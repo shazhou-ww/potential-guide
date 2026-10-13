@@ -1,0 +1,26 @@
+{
+  "name": "potential-guide",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Objective guidance, regulation, and portfolio supervision packages.",
+  "type": "module",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "clean": "tsc -b --clean",
+    "build": "tsc -b",
+    "typecheck": "tsc -b --pretty false && tsc -p tsconfig.test.json --pretty false",
+    "lint": "biome check packages scripts",
+    "test": "pnpm run build && tsx --test \"packages/*/test/*.test.ts\"",
+    "pack:check": "pnpm run build && node scripts/check-packages.mjs",
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run pack:check"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "22.20.5",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

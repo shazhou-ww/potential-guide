@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/objective-guide"
+    },
+    {
+      "path": "./packages/objective-regulator"
+    },
+    {
+      "path": "./packages/objective-portfolio-supervisor"
+    }
+  ]
+}

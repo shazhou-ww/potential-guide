@@ -1,18 +1,20 @@
 # Implementation
 
+[Verification evidence](./verification.md) records the reproducible checks for this implementation.
+
 ## Steps
 
 ### I-S01: Establish the package workspace
 
-Create the pinned pnpm and TypeScript workspace, shared quality commands, and manifests for the three scoped packages with the required one-way dependency graph.
+Create a Node.js 22.12+ workspace pinned to pnpm 11.22.0, TypeScript project references, Biome checks, and publishable manifests for the three scoped packages with the required one-way dependency graph.
 
 ### I-S02: Implement the Objective Guide core
 
-Implement the loader, manifests, Guide and Instance APIs, prerequisite and language handling, observations, checks, and localized reference access in `@potential-guide/objective-guide`.
+Implement canonical URI loading and caching, strict manifests, typed instance creation, bounded prerequisite projection, localized levels and references, ordered checks, and fresh observations in `@potential-guide/objective-guide`.
 
 ### I-S03: Implement regulation and portfolio layers
 
-Implement the guarded single-objective loop and policy-driven portfolio supervisor in their dependent packages, then document and test all package boundaries.
+Implement the guarded single-objective loop and policy-driven portfolio supervisor in their dependent packages, then document their APIs and verify the built package artifacts.
 
 ## Acceptance criteria
 
@@ -26,4 +28,4 @@ Regulator and Portfolio Supervisor tests prove target validation, action and re-
 
 ### I-AC03: Monorepo verification succeeds
 
-A frozen install plus repository build, type-check, lint, and test commands pass, package artifacts expose only declared entry points, and documentation maps each public API to its owning package.
+`pnpm install --frozen-lockfile` and `pnpm check` pass; packed artifacts omit source, tests, and build metadata; runtime exports match each package manifest; and package documentation maps the public APIs to their owners.

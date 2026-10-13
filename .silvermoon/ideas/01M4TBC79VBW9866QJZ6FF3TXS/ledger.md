@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** Establish the package workspace
-- [ ] **I-S02:** Implement the Objective Guide core
-- [ ] **I-S03:** Implement regulation and portfolio layers
+- [x] **I-S01:** Establish the package workspace
+- [x] **I-S02:** Implement the Objective Guide core
+- [x] **I-S03:** Implement regulation and portfolio layers
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** Core contracts conform
-- [ ] **I-AC02:** Regulation semantics are guarded
-- [ ] **I-AC03:** Monorepo verification succeeds
+- [x] **I-AC01:** Core contracts conform
+- [x] **I-AC02:** Regulation semantics are guarded
+- [x] **I-AC03:** Monorepo verification succeeds
 
 ## Deployment
 
