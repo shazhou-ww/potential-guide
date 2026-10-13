@@ -1,378 +1,355 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { stat } from "node:fs/promises";
 import { test } from "node:test";
-import { pathToFileURL } from "node:url";
 import type {
-  ObjectiveCheck,
+  CheckRequest,
+  CheckResult,
+  ObjectiveGuideInstance,
   ObjectiveGuideManifest,
-  ObjectiveLoaderOptions,
   ObjectivePageResource,
   ObjectiveResourceResolver,
 } from "@potential-guide/objective-guide";
 import {
   createObjectiveLoader,
-  fileObjectiveResources,
-  ObjectiveConfigurationError,
   ObjectiveOperationError,
+  SUBJECT_PROJECTION_LIMITS,
 } from "@potential-guide/objective-guide";
+import { compileSubjectProjection } from "../src/projection.js";
 
-const rootUri = "https://objectives.test/root/objective-guide.yaml";
-const childUri = "https://objectives.test/child/objective-guide.yaml";
+const rootUri = "https://objectives.test/root/manifest.yaml";
+const childUri = "https://objectives.test/child/manifest.yaml";
+type Handler = (request: CheckRequest) => Promise<CheckResult>;
 
 function manifest(overrides: Partial<ObjectiveGuideManifest> = {}): ObjectiveGuideManifest {
   return {
     schemaVersion: 1,
     domainSchema: {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
       type: "object",
-      properties: { root: { type: "string" } },
       required: ["root"],
+      properties: { root: { type: "string" } },
       additionalProperties: false,
     },
     levels: [{ id: "unready", advancement: { checks: ["ready"] } }],
     defaultLanguage: "en-US",
-    localizations: {
-      "en-US": {
-        content: "locales/en-US.yaml",
-        references: { source: "references/en-US/" },
-      },
-      "zh-CN": {
-        content: "locales/zh-CN.yaml",
-        references: { source: "references/zh-CN/" },
-      },
-    },
+    languages: ["en-US", "zh-CN"],
     ...overrides,
   };
 }
-
-function content(config: ObjectiveGuideManifest, language: string): unknown {
-  return {
-    title: `Objective ${language}`,
-    description: `Description ${language}`,
-    terminal: {
-      title: `Ready ${language}`,
-      description: `Ready description ${language}`,
-    },
-    levels: Object.fromEntries(
-      config.levels.map(({ id }) => [
-        id,
-        {
-          title: `${id} ${language}`,
-          description: `Waiting ${language}`,
-          outcome: `Cost and benefit ${language}`,
-        },
-      ]),
-    ),
-  };
+function markdown(properties: Record<string, string>, body = "") {
+  return `---\n${Object.entries(properties)
+    .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+    .join("\n")}\n---\n${body}\n`;
 }
-
-function page(id: string, body = "Reference text [[404]]"): string {
-  return `---\nid: ${JSON.stringify(id)}\n---\n# ${id}\n\n${body}\n`;
-}
-
 function fixture(
-  configs: Readonly<Record<string, ObjectiveGuideManifest>> = {
-    [rootUri]: manifest(),
-  },
-  checks: Readonly<Record<string, Readonly<Record<string, ObjectiveCheck>>>> = {},
-): {
-  loader: ReturnType<typeof createObjectiveLoader>;
-  texts: Map<string, string>;
-  pages: Map<string, ObjectivePageResource[]>;
-  reads: string[];
-} {
+  configs: Record<string, ObjectiveGuideManifest> = { [rootUri]: manifest() },
+  handlers: Record<string, Handler> = {},
+) {
   const texts = new Map<string, string>();
   const pages = new Map<string, ObjectivePageResource[]>();
   const reads: string[] = [];
-
   for (const [uri, config] of Object.entries(configs)) {
     texts.set(uri, JSON.stringify(config));
-    for (const [language, locale] of Object.entries(config.localizations)) {
-      texts.set(new URL(locale.content, uri).href, JSON.stringify(content(config, language)));
-      const sourceUri = new URL(locale.references.source, uri).href;
-      pages.set(
-        sourceUri,
-        ["404", "repair"].map((id) => ({
-          uri: new URL(`${id}.md`, sourceUri).href,
-          source: page(id),
-        })),
+    const source = new URL("references/", uri).href;
+    const resources: ObjectivePageResource[] = [];
+    const add = (id: string, language: string, properties: Record<string, string>, body = "") => {
+      resources.push({
+        uri: new URL(`${id}/${language}.md`, source).href,
+        source: markdown(properties, body),
+      });
+    };
+    for (const language of config.languages) {
+      add("system/overview", language, { title: language, description: `Objective ${language}` });
+      add("system/404", language, {
+        title: `Missing ${language}`,
+        description: `Missing ${language}`,
+      });
+      add("levels/terminal", language, {
+        title: `Ready ${language}`,
+        description: `Ready ${language}`,
+      });
+      for (const level of config.levels) {
+        add(`levels/${level.id}`, language, {
+          title: `${level.id} ${language}`,
+          description: `Waiting ${language}`,
+          outcome: `Cost and benefit ${language}`,
+        });
+        for (const id of level.advancement.checks)
+          add(`checks/${id}`, language, {
+            title: id,
+            description: `Check ${id} ${language}`,
+          });
+      }
+      add(
+        "problems/problem",
+        language,
+        {
+          title: `Problem ${language}`,
+          description: `Fix it ${language}`,
+        },
+        "[[system/404]]",
       );
     }
+    pages.set(source, resources);
   }
-
   const resources: ObjectiveResourceResolver = {
     async readText(uri) {
       reads.push(uri);
-      const source = texts.get(uri);
-      if (source === undefined) {
-        throw new Error(`Missing text resource: ${uri}`);
-      }
-      return source;
+      const value = texts.get(uri);
+      if (value === undefined) throw new Error(`Missing text ${uri}`);
+      return value;
     },
     async readPages(uri) {
-      const resourcesForLocale = pages.get(uri);
-      if (resourcesForLocale === undefined) {
-        throw new Error(`Missing page resources: ${uri}`);
-      }
-      return resourcesForLocale;
+      const value = pages.get(uri);
+      if (value === undefined) throw new Error(`Missing pages ${uri}`);
+      return value;
     },
   };
-
-  const options: ObjectiveLoaderOptions = {
+  const loader = createObjectiveLoader({
     resources,
-    resolveChecks: (uri) =>
-      checks[uri] ?? {
-        ready: async () => ({ pass: true }),
+    checkRunner: {
+      async run(_uri, id, request) {
+        return await (handlers[id] ?? (async () => ({ pass: true }) as const))(request);
       },
-  };
-  return {
-    loader: createObjectiveLoader(options),
-    texts,
-    pages,
-    reads,
-  };
-}
-
-test("loads one language-neutral Guide and creates immutable localized instances", async () => {
-  let passing = false;
-  const context = fixture(undefined, {
-    [rootUri]: {
-      ready: async (subject, language) =>
-        passing
-          ? { pass: true }
-          : {
-              pass: false,
-              problems: [
-                {
-                  pageId: "repair",
-                  description: `${String(subject.root)}/${language} is not ready`,
-                },
-              ],
-            },
     },
   });
+  return { texts, pages, reads, resources, loader };
+}
+async function instance(
+  context: ReturnType<typeof fixture>,
+  language = "en-US",
+): Promise<ObjectiveGuideInstance> {
+  const guide = await context.loader.load(rootUri);
+  const created = guide.createInstance({ subject: { root: "project" }, language });
+  if (!created.ok) assert.fail(JSON.stringify({ type: created.error.type }));
+  return created.instance;
+}
 
+test("canonical identity is language-neutral and References provide descriptions", async () => {
+  const context = fixture();
   const [first, second] = await Promise.all([
     context.loader.load(rootUri),
-    context.loader.load("https://objectives.test/root/./objective-guide.yaml"),
+    context.loader.load("https://objectives.test/root/./manifest.yaml"),
   ]);
   assert.equal(first, second);
   assert.equal(context.reads.filter((uri) => uri === rootUri).length, 1);
-
-  const subject = { root: "project" };
-  const created = first.createInstance({ subject, language: "en-US" });
-  assert.equal(created.ok, true);
-  if (!created.ok) {
-    return;
-  }
-  subject.root = "changed";
-  assert.equal(created.instance.subject.root, "project");
-  assert.ok(Object.isFrozen(created.instance.subject));
+  const en = await instance(context);
+  const zh = await instance(context, "zh-CN");
+  assert.equal(en.guide, zh.guide);
+  assert.equal(en.title, "en-US");
+  assert.equal(zh.title, "zh-CN");
   assert.deepEqual(
-    created.instance.describeLevels().map(({ id }) => id),
+    en.describeLevels().map(({ id }) => id),
     ["unready", "terminal"],
   );
-  assert.equal(created.instance.describeLevels()[0]?.advancementOutcome, "Cost and benefit en-US");
-
-  const firstObservation = await created.instance.probe();
-  assert.equal(firstObservation.current.instance, created.instance);
-  assert.equal(firstObservation.current.id, "unready");
-  assert.equal(firstObservation.gapSummary, "project/en-US is not ready");
-  assert.equal(
-    (await created.instance.readPage(firstObservation.problems[0]?.pageId ?? "")).id,
-    "repair",
-  );
-  assert.equal((await created.instance.readPage("missing")).id, "404");
-  assert.deepEqual(await created.instance.searchPages("REFERENCE"), [
-    { id: "404", title: "404" },
-    { id: "repair", title: "repair" },
+  assert.equal(en.describeLevels()[0]?.advancementOutcome, "Cost and benefit en-US");
+  assert.equal((await en.readPage("missing")).id, "system/404");
+  assert.deepEqual(await en.searchPages("fix it"), [
+    { id: "problems/problem", title: "Problem en-US" },
   ]);
-
-  passing = true;
-  assert.equal((await created.instance.probe()).current.id, "terminal");
-
-  const invalid = first.createInstance({ subject: { root: 5 } });
-  assert.equal(invalid.ok, false);
-  if (!invalid.ok) {
-    assert.equal(invalid.error.type, "invalid-subject");
-  }
-  const unsupported = first.createInstance({
-    subject: { root: "project" },
-    language: "en",
-  });
-  assert.equal(unsupported.ok, false);
-  if (!unsupported.ok && unsupported.error.type === "unsupported-language") {
-    assert.deepEqual(unsupported.error.supportedLanguages, ["en-US", "zh-CN"]);
-  } else {
-    assert.fail("Expected an unsupported-language result.");
-  }
 });
 
-test("prerequisites project subjects and block local checks until terminal", async () => {
-  let childReady = false;
+test("instance subjects are immutable and schema/language failures remain typed", async () => {
+  const guide = await fixture().loader.load(rootUri);
+  const subject = { root: "before" };
+  const result = guide.createInstance({ subject });
+  if (!result.ok) assert.fail("Expected instance.");
+  subject.root = "after";
+  assert.equal(result.instance.subject.root, "before");
+  assert.ok(Object.isFrozen(result.instance.subject));
+  const invalid = guide.createInstance({ subject: { root: 5 } });
+  if (invalid.ok || invalid.error.type !== "invalid-subject")
+    assert.fail("Expected subject failure.");
+  const unsupported = guide.createInstance({ subject: { root: "x" }, language: "en" });
+  if (unsupported.ok || unsupported.error.type !== "unsupported-language")
+    assert.fail("Expected language failure.");
+});
+
+test("ordered checks share one probe directory, clean it and return stable Problem IDs", async () => {
   const calls: string[] = [];
+  const directories: string[] = [];
+  let passing = false;
+  const config = manifest({
+    levels: [
+      { id: "one", advancement: { checks: ["first"] } },
+      { id: "two", advancement: { checks: ["second"] } },
+    ],
+  });
+  const context = fixture(
+    { [rootUri]: config },
+    {
+      first: async (request) => {
+        calls.push("first");
+        directories.push(request.probe.tempDirectory);
+        return passing
+          ? { pass: true }
+          : {
+              pass: false,
+              problems: [{ id: "problem", parameters: { description: "Dynamic detail" } }],
+            };
+      },
+      second: async (request) => {
+        calls.push("second");
+        directories.push(request.probe.tempDirectory);
+        return { pass: true };
+      },
+    },
+  );
+  const current = await instance(context);
+  const failed = await current.probe();
+  assert.equal(failed.current.id, "one");
+  assert.equal(failed.gapSummary, "Dynamic detail");
+  assert.equal(failed.problems[0]?.id, "problem");
+  assert.equal(
+    (await failed.current.instance.readPage(`problems/${failed.problems[0]!.id}`)).id,
+    "problems/problem",
+  );
+  await assert.rejects(stat(directories[0]!));
+  passing = true;
+  assert.equal((await current.probe()).current.id, "terminal");
+  assert.deepEqual(calls, ["first", "first", "second"]);
+  assert.equal(directories[1], directories[2]);
+  assert.notEqual(directories[0], directories[1]);
+  await assert.rejects(stat(directories[1]!));
+});
+
+test("prerequisite defaults to terminal and can unlock at a declared minimum level", async () => {
+  let passFirst = false;
+  const calls: string[] = [];
+  const child = manifest({
+    levels: [
+      { id: "configured", advancement: { checks: ["first"] } },
+      { id: "synchronized", advancement: { checks: ["second"] } },
+    ],
+  });
   const root = manifest({
     prerequisite: {
-      manifestUri: "../child/objective-guide.yaml",
+      manifestUri: childUri,
       subject: '{"root": root}',
+      minimumLevelId: "synchronized",
     },
-    levels: [{ id: "root-unready", advancement: { checks: ["root-ready"] } }],
-  });
-  const child = manifest({
-    levels: [{ id: "child-unready", advancement: { checks: ["child-ready"] } }],
   });
   const context = fixture(
     { [rootUri]: root, [childUri]: child },
     {
-      [rootUri]: {
-        "root-ready": async () => {
-          calls.push("root");
-          return { pass: true };
-        },
+      first: async () => {
+        calls.push("first");
+        return passFirst
+          ? { pass: true }
+          : {
+              pass: false,
+              problems: [{ id: "problem", parameters: {} }],
+            };
       },
-      [childUri]: {
-        "child-ready": async (subject) => {
-          calls.push(`child:${String(subject.root)}`);
-          return childReady
-            ? { pass: true }
-            : {
-                pass: false,
-                problems: [{ pageId: "repair", description: "Repair prerequisite" }],
-              };
-        },
+      second: async () => {
+        calls.push("second");
+        return { pass: false, problems: [{ id: "problem", parameters: {} }] };
+      },
+      ready: async () => {
+        calls.push("root");
+        return { pass: true };
       },
     },
   );
-
-  const guide = await context.loader.load(rootUri);
-  const created = guide.createInstance({ subject: { root: "project" } });
-  assert.equal(created.ok, true);
-  if (!created.ok) {
-    return;
-  }
+  const current = await instance(context);
   assert.deepEqual(
-    created.instance.describeLevels().map(({ id }) => id),
-    ["child-unready", "root-unready", "terminal"],
+    current.describeLevels().map(({ id }) => id),
+    ["configured", "unready", "terminal"],
   );
-  const blocked = await created.instance.probe();
-  assert.equal(blocked.current.instance, created.instance.prerequisite);
-  assert.deepEqual(calls, ["child:project"]);
+  assert.equal((await current.probe()).current.id, "configured");
+  passFirst = true;
+  const sample = await current.probe();
+  assert.equal(sample.current.instance, current);
+  assert.equal(sample.current.id, "terminal");
+  assert.deepEqual(calls, ["first", "first", "second", "root"]);
 
-  childReady = true;
-  assert.equal((await created.instance.probe()).current.id, "terminal");
-  assert.deepEqual(calls, ["child:project", "child:project", "root"]);
+  const terminalContext = fixture(
+    {
+      [rootUri]: manifest({ prerequisite: { manifestUri: childUri, subject: '{"root": root}' } }),
+      [childUri]: child,
+    },
+    {
+      first: async () => ({ pass: true }),
+      second: async () => ({ pass: false, problems: [{ id: "problem", parameters: {} }] }),
+    },
+  );
+  assert.equal((await (await instance(terminalContext)).probe()).current.id, "synchronized");
 });
 
-test("configuration and operation failures remain explicit", async () => {
-  const unsafe = manifest({
-    prerequisite: {
-      manifestUri: childUri,
-      subject: "$now()",
-    },
-  });
-  await assert.rejects(
-    fixture({ [rootUri]: unsafe, [childUri]: manifest() }).loader.load(rootUri),
-    ObjectiveConfigurationError,
-  );
-
-  const dangling = fixture();
-  for (const [sourceUri, resources] of dangling.pages) {
-    dangling.pages.set(
-      sourceUri,
-      resources.map((resource) => ({
-        ...resource,
-        source: page(resource.uri.endsWith("404.md") ? "404" : "repair", "[[missing]]"),
-      })),
-    );
-  }
-  await assert.rejects(dangling.loader.load(rootUri), /Dangling References link/);
-
-  const malformed = fixture(undefined, {
-    [rootUri]: {
-      ready: async () => ({
-        pass: false,
-        problems: [{ pageId: "missing", description: "Unknown page" }],
-      }),
-    },
-  });
-  const guide = await malformed.loader.load(rootUri);
-  const created = guide.createInstance({ subject: { root: "project" } });
-  assert.equal(created.ok, true);
-  if (created.ok) {
-    await assert.rejects(created.instance.probe(), ObjectiveOperationError);
-  }
-});
-
-test("default file resources load YAML and nested Markdown pages", async () => {
-  const root = await mkdtemp(join(tmpdir(), "potential-guide-"));
-  try {
-    await mkdir(join(root, "references", "nested"), { recursive: true });
-    const manifestPath = join(root, "objective-guide.yaml");
-    await writeFile(
-      manifestPath,
-      `schemaVersion: 1
-domainSchema:
-  type: object
-levels:
-  - id: configuration-invalid
-    advancement:
-      checks: [ready]
-defaultLanguage: en-US
-localizations:
-  en-US:
-    content: content.yaml
-    references:
-      source: references/
-`,
-    );
-    await writeFile(
-      join(root, "content.yaml"),
-      `title: Repository
-description: Repository readiness
-terminal:
-  title: Ready
-  description: The repository is ready.
-levels:
-  configuration-invalid:
-    title: Invalid
-    description: Configuration needs repair.
-    outcome: Repairing configuration enables repository work.
-`,
-    );
-    await writeFile(
-      join(root, "references", "404.md"),
-      '---\nid: "404"\n---\n# Not found\n\nNo such page.\n',
-    );
-    await writeFile(
-      join(root, "references", "nested", "repair.md"),
-      "---\nid: repair\n---\n# Repair\n\nSee [[404]].\n",
-    );
-
-    const loader = createObjectiveLoader({
-      checks: {
-        ready: async () => ({
-          pass: false,
-          problems: [{ pageId: "repair", description: "Repair configuration" }],
-        }),
+test("invalid minimum levels, malformed References and unknown Problems fail explicitly", async () => {
+  const invalidMinimum = fixture({
+    [rootUri]: manifest({
+      prerequisite: {
+        manifestUri: childUri,
+        subject: '{"root": root}',
+        minimumLevelId: "missing",
       },
-    });
-    const guide = await loader.load(manifestPath);
-    assert.equal(await loader.load(pathToFileURL(manifestPath).href), guide);
-    const created = guide.createInstance({ subject: {} });
-    assert.equal(created.ok, true);
-    if (created.ok) {
-      const observation = await created.instance.probe();
-      assert.equal(
-        (await observation.current.instance.readPage(observation.problems[0]?.pageId ?? "")).title,
-        "Repair",
-      );
-    }
+    }),
+    [childUri]: manifest(),
+  });
+  await assert.rejects(invalidMinimum.loader.load(rootUri), /minimum level/);
 
-    const pagePath = join(root, "references", "404.md");
-    await assert.rejects(fileObjectiveResources.readPages(pathToFileURL(pagePath).href));
-  } finally {
-    await rm(root, { recursive: true, force: true });
+  const missing = fixture();
+  const source = new URL("references/", rootUri).href;
+  missing.pages.set(
+    source,
+    missing.pages.get(source)!.filter(({ uri }) => !uri.includes("/system/404/")),
+  );
+  await assert.rejects(missing.loader.load(rootUri), /Missing Reference|cover every language/);
+
+  const unknown = await instance(
+    fixture(undefined, {
+      ready: async () => ({ pass: false, problems: [{ id: "missing", parameters: {} }] }),
+    }),
+  );
+  await assert.rejects(unknown.probe(), ObjectiveOperationError);
+});
+
+test("projection profile rejects dynamic capabilities and bounds execution/output", () => {
+  for (const expression of [
+    "$now()",
+    "$random()",
+    "$eval(root)",
+    "$map(root, function($x){$x})",
+    "($x := root; $x)",
+  ]) {
+    assert.throws(() => compileSubjectProjection(expression), /JSONata|projection|AST/);
   }
+  assert.throws(
+    () => compileSubjectProjection(" ".repeat(SUBJECT_PROJECTION_LIMITS.expressionBytes + 1)),
+    /expression limit/,
+  );
+  assert.deepEqual(
+    compileSubjectProjection('{"root": root, "n": count + 1}')({ root: "project", count: 2 }),
+    { root: "project", n: 3 },
+  );
+});
+
+test("resource and runner errors propagate instead of becoming low levels or 404", async () => {
+  const error = new Error("permission denied");
+  const context = fixture();
+  await assert.rejects(
+    createObjectiveLoader({
+      resources: {
+        ...context.resources,
+        readText: async () => {
+          throw error;
+        },
+      },
+    }).load(rootUri),
+    (caught) => caught === error,
+  );
+  const failed = await instance(
+    fixture(undefined, {
+      ready: async () => {
+        throw error;
+      },
+    }),
+  );
+  await assert.rejects(failed.probe(), (caught) => caught === error);
+  const malformed = await instance(
+    fixture(undefined, {
+      ready: async () => ({ pass: false, problems: [] }) as unknown as CheckResult,
+    }),
+  );
+  await assert.rejects(malformed.probe(), ObjectiveOperationError);
 });

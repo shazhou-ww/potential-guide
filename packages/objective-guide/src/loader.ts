@@ -1,14 +1,14 @@
-import type { LoadedLocale } from "./guide.js";
 import { createObjectiveGuide } from "./guide.js";
-import { canonicalManifestUri, fileObjectiveResources, validatePages } from "./resources.js";
+import { canonicalManifestUri, fileObjectiveResources, validateReferences } from "./resources.js";
+import { fileObjectiveCheckRunner } from "./runner.js";
 import type { ObjectiveGuide, ObjectiveLoader, ObjectiveLoaderOptions } from "./types.js";
-import { ObjectiveConfigurationError, parseContent, parseManifest } from "./validation.js";
+import { ObjectiveConfigurationError, parseManifest } from "./validation.js";
 
 export function createObjectiveLoader(options: ObjectiveLoaderOptions = {}): ObjectiveLoader {
   const resources = options.resources ?? fileObjectiveResources;
+  const runner = options.checkRunner ?? fileObjectiveCheckRunner;
   const cache = new Map<string, ObjectiveGuide>();
   let queue: Promise<unknown> = Promise.resolve();
-
   async function load(uri: string, ancestors: readonly string[]): Promise<ObjectiveGuide> {
     const canonical = canonicalManifestUri(uri);
     if (ancestors.includes(canonical)) {
@@ -16,12 +16,8 @@ export function createObjectiveLoader(options: ObjectiveLoaderOptions = {}): Obj
         `Cyclic prerequisite: ${[...ancestors, canonical].join(" -> ")}.`,
       );
     }
-
     const cached = cache.get(canonical);
-    if (cached !== undefined) {
-      return cached;
-    }
-
+    if (cached !== undefined) return cached;
     const manifest = parseManifest(await resources.readText(canonical));
     const prerequisite =
       manifest.prerequisite === undefined
@@ -30,54 +26,19 @@ export function createObjectiveLoader(options: ObjectiveLoaderOptions = {}): Obj
             ...ancestors,
             canonical,
           ]);
-
-    const locales = new Map<string, LoadedLocale>();
-    let baselineIds: string[] | undefined;
-    let baselineFallback: string | undefined;
-    for (const [language, localization] of Object.entries(manifest.localizations)) {
-      const contentUri = canonicalManifestUri(localization.content, canonical);
-      const sourceUri = canonicalManifestUri(localization.references.source, canonical);
-      const content = parseContent(
-        await resources.readText(contentUri),
-        manifest.levels.map(({ id }) => id),
-      );
-      const references = validatePages(
-        await resources.readPages(sourceUri),
-        sourceUri,
-        localization.references.notFoundPageId,
-      );
-      const ids = [...references.pages.keys()].sort();
-      if (
-        baselineIds !== undefined &&
-        (JSON.stringify(ids) !== JSON.stringify(baselineIds) ||
-          references.fallbackId !== baselineFallback)
-      ) {
-        throw new ObjectiveConfigurationError(
-          "Locales must share page IDs and not-found identity.",
-        );
+    const sourceUri = canonicalManifestUri("references/", canonical);
+    const locales = validateReferences(await resources.readPages(sourceUri), sourceUri, manifest);
+    if (runner.validate !== undefined) {
+      for (const checkId of new Set(
+        manifest.levels.flatMap(({ advancement }) => advancement.checks),
+      )) {
+        await runner.validate(canonical, checkId);
       }
-      baselineIds = ids;
-      baselineFallback = references.fallbackId;
-      locales.set(language, { content, ...references });
     }
-
-    const checks =
-      options.resolveChecks === undefined
-        ? (options.checks ?? {})
-        : options.resolveChecks(canonical);
-    const guide = createObjectiveGuide(
-      canonical,
-      manifest,
-      {
-        checks,
-        ...(prerequisite === undefined ? {} : { prerequisite }),
-      },
-      locales,
-    );
+    const guide = createObjectiveGuide(canonical, manifest, prerequisite, runner, locales);
     cache.set(canonical, guide);
     return guide;
   }
-
   return Object.freeze({
     load(uri: string) {
       const pending = queue.then(() => load(uri, []));

@@ -23,7 +23,7 @@ interface Harness {
 function harness(): Harness {
   let levelIndex = 0;
   let problems: readonly ObservedProblem[] = [
-    { pageId: "repair", description: "Repair the objective" },
+    { id: "repair", parameters: { description: "Repair the objective" } },
   ];
   let probes = 0;
   let instance: ObjectiveGuideInstance;
@@ -51,7 +51,9 @@ function harness(): Harness {
       return Object.freeze({
         current,
         problems: Object.freeze([...problems]),
-        gapSummary: problems.map(({ description }) => description).join("\n"),
+        gapSummary: problems
+          .map(({ parameters }) => String(parameters.description ?? ""))
+          .join("\n"),
       });
     },
     async readPage(id: string) {
@@ -100,7 +102,7 @@ test("regulates one action at a time and confirms progress with a new probe", as
   const result = await regulator.regulate(
     { targetLevelId: "terminal", limits },
     async ({ targetLevelId, observation, problem }) => {
-      requests.push(`${targetLevelId}/${observation.current.id}/${problem.pageId}`);
+      requests.push(`${targetLevelId}/${observation.current.id}/${problem.id}`);
       subject.setLevel(2);
       return { status: "completed", summary: "Repaired" };
     },

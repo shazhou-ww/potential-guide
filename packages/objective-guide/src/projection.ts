@@ -9,8 +9,7 @@ export const SUBJECT_PROJECTION_LIMITS = Object.freeze({
   milliseconds: 25,
   outputBytes: 65536,
 });
-
-class SubjectProjectionError extends TypeError {}
+export class SubjectProjectionError extends TypeError {}
 
 interface Node {
   type: string;
@@ -27,7 +26,6 @@ export function compileSubjectProjection(
   if (Buffer.byteLength(expression) > SUBJECT_PROJECTION_LIMITS.expressionBytes) {
     throw new ObjectiveConfigurationError("Subject projection exceeds expression limit.");
   }
-
   let raw: unknown;
   try {
     raw = JSON.parse(JSON.stringify(jsonata(expression).ast()));
@@ -38,7 +36,6 @@ export function compileSubjectProjection(
       cause: caught,
     });
   }
-
   let nodes = 0;
   function parse(value: unknown, depth = 0): Node {
     if (
@@ -52,51 +49,36 @@ export function compileSubjectProjection(
     ) {
       throw new ObjectiveConfigurationError("Unsupported or oversized JSONata AST.");
     }
-
     const child = (entry: unknown) => parse(entry, depth + 1);
     switch (value.type) {
       case "string":
       case "number":
       case "value":
-        if (!json(value.value) || typeof value.value === "object") {
-          break;
-        }
+        if (!json(value.value) || typeof value.value === "object") break;
         return { type: value.type, value: value.value };
       case "name":
-        if (typeof value.value !== "string") {
-          break;
-        }
+        if (typeof value.value !== "string") break;
         return { type: "name", value: value.value };
       case "variable":
-        if (value.value !== "") {
-          break;
-        }
+        if (value.value !== "") break;
         return { type: "variable" };
       case "path":
-        if (!Array.isArray(value.steps) || value.steps.length === 0) {
-          break;
-        }
+        if (!Array.isArray(value.steps) || value.steps.length === 0) break;
         return { type: "path", steps: value.steps.map(child) };
       case "unary":
         if (value.value === "{" && Array.isArray(value.lhs)) {
           const pairs: [Node, Node][] = value.lhs.map((pair: unknown) => {
-            if (!Array.isArray(pair) || pair.length !== 2) {
+            if (!Array.isArray(pair) || pair.length !== 2)
               throw new ObjectiveConfigurationError("Invalid object projection.");
-            }
             const key = child(pair[0]);
-            if (key.type !== "string") {
+            if (key.type !== "string")
               throw new ObjectiveConfigurationError("Projection keys must be literal strings.");
-            }
             return [key, child(pair[1])];
           });
           return { type: "unary", value: "{", lhs: pairs };
         }
         if (value.value === "[" && Array.isArray(value.expressions)) {
-          return {
-            type: "unary",
-            value: "[",
-            expressions: value.expressions.map(child),
-          };
+          return { type: "unary", value: "[", expressions: value.expressions.map(child) };
         }
         break;
       case "binary":
@@ -108,18 +90,15 @@ export function compileSubjectProjection(
             rhs: child(value.rhs),
           };
         }
-        break;
     }
     throw new ObjectiveConfigurationError(
       `JSONata ${value.type} is outside the deterministic subject projection profile.`,
     );
   }
-
   const ast = parse(raw);
   return (subject) => {
     const deadline = performance.now() + SUBJECT_PROJECTION_LIMITS.milliseconds;
     let steps = 0;
-
     function evaluate(node: Node, input: unknown): unknown {
       if (
         ++steps > SUBJECT_PROJECTION_LIMITS.nodes * SUBJECT_PROJECTION_LIMITS.nodes ||
@@ -140,70 +119,54 @@ export function compileSubjectProjection(
             : undefined;
         case "path": {
           let result = input;
-          for (const step of node.steps ?? []) {
+          for (const step of node.steps!) {
             if (Array.isArray(result)) {
               const values: unknown[] = result.flatMap((item) => {
                 const value = evaluate(step, item);
-                if (value === undefined) {
-                  return [];
-                }
-                return Array.isArray(value) ? value : [value];
+                return value === undefined ? [] : Array.isArray(value) ? value : [value];
               });
               result = values.length === 0 ? undefined : values.length === 1 ? values[0] : values;
-            } else {
-              result = evaluate(step, result);
-            }
+            } else result = evaluate(step, result);
           }
           return result;
         }
         case "unary": {
-          if (node.value === "[") {
-            return (node.expressions ?? []).flatMap((entry) => {
+          if (node.value === "[")
+            return node.expressions!.flatMap((entry) => {
               const value = evaluate(entry, input);
-              if (value === undefined) {
-                return [];
-              }
-              return Array.isArray(value) && !(entry.type === "unary" && entry.value === "[")
-                ? value
-                : [value];
+              return value === undefined
+                ? []
+                : Array.isArray(value) && !(entry.type === "unary" && entry.value === "[")
+                  ? value
+                  : [value];
             });
-          }
           const result: Record<string, unknown> = {};
           const pairs = node.lhs;
-          if (!Array.isArray(pairs)) {
+          if (!Array.isArray(pairs))
             throw new SubjectProjectionError("Invalid compiled projection.");
-          }
           for (const [key, value] of pairs) {
             const name = String(key.value);
             const entry = evaluate(value, input);
-            if (Object.hasOwn(result, name)) {
+            if (Object.hasOwn(result, name))
               throw new SubjectProjectionError(`Duplicate projected key: ${name}.`);
-            }
-            if (entry !== undefined) {
-              Object.defineProperty(result, name, {
-                enumerable: true,
-                value: entry,
-              });
-            }
+            if (entry !== undefined)
+              Object.defineProperty(result, name, { enumerable: true, value: entry });
           }
           return result;
         }
         case "binary": {
           const lhs = node.lhs;
-          if (lhs === undefined || Array.isArray(lhs)) {
+          if (lhs === undefined || Array.isArray(lhs))
             throw new SubjectProjectionError("Invalid binary projection.");
-          }
           const left = evaluate(lhs as Node, input);
-          const right = evaluate(node.rhs as Node, input);
+          const right = evaluate(node.rhs!, input);
           if (node.value === "&") {
-            if (typeof left !== "string" || typeof right !== "string") {
+            if (typeof left !== "string" || typeof right !== "string")
               throw new SubjectProjectionError("Concatenation requires strings.");
-            }
             return left + right;
           }
-          if (typeof left !== "number" || typeof right !== "number") {
+          if (typeof left !== "number" || typeof right !== "number")
             throw new SubjectProjectionError("Arithmetic requires numbers.");
-          }
           switch (node.value) {
             case "+":
               return left + right;
@@ -216,12 +179,10 @@ export function compileSubjectProjection(
             case "%":
               return left % right;
           }
-          break;
         }
       }
       throw new SubjectProjectionError("Unsupported compiled projection.");
     }
-
     const result = evaluate(ast, subject);
     if (
       !json(result) ||

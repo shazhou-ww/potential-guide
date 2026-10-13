@@ -1,66 +1,48 @@
 # `@potential-guide/objective-guide`
 
-Defines language-neutral Objectives and binds them to immutable subjects and one
-explicit content language. The package owns manifest loading, prerequisite
-projection, ordered levels, checks, localized observations, and reference pages.
+Defines language-neutral, URI-keyed Objective Guides and binds them to immutable
+JSON subjects and one explicit content language. The package owns manifest and
+domain validation, prerequisite projection, ordered levels, executable checks,
+localized observations, and reference pages. It does not own command reports,
+Git workflow policy, regulation, or portfolio supervision.
 
-Loader and I/O failures reject. Expected subject and language failures are returned
-as typed instance-creation results. Objective Guide APIs observe and explain; they
-do not change the subject's real-world state.
+## Transport layout
+
+Each Guide is a self-contained transport unit:
+
+```text
+my-objective-guide/
+├── objective-guide.yaml
+├── checks/
+│   └── repository-ready/
+│       └── run.js
+└── references/
+    ├── system/{overview,404}/{en-US,zh-CN}.md
+    ├── levels/<level-id>/{en-US,zh-CN}.md
+    ├── checks/<check-id>/{en-US,zh-CN}.md
+    ├── problems/<problem-id>/{en-US,zh-CN}.md
+    └── pages/<page-id>/{en-US,zh-CN}.md
+```
+
+Manifest checks contain stable IDs only. The file runner discovers exactly one
+`run` or `run.*` entry in the matching check directory and exchanges one JSON
+request and response over standard I/O. Every complete probe receives a unique
+temporary directory shared by its prerequisite chain and ordered checks.
+
+Reference identity is `<namespace>/<id>`; language is always the leaf file.
+Checks return stable Problem IDs plus JSON parameters, while the selected locale
+supplies the human-facing problem content.
 
 ## Public API
 
 - `createObjectiveLoader` loads and caches Guides by canonical Manifest URI.
+- `fileObjectiveCheckRunner` validates and executes convention-based checks.
 - `canonicalManifestUri` normalizes Manifest and resource identities.
-- `fileObjectiveResources` reads UTF-8 file resources and Markdown reference pages.
+- `fileObjectiveResources` reads UTF-8 file resources and Markdown References.
 - `ObjectiveConfigurationError` reports invalid manifests and resources.
-- `ObjectiveOperationError` reports invalid check and query behavior.
-- `SUBJECT_PROJECTION_LIMITS` documents the deterministic JSONata profile bounds.
-- Public types describe manifests, checks, Guides, instances, observations, typed
-  creation failures, resource resolvers, and reference pages.
+- `ObjectiveOperationError` reports runtime protocol and query failures.
+- `SUBJECT_PROJECTION_LIMITS` documents deterministic JSONata profile bounds.
 
-## Usage
-
-```ts
-import { createObjectiveLoader } from "@potential-guide/objective-guide";
-
-const loader = createObjectiveLoader({
-  checks: {
-    "repository-ready": async (subject, language) => {
-      return subject.root === "/ready"
-        ? { pass: true }
-        : {
-            pass: false,
-            problems: [
-              {
-                pageId: "prepare-repository",
-                description: `Prepare ${String(subject.root)} for ${language}.`,
-              },
-            ],
-          };
-    },
-  },
-});
-
-const guide = await loader.load(
-  new URL("./objective-guide.yaml", import.meta.url).href,
-);
-const created = guide.createInstance({
-  subject: { root: "/workspace" },
-  language: "en-US",
-});
-
-if (!created.ok) {
-  console.error(created.error);
-} else {
-  const observation = await created.instance.probe();
-  const firstProblem = observation.problems[0];
-  if (firstProblem) {
-    console.log(await observation.current.instance.readPage(firstProblem.pageId));
-  }
-}
-```
-
-Manifest structure is language-neutral. Locale content must completely cover every
-explicit level and the implicit terminal level, while every locale exposes the same
-reference-page identities.
+Loader and I/O failures reject. Expected subject, language, and prerequisite
+projection failures are typed instance-creation results. A prerequisite may
+declare `minimumLevelId`; omitting it retains the terminal-only unlock behavior.

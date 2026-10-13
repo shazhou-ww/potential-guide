@@ -47,11 +47,15 @@ function harness(id: string, initialLevel: number, probeLog: string[]): Harness 
         throw new Error("Invalid test level.");
       }
       const problems =
-        current.id === "terminal" ? [] : [{ pageId: `${id}-repair`, description: `Advance ${id}` }];
+        current.id === "terminal"
+          ? []
+          : [{ id: `${id}-repair`, parameters: { description: `Advance ${id}` } }];
       return Object.freeze({
         current,
         problems: Object.freeze(problems),
-        gapSummary: problems.map(({ description }) => description).join("\n"),
+        gapSummary: problems
+          .map(({ parameters }) => String(parameters.description ?? ""))
+          .join("\n"),
       });
     },
     async readPage(pageId: string) {

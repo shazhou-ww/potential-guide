@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const pnpmCommand = process.platform === "win32" ? "pnpm.exe" : "pnpm";
+const pnpmCommand = "pnpm";
 const packages = [
   {
     directory: "objective-guide",
@@ -17,6 +17,7 @@ const packages = [
       "SUBJECT_PROJECTION_LIMITS",
       "canonicalManifestUri",
       "createObjectiveLoader",
+      "fileObjectiveCheckRunner",
       "fileObjectiveResources",
     ],
   },
@@ -38,10 +39,17 @@ const packages = [
 
 function run(command, args) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd: root,
-      windowsHide: true,
-    });
+    const options = { cwd: root, windowsHide: true };
+    const child =
+      process.platform === "win32"
+        ? spawn(
+            [
+              command,
+              ...args.map((value) => `"${value.replaceAll("%", "%%").replaceAll('"', '""')}"`),
+            ].join(" "),
+            { ...options, shell: true },
+          )
+        : spawn(command, args, options);
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");
