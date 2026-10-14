@@ -32,22 +32,17 @@ This is the root of the preset tree, so it intentionally has no
 `.git-lineage.yaml`. The `git-lineage derive` command creates that file in the
 derived repository.
 
-## Preset tree
+## Preset inheritance
 
-```text
-preset-typescript-base
-├── preset-npm-package
-└── preset-pnpm-monorepo
-    └── preset-cloudflare-fullstack
-        └── preset-cloudflare-realtime
-```
-
-Each descendant has exactly one immediate parent. Descendants receive parent
-changes through ordinary Git merges:
+Each derived preset has one immediate parent and receives parent changes through
+ordinary Git merges:
 
 ```sh
 git-lineage update
 ```
+
+Each preset documents its own capabilities and does not enumerate its
+descendants.
 
 The root package is private because it supplies development tooling rather than
 an npm artifact.
