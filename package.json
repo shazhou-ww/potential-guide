@@ -1,20 +1,22 @@
 {
-  "name": "preset-typescript-base",
+  "name": "preset-pnpm-monorepo",
   "version": "0.0.0",
-  "description": "A strict TypeScript base preset for projects managed with pnpm.",
+  "description": "A strict TypeScript monorepo preset built with pnpm workspaces and Turborepo.",
   "keywords": [
     "typescript",
     "pnpm",
+    "monorepo",
+    "turborepo",
     "preset",
     "template"
   ],
-  "homepage": "https://github.com/shazhou-ww/preset-typescript-base#readme",
+  "homepage": "https://github.com/shazhou-ww/preset-pnpm-monorepo#readme",
   "bugs": {
-    "url": "https://github.com/shazhou-ww/preset-typescript-base/issues"
+    "url": "https://github.com/shazhou-ww/preset-pnpm-monorepo/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shazhou-ww/preset-typescript-base.git"
+    "url": "git+https://github.com/shazhou-ww/preset-pnpm-monorepo.git"
   },
   "license": "MIT",
   "private": true,
@@ -24,26 +26,25 @@
   },
   "packageManager": "pnpm@11.22.0",
   "scripts": {
-    "build": "pnpm clean && tsc -p tsconfig.build.json",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm build",
-    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "turbo run build",
+    "check": "pnpm format:check && turbo run lint typecheck test build",
+    "clean": "turbo run clean && node -e \"require('node:fs').rmSync('.turbo', { recursive: true, force: true })\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint . --max-warnings=0",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/node": "^26.6.5",
-    "@vitest/coverage-v8": "^5.0.4",
-    "eslint": "^10.12.0",
-    "globals": "^17.13.0",
-    "prettier": "^3.9.10",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.71.2",
-    "vitest": "^5.0.4"
+    "@eslint/js": "catalog:",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "eslint": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
   }
 }

@@ -1,84 +1,82 @@
-# TypeScript base preset
+# pnpm monorepo preset
 
-The root preset for strict TypeScript projects managed with pnpm. It contains
-the development baseline shared by more specialized presets without assuming an
-npm package, monorepo, application framework, or hosting platform.
-
-## Included
-
-- pnpm with a committed lockfile
-- strict TypeScript and generated declaration files
-- ESLint and Prettier
-- Vitest with V8 coverage thresholds
-- CI on the oldest supported and current Node.js releases
-- Dependabot updates for npm and GitHub Actions
+A neutral TypeScript monorepo baseline built with pnpm workspaces and Turborepo.
+It provides dependency topology, caching, shared quality tooling, and examples
+without choosing a product shape such as CLI, web app, service, or publishable
+package.
 
 ## Derive a repository
 
-Derive a repository while retaining Git ancestry:
-
 ```sh
 git-lineage derive \
-  https://github.com/shazhou-ww/preset-typescript-base.git \
-  my-project \
+  https://github.com/shazhou-ww/preset-pnpm-monorepo.git \
+  my-workspace \
   --branch main
-cd my-project
-```
-
-You can also use GitHub's **Use this template** button if you do not need to
-retain lineage.
-
-This is the root of the preset tree, so it intentionally has no
-`.git-lineage.yaml`. The `git-lineage derive` command creates that file in the
-derived repository.
-
-## Preset tree
-
-```text
-preset-typescript-base
-├── preset-npm-package
-└── preset-pnpm-monorepo
-    └── preset-cloudflare-fullstack
-        └── preset-cloudflare-realtime
-```
-
-Each descendant has exactly one immediate parent. Descendants receive parent
-changes through ordinary Git merges:
-
-```sh
-git-lineage update
-```
-
-The root package is private because it supplies development tooling rather than
-an npm artifact.
-
-## Requirements
-
-- Node.js 22.13 or newer
-- pnpm 11.22 or newer
-
-## Development
-
-```sh
+cd my-workspace
 pnpm install
 pnpm check
 ```
 
-Useful individual commands:
+This preset derives from
+[`preset-typescript-base`](https://github.com/shazhou-ww/preset-typescript-base).
+Its `.git-lineage.yaml` records that immediate parent. Run `git-lineage update`
+to merge future baseline changes.
 
-| Command              | Purpose                                               |
-| -------------------- | ----------------------------------------------------- |
-| `pnpm build`         | Compile ESM JavaScript, declarations, and source maps |
-| `pnpm typecheck`     | Type-check without emitting files                     |
-| `pnpm lint`          | Run ESLint                                            |
-| `pnpm format`        | Format supported files with Prettier                  |
-| `pnpm test`          | Run the test suite once                               |
-| `pnpm test:watch`    | Run tests in watch mode                               |
-| `pnpm test:coverage` | Run tests and enforce coverage thresholds             |
+## Structure
 
-The example entry point is `src/index.ts`. Tests belong in `test/`, and build
-artifacts are written to `dist/`. A derived preset may replace this layout when
-its specialization requires a different project structure.
+```text
+apps/
+  example/       executable project example
+packages/
+  core/          reusable library example
+pnpm-workspace.yaml
+turbo.json
+```
+
+The example app depends on `@workspace/core` through `workspace:*`. Replace both
+examples as soon as the real workspace shape is known; they exist to keep
+dependency ordering, type resolution, tests, and builds continuously verified.
+
+## Workspace conventions
+
+- Executable and deployable projects belong in `apps/`.
+- Reusable code belongs in `packages/`.
+- Shared third-party versions belong in the pnpm catalog in
+  `pnpm-workspace.yaml`.
+- Internal dependencies use `workspace:*`.
+- Each workspace owns its build, lint, test, and typecheck scripts.
+- Root commands use Turborepo to respect dependency order and cache outputs.
+
+Add a dependency from the repository root:
+
+```sh
+pnpm --filter @workspace/example-app add some-package
+pnpm --filter @workspace/core add --save-dev some-dev-tool
+```
+
+Run a command for one workspace:
+
+```sh
+pnpm --filter @workspace/core test
+```
+
+## Commands
+
+| Command          | Purpose                                        |
+| ---------------- | ---------------------------------------------- |
+| `pnpm build`     | Build every workspace in dependency order      |
+| `pnpm lint`      | Lint every workspace                           |
+| `pnpm typecheck` | Type-check every workspace                     |
+| `pnpm test`      | Test every workspace with coverage             |
+| `pnpm check`     | Run formatting, lint, types, tests, and builds |
+| `pnpm clean`     | Remove workspace outputs and Turborepo state   |
+
+## Adding a workspace
+
+Every direct child of `apps/` or `packages/` is discovered automatically. Give
+it a unique package name and the standard scripts consumed by `turbo.json`. Keep
+application packages private. A library may become publishable later, but this
+preset does not impose a release strategy.
 
 ## License
 

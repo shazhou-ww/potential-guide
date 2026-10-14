@@ -1,0 +1,24 @@
+packages:
+  - apps/*
+  - packages/*
+
+catalog:
+  "@eslint/js": ^10.0.1
+  "@types/node": ^26.6.5
+  "@vitest/coverage-v8": ^5.0.4
+  eslint: ^10.12.0
+  globals: ^17.13.0
+  prettier: ^3.9.10
+  turbo: ^2.11.8
+  typescript: ^5.9.3
+  typescript-eslint: ^8.71.2
+  vitest: ^5.0.4
+
+minimumReleaseAgeExclude:
+  - "@turbo/darwin-64@2.11.8"
+  - "@turbo/darwin-arm64@2.11.8"
+  - "@turbo/linux-64@2.11.8"
+  - "@turbo/linux-arm64@2.11.8"
+  - "@turbo/windows-64@2.11.8"
+  - "@turbo/windows-arm64@2.11.8"
+  - turbo@2.11.8
