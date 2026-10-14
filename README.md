@@ -20,8 +20,8 @@ pnpm check
 This preset derives from
 [`preset-typescript-base`](https://github.com/shazhou-ww/preset-typescript-base).
 Its `.git-lineage.yaml` records that immediate parent. Run `git-lineage update`
-to merge future baseline changes. This preset documents its own capabilities
-and does not enumerate descendants.
+to merge future baseline changes. This preset documents its own capabilities and
+does not enumerate descendants.
 
 ## Structure
 

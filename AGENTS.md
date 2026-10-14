@@ -15,5 +15,5 @@
 ## Skills
 
 - Manage project skills with `npx skills`.
-- Keep all project skills under `.agent/skills/<skill-name>/`, with each
-  skill's `SKILL.md` in its directory.
+- Keep all project skills under `.agent/skills/<skill-name>/`, with each skill's
+  `SKILL.md` in its directory.
