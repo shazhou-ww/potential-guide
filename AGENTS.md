@@ -18,7 +18,7 @@ derived presets.
 ## Skills
 
 - Manage project skills with `npx skills`.
-- Keep all project skills under `.agent/skills/<skill-name>/`, with each
-  skill's `SKILL.md` in its directory.
-- Keep skills appropriate to this root TypeScript baseline; specialized
-  presets should provide their own agent guidance and skills.
+- Keep all project skills under `.agent/skills/<skill-name>/`, with each skill's
+  `SKILL.md` in its directory.
+- Keep skills appropriate to this root TypeScript baseline; specialized presets
+  should provide their own agent guidance and skills.
