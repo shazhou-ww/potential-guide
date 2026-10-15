@@ -18,10 +18,10 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** Synchronize the verified package suite
-- [ ] **D-S02:** Verify isolated package consumption
+- [x] **D-S01:** 同步已验证的软件包套件
+- [x] **D-S02:** 验证隔离的软件包消费
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Primary contains the accepted suite
-- [ ] **D-AC02:** Packed packages work together
+- [x] **D-AC01:** Primary 包含已接受的套件
+- [x] **D-AC02:** 打包产物可协同工作
