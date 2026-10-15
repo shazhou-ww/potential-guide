@@ -12,7 +12,7 @@ import {
 } from "@potential-guide/cli-core";
 import { createObjectiveLoader, type ObjectiveSubject } from "@potential-guide/objective-guide";
 
-export const guideCommandVersion = "0.1.0";
+export const guideCommandVersion = "0.2.0-rc.0";
 
 async function loadGuide(path: string) {
   try {

@@ -7,7 +7,7 @@ void commandMain(
     protocol: "pguide-command-v1",
     command: "supervise",
     description: "Supervise an Objective portfolio",
-    version: "0.1.0",
+    version: "0.2.0-rc.0",
   },
   runSupervise,
 );

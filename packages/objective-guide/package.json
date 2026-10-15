@@ -1,6 +1,6 @@
 {
   "name": "@potential-guide/objective-guide",
-  "version": "0.2.0-rc.0",
+  "version": "0.2.0-rc.1",
   "description": "Language-neutral objective definitions, observations, and localized guidance.",
   "type": "module",
   "sideEffects": false,

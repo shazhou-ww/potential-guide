@@ -1,6 +1,6 @@
 {
   "name": "@potential-guide/objective-regulator",
-  "version": "0.1.0",
+  "version": "0.2.0-rc.0",
   "description": "Guarded single-objective probe, action, and re-probe regulation.",
   "type": "module",
   "sideEffects": false,
