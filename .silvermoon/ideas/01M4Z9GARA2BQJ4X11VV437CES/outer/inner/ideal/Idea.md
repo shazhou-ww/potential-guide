@@ -12,7 +12,7 @@ Potential Guide 的各软件包目前只能作为库集成，缺少统一、可�
 
 - 顶层命令采用类似 Git 的扩展模型，包拥有自己的命令实现和生命周期，顶层 CLI 不吸收各包的业务逻辑。
 - 子命令发现、参数转发、退出码和结构化输出形成稳定契约，并明确可信命令来源，避免意外执行同名程序。
-- canonical 命令使用 `potential`；不占用应当属于 `guide` 子命令的 `potential-guide`，也不提供容易与 POSIX pager 和 PostgreSQL 生态混淆的 `pg`。
+- unscoped npm 包和 canonical 命令统一使用 `pguide`，支持直接运行 `npx pguide`；不采用已被占用的 `potential`，也不提供容易与 POSIX pager 和 PostgreSQL 生态混淆的 `pg`。
 
 ## 验收标准
 

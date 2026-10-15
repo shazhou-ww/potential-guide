@@ -6,10 +6,12 @@
 
 ### 推荐
 
-- canonical 可执行文件：`potential`
-- npm 包建议：`@potential-guide/cli`
+- canonical 可执行文件：`pguide`
+- unscoped npm 包：`pguide`
 
-日常文档、脚本和机器集成统一使用 `potential`。不提供 `potential-guide` 顶层别名，因为 Git 风格扩展模型需要把该名称留给独立的 `guide` 子命令。
+日常文档、脚本和机器集成统一使用 `pguide`。包安装后提供同名 bin，并支持 `npx pguide ...`，避免要求用户了解 scoped 包名。
+
+2026-10-15 的 npm registry 检查中，`pguide` 返回未发布，`potential` 已存在 `2.0.0`。发布准备阶段必须重新确认并实际取得 `pguide` 包名；若届时不可用，应回到命名决策而不是静默发布到其他包名。
 
 ### 不建议使用 `pg`
 
@@ -20,8 +22,8 @@
 顶层 CLI 同时支持内置命令和 Git 风格外部子命令：
 
 ```text
-potential <command> [arguments]
-potential-<command> [arguments]
+pguide <command> [arguments]
+pguide-<command> [arguments]
 ```
 
 包拥有自己的 CLI 和业务语义。顶层 CLI 只负责全局配置、命令发现、可信解析、进程调用以及统一的输出和退出码约定。
@@ -31,44 +33,44 @@ potential-<command> [arguments]
 
 | 顶层调用 | 独立可执行文件 | 所属范围 | 目的 |
 | --- | --- | --- | --- |
-| `potential guide ...` | `potential-guide` | Objective Guide | 加载、检查和 probe 一个 Guide Instance |
-| `potential regulate ...` | `potential-regulate` | Objective Regulator | 对一个 Objective 执行有界 regulation |
-| `potential supervise ...` | `potential-supervise` | Portfolio Supervisor | 规划或执行多 Objective directives |
-| `potential commands` | 内置 | 顶层 CLI | 列出命令、来源和协议版本 |
-| `potential doctor` | 内置 | 顶层 CLI | 检查配置、运行时和外部命令冲突 |
-| `potential completion` | 内置 | 顶层 CLI | 生成 shell completion |
-| `potential help` | 内置 | 顶层 CLI | 显示顶层或指定命令帮助 |
-| `potential version` | 内置 | 顶层 CLI | 显示 CLI 与协议版本 |
+| `pguide guide ...` | `pguide-guide` | Objective Guide | 加载、检查和 probe 一个 Guide Instance |
+| `pguide regulate ...` | `pguide-regulate` | Objective Regulator | 对一个 Objective 执行有界 regulation |
+| `pguide supervise ...` | `pguide-supervise` | Portfolio Supervisor | 规划或执行多 Objective directives |
+| `pguide commands` | 内置 | 顶层 CLI | 列出命令、来源和协议版本 |
+| `pguide doctor` | 内置 | 顶层 CLI | 检查配置、运行时和外部命令冲突 |
+| `pguide completion` | 内置 | 顶层 CLI | 生成 shell completion |
+| `pguide help` | 内置 | 顶层 CLI | 显示顶层或指定命令帮助 |
+| `pguide version` | 内置 | 顶层 CLI | 显示 CLI 与协议版本 |
 
 包级可执行文件必须可以直接运行。通过顶层 CLI 调用时，命令参数、stdin、信号和最终退出状态不得改变。
 
 ## 外部子命令发现
 
-调用 `potential <command>` 时：
+调用 `pguide <command>` 时：
 
 1. 只接受小写 ASCII 动词 slug，例如 `regulate` 或 `verify-policy`。
 2. 内置命令优先，外部命令不能覆盖 `help`、`version`、`commands`、`doctor` 或 `completion`。
-3. 在显式配置的命令目录和 `PATH` 中查找 `potential-<command>`；配置目录优先于 `PATH`。
+3. 在显式配置的命令目录和 `PATH` 中查找 `pguide-<command>`；配置目录优先于 `PATH`。
 4. 不隐式搜索当前工作目录，避免仓库内同名文件被意外执行。
 5. 同一优先级发现多个候选时显式失败，并在错误中列出所有 real path。
 6. `commands` 显示每个命令的来源、解析后的路径、是否内置及协议兼容性。
 
-外部命令通过 `potential-command-v1` 协议声明身份和能力。顶层 CLI 可以请求机器可读 metadata，但不会通过解析帮助文本推断能力。
+外部命令通过 `pguide-command-v1` 协议声明身份和能力。顶层 CLI 可以请求机器可读 metadata，但不会通过解析帮助文本推断能力。
 
 ## 全局参数
 
 保留的全局参数可以位于一级子命令之前或之后。顶层 CLI 先确定子命令，再从 `--` 之前的参数中提取已声明的全局参数；其余参数保持原有顺序交给子命令。
 
 ```text
-potential [global options] <command> [command options]
-potential <command> [global options] [command options]
+pguide [global options] <command> [command options]
+pguide <command> [global options] [command options]
 ```
 
 两种形式语义相同，例如：
 
 ```text
-potential --format json guide --guide ./objective-guide.yaml --subject-file ./subject.json
-potential guide --guide ./objective-guide.yaml --subject-file ./subject.json --format json
+pguide --format json guide --guide ./objective-guide.yaml --subject-file ./subject.json
+pguide guide --guide ./objective-guide.yaml --subject-file ./subject.json --format json
 ```
 
 全局参数名属于协议保留字，包级命令不能以不同语义重新定义。遇到 `--` 后，顶层 CLI 停止识别任何全局参数，并把后续内容逐字传给子命令或 Agent adapter。由此既允许符合直觉的参数位置，也避免外部命令的参数被意外吞掉。
@@ -90,11 +92,11 @@ stdout 只承载命令结果，stderr 承载诊断和日志。`--format json` �
 `guide` 执行一次无副作用的 Guide probe 并输出 observation。它不加载 Agent，也不执行 action。
 
 ```text
-potential guide [options]
+pguide guide [options]
 ```
 
 ```powershell
-potential guide `
+pguide guide `
   --guide .\objective-guide.yaml `
   --subject-file .\subject.json `
   --language zh-CN `
@@ -113,7 +115,7 @@ potential guide `
 `regulate` 直接执行一次完整、有界的 regulation，不再增加与 `guide` 重复的 `probe` 或语义冗余的 `run` 二级命令。
 
 ```powershell
-potential regulate `
+pguide regulate `
   --guide .\objective-guide.yaml `
   --subject-file .\subject.json `
   --target terminal `
@@ -146,7 +148,7 @@ Regulator 不持有隐藏会话状态，也不提供独立 `resume` 命令。再
 `process` adapter 可额外接受位于 `--` 之后的 Agent 进程参数：
 
 ```powershell
-potential regulate <options> -- --profile autonomous
+pguide regulate <options> -- --profile autonomous
 ```
 
 顶层 CLI 不解释 `--` 之后的内容；其他 adapter 可以拒绝不支持的附加参数。
@@ -157,7 +159,7 @@ Agent adapter 实现现有 `ObjectiveActionExecutor` 语义。每次调用只接
 
 ```json
 {
-  "protocol": "potential-action-v1",
+  "protocol": "pguide-action-v1",
   "targetLevelId": "terminal",
   "observation": {},
   "problem": {}
@@ -223,7 +225,7 @@ JSON 输出包含稳定字段：
 从高到低：
 
 1. 命令行参数；
-2. `POTENTIAL_GUIDE_*` 环境变量；
+2. `PGUIDE_*` 环境变量；
 3. `--config` 指定文件；
 4. 从 `--cwd` 向上查找的项目配置；
 5. 用户级配置；
