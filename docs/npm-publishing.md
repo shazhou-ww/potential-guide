@@ -21,6 +21,10 @@ commit must be reachable from `origin/main`. Each tag publishes only one
 package, which keeps a failure from partially publishing a multi-package
 release.
 
+Stable versions publish to the npm `latest` dist-tag. Release candidates use
+the `X.Y.Z-rc.N` version form and publish to the `rc` dist-tag, so testing an RC
+never changes the default version installed by consumers.
+
 ## Before configuring npm
 
 Merge `.github/workflows/publish-npm.yaml` to `main`. npm matches the workflow
@@ -154,6 +158,18 @@ gh workflow run publish-npm.yaml --ref main -f package=objective-guide
 
 Use the dry-run only as a quick diagnostic, then perform the real tag release
 within the two-day window.
+
+For a release candidate, update the selected package version and create the
+matching package-specific tag, for example:
+
+```sh
+git tag -a objective-guide-v0.2.0-rc.0 \
+  -m "release: objective-guide v0.2.0-rc.0"
+git push origin refs/tags/objective-guide-v0.2.0-rc.0
+```
+
+The workflow publishes this version under npm's `rc` dist-tag. Wait for the
+workflow to succeed before testing the package downstream.
 
 After every package has one successful OIDC release, set its npm **Publishing
 access** to **Require two-factor authentication and disallow tokens**. Trusted

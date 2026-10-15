@@ -97,9 +97,9 @@ jobs:
               name: "pguide",
             },
           };
-          const stableVersion = /^\d+\.\d+\.\d+$/u;
+          const releaseVersion = /^\d+\.\d+\.\d+(?:-rc\.\d+)?$/u;
           const tagPattern =
-            /^(cli-core|objective-guide|objective-regulator|objective-portfolio-supervisor|pguide-config|pguide)-v(\d+\.\d+\.\d+)$/u;
+            /^(cli-core|objective-guide|objective-regulator|objective-portfolio-supervisor|pguide-config|pguide)-v(\d+\.\d+\.\d+(?:-rc\.\d+)?)$/u;
 
           let packageId;
           let taggedVersion;
@@ -133,9 +133,9 @@ jobs:
             console.error(`::error::${packageJson.name} is marked private.`);
             process.exit(1);
           }
-          if (!stableVersion.test(packageJson.version)) {
+          if (!releaseVersion.test(packageJson.version)) {
             console.error(
-              `::error::Publishing accepts stable SemVer versions only; received ${packageJson.version}.`,
+              `::error::Publishing accepts stable or rc SemVer versions only; received ${packageJson.version}.`,
             );
             process.exit(1);
           }
@@ -158,6 +158,7 @@ jobs:
             id: packageId,
             name: packageJson.name,
             version: packageJson.version,
+            dist_tag: packageJson.version.includes("-rc.") ? "rc" : "latest",
           })) {
             appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
           }
@@ -254,7 +255,7 @@ jobs:
         run: >-
           npm publish "${{ steps.pack.outputs.tarball }}"
           --access public
-          --tag latest
+          --tag "${{ steps.release.outputs.dist_tag }}"
           --registry=https://registry.npmjs.org/
           --loglevel=verbose
 

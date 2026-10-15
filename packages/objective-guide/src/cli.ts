@@ -13,7 +13,7 @@ import {
 import { createObjectiveLoader } from "./loader.js";
 import type { ObjectiveSubject } from "./types.js";
 
-export const guideCommandVersion = "0.1.0";
+export const guideCommandVersion = "0.2.0-rc.0";
 
 async function loadGuide(path: string) {
   try {
