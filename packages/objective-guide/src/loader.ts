@@ -34,7 +34,7 @@ export function createObjectiveLoader(options: ObjectiveLoaderOptions = {}): Obj
     const locales = validateReferences(await resources.readPages(sourceUri), sourceUri, manifest);
     if (runner.validate !== undefined) {
       for (const checkId of new Set(
-        manifest.levels.flatMap(({ advancement }) => advancement.checks),
+        manifest.levels.flatMap(({ advancement }) => advancement.checks.map(({ id }) => id)),
       )) {
         await runner.validate(canonical, checkId);
       }

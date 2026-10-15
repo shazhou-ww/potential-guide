@@ -144,7 +144,7 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     await mkdir(join(guide, "checks", "ready"), { recursive: true });
     await writeFile(
       join(guide, "objective-guide.yaml"),
-      "schemaVersion: 1\ndomainSchema:\n  type: object\n  required: [marker]\n  properties:\n    marker: {type: string}\nlevels:\n  - id: initial\n    advancement:\n      checks: [ready]\ndefaultLanguage: en-US\nlanguages: [en-US]\n",
+      "schemaVersion: 1\ndomainSchema:\n  type: object\n  required: [marker]\n  properties:\n    marker: {type: string}\nlevels:\n  - id: initial\n    advancement:\n      checks:\n        - id: ready\n          problems: [not-ready]\ndefaultLanguage: en-US\nlanguages: [en-US]\n",
     );
     await page(guide, "system/overview", "Fixture");
     await page(guide, "system/404", "Missing");

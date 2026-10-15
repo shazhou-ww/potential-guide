@@ -74,7 +74,16 @@ test("scaffold, validate and probe work directly", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "pguide-cli-"));
   try {
     const guide = join(temporary, "guide");
-    const scaffold = await run(bins.scaffold, ["guide", guide, "--format", "json"]);
+    const scaffold = await run(bins.scaffold, [
+      "guide",
+      guide,
+      "--check",
+      "ready",
+      "--problem",
+      "not-ready",
+      "--format",
+      "json",
+    ]);
     assert.equal(scaffold.code, 0, scaffold.stdout);
     const manifest = join(guide, "objective-guide.yaml");
     const validate = await run(bins.validate, ["guide", manifest, "--format", "json"]);

@@ -41,7 +41,11 @@ const probeWithContext = new WeakMap<
   (context: ProbeContext) => Promise<ObjectiveObservation>
 >();
 
-function checkResult(value: unknown, locale: LoadedLocale): CheckResult {
+function checkResult(
+  value: unknown,
+  locale: LoadedLocale,
+  declaredProblemIds: ReadonlySet<string>,
+): CheckResult {
   if (!record(value) || typeof value.pass !== "boolean")
     throw new ObjectiveOperationError("Invalid check result.");
   if (value.pass) {
@@ -63,9 +67,10 @@ function checkResult(value: unknown, locale: LoadedLocale): CheckResult {
       !identifier(entry.id) ||
       !record(entry.parameters) ||
       !json(entry.parameters) ||
+      !declaredProblemIds.has(entry.id) ||
       !locale.pages.has(`problems/${entry.id}`)
     ) {
-      throw new ObjectiveOperationError("Check returned an invalid or unknown Problem ID.");
+      throw new ObjectiveOperationError("Check returned an invalid or undeclared Problem ID.");
     }
     return Object.freeze({
       id: entry.id,
@@ -88,6 +93,7 @@ function problemSummary(
 
 async function runLevelChecks(
   context: ObjectiveCheckSchedulingContext,
+  declaredProblems: ReadonlyMap<string, ReadonlySet<string>>,
   policy: ObjectiveCheckSchedulingPolicy | undefined,
   runner: ObjectiveCheckRunner,
   request: CheckRequest,
@@ -123,6 +129,7 @@ async function runLevelChecks(
         results[index] = checkResult(
           await runner.run(context.instance.guide.manifestUri, checkId, request, signal),
           locale,
+          declaredProblems.get(checkId)!,
         );
       } catch (cause) {
         stopped = true;
@@ -373,8 +380,13 @@ export function createObjectiveGuide(
           probe: Object.freeze({ tempDirectory: context.tempDirectory }),
         });
         for (const level of manifest.levels) {
+          const checkIds = level.advancement.checks.map(({ id }) => id);
+          const declaredProblems = new Map(
+            level.advancement.checks.map(({ id, problems }) => [id, new Set(problems)]),
+          );
           const results = await runLevelChecks(
-            Object.freeze({ instance, levelId: level.id, checkIds: level.advancement.checks }),
+            Object.freeze({ instance, levelId: level.id, checkIds: Object.freeze(checkIds) }),
+            declaredProblems,
             schedulingPolicy,
             runner,
             request,

@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 扩展 manifest 类型与解析
-- [ ] **I-S02:** 收紧 Reference 与运行时校验
-- [ ] **I-S03:** 更新生成面与契约测试
+- [x] **I-S01:** 扩展 manifest 类型与解析
+- [x] **I-S02:** 收紧 Reference 与运行时校验
+- [x] **I-S03:** 更新生成面与契约测试
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 三层 manifest 可加载
-- [ ] **I-AC02:** ID 与 Reference 精确对应
-- [ ] **I-AC03:** 仓库检查通过
+- [x] **I-AC01:** 三层 manifest 可加载
+- [x] **I-AC02:** ID 与 Reference 精确对应
+- [x] **I-AC03:** 仓库检查通过
 
 ## Deployment
 

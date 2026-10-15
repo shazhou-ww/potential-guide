@@ -141,14 +141,37 @@ export function parseManifest(source: string): ObjectiveGuideManifest {
       throw new ObjectiveConfigurationError("Levels require a non-reserved ID and advancement.");
     }
     fields(entry.advancement, ["checks"]);
-    if (!Array.isArray(entry.advancement.checks) || !entry.advancement.checks.every(identifier)) {
-      throw new ObjectiveConfigurationError("Advancement checks must be CheckIds.");
+    if (!Array.isArray(entry.advancement.checks)) {
+      throw new ObjectiveConfigurationError("Advancement checks must be check nodes.");
     }
-    return { id: entry.id, advancement: { checks: entry.advancement.checks.map(String) } };
+    const checks = entry.advancement.checks.map((check: unknown) => {
+      if (!record(check)) throw new ObjectiveConfigurationError("Invalid check.");
+      fields(check, ["id", "problems"]);
+      if (
+        !identifier(check.id) ||
+        !Array.isArray(check.problems) ||
+        !check.problems.every(identifier)
+      ) {
+        throw new ObjectiveConfigurationError("Checks require an ID and ProblemIds.");
+      }
+      if (new Set(check.problems).size !== check.problems.length) {
+        throw new ObjectiveConfigurationError(`Duplicate Problem ID in check: ${check.id}.`);
+      }
+      return { id: check.id, problems: check.problems.map(String) };
+    });
+    return { id: entry.id, advancement: { checks } };
   });
   const first = levels[0]!;
   if (new Set(levels.map(({ id }) => id)).size !== levels.length) {
     throw new ObjectiveConfigurationError("Duplicate level ID.");
+  }
+  const checks = levels.flatMap(({ advancement }) => advancement.checks);
+  if (new Set(checks.map(({ id }) => id)).size !== checks.length) {
+    throw new ObjectiveConfigurationError("Duplicate check ID.");
+  }
+  const problemIds = checks.flatMap(({ problems }) => problems);
+  if (new Set(problemIds).size !== problemIds.length) {
+    throw new ObjectiveConfigurationError("Problem ID must belong to exactly one check.");
   }
   let prerequisite: ObjectiveGuideManifest["prerequisite"];
   if (Object.hasOwn(value, "prerequisite")) {

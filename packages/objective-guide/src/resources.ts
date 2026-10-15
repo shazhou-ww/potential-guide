@@ -129,7 +129,9 @@ export function validateReferences(
   const root = canonicalManifestUri(sourceUri.endsWith("/") ? sourceUri : `${sourceUri}/`);
   const languages = new Set(manifest.languages);
   const levelIds = new Set(manifest.levels.map(({ id }) => id));
-  const checkIds = new Set(manifest.levels.flatMap(({ advancement }) => advancement.checks));
+  const checks = manifest.levels.flatMap(({ advancement }) => advancement.checks);
+  const checkIds = new Set(checks.map(({ id }) => id));
+  const problemIds = new Set(checks.flatMap(({ problems }) => problems));
   const nodes = new Map<string, Map<string, LoadedReferencePage>>();
   for (const resource of resources) {
     const uri = canonicalManifestUri(resource.uri);
@@ -159,6 +161,9 @@ export function validateReferences(
     if (namespace === "checks" && !checkIds.has(localId)) {
       throw new ObjectiveConfigurationError(`Unknown check Reference: ${localId}.`);
     }
+    if (namespace === "problems" && !problemIds.has(localId)) {
+      throw new ObjectiveConfigurationError(`Unknown problem Reference: ${localId}.`);
+    }
     const id = `${namespace}/${localId}`;
     const locales = nodes.get(id) ?? new Map<string, LoadedReferencePage>();
     if (locales.has(language))
@@ -172,6 +177,7 @@ export function validateReferences(
     "levels/terminal",
     ...[...levelIds].map((id) => `levels/${id}`),
     ...[...checkIds].map((id) => `checks/${id}`),
+    ...[...problemIds].map((id) => `problems/${id}`),
   ];
   for (const id of required) {
     if (!nodes.has(id)) throw new ObjectiveConfigurationError(`Missing Reference: ${id}.`);

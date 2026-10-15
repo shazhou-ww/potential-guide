@@ -12,8 +12,16 @@ async function exercise(concurrency) {
     schemaVersion: 1,
     domainSchema: { type: "object" },
     levels: [
-      { id: "stage", advancement: { checks: ["first", "second"] } },
-      { id: "later", advancement: { checks: ["later"] } },
+      {
+        id: "stage",
+        advancement: {
+          checks: [
+            { id: "first", problems: ["first-repair"] },
+            { id: "second", problems: ["second-repair"] },
+          ],
+        },
+      },
+      { id: "later", advancement: { checks: [{ id: "later", problems: [] }] } },
     ],
     defaultLanguage: "zh-CN",
     languages: ["zh-CN"],
@@ -27,7 +35,8 @@ async function exercise(concurrency) {
     ["checks/first", { title: "第一项", description: "第一项检查" }],
     ["checks/second", { title: "第二项", description: "第二项检查" }],
     ["checks/later", { title: "后续检查", description: "后续阶段检查" }],
-    ["problems/repair", { title: "需要修复", description: "修复当前阶段" }],
+    ["problems/first-repair", { title: "需要修复", description: "修复第一项检查" }],
+    ["problems/second-repair", { title: "需要修复", description: "修复第二项检查" }],
   ];
   const loader = createObjectiveLoader({
     resources: {
@@ -53,7 +62,7 @@ async function exercise(concurrency) {
         }
         return repaired
           ? { pass: true }
-          : { pass: false, problems: [{ id: "repair", parameters: { checkId: id } }] };
+          : { pass: false, problems: [{ id: `${id}-repair`, parameters: { checkId: id } }] };
       },
     },
   });

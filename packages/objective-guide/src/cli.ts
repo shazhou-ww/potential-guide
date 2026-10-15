@@ -80,7 +80,7 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
     writeResult(
       { schemaVersion: 1, command: "scaffold", types: ["guide"] },
       globals.format,
-      "Usage: pguide scaffold guide <directory> [--language <tag>] [--level <id>] [--check <id>]",
+      "Usage: pguide scaffold guide <directory> [--language <tag>] [--level <id>] [--check <id>] [--problem <id>]",
     );
     return;
   }
@@ -98,15 +98,19 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
   if (languages.length === 0) languages.push("en-US");
   const level = (option(argv, "--level") as string | undefined) ?? "initial";
   const check = option(argv, "--check") as string | undefined;
+  const problems = option(argv, "--problem", { multiple: true }) as string[];
   if (
     !/^[a-z0-9][a-z0-9-]*$/.test(level) ||
-    (check !== undefined && !/^[a-z0-9][a-z0-9-]*$/.test(check))
+    (check !== undefined && !/^[a-z0-9][a-z0-9-]*$/.test(check)) ||
+    problems.some((problem) => !/^[a-z0-9][a-z0-9-]*$/.test(problem))
   )
-    throw new CliError("Level and check IDs must be lowercase kebab-case.");
+    throw new CliError("Level, check and problem IDs must be lowercase kebab-case.");
+  if ((check === undefined && problems.length > 0) || new Set(problems).size !== problems.length)
+    throw new CliError("Problems require one check and must be unique.");
   await mkdir(root, { recursive: true });
   await writeFile(
     join(root, "objective-guide.yaml"),
-    `schemaVersion: 1\ndomainSchema:\n  type: object\nlevels:\n  - id: ${level}\n    advancement:\n      checks: ${check === undefined ? "[]" : `[${check}]`}\ndefaultLanguage: ${languages[0]}\nlanguages: [${languages.join(", ")}]\n`,
+    `schemaVersion: 1\ndomainSchema:\n  type: object\nlevels:\n  - id: ${level}\n    advancement:\n      checks:${check === undefined ? " []" : `\n        - id: ${check}\n          problems: [${problems.join(", ")}]`}\ndefaultLanguage: ${languages[0]}\nlanguages: [${languages.join(", ")}]\n`,
   );
   for (const language of languages) {
     const pages: [string, string][] = [
@@ -120,6 +124,11 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
     ];
     if (check !== undefined)
       pages.push([`checks/${check}`, page("Generated check", "TODO: describe this check.")]);
+    for (const problem of problems)
+      pages.push([
+        `problems/${problem}`,
+        page("Generated problem", "TODO: describe this problem."),
+      ]);
     for (const [id, source] of pages) {
       const path = join(root, "references", ...id.split("/"), `${language}.md`);
       await mkdir(dirname(path), { recursive: true });

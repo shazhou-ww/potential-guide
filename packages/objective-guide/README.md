@@ -30,7 +30,25 @@ my-objective-guide/
     └── pages/<page-id>/{en-US,zh-CN}.md
 ```
 
-Manifest checks contain stable IDs only. The file runner discovers exactly one
+Manifest levels contain check nodes with stable IDs and the stable Problem IDs
+that each check is allowed to return:
+
+```yaml
+levels:
+  - id: configuration-invalid
+    advancement:
+      checks:
+        - id: repository-ready
+          problems: [repository-unready]
+```
+
+Level, check, and problem IDs form an explicit three-layer forest. Each check
+and problem ID belongs to exactly one parent. Every declared level, check, and
+problem has exactly one Reference page per manifest language; undeclared pages
+in those namespaces are rejected. The existing `system` and `pages` namespace
+rules are unchanged.
+
+The file runner discovers exactly one
 `run` or `run.*` entry in the matching check directory and exchanges one JSON
 request and response over standard I/O. Every complete probe receives a unique
 temporary directory shared by its prerequisite chain and checks. Concurrent checks
@@ -38,8 +56,9 @@ must use distinct files or otherwise coordinate access to that directory; it is
 removed only after all started checks have settled.
 
 Reference identity is `<namespace>/<id>`; language is always the leaf file.
-Checks return stable Problem IDs plus JSON parameters, while the selected locale
-supplies the human-facing problem content.
+Checks return only their declared stable Problem IDs plus JSON parameters.
+Returning a Problem owned by another check is an explicit operation error,
+while the selected locale supplies the human-facing problem content.
 
 ## Public API
 

@@ -111,7 +111,17 @@ test("loaded same-level checks retain injected scheduling through supervision an
         return JSON.stringify({
           schemaVersion: 1,
           domainSchema: { type: "object" },
-          levels: [{ id: "stage", advancement: { checks: ["first", "second"] } }],
+          levels: [
+            {
+              id: "stage",
+              advancement: {
+                checks: [
+                  { id: "first", problems: ["first-repair"] },
+                  { id: "second", problems: ["second-repair"] },
+                ],
+              },
+            },
+          ],
           defaultLanguage: "en-US",
           languages: ["en-US"],
         });
@@ -124,7 +134,8 @@ test("loaded same-level checks retain injected scheduling through supervision an
           ["levels/terminal", { title: "Terminal", description: "Complete" }],
           ["checks/first", { title: "First", description: "First check" }],
           ["checks/second", { title: "Second", description: "Second check" }],
-          ["problems/repair", { title: "Repair", description: "Repair check" }],
+          ["problems/first-repair", { title: "Repair", description: "Repair first check" }],
+          ["problems/second-repair", { title: "Repair", description: "Repair second check" }],
         ].map(([id, properties]) => ({
           uri: new URL(`${id}/en-US.md`, sourceUri).href,
           source: `---\n${JSON.stringify(properties)}\n---\n`,
@@ -141,7 +152,7 @@ test("loaded same-level checks retain injected scheduling through supervision an
         await Promise.resolve();
         active -= 1;
         return missing.has(id)
-          ? { pass: false, problems: [{ id: "repair", parameters: { checkId: id } }] }
+          ? { pass: false, problems: [{ id: `${id}-repair`, parameters: { checkId: id } }] }
           : { pass: true };
       },
     },

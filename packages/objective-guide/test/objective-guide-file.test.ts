@@ -39,7 +39,9 @@ domainSchema:
 levels:
   - id: configuration-invalid
     advancement:
-      checks: [ready]
+      checks:
+        - id: ready
+          problems: [project-unready]
 defaultLanguage: en-US
 languages: [en-US, zh-CN]
 `,

@@ -23,6 +23,10 @@ const rootUri = "https://objectives.test/root/manifest.yaml";
 const childUri = "https://objectives.test/child/manifest.yaml";
 type Handler = (request: CheckRequest) => Promise<unknown>;
 
+function checks(...ids: string[]) {
+  return ids.map((id) => ({ id, problems: [`${id}-problem`] }));
+}
+
 function manifest(overrides: Partial<ObjectiveGuideManifest> = {}): ObjectiveGuideManifest {
   return {
     schemaVersion: 1,
@@ -32,7 +36,7 @@ function manifest(overrides: Partial<ObjectiveGuideManifest> = {}): ObjectiveGui
       properties: { root: { type: "string" } },
       additionalProperties: false,
     },
-    levels: [{ id: "unready", advancement: { checks: ["ready"] } }],
+    levels: [{ id: "unready", advancement: { checks: checks("ready") } }],
     defaultLanguage: "en-US",
     languages: ["en-US", "zh-CN"],
     ...overrides,
@@ -77,21 +81,23 @@ function fixture(
           description: `Waiting ${language}`,
           outcome: `Cost and benefit ${language}`,
         });
-        for (const id of level.advancement.checks)
-          add(`checks/${id}`, language, {
-            title: id,
-            description: `Check ${id} ${language}`,
+        for (const check of level.advancement.checks) {
+          add(`checks/${check.id}`, language, {
+            title: check.id,
+            description: `Check ${check.id} ${language}`,
           });
+          for (const problemId of check.problems)
+            add(
+              `problems/${problemId}`,
+              language,
+              {
+                title: `Problem ${language}`,
+                description: `Fix it ${language}`,
+              },
+              "[[system/404]]",
+            );
+        }
       }
-      add(
-        "problems/problem",
-        language,
-        {
-          title: `Problem ${language}`,
-          description: `Fix it ${language}`,
-        },
-        "[[system/404]]",
-      );
     }
     pages.set(source, resources);
   }
@@ -113,7 +119,28 @@ function fixture(
     resources,
     checkRunner: {
       async run(_uri, id, request) {
-        return await (handlers[id] ?? (async () => ({ pass: true }) as const))(request);
+        const result = await (handlers[id] ?? (async () => ({ pass: true }) as const))(request);
+        if (
+          result !== null &&
+          typeof result === "object" &&
+          "pass" in result &&
+          result.pass === false &&
+          "problems" in result &&
+          Array.isArray(result.problems)
+        ) {
+          return {
+            ...result,
+            problems: result.problems.map((problem: unknown) =>
+              problem !== null &&
+              typeof problem === "object" &&
+              "id" in problem &&
+              problem.id === "problem"
+                ? { ...problem, id: `${id}-problem` }
+                : problem,
+            ),
+          };
+        }
+        return result;
       },
     },
   });
@@ -137,8 +164,8 @@ test("default scheduling runs all same-stage checks serially and aggregates ever
     {
       [rootUri]: manifest({
         levels: [
-          { id: "stage", advancement: { checks: ["first", "second", "third"] } },
-          { id: "later", advancement: { checks: ["later"] } },
+          { id: "stage", advancement: { checks: checks("first", "second", "third") } },
+          { id: "later", advancement: { checks: checks("later") } },
         ],
       }),
     },
@@ -180,7 +207,7 @@ test("changing injected concurrency changes timing but not observations", async 
   const context = fixture(
     {
       [rootUri]: manifest({
-        levels: [{ id: "stage", advancement: { checks: ["first", "second"] } }],
+        levels: [{ id: "stage", advancement: { checks: checks("first", "second") } }],
       }),
     },
     Object.fromEntries(
@@ -215,7 +242,7 @@ test("concurrent probes have independent limits and temporary directories", {
   const context = fixture(
     {
       [rootUri]: manifest({
-        levels: [{ id: "stage", advancement: { checks: ["first", "second"] } }],
+        levels: [{ id: "stage", advancement: { checks: checks("first", "second") } }],
       }),
     },
     Object.fromEntries(
@@ -259,7 +286,9 @@ test("injected scheduling overlaps checks up to its limit and preserves manifest
   let active = 0;
   let maximum = 0;
   const context = fixture(
-    { [rootUri]: manifest({ levels: [{ id: "stage", advancement: { checks: names } }] }) },
+    {
+      [rootUri]: manifest({ levels: [{ id: "stage", advancement: { checks: checks(...names) } }] }),
+    },
     Object.fromEntries(
       names.map((id, index) => [
         id,
@@ -311,8 +340,8 @@ test("later-stage scheduling waits for every current-stage check to pass", {
     {
       [rootUri]: manifest({
         levels: [
-          { id: "stage", advancement: { checks: ["slow", "fast"] } },
-          { id: "later", advancement: { checks: ["later"] } },
+          { id: "stage", advancement: { checks: checks("slow", "fast") } },
+          { id: "later", advancement: { checks: checks("later") } },
         ],
       }),
     },
@@ -356,7 +385,7 @@ test("policy receives frozen stage context throughout prerequisites and repeated
         prerequisite: { manifestUri: childUri, subject: '{"root": root}' },
       }),
       [childUri]: manifest({
-        levels: [{ id: "child-stage", advancement: { checks: ["child-one", "child-two"] } }],
+        levels: [{ id: "child-stage", advancement: { checks: checks("child-one", "child-two") } }],
       }),
     },
     {
@@ -457,7 +486,7 @@ test("operation errors stop queued checks but drain active checks before directo
     const context = fixture(
       {
         [rootUri]: manifest({
-          levels: [{ id: "stage", advancement: { checks: ["first", "second", "queued"] } }],
+          levels: [{ id: "stage", advancement: { checks: checks("first", "second", "queued") } }],
         }),
       },
       {
@@ -537,7 +566,7 @@ test("canonical identity is language-neutral and References provide descriptions
   assert.equal(en.describeLevels()[0]?.advancementOutcome, "Cost and benefit en-US");
   assert.equal((await en.readPage("missing")).id, "system/404");
   assert.deepEqual(await en.searchPages("fix it"), [
-    { id: "problems/problem", title: "Problem en-US" },
+    { id: "problems/ready-problem", title: "Problem en-US" },
   ]);
 });
 
@@ -563,8 +592,8 @@ test("ordered checks share one probe directory, clean it and return stable Probl
   let passing = false;
   const config = manifest({
     levels: [
-      { id: "one", advancement: { checks: ["first"] } },
-      { id: "two", advancement: { checks: ["second"] } },
+      { id: "one", advancement: { checks: checks("first") } },
+      { id: "two", advancement: { checks: checks("second") } },
     ],
   });
   const context = fixture(
@@ -591,10 +620,10 @@ test("ordered checks share one probe directory, clean it and return stable Probl
   const failed = await current.probe();
   assert.equal(failed.current.id, "one");
   assert.equal(failed.gapSummary, "Dynamic detail");
-  assert.equal(failed.problems[0]?.id, "problem");
+  assert.equal(failed.problems[0]?.id, "first-problem");
   assert.equal(
     (await failed.current.instance.readPage(`problems/${failed.problems[0]!.id}`)).id,
-    "problems/problem",
+    "problems/first-problem",
   );
   await assert.rejects(stat(directories[0]!));
   passing = true;
@@ -610,8 +639,8 @@ test("prerequisite defaults to terminal and can unlock at a declared minimum lev
   const calls: string[] = [];
   const child = manifest({
     levels: [
-      { id: "configured", advancement: { checks: ["first"] } },
-      { id: "synchronized", advancement: { checks: ["second"] } },
+      { id: "configured", advancement: { checks: checks("first") } },
+      { id: "synchronized", advancement: { checks: checks("second") } },
     ],
   });
   const root = manifest({
@@ -695,6 +724,96 @@ test("invalid minimum levels, malformed References and unknown Problems fail exp
     }),
   );
   await assert.rejects(unknown.probe(), ObjectiveOperationError);
+});
+
+test("manifest tree and Reference identities are exact", async () => {
+  const legacy = fixture();
+  legacy.texts.set(
+    rootUri,
+    JSON.stringify({
+      ...manifest(),
+      levels: [{ id: "stage", advancement: { checks: ["legacy"] } }],
+    }),
+  );
+  await assert.rejects(legacy.loader.load(rootUri), /Invalid check/);
+
+  const duplicateCheck = fixture();
+  duplicateCheck.texts.set(
+    rootUri,
+    JSON.stringify({
+      ...manifest(),
+      levels: [
+        { id: "one", advancement: { checks: checks("shared") } },
+        { id: "two", advancement: { checks: checks("shared") } },
+      ],
+    }),
+  );
+  await assert.rejects(duplicateCheck.loader.load(rootUri), /Duplicate check ID/);
+
+  const duplicateProblem = fixture();
+  duplicateProblem.texts.set(
+    rootUri,
+    JSON.stringify({
+      ...manifest(),
+      levels: [
+        {
+          id: "stage",
+          advancement: {
+            checks: [
+              { id: "first", problems: ["shared"] },
+              { id: "second", problems: ["shared"] },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+  await assert.rejects(duplicateProblem.loader.load(rootUri), /exactly one check/);
+
+  const source = new URL("references/", rootUri).href;
+  for (const namespace of ["levels", "checks", "problems"]) {
+    const extra = fixture();
+    extra.pages.get(source)!.push({
+      uri: new URL(`${namespace}/extra/en-US.md`, source).href,
+      source: markdown(
+        namespace === "levels"
+          ? { title: "Extra", description: "Extra", outcome: "Extra" }
+          : { title: "Extra", description: "Extra" },
+      ),
+    });
+    await assert.rejects(
+      extra.loader.load(rootUri),
+      new RegExp(`Unknown ${namespace.slice(0, -1)}`),
+    );
+  }
+
+  const missingProblem = fixture();
+  missingProblem.pages.set(
+    source,
+    missingProblem.pages
+      .get(source)!
+      .filter(({ uri }) => !uri.includes("/problems/ready-problem/zh-CN.md")),
+  );
+  await assert.rejects(missingProblem.loader.load(rootUri), /cover every language/);
+});
+
+test("a check cannot return a Problem owned by another check", async () => {
+  const current = await instance(
+    fixture(
+      {
+        [rootUri]: manifest({
+          levels: [{ id: "stage", advancement: { checks: checks("first", "second") } }],
+        }),
+      },
+      {
+        first: async () => ({
+          pass: false,
+          problems: [{ id: "second-problem", parameters: {} }],
+        }),
+      },
+    ),
+  );
+  await assert.rejects(current.probe(), /undeclared Problem ID/);
 });
 
 test("projection profile rejects dynamic capabilities and bounds execution/output", () => {

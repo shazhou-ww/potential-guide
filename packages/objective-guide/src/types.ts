@@ -96,7 +96,11 @@ export interface ObjectiveGuideInstance {
   searchPages(query: string): Promise<readonly ReferencePageSummary[]>;
 }
 export interface ObjectiveLevelAdvancementManifest {
-  checks: readonly CheckId[];
+  checks: readonly ObjectiveCheckManifest[];
+}
+export interface ObjectiveCheckManifest {
+  id: CheckId;
+  problems: readonly ProblemId[];
 }
 export interface ObjectiveLevelManifest {
   id: ObjectiveLevelId;
