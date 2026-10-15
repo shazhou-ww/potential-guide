@@ -35,9 +35,11 @@ pguide-<command> [arguments]
 | --- | --- | --- | --- |
 | `pguide probe ...` | `pguide-probe` | Objective Guide | 加载并 probe 一个 Guide Instance |
 | `pguide regulate ...` | `pguide-regulate` | Objective Regulator | 对一个 Objective 执行有界 regulation |
+| `pguide continue ...` | `pguide-continue` | Objective Regulator | 重新激活已有 Regulation 并创建新 Attempt |
 | `pguide supervise ...` | `pguide-supervise` | Portfolio Supervisor | 规划或执行多 Objective directives |
 | `pguide scaffold ...` | `pguide-scaffold` | Objective Guide 工具 | 创建可加载的 Objective Guide 骨架 |
 | `pguide validate ...` | `pguide-validate` | Objective Guide 工具 | 静态验证 Guide manifest、checks 和 References |
+| `pguide config ...` | `pguide-config` | 可选配置工具 | 读取、验证和原子修改标准配置 |
 | `pguide list` | 内置 | 顶层 CLI | 列出命令、来源和协议版本 |
 | `pguide diagnose` | 内置 | 顶层 CLI | 检查配置、运行时和外部命令冲突 |
 | `pguide complete` | 内置 | 顶层 CLI | 生成 shell completion |
@@ -162,14 +164,14 @@ pguide regulate `
 | `--guide <path-or-uri>` | 是 | 无 | Guide manifest 的文件路径或 URI |
 | `--subject-file <path>` | 是 | 无 | JSON subject 文件；传入 `-` 表示 stdin |
 | `--target <level-id>` | 是 | 无 | 明确目标 level；也接受 `terminal`，但不隐式假定 |
-| `--agent <profile-name>` | 条件必需 | `defaultAgent` | 选择配置中预定义的 Agent profile；未指定且没有默认值时失败 |
+| `--agent <profile-name>` | 条件必需 | `defaultAgent` | 选择配置中预定义的 ACP Agent profile；未指定且没有默认值时失败 |
 | `--max-iterations <integer>` | 否 | `8` | 最多请求的 Agent action 数 |
 | `--max-stalled-iterations <integer>` | 否 | `2` | 连续未提升 level 的上限 |
 | `--timeout <duration>` | 否 | `30m` | 整次 regulation 的 wall-clock deadline |
 | `--language <bcp47>` | 否 | 配置值 | Reference 内容语言 |
 | `--report <path>` | 否 | 无 | 原子写入包含每轮摘要的最终报告 |
 
-Regulator 不持有隐藏会话状态，也不提供独立 `resume` 命令。再次运行相同命令会从真实世界重新 probe 并继续推进。
+核心 Regulator 保持无持久状态；`pguide` 在其外层显式保存 Regulation、Attempt 和 ACP session reference，并通过独立的 `continue` 命令重新激活。重复执行原 `regulate` 命令会创建新的 Regulation，不会猜测需要恢复哪个历史目标。
 
 命令行不接受 Agent executable、endpoint、protocol、任意 Agent 参数或凭据。除 `--agent <profile-name>` 外，所有 Agent 细节都来自标准配置。
 
@@ -195,48 +197,97 @@ agents:
       command: copilot
       args: [--acp]
       env: [GITHUB_TOKEN]
-
-  shared-copilot:
-    connection:
-      type: ahp
-      protocolVersion: "1.0.0"
-    transport:
-      type: websocket
-      url: ws://127.0.0.1:8787
-      bearerTokenEnv: PGUIDE_AHP_TOKEN
-    agent:
-      id: copilot
+    requirements:
+      sessionResume: true
 ```
 
-`agents` 是以稳定名称索引的预定义 profile 列表。ACP profile 描述一个可直连 Agent；AHP profile 描述一个 session host，并可选择该 host 发布的 Agent。用户配置先加载，项目配置按 profile 名整体替换，显式配置最后覆盖；单个 profile 不做字段级深度合并，避免从多个来源拼出不可审计的执行目标。
+`agents` 是以稳定名称索引的预定义 ACP Agent profile 列表。用户配置先加载，项目配置按 profile 名整体替换，显式配置最后覆盖；单个 profile 不做字段级深度合并，避免从多个来源拼出不可审计的 Agent。
 
-`pguide list agents` 列出有效 profile、来源、连接层、transport 和所选 Agent，但不显示凭据。`pguide diagnose agent <profile-name>` 解析 executable 或 endpoint，执行对应握手并验证 regulation 所需能力，不提交任务。
+`pguide config list-agents` 列出有效 profile、来源、ACP version 和 transport，但不显示凭据。`pguide diagnose agent <profile-name>` 解析 executable，执行 ACP `initialize` 并验证 regulation 所需 capabilities，不创建 session 或提交 prompt。
 
 配置文件不得包含 token、password 或 API key 字面值。`env` 只声明允许继承的环境变量名；网络认证只引用保存凭据的环境变量名或宿主凭据提供器。
 
-## Agent 连接契约
+## ACP Agent 契约
 
-Agent profile 的 `connection.type` 只接受 `acp` 或 `ahp`，其他值在启动任何进程或网络连接前失败。两者位于不同层级，不能视为可互换的 Agent wire protocol：
+v1 Agent profile 的 `connection.type` 只接受 `acp`，其他值在启动任何进程前失败。`pguide` 作为 Agent Client Protocol client，通过 `initialize` 协商 wire protocol version 和 capabilities，再创建或恢复 Agent session。
 
-- **ACP direct**：Agent Client Protocol 是单 client 到单 coding agent 的点对点通信层。`pguide` 作为 ACP client，通过 `initialize` 协商 protocol version 和 capabilities，再创建或恢复 Agent session。
-- **AHP host**：微软 Agent Host Protocol 是多 client 共享 Agent sessions 的协调层。`pguide` 作为 AHP client 连接 authoritative host；host 负责 session state、action sequencing、subscriptions、reconnection 和 replay，并通常在下层通过 ACP 或 Agent 专用接口驱动 Agent。
-
-截至 2026-10-15，公开规范的稳定 ACP wire protocol version 为 `1`，微软 AHP 已发布 protocol `1.0.0`。这些是兼容性观测而非永久默认值；实现必须根据握手与 capabilities 判断兼容性，不能根据 SDK 或 schema artifact 的包版本推断 wire compatibility。
-
-协议依据分别为 [Agent Client Protocol](https://github.com/agentclientprotocol/agent-client-protocol) 和微软 [Agent Host Protocol](https://github.com/microsoft/agent-host-protocol) 的公开规范。
+协议依据为 [Agent Client Protocol](https://github.com/agentclientprotocol/agent-client-protocol) 公开规范。实现必须根据 `initialize` 握手和 capabilities 判断兼容性，不能根据 SDK 或 schema artifact 的包版本推断 wire compatibility。
 
 `pguide` 不定义私有 Agent wire protocol，也不接受任意 `process` adapter。连接实现负责把 `ObjectiveActionRequest` 映射到标准 session/turn 消息，并将一次 Agent 结果映射为现有 `ObjectiveActionExecutor` 的 `completed` 或 `blocked` 结果。
 
 `completed` 只表示 Agent 完成了本轮动作，不表示 Objective 有进展。CLI 必须等待 Regulator re-probe；只有新的 observation 可以证明 level 提升或 target reached。
 
-AHP host 或 ACP agent/client capability 负责 mutation 权限、工具允许列表和人工授权流程。CLI 不提供绕过协议参与方审批的通用开关。
+ACP agent/client capabilities 负责 mutation 权限、工具允许列表和人工授权流程。CLI 不提供绕过协议参与方审批的通用开关。
 
-### AHP 与 ACP 的选择
+Agent profile 必须支持 ACP session resume，供 `continue` 恢复上下文。`pguide` 在实时运行期间持久化收到的协议可见 `session/update`；历史 replay 是补全能力，不能作为审计记录的唯一来源。隐藏 chain-of-thought、Agent 未发送的内部日志和 backend tracing 不属于 ACP transcript。
 
-- 默认推荐 **AHP host profile** 用于长期 Regulation、`continue`、多端观察或控制：AHP 的 authoritative channel state、ordered action envelopes、`serverSeq`、subscriptions 和 reconnect replay 可以让不同终端共享同一 session，并从增量 action stream 恢复界面与 Agent 过程。
-- **ACP direct profile** 适合一次性、本机、单 client regulation：依赖更少，直接表达 prompt、streaming update、tool call 和 permission flow。
-- AHP 不替代 ACP 的 Agent 通信能力。典型架构是 `pguide → AHP host → ACP agent`；AHP 官方将其描述为协调层，ACP 是通信层。
-- AHP 的增量进度只证明 Agent session 中发生了哪些 actions，并不证明 Objective level 已提升。每次 regulation 或 continuation 仍必须由 Objective Guide 重新 probe，以 observation 作为进度与完成的唯一权威。
+微软 Agent Host Protocol 的多客户端 authoritative state、action sequencing 和 reconnect replay 对未来多端共享有价值，但不是 v1 regulation 的前置依赖。若以后加入 AHP，应作为 ACP Agent 之上的可选 host integration，而不是改变 Regulation 的进度语义。
+
+## Regulation 与 Attempt
+
+`regulate` 创建持久 **Regulation**，并立即运行第一个 **Attempt**：
+
+- Regulation 保存稳定的 Guide identity/revision、subject digest、target、Agent profile 快照和历史摘要；
+- Attempt 保存一次调用的 limits、ACP session、observations、actions、结果和时间范围；
+- 命令成功创建后始终输出 `regulationId`，即使首个 Attempt blocked、stalled 或 timed out。
+
+`pguide` 自己持久化 Regulation ledger 和 ACP transcript。ACP Agent 保存可恢复的会话上下文；两者都不能替代重新 probe 得到的现实状态。
+
+## `continue` 子命令
+
+```powershell
+pguide continue <regulation-id>
+```
+
+`continue` 使用原 Regulation 参数创建一个新 Attempt，不要求重复 Guide、subject、target 或 Agent 参数：
+
+1. 加载 Regulation、Agent profile 快照、ACP session ID 和历史摘要；
+2. 恢复 ACP session；无法恢复时创建新 session 并注入精简历史摘要，同时记录恢复方式；
+3. 始终先重新 probe；
+4. 目标仍满足时记录 `still-satisfied`，不调用 Agent；
+5. 现实已退化或此前未达标时，从当前 observation 继续 regulation；
+6. 绝不重放已完成的现实动作，也不以历史 observation 覆盖当前 probe。
+
+Guide identity/revision、subject 和 target 发生不兼容变化时，`continue` 拒绝执行并要求创建新的 Regulation。Agent profile 后续更新或删除不改变历史快照；若要采用新 profile，应创建新 Regulation，未来可另行提供显式 fork。
+
+每个 Attempt 获得新的 `maxIterations`、`maxStalledIterations` 和 invocation timeout；Regulation 保留累计 attempts、actions 和活跃时间用于审计及可选总预算策略。不能通过 `continue` 静默放宽配置定义的预算。
+
+默认 state 路径：
+
+- Windows：`%LOCALAPPDATA%\pguide\regulations\<regulation-id>`；
+- macOS/Linux：`$XDG_STATE_HOME/pguide/regulations/<regulation-id>`，未设置时使用 `~/.local/state/pguide/regulations/<regulation-id>`。
+
+state 不保存凭据。subject、observations 和 transcript 可能敏感，必须采用仅当前用户可访问的权限，并支持配置保留期限。
+
+## `config` 可选扩展
+
+`pguide-config` 是官方可选外部命令。没有安装时，用户仍可手工编辑标准 YAML；核心 `pguide` 始终负责 schema、加载、合并和运行时验证。
+
+```text
+pguide config show
+pguide config path
+pguide config validate
+pguide config edit
+pguide config get <key>
+pguide config set <key> <value>
+pguide config unset <key>
+pguide config list-agents
+pguide config show-agent <name>
+pguide config add-agent <name> <source>
+pguide config update-agent <name> <source>
+pguide config remove-agent <name>
+```
+
+`<source>` 是配置文件路径；传入 `-` 时从 stdin 读取到 EOF。source 不可省略，也不根据 TTY 自动推断。
+
+```powershell
+pguide config add-agent copilot .\copilot-agent.yaml --scope user
+Get-Content .\copilot-agent.yaml -Raw | pguide config update-agent copilot - --scope project
+```
+
+`add-agent` 遇到同名 profile 时失败；`update-agent` 遇到不存在的 profile 时失败；两者都解析一个完整 YAML/JSON profile，经 schema 与 secret literal 检查后原子写入，不进行字段级 patch。`remove-agent` 只删除注册信息，不删除历史 Regulation 中保存的脱敏 profile 快照。
+
+配置管理扩展与核心必须复用同一配置库，负责 schema、配置路径、层级合并、来源追踪、脱敏和原子写入，不能复制规则。
 
 ## Regulation 输出
 
@@ -266,12 +317,12 @@ JSON 输出包含稳定字段：
 
 | 退出码 | 含义 |
 | ---: | --- |
-| `0` | `target-reached`，或 `probe` 成功 |
+| `0` | `target-reached`、`still-satisfied`，或 `probe` 成功 |
 | `2` | CLI 参数、配置、Guide、subject 或协议无效 |
 | `3` | `action-blocked` 或 `no-actionable-problem` |
 | `4` | `no-progress` 或 `max-iterations` |
 | `5` | `timed-out` 或外部取消 |
-| `6` | AHP/ACP 握手、host/Agent session、transport 或 I/O 操作失败 |
+| `6` | ACP 握手、Agent session、transport 或 I/O 操作失败 |
 | `70` | 未分类内部错误 |
 
 所有非零结果在 Markdown 与 JSON 模式中都返回机器可识别的 status，不以解析错误文本作为自动化接口。
@@ -294,6 +345,6 @@ JSON 输出包含稳定字段：
 - 不让顶层 CLI 复制 Guide、Regulator 或 Portfolio 的业务实现。
 - 不允许外部命令覆盖保留的内置命令。
 - 不把 Agent 的自报完成当作 Objective 进展。
-- 不支持绕过 AHP host 或 ACP direct profile 的临时 Agent 命令行参数。
+- 不支持绕过预定义 ACP Agent profile 的临时 Agent 命令行参数。
 - 不提供关闭 timeout、iteration 或 stalled-progress 防护的无限运行模式。
-- 不在第一版实现远程插件市场、后台 daemon 或隐藏的 regulation session。
+- 不在第一版实现 AHP、多客户端并发控制、远程插件市场或后台 daemon。
