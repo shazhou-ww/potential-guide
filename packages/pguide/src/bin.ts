@@ -15,7 +15,7 @@ import {
 import spawn from "cross-spawn";
 import { sameDirectory } from "./path.js";
 
-const VERSION = "0.2.0-rc.0";
+const VERSION = "0.2.0-rc.1";
 const reserved = new Set(["diagnose", "complete"]);
 const commandPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 

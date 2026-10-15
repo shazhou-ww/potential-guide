@@ -1,6 +1,6 @@
 {
   "name": "@potential-guide/cli-core",
-  "version": "0.1.0",
+  "version": "0.1.0-rc.0",
   "description": "Shared CLI protocol, configuration, persistence, and ACP client for Potential Guide.",
   "type": "module",
   "sideEffects": false,
