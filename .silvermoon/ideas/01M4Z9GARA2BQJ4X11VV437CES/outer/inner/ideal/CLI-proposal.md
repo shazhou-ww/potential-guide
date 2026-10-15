@@ -40,11 +40,10 @@ pguide-<command> [arguments]
 | `pguide scaffold ...` | `pguide-scaffold` | Objective Guide 工具 | 创建可加载的 Objective Guide 骨架 |
 | `pguide validate ...` | `pguide-validate` | Objective Guide 工具 | 静态验证 Guide manifest、checks 和 References |
 | `pguide config ...` | `pguide-config` | 可选配置工具 | 读取、验证和原子修改标准配置 |
-| `pguide list` | 内置 | 顶层 CLI | 列出命令、来源和协议版本 |
 | `pguide diagnose` | 内置 | 顶层 CLI | 检查配置、运行时和外部命令冲突 |
 | `pguide complete` | 内置 | 顶层 CLI | 生成 shell completion |
 
-帮助和版本使用上下文相关的 `--help` 与 `--version`，不额外占用名词形式的一级子命令。
+帮助和版本使用上下文相关的 `--help` 与 `--version`，不额外占用名词形式的一级子命令。顶层 `--help` 同时列出内置命令与当前可发现的外部 commands；`--help --format json` 提供包含来源、解析路径和协议兼容性的机器可读清单。
 
 包级可执行文件必须可以直接运行。通过顶层 CLI 调用时，命令参数、stdin、信号和最终退出状态不得改变。
 
@@ -53,11 +52,11 @@ pguide-<command> [arguments]
 调用 `pguide <command>` 时：
 
 1. 只接受小写 ASCII 动词 slug，例如 `regulate` 或 `verify-policy`。
-2. 内置命令优先，外部命令不能覆盖 `list`、`diagnose` 或 `complete`。
+2. 内置命令优先，外部命令不能覆盖 `diagnose` 或 `complete`。
 3. 在显式配置的命令目录和 `PATH` 中查找 `pguide-<command>`；配置目录优先于 `PATH`。
 4. 不隐式搜索当前工作目录，避免仓库内同名文件被意外执行。
 5. 同一优先级发现多个候选时显式失败，并在错误中列出所有 real path。
-6. `list` 显示每个命令的来源、解析后的路径、是否内置及协议兼容性。
+6. 顶层 `--help` 显示每个命令的来源、解析后的路径、是否内置及协议兼容性。
 
 外部命令通过 `pguide-command-v1` 协议声明身份和能力。顶层 CLI 可以请求机器可读 metadata，但不会通过解析帮助文本推断能力。
 
