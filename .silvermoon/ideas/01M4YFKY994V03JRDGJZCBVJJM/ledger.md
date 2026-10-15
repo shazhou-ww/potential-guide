@@ -4,13 +4,13 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 分离阶段语义与 check 调度
+- [ ] **I-S01:** 分离阶段语义并注入同级调度策略
 - [ ] **I-S02:** 验证阶段与调度行为
 - [ ] **I-S03:** 记录阶段契约
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 独立 checks 遵守调度限制
+- [ ] **I-AC01:** 注入策略控制独立 checks 的并行度
 - [ ] **I-AC02:** 阶段观测与屏障保持正确
 - [ ] **I-AC03:** 集成与文档保持一致
 
