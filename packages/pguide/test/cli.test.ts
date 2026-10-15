@@ -185,17 +185,37 @@ test("Windows cwd exclusion canonicalizes aliases and casing", async () => {
 });
 
 test("all official commands dispatch through the top-level CLI", async () => {
-  const binDirectory = join(root, "packages", "pguide", "node_modules", ".bin");
-  const env = { ...process.env, PATH: `${binDirectory}${delimiter}${process.env.PATH ?? ""}` };
-  for (const command of Object.keys(bins)) {
-    const result = await run(
-      top,
-      command === "probe"
-        ? ["--format", "json", command, "--help"]
-        : [command, "--help", "--format", "json"],
-      env,
+  const binDirectory = await mkdtemp(join(tmpdir(), "pguide-official-bins-"));
+  try {
+    const extension = process.platform === "win32" ? ".cmd" : "";
+    for (const [command, script] of Object.entries(bins)) {
+      const commandPath = join(binDirectory, `pguide-${command}${extension}`);
+      await writeFile(
+        commandPath,
+        process.platform === "win32"
+          ? `@echo off\r\n"${process.execPath}" "${script}" %*\r\n`
+          : `#!/bin/sh\nexec "${process.execPath}" "${script}" "$@"\n`,
+        { mode: 0o755 },
+      );
+    }
+    const config = join(binDirectory, "config.yaml");
+    await writeFile(
+      config,
+      `schemaVersion: 1\ncommandDirectories:\n  - ${JSON.stringify(binDirectory)}\n`,
     );
-    assert.equal(result.code, 0, `${command}: ${result.stderr}\n${result.stdout}`);
-    assert.equal(JSON.parse(result.stdout).command, command);
+    const env = { ...process.env, PATH: `${binDirectory}${delimiter}${process.env.PATH ?? ""}` };
+    for (const command of Object.keys(bins)) {
+      const result = await run(
+        top,
+        command === "probe"
+          ? ["--config", config, "--format", "json", command, "--help"]
+          : ["--config", config, command, "--help", "--format", "json"],
+        env,
+      );
+      assert.equal(result.code, 0, `${command}: ${result.stderr}\n${result.stdout}`);
+      assert.equal(JSON.parse(result.stdout).command, command);
+    }
+  } finally {
+    await rm(binDirectory, { recursive: true, force: true });
   }
 });
