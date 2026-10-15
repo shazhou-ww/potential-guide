@@ -47,6 +47,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 22.20.5
+      cross-spawn:
+        specifier: 'catalog:'
+        version: 7.0.6
       tsx:
         specifier: 'catalog:'
         version: 4.23.15

@@ -1,21 +1,12 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import {
-  access,
-  chmod,
-  cp,
-  mkdir,
-  readFile,
-  readdir,
-  rm,
-  unlink,
-  writeFile,
-} from "node:fs/promises";
+import { access, chmod, cp, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { delimiter, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createDeploymentWorkspace, execute } from "./verify-deployment-helpers.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const scratch = join(root, ".deployment-verification");
+const workspace = await createDeploymentWorkspace();
+const scratch = workspace.path;
 const packs = join(scratch, "packs");
 const consumer = join(scratch, "consumer");
 const fixtureSource = join(root, "scripts", "fixtures", "deployment-acp");
@@ -52,38 +43,8 @@ const packageDefinitions = [
   { directory: "pguide", name: "pguide", bins: ["pguide"] },
 ];
 
-function execute(command, args, options = {}) {
-  return new Promise((resolveRun, reject) => {
-    const child = spawn(command, args, {
-      cwd: options.cwd ?? root,
-      env: options.env ?? process.env,
-      input: undefined,
-      windowsHide: true,
-      shell: process.platform === "win32" && /\.(?:cmd|bat)$/i.test(command),
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk;
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk;
-    });
-    child.on("error", reject);
-    child.on("close", (code, signal) =>
-      resolveRun({ code: code ?? (signal === undefined ? 70 : 5), signal, stdout, stderr }),
-    );
-    options.onSpawn?.(child);
-    if (options.input === undefined) child.stdin.end();
-    else child.stdin.end(options.input);
-  });
-}
-
 async function successful(command, args, options) {
-  const result = await execute(command, args, options);
+  const result = await execute(command, args, { cwd: root, ...options });
   assert.equal(result.code, 0, `${command} ${args.join(" ")}\n${result.stderr}\n${result.stdout}`);
   return result;
 }
@@ -458,12 +419,11 @@ async function verifyRegulation(baseEnv) {
   console.log("ACP regulation, persistence, resume, retention, redaction and reports verified");
 }
 
-await rm(scratch, { recursive: true, force: true });
 try {
   await packAndInstall();
   const env = await verifyCliContract();
   await verifyRegulation(env);
   console.log("deployment verification passed");
 } finally {
-  await rm(scratch, { recursive: true, force: true });
+  await workspace.cleanup();
 }
