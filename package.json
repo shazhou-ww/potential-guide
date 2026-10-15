@@ -18,12 +18,13 @@
     "format:check": "biome format .",
     "lint": "turbo run lint && biome lint scripts",
     "pack:check": "pnpm run build && node scripts/check-packages.mjs",
-    "test": "turbo run test",
+    "test": "turbo run test && node --test scripts/*.test.mjs",
     "typecheck": "turbo run typecheck && tsc -p tsconfig.test.json --pretty false"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@types/node": "catalog:",
+    "cross-spawn": "catalog:",
     "tsx": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:"
