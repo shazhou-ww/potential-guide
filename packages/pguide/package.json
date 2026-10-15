@@ -26,7 +26,11 @@
     "@potential-guide/objective-guide": "workspace:^",
     "@potential-guide/objective-regulator": "workspace:^",
     "@potential-guide/objective-portfolio-supervisor": "workspace:^",
+    "cross-spawn": "catalog:",
     "pguide-config": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/cross-spawn": "catalog:"
   },
   "publishConfig": {
     "access": "public"

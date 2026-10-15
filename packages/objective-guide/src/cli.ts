@@ -3,23 +3,35 @@ import { dirname, join, resolve } from "node:path";
 import {
   atomicWrite,
   CliError,
+  type CommandMetadata,
   commandMain,
+  type GlobalOptions,
   option,
   readJsonSubject,
   writeResult,
-  type CommandMetadata,
-  type GlobalOptions,
 } from "@potential-guide/cli-core";
 import { createObjectiveLoader } from "./loader.js";
 import type { ObjectiveSubject } from "./types.js";
 
 export const guideCommandVersion = "0.1.0";
 
+async function loadGuide(path: string) {
+  try {
+    return await createObjectiveLoader().load(path);
+  } catch (error) {
+    throw new CliError(
+      error instanceof Error ? error.message : "Guide could not be loaded.",
+      2,
+      "guide-error",
+    );
+  }
+}
+
 async function createInstance(argv: string[], globals: GlobalOptions) {
   const guidePath = option(argv, "--guide", { required: true }) as string;
   const subjectPath = option(argv, "--subject-file", { required: true }) as string;
   const language = option(argv, "--language") as string | undefined;
-  const guide = await createObjectiveLoader().load(resolve(globals.cwd, guidePath));
+  const guide = await loadGuide(resolve(globals.cwd, guidePath));
   const created = guide.createInstance({
     subject: (await readJsonSubject(subjectPath, globals.cwd)) as ObjectiveSubject,
     ...(language === undefined ? {} : { language }),
@@ -146,7 +158,7 @@ export async function runValidate(argv: string[], globals: GlobalOptions): Promi
   }
   if (argv[0] !== "guide" || argv[1] === undefined)
     throw new CliError("Expected validate guide <manifest>.");
-  const guide = await createObjectiveLoader().load(resolve(globals.cwd, argv[1]));
+  const guide = await loadGuide(resolve(globals.cwd, argv[1]));
   const value = { schemaVersion: 1, status: "valid", manifestUri: guide.manifestUri };
   writeResult(value, globals.format, `Valid Objective Guide: ${guide.manifestUri}`);
 }

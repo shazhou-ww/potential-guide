@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { test } from "node:test";
@@ -60,7 +60,7 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     const check = join(guide, "checks", "ready", "run.js");
     await writeFile(
       check,
-      `#!/usr/bin/env node\nlet s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const r=JSON.parse(s);const ok=require("node:fs").existsSync(r.subject.marker);process.stdout.write(JSON.stringify(ok?{pass:true}:{pass:false,problems:[{id:"not-ready",parameters:{}}]}));});\n`,
+      `#!/usr/bin/env node\nlet s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const r=JSON.parse(s);if(r.subject.marker==="hang"){setInterval(()=>{},1000);return;}const ok=require("node:fs").existsSync(r.subject.marker);process.stdout.write(JSON.stringify(ok?{pass:true}:{pass:false,problems:[{id:"not-ready",parameters:{}}]}));});\n`,
     );
     if (process.platform !== "win32") await chmod(check, 0o755);
     const agent = join(temporary, "agent.mjs");
@@ -71,11 +71,28 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     const config = join(temporary, "config.yaml");
     await writeFile(
       config,
-      `schemaVersion: 1\ndefaultAgent: fixture\nstateDirectory: ${JSON.stringify(state)}\nagents:\n  fixture:\n    connection: {type: acp, protocolVersion: "1"}\n    transport:\n      type: stdio\n      command: ${JSON.stringify(process.execPath)}\n      args: [${JSON.stringify(agent)}]\n      env: [ACTION_MARKER]\n    requirements: {sessionResume: true}\n`,
+      JSON.stringify({
+        schemaVersion: 1,
+        defaultAgent: "fixture",
+        stateDirectory: state,
+        agents: {
+          fixture: {
+            connection: { type: "acp", protocolVersion: "1" },
+            transport: {
+              type: "stdio",
+              command: process.execPath,
+              args: [agent],
+              env: ["ACTION_MARKER", "SECRET_ENV"],
+            },
+            requirements: { sessionResume: true },
+          },
+        },
+      }),
     );
     const subject = join(temporary, "subject.json");
+    const report = join(temporary, "report.json");
     await writeFile(subject, JSON.stringify({ marker }));
-    const env = { ...process.env, ACTION_MARKER: marker };
+    const env = { ...process.env, ACTION_MARKER: marker, SECRET_ENV: "snapshot-secret-value" };
     const first = await run(
       regulate,
       [
@@ -87,6 +104,8 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
         subject,
         "--target",
         "terminal",
+        "--report",
+        report,
         "--format",
         "json",
       ],
@@ -95,6 +114,7 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     assert.equal(first.code, 0, `${first.stderr}\n${first.stdout}`);
     const result = JSON.parse(first.stdout);
     assert.equal(result.status, "target-reached");
+    assert.equal(JSON.parse(await readFile(report, "utf8")).regulationId, result.regulationId);
     const second = await run(
       continueCommand,
       ["--config", config, result.regulationId, "--format", "json"],
@@ -107,10 +127,127 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     );
     assert.equal(ledger.attempts.length, 2);
     assert.equal(ledger.attempts[1].resumeMode, "not-needed");
+    assert.doesNotMatch(JSON.stringify(ledger), /snapshot-secret-value/);
     assert.match(
       await readFile(join(state, "regulations", result.regulationId, "transcript.jsonl"), "utf8"),
       /session\/update/,
     );
+
+    const hangingSubject = join(temporary, "hanging-subject.json");
+    await writeFile(hangingSubject, JSON.stringify({ marker: "hang" }));
+    const probeStarted = Date.now();
+    const probeTimeout = await run(
+      regulate,
+      [
+        "--config",
+        config,
+        "--guide",
+        join(guide, "objective-guide.yaml"),
+        "--subject-file",
+        hangingSubject,
+        "--target",
+        "terminal",
+        "--timeout",
+        "100ms",
+        "--format",
+        "json",
+      ],
+      env,
+    );
+    assert.equal(probeTimeout.code, 5, probeTimeout.stdout);
+    assert.ok(Date.now() - probeStarted < 5_000);
+
+    await writeFile(check, `${await readFile(check, "utf8")}\n`);
+    const changedGuide = await run(
+      continueCommand,
+      ["--config", config, result.regulationId, "--format", "json"],
+      { ...process.env },
+    );
+    assert.equal(changedGuide.code, 2, changedGuide.stdout);
+    const changedLedger = JSON.parse(
+      await readFile(join(state, "regulations", result.regulationId, "regulation.json"), "utf8"),
+    );
+    assert.equal(changedLedger.attempts.at(-1).status, "failed");
+    assert.equal(changedLedger.attempts.at(-1).errorCategory, "guide");
+    assert.equal(changedLedger.attempts.at(-1).errorSummary, "guide failure");
+
+    await unlink(marker);
+    await writeFile(check, (await readFile(check, "utf8")).trimEnd());
+    const hanging = join(temporary, "hanging-agent.mjs");
+    await writeFile(
+      hanging,
+      `import{createInterface}from"node:readline";for await(const line of createInterface({input:process.stdin})){JSON.parse(line);await new Promise(()=>{});}`,
+    );
+    const hangingConfig = join(temporary, "hanging-config.yaml");
+    await writeFile(
+      hangingConfig,
+      `schemaVersion: 1\ndefaultAgent: fixture\nstateDirectory: ${JSON.stringify(state)}\nagents:\n  fixture:\n    connection: {type: acp, protocolVersion: "1"}\n    transport: {type: stdio, command: ${JSON.stringify(process.execPath)}, args: [${JSON.stringify(hanging)}]}\n`,
+    );
+    const started = Date.now();
+    const timedOut = await run(
+      regulate,
+      [
+        "--config",
+        hangingConfig,
+        "--guide",
+        join(guide, "objective-guide.yaml"),
+        "--subject-file",
+        subject,
+        "--target",
+        "terminal",
+        "--timeout",
+        "100ms",
+        "--format",
+        "json",
+      ],
+      { ...process.env },
+    );
+    assert.equal(timedOut.code, 5, timedOut.stdout);
+    assert.equal(JSON.parse(timedOut.stdout).status, "timed-out");
+    assert.ok(Date.now() - started < 5_000);
+    const timeoutId = JSON.parse(timedOut.stdout).regulationId;
+    const timeoutLedger = JSON.parse(
+      await readFile(join(state, "regulations", timeoutId, "regulation.json"), "utf8"),
+    );
+    assert.equal(timeoutLedger.attempts[0].status, "timed-out");
+    assert.ok(timeoutLedger.attempts[0].completedAt);
+
+    const before = new Set(await readdir(join(state, "regulations")));
+    const badAgentConfig = join(temporary, "bad-agent-config.yaml");
+    await writeFile(
+      badAgentConfig,
+      `schemaVersion: 1\ndefaultAgent: fixture\nstateDirectory: ${JSON.stringify(state)}\nagents:\n  fixture:\n    connection: {type: acp, protocolVersion: "1"}\n    transport: {type: stdio, command: ${JSON.stringify(join(temporary, "missing-agent"))}}\n`,
+    );
+    const failed = await run(
+      regulate,
+      [
+        "--config",
+        badAgentConfig,
+        "--guide",
+        join(guide, "objective-guide.yaml"),
+        "--subject-file",
+        subject,
+        "--target",
+        "terminal",
+        "--format",
+        "json",
+      ],
+      { ...process.env },
+    );
+    assert.equal(failed.code, 6, failed.stdout);
+    const failedId = (await readdir(join(state, "regulations"))).find((id) => !before.has(id));
+    assert.ok(failedId);
+    const failedLedger = JSON.parse(
+      await readFile(join(state, "regulations", failedId, "regulation.json"), "utf8"),
+    );
+    assert.equal(failedLedger.attempts[0].status, "failed");
+    assert.ok(failedLedger.attempts[0].completedAt);
+    assert.doesNotMatch(JSON.stringify(failedLedger.attempts[0]), /missing-agent/);
+
+    const unknown = await run(regulate, ["--unknown", "value", "--format", "json"], {
+      ...process.env,
+    });
+    assert.equal(unknown.code, 2, unknown.stdout);
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

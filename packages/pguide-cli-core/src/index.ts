@@ -1,9 +1,23 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { chmod, mkdir, open, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  lstat,
+  mkdir,
+  open,
+  readdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  stat,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import { homedir, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
+import { fileURLToPath } from "node:url";
 import { parse, stringify } from "yaml";
 
 export const COMMAND_PROTOCOL = "pguide-command-v1";
@@ -87,6 +101,43 @@ function positiveInteger(value: unknown, field: string): number | undefined {
   return Number(value);
 }
 
+const secretName =
+  /^(?:api[-_]?key|access[-_]?token|auth[-_]?token|token|password|passwd|secret)$/i;
+
+function rejectSecretValues(value: unknown, path: readonly string[] = []): void {
+  if (Array.isArray(value)) {
+    for (const [index, entry] of value.entries())
+      rejectSecretValues(entry, [...path, String(index)]);
+    return;
+  }
+  if (!record(value)) {
+    if (typeof value === "string" && value !== "" && path.some((part) => secretName.test(part))) {
+      throw new CliError("Agent profiles may not contain credential literals.");
+    }
+    return;
+  }
+  for (const [key, entry] of Object.entries(value)) rejectSecretValues(entry, [...path, key]);
+}
+
+function rejectSecretArguments(args: readonly string[]): void {
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index] as string;
+    const equal = /^--?([^=]+)=(.*)$/.exec(argument);
+    if (equal !== null && secretName.test(equal[1] as string) && (equal[2] as string) !== "") {
+      throw new CliError("Agent transport args may not contain credential literals.");
+    }
+    const flag = /^--?(.+)$/.exec(argument);
+    if (
+      flag !== null &&
+      secretName.test(flag[1] as string) &&
+      args[index + 1] !== undefined &&
+      !String(args[index + 1]).startsWith("-")
+    ) {
+      throw new CliError("Agent transport args may not contain credential literals.");
+    }
+  }
+}
+
 export function validateAgentProfile(value: unknown): AgentProfile {
   if (!record(value)) throw new CliError("Agent profile must be an object.");
   exactKeys(value, ["connection", "transport", "requirements"], "Agent profile");
@@ -106,6 +157,7 @@ export function validateAgentProfile(value: unknown): AgentProfile {
   ) {
     throw new CliError("Agent transport args must be nonempty strings.");
   }
+  rejectSecretArguments((value.transport.args as string[] | undefined) ?? []);
   if (
     value.transport.env !== undefined &&
     (!Array.isArray(value.transport.env) ||
@@ -123,10 +175,7 @@ export function validateAgentProfile(value: unknown): AgentProfile {
       throw new CliError("sessionResume must be boolean.");
     }
   }
-  const source = stringify(value);
-  if (/(token|password|api[-_]?key|secret)\s*:\s*(?!null\b|["']?env\b)\S+/i.test(source)) {
-    throw new CliError("Agent profiles may not contain credential literals.");
-  }
+  rejectSecretValues(value);
   return value as unknown as AgentProfile;
 }
 
@@ -408,12 +457,155 @@ export function digest(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
+export async function digestTree(manifestPath: string): Promise<string> {
+  const guides: { relation: string; entries: { path: string; content: string }[] }[] = [];
+  const visited = new Set<string>();
+  async function visitTree(manifest: string, relation: string): Promise<void> {
+    const canonicalManifest = await realpath(resolve(manifest));
+    if (visited.has(canonicalManifest)) {
+      throw new CliError("Guide prerequisite tree contains a cycle.");
+    }
+    visited.add(canonicalManifest);
+    const root = dirname(canonicalManifest);
+    const entries: { path: string; content: string }[] = [];
+    async function visit(directory: string, relative: string): Promise<void> {
+      const names = (await readdir(directory)).sort((left, right) =>
+        Buffer.from(left).compare(Buffer.from(right)),
+      );
+      for (const name of names) {
+        const absolute = join(directory, name);
+        const childRelative = relative === "" ? name : `${relative}/${name}`;
+        const details = await lstat(absolute);
+        if (details.isSymbolicLink()) {
+          throw new CliError(`Guide trees may not contain symbolic links: ${childRelative}.`);
+        }
+        if (details.isDirectory()) await visit(absolute, childRelative);
+        else if (details.isFile()) {
+          entries.push({
+            path: childRelative,
+            content: createHash("sha256")
+              .update(await readFile(absolute))
+              .digest("hex"),
+          });
+        }
+      }
+    }
+    await visit(root, "");
+    guides.push({ relation, entries });
+    const source = parse(await readFile(canonicalManifest, "utf8")) as {
+      prerequisite?: { manifestUri?: unknown };
+    };
+    const prerequisite = source?.prerequisite?.manifestUri;
+    if (typeof prerequisite === "string") {
+      let prerequisitePath: string;
+      try {
+        prerequisitePath = prerequisite.startsWith("file:")
+          ? fileURLToPath(prerequisite)
+          : resolve(root, prerequisite);
+      } catch {
+        throw new CliError("Guide prerequisite manifest URI is invalid.");
+      }
+      await visitTree(prerequisitePath, `${relation}/prerequisite`);
+    }
+  }
+  await visitTree(manifestPath, "root");
+  return digest(guides);
+}
+
+export function rejectUnknownOptions(
+  argv: readonly string[],
+  options: Readonly<Record<string, "flag" | "value">>,
+  positional = 0,
+): void {
+  let positionals = 0;
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index] as string;
+    if (!argument.startsWith("--")) {
+      positionals += 1;
+      continue;
+    }
+    const kind = options[argument];
+    if (kind === undefined) throw new CliError(`Unknown option: ${argument}.`);
+    if (kind === "value") {
+      if (argv[index + 1] === undefined || String(argv[index + 1]).startsWith("--")) {
+        throw new CliError(`${argument} needs a value.`);
+      }
+      index += 1;
+    }
+  }
+  if (positionals > positional) throw new CliError("Too many positional arguments.");
+}
+
+function inside(root: string, candidate: string): boolean {
+  const prefix =
+    root.endsWith("\\") || root.endsWith("/")
+      ? root
+      : `${root}${process.platform === "win32" ? "\\" : "/"}`;
+  const normalize = (value: string) => (process.platform === "win32" ? value.toLowerCase() : value);
+  return normalize(candidate).startsWith(normalize(prefix));
+}
+
+export async function pruneExpiredRegulations(root: string, now = new Date()): Promise<number> {
+  const regulations = join(resolve(root), "regulations");
+  let canonicalRoot: string;
+  try {
+    if ((await lstat(regulations)).isSymbolicLink()) {
+      throw new CliError("Regulations state root may not be a symbolic link.", 6, "io-error");
+    }
+    canonicalRoot = await realpath(regulations);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return 0;
+    throw error;
+  }
+  let removed = 0;
+  for (const name of await readdir(canonicalRoot)) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(name))
+      continue;
+    const candidate = join(canonicalRoot, name);
+    const details = await lstat(candidate);
+    if (details.isSymbolicLink() || !details.isDirectory()) continue;
+    const canonical = await realpath(candidate);
+    if (!inside(canonicalRoot, canonical)) continue;
+    let expiresAt: unknown;
+    try {
+      expiresAt = (
+        JSON.parse(await readFile(join(canonical, "regulation.json"), "utf8")) as Record<
+          string,
+          unknown
+        >
+      ).expiresAt;
+    } catch {
+      continue;
+    }
+    if (typeof expiresAt !== "string" || !Number.isFinite(Date.parse(expiresAt))) continue;
+    if (Date.parse(expiresAt) >= now.getTime()) continue;
+    await rm(canonical, { recursive: true });
+    removed += 1;
+  }
+  return removed;
+}
+
 export function writeResult(
   value: Record<string, unknown>,
   format: "markdown" | "json",
   markdown: string,
 ): void {
   process.stdout.write(format === "json" ? `${JSON.stringify(value, null, 2)}\n` : `${markdown}\n`);
+}
+
+export function expectedCliError(error: unknown): CliError {
+  if (error instanceof CliError) return error;
+  const nodeError = error as NodeJS.ErrnoException;
+  if (
+    error instanceof SyntaxError ||
+    (typeof nodeError?.code === "string" &&
+      ["EACCES", "EEXIST", "EISDIR", "ENOENT", "ENOTDIR", "EPERM", "EPIPE"].includes(
+        nodeError.code,
+      ))
+  ) {
+    return new CliError(error instanceof Error ? error.message : String(error), 6, "io-error");
+  }
+  return new CliError(error instanceof Error ? error.message : String(error), 70, "internal-error");
 }
 
 export async function commandMain(
@@ -436,14 +628,7 @@ export async function commandMain(
     }
     process.exitCode = (await run(rest, options)) ?? 0;
   } catch (error) {
-    const failure =
-      error instanceof CliError
-        ? error
-        : new CliError(
-            error instanceof Error ? error.message : String(error),
-            70,
-            "internal-error",
-          );
+    const failure = expectedCliError(error);
     const format =
       process.argv.includes("--format") &&
       process.argv[process.argv.indexOf("--format") + 1] === "json"
@@ -600,6 +785,7 @@ export class AcpClient {
 
   close(): void {
     this.child.stdin.end();
+    if (this.child.exitCode === null && this.child.signalCode === null) this.child.kill();
   }
 }
 

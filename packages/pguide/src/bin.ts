@@ -1,17 +1,18 @@
 #!/usr/bin/env node
-import { spawn } from "node:child_process";
-import { realpath, readdir, stat } from "node:fs/promises";
+import { readdir, realpath, stat } from "node:fs/promises";
 import { delimiter, extname, join, resolve } from "node:path";
 import {
   AcpClient,
   CliError,
+  type CommandMetadata,
+  expectedCliError,
   extractGlobals,
+  type GlobalOptions,
   loadConfig,
   option,
   writeResult,
-  type CommandMetadata,
-  type GlobalOptions,
 } from "@potential-guide/cli-core";
+import spawn from "cross-spawn";
 
 const VERSION = "0.1.0";
 const reserved = new Set(["diagnose", "complete"]);
@@ -80,7 +81,12 @@ async function discover(
     const tier = configured.filter((entry) => entry.command === command);
     const selected = tier.length > 0 ? tier : fromPath.filter((entry) => entry.command === command);
     const unique = [
-      ...new Map(selected.map((entry) => [entry.path.toLowerCase(), entry])).values(),
+      ...new Map(
+        selected.map((entry) => [
+          process.platform === "win32" ? entry.path.toLowerCase() : entry.path,
+          entry,
+        ]),
+      ).values(),
     ];
     if (unique.length === 1) commands.push(unique[0] as Candidate);
     else if (unique.length > 1) conflicts[command] = unique.map(({ path }) => path);
@@ -93,15 +99,15 @@ async function runCapture(
   args: string[],
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolveRun, reject) => {
-    const child = spawn(path, args, { windowsHide: true, shell: process.platform === "win32" });
+    const child = spawn(path, args, { windowsHide: true, shell: false });
     let stdout = "";
     let stderr = "";
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (chunk) => {
+    child.stdout?.setEncoding("utf8");
+    child.stderr?.setEncoding("utf8");
+    child.stdout?.on("data", (chunk) => {
       stdout += chunk;
     });
-    child.stderr.on("data", (chunk) => {
+    child.stderr?.on("data", (chunk) => {
       stderr += chunk;
     });
     child.on("error", reject);
@@ -159,7 +165,7 @@ async function dispatch(
       cwd: globals.cwd,
       stdio: "inherit",
       windowsHide: true,
-      shell: process.platform === "win32",
+      shell: false,
     });
     const forward = (signal: NodeJS.Signals) => child.kill(signal);
     process.once("SIGINT", forward);
@@ -326,14 +332,7 @@ async function main(): Promise<number> {
     if (candidate === undefined) throw new CliError(`Unknown command: ${command}.`);
     return dispatch(candidate, rest.slice(1), globals);
   } catch (error) {
-    const failure =
-      error instanceof CliError
-        ? error
-        : new CliError(
-            error instanceof Error ? error.message : String(error),
-            70,
-            "internal-error",
-          );
+    const failure = expectedCliError(error);
     const format =
       process.argv.includes("--format") &&
       process.argv[process.argv.indexOf("--format") + 1] === "json"

@@ -12,7 +12,11 @@ executor and retain responsibility for cancellation within that executor.
 
 The package owns `pguide-regulate` and `pguide-continue`. They use only
 predefined ACP Agent profiles and persist a private Regulation/Attempt ledger
-plus the protocol-visible transcript.
+plus the protocol-visible transcript. `--timeout` bounds the complete Attempt,
+including Guide probes, ACP setup/session/prompt calls, re-probes, and final
+persistence. `--report <path>` atomically writes the machine-readable result.
+Expired Regulations are pruned from the configured state root at safe command
+entry points.
 
 ## Public API
 

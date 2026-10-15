@@ -35,6 +35,7 @@ export type ObjectiveActionExecutor = (
 export interface RegulationRequest {
   targetLevelId: ObjectiveLevelId;
   limits: RegulationLimits;
+  signal?: AbortSignal;
 }
 
 export type RegulationStatus =
@@ -178,7 +179,8 @@ export function createObjectiveRegulator(instance: ObjectiveGuideInstance): Obje
   const regulator: ObjectiveRegulator = {
     instance,
     probe: () => instance.probe(),
-    async regulate({ targetLevelId, limits }, executeAction) {
+    async regulate(request, executeAction) {
+      const { targetLevelId, limits } = request;
       if (!text(targetLevelId)) {
         throw new ObjectiveRegulatorError("Target level ID must be nonempty.");
       }
@@ -198,7 +200,7 @@ export function createObjectiveRegulator(instance: ObjectiveGuideInstance): Obje
       }
 
       const deadline = performance.now() + limits.timeoutMs;
-      const initial = await withinDeadline(instance.probe(), deadline);
+      const initial = await withinDeadline(instance.probe(request.signal), deadline);
       if (initial === timedOut) {
         throw new ObjectiveRegulatorTimeoutError(
           "Initial probe timed out before an observation was available.",
@@ -225,13 +227,13 @@ export function createObjectiveRegulator(instance: ObjectiveGuideInstance): Obje
           return result("timed-out", targetLevelId, iterations, latestObservation);
         }
 
-        const request = Object.freeze({
+        const actionRequest = Object.freeze({
           targetLevelId,
           observation: latestObservation,
           problem,
         });
         iterations += 1;
-        const action = await withinDeadline(executeAction(request), deadline);
+        const action = await withinDeadline(executeAction(actionRequest), deadline);
         if (action === timedOut) {
           return result("timed-out", targetLevelId, iterations, latestObservation);
         }
@@ -240,7 +242,7 @@ export function createObjectiveRegulator(instance: ObjectiveGuideInstance): Obje
           return result("action-blocked", targetLevelId, iterations, latestObservation);
         }
 
-        const observed = await withinDeadline(instance.probe(), deadline);
+        const observed = await withinDeadline(instance.probe(request.signal), deadline);
         if (observed === timedOut) {
           return result("timed-out", targetLevelId, iterations, latestObservation);
         }

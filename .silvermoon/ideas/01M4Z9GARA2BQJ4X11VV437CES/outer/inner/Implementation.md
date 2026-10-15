@@ -26,6 +26,10 @@
 
 覆盖所有命令的直接调用和顶层分派、fixture ACP 完整 regulation/continue、配置安全、骨架与验证；更新根文档、发布顺序、workspace/lockfile、package contents 检查，并以完整 `pnpm check` 和实际 pack 产物验证。
 
+### I-S07: 修复实现门禁安全与生命周期缺口
+
+Windows shim 分派不得启用 shell；一次 Attempt 的 timeout 覆盖 probe、ACP、re-probe 与持久化；Guide revision 覆盖完整本地行为树；配置编辑先验证临时副本；失败 Attempt、报告和 retention 清理均以原子、安全边界持久化。
+
 ## Acceptance criteria
 
 ### I-AC01: 命令发现和协议稳定
@@ -51,3 +55,7 @@
 ### I-AC06: 发布产物完整可执行
 
 `pnpm check` 全部通过；标准 pack check 对每个新增/修改包执行真实打包，证明声明 bins、dist、README、LICENSE 完整且不包含 source、tests、临时文件、tarball、node_modules 或凭据。
+
+### I-AC07: 独立审查问题具有回归保护
+
+定向测试证明 shell metachar 参数不被解释、整次 invocation 有界、secret 不进入输出或状态、行为树变化阻止 continue、编辑失败不破坏配置、公开错误码与失败 Attempt 完整、report 原子落盘、平台去重正确且 retention 清理不越界；完整检查与 pack checks 继续通过。

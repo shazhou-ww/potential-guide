@@ -113,10 +113,15 @@ test("top-level safely dispatches discovered commands and preserves arguments", 
       { mode: 0o755 },
     );
     const env = { ...process.env, PATH: `${temporary}${delimiter}${process.env.PATH ?? ""}` };
-    const dispatched = await run(top, ["echo", "one", "--", "--format", "literal"], env);
+    const literalArguments = ["one", "a&b", "x|y", "%PATH%", "$(echo nope)", 'say"hello'];
+    const dispatched = await run(
+      top,
+      ["echo", ...literalArguments, "--", "--format", "literal"],
+      env,
+    );
     assert.equal(dispatched.code, 0, dispatched.stderr);
     assert.deepEqual(JSON.parse(dispatched.stdout), [
-      "one",
+      ...literalArguments,
       "--cwd",
       root,
       "--format",
@@ -129,6 +134,37 @@ test("top-level safely dispatches discovered commands and preserves arguments", 
       "--format",
       "literal",
     ]);
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
+
+test("real-path deduplication follows platform case sensitivity", {
+  skip: process.platform === "win32",
+}, async () => {
+  const temporary = await mkdtemp(join(tmpdir(), "pguide-case-dedupe-"));
+  try {
+    const lower = join(temporary, "commands");
+    const upper = join(temporary, "COMMANDS");
+    await Promise.all([
+      import("node:fs/promises").then(({ mkdir }) => mkdir(lower)),
+      import("node:fs/promises").then(({ mkdir }) => mkdir(upper)),
+    ]);
+    for (const directory of [lower, upper]) {
+      await writeFile(
+        join(directory, "pguide-case"),
+        `#!/bin/sh\nif [ "$1" = "--pguide-command-metadata" ]; then echo '{"protocol":"pguide-command-v1","command":"case","description":"fixture","version":"1"}'; fi\n`,
+        { mode: 0o755 },
+      );
+    }
+    const config = join(temporary, "config.yaml");
+    await writeFile(
+      config,
+      `schemaVersion: 1\ncommandDirectories:\n  - ${JSON.stringify(lower)}\n  - ${JSON.stringify(upper)}\n`,
+    );
+    const help = await run(top, ["--config", config, "--help", "--format", "json"]);
+    assert.equal(help.code, 0, help.stderr);
+    assert.equal(JSON.parse(help.stdout).conflicts.case.length, 2);
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

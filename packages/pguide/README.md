@@ -11,3 +11,5 @@ pguide regulate --guide ./objective-guide.yaml --subject-file ./subject.json --t
 Commands are independent `pguide-<command>` executables. The official command
 packages provide `probe`, `regulate`, `continue`, `supervise`, `scaffold`,
 `validate`, and optional `config`; `diagnose` and `complete` are built in.
+External executables and Windows command shims are invoked without shell mode,
+so argument boundaries and metacharacters are preserved.

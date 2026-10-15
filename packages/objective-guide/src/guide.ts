@@ -32,6 +32,7 @@ import {
 
 interface ProbeContext {
   tempDirectory: string;
+  signal?: AbortSignal;
 }
 const validators = new WeakMap<ObjectiveGuide, ValidateFunction>();
 const guideLevels = new WeakMap<ObjectiveGuide, readonly string[]>();
@@ -91,6 +92,7 @@ async function runLevelChecks(
   runner: ObjectiveCheckRunner,
   request: CheckRequest,
   locale: LoadedLocale,
+  signal?: AbortSignal,
 ): Promise<readonly CheckResult[]> {
   if (context.checkIds.length === 0) return [];
   let concurrency = 1;
@@ -119,7 +121,7 @@ async function runLevelChecks(
       const [index, checkId] = next.value;
       try {
         results[index] = checkResult(
-          await runner.run(context.instance.guide.manifestUri, checkId, request),
+          await runner.run(context.instance.guide.manifestUri, checkId, request, signal),
           locale,
         );
       } catch (cause) {
@@ -279,10 +281,13 @@ export function createObjectiveGuide(
         description: overview.description!,
         prerequisite: childInstance,
         describeLevels: () => descriptions,
-        async probe(): Promise<ObjectiveObservation> {
+        async probe(signal?: AbortSignal): Promise<ObjectiveObservation> {
           const tempDirectory = await mkdtemp(join(tmpdir(), "silvermoon-probe-"));
           try {
-            return await probeWithContext.get(instance)!({ tempDirectory });
+            return await probeWithContext.get(instance)!({
+              tempDirectory,
+              ...(signal === undefined ? {} : { signal }),
+            });
           } finally {
             await rm(tempDirectory, { recursive: true, force: true });
           }
@@ -374,6 +379,7 @@ export function createObjectiveGuide(
             runner,
             request,
             locale,
+            context.signal,
           );
           const problems = results.flatMap((result) => (result.pass ? [] : result.problems));
           if (problems.length > 0) {

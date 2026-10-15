@@ -67,6 +67,7 @@ async function execute(
   args: readonly string[],
   request: CheckRequest,
   cwd: string,
+  signal?: AbortSignal,
 ) {
   const inherited =
     process.platform === "win32"
@@ -86,6 +87,11 @@ async function execute(
     let stdout = "";
     let stderr = "";
     let settled = false;
+    const onAbort = () => {
+      child.kill();
+      finish(new ObjectiveOperationError("Check cancelled."));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
     const timer = setTimeout(() => {
       child.kill();
       finish(new ObjectiveOperationError(`Check timed out after ${CHECK_TIMEOUT_MS}ms.`));
@@ -94,6 +100,7 @@ async function execute(
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
       if (error === undefined) resolve(value);
       else reject(error);
     }
@@ -152,9 +159,9 @@ export const fileObjectiveCheckRunner: ObjectiveCheckRunner = {
     const { entry } = await resolveEntry(manifestUri, checkId);
     await commandFor(entry);
   },
-  async run(manifestUri, checkId, request) {
+  async run(manifestUri, checkId, request, signal) {
     const { directory, entry } = await resolveEntry(manifestUri, checkId);
     const { command, args } = await commandFor(entry);
-    return await execute(command, args, request, directory);
+    return await execute(command, args, request, directory, signal);
   },
 };

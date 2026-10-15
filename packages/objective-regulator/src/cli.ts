@@ -2,28 +2,31 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
+  AcpClient,
+  type AgentProfile,
+  atomicWrite,
+  CliError,
+  type CommandMetadata,
+  commandMain,
+  digest,
+  digestTree,
+  duration,
+  ensurePrivateDirectory,
+  type GlobalOptions,
+  loadConfig,
+  option,
+  pruneExpiredRegulations,
+  readJsonSubject,
+  rejectUnknownOptions,
+  stateRoot,
+  validateAgentProfile,
+  writeResult,
+} from "@potential-guide/cli-core";
+import {
   createObjectiveLoader,
   type JsonObject,
   type ObjectiveObservation,
 } from "@potential-guide/objective-guide";
-import {
-  AcpClient,
-  atomicWrite,
-  CliError,
-  commandMain,
-  digest,
-  duration,
-  ensurePrivateDirectory,
-  loadConfig,
-  option,
-  readJsonSubject,
-  stateRoot,
-  validateAgentProfile,
-  writeResult,
-  type AgentProfile,
-  type CommandMetadata,
-  type GlobalOptions,
-} from "@potential-guide/cli-core";
 import {
   createObjectiveRegulator,
   ObjectiveRegulatorTimeoutError,
@@ -40,8 +43,79 @@ interface Attempt {
   sessionId?: string;
   resumeMode?: "new" | "resumed" | "new-with-summary" | "not-needed";
   status?: string;
+  errorCategory?: "input" | "configuration" | "guide" | "agent-spawn" | "acp" | "io" | "internal";
+  errorSummary?: string;
   observations: ObjectiveObservation[];
   actions: { problemId: string; status: string; summary: string }[];
+}
+
+class InvocationTimeoutError extends Error {}
+
+function expectedFailure(error: unknown): {
+  category: NonNullable<Attempt["errorCategory"]>;
+  failure: CliError;
+} {
+  if (error instanceof CliError) {
+    const category =
+      error.status === "acp-error"
+        ? "acp"
+        : error.status === "guide-error"
+          ? "guide"
+          : error.status === "io-error"
+            ? "io"
+            : error.status === "configuration-error"
+              ? "configuration"
+              : "input";
+    return { category, failure: error };
+  }
+  const nodeError = error as NodeJS.ErrnoException;
+  if (
+    typeof nodeError?.code === "string" &&
+    ["EACCES", "EISDIR", "ENOENT", "ENOTDIR", "EPERM", "EPIPE"].includes(nodeError.code)
+  ) {
+    const category = nodeError.code === "EACCES" ? "agent-spawn" : "io";
+    return {
+      category,
+      failure: new CliError(
+        error instanceof Error ? error.message : "I/O operation failed.",
+        6,
+        category === "agent-spawn" ? "agent-spawn-error" : "io-error",
+      ),
+    };
+  }
+  return {
+    category: "internal",
+    failure: new CliError(
+      error instanceof Error ? error.message : "Internal regulation failure.",
+      70,
+      "internal-error",
+    ),
+  };
+}
+
+async function withinInvocation<T>(
+  timeoutMs: number,
+  operation: (signal: AbortSignal, deadline: number) => Promise<T>,
+): Promise<T> {
+  const controller = new AbortController();
+  const deadline = performance.now() + timeoutMs;
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => {
+        reject(new InvocationTimeoutError("Regulation invocation timed out."));
+        controller.abort();
+      },
+      Math.min(timeoutMs, 2_147_483_647),
+    );
+  });
+  const work = operation(controller.signal, deadline);
+  work.catch(() => undefined);
+  try {
+    return await Promise.race([work, timeout]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
 }
 
 interface Regulation {
@@ -108,12 +182,48 @@ function actionPrompt(regulation: Regulation, observation: ObjectiveObservation)
   return `Potential Guide regulation ${regulation.regulationId}\nTarget level: ${regulation.targetLevelId}\nCurrent level: ${observation.current.id}\nProblem: ${problem?.id ?? "none"}\nParameters: ${JSON.stringify(problem?.parameters ?? {})}\nRecent protocol-visible action summary:\n${history || "(none)"}\nPerform only the action needed for this problem. Do not claim objective progress; pguide will re-probe.`;
 }
 
+function safeAgentValue<T>(value: T, profile: AgentProfile): T {
+  let source = JSON.stringify(value);
+  for (const name of profile.transport.env ?? []) {
+    const secret = process.env[name];
+    if (secret !== undefined && secret !== "") source = source.split(secret).join("[REDACTED]");
+  }
+  return JSON.parse(source) as T;
+}
+
+async function loadGuide(path: string) {
+  try {
+    return await createObjectiveLoader().load(path);
+  } catch (error) {
+    throw new CliError(
+      error instanceof Error ? error.message : "Guide could not be loaded.",
+      2,
+      "guide-error",
+    );
+  }
+}
+
+async function acpCall<T>(operation: Promise<T>): Promise<T> {
+  try {
+    return await operation;
+  } catch (error) {
+    if (error instanceof CliError) throw error;
+    throw new CliError(
+      error instanceof Error ? error.message : "ACP operation failed.",
+      6,
+      "acp-error",
+    );
+  }
+}
+
 async function runAttempt(
   regulation: Regulation,
   attempt: Attempt,
   root: string,
   cwd: string,
   resume: boolean,
+  signal: AbortSignal,
+  deadline: number,
 ): Promise<
   | RegulationResult
   | {
@@ -123,19 +233,34 @@ async function runAttempt(
       targetLevelId: string;
     }
 > {
-  const source = await readFile(regulation.guidePath, "utf8");
-  if (digest(source) !== regulation.guideRevision)
-    throw new CliError("Guide revision changed; create a new Regulation.");
+  const throwIfAborted = () => {
+    if (signal.aborted) throw new InvocationTimeoutError("Regulation invocation timed out.");
+  };
+  if ((await digestTree(regulation.guidePath)) !== regulation.guideRevision)
+    throw new CliError("Guide revision changed; create a new Regulation.", 2, "guide-error");
+  throwIfAborted();
   if (digest(regulation.subject) !== regulation.subjectDigest)
     throw new CliError("Stored subject digest mismatch.", 6, "io-error");
-  const guide = await createObjectiveLoader().load(regulation.guidePath);
+  const guide = await loadGuide(regulation.guidePath);
+  throwIfAborted();
   const created = guide.createInstance({
     subject: regulation.subject,
     ...(regulation.language ? { language: regulation.language } : {}),
   });
   if (!created.ok) throw new CliError(`Cannot restore Guide instance: ${created.error.type}.`);
   const regulator = createObjectiveRegulator(created.instance);
-  const initial = await regulator.probe();
+  let initial: ObjectiveObservation;
+  try {
+    initial = await created.instance.probe(signal);
+  } catch (error) {
+    if (signal.aborted) throw new InvocationTimeoutError("Regulation invocation timed out.");
+    throw new CliError(
+      error instanceof Error ? error.message : "Guide probe failed.",
+      2,
+      "guide-error",
+    );
+  }
+  throwIfAborted();
   attempt.observations.push(initial);
   await save(root, regulation, attempt);
   const levels = created.instance.describeLevels();
@@ -154,14 +279,23 @@ async function runAttempt(
   const transcriptPath = join(root, "transcript.jsonl");
   const client = new AcpClient(regulation.agentProfile, async (update) => {
     const handle = await import("node:fs/promises");
-    await handle.appendFile(transcriptPath, `${JSON.stringify(update)}\n`, {
-      encoding: "utf8",
-      mode: 0o600,
-    });
+    await handle.appendFile(
+      transcriptPath,
+      `${JSON.stringify(safeAgentValue(update, regulation.agentProfile))}\n`,
+      {
+        encoding: "utf8",
+        mode: 0o600,
+      },
+    );
   });
+  const abort = () => client.close();
+  signal.addEventListener("abort", abort, { once: true });
   let sessionId: string;
   try {
-    const initialized = await client.initialize(regulation.agentProfile.connection.protocolVersion);
+    const initialized = await acpCall(
+      client.initialize(regulation.agentProfile.connection.protocolVersion),
+    );
+    throwIfAborted();
     if (
       initialized.protocolVersion !== undefined &&
       String(initialized.protocolVersion) !== regulation.agentProfile.connection.protocolVersion
@@ -183,15 +317,18 @@ async function runAttempt(
     const previous = regulation.attempts.at(-2)?.sessionId;
     if (resume && previous !== undefined) {
       try {
-        await client.resumeSession(previous, cwd);
+        await acpCall(client.resumeSession(previous, cwd));
+        throwIfAborted();
         sessionId = previous;
         attempt.resumeMode = "resumed";
       } catch {
-        sessionId = await client.newSession(cwd);
+        sessionId = await acpCall(client.newSession(cwd));
+        throwIfAborted();
         attempt.resumeMode = "new-with-summary";
       }
     } else {
-      sessionId = await client.newSession(cwd);
+      sessionId = await acpCall(client.newSession(cwd));
+      throwIfAborted();
       attempt.resumeMode = "new";
     }
     attempt.sessionId = sessionId;
@@ -199,25 +336,49 @@ async function runAttempt(
     process.once("SIGINT", onSignal);
     process.once("SIGTERM", onSignal);
     try {
-      const result = await regulator.regulate(
-        { targetLevelId: regulation.targetLevelId, limits: attempt.limits },
-        async (request) => {
-          attempt.observations.push(request.observation);
-          const response = await client.prompt(
-            sessionId,
-            actionPrompt(regulation, request.observation),
-          );
-          attempt.actions.push({
-            problemId: request.problem.id,
-            status: response.status,
-            summary: response.summary,
-          });
-          await save(root, regulation, attempt);
-          return response.status === "completed"
-            ? { status: "completed", summary: response.summary }
-            : { status: "blocked", reason: response.summary };
-        },
-      );
+      let result: RegulationResult;
+      try {
+        result = await regulator.regulate(
+          {
+            targetLevelId: regulation.targetLevelId,
+            limits: {
+              ...attempt.limits,
+              timeoutMs: Math.max(1, deadline - performance.now()),
+            },
+            signal,
+          },
+          async (request) => {
+            attempt.observations.push(request.observation);
+            const response = await acpCall(
+              client.prompt(sessionId, actionPrompt(regulation, request.observation)),
+            );
+            throwIfAborted();
+            const safeResponse = safeAgentValue(response, regulation.agentProfile);
+            attempt.actions.push({
+              problemId: request.problem.id,
+              status: safeResponse.status,
+              summary: safeResponse.summary,
+            });
+            await save(root, regulation, attempt);
+            return safeResponse.status === "completed"
+              ? { status: "completed", summary: safeResponse.summary }
+              : { status: "blocked", reason: safeResponse.summary };
+          },
+        );
+      } catch (error) {
+        if (
+          error instanceof CliError ||
+          error instanceof ObjectiveRegulatorTimeoutError ||
+          signal.aborted
+        ) {
+          throw error;
+        }
+        throw new CliError(
+          error instanceof Error ? error.message : "Guide re-probe failed.",
+          2,
+          "guide-error",
+        );
+      }
       attempt.observations.push(result.latestObservation);
       return result;
     } finally {
@@ -225,6 +386,7 @@ async function runAttempt(
       process.removeListener("SIGTERM", onSignal);
     }
   } finally {
+    signal.removeEventListener("abort", abort);
     client.close();
   }
 }
@@ -235,6 +397,7 @@ async function finish(
   root: string,
   result: Awaited<ReturnType<typeof runAttempt>>,
   globals: GlobalOptions,
+  reportPath?: string,
 ): Promise<number> {
   attempt.completedAt = new Date().toISOString();
   attempt.status = result.status;
@@ -248,6 +411,9 @@ async function finish(
     latestObservation: result.latestObservation,
   };
   const report = `# Regulation ${regulation.regulationId}\n\nStatus: \`${result.status}\`\n\nTarget: \`${regulation.targetLevelId}\`\n\nIterations: ${result.iterations}`;
+  if (reportPath !== undefined) {
+    await atomicWrite(resolve(globals.cwd, reportPath), `${JSON.stringify(value, null, 2)}\n`);
+  }
   writeResult(value, globals.format, report);
   return exitCode(result.status);
 }
@@ -264,7 +430,19 @@ export async function runRegulate(
     );
     return;
   }
+  rejectUnknownOptions(argv, {
+    "--guide": "value",
+    "--subject-file": "value",
+    "--target": "value",
+    "--agent": "value",
+    "--language": "value",
+    "--max-iterations": "value",
+    "--max-stalled-iterations": "value",
+    "--timeout": "value",
+    "--report": "value",
+  });
   const loaded = await loadConfig(globals.cwd, globals.config);
+  await pruneExpiredRegulations(stateRoot(loaded.value));
   const guidePath = resolve(globals.cwd, option(argv, "--guide", { required: true }) as string);
   const subject = (await readJsonSubject(
     option(argv, "--subject-file", { required: true }) as string,
@@ -277,6 +455,7 @@ export async function runRegulate(
   const profile = loaded.value.agents?.[agentName];
   if (profile === undefined) throw new CliError(`Unknown Agent profile: ${agentName}.`);
   validateAgentProfile(profile);
+  const guideRevision = await digestTree(guidePath);
   const regulationId = randomUUID();
   const root = join(stateRoot(loaded.value), "regulations", regulationId);
   await ensurePrivateDirectory(root);
@@ -292,7 +471,7 @@ export async function runRegulate(
     regulationId,
     createdAt: new Date().toISOString(),
     guidePath,
-    guideRevision: digest(await readFile(guidePath, "utf8")),
+    guideRevision,
     subject,
     subjectDigest: digest(subject),
     targetLevelId,
@@ -310,27 +489,40 @@ export async function runRegulate(
     attempts: [attempt],
   };
   await save(root, regulation, attempt);
+  const reportPath = option(argv, "--report") as string | undefined;
   try {
-    return await finish(
-      regulation,
-      attempt,
-      root,
-      await runAttempt(regulation, attempt, root, globals.cwd, false),
-      globals,
+    return await withinInvocation(attempt.limits.timeoutMs, async (signal, deadline) =>
+      finish(
+        regulation,
+        attempt,
+        root,
+        await runAttempt(regulation, attempt, root, globals.cwd, false, signal, deadline),
+        globals,
+        reportPath,
+      ),
     );
   } catch (error) {
-    if (error instanceof ObjectiveRegulatorTimeoutError) {
+    if (
+      error instanceof ObjectiveRegulatorTimeoutError ||
+      error instanceof InvocationTimeoutError
+    ) {
       attempt.status = "timed-out";
       attempt.completedAt = new Date().toISOString();
       await save(root, regulation, attempt);
-      writeResult(
-        { schemaVersion: 1, regulationId, status: "timed-out" },
-        globals.format,
-        `Regulation ${regulationId} timed out.`,
-      );
+      const value = { schemaVersion: 1, regulationId, status: "timed-out" };
+      if (reportPath !== undefined) {
+        await atomicWrite(resolve(globals.cwd, reportPath), `${JSON.stringify(value, null, 2)}\n`);
+      }
+      writeResult(value, globals.format, `Regulation ${regulationId} timed out.`);
       return 5;
     }
-    throw error;
+    const expected = expectedFailure(error);
+    attempt.status = "failed";
+    attempt.completedAt = new Date().toISOString();
+    attempt.errorCategory = expected.category;
+    attempt.errorSummary = `${expected.category} failure`;
+    await save(root, regulation, attempt);
+    throw expected.failure;
   }
 }
 
@@ -346,10 +538,20 @@ export async function runContinue(
     );
     return;
   }
-  const id = argv[0];
+  rejectUnknownOptions(argv, { "--report": "value" }, 1);
+  let id: string | undefined;
+  for (let index = 0; index < argv.length; index += 1) {
+    if (argv[index] === "--report") {
+      index += 1;
+    } else {
+      id = argv[index];
+      break;
+    }
+  }
   if (id === undefined || !/^[0-9a-f-]{36}$/.test(id))
     throw new CliError("A valid regulation ID is required.");
   const loaded = await loadConfig(globals.cwd, globals.config);
+  await pruneExpiredRegulations(stateRoot(loaded.value));
   const root = join(stateRoot(loaded.value), "regulations", id);
   let regulation: Regulation;
   try {
@@ -369,13 +571,41 @@ export async function runContinue(
   };
   regulation.attempts.push(attempt);
   await save(root, regulation, attempt);
-  return finish(
-    regulation,
-    attempt,
-    root,
-    await runAttempt(regulation, attempt, root, globals.cwd, true),
-    globals,
-  );
+  const reportPath = option(argv, "--report") as string | undefined;
+  try {
+    return await withinInvocation(attempt.limits.timeoutMs, async (signal, deadline) =>
+      finish(
+        regulation,
+        attempt,
+        root,
+        await runAttempt(regulation, attempt, root, globals.cwd, true, signal, deadline),
+        globals,
+        reportPath,
+      ),
+    );
+  } catch (error) {
+    if (
+      error instanceof ObjectiveRegulatorTimeoutError ||
+      error instanceof InvocationTimeoutError
+    ) {
+      attempt.status = "timed-out";
+      attempt.completedAt = new Date().toISOString();
+      await save(root, regulation, attempt);
+      const value = { schemaVersion: 1, regulationId: id, status: "timed-out" };
+      if (reportPath !== undefined) {
+        await atomicWrite(resolve(globals.cwd, reportPath), `${JSON.stringify(value, null, 2)}\n`);
+      }
+      writeResult(value, globals.format, `Regulation ${id} timed out.`);
+      return 5;
+    }
+    const expected = expectedFailure(error);
+    attempt.status = "failed";
+    attempt.completedAt = new Date().toISOString();
+    attempt.errorCategory = expected.category;
+    attempt.errorSummary = `${expected.category} failure`;
+    await save(root, regulation, attempt);
+    throw expected.failure;
+  }
 }
 
 export function launchRegulatorCommand(

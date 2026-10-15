@@ -1,22 +1,23 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
-import { spawn } from "node:child_process";
-import { join, resolve } from "node:path";
-import { parse, stringify } from "yaml";
+import { randomUUID } from "node:crypto";
+import { readFile, unlink } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import {
   atomicWrite,
   CliError,
   commandMain,
+  type GlobalOptions,
   loadConfig,
+  type PguideConfig,
   parseConfig,
   readStdin,
   redactConfig,
   userConfigPath,
   validateAgentProfile,
   writeResult,
-  type GlobalOptions,
-  type PguideConfig,
 } from "@potential-guide/cli-core";
+import spawn from "cross-spawn";
+import { parse, stringify } from "yaml";
 
 function targetPath(scope: string, globals: GlobalOptions): string {
   if (scope === "user") return userConfigPath();
@@ -32,6 +33,16 @@ async function editable(path: string): Promise<PguideConfig> {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return { schemaVersion: 1 };
     throw error;
   }
+}
+
+function editorCommand(source: string): { command: string; args: string[] } {
+  const parts = source.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) ?? [];
+  if (parts.length === 0) throw new CliError("VISUAL or EDITOR is invalid.");
+  const unquote = (part: string) =>
+    (part.startsWith('"') && part.endsWith('"')) || (part.startsWith("'") && part.endsWith("'"))
+      ? part.slice(1, -1)
+      : part;
+  return { command: unquote(parts[0] as string), args: parts.slice(1).map(unquote) };
 }
 
 async function run(argv: string[], globals: GlobalOptions): Promise<void> {
@@ -137,19 +148,28 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
   if (subcommand === "edit") {
     const editor = process.env.VISUAL ?? process.env.EDITOR;
     if (editor === undefined) throw new CliError("VISUAL or EDITOR is required for config edit.");
-    await new Promise<void>((resolveEditor, rejectEditor) => {
-      const child = spawn(editor, [path], {
-        cwd: globals.cwd,
-        stdio: "inherit",
-        shell: process.platform === "win32",
+    const temporary = join(dirname(path), `.config.${process.pid}.${randomUUID()}.yaml.tmp`);
+    const current = await editable(path);
+    await atomicWrite(temporary, stringify(current));
+    try {
+      const parsed = editorCommand(editor);
+      await new Promise<void>((resolveEditor, rejectEditor) => {
+        const child = spawn(parsed.command, [...parsed.args, temporary], {
+          cwd: globals.cwd,
+          stdio: "inherit",
+          shell: false,
+        });
+        child.on("error", rejectEditor);
+        child.on("close", (code) => {
+          if (code === 0) resolveEditor();
+          else rejectEditor(new CliError(`Editor exited ${String(code)}.`));
+        });
       });
-      child.on("error", rejectEditor);
-      child.on("close", (code) => {
-        if (code === 0) resolveEditor();
-        else rejectEditor(new CliError(`Editor exited ${String(code)}.`));
-      });
-    });
-    parseConfig(await readFile(path, "utf8"));
+      const validated = parseConfig(await readFile(temporary, "utf8"));
+      await atomicWrite(path, stringify(validated));
+    } finally {
+      await unlink(temporary).catch(() => undefined);
+    }
     return;
   }
   const config = await editable(path);
