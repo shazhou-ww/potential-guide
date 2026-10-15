@@ -1,12 +1,20 @@
 # npm publishing
 
-Potential Guide publishes three independent public packages from this monorepo:
+Potential Guide publishes six CLI and library packages independently from this monorepo:
 
 | Package | Release tag |
 | --- | --- |
 | `@potential-guide/objective-guide` | `objective-guide-vX.Y.Z` |
 | `@potential-guide/objective-regulator` | `objective-regulator-vX.Y.Z` |
 | `@potential-guide/objective-portfolio-supervisor` | `objective-portfolio-supervisor-vX.Y.Z` |
+| `@potential-guide/cli-core` | `cli-core-vX.Y.Z` |
+| `pguide-config` | `pguide-config-vX.Y.Z` |
+| `pguide` | `pguide-vX.Y.Z` |
+
+CLI packages must be released in dependency order: `cli-core`, the three
+Objective packages, `pguide-config`, then `pguide`. Reconfirm that the unscoped
+names remain available before the first placeholder publish. Never silently
+substitute another canonical package name.
 
 The tag version must exactly match that package's `package.json`, and the tagged
 commit must be reachable from `origin/main`. Each tag publishes only one
@@ -27,6 +35,9 @@ rules must allow these release tags:
 - `objective-guide-v*`
 - `objective-regulator-v*`
 - `objective-portfolio-supervisor-v*`
+- `cli-core-v*`
+- `pguide-config-v*`
+- `pguide-v*`
 
 ## Publish the bootstrap placeholders
 
@@ -54,17 +65,23 @@ pnpm bootstrap:pack
 npm login --registry=https://registry.npmjs.org/ --auth-type=web
 npm whoami --registry=https://registry.npmjs.org/
 
+npm publish .cache/npm-bootstrap/potential-guide-cli-core-0.0.0.tgz \
+  --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/potential-guide-objective-guide-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/potential-guide-objective-regulator-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/potential-guide-objective-portfolio-supervisor-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
+npm publish .cache/npm-bootstrap/pguide-config-0.0.0.tgz \
+  --access public --registry=https://registry.npmjs.org/
+npm publish .cache/npm-bootstrap/pguide-0.0.0.tgz \
+  --access public --registry=https://registry.npmjs.org/
 
 npm logout --registry=https://registry.npmjs.org/
 ```
 
-The `bootstrap:pack` command only creates three minimal tarballs containing a
+The `bootstrap:pack` command only creates six minimal tarballs containing a
 `package.json` and README; it never publishes them. Inspect the printed paths
 before running `npm publish`. Do not manually publish the tracked `0.1.0`
 product packages.
@@ -95,7 +112,7 @@ days. A dry-run can diagnose the connection but does not satisfy that deadline.
 
 ## Publish the first product versions
 
-After publishing all three placeholders and configuring their Trusted
+After publishing all six placeholders and configuring their Trusted
 Publishers, publish in dependency order. Wait for each workflow to succeed
 before creating the next tag:
 
@@ -103,6 +120,9 @@ before creating the next tag:
 git fetch origin main --tags
 git switch main
 git pull --ff-only origin main
+
+git tag -a cli-core-v0.1.0 -m "release: cli-core v0.1.0"
+git push origin refs/tags/cli-core-v0.1.0
 
 git tag -a objective-guide-v0.1.0 -m "release: objective-guide v0.1.0"
 git push origin refs/tags/objective-guide-v0.1.0
@@ -113,6 +133,12 @@ git push origin refs/tags/objective-regulator-v0.1.0
 git tag -a objective-portfolio-supervisor-v0.1.0 \
   -m "release: objective-portfolio-supervisor v0.1.0"
 git push origin refs/tags/objective-portfolio-supervisor-v0.1.0
+
+git tag -a pguide-config-v0.1.0 -m "release: pguide-config v0.1.0"
+git push origin refs/tags/pguide-config-v0.1.0
+
+git tag -a pguide-v0.1.0 -m "release: pguide v0.1.0"
+git push origin refs/tags/pguide-v0.1.0
 ```
 
 Use `gh run list --workflow publish-npm.yaml` and

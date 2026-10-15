@@ -12,6 +12,12 @@ catalogs:
     '@types/node':
       specifier: 22.20.5
       version: 22.20.5
+    ajv:
+      specifier: 8.20.0
+      version: 8.20.0
+    jsonata:
+      specifier: 2.1.0
+      version: 2.1.0
     tsx:
       specifier: 4.23.15
       version: 4.23.15
@@ -21,6 +27,9 @@ catalogs:
     typescript:
       specifier: 5.9.3
       version: 5.9.3
+    yaml:
+      specifier: 2.9.1
+      version: 2.9.1
 
 importers:
 
@@ -44,18 +53,24 @@ importers:
 
   packages/objective-guide:
     dependencies:
+      '@potential-guide/cli-core':
+        specifier: workspace:^
+        version: link:../pguide-cli-core
       ajv:
-        specifier: ^8.20.0
+        specifier: 'catalog:'
         version: 8.20.0
       jsonata:
-        specifier: ^2.1.0
-        version: 2.2.2
+        specifier: 'catalog:'
+        version: 2.1.0
       yaml:
-        specifier: ^2.9.1
+        specifier: 'catalog:'
         version: 2.9.1
 
   packages/objective-portfolio-supervisor:
     dependencies:
+      '@potential-guide/cli-core':
+        specifier: workspace:^
+        version: link:../pguide-cli-core
       '@potential-guide/objective-guide':
         specifier: workspace:^
         version: link:../objective-guide
@@ -65,9 +80,45 @@ importers:
 
   packages/objective-regulator:
     dependencies:
+      '@potential-guide/cli-core':
+        specifier: workspace:^
+        version: link:../pguide-cli-core
       '@potential-guide/objective-guide':
         specifier: workspace:^
         version: link:../objective-guide
+
+  packages/pguide:
+    dependencies:
+      '@potential-guide/cli-core':
+        specifier: workspace:^
+        version: link:../pguide-cli-core
+      '@potential-guide/objective-guide':
+        specifier: workspace:^
+        version: link:../objective-guide
+      '@potential-guide/objective-portfolio-supervisor':
+        specifier: workspace:^
+        version: link:../objective-portfolio-supervisor
+      '@potential-guide/objective-regulator':
+        specifier: workspace:^
+        version: link:../objective-regulator
+      pguide-config:
+        specifier: workspace:^
+        version: link:../pguide-config
+
+  packages/pguide-cli-core:
+    dependencies:
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.1
+
+  packages/pguide-config:
+    dependencies:
+      '@potential-guide/cli-core':
+        specifier: workspace:^
+        version: link:../pguide-cli-core
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.1
 
 packages:
 
@@ -339,8 +390,8 @@ packages:
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
 
-  jsonata@2.2.2:
-    resolution: {integrity: sha512-XDFH2PuaAXv0AXJEWwElXbqADmKFGKMLMkFb+qOz0EhjQW2EIJ6pgtordLU+4u3IVERyBfqy6bi6kZKEncvRqA==}
+  jsonata@2.1.0:
+    resolution: {integrity: sha512-OCzaRMK8HobtX8fp37uIVmL8CY1IGc/a6gLsDqz3quExFR09/U78HUzWYr7T31UEB6+Eu0/8dkVD5fFDOl9a8w==}
     engines: {node: '>= 8'}
 
   require-from-string@2.0.2:
@@ -551,7 +602,7 @@ snapshots:
 
   json-schema-traverse@1.0.0: {}
 
-  jsonata@2.2.2: {}
+  jsonata@2.1.0: {}
 
   require-from-string@2.0.2: {}
 

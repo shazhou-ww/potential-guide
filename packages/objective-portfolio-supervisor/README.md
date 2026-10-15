@@ -8,6 +8,11 @@ across different Objectives.
 Every registration must be represented by either one directive or one deferred
 entry. Safety-threshold recovery precedes opportunistic work.
 
+## CLI
+
+The package owns `pguide-supervise`, which loads a portfolio description, plans
+directives, and can execute them through a configured ACP Agent profile.
+
 ## Public API
 
 - `createObjectivePortfolioSupervisor(registrations, policy)` validates stable,

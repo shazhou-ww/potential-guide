@@ -8,6 +8,12 @@ unbounded loop.
 The package never performs real-world mutations itself. Callers inject the Agent
 executor and retain responsibility for cancellation within that executor.
 
+## CLI
+
+The package owns `pguide-regulate` and `pguide-continue`. They use only
+predefined ACP Agent profiles and persist a private Regulation/Attempt ledger
+plus the protocol-visible transcript.
+
 ## Public API
 
 - `createObjectiveRegulator(instance)` binds regulation to one Guide Instance.

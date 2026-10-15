@@ -6,6 +6,12 @@ domain validation, prerequisite projection, ordered levels, executable checks,
 localized observations, and reference pages. It does not own command reports,
 Git workflow policy, regulation, or portfolio supervision.
 
+## CLI
+
+The package owns the independent `pguide-probe`, `pguide-scaffold`, and
+`pguide-validate` bins. They can run directly or through top-level `pguide`
+discovery.
+
 ## Transport layout
 
 Each Guide is a self-contained transport unit:

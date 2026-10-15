@@ -2,6 +2,9 @@
   "files": [],
   "references": [
     {
+      "path": "./packages/pguide-cli-core"
+    },
+    {
       "path": "./packages/objective-guide"
     },
     {
@@ -9,6 +12,12 @@
     },
     {
       "path": "./packages/objective-portfolio-supervisor"
+    },
+    {
+      "path": "./packages/pguide-config"
+    },
+    {
+      "path": "./packages/pguide"
     }
   ]
 }

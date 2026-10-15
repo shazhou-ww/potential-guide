@@ -1,0 +1,40 @@
+{
+  "name": "pguide",
+  "version": "0.1.0",
+  "description": "Extensible command-line interface for Potential Guide.",
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "pguide": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.ts\"",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@potential-guide/cli-core": "workspace:^",
+    "@potential-guide/objective-guide": "workspace:^",
+    "@potential-guide/objective-regulator": "workspace:^",
+    "@potential-guide/objective-portfolio-supervisor": "workspace:^",
+    "pguide-config": "workspace:^"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shazhou-ww/potential-guide.git",
+    "directory": "packages/pguide"
+  }
+}

@@ -12,6 +12,9 @@
       "import": "./dist/index.js"
     }
   },
+  "bin": {
+    "pguide-supervise": "./dist/bin/supervise.js"
+  },
   "files": [
     "dist",
     "README.md"
@@ -27,6 +30,7 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@potential-guide/cli-core": "workspace:^",
     "@potential-guide/objective-guide": "workspace:^",
     "@potential-guide/objective-regulator": "workspace:^"
   },

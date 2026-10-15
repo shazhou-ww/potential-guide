@@ -6,6 +6,9 @@ on:
       - "objective-guide-v*"
       - "objective-regulator-v*"
       - "objective-portfolio-supervisor-v*"
+      - "cli-core-v*"
+      - "pguide-config-v*"
+      - "pguide-v*"
   workflow_dispatch:
     inputs:
       package:
@@ -16,6 +19,9 @@ on:
           - objective-guide
           - objective-regulator
           - objective-portfolio-supervisor
+          - cli-core
+          - pguide-config
+          - pguide
 
 permissions: {}
 
@@ -66,6 +72,10 @@ jobs:
           const { join } = require("node:path");
 
           const packages = {
+            "cli-core": {
+              directory: "packages/pguide-cli-core",
+              name: "@potential-guide/cli-core",
+            },
             "objective-guide": {
               directory: "packages/objective-guide",
               name: "@potential-guide/objective-guide",
@@ -78,10 +88,18 @@ jobs:
               directory: "packages/objective-portfolio-supervisor",
               name: "@potential-guide/objective-portfolio-supervisor",
             },
+            "pguide-config": {
+              directory: "packages/pguide-config",
+              name: "pguide-config",
+            },
+            "pguide": {
+              directory: "packages/pguide",
+              name: "pguide",
+            },
           };
           const stableVersion = /^\d+\.\d+\.\d+$/u;
           const tagPattern =
-            /^(objective-guide|objective-regulator|objective-portfolio-supervisor)-v(\d+\.\d+\.\d+)$/u;
+            /^(cli-core|objective-guide|objective-regulator|objective-portfolio-supervisor|pguide-config|pguide)-v(\d+\.\d+\.\d+)$/u;
 
           let packageId;
           let taggedVersion;

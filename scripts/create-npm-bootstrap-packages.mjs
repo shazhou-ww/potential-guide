@@ -6,7 +6,14 @@ import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const destination = resolve(process.argv[2] ?? join(root, ".cache", "npm-bootstrap"));
-const packages = ["objective-guide", "objective-regulator", "objective-portfolio-supervisor"];
+const packages = [
+  "pguide-cli-core",
+  "objective-guide",
+  "objective-regulator",
+  "objective-portfolio-supervisor",
+  "pguide-config",
+  "pguide",
+];
 const packageManagerCli = process.env.npm_execpath;
 if (packageManagerCli === undefined) {
   throw new Error("Run this script through pnpm bootstrap:pack.");

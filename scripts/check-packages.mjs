@@ -9,6 +9,31 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const pnpmCommand = "pnpm";
 const packages = [
   {
+    directory: "pguide-cli-core",
+    name: "@potential-guide/cli-core",
+    exports: [
+      "AcpClient",
+      "COMMAND_PROTOCOL",
+      "CliError",
+      "atomicWrite",
+      "commandMain",
+      "digest",
+      "duration",
+      "ensurePrivateDirectory",
+      "extractGlobals",
+      "loadConfig",
+      "option",
+      "parseConfig",
+      "readJsonSubject",
+      "readStdin",
+      "redactConfig",
+      "stateRoot",
+      "userConfigPath",
+      "validateAgentProfile",
+      "writeResult",
+    ],
+  },
+  {
     directory: "objective-guide",
     name: "@potential-guide/objective-guide",
     exports: [
@@ -20,6 +45,7 @@ const packages = [
       "fileObjectiveCheckRunner",
       "fileObjectiveResources",
     ],
+    bins: ["pguide-probe", "pguide-scaffold", "pguide-validate"],
   },
   {
     directory: "objective-regulator",
@@ -29,11 +55,23 @@ const packages = [
       "ObjectiveRegulatorTimeoutError",
       "createObjectiveRegulator",
     ],
+    bins: ["pguide-regulate", "pguide-continue"],
   },
   {
     directory: "objective-portfolio-supervisor",
     name: "@potential-guide/objective-portfolio-supervisor",
     exports: ["ObjectivePortfolioError", "createObjectivePortfolioSupervisor"],
+    bins: ["pguide-supervise"],
+  },
+  {
+    directory: "pguide-config",
+    name: "pguide-config",
+    bins: ["pguide-config"],
+  },
+  {
+    directory: "pguide",
+    name: "pguide",
+    bins: ["pguide"],
   },
 ];
 
@@ -77,11 +115,15 @@ try {
     const packageRoot = join(root, "packages", expected.directory);
     const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
     assert.equal(manifest.name, expected.name);
-    assert.deepEqual(Object.keys(manifest.exports), ["."]);
-    assert.deepEqual(Object.keys(manifest.exports["."]).sort(), ["import", "types"]);
-
-    const module = await import(pathToFileURL(join(packageRoot, "dist", "index.js")).href);
-    assert.deepEqual(Object.keys(module).sort(), [...expected.exports].sort());
+    if (expected.exports !== undefined) {
+      assert.deepEqual(Object.keys(manifest.exports), ["."]);
+      assert.deepEqual(Object.keys(manifest.exports["."]).sort(), ["import", "types"]);
+      const module = await import(pathToFileURL(join(packageRoot, "dist", "index.js")).href);
+      assert.deepEqual(Object.keys(module).sort(), [...expected.exports].sort());
+    }
+    for (const bin of expected.bins ?? []) {
+      assert.equal(typeof manifest.bin[bin], "string");
+    }
 
     const packed = JSON.parse(
       await run(pnpmCommand, [
@@ -96,8 +138,10 @@ try {
     assert.equal(packed.name, expected.name);
     const files = packed.files.map(({ path }) => path);
     for (const required of [
-      "dist/index.js",
-      "dist/index.d.ts",
+      ...(expected.exports === undefined ? [] : ["dist/index.js", "dist/index.d.ts"]),
+      ...(expected.bins === undefined
+        ? []
+        : Object.values(manifest.bin).map((path) => path.replace(/^\.\//, ""))),
       "LICENSE",
       "package.json",
       "README.md",

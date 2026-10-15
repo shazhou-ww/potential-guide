@@ -1,0 +1,37 @@
+{
+  "name": "pguide-config",
+  "version": "0.1.0",
+  "description": "Official configuration command extension for pguide.",
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "pguide-config": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.ts\"",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@potential-guide/cli-core": "workspace:^",
+    "yaml": "catalog:"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shazhou-ww/potential-guide.git",
+    "directory": "packages/pguide-config"
+  }
+}

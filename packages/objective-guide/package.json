@@ -12,6 +12,11 @@
       "import": "./dist/index.js"
     }
   },
+  "bin": {
+    "pguide-probe": "./dist/bin/probe.js",
+    "pguide-scaffold": "./dist/bin/scaffold.js",
+    "pguide-validate": "./dist/bin/validate.js"
+  },
   "files": [
     "dist",
     "README.md"
@@ -27,9 +32,10 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
-    "ajv": "^8.20.0",
-    "jsonata": "^2.1.0",
-    "yaml": "^2.9.1"
+    "@potential-guide/cli-core": "workspace:^",
+    "ajv": "catalog:",
+    "jsonata": "catalog:",
+    "yaml": "catalog:"
   },
   "publishConfig": {
     "access": "public"

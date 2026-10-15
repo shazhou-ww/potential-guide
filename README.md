@@ -1,6 +1,7 @@
 # Potential Guide
 
-Potential Guide is a pnpm TypeScript monorepo for three composable objective packages:
+Potential Guide is a pnpm TypeScript monorepo for composable objective packages
+and the extensible `pguide` command line:
 
 - `@potential-guide/objective-guide` models one objective through ordered levels,
   independently eligible same-level checks with injected concurrency policy,
@@ -9,6 +10,10 @@ Potential Guide is a pnpm TypeScript monorepo for three composable objective pac
   for one Objective Guide instance.
 - `@potential-guide/objective-portfolio-supervisor` coordinates multiple regulators
   through an injected portfolio policy.
+- `pguide` discovers and safely dispatches independent `pguide-<command>`
+  executables. Official commands cover probing, regulation and continuation,
+  portfolio supervision, scaffolding, validation, diagnostics, completion, and
+  optional configuration management.
 
 Dependencies flow in that order and never back toward the core.
 
@@ -35,6 +40,19 @@ pnpm test
 ```
 
 Run `pnpm check` for the complete repository verification.
+
+## CLI
+
+```sh
+npx pguide --help
+pguide scaffold guide ./my-guide
+pguide validate guide ./my-guide/objective-guide.yaml
+pguide probe --guide ./my-guide/objective-guide.yaml --subject-file ./subject.json
+```
+
+`pguide regulate` uses only named ACP Agent profiles from user, project, or
+explicit YAML configuration. Regulation state and protocol-visible transcript
+are stored under the platform state directory; credentials are never persisted.
 
 ## Publishing
 
