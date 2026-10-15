@@ -75,7 +75,7 @@ pguide --format json probe --guide ./objective-guide.yaml --subject-file ./subje
 pguide probe --guide ./objective-guide.yaml --subject-file ./subject.json --format json
 ```
 
-全局参数名属于协议保留字，包级命令不能以不同语义重新定义。遇到 `--` 后，顶层 CLI 停止识别任何全局参数，并把后续内容逐字传给子命令或 Agent adapter。由此既允许符合直觉的参数位置，也避免外部命令的参数被意外吞掉。
+全局参数名属于协议保留字，包级命令不能以不同语义重新定义。遇到 `--` 后，顶层 CLI 停止识别任何全局参数，并把后续内容逐字传给子命令。由此既允许符合直觉的参数位置，也避免外部命令的参数被意外吞掉。
 
 | 参数 | 语义 |
 | --- | --- |
@@ -150,7 +150,6 @@ pguide regulate `
   --subject-file .\subject.json `
   --target terminal `
   --agent copilot `
-  --agent-config .\copilot-agent.json `
   --max-iterations 8 `
   --max-stalled-iterations 2 `
   --timeout 30m `
@@ -163,8 +162,7 @@ pguide regulate `
 | `--guide <path-or-uri>` | 是 | 无 | Guide manifest 的文件路径或 URI |
 | `--subject-file <path>` | 是 | 无 | JSON subject 文件；传入 `-` 表示 stdin |
 | `--target <level-id>` | 是 | 无 | 明确目标 level；也接受 `terminal`，但不隐式假定 |
-| `--agent <adapter-id>` | 是 | 无 | 已注册 Agent adapter，例如 `copilot` 或 `process` |
-| `--agent-config <path>` | 否 | adapter 默认值 | Agent adapter 的非敏感配置文件 |
+| `--agent <profile-name>` | 条件必需 | `defaultAgent` | 选择配置中预定义的 Agent profile；未指定且没有默认值时失败 |
 | `--max-iterations <integer>` | 否 | `8` | 最多请求的 Agent action 数 |
 | `--max-stalled-iterations <integer>` | 否 | `2` | 连续未提升 level 的上限 |
 | `--timeout <duration>` | 否 | `30m` | 整次 regulation 的 wall-clock deadline |
@@ -173,44 +171,63 @@ pguide regulate `
 
 Regulator 不持有隐藏会话状态，也不提供独立 `resume` 命令。再次运行相同命令会从真实世界重新 probe 并继续推进。
 
-敏感凭据不允许通过普通命令参数或 `--agent-config` 明文传递。Adapter 应使用宿主凭据存储、环境注入或自己的认证流程。
+命令行不接受 Agent executable、endpoint、protocol、任意 Agent 参数或凭据。除 `--agent <profile-name>` 外，所有 Agent 细节都来自标准配置。
 
-`process` adapter 可额外接受位于 `--` 之后的 Agent 进程参数：
+## Agent 配置
 
-```powershell
-pguide regulate <options> -- --profile autonomous
+Agent profile 与其他 CLI 设置使用同一份 `pguide` YAML 配置：
+
+- 项目配置：从 `--cwd` 向上查找 `.pguide/config.yaml`；
+- 用户配置：Windows 使用 `%APPDATA%\pguide\config.yaml`，其他平台使用 `$XDG_CONFIG_HOME/pguide/config.yaml`，未设置时回退到 `~/.config/pguide/config.yaml`；
+- 显式配置：全局 `--config <path>` 作为最高优先级配置层。
+
+```yaml
+schemaVersion: 1
+defaultAgent: copilot
+
+agents:
+  copilot:
+    protocol:
+      name: acp
+      version: "1"
+    transport:
+      type: stdio
+      command: copilot
+      args: [--acp]
+      env: [GITHUB_TOKEN]
+
+  guarded-codex:
+    protocol:
+      name: ahp
+      version: "2.4"
+    transport:
+      type: http
+      url: http://127.0.0.1:8787
+      bearerTokenEnv: AHP_TOKEN
 ```
 
-顶层 CLI 不解释 `--` 之后的内容；其他 adapter 可以拒绝不支持的附加参数。
+`agents` 是以稳定名称索引的预定义 profile 列表。用户配置先加载，项目配置按 profile 名整体替换，显式配置最后覆盖；单个 profile 不做字段级深度合并，避免从多个来源拼出不可审计的 Agent。
 
-## Agent adapter 契约
+`pguide list agents` 列出有效 profile、来源、协议和 transport，但不显示凭据。`pguide diagnose agent <profile-name>` 解析 executable 或 endpoint，执行协议握手并验证 regulation 所需能力，不提交任务。
 
-Agent adapter 实现现有 `ObjectiveActionExecutor` 语义。每次调用只接收一个 action request：
+配置文件不得包含 token、password 或 API key 字面值。`env` 只声明允许继承的环境变量名；网络认证只引用保存凭据的环境变量名或宿主凭据提供器。
 
-```json
-{
-  "protocol": "pguide-action-v1",
-  "targetLevelId": "terminal",
-  "observation": {},
-  "problem": {}
-}
-```
+## Agent 协议契约
 
-合法结果只有：
+Agent profile 的 `protocol.name` 只接受 `ahp` 或 `acp`，其他值在启动任何进程或网络连接前失败：
 
-```json
-{"status":"completed","summary":"Applied one remediation."}
-```
+- **ACP**：`pguide` 作为 Agent Client Protocol client，通过 `initialize` 协商 protocol version 和 capabilities，再创建 session 并把单轮 Objective action 作为 prompt/task 交给 coding agent。
+- **AHP**：`pguide` 连接 Agent Harness Protocol harness，先执行 AHP handshake，再使用其 run/task lifecycle 和监督事件能力驱动受 harness 策略约束的 Agent。缺少所需 run/task capability 的 endpoint 不可用于 `regulate`。
 
-或：
+截至 2026-10-15，公开规范的稳定 ACP protocol version 为 `1`，AHP 当前 protocol version 为 `2.4`。这些是兼容性观测而非永久默认值；实现必须根据所支持的 major version 和握手结果决定兼容性，不能根据 SDK 或 schema artifact 的包版本推断 wire compatibility。
 
-```json
-{"status":"blocked","reason":"Human authorization is required."}
-```
+协议依据分别为 [Agent Client Protocol](https://github.com/agentclientprotocol/agent-client-protocol) 和 [Agent Harness Protocol](https://github.com/A3S-Lab/AgentHarnessProtocol) 的公开规范。
+
+`pguide` 不再定义私有 Agent wire protocol，也不接受任意 `process` adapter。协议实现负责把 `ObjectiveActionRequest` 映射到标准 session/run 消息，并将一次 Agent 结果映射为现有 `ObjectiveActionExecutor` 的 `completed` 或 `blocked` 结果。
 
 `completed` 只表示 Agent 完成了本轮动作，不表示 Objective 有进展。CLI 必须等待 Regulator re-probe；只有新的 observation 可以证明 level 提升或 target reached。
 
-Adapter 负责自己的 mutation 权限、工具允许列表和人工授权策略。CLI 不提供绕过 Agent 或宿主审批的通用开关。
+AHP harness 或 ACP agent/client capability 负责 mutation 权限、工具允许列表和人工授权策略。CLI 不提供绕过协议参与方审批的通用开关。
 
 ## Regulation 输出
 
@@ -234,7 +251,7 @@ JSON 输出包含稳定字段：
 }
 ```
 
-不把 Agent 的自由文本日志混入 JSON；详细 Agent 日志写入 stderr 或 adapter 自己的持久日志。
+不把 Agent 的自由文本日志混入 JSON；详细 Agent 日志写入 stderr 或协议实现自己的持久日志。
 
 ## 退出码
 
@@ -245,7 +262,7 @@ JSON 输出包含稳定字段：
 | `3` | `action-blocked` 或 `no-actionable-problem` |
 | `4` | `no-progress` 或 `max-iterations` |
 | `5` | `timed-out` 或外部取消 |
-| `6` | Agent adapter、子进程或 I/O 操作失败 |
+| `6` | AHP/ACP 握手、Agent session、transport 或 I/O 操作失败 |
 | `70` | 未分类内部错误 |
 
 所有非零结果在 Markdown 与 JSON 模式中都返回机器可识别的 status，不以解析错误文本作为自动化接口。
@@ -261,12 +278,13 @@ JSON 输出包含稳定字段：
 5. 用户级配置；
 6. 内置默认值。
 
-项目配置只描述命令目录、默认语言、输出偏好、limits 和 adapter 标识等非敏感设置。CLI 必须能用 `diagnose --format json` 显示每个有效值的来源，但不得输出凭据。
+项目配置只描述命令目录、默认语言、输出偏好、limits 和 Agent profile 等非敏感设置。CLI 必须能用 `diagnose --format json` 显示每个有效值的来源，但不得输出凭据。
 
 ## 明确不包含
 
 - 不让顶层 CLI 复制 Guide、Regulator 或 Portfolio 的业务实现。
 - 不允许外部命令覆盖保留的内置命令。
 - 不把 Agent 的自报完成当作 Objective 进展。
+- 不支持 AHP 与 ACP 之外的 Agent 协议，也不提供绕过 profile 的临时 Agent 命令行参数。
 - 不提供关闭 timeout、iteration 或 stalled-progress 防护的无限运行模式。
 - 不在第一版实现远程插件市场、后台 daemon 或隐藏的 regulation session。
