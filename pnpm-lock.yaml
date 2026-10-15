@@ -4,21 +4,42 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    '@biomejs/biome':
+      specifier: 2.5.15
+      version: 2.5.15
+    '@types/node':
+      specifier: 22.20.5
+      version: 22.20.5
+    tsx:
+      specifier: 4.23.15
+      version: 4.23.15
+    turbo:
+      specifier: ^2.11.8
+      version: 2.11.8
+    typescript:
+      specifier: 5.9.3
+      version: 5.9.3
+
 importers:
 
   .:
     devDependencies:
       '@biomejs/biome':
-        specifier: 2.5.15
+        specifier: 'catalog:'
         version: 2.5.15
       '@types/node':
-        specifier: 22.20.5
+        specifier: 'catalog:'
         version: 22.20.5
       tsx:
-        specifier: 4.23.15
+        specifier: 'catalog:'
         version: 4.23.15
+      turbo:
+        specifier: 'catalog:'
+        version: 2.11.8
       typescript:
-        specifier: 5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/objective-guide:
@@ -263,6 +284,36 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@turbo/darwin-64@2.11.8':
+    resolution: {integrity: sha512-u+6s4C2hskRYx6MkW2uT7BCW6sESCL/+5bjHDDWUfQfQliCSJ7lAHAL6RQaw0an9WU6nJvwYgT786mEWul2kDw==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@turbo/darwin-arm64@2.11.8':
+    resolution: {integrity: sha512-y3qpPbclA4MuzAf/pSp6ivifp2mBCiLMHyf/bVq2eAJLjTnzev9JG5eqFhM0UvDGi0b3QKRNZi2HiavPnLbEbw==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@turbo/linux-64@2.11.8':
+    resolution: {integrity: sha512-5Pm0icIkXPjk/HxhZD2AFMCyfH8RlITgtOksoSAdeLtXHAagzAqaAkdqG+6Ebd3eGPT1k3nJZWQD4wCLlIte5g==}
+    cpu: [x64]
+    os: [android, linux]
+
+  '@turbo/linux-arm64@2.11.8':
+    resolution: {integrity: sha512-gh/Pcg7WVLS22SpoFqNxs/4y6feU/+Qa9nkCLTOHMTLjE3ADeqMjLFulq1LVCsWD2vjQccCnaZSUOLJ/lHzBRQ==}
+    cpu: [arm64]
+    os: [android, linux]
+
+  '@turbo/windows-64@2.11.8':
+    resolution: {integrity: sha512-NnHtcWPE6PymlYsCKEuYditlY/nMeCEB3xyD4yc3cpqpxW7/4Xqdlqd5TpqvEpjS8CDazPHelGCQS/ghUIoZ6g==}
+    cpu: [x64]
+    os: [win32]
+
+  '@turbo/windows-arm64@2.11.8':
+    resolution: {integrity: sha512-o8UyM/VlYCvW5Enfo2O37Pe11p3wmnEYtJrohXA2SyOlehmo5KyXpptPRKrXOMNfdmoYEulo6Nhj0tIv2UB0hA==}
+    cpu: [arm64]
+    os: [win32]
+
   '@types/node@22.20.5':
     resolution: {integrity: sha512-U2+DNr+wSjpsTS/wZGYHq7GcwfuSmKiKvoPvK22zwTlRhU91yOniN4qRR5KhIjvif7ysw/dz/hKmfDH0Ris4aA==}
 
@@ -299,6 +350,10 @@ packages:
   tsx@4.23.15:
     resolution: {integrity: sha512-Yiex1Ovn8z2xPpOWckIiysV1SSyRMY9BkLF++q0yKiDxCqRhosKfMg3janKkiLBwZ5c/YryloKwGZcrEmtwxKw==}
     engines: {node: '>=18.0.0'}
+    hasBin: true
+
+  turbo@2.11.8:
+    resolution: {integrity: sha512-OwiFs6xNO5c2XtPgYCgCXuSlkur4b5T/OeAbOKzgsHh5mmJ9Sh7m041fz2JchrvyQv8hmae+1n07HfBmvDLZRA==}
     hasBin: true
 
   typescript@5.9.3:
@@ -429,6 +484,24 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
+  '@turbo/darwin-64@2.11.8':
+    optional: true
+
+  '@turbo/darwin-arm64@2.11.8':
+    optional: true
+
+  '@turbo/linux-64@2.11.8':
+    optional: true
+
+  '@turbo/linux-arm64@2.11.8':
+    optional: true
+
+  '@turbo/windows-64@2.11.8':
+    optional: true
+
+  '@turbo/windows-arm64@2.11.8':
+    optional: true
+
   '@types/node@22.20.5':
     dependencies:
       undici-types: 6.21.0
@@ -487,6 +560,15 @@ snapshots:
       esbuild: 0.28.2
     optionalDependencies:
       fsevents: 2.3.3
+
+  turbo@2.11.8:
+    optionalDependencies:
+      '@turbo/darwin-64': 2.11.8
+      '@turbo/darwin-arm64': 2.11.8
+      '@turbo/linux-64': 2.11.8
+      '@turbo/linux-arm64': 2.11.8
+      '@turbo/windows-64': 2.11.8
+      '@turbo/windows-arm64': 2.11.8
 
   typescript@5.9.3: {}
 

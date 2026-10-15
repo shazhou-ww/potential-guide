@@ -1,4 +1,9 @@
 node_modules/
 dist/
 .cache/
+.turbo/
 *.tgz
+
+.DS_Store
+.idea/
+.vscode/

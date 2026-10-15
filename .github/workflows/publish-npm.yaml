@@ -1,0 +1,251 @@
+name: Publish package to npm
+
+on:
+  push:
+    tags:
+      - "objective-guide-v*"
+      - "objective-regulator-v*"
+      - "objective-portfolio-supervisor-v*"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package whose Trusted Publisher connection should be dry-run
+        required: true
+        type: choice
+        options:
+          - objective-guide
+          - objective-regulator
+          - objective-portfolio-supervisor
+
+permissions: {}
+
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish verified package
+    runs-on: ubuntu-latest
+    environment: npm
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.11.1
+          cache: pnpm
+
+      - name: Install the trusted publishing client
+        run: npm install --global npm@11.21.0
+
+      - name: Verify release metadata
+        id: release
+        env:
+          PACKAGE_INPUT: ${{ inputs.package }}
+          RELEASE_EVENT: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node --input-type=commonjs <<'NODE'
+          const { appendFileSync, readFileSync } = require("node:fs");
+          const { join } = require("node:path");
+
+          const packages = {
+            "objective-guide": {
+              directory: "packages/objective-guide",
+              name: "@potential-guide/objective-guide",
+            },
+            "objective-regulator": {
+              directory: "packages/objective-regulator",
+              name: "@potential-guide/objective-regulator",
+            },
+            "objective-portfolio-supervisor": {
+              directory: "packages/objective-portfolio-supervisor",
+              name: "@potential-guide/objective-portfolio-supervisor",
+            },
+          };
+          const stableVersion = /^\d+\.\d+\.\d+$/u;
+          const tagPattern =
+            /^(objective-guide|objective-regulator|objective-portfolio-supervisor)-v(\d+\.\d+\.\d+)$/u;
+
+          let packageId;
+          let taggedVersion;
+          if (process.env.RELEASE_EVENT === "push") {
+            const match = tagPattern.exec(process.env.RELEASE_TAG ?? "");
+            if (match === null) {
+              console.error(`::error::Unsupported release tag ${process.env.RELEASE_TAG}.`);
+              process.exit(1);
+            }
+            [, packageId, taggedVersion] = match;
+          } else {
+            packageId = process.env.PACKAGE_INPUT;
+          }
+
+          const selected = packages[packageId];
+          if (selected === undefined) {
+            console.error(`::error::Unsupported package ${packageId}.`);
+            process.exit(1);
+          }
+
+          const packageJson = JSON.parse(
+            readFileSync(join(selected.directory, "package.json"), "utf8"),
+          );
+          if (packageJson.name !== selected.name) {
+            console.error(
+              `::error::Expected ${selected.name} in ${selected.directory}, received ${packageJson.name}.`,
+            );
+            process.exit(1);
+          }
+          if (packageJson.private === true) {
+            console.error(`::error::${packageJson.name} is marked private.`);
+            process.exit(1);
+          }
+          if (!stableVersion.test(packageJson.version)) {
+            console.error(
+              `::error::Publishing accepts stable SemVer versions only; received ${packageJson.version}.`,
+            );
+            process.exit(1);
+          }
+          if (packageJson.publishConfig?.access !== "public") {
+            console.error(`::error::${packageJson.name} must publish with public access.`);
+            process.exit(1);
+          }
+          if (
+            process.env.RELEASE_EVENT === "push" &&
+            taggedVersion !== packageJson.version
+          ) {
+            console.error(
+              `::error::Tag version ${taggedVersion} does not match ${packageJson.name}@${packageJson.version}.`,
+            );
+            process.exit(1);
+          }
+
+          for (const [key, value] of Object.entries({
+            directory: selected.directory,
+            id: packageId,
+            name: packageJson.name,
+            version: packageJson.version,
+          })) {
+            appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
+          }
+          NODE
+
+      - name: Verify release commit is on main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main; then
+            echo "::error::The release commit must be reachable from origin/main."
+            exit 1
+          fi
+
+      - name: Reject an existing npm version
+        if: github.event_name == 'push'
+        env:
+          PACKAGE_NAME: ${{ steps.release.outputs.name }}
+          PACKAGE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set +e
+          result="$(
+            npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version \
+              --json \
+              --registry=https://registry.npmjs.org/ 2>&1
+          )"
+          status=$?
+          set -e
+
+          if [ "$status" -eq 0 ]; then
+            echo "::error::${PACKAGE_NAME}@${PACKAGE_VERSION} is already published."
+            exit 1
+          fi
+          if ! grep -q '"code": "E404"' <<<"$result"; then
+            echo "$result"
+            echo "::error::Could not determine whether ${PACKAGE_NAME}@${PACKAGE_VERSION} exists."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate repository
+        run: pnpm check
+
+      - name: Assign a temporary dry-run version
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          PACKAGE_DIRECTORY: ${{ steps.release.outputs.directory }}
+        run: |
+          node --input-type=commonjs <<'NODE'
+          const { readFileSync, writeFileSync } = require("node:fs");
+          const { join } = require("node:path");
+
+          const path = join(process.env.PACKAGE_DIRECTORY, "package.json");
+          const packageJson = JSON.parse(readFileSync(path, "utf8"));
+          packageJson.version = `0.0.0-oidc-dry-run.${process.env.GITHUB_RUN_ID}`;
+          writeFileSync(path, `${JSON.stringify(packageJson, null, 2)}\n`);
+          NODE
+
+      - name: Pack package
+        id: pack
+        env:
+          PACKAGE_DIRECTORY: ${{ steps.release.outputs.directory }}
+        run: |
+          node --input-type=commonjs <<'NODE'
+          const { appendFileSync, mkdirSync } = require("node:fs");
+          const { resolve } = require("node:path");
+          const { execFileSync } = require("node:child_process");
+
+          const destination = resolve(process.env.RUNNER_TEMP, "npm-packages");
+          mkdirSync(destination, { recursive: true });
+          const result = JSON.parse(
+            execFileSync(
+              "pnpm",
+              [
+                "--dir",
+                process.env.PACKAGE_DIRECTORY,
+                "pack",
+                "--pack-destination",
+                destination,
+                "--json",
+              ],
+              { encoding: "utf8" },
+            ),
+          );
+          appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `tarball=${resolve(result.filename)}\n`,
+          );
+          NODE
+
+      - name: Publish package
+        if: github.event_name == 'push'
+        run: >-
+          npm publish "${{ steps.pack.outputs.tarball }}"
+          --access public
+          --tag latest
+          --registry=https://registry.npmjs.org/
+          --loglevel=verbose
+
+      - name: Validate trusted publishing
+        if: github.event_name == 'workflow_dispatch'
+        run: >-
+          npm publish "${{ steps.pack.outputs.tarball }}"
+          --dry-run
+          --access public
+          --tag oidc-dry-run
+          --registry=https://registry.npmjs.org/
+          --loglevel=verbose

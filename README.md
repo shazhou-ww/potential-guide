@@ -14,8 +14,15 @@ Dependencies flow in that order and never back toward the core.
 
 ## Requirements
 
-- Node.js 22.12 or newer
+- Node.js 22.13 or newer
 - Corepack with pnpm 11.22.0
+
+## Lineage
+
+This repository inherits its workspace baseline from
+[`shazhou-ww/preset-pnpm-monorepo`](https://github.com/shazhou-ww/preset-pnpm-monorepo).
+The immediate parent and branch are recorded in `.git-lineage.yaml`. Run
+`git-lineage update` from a clean worktree to merge future preset updates.
 
 ## Development
 
@@ -28,3 +35,11 @@ pnpm test
 ```
 
 Run `pnpm check` for the complete repository verification.
+
+## Publishing
+
+Releases use package-specific tags and npm Trusted Publishing. Create the empty
+package records in the npm organization, configure their Trusted Publishers,
+and let GitHub Actions publish the first `0.1.0` versions with provenance. See
+the [npm publishing guide](./docs/npm-publishing.md) for the one-time setup and
+release procedure.
