@@ -58,11 +58,21 @@ potential-<command> [arguments]
 
 ## 全局参数
 
-全局参数必须位于子命令之前；子命令之后的参数原样交给对应命令。
+保留的全局参数可以位于一级子命令之前或之后。顶层 CLI 先确定子命令，再从 `--` 之前的参数中提取已声明的全局参数；其余参数保持原有顺序交给子命令。
 
 ```text
 potential [global options] <command> [command options]
+potential <command> [global options] [command options]
 ```
+
+两种形式语义相同，例如：
+
+```text
+potential --format json regulate probe --guide ./objective-guide.yaml --subject-file ./subject.json
+potential regulate probe --guide ./objective-guide.yaml --subject-file ./subject.json --format json
+```
+
+全局参数名属于协议保留字，包级命令不能以不同语义重新定义。遇到 `--` 后，顶层 CLI 停止识别任何全局参数，并把后续内容逐字传给子命令或 Agent adapter。由此既允许符合直觉的参数位置，也避免外部命令的参数被意外吞掉。
 
 | 参数 | 语义 |
 | --- | --- |
@@ -72,8 +82,8 @@ potential [global options] <command> [command options]
 | `--color auto|always|never` | 控制 human 输出颜色 |
 | `--log-level error|warn|info|debug` | 控制 stderr 诊断级别 |
 | `--no-external-commands` | 只允许内置命令 |
-| `--help` | 显示当前层级帮助 |
-| `--version` | 显示顶层 CLI 版本 |
+| `--help` | 在命令前显示顶层帮助，在命令后显示该命令帮助 |
+| `--version` | 在命令前显示顶层版本，在命令后显示该命令版本 |
 
 stdout 只承载命令结果，stderr 承载诊断和日志。`--format json` 时 stdout 必须是一个完整 JSON 文档，不能混入进度文本。
 
