@@ -3,12 +3,14 @@
 ## 验证对象
 
 - accepted implementation commit/primary `d2d2ece68dedf585e71eb160a57372b0cbf4b262` 已由刷新后的 `origin/main` 包含。
-- 部署契约 revision `866cc46b0e28` 先随 `cad8639342bd69c9eef5bc146abc2c1cbc259255` 同步；验证与可移植性修复最终位于 primary `9deb5bf6869953c40a2a60dbc8e052938e15c362`。
+- 部署契约与证据在 deployment gate 复审后再次更新；两项 Medium 修复位于 primary `9cc3529ab8c0805c7f763e0cb1843db4dfaa76d2`。
 - 未执行任何 npm publish、name claim 或真实凭据访问。
 
 ## 可重复验证
 
-`pnpm deployment:verify` 从六个 workspace 生成 tarball，在 `.deployment-verification/consumer` 通过 npm 隔离安装后执行，再由 `finally` 删除 tarball、consumer 和其 `node_modules`。本地 Windows 11、Node `24.12.0`、pnpm `11.22.0` 结果为通过，结束后确认临时目录不存在。
+`pnpm deployment:verify` 从六个 workspace 生成 tarball，在 OS 临时目录中由 `mkdtemp` 分配的唯一 operation-owned consumer 内通过 npm 隔离安装后执行，再由 `finally` 只删除本次解析后的目录。仓库内预存的 `.deployment-verification` 不再读取或删除；并发执行使用不同目录，目录内 symlink 也不会越界删除目标。本地 Windows 11、Node `24.12.0`、pnpm `11.22.0` 结果为通过，结束后确认本次临时目录不存在。
+
+Windows 上的 `pnpm.cmd` 与 `npm.cmd` 现在由仓库既有的 `cross-spawn` 在 `shell: false` 语义下启动，不再设置 `shell: true`，执行中没有 Node `DEP0190`。`scripts/verify-deployment.test.mjs` 使用含空格、`&`、`()`、`^` 的命令路径和参数验证逐字传递，并验证两个并发 workspace、预存同名目录以及指向受保护目录的 junction 在清理后均不受影响。
 
 产物审计记录的文件数：
 
@@ -40,8 +42,9 @@ packed `pguide regulate` 通过 stdio 运行仓库 fixture 的真实 ACP JSON-RP
 
 ## 跨平台与仓库检查
 
-- `pnpm check`：本地通过，包含 format、lint、typecheck、test、pack audit。
-- `pnpm deployment:verify`：本地通过。
+- `node --test scripts/verify-deployment.test.mjs`：本地通过（2 项）。
+- `pnpm check`：本地通过，包含 format、lint、typecheck、test 和六个 package 的 pack audit。
+- `pnpm deployment:verify`：本地 packed isolated consumer 通过。
 - GitHub Actions [CI run 38737551393](https://github.com/shazhou-ww/potential-guide/actions/runs/38737551393)：primary `9deb5bf6869953c40a2a60dbc8e052938e15c362` 上全部通过。
 - CI jobs：Node.js `22.13.0`、Node.js `24.11.1`、Packed CLI `windows-latest`、`ubuntu-latest`、`macos-latest` 均为 success。
 
