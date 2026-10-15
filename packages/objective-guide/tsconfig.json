@@ -6,6 +6,5 @@
     "outDir": "dist",
     "tsBuildInfoFile": "../../.cache/tsbuildinfo/objective-guide.tsbuildinfo"
   },
-  "include": ["src/**/*.ts"],
-  "references": [{ "path": "../pguide-cli-core" }]
+  "include": ["src/**/*.ts"]
 }

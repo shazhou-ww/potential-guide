@@ -33,7 +33,7 @@ import {
   createObjectiveRegulator,
   ObjectiveRegulatorTimeoutError,
   type RegulationResult,
-} from "./index.js";
+} from "@potential-guide/objective-regulator";
 
 export const regulatorCommandVersion = "0.1.0";
 

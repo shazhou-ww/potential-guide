@@ -8,16 +8,6 @@ unbounded loop.
 The package never performs real-world mutations itself. Callers inject the Agent
 executor and retain responsibility for cancellation within that executor.
 
-## CLI
-
-The package owns `pguide-regulate` and `pguide-continue`. They use only
-predefined ACP Agent profiles and persist a private Regulation/Attempt ledger
-plus the protocol-visible transcript. `--timeout` bounds the complete Attempt,
-including Guide probes, ACP setup/session/prompt calls, re-probes, and final
-persistence. `--report <path>` atomically writes the machine-readable result.
-Expired Regulations are pruned from the configured state root at safe command
-entry points.
-
 ## Public API
 
 - `createObjectiveRegulator(instance)` binds regulation to one Guide Instance.
@@ -28,6 +18,10 @@ entry points.
   and an observation with no actionable problem.
 - Configuration and initial-observation timeout defects reject through explicit
   error classes.
+
+The package is domain logic only. The `pguide` composition package owns the
+`regulate` and `continue` CLI adapters, including configuration, ACP, and
+persistence concerns.
 
 ## Usage
 

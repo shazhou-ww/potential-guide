@@ -1,5 +1,9 @@
 #!/usr/bin/env node
-import { launchRegulatorCommand, regulatorCommandVersion, runRegulate } from "../cli.js";
+import {
+  launchRegulatorCommand,
+  regulatorCommandVersion,
+  runRegulate,
+} from "../commands/regulator.js";
 launchRegulatorCommand(
   {
     protocol: "pguide-command-v1",

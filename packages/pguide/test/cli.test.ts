@@ -9,19 +9,12 @@ import { sameDirectory } from "../src/path.js";
 const root = resolve(import.meta.dirname, "..", "..", "..");
 const top = join(root, "packages", "pguide", "dist", "bin.js");
 const bins = {
-  probe: join(root, "packages", "objective-guide", "dist", "bin", "probe.js"),
-  regulate: join(root, "packages", "objective-regulator", "dist", "bin", "regulate.js"),
-  continue: join(root, "packages", "objective-regulator", "dist", "bin", "continue.js"),
-  supervise: join(
-    root,
-    "packages",
-    "objective-portfolio-supervisor",
-    "dist",
-    "bin",
-    "supervise.js",
-  ),
-  scaffold: join(root, "packages", "objective-guide", "dist", "bin", "scaffold.js"),
-  validate: join(root, "packages", "objective-guide", "dist", "bin", "validate.js"),
+  probe: join(root, "packages", "pguide", "dist", "bin", "probe.js"),
+  regulate: join(root, "packages", "pguide", "dist", "bin", "regulate.js"),
+  continue: join(root, "packages", "pguide", "dist", "bin", "continue.js"),
+  supervise: join(root, "packages", "pguide", "dist", "bin", "supervise.js"),
+  scaffold: join(root, "packages", "pguide", "dist", "bin", "scaffold.js"),
+  validate: join(root, "packages", "pguide", "dist", "bin", "validate.js"),
   config: join(root, "packages", "pguide-config", "dist", "bin.js"),
 };
 

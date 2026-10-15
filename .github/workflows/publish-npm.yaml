@@ -7,7 +7,7 @@ on:
       - "objective-regulator-v*"
       - "objective-portfolio-supervisor-v*"
       - "cli-core-v*"
-      - "pguide-config-v*"
+      - "config-v*"
       - "pguide-v*"
   workflow_dispatch:
     inputs:
@@ -20,7 +20,7 @@ on:
           - objective-regulator
           - objective-portfolio-supervisor
           - cli-core
-          - pguide-config
+          - config
           - pguide
 
 permissions: {}
@@ -88,9 +88,9 @@ jobs:
               directory: "packages/objective-portfolio-supervisor",
               name: "@potential-guide/objective-portfolio-supervisor",
             },
-            "pguide-config": {
+            "config": {
               directory: "packages/pguide-config",
-              name: "pguide-config",
+              name: "@potential-guide/config",
             },
             "pguide": {
               directory: "packages/pguide",
@@ -99,7 +99,7 @@ jobs:
           };
           const releaseVersion = /^\d+\.\d+\.\d+(?:-rc\.\d+)?$/u;
           const tagPattern =
-            /^(cli-core|objective-guide|objective-regulator|objective-portfolio-supervisor|pguide-config|pguide)-v(\d+\.\d+\.\d+(?:-rc\.\d+)?)$/u;
+            /^(cli-core|objective-guide|objective-regulator|objective-portfolio-supervisor|config|pguide)-v(\d+\.\d+\.\d+(?:-rc\.\d+)?)$/u;
 
           let packageId;
           let taggedVersion;

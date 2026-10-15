@@ -12,12 +12,10 @@
       "import": "./dist/index.js"
     }
   },
-  "bin": {
-    "pguide-regulate": "./dist/bin/regulate.js",
-    "pguide-continue": "./dist/bin/continue.js"
-  },
   "files": [
     "dist",
+    "!dist/bin",
+    "!dist/cli.*",
     "README.md"
   ],
   "scripts": {
@@ -31,7 +29,6 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
-    "@potential-guide/cli-core": "workspace:^",
     "@potential-guide/objective-guide": "workspace:^"
   },
   "publishConfig": {

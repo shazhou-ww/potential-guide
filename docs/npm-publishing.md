@@ -8,13 +8,20 @@ Potential Guide publishes six CLI and library packages independently from this m
 | `@potential-guide/objective-regulator` | `objective-regulator-vX.Y.Z` |
 | `@potential-guide/objective-portfolio-supervisor` | `objective-portfolio-supervisor-vX.Y.Z` |
 | `@potential-guide/cli-core` | `cli-core-vX.Y.Z` |
-| `pguide-config` | `pguide-config-vX.Y.Z` |
+| `@potential-guide/config` | `config-vX.Y.Z` |
 | `pguide` | `pguide-vX.Y.Z` |
 
-CLI packages must be released in dependency order: `cli-core`, the three
-Objective packages, `pguide-config`, then `pguide`. Reconfirm that the unscoped
-names remain available before the first placeholder publish. Never silently
-substitute another canonical package name.
+Packages must be released in dependency order: `cli-core` and
+`objective-guide`, then `objective-regulator`, `objective-portfolio-supervisor`
+and `config`, then `pguide`. The three Objective packages are domain logic and
+must not depend on `cli-core`; only `config` and the `pguide` composition layer
+consume CLI infrastructure.
+
+All extension packages use the `@potential-guide` npm scope. Their executable
+and command names remain independent of the package name; for example,
+`@potential-guide/config` installs `pguide-config` and advertises `config`.
+Only the composition package is named `pguide` because it is the package users
+invoke through `npx pguide`.
 
 The tag version must exactly match that package's `package.json`, and the tagged
 commit must be reachable from `origin/main`. Each tag publishes only one
@@ -40,7 +47,7 @@ rules must allow these release tags:
 - `objective-regulator-v*`
 - `objective-portfolio-supervisor-v*`
 - `cli-core-v*`
-- `pguide-config-v*`
+- `config-v*`
 - `pguide-v*`
 
 ## Publish the bootstrap placeholders
@@ -77,7 +84,7 @@ npm publish .cache/npm-bootstrap/potential-guide-objective-regulator-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/potential-guide-objective-portfolio-supervisor-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
-npm publish .cache/npm-bootstrap/pguide-config-0.0.0.tgz \
+npm publish .cache/npm-bootstrap/potential-guide-config-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/pguide-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
@@ -138,8 +145,8 @@ git tag -a objective-portfolio-supervisor-v0.1.0 \
   -m "release: objective-portfolio-supervisor v0.1.0"
 git push origin refs/tags/objective-portfolio-supervisor-v0.1.0
 
-git tag -a pguide-config-v0.1.0 -m "release: pguide-config v0.1.0"
-git push origin refs/tags/pguide-config-v0.1.0
+git tag -a config-v0.1.0 -m "release: config v0.1.0"
+git push origin refs/tags/config-v0.1.0
 
 git tag -a pguide-v0.1.0 -m "release: pguide v0.1.0"
 git push origin refs/tags/pguide-v0.1.0

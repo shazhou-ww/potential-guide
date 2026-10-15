@@ -5,7 +5,13 @@
   "type": "module",
   "sideEffects": false,
   "bin": {
-    "pguide": "./dist/bin.js"
+    "pguide": "./dist/bin.js",
+    "pguide-continue": "./dist/bin/continue.js",
+    "pguide-probe": "./dist/bin/probe.js",
+    "pguide-regulate": "./dist/bin/regulate.js",
+    "pguide-scaffold": "./dist/bin/scaffold.js",
+    "pguide-supervise": "./dist/bin/supervise.js",
+    "pguide-validate": "./dist/bin/validate.js"
   },
   "files": [
     "dist",
@@ -26,8 +32,8 @@
     "@potential-guide/objective-guide": "workspace:^",
     "@potential-guide/objective-regulator": "workspace:^",
     "@potential-guide/objective-portfolio-supervisor": "workspace:^",
-    "cross-spawn": "catalog:",
-    "pguide-config": "workspace:^"
+    "@potential-guide/config": "workspace:^",
+    "cross-spawn": "catalog:"
   },
   "devDependencies": {
     "@types/cross-spawn": "catalog:"

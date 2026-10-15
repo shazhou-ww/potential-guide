@@ -5,13 +5,15 @@ import { createObjectiveRegulator } from "@potential-guide/objective-regulator";
 import {
   AcpClient,
   CliError,
-  commandMain,
   loadConfig,
   option,
   writeResult,
   type GlobalOptions,
 } from "@potential-guide/cli-core";
-import { createObjectivePortfolioSupervisor, type ObjectiveRegistration } from "./index.js";
+import {
+  createObjectivePortfolioSupervisor,
+  type ObjectiveRegistration,
+} from "@potential-guide/objective-portfolio-supervisor";
 
 export async function runSupervise(
   argv: string[],
@@ -114,13 +116,3 @@ export async function runSupervise(
     `Planned ${plan.directives.length} portfolio directives.`,
   );
 }
-
-void commandMain(
-  {
-    protocol: "pguide-command-v1",
-    command: "supervise",
-    description: "Supervise an Objective portfolio",
-    version: "0.1.0",
-  },
-  runSupervise,
-);

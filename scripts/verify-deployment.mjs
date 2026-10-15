@@ -25,22 +25,41 @@ const packageDefinitions = [
     directory: "objective-guide",
     name: "@potential-guide/objective-guide",
     exports: true,
-    bins: ["pguide-probe", "pguide-scaffold", "pguide-validate"],
+    bins: [],
+    forbiddenDependencies: ["@potential-guide/cli-core"],
   },
   {
     directory: "objective-regulator",
     name: "@potential-guide/objective-regulator",
     exports: true,
-    bins: ["pguide-regulate", "pguide-continue"],
+    bins: [],
+    forbiddenDependencies: ["@potential-guide/cli-core"],
   },
   {
     directory: "objective-portfolio-supervisor",
     name: "@potential-guide/objective-portfolio-supervisor",
     exports: true,
-    bins: ["pguide-supervise"],
+    bins: [],
+    forbiddenDependencies: ["@potential-guide/cli-core"],
   },
-  { directory: "pguide-config", name: "pguide-config", bins: ["pguide-config"] },
-  { directory: "pguide", name: "pguide", bins: ["pguide"] },
+  {
+    directory: "pguide-config",
+    name: "@potential-guide/config",
+    bins: ["pguide-config"],
+  },
+  {
+    directory: "pguide",
+    name: "pguide",
+    bins: [
+      "pguide",
+      "pguide-continue",
+      "pguide-probe",
+      "pguide-regulate",
+      "pguide-scaffold",
+      "pguide-supervise",
+      "pguide-validate",
+    ],
+  },
 ];
 
 async function successful(command, args, options) {
@@ -80,12 +99,23 @@ async function packAndInstall() {
           !path.startsWith("src/") &&
           !path.startsWith("test/") &&
           !path.endsWith(".tsbuildinfo") &&
-          !path.includes(".deployment-verification"),
+          !path.includes(".deployment-verification") &&
+          !(
+            (definition.forbiddenDependencies ?? []).includes("@potential-guide/cli-core") &&
+            (path.startsWith("dist/bin/") || path.startsWith("dist/cli."))
+          ),
       ),
       `${definition.name} includes development-only content`,
     );
     const packageManifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
-    for (const bin of definition.bins) assert.equal(typeof packageManifest.bin[bin], "string");
+    assert.deepEqual(Object.keys(packageManifest.bin ?? {}).sort(), [...definition.bins].sort());
+    for (const dependency of definition.forbiddenDependencies ?? []) {
+      assert.equal(
+        packageManifest.dependencies?.[dependency],
+        undefined,
+        `${definition.name} must not depend on ${dependency}`,
+      );
+    }
     await access(packed.filename);
     tarballs.push(resolve(packed.filename));
     console.log(`packed ${definition.name}: ${paths.length} files`);

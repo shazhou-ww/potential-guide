@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { guideCommandVersion, launchGuideCommand, runScaffold } from "../cli.js";
+import { guideCommandVersion, launchGuideCommand, runScaffold } from "../commands/guide.js";
 launchGuideCommand(
   {
     protocol: "pguide-command-v1",

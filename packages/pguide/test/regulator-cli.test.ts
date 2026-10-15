@@ -15,11 +15,15 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { test } from "node:test";
 import { digest } from "@potential-guide/cli-core";
-import { InvocationCancelledError, InvocationTimeoutError, withinInvocation } from "../src/cli.js";
+import {
+  InvocationCancelledError,
+  InvocationTimeoutError,
+  withinInvocation,
+} from "../src/commands/regulator.js";
 
 const root = resolve(import.meta.dirname, "..", "..", "..");
-const regulate = join(root, "packages", "objective-regulator", "dist", "bin", "regulate.js");
-const continueCommand = join(root, "packages", "objective-regulator", "dist", "bin", "continue.js");
+const regulate = join(root, "packages", "pguide", "dist", "bin", "regulate.js");
+const continueCommand = join(root, "packages", "pguide", "dist", "bin", "continue.js");
 
 test("invocation finalization has one owner at timeout and simulated cancellation", async () => {
   let lateSideEffects = 0;

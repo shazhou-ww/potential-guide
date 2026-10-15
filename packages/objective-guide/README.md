@@ -6,12 +6,6 @@ domain validation, prerequisite projection, ordered levels, executable checks,
 localized observations, and reference pages. It does not own command reports,
 Git workflow policy, regulation, or portfolio supervision.
 
-## CLI
-
-The package owns the independent `pguide-probe`, `pguide-scaffold`, and
-`pguide-validate` bins. They can run directly or through top-level `pguide`
-discovery.
-
 ## Transport layout
 
 Each Guide is a self-contained transport unit:
@@ -73,6 +67,9 @@ while the selected locale supplies the human-facing problem content.
 Loader and I/O failures reject. Expected subject, language, and prerequisite
 projection failures are typed instance-creation results. A prerequisite may
 declare `minimumLevelId`; omitting it retains the terminal-only unlock behavior.
+
+The package is domain logic only. The `pguide` composition package owns CLI
+adapters such as `probe`, `scaffold`, and `validate`.
 
 ## Levels and check scheduling
 

@@ -10,12 +10,17 @@ and the extensible `pguide` command line:
   for one Objective Guide instance.
 - `@potential-guide/objective-portfolio-supervisor` coordinates multiple regulators
   through an injected portfolio policy.
-- `pguide` discovers and safely dispatches independent `pguide-<command>`
-  executables. Official commands cover probing, regulation and continuation,
-  portfolio supervision, scaffolding, validation, diagnostics, completion, and
-  optional configuration management.
+- `@potential-guide/cli-core` provides command protocol and CLI infrastructure
+  without depending on Objective logic.
+- `@potential-guide/config` is an optional scoped extension whose executable is
+  `pguide-config` and whose command name is `config`.
+- `pguide` is the composition package invoked by `npx pguide`. It owns the
+  official Objective command adapters and discovers other independent
+  `pguide-<command>` executables.
 
-Dependencies flow in that order and never back toward the core.
+Objective dependencies flow from Guide to Regulator to Portfolio Supervisor.
+CLI dependencies flow from CLI Core into extensions and the `pguide`
+composition layer; Objective logic never depends on CLI Core.
 
 ## Requirements
 

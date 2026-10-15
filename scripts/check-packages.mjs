@@ -51,7 +51,8 @@ const packages = [
       "fileObjectiveCheckRunner",
       "fileObjectiveResources",
     ],
-    bins: ["pguide-probe", "pguide-scaffold", "pguide-validate"],
+    bins: [],
+    forbiddenDependencies: ["@potential-guide/cli-core"],
   },
   {
     directory: "objective-regulator",
@@ -61,23 +62,33 @@ const packages = [
       "ObjectiveRegulatorTimeoutError",
       "createObjectiveRegulator",
     ],
-    bins: ["pguide-regulate", "pguide-continue"],
+    bins: [],
+    forbiddenDependencies: ["@potential-guide/cli-core"],
   },
   {
     directory: "objective-portfolio-supervisor",
     name: "@potential-guide/objective-portfolio-supervisor",
     exports: ["ObjectivePortfolioError", "createObjectivePortfolioSupervisor"],
-    bins: ["pguide-supervise"],
+    bins: [],
+    forbiddenDependencies: ["@potential-guide/cli-core"],
   },
   {
     directory: "pguide-config",
-    name: "pguide-config",
+    name: "@potential-guide/config",
     bins: ["pguide-config"],
   },
   {
     directory: "pguide",
     name: "pguide",
-    bins: ["pguide"],
+    bins: [
+      "pguide",
+      "pguide-continue",
+      "pguide-probe",
+      "pguide-regulate",
+      "pguide-scaffold",
+      "pguide-supervise",
+      "pguide-validate",
+    ],
   },
 ];
 
@@ -121,16 +132,27 @@ try {
     const packageRoot = join(root, "packages", expected.directory);
     const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
     assert.equal(manifest.name, expected.name);
+    assert.deepEqual(Object.keys(manifest.bin ?? {}).sort(), [...(expected.bins ?? [])].sort());
+    for (const dependency of expected.forbiddenDependencies ?? []) {
+      for (const field of [
+        "dependencies",
+        "devDependencies",
+        "optionalDependencies",
+        "peerDependencies",
+      ]) {
+        assert.equal(
+          manifest[field]?.[dependency],
+          undefined,
+          `${expected.name} must not declare ${dependency} in ${field}.`,
+        );
+      }
+    }
     if (expected.exports !== undefined) {
       assert.deepEqual(Object.keys(manifest.exports), ["."]);
       assert.deepEqual(Object.keys(manifest.exports["."]).sort(), ["import", "types"]);
       const module = await import(pathToFileURL(join(packageRoot, "dist", "index.js")).href);
       assert.deepEqual(Object.keys(module).sort(), [...expected.exports].sort());
     }
-    for (const bin of expected.bins ?? []) {
-      assert.equal(typeof manifest.bin[bin], "string");
-    }
-
     const packed = JSON.parse(
       await run(pnpmCommand, [
         "--dir",
@@ -147,7 +169,7 @@ try {
       ...(expected.exports === undefined ? [] : ["dist/index.js", "dist/index.d.ts"]),
       ...(expected.bins === undefined
         ? []
-        : Object.values(manifest.bin).map((path) => path.replace(/^\.\//, ""))),
+        : Object.values(manifest.bin ?? {}).map((path) => path.replace(/^\.\//, ""))),
       "LICENSE",
       "package.json",
       "README.md",
@@ -157,7 +179,13 @@ try {
     assert.ok(
       files.every(
         (path) =>
-          !path.startsWith("src/") && !path.startsWith("test/") && !path.endsWith(".tsbuildinfo"),
+          !path.startsWith("src/") &&
+          !path.startsWith("test/") &&
+          !path.endsWith(".tsbuildinfo") &&
+          !(
+            (expected.forbiddenDependencies ?? []).includes("@potential-guide/cli-core") &&
+            (path.startsWith("dist/bin/") || path.startsWith("dist/cli."))
+          ),
       ),
       `${expected.name} contains development-only files.`,
     );

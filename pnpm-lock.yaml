@@ -62,9 +62,6 @@ importers:
 
   packages/objective-guide:
     dependencies:
-      '@potential-guide/cli-core':
-        specifier: workspace:^
-        version: link:../pguide-cli-core
       ajv:
         specifier: 'catalog:'
         version: 8.20.0
@@ -77,9 +74,6 @@ importers:
 
   packages/objective-portfolio-supervisor:
     dependencies:
-      '@potential-guide/cli-core':
-        specifier: workspace:^
-        version: link:../pguide-cli-core
       '@potential-guide/objective-guide':
         specifier: workspace:^
         version: link:../objective-guide
@@ -89,9 +83,6 @@ importers:
 
   packages/objective-regulator:
     dependencies:
-      '@potential-guide/cli-core':
-        specifier: workspace:^
-        version: link:../pguide-cli-core
       '@potential-guide/objective-guide':
         specifier: workspace:^
         version: link:../objective-guide
@@ -101,6 +92,9 @@ importers:
       '@potential-guide/cli-core':
         specifier: workspace:^
         version: link:../pguide-cli-core
+      '@potential-guide/config':
+        specifier: workspace:^
+        version: link:../pguide-config
       '@potential-guide/objective-guide':
         specifier: workspace:^
         version: link:../objective-guide
@@ -113,9 +107,6 @@ importers:
       cross-spawn:
         specifier: 'catalog:'
         version: 7.0.6
-      pguide-config:
-        specifier: workspace:^
-        version: link:../pguide-config
     devDependencies:
       '@types/cross-spawn':
         specifier: 'catalog:'

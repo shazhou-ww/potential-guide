@@ -1,5 +1,5 @@
 {
-  "name": "pguide-config",
+  "name": "@potential-guide/config",
   "version": "0.1.0",
   "description": "Official configuration command extension for pguide.",
   "type": "module",
