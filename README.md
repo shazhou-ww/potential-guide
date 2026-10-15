@@ -3,6 +3,7 @@
 Potential Guide is a pnpm TypeScript monorepo for three composable objective packages:
 
 - `@potential-guide/objective-guide` models one objective through ordered levels,
+  independently eligible same-level checks with injected concurrency policy,
   observations, localized guidance, and typed instance creation.
 - `@potential-guide/objective-regulator` runs a guarded probe, action, and re-probe loop
   for one Objective Guide instance.

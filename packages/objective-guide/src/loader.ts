@@ -7,6 +7,10 @@ import { ObjectiveConfigurationError, parseManifest } from "./validation.js";
 export function createObjectiveLoader(options: ObjectiveLoaderOptions = {}): ObjectiveLoader {
   const resources = options.resources ?? fileObjectiveResources;
   const runner = options.checkRunner ?? fileObjectiveCheckRunner;
+  const schedulingPolicy = options.checkSchedulingPolicy;
+  if (schedulingPolicy !== undefined && typeof schedulingPolicy !== "function") {
+    throw new ObjectiveConfigurationError("Check scheduling policy must be a function.");
+  }
   const cache = new Map<string, ObjectiveGuide>();
   let queue: Promise<unknown> = Promise.resolve();
   async function load(uri: string, ancestors: readonly string[]): Promise<ObjectiveGuide> {
@@ -35,7 +39,14 @@ export function createObjectiveLoader(options: ObjectiveLoaderOptions = {}): Obj
         await runner.validate(canonical, checkId);
       }
     }
-    const guide = createObjectiveGuide(canonical, manifest, prerequisite, runner, locales);
+    const guide = createObjectiveGuide(
+      canonical,
+      manifest,
+      prerequisite,
+      runner,
+      locales,
+      schedulingPolicy,
+    );
     cache.set(canonical, guide);
     return guide;
   }

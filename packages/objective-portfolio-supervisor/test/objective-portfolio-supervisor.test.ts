@@ -6,6 +6,7 @@ import type {
   ObjectiveLevelDescription,
   ObjectiveObservation,
 } from "@potential-guide/objective-guide";
+import { createObjectiveLoader } from "@potential-guide/objective-guide";
 import type {
   ObjectivePortfolioPolicy,
   ObjectiveRegistration,
@@ -97,6 +98,94 @@ const limits = {
   timeoutMs: 1_000,
   maxStalledIterations: 2,
 };
+
+test("loaded same-level checks retain injected scheduling through supervision and regulation", async () => {
+  const missing = new Set(["first", "second"]);
+  let active = 0;
+  let maximum = 0;
+  let policyCalls = 0;
+  const manifestUri = "https://objectives.test/scheduled/manifest.yaml";
+  const loader = createObjectiveLoader({
+    resources: {
+      async readText() {
+        return JSON.stringify({
+          schemaVersion: 1,
+          domainSchema: { type: "object" },
+          levels: [{ id: "stage", advancement: { checks: ["first", "second"] } }],
+          defaultLanguage: "en-US",
+          languages: ["en-US"],
+        });
+      },
+      async readPages(sourceUri) {
+        return [
+          ["system/overview", { title: "Scheduled", description: "Scheduled objective" }],
+          ["system/404", { title: "Missing", description: "Missing page" }],
+          ["levels/stage", { title: "Stage", description: "Attained stage", outcome: "Advance" }],
+          ["levels/terminal", { title: "Terminal", description: "Complete" }],
+          ["checks/first", { title: "First", description: "First check" }],
+          ["checks/second", { title: "Second", description: "Second check" }],
+          ["problems/repair", { title: "Repair", description: "Repair check" }],
+        ].map(([id, properties]) => ({
+          uri: new URL(`${id}/en-US.md`, sourceUri).href,
+          source: `---\n${JSON.stringify(properties)}\n---\n`,
+        }));
+      },
+    },
+    checkSchedulingPolicy: () => {
+      policyCalls += 1;
+      return 2;
+    },
+    checkRunner: {
+      async run(_uri, id) {
+        maximum = Math.max(maximum, ++active);
+        await Promise.resolve();
+        active -= 1;
+        return missing.has(id)
+          ? { pass: false, problems: [{ id: "repair", parameters: { checkId: id } }] }
+          : { pass: true };
+      },
+    },
+  });
+  const guide = await loader.load(manifestUri);
+  const created = guide.createInstance({ subject: {} });
+  if (!created.ok) assert.fail("Expected loaded instance.");
+  const supervisor = createObjectivePortfolioSupervisor(
+    [
+      {
+        id: "scheduled",
+        regulator: createObjectiveRegulator(created.instance),
+        safety: { defensiveThresholdId: "stage", defensiveTargetLevelId: "terminal" },
+      },
+    ],
+    async () => ({
+      directives: [
+        {
+          registrationId: "scheduled",
+          targetLevelId: "terminal",
+          trigger: "defensive",
+          rationale: "Repair the attained stage.",
+          limits,
+        },
+      ],
+      deferred: [],
+    }),
+  );
+  const observed = await supervisor.observe();
+  assert.equal(observed.entries[0]?.observation.problems.length, 2);
+  const actions: string[] = [];
+  const results = await supervisor.execute(await supervisor.plan(observed), async ({ problem }) => {
+    const id = problem.parameters.checkId;
+    if (typeof id !== "string") assert.fail("Expected check identity.");
+    actions.push(id);
+    missing.delete(id);
+    return { status: "completed", summary: `Repaired ${id}` };
+  });
+  assert.deepEqual(actions, ["first", "second"]);
+  assert.equal(maximum, 2);
+  assert.equal(policyCalls, 4);
+  assert.equal(results.results[0]?.result.status, "target-reached");
+  assert.equal(results.results[0]?.result.latestObservation.current.id, "terminal");
+});
 
 test("observes sequentially, plans defense first, and executes in policy order", async () => {
   const probes: string[] = [];

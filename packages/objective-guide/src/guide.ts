@@ -9,6 +9,8 @@ import type {
   CheckRequest,
   CheckResult,
   ObjectiveCheckRunner,
+  ObjectiveCheckSchedulingContext,
+  ObjectiveCheckSchedulingPolicy,
   ObjectiveGuide,
   ObjectiveGuideInstance,
   ObjectiveGuideInstanceCreationError,
@@ -83,12 +85,66 @@ function problemSummary(
     : (page.description ?? page.title);
 }
 
+async function runLevelChecks(
+  context: ObjectiveCheckSchedulingContext,
+  policy: ObjectiveCheckSchedulingPolicy | undefined,
+  runner: ObjectiveCheckRunner,
+  request: CheckRequest,
+  locale: LoadedLocale,
+): Promise<readonly CheckResult[]> {
+  if (context.checkIds.length === 0) return [];
+  let concurrency = 1;
+  if (policy !== undefined) {
+    try {
+      concurrency = await policy(context);
+    } catch (cause) {
+      throw new ObjectiveOperationError(
+        `Check scheduling policy failed for level ${context.levelId}.`,
+        { cause },
+      );
+    }
+  }
+  if (!Number.isSafeInteger(concurrency) || concurrency < 1) {
+    throw new ObjectiveOperationError(
+      `Check scheduling policy must return a positive safe integer for level ${context.levelId}.`,
+    );
+  }
+  const results: CheckResult[] = [];
+  const checks = context.checkIds.entries();
+  let stopped = false;
+  async function worker() {
+    while (!stopped) {
+      const next = checks.next();
+      if (next.done) return;
+      const [index, checkId] = next.value;
+      try {
+        results[index] = checkResult(
+          await runner.run(context.instance.guide.manifestUri, checkId, request),
+          locale,
+        );
+      } catch (cause) {
+        stopped = true;
+        throw cause;
+      }
+    }
+  }
+  // Drain started checks before probe() can remove their shared temporary directory.
+  const workers = await Promise.allSettled(
+    Array.from({ length: Math.min(concurrency, context.checkIds.length) }, () => worker()),
+  );
+  for (const result of workers) {
+    if (result.status === "rejected") throw result.reason;
+  }
+  return results;
+}
+
 export function createObjectiveGuide(
   manifestUri: string,
   manifest: ObjectiveGuideManifest,
   prerequisiteGuide: ObjectiveGuide | undefined,
   runner: ObjectiveCheckRunner,
   locales: ReadonlyMap<string, LoadedLocale>,
+  schedulingPolicy?: ObjectiveCheckSchedulingPolicy,
 ): ObjectiveGuide {
   const prerequisiteUri =
     manifest.prerequisite === undefined
@@ -306,26 +362,29 @@ export function createObjectiveGuide(
           )
             return observation;
         }
-        const request: CheckRequest = {
+        const request: CheckRequest = Object.freeze({
           protocolVersion: 1,
           subject: stableSubject,
-          probe: { tempDirectory: context.tempDirectory },
-        };
+          probe: Object.freeze({ tempDirectory: context.tempDirectory }),
+        });
         for (const level of manifest.levels) {
-          for (const name of level.advancement.checks) {
-            const result = checkResult(await runner.run(manifestUri, name, request), locale);
-            if (!result.pass) {
-              const current = descriptions.find(
-                (entry) => entry.instance === instance && entry.id === level.id,
-              )!;
-              return Object.freeze({
-                current,
-                problems: Object.freeze([...result.problems]),
-                gapSummary: result.problems
-                  .map((problem) => problemSummary(locale, problem))
-                  .join("\n"),
-              });
-            }
+          const results = await runLevelChecks(
+            Object.freeze({ instance, levelId: level.id, checkIds: level.advancement.checks }),
+            schedulingPolicy,
+            runner,
+            request,
+            locale,
+          );
+          const problems = results.flatMap((result) => (result.pass ? [] : result.problems));
+          if (problems.length > 0) {
+            const current = descriptions.find(
+              (entry) => entry.instance === instance && entry.id === level.id,
+            )!;
+            return Object.freeze({
+              current,
+              problems: Object.freeze(problems),
+              gapSummary: problems.map((problem) => problemSummary(locale, problem)).join("\n"),
+            });
           }
         }
         return Object.freeze({

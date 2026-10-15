@@ -1,16 +1,19 @@
 import assert from "node:assert/strict";
 import { stat } from "node:fs/promises";
 import { test } from "node:test";
+import { setImmediate } from "node:timers/promises";
 import type {
   CheckRequest,
-  CheckResult,
+  ObjectiveCheckSchedulingContext,
   ObjectiveGuideInstance,
   ObjectiveGuideManifest,
+  ObjectiveLoaderOptions,
   ObjectivePageResource,
   ObjectiveResourceResolver,
 } from "@potential-guide/objective-guide";
 import {
   createObjectiveLoader,
+  ObjectiveConfigurationError,
   ObjectiveOperationError,
   SUBJECT_PROJECTION_LIMITS,
 } from "@potential-guide/objective-guide";
@@ -18,7 +21,7 @@ import { compileSubjectProjection } from "../src/projection.js";
 
 const rootUri = "https://objectives.test/root/manifest.yaml";
 const childUri = "https://objectives.test/child/manifest.yaml";
-type Handler = (request: CheckRequest) => Promise<CheckResult>;
+type Handler = (request: CheckRequest) => Promise<unknown>;
 
 function manifest(overrides: Partial<ObjectiveGuideManifest> = {}): ObjectiveGuideManifest {
   return {
@@ -43,6 +46,7 @@ function markdown(properties: Record<string, string>, body = "") {
 function fixture(
   configs: Record<string, ObjectiveGuideManifest> = { [rootUri]: manifest() },
   handlers: Record<string, Handler> = {},
+  options: Pick<ObjectiveLoaderOptions, "checkSchedulingPolicy"> = {},
 ) {
   const texts = new Map<string, string>();
   const pages = new Map<string, ObjectivePageResource[]>();
@@ -105,6 +109,7 @@ function fixture(
     },
   };
   const loader = createObjectiveLoader({
+    ...options,
     resources,
     checkRunner: {
       async run(_uri, id, request) {
@@ -112,8 +117,396 @@ function fixture(
       },
     },
   });
+
   return { texts, pages, reads, resources, loader };
 }
+
+function gate() {
+  let release!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { promise, release };
+}
+
+test("default scheduling runs all same-stage checks serially and aggregates every problem", async () => {
+  const calls: string[] = [];
+  let active = 0;
+  let maximum = 0;
+  const context = fixture(
+    {
+      [rootUri]: manifest({
+        levels: [
+          { id: "stage", advancement: { checks: ["first", "second", "third"] } },
+          { id: "later", advancement: { checks: ["later"] } },
+        ],
+      }),
+    },
+    Object.fromEntries(
+      ["first", "second", "third", "later"].map((id) => [
+        id,
+        async () => {
+          calls.push(id);
+          maximum = Math.max(maximum, ++active);
+          await Promise.resolve();
+          active -= 1;
+          return id === "third"
+            ? { pass: true }
+            : {
+                pass: false,
+                problems: [
+                  { id: "problem", parameters: { description: id } },
+                  { id: "problem", parameters: { description: `${id} detail` } },
+                ],
+              };
+        },
+      ]),
+    ),
+  );
+  const sample = await (await instance(context)).probe();
+  assert.equal(maximum, 1);
+  assert.deepEqual(calls, ["first", "second", "third"]);
+  assert.equal(sample.current.id, "stage");
+  assert.equal(sample.gapSummary, "first\nfirst detail\nsecond\nsecond detail");
+  assert.equal(sample.problems.length, 4);
+  assert.ok(Object.isFrozen(sample.problems));
+  assert.ok(sample.problems.every((problem) => Object.isFrozen(problem.parameters)));
+});
+
+test("changing injected concurrency changes timing but not observations", async () => {
+  let concurrency = 1;
+  let active = 0;
+  let maximum = 0;
+  const context = fixture(
+    {
+      [rootUri]: manifest({
+        levels: [{ id: "stage", advancement: { checks: ["first", "second"] } }],
+      }),
+    },
+    Object.fromEntries(
+      ["first", "second"].map((id) => [
+        id,
+        async () => {
+          maximum = Math.max(maximum, ++active);
+          await Promise.resolve();
+          active -= 1;
+          return { pass: false, problems: [{ id: "problem", parameters: { description: id } }] };
+        },
+      ]),
+    ),
+    { checkSchedulingPolicy: () => concurrency },
+  );
+  const current = await instance(context);
+  const serial = await current.probe();
+  assert.equal(maximum, 1);
+  concurrency = 2;
+  maximum = 0;
+  const parallel = await current.probe();
+  assert.equal(maximum, 2);
+  assert.deepEqual(parallel, serial);
+});
+
+test("concurrent probes have independent limits and temporary directories", {
+  timeout: 5_000,
+}, async () => {
+  const started = gate();
+  const finish = gate();
+  const directories: string[] = [];
+  const context = fixture(
+    {
+      [rootUri]: manifest({
+        levels: [{ id: "stage", advancement: { checks: ["first", "second"] } }],
+      }),
+    },
+    Object.fromEntries(
+      ["first", "second"].map((id) => [
+        id,
+        async (request: CheckRequest) => {
+          assert.ok(Object.isFrozen(request));
+          assert.ok(Object.isFrozen(request.probe));
+          directories.push(request.probe.tempDirectory);
+          if (directories.length === 4) started.release();
+          await finish.promise;
+          return { pass: false, problems: [{ id: "problem", parameters: { description: id } }] };
+        },
+      ]),
+    ),
+    { checkSchedulingPolicy: () => 2 },
+  );
+  const current = await instance(context);
+  const probing = Promise.all([current.probe(), current.probe()]);
+  try {
+    await started.promise;
+    assert.equal(new Set(directories).size, 2);
+    for (const directory of directories) assert.ok((await stat(directory)).isDirectory());
+  } finally {
+    finish.release();
+    await probing;
+  }
+  for (const directory of new Set(directories)) await assert.rejects(stat(directory));
+});
+
+test("injected scheduling overlaps checks up to its limit and preserves manifest result order", {
+  timeout: 5_000,
+}, async () => {
+  const names = ["first", "second", "third", "fourth"];
+  const gates = names.map(() => gate());
+  const twoStarted = gate();
+  const thirdStarted = gate();
+  const fourthStarted = gate();
+  const calls: string[] = [];
+  const completed: string[] = [];
+  let active = 0;
+  let maximum = 0;
+  const context = fixture(
+    { [rootUri]: manifest({ levels: [{ id: "stage", advancement: { checks: names } }] }) },
+    Object.fromEntries(
+      names.map((id, index) => [
+        id,
+        async () => {
+          calls.push(id);
+          maximum = Math.max(maximum, ++active);
+          if (calls.length === 2) twoStarted.release();
+          if (id === "third") thirdStarted.release();
+          if (id === "fourth") fourthStarted.release();
+          await gates[index]!.promise;
+          active -= 1;
+          completed.push(id);
+          return { pass: false, problems: [{ id: "problem", parameters: { description: id } }] };
+        },
+      ]),
+    ),
+    { checkSchedulingPolicy: async () => 2 },
+  );
+  const current = await instance(context);
+  const probing = current.probe();
+  try {
+    await twoStarted.promise;
+    assert.deepEqual(calls, ["first", "second"]);
+    gates[1]!.release();
+    await thirdStarted.promise;
+    assert.deepEqual(calls, ["first", "second", "third"]);
+    gates[2]!.release();
+    await fourthStarted.promise;
+    gates[3]!.release();
+    gates[0]!.release();
+    const sample = await probing;
+    assert.equal(maximum, 2);
+    assert.equal(sample.current.id, "stage");
+    assert.deepEqual(completed.slice(0, 2), ["second", "third"]);
+    assert.equal(sample.gapSummary, names.join("\n"));
+  } finally {
+    for (const entry of gates) entry.release();
+    await probing;
+  }
+});
+
+test("later-stage scheduling waits for every current-stage check to pass", {
+  timeout: 5_000,
+}, async () => {
+  const slow = gate();
+  const fastDone = gate();
+  const scheduled: string[] = [];
+  const context = fixture(
+    {
+      [rootUri]: manifest({
+        levels: [
+          { id: "stage", advancement: { checks: ["slow", "fast"] } },
+          { id: "later", advancement: { checks: ["later"] } },
+        ],
+      }),
+    },
+    {
+      slow: async () => {
+        await slow.promise;
+        return { pass: true };
+      },
+      fast: async () => {
+        fastDone.release();
+        return { pass: true };
+      },
+    },
+    {
+      checkSchedulingPolicy: ({ levelId }) => {
+        scheduled.push(levelId);
+        return 10;
+      },
+    },
+  );
+  const probing = (await instance(context)).probe();
+  try {
+    await fastDone.promise;
+    await setImmediate();
+    assert.deepEqual(scheduled, ["stage"]);
+    slow.release();
+    assert.equal((await probing).current.id, "terminal");
+    assert.deepEqual(scheduled, ["stage", "later"]);
+  } finally {
+    slow.release();
+    await probing;
+  }
+});
+
+test("policy receives frozen stage context throughout prerequisites and repeated probes", async () => {
+  let passing = false;
+  const scheduled: ObjectiveCheckSchedulingContext[] = [];
+  const context = fixture(
+    {
+      [rootUri]: manifest({
+        prerequisite: { manifestUri: childUri, subject: '{"root": root}' },
+      }),
+      [childUri]: manifest({
+        levels: [{ id: "child-stage", advancement: { checks: ["child-one", "child-two"] } }],
+      }),
+    },
+    {
+      "child-one": async () =>
+        passing ? { pass: true } : { pass: false, problems: [{ id: "problem", parameters: {} }] },
+    },
+    {
+      checkSchedulingPolicy: (value) => {
+        assert.ok(Object.isFrozen(value));
+        assert.ok(Object.isFrozen(value.checkIds));
+        scheduled.push(value);
+        return 2;
+      },
+    },
+  );
+  const current = await instance(context);
+  assert.equal((await current.probe()).current.instance, current.prerequisite);
+  assert.deepEqual(
+    scheduled.map(({ levelId }) => levelId),
+    ["child-stage"],
+  );
+  assert.equal(scheduled[0]?.instance, current.prerequisite);
+  assert.deepEqual(scheduled[0]?.checkIds, ["child-one", "child-two"]);
+  passing = true;
+  assert.equal((await current.probe()).current.id, "terminal");
+  assert.equal((await current.probe()).current.id, "terminal");
+  assert.deepEqual(
+    scheduled.map(({ levelId }) => levelId),
+    ["child-stage", "child-stage", "unready", "child-stage", "unready"],
+  );
+  assert.equal(scheduled[2]?.instance, current);
+});
+
+test("empty stages advance without calling the scheduling policy", async () => {
+  let calls = 0;
+  const context = fixture(
+    { [rootUri]: manifest({ levels: [{ id: "empty", advancement: { checks: [] } }] }) },
+    {},
+    {
+      checkSchedulingPolicy: () => {
+        calls += 1;
+        return 0;
+      },
+    },
+  );
+  assert.equal((await (await instance(context)).probe()).current.id, "terminal");
+  assert.equal(calls, 0);
+});
+
+test("invalid scheduling limits and policy failures reject explicitly before running checks", async () => {
+  for (const concurrency of [0, -1, 1.5, Number.NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+    const current = await instance(
+      fixture(
+        undefined,
+        { ready: async () => assert.fail("Invalid policy must not run checks.") },
+        { checkSchedulingPolicy: () => concurrency },
+      ),
+    );
+    await assert.rejects(current.probe(), /positive safe integer/);
+  }
+  const cause = new Error("budget unavailable");
+  for (const policy of [
+    () => {
+      throw cause;
+    },
+    async () => {
+      throw cause;
+    },
+  ]) {
+    const current = await instance(
+      fixture(
+        undefined,
+        { ready: async () => assert.fail("Failed policy must not run checks.") },
+        { checkSchedulingPolicy: policy },
+      ),
+    );
+    await assert.rejects(
+      current.probe(),
+      (error) => error instanceof ObjectiveOperationError && error.cause === cause,
+    );
+  }
+  const options: ObjectiveLoaderOptions = {};
+  Reflect.set(options, "checkSchedulingPolicy", null);
+  assert.throws(() => createObjectiveLoader(options), ObjectiveConfigurationError);
+});
+
+test("operation errors stop queued checks but drain active checks before directory cleanup", {
+  timeout: 5_000,
+}, async () => {
+  for (const invalidResult of [false, true]) {
+    const fail = gate();
+    const peer = gate();
+    const started = gate();
+    const error = new Error("runner failed");
+    const calls: string[] = [];
+    let directory = "";
+    let settled = false;
+    const context = fixture(
+      {
+        [rootUri]: manifest({
+          levels: [{ id: "stage", advancement: { checks: ["first", "second", "queued"] } }],
+        }),
+      },
+      {
+        first: async () => {
+          calls.push("first");
+          await fail.promise;
+          if (invalidResult) return { pass: false, problems: [] };
+          throw error;
+        },
+        second: async (request) => {
+          calls.push("second");
+          directory = request.probe.tempDirectory;
+          started.release();
+          await peer.promise;
+          assert.ok((await stat(directory)).isDirectory());
+          if (!invalidResult) throw new Error("second runner failed");
+          return { pass: true };
+        },
+        queued: async () => assert.fail("Queued checks must not start after an operation error."),
+      },
+      { checkSchedulingPolicy: () => 2 },
+    );
+    const probing = (await instance(context)).probe();
+    const rejected = assert.rejects(probing, (caught) =>
+      invalidResult ? caught instanceof ObjectiveOperationError : caught === error,
+    );
+    probing.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+    try {
+      await started.promise;
+      fail.release();
+      await setImmediate();
+      assert.equal(settled, false);
+      assert.deepEqual(calls, ["first", "second"]);
+      assert.ok((await stat(directory)).isDirectory());
+    } finally {
+      fail.release();
+      peer.release();
+      await rejected;
+    }
+    await assert.rejects(stat(directory));
+  }
+});
 async function instance(
   context: ReturnType<typeof fixture>,
   language = "en-US",
@@ -348,7 +741,7 @@ test("resource and runner errors propagate instead of becoming low levels or 404
   await assert.rejects(failed.probe(), (caught) => caught === error);
   const malformed = await instance(
     fixture(undefined, {
-      ready: async () => ({ pass: false, problems: [] }) as unknown as CheckResult,
+      ready: async () => ({ pass: false, problems: [] }),
     }),
   );
   await assert.rejects(malformed.probe(), ObjectiveOperationError);

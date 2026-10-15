@@ -137,6 +137,14 @@ export interface ObjectiveCheckRunner {
   validate?(manifestUri: ObjectiveManifestUri, checkId: CheckId): Promise<void>;
   run(manifestUri: ObjectiveManifestUri, checkId: CheckId, request: CheckRequest): Promise<unknown>;
 }
+export interface ObjectiveCheckSchedulingContext {
+  readonly instance: ObjectiveGuideInstance;
+  readonly levelId: ObjectiveLevelId;
+  readonly checkIds: readonly CheckId[];
+}
+export type ObjectiveCheckSchedulingPolicy = (
+  context: ObjectiveCheckSchedulingContext,
+) => number | Promise<number>;
 export interface ObjectiveLoader {
   load(manifestUri: ObjectiveManifestUri): Promise<ObjectiveGuide>;
 }
@@ -151,4 +159,5 @@ export interface ObjectiveResourceResolver {
 export interface ObjectiveLoaderOptions {
   resources?: ObjectiveResourceResolver;
   checkRunner?: ObjectiveCheckRunner;
+  checkSchedulingPolicy?: ObjectiveCheckSchedulingPolicy;
 }

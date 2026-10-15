@@ -10,6 +10,8 @@ export type {
   JsonValue,
   LanguageTag,
   ObjectiveCheckRunner,
+  ObjectiveCheckSchedulingContext,
+  ObjectiveCheckSchedulingPolicy,
   ObjectiveDomainSchema,
   ObjectiveGuide,
   ObjectiveGuideInstance,
