@@ -13,6 +13,9 @@
   `turbo.json`.
 - Use Biome for formatting and linting, and Node's test runner through `tsx`
   for tests.
+- Release packages only through package-specific tags documented in
+  `docs/npm-publishing.md`. Never add an npm publishing token to the repository
+  or GitHub Actions.
 
 ## Skills
 

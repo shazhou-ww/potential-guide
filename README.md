@@ -35,3 +35,11 @@ pnpm test
 ```
 
 Run `pnpm check` for the complete repository verification.
+
+## Publishing
+
+Releases use package-specific tags and npm Trusted Publishing. Create the empty
+package records in the npm organization, configure their Trusted Publishers,
+and let GitHub Actions publish the first `0.1.0` versions with provenance. See
+the [npm publishing guide](./docs/npm-publishing.md) for the one-time setup and
+release procedure.
