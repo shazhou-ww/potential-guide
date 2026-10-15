@@ -11,11 +11,11 @@ Potential Guide 的各软件包目前只能作为库集成，缺少统一、可�
 ## 边界
 
 - 顶层命令采用类似 Git 的扩展模型，包拥有自己的命令实现和生命周期，顶层 CLI 不吸收各包的业务逻辑。
-- 子命令发现、参数转发、退出码和结构化输出形成稳定契约；Agent 只能来自标准配置中预定义且通过 AHP 或 ACP 握手的 profile。
+- 子命令发现、参数转发、退出码和结构化输出形成稳定契约；执行目标只能来自标准配置中预定义的 AHP host 或 ACP direct profile。
 - unscoped npm 包和 canonical 命令统一使用 `pguide`，支持直接运行 `npx pguide`；不采用已被占用的 `potential`，也不提供容易与 POSIX pager 和 PostgreSQL 生态混淆的 `pg`。
 
 ## 验收标准
 
 - 安装后的顶层 CLI 能列出并调用内置或包提供的子命令，且同一子命令可通过其独立可执行文件直接运行。
-- `probe` 能执行一次无副作用 observation，`regulate` 能通过预定义 AHP/ACP Agent profile 执行有界 regulation，并提供创建及验证 Objective Guide 骨架的辅助命令。
+- `probe` 能执行一次无副作用 observation，`regulate` 能通过预定义 AHP host 或 ACP direct profile 执行有界 regulation，并提供创建及验证 Objective Guide 骨架的辅助命令。
 - 命令命名、发现优先级、输入输出和失败语义在 Windows、macOS 与 Linux 上具有可测试且一致的行为。

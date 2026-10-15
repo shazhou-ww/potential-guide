@@ -187,47 +187,56 @@ defaultAgent: copilot
 
 agents:
   copilot:
-    protocol:
-      name: acp
-      version: "1"
+    connection:
+      type: acp
+      protocolVersion: "1"
     transport:
       type: stdio
       command: copilot
       args: [--acp]
       env: [GITHUB_TOKEN]
 
-  guarded-codex:
-    protocol:
-      name: ahp
-      version: "2.4"
+  shared-copilot:
+    connection:
+      type: ahp
+      protocolVersion: "1.0.0"
     transport:
-      type: http
-      url: http://127.0.0.1:8787
-      bearerTokenEnv: AHP_TOKEN
+      type: websocket
+      url: ws://127.0.0.1:8787
+      bearerTokenEnv: PGUIDE_AHP_TOKEN
+    agent:
+      id: copilot
 ```
 
-`agents` 是以稳定名称索引的预定义 profile 列表。用户配置先加载，项目配置按 profile 名整体替换，显式配置最后覆盖；单个 profile 不做字段级深度合并，避免从多个来源拼出不可审计的 Agent。
+`agents` 是以稳定名称索引的预定义 profile 列表。ACP profile 描述一个可直连 Agent；AHP profile 描述一个 session host，并可选择该 host 发布的 Agent。用户配置先加载，项目配置按 profile 名整体替换，显式配置最后覆盖；单个 profile 不做字段级深度合并，避免从多个来源拼出不可审计的执行目标。
 
-`pguide list agents` 列出有效 profile、来源、协议和 transport，但不显示凭据。`pguide diagnose agent <profile-name>` 解析 executable 或 endpoint，执行协议握手并验证 regulation 所需能力，不提交任务。
+`pguide list agents` 列出有效 profile、来源、连接层、transport 和所选 Agent，但不显示凭据。`pguide diagnose agent <profile-name>` 解析 executable 或 endpoint，执行对应握手并验证 regulation 所需能力，不提交任务。
 
 配置文件不得包含 token、password 或 API key 字面值。`env` 只声明允许继承的环境变量名；网络认证只引用保存凭据的环境变量名或宿主凭据提供器。
 
-## Agent 协议契约
+## Agent 连接契约
 
-Agent profile 的 `protocol.name` 只接受 `ahp` 或 `acp`，其他值在启动任何进程或网络连接前失败：
+Agent profile 的 `connection.type` 只接受 `acp` 或 `ahp`，其他值在启动任何进程或网络连接前失败。两者位于不同层级，不能视为可互换的 Agent wire protocol：
 
-- **ACP**：`pguide` 作为 Agent Client Protocol client，通过 `initialize` 协商 protocol version 和 capabilities，再创建 session 并把单轮 Objective action 作为 prompt/task 交给 coding agent。
-- **AHP**：`pguide` 连接 Agent Harness Protocol harness，先执行 AHP handshake，再使用其 run/task lifecycle 和监督事件能力驱动受 harness 策略约束的 Agent。缺少所需 run/task capability 的 endpoint 不可用于 `regulate`。
+- **ACP direct**：Agent Client Protocol 是单 client 到单 coding agent 的点对点通信层。`pguide` 作为 ACP client，通过 `initialize` 协商 protocol version 和 capabilities，再创建或恢复 Agent session。
+- **AHP host**：微软 Agent Host Protocol 是多 client 共享 Agent sessions 的协调层。`pguide` 作为 AHP client 连接 authoritative host；host 负责 session state、action sequencing、subscriptions、reconnection 和 replay，并通常在下层通过 ACP 或 Agent 专用接口驱动 Agent。
 
-截至 2026-10-15，公开规范的稳定 ACP protocol version 为 `1`，AHP 当前 protocol version 为 `2.4`。这些是兼容性观测而非永久默认值；实现必须根据所支持的 major version 和握手结果决定兼容性，不能根据 SDK 或 schema artifact 的包版本推断 wire compatibility。
+截至 2026-10-15，公开规范的稳定 ACP wire protocol version 为 `1`，微软 AHP 已发布 protocol `1.0.0`。这些是兼容性观测而非永久默认值；实现必须根据握手与 capabilities 判断兼容性，不能根据 SDK 或 schema artifact 的包版本推断 wire compatibility。
 
-协议依据分别为 [Agent Client Protocol](https://github.com/agentclientprotocol/agent-client-protocol) 和 [Agent Harness Protocol](https://github.com/A3S-Lab/AgentHarnessProtocol) 的公开规范。
+协议依据分别为 [Agent Client Protocol](https://github.com/agentclientprotocol/agent-client-protocol) 和微软 [Agent Host Protocol](https://github.com/microsoft/agent-host-protocol) 的公开规范。
 
-`pguide` 不再定义私有 Agent wire protocol，也不接受任意 `process` adapter。协议实现负责把 `ObjectiveActionRequest` 映射到标准 session/run 消息，并将一次 Agent 结果映射为现有 `ObjectiveActionExecutor` 的 `completed` 或 `blocked` 结果。
+`pguide` 不定义私有 Agent wire protocol，也不接受任意 `process` adapter。连接实现负责把 `ObjectiveActionRequest` 映射到标准 session/turn 消息，并将一次 Agent 结果映射为现有 `ObjectiveActionExecutor` 的 `completed` 或 `blocked` 结果。
 
 `completed` 只表示 Agent 完成了本轮动作，不表示 Objective 有进展。CLI 必须等待 Regulator re-probe；只有新的 observation 可以证明 level 提升或 target reached。
 
-AHP harness 或 ACP agent/client capability 负责 mutation 权限、工具允许列表和人工授权策略。CLI 不提供绕过协议参与方审批的通用开关。
+AHP host 或 ACP agent/client capability 负责 mutation 权限、工具允许列表和人工授权流程。CLI 不提供绕过协议参与方审批的通用开关。
+
+### AHP 与 ACP 的选择
+
+- 默认推荐 **AHP host profile** 用于长期 Regulation、`continue`、多端观察或控制：AHP 的 authoritative channel state、ordered action envelopes、`serverSeq`、subscriptions 和 reconnect replay 可以让不同终端共享同一 session，并从增量 action stream 恢复界面与 Agent 过程。
+- **ACP direct profile** 适合一次性、本机、单 client regulation：依赖更少，直接表达 prompt、streaming update、tool call 和 permission flow。
+- AHP 不替代 ACP 的 Agent 通信能力。典型架构是 `pguide → AHP host → ACP agent`；AHP 官方将其描述为协调层，ACP 是通信层。
+- AHP 的增量进度只证明 Agent session 中发生了哪些 actions，并不证明 Objective level 已提升。每次 regulation 或 continuation 仍必须由 Objective Guide 重新 probe，以 observation 作为进度与完成的唯一权威。
 
 ## Regulation 输出
 
@@ -262,7 +271,7 @@ JSON 输出包含稳定字段：
 | `3` | `action-blocked` 或 `no-actionable-problem` |
 | `4` | `no-progress` 或 `max-iterations` |
 | `5` | `timed-out` 或外部取消 |
-| `6` | AHP/ACP 握手、Agent session、transport 或 I/O 操作失败 |
+| `6` | AHP/ACP 握手、host/Agent session、transport 或 I/O 操作失败 |
 | `70` | 未分类内部错误 |
 
 所有非零结果在 Markdown 与 JSON 模式中都返回机器可识别的 status，不以解析错误文本作为自动化接口。
@@ -285,6 +294,6 @@ JSON 输出包含稳定字段：
 - 不让顶层 CLI 复制 Guide、Regulator 或 Portfolio 的业务实现。
 - 不允许外部命令覆盖保留的内置命令。
 - 不把 Agent 的自报完成当作 Objective 进展。
-- 不支持 AHP 与 ACP 之外的 Agent 协议，也不提供绕过 profile 的临时 Agent 命令行参数。
+- 不支持绕过 AHP host 或 ACP direct profile 的临时 Agent 命令行参数。
 - 不提供关闭 timeout、iteration 或 stalled-progress 防护的无限运行模式。
 - 不在第一版实现远程插件市场、后台 daemon 或隐藏的 regulation session。
