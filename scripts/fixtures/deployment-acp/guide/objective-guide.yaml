@@ -1,0 +1,13 @@
+schemaVersion: 1
+domainSchema:
+  type: object
+  required: [marker]
+  properties:
+    marker:
+      type: string
+levels:
+  - id: initial
+    advancement:
+      checks: [ready]
+defaultLanguage: en-US
+languages: [en-US]

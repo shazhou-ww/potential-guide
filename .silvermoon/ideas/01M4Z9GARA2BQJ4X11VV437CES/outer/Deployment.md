@@ -4,26 +4,26 @@
 
 ### D-S01: 验证打包与独立安装
 
-打包顶层 CLI 和包级命令，在隔离环境中安装产物，并确认发布内容、可执行入口及内部依赖只来自这些产物。
+从六个 workspace 生成真实 tarball，在仓库内的临时隔离 consumer 中仅安装这些产物；审计发布文件、unscoped `pguide`、全部 package-owned bin、`pguide-config` 扩展和安装后的内部依赖链，结束后清理 tarball、consumer 与 `node_modules`。
 
 ### D-S02: 验证跨平台子命令调用
 
-在 Windows、macOS 与 Linux 的支持矩阵中验证直接命令、顶层分派、PATH 发现、参数转发、取消和退出码行为。
+以同一可重复脚本覆盖安全 PATH 发现、直接与顶层分派、全局选项前后位置、`--` 边界、stdin、退出码和信号；在仓库 CI 定义 Windows、macOS、Linux 矩阵，并在当前平台完整执行。
 
 ### D-S03: 验证真实 Agent regulation
 
-使用受控测试仓库和已配置 Agent adapter 运行端到端 regulation，保留不含敏感数据的命令、状态转换及最终 observation 证据。
+通过 packed CLI 和不含真实凭据的受控 ACP fixture 执行 `regulate`、持久 lineage/transcript、仍满足时的 `continue`、退化后的 ACP resume 修复，并验证报告、retention、redaction 以及 blocked、stalled、timeout 结果。
 
 ## Acceptance criteria
 
 ### D-AC01: 安装产物可独立使用
 
-隔离 consumer 能从打包产物运行顶层 CLI 和每个包级命令，且产物审计未发现源码、测试、临时文件或未声明依赖。
+隔离 consumer 能从 tarball 运行 unscoped `pguide`、所有 package-owned bin 和 `pguide-config` 分派；产物不含源码、测试或临时文件，且安装后的内部依赖均由同批 tarball 满足。
 
 ### D-AC02: 支持平台行为一致
 
-CI 支持矩阵在 Windows、macOS 与 Linux 上通过同一套命令发现与分派场景，并记录 canonical 命令名称及任何可选短别名的冲突调查。
+CI 为 Windows、macOS 与 Linux 调用同一 packed CLI 验证脚本，当前平台完整通过；证据明确区分已执行结果与仅由 CI 定义覆盖的平台，不虚报尚未运行的矩阵结果。
 
 ### D-AC03: Agent regulation 达到目标
 
-真实 Agent adapter 在限制范围内把测试 Objective 推进到目标 level；证据显示 Regulator 而非 Agent 声明进展，并能清晰报告 blocked、stalled 与 timeout。
+受控真实 ACP transport 在限制范围内把 fixture Objective 推进到目标 level，Regulator 重探针确认进展；持久恢复、脱敏、保留期和 blocked、stalled、timeout 报告均由 packed CLI 的可重复验证证明。

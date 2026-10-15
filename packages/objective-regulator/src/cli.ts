@@ -392,7 +392,10 @@ async function runAttempt(
         (capabilities as Record<string, unknown>).loadSession !== true)
     )
       throw new CliError("ACP Agent did not advertise required capabilities.", 6, "acp-error");
-    const previous = regulation.attempts.at(-2)?.sessionId;
+    const previous = regulation.attempts
+      .slice(0, -1)
+      .reverse()
+      .find(({ sessionId: priorSessionId }) => priorSessionId !== undefined)?.sessionId;
     if (resume && previous !== undefined) {
       try {
         await acpCall(client.resumeSession(previous, cwd), regulation.agentProfile);
