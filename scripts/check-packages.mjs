@@ -15,6 +15,7 @@ const packages = [
       "AcpClient",
       "COMMAND_PROTOCOL",
       "CliError",
+      "agentSecretValues",
       "atomicWrite",
       "commandMain",
       "digest",

@@ -161,7 +161,7 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     const agent = join(temporary, "agent.mjs");
     await writeFile(
       agent,
-      `import{createInterface}from"node:readline";import{writeFile}from"node:fs/promises";for await(const line of createInterface({input:process.stdin})){const m=JSON.parse(line);if(!m.id)continue;let result={};if(m.method==="initialize")result={protocolVersion:"1",agentCapabilities:{loadSession:true}};if(m.method==="session/new")result={sessionId:"fixture-session"};if(m.method==="session/resume"){if(process.env.HANG_RESUME){await writeFile(process.env.RESUME_MARKER,"yes");await new Promise(()=>{});}result={};}if(m.method==="session/prompt"){if(process.env.CANCEL_RESPONSE)result={stopReason:"cancelled"};else{await writeFile(process.env.ACTION_MARKER,"yes");console.log(JSON.stringify({jsonrpc:"2.0",method:"session/update",params:{sessionId:"fixture-session",update:{sessionUpdate:"agent_message_chunk",content:{type:"text",text:"agent echoed "+process.env.SECRET_ENV}}}}));result={stopReason:"end_turn",summary:"created marker "+process.env.SECRET_ENV};}}console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
+      `import{createInterface}from"node:readline";import{writeFile}from"node:fs/promises";for await(const line of createInterface({input:process.stdin})){const m=JSON.parse(line);if(!m.id)continue;let result={};if(m.method==="initialize")result={protocolVersion:"1",agentCapabilities:{loadSession:true}};if(m.method==="session/new")result={sessionId:"fixture-session"};if(m.method==="session/resume"){if(process.env.HANG_RESUME){await writeFile(process.env.RESUME_MARKER,"yes");await new Promise(()=>{});}result={};}if(m.method==="session/prompt"){if(process.env.CANCEL_RESPONSE)result={stopReason:"cancelled"};else{await writeFile(process.env.ACTION_MARKER,"yes");process.stderr.write("fixture diagnostic: ");for(const part of [process.env.SECRET_ENV.slice(0,3),process.env.SECRET_ENV.slice(3,11),process.env.SECRET_ENV.slice(11)]){process.stderr.write(part);await new Promise(resolve=>setTimeout(resolve,5));}process.stderr.write(" :complete\\n");console.log(JSON.stringify({jsonrpc:"2.0",method:"session/update",params:{sessionId:"fixture-session",update:{sessionUpdate:"agent_message_chunk",content:{type:"text",text:"agent echoed "+process.env.SECRET_ENV}}}}));result={stopReason:"end_turn",summary:"created marker "+process.env.SECRET_ENV};}}console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
     );
     const config = join(temporary, "config.yaml");
     await writeFile(
@@ -224,6 +224,8 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     assert.equal(result.status, "target-reached");
     assert.equal(first.stdout.includes(echoedSecret), false);
     assert.equal(first.stdout.includes(encodedSecret), false);
+    assert.equal(first.stderr.includes(echoedSecret), false);
+    assert.match(first.stderr, /fixture diagnostic: \[REDACTED\] :complete/);
     const reportSource = await readFile(report, "utf8");
     const reportValue = JSON.parse(reportSource);
     assert.equal(reportValue.regulationId, result.regulationId);

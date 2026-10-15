@@ -36,7 +36,7 @@ Windows shim 分派不得启用 shell；一次 Attempt 的 timeout 覆盖 probe�
 
 ### I-S09: 修复最终复审的状态与 ACP 边界
 
-对 Agent 数据按结构递归替换原始环境凭据而不处理序列化文本；将内部 canonical subject 与展示脱敏投影分离，以私有原子文件保存精确 subject 和原始 digest；resume 被取消或超时时禁止 fallback，新 ACP request 在 child 或 stdin 关闭后立即失败。
+对 Agent 数据按结构递归替换原始环境凭据而不处理序列化文本，并以有界跨 chunk 流式脱敏保护 Agent stderr 诊断；将内部 canonical subject 与展示脱敏投影分离，以私有原子文件保存精确 subject 和原始 digest；resume 被取消或超时时禁止 fallback，新 ACP request 在 child 或 stdin 关闭后立即失败。
 
 ## Acceptance criteria
 
@@ -74,4 +74,4 @@ Windows shim 分派不得启用 shell；一次 Attempt 的 timeout 覆盖 probe�
 
 ### I-AC09: 最终复审阻断项具有端到端回归证明
 
-fixture Agent 回显含引号、反斜杠、换行和 Unicode 的 credential 时，stdout、transcript、Attempt、action summary 与 report 均不含原值或其 JSON 转义形式；业务 subject 使用 `token`、`authorization` 等普通字段仍以精确值和一致 digest 完成 continue roundtrip，持久文件保持私有权限且报告不投影 subject；真实 resume 悬挂在 timeout、SIGINT、SIGTERM 下可靠退出 5 并持久化终态，ACP child/stdin 关闭后的 request 不会悬挂。
+fixture Agent 在跨多个 stderr chunks 及协议数据中回显含引号、反斜杠、换行和 Unicode 的 credential 时，用户 stderr、stdout、transcript、Attempt、action summary 与 report 均不含原值或其 JSON 转义形式，stderr 保留脱敏后的安全诊断；业务 subject 使用 `token`、`authorization` 等普通字段仍以精确值和一致 digest 完成 continue roundtrip，持久文件保持私有权限且报告不投影 subject；真实 resume 悬挂在 timeout、SIGINT、SIGTERM 下可靠退出 5 并持久化终态，ACP child/stdin 关闭后的 request 不会悬挂。

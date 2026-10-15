@@ -175,6 +175,66 @@ export function redactSensitive<T>(value: T): T {
   return visit(value) as T;
 }
 
+export function agentSecretValues(profile: AgentProfile): string[] {
+  return [
+    ...new Set(
+      (profile.transport.env ?? [])
+        .map((name) => process.env[name])
+        .filter((secret): secret is string => secret !== undefined && secret !== ""),
+    ),
+  ].sort((left, right) => right.length - left.length);
+}
+
+class StreamingSecretRedactor {
+  private pending = Buffer.alloc(0);
+  private readonly secrets: Buffer[];
+  private readonly tailLength: number;
+  private ended = false;
+
+  constructor(secrets: readonly string[]) {
+    this.secrets = secrets
+      .map((secret) => Buffer.from(secret))
+      .sort((left, right) => right.length - left.length);
+    this.tailLength = Math.max(0, ...this.secrets.map((secret) => secret.length - 1));
+  }
+
+  write(chunk: Buffer): void {
+    if (this.ended) return;
+    this.pending = Buffer.concat([this.pending, chunk]);
+    this.flush(false);
+  }
+
+  end(): void {
+    if (this.ended) return;
+    this.ended = true;
+    this.flush(true);
+  }
+
+  private flush(all: boolean): void {
+    const safeLength = all
+      ? this.pending.length
+      : Math.max(0, this.pending.length - this.tailLength);
+    const output: Buffer[] = [];
+    let offset = 0;
+    while (offset < safeLength) {
+      const secret = this.secrets.find(
+        (candidate) =>
+          offset + candidate.length <= this.pending.length &&
+          this.pending.subarray(offset, offset + candidate.length).equals(candidate),
+      );
+      if (secret !== undefined) {
+        output.push(Buffer.from("[REDACTED]"));
+        offset += secret.length;
+      } else {
+        output.push(this.pending.subarray(offset, offset + 1));
+        offset += 1;
+      }
+    }
+    this.pending = this.pending.subarray(offset);
+    if (output.length > 0) process.stderr.write(Buffer.concat(output));
+  }
+}
+
 export function validateAgentProfile(value: unknown): AgentProfile {
   if (!record(value)) throw new CliError("Agent profile must be an object.");
   exactKeys(value, ["connection", "transport", "requirements"], "Agent profile");
@@ -726,7 +786,10 @@ export class AcpClient {
       windowsHide: true,
       shell: false,
     });
-    this.child.stderr.pipe(process.stderr);
+    const stderr = new StreamingSecretRedactor(agentSecretValues(profile));
+    this.child.stderr.on("data", (chunk: Buffer) => stderr.write(chunk));
+    this.child.stderr.once("end", () => stderr.end());
+    this.child.stderr.once("close", () => stderr.end());
     this.child.on("error", (error) => this.fail(error));
     this.child.stdin.on("error", (error) => this.fail(error));
     this.closed = new Promise((resolveClosed) => {

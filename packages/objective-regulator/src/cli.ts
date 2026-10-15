@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import {
   AcpClient,
   type AgentProfile,
+  agentSecretValues,
   atomicWrite,
   CliError,
   type CommandMetadata,
@@ -231,13 +232,7 @@ function actionPrompt(regulation: Regulation, observation: ObjectiveObservation)
 }
 
 function safeAgentValue<T>(value: T, profile: AgentProfile): T {
-  const secrets = [
-    ...new Set(
-      (profile.transport.env ?? [])
-        .map((name) => process.env[name])
-        .filter((secret): secret is string => secret !== undefined && secret !== ""),
-    ),
-  ].sort((left, right) => right.length - left.length);
+  const secrets = agentSecretValues(profile);
   const visit = (current: unknown): unknown => {
     if (typeof current === "string") {
       let safe = current;
