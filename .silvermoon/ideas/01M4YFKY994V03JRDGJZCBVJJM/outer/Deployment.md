@@ -21,3 +21,26 @@
 针对已验收的主分支版本，进行可复现的使用方验证，证明串行和并行调度产生相同的
 阶段与问题结果，且当前阶段失败时仍会阻塞后续阶段。
 在部署阶段将主分支版本和验证证据记录到本契约。
+
+2026-10-15 使用方验证基线为主分支提交
+`bb6a02b928eff35f1376ceca0dbb54f1bb489c27`，
+已验收的实现修订为 `f5a1e62c5520a7bfb3919e77ac913b8dc566ee9b`。
+执行 `npm run build` 后运行
+`node .silvermoon\ideas\01M4YFKY994V03JRDGJZCBVJJM\outer\verify-consumer.mjs`，
+构建与全部脚本断言通过：
+
+- 并行度一和二的当前阶段均为 `stage`，问题按 `first`、`second` 排列，
+  `gapSummary` 相同；实际峰值并发分别为一和二。
+- 当前阶段失败时 `later` check 执行次数为零；
+  经真实 supervisor、regulator 修复并重新观测后均到达 `terminal`，
+  `later` check 各执行一次。
+- 脚本报告 `publication: "not-performed"`；没有执行发布命令，
+  没有创建版本标签或 GitHub Release。
+
+同日发布状态观测：`git tag --list` 和 `gh release list` 均未发现发布记录。
+浏览器访问以下 npmx 公开包页面均显示 `404 — Package Not Found`：
+[objective-guide](https://npmx.dev/package/@potential-guide/objective-guide)、
+[objective-regulator](https://npmx.dev/package/@potential-guide/objective-regulator)、
+[objective-portfolio-supervisor](https://npmx.dev/package/@potential-guide/objective-portfolio-supervisor)。
+这是公开页面旁证，不等同于对历史发布或私有 registry 的完整证明。
+公司限制访问 npm registry，直接查询发生 TLS 错误；未使用代理或镜像绕过该限制。
