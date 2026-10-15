@@ -4,6 +4,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
 import { test } from "node:test";
+import { sameDirectory } from "../src/path.js";
 
 const root = resolve(import.meta.dirname, "..", "..", "..");
 const top = join(root, "packages", "pguide", "dist", "bin.js");
@@ -168,6 +169,19 @@ test("real-path deduplication follows platform case sensitivity", {
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
+});
+
+test("Windows cwd exclusion canonicalizes aliases and casing", async () => {
+  const aliases = new Map([
+    ["C:\\PROGRA~1\\Guide", "C:\\Program Files\\Guide"],
+    ["c:\\program files\\guide", "C:\\Program Files\\Guide"],
+  ]);
+  const canonicalize = async (path: string) => aliases.get(path) ?? path;
+  assert.equal(
+    await sameDirectory("C:\\PROGRA~1\\Guide", "c:\\program files\\guide", "win32", canonicalize),
+    true,
+  );
+  assert.equal(await sameDirectory("C:\\Guide\\bin", "C:\\Guide", "win32", canonicalize), false);
 });
 
 test("all official commands dispatch through the top-level CLI", async () => {

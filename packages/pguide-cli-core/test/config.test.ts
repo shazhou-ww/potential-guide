@@ -9,6 +9,7 @@ import {
   loadConfig,
   parseConfig,
   pruneExpiredRegulations,
+  redactSensitive,
   validateAgentProfile,
 } from "@potential-guide/cli-core";
 
@@ -26,6 +27,27 @@ test("configuration validates ACP profiles and rejects secret literals", () => {
       transport: { type: "stdio", command: "fixture", token: "literal" },
     }),
   );
+  for (const name of [
+    "api-key",
+    "client-secret",
+    "bearer-token",
+    "authorization",
+    "access-token",
+    "refresh-token",
+    "private-key",
+    "credential",
+    "token",
+    "password",
+  ]) {
+    for (const args of [[`--${name}`, "literal"], [`--${name}=literal`]]) {
+      assert.throws(() =>
+        validateAgentProfile({
+          connection: { type: "acp", protocolVersion: "1" },
+          transport: { type: "stdio", command: "fixture", args },
+        }),
+      );
+    }
+  }
   for (const args of [["--api-key", "literal"], ["--token=literal"], ["--password", "literal"]]) {
     assert.throws(() =>
       validateAgentProfile({
@@ -44,6 +66,26 @@ test("configuration validates ACP profiles and rejects secret literals", () => {
         env: ["SERVICE_API_KEY"],
       },
     }),
+  );
+  assert.deepEqual(
+    redactSensitive({
+      nested: { credential: "hidden" },
+      transport: {
+        args: ["--client-secret=hidden", "--authorization", "hidden", "--tokenizer", "safe"],
+      },
+    }),
+    {
+      nested: { credential: "[REDACTED]" },
+      transport: {
+        args: [
+          "--client-secret=[REDACTED]",
+          "--authorization",
+          "[REDACTED]",
+          "--tokenizer",
+          "safe",
+        ],
+      },
+    },
   );
 });
 

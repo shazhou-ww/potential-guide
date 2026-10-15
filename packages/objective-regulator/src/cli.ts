@@ -17,6 +17,7 @@ import {
   option,
   pruneExpiredRegulations,
   readJsonSubject,
+  redactSensitive,
   rejectUnknownOptions,
   stateRoot,
   validateAgentProfile,
@@ -49,7 +50,8 @@ interface Attempt {
   actions: { problemId: string; status: string; summary: string }[];
 }
 
-class InvocationTimeoutError extends Error {}
+export class InvocationTimeoutError extends Error {}
+export class InvocationCancelledError extends Error {}
 
 function expectedFailure(error: unknown): {
   category: NonNullable<Attempt["errorCategory"]>;
@@ -93,28 +95,68 @@ function expectedFailure(error: unknown): {
   };
 }
 
-async function withinInvocation<T>(
+type CancellationRegistration = (cancel: () => void) => () => void;
+
+function processCancellation(cancel: () => void): () => void {
+  process.once("SIGINT", cancel);
+  process.once("SIGTERM", cancel);
+  return () => {
+    process.removeListener("SIGINT", cancel);
+    process.removeListener("SIGTERM", cancel);
+  };
+}
+
+export async function withinInvocation<T>(
   timeoutMs: number,
   operation: (signal: AbortSignal, deadline: number) => Promise<T>,
+  registerCancellation: CancellationRegistration = processCancellation,
 ): Promise<T> {
   const controller = new AbortController();
   const deadline = performance.now() + timeoutMs;
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () => {
-        reject(new InvocationTimeoutError("Regulation invocation timed out."));
-        controller.abort();
-      },
-      Math.min(timeoutMs, 2_147_483_647),
-    );
+  const state: { owner: "running" | "completed" | "timed-out" | "cancelled" } = {
+    owner: "running",
+  };
+  let result: T | undefined;
+  let failure: unknown;
+  let release!: () => void;
+  const settled = new Promise<void>((resolveSettled) => {
+    release = resolveSettled;
   });
-  const work = operation(controller.signal, deadline);
-  work.catch(() => undefined);
+  const claim = (next: Exclude<(typeof state)["owner"], "running">, reason?: Error) => {
+    if (state.owner !== "running") return;
+    state.owner = next;
+    if (reason !== undefined) controller.abort(reason);
+    release();
+  };
+  const timer = setTimeout(
+    () => claim("timed-out", new InvocationTimeoutError("Regulation invocation timed out.")),
+    Math.min(timeoutMs, 2_147_483_647),
+  );
+  const unregister = registerCancellation(() =>
+    claim("cancelled", new InvocationCancelledError("Regulation invocation cancelled.")),
+  );
+  const work = operation(controller.signal, deadline).then(
+    (value) => {
+      result = value;
+      claim("completed");
+    },
+    (error: unknown) => {
+      failure = error;
+      claim("completed");
+    },
+  );
   try {
-    return await Promise.race([work, timeout]);
+    await settled;
+    await work;
+    if (state.owner === "timed-out")
+      throw new InvocationTimeoutError("Regulation invocation timed out.");
+    if (state.owner === "cancelled")
+      throw new InvocationCancelledError("Regulation invocation cancelled.");
+    if (failure !== undefined) throw failure;
+    return result as T;
   } finally {
-    if (timer !== undefined) clearTimeout(timer);
+    clearTimeout(timer);
+    unregister();
   }
 }
 
@@ -165,10 +207,13 @@ function exitCode(status: string): number {
 }
 
 async function save(root: string, regulation: Regulation, attempt: Attempt): Promise<void> {
-  await atomicWrite(join(root, "regulation.json"), `${JSON.stringify(regulation, null, 2)}\n`);
+  const safeRegulation = redactSensitive(regulation);
+  const safeAttempt = redactSensitive(attempt);
+  safeRegulation.subjectDigest = digest(safeRegulation.subject);
+  await atomicWrite(join(root, "regulation.json"), `${JSON.stringify(safeRegulation, null, 2)}\n`);
   await atomicWrite(
     join(root, "attempts", `${attempt.id}.json`),
-    `${JSON.stringify(attempt, null, 2)}\n`,
+    `${JSON.stringify(safeAttempt, null, 2)}\n`,
   );
 }
 
@@ -188,7 +233,7 @@ function safeAgentValue<T>(value: T, profile: AgentProfile): T {
     const secret = process.env[name];
     if (secret !== undefined && secret !== "") source = source.split(secret).join("[REDACTED]");
   }
-  return JSON.parse(source) as T;
+  return redactSensitive(JSON.parse(source) as T);
 }
 
 async function loadGuide(path: string) {
@@ -233,8 +278,12 @@ async function runAttempt(
       targetLevelId: string;
     }
 > {
+  const abortedError = () =>
+    signal.reason instanceof InvocationCancelledError
+      ? signal.reason
+      : new InvocationTimeoutError("Regulation invocation timed out.");
   const throwIfAborted = () => {
-    if (signal.aborted) throw new InvocationTimeoutError("Regulation invocation timed out.");
+    if (signal.aborted) throw abortedError();
   };
   if ((await digestTree(regulation.guidePath)) !== regulation.guideRevision)
     throw new CliError("Guide revision changed; create a new Regulation.", 2, "guide-error");
@@ -253,7 +302,7 @@ async function runAttempt(
   try {
     initial = await created.instance.probe(signal);
   } catch (error) {
-    if (signal.aborted) throw new InvocationTimeoutError("Regulation invocation timed out.");
+    if (signal.aborted) throw abortedError();
     throw new CliError(
       error instanceof Error ? error.message : "Guide probe failed.",
       2,
@@ -288,9 +337,12 @@ async function runAttempt(
       },
     );
   });
-  const abort = () => client.close();
+  let sessionId: string | undefined;
+  let abortWork: Promise<void> | undefined;
+  const abort = () => {
+    abortWork = sessionId === undefined ? client.stop() : client.cancelAndStop(sessionId);
+  };
   signal.addEventListener("abort", abort, { once: true });
-  let sessionId: string;
   try {
     const initialized = await acpCall(
       client.initialize(regulation.agentProfile.connection.protocolVersion),
@@ -332,63 +384,93 @@ async function runAttempt(
       attempt.resumeMode = "new";
     }
     attempt.sessionId = sessionId;
-    const onSignal = () => client.cancel(sessionId);
-    process.once("SIGINT", onSignal);
-    process.once("SIGTERM", onSignal);
+    const activeSessionId = sessionId;
+    let result: RegulationResult;
     try {
-      let result: RegulationResult;
-      try {
-        result = await regulator.regulate(
-          {
-            targetLevelId: regulation.targetLevelId,
-            limits: {
-              ...attempt.limits,
-              timeoutMs: Math.max(1, deadline - performance.now()),
-            },
-            signal,
+      result = await regulator.regulate(
+        {
+          targetLevelId: regulation.targetLevelId,
+          limits: {
+            ...attempt.limits,
+            timeoutMs: Math.max(1, deadline - performance.now()),
           },
-          async (request) => {
-            attempt.observations.push(request.observation);
-            const response = await acpCall(
-              client.prompt(sessionId, actionPrompt(regulation, request.observation)),
-            );
-            throwIfAborted();
-            const safeResponse = safeAgentValue(response, regulation.agentProfile);
-            attempt.actions.push({
-              problemId: request.problem.id,
-              status: safeResponse.status,
-              summary: safeResponse.summary,
-            });
-            await save(root, regulation, attempt);
-            return safeResponse.status === "completed"
-              ? { status: "completed", summary: safeResponse.summary }
-              : { status: "blocked", reason: safeResponse.summary };
-          },
-        );
-      } catch (error) {
-        if (
-          error instanceof CliError ||
-          error instanceof ObjectiveRegulatorTimeoutError ||
-          signal.aborted
-        ) {
-          throw error;
-        }
-        throw new CliError(
-          error instanceof Error ? error.message : "Guide re-probe failed.",
-          2,
-          "guide-error",
-        );
+          signal,
+        },
+        async (request) => {
+          attempt.observations.push(request.observation);
+          const response = await acpCall(
+            client.prompt(activeSessionId, actionPrompt(regulation, request.observation)),
+          );
+          throwIfAborted();
+          const safeResponse = safeAgentValue(response, regulation.agentProfile);
+          if (safeResponse.status === "cancelled") {
+            throw new InvocationCancelledError("ACP session was cancelled.");
+          }
+          attempt.actions.push({
+            problemId: request.problem.id,
+            status: safeResponse.status,
+            summary: safeResponse.summary,
+          });
+          await save(root, regulation, attempt);
+          return safeResponse.status === "completed"
+            ? { status: "completed", summary: safeResponse.summary }
+            : { status: "blocked", reason: safeResponse.summary };
+        },
+      );
+    } catch (error) {
+      if (
+        error instanceof CliError ||
+        error instanceof ObjectiveRegulatorTimeoutError ||
+        error instanceof InvocationCancelledError ||
+        signal.aborted
+      ) {
+        throw signal.aborted ? abortedError() : error;
       }
-      attempt.observations.push(result.latestObservation);
-      return result;
-    } finally {
-      process.removeListener("SIGINT", onSignal);
-      process.removeListener("SIGTERM", onSignal);
+      throw new CliError(
+        error instanceof Error ? error.message : "Guide re-probe failed.",
+        2,
+        "guide-error",
+      );
     }
+    attempt.observations.push(result.latestObservation);
+    return result;
   } finally {
     signal.removeEventListener("abort", abort);
-    client.close();
+    await (abortWork ?? client.stop());
   }
+}
+
+function reportValue(regulation: Regulation, finalStatus: string) {
+  return redactSensitive({
+    schemaVersion: 1,
+    regulationId: regulation.regulationId,
+    targetLevelId: regulation.targetLevelId,
+    status: finalStatus,
+    finalStatus,
+    attempts: regulation.attempts.map((entry) => ({
+      id: entry.id,
+      startedAt: entry.startedAt,
+      completedAt: entry.completedAt,
+      status: entry.status,
+      resumeMode: entry.resumeMode,
+      actions: entry.actions,
+      rounds: entry.observations.map((observation, index) => ({
+        round: index + 1,
+        currentLevelId: observation.current.id,
+        problemIds: observation.problems.map((problem) => problem.id),
+      })),
+    })),
+    recovery: {
+      regulationId: regulation.regulationId,
+      command: `pguide continue ${regulation.regulationId}`,
+    },
+  });
+}
+
+interface FinishedInvocation {
+  code: number;
+  value: ReturnType<typeof reportValue>;
+  markdown: string;
 }
 
 async function finish(
@@ -398,24 +480,35 @@ async function finish(
   result: Awaited<ReturnType<typeof runAttempt>>,
   globals: GlobalOptions,
   reportPath?: string,
-): Promise<number> {
+): Promise<FinishedInvocation> {
   attempt.completedAt = new Date().toISOString();
   attempt.status = result.status;
   await save(root, regulation, attempt);
-  const value = {
-    schemaVersion: 1,
-    regulationId: regulation.regulationId,
-    status: result.status,
-    targetLevelId: regulation.targetLevelId,
-    iterations: result.iterations,
-    latestObservation: result.latestObservation,
-  };
+  const value = reportValue(regulation, result.status);
   const report = `# Regulation ${regulation.regulationId}\n\nStatus: \`${result.status}\`\n\nTarget: \`${regulation.targetLevelId}\`\n\nIterations: ${result.iterations}`;
   if (reportPath !== undefined) {
     await atomicWrite(resolve(globals.cwd, reportPath), `${JSON.stringify(value, null, 2)}\n`);
   }
-  writeResult(value, globals.format, report);
-  return exitCode(result.status);
+  return { code: exitCode(result.status), value, markdown: report };
+}
+
+async function finishInterrupted(
+  regulation: Regulation,
+  attempt: Attempt,
+  root: string,
+  status: "timed-out" | "cancelled",
+  globals: GlobalOptions,
+  reportPath?: string,
+): Promise<number> {
+  attempt.status = status;
+  attempt.completedAt = new Date().toISOString();
+  await save(root, regulation, attempt);
+  const value = reportValue(regulation, status);
+  if (reportPath !== undefined) {
+    await atomicWrite(resolve(globals.cwd, reportPath), `${JSON.stringify(value, null, 2)}\n`);
+  }
+  writeResult(value, globals.format, `Regulation ${regulation.regulationId} ${status}.`);
+  return 5;
 }
 
 export async function runRegulate(
@@ -491,7 +584,7 @@ export async function runRegulate(
   await save(root, regulation, attempt);
   const reportPath = option(argv, "--report") as string | undefined;
   try {
-    return await withinInvocation(attempt.limits.timeoutMs, async (signal, deadline) =>
+    const finished = await withinInvocation(attempt.limits.timeoutMs, async (signal, deadline) =>
       finish(
         regulation,
         attempt,
@@ -501,20 +594,17 @@ export async function runRegulate(
         reportPath,
       ),
     );
+    writeResult(finished.value, globals.format, finished.markdown);
+    return finished.code;
   } catch (error) {
     if (
       error instanceof ObjectiveRegulatorTimeoutError ||
       error instanceof InvocationTimeoutError
     ) {
-      attempt.status = "timed-out";
-      attempt.completedAt = new Date().toISOString();
-      await save(root, regulation, attempt);
-      const value = { schemaVersion: 1, regulationId, status: "timed-out" };
-      if (reportPath !== undefined) {
-        await atomicWrite(resolve(globals.cwd, reportPath), `${JSON.stringify(value, null, 2)}\n`);
-      }
-      writeResult(value, globals.format, `Regulation ${regulationId} timed out.`);
-      return 5;
+      return finishInterrupted(regulation, attempt, root, "timed-out", globals, reportPath);
+    }
+    if (error instanceof InvocationCancelledError) {
+      return finishInterrupted(regulation, attempt, root, "cancelled", globals, reportPath);
     }
     const expected = expectedFailure(error);
     attempt.status = "failed";
@@ -573,7 +663,7 @@ export async function runContinue(
   await save(root, regulation, attempt);
   const reportPath = option(argv, "--report") as string | undefined;
   try {
-    return await withinInvocation(attempt.limits.timeoutMs, async (signal, deadline) =>
+    const finished = await withinInvocation(attempt.limits.timeoutMs, async (signal, deadline) =>
       finish(
         regulation,
         attempt,
@@ -583,20 +673,17 @@ export async function runContinue(
         reportPath,
       ),
     );
+    writeResult(finished.value, globals.format, finished.markdown);
+    return finished.code;
   } catch (error) {
     if (
       error instanceof ObjectiveRegulatorTimeoutError ||
       error instanceof InvocationTimeoutError
     ) {
-      attempt.status = "timed-out";
-      attempt.completedAt = new Date().toISOString();
-      await save(root, regulation, attempt);
-      const value = { schemaVersion: 1, regulationId: id, status: "timed-out" };
-      if (reportPath !== undefined) {
-        await atomicWrite(resolve(globals.cwd, reportPath), `${JSON.stringify(value, null, 2)}\n`);
-      }
-      writeResult(value, globals.format, `Regulation ${id} timed out.`);
-      return 5;
+      return finishInterrupted(regulation, attempt, root, "timed-out", globals, reportPath);
+    }
+    if (error instanceof InvocationCancelledError) {
+      return finishInterrupted(regulation, attempt, root, "cancelled", globals, reportPath);
     }
     const expected = expectedFailure(error);
     attempt.status = "failed";

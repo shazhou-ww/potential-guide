@@ -30,6 +30,10 @@
 
 Windows shim 分派不得启用 shell；一次 Attempt 的 timeout 覆盖 probe、ACP、re-probe 与持久化；Guide revision 覆盖完整本地行为树；配置编辑先验证临时副本；失败 Attempt、报告和 retention 清理均以原子、安全边界持久化。
 
+### I-S08: 加固终态所有权与跨边界脱敏
+
+以单一 invocation finalization 状态机覆盖 timeout、SIGINT、SIGTERM、ACP cancel、持久化、report 和输出，等待失去竞态的一方彻底停止后再返回；扩展凭据参数族并在 Agent 展示、Regulation snapshot、Attempt、transcript 与 report 各自深层脱敏；使用平台感知 realpath 排除 cwd 别名，并让原子 report 提供逐 Attempt actions、round summaries、恢复命令和最终状态。
+
 ## Acceptance criteria
 
 ### I-AC01: 命令发现和协议稳定
@@ -59,3 +63,7 @@ Windows shim 分派不得启用 shell；一次 Attempt 的 timeout 覆盖 probe�
 ### I-AC07: 独立审查问题具有回归保护
 
 定向测试证明 shell metachar 参数不被解释、整次 invocation 有界、secret 不进入输出或状态、行为树变化阻止 continue、编辑失败不破坏配置、公开错误码与失败 Attempt 完整、report 原子落盘、平台去重正确且 retention 清理不越界；完整检查与 pack checks 继续通过。
+
+### I-AC08: 第二轮审查竞态与防御边界可证明
+
+定向测试以可控 cancellation helper 验证 timeout 收尾竞态只有一个终态且 loser 返回前已停止，ACP cancelled 与模拟信号均得到 `cancelled`、`completedAt` 和退出码 5；常见 credential 参数两种形式均拒绝且绕过数据被深层脱敏；Windows 大小写、alias、短路径语义不从 cwd 发现命令；多轮 report 含 actions、round summaries、恢复方式和最终状态且无 secret，并由完整 `pnpm check`（含 pack checks）证明。

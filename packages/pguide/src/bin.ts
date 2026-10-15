@@ -13,6 +13,7 @@ import {
   writeResult,
 } from "@potential-guide/cli-core";
 import spawn from "cross-spawn";
+import { sameDirectory } from "./path.js";
 
 const VERSION = "0.1.0";
 const reserved = new Set(["diagnose", "complete"]);
@@ -69,9 +70,10 @@ async function discover(
       ),
     )
   ).flat();
-  const pathDirectories = (process.env.PATH ?? "")
-    .split(delimiter)
-    .filter((path) => path !== "" && resolve(path) !== globals.cwd);
+  const pathDirectories: string[] = [];
+  for (const path of (process.env.PATH ?? "").split(delimiter)) {
+    if (path !== "" && !(await sameDirectory(path, globals.cwd))) pathDirectories.push(path);
+  }
   const fromPath = (
     await Promise.all(pathDirectories.map((path) => directoryCandidates(path, "PATH")))
   ).flat();

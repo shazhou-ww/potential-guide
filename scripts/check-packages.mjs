@@ -30,6 +30,7 @@ const packages = [
       "readJsonSubject",
       "readStdin",
       "redactConfig",
+      "redactSensitive",
       "rejectUnknownOptions",
       "stateRoot",
       "userConfigPath",

@@ -12,6 +12,7 @@ import {
   parseConfig,
   readStdin,
   redactConfig,
+  redactSensitive,
   userConfigPath,
   validateAgentProfile,
   writeResult,
@@ -114,10 +115,11 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     const name = argv[1];
     const profile = name === undefined ? undefined : loaded.value.agents?.[name];
     if (profile === undefined) throw new CliError(`Unknown Agent profile: ${name ?? ""}.`);
+    const safeProfile = redactSensitive(profile);
     writeResult(
-      { schemaVersion: 1, name, profile, source: loaded.sources[`agents.${name}`] },
+      { schemaVersion: 1, name, profile: safeProfile, source: loaded.sources[`agents.${name}`] },
       globals.format,
-      stringify(profile),
+      stringify(safeProfile),
     );
     return;
   }

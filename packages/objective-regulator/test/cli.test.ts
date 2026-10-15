@@ -4,10 +4,53 @@ import { chmod, mkdir, mkdtemp, readdir, readFile, rm, unlink, writeFile } from 
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { test } from "node:test";
+import { InvocationCancelledError, InvocationTimeoutError, withinInvocation } from "../src/cli.js";
 
 const root = resolve(import.meta.dirname, "..", "..", "..");
 const regulate = join(root, "packages", "objective-regulator", "dist", "bin", "regulate.js");
 const continueCommand = join(root, "packages", "objective-regulator", "dist", "bin", "continue.js");
+
+test("invocation finalization has one owner at timeout and simulated cancellation", async () => {
+  let lateSideEffects = 0;
+  await assert.rejects(
+    withinInvocation(10, async (signal) => {
+      await new Promise<void>((resolveWait) =>
+        signal.addEventListener(
+          "abort",
+          () =>
+            setTimeout(() => {
+              lateSideEffects += 1;
+              resolveWait();
+            }, 10),
+          { once: true },
+        ),
+      );
+      return "late-success";
+    }),
+    InvocationTimeoutError,
+  );
+  assert.equal(lateSideEffects, 1);
+
+  let cancel: (() => void) | undefined;
+  await assert.rejects(
+    withinInvocation(
+      1_000,
+      async (signal) =>
+        new Promise((_resolve, reject) =>
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true }),
+        ),
+      (handler) => {
+        cancel = handler;
+        queueMicrotask(handler);
+        return () => {
+          cancel = undefined;
+        };
+      },
+    ),
+    InvocationCancelledError,
+  );
+  assert.equal(cancel, undefined);
+});
 
 function run(
   script: string,
@@ -66,7 +109,7 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     const agent = join(temporary, "agent.mjs");
     await writeFile(
       agent,
-      `import{createInterface}from"node:readline";import{writeFile}from"node:fs/promises";for await(const line of createInterface({input:process.stdin})){const m=JSON.parse(line);if(!m.id)continue;let result={};if(m.method==="initialize")result={protocolVersion:"1",agentCapabilities:{loadSession:true}};if(m.method==="session/new")result={sessionId:"fixture-session"};if(m.method==="session/resume")result={};if(m.method==="session/prompt"){await writeFile(process.env.ACTION_MARKER,"yes");console.log(JSON.stringify({jsonrpc:"2.0",method:"session/update",params:{sessionId:"fixture-session",update:{sessionUpdate:"agent_message_chunk",content:{type:"text",text:"done"}}}}));result={stopReason:"end_turn",summary:"created marker"};}console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
+      `import{createInterface}from"node:readline";import{writeFile}from"node:fs/promises";for await(const line of createInterface({input:process.stdin})){const m=JSON.parse(line);if(!m.id)continue;let result={};if(m.method==="initialize")result={protocolVersion:"1",agentCapabilities:{loadSession:true}};if(m.method==="session/new")result={sessionId:"fixture-session"};if(m.method==="session/resume")result={};if(m.method==="session/prompt"){if(process.env.CANCEL_RESPONSE)result={stopReason:"cancelled"};else{await writeFile(process.env.ACTION_MARKER,"yes");console.log(JSON.stringify({jsonrpc:"2.0",method:"session/update",params:{sessionId:"fixture-session",update:{sessionUpdate:"agent_message_chunk",content:{type:"text",text:"done"}}}}));result={stopReason:"end_turn",summary:"created marker"};}}console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
     );
     const config = join(temporary, "config.yaml");
     await writeFile(
@@ -82,7 +125,7 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
               type: "stdio",
               command: process.execPath,
               args: [agent],
-              env: ["ACTION_MARKER", "SECRET_ENV"],
+              env: ["ACTION_MARKER", "SECRET_ENV", "CANCEL_RESPONSE"],
             },
             requirements: { sessionResume: true },
           },
@@ -114,7 +157,12 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     assert.equal(first.code, 0, `${first.stderr}\n${first.stdout}`);
     const result = JSON.parse(first.stdout);
     assert.equal(result.status, "target-reached");
-    assert.equal(JSON.parse(await readFile(report, "utf8")).regulationId, result.regulationId);
+    const reportValue = JSON.parse(await readFile(report, "utf8"));
+    assert.equal(reportValue.regulationId, result.regulationId);
+    assert.ok(reportValue.attempts[0].rounds.length >= 2);
+    assert.ok(reportValue.attempts[0].actions.length >= 1);
+    assert.match(reportValue.recovery.command, /pguide continue/);
+    assert.doesNotMatch(JSON.stringify(reportValue), /snapshot-secret-value/);
     const second = await run(
       continueCommand,
       ["--config", config, result.regulationId, "--format", "json"],
@@ -171,8 +219,8 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     assert.equal(changedLedger.attempts.at(-1).errorCategory, "guide");
     assert.equal(changedLedger.attempts.at(-1).errorSummary, "guide failure");
 
-    await unlink(marker);
     await writeFile(check, (await readFile(check, "utf8")).trimEnd());
+    await unlink(marker);
     const hanging = join(temporary, "hanging-agent.mjs");
     await writeFile(
       hanging,
@@ -211,6 +259,31 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     );
     assert.equal(timeoutLedger.attempts[0].status, "timed-out");
     assert.ok(timeoutLedger.attempts[0].completedAt);
+
+    const cancelled = await run(
+      regulate,
+      [
+        "--config",
+        config,
+        "--guide",
+        join(guide, "objective-guide.yaml"),
+        "--subject-file",
+        subject,
+        "--target",
+        "terminal",
+        "--format",
+        "json",
+      ],
+      { ...env, CANCEL_RESPONSE: "yes" },
+    );
+    assert.equal(cancelled.code, 5, cancelled.stdout);
+    assert.equal(JSON.parse(cancelled.stdout).status, "cancelled");
+    const cancelledId = JSON.parse(cancelled.stdout).regulationId;
+    const cancelledLedger = JSON.parse(
+      await readFile(join(state, "regulations", cancelledId, "regulation.json"), "utf8"),
+    );
+    assert.equal(cancelledLedger.attempts[0].status, "cancelled");
+    assert.ok(cancelledLedger.attempts[0].completedAt);
 
     const before = new Set(await readdir(join(state, "regulations")));
     const badAgentConfig = join(temporary, "bad-agent-config.yaml");

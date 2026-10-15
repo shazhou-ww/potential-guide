@@ -102,7 +102,7 @@ function positiveInteger(value: unknown, field: string): number | undefined {
 }
 
 const secretName =
-  /^(?:api[-_]?key|access[-_]?token|auth[-_]?token|token|password|passwd|secret)$/i;
+  /^(?:api[-_]?key|client[-_]?secret|bearer[-_]?token|authorization|access[-_]?token|refresh[-_]?token|auth[-_]?token|private[-_]?key|credential|token|password|passwd|secret)$/i;
 
 function rejectSecretValues(value: unknown, path: readonly string[] = []): void {
   if (Array.isArray(value)) {
@@ -126,16 +126,53 @@ function rejectSecretArguments(args: readonly string[]): void {
     if (equal !== null && secretName.test(equal[1] as string) && (equal[2] as string) !== "") {
       throw new CliError("Agent transport args may not contain credential literals.");
     }
+
     const flag = /^--?(.+)$/.exec(argument);
     if (
       flag !== null &&
       secretName.test(flag[1] as string) &&
       args[index + 1] !== undefined &&
-      !String(args[index + 1]).startsWith("-")
+      args[index + 1] !== "--"
     ) {
       throw new CliError("Agent transport args may not contain credential literals.");
     }
   }
+}
+
+function redactSecretArguments(args: readonly string[]): string[] {
+  const redacted = [...args];
+  for (let index = 0; index < redacted.length; index += 1) {
+    const argument = redacted[index] as string;
+    const equal = /^--?([^=]+)=(.*)$/.exec(argument);
+    if (equal !== null && secretName.test(equal[1] as string)) {
+      redacted[index] = `${argument.slice(0, argument.indexOf("=") + 1)}[REDACTED]`;
+      continue;
+    }
+    const flag = /^--?(.+)$/.exec(argument);
+    if (flag !== null && secretName.test(flag[1] as string) && redacted[index + 1] !== undefined) {
+      redacted[index + 1] = "[REDACTED]";
+      index += 1;
+    }
+  }
+  return redacted;
+}
+
+export function redactSensitive<T>(value: T): T {
+  function visit(current: unknown, key?: string): unknown {
+    if (key !== undefined && secretName.test(key) && current !== undefined && current !== null) {
+      return "[REDACTED]";
+    }
+    if (Array.isArray(current)) {
+      return key === "args"
+        ? redactSecretArguments(current.map((entry) => String(entry)))
+        : current.map((entry) => visit(entry));
+    }
+    if (!record(current)) return current;
+    return Object.fromEntries(
+      Object.entries(current).map(([entryKey, entry]) => [entryKey, visit(entry, entryKey)]),
+    );
+  }
+  return visit(value) as T;
 }
 
 export function validateAgentProfile(value: unknown): AgentProfile {
@@ -339,7 +376,7 @@ export async function loadConfig(cwd: string, explicit?: string): Promise<Loaded
 }
 
 export function redactConfig(config: PguideConfig): PguideConfig {
-  return JSON.parse(JSON.stringify(config)) as PguideConfig;
+  return redactSensitive(config);
 }
 
 export async function atomicWrite(path: string, content: string): Promise<void> {
@@ -665,6 +702,8 @@ export class AcpClient {
     { resolve(value: unknown): void; reject(error: Error): void }
   >();
   private nextId = 1;
+  private readonly updateWork = new Set<Promise<void>>();
+  private readonly closed: Promise<void>;
   readonly updates: AcpUpdate[] = [];
 
   constructor(
@@ -691,6 +730,9 @@ export class AcpClient {
       for (const pending of this.pending.values()) pending.reject(error);
       this.pending.clear();
     });
+    this.closed = new Promise((resolveClosed) => {
+      this.child.once("close", () => resolveClosed());
+    });
     this.child.on("close", (code) => {
       if (this.pending.size === 0) return;
       const error = new Error(`ACP Agent exited before replying (${String(code)}).`);
@@ -698,7 +740,13 @@ export class AcpClient {
       this.pending.clear();
     });
     const lines = createInterface({ input: this.child.stdout });
-    lines.on("line", (line) => void this.receive(line));
+    lines.on("line", (line) => {
+      void this.receive(line).catch((error: unknown) => {
+        const failure = error instanceof Error ? error : new Error("ACP update handling failed.");
+        for (const pending of this.pending.values()) pending.reject(failure);
+        this.pending.clear();
+      });
+    });
   }
 
   private async receive(line: string): Promise<void> {
@@ -725,7 +773,13 @@ export class AcpClient {
         params: message.params,
       };
       this.updates.push(update);
-      await this.onUpdate(update);
+      const work = this.onUpdate(update);
+      this.updateWork.add(work);
+      try {
+        await work;
+      } finally {
+        this.updateWork.delete(work);
+      }
     }
   }
 
@@ -763,7 +817,7 @@ export class AcpClient {
   async prompt(
     sessionId: string,
     prompt: string,
-  ): Promise<{ status: "completed" | "blocked"; summary: string }> {
+  ): Promise<{ status: "completed" | "blocked" | "cancelled"; summary: string }> {
     const result = await this.request("session/prompt", {
       sessionId,
       prompt: [{ type: "text", text: prompt }],
@@ -771,21 +825,48 @@ export class AcpClient {
     if (!record(result))
       throw new CliError("ACP prompt returned an invalid response.", 6, "acp-error");
     const stopReason = String(result.stopReason ?? "end_turn");
-    if (stopReason === "refusal" || stopReason === "cancelled") {
+    if (stopReason === "cancelled") {
+      return { status: "cancelled", summary: stopReason };
+    }
+    if (stopReason === "refusal") {
       return { status: "blocked", summary: stopReason };
     }
     return { status: "completed", summary: String(result.summary ?? stopReason) };
   }
 
   cancel(sessionId: string): void {
-    this.child.stdin.write(
-      `${JSON.stringify({ jsonrpc: "2.0", method: "session/cancel", params: { sessionId } })}\n`,
-    );
+    if (!this.child.stdin.destroyed) {
+      this.child.stdin.write(
+        `${JSON.stringify({ jsonrpc: "2.0", method: "session/cancel", params: { sessionId } })}\n`,
+      );
+    }
+  }
+
+  async cancelAndStop(sessionId: string): Promise<void> {
+    if (!this.child.stdin.destroyed) {
+      await new Promise<void>((resolveWrite) => {
+        const fallback = setTimeout(resolveWrite, 100);
+        this.child.stdin.write(
+          `${JSON.stringify({ jsonrpc: "2.0", method: "session/cancel", params: { sessionId } })}\n`,
+          () => {
+            clearTimeout(fallback);
+            resolveWrite();
+          },
+        );
+      });
+    }
+    await this.stop();
   }
 
   close(): void {
     this.child.stdin.end();
     if (this.child.exitCode === null && this.child.signalCode === null) this.child.kill();
+  }
+
+  async stop(): Promise<void> {
+    this.close();
+    await this.closed;
+    await Promise.allSettled(this.updateWork);
   }
 }
 
