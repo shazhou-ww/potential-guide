@@ -1,0 +1,4 @@
+version: 2
+primaryRepository: https://github.com/shazhou-ww/potential-guide.git
+primaryBranch: main
+preferredLanguage: zh-CN

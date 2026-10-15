@@ -9,16 +9,15 @@
       "cache": false
     },
     "lint": {
-      "dependsOn": ["^build"],
       "outputs": []
     },
     "test": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "dependsOn": ["build"],
+      "outputs": []
     },
     "typecheck": {
-      "dependsOn": ["^build"],
-      "outputs": []
+      "dependsOn": ["^typecheck"],
+      "outputs": ["dist/**"]
     }
   }
 }

@@ -1,50 +1,29 @@
 {
-  "name": "preset-pnpm-monorepo",
-  "version": "0.0.0",
-  "description": "A strict TypeScript monorepo preset built with pnpm workspaces and Turborepo.",
-  "keywords": [
-    "typescript",
-    "pnpm",
-    "monorepo",
-    "turborepo",
-    "preset",
-    "template"
-  ],
-  "homepage": "https://github.com/shazhou-ww/preset-pnpm-monorepo#readme",
-  "bugs": {
-    "url": "https://github.com/shazhou-ww/preset-pnpm-monorepo/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/shazhou-ww/preset-pnpm-monorepo.git"
-  },
-  "license": "MIT",
+  "name": "potential-guide",
+  "version": "0.1.0",
   "private": true,
+  "description": "Objective guidance, regulation, and portfolio supervision packages.",
   "type": "module",
-  "engines": {
-    "node": ">=22.13"
-  },
   "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "build": "turbo run build",
-    "check": "pnpm format:check && turbo run lint typecheck test build",
-    "clean": "turbo run clean && node -e \"require('node:fs').rmSync('.turbo', { recursive: true, force: true })\"",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "lint": "turbo run lint",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run pack:check",
+    "clean": "turbo run clean && node -e \"for (const path of ['.cache', '.turbo']) require('node:fs').rmSync(path, { recursive: true, force: true })\"",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "turbo run lint && biome lint scripts",
+    "pack:check": "pnpm run build && node scripts/check-packages.mjs",
     "test": "turbo run test",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck && tsc -p tsconfig.test.json --pretty false"
   },
   "devDependencies": {
-    "@eslint/js": "catalog:",
+    "@biomejs/biome": "catalog:",
     "@types/node": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
-    "eslint": "catalog:",
-    "globals": "catalog:",
-    "prettier": "catalog:",
+    "tsx": "catalog:",
     "turbo": "catalog:",
-    "typescript": "catalog:",
-    "typescript-eslint": "catalog:",
-    "vitest": "catalog:"
+    "typescript": "catalog:"
   }
 }

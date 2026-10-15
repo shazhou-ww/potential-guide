@@ -1,21 +1,14 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "lib": ["ES2022"],
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitOverride": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": true,
-    "useUnknownInCatchVariables": true,
-    "verbatimModuleSyntax": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "types": ["node"],
-    "skipLibCheck": true
-  },
-  "include": ["vitest.config.ts"]
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/objective-guide"
+    },
+    {
+      "path": "./packages/objective-regulator"
+    },
+    {
+      "path": "./packages/objective-portfolio-supervisor"
+    }
+  ]
 }

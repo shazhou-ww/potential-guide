@@ -1,84 +1,37 @@
-# pnpm monorepo preset
+# Potential Guide
 
-A neutral TypeScript monorepo baseline built with pnpm workspaces and Turborepo.
-It provides dependency topology, caching, shared quality tooling, and examples
-without choosing a product shape such as CLI, web app, service, or publishable
-package.
+Potential Guide is a pnpm TypeScript monorepo for three composable objective packages:
 
-## Derive a repository
+- `@potential-guide/objective-guide` models one objective through ordered levels,
+  independently eligible same-level checks with injected concurrency policy,
+  observations, localized guidance, and typed instance creation.
+- `@potential-guide/objective-regulator` runs a guarded probe, action, and re-probe loop
+  for one Objective Guide instance.
+- `@potential-guide/objective-portfolio-supervisor` coordinates multiple regulators
+  through an injected portfolio policy.
 
-```sh
-git-lineage derive \
-  https://github.com/shazhou-ww/preset-pnpm-monorepo.git \
-  my-workspace \
-  --branch main
-cd my-workspace
-pnpm install
-pnpm check
-```
+Dependencies flow in that order and never back toward the core.
 
-This preset derives from
-[`preset-typescript-base`](https://github.com/shazhou-ww/preset-typescript-base).
-Its `.git-lineage.yaml` records that immediate parent. Run `git-lineage update`
-to merge future baseline changes. This preset documents its own capabilities and
-does not enumerate descendants.
+## Requirements
 
-## Structure
+- Node.js 22.13 or newer
+- Corepack with pnpm 11.22.0
 
-```text
-apps/
-  example/       executable project example
-packages/
-  core/          reusable library example
-pnpm-workspace.yaml
-turbo.json
-```
+## Lineage
 
-The example app depends on `@workspace/core` through `workspace:*`. Replace both
-examples as soon as the real workspace shape is known; they exist to keep
-dependency ordering, type resolution, tests, and builds continuously verified.
+This repository inherits its workspace baseline from
+[`shazhou-ww/preset-pnpm-monorepo`](https://github.com/shazhou-ww/preset-pnpm-monorepo).
+The immediate parent and branch are recorded in `.git-lineage.yaml`. Run
+`git-lineage update` from a clean worktree to merge future preset updates.
 
-## Workspace conventions
-
-- Executable and deployable projects belong in `apps/`.
-- Reusable code belongs in `packages/`.
-- Shared third-party versions belong in the pnpm catalog in
-  `pnpm-workspace.yaml`.
-- Internal dependencies use `workspace:*`.
-- Each workspace owns its build, lint, test, and typecheck scripts.
-- Root commands use Turborepo to respect dependency order and cache outputs.
-
-Add a dependency from the repository root:
+## Development
 
 ```sh
-pnpm --filter @workspace/example-app add some-package
-pnpm --filter @workspace/core add --save-dev some-dev-tool
+corepack pnpm install --frozen-lockfile
+pnpm build
+pnpm lint
+pnpm typecheck
+pnpm test
 ```
 
-Run a command for one workspace:
-
-```sh
-pnpm --filter @workspace/core test
-```
-
-## Commands
-
-| Command          | Purpose                                        |
-| ---------------- | ---------------------------------------------- |
-| `pnpm build`     | Build every workspace in dependency order      |
-| `pnpm lint`      | Lint every workspace                           |
-| `pnpm typecheck` | Type-check every workspace                     |
-| `pnpm test`      | Test every workspace with coverage             |
-| `pnpm check`     | Run formatting, lint, types, tests, and builds |
-| `pnpm clean`     | Remove workspace outputs and Turborepo state   |
-
-## Adding a workspace
-
-Every direct child of `apps/` or `packages/` is discovered automatically. Give
-it a unique package name and the standard scripts consumed by `turbo.json`. Keep
-application packages private. A library may become publishable later, but this
-preset does not impose a release strategy.
-
-## License
-
-MIT
+Run `pnpm check` for the complete repository verification.

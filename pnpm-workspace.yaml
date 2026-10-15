@@ -3,16 +3,14 @@ packages:
   - packages/*
 
 catalog:
-  "@eslint/js": ^10.0.1
-  "@types/node": ^26.6.5
-  "@vitest/coverage-v8": ^5.0.4
-  eslint: ^10.12.0
-  globals: ^17.13.0
-  prettier: ^3.9.10
+  "@biomejs/biome": 2.5.15
+  "@types/node": 22.20.5
+  tsx: 4.23.15
   turbo: ^2.11.8
-  typescript: ^6.0.3
-  typescript-eslint: ^8.71.2
-  vitest: ^5.0.4
+  typescript: 5.9.3
+
+allowBuilds:
+  esbuild: true
 
 minimumReleaseAgeExclude:
   - "@turbo/darwin-64@2.11.8"

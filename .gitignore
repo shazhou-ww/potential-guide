@@ -1,8 +1,8 @@
-coverage/
-dist/
 node_modules/
-*.tgz
+dist/
+.cache/
 .turbo/
+*.tgz
 
 .DS_Store
 .idea/

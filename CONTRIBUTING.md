@@ -14,5 +14,6 @@ Before opening a pull request, run:
 pnpm check
 ```
 
-Add or update tests for every behavior change. Keep public exports in
-`src/index.ts`, and treat changes to those exports as API changes.
+Add or update tests for every behavior change. Keep each package's public
+exports in its `src/index.ts`, and treat changes to those exports as API
+changes.
