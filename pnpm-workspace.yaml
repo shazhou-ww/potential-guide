@@ -11,7 +11,7 @@ catalog:
   jsonata: 2.1.0
   tsx: 4.23.15
   turbo: ^2.11.8
-  typescript: 5.9.3
+  typescript: 7.0.2
   yaml: 2.9.1
 
 allowBuilds:
