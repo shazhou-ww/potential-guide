@@ -25,14 +25,15 @@ potential-<command> [arguments]
 ```
 
 包拥有自己的 CLI 和业务语义。顶层 CLI 只负责全局配置、命令发现、可信解析、进程调用以及统一的输出和退出码约定。
+所有面向用户的一级子命令使用小写祈使动词，描述用户要求系统执行的动作，而不是对应包或组件的名词。
 
 ### 初始命令面
 
 | 顶层调用 | 独立可执行文件 | 所属范围 | 目的 |
 | --- | --- | --- | --- |
 | `potential guide ...` | `potential-guide` | Objective Guide | 加载、检查和 probe 一个 Guide Instance |
-| `potential regulator ...` | `potential-regulator` | Objective Regulator | 对一个 Objective 执行有界 regulation |
-| `potential portfolio ...` | `potential-portfolio` | Portfolio Supervisor | 规划或执行多 Objective directives |
+| `potential regulate ...` | `potential-regulate` | Objective Regulator | 对一个 Objective 执行有界 regulation |
+| `potential supervise ...` | `potential-supervise` | Portfolio Supervisor | 规划或执行多 Objective directives |
 | `potential commands` | 内置 | 顶层 CLI | 列出命令、来源和协议版本 |
 | `potential doctor` | 内置 | 顶层 CLI | 检查配置、运行时和外部命令冲突 |
 | `potential completion` | 内置 | 顶层 CLI | 生成 shell completion |
@@ -45,7 +46,7 @@ potential-<command> [arguments]
 
 调用 `potential <command>` 时：
 
-1. 只接受小写 ASCII slug，例如 `regulator` 或 `my-policy`。
+1. 只接受小写 ASCII 动词 slug，例如 `regulate` 或 `verify-policy`。
 2. 内置命令优先，外部命令不能覆盖 `help`、`version`、`commands`、`doctor` 或 `completion`。
 3. 在显式配置的命令目录和 `PATH` 中查找 `potential-<command>`；配置目录优先于 `PATH`。
 4. 不隐式搜索当前工作目录，避免仓库内同名文件被意外执行。
@@ -76,21 +77,21 @@ potential [global options] <command> [command options]
 
 stdout 只承载命令结果，stderr 承载诊断和日志。`--format json` 时 stdout 必须是一个完整 JSON 文档，不能混入进度文本。
 
-## Regulator 子命令
+## `regulate` 子命令
 
 Regulator 初始只提供无副作用的 `probe` 和可产生现实修改的 `run`：
 
 ```text
-potential regulator probe [options]
-potential regulator run [options]
+potential regulate probe [options]
+potential regulate run [options]
 ```
 
 不提供独立 `resume` 命令。Regulator 不持有隐藏会话状态；再次运行相同命令会从真实世界重新 probe 并继续推进。
 
-### `regulator probe`
+### `regulate probe`
 
 ```powershell
-potential regulator probe `
+potential regulate probe `
   --guide .\objective-guide.yaml `
   --subject-file .\subject.json `
   --language zh-CN `
@@ -106,10 +107,10 @@ potential regulator probe `
 
 `probe` 只输出 observation，不加载 Agent，也不执行 action。它替代容易误解的 `run --dry-run`。
 
-### `regulator run`
+### `regulate run`
 
 ```powershell
-potential regulator run `
+potential regulate run `
   --guide .\objective-guide.yaml `
   --subject-file .\subject.json `
   --target terminal `
@@ -140,7 +141,7 @@ potential regulator run `
 `process` adapter 可额外接受位于 `--` 之后的 Agent 进程参数：
 
 ```powershell
-potential regulator run <options> -- --profile autonomous
+potential regulate run <options> -- --profile autonomous
 ```
 
 顶层 CLI 不解释 `--` 之后的内容；其他 adapter 可以拒绝不支持的附加参数。
