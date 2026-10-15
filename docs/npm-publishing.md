@@ -28,17 +28,46 @@ rules must allow these release tags:
 - `objective-regulator-v*`
 - `objective-portfolio-supervisor-v*`
 
-## Create the npm package records
+## Publish the bootstrap placeholders
 
-On npmjs.com, open the `potential-guide` organization and create these three
-public package records:
+npm only allows Trusted Publishers to be added to existing packages. New
+Trusted Publisher connections must then complete a real OIDC publish within two
+days. A dry-run does not satisfy that requirement.
 
-- `@potential-guide/objective-guide`
-- `@potential-guide/objective-regulator`
-- `@potential-guide/objective-portfolio-supervisor`
+To keep the first product release under OIDC with provenance, manually publish
+minimal `0.0.0` placeholders and reserve the tracked `0.1.0` versions for the
+workflow.
 
-Create only the package records. Do not manually publish a placeholder or the
-`0.1.0` product version, and do not create an npm automation token.
+On a machine and network approved to access the npm registry, use a clean,
+up-to-date `main` checkout:
+
+```sh
+git fetch origin main
+git switch main
+git pull --ff-only origin main
+
+corepack enable
+pnpm install --frozen-lockfile
+pnpm check
+pnpm bootstrap:pack
+
+npm login --registry=https://registry.npmjs.org/ --auth-type=web
+npm whoami --registry=https://registry.npmjs.org/
+
+npm publish .cache/npm-bootstrap/potential-guide-objective-guide-0.0.0.tgz \
+  --access public --registry=https://registry.npmjs.org/
+npm publish .cache/npm-bootstrap/potential-guide-objective-regulator-0.0.0.tgz \
+  --access public --registry=https://registry.npmjs.org/
+npm publish .cache/npm-bootstrap/potential-guide-objective-portfolio-supervisor-0.0.0.tgz \
+  --access public --registry=https://registry.npmjs.org/
+
+npm logout --registry=https://registry.npmjs.org/
+```
+
+The `bootstrap:pack` command only creates three minimal tarballs containing a
+`package.json` and README; it never publishes them. Inspect the printed paths
+before running `npm publish`. Do not manually publish the tracked `0.1.0`
+product packages.
 
 ## Configure Trusted Publishers
 
@@ -66,9 +95,9 @@ days. A dry-run can diagnose the connection but does not satisfy that deadline.
 
 ## Publish the first product versions
 
-After creating all three package records and Trusted Publishers, publish in
-dependency order. Wait for each workflow to succeed before creating the next
-tag:
+After publishing all three placeholders and configuring their Trusted
+Publishers, publish in dependency order. Wait for each workflow to succeed
+before creating the next tag:
 
 ```sh
 git fetch origin main --tags
