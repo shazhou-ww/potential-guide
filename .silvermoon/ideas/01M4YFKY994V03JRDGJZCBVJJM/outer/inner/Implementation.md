@@ -2,39 +2,33 @@
 
 ## Steps
 
-### I-S01: Separate stage semantics from check scheduling
+### I-S01: 分离阶段语义与 check 调度
 
-Refine the guide API and probe flow so same-stage checks are independent,
-scheduling owns execution concurrency, and complete stage results determine
-advancement. Preserve prerequisite barriers and explicit operation errors.
+细化 guide API 与 probe 流程，使同阶段 checks 相互独立，由调度控制执行并行度，
+并由完整的阶段结果决定推进。保留前置条件屏障和明确的操作错误。
 
-### I-S02: Verify stage and scheduling behavior
+### I-S02: 验证阶段与调度行为
 
-Add deterministic tests for overlapping checks, bounded and serial scheduling,
-multiple same-stage failures, stage barriers, and prerequisite behavior. Exercise
-regulator and portfolio integration where affected.
+添加确定性测试，覆盖 checks 重叠执行、受限并行与串行调度、同阶段多项失败、
+阶段屏障及前置条件行为。对受影响的 regulator 和 portfolio 集成进行验证。
 
-### I-S03: Document the stage contract
+### I-S03: 记录阶段契约
 
-Update directly related package documentation to distinguish attained levels,
-independent checks, and actual scheduling. Document any public API changes and
-shared temporary-directory implications.
+更新直接相关的包文档，区分已达成的 levels、独立 checks 与实际调度。
+记录公共 API 的变更及共享临时目录带来的影响。
 
 ## Acceptance criteria
 
-### I-AC01: Independent checks honor scheduling limits
+### I-AC01: 独立 checks 遵守调度限制
 
-Deterministic runner tests prove same-stage checks overlap when permitted,
-respect configured concurrency, and all remain eligible after a peer fails,
-including when execution is serialized.
+通过确定性的 runner 测试证明：同阶段 checks 在允许时重叠执行，遵守配置的并行度，
+且同级 check 失败后其他 checks 仍具备执行资格，串行执行时也不例外。
 
-### I-AC02: Stage observations and barriers remain correct
+### I-AC02: 阶段观测与屏障保持正确
 
-Tests prove failures are reported deterministically for the current stage,
-later stages wait for all current-stage checks to pass, prerequisites retain
-their unlock behavior, and invalid results or runner errors reject explicitly.
+通过测试证明：当前阶段的失败信息以确定性方式报告，后续阶段等待当前阶段的所有
+checks 通过，前置条件保持原有解锁行为，无效结果或 runner 错误明确导致操作失败。
 
-### I-AC03: Integration and documentation agree
+### I-AC03: 集成与文档保持一致
 
-The affected package tests, repository type checks, and lint pass, and package
-documentation describes the implemented semantics and scheduling API.
+受影响的包测试、仓库类型检查和 lint 均通过，包文档准确描述实现的语义和调度 API。

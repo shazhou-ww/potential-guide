@@ -2,17 +2,15 @@
 
 ## Steps
 
-### D-S01: Verify the primary candidate as a consumer
+### D-S01: 从使用方验证主分支候选版本
 
-Verify the implementation accepted on primary through a consumer-level guide
-using independent checks and contrasting scheduling limits. No npm publication
-or production rollout is assumed.
+通过使用方层面的 guide，采用独立 checks 与不同调度限制，
+验证主分支上已验收的实现。本次不默认包含 npm 发布或生产环境上线。
 
 ## Acceptance criteria
 
-### D-AC01: Primary exposes the accepted stage behavior
+### D-AC01: 主分支提供已验收的阶段行为
 
-A reproducible consumer exercise against the accepted primary revision shows
-that serial and concurrent scheduling produce the same stage and problems,
-while later stages remain blocked by current-stage failures. Record the primary
-revision and exercise evidence in this contract during deployment.
+针对已验收的主分支版本，进行可复现的使用方验证，证明串行和并行调度产生相同的
+阶段与问题结果，且当前阶段失败时仍会阻塞后续阶段。
+在部署阶段将主分支版本和验证证据记录到本契约。

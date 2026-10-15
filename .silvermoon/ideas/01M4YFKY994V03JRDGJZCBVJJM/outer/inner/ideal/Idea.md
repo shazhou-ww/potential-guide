@@ -1,33 +1,29 @@
-# Define levels as attained stages with independent checks
+# 将 level 定义为已达成的阶段，让同级 checks 相互独立
 
 ## Problem
 
-Levels currently group checks that execute in list order and stop at the first
-failure. This makes checks within a level implicitly dependent on earlier checks,
-rather than independently applicable at an attained stage.
+目前，level 将 checks 分组，checks 按清单顺序执行，并在首次失败时停止。
+这使同一 level 内的 checks 隐式依赖前面的 checks，而不是在已达成的阶段中独立适用。
 
 ## Outcome
 
-A level represents an attained stage and is the sole stage prerequisite for every
-check attached to it. Checks within that level are independently eligible;
-scheduling concurrency or policy, not their membership or list position,
-determines whether they actually execute concurrently.
+level 表示一个已达成的阶段，并作为其下所有 checks 唯一的阶段前置条件。
+同一 level 内的 checks 均独立具备执行资格；是否实际并行执行由调度并行度或策略决定，
+而不是由它们所属的 level 或清单位置决定。
 
 ## Boundaries
 
-- Preserve ordered stage advancement: all checks attached to a stage must pass
-  before the next stage is attained; unmet guide prerequisites still block entry.
-- A check must not depend on another check in the same level completing or
-  passing. Scheduling may serialize execution without creating such a dependency.
-- Keep execution policy separate from the level definition; this change does not
-  introduce arbitrary check dependency graphs or portfolio scheduling.
+- 保留阶段的有序推进：当前阶段的所有 checks 通过后，才能达成下一阶段；
+  未满足的 guide 前置条件仍会阻止进入。
+- check 不得依赖同一 level 内其他 check 的完成或通过。调度可以串行执行，
+  但这不构成 checks 之间的依赖关系。
+- 执行策略与 level 定义分离；本次变更不引入任意 check 依赖图或 portfolio 调度。
 
 ## Acceptance criteria
 
-- Every check in the current attained stage remains eligible even if a peer
-  reports failure, and observations include failures from that stage without
-  relying on completion order.
-- Checks within a stage can overlap when scheduling permits; limiting concurrency
-  to one changes execution timing only, not eligibility or advancement.
-- Subsequent stages remain blocked until all current-stage checks pass, and
-  prerequisite and terminal observations retain their existing meanings.
+- 即使同级 check 报告失败，当前已达成阶段中的每个 check 仍具备执行资格；
+  观测结果包含该阶段的失败信息，不依赖完成顺序。
+- 调度允许时，同阶段 checks 可以重叠执行；将并行度限制为一只改变执行时序，
+  不改变执行资格或阶段推进条件。
+- 当前阶段的所有 checks 通过前，后续阶段保持阻塞；
+  前置条件与 terminal 观测保持现有含义。
