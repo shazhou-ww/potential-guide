@@ -17,5 +17,5 @@ Potential Guide 的各软件包目前只能作为库集成，缺少统一、可�
 ## 验收标准
 
 - 安装后的顶层 CLI 能列出并调用内置或包提供的子命令，且同一子命令可通过其独立可执行文件直接运行。
-- `regulate` 子命令能加载 Guide 与 subject，并通过可替换 Agent adapter 执行受迭代、超时和停滞限制保护的 regulation。
+- `probe` 能执行一次无副作用 observation，`regulate` 能通过可替换 Agent adapter 执行有界 regulation，并提供创建及验证 Objective Guide 骨架的辅助命令。
 - 命令命名、发现优先级、输入输出和失败语义在 Windows、macOS 与 Linux 上具有可测试且一致的行为。

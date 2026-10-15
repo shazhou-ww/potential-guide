@@ -33,14 +33,16 @@ pguide-<command> [arguments]
 
 | 顶层调用 | 独立可执行文件 | 所属范围 | 目的 |
 | --- | --- | --- | --- |
-| `pguide guide ...` | `pguide-guide` | Objective Guide | 加载、检查和 probe 一个 Guide Instance |
+| `pguide probe ...` | `pguide-probe` | Objective Guide | 加载并 probe 一个 Guide Instance |
 | `pguide regulate ...` | `pguide-regulate` | Objective Regulator | 对一个 Objective 执行有界 regulation |
 | `pguide supervise ...` | `pguide-supervise` | Portfolio Supervisor | 规划或执行多 Objective directives |
-| `pguide commands` | 内置 | 顶层 CLI | 列出命令、来源和协议版本 |
-| `pguide doctor` | 内置 | 顶层 CLI | 检查配置、运行时和外部命令冲突 |
-| `pguide completion` | 内置 | 顶层 CLI | 生成 shell completion |
-| `pguide help` | 内置 | 顶层 CLI | 显示顶层或指定命令帮助 |
-| `pguide version` | 内置 | 顶层 CLI | 显示 CLI 与协议版本 |
+| `pguide scaffold ...` | `pguide-scaffold` | Objective Guide 工具 | 创建可加载的 Objective Guide 骨架 |
+| `pguide validate ...` | `pguide-validate` | Objective Guide 工具 | 静态验证 Guide manifest、checks 和 References |
+| `pguide list` | 内置 | 顶层 CLI | 列出命令、来源和协议版本 |
+| `pguide diagnose` | 内置 | 顶层 CLI | 检查配置、运行时和外部命令冲突 |
+| `pguide complete` | 内置 | 顶层 CLI | 生成 shell completion |
+
+帮助和版本使用上下文相关的 `--help` 与 `--version`，不额外占用名词形式的一级子命令。
 
 包级可执行文件必须可以直接运行。通过顶层 CLI 调用时，命令参数、stdin、信号和最终退出状态不得改变。
 
@@ -49,11 +51,11 @@ pguide-<command> [arguments]
 调用 `pguide <command>` 时：
 
 1. 只接受小写 ASCII 动词 slug，例如 `regulate` 或 `verify-policy`。
-2. 内置命令优先，外部命令不能覆盖 `help`、`version`、`commands`、`doctor` 或 `completion`。
+2. 内置命令优先，外部命令不能覆盖 `list`、`diagnose` 或 `complete`。
 3. 在显式配置的命令目录和 `PATH` 中查找 `pguide-<command>`；配置目录优先于 `PATH`。
 4. 不隐式搜索当前工作目录，避免仓库内同名文件被意外执行。
 5. 同一优先级发现多个候选时显式失败，并在错误中列出所有 real path。
-6. `commands` 显示每个命令的来源、解析后的路径、是否内置及协议兼容性。
+6. `list` 显示每个命令的来源、解析后的路径、是否内置及协议兼容性。
 
 外部命令通过 `pguide-command-v1` 协议声明身份和能力。顶层 CLI 可以请求机器可读 metadata，但不会通过解析帮助文本推断能力。
 
@@ -69,8 +71,8 @@ pguide <command> [global options] [command options]
 两种形式语义相同，例如：
 
 ```text
-pguide --format json guide --guide ./objective-guide.yaml --subject-file ./subject.json
-pguide guide --guide ./objective-guide.yaml --subject-file ./subject.json --format json
+pguide --format json probe --guide ./objective-guide.yaml --subject-file ./subject.json
+pguide probe --guide ./objective-guide.yaml --subject-file ./subject.json --format json
 ```
 
 全局参数名属于协议保留字，包级命令不能以不同语义重新定义。遇到 `--` 后，顶层 CLI 停止识别任何全局参数，并把后续内容逐字传给子命令或 Agent adapter。由此既允许符合直觉的参数位置，也避免外部命令的参数被意外吞掉。
@@ -87,16 +89,16 @@ pguide guide --guide ./objective-guide.yaml --subject-file ./subject.json --form
 
 stdout 只承载命令结果，stderr 承载诊断和日志。`--format json` 时 stdout 必须是一个完整 JSON 文档，不能混入进度文本。
 
-## `guide` 子命令
+## `probe` 子命令
 
-`guide` 执行一次无副作用的 Guide probe 并输出 observation。它不加载 Agent，也不执行 action。
+`probe` 执行一次无副作用的 Guide probe 并输出 observation。它不加载 Agent，也不执行 action。
 
 ```text
-pguide guide [options]
+pguide probe [options]
 ```
 
 ```powershell
-pguide guide `
+pguide probe `
   --guide .\objective-guide.yaml `
   --subject-file .\subject.json `
   --language zh-CN `
@@ -110,9 +112,37 @@ pguide guide `
 | `--language <bcp47>` | 否 | Reference 内容语言；默认来自配置 |
 | `--report <path>` | 否 | 将完整结果原子写入文件 |
 
+## `scaffold` 子命令
+
+`scaffold` 创建一个可被 loader 读取、但仍明确包含待实现业务内容的 Objective Guide 骨架：
+
+```powershell
+pguide scaffold guide .\my-objective `
+  --language en-US `
+  --language zh-CN
+```
+
+| 参数 | 必需 | 默认值 | 语义 |
+| --- | --- | --- | --- |
+| `guide` | 是 | 无 | 当前支持的骨架类型；为未来其他 artifact 保留扩展位 |
+| `<directory>` | 是 | 无 | 新建的 Guide 根目录 |
+| `--language <bcp47>` | 否，可重复 | `en-US` | 生成的 Reference 语言；首项为 default language |
+| `--level <level-id>` | 否 | `initial` | 首个显式 level 的稳定 ID |
+| `--check <check-id>` | 否 | 无 | 可选首个 check；提供后同时生成 `checks/<id>/run.*` 占位入口 |
+
+输出包含 `objective-guide.yaml`、必需的 `system/overview` 与 `system/404` References、首个 level 与 `terminal` References，以及可选 check 的目录和 Reference。目标目录必须不存在或为空；命令不提供覆盖现有文件的强制选项。
+
+## `validate` 子命令
+
+```powershell
+pguide validate guide .\my-objective\objective-guide.yaml
+```
+
+`validate guide` 加载并静态验证 manifest、domain schema、prerequisite、level/check 标识、check entry 和全部语言的必需 References，但不执行业务 check。成功时输出规范化摘要，失败时返回所有可安全聚合的配置问题。
+
 ## `regulate` 子命令
 
-`regulate` 直接执行一次完整、有界的 regulation，不再增加与 `guide` 重复的 `probe` 或语义冗余的 `run` 二级命令。
+`regulate` 直接执行一次完整、有界的 regulation，不再增加与独立 `probe` 重复的 observation 模式或语义冗余的 `run` 二级命令。
 
 ```powershell
 pguide regulate `
@@ -231,7 +261,7 @@ JSON 输出包含稳定字段：
 5. 用户级配置；
 6. 内置默认值。
 
-项目配置只描述命令目录、默认语言、输出偏好、limits 和 adapter 标识等非敏感设置。CLI 必须能用 `doctor --format json` 显示每个有效值的来源，但不得输出凭据。
+项目配置只描述命令目录、默认语言、输出偏好、limits 和 adapter 标识等非敏感设置。CLI 必须能用 `diagnose --format json` 显示每个有效值的来源，但不得输出凭据。
 
 ## 明确不包含
 
