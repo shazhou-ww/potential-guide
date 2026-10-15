@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { Readable, Writable } from "node:stream";
 import { test } from "node:test";
 import {
   AcpClient,
@@ -13,6 +14,72 @@ import {
   redactSensitive,
   validateAgentProfile,
 } from "@potential-guide/cli-core";
+import { pipeRedactedSecrets } from "../src/streaming-secret-redactor.js";
+
+test("ACP stderr redaction applies backpressure with bounded cross-chunk state", async () => {
+  const secret = 'quote" slash\\\\ newline\nUnicode雪';
+  const prefix = Buffer.from("diagnostic:");
+  const suffix = Buffer.from(":safe\n");
+  const payload = Buffer.concat([prefix, Buffer.from(secret), suffix]);
+  const repetitions = 20_000;
+  const sourceChunks: Buffer[] = [];
+  for (let index = 0; index < repetitions; index += 1) {
+    const split = (index % (payload.length - 1)) + 1;
+    sourceChunks.push(payload.subarray(0, split), payload.subarray(split));
+  }
+  let sent = 0;
+  let sourceBackpressured = false;
+  let sourcePaused = false;
+  const source = new Readable({
+    highWaterMark: 256,
+    read() {
+      while (sent < sourceChunks.length) {
+        const chunk = sourceChunks[sent] as Buffer;
+        sent += 1;
+        if (!this.push(chunk)) {
+          sourceBackpressured = true;
+          return;
+        }
+      }
+      this.push(null);
+    },
+  });
+  source.on("pause", () => {
+    sourcePaused = true;
+  });
+  const chunks: Buffer[] = [];
+  const destination = new Writable({
+    highWaterMark: 32,
+    write(chunk: Buffer, _encoding, callback) {
+      chunks.push(Buffer.from(chunk));
+      setImmediate(callback);
+    },
+  });
+
+  const { redactor, completion } = pipeRedactedSecrets(source, destination, [secret]);
+  await completion;
+
+  const output = Buffer.concat(chunks).toString("utf8");
+  assert.equal(sourceBackpressured, true);
+  assert.equal(sourcePaused, true);
+  assert.equal(sent, sourceChunks.length);
+  assert.equal(output.includes(secret), false);
+  assert.equal((output.match(/\[REDACTED\]/g) ?? []).length, repetitions);
+  assert.equal(output, `diagnostic:[REDACTED]:safe\n`.repeat(repetitions));
+  assert.ok(redactor.maxBufferedTailBytes <= Buffer.byteLength(secret) - 1);
+});
+
+test("ACP stderr redaction propagates destination errors without hanging", async () => {
+  const source = Readable.from([Buffer.from("safe output")]);
+  const destination = new Writable({
+    write(_chunk, _encoding, callback) {
+      callback(new Error("destination failed"));
+    },
+  });
+  const { completion } = pipeRedactedSecrets(source, destination, ["secret"]);
+  await assert.rejects(completion, /destination failed/);
+  assert.equal(source.destroyed, true);
+});
 
 test("ACP requests reject after the Agent or client closes", async () => {
   const exited = new AcpClient({

@@ -19,6 +19,7 @@ import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { parse, stringify } from "yaml";
+import { pipeRedactedSecrets } from "./streaming-secret-redactor.js";
 
 export const COMMAND_PROTOCOL = "pguide-command-v1";
 
@@ -183,56 +184,6 @@ export function agentSecretValues(profile: AgentProfile): string[] {
         .filter((secret): secret is string => secret !== undefined && secret !== ""),
     ),
   ].sort((left, right) => right.length - left.length);
-}
-
-class StreamingSecretRedactor {
-  private pending = Buffer.alloc(0);
-  private readonly secrets: Buffer[];
-  private readonly tailLength: number;
-  private ended = false;
-
-  constructor(secrets: readonly string[]) {
-    this.secrets = secrets
-      .map((secret) => Buffer.from(secret))
-      .sort((left, right) => right.length - left.length);
-    this.tailLength = Math.max(0, ...this.secrets.map((secret) => secret.length - 1));
-  }
-
-  write(chunk: Buffer): void {
-    if (this.ended) return;
-    this.pending = Buffer.concat([this.pending, chunk]);
-    this.flush(false);
-  }
-
-  end(): void {
-    if (this.ended) return;
-    this.ended = true;
-    this.flush(true);
-  }
-
-  private flush(all: boolean): void {
-    const safeLength = all
-      ? this.pending.length
-      : Math.max(0, this.pending.length - this.tailLength);
-    const output: Buffer[] = [];
-    let offset = 0;
-    while (offset < safeLength) {
-      const secret = this.secrets.find(
-        (candidate) =>
-          offset + candidate.length <= this.pending.length &&
-          this.pending.subarray(offset, offset + candidate.length).equals(candidate),
-      );
-      if (secret !== undefined) {
-        output.push(Buffer.from("[REDACTED]"));
-        offset += secret.length;
-      } else {
-        output.push(this.pending.subarray(offset, offset + 1));
-        offset += 1;
-      }
-    }
-    this.pending = this.pending.subarray(offset);
-    if (output.length > 0) process.stderr.write(Buffer.concat(output));
-  }
 }
 
 export function validateAgentProfile(value: unknown): AgentProfile {
@@ -764,6 +715,7 @@ export class AcpClient {
   private nextId = 1;
   private readonly updateWork = new Set<Promise<void>>();
   private readonly closed: Promise<void>;
+  private readonly stderrPipeline: Promise<void>;
   private terminalError?: Error;
   readonly updates: AcpUpdate[] = [];
 
@@ -786,10 +738,14 @@ export class AcpClient {
       windowsHide: true,
       shell: false,
     });
-    const stderr = new StreamingSecretRedactor(agentSecretValues(profile));
-    this.child.stderr.on("data", (chunk: Buffer) => stderr.write(chunk));
-    this.child.stderr.once("end", () => stderr.end());
-    this.child.stderr.once("close", () => stderr.end());
+    this.stderrPipeline = pipeRedactedSecrets(
+      this.child.stderr,
+      process.stderr,
+      agentSecretValues(profile),
+    ).completion;
+    void this.stderrPipeline.catch((error: unknown) =>
+      this.fail(error instanceof Error ? error : new Error("ACP stderr pipeline failed.")),
+    );
     this.child.on("error", (error) => this.fail(error));
     this.child.stdin.on("error", (error) => this.fail(error));
     this.closed = new Promise((resolveClosed) => {
@@ -959,7 +915,7 @@ export class AcpClient {
   async stop(): Promise<void> {
     this.close();
     await this.closed;
-    await Promise.allSettled(this.updateWork);
+    await Promise.allSettled([...this.updateWork, this.stderrPipeline]);
   }
 }
 

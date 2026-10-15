@@ -11,7 +11,7 @@
 
 - `packages/pguide/test/cli.test.ts` 覆盖 package metadata/help、顶层 built-ins、Windows-compatible metachar 参数逐字分派、平台大小写去重语义，以及 scaffold/validate/probe 链路。
 - `packages/objective-regulator/test/cli.test.ts` 使用本地 fixture ACP Agent，覆盖 initialize、session/new、prompt、session/update、action 后 re-probe、初始 probe/ACP timeout、原子 report、Guide 变化拒绝、失败 Attempt 收尾、脱敏快照、跨多个 stderr chunks 的特殊字符与 Unicode credential 流式脱敏，以及 still-satisfied continue；断言用户 stderr 保留 `[REDACTED]` 安全诊断且 stdout、report、transcript 不回归。
-- `packages/pguide-cli-core/test/config.test.ts` 覆盖 schema、transport secret literal 拒绝与普通参数无误报、完整 Guide/Reference/check/prerequisite tree revision、symlink 边界、retention 安全清理和原子显式配置加载。
+- `packages/pguide-cli-core/test/config.test.ts` 覆盖 schema、transport secret literal 拒绝与普通参数无误报、完整 Guide/Reference/check/prerequisite tree revision、symlink 边界、retention 安全清理和原子显式配置加载；慢 destination/high-volume 测试进一步证明 Transform pipeline 传播背压、source 确实暂停、跨 chunk 尾部保持在最长 secret 字节数内、end flush 后输出完整安全，且 destination error 会销毁 pipeline 而不悬挂。
 - `packages/pguide-config/test/config-command.test.ts` 覆盖临时副本编辑、验证失败保留原文件与清理，以及 `show-agent` 不回显被拒绝的 secret。
 - `scripts/check-packages.mjs` 对声明包执行真实 `pnpm pack --json` 并检查内容和 bins。
 - 当前候选已通过 cli-core 与 objective-regulator 定向测试、完整 `pnpm check`、独立 `pnpm run pack:check` 及 Silvermoon worktree 检查。
