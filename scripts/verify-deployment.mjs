@@ -225,6 +225,9 @@ async function verifyCliContract() {
 
   await cp(fixtureSource, fixture, { recursive: true });
   const guide = join(fixture, "guide", "objective-guide.yaml");
+  if (process.platform !== "win32") {
+    await chmod(join(fixture, "guide", "checks", "ready", "run.js"), 0o755);
+  }
   const subject = join(fixture, "subject.json");
   await writeFile(subject, JSON.stringify({ marker: join(fixture, "ready") }));
   const direct = await successful(
