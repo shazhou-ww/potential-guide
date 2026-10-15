@@ -30,12 +30,12 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 验证打包与独立安装
-- [ ] **D-S02:** 验证跨平台子命令调用
-- [ ] **D-S03:** 验证真实 Agent regulation
+- [x] **D-S01:** 验证打包与独立安装
+- [x] **D-S02:** 验证跨平台子命令调用
+- [x] **D-S03:** 验证真实 Agent regulation
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 安装产物可独立使用
-- [ ] **D-AC02:** 支持平台行为一致
-- [ ] **D-AC03:** Agent regulation 达到目标
+- [x] **D-AC01:** 安装产物可独立使用
+- [x] **D-AC02:** 支持平台行为一致
+- [x] **D-AC03:** Agent regulation 达到目标
