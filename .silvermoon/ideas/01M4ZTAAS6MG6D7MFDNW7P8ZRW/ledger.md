@@ -18,10 +18,10 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 提供可消费的变更
-- [ ] **D-S02:** 验证下游升级入口
+- [x] **D-S01:** 提供可消费的变更
+- [x] **D-S02:** 验证下游升级入口
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Primary 可达
-- [ ] **D-AC02:** 下游契约清晰
+- [x] **D-AC01:** Primary 可达
+- [x] **D-AC02:** 下游契约清晰
