@@ -6,13 +6,13 @@ Potential Guide 的各软件包目前只能作为库集成，缺少统一、可�
 
 ## 结果
 
-用户既能直接运行每个软件包拥有的 CLI，也能通过一个 Potential Guide 顶层命令发现并调用这些子命令；Objective Regulator 可以据此驱动指定 Agent 完成一次有边界的 regulation。
+用户既能直接运行每个软件包拥有的 CLI，也能通过一个 Potential Guide 顶层命令发现并调用这些子命令；Objective Regulator 可以据此驱动指定 Agent 完成一次有边界的 regulation。具体命令与协议见 [CLI 方案](./CLI-proposal.md)。
 
 ## 边界
 
 - 顶层命令采用类似 Git 的扩展模型，包拥有自己的命令实现和生命周期，顶层 CLI 不吸收各包的业务逻辑。
 - 子命令发现、参数转发、退出码和结构化输出形成稳定契约，并明确可信命令来源，避免意外执行同名程序。
-- `pg` 仅作为候选短名称；在确认常见工具、包注册表和目标平台没有不可接受的冲突前，不把它设为唯一入口。
+- canonical 命令使用 `potential-guide`，建议同时提供 `pguide` 短别名；不提供容易与 POSIX pager 和 PostgreSQL 生态混淆的 `pg`。
 
 ## 验收标准
 
