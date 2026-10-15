@@ -281,9 +281,11 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     assert.ok(resumedLedger.attempts.at(-1).completedAt);
 
     if (process.platform !== "win32") {
+      const signalBaseline = structuredClone(resumeBaseline);
+      signalBaseline.attempts.at(-1).limits.timeoutMs = 5_000;
       for (const signal of ["SIGINT", "SIGTERM"] as const) {
         await rm(resumeMarker, { force: true });
-        await writeFile(regulationPath, `${JSON.stringify(resumeBaseline, null, 2)}\n`);
+        await writeFile(regulationPath, `${JSON.stringify(signalBaseline, null, 2)}\n`);
         const signalled = await runAndSignal(
           continueCommand,
           continueArgs,
