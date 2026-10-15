@@ -81,9 +81,9 @@ pguide probe --guide ./objective-guide.yaml --subject-file ./subject.json --form
 | --- | --- |
 | `--cwd <path>` | 设置命令工作目录；默认当前目录 |
 | `--config <path>` | 使用指定配置文件 |
-| `--format human|json` | 选择人类可读或稳定 JSON 输出 |
-| `--color auto|always|never` | 控制 human 输出颜色 |
-| `--log-level error|warn|info|debug` | 控制 stderr 诊断级别 |
+| `--format <format>` | 输出格式；可选 `markdown` 或 `json`，默认 `markdown` |
+| `--color <mode>` | Markdown 输出颜色；可选 `auto`、`always` 或 `never` |
+| `--log-level <level>` | stderr 诊断级别；可选 `error`、`warn`、`info` 或 `debug` |
 | `--help` | 在命令前显示顶层帮助，在命令后显示该命令帮助 |
 | `--version` | 在命令前显示顶层版本，在命令后显示该命令版本 |
 
@@ -102,13 +102,13 @@ pguide probe `
   --guide .\objective-guide.yaml `
   --subject-file .\subject.json `
   --language zh-CN `
-  --format human
+  --format markdown
 ```
 
 | 参数 | 必需 | 语义 |
 | --- | --- | --- |
 | `--guide <path-or-uri>` | 是 | Guide manifest 的文件路径或 URI |
-| `--subject-file <path|->` | 是 | JSON subject 文件；`-` 表示 stdin |
+| `--subject-file <path>` | 是 | JSON subject 文件；传入 `-` 表示 stdin |
 | `--language <bcp47>` | 否 | Reference 内容语言；默认来自配置 |
 | `--report <path>` | 否 | 将完整结果原子写入文件 |
 
@@ -155,14 +155,14 @@ pguide regulate `
   --max-stalled-iterations 2 `
   --timeout 30m `
   --language zh-CN `
-  --format human
+  --format markdown
 ```
 
 | 参数 | 必需 | 默认值 | 语义 |
 | --- | --- | --- | --- |
 | `--guide <path-or-uri>` | 是 | 无 | Guide manifest 的文件路径或 URI |
-| `--subject-file <path|->` | 是 | 无 | JSON subject 文件；`-` 表示 stdin |
-| `--target <level-id|terminal>` | 是 | 无 | 明确目标 level；不隐式假定 terminal |
+| `--subject-file <path>` | 是 | 无 | JSON subject 文件；传入 `-` 表示 stdin |
+| `--target <level-id>` | 是 | 无 | 明确目标 level；也接受 `terminal`，但不隐式假定 |
 | `--agent <adapter-id>` | 是 | 无 | 已注册 Agent adapter，例如 `copilot` 或 `process` |
 | `--agent-config <path>` | 否 | adapter 默认值 | Agent adapter 的非敏感配置文件 |
 | `--max-iterations <integer>` | 否 | `8` | 最多请求的 Agent action 数 |
@@ -214,7 +214,7 @@ Adapter 负责自己的 mutation 权限、工具允许列表和人工授权策�
 
 ## Regulation 输出
 
-human 输出按轮显示：
+Markdown 输出按轮显示：
 
 1. 初始 level 和目标 level；
 2. 当前最高优先级 problem；
@@ -248,7 +248,7 @@ JSON 输出包含稳定字段：
 | `6` | Agent adapter、子进程或 I/O 操作失败 |
 | `70` | 未分类内部错误 |
 
-所有非零结果在 human 与 JSON 模式中都返回机器可识别的 status，不以解析错误文本作为自动化接口。
+所有非零结果在 Markdown 与 JSON 模式中都返回机器可识别的 status，不以解析错误文本作为自动化接口。
 
 ## 配置优先级
 
