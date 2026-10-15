@@ -67,8 +67,8 @@ potential <command> [global options] [command options]
 两种形式语义相同，例如：
 
 ```text
-potential --format json regulate probe --guide ./objective-guide.yaml --subject-file ./subject.json
-potential regulate probe --guide ./objective-guide.yaml --subject-file ./subject.json --format json
+potential --format json guide --guide ./objective-guide.yaml --subject-file ./subject.json
+potential guide --guide ./objective-guide.yaml --subject-file ./subject.json --format json
 ```
 
 全局参数名属于协议保留字，包级命令不能以不同语义重新定义。遇到 `--` 后，顶层 CLI 停止识别任何全局参数，并把后续内容逐字传给子命令或 Agent adapter。由此既允许符合直觉的参数位置，也避免外部命令的参数被意外吞掉。
@@ -85,21 +85,16 @@ potential regulate probe --guide ./objective-guide.yaml --subject-file ./subject
 
 stdout 只承载命令结果，stderr 承载诊断和日志。`--format json` 时 stdout 必须是一个完整 JSON 文档，不能混入进度文本。
 
-## `regulate` 子命令
+## `guide` 子命令
 
-Regulator 初始只提供无副作用的 `probe` 和可产生现实修改的 `run`：
+`guide` 执行一次无副作用的 Guide probe 并输出 observation。它不加载 Agent，也不执行 action。
 
 ```text
-potential regulate probe [options]
-potential regulate run [options]
+potential guide [options]
 ```
 
-不提供独立 `resume` 命令。Regulator 不持有隐藏会话状态；再次运行相同命令会从真实世界重新 probe 并继续推进。
-
-### `regulate probe`
-
 ```powershell
-potential regulate probe `
+potential guide `
   --guide .\objective-guide.yaml `
   --subject-file .\subject.json `
   --language zh-CN `
@@ -113,12 +108,12 @@ potential regulate probe `
 | `--language <bcp47>` | 否 | Reference 内容语言；默认来自配置 |
 | `--report <path>` | 否 | 将完整结果原子写入文件 |
 
-`probe` 只输出 observation，不加载 Agent，也不执行 action。它替代容易误解的 `run --dry-run`。
+## `regulate` 子命令
 
-### `regulate run`
+`regulate` 直接执行一次完整、有界的 regulation，不再增加与 `guide` 重复的 `probe` 或语义冗余的 `run` 二级命令。
 
 ```powershell
-potential regulate run `
+potential regulate `
   --guide .\objective-guide.yaml `
   --subject-file .\subject.json `
   --target terminal `
@@ -144,12 +139,14 @@ potential regulate run `
 | `--language <bcp47>` | 否 | 配置值 | Reference 内容语言 |
 | `--report <path>` | 否 | 无 | 原子写入包含每轮摘要的最终报告 |
 
+Regulator 不持有隐藏会话状态，也不提供独立 `resume` 命令。再次运行相同命令会从真实世界重新 probe 并继续推进。
+
 敏感凭据不允许通过普通命令参数或 `--agent-config` 明文传递。Adapter 应使用宿主凭据存储、环境注入或自己的认证流程。
 
 `process` adapter 可额外接受位于 `--` 之后的 Agent 进程参数：
 
 ```powershell
-potential regulate run <options> -- --profile autonomous
+potential regulate <options> -- --profile autonomous
 ```
 
 顶层 CLI 不解释 `--` 之后的内容；其他 adapter 可以拒绝不支持的附加参数。
