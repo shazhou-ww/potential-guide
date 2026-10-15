@@ -52,7 +52,6 @@ potential-<command> [arguments]
 4. 不隐式搜索当前工作目录，避免仓库内同名文件被意外执行。
 5. 同一优先级发现多个候选时显式失败，并在错误中列出所有 real path。
 6. `commands` 显示每个命令的来源、解析后的路径、是否内置及协议兼容性。
-7. `--no-external-commands` 禁止执行外部子命令，供受限 CI 或安全环境使用。
 
 外部命令通过 `potential-command-v1` 协议声明身份和能力。顶层 CLI 可以请求机器可读 metadata，但不会通过解析帮助文本推断能力。
 
@@ -81,7 +80,6 @@ potential regulate probe --guide ./objective-guide.yaml --subject-file ./subject
 | `--format human|json` | 选择人类可读或稳定 JSON 输出 |
 | `--color auto|always|never` | 控制 human 输出颜色 |
 | `--log-level error|warn|info|debug` | 控制 stderr 诊断级别 |
-| `--no-external-commands` | 只允许内置命令 |
 | `--help` | 在命令前显示顶层帮助，在命令后显示该命令帮助 |
 | `--version` | 在命令前显示顶层版本，在命令后显示该命令版本 |
 
