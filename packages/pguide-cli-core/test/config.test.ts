@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import {
+  AcpClient,
   atomicWrite,
   digestTree,
   loadConfig,
@@ -12,6 +13,31 @@ import {
   redactSensitive,
   validateAgentProfile,
 } from "@potential-guide/cli-core";
+
+test("ACP requests reject after the Agent or client closes", async () => {
+  const exited = new AcpClient({
+    connection: { type: "acp", protocolVersion: "1" },
+    transport: {
+      type: "stdio",
+      command: process.execPath,
+      args: ["-e", "process.exit(0)"],
+    },
+  });
+  await assert.rejects(exited.initialize("1"), /exited|closed|writable/i);
+  await assert.rejects(exited.request("after/close", {}), /exited|closed|writable/i);
+  await exited.stop();
+
+  const closed = new AcpClient({
+    connection: { type: "acp", protocolVersion: "1" },
+    transport: {
+      type: "stdio",
+      command: process.execPath,
+      args: ["-e", "setInterval(()=>{},1000)"],
+    },
+  });
+  await closed.stop();
+  await assert.rejects(closed.request("after/stop", {}), /closed|writable/i);
+});
 
 test("configuration validates ACP profiles and rejects secret literals", () => {
   const profile = validateAgentProfile({

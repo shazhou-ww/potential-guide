@@ -704,6 +704,7 @@ export class AcpClient {
   private nextId = 1;
   private readonly updateWork = new Set<Promise<void>>();
   private readonly closed: Promise<void>;
+  private terminalError?: Error;
   readonly updates: AcpUpdate[] = [];
 
   constructor(
@@ -726,18 +727,13 @@ export class AcpClient {
       shell: false,
     });
     this.child.stderr.pipe(process.stderr);
-    this.child.on("error", (error) => {
-      for (const pending of this.pending.values()) pending.reject(error);
-      this.pending.clear();
-    });
+    this.child.on("error", (error) => this.fail(error));
+    this.child.stdin.on("error", (error) => this.fail(error));
     this.closed = new Promise((resolveClosed) => {
       this.child.once("close", () => resolveClosed());
     });
     this.child.on("close", (code) => {
-      if (this.pending.size === 0) return;
-      const error = new Error(`ACP Agent exited before replying (${String(code)}).`);
-      for (const pending of this.pending.values()) pending.reject(error);
-      this.pending.clear();
+      this.fail(new Error(`ACP Agent exited before replying (${String(code)}).`));
     });
     const lines = createInterface({ input: this.child.stdout });
     lines.on("line", (line) => {
@@ -747,6 +743,12 @@ export class AcpClient {
         this.pending.clear();
       });
     });
+  }
+
+  private fail(error: Error): void {
+    this.terminalError ??= error;
+    for (const pending of this.pending.values()) pending.reject(this.terminalError);
+    this.pending.clear();
   }
 
   private async receive(line: string): Promise<void> {
@@ -786,8 +788,35 @@ export class AcpClient {
   request(method: string, params: unknown): Promise<unknown> {
     const id = this.nextId++;
     return new Promise((resolveRequest, rejectRequest) => {
+      if (
+        this.terminalError !== undefined ||
+        this.child.stdin.destroyed ||
+        this.child.stdin.writableEnded ||
+        !this.child.stdin.writable
+      ) {
+        rejectRequest(this.terminalError ?? new Error("ACP Agent stdin is not writable."));
+        return;
+      }
       this.pending.set(id, { resolve: resolveRequest, reject: rejectRequest });
-      this.child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
+      try {
+        this.child.stdin.write(
+          `${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`,
+          (error) => {
+            if (error === null || error === undefined) return;
+            const pending = this.pending.get(id);
+            if (pending !== undefined) {
+              this.pending.delete(id);
+              pending.reject(error);
+            }
+            this.fail(error);
+          },
+        );
+      } catch (error) {
+        this.pending.delete(id);
+        const failure = error instanceof Error ? error : new Error("ACP Agent write failed.");
+        this.fail(failure);
+        rejectRequest(failure);
+      }
     });
   }
 
@@ -859,6 +888,7 @@ export class AcpClient {
   }
 
   close(): void {
+    this.fail(new Error("ACP Agent client closed."));
     this.child.stdin.end();
     if (this.child.exitCode === null && this.child.signalCode === null) this.child.kill();
   }

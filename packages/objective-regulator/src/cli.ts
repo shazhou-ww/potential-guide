@@ -207,9 +207,12 @@ function exitCode(status: string): number {
 }
 
 async function save(root: string, regulation: Regulation, attempt: Attempt): Promise<void> {
-  const safeRegulation = redactSensitive(regulation);
+  const safeRegulation = {
+    ...redactSensitive({ ...regulation, subject: undefined }),
+    subject: regulation.subject,
+    subjectDigest: regulation.subjectDigest,
+  };
   const safeAttempt = redactSensitive(attempt);
-  safeRegulation.subjectDigest = digest(safeRegulation.subject);
   await atomicWrite(join(root, "regulation.json"), `${JSON.stringify(safeRegulation, null, 2)}\n`);
   await atomicWrite(
     join(root, "attempts", `${attempt.id}.json`),
@@ -228,12 +231,49 @@ function actionPrompt(regulation: Regulation, observation: ObjectiveObservation)
 }
 
 function safeAgentValue<T>(value: T, profile: AgentProfile): T {
-  let source = JSON.stringify(value);
-  for (const name of profile.transport.env ?? []) {
-    const secret = process.env[name];
-    if (secret !== undefined && secret !== "") source = source.split(secret).join("[REDACTED]");
+  const secrets = [
+    ...new Set(
+      (profile.transport.env ?? [])
+        .map((name) => process.env[name])
+        .filter((secret): secret is string => secret !== undefined && secret !== ""),
+    ),
+  ].sort((left, right) => right.length - left.length);
+  const visit = (current: unknown): unknown => {
+    if (typeof current === "string") {
+      let safe = current;
+      for (const secret of secrets) safe = safe.split(secret).join("[REDACTED]");
+      return safe;
+    }
+    if (Array.isArray(current)) return current.map(visit);
+    if (current !== null && typeof current === "object") {
+      return Object.fromEntries(Object.entries(current).map(([key, entry]) => [key, visit(entry)]));
+    }
+    return current;
+  };
+  return redactSensitive(visit(value) as T);
+}
+
+async function acpCall<T>(operation: Promise<T>, profile: AgentProfile): Promise<T> {
+  try {
+    return await operation;
+  } catch (error) {
+    if (error instanceof CliError) {
+      throw new CliError(safeAgentValue(error.message, profile), error.exitCode, error.status);
+    }
+    throw new CliError(
+      safeAgentValue(error instanceof Error ? error.message : "ACP operation failed.", profile),
+      6,
+      "acp-error",
+    );
   }
-  return redactSensitive(JSON.parse(source) as T);
+}
+
+function safeSessionId(sessionId: string, profile: AgentProfile): string {
+  const safe = safeAgentValue(sessionId, profile);
+  if (safe !== sessionId) {
+    throw new CliError("ACP sessionId contained credential material.", 6, "acp-error");
+  }
+  return sessionId;
 }
 
 async function loadGuide(path: string) {
@@ -244,19 +284,6 @@ async function loadGuide(path: string) {
       error instanceof Error ? error.message : "Guide could not be loaded.",
       2,
       "guide-error",
-    );
-  }
-}
-
-async function acpCall<T>(operation: Promise<T>): Promise<T> {
-  try {
-    return await operation;
-  } catch (error) {
-    if (error instanceof CliError) throw error;
-    throw new CliError(
-      error instanceof Error ? error.message : "ACP operation failed.",
-      6,
-      "acp-error",
     );
   }
 }
@@ -346,6 +373,7 @@ async function runAttempt(
   try {
     const initialized = await acpCall(
       client.initialize(regulation.agentProfile.connection.protocolVersion),
+      regulation.agentProfile,
     );
     throwIfAborted();
     if (
@@ -353,7 +381,10 @@ async function runAttempt(
       String(initialized.protocolVersion) !== regulation.agentProfile.connection.protocolVersion
     ) {
       throw new CliError(
-        `ACP protocol negotiation selected unsupported version ${String(initialized.protocolVersion)}.`,
+        safeAgentValue(
+          `ACP protocol negotiation selected unsupported version ${String(initialized.protocolVersion)}.`,
+          regulation.agentProfile,
+        ),
         6,
         "acp-error",
       );
@@ -369,17 +400,24 @@ async function runAttempt(
     const previous = regulation.attempts.at(-2)?.sessionId;
     if (resume && previous !== undefined) {
       try {
-        await acpCall(client.resumeSession(previous, cwd));
+        await acpCall(client.resumeSession(previous, cwd), regulation.agentProfile);
         throwIfAborted();
         sessionId = previous;
         attempt.resumeMode = "resumed";
       } catch {
-        sessionId = await acpCall(client.newSession(cwd));
+        if (signal.aborted) throw abortedError();
+        sessionId = safeSessionId(
+          await acpCall(client.newSession(cwd), regulation.agentProfile),
+          regulation.agentProfile,
+        );
         throwIfAborted();
         attempt.resumeMode = "new-with-summary";
       }
     } else {
-      sessionId = await acpCall(client.newSession(cwd));
+      sessionId = safeSessionId(
+        await acpCall(client.newSession(cwd), regulation.agentProfile),
+        regulation.agentProfile,
+      );
       throwIfAborted();
       attempt.resumeMode = "new";
     }
@@ -400,6 +438,7 @@ async function runAttempt(
           attempt.observations.push(request.observation);
           const response = await acpCall(
             client.prompt(activeSessionId, actionPrompt(regulation, request.observation)),
+            regulation.agentProfile,
           );
           throwIfAborted();
           const safeResponse = safeAgentValue(response, regulation.agentProfile);

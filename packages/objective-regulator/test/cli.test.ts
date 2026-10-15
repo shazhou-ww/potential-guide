@@ -1,9 +1,20 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { chmod, mkdir, mkdtemp, readdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { test } from "node:test";
+import { digest } from "@potential-guide/cli-core";
 import { InvocationCancelledError, InvocationTimeoutError, withinInvocation } from "../src/cli.js";
 
 const root = resolve(import.meta.dirname, "..", "..", "..");
@@ -74,6 +85,47 @@ function run(
   });
 }
 
+async function runAndSignal(
+  script: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  marker: string,
+  signal: "SIGINT" | "SIGTERM",
+): Promise<{ code: number; stdout: string; stderr: string }> {
+  const child = spawn(process.execPath, [script, ...args], { cwd: root, env, windowsHide: true });
+  let stdout = "";
+  let stderr = "";
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (chunk) => {
+    stdout += chunk;
+  });
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
+  const result = new Promise<{ code: number; stdout: string; stderr: string }>(
+    (resolveRun, reject) => {
+      child.on("error", reject);
+      child.on("close", (code) => resolveRun({ code: code ?? 70, stdout, stderr }));
+    },
+  );
+  const deadline = Date.now() + 5_000;
+  while (true) {
+    try {
+      await readFile(marker);
+      break;
+    } catch {
+      if (Date.now() >= deadline) {
+        child.kill();
+        throw new Error("ACP resume fixture did not start.");
+      }
+      await new Promise((resolveWait) => setTimeout(resolveWait, 10));
+    }
+  }
+  process.kill(child.pid as number, signal);
+  return result;
+}
+
 async function page(rootPath: string, id: string, title: string, outcome?: string) {
   const path = join(rootPath, "references", ...id.split("/"), "en-US.md");
   await mkdir(dirname(path), { recursive: true });
@@ -109,7 +161,7 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     const agent = join(temporary, "agent.mjs");
     await writeFile(
       agent,
-      `import{createInterface}from"node:readline";import{writeFile}from"node:fs/promises";for await(const line of createInterface({input:process.stdin})){const m=JSON.parse(line);if(!m.id)continue;let result={};if(m.method==="initialize")result={protocolVersion:"1",agentCapabilities:{loadSession:true}};if(m.method==="session/new")result={sessionId:"fixture-session"};if(m.method==="session/resume")result={};if(m.method==="session/prompt"){if(process.env.CANCEL_RESPONSE)result={stopReason:"cancelled"};else{await writeFile(process.env.ACTION_MARKER,"yes");console.log(JSON.stringify({jsonrpc:"2.0",method:"session/update",params:{sessionId:"fixture-session",update:{sessionUpdate:"agent_message_chunk",content:{type:"text",text:"done"}}}}));result={stopReason:"end_turn",summary:"created marker"};}}console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
+      `import{createInterface}from"node:readline";import{writeFile}from"node:fs/promises";for await(const line of createInterface({input:process.stdin})){const m=JSON.parse(line);if(!m.id)continue;let result={};if(m.method==="initialize")result={protocolVersion:"1",agentCapabilities:{loadSession:true}};if(m.method==="session/new")result={sessionId:"fixture-session"};if(m.method==="session/resume"){if(process.env.HANG_RESUME){await writeFile(process.env.RESUME_MARKER,"yes");await new Promise(()=>{});}result={};}if(m.method==="session/prompt"){if(process.env.CANCEL_RESPONSE)result={stopReason:"cancelled"};else{await writeFile(process.env.ACTION_MARKER,"yes");console.log(JSON.stringify({jsonrpc:"2.0",method:"session/update",params:{sessionId:"fixture-session",update:{sessionUpdate:"agent_message_chunk",content:{type:"text",text:"agent echoed "+process.env.SECRET_ENV}}}}));result={stopReason:"end_turn",summary:"created marker "+process.env.SECRET_ENV};}}console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
     );
     const config = join(temporary, "config.yaml");
     await writeFile(
@@ -125,7 +177,13 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
               type: "stdio",
               command: process.execPath,
               args: [agent],
-              env: ["ACTION_MARKER", "SECRET_ENV", "CANCEL_RESPONSE"],
+              env: [
+                "ACTION_MARKER",
+                "SECRET_ENV",
+                "CANCEL_RESPONSE",
+                "HANG_RESUME",
+                "RESUME_MARKER",
+              ],
             },
             requirements: { sessionResume: true },
           },
@@ -134,8 +192,15 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     );
     const subject = join(temporary, "subject.json");
     const report = join(temporary, "report.json");
-    await writeFile(subject, JSON.stringify({ marker }));
-    const env = { ...process.env, ACTION_MARKER: marker, SECRET_ENV: "snapshot-secret-value" };
+    const canonicalSubject = {
+      marker,
+      token: "business-token-not-a-credential",
+      nested: { authorization: "ordinary-domain-value" },
+    };
+    await writeFile(subject, JSON.stringify(canonicalSubject));
+    const echoedSecret = 'quote" slash\\\\ newline\nUnicode雪';
+    const encodedSecret = JSON.stringify(echoedSecret).slice(1, -1);
+    const env = { ...process.env, ACTION_MARKER: marker, SECRET_ENV: echoedSecret };
     const first = await run(
       regulate,
       [
@@ -157,12 +222,17 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     assert.equal(first.code, 0, `${first.stderr}\n${first.stdout}`);
     const result = JSON.parse(first.stdout);
     assert.equal(result.status, "target-reached");
-    const reportValue = JSON.parse(await readFile(report, "utf8"));
+    assert.equal(first.stdout.includes(echoedSecret), false);
+    assert.equal(first.stdout.includes(encodedSecret), false);
+    const reportSource = await readFile(report, "utf8");
+    const reportValue = JSON.parse(reportSource);
     assert.equal(reportValue.regulationId, result.regulationId);
     assert.ok(reportValue.attempts[0].rounds.length >= 2);
     assert.ok(reportValue.attempts[0].actions.length >= 1);
+    assert.match(reportValue.attempts[0].actions[0].summary, /\[REDACTED\]/);
     assert.match(reportValue.recovery.command, /pguide continue/);
-    assert.doesNotMatch(JSON.stringify(reportValue), /snapshot-secret-value/);
+    assert.equal(JSON.stringify(reportValue).includes(echoedSecret), false);
+    assert.equal(reportSource.includes(encodedSecret), false);
     const second = await run(
       continueCommand,
       ["--config", config, result.regulationId, "--format", "json"],
@@ -170,16 +240,65 @@ test("regulate and continue integrate with a fixture ACP Agent and persisted Att
     );
     assert.equal(second.code, 0, `${second.stderr}\n${second.stdout}`);
     assert.equal(JSON.parse(second.stdout).status, "still-satisfied");
-    const ledger = JSON.parse(
-      await readFile(join(state, "regulations", result.regulationId, "regulation.json"), "utf8"),
-    );
+    const regulationPath = join(state, "regulations", result.regulationId, "regulation.json");
+    const ledgerSource = await readFile(regulationPath, "utf8");
+    const ledger = JSON.parse(ledgerSource);
     assert.equal(ledger.attempts.length, 2);
     assert.equal(ledger.attempts[1].resumeMode, "not-needed");
-    assert.doesNotMatch(JSON.stringify(ledger), /snapshot-secret-value/);
-    assert.match(
-      await readFile(join(state, "regulations", result.regulationId, "transcript.jsonl"), "utf8"),
-      /session\/update/,
+    assert.deepEqual(ledger.subject, canonicalSubject);
+    assert.equal(ledger.subjectDigest, digest(canonicalSubject));
+    assert.equal(ledgerSource.includes(encodedSecret), false);
+    if (process.platform !== "win32") {
+      assert.equal((await stat(regulationPath)).mode & 0o777, 0o600);
+    }
+    const transcript = await readFile(
+      join(state, "regulations", result.regulationId, "transcript.jsonl"),
+      "utf8",
     );
+    assert.match(transcript, /session\/update/);
+    assert.equal(transcript.includes(echoedSecret), false);
+    assert.equal(transcript.includes(encodedSecret), false);
+    assert.match(transcript, /\[REDACTED\]/);
+    await unlink(marker);
+    const resumeBaseline = JSON.parse(await readFile(regulationPath, "utf8"));
+    resumeBaseline.attempts.at(-1).limits.timeoutMs = 150;
+    const resumeMarker = join(temporary, "resume-started");
+    const continueArgs = ["--config", config, result.regulationId, "--format", "json"];
+    const resumeEnvironment = {
+      ...process.env,
+      HANG_RESUME: "yes",
+      RESUME_MARKER: resumeMarker,
+    };
+
+    await writeFile(regulationPath, `${JSON.stringify(resumeBaseline, null, 2)}\n`);
+    const resumeTimeout = await run(continueCommand, continueArgs, resumeEnvironment);
+    assert.equal(resumeTimeout.code, 5, resumeTimeout.stdout);
+    assert.equal(JSON.parse(resumeTimeout.stdout).status, "timed-out");
+    let resumedLedger = JSON.parse(await readFile(regulationPath, "utf8"));
+    assert.equal(resumedLedger.attempts.at(-1).status, "timed-out");
+    assert.ok(resumedLedger.attempts.at(-1).completedAt);
+
+    if (process.platform !== "win32") {
+      for (const signal of ["SIGINT", "SIGTERM"] as const) {
+        await rm(resumeMarker, { force: true });
+        await writeFile(regulationPath, `${JSON.stringify(resumeBaseline, null, 2)}\n`);
+        const signalled = await runAndSignal(
+          continueCommand,
+          continueArgs,
+          resumeEnvironment,
+          resumeMarker,
+          signal,
+        );
+        assert.equal(signalled.code, 5, `${signal}: ${signalled.stderr}\n${signalled.stdout}`);
+        assert.equal(JSON.parse(signalled.stdout).status, "cancelled");
+        resumedLedger = JSON.parse(await readFile(regulationPath, "utf8"));
+        assert.equal(resumedLedger.attempts.at(-1).status, "cancelled");
+        assert.ok(resumedLedger.attempts.at(-1).completedAt);
+      }
+    }
+
+    await writeFile(regulationPath, `${JSON.stringify(resumeBaseline, null, 2)}\n`);
+    await writeFile(marker, "yes");
 
     const hangingSubject = join(temporary, "hanging-subject.json");
     await writeFile(hangingSubject, JSON.stringify({ marker: "hang" }));

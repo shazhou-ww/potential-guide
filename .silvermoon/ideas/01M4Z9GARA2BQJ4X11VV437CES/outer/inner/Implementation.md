@@ -34,6 +34,10 @@ Windows shim 分派不得启用 shell；一次 Attempt 的 timeout 覆盖 probe�
 
 以单一 invocation finalization 状态机覆盖 timeout、SIGINT、SIGTERM、ACP cancel、持久化、report 和输出，等待失去竞态的一方彻底停止后再返回；扩展凭据参数族并在 Agent 展示、Regulation snapshot、Attempt、transcript 与 report 各自深层脱敏；使用平台感知 realpath 排除 cwd 别名，并让原子 report 提供逐 Attempt actions、round summaries、恢复命令和最终状态。
 
+### I-S09: 修复最终复审的状态与 ACP 边界
+
+对 Agent 数据按结构递归替换原始环境凭据而不处理序列化文本；将内部 canonical subject 与展示脱敏投影分离，以私有原子文件保存精确 subject 和原始 digest；resume 被取消或超时时禁止 fallback，新 ACP request 在 child 或 stdin 关闭后立即失败。
+
 ## Acceptance criteria
 
 ### I-AC01: 命令发现和协议稳定
@@ -67,3 +71,7 @@ Windows shim 分派不得启用 shell；一次 Attempt 的 timeout 覆盖 probe�
 ### I-AC08: 第二轮审查竞态与防御边界可证明
 
 定向测试以可控 cancellation helper 验证 timeout 收尾竞态只有一个终态且 loser 返回前已停止，ACP cancelled 与模拟信号均得到 `cancelled`、`completedAt` 和退出码 5；常见 credential 参数两种形式均拒绝且绕过数据被深层脱敏；Windows 大小写、alias、短路径语义不从 cwd 发现命令；多轮 report 含 actions、round summaries、恢复方式和最终状态且无 secret，并由完整 `pnpm check`（含 pack checks）证明。
+
+### I-AC09: 最终复审阻断项具有端到端回归证明
+
+fixture Agent 回显含引号、反斜杠、换行和 Unicode 的 credential 时，stdout、transcript、Attempt、action summary 与 report 均不含原值或其 JSON 转义形式；业务 subject 使用 `token`、`authorization` 等普通字段仍以精确值和一致 digest 完成 continue roundtrip，持久文件保持私有权限且报告不投影 subject；真实 resume 悬挂在 timeout、SIGINT、SIGTERM 下可靠退出 5 并持久化终态，ACP child/stdin 关闭后的 request 不会悬挂。
