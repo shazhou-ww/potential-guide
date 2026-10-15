@@ -6,11 +6,10 @@
 
 ### 推荐
 
-- canonical 可执行文件：`potential-guide`
-- 官方短别名：`pguide`
+- canonical 可执行文件：`potential`
 - npm 包建议：`@potential-guide/cli`
 
-所有文档、脚本和机器集成使用 `potential-guide`。`pguide` 只作为交互式便利别名，行为与 canonical 命令完全一致。
+日常文档、脚本和机器集成统一使用 `potential`。不提供 `potential-guide` 顶层别名，因为 Git 风格扩展模型需要把该名称留给独立的 `guide` 子命令。
 
 ### 不建议使用 `pg`
 
@@ -21,9 +20,8 @@
 顶层 CLI 同时支持内置命令和 Git 风格外部子命令：
 
 ```text
-potential-guide <command> [arguments]
-pguide <command> [arguments]
-potential-guide-<command> [arguments]
+potential <command> [arguments]
+potential-<command> [arguments]
 ```
 
 包拥有自己的 CLI 和业务语义。顶层 CLI 只负责全局配置、命令发现、可信解析、进程调用以及统一的输出和退出码约定。
@@ -32,37 +30,37 @@ potential-guide-<command> [arguments]
 
 | 顶层调用 | 独立可执行文件 | 所属范围 | 目的 |
 | --- | --- | --- | --- |
-| `potential-guide guide ...` | `potential-guide-guide` | Objective Guide | 加载、检查和 probe 一个 Guide Instance |
-| `potential-guide regulator ...` | `potential-guide-regulator` | Objective Regulator | 对一个 Objective 执行有界 regulation |
-| `potential-guide portfolio ...` | `potential-guide-portfolio` | Portfolio Supervisor | 规划或执行多 Objective directives |
-| `potential-guide commands` | 内置 | 顶层 CLI | 列出命令、来源和协议版本 |
-| `potential-guide doctor` | 内置 | 顶层 CLI | 检查配置、运行时和外部命令冲突 |
-| `potential-guide completion` | 内置 | 顶层 CLI | 生成 shell completion |
-| `potential-guide help` | 内置 | 顶层 CLI | 显示顶层或指定命令帮助 |
-| `potential-guide version` | 内置 | 顶层 CLI | 显示 CLI 与协议版本 |
+| `potential guide ...` | `potential-guide` | Objective Guide | 加载、检查和 probe 一个 Guide Instance |
+| `potential regulator ...` | `potential-regulator` | Objective Regulator | 对一个 Objective 执行有界 regulation |
+| `potential portfolio ...` | `potential-portfolio` | Portfolio Supervisor | 规划或执行多 Objective directives |
+| `potential commands` | 内置 | 顶层 CLI | 列出命令、来源和协议版本 |
+| `potential doctor` | 内置 | 顶层 CLI | 检查配置、运行时和外部命令冲突 |
+| `potential completion` | 内置 | 顶层 CLI | 生成 shell completion |
+| `potential help` | 内置 | 顶层 CLI | 显示顶层或指定命令帮助 |
+| `potential version` | 内置 | 顶层 CLI | 显示 CLI 与协议版本 |
 
 包级可执行文件必须可以直接运行。通过顶层 CLI 调用时，命令参数、stdin、信号和最终退出状态不得改变。
 
 ## 外部子命令发现
 
-调用 `potential-guide <command>` 时：
+调用 `potential <command>` 时：
 
 1. 只接受小写 ASCII slug，例如 `regulator` 或 `my-policy`。
 2. 内置命令优先，外部命令不能覆盖 `help`、`version`、`commands`、`doctor` 或 `completion`。
-3. 在显式配置的命令目录和 `PATH` 中查找 `potential-guide-<command>`；配置目录优先于 `PATH`。
+3. 在显式配置的命令目录和 `PATH` 中查找 `potential-<command>`；配置目录优先于 `PATH`。
 4. 不隐式搜索当前工作目录，避免仓库内同名文件被意外执行。
 5. 同一优先级发现多个候选时显式失败，并在错误中列出所有 real path。
 6. `commands` 显示每个命令的来源、解析后的路径、是否内置及协议兼容性。
 7. `--no-external-commands` 禁止执行外部子命令，供受限 CI 或安全环境使用。
 
-外部命令通过 `potential-guide-command-v1` 协议声明身份和能力。顶层 CLI 可以请求机器可读 metadata，但不会通过解析帮助文本推断能力。
+外部命令通过 `potential-command-v1` 协议声明身份和能力。顶层 CLI 可以请求机器可读 metadata，但不会通过解析帮助文本推断能力。
 
 ## 全局参数
 
 全局参数必须位于子命令之前；子命令之后的参数原样交给对应命令。
 
 ```text
-potential-guide [global options] <command> [command options]
+potential [global options] <command> [command options]
 ```
 
 | 参数 | 语义 |
@@ -83,8 +81,8 @@ stdout 只承载命令结果，stderr 承载诊断和日志。`--format json` �
 Regulator 初始只提供无副作用的 `probe` 和可产生现实修改的 `run`：
 
 ```text
-potential-guide regulator probe [options]
-potential-guide regulator run [options]
+potential regulator probe [options]
+potential regulator run [options]
 ```
 
 不提供独立 `resume` 命令。Regulator 不持有隐藏会话状态；再次运行相同命令会从真实世界重新 probe 并继续推进。
@@ -92,7 +90,7 @@ potential-guide regulator run [options]
 ### `regulator probe`
 
 ```powershell
-potential-guide regulator probe `
+potential regulator probe `
   --guide .\objective-guide.yaml `
   --subject-file .\subject.json `
   --language zh-CN `
@@ -111,7 +109,7 @@ potential-guide regulator probe `
 ### `regulator run`
 
 ```powershell
-potential-guide regulator run `
+potential regulator run `
   --guide .\objective-guide.yaml `
   --subject-file .\subject.json `
   --target terminal `
@@ -142,7 +140,7 @@ potential-guide regulator run `
 `process` adapter 可额外接受位于 `--` 之后的 Agent 进程参数：
 
 ```powershell
-potential-guide regulator run <options> -- --profile autonomous
+potential regulator run <options> -- --profile autonomous
 ```
 
 顶层 CLI 不解释 `--` 之后的内容；其他 adapter 可以拒绝不支持的附加参数。
@@ -153,7 +151,7 @@ Agent adapter 实现现有 `ObjectiveActionExecutor` 语义。每次调用只接
 
 ```json
 {
-  "protocol": "potential-guide-action-v1",
+  "protocol": "potential-action-v1",
   "targetLevelId": "terminal",
   "observation": {},
   "problem": {}
