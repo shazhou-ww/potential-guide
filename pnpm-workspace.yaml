@@ -9,7 +9,7 @@ catalog:
   ajv: 8.20.0
   cross-spawn: 7.0.6
   effect: 4.0.2
-  jsonata: 2.1.0
+  jsonata: 2.2.2
   tsx: 4.23.15
   turbo: ^2.11.8
   typescript: 5.9.3
