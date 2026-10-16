@@ -4,14 +4,14 @@
 
 - 生产实现提交：`c55313834203bc3670831e40197a3e15ac3adadb`。
 - 基础源码修订：`10df39610dc28225ff865eef16fbf84104bb2c46`；移除 Effect lock entry 的公司镜像固定 tarball URL，保留原完整 integrity，让各获准环境按自身 registry 元数据验证。
-- 最终发布验证工具候选：`e38fd57e63e6661a6f1ec13e88220321483c2c86`；加入有界 registry 传播等待与不发包的纯验证恢复，未改变已发布 effects 的产品实现。
+- 最终发布验证工具候选：`0dbe85654b7fa8ce47482bf4eec462130d5836a8`；包含有界 registry 传播等待、不发包的纯验证恢复与确定性的就绪 / 清理验证。产品包内容与已发布候选一致，没有重发版本。
 - 本地环境：Windows x64、Node 24.11.1、pnpm 11.22.0。
-- [最终候选 CI](https://github.com/shazhou-ww/potential-guide/actions/runs/38877774181) **5 / 5 jobs 成功**：Node 22.13.0 / 24.11.1 完整检查，以及 Ubuntu / macOS / Windows 的独立打包消费者验证。
+- [最终候选 CI](https://github.com/shazhou-ww/potential-guide/actions/runs/38884201132) **5 / 5 jobs 成功**：Node 22.13.0 / 24.11.1 完整检查，以及 Ubuntu / macOS / Windows 的独立打包消费者验证。
 - [逐包 RC 清单](./Release-candidates.md)与[迁移指导](../../../../../docs/functional-migration.md)均已交付。打包证明不等于 npm 发布证明，实际发布状态由 Deployment 记录。
 
 ## 完整验证结果
 
-`pnpm check` 本地通过，覆盖 formatter、lint、生产类型检查、测试严格类型检查、测试与逐包 pack 检查。发布验证工具修订后，测试共 **116 项，115 通过，1 项平台跳过**；跳过不计为通过，其他平台结果由上述 CI 单独证明。Biome 仍有显式报告的 warning，未通过禁用规则掩盖错误。
+`pnpm check` 本地通过，覆盖 formatter、lint、生产类型检查、测试严格类型检查、测试与逐包 pack 检查。发布验证工具修订后，测试共 **117 项，116 通过，1 项平台跳过**；跳过不计为通过，其他平台结果由上述 CI 单独证明。Biome 仍有显式报告的 warning，未通过禁用规则掩盖错误。
 
 | 范围 | 本地测试数 | 结果 |
 | --- | --- | --- |
@@ -23,7 +23,7 @@
 | cli-core | 9 | 全部通过。 |
 | config | 4 | 全部通过。 |
 | pguide | 21 | 20 通过，1 平台跳过。 |
-| 根发布 / 部署工具 | 10 | 全部通过，包含 4 项 registry 传播 / 恢复回归。 |
+| 根发布 / 部署工具 | 11 | 全部通过，包含 5 项 registry 传播 / 恢复回归。 |
 
 本地完整原始输出在 `.cache/functional-implementation-check.log`；独立 tarball 消费者输出在 `.cache/functional-consumer-check.log`。这些是本地复跑日志，不冒充远程永久证据；永久的跨平台验证绑定上述 CI run 与候选 commit。
 
@@ -63,9 +63,9 @@
 
 ### HTTP 202 处理窗口
 
-实际发布日志明确报告 PUT 202 与 “may take a few minutes”。原一分钟等待窗口对这种正常处理偏短，虽然纯验证恢复已安全取得真实回执，仍应修正未来发布的默认路径：延长为 60 次、每次间隔 5 秒，并增加模拟 90 秒传播的回归，避免正常异步处理总是触发恢复。此修订不改变任何产品包，不重发任何版本；I-S03 / I-AC03 在新检查完成前重置，实际 RC 的不可变发布回执仍有效。
+实际发布日志明确报告 PUT 202 与 “may take a few minutes”。原一分钟等待窗口对这种正常处理偏短，虽然纯验证恢复已安全取得真实回执，仍应修正未来发布的默认路径：延长为 60 次、每次间隔 5 秒，并增加模拟 90 秒传播的回归，避免正常异步处理总是触发恢复。此修订不改变任何产品包，不重发任何版本；I-S03 / I-AC03 曾在修订时重置；现完整 pnpm check、独立 Windows 消费者及最终五个 CI jobs 均通过，修订已完成，实际 RC 的不可变发布回执仍有效。
 
-最终打包 CI 的一次 macOS 运行还暴露测试脚本的两秒 Agent-ready 假设：超时后未等待被测 CLI 退出就删除 workspace，ENOTEMPTY 又遮蔽原失败。验证脚本改为最多 30 秒的明确就绪等待、退出前失败诊断及 finally 终止 / 等待唯一持有的 child；fixture 故意在原两秒界限后才报告就绪。顶层同时保留主错误与清理错误，不让清理错误掩盖真实原因。已发布产品不受这个测试 harness 修订影响；真实 npm 消费者 CI 38882670463 的五个 jobs 已成功。
+最终打包 CI 的一次 macOS 运行还暴露测试脚本的两秒 Agent-ready 假设：超时后未等待被测 CLI 退出就删除 workspace，ENOTEMPTY 又遮蔽原失败。验证脚本改为最多 30 秒的明确就绪等待、退出前失败诊断及 finally 终止 / 等待唯一持有的 child；fixture 故意在原两秒界限后才报告就绪。顶层同时保留主错误与清理错误，不让清理错误掩盖真实原因。已发布产品不受这个测试 harness 修订影响；真实 npm 消费者 CI 38882670463 的五个 jobs 已成功；最终修订的 CI 38884201132 也已五个 jobs 全通过，包括故意延迟就绪的跨平台打包消费者。
 
 ### 发布验证工具修订
 
