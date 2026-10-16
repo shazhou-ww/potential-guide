@@ -1,0 +1,16 @@
+{
+  "name": "potential-guide-effect-frp-prototype",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-timeout=10000 prototype.test.mjs"
+  },
+  "engines": {
+    "node": ">=22.13.0",
+    "pnpm": ">=11.22.0"
+  },
+  "packageManager": "pnpm@11.22.0",
+  "dependencies": {
+    "effect": "catalog:"
+  }
+}

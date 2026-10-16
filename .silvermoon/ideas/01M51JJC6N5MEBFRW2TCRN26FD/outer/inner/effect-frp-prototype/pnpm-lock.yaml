@@ -1,0 +1,28 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+catalogs:
+  default:
+    effect:
+      specifier: 4.0.2
+      version: 4.0.2
+
+importers:
+
+  .:
+    dependencies:
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.2
+
+packages:
+
+  effect@4.0.2:
+    resolution: {integrity: sha512-YeYnLqSFrL4+tCOXRrfNP03w8FILoF/wDl+ukraJAGzXrjcS383W7LAAvGBbLatEyktmLxRq+9xJinx7QzXW5A==, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/effect/-/effect-4.0.2.tgz}
+
+snapshots:
+
+  effect@4.0.2: {}
