@@ -31,6 +31,8 @@
 
 ## Acceptance criteria
 
+逐包发布与纯验证回执、产物 integrity / provenance、实际 npm 安装消费者和平台覆盖见[部署证据](./Release-evidence.md)。记录保留原始失败 run 与后续验证恢复，不将 metadata 传播延迟导致的失败 run 改称成功。
+
 ### D-AC01: RC 版本决策与发布范围可审计
 
 发布清单逐包包含已发布基线、变更分类、SemVer / 0.x 判断理由、选定 RC、依赖顺序与候选 commit；能区分新包首个产品版本、已有包的新目标版本和同一候选的 RC 序号递增。所有目标均为 `0.x.y-rc.N`，无 1.0、稳定产品版本或退役包的新发布；新包配置与并行 Agent 交付均有可核实的外部结果。
