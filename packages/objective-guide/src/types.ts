@@ -18,7 +18,8 @@ export interface ReferencePageSummary {
   title: string;
 }
 export interface ReferencePage extends ReferencePageSummary {
-  description?: string;
+  description: string;
+  references: readonly ReferencePageId[];
   content: string;
 }
 export interface ObjectiveLevelDescription {
@@ -26,7 +27,6 @@ export interface ObjectiveLevelDescription {
   id: ObjectiveLevelId;
   title: string;
   description: string;
-  advancementOutcome: string | null;
 }
 export interface ObjectiveObservation {
   current: ObjectiveLevelDescription;

@@ -17,12 +17,8 @@ import {
   text,
 } from "./validation.js";
 
-export interface LoadedReferencePage extends ReferencePage {
-  outcome?: string;
-  instruction?: string;
-}
 export interface LoadedLocale {
-  pages: ReadonlyMap<string, LoadedReferencePage>;
+  pages: ReadonlyMap<string, ReferencePage>;
 }
 
 export function canonicalManifestUri(uri: string, base?: string): string {
@@ -83,11 +79,7 @@ export const fileObjectiveResources: ObjectiveResourceResolver = {
   },
 };
 
-function parsePage(
-  resource: ObjectivePageResource,
-  id: string,
-  namespace: string,
-): LoadedReferencePage {
+function parsePage(resource: ObjectivePageResource, id: string): ReferencePage {
   const normalized = resource.source.replace(/\r\n/g, "\n");
   const match = /^---\n([\s\S]*?)\n---(?:\n([\s\S]*))?$/.exec(normalized);
   if (match === null)
@@ -95,28 +87,35 @@ function parsePage(
   const metadata: unknown = parseStrictYaml(match[1]!);
   if (!record(metadata))
     throw new ObjectiveConfigurationError(`Invalid page metadata: ${resource.uri}.`);
-  const required =
-    namespace === "levels" && id !== "levels/terminal"
-      ? ["title", "description", "outcome"]
-      : namespace === "pages"
-        ? ["title"]
-        : ["title", "description"];
-  const optional =
-    namespace === "pages" ? ["description"] : namespace === "problems" ? ["instruction"] : [];
-  fields(metadata, required, optional);
-  if (
-    !required.every((field) => text(metadata[field])) ||
-    optional.some((field) => Object.hasOwn(metadata, field) && !text(metadata[field]))
-  ) {
+  fields(metadata, ["title", "description"], ["references"]);
+  if (!text(metadata.title) || !text(metadata.description)) {
     throw new ObjectiveConfigurationError(`Incomplete page metadata: ${resource.uri}.`);
+  }
+  if ([...metadata.description].length > 200) {
+    throw new ObjectiveConfigurationError(
+      `Reference description must contain at most 200 Unicode code points: ${resource.uri}.`,
+    );
+  }
+  const references: unknown = Object.hasOwn(metadata, "references") ? metadata.references : [];
+  if (
+    !Array.isArray(references) ||
+    !references.every(
+      (reference: unknown) =>
+        typeof reference === "string" &&
+        /^(system|levels|checks|problems|pages)\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(reference),
+    ) ||
+    new Set(references).size !== references.length
+  ) {
+    throw new ObjectiveConfigurationError(
+      `Reference references must be an array of unique page IDs: ${resource.uri}.`,
+    );
   }
   const content = (match[2] ?? "").trim();
   return immutable({
     id,
-    title: String(metadata.title),
-    ...(typeof metadata.description === "string" ? { description: metadata.description } : {}),
-    ...(typeof metadata.outcome === "string" ? { outcome: metadata.outcome } : {}),
-    ...(typeof metadata.instruction === "string" ? { instruction: metadata.instruction } : {}),
+    title: metadata.title,
+    description: metadata.description,
+    references,
     content,
   });
 }
@@ -132,7 +131,7 @@ export function validateReferences(
   const checks = manifest.levels.flatMap(({ advancement }) => advancement.checks);
   const checkIds = new Set(checks.map(({ id }) => id));
   const problemIds = new Set(checks.flatMap(({ problems }) => problems));
-  const nodes = new Map<string, Map<string, LoadedReferencePage>>();
+  const nodes = new Map<string, Map<string, ReferencePage>>();
   for (const resource of resources) {
     const uri = canonicalManifestUri(resource.uri);
     if (!uri.startsWith(root))
@@ -165,10 +164,10 @@ export function validateReferences(
       throw new ObjectiveConfigurationError(`Unknown problem Reference: ${localId}.`);
     }
     const id = `${namespace}/${localId}`;
-    const locales = nodes.get(id) ?? new Map<string, LoadedReferencePage>();
+    const locales = nodes.get(id) ?? new Map<string, ReferencePage>();
     if (locales.has(language))
       throw new ObjectiveConfigurationError(`Duplicate Reference locale: ${id}/${language}.`);
-    locales.set(language, parsePage(resource, id, namespace));
+    locales.set(language, parsePage(resource, id));
     nodes.set(id, locales);
   }
   const required = [
@@ -192,6 +191,12 @@ export function validateReferences(
   }
   for (const locales of nodes.values())
     for (const page of locales.values()) {
+      for (const reference of page.references) {
+        if (!nodes.has(reference))
+          throw new ObjectiveConfigurationError(
+            `Dangling Reference metadata link from ${page.id}: ${reference}.`,
+          );
+      }
       for (const match of page.content.matchAll(/\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g)) {
         if (!nodes.has(match[1]!))
           throw new ObjectiveConfigurationError(`Dangling References link: ${match[1]}.`);

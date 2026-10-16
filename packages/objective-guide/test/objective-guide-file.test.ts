@@ -21,7 +21,7 @@ async function page(
   await mkdir(join(path, ".."), { recursive: true });
   await writeFile(
     path,
-    `---\n${Object.entries(properties)
+    `---\n${Object.entries({ references: [], ...properties })
       .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
       .join("\n")}\n---\n${body}\n`,
   );
@@ -52,11 +52,16 @@ languages: [en-US, zh-CN]
         description: "Prepared project",
       });
       await page(root, "system/404", language, { title: "Not found", description: "No such page" });
-      await page(root, "levels/configuration-invalid", language, {
-        title: "Invalid",
-        description: "Configuration is not valid",
-        outcome: "Repair to continue",
-      });
+      await page(
+        root,
+        "levels/configuration-invalid",
+        language,
+        {
+          title: "Invalid",
+          description: "Configuration is not valid",
+        },
+        "Repair to continue",
+      );
       await page(root, "levels/terminal", language, { title: "Ready", description: "All ready" });
       await page(root, "checks/ready", language, {
         title: "Ready check",
@@ -111,6 +116,7 @@ process.stdin.on("end", async () => {
     );
     assert.equal((await result.instance.readPage("missing")).id, "system/404");
     assert.deepEqual(await result.instance.searchPages("repair"), [
+      { id: "levels/configuration-invalid", title: "Invalid" },
       { id: "problems/project-unready", title: "Repair project" },
     ]);
   } finally {

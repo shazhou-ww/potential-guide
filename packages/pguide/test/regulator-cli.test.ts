@@ -130,12 +130,12 @@ async function runAndSignal(
   return result;
 }
 
-async function page(rootPath: string, id: string, title: string, outcome?: string) {
+async function page(rootPath: string, id: string, title: string, content = "") {
   const path = join(rootPath, "references", ...id.split("/"), "en-US.md");
   await mkdir(dirname(path), { recursive: true });
   await writeFile(
     path,
-    `---\ntitle: ${title}\ndescription: fixture${outcome ? `\noutcome: ${outcome}` : ""}\n---\n`,
+    `---\ntitle: ${title}\ndescription: fixture\nreferences: []\n---\n${content}\n`,
   );
 }
 

@@ -70,8 +70,12 @@ export async function runProbe(argv: string[], globals: GlobalOptions): Promise<
   );
 }
 
-function page(title: string, description: string, outcome?: string): string {
-  return `---\ntitle: ${JSON.stringify(title)}\ndescription: ${JSON.stringify(description)}${outcome === undefined ? "" : `\noutcome: ${JSON.stringify(outcome)}`}\n---\n\nTODO: replace this generated guidance.\n`;
+function page(
+  title: string,
+  description: string,
+  content = "TODO: replace this generated guidance.",
+): string {
+  return `---\ntitle: ${JSON.stringify(title)}\ndescription: ${JSON.stringify(description)}\nreferences: []\n---\n\n${content}\n`;
 }
 
 export async function runScaffold(argv: string[], globals: GlobalOptions): Promise<void> {

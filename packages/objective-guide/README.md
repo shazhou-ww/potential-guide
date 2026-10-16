@@ -54,6 +54,51 @@ Checks return only their declared stable Problem IDs plus JSON parameters.
 Returning a Problem owned by another check is an explicit operation error,
 while the selected locale supplies the human-facing problem content.
 
+## Reference metadata
+
+Every Reference uses the same front matter fields: required `title` and
+`description`, and optional `references`,
+including system, level, terminal, check, problem, and general pages:
+
+```markdown
+---
+title: Repair configuration
+description: A short summary of the configuration repair steps.
+references:
+  - pages/configuration-spec
+---
+
+Explain the problem, repair steps, or level advancement here.
+```
+
+`title` must be a nonempty string. `description` is the page's TL;DR: a nonempty
+string of at most 200 Unicode code points, including whitespace. Omit `references`
+or use `references: []` when no related pages are declared; `readPage()` always
+returns an array, defaulting to `[]`. Explicit `null` is invalid.
+References are an ordered array of unique,
+language-neutral page IDs in this Guide, not titles, filenames, or external URLs.
+The target page owns its title; read it in the instance's language when displaying
+a reference. References are returned by `readPage()` and do not automatically
+expand other pages or produce an aggregated report.
+
+Loading a Guide, including through `pguide validate guide`, validates all pages
+in every declared language: required fields, types, description length, reference
+identity and target existence, and language coverage. Unknown metadata fields are
+rejected. Existing body `[[namespace/id]]` links remain supported and validated
+independently of front matter references.
+
+`readPage()` retains its display-oriented fallback: a missing page returns the
+localized `system/404` page with `id: "system/404"`, not the requested ID or `null`.
+Callers can inspect that ID to recognize a 404 page. Configuration validation
+checks actual target existence directly; fallback never makes a dangling
+reference valid.
+
+Migration: add `description` to any general page that omitted it.
+Move former `outcome` and `instruction` metadata into
+the Markdown body and remove those fields from front matter. Level advancement
+guidance is ordinary page content, available through `readPage("levels/<id>")`;
+`describeLevels()` no longer exposes `advancementOutcome`.
+
 ## Public API
 
 - `createObjectiveLoader` loads and caches Guides by canonical Manifest URI.

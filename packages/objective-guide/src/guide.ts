@@ -86,9 +86,7 @@ function problemSummary(
 ) {
   const page = locale.pages.get(`problems/${problem.id}`)!;
   const detail = problem.parameters.description;
-  return typeof detail === "string" && detail.trim() !== ""
-    ? detail
-    : (page.description ?? page.title);
+  return typeof detail === "string" && detail.trim() !== "" ? detail : page.description;
 }
 
 async function runLevelChecks(
@@ -285,7 +283,7 @@ export function createObjectiveGuide(
         subject: stableSubject,
         language,
         title: overview.title,
-        description: overview.description!,
+        description: overview.description,
         prerequisite: childInstance,
         describeLevels: () => descriptions,
         async probe(signal?: AbortSignal): Promise<ObjectiveObservation> {
@@ -309,7 +307,7 @@ export function createObjectiveGuide(
           const needle = query.trim().toLocaleLowerCase(language);
           return Object.freeze(
             [...locale.pages.values()]
-              .filter(({ title, description = "", content }) =>
+              .filter(({ title, description, content }) =>
                 `${title}\n${description}\n${content}`.toLocaleLowerCase(language).includes(needle),
               )
               .map(({ id, title }) => Object.freeze({ id, title })),
@@ -336,16 +334,14 @@ export function createObjectiveGuide(
             instance,
             id,
             title: content.title,
-            description: content.description!,
-            advancementOutcome: content.outcome!,
+            description: content.description,
           });
         }),
         Object.freeze({
           instance,
           id: "terminal",
           title: locale.pages.get("levels/terminal")!.title,
-          description: locale.pages.get("levels/terminal")!.description!,
-          advancementOutcome: null,
+          description: locale.pages.get("levels/terminal")!.description,
         }),
       ]);
       probeWithContext.set(instance, async (context) => {

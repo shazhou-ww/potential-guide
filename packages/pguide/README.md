@@ -20,3 +20,11 @@ of the command names advertised by their executable metadata.
 
 External executables and Windows command shims are invoked without shell mode,
 so argument boundaries and metacharacters are preserved.
+
+`scaffold guide` generates References with the uniform required `title` and
+`description` fields, plus optional `references` (defaulting to `[]` when omitted).
+Level advancement guidance
+belongs in the Markdown body. `validate guide` loads the entire Guide and checks
+all localized References, including nonempty descriptions of at most 200 Unicode
+code points and the existence of every declared reference target. See the
+[Reference metadata contract](../objective-guide/README.md#reference-metadata).

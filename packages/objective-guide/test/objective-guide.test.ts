@@ -42,8 +42,8 @@ function manifest(overrides: Partial<ObjectiveGuideManifest> = {}): ObjectiveGui
     ...overrides,
   };
 }
-function markdown(properties: Record<string, string>, body = "") {
-  return `---\n${Object.entries(properties)
+function markdown(properties: Record<string, unknown>, body = "") {
+  return `---\n${Object.entries({ references: [], ...properties })
     .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
     .join("\n")}\n---\n${body}\n`;
 }
@@ -76,11 +76,15 @@ function fixture(
         description: `Ready ${language}`,
       });
       for (const level of config.levels) {
-        add(`levels/${level.id}`, language, {
-          title: `${level.id} ${language}`,
-          description: `Waiting ${language}`,
-          outcome: `Cost and benefit ${language}`,
-        });
+        add(
+          `levels/${level.id}`,
+          language,
+          {
+            title: `${level.id} ${language}`,
+            description: `Waiting ${language}`,
+          },
+          `Cost and benefit ${language}`,
+        );
         for (const check of level.advancement.checks) {
           add(`checks/${check.id}`, language, {
             title: check.id,
@@ -546,6 +550,173 @@ async function instance(
   return created.instance;
 }
 
+test("all Reference namespaces share metadata and resolve localized titles by identity", async () => {
+  const context = fixture();
+  const source = new URL("references/", rootUri).href;
+  const references = ["pages/shared", "checks/ready"];
+  for (const resource of context.pages.get(source)!) {
+    resource.source = resource.source.replace(
+      "references: []",
+      `references: ${JSON.stringify(references)}`,
+    );
+  }
+  for (const language of ["en-US", "zh-CN"]) {
+    context.pages.get(source)!.push({
+      uri: new URL(`pages/shared/${language}.md`, source).href,
+      source: markdown({ title: `Shared ${language}`, description: "Shared guidance" }),
+    });
+  }
+  const en = await instance(context);
+  const zh = await instance(context, "zh-CN");
+  for (const id of [
+    "system/overview",
+    "system/404",
+    "levels/unready",
+    "levels/terminal",
+    "checks/ready",
+    "problems/ready-problem",
+  ]) {
+    const page = await en.readPage(id);
+    assert.deepEqual(page.references, references);
+    assert.ok(Object.isFrozen(page.references));
+    assert.equal(typeof page.description, "string");
+  }
+  assert.deepEqual((await en.readPage("pages/shared")).references, []);
+  assert.equal((await en.readPage(references[0]!)).title, "Shared en-US");
+  assert.equal((await zh.readPage(references[0]!)).title, "Shared zh-CN");
+});
+
+test("every Reference namespace rejects missing, legacy and invalid metadata", async () => {
+  const namespaces = [
+    "system/overview",
+    "system/404",
+    "levels/unready",
+    "levels/terminal",
+    "checks/ready",
+    "problems/ready-problem",
+    "pages/extra",
+  ];
+  const valid = { title: "Title", description: "Summary", references: [] };
+  const invalid: Record<string, unknown>[] = [
+    { description: "Summary", references: [] },
+    { title: "Title", references: [] },
+    { ...valid, title: " " },
+    { ...valid, title: 1 },
+    { ...valid, description: " \n\t" },
+    { ...valid, description: 1 },
+    { ...valid, description: null },
+    { ...valid, description: "a".repeat(201) },
+    { ...valid, description: "\u{1f680}".repeat(201) },
+    { ...valid, outcome: "Legacy outcome" },
+    { ...valid, instruction: "Legacy instruction" },
+    { ...valid, tldr: "Unknown field" },
+    { ...valid, references: null },
+    { ...valid, references: "system/overview" },
+    { ...valid, references: [{ id: "system/overview", title: "Duplicated title" }] },
+    { ...valid, references: [1] },
+    { ...valid, references: ["../overview"] },
+    { ...valid, references: ["system/overview/en-US.md"] },
+    { ...valid, references: ["system/overview", "system/overview"] },
+    { ...valid, references: ["pages/missing"] },
+  ];
+  for (const id of namespaces) {
+    for (const metadata of invalid) {
+      const context = fixture();
+      const source = new URL("references/", rootUri).href;
+      const uri = new URL(`${id}/en-US.md`, source).href;
+      const resources = context.pages.get(source)!;
+      if (id === "pages/extra") {
+        for (const language of ["en-US", "zh-CN"]) {
+          resources.push({
+            uri: new URL(`${id}/${language}.md`, source).href,
+            source: markdown(valid),
+          });
+        }
+      }
+      resources.find((resource) => resource.uri === uri)!.source =
+        `---\n${JSON.stringify(metadata)}\n---\n`;
+      await assert.rejects(
+        context.loader.load(rootUri),
+        ObjectiveConfigurationError,
+        `${id}: ${JSON.stringify(metadata)}`,
+      );
+    }
+  }
+});
+
+test("omitted references default to immutable empty arrays for every namespace", async () => {
+  const context = fixture();
+  const source = new URL("references/", rootUri).href;
+  for (const resource of context.pages.get(source)!) {
+    resource.source = resource.source.replace("references: []\n", "");
+  }
+  for (const language of ["en-US", "zh-CN"]) {
+    context.pages.get(source)!.push({
+      uri: new URL(`pages/extra/${language}.md`, source).href,
+      source: "---\ntitle: Extra\ndescription: Summary\n---\n",
+    });
+  }
+  for (const language of ["en-US", "zh-CN"]) {
+    const current = await instance(context, language);
+    for (const id of [
+      "system/overview",
+      "system/404",
+      "levels/unready",
+      "levels/terminal",
+      "checks/ready",
+      "problems/ready-problem",
+      "pages/extra",
+    ]) {
+      const page = await current.readPage(id);
+      assert.deepEqual(page.references, []);
+      assert.ok(Object.isFrozen(page.references));
+    }
+  }
+});
+
+test("description length counts Unicode code points and accepts the exact limit", async () => {
+  for (const description of ["a", "a".repeat(200), "\u96ea".repeat(200), "\u{1f680}".repeat(200)]) {
+    const context = fixture();
+    const source = new URL("references/", rootUri).href;
+    for (const resource of context.pages.get(source)!) {
+      resource.source = markdown({ title: "Title", description });
+    }
+    const current = await instance(context);
+    assert.equal(current.description, description);
+    assert.equal((await current.readPage("levels/terminal")).description, description);
+  }
+});
+
+test("Guide validation includes non-default language metadata and reference language coverage", async () => {
+  for (const metadata of [
+    { title: "Title", description: "a".repeat(201) },
+    { title: "Title", description: "Summary", references: ["pages/missing"] },
+  ]) {
+    const context = fixture();
+    const source = new URL("references/", rootUri).href;
+    const overview = context.pages
+      .get(source)!
+      .find(({ uri }) => uri.endsWith("/system/overview/zh-CN.md"))!;
+    overview.source = markdown(metadata);
+    await assert.rejects(context.loader.load(rootUri), ObjectiveConfigurationError);
+  }
+  const context = fixture();
+  const source = new URL("references/", rootUri).href;
+  context.pages.get(source)!.push({
+    uri: new URL("pages/shared/en-US.md", source).href,
+    source: markdown({ title: "Shared", description: "Summary" }),
+  });
+  const overview = context.pages
+    .get(source)!
+    .find(({ uri }) => uri.endsWith("/system/overview/en-US.md"))!;
+  overview.source = markdown({
+    title: "Title",
+    description: "Summary",
+    references: ["pages/shared"],
+  });
+  await assert.rejects(context.loader.load(rootUri), /cover every language/);
+});
+
 test("canonical identity is language-neutral and References provide descriptions", async () => {
   const context = fixture();
   const [first, second] = await Promise.all([
@@ -563,7 +734,8 @@ test("canonical identity is language-neutral and References provide descriptions
     en.describeLevels().map(({ id }) => id),
     ["unready", "terminal"],
   );
-  assert.equal(en.describeLevels()[0]?.advancementOutcome, "Cost and benefit en-US");
+  assert.equal((await en.readPage("levels/unready")).content, "Cost and benefit en-US");
+  assert.ok(!Object.hasOwn(en.describeLevels()[0]!, "advancementOutcome"));
   assert.equal((await en.readPage("missing")).id, "system/404");
   assert.deepEqual(await en.searchPages("fix it"), [
     { id: "problems/ready-problem", title: "Problem en-US" },
@@ -775,11 +947,7 @@ test("manifest tree and Reference identities are exact", async () => {
     const extra = fixture();
     extra.pages.get(source)!.push({
       uri: new URL(`${namespace}/extra/en-US.md`, source).href,
-      source: markdown(
-        namespace === "levels"
-          ? { title: "Extra", description: "Extra", outcome: "Extra" }
-          : { title: "Extra", description: "Extra" },
-      ),
+      source: markdown({ title: "Extra", description: "Extra" }),
     });
     await assert.rejects(
       extra.loader.load(rootUri),

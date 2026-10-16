@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
 import { test } from "node:test";
@@ -93,6 +93,29 @@ test("scaffold, validate and probe work directly", async () => {
     ]);
     assert.equal(probe.code, 0, probe.stdout);
     assert.equal(JSON.parse(probe.stdout).status, "observed");
+    const overviewPath = join(guide, "references", "system", "overview", "en-US.md");
+    const overview = await readFile(overviewPath, "utf8");
+    assert.match(overview, /references: \[\]/);
+    const level = await readFile(
+      join(guide, "references", "levels", "initial", "en-US.md"),
+      "utf8",
+    );
+    assert.doesNotMatch(level, /\noutcome:/);
+    assert.match(level, /---\n\nTODO: describe advancement\./);
+    for (const invalid of [
+      overview.replace(/description: .*/, 'description: ""'),
+      overview.replace(/description: .*/, `description: ${"a".repeat(201)}`),
+      overview.replace(/\ndescription: .*/, ""),
+      overview.replace("references: []", "references: [pages/missing]"),
+    ]) {
+      await writeFile(overviewPath, invalid);
+      const rejected = await run(bins.validate, ["guide", manifest, "--format", "json"]);
+      assert.equal(rejected.code, 2, rejected.stdout);
+      assert.match(rejected.stdout, /guide-error/);
+    }
+    await writeFile(overviewPath, overview.replace("\nreferences: []", ""));
+    const withoutReferences = await run(bins.validate, ["guide", manifest, "--format", "json"]);
+    assert.equal(withoutReferences.code, 0, withoutReferences.stdout);
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

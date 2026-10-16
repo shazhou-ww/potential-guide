@@ -57,20 +57,19 @@ function harness(): Harness {
       });
     },
     async readPage(id: string) {
-      return { id, title: id, content: id };
+      return { id, title: id, description: id, references: [], content: id };
     },
     async searchPages() {
       return [];
     },
   });
   levels = Object.freeze(
-    ["unready", "ready", "terminal"].map((id, index) =>
+    ["unready", "ready", "terminal"].map((id) =>
       Object.freeze({
         instance,
         id,
         title: id,
         description: id,
-        advancementOutcome: index === 2 ? null : `Advance from ${id}`,
       }),
     ),
   );

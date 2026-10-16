@@ -60,20 +60,19 @@ function harness(id: string, initialLevel: number, probeLog: string[]): Harness 
       });
     },
     async readPage(pageId: string) {
-      return { id: pageId, title: pageId, content: pageId };
+      return { id: pageId, title: pageId, description: pageId, references: [], content: pageId };
     },
     async searchPages() {
       return [];
     },
   });
   levels = Object.freeze(
-    ["critical", "safe", "terminal"].map((levelId, index) =>
+    ["critical", "safe", "terminal"].map((levelId) =>
       Object.freeze({
         instance,
         id: levelId,
         title: levelId,
         description: levelId,
-        advancementOutcome: index === 2 ? null : `Advance ${id}`,
       }),
     ),
   );
@@ -127,18 +126,20 @@ test("loaded same-level checks retain injected scheduling through supervision an
         });
       },
       async readPages(sourceUri) {
-        return [
-          ["system/overview", { title: "Scheduled", description: "Scheduled objective" }],
-          ["system/404", { title: "Missing", description: "Missing page" }],
-          ["levels/stage", { title: "Stage", description: "Attained stage", outcome: "Advance" }],
-          ["levels/terminal", { title: "Terminal", description: "Complete" }],
-          ["checks/first", { title: "First", description: "First check" }],
-          ["checks/second", { title: "Second", description: "Second check" }],
-          ["problems/first-repair", { title: "Repair", description: "Repair first check" }],
-          ["problems/second-repair", { title: "Repair", description: "Repair second check" }],
-        ].map(([id, properties]) => ({
+        return (
+          [
+            ["system/overview", { title: "Scheduled", description: "Scheduled objective" }],
+            ["system/404", { title: "Missing", description: "Missing page" }],
+            ["levels/stage", { title: "Stage", description: "Attained stage" }],
+            ["levels/terminal", { title: "Terminal", description: "Complete" }],
+            ["checks/first", { title: "First", description: "First check" }],
+            ["checks/second", { title: "Second", description: "Second check" }],
+            ["problems/first-repair", { title: "Repair", description: "Repair first check" }],
+            ["problems/second-repair", { title: "Repair", description: "Repair second check" }],
+          ] satisfies [string, { title: string; description: string }][]
+        ).map(([id, properties]) => ({
           uri: new URL(`${id}/en-US.md`, sourceUri).href,
-          source: `---\n${JSON.stringify(properties)}\n---\n`,
+          source: `---\n${JSON.stringify({ references: [], ...properties })}\n---\n${id === "levels/stage" ? "Advance" : ""}\n`,
         }));
       },
     },

@@ -1,5 +1,7 @@
 ---
 title: Initial
 description: The marker is absent.
-outcome: Create the marker.
+references: []
 ---
+
+Create the marker.
