@@ -38,6 +38,7 @@
 ### D-AC02: 所有目标 RC 已真实发布且可获取
 
 逐包有成功的产品发布 workflow 链接、包专属 tag / commit、npm 版本及 integrity / provenance 证据；registry 的 rc 指向本轮目标版本，latest 与发布前记录一致。独立环境能获取每个目标 RC 及其传递依赖；产物版本、导出和依赖对应候选。任一包只有 placeholder、dry-run、部分成功或安装失败，均不满足本条。
+若 OIDC Publish step 已成功、仅后置 metadata 验证因传播延迟失败，保留原失败 run，使用不发包的 verify-published 模式补全成功回执；不能重新发布、覆盖版本或将原 run 伪称成功。正常发布仍要求完整 workflow 成功。registry 的 rc 指向本轮目标版本，latest 与发布前记录一致。独立环境能获取每个目标 RC 及其传递依赖；产物版本、导出和依赖对应候选。任一包只有 placeholder、dry-run、部分成功或安装失败，均不满足本条。
 
 ### D-AC03: npm 消费者可复现迁移与运行边界
 

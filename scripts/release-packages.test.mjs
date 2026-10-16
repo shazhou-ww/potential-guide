@@ -61,7 +61,7 @@ test("publication workflow covers the inventory and its embedded scripts compile
   const scripts = [
     ...workflow.matchAll(/node --input-type=(module|commonjs) <<'NODE'\r?\n([\s\S]*?)^\s+NODE$/gmu),
   ];
-  assert.ok(scripts.length >= 5);
+  assert.ok(scripts.length >= 4);
   for (const [, type, source] of scripts) {
     const result = spawnSync(process.execPath, ["--check", `--input-type=${type}`], {
       input: source,

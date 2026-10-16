@@ -26,7 +26,7 @@
 
 ## Acceptance criteria
 
-实现证据、候选 commit、逐项覆盖和跨平台 CI 见[验证记录](./Validation.md)。当前产品尚未发布，外部 RC 完成状态由 Deployment 单独判断。
+实现证据、候选 commit、逐项覆盖和跨平台 CI 见[验证记录](./Validation.md)。外部 RC 的实际完成状态由 Deployment 单独判断；发布验证工具若暴露缺陷，先修订并重新验证实现候选，不重复发布已有版本。
 
 ### I-AC01: 公开契约与来源边界可验证
 

@@ -26,6 +26,17 @@ on:
           - cli-core
           - config
           - pguide
+      mode:
+        description: Dry-run publishing or only verify an already-published version
+        type: choice
+        default: dry-run
+        options:
+          - dry-run
+          - verify-published
+      expected_latest:
+        description: Recorded latest tag before publishing (required for verify-published)
+        type: string
+        default: ""
 
 permissions: {}
 
@@ -181,7 +192,7 @@ jobs:
         run: pnpm check
 
       - name: Assign a temporary dry-run version
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && inputs.mode != 'verify-published'
         env:
           PACKAGE_DIRECTORY: ${{ steps.release.outputs.directory }}
         run: |
@@ -196,6 +207,7 @@ jobs:
           NODE
 
       - name: Pack package
+        if: github.event_name == 'push' || inputs.mode != 'verify-published'
         id: pack
         env:
           PACKAGE_DIRECTORY: ${{ steps.release.outputs.directory }}
@@ -254,44 +266,17 @@ jobs:
           --loglevel=verbose
 
       - name: Verify published metadata and provenance
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || inputs.mode == 'verify-published'
         env:
+          PACKAGE_ID: ${{ steps.release.outputs.id }}
           PACKAGE_NAME: ${{ steps.release.outputs.name }}
           PACKAGE_VERSION: ${{ steps.release.outputs.version }}
           DIST_TAG: ${{ steps.release.outputs.dist_tag }}
-          LATEST_BEFORE: ${{ steps.tags.outputs.latest_before }}
-        run: |
-          node --input-type=module <<'NODE'
-          import assert from "node:assert/strict";
-          import { execFileSync } from "node:child_process";
-          import { appendFileSync } from "node:fs";
-          const name = process.env.PACKAGE_NAME;
-          const version = process.env.PACKAGE_VERSION;
-          const view = (...args) => JSON.parse(execFileSync("npm", [
-            "view", ...args, "--json", "--registry=https://registry.npmjs.org/",
-          ], { encoding: "utf8" }));
-          const metadata = view(`${name}@${version}`, "name", "version", "dist");
-          const tags = view(name, "dist-tags");
-          assert.equal(metadata.name, name);
-          assert.equal(metadata.version, version);
-          assert.equal(tags[process.env.DIST_TAG], version);
-          assert.ok(metadata.dist.integrity, "Published artifact must have integrity metadata.");
-          assert.ok(metadata.dist.attestations?.url, "Trusted publishing must produce provenance.");
-          if (process.env.DIST_TAG === "rc") {
-            assert.equal(tags.latest ?? "", process.env.LATEST_BEFORE);
-          }
-          const receipt = {
-            package: name, version, tags, latestBefore: process.env.LATEST_BEFORE,
-            commit: process.env.GITHUB_SHA, integrity: metadata.dist.integrity,
-            provenance: metadata.dist.attestations.url,
-          };
-          console.log(JSON.stringify(receipt, null, 2));
-          appendFileSync(process.env.GITHUB_STEP_SUMMARY,
-            `## Published release receipt\n\n\`\`\`json\n${JSON.stringify(receipt, null, 2)}\n\`\`\`\n`);
-          NODE
+          LATEST_BEFORE: ${{ github.event_name == 'push' && steps.tags.outputs.latest_before || inputs.expected_latest }}
+        run: node scripts/verify-published-package.mjs
 
       - name: Validate trusted publishing
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && inputs.mode != 'verify-published'
         run: >-
           npm publish "${{ steps.pack.outputs.tarball }}"
           --dry-run

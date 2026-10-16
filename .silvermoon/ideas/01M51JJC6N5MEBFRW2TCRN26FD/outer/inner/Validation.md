@@ -6,11 +6,11 @@
 - 可发布源码候选：`10df39610dc28225ff865eef16fbf84104bb2c46`；后者只移除 Effect lock entry 的公司镜像固定 tarball URL，保留原完整 integrity，让各获准环境按自身 registry 元数据验证。
 - 本地环境：Windows x64、Node 24.11.1、pnpm 11.22.0。
 - [候选 CI](https://github.com/shazhou-ww/potential-guide/actions/runs/38876082486) **5 / 5 jobs 成功**：Node 22.13.0 / 24.11.1 完整检查，以及 Ubuntu / macOS / Windows 的独立打包消费者验证。
-- [逐包 RC 清单](./Release-candidates.md)与[迁移指导](../../../../../docs/functional-migration.md)均已交付。产品发布尚未执行，不将这里的打包证明当成 npm 已发布证明。
+- [逐包 RC 清单](./Release-candidates.md)与[迁移指导](../../../../../docs/functional-migration.md)均已交付。打包证明不等于 npm 发布证明，实际发布状态由 Deployment 记录。
 
 ## 完整验证结果
 
-`pnpm check` 本地通过，覆盖 formatter、lint、生产类型检查、测试严格类型检查、测试与逐包 pack 检查。测试共 **112 项，111 通过，1 项平台跳过**；跳过不计为通过，其他平台结果由上述 CI 单独证明。Biome 仍有显式报告的 warning，未通过禁用规则掩盖错误。
+`pnpm check` 本地通过，覆盖 formatter、lint、生产类型检查、测试严格类型检查、测试与逐包 pack 检查。发布验证工具修订后，测试共 **116 项，115 通过，1 项平台跳过**；跳过不计为通过，其他平台结果由上述 CI 单独证明。Biome 仍有显式报告的 warning，未通过禁用规则掩盖错误。
 
 | 范围 | 本地测试数 | 结果 |
 | --- | --- | --- |
@@ -22,7 +22,7 @@
 | cli-core | 9 | 全部通过。 |
 | config | 4 | 全部通过。 |
 | pguide | 21 | 20 通过，1 平台跳过。 |
-| 根发布 / 部署工具 | 6 | 全部通过。 |
+| 根发布 / 部署工具 | 10 | 全部通过，包含 4 项 registry 传播 / 恢复回归。 |
 
 本地完整原始输出在 `.cache/functional-implementation-check.log`；独立 tarball 消费者输出在 `.cache/functional-consumer-check.log`。这些是本地复跑日志，不冒充远程永久证据；永久的跨平台验证绑定上述 CI run 与候选 commit。
 
@@ -59,5 +59,9 @@
 5. **适配与恢复错误**：统一 payload / message、保留真实会话 ID、异步落盘排队、明确源码 / 清理错误及原始 cause；这些修复进入集成测试，不靠成功形状 fallback。
 
 ## 验收边界
+
+### 发布验证工具修订
+
+首次 effects RC 的 [OIDC publish step](https://github.com/shazhou-ww/potential-guide/actions/runs/38876853830) 成功，但紧接着的 registry 查询因短暂 E404 导致整个 run 失败。暂停下游发布，返回实现修订发布验证工具：加入有界传播等待与纯验证恢复模式，不覆盖版本、不移动已推送 tag，也不重新执行已成功的发布。4 项新回归与完整 pnpm check 已通过；I-S03 / I-AC03 在云端修订验证及真实纯验证恢复完成前保持未完成，原有领域实现与跨平台证据仍有效。
 
 上述证据支持 Implementation 门线；由已获用户授权的主会话审批，并通过 Silvermoon 的精确 revision Submit / Accept 记录状态。npm OIDC 权限、实际产品 RC、provenance、rc / latest 和 npm 安装消费者仍由 Deployment 验证，不能提前勾选部署验收。

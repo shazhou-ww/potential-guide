@@ -210,6 +210,22 @@ release to this repository and workflow. The publish workflow records a
 release receipt with the exact commit, integrity, provenance URL and
 before/after tags; an RC publish fails verification if `latest` changed.
 
+Registry metadata can lag behind a successful publish. Verification waits for
+the version, intended dist-tag and provenance with a bounded retry; it never
+repeats a publish. If an older workflow already published successfully but its
+verification failed, preserve the original run and release tag, then use the
+non-publishing recovery mode with the recorded previous `latest`:
+
+```sh
+gh workflow run publish-npm.yaml --ref main \
+  -f package=effects -f mode=verify-published -f expected_latest=0.0.0
+```
+
+This mode skips packing, dry-run publishing and actual publishing. Its receipt
+records the original package tag's source commit separately from the
+verification commit. Never rerun a successful publish step to repair a
+metadata propagation failure.
+
 After every selected RC has published successfully, run the CI workflow
 manually with `published=true`. Its independent consumers install the exact
 manifest RC versions from npm, not local tarballs, and verify the CLI and
