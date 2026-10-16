@@ -18,7 +18,7 @@ Supervisor 包名不变，只适配新的领域执行接口；CLI Core 不依赖
 
 ## 2. 规格、身份与版本
 
-- PilotSpec 是可序列化的已解析定义，包含 Objective 身份、manifest、Wiki 与来源版本；不是带订阅或进程的实例。`loadPilotSpec` 使用 ResourceResolver 的确切版本，不把未提交文件标成 HEAD。
+- PilotSpec 是可序列化的已解析定义，包含 Objective 身份、manifest、Wiki 与来源版本；不是带订阅或进程的实例。`loadPilotSpec` 使用 ResourceResolver 的确切版本；多仓库前置通过 versionFor 按 Objective 获取各自 commit，不把未提交文件标成 HEAD，也不将根仓库版本复制给其他来源。
 - RegulatorSpec 由 Pilot 规格、Strategy 与 AgentBinding 组成；subject 单独放进 RegulationInput。目标 LevelId 和 Agent 单次执行限制属于 Strategy，不能在外层再维护另一份配置。
 - 本地类型的字段名称以各包导出的 TypeScript 类型为准：当前配方字段为 `pilot`、`strategy`、`binding`；输入字段为 `spec`、`subject` 和可选 `language`。
 - Objective URI 标识 Git 仓库及定义路径，例如 `git+https://github.com/owner/repo.git#objectives/project/pilot.yaml`。commit 与该稳定身份分开。测试可使用明确的 git+file 来源，不以裸文件路径充当全局身份。
