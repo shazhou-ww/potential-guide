@@ -3,9 +3,10 @@
 ## 候选与环境
 
 - 生产实现提交：`c55313834203bc3670831e40197a3e15ac3adadb`。
-- 可发布源码候选：`10df39610dc28225ff865eef16fbf84104bb2c46`；后者只移除 Effect lock entry 的公司镜像固定 tarball URL，保留原完整 integrity，让各获准环境按自身 registry 元数据验证。
+- 基础源码修订：`10df39610dc28225ff865eef16fbf84104bb2c46`；移除 Effect lock entry 的公司镜像固定 tarball URL，保留原完整 integrity，让各获准环境按自身 registry 元数据验证。
+- 最终发布验证工具候选：`e38fd57e63e6661a6f1ec13e88220321483c2c86`；加入有界 registry 传播等待与不发包的纯验证恢复，未改变已发布 effects 的产品实现。
 - 本地环境：Windows x64、Node 24.11.1、pnpm 11.22.0。
-- [候选 CI](https://github.com/shazhou-ww/potential-guide/actions/runs/38876082486) **5 / 5 jobs 成功**：Node 22.13.0 / 24.11.1 完整检查，以及 Ubuntu / macOS / Windows 的独立打包消费者验证。
+- [最终候选 CI](https://github.com/shazhou-ww/potential-guide/actions/runs/38877774181) **5 / 5 jobs 成功**：Node 22.13.0 / 24.11.1 完整检查，以及 Ubuntu / macOS / Windows 的独立打包消费者验证。
 - [逐包 RC 清单](./Release-candidates.md)与[迁移指导](../../../../../docs/functional-migration.md)均已交付。打包证明不等于 npm 发布证明，实际发布状态由 Deployment 记录。
 
 ## 完整验证结果
@@ -62,6 +63,6 @@
 
 ### 发布验证工具修订
 
-首次 effects RC 的 [OIDC publish step](https://github.com/shazhou-ww/potential-guide/actions/runs/38876853830) 成功，但紧接着的 registry 查询因短暂 E404 导致整个 run 失败。暂停下游发布，返回实现修订发布验证工具：加入有界传播等待与纯验证恢复模式，不覆盖版本、不移动已推送 tag，也不重新执行已成功的发布。4 项新回归与完整 pnpm check 已通过；I-S03 / I-AC03 在云端修订验证及真实纯验证恢复完成前保持未完成，原有领域实现与跨平台证据仍有效。
+首次 effects RC 的 [OIDC publish step](https://github.com/shazhou-ww/potential-guide/actions/runs/38876853830) 成功，但紧接着的 registry 查询因短暂 E404 导致整个 run 失败。暂停下游发布，返回实现修订发布验证工具：加入有界传播等待与纯验证恢复模式，不覆盖版本、不移动已推送 tag，也不重新执行已成功的发布。4 项新回归、完整 pnpm check 和最终候选的五个 CI jobs 均通过。[真实纯验证恢复](https://github.com/shazhou-ww/potential-guide/actions/runs/38877790288) 成功，Publish / Pack / dry-run 均跳过；回执确认 effects@0.1.0-rc.0、rc 指向该版本、latest 仍为 0.0.0、integrity 与 provenance 存在，原 producer commit 为 4526dd019d806c4d83f45fa60b66dde687e8c669。原失败 run 保留，不重复发布。I-S03 / I-AC03 修订证据已补齐，可对新 implementationRevision 重新提交并审批。
 
 上述证据支持 Implementation 门线；由已获用户授权的主会话审批，并通过 Silvermoon 的精确 revision Submit / Accept 记录状态。npm OIDC 权限、实际产品 RC、provenance、rc / latest 和 npm 安装消费者仍由 Deployment 验证，不能提前勾选部署验收。
