@@ -76,6 +76,28 @@ test("provenance and the intended RC tag must be present before success", async 
   assert.equal(waits, 1);
 });
 
+test("asynchronous npm processing may exceed one minute before the version becomes visible", async () => {
+  let reads = 0;
+  let elapsed = 0;
+  const receipt = await verifyPublishedPackage(
+    release,
+    async () => {
+      reads++;
+      return Response.json(
+        reads <= 18
+          ? { name: release.name, versions: {}, "dist-tags": { latest: "0.0.0" } }
+          : published(),
+      );
+    },
+    async (milliseconds) => {
+      elapsed += milliseconds;
+    },
+  );
+  assert.equal(reads, 19);
+  assert.equal(elapsed, 90_000);
+  assert.equal(receipt.version, release.version);
+});
+
 test("permanent registry errors and changed latest are not masked by retries", async () => {
   let reads = 0;
   const pause = async () => assert.fail("Permanent errors must not be retried.");
@@ -113,8 +135,8 @@ test("propagation waiting is bounded and a missing version never becomes success
         waits++;
       },
     ),
-    /not visible after 12 attempts/,
+    /not visible after 60 attempts/,
   );
-  assert.equal(reads, 12);
-  assert.equal(waits, 11);
+  assert.equal(reads, 60);
+  assert.equal(waits, 59);
 });

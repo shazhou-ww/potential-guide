@@ -210,8 +210,9 @@ release to this repository and workflow. The publish workflow records a
 release receipt with the exact commit, integrity, provenance URL and
 before/after tags; an RC publish fails verification if `latest` changed.
 
-Registry metadata can lag behind a successful publish. Verification waits for
-the version, intended dist-tag and provenance with a bounded retry; it never
+Registry metadata can lag behind a successful publish, including npm's HTTP 202
+processing response. Verification waits for the version, intended dist-tag and
+provenance for up to 60 polls five seconds apart (about five minutes); it never
 repeats a publish. If an older workflow already published successfully but its
 verification failed, preserve the original run and release tag, then use the
 non-publishing recovery mode with the recorded previous `latest`:

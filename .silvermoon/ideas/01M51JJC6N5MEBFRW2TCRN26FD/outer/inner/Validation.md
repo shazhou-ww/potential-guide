@@ -61,6 +61,10 @@
 
 ## 验收边界
 
+### HTTP 202 处理窗口
+
+实际发布日志明确报告 PUT 202 与 “may take a few minutes”。原一分钟等待窗口对这种正常处理偏短，虽然纯验证恢复已安全取得真实回执，仍应修正未来发布的默认路径：延长为 60 次、每次间隔 5 秒，并增加模拟 90 秒传播的回归，避免正常异步处理总是触发恢复。此修订不改变任何产品包，不重发任何版本；I-S03 / I-AC03 在新检查完成前重置，实际 RC 的不可变发布回执仍有效。
+
 ### 发布验证工具修订
 
 首次 effects RC 的 [OIDC publish step](https://github.com/shazhou-ww/potential-guide/actions/runs/38876853830) 成功，但紧接着的 registry 查询因短暂 E404 导致整个 run 失败。暂停下游发布，返回实现修订发布验证工具：加入有界传播等待与纯验证恢复模式，不覆盖版本、不移动已推送 tag，也不重新执行已成功的发布。4 项新回归、完整 pnpm check 和最终候选的五个 CI jobs 均通过。[真实纯验证恢复](https://github.com/shazhou-ww/potential-guide/actions/runs/38877790288) 成功，Publish / Pack / dry-run 均跳过；回执确认 effects@0.1.0-rc.0、rc 指向该版本、latest 仍为 0.0.0、integrity 与 provenance 存在，原 producer commit 为 4526dd019d806c4d83f45fa60b66dde687e8c669。原失败 run 保留，不重复发布。I-S03 / I-AC03 修订证据已补齐，可对新 implementationRevision 重新提交并审批。

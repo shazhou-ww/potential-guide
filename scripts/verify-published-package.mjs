@@ -13,7 +13,7 @@ export async function verifyPublishedPackage(
     }),
   pause = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
 ) {
-  const attempts = 12;
+  const attempts = 60;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     const response = await readPackage();
     if (!response.ok) {
