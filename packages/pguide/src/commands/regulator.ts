@@ -35,7 +35,7 @@ import {
   type RegulationResult,
 } from "@potential-guide/objective-regulator";
 
-export const regulatorCommandVersion = "0.2.0-rc.1";
+export const regulatorCommandVersion = "0.2.0-rc.2";
 
 interface Attempt {
   id: string;
