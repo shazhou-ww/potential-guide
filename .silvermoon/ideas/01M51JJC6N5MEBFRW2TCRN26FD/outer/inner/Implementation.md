@@ -20,9 +20,9 @@
 
 ### I-S03: 交付迁移入口与 RC 发布候选
 
-- 同步仓库消费者、CLI、配置、scaffold、恢复记录和必要的 Supervisor 调用；完成面向 Silvermoon 的迁移指导及可运行示例，覆盖 import、规格、探针协议、Agent 输入、执行与取消，明确旧记录或旧输入不兼容时的报错。
+- 同步仓库消费者、CLI、配置、scaffold、恢复记录和必要的 Supervisor 调用；完成面向 Silvermoon 的[迁移指导](../../../../../docs/functional-migration.md)及可运行示例，覆盖 import、规格、探针协议、Agent 输入、执行与取消，明确旧记录或旧输入不兼容时的报错。
 - 更新 workspace 依赖、catalog、构建与导出、打包验证、发布 workflow 的逐包映射及 tag 规则和发包文档。RC 的内部依赖必须能由 npm 解析，不能残留 workspace 路径、未发布版本或对退役入口的依赖。
-- 按 [Deployment 版本规则](../Deployment.md#版本与发布边界)准备逐包发布清单：实际变更、已发布基线、目标 RC、版本判断理由、依赖顺序与候选 commit。完成 pnpm check、候选 tarball 检查和独立消费者验证后再进入部署；本阶段不创建产品发布 tag 或发布产品包。
+- 按 [Deployment 版本规则](../Deployment.md#版本与发布边界)准备[逐包发布清单](./Release-candidates.md)：实际变更、已发布基线、目标 RC、版本判断理由、依赖顺序与候选 commit。完成 pnpm check、候选 tarball 检查和独立消费者验证后再进入部署；本阶段不创建产品发布 tag 或发布产品包。
 
 ## Acceptance criteria
 

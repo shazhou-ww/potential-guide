@@ -2,12 +2,7 @@ import { types } from "node:util";
 import type { ValidateFunction } from "ajv";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { parseDocument } from "yaml";
-import type {
-  JsonValue,
-  ObjectiveDomainSchema,
-  ObjectiveGuideManifest,
-  ObjectiveValidationIssues,
-} from "./types.js";
+import type { JsonObject, JsonValue, PilotManifest, ValidationIssues } from "./types.js";
 
 export class ObjectiveConfigurationError extends TypeError {}
 export class ObjectiveOperationError extends TypeError {}
@@ -109,7 +104,7 @@ function canonicalLanguage(language: string) {
     return false;
   }
 }
-export function parseManifest(source: string): ObjectiveGuideManifest {
+export function parseManifest(source: string): PilotManifest {
   const value: unknown = parseStrictYaml(source);
   if (!record(value))
     throw new ObjectiveConfigurationError("Objective Manifest must be an object.");
@@ -165,15 +160,13 @@ export function parseManifest(source: string): ObjectiveGuideManifest {
   if (new Set(levels.map(({ id }) => id)).size !== levels.length) {
     throw new ObjectiveConfigurationError("Duplicate level ID.");
   }
-  const checks = levels.flatMap(({ advancement }) => advancement.checks);
-  if (new Set(checks.map(({ id }) => id)).size !== checks.length) {
-    throw new ObjectiveConfigurationError("Duplicate check ID.");
+  for (const level of levels) {
+    const checks = level.advancement.checks;
+    if (new Set(checks.map(({ id }) => id)).size !== checks.length) {
+      throw new ObjectiveConfigurationError("Duplicate check ID within a level.");
+    }
   }
-  const problemIds = checks.flatMap(({ problems }) => problems);
-  if (new Set(problemIds).size !== problemIds.length) {
-    throw new ObjectiveConfigurationError("Problem ID must belong to exactly one check.");
-  }
-  let prerequisite: ObjectiveGuideManifest["prerequisite"];
+  let prerequisite: PilotManifest["prerequisite"];
   if (Object.hasOwn(value, "prerequisite")) {
     if (!record(value.prerequisite)) throw new ObjectiveConfigurationError("Invalid prerequisite.");
     fields(value.prerequisite, ["manifestUri", "subject"], ["minimumLevelId"]);
@@ -205,7 +198,7 @@ export function parseManifest(source: string): ObjectiveGuideManifest {
     ...(prerequisite === undefined ? {} : { prerequisite }),
   });
 }
-export function compileDomain(schema: ObjectiveDomainSchema): ValidateFunction {
+export function compileDomain(schema: JsonObject): ValidateFunction {
   if (
     schema.type !== "object" ||
     (schema.$schema !== undefined &&
@@ -236,7 +229,7 @@ export function compileDomain(schema: ObjectiveDomainSchema): ValidateFunction {
 export function validateSubject(
   subject: unknown,
   validate: ValidateFunction,
-): ObjectiveValidationIssues | null {
+): ValidationIssues | null {
   if (!record(subject) || !json(subject) || !validate(subject)) {
     const issues = (
       validate.errors ?? [

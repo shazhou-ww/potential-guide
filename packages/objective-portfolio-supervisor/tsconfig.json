@@ -9,10 +9,13 @@
   "include": ["src/**/*.ts"],
   "references": [
     {
-      "path": "../objective-guide"
+      "path": "../objective-pilot"
     },
     {
       "path": "../objective-regulator"
+    },
+    {
+      "path": "../effects"
     }
   ]
 }

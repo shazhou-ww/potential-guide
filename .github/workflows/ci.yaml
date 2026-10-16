@@ -5,6 +5,12 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
+    inputs:
+      published:
+        description: Verify exact published RC versions instead of local tarballs
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -81,4 +87,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify packed CLI deployment
+        if: inputs.published != true
         run: pnpm deployment:verify
+
+      - name: Verify published RC deployment
+        if: inputs.published == true
+        run: node scripts/verify-deployment.mjs --published

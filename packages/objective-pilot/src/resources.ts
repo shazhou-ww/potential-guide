@@ -1,12 +1,7 @@
 import { lstat, readdir, readFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type {
-  ObjectiveGuideManifest,
-  ObjectivePageResource,
-  ObjectiveResourceResolver,
-  ReferencePage,
-} from "./types.js";
+import type { PageResource, PilotManifest, ReferencePage, ResourceResolver } from "./types.js";
 import {
   fields,
   identifier,
@@ -23,6 +18,39 @@ export interface LoadedLocale {
 
 export function canonicalManifestUri(uri: string, base?: string): string {
   try {
+    if (uri.startsWith("git+")) {
+      const url = new URL(uri);
+      const path = decodeURIComponent(url.hash.slice(1));
+      if (
+        !path ||
+        path.startsWith("/") ||
+        path
+          .replace(/\/$/, "")
+          .split("/")
+          .some((part) => part === ".." || part === "." || part === "") ||
+        url.username ||
+        url.password ||
+        url.search
+      ) {
+        throw new ObjectiveConfigurationError(
+          "Git Objective URI requires an unambiguous repository-relative fragment.",
+        );
+      }
+      url.hash = path.split("/").map(encodeURIComponent).join("/");
+      return url.href;
+    }
+    if (base?.startsWith("git+")) {
+      if (/^[a-z][a-z0-9+.-]*:/i.test(uri)) {
+        throw new ObjectiveConfigurationError(
+          "Git resources require a Git Objective URI or a repository-relative reference.",
+        );
+      }
+      const url = new URL(base);
+      const root = decodeURIComponent(url.hash.slice(1));
+      const path = new URL(uri, `https://resource.invalid/${root}`).pathname.slice(1);
+      url.hash = path;
+      return canonicalManifestUri(url.href);
+    }
     const url = base === undefined && isAbsolute(uri) ? pathToFileURL(uri) : new URL(uri, base);
     if (url.hash || url.username || url.password || (url.protocol === "file:" && url.search)) {
       throw new ObjectiveConfigurationError(
@@ -44,7 +72,8 @@ export function canonicalManifestUri(uri: string, base?: string): string {
     throw new ObjectiveConfigurationError(`Invalid Manifest URI: ${uri}.`, { cause: caught });
   }
 }
-export const fileObjectiveResources: ObjectiveResourceResolver = {
+export const fileResources: ResourceResolver = {
+  version: "working-tree",
   async readText(uri) {
     if (new URL(uri).protocol !== "file:")
       throw new ObjectiveConfigurationError(`Unsupported resource URI: ${uri}.`);
@@ -58,7 +87,7 @@ export const fileObjectiveResources: ObjectiveResourceResolver = {
     if (!rootMetadata.isDirectory() || rootMetadata.isSymbolicLink()) {
       throw new ObjectiveConfigurationError("References source must be a regular directory.");
     }
-    const pages: ObjectivePageResource[] = [];
+    const pages: PageResource[] = [];
     async function walk(path: string) {
       const metadata = await lstat(path);
       if (metadata.isSymbolicLink())
@@ -79,7 +108,7 @@ export const fileObjectiveResources: ObjectiveResourceResolver = {
   },
 };
 
-function parsePage(resource: ObjectivePageResource, id: string): ReferencePage {
+function parsePage(resource: PageResource, id: string): ReferencePage {
   const normalized = resource.source.replace(/\r\n/g, "\n");
   const match = /^---\n([\s\S]*?)\n---(?:\n([\s\S]*))?$/.exec(normalized);
   if (match === null)
@@ -102,7 +131,9 @@ function parsePage(resource: ObjectivePageResource, id: string): ReferencePage {
     !references.every(
       (reference: unknown) =>
         typeof reference === "string" &&
-        /^(system|levels|checks|problems|pages)\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(reference),
+        /^(?:(?:system|levels|checks|problems|pages)\/[a-z0-9]+(?:-[a-z0-9]+)*|levels\/[a-z0-9-]+\/checks\/[a-z0-9-]+(?:\/problems\/[a-z0-9-]+)?)$/.test(
+          reference,
+        ),
     ) ||
     new Set(references).size !== references.length
   ) {
@@ -121,9 +152,9 @@ function parsePage(resource: ObjectivePageResource, id: string): ReferencePage {
 }
 
 export function validateReferences(
-  resources: readonly ObjectivePageResource[],
+  resources: readonly PageResource[],
   sourceUri: string,
-  manifest: ObjectiveGuideManifest,
+  manifest: PilotManifest,
 ): ReadonlyMap<string, LoadedLocale> {
   const root = canonicalManifestUri(sourceUri.endsWith("/") ? sourceUri : `${sourceUri}/`);
   const languages = new Set(manifest.languages);
@@ -137,12 +168,13 @@ export function validateReferences(
     if (!uri.startsWith(root))
       throw new ObjectiveConfigurationError(`Reference escapes source: ${uri}.`);
     const parts = decodeURIComponent(uri.slice(root.length)).split("/");
-    if (parts.length !== 3 || !parts[2]!.endsWith(".md")) {
+    if (![3, 5, 7].includes(parts.length) || !parts.at(-1)!.endsWith(".md")) {
       throw new ObjectiveConfigurationError(
         `References require <namespace>/<id>/<language>.md: ${uri}.`,
       );
     }
-    const [namespace, localId, file] = parts as [string, string, string];
+    const [namespace, localId] = parts as [string, string, ...string[]];
+    const file = parts.at(-1)!;
     const language = file.slice(0, -3);
     if (
       !["system", "levels", "checks", "problems", "pages"].includes(namespace) ||
@@ -163,7 +195,19 @@ export function validateReferences(
     if (namespace === "problems" && !problemIds.has(localId)) {
       throw new ObjectiveConfigurationError(`Unknown problem Reference: ${localId}.`);
     }
-    const id = `${namespace}/${localId}`;
+    if (parts.length > 3) {
+      const level = manifest.levels.find(({ id }) => id === localId);
+      const check = level?.advancement.checks.find(({ id }) => id === parts[3]);
+      if (
+        namespace !== "levels" ||
+        parts[2] !== "checks" ||
+        check === undefined ||
+        (parts.length === 7 && (parts[4] !== "problems" || !check.problems.includes(parts[5]!)))
+      ) {
+        throw new ObjectiveConfigurationError(`Invalid scoped Reference identity: ${uri}.`);
+      }
+    }
+    const id = parts.slice(0, -1).join("/");
     const locales = nodes.get(id) ?? new Map<string, ReferencePage>();
     if (locales.has(language))
       throw new ObjectiveConfigurationError(`Duplicate Reference locale: ${id}/${language}.`);
@@ -175,9 +219,26 @@ export function validateReferences(
     "system/404",
     "levels/terminal",
     ...[...levelIds].map((id) => `levels/${id}`),
-    ...[...checkIds].map((id) => `checks/${id}`),
-    ...[...problemIds].map((id) => `problems/${id}`),
   ];
+  for (const level of manifest.levels) {
+    for (const check of level.advancement.checks) {
+      const scoped = `levels/${level.id}/checks/${check.id}`;
+      const uniqueCheck = checks.filter(({ id }) => id === check.id).length === 1;
+      required.push(nodes.has(scoped) ? scoped : uniqueCheck ? `checks/${check.id}` : scoped);
+      for (const problem of check.problems) {
+        const scopedProblem = `${scoped}/problems/${problem}`;
+        const uniqueProblem =
+          checks.flatMap(({ problems }) => problems).filter((id) => id === problem).length === 1;
+        required.push(
+          nodes.has(scopedProblem)
+            ? scopedProblem
+            : uniqueProblem
+              ? `problems/${problem}`
+              : scopedProblem,
+        );
+      }
+    }
+  }
   for (const id of required) {
     if (!nodes.has(id)) throw new ObjectiveConfigurationError(`Missing Reference: ${id}.`);
   }

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { access, chmod, cp, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { delimiter, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { releasePackages } from "./release-packages.mjs";
 import { createDeploymentWorkspace, execute } from "./verify-deployment-helpers.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -11,56 +12,16 @@ const packs = join(scratch, "packs");
 const consumer = join(scratch, "consumer");
 const fixtureSource = join(root, "scripts", "fixtures", "deployment-acp");
 const fixture = join(consumer, "fixture");
+const pilotUri = `git+${pathToFileURL(fixture).href}#guide/pilot.yaml`;
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const binExtension = process.platform === "win32" ? ".cmd" : "";
-const packageDefinitions = [
-  {
-    directory: "pguide-cli-core",
-    name: "@potential-guide/cli-core",
-    exports: true,
-    bins: [],
-  },
-  {
-    directory: "objective-guide",
-    name: "@potential-guide/objective-guide",
-    exports: true,
-    bins: [],
-    forbiddenDependencies: ["@potential-guide/cli-core"],
-  },
-  {
-    directory: "objective-regulator",
-    name: "@potential-guide/objective-regulator",
-    exports: true,
-    bins: [],
-    forbiddenDependencies: ["@potential-guide/cli-core"],
-  },
-  {
-    directory: "objective-portfolio-supervisor",
-    name: "@potential-guide/objective-portfolio-supervisor",
-    exports: true,
-    bins: [],
-    forbiddenDependencies: ["@potential-guide/cli-core"],
-  },
-  {
-    directory: "pguide-config",
-    name: "@potential-guide/config",
-    bins: ["pguide-config"],
-  },
-  {
-    directory: "pguide",
-    name: "pguide",
-    bins: [
-      "pguide",
-      "pguide-continue",
-      "pguide-probe",
-      "pguide-regulate",
-      "pguide-scaffold",
-      "pguide-supervise",
-      "pguide-validate",
-    ],
-  },
-];
+const packageDefinitions = releasePackages;
+const installPublished = process.argv.includes("--published");
+for (const argument of process.argv.slice(2)) {
+  if (argument !== "--published") throw new Error(`Unknown verification argument: ${argument}`);
+}
+const expectedVersions = new Map();
 
 async function successful(command, args, options) {
   const result = await execute(command, args, { cwd: root, ...options });
@@ -77,6 +38,14 @@ async function packAndInstall() {
   const tarballs = [];
   for (const definition of packageDefinitions) {
     const packageRoot = join(root, "packages", definition.directory);
+    const packageManifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
+    assert.equal(packageManifest.name, definition.name);
+    expectedVersions.set(definition.name, packageManifest.version);
+    if (installPublished) {
+      assert.match(packageManifest.version, /^0\.\d+\.\d+-rc\.\d+$/u);
+      tarballs.push(`${definition.name}@${packageManifest.version}`);
+      continue;
+    }
     const packedResult = await successful(
       pnpm,
       ["--dir", packageRoot, "pack", "--pack-destination", packs, "--json"],
@@ -84,12 +53,16 @@ async function packAndInstall() {
     );
     const packed = JSON.parse(packedResult.stdout);
     assert.equal(packed.name, definition.name);
+    assert.equal(packed.version, packageManifest.version);
     const paths = packed.files.map(({ path }) => path);
+    for (const forbidden of definition.forbiddenFiles ?? []) {
+      assert.ok(!paths.includes(forbidden), `${definition.name} contains retired ${forbidden}`);
+    }
     for (const required of [
       "LICENSE",
       "README.md",
       "package.json",
-      ...(definition.exports ? ["dist/index.js", "dist/index.d.ts"] : []),
+      ...(definition.requiredExports === undefined ? [] : ["dist/index.js", "dist/index.d.ts"]),
     ]) {
       assert.ok(paths.includes(required), `${definition.name} is missing ${required}`);
     }
@@ -107,7 +80,6 @@ async function packAndInstall() {
       ),
       `${definition.name} includes development-only content`,
     );
-    const packageManifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
     assert.deepEqual(Object.keys(packageManifest.bin ?? {}).sort(), [...definition.bins].sort());
     for (const dependency of definition.forbiddenDependencies ?? []) {
       assert.equal(
@@ -136,6 +108,13 @@ async function packAndInstall() {
       await readFile(join(consumer, "node_modules", ...definition.name.split("/"), "package.json")),
     );
     assert.equal(installedManifest.name, definition.name);
+    assert.equal(installedManifest.version, expectedVersions.get(definition.name));
+    for (const forbidden of definition.forbiddenFiles ?? []) {
+      await assert.rejects(
+        access(join(consumer, "node_modules", ...definition.name.split("/"), forbidden)),
+        { code: "ENOENT" },
+      );
+    }
     for (const dependency of Object.values(installedManifest.dependencies ?? {})) {
       assert.doesNotMatch(dependency, /^workspace:/);
     }
@@ -146,6 +125,29 @@ async function packAndInstall() {
     }
     for (const bin of definition.bins) await access(executable(bin));
   }
+  const moduleSource = [
+    'import assert from "node:assert/strict";',
+    ...packageDefinitions
+      .filter(({ requiredExports }) => requiredExports !== undefined)
+      .flatMap(({ name, requiredExports }, index) => [
+        `import * as library${index} from ${JSON.stringify(name)};`,
+        ...requiredExports.map(
+          (symbol) =>
+            `assert.ok(Object.hasOwn(library${index}, ${JSON.stringify(symbol)}), ${JSON.stringify(`${name} must export ${symbol}`)});`,
+        ),
+      ]),
+    'import { Effect, Exit, startEffect } from "@potential-guide/effects";',
+    'assert.equal(await Effect.runPromise(Effect.succeed("ready")), "ready");',
+    "const running = startEffect(Effect.never);",
+    "running.cancel();",
+    "assert.ok(Exit.hasInterrupts(await running.exit()));",
+  ].join("\n");
+  const smoke = join(consumer, "public-libraries.mjs");
+  await writeFile(smoke, moduleSource);
+  await successful(process.execPath, [smoke], { cwd: consumer });
+  console.log(
+    `${installPublished ? "registry RC" : "packed"} libraries installed and imported independently`,
+  );
 }
 
 async function verifyCliContract() {
@@ -215,29 +217,46 @@ async function verifyCliContract() {
   assert.deepEqual(JSON.parse(before.stdout), JSON.parse(after.stdout));
 
   await cp(fixtureSource, fixture, { recursive: true });
-  const guide = join(fixture, "guide", "objective-guide.yaml");
   if (process.platform !== "win32") {
     await chmod(join(fixture, "guide", "checks", "ready", "run.js"), 0o755);
   }
   const subject = join(fixture, "subject.json");
   await writeFile(subject, JSON.stringify({ marker: join(fixture, "ready") }));
+  for (const args of [
+    ["init", "-q"],
+    ["config", "user.name", "Deployment Fixture"],
+    ["config", "user.email", "fixture@example.invalid"],
+    ["remote", "add", "origin", pathToFileURL(fixture).href],
+    ["add", "."],
+    ["commit", "-qm", "Create committed deployment fixture"],
+  ]) {
+    await successful("git", ["-C", fixture, ...args], { cwd: consumer });
+  }
   const direct = await successful(
     executable("pguide-probe"),
-    ["--guide", guide, "--subject-file", subject, "--format", "json"],
+    ["--pilot", pilotUri, "--subject-file", subject, "--format", "json"],
     { cwd: consumer, env },
   );
   const dispatched = await successful(
     executable("pguide"),
-    ["probe", "--guide", guide, "--subject-file", subject, "--format", "json"],
+    ["probe", "--pilot", pilotUri, "--subject-file", subject, "--format", "json"],
     { cwd: consumer, env },
   );
-  assert.equal(JSON.parse(direct.stdout).status, JSON.parse(dispatched.stdout).status);
+  const directObservation = JSON.parse(direct.stdout);
+  const dispatchedObservation = JSON.parse(dispatched.stdout);
+  assert.equal(directObservation.status, 200);
+  assert.equal(dispatchedObservation.status, 200);
+  assert.equal(directObservation.payload.current.objectiveId, pilotUri);
+  assert.equal(directObservation.payload.current.levelId, "initial");
+  assert.equal(directObservation.payload.problems[0].ref.problemId, "not-ready");
+  assert.deepEqual(dispatchedObservation.payload.current, directObservation.payload.current);
   const stdin = await successful(
     executable("pguide-probe"),
-    ["--guide", guide, "--subject-file", "-", "--format", "json"],
+    ["--pilot", pilotUri, "--subject-file", "-", "--format", "json"],
     { cwd: consumer, env, input: await readFile(subject, "utf8") },
   );
-  assert.equal(JSON.parse(stdin.stdout).status, "observed");
+  assert.equal(JSON.parse(stdin.stdout).status, 200);
+  assert.equal(JSON.parse(stdin.stdout).payload.problems[0].ref.problemId, "not-ready");
 
   const badOption = await execute(executable("pguide"), ["probe", "--unknown", "x"], {
     cwd: consumer,
@@ -254,10 +273,11 @@ async function writeConfig(path, state) {
     path,
     `${JSON.stringify(
       {
-        schemaVersion: 1,
+        schemaVersion: 2,
         defaultAgent: "fixture",
         stateDirectory: state,
         retentionDays: 1,
+        agentExecutionLimits: { timeoutMs: 30_000 },
         agents: {
           fixture: {
             connection: { type: "acp", protocolVersion: "1" },
@@ -290,8 +310,8 @@ async function invokeRegulate(config, subject, report, env, extra = []) {
       "regulate",
       "--config",
       config,
-      "--guide",
-      join(fixture, "guide", "objective-guide.yaml"),
+      "--pilot",
+      pilotUri,
       "--subject-file",
       subject,
       "--target",
@@ -341,7 +361,7 @@ async function verifyRegulation(baseEnv) {
     cwd: consumer,
     env,
   });
-  assert.equal(JSON.parse(stillSatisfied.stdout).status, "still-satisfied");
+  assert.equal(JSON.parse(stillSatisfied.stdout).status, "target-reached");
 
   await unlink(marker);
   const repaired = await successful(executable("pguide"), continuationArgs, {
@@ -355,8 +375,8 @@ async function verifyRegulation(baseEnv) {
   const lineageSource = await readFile(join(regulationRoot, "regulation.json"), "utf8");
   const lineage = JSON.parse(lineageSource);
   assert.equal(lineage.attempts.length, 3);
-  assert.equal(lineage.attempts[1].resumeMode, "not-needed");
-  assert.equal(lineage.attempts[2].resumeMode, "resumed");
+  assert.equal(lineage.schemaVersion, 2);
+  assert.equal(lineage.attempts[1].actions.length, 0);
   assert.ok(Date.parse(lineage.expiresAt) > Date.now());
   const transcript = await readFile(join(regulationRoot, "transcript.jsonl"), "utf8");
   assert.match(transcript, /session\/update/);
@@ -379,27 +399,27 @@ async function verifyRegulation(baseEnv) {
     { ...baseEnv, PGUIDE_FIXTURE_MODE: "blocked" },
   );
   assert.equal(blocked.code, 3);
-  assert.equal(JSON.parse(blocked.stdout).status, "action-blocked");
+  assert.equal(JSON.parse(blocked.stdout).status, "agent-blocked");
 
-  const stalled = await invokeRegulate(
+  const legacyLimit = await invokeRegulate(
     config,
     blockedSubject,
     join(fixture, "stalled-report.json"),
     { ...baseEnv, PGUIDE_FIXTURE_MODE: "noop" },
     ["--max-stalled-iterations", "1"],
   );
-  assert.equal(stalled.code, 4);
-  assert.equal(JSON.parse(stalled.stdout).status, "no-progress");
+  assert.equal(legacyLimit.code, 2);
+  assert.match(`${legacyLimit.stdout}${legacyLimit.stderr}`, /max-stalled-iterations/);
 
   const timedOut = await invokeRegulate(
     config,
     blockedSubject,
     join(fixture, "timeout-report.json"),
     { ...baseEnv, PGUIDE_FIXTURE_MODE: "hang" },
-    ["--timeout", "200ms"],
+    ["--agent-timeout-ms", "200"],
   );
   assert.equal(timedOut.code, 5);
-  assert.equal(JSON.parse(timedOut.stdout).status, "timed-out");
+  assert.equal(JSON.parse(timedOut.stdout).status, "agent-limit-reached");
 
   if (process.platform !== "win32") {
     const signalMarker = join(fixture, "signal-prompted");
@@ -410,8 +430,8 @@ async function verifyRegulation(baseEnv) {
         "regulate",
         "--config",
         config,
-        "--guide",
-        join(fixture, "guide", "objective-guide.yaml"),
+        "--pilot",
+        pilotUri,
         "--subject-file",
         blockedSubject,
         "--target",

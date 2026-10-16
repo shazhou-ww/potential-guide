@@ -1,21 +1,18 @@
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { appendFile, readFile, stat } from "node:fs/promises";
+import { isAbsolute, join, resolve } from "node:path";
 import {
   AcpClient,
   type AgentProfile,
   agentSecretValues,
   atomicWrite,
   CliError,
-  type CommandMetadata,
-  commandMain,
   digest,
-  digestTree,
-  duration,
   ensurePrivateDirectory,
   type GlobalOptions,
   loadConfig,
   option,
+  type PguideConfig,
   pruneExpiredRegulations,
   readJsonSubject,
   redactSensitive,
@@ -24,211 +21,58 @@ import {
   validateAgentProfile,
   writeResult,
 } from "@potential-guide/cli-core";
+import { Exit, startEffect } from "@potential-guide/effects";
+import type {
+  Envelope,
+  PilotObservation,
+  PilotRuntime,
+  PilotSpec,
+  Subject,
+} from "@potential-guide/objective-pilot";
 import {
-  createObjectiveLoader,
-  type JsonObject,
-  type ObjectiveObservation,
-} from "@potential-guide/objective-guide";
-import {
-  createObjectiveRegulator,
-  ObjectiveRegulatorTimeoutError,
-  type RegulationResult,
+  type AgentInput,
+  type AgentOutcome,
+  makeRegulatorSpec,
+  type RegulationOutcome,
+  regulate,
 } from "@potential-guide/objective-regulator";
+import { withPilot } from "../pilot-source.js";
 
-export const regulatorCommandVersion = "0.2.0-rc.2";
+export const regulatorCommandVersion = "0.3.0-rc.0";
 
 interface Attempt {
   id: string;
   startedAt: string;
   completedAt?: string;
-  limits: { maxIterations: number; maxStalledIterations: number; timeoutMs: number };
-  sessionId?: string;
-  resumeMode?: "new" | "resumed" | "new-with-summary" | "not-needed";
   status?: string;
-  errorCategory?: "input" | "configuration" | "guide" | "agent-spawn" | "acp" | "io" | "internal";
-  errorSummary?: string;
-  observations: ObjectiveObservation[];
-  actions: { problemId: string; status: string; summary: string }[];
-}
-
-export class InvocationTimeoutError extends Error {}
-export class InvocationCancelledError extends Error {}
-
-function expectedFailure(error: unknown): {
-  category: NonNullable<Attempt["errorCategory"]>;
-  failure: CliError;
-} {
-  if (error instanceof CliError) {
-    const category =
-      error.status === "acp-error"
-        ? "acp"
-        : error.status === "guide-error"
-          ? "guide"
-          : error.status === "io-error"
-            ? "io"
-            : error.status === "configuration-error"
-              ? "configuration"
-              : "input";
-    return { category, failure: error };
-  }
-  const nodeError = error as NodeJS.ErrnoException;
-  if (
-    typeof nodeError?.code === "string" &&
-    ["EACCES", "EISDIR", "ENOENT", "ENOTDIR", "EPERM", "EPIPE"].includes(nodeError.code)
-  ) {
-    const category = nodeError.code === "EACCES" ? "agent-spawn" : "io";
-    return {
-      category,
-      failure: new CliError(
-        error instanceof Error ? error.message : "I/O operation failed.",
-        6,
-        category === "agent-spawn" ? "agent-spawn-error" : "io-error",
-      ),
-    };
-  }
-  return {
-    category: "internal",
-    failure: new CliError(
-      error instanceof Error ? error.message : "Internal regulation failure.",
-      70,
-      "internal-error",
-    ),
-  };
-}
-
-type CancellationRegistration = (cancel: () => void) => () => void;
-
-function processCancellation(cancel: () => void): () => void {
-  process.once("SIGINT", cancel);
-  process.once("SIGTERM", cancel);
-  return () => {
-    process.removeListener("SIGINT", cancel);
-    process.removeListener("SIGTERM", cancel);
-  };
-}
-
-export async function withinInvocation<T>(
-  timeoutMs: number,
-  operation: (signal: AbortSignal, deadline: number) => Promise<T>,
-  registerCancellation: CancellationRegistration = processCancellation,
-): Promise<T> {
-  const controller = new AbortController();
-  const deadline = performance.now() + timeoutMs;
-  const state: { owner: "running" | "completed" | "timed-out" | "cancelled" } = {
-    owner: "running",
-  };
-  let result: T | undefined;
-  let failure: unknown;
-  let release!: () => void;
-  const settled = new Promise<void>((resolveSettled) => {
-    release = resolveSettled;
-  });
-  const claim = (next: Exclude<(typeof state)["owner"], "running">, reason?: Error) => {
-    if (state.owner !== "running") return;
-    state.owner = next;
-    if (reason !== undefined) controller.abort(reason);
-    release();
-  };
-  const timer = setTimeout(
-    () => claim("timed-out", new InvocationTimeoutError("Regulation invocation timed out.")),
-    Math.min(timeoutMs, 2_147_483_647),
-  );
-  const unregister = registerCancellation(() =>
-    claim("cancelled", new InvocationCancelledError("Regulation invocation cancelled.")),
-  );
-  const work = operation(controller.signal, deadline).then(
-    (value) => {
-      result = value;
-      claim("completed");
-    },
-    (error: unknown) => {
-      failure = error;
-      claim("completed");
-    },
-  );
-  try {
-    await settled;
-    await work;
-    if (state.owner === "timed-out")
-      throw new InvocationTimeoutError("Regulation invocation timed out.");
-    if (state.owner === "cancelled")
-      throw new InvocationCancelledError("Regulation invocation cancelled.");
-    if (failure !== undefined) throw failure;
-    return result as T;
-  } finally {
-    clearTimeout(timer);
-    unregister();
-  }
+  sessionId?: string;
+  resumeMode?: "new" | "resumed" | "new-without-session-id" | "not-needed";
+  observations: Envelope<PilotObservation>[];
+  actions: AgentOutcome[];
 }
 
 interface Regulation {
-  schemaVersion: 1;
+  schemaVersion: 2;
   regulationId: string;
   createdAt: string;
-  guidePath: string;
-  guideRevision: string;
-  subject: JsonObject;
+  pilotUri: string;
+  pilotCommit: string;
+  sourcePath?: string;
+  subject: Subject;
   subjectDigest: string;
-  targetLevelId: string;
+  targetLevel: string;
   language?: string;
   agentName: string;
   agentProfile: AgentProfile;
-  retentionDays?: number;
+  agentExecutionLimits: { timeoutMs: number };
+  regulationStrategy?: PguideConfig["regulationStrategy"];
+  sessionId?: string;
   expiresAt?: string;
   attempts: Attempt[];
 }
 
-function limits(argv: string[], config: Awaited<ReturnType<typeof loadConfig>>["value"]) {
-  const maxIterations = Number(
-    option(argv, "--max-iterations") ?? config.limits?.maxIterations ?? 8,
-  );
-  const maxStalledIterations = Number(
-    option(argv, "--max-stalled-iterations") ?? config.limits?.maxStalledIterations ?? 2,
-  );
-  const timeoutMs =
-    option(argv, "--timeout") === undefined
-      ? (config.limits?.timeoutMs ?? 1_800_000)
-      : duration(option(argv, "--timeout") as string);
-  if (
-    !Number.isSafeInteger(maxIterations) ||
-    maxIterations < 1 ||
-    !Number.isSafeInteger(maxStalledIterations) ||
-    maxStalledIterations < 1
-  )
-    throw new CliError("Regulation limits must be positive integers.");
-  return { maxIterations, maxStalledIterations, timeoutMs };
-}
-
-function exitCode(status: string): number {
-  if (status === "target-reached" || status === "still-satisfied") return 0;
-  if (status === "action-blocked" || status === "no-actionable-problem") return 3;
-  if (status === "no-progress" || status === "max-iterations") return 4;
-  if (status === "timed-out" || status === "cancelled") return 5;
-  return 6;
-}
-
-async function save(root: string, regulation: Regulation, attempt: Attempt): Promise<void> {
-  const safeRegulation = {
-    ...redactSensitive({ ...regulation, subject: undefined }),
-    subject: regulation.subject,
-    subjectDigest: regulation.subjectDigest,
-  };
-  const safeAttempt = redactSensitive(attempt);
-  await atomicWrite(join(root, "regulation.json"), `${JSON.stringify(safeRegulation, null, 2)}\n`);
-  await atomicWrite(
-    join(root, "attempts", `${attempt.id}.json`),
-    `${JSON.stringify(safeAttempt, null, 2)}\n`,
-  );
-}
-
-function actionPrompt(regulation: Regulation, observation: ObjectiveObservation): string {
-  const problem = observation.problems[0];
-  const history = regulation.attempts
-    .flatMap((attempt) => attempt.actions)
-    .slice(-5)
-    .map((action) => `${action.problemId}: ${action.status} (${action.summary})`)
-    .join("\n");
-  return `Potential Guide regulation ${regulation.regulationId}\nTarget level: ${regulation.targetLevelId}\nCurrent level: ${observation.current.id}\nProblem: ${problem?.id ?? "none"}\nParameters: ${JSON.stringify(problem?.parameters ?? {})}\nRecent protocol-visible action summary:\n${history || "(none)"}\nPerform only the action needed for this problem. Do not claim objective progress; pguide will re-probe.`;
+export function agentPrompt(input: AgentInput): string {
+  return `Potential Guide regulation\nTarget: ${JSON.stringify(input.target)}\nSubject: ${JSON.stringify(input.subject)}\nComplete observation: ${JSON.stringify(input.observation)}\nAgent execution limits: ${JSON.stringify(input.limits)}\nAddress the complete observation. Organize any repair tasks yourself. Do not claim objective progress; pguide re-observes after your execution.`;
 }
 
 function safeAgentValue<T>(value: T, profile: AgentProfile): T {
@@ -240,312 +84,278 @@ function safeAgentValue<T>(value: T, profile: AgentProfile): T {
       return safe;
     }
     if (Array.isArray(current)) return current.map(visit);
-    if (current !== null && typeof current === "object") {
+    if (current !== null && typeof current === "object")
       return Object.fromEntries(Object.entries(current).map(([key, entry]) => [key, visit(entry)]));
-    }
     return current;
   };
   return redactSensitive(visit(value) as T);
 }
 
-async function acpCall<T>(operation: Promise<T>, profile: AgentProfile): Promise<T> {
-  try {
-    return await operation;
-  } catch (error) {
-    if (error instanceof CliError) {
-      throw new CliError(safeAgentValue(error.message, profile), error.exitCode, error.status);
-    }
+export async function executeAcpAgent(
+  input: AgentInput,
+  signal: AbortSignal,
+  profile: AgentProfile,
+  cwd: string,
+  onUpdate?: (update: unknown) => Promise<void>,
+  session: {
+    sessionId?: string;
+    continuing?: boolean;
+    onSession?: (id: string, mode: "new" | "resumed" | "new-without-session-id") => Promise<void>;
+  } = {},
+): Promise<AgentOutcome> {
+  signal.throwIfAborted();
+  if (
+    session.sessionId !== undefined &&
+    (session.sessionId.trim() === "" ||
+      safeAgentValue(session.sessionId, profile) !== session.sessionId)
+  )
     throw new CliError(
-      safeAgentValue(error instanceof Error ? error.message : "ACP operation failed.", profile),
+      "Persisted ACP session ID is invalid or contains credential material.",
       6,
       "acp-error",
     );
-  }
-}
-
-function safeSessionId(sessionId: string, profile: AgentProfile): string {
-  const safe = safeAgentValue(sessionId, profile);
-  if (safe !== sessionId) {
-    throw new CliError("ACP sessionId contained credential material.", 6, "acp-error");
-  }
-  return sessionId;
-}
-
-async function loadGuide(path: string) {
-  try {
-    return await createObjectiveLoader().load(path);
-  } catch (error) {
+  if (session.continuing && session.sessionId === undefined && profile.requirements?.sessionResume)
     throw new CliError(
-      error instanceof Error ? error.message : "Guide could not be loaded.",
-      2,
-      "guide-error",
+      "Cannot continue: no real ACP session ID was persisted and this Agent requires session resume. Start a new regulation.",
+      6,
+      "acp-error",
     );
-  }
-}
-
-async function runAttempt(
-  regulation: Regulation,
-  attempt: Attempt,
-  root: string,
-  cwd: string,
-  resume: boolean,
-  signal: AbortSignal,
-  deadline: number,
-): Promise<
-  | RegulationResult
-  | {
-      status: "still-satisfied";
-      iterations: 0;
-      latestObservation: ObjectiveObservation;
-      targetLevelId: string;
-    }
-> {
-  const abortedError = () =>
-    signal.reason instanceof InvocationCancelledError
-      ? signal.reason
-      : new InvocationTimeoutError("Regulation invocation timed out.");
-  const throwIfAborted = () => {
-    if (signal.aborted) throw abortedError();
-  };
-  if ((await digestTree(regulation.guidePath)) !== regulation.guideRevision)
-    throw new CliError("Guide revision changed; create a new Regulation.", 2, "guide-error");
-  throwIfAborted();
-  if (digest(regulation.subject) !== regulation.subjectDigest)
-    throw new CliError("Stored subject digest mismatch.", 6, "io-error");
-  const guide = await loadGuide(regulation.guidePath);
-  throwIfAborted();
-  const created = guide.createInstance({
-    subject: regulation.subject,
-    ...(regulation.language ? { language: regulation.language } : {}),
-  });
-  if (!created.ok) throw new CliError(`Cannot restore Guide instance: ${created.error.type}.`);
-  const regulator = createObjectiveRegulator(created.instance);
-  let initial: ObjectiveObservation;
-  try {
-    initial = await created.instance.probe(signal);
-  } catch (error) {
-    if (signal.aborted) throw abortedError();
-    throw new CliError(
-      error instanceof Error ? error.message : "Guide probe failed.",
-      2,
-      "guide-error",
-    );
-  }
-  throwIfAborted();
-  attempt.observations.push(initial);
-  await save(root, regulation, attempt);
-  const levels = created.instance.describeLevels();
-  const currentIndex = levels.findIndex((level) => level.id === initial.current.id);
-  const targetIndex = levels.findIndex((level) => level.id === regulation.targetLevelId);
-  if (targetIndex < 0) throw new CliError("Stored target level is no longer available.");
-  if (currentIndex >= targetIndex) {
-    attempt.resumeMode = "not-needed";
-    return {
-      status: resume ? "still-satisfied" : "target-reached",
-      iterations: 0,
-      latestObservation: initial,
-      targetLevelId: regulation.targetLevelId,
-    };
-  }
-  const transcriptPath = join(root, "transcript.jsonl");
-  const client = new AcpClient(regulation.agentProfile, async (update) => {
-    const handle = await import("node:fs/promises");
-    await handle.appendFile(
-      transcriptPath,
-      `${JSON.stringify(safeAgentValue(update, regulation.agentProfile))}\n`,
-      {
-        encoding: "utf8",
-        mode: 0o600,
-      },
-    );
-  });
+  const client = new AcpClient(profile, onUpdate);
   let sessionId: string | undefined;
-  let abortWork: Promise<void> | undefined;
+  let stopping: Promise<void> | undefined;
   const abort = () => {
-    abortWork = sessionId === undefined ? client.stop() : client.cancelAndStop(sessionId);
+    stopping = sessionId === undefined ? client.stop() : client.cancelAndStop(sessionId);
   };
   signal.addEventListener("abort", abort, { once: true });
   try {
-    const initialized = await acpCall(
-      client.initialize(regulation.agentProfile.connection.protocolVersion),
-      regulation.agentProfile,
-    );
-    throwIfAborted();
+    const initialized = await client.initialize(profile.connection.protocolVersion);
+    signal.throwIfAborted();
     if (
       initialized.protocolVersion !== undefined &&
-      String(initialized.protocolVersion) !== regulation.agentProfile.connection.protocolVersion
-    ) {
+      String(initialized.protocolVersion) !== profile.connection.protocolVersion
+    )
       throw new CliError(
-        safeAgentValue(
-          `ACP protocol negotiation selected unsupported version ${String(initialized.protocolVersion)}.`,
-          regulation.agentProfile,
-        ),
+        "ACP protocol negotiation selected an unsupported version.",
         6,
         "acp-error",
       );
-    }
     const capabilities = initialized.agentCapabilities;
     if (
-      regulation.agentProfile.requirements?.sessionResume === true &&
+      (profile.requirements?.sessionResume === true || session.sessionId !== undefined) &&
       (capabilities === null ||
         typeof capabilities !== "object" ||
         (capabilities as Record<string, unknown>).loadSession !== true)
     )
-      throw new CliError("ACP Agent did not advertise required capabilities.", 6, "acp-error");
-    const previous = regulation.attempts
-      .slice(0, -1)
-      .reverse()
-      .find(({ sessionId: priorSessionId }) => priorSessionId !== undefined)?.sessionId;
-    if (resume && previous !== undefined) {
-      try {
-        await acpCall(client.resumeSession(previous, cwd), regulation.agentProfile);
-        throwIfAborted();
-        sessionId = previous;
-        attempt.resumeMode = "resumed";
-      } catch {
-        if (signal.aborted) throw abortedError();
-        sessionId = safeSessionId(
-          await acpCall(client.newSession(cwd), regulation.agentProfile),
-          regulation.agentProfile,
-        );
-        throwIfAborted();
-        attempt.resumeMode = "new-with-summary";
-      }
-    } else {
-      sessionId = safeSessionId(
-        await acpCall(client.newSession(cwd), regulation.agentProfile),
-        regulation.agentProfile,
-      );
-      throwIfAborted();
-      attempt.resumeMode = "new";
-    }
-    attempt.sessionId = sessionId;
-    const activeSessionId = sessionId;
-    let result: RegulationResult;
-    try {
-      result = await regulator.regulate(
-        {
-          targetLevelId: regulation.targetLevelId,
-          limits: {
-            ...attempt.limits,
-            timeoutMs: Math.max(1, deadline - performance.now()),
-          },
-          signal,
-        },
-        async (request) => {
-          attempt.observations.push(request.observation);
-          const response = await acpCall(
-            client.prompt(activeSessionId, actionPrompt(regulation, request.observation)),
-            regulation.agentProfile,
-          );
-          throwIfAborted();
-          const safeResponse = safeAgentValue(response, regulation.agentProfile);
-          if (safeResponse.status === "cancelled") {
-            throw new InvocationCancelledError("ACP session was cancelled.");
-          }
-          attempt.actions.push({
-            problemId: request.problem.id,
-            status: safeResponse.status,
-            summary: safeResponse.summary,
-          });
-          await save(root, regulation, attempt);
-          return safeResponse.status === "completed"
-            ? { status: "completed", summary: safeResponse.summary }
-            : { status: "blocked", reason: safeResponse.summary };
-        },
-      );
-    } catch (error) {
-      if (
-        error instanceof CliError ||
-        error instanceof ObjectiveRegulatorTimeoutError ||
-        error instanceof InvocationCancelledError ||
-        signal.aborted
-      ) {
-        throw signal.aborted ? abortedError() : error;
-      }
       throw new CliError(
-        error instanceof Error ? error.message : "Guide re-probe failed.",
-        2,
-        "guide-error",
+        "ACP Agent did not advertise required session-resume capability.",
+        6,
+        "acp-error",
       );
+    let resumeMode: "new" | "resumed" | "new-without-session-id";
+    if (session.sessionId !== undefined) {
+      await client.resumeSession(session.sessionId, cwd);
+      sessionId = session.sessionId;
+      resumeMode = "resumed";
+    } else {
+      sessionId = await client.newSession(cwd);
+      resumeMode = session.continuing ? "new-without-session-id" : "new";
     }
-    attempt.observations.push(result.latestObservation);
-    return result;
+    signal.throwIfAborted();
+    if (safeAgentValue(sessionId, profile) !== sessionId)
+      throw new CliError("ACP sessionId contained credential material.", 6, "acp-error");
+    await session.onSession?.(sessionId, resumeMode);
+    signal.throwIfAborted();
+    const response = safeAgentValue(await client.prompt(sessionId, agentPrompt(input)), profile);
+    signal.throwIfAborted();
+    return response.status === "completed"
+      ? { status: "completed", summary: response.summary }
+      : { status: "blocked", reason: response.summary };
+  } catch (error) {
+    if (signal.aborted) throw signal.reason;
+    throw new CliError(
+      safeAgentValue(error instanceof Error ? error.message : "ACP invocation failed.", profile),
+      6,
+      "acp-error",
+    );
   } finally {
     signal.removeEventListener("abort", abort);
-    await (abortWork ?? client.stop());
+    await (stopping ?? client.stop());
   }
 }
 
-function reportValue(regulation: Regulation, finalStatus: string) {
-  return redactSensitive({
-    schemaVersion: 1,
-    regulationId: regulation.regulationId,
-    targetLevelId: regulation.targetLevelId,
-    status: finalStatus,
-    finalStatus,
-    attempts: regulation.attempts.map((entry) => ({
-      id: entry.id,
-      startedAt: entry.startedAt,
-      completedAt: entry.completedAt,
-      status: entry.status,
-      resumeMode: entry.resumeMode,
-      actions: entry.actions,
-      rounds: entry.observations.map((observation, index) => ({
-        round: index + 1,
-        currentLevelId: observation.current.id,
-        problemIds: observation.problems.map((problem) => problem.id),
-      })),
-    })),
-    recovery: {
-      regulationId: regulation.regulationId,
-      command: `pguide continue ${regulation.regulationId}`,
-    },
-  });
+async function save(root: string, regulation: Regulation, attempt: Attempt): Promise<void> {
+  const safe = {
+    ...redactSensitive({ ...regulation, subject: undefined }),
+    subject: regulation.subject,
+  };
+  await atomicWrite(join(root, "regulation.json"), `${JSON.stringify(safe, null, 2)}\n`);
+  await atomicWrite(
+    join(root, "attempts", `${attempt.id}.json`),
+    `${JSON.stringify(redactSensitive(attempt), null, 2)}\n`,
+  );
 }
 
-interface FinishedInvocation {
-  code: number;
-  value: ReturnType<typeof reportValue>;
-  markdown: string;
+function code(reason: string): number {
+  if (reason === "target-reached") return 0;
+  if (reason === "agent-blocked" || reason === "no-actionable-problem") return 3;
+  if (reason === "agent-limit-reached" || reason === "cancelled" || reason === "effect-ttl-reached")
+    return 5;
+  return 6;
 }
 
-async function finish(
+async function run(
   regulation: Regulation,
-  attempt: Attempt,
-  root: string,
-  result: Awaited<ReturnType<typeof runAttempt>>,
   globals: GlobalOptions,
   reportPath?: string,
-): Promise<FinishedInvocation> {
-  attempt.completedAt = new Date().toISOString();
-  attempt.status = result.status;
-  await save(root, regulation, attempt);
-  const value = reportValue(regulation, result.status);
-  const report = `# Regulation ${regulation.regulationId}\n\nStatus: \`${result.status}\`\n\nTarget: \`${regulation.targetLevelId}\`\n\nIterations: ${result.iterations}`;
-  if (reportPath !== undefined) {
-    await atomicWrite(resolve(globals.cwd, reportPath), `${JSON.stringify(value, null, 2)}\n`);
-  }
-  return { code: exitCode(result.status), value, markdown: report };
-}
-
-async function finishInterrupted(
-  regulation: Regulation,
-  attempt: Attempt,
-  root: string,
-  status: "timed-out" | "cancelled",
-  globals: GlobalOptions,
-  reportPath?: string,
+  prepared?: { spec: PilotSpec; runtime: PilotRuntime },
+  continuing = false,
 ): Promise<number> {
-  attempt.status = status;
-  attempt.completedAt = new Date().toISOString();
+  const root = join(
+    stateRoot((await loadConfig(globals.cwd, globals.config)).value),
+    "regulations",
+    regulation.regulationId,
+  );
+  await ensurePrivateDirectory(root);
+  if (digest(regulation.subject) !== regulation.subjectDigest)
+    throw new CliError("Stored subject digest mismatch.", 6, "io-error");
+  validateAgentProfile(regulation.agentProfile);
+  const attempt: Attempt = {
+    id: randomUUID(),
+    startedAt: new Date().toISOString(),
+    observations: [],
+    actions: [],
+    resumeMode: "not-needed",
+  };
+  regulation.attempts.push(attempt);
   await save(root, regulation, attempt);
-  const value = reportValue(regulation, status);
-  if (reportPath !== undefined) {
-    await atomicWrite(resolve(globals.cwd, reportPath), `${JSON.stringify(value, null, 2)}\n`);
+  // Observation callbacks are synchronous; drain serialized writes before execution/finalization.
+  let persistence = Promise.resolve();
+  const persist = () => {
+    persistence = persistence.then(() => save(root, regulation, attempt));
+    void persistence.catch(() => {});
+    return persistence;
+  };
+  const controller = new AbortController();
+  const cancel = () => controller.abort(new Error("Regulation cancelled."));
+  process.once("SIGINT", cancel);
+  process.once("SIGTERM", cancel);
+  let outcome: RegulationOutcome | undefined;
+  try {
+    const execute = async (pilot: PilotSpec, runtime: PilotRuntime) => {
+      if (pilot.objectiveId !== regulation.pilotUri || pilot.version !== regulation.pilotCommit)
+        throw new CliError(
+          "Recovery source does not match the pinned Pilot identity and commit; no newer version was selected.",
+          6,
+          "pilot-error",
+        );
+      const spec = makeRegulatorSpec(
+        pilot,
+        {
+          ...regulation.regulationStrategy,
+          targetLevel: regulation.targetLevel,
+          agentExecutionLimits: regulation.agentExecutionLimits,
+        },
+        { id: regulation.agentName },
+      );
+      const operation = startEffect(
+        regulate(
+          {
+            spec,
+            subject: regulation.subject,
+            ...(regulation.language === undefined ? {} : { language: regulation.language }),
+          },
+          {
+            pilot: runtime,
+            executeAgent: async (input, signal) => {
+              await persistence;
+              const result = await executeAcpAgent(
+                input,
+                signal,
+                regulation.agentProfile,
+                globals.cwd,
+                async (update) => {
+                  await appendFile(
+                    join(root, "transcript.jsonl"),
+                    `${JSON.stringify(safeAgentValue(update, regulation.agentProfile))}\n`,
+                    { mode: 0o600 },
+                  );
+                },
+                {
+                  ...(regulation.sessionId === undefined
+                    ? {}
+                    : { sessionId: regulation.sessionId }),
+                  continuing,
+                  onSession: async (id, mode) => {
+                    regulation.sessionId = id;
+                    attempt.sessionId = id;
+                    attempt.resumeMode = mode;
+                    await persist();
+                  },
+                },
+              );
+              attempt.actions.push(result);
+              await persist();
+              return result;
+            },
+            onObservation: (observation) => {
+              attempt.observations.push(observation);
+              void persist();
+            },
+          },
+        ),
+        controller.signal,
+      );
+      const exit = await operation.exit();
+      return Exit.hasInterrupts(exit) ? undefined : operation.await();
+    };
+    if (prepared === undefined) {
+      let location = regulation.pilotUri;
+      if (regulation.sourcePath !== undefined) {
+        try {
+          await stat(regulation.sourcePath);
+          location = regulation.sourcePath;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        }
+      }
+      try {
+        outcome = await withPilot(location, globals.cwd, regulation.pilotCommit, execute);
+      } catch (cause) {
+        if (controller.signal.aborted) throw cause;
+        throw new CliError(
+          `Cannot restore pinned Pilot commit ${regulation.pilotCommit}: ${cause instanceof Error ? cause.message : String(cause)} No source version was substituted.`,
+          6,
+          "pilot-error",
+        );
+      }
+    } else outcome = await execute(prepared.spec, prepared.runtime);
+    attempt.status =
+      outcome?.stopReason ??
+      (controller.signal.aborted || regulation.regulationStrategy?.effectTtlMs === undefined
+        ? "cancelled"
+        : "effect-ttl-reached");
+  } catch (error) {
+    attempt.status = controller.signal.aborted ? "cancelled" : "failed";
+    if (!controller.signal.aborted) throw error;
+  } finally {
+    process.removeListener("SIGINT", cancel);
+    process.removeListener("SIGTERM", cancel);
+    await persistence;
+    attempt.completedAt = new Date().toISOString();
+    await save(root, regulation, attempt);
   }
-  writeResult(value, globals.format, `Regulation ${regulation.regulationId} ${status}.`);
-  return 5;
+  const value = redactSensitive({
+    schemaVersion: 2,
+    regulationId: regulation.regulationId,
+    status: attempt.status,
+    outcome,
+    attempts: regulation.attempts,
+    recovery: { command: `pguide continue ${regulation.regulationId}` },
+  });
+  if (reportPath !== undefined)
+    await atomicWrite(resolve(globals.cwd, reportPath), `${JSON.stringify(value, null, 2)}\n`);
+  writeResult(value, globals.format, `Regulation ${regulation.regulationId}: ${attempt.status}.`);
+  return code(attempt.status ?? "failed");
 }
 
 export async function runRegulate(
@@ -556,101 +366,78 @@ export async function runRegulate(
     writeResult(
       { schemaVersion: 1, command: "regulate" },
       globals.format,
-      "Usage: pguide regulate --guide <path> --subject-file <path|-> --target <level> [--agent <profile>]",
+      "Usage: pguide regulate --pilot <path|Git URI> --subject-file <path|-> --target <level> [--agent <profile>] [--agent-timeout-ms <positive integer>] [--revision <ref|commit>]",
     );
     return;
   }
   rejectUnknownOptions(argv, {
-    "--guide": "value",
+    "--pilot": "value",
     "--subject-file": "value",
     "--target": "value",
     "--agent": "value",
     "--language": "value",
-    "--max-iterations": "value",
-    "--max-stalled-iterations": "value",
-    "--timeout": "value",
+    "--agent-timeout-ms": "value",
+    "--revision": "value",
     "--report": "value",
   });
   const loaded = await loadConfig(globals.cwd, globals.config);
   await pruneExpiredRegulations(stateRoot(loaded.value));
-  const guidePath = resolve(globals.cwd, option(argv, "--guide", { required: true }) as string);
-  const subject = (await readJsonSubject(
-    option(argv, "--subject-file", { required: true }) as string,
-    globals.cwd,
-  )) as JsonObject;
-  const targetLevelId = option(argv, "--target", { required: true }) as string;
   const agentName = (option(argv, "--agent") as string | undefined) ?? loaded.value.defaultAgent;
   if (agentName === undefined)
     throw new CliError("--agent is required when defaultAgent is not configured.");
   const profile = loaded.value.agents?.[agentName];
   if (profile === undefined) throw new CliError(`Unknown Agent profile: ${agentName}.`);
   validateAgentProfile(profile);
-  const guideRevision = await digestTree(guidePath);
-  const regulationId = randomUUID();
-  const root = join(stateRoot(loaded.value), "regulations", regulationId);
-  await ensurePrivateDirectory(root);
-  const attempt: Attempt = {
-    id: randomUUID(),
-    startedAt: new Date().toISOString(),
-    limits: limits(argv, loaded.value),
-    observations: [],
-    actions: [],
-  };
-  const regulation: Regulation = {
-    schemaVersion: 1,
-    regulationId,
-    createdAt: new Date().toISOString(),
-    guidePath,
-    guideRevision,
-    subject,
-    subjectDigest: digest(subject),
-    targetLevelId,
-    ...(option(argv, "--language") === undefined
-      ? {}
-      : { language: option(argv, "--language") as string }),
-    agentName,
-    agentProfile: profile,
-    ...(loaded.value.retentionDays === undefined
-      ? {}
-      : {
-          retentionDays: loaded.value.retentionDays,
-          expiresAt: new Date(Date.now() + loaded.value.retentionDays * 86_400_000).toISOString(),
-        }),
-    attempts: [attempt],
-  };
-  await save(root, regulation, attempt);
-  const reportPath = option(argv, "--report") as string | undefined;
-  try {
-    const finished = await withinInvocation(attempt.limits.timeoutMs, async (signal, deadline) =>
-      finish(
-        regulation,
-        attempt,
-        root,
-        await runAttempt(regulation, attempt, root, globals.cwd, false, signal, deadline),
-        globals,
-        reportPath,
-      ),
-    );
-    writeResult(finished.value, globals.format, finished.markdown);
-    return finished.code;
-  } catch (error) {
-    if (
-      error instanceof ObjectiveRegulatorTimeoutError ||
-      error instanceof InvocationTimeoutError
-    ) {
-      return finishInterrupted(regulation, attempt, root, "timed-out", globals, reportPath);
-    }
-    if (error instanceof InvocationCancelledError) {
-      return finishInterrupted(regulation, attempt, root, "cancelled", globals, reportPath);
-    }
-    const expected = expectedFailure(error);
-    attempt.status = "failed";
-    attempt.completedAt = new Date().toISOString();
-    attempt.errorCategory = expected.category;
-    attempt.errorSummary = `${expected.category} failure`;
-    await save(root, regulation, attempt);
-    throw expected.failure;
-  }
+  const subject = (await readJsonSubject(
+    option(argv, "--subject-file", { required: true }) as string,
+    globals.cwd,
+  )) as Subject;
+  const language = option(argv, "--language") as string | undefined;
+  const timeout = option(argv, "--agent-timeout-ms") as string | undefined;
+  const timeoutMs =
+    timeout === undefined
+      ? (loaded.value.agentExecutionLimits?.timeoutMs ?? 1_800_000)
+      : Number(timeout);
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2_147_483_647)
+    throw new CliError("--agent-timeout-ms must be a positive integer no greater than 2147483647.");
+  const location = option(argv, "--pilot", { required: true }) as string;
+  return withPilot(
+    location,
+    globals.cwd,
+    option(argv, "--revision") as string | undefined,
+    async (spec, runtime) => {
+      const regulation: Regulation = {
+        schemaVersion: 2,
+        regulationId: randomUUID(),
+        createdAt: new Date().toISOString(),
+        pilotUri: spec.objectiveId,
+        pilotCommit: spec.version,
+        ...(location.startsWith("git+") ? {} : { sourcePath: resolve(globals.cwd, location) }),
+        subject,
+        subjectDigest: digest(subject),
+        targetLevel: option(argv, "--target", { required: true }) as string,
+        ...(language === undefined ? {} : { language }),
+        agentName,
+        agentProfile: profile,
+        agentExecutionLimits: { timeoutMs },
+        ...(loaded.value.regulationStrategy === undefined
+          ? {}
+          : { regulationStrategy: loaded.value.regulationStrategy }),
+        ...(loaded.value.retentionDays === undefined
+          ? {}
+          : {
+              expiresAt: new Date(
+                Date.now() + loaded.value.retentionDays * 86_400_000,
+              ).toISOString(),
+            }),
+        attempts: [],
+      };
+      return run(regulation, globals, option(argv, "--report") as string | undefined, {
+        spec,
+        runtime,
+      });
+    },
+  );
 }
 
 export async function runContinue(
@@ -661,80 +448,55 @@ export async function runContinue(
     writeResult(
       { schemaVersion: 1, command: "continue" },
       globals.format,
-      "Usage: pguide continue <regulation-id>",
+      "Usage: pguide continue <regulation-id> [--report <path>]",
     );
     return;
   }
   rejectUnknownOptions(argv, { "--report": "value" }, 1);
-  let id: string | undefined;
-  for (let index = 0; index < argv.length; index += 1) {
-    if (argv[index] === "--report") {
-      index += 1;
-    } else {
-      id = argv[index];
-      break;
-    }
-  }
+  const id = argv[0];
   if (id === undefined || !/^[0-9a-f-]{36}$/.test(id))
     throw new CliError("A valid regulation ID is required.");
   const loaded = await loadConfig(globals.cwd, globals.config);
   await pruneExpiredRegulations(stateRoot(loaded.value));
-  const root = join(stateRoot(loaded.value), "regulations", id);
-  let regulation: Regulation;
-  try {
-    regulation = JSON.parse(await readFile(join(root, "regulation.json"), "utf8")) as Regulation;
-  } catch {
-    throw new CliError(`Regulation not found: ${id}.`, 6, "io-error");
-  }
-  const previousLimits = regulation.attempts.at(-1)?.limits;
-  if (previousLimits === undefined)
-    throw new CliError("Regulation has no prior Attempt.", 6, "io-error");
-  const attempt: Attempt = {
-    id: randomUUID(),
-    startedAt: new Date().toISOString(),
-    limits: previousLimits,
-    observations: [],
-    actions: [],
-  };
-  regulation.attempts.push(attempt);
-  await save(root, regulation, attempt);
-  const reportPath = option(argv, "--report") as string | undefined;
-  try {
-    const finished = await withinInvocation(attempt.limits.timeoutMs, async (signal, deadline) =>
-      finish(
-        regulation,
-        attempt,
-        root,
-        await runAttempt(regulation, attempt, root, globals.cwd, true, signal, deadline),
-        globals,
-        reportPath,
-      ),
+  const path = join(stateRoot(loaded.value), "regulations", id, "regulation.json");
+  const record: unknown = JSON.parse(await readFile(path, "utf8"));
+  if (
+    record === null ||
+    typeof record !== "object" ||
+    !("schemaVersion" in record) ||
+    record.schemaVersion !== 2
+  )
+    throw new CliError(
+      "Legacy continue records are incompatible with Pilot regulation. Start a new regulation with --pilot.",
     );
-    writeResult(finished.value, globals.format, finished.markdown);
-    return finished.code;
-  } catch (error) {
-    if (
-      error instanceof ObjectiveRegulatorTimeoutError ||
-      error instanceof InvocationTimeoutError
-    ) {
-      return finishInterrupted(regulation, attempt, root, "timed-out", globals, reportPath);
-    }
-    if (error instanceof InvocationCancelledError) {
-      return finishInterrupted(regulation, attempt, root, "cancelled", globals, reportPath);
-    }
-    const expected = expectedFailure(error);
-    attempt.status = "failed";
-    attempt.completedAt = new Date().toISOString();
-    attempt.errorCategory = expected.category;
-    attempt.errorSummary = `${expected.category} failure`;
-    await save(root, regulation, attempt);
-    throw expected.failure;
+  const regulation = record as Regulation;
+  if (
+    regulation.regulationId !== id ||
+    typeof regulation.pilotUri !== "string" ||
+    !regulation.pilotUri.startsWith("git+") ||
+    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(regulation.pilotCommit) ||
+    !Array.isArray(regulation.attempts) ||
+    !Number.isSafeInteger(regulation.agentExecutionLimits?.timeoutMs) ||
+    regulation.agentExecutionLimits.timeoutMs < 1
+  )
+    throw new CliError("Invalid Pilot regulation recovery record.", 6, "io-error");
+  if (
+    regulation.sourcePath !== undefined &&
+    (typeof regulation.sourcePath !== "string" || !isAbsolute(regulation.sourcePath))
+  )
+    throw new CliError(
+      "Recovery sourcePath must be an absolute local path, not an Objective identity.",
+      6,
+      "io-error",
+    );
+  const sessionId =
+    regulation.sessionId ??
+    [...regulation.attempts].reverse().find((attempt) => attempt.sessionId !== undefined)
+      ?.sessionId;
+  if (sessionId !== undefined) {
+    if (typeof sessionId !== "string" || sessionId.trim() === "")
+      throw new CliError("Invalid persisted ACP session ID.", 6, "io-error");
+    regulation.sessionId = sessionId;
   }
-}
-
-export function launchRegulatorCommand(
-  metadata: CommandMetadata,
-  run: (argv: string[], globals: GlobalOptions) => Promise<number | undefined>,
-): void {
-  void commandMain(metadata, run);
+  return run(regulation, globals, option(argv, "--report") as string | undefined, undefined, true);
 }

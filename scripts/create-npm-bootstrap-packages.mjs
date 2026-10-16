@@ -1,19 +1,12 @@
 import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { releasePackages } from "./release-packages.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const destination = resolve(process.argv[2] ?? join(root, ".cache", "npm-bootstrap"));
-const packages = [
-  "pguide-cli-core",
-  "objective-guide",
-  "objective-regulator",
-  "objective-portfolio-supervisor",
-  "pguide-config",
-  "pguide",
-];
+const packages = releasePackages.map(({ directory }) => directory);
 const packageManagerCli = process.env.npm_execpath;
 if (packageManagerCli === undefined) {
   throw new Error("Run this script through pnpm bootstrap:pack.");
@@ -23,7 +16,8 @@ const packageManagerIsExecutable = packageManagerCli.toLowerCase().endsWith(".ex
 await mkdir(dirname(destination), { recursive: true });
 await mkdir(destination);
 
-const temporaryRoot = await mkdtemp(join(tmpdir(), "potential-guide-npm-bootstrap-"));
+await mkdir(join(root, ".cache"), { recursive: true });
+const temporaryRoot = await mkdtemp(join(root, ".cache", "potential-guide-npm-bootstrap-"));
 try {
   for (const directory of packages) {
     const sourceManifest = JSON.parse(

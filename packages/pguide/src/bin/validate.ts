@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-import { guideCommandVersion, launchGuideCommand, runValidate } from "../commands/guide.js";
-launchGuideCommand(
+import { launchPilotCommand, pilotCommandVersion, runValidate } from "../commands/pilot.js";
+
+launchPilotCommand(
   {
     protocol: "pguide-command-v1",
     command: "validate",
-    description: "Validate an Objective Guide",
-    version: guideCommandVersion,
+    description: "Validate an Objective Pilot",
+    version: pilotCommandVersion,
   },
   runValidate,
 );

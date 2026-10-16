@@ -17,7 +17,6 @@ import {
 import { homedir, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
-import { fileURLToPath } from "node:url";
 import { parse, stringify } from "yaml";
 import { pipeRedactedSecrets } from "./streaming-secret-redactor.js";
 
@@ -37,7 +36,7 @@ export interface AgentProfile {
 }
 
 export interface PguideConfig {
-  schemaVersion: 1;
+  schemaVersion: 2;
   defaultAgent?: string;
   commandDirectories?: string[];
   defaultLanguage?: string;
@@ -46,7 +45,12 @@ export interface PguideConfig {
   logLevel?: "error" | "warn" | "info" | "debug";
   stateDirectory?: string;
   retentionDays?: number;
-  limits?: { maxIterations?: number; maxStalledIterations?: number; timeoutMs?: number };
+  agentExecutionLimits?: { timeoutMs?: number };
+  regulationStrategy?: {
+    mode?: { type: "adhoc" } | { type: "periodic"; intervalMs: number };
+    probe?: { timeoutMs: number; retry: { maxRetries: number; delayMs: number } };
+    effectTtlMs?: number;
+  };
   agents?: Record<string, AgentProfile>;
 }
 
@@ -235,6 +239,11 @@ export function parseConfig(source: string): PguideConfig {
     throw new CliError(`Invalid YAML: ${error instanceof Error ? error.message : String(error)}`);
   }
   if (!record(raw)) throw new CliError("Configuration must be an object.");
+  if (raw.schemaVersion === 1 || raw.limits !== undefined) {
+    throw new CliError(
+      "Legacy configuration is incompatible. Use schemaVersion: 2 and agentExecutionLimits.timeoutMs; cross-round iteration and stalled budgets are no longer supported.",
+    );
+  }
   exactKeys(
     raw,
     [
@@ -247,12 +256,13 @@ export function parseConfig(source: string): PguideConfig {
       "logLevel",
       "stateDirectory",
       "retentionDays",
-      "limits",
+      "agentExecutionLimits",
+      "regulationStrategy",
       "agents",
     ],
     "Configuration",
   );
-  if (raw.schemaVersion !== 1) throw new CliError("Configuration schemaVersion must be 1.");
+  if (raw.schemaVersion !== 2) throw new CliError("Configuration schemaVersion must be 2.");
   for (const field of ["defaultAgent", "defaultLanguage", "stateDirectory"] as const) {
     if (raw[field] !== undefined && !nonempty(raw[field])) {
       throw new CliError(`${field} must be a nonempty string.`);
@@ -282,12 +292,59 @@ export function parseConfig(source: string): PguideConfig {
     throw new CliError("logLevel is invalid.");
   }
   positiveInteger(raw.retentionDays, "retentionDays");
-  if (raw.limits !== undefined) {
-    if (!record(raw.limits)) throw new CliError("limits must be an object.");
-    exactKeys(raw.limits, ["maxIterations", "maxStalledIterations", "timeoutMs"], "limits");
-    positiveInteger(raw.limits.maxIterations, "limits.maxIterations");
-    positiveInteger(raw.limits.maxStalledIterations, "limits.maxStalledIterations");
-    positiveInteger(raw.limits.timeoutMs, "limits.timeoutMs");
+  if (raw.agentExecutionLimits !== undefined) {
+    if (!record(raw.agentExecutionLimits))
+      throw new CliError("agentExecutionLimits must be an object.");
+    exactKeys(raw.agentExecutionLimits, ["timeoutMs"], "agentExecutionLimits");
+    const timeoutMs = positiveInteger(
+      raw.agentExecutionLimits.timeoutMs,
+      "agentExecutionLimits.timeoutMs",
+    );
+    if (timeoutMs !== undefined && timeoutMs > 2_147_483_647)
+      throw new CliError("agentExecutionLimits.timeoutMs must not exceed 2147483647.");
+  }
+  if (raw.regulationStrategy !== undefined) {
+    const strategy = raw.regulationStrategy;
+    if (!record(strategy)) throw new CliError("regulationStrategy must be an object.");
+    exactKeys(strategy, ["mode", "probe", "effectTtlMs"], "regulationStrategy");
+    const timer = (value: unknown, field: string, allowZero = false): void => {
+      if (
+        !Number.isSafeInteger(value) ||
+        Number(value) < (allowZero ? 0 : 1) ||
+        Number(value) > 2_147_483_647
+      )
+        throw new CliError(
+          `${field} must be an integer between ${allowZero ? 0 : 1} and 2147483647.`,
+        );
+    };
+    if (strategy.mode !== undefined) {
+      if (!record(strategy.mode)) throw new CliError("regulationStrategy.mode must be an object.");
+      if (strategy.mode.type === "adhoc")
+        exactKeys(strategy.mode, ["type"], "regulationStrategy.mode");
+      else if (strategy.mode.type === "periodic") {
+        exactKeys(strategy.mode, ["type", "intervalMs"], "regulationStrategy.mode");
+        timer(strategy.mode.intervalMs, "regulationStrategy.mode.intervalMs");
+      } else throw new CliError("regulationStrategy.mode.type must be adhoc or periodic.");
+    }
+    if (strategy.probe !== undefined) {
+      if (!record(strategy.probe))
+        throw new CliError("regulationStrategy.probe must be an object.");
+      exactKeys(strategy.probe, ["timeoutMs", "retry"], "regulationStrategy.probe");
+      timer(strategy.probe.timeoutMs, "regulationStrategy.probe.timeoutMs");
+      if (!record(strategy.probe.retry))
+        throw new CliError("regulationStrategy.probe.retry is required.");
+      exactKeys(strategy.probe.retry, ["maxRetries", "delayMs"], "regulationStrategy.probe.retry");
+      if (
+        !Number.isSafeInteger(strategy.probe.retry.maxRetries) ||
+        Number(strategy.probe.retry.maxRetries) < 0
+      )
+        throw new CliError(
+          "regulationStrategy.probe.retry.maxRetries must be a nonnegative integer.",
+        );
+      timer(strategy.probe.retry.delayMs, "regulationStrategy.probe.retry.delayMs", true);
+    }
+    if (strategy.effectTtlMs !== undefined)
+      timer(strategy.effectTtlMs, "regulationStrategy.effectTtlMs");
   }
   if (raw.agents !== undefined) {
     if (!record(raw.agents)) throw new CliError("agents must be an object.");
@@ -347,7 +404,13 @@ function mergeConfig(
   sources: Record<string, string>,
 ): PguideConfig {
   const next = { ...target, ...incoming };
-  if (incoming.limits !== undefined) next.limits = { ...target.limits, ...incoming.limits };
+  if (incoming.agentExecutionLimits !== undefined)
+    next.agentExecutionLimits = {
+      ...target.agentExecutionLimits,
+      ...incoming.agentExecutionLimits,
+    };
+  if (incoming.regulationStrategy !== undefined)
+    next.regulationStrategy = { ...target.regulationStrategy, ...incoming.regulationStrategy };
   if (incoming.agents !== undefined) next.agents = { ...target.agents, ...incoming.agents };
   for (const key of Object.keys(incoming)) sources[key] = source;
   for (const name of Object.keys(incoming.agents ?? {})) sources[`agents.${name}`] = source;
@@ -357,7 +420,7 @@ function mergeConfig(
 export async function loadConfig(cwd: string, explicit?: string): Promise<LoadedConfig> {
   const user = userConfigPath();
   const project = await existingProjectConfig(cwd);
-  let value: PguideConfig = { schemaVersion: 1 };
+  let value: PguideConfig = { schemaVersion: 2 };
   const sources: Record<string, string> = { schemaVersion: "built-in" };
   for (const path of [user, project, explicit].filter(
     (entry): entry is string => entry !== undefined,
@@ -376,7 +439,7 @@ export async function loadConfig(cwd: string, explicit?: string): Promise<Loaded
     value = mergeConfig(value, env as PguideConfig, "environment", sources);
   }
   return {
-    value: parseConfig(stringify({ ...value, schemaVersion: 1 })),
+    value: parseConfig(stringify({ ...value, schemaVersion: 2 })),
     sources,
     paths: {
       user,
@@ -503,61 +566,6 @@ export function duration(value: string): number {
 
 export function digest(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
-}
-
-export async function digestTree(manifestPath: string): Promise<string> {
-  const guides: { relation: string; entries: { path: string; content: string }[] }[] = [];
-  const visited = new Set<string>();
-  async function visitTree(manifest: string, relation: string): Promise<void> {
-    const canonicalManifest = await realpath(resolve(manifest));
-    if (visited.has(canonicalManifest)) {
-      throw new CliError("Guide prerequisite tree contains a cycle.");
-    }
-    visited.add(canonicalManifest);
-    const root = dirname(canonicalManifest);
-    const entries: { path: string; content: string }[] = [];
-    async function visit(directory: string, relative: string): Promise<void> {
-      const names = (await readdir(directory)).sort((left, right) =>
-        Buffer.from(left).compare(Buffer.from(right)),
-      );
-      for (const name of names) {
-        const absolute = join(directory, name);
-        const childRelative = relative === "" ? name : `${relative}/${name}`;
-        const details = await lstat(absolute);
-        if (details.isSymbolicLink()) {
-          throw new CliError(`Guide trees may not contain symbolic links: ${childRelative}.`);
-        }
-        if (details.isDirectory()) await visit(absolute, childRelative);
-        else if (details.isFile()) {
-          entries.push({
-            path: childRelative,
-            content: createHash("sha256")
-              .update(await readFile(absolute))
-              .digest("hex"),
-          });
-        }
-      }
-    }
-    await visit(root, "");
-    guides.push({ relation, entries });
-    const source = parse(await readFile(canonicalManifest, "utf8")) as {
-      prerequisite?: { manifestUri?: unknown };
-    };
-    const prerequisite = source?.prerequisite?.manifestUri;
-    if (typeof prerequisite === "string") {
-      let prerequisitePath: string;
-      try {
-        prerequisitePath = prerequisite.startsWith("file:")
-          ? fileURLToPath(prerequisite)
-          : resolve(root, prerequisite);
-      } catch {
-        throw new CliError("Guide prerequisite manifest URI is invalid.");
-      }
-      await visitTree(prerequisitePath, `${relation}/prerequisite`);
-    }
-  }
-  await visitTree(manifestPath, "root");
-  return digest(guides);
 }
 
 export function rejectUnknownOptions(

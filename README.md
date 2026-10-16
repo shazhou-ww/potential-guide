@@ -3,11 +3,15 @@
 Potential Guide is a pnpm TypeScript monorepo for composable objective packages
 and the extensible `pguide` command line:
 
-- `@potential-guide/objective-guide` models one objective through ordered levels,
-  independently eligible same-level checks with injected concurrency policy,
-  observations, localized guidance, and typed instance creation.
-- `@potential-guide/objective-regulator` runs a guarded probe, action, and re-probe loop
-  for one Objective Guide instance.
+- `@potential-guide/effects` reuses Effect for cancellable computations, running
+  handles, current-value observations, and dependency-scoped replacement.
+- `@potential-guide/git-source` observes Git refs and provides immutable,
+  commit-bound repository snapshots without depending on Objective concepts.
+- `@potential-guide/objective-pilot` loads serializable objective specifications,
+  evaluates ordered levels through uniform probes, and provides localized Wiki
+  guidance. A Pilot observes; it never invokes an Agent.
+- `@potential-guide/objective-regulator` combines a serializable regulation recipe
+  with a separate subject and runs the observe, Agent, and re-observe process.
 - `@potential-guide/objective-portfolio-supervisor` coordinates multiple regulators
   through an injected portfolio policy.
 - `@potential-guide/cli-core` provides command protocol and CLI infrastructure
@@ -18,7 +22,9 @@ and the extensible `pguide` command line:
   official Objective command adapters and discovers other independent
   `pguide-<command>` executables.
 
-Objective dependencies flow from Guide to Regulator to Portfolio Supervisor.
+Objective dependencies flow from Pilot to Regulator to Portfolio Supervisor.
+Git source observation is independent of that domain graph; the composition
+layer connects commit-bound resources to Pilot specification loading.
 CLI dependencies flow from CLI Core into extensions and the `pguide`
 composition layer; Objective logic never depends on CLI Core.
 
@@ -50,10 +56,14 @@ Run `pnpm check` for the complete repository verification.
 
 ```sh
 npx pguide --help
-pguide scaffold guide ./my-guide
-pguide validate guide ./my-guide/objective-guide.yaml
-pguide probe --guide ./my-guide/objective-guide.yaml --subject-file ./subject.json
+pguide scaffold pilot ./my-pilot
+pguide validate pilot ./my-pilot/pilot.yaml
+pguide probe --pilot ./my-pilot/pilot.yaml --subject-file ./subject.json
 ```
+
+Commit the specification and its resources before probing so that the reported
+version identifies the contents actually evaluated. Validation and scaffolding
+do not require a committed version.
 
 `pguide regulate` uses only named ACP Agent profiles from user, project, or
 explicit YAML configuration. Regulation state and protocol-visible transcript
@@ -66,3 +76,12 @@ minimal `0.0.0` placeholders, configure their Trusted Publishers, and let
 GitHub Actions publish the first product versions with provenance. See the
 [npm publishing guide](./docs/npm-publishing.md) for the one-time setup and
 release procedure.
+
+The functional migration is intentionally breaking and does not retain the old
+Objective Guide API or input aliases. Product candidates remain on `0.x` and
+publish to npm's `rc` tag; breaking changes advance the minor version rather
+than introducing `1.0`.
+
+See the [functional migration guide](./docs/functional-migration.md) for
+consumer imports, specification/subject separation, the probe envelope,
+Agent input, CLI/config changes, and running-effect cancellation.

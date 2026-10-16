@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join, resolve } from "node:path";
 import { Readable, Writable } from "node:stream";
 import { test } from "node:test";
 import {
   AcpClient,
   atomicWrite,
-  digestTree,
+  digest,
   loadConfig,
   parseConfig,
   pruneExpiredRegulations,
@@ -15,6 +14,60 @@ import {
   validateAgentProfile,
 } from "@potential-guide/cli-core";
 import { pipeRedactedSecrets } from "../src/streaming-secret-redactor.js";
+
+const scratch = resolve(import.meta.dirname, "..", "..", "..", ".cache");
+await mkdir(scratch, { recursive: true });
+const tmpdir = () => scratch;
+
+test("configuration limits apply only to individual Agent executions", () => {
+  assert.deepEqual(parseConfig("schemaVersion: 2\nagentExecutionLimits:\n  timeoutMs: 1234\n"), {
+    schemaVersion: 2,
+    agentExecutionLimits: { timeoutMs: 1234 },
+  });
+
+  assert.throws(() => parseConfig("schemaVersion: 1\n"), /Legacy configuration/);
+  assert.throws(
+    () => parseConfig("schemaVersion: 2\nlimits:\n  maxIterations: 8\n"),
+    /cross-round/,
+  );
+  for (const value of ["0", "-1", "1.5", "2147483648", "invalid"]) {
+    assert.throws(() =>
+      parseConfig(`schemaVersion: 2\nagentExecutionLimits:\n  timeoutMs: ${value}\n`),
+    );
+  }
+  assert.throws(() => parseConfig("schemaVersion: 2\nagentExecutionLimits:\n  maxIterations: 8\n"));
+});
+
+test("regulation strategy validates scheduling, probe retries and optional effect lifetime", () => {
+  const strategy = {
+    mode: { type: "periodic", intervalMs: 1000 },
+    probe: { timeoutMs: 5000, retry: { maxRetries: 2, delayMs: 10 } },
+    effectTtlMs: 20000,
+  };
+  assert.deepEqual(
+    parseConfig(JSON.stringify({ schemaVersion: 2, regulationStrategy: strategy }))
+      .regulationStrategy,
+    strategy,
+  );
+  assert.deepEqual(
+    parseConfig("schemaVersion: 2\nregulationStrategy: {}\n").regulationStrategy,
+    {},
+  );
+  for (const invalid of [
+    { mode: { type: "periodic", intervalMs: 0 } },
+    { mode: { type: "adhoc", intervalMs: 1 } },
+    { mode: { type: "unknown" } },
+    { probe: { timeoutMs: 0, retry: { maxRetries: 0, delayMs: 0 } } },
+    { probe: { timeoutMs: 1, retry: { maxRetries: -1, delayMs: 0 } } },
+    { probe: { timeoutMs: 1, retry: { maxRetries: 0, delayMs: -1 } } },
+    { probe: { timeoutMs: 1 } },
+    { effectTtlMs: 0 },
+    { maxIterations: 1 },
+  ])
+    assert.throws(() =>
+      parseConfig(JSON.stringify({ schemaVersion: 2, regulationStrategy: invalid })),
+    );
+});
 
 test("ACP stderr redaction applies backpressure with bounded cross-chunk state", async () => {
   const secret = 'quote" slash\\\\ newline\nUnicode雪';
@@ -113,7 +166,7 @@ test("configuration validates ACP profiles and rejects secret literals", () => {
     requirements: { sessionResume: true },
   });
   assert.equal(profile.connection.type, "acp");
-  assert.throws(() => parseConfig("schemaVersion: 1\npassword: literal\n"));
+  assert.throws(() => parseConfig("schemaVersion: 2\npassword: literal\n"));
   assert.throws(() =>
     validateAgentProfile({
       connection: { type: "acp", protocolVersion: "1" },
@@ -186,57 +239,33 @@ test("explicit configuration merges profiles by whole profile and atomic writes"
   const root = await mkdtemp(join(tmpdir(), "pguide-config-"));
   try {
     const path = join(root, "config.yaml");
+    await mkdir(join(root, ".pguide"));
+    await writeFile(
+      join(root, ".pguide", "config.yaml"),
+      "schemaVersion: 2\nregulationStrategy:\n  mode: {type: periodic, intervalMs: 1000}\n",
+    );
     await atomicWrite(
       path,
-      "schemaVersion: 1\ndefaultAgent: fixture\nagents:\n  fixture:\n    connection: {type: acp, protocolVersion: '1'}\n    transport: {type: stdio, command: fixture}\n",
+      "schemaVersion: 2\ndefaultAgent: fixture\nregulationStrategy:\n  probe: {timeoutMs: 5000, retry: {maxRetries: 2, delayMs: 10}}\nagents:\n  fixture:\n    connection: {type: acp, protocolVersion: '1'}\n    transport: {type: stdio, command: fixture}\n",
     );
     const loaded = await loadConfig(root, path);
     assert.equal(loaded.value.defaultAgent, "fixture");
     assert.equal(loaded.sources["agents.fixture"], path);
-    await writeFile(join(root, "bad.yaml"), "schemaVersion: 2\n");
+    assert.deepEqual(loaded.value.regulationStrategy, {
+      mode: { type: "periodic", intervalMs: 1000 },
+      probe: { timeoutMs: 5000, retry: { maxRetries: 2, delayMs: 10 } },
+    });
+    await writeFile(join(root, "bad.yaml"), "schemaVersion: 1\n");
     await assert.rejects(loadConfig(root, join(root, "bad.yaml")));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
 
-test("Guide tree revisions cover checks and references with stable paths", async () => {
-  const root = await mkdtemp(join(tmpdir(), "pguide-guide-revision-"));
-  try {
-    const manifest = join(root, "objective-guide.yaml");
-    const check = join(root, "checks", "ready", "run.js");
-    const reference = join(root, "references", "levels", "initial", "en-US.md");
-    const prerequisiteRoot = join(dirname(root), `${root.split(/[\\/]/).at(-1)}-prerequisite`);
-    const prerequisiteManifest = join(prerequisiteRoot, "objective-guide.yaml");
-    await mkdir(join(root, "checks", "ready"), { recursive: true });
-    await mkdir(join(root, "references", "levels", "initial"), { recursive: true });
-    await mkdir(prerequisiteRoot);
-    await writeFile(
-      manifest,
-      `schemaVersion: 1\nprerequisite:\n  manifestUri: ${JSON.stringify(prerequisiteManifest)}\n`,
-    );
-    await writeFile(prerequisiteManifest, "schemaVersion: 1\n");
-    await writeFile(check, "first");
-    await writeFile(reference, "reference one");
-    const first = await digestTree(manifest);
-    await writeFile(check, "second");
-    const second = await digestTree(manifest);
-    await writeFile(reference, "reference two");
-    const third = await digestTree(manifest);
-    await writeFile(prerequisiteManifest, "schemaVersion: 1\nchanged: true\n");
-    const fourth = await digestTree(manifest);
-    assert.notEqual(first, second);
-    assert.notEqual(second, third);
-    assert.notEqual(third, fourth);
-    if (process.platform !== "win32") {
-      await symlink(join(root, "outside"), join(root, "references", "escape"));
-      await assert.rejects(digestTree(manifest), /symbolic links/);
-    }
-  } finally {
-    const prerequisiteRoot = join(dirname(root), `${root.split(/[\\/]/).at(-1)}-prerequisite`);
-    await rm(prerequisiteRoot, { recursive: true, force: true });
-    await rm(root, { recursive: true, force: true });
-  }
+test("generic digest is stable and detects JSON subject changes", () => {
+  const subject = { name: "fixture", entries: [1, 2] };
+  assert.equal(digest(subject), digest(structuredClone(subject)));
+  assert.notEqual(digest(subject), digest({ ...subject, entries: [1, 3] }));
 });
 
 test("retention pruning removes only expired in-root Regulation directories", async () => {

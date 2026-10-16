@@ -31,7 +31,7 @@ async function editable(path: string): Promise<PguideConfig> {
   try {
     return parseConfig(await readFile(path, "utf8"));
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return { schemaVersion: 1 };
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return { schemaVersion: 2 };
     throw error;
   }
 }
@@ -64,9 +64,18 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
       "remove-agent",
     ];
     writeResult(
-      { schemaVersion: 1, command: "config", subcommands },
+      {
+        schemaVersion: 1,
+        command: "config",
+        subcommands,
+        configurationSchemaVersion: 2,
+        regulationStrategyDefaults: {
+          mode: { type: "adhoc" },
+          probe: { timeoutMs: 30000, retry: { maxRetries: 0, delayMs: 0 } },
+        },
+      },
       globals.format,
-      `Usage: pguide config <${subcommands.join("|")}>`,
+      `Usage: pguide config <${subcommands.join("|")}>\nConfiguration schemaVersion: 2; regulationStrategy configures mode, probe timeout/retry, and optional effectTtlMs.`,
     );
     return;
   }
@@ -219,7 +228,7 @@ void commandMain(
     protocol: "pguide-command-v1",
     command: "config",
     description: "Manage pguide configuration",
-    version: "0.1.0-rc.1",
+    version: "0.2.0-rc.0",
   },
   run,
 );

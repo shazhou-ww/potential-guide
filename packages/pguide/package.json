@@ -1,6 +1,6 @@
 {
   "name": "pguide",
-  "version": "0.2.0-rc.2",
+  "version": "0.3.0-rc.0",
   "description": "Extensible command-line interface for Potential Guide.",
   "type": "module",
   "sideEffects": false,
@@ -29,7 +29,9 @@
   },
   "dependencies": {
     "@potential-guide/cli-core": "workspace:^",
-    "@potential-guide/objective-guide": "workspace:^",
+    "@potential-guide/objective-pilot": "workspace:^",
+    "@potential-guide/effects": "workspace:^",
+    "@potential-guide/git-source": "workspace:^",
     "@potential-guide/objective-regulator": "workspace:^",
     "@potential-guide/objective-portfolio-supervisor": "workspace:^",
     "@potential-guide/config": "workspace:^",

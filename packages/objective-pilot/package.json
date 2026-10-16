@@ -1,0 +1,44 @@
+{
+  "name": "@potential-guide/objective-pilot",
+  "version": "0.1.0-rc.0",
+  "description": "Serializable objective specifications and cancellable observation effects.",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.ts\"",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@potential-guide/effects": "workspace:^",
+    "ajv": "catalog:",
+    "jsonata": "catalog:",
+    "yaml": "catalog:"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shazhou-ww/potential-guide.git",
+    "directory": "packages/objective-pilot"
+  }
+}

@@ -5,7 +5,13 @@
       "path": "./packages/pguide-cli-core"
     },
     {
-      "path": "./packages/objective-guide"
+      "path": "./packages/effects"
+    },
+    {
+      "path": "./packages/git-source"
+    },
+    {
+      "path": "./packages/objective-pilot"
     },
     {
       "path": "./packages/objective-regulator"

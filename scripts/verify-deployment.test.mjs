@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
-import { access, mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { access, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import test from "node:test";
 import { createDeploymentWorkspace, execute } from "./verify-deployment-helpers.mjs";
@@ -29,7 +28,8 @@ test("execute preserves paths and arguments containing shell metacharacters", as
 });
 
 test("deployment workspaces are concurrent and preserve unrelated data", async () => {
-  const protectedRoot = await mkdtemp(join(tmpdir(), "potential-guide-protected-"));
+  const protectedWorkspace = await createDeploymentWorkspace();
+  const protectedRoot = protectedWorkspace.path;
   const legacyDirectory = join(protectedRoot, ".deployment-verification");
   await mkdir(legacyDirectory);
   const protectedFile = join(legacyDirectory, "sentinel.txt");
@@ -52,7 +52,6 @@ test("deployment workspaces are concurrent and preserve unrelated data", async (
   } finally {
     await first.cleanup();
     await second.cleanup();
-    const { rm } = await import("node:fs/promises");
-    await rm(protectedRoot, { recursive: true, force: true });
+    await protectedWorkspace.cleanup();
   }
 });

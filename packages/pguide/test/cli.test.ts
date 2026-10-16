@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
 import { test } from "node:test";
 import { sameDirectory } from "../src/path.js";
+import { fixture, scratch } from "./fixtures.js";
 
 const root = resolve(import.meta.dirname, "..", "..", "..");
+const tmpdir = () => scratch;
 const top = join(root, "packages", "pguide", "dist", "bin.js");
 const bins = {
   probe: join(root, "packages", "pguide", "dist", "bin", "probe.js"),
@@ -63,36 +64,65 @@ test("top-level built-ins return machine-readable help, diagnosis and completion
   assert.match(JSON.parse(complete.stdout).script, /Register-ArgumentCompleter/);
 });
 
-test("scaffold, validate and probe work directly", async () => {
-  const temporary = await mkdtemp(join(tmpdir(), "pguide-cli-"));
+test("scaffold and static validate preserve multilingual Wiki; production probes require committed snapshots", async () => {
+  const f = await fixture();
   try {
-    const guide = join(temporary, "guide");
-    const scaffold = await run(bins.scaffold, [
-      "guide",
-      guide,
-      "--check",
-      "ready",
-      "--problem",
-      "not-ready",
+    const guide = join(f.repository, "objective");
+    const manifest = f.manifest;
+    const validate = await run(bins.validate, ["pilot", manifest, "--format", "json"]);
+    assert.equal(validate.code, 0, validate.stdout);
+    const uncommitted = await run(bins.probe, [
+      "--pilot",
+      manifest,
+      "--subject-file",
+      f.subject,
       "--format",
       "json",
     ]);
-    assert.equal(scaffold.code, 0, scaffold.stdout);
-    const manifest = join(guide, "objective-guide.yaml");
-    const validate = await run(bins.validate, ["guide", manifest, "--format", "json"]);
-    assert.equal(validate.code, 0, validate.stdout);
-    const subject = join(temporary, "subject.json");
-    await writeFile(subject, "{}");
+    assert.equal(uncommitted.code, 2);
+    assert.match(uncommitted.stdout, /dirty|uncommitted/);
+    const commit = await f.commit();
     const probe = await run(bins.probe, [
-      "--guide",
+      "--pilot",
       manifest,
       "--subject-file",
-      subject,
+      f.subject,
+      "--language",
+      "zh-CN",
       "--format",
       "json",
     ]);
     assert.equal(probe.code, 0, probe.stdout);
-    assert.equal(JSON.parse(probe.stdout).status, "observed");
+    assert.equal(JSON.parse(probe.stdout).status, 200);
+    assert.equal(JSON.parse(probe.stdout).payload.current.levelId, "terminal");
+    assert.equal(JSON.parse(probe.stdout).payload.versions[f.uri], commit);
+    const portfolio = join(f.directory, "portfolio.json");
+    await writeFile(
+      portfolio,
+      JSON.stringify({
+        schemaVersion: 2,
+        objectives: [
+          {
+            id: "fixture",
+            pilot: f.uri,
+            revision: commit,
+            subject: {},
+            defensiveThreshold: "initial",
+            defensiveTarget: "terminal",
+          },
+        ],
+      }),
+    );
+    const planned = await run(bins.supervise, ["--portfolio-file", portfolio, "--format", "json"]);
+    assert.equal(planned.code, 0, planned.stdout + planned.stderr);
+    assert.equal(
+      JSON.parse(planned.stdout).observation.entries[0].observation.current.levelId,
+      "terminal",
+    );
+    assert.equal(
+      JSON.parse(planned.stdout).plan.directives[0].agentExecutionLimits.timeoutMs,
+      30_000,
+    );
     const overviewPath = join(guide, "references", "system", "overview", "en-US.md");
     const overview = await readFile(overviewPath, "utf8");
     assert.match(overview, /references: \[\]/);
@@ -109,15 +139,15 @@ test("scaffold, validate and probe work directly", async () => {
       overview.replace("references: []", "references: [pages/missing]"),
     ]) {
       await writeFile(overviewPath, invalid);
-      const rejected = await run(bins.validate, ["guide", manifest, "--format", "json"]);
+      const rejected = await run(bins.validate, ["pilot", manifest, "--format", "json"]);
       assert.equal(rejected.code, 2, rejected.stdout);
-      assert.match(rejected.stdout, /guide-error/);
+      assert.match(rejected.stdout, /pilot-error/);
     }
     await writeFile(overviewPath, overview.replace("\nreferences: []", ""));
-    const withoutReferences = await run(bins.validate, ["guide", manifest, "--format", "json"]);
+    const withoutReferences = await run(bins.validate, ["pilot", manifest, "--format", "json"]);
     assert.equal(withoutReferences.code, 0, withoutReferences.stdout);
   } finally {
-    await rm(temporary, { recursive: true, force: true });
+    await rm(f.directory, { recursive: true, force: true });
   }
 });
 
@@ -186,7 +216,7 @@ test("real-path deduplication follows platform case sensitivity", {
     const config = join(temporary, "config.yaml");
     await writeFile(
       config,
-      `schemaVersion: 1\ncommandDirectories:\n  - ${JSON.stringify(lower)}\n  - ${JSON.stringify(upper)}\n`,
+      `schemaVersion: 2\ncommandDirectories:\n  - ${JSON.stringify(lower)}\n  - ${JSON.stringify(upper)}\n`,
     );
     const help = await run(top, ["--config", config, "--help", "--format", "json"]);
     assert.equal(help.code, 0, help.stderr);
@@ -226,7 +256,7 @@ test("all official commands dispatch through the top-level CLI", async () => {
     const config = join(binDirectory, "config.yaml");
     await writeFile(
       config,
-      `schemaVersion: 1\ncommandDirectories:\n  - ${JSON.stringify(binDirectory)}\n`,
+      `schemaVersion: 2\ncommandDirectories:\n  - ${JSON.stringify(binDirectory)}\n`,
     );
     const env = { ...process.env, PATH: `${binDirectory}${delimiter}${process.env.PATH ?? ""}` };
     for (const command of Object.keys(bins)) {

@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-import { guideCommandVersion, launchGuideCommand, runProbe } from "../commands/guide.js";
-launchGuideCommand(
+import { launchPilotCommand, pilotCommandVersion, runProbe } from "../commands/pilot.js";
+
+launchPilotCommand(
   {
     protocol: "pguide-command-v1",
     command: "probe",
-    description: "Probe an Objective Guide",
-    version: guideCommandVersion,
+    description: "Observe an Objective Pilot",
+    version: pilotCommandVersion,
   },
   runProbe,
 );

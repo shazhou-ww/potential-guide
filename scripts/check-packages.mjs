@@ -1,96 +1,13 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { access, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { releasePackages } from "./release-packages.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const pnpmCommand = "pnpm";
-const packages = [
-  {
-    directory: "pguide-cli-core",
-    name: "@potential-guide/cli-core",
-    exports: [
-      "AcpClient",
-      "COMMAND_PROTOCOL",
-      "CliError",
-      "agentSecretValues",
-      "atomicWrite",
-      "commandMain",
-      "digest",
-      "digestTree",
-      "duration",
-      "ensurePrivateDirectory",
-      "expectedCliError",
-      "extractGlobals",
-      "loadConfig",
-      "option",
-      "parseConfig",
-      "pruneExpiredRegulations",
-      "readJsonSubject",
-      "readStdin",
-      "redactConfig",
-      "redactSensitive",
-      "rejectUnknownOptions",
-      "stateRoot",
-      "userConfigPath",
-      "validateAgentProfile",
-      "writeResult",
-    ],
-  },
-  {
-    directory: "objective-guide",
-    name: "@potential-guide/objective-guide",
-    exports: [
-      "ObjectiveConfigurationError",
-      "ObjectiveOperationError",
-      "SUBJECT_PROJECTION_LIMITS",
-      "canonicalManifestUri",
-      "createObjectiveLoader",
-      "fileObjectiveCheckRunner",
-      "fileObjectiveResources",
-    ],
-    bins: [],
-    forbiddenDependencies: ["@potential-guide/cli-core"],
-  },
-  {
-    directory: "objective-regulator",
-    name: "@potential-guide/objective-regulator",
-    exports: [
-      "ObjectiveRegulatorError",
-      "ObjectiveRegulatorTimeoutError",
-      "createObjectiveRegulator",
-    ],
-    bins: [],
-    forbiddenDependencies: ["@potential-guide/cli-core"],
-  },
-  {
-    directory: "objective-portfolio-supervisor",
-    name: "@potential-guide/objective-portfolio-supervisor",
-    exports: ["ObjectivePortfolioError", "createObjectivePortfolioSupervisor"],
-    bins: [],
-    forbiddenDependencies: ["@potential-guide/cli-core"],
-  },
-  {
-    directory: "pguide-config",
-    name: "@potential-guide/config",
-    bins: ["pguide-config"],
-  },
-  {
-    directory: "pguide",
-    name: "pguide",
-    bins: [
-      "pguide",
-      "pguide-continue",
-      "pguide-probe",
-      "pguide-regulate",
-      "pguide-scaffold",
-      "pguide-supervise",
-      "pguide-validate",
-    ],
-  },
-];
+const packages = releasePackages;
 
 function run(command, args) {
   return new Promise((resolve, reject) => {
@@ -126,7 +43,8 @@ function run(command, args) {
   });
 }
 
-const destination = await mkdtemp(join(tmpdir(), "potential-guide-packs-"));
+await mkdir(join(root, ".cache"), { recursive: true });
+const destination = await mkdtemp(join(root, ".cache", "potential-guide-packs-"));
 try {
   for (const expected of packages) {
     const packageRoot = join(root, "packages", expected.directory);
@@ -147,11 +65,13 @@ try {
         );
       }
     }
-    if (expected.exports !== undefined) {
+    if (expected.requiredExports !== undefined) {
       assert.deepEqual(Object.keys(manifest.exports), ["."]);
       assert.deepEqual(Object.keys(manifest.exports["."]).sort(), ["import", "types"]);
       const module = await import(pathToFileURL(join(packageRoot, "dist", "index.js")).href);
-      assert.deepEqual(Object.keys(module).sort(), [...expected.exports].sort());
+      for (const name of expected.requiredExports) {
+        assert.ok(Object.hasOwn(module, name), `${expected.name} must export ${name}.`);
+      }
     }
     const packed = JSON.parse(
       await run(pnpmCommand, [
@@ -164,9 +84,13 @@ try {
       ]),
     );
     assert.equal(packed.name, expected.name);
+    assert.equal(packed.version, manifest.version);
     const files = packed.files.map(({ path }) => path);
+    for (const forbidden of expected.forbiddenFiles ?? []) {
+      assert.ok(!files.includes(forbidden), `${expected.name} contains retired ${forbidden}.`);
+    }
     for (const required of [
-      ...(expected.exports === undefined ? [] : ["dist/index.js", "dist/index.d.ts"]),
+      ...(expected.requiredExports === undefined ? [] : ["dist/index.js", "dist/index.d.ts"]),
       ...(expected.bins === undefined
         ? []
         : Object.values(manifest.bin ?? {}).map((path) => path.replace(/^\.\//, ""))),

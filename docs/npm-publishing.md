@@ -1,19 +1,22 @@
 # npm publishing
 
-Potential Guide publishes six CLI and library packages independently from this monorepo:
+Potential Guide publishes eight CLI and library packages independently from this monorepo:
 
 | Package | Release tag |
 | --- | --- |
-| `@potential-guide/objective-guide` | `objective-guide-vX.Y.Z` |
+| `@potential-guide/effects` | `effects-vX.Y.Z` |
+| `@potential-guide/git-source` | `git-source-vX.Y.Z` |
+| `@potential-guide/objective-pilot` | `objective-pilot-vX.Y.Z` |
 | `@potential-guide/objective-regulator` | `objective-regulator-vX.Y.Z` |
 | `@potential-guide/objective-portfolio-supervisor` | `objective-portfolio-supervisor-vX.Y.Z` |
 | `@potential-guide/cli-core` | `cli-core-vX.Y.Z` |
 | `@potential-guide/config` | `config-vX.Y.Z` |
 | `pguide` | `pguide-vX.Y.Z` |
 
-Packages must be released in dependency order: `cli-core` and
-`objective-guide`, then `objective-regulator`, `objective-portfolio-supervisor`
-and `config`, then `pguide`. The three Objective packages are domain logic and
+Packages must be released in dependency order: `effects`, then `git-source`
+and `objective-pilot`, then `objective-regulator` and
+`objective-portfolio-supervisor`. `cli-core` must precede `config`; `pguide`
+comes after all its dependencies. The three Objective packages are domain logic and
 must not depend on `cli-core`; only `config` and the `pguide` composition layer
 consume CLI infrastructure.
 
@@ -28,7 +31,18 @@ commit must be reachable from `origin/main`. Each tag publishes only one
 package, which keeps a failure from partially publishing a multi-package
 release.
 
-Stable versions publish to the npm `latest` dist-tag. Release candidates use
+During the pre-1.0 phase, versions remain on `0.x`. Breaking changes and
+compatible new features advance the minor version; compatible fixes advance
+the patch version. An existing candidate series advances `rc.N` while it
+remains within the same target release. Choose versions independently for
+each changed package from its published API and actual changes, not by forcing
+all packages to have the same version. New packages with only a `0.0.0`
+placeholder start their first product candidate at `0.1.0-rc.0`.
+
+The functional migration deploys **release candidates only**. It never
+publishes a stable version, changes `latest`, or introduces `1.0`.
+The general workflow still distinguishes stable and RC tags: stable versions
+publish to the npm `latest` dist-tag, while release candidates use
 the `X.Y.Z-rc.N` version form and publish to the `rc` dist-tag, so testing an RC
 never changes the default version installed by consumers.
 
@@ -43,7 +57,9 @@ environment named `npm`, and leave it without npm secrets. Optional required
 reviewers are compatible with the workflow, but any deployment branch or tag
 rules must allow these release tags:
 
-- `objective-guide-v*`
+- `effects-v*`
+- `git-source-v*`
+- `objective-pilot-v*`
 - `objective-regulator-v*`
 - `objective-portfolio-supervisor-v*`
 - `cli-core-v*`
@@ -57,8 +73,9 @@ Trusted Publisher connections must then complete a real OIDC publish within two
 days. A dry-run does not satisfy that requirement.
 
 To keep the first product release under OIDC with provenance, manually publish
-minimal `0.0.0` placeholders and reserve the tracked `0.1.0` versions for the
-workflow.
+minimal `0.0.0` placeholders only for packages that do not yet exist, and
+reserve product RC versions for the workflow. A placeholder is not a
+functional product release.
 
 On a machine and network approved to access the npm registry, use a clean,
 up-to-date `main` checkout:
@@ -78,7 +95,11 @@ npm whoami --registry=https://registry.npmjs.org/
 
 npm publish .cache/npm-bootstrap/potential-guide-cli-core-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
-npm publish .cache/npm-bootstrap/potential-guide-objective-guide-0.0.0.tgz \
+npm publish .cache/npm-bootstrap/potential-guide-effects-0.0.0.tgz \
+  --access public --registry=https://registry.npmjs.org/
+npm publish .cache/npm-bootstrap/potential-guide-git-source-0.0.0.tgz \
+  --access public --registry=https://registry.npmjs.org/
+npm publish .cache/npm-bootstrap/potential-guide-objective-pilot-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/potential-guide-objective-regulator-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
@@ -92,10 +113,10 @@ npm publish .cache/npm-bootstrap/pguide-0.0.0.tgz \
 npm logout --registry=https://registry.npmjs.org/
 ```
 
-The `bootstrap:pack` command only creates six minimal tarballs containing a
+The `bootstrap:pack` command only creates eight minimal tarballs containing a
 `package.json` and README; it never publishes them. Inspect the printed paths
-before running `npm publish`. Do not manually publish the tracked `0.1.0`
-product packages.
+before running `npm publish`. Run only the publish lines for missing packages. Do not manually
+publish product candidates.
 
 ## Configure Trusted Publishers
 
@@ -117,39 +138,30 @@ workflow requests `id-token: write` and exchanges GitHub's OIDC identity for a
 short-lived npm credential. Trusted Publishing automatically adds provenance
 because this is a public repository on a GitHub-hosted runner.
 
-Configure the publishers only when the `0.1.0` release can run immediately.
+Configure the publishers only when the first product RC can run immediately.
 Each connection expires if it does not complete a successful publish within two
 days. A dry-run can diagnose the connection but does not satisfy that deadline.
 
 ## Publish the first product versions
 
-After publishing all six placeholders and configuring their Trusted
-Publishers, publish in dependency order. Wait for each workflow to succeed
-before creating the next tag:
+After publishing missing placeholders and configuring their Trusted
+Publishers, publish the selected product candidates in dependency order.
+Do not repeat the bootstrap publish for packages that already exist.
+For the functional migration, select exact `0.x.y-rc.N` versions from the
+reviewed release inventory, update manifests and internal dependencies, then
+use the matching package-specific RC tags. The stable `0.1.0` commands in
+historical releases are not instructions for this migration.
+
+Wait for each upstream workflow to succeed before creating a downstream tag.
+For example, a new effects package starts with:
 
 ```sh
 git fetch origin main --tags
 git switch main
 git pull --ff-only origin main
 
-git tag -a cli-core-v0.1.0 -m "release: cli-core v0.1.0"
-git push origin refs/tags/cli-core-v0.1.0
-
-git tag -a objective-guide-v0.1.0 -m "release: objective-guide v0.1.0"
-git push origin refs/tags/objective-guide-v0.1.0
-
-git tag -a objective-regulator-v0.1.0 -m "release: objective-regulator v0.1.0"
-git push origin refs/tags/objective-regulator-v0.1.0
-
-git tag -a objective-portfolio-supervisor-v0.1.0 \
-  -m "release: objective-portfolio-supervisor v0.1.0"
-git push origin refs/tags/objective-portfolio-supervisor-v0.1.0
-
-git tag -a config-v0.1.0 -m "release: config v0.1.0"
-git push origin refs/tags/config-v0.1.0
-
-git tag -a pguide-v0.1.0 -m "release: pguide v0.1.0"
-git push origin refs/tags/pguide-v0.1.0
+git tag -a effects-v0.1.0-rc.0 -m "release: effects v0.1.0-rc.0"
+git push origin refs/tags/effects-v0.1.0-rc.0
 ```
 
 Use `gh run list --workflow publish-npm.yaml` and
@@ -160,7 +172,7 @@ The workflow also supports a manual package-specific dry-run from GitHub's
 **Actions → Publish package to npm → Run workflow** UI or the CLI:
 
 ```sh
-gh workflow run publish-npm.yaml --ref main -f package=objective-guide
+gh workflow run publish-npm.yaml --ref main -f package=objective-pilot
 ```
 
 Use the dry-run only as a quick diagnostic, then perform the real tag release
@@ -170,9 +182,9 @@ For a release candidate, update the selected package version and create the
 matching package-specific tag, for example:
 
 ```sh
-git tag -a objective-guide-v0.2.0-rc.0 \
-  -m "release: objective-guide v0.2.0-rc.0"
-git push origin refs/tags/objective-guide-v0.2.0-rc.0
+git tag -a objective-pilot-v0.1.0-rc.0 \
+  -m "release: objective-pilot v0.1.0-rc.0"
+git push origin refs/tags/objective-pilot-v0.1.0-rc.0
 ```
 
 The workflow publishes this version under npm's `rc` dist-tag. Wait for the
@@ -185,15 +197,30 @@ Publishing continues to work with that setting.
 ## Verify a release
 
 Registry propagation can take a short time. Do not repeat a publish while
-waiting. Verify the immutable version and `latest` tag:
+waiting. Verify the immutable version, `rc` tag and unchanged `latest` tag:
 
 ```sh
-npm view "@potential-guide/objective-guide@0.1.0" \
+npm view "@potential-guide/objective-pilot@0.1.0-rc.0" \
   name version dist-tags exports engines dist \
   --json --registry=https://registry.npmjs.org/
 ```
 
-Repeat for the other packages and confirm that npm displays provenance linking
-the release to this repository and workflow. If the npm registry is blocked by
-network policy, perform CLI verification on an approved device or use the
-npmjs.com package pages; do not use a proxy or mirror to bypass the policy.
+Repeat for the other selected packages and confirm provenance links the
+release to this repository and workflow. The publish workflow records a
+release receipt with the exact commit, integrity, provenance URL and
+before/after tags; an RC publish fails verification if `latest` changed.
+
+After every selected RC has published successfully, run the CI workflow
+manually with `published=true`. Its independent consumers install the exact
+manifest RC versions from npm, not local tarballs, and verify the CLI and
+runtime scenarios on the declared operating systems:
+
+```sh
+gh workflow run ci.yaml --ref main -f published=true
+```
+
+If the registry is blocked by network policy, inspect package metadata through
+the approved [npmx browser](https://npmx.dev/) and use the existing
+GitHub-hosted workflow for authoritative registry/install verification.
+Do not disable TLS checks, change local routing, or use an unapproved proxy
+to bypass the policy.

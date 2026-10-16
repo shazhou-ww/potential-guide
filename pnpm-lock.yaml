@@ -21,6 +21,9 @@ catalogs:
     cross-spawn:
       specifier: 7.0.6
       version: 7.0.6
+    effect:
+      specifier: 4.0.2
+      version: 4.0.2
     jsonata:
       specifier: 2.1.0
       version: 2.1.0
@@ -60,8 +63,23 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
-  packages/objective-guide:
+  packages/effects:
     dependencies:
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.2
+
+  packages/git-source:
+    dependencies:
+      '@potential-guide/effects':
+        specifier: workspace:^
+        version: link:../effects
+
+  packages/objective-pilot:
+    dependencies:
+      '@potential-guide/effects':
+        specifier: workspace:^
+        version: link:../effects
       ajv:
         specifier: 'catalog:'
         version: 8.20.0
@@ -74,18 +92,24 @@ importers:
 
   packages/objective-portfolio-supervisor:
     dependencies:
-      '@potential-guide/objective-guide':
+      '@potential-guide/effects':
         specifier: workspace:^
-        version: link:../objective-guide
+        version: link:../effects
+      '@potential-guide/objective-pilot':
+        specifier: workspace:^
+        version: link:../objective-pilot
       '@potential-guide/objective-regulator':
         specifier: workspace:^
         version: link:../objective-regulator
 
   packages/objective-regulator:
     dependencies:
-      '@potential-guide/objective-guide':
+      '@potential-guide/effects':
         specifier: workspace:^
-        version: link:../objective-guide
+        version: link:../effects
+      '@potential-guide/objective-pilot':
+        specifier: workspace:^
+        version: link:../objective-pilot
 
   packages/pguide:
     dependencies:
@@ -95,9 +119,15 @@ importers:
       '@potential-guide/config':
         specifier: workspace:^
         version: link:../pguide-config
-      '@potential-guide/objective-guide':
+      '@potential-guide/effects':
         specifier: workspace:^
-        version: link:../objective-guide
+        version: link:../effects
+      '@potential-guide/git-source':
+        specifier: workspace:^
+        version: link:../git-source
+      '@potential-guide/objective-pilot':
+        specifier: workspace:^
+        version: link:../objective-pilot
       '@potential-guide/objective-portfolio-supervisor':
         specifier: workspace:^
         version: link:../objective-portfolio-supervisor
@@ -392,6 +422,9 @@ packages:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
     engines: {node: '>= 8'}
 
+  effect@4.0.2:
+    resolution: {integrity: sha512-YeYnLqSFrL4+tCOXRrfNP03w8FILoF/wDl+ukraJAGzXrjcS383W7LAAvGBbLatEyktmLxRq+9xJinx7QzXW5A==, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/effect/-/effect-4.0.2.tgz}
+
   esbuild@0.28.2:
     resolution: {integrity: sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA==}
     engines: {node: '>=18'}
@@ -614,6 +647,8 @@ snapshots:
       path-key: 3.1.1
       shebang-command: 2.0.0
       which: 2.0.2
+
+  effect@4.0.2: {}
 
   esbuild@0.28.2:
     optionalDependencies:

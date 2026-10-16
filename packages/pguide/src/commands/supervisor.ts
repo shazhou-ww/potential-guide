@@ -1,19 +1,21 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { createObjectiveLoader, type JsonObject } from "@potential-guide/objective-guide";
-import { createObjectiveRegulator } from "@potential-guide/objective-regulator";
 import {
-  AcpClient,
   CliError,
+  type GlobalOptions,
   loadConfig,
   option,
+  rejectUnknownOptions,
   writeResult,
-  type GlobalOptions,
 } from "@potential-guide/cli-core";
+import type { Subject } from "@potential-guide/objective-pilot";
 import {
   createObjectivePortfolioSupervisor,
   type ObjectiveRegistration,
 } from "@potential-guide/objective-portfolio-supervisor";
+import { makeRegulatorSpec } from "@potential-guide/objective-regulator";
+import { withPilot } from "../pilot-source.js";
+import { executeAcpAgent } from "./regulator.js";
 
 export async function runSupervise(
   argv: string[],
@@ -23,96 +25,114 @@ export async function runSupervise(
     writeResult(
       { schemaVersion: 1, command: "supervise" },
       globals.format,
-      "Usage: pguide supervise --portfolio-file <json> [--execute]",
+      "Usage: pguide supervise --portfolio-file <json> [--execute] [--agent <profile>]",
     );
     return;
   }
+  rejectUnknownOptions(argv, {
+    "--portfolio-file": "value",
+    "--execute": "flag",
+    "--agent": "value",
+  });
   const path = resolve(globals.cwd, option(argv, "--portfolio-file", { required: true }) as string);
   const raw = JSON.parse(await readFile(path, "utf8")) as {
+    schemaVersion?: number;
     objectives?: {
       id: string;
-      guide: string;
-      subject: Record<string, unknown>;
+      pilot: string;
+      revision?: string;
+      subject: Subject;
       defensiveThreshold: string;
       defensiveTarget: string;
     }[];
   };
+  if (raw.schemaVersion !== 2)
+    throw new CliError(
+      "Portfolio requires schemaVersion: 2 and Pilot entries; legacy Guide portfolios are incompatible.",
+    );
   if (!Array.isArray(raw.objectives) || raw.objectives.length === 0)
     throw new CliError("Portfolio requires objectives.");
+  const objectives = raw.objectives;
+  const loaded = await loadConfig(globals.cwd, globals.config);
+  const agentName = (option(argv, "--agent") as string | undefined) ?? loaded.value.defaultAgent;
+  const profile = agentName === undefined ? undefined : loaded.value.agents?.[agentName];
+  if (argv.includes("--execute") && profile === undefined)
+    throw new CliError("An existing --agent profile is required for --execute.");
+  const agentExecutionLimits = {
+    timeoutMs: loaded.value.agentExecutionLimits?.timeoutMs ?? 30_000,
+  };
   const registrations: ObjectiveRegistration[] = [];
-  for (const entry of raw.objectives) {
-    const guide = await createObjectiveLoader().load(resolve(globals.cwd, entry.guide));
-    const created = guide.createInstance({ subject: entry.subject as JsonObject });
-    if (!created.ok) throw new CliError(`Invalid subject for ${entry.id}.`);
-    registrations.push({
-      id: entry.id,
-      regulator: createObjectiveRegulator(created.instance),
-      safety: {
-        defensiveThresholdId: entry.defensiveThreshold,
-        defensiveTargetLevelId: entry.defensiveTarget,
-      },
-    });
-  }
-  const supervisor = createObjectivePortfolioSupervisor(registrations, async (observation) => ({
-    directives: observation.entries.map((entry) => ({
-      registrationId: entry.registrationId,
-      targetLevelId: entry.safety.defensiveTargetLevelId,
-      trigger: "defensive" as const,
-      rationale: "Configured defensive target",
-      limits: { maxIterations: 1, maxStalledIterations: 1, timeoutMs: 30_000 },
-    })),
-    deferred: [],
-  }));
-  const observation = await supervisor.observe();
-  const plan = await supervisor.plan(observation);
-  const summary = observation.entries.map((entry) => ({
-    registrationId: entry.registrationId,
-    currentLevelId: entry.observation.current.id,
-    problems: entry.observation.problems,
-    gapSummary: entry.observation.gapSummary,
-  }));
-  if (argv.includes("--execute")) {
-    const loaded = await loadConfig(globals.cwd, globals.config);
-    const agentName = (option(argv, "--agent") as string | undefined) ?? loaded.value.defaultAgent;
-    if (agentName === undefined) throw new CliError("--agent is required for --execute.");
-    const profile = loaded.value.agents?.[agentName];
-    if (profile === undefined) throw new CliError(`Unknown Agent profile: ${agentName}.`);
-    const client = new AcpClient(profile);
-    try {
-      await client.initialize(profile.connection.protocolVersion);
-      const sessionId = await client.newSession(globals.cwd);
-      const result = await supervisor.execute(plan, async (request) => {
-        const response = await client.prompt(
-          sessionId,
-          `Portfolio target: ${request.targetLevelId}\nCurrent level: ${request.observation.current.id}\nProblem: ${request.problem.id}\nParameters: ${JSON.stringify(request.problem.parameters)}\nPerform only this action; pguide will re-probe.`,
-        );
-        return response.status === "completed"
-          ? { status: "completed", summary: response.summary }
-          : { status: "blocked", reason: response.summary };
+  async function load(index: number): Promise<number | undefined> {
+    const entry = objectives[index];
+    if (entry !== undefined) {
+      if (typeof entry.pilot !== "string")
+        throw new CliError("Portfolio objective requires pilot.");
+      return withPilot(entry.pilot, globals.cwd, entry.revision, async (pilot, runtime) => {
+        registrations.push({
+          id: entry.id,
+          input: {
+            spec: makeRegulatorSpec(
+              pilot,
+              {
+                ...loaded.value.regulationStrategy,
+                targetLevel: entry.defensiveTarget,
+                agentExecutionLimits,
+              },
+              { id: agentName ?? "unbound" },
+            ),
+            subject: entry.subject,
+          },
+          runtime: {
+            pilot: runtime,
+            executeAgent: async (input, signal) => {
+              if (profile === undefined) throw new CliError("Agent is not configured.");
+              return executeAcpAgent(input, signal, profile, globals.cwd);
+            },
+          },
+          safety: {
+            defensiveThresholdId: entry.defensiveThreshold,
+            defensiveTargetLevelId: entry.defensiveTarget,
+          },
+        });
+        return load(index + 1);
       });
-      const results = result.results.map((entry) => ({
-        registrationId: entry.registrationId,
-        status: entry.result.status,
-        iterations: entry.result.iterations,
-        currentLevelId: entry.result.latestObservation.current.id,
-      }));
+    }
+    const supervisor = createObjectivePortfolioSupervisor(registrations, async (observation) => ({
+      directives: observation.entries.map((value) => ({
+        registrationId: value.registrationId,
+        targetLevelId: value.safety.defensiveTargetLevelId,
+        trigger: "defensive",
+        rationale: "Configured defensive target",
+        agentExecutionLimits,
+      })),
+      deferred: [],
+    }));
+    const controller = new AbortController();
+    const cancel = () => controller.abort();
+    process.once("SIGINT", cancel);
+    process.once("SIGTERM", cancel);
+    try {
+      const observation = await supervisor.observe(controller.signal);
+      const plan = await supervisor.plan(observation);
+      if (argv.includes("--execute")) {
+        const results = await supervisor.execute(plan, controller.signal);
+        writeResult(
+          { schemaVersion: 2, status: "executed", plan, observation, results },
+          globals.format,
+          `Executed ${results.results.length} portfolio directives.`,
+        );
+        return results.results.some(({ result }) => result.stopReason !== "target-reached") ? 3 : 0;
+      }
       writeResult(
-        { schemaVersion: 1, status: "executed", plan, observation: summary, results },
+        { schemaVersion: 2, status: "planned", observation, plan },
         globals.format,
-        `Executed ${result.results.length} portfolio directives.`,
+        `Planned ${plan.directives.length} portfolio directives.`,
       );
-      return result.results.some(
-        ({ result: directiveResult }) => directiveResult.status !== "target-reached",
-      )
-        ? 3
-        : 0;
+      return 0;
     } finally {
-      client.close();
+      process.removeListener("SIGINT", cancel);
+      process.removeListener("SIGTERM", cancel);
     }
   }
-  writeResult(
-    { schemaVersion: 1, status: "planned", observation: summary, plan },
-    globals.format,
-    `Planned ${plan.directives.length} portfolio directives.`,
-  );
+  return load(0);
 }

@@ -1,6 +1,6 @@
-import { mkdtemp, realpath, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawn } from "cross-spawn";
 
 export function execute(command, args, options = {}) {
@@ -32,7 +32,9 @@ export function execute(command, args, options = {}) {
 }
 
 export async function createDeploymentWorkspace() {
-  const created = await mkdtemp(join(tmpdir(), "potential-guide-deployment-"));
+  const cache = fileURLToPath(new URL("../.cache/", import.meta.url));
+  await mkdir(cache, { recursive: true });
+  const created = await mkdtemp(join(cache, "potential-guide-deployment-"));
   const path = await realpath(created);
   let cleaned = false;
 

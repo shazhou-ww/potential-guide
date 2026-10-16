@@ -15,7 +15,7 @@ import {
 import spawn from "cross-spawn";
 import { sameDirectory } from "./path.js";
 
-const VERSION = "0.2.0-rc.2";
+const VERSION = "0.3.0-rc.0";
 const reserved = new Set(["diagnose", "complete"]);
 const commandPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
@@ -54,7 +54,9 @@ async function directoryCandidates(
       result.push({ command, path: await realpath(path), source });
     }
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT" && !(source === "PATH" && (code === "EACCES" || code === "EPERM")))
+      throw error;
   }
   return result;
 }

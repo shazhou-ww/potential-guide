@@ -7,5 +7,5 @@
     "tsBuildInfoFile": "../../.cache/tsbuildinfo/objective-regulator.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../objective-guide" }]
+  "references": [{ "path": "../objective-pilot" }, { "path": "../effects" }]
 }

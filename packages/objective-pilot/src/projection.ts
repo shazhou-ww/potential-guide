@@ -1,5 +1,5 @@
 import jsonata from "jsonata";
-import type { ObjectiveSubject } from "./types.js";
+import type { Subject } from "./types.js";
 import { json, ObjectiveConfigurationError, record } from "./validation.js";
 
 export const SUBJECT_PROJECTION_LIMITS = Object.freeze({
@@ -20,9 +20,7 @@ interface Node {
   expressions?: readonly Node[];
 }
 
-export function compileSubjectProjection(
-  expression: string,
-): (subject: ObjectiveSubject) => unknown {
+export function compileSubjectProjection(expression: string): (subject: Subject) => unknown {
   if (Buffer.byteLength(expression) > SUBJECT_PROJECTION_LIMITS.expressionBytes) {
     throw new ObjectiveConfigurationError("Subject projection exceeds expression limit.");
   }

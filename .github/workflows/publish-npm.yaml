@@ -3,7 +3,9 @@ name: Publish package to npm
 on:
   push:
     tags:
-      - "objective-guide-v*"
+      - "effects-v*"
+      - "git-source-v*"
+      - "objective-pilot-v*"
       - "objective-regulator-v*"
       - "objective-portfolio-supervisor-v*"
       - "cli-core-v*"
@@ -16,7 +18,9 @@ on:
         required: true
         type: choice
         options:
-          - objective-guide
+          - effects
+          - git-source
+          - objective-pilot
           - objective-regulator
           - objective-portfolio-supervisor
           - cli-core
@@ -67,49 +71,22 @@ jobs:
           RELEASE_EVENT: ${{ github.event_name }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          node --input-type=commonjs <<'NODE'
-          const { appendFileSync, readFileSync } = require("node:fs");
-          const { join } = require("node:path");
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from "node:fs";
+          import { join } from "node:path";
+          import { parseReleaseTag, releasePackages, releaseVersion } from "./scripts/release-packages.mjs";
 
-          const packages = {
-            "cli-core": {
-              directory: "packages/pguide-cli-core",
-              name: "@potential-guide/cli-core",
-            },
-            "objective-guide": {
-              directory: "packages/objective-guide",
-              name: "@potential-guide/objective-guide",
-            },
-            "objective-regulator": {
-              directory: "packages/objective-regulator",
-              name: "@potential-guide/objective-regulator",
-            },
-            "objective-portfolio-supervisor": {
-              directory: "packages/objective-portfolio-supervisor",
-              name: "@potential-guide/objective-portfolio-supervisor",
-            },
-            "config": {
-              directory: "packages/pguide-config",
-              name: "@potential-guide/config",
-            },
-            "pguide": {
-              directory: "packages/pguide",
-              name: "pguide",
-            },
-          };
-          const releaseVersion = /^\d+\.\d+\.\d+(?:-rc\.\d+)?$/u;
-          const tagPattern =
-            /^(cli-core|objective-guide|objective-regulator|objective-portfolio-supervisor|config|pguide)-v(\d+\.\d+\.\d+(?:-rc\.\d+)?)$/u;
+          const packages = Object.fromEntries(releasePackages.map((entry) => [
+            entry.id,
+            { ...entry, directory: join("packages", entry.directory) },
+          ]));
 
           let packageId;
           let taggedVersion;
           if (process.env.RELEASE_EVENT === "push") {
-            const match = tagPattern.exec(process.env.RELEASE_TAG ?? "");
-            if (match === null) {
-              console.error(`::error::Unsupported release tag ${process.env.RELEASE_TAG}.`);
-              process.exit(1);
-            }
-            [, packageId, taggedVersion] = match;
+            const release = parseReleaseTag(process.env.RELEASE_TAG ?? "");
+            packageId = release.id;
+            taggedVersion = release.version;
           } else {
             packageId = process.env.PACKAGE_INPUT;
           }
@@ -135,7 +112,7 @@ jobs:
           }
           if (!releaseVersion.test(packageJson.version)) {
             console.error(
-              `::error::Publishing accepts stable or rc SemVer versions only; received ${packageJson.version}.`,
+              `::error::Publishing accepts 0.x stable or rc SemVer versions only; received ${packageJson.version}.`,
             );
             process.exit(1);
           }
@@ -250,6 +227,23 @@ jobs:
           );
           NODE
 
+      - name: Record distribution tags
+        if: github.event_name == 'push'
+        id: tags
+        env:
+          PACKAGE_NAME: ${{ steps.release.outputs.name }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { execFileSync } from "node:child_process";
+          import { appendFileSync } from "node:fs";
+          const tags = JSON.parse(execFileSync("npm", [
+            "view", process.env.PACKAGE_NAME, "dist-tags", "--json",
+            "--registry=https://registry.npmjs.org/",
+          ], { encoding: "utf8" }));
+          appendFileSync(process.env.GITHUB_OUTPUT, `latest_before=${tags.latest ?? ""}\n`);
+          console.log(JSON.stringify({ package: process.env.PACKAGE_NAME, tags }));
+          NODE
+
       - name: Publish package
         if: github.event_name == 'push'
         run: >-
@@ -258,6 +252,43 @@ jobs:
           --tag "${{ steps.release.outputs.dist_tag }}"
           --registry=https://registry.npmjs.org/
           --loglevel=verbose
+
+      - name: Verify published metadata and provenance
+        if: github.event_name == 'push'
+        env:
+          PACKAGE_NAME: ${{ steps.release.outputs.name }}
+          PACKAGE_VERSION: ${{ steps.release.outputs.version }}
+          DIST_TAG: ${{ steps.release.outputs.dist_tag }}
+          LATEST_BEFORE: ${{ steps.tags.outputs.latest_before }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { execFileSync } from "node:child_process";
+          import { appendFileSync } from "node:fs";
+          const name = process.env.PACKAGE_NAME;
+          const version = process.env.PACKAGE_VERSION;
+          const view = (...args) => JSON.parse(execFileSync("npm", [
+            "view", ...args, "--json", "--registry=https://registry.npmjs.org/",
+          ], { encoding: "utf8" }));
+          const metadata = view(`${name}@${version}`, "name", "version", "dist");
+          const tags = view(name, "dist-tags");
+          assert.equal(metadata.name, name);
+          assert.equal(metadata.version, version);
+          assert.equal(tags[process.env.DIST_TAG], version);
+          assert.ok(metadata.dist.integrity, "Published artifact must have integrity metadata.");
+          assert.ok(metadata.dist.attestations?.url, "Trusted publishing must produce provenance.");
+          if (process.env.DIST_TAG === "rc") {
+            assert.equal(tags.latest ?? "", process.env.LATEST_BEFORE);
+          }
+          const receipt = {
+            package: name, version, tags, latestBefore: process.env.LATEST_BEFORE,
+            commit: process.env.GITHUB_SHA, integrity: metadata.dist.integrity,
+            provenance: metadata.dist.attestations.url,
+          };
+          console.log(JSON.stringify(receipt, null, 2));
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            `## Published release receipt\n\n\`\`\`json\n${JSON.stringify(receipt, null, 2)}\n\`\`\`\n`);
+          NODE
 
       - name: Validate trusted publishing
         if: github.event_name == 'workflow_dispatch'
