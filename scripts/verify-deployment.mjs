@@ -424,6 +424,8 @@ async function verifyRegulation(baseEnv) {
   if (process.platform !== "win32") {
     const signalMarker = join(fixture, "signal-prompted");
     let child;
+    let finished = false;
+    let force;
     const signalled = execute(
       executable("pguide"),
       [
@@ -450,30 +452,71 @@ async function verifyRegulation(baseEnv) {
           child = spawned;
         },
       },
+    ).then(
+      (value) => {
+        finished = true;
+        return { ok: true, value };
+      },
+      (error) => {
+        finished = true;
+        return { ok: false, error };
+      },
     );
-    for (let attempts = 0; attempts < 100; attempts += 1) {
-      try {
-        await access(signalMarker);
-        break;
-      } catch {
+    const stop = () => {
+      if (!finished && child?.pid) {
+        child.kill("SIGTERM");
+        force ??= setTimeout(() => {
+          if (!finished) child.kill("SIGKILL");
+        }, 2_000);
+      }
+    };
+    try {
+      const deadline = Date.now() + 30_000;
+      for (;;) {
+        try {
+          await access(signalMarker);
+          break;
+        } catch (error) {
+          if (error?.code !== "ENOENT") throw error;
+        }
+        if (finished) {
+          const result = await signalled;
+          if (!result.ok) throw result.error;
+          throw new Error(`CLI exited before Agent readiness: ${JSON.stringify(result.value)}`);
+        }
+        assert.ok(Date.now() < deadline, "Agent prompt was not ready within 30 seconds.");
         await new Promise((resolveWait) => setTimeout(resolveWait, 20));
       }
+      assert.ok(child?.pid);
+      stop();
+      const cancelled = await signalled;
+      if (!cancelled.ok) throw cancelled.error;
+      assert.equal(cancelled.value.code, 5);
+      assert.equal(JSON.parse(cancelled.value.stdout).status, "cancelled");
+    } finally {
+      stop();
+      await signalled;
+      clearTimeout(force);
     }
-    await access(signalMarker);
-    assert.ok(child?.pid);
-    process.kill(child.pid, "SIGTERM");
-    const cancelled = await signalled;
-    assert.equal(cancelled.code, 5);
-    assert.equal(JSON.parse(cancelled.stdout).status, "cancelled");
   }
   console.log("ACP regulation, persistence, resume, retention, redaction and reports verified");
 }
 
+const failures = [];
 try {
   await packAndInstall();
   const env = await verifyCliContract();
   await verifyRegulation(env);
-  console.log("deployment verification passed");
-} finally {
-  await workspace.cleanup();
+} catch (error) {
+  failures.push(error);
 }
+try {
+  await workspace.cleanup();
+} catch (error) {
+  failures.push(error);
+}
+if (failures.length === 1) throw failures[0];
+if (failures.length > 1) {
+  throw new AggregateError(failures, "Deployment verification and workspace cleanup failed.");
+}
+console.log("deployment verification passed");

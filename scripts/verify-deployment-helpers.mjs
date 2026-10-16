@@ -43,7 +43,7 @@ export async function createDeploymentWorkspace() {
     async cleanup() {
       if (cleaned) return;
       cleaned = true;
-      await rm(path, { recursive: true, force: true });
+      await rm(path, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
     },
   };
 }

@@ -1,5 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { createInterface } from "node:readline";
+import { setTimeout as delay } from "node:timers/promises";
 
 const mode = process.env.PGUIDE_FIXTURE_MODE ?? "repair";
 
@@ -18,6 +19,8 @@ for await (const line of createInterface({ input: process.stdin })) {
     }
   } else if (message.method === "session/prompt") {
     if (process.env.PGUIDE_PROMPT_MARKER) {
+      // Readiness must tolerate startup beyond the old two-second polling cutoff.
+      await delay(2_100);
       await writeFile(process.env.PGUIDE_PROMPT_MARKER, "prompted");
     }
     if (mode === "hang") await new Promise(() => {});
