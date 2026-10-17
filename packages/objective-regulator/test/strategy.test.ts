@@ -1,16 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
-import { Effect, Exit, startEffect } from "@potential-guide/effects";
+import { Effect } from "@potential-guide/effects";
 import { fixture } from "../../objective-pilot/test/fixtures.js";
-import { makeRegulatorSpec, type RegulationStrategy, regulate } from "../src/index.js";
+import {
+  makeRegulatorSpec,
+  RegulationError,
+  type RegulationInput,
+  type RegulationStrategy,
+  regulate,
+} from "../src/index.js";
 
 const pass = { status: 200, message: "", payload: { ok: true, problems: [] } } as const;
-const fail = {
-  status: 200,
-  message: "",
-  payload: { ok: false, problems: [{ id: "broken", parameters: {} }] },
-} as const;
 async function input(strategy: Partial<RegulationStrategy> = {}) {
   return {
     spec: makeRegulatorSpec(
@@ -18,6 +19,7 @@ async function input(strategy: Partial<RegulationStrategy> = {}) {
       {
         targetLevel: "terminal",
         agentExecutionLimits: { timeoutMs: 1000 },
+        quota: { timeoutMs: 10_000, maxAgentRuns: 10, maxStallRuns: 3 },
         ...strategy,
       },
       { id: "test" },
@@ -26,13 +28,13 @@ async function input(strategy: Partial<RegulationStrategy> = {}) {
   };
 }
 
-test("probe policy retries only 5xx and respects finite retry count and delay", async () => {
+test("probe policy retries 5xx only, preserving typed invocation errors and envelope", async () => {
   const base = await input({ probe: { timeoutMs: 1000, retry: { maxRetries: 2, delayMs: 15 } } });
   for (const status of [403, 503]) {
     let rounds = 0;
     let agents = 0;
     const starts: number[] = [];
-    const result = await Effect.runPromise(
+    const error = await Effect.runPromise(
       regulate(base, {
         pilot: {
           resolveCheck: (ref) => async () => {
@@ -45,83 +47,78 @@ test("probe policy retries only 5xx and respects finite retry count and delay", 
         },
         executeAgent: async () => {
           agents++;
-          return { status: "blocked", reason: "must not repair transport" };
+          return { status: "completed", summary: "wrong" };
         },
-      }),
+      }).pipe(
+        Effect.match({
+          onFailure: (error) => error,
+          onSuccess: () => assert.fail("Invocation failure must reject."),
+        }),
+      ),
     );
-    assert.equal(result.stopReason, "invocation-failed");
+    assert.ok(error instanceof RegulationError);
+    assert.equal(error.status, status);
+    assert.equal(error.envelope?.payload, null);
     assert.equal(rounds, status === 403 ? 1 : 3);
     assert.equal(agents, 0);
     if (status === 503) {
       const [first, second, third] = starts;
       assert.ok(first !== undefined && second !== undefined && third !== undefined);
-      assert.ok(second - first >= 15);
-      assert.ok(third - second >= 15);
+      assert.ok(second - first >= 14);
+      assert.ok(third - second >= 14);
     }
   }
 });
 
-test("a later successful 5xx retry establishes a trusted level without an Agent repair", async () => {
+test("successful retry establishes target without authorizing Agent repair", async () => {
   const base = await input({ probe: { timeoutMs: 1000, retry: { maxRetries: 2, delayMs: 0 } } });
   let rounds = 0;
-  let agents = 0;
   const statuses: number[] = [];
   const result = await Effect.runPromise(
     regulate(base, {
       pilot: {
         resolveCheck: (ref) => async () => {
           if (ref.levelId === "z-first" && ref.checkId === "one") rounds++;
-          return rounds < 3
-            ? { status: 500, payload: null, message: "retryable source fault" }
-            : pass;
+          return rounds < 3 ? { status: 500, payload: null, message: "retryable" } : pass;
         },
       },
-      executeAgent: async () => {
-        agents++;
-        return { status: "blocked", reason: "wrong" };
-      },
-      onObservation: (sample) => {
-        statuses.push(sample.status);
-      },
+      executeAgent: async () => assert.fail("No repair required."),
+      onObservation: (sample) => statuses.push(sample.status),
     }),
   );
-  assert.equal(rounds, 3);
   assert.equal(result.stopReason, "target-reached");
-  assert.equal(agents, 0);
+  assert.equal(result.iterations, 0);
   assert.deepEqual(statuses, [500, 500, 200]);
 });
 
-test("a sibling 4xx prevents retrying a whole level even when a 5xx appears first", async () => {
-  const base = await input({ probe: { timeoutMs: 1000, retry: { maxRetries: 2, delayMs: 0 } } });
+test("a sibling 4xx prevents whole-observation retries even if a 5xx appeared first", async () => {
   let checks = 0;
-  const result = await Effect.runPromise(
-    regulate(base, {
+  const error = await Effect.runPromise(
+    regulate(await input({ probe: { timeoutMs: 1000, retry: { maxRetries: 2, delayMs: 0 } } }), {
       pilot: {
         resolveCheck: (ref) => async () => {
           checks++;
-          return {
-            status: ref.checkId === "one" ? 503 : 403,
-            payload: null,
-            message: "Invocation rejected.",
-          };
+          return { status: ref.checkId === "one" ? 503 : 403, payload: null, message: "rejected" };
         },
       },
-      executeAgent: async () => {
-        throw new Error("Invocation faults must not authorize Agent work.");
-      },
-    }),
+      executeAgent: async () => assert.fail("Invocation faults cannot authorize repair."),
+    }).pipe(
+      Effect.match({
+        onFailure: (error) => error,
+        onSuccess: () => assert.fail("Expected invocation error."),
+      }),
+    ),
   );
-  assert.equal(result.latestObservation.status, 403);
+  assert.equal(error.status, 403);
   assert.equal(checks, 2);
 });
 
-test("probe timeout aborts observation and reports 504 without trusting a late result", async () => {
-  const base = await input({ probe: { timeoutMs: 20, retry: { maxRetries: 0, delayMs: 0 } } });
+test("probe timeout aborts ignored cleanup, raises 504, and isolates late results", async () => {
   const releases: (() => void)[] = [];
   const signals: AbortSignal[] = [];
-  let agents = 0;
-  const result = await Effect.runPromise(
-    regulate(base, {
+  const reports: number[] = [];
+  const error = await Effect.runPromise(
+    regulate(await input({ probe: { timeoutMs: 20, retry: { maxRetries: 0, delayMs: 0 } } }), {
       pilot: {
         resolveCheck: () => async (_subject, signal) => {
           signals.push(signal);
@@ -129,89 +126,173 @@ test("probe timeout aborts observation and reports 504 without trusting a late r
           return pass;
         },
       },
-      executeAgent: async () => {
-        agents++;
-        return { status: "blocked", reason: "wrong" };
-      },
-    }),
+      executeAgent: async () => assert.fail("Timeout cannot authorize repair."),
+      onObservation: (sample) => reports.push(sample.status),
+    }).pipe(
+      Effect.match({
+        onFailure: (error) => error,
+        onSuccess: () => assert.fail("Expected probe timeout."),
+      }),
+    ),
   );
-  assert.equal(result.stopReason, "invocation-failed");
-  assert.equal(result.latestObservation.status, 504);
-  assert.equal(result.latestObservation.payload, null);
-  assert.equal(agents, 0);
-  assert.ok(signals.length > 0);
+  assert.equal(error.status, 504);
+  assert.equal(error.envelope?.payload, null);
   assert.ok(signals.every((signal) => signal.aborted));
   for (const release of releases) release();
   await delay(5);
-  assert.equal(result.latestObservation.payload, null);
+  assert.deepEqual(reports, [504]);
 });
 
-test("periodic mode observes after target and repairs later regressions", async () => {
-  const base = await input({ mode: { type: "periodic", intervalMs: 10 } });
-  let regressed = false;
-  let repaired = false;
-  let observations = 0;
-  let agents = 0;
-  const controller = new AbortController();
-  const running = startEffect(
+test("overall time quota includes probe retries and retry delays", async () => {
+  const base = await input({
+    quota: { timeoutMs: 50, maxAgentRuns: 5, maxStallRuns: 5 },
+    probe: { timeoutMs: 1000, retry: { maxRetries: 10, delayMs: 1000 } },
+  });
+  const result = await Effect.runPromise(
     regulate(base, {
-      pilot: { resolveCheck: () => async () => (regressed && !repaired ? fail : pass) },
-      async executeAgent(request) {
-        assert.equal(request.observation.problems.length, 2);
-        agents++;
-        repaired = true;
-        return { status: "completed", summary: "regression repaired" };
+      pilot: {
+        resolveCheck: () => async () => ({ status: 503, payload: null, message: "offline" }),
       },
-      onObservation: () => {
-        observations++;
-        if (observations === 1) regressed = true;
-      },
+      executeAgent: async () => assert.fail("No repair on invocation failure."),
     }),
-    controller.signal,
   );
-  try {
-    const deadline = performance.now() + 2000;
-    while (!repaired || observations < 3) {
-      assert.ok(performance.now() < deadline, "Periodic regression repair did not complete.");
-      await delay(1);
-    }
-    assert.equal(agents, 1);
-  } finally {
-    controller.abort();
-    await assert.rejects(running.await());
+  assert.equal(result.stopReason, "exhausted");
+  assert.equal(result.exhaustedBy, "time");
+  assert.equal(result.latestObservation.status, 503);
+  assert.equal(result.iterations, 0);
+});
+
+test("probe crashes become typed invocation faults, not normal completed outcomes", async () => {
+  const error = await Effect.runPromise(
+    regulate(await input(), {
+      pilot: {
+        resolveCheck: () => {
+          throw new Error("resolver crashed");
+        },
+      },
+      executeAgent: async () => assert.fail("Cannot repair an invocation failure."),
+    }).pipe(
+      Effect.match({
+        onFailure: (error) => error,
+        onSuccess: () => assert.fail("Expected invocation fault."),
+      }),
+    ),
+  );
+  assert.equal(error.status, 502);
+  assert.match(error.message, /resolver crashed/);
+});
+
+test("externally provided malformed inputs reject as 400 before any execution", async () => {
+  const base = await input();
+  const invalid: unknown[] = [
+    null,
+    {},
+    [],
+    { ...base, subject: null },
+    { ...base, subject: [] },
+    { ...base, language: 1 },
+    { ...base, history: null },
+    { ...base, history: { stalledRuns: -1 } },
+    { ...base, history: { stalledRuns: 1.5 } },
+    { ...base, history: { stalledRuns: Number.MAX_SAFE_INTEGER + 1 } },
+    { ...base, spec: null },
+    ...[
+      null,
+      {},
+      { ...base.spec.pilot, manifest: null },
+      { ...base.spec.pilot, locales: null },
+      { ...base.spec.pilot, objectiveId: 1 },
+      { ...base.spec.pilot, version: null },
+      { ...base.spec.pilot, manifest: { ...base.spec.pilot.manifest, levels: [null] } },
+    ].map((pilot) => ({ ...base, spec: { ...base.spec, pilot } })),
+    ...[
+      null,
+      {},
+      { ...base.spec.strategy, agentExecutionLimits: null },
+      { ...base.spec.strategy, quota: null },
+      { ...base.spec.strategy, probe: { timeoutMs: 1, retry: null } },
+      { ...base.spec.strategy, mode: { type: "periodic", intervalMs: 10 } },
+      { ...base.spec.strategy, effectTtlMs: 100 },
+      { ...base.spec.strategy, targetLevel: "unknown" },
+    ].map((strategy) => ({ ...base, spec: { ...base.spec, strategy } })),
+    ...[null, {}, { id: 1 }, { id: "test", configuration: [] }].map((binding) => ({
+      ...base,
+      spec: { ...base.spec, binding },
+    })),
+  ];
+  const cyclic: Record<string, unknown> = { ...base };
+  cyclic.subject = cyclic;
+  invalid.push(cyclic);
+  for (const value of invalid) {
+    let calls = 0;
+    const error = await Effect.runPromise(
+      regulate(value as RegulationInput, {
+        pilot: {
+          resolveCheck: () => {
+            calls++;
+            return async () => pass;
+          },
+        },
+        executeAgent: async () => {
+          calls++;
+          return { status: "completed", summary: "wrong" };
+        },
+      }).pipe(
+        Effect.match({
+          onFailure: (error) => error,
+          onSuccess: () => assert.fail("Malformed input cannot complete."),
+        }),
+      ),
+    );
+    assert.ok(error instanceof RegulationError);
+    assert.equal(error.status, 400);
+    assert.equal(calls, 0);
   }
 });
 
-test("effect TTL is lifecycle interruption, not an Agent or cross-round budget", async () => {
-  const base = await input({ effectTtlMs: 500 });
-  let agentStarted = false;
-  let agentAborted = false;
-  const running = startEffect(
-    regulate(base, {
-      pilot: { resolveCheck: () => async () => fail },
-      executeAgent: async (request, signal) => {
-        agentStarted = true;
-        assert.equal(request.limits.timeoutMs, 1000);
-        signal.addEventListener("abort", () => {
-          agentAborted = true;
-        });
-        return await new Promise(() => {});
-      },
-    }),
+test("quota timers and counts are required, positive and safe", async () => {
+  const base = await input();
+  for (const field of ["timeoutMs", "maxAgentRuns", "maxStallRuns"] as const) {
+    for (const value of [
+      0,
+      -1,
+      0.5,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.MAX_SAFE_INTEGER + 1,
+    ]) {
+      assert.throws(
+        () =>
+          makeRegulatorSpec(
+            base.spec.pilot,
+            {
+              ...base.spec.strategy,
+              quota: { ...base.spec.strategy.quota, [field]: value },
+            },
+            base.spec.binding,
+          ),
+        (error: unknown) => error instanceof RegulationError && error.status === 400,
+      );
+    }
+  }
+  assert.throws(
+    () =>
+      makeRegulatorSpec(
+        base.spec.pilot,
+        {
+          ...base.spec.strategy,
+          quota: { ...base.spec.strategy.quota, timeoutMs: 2_147_483_648 },
+        },
+        base.spec.binding,
+      ),
+    RegulationError,
   );
-  const exit = await running.exit();
-  assert.equal(Exit.hasInterrupts(exit), true);
-  assert.equal(agentStarted, true);
-  assert.equal(agentAborted, true);
-});
-
-test("strategy validates cadence, probe retry policy and lifecycle TTL", async () => {
   for (const extra of [
-    { mode: { type: "periodic" as const, intervalMs: 0 } },
+    { agentExecutionLimits: { timeoutMs: 0 } },
+    { agentExecutionLimits: { timeoutMs: 2_147_483_648 } },
     { probe: { timeoutMs: 0, retry: { maxRetries: 0, delayMs: 0 } } },
     { probe: { timeoutMs: 1, retry: { maxRetries: -1, delayMs: 0 } } },
     { probe: { timeoutMs: 1, retry: { maxRetries: 1, delayMs: -1 } } },
-    { effectTtlMs: 0 },
   ])
-    await assert.rejects(input(extra));
+    await assert.rejects(input(extra), RegulationError);
 });

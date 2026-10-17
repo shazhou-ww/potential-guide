@@ -33,12 +33,19 @@ import {
   type AgentInput,
   type AgentOutcome,
   makeRegulatorSpec,
+  RegulationError,
   type RegulationOutcome,
   regulate,
 } from "@potential-guide/objective-regulator";
 import { withPilot } from "../pilot-source.js";
 
 export const regulatorCommandVersion = "0.3.0-rc.0";
+
+export const defaultRegulationQuota = Object.freeze({
+  timeoutMs: 300_000,
+  maxAgentRuns: 10,
+  maxStallRuns: 3,
+});
 
 interface Attempt {
   id: string;
@@ -69,13 +76,14 @@ interface Regulation {
   sessionId?: string;
   expiresAt?: string;
   attempts: Attempt[];
+  history?: { stalledRuns: number };
 }
 
 export function agentPrompt(input: AgentInput): string {
   return `Potential Guide regulation\nTarget: ${JSON.stringify(input.target)}\nSubject: ${JSON.stringify(input.subject)}\nComplete observation: ${JSON.stringify(input.observation)}\nAgent execution limits: ${JSON.stringify(input.limits)}\nAddress the complete observation. Organize any repair tasks yourself. Do not claim objective progress; pguide re-observes after your execution.`;
 }
 
-function safeAgentValue<T>(value: T, profile: AgentProfile): T {
+export function safeAgentValue<T>(value: T, profile: AgentProfile): T {
   const secrets = agentSecretValues(profile);
   const visit = (current: unknown): unknown => {
     if (typeof current === "string") {
@@ -197,9 +205,8 @@ async function save(root: string, regulation: Regulation, attempt: Attempt): Pro
 
 function code(reason: string): number {
   if (reason === "target-reached") return 0;
-  if (reason === "agent-blocked" || reason === "no-actionable-problem") return 3;
-  if (reason === "agent-limit-reached" || reason === "cancelled" || reason === "effect-ttl-reached")
-    return 5;
+  if (reason === "prerequisite-unmet") return 3;
+  if (reason === "exhausted" || reason === "cancelled") return 5;
   return 6;
 }
 
@@ -248,10 +255,15 @@ async function run(
           6,
           "pilot-error",
         );
+      const quota = regulation.regulationStrategy?.quota ?? defaultRegulationQuota;
       const spec = makeRegulatorSpec(
         pilot,
         {
           ...regulation.regulationStrategy,
+          quota: {
+            ...quota,
+            maxStallRuns: quota.maxStallRuns + (regulation.history?.stalledRuns ?? 0),
+          },
           targetLevel: regulation.targetLevel,
           agentExecutionLimits: regulation.agentExecutionLimits,
         },
@@ -262,6 +274,7 @@ async function run(
           {
             spec,
             subject: regulation.subject,
+            ...(regulation.history === undefined ? {} : { history: regulation.history }),
             ...(regulation.language === undefined ? {} : { language: regulation.language }),
           },
           {
@@ -322,6 +335,7 @@ async function run(
         outcome = await withPilot(location, globals.cwd, regulation.pilotCommit, execute);
       } catch (cause) {
         if (controller.signal.aborted) throw cause;
+        if (cause instanceof RegulationError) throw cause;
         throw new CliError(
           `Cannot restore pinned Pilot commit ${regulation.pilotCommit}: ${cause instanceof Error ? cause.message : String(cause)} No source version was substituted.`,
           6,
@@ -329,13 +343,12 @@ async function run(
         );
       }
     } else outcome = await execute(prepared.spec, prepared.runtime);
-    attempt.status =
-      outcome?.stopReason ??
-      (controller.signal.aborted || regulation.regulationStrategy?.effectTtlMs === undefined
-        ? "cancelled"
-        : "effect-ttl-reached");
+    attempt.status = outcome?.stopReason ?? "cancelled";
+    if (outcome !== undefined) regulation.history = { stalledRuns: outcome.stalledRuns };
   } catch (error) {
     attempt.status = controller.signal.aborted ? "cancelled" : "failed";
+    if (error instanceof RegulationError)
+      throw new CliError(error.message, error.status < 500 ? 2 : 6, "regulation-error");
     if (!controller.signal.aborted) throw error;
   } finally {
     process.removeListener("SIGINT", cancel);
@@ -420,9 +433,10 @@ export async function runRegulate(
         agentName,
         agentProfile: profile,
         agentExecutionLimits: { timeoutMs },
-        ...(loaded.value.regulationStrategy === undefined
-          ? {}
-          : { regulationStrategy: loaded.value.regulationStrategy }),
+        regulationStrategy: {
+          ...loaded.value.regulationStrategy,
+          quota: loaded.value.regulationStrategy?.quota ?? defaultRegulationQuota,
+        },
         ...(loaded.value.retentionDays === undefined
           ? {}
           : {

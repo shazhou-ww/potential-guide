@@ -199,6 +199,16 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{id:
   assert.ok(refreshed.payload !== null);
   assert.equal(refreshed.payload.current.objectiveId, parent.uri);
   assert.equal(refreshed.payload.current.levelId, "terminal");
+  const pinned = await withPilot(
+    parent.uri,
+    parent.root,
+    parentCommit,
+    (spec, runtime) => Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime)),
+    { versions: { [parent.uri]: parentCommit, [child.uri]: childCommit } },
+  );
+  assert.ok(pinned.payload !== null);
+  assert.equal(pinned.payload.current.objectiveId, child.uri);
+  assert.equal(pinned.payload.versions[child.uri], childCommit);
 });
 
 test("Git source failure is reported as explicit pilot-error exit 2", async () => {

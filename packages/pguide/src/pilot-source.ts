@@ -27,6 +27,7 @@ import {
   type PilotSpec,
   type ResourceResolver,
 } from "@potential-guide/objective-pilot";
+import { RegulationError } from "@potential-guide/objective-regulator";
 
 const execute = promisify(execFile);
 
@@ -95,6 +96,7 @@ async function bindPilot<T>(
   cwd: string,
   revision: string | undefined,
   use: (spec: PilotSpec, runtime: PilotRuntime) => Promise<T>,
+  options: PilotSourceOptions,
 ): Promise<T> {
   let objectiveUri: string;
   let repository: string;
@@ -131,7 +133,7 @@ async function bindPilot<T>(
       `git+${repository}#${pathInRepository.split("/").map(encodeURIComponent).join("/")}`,
     );
   }
-  const scratch = resolve(".cache", "pguide-sources");
+  const scratch = options.cacheDirectory ?? resolve(".cache", "pguide-sources");
   await mkdir(scratch, { recursive: true });
   const cache = await mkdtemp(join(scratch, "pguide-runtime-"));
   return afterCleanup(
@@ -173,7 +175,10 @@ async function bindPilot<T>(
                   { cacheDirectory: cache },
                   {
                     repository: remote,
-                    revision: { type: "ref", value: "HEAD" },
+                    revision:
+                      options.versions?.[uri] === undefined
+                        ? { type: "ref", value: "HEAD" }
+                        : { type: "commit", value: options.versions[uri] },
                     refresh: { type: "once" },
                   },
                 ).pipe(Effect.provideService(Scope.Scope, scope)),
@@ -183,7 +188,12 @@ async function bindPilot<T>(
             }
             const resources: ResourceResolver = {
               version: snapshot.commit,
-              versionFor: async (uri) => (await sourceFor(uri)).snapshot.commit,
+              versionFor: async (uri) => {
+                const commit = (await sourceFor(uri)).snapshot.commit;
+                if (options.versions !== undefined && options.versions[uri] !== commit)
+                  throw new PilotSourceError(`Pinned source version mismatch for ${uri}.`);
+                return commit;
+              },
               readText: async (uri) =>
                 Effect.runPromise((await sourceFor(uri)).snapshot.readText(resourcePath(uri))),
               async readPages(uri) {
@@ -368,7 +378,7 @@ async function bindPilot<T>(
       );
       if (Exit.isFailure(result)) {
         const cause = Cause.squash(result.cause);
-        if (cause instanceof CliError) throw cause;
+        if (cause instanceof CliError || cause instanceof RegulationError) throw cause;
         throw new PilotSourceError(cause instanceof Error ? cause.message : String(cause), cause);
       }
       return result.value;
@@ -382,11 +392,17 @@ export async function withPilot<T>(
   cwd: string,
   revision: string | undefined,
   use: (spec: PilotSpec, runtime: PilotRuntime) => Promise<T>,
+  options: PilotSourceOptions = {},
 ): Promise<T> {
   try {
-    return await bindPilot(location, cwd, revision, use);
+    return await bindPilot(location, cwd, revision, use, options);
   } catch (cause) {
-    if (cause instanceof CliError) throw cause;
+    if (cause instanceof CliError || cause instanceof RegulationError) throw cause;
     throw new PilotSourceError(cause instanceof Error ? cause.message : String(cause), cause);
   }
+}
+
+export interface PilotSourceOptions {
+  readonly versions?: Readonly<Record<string, string>>;
+  readonly cacheDirectory?: string;
 }

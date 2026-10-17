@@ -18,7 +18,10 @@ import { homedir, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parse, stringify } from "yaml";
+import { killProcessTree } from "./process-tree.js";
 import { pipeRedactedSecrets } from "./streaming-secret-redactor.js";
+
+export { killProcessTree } from "./process-tree.js";
 
 export const COMMAND_PROTOCOL = "pguide-command-v1";
 
@@ -47,9 +50,8 @@ export interface PguideConfig {
   retentionDays?: number;
   agentExecutionLimits?: { timeoutMs?: number };
   regulationStrategy?: {
-    mode?: { type: "adhoc" } | { type: "periodic"; intervalMs: number };
     probe?: { timeoutMs: number; retry: { maxRetries: number; delayMs: number } };
-    effectTtlMs?: number;
+    quota?: { timeoutMs: number; maxAgentRuns: number; maxStallRuns: number };
   };
   agents?: Record<string, AgentProfile>;
 }
@@ -306,7 +308,7 @@ export function parseConfig(source: string): PguideConfig {
   if (raw.regulationStrategy !== undefined) {
     const strategy = raw.regulationStrategy;
     if (!record(strategy)) throw new CliError("regulationStrategy must be an object.");
-    exactKeys(strategy, ["mode", "probe", "effectTtlMs"], "regulationStrategy");
+    exactKeys(strategy, ["probe", "quota"], "regulationStrategy");
     const timer = (value: unknown, field: string, allowZero = false): void => {
       if (
         !Number.isSafeInteger(value) ||
@@ -317,14 +319,19 @@ export function parseConfig(source: string): PguideConfig {
           `${field} must be an integer between ${allowZero ? 0 : 1} and 2147483647.`,
         );
     };
-    if (strategy.mode !== undefined) {
-      if (!record(strategy.mode)) throw new CliError("regulationStrategy.mode must be an object.");
-      if (strategy.mode.type === "adhoc")
-        exactKeys(strategy.mode, ["type"], "regulationStrategy.mode");
-      else if (strategy.mode.type === "periodic") {
-        exactKeys(strategy.mode, ["type", "intervalMs"], "regulationStrategy.mode");
-        timer(strategy.mode.intervalMs, "regulationStrategy.mode.intervalMs");
-      } else throw new CliError("regulationStrategy.mode.type must be adhoc or periodic.");
+    if (strategy.quota !== undefined) {
+      if (!record(strategy.quota))
+        throw new CliError("regulationStrategy.quota must be an object.");
+      exactKeys(
+        strategy.quota,
+        ["timeoutMs", "maxAgentRuns", "maxStallRuns"],
+        "regulationStrategy.quota",
+      );
+      timer(strategy.quota.timeoutMs, "regulationStrategy.quota.timeoutMs");
+      for (const key of ["maxAgentRuns", "maxStallRuns"]) {
+        if (!Number.isSafeInteger(strategy.quota[key]) || Number(strategy.quota[key]) < 1)
+          throw new CliError(`regulationStrategy.quota.${key} must be a positive safe integer.`);
+      }
     }
     if (strategy.probe !== undefined) {
       if (!record(strategy.probe))
@@ -343,8 +350,6 @@ export function parseConfig(source: string): PguideConfig {
         );
       timer(strategy.probe.retry.delayMs, "regulationStrategy.probe.retry.delayMs", true);
     }
-    if (strategy.effectTtlMs !== undefined)
-      timer(strategy.effectTtlMs, "regulationStrategy.effectTtlMs");
   }
   if (raw.agents !== undefined) {
     if (!record(raw.agents)) throw new CliError("agents must be an object.");
@@ -921,7 +926,12 @@ export class AcpClient {
   }
 
   async stop(): Promise<void> {
-    this.close();
+    await this.kill();
+  }
+
+  async kill(): Promise<void> {
+    this.fail(new Error("ACP Agent client closed."));
+    await killProcessTree(this.child);
     await this.closed;
     await Promise.allSettled([...this.updateWork, this.stderrPipeline]);
   }

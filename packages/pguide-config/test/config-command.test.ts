@@ -42,9 +42,8 @@ test("config exposes schema 2 strategy help and validates strategy edits", async
     const help = await run(["--help", "--format", "json"]);
     assert.equal(JSON.parse(help.stdout).configurationSchemaVersion, 2);
     const strategy = {
-      mode: { type: "periodic", intervalMs: 1000 },
+      quota: { timeoutMs: 20000, maxAgentRuns: 5, maxStallRuns: 2 },
       probe: { timeoutMs: 5000, retry: { maxRetries: 2, delayMs: 10 } },
-      effectTtlMs: 20000,
     };
     const configured = await run([
       "set",

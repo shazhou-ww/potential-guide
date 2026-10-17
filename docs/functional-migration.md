@@ -85,8 +85,9 @@ Probe 必须清理自己创建的临时资源，不负责回滚业务状态。�
 
 - 一次 regulate 可以反复执行 Pilot → Agent → Pilot，直到达到目标或返回明确停止原因；不是一次 Agent 调用，也不接收外部 PilotObservation 作为启动参数。
 - AgentInput 带完整观测、目标、subject、绑定与单次执行限制，不再仅发送 `problems[0]`。Agent 自己组织修复，不要求消费方为每个 ProblemId 建任务。
-- Agent 单次超时 / 限额不等于整个调节的最大轮数或停滞预算；旧跨轮 limits 配置不再支持。
-- 探测模式通过 Strategy 的 `mode` 区分 adhoc / periodic；探测调用的 timeout / retry 与 Agent 单次 timeout 分开。4xx 不重试，5xx 按有限重试规则处理。`effectTtlMs` 约束运行效应的生命周期，不是跨轮迭代预算，也不能替代 Probe 的清理宽限期。
+- Agent 单次 timeout 与本次 run 的 quota 分开；quota 包含时长、Agent 调用数和停滞轮次。旧顶层 limits 不再支持。
+- regulator 不携带 mode 或 effectTtlMs，不周期调度。正常结果为 target-reached、exhausted、prerequisite-unmet；配置或输入错误归 4xx，执行故障归 5xx，外部终止与正常结果分离。前置不满足不得派 Agent 越界修复。
+- supervisor 的 planner 维护目标组合，周期观测并按需形成优先队列；coordinator 感知 Agent 资源、分配 quota，处理 exhausted 续跑、P0 抢占及 abort/kill 生命周期。普通优先级只排序，完成后不盲目重跑。
 - 配置采用 schemaVersion 2；`agentExecutionLimits.timeoutMs` 作用于每次 Agent 调用。旧 schemaVersion 1、旧跨轮预算和旧持久化记录需显式迁移，不能直接按新类型读取。
 - RegulatorOutcome 是完成结果，不能拿它取消已经运行的任务；取消使用外层 RunningEffect。
 

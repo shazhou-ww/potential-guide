@@ -398,8 +398,8 @@ async function verifyRegulation(baseEnv) {
     join(fixture, "blocked-report.json"),
     { ...baseEnv, PGUIDE_FIXTURE_MODE: "blocked" },
   );
-  assert.equal(blocked.code, 3);
-  assert.equal(JSON.parse(blocked.stdout).status, "agent-blocked");
+  assert.equal(blocked.code, 2);
+  assert.equal(JSON.parse(blocked.stdout).status, "regulation-error");
 
   const legacyLimit = await invokeRegulate(
     config,
@@ -419,7 +419,7 @@ async function verifyRegulation(baseEnv) {
     ["--agent-timeout-ms", "200"],
   );
   assert.equal(timedOut.code, 5);
-  assert.equal(JSON.parse(timedOut.stdout).status, "agent-limit-reached");
+  assert.equal(JSON.parse(timedOut.stdout).status, "exhausted");
 
   if (process.platform !== "win32") {
     const signalMarker = join(fixture, "signal-prompted");
@@ -502,11 +502,104 @@ async function verifyRegulation(baseEnv) {
   console.log("ACP regulation, persistence, resume, retention, redaction and reports verified");
 }
 
+async function verifySupervisor(baseEnv) {
+  const planner = join(fixture, "planner.mjs");
+  const log = join(fixture, "planner-prompts.jsonl");
+  await writeFile(
+    planner,
+    `
+import { createInterface } from "node:readline";
+import { appendFileSync } from "node:fs";
+for await (const line of createInterface({input:process.stdin})) {
+  const message=JSON.parse(line);
+  if (!message.id) continue;
+  let result={};
+  if (message.method==="initialize") result={protocolVersion:"1"};
+  if (message.method==="session/new") result={sessionId:"planner"};
+  if (message.method==="session/prompt") {
+    appendFileSync(${JSON.stringify(log)}, JSON.stringify(message.params)+"\\n");
+    console.log(JSON.stringify({jsonrpc:"2.0",method:"session/update",params:{
+      sessionId:"planner",update:{sessionUpdate:"agent_message_chunk",
+        content:{type:"text",text:JSON.stringify({directives:[]})}}}}));
+    result={stopReason:"end_turn"};
+  }
+  console.log(JSON.stringify({jsonrpc:"2.0",id:message.id,result}));
+}
+`,
+  );
+  const config = join(fixture, "supervisor-config.json");
+  await writeFile(
+    config,
+    JSON.stringify({
+      schemaVersion: 2,
+      agents: {
+        planner: {
+          connection: { type: "acp", protocolVersion: "1" },
+          transport: { type: "stdio", command: process.execPath, args: [planner] },
+        },
+      },
+    }),
+  );
+  const portfolio = join(fixture, "portfolio.json");
+  await writeFile(
+    portfolio,
+    JSON.stringify({
+      schemaVersion: 3,
+      goals: [
+        {
+          id: "maintained",
+          pilot: pilotUri,
+          subject: { marker: join(fixture, "ready") },
+          targetLevel: "terminal",
+          priority: 1,
+          observationIntervalMs: 1000,
+        },
+      ],
+      resources: [],
+    }),
+  );
+  const args = [
+    "supervise",
+    "--portfolio-file",
+    portfolio,
+    "--planner",
+    "planner",
+    "--config",
+    config,
+    "--format",
+    "json",
+  ];
+  const planned = await successful(executable("pguide"), args, { cwd: consumer, env: baseEnv });
+  const plan = JSON.parse(planned.stdout);
+  assert.equal(plan.schemaVersion, 3);
+  assert.equal(plan.status, "planned");
+  assert.equal(plan.observations.maintained.payload.current.levelId, "terminal");
+  assert.deepEqual(plan.queue.demands, []);
+  assert.deepEqual(plan.events, []);
+  assert.match(await readFile(log, "utf8"), /maintained/);
+  const execution = await successful(
+    executable("pguide"),
+    [...args, "--execute", "--duration-ms", "1500"],
+    {
+      cwd: consumer,
+      env: baseEnv,
+    },
+  );
+  const executed = JSON.parse(execution.stdout);
+  assert.equal(executed.schemaVersion, 3);
+  assert.equal(executed.status, "executed");
+  assert.equal(executed.observations.maintained.payload.current.levelId, "terminal");
+  assert.deepEqual(executed.queue.demands, []);
+  assert.deepEqual(executed.events, []);
+  console.log("installed ACP planner and bounded supervisor lifecycle verified");
+}
+
 const failures = [];
 try {
   await packAndInstall();
   const env = await verifyCliContract();
   await verifyRegulation(env);
+  await verifySupervisor(env);
 } catch (error) {
   failures.push(error);
 }

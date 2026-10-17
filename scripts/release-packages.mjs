@@ -58,7 +58,7 @@ export const releasePackages = [
     id: "objective-portfolio-supervisor",
     directory: "objective-portfolio-supervisor",
     name: "@potential-guide/objective-portfolio-supervisor",
-    requiredExports: ["createObjectivePortfolioSupervisor"],
+    requiredExports: ["createPortfolioPlanner", "createPortfolioCoordinator"],
     bins: [],
     forbiddenDependencies: ["@potential-guide/cli-core", "@potential-guide/objective-guide"],
   },

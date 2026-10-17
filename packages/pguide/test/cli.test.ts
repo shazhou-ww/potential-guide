@@ -96,33 +96,6 @@ test("scaffold and static validate preserve multilingual Wiki; production probes
     assert.equal(JSON.parse(probe.stdout).status, 200);
     assert.equal(JSON.parse(probe.stdout).payload.current.levelId, "terminal");
     assert.equal(JSON.parse(probe.stdout).payload.versions[f.uri], commit);
-    const portfolio = join(f.directory, "portfolio.json");
-    await writeFile(
-      portfolio,
-      JSON.stringify({
-        schemaVersion: 2,
-        objectives: [
-          {
-            id: "fixture",
-            pilot: f.uri,
-            revision: commit,
-            subject: {},
-            defensiveThreshold: "initial",
-            defensiveTarget: "terminal",
-          },
-        ],
-      }),
-    );
-    const planned = await run(bins.supervise, ["--portfolio-file", portfolio, "--format", "json"]);
-    assert.equal(planned.code, 0, planned.stdout + planned.stderr);
-    assert.equal(
-      JSON.parse(planned.stdout).observation.entries[0].observation.current.levelId,
-      "terminal",
-    );
-    assert.equal(
-      JSON.parse(planned.stdout).plan.directives[0].agentExecutionLimits.timeoutMs,
-      30_000,
-    );
     const overviewPath = join(guide, "references", "system", "overview", "en-US.md");
     const overview = await readFile(overviewPath, "utf8");
     assert.match(overview, /references: \[\]/);

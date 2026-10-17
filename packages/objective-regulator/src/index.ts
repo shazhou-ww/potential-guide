@@ -1,37 +1,44 @@
 import {
   createLatestSlot,
   Effect,
-  type RunningEffect,
-  type SubscriptionRef,
+  type EffectSample,
+  SubscriptionRef,
   watchSnapshot,
 } from "@potential-guide/effects";
 import {
+  canonicalManifestUri,
+  compileSubjectProjection,
   type Envelope,
   isJsonValue,
   type JsonObject,
   type LevelRef,
+  ObjectiveConfigurationError,
   observe,
   type PilotInput,
   type PilotObservation,
   type PilotRuntime,
   type PilotSpec,
+  parseManifest,
   type Subject,
+  SubjectProjectionError,
 } from "@potential-guide/objective-pilot";
 
 export interface AgentExecutionLimits {
   readonly timeoutMs: number;
 }
+export interface RegulationQuota {
+  readonly timeoutMs: number;
+  readonly maxAgentRuns: number;
+  readonly maxStallRuns: number;
+}
 export interface RegulationStrategy {
   readonly targetLevel: string;
   readonly agentExecutionLimits: AgentExecutionLimits;
-  readonly mode?:
-    | { readonly type: "adhoc" }
-    | { readonly type: "periodic"; readonly intervalMs: number };
+  readonly quota: RegulationQuota;
   readonly probe?: {
     readonly timeoutMs: number;
     readonly retry: { readonly maxRetries: number; readonly delayMs: number };
   };
-  readonly effectTtlMs?: number;
 }
 export interface AgentBinding {
   readonly id: string;
@@ -46,6 +53,7 @@ export interface RegulationInput {
   readonly spec: RegulatorSpec;
   readonly subject: Subject;
   readonly language?: string;
+  readonly history?: { readonly stalledRuns: number };
 }
 export interface AgentInput {
   readonly binding: AgentBinding;
@@ -57,17 +65,19 @@ export interface AgentInput {
 export type AgentOutcome =
   | { readonly status: "completed"; readonly summary: string }
   | { readonly status: "blocked" | "failed" | "limit-reached"; readonly reason: string };
-export type StopReason =
-  | "target-reached"
-  | "no-actionable-problem"
-  | "invocation-failed"
-  | "agent-blocked"
-  | "agent-failed"
-  | "agent-limit-reached";
+export type StopReason = "target-reached" | "exhausted" | "prerequisite-unmet";
+export interface RegulationPrerequisite {
+  readonly spec: PilotSpec;
+  readonly subject: Subject;
+  readonly minimumLevelId: string;
+}
 export interface RegulationOutcome {
   readonly stopReason: StopReason;
   readonly iterations: number;
   readonly latestObservation: Envelope<PilotObservation>;
+  readonly stalledRuns: number;
+  readonly exhaustedBy?: "time" | "agent-runs" | "stall" | "agent-limit";
+  readonly prerequisite?: RegulationPrerequisite;
   readonly agentOutcome?: AgentOutcome;
 }
 export interface RegulationRuntime {
@@ -75,71 +85,176 @@ export interface RegulationRuntime {
   readonly executeAgent: (input: AgentInput, signal: AbortSignal) => Promise<AgentOutcome>;
   readonly onObservation?: (observation: Envelope<PilotObservation>) => void;
 }
-export class ObjectiveRegulatorError extends TypeError {}
+export class RegulationError extends Error {
+  readonly status: number;
+  readonly envelope?: Envelope<PilotObservation>;
 
-function validateStrategy(pilot: PilotSpec, strategy: RegulationStrategy, binding: AgentBinding) {
-  if (!isJsonValue({ pilot, strategy, binding }))
-    throw new ObjectiveRegulatorError(
-      "Regulator specifications must contain only finite JSON data.",
-    );
-  if (
-    Object.keys(strategy).some(
-      (key) =>
-        !["targetLevel", "agentExecutionLimits", "mode", "probe", "effectTtlMs"].includes(key),
-    ) ||
-    Object.keys(strategy.agentExecutionLimits).some((key) => key !== "timeoutMs") ||
-    Object.keys(binding).some((key) => !["id", "configuration"].includes(key))
+  constructor(
+    message: string,
+    status: number,
+    options?: ErrorOptions & { readonly envelope?: Envelope<PilotObservation> },
+  );
+  constructor(
+    status: number,
+    message: string,
+    options?: ErrorOptions & { readonly envelope?: Envelope<PilotObservation> },
+  );
+  constructor(
+    first: number | string,
+    second: string | number,
+    options?: ErrorOptions & { readonly envelope?: Envelope<PilotObservation> },
   ) {
-    throw new ObjectiveRegulatorError(
-      "Unsupported regulator strategy, execution limits or binding fields; legacy budgets are not supported.",
-    );
+    super(typeof first === "string" ? first : String(second), options);
+    this.name = "RegulationError";
+    this.status = typeof first === "number" ? first : Number(second);
+    if (options?.envelope !== undefined) this.envelope = options.envelope;
   }
+}
+
+const maximumTimer = 2_147_483_647;
+const duration = (value: unknown): value is number =>
+  Number.isSafeInteger(value) && Number(value) > 0 && Number(value) <= maximumTimer;
+const count = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) > 0;
+const record = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+const text = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0;
+
+function fields(
+  value: unknown,
+  required: readonly string[],
+  optional: readonly string[] = [],
+): asserts value is Record<string, unknown> {
   if (
-    !pilot.manifest.levels.some(({ id }) => id === strategy.targetLevel) &&
-    strategy.targetLevel !== "terminal"
-  ) {
-    throw new ObjectiveRegulatorError("Target level must belong to the root Pilot Objective.");
-  }
-  if (
-    !Number.isSafeInteger(strategy.agentExecutionLimits.timeoutMs) ||
-    strategy.agentExecutionLimits.timeoutMs < 1 ||
-    strategy.agentExecutionLimits.timeoutMs > 2_147_483_647
-  ) {
-    throw new ObjectiveRegulatorError("Agent timeoutMs must be a positive safe timer duration.");
-  }
-  if (!binding.id.trim()) throw new ObjectiveRegulatorError("Agent binding ID must be nonempty.");
-  const duration = (value: number) =>
-    Number.isSafeInteger(value) && value > 0 && value <= 2_147_483_647;
-  if (strategy.effectTtlMs !== undefined && !duration(strategy.effectTtlMs)) {
-    throw new ObjectiveRegulatorError("Effect TTL must be a positive safe timer duration.");
-  }
-  const mode = strategy.mode;
-  if (
-    mode !== undefined &&
-    (!["adhoc", "periodic"].includes(mode.type) ||
-      Object.keys(mode).some(
-        (key) => !["type", ...(mode.type === "periodic" ? ["intervalMs"] : [])].includes(key),
-      ) ||
-      (mode.type === "periodic" && !duration(mode.intervalMs)))
+    !record(value) ||
+    required.some((key) => !Object.hasOwn(value, key)) ||
+    Object.keys(value).some((key) => !required.includes(key) && !optional.includes(key))
   )
-    throw new ObjectiveRegulatorError(
-      "Periodic mode requires a positive intervalMs; adhoc accepts only type.",
-    );
-  const probe = strategy.probe;
+    throw new RegulationError(400, `Expected fields: ${[...required, ...optional].join(", ")}.`);
+}
+
+function immutable<T>(value: T): T {
+  if (value !== null && typeof value === "object") {
+    for (const child of Object.values(value)) immutable(child);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+function inputError(cause: unknown): RegulationError {
+  return cause instanceof RegulationError
+    ? cause
+    : new RegulationError(400, cause instanceof Error ? cause.message : String(cause), { cause });
+}
+
+function executionError(cause: unknown): RegulationError {
+  if (cause instanceof RegulationError) return cause;
+  if (cause instanceof ObjectiveConfigurationError || cause instanceof SubjectProjectionError)
+    return inputError(cause);
+  return new RegulationError(500, cause instanceof Error ? cause.message : String(cause), {
+    cause,
+  });
+}
+
+function validatePilot(value: unknown, ancestors = new Set<string>()): asserts value is PilotSpec {
+  fields(value, ["objectiveId", "version", "manifest", "locales"], ["prerequisite"]);
   if (
-    probe !== undefined &&
-    (!duration(probe.timeoutMs) ||
-      Object.keys(probe).some((key) => !["timeoutMs", "retry"].includes(key)) ||
-      Object.keys(probe.retry).some((key) => !["maxRetries", "delayMs"].includes(key)) ||
-      !Number.isSafeInteger(probe.retry.maxRetries) ||
-      probe.retry.maxRetries < 0 ||
-      !Number.isSafeInteger(probe.retry.delayMs) ||
-      probe.retry.delayMs < 0 ||
-      probe.retry.delayMs > 2_147_483_647)
+    !text(value.objectiveId) ||
+    !value.objectiveId.startsWith("git+") ||
+    canonicalManifestUri(value.objectiveId) !== value.objectiveId ||
+    typeof value.version !== "string" ||
+    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(value.version) ||
+    ancestors.has(value.objectiveId)
   )
-    throw new ObjectiveRegulatorError(
-      "Probe policy requires a positive timeoutMs, nonnegative finite maxRetries and timer delayMs.",
+    throw new RegulationError(
+      400,
+      "Pilot requires unique stable Git identities and exact versions.",
     );
+  ancestors.add(value.objectiveId);
+  const manifest = parseManifest(JSON.stringify(value.manifest));
+  if (!record(value.locales))
+    throw new RegulationError(400, "Pilot locales must be reference page maps.");
+  for (const language of manifest.languages) {
+    const pages = value.locales[language];
+    if (!record(pages) || !Object.hasOwn(pages, "system/404"))
+      throw new RegulationError(400, `Missing reference pages for ${language}.`);
+    for (const page of Object.values(pages)) {
+      fields(page, ["id", "title", "description", "references", "content"]);
+      if (
+        !text(page.id) ||
+        typeof page.title !== "string" ||
+        typeof page.description !== "string" ||
+        typeof page.content !== "string" ||
+        !Array.isArray(page.references) ||
+        !page.references.every(text)
+      )
+        throw new RegulationError(400, "Invalid Pilot reference page.");
+    }
+  }
+  if ((manifest.prerequisite === undefined) !== (value.prerequisite === undefined))
+    throw new RegulationError(400, "Mismatched prerequisite specification.");
+  if (manifest.prerequisite !== undefined) {
+    validatePilot(value.prerequisite, ancestors);
+    const child = value.prerequisite;
+    const minimum = manifest.prerequisite.minimumLevelId ?? "terminal";
+    if (
+      canonicalManifestUri(manifest.prerequisite.manifestUri, value.objectiveId) !==
+        child.objectiveId ||
+      (minimum !== "terminal" && !child.manifest.levels.some(({ id }) => id === minimum))
+    )
+      throw new RegulationError(400, "Invalid direct prerequisite identity or minimum level.");
+    compileSubjectProjection(manifest.prerequisite.subject);
+  }
+  ancestors.delete(value.objectiveId);
+}
+
+function validateSpec(value: unknown): asserts value is RegulatorSpec {
+  if (!isJsonValue(value))
+    throw new RegulationError(400, "Regulator specifications must contain only finite JSON data.");
+  fields(value, ["pilot", "strategy", "binding"]);
+  validatePilot(value.pilot);
+  const strategy = value.strategy;
+  fields(strategy, ["targetLevel", "agentExecutionLimits", "quota"], ["probe"]);
+  fields(strategy.agentExecutionLimits, ["timeoutMs"]);
+  if (!duration(strategy.agentExecutionLimits.timeoutMs))
+    throw new RegulationError(400, "Agent timeoutMs must be a positive safe timer duration.");
+  fields(strategy.quota, ["timeoutMs", "maxAgentRuns", "maxStallRuns"]);
+  if (
+    !duration(strategy.quota.timeoutMs) ||
+    !count(strategy.quota.maxAgentRuns) ||
+    !count(strategy.quota.maxStallRuns)
+  )
+    throw new RegulationError(
+      400,
+      "Quota requires a positive safe timer and positive safe counts.",
+    );
+  if (
+    strategy.targetLevel !== "terminal" &&
+    !value.pilot.manifest.levels.some(({ id }) => id === strategy.targetLevel)
+  )
+    throw new RegulationError(400, "Target level must belong to the root Pilot Objective.");
+  fields(value.binding, ["id"], ["configuration"]);
+  if (
+    !text(value.binding.id) ||
+    (value.binding.configuration !== undefined && !record(value.binding.configuration))
+  )
+    throw new RegulationError(
+      400,
+      "Agent binding requires a nonempty ID and object configuration.",
+    );
+  if (strategy.probe !== undefined) {
+    fields(strategy.probe, ["timeoutMs", "retry"]);
+    fields(strategy.probe.retry, ["maxRetries", "delayMs"]);
+    if (
+      !duration(strategy.probe.timeoutMs) ||
+      !Number.isSafeInteger(strategy.probe.retry.maxRetries) ||
+      Number(strategy.probe.retry.maxRetries) < 0 ||
+      !Number.isSafeInteger(strategy.probe.retry.delayMs) ||
+      Number(strategy.probe.retry.delayMs) < 0 ||
+      Number(strategy.probe.retry.delayMs) > maximumTimer
+    )
+      throw new RegulationError(400, "Invalid probe timeout or retry policy.");
+  }
 }
 
 export function makeRegulatorSpec(
@@ -147,17 +262,31 @@ export function makeRegulatorSpec(
   strategy: RegulationStrategy,
   binding: AgentBinding,
 ): RegulatorSpec {
-  validateStrategy(pilot, strategy, binding);
-  // Snapshot the recipe; neither the subject nor local executable bindings belong here.
-  const spec = structuredClone({ pilot, strategy, binding });
-  function freeze(value: object) {
-    for (const child of Object.values(value)) {
-      if (child !== null && typeof child === "object") freeze(child);
-    }
-    Object.freeze(value);
+  try {
+    const value = { pilot, strategy, binding };
+    validateSpec(value);
+    return immutable(structuredClone(value));
+  } catch (cause) {
+    throw inputError(cause);
   }
-  freeze(spec);
-  return spec;
+}
+
+function snapshotInput(value: RegulationInput): RegulationInput {
+  try {
+    if (!isJsonValue(value)) throw new RegulationError(400, "Input must contain finite JSON data.");
+    fields(value, ["spec", "subject"], ["language", "history"]);
+    validateSpec(value.spec);
+    if (!record(value.subject) || (value.language !== undefined && !text(value.language)))
+      throw new RegulationError(400, "Invalid subject or language.");
+    if (value.history !== undefined) {
+      fields(value.history, ["stalledRuns"]);
+      if (!Number.isSafeInteger(value.history.stalledRuns) || value.history.stalledRuns < 0)
+        throw new RegulationError(400, "History stalledRuns must be a nonnegative safe count.");
+    }
+    return immutable(structuredClone(value));
+  } catch (cause) {
+    throw inputError(cause);
+  }
 }
 
 export function pilotInput(input: RegulationInput): PilotInput {
@@ -169,111 +298,148 @@ export function pilotInput(input: RegulationInput): PilotInput {
 }
 
 export function agentInput(input: RegulationInput, observation: PilotObservation): AgentInput {
-  return {
-    binding: input.spec.binding,
-    subject: input.subject,
-    target: { objectiveId: input.spec.pilot.objectiveId, levelId: input.spec.strategy.targetLevel },
-    observation,
-    limits: input.spec.strategy.agentExecutionLimits,
-  };
+  return immutable(
+    structuredClone({
+      binding: input.spec.binding,
+      subject: input.subject,
+      target: {
+        objectiveId: input.spec.pilot.objectiveId,
+        levelId: input.spec.strategy.targetLevel,
+      },
+      observation,
+      limits: input.spec.strategy.agentExecutionLimits,
+    }),
+  );
+}
+
+/** Return the direct dependency, never a deeper ancestor that happens to be current. */
+export function regulationPrerequisite(input: RegulationInput): RegulationPrerequisite | undefined {
+  const stable = snapshotInput(input);
+  const spec = stable.spec.pilot.prerequisite;
+  const prerequisite = stable.spec.pilot.manifest.prerequisite;
+  if (spec === undefined || prerequisite === undefined) return undefined;
+  try {
+    const subject = compileSubjectProjection(prerequisite.subject)(stable.subject);
+    if (!record(subject) || !isJsonValue(subject))
+      throw new RegulationError(400, "Prerequisite projection must produce a subject object.");
+    return immutable({
+      spec,
+      subject: subject as Subject,
+      minimumLevelId: prerequisite.minimumLevelId ?? "terminal",
+    });
+  } catch (cause) {
+    throw inputError(cause);
+  }
 }
 
 export type RegulationDecision =
-  | { readonly type: "stop"; readonly reason: "target-reached" | "no-actionable-problem" }
+  | { readonly type: "stop"; readonly reason: "target-reached" }
+  | {
+      readonly type: "stop";
+      readonly reason: "prerequisite-unmet";
+      readonly prerequisite: RegulationPrerequisite;
+    }
   | { readonly type: "execute"; readonly input: AgentInput };
 
-export function decideRegulation(
-  input: RegulationInput,
-  observation: PilotObservation,
-): RegulationDecision {
-  validateStrategy(input.spec.pilot, input.spec.strategy, input.spec.binding);
+function decide(input: RegulationInput, observation: PilotObservation): RegulationDecision {
   const pilot = input.spec.pilot;
   const rootLevels = [...pilot.manifest.levels.map(({ id }) => id), "terminal"];
   const current = observation.current;
-  if (current.objectiveId === pilot.objectiveId) {
-    const index = rootLevels.indexOf(current.levelId);
-    if (index < 0) throw new ObjectiveRegulatorError("Observation contains an unknown root level.");
-    if (index >= rootLevels.indexOf(input.spec.strategy.targetLevel)) {
-      return { type: "stop", reason: "target-reached" };
-    }
-  } else {
+  if (current.objectiveId !== pilot.objectiveId) {
     let owner = pilot.prerequisite;
     while (owner !== undefined && owner.objectiveId !== current.objectiveId)
       owner = owner.prerequisite;
     if (
       owner === undefined ||
       ![...owner.manifest.levels.map(({ id }) => id), "terminal"].includes(current.levelId)
-    ) {
-      throw new ObjectiveRegulatorError("Observation belongs to an unrelated Objective.");
-    }
+    )
+      throw new RegulationError(500, "Observation belongs to an unrelated Objective or level.");
+    const prerequisite = regulationPrerequisite(input);
+    if (prerequisite === undefined)
+      throw new RegulationError(500, "Observation has no matching prerequisite.");
+    return { type: "stop", reason: "prerequisite-unmet", prerequisite };
   }
-  return observation.problems.length === 0
-    ? { type: "stop", reason: "no-actionable-problem" }
-    : { type: "execute", input: agentInput(input, observation) };
+  const index = rootLevels.indexOf(current.levelId);
+  if (index < 0) throw new RegulationError(500, "Observation contains an unknown root level.");
+  if (index >= rootLevels.indexOf(input.spec.strategy.targetLevel))
+    return { type: "stop", reason: "target-reached" };
+  if (
+    observation.problems.length === 0 ||
+    observation.problems.some(
+      ({ ref }) => ref.objectiveId !== pilot.objectiveId || ref.levelId !== current.levelId,
+    )
+  )
+    throw new RegulationError(500, "Observation has no actionable root-scoped problems.");
+  return { type: "execute", input: agentInput(input, observation) };
+}
+
+export function decideRegulation(
+  input: RegulationInput,
+  observation: PilotObservation,
+): RegulationDecision {
+  return decide(snapshotInput(input), observation);
 }
 
 function validateAgentOutcome(value: AgentOutcome): AgentOutcome {
   if (
-    value === null ||
-    typeof value !== "object" ||
+    !isJsonValue(value) ||
+    !record(value) ||
     (value.status === "completed"
-      ? typeof value.summary !== "string" || !value.summary.trim()
-      : !["blocked", "failed", "limit-reached"].includes(value.status) ||
-        typeof value.reason !== "string" ||
-        !value.reason.trim())
-  ) {
-    throw new ObjectiveRegulatorError("Agent returned an invalid outcome.");
-  }
-  return value;
+      ? !text(value.summary)
+      : !["blocked", "failed", "limit-reached"].includes(value.status) || !text(value.reason))
+  )
+    throw new RegulationError(502, "Agent returned an invalid outcome.");
+  return immutable(structuredClone(value));
 }
 
-async function executeAgent(
-  input: AgentInput,
-  runtime: RegulationRuntime,
+async function interruptible<T>(action: Promise<T>, signal: AbortSignal): Promise<T> {
+  let onAbort: (() => void) | undefined;
+  try {
+    return await Promise.race([
+      action,
+      new Promise<never>((_resolve, reject) => {
+        onAbort = () => reject(signal.reason);
+        if (signal.aborted) onAbort();
+        else signal.addEventListener("abort", onAbort, { once: true });
+      }),
+    ]);
+  } finally {
+    if (onAbort !== undefined) signal.removeEventListener("abort", onAbort);
+  }
+}
+
+async function timed<T>(
+  action: (signal: AbortSignal) => Promise<T>,
+  timeoutMs: number,
+  timeoutValue: T,
   parent: AbortSignal,
-): Promise<AgentOutcome> {
+): Promise<T> {
   parent.throwIfAborted();
   const controller = new AbortController();
   const signal = AbortSignal.any([parent, controller.signal]);
   let timer: ReturnType<typeof setTimeout> | undefined;
-  let onAbort: (() => void) | undefined;
   try {
-    const deadline = new Promise<AgentOutcome>((resolve, reject) => {
-      onAbort = () => reject(parent.reason);
-      parent.addEventListener("abort", onAbort, { once: true });
+    const deadline = new Promise<T>((resolve) => {
       timer = setTimeout(() => {
-        controller.abort(new Error("Agent execution time limit reached."));
-        resolve({ status: "limit-reached", reason: "Agent execution time limit reached." });
-      }, input.limits.timeoutMs);
+        resolve(timeoutValue);
+        controller.abort(new Error("Execution time limit reached."));
+      }, timeoutMs);
     });
-    // Promise.race owns late rejection handlers without waiting for uncooperative cleanup.
-    const action = Promise.resolve().then(() => {
+    const pending = Promise.resolve().then(() => {
       signal.throwIfAborted();
-      return runtime.executeAgent(input, signal);
+      return action(signal);
     });
-    const outcome = await Promise.race([action, deadline]);
-    parent.throwIfAborted();
-    return validateAgentOutcome(outcome);
-  } catch (cause) {
-    parent.throwIfAborted();
-    return { status: "failed", reason: cause instanceof Error ? cause.message : String(cause) };
+    return await interruptible(Promise.race([pending, deadline]), parent);
   } finally {
     if (timer !== undefined) clearTimeout(timer);
-    if (onAbort !== undefined) parent.removeEventListener("abort", onAbort);
   }
-}
-
-interface ObservationSource {
-  read(refresh: boolean, signal: AbortSignal): Promise<Envelope<PilotObservation>>;
-  cancel?(): void;
 }
 
 async function probeWithPolicy(
   input: RegulationInput,
-  source: ObservationSource,
-  refresh: boolean,
+  runtime: RegulationRuntime,
   signal: AbortSignal,
-  onObservation: RegulationRuntime["onObservation"],
+  publish: (value: Envelope<PilotObservation>) => void,
 ): Promise<Envelope<PilotObservation>> {
   const policy = input.spec.strategy.probe ?? {
     timeoutMs: 30_000,
@@ -281,192 +447,208 @@ async function probeWithPolicy(
   };
   for (let attempt = 0; ; attempt++) {
     signal.throwIfAborted();
-    const envelope = await Effect.runPromise(
-      Effect.timeoutOrElse(
-        Effect.tryPromise({
-          try: (probeSignal) => source.read(refresh || attempt > 0, probeSignal),
-          catch: (cause) =>
-            cause instanceof Error ? cause : new ObjectiveRegulatorError(String(cause)),
-        }),
-        {
-          duration: policy.timeoutMs,
-          orElse: () =>
-            Effect.sync<Envelope<PilotObservation>>(() => {
-              source.cancel?.();
-              return {
-                status: 504,
-                payload: null,
-                message: `probe-timeout: Observation exceeded ${policy.timeoutMs}ms.`,
-              };
+    const envelope = await timed<Envelope<PilotObservation>>(
+      async (probeSignal) => {
+        const result = await Effect.runPromise(
+          observe(pilotInput(input), runtime.pilot).pipe(
+            Effect.match({
+              onSuccess: (value) => ({ value }),
+              onFailure: (error) => ({ error }),
             }),
-        },
-      ),
-      { signal },
+          ),
+          { signal: probeSignal },
+        );
+        if ("error" in result) throw result.error;
+        return result.value;
+      },
+      policy.timeoutMs,
+      { status: 504, payload: null, message: `Probe exceeded ${policy.timeoutMs}ms.` },
+      signal,
     );
     signal.throwIfAborted();
-    onObservation?.(envelope);
-    if (
-      envelope.payload !== null ||
-      envelope.status < 500 ||
-      envelope.status > 599 ||
-      attempt >= policy.retry.maxRetries
-    )
-      return envelope;
+    const stable = immutable(structuredClone(envelope));
+    publish(stable);
+    if (stable.payload !== null) return stable;
+    if (stable.status < 500 || stable.status > 599 || attempt >= policy.retry.maxRetries)
+      throw new RegulationError(
+        stable.status >= 400 && stable.status <= 599 ? stable.status : 502,
+        `Probe invocation failed: ${stable.message}`,
+        { envelope: stable },
+      );
     await Effect.runPromise(Effect.sleep(policy.retry.delayMs), { signal });
   }
 }
 
-function regulation(
-  input: RegulationInput,
-  runtime: RegulationRuntime,
-  source: ObservationSource,
-): Effect.Effect<RegulationOutcome, Error> {
-  const execution = Effect.callback<RegulationOutcome, Error>((resume, signal) => {
-    const pending = (async (): Promise<RegulationOutcome> => {
-      signal.throwIfAborted();
-      validateStrategy(input.spec.pilot, input.spec.strategy, input.spec.binding);
-      let iterations = 0;
-      let refresh = false;
-      while (true) {
-        const latestObservation = await probeWithPolicy(
-          input,
-          source,
-          refresh,
-          signal,
-          runtime.onObservation,
-        );
-        signal.throwIfAborted();
-        if (latestObservation.payload === null)
-          return { stopReason: "invocation-failed", iterations, latestObservation };
-        const decision = decideRegulation(input, latestObservation.payload);
-        if (
-          decision.type === "stop" &&
-          decision.reason === "target-reached" &&
-          input.spec.strategy.mode?.type === "periodic"
-        ) {
-          await Effect.runPromise(Effect.sleep(input.spec.strategy.mode.intervalMs), { signal });
-          refresh = true;
-          continue;
-        }
-        if (decision.type === "stop")
-          return { stopReason: decision.reason, iterations, latestObservation };
-        iterations++;
-        const outcome = await executeAgent(decision.input, runtime, signal);
-        signal.throwIfAborted();
-        if (outcome.status !== "completed")
-          return {
-            stopReason:
-              outcome.status === "blocked"
-                ? "agent-blocked"
-                : outcome.status === "failed"
-                  ? "agent-failed"
-                  : "agent-limit-reached",
-            iterations,
-            latestObservation,
-            agentOutcome: outcome,
-          };
-        refresh = true;
-      }
-    })();
-    const settled = pending.then(
-      (value) => resume(Effect.succeed(value)),
-      (cause: unknown) =>
-        resume(
-          Effect.fail(cause instanceof Error ? cause : new ObjectiveRegulatorError(String(cause))),
-        ),
-    );
-    return Effect.promise(() => settled);
-  });
-  return Effect.suspend(() => {
-    validateStrategy(input.spec.pilot, input.spec.strategy, input.spec.binding);
-    return input.spec.strategy.effectTtlMs === undefined
-      ? execution
-      : Effect.timeoutOrElse(execution, {
-          duration: input.spec.strategy.effectTtlMs,
-          orElse: () => Effect.interrupt,
-        });
-  });
+function progressed(before: PilotObservation, after: PilotObservation, pilot: PilotSpec): boolean {
+  if (after.current.objectiveId !== pilot.objectiveId) return false;
+  const levels = [...pilot.manifest.levels.map(({ id }) => id), "terminal"];
+  const previous = levels.indexOf(before.current.levelId);
+  const current = levels.indexOf(after.current.levelId);
+  if (current > previous) return true;
+  const scopedCount = (observation: PilotObservation) =>
+    new Set(
+      observation.problems.map(({ ref }) =>
+        JSON.stringify([ref.objectiveId, ref.levelId, ref.checkId, ref.problemId]),
+      ),
+    ).size;
+  return current === previous && scopedCount(after) < scopedCount(before);
 }
 
 export function regulate(
   input: RegulationInput,
   runtime: RegulationRuntime,
-): Effect.Effect<RegulationOutcome, Error> {
-  return Effect.suspend(() => {
-    const snapshot = structuredClone(input);
-    return regulation(snapshot, runtime, {
-      read: (_refresh, signal) =>
-        Effect.runPromise(observe(pilotInput(snapshot), runtime.pilot), { signal }),
-    });
+): Effect.Effect<RegulationOutcome, RegulationError> {
+  return Effect.callback<RegulationOutcome, RegulationError>((resume, parent) => {
+    const startedAt = performance.now();
+    const deadline = new AbortController();
+    const signal = AbortSignal.any([parent, deadline.signal]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let iterations = 0;
+    let stalledRuns = 0;
+    let latestObservation: Envelope<PilotObservation> = {
+      status: 408,
+      payload: null,
+      message: "Regulation time quota exhausted before an observation.",
+    };
+    let agentOutcome: AgentOutcome | undefined;
+    const outcome = (
+      stopReason: StopReason,
+      extra: Pick<RegulationOutcome, "exhaustedBy" | "prerequisite"> = {},
+    ): RegulationOutcome =>
+      immutable({
+        stopReason,
+        iterations,
+        latestObservation,
+        stalledRuns,
+        ...(agentOutcome === undefined ? {} : { agentOutcome }),
+        ...extra,
+      });
+    const pending = (async (): Promise<RegulationOutcome> => {
+      try {
+        parent.throwIfAborted();
+        const stable = snapshotInput(input);
+        stalledRuns = stable.history?.stalledRuns ?? 0;
+        if (
+          !record(runtime) ||
+          !record(runtime.pilot) ||
+          typeof runtime.pilot.resolveCheck !== "function" ||
+          typeof runtime.executeAgent !== "function" ||
+          (runtime.onObservation !== undefined && typeof runtime.onObservation !== "function")
+        )
+          throw new RegulationError(400, "Invalid regulator runtime bindings.");
+        const quota = stable.spec.strategy.quota;
+        const remaining = quota.timeoutMs - (performance.now() - startedAt);
+        if (remaining <= 0) return outcome("exhausted", { exhaustedBy: "time" });
+        timer = setTimeout(() => deadline.abort(), remaining);
+        const checkTime = () => {
+          parent.throwIfAborted();
+          if (performance.now() - startedAt >= quota.timeoutMs) deadline.abort();
+          signal.throwIfAborted();
+        };
+        let previous: PilotObservation | undefined;
+        while (true) {
+          checkTime();
+          latestObservation = await probeWithPolicy(stable, runtime, signal, (sample) => {
+            checkTime();
+            latestObservation = sample;
+            runtime.onObservation?.(sample);
+          });
+          checkTime();
+          const observation = latestObservation.payload;
+          if (observation === null)
+            throw new RegulationError(500, "Missing successful observation.");
+          if (previous !== undefined)
+            stalledRuns = progressed(previous, observation, stable.spec.pilot)
+              ? 0
+              : Math.min(Number.MAX_SAFE_INTEGER, stalledRuns + 1);
+          const decision = decide(stable, observation);
+          checkTime();
+          if (decision.type === "stop")
+            return outcome(
+              decision.reason,
+              decision.reason === "prerequisite-unmet"
+                ? { prerequisite: decision.prerequisite }
+                : {},
+            );
+          if (stalledRuns >= quota.maxStallRuns)
+            return outcome("exhausted", { exhaustedBy: "stall" });
+          if (iterations >= quota.maxAgentRuns)
+            return outcome("exhausted", { exhaustedBy: "agent-runs" });
+          previous = observation;
+          iterations++;
+          agentOutcome = validateAgentOutcome(
+            await timed(
+              (agentSignal) => runtime.executeAgent(decision.input, agentSignal),
+              stable.spec.strategy.agentExecutionLimits.timeoutMs,
+              { status: "limit-reached", reason: "Agent execution time limit reached." },
+              signal,
+            ),
+          );
+          checkTime();
+          if (agentOutcome.status === "limit-reached")
+            return outcome("exhausted", { exhaustedBy: "agent-limit" });
+          if (agentOutcome.status !== "completed")
+            throw new RegulationError(
+              agentOutcome.status === "blocked" ? 409 : 500,
+              `Agent ${agentOutcome.status}: ${agentOutcome.reason}`,
+            );
+        }
+      } catch (cause) {
+        parent.throwIfAborted();
+        if (deadline.signal.aborted) return outcome("exhausted", { exhaustedBy: "time" });
+        throw executionError(cause);
+      } finally {
+        if (timer !== undefined) clearTimeout(timer);
+      }
+    })();
+    const settled = pending.then(
+      (value) => resume(Effect.succeed(value)),
+      (cause: unknown) => resume(Effect.fail(executionError(cause))),
+    );
+    return Effect.promise(() => settled);
   });
 }
 
-/** Submit one complete input snapshot when fields must change atomically. */
+/** Each externally changed complete snapshot starts a fresh, single regulation run. */
 export async function regulatorBehavior(
   source: SubscriptionRef.SubscriptionRef<RegulationInput>,
   runtime: RegulationRuntime,
   parentSignal?: AbortSignal,
 ) {
-  const pilotSlot = await createLatestSlot<string, Envelope<PilotObservation>, Error>(parentSignal);
-  const regulationSlot = await createLatestSlot<string, RegulationOutcome, Error>(parentSignal);
-  let owner:
-    | {
-        key: string;
-        sequence: number;
-        invalidated: boolean;
-        input: PilotInput;
-        handle: RunningEffect<Envelope<PilotObservation>, Error>;
-      }
-    | undefined;
+  const slot = await createLatestSlot<string, RegulationOutcome, RegulationError>(parentSignal);
+  const observation = await Effect.runPromise(
+    SubscriptionRef.make<EffectSample<string, Envelope<PilotObservation>, RegulationError>>({
+      state: "initial",
+    }),
+  );
   let generation = 0;
-  let regulationKey: string | undefined;
-  let runningRegulation: RunningEffect<RegulationOutcome, Error> | undefined;
+  let previousKey: string | undefined;
   const watcher = watchSnapshot(
     source,
     (snapshot) => {
-      const input = structuredClone(snapshot);
-      const nextRegulationKey = JSON.stringify(input);
-      if (regulationKey === nextRegulationKey) return;
-      runningRegulation?.cancel();
-      regulationKey = nextRegulationKey;
-      const key = JSON.stringify(pilotInput(input));
-      if (owner?.key !== key) {
-        owner = {
-          key,
-          sequence: 0,
-          invalidated: false,
-          input: pilotInput(input),
-          handle: pilotSlot.replace(`${key}:0`, observe(pilotInput(input), runtime.pilot)),
-        };
+      let stable: RegulationInput;
+      try {
+        stable = snapshotInput(snapshot);
+      } catch (cause) {
+        const key = `invalid:${++generation}`;
+        previousKey = undefined;
+        slot.replace(key, Effect.fail(inputError(cause)));
+        return;
       }
-      const selected = owner;
+      const key = JSON.stringify(stable);
+      if (key === previousKey) return;
+      previousKey = key;
       const token = ++generation;
-      const currentRuntime: RegulationRuntime = {
-        ...runtime,
-        onObservation: (observation) => {
-          if (token === generation) runtime.onObservation?.(observation);
-        },
-      };
-      runningRegulation = regulationSlot.replace(
-        nextRegulationKey,
-        regulation(input, currentRuntime, {
-          read: async (refresh, signal) => {
-            signal.throwIfAborted();
-            if (refresh || selected.invalidated) {
-              selected.invalidated = false;
-              selected.sequence++;
-              selected.handle = pilotSlot.replace(
-                `${selected.key}:${selected.sequence}`,
-                observe(selected.input, runtime.pilot),
-              );
-            }
-            const result = await selected.handle.await();
-            signal.throwIfAborted();
-            return result;
-          },
-          cancel() {
-            selected.invalidated = true;
-            selected.handle.cancel();
+      slot.replace(
+        key,
+        regulate(stable, {
+          ...runtime,
+          onObservation(sample) {
+            if (token !== generation) return;
+            Effect.runSync(
+              SubscriptionRef.set(observation, { state: "ready", key, value: sample }),
+            );
+            runtime.onObservation?.(sample);
           },
         }),
       );
@@ -474,13 +656,13 @@ export async function regulatorBehavior(
     parentSignal,
   );
   return {
-    observation: pilotSlot.state,
-    outcome: regulationSlot.state,
+    observation,
+    outcome: slot.state,
     async close() {
       generation++;
       watcher.cancel();
       await watcher.exit();
-      await Promise.all([pilotSlot.close(), regulationSlot.close()]);
+      await slot.close();
     },
   };
 }

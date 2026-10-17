@@ -64,7 +64,7 @@ defaultAgent: fixture
 agentExecutionLimits:
   timeoutMs: 30000
 regulationStrategy:
-  mode: { type: adhoc }
+  quota: { timeoutMs: 300000, maxAgentRuns: 10, maxStallRuns: 3 }
   probe: { timeoutMs: 30000, retry: { maxRetries: 0, delayMs: 0 } }
 agents:
   fixture:
@@ -78,17 +78,18 @@ with `scaffold pilot`/`validate pilot`, and migrate checks to the envelope
 protocol. Remove `limits.maxIterations`, `limits.maxStalledIterations`,
 `--max-iterations`, `--max-stalled-iterations`, and whole-loop `--timeout`.
 `agentExecutionLimits.timeoutMs` / `--agent-timeout-ms` applies separately to each
-Agent execution, including ACP startup. There is no cross-round budget.
-Optional `regulationStrategy` also accepts
-`mode: { type: periodic, intervalMs: 1000 }`, per-observation probe timeouts and
-finite retry counts/delays, and `effectTtlMs` for the effect lifetime.
-Defaults are ad hoc mode, a 30000 ms probe timeout, zero retries and no TTL.
-Retries apply to retryable probe invocation failures, not business problems;
-these are not repair-round budgets. The strategy is persisted and `continue`
-restores it rather than silently adopting changed current configuration.
-Periodic execution continues re-observing until cancellation or its configured
-TTL; TTL interruption is reported as `effect-ttl-reached` with exit code 5,
-not as an internal failure.
+Agent execution, including ACP startup. Each regulation is one bounded run.
+Optional `regulationStrategy.quota` defaults to a 300000 ms whole-run timeout,
+10 Agent runs, and 3 stalled runs. Optional `regulationStrategy.probe` controls
+per-observation timeouts and finite retries/delays; its defaults are a 30000 ms
+timeout and zero retries. Probe retries apply to retryable invocation failures,
+not business problems. Remove legacy `mode` and `effectTtlMs`; ongoing scheduling
+belongs to portfolio supervision, not regulation.
+
+Normal outcomes are `target-reached` (exit 0), `exhausted` (exit 5), and
+`prerequisite-unmet` (exit 3). Typed 4xx/5xx invocation errors are failures,
+not normal outcomes. The strategy is persisted and `continue` restores it
+rather than silently adopting changed current configuration.
 
 The Agent receives the subject, target, **complete observation**, and execution
 limits. It owns task organization. Completed execution triggers re-observation;
@@ -97,6 +98,8 @@ New recovery records use schema 2, pin the Pilot URI/commit and subject digest,
 and persist complete observation envelopes, Agent outcomes, and actual ACP
 session IDs before prompting. `continue` starts a fresh feedback loop against
 that pinned recipe and resumes the recorded ACP session when repair is needed.
+Each `continue` is an explicit new run, preserving the pinned recipe and
+relevant progress history; it does not restart an exhausted run automatically.
 Session IDs in older schema 2 attempts are also recognized. A failed resume
 never silently starts a new session. If no real session ID was saved,
 `requirements.sessionResume: true` reports an explicit failure; otherwise a
@@ -111,10 +114,73 @@ version. When that path no longer exists, only the exact stored origin commit
 is attempted; unpublished commits may therefore be unavailable.
 Profiles inherit credentials by environment-variable name only.
 
-Portfolio JSON also uses schema 2: each `objectives` entry contains
-`id`, `pilot`, optional `revision`, `subject`, `defensiveThreshold`, and
-`defensiveTarget`. `supervise --portfolio-file <json> [--execute]` preserves
-defensive-first policy validation and forwards complete observations.
+## Portfolio supervision
+
+`pguide supervise --portfolio-file portfolio.json --planner strategist` observes
+the portfolio and asks the configured ACP planning Agent for a priority queue
+once, without executing repairs. Add `--execute` to continuously re-observe each
+goal at its configured interval and coordinate one-shot regulation runs until
+SIGINT/SIGTERM. `--execute --duration-ms 5000` bounds supervision and waits for
+active processes to stop before returning.
+
+Portfolio files require **schema 3**; old schemas and defensive-threshold
+portfolios are rejected:
+
+```json
+{
+  "schemaVersion": 3,
+  "goals": [{
+    "id": "service",
+    "pilot": "git+https://github.com/example/service.git#objective/pilot.yaml",
+    "subject": {},
+    "targetLevel": "terminal",
+    "priority": 1,
+    "observationIntervalMs": 30000,
+    "requirements": ["typescript"]
+  }],
+  "resources": [{
+    "id": "worker-1",
+    "agent": "implementer",
+    "capacity": 1,
+    "capabilities": ["typescript"]
+  }]
+}
+```
+
+Goals accept an optional pinned `revision`; Pilot sources follow the same
+committed-snapshot rules as `probe`. Both `strategist` and `implementer` refer
+to profiles in configuration `agents`. `--planner` is required and does not
+implicitly register the planner as an execution resource. An empty resource
+array is permitted; unavailable capacity leaves work queued.
+
+While executing, the CLI reloads the portfolio, Agent profiles, and source refs
+between polling cycles (250–1000 ms plus source-loading time). Goal/subject/spec
+changes replace immutable demands; resource changes reach the coordinator
+without restarting. An explicit commit remains pinned, while an unpinned Git
+URI or ref can advance to a new committed snapshot. Old observation scopes are
+released after replacement. Invalid live updates stop supervision rather than
+silently retaining stale inputs. Regulation quotas and execution timeout settings
+are fixed at command startup.
+
+The planner sees goals, observations, derived prerequisite candidates, previous
+demands, and resource-free execution feedback—never the Agent inventory.
+It must emit a JSON object through ACP `agent_message_chunk` text updates:
+`{"directives":[{"goalId":"service","priority":1}]}`. Optional directive fields
+are `targetLevel` (a known level) and `requirements` (capability names).
+Unknown or duplicate IDs, arbitrary commands, invalid JSON, refusal,
+cancellation, excessive output, and timeout fail closed; there is no fallback
+policy. Planning uses `agentExecutionLimits.timeoutMs`, separately from each
+execution's timeout and regulation quota.
+
+The coordinator alone binds demands to compatible resources, enforces capacity,
+handles P0 preemption, and executes pinned regulations in separate OS processes.
+Executing Agents can request capabilities using ACP notification method
+`pguide/capability-request` with `{ "capability": "tool-name", "reason": "why" }`.
+Requests are associated with the live demand and forwarded to subsequent
+planning; they never provision resources or execute model-provided commands.
+Completed work is not repeated merely because capacity changes; a fresh
+observation can create new demand after regression. JSON output includes the
+final queue, observations, and the latest 1000 coordinator events.
 
 The package provides independent `pguide-probe`, `pguide-regulate`,
 `pguide-continue`, `pguide-supervise`, `pguide-scaffold`, and `pguide-validate`

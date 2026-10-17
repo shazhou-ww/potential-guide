@@ -6,6 +6,76 @@ import type { AgentInput } from "@potential-guide/objective-regulator";
 import { agentPrompt, executeAcpAgent } from "../src/commands/regulator.js";
 import { bin, fixture, git, root, run, scratch } from "./fixtures.js";
 
+test("explicit continue grants another stall allowance while retaining history", async () => {
+  const f = await fixture();
+  try {
+    await writeFile(
+      join(f.repository, "objective", "checks", "ready", "run.js"),
+      '#!/usr/bin/env node\nconsole.log(JSON.stringify({status:200,message:"",payload:{ok:false,problems:[{id:"not-ready",parameters:{}}]}}));',
+    );
+    const commit = await f.commit();
+    const agent = join(f.directory, "noop.mjs");
+    await writeFile(
+      agent,
+      `import {createInterface} from "node:readline";
+for await(const line of createInterface({input:process.stdin})){
+const m=JSON.parse(line);if(!m.id)continue;
+const result=m.method==="initialize"?{protocolVersion:"1",agentCapabilities:{loadSession:true}}:
+m.method==="session/new"?{sessionId:"same"}:m.method==="session/prompt"?{stopReason:"end_turn",summary:"No progress"}:{};
+console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
+    );
+    const config = join(f.directory, "config.json");
+    await writeFile(
+      config,
+      JSON.stringify({
+        schemaVersion: 2,
+        defaultAgent: "noop",
+        stateDirectory: join(f.directory, "state"),
+        regulationStrategy: {
+          quota: { timeoutMs: 10000, maxAgentRuns: 5, maxStallRuns: 1 },
+        },
+        agents: {
+          noop: {
+            connection: { type: "acp", protocolVersion: "1" },
+            transport: { type: "stdio", command: process.execPath, args: [agent] },
+          },
+        },
+      }),
+    );
+    const first = await run(bin("regulate"), [
+      "--pilot",
+      f.uri,
+      "--revision",
+      commit,
+      "--subject-file",
+      f.subject,
+      "--target",
+      "terminal",
+      "--config",
+      config,
+      "--format",
+      "json",
+    ]);
+    assert.equal(first.code, 5, first.stdout + first.stderr);
+    const firstReport = JSON.parse(first.stdout);
+    assert.equal(firstReport.outcome.iterations, 1);
+    assert.equal(firstReport.outcome.stalledRuns, 1);
+    const second = await run(bin("continue"), [
+      firstReport.regulationId,
+      "--config",
+      config,
+      "--format",
+      "json",
+    ]);
+    assert.equal(second.code, 5, second.stdout + second.stderr);
+    const secondReport = JSON.parse(second.stdout);
+    assert.equal(secondReport.outcome.iterations, 1);
+    assert.equal(secondReport.outcome.stalledRuns, 2);
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
 test("Agent prompts contain the subject, target and every problem, not a selected task", () => {
   const prompt = agentPrompt({
     binding: { id: "fixture" },
@@ -58,9 +128,8 @@ test("regulate and continue persist pinned Pilot observations and use the JSON c
     const state = join(f.directory, "state");
     const config = join(f.directory, "config.yaml");
     const regulationStrategy = {
-      mode: { type: "adhoc" },
+      quota: { timeoutMs: 30000, maxAgentRuns: 10, maxStallRuns: 3 },
       probe: { timeoutMs: 5000, retry: { maxRetries: 1, delayMs: 1 } },
-      effectTtlMs: 30000,
     };
     await writeFile(
       config,
@@ -316,7 +385,7 @@ test("per-Agent timeout includes ACP startup and invocation failures never start
     ];
     const limited = await run(bin("regulate"), args, env);
     assert.equal(limited.code, 5, limited.stdout + limited.stderr);
-    assert.equal(JSON.parse(limited.stdout).outcome.stopReason, "agent-limit-reached");
+    assert.equal(JSON.parse(limited.stdout).outcome.stopReason, "exhausted");
     assert.equal(await readFile(started, "utf8"), "yes");
     await rm(started);
     await writeFile(check, "#!/usr/bin/env node\nconsole.log(JSON.stringify({pass:true}));");
@@ -324,18 +393,18 @@ test("per-Agent timeout includes ACP startup and invocation failures never start
     args[3] = invalidCommit;
     const failed = await run(bin("regulate"), args, env);
     assert.equal(failed.code, 6, failed.stdout + failed.stderr);
-    assert.equal(JSON.parse(failed.stdout).outcome.stopReason, "invocation-failed");
+    assert.equal(JSON.parse(failed.stdout).status, "regulation-error");
     await assert.rejects(readFile(started), { code: "ENOENT" });
   } finally {
     await rm(f.directory, { recursive: true, force: true });
   }
 });
 
-test("periodic regulation consumes configured effect TTL without treating it as an internal failure", async () => {
+test("one-shot regulation finishes at target without scheduling another observation", async () => {
   const f = await fixture();
   try {
     const commit = await f.commit();
-    const config = join(f.directory, "periodic.yaml");
+    const config = join(f.directory, "one-shot.yaml");
     await writeFile(
       config,
       JSON.stringify({
@@ -343,9 +412,8 @@ test("periodic regulation consumes configured effect TTL without treating it as 
         defaultAgent: "unused",
         stateDirectory: join(f.directory, "state"),
         regulationStrategy: {
-          mode: { type: "periodic", intervalMs: 20 },
+          quota: { timeoutMs: 1500, maxAgentRuns: 2, maxStallRuns: 2 },
           probe: { timeoutMs: 1000, retry: { maxRetries: 0, delayMs: 0 } },
-          effectTtlMs: 1500,
         },
         agents: {
           unused: {
@@ -373,10 +441,10 @@ test("periodic regulation consumes configured effect TTL without treating it as 
       "--format",
       "json",
     ]);
-    assert.equal(result.code, 5, result.stdout + result.stderr);
+    assert.equal(result.code, 0, result.stdout + result.stderr);
     const report = JSON.parse(result.stdout);
-    assert.equal(report.status, "effect-ttl-reached");
-    assert.ok(report.attempts[0].observations.length >= 2);
+    assert.equal(report.status, "target-reached");
+    assert.equal(report.attempts[0].observations.length, 1);
     assert.deepEqual(report.attempts[0].actions, []);
   } finally {
     await rm(f.directory, { recursive: true, force: true });

@@ -70,12 +70,12 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
         subcommands,
         configurationSchemaVersion: 2,
         regulationStrategyDefaults: {
-          mode: { type: "adhoc" },
+          quota: { timeoutMs: 300000, maxAgentRuns: 10, maxStallRuns: 3 },
           probe: { timeoutMs: 30000, retry: { maxRetries: 0, delayMs: 0 } },
         },
       },
       globals.format,
-      `Usage: pguide config <${subcommands.join("|")}>\nConfiguration schemaVersion: 2; regulationStrategy configures mode, probe timeout/retry, and optional effectTtlMs.`,
+      `Usage: pguide config <${subcommands.join("|")}>\nConfiguration schemaVersion: 2; regulationStrategy configures a single-run quota and probe timeout/retry. Scheduling belongs to supervisor.`,
     );
     return;
   }

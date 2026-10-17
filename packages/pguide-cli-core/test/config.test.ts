@@ -38,11 +38,10 @@ test("configuration limits apply only to individual Agent executions", () => {
   assert.throws(() => parseConfig("schemaVersion: 2\nagentExecutionLimits:\n  maxIterations: 8\n"));
 });
 
-test("regulation strategy validates scheduling, probe retries and optional effect lifetime", () => {
+test("regulation strategy validates single-run quota and rejects scheduling fields", () => {
   const strategy = {
-    mode: { type: "periodic", intervalMs: 1000 },
+    quota: { timeoutMs: 20000, maxAgentRuns: 5, maxStallRuns: 2 },
     probe: { timeoutMs: 5000, retry: { maxRetries: 2, delayMs: 10 } },
-    effectTtlMs: 20000,
   };
   assert.deepEqual(
     parseConfig(JSON.stringify({ schemaVersion: 2, regulationStrategy: strategy }))
@@ -54,14 +53,21 @@ test("regulation strategy validates scheduling, probe retries and optional effec
     {},
   );
   for (const invalid of [
+    { mode: { type: "periodic", intervalMs: 1000 } },
     { mode: { type: "periodic", intervalMs: 0 } },
     { mode: { type: "adhoc", intervalMs: 1 } },
     { mode: { type: "unknown" } },
+    { mode: { type: "adhoc" } },
+    { quota: { timeoutMs: 0, maxAgentRuns: 1, maxStallRuns: 1 } },
+    { quota: { timeoutMs: 1000, maxAgentRuns: 0, maxStallRuns: 1 } },
+    { quota: { timeoutMs: 1000, maxAgentRuns: 1, maxStallRuns: -1 } },
+    { quota: { timeoutMs: 1000 } },
     { probe: { timeoutMs: 0, retry: { maxRetries: 0, delayMs: 0 } } },
     { probe: { timeoutMs: 1, retry: { maxRetries: -1, delayMs: 0 } } },
     { probe: { timeoutMs: 1, retry: { maxRetries: 0, delayMs: -1 } } },
     { probe: { timeoutMs: 1 } },
     { effectTtlMs: 0 },
+    { effectTtlMs: 1000 },
     { maxIterations: 1 },
   ])
     assert.throws(() =>
@@ -242,7 +248,7 @@ test("explicit configuration merges profiles by whole profile and atomic writes"
     await mkdir(join(root, ".pguide"));
     await writeFile(
       join(root, ".pguide", "config.yaml"),
-      "schemaVersion: 2\nregulationStrategy:\n  mode: {type: periodic, intervalMs: 1000}\n",
+      "schemaVersion: 2\nregulationStrategy:\n  quota: {timeoutMs: 20000, maxAgentRuns: 5, maxStallRuns: 2}\n",
     );
     await atomicWrite(
       path,
@@ -252,7 +258,7 @@ test("explicit configuration merges profiles by whole profile and atomic writes"
     assert.equal(loaded.value.defaultAgent, "fixture");
     assert.equal(loaded.sources["agents.fixture"], path);
     assert.deepEqual(loaded.value.regulationStrategy, {
-      mode: { type: "periodic", intervalMs: 1000 },
+      quota: { timeoutMs: 20000, maxAgentRuns: 5, maxStallRuns: 2 },
       probe: { timeoutMs: 5000, retry: { maxRetries: 2, delayMs: 10 } },
     });
     await writeFile(join(root, "bad.yaml"), "schemaVersion: 1\n");
