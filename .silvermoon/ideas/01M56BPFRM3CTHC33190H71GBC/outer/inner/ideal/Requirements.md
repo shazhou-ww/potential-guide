@@ -23,7 +23,7 @@
 
 ### 现有配置保持可用
 
-沿用 pguide 自己的 YAML 配置文件及 `agents.<profile>` 结构；不要求修改 Host 或 VS Code 的 Agent 定义文件。ACP 的 `connection`、`transport` 和 `requirements` 写法不变，`--agent` 仍选择本地 profile。
+沿用 pguide 自己的 YAML 配置文件及 `agents.<profile>` 结构；不要求修改 Host 或 VS Code 的 Agent 定义文件。新配置以每个 profile 顶层的 `type: acp | ahp` 作为整个 profile 的判别字段，`--agent` 仍选择本地 profile。以下旧 ACP 写法继续兼容，解析后规范化为新 ACP profile；只识别合法的旧结构，不把任意缺少 `type` 的配置默认为 ACP。
 
 ```yaml
 schemaVersion: 2
@@ -44,11 +44,12 @@ schemaVersion: 2
 defaultAgent: repair-ahp
 agents:
   repair-acp:
-    connection: { type: acp, protocolVersion: "1" }
+    type: acp
+    connection: { protocolVersion: "1" }
     transport: { type: stdio, command: your-acp-agent }
   repair-ahp:
+    type: ahp
     connection:
-      type: ahp
       protocolVersion: "<host-supported-ahp-version>"
       agent: "<host-agent-id>"
     transport:
@@ -63,7 +64,8 @@ agents:
 
 | 配置项 | 变化与语义 |
 | --- | --- |
-| `connection.type` | 增加 `ahp`，不增加 `vscode` 协议类型 |
+| profile 顶层 `type` | 以 `acp` / `ahp` 判别整个 profile；连接、传输、认证及其他字段按该类型校验，不增加 `vscode` 类型 |
+| `connection.type` | 新写法移除此字段，避免重复协议声明；仅在合法旧 ACP 配置的兼容入口中识别 |
 | `connection.protocolVersion` | 按所选协议验证；AHP 版本不沿用 ACP 的正整数字符串校验 |
 | `connection.agent` | AHP Host 内的 Agent 标识；与本地 profile 名 `repair-ahp` 分开，不按产品名推断 |
 | `transport` | 按实际支持的 AHP 传输增加分支；上例是连接已有 Host 的 WebSocket 地址，不把 ACP 的 stdio 命令字段硬套到 AHP |
@@ -74,6 +76,8 @@ agents:
 使用时以 `--agent repair-ahp` 选择 AHP，以 `--agent repair-acp` 选择 ACP；目标 subject、Pilot 和运行额度的配置方式不因协议切换而改变。
 
 目标是将 AHP 作为可选配置扩展、保持原 ACP 配置不变。当前解析器只接受 ACP，实施必须同步更新配置校验、配置编辑器与恢复记录；是否必须提升配置 schema 版本，应由实际兼容性验证决定并提供迁移说明，不能仅靠文档宣布可用。字段细节如需调整，应先更新本需求和示例，不能让示例与最终校验器分离。
+
+新 profile 的类型模型为以顶层 `type` 判别的 `AcpAgentProfile | AhpAgentProfile`，不强求两种协议的其余字段相同。`transport.type` 保留为独立的传输判别字段；拒绝混用协议字段、同时声明新旧协议位置或缺少有效判别信息的配置。配置编辑器与恢复记录统一使用规范化后的新形状，读取旧 ACP 记录时保留原协议与执行语义。
 
 Host 自身的启动、认证和 Agent 注册步骤可以因实现不同而不同，放在对应实现的接入说明中；通用配置不承诺所有 Host 都支持上例传输或认证，也不通过 Host 产品名分派核心行为。
 
