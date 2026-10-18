@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-void import("../../setup-check.mjs").then(({ main }) => main("installation"));
+void import("../../setup-check.mjs").then(({ main }) => main("installation", { pilot: true }));

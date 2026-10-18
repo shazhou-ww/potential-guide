@@ -4,6 +4,22 @@ domainSchema:
   additionalProperties: false
   required: [workingDirectory, configPath, scratchDirectory, pguide]
   properties:
+    target:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [type]
+          properties:
+            type: {const: local}
+        - type: object
+          additionalProperties: false
+          required: [type, host, shell]
+          properties:
+            type: {const: ssh}
+            host: {type: string, pattern: '^(?:[A-Za-z0-9_][A-Za-z0-9_.-]*@)?[A-Za-z0-9_][A-Za-z0-9_.-]*$'}
+            shell: {const: posix}
+            node: {type: string, pattern: '^(?:[A-Za-z0-9_][A-Za-z0-9_.-]*|/[A-Za-z0-9_./-]+)$'}
+            port: {type: integer, minimum: 1, maximum: 65535}
     workingDirectory: {type: string, minLength: 1}
     configPath: {type: string, minLength: 1}
     scratchDirectory: {type: string, minLength: 1}
@@ -18,7 +34,7 @@ domainSchema:
     agent: {type: string, minLength: 1}
     userHome: {type: string, minLength: 1}
     allowSanity: {type: boolean, default: false}
-    timeoutMs: {type: integer, minimum: 100, maximum: 24000, default: 20000}
+    timeoutMs: {type: integer, minimum: 100, maximum: 300000, default: 20000}
 levels:
   - id: initial
     advancement:

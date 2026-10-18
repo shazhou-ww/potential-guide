@@ -69,23 +69,31 @@ do not require a committed version.
 explicit YAML configuration. Regulation state and protocol-visible transcript
 are stored under the platform state directory; credentials are never persisted.
 
-### Set up this device
+### Set up a target device
 
 The repository-owned [setup Objective](./objectives/pguide-setup/README.md) checks
-the current user's installation, configuration and ACP readiness, then optionally
-runs one real, isolated detect-repair-recheck. It is a Git-subdirectory Pilot,
-not a new CLI command:
+installation, configuration and ACP readiness on target **B**, while an already-ready
+control machine **A** runs setup regulation and guides its Agent to install/configure
+B. An explicit SSH target uses a dependency-free Node helper on POSIX B: B does
+not need pguide to begin checking. Omitting `target` (or `type:local`) preserves
+local bootstrap. It is a Git-subdirectory Pilot, not a new CLI command:
 
 ```sh
 pguide probe --pilot 'git+https://github.com/shazhou-ww/potential-guide.git#objectives/pguide-setup/pilot.yaml' --revision <commit> --subject-file <absolute-subject.json> --format json
 ```
 
-Start with its external-Agent bootstrap instructions if `pguide` is not installed.
+Start with its control-Agent bootstrap instructions if B lacks Node or `pguide`.
 The native Node helper also runs directly from a checkout without snapshot
 dependencies. Sanity requires explicit consent, can incur Agent costs, and never
-uses a real project as its repair target. Existing environment-based credentials
+uses a real project as its repair target. SSH requires existing host trust and
+noninteractive authorization, never forwards A's credentials/HOME, and never falls
+back to local checks. Target hostname/user evidence is separate from its SSH alias.
+Existing environment-based credentials
 are available only in the direct shell entrypoint, not silently forwarded into
-sanitized Pilot probes; the guide documents existing file-authentication options.
+sanitized local Pilot probes; the guide documents existing file-authentication options.
+For real Agents needing longer startup, the direct helper accepts explicit
+`timeoutMs:180000`; Pilot wrappers reject budgets beyond their 30-second outer
+probe allowance. A successful direct check is not a cached Git Pilot terminal receipt.
 
 ## Publishing
 

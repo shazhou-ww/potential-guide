@@ -132,7 +132,10 @@ test("worker forwards capability requests as events without treating them as new
     import {writeFileSync} from "node:fs";
     for await (const line of createInterface({input:process.stdin})) {
     const m=JSON.parse(line);if(!m.id)continue;let result={};
-    if(m.method==="initialize")result={protocolVersion:"1"};
+    if(m.method==="initialize"){
+      if(m.params.protocolVersion!==1)throw Error("Expected numeric ACP version");
+      result={protocolVersion:1};
+    }
     if(m.method==="session/new")result={sessionId:"worker"};
     if(m.method==="session/prompt"){
     console.log(JSON.stringify({jsonrpc:"2.0",method:"pguide/capability-request",params:{capability:"design",reason:"Need illustration support"}}));

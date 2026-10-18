@@ -20,7 +20,7 @@ test("explicit continue grants another stall allowance while retaining history",
       `import {createInterface} from "node:readline";
 for await(const line of createInterface({input:process.stdin})){
 const m=JSON.parse(line);if(!m.id)continue;
-const result=m.method==="initialize"?{protocolVersion:"1",agentCapabilities:{loadSession:true}}:
+const result=m.method==="initialize"?{protocolVersion:1,agentCapabilities:{loadSession:true}}:
 m.method==="session/new"?{sessionId:"same"}:m.method==="session/prompt"?{stopReason:"end_turn",summary:"No progress"}:{};
 console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
     );
@@ -123,7 +123,7 @@ test("regulate and continue persist pinned Pilot observations and use the JSON c
     const rpcLog = join(f.directory, "rpc.jsonl");
     await writeFile(
       agent,
-      `import{createInterface}from"node:readline";import{appendFile,writeFile}from"node:fs/promises";for await(const line of createInterface({input:process.stdin})){const m=JSON.parse(line);if(!m.id)continue;await appendFile(process.env.RPC_LOG,JSON.stringify(m)+"\\n");let result={};if(m.method==="initialize")result={protocolVersion:"1",agentCapabilities:{loadSession:true}};if(m.method==="session/new")result={sessionId:"fixture"};if(m.method==="session/resume"&&m.params.sessionId!=="fixture")throw Error("Wrong session ID");if(m.method==="session/prompt"){await writeFile(process.env.PROMPT_LOG,JSON.stringify(m.params));await writeFile(process.env.MARKER,"yes");result={stopReason:"end_turn",summary:"Repaired"};}console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
+      `import{createInterface}from"node:readline";import{appendFile,writeFile}from"node:fs/promises";for await(const line of createInterface({input:process.stdin})){const m=JSON.parse(line);if(!m.id)continue;await appendFile(process.env.RPC_LOG,JSON.stringify(m)+"\\n");let result={};if(m.method==="initialize")result={protocolVersion:1,agentCapabilities:{loadSession:true}};if(m.method==="session/new")result={sessionId:"fixture"};if(m.method==="session/load"&&m.params.sessionId!=="fixture")throw Error("Wrong session ID");if(m.method==="session/prompt"){await writeFile(process.env.PROMPT_LOG,JSON.stringify(m.params));await writeFile(process.env.MARKER,"yes");result={stopReason:"end_turn",summary:"Repaired"};}console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
     );
     const state = join(f.directory, "state");
     const config = join(f.directory, "config.yaml");
@@ -221,9 +221,9 @@ test("regulate and continue persist pinned Pilot observations and use the JSON c
       .split("\n")
       .map((line) => JSON.parse(line));
     assert.equal(requests.filter((request) => request.method === "session/new").length, 1);
-    assert.equal(requests.filter((request) => request.method === "session/resume").length, 1);
+    assert.equal(requests.filter((request) => request.method === "session/load").length, 1);
     assert.equal(
-      requests.find((request) => request.method === "session/resume").params.sessionId,
+      requests.find((request) => request.method === "session/load").params.sessionId,
       "fixture",
     );
   } finally {
@@ -252,7 +252,7 @@ test("continuation without a real session ID fails when required and is explicit
       command: process.execPath,
       args: [
         "-e",
-        'const r=require("node:readline").createInterface({input:process.stdin});r.on("line",l=>{const m=JSON.parse(l);let result=m.method==="initialize"?{protocolVersion:"1"}:m.method==="session/new"?{sessionId:"actual-new-id"}:{stopReason:"end_turn",summary:"done"};console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));});',
+        'const r=require("node:readline").createInterface({input:process.stdin});r.on("line",l=>{const m=JSON.parse(l);let result=m.method==="initialize"?{protocolVersion:1}:m.method==="session/new"?{sessionId:"actual-new-id"}:{stopReason:"end_turn",summary:"done"};console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));});',
       ],
     },
   };
@@ -293,7 +293,7 @@ test("continuation without a real session ID fails when required and is explicit
       ...profile.transport,
       args: [
         "-e",
-        'require("node:readline").createInterface({input:process.stdin}).on("line",l=>{const m=JSON.parse(l);console.log(JSON.stringify(m.method==="session/resume"?{jsonrpc:"2.0",id:m.id,error:{code:-32000,message:"resume unavailable"}}:{jsonrpc:"2.0",id:m.id,result:m.method==="initialize"?{protocolVersion:"1",agentCapabilities:{loadSession:true}}:m.method==="session/new"?{sessionId:"unexpected-new"}:{stopReason:"end_turn"}}));});',
+        'require("node:readline").createInterface({input:process.stdin}).on("line",l=>{const m=JSON.parse(l);console.log(JSON.stringify(m.method==="session/load"?{jsonrpc:"2.0",id:m.id,error:{code:-32000,message:"resume unavailable"}}:{jsonrpc:"2.0",id:m.id,result:m.method==="initialize"?{protocolVersion:1,agentCapabilities:{loadSession:true}}:m.method==="session/new"?{sessionId:"unexpected-new"}:{stopReason:"end_turn"}}));});',
       ],
     },
   };

@@ -10,10 +10,10 @@ for await (const line of createInterface({ input: process.stdin })) {
 
   let result = {};
   if (message.method === "initialize") {
-    result = { protocolVersion: "1", agentCapabilities: { loadSession: true } };
+    result = { protocolVersion: 1, agentCapabilities: { loadSession: true } };
   } else if (message.method === "session/new") {
     result = { sessionId: "deployment-fixture-session" };
-  } else if (message.method === "session/resume") {
+  } else if (message.method === "session/load") {
     if (process.env.PGUIDE_RESUME_MARKER) {
       await writeFile(process.env.PGUIDE_RESUME_MARKER, "resumed");
     }

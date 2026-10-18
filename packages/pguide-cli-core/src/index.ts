@@ -105,6 +105,18 @@ function positiveInteger(value: unknown, field: string): number | undefined {
   if (!Number.isSafeInteger(value) || Number(value) < 1) {
     throw new CliError(`${field} must be a positive integer.`);
   }
+
+  return Number(value);
+}
+
+export function acpProtocolVersion(value: string): number {
+  if (
+    typeof value !== "string" ||
+    !/^[1-9]\d*$/.test(value) ||
+    !Number.isSafeInteger(Number(value))
+  ) {
+    throw new CliError("ACP protocolVersion must be a positive safe integer string.");
+  }
   return Number(value);
 }
 
@@ -200,6 +212,7 @@ export function validateAgentProfile(value: unknown): AgentProfile {
   if (value.connection.type !== "acp" || !nonempty(value.connection.protocolVersion)) {
     throw new CliError("Agent connection must select ACP and a protocolVersion.");
   }
+  acpProtocolVersion(value.connection.protocolVersion);
   if (!record(value.transport)) throw new CliError("Agent stdio transport is required.");
   exactKeys(value.transport, ["type", "command", "args", "env"], "Agent transport");
   if (value.transport.type !== "stdio" || !nonempty(value.transport.command)) {
@@ -706,17 +719,35 @@ export async function commandMain(
 
 interface RpcMessage {
   jsonrpc: "2.0";
-  id?: number;
+  id?: number | string;
   method?: string;
   params?: unknown;
   result?: unknown;
-  error?: { message?: string };
+  error?: { code?: number; message?: string };
 }
 
 export interface AcpUpdate {
   timestamp: string;
   method: string;
   params: unknown;
+}
+
+export interface AcpPermissionRequest {
+  sessionId: string;
+  toolCall: Record<string, unknown>;
+  options: {
+    optionId: string;
+    name: string;
+    kind: "allow_once" | "allow_always" | "reject_once" | "reject_always";
+  }[];
+}
+
+export interface AcpClientOptions {
+  permissionHandler?: (
+    request: AcpPermissionRequest,
+    signal: AbortSignal,
+  ) => string | undefined | Promise<string | undefined>;
+  permissionTimeoutMs?: number;
 }
 
 export class AcpClient {
@@ -730,12 +761,23 @@ export class AcpClient {
   private readonly closed: Promise<void>;
   private readonly stderrPipeline: Promise<void>;
   private terminalError?: Error;
+  private readonly lifetime = new AbortController();
+  private readonly promptText = new Map<string, { text: string; bytes: number }>();
   readonly updates: AcpUpdate[] = [];
 
   constructor(
     profile: AgentProfile,
     private readonly onUpdate: (update: AcpUpdate) => Promise<void> = async () => undefined,
+    private readonly options: AcpClientOptions = {},
   ) {
+    acpProtocolVersion(profile.connection.protocolVersion);
+    if (
+      options.permissionTimeoutMs !== undefined &&
+      (!Number.isSafeInteger(options.permissionTimeoutMs) ||
+        options.permissionTimeoutMs <= 0 ||
+        options.permissionTimeoutMs > 30_000)
+    )
+      throw new CliError("ACP permissionTimeoutMs must be between 1 and 30000.");
     const environment: NodeJS.ProcessEnv = {};
     for (const name of profile.transport.env ?? []) {
       if (process.env[name] !== undefined) environment[name] = process.env[name];
@@ -779,6 +821,7 @@ export class AcpClient {
 
   private fail(error: Error): void {
     this.terminalError ??= error;
+    this.lifetime.abort(this.terminalError);
     for (const pending of this.pending.values()) pending.reject(this.terminalError);
     this.pending.clear();
   }
@@ -790,10 +833,16 @@ export class AcpClient {
     } catch {
       return;
     }
+    if (!record(message) || message.jsonrpc !== "2.0") return;
+    if (typeof message.method === "string" && message.id !== undefined) {
+      if (typeof message.id !== "string" && !Number.isSafeInteger(message.id)) return;
+      await this.handleRequest({ ...message, id: message.id });
+      return;
+    }
     if (message.id !== undefined) {
-      const pending = this.pending.get(message.id);
+      const pending = typeof message.id === "number" ? this.pending.get(message.id) : undefined;
       if (pending !== undefined) {
-        this.pending.delete(message.id);
+        this.pending.delete(message.id as number);
         if (message.error !== undefined)
           pending.reject(new Error(message.error.message ?? "ACP error"));
         else pending.resolve(message.result);
@@ -801,20 +850,135 @@ export class AcpClient {
       return;
     }
     if (message.method !== undefined) {
-      const update = {
-        timestamp: new Date().toISOString(),
-        method: message.method,
-        params: message.params,
-      };
-      this.updates.push(update);
-      const work = this.onUpdate(update);
-      this.updateWork.add(work);
-      try {
-        await work;
-      } finally {
-        this.updateWork.delete(work);
+      const params = message.params;
+      if (
+        message.method === "session/update" &&
+        record(params) &&
+        typeof params.sessionId === "string" &&
+        record(params.update) &&
+        params.update.sessionUpdate === "agent_message_chunk" &&
+        record(params.update.content) &&
+        params.update.content.type === "text" &&
+        typeof params.update.content.text === "string"
+      ) {
+        const output = this.promptText.get(params.sessionId);
+        if (output !== undefined) {
+          output.bytes += Buffer.byteLength(params.update.content.text);
+          if (output.bytes > 1_048_576) {
+            this.fail(new CliError("ACP Agent text output limit exceeded.", 6, "acp-error"));
+            return;
+          }
+          output.text += params.update.content.text;
+        }
       }
+      await this.emitUpdate(message.method, message.params);
     }
+  }
+
+  private async emitUpdate(method: string, params: unknown): Promise<void> {
+    const update = {
+      timestamp: new Date().toISOString(),
+      method,
+      params,
+    };
+    this.updates.push(update);
+    const work = this.onUpdate(update);
+    this.updateWork.add(work);
+    try {
+      await work;
+    } finally {
+      this.updateWork.delete(work);
+    }
+  }
+
+  private reply(message: RpcMessage): void {
+    if (this.terminalError !== undefined || !this.child.stdin.writable) return;
+    this.child.stdin.write(`${JSON.stringify(message)}\n`, (error) => {
+      if (error) this.fail(error);
+    });
+  }
+
+  private async handleRequest(message: RpcMessage & { id: number | string }): Promise<void> {
+    if (message.method !== "session/request_permission") {
+      this.reply({
+        jsonrpc: "2.0",
+        id: message.id,
+        error: { code: -32601, message: "Client method not supported." },
+      });
+      await this.emitUpdate("pguide/request_denied", { reason: "unsupported-client-method" });
+      return;
+    }
+    const params = message.params;
+    let optionId: string | undefined;
+    let reason = "no-permission-handler";
+    if (
+      record(params) &&
+      nonempty(params.sessionId) &&
+      this.promptText.has(params.sessionId) &&
+      record(params.toolCall) &&
+      nonempty(params.toolCall.toolCallId) &&
+      Array.isArray(params.options) &&
+      params.options.length > 0 &&
+      params.options.length <= 32 &&
+      params.options.every(
+        (option) =>
+          record(option) &&
+          nonempty(option.optionId) &&
+          nonempty(option.name) &&
+          ["allow_once", "allow_always", "reject_once", "reject_always"].includes(
+            String(option.kind),
+          ),
+      ) &&
+      new Set(params.options.map((option) => option.optionId)).size === params.options.length
+    ) {
+      if (this.options.permissionHandler !== undefined) {
+        const offeredIds = new Set(params.options.map((option) => option.optionId));
+        const sessionId = params.sessionId;
+        const controller = new AbortController();
+        const signal = AbortSignal.any([controller.signal, this.lifetime.signal]);
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        let onAbort: (() => void) | undefined;
+        try {
+          const cancelled = new Promise<undefined>((resolveCancelled) => {
+            onAbort = () => resolveCancelled(undefined);
+            signal.addEventListener("abort", onAbort, { once: true });
+            if (signal.aborted) onAbort();
+            timeout = setTimeout(
+              () => controller.abort(),
+              this.options.permissionTimeoutMs ?? 1000,
+            );
+          });
+          const selected = await Promise.race([
+            Promise.resolve().then(() =>
+              signal.aborted
+                ? undefined
+                : this.options.permissionHandler?.(
+                    params as unknown as AcpPermissionRequest,
+                    signal,
+                  ),
+            ),
+            cancelled,
+          ]);
+          if (!signal.aborted && this.promptText.has(sessionId) && offeredIds.has(selected))
+            optionId = selected;
+          reason = signal.aborted ? "permission-handler-cancelled" : "permission-not-selected";
+        } catch {
+          reason = "permission-handler-failed";
+        } finally {
+          clearTimeout(timeout);
+          if (onAbort !== undefined) signal.removeEventListener("abort", onAbort);
+        }
+      }
+    } else reason = "invalid-permission-request";
+    this.reply({
+      jsonrpc: "2.0",
+      id: message.id,
+      result: {
+        outcome:
+          optionId === undefined ? { outcome: "cancelled" } : { outcome: "selected", optionId },
+      },
+    });
+    if (optionId === undefined) await this.emitUpdate("pguide/request_denied", { reason });
   }
 
   request(method: string, params: unknown): Promise<unknown> {
@@ -853,13 +1017,20 @@ export class AcpClient {
   }
 
   async initialize(protocolVersion: string): Promise<Record<string, unknown>> {
+    const version = acpProtocolVersion(protocolVersion);
     const result = await this.request("initialize", {
-      protocolVersion,
+      protocolVersion: version,
       clientInfo: { name: "pguide", version: "0.1.0" },
       clientCapabilities: {},
     });
     if (!record(result))
       throw new CliError("ACP initialize returned an invalid response.", 6, "acp-error");
+    if (!Number.isSafeInteger(result.protocolVersion) || result.protocolVersion !== version)
+      throw new CliError(
+        "ACP protocol negotiation selected an unsupported version.",
+        6,
+        "acp-error",
+      );
     return result;
   }
 
@@ -872,17 +1043,26 @@ export class AcpClient {
   }
 
   async resumeSession(sessionId: string, cwd: string): Promise<void> {
-    await this.request("session/resume", { sessionId, cwd, mcpServers: [] });
+    await this.request("session/load", { sessionId, cwd, mcpServers: [] });
   }
 
   async prompt(
     sessionId: string,
     prompt: string,
   ): Promise<{ status: "completed" | "blocked" | "cancelled"; summary: string }> {
-    const result = await this.request("session/prompt", {
-      sessionId,
-      prompt: [{ type: "text", text: prompt }],
-    });
+    if (this.promptText.has(sessionId))
+      throw new CliError("An ACP prompt is already active for this session.", 6, "acp-error");
+    const output = { text: "", bytes: 0 };
+    this.promptText.set(sessionId, output);
+    let result: unknown;
+    try {
+      result = await this.request("session/prompt", {
+        sessionId,
+        prompt: [{ type: "text", text: prompt }],
+      });
+    } finally {
+      this.promptText.delete(sessionId);
+    }
     if (!record(result))
       throw new CliError("ACP prompt returned an invalid response.", 6, "acp-error");
     const stopReason = String(result.stopReason ?? "end_turn");
@@ -892,7 +1072,10 @@ export class AcpClient {
     if (stopReason === "refusal") {
       return { status: "blocked", summary: stopReason };
     }
-    return { status: "completed", summary: String(result.summary ?? stopReason) };
+    return {
+      status: "completed",
+      summary: output.text.trim() || String(result.summary ?? stopReason),
+    };
   }
 
   cancel(sessionId: string): void {

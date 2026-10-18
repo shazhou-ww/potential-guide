@@ -5,4 +5,6 @@ references: [pages/bootstrap]
 ---
 
 核对实际 ACP stdio 命令、版本、已有登录状态与 sessionResume 要求。
+配置 protocolVersion 保持规范正整数字符串（例如 "1"），ACP 线上必须是数字 1；
+不接受字符串协商响应。诊断只报告安全 stage/reason 枚举，不回显服务端原始错误。
 没有真实 ACP 入口时明确报告；不自动调用模型或申请付费资源。

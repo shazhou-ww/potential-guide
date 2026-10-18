@@ -21,7 +21,10 @@ for await (const line of createInterface({ input: process.stdin })) {
   if (!message.id) continue;
   if (mode === "hang") continue;
   let result = {};
-  if (message.method === "initialize") result = { protocolVersion: "1" };
+  if (message.method === "initialize") {
+    if (message.params.protocolVersion !== 1) throw Error("Expected numeric ACP version");
+    result = { protocolVersion: 1 };
+  }
   if (message.method === "session/new") result = { sessionId: "planner-session" };
   if (message.method === "session/prompt") {
     if (mode === "repair") {

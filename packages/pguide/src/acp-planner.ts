@@ -165,13 +165,8 @@ export function createAcpPlannerPolicy(
       timeoutMs,
     );
     try {
-      const initialized = await client.initialize(profile.connection.protocolVersion);
+      await client.initialize(profile.connection.protocolVersion);
       signal.throwIfAborted();
-      if (
-        initialized.protocolVersion !== undefined &&
-        String(initialized.protocolVersion) !== profile.connection.protocolVersion
-      )
-        throw new CliError("ACP planner protocol version mismatch.", 6, "acp-error");
       sessionId = await client.newSession(cwd);
       signal.throwIfAborted();
       const response = await client.prompt(sessionId, plannerPrompt(input));

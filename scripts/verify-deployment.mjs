@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { access, chmod, cp, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { delimiter, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -186,8 +187,30 @@ async function verifyCliContract() {
     process.platform === "win32" ? "@echo off\r\necho unsafe\r\n" : "#!/bin/sh\necho unsafe\n",
   );
   if (process.platform !== "win32") await chmod(rogue, 0o755);
-  const path = `${extensionDirectory}${delimiter}${join(consumer, "node_modules", ".bin")}${delimiter}${process.env.PATH ?? ""}`;
-  const env = { ...process.env, PATH: path };
+  const hostPaths = (process.env.PATH ?? "")
+    .split(delimiter)
+    .filter(
+      (directory) =>
+        directory &&
+        !packageDefinitions
+          .flatMap(({ bins }) => bins)
+          .some((name) => existsSync(join(directory, `${name}${binExtension}`))),
+    );
+  const path = [extensionDirectory, join(consumer, "node_modules", ".bin"), ...hostPaths].join(
+    delimiter,
+  );
+  const home = join(consumer, "home");
+  const appData = join(home, "AppData", "Roaming");
+  await mkdir(appData, { recursive: true });
+  const env = {
+    ...process.env,
+    PATH: path,
+    HOME: home,
+    USERPROFILE: home,
+    APPDATA: appData,
+    LOCALAPPDATA: join(home, "AppData", "Local"),
+    XDG_CONFIG_HOME: join(home, ".config"),
+  };
 
   const discovery = await successful(executable("pguide"), ["--help", "--format", "json"], {
     cwd: consumer,
@@ -514,7 +537,7 @@ for await (const line of createInterface({input:process.stdin})) {
   const message=JSON.parse(line);
   if (!message.id) continue;
   let result={};
-  if (message.method==="initialize") result={protocolVersion:"1"};
+  if (message.method==="initialize") result={protocolVersion:1};
   if (message.method==="session/new") result={sessionId:"planner"};
   if (message.method==="session/prompt") {
     appendFileSync(${JSON.stringify(log)}, JSON.stringify(message.params)+"\\n");
@@ -620,7 +643,7 @@ import { writeFile } from "node:fs/promises";
 for await (const line of createInterface({input:process.stdin})) {
   const message=JSON.parse(line);if (!message.id) continue;
   let result={};
-  if (message.method==="initialize") result={protocolVersion:"1"};
+  if (message.method==="initialize") result={protocolVersion:1};
   if (message.method==="session/new") result={sessionId:"setup-fixture"};
   if (message.method==="session/prompt") {
     const subjectLine=message.params.prompt[0].text.split("\\n").find(line=>line.startsWith("Subject: "));
@@ -637,6 +660,7 @@ for await (const line of createInterface({input:process.stdin})) {
     configPath,
     JSON.stringify({
       schemaVersion: 2,
+      commandDirectories: [join(consumer, "node_modules", ".bin")],
       defaultAgent: "setup",
       agents: {
         setup: {
@@ -673,6 +697,8 @@ for await (const line of createInterface({input:process.stdin})) {
       setupUri,
       "--revision",
       revision,
+      "--config",
+      configPath,
       "--subject-file",
       subject,
       "--format",

@@ -18,3 +18,21 @@ fields are rejected rather than silently changing old periodic recipes.
 Periodic observation and subsequent run scheduling belong to supervisor.
 The generic JSON `digest` utility supports persisted subject integrity;
 production observation identity/version comes from the Git source commit.
+
+ACP profiles keep `connection.protocolVersion: "1"` as a configuration string;
+the client validates a positive safe integer and sends the numeric ACP version
+on the wire. Initialization requires the same numeric negotiated version.
+Session continuation uses standard `session/load` with the advertised
+`loadSession` capability. Prompt summaries use streamed `agent_message_chunk`
+text (bounded to 1 MiB), falling back to legacy summaries or the stop reason.
+
+Agent-to-client requests have a separate JSON-RPC ID namespace from pending
+client requests. By default, `session/request_permission` receives a cancelled
+outcome, while unsupported methods receive `-32601`; no filesystem or terminal
+capabilities are advertised or implicitly authorized. Denials emit a
+`pguide/request_denied` update without tool arguments. Embedders may explicitly
+provide a third `AcpClient` constructor argument with `permissionHandler` and
+`permissionTimeoutMs` (default 1000, maximum 30000). The handler receives the
+validated active-session request and an abort signal, and must return an offered
+option ID. Missing, invalid, failed, timed-out, or shutdown-interrupted decisions
+cancel the request. This API does not enable any permission by default.

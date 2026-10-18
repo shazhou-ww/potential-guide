@@ -138,15 +138,6 @@ export async function executeAcpAgent(
   try {
     const initialized = await client.initialize(profile.connection.protocolVersion);
     signal.throwIfAborted();
-    if (
-      initialized.protocolVersion !== undefined &&
-      String(initialized.protocolVersion) !== profile.connection.protocolVersion
-    )
-      throw new CliError(
-        "ACP protocol negotiation selected an unsupported version.",
-        6,
-        "acp-error",
-      );
     const capabilities = initialized.agentCapabilities;
     if (
       (profile.requirements?.sessionResume === true || session.sessionId !== undefined) &&

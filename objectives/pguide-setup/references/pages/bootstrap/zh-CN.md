@@ -5,11 +5,18 @@ references: [system/overview]
 ---
 
 运行 `node setup-check.mjs installation --subject-file <绝对路径>` 无需 pguide。
-提供 workingDirectory、configPath、scratchDirectory 绝对路径和 pguide command/args。
+命令在已就绪的 A；subject 的 workingDirectory、configPath、scratchDirectory 和
+pguide command/args 全部指向目标 B。target 省略/local 为本地；SSH 使用
+`{type:"ssh",host:"user@alias",shell:"posix"}`，所有路径是 B 的 POSIX 绝对路径。
+Node helper 自动有界传到 B；缺 Node 则先由 A 的控制 Agent 按授权安装。
+已有 SSH 授权和主机信任是前置条件，禁止自动接受 host key、复制 A 的认证或回退 A。
 完整 subject、版本来源、配置示例和 Git URI 在本目录 README.md。
 当前源码未必发布：按准确 commit 构建或安装明确版本，不把 registry latest 当成源码。
-优先使用执行 setup 的 Agent 的实际 ACP 命令；没有就报告并选择用户已有入口。
+优先使用在 B 上实际可用的 ACP 命令；没有就报告并选择用户已有入口。
 不得复制秘密、自动申请付费资源或为测试调用真实模型。
 直接 shell 入口继承已有环境；Git probe 不继承模型变量，不存在 receipt 绕过。
 userHome 仅补 HOME/USERPROFILE，profile 必须通过 transport.env 选择名字，
 Agent 自己访问已登录文件；setup 不读取认证文件。
+SSH 禁止 userHome，使用 B 自身环境。真实 sanity 若超过默认 20 秒，须显式同意
+直接 helper 的 timeoutMs（例如 180000，最大 300000）；Pilot 默认外层 30 秒不支持
+长时限，返回 outer-timeout，不能用直接成功缓存或伪造 terminal。

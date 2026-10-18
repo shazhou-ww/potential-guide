@@ -1,24 +1,30 @@
-# 当前设备、当前用户的 pguide setup Objective
+# 从控制机 A 配置目标机 B 的 pguide setup Objective
 
 本目录是独立的 Pilot，不增加 `pguide setup` 命令。所有检查只使用 Node.js
-内置模块，不需要此快照安装 `node_modules`。运行器由当前设备已经安装的
-`pguide` 提供；检查不会安装软件、修改用户配置或执行真实项目。
+内置模块，不需要此快照安装 `node_modules`。运行 setup 调节的控制机 **A 已经具备
+pguide 和可用 Agent**；subject 描述要安装、配置、验证的目标机 **B**。A 的控制
+Agent 根据检查结果和引导、按授权在 B 安装配置前置条件；检查本身不会安装软件、
+修改用户配置或执行真实项目。A 上的安装、认证或成功运行不是 B 就绪的证据。
+省略 `target` 或设置 `{"type":"local"}` 保留旧的本地 bootstrap 行为（A=B）。
 
-## 外部 Agent bootstrap（还没有 pguide 时）
+## 控制 Agent bootstrap（B 还没有 pguide 时）
 
-1. 读取本文件，确认 Node.js ≥22.13、Git 和当前用户身份。进程树清理需要 Windows 的
+1. 读取本文件，确认目标 B 的 Node.js ≥22.13、Git 和用户身份。进程树清理需要 Windows 的
    `taskkill` 或 POSIX 的 `ps`（包括 Agent 建立的独立进程组）。外部 Agent 可以直接运行
    `node objectives\pguide-setup\setup-check.mjs installation --subject-file D:\setup\subject.json`。
+   SSH 时 helper 从 A 经 stdin 发送到 B，不需要预装 pguide、pnpm 或 npm 依赖。
+   若 B 连 Node 都没有，返回 `remote-node-missing`；控制 Agent 应先按授权通过既有 SSH
+   管理方式安装 Node，再重新检查，绝不改为检查 A。
    `installation-missing` 是待解决的问题，不是 bootstrap 自身失败。
 2. 向用户说明软件来源与目标版本后再按授权安装。发布版本可以使用
    `npm install --global pguide@<明确的版本>`；不要认为 registry 的 `latest`、
    `rc` 或同名版本已经包含当前源码。当前源码中尚未发布的功能应使用此仓库准确的
    commit，按根目录说明运行 `pnpm install`、`pnpm build`，再指向该构建，或按设备策略
    链接它。不要在运行检查时自动安装，也不要把 setup 加成应用依赖。
-3. 优先检查执行 setup 的 Agent 是否**确实提供可运行的 ACP stdio 命令**以及其认证方式。
+3. 优先检查执行 setup 的 Agent 是否**在 B 上确实提供可运行的 ACP stdio 命令**以及其认证方式。
    当前 IDE 聊天并不自动等于 ACP 入口。没有已知 ACP 入口时明确报告，选择用户已有的
    其他 ACP Agent；不要伪造入口、读取/复制令牌、自动申请订阅或付费资源。
-4. 使用安装后的 `pguide config path` 找到当前用户配置，设置 schemaVersion 2、
+4. 在 B 使用安装后的 `pguide config path` 找到目标用户配置，设置 schemaVersion 2、
    ACP profile 与 defaultAgent（或者 subject.agent）。`pguide config validate` 只检查
    配置语法；本 Objective 还必须成功 initialize 和 session/new。只对用户明确同意的配置
    作修改；setup 检查本身永不修改它。
@@ -28,7 +34,8 @@
 
 ## Subject（只放非秘密信息）
 
-所有目录及配置路径必须是本机**绝对路径**。`workingDirectory` 定义配置合并上下文；
+所有目录及配置路径必须是**目标机绝对路径**，不得把 A 的工作区、配置或 HOME 当作 B。
+`workingDirectory` 定义配置合并上下文；
 真实命令的操作 cwd 是独占 scratch 或其中的测试仓库。
 `configPath` 必须存在，表示明确的当前用户配置目标；有效配置仍按 pguide 的
 用户 → 项目 → explicit 合并规则读取。建议 workingDirectory 使用没有项目配置的
@@ -50,6 +57,52 @@
   "timeoutMs": 20000
 }
 ```
+
+SSH 示例（POSIX B；本机保存的 subject 文件路径仍是 A 的路径）：
+
+```json
+{
+  "target": {
+    "type": "ssh",
+    "host": "worker@build-target",
+    "shell": "posix",
+    "node": "/usr/bin/node",
+    "port": 22
+  },
+  "workingDirectory": "/home/worker",
+  "configPath": "/home/worker/.config/pguide/config.yaml",
+  "scratchDirectory": "/home/worker/setup-scratch",
+  "pguide": {"command": "pguide"},
+  "agent": "existing-agent",
+  "allowSanity": false,
+  "timeoutMs": 14000
+}
+```
+
+### SSH MVP 的明确边界
+
+- 只支持 B 的 POSIX shell；Windows B、交互登录、密码/验证码提示、IPv6 字面量和
+  自定义 SSH 参数不在此 MVP 内。`host` 是安全 SSH alias 或 `user@host`；
+  IPv6 可通过已有 SSH alias 连接。`node` 默认 `node`，可给不含空格/元字符的绝对路径。
+  不运行任意 shell 字符串；pguide/Agent 的参数仍由目标 Node 分项启动。
+- A 必须已有 SSH 客户端、非交互授权和可信 known_hosts。使用 BatchMode、
+  StrictHostKeyChecking=yes，绝不自动接受 host key；禁用 agent/X11/端口转发、
+  LocalCommand、连接复用及环境转发。保留既有 SSH alias/ProxyCommand 配置，
+  它们是 A 管理员已有的信任边界，不应接受陌生配置。
+- 不上传 A 的配置、认证文件、环境变量或 HOME。SSH subject 禁止 `userHome`；
+  B 的 HOME/环境来自 B 的登录会话，ACP profile 仍须显式声明所需变量名。
+  非交互 PATH 可能不同，必要时给 B 的 Node、pguide 和 ACP 入口绝对路径。
+- 经 stdin 发送有界 JSON（原生 helper 和固定 sanity fixture），B 在其指定
+  scratch 下创建独占目录、执行并清理；不用 scp、全局临时目录、npm 安装或预装 helper。
+  `installation` 检查不要求 Git；完整 sanity 需要 B 的 Git 和进程清理工具。
+- SSH 本地期限为 `timeoutMs + 10000`，连接期限 5 秒，stdout+stderr 上限 256 KiB。
+  断开连接会终止 A 的 SSH 进程树；B 收到 HUP/TERM 时取消检查并清理，未收到时由 B
+  自身期限完成清理。操作系统强杀/断电仍不能保证清理，不承诺远程断连时立即完成删除。
+- `ssh-unavailable`、`ssh-unreachable`（连接/授权/主机信任失败）、`remote-node-missing`、
+  `remote-helper-failed`、`remote-helper-protocol` 和 `ssh-timeout` 是明确调用故障。
+  不输出原始服务器 stderr，不静默回退到 A。成功抵达 helper 的 Envelope.message
+  包含 JSON：连接 alias、B 自报 hostname/user、检查诊断；alias 不等同 hostname，
+  身份不是独立硬件证明，实际 SSH host key 信任仍由已有配置保障。
 
 `pguide.command` 是已安装的原生可执行文件或完整 `.cmd` 路径；也可用 Node +
 绝对 CLI 入口（推荐用于源码和含 shell 特殊字符的 Windows 路径）。参数逐项传递；
@@ -77,6 +130,8 @@ shim 目录，其中 `pguide-config` 指向 `packages\pguide-config\dist\bin.js`
   两个平台也不传递模型 token。这里不放宽核心边界。可声明非秘密绝对 `userHome`，
   helper 只补入 `HOME`、`USERPROFILE`；profile 必须再通过 `transport.env` 明确选择
   它们。Agent 可以自行使用该用户已登录的文件认证；helper 不读取认证文件。
+- **SSH target** 使用 B 已有环境和认证；即使 A 上缺少模型变量也不能使用 A 的登录态
+  代替 B 的认证。上面 `userHome` 的本地补入行为不适用于 SSH。
 - 其他必需环境引用缺失时返回 `environment-unavailable`，不会偷偷寻找值。依赖
   环境 token 的 Agent 可在已有认证 shell 中直接检查，但这**不是**后续 Git Pilot 的
   terminal 凭证；没有 receipt/cache 绕过。需要 Git Pilot 达到 terminal 时应选择支持
@@ -99,6 +154,10 @@ agents:
       env: [USERPROFILE]
 ```
 
+配置的 `protocolVersion` 保持规范十进制字符串 `"1"`；ACP initialize 在线协议中发送
+数字 `1`，并严格要求数字响应。拒绝时 `acp-unavailable` 可包含安全的
+`stage`（initialize/session-new）、`reason` 枚举；不会回显可能含秘密的服务端 error。
+
 ## 运行与结果
 
 本地直接检查，未安装 pguide 也可运行第一条：
@@ -109,6 +168,10 @@ node objectives\pguide-setup\setup-check.mjs configuration --subject-file D:\set
 # 用户明确同意并在 subject 中设置 allowSanity:true 后：
 node objectives\pguide-setup\setup-check.mjs sanity --subject-file D:\setup\subject.json
 ```
+
+上述命令也用于 SSH subject：命令在 A，检查与真正的 pguide/Agent 执行在 B。
+运行 setup regulation 的 Agent 在 A；sanity 内部调用的 Agent 是 B 配置中的 Agent。
+控制 Agent 不得仅凭 A 的成功输出宣称远端 terminal。
 
 也可以向 stdin 发送 subject JSON；`checks\*\run.cjs` 使用相同协议。
 stdout 恰好一份 CheckResult Envelope：`status:200` 的 `payload.ok:false` 是声明的
@@ -135,14 +198,21 @@ Git 仓库，确认错误 marker；以选定配置的 Agent 运行**一次**真�
 nonce 的精确内容。空报完成、写错值、改检查器或伪造 report 不会通过独立复核。
 这是真实执行证据，不是针对恶意全权限 Agent 的安全沙箱。
 
-默认每个 helper 总期限 20 秒，可配置 100–24000 毫秒；sanity 内部 Agent/调节配额至多
-12 秒、一次 Agent、一次 stall、probe 至多 3 秒且不重试。stdout+stderr 合计上限
+默认每个 helper 总期限 20 秒，直接入口可配置 100–300000 毫秒；真实 Agent 冷启动可能
+超过默认期限。用户明确同意后可直接使用 `allowSanity:true, timeoutMs:180000`，
+不会自动重试真实 prompt。sanity 内部 Agent/调节配额为总期限减去 8 秒（至少 100 毫秒），
+仍受外层总期限约束；一次 Agent、一次 stall、probe 至多 3 秒且不重试。stdout+stderr 合计上限
 256 KiB，超时/超限按 PID 终止进程树；配置、state、fixture 都位于独占目录并最终清理。
 helper 清除继承的 `GIT_*` 覆盖并禁用全局/系统 Git 配置，避免索引、工作树、模板、
 hooks 或签名配置把测试带到其他仓库；同样覆盖 `PGUIDE_STATE_DIRECTORY` 到独占目录。
 不能设置准确金额预算；用户同意的是一次有界执行，具体计费依 Agent/供应商。
-核心 process probe 默认 30 秒，helper 上限预留清理时间；不要用更短的外层 deadline
-打断清理。正常完成和内部超时均清理；操作系统强杀/断电不能保证 finally，遇到残留时先
+核心 process probe 默认 30 秒，Pilot 的 run.cjs 入口明确拒绝总预算超过 24000 毫秒，
+返回 `outer-timeout` 而不是让外层中断清理。SSH 总预算还包含 10000 毫秒传输余量，
+因此 Git Pilot SSH subject 须显式设置 `timeoutMs <= 14000`；不要假设真实远端 sanity
+能在此时间完成。先运行有界 readiness，实际较慢的 sanity 使用直接 helper 的显式长时限。
+直接 sanity 成功不生成 receipt，也不能缓存/伪造下一次 Git Pilot 的 terminal；
+当前默认 30 秒 process probe 不支持长时限 terminal，需要未来显式更长的外层契约。
+不要用更短的外层 deadline 打断清理。正常完成和内部超时均清理；操作系统强杀/断电不能保证 finally，遇到残留时先
 确认关联进程已终止，再只删除本次拥有的目录，绝不能清理其他任务的 scratch。
 
 ## 仓库验证
@@ -152,4 +222,6 @@ pnpm --filter pguide exec tsx --test test\setup-objective.test.ts
 ```
 
 测试使用本仓库构建出的 pguide composition 和真实本地 ACP fixture 子进程，
+并以内部 transport API 注入本地命令 fixture 测试 SSH 请求、远端 payload、错误和清理，
+不需要真实 SSH 目标，不支持从生产 subject 注入 transport。
 不安装全局软件、不修改当前用户配置、不访问真实模型。

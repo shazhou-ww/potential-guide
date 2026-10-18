@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { cp, lstat, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { delimiter, dirname, isAbsolute, join, resolve } from "node:path";
+import { delimiter, dirname, isAbsolute, join, posix, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -18,26 +18,29 @@ class Fault extends Error {
   }
 }
 class Problem extends Error {
-  constructor(id) {
+  constructor(id, parameters = {}) {
     super(id);
     this.id = id;
+    this.parameters = parameters;
   }
 }
 const success = () => ({ status: 200, payload: { ok: true, problems: [] }, message: "" });
-const problem = (id) => ({
+const problem = (id, parameters = {}) => ({
   status: 200,
-  payload: { ok: false, problems: [{ id, parameters: {} }] },
+  payload: { ok: false, problems: [{ id, parameters }] },
   message: "",
 });
 
 function subjectValue(value) {
   const required = ["workingDirectory", "configPath", "scratchDirectory", "pguide"];
-  const optional = ["desiredVersion", "agent", "userHome", "allowSanity", "timeoutMs"];
+  const optional = ["desiredVersion", "agent", "userHome", "allowSanity", "timeoutMs", "target"];
+  const remote = value?.target?.type === "ssh";
+  const absolute = remote ? posix.isAbsolute : isAbsolute;
   if (
     !record(value) ||
     required.some((key) => !Object.hasOwn(value, key)) ||
     Object.keys(value).some((key) => ![...required, ...optional].includes(key)) ||
-    required.slice(0, 3).some((key) => !nonempty(value[key]) || !isAbsolute(value[key])) ||
+    required.slice(0, 3).some((key) => !nonempty(value[key]) || !absolute(value[key])) ||
     !record(value.pguide) ||
     Object.keys(value.pguide).some((key) => !["command", "args"].includes(key)) ||
     !nonempty(value.pguide.command) ||
@@ -45,9 +48,13 @@ function subjectValue(value) {
       (!Array.isArray(value.pguide.args) || !value.pguide.args.every(nonempty))) ||
     ["desiredVersion", "agent"].some((key) => value[key] !== undefined && !nonempty(value[key])) ||
     (value.userHome !== undefined && (!nonempty(value.userHome) || !isAbsolute(value.userHome))) ||
+    (remote && value.userHome !== undefined) ||
+    (value.target !== undefined &&
+      (!record(value.target) ||
+        (!remote && (value.target.type !== "local" || Object.keys(value.target).length !== 1)))) ||
     (value.allowSanity !== undefined && typeof value.allowSanity !== "boolean") ||
     (value.timeoutMs !== undefined &&
-      (!Number.isSafeInteger(value.timeoutMs) || value.timeoutMs < 100 || value.timeoutMs > 24000))
+      (!Number.isSafeInteger(value.timeoutMs) || value.timeoutMs < 100 || value.timeoutMs > 300000))
   )
     throw new Fault("invalid-subject: see the setup subject contract.", 400);
   return { ...value, timeoutMs: value.timeoutMs ?? 20000 };
@@ -126,7 +133,7 @@ async function descendants(pid) {
   });
 }
 
-async function stopTree(child) {
+export async function stopTree(child) {
   if (child.pid === undefined) return;
   if (process.platform !== "win32") {
     // Regulate and ACP may create separate process groups. Capture descendants before killing parents.
@@ -334,7 +341,9 @@ async function configured(subject, context) {
   const profile = config.agents[name];
   if (
     profile.connection?.type !== "acp" ||
-    !nonempty(profile.connection.protocolVersion) ||
+    !/^[1-9][0-9]*$/.test(profile.connection.protocolVersion) ||
+    typeof profile.connection.protocolVersion !== "string" ||
+    !Number.isSafeInteger(Number(profile.connection.protocolVersion)) ||
     profile.transport?.type !== "stdio" ||
     !nonempty(profile.transport.command) ||
     (profile.transport.args !== undefined &&
@@ -368,7 +377,7 @@ async function acpReady(profile, context, directory) {
     missing: "acp-unavailable",
     begin: (child) =>
       send(child, 1, "initialize", {
-        protocolVersion: profile.connection.protocolVersion,
+        protocolVersion: Number(profile.connection.protocolVersion),
         clientInfo: { name: "pguide-setup", version: "1" },
         clientCapabilities: {},
       }),
@@ -395,7 +404,12 @@ async function acpReady(profile, context, directory) {
           return;
         }
         if (message.error !== undefined) {
-          stop(new Problem("acp-unavailable"));
+          stop(
+            new Problem("acp-unavailable", {
+              stage: phase === 1 ? "initialize" : "session-new",
+              reason: "agent-rejected",
+            }),
+          );
           return;
         }
         if (!record(message.result)) {
@@ -404,11 +418,16 @@ async function acpReady(profile, context, directory) {
         }
         if (phase === 1) {
           if (
-            String(message.result.protocolVersion) !== profile.connection.protocolVersion ||
+            message.result.protocolVersion !== Number(profile.connection.protocolVersion) ||
             (profile.requirements?.sessionResume === true &&
               message.result.agentCapabilities?.loadSession !== true)
           ) {
-            stop(new Problem("acp-unavailable"));
+            stop(
+              new Problem("acp-unavailable", {
+                stage: "initialize",
+                reason: "incompatible-capabilities",
+              }),
+            );
             return;
           }
           phase = 2;
@@ -426,7 +445,11 @@ async function acpReady(profile, context, directory) {
       }
     },
   });
-  if (!ready || (result.code !== 0 && phase !== 2)) throw new Problem("acp-unavailable");
+  if (!ready || (result.code !== 0 && phase !== 2))
+    throw new Problem("acp-unavailable", {
+      stage: phase === 1 ? "initialize" : "session-new",
+      reason: "agent-exited",
+    });
 }
 
 async function sanity(subject, context, directory, selected) {
@@ -438,7 +461,7 @@ async function sanity(subject, context, directory, selected) {
   const subjectFile = join(directory, "sanity-subject.json");
   await writeFile(subjectFile, JSON.stringify({ marker, expected }));
   const configPath = join(directory, "sanity-config.json");
-  const timeoutMs = Math.min(12000, subject.timeoutMs);
+  const timeoutMs = Math.max(100, subject.timeoutMs - 8000);
   const config = {
     schemaVersion: 2,
     commandDirectories: (selected.config.commandDirectories ?? []).map((path) =>
@@ -495,7 +518,11 @@ async function sanity(subject, context, directory, selected) {
       throw new Fault("timeout: sanity regulation exhausted its time allowance.", 504);
     if (!["agent-runs", "stall"].includes(report.outcome.exhaustedBy))
       throw new Fault("protocol: unknown sanity exhaustion reason.");
-    throw new Problem("sanity-failed");
+    throw new Problem("sanity-failed", {
+      stage: "regulate",
+      reason: "quota-exhausted",
+      exhaustedBy: report.outcome.exhaustedBy,
+    });
   }
   if (report.outcome?.stopReason !== "target-reached" || report.outcome?.iterations !== 1)
     throw new Fault("protocol: unexpected sanity regulation outcome.");
@@ -511,20 +538,41 @@ async function sanity(subject, context, directory, selected) {
     if (error.code !== "ENOENT") throw error;
   }
   if (!correct || final.current?.levelId !== "terminal" || final.problems?.length !== 0)
-    throw new Problem("sanity-failed");
+    throw new Problem("sanity-failed", {
+      stage: "recheck",
+      reason: !correct ? "nonce-mismatch" : "target-not-reached",
+    });
 }
 
-export async function check(stage, value) {
+export async function check(stage, value, options = {}) {
   let directory;
   let timer;
+  let abort;
   try {
     if (!["installation", "configuration", "sanity"].includes(stage))
       throw new Fault("usage: select installation, configuration, or sanity.", 400);
     const subject = subjectValue(value);
+    const remote = subject.target?.type === "ssh";
+    if (remote) {
+      const { validateTarget } = await import("./ssh-target.mjs");
+      validateTarget(subject.target);
+    }
     // No executable, including an Agent, is launched without explicit sanity consent.
     if (stage === "sanity" && subject.allowSanity !== true)
       return problem("sanity-consent-required");
+    if (options.pilot === true && subject.timeoutMs + (remote ? 10000 : 0) > 24000)
+      throw new Fault(
+        "outer-timeout: Pilot checks require a total budget <=24000ms; use the direct helper for longer checks.",
+        400,
+      );
+    if (remote) {
+      const { checkSsh } = await import("./ssh-target.mjs");
+      return await checkSsh(stage, subject);
+    }
     const controller = new AbortController();
+    abort = () => controller.abort();
+    options.signal?.addEventListener("abort", abort, { once: true });
+    if (options.signal?.aborted) abort();
     timer = setTimeout(
       () => controller.abort(new Fault("timeout: setup check exceeded its deadline.", 504)),
       subject.timeoutMs,
@@ -540,7 +588,9 @@ export async function check(stage, value) {
     }
     return success();
   } catch (error) {
-    if (error instanceof Problem) return problem(error.id);
+    if (error instanceof Problem) return problem(error.id, error.parameters);
+    if (error.name === "TargetFault")
+      return { status: error.status, payload: null, message: error.message };
     return {
       status: error instanceof Fault ? error.status : 502,
       payload: null,
@@ -551,12 +601,13 @@ export async function check(stage, value) {
     };
   } finally {
     clearTimeout(timer);
+    if (abort) options.signal?.removeEventListener("abort", abort);
     if (directory !== undefined)
       await rm(directory, { recursive: true, force: true, maxRetries: 3 });
   }
 }
 
-export async function main(stage = process.argv[2]) {
+export async function main(stage = process.argv[2], options = {}) {
   try {
     const args = process.argv.slice(3);
     let source;
@@ -587,7 +638,7 @@ export async function main(stage = process.argv[2]) {
     } catch {
       throw new Fault("invalid-subject: expected JSON.", 400);
     }
-    console.log(JSON.stringify(await check(stage, subject)));
+    console.log(JSON.stringify(await check(stage, subject, options)));
   } catch (error) {
     console.log(
       JSON.stringify({

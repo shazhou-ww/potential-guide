@@ -50,13 +50,15 @@ import {appendFile,readFile,writeFile} from "node:fs/promises";
 const mode=${JSON.stringify(mode)}, log=${JSON.stringify(log)};
 for await (const line of createInterface({input:process.stdin})) {
   const m=JSON.parse(line); if(m.id===undefined)continue;
-  await appendFile(log,JSON.stringify({method:m.method,cwd:m.params.cwd,pid:process.pid})+"\\n");
+  await appendFile(log,JSON.stringify({method:m.method,cwd:m.params.cwd,protocolVersion:m.params.protocolVersion,pid:process.pid})+"\\n");
   if(mode==="malformed"){console.log("not JSON");continue;}
   if(mode==="timeout"){setInterval(()=>{},1000);continue;}
   let result={};
   if(m.method==="initialize") {
+    if(m.params.protocolVersion!==1)throw Error("initialize requires a numeric protocolVersion");
+    if(mode==="rejected"){console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,error:{code:-32000,message:"SECRET-SERVER-TEXT"}}));continue;}
     if(mode==="home" && await readFile(process.env.USERPROFILE+"/logged-in","utf8")!=="existing")throw Error("No login");
-    result={protocolVersion:"1",agentCapabilities:{loadSession:true}};
+    result={protocolVersion:mode==="string-version"?"1":1,agentCapabilities:{loadSession:true}};
   }
   if(m.method==="session/new")result={sessionId:"real-fixture-session"};
   if(m.method==="session/prompt") {
@@ -144,7 +146,12 @@ for await (const line of createInterface({input:process.stdin})) {
 
 function isProblem(envelope: CheckEnvelope, id: string) {
   assert.equal(envelope.status, 200, envelope.message);
-  assert.deepEqual(envelope.payload, { ok: false, problems: [{ id, parameters: {} }] });
+  assert.equal(envelope.payload?.ok, false);
+  assert.deepEqual(
+    envelope.payload?.problems.map((entry) => entry.id),
+    [id],
+  );
+  assert.equal(typeof envelope.payload?.problems[0]?.parameters, "object");
 }
 function passed(envelope: CheckEnvelope) {
   assert.equal(envelope.status, 200, envelope.message);
@@ -266,7 +273,240 @@ test("configuration performs real ACP initialize and session/new without prompti
       ["initialize", "session/new"],
     );
     assert.ok(messages[1].cwd.startsWith(f.scratch));
+    assert.equal(messages[0].protocolVersion, 1);
     for (const { pid } of messages) assert.throws(() => process.kill(pid, 0));
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+test("setup ACP rejects string negotiation and emits only safe rejection diagnostics", async () => {
+  for (const mode of ["string-version", "rejected"]) {
+    const f = await setup(mode);
+    try {
+      const envelope = await f.direct("configuration");
+      assert.equal(envelope.payload?.problems[0]?.id, "acp-unavailable");
+      assert.deepEqual(envelope.payload?.problems[0]?.parameters, {
+        stage: "initialize",
+        reason: mode === "rejected" ? "agent-rejected" : "incompatible-capabilities",
+      });
+      assert.doesNotMatch(JSON.stringify(envelope), /SECRET-SERVER-TEXT/);
+    } finally {
+      await rm(f.directory, { recursive: true, force: true });
+    }
+  }
+});
+
+test("local target is backward compatible; long direct deadlines are rejected by Pilot guard", async () => {
+  const f = await setup();
+  try {
+    passed(
+      await f.direct("installation", {
+        ...f.subject,
+        target: { type: "local" },
+        timeoutMs: 180000,
+      }),
+    );
+    const { check } = await import(pathToFileURL(helper).href);
+    const envelope = await check(
+      "installation",
+      { ...f.subject, timeoutMs: 180000 },
+      { pilot: true },
+    );
+    assert.equal(envelope.status, 400);
+    assert.match(envelope.message, /outer-timeout/);
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+const remoteSubject = {
+  target: {
+    type: "ssh",
+    host: "worker@target-alias",
+    shell: "posix",
+    node: "/usr/bin/node",
+    port: 2222,
+  },
+  workingDirectory: "/home/worker",
+  configPath: "/home/worker/.config/pguide/config.yaml",
+  scratchDirectory: "/home/worker/setup-scratch",
+  pguide: { command: "pguide" },
+  timeoutMs: 1000,
+};
+const transportModule = () => import(pathToFileURL(join(objective, "ssh-target.mjs")).href);
+
+test("SSH adapter quotes code and rejects injection, forwards no control subject paths or environment", async () => {
+  const { sshRequest } = await transportModule();
+  const request = await sshRequest("installation", remoteSubject);
+  assert.equal(request.command, "ssh");
+  assert.deepEqual(request.args.slice(-3, -1), ["--", "worker@target-alias"]);
+  for (const option of [
+    "BatchMode=yes",
+    "StrictHostKeyChecking=yes",
+    "SendEnv=-*",
+    "SetEnv=PGUIDE_SETUP_REMOTE=1",
+    "ForwardAgent=no",
+    "PermitLocalCommand=no",
+  ])
+    assert.ok(request.args.includes(option));
+  assert.ok(request.args.includes("2222"));
+  assert.match(request.args.at(-1), /command -v '\/usr\/bin\/node'/);
+  const payload = JSON.parse(request.input);
+  assert.equal(payload.subject.target, undefined);
+  assert.equal(payload.subject.userHome, undefined);
+  assert.equal(payload.subject.configPath, remoteSubject.configPath);
+  assert.doesNotMatch(request.input, new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.equal(Object.keys(payload.files).length, 10);
+  for (const target of [
+    { ...remoteSubject.target, host: "-oProxyCommand=bad" },
+    { ...remoteSubject.target, host: "user@host;touch-bad" },
+    { ...remoteSubject.target, node: "node -e bad" },
+    { ...remoteSubject.target, node: "/node'bad" },
+    { ...remoteSubject.target, shell: "powershell" },
+    { ...remoteSubject.target, port: 0 },
+    { ...remoteSubject.target, env: { SECRET: "bad" } },
+  ])
+    await assert.rejects(
+      sshRequest("installation", { ...remoteSubject, target }),
+      /invalid-target/,
+    );
+  const { check } = await import(pathToFileURL(helper).href);
+  assert.equal(
+    (await check("installation", { ...remoteSubject, userHome: "/control/home" })).status,
+    400,
+  );
+  const blocked = await check("sanity", { ...remoteSubject, allowSanity: false });
+  isProblem(blocked, "sanity-consent-required");
+});
+
+test("SSH unreachable, missing Node and helper faults never fall back to local evidence", async () => {
+  const { checkSsh } = await transportModule();
+  for (const [code, message] of [
+    [255, /ssh-unreachable/],
+    [69, /remote-node-missing/],
+    [70, /remote-helper-failed/],
+  ] as const) {
+    let calls = 0;
+    await assert.rejects(
+      checkSsh("installation", remoteSubject, async () => {
+        calls++;
+        return { code, stdout: "SECRET SERVER DIAGNOSTIC" };
+      }),
+      message,
+    );
+    assert.equal(calls, 1);
+  }
+  await assert.rejects(
+    checkSsh("installation", remoteSubject, async () => ({ code: 0, stdout: "not-json" })),
+    /remote-helper-protocol/,
+  );
+  const envelope = await checkSsh("installation", remoteSubject, async () => ({
+    code: 0,
+    stdout: JSON.stringify({
+      identity: { hostname: "actual-target-name", user: "worker" },
+      result: {
+        status: 200,
+        payload: { ok: false, problems: [{ id: "installation-missing", parameters: {} }] },
+        message: "",
+      },
+    }),
+  }));
+  isProblem(envelope, "installation-missing");
+  assert.deepEqual(JSON.parse(envelope.message).target, {
+    type: "ssh",
+    connection: "worker@target-alias",
+    hostname: "actual-target-name",
+    user: "worker",
+  });
+});
+
+test("shipped Node bootstrap runs independently and cleans target payload and timed out children", async () => {
+  const f = await setup();
+  const { sshRequest, remoteBootstrap, runSsh } = await transportModule();
+  try {
+    const request = await sshRequest("installation", remoteSubject);
+    const payload = JSON.parse(request.input);
+    const { userHome: _home, ...subject } = f.subject;
+    payload.subject = { ...subject, pguide: { command: join(f.directory, "absent-on-target") } };
+    const result = await runSsh({
+      command: process.execPath,
+      args: ["-e", remoteBootstrap],
+      input: JSON.stringify(payload),
+      timeoutMs: 5000,
+    });
+
+    assert.equal(result.code, 0, result.stdout);
+    const response = JSON.parse(result.stdout);
+    isProblem(response.result, "installation-missing");
+    assert.ok(response.identity.hostname);
+    assert.ok(response.identity.user);
+    assert.deepEqual(await readdir(f.scratch), []);
+    const sleeper = join(f.directory, "remote-sleeper.cjs");
+    await writeFile(sleeper, "setInterval(()=>{},1000);");
+    payload.subject = {
+      ...subject,
+      timeoutMs: 500,
+      pguide: { command: process.execPath, args: [sleeper] },
+    };
+    const timed = await runSsh({
+      command: process.execPath,
+      args: ["-e", remoteBootstrap],
+      input: JSON.stringify(payload),
+      timeoutMs: 7000,
+    });
+    assert.equal(JSON.parse(timed.stdout).result.status, 504);
+    assert.deepEqual(await readdir(f.scratch), []);
+    await assert.rejects(
+      runSsh({
+        command: process.execPath,
+        args: ["-e", "setInterval(()=>{},1000)"],
+        input: "",
+        timeoutMs: 100,
+      }),
+      /ssh-timeout/,
+    );
+    await assert.rejects(
+      runSsh({
+        command: process.execPath,
+        args: ["-e", "process.stdout.write('x'.repeat(300000));setInterval(()=>{},1000)"],
+        input: "",
+        timeoutMs: 5000,
+      }),
+      /ssh-output-limit/,
+    );
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+test("remote payload uses target authentication and performs actual nonce sanity, not control evidence", async () => {
+  const f = await setup("home");
+  const { sshRequest, remoteBootstrap, runSsh } = await transportModule();
+  try {
+    await writeFile(join(f.home, "logged-in"), "existing");
+    f.config.agents.fixture.transport.env = ["USERPROFILE"];
+    await f.updateConfig();
+    const payload = JSON.parse((await sshRequest("sanity", remoteSubject)).input);
+    const { userHome: _home, ...subject } = f.subject;
+    payload.subject = { ...subject, allowSanity: true };
+    const result = await runSsh({
+      command: process.execPath,
+      args: ["-e", remoteBootstrap],
+      input: JSON.stringify(payload),
+      timeoutMs: 34000,
+      env: f.env,
+    });
+    assert.equal(result.code, 0, result.stdout);
+    passed(JSON.parse(result.stdout).result);
+    const entries = (await readFile(f.log, "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    assert.equal(entries.filter(({ method }) => method === "session/prompt").length, 1);
+    assert.ok(entries.filter(({ cwd }) => cwd).every(({ cwd }) => cwd.startsWith(f.scratch)));
+    assert.deepEqual(await readdir(f.scratch), []);
+    assert.equal(await readFile(join(f.home, "logged-in"), "utf8"), "existing");
   } finally {
     await rm(f.directory, { recursive: true, force: true });
   }

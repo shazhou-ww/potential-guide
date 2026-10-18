@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-void import("../../setup-check.mjs").then(({ main }) => main("sanity"));
+void import("../../setup-check.mjs").then(({ main }) => main("sanity", { pilot: true }));
