@@ -18,7 +18,7 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 准备真实 VS Code 验证环境
+- [ ] **D-S01:** 准备真实 AHP 验证环境
 - [ ] **D-S02:** 实测修复与会话生命周期
 
 ### Deployment acceptance criteria

@@ -1,10 +1,12 @@
-# Regulator 接入 VS Code AHP 的具体需求
+# Regulator 接入 AHP 的具体需求
 
 ## 定位与目标
 
-本文细化 [Idea.md](./Idea.md)：让 pguide 的 Regulator 作为客户端，调用 VS Code Agent Host 提供的 Agent 完成修复。AHP 指 Agent Host Protocol，不是 ACP 的别名，也不是让 VS Code 调用一个由 Regulator 新提供的 AHP 服务端。
+本文细化 [Idea.md](./Idea.md)：让 pguide 的 Regulator 作为客户端，调用兼容 AHP 的 Host 提供的 Agent 完成修复。AHP 指 Agent Host Protocol，不是 ACP 的别名，也不是让 Host 调用一个由 Regulator 新提供的 AHP 服务端。
 
-本文描述用户可观察的要求，不预选 SDK、传输方式、协议方法或包结构。具体接入入口及版本能力必须在实施时核对[官方 AHP 规范](https://microsoft.github.io/agent-host-protocol/)和真实 VS Code 环境，不能把尚未确认的接口写成已支持能力。
+支持对象是 AHP 协议，而非某个编辑器。配置字段、协议类型和公共 API 不得命名为 `vscode` 或要求 VS Code 专属路径、进程、UI；Host 产品和版本仅用于实现说明、连接准备与实测证据。VS Code 是首个真实验证实现，其他 Host 按相同协议和能力条件接入。
+
+本文描述用户可观察的要求，并给出配置候选，不预选 SDK、协议方法或包结构。具体接入入口、传输及版本能力必须在实施时核对[官方 AHP 规范](https://microsoft.github.io/agent-host-protocol/)和真实 Host 环境，不能把尚未确认的接口写成已支持能力。
 
 ## 当前行为与用户场景
 
@@ -12,17 +14,75 @@
 
 | 场景 | 用户操作 | 期望结果 |
 | --- | --- | --- |
-| 首次使用 AHP | 配置一个可访问的 VS Code Agent Host 与 Agent profile，执行 `pguide regulate` | 在指定目标上下文中运行修复，并以重新观察的结果结束或继续 |
+| 首次使用 AHP | 配置一个可访问的 AHP Host 与 Agent profile，执行 `pguide regulate` | 在指定目标上下文中运行修复，并以重新观察的结果结束或继续 |
 | 与 ACP 并存 | 在同一配置中保留 ACP profile，显式选择另一 AHP profile | 按所选协议执行，不要求用户迁移仍可用的 ACP 配置 |
 | 中断后继续 | 对已保存的 AHP regulation 执行 `pguide continue` | 按保存的配方重新观察；仍需修复时恢复原会话 |
 | 遇到交互或环境阻塞 | Host 不可用、权限不足、认证过期或能力不兼容 | 提供明确失败原因与恢复条件，不伪装为完成，也不绕过授权 |
+
+## Agent 配置写法
+
+### 现有配置保持可用
+
+沿用 pguide 自己的 YAML 配置文件及 `agents.<profile>` 结构；不要求修改 Host 或 VS Code 的 Agent 定义文件。ACP 的 `connection`、`transport` 和 `requirements` 写法不变，`--agent` 仍选择本地 profile。
+
+```yaml
+schemaVersion: 2
+defaultAgent: repair-acp
+agents:
+  repair-acp:
+    connection: { type: acp, protocolVersion: "1" }
+    transport: { type: stdio, command: your-acp-agent }
+    requirements: { sessionResume: true }
+```
+
+### 新增 AHP profile 的目标写法
+
+以下是待实施的配置候选，不是当前版本已支持的配置，也不是 AHP 官方配置格式。以支持 WebSocket 和 Bearer 认证的 Host 为例；`protocolVersion` 与 `agent` 占位值必须替换为该 Host 实际支持的协议版本和 Agent 标识，不能照抄运行。
+
+```yaml
+schemaVersion: 2
+defaultAgent: repair-ahp
+agents:
+  repair-acp:
+    connection: { type: acp, protocolVersion: "1" }
+    transport: { type: stdio, command: your-acp-agent }
+  repair-ahp:
+    connection:
+      type: ahp
+      protocolVersion: "<host-supported-ahp-version>"
+      agent: "<host-agent-id>"
+    transport:
+      type: websocket
+      url: wss://agent-host.example.invalid/ahp
+    authentication:
+      type: bearer
+      tokenEnv: AHP_TOKEN
+    requirements:
+      sessionResume: true
+```
+
+| 配置项 | 变化与语义 |
+| --- | --- |
+| `connection.type` | 增加 `ahp`，不增加 `vscode` 协议类型 |
+| `connection.protocolVersion` | 按所选协议验证；AHP 版本不沿用 ACP 的正整数字符串校验 |
+| `connection.agent` | AHP Host 内的 Agent 标识；与本地 profile 名 `repair-ahp` 分开，不按产品名推断 |
+| `transport` | 按实际支持的 AHP 传输增加分支；上例是连接已有 Host 的 WebSocket 地址，不把 ACP 的 stdio 命令字段硬套到 AHP |
+| `authentication` | 上例新增 Bearer 环境变量引用，运行时读取 `AHP_TOKEN`；不写 token 明文或把该字段当作所有 Host 的唯一认证模式 |
+| `requirements.sessionResume` | 复用现有语义；为 `true` 时所选 Host/Agent 必须具备恢复能力，否则在执行前明确失败 |
+| `defaultAgent` / `--agent` | 仍选择 profile；不新增 `--vscode` 或强制更改原有 Agent 选择方式 |
+
+使用时以 `--agent repair-ahp` 选择 AHP，以 `--agent repair-acp` 选择 ACP；目标 subject、Pilot 和运行额度的配置方式不因协议切换而改变。
+
+目标是将 AHP 作为可选配置扩展、保持原 ACP 配置不变。当前解析器只接受 ACP，实施必须同步更新配置校验、配置编辑器与恢复记录；是否必须提升配置 schema 版本，应由实际兼容性验证决定并提供迁移说明，不能仅靠文档宣布可用。字段细节如需调整，应先更新本需求和示例，不能让示例与最终校验器分离。
+
+Host 自身的启动、认证和 Agent 注册步骤可以因实现不同而不同，放在对应实现的接入说明中；通用配置不承诺所有 Host 都支持上例传输或认证，也不通过 Host 产品名分派核心行为。
 
 ## 功能与行为要求
 
 ### R-01: 显式选择协议和执行目标
 
 - 复用现有 Agent profile 选择方式，让用户明确区分 ACP 与 AHP；配置能够唯一确定 Host 连接目标及实际执行 Agent。
-- 支持文档必须说明连接入口、所需 VS Code/Host 版本、认证来源、工作区或目标目录的解析规则，以及会话恢复所需能力。
+- 支持文档必须说明连接入口、所需协议版本与 Host 能力、认证来源、工作区或目标目录的解析规则，以及会话恢复所需能力；产品版本仅出现在对应实现的接入说明中。
 - 目标设备与路径必须按 Host 的实际执行环境解释。无法访问目标或无法确认上下文时，在发送修复请求前明确失败，不能落到另一个工作区。
 - 不自动搜索任意 Host、不自动选择用户其他会话、不在 AHP 失败时改用 ACP。
 
@@ -30,7 +90,7 @@
 
 - 在修复执行前验证连接、协议兼容性及所选 Agent 的必要能力；无法满足要求时，说明缺少的前提。
 - 区分连接失败、认证失败、Agent 不可用和能力不支持，避免只输出无法定位的通用失败。
-- 文档列明已验证的版本组合和能力限制；不能将单次连接成功扩大为全部 VS Code 版本兼容。
+- 文档列明已验证的 Host/协议版本组合和能力限制；不能将单个实现的成功扩大为全部 AHP Host 或版本兼容。
 
 ### R-03: 传递完整且一致的修复上下文
 
@@ -58,7 +118,7 @@
 - 单次 Agent 超时覆盖连接、会话准备、请求执行及等待结果；同时服从整个 regulation 的总时限、调用次数和停滞上限，不因重连或恢复重置同一次运行的额度。
 - 用户中断或超时应向当前受控执行传递取消；返回后不再授权后续修复，迟到结果不得发布为当前运行的成功。
 - 区分本地等待已结束与远端执行已确认停止。无法确认远端停止时，明确暴露剩余风险和会话定位信息，不能谎报取消完成。
-- 只清理本次调用拥有的连接和执行资源，不关闭共享 VS Code、Host 或不属于本次运行的会话。
+- 只清理本次调用拥有的连接和执行资源，不关闭共享 Host、承载它的应用或不属于本次运行的会话。
 
 ### R-07: 认证与权限不越界
 
@@ -75,17 +135,17 @@
 ### R-09: 保持 ACP 和核心边界
 
 - 现有 ACP profile、执行、取消和恢复记录继续按原语义工作，不为启用 AHP 强制迁移可用 ACP 配置。
-- 协议专属细节留在接入边界，不让通用 Regulator 依赖 VS Code 进程或 UI。
+- 协议专属细节留在接入边界，通用 Regulator 不依赖某种 Host 产品的进程、UI 或安装路径。相同能力的 Host 替换仅调整连接目标、认证和 Agent 标识，不改协议类型或核心代码。
 - 本次不新增 portfolio 调度、AHP 服务端、任意已有会话接管、多客户端协作控制、自动安装 Host 或 npm 发布。
 - 若共享配置或恢复格式必须演进，应提供明确兼容或迁移规则，不以忽略旧字段的方式掩盖不兼容。
 
 ## 验证场景与证据要求
 
-以下是需求的验证用例，不是实施任务清单。自动协议替身可证明确定性行为，但不能代替真实 VS Code 接入证据。
+以下是需求的验证用例，不是实施任务清单。自动协议替身可证明确定性行为，但不能代替真实 AHP Host 接入证据。首个端到端验收明确使用 VS Code 的真实 agent session；这是一组实现兼容性证据，不是协议支持范围的产品限定。
 
 | 用例 | 操作或故障 | 可观察结果 | 证明方式 |
 | --- | --- | --- | --- |
-| V-01 | 在隔离目标上通过 AHP 执行一次修复 | Agent 收到完整上下文；执行完成后新观察确认目标达成 | 自动闭环测试及真实 VS Code 运行记录 |
+| V-01 | 在隔离目标上通过 AHP 执行一次修复 | Agent 收到完整上下文；执行完成后新观察确认目标达成 | 自动闭环测试及真实 VS Code agent session 运行记录 |
 | V-02 | Agent 声称完成但目标仍不满足 | 不报告 `target-reached`；继续或按原有额度、停滞策略退出 | 自动测试比较修复前后 observation 与最终 outcome |
 | V-03 | 目标已满足、前置条件缺失或观察调用失败 | 不发送修复请求；已满足时也不创建或恢复会话 | 自动测试统计会话与执行调用 |
 | V-04 | 保存真实身份后中断，再执行 `continue` | 先重新观察；需要修复时使用原会话，不采用改变后的其他目标 | 自动恢复测试及真实会话身份对照 |
@@ -94,12 +154,21 @@
 | V-07 | Host 断线、认证失效、权限拒绝或能力不足 | 原因可区分且脱敏；不自动降级、不无限等待、不绕过批准 | 自动故障注入及支持范围说明 |
 | V-08 | 请求已发送后断线，或收到重复/迟到状态 | 不自动重放副作用请求，不重复计数或报告伪完成 | 自动协议测试检查发送次数和最终状态 |
 | V-09 | 在同一候选版本使用原 ACP profile | 原配置、执行结果和恢复行为保持可用 | ACP 回归测试及真实 ACP 对照运行 |
+| V-10 | 加载 ACP/AHP 共存配置，使用非产品专属的 Host 地址与 Agent 标识 | 校验和选择按协议与能力分派，不依赖 VS Code 命名或安装 | 配置解析、编辑保存、执行选择及恢复记录自动测试；不能把替身算作第二个真实 Host 的兼容证据 |
 
-真实运行证据需记录候选提交、VS Code/Host/协议实际版本、连接前提、脱敏会话身份、目标观察及执行结果。环境不可用时记录阻塞，不能把测试替身或仅连接成功当作实测通过。
+### 使用 VS Code agent session 的首个真实验收
+
+1. 准备隔离工作区和一个可观察的未满足目标，记录 VS Code、其 AHP Host、协议实际版本及非敏感连接前提。确认该版本确有可供外部客户端访问的 AHP 入口；只有编辑器内聊天能力不算满足前提。
+2. 用通用 `ahp` profile 运行 `pguide regulate`，由 pguide 经 AHP 创建其拥有的真实 agent session。对照 Host 可用的会话状态或记录，确认请求、执行目标与会话身份一致；不能手动聊天代替 pguide 调用。
+3. 让 Agent 完成一次受控修复，保存修复前后目标观察、实际执行结果及脱敏会话身份。必须由新观察证明 `target-reached`，不以聊天回答“已完成”判定通过。
+4. 在单独的受控用例中取消运行，再执行 `continue`。仍需修复时确认使用原会话，记录取消是否被远端确认以及恢复结果；已满足目标的继续操作应无需会话调用。
+5. 运行 ACP 对照用例，保留配置与结果。真实环境缺失或某项能力不可用时明确报告阻塞，不把自动替身或仅连接成功当作验收通过。
+
+整个实测受有限额度与既有授权约束，不接管用户无关会话、不改动真实业务项目。证据需记录候选提交、Host 产品及版本、协议版本、连接前提、脱敏会话身份、目标观察和执行结果；未来其他 Host 使用同一套协议行为用例验证。
 
 ## 与下游契约的对应关系
 
 - R-01、R-02 的接入前提由 [I-S01](../Implementation.md#i-s01-核对-ahp-接入与能力边界)核对，其余行为由 I-S02 接入、I-S03 验证并文档化。
-- V-01 至 V-03 对应 I-AC01；V-04 至 V-08 对应 I-AC02；V-09 及配置兼容对应 I-AC03。
+- V-01 至 V-03 对应 I-AC01；V-04 至 V-08 对应 I-AC02；V-09、V-10 及配置兼容对应 I-AC03。
 - 真实 AHP 闭环对应 [Deployment.md](../../Deployment.md) 的 D-AC01；真实恢复与取消对应 D-AC02；ACP 对照对应 D-AC03。
 - 本文不记录完成状态或执行证据；下游契约及 [ledger.md](../../../ledger.md)继续使用已有稳定 ID，准备阶段的条目保持未完成。
