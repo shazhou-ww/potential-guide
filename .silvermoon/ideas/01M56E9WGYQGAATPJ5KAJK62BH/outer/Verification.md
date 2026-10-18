@@ -26,8 +26,12 @@ pnpm deployment:verify 将八个包独立打包安装，检查公开库导出及
 
 本契约和证据同步后，对稳定 outer revision 再验证安装行为，以及真实拒绝/授权恢复；随后清理本轮独占目录及进程，仅在根 ledger 记录完成，不再改变此世界修订。
 
+部署阶段再次验证：run `493ebbb2-1c77-4ec3-9792-31beb7219871` 首轮真实 edit 请求拒绝，exit 3、authorization-required 且 marker 不存在；添加同一精确文件 grant 后，原 session resumed 一轮 target-reached，独立内容核验通过。安装拒绝、授权恢复和撤销场景也再次通过。
+
 ## 已知限制
 
 验证平台为 Windows；文件符号链接自动测试因系统权限跳过，目录链接越界测试实际通过。ACP 不是 OS 沙箱，无法约束不请求权限的预授权工具或恶意 Agent。本轮没有批准 shell 任意执行，也没有更改 setup 独立 Objective 的无换行校验。
 
 既有 setup idea 的其他遗留项与本次权限交付分开处理，不通过本门禁自动结案。
+
+保留会话可能自行记住拒绝并不再发起请求；一次这样的额外观察返回 exhausted，而非 authorization-required。没有新的结构化请求时不会从拒绝文本猜测授权状态。明确的请求链与新会话拒绝、原会话授权恢复均已实测；不能承诺每个模型在所有保留历史下都产生相同请求序列。
