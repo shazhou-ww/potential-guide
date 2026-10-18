@@ -53,7 +53,8 @@ its owning root registrations disappear.
 ## Coordinator
 
 `await createPortfolioCoordinator({ queue, resources, runner, maxConcurrency,
-quota, agentExecutionLimits, abortGraceMs, onEvent? })` subscribes to current queue
+quota, agentExecutionLimits, abortGraceMs, permissions?, permissionUpdates?,
+onEvent? })` subscribes to current queue
 and resource snapshots. It returns `state` and asynchronous `close()`.
 
 Resources are `{ id, binding, capacity, capabilities }`. The coordinator selects
@@ -105,6 +106,37 @@ exact `input` object passed to `runner.start`. This associates requests with a
 live run, ignores superseded/stopping runs, and emits the planner event with
 `requirements: [capability]` and `reason`. Repeated identical requests are
 deduplicated.
+
+### Authorization and resumption
+
+`permissions?: RegulationPermissions` is trusted coordinator configuration, never
+a planner directive or queue field. `permissionUpdates?` is a
+`SubscriptionRef<RegulationPermissions | undefined>`; when supplied, its current
+value overrides the static policy, including `undefined` (deny-all). The regulator
+validates ceiling/grant IDs and receives an immutable policy snapshot for every
+run. Changing effective live permissions aborts active runs, retains their occupied slots
+until termination, and ignores late results. Invalid replacements revoke to
+deny-all and surface an error, suspending launches until a valid replacement
+arrives rather than retaining old authority.
+
+An `authorization-required` result remains visible to planning but is held by the
+coordinator. The same is true for `exhausted` results with top-level unresolved
+`authorizationRequests`. Unlike ordinary quota exhaustion, neither automatically
+continues with unchanged authority. The blocked signature includes actual
+Pilot/specification, subject, language, target, and effective selected permission
+rules, not priority, queue revisions, Agent identity, rule IDs, or unselected
+ceiling entries. Reprioritizing, requeueing, replacing resources, and equivalent
+policy updates cannot bypass it. Changing the effective grants or the actual
+plan permits another run, which always starts with fresh observation.
+
+Forward denied operations with
+`coordinator.reportAuthorizationRequest(input, request)`, using the exact runner
+input object. It emits a deduplicated `authorization-request` event containing
+`{ demand, request }`, ignores stale/stopping runs, and never changes grants.
+Planner feedback contains requests and observations, not the trusted permission
+policy. Planner output and registered goals reject permission/ceiling/grant fields.
+Adapters may try authorized alternatives before returning a blocked result:
+target attainment and actual observed progress take precedence over a denied call.
 
 ## Migration
 

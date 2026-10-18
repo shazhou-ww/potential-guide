@@ -715,6 +715,65 @@ for await (const line of createInterface({input:process.stdin})) {
   console.log("installed pguide loads committed setup subdirectory and verifies real nonce repair");
 }
 
+async function verifyRegulationPermissions(baseEnv) {
+  const marker = join(consumer, "authorized-marker.txt");
+  const subject = join(consumer, "permission-subject.json");
+  const config = join(consumer, "permission-config.json");
+  const report = join(consumer, "permission-report.json");
+  const stateDirectory = join(consumer, "permission-state");
+  const policy = {
+    ceiling: [{ id: "marker-edit", operation: "edit", resources: [marker] }],
+    grants: [],
+  };
+  const configuration = {
+    schemaVersion: 2,
+    defaultAgent: "permission-fixture",
+    stateDirectory,
+    commandDirectories: [join(consumer, "node_modules", ".bin")],
+    regulationPermissions: policy,
+    regulationStrategy: {
+      quota: { timeoutMs: 30000, maxAgentRuns: 2, maxStallRuns: 2 },
+    },
+    agents: {
+      "permission-fixture": {
+        connection: { type: "acp", protocolVersion: "1" },
+        transport: {
+          type: "stdio",
+          command: process.execPath,
+          args: [join(fixture, "permission-agent.mjs")],
+        },
+      },
+    },
+  };
+  await writeFile(subject, JSON.stringify({ marker }));
+  await writeFile(config, JSON.stringify(configuration));
+  const denied = await invokeRegulate(config, subject, report, baseEnv);
+  assert.equal(denied.code, 3, denied.stdout + denied.stderr);
+  const deniedResult = JSON.parse(denied.stdout);
+  assert.equal(deniedResult.status, "authorization-required");
+  assert.equal(deniedResult.outcome.authorizationRequests[0].operation, "edit");
+  assert.deepEqual(deniedResult.outcome.authorizationRequests[0].resources, [marker]);
+  await assert.rejects(access(marker), { code: "ENOENT" });
+
+  configuration.regulationPermissions.grants = ["marker-edit"];
+  await writeFile(config, JSON.stringify(configuration));
+  const args = ["continue", deniedResult.regulationId, "--config", config, "--format", "json"];
+  const allowed = await successful(executable("pguide"), args, { cwd: consumer, env: baseEnv });
+  assert.equal(JSON.parse(allowed.stdout).status, "target-reached");
+  assert.equal(await readFile(marker, "utf8"), "permission-verified");
+
+  await unlink(marker);
+  configuration.regulationPermissions = { ceiling: [], grants: [] };
+  await writeFile(config, JSON.stringify(configuration));
+  const revoked = await execute(executable("pguide"), args, { cwd: consumer, env: baseEnv });
+  assert.equal(revoked.code, 3, revoked.stdout + revoked.stderr);
+  assert.equal(JSON.parse(revoked.stdout).status, "authorization-required");
+  await assert.rejects(access(marker), { code: "ENOENT" });
+  console.log(
+    "installed permissions deny, grant-on-continue, and current-ceiling revocation verified",
+  );
+}
+
 const failures = [];
 try {
   await packAndInstall();
@@ -722,6 +781,7 @@ try {
   await verifyRegulation(env);
   await verifySupervisor(env);
   await verifySetupObjective(env);
+  await verifyRegulationPermissions(env);
 } catch (error) {
   failures.push(error);
 }

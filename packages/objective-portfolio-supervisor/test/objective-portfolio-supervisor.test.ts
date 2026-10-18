@@ -5,6 +5,7 @@ import type { Envelope, PilotObservation, PilotSpec } from "@potential-guide/obj
 import {
   type RegulationInput,
   type RegulationOutcome,
+  type RegulationPermissions,
   regulate,
 } from "@potential-guide/objective-regulator";
 import {
@@ -112,6 +113,16 @@ const resource: AgentResource = {
   capacity: 1,
   capabilities: ["code"],
 };
+const authorizationRequest = {
+  id: "denied-1",
+  operation: "execute",
+  resources: [],
+  reason: "Command is not granted.",
+} as const;
+const permissionPolicy: RegulationPermissions = {
+  ceiling: [{ id: "repair", operation: "execute", command: "node repair.js" }],
+  grants: [],
+};
 async function harness(
   demands: readonly QueueDemand[],
   options: {
@@ -120,6 +131,8 @@ async function harness(
     abortGraceMs?: number;
     kill?: () => Promise<void>;
     onEvent?: (event: CoordinatorEvent) => Promise<void>;
+    permissions?: RegulationPermissions;
+    permissionUpdates?: SubscriptionRef.SubscriptionRef<RegulationPermissions | undefined>;
   } = {},
 ) {
   const queue = await Effect.runPromise(
@@ -143,6 +156,8 @@ async function harness(
     abortGraceMs: options.abortGraceMs ?? 5,
     quota: { timeoutMs: 1000, maxAgentRuns: 2, maxStallRuns: 2 },
     agentExecutionLimits: { timeoutMs: 100 },
+    ...(options.permissions ? { permissions: options.permissions } : {}),
+    ...(options.permissionUpdates ? { permissionUpdates: options.permissionUpdates } : {}),
     onEvent: (event) => {
       events.push(event);
       return options.onEvent?.(event);
@@ -185,6 +200,205 @@ test("resource capacity two and live load enforce global/per-resource ceilings",
   const h = await harness([demand("a"), demand("b"), demand("c")], {
     maxConcurrency: 3,
     resources: [{ ...resource, capacity: 2 }],
+  });
+
+  test("authorization block survives priority, revision, resource identity and equivalent grant updates", async () => {
+    const policy = { ...permissionPolicy, grants: ["repair"] };
+    const permissionUpdates = await Effect.runPromise(
+      SubscriptionRef.make<RegulationPermissions | undefined>(policy),
+    );
+    const h = await harness([demand("a")], { permissionUpdates });
+    try {
+      await until(() => h.executions.length === 1);
+      const first = h.executions[0]!;
+      assert.deepEqual(first.input.permissions, policy);
+      // Irrelevant revisions arriving during a run must not discard its blocked signature.
+      await h.update([demand("a", 0, { revision: 2 })]);
+      first.completion.resolve({
+        ...outcome(first.input, "authorization-required"),
+        authorizationRequests: [authorizationRequest],
+      });
+      await until(async () => (await read(h.coordinator.state)).runs.length === 0);
+      await h.update([demand("a", 1, { revision: 3 })]);
+      await Effect.runPromise(
+        SubscriptionRef.set(h.resources, [
+          { ...resource, id: "replacement", binding: { id: "other" } },
+        ]),
+      );
+      await Effect.runPromise(
+        SubscriptionRef.set(permissionUpdates, {
+          ceiling: [
+            { id: "unused", operation: "read", resources: ["/workspace/file"] },
+            { id: "renamed", operation: "execute", command: "node repair.js" },
+          ],
+          grants: ["renamed"],
+        }),
+      );
+      await delay(30);
+      assert.equal(h.executions.length, 1);
+      assert.equal((await read(h.coordinator.state)).error, undefined);
+      await h.update([demand("a", 1, { revision: 4, subject: { changed: true } })]);
+      await until(() => h.executions.length === 2);
+    } finally {
+      await h.coordinator.close();
+    }
+  });
+
+  test("effective permission changes retry blocked demand with a new frozen policy, never the old snapshot", async () => {
+    const permissionUpdates = await Effect.runPromise(
+      SubscriptionRef.make<RegulationPermissions | undefined>(permissionPolicy),
+    );
+    const h = await harness([demand("a")], { permissionUpdates });
+    try {
+      await until(() => h.executions.length === 1);
+      const first = h.executions[0]!;
+      first.completion.resolve({
+        ...outcome(first.input, "authorization-required"),
+        authorizationRequests: [authorizationRequest],
+      });
+      await until(async () => (await read(h.coordinator.state)).runs.length === 0);
+      await Effect.runPromise(
+        SubscriptionRef.set(permissionUpdates, { ...permissionPolicy, grants: ["repair"] }),
+      );
+      await until(() => h.executions.length === 2);
+      assert.deepEqual(first.input.permissions?.grants, []);
+      assert.deepEqual(h.executions[1]!.input.permissions?.grants, ["repair"]);
+      assert.ok(Object.isFrozen(h.executions[1]!.input.permissions));
+    } finally {
+      await h.coordinator.close();
+    }
+  });
+
+  test("removing live permission policy cancels old authority and ignores its late result", async () => {
+    const granted = { ...permissionPolicy, grants: ["repair"] };
+    const permissionUpdates = await Effect.runPromise(
+      SubscriptionRef.make<RegulationPermissions | undefined>(granted),
+    );
+    const h = await harness([demand("a")], {
+      permissions: granted,
+      permissionUpdates,
+      abortGraceMs: 5,
+    });
+    try {
+      await until(() => h.executions.length === 1);
+      const first = h.executions[0]!;
+      await Effect.runPromise(SubscriptionRef.set(permissionUpdates, undefined));
+      await until(() => first.aborted && h.executions.length === 2);
+      assert.deepEqual(h.executions[1]!.input.permissions, { ceiling: [], grants: [] });
+      first.completion.resolve(outcome(first.input));
+      await delay(20);
+      assert.equal(h.events.filter((event) => event.type === "result").length, 0);
+      assert.deepEqual(first.input.permissions, granted);
+    } finally {
+      await h.coordinator.close();
+    }
+  });
+
+  test("quota-exhausted unresolved authorization does not create an automatic continuation loop", async () => {
+    const h = await harness([demand("a")]);
+    try {
+      await until(() => h.executions.length === 1);
+      h.executions[0]!.completion.resolve({
+        ...outcome(h.executions[0]!.input, "exhausted"),
+        exhaustedBy: "agent-runs",
+        authorizationRequests: [authorizationRequest],
+      });
+      await until(async () => (await read(h.coordinator.state)).runs.length === 0);
+      await h.update([demand("a", 0, { revision: 2 })]);
+      await delay(30);
+      assert.equal(h.executions.length, 1);
+      await h.update([demand("a", 0, { revision: 3, targetLevel: "ready" })]);
+      await until(() => h.executions.length === 2);
+    } finally {
+      await h.coordinator.close();
+    }
+  });
+
+  test("authorization feedback reaches planner without grants and cannot self-authorize", async () => {
+    const received: CoordinatorEvent[] = [];
+    let selfGrant = false;
+    const planner = await createPortfolioPlanner({
+      goals: [goal("a")],
+      periodic: false,
+      observe: async (entry) => observed(entry.pilot),
+      policy: async (input) => {
+        received.push(...input.events);
+        assert.equal(JSON.stringify(input).includes('"ceiling"'), false);
+        return {
+          directives: input.candidates.map((entry) => ({
+            goalId: entry.id,
+            priority: entry.priority,
+            ...(selfGrant ? { permissions: { ceiling: [], grants: ["repair"] } } : {}),
+          })),
+        };
+      },
+    });
+    const h = await harness((await read(planner.queue)).demands, {
+      permissions: permissionPolicy,
+      onEvent: (event) => planner.feedback(event),
+    });
+    try {
+      await until(() => h.executions.length === 1);
+      const first = h.executions[0]!;
+      h.coordinator.reportAuthorizationRequest(first.input, authorizationRequest);
+      h.coordinator.reportAuthorizationRequest(first.input, authorizationRequest);
+      await until(() => received.some((event) => event.type === "authorization-request"));
+      assert.equal(received.filter((event) => event.type === "authorization-request").length, 1);
+      first.completion.resolve({
+        ...outcome(first.input, "authorization-required"),
+        authorizationRequests: [authorizationRequest],
+      });
+      await until(() => received.some((event) => event.type === "result"));
+      assert.equal((await read(planner.queue)).demands.length, 1);
+      h.coordinator.reportAuthorizationRequest(first.input, {
+        ...authorizationRequest,
+        id: "late",
+      });
+      await delay(10);
+      assert.equal(received.filter((event) => event.type === "authorization-request").length, 1);
+      selfGrant = true;
+      await assert.rejects(planner.refresh(), /Unsupported planner directive fields/);
+      assert.deepEqual(first.input.permissions?.grants, []);
+    } finally {
+      await h.coordinator.close();
+      await planner.close();
+    }
+  });
+
+  test("queue goals cannot smuggle permission policy and malformed initial policy cannot launch", async () => {
+    await assert.rejects(
+      harness([{ ...demand("a"), permissions: permissionPolicy } as QueueDemand]),
+      /Invalid objective goal/,
+    );
+    await assert.rejects(
+      harness([demand("a")], { permissions: { ...permissionPolicy, grants: ["self-granted"] } }),
+      /existing ceiling IDs/,
+    );
+  });
+
+  test("malformed live grant selection stops active work and suspends launches until repaired", async () => {
+    const permissionUpdates = await Effect.runPromise(
+      SubscriptionRef.make<RegulationPermissions | undefined>({
+        ...permissionPolicy,
+        grants: ["repair"],
+      }),
+    );
+    const h = await harness([demand("a")], { permissionUpdates });
+    try {
+      await until(() => h.executions.length === 1);
+      await Effect.runPromise(
+        SubscriptionRef.set(permissionUpdates, { ceiling: [], grants: ["outside-ceiling"] }),
+      );
+      await until(() => h.executions[0]!.aborted && h.executions[0]!.killed);
+      await delay(20);
+      assert.equal(h.executions.length, 1);
+      assert.ok((await read(h.coordinator.state)).error);
+      await Effect.runPromise(SubscriptionRef.set(permissionUpdates, undefined));
+      await until(() => h.executions.length === 2);
+      assert.deepEqual(h.executions[1]!.input.permissions, { ceiling: [], grants: [] });
+    } finally {
+      await h.coordinator.close();
+    }
   });
   try {
     await until(async () => {

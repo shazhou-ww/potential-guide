@@ -63,6 +63,8 @@ Every normal `RegulationOutcome` contains `iterations` (Agent invocation count),
 - `target-reached`: the latest observation reaches the requested local level.
 - `exhausted`: `exhaustedBy` is `time`, `agent-runs`, `stall`, or `agent-limit`.
 - `prerequisite-unmet`: `prerequisite` contains `{ spec, subject, minimumLevelId }`.
+- `authorization-required`: `authorizationRequests` describes denied operations
+  that remain unresolved after a fresh trusted observation.
 
 The final `agentOutcome`, when available, is included. If time expires before
 any observation, `latestObservation` explicitly has `payload: null` and status
@@ -80,11 +82,54 @@ discover the rest of the dependency chain. The exported
 Pilot validates subjects throughout the dependency chain before any check or
 Agent executes.
 
-Agent outcomes are `{ status: "completed", summary }` or
+Agent outcomes are `{ status: "completed", summary, authorizationRequests? }`,
+`{ status: "authorization-required", reason, authorizationRequests }`, or
 `{ status: "blocked" | "failed" | "limit-reached", reason }`. A per-call timeout
 or explicit `limit-reached` yields `exhaustedBy: "agent-limit"`. Blocked (409)
 and failed (500) Agents instead raise `RegulationError`; they are not quota
 exhaustion. Malformed Agent outcomes raise 502.
+
+## Explicit run authorization
+
+Permissions are independent of execution quotas, subjects, Agent bindings, and
+planner instructions. `RegulationInput.permissions` is optional and defaults to
+deny-all, not implicit approval. The trusted caller supplies:
+
+```ts
+permissions: {
+  ceiling: [
+    { id: "read-config", operation: "read", resources: ["/work/project/config.json"] },
+    { id: "repair", operation: "execute", command: "node repair.js" },
+  ],
+  grants: ["read-config"],
+}
+```
+
+`PermissionGrant` permits only `read`, `edit`, and `execute`. Filesystem resources
+are exact absolute paths, not directory trees or glob patterns. Execution uses
+an exact complete `command`, not a shell prefix. `RegulationPermissions.grants`
+selects unique IDs from the administrator's unique ceiling rules; it cannot
+define additional rules. `makeRegulationPermissions(value)` validates and returns
+an immutable snapshot; `undefined` returns empty ceiling/grants. Invalid policy
+is a 400 before probes or Agent work. Every `AgentInput.permissions` contains the
+complete frozen snapshot. A runtime adapter must enforce it at each operation,
+including path canonicalization and symlink handling; this package does not
+intercept filesystem or shell calls.
+
+An `AuthorizationRequest` has `{ id, operation, resources, reason, command? }`.
+Unknown requested operations are representable for reporting but cannot become
+grants. Requests never authorize themselves. Adapters should deny individual
+ungranted calls while allowing alternate paths, then attach outstanding requests
+to `completed`, or return `authorization-required` with a nonempty request array.
+Both outcomes cause fresh observation. Reaching the target wins; observed progress
+clears the unresolved requests for scheduling and continues. No progress returns
+`authorization-required` without incrementing stall history, even on the final
+allowed Agent call: confirmed unresolved denial takes precedence over Agent-run
+and stall counts. Observed progress still respects the remaining Agent quota;
+target attainment completes successfully. A time interruption remains `exhausted`
+and does not trust an incomplete re-observation. Historical requests can remain
+in `agentOutcome`; only the top-level array indicates unresolved authorization
+after re-observation.
 
 `RegulationError` has `status`, `message`, and an optional `envelope`.
 Its constructor accepts `(message, status, options?)` (also

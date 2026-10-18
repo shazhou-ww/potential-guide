@@ -12,7 +12,7 @@ import { bin, fixture, root, run, scratch } from "./fixtures.js";
 
 const stubSource = `
 import { createInterface } from "node:readline";
-import { appendFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, writeFileSync } from "node:fs";
 const [mode, log, marker] = process.argv.slice(2);
 writeFileSync(log + ".pid", String(process.pid));
 for await (const line of createInterface({ input: process.stdin })) {
@@ -30,10 +30,17 @@ for await (const line of createInterface({ input: process.stdin })) {
     if (mode === "repair") {
       console.log(JSON.stringify({ jsonrpc: "2.0", method: "pguide/capability-request",
         params: { capability: "additional-tool", reason: "Need a specialized verification tool" } }));
+      const deadline = Date.now() + 8000;
+      while (!existsSync(marker + ".planner-feedback")) {
+        if (Date.now() > deadline) throw Error("Planner did not acknowledge capability feedback.");
+        await new Promise(done => setTimeout(done, 25));
+      }
       writeFileSync(marker, "repaired");
       result = { stopReason: "end_turn", summary: "Repaired" };
     } else {
       const context = JSON.parse(message.params.prompt[0].text.split("\\n").at(-1));
+      if (message.params.prompt[0].text.includes("Need a specialized verification tool"))
+        writeFileSync(marker + ".planner-feedback", "acknowledged");
       const directives = context.candidates.map(goal => ({ goalId: goal.id, priority: goal.priority }));
       let value = JSON.stringify({ directives });
       if (mode === "duplicate") value = JSON.stringify({ directives: [directives[0], directives[0]] });
@@ -161,9 +168,9 @@ test("supervise plans once without repairs, then continuously observes and execu
       config,
       JSON.stringify({
         schemaVersion: 2,
-        agentExecutionLimits: { timeoutMs: 5_000 },
+        agentExecutionLimits: { timeoutMs: 12_000 },
         agents: {
-          strategist: profile(stub, "plan", plannerLog),
+          strategist: profile(stub, "plan", plannerLog, marker),
           "private-execution-agent": profile(stub, "repair", executorLog, marker),
         },
       }),
@@ -224,8 +231,9 @@ test("supervise plans once without repairs, then continuously observes and execu
     const configuredExecutor = configured.agents["private-execution-agent"];
     delete configured.agents["private-execution-agent"];
     await writeFile(config, JSON.stringify(configured));
-    running = run(bin("supervise"), [...args, "--execute", "--duration-ms", "7000"]);
-    const deadline = Date.now() + 8_000;
+    // Leave time for source refresh and a complete planner-feedback handshake under suite load.
+    running = run(bin("supervise"), [...args, "--execute", "--duration-ms", "15000"]);
+    const deadline = Date.now() + 12_000;
     while ((await readFile(plannerLog, "utf8")).split('"method":"session/prompt"').length < 3) {
       assert.ok(Date.now() < deadline, "Supervisor did not start planning.");
       await new Promise((done) => setTimeout(done, 25));

@@ -86,8 +86,9 @@ timeout and zero retries. Probe retries apply to retryable invocation failures,
 not business problems. Remove legacy `mode` and `effectTtlMs`; ongoing scheduling
 belongs to portfolio supervision, not regulation.
 
-Normal outcomes are `target-reached` (exit 0), `exhausted` (exit 5), and
-`prerequisite-unmet` (exit 3). Typed 4xx/5xx invocation errors are failures,
+Normal outcomes are `target-reached` (exit 0), `exhausted` (exit 5),
+`authorization-required` (exit 3), and `prerequisite-unmet` (exit 3).
+Typed 4xx/5xx invocation errors are failures,
 not normal outcomes. The strategy is persisted and `continue` restores it
 rather than silently adopting changed current configuration.
 
@@ -113,6 +114,74 @@ the pinned commit, recovery fails explicitly rather than selecting a newer
 version. When that path no longer exists, only the exact stored origin commit
 is attempted; unpublished commits may therefore be unavailable.
 Profiles inherit credentials by environment-variable name only.
+
+## Explicit run permissions
+
+Configuration optionally contains `regulationPermissions`. Omission denies all
+ACP permission requests. Administrators define a ceiling of named rules and
+explicitly activate a subset in `grants`; neither subjects, model plans, tool
+titles nor capability labels grant authority:
+
+```yaml
+regulationPermissions:
+  ceiling:
+    - id: edit-result
+      operation: edit
+      resources: ['D:\work\project\result.json']
+    - id: read-input
+      operation: read
+      resources: ['D:\work\project\input.json']
+    - id: verify
+      operation: execute
+      command: 'node verify.mjs'
+  grants: [edit-result, read-input]
+```
+
+Use absolute paths appropriate to your OS. Resources identify **exact files or
+directories**, never recursive roots or glob patterns. All requested paths must
+match granted paths both lexically and after realpath resolution; creating a
+file requires an existing parent. Configure canonical paths rather than symlink
+aliases, which are rejected to prevent rebinding between Agent invocations.
+A directory rule does not authorize its
+children. Every apply-patch Add/Update/Delete target, Move destination and ACP
+location is checked. Missing paths, unknown tool kinds, unrecognized raw input,
+traversal and changed symlink destinations fail closed. Structured file input is
+`{path}` for read or `{path, content?}` for edit; edits also accept an apply_patch
+string or `{patch}`. Execute input is only `{command}` and must match the complete
+configured command exactly: no shell-prefix, wildcard, or cwd-based allowances.
+Unsupported Agent argument shapes require explicit adapter support, not looser rules.
+Copilot's `{fileName, diff}` permission input is also supported for single-file
+unified Git diffs: the absolute filename, all diff headers and every ACP location
+must agree. Creation/deletion null-file headers are recognized; renames,
+multi-file diffs, symlink modes, quoted/ambiguous paths and malformed hunks are denied.
+
+Only an offered `allow_once` option is selected. Individual denials do not kill
+the prompt: the Agent can try alternatives, and the regulator re-observes.
+Verified target/progress beats a denial; otherwise an unresolved request normally
+returns `authorization-required` with safe request metadata. Hard quotas still
+apply. Events exclude raw commands and model rationale. Permission snapshots and
+requests are persisted per attempt. `continue` keeps the pinned recipe and limits
+but **reloads the current configuration ceiling and grants**, not stale saved
+authority. Edit the complete setting using
+`pguide config set regulationPermissions '<JSON or YAML object>' --scope user`;
+`pguide config get regulationPermissions` reads it. Project and explicit config
+follow normal configuration precedence; protect all config sources as trusted
+administrative inputs and do not authorize Agents to edit them.
+Execution prompts include only the current effective grants, not the full ceiling,
+and tell resumed Agents to seek a fresh host decision rather than treating old
+session denials as current policy. Prose about being blocked never grants
+authority or substitutes for an actual permission request.
+
+Supervision reloads these administrative settings outside the planner queue.
+Permission changes replace execution snapshots and revoke stale runs; denied
+requests inform planning but planners cannot approve them.
+
+**This is an ACP authorization boundary, not a sandbox or malicious-Agent
+containment.** Exact shell commands can still have broad effects. An Agent can
+perform actions without asking ACP, especially when its profile includes
+`--allow-all-tools`, `--allow-tool=write`, or equivalent preauthorization flags.
+Remove those flags when relying on this mediation. Pilot checks, Agent runtime,
+administrative config and allowed commands remain trusted.
 
 ## Portfolio supervision
 

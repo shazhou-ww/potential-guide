@@ -18,9 +18,15 @@ import { homedir, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parse, stringify } from "yaml";
+import { parseRegulationPermissions, type RegulationPermissions } from "./permissions.js";
 import { killProcessTree } from "./process-tree.js";
 import { pipeRedactedSecrets } from "./streaming-secret-redactor.js";
 
+export {
+  type PermissionGrant,
+  parseRegulationPermissions,
+  type RegulationPermissions,
+} from "./permissions.js";
 export { killProcessTree } from "./process-tree.js";
 
 export const COMMAND_PROTOCOL = "pguide-command-v1";
@@ -49,6 +55,7 @@ export interface PguideConfig {
   stateDirectory?: string;
   retentionDays?: number;
   agentExecutionLimits?: { timeoutMs?: number };
+  regulationPermissions?: RegulationPermissions;
   regulationStrategy?: {
     probe?: { timeoutMs: number; retry: { maxRetries: number; delayMs: number } };
     quota?: { timeoutMs: number; maxAgentRuns: number; maxStallRuns: number };
@@ -272,6 +279,7 @@ export function parseConfig(source: string): PguideConfig {
       "stateDirectory",
       "retentionDays",
       "agentExecutionLimits",
+      "regulationPermissions",
       "regulationStrategy",
       "agents",
     ],
@@ -307,6 +315,15 @@ export function parseConfig(source: string): PguideConfig {
     throw new CliError("logLevel is invalid.");
   }
   positiveInteger(raw.retentionDays, "retentionDays");
+  if (raw.regulationPermissions !== undefined) {
+    try {
+      parseRegulationPermissions(raw.regulationPermissions);
+    } catch {
+      throw new CliError(
+        "Invalid regulationPermissions: require explicit unique rules and grants within the ceiling.",
+      );
+    }
+  }
   if (raw.agentExecutionLimits !== undefined) {
     if (!record(raw.agentExecutionLimits))
       throw new CliError("agentExecutionLimits must be an object.");

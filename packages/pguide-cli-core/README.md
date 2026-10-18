@@ -36,3 +36,12 @@ provide a third `AcpClient` constructor argument with `permissionHandler` and
 validated active-session request and an abort signal, and must return an offered
 option ID. Missing, invalid, failed, timed-out, or shutdown-interrupted decisions
 cancel the request. This API does not enable any permission by default.
+
+`PguideConfig.regulationPermissions` stores protocol-neutral named ceiling rules
+and an explicit subset of granted IDs. `parseRegulationPermissions` validates the
+configuration shape without coupling cli-core to the regulator. Read/edit rules
+contain exact absolute `resources`; execute rules contain an exact `command`.
+The pguide runtime adapter supplies policy, realpath checks and safe permission
+events. Generic ACP handlers remain opt-in; timeout/cancellation never selects an
+invalid or unoffered option. Profiles that preauthorize tools can bypass ACP
+requests, so these checks are not an OS sandbox.

@@ -6,7 +6,9 @@ import type { PilotManifest } from "@potential-guide/objective-pilot";
 import { fixture, manifest, objectiveId } from "../../objective-pilot/test/fixtures.js";
 import {
   type AgentInput,
+  type AgentOutcome,
   decideRegulation,
+  makeRegulationPermissions,
   makeRegulatorSpec,
   RegulationError,
   type RegulationInput,
@@ -79,6 +81,233 @@ test("recipe and runtime snapshots are immutable JSON data", async () => {
   assert.equal(result.stopReason, "target-reached");
   assert.ok(Object.isFrozen(result.latestObservation));
   assert.ok(Object.isFrozen(result));
+});
+
+const deniedRequest = {
+  id: "request-1",
+  operation: "edit",
+  resources: ["/workspace/config.json"],
+  reason: "No matching run grant.",
+} as const;
+
+test("permissions deny by default and selected ceiling grants are immutable run snapshots", async () => {
+  const policy = {
+    ceiling: [{ id: "edit-config", operation: "edit", resources: ["/workspace/config.json"] }],
+    grants: ["edit-config"],
+  } as const;
+  for (const permissions of [undefined, policy]) {
+    const base = await input();
+    let repaired = false;
+    await Effect.runPromise(
+      regulate(
+        { ...base, ...(permissions ? { permissions } : {}) },
+        {
+          pilot: { resolveCheck: () => async () => (repaired ? pass : fail) },
+          async executeAgent(request) {
+            assert.deepEqual(request.permissions, permissions ?? { ceiling: [], grants: [] });
+            assert.ok(Object.isFrozen(request.permissions.grants));
+            assert.ok(Object.isFrozen(request.permissions.ceiling));
+            repaired = true;
+            return completed;
+          },
+        },
+      ),
+    );
+  }
+});
+
+test("invalid grant selections and expanding rules fail with 400 before Agent execution", async () => {
+  const ceiling = [{ id: "read-config", operation: "read", resources: ["/workspace/config.json"] }];
+  for (const permissions of [
+    { ceiling, grants: ["missing"] },
+    { ceiling, grants: ["read-config", "read-config"] },
+    { ceiling, grants: [{ id: "read-config", operation: "execute", command: "anything" }] },
+    { ceiling: [...ceiling, ...ceiling], grants: [] },
+    { ceiling: [{ id: "unknown", operation: "network", resources: [] }], grants: [] },
+    { ceiling: [{ id: "relative", operation: "read", resources: ["file.txt"] }], grants: [] },
+    { ceiling: [{ id: "glob", operation: "edit", resources: ["/workspace/*"] }], grants: [] },
+    { ceiling: [{ id: "exec", operation: "execute", command: "" }], grants: [] },
+    { ceiling, grants: [], selfAuthorize: true },
+  ]) {
+    const error = await errorOf({ ...(await input()), permissions } as unknown as RegulationInput, {
+      pilot: { resolveCheck: () => assert.fail("Invalid policy cannot reach probes.") },
+      executeAgent: async () => assert.fail("Invalid policy cannot reach Agent."),
+    });
+    assert.equal(error.status, 400);
+  }
+  assert.deepEqual(makeRegulationPermissions(undefined), { ceiling: [], grants: [] });
+});
+
+test("unresolved authorization is normal after a fresh observation and does not consume stall history", async () => {
+  for (const status of ["completed", "authorization-required"] as const) {
+    let observations = 0;
+    const result = await Effect.runPromise(
+      regulate(
+        { ...(await input()), history: { stalledRuns: 2 } },
+        {
+          pilot: { resolveCheck: () => async () => fail },
+          executeAgent: async () =>
+            status === "completed"
+              ? {
+                  status,
+                  summary: "Alternative unavailable.",
+                  authorizationRequests: [deniedRequest],
+                }
+              : { status, reason: "Requires approval.", authorizationRequests: [deniedRequest] },
+          onObservation: () => observations++,
+        },
+      ),
+    );
+    assert.equal(result.stopReason, "authorization-required");
+    assert.deepEqual(result.authorizationRequests, [deniedRequest]);
+    assert.equal(result.latestObservation.status, 200);
+    assert.equal(result.latestObservation.payload?.current.levelId, "z-first");
+    assert.equal(result.stalledRuns, 2);
+    assert.equal(result.iterations, 1);
+    assert.equal(observations, 2);
+  }
+});
+
+test("target and actual alternate-path progress win over denied requests", async () => {
+  for (const intermediate of [false, true]) {
+    let rounds = 0;
+    const result = await Effect.runPromise(
+      regulate(await input(), {
+        pilot: {
+          resolveCheck: (ref) => async () =>
+            rounds > (intermediate ? 1 : 0) || (rounds === 1 && ref.checkId === "one")
+              ? pass
+              : fail,
+        },
+        executeAgent: async () => {
+          rounds++;
+          return { ...completed, authorizationRequests: [deniedRequest] };
+        },
+      }),
+    );
+    assert.equal(result.stopReason, "target-reached");
+    assert.equal(result.iterations, intermediate ? 2 : 1);
+    assert.equal(result.stalledRuns, 0);
+    assert.equal(result.authorizationRequests, undefined);
+  }
+});
+
+test("unresolved denial on the last allowed turn takes precedence over Agent and stall counts", async () => {
+  let observations = 0;
+  const result = await Effect.runPromise(
+    regulate(await input({ quota: { ...quota, maxAgentRuns: 1, maxStallRuns: 1 } }), {
+      pilot: { resolveCheck: () => async () => fail },
+      executeAgent: async () => ({ ...completed, authorizationRequests: [deniedRequest] }),
+      onObservation: () => observations++,
+    }),
+  );
+  assert.equal(result.stopReason, "authorization-required");
+  assert.equal(result.exhaustedBy, undefined);
+  assert.deepEqual(result.authorizationRequests, [deniedRequest]);
+  assert.equal(result.iterations, 1);
+  assert.equal(observations, 2);
+  assert.equal(result.stalledRuns, 0);
+  assert.equal(result.latestObservation.status, 200);
+});
+
+test("target or actual progress on the last allowed denied turn is not authorization-blocked", async () => {
+  for (const reachTarget of [false, true]) {
+    let executed = false;
+    const result = await Effect.runPromise(
+      regulate(await input({ quota: { ...quota, maxAgentRuns: 1, maxStallRuns: 1 } }), {
+        pilot: {
+          resolveCheck: (ref) => async () =>
+            executed && (reachTarget || ref.checkId === "one") ? pass : fail,
+        },
+        executeAgent: async () => {
+          executed = true;
+          return { ...completed, authorizationRequests: [deniedRequest] };
+        },
+      }),
+    );
+    assert.equal(result.stopReason, reachTarget ? "target-reached" : "exhausted");
+    assert.equal(result.exhaustedBy, reachTarget ? undefined : "agent-runs");
+    assert.equal(result.authorizationRequests, undefined);
+    assert.equal(result.stalledRuns, 0);
+  }
+});
+
+test("malformed authorization outcomes fail with 502 instead of manufacturing approval", async () => {
+  for (const agentOutcome of [
+    { status: "authorization-required", reason: "Need approval." },
+    { status: "authorization-required", reason: "Need approval.", authorizationRequests: [] },
+    { ...completed, authorizationRequests: [{ ...deniedRequest, resources: "file" }] },
+    { ...completed, authorizationRequests: [{ ...deniedRequest, operation: "" }] },
+    { ...completed, authorizationRequests: [{ ...deniedRequest, grants: ["self-granted"] }] },
+    { status: "failed", reason: "failure", authorizationRequests: [deniedRequest] },
+  ]) {
+    assert.equal(
+      (
+        await errorOf(await input(), {
+          pilot: { resolveCheck: () => async () => fail },
+          executeAgent: async () => agentOutcome as unknown as AgentOutcome,
+        })
+      ).status,
+      502,
+    );
+  }
+});
+
+test("permission replacement aborts old work, isolates late authorization responses and freshly observes on resume", async () => {
+  const base = await input();
+  const granted = {
+    ceiling: [{ id: "repair", operation: "execute", command: "node repair.js" }],
+    grants: ["repair"],
+  } as const;
+  const source = await Effect.runPromise(
+    SubscriptionRef.make<RegulationInput>({ ...base, permissions: granted }),
+  );
+  let calls = 0;
+  let observations = 0;
+  let repaired = false;
+  let aborted = false;
+  let release: (() => void) | undefined;
+  const behavior = await regulatorBehavior(source, {
+    pilot: { resolveCheck: () => async () => (repaired ? pass : fail) },
+    async executeAgent(request, signal) {
+      calls++;
+      if (calls === 1) {
+        assert.deepEqual(request.permissions.grants, ["repair"]);
+        signal.addEventListener("abort", () => {
+          aborted = true;
+        });
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+      } else assert.deepEqual(request.permissions.grants, []);
+      return { ...completed, authorizationRequests: [deniedRequest] };
+    },
+    onObservation: () => observations++,
+  });
+  try {
+    await until(() => calls === 1);
+    await Effect.runPromise(SubscriptionRef.set(source, base));
+    await until(() => observations === 3 && calls === 2);
+    await delay(5);
+    assert.equal(aborted, true);
+    const blocked = await Effect.runPromise(SubscriptionRef.get(behavior.outcome));
+    assert.equal(blocked.state, "ready");
+    if (blocked.state === "ready") assert.equal(blocked.value.stopReason, "authorization-required");
+    release?.();
+    await delay(10);
+    assert.deepEqual(await Effect.runPromise(SubscriptionRef.get(behavior.outcome)), blocked);
+    repaired = true;
+    await Effect.runPromise(SubscriptionRef.set(source, { ...base, permissions: granted }));
+    await until(() => observations === 4);
+    await delay(5);
+    const resumed = await Effect.runPromise(SubscriptionRef.get(behavior.outcome));
+    assert.equal(resumed.state, "ready");
+    if (resumed.state === "ready") assert.equal(resumed.value.stopReason, "target-reached");
+    assert.equal(calls, 2, "Resume must observe current reality before choosing another Agent.");
+  } finally {
+    release?.();
+    await behavior.close();
+  }
 });
 
 test("single run performs multiple Agent rounds and observes after every completed round", async () => {

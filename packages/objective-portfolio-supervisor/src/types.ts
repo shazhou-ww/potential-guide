@@ -8,8 +8,10 @@ import type {
 import type {
   AgentBinding,
   AgentExecutionLimits,
+  AuthorizationRequest,
   RegulationInput,
   RegulationOutcome,
+  RegulationPermissions,
   RegulationStrategy,
 } from "@potential-guide/objective-regulator";
 
@@ -55,6 +57,11 @@ export type CoordinatorEvent =
   | { readonly type: "failed"; readonly demand: QueueDemand; readonly error: unknown }
   | { readonly type: "stopping" | "killed"; readonly demand: QueueDemand }
   | { readonly type: "p0-queued"; readonly demand: QueueDemand }
+  | {
+      readonly type: "authorization-request";
+      readonly demand: QueueDemand;
+      readonly request: AuthorizationRequest;
+    }
   | {
       readonly type: "capability-request";
       readonly demand: QueueDemand;
@@ -118,10 +125,13 @@ export interface PortfolioCoordinatorOptions {
   readonly quota: RegulationStrategy["quota"];
   readonly agentExecutionLimits: AgentExecutionLimits;
   readonly abortGraceMs: number;
+  readonly permissions?: RegulationPermissions;
+  readonly permissionUpdates?: SubscriptionRef.SubscriptionRef<RegulationPermissions | undefined>;
   readonly onEvent?: (event: CoordinatorEvent) => void | Promise<void>;
 }
 export interface PortfolioCoordinator {
   readonly state: SubscriptionRef.SubscriptionRef<CoordinatorState>;
   reportCapabilityRequest(input: RegulationInput, request: CapabilityRequest): void;
+  reportAuthorizationRequest(input: RegulationInput, request: AuthorizationRequest): void;
   close(): Promise<void>;
 }

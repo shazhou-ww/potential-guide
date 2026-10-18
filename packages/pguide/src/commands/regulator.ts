@@ -32,11 +32,14 @@ import type {
 import {
   type AgentInput,
   type AgentOutcome,
+  makeRegulationPermissions,
   makeRegulatorSpec,
   RegulationError,
   type RegulationOutcome,
+  type RegulationPermissions,
   regulate,
 } from "@potential-guide/objective-regulator";
+import { createAcpPermissionPolicy, type PermissionDecision } from "../acp-permissions.js";
 import { withPilot } from "../pilot-source.js";
 
 export const regulatorCommandVersion = "0.3.0-rc.0";
@@ -56,6 +59,7 @@ interface Attempt {
   resumeMode?: "new" | "resumed" | "new-without-session-id" | "not-needed";
   observations: Envelope<PilotObservation>[];
   actions: AgentOutcome[];
+  permissions?: RegulationPermissions;
 }
 
 interface Regulation {
@@ -73,6 +77,7 @@ interface Regulation {
   agentProfile: AgentProfile;
   agentExecutionLimits: { timeoutMs: number };
   regulationStrategy?: PguideConfig["regulationStrategy"];
+  permissions?: RegulationPermissions;
   sessionId?: string;
   expiresAt?: string;
   attempts: Attempt[];
@@ -80,7 +85,10 @@ interface Regulation {
 }
 
 export function agentPrompt(input: AgentInput): string {
-  return `Potential Guide regulation\nTarget: ${JSON.stringify(input.target)}\nSubject: ${JSON.stringify(input.subject)}\nComplete observation: ${JSON.stringify(input.observation)}\nAgent execution limits: ${JSON.stringify(input.limits)}\nAddress the complete observation. Organize any repair tasks yourself. Do not claim objective progress; pguide re-observes after your execution.`;
+  const permissions = makeRegulationPermissions(input.permissions);
+  const active = new Set(permissions.grants);
+  const authorization = { grants: permissions.ceiling.filter((rule) => active.has(rule.id)) };
+  return `Potential Guide regulation\nTarget: ${JSON.stringify(input.target)}\nSubject: ${JSON.stringify(input.subject)}\nComplete observation: ${JSON.stringify(input.observation)}\nAgent execution limits: ${JSON.stringify(input.limits)}\nCurrent run authorization: ${JSON.stringify(authorization)}\nOnly the effective configured grants above apply to this run. Earlier session denials are historical, not current authorization decisions: when a current grant is relevant, you may request host permission evaluation again. These grants do not let you self-authorize or bypass ACP permission requests; the host must approve the exact operation and resources. Ungranted operations remain denied. Address the complete observation. Organize any repair tasks yourself. Do not claim objective progress; pguide re-observes after your execution.`;
 }
 
 export function safeAgentValue<T>(value: T, profile: AgentProfile): T {
@@ -128,7 +136,20 @@ export async function executeAcpAgent(
       6,
       "acp-error",
     );
-  const client = new AcpClient(profile, onUpdate);
+  const decisions: PermissionDecision[] = [];
+  const policy = await createAcpPermissionPolicy(input.permissions, cwd, (decision) =>
+    decisions.push(decision),
+  );
+  signal.throwIfAborted();
+  const client = new AcpClient(
+    profile,
+    async (update) => {
+      if (update.method === "pguide/request_denied" && policy.denied.length === 0)
+        policy.noteDenied("invalid-or-cancelled-request");
+      await onUpdate?.(update);
+    },
+    { permissionHandler: policy.handler },
+  );
   let sessionId: string | undefined;
   let stopping: Promise<void> | undefined;
   const abort = () => {
@@ -166,9 +187,20 @@ export async function executeAcpAgent(
     signal.throwIfAborted();
     const response = safeAgentValue(await client.prompt(sessionId, agentPrompt(input)), profile);
     signal.throwIfAborted();
+    const authorizationRequests = safeAgentValue(policy.denied, profile);
     return response.status === "completed"
-      ? { status: "completed", summary: response.summary }
-      : { status: "blocked", reason: response.summary };
+      ? {
+          status: "completed",
+          summary: response.summary,
+          ...(authorizationRequests.length === 0 ? {} : { authorizationRequests }),
+        }
+      : authorizationRequests.length > 0
+        ? {
+            status: "authorization-required",
+            reason: "Agent requires explicit authorization.",
+            authorizationRequests,
+          }
+        : { status: "blocked", reason: response.summary };
   } catch (error) {
     if (signal.aborted) throw signal.reason;
     throw new CliError(
@@ -179,24 +211,31 @@ export async function executeAcpAgent(
   } finally {
     signal.removeEventListener("abort", abort);
     await (stopping ?? client.stop());
+    for (const decision of decisions)
+      await onUpdate?.({
+        timestamp: new Date().toISOString(),
+        method: "pguide/permission_decision",
+        params: safeAgentValue(decision, profile),
+      });
   }
 }
 
 async function save(root: string, regulation: Regulation, attempt: Attempt): Promise<void> {
   const safe = {
-    ...redactSensitive({ ...regulation, subject: undefined }),
+    ...safeAgentValue({ ...regulation, subject: undefined }, regulation.agentProfile),
     subject: regulation.subject,
   };
   await atomicWrite(join(root, "regulation.json"), `${JSON.stringify(safe, null, 2)}\n`);
   await atomicWrite(
     join(root, "attempts", `${attempt.id}.json`),
-    `${JSON.stringify(redactSensitive(attempt), null, 2)}\n`,
+    `${JSON.stringify(safeAgentValue(attempt, regulation.agentProfile), null, 2)}\n`,
   );
 }
 
 function code(reason: string): number {
   if (reason === "target-reached") return 0;
   if (reason === "prerequisite-unmet") return 3;
+  if (reason === "authorization-required") return 3;
   if (reason === "exhausted" || reason === "cancelled") return 5;
   return 6;
 }
@@ -208,11 +247,11 @@ async function run(
   prepared?: { spec: PilotSpec; runtime: PilotRuntime },
   continuing = false,
 ): Promise<number> {
-  const root = join(
-    stateRoot((await loadConfig(globals.cwd, globals.config)).value),
-    "regulations",
-    regulation.regulationId,
-  );
+  const config = (await loadConfig(globals.cwd, globals.config)).value;
+  // Persisted ceilings are audit snapshots, never authority for a new attempt.
+  const permissions = makeRegulationPermissions(config.regulationPermissions);
+  regulation.permissions = permissions;
+  const root = join(stateRoot(config), "regulations", regulation.regulationId);
   await ensurePrivateDirectory(root);
   if (digest(regulation.subject) !== regulation.subjectDigest)
     throw new CliError("Stored subject digest mismatch.", 6, "io-error");
@@ -223,6 +262,7 @@ async function run(
     observations: [],
     actions: [],
     resumeMode: "not-needed",
+    permissions,
   };
   regulation.attempts.push(attempt);
   await save(root, regulation, attempt);
@@ -265,6 +305,7 @@ async function run(
           {
             spec,
             subject: regulation.subject,
+            permissions,
             ...(regulation.history === undefined ? {} : { history: regulation.history }),
             ...(regulation.language === undefined ? {} : { language: regulation.language }),
           },
@@ -348,14 +389,17 @@ async function run(
     attempt.completedAt = new Date().toISOString();
     await save(root, regulation, attempt);
   }
-  const value = redactSensitive({
-    schemaVersion: 2,
-    regulationId: regulation.regulationId,
-    status: attempt.status,
-    outcome,
-    attempts: regulation.attempts,
-    recovery: { command: `pguide continue ${regulation.regulationId}` },
-  });
+  const value = safeAgentValue(
+    {
+      schemaVersion: 2,
+      regulationId: regulation.regulationId,
+      status: attempt.status,
+      outcome,
+      attempts: regulation.attempts,
+      recovery: { command: `pguide continue ${regulation.regulationId}` },
+    },
+    regulation.agentProfile,
+  );
   if (reportPath !== undefined)
     await atomicWrite(resolve(globals.cwd, reportPath), `${JSON.stringify(value, null, 2)}\n`);
   writeResult(value, globals.format, `Regulation ${regulation.regulationId}: ${attempt.status}.`);

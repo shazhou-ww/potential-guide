@@ -50,6 +50,20 @@ export function reached(goal: ObjectiveGoal, observation: PilotObservation): boo
 export function validateGoal(goal: ObjectiveGoal): void {
   canonicalJson(goal);
   if (
+    Object.keys(goal).some(
+      (key) =>
+        ![
+          "id",
+          "pilot",
+          "subject",
+          "targetLevel",
+          "priority",
+          "observationIntervalMs",
+          "requirements",
+          "language",
+          "revision",
+        ].includes(key),
+    ) ||
     !goal.id?.trim() ||
     !goal.pilot?.objectiveId?.trim() ||
     !goal.subject ||

@@ -24,7 +24,44 @@ test("configuration limits apply only to individual Agent executions", () => {
     schemaVersion: 2,
     agentExecutionLimits: { timeoutMs: 1234 },
   });
+});
 
+test("permission config requires explicit exact rules and grants within the administrative ceiling", () => {
+  const permissions = {
+    ceiling: [
+      { id: "read", operation: "read", resources: [join(scratch, "read")] },
+      { id: "edit", operation: "edit", resources: [join(scratch, "edit")] },
+      { id: "verify", operation: "execute", command: "node verify.mjs" },
+    ],
+    grants: ["edit", "verify"],
+  };
+  assert.deepEqual(
+    parseConfig(JSON.stringify({ schemaVersion: 2, regulationPermissions: permissions }))
+      .regulationPermissions,
+    permissions,
+  );
+  for (const value of [
+    { grants: ["all"] },
+    { ceiling: [], grants: ["all"] },
+    { ...permissions, grants: ["edit", "edit"] },
+    { ...permissions, ceiling: [...permissions.ceiling, permissions.ceiling[0]] },
+    { ceiling: [{ id: "bad", operation: "write", resources: [scratch] }], grants: [] },
+    { ceiling: [{ id: "bad", operation: "read", resources: ["relative"] }], grants: [] },
+    { ceiling: [{ id: "bad", operation: "read", resources: [`${scratch}/*`] }], grants: [] },
+    {
+      ceiling: [{ id: "bad", operation: "execute", command: "node", resources: [scratch] }],
+      grants: [],
+    },
+    { ceiling: [{ id: "bad", operation: "execute", command: "" }], grants: [] },
+    { ceiling: [], grants: [], allowAll: true },
+  ])
+    assert.throws(
+      () => parseConfig(JSON.stringify({ schemaVersion: 2, regulationPermissions: value })),
+      /regulationPermissions/,
+    );
+});
+
+test("invalid and legacy configuration limits are rejected", () => {
   assert.throws(() => parseConfig("schemaVersion: 1\n"), /Legacy configuration/);
   assert.throws(
     () => parseConfig("schemaVersion: 2\nlimits:\n  maxIterations: 8\n"),

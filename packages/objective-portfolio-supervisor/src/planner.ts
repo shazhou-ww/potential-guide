@@ -361,7 +361,11 @@ export async function createPortfolioPlanner(
               observations[goal.id] = structuredClone(event.outcome.latestObservation);
               due.set(goal.id, Date.now() + goal.observationIntervalMs);
             } else markObserved(goal, event.outcome.latestObservation);
-            if (event.outcome.stopReason === "exhausted") needsWork.add(goal.id);
+            if (
+              event.outcome.stopReason === "exhausted" ||
+              event.outcome.stopReason === "authorization-required"
+            )
+              needsWork.add(goal.id);
             else {
               needsWork.delete(goal.id);
               for (const [root, child] of dependencies) {

@@ -14,7 +14,16 @@ export async function git(cwd: string, ...args: string[]): Promise<string> {
 }
 export function run(script: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
   return new Promise<{ code: number; stdout: string; stderr: string }>((done, reject) => {
-    const child = spawn(process.execPath, [script, ...args], { cwd: root, env, windowsHide: true });
+    const child = spawn(process.execPath, [script, ...args], {
+      cwd: root,
+      env: {
+        ...env,
+        APPDATA: join(scratch, "isolated-user-config"),
+        XDG_CONFIG_HOME: join(scratch, "isolated-user-config"),
+        HOME: join(scratch, "isolated-user-home"),
+      },
+      windowsHide: true,
+    });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk) => {

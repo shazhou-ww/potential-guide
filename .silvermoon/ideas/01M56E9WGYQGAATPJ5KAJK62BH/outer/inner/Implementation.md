@@ -1,5 +1,9 @@
 # Implementation
 
+本轮边界与状态判断见 [实施设计](./Design.md)。
+
+自动、安装及真实协议验证见 [权限支持验证记录](./Verification.md)。
+
 ## Steps
 
 ### I-S01: 定义执行授权与正常阻塞契约

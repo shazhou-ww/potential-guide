@@ -6,6 +6,110 @@ import type { AgentInput } from "@potential-guide/objective-regulator";
 import { agentPrompt, executeAcpAgent } from "../src/commands/regulator.js";
 import { bin, fixture, git, root, run, scratch } from "./fixtures.js";
 
+test("permissions persist per attempt and continue uses current grants and revoked ceiling", async () => {
+  const f = await fixture();
+  try {
+    const marker = join(f.directory, "permission-marker");
+    const permissions = {
+      ceiling: [{ id: "marker", operation: "edit", resources: [marker] }],
+      grants: [] as string[],
+    };
+    await writeFile(
+      join(f.repository, "objective", "checks", "ready", "run.js"),
+      `#!/usr/bin/env node\nimport {existsSync} from "node:fs";let s="";for await(const c of process.stdin)s+=c;const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{id:"not-ready",parameters:{}}]}}));`,
+    );
+    await writeFile(
+      f.subject,
+      JSON.stringify({ marker, regulationPermissions: { ...permissions, grants: ["marker"] } }),
+    );
+    const commit = await f.commit();
+    const agent = join(f.directory, "permission-agent.mjs");
+    const promptLog = join(f.directory, "permission-prompts.jsonl");
+    await writeFile(
+      agent,
+      `import{createInterface}from"node:readline";import{writeFile,appendFile}from"node:fs/promises";
+let prompt;for await(const line of createInterface({input:process.stdin})){const m=JSON.parse(line);
+if(m.method==="session/prompt"){prompt=m;await appendFile(${JSON.stringify(promptLog)},JSON.stringify(m.params)+"\\n");console.log(JSON.stringify({jsonrpc:"2.0",id:"permission",method:"session/request_permission",params:{sessionId:"permission-session",toolCall:{toolCallId:"edit",kind:"edit",locations:[{path:${JSON.stringify(marker)}}],rawInput:{path:${JSON.stringify(marker)},content:"yes"}},options:[{optionId:"allow",name:"Allow",kind:"allow_once"},{optionId:"deny",name:"Deny",kind:"reject_once"}]}}));continue;}
+if(m.id==="permission"){if(m.result.outcome.optionId==="allow")await writeFile(${JSON.stringify(marker)},"yes");console.log(JSON.stringify({jsonrpc:"2.0",id:prompt.id,result:{stopReason:"end_turn"}}));continue;}
+if(m.id!==undefined)console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result:m.method==="initialize"?{protocolVersion:1,agentCapabilities:{loadSession:true}}:m.method==="session/new"?{sessionId:"permission-session"}:{}}));}`,
+    );
+    const config = join(f.directory, "config.json");
+    const value = {
+      schemaVersion: 2,
+      defaultAgent: "fixture",
+      stateDirectory: join(f.directory, "state"),
+      regulationPermissions: permissions,
+      regulationStrategy: { quota: { timeoutMs: 20000, maxAgentRuns: 3, maxStallRuns: 2 } },
+      agents: {
+        fixture: {
+          connection: { type: "acp", protocolVersion: "1" },
+          transport: { type: "stdio", command: process.execPath, args: [agent] },
+        },
+      },
+    };
+    await writeFile(config, JSON.stringify(value));
+    const first = await run(bin("regulate"), [
+      "--pilot",
+      f.uri,
+      "--revision",
+      commit,
+      "--subject-file",
+      f.subject,
+      "--target",
+      "terminal",
+      "--config",
+      config,
+      "--format",
+      "json",
+    ]);
+    assert.equal(first.code, 3, first.stdout + first.stderr);
+    const denied = JSON.parse(first.stdout);
+    assert.equal(denied.status, "authorization-required");
+    assert.equal(denied.outcome.authorizationRequests[0].operation, "edit");
+    assert.deepEqual(denied.attempts[0].permissions.grants, []);
+    permissions.grants = ["marker"];
+    await writeFile(config, JSON.stringify(value));
+    const args = [denied.regulationId, "--config", config, "--format", "json"];
+    const resumed = await run(bin("continue"), args);
+    assert.equal(resumed.code, 0, resumed.stdout + resumed.stderr);
+    assert.equal(await readFile(marker, "utf8"), "yes");
+    assert.deepEqual(JSON.parse(resumed.stdout).attempts[1].permissions.grants, ["marker"]);
+    await rm(marker);
+    value.regulationPermissions = { ceiling: [], grants: [] };
+    await writeFile(config, JSON.stringify(value));
+    const revoked = await run(bin("continue"), args);
+    assert.equal(revoked.code, 3, revoked.stdout + revoked.stderr);
+    const final = JSON.parse(revoked.stdout);
+    assert.equal(final.status, "authorization-required");
+    assert.deepEqual(final.attempts[2].permissions, { ceiling: [], grants: [] });
+    const persisted = JSON.parse(
+      await readFile(
+        join(value.stateDirectory, "regulations", denied.regulationId, "regulation.json"),
+        "utf8",
+      ),
+    );
+    assert.deepEqual(persisted.permissions, { ceiling: [], grants: [] });
+    assert.equal(persisted.attempts[0].actions[0].authorizationRequests[0].operation, "edit");
+    const snapshots = (await readFile(promptLog, "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => {
+        const text = JSON.parse(line).prompt[0].text as string;
+        const authorization = /^Current run authorization: (.+)$/m.exec(text)?.[1];
+        assert.ok(authorization);
+        assert.match(text, /Earlier session denials are historical/);
+        return JSON.parse(authorization);
+      });
+    assert.deepEqual(snapshots, [
+      { grants: [] },
+      { grants: [{ id: "marker", operation: "edit", resources: [marker] }] },
+      { grants: [] },
+    ]);
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
 test("explicit continue grants another stall allowance while retaining history", async () => {
   const f = await fixture();
   try {
@@ -78,6 +182,7 @@ console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
 
 test("Agent prompts contain the subject, target and every problem, not a selected task", () => {
   const prompt = agentPrompt({
+    permissions: { ceiling: [], grants: [] },
     binding: { id: "fixture" },
     subject: { name: "subject" },
     target: { objectiveId: "git+https://example.invalid/repo.git#pilot.yaml", levelId: "terminal" },
@@ -105,6 +210,34 @@ test("Agent prompts contain the subject, target and every problem, not a selecte
   assert.match(prompt, /second/);
   assert.match(prompt, /"timeoutMs":1234/);
   assert.match(prompt, /"name":"subject"/);
+  assert.match(prompt, /Current run authorization: \{"grants":\[\]\}/);
+  assert.match(prompt, /request host permission evaluation again/);
+  assert.match(prompt, /do not let you self-authorize or bypass ACP/);
+});
+
+test("Agent prompt exposes effective grants without the ungranted administrative ceiling", () => {
+  const prompt = agentPrompt({
+    binding: { id: "fixture" },
+    subject: {},
+    target: { objectiveId: "git+file:///fixture.git#pilot.yaml", levelId: "terminal" },
+    observation: {
+      current: { objectiveId: "git+file:///fixture.git#pilot.yaml", levelId: "initial" },
+      problems: [],
+      gapSummary: "",
+      observedAt: new Date().toISOString(),
+      versions: {},
+    },
+    limits: { timeoutMs: 1000 },
+    permissions: {
+      ceiling: [
+        { id: "active", operation: "edit", resources: [join(scratch, "active-marker")] },
+        { id: "ungranted-private-rule", operation: "execute", command: "private-command" },
+      ],
+      grants: ["active"],
+    },
+  });
+  assert.match(prompt, /"id":"active"/);
+  assert.doesNotMatch(prompt, /ungranted-private-rule|private-command/);
 });
 
 test("regulate and continue persist pinned Pilot observations and use the JSON check protocol", async () => {
@@ -233,6 +366,7 @@ test("regulate and continue persist pinned Pilot observations and use the JSON c
 
 test("continuation without a real session ID fails when required and is explicit otherwise", async () => {
   const input: AgentInput = {
+    permissions: { ceiling: [], grants: [] },
     binding: { id: "fixture" },
     subject: {},
     target: { objectiveId: "git+file:///fixture.git#pilot.yaml", levelId: "terminal" },

@@ -14,7 +14,17 @@ function run(
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<{ code: number; stdout: string }> {
   return new Promise((resolveRun, reject) => {
-    const child = spawn(process.execPath, [script, ...args], { env });
+    const child = spawn(process.execPath, [script, ...args], {
+      env: {
+        ...env,
+        APPDATA:
+          env.APPDATA !== process.env.APPDATA ? env.APPDATA : join(scratch, "config-test-user"),
+        XDG_CONFIG_HOME:
+          env.XDG_CONFIG_HOME !== process.env.XDG_CONFIG_HOME
+            ? env.XDG_CONFIG_HOME
+            : join(scratch, "config-test-user"),
+      },
+    });
     let stdout = "";
     child.stdout.setEncoding("utf8");
     child.stdout.on("data", (chunk) => {
@@ -31,6 +41,56 @@ test("config path is available without creating configuration", async () => {
     const result = await run(["path", "--cwd", cwd, "--format", "json"]);
     assert.equal(result.code, 0);
     assert.ok(JSON.parse(result.stdout).paths.user);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("user config permissions round trip and invalid grants cannot replace the ceiling", async () => {
+  const cwd = await mkdtemp(join(scratch, "pguide-config-permissions-"));
+  const env = { ...process.env, APPDATA: cwd, XDG_CONFIG_HOME: cwd };
+  const permissions = {
+    ceiling: [{ id: "edit-result", operation: "edit", resources: [join(cwd, "result")] }],
+    grants: ["edit-result"],
+  };
+  try {
+    const configured = await run(
+      [
+        "set",
+        "regulationPermissions",
+        JSON.stringify(permissions),
+        "--scope",
+        "user",
+        "--cwd",
+        cwd,
+        "--format",
+        "json",
+      ],
+      env,
+    );
+    assert.equal(configured.code, 0, configured.stdout);
+    const read = await run(["get", "regulationPermissions", "--cwd", cwd, "--format", "json"], env);
+    assert.deepEqual(JSON.parse(read.stdout).value, permissions);
+    const invalid = await run(
+      [
+        "set",
+        "regulationPermissions",
+        JSON.stringify({ ...permissions, grants: ["unlisted"] }),
+        "--scope",
+        "user",
+        "--cwd",
+        cwd,
+        "--format",
+        "json",
+      ],
+      env,
+    );
+    assert.equal(invalid.code, 2, invalid.stdout);
+    const unchanged = await run(
+      ["get", "regulationPermissions", "--cwd", cwd, "--format", "json"],
+      env,
+    );
+    assert.deepEqual(JSON.parse(unchanged.stdout).value, permissions);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

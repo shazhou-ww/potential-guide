@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { type AgentProfile, killProcessTree } from "@potential-guide/cli-core";
 import {
+  type AuthorizationRequest,
   RegulationError,
   type RegulationInput,
   type RegulationOutcome,
@@ -19,18 +20,27 @@ export interface CapabilityRequest {
   readonly capability: string;
   readonly reason: string;
 }
+export interface PermissionRequest {
+  readonly type: "authorization-request";
+  readonly request: AuthorizationRequest;
+}
+export type RegulationProcessEvent = CapabilityRequest | PermissionRequest;
 
 export function createProcessRegulationRunner(
   profiles: Readonly<Record<string, AgentProfile>>,
   cwd: string,
-  onEvent?: (input: RegulationInput, event: CapabilityRequest) => void,
+  onEvent?: (input: RegulationInput, event: RegulationProcessEvent) => void,
 ) {
   return {
     start(
       input: RegulationInput,
       resource: { readonly binding: { readonly id: string } },
     ): ProcessRegulationHandle {
-      const profile = profiles[resource.binding.id];
+      const pinnedInput = structuredClone(input);
+      const profile =
+        profiles[resource.binding.id] === undefined
+          ? undefined
+          : structuredClone(profiles[resource.binding.id]);
       if (profile === undefined) throw new RegulationError("Unknown execution Agent binding.", 400);
       let child: ChildProcess | undefined;
       let aborted = false;
@@ -83,6 +93,15 @@ export function createProcessRegulationRunner(
                 } catch (error) {
                   rejectReply(error);
                 }
+              } else if (message.type === "authorization-request" && "request" in message) {
+                try {
+                  onEvent?.(input, {
+                    type: "authorization-request",
+                    request: message.request as AuthorizationRequest,
+                  });
+                } catch (error) {
+                  rejectReply(error);
+                }
               } else if (message.type === "outcome" && "outcome" in message) {
                 resolveReply(message.outcome as RegulationOutcome);
               } else if (message.type === "error" && "message" in message) {
@@ -102,7 +121,7 @@ export function createProcessRegulationRunner(
               );
             });
           });
-          child.send({ type: "start", input, profile, cwd, directory }, (error) => {
+          child.send({ type: "start", input: pinnedInput, profile, cwd, directory }, (error) => {
             if (error !== null)
               void force().catch((cause: unknown) => process.stderr.write(`${String(cause)}\n`));
           });

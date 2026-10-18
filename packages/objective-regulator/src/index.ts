@@ -23,6 +23,24 @@ import {
   SubjectProjectionError,
 } from "@potential-guide/objective-pilot";
 
+export type PermissionGrant =
+  | {
+      readonly id: string;
+      readonly operation: "read" | "edit";
+      readonly resources: readonly string[];
+    }
+  | { readonly id: string; readonly operation: "execute"; readonly command: string };
+export interface RegulationPermissions {
+  readonly ceiling: readonly PermissionGrant[];
+  readonly grants: readonly string[];
+}
+export interface AuthorizationRequest {
+  readonly id: string;
+  readonly operation: string;
+  readonly resources: readonly string[];
+  readonly reason: string;
+  readonly command?: string;
+}
 export interface AgentExecutionLimits {
   readonly timeoutMs: number;
 }
@@ -54,6 +72,7 @@ export interface RegulationInput {
   readonly subject: Subject;
   readonly language?: string;
   readonly history?: { readonly stalledRuns: number };
+  readonly permissions?: RegulationPermissions;
 }
 export interface AgentInput {
   readonly binding: AgentBinding;
@@ -61,11 +80,25 @@ export interface AgentInput {
   readonly target: LevelRef;
   readonly observation: PilotObservation;
   readonly limits: AgentExecutionLimits;
+  readonly permissions: RegulationPermissions;
 }
 export type AgentOutcome =
-  | { readonly status: "completed"; readonly summary: string }
+  | {
+      readonly status: "completed";
+      readonly summary: string;
+      readonly authorizationRequests?: readonly AuthorizationRequest[];
+    }
+  | {
+      readonly status: "authorization-required";
+      readonly reason: string;
+      readonly authorizationRequests: readonly AuthorizationRequest[];
+    }
   | { readonly status: "blocked" | "failed" | "limit-reached"; readonly reason: string };
-export type StopReason = "target-reached" | "exhausted" | "prerequisite-unmet";
+export type StopReason =
+  | "target-reached"
+  | "exhausted"
+  | "prerequisite-unmet"
+  | "authorization-required";
 export interface RegulationPrerequisite {
   readonly spec: PilotSpec;
   readonly subject: Subject;
@@ -79,6 +112,7 @@ export interface RegulationOutcome {
   readonly exhaustedBy?: "time" | "agent-runs" | "stall" | "agent-limit";
   readonly prerequisite?: RegulationPrerequisite;
   readonly agentOutcome?: AgentOutcome;
+  readonly authorizationRequests?: readonly AuthorizationRequest[];
 }
 export interface RegulationRuntime {
   readonly pilot: PilotRuntime;
@@ -139,6 +173,50 @@ function immutable<T>(value: T): T {
     Object.freeze(value);
   }
   return value;
+}
+
+/** Grants select administrator rules; no caller-supplied grant can expand the ceiling. */
+export function makeRegulationPermissions(value: unknown): RegulationPermissions {
+  if (value === undefined) return immutable({ ceiling: [], grants: [] });
+  if (!isJsonValue(value))
+    throw new RegulationError(400, "Permissions must contain finite JSON data.");
+  fields(value, ["ceiling", "grants"]);
+  if (!Array.isArray(value.ceiling) || !Array.isArray(value.grants))
+    throw new RegulationError(400, "Permissions require ceiling and grant arrays.");
+  const ids = new Set<string>();
+  for (const rule of value.ceiling) {
+    if (!record(rule)) throw new RegulationError(400, "Invalid permission ceiling rule.");
+    if (rule.operation === "execute") {
+      fields(rule, ["id", "operation", "command"]);
+      if (!text(rule.command) || rule.command.includes("\0"))
+        throw new RegulationError(400, "Execute permissions require an exact command.");
+    } else if (rule.operation === "read" || rule.operation === "edit") {
+      fields(rule, ["id", "operation", "resources"]);
+      if (
+        !Array.isArray(rule.resources) ||
+        rule.resources.length === 0 ||
+        !rule.resources.every(
+          (path) =>
+            text(path) &&
+            !/[*?\0]/.test(path) &&
+            (path.startsWith("/") ||
+              /^[a-z]:[\\/]/i.test(path) ||
+              /^\\\\[^\\]+\\[^\\]+/.test(path)),
+        )
+      )
+        throw new RegulationError(400, "Filesystem permissions require exact absolute paths.");
+    } else throw new RegulationError(400, "Unknown permission operation.");
+    if (!text(rule.id) || ids.has(rule.id))
+      throw new RegulationError(400, "Permission ceiling IDs must be unique nonempty strings.");
+    ids.add(rule.id);
+  }
+  const selected = new Set<string>();
+  for (const id of value.grants) {
+    if (!text(id) || !ids.has(id) || selected.has(id))
+      throw new RegulationError(400, "Grants must uniquely select existing ceiling IDs.");
+    selected.add(id);
+  }
+  return immutable(structuredClone(value)) as unknown as RegulationPermissions;
 }
 
 function inputError(cause: unknown): RegulationError {
@@ -274,7 +352,7 @@ export function makeRegulatorSpec(
 function snapshotInput(value: RegulationInput): RegulationInput {
   try {
     if (!isJsonValue(value)) throw new RegulationError(400, "Input must contain finite JSON data.");
-    fields(value, ["spec", "subject"], ["language", "history"]);
+    fields(value, ["spec", "subject"], ["language", "history", "permissions"]);
     validateSpec(value.spec);
     if (!record(value.subject) || (value.language !== undefined && !text(value.language)))
       throw new RegulationError(400, "Invalid subject or language.");
@@ -283,7 +361,10 @@ function snapshotInput(value: RegulationInput): RegulationInput {
       if (!Number.isSafeInteger(value.history.stalledRuns) || value.history.stalledRuns < 0)
         throw new RegulationError(400, "History stalledRuns must be a nonnegative safe count.");
     }
-    return immutable(structuredClone(value));
+    return immutable({
+      ...structuredClone(value),
+      permissions: makeRegulationPermissions(value.permissions),
+    });
   } catch (cause) {
     throw inputError(cause);
   }
@@ -308,6 +389,7 @@ export function agentInput(input: RegulationInput, observation: PilotObservation
       },
       observation,
       limits: input.spec.strategy.agentExecutionLimits,
+      permissions: makeRegulationPermissions(input.permissions),
     }),
   );
 }
@@ -380,16 +462,40 @@ export function decideRegulation(
   return decide(snapshotInput(input), observation);
 }
 
-function validateAgentOutcome(value: AgentOutcome): AgentOutcome {
+function validateAgentOutcome(value: unknown): AgentOutcome {
   if (
     !isJsonValue(value) ||
     !record(value) ||
+    typeof value.status !== "string" ||
     (value.status === "completed"
       ? !text(value.summary)
-      : !["blocked", "failed", "limit-reached"].includes(value.status) || !text(value.reason))
+      : !["blocked", "failed", "limit-reached", "authorization-required"].includes(value.status) ||
+        !text(value.reason))
   )
     throw new RegulationError(502, "Agent returned an invalid outcome.");
-  return immutable(structuredClone(value));
+  const requests = "authorizationRequests" in value ? value.authorizationRequests : undefined;
+  if (
+    (value.status === "authorization-required" &&
+      (!Array.isArray(requests) || requests.length === 0)) ||
+    (requests !== undefined &&
+      (!["completed", "authorization-required"].includes(value.status) ||
+        !Array.isArray(requests) ||
+        !requests.every(
+          (request: unknown) =>
+            record(request) &&
+            Object.keys(request).every((key) =>
+              ["id", "operation", "resources", "reason", "command"].includes(key),
+            ) &&
+            text(request.id) &&
+            text(request.operation) &&
+            text(request.reason) &&
+            Array.isArray(request.resources) &&
+            request.resources.every(text) &&
+            (request.command === undefined || text(request.command)),
+        )))
+  )
+    throw new RegulationError(502, "Agent returned invalid authorization requests.");
+  return immutable(structuredClone(value)) as unknown as AgentOutcome;
 }
 
 async function interruptible<T>(action: Promise<T>, signal: AbortSignal): Promise<T> {
@@ -513,7 +619,7 @@ export function regulate(
     let agentOutcome: AgentOutcome | undefined;
     const outcome = (
       stopReason: StopReason,
-      extra: Pick<RegulationOutcome, "exhaustedBy" | "prerequisite"> = {},
+      extra: Pick<RegulationOutcome, "exhaustedBy" | "prerequisite" | "authorizationRequests"> = {},
     ): RegulationOutcome =>
       immutable({
         stopReason,
@@ -557,10 +663,20 @@ export function regulate(
           const observation = latestObservation.payload;
           if (observation === null)
             throw new RegulationError(500, "Missing successful observation.");
+          const madeProgress =
+            previous !== undefined && progressed(previous, observation, stable.spec.pilot);
+          const authorizationRequests =
+            agentOutcome && "authorizationRequests" in agentOutcome
+              ? agentOutcome.authorizationRequests
+              : undefined;
+          const authorizationBlocked =
+            previous !== undefined && !madeProgress && Boolean(authorizationRequests?.length);
           if (previous !== undefined)
-            stalledRuns = progressed(previous, observation, stable.spec.pilot)
+            stalledRuns = madeProgress
               ? 0
-              : Math.min(Number.MAX_SAFE_INTEGER, stalledRuns + 1);
+              : authorizationBlocked
+                ? stalledRuns
+                : Math.min(Number.MAX_SAFE_INTEGER, stalledRuns + 1);
           const decision = decide(stable, observation);
           checkTime();
           if (decision.type === "stop")
@@ -570,6 +686,8 @@ export function regulate(
                 ? { prerequisite: decision.prerequisite }
                 : {},
             );
+          if (authorizationBlocked && authorizationRequests)
+            return outcome("authorization-required", { authorizationRequests });
           if (stalledRuns >= quota.maxStallRuns)
             return outcome("exhausted", { exhaustedBy: "stall" });
           if (iterations >= quota.maxAgentRuns)
@@ -587,7 +705,10 @@ export function regulate(
           checkTime();
           if (agentOutcome.status === "limit-reached")
             return outcome("exhausted", { exhaustedBy: "agent-limit" });
-          if (agentOutcome.status !== "completed")
+          if (
+            agentOutcome.status !== "completed" &&
+            agentOutcome.status !== "authorization-required"
+          )
             throw new RegulationError(
               agentOutcome.status === "blocked" ? 409 : 500,
               `Agent ${agentOutcome.status}: ${agentOutcome.reason}`,

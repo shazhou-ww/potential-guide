@@ -1,15 +1,15 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
-  CliError,
   type AgentProfile,
+  CliError,
   type GlobalOptions,
   loadConfig,
   option,
   rejectUnknownOptions,
   writeResult,
 } from "@potential-guide/cli-core";
-import { Effect, startEffect, SubscriptionRef, watchSnapshot } from "@potential-guide/effects";
+import { Effect, SubscriptionRef, startEffect, watchSnapshot } from "@potential-guide/effects";
 import {
   observe,
   type PilotRuntime,
@@ -27,10 +27,18 @@ import {
   type PortfolioPlannerOptions,
   type RegulationRunner,
 } from "@potential-guide/objective-portfolio-supervisor";
-import type { RegulationInput, RegulationStrategy } from "@potential-guide/objective-regulator";
+import {
+  makeRegulationPermissions,
+  type RegulationInput,
+  type RegulationPermissions,
+  type RegulationStrategy,
+} from "@potential-guide/objective-regulator";
 import { createAcpPlannerPolicy } from "../acp-planner.js";
 import { withPilot } from "../pilot-source.js";
-import { type CapabilityRequest, createProcessRegulationRunner } from "../regulation-process.js";
+import {
+  createProcessRegulationRunner,
+  type RegulationProcessEvent,
+} from "../regulation-process.js";
 import { defaultRegulationQuota } from "./regulator.js";
 
 interface FileGoal {
@@ -178,15 +186,17 @@ export async function supervisePortfolio(
     readonly runner:
       | RegulationRunner
       | ((
-          report: (input: RegulationInput, request: CapabilityRequest) => void,
+          report: (input: RegulationInput, request: RegulationProcessEvent) => void,
         ) => RegulationRunner);
     readonly quota: RegulationStrategy["quota"];
     readonly agentExecutionLimits: { readonly timeoutMs: number };
+    readonly permissions?: RegulationPermissions;
     readonly signal?: AbortSignal;
     readonly durationMs?: number;
     readonly refresh?: () => Promise<{
       readonly goals: readonly ObjectiveGoal[];
       readonly resources: readonly AgentResource[];
+      readonly permissions?: RegulationPermissions;
       readonly releasePrevious?: () => Promise<void>;
     }>;
     readonly refreshIntervalMs?: number;
@@ -220,18 +230,28 @@ export async function supervisePortfolio(
   try {
     if (options.execute) {
       const resources = await Effect.runPromise(SubscriptionRef.make(options.resources));
+      const permissionUpdates = await Effect.runPromise(
+        SubscriptionRef.make<RegulationPermissions | undefined>(
+          makeRegulationPermissions(options.permissions),
+        ),
+      );
       const failed = (state: { readonly error?: unknown }) => {
         if (state.error === undefined) return;
         failure ??= state.error;
         controller.abort();
       };
       watchers.push(watchSnapshot(planner.state, failed));
-      const pendingRequests: { input: RegulationInput; request: CapabilityRequest }[] = [];
+      const pendingRequests: { input: RegulationInput; request: RegulationProcessEvent }[] = [];
+      const reportRequest = (input: RegulationInput, request: RegulationProcessEvent) => {
+        if (request.type === "authorization-request")
+          coordinator?.reportAuthorizationRequest(input, request.request);
+        else coordinator?.reportCapabilityRequest(input, request);
+      };
       const runner =
         typeof options.runner === "function"
           ? options.runner((input, request) => {
               if (coordinator === undefined) pendingRequests.push({ input, request });
-              else coordinator.reportCapabilityRequest(input, request);
+              else reportRequest(input, request);
             })
           : options.runner;
       coordinator = await createPortfolioCoordinator({
@@ -241,6 +261,7 @@ export async function supervisePortfolio(
         maxConcurrency: Number.MAX_SAFE_INTEGER,
         quota: options.quota,
         agentExecutionLimits: options.agentExecutionLimits,
+        permissionUpdates,
         abortGraceMs: 1_000,
         onEvent: async (event) => {
           events.push(event);
@@ -248,8 +269,7 @@ export async function supervisePortfolio(
           await planner.feedback(event);
         },
       });
-      for (const { input, request } of pendingRequests)
-        coordinator.reportCapabilityRequest(input, request);
+      for (const { input, request } of pendingRequests) reportRequest(input, request);
       watchers.push(watchSnapshot(coordinator.state, failed));
       let goalSignature = JSON.stringify(options.goals);
       let resourceSignature = JSON.stringify(options.resources);
@@ -260,6 +280,10 @@ export async function supervisePortfolio(
           refreshing = (async () => {
             const next = await refresh();
             if (signal.aborted) return;
+            if ("permissions" in next)
+              await Effect.runPromise(
+                SubscriptionRef.set(permissionUpdates, makeRegulationPermissions(next.permissions)),
+              );
             const nextGoalSignature = JSON.stringify(next.goals);
             const nextResourceSignature = JSON.stringify(next.resources);
             if (nextGoalSignature !== goalSignature) {
@@ -440,6 +464,7 @@ export async function runSupervise(
       runner: (report) => createProcessRegulationRunner(profiles, globals.cwd, report),
       quota: loaded.value.regulationStrategy?.quota ?? defaultRegulationQuota,
       agentExecutionLimits,
+      permissions: makeRegulationPermissions(loaded.value.regulationPermissions),
       signal: controller.signal,
       refreshIntervalMs: Math.min(
         1_000,
@@ -458,7 +483,11 @@ export async function runSupervise(
         for (const name of Object.keys(profiles)) delete profiles[name];
         Object.assign(profiles, agents);
         plannerProfile = nextPlanner;
-        return { ...nextGoals, resources: nextResources };
+        return {
+          ...nextGoals,
+          resources: nextResources,
+          permissions: makeRegulationPermissions(config.value.regulationPermissions),
+        };
       },
     });
     writeResult(

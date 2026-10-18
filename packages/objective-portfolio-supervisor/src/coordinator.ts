@@ -1,8 +1,10 @@
 import { Effect, SubscriptionRef, watchSnapshot } from "@potential-guide/effects";
 import {
+  makeRegulationPermissions,
   makeRegulatorSpec,
   type RegulationInput,
   type RegulationOutcome,
+  type RegulationPermissions,
 } from "@potential-guide/objective-regulator";
 import {
   canonicalJson,
@@ -27,7 +29,7 @@ import type {
 } from "./types.js";
 
 interface Execution extends ActiveRun {
-  readonly input: RegulationInput;
+  readonly input: RegulationInput & { readonly permissions: RegulationPermissions };
   readonly handle: RunHandle;
   settled: boolean;
   timer?: ReturnType<typeof setTimeout>;
@@ -39,6 +41,20 @@ function token(demand: QueueDemand): string {
 }
 function recipe(demand: QueueDemand): string {
   return canonicalJson([demand.pilot, demand.subject, demand.language ?? null]);
+}
+function permissionSignature(permissions: RegulationPermissions): string {
+  // Rule IDs, ordering, priorities and unselected ceiling entries confer no authority.
+  const effective = permissions.ceiling
+    .filter((rule) => permissions.grants.includes(rule.id))
+    .flatMap((rule) =>
+      rule.operation === "execute"
+        ? [canonicalJson({ operation: rule.operation, command: rule.command })]
+        : rule.resources.map((resource) => canonicalJson({ operation: rule.operation, resource })),
+    );
+  return canonicalJson([...new Set(effective)].sort());
+}
+function authorizationSignature(demand: QueueDemand, permissions: RegulationPermissions): string {
+  return canonicalJson([recipe(demand), demand.targetLevel, permissionSignature(permissions)]);
 }
 
 export function validateQueue(snapshot: PriorityQueueSnapshot): void {
@@ -94,11 +110,18 @@ export async function createPortfolioCoordinator(
   let resources = structuredClone(await Effect.runPromise(SubscriptionRef.get(options.resources)));
   validateQueue(queue);
   validateResources(resources);
+  let permissions = makeRegulationPermissions(
+    options.permissionUpdates
+      ? await Effect.runPromise(SubscriptionRef.get(options.permissionUpdates))
+      : options.permissions,
+  );
+  let permissionInvalid = false;
   const state = await Effect.runPromise(
     SubscriptionRef.make<CoordinatorState>({ runs: [], events: [] }),
   );
   const runs = new Set<Execution>();
   const completed = new Set<string>();
+  const authorizationBlocked = new Map<string, string>();
   const history = new Map<string, number>();
   const arrivals = new Map<string, number>();
   const p0Arrivals = new Map<string, number>();
@@ -165,6 +188,21 @@ export async function createPortfolioCoordinator(
     );
     const stopping = run.status === "stopping";
     release(run);
+    if (
+      outcome &&
+      (outcome.stopReason === "authorization-required" ||
+        (outcome.stopReason === "exhausted" && outcome.authorizationRequests?.length)) &&
+      !stopping
+    ) {
+      const current = queue.demands.find((demand) => demand.id === run.demand.id);
+      const signature = authorizationSignature(run.demand, run.input.permissions);
+      if (current && signature === authorizationSignature(current, permissions)) {
+        authorizationBlocked.set(current.id, signature);
+        history.set(recipe(current), outcome.stalledRuns);
+        emit({ type: "result", demand: current, outcome });
+      }
+      return;
+    }
     if (!stillCurrent || stopping) return;
     if (outcome) {
       history.set(recipe(run.demand), outcome.stalledRuns);
@@ -244,7 +282,7 @@ export async function createPortfolioCoordinator(
     }
   }
   function drain() {
-    if (closed) return;
+    if (closed || permissionInvalid) return;
     rememberArrivals();
     for (const run of runs) {
       const current = queue.demands.find((demand) => demand.id === run.demand.id);
@@ -255,6 +293,7 @@ export async function createPortfolioCoordinator(
       .filter(
         (demand) =>
           !completed.has(token(demand)) &&
+          authorizationBlocked.get(demand.id) !== authorizationSignature(demand, permissions) &&
           ![...runs].some((run) => token(run.demand) === token(demand)),
       )
       .sort(
@@ -304,6 +343,7 @@ export async function createPortfolioCoordinator(
           ),
           subject: demand.subject,
           history: { stalledRuns },
+          permissions,
           ...(demand.language === undefined ? {} : { language: demand.language }),
         };
         const handle = options.runner.start(input, resource);
@@ -375,9 +415,61 @@ export async function createPortfolioCoordinator(
       failed(cause);
     }
   });
+  const permissionWatcher = options.permissionUpdates
+    ? watchSnapshot(options.permissionUpdates, (snapshot) => {
+        if (closed) return;
+        try {
+          const next = makeRegulationPermissions(snapshot);
+          if (!permissionInvalid && canonicalJson(next) === canonicalJson(permissions)) return;
+          const changed = permissionSignature(next) !== permissionSignature(permissions);
+          permissionInvalid = false;
+          permissions = next;
+          // Equivalent policy updates leave running snapshots intact; changed authority cancels them.
+          if (changed) for (const run of runs) void stop(run);
+          schedule();
+        } catch (cause) {
+          // Invalid replacement policy must not leave previously granted execution running.
+          permissions = makeRegulationPermissions(undefined);
+          permissionInvalid = true;
+          for (const run of runs) void stop(run);
+          failed(cause);
+          schedule();
+        }
+      })
+    : undefined;
   schedule();
   return {
     state,
+    reportAuthorizationRequest(input, request) {
+      if (closed) return;
+      if (
+        !request ||
+        Object.keys(request).some(
+          (key) => !["id", "operation", "resources", "reason", "command"].includes(key),
+        ) ||
+        typeof request.id !== "string" ||
+        !request.id.trim() ||
+        typeof request.operation !== "string" ||
+        !request.operation.trim() ||
+        typeof request.reason !== "string" ||
+        !request.reason.trim() ||
+        !Array.isArray(request.resources) ||
+        request.resources.some((path) => typeof path !== "string" || !path.trim()) ||
+        (request.command !== undefined &&
+          (typeof request.command !== "string" || !request.command.trim()))
+      )
+        throw new ObjectivePortfolioError("Invalid authorization request.");
+      const run = [...runs].find((entry) => entry.input === input && entry.status === "running");
+      if (!run || !queue.demands.some((entry) => token(entry) === token(run.demand))) return;
+      const key = canonicalJson(["agent-authorization", token(run.demand), request]);
+      if (notifications.has(key)) return;
+      notifications.add(key);
+      emit({
+        type: "authorization-request",
+        demand: run.demand,
+        request: structuredClone(request),
+      });
+    },
     reportCapabilityRequest(input, request) {
       if (closed) return;
       if (!request.capability?.trim() || !request.reason?.trim())
@@ -405,9 +497,11 @@ export async function createPortfolioCoordinator(
       clearTimeout(timer);
       queueWatcher.cancel();
       resourceWatcher.cancel();
+      permissionWatcher?.cancel();
       closing = Promise.all([
         queueWatcher.exit(),
         resourceWatcher.exit(),
+        ...(permissionWatcher ? [permissionWatcher.exit()] : []),
         ...[...runs].map(stop),
         ...callbacks,
       ]).then(() => undefined);

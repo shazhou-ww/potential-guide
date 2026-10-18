@@ -49,6 +49,21 @@ async function run(message: StartMessage) {
               message.cwd,
               async (update) => {
                 if (
+                  update !== null &&
+                  typeof update === "object" &&
+                  "method" in update &&
+                  update.method === "pguide/permission_decision" &&
+                  "params" in update &&
+                  update.params !== null &&
+                  typeof update.params === "object" &&
+                  "decision" in update.params &&
+                  update.params.decision === "denied" &&
+                  "request" in update.params
+                ) {
+                  process.send?.({ type: "authorization-request", request: update.params.request });
+                  return;
+                }
+                if (
                   update === null ||
                   typeof update !== "object" ||
                   !("method" in update) ||
