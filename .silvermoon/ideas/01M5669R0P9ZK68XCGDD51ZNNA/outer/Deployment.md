@@ -2,6 +2,8 @@
 
 本次交付为 primary 中可被 Git 子目录引用的 setup Objective，不包含 npm 发布或对当前用户设备进行全局配置。
 
+交付结果及验证范围见 [setup Objective 交付证据](./Verification.md)。
+
 ## Steps
 
 ### D-S01: 同步并验证子目录交付
