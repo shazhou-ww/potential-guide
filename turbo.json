@@ -15,6 +15,11 @@
       "dependsOn": ["build"],
       "outputs": []
     },
+    "pguide#test": {
+      "dependsOn": ["build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/objectives/**"],
+      "outputs": []
+    },
     "typecheck": {
       "dependsOn": ["^typecheck"],
       "outputs": ["dist/**"]

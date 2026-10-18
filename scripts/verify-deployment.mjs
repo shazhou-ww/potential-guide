@@ -594,12 +594,108 @@ for await (const line of createInterface({input:process.stdin})) {
   console.log("installed ACP planner and bounded supervisor lifecycle verified");
 }
 
+async function verifySetupObjective(baseEnv) {
+  const setupRoot = join(consumer, "setup-objective");
+  const setup = join(setupRoot, "objectives", "pguide-setup");
+  await mkdir(setupRoot, { recursive: true });
+  await cp(join(root, "objectives", "pguide-setup"), setup, { recursive: true });
+  await successful("git", ["init", "-q"], { cwd: setupRoot });
+  await successful("git", ["config", "user.name", "Deployment Fixture"], { cwd: setupRoot });
+  await successful("git", ["config", "user.email", "fixture@example.invalid"], { cwd: setupRoot });
+  await successful("git", ["remote", "add", "origin", pathToFileURL(setupRoot).href], {
+    cwd: setupRoot,
+  });
+  await successful("git", ["add", "."], { cwd: setupRoot });
+  await successful("git", ["commit", "-qm", "Committed setup Objective"], { cwd: setupRoot });
+  const revision = (
+    await successful("git", ["rev-parse", "HEAD"], { cwd: setupRoot })
+  ).stdout.trim();
+  const setupUri = `git+${pathToFileURL(setupRoot).href}#objectives/pguide-setup/pilot.yaml`;
+  const agent = join(consumer, "setup-agent.mjs");
+  await writeFile(
+    agent,
+    `
+import { createInterface } from "node:readline";
+import { writeFile } from "node:fs/promises";
+for await (const line of createInterface({input:process.stdin})) {
+  const message=JSON.parse(line);if (!message.id) continue;
+  let result={};
+  if (message.method==="initialize") result={protocolVersion:"1"};
+  if (message.method==="session/new") result={sessionId:"setup-fixture"};
+  if (message.method==="session/prompt") {
+    const subjectLine=message.params.prompt[0].text.split("\\n").find(line=>line.startsWith("Subject: "));
+    const subject=JSON.parse(subjectLine.slice("Subject: ".length));
+    await writeFile(subject.marker,subject.expected);
+    result={stopReason:"end_turn",summary:"Exact nonce written"};
+  }
+  console.log(JSON.stringify({jsonrpc:"2.0",id:message.id,result}));
+}
+`,
+  );
+  const configPath = join(consumer, "setup-config.json");
+  await writeFile(
+    configPath,
+    JSON.stringify({
+      schemaVersion: 2,
+      defaultAgent: "setup",
+      agents: {
+        setup: {
+          connection: { type: "acp", protocolVersion: "1" },
+          transport: { type: "stdio", command: process.execPath, args: [agent] },
+        },
+      },
+    }),
+  );
+  const scratchDirectory = join(consumer, "setup-scratch");
+  const subject = join(consumer, "setup-subject.json");
+  await writeFile(
+    subject,
+    JSON.stringify({
+      workingDirectory: consumer,
+      configPath,
+      scratchDirectory,
+      pguide: {
+        command: process.execPath,
+        args: [join(consumer, "node_modules", "pguide", "dist", "bin.js")],
+      },
+      desiredVersion: expectedVersions.get("pguide"),
+      agent: "setup",
+      userHome: consumer,
+      allowSanity: true,
+      timeoutMs: 24000,
+    }),
+  );
+  const result = await successful(
+    executable("pguide"),
+    [
+      "probe",
+      "--pilot",
+      setupUri,
+      "--revision",
+      revision,
+      "--subject-file",
+      subject,
+      "--format",
+      "json",
+    ],
+    { cwd: consumer, env: baseEnv },
+  );
+  const observation = JSON.parse(result.stdout);
+  assert.equal(observation.status, 200, result.stdout);
+  assert.equal(observation.payload.current.objectiveId, setupUri);
+  assert.equal(observation.payload.current.levelId, "terminal", result.stdout);
+  assert.equal(observation.payload.versions[setupUri], revision);
+  assert.deepEqual(observation.payload.problems, []);
+  console.log("installed pguide loads committed setup subdirectory and verifies real nonce repair");
+}
+
 const failures = [];
 try {
   await packAndInstall();
   const env = await verifyCliContract();
   await verifyRegulation(env);
   await verifySupervisor(env);
+  await verifySetupObjective(env);
 } catch (error) {
   failures.push(error);
 }

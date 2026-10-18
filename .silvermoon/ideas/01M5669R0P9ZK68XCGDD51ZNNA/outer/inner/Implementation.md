@@ -1,5 +1,7 @@
 # Implementation
 
+具体接口、测试结果及验收边界见 [实现验收证据](./Verification.md)。
+
 ## Steps
 
 ### I-S01: 定义设备就绪观测与引导

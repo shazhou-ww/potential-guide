@@ -1,0 +1,16 @@
+schemaVersion: 1
+domainSchema:
+  type: object
+  required: [marker, expected]
+  additionalProperties: false
+  properties:
+    marker: {type: string, minLength: 1}
+    expected: {type: string, minLength: 48, maxLength: 48}
+levels:
+  - id: unrepaired
+    advancement:
+      checks:
+        - id: marker
+          problems: [marker-incorrect]
+defaultLanguage: en-US
+languages: [en-US]

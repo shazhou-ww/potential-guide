@@ -69,6 +69,24 @@ do not require a committed version.
 explicit YAML configuration. Regulation state and protocol-visible transcript
 are stored under the platform state directory; credentials are never persisted.
 
+### Set up this device
+
+The repository-owned [setup Objective](./objectives/pguide-setup/README.md) checks
+the current user's installation, configuration and ACP readiness, then optionally
+runs one real, isolated detect-repair-recheck. It is a Git-subdirectory Pilot,
+not a new CLI command:
+
+```sh
+pguide probe --pilot 'git+https://github.com/shazhou-ww/potential-guide.git#objectives/pguide-setup/pilot.yaml' --revision <commit> --subject-file <absolute-subject.json> --format json
+```
+
+Start with its external-Agent bootstrap instructions if `pguide` is not installed.
+The native Node helper also runs directly from a checkout without snapshot
+dependencies. Sanity requires explicit consent, can incur Agent costs, and never
+uses a real project as its repair target. Existing environment-based credentials
+are available only in the direct shell entrypoint, not silently forwarded into
+sanitized Pilot probes; the guide documents existing file-authentication options.
+
 ## Publishing
 
 Releases use package-specific tags and npm Trusted Publishing. Manually publish

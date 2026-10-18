@@ -1,0 +1,39 @@
+schemaVersion: 1
+domainSchema:
+  type: object
+  additionalProperties: false
+  required: [workingDirectory, configPath, scratchDirectory, pguide]
+  properties:
+    workingDirectory: {type: string, minLength: 1}
+    configPath: {type: string, minLength: 1}
+    scratchDirectory: {type: string, minLength: 1}
+    pguide:
+      type: object
+      additionalProperties: false
+      required: [command]
+      properties:
+        command: {type: string, minLength: 1}
+        args: {type: array, items: {type: string, minLength: 1}}
+    desiredVersion: {type: string, minLength: 1}
+    agent: {type: string, minLength: 1}
+    userHome: {type: string, minLength: 1}
+    allowSanity: {type: boolean, default: false}
+    timeoutMs: {type: integer, minimum: 100, maximum: 24000, default: 20000}
+levels:
+  - id: initial
+    advancement:
+      checks:
+        - id: installation
+          problems: [installation-missing, installation-unusable, version-mismatch]
+  - id: installed
+    advancement:
+      checks:
+        - id: configuration
+          problems: [installation-missing, installation-unusable, version-mismatch, configuration-missing, configuration-invalid, command-unavailable, agent-missing, environment-unavailable, acp-unavailable]
+  - id: configured
+    advancement:
+      checks:
+        - id: sanity
+          problems: [installation-missing, installation-unusable, version-mismatch, configuration-missing, configuration-invalid, command-unavailable, agent-missing, environment-unavailable, acp-unavailable, sanity-consent-required, git-unavailable, sanity-failed]
+defaultLanguage: zh-CN
+languages: [zh-CN]
