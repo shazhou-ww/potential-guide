@@ -2,20 +2,23 @@ import { randomUUID } from "node:crypto";
 import { appendFile, readFile, stat } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import {
+  type AcpAgentProfile,
   AcpClient,
   type AgentProfile,
-  agentSecretValues,
+  type AhpSessionIdentity,
   atomicWrite,
   CliError,
   digest,
   ensurePrivateDirectory,
+  executeAhp,
   type GlobalOptions,
+  type LegacyAcpAgentProfile,
   loadConfig,
   option,
   type PguideConfig,
   pruneExpiredRegulations,
   readJsonSubject,
-  redactSensitive,
+  redactAgentValue,
   rejectUnknownOptions,
   stateRoot,
   validateAgentProfile,
@@ -32,6 +35,7 @@ import type {
 import {
   type AgentInput,
   type AgentOutcome,
+  type AuthorizationRequest,
   makeRegulationPermissions,
   makeRegulatorSpec,
   RegulationError,
@@ -39,7 +43,11 @@ import {
   type RegulationPermissions,
   regulate,
 } from "@potential-guide/objective-regulator";
-import { createAcpPermissionPolicy, type PermissionDecision } from "../acp-permissions.js";
+import {
+  createAcpPermissionPolicy,
+  type PermissionDecision,
+  unknownPermissionRequest,
+} from "../acp-permissions.js";
 import { withPilot } from "../pilot-source.js";
 
 export const regulatorCommandVersion = "0.3.0-rc.0";
@@ -56,6 +64,7 @@ interface Attempt {
   completedAt?: string;
   status?: string;
   sessionId?: string;
+  ahpSession?: AhpSessionIdentity;
   resumeMode?: "new" | "resumed" | "new-without-session-id" | "not-needed";
   observations: Envelope<PilotObservation>[];
   actions: AgentOutcome[];
@@ -79,6 +88,7 @@ interface Regulation {
   regulationStrategy?: PguideConfig["regulationStrategy"];
   permissions?: RegulationPermissions;
   sessionId?: string;
+  ahpSession?: AhpSessionIdentity;
   expiresAt?: string;
   attempts: Attempt[];
   history?: { stalledRuns: number };
@@ -88,29 +98,17 @@ export function agentPrompt(input: AgentInput): string {
   const permissions = makeRegulationPermissions(input.permissions);
   const active = new Set(permissions.grants);
   const authorization = { grants: permissions.ceiling.filter((rule) => active.has(rule.id)) };
-  return `Potential Guide regulation\nTarget: ${JSON.stringify(input.target)}\nSubject: ${JSON.stringify(input.subject)}\nComplete observation: ${JSON.stringify(input.observation)}\nAgent execution limits: ${JSON.stringify(input.limits)}\nCurrent run authorization: ${JSON.stringify(authorization)}\nOnly the effective configured grants above apply to this run. Earlier session denials are historical, not current authorization decisions: when a current grant is relevant, you may request host permission evaluation again. These grants do not let you self-authorize or bypass ACP permission requests; the host must approve the exact operation and resources. Ungranted operations remain denied. Address the complete observation. Organize any repair tasks yourself. Do not claim objective progress; pguide re-observes after your execution.`;
+  return `Potential Guide regulation\nTarget: ${JSON.stringify(input.target)}\nSubject: ${JSON.stringify(input.subject)}\nComplete observation: ${JSON.stringify(input.observation)}\nAgent execution limits: ${JSON.stringify(input.limits)}\nCurrent run authorization: ${JSON.stringify(authorization)}\nOnly the effective configured grants above apply to this run. Earlier session denials are historical, not current authorization decisions: when a current grant is relevant, you may request host permission evaluation again. These grants do not let you self-authorize or bypass protocol permission requests; the host must approve the exact operation and resources. Ungranted operations remain denied. Address the complete observation. Organize any repair tasks yourself. Do not claim objective progress; pguide re-observes after your execution.`;
 }
 
-export function safeAgentValue<T>(value: T, profile: AgentProfile): T {
-  const secrets = agentSecretValues(profile);
-  const visit = (current: unknown): unknown => {
-    if (typeof current === "string") {
-      let safe = current;
-      for (const secret of secrets) safe = safe.split(secret).join("[REDACTED]");
-      return safe;
-    }
-    if (Array.isArray(current)) return current.map(visit);
-    if (current !== null && typeof current === "object")
-      return Object.fromEntries(Object.entries(current).map(([key, entry]) => [key, visit(entry)]));
-    return current;
-  };
-  return redactSensitive(visit(value) as T);
+export function safeAgentValue<T>(value: T, profile: AgentProfile | LegacyAcpAgentProfile): T {
+  return redactAgentValue(value, profile);
 }
 
 export async function executeAcpAgent(
   input: AgentInput,
   signal: AbortSignal,
-  profile: AgentProfile,
+  profile: AcpAgentProfile | LegacyAcpAgentProfile,
   cwd: string,
   onUpdate?: (update: unknown) => Promise<void>,
   session: {
@@ -220,6 +218,75 @@ export async function executeAcpAgent(
   }
 }
 
+export interface AgentSession {
+  sessionId?: string;
+  ahpSession?: AhpSessionIdentity;
+  continuing?: boolean;
+  onSession?: (
+    id: string,
+    mode: "new" | "resumed" | "new-without-session-id",
+    ahpSession?: AhpSessionIdentity,
+  ) => Promise<void>;
+}
+
+export async function executeAgent(
+  input: AgentInput,
+  signal: AbortSignal,
+  profile: AgentProfile,
+  cwd: string,
+  onUpdate?: (update: unknown) => Promise<void>,
+  session: AgentSession = {},
+): Promise<AgentOutcome> {
+  if (profile.type === "acp")
+    return executeAcpAgent(input, signal, profile, cwd, onUpdate, session);
+  if (session.sessionId !== undefined && session.ahpSession?.sessionUri !== session.sessionId)
+    throw new CliError(
+      "Persisted AHP session identity is missing or inconsistent; no replacement was created.",
+      6,
+      "ahp-error",
+    );
+  const authorizationRequests: AuthorizationRequest[] = [];
+  const response = safeAgentValue(
+    await executeAhp(profile, agentPrompt(input), cwd, signal, {
+      ...(session.ahpSession === undefined ? {} : { session: session.ahpSession }),
+      ...(session.continuing === undefined ? {} : { continuing: session.continuing }),
+      onSession: async (identity, mode) => {
+        await session.onSession?.(identity.sessionUri, mode, identity);
+      },
+      onUpdate: async (update) => {
+        await onUpdate?.(safeAgentValue(update, profile));
+      },
+      onPermission: async () => {
+        const request = unknownPermissionRequest(
+          authorizationRequests.length + 1,
+          "unsupported-ahp-operation-and-once-semantics",
+        );
+        authorizationRequests.push(request);
+        await onUpdate?.({
+          timestamp: new Date().toISOString(),
+          method: "pguide/permission_decision",
+          params: { decision: "denied", request },
+        });
+      },
+    }),
+    profile,
+  );
+  if (response.status === "completed")
+    return {
+      status: "completed",
+      summary: response.summary,
+      ...(authorizationRequests.length === 0 ? {} : { authorizationRequests }),
+    };
+  if (authorizationRequests.length > 0)
+    return {
+      status: "authorization-required",
+      reason: "AHP requests explicit authorization with unsupported operation/once semantics.",
+      authorizationRequests,
+    };
+  if (response.status === "blocked") return { status: "blocked", reason: response.summary };
+  return { status: "failed", reason: response.summary };
+}
+
 async function save(root: string, regulation: Regulation, attempt: Attempt): Promise<void> {
   const safe = {
     ...safeAgentValue({ ...regulation, subject: undefined }, regulation.agentProfile),
@@ -255,7 +322,7 @@ async function run(
   await ensurePrivateDirectory(root);
   if (digest(regulation.subject) !== regulation.subjectDigest)
     throw new CliError("Stored subject digest mismatch.", 6, "io-error");
-  validateAgentProfile(regulation.agentProfile);
+  regulation.agentProfile = validateAgentProfile(regulation.agentProfile);
   const attempt: Attempt = {
     id: randomUUID(),
     startedAt: new Date().toISOString(),
@@ -278,6 +345,7 @@ async function run(
   process.once("SIGINT", cancel);
   process.once("SIGTERM", cancel);
   let outcome: RegulationOutcome | undefined;
+  const executions: Promise<AgentOutcome>[] = [];
   try {
     const execute = async (pilot: PilotSpec, runtime: PilotRuntime) => {
       if (pilot.objectiveId !== regulation.pilotUri || pilot.version !== regulation.pilotCommit)
@@ -313,7 +381,7 @@ async function run(
             pilot: runtime,
             executeAgent: async (input, signal) => {
               await persistence;
-              const result = await executeAcpAgent(
+              const execution = executeAgent(
                 input,
                 signal,
                 regulation.agentProfile,
@@ -329,15 +397,24 @@ async function run(
                   ...(regulation.sessionId === undefined
                     ? {}
                     : { sessionId: regulation.sessionId }),
+                  ...(regulation.ahpSession === undefined
+                    ? {}
+                    : { ahpSession: regulation.ahpSession }),
                   continuing,
-                  onSession: async (id, mode) => {
+                  onSession: async (id, mode, ahpSession) => {
                     regulation.sessionId = id;
                     attempt.sessionId = id;
                     attempt.resumeMode = mode;
+                    if (ahpSession !== undefined) {
+                      regulation.ahpSession = ahpSession;
+                      attempt.ahpSession = ahpSession;
+                    }
                     await persist();
                   },
                 },
               );
+              executions.push(execution);
+              const result = await execution;
               attempt.actions.push(result);
               await persist();
               return result;
@@ -385,6 +462,8 @@ async function run(
   } finally {
     process.removeListener("SIGINT", cancel);
     process.removeListener("SIGTERM", cancel);
+    // The feedback-loop deadline can finish before protocol cancellation cleanup.
+    await Promise.allSettled(executions);
     await persistence;
     attempt.completedAt = new Date().toISOString();
     await save(root, regulation, attempt);
@@ -544,7 +623,7 @@ export async function runContinue(
       ?.sessionId;
   if (sessionId !== undefined) {
     if (typeof sessionId !== "string" || sessionId.trim() === "")
-      throw new CliError("Invalid persisted ACP session ID.", 6, "io-error");
+      throw new CliError("Invalid persisted Agent session ID.", 6, "io-error");
     regulation.sessionId = sessionId;
   }
   return run(regulation, globals, option(argv, "--report") as string | undefined, undefined, true);

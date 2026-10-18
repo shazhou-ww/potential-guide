@@ -1,7 +1,7 @@
 # pguide
 
 The Potential Guide CLI composes Objective Pilot observation, functional
-regulation, Git snapshots, and ACP Agent execution.
+regulation, Git snapshots, and ACP or AHP Agent execution.
 
 ```sh
 pguide scaffold pilot ./objective --check ready --problem not-ready
@@ -68,7 +68,8 @@ regulationStrategy:
   probe: { timeoutMs: 30000, retry: { maxRetries: 0, delayMs: 0 } }
 agents:
   fixture:
-    connection: { type: acp, protocolVersion: "1" }
+    type: acp
+    connection: { protocolVersion: "1" }
     transport: { type: stdio, command: your-acp-agent }
 ```
 
@@ -78,7 +79,7 @@ with `scaffold pilot`/`validate pilot`, and migrate checks to the envelope
 protocol. Remove `limits.maxIterations`, `limits.maxStalledIterations`,
 `--max-iterations`, `--max-stalled-iterations`, and whole-loop `--timeout`.
 `agentExecutionLimits.timeoutMs` / `--agent-timeout-ms` applies separately to each
-Agent execution, including ACP startup. Each regulation is one bounded run.
+Agent execution, including connection and session startup. Each regulation is one bounded run.
 Optional `regulationStrategy.quota` defaults to a 300000 ms whole-run timeout,
 10 Agent runs, and 3 stalled runs. Optional `regulationStrategy.probe` controls
 per-observation timeouts and finite retries/delays; its defaults are a 30000 ms
@@ -96,9 +97,9 @@ The Agent receives the subject, target, **complete observation**, and execution
 limits. It owns task organization. Completed execution triggers re-observation;
 invocation failure does not trigger repair. SIGINT/SIGTERM interrupts regulation.
 New recovery records use schema 2, pin the Pilot URI/commit and subject digest,
-and persist complete observation envelopes, Agent outcomes, and actual ACP
-session IDs before prompting. `continue` starts a fresh feedback loop against
-that pinned recipe and resumes the recorded ACP session when repair is needed.
+and persist complete observation envelopes, Agent outcomes, and confirmed
+protocol session identities before prompting. `continue` starts a fresh feedback loop against
+that pinned recipe and resumes the recorded session when repair is needed.
 Each `continue` is an explicit new run, preserving the pinned recipe and
 relevant progress history; it does not restart an exhausted run automatically.
 Session IDs in older schema 2 attempts are also recognized. A failed resume
@@ -182,11 +183,139 @@ perform actions without asking ACP, especially when its profile includes
 `--allow-all-tools`, `--allow-tool=write`, or equivalent preauthorization flags.
 Remove those flags when relying on this mediation. Pilot checks, Agent runtime,
 administrative config and allowed commands remain trusted.
+## Protocol selection and legacy ACP profiles
+
+Each new profile uses a top-level `type: acp | ahp`. `connection` contains
+protocol-specific settings, while `transport.type` independently selects the
+transport. The old ACP shape `connection: { type: acp, protocolVersion: "1" }`
+with a valid stdio transport is still readable, including in schema 2 recovery
+records. It is normalized to the top-level form when loaded, edited or saved.
+Schema 2 is retained: no migration is required for legal existing ACP profiles.
+Mixed new/old discriminants, missing protocol selectors, and ACP/AHP field
+combinations are rejected, not silently defaulted. `--agent` and `defaultAgent`
+always select the local profile, not a Host product.
+
+## AHP Host support
+
+The adapter uses the official `@microsoft/agent-host-protocol` SDK **1.0.0**,
+offering exactly the configured wire version **1.0.0** or **0.9.0**. A newer
+Host must accept that offered version under AHP's caret-compatibility rules;
+a different negotiated value fails explicitly. No Host/version combination
+is claimed as real-world verified by the automated tests.
+
+```yaml
+schemaVersion: 2
+defaultAgent: repair
+agents:
+  repair:
+    type: ahp
+    connection:
+      protocolVersion: "1.0.0"
+      agent: "<advertised-provider-id>"
+    transport:
+      type: websocket
+      url: ws://127.0.0.1:12345
+    authentication:
+      type: query-token
+      parameter: tkn
+      tokenEnv: AHP_CONNECTION_TOKEN
+    requirements:
+      sessionResume: true
+```
+
+Replace the address, version and provider with explicitly authorized Host
+settings. The adapter does not discover endpoints, start a Host, connect to
+editor-internal named pipes, select unrelated sessions, or fall back to ACP.
+Only WebSocket JSON-RPC text frames are supported. Use `wss` for remote hosts;
+unencrypted `ws` is intended for trusted local connections. Credential-bearing
+URLs (userinfo, query, fragment) are rejected. Endpoint access tokens are read
+from `tokenEnv` and added to the configured query parameter only in memory.
+This is transport authentication, not an AHP-wide bearer convention.
+Use `authentication: { type: none }` or omit it for an already-secured endpoint.
+Header authentication is not supported by the SDK's global WebSocket transport.
+
+If the Agent needs protocol-level resource credentials, add
+`authentication.resources: [{ resource: "<advertised-resource>", tokenEnv: AHP_RESOURCE_TOKEN }]`
+to either authentication type. These are sent with AHP `authenticate` only
+when the selected Agent advertised that exact protected resource. pguide does
+not acquire/copy tokens, perform interactive OAuth, or automatically approve
+tools/input requests. Host-owned existing authentication may be sufficient;
+`AuthRequired` errors require explicit credential preparation. Tokens must
+never be placed in the profile, command line, recovery record or evidence.
+
+The Host must advertise the selected provider, implement `resourceResolve`,
+accept `createSession` with one working directory, expose a ready session with
+its default chat, and support session/chat `subscribe`, `dispatchAction` and
+the standard turn lifecycle. AHP has no ACP-style `loadSession` capability:
+resume is subscription to the original retained session and chat, validated
+against their authoritative state. Missing capabilities/methods fail explicitly.
+`pguide diagnose agent repair` checks negotiation/provider/authentication
+without creating a session or sending a repair.
+
+For a new session, the execution directory is the CLI's absolute `--cwd` as a
+file URI, resolved on the **Host** using `resourceResolve`. The Host must be
+able to access that path and confirm the canonical directory in the session
+and chat; a different target is rejected before dispatch. There is no implicit
+local-to-remote path translation. Use the corresponding Host-side path when
+the CLI and Host share filesystem semantics. Subject paths must also be
+meaningful to the Host. On recovery the saved canonical directory is pinned;
+changing current configuration or `--cwd` does not retarget that session.
+
+AHP session URIs are client-chosen per the specification, but only a successful
+Host `createSession` response establishes their existence. pguide saves that
+confirmed session identity, the default chat URI, canonical directory and the
+next turn ID **before** sending a repair. It never uses a generated URI alone
+as evidence of session creation. `continue` re-observes first, then subscribes
+to the original identities only if repair is still necessary. Missing sessions,
+changed providers/directories, active/queued/background execution or a previous
+dispatch without a retained terminal turn fail closed. No replacement chat,
+session or automatic reconnect/replay is attempted after an uncertain dispatch.
+
+Only a Host-confirmed terminal turn completes an invocation. Agent text is not
+target evidence: the Regulator always re-observes. Errors and unexpected turn
+states fail; input or resource-authentication requests return a blocked outcome
+and request cancellation without approving anything. Tool permission requests
+use the conservative policy described below. Output is bounded to 4 MiB per
+execution. Per-Agent deadlines cover connection, authentication, directory
+resolution and session setup as well as execution; the regulation quota remains
+independent. Cancellation dispatches `chat/turnCancelled` only for the owned
+turn. Cleanup allows at most 250 ms for acknowledgement, records
+`pguide/ahp-interruption` in the transcript with `cancellationSent`,
+`remoteStopConfirmed` and `executionState`, and closes only the client's
+connection. An unconfirmed remote stop remains **uncertain**; inspect the
+original chat before explicit continuation. Late results cannot become success.
+No shared Host or unrelated session is stopped or disposed.
+
+AHP 1.0 tool confirmations do not provide ACP's authoritative operation kind
+or `allow_once` option semantics. `toolName` is diagnostic, `toolInput` may be
+opaque/referenced and file edits are previews, not a complete permission scope.
+The adapter therefore **never guesses** read/edit/execute authority from those
+fields and never treats an ordinary `approve` option as a single-use grant.
+Even a configured file/command grant cannot automatically approve an
+unclassifiable AHP request. Execution/result confirmations receive the official
+`chat/toolCallConfirmed` / `chat/toolCallResultConfirmed` denial with
+`approved: false`; safe `unknown` authorization requests and
+`pguide/permission_decision` records explain the unsupported semantics.
+The turn remains live so the Agent may try an authorized alternative. The
+Regulator re-observes after terminal completion: verified target/progress wins,
+otherwise an unresolved request yields `authorization-required` (exit 3).
+`continue` reloads current permissions and never reuses old session authority.
+This fail-closed limitation is not a Host sandbox: a preauthorized Agent can
+still perform operations that it never asks the client to confirm. Supporting
+positive AHP grant decisions requires a separately verified structured Host
+permission/one-use contract; no product-specific or invented extension is used.
+
+VS Code is a candidate reference Host, not a protocol discriminator. Its
+`code agent host --help` documents externally reachable Host setup. Prefer a
+separately owned `--new-instance --foreground` Host for isolated validation;
+never use `--replace`/`kill` on shared Hosts. `code agent endpoints` includes
+credentials and must not be printed or committed as evidence. Editor session
+availability alone does not establish an externally usable WebSocket endpoint.
 
 ## Portfolio supervision
 
 `pguide supervise --portfolio-file portfolio.json --planner strategist` observes
-the portfolio and asks the configured ACP planning Agent for a priority queue
+the portfolio and asks the configured ACP/AHP planning Agent for a priority queue
 once, without executing repairs. Add `--execute` to continuously re-observe each
 goal at its configured interval and coordinate one-shot regulation runs until
 SIGINT/SIGTERM. `--execute --duration-ms 5000` bounds supervision and waits for
@@ -233,7 +362,8 @@ are fixed at command startup.
 
 The planner sees goals, observations, derived prerequisite candidates, previous
 demands, and resource-free execution feedback—never the Agent inventory.
-It must emit a JSON object through ACP `agent_message_chunk` text updates:
+It must emit a JSON object through ACP `agent_message_chunk` text updates or
+AHP terminal-turn markdown response parts:
 `{"directives":[{"goalId":"service","priority":1}]}`. Optional directive fields
 are `targetLevel` (a known level) and `requirements` (capability names).
 Unknown or duplicate IDs, arbitrary commands, invalid JSON, refusal,

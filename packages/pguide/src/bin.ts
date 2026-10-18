@@ -3,6 +3,7 @@ import { readdir, realpath, stat } from "node:fs/promises";
 import { delimiter, extname, join, resolve } from "node:path";
 import {
   AcpClient,
+  inspectAhp,
   CliError,
   type CommandMetadata,
   expectedCliError,
@@ -249,11 +250,26 @@ async function diagnose(argv: string[], globals: GlobalOptions): Promise<number>
     const name = argv[agentIndex + 1];
     const profile = name === undefined ? undefined : config.value.agents?.[name];
     if (profile === undefined) throw new CliError(`Unknown Agent profile: ${name ?? ""}.`);
-    const client = new AcpClient(profile);
-    try {
-      agent = { name, initialize: await client.initialize(profile.connection.protocolVersion) };
-    } finally {
-      client.close();
+    if (profile.type === "ahp") {
+      agent = {
+        name,
+        type: profile.type,
+        initialize: await inspectAhp(
+          profile,
+          AbortSignal.timeout(config.value.agentExecutionLimits?.timeoutMs ?? 30_000),
+        ),
+      };
+    } else {
+      const client = new AcpClient(profile);
+      try {
+        agent = {
+          name,
+          type: profile.type,
+          initialize: await client.initialize(profile.connection.protocolVersion),
+        };
+      } finally {
+        client.close();
+      }
     }
   }
   const value = {

@@ -65,7 +65,8 @@ for await (const line of createInterface({ input: process.stdin })) {
 
 function profile(stub: string, mode: string, log: string, marker = "unused"): AgentProfile {
   return {
-    connection: { type: "acp", protocolVersion: "1" },
+    type: "acp",
+    connection: { protocolVersion: "1" },
     transport: { type: "stdio", command: process.execPath, args: [stub, mode, log, marker] },
   };
 }
@@ -231,9 +232,9 @@ test("supervise plans once without repairs, then continuously observes and execu
     const configuredExecutor = configured.agents["private-execution-agent"];
     delete configured.agents["private-execution-agent"];
     await writeFile(config, JSON.stringify(configured));
-    // Leave time for source refresh and a complete planner-feedback handshake under suite load.
+    // Include startup, Git reload and a post-execution planner cycle under full-suite load.
     running = run(bin("supervise"), [...args, "--execute", "--duration-ms", "15000"]);
-    const deadline = Date.now() + 12_000;
+    const deadline = Date.now() + 16_000;
     while ((await readFile(plannerLog, "utf8")).split('"method":"session/prompt"').length < 3) {
       assert.ok(Date.now() < deadline, "Supervisor did not start planning.");
       await new Promise((done) => setTimeout(done, 25));

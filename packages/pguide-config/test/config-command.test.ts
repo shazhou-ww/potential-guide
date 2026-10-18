@@ -180,3 +180,57 @@ test("show-agent rejects secret-bearing transport arguments without echoing them
     await rm(cwd, { recursive: true, force: true });
   }
 });
+
+test("config editor and Agent commands normalize legacy ACP and preserve AHP profiles", async () => {
+  const cwd = await mkdtemp(join(scratch, "pguide-config-ahp-"));
+  try {
+    const editor = join(cwd, "editor.mjs");
+    await writeFile(
+      editor,
+      'import{writeFile}from"node:fs/promises";await writeFile(process.argv.at(-1),process.env.EDIT_CONTENT);',
+    );
+    const ahp = {
+      type: "ahp",
+      connection: { protocolVersion: "1.0.0", agent: "generic-provider" },
+      transport: { type: "websocket", url: "wss://host.example.invalid/ahp" },
+      authentication: { type: "query-token", parameter: "tkn", tokenEnv: "AHP_TOKEN" },
+    };
+    const edited = await run(["edit", "--cwd", cwd], {
+      ...process.env,
+      VISUAL: `"${process.execPath}" "${editor}"`,
+      EDIT_CONTENT: JSON.stringify({
+        schemaVersion: 2,
+        agents: {
+          legacy: {
+            connection: { type: "acp", protocolVersion: "1" },
+            transport: { type: "stdio", command: "fixture" },
+          },
+          remote: ahp,
+        },
+      }),
+    });
+    assert.equal(edited.code, 0, edited.stdout);
+    const list = await run(["list-agents", "--cwd", cwd, "--format", "json"]);
+    assert.deepEqual(
+      JSON.parse(list.stdout)
+        .agents.filter(({ name }: { name: string }) => ["legacy", "remote"].includes(name))
+        .map(({ type }: { type: string }) => type),
+      ["acp", "ahp"],
+    );
+    const shown = await run(["show-agent", "remote", "--cwd", cwd, "--format", "json"]);
+    assert.deepEqual(JSON.parse(shown.stdout).profile, ahp);
+    const legacy = await run(["show-agent", "legacy", "--cwd", cwd, "--format", "json"]);
+    assert.equal(JSON.parse(legacy.stdout).profile.type, "acp");
+    assert.equal(JSON.parse(legacy.stdout).profile.connection.type, undefined);
+    const source = join(cwd, "profile.json");
+    await writeFile(source, JSON.stringify(ahp));
+    assert.equal((await run(["add-agent", "added", source, "--cwd", cwd])).code, 0);
+    const updated = { ...ahp, connection: { ...ahp.connection, agent: "another-provider" } };
+    await writeFile(source, JSON.stringify(updated));
+    assert.equal((await run(["update-agent", "added", source, "--cwd", cwd])).code, 0);
+    const actual = await run(["show-agent", "added", "--cwd", cwd, "--format", "json"]);
+    assert.deepEqual(JSON.parse(actual.stdout).profile, updated);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});

@@ -9,6 +9,9 @@ catalogs:
     '@biomejs/biome':
       specifier: 2.5.15
       version: 2.5.15
+    '@microsoft/agent-host-protocol':
+      specifier: 1.0.0
+      version: 1.0.0
     '@types/cross-spawn':
       specifier: 6.0.6
       version: 6.0.6
@@ -144,6 +147,9 @@ importers:
 
   packages/pguide-cli-core:
     dependencies:
+      '@microsoft/agent-host-protocol':
+        specifier: 'catalog:'
+        version: 1.0.0
       yaml:
         specifier: 'catalog:'
         version: 2.9.1
@@ -379,6 +385,9 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@microsoft/agent-host-protocol@1.0.0':
+    resolution: {integrity: sha512-swjikGoqZ/bv3Mn4vkkLzwpmS/j9tV7Aas7ruD2a/R3KVsUlokwCJNSET57mdsmZLMnrawDaCr/ctufbpjE4iA==}
+
   '@turbo/darwin-64@2.11.8':
     resolution: {integrity: sha512-u+6s4C2hskRYx6MkW2uT7BCW6sESCL/+5bjHDDWUfQfQliCSJ7lAHAL6RQaw0an9WU6nJvwYgT786mEWul2kDw==}
     cpu: [x64]
@@ -608,6 +617,8 @@ snapshots:
 
   '@esbuild/win32-x64@0.28.2':
     optional: true
+
+  '@microsoft/agent-host-protocol@1.0.0': {}
 
   '@turbo/darwin-64@2.11.8':
     optional: true

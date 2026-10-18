@@ -110,6 +110,7 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     const agents = Object.entries(loaded.value.agents ?? {}).map(([name, profile]) => ({
       name,
       source: loaded.sources[`agents.${name}`],
+      type: profile.type,
       protocolVersion: profile.connection.protocolVersion,
       transport: profile.transport.type,
     }));

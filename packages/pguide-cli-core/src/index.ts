@@ -27,6 +27,7 @@ export {
   parseRegulationPermissions,
   type RegulationPermissions,
 } from "./permissions.js";
+export { type AhpSessionIdentity, executeAhp, inspectAhp } from "./ahp.js";
 export { killProcessTree } from "./process-tree.js";
 
 export const COMMAND_PROTOCOL = "pguide-command-v1";
@@ -38,11 +39,31 @@ export interface CommandMetadata {
   version: string;
 }
 
-export interface AgentProfile {
+export interface LegacyAcpAgentProfile {
   connection: { type: "acp"; protocolVersion: string };
   transport: { type: "stdio"; command: string; args?: string[]; env?: string[] };
   requirements?: { sessionResume?: boolean };
 }
+
+export interface AcpAgentProfile {
+  type: "acp";
+  connection: { protocolVersion: string };
+  transport: LegacyAcpAgentProfile["transport"];
+  requirements?: { sessionResume?: boolean };
+}
+
+export interface AhpAgentProfile {
+  type: "ahp";
+  connection: { protocolVersion: "1.0.0" | "0.9.0"; agent: string };
+  transport: { type: "websocket"; url: string };
+  authentication?: (
+    | { type: "none" }
+    | { type: "query-token"; parameter: string; tokenEnv: string }
+  ) & { resources?: { resource: string; tokenEnv: string }[] };
+  requirements?: { sessionResume?: boolean };
+}
+
+export type AgentProfile = AcpAgentProfile | AhpAgentProfile;
 
 export interface PguideConfig {
   schemaVersion: 2;
@@ -201,44 +222,61 @@ export function redactSensitive<T>(value: T): T {
   return visit(value) as T;
 }
 
-export function agentSecretValues(profile: AgentProfile): string[] {
+export function agentSecretValues(profile: AgentProfile | LegacyAcpAgentProfile): string[] {
+  const names =
+    "type" in profile && profile.type === "ahp"
+      ? [
+          ...(profile.authentication?.type === "query-token"
+            ? [profile.authentication.tokenEnv]
+            : []),
+          ...(profile.authentication?.resources?.map(({ tokenEnv }) => tokenEnv) ?? []),
+        ]
+      : "env" in profile.transport
+        ? (profile.transport.env ?? [])
+        : [];
   return [
     ...new Set(
-      (profile.transport.env ?? [])
+      names
         .map((name) => process.env[name])
         .filter((secret): secret is string => secret !== undefined && secret !== ""),
     ),
   ].sort((left, right) => right.length - left.length);
 }
 
+export function redactAgentValue<T>(value: T, profile: AgentProfile | LegacyAcpAgentProfile): T {
+  const secrets = agentSecretValues(profile);
+  const visit = (current: unknown): unknown => {
+    if (typeof current === "string") {
+      let safe = current;
+      for (const secret of secrets) safe = safe.split(secret).join("[REDACTED]");
+      return safe;
+    }
+    if (Array.isArray(current)) return current.map(visit);
+    if (record(current))
+      return Object.fromEntries(Object.entries(current).map(([key, entry]) => [key, visit(entry)]));
+    return current;
+  };
+  return redactSensitive(visit(value) as T);
+}
+
 export function validateAgentProfile(value: unknown): AgentProfile {
   if (!record(value)) throw new CliError("Agent profile must be an object.");
-  exactKeys(value, ["connection", "transport", "requirements"], "Agent profile");
+  exactKeys(
+    value,
+    ["type", "connection", "transport", "authentication", "requirements"],
+    "Agent profile",
+  );
   if (!record(value.connection)) throw new CliError("Agent connection is required.");
-  exactKeys(value.connection, ["type", "protocolVersion"], "Agent connection");
-  if (value.connection.type !== "acp" || !nonempty(value.connection.protocolVersion)) {
-    throw new CliError("Agent connection must select ACP and a protocolVersion.");
-  }
-  acpProtocolVersion(value.connection.protocolVersion);
-  if (!record(value.transport)) throw new CliError("Agent stdio transport is required.");
-  exactKeys(value.transport, ["type", "command", "args", "env"], "Agent transport");
-  if (value.transport.type !== "stdio" || !nonempty(value.transport.command)) {
-    throw new CliError("Agent transport must be stdio with a command.");
-  }
-  if (
-    value.transport.args !== undefined &&
-    (!Array.isArray(value.transport.args) || !value.transport.args.every(nonempty))
-  ) {
-    throw new CliError("Agent transport args must be nonempty strings.");
-  }
-  rejectSecretArguments((value.transport.args as string[] | undefined) ?? []);
-  if (
-    value.transport.env !== undefined &&
-    (!Array.isArray(value.transport.env) ||
-      !value.transport.env.every((entry) => nonempty(entry) && /^[A-Z_][A-Z0-9_]*$/.test(entry)))
-  ) {
-    throw new CliError("Agent transport env must contain environment variable names.");
-  }
+  const legacy = value.type === undefined && value.connection.type === "acp";
+  if (!legacy && value.type !== "acp" && value.type !== "ahp")
+    throw new CliError("Agent profile must explicitly select type: acp or ahp.");
+  if (!legacy && "type" in value.connection)
+    throw new CliError(
+      "Use only profile-level type; connection.type is reserved for legacy ACP profiles.",
+    );
+  const type = legacy ? "acp" : value.type;
+  if (!record(value.transport)) throw new CliError("Agent transport is required.");
+  let requirements: AgentProfile["requirements"];
   if (value.requirements !== undefined) {
     if (!record(value.requirements)) throw new CliError("Agent requirements must be an object.");
     exactKeys(value.requirements, ["sessionResume"], "Agent requirements");
@@ -248,9 +286,127 @@ export function validateAgentProfile(value: unknown): AgentProfile {
     ) {
       throw new CliError("sessionResume must be boolean.");
     }
+    requirements =
+      value.requirements.sessionResume === undefined
+        ? {}
+        : { sessionResume: value.requirements.sessionResume };
   }
   rejectSecretValues(value);
-  return value as unknown as AgentProfile;
+  const common = requirements === undefined ? {} : { requirements };
+  if (type === "acp") {
+    exactKeys(
+      value.connection,
+      legacy ? ["type", "protocolVersion"] : ["protocolVersion"],
+      "ACP connection",
+    );
+    if (!nonempty(value.connection.protocolVersion))
+      throw new CliError("ACP protocolVersion is required.");
+    acpProtocolVersion(value.connection.protocolVersion);
+    if (value.authentication !== undefined)
+      throw new CliError("ACP authentication must use transport environment names.");
+    exactKeys(value.transport, ["type", "command", "args", "env"], "ACP transport");
+    if (value.transport.type !== "stdio" || !nonempty(value.transport.command))
+      throw new CliError("Agent transport must be stdio with a command.");
+    const args = value.transport.args;
+    if (args !== undefined && (!Array.isArray(args) || !args.every(nonempty)))
+      throw new CliError("Agent transport args must be nonempty strings.");
+    rejectSecretArguments(args ?? []);
+    const env = value.transport.env;
+    if (env !== undefined && (!Array.isArray(env) || !env.every(environmentName)))
+      throw new CliError("Agent transport env must contain environment variable names.");
+    return {
+      type: "acp",
+      connection: { protocolVersion: value.connection.protocolVersion },
+      transport: {
+        type: "stdio",
+        command: value.transport.command,
+        ...(args === undefined ? {} : { args }),
+        ...(env === undefined ? {} : { env }),
+      },
+      ...common,
+    };
+  }
+  exactKeys(value.connection, ["protocolVersion", "agent"], "AHP connection");
+  if (value.connection.protocolVersion !== "1.0.0" && value.connection.protocolVersion !== "0.9.0")
+    throw new CliError("AHP protocolVersion must be 1.0.0 or 0.9.0 (supported by SDK 1.0.0).");
+  if (!nonempty(value.connection.agent))
+    throw new CliError("AHP connection.agent must name an advertised provider.");
+  exactKeys(value.transport, ["type", "url"], "AHP transport");
+  if (value.transport.type !== "websocket" || !nonempty(value.transport.url))
+    throw new CliError("AHP transport must be websocket with a URL.");
+  let url: URL;
+  try {
+    url = new URL(value.transport.url);
+  } catch {
+    throw new CliError("Invalid AHP WebSocket URL.");
+  }
+  if (
+    !["ws:", "wss:"].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash
+  )
+    throw new CliError(
+      "AHP URL must use ws/wss without credentials, query or fragment; use authentication environment references.",
+    );
+  let authentication: AhpAgentProfile["authentication"];
+  if (value.authentication !== undefined) {
+    const auth = value.authentication;
+    if (!record(auth)) throw new CliError("AHP authentication must be an object.");
+    exactKeys(
+      auth,
+      auth.type === "query-token"
+        ? ["type", "parameter", "tokenEnv", "resources"]
+        : ["type", "resources"],
+      "AHP authentication",
+    );
+    if (auth.type !== "none" && auth.type !== "query-token")
+      throw new CliError("AHP authentication must select none or query-token.");
+    const resources: { resource: string; tokenEnv: string }[] = [];
+    if (auth.resources !== undefined) {
+      if (!Array.isArray(auth.resources))
+        throw new CliError("AHP authentication.resources must be an array.");
+      for (const entry of auth.resources) {
+        if (!record(entry)) throw new CliError("AHP resource credential must be an object.");
+        exactKeys(entry, ["resource", "tokenEnv"], "AHP resource credential");
+        if (!nonempty(entry.resource) || !environmentName(entry.tokenEnv))
+          throw new CliError("AHP resource credentials require resource and tokenEnv.");
+        if (resources.some(({ resource }) => resource === entry.resource))
+          throw new CliError("Duplicate AHP resource credential.");
+        resources.push({ resource: entry.resource, tokenEnv: entry.tokenEnv });
+      }
+    }
+    if (auth.type === "query-token") {
+      if (
+        !nonempty(auth.parameter) ||
+        !/^[A-Za-z][A-Za-z0-9_-]*$/.test(auth.parameter) ||
+        !environmentName(auth.tokenEnv)
+      )
+        throw new CliError("AHP query-token requires a parameter name and tokenEnv.");
+      authentication = {
+        type: auth.type,
+        parameter: auth.parameter,
+        tokenEnv: auth.tokenEnv,
+        ...(auth.resources === undefined ? {} : { resources }),
+      };
+    } else
+      authentication = { type: "none", ...(auth.resources === undefined ? {} : { resources }) };
+  }
+  return {
+    type: "ahp",
+    connection: {
+      protocolVersion: value.connection.protocolVersion,
+      agent: value.connection.agent,
+    },
+    transport: { type: "websocket", url: url.href },
+    ...common,
+    ...(authentication === undefined ? {} : { authentication }),
+  };
+}
+
+function environmentName(value: unknown): value is string {
+  return nonempty(value) && /^[A-Z_][A-Z0-9_]*$/.test(value);
 }
 
 export function parseConfig(source: string): PguideConfig {
@@ -385,7 +541,7 @@ export function parseConfig(source: string): PguideConfig {
     if (!record(raw.agents)) throw new CliError("agents must be an object.");
     for (const [name, profile] of Object.entries(raw.agents)) {
       if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) throw new CliError(`Invalid agent name: ${name}.`);
-      validateAgentProfile(profile);
+      raw.agents[name] = validateAgentProfile(profile);
     }
   }
   return raw as unknown as PguideConfig;
@@ -783,7 +939,7 @@ export class AcpClient {
   readonly updates: AcpUpdate[] = [];
 
   constructor(
-    profile: AgentProfile,
+    profile: AcpAgentProfile | LegacyAcpAgentProfile,
     private readonly onUpdate: (update: AcpUpdate) => Promise<void> = async () => undefined,
     private readonly options: AcpClientOptions = {},
   ) {

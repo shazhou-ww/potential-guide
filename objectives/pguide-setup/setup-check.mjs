@@ -339,8 +339,16 @@ async function configured(subject, context) {
   const name = subject.agent ?? config.defaultAgent;
   if (!nonempty(name) || !record(config.agents?.[name])) throw new Problem("agent-missing");
   const profile = config.agents[name];
+  if (profile.type === "ahp")
+    throw new Problem("acp-unavailable", {
+      reason:
+        "This setup Pilot verifies ACP stdio readiness only. Select an ACP profile; AHP runtime support does not imply ACP compatibility.",
+    });
   if (
-    profile.connection?.type !== "acp" ||
+    !(
+      (profile.type === "acp" && profile.connection?.type === undefined) ||
+      (profile.type === undefined && profile.connection?.type === "acp")
+    ) ||
     !/^[1-9][0-9]*$/.test(profile.connection.protocolVersion) ||
     typeof profile.connection.protocolVersion !== "string" ||
     !Number.isSafeInteger(Number(profile.connection.protocolVersion)) ||

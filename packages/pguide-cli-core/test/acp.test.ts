@@ -4,12 +4,12 @@ import {
   AcpClient,
   type AcpClientOptions,
   type AcpUpdate,
-  type AgentProfile,
+  type LegacyAcpAgentProfile,
   acpProtocolVersion,
   validateAgentProfile,
 } from "@potential-guide/cli-core";
 
-function profile(script: string): AgentProfile {
+function profile(script: string): LegacyAcpAgentProfile {
   return {
     connection: { type: "acp", protocolVersion: "1" },
     transport: { type: "stdio", command: process.execPath, args: ["-e", script] },
@@ -81,7 +81,7 @@ function permissionAgent(
   method = "session/request_permission",
   overrides: Record<string, unknown> = {},
   requestId?: string,
-): AgentProfile {
+): LegacyAcpAgentProfile {
   return profile(`${rpcPrelude}
 let promptId;
 createInterface({input:process.stdin}).on("line", line => {

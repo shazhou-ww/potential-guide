@@ -37,7 +37,7 @@ agents:
 
 ### 新增 AHP profile 的目标写法
 
-以下是待实施的配置候选，不是当前版本已支持的配置，也不是 AHP 官方配置格式。以支持 WebSocket 和 Bearer 认证的 Host 为例；`protocolVersion` 与 `agent` 占位值必须替换为该 Host 实际支持的协议版本和 Agent 标识，不能照抄运行。
+以下是本次接入的配置写法，不是 AHP 官方配置格式。以支持 WebSocket、连接 query token 及 protected-resource 认证的 Host 为例；`protocolVersion` 与 `agent` 占位值必须替换为该 Host 实际支持的协议版本和 provider 标识，不能照抄运行。认证方式依据已核对的官方规范，不预设通用 Bearer header。
 
 ```yaml
 schemaVersion: 2
@@ -56,8 +56,12 @@ agents:
       type: websocket
       url: wss://agent-host.example.invalid/ahp
     authentication:
-      type: bearer
+      type: query-token
+      parameter: tkn
       tokenEnv: AHP_TOKEN
+      resources:
+        - resource: https://api.example.invalid/
+          tokenEnv: AHP_RESOURCE_TOKEN
     requirements:
       sessionResume: true
 ```
@@ -67,15 +71,15 @@ agents:
 | profile 顶层 `type` | 以 `acp` / `ahp` 判别整个 profile；连接、传输、认证及其他字段按该类型校验，不增加 `vscode` 类型 |
 | `connection.type` | 新写法移除此字段，避免重复协议声明；仅在合法旧 ACP 配置的兼容入口中识别 |
 | `connection.protocolVersion` | 按所选协议验证；AHP 版本不沿用 ACP 的正整数字符串校验 |
-| `connection.agent` | AHP Host 内的 Agent 标识；与本地 profile 名 `repair-ahp` 分开，不按产品名推断 |
+| `connection.agent` | AHP Host root catalogue 中的 provider 标识；与本地 profile 名 `repair-ahp` 分开，不按产品名推断 |
 | `transport` | 按实际支持的 AHP 传输增加分支；上例是连接已有 Host 的 WebSocket 地址，不把 ACP 的 stdio 命令字段硬套到 AHP |
-| `authentication` | 上例新增 Bearer 环境变量引用，运行时读取 `AHP_TOKEN`；不写 token 明文或把该字段当作所有 Host 的唯一认证模式 |
+| `authentication` | 连接 query token 的参数名和环境变量引用显式配置；可选 `resources` 对应 Host 为所选 provider 公布的 protected resource，不写凭据明文或向任意 resource 发送 token |
 | `requirements.sessionResume` | 复用现有语义；为 `true` 时所选 Host/Agent 必须具备恢复能力，否则在执行前明确失败 |
 | `defaultAgent` / `--agent` | 仍选择 profile；不新增 `--vscode` 或强制更改原有 Agent 选择方式 |
 
 使用时以 `--agent repair-ahp` 选择 AHP，以 `--agent repair-acp` 选择 ACP；目标 subject、Pilot 和运行额度的配置方式不因协议切换而改变。
 
-目标是将 AHP 作为可选配置扩展、保持原 ACP 配置不变。当前解析器只接受 ACP，实施必须同步更新配置校验、配置编辑器与恢复记录；是否必须提升配置 schema 版本，应由实际兼容性验证决定并提供迁移说明，不能仅靠文档宣布可用。字段细节如需调整，应先更新本需求和示例，不能让示例与最终校验器分离。
+目标是将 AHP 作为可选配置扩展、保持原 ACP 配置不变。接入必须同步更新配置校验、配置编辑器与恢复记录，并验证 schema 2 的兼容规则，不能仅靠文档宣布可用。未使用连接 query token 时，可省略 `authentication` 或选择 `type: none`，但不能因此绕过 Host 所需的 protected-resource 认证或暴露未经保护的远端连接。字段细节如需调整，应先更新本需求和示例，不能让示例与最终校验器分离。
 
 新 profile 的类型模型为以顶层 `type` 判别的 `AcpAgentProfile | AhpAgentProfile`，不强求两种协议的其余字段相同。`transport.type` 保留为独立的传输判别字段；拒绝混用协议字段、同时声明新旧协议位置或缺少有效判别信息的配置。配置编辑器与恢复记录统一使用规范化后的新形状，读取旧 ACP 记录时保留原协议与执行语义。
 
@@ -111,7 +115,7 @@ Host 自身的启动、认证和 Agent 注册步骤可以因实现不同而不�
 
 ### R-05: 真实会话身份与可恢复执行
 
-- 获取并持久保存 Host 返回的真实会话身份及恢复所必需的非敏感定位信息；在发送首次修复请求前保存已取得的身份，不伪造占位会话 ID。
+- 获取并持久保存经 Host 确认存在的真实 session/default-chat 身份及恢复所必需的非敏感定位信息；在发送首次修复请求前保存已确认的身份和 turn 标识，不伪造占位会话 ID。按 AHP 规则由客户端提议的 session URI，只有 Host 创建成功后才算有效会话。
 - 恢复记录必须能够区分协议和原执行目标。`continue` 保留既有固定配方、Pilot 版本、subject 与进展历史，不静默采用当前配置中的另一个 Host 或 Agent。
 - `continue` 是一次显式的新闭环，先重新观察；仍需修复时才恢复原会话，不盲目重放上次请求。
 - 已保存会话无法恢复时明确失败，不改建新会话。若从未保存有效身份，沿用现有显式策略：要求恢复时失败；允许新建时记录 `resumeMode: new-without-session-id`，不能冒充恢复成功。
@@ -129,6 +133,7 @@ Host 自身的启动、认证和 Agent 注册步骤可以因实现不同而不�
 - 使用用户已有且明确配置的认证来源，不在配置示例、恢复记录、日志或验证证据中保存凭据明文。
 - 遵守 Host 的权限与工具批准机制，不自动批准提权、绕过工作区信任或复用其他会话的授权。
 - 需要人工批准时显示明确阻塞原因；无人值守且无法完成批准时应受执行时限约束并明确结束，不能无限等待或自行放行。
+- 保留 Regulator 已有权限策略与授权请求结果链路。标准 AHP 未可靠声明操作分类及单次批准语义时，不能依据工具名、标题或任意 input 猜测权限，也不能把普通 `approve` 当作一次性授权。此类请求标为未知授权需求，并按官方拒绝动作处理；允许 Agent 尝试无需授权的替代路径，随后沿用先核对实际目标进展、再报告 `authorization-required` 的规则。只有经核验的结构化请求及一次性授权能力才能支持相应批准，不以现有 grant 为由伪造协议能力。
 
 ### R-08: 可诊断而不产生伪成功
 

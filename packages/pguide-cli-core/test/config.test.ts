@@ -208,7 +208,8 @@ test("configuration validates ACP profiles and rejects secret literals", () => {
     transport: { type: "stdio", command: "fixture", args: ["--acp"], env: ["TEST_TOKEN"] },
     requirements: { sessionResume: true },
   });
-  assert.equal(profile.connection.type, "acp");
+  assert.equal(profile.type, "acp");
+  assert.deepEqual(profile.connection, { protocolVersion: "1" });
   assert.throws(() => parseConfig("schemaVersion: 2\npassword: literal\n"));
   assert.throws(() =>
     validateAgentProfile({

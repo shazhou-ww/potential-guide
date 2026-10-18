@@ -16,7 +16,8 @@ test("process runner returns verified results only after worker cleanup", async 
       const runner = createProcessRegulationRunner(
         {
           unused: {
-            connection: { type: "acp", protocolVersion: "1" },
+            type: "acp",
+            connection: { protocolVersion: "1" },
             transport: {
               type: "stdio",
               command: process.execPath,
@@ -64,7 +65,8 @@ test("force termination stops a live process tree and cleans the owned run direc
       const runner = createProcessRegulationRunner(
         {
           unused: {
-            connection: { type: "acp", protocolVersion: "1" },
+            type: "acp",
+            connection: { protocolVersion: "1" },
             transport: { type: "stdio", command: process.execPath },
           },
         },
@@ -151,7 +153,8 @@ test("worker forwards capability requests as events without treating them as new
       const runner = createProcessRegulationRunner(
         {
           fixture: {
-            connection: { type: "acp", protocolVersion: "1" },
+            type: "acp",
+            connection: { protocolVersion: "1" },
             transport: { type: "stdio", command: process.execPath, args: [agent] },
           },
         },

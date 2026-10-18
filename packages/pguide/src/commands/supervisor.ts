@@ -33,7 +33,7 @@ import {
   type RegulationPermissions,
   type RegulationStrategy,
 } from "@potential-guide/objective-regulator";
-import { createAcpPlannerPolicy } from "../acp-planner.js";
+import { createAgentPlannerPolicy } from "../acp-planner.js";
 import { withPilot } from "../pilot-source.js";
 import {
   createProcessRegulationRunner,
@@ -447,7 +447,7 @@ export async function runSupervise(
     const result = await supervisePortfolio({
       goals,
       policy: (signal) => (input) =>
-        createAcpPlannerPolicy(plannerProfile, globals.cwd, {
+        createAgentPlannerPolicy(plannerProfile, globals.cwd, {
           signal,
           timeoutMs: agentExecutionLimits.timeoutMs,
         })(input),

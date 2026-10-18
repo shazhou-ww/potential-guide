@@ -1,7 +1,7 @@
 {
   "name": "@potential-guide/cli-core",
   "version": "0.2.0-rc.0",
-  "description": "Shared CLI protocol, configuration, persistence, and ACP client for Potential Guide.",
+  "description": "Shared CLI protocol, configuration, persistence, and ACP/AHP clients for Potential Guide.",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -27,6 +27,7 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@microsoft/agent-host-protocol": "catalog:",
     "yaml": "catalog:"
   },
   "publishConfig": {

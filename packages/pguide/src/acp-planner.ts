@@ -1,4 +1,11 @@
-import { AcpClient, type AgentProfile, CliError } from "@potential-guide/cli-core";
+import {
+  AcpClient,
+  type AgentProfile,
+  CliError,
+  executeAhp,
+  type LegacyAcpAgentProfile,
+  validateAgentProfile,
+} from "@potential-guide/cli-core";
 import {
   levelRank,
   type ObjectiveGoal,
@@ -113,16 +120,47 @@ export function validatePlannerPlan(value: unknown, input: PlannerPolicyInput): 
   return { directives };
 }
 
-export function createAcpPlannerPolicy(
-  profile: AgentProfile,
+export function createAgentPlannerPolicy(
+  candidate: AgentProfile | LegacyAcpAgentProfile,
   cwd: string,
   options: { timeoutMs?: number; signal?: AbortSignal } = {},
 ): PlannerPolicy {
+  const profile = validateAgentProfile(candidate);
   const timeoutMs = options.timeoutMs ?? 30_000;
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2_147_483_647)
     throw new CliError("Planner timeout must be a positive integer.");
   return async (input) => {
     options.signal?.throwIfAborted();
+    if (profile.type === "ahp") {
+      const controller = new AbortController();
+      const signal =
+        options.signal === undefined
+          ? controller.signal
+          : AbortSignal.any([controller.signal, options.signal]);
+      const timer = setTimeout(
+        () => controller.abort(new CliError("AHP planner timed out.", 6, "ahp-error")),
+        timeoutMs,
+      );
+      try {
+        const response = await executeAhp(profile, plannerPrompt(input), cwd, signal, {
+          onSession: async () => undefined,
+        });
+        signal.throwIfAborted();
+        if (response.status !== "completed")
+          throw new CliError(`AHP planner ${response.status}: ${response.summary}`, 6, "ahp-error");
+        if (!response.text?.trim())
+          throw new CliError("AHP planner returned no JSON text.", 6, "ahp-error");
+        let value: unknown;
+        try {
+          value = JSON.parse(response.text);
+        } catch {
+          throw new CliError("AHP planner returned malformed JSON.", 6, "ahp-error");
+        }
+        return validatePlannerPlan(value, input);
+      } finally {
+        clearTimeout(timer);
+      }
+    }
     const controller = new AbortController();
     const signal =
       options.signal === undefined
@@ -139,6 +177,7 @@ export function createAcpPlannerPolicy(
         controller.abort(new CliError("ACP planner output limit exceeded.", 6, "acp-error"));
         return;
       }
+
       const params = notification.params;
       if (
         notification.method !== "session/update" ||
@@ -197,3 +236,5 @@ export function createAcpPlannerPolicy(
     }
   };
 }
+
+export const createAcpPlannerPolicy = createAgentPlannerPolicy;

@@ -18,6 +18,32 @@ interface CheckEnvelope {
   message: string;
 }
 
+test("ACP-only setup reports an AHP selection as unsupported without starting an Agent", async () => {
+  const f = await setup();
+  try {
+    await writeFile(
+      f.subject.configPath,
+      JSON.stringify({
+        ...f.config,
+        agents: {
+          fixture: {
+            type: "ahp",
+            connection: { protocolVersion: "1.0.0", agent: "generic-provider" },
+            transport: { type: "websocket", url: "ws://127.0.0.1:1" },
+          },
+        },
+      }),
+    );
+    const envelope = await f.direct("configuration");
+    assert.equal(envelope.status, 200);
+    assert.equal(envelope.payload?.problems[0]?.id, "acp-unavailable");
+    assert.match(JSON.stringify(envelope.payload), /ACP stdio readiness only/);
+    assert.equal(existsSync(f.log), false);
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
 async function setup(mode = "fix") {
   const f = await fixture();
   const work = join(f.directory, "work");

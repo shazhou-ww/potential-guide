@@ -212,7 +212,7 @@ test("Agent prompts contain the subject, target and every problem, not a selecte
   assert.match(prompt, /"name":"subject"/);
   assert.match(prompt, /Current run authorization: \{"grants":\[\]\}/);
   assert.match(prompt, /request host permission evaluation again/);
-  assert.match(prompt, /do not let you self-authorize or bypass ACP/);
+  assert.match(prompt, /do not let you self-authorize or bypass protocol permission requests/);
 });
 
 test("Agent prompt exposes effective grants without the ungranted administrative ceiling", () => {

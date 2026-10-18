@@ -246,6 +246,10 @@ export interface PermissionDecision {
   readonly request: AuthorizationRequest;
 }
 
+export function unknownPermissionRequest(index: number, reason: string): AuthorizationRequest {
+  return { id: `permission-${index}`, operation: "unknown", resources: [], reason };
+}
+
 export async function createAcpPermissionPolicy(
   value: RegulationPermissions | undefined,
   cwd: string,
@@ -279,12 +283,7 @@ export async function createAcpPermissionPolicy(
   );
   const denied: AuthorizationRequest[] = [];
   const noteDenied = (reason: string) => {
-    const request = {
-      id: `permission-${denied.length + 1}`,
-      operation: "unknown",
-      resources: [],
-      reason,
-    };
+    const request = unknownPermissionRequest(denied.length + 1, reason);
     denied.push(request);
     onDecision({ decision: "denied", request });
   };

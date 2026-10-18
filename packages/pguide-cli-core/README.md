@@ -1,6 +1,6 @@
 # @potential-guide/cli-core
 
-Shared configuration, command protocol, atomic persistence, and ACP client used
+Shared configuration, command protocol, atomic persistence, and ACP/AHP clients used
 by the `pguide` command packages. This package is an implementation component;
 most users should install `pguide` and the desired command packages instead.
 Agent profiles inherit credentials only by environment-variable name; common
@@ -18,6 +18,30 @@ fields are rejected rather than silently changing old periodic recipes.
 Periodic observation and subsequent run scheduling belong to supervisor.
 The generic JSON `digest` utility supports persisted subject integrity;
 production observation identity/version comes from the Git source commit.
+
+`AgentProfile` is the top-level `type: "acp" | "ahp"` discriminated union
+of `AcpAgentProfile` and `AhpAgentProfile`. `validateAgentProfile` returns the
+normalized shape; `parseConfig` normalizes every profile, including valid
+legacy ACP `connection.type` records. New profiles must not repeat the
+discriminator in `connection`. `LegacyAcpAgentProfile` remains accepted by
+the ACP client for source compatibility; it is not a third normalized variant.
+`redactAgentValue` redacts configured environment secrets and sensitive keys.
+
+`executeAhp` uses official SDK 1.0.0 with explicit wire 1.0.0/0.9.0 negotiation,
+WebSocket transport and optional environment-sourced query/resource tokens.
+It validates the provider and canonical Host directory, persists Host-confirmed
+session/default-chat/turn identities through the required `onSession` callback,
+and waits for authoritative turn completion. Callers must provide a bounded
+`AbortSignal` covering the complete invocation and durable persistence before
+the callback resolves. Resume never allocates a replacement or replays an
+uncertain dispatch. `inspectAhp` performs only negotiation/provider/authentication
+diagnosis. Neither function starts/stops a Host or grants permissions.
+`executeAhp` denies standard AHP execution/result confirmations on the wire
+without ending the turn; `onPermission` reports their phase/identity for
+caller-owned safe authorization records, and `permissionDenials` counts them.
+No callback return value can automatically approve a tool. Standard AHP
+metadata lacks an authoritative operation kind and one-use grant semantics.
+See [AHP support and recovery boundaries](../pguide/README.md#ahp-host-support).
 
 ACP profiles keep `connection.protocolVersion: "1"` as a configuration string;
 the client validates a positive safe integer and sends the numeric ACP version

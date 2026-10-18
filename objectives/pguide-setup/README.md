@@ -6,6 +6,10 @@ pguide 和可用 Agent**；subject 描述要安装、配置、验证的目标机
 Agent 根据检查结果和引导、按授权在 B 安装配置前置条件；检查本身不会安装软件、
 修改用户配置或执行真实项目。A 上的安装、认证或成功运行不是 B 就绪的证据。
 省略 `target` 或设置 `{"type":"local"}` 保留旧的本地 bootstrap 行为（A=B）。
+本 Pilot 的就绪检查仍限定 ACP stdio，兼容规范化的顶层 `type: acp` 和合法旧
+`connection.type: acp` 配置。pguide 运行时支持 AHP 不代表本 Pilot 已验证 AHP；
+若所选 profile 是 `type: ahp`，检查明确返回 `acp-unavailable`，不会把它当作
+损坏配置或退回另一个 Agent。
 
 ## 控制 Agent bootstrap（B 还没有 pguide 时）
 
