@@ -29,6 +29,9 @@ export async function ahpHost(
     onTurn?: (prompt: string) => Promise<void>;
     onDenied?: () => Promise<void>;
     permissionInput?: string;
+    chatUri?: string;
+    authorityChat?: boolean;
+    deferredReady?: boolean;
     intercept?: (message: RpcMessage, connection: HostConnection) => boolean;
   } = {},
 ) {
@@ -40,7 +43,8 @@ export async function ahpHost(
   let provider = "";
   let active: Record<string, unknown> | undefined;
   const turns: Record<string, unknown>[] = [];
-  const chatUri = "ahp-chat:/host-default";
+  let chatUri = options.chatUri ?? "ahp-chat:/host-default";
+  let ready = options.deferredReady !== true;
   let requestUrl = "";
   const server = createServer();
   server.on("upgrade", (request, socket) => {
@@ -109,6 +113,8 @@ export async function ahpHost(
       else if (message.method === "authenticate") reply(message, {});
       else if (message.method === "createSession") {
         sessionUri = String(params.channel);
+        if (options.authorityChat)
+          chatUri = `ahp-chat://default/${Buffer.from(sessionUri).toString("base64url")}`;
         provider = String(params.provider);
         directory = String((params.workingDirectories as string[])[0]);
         reply(message, null);
@@ -125,7 +131,7 @@ export async function ahpHost(
         const state =
           channel === sessionUri
             ? {
-                lifecycle: "ready",
+                lifecycle: ready ? "ready" : "creating",
                 provider,
                 workingDirectories: [directory],
                 title: "",
@@ -148,6 +154,10 @@ export async function ahpHost(
       } else if (message.method === "dispatchAction") {
         const value = params.action as Record<string, unknown>;
         if (value.type === "chat/turnStarted") {
+          if (!ready) {
+            ready = true;
+            action(sessionUri, { type: "session/ready" });
+          }
           active = {
             id: value.turnId,
             startedAt: value.startedAt,

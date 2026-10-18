@@ -16,6 +16,8 @@
 
 集成 primary 并发新增的当前权限 ceiling/grants、恢复重载及监督事件链路；标准 AHP 没有可靠 operation/allow-once 语义时，发送官方 deny 并产生 `unknown` 授权请求，不猜测工具名或输入。保留替代执行机会，以新观察证明的进展优先，否则输出 `authorization-required`。
 
+首轮真实部署暴露的兼容修复：用标准 URI 解析校验 `ahp-chat` 身份并原样保存，兼容带 authority 的 default-chat URI；已确认创建且默认 chat 可订阅、provider/目录/归属一致并无执行历史或在途任务时，允许 `creating` 会话的合法首次 turn 触发惰性 backend，不再以先等 `ready` 形成死锁。失败、无效状态和原身份固定规则不放宽。新增回归与官方固定版本证据见 [AHP-Evidence.md](./AHP-Evidence.md)。
+
 ### I-S03: 补齐协议验证与使用说明
 
 增加 AHP 协议交互和失败路径测试，覆盖共享调用链的 ACP 回归，并更新配置、恢复与支持范围文档。

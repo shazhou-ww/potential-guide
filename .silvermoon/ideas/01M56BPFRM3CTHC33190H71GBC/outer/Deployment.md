@@ -10,6 +10,8 @@
 
 在有限执行额度内通过 pguide 驱动真实 VS Code agent session，验证 AHP 修复闭环、取消和原会话恢复，补充一次现有 ACP 使用路径的对照验证。记录可复查且不含敏感信息的证据，明确该结果不代表所有 AHP Host 都已实测。
 
+真实版本、隔离目标、首轮发现及复测结果见 [Verification.md](./Verification.md)。外部环境阻塞与客户端缺陷分开记录；客户端缺陷必须修复并重新验证后才能请求部署验收。
+
 ## Acceptance criteria
 
 ### D-AC01: 真实 AHP 修复达成目标

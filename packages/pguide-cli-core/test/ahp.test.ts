@@ -210,6 +210,208 @@ test("AHP waits for Host completion, saves confirmed identity before dispatch, a
   }
 });
 
+test("AHP Host authority chat URIs persist unchanged and deferred backends accept their first turn before ready", async () => {
+  const host = await ahpHost({ authorityChat: true, deferredReady: true });
+  let identity: AhpSessionIdentity | undefined;
+  const saved: AhpSessionIdentity[] = [];
+  const options = {
+    onSession: async (value: AhpSessionIdentity) => {
+      identity = value;
+      saved.push(value);
+    },
+  };
+  try {
+    assert.equal(
+      (
+        await executeAhp(
+          profile(host.url),
+          "first turn initializes backend",
+          process.cwd(),
+          AbortSignal.timeout(2000),
+          options,
+        )
+      ).status,
+      "completed",
+    );
+    assert.ok(identity?.chatUri);
+    const expectedChat = `ahp-chat://default/${Buffer.from(identity.sessionUri).toString("base64url")}`;
+    assert.equal(identity.chatUri, expectedChat);
+    assert.ok(saved.some((value) => value.chatUri === expectedChat && value.turnId));
+    assert.equal(
+      (
+        await executeAhp(
+          profile(host.url),
+          "resume original chat",
+          process.cwd(),
+          AbortSignal.timeout(2000),
+          { ...options, session: identity, continuing: true },
+        )
+      ).status,
+      "completed",
+    );
+    assert.equal(host.messages.filter(({ method }) => method === "createSession").length, 1);
+    assert.equal(
+      host.messages.filter(
+        ({ method, params }) =>
+          method === "dispatchAction" &&
+          (params.action as { type: string }).type === "chat/turnStarted",
+      ).length,
+      2,
+    );
+    assert.ok(
+      host.messages
+        .filter(
+          ({ method, params }) =>
+            method === "subscribe" && String(params.channel).startsWith("ahp-chat:"),
+        )
+        .every(({ params }) => params.channel === expectedChat),
+    );
+    const before = host.messages.length;
+    for (const chatUri of [
+      "https://default/session",
+      "ahp-session:/not-a-chat",
+      "ahp-chat:relative",
+      "ahp-chat://default/",
+      "ahp-chat://user:secret@default/session",
+      "ahp-chat://default/session?token=value",
+      "ahp-chat://default/session#fragment",
+      "ahp-chat://default/%zz",
+      "ahp-chat://default/with space",
+    ]) {
+      await assert.rejects(
+        executeAhp(
+          profile(host.url),
+          "must not dispatch",
+          process.cwd(),
+          AbortSignal.timeout(1000),
+          { ...options, session: { ...identity, chatUri } },
+        ),
+        /Invalid.*identity/,
+      );
+    }
+    assert.equal(host.messages.length, before);
+    await assert.rejects(
+      executeAhp(
+        profile(host.url),
+        "must not switch chat",
+        process.cwd(),
+        AbortSignal.timeout(1000),
+        { ...options, session: { ...identity, chatUri: "ahp-chat://other/unrelated" } },
+      ),
+      /original\/default chat is unavailable/,
+    );
+    assert.equal(
+      host.messages.filter(
+        ({ method, params }) =>
+          method === "dispatchAction" &&
+          (params.action as { type: string }).type === "chat/turnStarted",
+      ).length,
+      2,
+    );
+  } finally {
+    await host.close();
+  }
+});
+
+test("AHP resumes a confirmed but unstarted creating session without allocating a replacement", async () => {
+  const host = await ahpHost({ authorityChat: true, deferredReady: true });
+  let identity: AhpSessionIdentity | undefined;
+  try {
+    await assert.rejects(
+      executeAhp(profile(host.url), "not sent", process.cwd(), AbortSignal.timeout(1500), {
+        onSession: async (value) => {
+          identity = value;
+          throw new Error("simulated interruption after confirmed create");
+        },
+      }),
+      /simulated interruption/,
+    );
+    assert.ok(identity);
+    assert.equal(identity.chatUri, undefined);
+    assert.equal(identity.turnId, undefined);
+    assert.equal(
+      host.messages.some(({ method }) => method === "dispatchAction"),
+      false,
+    );
+    const modes: string[] = [];
+    assert.equal(
+      (
+        await executeAhp(
+          profile(host.url),
+          "first real send",
+          process.cwd(),
+          AbortSignal.timeout(1500),
+          {
+            session: identity,
+            continuing: true,
+            onSession: async (_value, mode) => {
+              modes.push(mode);
+            },
+          },
+        )
+      ).status,
+      "completed",
+    );
+    assert.ok(modes.every((mode) => mode === "resumed"));
+    assert.equal(host.messages.filter(({ method }) => method === "createSession").length, 1);
+  } finally {
+    await host.close();
+  }
+});
+
+for (const fault of ["failed", "invalid", "provider", "directory"] as const) {
+  test(`AHP deferred session ${fault} does not bypass execution preconditions`, async () => {
+    let directory = "";
+    const host = await ahpHost({
+      deferredReady: true,
+      authorityChat: true,
+      intercept(message, connection) {
+        if (message.method === "resourceResolve") directory = String(message.params.uri);
+        if (
+          message.method !== "subscribe" ||
+          !String(message.params.channel).startsWith("ahp-session:")
+        )
+          return false;
+        const chatUri = `ahp-chat://default/${Buffer.from(String(message.params.channel)).toString("base64url")}`;
+        connection.send({
+          jsonrpc: "2.0",
+          id: message.id,
+          result: {
+            snapshot: {
+              resource: message.params.channel,
+              fromSeq: 0,
+              state: {
+                lifecycle:
+                  fault === "failed" ? "failed" : fault === "invalid" ? "unknown" : "creating",
+                provider: fault === "provider" ? "other" : "generic-provider",
+                workingDirectories: [fault === "directory" ? "file:///other" : directory],
+                defaultChat: chatUri,
+                chats: [{ resource: chatUri }],
+                activeClients: [],
+              },
+            },
+          },
+        });
+        return true;
+      },
+    });
+    try {
+      await assert.rejects(
+        executeAhp(profile(host.url), "do not send", process.cwd(), AbortSignal.timeout(1500), {
+          onSession: async () => undefined,
+        }),
+        /creation failed|invalid session snapshot|differs from the pinned/,
+      );
+      assert.equal(
+        host.messages.some(({ method }) => method === "dispatchAction"),
+        false,
+      );
+    } finally {
+      await host.close();
+    }
+  });
+}
+
 test("AHP diagnosis validates without creating a session and sends only advertised resource credentials", async () => {
   const host = await ahpHost();
   process.env.PGUIDE_AHP_TEST_TOKEN = "fixture-secret";

@@ -254,6 +254,25 @@ export async function inspectAhp(profile: AhpAgentProfile, signal: AbortSignal) 
   }
 }
 
+function validChatUri(value: unknown): value is string {
+  if (typeof value !== "string" || /[\p{Cc}\s\\]/u.test(value) || /%(?![\da-f]{2})/i.test(value))
+    return false;
+  try {
+    const uri = new URL(value);
+    return (
+      uri.protocol === "ahp-chat:" &&
+      uri.pathname.startsWith("/") &&
+      uri.pathname.length > 1 &&
+      !uri.username &&
+      !uri.password &&
+      !uri.search &&
+      !uri.hash
+    );
+  } catch {
+    return false;
+  }
+}
+
 function validIdentity(identity: AhpSessionIdentity, profile: AhpAgentProfile): void {
   if (
     !identity ||
@@ -261,8 +280,7 @@ function validIdentity(identity: AhpSessionIdentity, profile: AhpAgentProfile): 
     !/^ahp-session:\/[^/?#]+$/.test(identity.sessionUri) ||
     typeof identity.workingDirectory !== "string" ||
     !identity.workingDirectory.startsWith("file:") ||
-    (identity.chatUri !== undefined &&
-      (typeof identity.chatUri !== "string" || !/^ahp-chat:\/[^/?#]+$/.test(identity.chatUri))) ||
+    (identity.chatUri !== undefined && !validChatUri(identity.chatUri)) ||
     (identity.turnId !== undefined &&
       (typeof identity.turnId !== "string" || !identity.turnId.trim())) ||
     safeText(JSON.stringify(identity), profile) !== JSON.stringify(identity)
@@ -502,7 +520,13 @@ export async function executeAhp(
     monitor(sessionSubscription.subscription, snapshot, "session");
     await waitFor(() => {
       if (sessionState?.lifecycle === "failed") throw new Error("AHP session creation failed.");
-      return sessionState?.lifecycle === "ready" ? true : undefined;
+      const chat = identity?.chatUri ?? sessionState?.defaultChat;
+      return sessionState?.lifecycle === "ready" ||
+        (sessionState?.lifecycle === "creating" &&
+          chat &&
+          sessionState.chats.some(({ resource }) => resource === chat))
+        ? true
+        : undefined;
     });
     if (
       sessionState.provider !== profile.connection.agent ||
@@ -526,6 +550,10 @@ export async function executeAhp(
     const chat = chatSubscription.result.snapshot;
     if (!chat) throw new Error("AHP chat snapshot is missing.");
     monitor(chatSubscription.subscription, chat, "chat");
+    if (sessionState.lifecycle === "creating" && chatState.turns.length > 0)
+      throw new Error(
+        "AHP creating session already has turn history; wait for backend readiness before another execution.",
+      );
     if (
       chatState.workingDirectories !== undefined &&
       (chatState.workingDirectories.length !== 1 ||

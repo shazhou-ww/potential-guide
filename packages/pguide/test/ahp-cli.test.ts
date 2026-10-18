@@ -121,6 +121,8 @@ test("AHP CLI closes the observation loop, pins its recipe, and skips all sessio
   let prompt = "";
   let savedBeforeRepair = false;
   const host = await ahpHost({
+    authorityChat: true,
+    deferredReady: true,
     onTurn: async (text) => {
       prompt = text;
       const [id] = await readdir(join(state, "regulations"));
@@ -252,6 +254,10 @@ import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);proces
     const path = join(state, "regulations", report.regulationId, "regulation.json");
     const original = JSON.parse(await readFile(path, "utf8"));
     assert.equal(original.agentProfile.type, "ahp");
+    assert.equal(
+      original.ahpSession.chatUri,
+      `ahp-chat://default/${Buffer.from(original.sessionId).toString("base64url")}`,
+    );
     assert.equal(original.attempts[0].observations.length, 2);
     const calls = host.messages.length;
     const satisfied = await run(bin("continue"), [

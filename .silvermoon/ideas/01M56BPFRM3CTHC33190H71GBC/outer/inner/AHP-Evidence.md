@@ -14,7 +14,7 @@
 | --- | --- |
 | [Lifecycle](https://github.com/microsoft/agent-host-protocol/blob/1ef0642965efaa7ef98caff287bca923fbc80ec6/docs/specification/lifecycle.md) / [Versioning](https://github.com/microsoft/agent-host-protocol/blob/1ef0642965efaa7ef98caff287bca923fbc80ec6/docs/specification/versioning.md) | `initialize` 使用版本列表与 root subscription；不将产品名/产品版本当作能力。禁用自动 reconnect/副作用重发。 |
 | [Transport](https://github.com/microsoft/agent-host-protocol/blob/1ef0642965efaa7ef98caff287bca923fbc80ec6/docs/specification/transport.md) / [Authentication](https://github.com/microsoft/agent-host-protocol/blob/1ef0642965efaa7ef98caff287bca923fbc80ec6/docs/specification/authentication.md) | endpoint 认证不是通用 bearer wire 字段。用显式 query 参数加环境变量；protected-resource token 仅发送给选中 Agent 已公布的 resource。 |
-| [CreateSessionParams](https://github.com/microsoft/agent-host-protocol/blob/5f16d81bb7045b66d7bc768d244feab75002d943/types/channels-session/commands.ts) / [Session channel](https://github.com/microsoft/agent-host-protocol/blob/1ef0642965efaa7ef98caff287bca923fbc80ec6/docs/specification/session-channel.md) | session URI 由客户端选择，但 Host `createSession` 成功才确认存在。保存该确认身份，等待 `ready`，使用 Host 的 default chat，不伪造 session ID，也不擅自创建替代 chat。 |
+| [CreateSessionParams](https://github.com/microsoft/agent-host-protocol/blob/5f16d81bb7045b66d7bc768d244feab75002d943/types/channels-session/commands.ts) / [Session channel](https://github.com/microsoft/agent-host-protocol/blob/1ef0642965efaa7ef98caff287bca923fbc80ec6/docs/specification/session-channel.md) | session URI 由客户端选择，但 Host `createSession` 成功才确认存在。保存该确认身份，使用 Host 的 default chat；支持已确认创建、chat 已可订阅但 backing 尚待首次发送才初始化的 `creating` 状态，不伪造 session ID，也不擅自创建替代 chat。 |
 | [Chat actions](https://github.com/microsoft/agent-host-protocol/blob/5f16d81bb7045b66d7bc768d244feab75002d943/types/channels-chat/actions.ts) / [Chat channel](https://github.com/microsoft/agent-host-protocol/blob/1ef0642965efaa7ef98caff287bca923fbc80ec6/docs/specification/chat-channel.md) | 执行使用 `chat/turnStarted`，等待同一 turn 的 Host terminal action；取消使用 `chat/turnCancelled`。恢复通过 session/chat subscribe，不套用 ACP `session/load`。 |
 | [ResourceResolveParams](https://github.com/microsoft/agent-host-protocol/blob/5f16d81bb7045b66d7bc768d244feab75002d943/types/common/commands.ts) | 将 CLI cwd 作为 Host 可理解的 file URI；Host 解析 canonical directory 后核对 session/chat 执行范围，不自动映射远程路径或改用其他工作区。 |
 | [SDK client](https://github.com/microsoft/agent-host-protocol/blob/5f16d81bb7045b66d7bc768d244feab75002d943/clients/typescript/src/client/client.ts) | 复用官方 request/subscribe/dispatch 和 reducers；其默认 malformed-frame warning 会包含解析错误，因此增加有界严格传输包装，坏帧显式断开，不输出原始 payload。 |
@@ -23,7 +23,7 @@
 
 - 顶层 `AcpAgentProfile | AhpAgentProfile`；合法旧 ACP 配置和 schema 2 恢复记录规范化后仍保持原语义，不接受任意缺失 selector 的配置或新旧位置同时声明。
 - `authentication: {type: query-token, parameter, tokenEnv}` 是传输层环境引用；`{type: none}` 或省略表示传输已受保护。可选 `resources` 对应官方 `authenticate`，不会替用户获取/复制认证或自动批准工具。
-- 所选 provider 必须在 root catalogue；Host 必须实现目录解析、session 创建、ready/default-chat、订阅和标准 turn 生命周期。方法/身份/目录/权限不可用均明确失败，不按 VS Code 名称分派。
+- 所选 provider 必须在 root catalogue；Host 必须实现目录解析、session 创建、default-chat、订阅和标准 turn 生命周期。`creating` 的已确认初始会话可由首次 turn 初始化 backing；failed/无效状态及其他方法/身份/目录/权限不可用均明确失败，不按 VS Code 名称分派。
 - 恢复记录固定 profile、subject、Pilot commit、原 canonical directory、session/chat 与上次 turn ID。已有身份丢失、当前有活动/排队/后台任务或旧 dispatch 没有可确认的 terminal turn，均拒绝自动重放。
 - 仍需修复才创建/恢复会话；确认目标达成只来自下一次 observation。Agent 的文本自报完成不是目标证据。
 - deadline 覆盖连接、握手、目录/认证和执行；中断后只请求取消本次拥有的 turn，最多额外等待 250 ms 收集确认。transcript 的 `pguide/ahp-interruption` 区分 `cancellationSent`、`remoteStopConfirmed` 与 `executionState`。无确认时保留不确定状态，不声称远端已停。
@@ -33,12 +33,23 @@
 
 ## 自动验证
 
+### 首轮真实 Host 暴露的兼容修复
+
+父会话在独占 VS Code Host 上已协商 wire `1.0.0` 并成功创建会话，但客户端等待 `ready` 超时。真实 `defaultChat` 使用 `ahp-chat://default/<base64url-session>`，而非测试最初只覆盖的单路径形式；Host 日志同时明确 backing 直到 first send 才 materialize。父会话完成 resource authentication 后仍为 `creating`，因此没有把这两个客户端问题归因于 token 或网络，也没有增大 timeout 掩盖它们。真实复测仍由父会话拥有的 Outer 文档记录。
+
+固定官方来源为已安装版本 commit `6d62b1d5dace93a33b3a6d3eca1317bd5e15bcb1`：
+
+- [buildChatUri / buildDefaultChatUri / parseChatUri](https://github.com/microsoft/vscode/blob/6d62b1d5dace93a33b3a6d3eca1317bd5e15bcb1/src/vs/platform/agentHost/common/state/sessionState.ts) 明确将 chat ID 放入 authority，将完整 session URI 编码放入 path。SDK 的 `URI` 是 string 且未公开该 Host helper，因此通用适配器采用标准 URL 解析验证 `ahp-chat:` scheme/非空绝对路径，保留原字符串；拒绝其他 scheme、凭据、query/fragment、空路径、控制字符和坏百分号转义，不复制产品专属编码规则或增加产品依赖。
+- [AgentHostStateManager](https://github.com/microsoft/vscode/blob/6d62b1d5dace93a33b3a6d3eca1317bd5e15bcb1/src/vs/platform/agentHost/node/agentHostStateManager.ts) 的 provisional-session 说明明确 first turn 可早于 materialization；[AgentSideEffects](https://github.com/microsoft/vscode/blob/6d62b1d5dace93a33b3a6d3eca1317bd5e15bcb1/src/vs/platform/agentHost/node/agentSideEffects.ts) 在 turn preparation/send 阶段初始化 deferred session。客户端只在创建已确认、原/default chat 属于该 session 且可订阅、provider/目录一致、无 turn 历史和在途/排队/后台工作时授权合法首次 dispatch。`creationFailed`、无效状态、历史 dispatch 不确定性和原身份固定检查保持有效。
+- 新测试 Host 在首次 `chat/turnStarted` 前永不发 `session/ready`，以同一协议形态复现原死锁；测试覆盖 authority URI 原样持久化/恢复、错误 scheme/坏 URI 拒绝、有效但非成员 chat 拒绝，以及 deferred 会话的 failed/invalid/provider/directory 故障不发送请求。另验证先前只保存了已确认 session、尚无 chat/turn ID 的 `creating` 记录能恢复原会话并发送首次 turn，不新建替代。CLI 闭环和 continue 也改用 authority chat 与 deferred backing 的替身，仍需重新观察证明修复。
+- 定向命令 `pnpm exec tsx --test packages\pguide-cli-core\test\ahp.test.ts packages\pguide\test\ahp-cli.test.ts`：39/39 通过，0 失败，0 跳过。最终 `pnpm check` 退出 0。一次完整运行遇到既有 ACP setup 的进程退出时序断言，未更改无关代码或测试，完整重跑通过。修复未连接真实 Host、未读取认证、未修改 Ideal/Outer/events，也未提交；当前 Inner 修订应重新审查。
+
 - 父会话在冲突集成完成后独立执行 `pnpm exec tsx --test packages\pguide-cli-core\test\ahp.test.ts packages\pguide\test\ahp-cli.test.ts packages\pguide-cli-core\test\config.test.ts packages\pguide-config\test\config-command.test.ts packages\pguide\test\acp-permissions.test.ts`：58 个测试，57 通过、0 失败、1 个 Windows symlink 权限预期跳过，退出 0。覆盖新旧配置、编辑保存、恢复与拒绝重放、逐字节上限、握手取消、官方拒绝动作及 ACP 权限回归。
 
 - 定向 ACP setup 回归：`pnpm exec tsx --test packages\pguide\test\setup-objective.test.ts`，22/22 通过，0 失败。
 - 定向 ACP planner/supervisor 回归：`pnpm exec tsx --test packages\pguide\test\supervisor-cli.test.ts`，12/12 通过，0 失败。
 - 最终 `pnpm check` 退出 0：format、8 个 workspace 的 lint/typecheck/test、根脚本测试、build 和 8 个包的 pack 检查全部成功。Biome 仍报告既有 warning，不含阻断错误。
-- 集成 primary 权限功能后的最终完整测试汇总：261 个测试，259 通过，0 失败，2 个 Windows 平台预期跳过（`real-path deduplication follows platform case sensitivity` 与创建文件 symlink 所需平台权限不足）。workspace 分项：cli-core 49/49、config 6/6、effects 12/12、git-source 15/15、objective-pilot 23/23、objective-regulator 38/38、objective-portfolio-supervisor 31/31、pguide 74 通过/2 跳过；另有根 scripts 11/11。
+- 两项真实兼容修复后的最终完整测试汇总：267 个测试，265 通过，0 失败，2 个 Windows 平台预期跳过（`real-path deduplication follows platform case sensitivity` 与创建文件 symlink 所需平台权限不足）。workspace 分项：cli-core 55/55、config 6/6、effects 12/12、git-source 15/15、objective-pilot 23/23、objective-regulator 38/38、objective-portfolio-supervisor 31/31、pguide 74 通过/2 跳过；另有根 scripts 11/11。
 - AHP 协议、CLI 闭环/恢复、共享 planner/worker 与配置编辑使用实际 WebSocket JSON-RPC 替身。协议测试精确验证 4,194,304 字节允许、4,194,305 字节拒绝；握手和初始化均受取消期限覆盖，坏帧不泄露原文。
 - CLI 合成目标验证完整两个 problem 及 scope 参数抵达 Agent、Host 身份和 turn ID 在请求前持久保存、完成后重新观察、目标已满足不触碰会话、当前配置改变不覆盖原配方。Agent 仅自报成功而目标未变时仍为 `exhausted`。
 - 权限等价集成自动验证：deny-all、表面匹配的显式 grant、结果确认和拒绝后的替代进展四个 CLI 场景均通过。实际捕获官方 `approved: false` action，断言没有任何 approve、持久记录安全 `unknown` 授权请求与 denial 事件、执行后重新观察；没有进展时 `authorization-required`，替代修复得到观察证明时 `target-reached`。既有 ACP allow-once、精确资源/命令、symlink、恢复权限重载和监督反馈测试完整保留。

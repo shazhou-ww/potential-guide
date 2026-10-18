@@ -244,7 +244,7 @@ tools/input requests. Host-owned existing authentication may be sufficient;
 never be placed in the profile, command line, recovery record or evidence.
 
 The Host must advertise the selected provider, implement `resourceResolve`,
-accept `createSession` with one working directory, expose a ready session with
+accept `createSession` with one working directory, expose a confirmed session with
 its default chat, and support session/chat `subscribe`, `dispatchAction` and
 the standard turn lifecycle. AHP has no ACP-style `loadSession` capability:
 resume is subscription to the original retained session and chat, validated
@@ -270,6 +270,16 @@ to the original identities only if repair is still necessary. Missing sessions,
 changed providers/directories, active/queued/background execution or a previous
 dispatch without a retained terminal turn fail closed. No replacement chat,
 session or automatic reconnect/replay is attempted after an uncertain dispatch.
+
+Host chat URIs remain exact identities, including authority forms such as
+`ahp-chat://default/<encoded-session>`; the adapter validates the URI scheme
+without rewriting it or requiring a UUID-only path. Session catalogue membership
+and the pinned original identity are still required. Some Hosts leave a confirmed
+session in `creating` until the first send materializes its backend. A subscribable
+default chat with verified provider/directory, no turn history and no active,
+queued or background work can accept that initial turn without first waiting for
+`ready`. Failed/invalid lifecycle states still fail explicitly; readiness is not
+used to bypass any execution-context or recovery checks.
 
 Only a Host-confirmed terminal turn completes an invocation. Agent text is not
 target evidence: the Regulator always re-observes. Errors and unexpected turn
