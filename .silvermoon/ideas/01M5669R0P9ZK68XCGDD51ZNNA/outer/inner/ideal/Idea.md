@@ -1,21 +1,21 @@
-# 建立设备级 pguide setup Objective
+# 从控制端配置目标设备的 pguide
 
 ## 问题
 
-安装命令成功或配置文件存在不能证明设备能够实际运行 pguide。首次接入缺少统一的观测、修复指引和端到端验收，也容易陷入先配置 pguide 才能执行 setup 的循环。
+待配置设备不能依赖尚未就绪的 pguide 自行执行 setup regulation。真实 Copilot 试用还暴露 ACP 协议参数不兼容，已有测试替身未能证明真实设备可用。
 
 ## 结果
 
-在本仓库提供可通过 Git 子目录引用的 setup Objective，指导当前用户完成安装、Agent 配置和隔离的真实 sanity check，只有经过观测确认可用才达到 terminal。
+setup Objective 明确区分已就绪控制端和目标设备：控制端 Agent 驱动目标设备安装、配置与本机 sanity，并用目标设备证据判定就绪。修复真实 ACP 接入并配置当前设备，建立可用控制端。
 
 ## 边界
 
-- MVP 针对当前设备、当前用户；不新增 pguide setup 命令，不进行本机全局安装或 npm 发布。
+- 保留本地 bootstrap，新增明确 SSH 目标边界；不新增 pguide setup 命令，不连接未指定远端、不发布 npm。
 - 优先复用执行 setup 的 Agent 的可用 ACP 入口和已有认证；没有 ACP 入口时明确说明，不复制秘密或自动申请付费资源。
-- 检查不擅自修复设备；sanity check 仅在明确允许时使用有界额度和隔离目录，不修改真实项目。
+- 用户授权本机配置；保留现有用户设置，sanity 仅使用隔离目标和有限额度，不修改真实项目。远端凭据不从控制端复制。
 
 ## 验收标准
 
-- manifest、检查程序及指引在仓库子目录中独立可用，未安装时也有外部 Agent 可执行的 bootstrap 指引。
+- manifest、检查程序及指引区分执行端和目标设备，远端 Node/bootstrap 准入失败明确返回，不误用控制端的配置或成功证据。
 - 缺少安装、错误配置、不可用 ACP 和未通过 sanity 均可观察为明确问题，不能只凭 help 或 Agent 自报成功判为就绪。
-- 通过已配置的 Agent 完成隔离的 detect-repair-recheck，确认正确结果并清理资源；自动测试和实际 Git 子目录加载验证通过。
+- 数字 ACP wire 版本兼容真实 Copilot；本机持久配置经真实 Agent 隔离修复验证，远端通道通过自动测试验证但不冒充真实远端验收。

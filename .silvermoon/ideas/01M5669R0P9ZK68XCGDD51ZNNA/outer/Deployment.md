@@ -1,8 +1,8 @@
 # Deployment
 
-本次交付为 primary 中可被 Git 子目录引用的 setup Objective，不包含 npm 发布或对当前用户设备进行全局配置。
+本次交付为修订后的 setup Objective 及当前用户可用的本机 pguide 配置，不发布 npm，也不连接未指定的远端设备。
 
-交付结果及验证范围见 [setup Objective 交付证据](./Verification.md)。
+此前交付结果见 [历史交付证据](./Verification.md)，本次修订的本机真实接入需另行验证。
 
 ## Steps
 
@@ -12,7 +12,7 @@
 
 ### D-S02: 验证安装产物与隔离运行
 
-执行现有安装产物验证，并使用本地 ACP 测试替身验证 setup 的端到端行为，记录范围和结果。
+验证现有安装产物并在本机运行真实 Copilot sanity，记录持久配置位置、执行结果和限制。
 
 ## Acceptance criteria
 
@@ -22,4 +22,4 @@
 
 ### D-AC02: 交付验证通过
 
-pnpm deployment:verify 及 setup 隔离集成验证成功，明确测试替身不等同于本机真实 Agent 已认证或配置完成。
+安装产物验证与本机真实 Agent 隔离 sanity 成功；远端只声明通道测试，不宣称未知设备已配置。
