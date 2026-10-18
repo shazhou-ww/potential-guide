@@ -61,11 +61,38 @@
 
 这证明原 profile 和协议调用链仍可使用，并保留授权边界；它不是该工具权限形式已获支持或真实目标已修复的证明。ACP 的既有配置、精确权限和恢复行为另有完整自动回归。
 
+## 2026-10-18 晚间继续部署
+
+按用户继续推进的要求，在 `880c6084e9eb6cc535b536e0929c4715ba4c9723` 候选上重新创建独占 loopback Host，仍使用 VS Code Agent Host `1.142.0`、真实协商 wire `1.0.0` 和 `copilotcli` provider。没有复用已停止的旧 endpoint，也没有接管 editor Host。
+
+本轮不向 Host 注入 GitHub CLI 的 resource token，而是使用 provider 已有的登录；没有切换账户、购买额度、复制登录凭据或改变用户配置。真实 Agent 已产生工具调用，因此本轮没有再现前次的 quota 错误。subject 同时明确给出了目标文件、精确内容和唯一允许的修改，避免将缺少测试指令误判为产品问题。
+
+| 项目 | 本轮真实证据 |
+| --- | --- |
+| Regulation | `7ea22cf9-d23b-4cbe-b79e-7207046e5a61` |
+| Session | `ahp-session:/09e111e8-75e5-4c4a-a8d9-364bf9e8a085` |
+| Turn | `e4075683-db7d-4322-a35f-08b7d35e9b38` |
+| 实际请求 | Agent 尝试创建隔离 workspace 内的 `ready.txt`，Host 发出真实文件创建确认 |
+| 当前显式权限 | 仅为该 `ready.txt` 设置 `operation: edit` ceiling 与 grant，不包含其他路径或执行权限 |
+| 安全结果 | 客户端发送拒绝，保存 `operation: unknown`、`reason: unsupported-ahp-operation-and-once-semantics`；Agent 结束后重新观察 |
+| CLI 与目标 | `authorization-required`，退出 3；`ready.txt` 仍不存在，没有报告 `target-reached` |
+
+### 权限阻塞的核验
+
+真实确认带有 native `edits.items[].after.uri` 预览，以及 `Allow in this Session` / `Allow Once` / `Skip` 选项，但这些显示内容不能单独证明完整操作范围或供通用客户端信任的单次授权契约。实际 `_meta.permissionRequest` 只有 `diff`，没有可靠的 operation kind 或完整资源声明。
+
+核对与安装版本固定一致的官方源码：
+
+- [permission metadata reader](https://github.com/microsoft/vscode/blob/6d62b1d5dace93a33b3a6d3eca1317bd5e15bcb1/src/vs/platform/agentHost/common/meta/copilotd/agentPermissionRequestMeta.ts) 明确将 raw permission metadata 定位为可随实现变化的兼容/展示桥接，而非稳定协议契约；其 `withPermissionDiff` 也解释了本次只出现 diff 的形状。
+- [shared metadata reader](https://github.com/microsoft/vscode/blob/6d62b1d5dace93a33b3a6d3eca1317bd5e15bcb1/src/vs/platform/agentHost/common/meta/agentPermissionRequestMeta.ts) 不能为这个实际请求补出缺失的可靠操作类别。
+
+因此不能根据工具名、文件预览、选项标签或 opaque option ID 推断批准，也不能通过放宽客户端、开启 session-wide 自动批准或手动代写目标文件来通过测试。本轮确认当前主要阻塞已经从额度转为真实文件写入的安全授权能力，仍不满足 D-AC01。
+
 ## 当前门限与恢复条件
 
 - D-S01：真实环境与隔离边界已建立。
 - D-AC02：真实原 session/chat 恢复和 owned turn 取消回执已验证；自动测试另覆盖迟到状态隔离。
 - D-AC03：已有 ACP 配置完成真实对照调用，无需迁移，结果与授权不足明确区分。
-- D-S02 / D-AC01：仍未完成。真实 AHP 修复被账户月额度阻止，`ready.txt` 不存在，不能通过部署验收。
-- 不记录 `submitOuter` 或 `acceptOuter`。恢复条件是账户已有可用额度/授权后，在同样的隔离目标和固定候选上重跑完整修复，确认新 observation 达到目标；不自行购买额度、切换账户、扩大权限或重复消耗调用。
+- D-S02 / D-AC01：仍未完成。本轮真实 Agent 已到达文件创建，但缺少能安全执行当前精确 grant 的可靠权限契约，`ready.txt` 不存在，不能通过部署验收；前次 quota 错误不再作为本轮当前阻塞。
+- 不记录 `submitOuter` 或 `acceptOuter`。恢复需要真实 Host 提供经核验的结构化操作/资源与单次批准语义，或先明确设计并审批独立的人工逐次授权流程，再重新运行完整修复闭环；不能以已有文件 grant 为由猜测未声明的权限。保持现有通用 AHP 拒绝未知请求的边界，不自行扩大权限或反复消耗调用。
 - 验证结束后已停止独占 Host，并确认其 PID 消失、loopback 端口关闭，临时连接 token 已删除。没有停止共享 editor Host。恢复时需重新准备明确授权的 Host；不得把已停止的 endpoint 当作仍可恢复的运行环境。
