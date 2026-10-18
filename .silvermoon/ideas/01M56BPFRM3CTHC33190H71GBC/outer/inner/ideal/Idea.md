@@ -8,6 +8,8 @@
 
 用户可配置 VS Code AHP Agent 执行 Regulator 修复，并在同一观察、执行、再观察闭环中获得可恢复的会话与明确结果。
 
+具体场景、行为约束与验证用例见[需求文档](./Requirements.md)。该文档细化本契约，不另行定义生命周期或验收入口。
+
 ## 边界
 
 - 保留 ACP 行为与协议无关的 Regulator 核心；本次不把 Regulator 改造成 AHP 服务端。
