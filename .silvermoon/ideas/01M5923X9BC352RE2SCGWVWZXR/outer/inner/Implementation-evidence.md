@@ -155,3 +155,21 @@ strategy.test.ts:161 预期 503、实际 408。其他被 Turbo 终止的测试�
 - `pnpm exec biome check packages\pguide\test\setup-objective.test.ts` 退出 0。
   未运行完整 `pnpm check`；独立复测及全部门禁仍由主会话负责。
   未提交、push 或发布；未修改 ledger/events/ideal/outer，代码保持未提交。
+
+### 主会话最终 CI 门禁
+
+主会话独立复查两项新测试的断言及变更范围；Node 24 的 quota 定向用例和
+Node 22 的完整 regulator 38 项实际通过。候选提交
+`0741d143e502c0918a563527c9a4663b29bb6ef1` 已进入 primary。
+因其他会话持续同步文档导致 main CI 反复取消，主会话以同一提交的独立 validation ref
+运行现有 CI，不修改 workflow 的矩阵或跳过任何检查。
+
+[CI 39199404501](https://github.com/shazhou-ww/potential-guide/actions/runs/39199404501)
+完整成功，5/5 jobs：Node 22.13.0 / 24.11.1 的 pnpm check，
+Windows / Ubuntu / macOS 的 packed entry-only 独立消费者。真实 registry 模式仍未执行。
+此前 39198388317 等因 main 文档并发而取消的运行不计作成功；39197422086 的失败保留。
+
+主会话最终本地 `pnpm check` 也完整退出零：CLI 79 项，78 通过、0 失败、
+0 取消、1 个既有平台跳过；format、lint、typecheck、根脚本与八包 pack 均通过。
+同步至 cbde95f 仅增加其他 Idea 文档；与 CI 提交相比 packages / scripts /
+objectives / .github 的树无差异。I-S01 / I-AC01 据本地结果及完整成功矩阵重新完成。
