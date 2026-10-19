@@ -279,4 +279,52 @@ docker exec -it pguide-agent-keychain-1ce0ed16 /harness/keychain-unlock.sh
 
 容器基础镜像和原 provenance 保持不变，不冒称重新构建；公开代码热修的独立记录在 `/harness/runtime-overlay.json`，会话中保留同名安全副本。未复制或修改 HOME/keyrings，后续重建使用仓库修正后的 helper。
 
-当前真实用户集合存在但 locked，需要用户用同一口令再次运行上一节相同的交互解锁命令，不需要重新设置或向 Agent 提供口令。确认持续 unlocked 后才重启官方设备授权；本轮没有产生新设备码或模型请求。完整 pnpm check 退出 `0`：373 项报告，371 通过、2 项已有跳过、0 失败；根脚本 24 项和 monorepo 34 项实际执行，其余十一 workspace 测试使用缓存。I-S03、I-AC03 保持未完成。
+该修复发布时，真实用户集合存在但 locked，需要用户用同一口令再次运行上一节相同的交互解锁命令，不需要重新设置或向 Agent 提供口令。确认持续 unlocked 后才重启官方设备授权；修复验证本身没有产生新设备码或模型请求。完整 pnpm check 退出 `0`：373 项报告，371 通过、2 项已有跳过、0 失败；根脚本 24 项和 monorepo 34 项实际执行，其余十一 workspace 测试使用缓存。后续登录和真实验证以下节为准。
+
+## 已认证真实 Agent 基线通过与正式自查预算
+
+用户再次完成交互解锁后，主会话独立确认同一容器、同一 Secret Service owner 下集合持续 unlocked，再启动官方设备授权。用户完成浏览器操作后，登录进程退出 `0`，明确返回 Signed in successfully，而非此前 token 未保存的失败。临时设备码不写入仓库。后续仅查询集合 Items 元数据确认存在条目，不读取任何 secret 值、token、认证文件、keyring 文件或用户口令。
+
+### 真实模型可用性已实测成立
+
+先执行一次零 prompt 的 discover，成功返回模型元数据；它仍只记为 discovered，不作为通过。随后使用本账号实际列出的 `gpt-5-mini`，在同一容器中执行唯一一次真实 baseline：
+
+| 检查 | 实际结果 |
+| --- | --- |
+| baseline | `/work/runs/real-agent-lHBDqi/baseline.json` |
+| 状态 / 退出码 | `ready` / `0` |
+| requested / selected model | 均为 `gpt-5-mini` |
+| prompt / deniedRequests | `1` / `0` |
+| 独立随机 marker / task 清理 | 均为 `true` |
+| initialize / session-new | 启动后 `4149 ms` / `9533 ms` |
+| prompt 正常完成 / 总时长 | 启动后 `27435 ms` / `27482 ms` |
+| prompt 发出至完成 | 约 `17902 ms` |
+| marker SHA-256 | `08bdc0ff666b166ca5aa231ac6ff6c26aef972892dd9c1f5256f4331afa96e71` |
+
+runner 使用真实官方 CLI，不是 ACP fixture；只有显式 end_turn、没有拒绝且独立读取随机文件准确匹配才能 ready。传给 ACP 的环境仅为容器自己的 HOME、私有 D-Bus 和 runtime 地址，没有转交宿主 SDK 或 GitHub token。原始安全报告副本为会话文件 `authenticated-agent-baseline.json`。这次证据确认 `gpt-5-mini` 在本次认证、用户和入口下确实可调用并完成修复；不把该结论推广为永久可用或所有设备可用，也不把此前超时归因为模型一定不存在。
+
+### 真实 baseline 开门后的完整 pguide probe
+
+后续验证先核对上述 ready、模型匹配、唯一 prompt、无拒绝、清理结果和容器源码一致，不因登录或模型列表成功就跳过门线。使用容器中已安装 `pguide 0.4.0-rc.0`、源码 `e4e84fd9b09d95bfd9e652dd432c1342bc7c79da` 对应的 Objective 精确 revision `a90a62c9363b70993188f7deb5f23eaf0d2deeff`，保持正式 `timeoutMs: 24000` 不变。
+
+第一轮完整 probe 返回 Envelope 200、停在 installed/configuration、problem 为 environment-unavailable；prompt 数为 `0`。原因是 Git probe 隔离环境未继承 D-Bus/runtime 变量，不能把外层会话成功沿用为内层可用。
+
+本轮未扩大 Git probe 的全局环境白名单。仅调整这个容器操作员控制的本地 ACP 启动器：profile 只引用 HOME，启动器对固定 `/work/runtime` 校验 canonical 路径、当前 UID、0700 权限，以及 bus 为同一 UID 所有的 Unix socket，再显式为真实 Copilot 设置该私有地址。没有复制认证文件、注入 token、改 keychain 或扩展文件/shell/URL 权限；marker 仍只授权本次绝对文件路径。该配置条件变化前没有发送模型请求，不是在同一条件下自动重试。
+
+调整后只执行一次完整真实 probe，证据目录 `/work/runs/real-self-check-jtuR17`：
+
+- configuration 的真实 session/new 成功，sanity 的唯一修复会话也确认模型匹配。
+- sanity initialize 在启动后 `8822 ms` 完成，session/new 在 `13421 ms` 完成，唯一 prompt 于 `13422 ms` 发出。
+- `19898 ms` 因剩余预算发送 cancel，prompt 实际等待约 `6476 ms`；没有 end_turn 或独立文件修复成功证据，没有权限请求。
+- 命令退出码 `6`，Envelope 为 `504`、空 payload、`timeout: direct Agent exceeded its deadline.`，不能称为 terminal，也没有成功版本投影。
+- 独占 scratch 全部删除，只保留预先放置的无关 keep.txt；没有额外模型重试、换模型、扩权或延长 Pilot 预算。
+
+原始 verification 与无秘密方法审计保留在容器对应 run，安全副本分别为会话文件 `authenticated-self-check-report.json`、`authenticated-self-check-audit.jsonl`；环境阻断的零 prompt 报告为 `authenticated-self-check-environment.json`。验证器只透传真正的 ACP 消息，不合成完成响应；公开源文件留在会话的 `validate-real-container-self-check.mjs`，临时容器入口随后定向清理，不触碰 HOME 或认证存储。
+
+### 当前结论与下一决策
+
+认证和真实模型修复能力现已成立；当前正式自查仍受 24 秒总预算限制，不能以 120 秒 baseline 的 ready 冒充原标准通过。基线完整运行约 27.5 秒，正式 sanity 的本次 startup 又消耗约 13.4 秒，明确说明预算需要与真实启动和清理成本一起评估；尚不承诺固定延长值能覆盖所有时延。
+
+已提出仅增加显式可配置的较长预算、保留现有默认值并强制协调内外期限及清理余量的选择，未获得用户答复。因此保持当前行为，不修改 manifest、默认预算或正式通过条件。下一步等待这项行为决策，再按被接受的契约实现与复验。I-S03、I-AC03 继续未完成，不 submitInner、不请求实现或交付验收；已经通过的真实 Agent baseline 作为可复用环境证据保留。
+
+本轮发布前 pnpm check 再次退出 `0`（373 项报告、371 通过、2 项已有跳过）；实际执行根脚本 24 项与 monorepo 34 项，其余十一 workspace 测试复用缓存。主会话另直接读取容器 baseline 和正式 probe 报告，核对真实 ready、模型、一次 prompt、独立 marker 结果，以及正式 probe 的 504、非 terminal、scratch sentinel 保留。没有重复模型请求来确认已有结果。

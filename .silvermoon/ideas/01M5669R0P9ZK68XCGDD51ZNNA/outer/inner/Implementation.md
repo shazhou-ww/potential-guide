@@ -38,6 +38,8 @@ Pilot 单项默认 20 秒，subject 上限 24 秒，为默认 30 秒 probe 留�
 
 按用户后续要求，已同步最新代码并新增独立真实 Agent Docker 基线，先证明 Agent 能正常完成隔离文件任务，再进行后续 pguide 自查；不再把模型目录或握手视为模型可用。既有默认无凭据 fixture 镜像保持不变，另有显式 real-agent target 安装固定 Copilot CLI，以容器内正常登录获得独立认证，不复制宿主 token、HOME 或用户配置。只有真实任务明确 end_turn、没有权限拒绝、随机 marker 经独立核验且清理成功才能返回 ready；120 秒诊断基线不修改 24 秒 Pilot 限制，也不替代 terminal。首次浏览器授权成功，但 CLI 未保存 token。用户随后选择 keychain，现已构建并保留标准 Secret Service 环境；加密存取、错误口令拒绝和锁定/解锁均有容器实测。用户初始化集合后发现 daemon 未持续保持，已修正终端生命周期，并通过真实 PTY 及独立 docker-exec 后的持续解锁回归；原容器仅覆盖两个公开 helper，不重启、不复制或重置用户 keyring。当前等待同一口令重新解锁，再完成官方登录，见 [Docker 验证](./Docker-validation.md)。最终 pnpm check 通过（373 项报告，371 通过、2 项跳过）；I-S03、I-AC03 仍未完成。
 
+随后用户完成解锁和官方设备授权，登录成功且独立 ACP 会话可用；同一容器的 `gpt-5-mini` 真实 baseline 已 ready，唯一随机文件修复经独立核验成功，无拒绝且清理成功，总计约 27.5 秒。正式自查先暴露 Git probe 环境隔离与私有 D-Bus 的配置差异（零 prompt），经本地受控启动器显式接入已授权私有总线后，24 秒完整 probe 仍返回 direct Agent 超时；startup 约 13.4 秒，唯一 prompt 仅获得约 6.5 秒。认证和模型可用性不再列为当前阻塞，当前等待是否允许显式可配置较长预算并协调内外期限的行为决策；未修改现有预算，也不将 baseline ready 记为 I-AC03 的 terminal。最新证据和安全边界以 [Docker 验证](./Docker-validation.md) 最后一节为准。
+
 ## Acceptance criteria
 
 ### I-AC01: 独立自查可加载
