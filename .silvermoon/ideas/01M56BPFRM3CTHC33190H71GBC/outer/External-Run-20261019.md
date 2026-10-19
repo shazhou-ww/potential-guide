@@ -62,4 +62,44 @@ CLI 于 `2026-10-19T12:24:33+08:00` 从精确非 Git 目标目录运行，使用
 
 协议 options 确实包含 `Allow Once`、`Allow in this Session`、`Skip`；实际卡片的主要可见按钮是 `Allow in this Session` 和 `Skip`，另有 `More Actions...`。没有选取任何 option，`Allow Once` 只可由用户本人通过 native 选项决定；绝不能按默认会话级按钮。若用户要额外允许此条只读校验，必须明确作为独立的单次 shell 操作决定，而不是沿用文件创建许可；也可由用户跳过/取消。没有当前实际请求的明确决定时保持 external 有界等待，不代点任何按钮。
 
-当前没有最终 CLI 结果，不能将文件存在、native 卡片或某个 UI 点击当目标通过；D-S02 / D-AC01 继续未完成，没有 submitOuter / acceptOuter。
+以上是等待中的历史观察；自然截止后的终态如下，不能将文件存在、native 卡片或某个 UI 点击当目标通过。
+
+## 自然截止后的最终结果
+
+没有再次要求交互，没有选择默认决定，没有代点 Skip/approve，没有重建请求或发起另一轮模型。对现有执行只做一次有界结束等待。最终 CLI 于 `12:34:39.299+08:00` 退出 `5`，报告 `stopReason: exhausted`、`exhaustedBy: agent-limit`、`iterations: 1`、`Agent execution time limit reached.`。
+
+最终真实 transcript 没有本次工具的 `chat/toolCallConfirmed` / `chat/toolCallResultConfirmed`：没有收到用户单次允许或 Skip 的外部决定。它确实包含同一 owned turn 的 Host `chat/turnCancelled`；`pguide/ahp-interruption` 记录：
+
+```json
+{
+  "cancellationSent": true,
+  "remoteStopConfirmed": true,
+  "executionState": "cancelled"
+}
+```
+
+这不是只发送取消就宣称远端停止，也不是将用户不可用解释成拒绝。CLI `recovery.command` 是 `pguide continue d34dc7cf-5ec3-4658-9f6f-79ad82910e48`，本轮没有运行它。
+
+终态后独立读取的目标仍为 `4148502d56455249464945440d0a`，14 字节 CRLF；没有改写目标，也不把这次只读检查称作修复。CLI 自身 latestObservation 保留执行前的 `not-ready`，因此本文明确区分它与本次终态后独立观察，不伪造一次 CLI 重观察或 `target-reached`。D-S02 / D-AC01 仍不通过，Outer 不提交。
+
+## LF 诊断、修正上下文及下一次最低条件
+
+可以确定的是：真实模型 `apply_patch` 输入使用 LF（补丁为 `+AHP-VERIFIED\n`），真实工具之后落盘成为 CRLF；模型不是没有收到 LF 目标。目标目录没有 `.editorconfig`、`.gitattributes` 或 `.vscode/settings.json`，专用 UI 没有显式 `files.eol`；本机 Node `process.platform` 为 `win32`。不能据此断言转换必定发生在某个特定编辑器设置层，更不能声称设 `files.eol` 就已经验证有效。
+
+固定版本官方 [Copilot approval policy](https://github.com/microsoft/vscode/blob/6d62b1d5dace93a33b3a6d3eca1317bd5e15bcb1/src/vs/platform/agentHost/node/copilot/copilotApprovalPolicy.ts#L31) 将 native `manual` 映射到 `default`；不能仅凭界面显示 Manual 就承诺每次文件写入都必然请求确认。实际文件编辑的 `confirmed: not-needed` 与随后 shell 的真实确认请求，均已在本轮实际协议流中观察。外部等待适配并不改写 Host 的权限或换行策略。
+
+下一次上下文应明确修正为：
+
+> 外部独立检查已确认唯一 ready.txt 当前为 UTF-8 `AHP-VERIFIED` + CRLF（14 字节），不是缺文件。先前 apply_patch 输入虽为 LF，但落盘发生 CRLF 转换，禁止重复同样补丁并声称成功。只允许能够明确保留 LF/raw bytes 的原生编辑工具，将这一个现有文件纠正为 13 字节；不要运行 shell、终端、自检、Git 或其他工具，不修改其他路径或标准。最终字节由外部 Objective 检查，你无需自检。若当前编辑接口不能表达或保证 LF，请直接报告该具体能力阻塞并结束，不改用 shell 或要求扩大权限。若 Host 对实际编辑发出 native 请求，只等待真人核对当前路径、diff 和单次选项。
+
+这是修正后的待用指引，不是已经送达原会话的消息，也不是再次执行的许可。本轮只读调查没有证明当前原生编辑工具有可保证 LF 的接口；在这一点得到可信确认前，不再消耗模型重试。
+
+另一个已查证的恢复限制是：当前 `continue` 只接受 regulation ID / `--report`，重用持久化 subject、profile 和固定 Pilot commit。不能编辑 `regulation.json`、换掉 commit 或改外部 subject 文件，伪称新的指引已被合法续跑采用。若后续确需增加显式修正上下文入口，应先按 Silvermoon 返回实施阶段设计并验收，而不是在部署阶段偷偷改产品；在现有恢复能力范围内，不重新创建会话，不重放已取消的 turn。
+
+## 证据保留与清理
+
+终态证据摘要见 [External-Run-20261019.json](./External-Run-20261019.json)。本操作私有目录内仍保留原 regulation/transcript/脱敏 CLI 结果与固定 Pilot，以便核对和合法恢复，SHA-256 已记录。它们不是另一轮执行。
+
+已结束的真实 CLI 包装器 PID `3432` 不再存活；结束等待辅助进程也已退出。冗余 `connection-sensitive.txt`、本地显示脚本及显示元数据已删除，没有将密钥文件注册为 artifact。为了保留同一真实会话与用户已登记连接，必要的专用 Host PID `36692`（supervisor `32092`）和专用 UI PID `28732` 继续存活；清理后实际认证 WebSocket 仍响应。传输 token 仅留在当前用户/SYSTEM 限定的本操作运行数据中及用户本人登记的专用配置，不输出、不提交。
+
+后续明确放弃恢复或全部依赖验证完成时，只停止 `regulator-ahp-dedicated-host-1203`、`regulator-ahp-dedicated-ui-1203` 对应的自有 detached 进程组，核验端口和具体 PID 后再删除本操作私有目录；不能停止原共享窗口 PID `18136`。当前保留隔离目标作为真实失败证据，不清除或改写其内容。
