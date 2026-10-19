@@ -78,6 +78,18 @@ importers:
         specifier: workspace:^
         version: link:../effects
 
+  packages/monorepo-objective:
+    dependencies:
+      ajv:
+        specifier: 'catalog:'
+        version: 8.20.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.1
+
   packages/objective-pilot:
     dependencies:
       '@potential-guide/effects':

@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "policy": {
+    "source": "pnpm-default-v1",
+    "directories": { "apps": "apps", "packages": "packages", "docs": "docs", "scripts": "scripts" },
+    "requiredFiles": ["tsconfig.json", "biome.json"],
+    "exceptions": [],
+    "assignments": [],
+    "allowedDirectories": [
+      {
+        "path": "objectives",
+        "reason": "Repository-owned Pilot manifests, checks and references, not executable application workspaces."
+      }
+    ],
+    "dependencyExceptions": []
+  },
+  "workspaces": [
+    {
+      "name": "@potential-guide/effects",
+      "path": "packages/effects",
+      "roles": ["npm"],
+      "runtime": "node",
+      "allows": [],
+      "entries": ["src/index.ts"],
+      "sources": ["src/index.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "@potential-guide/git-source",
+      "path": "packages/git-source",
+      "roles": ["npm"],
+      "runtime": "node",
+      "allows": ["@potential-guide/effects"],
+      "entries": ["src/index.ts"],
+      "sources": ["src/index.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "@potential-guide/objective-pilot",
+      "path": "packages/objective-pilot",
+      "roles": ["npm"],
+      "runtime": "node",
+      "allows": ["@potential-guide/effects"],
+      "entries": ["src/index.ts"],
+      "sources": ["src/index.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "@potential-guide/objective-regulator",
+      "path": "packages/objective-regulator",
+      "roles": ["npm"],
+      "runtime": "node",
+      "allows": ["@potential-guide/effects", "@potential-guide/objective-pilot"],
+      "entries": ["src/index.ts"],
+      "sources": ["src/index.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "@potential-guide/objective-portfolio-supervisor",
+      "path": "packages/objective-portfolio-supervisor",
+      "roles": ["npm"],
+      "runtime": "node",
+      "allows": [
+        "@potential-guide/effects",
+        "@potential-guide/objective-pilot",
+        "@potential-guide/objective-regulator"
+      ],
+      "entries": ["src/index.ts"],
+      "sources": ["src/index.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "@potential-guide/cli-core",
+      "path": "packages/pguide-cli-core",
+      "roles": ["npm"],
+      "runtime": "node",
+      "allows": [],
+      "entries": ["src/index.ts"],
+      "sources": ["src/index.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "@potential-guide/config",
+      "path": "packages/pguide-config",
+      "roles": ["npm", "cli"],
+      "runtime": "node",
+      "allows": ["@potential-guide/cli-core"],
+      "entries": ["src/bin.ts"],
+      "sources": ["src/bin.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "pguide",
+      "path": "packages/pguide",
+      "roles": ["npm", "cli"],
+      "runtime": "node",
+      "allows": [
+        "@potential-guide/cli-core",
+        "@potential-guide/config",
+        "@potential-guide/effects",
+        "@potential-guide/git-source",
+        "@potential-guide/objective-pilot",
+        "@potential-guide/objective-regulator",
+        "@potential-guide/objective-portfolio-supervisor"
+      ],
+      "entries": ["src/bin.ts"],
+      "sources": ["src/bin.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "@potential-guide/monorepo-objective",
+      "path": "packages/monorepo-objective",
+      "roles": ["tool"],
+      "runtime": "node",
+      "allows": [],
+      "entries": ["src/index.ts"],
+      "sources": ["src/index.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    }
+  ],
+  "deliveries": [
+    {
+      "id": "public-library-suite",
+      "purpose": "Publish the existing public packages as consumable npm libraries using the repository package-specific release workflow.",
+      "kind": "npm",
+      "packages": [
+        "@potential-guide/effects",
+        "@potential-guide/git-source",
+        "@potential-guide/objective-pilot",
+        "@potential-guide/objective-regulator",
+        "@potential-guide/objective-portfolio-supervisor",
+        "@potential-guide/cli-core",
+        "@potential-guide/config",
+        "pguide"
+      ],
+      "entry": { "package": "@potential-guide/objective-pilot", "path": "src/index.ts" },
+      "runtime": "node",
+      "resources": [],
+      "services": [],
+      "capabilities": [],
+      "independent": false
+    },
+    {
+      "id": "developer-commands",
+      "purpose": "Deliver pguide commands and the configuration extension without coupling internal checking tools to the public distribution.",
+      "kind": "cli",
+      "packages": [
+        "pguide",
+        "@potential-guide/config",
+        "@potential-guide/cli-core",
+        "@potential-guide/effects",
+        "@potential-guide/git-source",
+        "@potential-guide/objective-pilot",
+        "@potential-guide/objective-regulator",
+        "@potential-guide/objective-portfolio-supervisor"
+      ],
+      "entry": { "package": "pguide", "path": "src/bin.ts" },
+      "runtime": "node",
+      "resources": [],
+      "services": [],
+      "capabilities": [],
+      "independent": false
+    }
+  ]
+}

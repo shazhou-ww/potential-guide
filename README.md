@@ -120,3 +120,8 @@ than introducing `1.0`.
 See the [functional migration guide](./docs/functional-migration.md) for
 consumer imports, specification/subject separation, the probe envelope,
 Agent input, CLI/config changes, and running-effect cancellation.
+
+The [requirements-led pnpm monorepo Objective](./objectives/pnpm-monorepo/README.md)
+checks structure before dependency, build and delivery preparation. It works on
+independent target repositories, reports unsupported or missing proof explicitly,
+and never installs, publishes, deploys or runs migrations.

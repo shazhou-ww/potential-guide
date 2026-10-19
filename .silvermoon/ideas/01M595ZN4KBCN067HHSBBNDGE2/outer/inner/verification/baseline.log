@@ -1,0 +1,33 @@
+﻿✖ real sanity verifies a finite repair (11906.6103ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 13935.932
+
+✖ failing tests:
+
+test at test\setup-objective.test.ts:575:3
+✖ real sanity verifies a finite repair (11906.6103ms)
+  AssertionError [ERR_ASSERTION]: protocol: independent sanity probe failed.
+  
+  502 !== 200
+  
+      at passed (D:\Code\potential-guide.worktrees\pnpm-monorepo-architecture-discussion\packages\pguide\test\setup-objective.test.ts:188:10)
+      at TestContext.<anonymous> (D:\Code\potential-guide.worktrees\pnpm-monorepo-architecture-discussion\packages\pguide\test\setup-objective.test.ts:585:27)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 502,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+undefined
+D:\Code\potential-guide.worktrees\pnpm-monorepo-architecture-discussion\packages\pguide:
+[ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL] Command failed with exit code 1: tsx --test "--test-concurrency=1" "--test-name-pattern=real sanity verifies a finite repair" "test\setup-objective.test.ts"
+

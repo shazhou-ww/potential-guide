@@ -2,6 +2,9 @@
   "files": [],
   "references": [
     {
+      "path": "./packages/monorepo-objective"
+    },
+    {
       "path": "./packages/pguide-cli-core"
     },
     {
