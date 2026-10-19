@@ -408,3 +408,43 @@ objectives / .github 的树无差异。I-S01 / I-AC01 据本地结果及完整�
   这是已验证的输入所有权修复与可观测性补足，**尚不宣称 EOF 是 CI 根因**；
   后续精确候选 CI 由父会话验证。本轮未运行 full check、packed、Linux 重复或 CI，
   未 commit/push，也未改 gates/ledger/events/outer；全部修改留为 uncommitted。
+
+### Windows ownership snapshot 改用 Toolhelp32（不再依赖 CIM/WMI）
+
+- 父会话提供精确 `6d3d635` / CI `39224567344`：其他四项通过，Windows
+  `117967614585` 为 `timeout;elapsedMs=10026;reported=false;phase=query-started`。
+  PowerShell 已进入 Get-Cim 所在 query/pipeline，但未返回；该 phase 不能区分
+  cmdlet autoload 与 provider 等内部位置。EOF 生命周期修复仍有效，但不是此 CI
+  故障的修复；不再追加阈值或 EOF 实验。
+- 仅替换 Windows snapshot backend：同一个固定系统 PowerShell 进程内以
+  `Add-Type` 内存编译 C# P/Invoke，调用 `CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS)`
+  与 `Process32FirstW/Process32NextW`，直接取得 OS 公开 PID/parent PID；
+  没有 CIM sidequery、进程内存读取、额外依赖/二进制/配置、预热、重试或失败降级。
+  输出仍为 `{ProcessId,ParentProcessId}` 数组，原严格校验与 owned 集合闭包不变。
+- `PROCESSENTRY32W` 明确 sequential/Unicode/Pack=8；DWORD 为 uint、LONG 为 int、
+  heap ID 为指针宽度 UIntPtr、文件名为 260 WCHAR。真实 64/32 位 PowerShell
+  分别验证 size **568/556**，heap offset **16/12**、parent offset **32/24**、
+  filename offset **44/36**，并在两种宿主中找到测试 Node 的实际 PID/parent。
+- 检查 `INVALID_HANDLE_VALUE`；仅 `ERROR_NO_MORE_FILES=18` 是枚举正常终点。
+  每个有效 snapshot handle 均在 `finally` 关闭；snapshot/first/next/close 错误
+  显式失败。只透传固定 `native-*` reason 和 uint 范围的 `nativeCode`，
+  增加固定 `compiling/compiled` phase，setup Fault 同步严格白名单；不透传
+  任意 stderr、路径或 Auth。保留 owned stdin EOF、**10000ms 总 snapshot watchdog**，
+  编译也在此 watchdog 内；整体 subject/process/SSH/consent/取消预算完全不变。
+- 原十项 shared 回归保留且 fault/EOF fixtures 已切换到真实 native query。
+  新增双宿主 ABI 回归及六种确定性 native fault/end 场景：无效 handle、
+  first/next 非 18 错误、first/next 的 18 正常终点，以及实际 close 后注入 close
+  错误分支；验证有效句柄在失败/正常返回时确实关闭，无效句柄不关闭。
+  真实不合作树额外断言 native snapshot 捕获 child 与正确 parent，再实际 taskkill
+  并注入非零结果；必须证明全部捕获 owned PID 缺失，活着/不可观测后代仍失败。
+- 最终安装 Node **22.13.0 / 24.11.1** 各运行
+  `pnpm exec tsx --test packages\pguide-cli-core\test\process-tree.test.ts`：
+  **12/12、12/12**，总耗时 **39241ms/35940ms**，无 skip；
+  EOF + 6s 延迟的真实 native query **7328ms/6997ms**，真实 10s 挂起仍显式失败。
+  Node 22.13.0 定向 setup `sanity invocation diagnostics` **1/1**：
+  native reason/code 可安全透传，伪造 phase/canary 不泄漏。
+- core build、test typecheck、Biome、正式 runtime 再生成及 `--check`、
+  `git diff --check` 通过，独占 profile 已清理。未运行 full check、packed、Linux
+  重复或 CI；未改 POSIX、门禁/账本/事件/outer，保留父会话现有 Implementation
+  修改。八个本轮文件留为 uncommitted，未 commit/push；父会话负责 ABI/runtime
+  复核及下一精确候选 CI，本地通过不等同 Windows CI 已绿。

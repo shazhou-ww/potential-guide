@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import childProcess, { type ChildProcess, type PromiseWithChild, spawn } from "node:child_process";
 import { once } from "node:events";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import { join, resolve } from "node:path";
@@ -201,6 +202,22 @@ test("Windows snapshot command failures retain only bounded diagnostic fields", 
     ],
     [
       {
+        code: 1,
+        stderr:
+          "PGUIDE_WINDOWS_SNAPSHOT_ERROR:native-next\nPGUIDE_WINDOWS_SNAPSHOT_NATIVE_ERROR:5\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:query-started\n",
+      },
+      "nativeCode=5;phase=query-started;reason=native-next]",
+    ],
+    [
+      {
+        code: 1,
+        stderr:
+          "PGUIDE_WINDOWS_SNAPSHOT_ERROR:native-snapshot\nPGUIDE_WINDOWS_SNAPSHOT_NATIVE_ERROR:9999999999\n",
+      },
+      "nativeCode=none;phase=unreported;reason=native-snapshot]",
+    ],
+    [
+      {
         code: null,
         killed: true,
         stderr:
@@ -236,7 +253,7 @@ test("Windows snapshot command failures retain only bounded diagnostic fields", 
       assert.ok(error.message.includes(expected), error.message);
       assert.match(
         error.message,
-        /elapsedMs=\d{1,10};reported=(?:true|false);phase=(?:unreported|started|query-started|queried|serialized|exiting);reason=/,
+        /elapsedMs=\d{1,10};reported=(?:true|false);nativeCode=(?:\d{1,10}|none);phase=(?:unreported|started|compiling|compiled|query-started|queried|serialized|exiting);reason=/,
       );
       assert.equal(error.message.includes(canary), false);
       return true;
@@ -265,7 +282,7 @@ test("Windows simultaneous snapshot and termination failures preserve safe comma
 async function sparseEnvironment(t: TestContext): Promise<NodeJS.ProcessEnv> {
   const cache = resolve(".cache");
   await mkdir(cache, { recursive: true });
-  const home = await mkdtemp(join(cache, "pguide-cim-home-"));
+  const home = await mkdtemp(join(cache, "pguide-native-snapshot-home-"));
   t.after(() => rm(home, { recursive: true, force: true, maxRetries: 3 }));
   return {
     ...Object.fromEntries(
@@ -279,15 +296,72 @@ async function sparseEnvironment(t: TestContext): Promise<NodeJS.ProcessEnv> {
 }
 
 if (process.platform === "win32") {
+  const query = "[PguideWindowsProcessSnapshot]::Collect()";
+
+  test("Windows native snapshot uses the correct host ABI and returns authoritative PID/parent rows", async (t) => {
+    const execute = promisify(childProcess.execFile);
+    const env = await sparseEnvironment(t);
+    const systemRoot = process.env.SystemRoot ?? process.env.WINDIR;
+    assert.ok(systemRoot);
+    const hostPath = (directory: string) =>
+      join(systemRoot, directory, "WindowsPowerShell", "v1.0", "powershell.exe");
+    const hosts = [{ path: hostPath("System32"), pointerSize: process.arch === "ia32" ? 4 : 8 }];
+    const wow64 = hostPath("SysWOW64");
+    if (process.arch !== "ia32" && existsSync(wow64)) hosts.push({ path: wow64, pointerSize: 4 });
+    let host = hosts[0];
+    let rows: unknown;
+    nativeWindowsCommands(t, (command, args, options) => {
+      if (command.endsWith("powershell.exe")) {
+        assert.ok(host);
+        const { path, pointerSize } = host;
+        const collect = "public static Row[] Collect() {";
+        const collectWithAbiCheck = `${collect}
+          if (IntPtr.Size != ${pointerSize} ||
+              Marshal.SizeOf(typeof(PROCESSENTRY32W)) != ${pointerSize === 8 ? 568 : 556} ||
+              Marshal.OffsetOf(typeof(PROCESSENTRY32W), "th32DefaultHeapID").ToInt64() != ${pointerSize === 8 ? 16 : 12} ||
+              Marshal.OffsetOf(typeof(PROCESSENTRY32W), "th32ParentProcessID").ToInt64() != ${pointerSize === 8 ? 32 : 24} ||
+              Marshal.OffsetOf(typeof(PROCESSENTRY32W), "szExeFile").ToInt64() != ${pointerSize === 8 ? 44 : 36}) {
+            throw new Exception("fixture-native-abi-mismatch");
+          }
+        `;
+        assert.ok(args[3]?.includes(collect));
+        const pending = execute(
+          path,
+          args.map((arg, index) => (index === 3 ? arg.replace(collect, collectWithAbiCheck) : arg)),
+          { ...options, env, encoding: "utf8" },
+        );
+        return Object.assign(
+          pending.then((result) => {
+            rows = JSON.parse(result.stdout);
+            return result;
+          }),
+          { child: pending.child },
+        );
+      }
+      assert.equal(command, "taskkill");
+      return simulatedCommand(Promise.resolve({ stdout: "", stderr: "" }));
+    });
+    for (host of hosts) {
+      await killProcessTree(ownedChild());
+      assert.ok(Array.isArray(rows));
+      assert.ok(
+        rows.some((row) => row.ProcessId === process.pid && row.ParentProcessId === process.ppid),
+        `${host.pointerSize * 8}-bit snapshot must contain the test process's real parent PID`,
+      );
+      t.diagnostic(
+        `Native ${host.pointerSize * 8}-bit PROCESSENTRY32W layout and PID/parent verified.`,
+      );
+    }
+  });
+
   test("Windows real snapshot subprocess distinguishes command, module and 10s watchdog faults", async (t) => {
     const execute = promisify(childProcess.execFile);
     const env = await sparseEnvironment(t);
-    const query =
-      "Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId | Select-Object ProcessId,ParentProcessId";
     let replacement = "";
     nativeWindowsCommands(t, (command, args, options) => {
       if (command.endsWith("powershell.exe")) {
         assert.equal(options?.timeout, 10_000);
+        assert.ok(args[3]?.includes(query), "fixture must replace the actual native query");
         return execute(
           command,
           args.map((arg) => arg.replace(query, replacement)),
@@ -299,7 +373,7 @@ if (process.platform === "win32") {
     });
     for (const [fixture, expected] of [
       [
-        "Get-PguideMissingCimFixture",
+        "Get-PguideMissingNativeFixture",
         /kind=exit;exit=1;.*phase=query-started;reason=command-not-found/,
       ],
       [
@@ -318,6 +392,98 @@ if (process.platform === "win32") {
         assert.equal(error.message.includes("fixture-canary"), false);
         return true;
       });
+    }
+  });
+
+  test("Windows native snapshot distinguishes enumeration end from faults and closes valid handles", async (t) => {
+    const execute = promisify(childProcess.execFile);
+    const env = await sparseEnvironment(t);
+    const closedMarker = "PGUIDE_TEST_NATIVE_HANDLE_CLOSED";
+    let alter = (script: string) => script;
+    let stderr = "";
+    let rows: unknown;
+    nativeWindowsCommands(t, (command, args, options) => {
+      if (command.endsWith("powershell.exe")) {
+        const script = args[3];
+        assert.ok(script);
+        assert.ok(script.includes(query));
+        assert.ok(script.includes("if (!CloseHandle(handle))"));
+        const pending = execute(
+          command,
+          [
+            ...args.slice(0, 3),
+            alter(
+              script.replace(
+                "if (!CloseHandle(handle))",
+                `bool closed = CloseHandle(handle);
+      if (closed) Console.Error.WriteLine("${closedMarker}");
+      if (!closed)`,
+              ),
+            ),
+          ],
+          { ...options, env, encoding: "utf8" },
+        );
+        return Object.assign(
+          pending.then(
+            (result) => {
+              stderr = result.stderr;
+              rows = JSON.parse(result.stdout);
+              return result;
+            },
+            (error) => {
+              stderr = error.stderr;
+              throw error;
+            },
+          ),
+          { child: pending.child },
+        );
+      }
+      assert.equal(command, "taskkill");
+      return simulatedCommand(Promise.resolve({ stdout: "", stderr: "" }));
+    });
+    for (const [operation, code, reason, closes] of [
+      ["snapshot", 5, "native-snapshot", false],
+      ["first", 5, "native-first", true],
+      ["next", 5, "native-next", true],
+      ["first", 18, null, true],
+      ["next", 18, null, true],
+      ["close", 5, "native-close", true],
+    ] as const) {
+      alter = (script) =>
+        script
+          .replace(
+            operation === "snapshot"
+              ? "CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)"
+              : operation === "first"
+                ? "Process32FirstW(handle, ref entry)"
+                : operation === "next"
+                  ? "Process32NextW(handle, ref entry)"
+                  : "if (!closed)",
+            operation === "snapshot"
+              ? "new IntPtr(-1)"
+              : operation === "close"
+                ? 'if (Boolean.Parse("true"))'
+                : 'Boolean.Parse("false")',
+          )
+          .replaceAll("Marshal.GetLastWin32Error()", String(code));
+      stderr = "";
+      rows = undefined;
+      if (reason !== null)
+        await assert.rejects(killProcessTree(ownedChild()), (error) => {
+          assert.ok(error instanceof Error);
+          assert.ok(
+            error.message.includes(`nativeCode=${code};phase=query-started;reason=${reason}]`),
+            error.message,
+          );
+          assert.equal(error.message.includes(closedMarker), false);
+          return true;
+        });
+      else {
+        await killProcessTree(ownedChild());
+        assert.ok(Array.isArray(rows));
+        assert.equal(rows.length, operation === "first" ? 0 : 1);
+      }
+      assert.equal(stderr.includes(closedMarker), closes, `${operation}/${code} handle ownership`);
     }
   });
 }
@@ -344,8 +510,24 @@ test("forceful cleanup terminates an owned process and its uncooperative child",
         return Object.assign(
           pending.then((result) => {
             assert.equal(pending.child.stdin?.writableEnded, true, "owner must send EOF");
-            for (const phase of ["started", "query-started", "queried", "serialized", "exiting"])
+            for (const phase of [
+              "started",
+              "compiling",
+              "compiled",
+              "query-started",
+              "queried",
+              "serialized",
+              "exiting",
+            ])
               assert.ok(result.stderr.includes(`PGUIDE_WINDOWS_SNAPSHOT_PHASE:${phase}`));
+            const rows: unknown = JSON.parse(result.stdout);
+            assert.ok(Array.isArray(rows));
+            assert.ok(
+              rows.some(
+                (row) => row.ProcessId === grandchildPid && row.ParentProcessId === ownedRootPid,
+              ),
+              "native snapshot must capture the actual uncooperative child and its parent",
+            );
             const elapsed = performance.now() - started;
             assert.ok(elapsed > 5000 && elapsed < 10000, `actual snapshot took ${elapsed}ms`);
             t.diagnostic(
@@ -367,6 +549,8 @@ test("forceful cleanup terminates an owned process and its uncooperative child",
       );
     });
   }
+  let grandchildPid: number | undefined;
+  let ownedRootPid: number | undefined;
   const childSource = `process.on("SIGTERM",()=>{});console.log(process.pid);setInterval(()=>{},1000);`;
   const rootSource = `
     const {spawn}=require("node:child_process");
@@ -397,6 +581,8 @@ test("forceful cleanup terminates an owned process and its uncooperative child",
       });
     });
     assert.ok(Number.isSafeInteger(grandchild) && grandchild > 0);
+    grandchildPid = grandchild;
+    ownedRootPid = child.pid;
     await killProcessTree(child);
     await closed;
     const deadline = Date.now() + 3000;

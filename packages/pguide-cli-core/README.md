@@ -69,8 +69,16 @@ stop the client in `finally` and supply an outer deadline. Optional
 completed. Both options are opt-in to preserve legacy caller behavior; the local
 self-check uses them without changing its configured tool permissions.
 
-Windows `killProcessTree` snapshots owned PID/parent relationships through the
-system PowerShell/CIM provider (bounded to 10000 ms) before PID-scoped `taskkill`.
+Windows `killProcessTree` snapshots owned PID/parent relationships through
+Toolhelp32 (`TH32CS_SNAPPROCESS`, `Process32FirstW`/`Process32NextW`), using in-memory
+C# P/Invoke compiled by the fixed system PowerShell host (bounded to 10000 ms),
+before PID-scoped `taskkill`. It does not depend on CIM/WMI services, inspect process
+memory, or install a native package/binary. `PROCESSENTRY32W` uses the host's
+pointer-sized `ULONG_PTR` and sequential Win32 layout (568 bytes in a 64-bit host,
+556 in a 32-bit host, with maximum packing of 8); only numeric PID/parent PID
+rows leave the subprocess. Invalid snapshot handles and native enumeration errors
+fail explicitly; only `ERROR_NO_MORE_FILES` ends enumeration normally. Every valid
+snapshot handle is closed in `finally`, including enumeration failures.
 If concurrent teardown makes taskkill fail, cleanup succeeds only after every
 snapshotted owned PID is observed absent, with at most 500 ms of exit observation.
 Root exit alone is not evidence that descendants are gone; live or unobservable
@@ -90,8 +98,11 @@ SSH limits and consent are unchanged.
 
 The fixed PowerShell query accepts no input, so its owner ends the subprocess's
 stdin pipe immediately rather than leaving it waiting for EOF. Failure diagnostics
-expose only the last fixed script phase: `unreported`, `started`, `query-started`,
-`queried`, `serialized` or `exiting`. `exiting` means the command body finished,
+expose only fixed error labels, a bounded unsigned Win32 error code (`nativeCode`,
+or `none`), and the last fixed script phase: `unreported`, `started`, `compiling`,
+`compiled`, `query-started`, `queried`, `serialized` or `exiting`. Compilation and
+native enumeration share the same watchdog; there is no additional compilation
+allowance. `exiting` means the command body finished,
 not that process exit and stdio closure have been acknowledged. No arbitrary
 stderr, paths or authentication data are forwarded.
 
