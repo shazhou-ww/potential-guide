@@ -8,7 +8,9 @@
 - 最终产品和测试候选：`0741d143e502c0918a563527c9a4663b29bb6ef1`。
 - 最终 Inner World：`59dc6c40689bfb2e1af1e3988747278de7968cee`，
   接受记录位于 primary `b183fbcbcc3efa023053563839d13ab0bc5f508e`。
-- 后续文档和生命周期事件不改变 packages / scripts / objectives / .github 的已验证树。
+- 截至 `9a05e479abb70d2274f3c79d8f1b2aec0f3e4e46`，后续文档和生命周期事件
+  不改变 packages / scripts / objectives / .github 的已验证树。
+  此后 primary 合入其他 Idea 的产品更改，不自动继承本记录的候选验证结论。
 - 五个已变包准备新候选：regulator / supervisor / pguide 为 `0.4.0-rc.0`，
   cli-core / config 为 `0.3.0-rc.0`；其他三个上游仍为 `0.1.0-rc.0`。
   逐包 API 分类、依赖顺序和稳定映射见
@@ -46,8 +48,38 @@ retention / 脱敏、supervisor 生命周期、固定 Git 子目录 setup 的随
 
 该次操作目录 `.cache/potential-guide-deployment-3wO1jW` 在返回后不存在，
 消费者清理成功。此后产品代码未改变，只修正测试的真实时钟假设。
-本记录同步后，主会话再对稳定 Outer World 重跑相同命令，
-检查独立目录被清理，并仅在根 ledger 记录最终结果，避免验证后改写此修订。
+本记录同步后，主会话对 Outer World
+`f13c8104a6d803dc3fbe60f7e765b06bf0d7a4ef` 和上述 `9a05e479abb7` 提交
+重跑相同命令，结果失败，不能用此前成功代替该次交付门限。
+
+## 当前交付阻塞：真实 setup sanity 超时
+
+主会话复验中，entry-only 安装及依赖核验、库导入、CLI、ACP 调节、
+持久化和恢复、retention / 脱敏、supervisor 均通过；
+随后固定 Git 子目录 setup probe 返回 exit 6 和：
+
+```json
+{"status":504,"payload":null,"message":"timeout: setup check exceeded its deadline."}
+```
+
+该次 `.cache/potential-guide-deployment-JaqshF` 已由脚本清理，主会话独立确认目录不存在。
+安装成功和清理成功不等于 setup 已达到 terminal。
+
+同一 setup subsession 又原样复现两次失败，其中一次临时诊断记录安装检查约
+393ms、配置检查约 8310ms、sanity 约 24554ms，外层 probe 约 46822ms。
+这是 subsession 的诊断反馈，不是主会话成功验收；临时插桩已撤销、诊断文件已清理，
+没有以重试、预热、删减 nonce / terminal 断言或更改生产期限获取绿灯。
+其 helper 定向测试 2/2 通过，也不替代 packed Git Pilot 消费者验证。
+
+当前 subject 已使用 Pilot 允许的 24000ms 上限；这是每个 helper 检查的预算，
+不是整个多级 Git Pilot probe 的总预算。direct helper 可以显式使用较长预算，
+但不能把 direct 成功冒充安装产物的 Git Pilot terminal 回执。
+subsession 未找到不改变覆盖语义的 verifier-only 修复，未修改产品或脚本。
+
+因此 D-S01 / D-AC01 保持未完成，Outer 未 submit / accept，不能宣称 P0 已全部关闭。
+下一步涉及产品取舍：继续要求该冷启动链路在 24 秒内完成并优化实现，
+或保持默认期限并设计与外层 probe deadline 配套的显式长预算支持。
+选择后需重新实施和检查，不允许仅改此文档或勾选 ledger 获得交付验收。
 
 ## 尚未执行的真实发布
 
