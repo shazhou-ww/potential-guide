@@ -12,6 +12,8 @@
 
 真实版本、隔离目标、首轮发现及复测结果见 [Verification.md](./Verification.md)。外部环境阻塞与客户端缺陷分开记录；客户端缺陷必须修复并重新验证后才能请求部署验收。
 
+external 复测使用用户已手动连接的专用 loopback Host `127.0.0.1:51793`，不另建连接、不代输凭据。先在官方 Agents UI 选择该已连接 Host，再使用全新的非 Git 隔离目录 `D:\Code\regulator-ahp-target-20261019-1216-2eb89994`；唯一修复是创建精确字节 `AHP-VERIFIED\n` 的 `ready.txt`。只运行一个 Agent 修复 turn，执行等待最多 10 分钟，整体额度最多 11 分钟，不自动重试。通过 CLI 持久化的 session/chat/turn/toolCall 身份在官方 UI 定位对应会话；确认用户可见后才进入人工决定步骤。请求等待期间不发送任何 approve/deny，用户仅可按 native 卡片逐次决定；范围或单次语义不清晰时不要求批准。停止、账户错误和超时如实记录，目标仍由独立 Objective 精确重观察，不以卡片出现或批准推断成功。
+
 ## Acceptance criteria
 
 ### D-AC01: 真实 AHP 修复达成目标
