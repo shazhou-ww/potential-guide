@@ -21,6 +21,50 @@ const { createInterface } = require("node:readline");
 const send = message => console.log(JSON.stringify({jsonrpc:"2.0", ...message}));
 `;
 
+test("optional ACP raw output bound covers stdout and stderr without waiting for a newline", async () => {
+  for (const stream of ["stdout", "stderr"]) {
+    const client = new AcpClient(
+      profile(`process.stdin.once("data",()=>process.${stream}.write("x".repeat(64)));`),
+      undefined,
+      { maxOutputBytes: 32 },
+    );
+    try {
+      await assert.rejects(client.initialize("1"), /ACP output limit exceeded/);
+    } finally {
+      await client.stop();
+    }
+  }
+  for (const maxOutputBytes of [0, -1, 1.1, Number.POSITIVE_INFINITY])
+    assert.throws(
+      () => new AcpClient(profile(""), undefined, { maxOutputBytes }),
+      /positive safe integer/,
+    );
+});
+
+test("strict ACP completion requires explicit end_turn while legacy default is unchanged", async () => {
+  for (const requireEndTurn of [false, true]) {
+    for (const stopReason of [undefined, "max_tokens", "end_turn"]) {
+      const client = new AcpClient(
+        profile(`${rpcPrelude}
+createInterface({input:process.stdin}).on("line", line => {
+ const m=JSON.parse(line);
+ send({id:m.id,result:${JSON.stringify({ stopReason })}});
+});`),
+        undefined,
+        { requireEndTurn },
+      );
+      try {
+        assert.equal(
+          (await client.prompt("fixture", "one tiny task")).status,
+          !requireEndTurn || stopReason === "end_turn" ? "completed" : "blocked",
+        );
+      } finally {
+        await client.stop();
+      }
+    }
+  }
+});
+
 test("ACP configuration stays a positive safe integer string", () => {
   assert.equal(acpProtocolVersion("1"), 1);
   assert.equal(acpProtocolVersion("9007199254740991"), Number.MAX_SAFE_INTEGER);

@@ -1,5 +1,10 @@
 # 从控制机 A 配置目标机 B 的 pguide setup Objective
 
+已有本机 pguide 的设备优先运行独立的
+[本机自查 Objective](../pguide-self-check/README.md)：默认一次直接 Agent marker 修复，
+不嵌套 regulation、不需要 allowSanity。本文旧 bootstrap/setup 的授权及 SSH 行为不变；
+后续远程整备接入新自查仍待单独实施。
+
 本目录是独立的 Pilot，不增加 `pguide setup` 命令。所有检查只使用 Node.js
 内置模块，不需要此快照安装 `node_modules`。运行 setup 调节的控制机 **A 已经具备
 pguide 和可用 Agent**；subject 描述要安装、配置、验证的目标机 **B**。A 的控制

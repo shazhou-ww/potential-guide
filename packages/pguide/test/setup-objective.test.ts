@@ -6,7 +6,7 @@ import { delimiter, dirname, join } from "node:path";
 import { test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { fileResources, loadPilotSpec } from "@potential-guide/objective-pilot";
-import { bin, fixture, root, run } from "./fixtures.js";
+import { bin, fixture, git, root, run } from "./fixtures.js";
 
 const objective = join(root, "objectives", "pguide-setup");
 const helper = join(objective, "setup-check.mjs");
@@ -74,14 +74,20 @@ async function setup(mode = "fix") {
     `import {createInterface} from "node:readline";
 import {spawn} from "node:child_process";
 import {appendFile,readFile,writeFile} from "node:fs/promises";
+import {join} from "node:path";
 const mode=${JSON.stringify(mode)}, log=${JSON.stringify(log)};
+let cwd, pendingPrompt;
 for await (const line of createInterface({input:process.stdin})) {
   const m=JSON.parse(line); if(m.id===undefined)continue;
   if(mode==="prompt-timeout" && m.method==="session/prompt"){
     const child=spawn(process.execPath,["-e","setInterval(()=>{},1000)"],{stdio:"ignore"});
     await appendFile(log,JSON.stringify({method:"fixture/descendant",pid:child.pid})+"\\n");
   }
-  await appendFile(log,JSON.stringify({method:m.method,cwd:m.params.cwd,protocolVersion:m.params.protocolVersion,pid:process.pid})+"\\n");
+  await appendFile(log,JSON.stringify({method:m.method??"permission-response",cwd:m.params?.cwd,protocolVersion:m.params?.protocolVersion,text:m.params?.prompt?.[0]?.text,pid:process.pid})+"\\n");
+  if(m.method===undefined) {
+    console.log(JSON.stringify({jsonrpc:"2.0",id:pendingPrompt,result:{stopReason:"end_turn",summary:"SECRET-MODEL-TEXT"}}));
+    continue;
+  }
   if(mode==="malformed"){console.log("not JSON");continue;}
   if(mode==="timeout"){setInterval(()=>{},1000);continue;}
   let result={};
@@ -91,13 +97,22 @@ for await (const line of createInterface({input:process.stdin})) {
     if(mode==="home" && await readFile(process.env.USERPROFILE+"/logged-in","utf8")!=="existing")throw Error("No login");
     result={protocolVersion:mode==="string-version"?"1":1,agentCapabilities:{loadSession:true}};
   }
-  if(m.method==="session/new")result={sessionId:"real-fixture-session"};
+  if(m.method==="session/new"){cwd=m.params.cwd;result={sessionId:"real-fixture-session"};}
   if(m.method==="session/prompt") {
     if(mode==="prompt-timeout"){setInterval(()=>{},1000);continue;}
     const text=m.params.prompt[0].text;
-    const subject=JSON.parse(text.split("\\nSubject: ")[1].split("\\nComplete observation: ")[0]);
-    if(mode==="fix" || mode==="home")await writeFile(subject.marker,subject.expected);
+    const direct=text.includes("Self-check task: ");
+    const subject=direct?JSON.parse(text.split("Self-check task: ")[1].split("\\n")[0]):JSON.parse(text.split("\\nSubject: ")[1].split("\\nComplete observation: ")[0]);
+    if(direct)subject.marker=join(cwd,subject.marker);
+    if(mode==="fix" || mode==="home" || mode==="denied" || mode==="incomplete")await writeFile(subject.marker,subject.expected);
     if(mode==="wrong")await writeFile(subject.marker,"a different successful-looking marker");
+    if(mode==="denied"){
+      pendingPrompt=m.id;
+      console.log(JSON.stringify({jsonrpc:"2.0",id:"permission",method:"session/request_permission",params:{sessionId:"real-fixture-session",toolCall:{toolCallId:"write",kind:"edit",locations:[{path:subject.marker}],rawInput:{path:subject.marker}},options:[{optionId:"yes",name:"Yes",kind:"allow_once"}]}}));
+      continue;
+    }
+    if(mode==="overflow"){console.log("x".repeat(220000));setInterval(()=>{},1000);continue;}
+    if(mode==="incomplete"){console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result:{stopReason:"max_tokens"}}));continue;}
     result={stopReason:"end_turn",summary:"Done"};
   }
   console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));
@@ -780,6 +795,246 @@ test("Windows installed command and ACP npm shims preserve spaces without shell 
     });
     assert.equal(envelope.status, 502);
     assert.match(envelope.message, /unsupported-command/);
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+const selfObjective = join(root, "objectives", "pguide-self-check");
+const selfHelper = join(selfObjective, "self-check.mjs");
+function selfSubject(f: Awaited<ReturnType<typeof setup>>) {
+  const { allowSanity: _, ...subject } = f.subject;
+  return subject;
+}
+
+test("self-check manifest loads local-only input, implicit terminal and every reference", async () => {
+  const spec = await loadPilotSpec(join(selfObjective, "pilot.yaml"), fileResources);
+  assert.deepEqual(
+    spec.manifest.levels.map(({ id }) => id),
+    ["initial", "installed", "configured"],
+  );
+  for (const level of spec.manifest.levels) {
+    assert.equal(level.advancement.checks.length, 1);
+    for (const check of level.advancement.checks) {
+      const scope = `levels/${level.id}/checks/${check.id}`;
+      assert.ok(spec.locales["zh-CN"]?.[scope]);
+      for (const id of check.problems) {
+        assert.ok(spec.locales["zh-CN"]?.[`${scope}/problems/${id}`]);
+        assert.notEqual(id, "sanity-consent-required");
+        assert.notEqual(id, "git-unavailable");
+      }
+    }
+  }
+  const validated = await run(bin("validate"), [
+    "pilot",
+    join(selfObjective, "pilot.yaml"),
+    "--format",
+    "json",
+  ]);
+  assert.equal(validated.code, 0, validated.stdout + validated.stderr);
+  const f = await setup();
+  try {
+    const subject = selfSubject(f);
+    passed(await f.direct("installation", subject, selfHelper));
+    for (const extra of [
+      { target: { type: "local" } },
+      { target: remoteSubject.target },
+      { allowSanity: true },
+      { allowSanity: false },
+    ])
+      assert.equal((await f.direct("sanity", { ...subject, ...extra }, selfHelper)).status, 400);
+    await assert.rejects(readFile(f.log), { code: "ENOENT" });
+    const { check } = await import(
+      pathToFileURL(join(selfObjective, "runtime", "setup-check.mjs")).href
+    );
+    assert.equal(
+      (await check("sanity", { ...subject, timeoutMs: 30000 }, { selfCheck: true, pilot: true }))
+        .status,
+      400,
+    );
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+test("self-check reuses installation/configuration failures without executing a prompt", async () => {
+  const f = await setup();
+  try {
+    const subject = selfSubject(f);
+    isProblem(
+      await f.direct("installation", { ...subject, desiredVersion: "other" }, selfHelper),
+      "version-mismatch",
+    );
+    isProblem(
+      await f.direct("sanity", { ...subject, configPath: join(f.directory, "absent") }, selfHelper),
+      "configuration-missing",
+    );
+    isProblem(
+      await f.direct("sanity", { ...subject, agent: "missing" }, selfHelper),
+      "agent-missing",
+    );
+    await writeFile(subject.configPath, "schemaVersion: 1");
+    isProblem(await f.direct("configuration", subject, selfHelper), "configuration-invalid");
+    await assert.rejects(readFile(f.log), { code: "ENOENT" });
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+test("self-check defaults to exactly one direct repair, no nested regulate or Git, and preserves config", async () => {
+  const f = await setup();
+  try {
+    const { timeoutMs: _, ...subject } = selfSubject(f);
+    const original = await readFile(subject.configPath, "utf8");
+    const forbidden = join(f.directory, "forbidden.cjs");
+    await writeFile(
+      forbidden,
+      `if(process.argv.includes("--pguide-command-metadata"))console.log(JSON.stringify({protocol:"pguide-command-v1",command:"regulate",version:"fixture",description:"fixture"}));else process.exit(91);`,
+    );
+    const commands = f.config.commandDirectories[0] as string;
+    await writeFile(
+      join(commands, `pguide-regulate${process.platform === "win32" ? ".cmd" : ""}`),
+      process.platform === "win32"
+        ? `@echo off\r\n"${process.execPath}" "${forbidden}" %*\r\n`
+        : `#!/bin/sh\nexec "${process.execPath}" "${forbidden}" "$@"\n`,
+      { mode: 0o755 },
+    );
+    const noGit = join(f.directory, "no-git");
+    await mkdir(noGit);
+    await writeFile(
+      join(noGit, process.platform === "win32" ? "git.cmd" : "git"),
+      process.platform === "win32" ? "@exit /b 92\r\n" : "#!/bin/sh\nexit 92\n",
+      { mode: 0o755 },
+    );
+    f.env.PATH = `${noGit}${delimiter}${f.env.PATH}`;
+    passed(await f.direct("sanity", subject, selfHelper));
+    assert.equal(await readFile(subject.configPath, "utf8"), original);
+    const messages = (await readFile(f.log, "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    const prompts = messages.filter(({ method }) => method === "session/prompt");
+    assert.equal(prompts.length, 1);
+    assert.match(prompts[0].text, /Self-check task: /);
+    assert.doesNotMatch(prompts[0].text, /Potential Guide regulation|Complete observation:/);
+    assert.deepEqual(
+      messages.map(({ method }) => method),
+      ["initialize", "session/new", "initialize", "session/new", "session/prompt"],
+    );
+    for (const { pid } of messages) assert.throws(() => process.kill(pid, 0));
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+test("self-check wrong, summary-only, denied, incomplete and oversized Agent runs cannot pass", async () => {
+  for (const [mode, reason] of [
+    ["wrong", "nonce-mismatch"],
+    ["summary", "nonce-mismatch"],
+    ["denied", "denied"],
+    ["incomplete", "blocked"],
+    ["overflow", "output-limit"],
+  ]) {
+    const f = await setup(mode);
+    try {
+      const result = await f.direct("sanity", selfSubject(f), selfHelper);
+      isProblem(result, "sanity-failed");
+      const parameters = result.payload?.problems[0]?.parameters as { reason: string } | undefined;
+      assert.equal(parameters?.reason, reason);
+      assert.doesNotMatch(JSON.stringify(result), /SECRET-MODEL-TEXT/);
+      const messages = (await readFile(f.log, "utf8"))
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line));
+      assert.equal(messages.filter(({ method }) => method === "session/prompt").length, 1);
+      for (const { pid } of messages) assert.throws(() => process.kill(pid, 0));
+    } finally {
+      await rm(f.directory, { recursive: true, force: true });
+    }
+  }
+});
+
+test("self-check bounded timeout cleans owned task/state and preserves unrelated scratch", async () => {
+  const f = await setup("prompt-timeout");
+  try {
+    const subject = { ...selfSubject(f), timeoutMs: 7000 };
+    const sentinel = join(f.scratch, "user-owned");
+    await writeFile(sentinel, "preserve");
+    await writeFile(f.subjectFile, JSON.stringify(subject));
+    const started = Date.now();
+    const result = await run(selfHelper, ["sanity", "--subject-file", f.subjectFile], f.env);
+    const envelope = JSON.parse(result.stdout);
+    assert.equal(envelope.status, 504, result.stdout + result.stderr);
+    assert.ok(Date.now() - started < 15000);
+    assert.equal(await readFile(sentinel, "utf8"), "preserve");
+    assert.deepEqual(await readdir(f.scratch), ["user-owned"]);
+    await assert.rejects(lstat(join(f.directory, "must-not-be-used")), { code: "ENOENT" });
+    for (const message of (await readFile(f.log, "utf8")).trim().split("\n"))
+      assert.throws(() => process.kill(JSON.parse(message).pid, 0));
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+test("self-check preserves a shorter configured Agent execution timeout", async () => {
+  const f = await setup("prompt-timeout");
+  try {
+    await writeFile(
+      f.subject.configPath,
+      JSON.stringify({ ...f.config, agentExecutionLimits: { timeoutMs: 500 } }),
+    );
+    const result = await f.direct("sanity", selfSubject(f), selfHelper);
+    assert.equal(result.status, 504);
+    assert.match(result.message, /direct Agent exceeded its deadline/);
+    const messages = (await readFile(f.log, "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    assert.equal(messages.filter(({ method }) => method === "session/prompt").length, 1);
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+test("self-check committed Git subdirectory snapshot is dependency-free and reaches terminal with one prompt", async () => {
+  const f = await setup();
+  try {
+    const snapshot = join(f.repository, "objectives", "pguide-self-check");
+    await cp(selfObjective, snapshot, { recursive: true });
+    await git(f.repository, "add", ".");
+    await git(f.repository, "commit", "-qm", "Self-check snapshot");
+    const revision = await git(f.repository, "rev-parse", "HEAD");
+    const uri = `git+${pathToFileURL(f.repository).href}#objectives/pguide-self-check/pilot.yaml`;
+    await writeFile(f.subjectFile, JSON.stringify(selfSubject(f)));
+    const result = await run(
+      composition,
+      [
+        "probe",
+        "--pilot",
+        uri,
+        "--revision",
+        revision,
+        "--subject-file",
+        f.subjectFile,
+        "--config",
+        f.subject.configPath,
+        "--format",
+        "json",
+      ],
+      f.env,
+    );
+    assert.equal(result.code, 0, result.stdout + result.stderr);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.status, 200);
+    assert.equal(report.payload.current.levelId, "terminal");
+    assert.equal(report.payload.versions[uri], revision);
+    assert.deepEqual(report.payload.problems, []);
+    assert.deepEqual(await readdir(f.scratch), []);
+    const messages = (await readFile(f.log, "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    assert.equal(messages.filter(({ method }) => method === "session/prompt").length, 1);
   } finally {
     await rm(f.directory, { recursive: true, force: true });
   }

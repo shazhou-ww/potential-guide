@@ -926,6 +926,8 @@ export interface AcpPermissionRequest {
 }
 
 export interface AcpClientOptions {
+  maxOutputBytes?: number;
+  requireEndTurn?: boolean;
   permissionHandler?: (
     request: AcpPermissionRequest,
     signal: AbortSignal,
@@ -955,6 +957,11 @@ export class AcpClient {
   ) {
     acpProtocolVersion(profile.connection.protocolVersion);
     if (
+      options.maxOutputBytes !== undefined &&
+      (!Number.isSafeInteger(options.maxOutputBytes) || options.maxOutputBytes < 1)
+    )
+      throw new CliError("ACP maxOutputBytes must be a positive safe integer.");
+    if (
       options.permissionTimeoutMs !== undefined &&
       (!Number.isSafeInteger(options.permissionTimeoutMs) ||
         options.permissionTimeoutMs <= 0 ||
@@ -976,6 +983,14 @@ export class AcpClient {
       windowsHide: true,
       shell: false,
     });
+    let outputBytes = 0;
+    const countOutput = (chunk: Buffer) => {
+      outputBytes += chunk.length;
+      if (options.maxOutputBytes !== undefined && outputBytes > options.maxOutputBytes)
+        this.fail(new CliError("ACP output limit exceeded.", 6, "acp-error"));
+    };
+    this.child.stdout.on("data", countOutput);
+    this.child.stderr.on("data", countOutput);
     this.stderrPipeline = pipeRedactedSecrets(
       this.child.stderr,
       process.stderr,
@@ -1255,6 +1270,8 @@ export class AcpClient {
     if (stopReason === "refusal") {
       return { status: "blocked", summary: stopReason };
     }
+    if (this.options.requireEndTurn && result.stopReason !== "end_turn")
+      return { status: "blocked", summary: "incomplete-turn" };
     return {
       status: "completed",
       summary: output.text.trim() || String(result.summary ?? stopReason),

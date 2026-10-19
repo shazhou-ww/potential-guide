@@ -71,6 +71,15 @@ are stored under the platform state directory; credentials are never persisted.
 
 ### Set up a target device
 
+For an already installed local device, prefer the standalone
+[self-check Objective](./objectives/pguide-self-check/README.md). Its
+`initial → installed → configured → terminal` checks verify installation,
+ACP stdio configuration and one isolated, directly prompted marker repair with
+independent exact-content verification. It does not nest regulation or require
+an extra `allowSanity` input; existing tool permissions still apply. Each check
+defaults to 20 seconds (24-second Pilot maximum within the default 30-second
+probe deadline). Remote setup integration remains future work.
+
 The repository-owned [setup Objective](./objectives/pguide-setup/README.md) checks
 installation, configuration and ACP readiness on target **B**, while an already-ready
 control machine **A** runs setup regulation and guides its Agent to install/configure

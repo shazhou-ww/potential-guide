@@ -61,6 +61,14 @@ Session continuation uses standard `session/load` with the advertised
 `loadSession` capability. Prompt summaries use streamed `agent_message_chunk`
 text (bounded to 1 MiB), falling back to legacy summaries or the stop reason.
 
+Embedders may additionally set `AcpClientOptions.maxOutputBytes` to a positive safe
+integer to bound combined raw stdout/stderr, including unterminated lines and
+non-message output. Exceeding it rejects pending requests; callers must still
+stop the client in `finally` and supply an outer deadline. Optional
+`requireEndTurn: true` accepts only an explicit `end_turn` prompt response as
+completed. Both options are opt-in to preserve legacy caller behavior; the local
+self-check uses them without changing its configured tool permissions.
+
 Agent-to-client requests have a separate JSON-RPC ID namespace from pending
 client requests. By default, `session/request_permission` receives a cancelled
 outcome, while unsupported methods receive `-32601`; no filesystem or terminal

@@ -31,10 +31,12 @@ const problem = (id, parameters = {}) => ({
   message: "",
 });
 
-function subjectValue(value) {
+function subjectValue(value, selfCheck = false) {
   const required = ["workingDirectory", "configPath", "scratchDirectory", "pguide"];
   const optional = ["desiredVersion", "agent", "userHome", "allowSanity", "timeoutMs", "target"];
   const remote = value?.target?.type === "ssh";
+  if (selfCheck && (value?.target !== undefined || value?.allowSanity !== undefined))
+    throw new Fault("invalid-subject: self-check is local-only and has no allowSanity input.", 400);
   const absolute = remote ? posix.isAbsolute : isAbsolute;
   if (
     !record(value) ||
@@ -172,7 +174,7 @@ export async function stopTree(child) {
   });
 }
 
-function executionContext(subject, directory, signal) {
+function executionContext(subject, directory, signal, deadline) {
   const env = { ...process.env };
   // A caller's Git index/worktree/config overrides must not escape the owned fixture.
   for (const key of Object.keys(env)) if (/^GIT_/i.test(key)) delete env[key];
@@ -274,7 +276,7 @@ function executionContext(subject, directory, signal) {
       "--format",
       "json",
     ]);
-  return { execute, cli, env };
+  return { execute, cli, env, remainingMs: () => deadline - Date.now() };
 }
 
 function jsonOutput(result) {
@@ -554,6 +556,61 @@ async function sanity(subject, context, directory, selected) {
     });
 }
 
+async function directSanity(context, directory, selected) {
+  const task = join(directory, "task");
+  await mkdir(task, { mode: 0o700 });
+  const marker = join(task, "marker.txt");
+  const expected = `ready-${randomBytes(24).toString("hex")}`;
+  await writeFile(marker, "not-ready", { mode: 0o600 });
+  if ((await readFile(marker, "utf8")) === expected)
+    throw new Fault("sanity: initial marker was not independently observed.");
+  const input = join(directory, "agent-input.json");
+  await writeFile(
+    input,
+    JSON.stringify({
+      cwd: task,
+      expected,
+      profile: selected.profile,
+      permissions: selected.config.regulationPermissions,
+      timeoutMs: Math.max(
+        1,
+        Math.min(
+          context.remainingMs() - 2500,
+          selected.config.agentExecutionLimits?.timeoutMs ?? Number.POSITIVE_INFINITY,
+        ),
+      ),
+    }),
+    { mode: 0o600 },
+  );
+  const result = await context.execute(process.execPath, [join(here, "direct-agent.mjs"), input]);
+  if (result.code !== 0) throw new Fault("sanity: direct Agent process failed.");
+  const outcome = jsonOutput(result);
+  if (outcome.reason === "timeout")
+    throw new Fault("timeout: direct Agent exceeded its deadline.", 504);
+  if (outcome.status !== "completed")
+    throw new Problem("sanity-failed", {
+      stage: "agent",
+      reason: ["denied", "blocked", "cancelled", "output-limit", "invocation-failed"].includes(
+        outcome.reason,
+      )
+        ? outcome.reason
+        : "invalid-outcome",
+    });
+  let correct = false;
+  try {
+    const details = await lstat(marker);
+    correct =
+      details.isFile() &&
+      !details.isSymbolicLink() &&
+      details.nlink === 1 &&
+      details.size === Buffer.byteLength(expected) &&
+      (await readFile(marker, "utf8")) === expected;
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  if (!correct) throw new Problem("sanity-failed", { stage: "recheck", reason: "nonce-mismatch" });
+}
+
 export async function check(stage, value, options = {}) {
   let directory;
   let timer;
@@ -561,14 +618,14 @@ export async function check(stage, value, options = {}) {
   try {
     if (!["installation", "configuration", "sanity"].includes(stage))
       throw new Fault("usage: select installation, configuration, or sanity.", 400);
-    const subject = subjectValue(value);
+    const subject = subjectValue(value, options.selfCheck === true);
     const remote = subject.target?.type === "ssh";
     if (remote) {
       const { validateTarget } = await import("./ssh-target.mjs");
       validateTarget(subject.target);
     }
-    // No executable, including an Agent, is launched without explicit sanity consent.
-    if (stage === "sanity" && subject.allowSanity !== true)
+    // Legacy setup retains its separate sanity consent gate.
+    if (stage === "sanity" && !options.selfCheck && subject.allowSanity !== true)
       return problem("sanity-consent-required");
     if (options.pilot === true && subject.timeoutMs + (remote ? 10000 : 0) > 24000)
       throw new Fault(
@@ -589,12 +646,20 @@ export async function check(stage, value, options = {}) {
     );
     await mkdir(subject.scratchDirectory, { recursive: true });
     directory = await mkdtemp(join(subject.scratchDirectory, "pguide-setup-"));
-    const context = executionContext(subject, directory, controller.signal);
+    const context = executionContext(
+      subject,
+      directory,
+      controller.signal,
+      Date.now() + subject.timeoutMs,
+    );
     if (stage === "installation") await installation(subject, context);
     else {
       const selected = await configured(subject, context);
       await acpReady(selected.profile, context, directory);
-      if (stage === "sanity") await sanity(subject, context, directory, selected);
+      if (stage === "sanity") {
+        if (options.selfCheck) await directSanity(context, directory, selected);
+        else await sanity(subject, context, directory, selected);
+      }
     }
     return success();
   } catch (error) {

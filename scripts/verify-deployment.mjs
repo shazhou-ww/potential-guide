@@ -625,6 +625,11 @@ async function verifySetupObjective(baseEnv) {
   const setup = join(setupRoot, "objectives", "pguide-setup");
   await mkdir(setupRoot, { recursive: true });
   await cp(join(root, "objectives", "pguide-setup"), setup, { recursive: true });
+  await cp(
+    join(root, "objectives", "pguide-self-check"),
+    join(setupRoot, "objectives", "pguide-self-check"),
+    { recursive: true },
+  );
   await successful("git", ["init", "-q"], { cwd: setupRoot });
   await successful("git", ["config", "user.name", "Deployment Fixture"], { cwd: setupRoot });
   await successful("git", ["config", "user.email", "fixture@example.invalid"], { cwd: setupRoot });
@@ -642,15 +647,21 @@ async function verifySetupObjective(baseEnv) {
     agent,
     `
 import { createInterface } from "node:readline";
-import { writeFile } from "node:fs/promises";
+import { appendFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+let cwd;
 for await (const line of createInterface({input:process.stdin})) {
   const message=JSON.parse(line);if (!message.id) continue;
   let result={};
   if (message.method==="initialize") result={protocolVersion:1};
-  if (message.method==="session/new") result={sessionId:"setup-fixture"};
+  if (message.method==="session/new") {cwd=message.params.cwd;result={sessionId:"setup-fixture"};}
   if (message.method==="session/prompt") {
-    const subjectLine=message.params.prompt[0].text.split("\\n").find(line=>line.startsWith("Subject: "));
-    const subject=JSON.parse(subjectLine.slice("Subject: ".length));
+    const text=message.params.prompt[0].text;
+    const direct=text.includes("Self-check task: ");
+    const subjectLine=text.split("\\n").find(line=>line.startsWith(direct?"Self-check task: ":"Subject: "));
+    const subject=JSON.parse(subjectLine.slice(direct?"Self-check task: ".length:"Subject: ".length));
+    if(direct)subject.marker=join(cwd,subject.marker);
+    await appendFile(${JSON.stringify(join(consumer, "setup-prompts.jsonl"))},JSON.stringify({direct})+"\\n");
     await writeFile(subject.marker,subject.expected);
     result={stopReason:"end_turn",summary:"Exact nonce written"};
   }
@@ -717,6 +728,40 @@ for await (const line of createInterface({input:process.stdin})) {
   assert.equal(observation.payload.versions[setupUri], revision);
   assert.deepEqual(observation.payload.problems, []);
   console.log("installed pguide loads committed setup subdirectory and verifies real nonce repair");
+  const selfSubject = JSON.parse(await readFile(subject, "utf8"));
+  delete selfSubject.allowSanity;
+  await writeFile(subject, JSON.stringify(selfSubject));
+  const selfUri = setupUri.replace("/pguide-setup/", "/pguide-self-check/");
+  const selfResult = await successful(
+    executable("pguide"),
+    [
+      "probe",
+      "--pilot",
+      selfUri,
+      "--revision",
+      revision,
+      "--config",
+      configPath,
+      "--subject-file",
+      subject,
+      "--format",
+      "json",
+    ],
+    { cwd: consumer, env: baseEnv },
+  );
+  const selfObservation = JSON.parse(selfResult.stdout);
+  assert.equal(selfObservation.status, 200, selfResult.stdout);
+  assert.equal(selfObservation.payload.current.levelId, "terminal", selfResult.stdout);
+  assert.equal(selfObservation.payload.versions[selfUri], revision);
+  assert.deepEqual(selfObservation.payload.problems, []);
+  assert.deepEqual(
+    (await readFile(join(consumer, "setup-prompts.jsonl"), "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line)),
+    [{ direct: false }, { direct: true }],
+  );
+  console.log("installed pguide self-check snapshot verifies exactly one direct Agent repair");
 }
 
 async function verifyRegulationPermissions(baseEnv) {

@@ -1,7 +1,15 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "files": {
-    "includes": ["**", "!**/.cache", "!**/.turbo", "!**/dist", "!**/node_modules", "!.silvermoon"]
+    "includes": [
+      "**",
+      "!**/.cache",
+      "!**/.turbo",
+      "!**/dist",
+      "!**/node_modules",
+      "!.silvermoon",
+      "!objectives/pguide-self-check/runtime"
+    ]
   },
   "formatter": {
     "enabled": true,
