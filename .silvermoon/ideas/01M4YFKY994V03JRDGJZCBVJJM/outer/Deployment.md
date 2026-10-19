@@ -46,6 +46,17 @@
   脚本输出精确 `baseline` 与 `publication: "not-performed"`。
   本次未执行 npm 发布、版本标签或 GitHub Release，也未推进 preset 继承。
 
+补充仓库验证：`pnpm check` 的格式、lint、类型检查通过；七个库 workspace 测试均通过，
+但 `pguide` 测试为 73 通过、2 失败、1 跳过，因此整体退出一，不能宣称全仓检查通过。
+失败项为 `sanity timeout during an actual ACP prompt cleans isolated config, state and descendants`
+（`setup-objective.test.ts:645`，期望一、实际零）及
+`supervise plans once without repairs, then continuously observes and executes a pinned goal once`
+（初次期望 `terminal`、实际 `initial`）。
+用 `tsx --test --test-concurrency=1 --test-name-pattern` 精确复跑两项：
+supervisor 项通过，sanity timeout 项仍失败；单独执行 `pnpm run pack:check` 通过。
+上述 CLI 超时清理失败保留为已知验证限制，不以此伪造全仓绿灯，
+也不在部署阶段修改产品实现。本契约要求的独立使用方阶段屏障与修复收敛断言全部通过。
+
 ### 2026-10-15 历史证据
 
 2026-10-15 使用方验证基线为主分支提交
