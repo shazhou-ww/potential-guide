@@ -305,3 +305,43 @@ objectives / .github 的树无差异。I-S01 / I-AC01 据本地结果及完整�
 - 相关 Biome check、受影响 workspace typecheck、generated `--check` 通过；
   未运行完整 `pnpm check`、未启动/推送 CI、未提交或修改生命周期材料。
   源码与本节证据留为 uncommitted，独立门禁和 Windows CI 结论仍由父会话负责。
+
+### CI 39217516250：仅 Windows CIM command 的精确诊断跟进
+
+- 父会话报告 `d7758af28eda62ac2ebf51ec1dc3c78accf38450` 的精确 Node 22.13/24.11
+  全量 check 及 Ubuntu/macOS packed 均通过；仅 Windows job `117944761406`
+  在 setup 返回 `exit=6,status=regulation-error,diagnostic=windows-snapshot-command`。
+  这已定位 shared `killProcessTree` 的 PowerShell/CIM subprocess 执行失败，
+  不是 inner 3s probe、JSON 校验或 POSIX 取消修复。
+- 本机 Node 22.13.0 以相同稀疏平台环境、独占 USERPROFILE/HOME，分别省略、
+  继承、清空 PSModulePath 及注入 pwsh7 模块路径形态，固定 CIM query 均成功：
+  首组约 870–1633ms；另设独立 module-analysis-cache 路径后约 862–1031ms。
+  均不带 ProgramFiles/LOCALAPPDATA；本机未发现 pwsh7 可执行文件，因此这些
+  环境对比不是复现 GitHub 镜像，也不能据此认定 CI 是 5s timeout 或 module failure。
+- 未猜测修改查询/环境或扩大预算。只给固定只读 query 的失败增加可判别字段：
+  `kind/exit/errno/signal/killed/elapsedMs/reported/reason`，错误仍抛出并保留 cause。
+  PowerShell catch 只将已知 FullyQualifiedErrorId 映射为固定
+  command-not-found、module-autoload/load/not-found/manifest、access-denied、
+  CIM access/class/namespace/RPC 等标签；未知错误仅为 unclassified，始终 exit 1。
+  不回传任意 stderr、命令、路径、Agent/config/Auth 或异常原文。
+  setup 仅转发严格格式的固定标签及有界数字；双重 snapshot/taskkill 失败时
+  AggregateError 同样保留该安全诊断，不丢失下一次 CI 的分类。
+- 下一次 CI 若见
+  `windows-snapshot-command[kind=timeout;exit=none;errno=none;signal=SIGTERM;killed=true;elapsedMs=5001;reported=false;reason=unclassified]`
+  可确认 Node 的 5s watchdog；若 `kind=exit;exit=1;reported=true;reason=module-autoload`
+  则是固定 query 内捕获的模块错误。`reported=false` 表示未收到本命令的固定
+  catch 标记，不能把它自动等同于模块错误。实际 CI 细分类仍待父会话下一次运行。
+- `pnpm exec tsx --test packages\pguide-cli-core\test\process-tree.test.ts`：
+  Windows Node 22.13.0、24.11.1 各 9/9，耗时 10593ms/10496ms。
+  原六项均保留；实际不合作 owned 树现在使用新建独占稀疏 profile，
+  不继承 PSModulePath/ProgramFiles/LOCALAPPDATA；另以真实 PowerShell 分别注入
+  缺命令、模块错误与超过 5s 的命令，验证精确分类及未变的 5000ms 界限。
+  非零 taskkill 后的 owned 后代验证、不可观测/存活后代失败均未放宽。
+- Node 22.13.0 的 `tsx --test --test-name-pattern='sanity invocation diagnostics'
+  packages\pguide\test\setup-objective.test.ts` 1/1，32083ms，
+  覆盖新标签跨 setup 报告传递、畸形标签和 canary 不泄漏。
+  相关 workspace/test typecheck、Biome、正式 runtime 再生成及 `--check` 均通过。
+  临时环境诊断与 module-cache scratch 已清理；未动 Linux 修复、生产
+  30s/24s/6s 预算、5s CIM 界限、SSH、其他 workspace 或合同。
+  本轮是**诊断就绪，不是 Windows CI 根因修复或绿灯声明**；未跑完整 check、
+  packed、Linux 重复测试或 CI，未 commit/push/改 gates/ledger/events/outer。

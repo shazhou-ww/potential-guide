@@ -3,6 +3,70 @@ import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
+const windowsSnapshotCommand = String.raw `
+$ErrorActionPreference='Stop'
+try {
+  ConvertTo-Json -Compress -InputObject @(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId | Select-Object ProcessId,ParentProcessId)
+} catch {
+  $reason = switch -Regex ($_.FullyQualifiedErrorId) {
+    '^CommandNotFoundException(?:,|$)' { 'command-not-found'; break }
+    '^CouldNotAutoload(?:Matching)?Module(?:,|$)' { 'module-autoload'; break }
+    '^Modules_ModuleNotFound(?:,|$)' { 'module-not-found'; break }
+    '^Modules_ModuleLoadFailure(?:,|$)' { 'module-load'; break }
+    '^Modules_InvalidManifest(?:,|$)' { 'module-manifest'; break }
+    '^UnauthorizedAccess(?:,|$)' { 'access-denied'; break }
+    '^HRESULT 0x80041003,Microsoft\.Management\.Infrastructure\.CimCmdlets\.GetCimInstanceCommand$' { 'cim-access-denied'; break }
+    '^HRESULT 0x80041010,Microsoft\.Management\.Infrastructure\.CimCmdlets\.GetCimInstanceCommand$' { 'cim-invalid-class'; break }
+    '^HRESULT 0x8004100E,Microsoft\.Management\.Infrastructure\.CimCmdlets\.GetCimInstanceCommand$' { 'cim-invalid-namespace'; break }
+    '^HRESULT 0x800706BA,Microsoft\.Management\.Infrastructure\.CimCmdlets\.GetCimInstanceCommand$' { 'cim-rpc-unavailable'; break }
+    default { 'unclassified' }
+  }
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_ERROR:' + $reason)
+  exit 1
+}`;
+class WindowsSnapshotCommandError extends Error {
+}
+function snapshotCommandError(cause, started) {
+    // execFile errors include command text and stderr; expose only bounded fields from this fixed query.
+    const error = cause;
+    const code = error?.code;
+    const exit = typeof code === "number" && Number.isInteger(code) && code >= -2147483648 && code <= 4294967295
+        ? String(code)
+        : "none";
+    const errno = typeof code === "string" &&
+        [
+            "ENOENT",
+            "EACCES",
+            "EPERM",
+            "EINVAL",
+            "E2BIG",
+            "ENOMEM",
+            "ETIMEDOUT",
+            "UNKNOWN",
+            "ERR_CHILD_PROCESS_STDIO_MAXBUFFER",
+        ].includes(code)
+        ? code
+        : "none";
+    const signal = error?.signal === "SIGTERM" || error?.signal === "SIGKILL" ? error.signal : "none";
+    const killed = error?.killed === true;
+    const kind = errno === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER"
+        ? "output-limit"
+        : killed || errno === "ETIMEDOUT"
+            ? "timeout"
+            : exit !== "none"
+                ? "exit"
+                : errno !== "none"
+                    ? "spawn"
+                    : signal !== "none"
+                        ? "signal"
+                        : "unknown";
+    const reported = typeof error?.stderr === "string"
+        ? /(?:^|\r?\n)PGUIDE_WINDOWS_SNAPSHOT_ERROR:(command-not-found|module-autoload|module-not-found|module-load|module-manifest|access-denied|cim-access-denied|cim-invalid-class|cim-invalid-namespace|cim-rpc-unavailable|unclassified)(?:\r?\n|$)/.exec(error.stderr)
+        : null;
+    const reason = reported?.[1] ?? "unclassified";
+    const elapsedMs = Math.min(2147483647, Math.max(0, Math.round(performance.now() - started)));
+    return new WindowsSnapshotCommandError(`windows-snapshot-command[kind=${kind};exit=${exit};errno=${errno};signal=${signal};killed=${killed};elapsedMs=${elapsedMs};reported=${reported !== null};reason=${reason}]`, { cause });
+}
 export async function killProcessTree(child) {
     if (child.pid === undefined || child.exitCode !== null || child.signalCode !== null)
         return;
@@ -13,12 +77,14 @@ export async function killProcessTree(child) {
             const systemRoot = process.env.SystemRoot ?? process.env.WINDIR;
             if (systemRoot === undefined)
                 throw new Error("Windows process identity query requires SystemRoot.");
-            const { stdout } = await execute(join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), [
-                "-NoProfile",
-                "-NonInteractive",
-                "-Command",
-                "$ErrorActionPreference='Stop'; ConvertTo-Json -Compress -InputObject @(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId | Select-Object ProcessId,ParentProcessId)",
-            ], { windowsHide: true, timeout: 5000 });
+            const started = performance.now();
+            let stdout;
+            try {
+                ({ stdout } = await execute(join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), ["-NoProfile", "-NonInteractive", "-Command", windowsSnapshotCommand], { windowsHide: true, timeout: 5000 }));
+            }
+            catch (error) {
+                throw snapshotCommandError(error, started);
+            }
             const rows = JSON.parse(stdout);
             if (!Array.isArray(rows) ||
                 rows.some((row) => row === null ||
@@ -48,7 +114,7 @@ export async function killProcessTree(child) {
         }
         catch (error) {
             if ("error" in snapshot)
-                throw new AggregateError([snapshot.error, error], "Process tree termination and ownership snapshot failed.");
+                throw new AggregateError([snapshot.error, error], `Process tree termination and ownership snapshot failed.${snapshot.error instanceof WindowsSnapshotCommandError ? ` ${snapshot.error.message}` : ""}`);
             // Concurrent parent/child teardown can make taskkill nonzero after success.
             // Root exit alone is insufficient: every pre-kill owned PID must disappear.
             const deadline = performance.now() + 500;

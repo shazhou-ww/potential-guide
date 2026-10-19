@@ -531,7 +531,14 @@ async function sanity(subject, context, directory, selected) {
       )
         ? report.status
         : "unrecognized";
+      const snapshotDiagnostic =
+        typeof report.error === "string"
+          ? /windows-snapshot-command\[kind=(?:timeout|exit|spawn|signal|output-limit|unknown);exit=(?:-?\d{1,10}|none);errno=(?:ENOENT|EACCES|EPERM|EINVAL|E2BIG|ENOMEM|ETIMEDOUT|UNKNOWN|ERR_CHILD_PROCESS_STDIO_MAXBUFFER|none);signal=(?:SIGTERM|SIGKILL|none);killed=(?:true|false);elapsedMs=\d{1,10};reported=(?:true|false);reason=(?:command-not-found|module-autoload|module-not-found|module-load|module-manifest|access-denied|cim-access-denied|cim-invalid-class|cim-invalid-namespace|cim-rpc-unavailable|unclassified)\]/.exec(
+              report.error,
+            )?.[0]
+          : undefined;
       const diagnostic =
+        snapshotDiagnostic ??
         [
           [
             "Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId",
@@ -543,7 +550,8 @@ async function sanity(subject, context, directory, selected) {
           ["Check timed out after 3000ms.", "inner-probe-deadline"],
         ].find(
           ([message]) => typeof report.error === "string" && report.error.includes(message),
-        )?.[1] ?? "unclassified";
+        )?.[1] ??
+        "unclassified";
       throw new Fault(
         `regulate: Agent or probe invocation failed (exit=${result.code ?? "signal"}, status=${status}, diagnostic=${diagnostic}).`,
       );

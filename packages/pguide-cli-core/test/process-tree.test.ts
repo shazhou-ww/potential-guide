@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import childProcess, { type ChildProcess, spawn } from "node:child_process";
 import { once } from "node:events";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
+import { join, resolve } from "node:path";
 import { type TestContext, test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
@@ -9,7 +11,11 @@ import { killProcessTree } from "@potential-guide/cli-core";
 
 function windowsCommands(
   t: TestContext,
-  execute: (command: string, args: string[]) => Promise<{ stdout: string; stderr: string }>,
+  execute: (
+    command: string,
+    args: string[],
+    options?: { windowsHide?: boolean; timeout?: number },
+  ) => Promise<{ stdout: string; stderr: string }>,
 ) {
   const platform = Object.getOwnPropertyDescriptor(process, "platform");
   const systemRoot = process.env.SystemRoot;
@@ -124,7 +130,143 @@ test("Windows snapshot failure still attempts termination and fails explicitly",
   assert.equal(terminated, true);
 });
 
-test("forceful cleanup terminates an owned process and its uncooperative child", async () => {
+test("Windows snapshot command failures retain only bounded diagnostic fields", async (t) => {
+  const canary = "fixture-canary-must-not-be-exposed";
+  const cases = [
+    [
+      { code: null, killed: true, signal: "SIGTERM" },
+      "kind=timeout;exit=none;errno=none;signal=SIGTERM;killed=true",
+    ],
+    [{ code: 23 }, "kind=exit;exit=23;errno=none"],
+    [{ code: -1073741515 }, "kind=exit;exit=-1073741515;errno=none"],
+    [{ code: "ENOENT" }, "kind=spawn;exit=none;errno=ENOENT"],
+    [{ code: "EACCES" }, "kind=spawn;exit=none;errno=EACCES"],
+    [
+      { code: "ERR_CHILD_PROCESS_STDIO_MAXBUFFER", killed: true },
+      "kind=output-limit;exit=none;errno=ERR_CHILD_PROCESS_STDIO_MAXBUFFER",
+    ],
+    [
+      { code: 1, stderr: `PGUIDE_WINDOWS_SNAPSHOT_ERROR:module-autoload\n${canary}` },
+      "reason=module-autoload]",
+    ],
+    [{ code: 1, stderr: `PGUIDE_WINDOWS_SNAPSHOT_ERROR:${canary}\n` }, "reason=unclassified]"],
+    [
+      { code: 1, stderr: `PGUIDE_WINDOWS_SNAPSHOT_ERROR:module-autoload-${canary}\n` },
+      "reason=unclassified]",
+    ],
+    [
+      { code: canary, signal: canary, stderr: canary },
+      "kind=unknown;exit=none;errno=none;signal=none",
+    ],
+  ] as const;
+  let failure: Error;
+  let terminated = false;
+  windowsCommands(t, async (command, _args, options) => {
+    if (command.endsWith("powershell.exe")) {
+      assert.equal(options?.timeout, 5000, "snapshot deadline must remain unchanged");
+      throw failure;
+    }
+    assert.equal(command, "taskkill");
+    terminated = true;
+    return { stdout: "", stderr: "" };
+  });
+  for (const [fields, expected] of cases) {
+    failure = Object.assign(new Error(canary), fields);
+    terminated = false;
+    await assert.rejects(killProcessTree(ownedChild()), (error) => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.cause, failure);
+      assert.ok(error.message.includes(expected), error.message);
+      assert.match(error.message, /elapsedMs=\d{1,10};reported=(?:true|false);reason=/);
+      assert.equal(error.message.includes(canary), false);
+      return true;
+    });
+    assert.equal(terminated, true, "failed snapshot must still attempt owned termination");
+  }
+});
+
+test("Windows simultaneous snapshot and termination failures preserve safe command diagnostics", async (t) => {
+  const failure = Object.assign(new Error("fixture-canary"), { code: "ENOENT" });
+  const termination = new Error("fixture-taskkill-canary");
+  windowsCommands(t, async (command) => {
+    if (command.endsWith("powershell.exe")) throw failure;
+    throw termination;
+  });
+  await assert.rejects(killProcessTree(ownedChild()), (error) => {
+    assert.ok(error instanceof AggregateError);
+    assert.equal(error.errors[0].cause, failure);
+    assert.equal(error.errors[1], termination);
+    assert.match(error.message, /windows-snapshot-command\[kind=spawn;exit=none;errno=ENOENT;/);
+    assert.equal(error.message.includes("canary"), false);
+    return true;
+  });
+});
+
+async function sparseEnvironment(t: TestContext): Promise<NodeJS.ProcessEnv> {
+  const cache = resolve(".cache");
+  await mkdir(cache, { recursive: true });
+  const home = await mkdtemp(join(cache, "pguide-cim-home-"));
+  t.after(() => rm(home, { recursive: true, force: true, maxRetries: 3 }));
+  return {
+    ...Object.fromEntries(
+      ["Path", "PATH", "SystemRoot", "WINDIR", "TEMP", "TMP"].flatMap((name) =>
+        process.env[name] === undefined ? [] : [[name, process.env[name]]],
+      ),
+    ),
+    HOME: home,
+    USERPROFILE: home,
+  };
+}
+
+if (process.platform === "win32") {
+  test("Windows real snapshot subprocess distinguishes command, module and unchanged 5s timeout faults", async (t) => {
+    const execute = promisify(childProcess.execFile);
+    const env = await sparseEnvironment(t);
+    const query =
+      "Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId | Select-Object ProcessId,ParentProcessId";
+    let replacement = "";
+    windowsCommands(t, async (command, args, options) => {
+      if (command.endsWith("powershell.exe")) {
+        assert.equal(options?.timeout, 5000);
+        return execute(
+          command,
+          args.map((arg) => arg.replace(query, replacement)),
+          { ...options, env, encoding: "utf8" },
+        );
+      }
+      assert.equal(command, "taskkill");
+      return { stdout: "", stderr: "" };
+    });
+    for (const [fixture, expected] of [
+      ["Get-PguideMissingCimFixture", /kind=exit;exit=1;.*reason=command-not-found/],
+      [
+        "Write-Error -ErrorId CouldNotAutoloadMatchingModule -Message 'fixture-canary'",
+        /kind=exit;exit=1;.*reason=module-autoload/,
+      ],
+      ["Start-Sleep -Seconds 10", /kind=timeout;exit=none;.*killed=true;.*reason=unclassified/],
+    ] as const) {
+      replacement = fixture;
+      await assert.rejects(killProcessTree(ownedChild()), (error) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, expected);
+        assert.equal(error.message.includes("fixture-canary"), false);
+        return true;
+      });
+    }
+  });
+}
+
+test("forceful cleanup terminates an owned process and its uncooperative child", async (t) => {
+  if (process.platform === "win32") {
+    const execute = promisify(childProcess.execFile);
+    const env = await sparseEnvironment(t);
+    assert.equal(env.PSModulePath, undefined);
+    assert.equal(env.ProgramFiles, undefined);
+    assert.equal(env.LOCALAPPDATA, undefined);
+    windowsCommands(t, (command, args, options) =>
+      execute(command, args, { ...options, env, encoding: "utf8" }),
+    );
+  }
   const childSource = `process.on("SIGTERM",()=>{});console.log(process.pid);setInterval(()=>{},1000);`;
   const rootSource = `
     const {spawn}=require("node:child_process");
