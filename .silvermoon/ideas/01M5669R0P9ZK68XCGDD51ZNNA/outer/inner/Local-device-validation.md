@@ -205,3 +205,14 @@ I-AC03 因缺少真实 terminal 证据仍未满足，不提交或批准实现验
 本轮实现将 self-check sanity 的 readiness 合并到唯一修复会话：实际修复会话仍须通过协议协商、所选 profile 要求的 sessionResume 能力和 session/new，才能发出一次 prompt。configuration check 保持独立无 prompt 的真实会话；旧 setup/SSH 路径不变。没有跨 check 缓存就绪、跳过安装配置、延长预算或减少清理余量。新增拒绝 initialize、错误协议、缺少必需恢复能力、拒绝 session/new 的四种回归，均核对只有一个 Agent、没有 prompt、固定安全错误分类和已清理进程；成功回归精确核对只有一次 initialize、session/new、prompt。定向九项测试全部通过，不将测试替身当作真实 terminal。
 
 优化候选的完整 `pnpm check` 退出码 `0`：格式、lint、类型检查、四个 runtime 新鲜度检查、测试、build 和 pack 检查通过。合计报告 365 项测试，363 通过、2 项已有跳过、0 失败；setup 33 项、self-check package 1 项和 monorepo 34 项重新执行，其余九个 workspace 测试为 Turbo 缓存回放，根脚本 16 项重新执行。现阶段只确认消除了重复启动且保留拒绝路径，尚不声明真实任务能在预算内完成。
+
+### 优化版本的真实复验
+
+优化和自动验证先以 `7f1487ad93741f9fafd8c73560d2acf6b871101a` 同步到 primary，再用现有安装、相同临时 `gpt-5-mini` profile、最小绝对 marker 写权限和 24 秒预算，对该精确源码版本执行一次完整 probe。代码消除重复启动是这次复验前的实质条件变化，不是对相同条件的自动重试。
+
+- 审计确认 ACP 启动从三次降为两次：configuration readiness 一次、sanity 修复会话一次；两次 session/new 均确认所选模型匹配。
+- 修复会话在启动后 `1967 ms` 完成 session/new，`1968 ms` 发出唯一 prompt；`19124 ms` 因总预算发送取消，即本次 prompt 等待约 `17156 ms`，比优化前同模型这一次样本多约 `2879 ms`。样本耗时受外部条件影响，不能声明恒定节省值。
+- `19128 ms` 收到 `stopReason: cancelled`；没有观察到权限请求。probe 仍退出 `6`、返回 504 direct Agent 超时、空 payload，没有 terminal、精确 versions 投影或经独立复查的成功修复证据。
+- scratch 无残留；临时配置、启动器、参数副本、准备/发现脚本及空 scratch 根目录已删除，用户持久模型、配置和权限不变。原始报告和方法审计保留为会话文件 `self-check-optimized-report.json`、`self-check-optimized-audit.jsonl`。
+
+结论是已验证本地重复启动开销被消除，但当前真实服务在剩余约 17.2 秒内仍未返回完成结果；尚不能证明是模型推理慢、服务等待还是其他外部原因。没有再换模型、延长期限或重试，也不把启动优化或模型列表当作 I-AC03 通过。下一步需要新的外部执行证据或明确讨论预算契约；在没有条件变化时暂停真实调用，不能自行放宽 24 秒上限或用长 helper 替代完整 Pilot terminal。I-S03、I-AC03 保持未完成。

@@ -34,6 +34,8 @@ Pilot 单项默认 20 秒，subject 上限 24 秒，为默认 30 秒 probe 留�
 
 历史设备固定 811f28d 的完整 probe 停在 installed，configuration 的 session/new 被 Agent 拒绝，认证诊断为 authentication-required。当前 Windows 用户另用既有安装加载固定 c1f2a42 的新 package 快照，完整 probe 已进入 direct sanity，但返回 504 `timeout: direct Agent exceeded its deadline.`。用户随后明确同意单次绝对 marker 写入授权，本机指定固定 6c75d92 再执行一次完整 probe；无秘密方法审计确认真实 prompt 已发出，在约 13.5 秒等待后因剩余预算耗尽取消，没有权限请求，仍未得到 terminal。临时配置及授权启动器已删除，scratch 已清空。不同用户的历史认证阻塞、客户端权限模拟和当前真实结果不能混用；readiness 通过或 prompt 发出也不等于真实修复成功。详细纠正、边界及下一步见 [当前设备验证](./Local-device-validation.md)。本步骤和 I-AC03 保持未完成，不记录 submitInner 或 acceptInner。
 
+随后从无 prompt 的 ACP 元数据确认默认模型及可选 `gpt-5-mini`，仅在临时 profile 切换轻量模型；原实现仍超时。消除 sanity 的重复 readiness 启动后，完整 pnpm check 通过（365 项报告，363 通过、2 项跳过）；固定已同步优化源码 7f1487a 的真实复验确认完整自查只启动两个 ACP Agent，唯一 prompt 获得约 17.2 秒，但仍返回取消和 504，未达到 terminal。没有延长预算、扩大权限或继续重试；I-S03、I-AC03 仍未完成，等待新的外部执行证据或预算契约讨论。
+
 ## Acceptance criteria
 
 ### I-AC01: 独立自查可加载
