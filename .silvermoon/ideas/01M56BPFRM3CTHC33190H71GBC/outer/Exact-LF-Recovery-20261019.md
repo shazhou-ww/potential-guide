@@ -30,4 +30,27 @@ pnpm exec tsx --test --test-name-pattern "continue uses current grants|effective
 
 ## 本轮执行记录
 
-待合同正常同步并 fresh reobserve 后，才允许一次有界原会话 continue。此处尚未记录工具请求出现、真人 Allow Once、执行成功或 D-AC 通过；必须由实际事件补齐，不把准备测试当验收。
+合同已提交为 `91f8dcfe990bf07a72127a7090c38cad48f5c595` 并确认 primary 可达；fresh report 的执行合同修订为 `4611a39e4e6a`。随后仅在本操作私有配置加入这一个当前 execute grant，保持 external 和固定恢复配方不变，通过公开 `packages/pguide/dist/bin/continue.js` 正常调用原 regulation。
+
+正式 detached shell `regulator-ahp-lf-continue-20261019`、包装器 PID `12916` 于 `13:26:03.941+08:00` 启动。执行预算 600,000 ms，整体预算 660,000 ms，预期执行截止约 `13:36:04+08:00`。新 attempt 为第 2 次，subject digest 和 Pilot commit 均与首轮完全相同；没有重新创建 session、复制凭据、改存储记录或重放旧 turn。
+
+`13:26:27.953+08:00` 实际收到 `pguide/ahp-external-confirmation`：
+
+| 字段 | 实际值 |
+| --- | --- |
+| regulation | `d34dc7cf-5ec3-4658-9f6f-79ad82910e48` |
+| session | `ahp-session:/82892f7e-476f-4c40-ace3-5764f40ff157`（原 session） |
+| chat | `ahp-chat://default/YWhwLXNlc3Npb246LzgyODkyZjdlLTQ3NmYtNGM0MC1hY2UzLTU3NjRmNDBmZjE1Nw`（原 chat） |
+| 新 turn | `94d57715-8575-4c76-bf50-f93ee4bf1dcc` |
+| toolCall | `call_Mcdi2FaUcHrDaqwEagD2ETnJ` |
+| 工具 | `powershell` |
+| 标题／意图 | `Run in terminal?` / `Apply authorized exact LF recovery to ready.txt` |
+| 当前状态 | `awaiting-external-decision`，尚未观察到决定或完成 |
+
+程序逐字符断言：本次 `toolInput.command` 与 Deployment 的完整命令完全一致，输入的另一个字段只有上述描述；session/chat 与首轮相同，turn 与旧 turn 不同。真实 protocol options 为 `Allow in this Session`、`Allow Once`、`Skip`；仅用户本人可以选择 `Allow Once`，不按 opaque ID 推测语义。
+
+官方专用窗口仍显示原 session，左侧位于 `regulator-ahp-target-20261019-1216-2eb89994 [regulator-ahp-verification]` 分组，状态为 `Attention Needed`。本次精确请求的聊天项 `Chat confirmation required: Run in terminal?: $p = ...` 实际可见；只执行了该项的 `ScrollIntoView`，未触发批准。该会话行还显示可见且 enabled 的原生快捷按钮，其完整可访问名称为 `Allow once: ` 加本次完整 `$p = ... WriteAllBytes(...)` 命令。
+
+**识别注意**：UI 中仍能读到首轮 `$path = ... ReadAllBytes ... Write-Output 'Verified...'` 的旧确认 dialog；它不是本次写入请求，不应为此点 `Allow in this Session`。本次一定以 `$p =`、`Unexpected ready.txt bytes; no write performed`、`WriteAllBytes` 三段核对。可使用原会话行对应这条精确命令的 `Allow once` 快捷按钮，或在本次正确卡片中选择 `Allow Once`；不要批准旧只读自检，也不要选 `Skip All`。
+
+私有 `lf-launch.json`、`lf-preflight.json`、`lf-pending.json`、`lf-pending-audit.json` 和追加 transcript 保存实际过程；token 只由本次包装器从自有 Host 运行数据读入进程环境，所有输出精确脱敏。等待中的 Host/UI/CLI 不清理。本文记录的是 pending，不是用户已经点击、执行成功或 D-AC 通过。
