@@ -309,6 +309,41 @@ test("history requires real sufficient, fresh, matching and strictly increasing 
   );
 });
 
+test("invalid history identifies the offending sample with bounded target and observed evidence", () => {
+  for (const [replacement, reason, field, actual] of [
+    [
+      sample(now, { hostname: "another-machine" }),
+      "identity-mismatch",
+      "hostname",
+      "another-machine",
+    ],
+    [sample(now + 1), "future-timestamp", "measuredAt", now + 1],
+    [sample(now - 500), "timestamp-order", "measuredAt", now - 500],
+    [sample(now, { cacheBytes: -1 }), "invalid-sample", "cacheBytes", -1],
+  ] as const) {
+    const problem = evaluate([history[0], history[1], replacement])[0];
+    assert.equal(problem.id, "history-invalid");
+    assert.equal(problem.parameters.index, 2);
+    assert.equal(problem.parameters.reason, reason);
+    assert.equal(problem.parameters.actual[field], actual);
+    assert.deepEqual(problem.parameters.expected, {
+      hostname: "health-fixture",
+      user: subject.user,
+      home: subject.home,
+      measuredAt: { greaterThan: now - 500, maximum: now },
+      metrics: "finite nonnegative numbers",
+    });
+  }
+  const oversized = sample(now, {
+    hostname: "x".repeat(10000),
+    unknown: { nested: "must-not-leak".repeat(10000) },
+  });
+  const problem = evaluate([history[0], history[1], oversized])[0];
+  assert.equal(problem.parameters.actual.hostname.length, 256);
+  assert.equal("unknown" in problem.parameters.actual, false);
+  assert.ok(JSON.stringify(problem.parameters).length < 2048);
+});
+
 test("apt freshness accepts genuine successful-refresh evidence without rewriting repository mtimes", () => {
   const policy = { maxPackageIndexAgeSeconds: 10 };
   assert.equal(health.packageIndexProblem([now - 10000], undefined, policy, now), null);
@@ -368,7 +403,12 @@ test("task boundaries preserve healthy long tasks and never conflate deadline wi
   assert.deepEqual(ids(evaluateTasks([active], now, new Set())), ["task-orphaned"]);
   assert.deepEqual(ids(evaluateTasks([finished])), ["task-process-leftover"]);
   assert.deepEqual(evaluateTasks([finished], now, new Set()), []);
-  assert.deepEqual(ids(evaluateTasks([finished], now + 1, new Set())), ["task-residue"]);
+  const residueProblem = evaluateTasks([finished], now + 1, new Set())[0];
+  assert.equal(residueProblem.id, "task-residue");
+  assert.equal(residueProblem.parameters.path, residue);
+  assert.equal(residueProblem.parameters.finishedAt, now - 1000);
+  assert.deepEqual(residueProblem.parameters.expected, { retentionSeconds: 1 });
+  assert.deepEqual(residueProblem.parameters.actual, { ageSeconds: 1.001 });
   assert.deepEqual(ids(evaluateTasks([active, active])), ["task-registry-invalid"]);
   assert.deepEqual(ids(evaluateTasks([{ ...active, startedAt: now + 1 }])), [
     "task-registry-invalid",

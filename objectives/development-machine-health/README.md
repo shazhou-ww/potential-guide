@@ -72,6 +72,59 @@ node packages\pguide\dist\bin\probe.js --pilot objectives\development-machine-he
 该入口要求干净、已提交的 Git 版本。直接 helper 可用于未提交开发，但不构成绑定代码版本
 的完整 Pilot 收据。
 
+## 默认要求与可覆盖策略
+
+`minimumVersions` 可按工具名覆盖最低版本，值为数字版本字符串：
+
+| 工具 | 默认最低版本 |
+| --- | --- |
+| Git | 2.30 |
+| Node.js／npm／TypeScript (`tsc`) | 22.13／10／5 |
+| Python (`python3`) | 3.10 |
+| C++ (`c++`)／CMake／Ninja | 10／3.20／1.10 |
+| rustup／rustc／Cargo | 1.25／1.75／1.75 |
+
+只检查所选栈；Git 是公共基线。TypeScript 使用现有编译器而非自动下载，Python 创建 venv，
+C++ 使用 CMake／Ninja，Rust 离线构建无外部依赖的 crate。
+
+`policy` 可部分覆盖以下字段，未指定的使用默认值：
+
+| 字段 | 默认值及含义 |
+| --- | --- |
+| `minFreeBytes` | 1,073,741,824，workspace 文件系统至少 1 GiB 可用 |
+| `minFreeInodes` | 1,024，workspace 文件系统可用 inode 下限 |
+| `retentionSeconds` | 86,400，已完成任务临时产物保留期限 |
+| `historyMinSamples`／`historyMinSpanMs` | 3 个样本，至少跨越 1,000 ms |
+| `historyMaxAgeMs` | 最新样本不超过 300,000 ms |
+| `maxCacheGrowthBytesPerSecond` | 1,048,576 bytes/s |
+| `maxLogGrowthBytesPerSecond` | 65,536 bytes/s |
+| `maxPackageIndexAgeSeconds` | 604,800，包索引新鲜度上限 7 天 |
+
+容量等于下限、增长等于上限时通过。历史必须来自相同 hostname／user／home，时间递增、
+非未来值且指标非负；样本不足和身份错误均不能证明持续健康。
+包更新模拟只依据本地 apt 索引，不代表已实时查询安全公告。有 root 所有的有效
+`/var/lib/apt/periodic/update-success-stamp` 时采用其时间，否则保守采用最旧 Packages
+文件时间；Packages 必须存在。夹具在成功更新、安装后记录该成功时间。
+
+## 任务登记与保护规则
+
+仅检查 `tasksDirectory` 直属的、由目标用户所有的普通 `.json` 文件。示例：
+
+```json
+{
+  "id": "build-example",
+  "state": "finished",
+  "startedAt": 1790000000000,
+  "finishedAt": 1790000010000,
+  "temporaryDirectory": "/home/agent/tmp/build-example"
+}
+```
+
+时间字段为 Unix 毫秒。活动记录使用 `state: active` 和实际 `pid`，可选 `deadlineAt`；
+完成记录要求 `finishedAt`。临时路径只能是 scratch 的直属目录。检查会报告孤儿任务、
+显式期限超时、完成后仍运行的进程和超过保留期的已知残留，不会自行删除或终止。
+不将未知文件、长时间但无超期约定的活动任务、未提交仓库视为垃圾。
+
 ## 本机 Docker 验收
 
 前置：可访问的 Linux Docker 引擎、Node.js ≥22.13、pnpm ≥11.22，以及宿主构建时可获取

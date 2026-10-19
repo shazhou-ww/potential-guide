@@ -733,6 +733,8 @@ export function evaluateTasks(tasks, subject, now, livePids, residuePaths) {
             id: task.id,
             path: task.temporaryDirectory,
             finishedAt: task.finishedAt,
+            expected: { retentionSeconds: subject.policy.retentionSeconds },
+            actual: { ageSeconds: (now - task.finishedAt) / 1000 },
             recovery:
               "Review retained output and uncommitted work before manually cleaning the registered directory.",
           }),
@@ -858,19 +860,38 @@ export function evaluateHistory(history, subject, identityValue, now) {
       }),
     ];
   let previous = -1;
-  for (const entry of history) {
-    if (
-      !validSample(entry) ||
+  const bounded = (value) => {
+    if (typeof value === "string") return value.slice(0, 256);
+    if (typeof value === "number") return Number.isFinite(value) ? value : String(value);
+    if (value === undefined || value === null) return null;
+    return `[${Array.isArray(value) ? "array" : typeof value}]`;
+  };
+  for (const [index, entry] of history.entries()) {
+    let reason;
+    if (!validSample(entry)) reason = "invalid-sample";
+    else if (
       entry.hostname !== identityValue.hostname ||
       entry.user !== subject.user ||
-      entry.home !== subject.home ||
-      entry.measuredAt <= previous ||
-      entry.measuredAt > now
-    ) {
+      entry.home !== subject.home
+    )
+      reason = "identity-mismatch";
+    else if (entry.measuredAt <= previous) reason = "timestamp-order";
+    else if (entry.measuredAt > now) reason = "future-timestamp";
+    if (reason) {
       return [
         issue("history-invalid", {
-          expected:
-            "matching hostname/user/home, nonnegative metrics and strictly increasing nonfuture timestamps",
+          index,
+          reason,
+          expected: {
+            hostname: bounded(identityValue.hostname),
+            user: bounded(subject.user),
+            home: bounded(subject.home),
+            measuredAt: { greaterThan: previous, maximum: now },
+            metrics: "finite nonnegative numbers",
+          },
+          actual: Object.fromEntries(
+            sampleKeys.map((key) => [key, bounded(record(entry) ? entry[key] : undefined)]),
+          ),
         }),
       ];
     }
