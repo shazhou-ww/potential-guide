@@ -13,7 +13,7 @@
 2026-10-19 使用已安装 VS Code `1.142.0` / commit `6d62b1d5dace93a33b3a6d3eca1317bd5e15bcb1`，没有换版本或安装插件：
 
 1. `code --help` 实际提供 `--agents`。该版本安装在版本化目录 `6d62b1d5da\resources\app`，其中实际存在 `out\vs\sessions\sessions.desktop.main.js`；bundle 包含 `sessions.remoteAgentHost.add`，不是仅凭线上源码推断。
-2. 当前已有 Agents 窗口保持不动。直接调用 `code --agents --user-data-dir ...` 会在当前宿主环境路由到已有窗口，不能据此声称创建了隔离 UI。因此改为直接启动安装的 `Code.exe --agents --user-data-dir <operation-owned-directory> --disable-extensions --no-first-run`；仅在该子进程环境移除 CLI IPC / Electron-as-Node 标记，不修改用户或系统环境变量。独立进程和独立 Agents 窗口均实际出现，窗口仍显示 GitHub Sign In，未复制已有登录。
+2. 当前已有 Agents 窗口保持不动。直接调用 `code --agents --user-data-dir ...` 会在当前宿主环境路由到已有窗口，不能据此声称创建了隔离 UI。因此改为直接启动安装的 `Code.exe`，显式传入 `--agents --user-data-dir <operation-owned-directory>`；仅在该子进程环境移除 CLI IPC / Electron-as-Node 标记，不修改用户或系统环境变量。独立进程和独立 Agents 窗口均实际出现，窗口仍显示 GitHub Sign In，未复制已有登录。
 3. 只对隔离 UI 使用 loopback 检查入口，实际打开 Command Palette，搜索但未提交连接数据。真实结果是 **`Agents: Add Remote Agent Host...`**，不是之前方案中按源码 category 猜出的 `Sessions:` 显示前缀。稳定命令 ID 仍是 `sessions.remoteAgentHost.add`。
 4. 仅打开该命令的空输入框，实际提示：
 
