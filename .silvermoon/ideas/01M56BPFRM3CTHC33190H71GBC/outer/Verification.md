@@ -101,7 +101,7 @@
 
 ## 当前门限与恢复条件
 
-已明确委托验收并记录 `acceptInner#15`，进入 deploying。2026-10-19 external 复测的固定隔离目标、真实 UI Host 选择及原生 Folder Trust 见 [External-Run-20261019.md](./External-Run-20261019.md)。用户随后本人确认目录信任，实际复查模态框已消失、精确远端隔离目录保持不变；该结果不是文件请求批准，可以进入一次有界执行。D-S02 / D-AC01 仍未完成。
+已明确委托验收并记录 `acceptInner#15`，进入 deploying。2026-10-19 external 真实执行已自然截止：退出 `5` / `exhaustedBy: agent-limit`，没有外部工具决定；Host 确认同一 turn 已取消。真实 `apply_patch` 输入 LF，落盘却为 14 字节 CRLF，终态后独立读取仍不符合 13 字节 LF 标准。完整身份、原生卡片、终态、换行诊断和下一次最低条件见 [External-Run-20261019.md](./External-Run-20261019.md) 及其结构化证据。没有代写目标，没有再次执行，没有 submitOuter / acceptOuter；D-S02 / D-AC01 仍未完成。
 
 此前的只读连接调查见 [Host-UI-Readiness.md](./Host-UI-Readiness.md)，保留当时未授权登记连接、未通过 Inner 门限的历史状态；最新状态以上述 external 复测证据为准。
 

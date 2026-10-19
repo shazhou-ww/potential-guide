@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "host": {
+    "product": "Visual Studio Code Agent Host",
+    "version": "1.142.0",
+    "commit": "6d62b1d5dace93a33b3a6d3eca1317bd5e15bcb1",
+    "protocolVersion": "1.0.0",
+    "provider": "copilotcli",
+    "address": "127.0.0.1:51793",
+    "platform": "win32"
+  },
+  "identity": {
+    "regulationId": "d34dc7cf-5ec3-4658-9f6f-79ad82910e48",
+    "sessionUri": "ahp-session:/82892f7e-476f-4c40-ace3-5764f40ff157",
+    "chatUri": "ahp-chat://default/YWhwLXNlc3Npb246LzgyODkyZjdlLTQ3NmYtNGM0MC1hY2UzLTU3NjRmNDBmZjE1Nw",
+    "turnId": "4707b654-2e9d-4505-9709-87bbbe54f841",
+    "pilotCommit": "3d654946e6a3854e94ae96b834c2fa885fdc3afc"
+  },
+  "target": {
+    "file": "D:\\Code\\regulator-ahp-target-20261019-1216-2eb89994\\ready.txt",
+    "existedBefore": false,
+    "expectedHex": "4148502d56455249464945440a",
+    "finalHex": "4148502d56455249464945440d0a",
+    "exactBytesPassed": false,
+    "independentFinalObservation": true,
+    "targetWrittenByDeploymentOperator": false
+  },
+  "firstTool": {
+    "toolCallId": "custom_call_uS0DuHaHepNszT6D19FnouGV",
+    "toolName": "apply_patch",
+    "patchInputUsedLf": true,
+    "hostConfirmed": "not-needed"
+  },
+  "pendingTool": {
+    "toolCallId": "call_3ZLnVC1GljZcwdRIuu5U3ign",
+    "toolName": "powershell",
+    "phase": "execution",
+    "purpose": "Read only ready.txt and compare exact bytes",
+    "nativeOptionsObserved": ["Allow Once", "Allow in this Session", "Skip"],
+    "externalDecisionReceived": false,
+    "decisionSentByDeploymentOperator": false
+  },
+  "termination": {
+    "startedAt": "2026-10-19T12:24:33.1105838+08:00",
+    "completedAt": "2026-10-19T12:34:39.2996297+08:00",
+    "agentTimeoutMs": 600000,
+    "quotaTimeoutMs": 660000,
+    "exitCode": 5,
+    "stopReason": "exhausted",
+    "exhaustedBy": "agent-limit",
+    "iterations": 1,
+    "cancellationSent": true,
+    "hostTurnCancelledObserved": true,
+    "remoteStopConfirmed": true,
+    "executionState": "cancelled",
+    "retryStarted": false
+  },
+  "originalEvidenceSha256": {
+    "regulation.json": "5ee90265d1723202a9b8698562e71a625fd0a8c89770fd8cf367a9a3037a696c",
+    "transcript.jsonl": "a369b0af205dbd6b5cd00d0ea99268694f484138aaa847b09a84d678e85bd7c4",
+    "repair-console-redacted.txt": "a7153f82b586a276d688d74abb7724d4427a61fab63874d76924cc3dba9d4657"
+  },
+  "deploymentAccepted": false,
+  "outerSubmitted": false
+}
