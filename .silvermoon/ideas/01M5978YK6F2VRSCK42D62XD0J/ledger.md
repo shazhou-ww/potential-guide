@@ -18,10 +18,10 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 验证真实 Linux 与 WSL
+- [ ] **D-S01:** 验证本机 Docker 场景矩阵
 - [ ] **D-S02:** 验证持续维护闭环
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 真实环境边界成立
-- [ ] **D-AC02:** 持续健康有实际证据
+- [ ] **D-AC01:** Docker 具体 gap 检出
+- [ ] **D-AC02:** 恢复与保护有实际证据
