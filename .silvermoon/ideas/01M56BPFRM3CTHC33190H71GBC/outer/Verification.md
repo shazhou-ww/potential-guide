@@ -101,6 +101,8 @@
 
 ## 当前门限与恢复条件
 
+2026-10-19 后续只读连接调查见 [Host-UI-Readiness.md](./Host-UI-Readiness.md)：在本机干净 Agents profile 实际核实了 Add Host 命令和空输入框，生产 inspectAhp 也成功连接新独占 Host；没有向 UI 输入 token、创建修复 turn 或验收任何阶段。该固定版本的 Add Host 会持久化连接信息及传输 token，因此下一步需要用户明确允许在专用可删除 profile 中登记这一个 loopback Host，并由用户本人完成输入；不能把 UI 连接准备假称为真实修复完成。已提交的 external 等待实现 revision 保持不变，仍待 explicit inner 决策。
+
 - D-S01：真实环境与隔离边界已建立。
 - D-AC02：真实原 session/chat 恢复和 owned turn 取消回执已验证；自动测试另覆盖迟到状态隔离。
 - D-AC03：已有 ACP 配置完成真实对照调用，无需迁移，结果与授权不足明确区分。
