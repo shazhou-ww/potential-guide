@@ -80,6 +80,11 @@ an extra `allowSanity` input; existing tool permissions still apply. Each check
 defaults to 20 seconds (24-second Pilot maximum within the default 30-second
 probe deadline). Remote setup integration remains future work.
 
+The [credential-free Docker harness](./scripts/self-check-docker/README.md)
+builds an explicit source commit, installs packed packages in a clean Linux
+consumer, and verifies positive and negative marker repairs with a local ACP
+fixture—without credentials or real model calls.
+
 The repository-owned [setup Objective](./objectives/pguide-setup/README.md) checks
 installation, configuration and ACP readiness on target **B**, while an already-ready
 control machine **A** runs setup regulation and guides its Agent to install/configure
