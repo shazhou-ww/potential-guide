@@ -88,11 +88,22 @@
 
 因此不能根据工具名、文件预览、选项标签或 opaque option ID 推断批准，也不能通过放宽客户端、开启 session-wide 自动批准或手动代写目标文件来通过测试。本轮确认当前主要阻塞已经从额度转为真实文件写入的安全授权能力，仍不满足 D-AC01。
 
+## 2026-10-19 独立工作区核验
+
+本轮从 primary `c2c16250827f334d952e17d08adec3f5ce9be578` 创建独立 Git worktree 与分支，仅核验当前部署阻塞，不修改产品交付物、Objective 或授权配置。
+
+- 本机 `code --version` 仍为 `1.142.0` / `6d62b1d5dace93a33b3a6d3eca1317bd5e15bcb1`；`code agent host --help` 支持独占 loopback Host，但没有提供完整 operation/resource/once 权限契约的协商选项。没有新 Host 版本或授权输入，因此没有重复创建付费模型 turn，也没有启动新的 Host、读取登录凭据或生成连接 token。
+- 重新读取与本机 commit 一致的官方 [native chat state](https://github.com/microsoft/vscode/blob/6d62b1d5dace93a33b3a6d3eca1317bd5e15bcb1/src/vs/platform/agentHost/common/state/protocol/channels-chat/state.ts)：`ConfirmationOption` 只有 `id`、人类可读 `label`、`kind: approve | deny` 和可选展示 `group`；没有单次批准的机器语义。`ToolCallPendingConfirmationState.edits` 明确用于预览，不能据此推断完整权限范围。重新读取上述 metadata reader 也确认 `withPermissionDiff` 只写入 `{ diff }`，不能补足实际请求中缺失的权限声明。
+- 当前生产 `executeAgent` 的 AHP `onPermission` 始终生成 `unsupported-ahp-operation-and-once-semantics` 并拒绝请求；这与已验收的安全边界和 README 一致。即使未来 Host 补充契约，当前版本也不会自动获得批准能力；仍需先核验新契约，再按生命周期返回实施阶段实现和审批所需适配，不能在部署阶段临时改为按标签或 option ID 批准。
+- Node `v24.11.1`、pnpm `11.22.0`。首次定向验证因独立 worktree 尚无 `dist` 失败，pnpm 同时自动恢复了 lockfile 已固定的依赖；随后 `pnpm run build` 成功（8/8 工作区），再运行 `pnpm exec tsx --test packages\pguide-cli-core\test\ahp.test.ts packages\pguide\test\ahp-cli.test.ts`，39/39 通过、0 失败、0 跳过。包括配置 grant 仍拒绝未知 AHP 请求、execution/result 拒绝、进展优先级、原会话恢复、延迟首 turn 及目标未变化不报成功。这些是回归证据，不是新的真实 Host 修复成功证据。
+
+当前安全可行路径仍需外部输入：提供可核验的完整结构化权限契约，并完成必要的实施适配；或者明确设计、授权并验收独立的人类逐次确认流程，再做真实端到端复测。直接切换现有 provider、放宽 grant、预先代写 `ready.txt` 或仅重试模型，都不能解除此阻塞。
+
 ## 当前门限与恢复条件
 
 - D-S01：真实环境与隔离边界已建立。
 - D-AC02：真实原 session/chat 恢复和 owned turn 取消回执已验证；自动测试另覆盖迟到状态隔离。
 - D-AC03：已有 ACP 配置完成真实对照调用，无需迁移，结果与授权不足明确区分。
 - D-S02 / D-AC01：仍未完成。本轮真实 Agent 已到达文件创建，但缺少能安全执行当前精确 grant 的可靠权限契约，`ready.txt` 不存在，不能通过部署验收；前次 quota 错误不再作为本轮当前阻塞。
-- 不记录 `submitOuter` 或 `acceptOuter`。恢复需要真实 Host 提供经核验的结构化操作/资源与单次批准语义，或先明确设计并审批独立的人工逐次授权流程，再重新运行完整修复闭环；不能以已有文件 grant 为由猜测未声明的权限。保持现有通用 AHP 拒绝未知请求的边界，不自行扩大权限或反复消耗调用。
+- 不记录 `submitOuter` 或 `acceptOuter`。恢复需要真实 Host 提供经核验的结构化操作/资源与单次批准语义，或先明确设计并审批独立的人工逐次授权流程；若需改变交付物，应先按生命周期返回实施阶段完成所需适配及验收，再重新运行完整修复闭环。不能以已有文件 grant 为由猜测未声明的权限。保持现有通用 AHP 拒绝未知请求的边界，不自行扩大权限或反复消耗调用。
 - 验证结束后已停止独占 Host，并确认其 PID 消失、loopback 端口关闭，临时连接 token 已删除。没有停止共享 editor Host。恢复时需重新准备明确授权的 Host；不得把已停止的 endpoint 当作仍可恢复的运行环境。
