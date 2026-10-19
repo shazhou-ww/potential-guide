@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { setTimeout as delay } from "node:timers/promises";
+import { setTimeout as delay, setImmediate as nextTurn } from "node:timers/promises";
 import { Effect } from "@potential-guide/effects";
 import { fixture } from "../../objective-pilot/test/fixtures.js";
 import {
@@ -143,23 +143,74 @@ test("probe timeout aborts ignored cleanup, raises 504, and isolates late result
   assert.deepEqual(reports, [504]);
 });
 
-test("overall time quota includes probe retries and retry delays", async () => {
+test("overall time quota includes probe retries and retry delays", { timeout: 5000 }, async (t) => {
   const base = await input({
     quota: { timeoutMs: 50, maxAgentRuns: 5, maxStallRuns: 5 },
-    probe: { timeoutMs: 1000, retry: { maxRetries: 10, delayMs: 1000 } },
+    probe: { timeoutMs: 1000, retry: { maxRetries: 10, delayMs: 20 } },
   });
-  const result = await Effect.runPromise(
+  // Keep both quota clocks controlled; host load must not exhaust the quota before a probe.
+  let now = 0;
+  t.mock.method(performance, "now", () => now);
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const advance = async (ms: number) => {
+    now += ms;
+    t.mock.timers.tick(ms);
+    await nextTurn();
+  };
+  let probes = 0;
+  let settled = false;
+  const observations: { status: number; payload: unknown; message: string }[] = [];
+  const pending = Effect.runPromise(
     regulate(base, {
       pilot: {
-        resolveCheck: () => async () => ({ status: 503, payload: null, message: "offline" }),
+        resolveCheck: (ref) => async () => {
+          if (ref.levelId === "z-first" && ref.checkId === "one") {
+            probes++;
+            await new Promise<void>((resolve) => setTimeout(resolve, 10));
+          }
+          return { status: probes === 1 ? 500 : 503, payload: null, message: "offline" };
+        },
       },
       executeAgent: async () => assert.fail("No repair on invocation failure."),
+      onObservation: (sample) => observations.push(sample),
     }),
+  ).then((result) => {
+    settled = true;
+    return result;
+  });
+  await nextTurn();
+  assert.equal(probes, 1);
+  await advance(9);
+  assert.equal(observations.length, 0);
+  await advance(1);
+  assert.deepEqual(
+    observations.map((sample) => sample.status),
+    [500],
   );
+  await advance(19);
+  assert.equal(probes, 1);
+  await advance(1);
+  assert.equal(probes, 2);
+  await advance(9);
+  assert.equal(observations.length, 1);
+  await advance(1);
+  assert.deepEqual(
+    observations.map((sample) => sample.status),
+    [500, 503],
+  );
+  await advance(9);
+  assert.equal(settled, false);
+  await advance(1);
+  assert.equal(settled, true);
+  const result = await pending;
   assert.equal(result.stopReason, "exhausted");
   assert.equal(result.exhaustedBy, "time");
   assert.equal(result.latestObservation.status, 503);
+  assert.equal(result.latestObservation, observations[1]);
   assert.equal(result.iterations, 0);
+  await advance(20);
+  assert.equal(probes, 2);
+  assert.equal(observations.length, 2);
 });
 
 test("probe crashes become typed invocation faults, not normal completed outcomes", async () => {

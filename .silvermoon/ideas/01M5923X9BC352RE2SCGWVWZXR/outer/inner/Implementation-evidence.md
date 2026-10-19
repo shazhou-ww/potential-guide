@@ -97,3 +97,40 @@ CLI 为 75 通过、1 个既有平台跳过、0 失败及取消。随后合并�
 `e18e5c74e0eab33e213fc1f81eb5000c1b72b232`，后续同步截至
 `a15aeb38210f539daf9b3da45b7f97ef7a0769e7` 仅含其他 Idea 的文档。
 主会话据此完成 I-AC01 至 I-AC03 的独立检查，阶段接受仍须由准确修订的独立事件记录。
+
+## 交付 CI 发现与重新实施
+
+准确提交 cae801bfb60d96afdaa86d6e474b97767669f707 的
+[CI 39197422086](https://github.com/shazhou-ww/potential-guide/actions/runs/39197422086)
+中三个 OS 的 packed consumer 成功，但 Node 22.13.0 与 24.11.1 全量检查均失败于
+regulator 的 overall time quota includes probe retries and retry delays：
+strategy.test.ts:161 预期 503、实际 408。其他被 Turbo 终止的测试不计作独立根因。
+本地检查成功不能替代此结果；I-S01 / I-AC01 重置，改变 Inner World 后重新实施和验收，
+不删除或覆盖此前精确修订的接受事件。
+
+## CI retry 配额回归的限定修复（subsession 实现者反馈）
+
+- 已复核重开的 I-S01 / I-AC01；本次只修改 regulator 的该项测试及本反馈，
+  不修改生产代码、其他产品面、ledger、events、ideal 或外层 Deployment。
+- 根因是测试把真实 50ms 配额当成首个 503 必定已经发布的前提。生产计时从输入快照验证前
+  开始，发布 observation 前也检查同一整体期限；在 CI 负载下，首个 envelope 尚未发布就可能
+  耗尽配额，因此返回 README 明确规定的 408，而不是已有 503 被覆盖或重试配额失效。
+  原测试在本机定向复跑仍通过，不能以本机成功否定 CI 的竞态。
+- 保留原测试名及精确的 `latestObservation.status === 503`，改用 Node 内置
+  `t.mock.timers` 和 `performance.now` mock 控制两套计时；真实 `setImmediate`
+  仅让异步 continuation 完成，不用固定 sleep 窗口判定成功。虚拟时间线：
+  首次 probe 在 10ms 发布 500，20ms retry delay 后在 30ms 开始第二次 probe，
+  40ms 发布 503，49ms 尚未结束，50ms 在下一次 retry delay 中整体耗尽。
+  断言完整最后 envelope 被保留、Agent 从未执行、再推进 20ms 也没有第三次 probe
+  或新 observation。5 秒 test timeout 仅为失败 watchdog，不增加生产配额。
+- 两种 Node 均通过各自 PowerShell 进程的 PATH 选择，没有全局切换：
+  `$env:PATH = (Join-Path $env:NVM_HOME 'v22.13.0') + ';' + $env:PATH`
+  或相同命令的 `v24.11.1`；`node --version` 分别确认版本。
+  两个版本均实际执行以下命令，均退出 0：
+  - `pnpm --filter @potential-guide/objective-regulator exec tsx --test --test-name-pattern 'overall time quota includes probe retries and retry delays' test\strategy.test.ts`：各 1/1。
+  - `pnpm --filter @potential-guide/objective-regulator test`：各 38/38，0 fail、0 cancelled、0 skip。
+  - Node 22 另执行 `pnpm --filter @potential-guide/objective-regulator exec tsx --test --test-reporter=spec 'test\*.test.ts'`：38/38。
+- `pnpm exec biome check --write packages\objective-regulator\test\strategy.test.ts`
+  完成格式整理；`pnpm exec tsc -p tsconfig.test.json --noEmit` 退出 0。
+  本反馈不代替主会话独立复测、完整 `pnpm check`、精确修订 CI 或任何生命周期门禁；
+  未执行提交、push、tag、发布、submit 或 accept，变更保持未提交。
