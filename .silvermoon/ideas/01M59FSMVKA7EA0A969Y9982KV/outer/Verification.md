@@ -132,6 +132,12 @@ Docker 构建的 apt/npm 解析不完全 hermetic：固定基础镜像和记录�
 重新读取持久报告并验证 10 个 monorepo 观察、12 个两版本 setup/self-check 完整 probe、
 33 个 health 场景、ignore 实际行为和清理；复核不产生模型调用或启动容器。
 
+补充基线可复现来源见 [baseline-source.json](./verification/baseline-source.json)；
+[baseline-source.mjs](./verification/baseline-source.mjs) 从 Git 对象重新计算 archive SHA-256、
+原始 setup/test blob，以及8个复用基础包的版本、源码树摘要与来源提交一致性。
+基础包 dist 是复用的整合构建，不宣称独立从零构建；迁移后的 setup 实现没有进入原始基线。
+该补充不改变已接受的实现树或任何测试结果，不授权豁免。
+
 ## 清理与历史资源保护
 
 health 验证器已确认其所有自有容器/镜像/scratch 清理成功。
