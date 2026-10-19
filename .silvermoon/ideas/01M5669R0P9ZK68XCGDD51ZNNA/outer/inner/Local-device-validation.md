@@ -120,3 +120,28 @@ I-AC03 因缺少真实 terminal 证据仍未满足，不提交或批准实现验
 本次官方浏览器 OAuth 流程等待约 150 秒仍未返回完成报告。主会话已终止本次登录进程树，避免遗留等待中的 CLI 或回调服务；OAuth URL、原始认证响应及任何凭据均未打印或持久化。没有确认认证恢复，也没有据此重复 ACP 或真实 probe。
 
 这次恢复尝试不构成登录成功或 terminal 证据。后续需设备用户完成正常登录；在未确认外部认证状态改变前，不再自动触发浏览器流程。I-S03、I-AC03 及所有交付门线仍保持未完成。
+
+## 2026-10-19 当前 Windows 用户的有界验证
+
+本轮运行环境已变为当前 Windows 用户 Wei，不沿用上述另一用户的安装、认证或阻塞结论。未读取认证文件，未传递父会话 SDK、gh 或其他 token，未修改用户配置、PATH 或工具权限，也未触发浏览器登录。
+
+- 当前环境为 Node.js `v24.12.0`、pnpm `11.22.0`、Copilot CLI `1.0.98`。
+- 已存在持久入口 `C:\Users\Wei\bin\pguide.cmd`，指向另一现有工作树的 `packages\pguide\dist\bin.js`；安装自报 `0.3.0-rc.0`。本轮没有将该安装替换为当前源码，也不据版本号推断其源码 commit。
+- 既有用户配置校验通过。所选 `copilot` profile 使用 Node + 已安装 Copilot 的 `npm-loader.js`、ACP stdio/protocol 1，仅声明 `USERPROFILE` 环境变量；没有显式 model 或额外 regulationPermissions。本轮保持这些设置不变，不自动授予 marker 写权限。
+- 使用该已安装 pguide，固定已同步源码 `c1f2a42763658f77f8a3bd84011f0213b5d9e63b`，通过 `#packages/pguide-self-check-pilot/pilot.yaml` 加载新 package 路径；subject 指定当前用户的隔离目录、上述安装及配置，预算为 `24000 ms`。
+
+只执行了一次完整 probe；退出码为 `6`，原始报告为：
+
+```json
+{
+  "status": 504,
+  "payload": null,
+  "message": "timeout: direct Agent exceeded its deadline."
+}
+```
+
+该固定错误由 direct sanity 返回，说明本次执行已越过配置和 ACP readiness，而不是复现旧用户的 `authentication-required`。但报告没有最终 level、精确 versions 或 Agent 完成结果，不能证明 prompt 已发送、模型可用、marker 修复成功或 terminal。独立检查确认本轮 scratch 目录没有残留子项。非秘密 subject 和报告留在本会话持久文件中，不把机器本地路径当作可移植复验入口。
+
+当前实际阻塞是既有 Agent 在允许的完整自查预算内未返回成功证据；不在外部条件未变时重复模型调用，不放宽 24 秒 Pilot 上限，也不以较长直接 helper、测试替身或旧设备结果代替 terminal。下一步需先确定可在该预算及既有权限内完成 marker 修复的已授权 ACP profile，或取得针对启动/执行耗时的独立非模型证据并修复已证实的问题，再执行一次精确 revision 的完整自查。I-S03、I-AC03 保持未完成，不记录 submitInner、acceptInner 或交付验收。
+
+本轮另执行 `pnpm check`，退出码 `0`：格式、lint、类型检查、四个 runtime 新鲜度检查、测试及 build/pack 检查通过。workspace 报告合计 348 项测试，346 通过、2 项跳过；根脚本 16 项全部通过，总计 364 项、362 通过、2 项跳过、0 失败。effects 与 git-source 的测试为 Turbo 缓存回放，其余十个 workspace 的测试重新执行，根脚本重新执行；pack 阶段构建复用前面生成的 Turbo 缓存。不把这些自动回归记为真实 terminal。保留既有非阻断 lint 警告，没有进行无关修复。
