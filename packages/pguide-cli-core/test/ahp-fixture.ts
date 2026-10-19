@@ -28,6 +28,11 @@ export async function ahpHost(
     text?: string;
     onTurn?: (prompt: string) => Promise<void>;
     onDenied?: () => Promise<void>;
+    onPending?: (
+      turnId: string,
+      chatUri: string,
+      connection: HostConnection,
+    ) => void | Promise<void>;
     permissionInput?: string;
     chatUri?: string;
     authorityChat?: boolean;
@@ -204,6 +209,7 @@ export async function ahpHost(
                 result: { success: true, pastTenseMessage: "Result ready" },
                 requiresResultConfirmation: true,
               });
+            await options.onPending?.(String(value.turnId), chatUri, connection);
             return;
           }
           await options.onTurn?.(String((value.message as { text: string }).text));

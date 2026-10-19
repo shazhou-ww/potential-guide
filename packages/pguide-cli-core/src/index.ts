@@ -54,6 +54,7 @@ export interface AcpAgentProfile {
 
 export interface AhpAgentProfile {
   type: "ahp";
+  confirmations?: "deny" | "external";
   connection: { protocolVersion: "1.0.0" | "0.9.0"; agent: string };
   transport: { type: "websocket"; url: string };
   authentication?: (
@@ -263,7 +264,7 @@ export function validateAgentProfile(value: unknown): AgentProfile {
   if (!record(value)) throw new CliError("Agent profile must be an object.");
   exactKeys(
     value,
-    ["type", "connection", "transport", "authentication", "requirements"],
+    ["type", "connection", "transport", "authentication", "requirements", "confirmations"],
     "Agent profile",
   );
   if (!record(value.connection)) throw new CliError("Agent connection is required.");
@@ -294,6 +295,8 @@ export function validateAgentProfile(value: unknown): AgentProfile {
   rejectSecretValues(value);
   const common = requirements === undefined ? {} : { requirements };
   if (type === "acp") {
+    if (value.confirmations !== undefined)
+      throw new CliError("ACP profiles do not support AHP confirmations.");
     exactKeys(
       value.connection,
       legacy ? ["type", "protocolVersion"] : ["protocolVersion"],
@@ -326,6 +329,12 @@ export function validateAgentProfile(value: unknown): AgentProfile {
       ...common,
     };
   }
+  if (
+    value.confirmations !== undefined &&
+    value.confirmations !== "deny" &&
+    value.confirmations !== "external"
+  )
+    throw new CliError("AHP confirmations must be deny or external.");
   exactKeys(value.connection, ["protocolVersion", "agent"], "AHP connection");
   if (value.connection.protocolVersion !== "1.0.0" && value.connection.protocolVersion !== "0.9.0")
     throw new CliError("AHP protocolVersion must be 1.0.0 or 0.9.0 (supported by SDK 1.0.0).");
@@ -401,6 +410,7 @@ export function validateAgentProfile(value: unknown): AgentProfile {
     },
     transport: { type: "websocket", url: url.href },
     ...common,
+    ...(value.confirmations === undefined ? {} : { confirmations: value.confirmations }),
     ...(authentication === undefined ? {} : { authentication }),
   };
 }

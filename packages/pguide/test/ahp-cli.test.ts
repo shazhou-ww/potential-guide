@@ -114,6 +114,111 @@ import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);proces
   });
 }
 
+for (const scenario of ["repair", "unchanged", "denied"] as const) {
+  const repaired = scenario === "repair";
+  test(`AHP external confirmation keeps the recipe: ${scenario}`, async () => {
+    const f = await fixture();
+    const marker = join(f.directory, "external-target");
+    const state = join(f.directory, "state");
+    const host = await ahpHost({
+      mode: "permission",
+      async onPending(turnId, chatUri, connection) {
+        connection.action(chatUri, {
+          type: "chat/toolCallConfirmed",
+          turnId,
+          toolCallId: "tool",
+          approved: scenario !== "denied",
+          ...(scenario === "denied" ? { reason: "denied" } : { confirmed: "user-action" }),
+        });
+        if (repaired) await writeFile(marker, "external fixture repair");
+        connection.action(chatUri, { type: "chat/turnComplete", turnId, duration: 1 });
+      },
+    });
+    try {
+      await writeFile(
+        join(f.repository, "objective", "checks", "ready", "run.js"),
+        `#!/usr/bin/env node
+import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{id:"not-ready",parameters:{}}]}}));});`,
+      );
+      await writeFile(f.subject, JSON.stringify({ marker }));
+      const commit = await f.commit();
+      const config = join(f.directory, "config.json");
+      await writeFile(
+        config,
+        JSON.stringify({
+          schemaVersion: 2,
+          defaultAgent: "repair",
+          stateDirectory: state,
+          regulationStrategy: {
+            quota: { timeoutMs: 30000, maxAgentRuns: 1, maxStallRuns: 1 },
+          },
+          agents: {
+            repair: {
+              type: "ahp",
+              confirmations: "external",
+              connection: { protocolVersion: "1.0.0", agent: "generic-provider" },
+              transport: { type: "websocket", url: host.url },
+            },
+          },
+        }),
+      );
+      const result = await run(bin("regulate"), [
+        "--pilot",
+        f.uri,
+        "--revision",
+        commit,
+        "--subject-file",
+        f.subject,
+        "--target",
+        "terminal",
+        "--config",
+        config,
+        "--format",
+        "json",
+      ]);
+      const report = JSON.parse(result.stdout);
+      assert.equal(
+        result.code,
+        repaired ? 0 : scenario === "denied" ? 3 : 5,
+        result.stdout + result.stderr,
+      );
+      assert.equal(
+        report.outcome.stopReason,
+        repaired
+          ? "target-reached"
+          : scenario === "denied"
+            ? "authorization-required"
+            : "exhausted",
+      );
+      assert.equal(
+        host.messages.some(
+          ({ method, params }) =>
+            method === "dispatchAction" &&
+            /toolCall(Result)?Confirmed/.test(String((params.action as { type: string }).type)),
+        ),
+        false,
+      );
+      const recordPath = join(state, "regulations", report.regulationId);
+      const saved = JSON.parse(await readFile(join(recordPath, "regulation.json"), "utf8"));
+      assert.equal(saved.attempts[0].observations.length, 2);
+      if (scenario === "denied")
+        assert.equal(
+          saved.attempts[0].actions[0].authorizationRequests[0].reason,
+          "external-ahp-confirmation-denied",
+        );
+      else assert.equal(saved.attempts[0].actions[0].authorizationRequests, undefined);
+      assert.match(JSON.stringify(saved), /"confirmations":"external"/);
+      const transcript = await readFile(join(recordPath, "transcript.jsonl"), "utf8");
+      assert.match(transcript, /pguide\/ahp-external-confirmation/);
+      assert.match(transcript, /awaiting-external-decision/);
+      assert.doesNotMatch(transcript, /"decision":"denied"/);
+    } finally {
+      await host.close();
+      await rm(f.directory, { recursive: true, force: true });
+    }
+  });
+}
+
 test("AHP CLI closes the observation loop, pins its recipe, and skips all session calls for satisfied targets", async () => {
   const f = await fixture();
   const marker = join(f.directory, "repaired");

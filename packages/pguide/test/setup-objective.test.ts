@@ -635,7 +635,7 @@ test("sanity timeout during an actual ACP prompt cleans isolated config, state a
     const envelope = await f.direct("sanity", {
       ...f.subject,
       allowSanity: true,
-      timeoutMs: 10000,
+      timeoutMs: 24000,
     });
     assert.equal(envelope.status, 504, JSON.stringify(envelope));
     const entries = (await readFile(f.log, "utf8"))

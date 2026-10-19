@@ -256,7 +256,20 @@ export async function executeAgent(
       onUpdate: async (update) => {
         await onUpdate?.(safeAgentValue(update, profile));
       },
-      onPermission: async () => {
+      onPermission: async (pending) => {
+        if (profile.confirmations === "external") {
+          await onUpdate?.(
+            safeAgentValue(
+              {
+                timestamp: new Date().toISOString(),
+                method: "pguide/ahp-external-confirmation",
+                params: { ...pending, status: "awaiting-external-decision" },
+              },
+              profile,
+            ),
+          );
+          return;
+        }
         const request = unknownPermissionRequest(
           authorizationRequests.length + 1,
           "unsupported-ahp-operation-and-once-semantics",
@@ -271,6 +284,13 @@ export async function executeAgent(
     }),
     profile,
   );
+  if (profile.confirmations === "external" && (response.permissionDenials ?? 0) > 0)
+    authorizationRequests.push(
+      unknownPermissionRequest(
+        authorizationRequests.length + 1,
+        "external-ahp-confirmation-denied",
+      ),
+    );
   if (response.status === "completed")
     return {
       status: "completed",

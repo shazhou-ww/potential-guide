@@ -301,8 +301,29 @@ or `allow_once` option semantics. `toolName` is diagnostic, `toolInput` may be
 opaque/referenced and file edits are previews, not a complete permission scope.
 The adapter therefore **never guesses** read/edit/execute authority from those
 fields and never treats an ordinary `approve` option as a single-use grant.
+The default (or explicit `confirmations: deny`) remains deny-by-default.
+For supervised runs only, an AHP profile can set `confirmations: external`:
+pguide leaves each execution/result confirmation pending for a human using a
+trusted client already connected to the same Host and session. It sends no
+confirmation, chooses no option, and converts no configured grant into approval.
+The transcript records `pguide/ahp-external-confirmation` with the exact
+session/chat/turn/toolCall/phase identifiers, without credentials or tool input.
+The human must verify the full native request and choose only a single-request
+decision, not session-wide/always approval. This setting does not open a UI,
+connect another client, or authorize any request. Do not enable it without an
+available human client. Waiting consumes the existing execution/run timeout;
+cancel, disconnect and target-directory guards remain active. A later Host
+decision is not success: the regulator must still re-observe the Objective.
+The selected mode is saved with the execution recipe, not silently enabled by
+`continue`. ACP profiles do not accept this AHP-only setting.
+The wire action does not authenticate a human or prove single-use semantics;
+external mode relies on the user's trusted Host/client for that decision.
+Host-observed denial is recorded as `external-ahp-confirmation-denied` and,
+without verified progress, ends with `authorization-required` rather than
+silently treating refusal as a successful repair.
 Even a configured file/command grant cannot automatically approve an
-unclassifiable AHP request. Execution/result confirmations receive the official
+unclassifiable AHP request. In the default deny mode, execution/result
+confirmations receive the official
 `chat/toolCallConfirmed` / `chat/toolCallResultConfirmed` denial with
 `approved: false`; safe `unknown` authorization requests and
 `pguide/permission_decision` records explain the unsupported semantics.

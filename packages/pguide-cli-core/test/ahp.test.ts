@@ -142,6 +142,151 @@ test("top-level discriminants normalize only valid legacy ACP and reject mixed p
     assert.throws(() => validateAgentProfile(invalid));
 });
 
+test("AHP external confirmation is explicit and cannot be configured on ACP", () => {
+  const ahp = profile("wss://host.example.invalid/ahp");
+  for (const confirmations of ["deny", "external"] as const)
+    assert.deepEqual(validateAgentProfile({ ...ahp, confirmations }), { ...ahp, confirmations });
+  for (const confirmations of ["approve", "always", true, {}, null])
+    assert.throws(() => validateAgentProfile({ ...ahp, confirmations }), /confirmations/);
+  assert.throws(
+    () =>
+      validateAgentProfile({
+        type: "acp",
+        connection: { protocolVersion: "1" },
+        transport: { type: "stdio", command: "fixture" },
+        confirmations: "external",
+      }),
+    /ACP.*confirmations/,
+  );
+});
+
+for (const mode of ["permission", "result-permission"] as const) {
+  for (const approved of [true, false]) {
+    test(`AHP external ${mode} observes external ${approved ? "approval" : "denial"} without dispatching a decision`, async () => {
+      const host = await ahpHost({
+        mode,
+        onPending(turnId, chatUri, connection) {
+          setTimeout(() => {
+            connection.action(chatUri, {
+              type:
+                mode === "permission" ? "chat/toolCallConfirmed" : "chat/toolCallResultConfirmed",
+              turnId,
+              toolCallId: "tool",
+              approved,
+              ...(approved ? { confirmed: "user-action" } : { reason: "denied" }),
+            });
+            connection.action(chatUri, { type: "chat/turnComplete", turnId, duration: 1 });
+          }, 20);
+        },
+      });
+      const pending: unknown[] = [];
+      try {
+        const outcome = await executeAhp(
+          { ...profile(host.url), confirmations: "external" },
+          "repair",
+          process.cwd(),
+          AbortSignal.timeout(2000),
+          {
+            onSession: async () => undefined,
+            onPermission: async (request) => {
+              pending.push(request);
+            },
+          },
+        );
+        assert.equal(outcome.status, "completed");
+        assert.equal(outcome.permissionDenials, approved ? undefined : 1);
+        assert.equal(pending.length, 1);
+        assert.match(JSON.stringify(pending), /"sessionUri":"ahp-session:/);
+        assert.match(JSON.stringify(pending), /"chatUri":"ahp-chat:/);
+        assert.match(
+          JSON.stringify(pending),
+          mode === "permission" ? /"phase":"execution"/ : /"phase":"result"/,
+        );
+        assert.equal(
+          host.messages.some(
+            ({ method, params }) =>
+              method === "dispatchAction" &&
+              /toolCall(Result)?Confirmed/.test(String((params.action as { type: string }).type)),
+          ),
+          false,
+        );
+      } finally {
+        await host.close();
+      }
+    });
+  }
+}
+
+for (const mode of ["timeout", "abort", "foreign-turn", "disconnect"] as const) {
+  test(`AHP external confirmation ${mode} stays bounded and never approves`, async () => {
+    const controller = new AbortController();
+    const updates: unknown[] = [];
+    const host = await ahpHost({
+      mode: "permission",
+      onPending(_turnId, chatUri, connection) {
+        if (mode === "foreign-turn") {
+          connection.action(chatUri, {
+            type: "chat/toolCallConfirmed",
+            turnId: "foreign",
+            toolCallId: "tool",
+            approved: true,
+            confirmed: "user-action",
+          });
+          connection.action(chatUri, {
+            type: "chat/turnComplete",
+            turnId: "foreign",
+            duration: 1,
+          });
+        } else if (mode === "disconnect") setTimeout(() => connection.close(), 20);
+      },
+    });
+    try {
+      await assert.rejects(
+        executeAhp(
+          { ...profile(host.url), confirmations: "external" },
+          "repair",
+          process.cwd(),
+          mode === "abort" ? controller.signal : AbortSignal.timeout(250),
+          {
+            onSession: async () => undefined,
+            onPermission: async () => {
+              if (mode === "abort") controller.abort(new Error("Cancelled by test"));
+            },
+            onUpdate: async (update) => {
+              updates.push(update);
+            },
+          },
+        ),
+        mode === "disconnect" ? /uncertain|disconnect/i : /abort|timeout|cancelled/i,
+      );
+      assert.equal(
+        host.messages.some(
+          ({ method, params }) =>
+            method === "dispatchAction" &&
+            /toolCall(Result)?Confirmed/.test(String((params.action as { type: string }).type)),
+        ),
+        false,
+      );
+      assert.match(
+        JSON.stringify(updates),
+        mode === "disconnect" || mode === "abort"
+          ? /"executionState":"uncertain"/
+          : /"remoteStopConfirmed":true/,
+      );
+      assert.equal(
+        host.messages.filter(
+          ({ method, params }) =>
+            method === "dispatchAction" &&
+            (params.action as { type: string }).type === "chat/turnStarted",
+        ).length,
+        1,
+      );
+    } finally {
+      await host.close();
+    }
+  });
+}
+
 test("AHP waits for Host completion, saves confirmed identity before dispatch, and resumes original chat", async () => {
   const host = await ahpHost();
   let identity: AhpSessionIdentity | undefined;
