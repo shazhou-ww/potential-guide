@@ -576,7 +576,12 @@ for (const mode of ["noop", "wrong", "fix"]) {
     const f = await setup(mode);
     try {
       const original = await readFile(f.subject.configPath, "utf8");
-      const envelope = await f.direct("sanity", { ...f.subject, allowSanity: true });
+      const envelope = await f.direct("sanity", {
+        ...f.subject,
+        allowSanity: true,
+        // Finite integration success includes cold CLI startups; this is not the Pilot deadline.
+        ...(mode === "fix" ? { timeoutMs: 60000 } : {}),
+      });
       if (mode === "fix") passed(envelope);
       else isProblem(envelope, "sanity-failed");
       const messages = (await readFile(f.log, "utf8"))

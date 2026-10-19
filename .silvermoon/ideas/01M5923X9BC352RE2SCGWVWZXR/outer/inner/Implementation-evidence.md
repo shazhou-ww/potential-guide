@@ -134,3 +134,24 @@ strategy.test.ts:161 预期 503、实际 408。其他被 Turbo 终止的测试�
   完成格式整理；`pnpm exec tsc -p tsconfig.test.json --noEmit` 退出 0。
   本反馈不代替主会话独立复测、完整 `pnpm check`、精确修订 CI 或任何生命周期门禁；
   未执行提交、push、tag、发布、submit 或 accept，变更保持未提交。
+
+### 有限 sanity 成功用例的直接 helper watchdog（2026-10-19）
+
+- 主会话在 `8f5ae9e` 后独立运行 `pnpm check`：regulator 通过，CLI 串行
+  79 项中仅 `setup-objective.test.ts:575` 的有限修复成功用例失败；
+  第 580 行期望 200，实际为整体 deadline 504，用例耗时 25842ms，
+  超过 fixture 继承的 24000ms。该冷启动集成耗时不证明生产期限应放宽。
+- 仅为 `mode === "fix"` 的直接 helper 调用显式指定 `timeoutMs: 60000`：
+  这是包含多次 CLI 冷启动的有限集成工作 watchdog，不是生产 Pilot 24 秒
+  guard，也不是全局测试预算。noop/wrong、实际超时测试和生产代码均未修改；
+  保留精确 200/成功 envelope、实际 ACP prompt、随机 nonce 修复验证、
+  配置不变、工作目录及 scratch/state/index 清理断言，不接受 504 或跳过测试。
+- 两个独立 PowerShell 进程分别在 PATH 前置已安装的 Node 版本目录，
+  `node --version` 确认 `v24.11.1` / `v22.13.0`；均执行：
+  `pnpm --filter pguide exec tsx --test --test-concurrency=1 --test-name-pattern 'real sanity (verifies a finite repair|rejects (noop|wrong) Agent completion)' test\setup-objective.test.ts`。
+  两版均退出 0，3/3 通过，0 fail、cancelled、skipped；Node 24 的
+  noop/wrong/fix 耗时分别为 20354/19300/25486ms，Node 22 分别为
+  19906/19162/24413ms。成功依赖实际修复后验证通过，而非 Agent 自报完成。
+- `pnpm exec biome check packages\pguide\test\setup-objective.test.ts` 退出 0。
+  未运行完整 `pnpm check`；独立复测及全部门禁仍由主会话负责。
+  未提交、push 或发布；未修改 ledger/events/ideal/outer，代码保持未提交。
