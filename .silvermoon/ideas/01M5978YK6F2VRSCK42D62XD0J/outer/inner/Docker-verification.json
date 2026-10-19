@@ -1,0 +1,1429 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-19T06:04:00.833Z",
+  "scope": "local Docker only; controlled short-window samples, not long-term reliability",
+  "executionMode": "immutable Git-bound Pilot API with fresh process probes and real CLI parity",
+  "scenarios": [
+    {
+      "id": "healthy-all-four-stacks",
+      "passed": true,
+      "observation": {
+        "pilot": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-19T06:07:05.303Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+            }
+          }
+        },
+        "cliSmoke": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-19T06:08:54.017Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "history-required",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "orderly"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "orderly",
+                "checkId": "sustainability",
+                "problemId": "history-insufficient"
+              },
+              "parameters": {
+                "expected": "3 samples spanning 1000ms",
+                "actual": 0
+              }
+            }
+          ],
+          "gapSummary": "样本缺失、数量不足、时间跨度不足或最新样本过旧。",
+          "observedAt": "2026-10-19T06:09:11.043Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "docker-transport-does-not-fallback",
+      "passed": true,
+      "observation": {
+        "status": 502,
+        "payload": null,
+        "message": "docker-transport: exit 1: Error response from daemon: No such container: missing-04b41f58-6bac-41c1-ad03-4666af51b361\n"
+      }
+    },
+    {
+      "id": "invalid-input-explicitly-rejected",
+      "passed": true,
+      "observation": {
+        "status": 400,
+        "payload": null,
+        "message": "invalid-subject: expected the documented Linux machine-health subject."
+      }
+    },
+    {
+      "id": "root-is-not-dedicated-user",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "initial"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "identity-mismatch"
+              },
+              "parameters": {
+                "expected": {
+                  "user": "root",
+                  "home": "/root",
+                  "nonroot": true
+                },
+                "actual": {
+                  "user": "root",
+                  "home": "/root",
+                  "HOME": "/home/agent",
+                  "uid": 0
+                },
+                "recovery": "Run as the declared non-root account with its HOME; do not hide a root invocation."
+              }
+            },
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "directory-unusable"
+              },
+              "parameters": {
+                "directory": "workspace",
+                "path": "/home/agent/work",
+                "expected": "real directory owned by uid 0",
+                "actual": {
+                  "uid": 2000,
+                  "directory": true,
+                  "symlink": false
+                },
+                "recovery": "Correct ownership and use a canonical directory; do not move or delete user data."
+              }
+            },
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "directory-unusable"
+              },
+              "parameters": {
+                "directory": "scratchDirectory",
+                "path": "/home/agent/tmp",
+                "expected": "real directory owned by uid 0",
+                "actual": {
+                  "uid": 2000,
+                  "directory": true,
+                  "symlink": false
+                },
+                "recovery": "Correct ownership and use a canonical directory; do not move or delete user data."
+              }
+            },
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "directory-unusable"
+              },
+              "parameters": {
+                "directory": "cacheDirectory",
+                "path": "/home/agent/cache",
+                "expected": "real directory owned by uid 0",
+                "actual": {
+                  "uid": 2000,
+                  "directory": true,
+                  "symlink": false
+                },
+                "recovery": "Correct ownership and use a canonical directory; do not move or delete user data."
+              }
+            },
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "directory-unusable"
+              },
+              "parameters": {
+                "directory": "logDirectory",
+                "path": "/home/agent/logs",
+                "expected": "real directory owned by uid 0",
+                "actual": {
+                  "uid": 2000,
+                  "directory": true,
+                  "symlink": false
+                },
+                "recovery": "Correct ownership and use a canonical directory; do not move or delete user data."
+              }
+            },
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "directory-unusable"
+              },
+              "parameters": {
+                "directory": "tasksDirectory",
+                "path": "/home/agent/tasks",
+                "expected": "real directory owned by uid 0",
+                "actual": {
+                  "uid": 2000,
+                  "directory": true,
+                  "symlink": false
+                },
+                "recovery": "Correct ownership and use a canonical directory; do not move or delete user data."
+              }
+            },
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "sudo-unavailable"
+              },
+              "parameters": {
+                "expected": "(ALL : ALL) NOPASSWD: ALL from sudo -n -l",
+                "actual": "exit 0; unrestricted grant=false",
+                "recovery": "Have an administrator explicitly grant this trusted account unrestricted noninteractive sudo."
+              }
+            }
+          ],
+          "gapSummary": "当前 uid、用户名或 HOME 不符合受管账号。\n必要目录不存在、归属错误或不是规范真实目录。\n必要目录不存在、归属错误或不是规范真实目录。\n必要目录不存在、归属错误或不是规范真实目录。\n必要目录不存在、归属错误或不是规范真实目录。\n必要目录不存在、归属错误或不是规范真实目录。\nsudo -n -l 未显示完整 NOPASSWD ALL 授权。",
+          "observedAt": "2026-10-19T06:09:17.997Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "environment-mismatch",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "initial"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "environment-mismatch"
+              },
+              "parameters": {
+                "expected": "native-linux",
+                "actual": "container"
+              }
+            }
+          ],
+          "gapSummary": "实测 container、wsl 或 native-linux 与声明不同。",
+          "observedAt": "2026-10-19T06:09:20.960Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "home-owner-gap-and-recovery",
+      "passed": true,
+      "observation": {
+        "failed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+              "levelId": "initial"
+            },
+            "problems": [
+              {
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                  "levelId": "initial",
+                  "checkId": "identity",
+                  "problemId": "directory-unusable"
+                },
+                "parameters": {
+                  "directory": "workspace",
+                  "path": "/home/agent/work",
+                  "expected": "real directory owned by uid 2000",
+                  "actual": {
+                    "uid": 0,
+                    "directory": true,
+                    "symlink": false
+                  },
+                  "recovery": "Correct ownership and use a canonical directory; do not move or delete user data."
+                }
+              }
+            ],
+            "gapSummary": "必要目录不存在、归属错误或不是规范真实目录。",
+            "observedAt": "2026-10-19T06:09:24.463Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+            }
+          }
+        },
+        "recovered": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-19T06:09:43.942Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "sudo-gap-and-recovery",
+      "passed": true,
+      "observation": {
+        "failed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+              "levelId": "initial"
+            },
+            "problems": [
+              {
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                  "levelId": "initial",
+                  "checkId": "identity",
+                  "problemId": "sudo-unavailable"
+                },
+                "parameters": {
+                  "expected": "(ALL : ALL) NOPASSWD: ALL from sudo -n -l",
+                  "actual": "exit 1; unrestricted grant=false",
+                  "recovery": "Have an administrator explicitly grant this trusted account unrestricted noninteractive sudo."
+                }
+              }
+            ],
+            "gapSummary": "sudo -n -l 未显示完整 NOPASSWD ALL 授权。",
+            "observedAt": "2026-10-19T06:09:45.967Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+            }
+          }
+        },
+        "recovered": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-19T06:10:01.172Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "filesystem-space-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "managed"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "managed",
+                "checkId": "system",
+                "problemId": "capacity-low"
+              },
+              "parameters": {
+                "path": "/health-quota",
+                "expected": 1048576,
+                "actual": 524288,
+                "unit": "bytes"
+              }
+            }
+          ],
+          "gapSummary": "必要目录所在文件系统的可用容量低于策略。",
+          "observedAt": "2026-10-19T06:10:04.456Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "filesystem-inode-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "managed"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "managed",
+                "checkId": "system",
+                "problemId": "inodes-low"
+              },
+              "parameters": {
+                "path": "/health-quota",
+                "expected": 16,
+                "actual": 8,
+                "unit": "inodes"
+              }
+            }
+          ],
+          "gapSummary": "文件系统剩余 inode 低于策略。",
+          "observedAt": "2026-10-19T06:10:07.850Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "required-endpoint-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "managed"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "managed",
+                "checkId": "system",
+                "problemId": "http-unavailable"
+              },
+              "parameters": {
+                "url": "http://127.0.0.1:18080/unavailable",
+                "expected": "HTTP 2xx without redirect",
+                "actual": "file:///home/agent/[eval1]:1\nconst r=await fetch(process.argv[1],{signal:AbortSignal.timeout(4000),redirect:'error'});await r.body?.cancel();if(!r.ok)throw Error('HTTP '+r.status);\n                                                                                                                               ^\n\nError: HTTP 503\n    at file:///home/agent/[eval1]:1:128\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n\nNode.js v22.23.3\n"
+              }
+            }
+          ],
+          "gapSummary": "显式 URL 未直接返回成功的 2xx 状态。",
+          "observedAt": "2026-10-19T06:10:12.117Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "package-manager-incomplete",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "managed"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "managed",
+                "checkId": "system",
+                "problemId": "package-database-unhealthy"
+              },
+              "parameters": {
+                "tool": "dpkg --audit",
+                "actual": "dpkg: error: parsing file '/var/lib/dpkg/updates/0000' near line 0:\n field name 'invalid' must be followed by colon\n",
+                "code": 2
+              }
+            }
+          ],
+          "gapSummary": "dpkg audit 或 apt 只读依赖模拟发现已安装包状态不一致。",
+          "observedAt": "2026-10-19T06:10:15.461Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "version-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "system-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "system-ready",
+                "checkId": "toolchains",
+                "problemId": "tool-version"
+              },
+              "parameters": {
+                "tool": "node",
+                "expected": "999.0.0",
+                "actual": "22.23.3",
+                "code": 0,
+                "recovery": "Select an installed supported toolchain; no automatic download is attempted."
+              }
+            }
+          ],
+          "gapSummary": "版本低于最低值、输出无法解析或版本命令失败。",
+          "observedAt": "2026-10-19T06:10:23.900Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "typescript-missing",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "system-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "system-ready",
+                "checkId": "toolchains",
+                "problemId": "tool-missing"
+              },
+              "parameters": {
+                "tool": "tsc",
+                "expected": "5",
+                "actual": "ENOENT",
+                "recovery": "Install the declared tool explicitly outside this check."
+              }
+            }
+          ],
+          "gapSummary": "Git 或所选栈的必要工具出现 ENOENT。",
+          "observedAt": "2026-10-19T06:10:28.001Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "python-missing",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "system-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "system-ready",
+                "checkId": "toolchains",
+                "problemId": "tool-missing"
+              },
+              "parameters": {
+                "tool": "python3",
+                "expected": "3.10",
+                "actual": "ENOENT",
+                "recovery": "Install the declared tool explicitly outside this check."
+              }
+            }
+          ],
+          "gapSummary": "Git 或所选栈的必要工具出现 ENOENT。",
+          "observedAt": "2026-10-19T06:10:31.784Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "cpp-missing",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "system-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "system-ready",
+                "checkId": "toolchains",
+                "problemId": "tool-missing"
+              },
+              "parameters": {
+                "tool": "c++",
+                "expected": "10",
+                "actual": "ENOENT",
+                "recovery": "Install the declared tool explicitly outside this check."
+              }
+            }
+          ],
+          "gapSummary": "Git 或所选栈的必要工具出现 ENOENT。",
+          "observedAt": "2026-10-19T06:10:36.075Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "rust-missing",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "system-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "system-ready",
+                "checkId": "toolchains",
+                "problemId": "tool-missing"
+              },
+              "parameters": {
+                "tool": "cargo",
+                "expected": "1.75",
+                "actual": "ENOENT",
+                "recovery": "Install the declared tool explicitly outside this check."
+              }
+            }
+          ],
+          "gapSummary": "Git 或所选栈的必要工具出现 ENOENT。",
+          "observedAt": "2026-10-19T06:10:39.727Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "compiler-exists-but-fails",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "system-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "system-ready",
+                "checkId": "toolchains",
+                "problemId": "toolchain-failed"
+              },
+              "parameters": {
+                "stack": "cpp",
+                "tool": "cmake",
+                "expected": "exit 0",
+                "actual": {
+                  "code": 1,
+                  "stdout": "-- The CXX compiler identification is unknown\n-- Detecting CXX compiler ABI info\n-- Detecting CXX compiler ABI info - failed\n-- Check for working CXX compiler: /usr/bin/c++\n-- Check for working CXX compiler: /usr/bin/c++ - broken\n-- Configuring incomplete, errors occurred!\nSee also \"/home/agent/tmp/pguide-health-I9vjib/cpp-out/CMakeFiles/CMakeOutput.log\".\nSee also \"/home/agent/tmp/pguide-health-I9vjib/cpp-out/CMakeFiles/CMakeError.log\".\n",
+                  "stderr": "CMake Error at /usr/share/cmake-3.25/Modules/CMakeTestCXXCompiler.cmake:63 (message):\n  The C++ compiler\n\n    \"/usr/bin/c++\"\n\n  is not able to compile a simple test program.\n\n  It fails with the following output:\n\n    Change Dir: /home/agent/tmp/pguide-health-I9vjib/cpp-out/CMakeFiles/CMakeScratch/TryCompile-si4AWc\n    \n    Run Build Command(s):/usr/bin/ninja cmTC_ae8ab && [1/2] Building CXX object CMakeFiles/cmTC_ae8ab.dir/testCXXCompiler.cxx.o\n    FAILED: CMakeFiles/cmTC_ae8ab.dir/testCXXCompiler.cxx.o \n    /usr/bin/c++    -o CMakeFiles/cmTC_ae8ab.dir/testCXXCompiler.cxx.o -c /home/agent/tmp/pguide-health-I9vjib/cpp-out/CMakeFiles/CMakeScratch/TryCompile-si4AWc/testCXXCompiler.cxx\n    ninja: build stopped: subcommand failed.\n    \n    \n\n  \n\n  CMake will not be able to correctly generate this project.\nCall Stack (most recent call first):\n  CMakeLists.txt:2 (project)\n\n\n"
+                },
+                "recovery": "Repair this compiler, linker, runtime or offline standard library; preserve workspace data."
+              }
+            }
+          ],
+          "gapSummary": "所选开发栈未完成真实最小项目并输出期望标记。",
+          "observedAt": "2026-10-19T06:10:44.318Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "overlapping-layout",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "development-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "development-ready",
+                "checkId": "order",
+                "problemId": "layout-invalid"
+              },
+              "parameters": {
+                "directories": [
+                  "workspace",
+                  "cacheDirectory"
+                ],
+                "expected": "distinct, non-overlapping managed directories",
+                "actual": [
+                  "/home/agent/work",
+                  "/home/agent/work"
+                ]
+              }
+            }
+          ],
+          "gapSummary": "工作区、scratch、缓存、日志或任务注册目录重合或嵌套。",
+          "observedAt": "2026-10-19T06:10:57.870Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "invalid-task-registry",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "development-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "development-ready",
+                "checkId": "order",
+                "problemId": "task-registry-invalid"
+              },
+              "parameters": {
+                "file": "broken.json",
+                "actual": "invalid JSON"
+              }
+            }
+          ],
+          "gapSummary": "JSON、记录字段、文件身份、时间或 scratch 路径违反合约。",
+          "observedAt": "2026-10-19T06:11:19.174Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "stale-task-residue",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "development-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "development-ready",
+                "checkId": "order",
+                "problemId": "task-residue"
+              },
+              "parameters": {
+                "id": "ended",
+                "path": "/home/agent/tmp/ended",
+                "finishedAt": 1792390180532,
+                "expected": {
+                  "retentionSeconds": 1
+                },
+                "actual": {
+                  "ageSeconds": 121.467
+                },
+                "recovery": "Review retained output and uncommitted work before manually cleaning the registered directory."
+              }
+            }
+          ],
+          "gapSummary": "明确登记的 scratch 子目录超过 finishedAt 加保留周期仍存在。",
+          "observedAt": "2026-10-19T06:11:42.037Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "orphaned-task",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "development-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "development-ready",
+                "checkId": "order",
+                "problemId": "task-orphaned"
+              },
+              "parameters": {
+                "id": "orphan",
+                "pid": 2147483647
+              }
+            }
+          ],
+          "gapSummary": "active 记录缺少 pid，或其进程已不存在。",
+          "observedAt": "2026-10-19T06:11:51.836Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "task-deadline-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "development-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "development-ready",
+                "checkId": "order",
+                "problemId": "task-overdue"
+              },
+              "parameters": {
+                "id": "overdue",
+                "deadlineAt": 1792390312305,
+                "now": 1792390327607
+              }
+            }
+          ],
+          "gapSummary": "活动任务当前时间严格大于 deadlineAt。",
+          "observedAt": "2026-10-19T06:12:07.664Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "finished-task-process-leftover",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "development-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "development-ready",
+                "checkId": "order",
+                "problemId": "task-process-leftover"
+              },
+              "parameters": {
+                "id": "leftover",
+                "pid": 1
+              }
+            }
+          ],
+          "gapSummary": "finished 记录对应的 pid 仍存在。",
+          "observedAt": "2026-10-19T06:12:20.190Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "active-work-and-uncommitted-data-protected",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "terminal"
+          },
+          "problems": [],
+          "gapSummary": "",
+          "observedAt": "2026-10-19T06:12:42.858Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "foreign-history-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "orderly"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "orderly",
+                "checkId": "sustainability",
+                "problemId": "history-invalid"
+              },
+              "parameters": {
+                "index": 0,
+                "reason": "identity-mismatch",
+                "expected": {
+                  "hostname": "pguide-health-b0588141-a27b-4242-ac6a-80ac4d481929",
+                  "user": "agent",
+                  "home": "/home/agent",
+                  "measuredAt": {
+                    "greaterThan": -1,
+                    "maximum": 1792390378510
+                  },
+                  "metrics": "finite nonnegative numbers"
+                },
+                "actual": {
+                  "hostname": "other-device",
+                  "user": "agent",
+                  "home": "/home/agent",
+                  "measuredAt": 1792390364770,
+                  "freeBytes": 988774666240,
+                  "freeInodes": 66380821,
+                  "cacheBytes": 0,
+                  "logBytes": 0
+                }
+              }
+            }
+          ],
+          "gapSummary": "目标身份不匹配、未来时间、倒序或重复时间戳。",
+          "observedAt": "2026-10-19T06:12:59.804Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "stale-history-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "orderly"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "orderly",
+                "checkId": "sustainability",
+                "problemId": "history-insufficient"
+              },
+              "parameters": {
+                "expected": {
+                  "samples": 3,
+                  "spanMs": 1000,
+                  "maxAgeMs": 300000
+                },
+                "actual": {
+                  "samples": 3,
+                  "spanMs": 2827,
+                  "ageMs": 611503
+                }
+              }
+            }
+          ],
+          "gapSummary": "样本缺失、数量不足、时间跨度不足或最新样本过旧。",
+          "observedAt": "2026-10-19T06:13:19.699Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "cacheBytes-growth-and-recovery",
+      "passed": true,
+      "observation": {
+        "failed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+              "levelId": "orderly"
+            },
+            "problems": [
+              {
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                  "levelId": "orderly",
+                  "checkId": "sustainability",
+                  "problemId": "cache-growth"
+                },
+                "parameters": {
+                  "expected": 1,
+                  "actual": 3200,
+                  "unit": "bytes/second",
+                  "spanMs": 2560,
+                  "recovery": "Review growth and configure bounded retention; never blindly delete caches or logs."
+                }
+              }
+            ],
+            "gapSummary": "历史首尾缓存字节差除以真实秒数超过策略。",
+            "observedAt": "2026-10-19T06:13:46.410Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+            }
+          }
+        },
+        "recovered": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-19T06:14:08.879Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "logBytes-growth-and-recovery",
+      "passed": true,
+      "observation": {
+        "failed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+              "levelId": "orderly"
+            },
+            "problems": [
+              {
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                  "levelId": "orderly",
+                  "checkId": "sustainability",
+                  "problemId": "log-growth"
+                },
+                "parameters": {
+                  "expected": 1,
+                  "actual": 1807.9894063120726,
+                  "unit": "bytes/second",
+                  "spanMs": 4531,
+                  "recovery": "Review growth and configure bounded retention; never blindly delete caches or logs."
+                }
+              }
+            ],
+            "gapSummary": "历史首尾日志字节差除以真实秒数超过策略。",
+            "observedAt": "2026-10-19T06:14:34.200Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+            }
+          }
+        },
+        "recovered": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-19T06:15:07.216Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "package-index-stale",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "orderly"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "orderly",
+                "checkId": "sustainability",
+                "problemId": "package-index-stale"
+              },
+              "parameters": {
+                "expected": 604800,
+                "actual": 1792390525.576,
+                "source": "update-success-stamp mtime",
+                "unit": "seconds",
+                "recovery": "Explicitly refresh apt indexes outside this check; record an update-success-stamp only after a successful refresh."
+              }
+            }
+          ],
+          "gapSummary": "Packages 缺失、刷新证据陈旧或存在未来时间。",
+          "observedAt": "2026-10-19T06:15:28.779Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "pending-package-update",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "orderly"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "orderly",
+                "checkId": "sustainability",
+                "problemId": "updates-pending"
+              },
+              "parameters": {
+                "actual": {
+                  "upgraded": 1,
+                  "installed": 0,
+                  "removed": 0,
+                  "held": 0
+                },
+                "recovery": "Review and apply appropriate updates explicitly; this check never installs packages."
+              }
+            }
+          ],
+          "gapSummary": "apt-get 只读模拟显示升级、安装、删除或保留包。",
+          "observedAt": "2026-10-19T06:16:01.367Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "package-dependency-broken",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+            "levelId": "managed"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                "levelId": "managed",
+                "checkId": "system",
+                "problemId": "package-database-unhealthy"
+              },
+              "parameters": {
+                "tool": "apt-get -s check",
+                "expected": "consistent installed package dependencies",
+                "actual": {
+                  "code": 100,
+                  "stdout": "NOTE: This is only a simulation!\n      apt-get needs root privileges for real execution.\n      Keep also in mind that locking is deactivated,\n      so don't depend on the relevance to the real current situation!\nReading package lists...\nBuilding dependency tree...\nReading state information...\nYou might want to run 'apt --fix-broken install' to correct these.\nThe following packages have unmet dependencies:\n bash : Depends: base-files (>= 2.1.12) but 0.0.1 is installed\n        Recommends: bash-completion (>= 20060301-0) but it is not installed\n",
+                  "stderr": "E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution).\n"
+                },
+                "recovery": "Review the unsatisfied dependencies and explicitly repair the installed package state; this check does not change packages, caches or configuration."
+              }
+            }
+          ],
+          "gapSummary": "dpkg audit 或 apt 只读依赖模拟发现已安装包状态不一致。",
+          "observedAt": "2026-10-19T06:16:06.603Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+          }
+        }
+      }
+    },
+    {
+      "id": "healthy-then-regression",
+      "passed": true,
+      "observation": {
+        "passed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-19T06:16:27.396Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+            }
+          }
+        },
+        "regressed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+              "levelId": "initial"
+            },
+            "problems": [
+              {
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+                  "levelId": "initial",
+                  "checkId": "identity",
+                  "problemId": "directory-unusable"
+                },
+                "parameters": {
+                  "directory": "workspace",
+                  "path": "/home/agent/work",
+                  "expected": "real directory owned by uid 2000",
+                  "actual": {
+                    "uid": 0,
+                    "directory": true,
+                    "symlink": false
+                  },
+                  "recovery": "Correct ownership and use a canonical directory; do not move or delete user data."
+                }
+              }
+            ],
+            "gapSummary": "必要目录不存在、归属错误或不是规范真实目录。",
+            "observedAt": "2026-10-19T06:16:35.818Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml": "0420ecf50e9e09dd883394b8230235c35d378b41"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "cleaned": true,
+  "docker": {
+    "Client": {
+      "Version": "29.8.2",
+      "ApiVersion": "1.56",
+      "DefaultAPIVersion": "1.56",
+      "GitCommit": "7fc2dff",
+      "GoVersion": "go1.26.8",
+      "Os": "windows",
+      "Arch": "amd64",
+      "BuildTime": "Wed Sep 30 19:35:42 2026",
+      "Context": "desktop-linux"
+    },
+    "Server": {
+      "Platform": {
+        "Name": "Docker Desktop 4.95.0 (242831)"
+      },
+      "Version": "29.8.2",
+      "ApiVersion": "1.56",
+      "MinAPIVersion": "1.40",
+      "Os": "linux",
+      "Arch": "amd64",
+      "Components": [
+        {
+          "Name": "Engine",
+          "Version": "29.8.2",
+          "Details": {
+            "ApiVersion": "1.56",
+            "Arch": "amd64",
+            "BuildTime": "Wed Sep 30 19:32:25 2026",
+            "Experimental": "false",
+            "GitCommit": "8af9fe3",
+            "GoVersion": "go1.26.8",
+            "KernelVersion": "6.18.33.2-microsoft-standard-WSL2",
+            "MinAPIVersion": "1.40",
+            "Module": "github.com/moby/moby/v2",
+            "ModuleVersion": "v2.0.0+unknown",
+            "Os": "linux"
+          }
+        },
+        {
+          "Name": "containerd",
+          "Version": "v2.3.6",
+          "Details": {
+            "GitCommit": "ee2735368117d2eb259779949d5e75cdafec9761"
+          }
+        },
+        {
+          "Name": "runc",
+          "Version": "1.5.1",
+          "Details": {
+            "GitCommit": "v1.5.1-0-g8f2685a4"
+          }
+        },
+        {
+          "Name": "docker-init",
+          "Version": "0.19.0",
+          "Details": {
+            "GitCommit": "de40ad0"
+          }
+        }
+      ],
+      "GitCommit": "8af9fe3",
+      "GoVersion": "go1.26.8",
+      "KernelVersion": "6.18.33.2-microsoft-standard-WSL2",
+      "BuildTime": "2026-09-30T19:32:25.000000000+00:00"
+    }
+  },
+  "commit": "0420ecf50e9e09dd883394b8230235c35d378b41",
+  "pilot": "git+file:///D:/Code/potential-guide.worktrees/device-setup-agent-development-tools/#objectives/development-machine-health/pilot.yaml",
+  "typescript": {
+    "version": "5.9.3",
+    "integrity": "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="
+  },
+  "image": "sha256:3df9049021f21309e492a902fb43b051c633869083725386f55ac958b25fc42a",
+  "passed": true,
+  "finishedAt": "2026-10-19T06:16:46.916Z"
+}

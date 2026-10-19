@@ -31,7 +31,7 @@
 
 ## 全库检查的既有失败
 
-`pnpm check` 已执行，格式、lint、类型检查通过，但既有
+首次 `pnpm check` 已执行，格式、lint、类型检查通过，但既有
 `packages/pguide/test/setup-objective.test.ts` 的六个 sanity 相关测试失败，
 共同现象为 `protocol: independent sanity probe failed.`，并非本次健康 Pilot 回归失败。
 不将该次命令报告为全库通过，也不在本次范围修复无关 setup 实现。
@@ -44,3 +44,25 @@
 不是重新安装依赖的独立干净构建，不能据此声称全部既有失败已逐项定位。
 
 上述例外已明确写入 [I-AC03](./Implementation.md)，不放宽本次 Docker gap 检出的交付标准。
+
+## 最终实施 Docker 验证
+
+执行 `node scripts\verify-development-health.mjs --report .cache\development-health-docker-implementation.json`，
+从 2026-10-19T06:04:00.833Z 到 06:16:46.916Z，33/33 场景通过，
+`passed: true`、`cleaned: true`，Docker Server 为 29.8.2。
+[原始收据](./Docker-verification.json)保留每个场景的实际观测和故障参数。
+
+代码版本为 `0420ecf50e9e09dd883394b8230235c35d378b41`。一次固定 Git 绑定贯穿
+真实 Pilot API 观测，但每组 check 都启动独立进程访问实际容器；健康场景另行通过
+真实 CLI，并断言 API／CLI 层级和版本相同。所有场景均执行，没有把失败替换为跳过。
+
+33 个场景包含正常四栈、无历史、传输失败不回退、非法输入、root 和环境类别不符、
+目录／sudo 的故障与恢复、真实 tmpfs 容量／inode 不足、HTTP 故障、包数据库损坏、
+最低版本不符、四栈分别缺工具、编译器存在但不能构建、目录重叠、非法任务登记、
+已知残留／孤儿／超期／结束后仍存活的任务、正常任务及未提交工作保护、外来／过期
+历史、实际缓存／日志增长与恢复、过期包索引、仅待升级与依赖关系损坏两种状态，
+以及健康后重新引入故障的降级。每个故障检查层级、问题 ID 和非空参数；
+容量、inode、目录、工具和增长等场景还断言具体对象与阈值证据。
+
+主 Agent 据以上证据确认本次实施标准成立，包含已披露的 I-AC03 基线例外；
+最终交付仍需在部署阶段按同一标准重新运行 Docker 验证，不将实施通过替代部署收据。
