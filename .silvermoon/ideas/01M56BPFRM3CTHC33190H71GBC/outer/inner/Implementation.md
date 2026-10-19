@@ -24,6 +24,12 @@
 
 使用实际 WebSocket JSON-RPC 测试 Host 和 CLI 合成目标证明自动闭环；覆盖逐字节上限、握手/初始化取消、权限阻塞、失联、重复通知、身份保存与恢复。自动替身不作为真实 Host 或 Outer World 证据。已有 ACP-only setup Pilot 兼容规范化配置，并明确拒绝 AHP 就绪验证，不扩大它的职责。
 
+### I-S04: 支持外部人工逐次确认
+
+部署未通过后的最小适配：新增显式 AHP profile `confirmations: external`，由用户已连接同一 Host 的可信客户端展示完整请求并作出逐次决定。pguide 仅保持订阅并等待，不发送 approve、deny 或选择 option；缺省及 `deny` 保持原来的拒绝行为。既有 ceiling/grants 不转换成未知 AHP 权限。配置随原会话配方固定，受原运行期限、取消、断线和目标目录守卫约束。没有人类客户端时不得启用；不启动 UI、不连接额外 Host、不复制凭据，不以配置启用或实施验收代替某次操作的人工授权。
+
+具体协议依据、安全边界和验证方案见 [AHP-External-Confirmation.md](./AHP-External-Confirmation.md)。此变更使原 Inner World 验收过期，必须重新完成实施验收后才能返回真实部署。
+
 ## Acceptance criteria
 
 ### I-AC01: AHP 闭环可验证
@@ -43,3 +49,7 @@
 既有 ACP 配置与执行恢复回归测试通过；ACP/AHP 共存配置可解析、编辑保存并选择正确执行链路，测试证明不依赖 Host 产品名。AHP 配置示例与限制说明完整；执行相关测试及仓库要求的 pnpm check 并保留结果。
 
 固定来源、命令结果、支持范围和真实 Host 尚待验证项集中保存在 [AHP-Evidence.md](./AHP-Evidence.md)；Deployment 契约、Outer World 证据和所有生命周期交接由父会话负责。
+
+### I-AC04: 外部确认不产生自动授权
+
+配置、核心与 CLI 回归证明：缺省仍拒绝；显式 external 在 execution/result 两阶段均不发送任何确认，能够消费 Host 回传的外部决定并继续重新观察；未确认时超时/取消不伪报成功，断线不自动重放，其他 turn 的决定不能解除本 turn 的等待。仅真实目标重观察可以认定修复。完整 pnpm check 通过。自动测试不替代用户逐次确认或 D-AC01 的真实证据。
