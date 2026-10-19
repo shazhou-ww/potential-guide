@@ -1,0 +1,36 @@
+{
+  "name": "@potential-guide/pguide-setup-pilot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Complete local and SSH pguide setup Pilot.",
+  "type": "module",
+  "files": [
+    "pilot.yaml",
+    "checks",
+    "references",
+    "src",
+    "runtime",
+    "setup-check.mjs",
+    "ssh-target.mjs",
+    "sanity-fixture"
+  ],
+  "exports": {
+    ".": "./setup-check.mjs",
+    "./pilot.yaml": "./pilot.yaml"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-setup-runtime.mjs",
+    "clean": "node -e \"\"",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.ts\"",
+    "typecheck": "node ../../scripts/check-pilot-sources.mjs"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "devDependencies": {
+    "@potential-guide/objective-pilot": "workspace:^",
+    "@potential-guide/config": "workspace:^",
+    "pguide": "workspace:^"
+  }
+}

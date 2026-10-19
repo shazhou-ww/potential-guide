@@ -1,6 +1,6 @@
 # Credential-free self-check Docker harness
 
-Validates the existing `objectives/pguide-self-check` through a **source-built,
+Validates the existing `packages/pguide-self-check-pilot` through a **source-built,
 packed, installed** pguide in Linux. No real model, credentials, user config,
 host HOME, host environment forwarding, bind mounts, or Docker socket. This is
 controlled ACP integration evidence, **not** real-device/model acceptance.
@@ -58,6 +58,11 @@ tree, isolated toolchain, pnpm store, or tarballs. The Objective is committed du
 with fixed Git dates; provenance records both the original source revision and
 the separate Objective revision actually passed to the probe.
 
+The Objective repository now includes both complete setup and self-check Pilot
+packages. The setup package's embedded sanity fixture and generated transport
+runtime stay with its manifest. Development dependencies and package tests are
+excluded from this repository copy.
+
 ## Create a reusable container, then verify
 
 The image defaults to UID 1000 (`node`), HOME `/work/home`, and `sleep infinity`.
@@ -70,6 +75,9 @@ docker exec pguide-self-check-7dd2b7ee node --version
 docker exec pguide-self-check-7dd2b7ee node /harness/verify.mjs fix
 docker exec pguide-self-check-7dd2b7ee node /harness/verify.mjs wrong
 docker exec pguide-self-check-7dd2b7ee node /harness/verify.mjs summary-only
+docker exec pguide-self-check-7dd2b7ee node /harness/verify.mjs fix setup
+docker exec pguide-self-check-7dd2b7ee node /harness/verify.mjs wrong setup
+docker exec pguide-self-check-7dd2b7ee node /harness/verify.mjs summary-only setup
 docker inspect --format '{{.Config.User}} {{.HostConfig.NetworkMode}} {{json .HostConfig.CapDrop}} {{json .HostConfig.SecurityOpt}} {{json .Mounts}}' pguide-self-check-7dd2b7ee
 ```
 
@@ -90,6 +98,14 @@ It writes `probe.json`, `prompts.jsonl` (mode/count only), and
 `verification.json` beside the config and subject, then prints the report.
 The fixture stores no prompt text or nonce. Assertions exit nonzero on any
 mismatch; do not interpret a helper-only result as a full probe.
+
+The optional second argument `setup` switches to the committed setup package,
+uses a 20000 ms check budget and explicitly sets `allowSanity: true` for this
+credential-free fixture only. It verifies the existing nested regulation repair
+and independent marker recheck. The default remains self-check with its direct
+Agent repair and no consent/target input. Neither mode uses a real account or
+paid model; Linux fixture evidence does not prove Windows nested-probe readiness
+or SSH identity/authentication on an external device.
 
 The container stays running for reuse; `/work` is its writable layer (no
 mounts). To independently inspect evidence, use `docker exec ... cat` with the

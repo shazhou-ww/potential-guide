@@ -3,11 +3,12 @@ import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-const [mode, ...extra] = process.argv.slice(2);
+const [mode, kind = "self-check", ...extra] = process.argv.slice(2);
 assert.ok(["fix", "wrong", "summary-only"].includes(mode) && extra.length === 0);
+assert.ok(["self-check", "setup"].includes(kind));
 assert.notEqual(process.getuid(), 0, "Run as the image's non-root user");
 const provenance = JSON.parse(await readFile("/harness/provenance.json", "utf8"));
-const run = await mkdtemp(`/work/runs/${mode}-`);
+const run = await mkdtemp(`/work/runs/${kind}-${mode}-`);
 const configPath = join(run, "config.json");
 const subjectPath = join(run, "subject.json");
 const log = join(run, "prompts.jsonl");
@@ -43,10 +44,11 @@ await writeFile(
     desiredVersion: provenance.pguideVersion,
     agent: "fixture",
     userHome: "/work/home",
-    timeoutMs: 24000,
+    timeoutMs: kind === "setup" ? 20000 : 24000,
+    ...(kind === "setup" ? { allowSanity: true } : {}),
   }),
 );
-const pilot = "git+file:///opt/objective#objectives/pguide-self-check/pilot.yaml";
+const pilot = `git+file:///opt/objective#packages/pguide-${kind}-pilot/pilot.yaml`;
 const result = spawnSync(
   "/opt/consumer/node_modules/.bin/pguide",
   [
@@ -95,6 +97,7 @@ if (mode === "fix") {
   assert.ok(observation.payload.problems.some(({ ref }) => ref.problemId === "sanity-failed"));
 }
 const report = {
+  kind,
   mode,
   run,
   ...provenance,

@@ -1,0 +1,34 @@
+{
+  "name": "@potential-guide/development-machine-health-pilot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Complete Linux development-machine health Pilot with bounded Docker transport.",
+  "type": "module",
+  "files": [
+    "pilot.yaml",
+    "checks",
+    "references",
+    "src",
+    "runtime",
+    "health-check.mjs",
+    "docker"
+  ],
+  "exports": {
+    ".": "./health-check.mjs",
+    "./pilot.yaml": "./pilot.yaml"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-health-runtime.mjs",
+    "clean": "node -e \"\"",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.ts\"",
+    "typecheck": "node ../../scripts/check-pilot-sources.mjs"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "devDependencies": {
+    "@potential-guide/effects": "workspace:^",
+    "@potential-guide/objective-pilot": "workspace:^"
+  }
+}

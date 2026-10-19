@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { access, chmod, cp, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
-import { delimiter, join, resolve } from "node:path";
+import { basename, delimiter, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   assertLatestVersion,
@@ -622,13 +622,17 @@ for await (const line of createInterface({input:process.stdin})) {
 
 async function verifySetupObjective(baseEnv) {
   const setupRoot = join(consumer, "setup-objective");
-  const setup = join(setupRoot, "objectives", "pguide-setup");
+  const setup = join(setupRoot, "packages", "pguide-setup-pilot");
   await mkdir(setupRoot, { recursive: true });
-  await cp(join(root, "objectives", "pguide-setup"), setup, { recursive: true });
+  const pilotCopy = {
+    recursive: true,
+    filter: (source) => !["node_modules", ".turbo", "test"].includes(basename(source)),
+  };
+  await cp(join(root, "packages", "pguide-setup-pilot"), setup, pilotCopy);
   await cp(
-    join(root, "objectives", "pguide-self-check"),
-    join(setupRoot, "objectives", "pguide-self-check"),
-    { recursive: true },
+    join(root, "packages", "pguide-self-check-pilot"),
+    join(setupRoot, "packages", "pguide-self-check-pilot"),
+    pilotCopy,
   );
   await successful("git", ["init", "-q"], { cwd: setupRoot });
   await successful("git", ["config", "user.name", "Deployment Fixture"], { cwd: setupRoot });
@@ -641,7 +645,7 @@ async function verifySetupObjective(baseEnv) {
   const revision = (
     await successful("git", ["rev-parse", "HEAD"], { cwd: setupRoot })
   ).stdout.trim();
-  const setupUri = `git+${pathToFileURL(setupRoot).href}#objectives/pguide-setup/pilot.yaml`;
+  const setupUri = `git+${pathToFileURL(setupRoot).href}#packages/pguide-setup-pilot/pilot.yaml`;
   const agent = join(consumer, "setup-agent.mjs");
   await writeFile(
     agent,
@@ -737,7 +741,7 @@ for await (const line of createInterface({input:process.stdin})) {
   delete selfSubject.allowSanity;
   selfSubject.timeoutMs = 24000;
   await writeFile(subject, JSON.stringify(selfSubject));
-  const selfUri = setupUri.replace("/pguide-setup/", "/pguide-self-check/");
+  const selfUri = setupUri.replace("/pguide-setup-pilot/", "/pguide-self-check-pilot/");
   const selfResult = await successful(
     executable("pguide"),
     [

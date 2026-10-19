@@ -1,0 +1,32 @@
+{
+  "name": "@potential-guide/pguide-self-check-pilot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dependency-free snapshot delivery of the local pguide self-check Pilot.",
+  "type": "module",
+  "files": [
+    "pilot.yaml",
+    "checks",
+    "references",
+    "runtime",
+    "self-check.mjs"
+  ],
+  "exports": {
+    "./pilot.yaml": "./pilot.yaml"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-self-check-runtime.mjs",
+    "clean": "node -e \"\"",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.mjs\"",
+    "typecheck": "node ../../scripts/check-pilot-sources.mjs"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "devDependencies": {
+    "@potential-guide/pguide-setup-pilot": "workspace:^",
+    "@potential-guide/cli-core": "workspace:^",
+    "pguide": "workspace:^"
+  }
+}

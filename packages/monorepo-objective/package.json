@@ -4,6 +4,14 @@
   "private": true,
   "description": "Read-only, requirements-led pnpm monorepo Objective checks.",
   "type": "module",
+  "files": [
+    "dist",
+    "pilot.yaml",
+    "checks",
+    "references",
+    "check.mjs",
+    "THIRD_PARTY_NOTICES.txt"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -11,10 +19,10 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node ../../scripts/build-monorepo-runtime.mjs",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "lint": "biome lint .",
-    "test": "tsx --test \"test/*.test.ts\"",
+    "test": "tsx --test \"test/*.test.ts\" \"test/*.test.mjs\"",
     "typecheck": "tsc -b --pretty false"
   },
   "engines": {
@@ -24,5 +32,10 @@
     "ajv": "catalog:",
     "typescript": "catalog:",
     "yaml": "catalog:"
+  },
+  "devDependencies": {
+    "@potential-guide/effects": "workspace:^",
+    "@potential-guide/objective-pilot": "workspace:^",
+    "pguide": "workspace:^"
   }
 }

@@ -8,7 +8,9 @@
       "!**/dist",
       "!**/node_modules",
       "!.silvermoon",
-      "!objectives/pguide-self-check/runtime"
+      "!packages/pguide-self-check-pilot/runtime",
+      "!packages/development-machine-health-pilot/runtime",
+      "!packages/pguide-setup-pilot/runtime"
     ]
   },
   "formatter": {

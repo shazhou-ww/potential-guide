@@ -1,0 +1,36 @@
+import { Fault, stages, validateSubject } from "./contract.mjs";
+import { localSample } from "./sustainability.mjs";
+import { remote } from "./transport.mjs";
+export function failure(error) {
+  return {
+    status: error instanceof Fault ? error.status : 500,
+    payload: null,
+    message:
+      error instanceof Fault
+        ? error.message
+        : `health-check-fault: ${error.code ?? error.name}: ${error.message}`,
+  };
+}
+export async function invoke(stage, value) {
+  try {
+    if (![...stages, "sample"].includes(stage)) throw new Fault("invalid-stage.", 400);
+    const subject = validateSubject(value);
+    if (subject.target.type === "docker") return await remote(stage, subject);
+    if (process.platform !== "linux")
+      throw new Fault("unsupported-platform: local execution requires Linux (Debian/Ubuntu).", 501);
+    const context = { deadline: Date.now() + 24000 };
+    if (stage === "sample")
+      return { status: 200, payload: await localSample(subject, context), message: "" };
+    return await { identity, system, toolchains, order, sustainability }[stage](subject, context);
+  } catch (error) {
+    return failure(error);
+  }
+}
+export async function check(stage, subject) {
+  if (!stages.includes(stage))
+    return failure(new Fault("invalid-stage: sample is not a Pilot check.", 400));
+  return invoke(stage, subject);
+}
+export async function sample(subject) {
+  return invoke("sample", subject);
+}

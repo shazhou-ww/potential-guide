@@ -4,14 +4,14 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 核定迁移映射与运行契约
-- [ ] **I-S02:** 迁移完整 Pilot 与模块职责
+- [x] **I-S01:** 核定迁移映射与运行契约
+- [x] **I-S02:** 迁移完整 Pilot 与模块职责
 - [ ] **I-S03:** 更新调用方并完成回归
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 范围与归属完整
-- [ ] **I-AC02:** 架构规范实际落地
+- [x] **I-AC01:** 范围与归属完整
+- [x] **I-AC02:** 架构规范实际落地
 - [ ] **I-AC03:** 行为回归可追溯
 
 ## Deployment

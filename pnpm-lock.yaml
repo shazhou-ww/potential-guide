@@ -27,6 +27,9 @@ catalogs:
     effect:
       specifier: 4.0.2
       version: 4.0.2
+    esbuild:
+      specifier: 0.28.2
+      version: 0.28.2
     jsonata:
       specifier: 2.1.0
       version: 2.1.0
@@ -56,6 +59,9 @@ importers:
       cross-spawn:
         specifier: 'catalog:'
         version: 7.0.6
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.2
       tsx:
         specifier: 'catalog:'
         version: 4.23.15
@@ -65,6 +71,15 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+
+  packages/development-machine-health-pilot:
+    devDependencies:
+      '@potential-guide/effects':
+        specifier: workspace:^
+        version: link:../effects
+      '@potential-guide/objective-pilot':
+        specifier: workspace:^
+        version: link:../objective-pilot
 
   packages/effects:
     dependencies:
@@ -89,6 +104,16 @@ importers:
       yaml:
         specifier: 'catalog:'
         version: 2.9.1
+    devDependencies:
+      '@potential-guide/effects':
+        specifier: workspace:^
+        version: link:../effects
+      '@potential-guide/objective-pilot':
+        specifier: workspace:^
+        version: link:../objective-pilot
+      pguide:
+        specifier: workspace:^
+        version: link:../pguide
 
   packages/objective-pilot:
     dependencies:
@@ -156,6 +181,30 @@ importers:
       '@types/cross-spawn':
         specifier: 'catalog:'
         version: 6.0.6
+
+  packages/pguide-self-check-pilot:
+    devDependencies:
+      '@potential-guide/cli-core':
+        specifier: workspace:^
+        version: link:../pguide-cli-core
+      '@potential-guide/pguide-setup-pilot':
+        specifier: workspace:^
+        version: link:../pguide-setup-pilot
+      pguide:
+        specifier: workspace:^
+        version: link:../pguide
+
+  packages/pguide-setup-pilot:
+    devDependencies:
+      '@potential-guide/config':
+        specifier: workspace:^
+        version: link:../pguide-config
+      '@potential-guide/objective-pilot':
+        specifier: workspace:^
+        version: link:../objective-pilot
+      pguide:
+        specifier: workspace:^
+        version: link:../pguide
 
   packages/pguide-cli-core:
     dependencies:
