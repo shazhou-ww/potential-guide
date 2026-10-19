@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import childProcess, { type ChildProcess, type PromiseWithChild, spawn } from "node:child_process";
 import { once } from "node:events";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import { join, resolve } from "node:path";
 import { PassThrough } from "node:stream";
@@ -220,6 +220,23 @@ test("Windows snapshot command failures retain only bounded diagnostic fields", 
       {
         code: null,
         killed: true,
+        stderr: "PGUIDE_WINDOWS_SNAPSHOT_PHASE:started\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:importing\n",
+      },
+      "phase=importing;reason=unclassified]",
+    ],
+    [
+      {
+        code: null,
+        killed: true,
+        stderr:
+          "PGUIDE_WINDOWS_SNAPSHOT_PHASE:importing\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:imported\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:compiling\n",
+      },
+      "phase=compiling;reason=unclassified]",
+    ],
+    [
+      {
+        code: null,
+        killed: true,
         stderr:
           "PGUIDE_WINDOWS_SNAPSHOT_PHASE:started\r\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:query-started\r\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:queried\r\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:serialized\r\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:exiting\r\n",
       },
@@ -253,7 +270,7 @@ test("Windows snapshot command failures retain only bounded diagnostic fields", 
       assert.ok(error.message.includes(expected), error.message);
       assert.match(
         error.message,
-        /elapsedMs=\d{1,10};reported=(?:true|false);nativeCode=(?:\d{1,10}|none);phase=(?:unreported|started|compiling|compiled|query-started|queried|serialized|exiting);reason=/,
+        /elapsedMs=\d{1,10};reported=(?:true|false);nativeCode=(?:\d{1,10}|none);phase=(?:unreported|started|importing|imported|compiling|compiled|query-started|queried|serialized|exiting);reason=/,
       );
       assert.equal(error.message.includes(canary), false);
       return true;
@@ -297,6 +314,83 @@ async function sparseEnvironment(t: TestContext): Promise<NodeJS.ProcessEnv> {
 
 if (process.platform === "win32") {
   const query = "[PguideWindowsProcessSnapshot]::Collect()";
+
+  test("Windows snapshot explicitly imports trusted Utility without unrelated module discovery", async (t) => {
+    const execute = promisify(childProcess.execFile);
+    const env = await sparseEnvironment(t);
+    assert.ok(env.HOME);
+    const modules = join(env.HOME, "modules");
+    const canary = "fixture-untrusted-module-must-not-load";
+    for (const [name, functions] of [
+      ["Microsoft.PowerShell.Utility", ["Add-Type", "ConvertTo-Json"]],
+      ["PguideSnapshotCanary", ["Get-PguideSnapshotCanary"]],
+    ] as const) {
+      const directory = join(modules, name);
+      await mkdir(directory, { recursive: true });
+      await writeFile(
+        join(directory, `${name}.psd1`),
+        `@{ RootModule='${name}.psm1'; ModuleVersion='99.0.0'; FunctionsToExport=@(${functions.map((name) => `'${name}'`).join(",")}); CmdletsToExport=@(); AliasesToExport=@() }`,
+      );
+      await writeFile(
+        join(directory, `${name}.psm1`),
+        `[Console]::Error.WriteLine('${canary}')\n${functions.map((name) => `function ${name} { throw '${canary}' }`).join("\n")}`,
+      );
+    }
+    let modulePath: string | undefined;
+    let elapsed = 0;
+    nativeWindowsCommands(t, (command, args, options) => {
+      if (command.endsWith("powershell.exe")) {
+        assert.ok(args[3]?.includes(query));
+        const checkedQuery = String.raw`
+          if ($PSModuleAutoLoadingPreference -ne 'None') { throw 'fixture-autoload-must-be-disabled' }
+          $utility = Get-Module -Name Microsoft.PowerShell.Utility
+          if ($null -eq $utility -or $utility.Path -ne ($PSHOME + '\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1')) {
+            throw 'fixture-utility-must-be-trusted'
+          }
+          try {
+            Get-PguideSnapshotCanary
+            throw 'fixture-unrelated-command-must-not-resolve'
+          } catch [System.Management.Automation.CommandNotFoundException] {}
+          if ($null -ne (Get-Module -Name PguideSnapshotCanary)) { throw 'fixture-unrelated-module-loaded' }
+          [PguideWindowsProcessSnapshot]::Collect()`;
+        const started = performance.now();
+        const pending = execute(
+          command,
+          args.map((arg, index) => (index === 3 ? arg.replace(query, checkedQuery) : arg)),
+          {
+            ...options,
+            env: modulePath === undefined ? env : { ...env, PSModulePath: modulePath },
+            encoding: "utf8",
+          },
+        );
+        return Object.assign(
+          pending.then((result) => {
+            elapsed = Math.round(performance.now() - started);
+            assert.equal(result.stderr.includes(canary), false);
+            for (const phase of ["importing", "imported", "compiling", "compiled", "exiting"])
+              assert.ok(result.stderr.includes(`PGUIDE_WINDOWS_SNAPSHOT_PHASE:${phase}`));
+            const rows: unknown = JSON.parse(result.stdout);
+            assert.ok(Array.isArray(rows));
+            assert.ok(
+              rows.some(
+                (row) => row.ProcessId === process.pid && row.ParentProcessId === process.ppid,
+              ),
+            );
+            return result;
+          }),
+          { child: pending.child },
+        );
+      }
+      assert.equal(command, "taskkill");
+      return simulatedCommand(Promise.resolve({ stdout: "", stderr: "" }));
+    });
+    for (modulePath of [undefined, modules]) {
+      await killProcessTree(ownedChild());
+      t.diagnostic(
+        `Trusted Utility import/native query (${modulePath === undefined ? "absent" : "canary-only"} PSModulePath) completed in ${elapsed}ms.`,
+      );
+    }
+  });
 
   test("Windows native snapshot uses the correct host ABI and returns authoritative PID/parent rows", async (t) => {
     const execute = promisify(childProcess.execFile);
@@ -357,34 +451,47 @@ if (process.platform === "win32") {
   test("Windows real snapshot subprocess distinguishes command, module and 10s watchdog faults", async (t) => {
     const execute = promisify(childProcess.execFile);
     const env = await sparseEnvironment(t);
+    assert.ok(env.HOME);
+    const utilityImport = String.raw`Import-Module -Name ($PSHOME + '\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop`;
+    let target = query;
     let replacement = "";
     nativeWindowsCommands(t, (command, args, options) => {
       if (command.endsWith("powershell.exe")) {
         assert.equal(options?.timeout, 10_000);
         assert.ok(args[3]?.includes(query), "fixture must replace the actual native query");
+        assert.ok(args[3]?.includes(target));
         return execute(
           command,
-          args.map((arg) => arg.replace(query, replacement)),
+          args.map((arg) => arg.replace(target, replacement)),
           { ...options, env, encoding: "utf8" },
         );
       }
       assert.equal(command, "taskkill");
       return simulatedCommand(Promise.resolve({ stdout: "", stderr: "" }));
     });
-    for (const [fixture, expected] of [
+    for (const [expression, fixture, expected] of [
       [
+        utilityImport,
+        `Import-Module -Name '${join(env.HOME, "fixture-canary-missing.psd1").replaceAll("'", "''")}' -ErrorAction Stop`,
+        /kind=exit;exit=1;.*phase=importing;reason=module-not-found/,
+      ],
+      [
+        query,
         "Get-PguideMissingNativeFixture",
         /kind=exit;exit=1;.*phase=query-started;reason=command-not-found/,
       ],
       [
+        query,
         "Write-Error -ErrorId CouldNotAutoloadMatchingModule -Message 'fixture-canary'",
         /kind=exit;exit=1;.*phase=query-started;reason=module-autoload/,
       ],
       [
+        query,
         "Start-Sleep -Seconds 20",
         /kind=timeout;exit=none;.*killed=true;.*phase=query-started;reason=unclassified/,
       ],
     ] as const) {
+      target = expression;
       replacement = fixture;
       await assert.rejects(killProcessTree(ownedChild()), (error) => {
         assert.ok(error instanceof Error);
@@ -502,7 +609,9 @@ test("forceful cleanup terminates an owned process and its uncooperative child",
         const pending = execute(
           command,
           args.map((arg, index) =>
-            index === 3 ? `$null = [Console]::In.ReadToEnd(); Start-Sleep -Seconds 6; ${arg}` : arg,
+            index === 3
+              ? `$null = [Console]::In.ReadToEnd(); [Threading.Thread]::Sleep(6000); ${arg}`
+              : arg,
           ),
           { ...options, env, encoding: "utf8" },
         );
@@ -512,6 +621,8 @@ test("forceful cleanup terminates an owned process and its uncooperative child",
             assert.equal(pending.child.stdin?.writableEnded, true, "owner must send EOF");
             for (const phase of [
               "started",
+              "importing",
+              "imported",
               "compiling",
               "compiled",
               "query-started",

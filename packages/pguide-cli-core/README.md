@@ -97,11 +97,19 @@ runtime teardown (including its own taskkill), not this inner snapshot query.
 SSH limits and consent are unchanged.
 
 The fixed PowerShell query accepts no input, so its owner ends the subprocess's
-stdin pipe immediately rather than leaving it waiting for EOF. Failure diagnostics
+stdin pipe immediately rather than leaving it waiting for EOF. That child session
+disables module autoload and explicitly imports only the built-in
+`Microsoft.PowerShell.Utility` manifest at the absolute `$PSHOME\Modules` path;
+`Add-Type` and `ConvertTo-Json` are module-qualified. It does not discover modules
+through inherited `PSModulePath`, change the parent's environment, or bypass
+execution policy/security checks. Failure diagnostics
 expose only fixed error labels, a bounded unsigned Win32 error code (`nativeCode`,
-or `none`), and the last fixed script phase: `unreported`, `started`, `compiling`,
-`compiled`, `query-started`, `queried`, `serialized` or `exiting`. Compilation and
-native enumeration share the same watchdog; there is no additional compilation
+or `none`), and the last fixed script phase: `unreported`, `started`, `importing`,
+`imported`, `compiling`, `compiled`, `query-started`, `queried`, `serialized` or
+`exiting`. `importing` brackets the explicit trusted import; `compiling` is emitted
+only after it succeeds, immediately before the module-qualified `Add-Type` call.
+Explicit import, compilation and native enumeration share the same
+watchdog; there is no additional import or compilation
 allowance. `exiting` means the command body finished,
 not that process exit and stdio closure have been acknowledged. No arbitrary
 stderr, paths or authentication data are forwarded.

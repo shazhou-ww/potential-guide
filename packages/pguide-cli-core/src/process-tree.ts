@@ -3,12 +3,16 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 
-const windowsSnapshotCommand = `
+const windowsSnapshotCommand = String.raw`
 [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:started')
 $ErrorActionPreference='Stop'
+$PSModuleAutoLoadingPreference='None'
 try {
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:importing')
+  Import-Module -Name ($PSHOME + '\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:imported')
   [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:compiling')
-  Add-Type -TypeDefinition @'
+  Microsoft.PowerShell.Utility\Add-Type -TypeDefinition @'
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -92,7 +96,7 @@ public static class PguideWindowsProcessSnapshot {
   [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:query-started')
   $rows = @([PguideWindowsProcessSnapshot]::Collect())
   [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:queried')
-  $serialized = ConvertTo-Json -Compress -InputObject $rows
+  $serialized = Microsoft.PowerShell.Utility\ConvertTo-Json -Compress -InputObject $rows
   [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:serialized')
   [Console]::Out.WriteLine($serialized)
   [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:exiting')
@@ -183,7 +187,7 @@ function snapshotCommandError(cause: unknown, started: number): WindowsSnapshotC
   let phase = "unreported";
   if (typeof error?.stderr === "string")
     for (const entry of error.stderr.matchAll(
-      /(?:^|\r?\n)PGUIDE_WINDOWS_SNAPSHOT_PHASE:(started|compiling|compiled|query-started|queried|serialized|exiting)(?=\r?\n|$)/g,
+      /(?:^|\r?\n)PGUIDE_WINDOWS_SNAPSHOT_PHASE:(started|importing|imported|compiling|compiled|query-started|queried|serialized|exiting)(?=\r?\n|$)/g,
     ))
       phase = entry[1] ?? "unreported";
   const elapsedMs = Math.min(2147483647, Math.max(0, Math.round(performance.now() - started)));

@@ -714,6 +714,10 @@ test("sanity invocation diagnostics expose fixed classifications, not arbitrary 
     const canary = "fixture-canary-must-not-be-exposed";
     const snapshotDiagnostic =
       "windows-snapshot-command[kind=exit;exit=1;errno=none;signal=none;killed=false;elapsedMs=100;reported=true;nativeCode=5;phase=query-started;reason=native-next]";
+    const importDiagnostic = snapshotDiagnostic.replace(
+      "nativeCode=5;phase=query-started;reason=native-next",
+      "nativeCode=none;phase=importing;reason=module-not-found",
+    );
     for (const [report, expected] of [
       [
         {
@@ -725,6 +729,10 @@ test("sanity invocation diagnostics expose fixed classifications, not arbitrary 
       [
         { status: "regulation-error", error: `${snapshotDiagnostic} ${canary}` },
         `status=regulation-error, diagnostic=${snapshotDiagnostic}`,
+      ],
+      [
+        { status: "regulation-error", error: `${importDiagnostic} ${canary}` },
+        `status=regulation-error, diagnostic=${importDiagnostic}`,
       ],
       [
         {

@@ -448,3 +448,43 @@ objectives / .github 的树无差异。I-S01 / I-AC01 据本地结果及完整�
   重复或 CI；未改 POSIX、门禁/账本/事件/outer，保留父会话现有 Implementation
   修改。八个本轮文件留为 uncommitted，未 commit/push；父会话负责 ABI/runtime
   复核及下一精确候选 CI，本地通过不等同 Windows CI 已绿。
+
+### 固定 Windows helper 显式加载可信 Utility，禁用隐式模块发现
+
+- 父会话提供 `928993592df854cc3b6e7fa7a30b4bdb1233b523` / CI
+  `39227700246`：其他四项通过，Windows 为
+  `timeout;elapsedMs=10303;reported=false;nativeCode=none;phase=compiling`。
+  native query 尚未调用，位置在 Add-Type 调用/隐式 autoload/编译范围内。
+  旧 Get-Cim 的 `query-started` 同样包含 cmdlet autoload，故先前并未证明
+  CIM provider 本身是根因；不再把替换 provider 或本地成功当作 CI 根因证明。
+- 固定 helper 子会话设置 `$PSModuleAutoLoadingPreference='None'`，用 Core 内建
+  `Import-Module` 从绝对 `$PSHOME\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1`
+  加载系统 Utility；不使用会触发其他模块发现的 Join-Path。Add-Type 与
+  ConvertTo-Json 均显式 module-qualified，没有发现/导入用户模块或失败 fallback。
+  新固定 `importing/imported` phase 区分导入与后续 Add-Type：
+  `compiling` 现在明确发生在可信模块导入成功之后。安全白名单及 setup Fault 同步，
+  仍只输出固定标签、有限数字，不泄漏路径/Auth/stderr。
+- 父会话核实 regulation worker 的 fork 没有 env override，shared helper 继承的是
+  setup CLI executionContext 环境（包括存在的 TEMP/TMP），不是 Agent transport.env
+  的精简列表。本轮不修改该边界、不追查错误的 Agent profile，也不臆改 TEMP/TMP；
+  生产 subprocess 的环境继承保持原样，仅改变其 PowerShell 会话模块加载方式。
+- 新真实 sparse-env 回归保留 TEMP/TMP 等允许键，分别省略 PSModulePath 和仅给出
+  owned canary 模块目录；该目录含假 Utility 与无关 canary module。
+  验证实际加载的 Utility manifest 来自 PSHOME、autoload 为 None、无关命令确实
+  CommandNotFound 且模块未加载、canary 不执行，仍获得真实 PID/parent 数组。
+  Node 22.13.0 两种环境实际完成 **659/632ms**；Node 24.11.1 **628/589ms**。
+  这是本地实测而非对 GitHub runner 全部环境/故障的复现或根因确认。
+- 原十二项 shared 回归全部保留，新增 missing trusted-import 的真实显式失败及
+  importing timeout 标签回归；native ABI/错误/句柄 finally/非零 taskkill owned
+  缺失证明、实际 10s 挂起失败保持。EOF + 6s fixture 改用 .NET Thread.Sleep，
+  避免原 Start-Sleep 在生产脚本之前隐式预载 Utility；不是增加预热。
+  **10s watchdog、20/24/30s 默认与 60/75s opt-in、SSH/consent/取消、POSIX、
+  native ABI 均未改变**；没有新依赖/二进制、策略/AV 绕过、重试或额外预算。
+- 两个安装 Node 版本各执行 shared process-tree 定向文件：**13/13、13/13**，
+  总耗时 **27080/27349ms**，无 skip；真实 EOF-dependent query **6680/6708ms**。
+  Node 22.13.0 setup diagnostic 定向 **1/1**（包括新增 importing 标签安全透传
+  和原 native/canary 隔离）。core build、test typecheck、Biome、正式 runtime
+  builder 及 `--check`、`git diff --check` 通过，owned profile 已清理。
+- 八个本轮文件留为 uncommitted；未运行 full check、packed、Linux 重复或 CI，
+  未 commit/push/改 gates/ledger/events/outer。父会话负责下一精确候选 CI；
+  若仍为 `compiling`，应继续定位 Add-Type/编译内部，而不是再增 watchdog。
