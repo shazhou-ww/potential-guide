@@ -18,10 +18,10 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 验证本机 Docker 场景矩阵
-- [ ] **D-S02:** 验证持续维护闭环
+- [x] **D-S01:** 验证本机 Docker 场景矩阵
+- [x] **D-S02:** 验证持续维护闭环
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Docker 具体 gap 检出
-- [ ] **D-AC02:** 恢复与保护有实际证据
+- [x] **D-AC01:** Docker 具体 gap 检出
+- [x] **D-AC02:** 恢复与保护有实际证据

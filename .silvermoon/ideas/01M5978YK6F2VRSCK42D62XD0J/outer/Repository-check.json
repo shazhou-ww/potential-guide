@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "command": "pnpm check",
+  "passed": false,
+  "failedTests": [
+    "ACP-only setup reports an AHP selection as unsupported without starting an Agent",
+    "configuration reports missing/invalid config, unsupported commands, absent Agent and missing env",
+    "configuration performs real ACP initialize and session/new without prompting",
+    "setup ACP rejects string negotiation and emits only safe rejection diagnostics",
+    "remote payload uses target authentication and performs actual nonce sanity, not control evidence",
+    "real sanity rejects noop Agent completion",
+    "real sanity rejects wrong Agent completion",
+    "real sanity verifies a finite repair",
+    "sanity timeout during an actual ACP prompt cleans isolated config, state and descendants",
+    "Git subdirectory snapshot runs dependency-free checks and existing file-auth ACP to terminal",
+    "self-check bounded timeout cleans owned task/state and preserves unrelated scratch"
+  ],
+  "failedCount": 11,
+  "healthRegression": {
+    "passed": true,
+    "tests": 15
+  },
+  "formatLintTypecheck": {
+    "passed": true,
+    "workspaces": 9
+  },
+  "packageBuildAndPack": {
+    "passed": true
+  },
+  "additionalExistingFailuresIsolated": {
+    "command": "pnpm --filter pguide exec tsx --test --test-name-pattern \"ACP-only setup|configuration reports|configuration performs|setup ACP rejects|self-check bounded timeout\" test\\setup-objective.test.ts",
+    "tests": 5,
+    "passed": 5,
+    "failed": 0,
+    "stdout": "✔ ACP-only setup reports an AHP selection as unsupported without starting an Agent (7142.2894ms)\r\n✔ configuration reports missing/invalid config, unsupported commands, absent Agent and missing env (19852.5273ms)\r\n✔ configuration performs real ACP initialize and session/new without prompting (7028.63ms)\r\n✔ setup ACP rejects string negotiation and emits only safe rejection diagnostics (14868.8564ms)\r\n✔ self-check bounded timeout cleans owned task/state and preserves unrelated scratch (8683.0851ms)\r\nℹ tests 5\r\nℹ suites 0\r\nℹ pass 5\r\nℹ fail 0\r\nℹ cancelled 0\r\nℹ skipped 0\r\nℹ todo 0\r\nℹ duration_ms 59524.4698\r\n"
+  },
+  "baseline": {
+    "revision": "d35db75",
+    "relevantExistingSourceUnchanged": true,
+    "proof": "inner/Baseline-check.json",
+    "scope": "One persistent sanity failure reproduced from baseline source with unchanged shared compiled CLI; this is not a clean independent rebuild or proof of all eleven causes."
+  }
+}
