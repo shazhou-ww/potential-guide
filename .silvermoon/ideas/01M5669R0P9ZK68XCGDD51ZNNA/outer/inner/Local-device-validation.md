@@ -164,3 +164,26 @@ I-AC03 因缺少真实 terminal 证据仍未满足，不提交或批准实现验
 已阅读当前安装 Copilot 的官方 `help permissions`：相对 `write(marker.txt)` 按末尾路径组件匹配，并非单一绝对位置；下一次最小授权应使用随机任务目录下 marker 的绝对路径，保留路径限制、禁用额外临时目录访问，不授予 shell、网络或其他写权限，不修改持久用户配置。
 
 已通过结构化询问请求这项单次最小授权，但用户当前不可用，没有获得授权。因此没有临时扩权或再次调用模型。当前下一步是由用户明确允许“仅本次隔离目录中的 marker.txt 写入”，随后在临时配置/启动适配器中绑定实际生成的绝对 marker 路径并执行一次完整 probe；若仍超时，记录失败并停止，不自动重试。I-S03、I-AC03 继续未完成，现有通过的自动测试不替代此授权或真实 terminal。
+
+## 单次最小授权后的真实复验
+
+用户随后直接回复“好的”，同意上一条明确提出的“下一次自查仅修改其隔离目录中的 marker.txt”授权。本轮只消费这一次验证授权，不将其当作持久配置变更、其他文件权限、额外模型重试或任何生命周期验收。
+
+### 授权范围与前次诊断纠正
+
+准备临时启动适配器时，完整检查所选 profile 的权限参数，发现既有用户配置含 `--allow-tool=write`。前次只检查有效配置的 `regulationPermissions` 并模拟客户端拒绝，遗漏了 Agent 自身启动参数的预授权；因此不能把 `not-granted` 模拟结果称为真实执行的确定权限阻碍，更不能归因为此前超时。该模拟结果仍是真实客户端策略结果，但只在实际请求该策略时适用。没有为了验证而移除或改写用户的持久设置。
+
+本次在会话目录创建独立 explicit 配置，复用既有安装、真实 Copilot 入口和原有 USERPROFILE 认证边界；临时适配器删除广义 `write` 授权，只对本次实际创建的普通、非链接、单硬链接 marker 文件添加 `write(<绝对 marker 路径>)`。保留正常路径限制，并添加 `--disallow-temp-dir`、`--deny-tool shell`、`--deny-tool url`。未申请其他文件写入、shell 或网络工具权限，没有复制凭据、改模型或改持久配置。只透传真实 ACP 字节流，不合成会话、修复或完成响应；审计只记录方法、时长、固定结果分类，不记录 prompt、nonce、模型正文或原始认证错误。
+
+安装后的 pguide 校验临时有效配置成功。随后通过同一已安装 `0.3.0-rc.0` 入口，指定快照 revision `6c75d927aaefe361cb85746c055cb1a01114ad1c` 和 package 子目录，执行一次完整 probe，仍采用 `24000 ms` subject 预算。
+
+### 实际结果
+
+- probe 退出码 `6`，报告仍为 `504`、`payload: null`、`timeout: direct Agent exceeded its deadline.`，没有 terminal 或版本结果投影。
+- 审计记录三个真实 ACP 启动：configuration readiness、sanity readiness 和 direct repair。前两个只建立会话，没有写入授权；第三个才启用绝对 marker 写入授权。
+- direct repair 从启动到 initialize 响应约 `290 ms`；session/new 在启动后 `3139 ms` 成功；`session/prompt` 在 `3140 ms` 发出。
+- 到 `16632 ms` 发送 `session/cancel`，即本次 prompt 获得约 `13492 ms` 等待时间；在 `16636 ms` 收到真实 prompt 响应，`stopReason: cancelled`。
+- 在这一有界执行中没有观察到 `session/request_permission`。因此本次没有文件权限被拒绝的证据，不能把已有客户端拒绝模拟当作根因。也不能仅凭 prompt 发出和取消确认推断模型访问成功、完成过工具编辑或准确修复。
+- 独立检查 scratch 目录无残留子项；临时启动器、配置、源参数副本和空 scratch 根目录随后删除，撤销本次适配器授权入口。原始报告与无秘密方法审计保留在会话文件 `self-check-once-report.json`、`self-check-once-audit.jsonl`。
+
+当前阻塞已缩小为真实 prompt 未在完整自查剩余预算内完成，而不是已经证实的认证失败或权限拒绝。此次没有再次运行模型、延长 Pilot 上限或改用较长 helper。下一次真实复验需先有可验证的外部条件变化，例如用户选定其现有账号已可用的低延迟 ACP 模型/profile，或代码耗时优化取得独立证据；另需重新确认一次验证授权，不能沿用已消费的单次授权。I-S03、I-AC03 保持未完成，不 submitInner 或请求实现验收。

@@ -30,7 +30,7 @@ Pilot 单项默认 20 秒，subject 上限 24 秒，为默认 30 秒 probe 留�
 
 源码 `811f28d802028b8c5a82337a47f9b111d83cedb6` 的 Windows 子会话定向复跑 8/8 通过，父会话独立验证同版本干净安装容器正反例。继续同步上游 Windows 修复后，父会话又在 `fbccc9de7e9ba909771d21aff1a0410d1d96ccbe` 执行 pnpm check，退出 0，354 项测试中 353 通过、1 项已有平台跳过；实际执行和 Turbo 缓存边界见 [Docker 验证](./Docker-validation.md)。历史 Windows 失败不再列为当前未解决阻塞。
 
-历史设备固定 811f28d 的完整 probe 停在 installed，configuration 的 session/new 被 Agent 拒绝，认证诊断为 authentication-required。当前 Windows 用户另用既有安装加载固定 c1f2a42 的新 package 快照，单次完整 probe 已进入 direct sanity，但返回 504 `timeout: direct Agent exceeded its deadline.`，未得到 terminal，scratch 已清空。两次结果属于不同用户环境，不能将历史认证阻塞沿用为当前诊断，也不能将 readiness 通过当作真实修复成功。详细边界及下一步见 [当前设备验证](./Local-device-validation.md)。本步骤和 I-AC03 保持未完成，不记录 submitInner 或 acceptInner。
+历史设备固定 811f28d 的完整 probe 停在 installed，configuration 的 session/new 被 Agent 拒绝，认证诊断为 authentication-required。当前 Windows 用户另用既有安装加载固定 c1f2a42 的新 package 快照，完整 probe 已进入 direct sanity，但返回 504 `timeout: direct Agent exceeded its deadline.`。用户随后明确同意单次绝对 marker 写入授权，本机指定固定 6c75d92 再执行一次完整 probe；无秘密方法审计确认真实 prompt 已发出，在约 13.5 秒等待后因剩余预算耗尽取消，没有权限请求，仍未得到 terminal。临时配置及授权启动器已删除，scratch 已清空。不同用户的历史认证阻塞、客户端权限模拟和当前真实结果不能混用；readiness 通过或 prompt 发出也不等于真实修复成功。详细纠正、边界及下一步见 [当前设备验证](./Local-device-validation.md)。本步骤和 I-AC03 保持未完成，不记录 submitInner 或 acceptInner。
 
 ## Acceptance criteria
 
