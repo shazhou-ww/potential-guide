@@ -26,6 +26,8 @@
 任务图与构建输出；类型专属检查观察现有产物而不运行 scripts。
 通过 TypeScript 语法树读取导入，避免把注释和普通字符串当作跨包引用。
 前端与服务可以合包并通过不同交付入口关联；不要求支撑包独立交付。
+跨服务关联要求实际服务角色与同环境服务交付，而非仅有 packages 关联；
+外部服务采用显式 service 类型的同环境供应引用，不把普通资源或共享包当作 API。
 
 沿用 Pilot 的 manifest、References、process probe 和 Envelope 协议，只有结构已确认才进入
 交付层。Git probe 临时 checkout 不自动构建依赖，故 subject 显式引用控制机可信、同 revision

@@ -1,7 +1,7 @@
-﻿✔ real repository manifest and process probes advance through both layers to terminal (5152.0274ms)
-✔ direct adapter emits the existing check envelope and invalid invocation never returns ok (1838.6983ms)
-✔ real probe stops at structure for invalid contract and does not fall through to deliveries (1085.3024ms)
-✔ a valid internal package reaches Pilot terminal without execution or online proof (4649.7811ms)
+﻿✔ real repository manifest and process probes advance through both layers to terminal (4778.7454ms)
+✔ direct adapter emits the existing check envelope and invalid invocation never returns ok (1035.2563ms)
+✔ real probe stops at structure for invalid contract and does not fall through to deliveries (938.9525ms)
+✔ a valid internal package reaches Pilot terminal without execution or online proof (4392.3862ms)
 ℹ tests 4
 ℹ suites 0
 ℹ pass 4
@@ -9,4 +9,4 @@
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 14552.9971
+ℹ duration_ms 12356.5638
