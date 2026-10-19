@@ -336,3 +336,47 @@ runner 使用真实官方 CLI，不是 ACP fixture；只有显式 end_turn、没
 Pilot manifest、共享 runner、local-only runtime 提取器和生成参考页已同步。提取器在删除远程分支时保留 else 中的本地期限校验，避免为本机快照误删保护；回归同时针对原 setup helper 与生成的 self-check runtime 验证默认值、恰好 6000 ms 余量、少 1 ms、上限 300 秒和非法元数据。提交过的 Git 快照测试覆盖默认 probe 与显式 subject 60000 / probe 90000 两种完整 terminal，均只有一个 fixture prompt；这些是自动回归，不是真实模型证据。
 
 定向十项测试全部通过，完整 pnpm check 退出 `0`（373 项报告，371 通过、2 项已有跳过）。setup 33 项、self-check package 1 项、monorepo 34 项和根脚本 24 项实际执行，其余九个 workspace 的测试复用缓存；格式、lint、类型、新鲜度、build 和 pack 通过。此时 I-S03、I-AC03 仍等待新精确源码的真实完整 probe，不因为预算候选已通过测试就提交实现验收。
+
+## Implementation 验收就绪：真实完整 terminal
+
+本节为最新实现证据，先前认证、终端生命周期、隔离环境及 24 秒预算失败均保留为历史，不再作为当前未完成项。用户同意的预算改动先以 `7db27d869ed33dd0cac526bc5cf9321f6c3891df` 发布到 primary，确认可达后才执行本次真实验证；这不是修改运行时元数据来冒充旧标准通过。
+
+### 精确来源与期限
+
+只对上述提交的 `packages/pguide-self-check-pilot` 执行 Git archive，导入同一已认证容器的新目录 `/work/self-check-7db27d8`，没有重新构建认证镜像、复制 keyring 或导入未提交源码：
+
+| 项目 | 实际值 |
+| --- | --- |
+| Pilot 源码 commit | `7db27d869ed33dd0cac526bc5cf9321f6c3891df` |
+| archive SHA-256 | `138b9bf8ec03a6dd68e1d2d94b041b440c03636a3ac8b077afbdbc2ad4fcc5f3` |
+| 原提交及容器的相同 Pilot tree | `9c73bc977eb53ba51ceddb55a0f2d312724231dd` |
+| 容器快照 Git revision | `85d1b2a5f73e7a7cb4e9d1fb2e335f9ee52fbb1a` |
+| Pilot URI | `git+file:///work/self-check-7db27d8#packages/pguide-self-check-pilot/pilot.yaml` |
+| 实际 pguide 安装 | `0.4.0-rc.0`，原镜像中打包安装的 consumer |
+| 已安装 CLI 源码 | `e4e84fd9b09d95bfd9e652dd432c1342bc7c79da`，与本次 Pilot 源码分开记录 |
+| 实际 Agent / model | 官方 Copilot `1.0.98` / `gpt-5-mini` |
+| subject / 外层 probe | `60000 ms` / `90000 ms`，重试为 `0` |
+| 证据目录 | `/work/runs/real-self-check-Ja4a9j` |
+
+导入前后的整个 Pilot tree OID 相同，不只比对版本号或某个文件。pguide 通过真实 Git 子目录加载该已提交快照，自动注入实际外层期限；没有手动设置 PGUIDE_PROBE_TIMEOUT_MS。旧安装兼容已有元数据协议，新检查来自精确 Git 快照，不把 CLI 安装 commit 和 Pilot commit 混为一谈。
+
+真实 Agent 基线仍作为前置门线：校验此前 ready、同一安装、同一模型、一个真实 prompt、独立 marker 正确及清理成功；没有为了确认基线再发送一次模型请求。当前复验沿用已授权私有 Secret Service 的受控本地启动器，不改 Git probe 的环境白名单。目录/socket 归属校验、单个绝对 marker 写入、shell/URL 工具拒绝及禁用额外临时目录访问均保持不变。
+
+### 实际结果及独立复核
+
+完整 probe 退出 `0`，原始 Envelope 为 status `200`、current.levelId `terminal`、problems 为空、versions 对该 URI 精确匹配 `85d1b2a5f73e7a7cb4e9d1fb2e335f9ee52fbb1a`。
+
+- 真实 configuration 与 sanity 的 session/new 均确认所选模型匹配；整个完整自查只有一个 session/prompt。
+- 修复会话启动后 `4013 ms` 完成 initialize，`8480 ms` 完成 session/new 并发出 prompt，`29378 ms` 收到正常 end_turn；prompt 约 `20898 ms`。随后出现的 session/cancel 属于正常停止/清理，而非此前预算取消的失败。
+- 随机 marker 由检查程序读取，验证普通非链接文件、单硬链接、字节数和精确内容后才成功；没有模型摘要自证。
+- scratch 最后只剩预置的无关 keep.txt，原内容不变；本次独占任务及状态清理完成。没有权限请求或被拒绝记录，没有 target 或 allowSanity 输入，没有嵌套 regulation。
+
+主会话直接读取原始 probe.json、subject.json、config.json、audit.jsonl 并独立断言上述结果，不只相信外层验证器的 terminal 布尔值。原始报告及安全方法审计的会话副本为 `implementation-terminal-probe.json`、`implementation-terminal-verification.json`、`implementation-terminal-audit.jsonl`，不含 token、口令、prompt 正文、模型文本或随机期望值。临时 source tar 和公开验证器随后定向清理，保留已提交的公开 Pilot 仓库及证据，认证容器未重启或导出。
+
+### 验收边界
+
+I-S03、I-AC03 现已具备完整自动回归和至少一次真实、已安装 pguide、精确 Git 快照 terminal 证据；Implementation ledger 可全部勾选，准备 submitInner。用户仍需对准确 Implementation revision 作独立验收，不能把“继续推进”或本节勾选当作 acceptInner。
+
+本次证明已认证 Linux 容器中的显式 60/90 秒配置可通过，不声称默认 20/30 秒配置、Windows 宿主、远端 SSH 或其他设备也已通过；旧默认行为保持不变。没有发布 npm，没有进入或批准部署验收。既有失败与 standalone baseline 作为过程证据保留，但不替代本节的正式 terminal。
+
+验收材料整理后再次执行完整 pnpm check，退出 `0`；源代码、生成产物和已实测 Pilot tree 没有再次变化，没有为确认结果重复模型请求。最终原始日志留在会话的 `implementation-final-pnpm-check.txt`，生命周期 worktree/staged 检查另行执行。此时仅准备 Agent 的 submitInner，用户接受仍是后续独立决策。

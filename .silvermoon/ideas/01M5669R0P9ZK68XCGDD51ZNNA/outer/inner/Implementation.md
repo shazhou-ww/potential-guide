@@ -1,8 +1,8 @@
 # Implementation
 
-本轮优先交付独立本机自查，分级及检查职责见 [分级与检查说明](./ideal/Levels-and-checks.md)。仓库实现位于 `objectives/pguide-self-check`；远程整备接入独立自查留作后续工作。下文保留稳定契约标题，记录实际设计，不代表父会话已批准验收。
+本轮优先交付独立本机自查，分级及检查职责见 [分级与检查说明](./ideal/Levels-and-checks.md)。仓库实现位于 [pguide-self-check-pilot](../../../../../packages/pguide-self-check-pilot/README.md)；远程整备接入独立自查留作后续工作。下文记录实际实现与证据，不代表用户已批准验收。
 
-复用现有 setup 的安装、配置、ACP readiness、受限进程执行与清理。新 sanity 不再使用旧 regulation fixture。此前结果见 [历史实现证据](./Verification.md) 和 [目标设备修订验证](./Target-revision.md)，均不证明新独立自查已经通过。本轮实现与验证边界见 [独立自查实现证据](./Self-check-implementation.md)，主会话的独立检查及真实认证阻塞见 [当前设备验证](./Local-device-validation.md)。另已建立并保留无凭据的 Linux 容器，正反例集成结果与复用入口见 [Docker 验证](./Docker-validation.md)；它不替代真实模型验收。
+复用现有 setup 的安装、配置、ACP readiness、受限进程执行与清理。新 sanity 不再使用旧 regulation fixture。历史过程见 [历史实现证据](./Verification.md)、[目标设备修订验证](./Target-revision.md)、[独立自查实现证据](./Self-check-implementation.md) 和 [当前设备验证](./Local-device-validation.md)。最新自动回归、容器独立认证及真实完整 terminal 证据以 [Docker 验证](./Docker-validation.md) 最后一节为准，既有 fixture 成功不替代真实模型证据。
 
 ## Steps
 
@@ -18,7 +18,7 @@
 
 共享 helper 使用显式 selfCheck 模式；旧 setup 默认路径不变，含 SSH 传输和显式 allowSanity。新 sanity 仅创建独占 task/marker.txt，通过现有 AcpClient 的 initialize/newSession/prompt/stop API 执行一次提示，使用原有权限策略，不合成 grants、不增加 allow-all。正常 end_turn、未被拒绝且独立普通文件/链接数/字节数/随机精确内容校验通过才成功。
 
-真实耗时诊断确认 sanity 原先先启动 readiness Agent，再为修复启动第二个 Agent。现已将 sanity 的协议、必需 sessionResume 能力及 session/new 核验合并到唯一修复会话；configuration 仍独立真实核验，不依赖历史成功。启动失败以 acp-unavailable 和安全 initialize/session-new、startup-failed 分类阻断，不发送 prompt；旧 setup 和 SSH 的 readiness 路径保持不变。没有放宽 24 秒 Pilot 上限、既有执行限制或清理余量。
+真实耗时诊断确认 sanity 原先先启动 readiness Agent，再为修复启动第二个 Agent。现已将 sanity 的协议、必需 sessionResume 能力及 session/new 核验合并到唯一修复会话；configuration 仍独立真实核验，不依赖历史成功。启动失败以 acp-unavailable 和安全 initialize/session-new、startup-failed 分类阻断，不发送 prompt；旧 setup 和 SSH 的 readiness 路径保持不变。复用会话本身不改变任何期限、权限或清理余量；显式预算的规则如下。
 
 为支持 dependency-free Git 子目录快照，构建脚本从共享源码提取 AcpClient 声明，并转译现有权限策略、进程树清理和流式脱敏模块，连同共享 helper 一并生成 runtime；不是另写一套线上 ACP。产物新鲜度纳入默认测试，源码变化后需 `pnpm self-check:build`。
 
@@ -30,15 +30,13 @@ Pilot 单项默认仍为 20 秒，外层 probe 默认仍为 30 秒。用户同�
 
 仓库增加 manifest/wiki、输入、单 prompt、假完成/错误内容/权限拒绝/不完整结束、输出上限、超时清理、Git 子目录快照回归；原 setup 测试继续覆盖本地、SSH 与旧授权语义。部署验证脚本新增安装后 self-check 快照路径，fixture 明确只用于自动回归，不冒充真实模型证据。
 
-源码 `811f28d802028b8c5a82337a47f9b111d83cedb6` 的 Windows 子会话定向复跑 8/8 通过，父会话独立验证同版本干净安装容器正反例。继续同步上游 Windows 修复后，父会话又在 `fbccc9de7e9ba909771d21aff1a0410d1d96ccbe` 执行 pnpm check，退出 0，354 项测试中 353 通过、1 项已有平台跳过；实际执行和 Turbo 缓存边界见 [Docker 验证](./Docker-validation.md)。历史 Windows 失败不再列为当前未解决阻塞。
+预算候选的定向十项回归全部通过；完整 pnpm check 退出 `0`，373 项报告中 371 通过、2 项已有平台跳过、0 失败。setup 33 项、self-check package 1 项、monorepo 34 项和根脚本 24 项实际执行，其余九个 workspace 的测试复用缓存；格式、lint、类型、四个 runtime 新鲜度、build 和 pack 均通过。默认和显式较长预算的 Git 快照 terminal、非法/不足外层期限、假修复、拒绝、超时清理及更短 Agent 期限均有回归覆盖。
 
-历史设备固定 811f28d 的完整 probe 停在 installed，configuration 的 session/new 被 Agent 拒绝，认证诊断为 authentication-required。当前 Windows 用户另用既有安装加载固定 c1f2a42 的新 package 快照，完整 probe 已进入 direct sanity，但返回 504 `timeout: direct Agent exceeded its deadline.`。用户随后明确同意单次绝对 marker 写入授权，本机指定固定 6c75d92 再执行一次完整 probe；无秘密方法审计确认真实 prompt 已发出，在约 13.5 秒等待后因剩余预算耗尽取消，没有权限请求，仍未得到 terminal。临时配置及授权启动器已删除，scratch 已清空。不同用户的历史认证阻塞、客户端权限模拟和当前真实结果不能混用；readiness 通过或 prompt 发出也不等于真实修复成功。详细纠正、边界及下一步见 [当前设备验证](./Local-device-validation.md)。本步骤和 I-AC03 保持未完成，不记录 submitInner 或 acceptInner。
+独立 Linux 容器 `pguide-agent-keychain-1ce0ed16` 已用官方流程获得自己的认证，采用加密 Secret Service，不复制宿主 token 或 keyring。先证明真实 `gpt-5-mini` baseline ready，再由该设备上已安装的 `pguide 0.4.0-rc.0` 加载已同步源码 `7db27d869ed33dd0cac526bc5cf9321f6c3891df` 的 Pilot 快照。容器导入前后 Pilot Git tree 精确相同，快照 revision 为 `85d1b2a5f73e7a7cb4e9d1fb2e335f9ee52fbb1a`；已安装 CLI 的构建来源独立记录，不混称同一个源码 commit。
 
-随后从无 prompt 的 ACP 元数据确认默认模型及可选 `gpt-5-mini`，仅在临时 profile 切换轻量模型；原实现仍超时。消除 sanity 的重复 readiness 启动后，完整 pnpm check 通过（365 项报告，363 通过、2 项跳过）；固定已同步优化源码 7f1487a 的真实复验确认完整自查只启动两个 ACP Agent，唯一 prompt 获得约 17.2 秒，但仍返回取消和 504，未达到 terminal。没有延长预算、扩大权限或继续重试；I-S03、I-AC03 仍未完成，等待新的外部执行证据或预算契约讨论。
+本次显式 subject 60000 ms / 外层 probe 90000 ms、零重试的完整真实 probe 返回 status `200`、`terminal`、空 problems、精确版本匹配；只发出一次 prompt，真实 end_turn，随机文件由检查程序独立核验，scratch 清空且无关 sentinel 保留。主会话另直接读取原始 probe、配置、subject 和安全方法审计复核，不只相信验证器摘要。真实修复会话约 8.5 秒完成 startup，约 29.4 秒正常结束；没有以长 helper 或独立 baseline 冒充完整 terminal。
 
-按用户后续要求，已同步最新代码并新增独立真实 Agent Docker 基线，先证明 Agent 能正常完成隔离文件任务，再进行后续 pguide 自查；不再把模型目录或握手视为模型可用。既有默认无凭据 fixture 镜像保持不变，另有显式 real-agent target 安装固定 Copilot CLI，以容器内正常登录获得独立认证，不复制宿主 token、HOME 或用户配置。只有真实任务明确 end_turn、没有权限拒绝、随机 marker 经独立核验且清理成功才能返回 ready；120 秒诊断基线不修改 24 秒 Pilot 限制，也不替代 terminal。首次浏览器授权成功，但 CLI 未保存 token。用户随后选择 keychain，现已构建并保留标准 Secret Service 环境；加密存取、错误口令拒绝和锁定/解锁均有容器实测。用户初始化集合后发现 daemon 未持续保持，已修正终端生命周期，并通过真实 PTY 及独立 docker-exec 后的持续解锁回归；原容器仅覆盖两个公开 helper，不重启、不复制或重置用户 keyring。当前等待同一口令重新解锁，再完成官方登录，见 [Docker 验证](./Docker-validation.md)。最终 pnpm check 通过（373 项报告，371 通过、2 项跳过）；I-S03、I-AC03 仍未完成。
-
-随后用户完成解锁和官方设备授权，登录成功且独立 ACP 会话可用；同一容器的 `gpt-5-mini` 真实 baseline 已 ready，唯一随机文件修复经独立核验成功，无拒绝且清理成功，总计约 27.5 秒。正式自查先暴露 Git probe 环境隔离与私有 D-Bus 的配置差异（零 prompt），经本地受控启动器显式接入已授权私有总线后，24 秒完整 probe 仍返回 direct Agent 超时；startup 约 13.4 秒，唯一 prompt 仅获得约 6.5 秒。认证和模型可用性不再列为当前阻塞，当前等待是否允许显式可配置较长预算并协调内外期限的行为决策；未修改现有预算，也不将 baseline ready 记为 I-AC03 的 terminal。最新证据和安全边界以 [Docker 验证](./Docker-validation.md) 最后一节为准。
+I-S03 与 I-AC03 的 Agent 可验证工作现已完成，可以提交精确 Implementation revision 供用户验收。结论限于该已认证 Linux 容器、所选模型和显式预算，不声称默认 20/30 秒配置、Windows 宿主、远端 SSH 或其他设备也已通过。用户验收、后续交付及默认预算行为保持独立；不得自动记录 acceptInner。
 
 ## Acceptance criteria
 
