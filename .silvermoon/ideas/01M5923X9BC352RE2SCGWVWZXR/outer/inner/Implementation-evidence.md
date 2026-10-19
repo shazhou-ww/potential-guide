@@ -345,3 +345,33 @@ objectives / .github 的树无差异。I-S01 / I-AC01 据本地结果及完整�
   30s/24s/6s 预算、5s CIM 界限、SSH、其他 workspace 或合同。
   本轮是**诊断就绪，不是 Windows CI 根因修复或绿灯声明**；未跑完整 check、
   packed、Linux 重复测试或 CI，未 commit/push/改 gates/ledger/events/outer。
+
+### CI 39220514441：修复已确认的冷启动 snapshot watchdog 误失败
+
+- 父会话提供候选 `90653d1` 的精确 CI：其他四 job 通过，仅 Windows
+  `117954463185` 返回 `kind=timeout;signal=SIGTERM;killed=true;elapsedMs=5037;reported=false`。
+  已确认是新引入的 5s CIM measurement watchdog 截断冷启动，不再猜测
+  permissions/module/JSON/inner probe；按父会话明确决定，将该内部界限改为
+  **10000ms**，唯一生产行为差异是 shared `killProcessTree` 的该项 execFile timeout。
+- 查询仍运行于现有 regulator/sanity 执行内，可被现有 subject/outer-process
+  取消提前终止；不是给业务或查询额外保证 10s。共享 README 区分此 measurement
+  watchdog 与整体执行预算：默认 subject 20s、Pilot cap 24s/process 30s、
+  显式 local 60/75s 不变，6s 外围余量属于启动/输出及 outer runtime 自己的
+  taskkill/teardown，不是这项 inner query 的预算；SSH、consent、实际整体 timers 不变。
+- 原六个 shared cleanup 回归保留。真实不合作 owned 树使用独占稀疏 profile，
+  单次 PowerShell fixture 在 query 前延迟 6s，再执行真正 CIM 查询；
+  Node 22.13.0/24.11.1 实测分别 **7094ms/7125ms**，均明确 >5s 且 <10s。
+  随后实际 taskkill 整树，再注入非零 128 结果，必须通过每个已捕获 owned PID
+  的真实缺失验证；没有用根退出、英文 taskkill 输出或忽略错误替代 descendant proof。
+- 挂起 fixture 使用实际 `Start-Sleep 20`，仍在 **10000ms** watchdog 下终止并
+  显式失败；命令/模块故障、无效快照、不可观测/存活后代及部分终止失败路径均保留。
+  无 retry、prewarm、skip 或 snapshot fallback。
+- 两个安装 Node 版本均执行
+  `pnpm exec tsx --test packages\pguide-cli-core\test\process-tree.test.ts`：
+  **各 9/9**，总耗时 25428ms/21626ms。
+  core `tsc -b`、test typecheck、Biome、正式 builder 再生成与 `--check`、
+  `git diff --check` 均通过。generated process-tree 仅同步该 timeout，
+  没有手改副本或更改 Linux 修复。
+- 本轮不跑 full check、packed、Linux 重复验证或 CI；五文件（含本节）留为
+  uncommitted，未 commit/push/改 gates/ledger/events/outer。
+  父会话负责下一次精确候选 CI 与最终独立门禁，本节不宣称 Windows CI 已绿。

@@ -80,7 +80,7 @@ export async function killProcessTree(child) {
             const started = performance.now();
             let stdout;
             try {
-                ({ stdout } = await execute(join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), ["-NoProfile", "-NonInteractive", "-Command", windowsSnapshotCommand], { windowsHide: true, timeout: 5000 }));
+                ({ stdout } = await execute(join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), ["-NoProfile", "-NonInteractive", "-Command", windowsSnapshotCommand], { windowsHide: true, timeout: 10_000 }));
             }
             catch (error) {
                 throw snapshotCommandError(error, started);

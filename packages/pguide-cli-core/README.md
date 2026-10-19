@@ -70,13 +70,23 @@ completed. Both options are opt-in to preserve legacy caller behavior; the local
 self-check uses them without changing its configured tool permissions.
 
 Windows `killProcessTree` snapshots owned PID/parent relationships through the
-system PowerShell/CIM provider (bounded to 5 seconds) before PID-scoped `taskkill`.
+system PowerShell/CIM provider (bounded to 10000 ms) before PID-scoped `taskkill`.
 If concurrent teardown makes taskkill fail, cleanup succeeds only after every
 snapshotted owned PID is observed absent, with at most 500 ms of exit observation.
 Root exit alone is not evidence that descendants are gone; live or unobservable
 PIDs retain the failure. No localized taskkill output is parsed, no termination is
 retried, and an exited root is not targeted again. Snapshot failures remain explicit,
 even though termination is still attempted for a live root.
+
+The snapshot watchdog bounds internal ownership measurement, not Agent execution,
+regulation, subject or process execution. In setup it runs inside the current
+regulation/sanity work; existing subject and outer-process cancellation can stop
+the containing tree earlier. It grants no additional execution time and does not
+guarantee the query gets 10000 ms. Setup's default 20000 ms subject, 24000 ms Pilot
+cap under the default 30000 ms process budget, and explicit 60000/75000 ms local
+budgets are unchanged. The 6000 ms outer headroom covers startup/output and outer
+runtime teardown (including its own taskkill), not this inner snapshot query.
+SSH limits and consent are unchanged.
 
 Agent-to-client requests have a separate JSON-RPC ID namespace from pending
 client requests. By default, `session/request_permission` receives a cancelled

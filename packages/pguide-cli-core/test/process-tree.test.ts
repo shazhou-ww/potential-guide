@@ -163,7 +163,7 @@ test("Windows snapshot command failures retain only bounded diagnostic fields", 
   let terminated = false;
   windowsCommands(t, async (command, _args, options) => {
     if (command.endsWith("powershell.exe")) {
-      assert.equal(options?.timeout, 5000, "snapshot deadline must remain unchanged");
+      assert.equal(options?.timeout, 10_000, "bound internal ownership measurement");
       throw failure;
     }
     assert.equal(command, "taskkill");
@@ -219,7 +219,7 @@ async function sparseEnvironment(t: TestContext): Promise<NodeJS.ProcessEnv> {
 }
 
 if (process.platform === "win32") {
-  test("Windows real snapshot subprocess distinguishes command, module and unchanged 5s timeout faults", async (t) => {
+  test("Windows real snapshot subprocess distinguishes command, module and 10s watchdog faults", async (t) => {
     const execute = promisify(childProcess.execFile);
     const env = await sparseEnvironment(t);
     const query =
@@ -227,7 +227,7 @@ if (process.platform === "win32") {
     let replacement = "";
     windowsCommands(t, async (command, args, options) => {
       if (command.endsWith("powershell.exe")) {
-        assert.equal(options?.timeout, 5000);
+        assert.equal(options?.timeout, 10_000);
         return execute(
           command,
           args.map((arg) => arg.replace(query, replacement)),
@@ -243,7 +243,7 @@ if (process.platform === "win32") {
         "Write-Error -ErrorId CouldNotAutoloadMatchingModule -Message 'fixture-canary'",
         /kind=exit;exit=1;.*reason=module-autoload/,
       ],
-      ["Start-Sleep -Seconds 10", /kind=timeout;exit=none;.*killed=true;.*reason=unclassified/],
+      ["Start-Sleep -Seconds 20", /kind=timeout;exit=none;.*killed=true;.*reason=unclassified/],
     ] as const) {
       replacement = fixture;
       await assert.rejects(killProcessTree(ownedChild()), (error) => {
@@ -263,9 +263,25 @@ test("forceful cleanup terminates an owned process and its uncooperative child",
     assert.equal(env.PSModulePath, undefined);
     assert.equal(env.ProgramFiles, undefined);
     assert.equal(env.LOCALAPPDATA, undefined);
-    windowsCommands(t, (command, args, options) =>
-      execute(command, args, { ...options, env, encoding: "utf8" }),
-    );
+    windowsCommands(t, async (command, args, options) => {
+      if (command.endsWith("powershell.exe")) {
+        assert.equal(options?.timeout, 10_000);
+        const started = performance.now();
+        const result = await execute(
+          command,
+          args.map((arg, index) => (index === 3 ? `Start-Sleep -Seconds 6; ${arg}` : arg)),
+          { ...options, env, encoding: "utf8" },
+        );
+        const elapsed = performance.now() - started;
+        assert.ok(elapsed > 5000 && elapsed < 10000, `actual snapshot took ${elapsed}ms`);
+        t.diagnostic(`Owned Windows snapshot completed in ${Math.round(elapsed)}ms.`);
+        return result;
+      }
+      assert.equal(command, "taskkill");
+      await execute(command, args, { ...options, env, encoding: "utf8" });
+      // Simulate a partial/nonzero result after real termination: all captured PIDs must be absent.
+      throw Object.assign(new Error("fixture termination race"), { code: 128 });
+    });
   }
   const childSource = `process.on("SIGTERM",()=>{});console.log(process.pid);setInterval(()=>{},1000);`;
   const rootSource = `
