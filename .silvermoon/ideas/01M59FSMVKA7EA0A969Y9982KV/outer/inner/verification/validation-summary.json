@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "environment": {
+    "node": "v24.11.1",
+    "pnpm": "11.22.0",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "baselinePrimary": "345027e47f4b530e66539bae822b51b2728e3427",
+  "acceptedIdeal": "1a31e4faf930bfcc5360c8e9e2af53d9f5219f67",
+  "sourceIdentity": "以包含本文件的 primary commit 为准，准确 implementationRevision 由 submitInner 记录。",
+  "checks": {
+    "pnpm check": {
+      "exitCode": 1,
+      "format": "passed",
+      "lint": "passed",
+      "typecheck": "passed",
+      "test": "failed",
+      "testDetail": "六个在当前 primary 原始源码中新复现的 setup 用例失败。",
+      "pack": "not-reached"
+    },
+    "node --test scripts/*.test.mjs": {
+      "exitCode": 0,
+      "tests": 16,
+      "passed": 16
+    },
+    "pnpm pack:check": {
+      "exitCode": 0,
+      "publicTarballs": 8
+    },
+    "privatePilotTarballs": {
+      "passed": 4,
+      "dependencyInstallation": false,
+      "sshPayloadFiles": 11
+    }
+  },
+  "workspaces": {
+    "@potential-guide/effects": {
+      "tests": 12,
+      "pass": 12,
+      "fail": 0,
+      "skipped": 0
+    },
+    "@potential-guide/git-source": {
+      "tests": 15,
+      "pass": 15,
+      "fail": 0,
+      "skipped": 0
+    },
+    "@potential-guide/cli-core": {
+      "tests": 78,
+      "pass": 78,
+      "fail": 0,
+      "skipped": 0
+    },
+    "@potential-guide/config": {
+      "tests": 6,
+      "pass": 6,
+      "fail": 0,
+      "skipped": 0
+    },
+    "@potential-guide/objective-pilot": {
+      "tests": 28,
+      "pass": 28,
+      "fail": 0,
+      "skipped": 0
+    },
+    "@potential-guide/development-machine-health-pilot": {
+      "tests": 15,
+      "pass": 15,
+      "fail": 0,
+      "skipped": 0
+    },
+    "@potential-guide/objective-regulator": {
+      "tests": 38,
+      "pass": 38,
+      "fail": 0,
+      "skipped": 0
+    },
+    "@potential-guide/objective-portfolio-supervisor": {
+      "tests": 31,
+      "pass": 31,
+      "fail": 0,
+      "skipped": 0
+    },
+    "pguide": {
+      "tests": 58,
+      "pass": 57,
+      "fail": 0,
+      "skipped": 1
+    },
+    "@potential-guide/pguide-self-check-pilot": {
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "@potential-guide/monorepo-objective": {
+      "tests": 34,
+      "pass": 34,
+      "fail": 0,
+      "skipped": 0
+    },
+    "@potential-guide/pguide-setup-pilot": {
+      "tests": 32,
+      "pass": 26,
+      "fail": 6,
+      "skipped": 0
+    }
+  },
+  "currentBaselineComparison": {
+    "baselineTests": 6,
+    "baselinePassed": 0,
+    "baselineFailed": 6,
+    "sameFailingNames": true,
+    "failures": [
+      "real sanity rejects noop Agent completion",
+      "real sanity rejects wrong Agent completion",
+      "real sanity verifies a finite repair",
+      "remote payload uses target authentication and performs actual nonce sanity, not control evidence",
+      "sanity invocation diagnostics expose fixed classifications, not arbitrary CLI error data",
+      "sanity timeout during an actual ACP prompt cleans isolated config, state and descendants"
+    ],
+    "disposition": "作为当前 primary 已有失败明确保留，未跳过、豁免或报告为通过；是否接受由父会话决定。"
+  },
+  "outerValidation": "等待 acceptInner；未授权真实模型、生产部署、发布或外部设备变更。"
+}

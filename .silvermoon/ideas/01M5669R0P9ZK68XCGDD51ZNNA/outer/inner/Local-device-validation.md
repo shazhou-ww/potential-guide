@@ -86,3 +86,37 @@ pguide probe
 需要设备用户通过其正常 Copilot 登录流程建立可用认证，或提供已经授权且已登录的独立 ACP 入口，才能重新验证真实修复。
 主会话不能代替用户完成交互登录、提取 gh token 或申请权限；已停止模型尝试，不循环重试。
 I-AC03 因缺少真实 terminal 证据仍未满足，不提交或批准实现验收，更不批准交付验收。
+
+## 2026-10-19 后续真实入口复验
+
+首轮结果保留为历史；本节记录源码 `811f28d802028b8c5a82337a47f9b111d83cedb6` 的新证据，不把旧 configured 状态沿用到新实现。
+
+- 当前持久 pguide 入口自报 `0.4.0-rc.0`；实际独立 Copilot CLI 已更新到 `1.0.98`。
+- 主会话复用生成的共享 AcpClient，分别使用 profile 原有 USERPROFILE，以及补充正常 Windows APPDATA/LOCALAPPDATA 的环境进行有界 readiness 诊断。两次 initialize 成功，session/new 均被拒绝，安全分类均为 `authentication-required`，prompt 次数为 0，清理均确认完成。
+- 未改用户 profile，未传递 SDK/gh token，未读取认证文件，也没有通过另一账户、目录或权限扩张绕过登录。
+- 安全诊断报告保留为会话持久文件 `current-acp-readiness.json` 和 `current-acp-readiness-standard-paths.json`。
+
+主会话随后通过同一持久安装入口运行一次完整 probe，将上述命令中的 revision 固定为 `811f28d802028b8c5a82337a47f9b111d83cedb6`，使用既有 subject、用户配置和 24000 ms 预算。原始报告保存为会话持久文件 `real-local-self-check-report-811f28d.json`：
+
+| 检查项 | 实际结果 |
+| --- | --- |
+| 命令退出码 / Envelope status | `0` / `200` |
+| 报告 versions | 精确匹配 `811f28d802028b8c5a82337a47f9b111d83cedb6` |
+| current.levelId | `installed` |
+| check / problem | `configuration` / `acp-unavailable` |
+| 安全诊断 | `stage=session-new`、`reason=agent-rejected` |
+| terminal | 未达到 |
+
+新版 configuration 已真实执行 session/new，因此认证错误在 installed 阶段即阻断，并未进入 sanity；不把 Envelope 200 或旧版 configured 当作成功。
+
+已通过一次结构化询问请求设备用户完成正常 `copilot login`，但用户不可用，未获得新的认证状态。后续不在未改变外部条件时重复询问或尝试模型调用。待设备用户正常登录后，再用已安装入口执行一次完整 probe，按实际精确 revision、terminal、空 problems 和独立文件检查结果验收。
+
+同版本 Windows 八项历史回归和 pnpm check 已恢复通过；独立干净安装容器也已通过正反例，见 [Docker 验证](./Docker-validation.md)。这两类成功均不补足本节缺少的真实认证与 terminal，I-S03、I-AC03 保持未完成。
+
+## 正常浏览器登录恢复尝试
+
+随后主会话检查 CLI 的顶层和 login 帮助，未发现无交互认证状态查询入口；没有因此发送模型请求。为尝试官方恢复路径，执行一次 `copilot login --web-flow`，仅在该临时子进程中移除继承的 `COPILOT_GITHUB_TOKEN`、`GH_TOKEN` 和 `GITHUB_TOKEN`，不向登录命令传入 token，不读取或复制凭据。
+
+本次官方浏览器 OAuth 流程等待约 150 秒仍未返回完成报告。主会话已终止本次登录进程树，避免遗留等待中的 CLI 或回调服务；OAuth URL、原始认证响应及任何凭据均未打印或持久化。没有确认认证恢复，也没有据此重复 ACP 或真实 probe。
+
+这次恢复尝试不构成登录成功或 terminal 证据。后续需设备用户完成正常登录；在未确认外部认证状态改变前，不再自动触发浏览器流程。I-S03、I-AC03 及所有交付门线仍保持未完成。

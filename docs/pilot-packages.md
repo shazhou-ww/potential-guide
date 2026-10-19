@@ -25,6 +25,12 @@ subject 的授权/预算/目标约束保持不变（monorepo 的受限字段迁�
   `checks/<id>/run.cjs` 仅作协议适配；业务实现按实际独立检查职责放在 `src`。
 - monorepo 的 structure、packages/delivery、task graph、schema/import 观察分离；
   deliveries 保留结构前置验证，不是运行全部业务后过滤 findings。
+  `repository-observation` 只读取/解析一次仓库事实，`repository-configuration`
+  消费这些事实；layout、workspace mapping、file placement/classification 各自可调用。
+  package 依赖、任务、发布内容、CLI 和 source boundary 分开检查；
+  browser、Worker metadata/bindings、service、identity、migration 是独立能力，
+  delivery 入口只编排它们。`source-observation` 产出 AST 导入事实，
+  单一导入规则不执行同文件其他导入或全仓库业务。
 - setup 的 installation、configuration/ACP readiness、sanity、direct sanity、
   execution 和 subject/envelope 契约分离。self-check 使用同源生成的模块，禁止手改生成物。
 - health 的 identity、system、toolchains、order、sustainability 独立；

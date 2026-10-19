@@ -251,3 +251,11 @@ export type Add = (
   requirements?: string[],
   targetDirectory?: string,
 ) => void;
+export type ReportPut = (
+  state: State,
+  rule: string,
+  evidence: string,
+  remedy?: string,
+  location?: string,
+) => void;
+export type Dependency = ReturnType<typeof dependencyGroups>[number];

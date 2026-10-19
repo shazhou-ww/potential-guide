@@ -58,6 +58,9 @@ pguide probe --pilot "git+file:///D:/Code/potential-guide#packages/pguide-self-c
 真实工具授权仍须遵守：沿用 profile 原有参数及有效配置 regulationPermissions，
 使用 pguide 现有权限策略，不自动生成 grants，不增加 allow-all，不修改用户配置。
 权限拒绝即失败，即使文件碰巧已正确也不通过。模型不可用、额度不足不重试。
+Agent 要求认证时，先由当前用户通过 Agent 的正常登录流程恢复认证
+（例如 Copilot 的 `copilot login`），正常登录后再运行一次自查；
+不复制凭据、不扩大权限，不在外部条件未变时自动重试。
 不承诺免费。小任务不要求 Git、网络、安装或提交；Git 仅为外层加载 Objective
 快照所需。隔离 cwd 不是恶意全权限 Agent 的安全沙箱。
 
@@ -67,7 +70,15 @@ pguide probe --pilot "git+file:///D:/Code/potential-guide#packages/pguide-self-c
 Agent 原始 stdout+stderr 上限 192 KiB，外围进程 stdout+stderr 上限 256 KiB。
 已有 agentExecutionLimits.timeoutMs 若更短仍生效，不放宽用户执行期限。
 超时/输出超限终止受管进程树；无重试，只删除本次 mkdtemp 独占目录及其状态，
-不删除 scratch 根目录或其他任务。Windows 需 taskkill，POSIX 需 ps。
+不删除 scratch 根目录或其他任务。POSIX 需 ps。Windows 需 PATH 中可用的
+`taskkill`（按受管 PID 执行 `/PID <pid> /T /F`），以及系统
+`%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe`。ACP 清理通过
+`-NoProfile -NonInteractive -Command` 运行固定脚本，需允许 `Add-Type` 在内存中编译
+C# P/Invoke，调用 Windows 原生 Toolhelp32 API（`CreateToolhelp32Snapshot`、
+`Process32FirstW`、`Process32NextW`）枚举 PID/父 PID，并用 `ConvertTo-Json` 序列化；
+不依赖 CIM/WMI 服务，也不安装原生包或二进制。编译与所有权查询共用上限为 10 秒的
+watchdog，仍受现有执行期限及外层取消约束，没有额外编译时间，也不放宽执行预算。
+快照失败仍尝试终止受管进程树，但显式报告失败，不视为清理成功。
 强杀、断电或恶意逃逸进程不在自动清理保证内。失败诊断只返回安全 stage/reason，
 不输出模型文本、服务端错误或认证内容。
 
