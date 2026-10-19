@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import childProcess, { type ChildProcess, spawn } from "node:child_process";
+import childProcess, { type ChildProcess, type PromiseWithChild, spawn } from "node:child_process";
 import { once } from "node:events";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import { join, resolve } from "node:path";
+import { PassThrough } from "node:stream";
 import { type TestContext, test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
@@ -16,6 +17,23 @@ function windowsCommands(
     args: string[],
     options?: { windowsHide?: boolean; timeout?: number },
   ) => Promise<{ stdout: string; stderr: string }>,
+) {
+  nativeWindowsCommands(t, (...args) => simulatedCommand(execute(...args)));
+}
+
+function simulatedCommand(
+  pending: Promise<{ stdout: string; stderr: string }>,
+): PromiseWithChild<{ stdout: string; stderr: string }> {
+  return Object.assign(pending, { child: { stdin: new PassThrough() } as unknown as ChildProcess });
+}
+
+function nativeWindowsCommands(
+  t: TestContext,
+  execute: (
+    command: string,
+    args: string[],
+    options?: { windowsHide?: boolean; timeout?: number },
+  ) => PromiseWithChild<{ stdout: string; stderr: string }>,
 ) {
   const platform = Object.getOwnPropertyDescriptor(process, "platform");
   const systemRoot = process.env.SystemRoot;
@@ -46,6 +64,29 @@ const tree = [
 ];
 const absent = () => Object.assign(new Error("gone"), { code: "ESRCH" });
 const ownedChild = () => ({ pid: 93001, exitCode: null, signalCode: null }) as ChildProcess;
+
+test("Windows snapshot owner sends EOF before awaiting its subprocess result", {
+  timeout: 2000,
+}, async (t) => {
+  const input = new PassThrough();
+  let eof = false;
+  nativeWindowsCommands(t, (command) => {
+    if (command.endsWith("powershell.exe")) {
+      const pending = new Promise<{ stdout: string; stderr: string }>((resolve) => {
+        input.once("finish", () => {
+          eof = true;
+          resolve({ stdout: JSON.stringify(tree), stderr: "" });
+        });
+      });
+      return Object.assign(pending, { child: { stdin: input } as unknown as ChildProcess });
+    }
+    assert.equal(command, "taskkill");
+    assert.equal(eof, true);
+    return simulatedCommand(Promise.resolve({ stdout: "", stderr: "" }));
+  });
+  await killProcessTree(ownedChild());
+  assert.equal(input.writableEnded, true);
+});
 
 test("Windows nonzero taskkill succeeds only after every snapshotted owned PID disappears", async (t) => {
   const failure = Object.assign(new Error("終了競合"), { code: 128 });
@@ -158,6 +199,22 @@ test("Windows snapshot command failures retain only bounded diagnostic fields", 
       { code: canary, signal: canary, stderr: canary },
       "kind=unknown;exit=none;errno=none;signal=none",
     ],
+    [
+      {
+        code: null,
+        killed: true,
+        stderr:
+          "PGUIDE_WINDOWS_SNAPSHOT_PHASE:started\r\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:query-started\r\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:queried\r\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:serialized\r\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:exiting\r\n",
+      },
+      "phase=exiting;reason=unclassified]",
+    ],
+    [
+      {
+        code: 1,
+        stderr: `PGUIDE_WINDOWS_SNAPSHOT_PHASE:started\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:${canary}\n`,
+      },
+      "phase=started;reason=unclassified]",
+    ],
   ] as const;
   let failure: Error;
   let terminated = false;
@@ -177,7 +234,10 @@ test("Windows snapshot command failures retain only bounded diagnostic fields", 
       assert.ok(error instanceof Error);
       assert.equal(error.cause, failure);
       assert.ok(error.message.includes(expected), error.message);
-      assert.match(error.message, /elapsedMs=\d{1,10};reported=(?:true|false);reason=/);
+      assert.match(
+        error.message,
+        /elapsedMs=\d{1,10};reported=(?:true|false);phase=(?:unreported|started|query-started|queried|serialized|exiting);reason=/,
+      );
       assert.equal(error.message.includes(canary), false);
       return true;
     });
@@ -225,7 +285,7 @@ if (process.platform === "win32") {
     const query =
       "Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId | Select-Object ProcessId,ParentProcessId";
     let replacement = "";
-    windowsCommands(t, async (command, args, options) => {
+    nativeWindowsCommands(t, (command, args, options) => {
       if (command.endsWith("powershell.exe")) {
         assert.equal(options?.timeout, 10_000);
         return execute(
@@ -235,15 +295,21 @@ if (process.platform === "win32") {
         );
       }
       assert.equal(command, "taskkill");
-      return { stdout: "", stderr: "" };
+      return simulatedCommand(Promise.resolve({ stdout: "", stderr: "" }));
     });
     for (const [fixture, expected] of [
-      ["Get-PguideMissingCimFixture", /kind=exit;exit=1;.*reason=command-not-found/],
+      [
+        "Get-PguideMissingCimFixture",
+        /kind=exit;exit=1;.*phase=query-started;reason=command-not-found/,
+      ],
       [
         "Write-Error -ErrorId CouldNotAutoloadMatchingModule -Message 'fixture-canary'",
-        /kind=exit;exit=1;.*reason=module-autoload/,
+        /kind=exit;exit=1;.*phase=query-started;reason=module-autoload/,
       ],
-      ["Start-Sleep -Seconds 20", /kind=timeout;exit=none;.*killed=true;.*reason=unclassified/],
+      [
+        "Start-Sleep -Seconds 20",
+        /kind=timeout;exit=none;.*killed=true;.*phase=query-started;reason=unclassified/,
+      ],
     ] as const) {
       replacement = fixture;
       await assert.rejects(killProcessTree(ownedChild()), (error) => {
@@ -263,24 +329,42 @@ test("forceful cleanup terminates an owned process and its uncooperative child",
     assert.equal(env.PSModulePath, undefined);
     assert.equal(env.ProgramFiles, undefined);
     assert.equal(env.LOCALAPPDATA, undefined);
-    windowsCommands(t, async (command, args, options) => {
+    nativeWindowsCommands(t, (command, args, options) => {
       if (command.endsWith("powershell.exe")) {
         assert.equal(options?.timeout, 10_000);
         const started = performance.now();
-        const result = await execute(
+        const pending = execute(
           command,
-          args.map((arg, index) => (index === 3 ? `Start-Sleep -Seconds 6; ${arg}` : arg)),
+          args.map((arg, index) =>
+            index === 3 ? `$null = [Console]::In.ReadToEnd(); Start-Sleep -Seconds 6; ${arg}` : arg,
+          ),
           { ...options, env, encoding: "utf8" },
         );
-        const elapsed = performance.now() - started;
-        assert.ok(elapsed > 5000 && elapsed < 10000, `actual snapshot took ${elapsed}ms`);
-        t.diagnostic(`Owned Windows snapshot completed in ${Math.round(elapsed)}ms.`);
-        return result;
+        assert.equal(pending.child.stdin?.writableEnded, false, "execFile leaves stdin open");
+        return Object.assign(
+          pending.then((result) => {
+            assert.equal(pending.child.stdin?.writableEnded, true, "owner must send EOF");
+            for (const phase of ["started", "query-started", "queried", "serialized", "exiting"])
+              assert.ok(result.stderr.includes(`PGUIDE_WINDOWS_SNAPSHOT_PHASE:${phase}`));
+            const elapsed = performance.now() - started;
+            assert.ok(elapsed > 5000 && elapsed < 10000, `actual snapshot took ${elapsed}ms`);
+            t.diagnostic(
+              `EOF-dependent owned Windows snapshot completed in ${Math.round(elapsed)}ms.`,
+            );
+            return result;
+          }),
+          { child: pending.child },
+        );
       }
       assert.equal(command, "taskkill");
-      await execute(command, args, { ...options, env, encoding: "utf8" });
-      // Simulate a partial/nonzero result after real termination: all captured PIDs must be absent.
-      throw Object.assign(new Error("fixture termination race"), { code: 128 });
+      const pending = execute(command, args, { ...options, env, encoding: "utf8" });
+      return Object.assign(
+        pending.then(() => {
+          // Simulate a partial/nonzero result after real termination: all captured PIDs must be absent.
+          throw Object.assign(new Error("fixture termination race"), { code: 128 });
+        }),
+        { child: pending.child },
+      );
     });
   }
   const childSource = `process.on("SIGTERM",()=>{});console.log(process.pid);setInterval(()=>{},1000);`;

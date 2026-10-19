@@ -4,9 +4,16 @@ import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 
 const windowsSnapshotCommand = String.raw`
+[Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:started')
 $ErrorActionPreference='Stop'
 try {
-  ConvertTo-Json -Compress -InputObject @(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId | Select-Object ProcessId,ParentProcessId)
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:query-started')
+  $rows = @(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId | Select-Object ProcessId,ParentProcessId)
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:queried')
+  $serialized = ConvertTo-Json -Compress -InputObject $rows
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:serialized')
+  [Console]::Out.WriteLine($serialized)
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:exiting')
 } catch {
   $reason = switch -Regex ($_.FullyQualifiedErrorId) {
     '^CommandNotFoundException(?:,|$)' { 'command-not-found'; break }
@@ -76,9 +83,15 @@ function snapshotCommandError(cause: unknown, started: number): WindowsSnapshotC
         )
       : null;
   const reason = reported?.[1] ?? "unclassified";
+  let phase = "unreported";
+  if (typeof error?.stderr === "string")
+    for (const entry of error.stderr.matchAll(
+      /(?:^|\r?\n)PGUIDE_WINDOWS_SNAPSHOT_PHASE:(started|query-started|queried|serialized|exiting)(?=\r?\n|$)/g,
+    ))
+      phase = entry[1] ?? "unreported";
   const elapsedMs = Math.min(2147483647, Math.max(0, Math.round(performance.now() - started)));
   return new WindowsSnapshotCommandError(
-    `windows-snapshot-command[kind=${kind};exit=${exit};errno=${errno};signal=${signal};killed=${killed};elapsedMs=${elapsedMs};reported=${reported !== null};reason=${reason}]`,
+    `windows-snapshot-command[kind=${kind};exit=${exit};errno=${errno};signal=${signal};killed=${killed};elapsedMs=${elapsedMs};reported=${reported !== null};phase=${phase};reason=${reason}]`,
     { cause },
   );
 }
@@ -95,11 +108,14 @@ export async function killProcessTree(child: ChildProcess): Promise<void> {
       const started = performance.now();
       let stdout: string;
       try {
-        ({ stdout } = await execute(
+        const pending = execute(
           join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"),
           ["-NoProfile", "-NonInteractive", "-Command", windowsSnapshotCommand],
           { windowsHide: true, timeout: 10_000 },
-        ));
+        );
+        // The fixed query accepts no input. execFile owns a pipe but does not send EOF.
+        pending.child.stdin?.end();
+        ({ stdout } = await pending);
       } catch (error) {
         throw snapshotCommandError(error, started);
       }

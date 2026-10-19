@@ -88,6 +88,13 @@ budgets are unchanged. The 6000 ms outer headroom covers startup/output and oute
 runtime teardown (including its own taskkill), not this inner snapshot query.
 SSH limits and consent are unchanged.
 
+The fixed PowerShell query accepts no input, so its owner ends the subprocess's
+stdin pipe immediately rather than leaving it waiting for EOF. Failure diagnostics
+expose only the last fixed script phase: `unreported`, `started`, `query-started`,
+`queried`, `serialized` or `exiting`. `exiting` means the command body finished,
+not that process exit and stdio closure have been acknowledged. No arbitrary
+stderr, paths or authentication data are forwarded.
+
 Agent-to-client requests have a separate JSON-RPC ID namespace from pending
 client requests. By default, `session/request_permission` receives a cancelled
 outcome, while unsupported methods receive `-32601`; no filesystem or terminal

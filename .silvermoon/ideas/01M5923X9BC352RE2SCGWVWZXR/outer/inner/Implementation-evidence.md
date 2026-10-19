@@ -375,3 +375,36 @@ objectives / .github 的树无差异。I-S01 / I-AC01 据本地结果及完整�
 - 本轮不跑 full check、packed、Linux 重复验证或 CI；五文件（含本节）留为
   uncommitted，未 commit/push/改 gates/ledger/events/outer。
   父会话负责下一次精确候选 CI 与最终独立门禁，本节不宣称 Windows CI 已绿。
+
+### Windows query 输入所有权与固定阶段诊断
+
+- 父会话提供精确候选 `c6df282` / CI `39222027838`：其他四项通过，
+  Windows 再次出现 `kind=timeout;elapsedMs=10024;signal=SIGTERM;killed=true;reported=false`。
+  因而仅用“5s 冷启动不足”不能解释 CI；本轮不再增加 **10000ms** snapshot watchdog，
+  也不改变默认 20/24/30s、显式 local 60/75s、SSH、consent 或整体取消边界。
+- 原生 promisified `execFile` 返回 `PromiseWithChild`；真实 fixture 确认返回时其
+  `child.stdin.writableEnded` 为 false。固定 query 不接收输入，现在由所有者立即
+  `pending.child.stdin?.end()`，随后 await 结果；只关闭这一个 query 的管道，
+  不触碰 ACP/root 的输入。生产路径不为 mock 添加 missing-child fallback；
+  测试改为保留原生 child 或提供符合该 API 的模拟管道。
+- 固定脚本依次写入 `started`、`query-started`、`queried`、`serialized`、`exiting`。
+  错误只提取最后一个白名单 phase；没有合法标记时为 `unreported`，未知 phase 和
+  任意 stderr/canary 均不透传。setup Fault 边界同步严格白名单，下一次 CI 可区分
+  未进入脚本、query 未返回、序列化，以及脚本已完成但 process/stdio 尚未关闭；
+  **`exiting` 不代表操作系统进程或管道退出已获确认**。
+- 保留原九项 shared 回归，增加必须先收到 stdin EOF 才能完成的确定性回归。
+  真实 PowerShell fixture 先执行 `[Console]::In.ReadToEnd()`，再延迟 6s，
+  执行真正 CIM query，验证五个阶段、stdin 已结束及 >5s/<10s 的实际完成时间；
+  随后实际终止 owned 树，注入非零 taskkill 结果后仍须证明全部捕获 PID 缺失。
+  命令/模块错误、真实 10s 挂起失败及存活/不可观测 descendant 失败路径不变。
+- 安装 Node **22.13.0 / 24.11.1** 分别执行
+  `pnpm exec tsx --test packages\pguide-cli-core\test\process-tree.test.ts`，
+  **各 10/10**，总耗时 **24040ms / 24469ms**；EOF-dependent 实际 query
+  **7624ms / 7761ms**。Node 22.13.0 定向
+  `--test-name-pattern='sanity invocation diagnostics'` **1/1**，安全 phase
+  透传及伪造 phase/canary 隔离均通过。
+- core build、test typecheck、Biome、正式 runtime builder 及 `--check`、
+  `git diff --check` 通过；独占 profile 目录已清理。生成文件仅由正式 builder 更新。
+  这是已验证的输入所有权修复与可观测性补足，**尚不宣称 EOF 是 CI 根因**；
+  后续精确候选 CI 由父会话验证。本轮未运行 full check、packed、Linux 重复或 CI，
+  未 commit/push，也未改 gates/ledger/events/outer；全部修改留为 uncommitted。

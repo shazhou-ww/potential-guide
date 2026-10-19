@@ -713,7 +713,7 @@ test("sanity invocation diagnostics expose fixed classifications, not arbitrary 
     const forwarder = join(f.directory, "diagnostic-forwarder.cjs");
     const canary = "fixture-canary-must-not-be-exposed";
     const snapshotDiagnostic =
-      "windows-snapshot-command[kind=timeout;exit=none;errno=none;signal=SIGTERM;killed=true;elapsedMs=5001;reported=false;reason=unclassified]";
+      "windows-snapshot-command[kind=timeout;exit=none;errno=none;signal=SIGTERM;killed=true;elapsedMs=10024;reported=false;phase=query-started;reason=unclassified]";
     for (const [report, expected] of [
       [
         {
@@ -727,7 +727,10 @@ test("sanity invocation diagnostics expose fixed classifications, not arbitrary 
         `status=regulation-error, diagnostic=${snapshotDiagnostic}`,
       ],
       [
-        { status: canary, error: snapshotDiagnostic.replace("kind=timeout", `kind=${canary}`) },
+        {
+          status: canary,
+          error: snapshotDiagnostic.replace("phase=query-started", `phase=${canary}`),
+        },
         "status=unrecognized, diagnostic=unclassified",
       ],
     ] as const) {
