@@ -41,6 +41,8 @@ export interface AhpExecutionOptions {
   ): Promise<void>;
   onUpdate?(update: unknown): Promise<void>;
   onPermission?(request: {
+    sessionUri: string;
+    chatUri: string;
     turnId: string;
     toolCallId: string;
     phase: "execution" | "result";
@@ -419,6 +421,14 @@ export async function executeAhp(
             throw new Error(`AHP invalid state transition: ${message}`);
           });
           if (
+            profile.confirmations === "external" &&
+            (action.type === "chat/toolCallConfirmed" ||
+              action.type === "chat/toolCallResultConfirmed") &&
+            action.turnId === ownedTurn &&
+            action.approved === false
+          )
+            permissionDenials += 1;
+          if (
             (action.type === "chat/toolCallReady" || action.type === "chat/toolCallComplete") &&
             ownedTurn === action.turnId
           ) {
@@ -432,30 +442,34 @@ export async function executeAhp(
             ) {
               const phase =
                 part.toolCall.status === "pending-confirmation" ? "execution" : "result";
+              if (!client || !identity?.chatUri)
+                throw new Error("AHP permission request has no active owned chat.");
               await options.onPermission?.({
+                sessionUri: identity.sessionUri,
+                chatUri: identity.chatUri,
                 turnId: action.turnId,
                 toolCallId: action.toolCallId,
                 phase,
               });
               signal.throwIfAborted();
-              if (!client || !identity?.chatUri)
-                throw new Error("AHP permission request has no active owned chat.");
-              permissionDenials += 1;
-              if (phase === "execution")
-                client.dispatch(identity.chatUri, {
-                  type: "chat/toolCallConfirmed" as ChatToolCallDeniedAction["type"],
-                  turnId: action.turnId,
-                  toolCallId: action.toolCallId,
-                  approved: false,
-                  reason: "denied" as ChatToolCallDeniedAction["reason"],
-                });
-              else
-                client.dispatch(identity.chatUri, {
-                  type: "chat/toolCallResultConfirmed" as ChatToolCallResultConfirmedAction["type"],
-                  turnId: action.turnId,
-                  toolCallId: action.toolCallId,
-                  approved: false,
-                });
+              if (profile.confirmations !== "external") {
+                permissionDenials += 1;
+                if (phase === "execution")
+                  client.dispatch(identity.chatUri, {
+                    type: "chat/toolCallConfirmed" as ChatToolCallDeniedAction["type"],
+                    turnId: action.turnId,
+                    toolCallId: action.toolCallId,
+                    approved: false,
+                    reason: "denied" as ChatToolCallDeniedAction["reason"],
+                  });
+                else
+                  client.dispatch(identity.chatUri, {
+                    type: "chat/toolCallResultConfirmed" as ChatToolCallResultConfirmedAction["type"],
+                    turnId: action.turnId,
+                    toolCallId: action.toolCallId,
+                    approved: false,
+                  });
+              }
             }
           }
           if (action.type === "chat/turnCancelled" && action.turnId === ownedTurn)

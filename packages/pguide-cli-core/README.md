@@ -36,11 +36,22 @@ and waits for authoritative turn completion. Callers must provide a bounded
 the callback resolves. Resume never allocates a replacement or replays an
 uncertain dispatch. `inspectAhp` performs only negotiation/provider/authentication
 diagnosis. Neither function starts/stops a Host or grants permissions.
-`executeAhp` denies standard AHP execution/result confirmations on the wire
+By default, `executeAhp` denies standard AHP execution/result confirmations on the wire
 without ending the turn; `onPermission` reports their phase/identity for
 caller-owned safe authorization records, and `permissionDenials` counts them.
 No callback return value can automatically approve a tool. Standard AHP
 metadata lacks an authoritative operation kind and one-use grant semantics.
+An AHP profile may explicitly set `confirmations: external` to wait for a human
+using a trusted client connected to the same Host/session. In this mode pguide
+does not dispatch any execution/result confirmation or select any option.
+`onPermission` reports the session/chat/turn/tool identities and phase; waiting
+uses the caller's existing bounded signal and cancellation path. It is not a
+grant, cannot launch/connect a human client, and must not be enabled unattended.
+ACP profiles reject this setting. Omitted `confirmations` and explicit `deny`
+retain deny-by-default behavior. Persisted profiles retain the chosen mode.
+`permissionDenials` also counts Host-observed denials in external mode; pguide
+reports unresolved external denial as `authorization-required` after re-observation,
+while verified progress still takes precedence.
 See [AHP support and recovery boundaries](../pguide/README.md#ahp-host-support).
 
 ACP profiles keep `connection.protocolVersion: "1"` as a configuration string;

@@ -191,6 +191,7 @@ test("config editor and Agent commands normalize legacy ACP and preserve AHP pro
     );
     const ahp = {
       type: "ahp",
+      confirmations: "external",
       connection: { protocolVersion: "1.0.0", agent: "generic-provider" },
       transport: { type: "websocket", url: "wss://host.example.invalid/ahp" },
       authentication: { type: "query-token", parameter: "tkn", tokenEnv: "AHP_TOKEN" },
