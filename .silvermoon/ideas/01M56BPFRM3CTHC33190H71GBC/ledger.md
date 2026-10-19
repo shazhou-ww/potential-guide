@@ -21,10 +21,10 @@
 ### Deployment steps
 
 - [x] **D-S01:** 准备真实 AHP 验证环境
-- [ ] **D-S02:** 实测修复与会话生命周期
+- [x] **D-S02:** 实测修复与会话生命周期
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 真实 AHP 修复达成目标
+- [x] **D-AC01:** 真实 AHP 修复达成目标
 - [x] **D-AC02:** 恢复与取消符合说明
 - [x] **D-AC03:** ACP 路径仍可使用

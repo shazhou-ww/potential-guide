@@ -99,17 +99,15 @@
 
 当前安全可行路径仍需外部输入：提供可核验的完整结构化权限契约，并完成必要的实施适配；或者明确设计、授权并验收独立的人类逐次确认流程，再做真实端到端复测。直接切换现有 provider、放宽 grant、预先代写 `ready.txt` 或仅重试模型，都不能解除此阻塞。
 
-## 当前门限与恢复条件
+## 当前部署结果与验收边界
 
-追加的固定安装来源、native SDK 执行边界、独立编辑器 EOL 复现及待授权的唯一文件精确修复方案见 [EOL-Diagnosis-20261019.md](./EOL-Diagnosis-20261019.md)。四项 scratch 结果不计真实部署通过；原文件仍为 14 字节，未发新模型、未批准工具，D-S02 / D-AC01 仍未完成。
+2026-10-19 13:31，原会话的唯一 guarded PowerShell 补救已真实完成。完整合同、正常 continue、真人 Allow Once、Host 成功回执及 pguide 精确目标重观察见 [Exact-LF-Recovery-20261019.md](./Exact-LF-Recovery-20261019.md) 和[结构化终态证据](./Exact-LF-Recovery-20261019.json)。不是把用户“点了”的陈述直接当成功：wire 确认 `confirmed: user-action`、`permissionDecisionSource: human_response`、`selectedOptionId: allow-once`，且匹配本次 turn/toolCall；工具退出 0，Host `turnComplete`，pguide 随后观察 `terminal`、零问题并退出 0 / `target-reached`。终态后独立读取为精确 13 字节 `4148502d56455249464945440a`。
 
-已明确委托验收并记录 `acceptInner#15`，进入 deploying。2026-10-19 external 真实执行已自然截止：退出 `5` / `exhaustedBy: agent-limit`，没有外部工具决定；Host 确认同一 turn 已取消。真实 `apply_patch` 输入 LF，落盘却为 14 字节 CRLF，终态后独立读取仍不符合 13 字节 LF 标准。完整身份、原生卡片、终态、换行诊断和下一次最低条件见 [External-Run-20261019.md](./External-Run-20261019.md) 及其结构化证据。没有代写目标，没有再次执行，没有 submitOuter / acceptOuter；D-S02 / D-AC01 仍未完成。
+首轮 CRLF 失败和真实取消仍保留在 [External-Run-20261019.md](./External-Run-20261019.md)；[EOL-Diagnosis-20261019.md](./EOL-Diagnosis-20261019.md) 的 scratch 复现仍不算真实部署证据。新的执行只增加用户已明确授权的完整 execute command，并由真人逐次批准，没有 Agent 代写目标、放宽标准、开启 session-wide 或私发 AHP turn。
 
-此前的只读连接调查见 [Host-UI-Readiness.md](./Host-UI-Readiness.md)，保留当时未授权登记连接、未通过 Inner 门限的历史状态；最新状态以上述 external 复测证据为准。
-
-- D-S01：真实环境与隔离边界已建立。
-- D-AC02：真实原 session/chat 恢复和 owned turn 取消回执已验证；自动测试另覆盖迟到状态隔离。
-- D-AC03：已有 ACP 配置完成真实对照调用，无需迁移，结果与授权不足明确区分。
-- D-S02 / D-AC01：仍未完成。本轮真实 Agent 已到达文件创建，但缺少能安全执行当前精确 grant 的可靠权限契约，`ready.txt` 不存在，不能通过部署验收；前次 quota 错误不再作为本轮当前阻塞。
-- 不记录 `submitOuter` 或 `acceptOuter`。恢复需要真实 Host 提供经核验的结构化操作/资源与单次批准语义，或先明确设计并审批独立的人工逐次授权流程；若需改变交付物，应先按生命周期返回实施阶段完成所需适配及验收，再重新运行完整修复闭环。不能以已有文件 grant 为由猜测未声明的权限。保持现有通用 AHP 拒绝未知请求的边界，不自行扩大权限或反复消耗调用。
-- 验证结束后已停止独占 Host，并确认其 PID 消失、loopback 端口关闭，临时连接 token 已删除。没有停止共享 editor Host。恢复时需重新准备明确授权的 Host；不得把已停止的 endpoint 当作仍可恢复的运行环境。
+- D-S01：专用官方 UI、loopback Host、用户本人登记连接及隔离边界均已建立；此前 [Host-UI-Readiness.md](./Host-UI-Readiness.md) 中早期未授权、未过 Inner 的状态仅为历史。
+- D-S02 / D-AC01：真实 Agent 在相同 session/chat 的新 turn 中完成唯一文件修复，pguide 原固定 Objective 从 `initial` / `not-ready` 重观察至 `terminal` / 无问题；精确字节独立复核通过。
+- D-AC02：首轮超时有真实 `chat/turnCancelled` 和 `remoteStopConfirmed: true`；本次 attempt 为 `resumed`，保留原 subject digest、Pilot commit、session/chat，仅 turn 新建，不重放旧 turn。自动测试另覆盖迟到状态隔离。
+- D-AC03：保留上述已有 `copilot` ACP profile 的真实对照调用和 `end_turn`／授权不足证据，不冒充本轮新 ACP 模型调用。最终代码的 `executeAcpAgent`、`agentPrompt` 与该真实调用候选逐字符一致，ACP 权限策略亦一致；后续 ACP transport 仅增加本调用未启用的可选输出／完整回合守卫。本轮相关 continue、精确授权及 external 回归 6/6 通过，结合最终实现已有完整 `pnpm check` 支持兼容性判断，配置无需迁移。
+- 以上是 Agent 侧完成证据，不是 Outer acceptance。同步并检查全部证据后才可为 exact Outer revision 记录 `submitOuter`，由主会话按用户委托复验；不记录 `acceptOuter`。
+- 单次 CLI 已退出。为主会话复核，专用 UI `28732`、Host 包装器 `36692` 暂留，原共享 UI `18136` 不动；一次 execute grant 和已用启动脚本在终态后撤销／删除，避免无意重复操作。token 仅留专用运行数据及用户本人登记的配置，不输出、不注册 artifact。复核完成或明确取消后，仅清理本操作自有进程与目录，不以早期旧 Host 已停止的历史记录误指当前保留 Host。
