@@ -1,0 +1,89 @@
+{
+  "kind": "real-ahp-external-exact-lf-recovery",
+  "executionContractCommit": "91f8dcfe990bf07a72127a7090c38cad48f5c595",
+  "executionContractRevision": "4611a39e4e6a2781bf36c336e111bc0d34349190",
+  "regulationId": "d34dc7cf-5ec3-4658-9f6f-79ad82910e48",
+  "attemptId": "12cb482e-72e4-4eac-a645-a6eba51319f1",
+  "resumeMode": "resumed",
+  "sessionUri": "ahp-session:/82892f7e-476f-4c40-ace3-5764f40ff157",
+  "chatUri": "ahp-chat://default/YWhwLXNlc3Npb246LzgyODkyZjdlLTQ3NmYtNGM0MC1hY2UzLTU3NjRmNDBmZjE1Nw",
+  "priorCancelledTurnId": "4707b654-2e9d-4505-9709-87bbbe54f841",
+  "turnId": "94d57715-8575-4c76-bf50-f93ee4bf1dcc",
+  "toolCallId": "call_Mcdi2FaUcHrDaqwEagD2ETnJ",
+  "pilotCommit": "3d654946e6a3854e94ae96b834c2fa885fdc3afc",
+  "subjectDigest": "9dc721c4d189b1fc18131f1d1baa84b63f208a5ce886f27dbae7d3133f971c4d",
+  "command": "$p = 'D:\\Code\\regulator-ahp-target-20261019-1216-2eb89994\\ready.txt'; if ([Convert]::ToBase64String([IO.File]::ReadAllBytes($p)) -ne 'QUhQLVZFUklGSUVEDQo=') { throw 'Unexpected ready.txt bytes; no write performed' }; [IO.File]::WriteAllBytes($p, [Text.Encoding]::UTF8.GetBytes(\"AHP-VERIFIED`n\"))",
+  "commandMatchesAuthorizedString": true,
+  "toolStartsInTurn": 1,
+  "confirmation": {
+    "type": "chat/toolCallConfirmed",
+    "serverSeq": 207,
+    "hostLogAt": "2026-10-19T13:31:44.845+08:00",
+    "approved": true,
+    "confirmed": "user-action",
+    "permissionDecisionSource": "human_response",
+    "selectedOptionId": "allow-once",
+    "nativeOptionLabel": "Allow Once",
+    "originClientId": "e290e524-d53e-4559-8b28-5981a5c9fd6c",
+    "pguideTurnOriginClientId": "82064532-9321-4e18-8ad0-fab176c3983d",
+    "agentSentApproval": false,
+    "userReportedClickAt": "2026-10-19T13:31:57+08:00"
+  },
+  "completion": {
+    "type": "chat/toolCallComplete",
+    "serverSeq": 211,
+    "hostLogAt": "2026-10-19T13:31:46.094+08:00",
+    "success": true,
+    "terminalExitCode": 0,
+    "hostTurnComplete": true,
+    "turnCompleteServerSeq": 279
+  },
+  "pguide": {
+    "cliExitCode": 0,
+    "finishedAt": "2026-10-19T13:31:59.3499182+08:00",
+    "status": "target-reached",
+    "stopReason": "target-reached",
+    "iterations": 1,
+    "before": {
+      "observedAt": "2026-10-19T05:26:09.094Z",
+      "status": 200,
+      "levelId": "initial",
+      "problemId": "not-ready",
+      "problemCount": 1
+    },
+    "after": {
+      "observedAt": "2026-10-19T05:31:55.962Z",
+      "status": 200,
+      "levelId": "terminal",
+      "problemCount": 0
+    }
+  },
+  "independentTargetObservation": {
+    "observedAt": "2026-10-19T05:36:03.113Z",
+    "path": "D:\\Code\\regulator-ahp-target-20261019-1216-2eb89994\\ready.txt",
+    "bytes": 13,
+    "hex": "4148502d56455249464945440a",
+    "sha256": "82882a098ef81ada63d28fdc13064b92754b8507aab7a8d3159978f841b25758",
+    "coordinatorDirectWrite": false
+  },
+  "evidenceSha256": {
+    "transcript": "59903c79eb1289cf52db13e8a60ad29e34804fbb1f9233747f94e0030082adbf",
+    "regulation": "97e5b15afebc19dd8cfc6c33d10f3f061bdbd1541a88924e387139e736e2f9a0",
+    "redactedCliResult": "42294e71dcd94c642b9503c5b8f0a026f74bc7359ff7736fa06414c293b2c7bb",
+    "cliExitRecord": "f9dad3058c22843f1d5a071ca702741a2b5dd38c6a267a7eacb139c4e1801bcb",
+    "originalTranscriptPrefixBytes": 194754,
+    "originalTranscriptPrefix": "a369b0af205dbd6b5cd00d0ea99268694f484138aaa847b09a84d678e85bd7c4"
+  },
+  "compatibility": {
+    "additionalAcpModelRuns": 0,
+    "priorRealAcpRegulationId": "640f02aa-c9d8-4e28-81c6-8043fdc0b85e",
+    "priorCandidate": "5fe79a355fc3918697b8eb88da9999b26f353130",
+    "unchangedExecuteAcpAgentSha256": "638a77f31e4e223eb2d52885af113e94e7b074a3d10d32e7383b55aeb1e55eac",
+    "unchangedAgentPromptSha256": "df4ad7f6bf3fd58fa5054f355e151ad7db1c325661522d90ab9260235f69317d",
+    "unchangedAcpPermissionPolicySha256": "9498a999a0af10f914095e1b9c219d0c15b23acb6986ea5e5435b6fe560b5268",
+    "entireAcpClientUnchanged": false,
+    "newOptionalClientGuardsEnabledByThisCaller": false,
+    "targetedTestsPassed": 6
+  },
+  "outerAccepted": false
+}
