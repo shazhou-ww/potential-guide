@@ -488,3 +488,28 @@ objectives / .github 的树无差异。I-S01 / I-AC01 据本地结果及完整�
 - 八个本轮文件留为 uncommitted；未运行 full check、packed、Linux 重复或 CI，
   未 commit/push/改 gates/ledger/events/outer。父会话负责下一精确候选 CI；
   若仍为 `compiling`，应继续定位 Add-Type/编译内部，而不是再增 watchdog。
+
+### 主会话最终独立实现门禁
+
+- 准确产品候选为 `345027e47f4b530e66539bae822b51b2728e3427`。
+  主会话审查本轮八个文件后独立执行 SDK / process-tree / probe / consumer
+  回归 **31/31**，无失败、取消或跳过，耗时 41429ms；实际可信 Utility
+  导入及 native query 为 **673/624ms**，EOF-dependent snapshot 为 **6685ms**。
+  另执行 setup 安全诊断 / ACP 拒绝定向 **2/2**，正式生成物 `--check` 通过。
+- 主会话为该准确提交独立创建 validation ref 并触发、等待及核验
+  [CI 39230208150](https://github.com/shazhou-ww/potential-guide/actions/runs/39230208150)：
+  Node **22.13.0 / 24.11.1** 各执行完整 `pnpm check` 成功，
+  **Windows / Ubuntu / macOS** 各执行 packed entry-only consumer 成功，
+  五项全部 success，headSha 与候选一致。Node 22 CLI 测试为 105 项、
+  103 通过、0 失败；另两项为 runner 报告的 skip，不作为成功执行计数。
+  两种 Node 的完整门禁由主会话通过 CI 执行，不声称最终本地 Windows
+  全量检查已通过；此前本地全量失败 / 取消及历史 4/5 CI 均保留，不计成功。
+- 真实 CI 的 Windows packed 路径现已通过，包含安装产物 Git Pilot 固定 revision、
+  nonce 修复、独立最终 probe 与 terminal；没有用 direct helper 或旧候选绿灯替代。
+  显式 trusted import 后整矩阵成功，不能据此倒推此前卡住的是 CIM provider。
+- 主会话再次独立断言全部八包 manifest 的准确候选版本、所有内部依赖
+  `workspace:^`；六个新版本与两项未变上游符合候选表。CI 完整检查和实际
+  packed graph 验证 pack 后版本与范围；lockfile 无文本变化，无已发布版本覆盖。
+- 此处只完成 Inner 质量与版本门禁。最终稳定 Outer 同步后仍须由主会话在
+  本地 Windows 重新执行 `pnpm deployment:verify`，不能拿本次 CI 替代它。
+  未发布 npm、未创建发布 tag、未移动 rc/latest，原 release hold 维持。
