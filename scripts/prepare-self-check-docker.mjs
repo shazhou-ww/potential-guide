@@ -8,7 +8,14 @@ import { pipeline } from "node:stream/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const harnessFiles = ["Dockerfile", "prepare-image.mjs", "fixture.mjs", "verify.mjs", "README.md"];
+const harnessFiles = [
+  "Dockerfile",
+  "prepare-image.mjs",
+  "fixture.mjs",
+  "verify.mjs",
+  "real-agent.mjs",
+  "README.md",
+];
 
 export async function prepareContext(repository, revision, destination) {
   assert.match(revision, /^[a-f0-9]{40}$/u, "Use an explicit full repository commit SHA");

@@ -148,3 +148,58 @@ pnpm exec tsx --test --test-concurrency=1 --test-name-pattern='^(force terminati
 - 主会话确认保留容器 `pguide-self-check-811f28d-7dd2` 仍运行且响应 Node v22.23.3，镜像 ID、无网络和无挂载状态与记录相符；没有重复执行已有三个 probe。
 
 真实独立 ACP 仍缺正常用户认证，主会话固定 811f28d 的完整 probe 没有 terminal，见 [当前设备验证](./Local-device-validation.md)。I-S03 和 I-AC03 仍未完成，不提交 submitInner，不批准 acceptInner 或交付验收；fixture 的 terminal 不替代真实用户 Agent 的 terminal。
+
+## 当前设备的真实 Agent 基线容器
+
+用户要求先同步最新代码，再建立能够验证真实 Agent 的 Docker 环境，避免在未证明模型可用时重复自查。主会话已将本分支 fast-forward 到 `6fda06f20fc0c152485ee5bc7065f65813d30966`，确认与 origin/main ahead/behind 为 `0/0`，保留全部并发修改。当前 Docker 引擎最初未启动，通过 Docker Desktop 正常启动后确认 Linux Engine `29.3.0` 可用，没有修改其他容器。
+
+默认 `runtime` target 仍是前文无网络、无凭据 fixture；新增显式 `real-agent` target 和 [真实基线 runner](../../../../../scripts/self-check-docker/real-agent.mjs)，不把旧 fixture terminal 当作模型成功。固定安装官方 Copilot CLI `1.0.98`，认证只允许在容器内通过官方登录建立，不向构建或运行层传入宿主 token、HOME、认证文件、源码 bind mount 或 Docker socket。
+
+### 已构建并保留的环境
+
+| 项目 | 实际值 |
+| --- | --- |
+| 镜像 | `pguide-real-agent:6fda06f-1ce0ed16-pinned` |
+| 镜像 ID | `sha256:50c95b42a3534d34938c8ea38ba9d54e34f56460049a1f1510d5808d8223753a` |
+| 容器 | `pguide-real-agent-6fda06f-1ce0ed16-pinned` |
+| 容器 ID | `537162d1ce03a226f9abffcc4b81fd0be2aeea7a65f73a862041347d8e99ce34` |
+| 基础镜像 | `node:24-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba3275657f93595428be4fc03` |
+| 实测 Node / Copilot | `v24.19.0` / `1.0.98` |
+| 运行用户 / HOME | `node`（UID 1000）/ `/work/home` |
+| 源码 archive revision | `6fda06f20fc0c152485ee5bc7065f65813d30966` |
+| 源码 archive SHA-256 | `7e1fe088ae640bfced986a31ec4b9f8197a39670d6da603a02eee9d49e6d6f10` |
+| 容器内 Objective Git revision | `a90a62c9363b70993188f7deb5f23eaf0d2deeff` |
+| 已安装 pguide | `0.4.0-rc.0` |
+| Dockerfile / real-agent.mjs SHA-256 | `7072d5e2fcf5d4ff49aa52ba5dead70b66483f781ba73a16ae4bda7654f84454` / `a83c3ded73397030368e5097cdd52159ba96d7231fef98d3baa4a5de7c9c2583` |
+
+源码通过 Git archive 固定；六个白名单 harness 文件来自构建时工作树，分别记录哈希，不声称它们属于旧源码 commit。仍采用 frozen 生产依赖安装和独立固定 TypeScript 工具链，不安装替代 Turbo 或改锁文件，不发布 npm。完整 provenance 在容器 `/harness/provenance.json`，另复制到会话的 `real-agent-pinned-provenance.json`。固定版本通过 `COPILOT_AUTO_UPDATE=false` 及 ACP 参数 `--no-auto-update` 禁用自动升级；主会话独立核验该环境开关与容器实际 runner 哈希。早期同名但不带 pinned 后缀的本次任务容器已定向停止，未删除其层或任何认证文件；后续只使用表中最终容器。
+
+首次构建遇到 Debian HTTP 502；改为官方 HTTPS 后发现 slim 基础镜像尚无系统 CA。最终使用固定 Node 镜像自带的公开根证书引导 HTTPS，再正常安装系统 ca-certificates、git、procps，构建成功。没有关闭 TLS 校验、加入宿主或自签证书、替换未经批准的源或传递 npm 认证。该流程不承诺 apt/npm 依赖逐字节可复现，保留实际 lock 哈希与镜像 ID。
+
+容器使用 init、bridge 网络、2 CPU、2 GiB 内存及相同 swap 总上限、256 进程上限，丢弃全部 capabilities 并启用 no-new-privileges。主会话独立检查确认运行中、非 root、mounts 为空、没有发布端口。真实登录及模型调用需要网络，这与 fixture 的 network none 有意区分；没有授予 shell 或 URL 工具网络权限。
+
+### 严格基线与实际阻塞
+
+`discover` 只建立会话并读取模型元数据，绝不返回 ready。`verify` 必须显式指定模型，核对它已被 Agent 列出且 session/new 返回模型匹配，再执行唯一一次真实随机 marker 修复。仅允许该 marker 的绝对路径写入，禁用 shell、URL 工具及默认系统临时目录访问，其余权限请求一律拒绝。必须 end_turn、没有拒绝、普通非链接单硬链接文件的字节数与随机内容独立匹配、进程和独占 task 清理成功，才返回 ready。失败使用固定分类并非零退出，不记录模型正文、prompt、nonce、token 或原始服务错误。
+
+120 秒是独立基线诊断上限，不修改正式 Pilot 24 秒上限；即使此基线将来通过，也不替代 I-AC03 的完整自查 terminal。后续验证必须先取得同一容器、所选真实 Agent/model 的 ready；版本命令、镜像构建、登录和模型目录均不能单独开门。
+
+首次容器执行一次 `--mode discover --timeout-ms 15000`，约 `511 ms` 明确返回 authentication-required；加入禁用自动升级的固定运行设置后，最终容器独立执行同一无 prompt 探测：initialize 约 `499 ms`，session/new 明确失败，最终报告 `status: failed`、`reason: authentication-required`、`promptCount: 0`、`markerVerified: false`，总计约 `536 ms`，退出码 `1`。独立读取最终 `/work/runs/real-agent-53jHtO/baseline.json` 并检查 task 已删除。最终安全报告复制到会话的 `real-agent-pinned-baseline.json`；首轮报告和 provenance 保留为历史。本轮没有发送任何真实模型提示，也没有因为构建成功而继续 pguide probe。
+
+当前需要设备用户在自己的交互终端中执行：
+
+```powershell
+docker exec -it pguide-real-agent-6fda06f-1ce0ed16-pinned copilot login --device-code
+```
+
+只在官方页面完成授权，不向会话发送 token 或认证文件。容器内 CLI 帮助已确认此参数；无系统凭据存储时，登录可能以明文保存在容器 HOME，故不得 docker commit/export 该认证容器、复制 HOME 或收集凭据。登录状态真正保存后，再由主会话发现可选模型、选择模型并运行一次真实基线；只有 ready 才继续自查。
+
+用户随后明确要求由主会话在容器中启动流程，并提供链接供其浏览器授权。主会话通过官方 `copilot login --device-code` 执行；设备链接和临时代码只用于本次交互，不写入仓库。流程最终退出 `1`，安全结果为“Login succeeded, but the token was not saved. Install a system keychain or rerun login and accept plaintext storage.” 这说明浏览器授权成功，但容器没有系统 keychain，且非交互流程未确认明文存储；不能据此宣称容器已登录或真实模型可用。
+
+已通过结构化询问请求用户选择“仅此私有容器内允许官方明文存储并重新授权”或“先配置系统 keychain”，未获得答复。没有默认同意明文存储，没有读取、提取或转移 token，也没有发起第二轮 OAuth 或真实 prompt。下一步等待明确的认证存储选择，再采用对应的官方交互登录流程；保留最终容器运行，停止对未改变的认证状态重复探测。
+
+### 自动验证与门线
+
+定向五项测试通过，覆盖构建上下文白名单，以及 ready 必须真实完成并独立核验、discovery 不能 ready、认证/模型不匹配/假修复/拒绝/超时/清理失败不能 ready、marker 链接与内容复查。测试替身仅用于这些单元回归，不是容器真实 Agent 通过证据。
+
+三次完整 pnpm check 均退出 `0`，报告合计 369 项、367 通过、2 项已有跳过、0 失败；根脚本 20 项和 monorepo 34 项实际执行，其余十一 workspace 测试使用 Turbo 缓存。最后一次包含最终 HTTPS/公开 CA Dockerfile、禁用自动升级的断言与 context 测试。I-S03、I-AC03 仍未完成，不 submitInner、不请求实现或交付验收。下一步当前外部阻塞为容器内认证的存储选择及完成登录；登录后仍需实测网络、模型及真实任务，不能把此环境称为已证明真实 Agent 跑通。

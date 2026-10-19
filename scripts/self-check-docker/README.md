@@ -9,7 +9,7 @@ controlled ACP integration evidence, **not** real-device/model acceptance.
 
 Choose an explicit, full committed source revision. Preparation does not invoke
 Docker: it writes a new, minimal context using `git archive`, then copies only
-the five named harness files. Uncommitted source edits and untracked files
+the six named harness files. Uncommitted source edits and untracked files
 (including `.env`, `node_modules`, and credentials) cannot enter the source
 archive. Harness edits may be uncommitted; their hashes are recorded separately.
 Do not build with the repository root as context.
@@ -127,7 +127,57 @@ printed run path or `docker cp <container>:/work/runs <chosen-local-directory>`.
 Parent/operator owns verification, approvals and lifecycle. When intentionally
 finished, remove **only** this container/image by their exact names.
 
-## Host-only tests
+## Real Agent baseline (separate, opt-in target)
+
+The default `runtime` target above remains credential-free and uses a fixture.
+Build `--target real-agent` to additionally install the pinned official Copilot
+CLI (`COPILOT_VERSION=1.0.98`) and the real ACP baseline runner.
+Automatic CLI updates are disabled for this target and its ACP child processes.
+
+```powershell
+docker build --target real-agent --build-arg NODE_IMAGE=node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 -t $image $context
+docker run -d --name $container --cap-drop ALL --security-opt no-new-privileges --cpus 2 --memory 2g --memory-swap 2g --pids-limit 256 $image
+docker exec $container copilot --version
+docker exec -it $container copilot login --device-code
+docker exec $container node /harness/real-agent.mjs --mode discover
+docker exec $container node /harness/real-agent.mjs --model <advertised-model-id>
+```
+
+Use a distinct image/container name from fixture verification. This target needs
+network access for independent official login and model requests, but publishes
+no ports and mounts no host directories, credentials, Docker socket or source.
+Do not pass host tokens, HOME, npm configuration or inherited environment.
+Authenticate directly inside the named container; do not automate device codes
+or copy them into reports. On headless Linux, Copilot may store its login in
+plaintext under the container HOME. Never commit/export that authenticated
+container as an image, copy its HOME, or collect its credential files as evidence.
+Keep it private and remove only that named container when intentionally finished.
+
+Model discovery is **not** a passing baseline. It returns `discovered` and zero
+prompts. Verification requires an explicitly selected, advertised model and a
+matching session result before one real task. Only `ready` means that the real
+Agent returned an explicit `end_turn`, no requested permission was denied, and
+an independent check verified the exact random contents of a regular, non-linked,
+single-hard-link marker file. Writes are preauthorized only for that absolute
+marker path; shell and URL tools and automatic temp-directory access are denied.
+Any other permission request is rejected, not silently granted.
+
+Each run has a maximum 120-second Agent diagnostic budget and a 192 KiB ACP
+output bound. This does **not** change the Pilot's 24-second limit: even a
+successful longer baseline is not a full self-check terminal result or acceptance.
+There are no model substitutions or automatic retries. Authentication, model
+mismatch, timeout, false repairs and cleanup errors fail explicitly and produce
+a nonzero exit. The runner deletes only its task and retains
+`/work/runs/real-agent-*/baseline.json`, with fixed error classifications and no
+prompt, nonce, model text, token or raw server error.
+
+**Gate subsequent validation on a real `ready` report from this container.**
+Do not start another pguide self-check merely because the image built, the CLI
+printed its version, login succeeded, or `discover` returned a model list.
+Re-run the baseline after a material Agent/model/authentication change; do not
+interpret a retained report as permanent readiness.
+
+### Host-only tests
 
 `node --test scripts\prepare-self-check-docker.test.mjs` validates context
 construction without Docker. The existing `scripts/*.test.mjs` default test

@@ -51,6 +51,7 @@ test("Docker context contains the exact commit archive plus only explicit harnes
       "README.md",
       "fixture.mjs",
       "prepare-image.mjs",
+      "real-agent.mjs",
       "verify.mjs",
     ]);
     const second = await prepareContext(repository, revision, join(repository, "second"));
