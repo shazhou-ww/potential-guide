@@ -96,6 +96,10 @@ CLI 于 `2026-10-19T12:24:33+08:00` 从精确非 Git 目标目录运行，使用
 
 另一个已查证的恢复限制是：当前 `continue` 只接受 regulation ID / `--report`，重用持久化 subject、profile 和固定 Pilot commit。不能编辑 `regulation.json`、换掉 commit 或改外部 subject 文件，伪称新的指引已被合法续跑采用。若后续确需增加显式修正上下文入口，应先按 Silvermoon 返回实施阶段设计并验收，而不是在部署阶段偷偷改产品；在现有恢复能力范围内，不重新创建会话，不重放已取消的 turn。
 
+### 追加的只读 EOL 调查
+
+后续已查明固定安装来源并完成同版官方编辑器 API 的独立四项复现，详见 [EOL-Diagnosis-20261019.md](./EOL-Diagnosis-20261019.md) 和[结构化证据](./EOL-Diagnosis-20261019.json)。工具完成时的实际文件 digest 已为 14 字节；native SDK 内建工具与编辑器扩展同名工具不可混同，`server-envelope` 日志不是扩展执行证明。编辑器的显式 LF metadata 在 scratch 有效，但没有证明 native 内建工具接受这个通道；不会仅改提示词或现用 `files.eol` 后再花模型重试。新的单次精确字节修复命令仅作为待授权提案保存，未执行、未改变原 Deployment 的禁止 shell 指引、未写真实目标。
+
 ## 证据保留与清理
 
 终态证据摘要见 [External-Run-20261019.json](./External-Run-20261019.json)。本操作私有目录内仍保留原 regulation/transcript/脱敏 CLI 结果与固定 Pilot，以便核对和合法恢复，SHA-256 已记录。它们不是另一轮执行。

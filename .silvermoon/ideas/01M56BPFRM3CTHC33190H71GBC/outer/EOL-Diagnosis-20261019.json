@@ -1,0 +1,84 @@
+{
+  "kind": "read-only-diagnosis-and-independent-reproduction",
+  "deploymentPassed": false,
+  "newModelTurns": 0,
+  "originalTargetWritten": false,
+  "toolApprovalSent": false,
+  "version": {
+    "vscode": "1.142.0",
+    "commit": "6d62b1d5dace93a33b3a6d3eca1317bd5e15bcb1",
+    "copilotSdk": "1.0.19-unstable.38345923974.g3754b70",
+    "nativeRuntimeBytes": 114303848,
+    "nativeRuntimeSha256": "cbc1ea3d19b5945aca015a3d6015ad55261677b368ae67c9e49cc416db2954bf",
+    "sdkFacadeSha256": "4e83db5ce5e29e4b0ff44cfe9d8b24c46849ad6c997eae93fd97b422ad45821d",
+    "agentHostMainSha256": "ab48e91a41e3ee3e9c1e0942fe0da912d2c32dcc907da0536674918aa0fdcf41"
+  },
+  "originalRun": {
+    "regulationId": "d34dc7cf-5ec3-4658-9f6f-79ad82910e48",
+    "turnId": "4707b654-2e9d-4505-9709-87bbbe54f841",
+    "toolCallId": "custom_call_uS0DuHaHepNszT6D19FnouGV",
+    "rawPatchEol": "LF",
+    "toolCompletionAfterDigest": "14:-516830830:1077832173",
+    "transcriptSha256": "a369b0af205dbd6b5cd00d0ea99268694f484138aaa847b09a84d678e85bd7c4",
+    "target": "D:\\Code\\regulator-ahp-target-20261019-1216-2eb89994\\ready.txt",
+    "targetHex": "4148502d56455249464945440d0a",
+    "targetSha256": "2d50b80014d167ecef1ee8be71fe29deb248902842cf574aa97abe2fe92421f2",
+    "requiredHex": "4148502d56455249464945440a"
+  },
+  "boundary": {
+    "located": "Copilot SDK builtin file-tool parsing or writing, before completion snapshot",
+    "nativeConversionFunctionIdentified": false,
+    "editorExtensionCallPathProven": false,
+    "editorSettingFixForOriginalToolProven": false,
+    "supportedModelFreeNativeToolExecutionEntryFound": false
+  },
+  "independentEditorProbe": {
+    "isRealDeploymentEvidence": false,
+    "platform": "win32",
+    "vscode": "1.142.0",
+    "initialFilesEol": "auto",
+    "exitCode": 0,
+    "passed": 4,
+    "observations": [
+      { "operation": "create-and-LF-insert", "bytes": 14, "eol": "CRLF", "hex": "4148502d56455249464945440d0a" },
+      { "operation": "existing-document-LF-replacement", "bytes": 14, "eol": "CRLF", "hex": "4148502d56455249464945440d0a" },
+      { "operation": "explicit-TextEdit-EOL-metadata", "bytes": 13, "eol": "LF", "hex": "4148502d56455249464945440a" },
+      { "operation": "new-document-explicit-files-eol-LF", "bytes": 13, "eol": "LF", "hex": "4148502d56455249464945440a" }
+    ],
+    "manifestSha256": "3ad5d722b7850019f252c77d0d937f1f82f7ee726dbc8856bac1ddda694db7a9",
+    "extensionSha256": "3fbc45f18aa92f171b0646f79d6660893665195d8b6ed4ec99766bf6af14a6be",
+    "harnessSha256": "9c9b79cbc21b7c77154b78dbae0b9fcaa2efca0202cceaa32e2e0931ba9c51e6",
+    "resultSha256": "94791f70123959f4520d2ad81e07e7822b60fdb3132287b35d12f996c4cffad5",
+    "initialActualAttempt": {
+      "exitCode": 1,
+      "completedCases": 1,
+      "error": "Document has been closed",
+      "resolution": "Pin scratch model with showTextDocument and reopen after workspace edits"
+    }
+  },
+  "independentGuardedByteProbe": {
+    "isRealDeploymentEvidence": false,
+    "passed": 2,
+    "crlfToExactLf": true,
+    "unexpectedExistingBytesRejected": true,
+    "rejectedAttemptLeftHashUnchanged": true,
+    "originalTargetUsed": false
+  },
+  "retainedResources": {
+    "dedicatedUiPid": 28732,
+    "hostWrapperPid": 36692,
+    "sharedUiPidUntouched": 18136,
+    "loopbackPort": 51793,
+    "unauthenticatedHttpStatus": 403,
+    "newAuthenticatedSessionClaimed": false
+  },
+  "recoveryProposal": {
+    "executed": false,
+    "requiresNewDeploymentContractBeforeExecution": true,
+    "requiresLegalCorrectiveContextEntry": true,
+    "requiresHumanExactAllowOnce": true,
+    "existingTargetGuardBase64": "QUhQLVZFUklGSUVEDQo=",
+    "requiredBytesBase64": "QUhQLVZFUklGSUVECg==",
+    "method": "One exact-path guarded WriteAllBytes invocation; no unrelated shell self-check"
+  }
+}
