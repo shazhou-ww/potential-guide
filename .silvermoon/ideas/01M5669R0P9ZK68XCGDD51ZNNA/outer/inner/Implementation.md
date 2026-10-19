@@ -26,7 +26,11 @@ Pilot 单项默认 20 秒，subject 上限 24 秒，为默认 30 秒 probe 留�
 
 将独立自查和现有 setup 回归纳入默认检查，使用本机已安装的 pguide 和已有权限内的真实 ACP Agent 验证完整自查，不额外请求 sanity 级授权。
 
-仓库增加 manifest/wiki、输入、单 prompt、假完成/错误内容/权限拒绝/不完整结束、输出上限、超时清理、Git 子目录快照回归；原 setup 测试继续覆盖本地、SSH 与旧授权语义。部署验证脚本新增安装后 self-check 快照路径，fixture 明确只用于自动回归，不冒充真实模型证据。父会话曾独立完成集成后的 pnpm check；后续并发 primary 整合后的宿主复跑仍有 Windows 超时和进程终止失败，不能据旧绿色结果宣称当前全量通过，详见 [Docker 验证](./Docker-validation.md)。真实设备 probe 未达到 terminal，独立 ACP 入口要求认证，因此本步骤和 I-AC03 保持未完成，不记录 submitInner 或 acceptInner。
+仓库增加 manifest/wiki、输入、单 prompt、假完成/错误内容/权限拒绝/不完整结束、输出上限、超时清理、Git 子目录快照回归；原 setup 测试继续覆盖本地、SSH 与旧授权语义。部署验证脚本新增安装后 self-check 快照路径，fixture 明确只用于自动回归，不冒充真实模型证据。
+
+源码 `811f28d802028b8c5a82337a47f9b111d83cedb6` 的 Windows 子会话定向复跑 8/8 通过，父会话独立验证同版本干净安装容器正反例。继续同步上游 Windows 修复后，父会话又在 `fbccc9de7e9ba909771d21aff1a0410d1d96ccbe` 执行 pnpm check，退出 0，354 项测试中 353 通过、1 项已有平台跳过；实际执行和 Turbo 缓存边界见 [Docker 验证](./Docker-validation.md)。历史 Windows 失败不再列为当前未解决阻塞。
+
+真实设备固定 811f28d 的完整 probe 停在 installed，configuration 的 session/new 被 Agent 拒绝，认证诊断仍为 authentication-required，未达到 terminal。因此本步骤和 I-AC03 保持未完成，不记录 submitInner 或 acceptInner。
 
 ## Acceptance criteria
 

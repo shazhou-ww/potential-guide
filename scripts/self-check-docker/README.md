@@ -15,9 +15,9 @@ archive. Harness edits may be uncommitted; their hashes are recorded separately.
 Do not build with the repository root as context.
 
 ```powershell
-$revision = 'd35db7554cfbcf25ed675fad1aa07dd4e8d906df'
-node scripts\prepare-self-check-docker.mjs $revision .self-check-docker-context
-docker build --build-arg NODE_IMAGE=node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 -t pguide-self-check:7dd2b7ee .self-check-docker-context
+$revision = '811f28d802028b8c5a82337a47f9b111d83cedb6'
+node scripts\prepare-self-check-docker.mjs $revision .cache\self-check-docker-context-811f28d-7dd2
+docker build --build-arg NODE_IMAGE=node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 -t pguide-self-check:811f28d-7dd2 .cache\self-check-docker-context-811f28d-7dd2
 ```
 
 Use a fresh context name on subsequent preparations; existing directories are
@@ -65,13 +65,21 @@ No host settings are changed. These limits apply to this named container only;
 do not stop, inspect credentials from, or remove other users' containers.
 
 ```powershell
-docker run -d --name pguide-self-check-7dd2b7ee --network none --cap-drop ALL --security-opt no-new-privileges --cpus 2 --memory 1g --memory-swap 1g --pids-limit 128 pguide-self-check:7dd2b7ee
-docker exec pguide-self-check-7dd2b7ee node --version
-docker exec pguide-self-check-7dd2b7ee node /harness/verify.mjs fix
-docker exec pguide-self-check-7dd2b7ee node /harness/verify.mjs wrong
-docker exec pguide-self-check-7dd2b7ee node /harness/verify.mjs summary-only
-docker inspect --format '{{.Config.User}} {{.HostConfig.NetworkMode}} {{json .HostConfig.CapDrop}} {{json .HostConfig.SecurityOpt}} {{json .Mounts}}' pguide-self-check-7dd2b7ee
+docker run -d --name pguide-self-check-811f28d-7dd2 --network none --cap-drop ALL --security-opt no-new-privileges --cpus 2 --memory 1g --memory-swap 1g --pids-limit 128 pguide-self-check:811f28d-7dd2
+docker exec pguide-self-check-811f28d-7dd2 node --version
+docker exec pguide-self-check-811f28d-7dd2 node /harness/verify.mjs fix
+docker exec pguide-self-check-811f28d-7dd2 node /harness/verify.mjs wrong
+docker exec pguide-self-check-811f28d-7dd2 node /harness/verify.mjs summary-only
+docker inspect --format '{{.Config.User}} {{.HostConfig.NetworkMode}} {{json .HostConfig.CapDrop}} {{json .HostConfig.SecurityOpt}} {{json .Mounts}}' pguide-self-check-811f28d-7dd2
 ```
+
+The named container above has already been retained with all three probe
+results. Inspect its existing evidence rather than rerunning prompts just to
+confirm. Choose distinct image/container names to create another instance;
+the older `pguide-self-check-7dd2b7ee` is also preserved, not replaced.
+Recorded source revisions are not a claim that later HEAD revisions were built.
+Parent-owned provenance and results are in the Idea's
+[Docker validation evidence](../../.silvermoon/ideas/01M5669R0P9ZK68XCGDD51ZNNA/outer/inner/Docker-validation.md).
 
 Each verifier invocation runs **one full probe, with exactly one prompt**. Do
 not repeat `fix` merely to confirm the same outcome. Numeric ACP initialize,
