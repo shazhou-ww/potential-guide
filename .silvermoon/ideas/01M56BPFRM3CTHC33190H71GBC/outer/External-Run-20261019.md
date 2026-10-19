@@ -38,3 +38,28 @@ Trusting this folder will also mark it as trusted in Visual Studio Code.
 用户随后明确报告本人已确认该 Folder Trust。重新观察确认：模态框消失，composer 仍显示上述精确隔离目录与 `regulator-ahp-verification`，`ready.txt` 仍不存在。该结果只解除目录信任前置条件，不是 `ready.txt` 的一次文件批准，不写为 AHP `toolCallConfirmed`，也不证明模型或工具已获授权。后续仍须在同一官方 UI 核对实际 session/chat/turn/toolCall、精确路径和 native 单次请求。
 
 Host、UI 和连接所需私有资源继续保留，不因报告返回而清理。当前可以开始预先约定的一次有界 external 修复；真实文件请求仍逐次等待用户，不从信任点击推导工具许可。本文此时只记录执行前状态，当前 `ready.txt` 仍不存在，没有 submitOuter / acceptOuter。
+
+## 一次真实执行及当前原生请求
+
+CLI 于 `2026-10-19T12:24:33+08:00` 从精确非 Git 目标目录运行，使用当前构建的 `regulate.js` 和上述固定 Pilot。正式 detached shellId 为 `regulator-ahp-real-external-1224`，包装器 PID `3432`；单 turn 预算至约 `12:34:33+08:00`，不无限等待、不自动重试。Host/UI 不随本次 turn 结束而清理。
+
+真实持久化身份：
+
+| 字段 | 值 |
+| --- | --- |
+| regulationId | `d34dc7cf-5ec3-4658-9f6f-79ad82910e48` |
+| sessionUri | `ahp-session:/82892f7e-476f-4c40-ace3-5764f40ff157` |
+| chatUri | `ahp-chat://default/YWhwLXNlc3Npb246LzgyODkyZjdlLTQ3NmYtNGM0MC1hY2UzLTU3NjRmNDBmZjE1Nw` |
+| turnId | `4707b654-2e9d-4505-9709-87bbbe54f841` |
+| 当前 pending toolCallId | `call_3ZLnVC1GljZcwdRIuu5U3ign` |
+| phase | `execution` |
+
+官方 UI 的隔离 workspace 分组实际出现一个 `Potential Guide regulation Target: ...` / `In Progress` 会话。Agent 仅选择这一个真实会话，使其内容及 native 确认卡片可见，没有选取任何批准/拒绝控件。
+
+首个 `apply_patch` 工具由 Host 标为 `confirmed: not-needed` 后创建了文件；没有将此标记解释成人类单次批准，更没有将目录信任点击伪记为 `toolCallConfirmed`。独立字节观察为 `4148502d56455249464945440d0a`，即 14 字节 CRLF；要求的 13 字节 LF 为 `4148502d56455249464945440a`，所以目标仍不通过。这也暴露该 Host 对 trusted workspace 文件编辑的行为：不是每个编辑都产生确认卡片，不能把通用 external 等待能力描述为强制 Host 对每次文件写入询问。
+
+`12:24:53.496+08:00` 的 `pguide/ahp-external-confirmation` 对应下一条原生 **`Run in terminal?`** 请求。工具为 `powershell` / `Run Shell Command`，内容是读取上述唯一 `ready.txt` 的字节，与 `AHP-VERIFIED` + LF 比较，不符则 throw，符合则 Write-Output；它不修复或写入文件。该请求不是文件创建请求，且超出了原计划“不要运行 shell”的指导，Agent 不批准，也不把已有文件授权扩张为执行授权。
+
+协议 options 确实包含 `Allow Once`、`Allow in this Session`、`Skip`；实际卡片的主要可见按钮是 `Allow in this Session` 和 `Skip`，另有 `More Actions...`。没有选取任何 option，`Allow Once` 只可由用户本人通过 native 选项决定；绝不能按默认会话级按钮。若用户要额外允许此条只读校验，必须明确作为独立的单次 shell 操作决定，而不是沿用文件创建许可；也可由用户跳过/取消。没有当前实际请求的明确决定时保持 external 有界等待，不代点任何按钮。
+
+当前没有最终 CLI 结果，不能将文件存在、native 卡片或某个 UI 点击当目标通过；D-S02 / D-AC01 继续未完成，没有 submitOuter / acceptOuter。
