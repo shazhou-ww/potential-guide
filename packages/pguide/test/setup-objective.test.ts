@@ -72,10 +72,15 @@ async function setup(mode = "fix") {
   await writeFile(
     agent,
     `import {createInterface} from "node:readline";
+import {spawn} from "node:child_process";
 import {appendFile,readFile,writeFile} from "node:fs/promises";
 const mode=${JSON.stringify(mode)}, log=${JSON.stringify(log)};
 for await (const line of createInterface({input:process.stdin})) {
   const m=JSON.parse(line); if(m.id===undefined)continue;
+  if(mode==="prompt-timeout" && m.method==="session/prompt"){
+    const child=spawn(process.execPath,["-e","setInterval(()=>{},1000)"],{stdio:"ignore"});
+    await appendFile(log,JSON.stringify({method:"fixture/descendant",pid:child.pid})+"\\n");
+  }
   await appendFile(log,JSON.stringify({method:m.method,cwd:m.params.cwd,protocolVersion:m.params.protocolVersion,pid:process.pid})+"\\n");
   if(mode==="malformed"){console.log("not JSON");continue;}
   if(mode==="timeout"){setInterval(()=>{},1000);continue;}
@@ -116,7 +121,7 @@ for await (const line of createInterface({input:process.stdin})) {
     configPath,
     scratchDirectory: scratch,
     pguide: { command: process.execPath, args: [composition] },
-    desiredVersion: "0.3.0-rc.0",
+    desiredVersion: "0.4.0-rc.0",
     userHome: home,
     allowSanity: false,
     timeoutMs: 24000,
@@ -263,7 +268,7 @@ test("configuration reports missing/invalid config, unsupported commands, absent
     const fake = join(f.directory, "unsupported.cjs");
     await writeFile(
       fake,
-      `console.log(JSON.stringify(process.argv.includes("--version")?{schemaVersion:1,name:"pguide",version:"0.3.0-rc.0"}:{commands:[],conflicts:{}}));`,
+      `console.log(JSON.stringify(process.argv.includes("--version")?{schemaVersion:1,name:"pguide",version:"0.4.0-rc.0"}:{commands:[],conflicts:{}}));`,
     );
     isProblem(
       await f.direct("configuration", {
@@ -632,11 +637,36 @@ test("oversized child output is bounded and reported as invocation fault", async
 test("sanity timeout during an actual ACP prompt cleans isolated config, state and descendants", async () => {
   const f = await setup("prompt-timeout");
   try {
-    const envelope = await f.direct("sanity", {
-      ...f.subject,
-      allowSanity: true,
-      timeoutMs: 24000,
-    });
+    const runner = join(f.directory, "prompt-deadline.mjs");
+    await writeFile(
+      runner,
+      `import {readFile} from "node:fs/promises";
+import {main} from ${JSON.stringify(pathToFileURL(helper).href)};
+const controller = new AbortController();
+const timer = setInterval(async () => {
+  try {
+    const log = await readFile(${JSON.stringify(f.log)}, "utf8");
+    if (log.includes('"method":"session/prompt"')) {
+      clearInterval(timer);
+      setTimeout(() => controller.abort(), 100);
+    }
+  } catch (error) { if(error.code !== "ENOENT") throw error; }
+}, 25);
+try { await main(undefined, {signal: controller.signal}); } finally { clearInterval(timer); }
+`,
+    );
+    const original = await readFile(f.subject.configPath, "utf8");
+    const envelope = await f.direct(
+      "sanity",
+      {
+        ...f.subject,
+        allowSanity: true,
+        // Startup is bounded separately; trigger the deadline only after the real
+        // hanging prompt is observed, not after an assumed machine startup time.
+        timeoutMs: 60000,
+      },
+      runner,
+    );
     assert.equal(envelope.status, 504, JSON.stringify(envelope));
     const entries = (await readFile(f.log, "utf8"))
       .trim()
@@ -644,6 +674,7 @@ test("sanity timeout during an actual ACP prompt cleans isolated config, state a
       .map((line) => JSON.parse(line));
     assert.equal(entries.filter(({ method }) => method === "session/prompt").length, 1);
     for (const { pid } of entries) assert.throws(() => process.kill(pid, 0));
+    assert.equal(await readFile(f.subject.configPath, "utf8"), original);
     assert.deepEqual(await readdir(f.work), []);
   } finally {
     await rm(f.directory, { recursive: true, force: true });

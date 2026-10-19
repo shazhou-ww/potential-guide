@@ -229,7 +229,7 @@ void commandMain(
     protocol: "pguide-command-v1",
     command: "config",
     description: "Manage pguide configuration",
-    version: "0.2.0-rc.0",
+    version: "0.3.0-rc.0",
   },
   run,
 );

@@ -227,14 +227,45 @@ records the original package tag's source commit separately from the
 verification commit. Never rerun a successful publish step to repair a
 metadata propagation failure.
 
-After every selected RC has published successfully, run the CI workflow
-manually with `published=true`. Its independent consumers install the exact
-manifest RC versions from npm, not local tarballs, and verify the CLI and
-runtime scenarios on the declared operating systems:
+After every selected candidate has published successfully, run the CI workflow
+manually with `published=true`. Its independent consumers install only
+`pguide@<manifest-version>` from npm, without overrides or other top-level internal
+dependencies. The verifier accepts the same `0.x` stable/RC versions as release
+tags, resolves every internal dependency from its actual parent (including nested
+copies), and checks all installed versions against the eight source manifests.
+It also imports the public libraries and verifies bins and runtime scenarios on
+the declared operating systems:
 
 ```sh
 gh workflow run ci.yaml --ref main -f published=true
 ```
+
+The default local `pnpm deployment:verify` path also installs only the entry
+tarball. It packs all eight packages, checks their contents, and uses npm
+`overrides` pointing to the seven internal library/config tarballs. This isolated
+consumer makes unpublished RC dependencies available without installing them as
+top-level dependencies. It proves local entry composition, not real registry
+dependency resolution, publication, provenance, or the `latest` dist-tag.
+Tarball overrides are never used in either registry mode.
+
+For a separately authorized stable release, update manifests to the reviewed stable
+versions and publish in dependency order first. Then verify the default consumer:
+
+```sh
+node scripts/verify-deployment.mjs --latest
+# Or the same three-OS CI consumer:
+gh workflow run ci.yaml --ref main -f latest=true
+```
+
+This mode reads `npm view pguide@latest version`, requires it to equal the entry
+manifest version, installs only `pguide@latest`, and applies the same exact
+transitive-version checks. It is not interchangeable with `--published`:
+successful exact RC installation does not prove default installation. The
+`published` and `latest` inputs are mutually exclusive; ordinary push/PR CI
+continues to use local packs. Neither mode publishes anything, and absent
+versions fail instead of silently falling back to older releases. The existing
+stable release hold remains in force: preparing a new RC or adding stable
+verification does not authorize publishing stable packages or moving `latest`.
 
 If the registry is blocked by network policy, inspect package metadata through
 the approved [npmx browser](https://npmx.dev/) and use the existing

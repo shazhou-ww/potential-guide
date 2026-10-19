@@ -1,6 +1,6 @@
 {
   "name": "@potential-guide/objective-portfolio-supervisor",
-  "version": "0.3.0-rc.0",
+  "version": "0.4.0-rc.0",
   "description": "Policy-driven supervision for a portfolio of objective regulators.",
   "type": "module",
   "sideEffects": false,

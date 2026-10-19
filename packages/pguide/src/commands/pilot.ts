@@ -20,7 +20,7 @@ import {
 } from "@potential-guide/objective-pilot";
 import { withPilot } from "../pilot-source.js";
 
-export const pilotCommandVersion = "0.3.0-rc.0";
+export const pilotCommandVersion = "0.4.0-rc.0";
 
 async function loadStaticPilot(path: string) {
   try {

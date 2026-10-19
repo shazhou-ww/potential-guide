@@ -50,7 +50,7 @@ import {
 } from "../acp-permissions.js";
 import { withPilot } from "../pilot-source.js";
 
-export const regulatorCommandVersion = "0.3.0-rc.0";
+export const regulatorCommandVersion = "0.4.0-rc.0";
 
 export const defaultRegulationQuota = Object.freeze({
   timeoutMs: 300_000,

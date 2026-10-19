@@ -469,7 +469,9 @@ async function sanity(subject, context, directory, selected) {
   const subjectFile = join(directory, "sanity-subject.json");
   await writeFile(subjectFile, JSON.stringify({ marker, expected }));
   const configPath = join(directory, "sanity-config.json");
-  const timeoutMs = Math.max(100, subject.timeoutMs - 8000);
+  // The outer deadline already bounds preparation, execution and cleanup. A fixed
+  // reserve could exhaust regulation during module startup, before any ACP prompt.
+  const timeoutMs = subject.timeoutMs;
   const config = {
     schemaVersion: 2,
     commandDirectories: (selected.config.commandDirectories ?? []).map((path) =>

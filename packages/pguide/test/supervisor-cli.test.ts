@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 import { type AgentProfile, atomicWrite } from "@potential-guide/cli-core";
 import type { PlannerPolicyInput } from "@potential-guide/objective-portfolio-supervisor";
 import { createAcpPlannerPolicy, plannerPrompt } from "../src/acp-planner.js";
@@ -39,6 +40,9 @@ for await (const line of createInterface({ input: process.stdin })) {
       result = { stopReason: "end_turn", summary: "Repaired" };
     } else {
       const context = JSON.parse(message.params.prompt[0].text.split("\\n").at(-1));
+      if (context.observations.fixture?.payload?.current?.levelId === "terminal" &&
+          context.previousQueue.demands.length === 0)
+        writeFileSync(marker + ".terminal", "observed");
       if (message.params.prompt[0].text.includes("Need a specialized verification tool"))
         writeFileSync(marker + ".planner-feedback", "acknowledged");
       const directives = context.candidates.map(goal => ({ goalId: goal.id, priority: goal.priority }));
@@ -232,9 +236,23 @@ test("supervise plans once without repairs, then continuously observes and execu
     const configuredExecutor = configured.agents["private-execution-agent"];
     delete configured.agents["private-execution-agent"];
     await writeFile(config, JSON.stringify(configured));
-    // Include startup, Git reload and a post-execution planner cycle under full-suite load.
-    running = run(bin("supervise"), [...args, "--execute", "--duration-ms", "15000"]);
-    const deadline = Date.now() + 16_000;
+    const runner = join(f.directory, "supervise-until-observed.mjs");
+    await writeFile(
+      runner,
+      `import {existsSync} from "node:fs";
+const timer = setInterval(() => {
+  if (existsSync(${JSON.stringify(`${marker}.terminal`)})) {
+    clearInterval(timer);
+    process.emit("SIGINT");
+  }
+}, 25);
+timer.unref();
+await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
+`,
+    );
+    // Duration is a failure watchdog, not the readiness/success condition.
+    running = run(runner, [...args, "--execute", "--duration-ms", "60000"]);
+    const deadline = Date.now() + 60_000;
     while ((await readFile(plannerLog, "utf8")).split('"method":"session/prompt"').length < 3) {
       assert.ok(Date.now() < deadline, "Supervisor did not start planning.");
       await new Promise((done) => setTimeout(done, 25));

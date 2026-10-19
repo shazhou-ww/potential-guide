@@ -204,8 +204,8 @@ nonce 的精确内容。空报完成、写错值、改检查器或伪造 report 
 
 默认每个 helper 总期限 20 秒，直接入口可配置 100–300000 毫秒；真实 Agent 冷启动可能
 超过默认期限。用户明确同意后可直接使用 `allowSanity:true, timeoutMs:180000`，
-不会自动重试真实 prompt。sanity 内部 Agent/调节配额为总期限减去 8 秒（至少 100 毫秒），
-仍受外层总期限约束；一次 Agent、一次 stall、probe 至多 3 秒且不重试。stdout+stderr 合计上限
+不会自动重试真实 prompt。sanity 内部 Agent/调节配额使用总期限，不预先扣除固定启动余量；
+准备、执行与复核仍共用外层总期限。一次 Agent、一次 stall、probe 至多 3 秒且不重试。stdout+stderr 合计上限
 256 KiB，超时/超限按 PID 终止进程树；配置、state、fixture 都位于独占目录并最终清理。
 helper 清除继承的 `GIT_*` 覆盖并禁用全局/系统 Git 配置，避免索引、工作树、模板、
 hooks 或签名配置把测试带到其他仓库；同样覆盖 `PGUIDE_STATE_DIRECTORY` 到独占目录。

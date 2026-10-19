@@ -3,10 +3,17 @@ import { existsSync } from "node:fs";
 import { access, chmod, cp, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { delimiter, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  assertLatestVersion,
+  consumerManifest,
+  consumerMode,
+  verifyConsumerGraph,
+} from "./deployment-consumer.mjs";
 import { releasePackages } from "./release-packages.mjs";
 import { createDeploymentWorkspace, execute } from "./verify-deployment-helpers.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
+const mode = consumerMode(process.argv.slice(2));
 const workspace = await createDeploymentWorkspace();
 const scratch = workspace.path;
 const packs = join(scratch, "packs");
@@ -18,10 +25,7 @@ const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const binExtension = process.platform === "win32" ? ".cmd" : "";
 const packageDefinitions = releasePackages;
-const installPublished = process.argv.includes("--published");
-for (const argument of process.argv.slice(2)) {
-  if (argument !== "--published") throw new Error(`Unknown verification argument: ${argument}`);
-}
+const installPublished = mode !== "packed";
 const expectedVersions = new Map();
 
 async function successful(command, args, options) {
@@ -36,15 +40,13 @@ function executable(name) {
 
 async function packAndInstall() {
   await mkdir(packs, { recursive: true });
-  const tarballs = [];
+  const tarballs = new Map();
   for (const definition of packageDefinitions) {
     const packageRoot = join(root, "packages", definition.directory);
     const packageManifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
     assert.equal(packageManifest.name, definition.name);
     expectedVersions.set(definition.name, packageManifest.version);
     if (installPublished) {
-      assert.match(packageManifest.version, /^0\.\d+\.\d+-rc\.\d+$/u);
-      tarballs.push(`${definition.name}@${packageManifest.version}`);
       continue;
     }
     const packedResult = await successful(
@@ -90,20 +92,23 @@ async function packAndInstall() {
       );
     }
     await access(packed.filename);
-    tarballs.push(resolve(packed.filename));
+    tarballs.set(definition.name, resolve(packed.filename));
     console.log(`packed ${definition.name}: ${paths.length} files`);
   }
 
   await mkdir(consumer, { recursive: true });
-  await writeFile(
-    join(consumer, "package.json"),
-    `${JSON.stringify({ name: "pguide-deployment-consumer", private: true }, null, 2)}\n`,
-  );
+  const manifest = consumerManifest(mode, expectedVersions, tarballs);
+  if (mode === "latest") {
+    const latest = await successful(npm, ["view", "pguide@latest", "version", "--json"]);
+    assertLatestVersion(JSON.parse(latest.stdout), expectedVersions.get("pguide"));
+  }
+  await writeFile(join(consumer, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   await successful(
     npm,
-    ["install", "--ignore-scripts", "--no-audit", "--no-fund", "--no-package-lock", ...tarballs],
+    ["install", "--ignore-scripts", "--no-audit", "--no-fund", "--no-package-lock"],
     { cwd: consumer },
   );
+  await verifyConsumerGraph(consumer, expectedVersions);
   for (const definition of packageDefinitions) {
     const installedManifest = JSON.parse(
       await readFile(join(consumer, "node_modules", ...definition.name.split("/"), "package.json")),
@@ -146,9 +151,7 @@ async function packAndInstall() {
   const smoke = join(consumer, "public-libraries.mjs");
   await writeFile(smoke, moduleSource);
   await successful(process.execPath, [smoke], { cwd: consumer });
-  console.log(
-    `${installPublished ? "registry RC" : "packed"} libraries installed and imported independently`,
-  );
+  console.log(`${mode} entry-only consumer: transitive versions and library imports verified`);
 }
 
 async function verifyCliContract() {
@@ -670,7 +673,8 @@ for await (const line of createInterface({input:process.stdin})) {
       },
     }),
   );
-  const scratchDirectory = join(consumer, "setup-scratch");
+  // Nested Git snapshots need path headroom on Windows even with core.longpaths.
+  const scratchDirectory = join(scratch, "s");
   const subject = join(consumer, "setup-subject.json");
   await writeFile(
     subject,

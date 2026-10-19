@@ -8,7 +8,11 @@ on:
   workflow_dispatch:
     inputs:
       published:
-        description: Verify exact published RC versions instead of local tarballs
+        description: Verify exact published manifest versions instead of local tarballs
+        type: boolean
+        default: false
+      latest:
+        description: Verify pguide@latest and expected transitive manifest versions (exclusive with published)
         type: boolean
         default: false
 
@@ -87,9 +91,17 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify packed CLI deployment
-        if: inputs.published != true
+        if: inputs.published != true && inputs.latest != true
         run: pnpm deployment:verify
 
-      - name: Verify published RC deployment
-        if: inputs.published == true
+      - name: Verify published exact-version deployment
+        if: inputs.published == true && inputs.latest != true
         run: node scripts/verify-deployment.mjs --published
+
+      - name: Verify default latest deployment
+        if: inputs.latest == true && inputs.published != true
+        run: node scripts/verify-deployment.mjs --latest
+
+      - name: Reject conflicting consumer inputs
+        if: inputs.latest == true && inputs.published == true
+        run: node scripts/verify-deployment.mjs --published --latest
