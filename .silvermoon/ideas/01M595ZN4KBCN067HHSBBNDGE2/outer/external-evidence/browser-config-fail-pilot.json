@@ -1,0 +1,304 @@
+{
+  "status": 200,
+  "message": "",
+  "payload": {
+    "current": {
+      "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#objectives/pnpm-monorepo/pilot.yaml",
+      "levelId": "structured"
+    },
+    "problems": [
+      {
+        "ref": {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#objectives/pnpm-monorepo/pilot.yaml",
+          "levelId": "structured",
+          "checkId": "deliveries",
+          "problemId": "delivery-incomplete"
+        },
+        "parameters": {
+          "report": {
+            "schemaVersion": 1,
+            "scope": "delivery-preparation",
+            "state": "fail",
+            "layer2": "checked",
+            "findings": [
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "contract-schema-v1",
+                "location": "requirements.json",
+                "evidence": "Versioned requirements contract is valid.",
+                "remedy": "",
+                "packages": [],
+                "requirements": []
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "global-config",
+                "location": "pnpm-workspace.yaml",
+                "evidence": "Workspace YAML and package metadata are parseable; supported field types checked.",
+                "remedy": "",
+                "packages": [],
+                "requirements": []
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "required-file",
+                "location": "README.md",
+                "evidence": "Required by pnpm-default-v1 or explicit policy.",
+                "remedy": "Restore the required file.",
+                "packages": [],
+                "requirements": []
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "required-file",
+                "location": "package.json",
+                "evidence": "Required by pnpm-default-v1 or explicit policy.",
+                "remedy": "Restore the required file.",
+                "packages": [],
+                "requirements": []
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "required-file",
+                "location": "pnpm-workspace.yaml",
+                "evidence": "Required by pnpm-default-v1 or explicit policy.",
+                "remedy": "Restore the required file.",
+                "packages": [],
+                "requirements": []
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "required-file",
+                "location": "turbo.json",
+                "evidence": "Required by pnpm-default-v1 or explicit policy.",
+                "remedy": "Restore the required file.",
+                "packages": [],
+                "requirements": []
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "layout-package-role",
+                "location": "packages/shared",
+                "evidence": "pnpm-default-v1: reusable and tooling packages belong under packages.",
+                "remedy": "Move only after authorization; update imports, workspace patterns, scripts and documentation references.",
+                "packages": [
+                  "shared"
+                ],
+                "requirements": [],
+                "targetDirectory": "packages"
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "layout-package-role",
+                "location": "apps/app",
+                "evidence": "pnpm-default-v1: applications belong under apps.",
+                "remedy": "Move only after authorization; update imports, workspace patterns, scripts and documentation references.",
+                "packages": [
+                  "app"
+                ],
+                "requirements": [],
+                "targetDirectory": "apps"
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "file-responsibility",
+                "location": "apps/app/docs/service-guide.md",
+                "evidence": "Confirmed application-owned guide",
+                "remedy": "",
+                "packages": [],
+                "requirements": []
+              },
+              {
+                "layer": 2,
+                "state": "pass",
+                "rule": "internal-role",
+                "location": "packages/shared/package.json",
+                "evidence": "Internal/tool packages must explicitly be private in pnpm-default-v1.",
+                "remedy": "Set private:true or declare a public package role instead.",
+                "packages": [
+                  "shared"
+                ],
+                "requirements": [
+                  "web-preview",
+                  "api-preview"
+                ]
+              },
+              {
+                "layer": 2,
+                "state": "pass",
+                "rule": "package-observed",
+                "location": "packages/shared/package.json",
+                "evidence": "All declared roles were evaluated; pass here does not override any unverified or failing checks.",
+                "remedy": "",
+                "packages": [
+                  "shared"
+                ],
+                "requirements": [
+                  "web-preview",
+                  "api-preview"
+                ]
+              },
+              {
+                "layer": 2,
+                "state": "pass",
+                "rule": "package-observed",
+                "location": "apps/app/package.json",
+                "evidence": "All declared roles were evaluated; pass here does not override any unverified or failing checks.",
+                "remedy": "",
+                "packages": [
+                  "app"
+                ],
+                "requirements": [
+                  "web-preview",
+                  "api-preview"
+                ]
+              },
+              {
+                "layer": 2,
+                "state": "pass",
+                "rule": "service-environment",
+                "location": "apps/app/site.json",
+                "evidence": "Service app must have a supported service delivery in the consumer's exact environment.",
+                "remedy": "Align the actual service delivery environment; package association alone is not evidence.",
+                "packages": [
+                  "app",
+                  "shared"
+                ],
+                "requirements": [
+                  "web-preview"
+                ]
+              },
+              {
+                "layer": 2,
+                "state": "not-applicable",
+                "rule": "oidc-preparation",
+                "location": "apps/app/site.json",
+                "evidence": "OIDC is not requested.",
+                "remedy": "",
+                "packages": [
+                  "app",
+                  "shared"
+                ],
+                "requirements": [
+                  "web-preview"
+                ]
+              },
+              {
+                "layer": 2,
+                "state": "not-applicable",
+                "rule": "independent-delivery",
+                "location": "apps/app/site.json",
+                "evidence": "No independent delivery constraint is declared.",
+                "remedy": "",
+                "packages": [
+                  "app",
+                  "shared"
+                ],
+                "requirements": [
+                  "web-preview"
+                ]
+              },
+              {
+                "layer": 2,
+                "state": "fail",
+                "rule": "browser-deployment",
+                "location": "apps/app/site.json",
+                "evidence": "Static deployment JSON entry/environment/output disagree with the requirement.",
+                "remedy": "Align deployment references; this JSON is a reference adapter, not a platform deployment.",
+                "packages": [
+                  "app",
+                  "shared"
+                ],
+                "requirements": [
+                  "web-preview"
+                ]
+              },
+              {
+                "layer": 2,
+                "state": "pass",
+                "rule": "delivery-artifact",
+                "location": "apps/app/site.json",
+                "evidence": "Only existing output files are observed; no build, deploy or migration is executed.",
+                "remedy": "Produce and verify artifacts separately.",
+                "packages": [
+                  "app",
+                  "shared"
+                ],
+                "requirements": [
+                  "web-preview"
+                ]
+              },
+              {
+                "layer": 2,
+                "state": "not-applicable",
+                "rule": "oidc-preparation",
+                "location": "apps/app/wrangler.json",
+                "evidence": "OIDC is not requested.",
+                "remedy": "",
+                "packages": [
+                  "app",
+                  "shared"
+                ],
+                "requirements": [
+                  "api-preview"
+                ]
+              },
+              {
+                "layer": 2,
+                "state": "not-applicable",
+                "rule": "independent-delivery",
+                "location": "apps/app/wrangler.json",
+                "evidence": "No independent delivery constraint is declared.",
+                "remedy": "",
+                "packages": [
+                  "app",
+                  "shared"
+                ],
+                "requirements": [
+                  "api-preview"
+                ]
+              },
+              {
+                "layer": 2,
+                "state": "pass",
+                "rule": "delivery-artifact",
+                "location": "apps/app/wrangler.json",
+                "evidence": "Only existing output files are observed; no build, deploy or migration is executed.",
+                "remedy": "Produce and verify artifacts separately.",
+                "packages": [
+                  "app",
+                  "shared"
+                ],
+                "requirements": [
+                  "api-preview"
+                ]
+              }
+            ],
+            "evidenceKind": "configuration-and-existing-files",
+            "onlineVerified": false,
+            "limitations": [
+              "No builds, package packing, isolated consumers or CLI command/extension discovery are executed; existing required artifacts and delivery configuration are checked.",
+              "Static source boundaries and declared runtimes are checked, not third-party transitive execution or engine-range intersections.",
+              "No remote resource provisioning, secret-value access, deployment, migration, live API health or online OIDC login is performed.",
+              "These outside-scope proofs do not block delivery-preparation readiness; unsupported adapters, unresolved imports and missing required configuration/artifacts remain blocking findings."
+            ]
+          }
+        }
+      }
+    ],
+    "gapSummary": "配置失败、证据不足或不支持的能力均不能判为通过。",
+    "observedAt": "2026-10-19T06:11:20.749Z",
+    "versions": {
+      "git+https://github.com/shazhou-ww/potential-guide.git#objectives/pnpm-monorepo/pilot.yaml": "65c14f1dff3e169c917d2cf67c093d2a16e59df4"
+    }
+  }
+}

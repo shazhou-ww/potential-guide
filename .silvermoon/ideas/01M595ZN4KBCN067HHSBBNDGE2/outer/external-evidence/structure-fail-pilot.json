@@ -1,0 +1,152 @@
+{
+  "status": 200,
+  "message": "",
+  "payload": {
+    "current": {
+      "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#objectives/pnpm-monorepo/pilot.yaml",
+      "levelId": "initial"
+    },
+    "problems": [
+      {
+        "ref": {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#objectives/pnpm-monorepo/pilot.yaml",
+          "levelId": "initial",
+          "checkId": "structure",
+          "problemId": "structure-incomplete"
+        },
+        "parameters": {
+          "report": {
+            "schemaVersion": 1,
+            "scope": "delivery-preparation",
+            "state": "fail",
+            "layer2": "blocked",
+            "findings": [
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "contract-schema-v1",
+                "location": "requirements.json",
+                "evidence": "Versioned requirements contract is valid.",
+                "remedy": "",
+                "packages": [],
+                "requirements": []
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "global-config",
+                "location": "pnpm-workspace.yaml",
+                "evidence": "Workspace YAML and package metadata are parseable; supported field types checked.",
+                "remedy": "",
+                "packages": [],
+                "requirements": []
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "required-file",
+                "location": "README.md",
+                "evidence": "Required by pnpm-default-v1 or explicit policy.",
+                "remedy": "Restore the required file.",
+                "packages": [],
+                "requirements": []
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "required-file",
+                "location": "package.json",
+                "evidence": "Required by pnpm-default-v1 or explicit policy.",
+                "remedy": "Restore the required file.",
+                "packages": [],
+                "requirements": []
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "required-file",
+                "location": "pnpm-workspace.yaml",
+                "evidence": "Required by pnpm-default-v1 or explicit policy.",
+                "remedy": "Restore the required file.",
+                "packages": [],
+                "requirements": []
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "required-file",
+                "location": "turbo.json",
+                "evidence": "Required by pnpm-default-v1 or explicit policy.",
+                "remedy": "Restore the required file.",
+                "packages": [],
+                "requirements": []
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "layout-package-role",
+                "location": "packages/shared",
+                "evidence": "pnpm-default-v1: reusable and tooling packages belong under packages.",
+                "remedy": "Move only after authorization; update imports, workspace patterns, scripts and documentation references.",
+                "packages": [
+                  "shared"
+                ],
+                "requirements": [],
+                "targetDirectory": "packages"
+              },
+              {
+                "layer": 1,
+                "state": "pass",
+                "rule": "layout-package-role",
+                "location": "apps/app",
+                "evidence": "pnpm-default-v1: applications belong under apps.",
+                "remedy": "Move only after authorization; update imports, workspace patterns, scripts and documentation references.",
+                "packages": [
+                  "app"
+                ],
+                "requirements": [],
+                "targetDirectory": "apps"
+              },
+              {
+                "layer": 1,
+                "state": "fail",
+                "rule": "file-responsibility",
+                "location": "service-guide.md",
+                "evidence": "pnpm-default-v1 / assignment: Confirmed application-owned guide.",
+                "remedy": "After authorization, preserve content and update imports, scripts, links and tool-fixed references; never overwrite an existing target.",
+                "packages": [
+                  "app"
+                ],
+                "requirements": [],
+                "targetDirectory": "apps/app/docs"
+              },
+              {
+                "layer": 2,
+                "state": "unverified",
+                "rule": "layer-order",
+                "location": "requirements.json",
+                "evidence": "Layer 2 blocked: structure or mappings are not fully established.",
+                "remedy": "Resolve layer 1 first.",
+                "packages": [],
+                "requirements": []
+              }
+            ],
+            "evidenceKind": "configuration-and-existing-files",
+            "onlineVerified": false,
+            "limitations": [
+              "No builds, package packing, isolated consumers or CLI command/extension discovery are executed; existing required artifacts and delivery configuration are checked.",
+              "Static source boundaries and declared runtimes are checked, not third-party transitive execution or engine-range intersections.",
+              "No remote resource provisioning, secret-value access, deployment, migration, live API health or online OIDC login is performed.",
+              "These outside-scope proofs do not block delivery-preparation readiness; unsupported adapters, unresolved imports and missing required configuration/artifacts remain blocking findings."
+            ]
+          }
+        }
+      }
+    ],
+    "gapSummary": "报告中存在结构失败或待分类内容，不能开始已确认需求的交付检查。",
+    "observedAt": "2026-10-19T06:05:51.131Z",
+    "versions": {
+      "git+https://github.com/shazhou-ww/potential-guide.git#objectives/pnpm-monorepo/pilot.yaml": "65c14f1dff3e169c917d2cf67c093d2a16e59df4"
+    }
+  }
+}

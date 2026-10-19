@@ -1,0 +1,16 @@
+{
+  "status": 200,
+  "message": "",
+  "payload": {
+    "current": {
+      "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#objectives/pnpm-monorepo/pilot.yaml",
+      "levelId": "terminal"
+    },
+    "problems": [],
+    "gapSummary": "",
+    "observedAt": "2026-10-19T06:07:11.176Z",
+    "versions": {
+      "git+https://github.com/shazhou-ww/potential-guide.git#objectives/pnpm-monorepo/pilot.yaml": "65c14f1dff3e169c917d2cf67c093d2a16e59df4"
+    }
+  }
+}

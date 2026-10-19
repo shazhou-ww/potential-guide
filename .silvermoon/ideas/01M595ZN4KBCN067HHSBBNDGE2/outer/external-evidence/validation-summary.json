@@ -1,0 +1,957 @@
+{
+  "sourceRevision": "65c14f1dff3e169c917d2cf67c093d2a16e59df4",
+  "executedDeploymentRevision": "71dd6bff6dfb369a0c155ac15d109fb7def2f595",
+  "checkerRoot": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+  "targetRoot": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-target",
+  "isolatedRoot": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+  "isolatedInitialCommit": "efccc4e8feee05c09b32ddee5ac6db3f638b66ef",
+  "node": "v24.11.1",
+  "pguideVersion": "{\n  \"schemaVersion\": 1,\n  \"name\": \"pguide\",\n  \"version\": \"0.4.0-rc.0\"\n}",
+  "results": [
+    {
+      "name": "repository",
+      "state": "pass",
+      "level": "terminal",
+      "before": {
+        "files": 538,
+        "sha256": "a2f35494560e711a5a0035c25cd3bb4ba9c0d3de7308f069db16b044ce8ec4f6"
+      },
+      "after": {
+        "files": 538,
+        "sha256": "a2f35494560e711a5a0035c25cd3bb4ba9c0d3de7308f069db16b044ce8ec4f6"
+      },
+      "beforeStatus": "",
+      "afterStatus": "",
+      "requiredRule": null,
+      "subject": {
+        "root": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-target",
+        "contract": "objectives/pnpm-monorepo/examples/repository.json",
+        "checkerModule": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\monorepo-objective\\dist\\index.js"
+      }
+    },
+    {
+      "name": "isolated-pass",
+      "state": "pass",
+      "level": "terminal",
+      "before": {
+        "files": 15,
+        "sha256": "20b15a21c3d942df9be8ae36c9fe5f27c8059db6ce19714931c72e2043027ad5"
+      },
+      "after": {
+        "files": 15,
+        "sha256": "20b15a21c3d942df9be8ae36c9fe5f27c8059db6ce19714931c72e2043027ad5"
+      },
+      "beforeStatus": "",
+      "afterStatus": "",
+      "requiredRule": null,
+      "subject": {
+        "root": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+        "contract": "requirements.json",
+        "checkerModule": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\monorepo-objective\\dist\\index.js"
+      }
+    },
+    {
+      "name": "structure-fail",
+      "state": "fail",
+      "level": "initial",
+      "before": {
+        "files": 16,
+        "sha256": "d720b024a93191bad92cfab98e6a394a4e9776e051c1496989738d53567882e3"
+      },
+      "after": {
+        "files": 16,
+        "sha256": "d720b024a93191bad92cfab98e6a394a4e9776e051c1496989738d53567882e3"
+      },
+      "beforeStatus": "M requirements.json\n?? service-guide.md",
+      "afterStatus": "M requirements.json\n?? service-guide.md",
+      "requiredRule": "file-responsibility",
+      "subject": {
+        "root": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+        "contract": "requirements.json",
+        "checkerModule": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\monorepo-objective\\dist\\index.js"
+      }
+    },
+    {
+      "name": "structure-repaired",
+      "state": "pass",
+      "level": "terminal",
+      "before": {
+        "files": 16,
+        "sha256": "69c106fde157471b91202e1bd52c0144861fd5359d510b68647f4f3f11345b2d"
+      },
+      "after": {
+        "files": 16,
+        "sha256": "69c106fde157471b91202e1bd52c0144861fd5359d510b68647f4f3f11345b2d"
+      },
+      "beforeStatus": "M requirements.json\n?? apps/app/docs/service-guide.md",
+      "afterStatus": "M requirements.json\n?? apps/app/docs/service-guide.md",
+      "requiredRule": null,
+      "subject": {
+        "root": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+        "contract": "requirements.json",
+        "checkerModule": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\monorepo-objective\\dist\\index.js"
+      }
+    },
+    {
+      "name": "dependency-fail",
+      "state": "fail",
+      "level": "structured",
+      "before": {
+        "files": 16,
+        "sha256": "b5ba0d2cf709d59a4968a197ca5e897f98583532dc2c039424aad48b275d1366"
+      },
+      "after": {
+        "files": 16,
+        "sha256": "b5ba0d2cf709d59a4968a197ca5e897f98583532dc2c039424aad48b275d1366"
+      },
+      "beforeStatus": "M requirements.json\n?? apps/app/docs/service-guide.md",
+      "afterStatus": "M requirements.json\n?? apps/app/docs/service-guide.md",
+      "requiredRule": "dependency-direction",
+      "subject": {
+        "root": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+        "contract": "requirements.json",
+        "checkerModule": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\monorepo-objective\\dist\\index.js"
+      }
+    },
+    {
+      "name": "dependency-repaired",
+      "state": "pass",
+      "level": "terminal",
+      "before": {
+        "files": 16,
+        "sha256": "69c106fde157471b91202e1bd52c0144861fd5359d510b68647f4f3f11345b2d"
+      },
+      "after": {
+        "files": 16,
+        "sha256": "69c106fde157471b91202e1bd52c0144861fd5359d510b68647f4f3f11345b2d"
+      },
+      "beforeStatus": "M requirements.json\n?? apps/app/docs/service-guide.md",
+      "afterStatus": "M requirements.json\n?? apps/app/docs/service-guide.md",
+      "requiredRule": null,
+      "subject": {
+        "root": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+        "contract": "requirements.json",
+        "checkerModule": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\monorepo-objective\\dist\\index.js"
+      }
+    },
+    {
+      "name": "browser-config-fail",
+      "state": "fail",
+      "level": "structured",
+      "before": {
+        "files": 16,
+        "sha256": "e8250dc0874076acf0da3e9ad4b00bda414131276cfb64ee1ff0903a67fc90c2"
+      },
+      "after": {
+        "files": 16,
+        "sha256": "e8250dc0874076acf0da3e9ad4b00bda414131276cfb64ee1ff0903a67fc90c2"
+      },
+      "beforeStatus": "M apps/app/site.json\n M requirements.json\n?? apps/app/docs/service-guide.md",
+      "afterStatus": "M apps/app/site.json\n M requirements.json\n?? apps/app/docs/service-guide.md",
+      "requiredRule": "browser-deployment",
+      "subject": {
+        "root": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+        "contract": "requirements.json",
+        "checkerModule": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\monorepo-objective\\dist\\index.js"
+      }
+    },
+    {
+      "name": "browser-config-repaired",
+      "state": "pass",
+      "level": "terminal",
+      "before": {
+        "files": 16,
+        "sha256": "69c106fde157471b91202e1bd52c0144861fd5359d510b68647f4f3f11345b2d"
+      },
+      "after": {
+        "files": 16,
+        "sha256": "69c106fde157471b91202e1bd52c0144861fd5359d510b68647f4f3f11345b2d"
+      },
+      "beforeStatus": "M requirements.json\n?? apps/app/docs/service-guide.md",
+      "afterStatus": "M requirements.json\n?? apps/app/docs/service-guide.md",
+      "requiredRule": null,
+      "subject": {
+        "root": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+        "contract": "requirements.json",
+        "checkerModule": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\monorepo-objective\\dist\\index.js"
+      }
+    },
+    {
+      "name": "worker-config-fail",
+      "state": "fail",
+      "level": "structured",
+      "before": {
+        "files": 16,
+        "sha256": "3cc7a1b3c9e1bd4b8cb46a766f75a7afbcb98462fa2d52edcc8af29c346993fc"
+      },
+      "after": {
+        "files": 16,
+        "sha256": "3cc7a1b3c9e1bd4b8cb46a766f75a7afbcb98462fa2d52edcc8af29c346993fc"
+      },
+      "beforeStatus": "M apps/app/wrangler.json\n M requirements.json\n?? apps/app/docs/service-guide.md",
+      "afterStatus": "M apps/app/wrangler.json\n M requirements.json\n?? apps/app/docs/service-guide.md",
+      "requiredRule": "worker-entry",
+      "subject": {
+        "root": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+        "contract": "requirements.json",
+        "checkerModule": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\monorepo-objective\\dist\\index.js"
+      }
+    },
+    {
+      "name": "worker-config-repaired",
+      "state": "pass",
+      "level": "terminal",
+      "before": {
+        "files": 16,
+        "sha256": "69c106fde157471b91202e1bd52c0144861fd5359d510b68647f4f3f11345b2d"
+      },
+      "after": {
+        "files": 16,
+        "sha256": "69c106fde157471b91202e1bd52c0144861fd5359d510b68647f4f3f11345b2d"
+      },
+      "beforeStatus": "M requirements.json\n?? apps/app/docs/service-guide.md",
+      "afterStatus": "M requirements.json\n?? apps/app/docs/service-guide.md",
+      "requiredRule": null,
+      "subject": {
+        "root": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+        "contract": "requirements.json",
+        "checkerModule": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\monorepo-objective\\dist\\index.js"
+      }
+    },
+    {
+      "name": "service-environment-fail",
+      "state": "fail",
+      "level": "structured",
+      "before": {
+        "files": 16,
+        "sha256": "7c9ab758f6bd0808567f1d8f4c01f95c83604f925ba950f1bd3d52ee3318674a"
+      },
+      "after": {
+        "files": 16,
+        "sha256": "7c9ab758f6bd0808567f1d8f4c01f95c83604f925ba950f1bd3d52ee3318674a"
+      },
+      "beforeStatus": "M apps/app/wrangler.json\n M requirements.json\n?? apps/app/docs/service-guide.md",
+      "afterStatus": "M apps/app/wrangler.json\n M requirements.json\n?? apps/app/docs/service-guide.md",
+      "requiredRule": "service-environment",
+      "subject": {
+        "root": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+        "contract": "requirements.json",
+        "checkerModule": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\monorepo-objective\\dist\\index.js"
+      }
+    },
+    {
+      "name": "service-environment-repaired",
+      "state": "pass",
+      "level": "terminal",
+      "before": {
+        "files": 16,
+        "sha256": "69c106fde157471b91202e1bd52c0144861fd5359d510b68647f4f3f11345b2d"
+      },
+      "after": {
+        "files": 16,
+        "sha256": "69c106fde157471b91202e1bd52c0144861fd5359d510b68647f4f3f11345b2d"
+      },
+      "beforeStatus": "M requirements.json\n?? apps/app/docs/service-guide.md",
+      "afterStatus": "M requirements.json\n?? apps/app/docs/service-guide.md",
+      "requiredRule": null,
+      "subject": {
+        "root": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+        "contract": "requirements.json",
+        "checkerModule": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\monorepo-objective\\dist\\index.js"
+      }
+    }
+  ],
+  "commands": [
+    {
+      "command": "git",
+      "args": [
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-target",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-target",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-target",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\check.mjs",
+        "deliveries",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\repository-subject.json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\pguide\\dist\\bin.js",
+        "probe",
+        "--config",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-cli-config.json",
+        "--pilot",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\pilot.yaml",
+        "--revision",
+        "65c14f1dff3e169c917d2cf67c093d2a16e59df4",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\repository-subject.json",
+        "--format",
+        "json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-target",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "init",
+        "--quiet"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "add",
+        "."
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "-c",
+        "user.name=Deployment Validation",
+        "-c",
+        "user.email=validation@example.invalid",
+        "commit",
+        "--quiet",
+        "-m",
+        "Record isolated browser and Worker validation target"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\check.mjs",
+        "deliveries",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\isolated-pass-subject.json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\pguide\\dist\\bin.js",
+        "probe",
+        "--config",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-cli-config.json",
+        "--pilot",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\pilot.yaml",
+        "--revision",
+        "65c14f1dff3e169c917d2cf67c093d2a16e59df4",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\isolated-pass-subject.json",
+        "--format",
+        "json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\check.mjs",
+        "deliveries",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\structure-fail-subject.json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\pguide\\dist\\bin.js",
+        "probe",
+        "--config",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-cli-config.json",
+        "--pilot",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\pilot.yaml",
+        "--revision",
+        "65c14f1dff3e169c917d2cf67c093d2a16e59df4",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\structure-fail-subject.json",
+        "--format",
+        "json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\check.mjs",
+        "deliveries",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\structure-repaired-subject.json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\pguide\\dist\\bin.js",
+        "probe",
+        "--config",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-cli-config.json",
+        "--pilot",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\pilot.yaml",
+        "--revision",
+        "65c14f1dff3e169c917d2cf67c093d2a16e59df4",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\structure-repaired-subject.json",
+        "--format",
+        "json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\check.mjs",
+        "deliveries",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\dependency-fail-subject.json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\pguide\\dist\\bin.js",
+        "probe",
+        "--config",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-cli-config.json",
+        "--pilot",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\pilot.yaml",
+        "--revision",
+        "65c14f1dff3e169c917d2cf67c093d2a16e59df4",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\dependency-fail-subject.json",
+        "--format",
+        "json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\check.mjs",
+        "deliveries",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\dependency-repaired-subject.json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\pguide\\dist\\bin.js",
+        "probe",
+        "--config",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-cli-config.json",
+        "--pilot",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\pilot.yaml",
+        "--revision",
+        "65c14f1dff3e169c917d2cf67c093d2a16e59df4",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\dependency-repaired-subject.json",
+        "--format",
+        "json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\check.mjs",
+        "deliveries",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\browser-config-fail-subject.json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\pguide\\dist\\bin.js",
+        "probe",
+        "--config",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-cli-config.json",
+        "--pilot",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\pilot.yaml",
+        "--revision",
+        "65c14f1dff3e169c917d2cf67c093d2a16e59df4",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\browser-config-fail-subject.json",
+        "--format",
+        "json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\check.mjs",
+        "deliveries",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\browser-config-repaired-subject.json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\pguide\\dist\\bin.js",
+        "probe",
+        "--config",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-cli-config.json",
+        "--pilot",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\pilot.yaml",
+        "--revision",
+        "65c14f1dff3e169c917d2cf67c093d2a16e59df4",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\browser-config-repaired-subject.json",
+        "--format",
+        "json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\check.mjs",
+        "deliveries",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\worker-config-fail-subject.json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\pguide\\dist\\bin.js",
+        "probe",
+        "--config",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-cli-config.json",
+        "--pilot",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\pilot.yaml",
+        "--revision",
+        "65c14f1dff3e169c917d2cf67c093d2a16e59df4",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\worker-config-fail-subject.json",
+        "--format",
+        "json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\check.mjs",
+        "deliveries",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\worker-config-repaired-subject.json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\pguide\\dist\\bin.js",
+        "probe",
+        "--config",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-cli-config.json",
+        "--pilot",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\pilot.yaml",
+        "--revision",
+        "65c14f1dff3e169c917d2cf67c093d2a16e59df4",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\worker-config-repaired-subject.json",
+        "--format",
+        "json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\check.mjs",
+        "deliveries",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\service-environment-fail-subject.json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\pguide\\dist\\bin.js",
+        "probe",
+        "--config",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-cli-config.json",
+        "--pilot",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\pilot.yaml",
+        "--revision",
+        "65c14f1dff3e169c917d2cf67c093d2a16e59df4",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\service-environment-fail-subject.json",
+        "--format",
+        "json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\check.mjs",
+        "deliveries",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\service-environment-repaired-subject.json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\pguide\\dist\\bin.js",
+        "probe",
+        "--config",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-cli-config.json",
+        "--pilot",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\objectives\\pnpm-monorepo\\pilot.yaml",
+        "--revision",
+        "65c14f1dff3e169c917d2cf67c093d2a16e59df4",
+        "--subject-file",
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\service-environment-repaired-subject.json",
+        "--format",
+        "json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    },
+    {
+      "command": "git",
+      "args": [
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-browser-worker",
+      "exitCode": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker\\packages\\pguide\\dist\\bin.js",
+        "--version",
+        "--format",
+        "json"
+      ],
+      "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\93092502-4198-40a9-9cbc-f21ac1ac8bf3\\files\\outer-checker",
+      "exitCode": 0
+    }
+  ],
+  "onlineVerified": false,
+  "noTargetScriptsExecuted": true
+}

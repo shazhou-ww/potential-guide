@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "policy": {
+    "source": "pnpm-default-v1",
+    "directories": {
+      "apps": "apps",
+      "packages": "packages",
+      "docs": "docs",
+      "scripts": "scripts"
+    },
+    "requiredFiles": [],
+    "exceptions": [],
+    "assignments": [
+      {
+        "path": "apps/app/docs/service-guide.md",
+        "purpose": "package-doc",
+        "owner": "app",
+        "reason": "Confirmed application-owned guide"
+      }
+    ],
+    "allowedDirectories": [],
+    "dependencyExceptions": []
+  },
+  "workspaces": [
+    {
+      "name": "shared",
+      "path": "packages/shared",
+      "roles": [
+        "internal"
+      ],
+      "runtime": "universal",
+      "allows": [],
+      "entries": [
+        "src/index.ts"
+      ],
+      "sources": [
+        "src/index.ts"
+      ],
+      "tasks": [
+        "build",
+        "test",
+        "typecheck"
+      ]
+    },
+    {
+      "name": "app",
+      "path": "apps/app",
+      "roles": [
+        "browser",
+        "cloudflare-worker"
+      ],
+      "runtime": "universal",
+      "allows": [
+        "shared"
+      ],
+      "entries": [
+        "src/browser.ts",
+        "src/worker.ts"
+      ],
+      "sources": [
+        "src/browser.ts",
+        "src/worker.ts"
+      ],
+      "tasks": [
+        "build",
+        "test",
+        "typecheck"
+      ]
+    }
+  ],
+  "deliveries": [
+    {
+      "id": "web-preview",
+      "purpose": "Isolated browser delivery",
+      "kind": "browser",
+      "packages": [
+        "app",
+        "shared"
+      ],
+      "entry": {
+        "package": "app",
+        "path": "src/browser.ts"
+      },
+      "runtime": "browser",
+      "environment": "preview",
+      "config": "apps/app/site.json",
+      "output": "apps/app/dist",
+      "resources": [],
+      "services": [
+        "app"
+      ],
+      "capabilities": [],
+      "independent": false
+    },
+    {
+      "id": "api-preview",
+      "purpose": "Isolated Worker delivery",
+      "kind": "cloudflare-worker",
+      "packages": [
+        "app",
+        "shared"
+      ],
+      "entry": {
+        "package": "app",
+        "path": "src/worker.ts"
+      },
+      "runtime": "worker",
+      "environment": "preview",
+      "config": "apps/app/wrangler.json",
+      "output": "apps/app/dist",
+      "resources": [
+        {
+          "name": "DB",
+          "kind": "resource",
+          "visibility": "server",
+          "supply": "platform",
+          "environment": "preview"
+        }
+      ],
+      "services": [],
+      "capabilities": [],
+      "independent": false
+    }
+  ]
+}
