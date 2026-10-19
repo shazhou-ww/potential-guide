@@ -1,0 +1,114 @@
+schemaVersion: 1
+domainSchema:
+  type: object
+  additionalProperties: false
+  required: [environment, user, home, workspace, scratchDirectory, cacheDirectory, logDirectory, tasksDirectory, stacks]
+  properties:
+    target:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [type]
+          properties:
+            type: {const: local}
+        - type: object
+          additionalProperties: false
+          required: [type, container]
+          properties:
+            type: {const: docker}
+            container: {type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_.-]*$(?![\s\S])'}
+    environment: {enum: [container, native-linux, wsl]}
+    user: {type: string, pattern: '^[a-zA-Z_][a-zA-Z0-9_-]*[$]?$(?![\s\S])'}
+    home: {type: string, pattern: '^/(?!/)(?!$)(?!\.{1,2}(?:/|$))(?!.*\/\.{1,2}(?:/|$))(?!.*//)(?!.*[\u0000\r\n]).*[^/]$'}
+    workspace: {type: string, pattern: '^/(?!/)(?!$)(?!\.{1,2}(?:/|$))(?!.*\/\.{1,2}(?:/|$))(?!.*//)(?!.*[\u0000\r\n]).*[^/]$'}
+    scratchDirectory: {type: string, pattern: '^/(?!/)(?!$)(?!\.{1,2}(?:/|$))(?!.*\/\.{1,2}(?:/|$))(?!.*//)(?!.*[\u0000\r\n]).*[^/]$'}
+    cacheDirectory: {type: string, pattern: '^/(?!/)(?!$)(?!\.{1,2}(?:/|$))(?!.*\/\.{1,2}(?:/|$))(?!.*//)(?!.*[\u0000\r\n]).*[^/]$'}
+    logDirectory: {type: string, pattern: '^/(?!/)(?!$)(?!\.{1,2}(?:/|$))(?!.*\/\.{1,2}(?:/|$))(?!.*//)(?!.*[\u0000\r\n]).*[^/]$'}
+    tasksDirectory: {type: string, pattern: '^/(?!/)(?!$)(?!\.{1,2}(?:/|$))(?!.*\/\.{1,2}(?:/|$))(?!.*//)(?!.*[\u0000\r\n]).*[^/]$'}
+    stacks:
+      type: array
+      uniqueItems: true
+      items: {enum: [typescript, python, cpp, rust]}
+    minimumVersions:
+      type: object
+      additionalProperties: false
+      properties:
+        git: {type: string, pattern: '^\d+(?:\.\d+)*$(?![\s\S])'}
+        node: {type: string, pattern: '^\d+(?:\.\d+)*$(?![\s\S])'}
+        npm: {type: string, pattern: '^\d+(?:\.\d+)*$(?![\s\S])'}
+        tsc: {type: string, pattern: '^\d+(?:\.\d+)*$(?![\s\S])'}
+        python3: {type: string, pattern: '^\d+(?:\.\d+)*$(?![\s\S])'}
+        c++: {type: string, pattern: '^\d+(?:\.\d+)*$(?![\s\S])'}
+        cmake: {type: string, pattern: '^\d+(?:\.\d+)*$(?![\s\S])'}
+        ninja: {type: string, pattern: '^\d+(?:\.\d+)*$(?![\s\S])'}
+        rustup: {type: string, pattern: '^\d+(?:\.\d+)*$(?![\s\S])'}
+        rustc: {type: string, pattern: '^\d+(?:\.\d+)*$(?![\s\S])'}
+        cargo: {type: string, pattern: '^\d+(?:\.\d+)*$(?![\s\S])'}
+    policy:
+      type: object
+      additionalProperties: false
+      properties:
+        minFreeBytes: {type: number, minimum: 0}
+        minFreeInodes: {type: number, minimum: 0}
+        retentionSeconds: {type: number, minimum: 0}
+        historyMinSamples: {type: integer, minimum: 3, maximum: 9007199254740991}
+        historyMinSpanMs: {type: number, minimum: 1000}
+        historyMaxAgeMs: {type: number, minimum: 0}
+        maxCacheGrowthBytesPerSecond: {type: number, minimum: 0}
+        maxLogGrowthBytesPerSecond: {type: number, minimum: 0}
+        maxPackageIndexAgeSeconds: {type: number, minimum: 0}
+    network:
+      type: object
+      additionalProperties: false
+      required: [dns, urls]
+      properties:
+        dns:
+          type: array
+          items: {type: string, maxLength: 253, pattern: '^[A-Za-z0-9][A-Za-z0-9.-]*$(?![\s\S])'}
+        urls:
+          type: array
+          items: {type: string, pattern: '^https?://[A-Za-z0-9][A-Za-z0-9.-]*(?::(?:[1-9]\d{0,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5]))?(?:/[^\s@\u0000-\u001f]*)?$(?![\s\S])'}
+    history:
+      type: array
+      maxItems: 10000
+      items:
+        type: object
+        additionalProperties: false
+        required: [hostname, user, home, measuredAt, freeBytes, freeInodes, cacheBytes, logBytes]
+        properties:
+          hostname: {type: string, minLength: 1, pattern: '^[^\u0000\r\n]+$(?![\s\S])'}
+          user: {type: string, minLength: 1, pattern: '^[^\u0000\r\n]+$(?![\s\S])'}
+          home: {type: string, pattern: '^/(?!/)(?!$)(?!\.{1,2}(?:/|$))(?!.*\/\.{1,2}(?:/|$))(?!.*//)(?!.*[\u0000\r\n]).*[^/]$'}
+          measuredAt: {type: number, minimum: 0}
+          freeBytes: {type: number, minimum: 0}
+          freeInodes: {type: number, minimum: 0}
+          cacheBytes: {type: number, minimum: 0}
+          logBytes: {type: number, minimum: 0}
+levels:
+  - id: initial
+    advancement:
+      checks:
+        - id: identity
+          problems: [identity-mismatch, environment-mismatch, directory-unusable, sudo-unavailable]
+  - id: managed
+    advancement:
+      checks:
+        - id: system
+          problems: [directory-unusable, capacity-low, inodes-low, unsupported-package-manager, package-database-unhealthy, dns-unavailable, http-unavailable]
+  - id: system-ready
+    advancement:
+      checks:
+        - id: toolchains
+          problems: [directory-unusable, tool-missing, tool-version, toolchain-failed]
+  - id: development-ready
+    advancement:
+      checks:
+        - id: order
+          problems: [layout-invalid, directory-unusable, task-registry-invalid, task-orphaned, task-overdue, task-residue, task-process-leftover]
+  - id: orderly
+    advancement:
+      checks:
+        - id: sustainability
+          problems: [directory-unusable, history-insufficient, history-invalid, cache-growth, log-growth, unsupported-package-manager, package-index-stale, updates-pending, reboot-required]
+defaultLanguage: zh-CN
+languages: [zh-CN]

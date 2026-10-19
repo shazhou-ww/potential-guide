@@ -16,6 +16,7 @@
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run pack:check",
     "clean": "turbo run clean && node -e \"for (const path of ['.cache', '.turbo']) require('node:fs').rmSync(path, { recursive: true, force: true })\"",
     "deployment:verify": "pnpm run build && node scripts/verify-deployment.mjs",
+    "health:verify": "pnpm run build && node scripts/verify-development-health.mjs",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "lint": "turbo run lint && biome lint scripts objectives",

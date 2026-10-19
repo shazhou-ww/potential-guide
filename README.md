@@ -104,6 +104,20 @@ For real Agents needing longer startup, the direct helper accepts explicit
 `timeoutMs:180000`; Pilot wrappers reject budgets beyond their 30-second outer
 probe allowance. A successful direct check is not a cached Git Pilot terminal receipt.
 
+### Maintain a development environment
+
+The independent [development-machine health Pilot](./objectives/development-machine-health/README.md)
+checks a dedicated Linux account, basic system health, selected TypeScript/Python/C++/Rust
+toolchains, task residue and sampled health trends. Checks do not install or repair;
+an authorized Agent performs maintenance and re-observes. Docker targets are inspected
+inside the named container, never by falling back to the host.
+
+Run `pnpm health:verify --report <absolute-report.json>` for the local Docker
+healthy/fault/recovery matrix after committing the Pilot and verification script.
+It uses disposable, resource-bounded containers without host mounts, Docker socket
+access or external runtime networking. Docker verification is the delivery scope;
+it does not establish native Linux, WSL host or long-term health.
+
 ## Publishing
 
 Releases use package-specific tags and npm Trusted Publishing. Manually publish
