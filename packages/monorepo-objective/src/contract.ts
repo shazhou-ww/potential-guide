@@ -14,7 +14,7 @@ export interface Workspace {
 }
 export interface Resource {
   name: string;
-  kind: "configuration" | "secret" | "resource" | "identity";
+  kind: "configuration" | "secret" | "resource" | "identity" | "service";
   visibility: "public" | "server";
   supply: "build" | "runtime" | "platform";
   environment: string;
@@ -168,7 +168,7 @@ export const contractSchema = object(
             object(
               {
                 name: text,
-                kind: { enum: ["configuration", "secret", "resource", "identity"] },
+                kind: { enum: ["configuration", "secret", "resource", "identity", "service"] },
                 visibility: { enum: ["public", "server"] },
                 supply: { enum: ["build", "runtime", "platform"] },
                 environment: text,

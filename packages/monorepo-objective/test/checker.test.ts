@@ -514,6 +514,9 @@ test("role combinations do not force browser and Worker into separate packages",
       runtime: "worker",
       entry: { package: "app", path: "src/service.ts" },
       config: "apps/app/worker.json",
+      resources: [],
+      services: [],
+      capabilities: [],
     });
     let report = await check();
     assert.equal(report.layer2, "checked");
@@ -656,5 +659,75 @@ test("executable-only npm packages are valid without library exports or type dec
       report.findings.some((finding) => finding.state === "fail"),
       false,
     );
+  });
+});
+
+test("service references require an actual service delivery in the same environment, not package association", async () => {
+  await appFixture("browser", async ({ contract, delivery: browser, write, check }) => {
+    const app = contract.workspaces.find((workspace) => workspace.name === "app");
+    assert.ok(app);
+    app.roles.push("cloudflare-worker");
+    app.runtime = "universal";
+    app.entries.push("src/service.ts");
+    await write("apps/app/src/service.ts", "export default {};");
+    const service: Delivery = {
+      ...browser,
+      id: "api-preview",
+      kind: "cloudflare-worker",
+      runtime: "worker",
+      entry: { package: "app", path: "src/service.ts" },
+      config: "apps/app/worker.json",
+      resources: [],
+      services: [],
+      capabilities: [],
+    };
+    contract.deliveries.push(service);
+    browser.services = ["app"];
+    await write("apps/app/worker.json", {
+      name: "fixture",
+      main: "src/service.ts",
+      compatibility_date: "2026-01-01",
+      env: { preview: {} },
+    });
+    assert.equal((await check()).state, "pass");
+
+    service.environment = "production";
+    await write("apps/app/worker.json", {
+      name: "fixture",
+      main: "src/service.ts",
+      compatibility_date: "2026-01-01",
+      env: { production: {} },
+    });
+    let report = await check();
+    assert.equal(has(report, "service-environment"), true);
+    assert.equal(report.state, "fail");
+    assert.deepEqual(
+      report.findings.find(
+        (finding) => finding.rule === "service-environment" && finding.state === "fail",
+      )?.requirements,
+      [browser.id],
+    );
+
+    browser.services = ["shared"];
+    report = await check();
+    assert.equal(has(report, "service-role"), true);
+    assert.equal(report.state, "fail");
+
+    browser.services = ["external-api"];
+    browser.resources.push({
+      name: "external-api",
+      kind: "service",
+      visibility: "public",
+      supply: "runtime",
+      environment: "preview",
+    });
+    assert.equal((await check()).state, "pass");
+    const reference = browser.resources[0];
+    assert.ok(reference);
+    reference.environment = "production";
+    assert.equal((await check()).state, "fail");
+    reference.environment = "preview";
+    reference.kind = "resource";
+    assert.equal(has(await check(), "service-mapping"), true);
   });
 });

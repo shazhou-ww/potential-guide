@@ -41,6 +41,9 @@ lockfile、README 与 Objective References 同步接线。
 - 实际无法解析的相对/计算/外部导入、必需 npm/CLI 产物缺失、未支持交付/配置格式仍
   为阻断性 `unverified`；配置违规为 fail；缺失相对导入的有效结构目标在 Pilot
   留在 structured，而非误到 terminal。
+- 跨服务环境审查已修复：服务包必须有实际 Worker 角色及与消费者同环境的服务交付；
+  多角色合包同环境可通过，错环境与非服务包均失败。外部 API 只接受显式 service 类型、
+  同环境且浏览器可见的供应引用；普通 resource 不能冒充服务，不声称远端在线。
 
 ## 命令与结果
 
@@ -48,7 +51,7 @@ lockfile、README 与 Objective References 同步接线。
 
 | 命令 | 结果 | 证据 |
 | --- | --- | --- |
-| `pnpm --filter @potential-guide/monorepo-objective test` | 21/21 通过；覆盖全部类型真实 pass、失败、unsupported、缺失产物、归位冲突、合法例外、计算导入和只读边界 | [targeted.log](./verification/targeted.log) |
+| `pnpm --filter @potential-guide/monorepo-objective test` | 22/22 通过；覆盖全部类型真实 pass、失败、unsupported、缺失产物、归位冲突、合法例外、计算导入、跨服务身份/环境和只读边界 | [targeted.log](./verification/targeted.log) |
 | `node --test scripts\monorepo-objective.test.mjs` | 4/4 通过；真实进程 probe、两层终态、第一层失败阻止后续、第二层缺失导入阻断及非法 subject 调用失败 | [pilot.log](./verification/pilot.log) |
 | `pnpm typecheck` | 9/9 workspace tasks 通过，包含全仓库测试 TypeScript 检查 | [typecheck.log](./verification/typecheck.log) |
 | `node --test scripts\*.test.mjs` | 18/18 通过 | [scripts.log](./verification/scripts.log) |

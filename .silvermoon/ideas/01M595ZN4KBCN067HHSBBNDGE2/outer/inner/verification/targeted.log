@@ -5,32 +5,33 @@ At C:\Users\leescott.REDMOND\AppData\Local\pnpm\bin\pnpm.ps1:14 char:3
     + CategoryInfo          : NotSpecified: ($ tsx --test "test/*.test.ts":String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
-✔ layer one can pass and internal packages do not require public release metadata (355.8096ms)
-✔ invalid schema, unknown version/fields and invalid paths block layer two (123.4694ms)
-✔ missing global files, YAML duplicate keys and wrong schema types are not success-shaped (123.7709ms)
-✔ workspace identity, inclusion and delivery mapping require explicit coverage (82.1358ms)
-✔ known misplaced files report provenance, current path, destination, reference maintenance and conflicts (130.3627ms)
-✔ unknown purpose is pending classification; generated and tool-fixed exceptions are not misplaced (96.5837ms)
-✔ migration responsibility follows its owner; cross-service migrations require a declared target (107.0518ms)
-✔ dependency directions, workspace ranges, missing catalogs and cycles are diagnosed (246.1503ms)
-✔ cross-package relative paths and private exports fail without treating package paths as delivery identities (109.9307ms)
-✔ npm and CLI roles compose and absent artifacts are unverified, not validated by a build script (184.1685ms)
-✔ browser positive configuration supports multi-package association; API and private configuration mismatch fail (197.5261ms)
-✔ Cloudflare configuration checks environment, entry, bindings and optional capabilities without provisioning (263.9356ms)
-✔ unsupported delivery, capability and deployment formats never fall back to success (165.3546ms)
-✔ checker does not execute scripts or read secret-value files and leaves the target unchanged (111.306ms)
-✔ task cycles and dangling task references are not hidden by valid build script names (165.0706ms)
-✔ role combinations do not force browser and Worker into separate packages (1079.0755ms)
-✔ worker ordinary config and secrets are references; explicit migration mappings can satisfy preparation (332.3429ms)
-✔ unknown global fields and a missing support closure block rather than guessing requirements (198.1713ms)
-✔ directory overrides are explicit and justified fixed-location exceptions stay legal (146.5296ms)
-✔ executable-only npm packages are valid without library exports or type declarations (107.6688ms)
-✔ syntax-aware imports ignore comments and ordinary strings, preserve type-only uses (9.2471ms)
-ℹ tests 21
+✔ layer one can pass and internal packages do not require public release metadata (208.9242ms)
+✔ invalid schema, unknown version/fields and invalid paths block layer two (82.2719ms)
+✔ missing global files, YAML duplicate keys and wrong schema types are not success-shaped (84.7268ms)
+✔ workspace identity, inclusion and delivery mapping require explicit coverage (76.9978ms)
+✔ known misplaced files report provenance, current path, destination, reference maintenance and conflicts (123.3456ms)
+✔ unknown purpose is pending classification; generated and tool-fixed exceptions are not misplaced (127.8424ms)
+✔ migration responsibility follows its owner; cross-service migrations require a declared target (143.7287ms)
+✔ dependency directions, workspace ranges, missing catalogs and cycles are diagnosed (201.6127ms)
+✔ cross-package relative paths and private exports fail without treating package paths as delivery identities (63.2465ms)
+✔ npm and CLI roles compose and absent artifacts are unverified, not validated by a build script (142.7709ms)
+✔ browser positive configuration supports multi-package association; API and private configuration mismatch fail (146.8536ms)
+✔ Cloudflare configuration checks environment, entry, bindings and optional capabilities without provisioning (202.5601ms)
+✔ unsupported delivery, capability and deployment formats never fall back to success (194.1841ms)
+✔ checker does not execute scripts or read secret-value files and leaves the target unchanged (241.6204ms)
+✔ task cycles and dangling task references are not hidden by valid build script names (107.5511ms)
+✔ role combinations do not force browser and Worker into separate packages (190.9079ms)
+✔ worker ordinary config and secrets are references; explicit migration mappings can satisfy preparation (172.9413ms)
+✔ unknown global fields and a missing support closure block rather than guessing requirements (182.036ms)
+✔ directory overrides are explicit and justified fixed-location exceptions stay legal (129.6169ms)
+✔ executable-only npm packages are valid without library exports or type declarations (70.8268ms)
+✔ service references require an actual service delivery in the same environment, not package association (492.9907ms)
+✔ syntax-aware imports ignore comments and ordinary strings, preserve type-only uses (25.0479ms)
+ℹ tests 22
 ℹ suites 0
-ℹ pass 21
+ℹ pass 22
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 6574.8329
+ℹ duration_ms 8390.5226

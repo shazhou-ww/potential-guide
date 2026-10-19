@@ -95,8 +95,8 @@ optionalDependencies、peerDependencies 与 devDependencies 的种类。内部�
 | `packages`, `entry` | 全部关联包及入口 `{package,path}`。包含运行/peer 支撑包闭包，允许同一包支撑多个需求。 |
 | `runtime` | `node`、`browser`、`worker`、`universal` 或 `tool`；多运行时合包可声明 universal，并分别声明不同交付入口。 |
 | `environment`, `config`, `output` | 浏览器/Worker 所需的环境名、仓库相对配置路径及产物目录。 |
-| `resources` | 仅名称引用：`{name,kind,visibility,supply,environment}`。kind 为 configuration/secret/resource/identity；visibility 为 public/server；supply 为 build/runtime/platform。绝不放值。 |
-| `services` | 相关内部服务包名，或相同环境的 resource 名称引用（外部 API）；不执行网络请求。 |
+| `resources` | 仅名称引用：`{name,kind,visibility,supply,environment}`。kind 为 configuration/secret/resource/identity/service；visibility 为 public/server；supply 为 build/runtime/platform。绝不放值。 |
+| `services` | 相关内部服务入口包名，或相同环境的 service 名称引用（外部 API）；不执行网络请求。 |
 | `capabilities` | 按需 `oidc`、`migrations`；未知能力未验证。OIDC 只查身份供应引用，不查线上登录。 |
 | `migration` | 仅当需要迁移时声明 `{package,entry,resource}`，关联包入口与资源名称；不靠文件名猜测执行命令。 |
 | `independent` | 是否要求独立交付；没有此约束不强制所有包单独构建/部署。独立执行仍需外部证据。 |
@@ -161,6 +161,12 @@ pnpm pattern 支持 literal、`*`、`**` 与排除 `!`；更复杂 pattern 为�
 配置准备 Objective；未做事项放入 `limitations`，不制造无限阻断。内部包及各交付类型
 均能在范围内配置/静态证据成立时返回 pass，Pilot 可到 terminal。
 没有“导入一份自称通过的报告”绕过机制，也不通过 waiver 隐藏真正的范围内缺口。
+
+内部服务引用不能只靠 `packages` 关联成立：必须有实际服务角色（当前支持
+cloudflare-worker），且同一入口包有与消费者完全同环境的 Worker 交付声明。
+内部共享包或只在 production 交付的服务不能冒充 preview API。外部 API 的边界
+是明确 `kind:service` 的同环境供应引用，浏览器引用必须 public；普通 resource
+不能当作服务。此处只验证配置身份与环境关系，不认证远端 endpoint 在线。
 
 四态 `pass/fail/unverified/not-applicable` 分别表示满足、不满足、未验证、不适用。
 整体 fail 优先于 unverified，必需未验证阻止整体 pass。报告携带 layer、rule、
