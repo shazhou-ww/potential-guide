@@ -9,6 +9,7 @@ let sessionId;
 let stopping;
 let timer;
 let timedOut = false;
+let stage = "initialize";
 const stop = () => {
   if (client !== undefined)
     stopping ??= sessionId === undefined ? client.stop() : client.cancelAndStop(sessionId);
@@ -32,7 +33,13 @@ try {
     timedOut = true;
     stop();
   }, timeoutMs);
-  await client.initialize(profile.connection.protocolVersion);
+  const initialized = await client.initialize(profile.connection.protocolVersion);
+  if (
+    profile.requirements?.sessionResume === true &&
+    initialized.agentCapabilities?.loadSession !== true
+  )
+    throw new Error("ACP session resume is unavailable.");
+  stage = "session-new";
   sessionId = await client.newSession(cwd);
   const prompt = [
     "Potential Guide local self-check: one isolated marker repair.",
@@ -41,6 +48,7 @@ try {
     "Modify only marker.txt. Do not use network, install dependencies, change configuration, run pguide, or use Git.",
     "Do not plan or report; finish after the single repair. Respect existing tool permissions.",
   ].join("\n");
+  stage = "prompt";
   const response = await client.prompt(sessionId, prompt);
   outcome =
     denied || policy.denied.length > 0
@@ -49,7 +57,13 @@ try {
 } catch (error) {
   outcome = {
     status: "failed",
-    reason: error.message === "ACP output limit exceeded." ? "output-limit" : "invocation-failed",
+    reason:
+      error.message === "ACP output limit exceeded."
+        ? "output-limit"
+        : stage === "prompt"
+          ? "invocation-failed"
+          : "startup-failed",
+    stage,
   };
 } finally {
   clearTimeout(timer);

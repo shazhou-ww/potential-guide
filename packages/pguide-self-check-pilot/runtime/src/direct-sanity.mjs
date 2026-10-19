@@ -35,6 +35,8 @@ export async function directSanity(context, directory, selected) {
   const outcome = jsonOutput(result);
   if (outcome.reason === "timeout")
     throw new Fault("timeout: direct Agent exceeded its deadline.", 504);
+  if (outcome.reason === "startup-failed" && ["initialize", "session-new"].includes(outcome.stage))
+    throw new Problem("acp-unavailable", { stage: outcome.stage, reason: "startup-failed" });
   if (outcome.status !== "completed")
     throw new Problem("sanity-failed", {
       stage: "agent",

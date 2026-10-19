@@ -260,6 +260,8 @@ async function directSanity(context, directory, selected) {
   const outcome = jsonOutput(result);
   if (outcome.reason === "timeout")
     throw new Fault("timeout: direct Agent exceeded its deadline.", 504);
+  if (outcome.reason === "startup-failed" && ["initialize", "session-new"].includes(outcome.stage))
+    throw new Problem("acp-unavailable", { stage: outcome.stage, reason: "startup-failed" });
   if (outcome.status !== "completed")
     throw new Problem("sanity-failed", {
       stage: "agent",
@@ -910,7 +912,8 @@ async function check(stage, value, options = {}) {
     if (stage === "installation") await installation(subject, context);
     else {
       const selected = await configured(subject, context);
-      await acpReady(selected.profile, context, directory);
+      if (!(options.selfCheck && stage === "sanity"))
+        await acpReady(selected.profile, context, directory);
       if (stage === "sanity") {
         if (options.selfCheck) await directSanity(context, directory, selected);
         else await sanity(subject, context, directory, selected);

@@ -100,9 +100,12 @@ for await (const line of createInterface({input:process.stdin})) {
     if(m.params.protocolVersion!==1)throw Error("initialize requires a numeric protocolVersion");
     if(mode==="rejected"){console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,error:{code:-32000,message:"SECRET-SERVER-TEXT"}}));continue;}
     if(mode==="home" && await readFile(process.env.USERPROFILE+"/logged-in","utf8")!=="existing")throw Error("No login");
-    result={protocolVersion:mode==="string-version"?"1":1,agentCapabilities:{loadSession:true}};
+    result={protocolVersion:mode==="string-version"?"1":1,agentCapabilities:{loadSession:mode!=="no-resume"}};
   }
-  if(m.method==="session/new"){cwd=m.params.cwd;result={sessionId:"real-fixture-session"};}
+  if(m.method==="session/new"){
+    if(mode==="session-rejected"){console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,error:{code:-32000,message:"SECRET-SERVER-TEXT"}}));continue;}
+    cwd=m.params.cwd;result={sessionId:"real-fixture-session"};
+  }
   if(m.method==="session/prompt") {
     if(mode==="prompt-timeout"){setInterval(()=>{},1000);continue;}
     const text=m.params.prompt[0].text;
@@ -1134,11 +1137,52 @@ test("self-check defaults to exactly one direct repair, no nested regulate or Gi
     assert.doesNotMatch(prompts[0].text, /Potential Guide regulation|Complete observation:/);
     assert.deepEqual(
       messages.map(({ method }) => method),
-      ["initialize", "session/new", "initialize", "session/new", "session/prompt"],
+      ["initialize", "session/new", "session/prompt"],
     );
     for (const { pid } of messages) assert.throws(() => process.kill(pid, 0));
   } finally {
     await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+test("self-check repair session enforces readiness without starting a second Agent", async () => {
+  for (const [mode, stage] of [
+    ["rejected", "initialize"],
+    ["string-version", "initialize"],
+    ["no-resume", "initialize"],
+    ["session-rejected", "session-new"],
+  ]) {
+    const f = await setup(mode);
+    try {
+      await writeFile(
+        f.subject.configPath,
+        JSON.stringify({
+          ...f.config,
+          agents: {
+            fixture: { ...f.config.agents.fixture, requirements: { sessionResume: true } },
+          },
+        }),
+      );
+      const result = await f.direct("sanity", selfSubject(f), selfHelper);
+      isProblem(result, "acp-unavailable");
+      assert.deepEqual(result.payload?.problems[0]?.parameters, {
+        stage,
+        reason: "startup-failed",
+      });
+      assert.doesNotMatch(JSON.stringify(result), /SECRET-SERVER-TEXT/);
+      const messages = (await readFile(f.log, "utf8"))
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line));
+      assert.deepEqual(
+        messages.map(({ method }) => method),
+        stage === "initialize" ? ["initialize"] : ["initialize", "session/new"],
+      );
+      assert.equal(new Set(messages.map(({ pid }) => pid)).size, 1);
+      for (const { pid } of messages) assert.throws(() => process.kill(pid, 0));
+    } finally {
+      await rm(f.directory, { recursive: true, force: true });
+    }
   }
 });
 

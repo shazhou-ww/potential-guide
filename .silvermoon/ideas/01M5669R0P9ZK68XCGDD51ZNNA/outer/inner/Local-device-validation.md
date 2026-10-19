@@ -187,3 +187,21 @@ I-AC03 因缺少真实 terminal 证据仍未满足，不提交或批准实现验
 - 独立检查 scratch 目录无残留子项；临时启动器、配置、源参数副本和空 scratch 根目录随后删除，撤销本次适配器授权入口。原始报告与无秘密方法审计保留在会话文件 `self-check-once-report.json`、`self-check-once-audit.jsonl`。
 
 当前阻塞已缩小为真实 prompt 未在完整自查剩余预算内完成，而不是已经证实的认证失败或权限拒绝。此次没有再次运行模型、延长 Pilot 上限或改用较长 helper。下一次真实复验需先有可验证的外部条件变化，例如用户选定其现有账号已可用的低延迟 ACP 模型/profile，或代码耗时优化取得独立证据；另需重新确认一次验证授权，不能沿用已消费的单次授权。I-S03、I-AC03 保持未完成，不 submitInner 或请求实现验收。
+
+## 模型元数据、轻量模型复验与确定性开销修正
+
+用户再次要求继续后，先通过现有 AcpClient 仅执行 initialize/session-new，读取服务端返回的模型元数据，没有 session/prompt。当前会话模型为 `gpt-6.1-sol`，可选列表包含 `gpt-5-mini`。这只证明服务端提供该选项，不保证模型调用、额度或时延。元数据摘要保留为会话文件 `self-check-model-discovery.json`，独占目录已清理；没有读取认证文件或复制 token。
+
+本轮延续用户明确的最小 marker 验证授权，仅在临时 profile 中添加 `--model gpt-5-mini`，其余保持上一节单个绝对 marker 路径授权、禁用额外临时目录及 shell/URL 工具的边界，不改用户默认模型或持久配置。指定源码 revision `ac60e9379724978239c157bfb52ac9f66c913970`，使用既有安装执行一次完整 probe：
+
+- 三次 ACP session/new 审计均确认返回模型与 `gpt-5-mini` 匹配，不将传入参数本身当作模型已选择的证据。
+- direct repair 的 session/new 在启动后 `1759 ms` 完成，`session/prompt` 于 `1760 ms` 发出。
+- 在 `16037 ms` 因预算取消，即 prompt 等待约 `14277 ms`；`16048 ms` 返回 `stopReason: cancelled`，没有权限请求。
+- 原始 probe 仍为退出码 `6`、504 direct Agent 超时、空 payload，没有 terminal。不能把“轻量模型”名称当作性能保证，也不能据此确认底层模型调用已成功。
+- scratch 无残留。原始报告和固定字段审计保留为会话文件 `self-check-mini-report.json`、`self-check-mini-audit.jsonl`；不在条件未变时重复运行。
+
+独立代码追踪确认每次 sanity 在复核安装配置后，先运行并清理一个无 prompt readiness Agent，再重新启动另一个修复 Agent；本次额外 readiness 单是 initialize/session-new 就消耗约 `2676 ms`，尚未包含其清理。该重复启动是确定的本地开销，不是已证明的全部超时根因。
+
+本轮实现将 self-check sanity 的 readiness 合并到唯一修复会话：实际修复会话仍须通过协议协商、所选 profile 要求的 sessionResume 能力和 session/new，才能发出一次 prompt。configuration check 保持独立无 prompt 的真实会话；旧 setup/SSH 路径不变。没有跨 check 缓存就绪、跳过安装配置、延长预算或减少清理余量。新增拒绝 initialize、错误协议、缺少必需恢复能力、拒绝 session/new 的四种回归，均核对只有一个 Agent、没有 prompt、固定安全错误分类和已清理进程；成功回归精确核对只有一次 initialize、session/new、prompt。定向九项测试全部通过，不将测试替身当作真实 terminal。
+
+优化候选的完整 `pnpm check` 退出码 `0`：格式、lint、类型检查、四个 runtime 新鲜度检查、测试、build 和 pack 检查通过。合计报告 365 项测试，363 通过、2 项已有跳过、0 失败；setup 33 项、self-check package 1 项和 monorepo 34 项重新执行，其余九个 workspace 测试为 Turbo 缓存回放，根脚本 16 项重新执行。现阶段只确认消除了重复启动且保留拒绝路径，尚不声明真实任务能在预算内完成。

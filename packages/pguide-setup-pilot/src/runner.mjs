@@ -80,7 +80,8 @@ export async function check(stage, value, options = {}) {
     if (stage === "installation") await installation(subject, context);
     else {
       const selected = await configured(subject, context);
-      await acpReady(selected.profile, context, directory);
+      if (!(options.selfCheck && stage === "sanity"))
+        await acpReady(selected.profile, context, directory);
       if (stage === "sanity") {
         if (options.selfCheck) await directSanity(context, directory, selected);
         else await sanity(subject, context, directory, selected);

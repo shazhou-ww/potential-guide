@@ -18,6 +18,8 @@
 
 共享 helper 使用显式 selfCheck 模式；旧 setup 默认路径不变，含 SSH 传输和显式 allowSanity。新 sanity 仅创建独占 task/marker.txt，通过现有 AcpClient 的 initialize/newSession/prompt/stop API 执行一次提示，使用原有权限策略，不合成 grants、不增加 allow-all。正常 end_turn、未被拒绝且独立普通文件/链接数/字节数/随机精确内容校验通过才成功。
 
+真实耗时诊断确认 sanity 原先先启动 readiness Agent，再为修复启动第二个 Agent。现已将 sanity 的协议、必需 sessionResume 能力及 session/new 核验合并到唯一修复会话；configuration 仍独立真实核验，不依赖历史成功。启动失败以 acp-unavailable 和安全 initialize/session-new、startup-failed 分类阻断，不发送 prompt；旧 setup 和 SSH 的 readiness 路径保持不变。没有放宽 24 秒 Pilot 上限、既有执行限制或清理余量。
+
 为支持 dependency-free Git 子目录快照，构建脚本从共享源码提取 AcpClient 声明，并转译现有权限策略、进程树清理和流式脱敏模块，连同共享 helper 一并生成 runtime；不是另写一套线上 ACP。产物新鲜度纳入默认测试，源码变化后需 `pnpm self-check:build`。
 
 Pilot 单项默认 20 秒，subject 上限 24 秒，为默认 30 秒 probe 留清理余量。直接 helper 最多 300 秒的诊断入口不构成 Pilot terminal 证据。总预算包括 readiness 与 prompt，内部取消先于外部期限预留 2.5 秒；原始 ACP 输出 192 KiB，外围执行输出 256 KiB。超限、超时和清理错误不成功，仅删除本次独占目录。

@@ -53,6 +53,10 @@ pguide probe --pilot "git+file:///D:/Code/potential-guide#packages/pguide-self-c
 - sanity：复核依赖、ACP readiness，在独占 scratch/task 下创建错误的 marker.txt，
   **一次** AcpClient.prompt，要求只改 marker.txt，然后独立核验普通非链接文件、
   单硬链接、大小和随机精确内容。仅摘要、错误内容、拒绝权限都不通过。
+  readiness 由同一个修复 Agent 的 initialize、必需能力及 session/new 核验，
+  不先启动另一个探测 Agent；configuration 仍独立建立无 prompt 的会话。
+  修复会话启动失败返回 acp-unavailable 及安全 stage/startup-failed 分类，
+  不输出原始服务端错误。
 
 执行 self-check 已包含一次低损耗 sanity，不另加 allowSanity 检查级授权。
 真实工具授权仍须遵守：沿用 profile 原有参数及有效配置 regulationPermissions，
