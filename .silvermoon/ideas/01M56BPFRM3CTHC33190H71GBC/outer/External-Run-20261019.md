@@ -1,0 +1,40 @@
+# external 真实复测准备
+
+## 已完成的阶段与环境操作
+
+- 按主会话明确委托的技术验收决定，重新观察 exact submitted Inner `9461c1245d0541220b9b4ee734219df94234106d` 与 primary 同步后，通过 CLI 记录 `acceptInner#15`，提交 `54a3e3100362a5b1e155c3a8daf7faf744e29a32` 已正常进入 primary。它不是用户亲自批准某次工具操作，也不是 Outer acceptance。
+- fresh report 为 `deploying/downstream`。有界执行方案已先同步在 `e2f41ec`，当时 Outer revision `4f065491cbf5`；没有改产品实现。
+- 原正式 detached Host 和 UI 继续使用，没有重建或新增连接。专用 UI PID `28732`；Host 包装器 PID `36692` / supervisor PID `32092`；Host 仅配置为 loopback `127.0.0.1:51793`。
+- 用户已手动登记的专用 profile 中只有一个正确连接；新传输 token 只在本操作私有数据中比对，没有输出。官方 UI 日志在 `12:07:33` 记录 `Initialized`、`Connected` 和远端 provider 注册，真实 WebSocket 认证探测也成功。
+- 官方 Host 入口实测位于新会话 composer 的 Workspace Picker。Agent 仅选择已存在的 `regulator-ahp-verification`，没有代输 token、增加 Host 或触发模型。
+
+## 固定隔离目标及检查
+
+目标是新建的 `D:\Code\regulator-ahp-target-20261019-1216-2eb89994`。`git rev-parse --show-toplevel` 确认该目录不属于 Git worktree，首次检查 `ready.txt` 不存在。
+
+单独的合成 Pilot Git commit `3d654946e6a3854e94ae96b834c2fa885fdc3afc` 固定了检查和指导：只读取该目录内 `ready.txt`，以字节级比较验证 `AHP-VERIFIED\n`，不写目标。真实执行前检查返回 `ok:false` / `not-ready`，不存在用 Agent 代写目标制造成功的情况。
+
+配置明确为 `confirmations: external`、provider `copilotcli`、单个 Agent run，执行上限 600000 ms、整体上限 660000 ms；没有配置 session-wide/always 或新文件 grant。当前候选构建 8/8 成功。真实 CLI 启动脚本已准备，但尚未执行，也没有真实 session/chat/turn/toolCall 可供引用。
+
+## 实际遇到的人类授权点：Folder Trust
+
+在官方 UI 的 `Select Folder on regulator-ahp-verification` 中输入并选择上述隔离目录后，composer 已显示：
+
+```text
+Workspace: regulator-ahp-target-20261019-1216-2eb89994 [regulator-ahp-verification]
+```
+
+紧接着出现真实原生模态框：
+
+```text
+Do you trust the authors of the files in this folder?
+An agent session will be able to read files, run commands, and make changes in this folder.
+D:\Code\regulator-ahp-target-20261019-1216-2eb89994
+Trusting this folder will also mark it as trusted in Visual Studio Code.
+```
+
+操作按钮为 `Trust Folder & Continue` / `Cancel`。这是此前仅 Add Host 调查没有触发的新安全边界，不能将“允许选择已存在 Host”解释为 Agent 可以自动信任文件夹。Agent 没有点击任一按钮，没有修改 workspace trust、已有用户 profile 或工具批准策略。
+
+用户随后明确报告本人已确认该 Folder Trust。重新观察确认：模态框消失，composer 仍显示上述精确隔离目录与 `regulator-ahp-verification`，`ready.txt` 仍不存在。该结果只解除目录信任前置条件，不是 `ready.txt` 的一次文件批准，不写为 AHP `toolCallConfirmed`，也不证明模型或工具已获授权。后续仍须在同一官方 UI 核对实际 session/chat/turn/toolCall、精确路径和 native 单次请求。
+
+Host、UI 和连接所需私有资源继续保留，不因报告返回而清理。当前可以开始预先约定的一次有界 external 修复；真实文件请求仍逐次等待用户，不从信任点击推导工具许可。本文此时只记录执行前状态，当前 `ready.txt` 仍不存在，没有 submitOuter / acceptOuter。
