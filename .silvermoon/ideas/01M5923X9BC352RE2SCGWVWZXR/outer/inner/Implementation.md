@@ -12,6 +12,16 @@
 probe retries and retry delays 在两种 Node 环境中预期 503、实际 408 的原因，
 保留整体 quota、重试延迟和最后故障的业务断言，不凭任意扩大时限掩盖竞态。
 
+最终独立消费者还暴露 Windows 冷启动下真实 setup sanity 超过既有 24 秒硬上限。
+保持默认行为和有界执行，不为测试无条件放宽生产期限；为明确选择较长本地检查的调用方，
+提供与实际外层 process probe 期限一致、留有清理余量的显式预算支持。
+优先复用已有 probe 配置和运行上下文，不引入独立、相互矛盾的时间配置；
+默认 30 秒 process probe 下仍拒绝超过 24 秒的 setup subject。
+只有外层已明确配置足够期限时，本地 Git Pilot 才能接受较长 subject，
+无效、超预算及超时输入必须明确失败，实际取消和进程树清理仍需覆盖。
+不扩展 SSH 支持范围，不替换为 direct helper、预热或重试，也不削弱随机 nonce、
+固定 revision、独立最终 probe 和真实 terminal 断言。
+
 ### I-S02: 更新候选版本与变更清单
 
 对照已发布 RC 的 producer commit，按各包实际公开 API 变更选择新的 0.x RC，
@@ -33,6 +43,8 @@ probe retries and retry delays 在两种 Node 环境中预期 503、实际 408 �
 
 主会话独立运行 pnpm check，并对已知失败场景定向复测；Node 22.13.0 与
 24.11.1 的相关回归均通过，授权测试不再被父测试取消。
+显式长预算的安装产物 Git Pilot 实际达到 terminal；同时证明默认预算保持兼容、
+不足的外层期限被拒绝，实际超时或取消不会泄漏 Agent、后代进程或操作目录。
 
 ### I-AC02: 版本与代码一致
 
