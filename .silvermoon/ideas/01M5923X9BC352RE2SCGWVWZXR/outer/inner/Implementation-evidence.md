@@ -269,3 +269,39 @@ objectives / .github 的树无差异。I-S01 / I-AC01 据本地结果及完整�
   `--check` 通过，未手改 generated 文件或另一 Idea/新 workspace 合同。
   本轮未运行完整 `pnpm check` 或 packed verification，未启动 CI、
   未提交/push/发布，也未修改 ledger/events/outer；独立完整门禁仍由父会话负责。
+
+### 精确候选 CI 39213143819 的跨平台取消跟进（未接受门禁）
+
+- 候选 `4d0cf0abd43580b13da798f0c9dd8ae6ec43a55d` 的 Ubuntu Node 22/24
+  均仅在外部 Pilot 取消后的 PID 断言失败；Windows packed 在真实 Git setup
+  内返回泛化 regulate 502。原 CI 日志没有内层报告，不能据此认定为超时或 CIM 故障。
+- Linux Docker 在真实编译 runtime、原测试及独立 PID namespace/init 下复现：
+  取消后 sleeper 为 `Ssl`、PPID 1，其子进程为 `Sl`，均非 zombie。
+  根因是 process probe 只杀自身 process group，而 setup 子进程另建 detached group。
+  修复在终止父进程前获取 owned 后代快照，同时覆盖 detached 后代；软终止后仅对
+  尚存的 owned PID 强杀，并轮询真实 `ESRCH` 确认退出/回收后才删除 owned scratch。
+  原测试保留两个 PID 与两层 scratch 清理断言，且收紧为精确 `ESRCH`；
+  不以 sleep、根退出或 zombie 状态替代退出证明。
+- POSIX `ps` 查询限 1000ms/1MiB，沿用既有 grace，强杀退出确认限 2000ms；
+  无效快照、不可观测 PID、仍存活 PID 均显式失败。该清理阶段独立于既有
+  30s process/24s subject 默认限制，没有调大生产 deadline、SSH cap、重试或 consent。
+  增加四个确定性回归，真实 detached 子进程在 readiness 后主动忽略 SIGTERM，
+  验证父进程先退仍必须强杀后代及得到真实退出确认。
+- Windows 仅做有证据的诊断改进：setup 错误只附 OS exit code、白名单 CLI status
+  及固定故障分类，不转发任意 Agent/config/auth/路径/错误原文；
+  canary 回归确认任意内层数据不泄漏，502 仍是失败，不增加 retry 或放宽预算。
+  使用正式 `build-self-check-runtime.mjs` 再生成副本，未手改 generated 文件。
+- 本机 Windows Node 22.13.0 的 fixture-only packed setup 诊断一次通过；
+  最终原样 `node scripts\verify-deployment.mjs` 也一次完整通过
+  （CLI、ACP、supervisor、真实 Git nonce/terminal、self-check、permissions）。
+  **未复现 CI 的 Windows 根因，不能宣称该平台 CI 问题已修复**；保留上述固定分类，
+  供父会话下一次精确候选 CI 分辨 CIM 查询/树清理/内层 probe，而非猜测增加预算。
+- Windows Node 22.13.0、24.11.1 的同一 focused selection 各 17/17，
+  包含实际 force termination、有限真实 repair、外部 setup 取消、安全诊断、
+  原 shared Windows cleanup 六项及新 POSIX 四项；总耗时分别 52848ms/54901ms。
+  Linux 实际 Node 22.23.3、24.22.0（复用已有镜像/runtime，未安装依赖）的
+  exact cancellation + process cancellation/timeout + POSIX 四项各 7/7，
+  耗时 33564ms/20236ms；这是 Linux 实进程证明，不冒充 CI 的精确 Node patch 版本。
+- 相关 Biome check、受影响 workspace typecheck、generated `--check` 通过；
+  未运行完整 `pnpm check`、未启动/推送 CI、未提交或修改生命周期材料。
+  源码与本节证据留为 uncommitted，独立门禁和 Windows CI 结论仍由父会话负责。

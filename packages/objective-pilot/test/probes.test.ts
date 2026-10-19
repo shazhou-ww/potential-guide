@@ -115,8 +115,11 @@ test("process cancellation terminates the process tree and removes only its own 
   let logs = "";
   const script = `
     const {spawn}=require("node:child_process");
-    const child=spawn(process.execPath,["-e","setInterval(()=>{},1000)"],{stdio:"ignore"});
-    process.stderr.write(JSON.stringify({directory:process.env.PGUIDE_PROBE_TEMP_DIR,pid:child.pid})+"\\n");
+    const child=spawn(process.execPath,["-e","process.on('SIGTERM',()=>{});console.log('ready');setInterval(()=>{},1000)"],{stdio:["ignore","pipe","ignore"],detached:process.platform!=="win32"});
+    child.stdout.once("data",()=>{
+      child.stdout.destroy();
+      process.stderr.write(JSON.stringify({directory:process.env.PGUIDE_PROBE_TEMP_DIR,pid:child.pid})+"\\n");
+    });
     setInterval(()=>{},1000);
   `;
   const controller = new AbortController();

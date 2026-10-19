@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { parseCheckEnvelope } from "./pilot.js";
+import { stopPosixTree } from "./process-tree.js";
 import type { CheckProbe, CheckResult, Envelope, Subject } from "./types.js";
 import { ObjectiveConfigurationError } from "./validation.js";
 
@@ -106,7 +107,7 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
           process.env[key] === undefined ? [] : [[key, process.env[key]]],
         ),
       );
-      const result = await new Promise<Envelope<CheckResult>>((resolve) => {
+      const result = await new Promise<Envelope<CheckResult>>((resolve, reject) => {
         const child = spawn(options.command, [...(options.args ?? [])], {
           cwd: options.cwd,
           env: {
@@ -145,25 +146,17 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
           killers.add(pending);
           void pending.then(() => killers.delete(pending));
         }
-        function terminate(force: boolean) {
-          if (process.platform === "win32") {
-            killWindows(force);
-          } else if (child.pid !== undefined) {
-            try {
-              process.kill(-child.pid, force ? "SIGKILL" : "SIGTERM");
-            } catch (cause) {
-              if ((cause as NodeJS.ErrnoException).code !== "ESRCH") {
-                options.log?.(`Process group termination failed: ${String(cause)}\n`);
-                child.kill(force ? "SIGKILL" : "SIGTERM");
-              }
-            }
-          }
-        }
         function stop(result: Envelope<CheckResult>) {
           if (stopped !== undefined) return;
           stopped = result;
-          terminate(false);
-          hardTimer = setTimeout(() => terminate(true), gracePeriodMs);
+          if (process.platform === "win32") {
+            killWindows(false);
+            hardTimer = setTimeout(() => killWindows(true), gracePeriodMs);
+          } else {
+            const pending = stopPosixTree(child, gracePeriodMs);
+            killers.add(pending);
+            void pending.catch(reject);
+          }
         }
         const onAbort = () => stop(failure("cancelled", "Check cancelled.", 499));
         const timer = setTimeout(
@@ -195,11 +188,16 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
           clearTimeout(timer);
           if (hardTimer !== undefined) {
             // A child can exit before descendants. Complete the group teardown before cleanup.
-            terminate(true);
+            killWindows(true);
             clearTimeout(hardTimer);
           }
           signal.removeEventListener("abort", onAbort);
-          await Promise.all(killers);
+          try {
+            await Promise.all(killers);
+          } catch (cause) {
+            reject(cause);
+            return;
+          }
           if (stopped !== undefined) {
             resolve(stopped);
             return;

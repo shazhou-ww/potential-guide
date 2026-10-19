@@ -707,6 +707,48 @@ test("setup timeout kills its entire owned process tree and cleans scratch", asy
   }
 });
 
+test("sanity invocation diagnostics expose fixed classifications, not arbitrary CLI error data", async () => {
+  const f = await setup();
+  try {
+    const forwarder = join(f.directory, "diagnostic-forwarder.cjs");
+    const canary = "fixture-canary-must-not-be-exposed";
+    for (const [report, expected] of [
+      [
+        {
+          status: "internal-error",
+          error: `Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId ${canary}`,
+        },
+        "status=internal-error, diagnostic=windows-snapshot-command",
+      ],
+      [{ status: canary, error: canary }, "status=unrecognized, diagnostic=unclassified"],
+    ] as const) {
+      await writeFile(
+        forwarder,
+        `const {spawnSync}=require("node:child_process");
+if(process.argv[2]==="regulate"){
+  console.log(JSON.stringify(${JSON.stringify(report)}));process.exitCode=70;
+}else{
+  const result=spawnSync(process.execPath,[${JSON.stringify(composition)},...process.argv.slice(2)],{stdio:"inherit"});
+  process.exitCode=result.status??70;
+}`,
+      );
+      const envelope = await f.direct("sanity", {
+        ...f.subject,
+        allowSanity: true,
+        timeoutMs: 60000,
+        pguide: { command: process.execPath, args: [forwarder] },
+      });
+      assert.equal(envelope.status, 502);
+      assert.equal(envelope.payload, null);
+      assert.ok(envelope.message.includes(`exit=70, ${expected}`));
+      assert.equal(envelope.message.includes(canary), false);
+      assert.deepEqual(await readdir(f.scratch), []);
+    }
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
 test("external Pilot cancellation cleans nested setup scratch and its hanging child tree", async () => {
   const f = await setup();
   const controller = new AbortController();
@@ -753,7 +795,7 @@ setInterval(()=>{},1000);`,
     assert.equal((await readdir(directory)).length, 1, "setup scratch belongs to the runtime");
     controller.abort(new Error("external setup cancellation"));
     await assert.rejects(operation, /external setup cancellation/);
-    for (const pid of pids) assert.throws(() => process.kill(pid, 0));
+    for (const pid of pids) assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
     await assert.rejects(lstat(directory), { code: "ENOENT" });
     assert.deepEqual(await readdir(f.scratch), []);
   } finally {

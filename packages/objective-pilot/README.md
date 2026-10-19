@@ -73,8 +73,13 @@ Process stdin contains **only the subject JSON**. Stdout contains exactly one
 envelope; stderr is a log side channel. Business failure exits **0**.
 `createProcessCheckProbe({ command, args, cwd, timeoutMs, gracePeriodMs, log })`
 owns a project `.cache/pguide-probes` directory exposed through `PGUIDE_PROBE_TEMP_DIR`, its timeout,
-and process cleanup. POSIX uses a detached process group, SIGTERM and grace-period
-SIGKILL. Windows attempts PID-scoped `taskkill /T`, then `/T /F`; unlike POSIX,
+and process cleanup. POSIX requires `ps` to snapshot the owned descendant tree (bounded
+to 1000 ms), including descendants in detached process groups, before sending
+SIGTERM and grace-period SIGKILL. It then verifies that every captured owned PID
+has exited, allowing at most 2000 ms for hard-kill exit/reaping acknowledgement;
+unobservable or still-live PIDs and invalid snapshots fail cleanup explicitly.
+These bounded cleanup phases are separate from the unchanged process deadline.
+Windows attempts PID-scoped `taskkill /T`, then `/T /F`; unlike POSIX,
 arbitrary Windows console programs have no portable cooperative SIGTERM contract.
 The probe waits for process-tree termination and removes its own directory.
 Only essential platform environment variables are inherited.

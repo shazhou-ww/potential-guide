@@ -524,8 +524,30 @@ async function sanity(subject, context, directory, selected) {
   );
   const report = jsonOutput(result);
   if (result.code !== 0) {
-    if (result.code !== 5 || report.outcome?.stopReason !== "exhausted")
-      throw new Fault("regulate: Agent or probe invocation failed.");
+    if (result.code !== 5 || report.outcome?.stopReason !== "exhausted") {
+      // Only fixed diagnostic labels cross this boundary, never Agent/config/auth error text.
+      const status = ["acp-error", "regulation-error", "io-error", "internal-error"].includes(
+        report.status,
+      )
+        ? report.status
+        : "unrecognized";
+      const diagnostic =
+        [
+          [
+            "Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId",
+            "windows-snapshot-command",
+          ],
+          ["Invalid Windows process tree snapshot.", "windows-snapshot-format"],
+          ["Process tree termination and ownership snapshot failed.", "windows-tree-and-snapshot"],
+          ["Could not verify process tree cleanup.", "windows-tree-unobservable"],
+          ["Check timed out after 3000ms.", "inner-probe-deadline"],
+        ].find(
+          ([message]) => typeof report.error === "string" && report.error.includes(message),
+        )?.[1] ?? "unclassified";
+      throw new Fault(
+        `regulate: Agent or probe invocation failed (exit=${result.code ?? "signal"}, status=${status}, diagnostic=${diagnostic}).`,
+      );
+    }
     if (["time", "agent-limit"].includes(report.outcome.exhaustedBy))
       throw new Fault("timeout: sanity regulation exhausted its time allowance.", 504);
     if (!["agent-runs", "stall"].includes(report.outcome.exhaustedBy))
