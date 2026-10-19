@@ -627,11 +627,31 @@ export async function check(stage, value, options = {}) {
     // Legacy setup retains its separate sanity consent gate.
     if (stage === "sanity" && !options.selfCheck && subject.allowSanity !== true)
       return problem("sanity-consent-required");
-    if (options.pilot === true && subject.timeoutMs + (remote ? 10000 : 0) > 24000)
-      throw new Fault(
-        "outer-timeout: Pilot checks require a total budget <=24000ms; use the direct helper for longer checks.",
-        400,
-      );
+    if (options.pilot === true) {
+      if (remote || options.selfCheck) {
+        if (subject.timeoutMs + (remote ? 10000 : 0) > 24000)
+          throw new Fault(
+            "outer-timeout: SSH and self-check Pilot checks require a total budget <=24000ms.",
+            400,
+          );
+      } else {
+        const metadata = process.env.PGUIDE_PROBE_TIMEOUT_MS;
+        const outerTimeoutMs = metadata === undefined ? 30000 : Number(metadata);
+        if (
+          (metadata !== undefined && metadata !== String(outerTimeoutMs)) ||
+          !Number.isSafeInteger(outerTimeoutMs) ||
+          outerTimeoutMs < 1 ||
+          outerTimeoutMs > 2147483647
+        )
+          throw new Fault("outer-timeout: invalid PGUIDE_PROBE_TIMEOUT_MS runtime metadata.", 400);
+        // The outer process also owns startup, response emission and tree/scratch cleanup.
+        if (subject.timeoutMs + 6000 > outerTimeoutMs)
+          throw new Fault(
+            "outer-timeout: local Pilot process budget must cover timeoutMs plus 6000ms startup/cleanup reserve.",
+            400,
+          );
+      }
+    }
     if (remote) {
       const { checkSsh } = await import("./ssh-target.mjs");
       return await checkSsh(stage, subject);
@@ -645,7 +665,17 @@ export async function check(stage, value, options = {}) {
       subject.timeoutMs,
     );
     await mkdir(subject.scratchDirectory, { recursive: true });
-    directory = await mkdtemp(join(subject.scratchDirectory, "pguide-setup-"));
+    const probeDirectory =
+      options.pilot && !options.selfCheck ? process.env.PGUIDE_PROBE_TEMP_DIR : undefined;
+    if (probeDirectory !== undefined && !isAbsolute(probeDirectory))
+      throw new Fault("outer-timeout: invalid PGUIDE_PROBE_TEMP_DIR runtime metadata.", 400);
+    // Nested Git caches also create directories; keep Windows path headroom inside the probe.
+    directory = await mkdtemp(
+      join(
+        probeDirectory ?? subject.scratchDirectory,
+        probeDirectory === undefined ? "pguide-setup-" : "s-",
+      ),
+    );
     const context = executionContext(
       subject,
       directory,

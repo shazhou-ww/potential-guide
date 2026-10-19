@@ -173,3 +173,99 @@ Windows / Ubuntu / macOS 的 packed entry-only 独立消费者。真实 registry
 0 取消、1 个既有平台跳过；format、lint、typecheck、根脚本与八包 pack 均通过。
 同步至 cbde95f 仅增加其他 Idea 文档；与 CI 提交相比 packages / scripts /
 objectives / .github 的树无差异。I-S01 / I-AC01 据本地结果及完整成功矩阵重新完成。
+
+### 显式协调本地 Pilot 长预算：实现与子会话验证（2026-10-19）
+
+- 按重新打开的 I-S01 / I-AC01 实现真实有界支持，而非放宽生产默认或替换
+  Git Pilot 证据：process probe 默认仍为 30000ms，local subject 默认仍为
+  20000ms、默认外层所允许的上限仍为 24000ms。runtime 向检查进程注入
+  `PGUIDE_PROBE_TIMEOUT_MS`，值来自实际 process timeout，不继承调用者同名环境值。
+- 复用已有 `regulationStrategy.probe.timeoutMs`，经 typed `PilotSourceOptions`
+  传到 probe、regulate/continue、supervisor observation 和 worker 的 process probe；
+  不新增用户配置字段。regulation 中它仍另外约束整个 observation；
+  Agent timeout、whole-run quota、权限、sanity consent 和 SSH 原有 cap 均不扩大。
+- 仅 local setup opt-in 接受长 subject：外层至少为 subject 加 6000ms
+  启动、stdin/输出和清理余量，subject 仍限 100–300000ms。缺元数据按旧
+  30000ms 校验；非规范十进制、空白/换行、指数、非整数、非正数和越界元数据
+  明确 400，不静默回退；不足预算也明确 `outer-timeout`。
+- local Pilot 的独占 fixture/config/state 使用 runtime-owned temp 下的新建短名子目录；
+  嵌套 CLI source cache 也位于同一 owner 下，外部取消即使终止 helper，
+  process probe 仍终止子树并清理整个 owned 目录，不动无关数据。
+  安装 fixture 曾暴露 Windows 深路径 `Could not create Git cache` /
+  `fatal: '$GIT_DIR' too big`；缩短 owned 子目录及嵌套 cache 后，verifier 仅在 Windows
+  使用较短 process cache cwd。安装入口、subject 工作目录、config、Git URI、revision
+  都仍是独立消费者的绝对路径；没有预热、重试、直接 helper receipt 或放松 terminal 断言。
+- `verifySetupObjective` 明确选择 subject 60000ms 与 process 75000ms、零 retry；
+  后续另一 Idea 的 self-check fixture 仍显式为 24000ms，保留其原合同。
+  共享 setup 源码经 `node scripts\build-self-check-runtime.mjs` 正式再生成，
+  未手改 generated runtime 或另一 Idea 的合同。
+- objective-pilot 的公开 process runtime 元数据属于 feature minor，候选由
+  `0.1.0-rc.0` 改为 `0.2.0-rc.0`；候选说明同步，内部依赖保持 `workspace:^`，
+  其他已有新 RC/命令 metadata 不变。`pnpm install --lockfile-only --ignore-scripts`
+  退出 0，lockfile 无文本变化。
+- 验证命令及结果（非父会话门禁验收）：
+  - Node 24.11.1、22.13.0 分别执行
+    `pnpm --filter @potential-guide/objective-pilot exec tsx --test test\probes.test.ts`：
+    各 9/9，覆盖默认/显式元数据、父环境不能伪造、实际 timeout、外部取消、进程树和 scratch 清理。
+  - 两版 setup 定向执行保留 noop/wrong、实际 finite repair、实际超时、
+    prompt 内取消、Git 固定子目录及 file-auth/缺环境边界；长 Git 用例分别实际通过。
+    早期新增 SSH guard 断言误用了带 userHome 的本地主体，修正为原 SSH fixture 后单独复测通过。
+  - 最终两版执行
+    `pnpm --filter pguide exec tsx --test --test-concurrency=1 --test-name-pattern 'local Pilot deadlines|external Pilot cancellation' test\setup-objective.test.ts`：
+    各 2/2，覆盖默认 24s、60s/75s、精确 6s 余量、300000ms 上限、
+    无效元数据及真实悬挂后代的外部取消/owned 清理。
+  - 两版执行
+    `pnpm --filter pguide exec tsx --test --test-concurrency=1 --test-name-pattern 'nested Pilot sources' test\pilot-source.test.ts`：
+    各 1/1。新增 fixture 曾因长 Windows 路径及遗漏必填 subject.name 失败，
+    修正为短的独占测试目录和合法 subject 后，实际 terminal、source cleanup、
+    无关 sentinel 不变、相对 temp 元数据明确失败均通过。
+  - Node 22 最终长 Git 定向命令（同文件增加 `Git subdirectory snapshot coordinates` selector）
+    3/3 通过；完整用例 122858ms，包含两次真实 Git observation 及认证反例，
+    不把此总耗时误当单项 process/subject 预算。
+  - `pnpm --filter pguide exec tsx --test --test-concurrency=1 test\pilot-source.test.ts`
+    在新增 ownership 用例前 7/7；根 deployment-consumer / verify-deployment
+    两文件测试 5/5，候选命令 metadata、独立消费图和清理回归通过。
+  - `pnpm exec tsc -b packages\pguide --pretty false` 与
+    `pnpm exec tsc -p tsconfig.test.json --noEmit --pretty false` 均退出 0；
+    相关文件 Biome check 退出 0，仅保留三个既有 warning；
+    `node scripts\build-self-check-runtime.mjs --check` 通过。
+  - `node scripts\verify-deployment.mjs` 完整 packed consumer 已实际退出 0：
+    八包、CLI/ACP、supervisor、安装 Git setup nonce terminal、另一 Idea self-check
+    一次直接修复、permissions deny/grant/continue/revocation 全部通过。
+- 本段是子会话实现证据，不接受 I-S01/I-AC01 或替代父会话独立门禁。
+  未运行完整 `pnpm check`、未启动 CI、未提交/push/tag/npm 发布；
+  未修改 ledger/events/ideal/outer 或另一 Idea 合同，变更保持未提交。
+
+### 父会话完整检查的四个失败：清理竞态及有限语义预算（2026-10-19）
+
+- 父会话独立完整 `pnpm check` 失败：CLI 89 项，84 pass、4 fail、1 skip，
+  总耗时 1856842ms。失败为真实 worker 子树强制终止时 `taskkill` exit 128，
+  以及 remote nonce、noop、wrong 三个有限语义用例拿到 deadline 504；
+  新增长本地预算、边界、owned 外部取消和 Git nonce 用例均通过。
+  父会话事后查询相关 PID 均已消失，但不把该查询当作当次清理成功证据。
+- 共享 `killProcessTree` 在 Windows 终止前通过有界系统 PowerShell/CIM
+  快照记录根与传递后代 PID；`taskkill /PID <owned-root> /T /F` 非零时，
+  仅在全部快照 owned PID 实际 `ESRCH` 后成功，最多观察退出 500ms，不重试 kill。
+  根进程退出不再吞掉仍存活后代的错误；检查不获准/不可观测也保留失败。
+  若根在快照期间已退出，不再向可能复用的根 PID 发送终止；
+  快照无效/失败明确上报，活根仍尝试终止，不静默回退。
+  不解析任何语言的 taskkill 文本，不按名称终止，不向无关 PID 发送终止信号。
+- remote direct nonce subject 明确为 60000ms，传输 watchdog 按原契约为
+  subject 加 10000ms；noop/wrong/fix 三种有限业务结果统一 direct 60000ms。
+  不改 fixture/生产默认、SSH Pilot cap 或实际 timeout 测试；
+  noop/wrong 额外精确断言真实 `sanity-failed` 的
+  `{stage:"regulate",reason:"quota-exhausted",exhaustedBy:"stall"}`，
+  保留单次 prompt、nonce 实际验证、原配置及清理断言，504 仍明确失败。
+- Node 24.11.1、22.13.0 均分别执行并退出 0：
+  - `pnpm --filter @potential-guide/cli-core exec tsx --test test\process-tree.test.ts`：
+    各 6/6，含真实不合作子树、非零但全部消失、根已退出且后代仍活、
+    不可观测、无效快照及快照期间根退出不重复终止的确定性回归。
+  - `pnpm --filter pguide exec tsx --test --test-concurrency=1 --test-name-pattern 'force termination stops a live|remote payload uses target authentication|real sanity' test\regulation-process.test.ts test\setup-objective.test.ts`：
+    各 5/5；总耗时分别 100376ms / 97014ms，真实树退出和 owned run 删除通过，
+    remote、noop、wrong、fix 均得到原业务语义而非 timeout。
+- 相关三份代码 Biome check、`tsc -b packages\pguide`、
+  `tsc -p tsconfig.test.json --noEmit` 均退出 0；
+  使用正式 build-self-check-runtime 脚本再生成共享 process-tree 副本，
+  `--check` 通过，未手改 generated 文件或另一 Idea/新 workspace 合同。
+  本轮未运行完整 `pnpm check` 或 packed verification，未启动 CI、
+  未提交/push/发布，也未修改 ledger/events/outer；独立完整门禁仍由父会话负责。

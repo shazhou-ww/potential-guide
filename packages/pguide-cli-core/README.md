@@ -69,6 +69,15 @@ stop the client in `finally` and supply an outer deadline. Optional
 completed. Both options are opt-in to preserve legacy caller behavior; the local
 self-check uses them without changing its configured tool permissions.
 
+Windows `killProcessTree` snapshots owned PID/parent relationships through the
+system PowerShell/CIM provider (bounded to 5 seconds) before PID-scoped `taskkill`.
+If concurrent teardown makes taskkill fail, cleanup succeeds only after every
+snapshotted owned PID is observed absent, with at most 500 ms of exit observation.
+Root exit alone is not evidence that descendants are gone; live or unobservable
+PIDs retain the failure. No localized taskkill output is parsed, no termination is
+retried, and an exited root is not targeted again. Snapshot failures remain explicit,
+even though termination is still attempted for a live root.
+
 Agent-to-client requests have a separate JSON-RPC ID namespace from pending
 client requests. By default, `session/request_permission` receives a cancelled
 outcome, while unsupported methods receive `-32601`; no filesystem or terminal

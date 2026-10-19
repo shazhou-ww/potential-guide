@@ -21,6 +21,27 @@ const fail = {
 const subject = { root: "subject-json-only" };
 const signal = new AbortController().signal;
 
+test("process timeout metadata is runtime-owned and preserves the 30s default", async () => {
+  const previous = process.env.PGUIDE_PROBE_TIMEOUT_MS;
+  process.env.PGUIDE_PROBE_TIMEOUT_MS = "999999";
+  try {
+    for (const timeoutMs of [undefined, 75000]) {
+      const result = await createProcessCheckProbe({
+        command: process.execPath,
+        args: [
+          "-e",
+          'console.log(JSON.stringify({status:200,message:"",payload:{ok:false,problems:[{id:"missing",parameters:{timeoutMs:process.env.PGUIDE_PROBE_TIMEOUT_MS}}]}}))',
+        ],
+        ...(timeoutMs === undefined ? {} : { timeoutMs }),
+      })(subject, signal);
+      assert.equal(result.payload?.problems[0]?.parameters.timeoutMs, String(timeoutMs ?? 30000));
+    }
+  } finally {
+    if (previous === undefined) delete process.env.PGUIDE_PROBE_TIMEOUT_MS;
+    else process.env.PGUIDE_PROBE_TIMEOUT_MS = previous;
+  }
+});
+
 test("in-memory and real process probes share business-failure envelope and subject JSON", async () => {
   const memory = createMemoryCheckProbe((input) => {
     assert.deepEqual(input, subject);

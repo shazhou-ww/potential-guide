@@ -2,8 +2,8 @@ import type { AgentProfile, AhpSessionIdentity } from "@potential-guide/cli-core
 import { Effect } from "@potential-guide/effects";
 import type { PilotSpec } from "@potential-guide/objective-pilot";
 import {
-  RegulationError,
   type AgentOutcome,
+  RegulationError,
   type RegulationInput,
   regulate,
 } from "@potential-guide/objective-regulator";
@@ -129,7 +129,11 @@ async function run(message: StartMessage) {
           { signal: controller.signal },
         );
       },
-      { versions, cacheDirectory: message.directory },
+      {
+        versions,
+        cacheDirectory: message.directory,
+        probeTimeoutMs: message.input.spec.strategy?.probe?.timeoutMs,
+      },
     );
   } finally {
     await Promise.allSettled(executions);

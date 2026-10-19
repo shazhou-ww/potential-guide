@@ -461,7 +461,9 @@ async function run(
         }
       }
       try {
-        outcome = await withPilot(location, globals.cwd, regulation.pilotCommit, execute);
+        outcome = await withPilot(location, globals.cwd, regulation.pilotCommit, execute, {
+          probeTimeoutMs: regulation.regulationStrategy?.probe?.timeoutMs,
+        });
       } catch (cause) {
         if (controller.signal.aborted) throw cause;
         if (cause instanceof RegulationError) throw cause;
@@ -585,6 +587,7 @@ export async function runRegulate(
         runtime,
       });
     },
+    { probeTimeoutMs: loaded.value.regulationStrategy?.probe?.timeoutMs },
   );
 }
 

@@ -78,6 +78,12 @@ SIGKILL. Windows attempts PID-scoped `taskkill /T`, then `/T /F`; unlike POSIX,
 arbitrary Windows console programs have no portable cooperative SIGTERM contract.
 The probe waits for process-tree termination and removes its own directory.
 Only essential platform environment variables are inherited.
+The process timeout defaults to 30000 ms. Each child receives the actual configured
+timeout as the canonical decimal `PGUIDE_PROBE_TIMEOUT_MS`; this runtime-owned value
+and `PGUIDE_PROBE_TEMP_DIR` override any caller environment values. Checks can use
+the metadata to reject an inner workload that leaves insufficient startup/cleanup
+headroom. This is a per-process budget, not a whole observation or regulation quota;
+the timer starts after spawn, and cancellation may end it earlier.
 
 HTTP uses POST with subject JSON, requires status 200 for successful invocation,
 and uses AbortSignal for local cancellation and timeout. Aborting HTTP does

@@ -63,7 +63,7 @@ interface PortfolioFile {
   resources: FileResource[];
 }
 
-async function bindGoal(entry: FileGoal, cwd: string) {
+async function bindGoal(entry: FileGoal, cwd: string, probeTimeoutMs?: number) {
   let publish!: (value: { goal: ObjectiveGoal; runtime: PilotRuntime }) => void;
   let reject!: (error: unknown) => void;
   let release!: () => void;
@@ -74,26 +74,32 @@ async function bindGoal(entry: FileGoal, cwd: string) {
   const released = new Promise<void>((done) => {
     release = done;
   });
-  const lifetime = withPilot(entry.pilot, cwd, entry.revision, async (pilot, runtime) => {
-    if (
-      entry.targetLevel !== "terminal" &&
-      !pilot.manifest.levels.some(({ id }) => id === entry.targetLevel)
-    )
-      throw new CliError(`Goal ${entry.id} has an unknown target level.`);
-    publish({
-      goal: {
-        id: entry.id,
-        pilot,
-        subject: entry.subject,
-        targetLevel: entry.targetLevel,
-        priority: entry.priority,
-        observationIntervalMs: entry.observationIntervalMs,
-        ...(entry.requirements === undefined ? {} : { requirements: entry.requirements }),
-      },
-      runtime,
-    });
-    await released;
-  });
+  const lifetime = withPilot(
+    entry.pilot,
+    cwd,
+    entry.revision,
+    async (pilot, runtime) => {
+      if (
+        entry.targetLevel !== "terminal" &&
+        !pilot.manifest.levels.some(({ id }) => id === entry.targetLevel)
+      )
+        throw new CliError(`Goal ${entry.id} has an unknown target level.`);
+      publish({
+        goal: {
+          id: entry.id,
+          pilot,
+          subject: entry.subject,
+          targetLevel: entry.targetLevel,
+          priority: entry.priority,
+          observationIntervalMs: entry.observationIntervalMs,
+          ...(entry.requirements === undefined ? {} : { requirements: entry.requirements }),
+        },
+        runtime,
+      });
+      await released;
+    },
+    { probeTimeoutMs },
+  );
   void lifetime.catch(reject);
   const value = await ready;
   return {
@@ -395,7 +401,9 @@ export async function runSupervise(
     try {
       for (const entry of file.goals) {
         controller.signal.throwIfAborted();
-        fresh.push(await bindGoal(entry, globals.cwd));
+        fresh.push(
+          await bindGoal(entry, globals.cwd, loaded.value.regulationStrategy?.probe?.timeoutMs),
+        );
       }
       const next = fresh.map(({ goal }) => goal);
       if (JSON.stringify(next) === JSON.stringify(goals)) {

@@ -133,7 +133,19 @@ async function bindPilot<T>(
       `git+${repository}#${pathInRepository.split("/").map(encodeURIComponent).join("/")}`,
     );
   }
-  const scratch = options.cacheDirectory ?? resolve(".cache", "pguide-sources");
+  const parentDirectory = process.env.PGUIDE_PROBE_TEMP_DIR;
+  if (
+    options.cacheDirectory === undefined &&
+    parentDirectory !== undefined &&
+    !isAbsolute(parentDirectory)
+  )
+    throw new PilotSourceError("Invalid PGUIDE_PROBE_TEMP_DIR runtime metadata.");
+  // Nested CLIs stay inside their owning check, without repeating deep fixture cwd paths.
+  const scratch =
+    options.cacheDirectory ??
+    (parentDirectory === undefined
+      ? resolve(".cache", "pguide-sources")
+      : join(parentDirectory, "sources"));
   await mkdir(scratch, { recursive: true });
   const cache = await mkdtemp(join(scratch, "pguide-runtime-"));
   return afterCleanup(
@@ -339,6 +351,9 @@ async function bindPilot<T>(
                       );
                     const probe = createProcessCheckProbe({
                       ...executable,
+                      ...(options.probeTimeoutMs === undefined
+                        ? {}
+                        : { timeoutMs: options.probeTimeoutMs }),
                       log: (message) => process.stderr.write(message),
                     });
                     return (subject, signal) => {
@@ -405,4 +420,5 @@ export async function withPilot<T>(
 export interface PilotSourceOptions {
   readonly versions?: Readonly<Record<string, string>>;
   readonly cacheDirectory?: string;
+  readonly probeTimeoutMs?: number | undefined;
 }

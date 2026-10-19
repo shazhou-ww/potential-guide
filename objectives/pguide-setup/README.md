@@ -215,8 +215,27 @@ nonce 的精确内容。空报完成、写错值、改检查器或伪造 report 
 helper 清除继承的 `GIT_*` 覆盖并禁用全局/系统 Git 配置，避免索引、工作树、模板、
 hooks 或签名配置把测试带到其他仓库；同样覆盖 `PGUIDE_STATE_DIRECTORY` 到独占目录。
 不能设置准确金额预算；用户同意的是一次有界执行，具体计费依 Agent/供应商。
-核心 process probe 默认 30 秒，Pilot 的 run.cjs 入口明确拒绝总预算超过 24000 毫秒，
-返回 `outer-timeout` 而不是让外层中断清理。SSH 总预算还包含 10000 毫秒传输余量，
+核心 process probe 默认 30 秒，本地 Pilot 的 run.cjs 默认仍拒绝总预算超过 24000 毫秒。
+可在**启动 probe 的显式配置**中设置
+`regulationStrategy.probe: { timeoutMs: 75000, retry: { maxRetries: 0, delayMs: 0 } }`，
+同时在本地 subject 设置 `allowSanity:true, timeoutMs:60000`；例如使用
+`pguide probe --config D:\setup\config.json --pilot <固定 Git URI> --revision <commit> --subject-file D:\setup\subject.json --format json`。
+这会实际运行同一 Git snapshot 的检查及随机 nonce 修复/复核，不接受缓存或直接 helper
+结果代替 terminal。subject 上限仍为 300000ms；process 总预算必须至少为 subject
+期限加 6000ms，留给进程/模块启动、stdin 读取、结果输出和进程树/scratch 清理。
+runtime 通过 `PGUIDE_PROBE_TIMEOUT_MS` 注入实际 process 期限，不继承调用者同名变量；
+缺少元数据的独立 wrapper 按默认 30000ms 校验，非规范正整数元数据明确失败。
+预算不够时返回 `outer-timeout`，不自动重试或扩大期限。
+本地 Pilot 的独占 fixture/config/state 位于 runtime-owned `PGUIDE_PROBE_TEMP_DIR`
+内，以便外部取消即使强制终止 helper，也由 process probe 终止进程树后清理；
+直接 helper 仍使用 subject.scratchDirectory。6000ms 是预算校验余量，不承诺任意
+主机负载、操作系统强杀或断电下仍必然成功/完成删除；实际期限和取消始终有效。
+嵌套 CLI 的 Git source cache 也置于同一 runtime-owned 目录；仍应保留 Windows Git
+路径长度余量，长预算不解除路径限制。安装验证仅在 Windows 缩短 process cache cwd，
+已安装入口、subject 工作目录、config、Git URI 和固定 revision 仍为独立消费者的绝对路径。
+该设置是每个 check process 的上限，不包含 Git snapshot 加载；regulate 的整个 observation
+另受同一个 `probe.timeoutMs` 上限约束，整个 run quota 和 Agent limits 也不变。
+SSH 仍保留原有 24000ms cap，不因本地 opt-in 扩大；总预算包含 10000 毫秒传输余量，
 因此 Git Pilot SSH subject 须显式设置 `timeoutMs <= 14000`；不要假设真实远端 sanity
 能在此时间完成。先运行有界 readiness，实际较慢的 sanity 使用直接 helper 的显式长时限。
 直接 sanity 成功不生成 receipt，也不能缓存/伪造下一次 Git Pilot 的 terminal；

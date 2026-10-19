@@ -9,6 +9,10 @@
 Windows 本地执行 pnpm deployment:verify，并检查本次操作拥有的 consumer 已删除；
 同步候选的 CI 需覆盖 Node 22.13.0 / 24.11.1 完整检查与三个 OS 的独立 packed consumer。
 CI 若因并发文档提交取消，只接受包含同一产品树的后续完整成功矩阵，不把取消当作通过。
+安装产物的本地 setup Git Pilot 显式选择 subject 60000ms / process 75000ms，
+仍须固定 revision、实际随机 nonce 修复和独立最终 probe 达到 terminal；
+不用 direct helper、预热或重试替代这条路径。默认 30000ms / 24000ms 边界、
+不足预算拒绝及取消清理由质量门禁证明，SSH 与另一 Idea 的 self-check 上限不扩大。
 
 ### D-S02: 记录发布边界与后续操作
 

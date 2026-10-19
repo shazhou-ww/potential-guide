@@ -19,4 +19,7 @@ userHome 仅补 HOME/USERPROFILE，profile 必须通过 transport.env 选择名�
 Agent 自己访问已登录文件；setup 不读取认证文件。
 SSH 禁止 userHome，使用 B 自身环境。真实 sanity 若超过默认 20 秒，须显式同意
 直接 helper 的 timeoutMs（例如 180000，最大 300000）；Pilot 默认外层 30 秒不支持
-长时限，返回 outer-timeout，不能用直接成功缓存或伪造 terminal。
+长时限，返回 outer-timeout。本地 Git Pilot 可明确协调 subject 60000ms 与启动配置的
+regulationStrategy.probe.timeoutMs 75000ms（retry 为零）；外层至少覆盖 subject 加
+6000ms 启动/输出/清理余量，并通过 runtime-owned 元数据校验。仍实际执行 nonce 修复
+和最终复查，不能用直接成功缓存或伪造 terminal；SSH cap 不扩大。详见 README。

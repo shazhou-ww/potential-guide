@@ -4,8 +4,13 @@ import { existsSync } from "node:fs";
 import { cp, lstat, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { delimiter, dirname, join } from "node:path";
 import { test } from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
-import { fileResources, loadPilotSpec } from "@potential-guide/objective-pilot";
+import {
+  createProcessCheckProbe,
+  fileResources,
+  loadPilotSpec,
+} from "@potential-guide/objective-pilot";
 import { bin, fixture, git, root, run } from "./fixtures.js";
 
 const objective = join(root, "objectives", "pguide-setup");
@@ -366,6 +371,63 @@ test("local target is backward compatible; long direct deadlines are rejected by
   }
 });
 
+test("local Pilot deadlines require valid coordinated runtime metadata and a cleanup reserve", async () => {
+  const f = await setup();
+  const previous = process.env.PGUIDE_PROBE_TIMEOUT_MS;
+  try {
+    const { check } = await import(pathToFileURL(helper).href);
+    for (const [metadata, timeoutMs, accepted] of [
+      [undefined, 24000, true],
+      [undefined, 60000, false],
+      ["30000", 24000, true],
+      ["29999", 24000, false],
+      ["65000", 60000, false],
+      ["66000", 60000, true],
+      ["75000", 60000, true],
+      ["305999", 300000, false],
+      ["306000", 300000, true],
+      ...[
+        "",
+        "garbage",
+        "0",
+        "-1",
+        "75000.5",
+        "7.5e4",
+        " 75000",
+        "75000\n",
+        "075000",
+        "+75000",
+        "NaN",
+        "Infinity",
+        "2147483648",
+        "9007199254740992",
+      ].map((metadata) => [metadata, 100, false] as const),
+    ] as const) {
+      if (metadata === undefined) delete process.env.PGUIDE_PROBE_TIMEOUT_MS;
+      else process.env.PGUIDE_PROBE_TIMEOUT_MS = metadata;
+      const result = await check("installation", { ...f.subject, timeoutMs }, { pilot: true });
+      if (accepted) passed(result);
+      else {
+        assert.equal(result.status, 400, `${metadata}: ${JSON.stringify(result)}`);
+        assert.match(result.message, /outer-timeout/);
+      }
+      assert.deepEqual(await readdir(f.scratch), []);
+    }
+    process.env.PGUIDE_PROBE_TIMEOUT_MS = "75000";
+    const ssh = await check(
+      "installation",
+      { ...remoteSubject, timeoutMs: 15000 },
+      { pilot: true },
+    );
+    assert.equal(ssh.status, 400);
+    assert.match(ssh.message, /outer-timeout/);
+  } finally {
+    if (previous === undefined) delete process.env.PGUIDE_PROBE_TIMEOUT_MS;
+    else process.env.PGUIDE_PROBE_TIMEOUT_MS = previous;
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
 const remoteSubject = {
   target: {
     type: "ssh",
@@ -535,12 +597,13 @@ test("remote payload uses target authentication and performs actual nonce sanity
     await f.updateConfig();
     const payload = JSON.parse((await sshRequest("sanity", remoteSubject)).input);
     const { userHome: _home, ...subject } = f.subject;
-    payload.subject = { ...subject, allowSanity: true };
+    // Direct transport semantics include cold CLI startup, not the SSH Pilot cap.
+    payload.subject = { ...subject, allowSanity: true, timeoutMs: 60000 };
     const result = await runSsh({
       command: process.execPath,
       args: ["-e", remoteBootstrap],
       input: JSON.stringify(payload),
-      timeoutMs: 34000,
+      timeoutMs: payload.subject.timeoutMs + 10000,
       env: f.env,
     });
     assert.equal(result.code, 0, result.stdout);
@@ -594,11 +657,18 @@ for (const mode of ["noop", "wrong", "fix"]) {
       const envelope = await f.direct("sanity", {
         ...f.subject,
         allowSanity: true,
-        // Finite integration success includes cold CLI startups; this is not the Pilot deadline.
-        ...(mode === "fix" ? { timeoutMs: 60000 } : {}),
+        // All finite business outcomes include cold CLI startups, not a Pilot deadline test.
+        timeoutMs: 60000,
       });
       if (mode === "fix") passed(envelope);
-      else isProblem(envelope, "sanity-failed");
+      else {
+        isProblem(envelope, "sanity-failed");
+        assert.deepEqual(envelope.payload?.problems[0]?.parameters, {
+          stage: "regulate",
+          reason: "quota-exhausted",
+          exhaustedBy: "stall",
+        });
+      }
       const messages = (await readFile(f.log, "utf8"))
         .trim()
         .split("\n")
@@ -633,6 +703,62 @@ test("setup timeout kills its entire owned process tree and cleans scratch", asy
     for (const pid of JSON.parse(await readFile(pidFile, "utf8")))
       assert.throws(() => process.kill(pid, 0));
   } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+test("external Pilot cancellation cleans nested setup scratch and its hanging child tree", async () => {
+  const f = await setup();
+  const controller = new AbortController();
+  let operation: Promise<unknown> | undefined;
+  try {
+    const runner = join(f.directory, "pilot-check.mjs");
+    const sleeper = join(f.directory, "pilot-sleeper.cjs");
+    const pidFile = join(f.directory, "pilot-pids.json");
+    await writeFile(
+      runner,
+      `import {main} from ${JSON.stringify(pathToFileURL(helper).href)};
+process.stderr.write(process.env.PGUIDE_PROBE_TEMP_DIR);
+await main("installation",{pilot:true});`,
+    );
+    await writeFile(
+      sleeper,
+      `const{spawn}=require("node:child_process");const{writeFileSync}=require("node:fs");
+const child=spawn(process.execPath,["-e","setInterval(()=>{},1000)"],{stdio:"ignore"});
+writeFileSync(${JSON.stringify(pidFile)},JSON.stringify([process.pid,child.pid]));
+setInterval(()=>{},1000);`,
+    );
+    let directory = "";
+    operation = createProcessCheckProbe({
+      command: process.execPath,
+      args: [runner],
+      timeoutMs: 75000,
+      log: (text) => {
+        directory += text;
+      },
+    })(
+      {
+        ...f.subject,
+        timeoutMs: 60000,
+        pguide: { command: process.execPath, args: [sleeper] },
+      },
+      controller.signal,
+    );
+    const deadline = Date.now() + 10000;
+    while (!existsSync(pidFile)) {
+      assert.ok(Date.now() < deadline, "hanging setup child must start");
+      await delay(25);
+    }
+    const pids = JSON.parse(await readFile(pidFile, "utf8")) as number[];
+    assert.equal((await readdir(directory)).length, 1, "setup scratch belongs to the runtime");
+    controller.abort(new Error("external setup cancellation"));
+    await assert.rejects(operation, /external setup cancellation/);
+    for (const pid of pids) assert.throws(() => process.kill(pid, 0));
+    await assert.rejects(lstat(directory), { code: "ENOENT" });
+    assert.deepEqual(await readdir(f.scratch), []);
+  } finally {
+    controller.abort();
+    await operation?.catch(() => {});
     await rm(f.directory, { recursive: true, force: true });
   }
 });
@@ -701,24 +827,46 @@ try { await main(undefined, {signal: controller.signal}); } finally { clearInter
   }
 });
 
-test("Git subdirectory snapshot runs dependency-free checks and existing file-auth ACP to terminal", async () => {
+test("Git subdirectory snapshot coordinates long local budgets and existing file-auth ACP to terminal", async () => {
   const f = await setup("home");
   try {
     await writeFile(join(f.home, "logged-in"), "existing");
     f.config.agents.fixture.transport.env = ["USERPROFILE"];
     await f.updateConfig();
+    const writeProbeConfig = () =>
+      writeFile(
+        f.subject.configPath,
+        JSON.stringify({
+          ...f.config,
+          regulationStrategy: {
+            probe: { timeoutMs: 75000, retry: { maxRetries: 0, delayMs: 0 } },
+          },
+        }),
+      );
+    await writeProbeConfig();
     await cp(objective, join(f.repository, "objectives", "pguide-setup"), { recursive: true });
     const revision = await f.commit();
-    await writeFile(f.subjectFile, JSON.stringify({ ...f.subject, allowSanity: true }));
+    await writeFile(
+      f.subjectFile,
+      JSON.stringify({ ...f.subject, allowSanity: true, timeoutMs: 60000 }),
+    );
     const uri = `git+${pathToFileURL(f.repository).href}#objectives/pguide-setup/pilot.yaml`;
     const probeEnv: NodeJS.ProcessEnv = { ...f.env };
     delete probeEnv.GIT_DIR;
     delete probeEnv.GIT_INDEX_FILE;
-    const result = await run(
-      bin("probe"),
-      ["--pilot", uri, "--revision", revision, "--subject-file", f.subjectFile, "--format", "json"],
-      probeEnv,
-    );
+    const probeArgs = [
+      "--pilot",
+      uri,
+      "--revision",
+      revision,
+      "--subject-file",
+      f.subjectFile,
+      "--config",
+      f.subject.configPath,
+      "--format",
+      "json",
+    ];
+    const result = await run(bin("probe"), probeArgs, probeEnv);
     assert.equal(result.code, 0, result.stdout + result.stderr);
     const report = JSON.parse(result.stdout);
     assert.equal(report.status, 200, result.stdout);
@@ -729,12 +877,9 @@ test("Git subdirectory snapshot runs dependency-free checks and existing file-au
     assert.equal(await readFile(join(f.home, "logged-in"), "utf8"), "existing");
     f.config.agents.fixture.transport.env = ["USERPROFILE", "PGUIDE_SETUP_TEST_AUTH"];
     await f.updateConfig();
+    await writeProbeConfig();
     passed(await f.direct("configuration"));
-    const sanitized = await run(
-      bin("probe"),
-      ["--pilot", uri, "--revision", revision, "--subject-file", f.subjectFile, "--format", "json"],
-      probeEnv,
-    );
+    const sanitized = await run(bin("probe"), probeArgs, probeEnv);
     assert.equal(sanitized.code, 0, sanitized.stdout + sanitized.stderr);
     const blocked = JSON.parse(sanitized.stdout);
     assert.equal(blocked.payload.current.levelId, "installed");

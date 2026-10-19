@@ -97,6 +97,41 @@ test("level-scoped repeated check IDs execute their own committed probes", async
   assert.equal(result.payload.current.levelId, "terminal");
 });
 
+test("nested Pilot sources stay in the owning probe directory and preserve unrelated files", async (t) => {
+  const repo = await repository(
+    manifest({
+      levels: [{ id: "initial", advancement: { checks: [{ id: "ready", problems: ["broken"] }] } }],
+    }),
+  );
+  t.after(() => rm(repo.root, { recursive: true, force: true }));
+  await repo.check("checks/ready/run.cjs");
+  const revision = await repo.commit();
+  const parent = await mkdtemp(join(resolve(".cache"), "p-"));
+  t.after(() => rm(parent, { recursive: true, force: true }));
+  await writeFile(join(parent, "sentinel"), "keep");
+  const previous = process.env.PGUIDE_PROBE_TEMP_DIR;
+  try {
+    process.env.PGUIDE_PROBE_TEMP_DIR = parent;
+    const result = await withPilot(repo.uri, repo.root, revision, async (spec, runtime) => {
+      const entries = await filesystem.readdir(join(parent, "sources"));
+      assert.equal(entries.length, 1);
+      assert.match(entries[0] as string, /^pguide-runtime-/);
+      return Effect.runPromise(observe({ spec, subject: { name: "nested" } }, runtime));
+    });
+    assert.equal(result.payload?.current.levelId, "terminal");
+    assert.deepEqual(await filesystem.readdir(join(parent, "sources")), []);
+    assert.equal(await filesystem.readFile(join(parent, "sentinel"), "utf8"), "keep");
+    process.env.PGUIDE_PROBE_TEMP_DIR = "relative-probe-directory";
+    await assert.rejects(
+      withPilot(repo.uri, repo.root, revision, async () => undefined),
+      /Invalid PGUIDE_PROBE_TEMP_DIR/,
+    );
+  } finally {
+    if (previous === undefined) delete process.env.PGUIDE_PROBE_TEMP_DIR;
+    else process.env.PGUIDE_PROBE_TEMP_DIR = previous;
+  }
+});
+
 test("ambiguous flat executables and multiple run entries fail explicitly", async (t) => {
   const repo = await repository(manifest());
   t.after(() => rm(repo.root, { recursive: true, force: true }));

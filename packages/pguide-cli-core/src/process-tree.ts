@@ -1,16 +1,80 @@
 import { type ChildProcess, execFile } from "node:child_process";
+import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
-
-const execute = promisify(execFile);
 
 export async function killProcessTree(child: ChildProcess): Promise<void> {
   if (child.pid === undefined || child.exitCode !== null || child.signalCode !== null) return;
+  const execute = promisify(execFile);
   if (process.platform === "win32") {
+    let snapshot: { owned: Set<number> } | { error: unknown };
     try {
+      const systemRoot = process.env.SystemRoot ?? process.env.WINDIR;
+      if (systemRoot === undefined)
+        throw new Error("Windows process identity query requires SystemRoot.");
+      const { stdout } = await execute(
+        join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"),
+        [
+          "-NoProfile",
+          "-NonInteractive",
+          "-Command",
+          "$ErrorActionPreference='Stop'; ConvertTo-Json -Compress -InputObject @(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId | Select-Object ProcessId,ParentProcessId)",
+        ],
+        { windowsHide: true, timeout: 5000 },
+      );
+      const rows: unknown = JSON.parse(stdout);
+      if (
+        !Array.isArray(rows) ||
+        rows.some(
+          (row) =>
+            row === null ||
+            typeof row !== "object" ||
+            !Number.isSafeInteger(row.ProcessId) ||
+            row.ProcessId < 0 ||
+            !Number.isSafeInteger(row.ParentProcessId) ||
+            row.ParentProcessId < 0,
+        )
+      )
+        throw new Error("Invalid Windows process tree snapshot.");
+      const owned = new Set<number>([child.pid]);
+      let previous = 0;
+      while (previous !== owned.size) {
+        previous = owned.size;
+        for (const row of rows) if (owned.has(row.ParentProcessId)) owned.add(row.ProcessId);
+      }
+      snapshot = { owned };
+    } catch (error) {
+      snapshot = { error };
+    }
+    try {
+      if (child.exitCode !== null || child.signalCode !== null)
+        throw new Error("Owned root exited during the process tree snapshot.");
       await execute("taskkill", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true });
     } catch (error) {
-      if (child.exitCode === null && child.signalCode === null) throw error;
+      if ("error" in snapshot)
+        throw new AggregateError(
+          [snapshot.error, error],
+          "Process tree termination and ownership snapshot failed.",
+        );
+      // Concurrent parent/child teardown can make taskkill nonzero after success.
+      // Root exit alone is insufficient: every pre-kill owned PID must disappear.
+      const deadline = performance.now() + 500;
+      while (snapshot.owned.size > 0) {
+        for (const pid of snapshot.owned) {
+          try {
+            process.kill(pid, 0);
+          } catch (cause) {
+            if ((cause as NodeJS.ErrnoException).code !== "ESRCH")
+              throw new AggregateError([error, cause], "Could not verify process tree cleanup.");
+            snapshot.owned.delete(pid);
+          }
+        }
+        if (snapshot.owned.size === 0) return;
+        if (performance.now() >= deadline) throw error;
+        await delay(20);
+      }
     }
+    if ("error" in snapshot) throw snapshot.error;
     return;
   }
   // Include descendants that started their own process group, such as probes.

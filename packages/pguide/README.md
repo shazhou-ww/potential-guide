@@ -87,6 +87,20 @@ timeout and zero retries. Probe retries apply to retryable invocation failures,
 not business problems. Remove legacy `mode` and `effectTtlMs`; ongoing scheduling
 belongs to portfolio supervision, not regulation.
 
+`regulationStrategy.probe.timeoutMs` also configures each Git Pilot check process
+used by `probe`, `regulate`/`continue`, and supervisor observation/worker runtimes.
+The process default remains 30000 ms. During regulation the same setting also bounds
+the whole observation, so all checks in that observation must fit that separate
+budget; a larger process limit does not extend the regulation quota or Agent limit.
+Checks receive runtime-owned `PGUIDE_PROBE_TIMEOUT_MS` metadata. For local
+`pguide-setup`, an explicitly coordinated 60000 ms subject and 75000 ms probe
+budget enable a longer bounded run; configure both, with probe retries still zero.
+Nested Git Pilot source caches live under the invoking check's
+`PGUIDE_PROBE_TEMP_DIR` when present (otherwise the normal project cache is used).
+This keeps them inside the parent's cleanup scope, including forced cancellation.
+Use paths with Windows Git headroom: a process timeout opt-in does not remove
+Windows Git path-length limits.
+
 Normal outcomes are `target-reached` (exit 0), `exhausted` (exit 5),
 `authorization-required` (exit 3), and `prerequisite-unmet` (exit 3).
 Typed 4xx/5xx invocation errors are failures,

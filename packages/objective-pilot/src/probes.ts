@@ -109,7 +109,11 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
       const result = await new Promise<Envelope<CheckResult>>((resolve) => {
         const child = spawn(options.command, [...(options.args ?? [])], {
           cwd: options.cwd,
-          env: { ...environment, PGUIDE_PROBE_TEMP_DIR: directory },
+          env: {
+            ...environment,
+            PGUIDE_PROBE_TEMP_DIR: directory,
+            PGUIDE_PROBE_TIMEOUT_MS: String(timeoutMs),
+          },
           shell: false,
           windowsHide: true,
           detached: process.platform !== "win32",

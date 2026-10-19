@@ -6,6 +6,7 @@ import {
   type CommandMetadata,
   commandMain,
   type GlobalOptions,
+  loadConfig,
   option,
   readJsonSubject,
   rejectUnknownOptions,
@@ -59,6 +60,7 @@ export async function runProbe(argv: string[], globals: GlobalOptions): Promise<
     globals.cwd,
   )) as Subject;
   const language = option(argv, "--language") as string | undefined;
+  const loaded = await loadConfig(globals.cwd, globals.config);
   const controller = new AbortController();
   const cancel = () => controller.abort();
   process.once("SIGINT", cancel);
@@ -74,6 +76,7 @@ export async function runProbe(argv: string[], globals: GlobalOptions): Promise<
             observe({ spec, subject, ...(language === undefined ? {} : { language }) }, runtime),
             controller.signal,
           ).await(),
+        { probeTimeoutMs: loaded.value.regulationStrategy?.probe?.timeoutMs },
       );
     } finally {
       process.removeListener("SIGINT", cancel);

@@ -676,6 +676,10 @@ for await (const line of createInterface({input:process.stdin})) {
       schemaVersion: 2,
       commandDirectories: [join(consumer, "node_modules", ".bin")],
       defaultAgent: "setup",
+      // Opt in both budgets for the real installed Git Pilot; defaults remain unchanged.
+      regulationStrategy: {
+        probe: { timeoutMs: 75000, retry: { maxRetries: 0, delayMs: 0 } },
+      },
       agents: {
         setup: {
           connection: { type: "acp", protocolVersion: "1" },
@@ -701,7 +705,7 @@ for await (const line of createInterface({input:process.stdin})) {
       agent: "setup",
       userHome: consumer,
       allowSanity: true,
-      timeoutMs: 24000,
+      timeoutMs: 60000,
     }),
   );
   const result = await successful(
@@ -719,7 +723,8 @@ for await (const line of createInterface({input:process.stdin})) {
       "--format",
       "json",
     ],
-    { cwd: consumer, env: baseEnv },
+    // Only the runtime cache cwd is shorter; all installed/subject/config paths remain absolute.
+    { cwd: process.platform === "win32" ? root : consumer, env: baseEnv },
   );
   const observation = JSON.parse(result.stdout);
   assert.equal(observation.status, 200, result.stdout);
@@ -730,6 +735,7 @@ for await (const line of createInterface({input:process.stdin})) {
   console.log("installed pguide loads committed setup subdirectory and verifies real nonce repair");
   const selfSubject = JSON.parse(await readFile(subject, "utf8"));
   delete selfSubject.allowSanity;
+  selfSubject.timeoutMs = 24000;
   await writeFile(subject, JSON.stringify(selfSubject));
   const selfUri = setupUri.replace("/pguide-setup/", "/pguide-self-check/");
   const selfResult = await successful(
