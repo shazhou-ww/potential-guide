@@ -10,12 +10,24 @@
 - `pnpm format:check`：通过。
 - `pnpm lint`：通过。
 - `pnpm typecheck`：通过。
-- `pnpm --filter pguide exec tsx --test test\development-health-objective.test.ts`：14/14 通过。
+- `pnpm --filter pguide exec tsx --test test\development-health-objective.test.ts`：首次 14/14 通过；补充依赖一致性检查后 15/15 通过。
 - `pnpm pack:check`：通过，包含全部 workspace 构建和打包约束。
 
 针对性回归验证规范与中文 Wiki 完整、每次观测从首层开始且每组只执行一次、直接 helper
 与 Pilot 的严格输入一致、数值版本／阈值临界值、sudo 授权解析、历史身份及新鲜度、
 有界的错误样本诊断、apt 索引刷新证据、任务生命周期及路径边界、进程执行／输出限额。
+
+## Docker 扩展检查发现并修复的缺口
+
+首轮真实 CLI 矩阵 27/27 通过。扩展“待更新软件包”场景时，测试驱动把 base-files
+版本元数据降到 0.0.1，实际制造了依赖损坏而非单纯的可升级状态；`dpkg --audit`
+仍成功，但升级模拟返回 100。这暴露了系统层缺少依赖关系检查的真实缺口。
+
+修复包括：区分 ninja-build 的兼容旧版本（仅待升级）与 base-files 的不满足依赖状态；
+系统层增加只读 apt 模拟 check，禁用锁及两个缓存文件写入，将语义上的依赖损坏报告为
+`package-database-unhealthy`，而不是假健康或泛化为调用失败。子会话的实际 Docker
+烟测验证了该 gap，且 apt 配置、缓存和状态目录没有被检查修改；主 Agent 的最终矩阵
+同时覆盖这两种不同状态。
 
 ## 全库检查的既有失败
 

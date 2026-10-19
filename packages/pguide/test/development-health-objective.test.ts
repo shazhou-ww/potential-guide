@@ -344,6 +344,41 @@ test("invalid history identifies the offending sample with bounded target and ob
   assert.ok(JSON.stringify(problem.parameters).length < 2048);
 });
 
+test("apt dependency simulation distinguishes inconsistent packages from invocation faults", () => {
+  const clean = { code: 0, missing: false, stdout: "Reading package lists...\n", stderr: "" };
+  assert.equal(health.packageDependencyProblem(clean), null);
+  const broken = {
+    ...clean,
+    code: 100,
+    stdout:
+      "The following packages have unmet dependencies:\n usr-is-merged : Depends: base-files (>= 12~)",
+    stderr: "E: Unmet dependencies. Try 'apt --fix-broken install' with no packages.",
+  };
+  const problem = health.packageDependencyProblem(broken);
+  assert.equal(problem.id, "package-database-unhealthy");
+  assert.equal(problem.parameters.tool, "apt-get -s check");
+  assert.equal(problem.parameters.expected, "consistent installed package dependencies");
+  assert.deepEqual(problem.parameters.actual, {
+    code: 100,
+    stdout: broken.stdout,
+    stderr: broken.stderr,
+  });
+  assert.match(problem.parameters.recovery, /does not change packages, caches or configuration/);
+  const oversized = health.packageDependencyProblem({
+    ...broken,
+    stdout: `${broken.stdout}${"x".repeat(10000)}`,
+    stderr: `${broken.stderr}${"x".repeat(10000)}`,
+  });
+  assert.equal(oversized.parameters.actual.stdout.length, 4096);
+  assert.equal(oversized.parameters.actual.stderr.length, 4096);
+  for (const result of [
+    { ...clean, code: 127, missing: true },
+    { ...clean, code: 100, stderr: "E: Unable to read an unrelated configuration file." },
+    { ...broken, code: 2 },
+  ])
+    assert.throws(() => health.packageDependencyProblem(result), /package-dependency-check/);
+});
+
 test("apt freshness accepts genuine successful-refresh evidence without rewriting repository mtimes", () => {
   const policy = { maxPackageIndexAgeSeconds: 10 };
   assert.equal(health.packageIndexProblem([now - 10000], undefined, policy, now), null);

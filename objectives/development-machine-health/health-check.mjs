@@ -452,6 +452,27 @@ async function packageManager(context) {
   }
   return null;
 }
+export function packageDependencyProblem(result) {
+  if (result.missing) throw new Fault("package-dependency-check: apt-get missing.");
+  if (result.code === 0) return null;
+  const diagnostic = `${result.stdout}\n${result.stderr}`;
+  if (
+    result.code === 100 &&
+    /unmet dependenc|broken (?:packages|dependenc)|(?:Pre-?Depends|Depends):/i.test(diagnostic)
+  )
+    return issue("package-database-unhealthy", {
+      tool: "apt-get -s check",
+      expected: "consistent installed package dependencies",
+      actual: {
+        code: result.code,
+        stdout: result.stdout.slice(0, 4096),
+        stderr: result.stderr.slice(0, 4096),
+      },
+      recovery:
+        "Review the unsatisfied dependencies and explicitly repair the installed package state; this check does not change packages, caches or configuration.",
+    });
+  throw new Fault(`package-dependency-check: exit ${result.code}: ${diagnostic.slice(0, 2048)}`);
+}
 async function system(subject, context) {
   const problems = await directoryProblems(subject, true);
   if (problems.length) return envelope(problems);
@@ -465,6 +486,7 @@ async function system(subject, context) {
   if (unsupported) problems.push(unsupported);
   else {
     const audit = await execute("dpkg", ["--audit"], context);
+    if (audit.missing) throw new Fault("package-audit: dpkg missing.");
     if (audit.code !== 0 || audit.stdout.trim() || audit.stderr.trim())
       problems.push(
         issue("package-database-unhealthy", {
@@ -473,6 +495,24 @@ async function system(subject, context) {
           code: audit.code,
         }),
       );
+    else {
+      const dependencies = await execute(
+        "apt-get",
+        [
+          "-s",
+          "-o",
+          "Debug::NoLocking=1",
+          "-o",
+          "Dir::Cache::pkgcache=",
+          "-o",
+          "Dir::Cache::srcpkgcache=",
+          "check",
+        ],
+        context,
+      );
+      const dependencyProblem = packageDependencyProblem(dependencies);
+      if (dependencyProblem) problems.push(dependencyProblem);
+    }
   }
   for (const host of subject.network?.dns ?? []) {
     const code = "import{lookup}from'node:dns/promises';await lookup(process.argv[1]);";

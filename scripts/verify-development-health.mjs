@@ -76,6 +76,7 @@ async function verify(reportPath) {
     schemaVersion: 1,
     startedAt: new Date().toISOString(),
     scope: "local Docker only; controlled short-window samples, not long-term reliability",
+    executionMode: "immutable Git-bound Pilot API with fresh process probes and real CLI parity",
     scenarios: [],
     cleaned: false,
   };
@@ -127,6 +128,18 @@ async function verify(reportPath) {
         "-e",
         code,
       ]);
+    }
+    async function installedVersion(name, packageName, version) {
+      await inContainer(
+        name,
+        `import{readFile,writeFile}from'node:fs/promises';
+        const path='/var/lib/dpkg/status', source=await readFile(path,'utf8');
+        const packageName=${JSON.stringify(packageName)}, version=${JSON.stringify(version)};
+        const updated=source.split('\\n\\n').map(entry=>entry.startsWith('Package: '+packageName+'\\n')
+          ?entry.replace(/^Version: .+$/m,'Version: '+version):entry).join('\\n\\n');
+        if(updated===source)throw Error('fixture package not found: '+packageName);
+        await writeFile(path,updated);`,
+      );
     }
     async function direct(stage, subject) {
       return JSON.parse(
@@ -549,22 +562,15 @@ async function verify(reportPath) {
           return gap(await probe(subject), "orderly", "package-index-stale");
         },
       );
-      await scenario(
-        "pending-package-update",
-        async ({ name, subject, probe, samples, inContainer }) => {
-          subject.history = await samples(subject);
-          await inContainer(
-            name,
-            `import{readFile,writeFile}from'node:fs/promises';
-        const path='/var/lib/dpkg/status', source=await readFile(path,'utf8');
-        const updated=source.split('\\n\\n').map(entry=>entry.startsWith('Package: base-files\\n')
-          ?entry.replace(/^Version: .+$/m,'Version: 0.0.1'):entry).join('\\n\\n');
-        if(updated===source)throw Error('base-files fixture package not found');
-        await writeFile(path,updated);`,
-          );
-          return gap(await probe(subject), "orderly", "updates-pending");
-        },
-      );
+      await scenario("pending-package-update", async ({ name, subject, probe, samples }) => {
+        subject.history = await samples(subject);
+        await installedVersion(name, "ninja-build", "1.10.0-1");
+        return gap(await probe(subject), "orderly", "updates-pending");
+      });
+      await scenario("package-dependency-broken", async ({ name, subject, probe }) => {
+        await installedVersion(name, "base-files", "0.0.1");
+        return gap(await probe(subject), "managed", "package-database-unhealthy");
+      });
       await scenario(
         "healthy-then-regression",
         async ({ name, subject, probe, samples, inContainer }) => {

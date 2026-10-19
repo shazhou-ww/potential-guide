@@ -1,4 +1,4 @@
-﻿{
+{
   "baseline": "d35db75",
   "note": "Tests and setup objective extracted from baseline; shared compiled CLI source is unchanged by health implementation",
   "code": 1,
