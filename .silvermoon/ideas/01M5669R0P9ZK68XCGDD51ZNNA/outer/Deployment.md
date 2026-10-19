@@ -6,6 +6,8 @@
 
 交付源为 `git+https://github.com/shazhou-ww/potential-guide.git#packages/pguide-self-check-pilot/pilot.yaml`，revision 为上述完整 commit。检查在本契约同步到 primary 后执行；Git 访问或认证失败明确记录为交付阻塞，不静默换成本地 fixture 或旧快照。此前结果见 [历史交付证据](./Verification.md)，不沿用为本次新版本交付成功。
 
+本次固定远程来源的完整真实交付检查已完成，原始结果、独立复核及适用边界见 [交付验证](./Delivery-verification.md)。以下清单仍须独立用户验收，不以实现接受替代。
+
 ## Steps
 
 ### D-S01: 同步并验证子目录交付
