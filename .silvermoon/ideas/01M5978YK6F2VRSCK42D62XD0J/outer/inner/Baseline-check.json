@@ -1,0 +1,7 @@
+﻿{
+  "baseline": "d35db75",
+  "note": "Tests and setup objective extracted from baseline; shared compiled CLI source is unchanged by health implementation",
+  "code": 1,
+  "stdout": "✖ real sanity verifies a finite repair (12753.8016ms)\nℹ tests 1\nℹ suites 0\nℹ pass 0\nℹ fail 1\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 15451.1618\n\n✖ failing tests:\n\ntest at packages\\pguide\\test\\setup-objective.test.ts:50:13677\n✖ real sanity verifies a finite repair (12753.8016ms)\n  AssertionError [ERR_ASSERTION]: protocol: independent sanity probe failed.\n  \n  502 !== 200\n  \n      at passed (D:\\Code\\potential-guide.worktrees\\device-setup-agent-development-tools\\.cache\\health-baseline-JpWjJg\\packages\\pguide\\test\\setup-objective.test.ts:203:10)\n      at TestContext.<anonymous> (D:\\Code\\potential-guide.worktrees\\device-setup-agent-development-tools\\.cache\\health-baseline-JpWjJg\\packages\\pguide\\test\\setup-objective.test.ts:600:27)\n      at async Test.run (node:internal/test_runner/test:1113:7)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: 502,\n    expected: 200,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n",
+  "stderr": ""
+}

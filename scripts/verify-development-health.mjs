@@ -4,6 +4,9 @@ import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawn } from "cross-spawn";
+import { Effect } from "../packages/effects/dist/index.js";
+import { observe } from "../packages/objective-pilot/dist/index.js";
+import { withPilot } from "../packages/pguide/dist/pilot-source.js";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const objective = join(root, "objectives", "development-machine-health");
@@ -143,7 +146,7 @@ async function verify(reportPath) {
       }
       return history;
     }
-    async function probe(subject) {
+    async function probeCLI(subject) {
       const path = join(scratch, "subject.json");
       await writeFile(path, JSON.stringify(subject));
       return JSON.parse(
@@ -164,405 +167,417 @@ async function verify(reportPath) {
         ),
       );
     }
-    async function scenario(id, action) {
-      process.stderr.write(`Docker health: ${id}\n`);
-      const name = `pguide-health-${randomUUID()}`;
-      let entry;
-      try {
-        await execute("docker", [
-          "run",
-          "--detach",
-          "--name",
-          name,
-          "--hostname",
-          name,
-          "--add-host",
-          `${name}:127.0.0.1`,
-          "--network",
-          "none",
-          "--cpus",
-          "2",
-          "--memory",
-          "2g",
-          "--pids-limit",
-          "256",
-          "--tmpfs",
-          "/health-quota:rw,size=2m,nr_inodes=64,uid=2000,gid=2000,mode=0700",
-          tag,
-        ]);
-        containers.add(name);
-        await inContainer(
-          name,
-          `
+    await withPilot(report.pilot, root, report.commit, async (spec, runtime) => {
+      async function probe(subject) {
+        return Effect.runPromise(observe({ spec, subject }, runtime));
+      }
+      async function scenario(id, action) {
+        process.stderr.write(`Docker health: ${id}\n`);
+        const name = `pguide-health-${randomUUID()}`;
+        let entry;
+        try {
+          await execute("docker", [
+            "run",
+            "--detach",
+            "--name",
+            name,
+            "--hostname",
+            name,
+            "--add-host",
+            `${name}:127.0.0.1`,
+            "--network",
+            "none",
+            "--cpus",
+            "2",
+            "--memory",
+            "2g",
+            "--pids-limit",
+            "256",
+            "--tmpfs",
+            "/health-quota:rw,size=2m,nr_inodes=64,uid=2000,gid=2000,mode=0700",
+            tag,
+          ]);
+          containers.add(name);
+          await inContainer(
+            name,
+            `
           const response = await fetch("http://127.0.0.1:18080/health");
           if(response.status !== 200) throw Error("fixture is not ready");
         `,
-          "agent",
-        );
-        const subject = baselineSubject(name);
-        const observation = await action({ name, subject, direct, probe, samples, inContainer });
-        entry = { id, passed: true, observation };
-      } catch (error) {
-        entry = { id, passed: false, error: String(error) };
-        throw error;
-      } finally {
-        if (entry) report.scenarios.push(entry);
-        if (containers.has(name)) {
-          await execute("docker", ["rm", "--force", name]);
-          containers.delete(name);
+            "agent",
+          );
+          const subject = baselineSubject(name);
+          const observation = await action({ name, subject, direct, probe, samples, inContainer });
+          entry = { id, passed: true, observation };
+        } catch (error) {
+          entry = { id, passed: false, error: String(error) };
+          throw error;
+        } finally {
+          if (entry) report.scenarios.push(entry);
+          if (containers.has(name)) {
+            await execute("docker", ["rm", "--force", name]);
+            containers.delete(name);
+          }
         }
       }
-    }
-    function healthy(result) {
-      assert.equal(result.status, 200, JSON.stringify(result));
-      assert.equal(result.payload.current.levelId, "terminal", JSON.stringify(result));
-      assert.deepEqual(result.payload.problems, []);
-      return result;
-    }
-    function gap(result, level, id, expectedParameters = {}) {
-      assert.equal(result.status, 200, JSON.stringify(result));
-      assert.equal(result.payload.current.levelId, level, JSON.stringify(result));
-      const problem = result.payload.problems.find((entry) => entry.ref.problemId === id);
-      assert.ok(problem, `Expected ${id}: ${JSON.stringify(result)}`);
-      assert.ok(Object.keys(problem.parameters).length > 0, "Gap must include concrete evidence");
-      for (const [key, value] of Object.entries(expectedParameters))
-        assert.deepEqual(problem.parameters[key], value, JSON.stringify(problem));
-      return result;
-    }
+      function healthy(result) {
+        assert.equal(result.status, 200, JSON.stringify(result));
+        assert.equal(result.payload.current.levelId, "terminal", JSON.stringify(result));
+        assert.deepEqual(result.payload.problems, []);
+        return result;
+      }
+      function gap(result, level, id, expectedParameters = {}) {
+        assert.equal(result.status, 200, JSON.stringify(result));
+        assert.equal(result.payload.current.levelId, level, JSON.stringify(result));
+        const problem = result.payload.problems.find((entry) => entry.ref.problemId === id);
+        assert.ok(problem, `Expected ${id}: ${JSON.stringify(result)}`);
+        assert.ok(Object.keys(problem.parameters).length > 0, "Gap must include concrete evidence");
+        for (const [key, value] of Object.entries(expectedParameters))
+          assert.deepEqual(problem.parameters[key], value, JSON.stringify(problem));
+        return result;
+      }
 
-    await scenario("healthy-all-four-stacks", async ({ subject, samples, probe }) => {
-      subject.history = await samples(subject);
-      return healthy(await probe(subject));
-    });
-    await scenario("history-required", async ({ subject, probe }) =>
-      gap(await probe(subject), "orderly", "history-insufficient"),
-    );
-    await scenario("docker-transport-does-not-fallback", async ({ subject, direct }) => {
-      const result = await direct("identity", {
-        ...subject,
-        target: { type: "docker", container: `missing-${randomUUID()}` },
+      await scenario("healthy-all-four-stacks", async ({ subject, samples, probe }) => {
+        subject.history = await samples(subject);
+        const pilot = healthy(await probe(subject));
+        const cliSmoke = healthy(await probeCLI(subject));
+        assert.deepEqual(cliSmoke.payload.current, pilot.payload.current);
+        assert.deepEqual(cliSmoke.payload.versions, pilot.payload.versions);
+        return { pilot, cliSmoke };
       });
-      assert.notEqual(result.status, 200, JSON.stringify(result));
-      assert.equal(result.payload, null);
-      assert.ok(result.message.length > 0);
-      return result;
-    });
-    await scenario("invalid-input-explicitly-rejected", async ({ subject, direct }) => {
-      const result = await direct("identity", { ...subject, unexpected: true });
-      assert.equal(result.status, 400, JSON.stringify(result));
-      assert.equal(result.payload, null);
-      return result;
-    });
-    await scenario("root-is-not-dedicated-user", async ({ subject, probe }) => {
-      subject.user = "root";
-      subject.home = "/root";
-      return gap(await probe(subject), "initial", "identity-mismatch");
-    });
-    await scenario("environment-mismatch", async ({ subject, probe }) => {
-      subject.environment = "native-linux";
-      return gap(await probe(subject), "initial", "environment-mismatch");
-    });
-    await scenario(
-      "home-owner-gap-and-recovery",
-      async ({ name, subject, probe, samples, inContainer }) => {
-        await inContainer(
-          name,
-          "import{chown}from'node:fs/promises';await chown('/home/agent/work',0,0)",
-        );
-        const failed = gap(await probe(subject), "initial", "directory-unusable", {
-          directory: "workspace",
-          path: subject.workspace,
-          actual: { uid: 0, directory: true, symlink: false },
+      await scenario("history-required", async ({ subject, probe }) =>
+        gap(await probe(subject), "orderly", "history-insufficient"),
+      );
+      await scenario("docker-transport-does-not-fallback", async ({ subject, direct }) => {
+        const result = await direct("identity", {
+          ...subject,
+          target: { type: "docker", container: `missing-${randomUUID()}` },
         });
-        await inContainer(
-          name,
-          "import{chown}from'node:fs/promises';await chown('/home/agent/work',2000,2000)",
-        );
-        subject.history = await samples(subject);
-        return { failed, recovered: healthy(await probe(subject)) };
-      },
-    );
-    await scenario(
-      "sudo-gap-and-recovery",
-      async ({ name, subject, probe, samples, inContainer }) => {
-        await inContainer(
-          name,
-          "import{rename}from'node:fs/promises';await rename('/etc/sudoers.d/agent','/tmp/health-agent-sudo')",
-        );
-        const failed = gap(await probe(subject), "initial", "sudo-unavailable");
-        await inContainer(
-          name,
-          "import{rename}from'node:fs/promises';await rename('/tmp/health-agent-sudo','/etc/sudoers.d/agent')",
-        );
-        subject.history = await samples(subject);
-        return { failed, recovered: healthy(await probe(subject)) };
-      },
-    );
-    await scenario("filesystem-space-gap", async ({ name, subject, probe, inContainer }) => {
-      subject.workspace = "/health-quota";
-      subject.policy = { minFreeBytes: 1024 * 1024, minFreeInodes: 0 };
-      await inContainer(
-        name,
-        "import{writeFile}from'node:fs/promises';await writeFile('/health-quota/fill',Buffer.alloc(1536*1024))",
-        "agent",
-      );
-      const result = gap(await probe(subject), "managed", "capacity-low", {
-        path: subject.workspace,
-        expected: subject.policy.minFreeBytes,
-        unit: "bytes",
+        assert.notEqual(result.status, 200, JSON.stringify(result));
+        assert.equal(result.payload, null);
+        assert.ok(result.message.length > 0);
+        return result;
       });
-      assert.ok(
-        result.payload.problems.find((p) => p.ref.problemId === "capacity-low").parameters.actual <
-          subject.policy.minFreeBytes,
-      );
-      return result;
-    });
-    await scenario("filesystem-inode-gap", async ({ name, subject, probe, inContainer }) => {
-      subject.workspace = "/health-quota";
-      subject.policy = { minFreeBytes: 0, minFreeInodes: 16 };
-      await inContainer(
-        name,
-        "import{writeFile}from'node:fs/promises';for(let i=0;i<55;i++)await writeFile('/health-quota/f'+i,'')",
-        "agent",
-      );
-      const result = gap(await probe(subject), "managed", "inodes-low", {
-        path: subject.workspace,
-        expected: subject.policy.minFreeInodes,
-        unit: "inodes",
+      await scenario("invalid-input-explicitly-rejected", async ({ subject, direct }) => {
+        const result = await direct("identity", { ...subject, unexpected: true });
+        assert.equal(result.status, 400, JSON.stringify(result));
+        assert.equal(result.payload, null);
+        return result;
       });
-      assert.ok(
-        result.payload.problems.find((p) => p.ref.problemId === "inodes-low").parameters.actual <
-          subject.policy.minFreeInodes,
-      );
-      return result;
-    });
-    await scenario("required-endpoint-gap", async ({ subject, probe }) => {
-      subject.network.urls = ["http://127.0.0.1:18080/unavailable"];
-      return gap(await probe(subject), "managed", "http-unavailable", {
-        url: subject.network.urls[0],
+      await scenario("root-is-not-dedicated-user", async ({ subject, probe }) => {
+        subject.user = "root";
+        subject.home = "/root";
+        return gap(await probe(subject), "initial", "identity-mismatch");
       });
-    });
-    await scenario("package-manager-incomplete", async ({ name, subject, probe, inContainer }) => {
-      await inContainer(
-        name,
-        `import{writeFile}from'node:fs/promises';
-        await writeFile('/var/lib/dpkg/updates/0000','invalid package database update\\n');`,
-      );
-      return gap(await probe(subject), "managed", "package-database-unhealthy");
-    });
-    await scenario("version-gap", async ({ subject, probe }) => {
-      subject.minimumVersions = { node: "999.0.0" };
-      return gap(await probe(subject), "system-ready", "tool-version", {
-        tool: "node",
-        expected: "999.0.0",
+      await scenario("environment-mismatch", async ({ subject, probe }) => {
+        subject.environment = "native-linux";
+        return gap(await probe(subject), "initial", "environment-mismatch");
       });
-    });
-    for (const [stack, binary] of [
-      ["typescript", "/usr/local/bin/tsc"],
-      ["python", "/usr/bin/python3"],
-      ["cpp", "/usr/bin/c++"],
-      ["rust", "/opt/cargo/bin/cargo"],
-    ]) {
-      await scenario(`${stack}-missing`, async ({ name, subject, probe, inContainer }) => {
-        subject.stacks = [stack];
-        await inContainer(
-          name,
-          `import{rename}from'node:fs/promises';await rename(${JSON.stringify(binary)},${JSON.stringify(`${binary}.health-disabled`)})`,
-        );
-        return gap(await probe(subject), "system-ready", "tool-missing", {
-          tool: { typescript: "tsc", python: "python3", cpp: "c++", rust: "cargo" }[stack],
-          actual: "ENOENT",
-        });
-      });
-    }
-    await scenario("compiler-exists-but-fails", async ({ name, subject, probe, inContainer }) => {
-      subject.stacks = ["cpp"];
-      await inContainer(
-        name,
-        `import{rename,writeFile,chmod}from'node:fs/promises';
-        await rename('/usr/bin/c++','/usr/bin/c++.health-real');
-        await writeFile('/usr/bin/c++','#!/bin/sh\\nif [ "$1" = "--version" ]; then exec /usr/bin/c++.health-real --version; fi\\nexit 1\\n');
-        await chmod('/usr/bin/c++',0o755);`,
-      );
-      return gap(await probe(subject), "system-ready", "toolchain-failed");
-    });
-    await scenario("overlapping-layout", async ({ subject, probe }) => {
-      subject.cacheDirectory = subject.workspace;
-      return gap(await probe(subject), "development-ready", "layout-invalid");
-    });
-    await scenario("invalid-task-registry", async ({ name, subject, probe, inContainer }) => {
-      await inContainer(
-        name,
-        "import{writeFile}from'node:fs/promises';await writeFile('/home/agent/tasks/broken.json','not JSON')",
-        "agent",
-      );
-      return gap(await probe(subject), "development-ready", "task-registry-invalid");
-    });
-    await scenario("stale-task-residue", async ({ name, subject, probe, inContainer }) => {
-      await inContainer(
-        name,
-        `import{mkdir,writeFile}from'node:fs/promises';
-        await mkdir('/home/agent/tmp/ended');
-        await writeFile('/home/agent/tasks/ended.json',JSON.stringify({
-          id:'ended',state:'finished',startedAt:Date.now()-200000,finishedAt:Date.now()-100000,
-          temporaryDirectory:'/home/agent/tmp/ended'}));`,
-        "agent",
-      );
-      subject.policy = { retentionSeconds: 1 };
-      return gap(await probe(subject), "development-ready", "task-residue", {
-        id: "ended",
-        path: "/home/agent/tmp/ended",
-      });
-    });
-    await scenario("orphaned-task", async ({ name, subject, probe, inContainer }) => {
-      await inContainer(
-        name,
-        `import{writeFile}from'node:fs/promises';
-        await writeFile('/home/agent/tasks/orphan.json',JSON.stringify({
-          id:'orphan',state:'active',pid:2147483647,startedAt:Date.now()-1000}));`,
-        "agent",
-      );
-      return gap(await probe(subject), "development-ready", "task-orphaned");
-    });
-    await scenario("task-deadline-gap", async ({ name, subject, probe, inContainer }) => {
-      await inContainer(
-        name,
-        `import{writeFile}from'node:fs/promises';
-        await writeFile('/home/agent/tasks/overdue.json',JSON.stringify({
-          id:'overdue',state:'active',pid:1,startedAt:Date.now()-10000,deadlineAt:Date.now()-1000}));`,
-        "agent",
-      );
-      return gap(await probe(subject), "development-ready", "task-overdue");
-    });
-    await scenario(
-      "finished-task-process-leftover",
-      async ({ name, subject, probe, inContainer }) => {
-        await inContainer(
-          name,
-          `import{writeFile}from'node:fs/promises';
-        await writeFile('/home/agent/tasks/leftover.json',JSON.stringify({
-          id:'leftover',state:'finished',pid:1,startedAt:Date.now()-10000,finishedAt:Date.now()-1000}));`,
-          "agent",
-        );
-        return gap(await probe(subject), "development-ready", "task-process-leftover");
-      },
-    );
-    await scenario(
-      "active-work-and-uncommitted-data-protected",
-      async ({ name, subject, samples, probe, inContainer }) => {
-        await inContainer(
-          name,
-          `import{writeFile}from'node:fs/promises';import{execFileSync}from'node:child_process';
-        execFileSync('git',['init','/home/agent/work/project']);
-        await writeFile('/home/agent/work/project/work.txt','uncommitted work\\n');
-        await writeFile('/home/agent/unknown-file','keep\\n');
-        await writeFile('/home/agent/tasks/active.json',JSON.stringify({
-          id:'active',state:'active',pid:1,startedAt:Date.now()-86400000}));`,
-          "agent",
-        );
-        subject.history = await samples(subject);
-        const passed = healthy(await probe(subject));
-        await inContainer(
-          name,
-          `import{readFile,readdir}from'node:fs/promises';
-        if(await readFile('/home/agent/work/project/work.txt','utf8')!=='uncommitted work\\n')throw Error('work changed');
-        if(await readFile('/home/agent/unknown-file','utf8')!=='keep\\n')throw Error('unknown file changed');
-        process.kill(1,0);
-        if((await readdir('/home/agent/tmp')).length)throw Error('scratch leaked');`,
-          "agent",
-        );
-        return passed;
-      },
-    );
-    await scenario("foreign-history-gap", async ({ subject, samples, probe }) => {
-      subject.history = (await samples(subject)).map((entry) => ({
-        ...entry,
-        hostname: "other-device",
-      }));
-      return gap(await probe(subject), "orderly", "history-invalid");
-    });
-    await scenario("stale-history-gap", async ({ subject, samples, probe }) => {
-      subject.history = (await samples(subject)).map((entry) => ({
-        ...entry,
-        measuredAt: entry.measuredAt - 600000,
-      }));
-      return gap(await probe(subject), "orderly", "history-insufficient");
-    });
-    for (const [field, directory, expected] of [
-      ["cacheBytes", "/home/agent/cache", "cache-growth"],
-      ["logBytes", "/home/agent/logs", "log-growth"],
-    ]) {
       await scenario(
-        `${field}-growth-and-recovery`,
-        async ({ name, subject, direct, probe, samples, inContainer }) => {
-          subject.history = [];
-          for (let index = 0; index < 3; index++) {
-            await inContainer(
-              name,
-              `import{writeFile}from'node:fs/promises';await writeFile('${directory}/growth',Buffer.alloc(${(index + 1) * 4096}))`,
-              "agent",
-            );
-            const sample = await direct("sample", subject);
-            assert.equal(sample.status, 200, JSON.stringify(sample));
-            subject.history.push(sample.payload);
-            if (index < 2) await pause(650);
-          }
-          subject.policy = { maxCacheGrowthBytesPerSecond: 1, maxLogGrowthBytesPerSecond: 1 };
-          const failed = gap(await probe(subject), "orderly", expected, {
-            expected: 1,
-            unit: "bytes/second",
+        "home-owner-gap-and-recovery",
+        async ({ name, subject, probe, samples, inContainer }) => {
+          await inContainer(
+            name,
+            "import{chown}from'node:fs/promises';await chown('/home/agent/work',0,0)",
+          );
+          const failed = gap(await probe(subject), "initial", "directory-unusable", {
+            directory: "workspace",
+            path: subject.workspace,
+            actual: { uid: 0, directory: true, symlink: false },
           });
           await inContainer(
             name,
-            `import{unlink}from'node:fs/promises';await unlink('${directory}/growth')`,
-            "agent",
+            "import{chown}from'node:fs/promises';await chown('/home/agent/work',2000,2000)",
           );
           subject.history = await samples(subject);
           return { failed, recovered: healthy(await probe(subject)) };
         },
       );
-    }
-    await scenario(
-      "package-index-stale",
-      async ({ name, subject, probe, samples, inContainer }) => {
-        subject.history = await samples(subject);
+      await scenario(
+        "sudo-gap-and-recovery",
+        async ({ name, subject, probe, samples, inContainer }) => {
+          await inContainer(
+            name,
+            "import{rename}from'node:fs/promises';await rename('/etc/sudoers.d/agent','/tmp/health-agent-sudo')",
+          );
+          const failed = gap(await probe(subject), "initial", "sudo-unavailable");
+          await inContainer(
+            name,
+            "import{rename}from'node:fs/promises';await rename('/tmp/health-agent-sudo','/etc/sudoers.d/agent')",
+          );
+          subject.history = await samples(subject);
+          return { failed, recovered: healthy(await probe(subject)) };
+        },
+      );
+      await scenario("filesystem-space-gap", async ({ name, subject, probe, inContainer }) => {
+        subject.workspace = "/health-quota";
+        subject.policy = { minFreeBytes: 1024 * 1024, minFreeInodes: 0 };
         await inContainer(
           name,
-          `import{readdir,utimes}from'node:fs/promises';
+          "import{writeFile}from'node:fs/promises';await writeFile('/health-quota/fill',Buffer.alloc(1536*1024))",
+          "agent",
+        );
+        const result = gap(await probe(subject), "managed", "capacity-low", {
+          path: subject.workspace,
+          expected: subject.policy.minFreeBytes,
+          unit: "bytes",
+        });
+        assert.ok(
+          result.payload.problems.find((p) => p.ref.problemId === "capacity-low").parameters
+            .actual < subject.policy.minFreeBytes,
+        );
+        return result;
+      });
+      await scenario("filesystem-inode-gap", async ({ name, subject, probe, inContainer }) => {
+        subject.workspace = "/health-quota";
+        subject.policy = { minFreeBytes: 0, minFreeInodes: 16 };
+        await inContainer(
+          name,
+          "import{writeFile}from'node:fs/promises';for(let i=0;i<55;i++)await writeFile('/health-quota/f'+i,'')",
+          "agent",
+        );
+        const result = gap(await probe(subject), "managed", "inodes-low", {
+          path: subject.workspace,
+          expected: subject.policy.minFreeInodes,
+          unit: "inodes",
+        });
+        assert.ok(
+          result.payload.problems.find((p) => p.ref.problemId === "inodes-low").parameters.actual <
+            subject.policy.minFreeInodes,
+        );
+        return result;
+      });
+      await scenario("required-endpoint-gap", async ({ subject, probe }) => {
+        subject.network.urls = ["http://127.0.0.1:18080/unavailable"];
+        return gap(await probe(subject), "managed", "http-unavailable", {
+          url: subject.network.urls[0],
+        });
+      });
+      await scenario(
+        "package-manager-incomplete",
+        async ({ name, subject, probe, inContainer }) => {
+          await inContainer(
+            name,
+            `import{writeFile}from'node:fs/promises';
+        await writeFile('/var/lib/dpkg/updates/0000','invalid package database update\\n');`,
+          );
+          return gap(await probe(subject), "managed", "package-database-unhealthy");
+        },
+      );
+      await scenario("version-gap", async ({ subject, probe }) => {
+        subject.minimumVersions = { node: "999.0.0" };
+        return gap(await probe(subject), "system-ready", "tool-version", {
+          tool: "node",
+          expected: "999.0.0",
+        });
+      });
+      for (const [stack, binary] of [
+        ["typescript", "/usr/local/bin/tsc"],
+        ["python", "/usr/bin/python3"],
+        ["cpp", "/usr/bin/c++"],
+        ["rust", "/opt/cargo/bin/cargo"],
+      ]) {
+        await scenario(`${stack}-missing`, async ({ name, subject, probe, inContainer }) => {
+          subject.stacks = [stack];
+          await inContainer(
+            name,
+            `import{rename}from'node:fs/promises';await rename(${JSON.stringify(binary)},${JSON.stringify(`${binary}.health-disabled`)})`,
+          );
+          return gap(await probe(subject), "system-ready", "tool-missing", {
+            tool: { typescript: "tsc", python: "python3", cpp: "c++", rust: "cargo" }[stack],
+            actual: "ENOENT",
+          });
+        });
+      }
+      await scenario("compiler-exists-but-fails", async ({ name, subject, probe, inContainer }) => {
+        subject.stacks = ["cpp"];
+        await inContainer(
+          name,
+          `import{rename,writeFile,chmod}from'node:fs/promises';
+        await rename('/usr/bin/c++','/usr/bin/c++.health-real');
+        await writeFile('/usr/bin/c++','#!/bin/sh\\nif [ "$1" = "--version" ]; then exec /usr/bin/c++.health-real --version; fi\\nexit 1\\n');
+        await chmod('/usr/bin/c++',0o755);`,
+        );
+        return gap(await probe(subject), "system-ready", "toolchain-failed");
+      });
+      await scenario("overlapping-layout", async ({ subject, probe }) => {
+        subject.cacheDirectory = subject.workspace;
+        return gap(await probe(subject), "development-ready", "layout-invalid");
+      });
+      await scenario("invalid-task-registry", async ({ name, subject, probe, inContainer }) => {
+        await inContainer(
+          name,
+          "import{writeFile}from'node:fs/promises';await writeFile('/home/agent/tasks/broken.json','not JSON')",
+          "agent",
+        );
+        return gap(await probe(subject), "development-ready", "task-registry-invalid");
+      });
+      await scenario("stale-task-residue", async ({ name, subject, probe, inContainer }) => {
+        await inContainer(
+          name,
+          `import{mkdir,writeFile}from'node:fs/promises';
+        await mkdir('/home/agent/tmp/ended');
+        await writeFile('/home/agent/tasks/ended.json',JSON.stringify({
+          id:'ended',state:'finished',startedAt:Date.now()-200000,finishedAt:Date.now()-100000,
+          temporaryDirectory:'/home/agent/tmp/ended'}));`,
+          "agent",
+        );
+        subject.policy = { retentionSeconds: 1 };
+        return gap(await probe(subject), "development-ready", "task-residue", {
+          id: "ended",
+          path: "/home/agent/tmp/ended",
+        });
+      });
+      await scenario("orphaned-task", async ({ name, subject, probe, inContainer }) => {
+        await inContainer(
+          name,
+          `import{writeFile}from'node:fs/promises';
+        await writeFile('/home/agent/tasks/orphan.json',JSON.stringify({
+          id:'orphan',state:'active',pid:2147483647,startedAt:Date.now()-1000}));`,
+          "agent",
+        );
+        return gap(await probe(subject), "development-ready", "task-orphaned");
+      });
+      await scenario("task-deadline-gap", async ({ name, subject, probe, inContainer }) => {
+        await inContainer(
+          name,
+          `import{writeFile}from'node:fs/promises';
+        await writeFile('/home/agent/tasks/overdue.json',JSON.stringify({
+          id:'overdue',state:'active',pid:1,startedAt:Date.now()-10000,deadlineAt:Date.now()-1000}));`,
+          "agent",
+        );
+        return gap(await probe(subject), "development-ready", "task-overdue");
+      });
+      await scenario(
+        "finished-task-process-leftover",
+        async ({ name, subject, probe, inContainer }) => {
+          await inContainer(
+            name,
+            `import{writeFile}from'node:fs/promises';
+        await writeFile('/home/agent/tasks/leftover.json',JSON.stringify({
+          id:'leftover',state:'finished',pid:1,startedAt:Date.now()-10000,finishedAt:Date.now()-1000}));`,
+            "agent",
+          );
+          return gap(await probe(subject), "development-ready", "task-process-leftover");
+        },
+      );
+      await scenario(
+        "active-work-and-uncommitted-data-protected",
+        async ({ name, subject, samples, probe, inContainer }) => {
+          await inContainer(
+            name,
+            `import{writeFile}from'node:fs/promises';import{execFileSync}from'node:child_process';
+        execFileSync('git',['init','/home/agent/work/project']);
+        await writeFile('/home/agent/work/project/work.txt','uncommitted work\\n');
+        await writeFile('/home/agent/unknown-file','keep\\n');
+        await writeFile('/home/agent/tasks/active.json',JSON.stringify({
+          id:'active',state:'active',pid:1,startedAt:Date.now()-86400000}));`,
+            "agent",
+          );
+          subject.history = await samples(subject);
+          const passed = healthy(await probe(subject));
+          await inContainer(
+            name,
+            `import{readFile,readdir}from'node:fs/promises';
+        if(await readFile('/home/agent/work/project/work.txt','utf8')!=='uncommitted work\\n')throw Error('work changed');
+        if(await readFile('/home/agent/unknown-file','utf8')!=='keep\\n')throw Error('unknown file changed');
+        process.kill(1,0);
+        if((await readdir('/home/agent/tmp')).length)throw Error('scratch leaked');`,
+            "agent",
+          );
+          return passed;
+        },
+      );
+      await scenario("foreign-history-gap", async ({ subject, samples, probe }) => {
+        subject.history = (await samples(subject)).map((entry) => ({
+          ...entry,
+          hostname: "other-device",
+        }));
+        return gap(await probe(subject), "orderly", "history-invalid");
+      });
+      await scenario("stale-history-gap", async ({ subject, samples, probe }) => {
+        subject.history = (await samples(subject)).map((entry) => ({
+          ...entry,
+          measuredAt: entry.measuredAt - 600000,
+        }));
+        return gap(await probe(subject), "orderly", "history-insufficient");
+      });
+      for (const [field, directory, expected] of [
+        ["cacheBytes", "/home/agent/cache", "cache-growth"],
+        ["logBytes", "/home/agent/logs", "log-growth"],
+      ]) {
+        await scenario(
+          `${field}-growth-and-recovery`,
+          async ({ name, subject, direct, probe, samples, inContainer }) => {
+            subject.history = [];
+            for (let index = 0; index < 3; index++) {
+              await inContainer(
+                name,
+                `import{writeFile}from'node:fs/promises';await writeFile('${directory}/growth',Buffer.alloc(${(index + 1) * 4096}))`,
+                "agent",
+              );
+              const sample = await direct("sample", subject);
+              assert.equal(sample.status, 200, JSON.stringify(sample));
+              subject.history.push(sample.payload);
+              if (index < 2) await pause(650);
+            }
+            subject.policy = { maxCacheGrowthBytesPerSecond: 1, maxLogGrowthBytesPerSecond: 1 };
+            const failed = gap(await probe(subject), "orderly", expected, {
+              expected: 1,
+              unit: "bytes/second",
+            });
+            await inContainer(
+              name,
+              `import{unlink}from'node:fs/promises';await unlink('${directory}/growth')`,
+              "agent",
+            );
+            subject.history = await samples(subject);
+            return { failed, recovered: healthy(await probe(subject)) };
+          },
+        );
+      }
+      await scenario(
+        "package-index-stale",
+        async ({ name, subject, probe, samples, inContainer }) => {
+          subject.history = await samples(subject);
+          await inContainer(
+            name,
+            `import{readdir,utimes}from'node:fs/promises';
           for(const name of await readdir('/var/lib/apt/lists'))if(name.includes('Packages'))await utimes('/var/lib/apt/lists/'+name,1,1);
           await utimes('/var/lib/apt/periodic/update-success-stamp',1,1);`,
-        );
-        return gap(await probe(subject), "orderly", "package-index-stale");
-      },
-    );
-    await scenario(
-      "pending-package-update",
-      async ({ name, subject, probe, samples, inContainer }) => {
-        subject.history = await samples(subject);
-        await inContainer(
-          name,
-          `import{readFile,writeFile}from'node:fs/promises';
+          );
+          return gap(await probe(subject), "orderly", "package-index-stale");
+        },
+      );
+      await scenario(
+        "pending-package-update",
+        async ({ name, subject, probe, samples, inContainer }) => {
+          subject.history = await samples(subject);
+          await inContainer(
+            name,
+            `import{readFile,writeFile}from'node:fs/promises';
         const path='/var/lib/dpkg/status', source=await readFile(path,'utf8');
         const updated=source.split('\\n\\n').map(entry=>entry.startsWith('Package: base-files\\n')
           ?entry.replace(/^Version: .+$/m,'Version: 0.0.1'):entry).join('\\n\\n');
         if(updated===source)throw Error('base-files fixture package not found');
         await writeFile(path,updated);`,
-        );
-        return gap(await probe(subject), "orderly", "updates-pending");
-      },
-    );
-    await scenario(
-      "healthy-then-regression",
-      async ({ name, subject, probe, samples, inContainer }) => {
-        subject.history = await samples(subject);
-        const passed = healthy(await probe(subject));
-        await inContainer(
-          name,
-          "import{chown}from'node:fs/promises';await chown('/home/agent/work',0,0)",
-        );
-        return { passed, regressed: gap(await probe(subject), "initial", "directory-unusable") };
-      },
-    );
+          );
+          return gap(await probe(subject), "orderly", "updates-pending");
+        },
+      );
+      await scenario(
+        "healthy-then-regression",
+        async ({ name, subject, probe, samples, inContainer }) => {
+          subject.history = await samples(subject);
+          const passed = healthy(await probe(subject));
+          await inContainer(
+            name,
+            "import{chown}from'node:fs/promises';await chown('/home/agent/work',0,0)",
+          );
+          return { passed, regressed: gap(await probe(subject), "initial", "directory-unusable") };
+        },
+      );
+    });
     report.passed = true;
   } catch (error) {
     report.passed = false;

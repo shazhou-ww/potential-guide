@@ -100,6 +100,9 @@ C++ 使用 CMake／Ninja，Rust 离线构建无外部依赖的 crate。
 | `maxLogGrowthBytesPerSecond` | 65,536 bytes/s |
 | `maxPackageIndexAgeSeconds` | 604,800，包索引新鲜度上限 7 天 |
 
+本版历史采样覆盖磁盘容量、inode、缓存及日志大小，不提供 CPU／内存持续异常检测。
+Docker 验收对 CPU／内存设置上限是测试隔离措施，不应被理解为这些健康指标已经检查通过。
+
 容量等于下限、增长等于上限时通过。历史必须来自相同 hostname／user／home，时间递增、
 非未来值且指标非负；样本不足和身份错误均不能证明持续健康。
 包更新模拟只依据本地 apt 索引，不代表已实时查询安全公告。有 root 所有的有效
@@ -135,7 +138,10 @@ C++ 使用 CMake／Ninja，Rust 离线构建无外部依赖的 crate。
 pnpm health:verify --report D:\health\docker-report.json
 ```
 
-验收脚本使用当前提交的 Git Pilot 和真实 `pguide probe`，不是替换 check 的假数据。
+验收脚本绑定当前提交的 Git Pilot，在全部场景中运行真实 Pilot `observe` 和进程 probes，
+并对健康场景额外执行真实 `pguide probe`，核对 API／CLI 的层级和版本一致；
+不是替换 check 的假数据。一次固定的 Git 快照在场景间复用，避免反复复制整个仓库，
+但每次观测都从第一层开始，各 check 仍启动独立进程读取容器实际状态。
 它准备包含四种技术栈的镜像，为每个场景创建独立容器，断言问题层级、具体问题 ID，
 保留完整观测、镜像 ID、依赖完整性信息和 Docker／代码版本。
 
