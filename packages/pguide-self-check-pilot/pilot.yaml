@@ -17,7 +17,7 @@ domainSchema:
     desiredVersion: {type: string, minLength: 1}
     agent: {type: string, minLength: 1}
     userHome: {type: string, minLength: 1}
-    timeoutMs: {type: integer, minimum: 100, maximum: 24000, default: 20000}
+    timeoutMs: {type: integer, minimum: 100, maximum: 300000, default: 20000}
 levels:
   - id: initial
     advancement:

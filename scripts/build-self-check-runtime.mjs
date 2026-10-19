@@ -87,14 +87,16 @@ for (const name of await readdir(join(root, "packages", "pguide-setup-pilot", "s
               node.expression.text === "remote"
             ) {
               removed++;
-              return undefined;
+              return node.elseStatement === undefined
+                ? undefined
+                : ts.visitNode(node.elseStatement, visit);
             }
             return ts.visitEachChild(node, visit, context);
           };
           return (node) => ts.visitNode(node, visit);
         },
       ]);
-      if (removed !== 2) throw new Error("Local-only self-check extraction contract changed.");
+      if (removed !== 3) throw new Error("Local-only self-check extraction contract changed.");
       text = ts.createPrinter().printFile(transformed.transformed[0]);
       transformed.dispose();
     }
@@ -176,6 +178,6 @@ await reference(
 await reference(
   "pages/self-check",
   "本机自查边界",
-  "本机已安装的 pguide 运行此 Objective。subject 不接受 target 或 allowSanity；检查级无额外授权门，仍沿用真实工具权限。每项默认 20 秒、Pilot 最多 24 秒，为默认 30 秒 probe 留清理余量；原始 Agent 输出最多 192 KiB，外围输出最多 256 KiB。只清理本次独占 scratch/state，不重试、不嵌套 regulate。小修复不依赖 Git、网络或安装；Git 仅供加载 Objective。长时直接 helper 成功不代表完整 Pilot terminal。",
+  "本机已安装的 pguide 运行此 Objective。subject 不接受 target 或 allowSanity；检查级无额外授权门，仍沿用真实工具权限。每项默认 20 秒，显式 timeoutMs 最多 300 秒；Pilot 必须满足本项预算加 6000ms 不超过外层 probe timeoutMs，默认外层 30 秒时仍最多 24 秒。较长预算必须显式同步配置 regulationStrategy.probe.timeoutMs；保留已有更短 Agent 期限。原始 Agent 输出最多 192 KiB，外围输出最多 256 KiB。只清理本次独占 scratch/state，不重试、不嵌套 regulate。小修复不依赖 Git、网络或安装；Git 仅供加载 Objective。只有完整 Pilot terminal 才通过，不以直接 helper 成功替代。",
   [],
 );

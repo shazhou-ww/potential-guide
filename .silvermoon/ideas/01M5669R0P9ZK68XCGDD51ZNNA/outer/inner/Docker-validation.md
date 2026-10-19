@@ -328,3 +328,11 @@ runner 使用真实官方 CLI，不是 ACP fixture；只有显式 end_turn、没
 已提出仅增加显式可配置的较长预算、保留现有默认值并强制协调内外期限及清理余量的选择，未获得用户答复。因此保持当前行为，不修改 manifest、默认预算或正式通过条件。下一步等待这项行为决策，再按被接受的契约实现与复验。I-S03、I-AC03 继续未完成，不 submitInner、不请求实现或交付验收；已经通过的真实 Agent baseline 作为可复用环境证据保留。
 
 本轮发布前 pnpm check 再次退出 `0`（373 项报告、371 通过、2 项已有跳过）；实际执行根脚本 24 项与 monorepo 34 项，其余十一 workspace 测试复用缓存。主会话另直接读取容器 baseline 和正式 probe 报告，核对真实 ready、模型、一次 prompt、独立 marker 结果，以及正式 probe 的 504、非 terminal、scratch sentinel 保留。没有重复模型请求来确认已有结果。
+
+## 显式协调预算的实现候选
+
+用户随后同意继续推进 Implementation 验收，本轮按此前提出的显式可配置预算方向实施；这不是 acceptInner。默认 subject 20000 ms 和默认外层 probe 30000 ms 均不变，默认外层下仍至多允许 24000 ms。显式 subject 上限沿用已有 helper 的 300000 ms，但必须满足 subject.timeoutMs + 6000 <= 实际外层 probe timeoutMs；重用旧本地 setup 的元数据格式校验与清理余量，SSH 原上限不变，已有更短 Agent deadline 仍生效。
+
+Pilot manifest、共享 runner、local-only runtime 提取器和生成参考页已同步。提取器在删除远程分支时保留 else 中的本地期限校验，避免为本机快照误删保护；回归同时针对原 setup helper 与生成的 self-check runtime 验证默认值、恰好 6000 ms 余量、少 1 ms、上限 300 秒和非法元数据。提交过的 Git 快照测试覆盖默认 probe 与显式 subject 60000 / probe 90000 两种完整 terminal，均只有一个 fixture prompt；这些是自动回归，不是真实模型证据。
+
+定向十项测试全部通过，完整 pnpm check 退出 `0`（373 项报告，371 通过、2 项已有跳过）。setup 33 项、self-check package 1 项、monorepo 34 项和根脚本 24 项实际执行，其余九个 workspace 的测试复用缓存；格式、lint、类型、新鲜度、build 和 pack 通过。此时 I-S03、I-AC03 仍等待新精确源码的真实完整 probe，不因为预算候选已通过测试就提交实现验收。

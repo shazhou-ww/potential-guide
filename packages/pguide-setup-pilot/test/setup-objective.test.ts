@@ -374,12 +374,17 @@ test("local target is backward compatible; long direct deadlines are rejected by
   }
 });
 
-test("local Pilot deadlines require valid coordinated runtime metadata and a cleanup reserve", async () => {
+test("local setup and self-check deadlines require coordinated metadata and a cleanup reserve", async () => {
   const f = await setup();
   const previous = process.env.PGUIDE_PROBE_TIMEOUT_MS;
   try {
     const { check } = await import(pathToFileURL(helper).href);
+    const { check: selfCheck } = await import(
+      pathToFileURL(join(root, "packages", "pguide-self-check-pilot", "runtime", "setup-check.mjs"))
+        .href
+    );
     for (const [metadata, timeoutMs, accepted] of [
+      [undefined, 20000, true],
       [undefined, 24000, true],
       [undefined, 60000, false],
       ["30000", 24000, true],
@@ -408,13 +413,18 @@ test("local Pilot deadlines require valid coordinated runtime metadata and a cle
     ] as const) {
       if (metadata === undefined) delete process.env.PGUIDE_PROBE_TIMEOUT_MS;
       else process.env.PGUIDE_PROBE_TIMEOUT_MS = metadata;
-      const result = await check("installation", { ...f.subject, timeoutMs }, { pilot: true });
-      if (accepted) passed(result);
-      else {
-        assert.equal(result.status, 400, `${metadata}: ${JSON.stringify(result)}`);
-        assert.match(result.message, /outer-timeout/);
+      for (const [runCheck, subject, options] of [
+        [check, f.subject, { pilot: true }],
+        [selfCheck, selfSubject(f), { pilot: true, selfCheck: true }],
+      ] as const) {
+        const result = await runCheck("installation", { ...subject, timeoutMs }, options);
+        if (accepted) passed(result);
+        else {
+          assert.equal(result.status, 400, `${metadata}: ${JSON.stringify(result)}`);
+          assert.match(result.message, /outer-timeout/);
+        }
+        assert.deepEqual(await readdir(f.scratch), []);
       }
-      assert.deepEqual(await readdir(f.scratch), []);
     }
     process.env.PGUIDE_PROBE_TIMEOUT_MS = "75000";
     const ssh = await check(
@@ -1027,6 +1037,14 @@ function selfSubject(f: Awaited<ReturnType<typeof setup>>) {
 
 test("self-check manifest loads local-only input, implicit terminal and every reference", async () => {
   const spec = await loadPilotSpec(join(selfObjective, "pilot.yaml"), fileResources);
+  const properties = spec.manifest.domainSchema.properties;
+  assert.ok(properties !== null && typeof properties === "object" && "timeoutMs" in properties);
+  assert.deepEqual(properties.timeoutMs, {
+    type: "integer",
+    minimum: 100,
+    maximum: 300000,
+    default: 20000,
+  });
   assert.deepEqual(
     spec.manifest.levels.map(({ id }) => id),
     ["initial", "installed", "configured"],
@@ -1255,49 +1273,64 @@ test("self-check preserves a shorter configured Agent execution timeout", async 
   }
 });
 
-test("self-check committed Git subdirectory snapshot is dependency-free and reaches terminal with one prompt", async () => {
-  const f = await setup();
-  try {
-    const snapshot = join(f.repository, "packages", "pguide-self-check-pilot");
-    await cp(selfObjective, snapshot, {
-      recursive: true,
-      filter: (source) => !["node_modules", ".turbo", "test"].includes(basename(source)),
-    });
-    await git(f.repository, "add", ".");
-    await git(f.repository, "commit", "-qm", "Self-check snapshot");
-    const revision = await git(f.repository, "rev-parse", "HEAD");
-    const uri = `git+${pathToFileURL(f.repository).href}#packages/pguide-self-check-pilot/pilot.yaml`;
-    await writeFile(f.subjectFile, JSON.stringify(selfSubject(f)));
-    const result = await run(
-      composition,
-      [
-        "probe",
-        "--pilot",
-        uri,
-        "--revision",
-        revision,
-        "--subject-file",
+test("self-check committed snapshots coordinate default and explicit long budgets with one prompt", async () => {
+  for (const extended of [false, true]) {
+    const f = await setup();
+    try {
+      const snapshot = join(f.repository, "packages", "pguide-self-check-pilot");
+      await cp(selfObjective, snapshot, {
+        recursive: true,
+        filter: (source) => !["node_modules", ".turbo", "test"].includes(basename(source)),
+      });
+      await git(f.repository, "add", ".");
+      await git(f.repository, "commit", "-qm", "Self-check snapshot");
+      const revision = await git(f.repository, "rev-parse", "HEAD");
+      const uri = `git+${pathToFileURL(f.repository).href}#packages/pguide-self-check-pilot/pilot.yaml`;
+      if (extended)
+        await writeFile(
+          f.subject.configPath,
+          JSON.stringify({
+            ...f.config,
+            regulationStrategy: {
+              probe: { timeoutMs: 90000, retry: { maxRetries: 0, delayMs: 0 } },
+            },
+          }),
+        );
+      await writeFile(
         f.subjectFile,
-        "--config",
-        f.subject.configPath,
-        "--format",
-        "json",
-      ],
-      f.env,
-    );
-    assert.equal(result.code, 0, result.stdout + result.stderr);
-    const report = JSON.parse(result.stdout);
-    assert.equal(report.status, 200);
-    assert.equal(report.payload.current.levelId, "terminal");
-    assert.equal(report.payload.versions[uri], revision);
-    assert.deepEqual(report.payload.problems, []);
-    assert.deepEqual(await readdir(f.scratch), []);
-    const messages = (await readFile(f.log, "utf8"))
-      .trim()
-      .split("\n")
-      .map((line) => JSON.parse(line));
-    assert.equal(messages.filter(({ method }) => method === "session/prompt").length, 1);
-  } finally {
-    await rm(f.directory, { recursive: true, force: true });
+        JSON.stringify({ ...selfSubject(f), ...(extended ? { timeoutMs: 60000 } : {}) }),
+      );
+      const result = await run(
+        composition,
+        [
+          "probe",
+          "--pilot",
+          uri,
+          "--revision",
+          revision,
+          "--subject-file",
+          f.subjectFile,
+          "--config",
+          f.subject.configPath,
+          "--format",
+          "json",
+        ],
+        f.env,
+      );
+      assert.equal(result.code, 0, result.stdout + result.stderr);
+      const report = JSON.parse(result.stdout);
+      assert.equal(report.status, 200);
+      assert.equal(report.payload.current.levelId, "terminal");
+      assert.equal(report.payload.versions[uri], revision);
+      assert.deepEqual(report.payload.problems, []);
+      assert.deepEqual(await readdir(f.scratch), []);
+      const messages = (await readFile(f.log, "utf8"))
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line));
+      assert.equal(messages.filter(({ method }) => method === "session/prompt").length, 1);
+    } finally {
+      await rm(f.directory, { recursive: true, force: true });
+    }
   }
 });

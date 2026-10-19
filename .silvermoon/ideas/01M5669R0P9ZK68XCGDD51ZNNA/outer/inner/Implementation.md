@@ -22,7 +22,7 @@
 
 为支持 dependency-free Git 子目录快照，构建脚本从共享源码提取 AcpClient 声明，并转译现有权限策略、进程树清理和流式脱敏模块，连同共享 helper 一并生成 runtime；不是另写一套线上 ACP。产物新鲜度纳入默认测试，源码变化后需 `pnpm self-check:build`。
 
-Pilot 单项默认 20 秒，subject 上限 24 秒，为默认 30 秒 probe 留清理余量。直接 helper 最多 300 秒的诊断入口不构成 Pilot terminal 证据。总预算包括 readiness 与 prompt，内部取消先于外部期限预留 2.5 秒；原始 ACP 输出 192 KiB，外围执行输出 256 KiB。超限、超时和清理错误不成功，仅删除本次独占目录。
+Pilot 单项默认仍为 20 秒，外层 probe 默认仍为 30 秒。用户同意增加显式可配置的较长预算后，subject 上限为 300 秒，但必须满足本项 timeoutMs 加 6000ms 不超过外层实际期限；默认外层下仍最多 24 秒，较长值必须显式协调本次配置的 regulationStrategy.probe.timeoutMs，不自动改默认值或重试。沿用旧本机 setup 的元数据格式校验及清理余量规则，SSH 既有上限保持不变。直接 helper 最多 300 秒的诊断入口不构成 Pilot terminal 证据。总预算包括 readiness 与 prompt，内部取消先于外部期限预留 2.5 秒；原始 ACP 输出 192 KiB，外围执行输出 256 KiB。超限、超时和清理错误不成功，仅删除本次独占目录。
 
 ### I-S03: 验证并接入仓库检查
 

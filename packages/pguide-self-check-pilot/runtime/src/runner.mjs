@@ -20,11 +20,7 @@ export async function check(stage, value, options = {}) {
         if (stage === "sanity" && !options.selfCheck && subject.allowSanity !== true)
             return problem("sanity-consent-required");
         if (options.pilot === true) {
-            if (remote || options.selfCheck) {
-                if (subject.timeoutMs + (remote ? 10000 : 0) > 24000)
-                    throw new Fault("outer-timeout: SSH and self-check Pilot checks require a total budget <=24000ms.", 400);
-            }
-            else {
+            {
                 const metadata = process.env.PGUIDE_PROBE_TIMEOUT_MS;
                 const outerTimeoutMs = metadata === undefined ? 30000 : Number(metadata);
                 if ((metadata !== undefined && metadata !== String(outerTimeoutMs)) ||

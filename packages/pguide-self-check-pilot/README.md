@@ -68,9 +68,29 @@ Agent 要求认证时，先由当前用户通过 Agent 的正常登录流程恢�
 不承诺免费。小任务不要求 Git、网络、安装或提交；Git 仅为外层加载 Objective
 快照所需。隔离 cwd 不是恶意全权限 Agent 的安全沙箱。
 
-每个 check 默认总预算 20 秒，Pilot subject 上限 24 秒，为 probe 默认 **30 秒**
-留进程树清理余量；预算包含命令发现、ACP readiness、一次 prompt 和清理。
-直接 helper 可显式使用最多 300 秒，但长 helper 成功不能冒充默认 probe terminal。
+每个 check 默认总预算仍为 20 秒，外层 probe 默认仍为 **30 秒**。
+Pilot 要求 `subject.timeoutMs + 6000 <= regulationStrategy.probe.timeoutMs`，
+为启动、响应输出及进程树/scratch 清理留余量；因此默认外层期限下仍最多 24 秒。
+`timeoutMs` 可显式指定 100–300000 ms，预算包含命令发现、ACP readiness、
+一次 prompt 和清理，不会自动延长外层期限或重试。
+
+真实 Agent 启动和任务执行较慢时，可显式将 subject 的 `timeoutMs` 设为 `60000`，
+同时在本次 `--config` 使用的配置中协调外层期限，例如：
+
+```yaml
+regulationStrategy:
+  probe:
+    timeoutMs: 90000
+    retry:
+      maxRetries: 0
+      delayMs: 0
+```
+
+只增加 subject 预算而不增加外层期限会在执行前报 `outer-timeout`，不是等待后超时。
+外层运行器通过 `PGUIDE_PROBE_TIMEOUT_MS` 注入实际期限；缺失时按 30000 ms
+处理，格式非法时拒绝执行。不要通过手动覆盖该内部元数据冒充已协调的 probe。
+直接 helper 可显式使用最多 300 秒，但只有使用协调期限的完整 probe 达到
+terminal 才是通过证据，不能以长 helper 或独立 Agent baseline 替代。
 Agent 原始 stdout+stderr 上限 192 KiB，外围进程 stdout+stderr 上限 256 KiB。
 已有 agentExecutionLimits.timeoutMs 若更短仍生效，不放宽用户执行期限。
 超时/输出超限终止受管进程树；无重试，只删除本次 mkdtemp 独占目录及其状态，
