@@ -220,6 +220,7 @@ async function verify(reportPath) {
       assert.equal(result.payload.current.levelId, level, JSON.stringify(result));
       const problem = result.payload.problems.find((entry) => entry.ref.problemId === id);
       assert.ok(problem, `Expected ${id}: ${JSON.stringify(result)}`);
+      assert.ok(Object.keys(problem.parameters).length > 0, "Gap must include concrete evidence");
       for (const [key, value] of Object.entries(expectedParameters))
         assert.deepEqual(problem.parameters[key], value, JSON.stringify(problem));
       return result;
@@ -255,7 +256,7 @@ async function verify(reportPath) {
           name,
           "import{chown}from'node:fs/promises';await chown('/home/agent/work',0,0)",
         );
-        const failed = gap(await probe(subject), "initial", "directory-unavailable");
+        const failed = gap(await probe(subject), "initial", "directory-unusable");
         await inContainer(
           name,
           "import{chown}from'node:fs/promises';await chown('/home/agent/work',2000,2000)",
@@ -288,7 +289,7 @@ async function verify(reportPath) {
         "import{writeFile}from'node:fs/promises';await writeFile('/health-quota/fill',Buffer.alloc(1536*1024))",
         "agent",
       );
-      return gap(await probe(subject), "managed", "disk-space-low");
+      return gap(await probe(subject), "managed", "capacity-low");
     });
     await scenario("filesystem-inode-gap", async ({ name, subject, probe, inContainer }) => {
       subject.workspace = "/health-quota";
@@ -298,11 +299,11 @@ async function verify(reportPath) {
         "import{writeFile}from'node:fs/promises';for(let i=0;i<55;i++)await writeFile('/health-quota/f'+i,'')",
         "agent",
       );
-      return gap(await probe(subject), "managed", "disk-inodes-low");
+      return gap(await probe(subject), "managed", "inodes-low");
     });
     await scenario("required-endpoint-gap", async ({ subject, probe }) => {
       subject.network.urls = ["http://127.0.0.1:18080/unavailable"];
-      return gap(await probe(subject), "managed", "network-unavailable");
+      return gap(await probe(subject), "managed", "http-unavailable");
     });
     await scenario("package-manager-incomplete", async ({ name, subject, probe, inContainer }) => {
       await inContainer(
@@ -310,11 +311,11 @@ async function verify(reportPath) {
         `import{writeFile}from'node:fs/promises';
         await writeFile('/var/lib/dpkg/updates/0000','invalid package database update\\n');`,
       );
-      return gap(await probe(subject), "managed", "package-manager-unhealthy");
+      return gap(await probe(subject), "managed", "package-database-unhealthy");
     });
     await scenario("version-gap", async ({ subject, probe }) => {
       subject.minimumVersions = { node: "999.0.0" };
-      return gap(await probe(subject), "system-ready", "tool-version-mismatch");
+      return gap(await probe(subject), "system-ready", "tool-version");
     });
     for (const [stack, binary] of [
       ["typescript", "/usr/local/bin/tsc"],
@@ -328,7 +329,7 @@ async function verify(reportPath) {
           name,
           `import{rename}from'node:fs/promises';await rename(${JSON.stringify(binary)},${JSON.stringify(`${binary}.health-disabled`)})`,
         );
-        return gap(await probe(subject), "system-ready", "tool-unavailable");
+        return gap(await probe(subject), "system-ready", "tool-missing");
       });
     }
     await scenario("compiler-exists-but-fails", async ({ name, subject, probe, inContainer }) => {
@@ -430,8 +431,8 @@ async function verify(reportPath) {
       return gap(await probe(subject), "orderly", "history-insufficient");
     });
     for (const [field, directory, expected] of [
-      ["cacheBytes", "/home/agent/cache", "cache-growth-high"],
-      ["logBytes", "/home/agent/logs", "log-growth-high"],
+      ["cacheBytes", "/home/agent/cache", "cache-growth"],
+      ["logBytes", "/home/agent/logs", "log-growth"],
     ]) {
       await scenario(
         `${field}-growth-and-recovery`,
@@ -467,7 +468,8 @@ async function verify(reportPath) {
         await inContainer(
           name,
           `import{readdir,utimes}from'node:fs/promises';
-        for(const name of await readdir('/var/lib/apt/lists'))if(name.includes('Packages'))await utimes('/var/lib/apt/lists/'+name,1,1);`,
+          for(const name of await readdir('/var/lib/apt/lists'))if(name.includes('Packages'))await utimes('/var/lib/apt/lists/'+name,1,1);
+          await utimes('/var/lib/apt/periodic/update-success-stamp',1,1);`,
         );
         return gap(await probe(subject), "orderly", "package-index-stale");
       },
@@ -481,7 +483,7 @@ async function verify(reportPath) {
           name,
           "import{chown}from'node:fs/promises';await chown('/home/agent/work',0,0)",
         );
-        return { passed, regressed: gap(await probe(subject), "initial", "directory-unavailable") };
+        return { passed, regressed: gap(await probe(subject), "initial", "directory-unusable") };
       },
     );
     report.passed = true;
