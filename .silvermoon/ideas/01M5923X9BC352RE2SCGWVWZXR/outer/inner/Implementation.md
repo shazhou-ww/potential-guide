@@ -21,6 +21,10 @@ probe retries and retry delays 在两种 Node 环境中预期 503、实际 408 �
 无效、超预算及超时输入必须明确失败，实际取消和进程树清理仍需覆盖。
 不扩展 SSH 支持范围，不替换为 direct helper、预热或重试，也不削弱随机 nonce、
 固定 revision、独立最终 probe 和真实 terminal 断言。
+资源回收覆盖另建 process group 的实际后代与 Windows 部分 taskkill 结果，
+不能以根退出替代整棵 owned 子树退出。Windows 身份快照使用有界的系统原生
+PID/PPID 枚举，不依赖已在 CI 持续阻塞的 CIM/WMI 查询；快照、观测或清理失败
+必须明确上报。故障诊断只输出固定分类及有界数字，不转发任意 Agent 或认证错误原文。
 
 ### I-S02: 更新候选版本与变更清单
 

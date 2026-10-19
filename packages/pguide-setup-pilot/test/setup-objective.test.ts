@@ -718,12 +718,16 @@ test("sanity invocation diagnostics expose fixed classifications, not arbitrary 
     const forwarder = join(f.directory, "diagnostic-forwarder.cjs");
     const canary = "fixture-canary-must-not-be-exposed";
     const snapshotDiagnostic =
-      "windows-snapshot-command[kind=timeout;exit=none;errno=none;signal=SIGTERM;killed=true;elapsedMs=5001;reported=false;reason=unclassified]";
+      "windows-snapshot-command[kind=exit;exit=1;errno=none;signal=none;killed=false;elapsedMs=100;reported=true;nativeCode=5;phase=query-started;reason=native-next]";
+    const importDiagnostic = snapshotDiagnostic.replace(
+      "nativeCode=5;phase=query-started;reason=native-next",
+      "nativeCode=none;phase=importing;reason=module-not-found",
+    );
     for (const [report, expected] of [
       [
         {
           status: "internal-error",
-          error: `Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId ${canary}`,
+          error: `[PguideWindowsProcessSnapshot]::Collect() ${canary}`,
         },
         "status=internal-error, diagnostic=windows-snapshot-command",
       ],
@@ -732,7 +736,14 @@ test("sanity invocation diagnostics expose fixed classifications, not arbitrary 
         `status=regulation-error, diagnostic=${snapshotDiagnostic}`,
       ],
       [
-        { status: canary, error: snapshotDiagnostic.replace("kind=timeout", `kind=${canary}`) },
+        { status: "regulation-error", error: `${importDiagnostic} ${canary}` },
+        `status=regulation-error, diagnostic=${importDiagnostic}`,
+      ],
+      [
+        {
+          status: canary,
+          error: snapshotDiagnostic.replace("phase=query-started", `phase=${canary}`),
+        },
         "status=unrecognized, diagnostic=unclassified",
       ],
     ] as const) {

@@ -11,6 +11,7 @@ export async function sanity(subject, context, directory, selected) {
     join(repository, ".gitignore"),
     await readFile(join(repository, "gitignore"), "utf8"),
   );
+
   const marker = join(repository, "marker.txt");
   const expected = randomBytes(24).toString("hex");
   await writeFile(marker, "not-repaired");
@@ -79,17 +80,14 @@ export async function sanity(subject, context, directory, selected) {
         : "unrecognized";
       const snapshotDiagnostic =
         typeof report.error === "string"
-          ? /windows-snapshot-command\[kind=(?:timeout|exit|spawn|signal|output-limit|unknown);exit=(?:-?\d{1,10}|none);errno=(?:ENOENT|EACCES|EPERM|EINVAL|E2BIG|ENOMEM|ETIMEDOUT|UNKNOWN|ERR_CHILD_PROCESS_STDIO_MAXBUFFER|none);signal=(?:SIGTERM|SIGKILL|none);killed=(?:true|false);elapsedMs=\d{1,10};reported=(?:true|false);reason=(?:command-not-found|module-autoload|module-not-found|module-load|module-manifest|access-denied|cim-access-denied|cim-invalid-class|cim-invalid-namespace|cim-rpc-unavailable|unclassified)\]/.exec(
+          ? /windows-snapshot-command\[kind=(?:timeout|exit|spawn|signal|output-limit|unknown);exit=(?:-?\d{1,10}|none);errno=(?:ENOENT|EACCES|EPERM|EINVAL|E2BIG|ENOMEM|ETIMEDOUT|UNKNOWN|ERR_CHILD_PROCESS_STDIO_MAXBUFFER|none);signal=(?:SIGTERM|SIGKILL|none);killed=(?:true|false);elapsedMs=\d{1,10};reported=(?:true|false);nativeCode=(?:\d{1,10}|none);phase=(?:unreported|started|importing|imported|compiling|compiled|query-started|queried|serialized|exiting);reason=(?:command-not-found|module-autoload|module-not-found|module-load|module-manifest|access-denied|native-snapshot|native-first|native-next|native-close|unclassified)\]/.exec(
               report.error,
             )?.[0]
           : undefined;
       const diagnostic =
         snapshotDiagnostic ??
         [
-          [
-            "Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId",
-            "windows-snapshot-command",
-          ],
+          ["PguideWindowsProcessSnapshot", "windows-snapshot-command"],
           ["Invalid Windows process tree snapshot.", "windows-snapshot-format"],
           ["Process tree termination and ownership snapshot failed.", "windows-tree-and-snapshot"],
           ["Could not verify process tree cleanup.", "windows-tree-unobservable"],

@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
-import childProcess, { type ChildProcess, spawn } from "node:child_process";
+import childProcess, { type ChildProcess, type PromiseWithChild, spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import { join, resolve } from "node:path";
+import { PassThrough } from "node:stream";
 import { type TestContext, test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
@@ -16,6 +18,23 @@ function windowsCommands(
     args: string[],
     options?: { windowsHide?: boolean; timeout?: number },
   ) => Promise<{ stdout: string; stderr: string }>,
+) {
+  nativeWindowsCommands(t, (...args) => simulatedCommand(execute(...args)));
+}
+
+function simulatedCommand(
+  pending: Promise<{ stdout: string; stderr: string }>,
+): PromiseWithChild<{ stdout: string; stderr: string }> {
+  return Object.assign(pending, { child: { stdin: new PassThrough() } as unknown as ChildProcess });
+}
+
+function nativeWindowsCommands(
+  t: TestContext,
+  execute: (
+    command: string,
+    args: string[],
+    options?: { windowsHide?: boolean; timeout?: number },
+  ) => PromiseWithChild<{ stdout: string; stderr: string }>,
 ) {
   const platform = Object.getOwnPropertyDescriptor(process, "platform");
   const systemRoot = process.env.SystemRoot;
@@ -46,6 +65,29 @@ const tree = [
 ];
 const absent = () => Object.assign(new Error("gone"), { code: "ESRCH" });
 const ownedChild = () => ({ pid: 93001, exitCode: null, signalCode: null }) as ChildProcess;
+
+test("Windows snapshot owner sends EOF before awaiting its subprocess result", {
+  timeout: 2000,
+}, async (t) => {
+  const input = new PassThrough();
+  let eof = false;
+  nativeWindowsCommands(t, (command) => {
+    if (command.endsWith("powershell.exe")) {
+      const pending = new Promise<{ stdout: string; stderr: string }>((resolve) => {
+        input.once("finish", () => {
+          eof = true;
+          resolve({ stdout: JSON.stringify(tree), stderr: "" });
+        });
+      });
+      return Object.assign(pending, { child: { stdin: input } as unknown as ChildProcess });
+    }
+    assert.equal(command, "taskkill");
+    assert.equal(eof, true);
+    return simulatedCommand(Promise.resolve({ stdout: "", stderr: "" }));
+  });
+  await killProcessTree(ownedChild());
+  assert.equal(input.writableEnded, true);
+});
 
 test("Windows nonzero taskkill succeeds only after every snapshotted owned PID disappears", async (t) => {
   const failure = Object.assign(new Error("終了競合"), { code: 128 });
@@ -158,6 +200,55 @@ test("Windows snapshot command failures retain only bounded diagnostic fields", 
       { code: canary, signal: canary, stderr: canary },
       "kind=unknown;exit=none;errno=none;signal=none",
     ],
+    [
+      {
+        code: 1,
+        stderr:
+          "PGUIDE_WINDOWS_SNAPSHOT_ERROR:native-next\nPGUIDE_WINDOWS_SNAPSHOT_NATIVE_ERROR:5\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:query-started\n",
+      },
+      "nativeCode=5;phase=query-started;reason=native-next]",
+    ],
+    [
+      {
+        code: 1,
+        stderr:
+          "PGUIDE_WINDOWS_SNAPSHOT_ERROR:native-snapshot\nPGUIDE_WINDOWS_SNAPSHOT_NATIVE_ERROR:9999999999\n",
+      },
+      "nativeCode=none;phase=unreported;reason=native-snapshot]",
+    ],
+    [
+      {
+        code: null,
+        killed: true,
+        stderr: "PGUIDE_WINDOWS_SNAPSHOT_PHASE:started\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:importing\n",
+      },
+      "phase=importing;reason=unclassified]",
+    ],
+    [
+      {
+        code: null,
+        killed: true,
+        stderr:
+          "PGUIDE_WINDOWS_SNAPSHOT_PHASE:importing\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:imported\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:compiling\n",
+      },
+      "phase=compiling;reason=unclassified]",
+    ],
+    [
+      {
+        code: null,
+        killed: true,
+        stderr:
+          "PGUIDE_WINDOWS_SNAPSHOT_PHASE:started\r\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:query-started\r\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:queried\r\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:serialized\r\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:exiting\r\n",
+      },
+      "phase=exiting;reason=unclassified]",
+    ],
+    [
+      {
+        code: 1,
+        stderr: `PGUIDE_WINDOWS_SNAPSHOT_PHASE:started\nPGUIDE_WINDOWS_SNAPSHOT_PHASE:${canary}\n`,
+      },
+      "phase=started;reason=unclassified]",
+    ],
   ] as const;
   let failure: Error;
   let terminated = false;
@@ -177,7 +268,10 @@ test("Windows snapshot command failures retain only bounded diagnostic fields", 
       assert.ok(error instanceof Error);
       assert.equal(error.cause, failure);
       assert.ok(error.message.includes(expected), error.message);
-      assert.match(error.message, /elapsedMs=\d{1,10};reported=(?:true|false);reason=/);
+      assert.match(
+        error.message,
+        /elapsedMs=\d{1,10};reported=(?:true|false);nativeCode=(?:\d{1,10}|none);phase=(?:unreported|started|importing|imported|compiling|compiled|query-started|queried|serialized|exiting);reason=/,
+      );
       assert.equal(error.message.includes(canary), false);
       return true;
     });
@@ -205,7 +299,7 @@ test("Windows simultaneous snapshot and termination failures preserve safe comma
 async function sparseEnvironment(t: TestContext): Promise<NodeJS.ProcessEnv> {
   const cache = resolve(".cache");
   await mkdir(cache, { recursive: true });
-  const home = await mkdtemp(join(cache, "pguide-cim-home-"));
+  const home = await mkdtemp(join(cache, "pguide-native-snapshot-home-"));
   t.after(() => rm(home, { recursive: true, force: true, maxRetries: 3 }));
   return {
     ...Object.fromEntries(
@@ -219,32 +313,185 @@ async function sparseEnvironment(t: TestContext): Promise<NodeJS.ProcessEnv> {
 }
 
 if (process.platform === "win32") {
+  const query = "[PguideWindowsProcessSnapshot]::Collect()";
+
+  test("Windows snapshot explicitly imports trusted Utility without unrelated module discovery", async (t) => {
+    const execute = promisify(childProcess.execFile);
+    const env = await sparseEnvironment(t);
+    assert.ok(env.HOME);
+    const modules = join(env.HOME, "modules");
+    const canary = "fixture-untrusted-module-must-not-load";
+    for (const [name, functions] of [
+      ["Microsoft.PowerShell.Utility", ["Add-Type", "ConvertTo-Json"]],
+      ["PguideSnapshotCanary", ["Get-PguideSnapshotCanary"]],
+    ] as const) {
+      const directory = join(modules, name);
+      await mkdir(directory, { recursive: true });
+      await writeFile(
+        join(directory, `${name}.psd1`),
+        `@{ RootModule='${name}.psm1'; ModuleVersion='99.0.0'; FunctionsToExport=@(${functions.map((name) => `'${name}'`).join(",")}); CmdletsToExport=@(); AliasesToExport=@() }`,
+      );
+      await writeFile(
+        join(directory, `${name}.psm1`),
+        `[Console]::Error.WriteLine('${canary}')\n${functions.map((name) => `function ${name} { throw '${canary}' }`).join("\n")}`,
+      );
+    }
+    let modulePath: string | undefined;
+    let elapsed = 0;
+    nativeWindowsCommands(t, (command, args, options) => {
+      if (command.endsWith("powershell.exe")) {
+        assert.ok(args[3]?.includes(query));
+        const checkedQuery = String.raw`
+          if ($PSModuleAutoLoadingPreference -ne 'None') { throw 'fixture-autoload-must-be-disabled' }
+          $utility = Get-Module -Name Microsoft.PowerShell.Utility
+          if ($null -eq $utility -or $utility.Path -ne ($PSHOME + '\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1')) {
+            throw 'fixture-utility-must-be-trusted'
+          }
+          try {
+            Get-PguideSnapshotCanary
+            throw 'fixture-unrelated-command-must-not-resolve'
+          } catch [System.Management.Automation.CommandNotFoundException] {}
+          if ($null -ne (Get-Module -Name PguideSnapshotCanary)) { throw 'fixture-unrelated-module-loaded' }
+          [PguideWindowsProcessSnapshot]::Collect()`;
+        const started = performance.now();
+        const pending = execute(
+          command,
+          args.map((arg, index) => (index === 3 ? arg.replace(query, checkedQuery) : arg)),
+          {
+            ...options,
+            env: modulePath === undefined ? env : { ...env, PSModulePath: modulePath },
+            encoding: "utf8",
+          },
+        );
+        return Object.assign(
+          pending.then((result) => {
+            elapsed = Math.round(performance.now() - started);
+            assert.equal(result.stderr.includes(canary), false);
+            for (const phase of ["importing", "imported", "compiling", "compiled", "exiting"])
+              assert.ok(result.stderr.includes(`PGUIDE_WINDOWS_SNAPSHOT_PHASE:${phase}`));
+            const rows: unknown = JSON.parse(result.stdout);
+            assert.ok(Array.isArray(rows));
+            assert.ok(
+              rows.some(
+                (row) => row.ProcessId === process.pid && row.ParentProcessId === process.ppid,
+              ),
+            );
+            return result;
+          }),
+          { child: pending.child },
+        );
+      }
+      assert.equal(command, "taskkill");
+      return simulatedCommand(Promise.resolve({ stdout: "", stderr: "" }));
+    });
+    for (modulePath of [undefined, modules]) {
+      await killProcessTree(ownedChild());
+      t.diagnostic(
+        `Trusted Utility import/native query (${modulePath === undefined ? "absent" : "canary-only"} PSModulePath) completed in ${elapsed}ms.`,
+      );
+    }
+  });
+
+  test("Windows native snapshot uses the correct host ABI and returns authoritative PID/parent rows", async (t) => {
+    const execute = promisify(childProcess.execFile);
+    const env = await sparseEnvironment(t);
+    const systemRoot = process.env.SystemRoot ?? process.env.WINDIR;
+    assert.ok(systemRoot);
+    const hostPath = (directory: string) =>
+      join(systemRoot, directory, "WindowsPowerShell", "v1.0", "powershell.exe");
+    const hosts = [{ path: hostPath("System32"), pointerSize: process.arch === "ia32" ? 4 : 8 }];
+    const wow64 = hostPath("SysWOW64");
+    if (process.arch !== "ia32" && existsSync(wow64)) hosts.push({ path: wow64, pointerSize: 4 });
+    let host = hosts[0];
+    let rows: unknown;
+    nativeWindowsCommands(t, (command, args, options) => {
+      if (command.endsWith("powershell.exe")) {
+        assert.ok(host);
+        const { path, pointerSize } = host;
+        const collect = "public static Row[] Collect() {";
+        const collectWithAbiCheck = `${collect}
+          if (IntPtr.Size != ${pointerSize} ||
+              Marshal.SizeOf(typeof(PROCESSENTRY32W)) != ${pointerSize === 8 ? 568 : 556} ||
+              Marshal.OffsetOf(typeof(PROCESSENTRY32W), "th32DefaultHeapID").ToInt64() != ${pointerSize === 8 ? 16 : 12} ||
+              Marshal.OffsetOf(typeof(PROCESSENTRY32W), "th32ParentProcessID").ToInt64() != ${pointerSize === 8 ? 32 : 24} ||
+              Marshal.OffsetOf(typeof(PROCESSENTRY32W), "szExeFile").ToInt64() != ${pointerSize === 8 ? 44 : 36}) {
+            throw new Exception("fixture-native-abi-mismatch");
+          }
+        `;
+        assert.ok(args[3]?.includes(collect));
+        const pending = execute(
+          path,
+          args.map((arg, index) => (index === 3 ? arg.replace(collect, collectWithAbiCheck) : arg)),
+          { ...options, env, encoding: "utf8" },
+        );
+        return Object.assign(
+          pending.then((result) => {
+            rows = JSON.parse(result.stdout);
+            return result;
+          }),
+          { child: pending.child },
+        );
+      }
+      assert.equal(command, "taskkill");
+      return simulatedCommand(Promise.resolve({ stdout: "", stderr: "" }));
+    });
+    for (host of hosts) {
+      await killProcessTree(ownedChild());
+      assert.ok(Array.isArray(rows));
+      assert.ok(
+        rows.some((row) => row.ProcessId === process.pid && row.ParentProcessId === process.ppid),
+        `${host.pointerSize * 8}-bit snapshot must contain the test process's real parent PID`,
+      );
+      t.diagnostic(
+        `Native ${host.pointerSize * 8}-bit PROCESSENTRY32W layout and PID/parent verified.`,
+      );
+    }
+  });
+
   test("Windows real snapshot subprocess distinguishes command, module and 10s watchdog faults", async (t) => {
     const execute = promisify(childProcess.execFile);
     const env = await sparseEnvironment(t);
-    const query =
-      "Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId | Select-Object ProcessId,ParentProcessId";
+    assert.ok(env.HOME);
+    const utilityImport = String.raw`Import-Module -Name ($PSHOME + '\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop`;
+    let target = query;
     let replacement = "";
-    windowsCommands(t, async (command, args, options) => {
+    nativeWindowsCommands(t, (command, args, options) => {
       if (command.endsWith("powershell.exe")) {
         assert.equal(options?.timeout, 10_000);
+        assert.ok(args[3]?.includes(query), "fixture must replace the actual native query");
+        assert.ok(args[3]?.includes(target));
         return execute(
           command,
-          args.map((arg) => arg.replace(query, replacement)),
+          args.map((arg) => arg.replace(target, replacement)),
           { ...options, env, encoding: "utf8" },
         );
       }
       assert.equal(command, "taskkill");
-      return { stdout: "", stderr: "" };
+      return simulatedCommand(Promise.resolve({ stdout: "", stderr: "" }));
     });
-    for (const [fixture, expected] of [
-      ["Get-PguideMissingCimFixture", /kind=exit;exit=1;.*reason=command-not-found/],
+    for (const [expression, fixture, expected] of [
       [
-        "Write-Error -ErrorId CouldNotAutoloadMatchingModule -Message 'fixture-canary'",
-        /kind=exit;exit=1;.*reason=module-autoload/,
+        utilityImport,
+        `Import-Module -Name '${join(env.HOME, "fixture-canary-missing.psd1").replaceAll("'", "''")}' -ErrorAction Stop`,
+        /kind=exit;exit=1;.*phase=importing;reason=module-not-found/,
       ],
-      ["Start-Sleep -Seconds 20", /kind=timeout;exit=none;.*killed=true;.*reason=unclassified/],
+      [
+        query,
+        "Get-PguideMissingNativeFixture",
+        /kind=exit;exit=1;.*phase=query-started;reason=command-not-found/,
+      ],
+      [
+        query,
+        "Write-Error -ErrorId CouldNotAutoloadMatchingModule -Message 'fixture-canary'",
+        /kind=exit;exit=1;.*phase=query-started;reason=module-autoload/,
+      ],
+      [
+        query,
+        "Start-Sleep -Seconds 20",
+        /kind=timeout;exit=none;.*killed=true;.*phase=query-started;reason=unclassified/,
+      ],
     ] as const) {
+      target = expression;
       replacement = fixture;
       await assert.rejects(killProcessTree(ownedChild()), (error) => {
         assert.ok(error instanceof Error);
@@ -252,6 +499,98 @@ if (process.platform === "win32") {
         assert.equal(error.message.includes("fixture-canary"), false);
         return true;
       });
+    }
+  });
+
+  test("Windows native snapshot distinguishes enumeration end from faults and closes valid handles", async (t) => {
+    const execute = promisify(childProcess.execFile);
+    const env = await sparseEnvironment(t);
+    const closedMarker = "PGUIDE_TEST_NATIVE_HANDLE_CLOSED";
+    let alter = (script: string) => script;
+    let stderr = "";
+    let rows: unknown;
+    nativeWindowsCommands(t, (command, args, options) => {
+      if (command.endsWith("powershell.exe")) {
+        const script = args[3];
+        assert.ok(script);
+        assert.ok(script.includes(query));
+        assert.ok(script.includes("if (!CloseHandle(handle))"));
+        const pending = execute(
+          command,
+          [
+            ...args.slice(0, 3),
+            alter(
+              script.replace(
+                "if (!CloseHandle(handle))",
+                `bool closed = CloseHandle(handle);
+      if (closed) Console.Error.WriteLine("${closedMarker}");
+      if (!closed)`,
+              ),
+            ),
+          ],
+          { ...options, env, encoding: "utf8" },
+        );
+        return Object.assign(
+          pending.then(
+            (result) => {
+              stderr = result.stderr;
+              rows = JSON.parse(result.stdout);
+              return result;
+            },
+            (error) => {
+              stderr = error.stderr;
+              throw error;
+            },
+          ),
+          { child: pending.child },
+        );
+      }
+      assert.equal(command, "taskkill");
+      return simulatedCommand(Promise.resolve({ stdout: "", stderr: "" }));
+    });
+    for (const [operation, code, reason, closes] of [
+      ["snapshot", 5, "native-snapshot", false],
+      ["first", 5, "native-first", true],
+      ["next", 5, "native-next", true],
+      ["first", 18, null, true],
+      ["next", 18, null, true],
+      ["close", 5, "native-close", true],
+    ] as const) {
+      alter = (script) =>
+        script
+          .replace(
+            operation === "snapshot"
+              ? "CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)"
+              : operation === "first"
+                ? "Process32FirstW(handle, ref entry)"
+                : operation === "next"
+                  ? "Process32NextW(handle, ref entry)"
+                  : "if (!closed)",
+            operation === "snapshot"
+              ? "new IntPtr(-1)"
+              : operation === "close"
+                ? 'if (Boolean.Parse("true"))'
+                : 'Boolean.Parse("false")',
+          )
+          .replaceAll("Marshal.GetLastWin32Error()", String(code));
+      stderr = "";
+      rows = undefined;
+      if (reason !== null)
+        await assert.rejects(killProcessTree(ownedChild()), (error) => {
+          assert.ok(error instanceof Error);
+          assert.ok(
+            error.message.includes(`nativeCode=${code};phase=query-started;reason=${reason}]`),
+            error.message,
+          );
+          assert.equal(error.message.includes(closedMarker), false);
+          return true;
+        });
+      else {
+        await killProcessTree(ownedChild());
+        assert.ok(Array.isArray(rows));
+        assert.equal(rows.length, operation === "first" ? 0 : 1);
+      }
+      assert.equal(stderr.includes(closedMarker), closes, `${operation}/${code} handle ownership`);
     }
   });
 }
@@ -263,26 +602,66 @@ test("forceful cleanup terminates an owned process and its uncooperative child",
     assert.equal(env.PSModulePath, undefined);
     assert.equal(env.ProgramFiles, undefined);
     assert.equal(env.LOCALAPPDATA, undefined);
-    windowsCommands(t, async (command, args, options) => {
+    nativeWindowsCommands(t, (command, args, options) => {
       if (command.endsWith("powershell.exe")) {
         assert.equal(options?.timeout, 10_000);
         const started = performance.now();
-        const result = await execute(
+        const pending = execute(
           command,
-          args.map((arg, index) => (index === 3 ? `Start-Sleep -Seconds 6; ${arg}` : arg)),
+          args.map((arg, index) =>
+            index === 3
+              ? `$null = [Console]::In.ReadToEnd(); [Threading.Thread]::Sleep(6000); ${arg}`
+              : arg,
+          ),
           { ...options, env, encoding: "utf8" },
         );
-        const elapsed = performance.now() - started;
-        assert.ok(elapsed > 5000 && elapsed < 10000, `actual snapshot took ${elapsed}ms`);
-        t.diagnostic(`Owned Windows snapshot completed in ${Math.round(elapsed)}ms.`);
-        return result;
+        assert.equal(pending.child.stdin?.writableEnded, false, "execFile leaves stdin open");
+        return Object.assign(
+          pending.then((result) => {
+            assert.equal(pending.child.stdin?.writableEnded, true, "owner must send EOF");
+            for (const phase of [
+              "started",
+              "importing",
+              "imported",
+              "compiling",
+              "compiled",
+              "query-started",
+              "queried",
+              "serialized",
+              "exiting",
+            ])
+              assert.ok(result.stderr.includes(`PGUIDE_WINDOWS_SNAPSHOT_PHASE:${phase}`));
+            const rows: unknown = JSON.parse(result.stdout);
+            assert.ok(Array.isArray(rows));
+            assert.ok(
+              rows.some(
+                (row) => row.ProcessId === grandchildPid && row.ParentProcessId === ownedRootPid,
+              ),
+              "native snapshot must capture the actual uncooperative child and its parent",
+            );
+            const elapsed = performance.now() - started;
+            assert.ok(elapsed > 5000 && elapsed < 10000, `actual snapshot took ${elapsed}ms`);
+            t.diagnostic(
+              `EOF-dependent owned Windows snapshot completed in ${Math.round(elapsed)}ms.`,
+            );
+            return result;
+          }),
+          { child: pending.child },
+        );
       }
       assert.equal(command, "taskkill");
-      await execute(command, args, { ...options, env, encoding: "utf8" });
-      // Simulate a partial/nonzero result after real termination: all captured PIDs must be absent.
-      throw Object.assign(new Error("fixture termination race"), { code: 128 });
+      const pending = execute(command, args, { ...options, env, encoding: "utf8" });
+      return Object.assign(
+        pending.then(() => {
+          // Simulate a partial/nonzero result after real termination: all captured PIDs must be absent.
+          throw Object.assign(new Error("fixture termination race"), { code: 128 });
+        }),
+        { child: pending.child },
+      );
     });
   }
+  let grandchildPid: number | undefined;
+  let ownedRootPid: number | undefined;
   const childSource = `process.on("SIGTERM",()=>{});console.log(process.pid);setInterval(()=>{},1000);`;
   const rootSource = `
     const {spawn}=require("node:child_process");
@@ -313,6 +692,8 @@ test("forceful cleanup terminates an owned process and its uncooperative child",
       });
     });
     assert.ok(Number.isSafeInteger(grandchild) && grandchild > 0);
+    grandchildPid = grandchild;
+    ownedRootPid = child.pid;
     await killProcessTree(child);
     await closed;
     const deadline = Date.now() + 3000;

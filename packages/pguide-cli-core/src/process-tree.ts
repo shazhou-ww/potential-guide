@@ -4,24 +4,124 @@ import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 
 const windowsSnapshotCommand = String.raw`
+[Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:started')
 $ErrorActionPreference='Stop'
+$PSModuleAutoLoadingPreference='None'
 try {
-  ConvertTo-Json -Compress -InputObject @(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId | Select-Object ProcessId,ParentProcessId)
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:importing')
+  Import-Module -Name ($PSHOME + '\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:imported')
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:compiling')
+  Microsoft.PowerShell.Utility\Add-Type -TypeDefinition @'
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+
+public sealed class PguideWindowsSnapshotException : Exception {
+  public string Reason { get; private set; }
+  public uint NativeCode { get; private set; }
+  public PguideWindowsSnapshotException(string reason, int code) : base(reason) {
+    Reason = reason;
+    NativeCode = unchecked((uint)code);
+  }
+}
+
+public static class PguideWindowsProcessSnapshot {
+  private const uint TH32CS_SNAPPROCESS = 0x00000002;
+  private const int ERROR_NO_MORE_FILES = 18;
+
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode, Pack = 8)]
+  private struct PROCESSENTRY32W {
+    public uint dwSize;
+    public uint cntUsage;
+    public uint th32ProcessID;
+    public UIntPtr th32DefaultHeapID; // ULONG_PTR, unlike the surrounding DWORD fields.
+    public uint th32ModuleID;
+    public uint cntThreads;
+    public uint th32ParentProcessID;
+    public int pcPriClassBase;
+    public uint dwFlags;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+    public string szExeFile;
+  }
+
+  public sealed class Row {
+    public uint ProcessId { get; set; }
+    public uint ParentProcessId { get; set; }
+  }
+
+  [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true)]
+  private static extern IntPtr CreateToolhelp32Snapshot(uint flags, uint processId);
+  [DllImport("kernel32.dll", ExactSpelling = true, CharSet = CharSet.Unicode, SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  private static extern bool Process32FirstW(IntPtr snapshot, ref PROCESSENTRY32W entry);
+  [DllImport("kernel32.dll", ExactSpelling = true, CharSet = CharSet.Unicode, SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  private static extern bool Process32NextW(IntPtr snapshot, ref PROCESSENTRY32W entry);
+  [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  private static extern bool CloseHandle(IntPtr handle);
+
+  public static Row[] Collect() {
+    IntPtr handle = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (handle == new IntPtr(-1))
+      throw new PguideWindowsSnapshotException("native-snapshot", Marshal.GetLastWin32Error());
+    try {
+      var rows = new List<Row>();
+      var entry = new PROCESSENTRY32W();
+      entry.dwSize = checked((uint)Marshal.SizeOf(typeof(PROCESSENTRY32W)));
+      if (!Process32FirstW(handle, ref entry)) {
+        int error = Marshal.GetLastWin32Error();
+        if (error == ERROR_NO_MORE_FILES) return rows.ToArray();
+        throw new PguideWindowsSnapshotException("native-first", error);
+      }
+      do {
+        rows.Add(new Row {
+          ProcessId = entry.th32ProcessID,
+          ParentProcessId = entry.th32ParentProcessID
+        });
+      } while (Process32NextW(handle, ref entry));
+      int nextError = Marshal.GetLastWin32Error();
+      if (nextError != ERROR_NO_MORE_FILES)
+        throw new PguideWindowsSnapshotException("native-next", nextError);
+      return rows.ToArray();
+    } finally {
+      if (!CloseHandle(handle))
+        throw new PguideWindowsSnapshotException("native-close", Marshal.GetLastWin32Error());
+    }
+  }
+}
+'@
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:compiled')
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:query-started')
+  $rows = @([PguideWindowsProcessSnapshot]::Collect())
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:queried')
+  $serialized = Microsoft.PowerShell.Utility\ConvertTo-Json -Compress -InputObject $rows
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:serialized')
+  [Console]::Out.WriteLine($serialized)
+  [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_PHASE:exiting')
 } catch {
-  $reason = switch -Regex ($_.FullyQualifiedErrorId) {
+  $failure = $_.Exception
+  while ($null -ne $failure.InnerException) { $failure = $failure.InnerException }
+  $nativeCode = $null
+  if ($failure.GetType().FullName -eq 'PguideWindowsSnapshotException') {
+    $reason = $failure.Reason
+    $nativeCode = $failure.NativeCode
+  } else {
+    $reason = switch -Regex ($_.FullyQualifiedErrorId) {
     '^CommandNotFoundException(?:,|$)' { 'command-not-found'; break }
     '^CouldNotAutoload(?:Matching)?Module(?:,|$)' { 'module-autoload'; break }
     '^Modules_ModuleNotFound(?:,|$)' { 'module-not-found'; break }
     '^Modules_ModuleLoadFailure(?:,|$)' { 'module-load'; break }
     '^Modules_InvalidManifest(?:,|$)' { 'module-manifest'; break }
     '^UnauthorizedAccess(?:,|$)' { 'access-denied'; break }
-    '^HRESULT 0x80041003,Microsoft\.Management\.Infrastructure\.CimCmdlets\.GetCimInstanceCommand$' { 'cim-access-denied'; break }
-    '^HRESULT 0x80041010,Microsoft\.Management\.Infrastructure\.CimCmdlets\.GetCimInstanceCommand$' { 'cim-invalid-class'; break }
-    '^HRESULT 0x8004100E,Microsoft\.Management\.Infrastructure\.CimCmdlets\.GetCimInstanceCommand$' { 'cim-invalid-namespace'; break }
-    '^HRESULT 0x800706BA,Microsoft\.Management\.Infrastructure\.CimCmdlets\.GetCimInstanceCommand$' { 'cim-rpc-unavailable'; break }
     default { 'unclassified' }
+    }
   }
   [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_ERROR:' + $reason)
+  if ($null -ne $nativeCode) {
+    [Console]::Error.WriteLine('PGUIDE_WINDOWS_SNAPSHOT_NATIVE_ERROR:' + $nativeCode)
+  }
   exit 1
 }`;
 
@@ -71,14 +171,28 @@ function snapshotCommandError(cause: unknown, started: number): WindowsSnapshotC
               : "unknown";
   const reported =
     typeof error?.stderr === "string"
-      ? /(?:^|\r?\n)PGUIDE_WINDOWS_SNAPSHOT_ERROR:(command-not-found|module-autoload|module-not-found|module-load|module-manifest|access-denied|cim-access-denied|cim-invalid-class|cim-invalid-namespace|cim-rpc-unavailable|unclassified)(?:\r?\n|$)/.exec(
+      ? /(?:^|\r?\n)PGUIDE_WINDOWS_SNAPSHOT_ERROR:(command-not-found|module-autoload|module-not-found|module-load|module-manifest|access-denied|native-snapshot|native-first|native-next|native-close|unclassified)(?:\r?\n|$)/.exec(
           error.stderr,
         )
       : null;
   const reason = reported?.[1] ?? "unclassified";
+  const nativeError =
+    typeof error?.stderr === "string"
+      ? /(?:^|\r?\n)PGUIDE_WINDOWS_SNAPSHOT_NATIVE_ERROR:(\d{1,10})(?:\r?\n|$)/.exec(error.stderr)
+      : null;
+  const nativeCode =
+    reason.startsWith("native-") && nativeError !== null && Number(nativeError[1]) <= 4294967295
+      ? nativeError[1]
+      : "none";
+  let phase = "unreported";
+  if (typeof error?.stderr === "string")
+    for (const entry of error.stderr.matchAll(
+      /(?:^|\r?\n)PGUIDE_WINDOWS_SNAPSHOT_PHASE:(started|importing|imported|compiling|compiled|query-started|queried|serialized|exiting)(?=\r?\n|$)/g,
+    ))
+      phase = entry[1] ?? "unreported";
   const elapsedMs = Math.min(2147483647, Math.max(0, Math.round(performance.now() - started)));
   return new WindowsSnapshotCommandError(
-    `windows-snapshot-command[kind=${kind};exit=${exit};errno=${errno};signal=${signal};killed=${killed};elapsedMs=${elapsedMs};reported=${reported !== null};reason=${reason}]`,
+    `windows-snapshot-command[kind=${kind};exit=${exit};errno=${errno};signal=${signal};killed=${killed};elapsedMs=${elapsedMs};reported=${reported !== null};nativeCode=${nativeCode};phase=${phase};reason=${reason}]`,
     { cause },
   );
 }
@@ -95,11 +209,14 @@ export async function killProcessTree(child: ChildProcess): Promise<void> {
       const started = performance.now();
       let stdout: string;
       try {
-        ({ stdout } = await execute(
+        const pending = execute(
           join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"),
           ["-NoProfile", "-NonInteractive", "-Command", windowsSnapshotCommand],
           { windowsHide: true, timeout: 10_000 },
-        ));
+        );
+        // The fixed query accepts no input. execFile owns a pipe but does not send EOF.
+        pending.child.stdin?.end();
+        ({ stdout } = await pending);
       } catch (error) {
         throw snapshotCommandError(error, started);
       }

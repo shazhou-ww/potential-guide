@@ -375,3 +375,116 @@ objectives / .github 的树无差异。I-S01 / I-AC01 据本地结果及完整�
 - 本轮不跑 full check、packed、Linux 重复验证或 CI；五文件（含本节）留为
   uncommitted，未 commit/push/改 gates/ledger/events/outer。
   父会话负责下一次精确候选 CI 与最终独立门禁，本节不宣称 Windows CI 已绿。
+
+### Windows query 输入所有权与固定阶段诊断
+
+- 父会话提供精确候选 `c6df282` / CI `39222027838`：其他四项通过，
+  Windows 再次出现 `kind=timeout;elapsedMs=10024;signal=SIGTERM;killed=true;reported=false`。
+  因而仅用“5s 冷启动不足”不能解释 CI；本轮不再增加 **10000ms** snapshot watchdog，
+  也不改变默认 20/24/30s、显式 local 60/75s、SSH、consent 或整体取消边界。
+- 原生 promisified `execFile` 返回 `PromiseWithChild`；真实 fixture 确认返回时其
+  `child.stdin.writableEnded` 为 false。固定 query 不接收输入，现在由所有者立即
+  `pending.child.stdin?.end()`，随后 await 结果；只关闭这一个 query 的管道，
+  不触碰 ACP/root 的输入。生产路径不为 mock 添加 missing-child fallback；
+  测试改为保留原生 child 或提供符合该 API 的模拟管道。
+- 固定脚本依次写入 `started`、`query-started`、`queried`、`serialized`、`exiting`。
+  错误只提取最后一个白名单 phase；没有合法标记时为 `unreported`，未知 phase 和
+  任意 stderr/canary 均不透传。setup Fault 边界同步严格白名单，下一次 CI 可区分
+  未进入脚本、query 未返回、序列化，以及脚本已完成但 process/stdio 尚未关闭；
+  **`exiting` 不代表操作系统进程或管道退出已获确认**。
+- 保留原九项 shared 回归，增加必须先收到 stdin EOF 才能完成的确定性回归。
+  真实 PowerShell fixture 先执行 `[Console]::In.ReadToEnd()`，再延迟 6s，
+  执行真正 CIM query，验证五个阶段、stdin 已结束及 >5s/<10s 的实际完成时间；
+  随后实际终止 owned 树，注入非零 taskkill 结果后仍须证明全部捕获 PID 缺失。
+  命令/模块错误、真实 10s 挂起失败及存活/不可观测 descendant 失败路径不变。
+- 安装 Node **22.13.0 / 24.11.1** 分别执行
+  `pnpm exec tsx --test packages\pguide-cli-core\test\process-tree.test.ts`，
+  **各 10/10**，总耗时 **24040ms / 24469ms**；EOF-dependent 实际 query
+  **7624ms / 7761ms**。Node 22.13.0 定向
+  `--test-name-pattern='sanity invocation diagnostics'` **1/1**，安全 phase
+  透传及伪造 phase/canary 隔离均通过。
+- core build、test typecheck、Biome、正式 runtime builder 及 `--check`、
+  `git diff --check` 通过；独占 profile 目录已清理。生成文件仅由正式 builder 更新。
+  这是已验证的输入所有权修复与可观测性补足，**尚不宣称 EOF 是 CI 根因**；
+  后续精确候选 CI 由父会话验证。本轮未运行 full check、packed、Linux 重复或 CI，
+  未 commit/push，也未改 gates/ledger/events/outer；全部修改留为 uncommitted。
+
+### Windows ownership snapshot 改用 Toolhelp32（不再依赖 CIM/WMI）
+
+- 父会话提供精确 `6d3d635` / CI `39224567344`：其他四项通过，Windows
+  `117967614585` 为 `timeout;elapsedMs=10026;reported=false;phase=query-started`。
+  PowerShell 已进入 Get-Cim 所在 query/pipeline，但未返回；该 phase 不能区分
+  cmdlet autoload 与 provider 等内部位置。EOF 生命周期修复仍有效，但不是此 CI
+  故障的修复；不再追加阈值或 EOF 实验。
+- 仅替换 Windows snapshot backend：同一个固定系统 PowerShell 进程内以
+  `Add-Type` 内存编译 C# P/Invoke，调用 `CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS)`
+  与 `Process32FirstW/Process32NextW`，直接取得 OS 公开 PID/parent PID；
+  没有 CIM sidequery、进程内存读取、额外依赖/二进制/配置、预热、重试或失败降级。
+  输出仍为 `{ProcessId,ParentProcessId}` 数组，原严格校验与 owned 集合闭包不变。
+- `PROCESSENTRY32W` 明确 sequential/Unicode/Pack=8；DWORD 为 uint、LONG 为 int、
+  heap ID 为指针宽度 UIntPtr、文件名为 260 WCHAR。真实 64/32 位 PowerShell
+  分别验证 size **568/556**，heap offset **16/12**、parent offset **32/24**、
+  filename offset **44/36**，并在两种宿主中找到测试 Node 的实际 PID/parent。
+- 检查 `INVALID_HANDLE_VALUE`；仅 `ERROR_NO_MORE_FILES=18` 是枚举正常终点。
+  每个有效 snapshot handle 均在 `finally` 关闭；snapshot/first/next/close 错误
+  显式失败。只透传固定 `native-*` reason 和 uint 范围的 `nativeCode`，
+  增加固定 `compiling/compiled` phase，setup Fault 同步严格白名单；不透传
+  任意 stderr、路径或 Auth。保留 owned stdin EOF、**10000ms 总 snapshot watchdog**，
+  编译也在此 watchdog 内；整体 subject/process/SSH/consent/取消预算完全不变。
+- 原十项 shared 回归保留且 fault/EOF fixtures 已切换到真实 native query。
+  新增双宿主 ABI 回归及六种确定性 native fault/end 场景：无效 handle、
+  first/next 非 18 错误、first/next 的 18 正常终点，以及实际 close 后注入 close
+  错误分支；验证有效句柄在失败/正常返回时确实关闭，无效句柄不关闭。
+  真实不合作树额外断言 native snapshot 捕获 child 与正确 parent，再实际 taskkill
+  并注入非零结果；必须证明全部捕获 owned PID 缺失，活着/不可观测后代仍失败。
+- 最终安装 Node **22.13.0 / 24.11.1** 各运行
+  `pnpm exec tsx --test packages\pguide-cli-core\test\process-tree.test.ts`：
+  **12/12、12/12**，总耗时 **39241ms/35940ms**，无 skip；
+  EOF + 6s 延迟的真实 native query **7328ms/6997ms**，真实 10s 挂起仍显式失败。
+  Node 22.13.0 定向 setup `sanity invocation diagnostics` **1/1**：
+  native reason/code 可安全透传，伪造 phase/canary 不泄漏。
+- core build、test typecheck、Biome、正式 runtime 再生成及 `--check`、
+  `git diff --check` 通过，独占 profile 已清理。未运行 full check、packed、Linux
+  重复或 CI；未改 POSIX、门禁/账本/事件/outer，保留父会话现有 Implementation
+  修改。八个本轮文件留为 uncommitted，未 commit/push；父会话负责 ABI/runtime
+  复核及下一精确候选 CI，本地通过不等同 Windows CI 已绿。
+
+### 固定 Windows helper 显式加载可信 Utility，禁用隐式模块发现
+
+- 父会话提供 `928993592df854cc3b6e7fa7a30b4bdb1233b523` / CI
+  `39227700246`：其他四项通过，Windows 为
+  `timeout;elapsedMs=10303;reported=false;nativeCode=none;phase=compiling`。
+  native query 尚未调用，位置在 Add-Type 调用/隐式 autoload/编译范围内。
+  旧 Get-Cim 的 `query-started` 同样包含 cmdlet autoload，故先前并未证明
+  CIM provider 本身是根因；不再把替换 provider 或本地成功当作 CI 根因证明。
+- 固定 helper 子会话设置 `$PSModuleAutoLoadingPreference='None'`，用 Core 内建
+  `Import-Module` 从绝对 `$PSHOME\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1`
+  加载系统 Utility；不使用会触发其他模块发现的 Join-Path。Add-Type 与
+  ConvertTo-Json 均显式 module-qualified，没有发现/导入用户模块或失败 fallback。
+  新固定 `importing/imported` phase 区分导入与后续 Add-Type：
+  `compiling` 现在明确发生在可信模块导入成功之后。安全白名单及 setup Fault 同步，
+  仍只输出固定标签、有限数字，不泄漏路径/Auth/stderr。
+- 父会话核实 regulation worker 的 fork 没有 env override，shared helper 继承的是
+  setup CLI executionContext 环境（包括存在的 TEMP/TMP），不是 Agent transport.env
+  的精简列表。本轮不修改该边界、不追查错误的 Agent profile，也不臆改 TEMP/TMP；
+  生产 subprocess 的环境继承保持原样，仅改变其 PowerShell 会话模块加载方式。
+- 新真实 sparse-env 回归保留 TEMP/TMP 等允许键，分别省略 PSModulePath 和仅给出
+  owned canary 模块目录；该目录含假 Utility 与无关 canary module。
+  验证实际加载的 Utility manifest 来自 PSHOME、autoload 为 None、无关命令确实
+  CommandNotFound 且模块未加载、canary 不执行，仍获得真实 PID/parent 数组。
+  Node 22.13.0 两种环境实际完成 **659/632ms**；Node 24.11.1 **628/589ms**。
+  这是本地实测而非对 GitHub runner 全部环境/故障的复现或根因确认。
+- 原十二项 shared 回归全部保留，新增 missing trusted-import 的真实显式失败及
+  importing timeout 标签回归；native ABI/错误/句柄 finally/非零 taskkill owned
+  缺失证明、实际 10s 挂起失败保持。EOF + 6s fixture 改用 .NET Thread.Sleep，
+  避免原 Start-Sleep 在生产脚本之前隐式预载 Utility；不是增加预热。
+  **10s watchdog、20/24/30s 默认与 60/75s opt-in、SSH/consent/取消、POSIX、
+  native ABI 均未改变**；没有新依赖/二进制、策略/AV 绕过、重试或额外预算。
+- 两个安装 Node 版本各执行 shared process-tree 定向文件：**13/13、13/13**，
+  总耗时 **27080/27349ms**，无 skip；真实 EOF-dependent query **6680/6708ms**。
+  Node 22.13.0 setup diagnostic 定向 **1/1**（包括新增 importing 标签安全透传
+  和原 native/canary 隔离）。core build、test typecheck、Biome、正式 runtime
+  builder 及 `--check`、`git diff --check` 通过，owned profile 已清理。
+- 八个本轮文件留为 uncommitted；未运行 full check、packed、Linux 重复或 CI，
+  未 commit/push/改 gates/ledger/events/outer。父会话负责下一精确候选 CI；
+  若仍为 `compiling`，应继续定位 Add-Type/编译内部，而不是再增 watchdog。
