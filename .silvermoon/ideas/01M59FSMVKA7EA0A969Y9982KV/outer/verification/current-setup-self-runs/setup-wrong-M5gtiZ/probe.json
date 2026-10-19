@@ -1,0 +1,30 @@
+{
+  "status": 200,
+  "message": "",
+  "payload": {
+    "current": {
+      "objectiveId": "git+file:///opt/objective#packages/pguide-setup-pilot/pilot.yaml",
+      "levelId": "configured"
+    },
+    "problems": [
+      {
+        "ref": {
+          "objectiveId": "git+file:///opt/objective#packages/pguide-setup-pilot/pilot.yaml",
+          "levelId": "configured",
+          "checkId": "sanity",
+          "problemId": "sanity-failed"
+        },
+        "parameters": {
+          "stage": "regulate",
+          "reason": "quota-exhausted",
+          "exhaustedBy": "stall"
+        }
+      }
+    ],
+    "gapSummary": "调节未达到目标，或独立重新检查没有观察到精确随机 marker。",
+    "observedAt": "2026-10-19T11:28:02.450Z",
+    "versions": {
+      "git+file:///opt/objective#packages/pguide-setup-pilot/pilot.yaml": "a90a62c9363b70993188f7deb5f23eaf0d2deeff"
+    }
+  }
+}

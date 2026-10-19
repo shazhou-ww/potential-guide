@@ -1,0 +1,44 @@
+{
+  "sourceRevision": "7f1487ad93741f9fafd8c73560d2acf6b871101a",
+  "platform": "win32",
+  "node": "v24.11.1",
+  "pnpmCheck": {
+    "exitCode": 1,
+    "format": "passed",
+    "lint": "passed",
+    "typecheck": "passed",
+    "setup": {
+      "tests": 33,
+      "passed": 27,
+      "failed": 6
+    },
+    "failures": [
+      "real sanity rejects noop Agent completion",
+      "real sanity rejects wrong Agent completion",
+      "real sanity verifies a finite repair",
+      "remote payload uses target authentication and performs actual nonce sanity, not control evidence",
+      "sanity invocation diagnostics expose fixed classifications, not arbitrary CLI error data",
+      "sanity timeout during an actual ACP prompt cleans isolated config, state and descendants"
+    ]
+  },
+  "comparison": "逐用例名及失败原因与已接受实施证据比较；仍为相同六个 Windows nested sanity 失败，未报告为全绿。",
+  "scripts": {
+    "tests": 16,
+    "passed": 16,
+    "failed": 0
+  },
+  "publicPackageCheck": {
+    "passed": 8
+  },
+  "privatePilotPackTests": {
+    "passed": 4
+  },
+  "deployment": {
+    "monorepoScenarios": 10,
+    "installedSetupSelfCheckProbes": 12,
+    "currentSourceProbes": 6,
+    "healthScenarios": 33,
+    "fixtureBehaviorPassed": true
+  },
+  "externalPermissions": "仅本次独占容器及临时目标，无真实模型、认证、发布或生产/外部设备修改。"
+}

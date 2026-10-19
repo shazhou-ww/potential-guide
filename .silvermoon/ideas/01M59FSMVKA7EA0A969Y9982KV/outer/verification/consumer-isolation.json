@@ -1,0 +1,18 @@
+{
+    "container":  "/pguide-pilot-migration-6c75d927-3b5eadc7",
+    "imageId":  "sha256:cee9080d650ea9440984cf514780acd0c7384c145dfd38ececad9f4b43618b02",
+    "user":  "node",
+    "network":  "none",
+    "capDrop":  [
+                    "ALL"
+                ],
+    "securityOpt":  [
+                        "no-new-privileges"
+                    ],
+    "mounts":  [
+
+               ],
+    "memory":  1073741824,
+    "nanoCpus":  2000000000,
+    "pidsLimit":  128
+}

@@ -1,0 +1,1 @@
+{"workingDirectory":"/work/runs/setup-wrong-QrFA8h","configPath":"/work/runs/setup-wrong-QrFA8h/config.json","scratchDirectory":"/work/runs/setup-wrong-QrFA8h/scratch","pguide":{"command":"/opt/consumer/node_modules/.bin/pguide"},"desiredVersion":"0.4.0-rc.0","agent":"fixture","userHome":"/work/home","timeoutMs":20000,"allowSanity":true}

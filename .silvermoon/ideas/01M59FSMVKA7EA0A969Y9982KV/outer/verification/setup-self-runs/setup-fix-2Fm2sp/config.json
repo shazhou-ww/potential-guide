@@ -1,0 +1,1 @@
+{"schemaVersion":2,"commandDirectories":["/opt/consumer/node_modules/.bin"],"defaultAgent":"fixture","agents":{"fixture":{"connection":{"type":"acp","protocolVersion":"1"},"transport":{"type":"stdio","command":"/usr/local/bin/node","args":["/harness/fixture.mjs","fix","/work/runs/setup-fix-2Fm2sp/prompts.jsonl"]}}}}

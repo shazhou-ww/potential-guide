@@ -1,0 +1,29 @@
+{
+  "status": 200,
+  "message": "",
+  "payload": {
+    "current": {
+      "objectiveId": "git+file:///opt/objective#packages/pguide-self-check-pilot/pilot.yaml",
+      "levelId": "configured"
+    },
+    "problems": [
+      {
+        "ref": {
+          "objectiveId": "git+file:///opt/objective#packages/pguide-self-check-pilot/pilot.yaml",
+          "levelId": "configured",
+          "checkId": "sanity",
+          "problemId": "sanity-failed"
+        },
+        "parameters": {
+          "stage": "recheck",
+          "reason": "nonce-mismatch"
+        }
+      }
+    ],
+    "gapSummary": "本机自查 sanity-failed",
+    "observedAt": "2026-10-19T11:27:40.818Z",
+    "versions": {
+      "git+file:///opt/objective#packages/pguide-self-check-pilot/pilot.yaml": "a90a62c9363b70993188f7deb5f23eaf0d2deeff"
+    }
+  }
+}

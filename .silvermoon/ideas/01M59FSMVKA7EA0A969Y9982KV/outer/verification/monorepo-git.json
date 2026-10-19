@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "id": "valid-independent-target-no-checkerModule",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/monorepo-objective/pilot.yaml",
+            "levelId": "terminal"
+          },
+          "problems": [],
+          "gapSummary": "",
+          "observedAt": "2026-10-19T11:14:15.843Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/monorepo-objective/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "delivery-import-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/monorepo-objective/pilot.yaml",
+            "levelId": "structured"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/monorepo-objective/pilot.yaml",
+                "levelId": "structured",
+                "checkId": "deliveries",
+                "problemId": "delivery-incomplete"
+              },
+              "parameters": {
+                "report": {
+                  "schemaVersion": 1,
+                  "scope": "delivery-preparation",
+                  "state": "unverified",
+                  "layer2": "checked",
+                  "findings": [
+                    {
+                      "layer": 1,
+                      "state": "pass",
+                      "rule": "contract-schema-v1",
+                      "location": "requirements.json",
+                      "evidence": "Versioned requirements contract is valid.",
+                      "remedy": "",
+                      "packages": [],
+                      "requirements": []
+                    },
+                    {
+                      "layer": 1,
+                      "state": "pass",
+                      "rule": "global-config",
+                      "location": "pnpm-workspace.yaml",
+                      "evidence": "Workspace YAML and package metadata are parseable; supported field types checked.",
+                      "remedy": "",
+                      "packages": [],
+                      "requirements": []
+                    },
+                    {
+                      "layer": 1,
+                      "state": "pass",
+                      "rule": "required-file",
+                      "location": "README.md",
+                      "evidence": "Required by pnpm-default-v1 or explicit policy.",
+                      "remedy": "Restore the required file.",
+                      "packages": [],
+                      "requirements": []
+                    },
+                    {
+                      "layer": 1,
+                      "state": "pass",
+                      "rule": "required-file",
+                      "location": "package.json",
+                      "evidence": "Required by pnpm-default-v1 or explicit policy.",
+                      "remedy": "Restore the required file.",
+                      "packages": [],
+                      "requirements": []
+                    },
+                    {
+                      "layer": 1,
+                      "state": "pass",
+                      "rule": "required-file",
+                      "location": "pnpm-workspace.yaml",
+                      "evidence": "Required by pnpm-default-v1 or explicit policy.",
+                      "remedy": "Restore the required file.",
+                      "packages": [],
+                      "requirements": []
+                    },
+                    {
+                      "layer": 1,
+                      "state": "pass",
+                      "rule": "required-file",
+                      "location": "turbo.json",
+                      "evidence": "Required by pnpm-default-v1 or explicit policy.",
+                      "remedy": "Restore the required file.",
+                      "packages": [],
+                      "requirements": []
+                    },
+                    {
+                      "layer": 1,
+                      "state": "pass",
+                      "rule": "layout-package-role",
+                      "location": "packages/shared",
+                      "evidence": "pnpm-default-v1: reusable and tooling packages belong under packages.",
+                      "remedy": "Move only after authorization; update imports, workspace patterns, scripts and documentation references.",
+                      "packages": [
+                        "shared"
+                      ],
+                      "requirements": [],
+                      "targetDirectory": "packages"
+                    },
+                    {
+                      "layer": 2,
+                      "state": "pass",
+                      "rule": "internal-role",
+                      "location": "packages/shared/package.json",
+                      "evidence": "Internal/tool packages must explicitly be private in pnpm-default-v1.",
+                      "remedy": "Set private:true or declare a public package role instead.",
+                      "packages": [
+                        "shared"
+                      ],
+                      "requirements": []
+                    },
+                    {
+                      "layer": 2,
+                      "state": "unverified",
+                      "rule": "source-import-resolution",
+                      "location": "packages/shared/src/index.ts",
+                      "evidence": "A relative source import could not be resolved by the supported JS/TS mapping.",
+                      "remedy": "Restore the required source or declare a supported build/alias mapping.",
+                      "packages": [
+                        "shared"
+                      ],
+                      "requirements": []
+                    },
+                    {
+                      "layer": 2,
+                      "state": "pass",
+                      "rule": "package-observed",
+                      "location": "packages/shared/package.json",
+                      "evidence": "All declared roles were evaluated; pass here does not override any unverified or failing checks.",
+                      "remedy": "",
+                      "packages": [
+                        "shared"
+                      ],
+                      "requirements": []
+                    }
+                  ],
+                  "evidenceKind": "configuration-and-existing-files",
+                  "onlineVerified": false,
+                  "limitations": [
+                    "No builds, package packing, isolated consumers or CLI command/extension discovery are executed; existing required artifacts and delivery configuration are checked.",
+                    "Static source boundaries and declared runtimes are checked, not third-party transitive execution or engine-range intersections.",
+                    "No remote resource provisioning, secret-value access, deployment, migration, live API health or online OIDC login is performed.",
+                    "These outside-scope proofs do not block delivery-preparation readiness; unsupported adapters, unresolved imports and missing required configuration/artifacts remain blocking findings."
+                  ]
+                }
+              }
+            }
+          ],
+          "gapSummary": "配置失败、证据不足或不支持的能力均不能判为通过。",
+          "observedAt": "2026-10-19T11:15:25.884Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/monorepo-objective/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "delivery-repaired",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/monorepo-objective/pilot.yaml",
+            "levelId": "terminal"
+          },
+          "problems": [],
+          "gapSummary": "",
+          "observedAt": "2026-10-19T11:16:39.224Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/monorepo-objective/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "structure-invalid-contract",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/monorepo-objective/pilot.yaml",
+            "levelId": "initial"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/monorepo-objective/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "structure",
+                "problemId": "structure-incomplete"
+              },
+              "parameters": {
+                "report": {
+                  "schemaVersion": 1,
+                  "scope": "delivery-preparation",
+                  "state": "fail",
+                  "layer2": "blocked",
+                  "findings": [
+                    {
+                      "layer": 1,
+                      "state": "fail",
+                      "rule": "contract-schema-v1",
+                      "location": "requirements.json",
+                      "evidence": " must have required property 'policy';  must have required property 'workspaces';  must have required property 'deliveries'; /schemaVersion must be equal to constant",
+                      "remedy": "Repair the contract without inferring requirements from source.",
+                      "packages": [],
+                      "requirements": []
+                    },
+                    {
+                      "layer": 2,
+                      "state": "unverified",
+                      "rule": "layer-order",
+                      "location": "requirements.json",
+                      "evidence": "Layer 2 is blocked by the invalid contract.",
+                      "remedy": "Resolve layer 1 first.",
+                      "packages": [],
+                      "requirements": []
+                    }
+                  ],
+                  "evidenceKind": "configuration-and-existing-files",
+                  "onlineVerified": false,
+                  "limitations": [
+                    "No builds, package packing, isolated consumers or CLI command/extension discovery are executed; existing required artifacts and delivery configuration are checked.",
+                    "Static source boundaries and declared runtimes are checked, not third-party transitive execution or engine-range intersections.",
+                    "No remote resource provisioning, secret-value access, deployment, migration, live API health or online OIDC login is performed.",
+                    "These outside-scope proofs do not block delivery-preparation readiness; unsupported adapters, unresolved imports and missing required configuration/artifacts remain blocking findings."
+                  ]
+                }
+              }
+            }
+          ],
+          "gapSummary": "报告中存在结构失败或待分类内容，不能开始已确认需求的交付检查。",
+          "observedAt": "2026-10-19T11:17:53.715Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/monorepo-objective/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "structure-repaired",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/monorepo-objective/pilot.yaml",
+            "levelId": "terminal"
+          },
+          "problems": [],
+          "gapSummary": "",
+          "observedAt": "2026-10-19T11:19:08.078Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/monorepo-objective/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    }
+  ],
+  "cleaned": true,
+  "commit": "6c75d927aaefe361cb85746c055cb1a01114ad1c",
+  "pilot": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/monorepo-objective/pilot.yaml"
+}

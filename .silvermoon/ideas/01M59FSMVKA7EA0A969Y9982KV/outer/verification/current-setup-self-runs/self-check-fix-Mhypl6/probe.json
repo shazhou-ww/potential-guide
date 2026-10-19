@@ -1,0 +1,16 @@
+{
+  "status": 200,
+  "message": "",
+  "payload": {
+    "current": {
+      "objectiveId": "git+file:///opt/objective#packages/pguide-self-check-pilot/pilot.yaml",
+      "levelId": "terminal"
+    },
+    "problems": [],
+    "gapSummary": "",
+    "observedAt": "2026-10-19T11:27:25.024Z",
+    "versions": {
+      "git+file:///opt/objective#packages/pguide-self-check-pilot/pilot.yaml": "a90a62c9363b70993188f7deb5f23eaf0d2deeff"
+    }
+  }
+}

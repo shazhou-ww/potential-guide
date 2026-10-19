@@ -1,0 +1,1 @@
+{"workingDirectory":"/work/runs/self-check-fix-yOofkg","configPath":"/work/runs/self-check-fix-yOofkg/config.json","scratchDirectory":"/work/runs/self-check-fix-yOofkg/scratch","pguide":{"command":"/opt/consumer/node_modules/.bin/pguide"},"desiredVersion":"0.4.0-rc.0","agent":"fixture","userHome":"/work/home","timeoutMs":24000}

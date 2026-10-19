@@ -1,0 +1,153 @@
+cache miss, executing 5bcb4d5bdd358e75
+$ tsx --test "test/*.test.ts"
+✔ ACP-only setup reports an AHP selection as unsupported without starting an Agent (5546.2351ms)
+✔ setup Pilot strictly loads with all level-scoped check and problem wiki coverage (1479.6718ms)
+✔ native setup bootstrap distinguishes missing/unusable installation and exact versions (2722.2275ms)
+✔ configuration reports missing/invalid config, unsupported commands, absent Agent and missing env (14797.7728ms)
+✔ configuration performs real ACP initialize and session/new without prompting (5616.7529ms)
+✔ setup ACP rejects string negotiation and emits only safe rejection diagnostics (11244.1015ms)
+✔ local target is backward compatible; long direct deadlines are rejected by Pilot guard (1666.1902ms)
+✔ local Pilot deadlines require valid coordinated runtime metadata and a cleanup reserve (2783.1146ms)
+✔ SSH adapter quotes code and rejects injection, forwards no control subject paths or environment (80.5715ms)
+✔ SSH unreachable, missing Node and helper faults never fall back to local evidence (33.7255ms)
+✔ shipped Node bootstrap runs independently and cleans target payload and timed out children (3070.4973ms)
+✖ remote payload uses target authentication and performs actual nonce sanity, not control evidence (9075.0329ms)
+✔ malformed ACP is an invocation fault rather than false configuration readiness (5620.5945ms)
+✔ sanity without explicit consent never starts even the pguide or ACP process (1344.5968ms)
+✖ real sanity rejects noop Agent completion (8983.8191ms)
+✖ real sanity rejects wrong Agent completion (9192.9381ms)
+✖ real sanity verifies a finite repair (9073.9119ms)
+✔ setup timeout kills its entire owned process tree and cleans scratch (2680.3501ms)
+✖ sanity invocation diagnostics expose fixed classifications, not arbitrary CLI error data (9366.7118ms)
+✔ external Pilot cancellation cleans nested setup scratch and its hanging child tree (2439.5181ms)
+✔ oversized child output is bounded and reported as invocation fault (1842.691ms)
+✖ sanity timeout during an actual ACP prompt cleans isolated config, state and descendants (9316.2099ms)
+✔ Git subdirectory snapshot coordinates long local budgets and existing file-auth ACP to terminal (71046.0016ms)
+✔ check wrapper reads the subject JSON from stdin (1322.5027ms)
+✔ Windows installed command and ACP npm shims preserve spaces without shell interpolation (5925.8664ms)
+✔ self-check manifest loads local-only input, implicit terminal and every reference (3217.6151ms)
+✔ self-check reuses installation/configuration failures without executing a prompt (6825.5132ms)
+✔ self-check defaults to exactly one direct repair, no nested regulate or Git, and preserves config (5572.3879ms)
+✔ self-check repair session enforces readiness without starting a second Agent (34878.2924ms)
+✔ self-check wrong, summary-only, denied, incomplete and oversized Agent runs cannot pass (31414.8877ms)
+✔ self-check bounded timeout cleans owned task/state and preserves unrelated scratch (6801.1706ms)
+✔ self-check preserves a shorter configured Agent execution timeout (6738.2457ms)
+✔ self-check committed Git subdirectory snapshot is dependency-free and reaches terminal with one prompt (26976.9394ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 27
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 322714.0867
+
+✖ failing tests:
+
+test at test\setup-objective.test.ts:599:1
+✖ remote payload uses target authentication and performs actual nonce sanity, not control evidence (9075.0329ms)
+  AssertionError [ERR_ASSERTION]: protocol: independent sanity probe failed.
+  
+  502 !== 200
+  
+      at passed (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\packages\pguide-setup-pilot\test\setup-objective.test.ts:211:10)
+      at TestContext.<anonymous> (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\packages\pguide-setup-pilot\test\setup-objective.test.ts:618:5)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 502,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\setup-objective.test.ts:661:3
+✖ real sanity rejects noop Agent completion (8983.8191ms)
+  AssertionError [ERR_ASSERTION]: protocol: independent sanity probe failed.
+  
+  502 !== 200
+  
+      at isProblem (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\packages\pguide-setup-pilot\test\setup-objective.test.ts:202:10)
+      at TestContext.<anonymous> (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\packages\pguide-setup-pilot\test\setup-objective.test.ts:673:9)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 502,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\setup-objective.test.ts:661:3
+✖ real sanity rejects wrong Agent completion (9192.9381ms)
+  AssertionError [ERR_ASSERTION]: protocol: independent sanity probe failed.
+  
+  502 !== 200
+  
+      at isProblem (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\packages\pguide-setup-pilot\test\setup-objective.test.ts:202:10)
+      at TestContext.<anonymous> (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\packages\pguide-setup-pilot\test\setup-objective.test.ts:673:9)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 502,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\setup-objective.test.ts:661:3
+✖ real sanity verifies a finite repair (9073.9119ms)
+  AssertionError [ERR_ASSERTION]: protocol: independent sanity probe failed.
+  
+  502 !== 200
+  
+      at passed (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\packages\pguide-setup-pilot\test\setup-objective.test.ts:211:10)
+      at TestContext.<anonymous> (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\packages\pguide-setup-pilot\test\setup-objective.test.ts:671:27)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 502,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\setup-objective.test.ts:718:1
+✖ sanity invocation diagnostics expose fixed classifications, not arbitrary CLI error data (9366.7118ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(envelope.message.includes(`exit=70, ${expected}`))
+  
+      at TestContext.<anonymous> (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\packages\pguide-setup-pilot\test\setup-objective.test.ts:771:14)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test\setup-objective.test.ts:853:1
+✖ sanity timeout during an actual ACP prompt cleans isolated config, state and descendants (9316.2099ms)
+  AssertionError [ERR_ASSERTION]: {"status":502,"payload":null,"message":"protocol: independent sanity probe failed."}
+  
+  502 !== 504
+  
+      at TestContext.<anonymous> (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\packages\pguide-setup-pilot\test\setup-objective.test.ts:886:12)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 502,
+    expected: 504,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+[ELIFECYCLE] Test failed. See above for more details.

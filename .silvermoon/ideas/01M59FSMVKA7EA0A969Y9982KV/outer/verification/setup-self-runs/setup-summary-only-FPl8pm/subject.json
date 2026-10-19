@@ -1,0 +1,1 @@
+{"workingDirectory":"/work/runs/setup-summary-only-FPl8pm","configPath":"/work/runs/setup-summary-only-FPl8pm/config.json","scratchDirectory":"/work/runs/setup-summary-only-FPl8pm/scratch","pguide":{"command":"/opt/consumer/node_modules/.bin/pguide"},"desiredVersion":"0.4.0-rc.0","agent":"fixture","userHome":"/work/home","timeoutMs":20000,"allowSanity":true}
