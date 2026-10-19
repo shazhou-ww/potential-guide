@@ -145,3 +145,22 @@ I-AC03 因缺少真实 terminal 证据仍未满足，不提交或批准实现验
 当前实际阻塞是既有 Agent 在允许的完整自查预算内未返回成功证据；不在外部条件未变时重复模型调用，不放宽 24 秒 Pilot 上限，也不以较长直接 helper、测试替身或旧设备结果代替 terminal。下一步需先确定可在该预算及既有权限内完成 marker 修复的已授权 ACP profile，或取得针对启动/执行耗时的独立非模型证据并修复已证实的问题，再执行一次精确 revision 的完整自查。I-S03、I-AC03 保持未完成，不记录 submitInner、acceptInner 或交付验收。
 
 本轮另执行 `pnpm check`，退出码 `0`：格式、lint、类型检查、四个 runtime 新鲜度检查、测试及 build/pack 检查通过。workspace 报告合计 348 项测试，346 通过、2 项跳过；根脚本 16 项全部通过，总计 364 项、362 通过、2 项跳过、0 失败。effects 与 git-source 的测试为 Turbo 缓存回放，其余十个 workspace 的测试重新执行，根脚本重新执行；pack 阶段构建复用前面生成的 Turbo 缓存。不把这些自动回归记为真实 terminal。保留既有非阻断 lint 警告，没有进行无关修复。
+
+## 同日无模型耗时与权限诊断
+
+用户要求继续定位后，复用当前源码的 `executionContext`、`configured` 和 `acpReady`，在独占临时目录中仅运行安装/配置发现及 initialize/session-new；没有发送 session/prompt，没有再次运行真实修复，也没有改变配置、认证或权限。得到：
+
+| 阶段 | 实测耗时 |
+| --- | --- |
+| pguide 版本 | 82 ms |
+| pguide 命令发现 | 2014 ms |
+| pguide 有效配置 | 307 ms |
+| ACP readiness（含进程清理） | 2284 ms |
+
+上述非模型阶段合计约 4.7 秒，仅代表本次测量，不能当作上次超时的分阶段追踪或保证下一次耗时。自查的 sanity 还需另建 Agent 会话，不能由本次 readiness 时长推断 prompt 耗时。
+
+随后在同一独占目录创建非秘密 marker，仅把一个构造的 marker 编辑请求送入生成 runtime 的 `createAcpPermissionPolicy`，不把请求发送给 Agent。实际有效配置没有 `regulationPermissions`；本地策略结果为 `markerEditAllowed: false`、`reason: not-granted`。这证明当前客户端不会批准该编辑请求，不证明真实 Agent 曾提出同样请求，也不能据此断言它就是上次超时的原因。诊断结束已删除独占目录；摘要保留在本会话的 `device-readiness-timing.json`。
+
+已阅读当前安装 Copilot 的官方 `help permissions`：相对 `write(marker.txt)` 按末尾路径组件匹配，并非单一绝对位置；下一次最小授权应使用随机任务目录下 marker 的绝对路径，保留路径限制、禁用额外临时目录访问，不授予 shell、网络或其他写权限，不修改持久用户配置。
+
+已通过结构化询问请求这项单次最小授权，但用户当前不可用，没有获得授权。因此没有临时扩权或再次调用模型。当前下一步是由用户明确允许“仅本次隔离目录中的 marker.txt 写入”，随后在临时配置/启动适配器中绑定实际生成的绝对 marker 路径并执行一次完整 probe；若仍超时，记录失败并停止，不自动重试。I-S03、I-AC03 继续未完成，现有通过的自动测试不替代此授权或真实 terminal。
