@@ -74,7 +74,11 @@ test("real Agent baseline requires one completed repair and exact independent re
     assert.ok(args.includes("--disallow-temp-dir"));
     assert.ok(args.includes("--no-auto-update"));
     assert.equal(args.includes("--allow-all"), false);
-    assert.deepEqual(observed.profile.transport.env, ["HOME"]);
+    assert.deepEqual(observed.profile.transport.env, [
+      "HOME",
+      "DBUS_SESSION_BUS_ADDRESS",
+      "XDG_RUNTIME_DIR",
+    ]);
     const pattern = args.find((arg) => arg.startsWith("write("));
     assert.equal(isAbsolute(pattern.slice("write(".length, -1)), true);
     assert.doesNotMatch(await readFile(join(report.run, "baseline.json"), "utf8"), /SECRET-/);

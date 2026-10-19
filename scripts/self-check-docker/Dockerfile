@@ -37,8 +37,18 @@ ARG COPILOT_VERSION=1.0.98
 ARG NPM_REGISTRY=https://registry.npmjs.org/
 RUN npm install --global "@github/copilot@${COPILOT_VERSION}" --registry="${NPM_REGISTRY}" \
     --ignore-scripts --no-audit --no-fund && copilot --version
+RUN apt-get update && apt-get install -y --no-install-recommends dbus gnome-keyring libsecret-tools \
+    && rm -rf /var/lib/apt/lists/*
 COPY real-agent.mjs /harness/real-agent.mjs
+COPY keychain.mjs /harness/keychain.mjs
+COPY --chmod=755 keychain-entrypoint.sh keychain-unlock.sh /harness/
+RUN mkdir -p /work/runtime && chown node:node /work/runtime && chmod 700 /work/runtime
 ENV COPILOT_AUTO_UPDATE=false
+ENV XDG_RUNTIME_DIR=/work/runtime
+ENV DBUS_SESSION_BUS_ADDRESS=unix:path=/work/runtime/bus
+ENV GNOME_KEYRING_CONTROL=/work/runtime/keyring
 USER node
+ENTRYPOINT ["/harness/keychain-entrypoint.sh"]
+CMD ["sleep", "infinity"]
 
 FROM fixture-runtime AS runtime

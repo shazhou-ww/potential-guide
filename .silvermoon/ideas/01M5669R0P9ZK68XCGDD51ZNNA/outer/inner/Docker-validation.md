@@ -149,7 +149,7 @@ pnpm exec tsx --test --test-concurrency=1 --test-name-pattern='^(force terminati
 
 真实独立 ACP 仍缺正常用户认证，主会话固定 811f28d 的完整 probe 没有 terminal，见 [当前设备验证](./Local-device-validation.md)。I-S03 和 I-AC03 仍未完成，不提交 submitInner，不批准 acceptInner 或交付验收；fixture 的 terminal 不替代真实用户 Agent 的 terminal。
 
-## 当前设备的真实 Agent 基线容器
+## 当前设备的首版真实 Agent 基线容器
 
 用户要求先同步最新代码，再建立能够验证真实 Agent 的 Docker 环境，避免在未证明模型可用时重复自查。主会话已将本分支 fast-forward 到 `6fda06f20fc0c152485ee5bc7065f65813d30966`，确认与 origin/main ahead/behind 为 `0/0`，保留全部并发修改。当前 Docker 引擎最初未启动，通过 Docker Desktop 正常启动后确认 Linux Engine `29.3.0` 可用，没有修改其他容器。
 
@@ -202,4 +202,64 @@ docker exec -it pguide-real-agent-6fda06f-1ce0ed16-pinned copilot login --device
 
 定向五项测试通过，覆盖构建上下文白名单，以及 ready 必须真实完成并独立核验、discovery 不能 ready、认证/模型不匹配/假修复/拒绝/超时/清理失败不能 ready、marker 链接与内容复查。测试替身仅用于这些单元回归，不是容器真实 Agent 通过证据。
 
-三次完整 pnpm check 均退出 `0`，报告合计 369 项、367 通过、2 项已有跳过、0 失败；根脚本 20 项和 monorepo 34 项实际执行，其余十一 workspace 测试使用 Turbo 缓存。最后一次包含最终 HTTPS/公开 CA Dockerfile、禁用自动升级的断言与 context 测试。I-S03、I-AC03 仍未完成，不 submitInner、不请求实现或交付验收。下一步当前外部阻塞为容器内认证的存储选择及完成登录；登录后仍需实测网络、模型及真实任务，不能把此环境称为已证明真实 Agent 跑通。
+三次完整 pnpm check 均退出 `0`，报告合计 369 项、367 通过、2 项已有跳过、0 失败；根脚本 20 项和 monorepo 34 项实际执行，其余十一 workspace 测试使用 Turbo 缓存。最后一次包含最终 HTTPS/公开 CA Dockerfile、禁用自动升级的断言与 context 测试。I-S03、I-AC03 仍未完成，不 submitInner、不请求实现或交付验收。当时外部阻塞为容器内认证的存储选择及完成登录；后续用户选择和配置以下节为准。
+
+## 容器内加密 keychain 配置
+
+用户明确选择先配置容器内 keychain，不批准明文回退。本轮为 real-agent target 增加标准 D-Bus、GNOME Keyring 和 libsecret-tools，在构建阶段安装，不为运行中的 cap-drop ALL 容器恢复 root capabilities。未复制、读取或导出宿主 token、既有认证文件或用户 keyring；未把空口令或与加密文件放在一起的明文口令当作受保护存储。
+
+### 当前可复用环境
+
+| 项目 | 实际值 |
+| --- | --- |
+| 镜像 | `pguide-real-agent:e4e84fd-1ce0ed16-keychain-final` |
+| 镜像 ID | `sha256:d962dae39583bae46115c383dcea8c31decd505b3693f5aa6122be5c4650548f` |
+| 当前容器 | `pguide-agent-keychain-1ce0ed16` |
+| 容器 ID | `6e7bfd245d885f314a13eb892733754c4612c9969edc34962922064a333bf938` |
+| 固定源码 / archive SHA-256 | `e4e84fd9b09d95bfd9e652dd432c1342bc7c79da` / `4e1bd24fcdfd6d3342a4410c72cd43e2aeae43ce10a0223d9c96d9610a87cd57` |
+| 私有用户总线 | `unix:path=/work/runtime/bus` |
+| runtime 权限 | `node` 所有，`0700` |
+| 基线 | Node 24 的已记录 digest，Copilot `1.0.98`、禁用自动升级 |
+
+容器保持非 root、init、bridge、2 CPU、2 GiB、256 进程上限、cap-drop ALL、no-new-privileges，无宿主挂载和发布端口。上一轮 pinned 容器已定向停止，保留其层而不复制任何认证；后续使用表中简短名称的新容器。Docker Desktop 在本轮期间重启并升级到 Engine `29.8.2`，待引擎恢复后才继续验证，没有更改其他用户容器。
+
+[私有总线入口](../../../../../scripts/self-check-docker/keychain-entrypoint.sh)监督 D-Bus 和主命令；[交互解锁入口](../../../../../scripts/self-check-docker/keychain-unlock.sh)通过隐藏终端输入接收非空口令，确认两次，只通过 stdin 交给 GNOME Keyring，不写入参数、环境、文件、日志或源码。解锁有意替换本容器的 Keyring daemon，必须在 Agent 工作前执行，不在运行请求中替换。master password 不被保留，容器重启后需用户重新解锁。
+
+首次口令初始化之前，[状态检查](../../../../../scripts/self-check-docker/keychain.mjs)只检查总线名称，不提前激活一个未初始化的 Secret Service；解锁后最多等待 5 秒完成服务注册。真实 Agent 子进程显式继承容器内 HOME、DBUS_SESSION_BUS_ADDRESS、XDG_RUNTIME_DIR，不继承宿主环境或 token。集合缺失或锁定时，baseline 明确失败且不启动 Agent。
+
+构建 context 白名单扩为九个文件，shell 输入规范化为 LF 并对规范化后的实际字节记录哈希，避免 Windows CRLF 破坏 shebang。容器实际 runner、状态、解锁和入口脚本哈希均已与 `/harness/provenance.json` 独立核对；安全 provenance 副本在会话的 `keychain-container-provenance.json`。失败的无凭据测试实例和临时 context 定向清理，不保留或导出测试 keyring。
+
+### 独立实测
+
+最终镜像在无网络、cap-drop ALL 的全新一次性容器中执行真实 Secret Service 自检；只生成内存中的测试口令和测试值，没有真实 token。最终结果退出 `0`，安全摘要保留为会话文件 `keychain-self-test.json`：
+
+```json
+{
+  "status": "verified",
+  "roundTrip": true,
+  "encryptedFile": true,
+  "lockAndUnlock": true,
+  "wrongPasswordRejected": true
+}
+```
+
+自检实际核验 secret-tool store/lookup/clear、GNOME 加密 keyring 文件和 0600 权限、文件中不存在测试值或 master password 明文、锁定后错误口令不能解锁、同一正确口令重启 daemon 后可读回原测试值。它拒绝已有集合，不能在真实已认证容器运行。测试实例随后删除，只复制上述无秘密摘要，不读取真实用户凭据。
+
+当前复用容器没有初始化真实用户密码，状态为 `serviceAvailable: false`、`collectionExists: false`、`locked: true`，符合等待用户初始化的设计，不声称其已解锁。已独立确认：
+
+- 默认 CMD 能持续运行，重启后私有 D-Bus 恢复。
+- 非交互调用 unlock 被拒绝，不接受管道中的口令。
+- 集合未初始化时 baseline 被明确阻断，没有重新发起 OAuth 或模型请求。
+- shell 语法与容器内脚本哈希匹配、runtime 私有目录权限正确，无明文凭据回退。
+
+### 用户当前需要的操作
+
+请设备用户在自己的交互终端中执行：
+
+```powershell
+docker exec -it pguide-agent-keychain-1ce0ed16 /harness/keychain-unlock.sh
+```
+
+自行选择并确认 keychain 口令，不把口令发给 Agent。该命令第一次初始化加密集合，以后用于解锁；忘记口令不能由 Agent 恢复。用户确认已解锁后，再在这个容器内重新启动官方设备授权，由用户浏览器授权，然后验证 Copilot 确实存入 keychain，最后运行真实 Agent baseline。此前浏览器授权但未保存的 token 不尝试提取或复用。
+
+最终 pnpm check 退出 `0`：372 项报告、370 通过、2 项已有跳过、0 失败。根脚本 23 项和 monorepo 34 项实际执行，其余十一 workspace 测试使用 Turbo 缓存；keychain 解析、畸形/未知状态不能误报解锁、context LF 和 baseline 环境回归均覆盖。Secret Service 自检是额外容器实测，不是这些单元测试的替身，也不代表 Copilot 已保存认证或模型任务已完成。I-S03、I-AC03 继续未完成，下一外部步骤是用户在自己的终端初始化/解锁，不能自动代设或持久化 master password。

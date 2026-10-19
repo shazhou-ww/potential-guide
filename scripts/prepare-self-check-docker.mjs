@@ -14,6 +14,9 @@ const harnessFiles = [
   "fixture.mjs",
   "verify.mjs",
   "real-agent.mjs",
+  "keychain.mjs",
+  "keychain-entrypoint.sh",
+  "keychain-unlock.sh",
   "README.md",
 ];
 
@@ -50,7 +53,10 @@ export async function prepareContext(repository, revision, destination) {
   ]);
   const hashes = {};
   for (const name of harnessFiles) {
-    const content = await readFile(join(root, "scripts", "self-check-docker", name));
+    const original = await readFile(join(root, "scripts", "self-check-docker", name));
+    const content = name.endsWith(".sh")
+      ? Buffer.from(original.toString("utf8").replaceAll("\r\n", "\n"))
+      : original;
     await writeFile(join(context, name), content, { flag: "wx" });
     hashes[name] = createHash("sha256").update(content).digest("hex");
   }

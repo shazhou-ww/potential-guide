@@ -4,6 +4,7 @@ import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
+import { keychainState } from "./keychain.mjs";
 
 const reasons = new Set([
   "deadline",
@@ -93,7 +94,7 @@ export async function runBaseline(
             `write(${marker})`,
             ...(model === undefined ? [] : ["--model", model]),
           ],
-          env: ["HOME"],
+          env: ["HOME", "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR"],
         },
       },
       async (update) => {
@@ -198,6 +199,7 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
         "timeout-ms": { type: "string", default: "120000" },
       },
     });
+    if (keychainState().locked) throw new Error("keychain-locked");
     const { AcpClient } = await import(
       "/opt/objective/packages/pguide-self-check-pilot/runtime/acp-client.mjs"
     );
@@ -220,8 +222,12 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
     await writeFile(join(report.run, "baseline.json"), `${JSON.stringify(report, null, 2)}\n`);
     console.log(JSON.stringify(report, null, 2));
     if (report.status === "failed") process.exitCode = 1;
-  } catch {
-    console.error("Real Agent baseline invocation failed; check options, installation and paths.");
+  } catch (error) {
+    console.error(
+      error.message === "keychain-locked"
+        ? "Real Agent baseline blocked: initialize or unlock the container keychain first."
+        : "Real Agent baseline invocation failed; check options, installation and paths.",
+    );
     process.exitCode = 1;
   }
 }

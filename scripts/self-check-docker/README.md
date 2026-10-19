@@ -9,7 +9,7 @@ controlled ACP integration evidence, **not** real-device/model acceptance.
 
 Choose an explicit, full committed source revision. Preparation does not invoke
 Docker: it writes a new, minimal context using `git archive`, then copies only
-the six named harness files. Uncommitted source edits and untracked files
+the nine named harness files. Uncommitted source edits and untracked files
 (including `.env`, `node_modules`, and credentials) cannot enter the source
 archive. Harness edits may be uncommitted; their hashes are recorded separately.
 Do not build with the repository root as context.
@@ -138,6 +138,8 @@ Automatic CLI updates are disabled for this target and its ACP child processes.
 docker build --target real-agent --build-arg NODE_IMAGE=node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 -t $image $context
 docker run -d --name $container --cap-drop ALL --security-opt no-new-privileges --cpus 2 --memory 2g --memory-swap 2g --pids-limit 256 $image
 docker exec $container copilot --version
+docker exec $container node /harness/keychain.mjs
+docker exec -it $container /harness/keychain-unlock.sh
 docker exec -it $container copilot login --device-code
 docker exec $container node /harness/real-agent.mjs --mode discover
 docker exec $container node /harness/real-agent.mjs --model <advertised-model-id>
@@ -147,10 +149,28 @@ Use a distinct image/container name from fixture verification. This target needs
 network access for independent official login and model requests, but publishes
 no ports and mounts no host directories, credentials, Docker socket or source.
 Do not pass host tokens, HOME, npm configuration or inherited environment.
-Authenticate directly inside the named container; do not automate device codes
-or copy them into reports. On headless Linux, Copilot may store its login in
-plaintext under the container HOME. Never commit/export that authenticated
-container as an image, copy its HOME, or collect its credential files as evidence.
+The entrypoint supervises a private user D-Bus; secure unlock starts GNOME
+Secret Service on that bus. Status inspection does not autoactivate a locked
+daemon before the first password has initialized the encrypted keyring. The bus
+uses a user-owned mode-0700 runtime directory and a Unix socket, not TCP.
+Initialize/unlock the encrypted keychain in your own interactive terminal with
+`keychain-unlock.sh`; enter and confirm a nonempty password. The helper does not
+echo it, accept it as an argument/environment variable, or write it to a file.
+Do not send that password to the Agent or put it in shell history.
+The master password is not retained; after restarting the container, unlock again
+with the same password before login or model requests. Empty passwords, silent
+auto-unlock and plaintext credential fallback are not configured.
+Unlock deliberately replaces only this container's Secret Service daemon, so
+initialize/unlock before starting Agent work, not during a running request.
+The real Agent baseline refuses to start while the collection is missing or
+locked, and explicitly forwards only the container's HOME, private D-Bus address
+and runtime directory to the ACP child.
+
+Authenticate directly inside the named container. Device codes may be relayed
+to the user when explicitly requested, but must not be copied into durable
+reports. Require successful keychain storage, not just browser authorization;
+do not accept Copilot's plaintext fallback. Never commit/export that authenticated
+container as an image, copy its HOME/keyrings, or collect its credential files as evidence.
 Keep it private and remove only that named container when intentionally finished.
 
 Model discovery is **not** a passing baseline. It returns `discovered` and zero
@@ -176,6 +196,23 @@ Do not start another pguide self-check merely because the image built, the CLI
 printed its version, login succeeded, or `discover` returned a model list.
 Re-run the baseline after a material Agent/model/authentication change; do not
 interpret a retained report as permanent readiness.
+
+### Disposable keychain verification
+
+Before using the real container, verify Secret Service with a fresh, disposable
+instance of the same image:
+
+```powershell
+docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges -e PGUIDE_KEYCHAIN_SELF_TEST=1 $image node /harness/keychain.mjs --self-test
+```
+
+This uses only random, generated test material, refuses an existing collection,
+and verifies a store/read/clear round-trip, a private encrypted keyring file
+without plaintext test material, rejection of an incorrect password, and
+lock/unlock using the same in-memory test password. It never logs that password
+or copies any keyring. Do not run this
+test in an authenticated container. A passing keychain test is not a real-model
+baseline.
 
 ### Host-only tests
 
