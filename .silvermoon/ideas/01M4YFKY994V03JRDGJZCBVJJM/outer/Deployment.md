@@ -29,6 +29,25 @@
 阶段与问题结果，且当前阶段失败时仍会阻塞后续阶段。
 在部署阶段将主分支版本和验证证据记录到本契约。
 
+### 2026-10-19 当前 API 复验
+
+适配后的契约与使用方脚本先经 `silvermoon check --worktree`、`--staged`
+验证并同步到主分支，再对主分支提交
+`b6ba48020132e92e917db12f4db81f910df8f40a` 执行 `pnpm run build`
+及 `node .silvermoon\ideas\01M4YFKY994V03JRDGJZCBVJJM\outer\verify-consumer.mjs`，均退出零。
+该提交包含本次同步的验证脚本和已验收实现；没有修改产品实现。
+
+- 串行与并行观测均阻塞于 `stage`，问题顺序为 `first`、`second`，
+  `gapSummary` 均为两行“主分支阶段屏障验证”，峰值并发分别为一、二。
+- 初始观测的 `later` 执行次数为零；真实 planner/coordinator 驱动 regulator，
+  每组均只调用一次修复 Agent，最终 `stopReason` 为 `target-reached`、
+  阶段为 `terminal`，`laterRuns` 为一。
+- 两组除峰值并发外的完整归一化结果经深比较相同；
+  脚本输出精确 `baseline` 与 `publication: "not-performed"`。
+  本次未执行 npm 发布、版本标签或 GitHub Release，也未推进 preset 继承。
+
+### 2026-10-15 历史证据
+
 2026-10-15 使用方验证基线为主分支提交
 `bb6a02b928eff35f1376ceca0dbb54f1bb489c27`，
 已验收的实现修订为 `f5a1e62c5520a7bfb3919e77ac913b8dc566ee9b`。
