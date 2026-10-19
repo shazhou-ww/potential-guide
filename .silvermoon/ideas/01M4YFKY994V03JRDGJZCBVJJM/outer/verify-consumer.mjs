@@ -1,13 +1,29 @@
 import assert from "node:assert/strict";
-import { createObjectiveLoader } from "../../../../packages/objective-guide/dist/index.js";
-import { createObjectivePortfolioSupervisor } from "../../../../packages/objective-portfolio-supervisor/dist/index.js";
-import { createObjectiveRegulator } from "../../../../packages/objective-regulator/dist/index.js";
+import { execFileSync } from "node:child_process";
+import { Effect, startEffect, SubscriptionRef } from "../../../../packages/effects/dist/index.js";
+import {
+  canonicalManifestUri,
+  loadPilotSpec,
+  observe,
+} from "../../../../packages/objective-pilot/dist/index.js";
+import {
+  createPortfolioCoordinator,
+  createPortfolioPlanner,
+} from "../../../../packages/objective-portfolio-supervisor/dist/index.js";
+import { regulate } from "../../../../packages/objective-regulator/dist/index.js";
+
+const baseline = execFileSync("git", ["rev-parse", "HEAD"], {
+  cwd: new URL("../../../../", import.meta.url),
+  encoding: "utf8",
+}).trim();
 
 async function exercise(concurrency) {
   let repaired = false;
   let active = 0;
   let maximum = 0;
   let laterRuns = 0;
+  let agentRuns = 0;
+  const objectiveId = "git+https://consumer.test/objectives.git#pilot.yaml";
   const manifest = {
     schemaVersion: 1,
     domainSchema: { type: "object" },
@@ -26,94 +42,139 @@ async function exercise(concurrency) {
     defaultLanguage: "zh-CN",
     languages: ["zh-CN"],
   };
-  const references = [
-    ["system/overview", { title: "使用方验证", description: "主分支使用方验证" }],
-    ["system/404", { title: "未找到", description: "页面不存在" }],
-    ["levels/stage", { title: "阶段", description: "已达成阶段", outcome: "进入下一阶段" }],
-    ["levels/later", { title: "后续阶段", description: "后续阶段", outcome: "达成目标" }],
-    ["levels/terminal", { title: "完成", description: "目标已达成" }],
-    ["checks/first", { title: "第一项", description: "第一项检查" }],
-    ["checks/second", { title: "第二项", description: "第二项检查" }],
-    ["checks/later", { title: "后续检查", description: "后续阶段检查" }],
-    ["problems/first-repair", { title: "需要修复", description: "修复第一项检查" }],
-    ["problems/second-repair", { title: "需要修复", description: "修复第二项检查" }],
+  const ids = [
+    "system/overview",
+    "system/404",
+    "levels/terminal",
+    ...manifest.levels.flatMap((level) => [
+      `levels/${level.id}`,
+      ...level.advancement.checks.flatMap((check) => [
+        `levels/${level.id}/checks/${check.id}`,
+        ...check.problems.map(
+          (problem) => `levels/${level.id}/checks/${check.id}/problems/${problem}`,
+        ),
+      ]),
+    ]),
   ];
-  const loader = createObjectiveLoader({
-    resources: {
-      async readText() {
-        return JSON.stringify(manifest);
-      },
-      async readPages(sourceUri) {
-        return references.map(([id, properties]) => ({
-          uri: new URL(`${id}/zh-CN.md`, sourceUri).href,
-          source: `---\n${JSON.stringify(properties)}\n---\n`,
-        }));
-      },
+  const pilot = await loadPilotSpec(objectiveId, {
+    version: baseline,
+    async readText() {
+      return JSON.stringify(manifest);
     },
-    checkSchedulingPolicy: () => concurrency,
-    checkRunner: {
-      async run(_uri, id) {
-        maximum = Math.max(maximum, ++active);
-        await Promise.resolve();
-        active -= 1;
-        if (id === "later") {
-          laterRuns += 1;
-          return { pass: true };
-        }
-        return repaired
-          ? { pass: true }
-          : { pass: false, problems: [{ id: `${id}-repair`, parameters: { checkId: id } }] };
-      },
+    async readPages(sourceUri) {
+      return ids.map((id) => ({
+        uri: canonicalManifestUri(`${id}/zh-CN.md`, sourceUri),
+        source: `---\ntitle: 使用方验证\ndescription: 主分支阶段屏障验证\nreferences: []\n---\n`,
+      }));
     },
   });
-  const guide = await loader.load("https://consumer.test/objective-guide.yaml");
-  const created = guide.createInstance({ subject: {} });
-  assert.ok(created.ok);
-  const regulator = createObjectiveRegulator(created.instance);
-  const supervisor = createObjectivePortfolioSupervisor(
-    [{
-      id: "consumer",
-      regulator,
-      safety: { defensiveThresholdId: "stage", defensiveTargetLevelId: "terminal" },
-    }],
-    async () => ({
-      directives: [{
-        registrationId: "consumer",
-        targetLevelId: "terminal",
-        trigger: "defensive",
-        rationale: "验证修复与重新观测",
-        limits: { maxIterations: 2, timeoutMs: 5_000, maxStalledIterations: 2 },
-      }],
-      deferred: [],
-    }),
-  );
-  const observed = await supervisor.observe();
-  const sample = observed.entries[0].observation;
-  assert.equal(sample.current.id, "stage");
-  assert.deepEqual(sample.problems.map(({ parameters }) => parameters.checkId), ["first", "second"]);
-  assert.equal(laterRuns, 0);
-  const execution = await supervisor.execute(
-    await supervisor.plan(observed),
-    async () => {
-      repaired = true;
-      return { status: "completed", summary: "当前阶段已修复" };
+  const runtime = {
+    checkConcurrency: concurrency,
+    resolveCheck: (ref) => async () => {
+      maximum = Math.max(maximum, ++active);
+      await new Promise((resolve) => setTimeout(resolve, ref.checkId === "first" ? 10 : 1));
+      active -= 1;
+      if (ref.levelId === "later") {
+        laterRuns += 1;
+        return { status: 200, message: "", payload: { ok: true, problems: [] } };
+      }
+      return {
+        status: 200,
+        message: "",
+        payload: repaired
+          ? { ok: true, problems: [] }
+          : {
+              ok: false,
+              problems: [{ id: `${ref.checkId}-repair`, parameters: { checkId: ref.checkId } }],
+            },
+      };
     },
-  );
-  assert.equal(execution.results[0].result.status, "target-reached");
-  assert.equal(execution.results[0].result.latestObservation.current.id, "terminal");
-  assert.equal(laterRuns, 1);
-  assert.equal(maximum, concurrency);
-  return {
-    currentLevel: sample.current.id,
-    problems: sample.problems,
-    gapSummary: sample.gapSummary,
-    finalLevel: execution.results[0].result.latestObservation.current.id,
-    laterRuns,
-    maximum,
   };
+  const goal = {
+    id: "consumer",
+    pilot,
+    subject: {},
+    targetLevel: "terminal",
+    priority: 1,
+    observationIntervalMs: 60_000,
+  };
+  const planner = await createPortfolioPlanner({
+    goals: [goal],
+    periodic: false,
+    observe: (value) => Effect.runPromise(observe({ spec: value.pilot, subject: value.subject }, runtime)),
+  });
+  let coordinator;
+  let outcome;
+  let failure;
+  try {
+    const state = await Effect.runPromise(SubscriptionRef.get(planner.state));
+    const sample = state.observations.consumer.payload;
+    assert.ok(sample);
+    assert.equal(sample.current.levelId, "stage");
+    assert.deepEqual(sample.problems.map(({ ref }) => ref.checkId), ["first", "second"]);
+    assert.equal(laterRuns, 0);
+    const resources = await Effect.runPromise(
+      SubscriptionRef.make([{ id: "consumer-agent", binding: { id: "repair" }, capacity: 1, capabilities: [] }]),
+    );
+    coordinator = await createPortfolioCoordinator({
+      queue: planner.queue,
+      resources,
+      maxConcurrency: 1,
+      quota: { timeoutMs: 5_000, maxAgentRuns: 2, maxStallRuns: 2 },
+      agentExecutionLimits: { timeoutMs: 1_000 },
+      abortGraceMs: 100,
+      onEvent(event) {
+        if (event.type === "result") outcome = event.outcome;
+        if (event.type === "failed") failure = event.error;
+      },
+      runner: {
+        start(input) {
+          const running = startEffect(regulate(input, {
+            pilot: runtime,
+            async executeAgent() {
+              agentRuns += 1;
+              repaired = true;
+              return { status: "completed", summary: "当前阶段已修复" };
+            },
+          }));
+          return {
+            result: running.await(),
+            abort: () => running.cancel(),
+            async kill() {
+              running.cancel();
+              await running.exit();
+            },
+          };
+        },
+      },
+    });
+    const deadline = performance.now() + 10_000;
+    while (!outcome && !failure) {
+      assert.ok(performance.now() < deadline, "等待真实 supervisor/regulator 结果超时");
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    assert.ifError(failure);
+    assert.equal(outcome.stopReason, "target-reached");
+    assert.equal(outcome.latestObservation.payload.current.levelId, "terminal");
+    assert.equal(laterRuns, 1);
+    assert.equal(agentRuns, 1);
+    assert.equal(maximum, concurrency);
+    return {
+      currentLevel: sample.current.levelId,
+      problems: sample.problems,
+      gapSummary: sample.gapSummary,
+      finalLevel: outcome.latestObservation.payload.current.levelId,
+      laterRuns,
+      agentRuns,
+      maximum,
+    };
+  } finally {
+    await coordinator?.close();
+    await planner.close();
+  }
 }
 
 const serial = await exercise(1);
 const parallel = await exercise(2);
 assert.deepEqual({ ...serial, maximum: 0 }, { ...parallel, maximum: 0 });
-console.log(JSON.stringify({ serial, parallel, publication: "not-performed" }, null, 2));
+console.log(JSON.stringify({ baseline, serial, parallel, publication: "not-performed" }, null, 2));

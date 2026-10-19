@@ -18,8 +18,8 @@
 
 ### Deployment steps
 
-- [x] **D-S01:** 从使用方验证主分支候选版本
+- [ ] **D-S01:** 从使用方验证主分支候选版本
 
 ### Deployment acceptance criteria
 
-- [x] **D-AC01:** 主分支提供已验收的阶段行为
+- [ ] **D-AC01:** 主分支提供已验收的阶段行为

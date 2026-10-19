@@ -6,8 +6,15 @@
 
 通过使用方层面的 guide，采用独立 checks 与不同调度限制，
 验证主分支上已验收的实现。使用 [使用方验证脚本](./verify-consumer.mjs)
-直接导入三个包的构建产物，比较并行度为一与二时的观测、峰值并发、阶段屏障
+直接导入当前 `objective-pilot`、`objective-regulator`、`objective-portfolio-supervisor`
+及其 `effects` 运行依赖的构建产物，比较并行度为一与二时的观测、峰值并发、阶段屏障
 和 regulator 修复后的结果。
+
+2026-10-19 复核发现历史脚本仍导入已移除的 `objective-guide`，不能直接验证当前主分支。
+本次仅将 Outer World 使用方脚本适配到现有公开 API，不修改实现交付物。
+先同步此验证契约与脚本，再对同步后的主分支提交执行 `pnpm run build` 和上述脚本；
+使用真实 planner/coordinator 调用 regulator，保留串并行一致性及阶段屏障断言，
+并记录脚本输出的精确 `baseline`。在新验证通过前，历史结果不代替本次结果。
 
 本次明确不发布 npm 包、不创建版本标签或 GitHub Release，也不进行生产环境上线。
 所有包的发版暂缓，待基于已有 git-lineage 完成 preset 继承后，
