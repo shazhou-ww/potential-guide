@@ -36,7 +36,7 @@ Pilot 单项默认 20 秒，subject 上限 24 秒，为默认 30 秒 probe 留�
 
 随后从无 prompt 的 ACP 元数据确认默认模型及可选 `gpt-5-mini`，仅在临时 profile 切换轻量模型；原实现仍超时。消除 sanity 的重复 readiness 启动后，完整 pnpm check 通过（365 项报告，363 通过、2 项跳过）；固定已同步优化源码 7f1487a 的真实复验确认完整自查只启动两个 ACP Agent，唯一 prompt 获得约 17.2 秒，但仍返回取消和 504，未达到 terminal。没有延长预算、扩大权限或继续重试；I-S03、I-AC03 仍未完成，等待新的外部执行证据或预算契约讨论。
 
-按用户后续要求，已同步最新代码并新增独立真实 Agent Docker 基线，先证明 Agent 能正常完成隔离文件任务，再进行后续 pguide 自查；不再把模型目录或握手视为模型可用。既有默认无凭据 fixture 镜像保持不变，另有显式 real-agent target 安装固定 Copilot CLI，以容器内正常登录获得独立认证，不复制宿主 token、HOME 或用户配置。只有真实任务明确 end_turn、没有权限拒绝、随机 marker 经独立核验且清理成功才能返回 ready；120 秒诊断基线不修改 24 秒 Pilot 限制，也不替代 terminal。首次浏览器授权成功，但 CLI 未保存 token。用户随后选择 keychain，现已构建并保留标准 Secret Service 环境；一次性容器已通过真实加密存取、锁定/正确口令解锁及错误口令拒绝。实际复用容器尚待用户在自己终端初始化非空 keychain 口令，再重新完成官方登录；不会代设或保存 master password，见 [Docker 验证](./Docker-validation.md)。最终 pnpm check 通过（372 项报告，370 通过、2 项跳过）；I-S03、I-AC03 仍未完成。
+按用户后续要求，已同步最新代码并新增独立真实 Agent Docker 基线，先证明 Agent 能正常完成隔离文件任务，再进行后续 pguide 自查；不再把模型目录或握手视为模型可用。既有默认无凭据 fixture 镜像保持不变，另有显式 real-agent target 安装固定 Copilot CLI，以容器内正常登录获得独立认证，不复制宿主 token、HOME 或用户配置。只有真实任务明确 end_turn、没有权限拒绝、随机 marker 经独立核验且清理成功才能返回 ready；120 秒诊断基线不修改 24 秒 Pilot 限制，也不替代 terminal。首次浏览器授权成功，但 CLI 未保存 token。用户随后选择 keychain，现已构建并保留标准 Secret Service 环境；加密存取、错误口令拒绝和锁定/解锁均有容器实测。用户初始化集合后发现 daemon 未持续保持，已修正终端生命周期，并通过真实 PTY 及独立 docker-exec 后的持续解锁回归；原容器仅覆盖两个公开 helper，不重启、不复制或重置用户 keyring。当前等待同一口令重新解锁，再完成官方登录，见 [Docker 验证](./Docker-validation.md)。最终 pnpm check 通过（373 项报告，371 通过、2 项跳过）；I-S03、I-AC03 仍未完成。
 
 ## Acceptance criteria
 

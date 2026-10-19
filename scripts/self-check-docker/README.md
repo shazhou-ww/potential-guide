@@ -162,6 +162,11 @@ with the same password before login or model requests. Empty passwords, silent
 auto-unlock and plaintext credential fallback are not configured.
 Unlock deliberately replaces only this container's Secret Service daemon, so
 initialize/unlock before starting Agent work, not during a running request.
+The daemon runs in a detached session with no terminal descriptors. Unlock waits
+for a new D-Bus owner to become unlocked, rather than accepting the old owner's
+state while replacement is still pending. Disposable verification runs the
+interactive helper through a real pseudo-terminal and checks that unlocking
+survives its closure.
 The real Agent baseline refuses to start while the collection is missing or
 locked, and explicitly forwards only the container's HOME, private D-Bus address
 and runtime directory to the ACP child.

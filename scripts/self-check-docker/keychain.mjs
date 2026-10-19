@@ -21,6 +21,12 @@ export function parseLocked(reply) {
   return value === "true";
 }
 
+export function parseOwner(reply) {
+  const owner = /\bstring "(:[0-9]+\.[0-9]+)"/.exec(reply)?.[1];
+  if (owner === undefined) throw new Error("Unexpected Secret Service owner response.");
+  return owner;
+}
+
 const execute = (command, args, input) =>
   execFileSync(command, args, {
     encoding: "utf8",
@@ -50,11 +56,23 @@ export function keychainState() {
   ]);
   if (!names.includes('"org.freedesktop.secrets"'))
     return { serviceAvailable: false, collectionExists: false, locked: true };
+  const owner = parseOwner(
+    execute("dbus-send", [
+      "--session",
+      "--print-reply",
+      "--reply-timeout=5000",
+      "--dest=org.freedesktop.DBus",
+      "/org/freedesktop/DBus",
+      "org.freedesktop.DBus.GetNameOwner",
+      "string:org.freedesktop.secrets",
+    ]),
+  );
   const collection = parseCollection(
     call("/org/freedesktop/secrets", "org.freedesktop.Secret.Service.ReadAlias", "string:default"),
   );
   return {
     serviceAvailable: true,
+    owner,
     collection,
     collectionExists: collection !== undefined,
     locked:
@@ -70,11 +88,12 @@ export function keychainState() {
   };
 }
 
-async function unlockedState() {
+async function unlockedState(previousOwner) {
   const deadline = Date.now() + 5000;
   do {
     const state = keychainState();
-    if (!state.locked) return state;
+    if (!state.locked && (previousOwner === undefined || state.owner !== previousOwner))
+      return state;
     await delay(100);
   } while (Date.now() < deadline);
   throw new Error("Keychain did not unlock.");
@@ -90,17 +109,21 @@ async function selfTest() {
     const id = randomBytes(16).toString("hex");
     const unlock = (input = password) =>
       execute(
-        "gnome-keyring-daemon",
+        "script",
         [
-          "--replace",
-          "--unlock",
-          "--components=secrets",
-          `--control-directory=${process.env.XDG_RUNTIME_DIR}/keyring`,
+          "--quiet",
+          "--return",
+          "--echo",
+          "never",
+          "--command",
+          "/harness/keychain-unlock.sh",
+          "/dev/null",
         ],
-        input,
+        `${input}\n${input}\n`,
       );
     stage = "initialize";
     unlock();
+    await delay(500);
     const state = await unlockedState();
     assert.equal(state.locked, false);
     stage = "store";
@@ -126,8 +149,8 @@ async function selfTest() {
     );
     assert.equal(keychainState().locked, true);
     stage = "wrong-password";
-    unlock(randomBytes(32).toString("hex"));
-    await assert.rejects(unlockedState(), /Keychain did not unlock/);
+    assert.throws(() => unlock(randomBytes(32).toString("hex")));
+    assert.equal(keychainState().locked, true);
     stage = "unlock";
     unlock();
     assert.equal((await unlockedState()).locked, false);
@@ -140,6 +163,7 @@ async function selfTest() {
       encryptedFile: true,
       lockAndUnlock: true,
       wrongPasswordRejected: true,
+      survivesTerminalExit: true,
     };
   } catch {
     throw new Error(`Self-test stage: ${stage}`);
@@ -153,15 +177,25 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
       options: {
         "self-test": { type: "boolean", default: false },
         "require-unlocked": { type: "boolean", default: false },
+        owner: { type: "boolean", default: false },
+        "after-owner": { type: "string" },
       },
     });
-    const report = values["self-test"]
-      ? await selfTest()
-      : values["require-unlocked"]
-        ? await unlockedState()
-        : keychainState();
-    console.log(JSON.stringify(report, null, 2));
-    if (values["require-unlocked"] && report.locked) process.exitCode = 1;
+    if (values.owner) {
+      console.log(keychainState().owner ?? "none");
+    } else {
+      if (values["after-owner"] !== undefined)
+        assert.ok(
+          values["require-unlocked"] && /^(?:none|:[0-9]+\.[0-9]+)$/.test(values["after-owner"]),
+        );
+      const report = values["self-test"]
+        ? await selfTest()
+        : values["require-unlocked"]
+          ? await unlockedState(values["after-owner"])
+          : keychainState();
+      console.log(JSON.stringify(report, null, 2));
+      if (values["require-unlocked"] && report.locked) process.exitCode = 1;
+    }
   } catch (error) {
     const stage = /^Self-test stage: ([a-z-]+)$/.exec(error.message)?.[1];
     console.error(

@@ -9,6 +9,7 @@ fi
 password=
 confirmation=
 trap 'unset password confirmation' EXIT
+previous_owner=$(node /harness/keychain.mjs --owner)
 read -r -s -p "Container keychain password: " password
 printf '\n'
 if [[ -z "$password" ]]; then
@@ -21,7 +22,8 @@ if [[ "$password" != "$confirmation" ]]; then
   echo "Passwords do not match." >&2
   exit 1
 fi
-printf '%s' "$password" | gnome-keyring-daemon --replace --unlock --components=secrets \
-  --control-directory="$XDG_RUNTIME_DIR/keyring" >/dev/null
+printf '%s' "$password" | setsid --fork gnome-keyring-daemon --foreground \
+  --replace --unlock --components=secrets \
+  --control-directory="$XDG_RUNTIME_DIR/keyring" >/dev/null 2>&1
 unset password confirmation
-node /harness/keychain.mjs --require-unlocked
+node /harness/keychain.mjs --require-unlocked --after-owner "$previous_owner"

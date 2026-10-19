@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseCollection, parseLocked } from "./self-check-docker/keychain.mjs";
+import { parseCollection, parseLocked, parseOwner } from "./self-check-docker/keychain.mjs";
 
 test("keychain status distinguishes an uninitialized collection from a real collection", () => {
   assert.equal(parseCollection('method return\n   object path "/"'), undefined);
@@ -25,4 +25,10 @@ test("keychain status rejects unexpected collection paths", () => {
     'object path "/org/freedesktop/secrets/collection/"',
   ])
     assert.throws(() => parseCollection(reply), /Unexpected/);
+});
+
+test("keychain ownership requires a unique D-Bus name, not a service label", () => {
+  assert.equal(parseOwner('method return\n string ":1.23"'), ":1.23");
+  for (const reply of ["", 'string "org.freedesktop.secrets"', 'string ":1.x"'])
+    assert.throws(() => parseOwner(reply), /Unexpected/);
 });

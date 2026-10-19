@@ -245,7 +245,7 @@ docker exec -it pguide-real-agent-6fda06f-1ce0ed16-pinned copilot login --device
 
 自检实际核验 secret-tool store/lookup/clear、GNOME 加密 keyring 文件和 0600 权限、文件中不存在测试值或 master password 明文、锁定后错误口令不能解锁、同一正确口令重启 daemon 后可读回原测试值。它拒绝已有集合，不能在真实已认证容器运行。测试实例随后删除，只复制上述无秘密摘要，不读取真实用户凭据。
 
-当前复用容器没有初始化真实用户密码，状态为 `serviceAvailable: false`、`collectionExists: false`、`locked: true`，符合等待用户初始化的设计，不声称其已解锁。已独立确认：
+配置结束时复用容器尚未初始化真实用户密码，状态为 `serviceAvailable: false`、`collectionExists: false`、`locked: true`，符合等待用户初始化的设计，不声称当时已解锁。已独立确认：
 
 - 默认 CMD 能持续运行，重启后私有 D-Bus 恢复。
 - 非交互调用 unlock 被拒绝，不接受管道中的口令。
@@ -263,3 +263,20 @@ docker exec -it pguide-agent-keychain-1ce0ed16 /harness/keychain-unlock.sh
 自行选择并确认 keychain 口令，不把口令发给 Agent。该命令第一次初始化加密集合，以后用于解锁；忘记口令不能由 Agent 恢复。用户确认已解锁后，再在这个容器内重新启动官方设备授权，由用户浏览器授权，然后验证 Copilot 确实存入 keychain，最后运行真实 Agent baseline。此前浏览器授权但未保存的 token 不尝试提取或复用。
 
 最终 pnpm check 退出 `0`：372 项报告、370 通过、2 项已有跳过、0 失败。根脚本 23 项和 monorepo 34 项实际执行，其余十一 workspace 测试使用 Turbo 缓存；keychain 解析、畸形/未知状态不能误报解锁、context LF 和 baseline 环境回归均覆盖。Secret Service 自检是额外容器实测，不是这些单元测试的替身，也不代表 Copilot 已保存认证或模型任务已完成。I-S03、I-AC03 继续未完成，下一外部步骤是用户在自己的终端初始化/解锁，不能自动代设或持久化 master password。
+
+## 用户解锁后的终端生命周期修正
+
+用户报告“已解锁”后，主会话先执行只读 require-unlocked 检查，没有直接启动 OAuth。实际发现总线中没有持续的 Secret Service；随后原生 ReadAlias 探测激活了一个读取既有 login 集合但处于 locked 的 daemon。这证明用户集合已初始化，不能据此认为用户没有执行解锁，也不能将其当作已持续可用的解锁状态。没有读取 keyring 内容、口令或 token，也没有重置集合。
+
+此前自检没有覆盖真实交互终端和 docker-exec 父进程全部退出后的状态。本轮将公开 unlock helper 改为通过 setsid 启动独立会话中的 foreground daemon，关闭对原终端的描述符；口令仍只从隐藏交互输入经 stdin 传递。helper 记录旧 D-Bus owner，必须观察到新 owner 已解锁才成功，不能因旧 owner 尚未退出而误报成功。错误口令不会被接受，也没有空口令或明文回退。
+
+新增实测用 script 创建真实伪终端、禁止输入回显，在一次性无网络容器中运行同一个交互 helper。加密存取、锁定/解锁、错误口令拒绝及关闭终端后继续可用均通过；在另一保持运行的一次性容器中，完整测试进程退出后等待 5 秒，再通过独立 docker exec 确认集合仍 unlocked，进程检查显示 GNOME daemon 独立 SID 且没有 TTY。所有测试只使用生成的测试材料，实例已定向删除；安全摘要在会话的 `keychain-tty-self-test.json`。
+
+为保留用户已经初始化的加密集合，没有重新创建或重启当前 `pguide-agent-keychain-1ce0ed16`，更没有 docker commit/export。只把两个公开 helper 覆盖到原容器 `/harness` 并核验可执行权限与 SHA-256：
+
+- `keychain.mjs`: `3ff72c777d5db670b870ab2272c1d1432006c20272cd1aabf257a190376fa998`
+- `keychain-unlock.sh`: `22aab8ad2b19f194306ee7ad36c4e36f45f6c31084d9e2f3a3b541ef3a4346eb`
+
+容器基础镜像和原 provenance 保持不变，不冒称重新构建；公开代码热修的独立记录在 `/harness/runtime-overlay.json`，会话中保留同名安全副本。未复制或修改 HOME/keyrings，后续重建使用仓库修正后的 helper。
+
+当前真实用户集合存在但 locked，需要用户用同一口令再次运行上一节相同的交互解锁命令，不需要重新设置或向 Agent 提供口令。确认持续 unlocked 后才重启官方设备授权；本轮没有产生新设备码或模型请求。完整 pnpm check 退出 `0`：373 项报告，371 通过、2 项已有跳过、0 失败；根脚本 24 项和 monorepo 34 项实际执行，其余十一 workspace 测试使用缓存。I-S03、I-AC03 保持未完成。
