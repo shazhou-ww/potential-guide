@@ -12,11 +12,11 @@
 
 ### I-S02: 复用检查并打通真实闭环
 
-从现有实现复用安装、配置、ACP 和隔离任务验证，保留旧 setup/bootstrap 兼容行为；解决自查及内层任务的预算与清理，不引入递归自查。
+从现有实现复用安装、配置、ACP 和隔离任务验证；新自查默认执行一次直接 Agent 文件修复并独立核对随机内容，不嵌套完整 regulation，不增加 allowSanity 授权门。保留旧 setup/bootstrap 兼容行为，明确两种入口，解决预算与清理。
 
 ### I-S03: 验证并接入仓库检查
 
-将独立自查和现有 setup 回归纳入默认检查，并在明确授权后使用本机已安装的 pguide 和真实 ACP Agent 验证完整自查。
+将独立自查和现有 setup 回归纳入默认检查，使用本机已安装的 pguide 和已有权限内的真实 ACP Agent 验证完整自查，不额外请求 sanity 级授权。
 
 ## Acceptance criteria
 
@@ -26,8 +26,8 @@ Pilot 加载与分级测试证明 initial、installed、configured 和隐式 ter
 
 ### I-AC02: 自查不误报就绪
 
-自动测试覆盖缺安装、错配置、ACP 失败、未授权、假修复、超时和清理；只有真实任务及独立复查成功才能 terminal，旧 setup 回归保持通过。
+自动测试覆盖缺安装、错配置、ACP 失败、工具权限拒绝、假修复、超时和清理；证明新自查无额外授权时正常执行、至多一次 Agent 调用且不嵌套 regulation，只有真实任务及独立文件复查成功才能 terminal，旧 setup 回归保持通过。
 
 ### I-AC03: 自动及真实验证通过
 
-pnpm check 通过，并有本机已安装 pguide 运行独立自查达到 terminal 的已授权真实证据；若 Agent 或模型不可用，明确保留阻塞，不用测试替身替代。
+pnpm check 通过，并有本机已安装 pguide 运行独立自查达到 terminal 的真实证据；若 Agent 或模型不可用，明确保留阻塞，不用测试替身替代，不因低损耗而扩大权限或自动重试。
