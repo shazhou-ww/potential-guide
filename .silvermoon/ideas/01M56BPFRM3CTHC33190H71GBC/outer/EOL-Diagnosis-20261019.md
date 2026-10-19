@@ -1,5 +1,7 @@
 # 真实 apply_patch 的换行边界与独立复现
 
+本文保留补救前的诊断与失败边界。随后用户明确授权精确补救请求，并在真实官方 UI 选择 Allow Once；真实执行和 pguide 精确 LF 重观察已完成，当前结果见 [Exact-LF-Recovery-20261019.md](./Exact-LF-Recovery-20261019.md)，不以本报告的 scratch 实验替代该真实证据。
+
 ## 范围与结论
 
 本次只读调查和独立 scratch 实验没有发起模型轮次、恢复原 turn、批准工具或写入真实验收文件。D-S02 / D-AC01 仍失败；本文不是部署通过证据，也没有 `submitOuter`。

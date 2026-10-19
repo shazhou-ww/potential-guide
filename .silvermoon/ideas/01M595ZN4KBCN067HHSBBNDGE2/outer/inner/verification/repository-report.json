@@ -1,0 +1,1371 @@
+{
+  "schemaVersion": 1,
+  "scope": "delivery-preparation",
+  "state": "pass",
+  "layer2": "checked",
+  "findings": [
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "contract-schema-v1",
+      "location": "objectives/pnpm-monorepo/examples/repository.json",
+      "evidence": "Versioned requirements contract is valid.",
+      "remedy": "",
+      "packages": [],
+      "requirements": []
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "global-config",
+      "location": "pnpm-workspace.yaml",
+      "evidence": "Workspace YAML and package metadata are parseable; supported field types checked.",
+      "remedy": "",
+      "packages": [],
+      "requirements": []
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "required-file",
+      "location": "README.md",
+      "evidence": "Required by pnpm-default-v1 or explicit policy.",
+      "remedy": "Restore the required file.",
+      "packages": [],
+      "requirements": []
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "required-file",
+      "location": "package.json",
+      "evidence": "Required by pnpm-default-v1 or explicit policy.",
+      "remedy": "Restore the required file.",
+      "packages": [],
+      "requirements": []
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "required-file",
+      "location": "pnpm-workspace.yaml",
+      "evidence": "Required by pnpm-default-v1 or explicit policy.",
+      "remedy": "Restore the required file.",
+      "packages": [],
+      "requirements": []
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "required-file",
+      "location": "turbo.json",
+      "evidence": "Required by pnpm-default-v1 or explicit policy.",
+      "remedy": "Restore the required file.",
+      "packages": [],
+      "requirements": []
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "required-file",
+      "location": "tsconfig.json",
+      "evidence": "Required by pnpm-default-v1 or explicit policy.",
+      "remedy": "Restore the required file.",
+      "packages": [],
+      "requirements": []
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "required-file",
+      "location": "biome.json",
+      "evidence": "Required by pnpm-default-v1 or explicit policy.",
+      "remedy": "Restore the required file.",
+      "packages": [],
+      "requirements": []
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "layout-package-role",
+      "location": "packages/effects",
+      "evidence": "pnpm-default-v1: reusable and tooling packages belong under packages.",
+      "remedy": "Move only after authorization; update imports, workspace patterns, scripts and documentation references.",
+      "packages": [
+        "@potential-guide/effects"
+      ],
+      "requirements": [],
+      "targetDirectory": "packages"
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "layout-package-role",
+      "location": "packages/git-source",
+      "evidence": "pnpm-default-v1: reusable and tooling packages belong under packages.",
+      "remedy": "Move only after authorization; update imports, workspace patterns, scripts and documentation references.",
+      "packages": [
+        "@potential-guide/git-source"
+      ],
+      "requirements": [],
+      "targetDirectory": "packages"
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "layout-package-role",
+      "location": "packages/objective-pilot",
+      "evidence": "pnpm-default-v1: reusable and tooling packages belong under packages.",
+      "remedy": "Move only after authorization; update imports, workspace patterns, scripts and documentation references.",
+      "packages": [
+        "@potential-guide/objective-pilot"
+      ],
+      "requirements": [],
+      "targetDirectory": "packages"
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "layout-package-role",
+      "location": "packages/objective-regulator",
+      "evidence": "pnpm-default-v1: reusable and tooling packages belong under packages.",
+      "remedy": "Move only after authorization; update imports, workspace patterns, scripts and documentation references.",
+      "packages": [
+        "@potential-guide/objective-regulator"
+      ],
+      "requirements": [],
+      "targetDirectory": "packages"
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "layout-package-role",
+      "location": "packages/objective-portfolio-supervisor",
+      "evidence": "pnpm-default-v1: reusable and tooling packages belong under packages.",
+      "remedy": "Move only after authorization; update imports, workspace patterns, scripts and documentation references.",
+      "packages": [
+        "@potential-guide/objective-portfolio-supervisor"
+      ],
+      "requirements": [],
+      "targetDirectory": "packages"
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "layout-package-role",
+      "location": "packages/pguide-cli-core",
+      "evidence": "pnpm-default-v1: reusable and tooling packages belong under packages.",
+      "remedy": "Move only after authorization; update imports, workspace patterns, scripts and documentation references.",
+      "packages": [
+        "@potential-guide/cli-core"
+      ],
+      "requirements": [],
+      "targetDirectory": "packages"
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "layout-package-role",
+      "location": "packages/pguide-config",
+      "evidence": "pnpm-default-v1: reusable and tooling packages belong under packages.",
+      "remedy": "Move only after authorization; update imports, workspace patterns, scripts and documentation references.",
+      "packages": [
+        "@potential-guide/config"
+      ],
+      "requirements": [],
+      "targetDirectory": "packages"
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "layout-package-role",
+      "location": "packages/pguide",
+      "evidence": "pnpm-default-v1: reusable and tooling packages belong under packages.",
+      "remedy": "Move only after authorization; update imports, workspace patterns, scripts and documentation references.",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [],
+      "targetDirectory": "packages"
+    },
+    {
+      "layer": 1,
+      "state": "pass",
+      "rule": "layout-package-role",
+      "location": "packages/monorepo-objective",
+      "evidence": "pnpm-default-v1: reusable and tooling packages belong under packages.",
+      "remedy": "Move only after authorization; update imports, workspace patterns, scripts and documentation references.",
+      "packages": [
+        "@potential-guide/monorepo-objective"
+      ],
+      "requirements": [],
+      "targetDirectory": "packages"
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-identity",
+      "location": "packages/effects/package.json",
+      "evidence": "Public npm identity, version and access metadata.",
+      "remedy": "Declare public publish metadata without publishing.",
+      "packages": [
+        "@potential-guide/effects"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-exports",
+      "location": "packages/effects/package.json",
+      "evidence": "Public library exports must be explicit.",
+      "remedy": "Declare package entry exports.",
+      "packages": [
+        "@potential-guide/effects"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-channel",
+      "location": "packages/effects/package.json",
+      "evidence": "Configured npm channel is latest (npm default); release-command overrides are not executed.",
+      "remedy": "Declare a valid publishConfig.tag or validate the release workflow separately.",
+      "packages": [
+        "@potential-guide/effects"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-files",
+      "location": "packages/effects/package.json",
+      "evidence": "Publish allowlist must be bounded and exclude secret-value paths.",
+      "remedy": "Declare precise publish paths.",
+      "packages": [
+        "@potential-guide/effects"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/effects/package.json",
+      "evidence": "Existing file check for public target ./dist/index.d.ts; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/effects"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/effects/package.json",
+      "evidence": "Existing file check for public target ./dist/index.js; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/effects"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/effects/package.json",
+      "evidence": "Existing file check for public target ./dist/index.d.ts; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/effects"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "package-observed",
+      "location": "packages/effects/package.json",
+      "evidence": "All declared roles were evaluated; pass here does not override any unverified or failing checks.",
+      "remedy": "",
+      "packages": [
+        "@potential-guide/effects"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-identity",
+      "location": "packages/git-source/package.json",
+      "evidence": "Public npm identity, version and access metadata.",
+      "remedy": "Declare public publish metadata without publishing.",
+      "packages": [
+        "@potential-guide/git-source"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-exports",
+      "location": "packages/git-source/package.json",
+      "evidence": "Public library exports must be explicit.",
+      "remedy": "Declare package entry exports.",
+      "packages": [
+        "@potential-guide/git-source"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-channel",
+      "location": "packages/git-source/package.json",
+      "evidence": "Configured npm channel is latest (npm default); release-command overrides are not executed.",
+      "remedy": "Declare a valid publishConfig.tag or validate the release workflow separately.",
+      "packages": [
+        "@potential-guide/git-source"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-files",
+      "location": "packages/git-source/package.json",
+      "evidence": "Publish allowlist must be bounded and exclude secret-value paths.",
+      "remedy": "Declare precise publish paths.",
+      "packages": [
+        "@potential-guide/git-source"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/git-source/package.json",
+      "evidence": "Existing file check for public target ./dist/index.d.ts; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/git-source"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/git-source/package.json",
+      "evidence": "Existing file check for public target ./dist/index.js; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/git-source"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/git-source/package.json",
+      "evidence": "Existing file check for public target ./dist/index.d.ts; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/git-source"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "package-observed",
+      "location": "packages/git-source/package.json",
+      "evidence": "All declared roles were evaluated; pass here does not override any unverified or failing checks.",
+      "remedy": "",
+      "packages": [
+        "@potential-guide/git-source"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-identity",
+      "location": "packages/objective-pilot/package.json",
+      "evidence": "Public npm identity, version and access metadata.",
+      "remedy": "Declare public publish metadata without publishing.",
+      "packages": [
+        "@potential-guide/objective-pilot"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-exports",
+      "location": "packages/objective-pilot/package.json",
+      "evidence": "Public library exports must be explicit.",
+      "remedy": "Declare package entry exports.",
+      "packages": [
+        "@potential-guide/objective-pilot"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-channel",
+      "location": "packages/objective-pilot/package.json",
+      "evidence": "Configured npm channel is latest (npm default); release-command overrides are not executed.",
+      "remedy": "Declare a valid publishConfig.tag or validate the release workflow separately.",
+      "packages": [
+        "@potential-guide/objective-pilot"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-files",
+      "location": "packages/objective-pilot/package.json",
+      "evidence": "Publish allowlist must be bounded and exclude secret-value paths.",
+      "remedy": "Declare precise publish paths.",
+      "packages": [
+        "@potential-guide/objective-pilot"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/objective-pilot/package.json",
+      "evidence": "Existing file check for public target ./dist/index.d.ts; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/objective-pilot"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/objective-pilot/package.json",
+      "evidence": "Existing file check for public target ./dist/index.js; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/objective-pilot"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/objective-pilot/package.json",
+      "evidence": "Existing file check for public target ./dist/index.d.ts; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/objective-pilot"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "package-observed",
+      "location": "packages/objective-pilot/package.json",
+      "evidence": "All declared roles were evaluated; pass here does not override any unverified or failing checks.",
+      "remedy": "",
+      "packages": [
+        "@potential-guide/objective-pilot"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-identity",
+      "location": "packages/objective-regulator/package.json",
+      "evidence": "Public npm identity, version and access metadata.",
+      "remedy": "Declare public publish metadata without publishing.",
+      "packages": [
+        "@potential-guide/objective-regulator"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-exports",
+      "location": "packages/objective-regulator/package.json",
+      "evidence": "Public library exports must be explicit.",
+      "remedy": "Declare package entry exports.",
+      "packages": [
+        "@potential-guide/objective-regulator"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-channel",
+      "location": "packages/objective-regulator/package.json",
+      "evidence": "Configured npm channel is latest (npm default); release-command overrides are not executed.",
+      "remedy": "Declare a valid publishConfig.tag or validate the release workflow separately.",
+      "packages": [
+        "@potential-guide/objective-regulator"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-files",
+      "location": "packages/objective-regulator/package.json",
+      "evidence": "Publish allowlist must be bounded and exclude secret-value paths.",
+      "remedy": "Declare precise publish paths.",
+      "packages": [
+        "@potential-guide/objective-regulator"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/objective-regulator/package.json",
+      "evidence": "Existing file check for public target ./dist/index.d.ts; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/objective-regulator"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/objective-regulator/package.json",
+      "evidence": "Existing file check for public target ./dist/index.js; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/objective-regulator"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/objective-regulator/package.json",
+      "evidence": "Existing file check for public target ./dist/index.d.ts; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/objective-regulator"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "package-observed",
+      "location": "packages/objective-regulator/package.json",
+      "evidence": "All declared roles were evaluated; pass here does not override any unverified or failing checks.",
+      "remedy": "",
+      "packages": [
+        "@potential-guide/objective-regulator"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-identity",
+      "location": "packages/objective-portfolio-supervisor/package.json",
+      "evidence": "Public npm identity, version and access metadata.",
+      "remedy": "Declare public publish metadata without publishing.",
+      "packages": [
+        "@potential-guide/objective-portfolio-supervisor"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-exports",
+      "location": "packages/objective-portfolio-supervisor/package.json",
+      "evidence": "Public library exports must be explicit.",
+      "remedy": "Declare package entry exports.",
+      "packages": [
+        "@potential-guide/objective-portfolio-supervisor"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-channel",
+      "location": "packages/objective-portfolio-supervisor/package.json",
+      "evidence": "Configured npm channel is latest (npm default); release-command overrides are not executed.",
+      "remedy": "Declare a valid publishConfig.tag or validate the release workflow separately.",
+      "packages": [
+        "@potential-guide/objective-portfolio-supervisor"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-files",
+      "location": "packages/objective-portfolio-supervisor/package.json",
+      "evidence": "Publish allowlist must be bounded and exclude secret-value paths.",
+      "remedy": "Declare precise publish paths.",
+      "packages": [
+        "@potential-guide/objective-portfolio-supervisor"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/objective-portfolio-supervisor/package.json",
+      "evidence": "Existing file check for public target ./dist/index.d.ts; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/objective-portfolio-supervisor"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/objective-portfolio-supervisor/package.json",
+      "evidence": "Existing file check for public target ./dist/index.js; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/objective-portfolio-supervisor"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/objective-portfolio-supervisor/package.json",
+      "evidence": "Existing file check for public target ./dist/index.d.ts; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/objective-portfolio-supervisor"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "package-observed",
+      "location": "packages/objective-portfolio-supervisor/package.json",
+      "evidence": "All declared roles were evaluated; pass here does not override any unverified or failing checks.",
+      "remedy": "",
+      "packages": [
+        "@potential-guide/objective-portfolio-supervisor"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-identity",
+      "location": "packages/pguide-cli-core/package.json",
+      "evidence": "Public npm identity, version and access metadata.",
+      "remedy": "Declare public publish metadata without publishing.",
+      "packages": [
+        "@potential-guide/cli-core"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-exports",
+      "location": "packages/pguide-cli-core/package.json",
+      "evidence": "Public library exports must be explicit.",
+      "remedy": "Declare package entry exports.",
+      "packages": [
+        "@potential-guide/cli-core"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-channel",
+      "location": "packages/pguide-cli-core/package.json",
+      "evidence": "Configured npm channel is latest (npm default); release-command overrides are not executed.",
+      "remedy": "Declare a valid publishConfig.tag or validate the release workflow separately.",
+      "packages": [
+        "@potential-guide/cli-core"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-files",
+      "location": "packages/pguide-cli-core/package.json",
+      "evidence": "Publish allowlist must be bounded and exclude secret-value paths.",
+      "remedy": "Declare precise publish paths.",
+      "packages": [
+        "@potential-guide/cli-core"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/pguide-cli-core/package.json",
+      "evidence": "Existing file check for public target ./dist/index.d.ts; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/cli-core"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/pguide-cli-core/package.json",
+      "evidence": "Existing file check for public target ./dist/index.js; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/cli-core"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-artifact",
+      "location": "packages/pguide-cli-core/package.json",
+      "evidence": "Existing file check for public target ./dist/index.d.ts; no pack/build executed.",
+      "remedy": "Build/pack separately in an authorized environment; metadata is not consumption proof.",
+      "packages": [
+        "@potential-guide/cli-core"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "package-observed",
+      "location": "packages/pguide-cli-core/package.json",
+      "evidence": "All declared roles were evaluated; pass here does not override any unverified or failing checks.",
+      "remedy": "",
+      "packages": [
+        "@potential-guide/cli-core"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-identity",
+      "location": "packages/pguide-config/package.json",
+      "evidence": "Public npm identity, version and access metadata.",
+      "remedy": "Declare public publish metadata without publishing.",
+      "packages": [
+        "@potential-guide/config"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "not-applicable",
+      "rule": "npm-exports",
+      "location": "packages/pguide-config/package.json",
+      "evidence": "Executable-only npm packages do not need a JavaScript library export.",
+      "remedy": "Declare package entry exports.",
+      "packages": [
+        "@potential-guide/config"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-channel",
+      "location": "packages/pguide-config/package.json",
+      "evidence": "Configured npm channel is latest (npm default); release-command overrides are not executed.",
+      "remedy": "Declare a valid publishConfig.tag or validate the release workflow separately.",
+      "packages": [
+        "@potential-guide/config"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-files",
+      "location": "packages/pguide-config/package.json",
+      "evidence": "Publish allowlist must be bounded and exclude secret-value paths.",
+      "remedy": "Declare precise publish paths.",
+      "packages": [
+        "@potential-guide/config"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "not-applicable",
+      "rule": "npm-types",
+      "location": "packages/pguide-config/package.json",
+      "evidence": "Executable-only npm package has no public library typing surface.",
+      "remedy": "",
+      "packages": [
+        "@potential-guide/config"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "cli-bin",
+      "location": "packages/pguide-config/package.json",
+      "evidence": "Executable entry metadata.",
+      "remedy": "Declare bin entry points.",
+      "packages": [
+        "@potential-guide/config"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "cli-entry",
+      "location": "packages/pguide-config/./dist/bin.js",
+      "evidence": "Existing Node executable requires its shebang.",
+      "remedy": "Add the executable interpreter declaration.",
+      "packages": [
+        "@potential-guide/config"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "package-observed",
+      "location": "packages/pguide-config/package.json",
+      "evidence": "All declared roles were evaluated; pass here does not override any unverified or failing checks.",
+      "remedy": "",
+      "packages": [
+        "@potential-guide/config"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-identity",
+      "location": "packages/pguide/package.json",
+      "evidence": "Public npm identity, version and access metadata.",
+      "remedy": "Declare public publish metadata without publishing.",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "not-applicable",
+      "rule": "npm-exports",
+      "location": "packages/pguide/package.json",
+      "evidence": "Executable-only npm packages do not need a JavaScript library export.",
+      "remedy": "Declare package entry exports.",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-channel",
+      "location": "packages/pguide/package.json",
+      "evidence": "Configured npm channel is latest (npm default); release-command overrides are not executed.",
+      "remedy": "Declare a valid publishConfig.tag or validate the release workflow separately.",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "npm-files",
+      "location": "packages/pguide/package.json",
+      "evidence": "Publish allowlist must be bounded and exclude secret-value paths.",
+      "remedy": "Declare precise publish paths.",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "not-applicable",
+      "rule": "npm-types",
+      "location": "packages/pguide/package.json",
+      "evidence": "Executable-only npm package has no public library typing surface.",
+      "remedy": "",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "cli-bin",
+      "location": "packages/pguide/package.json",
+      "evidence": "Executable entry metadata.",
+      "remedy": "Declare bin entry points.",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "cli-entry",
+      "location": "packages/pguide/./dist/bin.js",
+      "evidence": "Existing Node executable requires its shebang.",
+      "remedy": "Add the executable interpreter declaration.",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "cli-entry",
+      "location": "packages/pguide/./dist/bin/continue.js",
+      "evidence": "Existing Node executable requires its shebang.",
+      "remedy": "Add the executable interpreter declaration.",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "cli-entry",
+      "location": "packages/pguide/./dist/bin/probe.js",
+      "evidence": "Existing Node executable requires its shebang.",
+      "remedy": "Add the executable interpreter declaration.",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "cli-entry",
+      "location": "packages/pguide/./dist/bin/regulate.js",
+      "evidence": "Existing Node executable requires its shebang.",
+      "remedy": "Add the executable interpreter declaration.",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "cli-entry",
+      "location": "packages/pguide/./dist/bin/scaffold.js",
+      "evidence": "Existing Node executable requires its shebang.",
+      "remedy": "Add the executable interpreter declaration.",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "cli-entry",
+      "location": "packages/pguide/./dist/bin/supervise.js",
+      "evidence": "Existing Node executable requires its shebang.",
+      "remedy": "Add the executable interpreter declaration.",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "cli-entry",
+      "location": "packages/pguide/./dist/bin/validate.js",
+      "evidence": "Existing Node executable requires its shebang.",
+      "remedy": "Add the executable interpreter declaration.",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "package-observed",
+      "location": "packages/pguide/package.json",
+      "evidence": "All declared roles were evaluated; pass here does not override any unverified or failing checks.",
+      "remedy": "",
+      "packages": [
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite",
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "internal-role",
+      "location": "packages/monorepo-objective/package.json",
+      "evidence": "Internal/tool packages must explicitly be private in pnpm-default-v1.",
+      "remedy": "Set private:true or declare a public package role instead.",
+      "packages": [
+        "@potential-guide/monorepo-objective"
+      ],
+      "requirements": []
+    },
+    {
+      "layer": 2,
+      "state": "pass",
+      "rule": "package-observed",
+      "location": "packages/monorepo-objective/package.json",
+      "evidence": "All declared roles were evaluated; pass here does not override any unverified or failing checks.",
+      "remedy": "",
+      "packages": [
+        "@potential-guide/monorepo-objective"
+      ],
+      "requirements": []
+    },
+    {
+      "layer": 2,
+      "state": "not-applicable",
+      "rule": "oidc-preparation",
+      "location": "src/index.ts",
+      "evidence": "OIDC is not requested.",
+      "remedy": "",
+      "packages": [
+        "@potential-guide/effects",
+        "@potential-guide/git-source",
+        "@potential-guide/objective-pilot",
+        "@potential-guide/objective-regulator",
+        "@potential-guide/objective-portfolio-supervisor",
+        "@potential-guide/cli-core",
+        "@potential-guide/config",
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "not-applicable",
+      "rule": "independent-delivery",
+      "location": "src/index.ts",
+      "evidence": "No independent delivery constraint is declared.",
+      "remedy": "",
+      "packages": [
+        "@potential-guide/effects",
+        "@potential-guide/git-source",
+        "@potential-guide/objective-pilot",
+        "@potential-guide/objective-regulator",
+        "@potential-guide/objective-portfolio-supervisor",
+        "@potential-guide/cli-core",
+        "@potential-guide/config",
+        "pguide"
+      ],
+      "requirements": [
+        "public-library-suite"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "not-applicable",
+      "rule": "oidc-preparation",
+      "location": "src/bin.ts",
+      "evidence": "OIDC is not requested.",
+      "remedy": "",
+      "packages": [
+        "pguide",
+        "@potential-guide/config",
+        "@potential-guide/cli-core",
+        "@potential-guide/effects",
+        "@potential-guide/git-source",
+        "@potential-guide/objective-pilot",
+        "@potential-guide/objective-regulator",
+        "@potential-guide/objective-portfolio-supervisor"
+      ],
+      "requirements": [
+        "developer-commands"
+      ]
+    },
+    {
+      "layer": 2,
+      "state": "not-applicable",
+      "rule": "independent-delivery",
+      "location": "src/bin.ts",
+      "evidence": "No independent delivery constraint is declared.",
+      "remedy": "",
+      "packages": [
+        "pguide",
+        "@potential-guide/config",
+        "@potential-guide/cli-core",
+        "@potential-guide/effects",
+        "@potential-guide/git-source",
+        "@potential-guide/objective-pilot",
+        "@potential-guide/objective-regulator",
+        "@potential-guide/objective-portfolio-supervisor"
+      ],
+      "requirements": [
+        "developer-commands"
+      ]
+    }
+  ],
+  "evidenceKind": "configuration-and-existing-files",
+  "onlineVerified": false,
+  "limitations": [
+    "No builds, package packing, isolated consumers or CLI command/extension discovery are executed; existing required artifacts and delivery configuration are checked.",
+    "Static source boundaries and declared runtimes are checked, not third-party transitive execution or engine-range intersections.",
+    "No remote resource provisioning, secret-value access, deployment, migration, live API health or online OIDC login is performed.",
+    "These outside-scope proofs do not block delivery-preparation readiness; unsupported adapters, unresolved imports and missing required configuration/artifacts remain blocking findings."
+  ]
+}

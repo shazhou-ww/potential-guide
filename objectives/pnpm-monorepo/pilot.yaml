@@ -1,0 +1,22 @@
+schemaVersion: 1
+domainSchema:
+  type: object
+  additionalProperties: false
+  required: [root, contract, checkerModule]
+  properties:
+    root: {type: string, minLength: 1}
+    contract: {type: string, minLength: 1}
+    checkerModule: {type: string, minLength: 1}
+levels:
+  - id: initial
+    advancement:
+      checks:
+        - id: structure
+          problems: [structure-incomplete]
+  - id: structured
+    advancement:
+      checks:
+        - id: deliveries
+          problems: [delivery-incomplete]
+defaultLanguage: zh-CN
+languages: [zh-CN]

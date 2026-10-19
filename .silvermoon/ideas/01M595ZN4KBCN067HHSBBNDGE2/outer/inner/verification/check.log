@@ -1,0 +1,1291 @@
+﻿pnpm.exe : $ pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run pack:check
+At C:\Users\leescott.REDMOND\AppData\Local\pnpm\bin\pnpm.ps1:14 char:3
++   & "$basedir/../global/v11/04c76a7707e0b1a68854d409e7d0792f72b9c5758 ...
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ pnpm run form... run pack:check:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+$ biome format .
+Checked 115 files in 113ms. No fixes applied.
+$ turbo run lint && biome lint scripts objectives
+
+   • turbo 2.11.8
+   • Packages in scope: @potential-guide/cli-core, @potential-guide/config, @potential-guide/effects, @potential-guide/git-source, @potential-guide/monorepo-objective, @potential-guide/objective-pilot, @potential-guide/objective-portfolio-supervisor, @potential-guide/objective-regulator, pguide
+   • Running lint in 9 packages
+   • Remote caching disabled, using shared worktree cache
+
+@potential-guide/monorepo-objective:lint: cache miss, executing 21eb857a12444ee5
+@potential-guide/effects:lint: cache hit, replaying logs bac303fd791fdb58
+@potential-guide/effects:lint: $ biome lint .
+@potential-guide/effects:lint: Checked 4 files in 21ms. No fixes applied.
+@potential-guide/config:lint: cache hit, replaying logs 9331dc46ec83f202
+@potential-guide/git-source:lint: cache hit, replaying logs 17e1deb9a18bcfe5
+@potential-guide/objective-regulator:lint: cache hit, replaying logs 2c3b5f229c932253
+@potential-guide/git-source:lint: $ biome lint .
+@potential-guide/git-source:lint: Checked 4 files in 30ms. No fixes applied.
+@potential-guide/objective-portfolio-supervisor:lint: cache hit, replaying logs 4eddc9133125b6a8
+@potential-guide/objective-pilot:lint: cache hit, replaying logs 24208c3c955681fc
+@potential-guide/config:lint: $ biome lint .
+@potential-guide/objective-regulator:lint: $ biome lint .
+@potential-guide/config:lint: Checked 4 files in 15ms. No fixes applied.
+@potential-guide/objective-regulator:lint: Checked 5 files in 35ms. No fixes applied.
+@potential-guide/objective-pilot:lint: $ biome lint .
+@potential-guide/objective-pilot:lint: src\projection.ts:120:30 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: $ biome lint .
+@potential-guide/objective-portfolio-supervisor:lint: src\coordinator.ts:156:21 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint:     118 │         case "path": {
+@potential-guide/objective-pilot:lint:     119 │           let result = input;
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     154 │     if (options.onEvent) {
+@potential-guide/objective-portfolio-supervisor:lint:     155 │       const pending = Promise.resolve()
+@potential-guide/objective-portfolio-supervisor:lint:   > 156 │         .then(() => options.onEvent!(event))
+@potential-guide/objective-pilot:lint:   > 120 │           for (const step of node.steps!) {
+@potential-guide/objective-pilot:lint:         │                              ^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:         │                     ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     157 │         .catch(failed);
+@potential-guide/objective-portfolio-supervisor:lint:     158 │       callbacks.add(pending);
+@potential-guide/objective-pilot:lint:     121 │             if (Array.isArray(result)) {
+@potential-guide/objective-pilot:lint:     122 │               const values: unknown[] = result.flatMap((item) => {
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint: src\projection.ts:133:20 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint:     154 154 │       if (options.onEvent) {
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     131 │         case "unary": {
+@potential-guide/objective-pilot:lint:     132 │           if (node.value === "[")
+@potential-guide/objective-pilot:lint:   > 133 │             return node.expressions!.flatMap((entry) => {
+@potential-guide/objective-pilot:lint:         │                    ^^^^^^^^^^^^^^^^^
+@potential-guide/objective-pilot:lint:     134 │               const value = evaluate(entry, input);
+@potential-guide/objective-pilot:lint:     135 │               return value === undefined
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     131 131 │           case "unary": {
+@potential-guide/objective-portfolio-supervisor:lint:     155 155 │         const pending = Promise.resolve()
+@potential-guide/objective-portfolio-supervisor:lint:     156     │ - ········.then(()·=>·options.onEvent!(event))
+@potential-guide/objective-pilot:lint:     132 132 │             if (node.value === "[")
+@potential-guide/objective-pilot:lint:     133     │ - ············return·node.expressions!.flatMap((entry)·=>·{
+@potential-guide/objective-pilot:lint:         133 │ + ············return·node.expressions?.flatMap((entry)·=>·{
+@potential-guide/objective-portfolio-supervisor:lint:         156 │ + ········.then(()·=>·options.onEvent?.(event))
+@potential-guide/objective-portfolio-supervisor:lint:     157 157 │           .catch(failed);
+@potential-guide/objective-portfolio-supervisor:lint:     158 158 │         callbacks.add(pending);
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint:     134 134 │                 const value = evaluate(entry, input);
+@potential-guide/objective-pilot:lint:     135 135 │                 return value === undefined
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: src\coordinator.ts:303:15 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     301 │           a.priority - b.priority ||
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint: src\projection.ts:160:34 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:     302 │           (a.priority === 0
+@potential-guide/objective-portfolio-supervisor:lint:   > 303 │             ? p0Arrivals.get(token(a))! - p0Arrivals.get(token(b))!
+@potential-guide/objective-portfolio-supervisor:lint:         │               ^^^^^^^^^^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     304 │             : arrivals.get(token(a))! - arrivals.get(token(b))!),
+@potential-guide/objective-portfolio-supervisor:lint:     305 │       );
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     158 │             throw new SubjectProjectionError("Invalid binary projection.");
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: src\coordinator.ts:303:43 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-pilot:lint:     159 │           const left = evaluate(lhs as Node, input);
+@potential-guide/objective-pilot:lint:   > 160 │           const right = evaluate(node.rhs!, input);
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint:         │                                  ^^^^^^^^^
+@potential-guide/objective-pilot:lint:     161 │           if (node.value === "&") {
+@potential-guide/objective-pilot:lint:     162 │             if (typeof left !== "string" || typeof right !== "string")
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     301 │           a.priority - b.priority ||
+@potential-guide/objective-portfolio-supervisor:lint:     302 │           (a.priority === 0
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint: src\resources.ts:116:45 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint:   > 303 │             ? p0Arrivals.get(token(a))! - p0Arrivals.get(token(b))!
+@potential-guide/objective-portfolio-supervisor:lint:         │                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:     304 │             : arrivals.get(token(a))! - arrivals.get(token(b))!),
+@potential-guide/objective-portfolio-supervisor:lint:     305 │       );
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     114 │   if (match === null)
+@potential-guide/objective-portfolio-supervisor:lint: src\coordinator.ts:304:15 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint:     115 │     throw new ObjectiveConfigurationError(`Reference page needs frontmatter: ${resource.uri}.`);
+@potential-guide/objective-pilot:lint:   > 116 │   const metadata: unknown = parseStrictYaml(match[1]!);
+@potential-guide/objective-pilot:lint:         │                                             ^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     302 │           (a.priority === 0
+@potential-guide/objective-portfolio-supervisor:lint:     303 │             ? p0Arrivals.get(token(a))! - p0Arrivals.get(token(b))!
+@potential-guide/objective-portfolio-supervisor:lint:   > 304 │             : arrivals.get(token(a))! - arrivals.get(token(b))!),
+@potential-guide/objective-portfolio-supervisor:lint:         │               ^^^^^^^^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     305 │       );
+@potential-guide/objective-pilot:lint:     117 │   if (!record(metadata))
+@potential-guide/objective-pilot:lint:     118 │     throw new ObjectiveConfigurationError(`Invalid page metadata: ${resource.uri}.`);
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     306 │     for (const demand of ordered) {
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: src\coordinator.ts:304:41 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint: src\resources.ts:171:47 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     169 │       throw new ObjectiveConfigurationError(`Reference escapes source: ${uri}.`);
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     302 │           (a.priority === 0
+@potential-guide/objective-pilot:lint:     170 │     const parts = decodeURIComponent(uri.slice(root.length)).split("/");
+@potential-guide/objective-pilot:lint:   > 171 │     if (![3, 5, 7].includes(parts.length) || !parts.at(-1)!.endsWith(".md")) {
+@potential-guide/objective-pilot:lint:         │                                               ^^^^^^^^^^^^^
+@potential-guide/objective-pilot:lint:     172 │       throw new ObjectiveConfigurationError(
+@potential-guide/objective-pilot:lint:     173 │         `References require <namespace>/<id>/<language>.md: ${uri}.`,
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     303 │             ? p0Arrivals.get(token(a))! - p0Arrivals.get(token(b))!
+@potential-guide/objective-portfolio-supervisor:lint:   > 304 │             : arrivals.get(token(a))! - arrivals.get(token(b))!),
+@potential-guide/objective-pilot:lint:     169 169 │         throw new ObjectiveConfigurationError(`Reference escapes source: ${uri}.`);
+@potential-guide/objective-pilot:lint:     170 170 │       const parts = decodeURIComponent(uri.slice(root.length)).split("/");
+@potential-guide/objective-portfolio-supervisor:lint:         │                                         ^^^^^^^^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     305 │       );
+@potential-guide/objective-pilot:lint:     171     │ - ····if·(![3,·5,·7].includes(parts.length)·||·!parts.at(-1)!.endsWith(".md"))·{
+@potential-guide/objective-portfolio-supervisor:lint:     306 │     for (const demand of ordered) {
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: src\planner.ts:159:20 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-pilot:lint:         171 │ + ····if·(![3,·5,·7].includes(parts.length)·||·!parts.at(-1)?.endsWith(".md"))·{
+@potential-guide/objective-pilot:lint:     172 172 │         throw new ObjectiveConfigurationError(
+@potential-guide/objective-pilot:lint:     173 173 │           `References require <namespace>/<id>/<language>.md: ${uri}.`,
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:     157 │     if (closed) return;
+@potential-guide/objective-portfolio-supervisor:lint:     158 │     const demands: QueueDemand[] = plan.directives.map((directive) => {
+@potential-guide/objective-pilot:lint: src\resources.ts:177:18 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   > 159 │       const goal = goals.get(directive.goalId)!;
+@potential-guide/objective-portfolio-supervisor:lint:         │                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     160 │       const next = {
+@potential-guide/objective-portfolio-supervisor:lint:     161 │         ...goal,
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint:     175 │     }
+@potential-guide/objective-pilot:lint:     176 │     const [namespace, localId] = parts as [string, string, ...string[]];
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: test\objective-portfolio-supervisor.test.ts:207:19 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     205 │   try {
+@potential-guide/objective-portfolio-supervisor:lint:     206 │     await until(() => h.executions.length === 1);
+@potential-guide/objective-portfolio-supervisor:lint:   > 207 │     const first = h.executions[0]!;
+@potential-guide/objective-portfolio-supervisor:lint:         │                   ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     208 │     assert.deepEqual(first.input.permissions, policy);
+@potential-guide/objective-portfolio-supervisor:lint:     209 │     // Irrelevant revisions arriving during a run must not discard its blocked signature.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: test\objective-portfolio-supervisor.test.ts:248:19 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     246 │   try {
+@potential-guide/objective-pilot:lint:   > 177 │     const file = parts.at(-1)!;
+@potential-guide/objective-pilot:lint:         │                  ^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     247 │     await until(() => h.executions.length === 1);
+@potential-guide/objective-portfolio-supervisor:lint:   > 248 │     const first = h.executions[0]!;
+@potential-guide/objective-pilot:lint:     178 │     const language = file.slice(0, -3);
+@potential-guide/objective-pilot:lint:     179 │     if (
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:         │                   ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     249 │     first.completion.resolve({
+@potential-guide/objective-portfolio-supervisor:lint:     250 │       ...outcome(first.input, "authorization-required"),
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: test\objective-portfolio-supervisor.test.ts:259:22 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+@potential-guide/objective-pilot:lint: src\resources.ts:205:85 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     203 │         parts[2] !== "checks" ||
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     257 │     await until(() => h.executions.length === 2);
+@potential-guide/objective-pilot:lint:     204 │         check === undefined ||
+@potential-guide/objective-pilot:lint:   > 205 │         (parts.length === 7 && (parts[4] !== "problems" || !check.problems.includes(parts[5]!)))
+@potential-guide/objective-portfolio-supervisor:lint:     258 │     assert.deepEqual(first.input.permissions?.grants, []);
+@potential-guide/objective-portfolio-supervisor:lint:   > 259 │     assert.deepEqual(h.executions[1]!.input.permissions?.grants, ["repair"]);
+@potential-guide/objective-pilot:lint:         │                                                                                     ^^^^^^^^^
+@potential-guide/objective-pilot:lint:     206 │       ) {
+@potential-guide/objective-pilot:lint:     207 │         throw new ObjectiveConfigurationError(`Invalid scoped Reference identity: ${uri}.`);
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:         │                      ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     260 │     assert.ok(Object.isFrozen(h.executions[1]!.input.permissions));
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint: src\resources.ts:262:24 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint:     261 │   } finally {
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     260 │       }
+@potential-guide/objective-portfolio-supervisor:lint:      257  257 │       await until(() => h.executions.length === 2);
+@potential-guide/objective-portfolio-supervisor:lint:      258  258 │       assert.deepEqual(first.input.permissions?.grants, []);
+@potential-guide/objective-pilot:lint:     261 │       for (const match of page.content.matchAll(/\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g)) {
+@potential-guide/objective-pilot:lint:   > 262 │         if (!nodes.has(match[1]!))
+@potential-guide/objective-portfolio-supervisor:lint:      259      │ - ····assert.deepEqual(h.executions[1]!.input.permissions?.grants,·["repair"]);
+@potential-guide/objective-portfolio-supervisor:lint:           259 │ + ····assert.deepEqual(h.executions[1]?.input.permissions?.grants,·["repair"]);
+@potential-guide/objective-pilot:lint:         │                        ^^^^^^^^^
+@potential-guide/objective-pilot:lint:     263 │           throw new ObjectiveConfigurationError(`Dangling References link: ${match[1]}.`);
+@potential-guide/objective-portfolio-supervisor:lint:      260  260 │       assert.ok(Object.isFrozen(h.executions[1]!.input.permissions));
+@potential-guide/objective-portfolio-supervisor:lint:      261  261 │     } finally {
+@potential-guide/objective-pilot:lint:     264 │       }
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: test\objective-portfolio-supervisor.test.ts:260:31 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+@potential-guide/objective-pilot:lint: src\resources.ts:270:63 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     258 │     assert.deepEqual(first.input.permissions?.grants, []);
+@potential-guide/objective-portfolio-supervisor:lint:     259 │     assert.deepEqual(h.executions[1]!.input.permissions?.grants, ["repair"]);
+@potential-guide/objective-portfolio-supervisor:lint:   > 260 │     assert.ok(Object.isFrozen(h.executions[1]!.input.permissions));
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     268 │       language,
+@potential-guide/objective-portfolio-supervisor:lint:         │                               ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     261 │   } finally {
+@potential-guide/objective-portfolio-supervisor:lint:     262 │     await h.coordinator.close();
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:      258  258 │       assert.deepEqual(first.input.permissions?.grants, []);
+@potential-guide/objective-portfolio-supervisor:lint:      259  259 │       assert.deepEqual(h.executions[1]!.input.permissions?.grants, ["repair"]);
+@potential-guide/objective-portfolio-supervisor:lint:      260      │ - ····assert.ok(Object.isFrozen(h.executions[1]!.input.permissions));
+@potential-guide/objective-portfolio-supervisor:lint:           260 │ + ····assert.ok(Object.isFrozen(h.executions[1]?.input.permissions));
+@potential-guide/objective-portfolio-supervisor:lint:      261  261 │     } finally {
+@potential-guide/objective-portfolio-supervisor:lint:      262  262 │       await h.coordinator.close();
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint:     269 │       {
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: test\objective-portfolio-supervisor.test.ts:278:19 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     276 │   try {
+@potential-guide/objective-portfolio-supervisor:lint:     277 │     await until(() => h.executions.length === 1);
+@potential-guide/objective-portfolio-supervisor:lint:   > 278 │     const first = h.executions[0]!;
+@potential-guide/objective-portfolio-supervisor:lint:         │                   ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     279 │     await Effect.runPromise(SubscriptionRef.set(permissionUpdates, undefined));
+@potential-guide/objective-portfolio-supervisor:lint:     280 │     await until(() => first.aborted && h.executions.length === 2);
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: test\objective-portfolio-supervisor.test.ts:281:22 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     279 │     await Effect.runPromise(SubscriptionRef.set(permissionUpdates, undefined));
+@potential-guide/objective-portfolio-supervisor:lint:     280 │     await until(() => first.aborted && h.executions.length === 2);
+@potential-guide/objective-portfolio-supervisor:lint:   > 281 │     assert.deepEqual(h.executions[1]!.input.permissions, { ceiling: [], grants: [] });
+@potential-guide/objective-portfolio-supervisor:lint:         │                      ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     282 │     first.completion.resolve(outcome(first.input));
+@potential-guide/objective-portfolio-supervisor:lint:     283 │     await delay(20);
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint:   > 270 │         pages: new Map([...nodes].map(([id, locales]) => [id, locales.get(language)!])),
+@potential-guide/objective-portfolio-supervisor:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:      279  279 │       await Effect.runPromise(SubscriptionRef.set(permissionUpdates, undefined));
+@potential-guide/objective-portfolio-supervisor:lint:      280  280 │       await until(() => first.aborted && h.executions.length === 2);
+@potential-guide/objective-portfolio-supervisor:lint:      281      │ - ····assert.deepEqual(h.executions[1]!.input.permissions,·{·ceiling:·[],·grants:·[]·});
+@potential-guide/objective-portfolio-supervisor:lint:           281 │ + ····assert.deepEqual(h.executions[1]?.input.permissions,·{·ceiling:·[],·grants:·[]·});
+@potential-guide/objective-portfolio-supervisor:lint:      282  282 │       first.completion.resolve(outcome(first.input));
+@potential-guide/objective-pilot:lint:         │                                                               ^^^^^^^^^^^^^^^^^^^^^^
+@potential-guide/objective-pilot:lint:     271 │       },
+@potential-guide/objective-portfolio-supervisor:lint:      283  283 │       await delay(20);
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint:     272 │     ]),
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: test\objective-portfolio-supervisor.test.ts:295:5 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     293 │   try {
+@potential-guide/objective-portfolio-supervisor:lint:     294 │     await until(() => h.executions.length === 1);
+@potential-guide/objective-portfolio-supervisor:lint:   > 295 │     h.executions[0]!.completion.resolve({
+@potential-guide/objective-portfolio-supervisor:lint:         │     ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     296 │       ...outcome(h.executions[0]!.input, "exhausted"),
+@potential-guide/objective-portfolio-supervisor:lint:     297 │       exhaustedBy: "agent-runs",
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint: src\validation.ts:159:17 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:      293  293 │     try {
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:      294  294 │       await until(() => h.executions.length === 1);
+@potential-guide/objective-portfolio-supervisor:lint:      295      │ - ····h.executions[0]!.completion.resolve({
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     157 │     return { id: entry.id, advancement: { checks } };
+@potential-guide/objective-portfolio-supervisor:lint:           295 │ + ····h.executions[0]?.completion.resolve({
+@potential-guide/objective-portfolio-supervisor:lint:      296  296 │         ...outcome(h.executions[0]!.input, "exhausted"),
+@potential-guide/objective-pilot:lint:     158 │   });
+@potential-guide/objective-pilot:lint:   > 159 │   const first = levels[0]!;
+@potential-guide/objective-portfolio-supervisor:lint:      297  297 │         exhaustedBy: "agent-runs",
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint:         │                 ^^^^^^^^^^
+@potential-guide/objective-pilot:lint:     160 │   if (new Set(levels.map(({ id }) => id)).size !== levels.length) {
+@potential-guide/objective-pilot:lint:     161 │     throw new ObjectiveConfigurationError("Duplicate level ID.");
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: test\objective-portfolio-supervisor.test.ts:296:18 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint: src\validation.ts:243:13 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     294 │     await until(() => h.executions.length === 1);
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     241 │       message,
+@potential-guide/objective-portfolio-supervisor:lint:     295 │     h.executions[0]!.completion.resolve({
+@potential-guide/objective-portfolio-supervisor:lint:   > 296 │       ...outcome(h.executions[0]!.input, "exhausted"),
+@potential-guide/objective-pilot:lint:     242 │     }));
+@potential-guide/objective-pilot:lint:   > 243 │     return [issues[0]!, ...issues.slice(1)];
+@potential-guide/objective-portfolio-supervisor:lint:         │                  ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     297 │       exhaustedBy: "agent-runs",
+@potential-guide/objective-pilot:lint:         │             ^^^^^^^^^^
+@potential-guide/objective-pilot:lint:     244 │   }
+@potential-guide/objective-portfolio-supervisor:lint:     298 │       authorizationRequests: [authorizationRequest],
+@potential-guide/objective-pilot:lint:     245 │   return null;
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint: test\pilot.test.ts:35:17 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:      294  294 │       await until(() => h.executions.length === 1);
+@potential-guide/objective-portfolio-supervisor:lint:      295  295 │       h.executions[0]!.completion.resolve({
+@potential-guide/objective-pilot:lint:     33 │   assert.equal(
+@potential-guide/objective-pilot:lint:     34 │     searchPages(spec, "Wiki", "en-US").length,
+@potential-guide/objective-portfolio-supervisor:lint:      296      │ - ······...outcome(h.executions[0]!.input,·"exhausted"),
+@potential-guide/objective-portfolio-supervisor:lint:           296 │ + ······...outcome(h.executions[0]?.input,·"exhausted"),
+@potential-guide/objective-pilot:lint:   > 35 │     Object.keys(spec.locales["en-US"]!).length,
+@potential-guide/objective-pilot:lint:        │                 ^^^^^^^^^^^^^^^^^^^^^^
+@potential-guide/objective-pilot:lint:     36 │   );
+@potential-guide/objective-portfolio-supervisor:lint:      297  297 │         exhaustedBy: "agent-runs",
+@potential-guide/objective-portfolio-supervisor:lint:      298  298 │         authorizationRequests: [authorizationRequest],
+@potential-guide/objective-pilot:lint:     37 │   assert.equal(readPage(spec, "not-found").id, "system/404");
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: test\objective-portfolio-supervisor.test.ts:336:19 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     334 │   try {
+@potential-guide/objective-portfolio-supervisor:lint:     335 │     await until(() => h.executions.length === 1);
+@potential-guide/objective-portfolio-supervisor:lint:   > 336 │     const first = h.executions[0]!;
+@potential-guide/objective-pilot:lint: test\pilot.test.ts:217:17 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:         │                   ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     337 │     h.coordinator.reportAuthorizationRequest(first.input, authorizationRequest);
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     338 │     h.coordinator.reportAuthorizationRequest(first.input, authorizationRequest);
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint:     215 │   const config = manifest();
+@potential-guide/objective-pilot:lint:     216 │   const duplicated = structuredClone(config);
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: test\objective-portfolio-supervisor.test.ts:386:23 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+@potential-guide/objective-pilot:lint:   > 217 │   const first = duplicated.levels[0]!;
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint:         │                 ^^^^^^^^^^^^^^^^^^^^^
+@potential-guide/objective-pilot:lint:     218 │   bad.texts.set(
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     384 │       SubscriptionRef.set(permissionUpdates, { ceiling: [], grants: ["outside-ceiling"] }),
+@potential-guide/objective-pilot:lint:     219 │     objectiveId,
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     385 │     );
+@potential-guide/objective-portfolio-supervisor:lint:   > 386 │     await until(() => h.executions[0]!.aborted && h.executions[0]!.killed);
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint: test\validation.test.ts:103:18 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint:         │                       ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     387 │     await delay(20);
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:     388 │     assert.equal(h.executions.length, 1);
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     101 │   for (const size of [200, 201]) {
+@potential-guide/objective-portfolio-supervisor:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint:     102 │     const data = fixture();
+@potential-guide/objective-portfolio-supervisor:lint:      384  384 │         SubscriptionRef.set(permissionUpdates, { ceiling: [], grants: ["outside-ceiling"] }),
+@potential-guide/objective-portfolio-supervisor:lint:      385  385 │       );
+@potential-guide/objective-pilot:lint:   > 103 │     const page = [...data.pages.values()][0]!.find(({ uri }) =>
+@potential-guide/objective-pilot:lint:         │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:      386      │ - ····await·until(()·=>·h.executions[0]!.aborted·&&·h.executions[0]!.killed);
+@potential-guide/objective-portfolio-supervisor:lint:           386 │ + ····await·until(()·=>·h.executions[0]?.aborted·&&·h.executions[0]!.killed);
+@potential-guide/objective-pilot:lint:   > 104 │       uri.endsWith("system/overview/zh-CN.md"),
+@potential-guide/objective-pilot:lint:   > 105 │     )!;
+@potential-guide/objective-portfolio-supervisor:lint:      387  387 │       await delay(20);
+@potential-guide/objective-portfolio-supervisor:lint:      388  388 │       assert.equal(h.executions.length, 1);
+@potential-guide/objective-pilot:lint:         │     ^^
+@potential-guide/objective-pilot:lint:     106 │     page.source = `---\ntitle: Title\ndescription: ${JSON.stringify("😀".repeat(size))}\nreferences: []\n---\n`;
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-pilot:lint:     107 │     if (size === 200) {
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: test\objective-portfolio-supervisor.test.ts:386:51 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint: test\validation.test.ts:103:18 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     384 │       SubscriptionRef.set(permissionUpdates, { ceiling: [], grants: ["outside-ceiling"] }),
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     101 │   for (const size of [200, 201]) {
+@potential-guide/objective-portfolio-supervisor:lint:     385 │     );
+@potential-guide/objective-portfolio-supervisor:lint:   > 386 │     await until(() => h.executions[0]!.aborted && h.executions[0]!.killed);
+@potential-guide/objective-pilot:lint:     102 │     const data = fixture();
+@potential-guide/objective-pilot:lint:   > 103 │     const page = [...data.pages.values()][0]!.find(({ uri }) =>
+@potential-guide/objective-pilot:lint:         │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+@potential-guide/objective-pilot:lint:     104 │       uri.endsWith("system/overview/zh-CN.md"),
+@potential-guide/objective-portfolio-supervisor:lint:         │                                                   ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     387 │     await delay(20);
+@potential-guide/objective-portfolio-supervisor:lint:     388 │     assert.equal(h.executions.length, 1);
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:      384  384 │         SubscriptionRef.set(permissionUpdates, { ceiling: [], grants: ["outside-ceiling"] }),
+@potential-guide/objective-pilot:lint:     105 │     )!;
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:      385  385 │       );
+@potential-guide/objective-portfolio-supervisor:lint:      386      │ - ····await·until(()·=>·h.executions[0]!.aborted·&&·h.executions[0]!.killed);
+@potential-guide/objective-portfolio-supervisor:lint:           386 │ + ····await·until(()·=>·h.executions[0]!.aborted·&&·h.executions[0]?.killed);
+@potential-guide/objective-pilot:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:      387  387 │       await delay(20);
+@potential-guide/objective-portfolio-supervisor:lint:      388  388 │       assert.equal(h.executions.length, 1);
+@potential-guide/objective-pilot:lint:     101 101 │     for (const size of [200, 201]) {
+@potential-guide/objective-pilot:lint:     102 102 │       const data = fixture();
+@potential-guide/objective-pilot:lint:     103     │ - ····const·page·=·[...data.pages.values()][0]!.find(({·uri·})·=>
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-pilot:lint:         103 │ + ····const·page·=·[...data.pages.values()][0]?.find(({·uri·})·=>
+@potential-guide/objective-pilot:lint:     104 104 │         uri.endsWith("system/overview/zh-CN.md"),
+@potential-guide/objective-portfolio-supervisor:lint: test\objective-portfolio-supervisor.test.ts:392:22 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-pilot:lint:     105 105 │       )!;
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     390 │     await Effect.runPromise(SubscriptionRef.set(permissionUpdates, undefined));
+@potential-guide/objective-pilot:lint: test\validation.test.ts:125:5 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:     391 │     await until(() => h.executions.length === 2);
+@potential-guide/objective-portfolio-supervisor:lint:   > 392 │     assert.deepEqual(h.executions[1]!.input.permissions, { ceiling: [], grants: [] });
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     123 │   ]) {
+@potential-guide/objective-portfolio-supervisor:lint:         │                      ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     393 │   } finally {
+@potential-guide/objective-pilot:lint:     124 │     const data = fixture();
+@potential-guide/objective-pilot:lint:   > 125 │     [...data.pages.values()][0]![0]!.source = source;
+@potential-guide/objective-portfolio-supervisor:lint:     394 │     await h.coordinator.close();
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-pilot:lint:         │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+@potential-guide/objective-pilot:lint:     126 │     await assert.rejects(data.load());
+@potential-guide/objective-portfolio-supervisor:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:      390  390 │       await Effect.runPromise(SubscriptionRef.set(permissionUpdates, undefined));
+@potential-guide/objective-portfolio-supervisor:lint:      391  391 │       await until(() => h.executions.length === 2);
+@potential-guide/objective-portfolio-supervisor:lint:      392      │ - ····assert.deepEqual(h.executions[1]!.input.permissions,·{·ceiling:·[],·grants:·[]·});
+@potential-guide/objective-pilot:lint:     127 │   }
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     123 123 │     ]) {
+@potential-guide/objective-pilot:lint:     124 124 │       const data = fixture();
+@potential-guide/objective-pilot:lint:     125     │ - ····[...data.pages.values()][0]![0]!.source·=·source;
+@potential-guide/objective-pilot:lint:         125 │ + ····[...data.pages.values()][0]?.[0]!.source·=·source;
+@potential-guide/objective-pilot:lint:     126 126 │       await assert.rejects(data.load());
+@potential-guide/objective-pilot:lint:     127 127 │     }
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint: test\validation.test.ts:125:5 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint:     123 │   ]) {
+@potential-guide/objective-pilot:lint:     124 │     const data = fixture();
+@potential-guide/objective-pilot:lint:   > 125 │     [...data.pages.values(Checked 13 files in 29ms. No fixes applied.)][0]![0]!.source = source;
+@potential-guide/objective-pilot:lint:         │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+@potential-guide/objective-pilot:lint:     126 │     await assert.rejects(data.load());
+@potential-guide/objective-pilot:lint: Found 17 warnings.
+@potential-guide/objective-portfolio-supervisor:lint:           392 │ + ····assert.deepEqual(h.executions[1]?.input.permissions,·{·ceiling:·[],·grants:·[]·});
+@potential-guide/objective-portfolio-supervisor:lint:      393  393 │     } finally {
+@potential-guide/objective-portfolio-supervisor:lint:      394  394 │       await h.coordinator.close();
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: test\objective-portfolio-supervisor.test.ts:412:5 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+pguide:lint: cache hit, replaying logs 17f42b650f2a58e1
+@potential-guide/cli-core:lint: cache hit, replaying logs f1f3b62f73a6f8ed
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-pilot:lint:     127 │   }
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-pilot:lint:   
+@potential-guide/objective-pilot:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     410 │     await delay(20);
+@potential-guide/objective-portfolio-supervisor:lint:     411 │     assert.equal(h.executions.length, 2);
+@potential-guide/objective-portfolio-supervisor:lint:   > 412 │     h.executions[0]!.completion.resolve(outcome(h.executions[0]!.input));
+@potential-guide/objective-portfolio-supervisor:lint:         │     ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     413 │     await until(() => h.executions.length === 3);
+@potential-guide/objective-portfolio-supervisor:lint:     414 │     assert.equal((await read(h.coordinator.state)).runs.length, 2);
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:      410  410 │       await delay(20);
+@potential-guide/objective-portfolio-supervisor:lint:      411  411 │       assert.equal(h.executions.length, 2);
+@potential-guide/objective-portfolio-supervisor:lint:      412      │ - ····h.executions[0]!.completion.resolve(outcome(h.executions[0]!.input));
+@potential-guide/objective-portfolio-supervisor:lint:           412 │ + ····h.executions[0]?.completion.resolve(outcome(h.executions[0]!.input));
+@potential-guide/objective-portfolio-supervisor:lint:      413  413 │       await until(() => h.executions.length === 3);
+@potential-guide/objective-portfolio-supervisor:lint:      414  414 │       assert.equal((await read(h.coordinator.state)).runs.length, 2);
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint: test\objective-portfolio-supervisor.test.ts:412:49 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint: 
+@potential-guide/objective-portfolio-supervisor:lint:   ! Forbidden non-null assertion.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:     410 │     await delay(20);
+@potential-guide/objective-portfolio-supervisor:lint:     411 │     assert.equal(h.executions.length, 2);
+@potential-guide/objective-portfolio-supervisor:lint:   > 412 │     h.executions[0]!.completion.resolve(outcome(h.executions[0]!.input));
+@potential-guide/objective-portfolio-supervisor:lint:         │                                                 ^^^^^^^^^^^^^^^^
+@potential-guide/objective-portfolio-supervisor:lint:     413 │     await until(() => h.executions.length === 3);
+@potential-guide/objective-portfolio-supervisor:lint:     414 │     assert.equal((await read(h.coordinator.state)).runs.length, 2);
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+@potential-guide/cli-core:lint: $ biome lint .
+@potential-guide/cli-core:lint: src\index.ts:870:69 lint/suspicious/noConfusingVoidType  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/cli-core:lint: 
+@potential-guide/cli-core:lint:   ! void is confusing inside a union type.
+@potential-guide/cli-core:lint:   
+@potential-guide/cli-core:lint:     868 │ export async function commandMain(
+pguide:lint: $ biome lint .
+pguide:lint: src\commands\pilot.ts:37:90 lint/suspicious/noConfusingVoidType  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint:      410  410 │       await delay(20);
+@potential-guide/objective-portfolio-supervisor:lint:      411  411 │       assert.equal(h.executions.length, 2);
+@potential-guide/objective-portfolio-supervisor:lint:      412      │ - ····h.executions[0]!.completion.resolve(outcome(h.executions[0]!.input));
+@potential-guide/objective-portfolio-supervisor:lint:           412 │ + ····h.executions[0]!.completion.resolve(outcome(h.executions[0]?.input));
+@potential-guide/objective-portfolio-supervisor:lint:      413  413 │       await until(() => h.executions.length === 3);
+@potential-guide/objective-portfolio-supervisor:lint:      414  414 │       assert.equal((await read(h.coordinator.state)).runs.length, 2);
+@potential-guide/cli-core:lint:     869 │   metadata: CommandMetadata,
+@potential-guide/cli-core:lint:   > 870 │   run: (argv: string[], globals: GlobalOptions) => Promise<number | void>,
+@potential-guide/cli-core:lint:         │                                                                     ^^^^
+@potential-guide/cli-core:lint:     871 │ ): Promise<void> {
+@potential-guide/cli-core:lint:     872 │   try {
+@potential-guide/cli-core:lint:   
+@potential-guide/cli-core:lint:   i Unsafe fix: Use undefined instead.
+@potential-guide/objective-portfolio-supervisor:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: The number of diagnostics exceeds the limit allowed. Use --max-diagnostics
+@potential-guide/objective-portfolio-supervisor:lint:  to increase it.
+pguide:lint: 
+@potential-guide/cli-core:lint:   
+@potential-guide/cli-core:lint:      868  868 │   export async function commandMain(
+@potential-guide/cli-core:lint:      869  869 │     metadata: CommandMetadata,
+pguide:lint:   ! void is confusing inside a union type.
+pguide:lint:   
+@potential-guide/objective-portfolio-supervisor:lint: Diagnostics not shown: 65.
+@potential-guide/objective-portfolio-supervisor:lint: Checked 8 files in 71ms. No fixes applied.
+@potential-guide/cli-core:lint:      870      │ - ··run:·(argv:·string[],·globals:·GlobalOptions)·=>·Promise<number·|·void>,
+@potential-guide/cli-core:lint:           870 │ + ··run:·(argv:·string[],·globals:·GlobalOptions)·=>·Promise<number·|·undefined>,
+@potential-guide/cli-core:lint:      871  871 │   ): Promise<void> {
+@potential-guide/cli-core:lint:      872  872 │     try {
+@potential-guide/cli-core:lint:   
+pguide:lint:     35 │ }
+pguide:lint:     36 │ 
+@potential-guide/objective-portfolio-supervisor:lint: Found 85 warnings.
+pguide:lint:   > 37 │ export async function runProbe(argv: string[], globals: GlobalOptions): Promise<number | void> {
+pguide:lint:        │                                                                                          ^^^^
+pguide:lint:     38 │   if (globals.help) {
+pguide:lint:     39 │     writeResult(
+pguide:lint:   
+pguide:lint:   i Unsafe fix: Use undefined instead.
+pguide:lint:   
+pguide:lint:      35  35 │   }
+pguide:lint:      36  36 │   
+@potential-guide/cli-core:lint: Checked 12 files in 53ms. No fixes applied.
+@potential-guide/cli-core:lint: 
+@potential-guide/cli-core:lint: Found 1 warning.
+pguide:lint:      37     │ - export·async·function·runProbe(argv:·string[],·globals:·GlobalOptions):·Promise<number·|·void>·{
+pguide:lint:          37 │ + export·async·function·runProbe(argv:·string[],·globals:·GlobalOptions):·Promise<number·|·undefined>·{
+pguide:lint:      38  38 │     if (globals.help) {
+pguide:lint:      39  39 │       writeResult(
+pguide:lint:   
+pguide:lint: 
+pguide:lint: src\commands\pilot.ts:217:69 lint/suspicious/noConfusingVoidType  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━
+pguide:lint: 
+pguide:lint:   ! void is confusing inside a union type.
+pguide:lint:   
+pguide:lint:     215 │ export function launchPilotCommand(
+pguide:lint:     216 │   metadata: CommandMetadata,
+pguide:lint:   > 217 │   run: (argv: string[], globals: GlobalOptions) => Promise<number | void>,
+pguide:lint:         │                                                                     ^^^^
+pguide:lint:     218 │ ): void {
+pguide:lint:     219 │   void commandMain(metadata, run);
+pguide:lint:   
+pguide:lint:   i Unsafe fix: Use undefined instead.
+pguide:lint:   
+pguide:lint:     215 215 │   export function launchPilotCommand(
+pguide:lint:     216 216 │     metadata: CommandMetadata,
+pguide:lint:     217     │ - ··run:·(argv:·string[],·globals:·GlobalOptions)·=>·Promise<number·|·void>,
+pguide:lint:         217 │ + ··run:·(argv:·string[],·globals:·GlobalOptions)·=>·Promise<number·|·undefined>,
+pguide:lint:     218 218 │   ): void {
+pguide:lint:     219 219 │     void commandMain(metadata, run);
+pguide:lint:   
+pguide:lint: 
+pguide:lint: src\pilot-source.ts:230:21 lint/complexity/useOptionalChain  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+pguide:lint: 
+pguide:lint:   ! Change to an optional chain.
+pguide:lint:   
+pguide:lint:     228 │                 function checkoutPath(checkout: string, path: string): string {
+pguide:lint:     229 │                   if (
+pguide:lint:   > 230 │                     path &&
+pguide:lint:         │                     ^^^^^^^
+pguide:lint:   > 231 │                     path
+pguide:lint:   > 232 │                       .split("/")
+pguide:lint:   > 233 │                       .some((part) => !part || part === "." || part === ".." || /[\\:]/.test(part))
+pguide:lint:         │                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pguide:lint:     234 │                   ) {
+pguide:lint:     235 │                     throw new PilotSourceError(
+pguide:lint:   
+pguide:lint:   i Unsafe fix: Change to an optional chain.
+pguide:lint:   
+pguide:lint:     228 228 │                   function checkoutPath(checkout: string, path: string): string {
+pguide:lint:     229 229 │                     if (
+pguide:lint:     230     │ - ····················path·&&
+pguide:lint:     231     │ - ····················path
+pguide:lint:     232     │ - ······················.split("/")
+pguide:lint:         230 │ + ····················path
+pguide:lint:         231 │ + ······················?.split("/")
+pguide:lint:     233 232 │                         .some((part) => !part || part === "." || part === ".." || /[\\:]/.test(part))
+pguide:lint:     234 233 │                     ) {
+pguide:lint:   
+pguide:lint: Checked 27 files in 47ms. No fixes applied.
+pguide:lint: Found 3 warnings.
+pguide:lint: 
+@potential-guide/monorepo-objective:lint: $ biome lint .
+@potential-guide/monorepo-objective:lint: Checked 7 files in 31ms. No fixes applied.
+
+ Tasks:    9 successful, 9 total
+Cached:    8 cached, 9 total
+  Time:    1.296s 
+
+Checked 25 files in 37ms. No fixes applied.
+$ turbo run typecheck && tsc -p tsconfig.test.json --pretty false
+
+   • turbo 2.11.8
+   • Packages in scope: @potential-guide/cli-core, @potential-guide/config, @potential-guide/effects, @potential-guide/git-source, @potential-guide/monorepo-objective, @potential-guide/objective-pilot, @potential-guide/objective-portfolio-supervisor, @potential-guide/objective-regulator, pguide
+   • Running typecheck in 9 packages
+   • Remote caching disabled, using shared worktree cache
+
+@potential-guide/monorepo-objective:typecheck: cache miss, executing b264ceb179757e26
+@potential-guide/effects:typecheck: cache hit, replaying logs d14ac0f61c7f5c01
+@potential-guide/effects:typecheck: $ tsc -b --pretty false
+@potential-guide/git-source:typecheck: cache hit, replaying logs c0e6bc8ad69a676c
+@potential-guide/git-source:typecheck: $ tsc -b --pretty false
+@potential-guide/cli-core:typecheck: cache hit, replaying logs 21bdf3714082b11a
+@potential-guide/cli-core:typecheck: $ tsc -b --pretty false
+@potential-guide/objective-pilot:typecheck: cache hit, replaying logs 7c50f72205d17f8d
+@potential-guide/objective-pilot:typecheck: $ tsc -b --pretty false
+@potential-guide/objective-regulator:typecheck: cache hit, replaying logs 9499baf72c0dbb5c
+@potential-guide/objective-regulator:typecheck: $ tsc -b --pretty false
+@potential-guide/config:typecheck: cache hit, replaying logs cfc09ba7941f5a13
+@potential-guide/config:typecheck: $ tsc -b --pretty false
+@potential-guide/objective-portfolio-supervisor:typecheck: cache hit, replaying logs f84bab28beda1599
+@potential-guide/objective-portfolio-supervisor:typecheck: $ tsc -b --pretty false
+pguide:typecheck: cache hit, replaying logs 33027ef9190413ba
+pguide:typecheck: $ tsc -b --pretty false
+@potential-guide/monorepo-objective:typecheck: $ tsc -b --pretty false
+
+ Tasks:    9 successful, 9 total
+Cached:    8 cached, 9 total
+  Time:    1.497s 
+
+$ turbo run test && node --test scripts/*.test.mjs
+
+   • turbo 2.11.8
+   • Packages in scope: @potential-guide/cli-core, @potential-guide/config, @potential-guide/effects, @potential-guide/git-source, @potential-guide/monorepo-objective, @potential-guide/objective-pilot, @potential-guide/objective-portfolio-supervisor, @potential-guide/objective-regulator, pguide
+   • Running test in 9 packages
+   • Remote caching disabled, using shared worktree cache
+
+@potential-guide/monorepo-objective:build: cache miss, executing 77c3871d41dc9c3d
+@potential-guide/effects:build: cache hit, replaying logs f360ca5665056059
+@potential-guide/effects:build: $ tsc -b
+@potential-guide/git-source:build: cache hit, replaying logs ac03e1662538f499
+@potential-guide/git-source:build: $ tsc -b
+@potential-guide/effects:test: cache hit, replaying logs 4dd0a7252b5834b7
+@potential-guide/effects:test: $ tsx --test "test/*.test.ts"
+@potential-guide/effects:test: ✔ lazy computation; await and exit distinguish business failure, invocation failure and cancellation (5.8397ms)
+@potential-guide/effects:test: ✔ replacement aborts before starting new work without waiting for old cleanup (3.9875ms)
+@potential-guide/effects:test: ✔ parent abort reaches all children; a preaborted signal runs no synchronous work (1.4268ms)
+@potential-guide/effects:test: ✔ one root ref commits 101 coherent snapshots (15.2951ms)
+@potential-guide/effects:test: ✔ independent refs combined with zipLatest are not a transaction (33.3801ms)
+@potential-guide/effects:test: ✔ dependency keys retain unchanged work while independent dependencies replace (1.7815ms)
+@potential-guide/effects:test: ✔ noncooperating callback completion cannot publish a stale result (1.2655ms)
+@potential-guide/effects:test: ✔ invocation failure publishes a cause, not an empty success (0.6699ms)
+@potential-guide/effects:test: ✔ uninterruptible old computations cannot overwrite a new generation (0.796ms)
+@potential-guide/effects:test: ✔ HTTP abort cancels local fetch, not the server's independent work (62.3875ms)
+@potential-guide/effects:test: ✔ activate exposes initial/current state and scope closes active computations (2.4902ms)
+@potential-guide/effects:test: ✔ preaborted slots publish cancellation without invoking the computation (0.7875ms)
+@potential-guide/effects:test: ℹ tests 12
+@potential-guide/effects:test: ℹ suites 0
+@potential-guide/effects:test: ℹ pass 12
+@potential-guide/effects:test: ℹ fail 0
+@potential-guide/effects:test: ℹ cancelled 0
+@potential-guide/effects:test: ℹ skipped 0
+@potential-guide/effects:test: ℹ todo 0
+@potential-guide/effects:test: ℹ duration_ms 2249.1742
+@potential-guide/cli-core:build: cache hit, replaying logs 181d6e4f35e41140
+@potential-guide/cli-core:build: $ tsc -b
+@potential-guide/objective-pilot:build: cache hit, replaying logs 10c7357d7e901c38
+@potential-guide/objective-pilot:build: $ tsc -b
+@potential-guide/objective-pilot:test: cache hit, replaying logs 4141fd5c5b4ad888
+@potential-guide/objective-pilot:test: $ tsx --test "test/*.test.ts"
+@potential-guide/objective-pilot:test: ✔ serializable recipe preserves stable IDs, source version and multilingual scoped Wiki (116.5298ms)
+@potential-guide/objective-pilot:test: ✔ all checks at first blocked level aggregate, level traversal is serial not lexicographic (194.9456ms)
+@potential-guide/objective-pilot:test: ✔ prerequisites run first with projected subject and retain their Objective ownership (165.9515ms)
+@potential-guide/objective-pilot:test: ✔ invocation failure never manufactures a trusted level and cannot mask sibling checks (67.0357ms)
+@potential-guide/objective-pilot:test: ✔ rejects invalid domain, unsupported language, undeclared problems and noncommitted inputs (99.0879ms)
+@potential-guide/objective-pilot:test: ✔ strict YAML, duplicate scope IDs, locales and cyclic prerequisites fail before observation (52.866ms)
+@potential-guide/objective-pilot:test: ✔ pre-aborted native effect never starts a probe (44.2287ms)
+@potential-guide/objective-pilot:test: ✔ business failure is a successful envelope; malformed protocol is not accepted (9.2825ms)
+@potential-guide/objective-pilot:test: ✔ in-memory and real process probes share business-failure envelope and subject JSON (241.9734ms)
+@potential-guide/objective-pilot:test: ✔ real HTTP probe posts subject JSON and treats business failure as HTTP 200 success (66.5244ms)
+@potential-guide/objective-pilot:test: ✔ transport failures and malformed process output cannot look like business defects (625.8335ms)
+@potential-guide/objective-pilot:test: ✔ process cancellation terminates the process tree and removes only its own temp directory (1397.537ms)
+@potential-guide/objective-pilot:test: ✔ process timeout returns an invocation fault and reclaims its resources (1392.1746ms)
+@potential-guide/objective-pilot:test: ✔ HTTP cancellation is local and does not promise remote business termination (57.7616ms)
+@potential-guide/objective-pilot:test: ✔ already aborted probes never start user code, HTTP, or a process (0.7257ms)
+@potential-guide/objective-pilot:test: ✔ native Pilot interruption awaits its probe finalizer before exposing completion (1408.8764ms)
+@potential-guide/objective-pilot:test: ✔ same-level concurrency is opt-in, bounded and deterministic; later levels remain serial (390.0946ms)
+@potential-guide/objective-pilot:test: ✔ subject snapshots and wiki pages are immutable; invalid projection fails before child probes (251.1577ms)
+@potential-guide/objective-pilot:test: ✔ Wiki descriptions enforce exact Unicode codepoint limit across all declared languages (93.9241ms)
+@potential-guide/objective-pilot:test: ✔ Wiki missing or dangling metadata, aliases and invalid frontmatter fail explicitly (119.8906ms)
+@potential-guide/objective-pilot:test: ✔ strict manifest schema rejects external references, reserved levels and duplicate problems in one check (5.5796ms)
+@potential-guide/objective-pilot:test: ✔ deterministic projection rejects dynamic capabilities and bounds expression and output (16.5448ms)
+@potential-guide/objective-pilot:test: ✔ source I/O failure stays explicit instead of returning an empty spec or fallback Wiki (21.1746ms)
+@potential-guide/objective-pilot:test: ℹ tests 23
+@potential-guide/objective-pilot:test: ℹ suites 0
+@potential-guide/objective-pilot:test: ℹ pass 23
+@potential-guide/objective-pilot:test: ℹ fail 0
+@potential-guide/objective-pilot:test: ℹ cancelled 0
+@potential-guide/objective-pilot:test: ℹ skipped 0
+@potential-guide/objective-pilot:test: ℹ todo 0
+@potential-guide/objective-pilot:test: ℹ duration_ms 8015.1815
+@potential-guide/git-source:test: cache hit, replaying logs 97f3b32731ac34c2
+@potential-guide/objective-regulator:build: cache hit, replaying logs 6122a1cf5e373886
+@potential-guide/objective-regulator:build: $ tsc -b
+@potential-guide/objective-regulator:test: cache hit, replaying logs 8555b4679df5fe5c
+@potential-guide/git-source:test: $ tsx --test "test/*.test.ts"
+@potential-guide/git-source:test: ✔ deep consumer caches support commit pinning beyond Windows MAX_PATH (1972.9455ms)
+@potential-guide/git-source:test: ✔ fixed commit, moved ref and old snapshots all read immutable objects, not checkout (3581.4599ms)
+@potential-guide/git-source:test: ✔ relative paths are contained and symlinks are never followed (2609.5205ms)
+@potential-guide/git-source:test: ✔ watch exposes an initial current value, follows ref changes, and keeps old snapshots stable (2082.5203ms)
+@potential-guide/git-source:test: ✔ load and watch propagate source failures explicitly; invalid specs never run commands (1314.8186ms)
+@potential-guide/git-source:test: ✔ snapshot scope releases its cache and later reads fail explicitly (1157.34ms)
+@potential-guide/git-source:test: ✔ cancelling acquisition interrupts commands and releases the temporary cache before exit (502.3764ms)
+@potential-guide/git-source:test: ✔ native git runner reports spawn and exit failures without success-shaped fallback (119.0098ms)
+@potential-guide/git-source:test: ✔ once watcher keeps its snapshot alive until cancellation, then releases cache (1290.0702ms)
+@potential-guide/git-source:test: ✔ snapshot owns its objects even if the local source repository disappears (1158.5738ms)
+@potential-guide/git-source:test: ✔ directory traversal reads tree objects and binary files fail only in text decoding (2565.1024ms)
+@potential-guide/git-source:test: ✔ a failed poll is visible and later refresh can recover without corrupting old snapshots (1721.2966ms)
+@potential-guide/git-source:test: ✔ default cache is project-local and failed acquisition removes only its owned child (2.8912ms)
+@potential-guide/git-source:test: ✔ tree listings are reused across twenty text files, errors retry and warmed caches respect Scope (3704.8566ms)
+@potential-guide/git-source:test: ✔ file URL repository with a self-referencing origin resolves HEAD and reads committed content (2063.6303ms)
+@potential-guide/git-source:test: ℹ tests 15
+@potential-guide/git-source:test: ℹ suites 0
+@potential-guide/git-source:test: ℹ pass 15
+@potential-guide/git-source:test: ℹ fail 0
+@potential-guide/git-source:test: ℹ cancelled 0
+@potential-guide/git-source:test: ℹ skipped 0
+@potential-guide/git-source:test: ℹ todo 0
+@potential-guide/git-source:test: ℹ duration_ms 27771.6213
+@potential-guide/cli-core:test: cache hit, replaying logs 2deeb9f49609070c
+@potential-guide/objective-regulator:test: $ tsx --test "test/*.test.ts"
+@potential-guide/objective-regulator:test: ✔ recipe and runtime snapshots are immutable JSON data (239.2164ms)
+@potential-guide/objective-regulator:test: ✔ permissions deny by default and selected ceiling grants are immutable run snapshots (197.0328ms)
+@potential-guide/objective-regulator:test: ✔ invalid grant selections and expanding rules fail with 400 before Agent execution (265.9498ms)
+@potential-guide/objective-regulator:test: ✔ unresolved authorization is normal after a fresh observation and does not consume stall history (145.3323ms)
+@potential-guide/objective-regulator:test: ✔ target and actual alternate-path progress win over denied requests (169.5894ms)
+@potential-guide/objective-regulator:test: ✔ unresolved denial on the last allowed turn takes precedence over Agent and stall counts (86.7888ms)
+@potential-guide/objective-regulator:test: ✔ target or actual progress on the last allowed denied turn is not authorization-blocked (177.6339ms)
+@potential-guide/objective-regulator:test: ✔ malformed authorization outcomes fail with 502 instead of manufacturing approval (319.8885ms)
+@potential-guide/objective-regulator:test: ✔ permission replacement aborts old work, isolates late authorization responses and freshly observes on resume (205.3523ms)
+@potential-guide/objective-regulator:test: ✔ single run performs multiple Agent rounds and observes after every completed round (124.0741ms)
+@potential-guide/objective-regulator:test: ✔ an already reached target completes once without scheduling rechecks (76.1488ms)
+@potential-guide/objective-regulator:test: ✔ agent-run quota exhausts only after observing the final completed repair (86.6018ms)
+@potential-guide/objective-regulator:test: ✔ target reached by last allowed Agent takes precedence over exhausted count (63.9075ms)
+@potential-guide/objective-regulator:test: ✔ stall quota carries across runs, counts completed no-progress rounds, and prevents more work (72.4492ms)
+@potential-guide/objective-regulator:test: ✔ level advancement and reduced scoped problems reset carried stagnation (149.9024ms)
+@potential-guide/objective-regulator:test: ✔ changing problem parameters alone is not progress (57.9066ms)
+@potential-guide/objective-regulator:test: ✔ time quota aborts an uncooperative first probe with an explicit null observation (100.1573ms)
+@potential-guide/objective-regulator:test: ✔ time quota includes Agent execution and preserves the latest observation (76.8277ms)
+@potential-guide/objective-regulator:test: ✔ per-Agent timeout and explicit limit are agent-limit exhaustion, not stalls (93.1677ms)
+@potential-guide/objective-regulator:test: ✔ each Agent round receives its own fresh limit (234.5415ms)
+@potential-guide/objective-regulator:test: ✔ initial unmet prerequisite returns projected direct child without invoking root Agent (229.4127ms)
+@potential-guide/objective-regulator:test: ✔ prerequisite regression after a root repair returns dependency instead of a second root Agent (120.1265ms)
+@potential-guide/objective-regulator:test: ✔ meeting a direct prerequisite minimum permits root Agent even below child terminal (122.5902ms)
+@potential-guide/objective-regulator:test: ✔ subject and prerequisite projection validation failures precede every probe and Agent (119.5163ms)
+@potential-guide/objective-regulator:test: ✔ Agent blocked, failed, malformed outcomes, and unexpected crashes are typed faults (202.3ms)
+@potential-guide/objective-regulator:test: ✔ parent cancellation interrupts during probes and Agent work rather than completing (74.257ms)
+@potential-guide/objective-regulator:test: ✔ already cancelled parent never launches probes or Agent (18.6434ms)
+@potential-guide/objective-regulator:test: ✔ behavior refreshes changed strategies after Agent mutation and rejects late old completions (85.6918ms)
+@potential-guide/objective-regulator:test: ✔ behavior aborts old probes before new snapshots and isolates late observations (77.0412ms)
+@potential-guide/objective-regulator:test: ✔ decision uses local level order and rejects foreign problems (23.6733ms)
+@potential-guide/objective-regulator:test: ✔ probe policy retries 5xx only, preserving typed invocation errors and envelope (359.6514ms)
+@potential-guide/objective-regulator:test: ✔ successful retry establishes target without authorizing Agent repair (123.1361ms)
+@potential-guide/objective-regulator:test: ✔ a sibling 4xx prevents whole-observation retries even if a 5xx appeared first (57.4102ms)
+@potential-guide/objective-regulator:test: ✔ probe timeout aborts ignored cleanup, raises 504, and isolates late results (67.7918ms)
+@potential-guide/objective-regulator:test: ✔ overall time quota includes probe retries and retry delays (86.7085ms)
+@potential-guide/objective-regulator:test: ✔ probe crashes become typed invocation faults, not normal completed outcomes (61.8293ms)
+@potential-guide/objective-regulator:test: ✔ externally provided malformed inputs reject as 400 before any execution (73.7223ms)
+@potential-guide/objective-regulator:test: ✔ quota timers and counts are required, positive and safe (245.3111ms)
+@potential-guide/objective-regulator:test: ℹ tests 38
+@potential-guide/objective-regulator:test: ℹ suites 0
+@potential-guide/objective-regulator:test: ℹ pass 38
+@potential-guide/objective-regulator:test: ℹ fail 0
+@potential-guide/objective-regulator:test: ℹ cancelled 0
+@potential-guide/objective-regulator:test: ℹ skipped 0
+@potential-guide/objective-regulator:test: ℹ todo 0
+@potential-guide/objective-regulator:test: ℹ duration_ms 7136.5921
+@potential-guide/cli-core:test: $ tsx --test "test/*.test.ts"
+@potential-guide/cli-core:test: ✔ ACP configuration stays a positive safe integer string (3.6767ms)
+@potential-guide/cli-core:test: ✔ ACP initializes using numeric protocol version and loads a standard session (713.3144ms)
+@potential-guide/cli-core:test: ✔ ACP rejects absent, string, mismatched, and unsafe negotiated versions (5017.3665ms)
+@potential-guide/cli-core:test: ✔ default permission cancellation does not steal a colliding pending prompt ID (695.2931ms)
+@potential-guide/cli-core:test: ✔ unsupported client filesystem requests fail closed with matching string IDs (714.0095ms)
+@potential-guide/cli-core:test: ✔ explicit permission handler may select only an offered option (3100.2833ms)
+@potential-guide/cli-core:test: ✔ invalid or inactive-session permission requests never invoke the handler (2724.755ms)
+@potential-guide/cli-core:test: ✔ permission decisions are bounded and timed-out handlers receive cancellation (566.7415ms)
+@potential-guide/cli-core:test: ✔ ACP collects only current-session Agent text chunks and resets between prompts (525.0527ms)
+@potential-guide/cli-core:test: ✔ ACP prompt text accumulation fails closed at its byte limit (544.1837ms)
+@potential-guide/cli-core:test: ✔ client shutdown aborts an outstanding permission handler without waiting for its timeout (485.8372ms)
+@potential-guide/cli-core:test: ✔ AHP connection deadline also covers a stalled WebSocket upgrade (159.6669ms)
+@potential-guide/cli-core:test: ✔ AHP enforces the exact incoming byte budget at 4194304 bytes (97.7602ms)
+@potential-guide/cli-core:test: ✔ AHP enforces the exact incoming byte budget at 4194305 bytes (62.0919ms)
+@potential-guide/cli-core:test: ✔ malformed AHP frames fail without leaking their payload to diagnostics (9.1483ms)
+@potential-guide/cli-core:test: ✔ top-level discriminants normalize only valid legacy ACP and reject mixed profiles (13.0753ms)
+@potential-guide/cli-core:test: ✔ AHP external confirmation is explicit and cannot be configured on ACP (0.5909ms)
+@potential-guide/cli-core:test: ✔ AHP external permission observes external approval without dispatching a decision (58.4466ms)
+@potential-guide/cli-core:test: ✔ AHP external permission observes external denial without dispatching a decision (46.3935ms)
+@potential-guide/cli-core:test: ✔ AHP external result-permission observes external approval without dispatching a decision (42.8277ms)
+@potential-guide/cli-core:test: ✔ AHP external result-permission observes external denial without dispatching a decision (43.3988ms)
+@potential-guide/cli-core:test: ✔ AHP external confirmation timeout stays bounded and never approves (264.757ms)
+@potential-guide/cli-core:test: ✔ AHP external confirmation abort stays bounded and never approves (279.5018ms)
+@potential-guide/cli-core:test: ✔ AHP external confirmation foreign-turn stays bounded and never approves (279.1646ms)
+@potential-guide/cli-core:test: ✔ AHP external confirmation disconnect stays bounded and never approves (39.132ms)
+@potential-guide/cli-core:test: ✔ AHP waits for Host completion, saves confirmed identity before dispatch, and resumes original chat (21.7399ms)
+@potential-guide/cli-core:test: ✔ AHP Host authority chat URIs persist unchanged and deferred backends accept their first turn before ready (23.7782ms)
+@potential-guide/cli-core:test: ✔ AHP resumes a confirmed but unstarted creating session without allocating a replacement (17.2159ms)
+@potential-guide/cli-core:test: ✔ AHP deferred session failed does not bypass execution preconditions (10.5269ms)
+@potential-guide/cli-core:test: ✔ AHP deferred session invalid does not bypass execution preconditions (15.907ms)
+@potential-guide/cli-core:test: ✔ AHP deferred session provider does not bypass execution preconditions (9.1468ms)
+@potential-guide/cli-core:test: ✔ AHP deferred session directory does not bypass execution preconditions (8.6934ms)
+@potential-guide/cli-core:test: ✔ AHP diagnosis validates without creating a session and sends only advertised resource credentials (13.4298ms)
+@potential-guide/cli-core:test: ✔ AHP error is explicit and does not replay (12.4737ms)
+@potential-guide/config:build: cache hit, replaying logs a87b3e10f6cd9e4e
+@potential-guide/cli-core:test: ✔ AHP input is explicit and does not replay (13.3824ms)
+@potential-guide/cli-core:test: ✔ AHP permission is explicit and does not replay (12.714ms)
+@potential-guide/cli-core:test: ✔ AHP result-permission is explicit and does not replay (9.3303ms)
+@potential-guide/cli-core:test: ✔ AHP disconnect is explicit and does not replay (15.8473ms)
+@potential-guide/cli-core:test: ✔ AHP hang is explicit and does not replay (110.3652ms)
+@potential-guide/cli-core:test: ✔ AHP initialization cancellation covers setup, missing identities and protocol/auth failures are explicit (119.7905ms)
+@potential-guide/cli-core:test: ✔ AHP error -32007 is explicit and sanitized (11.7512ms)
+@potential-guide/cli-core:test: ✔ AHP error -32002 is explicit and sanitized (7.5755ms)
+@potential-guide/cli-core:test: ✔ AHP error -32005 is explicit and sanitized (8.1418ms)
+@potential-guide/cli-core:test: ✔ AHP resume refuses lost sessions without allocating replacements (8.9095ms)
+@potential-guide/cli-core:test: ✔ AHP explicitly marks optional continuation with no identity as new (10.7454ms)
+@potential-guide/cli-core:test: ✔ AHP rejects version before reporting execution success (7.6684ms)
+@potential-guide/cli-core:test: ✔ AHP rejects agent before reporting execution success (7.2966ms)
+@potential-guide/cli-core:test: ✔ AHP rejects directory before reporting execution success (8.5652ms)
+@potential-guide/cli-core:test: ✔ AHP rejects snapshot before reporting execution success (19.8249ms)
+@potential-guide/cli-core:test: ✔ AHP rejects rejected before reporting execution success (264.2526ms)
+@potential-guide/cli-core:test: ✔ AHP rejects unknown-turn before reporting execution success (10.4886ms)
+@potential-guide/cli-core:test: ✔ AHP ignores duplicate/old notifications and rejects an unconfirmed previous dispatch (20.6928ms)
+@potential-guide/cli-core:test: ✔ configuration limits apply only to individual Agent executions (11.7472ms)
+@potential-guide/cli-core:test: ✔ permission config requires explicit exact rules and grants within the administrative ceiling (18.7438ms)
+@potential-guide/cli-core:test: ✔ invalid and legacy configuration limits are rejected (10.3642ms)
+@potential-guide/cli-core:test: ✔ regulation strategy validates single-run quota and rejects scheduling fields (6.5901ms)
+@potential-guide/cli-core:test: ✔ ACP stderr redaction applies backpressure with bounded cross-chunk state (442.7091ms)
+@potential-guide/cli-core:test: ✔ ACP stderr redaction propagates destination errors without hanging (7.25ms)
+@potential-guide/cli-core:test: ✔ ACP requests reject after the Agent or client closes (712.0535ms)
+@potential-guide/cli-core:test: ✔ configuration validates ACP profiles and rejects secret literals (3.3912ms)
+@potential-guide/cli-core:test: ✔ explicit configuration merges profiles by whole profile and atomic writes (62.4642ms)
+@potential-guide/cli-core:test: ✔ generic digest is stable and detects JSON subject changes (0.6563ms)
+@potential-guide/cli-core:test: ✔ retention pruning removes only expired in-root Regulation directories (42.4233ms)
+@potential-guide/cli-core:test: ✔ forceful cleanup terminates an owned process and its uncooperative child (809.1886ms)
+@potential-guide/cli-core:test: ℹ tests 64
+@potential-guide/cli-core:test: ℹ suites 0
+@potential-guide/cli-core:test: ℹ pass 64
+@potential-guide/cli-core:test: ℹ fail 0
+@potential-guide/cli-core:test: ℹ cancelled 0
+@potential-guide/cli-core:test: ℹ skipped 0
+@potential-guide/cli-core:test: ℹ todo 0
+@potential-guide/cli-core:test: ℹ duration_ms 16073.5956
+@potential-guide/config:build: $ tsc -b
+@potential-guide/objective-portfolio-supervisor:build: cache hit, replaying logs 75038539ea1ccf25
+@potential-guide/objective-portfolio-supervisor:build: $ tsc -b
+@potential-guide/objective-portfolio-supervisor:test: cache hit, replaying logs 3933e486afb6a0ef
+@potential-guide/objective-portfolio-supervisor:test: $ tsx --test "test/*.test.ts"
+@potential-guide/objective-portfolio-supervisor:test: ✔ authorization block survives priority, revision, resource identity and equivalent grant updates (155.8499ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ effective permission changes retry blocked demand with a new frozen policy, never the old snapshot (63.3223ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ removing live permission policy cancels old authority and ignores its late result (93.2127ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ quota-exhausted unresolved authorization does not create an automatic continuation loop (109.0221ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ authorization feedback reaches planner without grants and cannot self-authorize (63.5134ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ queue goals cannot smuggle permission policy and malformed initial policy cannot launch (1.0726ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ malformed live grant selection stops active work and suspends launches until repaired (90.0149ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ resource capacity two and live load enforce global/per-resource ceilings (77.0303ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ ordinary priority changes do not preempt; completion is suppressed on stale Behavior (140.0823ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ P0 waits for abort grace and confirmed kill, retains FIFO and deduplicates notices (137.8941ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ P0 preempts only one necessary lower run and never an equal-priority run (122.8059ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ exhausted demand yields and resumes with retained stalls/latest resource snapshot (47.3536ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ stale completion cannot complete a superseding specification (90.4286ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ canonical subjects serialize and deduplicate equivalent objective demands (46.0065ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ capability requests are deduplicated and new resources unblock work (61.5191ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ failed kill retains occupied resources and surfaces error (47.0196ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ planner observes successful goals at cadence and queues only later regression/spec changes (80.1998ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ planner deduplicates canonical registrations and priority-only updates preserve demand revision (2.7383ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ two roots merge known shared direct prerequisite at highest target then re-observe roots (8.3016ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ malformed/rejected policies surface errors, never silently use a fallback (1.8673ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ all queued P0 demands notify immediately and a running promotion is not preempted (76.4515ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ confirmed abort completion releases before grace without calling kill (48.6975ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ runner capability notifications bind to exact live input and ignore stale runs (73.7098ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ exhausted retry reconsiders priority instead of immediately reclaiming its slot (46.9758ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ quota exhaustion before an observation remains normal eligible planner demand (2.3784ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ observed prerequisite satisfaction renews blocked root without requiring a child run result (5.6015ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ target update with a canonically equal subject preserves serialization but isolates old completion (70.0926ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ prerequisite-blocked revisions never auto retry, even when only the queue snapshot changes (126.1946ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ planner goal removal publishes an empty queue and late feedback cannot resurrect it (2.7384ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ live worker capability requests reach the replaceable planner policy without provisioning (44.1955ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ automatic exhausted continuation grants another actual Agent round despite carried stalls (159.4713ms)
+@potential-guide/objective-portfolio-supervisor:test: ℹ tests 31
+@potential-guide/objective-portfolio-supervisor:test: ℹ suites 0
+@potential-guide/objective-portfolio-supervisor:test: ℹ pass 31
+@potential-guide/objective-portfolio-supervisor:test: ℹ fail 0
+@potential-guide/objective-portfolio-supervisor:test: ℹ cancelled 0
+@potential-guide/objective-portfolio-supervisor:test: ℹ skipped 0
+@potential-guide/objective-portfolio-supervisor:test: ℹ todo 0
+@potential-guide/objective-portfolio-supervisor:test: ℹ duration_ms 5003.2453
+@potential-guide/config:test: cache hit, replaying logs aeb0ad50e978e65c
+@potential-guide/config:test: $ tsx --test "test/*.test.ts"
+@potential-guide/config:test: ✔ config path is available without creating configuration (575.3735ms)
+@potential-guide/config:test: ✔ user config permissions round trip and invalid grants cannot replace the ceiling (3045.521ms)
+@potential-guide/config:test: ✔ config exposes schema 2 strategy help and validates strategy edits (3277.69ms)
+@potential-guide/config:test: ✔ config edit validates a temporary copy before atomically replacing the target (1608.7445ms)
+@potential-guide/config:test: ✔ show-agent rejects secret-bearing transport arguments without echoing them (444.4441ms)
+@potential-guide/config:test: ✔ config editor and Agent commands normalize legacy ACP and preserve AHP profiles (2958.5343ms)
+@potential-guide/config:test: ℹ tests 6
+@potential-guide/config:test: ℹ suites 0
+@potential-guide/config:test: ℹ pass 6
+@potential-guide/config:test: ℹ fail 0
+@potential-guide/config:test: ℹ cancelled 0
+@potential-guide/config:test: ℹ skipped 0
+@potential-guide/config:test: ℹ todo 0
+@potential-guide/config:test: ℹ duration_ms 12381.5336
+pguide:build: cache hit, replaying logs 280c2d4cc467b57e
+pguide:build: $ tsc -b
+pguide:test: cache miss, executing 86feecb68b36fe85
+@potential-guide/monorepo-objective:build: $ tsc -b
+pguide:test: $ tsx --test --test-concurrency=1 "test/*.test.ts"
+@potential-guide/monorepo-objective:test: cache miss, executing 21666ec7a6e0c35e
+@potential-guide/monorepo-objective:test: $ tsx --test "test/*.test.ts"
+pguide:test: ✔ Copilot fileName/unified-diff permissions verify every path before allowing once (18.3328ms)
+pguide:test: ✔ ACP permissions default deny, require explicit subset and snapshot mutable input (8.2061ms)
+pguide:test: ✔ resource extraction checks every path and rejects ambiguity, traversal, siblings and missing parents (10.4717ms)
+pguide:test: ✔ apply_patch checks add, update, delete, every move and every metadata location (9.075ms)
+pguide:test: ✔ canonical snapshots detect changed symlink parents instead of granting escaped targets (18.0451ms)
+pguide:test: ✔ execution requires exact complete command, never a cwd, shell prefix or wildcard (1.2421ms)
+pguide:test: ✔ dangling final symlinks cannot masquerade as authorized new files (4.513ms)
+pguide:test: ✔ ACP invocation allows an authorized alternative after denial without killing the prompt (558.9618ms)
+@potential-guide/monorepo-objective:test: ✔ layer one can pass and internal packages do not require public release metadata (74.7026ms)
+@potential-guide/monorepo-objective:test: ✔ invalid schema, unknown version/fields and invalid paths block layer two (31.003ms)
+@potential-guide/monorepo-objective:test: ✔ missing global files, YAML duplicate keys and wrong schema types are not success-shaped (48.2976ms)
+@potential-guide/monorepo-objective:test: ✔ workspace identity, inclusion and delivery mapping require explicit coverage (30.1851ms)
+@potential-guide/monorepo-objective:test: ✔ known misplaced files report provenance, current path, destination, reference maintenance and conflicts (50.2578ms)
+@potential-guide/monorepo-objective:test: ✔ unknown purpose is pending classification; generated and tool-fixed exceptions are not misplaced (47.5003ms)
+@potential-guide/monorepo-objective:test: ✔ migration responsibility follows its owner; cross-service migrations require a declared target (50.5756ms)
+@potential-guide/monorepo-objective:test: ✔ dependency directions, workspace ranges, missing catalogs and cycles are diagnosed (74.6773ms)
+@potential-guide/monorepo-objective:test: ✔ cross-package relative paths and private exports fail without treating package paths as delivery identities (63.2995ms)
+@potential-guide/monorepo-objective:test: ✔ npm and CLI roles compose and absent artifacts are unverified, not validated by a build script (46.8688ms)
+@potential-guide/monorepo-objective:test: ✔ browser positive configuration supports multi-package association; API and private configuration mismatch fail (80.9087ms)
+@potential-guide/monorepo-objective:test: ✔ Cloudflare configuration checks environment, entry, bindings and optional capabilities without provisioning (99.54ms)
+@potential-guide/monorepo-objective:test: ✔ unsupported delivery, capability and deployment formats never fall back to success (77.9413ms)
+@potential-guide/monorepo-objective:test: ✔ checker does not execute scripts or read secret-value files and leaves the target unchanged (58.1499ms)
+@potential-guide/monorepo-objective:test: ✔ task cycles and dangling task references are not hidden by valid build script names (36.4424ms)
+@potential-guide/monorepo-objective:test: ✔ role combinations do not force browser and Worker into separate packages (97.335ms)
+@potential-guide/monorepo-objective:test: ✔ worker ordinary config and secrets are references; explicit migration mappings can satisfy preparation (86.2694ms)
+@potential-guide/monorepo-objective:test: ✔ unknown global fields and a missing support closure block rather than guessing requirements (61.0654ms)
+@potential-guide/monorepo-objective:test: ✔ directory overrides are explicit and justified fixed-location exceptions stay legal (51.1148ms)
+@potential-guide/monorepo-objective:test: ✔ executable-only npm packages are valid without library exports or type declarations (38.3597ms)
+@potential-guide/monorepo-objective:test: ✔ syntax-aware imports ignore comments and ordinary strings, preserve type-only uses (8.8484ms)
+@potential-guide/monorepo-objective:test: ℹ tests 21
+@potential-guide/monorepo-objective:test: ℹ suites 0
+@potential-guide/monorepo-objective:test: ℹ pass 21
+@potential-guide/monorepo-objective:test: ℹ fail 0
+@potential-guide/monorepo-objective:test: ℹ cancelled 0
+@potential-guide/monorepo-objective:test: ℹ skipped 0
+@potential-guide/monorepo-objective:test: ℹ todo 0
+@potential-guide/monorepo-objective:test: ℹ duration_ms 2832.5864
+pguide:test: ✔ AHP permissions deny-all: deny on wire, never guess authority, and preserve progress precedence (8285.5378ms)
+pguide:test: ✔ AHP permissions configured-grant: deny on wire, never guess authority, and preserve progress precedence (11465.577ms)
+pguide:test: ✔ AHP permissions result-confirmation: deny on wire, never guess authority, and preserve progress precedence (11502.5681ms)
+pguide:test: ✔ AHP permissions alternative-progress: deny on wire, never guess authority, and preserve progress precedence (8177.46ms)
+pguide:test: ✔ AHP external confirmation keeps the recipe: repair (8032.4833ms)
+pguide:test: ✔ AHP external confirmation keeps the recipe: unchanged (8583.1401ms)
+pguide:test: ✔ AHP external confirmation keeps the recipe: denied (9036.586ms)
+pguide:test: ▶ AHP CLI closes the observation loop, pins its recipe, and skips all session calls for satisfied targets
+pguide:test:   ✔ AHP profiles route both supervisor planning and process-worker execution through AHP (13546.6611ms)
+pguide:test: ✔ AHP CLI closes the observation loop, pins its recipe, and skips all session calls for satisfied targets (34427.3129ms)
+pguide:test: ✔ AHP Agent self-reported completion cannot satisfy an unchanged target (7826.2253ms)
+pguide:test: ✔ all package commands expose direct protocol metadata and help (13740.8068ms)
+pguide:test: ✔ top-level built-ins return machine-readable help, diagnosis and completion (15277.8256ms)
+pguide:test: ✔ scaffold and static validate preserve multilingual Wiki; production probes require committed snapshots (16251.0829ms)
+pguide:test: ✔ top-level safely dispatches discovered commands and preserves arguments (667.0955ms)
+pguide:test: ﹣ real-path deduplication follows platform case sensitivity (0.1466ms) # SKIP
+pguide:test: ✔ Windows cwd exclusion canonicalizes aliases and casing (0.3959ms)
+pguide:test: ✔ all official commands dispatch through the top-level CLI (16891.0159ms)
+pguide:test: ✔ local Pilot maps origin identity but reads its exact local commit without fetching origin (5444.51ms)
+pguide:test: ✔ level-scoped repeated check IDs execute their own committed probes (10066.5122ms)
+pguide:test: ✔ ambiguous flat executables and multiple run entries fail explicitly (14606.4785ms)
+pguide:test: ✔ explicit Git URI can select an older exact commit independently of current checkout (9759.7478ms)
+pguide:test: ✔ two repository prerequisites preserve distinct commits, check routing and source cleanup (27002.9235ms)
+pguide:test: ✔ Git source failure is reported as explicit pilot-error exit 2 (149.2582ms)
+pguide:test: ✔ cleanup failure retains the primary CLI error and reports both causes (6154.2006ms)
+pguide:test: ✔ process runner returns verified results only after worker cleanup (14082.3239ms)
+pguide:test: ✔ force termination stops a live process tree and cleans the owned run directory (12901.454ms)
+pguide:test: ✔ worker forwards capability requests as events without treating them as new executions (13702.3681ms)
+pguide:test: ✔ permissions persist per attempt and continue uses current grants and revoked ceiling (22868.9017ms)
+pguide:test: ✔ explicit continue grants another stall allowance while retaining history (15429.199ms)
+pguide:test: ✔ Agent prompts contain the subject, target and every problem, not a selected task (1.1808ms)
+pguide:test: ✔ Agent prompt exposes effective grants without the ungranted administrative ceiling (2.0564ms)
+pguide:test: ✔ regulate and continue persist pinned Pilot observations and use the JSON check protocol (22140.1021ms)
+pguide:test: ✔ continuation without a real session ID fails when required and is explicit otherwise (798.248ms)
+pguide:test: ✔ legacy continue records and cross-round CLI budgets fail explicitly (5163.5021ms)
+pguide:test: ✔ per-Agent timeout includes ACP startup and invocation failures never start an Agent (13589.5005ms)
+pguide:test: ✔ one-shot regulation finishes at target without scheduling another observation (6989.2502ms)
+pguide:test: ✔ continue preserves local unpublished source metadata without changing the origin Objective identity (13149.8908ms)
+pguide:test: ✔ ACP-only setup reports an AHP selection as unsupported without starting an Agent (5867.7617ms)
+pguide:test: ✔ setup Pilot strictly loads with all level-scoped check and problem wiki coverage (1895.4832ms)
+pguide:test: ✔ native setup bootstrap distinguishes missing/unusable installation and exact versions (2929.8018ms)
+pguide:test: ✔ configuration reports missing/invalid config, unsupported commands, absent Agent and missing env (16450.3722ms)
+pguide:test: ✔ configuration performs real ACP initialize and session/new without prompting (6208.3206ms)
+pguide:test: ✔ setup ACP rejects string negotiation and emits only safe rejection diagnostics (13277.7201ms)
+pguide:test: ✔ local target is backward compatible; long direct deadlines are rejected by Pilot guard (2120.6492ms)
+pguide:test: ✔ SSH adapter quotes code and rejects injection, forwards no control subject paths or environment (275.7945ms)
+pguide:test: ✔ SSH unreachable, missing Node and helper faults never fall back to local evidence (36.7178ms)
+pguide:test: ✔ shipped Node bootstrap runs independently and cleans target payload and timed out children (3555.0724ms)
+pguide:test: ✖ remote payload uses target authentication and performs actual nonce sanity, not control evidence (11619.6105ms)
+pguide:test: ✔ malformed ACP is an invocation fault rather than false configuration readiness (7683.5117ms)
+pguide:test: ✔ sanity without explicit consent never starts even the pguide or ACP process (1634.4758ms)
+pguide:test: ✖ real sanity rejects noop Agent completion (10747.0342ms)
+pguide:test: ✖ real sanity rejects wrong Agent completion (10247.539ms)
+pguide:test: ✖ real sanity verifies a finite repair (9893.2157ms)
+pguide:test: ✔ setup timeout kills its entire owned process tree and cleans scratch (2833.266ms)
+pguide:test: ✔ oversized child output is bounded and reported as invocation fault (1841.2054ms)
+pguide:test: ✖ sanity timeout during an actual ACP prompt cleans isolated config, state and descendants (10385.4119ms)
+pguide:test: ✖ Git subdirectory snapshot runs dependency-free checks and existing file-auth ACP to terminal (40841.2556ms)
+pguide:test: ✔ check wrapper reads the subject JSON from stdin (1762.0813ms)
+pguide:test: ✔ Windows installed command and ACP npm shims preserve spaces without shell interpolation (7441.9718ms)
+pguide:test: ▶ ACP planner consumes standard text chunks, excludes inventory, and fails closed
+pguide:test:   ✔ duplicate (475.3655ms)
+pguide:test:   ✔ unknown (650.8209ms)
+pguide:test:   ✔ command (551.0315ms)
+pguide:test:   ✔ malformed (557.2136ms)
+pguide:test:   ✔ refusal (606.1986ms)
+pguide:test:   ✔ cancelled (572.134ms)
+pguide:test:   ✔ summary-only (547.7061ms)
+pguide:test:   ✔ oversized (460.6497ms)
+pguide:test:   ✔ startup timeout terminates the ACP process (845.6469ms)
+pguide:test: ✔ ACP planner consumes standard text chunks, excludes inventory, and fails closed (11912.1612ms)
+pguide:test: ✔ supervise plans once without repairs, then continuously observes and executes a pinned goal once (28332.2582ms)
+pguide:test: ✔ supervise rejects legacy portfolios and invalid registrations before planning (2074.9187ms)
+pguide:test: ℹ tests 79
+pguide:test: ℹ suites 0
+pguide:test: ℹ pass 72
+pguide:test: ℹ fail 6
+pguide:test: ℹ cancelled 0
+pguide:test: ℹ skipped 1
+pguide:test: ℹ todo 0
+pguide:test: ℹ duration_ms 613469.0979
+pguide:test: 
+pguide:test: ✖ failing tests:
+pguide:test: 
+pguide:test: test at test\setup-objective.test.ts:514:1
+pguide:test: ✖ remote payload uses target authentication and performs actual nonce sanity, not control evidence (11619.6105ms)
+pguide:test:   AssertionError [ERR_ASSERTION]: protocol: independent sanity probe failed.
+pguide:test:   
+pguide:test:   502 !== 200
+pguide:test:   
+pguide:test:       at passed (D:\Code\potential-guide.worktrees\subsession-implementation-guidelines\packages\pguide\test\setup-objective.test.ts:188:10)
+pguide:test:       at TestContext.<anonymous> (D:\Code\potential-guide.worktrees\subsession-implementation-guidelines\packages\pguide\test\setup-objective.test.ts:532:5)
+pguide:test:       at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+pguide:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+pguide:test:       at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+pguide:test:     generatedMessage: false,
+pguide:test:     code: 'ERR_ASSERTION',
+pguide:test:     actual: 502,
+pguide:test:     expected: 200,
+pguide:test:     operator: 'strictEqual',
+pguide:test:     diff: 'simple'
+pguide:test:   }
+pguide:test: 
+pguide:test: test at test\setup-objective.test.ts:575:3
+pguide:test: ✖ real sanity rejects noop Agent completion (10747.0342ms)
+pguide:test:   AssertionError [ERR_ASSERTION]: protocol: independent sanity probe failed.
+pguide:test:   
+pguide:test:   502 !== 200
+pguide:test:   
+pguide:test:       at isProblem (D:\Code\potential-guide.worktrees\subsession-implementation-guidelines\packages\pguide\test\setup-objective.test.ts:179:10)
+pguide:test:       at TestContext.<anonymous> (D:\Code\potential-guide.worktrees\subsession-implementation-guidelines\packages\pguide\test\setup-objective.test.ts:586:12)
+pguide:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+pguide:test:       at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+pguide:test:     generatedMessage: false,
+pguide:test:     code: 'ERR_ASSERTION',
+pguide:test:     actual: 502,
+pguide:test:     expected: 200,
+pguide:test:     operator: 'strictEqual',
+pguide:test:     diff: 'simple'
+pguide:test:   }
+pguide:test: 
+pguide:test: test at test\setup-objective.test.ts:575:3
+pguide:test: ✖ real sanity rejects wrong Agent completion (10247.539ms)
+pguide:test:   AssertionError [ERR_ASSERTION]: protocol: independent sanity probe failed.
+pguide:test:   
+pguide:test:   502 !== 200
+pguide:test:   
+pguide:test:       at isProblem (D:\Code\potential-guide.worktrees\subsession-implementation-guidelines\packages\pguide\test\setup-objective.test.ts:179:10)
+pguide:test:       at TestContext.<anonymous> (D:\Code\potential-guide.worktrees\subsession-implementation-guidelines\packages\pguide\test\setup-objective.test.ts:586:12)
+pguide:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+pguide:test:       at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+pguide:test:     generatedMessage: false,
+pguide:test:     code: 'ERR_ASSERTION',
+pguide:test:     actual: 502,
+pguide:test:     expected: 200,
+pguide:test:     operator: 'strictEqual',
+pguide:test:     diff: 'simple'
+pguide:test:   }
+pguide:test: 
+pguide:test: test at test\setup-objective.test.ts:575:3
+pguide:test: ✖ real sanity verifies a finite repair (9893.2157ms)
+pguide:test:   AssertionError [ERR_ASSERTION]: protocol: independent sanity probe failed.
+pguide:test:   
+pguide:test:   502 !== 200
+pguide:test:   
+pguide:test:       at passed (D:\Code\potential-guide.worktrees\subsession-implementation-guidelines\packages\pguide\test\setup-objective.test.ts:188:10)
+pguide:test:       at TestContext.<anonymous> (D:\Code\potential-guide.worktrees\subsession-implementation-guidelines\packages\pguide\test\setup-objective.test.ts:585:27)
+pguide:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+pguide:test:       at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+pguide:test:     generatedMessage: false,
+pguide:test:     code: 'ERR_ASSERTION',
+pguide:test:     actual: 502,
+pguide:test:     expected: 200,
+pguide:test:     operator: 'strictEqual',
+pguide:test:     diff: 'simple'
+pguide:test:   }
+pguide:test: 
+pguide:test: test at test\setup-objective.test.ts:642:1
+pguide:test: ✖ sanity timeout during an actual ACP prompt cleans isolated config, state and descendants (10385.4119ms)
+pguide:test:   AssertionError [ERR_ASSERTION]: {"status":502,"payload":null,"message":"protocol: independent sanity probe failed."}
+pguide:test:   
+pguide:test:   502 !== 504
+pguide:test:   
+pguide:test:       at TestContext.<anonymous> (D:\Code\potential-guide.worktrees\subsession-implementation-guidelines\packages\pguide\test\setup-objective.test.ts:675:12)
+pguide:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+pguide:test:       at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+pguide:test:     generatedMessage: false,
+pguide:test:     code: 'ERR_ASSERTION',
+pguide:test:     actual: 502,
+pguide:test:     expected: 504,
+pguide:test:     operator: 'strictEqual',
+pguide:test:     diff: 'simple'
+pguide:test:   }
+pguide:test: 
+pguide:test: test at test\setup-objective.test.ts:689:1
+pguide:test: ✖ Git subdirectory snapshot runs dependency-free checks and existing file-auth ACP to terminal (40841.2556ms)
+pguide:test:   AssertionError [ERR_ASSERTION]: {
+pguide:test:     "status": 502,
+pguide:test:     "payload": null,
+pguide:test:     "message": "protocol: independent sanity probe failed."
+pguide:test:   }
+pguide:test:   
+pguide:test:   
+pguide:test:   6 !== 0
+pguide:test:   
+pguide:test:       at TestContext.<anonymous> (D:\Code\potential-guide.worktrees\subsession-implementation-guidelines\packages\pguide\test\setup-objective.test.ts:707:12)
+pguide:test:       at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+pguide:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+pguide:test:       at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+pguide:test:     generatedMessage: false,
+pguide:test:     code: 'ERR_ASSERTION',
+pguide:test:     actual: 6,
+pguide:test:     expected: 0,
+pguide:test:     operator: 'strictEqual',
+pguide:test:     diff: 'simple'
+pguide:test:   }
+pguide:test: [ELIFECYCLE] Test failed. See above for more details.
+pguide#test:  ERROR  command (D:\Code\potential-guide.worktrees\subsession-implementation-guidelines\packages\pguide) 
+C:\Users\leescott.REDMOND\AppData\Local\pnpm\bin\pnpm.CMD run test exited (1)
+
+ Tasks:    17 successful, 18 total
+Cached:    15 cached, 18 total
+  Time:    10m15.437s 
+Failed:    pguide#test
+
+ ERROR  run failed: command  exited (1)
+[ELIFECYCLE] Test failed. See above for more details.
+[ELIFECYCLE] Command failed with exit code 1.

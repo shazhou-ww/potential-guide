@@ -1,0 +1,107 @@
+﻿✔ entry-only consumers accept shared stable/RC rules and select exact, latest or local overrides (8.1663ms)
+✔ entry graph requires every expected dependency, rejects missing, nested wrong versions and workspace ranges (220.0882ms)
+✔ current CLI command versions match their package candidate (36.3444ms)
+✔ real repository manifest and process probes advance through both layers to terminal (4903.4505ms)
+✔ direct adapter emits the existing check envelope and invalid invocation never returns ok (1196.5802ms)
+✔ real probe stops at structure for invalid contract and does not fall through to deliveries (1077.394ms)
+✔ a valid internal package reaches Pilot terminal without execution or online proof (4412.1378ms)
+✔ release inventory contains the new packages and excludes the retired Guide (2.1251ms)
+✔ package-specific RC tags preserve package identity and never select latest (0.9063ms)
+✔ release metadata rejects 1.0, malformed SemVer, unknown packages and retired tags (3.3424ms)
+✔ publication workflow covers the inventory and its embedded scripts compile (561.824ms)
+✔ execute preserves paths and arguments containing shell metacharacters (289.9225ms)
+✔ deployment workspaces are concurrent and preserve unrelated data (36.6831ms)
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (1/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (2/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (3/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (1/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (1/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (2/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (3/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (4/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (5/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (6/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (7/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (8/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (9/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (10/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (11/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (12/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (13/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (14/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (15/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (16/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (17/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (18/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (1/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (2/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (3/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (4/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (5/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (6/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (7/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (8/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (9/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (10/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (11/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (12/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (13/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (14/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (15/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (16/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (17/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (18/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (19/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (20/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (21/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (22/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (23/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (24/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (25/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (26/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (27/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (28/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (29/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (30/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (31/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (32/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (33/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (34/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (35/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (36/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (37/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (38/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (39/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (40/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (41/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (42/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (43/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (44/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (45/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (46/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (47/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (48/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (49/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (50/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (51/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (52/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (53/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (54/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (55/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (56/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (57/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (58/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (59/60).
+✔ published verification waits for propagation without repeating a publish (96.2743ms)
+✔ provenance and the intended RC tag must be present before success (1.3783ms)
+✔ asynchronous npm processing may exceed one minute before the version becomes visible (7.5442ms)
+✔ permanent registry errors and changed latest are not masked by retries (2.792ms)
+✔ propagation waiting is bounded and a missing version never becomes success (4.8495ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 13261.8713

@@ -1,0 +1,45 @@
+﻿pnpm.exe : $ pnpm run build && node scripts/check-packages.mjs
+At C:\Users\leescott.REDMOND\AppData\Local\pnpm\bin\pnpm.ps1:14 char:3
++   & "$basedir/../global/v11/04c76a7707e0b1a68854d409e7d0792f72b9c5758 ...
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ pnpm run buil...ck-packages.mjs:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+$ turbo run build
+
+   • turbo 2.11.8
+   • Packages in scope: @potential-guide/cli-core, @potential-guide/config, @potential-guide/effects, @potential-guide/git-source, @potential-guide/monorepo-objective, @potential-guide/objective-pilot, @potential-guide/objective-portfolio-supervisor, @potential-guide/objective-regulator, pguide
+   • Running build in 9 packages
+   • Remote caching disabled, using shared worktree cache
+
+@potential-guide/monorepo-objective:build: cache miss, executing 11ae19e468b9d610
+@potential-guide/effects:build: cache hit, replaying logs f360ca5665056059
+@potential-guide/effects:build: $ tsc -b
+@potential-guide/git-source:build: cache hit, replaying logs ac03e1662538f499
+@potential-guide/git-source:build: $ tsc -b
+@potential-guide/cli-core:build: cache hit, replaying logs 6414d0b6f2b9e696
+@potential-guide/cli-core:build: $ tsc -b
+@potential-guide/objective-pilot:build: cache hit, replaying logs 10c7357d7e901c38
+@potential-guide/objective-pilot:build: $ tsc -b
+@potential-guide/objective-regulator:build: cache hit, replaying logs 6122a1cf5e373886
+@potential-guide/objective-regulator:build: $ tsc -b
+@potential-guide/config:build: cache hit, replaying logs 1a7cbd1de628a6b6
+@potential-guide/config:build: $ tsc -b
+@potential-guide/objective-portfolio-supervisor:build: cache hit, replaying logs 75038539ea1ccf25
+@potential-guide/objective-portfolio-supervisor:build: $ tsc -b
+pguide:build: cache hit, replaying logs f8af730e9ba0ac14
+pguide:build: $ tsc -b
+@potential-guide/monorepo-objective:build: $ tsc -b
+
+ Tasks:    9 successful, 9 total
+Cached:    8 cached, 9 total
+  Time:    1.787s 
+
+@potential-guide/effects: 7 packed files
+@potential-guide/git-source: 7 packed files
+@potential-guide/objective-pilot: 31 packed files
+@potential-guide/objective-regulator: 7 packed files
+@potential-guide/objective-portfolio-supervisor: 23 packed files
+@potential-guide/cli-core: 23 packed files
+@potential-guide/config: 7 packed files
+pguide: 67 packed files

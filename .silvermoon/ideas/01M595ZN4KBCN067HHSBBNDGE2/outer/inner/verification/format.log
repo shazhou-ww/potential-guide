@@ -1,0 +1,8 @@
+﻿pnpm.exe : $ biome format .
+At C:\Users\leescott.REDMOND\AppData\Local\pnpm\bin\pnpm.ps1:14 char:3
++   & "$basedir/../global/v11/04c76a7707e0b1a68854d409e7d0792f72b9c5758 ...
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ biome format .:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Checked 121 files in 91ms. No fixes applied.

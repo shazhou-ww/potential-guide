@@ -1,0 +1,36 @@
+﻿pnpm.exe : $ turbo run typecheck && tsc -p tsconfig.test.json --pretty false
+At C:\Users\leescott.REDMOND\AppData\Local\pnpm\bin\pnpm.ps1:14 char:3
++   & "$basedir/../global/v11/04c76a7707e0b1a68854d409e7d0792f72b9c5758 ...
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ turbo run typ... --pretty false:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+   • turbo 2.11.8
+   • Packages in scope: @potential-guide/cli-core, @potential-guide/config, @potential-guide/effects, @potential-guide/git-source, @potential-guide/monorepo-objective, @potential-guide/objective-pilot, @potential-guide/objective-portfolio-supervisor, @potential-guide/objective-regulator, pguide
+   • Running typecheck in 9 packages
+   • Remote caching disabled, using shared worktree cache
+
+@potential-guide/monorepo-objective:typecheck: cache miss, executing 38a15574f67e2204
+@potential-guide/effects:typecheck: cache hit, replaying logs d14ac0f61c7f5c01
+@potential-guide/effects:typecheck: $ tsc -b --pretty false
+@potential-guide/git-source:typecheck: cache hit, replaying logs c0e6bc8ad69a676c
+@potential-guide/git-source:typecheck: $ tsc -b --pretty false
+@potential-guide/objective-pilot:typecheck: cache hit, replaying logs 7c50f72205d17f8d
+@potential-guide/objective-pilot:typecheck: $ tsc -b --pretty false
+@potential-guide/cli-core:typecheck: cache hit, replaying logs fa97f8d6bae1c889
+@potential-guide/cli-core:typecheck: $ tsc -b --pretty false
+@potential-guide/objective-regulator:typecheck: cache hit, replaying logs 9499baf72c0dbb5c
+@potential-guide/objective-regulator:typecheck: $ tsc -b --pretty false
+@potential-guide/objective-portfolio-supervisor:typecheck: cache hit, replaying logs f84bab28beda1599
+@potential-guide/objective-portfolio-supervisor:typecheck: $ tsc -b --pretty false
+@potential-guide/config:typecheck: cache hit, replaying logs 4efcc232cd5e0225
+@potential-guide/config:typecheck: $ tsc -b --pretty false
+pguide:typecheck: cache hit, replaying logs 720dce454b0b1f26
+pguide:typecheck: $ tsc -b --pretty false
+@potential-guide/monorepo-objective:typecheck: $ tsc -b --pretty false
+
+ Tasks:    9 successful, 9 total
+Cached:    8 cached, 9 total
+  Time:    1.536s 
+
