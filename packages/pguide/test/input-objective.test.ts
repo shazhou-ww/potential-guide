@@ -130,3 +130,93 @@ test("regulate persists the resolved source and piped subject; continue ignores 
     await rm(f.directory, { recursive: true, force: true });
   }
 });
+
+test("missing subjects show the selected Objective schema as readable and structured JSON guidance", async () => {
+  const f = await fixture();
+  const subjectSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["workingDirectory", "pguide"],
+    properties: {
+      workingDirectory: { type: "string", minLength: 1 },
+      pguide: {
+        type: "object",
+        required: ["command"],
+        properties: {
+          command: { type: "string", minLength: 1 },
+          args: { type: "array", items: { type: "string" } },
+        },
+      },
+      timeoutMs: { type: "integer", minimum: 100, maximum: 300000, default: 20000 },
+    },
+  };
+  try {
+    const manifest = await readFile(f.manifest, "utf8");
+    await writeFile(
+      f.manifest,
+      manifest.replace(
+        "domainSchema:\n  type: object",
+        `domainSchema: ${JSON.stringify(subjectSchema)}`,
+      ),
+    );
+    const commit = await f.commit();
+    const config = join(f.directory, "config.json");
+    await writeFile(
+      config,
+      JSON.stringify({
+        schemaVersion: 2,
+        objectives: { local: f.manifest, remote: f.uri },
+        defaultAgent: "unused",
+        stateDirectory: join(f.directory, "state"),
+        agents: {
+          unused: {
+            type: "acp",
+            connection: { protocolVersion: "1" },
+            transport: { type: "stdio", command: "must-not-run" },
+          },
+        },
+      }),
+    );
+    await writeFile(f.subject, "");
+    for (const command of ["probe", "regulate"]) {
+      for (const objective of ["@local", "remote"]) {
+        for (const subjectArgs of [[], ["--subject-file", "-"], ["--subject-file", f.subject]]) {
+          const args = [
+            "--pilot",
+            objective,
+            "--revision",
+            commit,
+            "--config",
+            config,
+            ...(command === "regulate" ? ["--target", "terminal"] : []),
+            ...subjectArgs,
+          ];
+          const json = await run(bin(command), [...args, "--format", "json"], process.env, " \n");
+          assert.equal(json.code, 2, json.stdout + json.stderr);
+          const value = JSON.parse(json.stdout);
+          assert.equal(value.status, "invalid");
+          assert.match(value.error, /Pipe a JSON subject/);
+          assert.deepEqual(value.guidance.subjectSchema, subjectSchema);
+          assert.match(value.guidance.instructions, /--subject-file subject.json/);
+          const text = await run(bin(command), args, process.env, "");
+          assert.equal(text.code, 2, text.stdout + text.stderr);
+          const guidance = /```json\n([\s\S]+)\n```/.exec(text.stdout)?.[1];
+          assert.ok(guidance);
+          assert.deepEqual(JSON.parse(guidance), value.guidance);
+          assert.equal(guidance, JSON.stringify(value.guidance, null, 2));
+        }
+      }
+    }
+    const malformed = await run(
+      bin("probe"),
+      ["--pilot", "@local", "--config", config, "--format", "json"],
+      process.env,
+      "{",
+    );
+    assert.equal(malformed.code, 2, malformed.stdout);
+    assert.equal(JSON.parse(malformed.stdout).error, "Subject must be valid JSON.");
+    assert.equal(JSON.parse(malformed.stdout).guidance, undefined);
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});

@@ -102,6 +102,52 @@ test("Objective commands persist scoped registrations and reject invalid edits a
   }
 });
 
+test("Objective list separates long locations and configuration sources without changing JSON", async () => {
+  const cwd = await mkdtemp(join(scratch, "pguide-config-objective-output-"));
+  const env = { ...process.env, APPDATA: cwd, XDG_CONFIG_HOME: cwd };
+  const objectives = {
+    "monorepo-standard":
+      "D:\\Code\\potential guide\\packages\\objective-monorepo-standard\\pilot.yaml",
+    "pguide-setup": "D:\\Code\\potential guide\\packages\\objective-pguide-setup\\pilot.yaml",
+    "pguide-self-check":
+      "D:\\Code\\potential guide\\packages\\objective-pguide-self-check\\pilot.yaml",
+    "devbox-health": "git+https://example.invalid/repo.git#objective/pilot.yaml",
+  };
+  const configPath = join(cwd, ".pguide", "config.yaml");
+  try {
+    await mkdir(join(cwd, ".pguide"), { recursive: true });
+    await writeFile(configPath, JSON.stringify({ schemaVersion: 2, objectives }));
+    const result = await run(["list-objectives", "--cwd", cwd], env);
+    assert.equal(result.code, 0, result.stdout);
+    assert.equal(
+      result.stdout,
+      `${Object.entries(objectives)
+        .map(([name, location]) => `${name}\n  Location: ${location}\n  Source:   ${configPath}`)
+        .join("\n\n")}\n`,
+    );
+    assert.ok(!result.stdout.includes("\t"));
+    const json = await run(["list-objectives", "--cwd", cwd, "--format", "json"], env);
+    assert.equal(json.code, 0, json.stdout);
+    assert.deepEqual(JSON.parse(json.stdout), {
+      schemaVersion: 1,
+      objectives: Object.entries(objectives).map(([name, location]) => ({
+        name,
+        location,
+        source: configPath,
+      })),
+    });
+    await writeFile(configPath, JSON.stringify({ schemaVersion: 2 }));
+    const empty = await run(["list-objectives", "--cwd", cwd], env);
+    assert.equal(empty.code, 0, empty.stdout);
+    assert.equal(empty.stdout, "No registered Objectives.\n");
+    const emptyJson = await run(["list-objectives", "--cwd", cwd, "--format", "json"], env);
+    assert.equal(emptyJson.code, 0, emptyJson.stdout);
+    assert.deepEqual(JSON.parse(emptyJson.stdout), { schemaVersion: 1, objectives: [] });
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 test("user config permissions round trip and invalid grants cannot replace the ceiling", async () => {
   const cwd = await mkdtemp(join(scratch, "pguide-config-permissions-"));
   const env = { ...process.env, APPDATA: cwd, XDG_CONFIG_HOME: cwd };
