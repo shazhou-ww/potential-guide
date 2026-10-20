@@ -8,7 +8,7 @@
 
 - 用户提出应先区分开放协议与内部数据，而不是给所有数据格式统一加版本号。
 - 用户提出使用公开位置的 schema 文件标识公共格式；这是本轮要进一步细化的方向。
-- 公开 schema URI 替代独立数字版本、不可变发布、随包离线校验和未知 URI 拒绝均为候选方案，尚未逐项确认。
+- 公共格式已确认以 schema URI 替代独立数字版本；域名和发布位置尚待选择，详见 G-01。随包离线校验及未知 URI 明确拒绝作为既有设计方向，不依赖运行时任意下载。
 - 内部持久化是否保留存储版本，以及哪些输出需要公开兼容承诺，仍需分别决定。
 
 ## 逐项清单
@@ -39,6 +39,14 @@
 当前推进到 CLI 配置拆分与分段配置规则。前面明确的局部意见按各节记录；公共地址、迁移方案和实现细节留待对应决定，不使用示意域名充当真实发布地址。
 
 ## Pilot Manifest 第一轮评审（2026-10-20）
+
+### G-01：公共格式标识与旧格式处理（已确认）
+
+用户明确同意公共数据格式用 URI 标识契约，旧格式统一拒绝并提供迁移，不提供过渡期兼容读取或静默字段别名。这里的决定覆盖本轮改造涉及的旧 manifest 入口、结构、字段、声明及旧 CLI 配置；迁移是显式操作，不是普通读取时自动改写。后续各节提及旧格式“待决定”的历史表述均以本决定为准。
+
+公共 schema URI 同时标识格式与版本；已发布地址对应的定义保持不可变，变更定义应发布新的标识，不能只保证不兼容变更才换地址。离线运行时使用随包的对应定义，不按实例中的任意 URI 联网解析。schema 文件自身的 `$schema` 仍表示 JSON Schema 方言，与业务文档用于识别契约的 URI 不同。
+
+域名尚未定案。Agent 建议优先采用项目长期控制的域名下的 `/schemas/<format>/<revision>.json`，而不是购买或假定已拥有某个名称。如果当前没有自有域名，可先规划 GitHub Pages 的 `https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json` 等地址，利用现有 GitHub 身份，不依赖 moving main 的 raw 文件链接。该示例尚未部署，不能当作可访问的 schema；Pages 托管也不自动保证不可变，需发布检查保护已发布文件。最终 canonical URI 应在正式写入用户文件之前确定，后续更换托管域名会留下旧 URI 的长期维护责任。
 
 以下是下一步规范化修改的输入，不是构想整体验收或运行时变更授权。HTML 的示例、类型与 schema 仍保留当前源码快照，避免将讨论中的格式伪装成已支持的格式。
 
@@ -169,7 +177,18 @@ interface GitProjectionContext {
 
 JSONata 求值根仍为 `{ context, input }`，表达式通过 `context.repo.rootPath`、`context.repo.origin`、`context.path` 和 `input` 取值。context 仍由工具提供，不允许用户 input 覆盖，不自动暴露进程环境、秘密值或文件系统能力。origin 表达实际仓库来源，不把旧 repository.id 或 checkout.id 直接改名后冒充来源。
 
-`path` 是仓库相对路径还是绝对路径的精确规则尚未取得明确选择。结合用户希望与 repo.rootPath 拼接的用法，Agent 建议采用仓库相对路径，根目录为 `"."`，仓库相对部分使用 `/`；这仍为建议，不把示例值当成最终决定。非 Git 场景、无 origin 时的结构或错误策略，以及 origin 的 URL 规范化仍待讨论，不引入静默的伪造 origin。
+用户已同意：Git 内 `path` 采用仓库相对路径，根目录为 `"."`；非 Git 目录中 `repo: null`，`path` 为调用目录绝对路径；Git 仓库没有 origin 时 `repo.origin: null`，不得伪造来源。仓库相对部分使用 `/` 是当前规范化建议；origin 的具体 URL 规范化与错误分类在实施时进一步明确。
+
+目标结构据此扩展为：
+
+```ts
+interface ProjectionContext {
+  repo: { rootPath: string; origin: string | null } | null;
+  path: string;
+}
+```
+
+`repo === null` 时不可读取 `repo.rootPath`；作者应选择适合非 Git 调用的投影。现有受限 JSONata 不具备完整条件表达式能力，因此是否需要在同一声明中同时处理两类场景属于后续表达式能力讨论，不能为此隐式开放任意 JSONata。
 
 ### O-05：支持跨平台路径拼接函数（方向已确认）
 
@@ -187,7 +206,7 @@ JSONata 求值根仍为 `{ context, input }`，表达式通过 `context.repo.roo
 
 当前项目以自有 AST 校验与求值器执行受限 JSONata，不是直接运行任意 JSONata 表达式；未来实现必须同时接入受限解析与求值，只开放明确的路径函数，不因原生 JSONata 的 registerFunction 可用就绕过现有能力、时限与输出边界。本轮仅用原生 JSONata 显式注册函数验证 Windows / POSIX 示例，未改变生产运行时。
 
-空路径、绝对第二参数、`..`、路径越界及输出大小边界应在实施前补齐规范与反例。普通 join 不是授权或沙箱边界；如要求限制在 repo.rootPath 内，需要独立明确并验证，不能把字符串拼接或 normalize 当作 containment 检查。
+用户已明确：这是普通 pathJoin，不做隐含承诺。按宿主 `node:path.join` 的普通语义拼接及规范化，不替换为 `path.resolve`，不附加“必须位于仓库内”的隐式规则；空路径、绝对片段、`.` 与 `..` 应以对应宿主 join 行为建立测试。参数类型、参数个数与既有输出大小边界仍需明确；这些输入检查不构成路径授权或沙箱。
 
 ## CLI 配置第一轮评审（2026-10-20）
 
@@ -199,7 +218,7 @@ Agent 建议主配置只保存“选择哪个 Agent”这样的名称引用，�
 
 `pguide agents list|show|add|edit|remove|validate|path` 为待讨论的命令组织示例，不代表已经冻结这些操作名。现有 config 的 Agent 增删改查迁移到独立入口，是否保留临时别名需显式决定；共享校验、脱敏、原子写入与错误提示不能分叉实现。
 
-### C-02：主配置改为 Git 风格的可扩展分段配置（用户提出的改造方向）
+### C-02：主配置改为 Git 风格的可扩展分段配置（早期提案，正比较 VS Code settings 方案）
 
 剩余通用配置不再以一个统一 JSON/YAML 树及全局 schemaVersion 作为唯一文件契约，而按 section/key 组织，使用 `pguide config` 读写。当前配置实际上是 YAML，并非仅限 JSON；本次目标是改变配置模型、扩展方式和管理语义，而非只更换文本后缀。
 
@@ -220,11 +239,11 @@ Agent 建议主配置只保存“选择哪个 Agent”这样的名称引用，�
 
 建议已知 key 的类型、默认值、约束与说明归使用该 key 的组件所有，主配置保留来源与作用域信息。可扩展不等于无校验：语法错误和已知 key 的非法值必须明确报错，未知 section/key 的保留、读写与消费规则要单独定义，不将“未知”静默转换为某种默认有效行为。
 
-需区分“Git 风格语法和命令体验”与“完全兼容 Git config”。普通 INI、TOML 和 Git config 的引号、转义、重复 key、多值、子节及 include 语义并不等价；具体采用哪套规则仍待讨论，不先选解析器或承诺支持 include / includeIf。
+需区分“Git 风格语法和命令体验”与“完全兼容 Git config”。普通 INI、TOML 和 Git config 的引号、转义、重复 key、多值、子节及 include 语义并不等价；具体采用哪套规则仍待讨论，不先选解析器或承诺支持 include / includeIf。用户随后提出 VS Code settings 风格作为替代，见 C-05；本节的 INI 仅保留讨论背景，不代表最终文件语法。
 
 ### C-03：拆分后仍需明确的边界
 
-- 用户级、项目级、显式文件等作用域是否分别适用于主配置和 agents.yaml；Agent 同名覆盖建议以完整 profile 为单位，不做可能拼出无效协议组合的深合并，最终规则待确认。
+- 用户明确初期只做用户级、项目级作用域，不预先扩展为第三套显式文件作用域；主配置与 agents.yaml 的实际位置仍需确定。Agent 同名覆盖建议以完整 profile 为单位，不做可能拼出无效协议组合的深合并，最终规则待确认。
 - 默认 Agent 名称与有效 Agent 定义的交叉验证、未知名称错误、配置来源展示和写入目标必须一致；旧主配置及 Agent 定义如何迁移或拒绝待决定。
 - `commandDirectories` 等多值配置如何表达；`regulationStrategy` 与 `regulationPermissions` 这类嵌套策略是否使用子节、命名规则或独立资源，尚未决定，不用 JSON 字符串塞回 key 值来假装完成拆分。
 - schemaVersion 不是通用配置扩展的前提；若采用无全局版本的 key 模型，需要逐 key 定义兼容、弃用和非法值处理。agents.yaml 是否使用公共 schema URI 属于独立格式讨论。
@@ -259,3 +278,37 @@ Agent 建议主配置只保存“选择哪个 Agent”这样的名称引用，�
 若期望 `pguide config` 统一展示类型、帮助、默认值或完成扩展级 validate，可另行设计声明式配置描述的发现机制，例如伴随文件或命令元数据；尚未选择机制，不虚构已有协议字段，也不要求通用配置编辑为了每个未知 key 自动执行外部子命令。当前 pguide-command-v1 仅声明命令元数据，新增描述能力需单独定义兼容边界。
 
 本项已纳入构想边界与实施种子的可验证要求；具体 namespace、typed value、描述发现、未知 key 诊断与配置文件语法仍为后续设计，未实施主配置或扩展协议变更。
+
+### C-05：比较 VS Code settings 风格（建议采用，尚未定案）
+
+用户提出用 VS Code settings 风格替代 Git 风格，并明确作用域先做用户级和项目级。已核对 VS Code 官方文档：settings.json 使用 JSON with Comments（JSONC），并非 YAML；扩展通过 `contributes.configuration` 描述唯一配置 ID、类型、默认值和说明，由宿主组合成配置体验。可扩展性来自这种声明/注册机制，不是 JSONC 解析器自身提供。
+
+Agent 建议采用 JSONC + 顶层命名空间 key + 原生 JSON 值，例如：
+
+```jsonc
+{
+  // key 是完整 ID，不是一个隐含的多层对象路径
+  "core.defaultAgent": "local",
+  "reports.enabled": true,
+  "regulate.quota": {
+    "timeoutMs": 300000,
+    "maxAgentRuns": 10,
+    "maxStallRuns": 3
+  },
+  "deploy.target": "staging"
+}
+```
+
+相比 Git 分段语法，JSONC 可直接表达字符串、布尔值、数值、数组和复杂对象，无需自行设计重复 key、多值和嵌套对象语法。建议先仅支持一种主配置文件格式，不同时增加 YAML、INI 和 TOML；agents.yaml 仍作为独立资源保留，不因主配置选择 JSONC 就重新混回设置文件。以上具体 key 与文件名仅是候选，旧配置示例保持原始快照。
+
+建议每个扩展声明自身 namespace 的配置描述，由配置基础设施统一支持来源、读写、默认值、提示和结构校验；描述如何发现尚需单独规范，不能声称 VS Code 的扩展 API 已能被本 CLI 直接使用。未知或未安装扩展的 key 可保留，但不宣称已经完成语义验证；不为了普通 get/set 自动执行任意扩展。
+
+这能更自然地解决扩展配置归属及复杂值表达，但不能自动决定覆盖/合并和授权语义。VS Code 对标量和数组覆盖，对对象合并；不建议把这整套规则机械复制到治理工具。这里建议初期 project > user，按完整 setting key 覆盖、数组整体替换；普通对象是否按 key 整体替换待确认。Agent profile 与权限策略尤其不做隐式深合并或授权并集，保留显式校验与信任边界。
+
+官方依据：
+
+- [Settings](https://code.visualstudio.com/docs/configure/settings)：用户/工作区与覆盖规则。
+- [JSON with Comments](https://code.visualstudio.com/docs/languages/json#_json-with-comments)：JSONC 与注释支持。
+- [contributes.configuration](https://code.visualstudio.com/api/references/contribution-points#contributes.configuration)：扩展配置描述。
+
+官网抓取因网络解析限制不可用时，本次通过官方 microsoft/vscode-docs GitHub 仓库对应文档核对以上事实。JSONC 是否作为最终格式、具体 namespace、配置描述发现及对象合并规则均未因本次比较自动定案。

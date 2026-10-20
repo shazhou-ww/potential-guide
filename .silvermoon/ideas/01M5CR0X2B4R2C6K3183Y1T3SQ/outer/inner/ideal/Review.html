@@ -104,7 +104,7 @@
       <details class="principles"><summary>阅读约定</summary><p>示例保留当前数字版本，未切换为候选 URI。TypeScript 是评审用自包含表达；JSON Schema 为 Draft 2020-12 的 YAML 草案，不是已发布规范。</p><p>JSON Schema 面板中的 $schema 声明的是 schema 方言，不是业务实例的格式 URI。实例标识字段仍待讨论。</p><p>内部格式也需要输入校验，但不因此成为公共协议。</p></details>
     </div></aside>
     <main>
-      <div class="notice"><strong>讨论稿，不是迁移通知。</strong> 基于源码快照 <code>50a80806e3ac</code>（2026-10-20）。整体规范仍待确认，已明确的局部修改方向见各页评审记录；未发布公共地址、未修改现有解析器。示例中的仓库、UUID 和 Git 哈希均为演示值，不是可运行的远端证据。草案校验通过不代表生产语义校验通过。<br><strong>已确认的跨格式命名方向：</strong>静态定义改称 Objective Manifest，入口为 objective.yaml；所有数据格式中指向目标定义的 pilot / pilot* 引用统一改为 objective / objective*。下方代码仍展示原始快照，不表示新格式已实施。</div>
+      <div class="notice"><strong>讨论稿，不是迁移通知。</strong> 基于源码快照 <code>50a80806e3ac</code>（2026-10-20）。整体规范仍待确认，已明确的局部修改方向见各页评审记录；未发布公共地址、未修改现有解析器。示例中的仓库、UUID 和 Git 哈希均为演示值，不是可运行的远端证据。草案校验通过不代表生产语义校验通过。<br><strong>已确认：</strong>公共格式采用 schema URI；旧格式统一拒绝并提供显式迁移。域名未定，未部署。静态定义改称 Objective Manifest，入口为 objective.yaml；所有数据格式中指向目标定义的 pilot / pilot* 引用统一改为 objective / objective*。三种代码表示仍展示原始快照，不表示新格式已实施。</div>
       <div id="pages"></div>
       <noscript><p>此离线文档需要启用 JavaScript 才能显示页签和代码示例。无需网络或外部依赖。</p></noscript>
     </main>
@@ -126,9 +126,10 @@
           "M-03 · 用户已确认：采用 Draft 2020-12 标准语法及对应 TypeScript schema 类型，不另造简化 DSL 或主动设置关键词白名单。根显式为 object，初期仅支持文档内 $defs 引用，不自动联网；加载时检查并编译 schema，调用时校验 subject；非法或不支持的定义明确报错。具体类型库仍待实施选型。",
           "M-04 · 用户已确认：静态定义称为 Objective Manifest，入口改为 objective.yaml；Pilot 保留为观察执行角色。单个目标定义 objective.yaml 与命名调用声明 objectives.yaml 职责不同。",
           "M-05 · 用户已确认：所有数据格式中引用目标定义的 pilot 统一改为 objective，pilotUri / pilotCommit / pilotTree / pilotSource 相应改为 objective*；覆盖公共输入、报告嵌套结构和内部记录，不改变来源与版本语义。API/CLI/包名按职责核对，不机械替换执行角色。",
+          "G-01 · 用户已确认：公共格式采用 schema URI，旧入口、旧结构和字段统一拒绝并提供迁移，不做静默兼容。域名/发布位置尚未定，运行时使用随包定义离线校验。",
           "下方三种表示仍是现有源码快照，不是修改后格式；这些评审意见不代表构想整体获批或运行时变更授权。"
         ],
-        questions:["公共文档是否用一个不可变 schema URI 替代 schemaVersion？","标识字段是否选 $schema；旧 manifest 是迁移、兼容读取还是明确拒绝？","语言、唯一性和局部引用限制由哪个公共 validator 保证？"],
+        questions:["canonical schema URI 使用自有域名还是 GitHub Pages？发布不可变性如何验证？","实例 URI 字段及显式迁移工具的范围是什么？","语言、唯一性和局部引用限制由哪个公共 validator 保证？"],
         sources:["packages/pilot-protocol/src/types.ts","packages/pilot-protocol/src/validation.ts","packages/pilot-protocol/src/definition.ts"],
         example:String.raw`schemaVersion: 1
 domainSchema:
@@ -226,12 +227,12 @@ $defs:
           "O-02 · 用户已澄清：inputSchema 可选，省略等价于 { const: {} }，即 Unit schema，只接受空对象值，不是任意 JSON。该 schema 校验 input 本身，而不是整个 { context, input }。",
           "O-02 · Unit 输入：实际 input 省略时归一化为 {}，求值根保留 input: {}；显式非空对象、数组、标量或 null 都不能通过 Unit 校验。显式 inputSchema: {} 仍接受任意 JSON，与省略字段不同；不扩大既有 Unit-only 输入省略规则。",
           "O-03 · 求值根保持 { context, input }；context 与 input 是根属性，不是 $context / $input 绑定变量。context 由工具构造，input 由调用者提供；投影结果再按 subjectSchema 校验。旧 directory / repository / checkout 结构只是现有源码快照。",
-          "O-04 · 用户已明确结构：context 只有 repo、path，repo 内含 rootPath、origin。path 的绝对/相对含义、无 Git 或无 origin 时的边界尚待确认；结合拼接用法，建议采用仓库相对路径，但不作为已定规则。",
-          "O-05 · 用户同意新增跨平台路径拼接能力，计划使用 $pathJoin(context.repo.rootPath, context.path)，按宿主系统生成本地路径。仅作纯路径计算，不访问文件系统，不自动证明路径在仓库内；当前受限 AST 还不支持该调用，须显式接入，不开放任意函数。",
+          "O-04 · 用户已确认：Git 内 path 为仓库相对路径，根目录用 .；context 只有 repo、path，repo 内含 rootPath、origin。非 Git 时 repo=null、path 为绝对路径；Git 无 origin 时 origin=null，不伪造来源。",
+          "O-05 · 用户已确认：普通 $pathJoin，采用宿主 path.join 语义，不附加仓库包含性承诺，不改成 resolve。纯路径计算，不访问文件系统；当前受限 AST 还不支持该调用，须显式接入，不开放任意函数。",
           "下方三种表示仍保留原始快照：inputSchema 在当前实现中必填。新增计划尚未实施；JSONata 仍是有边界的确定性投影 profile，不是任意动态执行。"
         ],
         projectionHeading:"目标 context 与路径函数 · 规范化草案（未实施）",
-        projectionExample:String.raw`# Git 场景示例；本例选用相对 path 演示，精确路径规则仍待确认
+        projectionExample:String.raw`# 已确认的 Git 场景结构；函数尚未实施
 evaluationRoot:
   context:
     repo:
@@ -248,7 +249,7 @@ result:
   directory: 'D:\work\repo\packages\api'`,
         scope:"文档和条目结构可完整展示。JSONata 的能力限制、执行边界和 inputSchema 编译不能只靠字符串 schema 校验。",
         validation:["parseObjectives 检查文档版本和精确字段，并编译 inputSchema 与受限投影。","bindObjective 校验输入、求值投影，再依据 Pilot domainSchema 校验最终 subject。"],
-        questions:["context.path 是否采用仓库相对路径；无 Git / 无 origin 时如何处理？","$pathJoin 如何处理绝对第二参数、空路径、.. 与越界？","声明格式的 schema URI、旧字段和 context 的迁移或拒绝策略如何定义？"],
+        questions:["非 Git 场景的声明是否需要额外受限条件表达式能力？","$pathJoin 的参数个数、类型和输出边界如何表达？","声明格式的 canonical URI 和显式迁移工具如何交付？"],
         sources:["packages/pilot-protocol/src/objectives.ts","packages/objective-declarations/src/index.ts","packages/pilot-protocol/src/projection.ts"],
         example:String.raw`schemaVersion: 1
 objectives:
@@ -302,34 +303,31 @@ properties:
         boundary:"用户可编写且跨工具升级保存，值得维护公共配置契约；归属 CLI Core，而不是因为公开就移入 pilot-protocol。凭据值不能写进示例或配置。",
         feedback:[
           "C-01 · 用户提出改造方向：agents 从主配置剥离到独立 agents.yaml，新增 pguide agents 管理；完整连接/传输定义不再混在普通选项内。",
-          "C-02 · 用户提出改造方向：剩余主配置改为类似 Git config 的分段可扩展配置，按 section/key 管理，而不是一个统一 JSON/YAML 配置树。当前源码仍使用 YAML v2，并非此提案已实施。",
+          "C-02 / C-05 · 早期 Git 分段提案正与 VS Code settings 风格比较。官方 VS Code settings.json 使用 JSONC（带注释的 JSON），不是 YAML；Agent 建议采用完整的命名空间 key + 原生 JSON 值，不因重用 JSON 就恢复封闭的全局配置类型。",
+          "用户已明确作用域：初期只做用户级和项目级。建议 project > user；对象合并策略尚待确认，不把 VS Code 的对象合并机械用于权限策略或 Agent profile。",
           "C-04 · 用户明确要求：所有扩展子命令，包括独立第三方命令，均可定义自身配置；新增自有 key 不需修改核心 PguideConfig 类型或等待主程序发布。具体命名空间和声明机制尚未定案。",
           "建议已知 key 的类型、默认值和约束由所属组件维护；保留作用域、来源与错误诊断。未知 key 是否允许存储与何时参与消费需明确，可扩展不等于静默忽略非法值。",
           "建议分离存储与语义：基础设施统一作用域、来源和 get/set/unset，保留未安装扩展的 key；扩展定义类型、默认值、帮助并在消费前校验。保存未知配置不能冒充语义校验成功，也不为通用编辑任意执行外部命令。",
-          "待讨论：是否严格兼容 Git config 语法、文件位置、作用域及多值/重复 key 规则；复杂权限和策略如何表达，不能简单塞回 JSON 字符串。下方三种表示仍是旧配置快照。"
+          "JSONC 能直接表达数组和对象，扩展描述可声明类型、默认值和说明，较 Git 语法更适合本需求；但描述发现、namespace、对象覆盖及权限信任仍需定义。JSONC 是最新推荐，用户尚未最终选定。下方三种表示仍是旧配置快照。"
         ],
-        proposalHeading:"分段主配置 · 方向示例（语法与 key 名未定，未实施）",
-        proposalExample:String.raw`[core]
-    defaultAgent = local
-    language = zh-CN
-    format = json
-
-[reports]
-    enabled = true
-
-[agentExecution]
-    timeoutMs = 300000
-
-[commands "deploy"]
-    target = staging
-    timeoutMs = 60000
-
-# Agent 的完整定义放到独立 agents.yaml
-# commands.deploy.target 可由扩展命令独立定义，无须核心认识它
-# 上述 namespace、key、文件路径与 Git 兼容范围尚未定案`,
+        proposalHeading:"VS Code settings 风格 · 最新建议（JSONC，未定案、未实施）",
+        proposalExample:String.raw`{
+  // 顶层 key 是完整 ID，点号不代表必须展开为多层对象
+  "core.defaultAgent": "local",
+  "reports.enabled": true,
+  "regulate.quota": {
+    "timeoutMs": 300000,
+    "maxAgentRuns": 10,
+    "maxStallRuns": 3
+  },
+  // deploy 扩展独立定义和校验自己的配置
+  "deploy.target": "staging"
+}
+// Agent 完整定义仍放独立 agents.yaml
+// 上述 key 与主配置文件名均未定案；不是 VS Code 配置 API 的直接复用`,
         scope:"仅展示配置 v2 的基础字段及 ACP 分支。省略 AHP、授权、regulationStrategy、reports 等合法字段；本页窄 schema 不可用于校验任意现有配置。",
         validation:["parseConfig 校验 v2、未知字段、Agent 类型、超时和授权等；loadConfig 负责合并与来源记录。","配置文件的 schema 不等于合并规则，也不代表能够连接或初始化 Agent。"],
-        questions:["扩展的 namespace 如何归属，类型/帮助描述如何发现，未安装扩展如何诊断？","采用精确 Git config 语法还是仅借鉴分段形式，作用域及多值规则是什么？","复杂策略与授权放在哪一类资源中，主配置与 agents.yaml 如何配合？"],
+        questions:["是否采用推荐的 JSONC + 命名空间 key，如何发现扩展配置描述？","用户级与项目级中对象按完整 key 替换还是显式允许合并？","复杂策略与授权如何校验并维持信任边界？"],
         sources:["packages/pguide-cli-core/src/index.ts","packages/pguide-cli-core/src/permissions.ts"],
         example:String.raw`schemaVersion: 2
 defaultAgent: local
