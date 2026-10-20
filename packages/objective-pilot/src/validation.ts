@@ -173,12 +173,16 @@ export function parseManifest(source: string): PilotManifest {
   });
 }
 export function compileDomain(schema: JsonObject): ValidateFunction {
-  if (
-    schema.type !== "object" ||
-    (schema.$schema !== undefined &&
-      schema.$schema !== "https://json-schema.org/draft/2020-12/schema")
-  ) {
+  if (schema.type !== "object")
     throw new ObjectiveConfigurationError("Domain must be a Draft 2020-12 root object schema.");
+  return compileInputSchema(schema);
+}
+export function compileInputSchema(schema: JsonObject): ValidateFunction {
+  if (
+    schema.$schema !== undefined &&
+    schema.$schema !== "https://json-schema.org/draft/2020-12/schema"
+  ) {
+    throw new ObjectiveConfigurationError("Expected a Draft 2020-12 schema.");
   }
   function inspect(value: unknown) {
     if (Array.isArray(value)) {

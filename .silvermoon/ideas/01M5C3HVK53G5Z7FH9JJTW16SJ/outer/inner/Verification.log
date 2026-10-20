@@ -1,0 +1,833 @@
+$ pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run pack:check
+$ biome format .
+Checked 215 files in 27ms. No fixes applied.
+$ turbo run lint && biome lint scripts config
+
+   • turbo 2.11.8
+   • Packages in scope: @potential-guide/cli-core, @potential-guide/config, @potential-guide/effects, @potential-guide/git-source, @potential-guide/objective-devbox-health, @potential-guide/objective-monorepo-standard, @potential-guide/objective-pguide-self-check, @potential-guide/objective-pguide-setup, @potential-guide/objective-pilot, @potential-guide/objective-portfolio-supervisor, @potential-guide/objective-regulator, pguide
+   • Running lint in 12 packages
+   • Remote caching disabled, using shared worktree cache
+
+@potential-guide/objective-pguide-self-check:lint: cache hit, replaying logs 475651bf4a65884e
+@potential-guide/git-source:lint: cache miss, executing 440298a924e93d97
+@potential-guide/effects:lint: cache hit, replaying logs bac303fd791fdb58
+@potential-guide/objective-regulator:lint: cache miss, executing 2ab7df9050c5b8fb
+@potential-guide/objective-devbox-health:lint: cache miss, executing bc126ec363201acb
+@potential-guide/objective-pguide-self-check:lint: $ biome lint .
+@potential-guide/objective-pguide-self-check:lint: Checked 6 files in 5ms. No fixes applied.
+@potential-guide/effects:lint: $ biome lint .
+@potential-guide/effects:lint: Checked 4 files in 12ms. No fixes applied.
+pguide:lint: cache miss, executing 2e2df98e5f914ccf
+@potential-guide/objective-pguide-setup:lint: cache hit, replaying logs 83284dc2e3b07b84
+@potential-guide/objective-monorepo-standard:lint: cache hit, replaying logs dd0cac31e8c45b2f
+@potential-guide/objective-pilot:lint: cache miss, executing 3396ea9c39cf1f96
+@potential-guide/objective-pguide-setup:lint: $ biome lint .
+@potential-guide/objective-monorepo-standard:lint: $ biome lint .
+@potential-guide/objective-pguide-setup:lint: Checked 16 files in 18ms. No fixes applied.
+@potential-guide/objective-monorepo-standard:lint: Checked 40 files in 17ms. No fixes applied.
+@potential-guide/objective-portfolio-supervisor:lint: cache miss, executing 6d7c48045d9afb8f
+@potential-guide/cli-core:lint: cache hit, replaying logs 326728887194b030
+@potential-guide/cli-core:lint: $ biome lint .
+@potential-guide/cli-core:lint: Checked 13 files in 18ms. No fixes applied.
+@potential-guide/config:lint: cache miss, executing fe19033801e9a803
+@potential-guide/git-source:lint: $ biome lint .
+@potential-guide/objective-regulator:lint: $ biome lint .
+@potential-guide/objective-devbox-health:lint: $ biome lint .
+@potential-guide/git-source:lint: Checked 4 files in 18ms. No fixes applied.
+pguide:lint: $ biome lint .
+@potential-guide/objective-regulator:lint: Checked 5 files in 15ms. No fixes applied.
+@potential-guide/objective-devbox-health:lint: Checked 19 files in 14ms. No fixes applied.
+@potential-guide/objective-pilot:lint: $ biome lint .
+pguide:lint: Checked 32 files in 19ms. No fixes applied.
+@potential-guide/objective-portfolio-supervisor:lint: $ biome lint .
+@potential-guide/objective-pilot:lint: Checked 22 files in 11ms. No fixes applied.
+@potential-guide/config:lint: $ biome lint .
+@potential-guide/objective-portfolio-supervisor:lint: Checked 8 files in 21ms. No fixes applied.
+@potential-guide/config:lint: Checked 5 files in 7ms. No fixes applied.
+
+ Tasks:    12 successful, 12 total
+Cached:    5 cached, 12 total
+  Time:    831ms
+
+Checked 35 files in 17ms. No fixes applied.
+$ turbo run typecheck && tsc -p tsconfig.test.json --pretty false
+
+   • turbo 2.11.8
+   • Packages in scope: @potential-guide/cli-core, @potential-guide/config, @potential-guide/effects, @potential-guide/git-source, @potential-guide/objective-devbox-health, @potential-guide/objective-monorepo-standard, @potential-guide/objective-pguide-self-check, @potential-guide/objective-pguide-setup, @potential-guide/objective-pilot, @potential-guide/objective-portfolio-supervisor, @potential-guide/objective-regulator, pguide
+   • Running typecheck in 12 packages
+   • Remote caching disabled, using shared worktree cache
+
+@potential-guide/effects:typecheck: cache hit, replaying logs d14ac0f61c7f5c01
+@potential-guide/effects:typecheck: $ tsc -b --pretty false
+@potential-guide/git-source:typecheck: cache miss, executing 4e09792857da17d4
+@potential-guide/objective-pilot:typecheck: cache miss, executing 0976148c02dc6302
+@potential-guide/cli-core:typecheck: cache hit, replaying logs b38efbb5d763ffb6
+@potential-guide/cli-core:typecheck: $ tsc -b --pretty false
+@potential-guide/config:typecheck: cache miss, executing 74e993b30a12f195
+@potential-guide/git-source:typecheck: $ tsc -b --pretty false
+@potential-guide/objective-pilot:typecheck: $ tsc -b --pretty false
+@potential-guide/config:typecheck: $ tsc -b --pretty false
+@potential-guide/objective-devbox-health:typecheck: cache miss, executing cf0af44c63a1d9d6
+@potential-guide/objective-regulator:typecheck: cache miss, executing 787ce46d300c064d
+@potential-guide/objective-devbox-health:typecheck: $ node ../../scripts/check-pilot-sources.mjs
+@potential-guide/objective-regulator:typecheck: $ tsc -b --pretty false
+@potential-guide/objective-portfolio-supervisor:typecheck: cache miss, executing 4045a5d307b75043
+@potential-guide/objective-portfolio-supervisor:typecheck: $ tsc -b --pretty false
+pguide:typecheck: cache miss, executing f4b5a073d92a1719
+pguide:typecheck: $ tsc -b --pretty false
+@potential-guide/objective-monorepo-standard:typecheck: cache miss, executing 68d348eb9a28aa62
+@potential-guide/objective-pguide-setup:typecheck: cache miss, executing c352ab5e4e3c0ef5
+@potential-guide/objective-monorepo-standard:typecheck: $ tsc -b --pretty false
+@potential-guide/objective-pguide-setup:typecheck: $ node ../../scripts/check-pilot-sources.mjs
+@potential-guide/objective-pguide-self-check:typecheck: cache miss, executing 2f6ae0eea5d2e7f2
+@potential-guide/objective-pguide-self-check:typecheck: $ node ../../scripts/check-pilot-sources.mjs
+
+ Tasks:    12 successful, 12 total
+Cached:    2 cached, 12 total
+  Time:    5.258s
+
+$ pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && turbo run test && node --test scripts/*.test.mjs
+$ node scripts/build-self-check-runtime.mjs --check
+$ node scripts/build-health-runtime.mjs --check
+$ node scripts/build-monorepo-runtime.mjs --check
+$ node scripts/build-setup-runtime.mjs --check
+
+   • turbo 2.11.8
+   • Packages in scope: @potential-guide/cli-core, @potential-guide/config, @potential-guide/effects, @potential-guide/git-source, @potential-guide/objective-devbox-health, @potential-guide/objective-monorepo-standard, @potential-guide/objective-pguide-self-check, @potential-guide/objective-pguide-setup, @potential-guide/objective-pilot, @potential-guide/objective-portfolio-supervisor, @potential-guide/objective-regulator, pguide
+   • Running test in 12 packages
+   • Remote caching disabled, using shared worktree cache
+
+@potential-guide/effects:build: cache hit, replaying logs f360ca5665056059
+@potential-guide/effects:build: $ tsc -b
+@potential-guide/objective-pilot:build: cache miss, executing 5edf266b3443b3d8
+@potential-guide/git-source:build: cache miss, executing 6d81123309770f0c
+@potential-guide/effects:test: cache hit, replaying logs 4dd0a7252b5834b7
+@potential-guide/effects:test: $ tsx --test "test/*.test.ts"
+@potential-guide/effects:test: ✔ lazy computation; await and exit distinguish business failure, invocation failure and cancellation (1.9961ms)
+@potential-guide/effects:test: ✔ replacement aborts before starting new work without waiting for old cleanup (1.4109ms)
+@potential-guide/effects:test: ✔ parent abort reaches all children; a preaborted signal runs no synchronous work (0.5569ms)
+@potential-guide/effects:test: ✔ one root ref commits 101 coherent snapshots (3.6233ms)
+@potential-guide/effects:test: ✔ independent refs combined with zipLatest are not a transaction (10.3481ms)
+@potential-guide/effects:test: ✔ dependency keys retain unchanged work while independent dependencies replace (0.8627ms)
+@potential-guide/effects:test: ✔ noncooperating callback completion cannot publish a stale result (0.4793ms)
+@potential-guide/effects:test: ✔ invocation failure publishes a cause, not an empty success (0.2534ms)
+@potential-guide/effects:test: ✔ uninterruptible old computations cannot overwrite a new generation (0.403ms)
+@potential-guide/effects:test: ✔ HTTP abort cancels local fetch, not the server's independent work (22.7363ms)
+@potential-guide/effects:test: ✔ activate exposes initial/current state and scope closes active computations (0.8738ms)
+@potential-guide/effects:test: ✔ preaborted slots publish cancellation without invoking the computation (0.3239ms)
+@potential-guide/effects:test: ℹ tests 12
+@potential-guide/effects:test: ℹ suites 0
+@potential-guide/effects:test: ℹ pass 12
+@potential-guide/effects:test: ℹ fail 0
+@potential-guide/effects:test: ℹ cancelled 0
+@potential-guide/effects:test: ℹ skipped 0
+@potential-guide/effects:test: ℹ todo 0
+@potential-guide/effects:test: ℹ duration_ms 475.8298
+@potential-guide/cli-core:build: cache hit, replaying logs aedeb5ad5115eb84
+@potential-guide/cli-core:build: $ tsc -b
+@potential-guide/config:build: cache miss, executing d2395997652fc38c
+@potential-guide/cli-core:test: cache hit, replaying logs 8ac48ea6d1990077
+@potential-guide/cli-core:test: $ tsx --test "test/*.test.ts"
+@potential-guide/cli-core:test: ✔ optional ACP raw output bound covers stdout and stderr without waiting for a newline (1230.3632ms)
+@potential-guide/cli-core:test: ✔ strict ACP completion requires explicit end_turn while legacy default is unchanged (3738.4122ms)
+@potential-guide/cli-core:test: ✔ ACP configuration stays a positive safe integer string (1.1122ms)
+@potential-guide/cli-core:test: ✔ ACP initializes using numeric protocol version and loads a standard session (588.281ms)
+@potential-guide/cli-core:test: ✔ ACP rejects absent, string, mismatched, and unsafe negotiated versions (3997.7998ms)
+@potential-guide/cli-core:test: ✔ default permission cancellation does not steal a colliding pending prompt ID (539.1902ms)
+@potential-guide/cli-core:test: ✔ unsupported client filesystem requests fail closed with matching string IDs (588.5096ms)
+@potential-guide/cli-core:test: ✔ explicit permission handler may select only an offered option (2778.8875ms)
+@potential-guide/cli-core:test: ✔ invalid or inactive-session permission requests never invoke the handler (2830.5885ms)
+@potential-guide/cli-core:test: ✔ permission decisions are bounded and timed-out handlers receive cancellation (586.9874ms)
+@potential-guide/cli-core:test: ✔ ACP collects only current-session Agent text chunks and resets between prompts (576.5222ms)
+@potential-guide/cli-core:test: ✔ ACP prompt text accumulation fails closed at its byte limit (570.2001ms)
+@potential-guide/cli-core:test: ✔ client shutdown aborts an outstanding permission handler without waiting for its timeout (542.9684ms)
+@potential-guide/cli-core:test: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+@potential-guide/cli-core:test: ✔ AHP connection deadline also covers a stalled WebSocket upgrade (121.5231ms)
+@potential-guide/cli-core:test: ✔ AHP enforces the exact incoming byte budget at 4194304 bytes (42.9065ms)
+@potential-guide/cli-core:test: ✔ AHP enforces the exact incoming byte budget at 4194305 bytes (43.1028ms)
+@potential-guide/cli-core:test: ✔ malformed AHP frames fail without leaking their payload to diagnostics (3.967ms)
+@potential-guide/cli-core:test: ✔ top-level discriminants normalize only valid legacy ACP and reject mixed profiles (4.9137ms)
+@potential-guide/cli-core:test: ✔ AHP external confirmation is explicit and cannot be configured on ACP (0.2304ms)
+@potential-guide/cli-core:test: ✔ AHP external permission observes external approval without dispatching a decision (33.8158ms)
+@potential-guide/cli-core:test: ✔ AHP external permission observes external denial without dispatching a decision (35.372ms)
+@potential-guide/cli-core:test: ✔ AHP external result-permission observes external approval without dispatching a decision (30.1847ms)
+@potential-guide/cli-core:test: ✔ AHP external result-permission observes external denial without dispatching a decision (30.506ms)
+@potential-guide/cli-core:test: ✔ AHP external confirmation timeout stays bounded and never approves (263.7588ms)
+@potential-guide/cli-core:test: ✔ AHP external confirmation abort stays bounded and never approves (261.7261ms)
+@potential-guide/cli-core:test: ✔ AHP external confirmation foreign-turn stays bounded and never approves (260.3306ms)
+@potential-guide/cli-core:test: ✔ AHP external confirmation disconnect stays bounded and never approves (31.2365ms)
+@potential-guide/cli-core:test: ✔ AHP waits for Host completion, saves confirmed identity before dispatch, and resumes original chat (10.9132ms)
+@potential-guide/cli-core:test: ✔ AHP Host authority chat URIs persist unchanged and deferred backends accept their first turn before ready (10.2156ms)
+@potential-guide/cli-core:test: ✔ AHP resumes a confirmed but unstarted creating session without allocating a replacement (6.7994ms)
+@potential-guide/cli-core:test: ✔ AHP deferred session failed does not bypass execution preconditions (3.4643ms)
+@potential-guide/cli-core:test: ✔ AHP deferred session invalid does not bypass execution preconditions (4.7097ms)
+@potential-guide/cli-core:test: ✔ AHP deferred session provider does not bypass execution preconditions (3.0217ms)
+@potential-guide/cli-core:test: ✔ AHP deferred session directory does not bypass execution preconditions (3.2433ms)
+@potential-guide/cli-core:test: ✔ AHP diagnosis validates without creating a session and sends only advertised resource credentials (6.94ms)
+@potential-guide/cli-core:test: ✔ AHP error is explicit and does not replay (5.0308ms)
+@potential-guide/cli-core:test: ✔ AHP input is explicit and does not replay (4.5167ms)
+@potential-guide/cli-core:test: ✔ AHP permission is explicit and does not replay (5.7368ms)
+@potential-guide/cli-core:test: ✔ AHP result-permission is explicit and does not replay (3.9721ms)
+@potential-guide/cli-core:test: ✔ AHP disconnect is explicit and does not replay (5.4657ms)
+@potential-guide/cli-core:test: ✔ AHP hang is explicit and does not replay (109.8709ms)
+@potential-guide/cli-core:test: ✔ AHP initialization cancellation covers setup, missing identities and protocol/auth failures are explicit (106.229ms)
+@potential-guide/cli-core:test: ✔ AHP error -32007 is explicit and sanitized (3.5453ms)
+@potential-guide/cli-core:test: ✔ AHP error -32002 is explicit and sanitized (2.8728ms)
+@potential-guide/cli-core:test: ✔ AHP error -32005 is explicit and sanitized (3.4418ms)
+@potential-guide/cli-core:test: ✔ AHP resume refuses lost sessions without allocating replacements (3.0281ms)
+@potential-guide/cli-core:test: ✔ AHP explicitly marks optional continuation with no identity as new (3.5278ms)
+@potential-guide/cli-core:test: ✔ AHP rejects version before reporting execution success (3.0794ms)
+@potential-guide/cli-core:test: ✔ AHP rejects agent before reporting execution success (2.7729ms)
+@potential-guide/cli-core:test: ✔ AHP rejects directory before reporting execution success (2.7584ms)
+@potential-guide/cli-core:test: ✔ AHP rejects snapshot before reporting execution success (7.8464ms)
+@potential-guide/cli-core:test: ✔ AHP rejects rejected before reporting execution success (260.0047ms)
+@potential-guide/cli-core:test: ✔ AHP rejects unknown-turn before reporting execution success (2.9419ms)
+@potential-guide/cli-core:test: ✔ AHP ignores duplicate/old notifications and rejects an unconfirmed previous dispatch (5.015ms)
+@potential-guide/cli-core:test: ✔ reports validate, merge per field and resolve CLI, config and state-directory precedence (21.9939ms)
+@potential-guide/cli-core:test: ✔ interactive subject input fails explicitly instead of waiting for stdin (0.5748ms)
+@potential-guide/cli-core:test: ✔ Registered Objectives validate names and targets without changing literal paths (1.0074ms)
+@potential-guide/cli-core:test: ✔ Registered Objectives merge by name with per-entry provenance (12.3644ms)
+@potential-guide/cli-core:test: ✔ configuration limits apply only to individual Agent executions (0.449ms)
+@potential-guide/cli-core:test: ✔ permission config requires explicit exact rules and grants within the administrative ceiling (2.8404ms)
+@potential-guide/cli-core:test: ✔ invalid and legacy configuration limits are rejected (0.7479ms)
+@potential-guide/cli-core:test: ✔ regulation strategy validates single-run quota and rejects scheduling fields (2.755ms)
+@potential-guide/cli-core:test: ✔ ACP stderr redaction applies backpressure with bounded cross-chunk state (101.7178ms)
+@potential-guide/cli-core:test: ✔ ACP stderr redaction propagates destination errors without hanging (1.6782ms)
+@potential-guide/cli-core:test: ✔ ACP requests reject after the Agent or client closes (591.4067ms)
+@potential-guide/cli-core:test: ✔ configuration validates ACP profiles and rejects secret literals (0.9123ms)
+@potential-guide/cli-core:test: ✔ explicit configuration merges profiles by whole profile and atomic writes (21.4443ms)
+@potential-guide/cli-core:test: ✔ generic digest is stable and detects JSON subject changes (0.2306ms)
+@potential-guide/cli-core:test: ✔ retention pruning removes only expired in-root Regulation directories (10.4578ms)
+@potential-guide/cli-core:test: ✔ Windows snapshot owner sends EOF before awaiting its subprocess result (2.7251ms)
+@potential-guide/cli-core:test: ✔ Windows nonzero taskkill succeeds only after every snapshotted owned PID disappears (1.5873ms)
+@potential-guide/cli-core:test: ✔ Windows root exit during the snapshot is verified without killing its PID again (0.5028ms)
+@potential-guide/cli-core:test: ✔ Windows root exit cannot hide a live owned descendant after nonzero taskkill (519.865ms)
+@potential-guide/cli-core:test: ✔ Windows cleanup never treats an unobservable PID as proven dead (0.8674ms)
+@potential-guide/cli-core:test: ✔ Windows snapshot failure still attempts termination and fails explicitly (0.3934ms)
+@potential-guide/cli-core:test: ✔ Windows snapshot command failures retain only bounded diagnostic fields (2.1889ms)
+@potential-guide/cli-core:test: ✔ Windows simultaneous snapshot and termination failures preserve safe command diagnostics (0.4008ms)
+@potential-guide/cli-core:test: ✔ Windows snapshot explicitly imports trusted Utility without unrelated module discovery (683.4274ms)
+@potential-guide/cli-core:test: ℹ Trusted Utility import/native query (absent PSModulePath) completed in 327ms.
+@potential-guide/cli-core:test: ℹ Trusted Utility import/native query (canary-only PSModulePath) completed in 348ms.
+@potential-guide/cli-core:test: ✔ Windows native snapshot uses the correct host ABI and returns authoritative PID/parent rows (1334.6176ms)
+@potential-guide/cli-core:test: ℹ Native 64-bit PROCESSENTRY32W layout and PID/parent verified.
+@potential-guide/cli-core:test: ℹ Native 32-bit PROCESSENTRY32W layout and PID/parent verified.
+@potential-guide/cli-core:test: ✔ Windows real snapshot subprocess distinguishes command, module and 10s watchdog faults (10827.625ms)
+@potential-guide/cli-core:test: ✔ Windows native snapshot distinguishes enumeration end from faults and closes valid handles (1715.9066ms)
+@potential-guide/cli-core:test: ✔ forceful cleanup terminates an owned process and its uncooperative child (6642.9766ms)
+@potential-guide/cli-core:test: ℹ EOF-dependent owned Windows snapshot completed in 6356ms.
+@potential-guide/cli-core:test: ℹ tests 82
+@potential-guide/cli-core:test: ℹ suites 0
+@potential-guide/cli-core:test: ℹ pass 82
+@potential-guide/cli-core:test: ℹ fail 0
+@potential-guide/cli-core:test: ℹ cancelled 0
+@potential-guide/cli-core:test: ℹ skipped 0
+@potential-guide/cli-core:test: ℹ todo 0
+@potential-guide/cli-core:test: ℹ duration_ms 21952.7312
+@potential-guide/objective-pilot:build: $ tsc -b
+@potential-guide/git-source:build: $ tsc -b
+@potential-guide/config:build: $ tsc -b
+@potential-guide/objective-pilot:test: cache miss, executing 4cb4a06eda09fa88
+@potential-guide/objective-regulator:build: cache miss, executing 4bd968df1cb22032
+@potential-guide/objective-devbox-health:build: cache miss, executing bd9713dd937b01fc
+@potential-guide/git-source:test: cache miss, executing c253b458591d8ed3
+@potential-guide/config:test: cache miss, executing 41d13cb3eb88e91c
+@potential-guide/objective-pilot:test: $ tsx --test "test/*.test.ts"
+@potential-guide/objective-devbox-health:build: $ node ../../scripts/build-health-runtime.mjs
+@potential-guide/objective-regulator:build: $ tsc -b
+@potential-guide/git-source:test: $ tsx --test "test/*.test.ts"
+@potential-guide/config:test: $ tsx --test "test/*.test.ts"
+@potential-guide/objective-regulator:test: cache miss, executing a05b8a16d626f12d
+@potential-guide/objective-portfolio-supervisor:build: cache miss, executing 9073c48d21ed7343
+@potential-guide/objective-devbox-health:test: cache miss, executing e44084bbca34d19e
+@potential-guide/config:test: ✔ config path is available without creating configuration (147.4685ms)
+@potential-guide/objective-regulator:test: $ tsx --test "test/*.test.ts"
+@potential-guide/objective-portfolio-supervisor:build: $ tsc -b
+pguide:build: cache miss, executing 38d9e13a87fcffae
+@potential-guide/objective-portfolio-supervisor:test: cache miss, executing 68ddd8c7a845888a
+@potential-guide/objective-devbox-health:test: $ tsx --test "test/*.test.ts"
+@potential-guide/objective-pilot:test: ✔ level check is lazy, uses array order, and returns the exact single observation (199.696ms)
+@potential-guide/objective-pilot:test: ✔ level check rejects invalid inputs and preserves invocation failures, never false (48.8459ms)
+@potential-guide/objective-pilot:test: ✔ true and false probes both contribute versions, and middle-level dependencies keep ownership (68.8829ms)
+@potential-guide/objective-pilot:test: ✔ strict check union rejects removed output and dependency fields without trusted evidence (29.5446ms)
+@potential-guide/objective-pilot:test: ✔ conflicting versions and recursively reentered instances fail explicitly (46.9253ms)
+@potential-guide/objective-pilot:test: ✔ nested observations share a total budget and cancellation waits for child cleanup (49.2175ms)
+pguide:build: $ tsc -b
+@potential-guide/objective-portfolio-supervisor:test: $ tsx --test "test/*.test.ts"
+@potential-guide/git-source:test: ✔ deep consumer caches support commit pinning beyond Windows MAX_PATH (669.6133ms)
+pguide:test: cache miss, executing 0b74f2fe74e7f64e
+@potential-guide/objective-pguide-setup:build: cache miss, executing 0d75285fe2c981b5
+@potential-guide/objective-monorepo-standard:build: cache miss, executing dcef5bf31892aa46
+pguide:test: $ tsx --test --test-concurrency=1 "test/*.test.ts"
+@potential-guide/objective-pguide-setup:build: $ node ../../scripts/build-setup-runtime.mjs
+@potential-guide/objective-monorepo-standard:build: $ tsc -b && node ../../scripts/build-monorepo-runtime.mjs
+@potential-guide/objective-regulator:test: ✔ recipe and runtime snapshots are immutable JSON data (68.5888ms)
+@potential-guide/objective-regulator:test: ✔ permissions deny by default and selected ceiling grants are immutable run snapshots (76.0693ms)
+@potential-guide/objective-regulator:test: ✔ invalid grant selections and expanding rules fail with 400 before Agent execution (109.2949ms)
+@potential-guide/objective-regulator:test: ✔ unresolved authorization is normal after a fresh observation and does not consume stall history (74.5818ms)
+@potential-guide/objective-regulator:test: ✔ target and actual alternate-path progress win over denied requests (65.3212ms)
+@potential-guide/objective-regulator:test: ✔ unresolved denial on the last allowed turn takes precedence over Agent and stall counts (28.8928ms)
+@potential-guide/objective-regulator:test: ✔ target or actual progress on the last allowed denied turn is not authorization-blocked (44.891ms)
+@potential-guide/objective-regulator:test: ✔ malformed authorization outcomes fail with 502 instead of manufacturing approval (106.3878ms)
+@potential-guide/objective-regulator:test: ✔ permission replacement aborts old work, isolates late authorization responses and freshly observes on resume (88.7845ms)
+@potential-guide/objective-regulator:test: ✔ single run performs multiple Agent rounds and observes after every completed round (48.4685ms)
+@potential-guide/objective-devbox-health:test: ✔ health manifest defines five ordered, nonredundant levels and complete zh-CN wiki (1.1207ms)
+@potential-guide/objective-devbox-health:test: ✔ Pilot freshly starts identity, runs each group once, and stops at first blocked level (76.9357ms)
+@potential-guide/objective-devbox-health:test: ✔ subject defaults are explicit, numeric, and do not mutate caller input (0.2826ms)
+@potential-guide/objective-devbox-health:test: ✔ direct and Pilot subject validation reject the same malformed contracts before any probe (480.4935ms)
+@potential-guide/objective-devbox-health:test: ✔ numeric version comparison and capacity equality do not use lexicographic order (0.41ms)
+@potential-guide/objective-devbox-health:test: ✔ sudo requires unrestricted noninteractive command grants, not group membership or defaults (0.2312ms)
+@potential-guide/objective-devbox-health:test: ✔ history requires real sufficient, fresh, matching and strictly increasing evidence (0.5339ms)
+@potential-guide/objective-devbox-health:test: ✔ invalid history identifies the offending sample with bounded target and observed evidence (0.1989ms)
+@potential-guide/objective-devbox-health:test: ✔ apt dependency simulation distinguishes inconsistent packages from invocation faults (0.2918ms)
+@potential-guide/objective-devbox-health:test: ✔ apt freshness accepts genuine successful-refresh evidence without rewriting repository mtimes (0.2184ms)
+@potential-guide/objective-devbox-health:test: ✔ task record validation rejects escape paths, malformed fields and ambiguous lifecycle (0.199ms)
+@potential-guide/objective-devbox-health:test: ✔ task boundaries preserve healthy long tasks and never conflate deadline with retention (0.421ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ controlled binding replacement invalidates live consumer waits and ignores late provider results (59.0804ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ authorization block survives priority, revision, resource identity and equivalent grant updates (90.0008ms)
+@potential-guide/objective-pguide-self-check:build: cache miss, executing 2ce0a8359bad1b2f
+@potential-guide/objective-pguide-setup:test: cache miss, executing 1cc51962ad2a2e4b
+@potential-guide/objective-portfolio-supervisor:test: ✔ effective permission changes retry blocked demand with a new frozen policy, never the old snapshot (61.8247ms)
+@potential-guide/objective-regulator:test: ✔ an already reached target completes once without scheduling rechecks (43.8507ms)
+@potential-guide/objective-regulator:test: ✔ agent-run quota exhausts only after observing the final completed repair (36.135ms)
+@potential-guide/objective-regulator:test: ✔ target reached by last allowed Agent takes precedence over exhausted count (34.5017ms)
+@potential-guide/objective-regulator:test: ✔ stall quota carries across runs, counts completed no-progress rounds, and prevents more work (41.6282ms)
+@potential-guide/objective-regulator:test: ✔ level advancement and reduced scoped problems reset carried stagnation (61.3085ms)
+@potential-guide/objective-regulator:test: ✔ changing problem parameters alone is not progress (18.199ms)
+@potential-guide/objective-regulator:test: ✔ time quota aborts an uncooperative first probe with an explicit null observation (84.7421ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ removing live permission policy cancels old authority and ignores its late result (90.9363ms)
+@potential-guide/config:test: ✔ legacy source aliases remain readable/removable; retired writes preserve configuration (2111.245ms)
+@potential-guide/objective-regulator:test: ✔ time quota includes Agent execution and preserves the latest observation (61.8906ms)
+@potential-guide/git-source:test: ✔ fixed commit, moved ref and old snapshots all read immutable objects, not checkout (1246.2821ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ quota-exhausted unresolved authorization does not create an automatic continuation loop (91.8259ms)
+@potential-guide/objective-regulator:test: ✔ per-Agent timeout and explicit limit are agent-limit exhaustion, not stalls (62.1646ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ authorization feedback reaches planner without grants and cannot self-authorize (61.2575ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ queue goals cannot smuggle permission policy and malformed initial policy cannot launch (1.1084ms)
+@potential-guide/objective-devbox-health:test: ✔ helper and all wrappers emit only strict envelopes for malformed input (445.1577ms)
+@potential-guide/objective-devbox-health:test: ✔ native unsupported platforms are explicit faults, never mock success (0.4603ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ malformed live grant selection stops active work and suspends launches until repaired (90.9656ms)
+pguide:test: ✔ Copilot fileName/unified-diff permissions verify every path before allowing once (15.8209ms)
+pguide:test: ✔ ACP permissions default deny, require explicit subset and snapshot mutable input (6.3906ms)
+@potential-guide/objective-pguide-self-check:build: $ node ../../scripts/build-self-check-runtime.mjs
+pguide:test: ✔ resource extraction checks every path and rejects ambiguity, traversal, siblings and missing parents (8.4553ms)
+pguide:test: ✔ apply_patch checks add, update, delete, every move and every metadata location (7.0291ms)
+pguide:test: ✔ canonical snapshots detect changed symlink parents instead of granting escaped targets (4.8182ms)
+pguide:test: ✔ execution requires exact complete command, never a cwd, shell prefix or wildcard (0.7473ms)
+pguide:test: ﹣ dangling final symlinks cannot masquerade as authorized new files (1.384ms) # Creating file symlinks requires platform privileges.
+@potential-guide/objective-portfolio-supervisor:test: ✔ resource capacity two and live load enforce global/per-resource ceilings (77.3247ms)
+@potential-guide/objective-devbox-health:test: ✔ subprocesses bound output, execution duration and missing-tool classification (168.3813ms)
+@potential-guide/objective-pguide-setup:test: $ tsx --test "test/*.test.ts"
+@potential-guide/objective-devbox-health:test: ℹ tests 15
+@potential-guide/objective-devbox-health:test: ℹ suites 0
+@potential-guide/objective-devbox-health:test: ℹ pass 15
+@potential-guide/objective-devbox-health:test: ℹ fail 0
+@potential-guide/objective-devbox-health:test: ℹ cancelled 0
+@potential-guide/objective-devbox-health:test: ℹ skipped 0
+@potential-guide/objective-devbox-health:test: ℹ todo 0
+@potential-guide/objective-devbox-health:test: ℹ duration_ms 1917.9552
+@potential-guide/objective-portfolio-supervisor:test: ✔ ordinary priority changes do not preempt; completion is suppressed on stale Behavior (139.5326ms)
+@potential-guide/objective-monorepo-standard:test: cache bypass, force executing 7fa6e66bac11a207
+@potential-guide/config:test: ✔ Objective list separates long locations and configuration sources without changing JSON (563.5511ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ P0 waits for abort grace and confirmed kill, retains FIFO and deduplicates notices (153.9423ms)
+@potential-guide/objective-regulator:test: ✔ each Agent round receives its own fresh limit (207.4686ms)
+@potential-guide/objective-regulator:test: ✔ all dependency problems and mixed internal problems hand off without an Agent or stall (77.9969ms)
+@potential-guide/objective-regulator:test: ✔ dependency after a repair hands off before accumulating an internal stall (51.3346ms)
+@potential-guide/objective-regulator:test: ✔ requested target attainment wins over dependencies needed only above that target (34.7584ms)
+@potential-guide/objective-regulator:test: ✔ satisfied dependency permits internal repair and same-run target completion (54.6286ms)
+@potential-guide/objective-regulator:test: ✔ subject and deleted prerequisite validation failures precede every probe and Agent (15.8775ms)
+@potential-guide/objective-regulator:test: ✔ Agent blocked, failed, malformed outcomes, and unexpected crashes are typed faults (77.5469ms)
+@potential-guide/objective-regulator:test: ✔ parent cancellation interrupts during probes and Agent work rather than completing (49.8031ms)
+@potential-guide/objective-regulator:test: ✔ already cancelled parent never launches probes or Agent (11.4757ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ P0 preempts only one necessary lower run and never an equal-priority run (110.3075ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ exhausted demand yields and resumes with retained stalls/latest resource snapshot (45.8409ms)
+@potential-guide/objective-regulator:test: ✔ behavior refreshes changed strategies after Agent mutation and rejects late old completions (52.2915ms)
+@potential-guide/objective-regulator:test: ✔ behavior aborts old probes before new snapshots and isolates late observations (61.3518ms)
+@potential-guide/objective-regulator:test: ✔ decision uses local level order and rejects foreign problems (7.1496ms)
+@potential-guide/objective-pguide-self-check:test: cache miss, executing c999a53a1e005d79
+@potential-guide/objective-regulator:test: ✔ probe policy retries 5xx only, preserving typed invocation errors and envelope (128.4209ms)
+@potential-guide/objective-regulator:test: ✔ successful retry establishes target without authorizing Agent repair (51.7699ms)
+@potential-guide/objective-regulator:test: ✔ a sibling 4xx prevents whole-observation retries even if a 5xx appeared first (19.7613ms)
+@potential-guide/objective-regulator:test: ✔ probe timeout aborts ignored cleanup, raises 504, and isolates late results (56.7047ms)
+@potential-guide/objective-regulator:test: ✔ overall time quota includes probe retries and retry delays (33.6934ms)
+@potential-guide/objective-regulator:test: ✔ probe crashes become typed invocation faults, not normal completed outcomes (23.4375ms)
+@potential-guide/objective-regulator:test: ✔ externally provided malformed inputs reject as 400 before any execution (31.9478ms)
+@potential-guide/objective-regulator:test: ✔ quota timers and counts are required, positive and safe (76.8157ms)
+@potential-guide/objective-regulator:test: ℹ tests 39
+@potential-guide/objective-regulator:test: ℹ suites 0
+@potential-guide/objective-regulator:test: ℹ pass 39
+@potential-guide/objective-regulator:test: ℹ fail 0
+@potential-guide/objective-regulator:test: ℹ cancelled 0
+@potential-guide/objective-regulator:test: ℹ skipped 0
+@potential-guide/objective-regulator:test: ℹ todo 0
+@potential-guide/objective-regulator:test: ℹ duration_ms 2640.8396
+@potential-guide/git-source:test: ✔ relative paths are contained and symlinks are never followed (772.3704ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ stale completion cannot complete a superseding specification (92.387ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ canonical subjects serialize and deduplicate equivalent objective demands (47.6876ms)
+@potential-guide/objective-monorepo-standard:test: $ tsx --test "test/*.test.ts" "test/*.test.mjs"
+@potential-guide/objective-portfolio-supervisor:test: ✔ capability requests are deduplicated and new resources unblock work (61.6721ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ failed kill retains occupied resources and surfaces error (47.6425ms)
+pguide:test: ✔ ACP invocation allows an authorized alternative after denial without killing the prompt (781.1546ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ planner observes successful goals at cadence and queues only later regression/spec changes (61.7477ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ planner deduplicates canonical registrations and priority-only updates preserve demand revision (1.9378ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ two roots merge a dynamic instance and resume independently at their own thresholds (36.5693ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ malformed/rejected policies surface errors, never silently use a fallback (0.9588ms)
+@potential-guide/config:test: ✔ user config permissions round trip and invalid grants cannot replace the ceiling (571.4284ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ all queued P0 demands notify immediately and a running promotion is not preempted (66.3944ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ confirmed abort completion releases before grace without calling kill (46.3519ms)
+@potential-guide/objective-pguide-self-check:test: $ tsx --test "test/*.test.mjs"
+@potential-guide/objective-portfolio-supervisor:test: ✔ runner capability notifications bind to exact live input and ignore stale runs (92.3399ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ exhausted retry reconsiders priority instead of immediately reclaiming its slot (46.163ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ quota exhaustion before an observation remains normal eligible planner demand (0.9632ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ observed dependency satisfaction renews blocked root without requiring a child run result (12.0481ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ multiple dependencies all satisfy before consumer re-observation; root removal collects only orphans (39.5198ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ shared provider survives one owner removal, while recipe replacement isolates old handoff (18.1222ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ actual instance wait cycles and conflicting exact source evidence are explicit failures (25.9848ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ fresh consumer observations withdraw obsolete waits, renew revisions and preserve shared owners (26.822ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ a dependency changing from B to C requeues the consumer for a new handoff and isolates the old revision (27.2691ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ replacing a registered provider subject cannot satisfy consumers of its retained old instance (11.4925ms)
+@potential-guide/objective-pguide-self-check:test: ✔ self-check rejects remote targets and setup-only consent before starting processes (1.1494ms)
+@potential-guide/objective-pguide-self-check:test: ℹ tests 1
+@potential-guide/objective-pguide-self-check:test: ℹ suites 0
+@potential-guide/objective-pguide-self-check:test: ℹ pass 1
+@potential-guide/objective-pguide-self-check:test: ℹ fail 0
+@potential-guide/objective-pguide-self-check:test: ℹ cancelled 0
+@potential-guide/objective-pguide-self-check:test: ℹ skipped 0
+@potential-guide/objective-pguide-self-check:test: ℹ todo 0
+@potential-guide/objective-pguide-self-check:test: ℹ duration_ms 149.8972
+@potential-guide/objective-portfolio-supervisor:test: ✔ target update with a canonically equal subject preserves serialization but isolates old completion (56.2258ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ dependency-blocked revisions never auto retry, even when only the queue snapshot changes (122.8003ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ planner goal removal publishes an empty queue and late feedback cannot resurrect it (1.4935ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ live worker capability requests reach the replaceable planner policy without provisioning (45.4578ms)
+@potential-guide/objective-portfolio-supervisor:test: ✔ automatic exhausted continuation grants another actual Agent round despite carried stalls (50.3546ms)
+@potential-guide/objective-portfolio-supervisor:test: ℹ tests 38
+@potential-guide/objective-portfolio-supervisor:test: ℹ suites 0
+@potential-guide/objective-portfolio-supervisor:test: ℹ pass 38
+@potential-guide/objective-portfolio-supervisor:test: ℹ fail 0
+@potential-guide/objective-portfolio-supervisor:test: ℹ cancelled 0
+@potential-guide/objective-portfolio-supervisor:test: ℹ skipped 0
+@potential-guide/objective-portfolio-supervisor:test: ℹ todo 0
+@potential-guide/objective-portfolio-supervisor:test: ℹ duration_ms 2903.4471
+@potential-guide/git-source:test: ✔ watch exposes an initial current value, follows ref changes, and keeps old snapshots stable (1021.8745ms)
+@potential-guide/objective-monorepo-standard:test: ✔ repository facts are parsed once and configuration rules can reuse them without layout or task checks (20.9848ms)
+@potential-guide/objective-monorepo-standard:test: ✔ workspace layout runs on an isolated package without loading workspace, deliveries or package tasks (6.2146ms)
+@potential-guide/objective-monorepo-standard:test: ✔ file placement and classification consume supplied facts and preserve collision evidence (0.7099ms)
+@potential-guide/objective-monorepo-standard:test: ✔ browser adapter does not evaluate Worker metadata or service and identity requirements (0.2737ms)
+@potential-guide/objective-monorepo-standard:test: ✔ delivery output coverage compares the actual output path with build patterns (1.4315ms)
+@potential-guide/objective-monorepo-standard:test: ✔ Worker metadata, variables and bindings remain independent of browser configuration (0.3606ms)
+@potential-guide/objective-monorepo-standard:test: ✔ service environment, identity supply and migration entry are separately callable checks (0.2766ms)
+@potential-guide/objective-monorepo-standard:test: ✔ source parsing produces facts; an individual import rule never evaluates unrelated imports (14.6927ms)
+@potential-guide/config:test: ✔ config exposes schema 2 strategy help and validates strategy edits (803.1005ms)
+@potential-guide/objective-monorepo-standard:test: ✔ layer one can pass and internal packages do not require public release metadata (81.3013ms)
+@potential-guide/objective-monorepo-standard:test: ✔ only explicitly assigned generated files skip source observation (41.6831ms)
+@potential-guide/objective-monorepo-standard:test: ✔ invalid schema, unknown version/fields and invalid paths block layer two (32.9303ms)
+@potential-guide/objective-monorepo-standard:test: ✔ missing global files, YAML duplicate keys and wrong schema types are not success-shaped (30.7915ms)
+@potential-guide/objective-monorepo-standard:test: ✔ workspace identity, inclusion and delivery mapping require explicit coverage (17.7311ms)
+@potential-guide/objective-monorepo-standard:test: ✔ known misplaced files report provenance, current path, destination, reference maintenance and conflicts (80.0021ms)
+@potential-guide/objective-monorepo-standard:test: ✔ unknown purpose is pending classification; generated and tool-fixed exceptions are not misplaced (25.4188ms)
+@potential-guide/objective-monorepo-standard:test: ✔ structure inventory excludes dist directories but still classifies source files and files named dist (21.1094ms)
+@potential-guide/objective-monorepo-standard:test: ✔ migration responsibility follows its owner; cross-service migrations require a declared target (32.9545ms)
+@potential-guide/config:test: ✔ config edit validates a temporary copy before atomically replacing the target (332.167ms)
+@potential-guide/objective-monorepo-standard:test: ✔ dependency directions, workspace ranges, missing catalogs and cycles are diagnosed (58.1196ms)
+@potential-guide/objective-monorepo-standard:test: ✔ cross-package relative paths and private exports fail without treating package paths as delivery identities (19.9717ms)
+@potential-guide/objective-monorepo-standard:test: ✔ npm and CLI roles compose and absent artifacts are unverified, not validated by a build script (56.3914ms)
+@potential-guide/config:test: ✔ show-agent rejects secret-bearing transport arguments without echoing them (123.1554ms)
+@potential-guide/git-source:test: ✔ load and watch propagate source failures explicitly; invalid specs never run commands (546.0986ms)
+@potential-guide/objective-monorepo-standard:test: ✔ browser positive configuration supports multi-package association; API and private configuration mismatch fail (47.9485ms)
+@potential-guide/objective-monorepo-standard:test: ✔ Cloudflare configuration checks environment, entry, bindings and optional capabilities without provisioning (59.5234ms)
+@potential-guide/objective-monorepo-standard:test: ✔ unsupported delivery, capability and deployment formats never fall back to success (49.1858ms)
+@potential-guide/objective-monorepo-standard:test: ✔ checker does not execute scripts or read secret-value files and leaves the target unchanged (32.2076ms)
+@potential-guide/objective-monorepo-standard:test: ✔ task cycles and dangling task references are not hidden by valid build script names (16.6093ms)
+@potential-guide/objective-monorepo-standard:test: ✔ role combinations do not force browser and Worker into separate packages (38.6512ms)
+@potential-guide/objective-monorepo-standard:test: ✔ worker ordinary config and secrets are references; explicit migration mappings can satisfy preparation (40.1821ms)
+@potential-guide/objective-monorepo-standard:test: ✔ unknown global fields and a missing support closure block rather than guessing requirements (34.33ms)
+@potential-guide/objective-monorepo-standard:test: ✔ directory overrides are explicit and justified fixed-location exceptions stay legal (30.5362ms)
+@potential-guide/objective-monorepo-standard:test: ✔ executable-only npm packages are valid without library exports or type declarations (22.151ms)
+@potential-guide/git-source:test: ✔ snapshot scope releases its cache and later reads fail explicitly (458.198ms)
+@potential-guide/objective-monorepo-standard:test: ✔ service references require an actual service delivery in the same environment, not package association (128.4786ms)
+@potential-guide/objective-monorepo-standard:test: ✔ syntax-aware imports ignore comments and ordinary strings, preserve type-only uses (6.7712ms)
+@potential-guide/objective-pguide-setup:test: ✔ ACP-only setup reports an AHP selection as unsupported without starting an Agent (1944.5062ms)
+@potential-guide/git-source:test: ✔ cancelling acquisition interrupts commands and releases the temporary cache before exit (191.3112ms)
+@potential-guide/git-source:test: ✔ native git runner reports spawn and exit failures without success-shaped fallback (45.6711ms)
+@potential-guide/config:test: ✔ config editor and Agent commands normalize legacy ACP and preserve AHP profiles (924.5342ms)
+@potential-guide/config:test: ℹ tests 8
+@potential-guide/config:test: ℹ suites 0
+@potential-guide/config:test: ℹ pass 8
+@potential-guide/config:test: ℹ fail 0
+@potential-guide/config:test: ℹ cancelled 0
+@potential-guide/config:test: ℹ skipped 0
+@potential-guide/config:test: ℹ todo 0
+@potential-guide/config:test: ℹ duration_ms 5699.2069
+@potential-guide/objective-pguide-setup:test: ✔ setup Pilot strictly loads with all level-scoped check and problem wiki coverage (495.9617ms)
+@potential-guide/git-source:test: ✔ once watcher keeps its snapshot alive until cancellation, then releases cache (578.9998ms)
+pguide:test: ✔ AHP permissions deny-all: deny on wire, never guess authority, and preserve progress precedence (1913.8556ms)
+@potential-guide/git-source:test: ✔ snapshot owns its objects even if the local source repository disappears (484.3052ms)
+@potential-guide/objective-pguide-setup:test: ✔ native setup bootstrap distinguishes missing/unusable installation and exact versions (1261.358ms)
+@potential-guide/git-source:test: ✔ directory traversal reads tree objects and binary files fail only in text decoding (718.9433ms)
+@potential-guide/objective-pilot:test: ✔ real process dependency requests share recursion, depth and total observation budgets (6506.0067ms)
+@potential-guide/objective-monorepo-standard:test: ✔ real repository manifest and process probes advance through both layers to terminal (1915.7296ms)
+pguide:test: ✔ AHP permissions configured-grant: deny on wire, never guess authority, and preserve progress precedence (1817.6281ms)
+@potential-guide/git-source:test: ✔ a failed poll is visible and later refresh can recover without corrupting old snapshots (737.6458ms)
+@potential-guide/git-source:test: ✔ default cache is project-local and failed acquisition removes only its owned child (1.2135ms)
+@potential-guide/objective-monorepo-standard:test: ✔ direct adapter emits the existing check envelope and invalid invocation never returns ok (884.6623ms)
+@potential-guide/objective-pilot:test: ✔ cancelling a source-bound process waits for its external process cleanup (1603.0086ms)
+@potential-guide/objective-monorepo-standard:test: ✔ real probe stops at structure for invalid contract and does not fall through to deliveries (384.9796ms)
+@potential-guide/objective-pilot:test: ✔ ordinary process probes can retain the three-pipe protocol without Node IPC metadata (54.2481ms)
+@potential-guide/objective-pilot:test: ✔ runs isolate identities, retries increment attempts and preserve business-failure envelopes (32.687ms)
+@potential-guide/objective-pilot:test: ✔ business evidence has separate seq, safe facts and relative artifacts (19.9601ms)
+@potential-guide/objective-pilot:test: ✔ artifact traversal, duplicates, symlink escapes and oversized content are rejected (7.4176ms)
+@potential-guide/objective-pilot:test: pguide evidence truncated: D:\Code\potential-guide.worktrees\setup-p-guide-and-monorepo-check\packages\objective-pilot\.cache\evidence-JzKutD\ec1e8144-c754-43ec-aa5c-6f6b4e5ab439\checks\213716c3-efa5-4ddb-aa35-c25606751bdf\events.jsonl
+@potential-guide/objective-pilot:test: ✔ truncation is explicit and an unfinished stream is never marked complete (40.7391ms)
+@potential-guide/objective-pilot:test: pguide evidence write failed: D:\Code\potential-guide.worktrees\setup-p-guide-and-monorepo-check\packages\objective-pilot\.cache\evidence-qpYuT1\1415f191-d8f4-4187-a4da-53a9265de2a2\events.jsonl
+@potential-guide/objective-pilot:test: ✔ execution errors, cancellation and persistence failures are not business success (131.41ms)
+@potential-guide/objective-pilot:test: ✔ subjects and inherited credentials are not stored; explicit disable does not write (18.3088ms)
+@potential-guide/objective-pilot:test: ✔ legacy commit-only and forged source evidence cannot be treated as directory tree evidence (1.6026ms)
+@potential-guide/objective-pilot:test: ✔ directory identity normalizes roots, trailing slash, encoded names and Windows file paths without trimming resources (0.742ms)
+@potential-guide/objective-pilot:test: ✔ identity rejects old manifest IDs and path escapes, while distinct folders remain distinct (0.3684ms)
+@potential-guide/objective-pilot:test: ✔ serializable recipe preserves stable IDs, source version and multilingual scoped Wiki (66.4169ms)
+@potential-guide/objective-pilot:test: ✔ all checks at first blocked level aggregate, level traversal is serial not lexicographic (79.3327ms)
+@potential-guide/objective-pilot:test: ✔ dependency checks retain consumer ownership and aggregate external instances (99.6725ms)
+@potential-guide/objective-pilot:test: ✔ invocation failure never manufactures a trusted level and cannot mask sibling checks (22.9897ms)
+@potential-guide/objective-pilot:test: ✔ rejects invalid domain, unsupported language, undeclared problems and noncommitted inputs (32.7521ms)
+@potential-guide/objective-pilot:test: ✔ strict YAML, duplicate scope IDs, locales and deleted fields fail before observation (12.6058ms)
+@potential-guide/objective-pilot:test: ✔ pre-aborted native effect never starts a probe (15.205ms)
+@potential-guide/objective-pilot:test: ✔ business failure is a successful envelope; malformed protocol is not accepted (0.2429ms)
+@potential-guide/objective-pilot:test: ✔ process timeout metadata is runtime-owned and preserves the 30s default (225.7005ms)
+@potential-guide/objective-pilot:test: ✔ in-memory and real process probes share business-failure envelope and subject JSON (111.1933ms)
+@potential-guide/objective-pilot:test: ✔ real HTTP probe posts subject JSON and treats business failure as HTTP 200 success (32.299ms)
+@potential-guide/objective-pilot:test: ✔ transport failures and malformed process output cannot look like business defects (269.8559ms)
+@potential-guide/objective-pilot:test: ✔ process cancellation terminates the process tree and removes only its own temp directory (939.1982ms)
+@potential-guide/objective-pilot:test: ✔ process timeout returns an invocation fault and reclaims its resources (972.8937ms)
+@potential-guide/objective-pilot:test: ✔ HTTP cancellation is local and does not promise remote business termination (42.6301ms)
+@potential-guide/objective-pilot:test: ✔ already aborted probes never start user code, HTTP, or a process (0.2235ms)
+@potential-guide/objective-pilot:test: ✔ native Pilot interruption awaits its probe finalizer before exposing completion (878.7487ms)
+@potential-guide/objective-pilot:test: ✔ POSIX cleanup retains detached ownership after root exit and waits for hard-killed child exit (7.7964ms)
+@potential-guide/objective-pilot:test: ✔ POSIX malformed snapshot attempts group cleanup but never reports successful tree cleanup (1.128ms)
+@potential-guide/objective-pilot:test: ✔ POSIX unobservable PID is not accepted as an exit acknowledgement (0.7126ms)
+@potential-guide/objective-pilot:test: ✔ POSIX live owned PID remains a cleanup failure after the bounded hard-kill wait (2005.2018ms)
+@potential-guide/objective-pilot:test: ✔ same-level concurrency is opt-in, bounded and deterministic; later levels remain serial (180.7483ms)
+@potential-guide/objective-pilot:test: ✔ subject snapshots and wiki pages are immutable; invalid subject fails before probes (43.2206ms)
+@potential-guide/objective-pilot:test: ✔ Wiki descriptions enforce exact Unicode codepoint limit across all declared languages (26.4448ms)
+@potential-guide/objective-pilot:test: ✔ Wiki missing or dangling metadata, aliases and invalid frontmatter fail explicitly (44.4234ms)
+@potential-guide/objective-pilot:test: ✔ strict manifest schema rejects external references, reserved levels and duplicate problems in one check (3.5817ms)
+@potential-guide/objective-pilot:test: ✔ deterministic projection rejects dynamic capabilities and bounds expression and output (2.2064ms)
+@potential-guide/objective-pilot:test: ✔ source I/O failure stays explicit instead of returning an empty spec or fallback Wiki (6.2743ms)
+@potential-guide/objective-pilot:test: ℹ tests 46
+@potential-guide/objective-pilot:test: ℹ suites 0
+@potential-guide/objective-pilot:test: ℹ pass 46
+@potential-guide/objective-pilot:test: ℹ fail 0
+@potential-guide/objective-pilot:test: ℹ cancelled 0
+@potential-guide/objective-pilot:test: ℹ skipped 0
+@potential-guide/objective-pilot:test: ℹ todo 0
+@potential-guide/objective-pilot:test: ℹ duration_ms 9377.1736
+@potential-guide/git-source:test: ✔ tree listings are reused across twenty text files, errors retry and warmed caches respect Scope (1347.2704ms)
+pguide:test: ✔ AHP permissions result-confirmation: deny on wire, never guess authority, and preserve progress precedence (1763.8343ms)
+@potential-guide/git-source:test: ✔ whole snapshots batch hundreds of binary files with bounded Git process counts (1227.0813ms)
+@potential-guide/objective-monorepo-standard:test: ✔ a valid internal package reaches Pilot terminal without execution or online proof (1559.8011ms)
+@potential-guide/objective-monorepo-standard:test: ℹ tests 36
+@potential-guide/objective-monorepo-standard:test: ℹ suites 0
+@potential-guide/objective-monorepo-standard:test: ℹ pass 36
+@potential-guide/objective-monorepo-standard:test: ℹ fail 0
+@potential-guide/objective-monorepo-standard:test: ℹ cancelled 0
+@potential-guide/objective-monorepo-standard:test: ℹ skipped 0
+@potential-guide/objective-monorepo-standard:test: ℹ todo 0
+@potential-guide/objective-monorepo-standard:test: ℹ duration_ms 7294.5051
+@potential-guide/git-source:test: ✔ batch reads bound large blobs and reject malformed output without yielding corrupt files (721.168ms)
+pguide:test: ✔ AHP permissions alternative-progress: deny on wire, never guess authority, and preserve progress precedence (1687.0738ms)
+@potential-guide/git-source:test: ✔ cancelling a blob batch awaits command cleanup and releases its owned cache (434.1161ms)
+@potential-guide/objective-pguide-setup:test: ✔ configuration reports missing/invalid config, unsupported commands, absent Agent and missing env (4611.9211ms)
+@potential-guide/git-source:test: ✔ file URL repository with a self-referencing origin resolves HEAD and reads committed content (733.7199ms)
+@potential-guide/git-source:test: ℹ tests 18
+@potential-guide/git-source:test: ℹ suites 0
+@potential-guide/git-source:test: ℹ pass 18
+@potential-guide/git-source:test: ℹ fail 0
+@potential-guide/git-source:test: ℹ cancelled 0
+@potential-guide/git-source:test: ℹ skipped 0
+@potential-guide/git-source:test: ℹ todo 0
+@potential-guide/git-source:test: ℹ duration_ms 12518.7092
+pguide:test: ✔ AHP external confirmation keeps the recipe: repair (1684.6333ms)
+@potential-guide/objective-pguide-setup:test: ✔ configuration performs real ACP initialize and session/new without prompting (1929.0088ms)
+pguide:test: ✔ AHP external confirmation keeps the recipe: unchanged (1620.5677ms)
+pguide:test: ✔ AHP external confirmation keeps the recipe: denied (1639.6966ms)
+@potential-guide/objective-pguide-setup:test: ✔ setup ACP rejects string negotiation and emits only safe rejection diagnostics (3722.4946ms)
+@potential-guide/objective-pguide-setup:test: ✔ local target is backward compatible; long direct deadlines are rejected by Pilot guard (684.4385ms)
+pguide:test: ▶ AHP CLI closes the observation loop, pins its recipe, and skips all session calls for satisfied targets
+pguide:test:   ✔ AHP profiles route both supervisor planning and process-worker execution through AHP (2653.3069ms)
+@potential-guide/objective-pguide-setup:test: ✔ local setup and self-check deadlines require coordinated metadata and a cleanup reserve (1825.7157ms)
+@potential-guide/objective-pguide-setup:test: ✔ SSH adapter quotes code and rejects injection, forwards no control subject paths or environment (2.4191ms)
+@potential-guide/objective-pguide-setup:test: ✔ SSH unreachable, missing Node and helper faults never fall back to local evidence (7.2287ms)
+@potential-guide/objective-pguide-setup:test: ✔ shipped Node bootstrap runs independently and cleans target payload and timed out children (2154.5021ms)
+pguide:test: ✔ AHP CLI closes the observation loop, pins its recipe, and skips all session calls for satisfied targets (6110.8417ms)
+pguide:test: ✔ AHP Agent self-reported completion cannot satisfy an unchanged target (1628.032ms)
+pguide:test: ✔ all package commands expose direct protocol metadata and help (2209.1349ms)
+pguide:test: ✔ command metadata and detailed help do not load business implementations (1973.7191ms)
+@potential-guide/objective-pguide-setup:test: ✔ remote payload uses target authentication and performs actual nonce sanity, not control evidence (6328.938ms)
+@potential-guide/objective-pguide-setup:test: ✔ malformed ACP is an invocation fault rather than false configuration readiness (1869.2907ms)
+pguide:test: ✔ built-in and config operation help is detailed and does not read missing config (2092.773ms)
+@potential-guide/objective-pguide-setup:test: ✔ sanity without explicit consent never starts even the pguide or ACP process (538.9806ms)
+pguide:test: ✔ top-level built-ins return machine-readable help, diagnosis and completion (2283.5618ms)
+pguide:test: ✔ bare usage and text help never execute discovered command metadata (829.1662ms)
+@potential-guide/objective-pguide-setup:test: ✔ real sanity rejects noop Agent completion (5061.3213ms)
+pguide:test: ✔ scaffold and static validate preserve multilingual Wiki; production probes require committed snapshots (4612.8455ms)
+pguide:test: ✔ top-level safely dispatches discovered commands and preserves arguments (250.1225ms)
+pguide:test: ﹣ real-path deduplication follows platform case sensitivity (0.0857ms) # SKIP
+pguide:test: ✔ Windows cwd exclusion canonicalizes aliases and casing (0.1943ms)
+pguide:test: ✔ all official commands dispatch through the top-level CLI (2699.3038ms)
+@potential-guide/objective-pguide-setup:test: ✔ real sanity rejects wrong Agent completion (5389.4276ms)
+pguide:test: ✔ probe and scaffold preserve stdout/export while retaining default, configured and overridden evidence (5823.8743ms)
+@potential-guide/objective-pguide-setup:test: ✔ real sanity verifies a finite repair (6224.0783ms)
+@potential-guide/objective-pguide-setup:test: ✔ setup timeout kills its entire owned process tree and cleans scratch (1841.1851ms)
+@potential-guide/objective-pguide-setup:test: ✔ sanity invocation diagnostics expose fixed classifications, not arbitrary CLI error data (12393.9763ms)
+@potential-guide/objective-pguide-setup:test: ✔ external Pilot cancellation cleans nested setup scratch and its hanging child tree (1452.2836ms)
+@potential-guide/objective-pguide-setup:test: ✔ oversized child output is bounded and reported as invocation fault (850.3948ms)
+@potential-guide/objective-pguide-setup:test: ✔ sanity timeout during an actual ACP prompt cleans isolated config, state and descendants (4875.5426ms)
+pguide:test: ✔ probe accepts piped JSON through direct and dispatched commands with Registered Objectives (25324.6698ms)
+pguide:test: ✔ regulate persists the resolved source and piped subject; continue ignores changed objectives (5932.7946ms)
+@potential-guide/objective-pguide-setup:test: ✔ Git subdirectory snapshot coordinates long local budgets and existing file-auth ACP to terminal (16433.1985ms)
+@potential-guide/objective-pguide-setup:test: ✔ check wrapper reads the subject JSON from stdin (539.4415ms)
+@potential-guide/objective-pguide-setup:test: ✔ Windows installed command and ACP npm shims preserve spaces without shell interpolation (2033.2731ms)
+@potential-guide/objective-pguide-setup:test: ✔ self-check manifest loads local-only input, implicit terminal and every reference (1324.0353ms)
+@potential-guide/objective-pguide-setup:test: ✔ self-check reuses installation/configuration failures without executing a prompt (2173.9832ms)
+@potential-guide/objective-pguide-setup:test: ✔ self-check defaults to exactly one direct repair, no nested regulate or Git, and preserves config (2964.9964ms)
+pguide:test: ✔ missing subjects show the selected Objective schema as readable and structured JSON guidance (21182.4895ms)
+pguide:test: ✔ strict declarations reject governance fields, legacy wrappers, aliases and ambiguous YAML (48.5223ms)
+pguide:test: ✔ Unit is unique {}, optional-object is not Unit, and both schema boundaries are enforced (136.2386ms)
+pguide:test: ✔ user and directory input types are orthogonal, source provenance and name ambiguity are explicit (947.1365ms)
+pguide:test: ✔ discovery is exact-directory, technology independent and never evaluates or resolves remote sources (880.2455ms)
+pguide:test: ✔ repository, checkout and directory context are independent and do not expose environment secrets (999.3979ms)
+@potential-guide/objective-pguide-setup:test: ✔ self-check repair session enforces readiness without starting a second Agent (8986.8879ms)
+@potential-guide/objective-pguide-setup:test: ✔ self-check automatically grants once without repair grants or configuration changes (2266.6384ms)
+pguide:test: ✔ declaration probe and direct probe agree; declaration mutation does not redirect continue (6509.4002ms)
+@potential-guide/objective-pguide-setup:test: ✔ self-check accepts only the exact nonce with zero or one LF/CRLF line ending (4486.4763ms)
+pguide:test: ✔ management requires scope, atomically validates, and migration preserves unrelated registrations (1901.8932ms)
+pguide:test: ✔ continue restores cross-repository dependency snapshots while a new binding follows the source (6681.1428ms)
+pguide:test: ✔ local Pilot maps origin identity but reads its exact local commit without fetching origin (1097.6545ms)
+pguide:test: ✔ level-scoped repeated check IDs execute their own committed probes (1209.4733ms)
+@potential-guide/objective-pguide-setup:test: ✔ self-check wrong, summary-only, unsupported, persistent-grant, incomplete and oversized Agent runs cannot pass (15661.5286ms)
+pguide:test: ✔ folder tree versions cover manifest, scripts, References and resources, not unrelated commits; moves change identity (5735.6758ms)
+pguide:test: ✔ repository-root Pilot has canonical #/ identity and a verified root tree (1073.5647ms)
+pguide:test: ✔ same repository folders can bind different retrieval commits and reject forged tree evidence (1774.7977ms)
+pguide:test: ✔ batched materialization preserves binary resources outside the Pilot directory (1246.7286ms)
+@potential-guide/objective-pguide-setup:test: ✔ self-check bounded timeout cleans owned task/state and preserves unrelated scratch (5769.9599ms)
+pguide:test: ✔ nested Pilot sources stay in the owning probe directory and preserve unrelated files (835.0029ms)
+pguide:test: ✔ ambiguous flat executables and multiple run entries fail explicitly (1602.8911ms)
+@potential-guide/objective-pguide-setup:test: ✔ self-check preserves a shorter configured Agent execution timeout (2782.3572ms)
+pguide:test: ✔ explicit Git URI can select an older exact commit independently of current checkout (1684.4626ms)
+pguide:test: ✔ cross-process dependency source binding preserves exact commits, routing and cleanup (5932.1409ms)
+pguide:test: ✔ Git source failure is reported as explicit pilot-error exit 2 (0.9802ms)
+pguide:test: ✔ source preparation has its own deadline and releases only its owned cache (399.7771ms)
+pguide:test: ✔ cleanup failure retains the primary CLI error and reports both causes (966.0933ms)
+pguide:test: ✔ process runner returns verified results only after worker cleanup (2571.0624ms)
+@potential-guide/objective-pguide-setup:test: ✔ self-check committed snapshots coordinate default and explicit long budgets with one prompt (12657.8068ms)
+@potential-guide/objective-pguide-setup:test: ℹ tests 35
+@potential-guide/objective-pguide-setup:test: ℹ suites 0
+@potential-guide/objective-pguide-setup:test: ℹ pass 35
+@potential-guide/objective-pguide-setup:test: ℹ fail 0
+@potential-guide/objective-pguide-setup:test: ℹ cancelled 0
+@potential-guide/objective-pguide-setup:test: ℹ skipped 0
+@potential-guide/objective-pguide-setup:test: ℹ todo 0
+@potential-guide/objective-pguide-setup:test: ℹ duration_ms 144194.5546
+pguide:test: ✔ force termination stops a live process tree and cleans the owned run directory (2455.0152ms)
+pguide:test: ✔ worker forwards capability requests as events without treating them as new executions (3220.0252ms)
+pguide:test: ✔ permissions persist per attempt and continue uses current grants and revoked ceiling (5464.5148ms)
+pguide:test: ✔ explicit continue grants another stall allowance while retaining history (4010.6698ms)
+pguide:test: ✔ Agent prompts contain the subject, target and every problem, not a selected task (0.6295ms)
+pguide:test: ✔ Agent prompt exposes effective grants without the ungranted administrative ceiling (0.8529ms)
+pguide:test: ✔ regulate and continue persist pinned Pilot observations and use the JSON check protocol (3966.4794ms)
+pguide:test: ✔ continuation without a real session ID fails when required and is explicit otherwise (1315.2161ms)
+pguide:test: ✔ legacy continue records and cross-round CLI budgets fail explicitly (1647.9193ms)
+pguide:test: ✔ per-Agent timeout includes ACP startup and invocation failures never start an Agent (3682.6635ms)
+pguide:test: ✔ one-shot regulation finishes at target without scheduling another observation (1520.5782ms)
+pguide:test: ✔ continue preserves local unpublished source metadata without changing the origin Objective identity (2741.1277ms)
+pguide:test: ▶ ACP planner consumes standard text chunks, excludes inventory, and fails closed
+pguide:test:   ✔ duplicate (658.2577ms)
+pguide:test:   ✔ unknown (644.2145ms)
+pguide:test:   ✔ command (690.9378ms)
+pguide:test:   ✔ malformed (647.5279ms)
+pguide:test:   ✔ refusal (618.8412ms)
+pguide:test:   ✔ cancelled (649.9204ms)
+pguide:test:   ✔ summary-only (733.0717ms)
+pguide:test:   ✔ oversized (676.7659ms)
+pguide:test:   ✔ startup timeout terminates the ACP process (1197.4895ms)
+pguide:test: ✔ ACP planner consumes standard text chunks, excludes inventory, and fails closed (8286.2566ms)
+pguide:test: ✔ supervise plans once without repairs, then continuously observes and executes a pinned goal once (11659.0558ms)
+pguide:test: ✔ supervise rejects legacy portfolios and invalid registrations before planning (666.8865ms)
+pguide:test: ✔ supervise dynamically binds a cross-process dependency, repairs it, then re-observes the consumer (26953.2786ms)
+pguide:test: ℹ tests 79
+pguide:test: ℹ suites 0
+pguide:test: ℹ pass 77
+pguide:test: ℹ fail 0
+pguide:test: ℹ cancelled 0
+pguide:test: ℹ skipped 2
+pguide:test: ℹ todo 0
+pguide:test: ℹ duration_ms 222390.6228
+
+ Tasks:    24 successful, 24 total
+Cached:    4 cached, 24 total
+  Time:    3m45.46s
+
+✔ entry-only consumers accept shared stable/RC rules and select exact, latest or local overrides (1.9397ms)
+✔ entry graph requires every expected dependency, rejects missing, nested wrong versions and workspace ranges (67.5048ms)
+✔ current CLI command versions match their package candidate (4.8042ms)
+✔ standalone evidence survives objective-monorepo-standard/checks/structure/run.cjs invocation failure without changing stdout (342.6301ms)
+✔ standalone evidence survives objective-devbox-health/checks/system/run.cjs invocation failure without changing stdout (59.8273ms)
+✔ standalone evidence survives objective-devbox-health/runtime/health-check.mjs invocation failure without changing stdout (58.3761ms)
+✔ standalone evidence survives objective-pguide-setup/checks/installation/run.cjs invocation failure without changing stdout (60.9337ms)
+✔ standalone evidence survives objective-pguide-setup/runtime/setup-check.mjs invocation failure without changing stdout (68.8383ms)
+✔ standalone evidence survives objective-pguide-self-check/checks/installation/run.cjs invocation failure without changing stdout (58.9881ms)
+✔ keychain status distinguishes an uninitialized collection from a real collection (0.5892ms)
+✔ keychain status never treats malformed lock state as unlocked (0.3146ms)
+✔ keychain status rejects unexpected collection paths (0.1137ms)
+✔ keychain ownership requires a unique D-Bus name, not a service label (0.1351ms)
+✔ every Objective instance uses a matching objective-prefixed workspace name (3.9232ms)
+✔ dist outputs are ignored while standalone Pilot runtimes remain versionable (33.8287ms)
+✔ all private Pilot tarballs include same-version resources and run without dependency installation (8700.4748ms)
+✔ Docker context contains the exact commit archive plus only explicit harness inputs (306.1284ms)
+✔ real Agent baseline requires one completed repair and exact independent recheck (27.0331ms)
+✔ readiness and advertised model lists never count as real Agent readiness (5.1469ms)
+✔ baseline rejects auth, unknown models, fake repairs, denial, timeout and cleanup failure (141.0108ms)
+✔ marker verification rejects same-content links and wrong content (10.2709ms)
+✔ release inventory contains the new packages and excludes the retired Guide (0.4946ms)
+✔ package-specific RC tags preserve package identity and never select latest (0.2067ms)
+✔ release metadata rejects 1.0, malformed SemVer, unknown packages and retired tags (0.1997ms)
+✔ publication workflow covers the inventory and its embedded scripts compile (146.8018ms)
+✔ execute preserves paths and arguments containing shell metacharacters (84.6596ms)
+✔ deployment workspaces are concurrent and preserve unrelated data (8.0709ms)
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (1/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (2/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (3/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (1/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (1/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (2/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (3/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (4/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (5/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (6/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (7/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (8/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (9/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (10/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (11/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (12/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (13/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (14/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (15/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (16/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (17/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (18/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (1/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (2/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (3/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (4/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (5/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (6/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (7/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (8/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (9/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (10/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (11/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (12/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (13/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (14/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (15/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (16/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (17/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (18/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (19/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (20/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (21/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (22/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (23/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (24/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (25/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (26/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (27/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (28/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (29/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (30/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (31/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (32/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (33/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (34/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (35/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (36/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (37/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (38/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (39/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (40/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (41/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (42/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (43/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (44/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (45/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (46/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (47/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (48/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (49/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (50/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (51/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (52/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (53/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (54/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (55/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (56/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (57/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (58/60).
+Waiting for @potential-guide/effects@0.1.0-rc.0 registry propagation (59/60).
+✔ published verification waits for propagation without repeating a publish (16.0117ms)
+✔ provenance and the intended RC tag must be present before success (0.4192ms)
+✔ asynchronous npm processing may exceed one minute before the version becomes visible (2.9522ms)
+✔ permanent registry errors and changed latest are not masked by retries (0.9913ms)
+✔ propagation waiting is bounded and a missing version never becomes success (1.1703ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9107.5287
+$ pnpm run build && node scripts/check-packages.mjs
+$ turbo run build
+
+   • turbo 2.11.8
+   • Packages in scope: @potential-guide/cli-core, @potential-guide/config, @potential-guide/effects, @potential-guide/git-source, @potential-guide/objective-devbox-health, @potential-guide/objective-monorepo-standard, @potential-guide/objective-pguide-self-check, @potential-guide/objective-pguide-setup, @potential-guide/objective-pilot, @potential-guide/objective-portfolio-supervisor, @potential-guide/objective-regulator, pguide
+   • Running build in 12 packages
+   • Remote caching disabled, using shared worktree cache
+
+@potential-guide/effects:build: cache hit, replaying logs f360ca5665056059
+@potential-guide/cli-core:build: cache hit, replaying logs aedeb5ad5115eb84
+@potential-guide/effects:build: $ tsc -b
+@potential-guide/cli-core:build: $ tsc -b
+@potential-guide/git-source:build: cache hit, replaying logs 6d81123309770f0c
+@potential-guide/git-source:build: $ tsc -b
+@potential-guide/config:build: cache hit, replaying logs d2395997652fc38c
+@potential-guide/config:build: $ tsc -b
+@potential-guide/objective-pilot:build: cache hit, replaying logs 5edf266b3443b3d8
+@potential-guide/objective-pilot:build: $ tsc -b
+@potential-guide/objective-regulator:build: cache hit, replaying logs 4bd968df1cb22032
+@potential-guide/objective-regulator:build: $ tsc -b
+@potential-guide/objective-devbox-health:build: cache hit, replaying logs bd9713dd937b01fc
+@potential-guide/objective-devbox-health:build: $ node ../../scripts/build-health-runtime.mjs
+@potential-guide/objective-portfolio-supervisor:build: cache hit, replaying logs 9073c48d21ed7343
+@potential-guide/objective-portfolio-supervisor:build: $ tsc -b
+pguide:build: cache hit, replaying logs 38d9e13a87fcffae
+pguide:build: $ tsc -b
+@potential-guide/objective-pguide-setup:build: cache hit, replaying logs 0d75285fe2c981b5
+@potential-guide/objective-pguide-setup:build: $ node ../../scripts/build-setup-runtime.mjs
+@potential-guide/objective-pguide-self-check:build: cache hit, replaying logs 2ce0a8359bad1b2f
+@potential-guide/objective-pguide-self-check:build: $ node ../../scripts/build-self-check-runtime.mjs
+@potential-guide/objective-monorepo-standard:build: cache hit, replaying logs dcef5bf31892aa46
+@potential-guide/objective-monorepo-standard:build: $ tsc -b && node ../../scripts/build-monorepo-runtime.mjs
+
+ Tasks:    12 successful, 12 total
+Cached:    12 cached, 12 total
+  Time:    24ms >>> FULL TURBO
+
+@potential-guide/effects: 7 packed files
+@potential-guide/git-source: 7 packed files
+@potential-guide/objective-pilot: 51 packed files
+@potential-guide/objective-regulator: 7 packed files
+@potential-guide/objective-portfolio-supervisor: 23 packed files
+@potential-guide/cli-core: 27 packed files
+@potential-guide/config: 11 packed files
+pguide: 79 packed files

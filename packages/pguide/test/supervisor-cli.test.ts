@@ -9,7 +9,7 @@ import type { PlannerPolicyInput } from "@potential-guide/objective-portfolio-su
 import { createAcpPlannerPolicy, plannerPrompt } from "../src/acp-planner.js";
 import { parsePortfolioFile } from "../src/commands/supervisor.js";
 import { withPilot } from "../src/pilot-source.js";
-import { bin, fixture, root, run, scratch } from "./fixtures.js";
+import { bin, fixture, git, root, run, scratch } from "./fixtures.js";
 
 const stubSource = `
 import { createInterface } from "node:readline";
@@ -224,7 +224,10 @@ test("supervise plans once without repairs, then continuously observes and execu
     assert.equal(report.status, "planned");
     assert.equal(report.observations.fixture.payload.current.levelId, "initial");
     assert.equal(report.queue.demands[0].id, "fixture");
-    assert.equal(report.queue.demands[0].pilot.version, revision);
+    assert.equal(
+      report.queue.demands[0].pilot.version,
+      await git(f.repository, "rev-parse", `${revision}:objective`),
+    );
     assert.equal(existsSync(marker), false);
     assert.equal(existsSync(executorLog), false);
     assert.equal((await readFile(counts, "utf8")).trim().split("\n").length, 1);
@@ -270,7 +273,10 @@ await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
     const execution = JSON.parse(executed.stdout);
     assert.equal(execution.status, "executed");
     assert.equal(execution.observations.fixture.payload.current.levelId, "terminal");
-    assert.equal(execution.observations.fixture.payload.versions[f.uri], updatedRevision);
+    assert.equal(
+      execution.observations.fixture.payload.versions[f.uri],
+      await git(f.repository, "rev-parse", `${updatedRevision}:objective`),
+    );
     assert.equal(execution.queue.demands.length, 0);
     assert.equal(
       execution.events.filter((event: { type: string }) => event.type === "started").length,
@@ -433,7 +439,12 @@ await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
     );
     assert.equal(result.observations.fixture.payload.current.objectiveId, consumer.uri);
     assert.equal(result.observations.fixture.payload.current.levelId, "terminal");
-    assert.equal(result.observations.fixture.payload.versions[provider.uri], providerRevision);
+    const providerTree = await git(
+      provider.repository,
+      "rev-parse",
+      `${providerRevision}:objective`,
+    );
+    assert.equal(result.observations.fixture.payload.versions[provider.uri], providerTree);
     assert.equal(result.queue.demands.length, 0);
     const handoff = result.events.find(
       (event: { type: string; outcome?: { stopReason: string } }) =>
@@ -451,7 +462,7 @@ await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
         }) =>
           event.type === "result" &&
           event.demand.pilot.objectiveId === provider.uri &&
-          event.demand.pilot.version === providerRevision &&
+          event.demand.pilot.version === providerTree &&
           event.outcome?.stopReason === "target-reached",
       ),
     );

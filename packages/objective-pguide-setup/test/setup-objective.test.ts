@@ -236,7 +236,7 @@ function passed(envelope: CheckEnvelope) {
 }
 
 test("setup Pilot strictly loads with all level-scoped check and problem wiki coverage", async () => {
-  const spec = await loadPilotSpec(join(objective, "pilot.yaml"), fileResources);
+  const spec = await loadPilotSpec(objective, fileResources);
   assert.deepEqual(
     spec.manifest.levels.map(({ id }) => id),
     ["initial", "installed", "configured"],
@@ -964,7 +964,7 @@ test("Git subdirectory snapshot coordinates long local budgets and existing file
       f.subjectFile,
       JSON.stringify({ ...f.subject, allowSanity: true, timeoutMs: 60000 }),
     );
-    const uri = `git+${pathToFileURL(f.repository).href}#packages/objective-pguide-setup/pilot.yaml`;
+    const uri = `git+${pathToFileURL(f.repository).href}#packages/objective-pguide-setup/`;
     const probeEnv: NodeJS.ProcessEnv = { ...f.env };
     delete probeEnv.GIT_DIR;
     delete probeEnv.GIT_INDEX_FILE;
@@ -986,7 +986,10 @@ test("Git subdirectory snapshot coordinates long local budgets and existing file
     assert.equal(report.status, 200, result.stdout);
     assert.equal(report.payload.current.levelId, "terminal", result.stdout);
     assert.deepEqual(report.payload.problems, []);
-    assert.equal(report.payload.versions[uri], revision);
+    assert.equal(
+      report.payload.versions[uri],
+      await git(f.repository, "rev-parse", `${revision}:packages/objective-pguide-setup`),
+    );
     assert.deepEqual(await readdir(f.scratch), []);
     assert.equal(await readFile(join(f.home, "logged-in"), "utf8"), "existing");
     f.config.agents.fixture.transport.env = ["USERPROFILE", "PGUIDE_SETUP_TEST_AUTH"];
@@ -1067,7 +1070,7 @@ function selfSubject(f: Awaited<ReturnType<typeof setup>>) {
 }
 
 test("self-check manifest loads local-only input, implicit terminal and every reference", async () => {
-  const spec = await loadPilotSpec(join(selfObjective, "pilot.yaml"), fileResources);
+  const spec = await loadPilotSpec(selfObjective, fileResources);
   const properties = spec.manifest.domainSchema.properties;
   assert.ok(properties !== null && typeof properties === "object" && "timeoutMs" in properties);
   assert.deepEqual(properties.timeoutMs, {
@@ -1373,7 +1376,7 @@ test("self-check committed snapshots coordinate default and explicit long budget
       await git(f.repository, "add", ".");
       await git(f.repository, "commit", "-qm", "Self-check snapshot");
       const revision = await git(f.repository, "rev-parse", "HEAD");
-      const uri = `git+${pathToFileURL(f.repository).href}#packages/objective-pguide-self-check/pilot.yaml`;
+      const uri = `git+${pathToFileURL(f.repository).href}#packages/objective-pguide-self-check/`;
       if (extended)
         await writeFile(
           f.subject.configPath,
@@ -1409,7 +1412,10 @@ test("self-check committed snapshots coordinate default and explicit long budget
       const report = JSON.parse(result.stdout);
       assert.equal(report.status, 200);
       assert.equal(report.payload.current.levelId, "terminal");
-      assert.equal(report.payload.versions[uri], revision);
+      assert.equal(
+        report.payload.versions[uri],
+        await git(f.repository, "rev-parse", `${revision}:packages/objective-pguide-self-check`),
+      );
       assert.deepEqual(report.payload.problems, []);
       assert.deepEqual(await readdir(f.scratch), []);
       const messages = (await readFile(f.log, "utf8"))

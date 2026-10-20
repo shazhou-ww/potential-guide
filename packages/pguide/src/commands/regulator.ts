@@ -17,11 +17,9 @@ import {
   option,
   type PguideConfig,
   pruneExpiredRegulations,
-  readJsonSubject,
   redactAgentValue,
   rejectUnknownOptions,
   reportOptions,
-  resolveObjective,
   stateRoot,
   validateAgentProfile,
   writeResult,
@@ -29,11 +27,13 @@ import {
 import { Exit, startEffect } from "@potential-guide/effects";
 import type {
   Envelope,
+  GitPilotSource,
   PilotObservation,
   PilotRuntime,
   PilotSpec,
   Subject,
 } from "@potential-guide/objective-pilot";
+import { validateGitPilotSource } from "@potential-guide/objective-pilot";
 import {
   type AgentInput,
   type AgentOutcome,
@@ -51,6 +51,7 @@ import {
   unknownPermissionRequest,
 } from "../acp-permissions.js";
 import { showCommandHelp } from "../command-help.js";
+import { selectObjective } from "../objectives.js";
 import { withPilot } from "../pilot-source.js";
 
 export const defaultRegulationQuota = Object.freeze({
@@ -73,11 +74,15 @@ interface Attempt {
 }
 
 interface Regulation {
-  schemaVersion: 2;
+  schemaVersion: 3;
   regulationId: string;
   createdAt: string;
   pilotUri: string;
   pilotCommit: string;
+  pilotTree: string;
+  pilotSource: GitPilotSource;
+  sourceBindings: Record<string, GitPilotSource>;
+  binding?: Awaited<ReturnType<typeof selectObjective>>["binding"];
   sourcePath?: string;
   subject: Subject;
   subjectDigest: string;
@@ -369,7 +374,11 @@ async function run(
   const executions: Promise<AgentOutcome>[] = [];
   try {
     const execute = async (pilot: PilotSpec, runtime: PilotRuntime) => {
-      if (pilot.objectiveId !== regulation.pilotUri || pilot.version !== regulation.pilotCommit)
+      if (
+        pilot.objectiveId !== regulation.pilotUri ||
+        pilot.version !== regulation.pilotTree ||
+        pilot.source?.commit !== regulation.pilotCommit
+      )
         throw new CliError(
           "Recovery source does not match the pinned Pilot identity and commit; no newer version was selected.",
           6,
@@ -441,6 +450,10 @@ async function run(
               return result;
             },
             onObservation: (observation) => {
+              for (const bound of runtime.boundObjectives?.() ?? []) {
+                if (bound.source !== undefined)
+                  regulation.sourceBindings[bound.objectiveId] = bound.source;
+              }
               attempt.observations.push(observation);
               void persist();
             },
@@ -463,6 +476,10 @@ async function run(
       }
       try {
         outcome = await withPilot(location, globals.cwd, regulation.pilotCommit, execute, {
+          versions: Object.fromEntries(
+            Object.entries(regulation.sourceBindings).map(([id, source]) => [id, source.tree]),
+          ),
+          sources: regulation.sourceBindings,
           probeTimeoutMs: regulation.regulationStrategy?.probe?.timeoutMs,
           reports: reportOptions([], config, globals.cwd),
         });
@@ -519,6 +536,9 @@ export async function runRegulate(
   }
   rejectUnknownOptions(argv, {
     "--pilot": "value",
+    "--objective": "value",
+    "--scope": "value",
+    "--input-file": "value",
     "--subject-file": "value",
     "--target": "value",
     "--agent": "value",
@@ -543,26 +563,26 @@ export async function runRegulate(
       : Number(timeout);
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2_147_483_647)
     throw new CliError("--agent-timeout-ms must be a positive integer no greater than 2147483647.");
-  const location = resolveObjective(
-    option(argv, "--pilot", { required: true }) as string,
-    loaded.value,
-  );
+  const selected = await selectObjective(argv, globals, loaded.value);
+  const location = selected.location;
   return withPilot(
     location,
     globals.cwd,
     option(argv, "--revision") as string | undefined,
     async (spec, runtime) => {
-      const subject = (await readJsonSubject(
-        option(argv, "--subject-file") as string | undefined,
-        globals.cwd,
-        spec.manifest.domainSchema,
-      )) as Subject;
+      const subject = await selected.subject(spec);
+      if (spec.source === undefined)
+        throw new CliError("Regulation requires Git directory source evidence.");
       const regulation: Regulation = {
-        schemaVersion: 2,
+        schemaVersion: 3,
         regulationId: randomUUID(),
         createdAt: new Date().toISOString(),
         pilotUri: spec.objectiveId,
-        pilotCommit: spec.version,
+        pilotCommit: spec.source.commit,
+        pilotTree: spec.version,
+        pilotSource: spec.source,
+        sourceBindings: { [spec.objectiveId]: spec.source },
+        ...(selected.binding === undefined ? {} : { binding: selected.binding }),
         ...(location.startsWith("git+") ? {} : { sourcePath: resolve(globals.cwd, location) }),
         subject,
         subjectDigest: digest(subject),
@@ -616,10 +636,10 @@ export async function runContinue(
     record === null ||
     typeof record !== "object" ||
     !("schemaVersion" in record) ||
-    record.schemaVersion !== 2
+    record.schemaVersion !== 3
   )
     throw new CliError(
-      "Legacy continue records are incompatible with Pilot regulation. Start a new regulation with --pilot.",
+      "Legacy continue records are incompatible: missing directory tree/commit evidence. Start a new regulation with --pilot <directory> or --objective.",
     );
   const regulation = record as Regulation;
   if (
@@ -627,11 +647,34 @@ export async function runContinue(
     typeof regulation.pilotUri !== "string" ||
     !regulation.pilotUri.startsWith("git+") ||
     !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(regulation.pilotCommit) ||
+    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(regulation.pilotTree) ||
+    regulation.pilotSource?.kind !== "git-tree" ||
+    regulation.pilotSource.commit !== regulation.pilotCommit ||
+    regulation.pilotSource.tree !== regulation.pilotTree ||
+    regulation.sourceBindings?.[regulation.pilotUri]?.commit !== regulation.pilotCommit ||
+    regulation.sourceBindings[regulation.pilotUri]?.tree !== regulation.pilotTree ||
     !Array.isArray(regulation.attempts) ||
     !Number.isSafeInteger(regulation.agentExecutionLimits?.timeoutMs) ||
     regulation.agentExecutionLimits.timeoutMs < 1
   )
     throw new CliError("Invalid Pilot regulation recovery record.", 6, "io-error");
+  try {
+    validateGitPilotSource(regulation.pilotUri, regulation.pilotTree, regulation.pilotSource);
+    if (
+      regulation.sourceBindings === null ||
+      typeof regulation.sourceBindings !== "object" ||
+      Array.isArray(regulation.sourceBindings)
+    )
+      throw new Error("Invalid source binding table.");
+    for (const [id, source] of Object.entries(regulation.sourceBindings))
+      validateGitPilotSource(id, source.tree, source);
+  } catch {
+    throw new CliError(
+      "Invalid directory commit/tree recovery evidence. Start a new regulation; no source version was substituted.",
+      6,
+      "io-error",
+    );
+  }
   if (
     regulation.sourcePath !== undefined &&
     (typeof regulation.sourcePath !== "string" || !isAbsolute(regulation.sourcePath))

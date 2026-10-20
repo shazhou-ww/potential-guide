@@ -21,7 +21,7 @@ const fail = {
   payload: { ok: false, problems: [{ kind: "internal", id: "broken", parameters: {} }] },
 } as const;
 const subject = { name: "consumer" };
-const externalId = "git+https://external.test/objectives.git#environment/pilot.yaml";
+const externalId = "git+https://external.test/objectives.git#environment/";
 async function specs() {
   const data = fixture({ [objectiveId]: manifest(), [externalId]: manifest() });
   return { consumer: await data.load(), external: await data.load(externalId) };

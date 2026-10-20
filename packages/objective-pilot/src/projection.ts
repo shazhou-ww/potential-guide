@@ -20,7 +20,10 @@ type Node = { value?: unknown } & (
   | { type: "binary"; value: unknown; lhs: Node; rhs: Node }
 );
 
-export function compileSubjectProjection(expression: string): (subject: Subject) => unknown {
+export function compileSubjectProjection(
+  expression: string,
+  options: { readonly requireDefined?: boolean } = {},
+): (subject: Subject) => unknown {
   if (Buffer.byteLength(expression) > SUBJECT_PROJECTION_LIMITS.expressionBytes) {
     throw new ObjectiveConfigurationError("Subject projection exceeds expression limit.");
   }
@@ -111,10 +114,15 @@ export function compileSubjectProjection(expression: string): (subject: Subject)
           return node.value;
         case "variable":
           return input;
-        case "name":
-          return record(input) && Object.hasOwn(input, String(node.value))
-            ? input[String(node.value)]
-            : undefined;
+        case "name": {
+          const value =
+            record(input) && Object.hasOwn(input, String(node.value))
+              ? input[String(node.value)]
+              : undefined;
+          if (value === undefined && options.requireDefined)
+            throw new SubjectProjectionError(`Missing projection input: ${String(node.value)}.`);
+          return value;
+        }
         case "path": {
           let result = input;
           for (const step of node.steps) {

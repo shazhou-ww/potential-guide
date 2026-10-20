@@ -1,7 +1,7 @@
 import type { SubscriptionRef } from "@potential-guide/effects";
 import { activate, Effect } from "@potential-guide/effects";
 import { observationScope, validateDependencyEvidence } from "./dependency.js";
-import { canonicalManifestUri, validateReferences } from "./resources.js";
+import { canonicalObjectiveUri, pilotResourceUri, validateReferences } from "./resources.js";
 import type {
   CheckResult,
   Envelope,
@@ -31,8 +31,10 @@ export async function loadPilotSpec(uri: string, resources: ResourceResolver): P
   if (!resources.version.trim())
     throw new ObjectiveConfigurationError("A source version is required.");
   async function load(input: string): Promise<PilotSpec> {
-    const objectiveId = canonicalManifestUri(input);
-    const manifest = parseManifest(await resources.readText(objectiveId));
+    const objectiveId = canonicalObjectiveUri(input);
+    const manifest = parseManifest(
+      await resources.readText(pilotResourceUri(objectiveId, "pilot.yaml")),
+    );
     const version =
       resources.versionFor === undefined
         ? resources.version
@@ -40,7 +42,7 @@ export async function loadPilotSpec(uri: string, resources: ResourceResolver): P
     if (!version.trim())
       throw new ObjectiveConfigurationError("An Objective source version is required.");
     compileDomain(manifest.domainSchema);
-    const source = canonicalManifestUri("references/", objectiveId);
+    const source = pilotResourceUri(objectiveId, "references/");
     const locales = Object.fromEntries(
       [...validateReferences(await resources.readPages(source), source, manifest)].map(
         ([language, locale]) => [language, Object.fromEntries(locale.pages)],
@@ -49,6 +51,9 @@ export async function loadPilotSpec(uri: string, resources: ResourceResolver): P
     return immutable({
       objectiveId,
       version,
+      ...(resources.sourceFor === undefined
+        ? {}
+        : { source: await resources.sourceFor(objectiveId) }),
       manifest,
       locales,
     });
@@ -153,7 +158,7 @@ export function parseDependencyProblem(value: unknown) {
     value.kind !== "dependency" ||
     typeof value.objectiveId !== "string" ||
     !value.objectiveId.startsWith("git+") ||
-    canonicalManifestUri(value.objectiveId) !== value.objectiveId ||
+    canonicalObjectiveUri(value.objectiveId) !== value.objectiveId ||
     !record(value.subject) ||
     !json(value.subject) ||
     !identifier(value.expectedLevelId) ||
@@ -182,7 +187,7 @@ export function observe(
       input,
       runtime,
       signal,
-      async (versions, signal): Promise<Envelope<PilotObservation>> => {
+      async (versions, signal, sources): Promise<Envelope<PilotObservation>> => {
         signal.throwIfAborted();
         const concurrency = runtime.checkConcurrency ?? 1;
         if (!Number.isSafeInteger(concurrency) || concurrency < 1) {
@@ -196,14 +201,14 @@ export function observe(
           subject: unknown,
         ): () => Promise<Envelope<PilotObservation>> {
           if (!record(spec)) throw new ObjectiveConfigurationError("PilotSpec must be an object.");
-          fields(spec, ["objectiveId", "version", "manifest", "locales"]);
+          fields(spec, ["objectiveId", "version", "manifest", "locales"], ["source"]);
           if (
             !spec.objectiveId.startsWith("git+") ||
-            canonicalManifestUri(spec.objectiveId) !== spec.objectiveId ||
+            canonicalObjectiveUri(spec.objectiveId) !== spec.objectiveId ||
             !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(spec.version)
           ) {
             throw new ObjectiveConfigurationError(
-              "Observation requires a stable Git Objective URI and an exact commit version; static working-tree specifications cannot be probed.",
+              "Observation requires a canonical Git Pilot directory and an exact content version; static working-tree specifications cannot be probed.",
             );
           }
           const manifest = parseManifest(JSON.stringify(spec.manifest));
@@ -330,6 +335,7 @@ export function observe(
                       .join("\n"),
                     observedAt: new Date().toISOString(),
                     versions: { ...versions },
+                    sources: { ...sources },
                   }),
                 };
             }
@@ -342,6 +348,7 @@ export function observe(
                 gapSummary: "",
                 observedAt: new Date().toISOString(),
                 versions: { ...versions },
+                sources: { ...sources },
               }),
             };
           };

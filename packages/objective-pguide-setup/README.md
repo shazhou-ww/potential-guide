@@ -196,7 +196,7 @@ stdout 恰好一份 CheckResult Envelope：`status:200` 的 `payload.ok:false` �
 
 ```powershell
 pguide validate pilot .\packages\objective-pguide-setup\pilot.yaml
-pguide probe --pilot "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-pguide-setup/pilot.yaml" --revision <完整提交哈希> --subject-file D:\setup\subject.json --format json
+pguide probe --pilot "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-pguide-setup/" --revision <完整提交哈希> --subject-file D:\setup\subject.json --format json
 ```
 
 `initial` 表示尚未确认安装；`installed` 已确认版本，但尚未确认配置；

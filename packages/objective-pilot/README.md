@@ -14,9 +14,9 @@ removed and rejected; manifest `schemaVersion` remains `1`:
 import { startEffect } from "@potential-guide/effects";
 import { loadPilotSpec, observe } from "@potential-guide/objective-pilot";
 
-// resolver.version is the exact Git commit; its reads use that same snapshot.
+// versionFor returns the directory tree; sourceFor separately records its retrieval commit.
 const spec = await loadPilotSpec(
-  "git+https://example.org/team/objectives.git#quality/pilot.yaml",
+  "git+https://example.org/team/objectives.git#quality/",
   resolver,
 );
 const running = startEffect(observe(
@@ -28,13 +28,21 @@ const envelope = await running.await();
 ```
 
 Production observations require a `git+` Objective URI and an exact 40- or
-64-character commit hash. `fileResources` and `loadPilotSpec` also support static,
+64-character content tree OID. `fileResources` and `loadPilotSpec` also support static,
 uncommitted files for validation; those specifications cannot be observed. A Git
 adapter belongs at composition, not in this package. `ResourceResolver` supplies
 `version`, `readText(uri)`, and `readPages(uri)`; page resources are `{ uri, source }`.
 Resource reads must be immutable for the resolver's lifetime.
 Resolvers spanning repositories implement `versionFor(objectiveId)` to return
-each Objective's own immutable source commit.
+each Objective directory's immutable tree OID. `sourceFor` supplies `{kind:"git-tree",
+repository,directory,commit,tree,repositoryTree}`: commit retrieves the snapshot,
+tree versions the Pilot, and repositoryTree independently covers materialized
+repository support files outside its folder. None hashes the execution environment.
+GitSnapshot.treeOid verifies a directory on the exact commit; a tree must never
+be passed as a commit. Static/custom memory resolvers do not claim Git evidence.
+没有 `spec.source` / Git `sources[id]` 的自定义解析器只提供不透明内容版本，不证明 Git
+tree；不得将其作为生产 Git 依赖、跨进程恢复或 continue 的版本证据。fileResources 的
+working-tree 版本仅用于静态验证。Git-bound 观察中的每个依赖都必须携带完整 tagged 来源证据。
 
 Levels are ordered by the manifest array, never by their ID spelling. The final
 local ID is `terminal`. Checks at a level are all evaluated and aggregated;
@@ -47,7 +55,8 @@ An observation contains `current: { objectiveId, levelId }`, fully scoped
 `problems` with either `{ kind: "internal", ref: { objectiveId, levelId, checkId,
 problemId }, parameters }` or `{ kind: "dependency", objectiveId, subject,
 expectedLevelId, currentLevelId }`,
-`gapSummary`, `observedAt`, and a map of Objective commit versions. It has no
+`gapSummary`, `observedAt`, a map of Objective tree versions, and `sources` with
+separate retrieval/support evidence for Git-bound observations. It has no
 top-level business `ok`. An invocation fault has no trusted current level.
 `current` always belongs to the observed Objective, including when it is blocked
 by dependencies. Dependency problems have no ID, ref, parameters or nested report.
@@ -120,7 +129,7 @@ For committed Node check scripts executed by the existing process adapter:
 import { createSourceObjectiveDependencyProbe } from "@potential-guide/objective-pilot";
 
 const dependency = createSourceObjectiveDependencyProbe({
-  objectiveId: "git+https://example.org/team/objectives.git#environment/pilot.yaml",
+  objectiveId: "git+https://example.org/team/objectives.git#environment/",
   expectedLevelId: "ready",
 });
 let input = "";

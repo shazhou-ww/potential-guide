@@ -144,7 +144,7 @@ test("strict manifest schema rejects external references, reserved levels and du
     },
   ]) {
     const data = fixture();
-    data.texts.set(objectiveId, JSON.stringify({ ...manifest(), ...overrides }));
+    data.texts.set(`${objectiveId}pilot.yaml`, JSON.stringify({ ...manifest(), ...overrides }));
     await assert.rejects(data.load());
   }
   assert.throws(

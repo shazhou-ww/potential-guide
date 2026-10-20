@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -15,15 +14,16 @@ import {
 import { main } from "../check.mjs";
 
 const root = fileURLToPath(new URL("../../..", import.meta.url));
-const manifest = pathToFileURL(
-  join(root, "packages", "objective-monorepo-standard", "pilot.yaml"),
-).href;
+const scratch = join(root, ".cache");
+await mkdir(scratch, { recursive: true });
+const tmpdir = () => scratch;
+const manifest = pathToFileURL(join(root, "packages", "objective-monorepo-standard")).href;
 const contract = "config/monorepo-requirements.json";
 const checkerModule = join(root, "packages", "objective-monorepo-standard", "dist", "index.js");
 const subject = { root, contract };
 async function fixtureSpec() {
   const objectiveId =
-    "git+https://example.test/monorepo-fixture.git#packages/objective-monorepo-standard/pilot.yaml";
+    "git+https://example.test/monorepo-fixture.git#packages/objective-monorepo-standard/";
   function local(uri) {
     return pathToFileURL(join(root, decodeURIComponent(new URL(uri).hash.slice(1)))).href;
   }
@@ -128,7 +128,7 @@ test("real probe stops at structure for invalid contract and does not fall throu
         },
       ),
     );
-    assert.equal(result.status, 200);
+    assert.equal(result.status, 200, result.message);
     assert.equal(result.payload.current.levelId, "initial");
     assert.deepEqual(calls, ["structure"]);
     assert.equal(
@@ -222,7 +222,7 @@ test("a valid internal package reaches Pilot terminal without execution or onlin
       "import './missing.js';",
     );
     const blocked = await Effect.runPromise(observe({ spec, subject: input }, runtime));
-    assert.equal(blocked.status, 200);
+    assert.equal(blocked.status, 200, blocked.message);
     assert.equal(blocked.payload.current.levelId, "structured");
     assert.equal(blocked.payload.problems[0].ref.problemId, "delivery-incomplete");
     assert.equal(blocked.payload.problems[0].parameters.report.state, "unverified");

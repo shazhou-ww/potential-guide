@@ -576,7 +576,7 @@ test("each Agent round receives its own fresh limit", async () => {
   assert.equal(result.iterations, 3);
 });
 
-const childId = "git+https://example.test/objectives.git#child/pilot.yaml";
+const childId = "git+https://example.test/objectives.git#child/";
 async function dependencyRuntime(ready: () => boolean, mixed = false): Promise<PilotRuntime> {
   const child = await fixture({ [childId]: manifest() }).load(childId);
   const probe = createObjectiveDependencyProbe(

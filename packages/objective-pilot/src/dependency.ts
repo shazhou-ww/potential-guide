@@ -1,11 +1,13 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { Effect } from "@potential-guide/effects";
 import { observe } from "./pilot.js";
+import { validateGitPilotSource } from "./resources.js";
 import type {
   CheckProbe,
   CheckResult,
   DependencyProblem,
   Envelope,
+  GitPilotSource,
   PilotInput,
   PilotObservation,
   PilotRuntime,
@@ -59,6 +61,7 @@ function rank(spec: PilotSpec, level: string): number {
 }
 interface Scope {
   readonly versions: Record<string, string>;
+  readonly sources: Record<string, GitPilotSource>;
   readonly bindings: Map<
     string,
     Promise<{ readonly spec: PilotSpec; readonly runtime: PilotRuntime }>
@@ -79,7 +82,7 @@ function mergeVersion(versions: Record<string, string>, id: string, version: str
     (versions[id] !== undefined && versions[id] !== version)
   )
     throw new ObjectiveOperationError(
-      `Conflicting source version or missing exact commit for ${id}.`,
+      `Conflicting content version or missing exact tree for ${id}.`,
     );
   versions[id] = version;
 }
@@ -88,7 +91,11 @@ export async function observationScope<T>(
   input: PilotInput,
   runtime: PilotRuntime,
   signal: AbortSignal,
-  use: (versions: Record<string, string>, signal: AbortSignal) => Promise<T>,
+  use: (
+    versions: Record<string, string>,
+    signal: AbortSignal,
+    sources: Record<string, GitPilotSource>,
+  ) => Promise<T>,
 ): Promise<T> {
   const parent = scopes.getStore();
   const limits = runtime.observationBudget ?? {
@@ -115,7 +122,12 @@ export async function observationScope<T>(
   if (stack.length >= budget.maxDepth || --budget.remaining < 0 || Date.now() >= budget.deadline)
     throw new ObjectiveOperationError("Dependency observation budget exhausted.");
   const versions = parent?.versions ?? {};
+  const sources = parent?.sources ?? {};
   mergeVersion(versions, input.spec.objectiveId, input.spec.version);
+  if (input.spec.source !== undefined) {
+    validateGitPilotSource(input.spec.objectiveId, input.spec.version, input.spec.source);
+    sources[input.spec.objectiveId] = input.spec.source;
+  }
   const timeout = new AbortController();
   const combined = AbortSignal.any([signal, ...(parent ? [parent.signal] : []), timeout.signal]);
   const timer = setTimeout(
@@ -126,6 +138,7 @@ export async function observationScope<T>(
     return await scopes.run(
       {
         versions,
+        sources,
         bindings: parent?.bindings ?? new Map(),
         stack: [...stack, key],
         evidence: new Map(),
@@ -133,7 +146,7 @@ export async function observationScope<T>(
         runtime,
         signal: combined,
       },
-      () => use(versions, combined),
+      () => use(versions, combined, sources),
     );
   } finally {
     clearTimeout(timer);
@@ -154,8 +167,24 @@ export function recordDependencyObservation(
   )
     throw new ObjectiveOperationError("Dependency evidence has mismatched source identity.");
   rank(input.spec, observation.current.levelId);
+  if (input.spec.source !== undefined) {
+    for (const [id, version] of Object.entries(observation.versions))
+      validateGitPilotSource(id, version, observation.sources?.[id]);
+    if (observation.sources?.[input.spec.objectiveId]?.commit !== input.spec.source.commit)
+      throw new ObjectiveOperationError("Dependency observation snapshot mismatch.");
+  }
   for (const [id, version] of Object.entries(observation.versions))
     mergeVersion(scope.versions, id, version);
+  for (const [id, source] of Object.entries(observation.sources ?? {})) {
+    validateGitPilotSource(id, observation.versions[id] ?? "", source);
+    const prior = scope.sources[id];
+    if (
+      prior !== undefined &&
+      (prior.tree !== source.tree || prior.repositoryTree !== source.repositoryTree)
+    )
+      throw new ObjectiveOperationError(`Conflicting source content evidence for ${id}.`);
+    scope.sources[id] = source;
+  }
   scope.evidence.set(
     canonical([input.spec.objectiveId, input.subject, observation.current.levelId]),
     { spec: input.spec, observation },
@@ -260,6 +289,7 @@ export function bindDependencyRequest() {
           target.objectiveId,
           scope.versions[target.objectiveId],
           combined,
+          scope.sources[target.objectiveId],
         );
         scope.bindings.set(target.objectiveId, binding);
       }

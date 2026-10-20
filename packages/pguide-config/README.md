@@ -24,22 +24,23 @@ replaces the selected configuration only after the editor exits successfully.
 
 ## Objective registry
 
-Use `add-objective <name> <path|Git URI>`, `update-objective <name> <path|Git URI>`,
-`remove-objective <name>`, and `list-objectives` to manage the local `objectives` registry.
+`add-objective`、`update-objective` 已退役并明确拒绝写入；使用
+`pguide objectives set|migrate` 将带显式 inputSchema 和 JSONata subject 的声明保存到
+独立 objectives.yaml。迁移不猜测旧来源别名的输入或绑定意图。
+`remove-objective <name>` 和 `list-objectives` 保留旧 config.objectives 的清理与查询。
 Names are lowercase kebab-case. Local registrations are saved as absolute paths
 relative to `--cwd`; Git URIs are saved unchanged. Entries cannot reference other `@names`.
 Edits validate the complete configuration before atomically saving it.
 
-Edits default to `--scope project`; `--scope user` and
-`--scope explicit --config <path>` work as for Agent profiles. Add rejects
-duplicates in the selected scope, and update/remove require an entry in that
-scope. Registered Objectives merge by name, with project overriding user and explicit
+Legacy removal defaults to `--scope project`; `--scope user` and
+`--scope explicit --config <path>` work as for Agent profiles. Removal requires an entry in that
+scope. Legacy source aliases merge by name, with project overriding user and explicit
 overriding project. Removing an override exposes a lower-scope entry if present.
 Listing returns effective names, locations and configuration sources.
 The default output shows each Objective in a separate block, with labeled
 `Location` and `Source` lines and full, untruncated paths or Git URIs.
 An empty registry prints `No registered Objectives.` Use `--format json` for
-machine-readable output; its schema is unchanged.
+machine-readable output; each entry now explicitly marks `semantics: legacy-source-alias`.
 
 `probe`, `regulate` and portfolio goal `pilot` fields accept registered names.
 Registration is optional: paths and Git URIs can still be used directly.

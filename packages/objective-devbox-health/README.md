@@ -71,7 +71,7 @@ subject 的 `history`；没有足够样本时不能到达最终健康状态。�
 提交 Pilot 后运行完整观测：
 
 ```powershell
-node packages\pguide\dist\bin\probe.js --pilot packages\objective-devbox-health\pilot.yaml --subject-file D:\health\subject.json --format json
+node packages\pguide\dist\bin\probe.js --pilot packages\objective-devbox-health --subject-file D:\health\subject.json --format json
 ```
 
 该入口要求干净、已提交的 Git 版本。直接 helper 可用于未提交开发，但不构成绑定代码版本

@@ -95,7 +95,7 @@ test("all checks at first blocked level aggregate, level traversal is serial not
 });
 
 test("dependency checks retain consumer ownership and aggregate external instances", async () => {
-  const child = "git+https://example.test/objectives.git#child/pilot.yaml";
+  const child = "git+https://example.test/objectives.git#child/";
   const data = fixture({
     [objectiveId]: manifest(),
     [child]: manifest(),
@@ -171,13 +171,13 @@ test("rejects invalid domain, unsupported language, undeclared problems and nonc
   );
   await assert.rejects(
     Effect.runPromise(observe({ spec: { ...spec, version: "working-tree" }, subject }, runtime)),
-    /exact commit/,
+    /exact tree/,
   );
   await assert.rejects(
     Effect.runPromise(
       observe({ spec: { ...spec, objectiveId: "file:///tmp/pilot.yaml" }, subject }, runtime),
     ),
-    /stable Git/,
+    /canonical Git/,
   );
   assert.equal(calls, 0);
   const invalid = await Effect.runPromise(
@@ -201,11 +201,14 @@ test("rejects invalid domain, unsupported language, undeclared problems and nonc
 
 test("strict YAML, duplicate scope IDs, locales and deleted fields fail before observation", async () => {
   const data = fixture();
-  data.texts.set(objectiveId, "schemaVersion: 1\nschemaVersion: 1\n");
+  data.texts.set(
+    canonicalManifestUri("pilot.yaml", objectiveId),
+    "schemaVersion: 1\nschemaVersion: 1\n",
+  );
   await assert.rejects(data.load(), /Invalid YAML/);
   const cyclic = fixture();
   cyclic.texts.set(
-    objectiveId,
+    canonicalManifestUri("pilot.yaml", objectiveId),
     JSON.stringify({ ...manifest(), prerequisite: { manifestUri: objectiveId, subject: "$" } }),
   );
   await assert.rejects(cyclic.load(), /Expected fields/);
@@ -218,7 +221,7 @@ test("strict YAML, duplicate scope IDs, locales and deleted fields fail before o
   const first = duplicated.levels[0];
   assert.ok(first);
   bad.texts.set(
-    objectiveId,
+    canonicalManifestUri("pilot.yaml", objectiveId),
     JSON.stringify({
       ...duplicated,
       levels: [

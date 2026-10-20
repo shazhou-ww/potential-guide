@@ -1,5 +1,14 @@
 export type ObjectiveId = string;
 export type SpecVersion = string;
+export interface GitPilotSource {
+  readonly kind: "git-tree";
+  readonly repository: string;
+  readonly directory: string;
+  readonly commit: string;
+  readonly tree: string;
+  /** Independent evidence for repository-external-to-folder files materialized with this Pilot. */
+  readonly repositoryTree: string;
+}
 export type LevelId = string;
 export type CheckId = string;
 export type ProblemId = string;
@@ -87,6 +96,7 @@ export interface ReferencePage extends ReferencePageSummary {
 export interface PilotSpec {
   readonly objectiveId: ObjectiveId;
   readonly version: SpecVersion;
+  readonly source?: GitPilotSource;
   readonly manifest: PilotManifest;
   readonly locales: Readonly<Record<string, Readonly<Record<string, ReferencePage>>>>;
 }
@@ -101,8 +111,10 @@ export interface PilotObservation {
   readonly gapSummary: string;
   readonly observedAt: string;
   readonly versions: Readonly<Record<ObjectiveId, SpecVersion>>;
+  readonly sources?: Readonly<Record<ObjectiveId, GitPilotSource>>;
 }
 export interface PilotRuntime {
+  readonly boundObjectives?: () => readonly PilotSpec[];
   readonly onObservation?: (value: Envelope<PilotObservation>) => void;
   readonly resolveCheck: (ref: CheckRef) => CheckProbe;
   readonly checkConcurrency?: number;
@@ -110,6 +122,7 @@ export interface PilotRuntime {
     objectiveId: ObjectiveId,
     version: SpecVersion | undefined,
     signal: AbortSignal,
+    source?: GitPilotSource,
   ) => Promise<{ readonly spec: PilotSpec; readonly runtime: PilotRuntime }>;
   readonly observationBudget?: {
     readonly timeoutMs: number;
@@ -124,6 +137,7 @@ export interface PageResource {
 export interface ResourceResolver {
   readonly version: SpecVersion;
   versionFor?(objectiveId: ObjectiveId): Promise<SpecVersion>;
+  sourceFor?(objectiveId: ObjectiveId): Promise<GitPilotSource>;
   readText(uri: string): Promise<string>;
   readPages(uri: string): Promise<readonly PageResource[]>;
 }

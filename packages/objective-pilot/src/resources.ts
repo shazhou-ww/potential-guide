@@ -1,7 +1,13 @@
 import { lstat, readdir, readFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { PageResource, PilotManifest, ReferencePage, ResourceResolver } from "./types.js";
+import type {
+  GitPilotSource,
+  PageResource,
+  PilotManifest,
+  ReferencePage,
+  ResourceResolver,
+} from "./types.js";
 import {
   fields,
   identifier,
@@ -16,18 +22,83 @@ export interface LoadedLocale {
   pages: ReadonlyMap<string, ReferencePage>;
 }
 
+export function validateGitPilotSource(
+  objectiveId: string,
+  version: string,
+  source: unknown,
+): asserts source is GitPilotSource {
+  const id = canonicalObjectiveUri(objectiveId);
+  const url = new URL(id);
+  const directory = decodeURIComponent(url.hash.slice(1)).replace(/\/$/, "");
+  url.hash = "";
+  const oid = (value: unknown) =>
+    typeof value === "string" && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(value);
+  if (
+    !id.startsWith("git+") ||
+    !record(source) ||
+    source.kind !== "git-tree" ||
+    source.repository !== url.href.slice(4) ||
+    source.directory !== directory ||
+    !oid(source.commit) ||
+    !oid(source.tree) ||
+    source.tree !== version ||
+    !oid(source.repositoryTree)
+  )
+    throw new ObjectiveConfigurationError(
+      `Invalid commit/tree source evidence for ${objectiveId}.`,
+    );
+}
+
+/** Directory identities are distinct from addresses of resources inside them. */
+export function canonicalObjectiveUri(uri: string): string {
+  const canonical = canonicalManifestUri(uri);
+  const url = new URL(canonical);
+  if (canonical.startsWith("git+")) {
+    const folder = decodeURIComponent(url.hash.slice(1)).replace(/\/$/, "");
+    if (folder.split("/").at(-1) === "pilot.yaml")
+      throw new ObjectiveConfigurationError(
+        "Pilot identity must be a directory URI, not pilot.yaml. Select its containing directory.",
+      );
+    url.hash = folder === "" ? "/" : `${folder.split("/").map(encodeURIComponent).join("/")}/`;
+  } else {
+    if (url.pathname.endsWith("/pilot.yaml"))
+      throw new ObjectiveConfigurationError(
+        "Pilot identity must be a directory URI, not pilot.yaml.",
+      );
+    url.pathname = `${url.pathname.replace(/\/$/, "")}/`;
+  }
+  return url.href;
+}
+
+export function pilotResourceUri(objectiveId: string, path: string): string {
+  const directory = canonicalObjectiveUri(objectiveId);
+  const decoded = decodeURIComponent(path);
+  if (
+    !decoded ||
+    decoded.startsWith("/") ||
+    decoded.split("/").some((part) => part === ".." || part === "." || /[\\:]/.test(part))
+  )
+    throw new ObjectiveConfigurationError("Pilot resources must remain inside their directory.");
+  return canonicalManifestUri(path, directory);
+}
+
 export function canonicalManifestUri(uri: string, base?: string): string {
   try {
     if (uri.startsWith("git+")) {
       const url = new URL(uri);
       const path = decodeURIComponent(url.hash.slice(1));
       if (
-        !path ||
-        path.startsWith("/") ||
+        (path.startsWith("/") && path !== "/") ||
+        /[\\:]/.test(path) ||
+        [...path].some(
+          (character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
+        ) ||
         path
           .replace(/\/$/, "")
           .split("/")
-          .some((part) => part === ".." || part === "." || part === "") ||
+          .some(
+            (part) => part === ".." || part === "." || (part === "" && path !== "" && path !== "/"),
+          ) ||
         url.username ||
         url.password ||
         url.search
@@ -36,8 +107,11 @@ export function canonicalManifestUri(uri: string, base?: string): string {
           "Git Objective URI requires an unambiguous repository-relative fragment.",
         );
       }
-      url.hash = path.split("/").map(encodeURIComponent).join("/");
-      return url.href;
+      url.hash =
+        path === "/" || path === "" ? "/" : path.split("/").map(encodeURIComponent).join("/");
+      const repository = new URL(url.href.slice(4));
+      repository.hash = "";
+      return `git+${repository.href}${url.hash}`;
     }
     if (base?.startsWith("git+")) {
       if (/^[a-z][a-z0-9+.-]*:/i.test(uri)) {
@@ -46,7 +120,7 @@ export function canonicalManifestUri(uri: string, base?: string): string {
         );
       }
       const url = new URL(base);
-      const root = decodeURIComponent(url.hash.slice(1));
+      const root = decodeURIComponent(url.hash.slice(1)).replace(/^\//, "");
       const path = new URL(uri, `https://resource.invalid/${root}`).pathname.slice(1);
       url.hash = path;
       return canonicalManifestUri(url.href);

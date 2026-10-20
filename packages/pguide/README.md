@@ -5,25 +5,86 @@ regulation, Git snapshots, and ACP or AHP Agent execution.
 
 ```sh
 pguide scaffold pilot ./objective --check ready --problem not-ready
-pguide validate pilot ./objective/pilot.yaml
+pguide validate pilot ./objective
 # Commit the Pilot and its reference pages/checks in a clean Git repository
 # with a credential-free HTTPS origin (file origins are supported for tests).
-pguide probe --pilot ./objective/pilot.yaml --subject-file ./subject.json
-pguide regulate --pilot ./objective/pilot.yaml --subject-file ./subject.json \
+pguide probe --pilot ./objective --subject-file ./subject.json
+pguide regulate --pilot ./objective --subject-file ./subject.json \
   --target terminal --agent fixture --agent-timeout-ms 30000
 pguide continue <regulation-id>
 ```
 
-Production `--pilot` accepts a committed local manifest path or a Git Objective
-URI such as `git+https://github.com/owner/repo.git#objective/pilot.yaml`.
+Production `--pilot` accepts a committed local Pilot directory or a Git Objective
+URI such as `git+https://github.com/owner/repo.git#objective/`.
 Use `--revision <ref|full-commit>` with an explicit Git URI. Local paths also
 accept `--revision <full-commit>`, including an older commit than checkout HEAD;
 refs require an explicit Git URI. Local paths require a clean repository and
 an origin. Their Objective identity remains the origin URI, while content is
 read from the exact local commit snapshot, never unchecked working-tree bytes.
 Objective identity excludes the commit while each observation's `versions`
-records the exact commit. Static `validate pilot` and scaffolding do not require
+records the directory tree OID; `sources[id]` separately records the retrieval
+commit, directory, tree and independent repository support tree. A tree is never
+used as a commit. Static `validate pilot` and scaffolding do not require
 a Git commit.
+
+## 目录与用户级 Objectives
+
+`pguide-objectives` 是与 probe 等一致的可发现命令扩展。任意技术栈仓库的选定目录可以放置
+`objectives.yaml`；不查找父目录、不递归发现、不需要 package.json。用户级清单位于
+`pguide config path` 所示用户 config.yaml 的同级 `objectives.yaml`，与运行设置分离。
+
+```yaml
+schemaVersion: 1
+objectives:
+  standardize:
+    description: 检查选定目录
+    pilot: git+https://example.org/rules.git#directory-standard/
+    inputSchema:
+      type: object
+      additionalProperties: false
+      maxProperties: 0
+    subject: |
+      {"root": context.directory.absolutePath}
+```
+
+```powershell
+pguide objectives list --cwd D:\project
+pguide objectives show standardize --scope directory --cwd D:\project
+pguide probe --objective standardize --scope directory --cwd D:\project
+pguide regulate --objective standardize --scope directory --cwd D:\project --target terminal --agent local
+pguide objectives set standardize --scope user --from D:\standardize.yaml
+pguide objectives remove standardize --scope user
+```
+
+`--from` 是只含所选名称的完整 objectives.yaml；所有写操作要求显式 `--scope user|directory`，
+校验后原子保存。相对 Pilot 路径相对于**目标清单文件**，不是调用目录或 `--from` 文件。
+list/show 返回名称、描述、作用域、原始来源、清单内容 SHA-256、Pilot、inputSchema 和表达式，
+不执行投影、检查、Agent 或远程版本解析。同名跨作用域选择必须明确消歧。
+
+`--objective` 与 `--pilot`、`--subject-file` 互斥。声明输入使用 `--input-file <file|->`；
+仅唯一空对象 Unit 可省略，非空值拒绝；普通可选字段对象不是 Unit。inputSchema 支持
+Draft 2020-12 JSON 类型，与存储作用域正交。绑定先校验 input，再以受预算限制、无外部能力的
+JSONata 确定性投影计算 subject，最后独立校验 Pilot domainSchema。只允许本地 `$defs` 引用。
+上下文仅提供 repository.id、checkout.id/rootPath、directory.absolutePath/relativePath；
+checkout.id 是主机名、规范化 Git common 目录和 checkout 路径的摘要，不仅凭路径跨设备合并，
+也不是密码学设备身份证明。没有 Git 上下文时 repository/checkout 为 null；
+表达式需要却缺失的字段报错，不收集凭据、环境变量或 package 身份。
+
+清单没有 target，probe 只观察，regulate 的 target 来自请求，依赖阈值来自消费者。
+continue schemaVersion 3 保存已选择的清单快照、上下文、输入、最终 subject、目录 ID、
+取回 commit 和 tree，恢复不重新发现同名入口；旧 schemaVersion 2 记录明确拒绝并指导重新绑定。
+
+### 来源与更新边界
+
+目录 ID 统一以 `/` 结尾，仓库根目录写作 `git+https://host/repo.git#/`；入口为目录内部
+pilot.yaml。Git manifest URI 不再接受；本地 CLI 输入仅对名称恰好为 pilot.yaml 的文件提供
+入口转换，核心协议只保存目录 ID。其他文件不会被剪裁成目录身份。
+默认远程 HEAD（远程默认分支）、本地 checkout HEAD；每次 withPilot 固定整个观察及依赖交接的
+快照。Supervisor 在受控刷新边界重新绑定根与已发现依赖，更新需求 revision 并重新观察；
+旧结果不能放行新需求，更新失败可见。目录内脚本、References、资源改变 tree，无关 commit
+不改变 Pilot 自身 tree。全仓库 materialization 的目录外支持文件另由 repositoryTree 记录，
+这是独立且保守的支持内容边界，不是 Pilot tree；环境、网络、动态安装仍不在 Git 内容哈希内，
+跨仓库来源必须通过依赖绑定获得独立证据。符号链接、子模块不能 materialize，明确拒绝。
 
 ## JSON subjects from stdin and the Objective registry
 
@@ -56,24 +117,23 @@ structured `guidance` field alongside the error. The command still exits with
 code 2 without running checks or starting an Agent. The Pilot must be loadable
 from its Git snapshot to provide schema guidance; source errors remain explicit.
 
-Register Objectives locally through the optional configuration command:
+旧 config.objectives 仅表示来源别名，不是带输入和投影的声明。新增/更新旧别名命令已退役；
+list-objectives 明确标记 legacy-source-alias，remove-objective 仍可清理。迁移不会猜测 subject：
 
 ```sh
-pguide config add-objective health 'git+https://github.com/owner/repo.git#objective/pilot.yaml'
 pguide config list-objectives
-pguide config update-objective health ./objective/pilot.yaml
+pguide objectives migrate health --scope user --from ./health.yaml --legacy-config ./old-config.yaml
 pguide config remove-objective health
 ```
 
-These edits default to project scope; use `--scope user` for cross-project
-registrations or `--scope explicit --config <path>` for a selected configuration.
-Registration stores local paths as absolute paths relative to `--cwd`.
-Alternatively, edit standard YAML:
+`migrate` 校验显式提供的新声明，先原子保存清单，再删除指定旧文件的同名别名；
+其他别名保留。若第二次写入失败，两处数据仍可检查恢复，不会先删除旧数据。
+旧配置仍可只读加载：
 
 ```yaml
 schemaVersion: 2
 objectives:
-  health: git+https://github.com/owner/repo.git#objective/pilot.yaml
+  health: git+https://github.com/owner/repo.git#objective/
 ```
 
 Registration is optional: unregistered paths and Git URIs remain valid inputs.
@@ -523,7 +583,7 @@ portfolios are rejected:
   "schemaVersion": 3,
   "goals": [{
     "id": "service",
-    "pilot": "git+https://github.com/example/service.git#objective/pilot.yaml",
+    "pilot": "git+https://github.com/example/service.git#objective/",
     "subject": {},
     "targetLevel": "terminal",
     "priority": 1,

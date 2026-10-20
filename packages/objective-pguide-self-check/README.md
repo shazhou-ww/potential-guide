@@ -35,7 +35,7 @@ Windows 也可将 pguide 指定为 Node + 已安装的绝对 JS 入口：
 用已安装的 pguide 与提交过的 Git 子目录快照运行（将 URI、revision、subject 替换为实际值）：
 
 ```powershell
-pguide probe --pilot "git+file:///D:/Code/potential-guide#packages/objective-pguide-self-check/pilot.yaml" --revision <commit> --subject-file D:\self-check\subject.json --config C:\Users\me\AppData\Roaming\pguide\config.yaml --format json
+pguide probe --pilot "git+file:///D:/Code/potential-guide#packages/objective-pguide-self-check/" --revision <commit> --subject-file D:\self-check\subject.json --config C:\Users\me\AppData\Roaming\pguide\config.yaml --format json
 ```
 
 这条 probe 会执行一次 sanity；不要紧接着为“确认”重复运行，避免额外模型调用。

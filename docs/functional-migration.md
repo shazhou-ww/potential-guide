@@ -18,10 +18,10 @@ Supervisor 包名不变，只适配新的领域执行接口；CLI Core 不依赖
 
 ## 2. 规格、身份与版本
 
-- PilotSpec 是可序列化的已解析定义，包含 Objective 身份、manifest、Wiki 与来源版本；不是带订阅或进程的实例。`loadPilotSpec` 使用 ResourceResolver 的确切版本；多仓库前置通过 versionFor 按 Objective 获取各自 commit，不把未提交文件标成 HEAD，也不将根仓库版本复制给其他来源。
+- PilotSpec 是可序列化的已解析定义，包含 Objective 目录身份、manifest、Wiki 与 tree 内容版本；不是带订阅或进程的实例。`loadPilotSpec` 从目录内 pilot.yaml 读取，ResourceResolver.versionFor 返回各目录 tree；sourceFor 提供独立取回 commit 与支持仓库 tree，不把 tree 当 commit，也不将根仓库版本复制给其他来源。
 - RegulatorSpec 由 Pilot 规格、Strategy 与 AgentBinding 组成；subject 单独放进 RegulationInput。目标 LevelId 和 Agent 单次执行限制属于 Strategy，不能在外层再维护另一份配置。
 - 本地类型的字段名称以各包导出的 TypeScript 类型为准：当前配方字段为 `pilot`、`strategy`、`binding`；输入字段为 `spec`、`subject` 和可选 `language`。
-- Objective URI 标识 Git 仓库及定义路径，例如 `git+https://github.com/owner/repo.git#packages/project-pilot/pilot.yaml`。commit 与该稳定身份分开。测试可使用明确的 git+file 来源，不以裸文件路径充当全局身份。
+- Objective URI 标识 Git 仓库及目录，例如 `git+https://github.com/owner/repo.git#packages/project-pilot/`，根目录为 `#/`。旧 manifest URI 在核心协议拒绝；CLI 仅对本地 pilot.yaml 提供精确入口转换。commit 用于取回，tree 用于版本；旧 continue schemaVersion 2 不得作为新目录证据恢复，必须重新绑定。旧报告只读保留，不能作为新依赖放行证据。
 - LevelId 是规格内的身份，不能按数字或字符串大小推断层级。跨上下文使用 LevelRef / CheckRef / ProblemRef；ProblemId 表示问题类型，不表示修复任务。
 - GitSnapshot 带本地读取能力，不能序列化。所有读取与消费者运行必须发生在快照所属 Scope 关闭之前；不要从已经关闭的 scoped effect 中返回快照供以后读取。
 

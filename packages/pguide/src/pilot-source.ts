@@ -10,7 +10,7 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { CliError } from "@potential-guide/cli-core";
@@ -18,15 +18,17 @@ import { Cause, Effect, Exit, Scope, Stream } from "@potential-guide/effects";
 import { type GitSnapshot, loadGitSnapshot } from "@potential-guide/git-source";
 import {
   type CheckResult,
-  canonicalManifestUri,
+  canonicalObjectiveUri,
   createProcessCheckProbe,
   type Envelope,
+  type GitPilotSource,
   loadPilotSpec,
   type PageResource,
   type PilotRuntime,
   type PilotSpec,
   type ResourceResolver,
   RunEvidence,
+  validateGitPilotSource,
 } from "@potential-guide/objective-pilot";
 import { RegulationError } from "@potential-guide/objective-regulator";
 
@@ -121,13 +123,19 @@ async function bindPilot<T>(
     const origin = new URL(uri);
     origin.hash = "";
     repository = repositoryUri(origin.href.slice(4));
-    if (!uri.hash) throw new PilotSourceError("Pilot Git URI requires a manifest path fragment.");
-    objectiveUri = canonicalManifestUri(uri.href);
+    objectiveUri = canonicalObjectiveUri(uri.href);
     snapshotRepository = repository;
     commitOrRef = revision ?? "HEAD";
   } else {
-    const path = await realpath(resolve(cwd, location));
-    const directory = (await stat(path)).isDirectory() ? path : dirname(path);
+    let path = await realpath(resolve(cwd, location));
+    if (!(await stat(path)).isDirectory()) {
+      if (basename(path) !== "pilot.yaml")
+        throw new PilotSourceError(
+          "Pilot sources must be directories; only an exact pilot.yaml entry can be converted at the CLI boundary.",
+        );
+      path = dirname(path);
+    }
+    const directory = path;
     const root = await realpath(await git(directory, "rev-parse", "--show-toplevel"));
     if (await git(root, "status", "--porcelain", "--untracked-files=all"))
       throw new PilotSourceError(
@@ -139,11 +147,10 @@ async function bindPilot<T>(
       throw new PilotSourceError("Local Pilot revisions must be full commit hashes, not refs.");
     }
     commitOrRef = revision ?? (await git(root, "rev-parse", "HEAD"));
-    const manifest = (await stat(path)).isDirectory() ? join(path, "pilot.yaml") : path;
-    const pathInRepository = relative(root, manifest).split("\\").join("/");
+    const pathInRepository = relative(root, path).split("\\").join("/");
     if (pathInRepository.startsWith("../") || isAbsolute(pathInRepository))
       throw new PilotSourceError("Pilot manifest must be inside its Git repository.");
-    objectiveUri = canonicalManifestUri(
+    objectiveUri = canonicalObjectiveUri(
       `git+${repository}#${pathInRepository.split("/").map(encodeURIComponent).join("/")}`,
     );
   }
@@ -230,14 +237,19 @@ async function bindPilot<T>(
             const initialSource = { snapshot, checkout: join(cache, "checkout-0") };
             yield* materialize(initialSource);
             const sources = new Map<string, Promise<Source>>([
-              [repository, Promise.resolve(initialSource)],
+              [`${repository}\n${snapshot.commit}`, Promise.resolve(initialSource)],
             ]);
             const requestedVersions = new Map(Object.entries(options.versions ?? {}));
+            const requestedSources = new Map(Object.entries(options.sources ?? {}));
+            const boundSources = new Map<string, Source>([[objectiveUri, initialSource]]);
             const sourceSignals = new Map<string, AbortSignal>();
             function resourcePath(uri: string): string {
               const url = new URL(uri);
               const path = decodeURIComponent(url.hash.slice(1)).replace(/\/$/, "");
-              if (!path || path.split("/").some((part) => part === ".." || part === "." || !part))
+              if (
+                path.length > 0 &&
+                path.split("/").some((part) => part === ".." || part === "." || !part)
+              )
                 throw new PilotSourceError("Invalid Git resource path.");
               return path;
             }
@@ -245,24 +257,53 @@ async function bindPilot<T>(
               const origin = new URL(uri);
               origin.hash = "";
               const remote = repositoryUri(origin.href.slice(4));
-              const existing = sources.get(remote);
-              const required = requestedVersions.get(uri);
-              if (existing !== undefined)
-                return existing.then((source) => {
-                  if (required !== undefined && source.snapshot.commit !== required)
-                    throw new PilotSourceError(`Pinned source version mismatch for ${uri}.`);
-                  return source;
-                });
+              const owner = [
+                ...new Set([
+                  ...boundSources.keys(),
+                  ...requestedSources.keys(),
+                  ...requestedVersions.keys(),
+                ]),
+              ]
+                .sort((a, b) => b.length - a.length)
+                .find((id) => uri === id || uri.startsWith(id));
+              const selected = owner ?? uri;
+              const evidence = requestedSources.get(selected);
+              const required = requestedVersions.get(selected);
+              const bound = boundSources.get(selected);
+              if (bound !== undefined) {
+                if (evidence !== undefined && bound.snapshot.commit !== evidence.commit)
+                  throw new PilotSourceError(
+                    `Conflicting immutable source binding for ${selected}.`,
+                  );
+                return Promise.resolve(bound);
+              }
+              if (required !== undefined && evidence === undefined)
+                throw new PilotSourceError(
+                  `Missing commit/tree source evidence for ${uri}; a tree is not a commit.`,
+                );
+              if (
+                evidence !== undefined &&
+                (evidence.kind !== "git-tree" ||
+                  evidence.repository !== remote ||
+                  evidence.directory !== resourcePath(selected) ||
+                  (required !== undefined && evidence.tree !== required))
+              )
+                throw new PilotSourceError(`Invalid pinned directory source evidence for ${uri}.`);
+              const key = `${remote}\n${evidence?.commit ?? (remote === repository ? snapshot.commit : "HEAD")}`;
+              const existing = sources.get(key);
+              if (existing !== undefined) return existing;
               const checkout = join(cache, `checkout-${sources.size}`);
               const pending = read(
                 loadGitSnapshot(
                   { cacheDirectory: cache },
                   {
-                    repository: remote,
+                    repository: remote === repository ? snapshotRepository : remote,
                     revision:
-                      required === undefined
-                        ? { type: "ref", value: "HEAD" }
-                        : { type: "commit", value: required },
+                      evidence !== undefined
+                        ? { type: "commit", value: evidence.commit }
+                        : remote === repository
+                          ? { type: "commit", value: snapshot.commit }
+                          : { type: "ref", value: "HEAD" },
                     refresh: { type: "once" },
                   },
                 ).pipe(Effect.provideService(Scope.Scope, scope)),
@@ -272,17 +313,46 @@ async function bindPilot<T>(
                 await read(materialize(source), sourceSignals.get(uri));
                 return source;
               });
-              sources.set(remote, pending);
+              sources.set(key, pending);
               return pending;
+            }
+            async function sourceEvidence(uri: string): Promise<GitPilotSource> {
+              const source = await sourceFor(uri);
+              const directory = resourcePath(uri);
+              const tree = await read(source.snapshot.treeOid(directory), sourceSignals.get(uri));
+              const required = requestedVersions.get(uri);
+              if (required !== undefined && required !== tree)
+                throw new PilotSourceError(`Pinned tree version mismatch for ${uri}.`);
+              boundSources.set(uri, source);
+              const origin = new URL(uri);
+              origin.hash = "";
+              const repositoryTree = await read(source.snapshot.treeOid(), sourceSignals.get(uri));
+              const expected = requestedSources.get(uri);
+              if (
+                expected !== undefined &&
+                (expected.kind !== "git-tree" ||
+                  expected.commit !== source.snapshot.commit ||
+                  expected.tree !== tree ||
+                  expected.repository !== repositoryUri(origin.href.slice(4)) ||
+                  expected.directory !== directory ||
+                  expected.repositoryTree !== repositoryTree)
+              )
+                throw new PilotSourceError(
+                  `Pinned commit/tree source evidence mismatch for ${uri}.`,
+                );
+              return {
+                kind: "git-tree",
+                repository: repositoryUri(origin.href.slice(4)),
+                directory,
+                commit: source.snapshot.commit,
+                tree,
+                repositoryTree,
+              };
             }
             const resources: ResourceResolver = {
               version: snapshot.commit,
-              versionFor: async (uri) => {
-                const commit = (await sourceFor(uri)).snapshot.commit;
-                if (requestedVersions.has(uri) && requestedVersions.get(uri) !== commit)
-                  throw new PilotSourceError(`Pinned source version mismatch for ${uri}.`);
-                return commit;
-              },
+              versionFor: async (uri) => (await sourceEvidence(uri)).tree,
+              sourceFor: sourceEvidence,
               readText: async (uri) => {
                 const source = await sourceFor(uri);
                 return new TextDecoder("utf-8", { fatal: true }).decode(
@@ -335,9 +405,7 @@ async function bindPilot<T>(
                   preparationSignal = signal,
                 ): Promise<void> {
                   const source = await sourceFor(pilot.objectiveId);
-                  const root = dirname(
-                    join(source.checkout, ...resourcePath(pilot.objectiveId).split("/")),
-                  );
+                  const root = join(source.checkout, ...resourcePath(pilot.objectiveId).split("/"));
                   const allChecks = pilot.manifest.levels.flatMap(
                     ({ advancement }) => advancement.checks,
                   );
@@ -400,23 +468,45 @@ async function bindPilot<T>(
                 await prepareChecks(spec);
                 const activeProbes = new Map<Promise<Envelope<CheckResult>>, AbortSignal>();
                 const probeLifecycle = new AbortController();
+                const boundObjectives = new Map<string, PilotSpec>([[spec.objectiveId, spec]]);
                 const runtime: PilotRuntime = {
+                  boundObjectives: () => [...boundObjectives.values()],
                   onObservation: (value) => evidence?.stream.emit("probe.observation", value),
-                  async resolveObjective(objectiveId, version, dependencySignal) {
+                  async resolveObjective(objectiveId, version, dependencySignal, source) {
                     dependencySignal.throwIfAborted();
                     if (
-                      canonicalManifestUri(objectiveId) !== objectiveId ||
+                      canonicalObjectiveUri(objectiveId) !== objectiveId ||
                       !objectiveId.startsWith("git+")
                     )
                       throw new PilotSourceError(
-                        "Dependency requires a canonical Git manifest URI.",
+                        "Dependency requires a canonical Git Pilot directory URI.",
                       );
+                    const bound = boundObjectives.get(objectiveId);
+                    if (bound !== undefined) {
+                      if (version !== undefined && version !== bound.version)
+                        throw new PilotSourceError(
+                          `Conflicting bound tree version for ${objectiveId}.`,
+                        );
+                      if (source !== undefined) {
+                        validateGitPilotSource(objectiveId, bound.version, source);
+                        if (
+                          source.commit !== bound.source?.commit ||
+                          source.repositoryTree !== bound.source?.repositoryTree
+                        )
+                          throw new PilotSourceError(
+                            `Conflicting bound snapshot evidence for ${objectiveId}.`,
+                          );
+                      }
+                      return { spec: bound, runtime };
+                    }
                     if (version !== undefined) requestedVersions.set(objectiveId, version);
+                    if (source !== undefined) requestedSources.set(objectiveId, source);
                     sourceSignals.set(objectiveId, dependencySignal);
                     const spec = await loadPilotSpec(objectiveId, resources);
                     dependencySignal.throwIfAborted();
                     await prepareChecks(spec, dependencySignal);
                     dependencySignal.throwIfAborted();
+                    boundObjectives.set(objectiveId, spec);
                     return { spec, runtime };
                   },
                   resolveCheck(ref) {
@@ -527,6 +617,7 @@ export interface PilotSourceOptions {
   readonly signal?: AbortSignal;
   readonly reports?: { readonly enabled?: boolean; readonly directory?: string } | undefined;
   readonly versions?: Readonly<Record<string, string>>;
+  readonly sources?: Readonly<Record<string, GitPilotSource>>;
   readonly cacheDirectory?: string;
   readonly probeTimeoutMs?: number | undefined;
   readonly preparationTimeoutMs?: number;

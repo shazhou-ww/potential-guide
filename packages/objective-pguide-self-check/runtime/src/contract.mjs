@@ -22,7 +22,7 @@ export class Problem extends Error {
 export const success = () => ({ status: 200, payload: { ok: true, problems: [] }, message: "" });
 export const problem = (id, parameters = {}) => ({
   status: 200,
-  payload: { ok: false, problems: [{ id, parameters }] },
+  payload: { ok: false, problems: [{ kind: "internal", id, parameters }] },
   message: "",
 });
 export function subjectValue(value, selfCheck = false) {

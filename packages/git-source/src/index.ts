@@ -58,6 +58,7 @@ export interface GitDirectoryEntry {
 export interface GitSnapshot {
   readonly repository: string;
   readonly commit: string;
+  readonly treeOid: (path?: string) => Effect.Effect<string, GitSourceError>;
   readonly readFile: (path: string) => Effect.Effect<Uint8Array, GitSourceError>;
   readonly readText: (path: string) => Effect.Effect<string, GitSourceError>;
   readonly readDirectory: (
@@ -559,6 +560,17 @@ function snapshotFromCommit(
   return Object.freeze({
     repository,
     commit,
+    treeOid: (path = "") =>
+      Effect.gen(function* () {
+        const entry = yield* lookup(path);
+        if (entry.kind !== "directory")
+          return yield* Effect.fail(
+            new GitSourceError("unsupported-entry", "tree", "Expected a Git directory."),
+          );
+        if (path !== "" && path !== ".") return entry.objectId;
+        const bytes = yield* lease.run("tree", ["rev-parse", `${commit}^{tree}`]);
+        return new TextDecoder().decode(bytes).trim();
+      }),
     readFile,
     readText: (path: string) =>
       readFile(path).pipe(

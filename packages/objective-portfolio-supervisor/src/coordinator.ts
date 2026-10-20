@@ -40,7 +40,12 @@ function token(demand: QueueDemand): string {
   return canonicalJson([demand.id, demand.revision]);
 }
 function recipe(demand: QueueDemand): string {
-  return canonicalJson([demand.pilot, demand.subject, demand.language ?? null]);
+  return canonicalJson([
+    demand.pilot,
+    demand.subject,
+    demand.language ?? null,
+    demand.sourceBindings ?? null,
+  ]);
 }
 function permissionSignature(permissions: RegulationPermissions): string {
   // Rule IDs, ordering, priorities and unselected ceiling entries confer no authority.
@@ -346,6 +351,7 @@ export async function createPortfolioCoordinator(
           history: { stalledRuns },
           permissions,
           ...(demand.language === undefined ? {} : { language: demand.language }),
+          ...(demand.sourceBindings === undefined ? {} : { sourceBindings: demand.sourceBindings }),
         };
         const handle = options.runner.start(input, resource);
         const run: Execution = {

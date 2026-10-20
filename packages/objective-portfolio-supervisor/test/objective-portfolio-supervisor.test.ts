@@ -44,7 +44,7 @@ function deferred<A>() {
 }
 function pilot(id: string): PilotSpec {
   return {
-    objectiveId: `git+file:///fixture.git#${id}/pilot.yaml`,
+    objectiveId: `git+file:///fixture.git#${id}/`,
     version: "1".repeat(40),
     manifest: {
       schemaVersion: 1,
@@ -180,6 +180,37 @@ const resource: AgentResource = {
   capacity: 1,
   capabilities: ["code"],
 };
+
+test("controlled binding replacement invalidates live consumer waits and ignores late provider results", async () => {
+  const consumer = goal("consumer");
+  const provider = goal("provider");
+  const planner = await createPortfolioPlanner({
+    goals: [consumer, provider],
+    periodic: false,
+    observe: async (entry) => observed(entry.pilot),
+  });
+  try {
+    const before = await read(planner.queue);
+    const rootDemand = required(before.demands.find(({ id }) => id === consumer.id));
+    await planner.feedback(handoff(rootDemand, provider.pilot));
+    const waiting = await read(planner.queue);
+    const oldProvider = required(waiting.demands.find(({ id }) => id === provider.id));
+    assert.ok(!waiting.demands.some(({ id }) => id === consumer.id));
+    const replacement = { ...provider, pilot: { ...provider.pilot, version: "2".repeat(40) } };
+    await planner.updateGoals([{ ...consumer, bindingRevision: "dependency-tree-2" }, replacement]);
+    const current = await read(planner.queue);
+    const newConsumer = required(current.demands.find(({ id }) => id === consumer.id));
+    const newProvider = required(current.demands.find(({ id }) => id === provider.id));
+    assert.ok(newConsumer.revision > rootDemand.revision);
+    assert.ok(newProvider.revision > oldProvider.revision);
+    await planner.feedback(handoff(oldProvider, pilot("late-foreign-target")));
+    assert.deepEqual(await read(planner.queue), current);
+    await planner.feedback(handoff(newConsumer, replacement.pilot));
+    assert.ok(!(await read(planner.queue)).demands.some(({ id }) => id === consumer.id));
+  } finally {
+    await planner.close();
+  }
+});
 const authorizationRequest = {
   id: "denied-1",
   operation: "execute",
@@ -671,7 +702,7 @@ test("planner observes successful goals at cadence and queues only later regress
     });
     assert.equal((await read(planner.queue)).demands.length, 0);
     level = "initial";
-    await planner.updateGoals([{ ...root, pilot: { ...root.pilot, version: "2" } }]);
+    await planner.updateGoals([{ ...root, pilot: { ...root.pilot, version: "2".repeat(40) } }]);
     const next = required((await read(planner.queue)).demands[0]);
     assert.ok(next.revision > old.revision);
     await planner.feedback({

@@ -318,13 +318,16 @@ test("regulate and continue persist pinned Pilot observations and use the JSON c
     assert.match(report.attempts[0].observations[0].message, /transient source failure/);
     assert.equal(successfulObservations[0].payload.problems.length, 2);
     assert.equal(successfulObservations[1].payload.current.levelId, "terminal");
-    assert.equal(successfulObservations[0].payload.versions[f.uri], commit);
+    assert.equal(
+      successfulObservations[0].payload.versions[f.uri],
+      await git(f.repository, "rev-parse", `${commit}:objective`),
+    );
     assert.match(await readFile(promptLog, "utf8"), /index\\?":1/);
     assert.match(await readFile(promptLog, "utf8"), /index\\?":2/);
     const persisted = JSON.parse(
       await readFile(join(state, "regulations", report.regulationId, "regulation.json"), "utf8"),
     );
-    assert.equal(persisted.schemaVersion, 2);
+    assert.equal(persisted.schemaVersion, 3);
     assert.equal(persisted.pilotCommit, commit);
     assert.deepEqual(persisted.agentExecutionLimits, { timeoutMs: 10_000 });
     assert.equal("limits" in persisted, false);
@@ -597,7 +600,7 @@ test("continue preserves local unpublished source metadata without changing the 
       "https://example.invalid/unpublished.git",
     );
     const commit = await f.commit();
-    const identity = "git+https://example.invalid/unpublished.git#objective/pilot.yaml";
+    const identity = "git+https://example.invalid/unpublished.git#objective/";
     const state = join(f.directory, "state");
     const config = join(f.directory, "config.yaml");
     await writeFile(
@@ -649,7 +652,10 @@ test("continue preserves local unpublished source metadata without changing the 
     assert.equal(continued.code, 0, continued.stdout + continued.stderr);
     const current = JSON.parse(continued.stdout).outcome.latestObservation.payload;
     assert.equal(current.current.objectiveId, identity);
-    assert.equal(current.versions[identity], commit);
+    assert.equal(
+      current.versions[identity],
+      await git(f.repository, "rev-parse", `${commit}:objective`),
+    );
   } finally {
     await rm(f.directory, { recursive: true, force: true });
   }

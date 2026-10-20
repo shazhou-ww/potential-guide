@@ -112,6 +112,7 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     const objectives = Object.entries(loaded.value.objectives ?? {}).map(([name, location]) => ({
       name,
       location,
+      semantics: "legacy-source-alias",
       source: loaded.sources[`objectives.${name}`],
     }));
     writeResult(
@@ -122,7 +123,7 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
         : objectives
             .map(
               ({ name, location, source }) =>
-                `${name}\n  Location: ${location}\n  Source:   ${source}`,
+                `${name} (legacy source alias)\n  Location: ${location}\n  Source:   ${source}`,
             )
             .join("\n\n"),
     );
@@ -193,21 +194,9 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
   }
   const config = await editable(path);
   if (subcommand === "add-objective" || subcommand === "update-objective") {
-    const name = argv[1];
-    const location = argv[2];
-    if (name === undefined || location === undefined || location.startsWith("--"))
-      throw new CliError(`${subcommand} requires <name> <path|Git URI>.`);
-    const exists = config.objectives !== undefined && Object.hasOwn(config.objectives, name);
-    if (subcommand === "add-objective" && exists)
-      throw new CliError(`Objective already exists in this scope: ${name}.`);
-    if (subcommand === "update-objective" && !exists)
-      throw new CliError(`Objective does not exist in this scope: ${name}.`);
-    if (location.startsWith("@"))
-      throw new CliError("Objective registry entries must reference a path or Git URI.");
-    config.objectives = {
-      ...config.objectives,
-      [name]: location.startsWith("git+") ? location : resolve(globals.cwd, location),
-    };
+    throw new CliError(
+      "Legacy source-alias writes are retired. Use pguide objectives set or migrate with an explicit inputSchema and subject. Existing aliases remain readable and removable; no binding is guessed.",
+    );
   } else if (subcommand === "remove-objective") {
     const name = argv[1];
     if (

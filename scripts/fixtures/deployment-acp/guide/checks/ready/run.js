@@ -12,7 +12,7 @@ process.stdin.on("end", () => {
       status: 200,
       payload: ready
         ? { ok: true, problems: [] }
-        : { ok: false, problems: [{ id: "not-ready", parameters: {} }] },
+        : { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: {} }] },
       message: "Deployment fixture completed.",
     }),
   );

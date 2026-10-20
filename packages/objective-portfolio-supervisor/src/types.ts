@@ -1,6 +1,7 @@
 import type { SubscriptionRef } from "@potential-guide/effects";
 import type {
   Envelope,
+  GitPilotSource,
   PilotObservation,
   PilotSpec,
   Subject,
@@ -24,6 +25,8 @@ export interface ObjectiveGoal {
   readonly observationIntervalMs: number;
   readonly requirements?: readonly string[];
   readonly language?: string;
+  readonly bindingRevision?: string;
+  readonly sourceBindings?: Readonly<Record<string, GitPilotSource>>;
 }
 export interface QueueDemand extends ObjectiveGoal {
   readonly revision: number;
@@ -98,6 +101,7 @@ export interface PortfolioPlannerOptions {
     objectiveId: string,
     version: string,
     signal: AbortSignal,
+    source?: GitPilotSource,
   ) => Promise<PilotSpec>;
   readonly releaseObjective?: (spec: PilotSpec) => Promise<void>;
   readonly observe: (

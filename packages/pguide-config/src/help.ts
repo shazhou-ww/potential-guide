@@ -65,18 +65,20 @@ const commands = {
   },
   "list-objectives": {
     arguments: "",
-    description: "List effective registered Objective names, locations and configuration origins.",
+    description:
+      "List legacy source aliases (not declarations), locations and configuration origins.",
     example: "pguide config list-objectives --format json",
   },
   "add-objective": {
     arguments: "<name> <path|Git URI> [--scope <scope>]",
     description:
-      "Register a new Objective name in the selected file; local paths are saved as absolute paths.",
+      "Retired: use pguide objectives set/migrate with explicit inputSchema and subject.",
     example: "pguide config add-objective health .\\objective --scope user",
   },
   "update-objective": {
     arguments: "<name> <path|Git URI> [--scope <scope>]",
-    description: "Replace an Objective location already registered in the selected file.",
+    description:
+      "Retired: use pguide objectives set/migrate; existing source aliases are read-only.",
     example: "pguide config update-objective health .\\updated-objective --scope user",
   },
   "remove-objective": {

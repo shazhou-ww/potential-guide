@@ -15,7 +15,7 @@ try {
   const revision = await execute("git", ["rev-parse", "HEAD"], { cwd: root });
   assert.equal(revision.code, 0, revision.stderr);
   report.commit = revision.stdout.trim();
-  report.pilot = `git+${pathToFileURL(root).href}#packages/objective-monorepo-standard/pilot.yaml`;
+  report.pilot = `git+${pathToFileURL(root).href}#packages/objective-monorepo-standard/`;
   const write = async (path, content) => {
     await mkdir(dirname(join(target, path)), { recursive: true });
     await writeFile(
@@ -101,7 +101,14 @@ try {
     const observation = JSON.parse(result.stdout);
     assert.equal(observation.status, 200, result.stdout);
     assert.equal(observation.payload.current.levelId, level, result.stdout);
-    assert.equal(observation.payload.versions[report.pilot], report.commit);
+    const tree = await execute(
+      "git",
+      ["rev-parse", `${report.commit}:packages/objective-monorepo-standard`],
+      { cwd: root },
+    );
+    assert.equal(tree.code, 0, tree.stderr);
+    assert.equal(observation.payload.versions[report.pilot], tree.stdout.trim());
+    assert.equal(observation.payload.sources[report.pilot].commit, report.commit);
     if (problemId)
       assert.ok(observation.payload.problems.some(({ ref }) => ref.problemId === problemId));
     else assert.deepEqual(observation.payload.problems, []);

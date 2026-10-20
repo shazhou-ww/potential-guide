@@ -61,8 +61,9 @@ export async function remote(stage, subject) {
     output.payload.ok !== (output.payload.problems.length === 0) ||
     !output.payload.problems.every(
       (p) =>
-        keys(p, ["id", "parameters"]) &&
-        own(p, ["id", "parameters"]) &&
+        keys(p, ["kind", "id", "parameters"]) &&
+        own(p, ["kind", "id", "parameters"]) &&
+        p.kind === "internal" &&
         problemIds[stage].includes(p.id) &&
         record(p.parameters),
     )

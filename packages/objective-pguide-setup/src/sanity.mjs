@@ -49,7 +49,7 @@ export async function sanity(subject, context, directory, selected) {
   await git("add", ".");
   await git("-c", "commit.gpgsign=false", "commit", "-qm", "Bounded setup fixture");
   const revision = await git("rev-parse", "HEAD");
-  const uri = `git+${pathToFileURL(repository).href}#pilot.yaml`;
+  const uri = `git+${pathToFileURL(repository).href}#/`;
   const common = ["--pilot", uri, "--revision", revision, "--subject-file", subjectFile];
   const probe = async () => {
     const result = await context.cli(["probe", ...common], configPath, repository);

@@ -20,7 +20,7 @@ subject 只需要目标根目录及目标仓库相对需求契约路径：
 ```powershell
 node packages\objective-monorepo-standard\check.mjs structure --subject-file D:\subject.json
 node packages\objective-monorepo-standard\check.mjs deliveries --subject-file D:\subject.json
-pguide probe --pilot "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/pilot.yaml" --subject-file D:\subject.json --format json
+pguide probe --pilot "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/" --subject-file D:\subject.json --format json
 ```
 
 使用 `--revision <完整 commit>` 固定可信版本；Git snapshot 不安装依赖或执行构建。

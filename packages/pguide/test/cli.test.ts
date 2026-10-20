@@ -4,7 +4,7 @@ import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node
 import { delimiter, join, resolve } from "node:path";
 import { test } from "node:test";
 import { sameDirectory } from "../src/path.js";
-import { fixture, scratch } from "./fixtures.js";
+import { fixture, git, scratch } from "./fixtures.js";
 
 const root = resolve(import.meta.dirname, "..", "..", "..");
 const tmpdir = () => scratch;
@@ -215,7 +215,10 @@ test("scaffold and static validate preserve multilingual Wiki; production probes
     assert.equal(probe.code, 0, probe.stdout);
     assert.equal(JSON.parse(probe.stdout).status, 200);
     assert.equal(JSON.parse(probe.stdout).payload.current.levelId, "terminal");
-    assert.equal(JSON.parse(probe.stdout).payload.versions[f.uri], commit);
+    assert.equal(
+      JSON.parse(probe.stdout).payload.versions[f.uri],
+      await git(f.repository, "rev-parse", `${commit}:objective`),
+    );
     const overviewPath = join(guide, "references", "system", "overview", "en-US.md");
     const overview = await readFile(overviewPath, "utf8");
     assert.match(overview, /references: \[\]/);

@@ -339,7 +339,7 @@ export const httpUrl =
   /^https?:\/\/[A-Za-z0-9][A-Za-z0-9.-]*(?::(?:[1-9]\d{0,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5]))?(?:\/[^\s@\u0000-\u001f]*)?$/;
 export const keys = (v, allowed) => record(v) && Object.keys(v).every((k) => allowed.includes(k));
 export const own = (v, required) => required.every((k) => Object.hasOwn(v, k));
-export const issue = (id, parameters = {}) => ({ id, parameters });
+export const issue = (id, parameters = {}) => ({ kind: "internal", id, parameters });
 export const envelope = (problems = [], diagnostics = []) => ({
   status: 200,
   payload: { ok: problems.length === 0, problems },
@@ -1187,8 +1187,9 @@ export async function remote(stage, subject) {
     output.payload.ok !== (output.payload.problems.length === 0) ||
     !output.payload.problems.every(
       (p) =>
-        keys(p, ["id", "parameters"]) &&
-        own(p, ["id", "parameters"]) &&
+        keys(p, ["kind", "id", "parameters"]) &&
+        own(p, ["kind", "id", "parameters"]) &&
+        p.kind === "internal" &&
         problemIds[stage].includes(p.id) &&
         record(p.parameters),
     )

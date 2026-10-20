@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promises as filesystem } from "node:fs";
-import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, rename, rm, stat, writeFile } from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { test } from "node:test";
@@ -29,12 +29,12 @@ async function repository(config: PilotManifest, origin?: string) {
   await git(root, "config", "user.email", "pilot@example.invalid");
   const identity = origin ?? pathToFileURL(root).href;
   await git(root, "remote", "add", "origin", identity);
-  const uri = `git+${identity}#objective/pilot.yaml`;
+  const uri = `git+${identity}#objective/`;
   const data = wikiFixture({ [uri]: config });
   for (const [resource, source] of [
     ...data.texts,
     ...[...data.pages.values()].flat().map(({ uri, source }) => [uri, source] as const),
-  ]) {
+  ] as const) {
     const path = join(root, ...decodeURIComponent(new URL(resource).hash.slice(1)).split("/"));
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, source);
@@ -42,7 +42,7 @@ async function repository(config: PilotManifest, origin?: string) {
   return {
     root,
     uri,
-    path: join(root, "objective", "pilot.yaml"),
+    path: join(root, "objective"),
     async check(path: string, source = successfulProbe) {
       const entry = join(root, "objective", ...path.split("/"));
       await mkdir(dirname(entry), { recursive: true });
@@ -67,16 +67,18 @@ test("local Pilot maps origin identity but reads its exact local commit without 
   t.after(() => rm(repo.root, { recursive: true, force: true }));
   const script = await repo.check("checks/ready/run.cjs");
   const commit = await repo.commit();
+  const tree = await git(repo.root, "rev-parse", `${commit}:objective`);
   const result = await withPilot(repo.path, repo.root, undefined, async (spec, runtime) => {
     assert.equal(spec.objectiveId, repo.uri);
-    assert.equal(spec.version, commit);
+    assert.equal(spec.version, tree);
+    assert.equal(spec.source?.commit, commit);
     // Concurrent checkout edits must not mutate an already-bound immutable source.
     await writeFile(script, "process.exit(7);");
     return Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime));
   });
   assert.ok(result.payload !== null);
   assert.equal(result.payload.current.levelId, "terminal");
-  assert.deepEqual(result.payload.versions, { [repo.uri]: commit });
+  assert.deepEqual(result.payload.versions, { [repo.uri]: tree });
   await assert.rejects(
     withPilot(repo.path, repo.root, undefined, async () => undefined),
     /dirty|uncommitted/,
@@ -95,6 +97,121 @@ test("level-scoped repeated check IDs execute their own committed probes", async
   );
   assert.ok(result.payload !== null);
   assert.equal(result.payload.current.levelId, "terminal");
+});
+
+test("folder tree versions cover manifest, scripts, References and resources, not unrelated commits; moves change identity", async (t) => {
+  const repo = await repository(
+    manifest({
+      levels: [{ id: "initial", advancement: { checks: [{ id: "ready", problems: ["broken"] }] } }],
+    }),
+  );
+  t.after(() => rm(repo.root, { recursive: true, force: true }));
+  await repo.check("checks/ready/run.cjs");
+  await repo.commit();
+  const bind = (location = repo.path) =>
+    withPilot(location, repo.root, undefined, async (spec) => spec);
+  let previous = await bind();
+  for (const [path, source] of [
+    [
+      "pilot.yaml",
+      `${JSON.stringify(manifest({ levels: [{ id: "initial", advancement: { checks: [{ id: "ready", problems: ["broken"] }] } }] }))}\n`,
+    ],
+    ["checks/ready/run.cjs", `${successfulProbe}\n`],
+    [
+      "references/system/overview/en-US.md",
+      "---\ntitle: Updated\ndescription: Updated reference\nreferences: []\n---\nContent.\n",
+    ],
+    ["asset.bin", "content"],
+  ] as const) {
+    await writeFile(join(repo.path, ...path.split("/")), source);
+    await repo.commit();
+    const next = await bind();
+    assert.notEqual(next.version, previous.version, path);
+    assert.equal(
+      next.version,
+      await git(repo.root, "rev-parse", `${next.source?.commit}:objective`),
+    );
+    previous = next;
+  }
+  await writeFile(join(repo.root, "unrelated"), "not inside Pilot");
+  await repo.commit();
+  const unchanged = await bind();
+  assert.equal(unchanged.version, previous.version);
+  assert.notEqual(unchanged.source?.commit, previous.source?.commit);
+  assert.notEqual(unchanged.source?.repositoryTree, previous.source?.repositoryTree);
+  await cp(repo.path, join(repo.root, "same-tree"), { recursive: true });
+  await repo.commit();
+  const duplicate = await bind(join(repo.root, "same-tree"));
+  assert.equal(duplicate.version, unchanged.version);
+  assert.notEqual(duplicate.objectiveId, unchanged.objectiveId);
+  await rename(join(repo.root, "same-tree"), join(repo.root, "moved"));
+  await repo.commit();
+  const moved = await bind(join(repo.root, "moved"));
+  assert.equal(moved.version, duplicate.version);
+  assert.notEqual(moved.objectiveId, duplicate.objectiveId);
+  await assert.rejects(
+    withPilot(moved.objectiveId, repo.root, moved.version, async () => undefined),
+    /commit|Git|fetch/i,
+  );
+});
+
+test("repository-root Pilot has canonical #/ identity and a verified root tree", async (t) => {
+  const repo = await repository(
+    manifest({
+      levels: [{ id: "initial", advancement: { checks: [{ id: "ready", problems: ["broken"] }] } }],
+    }),
+  );
+  t.after(() => rm(repo.root, { recursive: true, force: true }));
+  await repo.check("checks/ready/run.cjs");
+  for (const name of await filesystem.readdir(repo.path))
+    await rename(join(repo.path, name), join(repo.root, name));
+  await rm(repo.path, { recursive: true });
+  const commit = await repo.commit();
+  const result = await withPilot(repo.root, repo.root, undefined, async (spec, runtime) => {
+    assert.match(spec.objectiveId, /#\/$/);
+    assert.equal(spec.version, await git(repo.root, "rev-parse", `${commit}^{tree}`));
+    assert.equal(spec.source?.directory, "");
+    return Effect.runPromise(observe({ spec, subject: { name: "root" } }, runtime));
+  });
+  assert.equal(result.payload?.current.levelId, "terminal");
+});
+
+test("same repository folders can bind different retrieval commits and reject forged tree evidence", async (t) => {
+  const repo = await repository(
+    manifest({
+      levels: [{ id: "initial", advancement: { checks: [{ id: "ready", problems: ["broken"] }] } }],
+    }),
+  );
+  t.after(() => rm(repo.root, { recursive: true, force: true }));
+  await repo.check("checks/ready/run.cjs");
+  await cp(repo.path, join(repo.root, "other"), { recursive: true });
+  const old = await repo.commit();
+  const otherUri = repo.uri.replace("#objective/", "#other/");
+  const other = await withPilot(otherUri, repo.root, old, async (spec) => spec);
+  assert.ok(other.source);
+  await writeFile(join(repo.root, "other", "asset"), "updated");
+  await repo.commit();
+  await withPilot(repo.path, repo.root, undefined, async (spec, runtime) => {
+    assert.ok(runtime.resolveObjective);
+    const oldBinding = await runtime.resolveObjective(
+      otherUri,
+      other.version,
+      new AbortController().signal,
+      other.source,
+    );
+    assert.equal(oldBinding.spec.source?.commit, old);
+    assert.equal(oldBinding.spec.version, other.version);
+    assert.notEqual(spec.source?.commit, old);
+    await assert.rejects(
+      runtime.resolveObjective(
+        otherUri,
+        "0".repeat(40),
+        new AbortController().signal,
+        other.source,
+      ),
+      /mismatch|evidence|version/,
+    );
+  });
 });
 
 test("batched materialization preserves binary resources outside the Pilot directory", async (t) => {
@@ -184,16 +301,18 @@ test("explicit Git URI can select an older exact commit independently of current
   t.after(() => rm(repo.root, { recursive: true, force: true }));
   const script = await repo.check("checks/ready/run.cjs");
   const old = await repo.commit();
+  const oldTree = await git(repo.root, "rev-parse", `${old}:objective`);
   await writeFile(script, "process.exit(9);");
   await repo.commit();
   const result = await withPilot(repo.uri, repo.root, old, (spec, runtime) => {
-    assert.equal(spec.version, old);
+    assert.equal(spec.version, oldTree);
+    assert.equal(spec.source?.commit, old);
     return Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime));
   });
   assert.ok(result.payload !== null);
   assert.equal(result.payload.current.levelId, "terminal");
   const local = await withPilot(repo.path, repo.root, old, (spec, runtime) => {
-    assert.equal(spec.version, old);
+    assert.equal(spec.version, oldTree);
     assert.equal(spec.objectiveId, repo.uri);
     return Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime));
   });
@@ -221,6 +340,7 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kin
 `,
   );
   const childCommit = await child.commit();
+  const childTree = await git(child.root, "rev-parse", `${childCommit}:objective`);
   const parent = await repository(manifest({ levels }));
   t.after(() => rm(parent.root, { recursive: true, force: true }));
   await parent.check(
@@ -236,23 +356,31 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kin
 `,
   );
   const parentCommit = await parent.commit();
+  const parentTree = await git(parent.root, "rev-parse", `${parentCommit}:objective`);
+  let pinnedSources: NonNullable<
+    import("@potential-guide/objective-pilot").PilotObservation["sources"]
+  > = {};
   assert.notEqual(parentCommit, childCommit);
   let checkDirectory = "";
   await withPilot(parent.path, parent.root, undefined, async (spec, runtime) => {
-    assert.equal(spec.version, parentCommit);
+    assert.equal(spec.version, parentTree);
     const first = await Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime));
     assert.ok(first.payload !== null);
     assert.equal(first.payload.current.objectiveId, parent.uri);
     assert.equal(first.payload.problems[0]?.kind, "dependency");
     assert.deepEqual(first.payload.versions, {
-      [parent.uri]: parentCommit,
-      [child.uri]: childCommit,
+      [parent.uri]: parentTree,
+      [child.uri]: childTree,
     });
+    assert.ok(first.payload.sources);
+    pinnedSources = first.payload.sources;
+    assert.equal(pinnedSources[child.uri]?.commit, childCommit);
     assert.ok(runtime.resolveObjective);
     const binding = await runtime.resolveObjective(
       child.uri,
-      childCommit,
+      childTree,
       new AbortController().signal,
+      pinnedSources[child.uri],
     );
     const detail = await binding.runtime.resolveCheck({
       objectiveId: child.uri,
@@ -271,7 +399,7 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kin
     assert.ok(second.payload !== null);
     assert.equal(second.payload.current.objectiveId, parent.uri);
     assert.equal(second.payload.current.levelId, "initial");
-    assert.equal(second.payload.versions[child.uri], childCommit);
+    assert.equal(second.payload.versions[child.uri], childTree);
   });
   await assert.rejects(stat(checkDirectory), { code: "ENOENT" });
   const refreshed = await withPilot(parent.path, parent.root, undefined, (spec, runtime) =>
@@ -285,12 +413,12 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kin
     parent.root,
     parentCommit,
     (spec, runtime) => Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime)),
-    { versions: { [parent.uri]: parentCommit, [child.uri]: childCommit } },
+    { versions: { [parent.uri]: parentTree, [child.uri]: childTree }, sources: pinnedSources },
   );
   assert.ok(pinned.payload !== null);
   assert.equal(pinned.payload.current.objectiveId, parent.uri);
   assert.equal(pinned.payload.current.levelId, "initial");
-  assert.equal(pinned.payload.versions[child.uri], childCommit);
+  assert.equal(pinned.payload.versions[child.uri], childTree);
 });
 
 test("Git source failure is reported as explicit pilot-error exit 2", async () => {

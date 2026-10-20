@@ -44,6 +44,7 @@ export async function main(phase, subject, evidence) {
           ok: false,
           problems: [
             {
+              kind: "internal",
               id: phase === "structure" ? "structure-incomplete" : "delivery-incomplete",
               parameters: { report },
             },

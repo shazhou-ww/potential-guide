@@ -49,6 +49,10 @@ await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
   Empty string or `.` lists the root. Absolute paths, traversal, control
   characters, backslashes and colon syntax are rejected. Symlinks and submodules
   can be listed but are not followed or read as regular files.
+- `treeOid(path?)` returns the verified directory tree OID at that exact snapshot;
+  omitted/empty path selects the repository root tree. A regular file, symlink or
+  submodule is rejected. A tree is a content version, not a retrieval commit;
+  it must not be supplied to a commit revision selector.
 - `readFiles()` streams the entire committed tree as `{ path, bytes }` records.
   One recursive tree listing and binary-safe `cat-file --batch` requests replace
   per-file Git processes. Requests contain at most 256 blobs and target 8 MiB;

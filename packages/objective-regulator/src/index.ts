@@ -6,9 +6,10 @@ import {
   watchSnapshot,
 } from "@potential-guide/effects";
 import {
-  canonicalManifestUri,
+  canonicalObjectiveUri,
   type DependencyProblem,
   type Envelope,
+  type GitPilotSource,
   isJsonValue,
   type JsonObject,
   type LevelRef,
@@ -22,6 +23,7 @@ import {
   parseManifest,
   type Subject,
   SubjectProjectionError,
+  validateGitPilotSource,
 } from "@potential-guide/objective-pilot";
 
 export type PermissionGrant =
@@ -74,6 +76,7 @@ export interface RegulationInput {
   readonly language?: string;
   readonly history?: { readonly stalledRuns: number };
   readonly permissions?: RegulationPermissions;
+  readonly sourceBindings?: Readonly<Record<string, GitPilotSource>>;
 }
 export interface AgentInput {
   readonly binding: AgentBinding;
@@ -237,11 +240,11 @@ function executionError(cause: unknown): RegulationError {
 }
 
 function validatePilot(value: unknown): asserts value is PilotSpec {
-  fields(value, ["objectiveId", "version", "manifest", "locales"]);
+  fields(value, ["objectiveId", "version", "manifest", "locales"], ["source"]);
   if (
     !text(value.objectiveId) ||
     !value.objectiveId.startsWith("git+") ||
-    canonicalManifestUri(value.objectiveId) !== value.objectiveId ||
+    canonicalObjectiveUri(value.objectiveId) !== value.objectiveId ||
     typeof value.version !== "string" ||
     !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(value.version)
   )
@@ -250,6 +253,8 @@ function validatePilot(value: unknown): asserts value is PilotSpec {
       "Pilot requires unique stable Git identities and exact versions.",
     );
   const manifest = parseManifest(JSON.stringify(value.manifest));
+  if (value.source !== undefined)
+    validateGitPilotSource(value.objectiveId, value.version, value.source);
   if (!record(value.locales))
     throw new RegulationError(400, "Pilot locales must be reference page maps.");
   for (const language of manifest.languages) {
@@ -337,8 +342,14 @@ export function makeRegulatorSpec(
 function snapshotInput(value: RegulationInput): RegulationInput {
   try {
     if (!isJsonValue(value)) throw new RegulationError(400, "Input must contain finite JSON data.");
-    fields(value, ["spec", "subject"], ["language", "history", "permissions"]);
+    fields(value, ["spec", "subject"], ["language", "history", "permissions", "sourceBindings"]);
     validateSpec(value.spec);
+    if (value.sourceBindings !== undefined) {
+      if (!record(value.sourceBindings))
+        throw new RegulationError(400, "Invalid source binding table.");
+      for (const [id, source] of Object.entries(value.sourceBindings))
+        validateGitPilotSource(id, source.tree, source);
+    }
     if (!record(value.subject) || (value.language !== undefined && !text(value.language)))
       throw new RegulationError(400, "Invalid subject or language.");
     if (value.history !== undefined) {
@@ -428,6 +439,12 @@ function decide(input: RegulationInput, observation: PilotObservation): Regulati
     )
   )
     throw new RegulationError(500, "Invalid observation evidence or scoped problems.");
+  if (pilot.source !== undefined) {
+    for (const [id, version] of Object.entries(observation.versions))
+      validateGitPilotSource(id, version, observation.sources?.[id]);
+    if (observation.sources?.[pilot.objectiveId]?.commit !== pilot.source.commit)
+      throw new RegulationError(500, "Observation snapshot mismatch.");
+  }
   if (index >= rootLevels.indexOf(input.spec.strategy.targetLevel))
     return { type: "stop", reason: "target-reached" };
   const dependencies = observation.problems.filter((problem) => problem.kind === "dependency");

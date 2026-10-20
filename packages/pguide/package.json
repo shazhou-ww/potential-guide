@@ -7,6 +7,7 @@
   "bin": {
     "pguide": "./dist/bin.js",
     "pguide-continue": "./dist/bin/continue.js",
+    "pguide-objectives": "./dist/bin/objectives.js",
     "pguide-probe": "./dist/bin/probe.js",
     "pguide-regulate": "./dist/bin/regulate.js",
     "pguide-scaffold": "./dist/bin/scaffold.js",

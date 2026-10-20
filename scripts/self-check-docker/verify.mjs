@@ -48,7 +48,7 @@ await writeFile(
     ...(kind === "setup" ? { allowSanity: true } : {}),
   }),
 );
-const pilot = `git+file:///opt/objective#packages/pguide-${kind}-pilot/pilot.yaml`;
+const pilot = `git+file:///opt/objective#packages/objective-pguide-${kind}/`;
 const result = spawnSync(
   "/opt/consumer/node_modules/.bin/pguide",
   [
@@ -84,7 +84,19 @@ assert.equal(result.error, undefined, "Probe must finish within its outer deadli
 assert.equal(result.status, 0, `Probe failed: ${result.stderr}`);
 const observation = JSON.parse(result.stdout);
 assert.equal(observation.status, 200);
-assert.equal(observation.payload.versions[pilot], provenance.objectiveRevision);
+const tree = spawnSync(
+  "git",
+  [
+    "-C",
+    "/opt/objective",
+    "rev-parse",
+    `${provenance.objectiveRevision}:packages/objective-pguide-${kind}`,
+  ],
+  { encoding: "utf8" },
+);
+assert.equal(tree.status, 0, tree.stderr);
+assert.equal(observation.payload.versions[pilot], tree.stdout.trim());
+assert.equal(observation.payload.sources[pilot].commit, provenance.objectiveRevision);
 const prompts = (await readFile(log, "utf8")).trim().split("\n").filter(Boolean).map(JSON.parse);
 assert.deepEqual(prompts, [{ method: "session/prompt", mode }], "Exactly one prompt per probe");
 assert.deepEqual(await readdir(scratch), ["keep.txt"], "Owned task scratch must be cleaned");

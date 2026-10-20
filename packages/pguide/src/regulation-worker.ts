@@ -1,6 +1,6 @@
 import type { AgentProfile, AhpSessionIdentity } from "@potential-guide/cli-core";
 import { Effect } from "@potential-guide/effects";
-import type { PilotSpec } from "@potential-guide/objective-pilot";
+import type { GitPilotSource, PilotSpec } from "@potential-guide/objective-pilot";
 import {
   type AgentOutcome,
   RegulationError,
@@ -22,9 +22,13 @@ const controller = new AbortController();
 let started = false;
 
 async function run(message: StartMessage) {
-  const versions: Record<string, string> = {};
+  const sources: Record<string, GitPilotSource> = { ...message.input.sourceBindings };
+  const versions: Record<string, string> = Object.fromEntries(
+    Object.entries(sources).map(([id, source]) => [id, source.tree]),
+  );
   function collect(spec: PilotSpec) {
     versions[spec.objectiveId] = spec.version;
+    if (spec.source !== undefined) sources[spec.objectiveId] = spec.source;
   }
   collect(message.input.spec.pilot);
   let sessionId: string | undefined;
@@ -34,7 +38,7 @@ async function run(message: StartMessage) {
     return await withPilot(
       message.input.spec.pilot.objectiveId,
       message.cwd,
-      message.input.spec.pilot.version,
+      message.input.spec.pilot.source?.commit,
       async (spec, pilot) => {
         if (JSON.stringify(spec) !== JSON.stringify(message.input.spec.pilot))
           throw new RegulationError(
@@ -130,6 +134,7 @@ async function run(message: StartMessage) {
       },
       {
         versions,
+        sources,
         cacheDirectory: message.directory,
         probeTimeoutMs: message.input.spec.strategy?.probe?.timeoutMs,
       },

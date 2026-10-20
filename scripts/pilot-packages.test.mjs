@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -80,7 +80,7 @@ test("all private Pilot tarballs include same-version resources and run without 
       const packageRoot = join(consumer, "package");
       const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
       assert.equal(manifest.private, true);
-      const spec = await loadPilotSpec(join(packageRoot, "pilot.yaml"), fileResources);
+      const spec = await loadPilotSpec(packageRoot, fileResources);
       assert.deepEqual(
         spec.manifest.levels.flatMap((level) => level.advancement.checks.map((check) => check.id)),
         checks,

@@ -85,6 +85,7 @@ export const releasePackages = [
     bins: [
       "pguide",
       "pguide-continue",
+      "pguide-objectives",
       "pguide-probe",
       "pguide-regulate",
       "pguide-scaffold",

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
-import { bin, fixture, root, run } from "./fixtures.js";
+import { bin, fixture, git, root, run } from "./fixtures.js";
 
 test("probe accepts piped JSON through direct and dispatched commands with Registered Objectives", async () => {
   const f = await fixture();
@@ -47,7 +47,10 @@ test("probe accepts piped JSON through direct and dispatched commands with Regis
             "{}",
           );
           assert.equal(result.code, 0, result.stdout + result.stderr);
-          assert.equal(JSON.parse(result.stdout).payload.versions[f.uri], commit);
+          assert.equal(
+            JSON.parse(result.stdout).payload.versions[f.uri],
+            await git(f.repository, "rev-parse", `${commit}:objective`),
+          );
         }
       }
     }

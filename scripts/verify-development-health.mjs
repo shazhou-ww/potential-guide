@@ -102,7 +102,7 @@ async function verify(reportPath) {
     ]);
     assert.equal(changed, "", "Commit the exact Pilot and runner before verification");
     report.commit = await execute("git", ["rev-parse", "HEAD"]);
-    report.pilot = `git+${pathToFileURL(root).href}#packages/objective-devbox-health/pilot.yaml`;
+    report.pilot = `git+${pathToFileURL(root).href}#packages/objective-devbox-health/`;
     const context = join(scratch, "build");
     await mkdir(context);
     for (const name of ["Dockerfile", ".dockerignore", "server.mjs"])

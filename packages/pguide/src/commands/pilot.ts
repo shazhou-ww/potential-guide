@@ -1,30 +1,28 @@
 import { chmod, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import {
   atomicWrite,
   CliError,
   type GlobalOptions,
   loadConfig,
   option,
-  readJsonSubject,
   rejectUnknownOptions,
   reportOptions,
-  resolveObjective,
   writeResult,
 } from "@potential-guide/cli-core";
 import { startEffect } from "@potential-guide/effects";
-import {
-  fileResources,
-  loadPilotSpec,
-  observe,
-  type Subject,
-} from "@potential-guide/objective-pilot";
+import { fileResources, loadPilotSpec, observe } from "@potential-guide/objective-pilot";
 import { showCommandHelp } from "../command-help.js";
+import { selectObjective } from "../objectives.js";
 import { withPilot } from "../pilot-source.js";
 
 async function loadStaticPilot(path: string) {
   try {
-    return await loadPilotSpec(path, fileResources);
+    const entry = resolve(path);
+    return await loadPilotSpec(
+      basename(entry) === "pilot.yaml" ? dirname(entry) : entry,
+      fileResources,
+    );
   } catch (error) {
     throw new CliError(
       error instanceof Error ? error.message : "Pilot could not be loaded.",
@@ -44,6 +42,9 @@ export async function runProbe(
   }
   rejectUnknownOptions(argv, {
     "--pilot": "value",
+    "--objective": "value",
+    "--scope": "value",
+    "--input-file": "value",
     "--subject-file": "value",
     "--language": "value",
     "--revision": "value",
@@ -53,6 +54,7 @@ export async function runProbe(
   });
   const language = option(argv, "--language") as string | undefined;
   const loaded = await loadConfig(globals.cwd, globals.config);
+  const selected = await selectObjective(argv, globals, loaded.value);
   const controller = new AbortController();
   const cancel = () => controller.abort();
   process.once("SIGINT", cancel);
@@ -60,15 +62,11 @@ export async function runProbe(
   const value = await (async () => {
     try {
       return await withPilot(
-        resolveObjective(option(argv, "--pilot", { required: true }) as string, loaded.value),
+        selected.location,
         globals.cwd,
         option(argv, "--revision") as string | undefined,
         async (spec, runtime) => {
-          const subject = (await readJsonSubject(
-            option(argv, "--subject-file") as string | undefined,
-            globals.cwd,
-            spec.manifest.domainSchema,
-          )) as Subject;
+          const subject = await selected.subject(spec);
           return startEffect(
             observe({ spec, subject, ...(language === undefined ? {} : { language }) }, runtime),
             controller.signal,

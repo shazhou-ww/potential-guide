@@ -34,13 +34,21 @@ export {
   SUBJECT_PROJECTION_LIMITS,
   SubjectProjectionError,
 } from "./projection.js";
-export { canonicalManifestUri, fileResources } from "./resources.js";
+export {
+  canonicalManifestUri,
+  canonicalObjectiveUri,
+  fileResources,
+  pilotResourceUri,
+  validateGitPilotSource,
+} from "./resources.js";
 export type * from "./types.js";
 export {
   compileDomain,
+  compileInputSchema,
   json as isJsonValue,
   ObjectiveConfigurationError,
   ObjectiveOperationError,
   parseManifest,
+  parseStrictYaml,
   validateSubject,
 } from "./validation.js";

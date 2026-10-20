@@ -6,10 +6,18 @@ import {
   writeResult,
 } from "@potential-guide/cli-core";
 
-type Command = "probe" | "regulate" | "continue" | "supervise" | "scaffold" | "validate";
+type Command =
+  | "objectives"
+  | "probe"
+  | "regulate"
+  | "continue"
+  | "supervise"
+  | "scaffold"
+  | "validate";
 type Handler = Parameters<typeof commandMain>[1];
 
 export const commandDescriptions: Record<Command, string> = {
+  objectives: "Discover and manage user and directory Objective declarations",
   probe: "Observe an Objective Pilot",
   regulate: "Run Pilot regulation with per-Agent execution limits",
   continue: "Continue a persisted Regulation",
@@ -19,10 +27,24 @@ export const commandDescriptions: Record<Command, string> = {
 };
 
 const help: Record<Command, CommandHelp> = {
+  objectives: {
+    description:
+      "List/show declarations without evaluation or remote resolution; set/remove/migrate require explicit scope.",
+    usage: "pguide objectives list|show|set|remove|migrate [name] [--scope user|directory]",
+    sections: [
+      {
+        title: "Options",
+        lines: [
+          "  --from <file> Complete single-entry objectives.yaml for set/migrate",
+          "  --legacy-config <file> Explicit legacy config for migrate",
+        ],
+      },
+    ],
+  },
   probe: {
     description:
       "Observe the current Objective level and all blocking problems. Does not run regulation.",
-    usage: "pguide probe --pilot <path|Git URI|objective> [--subject-file <path|->] [options]",
+    usage: "pguide probe (--objective <name> | --pilot <directory|Git URI|legacy-alias>) [options]",
     sections: [
       {
         title: "Required",
@@ -31,6 +53,9 @@ const help: Record<Command, CommandHelp> = {
       {
         title: "Options",
         lines: [
+          "  --objective <name>     Select a declaration instead of --pilot",
+          "  --scope user|directory Disambiguate declaration scope",
+          "  --input-file <path|->  Declaration input; only Unit may omit it",
           "  --subject-file <path|-> JSON subject (default: stdin); use - explicitly for stdin",
           "  --revision <ref|commit> Pin source version; local paths require a full commit hash",
           "  --language <tag>        Select localized references (default: Pilot language)",
@@ -53,7 +78,7 @@ const help: Record<Command, CommandHelp> = {
           "  Local Pilot repositories must be clean and committed. Checks may execute tools;",
           "  a self-check Pilot includes one Agent sanity task. Read the Pilot before running.",
           "  Exit 0 means observation succeeded, not that the Objective reached terminal.",
-          "  Register a source with pguide config add-objective <name> <source>.",
+          "  Manage declarations with pguide objectives; config aliases are legacy sources only.",
           "  Use @name to require a registered Objective; bare names resolve when registered.",
           "  Next: pguide regulate --help",
         ],
@@ -64,11 +89,14 @@ const help: Record<Command, CommandHelp> = {
     description:
       "Observe, run an Agent when needed, and re-observe until a target or finite quota is reached.",
     usage:
-      "pguide regulate --pilot <path|Git URI|objective> --target <level> [--subject-file <path|->] [options]",
+      "pguide regulate (--objective <name> | --pilot <directory|Git URI|legacy-alias>) --target <level> [options]",
     sections: [
       {
         title: "Required",
         lines: [
+          "  --objective <name>     Select a declaration instead of --pilot",
+          "  --scope user|directory Disambiguate declaration scope",
+          "  --input-file <path|->  Declaration input; cannot combine with --subject-file",
           "  --pilot <source>        Committed path, Git URI, or registered Objective name",
           "  --target <level>        Target level ID, including terminal",
         ],

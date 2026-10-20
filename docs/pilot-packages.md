@@ -19,12 +19,12 @@
 
 ## 范围与历史路径
 
-| 历史路径（仅历史 commit 保留） | 当前 package / manifest |
+| 历史路径（仅历史 commit 保留） | 当前 Pilot 目录 ID fragment |
 | --- | --- |
-| `objectives/pnpm-monorepo` / `packages/monorepo-objective` | `packages/objective-monorepo-standard/pilot.yaml` |
-| `objectives/pguide-setup` / `packages/pguide-setup-pilot` | `packages/objective-pguide-setup/pilot.yaml` |
-| `objectives/pguide-self-check` / `packages/pguide-self-check-pilot` | `packages/objective-pguide-self-check/pilot.yaml` |
-| `objectives/development-machine-health` / `packages/development-machine-health-pilot` | `packages/objective-devbox-health/pilot.yaml` |
+| `objectives/pnpm-monorepo` / `packages/monorepo-objective` | `packages/objective-monorepo-standard/` |
+| `objectives/pguide-setup` / `packages/pguide-setup-pilot` | `packages/objective-pguide-setup/` |
+| `objectives/pguide-self-check` / `packages/pguide-self-check-pilot` | `packages/objective-pguide-self-check/` |
+| `objectives/development-machine-health` / `packages/development-machine-health-pilot` | `packages/objective-devbox-health/` |
 
 旧 URI 固定到旧 commit 时仍由该历史源码提供；新 commit 不保留第二套旧主体或
 静默重定向。迁移调用方的 URI fragment、脚本路径及版本 pin，然后重新加载 manifest

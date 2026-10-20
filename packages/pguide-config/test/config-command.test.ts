@@ -46,7 +46,7 @@ test("config path is available without creating configuration", async () => {
   }
 });
 
-test("Objective commands persist scoped registrations and reject invalid edits atomically", async () => {
+test("legacy source aliases remain readable/removable; retired writes preserve configuration", async () => {
   const cwd = await mkdtemp(join(scratch, "pguide-config-objective-"));
   const env = { ...process.env, APPDATA: cwd, XDG_CONFIG_HOME: cwd };
   const uri = "git+https://example.invalid/repo.git#objective/pilot.yaml";
@@ -61,17 +61,24 @@ test("Objective commands persist scoped registrations and reject invalid edits a
     ])
       assert.ok(help.subcommands.includes(command));
     assert.ok(help.subcommands.every((command: string) => !command.includes("alias")));
-    const added = await invoke(["add-objective", "health", uri, "--scope", "user"]);
-    assert.equal(added.code, 0, added.stdout);
+    await mkdir(join(cwd, "pguide"), { recursive: true });
+    await writeFile(
+      join(cwd, "pguide", "config.yaml"),
+      JSON.stringify({ schemaVersion: 2, objectives: { health: uri } }),
+    );
     const listed = JSON.parse((await invoke(["list-objectives"])).stdout).objectives;
     assert.deepEqual(
       listed.map(({ name, location }: { name: string; location: string }) => ({ name, location })),
       [{ name: "health", location: uri }],
     );
     assert.ok(listed[0].source);
-    const local = await invoke(["add-objective", "health", "./pilot.yaml"]);
-    assert.equal(local.code, 0, local.stdout);
+    assert.equal(listed[0].semantics, "legacy-source-alias");
     const configPath = join(cwd, ".pguide", "config.yaml");
+    await mkdir(join(cwd, ".pguide"), { recursive: true });
+    await writeFile(
+      configPath,
+      JSON.stringify({ schemaVersion: 2, objectives: { health: join(cwd, "pilot.yaml") } }),
+    );
     const before = await readFile(configPath, "utf8");
     for (const args of [
       ["add-objective", "health", uri],
@@ -88,7 +95,8 @@ test("Objective commands persist scoped registrations and reject invalid edits a
     const shown = JSON.parse((await invoke(["list-objectives"])).stdout).objectives;
     assert.equal(shown[0].location, join(cwd, "pilot.yaml"));
     const updated = await invoke(["update-objective", "health", uri]);
-    assert.equal(updated.code, 0, updated.stdout);
+    assert.equal(updated.code, 2, updated.stdout);
+    assert.match(updated.stdout, /retired/);
     const removed = await invoke(["remove-objective", "health"]);
     assert.equal(removed.code, 0, removed.stdout);
     const inherited = JSON.parse((await invoke(["list-objectives"])).stdout).objectives;
@@ -122,7 +130,10 @@ test("Objective list separates long locations and configuration sources without 
     assert.equal(
       result.stdout,
       `${Object.entries(objectives)
-        .map(([name, location]) => `${name}\n  Location: ${location}\n  Source:   ${configPath}`)
+        .map(
+          ([name, location]) =>
+            `${name} (legacy source alias)\n  Location: ${location}\n  Source:   ${configPath}`,
+        )
         .join("\n\n")}\n`,
     );
     assert.ok(!result.stdout.includes("\t"));
@@ -133,6 +144,7 @@ test("Objective list separates long locations and configuration sources without 
       objectives: Object.entries(objectives).map(([name, location]) => ({
         name,
         location,
+        semantics: "legacy-source-alias",
         source: configPath,
       })),
     });

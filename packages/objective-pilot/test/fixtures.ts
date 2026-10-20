@@ -5,7 +5,7 @@ import {
   type ResourceResolver,
 } from "../src/index.js";
 
-export const objectiveId = "git+https://example.test/objectives.git#root/pilot.yaml";
+export const objectiveId = "git+https://example.test/objectives.git#root/";
 export const commit = "a".repeat(40);
 
 export function manifest(overrides: Partial<PilotManifest> = {}): PilotManifest {
@@ -37,7 +37,10 @@ export function manifest(overrides: Partial<PilotManifest> = {}): PilotManifest 
 
 export function fixture(configs: Record<string, PilotManifest> = { [objectiveId]: manifest() }) {
   const texts = new Map(
-    Object.entries(configs).map(([uri, config]) => [uri, JSON.stringify(config)]),
+    Object.entries(configs).map(([uri, config]) => [
+      canonicalManifestUri("pilot.yaml", uri),
+      JSON.stringify(config),
+    ]),
   );
   const pages = new Map<string, { uri: string; source: string }[]>();
   for (const [uri, config] of Object.entries(configs)) {

@@ -66,7 +66,7 @@ export async function fixture(baseDirectory = scratch) {
   ]);
   if (scaffold.code !== 0) throw new Error(scaffold.stdout + scaffold.stderr);
   const manifest = join(repository, "objective", "pilot.yaml");
-  const uri = `git+${pathToFileURL(repository).href}#objective/pilot.yaml`;
+  const uri = `git+${pathToFileURL(repository).href}#objective/`;
   const subject = join(directory, "subject.json");
   await writeFile(subject, "{}");
   async function commit() {

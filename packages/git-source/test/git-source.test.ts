@@ -781,6 +781,8 @@ test("file URL repository with a self-referencing origin resolves HEAD and reads
   await git(repo.root, "add", ".");
   await git(repo.root, "commit", "-m", "pilot definition");
   const commit = await git(repo.root, "rev-parse", "HEAD");
+  const rootTree = await git(repo.root, "rev-parse", `${commit}^{tree}`);
+  const guideTree = await git(repo.root, "rev-parse", `${commit}:guide`);
   await Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
@@ -794,6 +796,11 @@ test("file URL repository with a self-referencing origin resolves HEAD and reads
         );
         assert.equal(snapshot.repository, repository);
         assert.equal(snapshot.commit, commit);
+        assert.equal(yield* snapshot.treeOid(), rootTree);
+        assert.equal(yield* snapshot.treeOid("."), rootTree);
+        assert.equal(yield* snapshot.treeOid("guide"), guideTree);
+        assert.ok(Exit.isFailure(yield* Effect.exit(snapshot.treeOid("guide/pilot.yaml"))));
+        assert.ok(Exit.isFailure(yield* Effect.exit(snapshot.treeOid("../guide"))));
         assert.equal(yield* snapshot.readText("guide/pilot.yaml"), "id: immutable-pilot\n");
       }),
     ),

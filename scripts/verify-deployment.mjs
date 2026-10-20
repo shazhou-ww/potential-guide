@@ -20,7 +20,7 @@ const packs = join(scratch, "packs");
 const consumer = join(scratch, "consumer");
 const fixtureSource = join(root, "scripts", "fixtures", "deployment-acp");
 const fixture = join(consumer, "fixture");
-const pilotUri = `git+${pathToFileURL(fixture).href}#guide/pilot.yaml`;
+const pilotUri = `git+${pathToFileURL(fixture).href}#guide/`;
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const binExtension = process.platform === "win32" ? ".cmd" : "";
@@ -645,7 +645,7 @@ async function verifySetupObjective(baseEnv) {
   const revision = (
     await successful("git", ["rev-parse", "HEAD"], { cwd: setupRoot })
   ).stdout.trim();
-  const setupUri = `git+${pathToFileURL(setupRoot).href}#packages/objective-pguide-setup/pilot.yaml`;
+  const setupUri = `git+${pathToFileURL(setupRoot).href}#packages/objective-pguide-setup/`;
   const agent = join(consumer, "setup-agent.mjs");
   await writeFile(
     agent,
@@ -734,7 +734,13 @@ for await (const line of createInterface({input:process.stdin})) {
   assert.equal(observation.status, 200, result.stdout);
   assert.equal(observation.payload.current.objectiveId, setupUri);
   assert.equal(observation.payload.current.levelId, "terminal", result.stdout);
-  assert.equal(observation.payload.versions[setupUri], revision);
+  const setupTree = await successful(
+    "git",
+    ["rev-parse", `${revision}:packages/objective-pguide-setup`],
+    { cwd: setupRoot },
+  );
+  assert.equal(observation.payload.versions[setupUri], setupTree.stdout.trim());
+  assert.equal(observation.payload.sources[setupUri].commit, revision);
   assert.deepEqual(observation.payload.problems, []);
   console.log("installed pguide loads committed setup subdirectory and verifies real nonce repair");
   const selfSubject = JSON.parse(await readFile(subject, "utf8"));
@@ -762,7 +768,13 @@ for await (const line of createInterface({input:process.stdin})) {
   const selfObservation = JSON.parse(selfResult.stdout);
   assert.equal(selfObservation.status, 200, selfResult.stdout);
   assert.equal(selfObservation.payload.current.levelId, "terminal", selfResult.stdout);
-  assert.equal(selfObservation.payload.versions[selfUri], revision);
+  const selfTree = await successful(
+    "git",
+    ["rev-parse", `${revision}:packages/objective-pguide-self-check`],
+    { cwd: setupRoot },
+  );
+  assert.equal(selfObservation.payload.versions[selfUri], selfTree.stdout.trim());
+  assert.equal(selfObservation.payload.sources[selfUri].commit, revision);
   assert.deepEqual(selfObservation.payload.problems, []);
   assert.deepEqual(
     (await readFile(join(consumer, "setup-prompts.jsonl"), "utf8"))
