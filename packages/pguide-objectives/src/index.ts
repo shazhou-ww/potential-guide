@@ -53,7 +53,7 @@ export async function runObjectives(argv: string[], globals: GlobalOptions): Pro
     );
     writeResult(
       {
-        $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
+        schemaVersion: 1,
         objectives: entries,
         legacyAliases,
       },

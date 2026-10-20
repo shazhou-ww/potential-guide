@@ -61,6 +61,8 @@ Registration is optional: paths and Git URIs can still be used directly.
 Use `@name` to require a registered Objective or `./name` to force a local path.
 The machine-readable list contains `schemaVersion: 1` and an `objectives` array
 of entries with `name`, `location` and `source`.
+This CLI response is not an Objective declaration document and does not carry
+the declaration file's `$schema` URI.
 See [stdin and registry examples](../pguide/README.md#json-subjects-from-stdin-and-the-objective-registry).
 
 `regulationPermissions` is an optional administrative setting, defaulting to

@@ -12,6 +12,11 @@ import {
   selectObjective,
 } from "../../objective-declarations/src/index.js";
 import { fixture as pilotFixture } from "../../objective-pilot/test/fixtures.js";
+import {
+  OBJECTIVES_SCHEMA_URI,
+  parseStrictYaml,
+  validateObjectivesDocument,
+} from "../../pilot-protocol/src/index.js";
 import { bin, fixture, git, run, writeConfig } from "./fixtures.js";
 
 const unit = { type: "object", additionalProperties: false, maxProperties: 0 } as const;
@@ -256,6 +261,50 @@ test("discovery is exact-directory, technology independent and never evaluates o
   assert.match(entry.revision, /^[a-f0-9]{64}$/);
   assert.equal(entry.scope, "directory");
   assert.equal(JSON.parse(listed.stdout).objectives.length, 1);
+});
+
+test("list and show identify discovery responses separately from declaration documents", async (t) => {
+  const f = await fixture();
+  t.after(() => rm(f.directory, { recursive: true, force: true }));
+  const file = join(f.repository, "objectives.yaml");
+  await writeFile(file, document());
+  const config = join(f.directory, "aliases.json");
+  await writeFile(
+    config,
+    JSON.stringify({ schemaVersion: 2, objectives: { old: declaration.objective } }),
+  );
+  for (const command of [["list"], ["show", "check"]]) {
+    const result = await run(bin("objectives"), [
+      ...command,
+      "--scope",
+      "directory",
+      "--cwd",
+      f.repository,
+      "--config",
+      config,
+      "--format",
+      "json",
+    ]);
+    assert.equal(result.code, 0, result.stdout + result.stderr);
+    const { schemaVersion, ...response } = JSON.parse(result.stdout);
+    assert.equal(schemaVersion, 1);
+    assert.equal(Object.hasOwn(response, "$schema"), false);
+    assert.equal(Array.isArray(response.objectives), true);
+    assert.equal(response.objectives[0].name, "check");
+    assert.deepEqual(response.legacyAliases, [
+      {
+        name: "old",
+        objective: declaration.objective,
+        semantics: "legacy-source-alias",
+        file: config,
+      },
+    ]);
+    assert.equal(
+      validateObjectivesDocument({ $schema: OBJECTIVES_SCHEMA_URI, ...response }),
+      false,
+    );
+  }
+  assert.equal(validateObjectivesDocument(parseStrictYaml(await readFile(file, "utf8"))), true);
 });
 
 test("context exposes only repo root/origin and repo-relative path across worktrees and non-Git directories", async (t) => {
