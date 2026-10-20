@@ -99,3 +99,18 @@ pguide 88 项中 86 通过、2 项既有平台跳过，脚本测试 39/39 通过
 16 个包的九种隔离消费场景通过。
 此更新改变 Inner revision；真实 Ubuntu CI 复验及对应接受刷新由父协调者负责，
 本修复没有追加或改写任何生命周期事件，也没有宣称新 CI 已通过。
+
+父协调者随后使用 TypeScript AST 检查任务改动文件，发现
+`packages/pguide/test/ahp-cli.test.ts` 的 AHP 闭环测试仍嵌套调用全局 test。
+在快进到 `37d50e3568a5eace030237000e80a730544a024f` 后，仅将该父测试接收的
+TestContext 显式传入，并把已有的 `await test(...)` 改为 `await t.test(...)`，
+明确 supervisor planning/process-worker 子测试的所有者与完成顺序；
+没有改变生产代码、既有超时、跳过或断言。该文件的 AST 复核为嵌套全局 test 调用 0 个、
+显式等待的父上下文子测试 1 个。
+Windows Node 22.13.0 和 24.12.0 分别直接执行
+`node --import tsx --test --test-concurrency=1 packages\pguide\test\ahp-cli.test.ts`，
+两次均为 10 通过、0 失败、0 取消、0 跳过，不是缓存重放。
+`pnpm check` 返回 0：40 个 workspace 测试任务通过（32 个缓存），
+pguide 88 项中 86 通过、2 项既有平台跳过，脚本测试 39/39，
+16 个包的九种隔离消费场景通过。此补充证据同样需要父协调者重新确认对应 Inner revision，
+不替代真实 CI 复验，也没有改动其他 Agent 负责的 monorepo 测试或生命周期事件。
