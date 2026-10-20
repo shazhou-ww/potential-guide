@@ -157,24 +157,92 @@ test("process cancellation terminates the process tree and removes only its own 
   assert.equal(alive, false, "descendant must be terminated before cancellation cleanup completes");
 });
 
-test("process timeout returns an invocation fault and reclaims its resources", async () => {
+test("process timeout returns an invocation fault and reclaims its resources", async (t) => {
+  const nativeSetTimeout = globalThis.setTimeout;
+  const nativeClearTimeout = globalThis.clearTimeout;
+  const controller = new AbortController();
   let logs = "";
-  const result = await createProcessCheckProbe({
+  let ready!: () => void;
+  const started = new Promise<void>((resolve) => {
+    ready = resolve;
+  });
+  let watchdog: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    watchdog = nativeSetTimeout(
+      () => reject(new Error("Process readiness/cleanup exceeded 15s.")),
+      15_000,
+    );
+  });
+  // Child startup has a real watchdog; the probe's exact 200ms clock advances after readiness.
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let expired = false;
+  const cleanupClock = setInterval(() => {
+    if (expired) t.mock.timers.tick(10);
+  }, 10);
+  const work = createProcessCheckProbe({
     command: process.execPath,
     args: [
       "-e",
-      "process.stderr.write(process.env.PGUIDE_PROBE_TEMP_DIR);setInterval(()=>{},1000);",
+      'process.stderr.write(JSON.stringify({directory:process.env.PGUIDE_PROBE_TEMP_DIR,pid:process.pid})+"\\n");setInterval(()=>{},1000);',
     ],
     timeoutMs: 200,
     gracePeriodMs: 25,
     log: (text) => {
       logs += text;
+      if (logs.includes("\n")) ready();
     },
-  })(subject, signal);
-  assert.ok(result.payload === null);
-  assert.match(result.message, /^timeout:/);
-  assert.match(logs, /pguide-check-/);
-  await assert.rejects(stat(logs), { code: "ENOENT" });
+  })(subject, controller.signal);
+  try {
+    await Promise.race([
+      started,
+      work.then(() => {
+        throw new Error("Process exited before readiness.");
+      }),
+      deadline,
+    ]);
+    const metadata: { directory: string; pid: number } = JSON.parse(logs.trim());
+    let settled = false;
+    void work.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+    t.mock.timers.tick(199);
+    await Promise.resolve();
+    assert.equal(settled, false, "The 200ms deadline must not fire at 199ms.");
+    assert.ok((await stat(metadata.directory)).isDirectory());
+    process.kill(metadata.pid, 0);
+    t.mock.timers.tick(1);
+    expired = true;
+    const result = await Promise.race([work, deadline]);
+    assert.equal(result.status, 504);
+    assert.ok(result.payload === null);
+    assert.match(result.message, /^timeout: Check timed out after 200ms\.$/);
+    assert.match(logs, /pguide-check-/);
+    await assert.rejects(stat(metadata.directory), { code: "ENOENT" });
+    assert.throws(() => process.kill(metadata.pid, 0), { code: "ESRCH" });
+  } finally {
+    controller.abort(new Error("Timeout fixture cleanup"));
+    expired = true;
+    let cleanupWatchdog: ReturnType<typeof setTimeout> | undefined;
+    const cleanupDeadline = new Promise<never>((_, reject) => {
+      cleanupWatchdog = nativeSetTimeout(
+        () => reject(new Error("Process fixture did not finish cancellation cleanup.")),
+        5_000,
+      );
+    });
+    try {
+      await Promise.race([work.catch(() => undefined), cleanupDeadline]);
+    } finally {
+      clearInterval(cleanupClock);
+      if (watchdog !== undefined) nativeClearTimeout(watchdog);
+      if (cleanupWatchdog !== undefined) nativeClearTimeout(cleanupWatchdog);
+      t.mock.timers.reset();
+    }
+  }
 });
 
 test("HTTP cancellation is local and does not promise remote business termination", async (t) => {
