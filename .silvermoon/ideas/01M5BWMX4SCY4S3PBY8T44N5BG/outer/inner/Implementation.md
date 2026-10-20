@@ -6,7 +6,7 @@
 
 ### I-S01: 替换问题与观察协议
 
-移除静态 prerequisite；新增独立 expected-level check 命令及 probe 的 false 转换，贯通两种问题、观察、校验和摘要；测试 fixture 使用新协议，不迁移两工程现有 Objective 定义。
+移除静态 prerequisite；在现有 objective-pilot 包导出层级判断和依赖 probe，贯通问题、观察、校验和摘要；不新增包或 check 子命令，测试 fixture 使用新协议，不迁移两工程现有 Objective 定义。
 
 ### I-S02: 贯通治理交接与依赖调度
 
@@ -20,7 +20,7 @@
 
 ### I-AC01: 问题协议可验证
 
-通过命令与 Pilot 定向测试证明 true/false 判断及 probe 转换正确、观察归属固定、两种问题结构严格、未知外部状态不伪装为业务阻塞。
+通过库函数与 Pilot 定向测试证明 true/false 判断及 probe 转换正确、观察归属固定、两种问题结构严格、未知外部状态不伪装为业务阻塞。
 
 ### I-AC02: 依赖闭环可恢复
 

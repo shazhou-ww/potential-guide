@@ -219,9 +219,9 @@ observeOwnLevels 仍执行当前层的全部 checks，聚合问题，在首个�
 ownerOf (current observation) == rootObjective input
 ```
 
-例如 A 的 publish probe 根据环境输入调用独立 check 命令检查 B 是否 ready：命令先返回 false，probe 再将同次报告转换为 DependencyCheckProblem。命令自身不生成 problem。这不使 A 的 current 变成 B，也不强制 A 从第一层就等待 B。
+例如 A 的 publish probe 根据环境输入调用 objective-pilot 导出的层级判断函数检查 B 是否 ready：先得到 passed = false，probe 再将同次 observation 转换为 DependencyCheckProblem。判断函数自身不生成 problem。这不使 A 的 current 变成 B，也不强制 A 从第一层就等待 B。
 
-### 3.2.1 独立命令判断，probe 转换结果
+### 3.2.1 库函数判断，probe 转换结果
 
 ```haskell
 data Target = Target ObjectiveId Subject LevelId
@@ -231,24 +231,24 @@ data LevelCheck = LevelCheck
   , evidence :: LevelEvidence
   }
 
-checkObjective
+checkObjectiveLevel
   :: CheckRuntime
   -> Target
   -> Effect CheckError LevelCheck
 
-checkObjective runtime target = do
+checkObjectiveLevel runtime target = do
   observation <- observeTargetOrFail runtime target
   pure (LevelCheck
     (reachesExpected target observation)
     (levelEvidence target observation))
 
-probeDependency
+objectiveDependencyProbe
   :: CheckRuntime
   -> Target
   -> Effect CheckError CheckResult
 
-probeDependency runtime target = do
-  result <- checkObjective runtime target
+objectiveDependencyProbe runtime target = do
+  result <- checkObjectiveLevel runtime target
   validateEvidence target result
   contributeVersions (evidence result)
   if passed result
@@ -258,7 +258,7 @@ probeDependency runtime target = do
         (dependencyFrom (evidence result)) :| []))
 ```
 
-checkObjective 的业务判定是 Bool；LevelCheck 保留同一次观察的证据，供进程命令通过 report 传递。CLI 的 stdout 只有 true/false，依赖 probe 是唯一构造依赖 problem 的转换边界。错误在 Effect 中传播，不折叠为 false；一条命令可独立使用，也可由 level 的一个或多个 probe 组合使用，见 [命令契约](./Check-command.md)。
+checkObjectiveLevel 的业务判定是 Bool；LevelCheck 的 evidence 表示同次 observation 的所需信息，在真实 API 中直接保留 observation，不重复定义外部 report。objectiveDependencyProbe 是 createObjectiveDependencyProbe 生成的计算的抽象；直接复用前者，无额外 CLI、裸布尔 stdout 或临时文件。错误不折叠为 false；level 的一个或多个 probe 可以组合调用，见 [库函数契约](./Dependency-check-api.md)。Envelope 错误返回与 Effect 失败仍按第 1 节的双层模型保留，此处略去机械解包。
 
 ### 3.3 Regulator：通过问题类型决定交接
 

@@ -6,13 +6,13 @@
 
 ## 结果
 
-Observation 始终描述当前 Objective；独立 check 命令判断外部目标是否达到预期层级，probe 将 false 转为依赖问题。Regulator 遇到依赖即交接 Supervisor，满足后重新观察当前目标。
+Observation 始终描述当前 Objective；从现有 objective-pilot 包导出层级判断与依赖 probe，检查脚本直接复用，probe 将 false 转为依赖问题。Regulator 遇到依赖即交接 Supervisor，满足后重新观察当前目标。
 
 ## 边界
 
 - 直接删除旧 prerequisite 协议，不保留兼容链或双轨模型。
 - 依赖问题无需 ProblemRef，只描述外部实例、预期层级与当前层级。
-- 本轮仅提交设计；两工程现有 Objective 定义留待之后手动迁移，不纳入自动迁移。
+- 本轮仅设计；MVP 不新增包或 check 子命令，两工程现有 Objective 定义之后手动迁移。
 
 ## 验收标准
 
@@ -23,6 +23,6 @@ Observation 始终描述当前 Objective；独立 check 命令判断外部目标
 ## 支持文档
 
 - [具体模型与治理闭环](./Dependency-design.md)
-- [独立 check 命令与 probe 结果转换](./Check-command.md)
+- [MVP 库函数与依赖 probe](./Dependency-check-api.md)
 - [Haskell 伪代码：协议与 Behavior 的 Before / After](./Protocol-before-after.md)
 - [修改范围、迁移方式与验证矩阵](./Change-map.md)

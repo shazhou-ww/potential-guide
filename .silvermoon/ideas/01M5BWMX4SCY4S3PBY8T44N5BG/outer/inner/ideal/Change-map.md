@@ -19,21 +19,20 @@
 | loadPilotSpec/describeLevels | 只加载和描述当前 Objective，移除链与等级拼接 | 固定版本、资源不可变、level 数组顺序 |
 | parseCheckEnvelope/observe | 校验新联合；仅内部问题补 ref；聚合同层依赖；current 固定本目标 | 全层聚合、并发顺序、错误 envelope |
 | 摘要/引用页消费 | 内部问题沿用页面；依赖使用统一本地化描述 | 内部 Wiki 与 scoped refs |
-| check 命令 | 新增独立 pguide check，复用来源绑定与 observe；比较 expected level，stdout 为 true/false，report 保留本次证据 | 不执行 Agent、不产生 problem，调用错误与 false 区分 |
-| 依赖 probe 适配 | 执行 check 命令，true 转通过、false 转 dependency；校验并合并 report 的版本证据 | 不将裸布尔值传给 parseCheckEnvelope，不二次观察 |
-| probes/外部观察 | 复用共享进程执行设施；memory、HTTP、process 接受转换后的新格式 | envelope、process stdin 仅 subject、退出清理与取消 |
+| objective-pilot 库函数/导出 | 导出 checkObjectiveLevel，复用 observe 比较 expected level，返回 passed 和同次 observation | 不执行 Agent、不产生 problem，不新增包 |
+| 依赖 probe 适配 | 导出 createObjectiveDependencyProbe，直接调用库函数，true 转通过、false 转 dependency，贡献版本证据 | 不启动嵌套命令、不经临时 report、不二次观察 |
+| probes/外部观察 | 复用现有运行脚本和进程执行设施；各传输接受转换后的新格式 | envelope、process stdin 仅 subject、退出清理与取消 |
 | objective-regulator | 删除递归规范验证与旧 prerequisite API；增加 dependency-required 联合分支 | target、quota、授权和非依赖 stall |
 | 进度比较 | 只比较本目标层级及内部问题；依赖在内部 stall 更新前交接 | 不将等待计作 Agent 无进展 |
 | Portfolio 类型/Planner | 多等待项、注入动态解析、独立阈值恢复、版本冲突与实际等待环检测 | 合并、优先级、周期观察 |
 | 派生目标生命周期 | 根所有权追踪、配方替换、共享引用与不可达目标回收 | revision 隔离、显式注册目标保留 |
 | Coordinator | 新交接原因正常结束，本 revision 不自动重跑，待 Planner 更新 | 退出确认、P0、资源和权限边界 |
 | pguide 来源/worker | 删除链式 prepareChecks、collect，支持动态来源及 probe 生命周期 | Git 快照、隔离、缓存清理 |
-| pguide 命令路由/帮助 | 注册 check 的参数、stdout、退出码与 report 契约，更新帮助及组合示例 | 既有 probe 命令仍输出 observation，不改成布尔命令 |
 | pguide regulator | 机器输出改用新原因；人类输出显示外部实例、预期和当前层级；退出码保留 3 | 输出模式、原有错误区分 |
 | pguide supervisor | 动态绑定取代静态树 runtime 注册，配置重载清除旧绑定 | 信号、bindings 关闭与迟到运行隔离 |
 | 直接相关文档/fixture | 更新包 README、API 示例和测试用新协议样例 | 不批量改写历史 idea/决策记录 |
 
-实现时搜索 prerequisite、prerequisite-unmet、regulationPrerequisite、describeLevels，以及所有无条件访问 problem.ref / parameters / id 的消费代码。业务文字中的 build prerequisites 不属于旧协议，不做无关替换。
+实现时搜索 prerequisite、prerequisite-unmet、regulationPrerequisite、describeLevels，以及所有无条件访问 problem.ref / parameters / id 的消费代码。业务文字中的 build prerequisites 不属于旧协议，不做无关替换。MVP 不新增 check 子命令、--as-probe 模式、CLI 布尔输出协议、report 中转或独立包；既有 probe 命令继续保持 observation 输出。
 
 ## 3. 不兼容更新与手动迁移边界
 
@@ -50,10 +49,11 @@
 | 场景 | 必须证明的结果 |
 | --- | --- |
 | 普通内部问题 | ID 声明/ref 补齐不变，Agent 正常运行 |
-| check 为 true/false | 等于或高于 expected 为 true，低于为 false；两种业务结果退出 0 |
-| false 转换边界 | 只有依赖 probe 构造 dependency；命令本身没有 problem/ref/调度行为 |
+| 判断为 true/false | 等于或高于 expected 的 passed 为 true，低于为 false；调用错误不是 false |
+| false 转换边界 | 只有依赖 probe 构造 dependency；判断函数没有 problem/ref/调度行为 |
 | 单个或拆分检查 | 一次检查一个目标，可在 level 内组合或拆成多个；聚合不漏依赖 |
-| 布尔值与证据一致 | stdout/report 同次观察且布尔值一致；缺失、损坏、错目标或错阈值的 report 明确失败 |
+| 布尔值与证据一致 | passed 和 observation 来自一次计算；错目标、无效 subject 或错阈值明确失败 |
+| 最小使用入口 | 运行脚本 import 现有包并调用 probe 即可复用，不要求额外 CLI 或临时报告 |
 | 单次观察 | false 后不重观测；输出的 current 与版本来自同一证据 |
 | 纯依赖 | 无 ref/ID 合法；摘要不查问题 Wiki；current 属于消费者 |
 | 中间层级依赖 | 前层正常通过，到对应 check 才阻塞 |
