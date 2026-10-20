@@ -1,5 +1,24 @@
 # 实施验证与边界
 
+## Node 22/24 嵌套测试生命周期修正
+
+同步 primary `37d50e3`，修正真实 CI run `39466557193`、Node 22 job
+`118779534801` 暴露的 monorepo 嵌套测试提前取消：父测试接收 TestContext，
+使用 `await t.test(...)` 等待 Supervisor 交接、修复和重新观察完成后才继续返回。
+所有业务断言保持原样；仅按 Biome 调整该调用的排版。
+
+对当前文件的全部 test 调用做 AST 检查，只有这一处嵌套调用，修正后为 awaited
+`t.test`。没有修改 AHP/Agent 测试或增加超时、跳过、重试。
+
+因主机只有 Node 24.12.0，下载官方 Windows Node 22.13.0 和 24.11.1 发行包，
+按官方 SHASUMS256 验证后在项目 `.cache` 中运行。两个版本均以
+`node --import tsx --test <monorepo 的全部四个 test 文件>` 执行：
+Node 22.13.0 为 43/43、0 cancelled（约 42 秒），Node 24.11.1 为 43/43、
+0 cancelled（约 37 秒）。Supervisor 子场景确实完整执行，不再以父测试结束前的
+几毫秒取消冒充验证。monorepo lint 同样通过；这是 Windows 上的真实双版本证明，
+不是 Ubuntu CI 已重新通过的声明。
+随后完整 `pnpm check` 退出 0，包含 16 个包及 9 个隔离 tarball 消费场景。
+
 ## Ubuntu CI 进程夹具可靠性修正
 
 同步到已接受 inner 的 primary `f3d80b3` 后，核对 run `39462606984`、
