@@ -1,0 +1,1108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Schema 契约 · 逐项评审</title>
+  <style>
+    :root { --bg:#f4f6fa; --paper:#fff; --ink:#17263d; --muted:#54657c; --line:#dbe3ed; --accent:#2358ce; --soft:#edf3ff; --code:#112139; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.7 system-ui,"Microsoft YaHei",sans-serif; }
+    button,input { font:inherit; }
+    button { cursor:pointer; }
+    button:focus-visible,a:focus-visible,input:focus-visible,[tabindex]:focus-visible { outline:3px solid #f4aa35; outline-offset:3px; }
+    a { color:var(--accent); text-underline-offset:3px; }
+    .masthead { padding:28px 36px; background:var(--ink); color:#fff; display:flex; justify-content:space-between; gap:24px; align-items:center; }
+    .eyebrow { color:#abc3f5; font-size:12px; letter-spacing:2px; text-transform:uppercase; }
+    h1 { margin:2px 0 6px; font-size:28px; line-height:1.4; }
+    .masthead p { margin:0; color:#d1dbee; }
+    .actions { display:flex; gap:10px; flex-shrink:0; }
+    .actions button { background:#fff; color:var(--ink); border:0; border-radius:8px; padding:9px 14px; }
+    .layout { display:grid; grid-template-columns:260px minmax(0,1fr); max-width:1900px; margin:auto; }
+    aside { padding:24px 18px; border-right:1px solid var(--line); }
+    .nav-inner { position:sticky; top:20px; }
+    .nav-label { font-size:12px; font-weight:700; letter-spacing:1px; color:var(--muted); margin:0 10px 12px; }
+    #format-tabs { display:flex; flex-direction:column; gap:6px; }
+    .format-tab { display:flex; gap:12px; align-items:center; text-align:left; border:1px solid transparent; border-radius:10px; background:transparent; color:var(--muted); padding:10px; width:100%; }
+    .format-tab span:first-child { font:12px ui-monospace,monospace; opacity:.75; }
+    .format-tab[aria-selected="true"] { background:var(--paper); color:var(--accent); border-color:#c7d6f7; box-shadow:0 3px 12px #142c5510; font-weight:700; }
+    .nav-note { font-size:12px; color:var(--muted); margin:22px 10px; }
+    main { min-width:0; padding:28px 34px 56px; }
+    .notice { background:#fff8e8; border:1px solid #e8cd91; color:#684b14; border-radius:10px; padding:13px 17px; margin-bottom:24px; font-size:13px; }
+    .page-head { display:flex; justify-content:space-between; gap:15px; align-items:start; }
+    h2 { font-size:27px; margin:0 0 8px; line-height:1.4; }
+    .tag { display:inline-block; background:var(--soft); color:#254b93; border:1px solid #cad9f5; border-radius:20px; padding:3px 10px; font-size:12px; margin-bottom:12px; }
+    .version { color:var(--muted); white-space:nowrap; font-size:13px; padding-top:8px; }
+    .purpose { font-size:16px; max-width:980px; margin:0 0 20px; }
+    .flow { display:flex; gap:12px; align-items:center; background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:16px 20px; margin-bottom:20px; }
+    .flow div { flex:1; min-width:0; }
+    .flow small { display:block; color:var(--muted); font-size:11px; letter-spacing:1px; }
+    .arrow { color:#7c91b0; flex:0 0 18px !important; }
+    .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+    .card { background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:18px 20px; }
+    h3 { margin:0 0 8px; font-size:15px; }
+    .card p { margin:0; }
+    ul,ol { margin:8px 0 0; padding-left:21px; }
+    .scope { font-size:13px; color:var(--muted); border-left:3px solid #88a6dd; padding:7px 13px; margin:20px 0 12px; }
+    .representation-bar { display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; align-items:center; margin:16px 0 12px; }
+    .view-tabs { display:flex; flex-wrap:wrap; gap:5px; }
+    .view-tab,.compare { border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--muted); padding:6px 12px; }
+    .view-tab[aria-selected="true"],.compare[aria-pressed="true"] { color:var(--accent); background:var(--soft); border-color:#acc2ed; }
+    .code-grid { display:grid; gap:14px; }
+    .compare-mode .code-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .code-card { min-width:0; border:1px solid #263c59; border-radius:10px; overflow:hidden; background:var(--code); color:#e2edfc; }
+    .code-head { display:flex; justify-content:space-between; align-items:center; background:#1d314e; padding:9px 14px; font-size:12px; }
+    .copy { background:transparent; color:#d0e1ff; border:1px solid #61799c; border-radius:5px; padding:3px 8px; font-size:12px; }
+    pre { margin:0; padding:20px; overflow:auto; font:13px/1.7 Consolas,"Cascadia Code",ui-monospace,monospace; tab-size:2; max-height:690px; }
+    .bottom { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:22px; }
+    .questions { background:#f0f5ff; }
+    .sources { font-size:12px; overflow-wrap:anywhere; margin-top:18px; color:var(--muted); }
+    .sources a { margin-right:12px; }
+    .pager { display:flex; justify-content:space-between; gap:12px; margin-top:25px; }
+    .pager button { background:#fff; border:1px solid var(--line); border-radius:8px; color:var(--accent); padding:8px 13px; }
+    .pager button:disabled { opacity:.4; cursor:default; }
+    .principles { margin:20px 10px; font-size:12px; color:var(--muted); }
+    .principles summary { cursor:pointer; font-weight:700; }
+    #status { position:fixed; bottom:18px; right:20px; background:var(--ink); color:#fff; padding:9px 15px; border-radius:8px; box-shadow:0 3px 16px #0002; z-index:10; }
+    #status:empty { display:none; }
+    [hidden] { display:none !important; }
+    @media(min-width:1800px) { pre { font-size:14px; } }
+    @media(max-width:1150px) { .compare-mode .code-grid { grid-template-columns:1fr; } main { padding:24px; } .layout { grid-template-columns:225px minmax(0,1fr); } }
+    @media(max-width:760px) {
+      .masthead { padding:22px 18px; align-items:start; flex-direction:column; gap:14px; }
+      h1 { font-size:24px; } h2 { font-size:23px; }
+      .layout { display:block; } aside { padding:14px 12px; border-right:0; border-bottom:1px solid var(--line); }
+      .nav-inner { position:static; } #format-tabs { flex-direction:row; overflow-x:auto; padding:4px; }
+      .format-tab { width:auto; flex-shrink:0; } .nav-label,.nav-note,.principles { display:none; }
+      main { padding:20px 16px 40px; } .info-grid,.bottom { grid-template-columns:1fr; }
+      .flow { align-items:stretch; flex-direction:column; padding:14px; gap:6px; } .arrow { transform:rotate(90deg); align-self:flex-start; }
+      .page-head { flex-direction:column; gap:0; } .version { padding:0; margin-bottom:12px; }
+      pre { padding:14px; font-size:12px; } .actions { flex-wrap:wrap; } .pager button { max-width:49%; }
+    }
+    @media print {
+      body { background:white; font-size:10pt; } .masthead { background:white; color:black; padding:0 0 15px; }
+      .masthead p,.eyebrow { color:#333; } .layout { display:block; } aside,.actions,.representation-bar,.copy,.pager,#status { display:none !important; }
+      main { padding:0; } .format-page[hidden],.code-card[hidden] { display:block !important; }
+      .format-page { break-before:page; } .format-page:first-child { break-before:auto; } .code-grid,.compare-mode .code-grid { display:block; }
+      .code-card { margin:12px 0; background:#fff; color:#111; border:1px solid #bbb; }
+      .code-head { background:#eee; color:#111; } pre { max-height:none; overflow:visible; white-space:pre-wrap; overflow-wrap:anywhere; font-size:8pt; }
+      .card,.flow,.notice { break-inside:avoid; } .notice { font-size:9pt; } a { color:black; } .sources { font-size:8pt; }
+    }
+  </style>
+</head>
+<body>
+  <header class="masthead">
+    <div><div class="eyebrow">Potential Guide / schema-contracts</div><h1>Schema 契约 · 逐项评审</h1><p>先看它用在哪里，再决定它是否需要成为公共契约。</p></div>
+    <div class="actions"><button id="print" type="button">打印全部 / 保存 PDF</button><button id="share" type="button">复制当前页链接</button></div>
+  </header>
+  <div class="layout">
+    <aside><div class="nav-inner">
+      <p class="nav-label">11 种格式 / 全部待讨论</p>
+      <nav id="format-tabs" role="tablist" aria-label="数据格式" aria-orientation="vertical"></nav>
+      <p class="nav-note">每种格式独立一页。报告与 monorepo 的两种格式已拆开，避免一个版本号掩盖不同契约。</p>
+      <details class="principles"><summary>阅读约定</summary><p>示例保留当前数字版本，未切换为候选 URI。TypeScript 是评审用自包含表达；JSON Schema 为 Draft 2020-12 的 YAML 草案，不是已发布规范。</p><p>JSON Schema 面板中的 $schema 声明的是 schema 方言，不是业务实例的格式 URI。实例标识字段仍待讨论。</p><p>内部格式也需要输入校验，但不因此成为公共协议。</p></details>
+    </div></aside>
+    <main>
+      <div class="notice"><strong>讨论稿，不是迁移通知。</strong> 基于源码快照 <code>50a80806e3ac</code>（2026-10-20）。所有分类与 schema 均待确认；未发布公共地址、未修改现有解析器。示例中的仓库、UUID 和 Git 哈希均为演示值，不是可运行的远端证据。草案校验通过不代表生产语义校验通过。</div>
+      <div id="pages"></div>
+      <noscript><p>此离线文档需要启用 JavaScript 才能显示页签和代码示例。无需网络或外部依赖。</p></noscript>
+    </main>
+  </div>
+  <div id="status" role="status" aria-live="polite"></div>
+  <script id="review-data">
+    const formats = [
+      {
+        id:"manifest", title:"Pilot Manifest", category:"公共核心协议 · 待确认", version:"当前 schemaVersion: 1",
+        producer:"Pilot 作者", artifact:"pilot.yaml", consumer:"loadPilotSpec → observe / regulate",
+        purpose:"描述一个 Pilot 能观察什么 subject、有哪些推进级别、每个级别运行哪些 check，以及文档支持哪些语言。它定义规则，不保存一次执行的结果。",
+        usecase:"团队编写一个代码仓库健康 Pilot：subject 指向待检查目录，ready 级别通过 tests 检查推进。第三方工具读取同一份 manifest，展示目标并验证输入。",
+        boundary:"作者与运行时可以独立交付，因此是明确的公共契约候选。domainSchema 描述业务 subject，不是 manifest 自身的 schema，两者不能混淆。",
+        scope:"代表性完整 manifest。TypeScript 使用自包含 JSON 类型；schema 覆盖主要结构，语言规范化、ID 唯一性及 domainSchema 编译仍需语义校验。",
+        validation:["现有 parseManifest 严格检查字段、版本、级别、check/problem ID 和语言列表。","loadPilotSpec 另行 compileDomain；仅把 domainSchema 写成 object，并不能保证它是合法的 JSON Schema。"],
+        questions:["公共文档是否用一个不可变 schema URI 替代 schemaVersion？","标识字段是否选 $schema；旧 manifest 是迁移、兼容读取还是明确拒绝？","语言、唯一性和局部引用限制由哪个公共 validator 保证？"],
+        sources:["packages/pilot-protocol/src/types.ts","packages/pilot-protocol/src/validation.ts","packages/pilot-protocol/src/definition.ts"],
+        example:String.raw`schemaVersion: 1
+domainSchema:
+  type: object
+  required: [directory]
+  properties:
+    directory: { type: string, minLength: 1 }
+  additionalProperties: false
+levels:
+  - id: ready
+    advancement:
+      checks:
+        - id: tests
+          problems: [tests-failed]
+defaultLanguage: zh-CN
+languages: [zh-CN]`,
+        types:String.raw`type Json = null | boolean | number | string
+  | Json[] | { [key: string]: Json };
+type JsonObject = { [key: string]: Json };
+
+interface PilotManifest {
+  readonly schemaVersion: 1;
+  readonly domainSchema: JsonObject;
+  readonly levels: readonly [Level, ...Level[]];
+  readonly defaultLanguage: string;
+  readonly languages: readonly [string, ...string[]];
+}
+interface Level {
+  readonly id: string;
+  readonly advancement: {
+    readonly checks: readonly {
+      readonly id: string;
+      readonly problems: readonly string[];
+    }[];
+  };
+}`,
+        schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
+title: Pilot Manifest（讨论草案）
+type: object
+additionalProperties: false
+required: [schemaVersion, domainSchema, levels, defaultLanguage, languages]
+properties:
+  schemaVersion: { const: 1 }
+  domainSchema:
+    type: object
+    required: [type]
+    properties:
+      type: { const: object }
+  levels:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, advancement]
+      properties:
+        id:
+          allOf:
+            - $ref: '#/$defs/id'
+            - not: { const: terminal }
+        advancement:
+          type: object
+          additionalProperties: false
+          required: [checks]
+          properties:
+            checks:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [id, problems]
+                properties:
+                  id: { $ref: '#/$defs/id' }
+                  problems:
+                    type: array
+                    uniqueItems: true
+                    items: { $ref: '#/$defs/id' }
+  defaultLanguage: { type: string, minLength: 1 }
+  languages:
+    type: array
+    minItems: 1
+    uniqueItems: true
+    items: { type: string, minLength: 1 }
+$defs:
+  id: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }`
+      },
+      {
+        id:"objectives", title:"Objective 声明", category:"公共声明格式 · 待确认", version:"当前 schemaVersion: 1",
+        producer:"仓库 / npm 包作者", artifact:"objectives.yaml", consumer:"parseObjectives → selectObjective → bindObjective",
+        purpose:"给可发现的目标取名，并声明其 Pilot、调用输入及 subject 投影。它将用户的输入和目录上下文绑定成 Pilot 的 subject，不负责决定治理目标级别。",
+        usecase:"每个包提供 standardize 声明。用户在包目录选择这个目标时不必手写 subject；Unit 输入可省略，投影从 context.directory.absolutePath 取得目录。",
+        boundary:"这是作者交给工具读取的开放入口，与 manifest 不同：manifest 定义规则，声明文件定义如何绑定和调用规则。target 不是声明字段。",
+        scope:"文档和条目结构可完整展示。JSONata 的能力限制、执行边界和 inputSchema 编译不能只靠字符串 schema 校验。",
+        validation:["parseObjectives 检查文档版本和精确字段，并编译 inputSchema 与受限投影。","bindObjective 校验输入、求值投影，再依据 Pilot domainSchema 校验最终 subject。"],
+        questions:["声明格式是否与 manifest 使用独立 schema URI？","文档级标识是否足够，条目与嵌入 inputSchema 是否需要额外标识？","Unit 输入约定与投影上下文是否属于稳定公共契约？"],
+        sources:["packages/pilot-protocol/src/objectives.ts"],
+        example:String.raw`schemaVersion: 1
+objectives:
+  standardize:
+    description: 检查当前包的规范
+    pilot: 'git+https://example.test/rules.git#package-standard/'
+    inputSchema:
+      type: object
+      additionalProperties: false
+      maxProperties: 0
+    subject: '{"directory": context.directory.absolutePath}'`,
+        types:String.raw`type Json = null | boolean | number | string
+  | Json[] | { [key: string]: Json };
+interface ObjectiveDeclaration {
+  readonly description: string;
+  readonly pilot: string;
+  readonly inputSchema: { [key: string]: Json };
+  readonly subject: string; // 受限 JSONata 表达式
+}
+// 评审用文档类型；当前源码只导出了条目类型。
+interface ObjectivesDocument {
+  schemaVersion: 1;
+  objectives: Record<string, ObjectiveDeclaration>;
+}`,
+        schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
+title: Objective 声明（讨论草案）
+type: object
+additionalProperties: false
+required: [schemaVersion, objectives]
+properties:
+  schemaVersion: { const: 1 }
+  objectives:
+    type: object
+    propertyNames:
+      pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+    additionalProperties:
+      type: object
+      additionalProperties: false
+      required: [description, pilot, inputSchema, subject]
+      properties:
+        description: { type: string, pattern: '\S' }
+        pilot: { type: string, pattern: '\S' }
+        inputSchema: { type: object }
+        subject: { type: string, pattern: '\S' }`
+      },
+      {
+        id:"config", title:"CLI 配置", category:"公共配置，不等于核心协议", version:"当前 schemaVersion: 2",
+        producer:"用户 / 项目维护者", artifact:".pguide/config.yaml + 用户配置", consumer:"loadConfig / parseConfig → 各命令",
+        purpose:"配置命令默认值、Agent 连接、执行限制、报告位置和授权策略。配置文件决定工具如何运行，不定义 Pilot 检查规则。",
+        usecase:"团队为本地 ACP Agent 配置启动命令和环境变量名，设置每次 Agent 调用的超时。用户配置与项目配置合并后，命令消费有效配置。",
+        boundary:"用户可编写且跨工具升级保存，值得维护公共配置契约；归属 CLI Core，而不是因为公开就移入 pilot-protocol。凭据值不能写进示例或配置。",
+        scope:"仅展示配置 v2 的基础字段及 ACP 分支。省略 AHP、授权、regulationStrategy、reports 等合法字段；本页窄 schema 不可用于校验任意现有配置。",
+        validation:["parseConfig 校验 v2、未知字段、Agent 类型、超时和授权等；loadConfig 负责合并与来源记录。","配置文件的 schema 不等于合并规则，也不代表能够连接或初始化 Agent。"],
+        questions:["配置是否独立发布 schema，归谁维护？","URI 版本策略是否与工具版本解耦？","局部配置与合并后的配置是否需要不同校验入口？"],
+        sources:["packages/pguide-cli-core/src/index.ts","packages/pguide-cli-core/src/permissions.ts"],
+        example:String.raw`schemaVersion: 2
+defaultAgent: local
+defaultLanguage: zh-CN
+format: json
+agentExecutionLimits:
+  timeoutMs: 300000
+agents:
+  local:
+    type: acp
+    connection: { protocolVersion: "1" }
+    transport:
+      type: stdio
+      command: example-agent
+      args: []
+      env: [EXAMPLE_AGENT_TOKEN]`,
+        types:String.raw`// 配置 v2 的 ACP 示例分支，不是完整 PguideConfig。
+interface ConfigExample {
+  schemaVersion: 2;
+  defaultAgent?: string;
+  defaultLanguage?: string;
+  format?: "json" | "markdown";
+  agentExecutionLimits?: { timeoutMs?: number };
+  agents?: Record<string, {
+    type: "acp";
+    connection: { protocolVersion: string };
+    transport: {
+      type: "stdio";
+      command: string;
+      args?: string[];
+      env?: string[]; // 环境变量名，不是秘密值
+    };
+  }>;
+}`,
+        schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
+title: CLI 配置 ACP 示例分支（非完整规范）
+type: object
+additionalProperties: false
+required: [schemaVersion]
+properties:
+  schemaVersion: { const: 2 }
+  defaultAgent: { type: string, pattern: '\S' }
+  defaultLanguage: { type: string, pattern: '\S' }
+  format: { enum: [json, markdown] }
+  agentExecutionLimits:
+    type: object
+    additionalProperties: false
+    properties:
+      timeoutMs: { type: integer, minimum: 1, maximum: 2147483647 }
+  agents:
+    type: object
+    propertyNames: { pattern: '^[a-z0-9][a-z0-9-]*$' }
+    additionalProperties:
+      type: object
+      additionalProperties: false
+      required: [type, connection, transport]
+      properties:
+        type: { const: acp }
+        connection:
+          type: object
+          additionalProperties: false
+          required: [protocolVersion]
+          properties:
+            protocolVersion: { type: string, pattern: '^[1-9][0-9]*$' }
+        transport:
+          type: object
+          additionalProperties: false
+          required: [type, command]
+          properties:
+            type: { const: stdio }
+            command: { type: string, pattern: '\S' }
+            args: { type: array, items: { type: string } }
+            env:
+              type: array
+              items: { type: string, pattern: '^[A-Z_][A-Z0-9_]*$' }`
+      },
+      {
+        id:"portfolio", title:"Portfolio 输入", category:"supervise 公共输入 · 待确认", version:"当前 schemaVersion: 3",
+        producer:"调度使用者 / 项目维护者", artifact:"--portfolio-file <json>", consumer:"parsePortfolioFile → planner / coordinator",
+        purpose:"把多个治理目标及可用 Agent 资源放在同一个调度视图中，提供目标优先级、观察间隔和资源能力。它不是单个 Pilot 的规则，也不是调度结果。",
+        usecase:"同时监督 API 与 UI 两个仓库，让具有 code 能力且容量为 1 的 Agent 处理 ready 目标。planner 先观察，再决定执行顺序。",
+        boundary:"由调用方提供、由 supervise 消费，是公共输入候选；其契约归属 supervise，不应自动升级成所有 Pilot 必须依赖的核心概念。",
+        scope:"展示完整文件主结构。schema 能验证形状和数值边界，但 ID 按字段唯一、目标级别存在、subject 合法及资源可绑定需另行验证。",
+        validation:["parsePortfolioFile 检查 v3、字段、重复 goal/resource ID、正整数和唯一字符串列表。","绑定 Pilot 时才检查目标级别；subject 的领域语义仍由对应 Pilot 决定。"],
+        questions:["是否作为稳定公共输入公开独立 schema？","goals 的 ID 唯一性与资源能力匹配由哪层保证？","文件格式是否允许旧版本迁移，或只明确拒绝？"],
+        sources:["packages/pguide-supervise/src/commands/supervisor.ts","packages/objective-portfolio-supervisor/src/types.ts"],
+        example:String.raw`schemaVersion: 3
+goals:
+  - id: api-ready
+    pilot: 'git+https://example.test/rules.git#health/'
+    subject: { directory: 'D:\work\api' }
+    targetLevel: ready
+    priority: 10
+    observationIntervalMs: 30000
+    requirements: [code]
+resources:
+  - id: worker-1
+    agent: local
+    capacity: 1
+    capabilities: [code]`,
+        types:String.raw`type Json = null | boolean | number | string
+  | Json[] | { [key: string]: Json };
+interface PortfolioFile {
+  schemaVersion: 3;
+  goals: {
+    id: string;
+    pilot: string;
+    revision?: string;
+    subject: { [key: string]: Json };
+    targetLevel: string;
+    priority: number;
+    observationIntervalMs: number;
+    requirements?: string[];
+  }[];
+  resources: {
+    id: string;
+    agent: string;
+    capacity: number;
+    capabilities: string[];
+  }[];
+}`,
+        schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
+title: Portfolio 输入（讨论草案）
+type: object
+additionalProperties: false
+required: [schemaVersion, goals, resources]
+properties:
+  schemaVersion: { const: 3 }
+  goals:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, pilot, subject, targetLevel, priority, observationIntervalMs]
+      properties:
+        id: { $ref: '#/$defs/text' }
+        pilot: { $ref: '#/$defs/text' }
+        revision: { $ref: '#/$defs/text' }
+        subject: { type: object }
+        targetLevel: { $ref: '#/$defs/text' }
+        priority: { type: integer, minimum: 0, maximum: 9007199254740991 }
+        observationIntervalMs: { $ref: '#/$defs/positive' }
+        requirements: { $ref: '#/$defs/strings' }
+  resources:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, agent, capacity, capabilities]
+      properties:
+        id: { $ref: '#/$defs/text' }
+        agent: { $ref: '#/$defs/text' }
+        capacity: { $ref: '#/$defs/positive' }
+        capabilities: { $ref: '#/$defs/strings' }
+$defs:
+  text: { type: string, pattern: '\S' }
+  positive: { type: integer, minimum: 1, maximum: 2147483647 }
+  strings:
+    type: array
+    uniqueItems: true
+    items: { $ref: '#/$defs/text' }`
+      },
+      {
+        id:"recovery", title:"Regulation 恢复记录", category:"内部持久化 · 非公共协议", version:"当前 schemaVersion: 3",
+        producer:"regulate 的持久化逻辑", artifact:"state / regulations / <id> / regulation.json", consumer:"continue → 恢复固定来源和执行上下文",
+        purpose:"保存一次治理的身份、绑定来源、最终 subject、Agent 配置及尝试记录，让后续进程能继续执行，而不是重新发现同名目标。",
+        usecase:"治理中断后运行 pguide continue <id>。工具恢复原 Pilot 的 commit/tree 和输入，避免远端分支变动后悄悄使用另一套规则。",
+        boundary:"即使不公开，它也跨越程序升级，因此可能需要内部存储版本。保留版本和完整校验，不等于承诺第三方能读写此文件。",
+        scope:"只展示新建记录的最小必需字段及 ACP profile；省略 binding、权限、策略、session、expiresAt、history 等可选字段。attempts 的内部元素结构未展开，草案不能替代完整恢复 validator。哈希为占位证据。",
+        validation:["当前 continue 检查 v3、若干必需字段、来源绑定和 Git 证据，然后进行类型断言；不是完整结构校验。","必须额外检查 URI/commit/tree 一致、subjectDigest 匹配、会话有效和来源可恢复；形状合法不代表可以安全继续。"],
+        questions:["是否明确规定仅供工具内部读写，不发布公共 schema？","内部格式升级采取迁移还是拒绝旧记录？","恢复前应完整校验哪些字段，尤其 attempts、subject 和 Agent profile？"],
+        sources:["packages/pguide-regulate/src/commands/regulator.ts","packages/pguide-cli-core/src/index.ts"],
+        example:String.raw`schemaVersion: 3
+regulationId: 00000000-0000-4000-8000-000000000001
+createdAt: "2026-10-20T13:00:00.000Z"
+pilotUri: 'git+https://example.test/rules.git#health/'
+pilotCommit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+pilotTree: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+pilotSource:
+  kind: git-tree
+  repository: https://example.test/rules.git
+  directory: health
+  commit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  tree: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  repositoryTree: cccccccccccccccccccccccccccccccccccccccc
+sourceBindings:
+  'git+https://example.test/rules.git#health/':
+    kind: git-tree
+    repository: https://example.test/rules.git
+    directory: health
+    commit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    tree: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    repositoryTree: cccccccccccccccccccccccccccccccccccccccc
+subject: { directory: 'D:\work\api' }
+subjectDigest: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+targetLevel: ready
+agentName: local
+agentProfile:
+  type: acp
+  connection: { protocolVersion: "1" }
+  transport: { type: stdio, command: example-agent }
+agentExecutionLimits: { timeoutMs: 300000 }
+attempts: []`,
+        types:String.raw`type Json = null | boolean | number | string
+  | Json[] | { [key: string]: Json };
+type JsonObject = { [key: string]: Json };
+interface GitSource {
+  kind: "git-tree";
+  repository: string;
+  directory: string;
+  commit: string;
+  tree: string;
+  repositoryTree: string;
+}
+// 最小记录切片；profile 与 attempts 的内部结构未展开。
+interface RecoveryExample {
+  schemaVersion: 3;
+  regulationId: string;
+  createdAt: string;
+  pilotUri: string;
+  pilotCommit: string;
+  pilotTree: string;
+  pilotSource: GitSource;
+  sourceBindings: Record<string, GitSource>;
+  subject: JsonObject;
+  subjectDigest: string;
+  targetLevel: string;
+  agentName: string;
+  agentProfile: JsonObject;
+  agentExecutionLimits: { timeoutMs: number };
+  attempts: JsonObject[];
+}`,
+        schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
+title: 内部恢复记录最小切片（非完整规范）
+type: object
+additionalProperties: false
+required: [schemaVersion, regulationId, createdAt, pilotUri, pilotCommit, pilotTree, pilotSource, sourceBindings, subject, subjectDigest, targetLevel, agentName, agentProfile, agentExecutionLimits, attempts]
+properties:
+  schemaVersion: { const: 3 }
+  regulationId: { type: string, pattern: '^[0-9a-f-]{36}$' }
+  createdAt: { type: string }
+  pilotUri: { type: string, pattern: '^git\+' }
+  pilotCommit: { $ref: '#/$defs/gitHash' }
+  pilotTree: { $ref: '#/$defs/gitHash' }
+  pilotSource: { $ref: '#/$defs/source' }
+  sourceBindings:
+    type: object
+    additionalProperties: { $ref: '#/$defs/source' }
+  subject: { type: object }
+  subjectDigest: { type: string, pattern: '^[0-9a-f]{64}$' }
+  targetLevel: { type: string, minLength: 1 }
+  agentName: { type: string, minLength: 1 }
+  agentProfile:
+    type: object
+    description: AgentProfile 完整分支在本草案中未展开
+  agentExecutionLimits:
+    type: object
+    additionalProperties: false
+    required: [timeoutMs]
+    properties:
+      timeoutMs: { type: integer, minimum: 1, maximum: 2147483647 }
+  attempts:
+    type: array
+    items:
+      type: object
+      description: Attempt 内部字段未展开
+$defs:
+  gitHash: { type: string, pattern: '^(?:[0-9a-f]{40}|[0-9a-f]{64})$' }
+  source:
+    type: object
+    additionalProperties: false
+    required: [kind, repository, directory, commit, tree, repositoryTree]
+    properties:
+      kind: { const: git-tree }
+      repository: { type: string }
+      directory: { type: string }
+      commit: { $ref: '#/$defs/gitHash' }
+      tree: { $ref: '#/$defs/gitHash' }
+      repositoryTree: { $ref: '#/$defs/gitHash' }`
+      },
+      {
+        id:"regulate-report", title:"Regulate 报告", category:"运行输出 · 开放承诺待定", version:"当前 schemaVersion: 2",
+        producer:"regulate / continue", artifact:"stdout JSON / --report 文件", consumer:"用户、脚本、报告查看器（是否稳定支持待定）",
+        purpose:"汇总一次治理后的状态、结果、尝试历史和恢复命令。它回答“这次执行怎样了”，不是供 continue 恢复的完整内部记录。",
+        usecase:"CI 保存一次治理的 JSON 报告，读取 regulationId 与状态，并在需要时向用户显示 pguide continue 的恢复入口。",
+        boundary:"落盘不自动等于内部存储协议，输出 JSON 也不自动等于稳定公共 API。先明确哪些脚本消费和历史读取属于正式承诺。",
+        scope:"展示中断后无 outcome 的报告分支；outcome 可选，尝试元素及 outcome 结构在此仅标为对象。完整报告应引用具体业务结果类型，不能以本草案替代。",
+        validation:["当前输出由 run 构造并脱敏，writeResult 负责序列化；未调用独立完整报告 validator。","status 来自治理流程；正式枚举、outcome 与 status 的一致性、脱敏策略需另行定义。"],
+        questions:["这是稳定机器接口，还是仅供查看的诊断报告？","如果公开，是否给它独立 schema，而不是与恢复记录共享？","是否承诺长期读取旧报告，还是只保留原始产物？"],
+        sources:["packages/pguide-regulate/src/commands/regulator.ts"],
+        example:String.raw`schemaVersion: 2
+regulationId: 00000000-0000-4000-8000-000000000001
+status: cancelled
+attempts: []
+recovery:
+  command: pguide continue 00000000-0000-4000-8000-000000000001`,
+        types:String.raw`type Json = null | boolean | number | string
+  | Json[] | { [key: string]: Json };
+type JsonObject = { [key: string]: Json };
+// 报告外壳；不是完整 RegulationOutcome / Attempt。
+interface RegulateReportExample {
+  schemaVersion: 2;
+  regulationId: string;
+  status: string;
+  outcome?: JsonObject;
+  attempts: JsonObject[];
+  recovery: { command: string };
+}`,
+        schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
+title: Regulate 报告外壳（讨论草案）
+type: object
+additionalProperties: false
+required: [schemaVersion, regulationId, status, attempts, recovery]
+properties:
+  schemaVersion: { const: 2 }
+  regulationId: { type: string, pattern: '^[0-9a-f-]{36}$' }
+  status: { type: string, minLength: 1 }
+  outcome:
+    type: object
+    description: RegulationOutcome 内部字段未展开
+  attempts:
+    type: array
+    items: { type: object }
+  recovery:
+    type: object
+    additionalProperties: false
+    required: [command]
+    properties:
+      command: { type: string, minLength: 1 }`
+      },
+      {
+        id:"supervise-report", title:"Supervise 报告", category:"调度输出 · 开放承诺待定", version:"当前 schemaVersion: 3",
+        producer:"supervisePortfolio", artifact:"supervise 的 JSON 结果", consumer:"用户 / 调度观察工具",
+        purpose:"呈现监督周期结束时的观察、队列和事件，以及本轮只是计划还是实际执行。它是 Portfolio 输入的结果视图，不是同一份 schema。",
+        usecase:"用户先以非 execute 模式观察 Portfolio，查看计划队列；另一次启用执行后，比较实际事件和目标观察。",
+        boundary:"输入 v3 与输出 v3 数字相同只是当前实现事实，不表示兼容性绑定，也不应让消费者按版本数字猜格式身份。",
+        scope:"展示无观察的空快照外壳。队列、事件及 observations 值的业务结构未展开；示例用于说明容器，不是有效运行一定会出现的结果。",
+        validation:["当前 supervisePortfolio 构造 schemaVersion、status、observations、queue、events。","业务快照类型和事件类型来自 planner/coordinator；外层 schema 不能替代其定义。"],
+        questions:["是否公开 planner 快照，还是单独定义稳定报告 DTO？","报告与 Portfolio 输入是否独立演进？","事件和观察需要完整回放语义，还是仅展示当前快照？"],
+        sources:["packages/pguide-supervise/src/commands/supervisor.ts","packages/objective-portfolio-supervisor/src/types.ts"],
+        example:String.raw`schemaVersion: 3
+status: planned
+observations: {}
+queue:
+  revision: 0
+  demands: []
+events: []`,
+        types:String.raw`type Json = null | boolean | number | string
+  | Json[] | { [key: string]: Json };
+type JsonObject = { [key: string]: Json };
+// 仅描述快照外壳，嵌套业务结构未展开。
+interface SuperviseReportExample {
+  schemaVersion: 3;
+  status: "planned" | "executed";
+  observations: Record<string, JsonObject>;
+  queue: { revision: number; demands: JsonObject[] };
+  events: JsonObject[];
+}`,
+        schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
+title: Supervise 快照外壳（讨论草案）
+type: object
+additionalProperties: false
+required: [schemaVersion, status, observations, queue, events]
+properties:
+  schemaVersion: { const: 3 }
+  status: { enum: [planned, executed] }
+  observations:
+    type: object
+    additionalProperties:
+      type: object
+      description: 观察快照值的内部结构未展开
+  queue:
+    type: object
+    additionalProperties: false
+    required: [revision, demands]
+    properties:
+      revision: { type: integer, minimum: 0 }
+      demands:
+        type: array
+        items:
+          type: object
+          description: QueueDemand 内部结构未展开
+  events:
+    type: array
+    items: { type: object }`
+      },
+      {
+        id:"cli", title:"CLI JSON 响应", category:"机器接口集合 · 稳定范围待定", version:"多类响应当前均为 schemaVersion: 1",
+        producer:"pguide 及各子命令", artifact:"--format json 的 stdout", consumer:"Shell / CI / setup Pilot",
+        purpose:"提供版本、帮助、配置查看、诊断、操作结果及错误等机器可读响应。这是一组不同格式，不是一个拥有共同 payload 的既有统一协议。",
+        usecase:"setup Pilot 调用 pguide --version --format json，检查 name/version；调用 config show 后检查配置。CI 也可能需要读取错误状态而不是解析 Markdown。",
+        boundary:"工具插件发现另有 pguide-command-v1 元数据协议，不能和 schemaVersion: 1 的 CLI 输出混为一谈。公开响应范围应逐命令、逐操作明确。",
+        scope:"本页仅选主命令 --version 的成功响应。没有把 help、config show、错误等不同结构硬拼成一个虚构 envelope；它们应在范围确定后继续细分。",
+        validation:["writeResult 接受 Record<string, unknown>，仅序列化；不是共享响应 schema。","setup 对版本和 config show 做局部消费校验，但不代表所有响应已有完整公共契约。"],
+        questions:["哪些命令响应正式支持第三方脚本消费？","用命令+操作确定 schema，还是新增显式响应类型？","错误是否单独统一；版本应在每条响应内还是由接口契约提供？"],
+        sources:["packages/pguide/src/bin.ts","packages/pguide-cli-core/src/index.ts","packages/objective-pguide-setup/src/installation.mjs"],
+        example:String.raw`# pguide --version --format json 的响应形状
+schemaVersion: 1
+name: pguide
+version: 0.4.0-rc.0`,
+        types:String.raw`// 主命令版本响应；不适用于子命令版本或错误响应。
+interface PguideVersionResponse {
+  schemaVersion: 1;
+  name: "pguide";
+  version: string;
+}`,
+        schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
+title: pguide 主命令版本响应（讨论草案）
+type: object
+additionalProperties: false
+required: [schemaVersion, name, version]
+properties:
+  schemaVersion: { const: 1 }
+  name: { const: pguide }
+  version: { type: string, pattern: '\S' }`
+      },
+      {
+        id:"evidence", title:"Evidence JSONL", category:"诊断事件流 · 是否开放待定", version:"当前每条记录 schemaVersion: 1",
+        producer:"EvidenceStream / RunEvidence / CheckEvidence", artifact:"events.jsonl，每行一个 JSON 对象", consumer:"调试者 / 证据查看器 / 潜在分析工具",
+        purpose:"记录一次运行和各 check 的时间序列证据，携带 run/check 身份、文件内序号、事件名和脱敏数据。它不是 CheckResult 或其成功保证。",
+        usecase:"检查失败时，通过 runId 找到 check.started、check.finished 等事件，关联结果文件；大输出超过边界会产生 evidence.truncated。",
+        boundary:"是否支持第三方分析、跨版本回放和长期读取决定它要不要成为公共事件协议。内部诊断流不必自动承担所有历史兼容义务。",
+        scope:"示例以 YAML 展示一个 JSONL 行，真实文件必须每行 JSON，不是 YAML 文档流。TypeScript/schema 展示通用外壳，未定义各事件 data 的判别联合。",
+        validation:["当前 emit 写入版本、ISO 时间、seq、上下文、event 和 data，并脱敏、限制大小。","序号在文件内递增，runId 关联和截断规则属于流级语义；单行 JSON Schema 无法全部保证。"],
+        questions:["是否承诺长期解析和回放？哪些事件是公共事件？","schema 标识放每行、首条记录还是文件旁的元数据？","data 是否按 event 建立联合 schema；截断和脱敏如何影响消费？"],
+        sources:["packages/objective-pilot/src/evidence.ts"],
+        example:String.raw`# 一条 JSONL 行的 YAML 可读表示
+schemaVersion: 1
+time: "2026-10-20T13:00:00.000Z"
+seq: 1
+runId: 00000000-0000-4000-8000-000000000002
+event: run.started
+data:
+  node: v24.12.0
+  platform: win32`,
+        types:String.raw`type Json = null | boolean | number | string
+  | Json[] | { [key: string]: Json };
+// 根据当前输出整理的外壳；非现有公共导出。
+interface EvidenceEvent {
+  schemaVersion: 1;
+  time: string;
+  seq: number;
+  runId: string;
+  checkRunId?: string;
+  attempt?: number;
+  event: string;
+  data: Json;
+}`,
+        schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
+title: Evidence 单条事件外壳（讨论草案）
+type: object
+additionalProperties: false
+required: [schemaVersion, time, seq, runId, event, data]
+properties:
+  schemaVersion: { const: 1 }
+  time:
+    type: string
+    description: ISO 时间的合法性需另行校验
+  seq: { type: integer, minimum: 1 }
+  runId: { type: string, minLength: 1 }
+  checkRunId: { type: string, minLength: 1 }
+  attempt: { type: integer, minimum: 1 }
+  event: { type: string, minLength: 1 }
+  data:
+    description: 事件专属 payload 尚未展开；目前接受任意 JSON 值`
+      },
+      {
+        id:"monorepo-contract", title:"Monorepo Contract", category:"Objective 内部模型 · 非通用协议", version:"当前内部 schemaVersion: 1",
+        producer:"monorepo 检查器按 subject 和仓库事实组装", artifact:"内存中的 Contract", consumer:"布局 / 依赖 / 交付检查逻辑",
+        purpose:"汇集 policy、扫描到的 workspaces 和 deliveries，作为具体 monorepo Objective 的检查模型。当前不是让用户直接编写一份 Contract 文件再读取。",
+        usecase:"checkRepository 读取 subject 的策略与交付声明，再根据实际目录构建 workspace 元数据，交给依赖和交付检查。模型随具体 Objective 实现变化。",
+        boundary:"公开的 subject 输入与内部 Contract 不是同一对象。policy/delivery 部分已有 schema 用于 subject；不能据此认定整个 Contract 都是公共协议。",
+        scope:"展示空仓库模型的完整根字段和 policy 的代表性切片；workspaces/deliveries 元素未展开。只为解释内部模型，不是用户输入指南或完整 Contract schema。",
+        validation:["内部模型通过检查器代码构造；contract.ts 提供 policySchema 和 deliverySchema，并非完整 Contract 根 schema。","目录是否存在、工作区身份、依赖映射和交付入口属于仓库事实检查，不能仅靠 schema 证明。"],
+        questions:["如果永远不落盘也不跨进程消费，是否移除内部 schemaVersion？","哪些 subject 字段需要公共 schema，哪些只是派生事实？","是否避免将内部 Contract 的结构承诺给第三方？"],
+        sources:["packages/objective-monorepo-standard/src/contract.ts","packages/objective-monorepo-standard/src/structure.ts","packages/objective-monorepo-standard/src/subjects.ts"],
+        example:String.raw`schemaVersion: 1
+policy:
+  source: pnpm-default-v1
+  directories:
+    apps: apps
+    packages: packages
+    docs: docs
+    scripts: scripts
+  requiredFiles: [package.json]
+  exceptions: []
+  assignments: []
+  allowedDirectories: []
+  dependencyExceptions: []
+workspaces: []
+deliveries: []`,
+        types:String.raw`type Json = null | boolean | number | string
+  | Json[] | { [key: string]: Json };
+type JsonObject = { [key: string]: Json };
+// policy 列表元素与 Workspace/Delivery 细节未展开。
+interface ContractExample {
+  schemaVersion: 1;
+  policy: {
+    source: "pnpm-default-v1";
+    directories: {
+      apps: string; packages: string;
+      docs: string; scripts: string;
+    };
+    requiredFiles: string[];
+    exceptions: JsonObject[];
+    assignments: JsonObject[];
+    allowedDirectories: JsonObject[];
+    dependencyExceptions: JsonObject[];
+  };
+  workspaces: JsonObject[];
+  deliveries: JsonObject[];
+}`,
+        schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
+title: Monorepo 内部模型示意（非完整规范）
+type: object
+additionalProperties: false
+required: [schemaVersion, policy, workspaces, deliveries]
+properties:
+  schemaVersion: { const: 1 }
+  policy:
+    type: object
+    additionalProperties: false
+    required: [source, directories, requiredFiles, exceptions, assignments, allowedDirectories, dependencyExceptions]
+    properties:
+      source: { const: pnpm-default-v1 }
+      directories:
+        type: object
+        additionalProperties: false
+        required: [apps, packages, docs, scripts]
+        properties:
+          apps: { type: string }
+          packages: { type: string }
+          docs: { type: string }
+          scripts: { type: string }
+      requiredFiles: { type: array, items: { type: string } }
+      exceptions: { $ref: '#/$defs/objects' }
+      assignments: { $ref: '#/$defs/objects' }
+      allowedDirectories: { $ref: '#/$defs/objects' }
+      dependencyExceptions: { $ref: '#/$defs/objects' }
+  workspaces: { $ref: '#/$defs/objects' }
+  deliveries: { $ref: '#/$defs/objects' }
+$defs:
+  objects:
+    type: array
+    items:
+      type: object
+      description: 本页只展示容器，元素业务结构未展开`
+      },
+      {
+        id:"monorepo-report", title:"Monorepo Report", category:"Objective 业务输出 · 开放承诺待定", version:"当前 schemaVersion: 1",
+        producer:"monorepo recorder / 检查器", artifact:"交付准备度报告", consumer:"用户 / Objective check 的问题映射",
+        purpose:"汇总静态检查的 findings、状态、第二层是否阻塞和局限性。它说明交付准备度，不证明线上可用、发布成功或实际部署完成。",
+        usecase:"仓库目录不符合规范时生成 layer 1 finding，给出位置、证据和修复建议；第二层交付检查被标记 blocked，防止误报已完成在线验证。",
+        boundary:"属于具体 Objective 的业务结果；如果要让外部查看器稳定读取，可独立公开报告 schema，但不属于所有 Pilot 的通用协议。",
+        scope:"展示完整 Report 根结构与 Finding 字段。各 rule 的语义、状态归约和仓库事实仍需业务逻辑确认，不由结构校验保证。",
+        validation:["Report 由 recorder 构造，schemaVersion 固定为 1；当前没有集中到协议包的 Report validator。","onlineVerified: false 与 evidenceKind 明确限制证明范围，不能把 pass 解读为线上服务已验证。"],
+        questions:["报告仅作为检查器实现细节，还是独立外部消费格式？","静态准备度与在线验证的边界是否成为稳定承诺？","报告与内部 Contract 是否必须各自演进，不共享格式身份？"],
+        sources:["packages/objective-monorepo-standard/src/shared.ts","packages/objective-monorepo-standard/src/report.ts"],
+        example:String.raw`schemaVersion: 1
+scope: delivery-preparation
+state: fail
+layer2: blocked
+findings:
+  - layer: 1
+    state: fail
+    rule: workspace-placement
+    location: tools/demo
+    evidence: 可发布包位于声明的 packages 目录之外
+    remedy: 移入 packages 或明确声明例外
+    requirements: []
+    packages: [demo]
+evidenceKind: configuration-and-existing-files
+onlineVerified: false
+limitations:
+  - 仅观察配置与现有文件，不执行发布或部署`,
+        types:String.raw`type State = "pass" | "fail" | "unverified"
+  | "not-applicable";
+interface Finding {
+  layer: 1 | 2;
+  state: State;
+  rule: string;
+  location: string;
+  evidence: string;
+  remedy: string;
+  requirements: string[];
+  packages: string[];
+  targetDirectory?: string;
+}
+interface MonorepoReport {
+  schemaVersion: 1;
+  scope: "delivery-preparation";
+  state: State;
+  layer2: "checked" | "blocked" | "not-requested";
+  findings: Finding[];
+  evidenceKind: "configuration-and-existing-files";
+  onlineVerified: false;
+  limitations: string[];
+}`,
+        schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
+title: Monorepo Report（讨论草案）
+type: object
+additionalProperties: false
+required: [schemaVersion, scope, state, layer2, findings, evidenceKind, onlineVerified, limitations]
+properties:
+  schemaVersion: { const: 1 }
+  scope: { const: delivery-preparation }
+  state: { $ref: '#/$defs/state' }
+  layer2: { enum: [checked, blocked, not-requested] }
+  findings:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [layer, state, rule, location, evidence, remedy, requirements, packages]
+      properties:
+        layer: { enum: [1, 2] }
+        state: { $ref: '#/$defs/state' }
+        rule: { type: string }
+        location: { type: string }
+        evidence: { type: string }
+        remedy: { type: string }
+        requirements: { $ref: '#/$defs/strings' }
+        packages: { $ref: '#/$defs/strings' }
+        targetDirectory: { type: string }
+  evidenceKind: { const: configuration-and-existing-files }
+  onlineVerified: { const: false }
+  limitations: { $ref: '#/$defs/strings' }
+$defs:
+  state: { enum: [pass, fail, unverified, not-applicable] }
+  strings: { type: array, items: { type: string } }`
+      }
+    ];
+  </script>
+  <script id="review-ui">
+    const nav = document.getElementById("format-tabs");
+    const pages = document.getElementById("pages");
+    const labels = { example:"示例 · YAML", types:"TypeScript 类型", schema:"JSON Schema · YAML" };
+    let active = 0;
+    let representation = "example";
+    let compare = false;
+    let statusTimer;
+    const sourceBase = "https://github.com/shazhou-ww/potential-guide/blob/50a80806e3aca67acf3220cdbf8bfc274de4748d/";
+    const narrowScreen = window.matchMedia("(max-width:760px)");
+    function updateOrientation() {
+      nav.setAttribute("aria-orientation", window.innerWidth <= 760 ? "horizontal" : "vertical");
+    }
+    narrowScreen.addEventListener("change", updateOrientation);
+    window.addEventListener("resize", updateOrientation);
+    updateOrientation();
+    function element(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+    function announce(message) {
+      clearTimeout(statusTimer);
+      document.getElementById("status").textContent = message;
+      statusTimer = setTimeout(() => { document.getElementById("status").textContent = ""; }, 4500);
+    }
+    async function copyText(text) {
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+        await navigator.clipboard.writeText(text);
+        announce("已复制到剪贴板");
+      } catch {
+        announce("无法访问剪贴板，请手动选择并复制文本。");
+      }
+    }
+    function card(title, body, className = "") {
+      const box = element("section", `card ${className}`);
+      box.append(element("h3", "", title));
+      if (Array.isArray(body)) {
+        const list = element("ul");
+        for (const item of body) list.append(element("li", "", item));
+        box.append(list);
+      } else box.append(element("p", "", body));
+      return box;
+    }
+    formats.forEach((format, index) => {
+      const tab = element("button", "format-tab");
+      tab.type = "button";
+      tab.id = `tab-${format.id}`;
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-controls", `page-${format.id}`);
+      tab.append(element("span", "", String(index + 1).padStart(2, "0")), element("span", "", format.title));
+      tab.addEventListener("click", () => select(index));
+      nav.append(tab);
+      const pagePanel = element("article", "format-page");
+      pagePanel.id = `page-${format.id}`;
+      pagePanel.setAttribute("role", "tabpanel");
+      pagePanel.setAttribute("aria-labelledby", tab.id);
+      pagePanel.tabIndex = 0;
+      const head = element("div", "page-head");
+      const heading = element("div");
+      heading.append(element("span", "tag", format.category), element("h2", "", format.title));
+      head.append(heading, element("span", "version", format.version));
+      pagePanel.append(head, element("p", "purpose", format.purpose));
+      const flow = element("div", "flow");
+      [[format.producer,"生产者"],[format.artifact,"承载位置"],[format.consumer,"消费者"]].forEach(([value,label], i) => {
+        if (i) flow.append(element("div", "arrow", "→"));
+        const part = element("div");
+        part.append(element("small", "", label), element("strong", "", value));
+        flow.append(part);
+      });
+      const info = element("div", "info-grid");
+      info.append(card("一个具体用例", format.usecase), card("为什么需要讨论它的边界", format.boundary));
+      pagePanel.append(flow, info, element("p", "scope", `展示范围：${format.scope}`));
+      const bar = element("div", "representation-bar");
+      const views = element("div", "view-tabs");
+      views.setAttribute("role", "tablist");
+      views.setAttribute("aria-label", `${format.title} 展示方式`);
+      for (const [key, label] of Object.entries(labels)) {
+        const viewTab = element("button", "view-tab", label);
+        viewTab.type = "button";
+        viewTab.dataset.view = key;
+        viewTab.id = `view-${format.id}-${key}`;
+        viewTab.setAttribute("role", "tab");
+        viewTab.setAttribute("aria-controls", `code-${format.id}-${key}`);
+        viewTab.addEventListener("click", () => { representation = key; compare = false; select(active); });
+        views.append(viewTab);
+      }
+      views.addEventListener("keydown", event => {
+        const keys = Object.keys(labels);
+        let at = keys.indexOf(representation);
+        if (event.key === "ArrowRight") at = (at + 1) % keys.length;
+        else if (event.key === "ArrowLeft") at = (at + keys.length - 1) % keys.length;
+        else if (event.key === "Home") at = 0;
+        else if (event.key === "End") at = keys.length - 1;
+        else return;
+        event.preventDefault();
+        representation = keys[at]; compare = false; select(active);
+        views.querySelector(`[data-view="${representation}"]`).focus();
+      });
+      const compareButton = element("button", "compare", "三栏对照");
+      compareButton.type = "button";
+      compareButton.addEventListener("click", () => { compare = !compare; select(active); });
+      bar.append(views, compareButton);
+      const grid = element("div", "code-grid");
+      for (const [key, label] of Object.entries(labels)) {
+        const codeCard = element("section", "code-card");
+        codeCard.dataset.kind = key;
+        codeCard.id = `code-${format.id}-${key}`;
+        codeCard.setAttribute("role", "tabpanel");
+        codeCard.setAttribute("aria-labelledby", `view-${format.id}-${key}`);
+        codeCard.tabIndex = 0;
+        const codeHead = element("div", "code-head");
+        const copy = element("button", "copy", "复制");
+        copy.type = "button";
+        copy.setAttribute("aria-label", `复制 ${format.title} ${label}`);
+        copy.addEventListener("click", () => copyText(format[key]));
+        codeHead.append(element("span", "", label), copy);
+        const pre = element("pre");
+        pre.append(element("code", "", format[key]));
+        codeCard.append(codeHead, pre);
+        grid.append(codeCard);
+      }
+      const bottom = element("div", "bottom");
+      bottom.append(card("现有校验与 schema 的边界", format.validation), card("本页 Review 要回答的问题", format.questions, "questions"));
+      const sources = element("p", "sources", "源码依据（固定快照）：");
+      for (const path of format.sources) {
+        const link = element("a", "", path);
+        link.href = sourceBase + path;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        sources.append(link);
+      }
+      const pager = element("div", "pager");
+      const previous = element("button", "", index ? `← ${formats[index - 1].title}` : "已是第一页");
+      const next = element("button", "", index < formats.length - 1 ? `${formats[index + 1].title} →` : "已是最后一页");
+      previous.type = next.type = "button";
+      previous.disabled = index === 0;
+      next.disabled = index === formats.length - 1;
+      previous.addEventListener("click", () => select(index - 1, true));
+      next.addEventListener("click", () => select(index + 1, true));
+      pager.append(previous, next);
+      pagePanel.append(bar, grid, bottom, sources, pager);
+      pages.append(pagePanel);
+    });
+    function select(index, focus = false, updateHash = true) {
+      active = index;
+      updateOrientation();
+      Array.from(nav.children).forEach((tab, at) => {
+        tab.setAttribute("aria-selected", String(at === active));
+        tab.tabIndex = at === active ? 0 : -1;
+      });
+      Array.from(pages.children).forEach((panel, at) => {
+        panel.hidden = at !== active;
+        panel.classList.toggle("compare-mode", compare);
+        panel.querySelector(".compare").setAttribute("aria-pressed", String(compare));
+        panel.querySelectorAll(".view-tab").forEach(tab => {
+          tab.setAttribute("aria-selected", String(tab.dataset.view === representation));
+          tab.tabIndex = tab.dataset.view === representation ? 0 : -1;
+        });
+        panel.querySelectorAll(".code-card").forEach(code => {
+          code.hidden = !compare && code.dataset.kind !== representation;
+          code.setAttribute("role", compare ? "region" : "tabpanel");
+        });
+      });
+      if (updateHash) {
+        const hash = `#${formats[active].id}/${compare ? "compare" : representation}`;
+        if (location.hash !== hash) {
+          try { history.replaceState(null, "", hash); }
+          catch { location.hash = hash; }
+        }
+      }
+      if (focus) {
+        nav.children[active].focus();
+        pages.children[active].scrollIntoView({ block:"start" });
+      }
+    }
+    function fromHash() {
+      const [id, view] = location.hash.slice(1).split("/");
+      const index = formats.findIndex(format => format.id === id);
+      representation = Object.hasOwn(labels, view) ? view : "example";
+      compare = view === "compare";
+      select(index < 0 ? 0 : index, false, false);
+    }
+    nav.addEventListener("keydown", event => {
+      let next = active;
+      if (event.key === "ArrowDown" || event.key === "ArrowRight") next = (active + 1) % formats.length;
+      else if (event.key === "ArrowUp" || event.key === "ArrowLeft") next = (active + formats.length - 1) % formats.length;
+      else if (event.key === "Home") next = 0;
+      else if (event.key === "End") next = formats.length - 1;
+      else return;
+      event.preventDefault();
+      select(next, true);
+    });
+    document.getElementById("print").addEventListener("click", () => window.print());
+    document.getElementById("share").addEventListener("click", () => copyText(location.href));
+    window.addEventListener("hashchange", fromHash);
+    fromHash();
+  </script>
+</body>
+</html>
