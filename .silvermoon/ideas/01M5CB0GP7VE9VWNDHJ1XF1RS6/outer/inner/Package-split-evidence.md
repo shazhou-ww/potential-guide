@@ -39,7 +39,7 @@ Pilot 的编写、静态验证和观察共用来源及定义约定；调节与�
 
 ## 安装与兼容证明
 
-`scripts/check-package-consumers.mjs` 在仓库 `.cache` 下创建并清理八种独立 pnpm 工作区，只消费当前 tarball，以离线模式、禁止安装脚本运行。递归校验每个真实父依赖下解析出的内部包版本，不依赖仓库源码链接。命令环境仅暴露消费者真实生成的二进制 shim、Node 和 POSIX shim 必需的最小 shell 工具，隔离本机已全局安装的旧扩展。
+`scripts/check-package-consumers.mjs` 在仓库 `.cache` 下创建并清理八种独立 pnpm 工作区，内部包只消费当前 tarball，禁止安装脚本运行。第三方依赖使用 prefer-offline，冷缓存可从 registry 获取兼容版本，不假定本机已有完整缓存。递归校验每个真实父依赖下解析出的内部包版本，不依赖仓库源码链接。命令环境仅暴露消费者真实生成的二进制 shim、Node 和 POSIX shim 必需的最小 shell 工具，隔离本机已全局安装的旧扩展。
 
 | 消费组合 | 显式选择包数 | 内部包闭包数 |
 | --- | --- | --- |
@@ -59,6 +59,8 @@ Pilot 的编写、静态验证和观察共用来源及定义约定；调节与�
 原 CLI 集成测试迁移到新产物路径，继续覆盖选项、stdin、字面参数透传、JSON/Markdown、权限、持久化继续、Git 固定版本、证据和监督。每个新命令从自己的清单读取版本，metadata/help 不加载业务实现。发布清单、包级 tag 触发器、源码工作区引用、依赖锁、Docker 消费准备和分发验证器都按显式选装命令更新；本轮未发布 npm 包。
 
 ## 实际执行结果
+
+远端首次跨平台验证发现：全离线安装在冷缓存中会为 ajv 解析到尚未缓存的兼容 fast-uri 版本，导致消费检查提前失败；已改为 prefer-offline，内部包仍强制本地 tarball，允许正常下载第三方依赖。对应回归检查禁止恢复强制 offline，跨平台重新验证另由部署证据记录。
 
 - 本机为 Windows，Node.js `v24.12.0`，pnpm `11.22.0`。
 - `pnpm exec turbo run build --force`：19 个构建任务成功；清理迁移中间产物后执行 `pnpm exec turbo run build typecheck --force`，38 个任务成功，刷新旧缓存，避免已移走的源码残留在 tarball。

@@ -55,7 +55,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       "pnpm",
       [
         "install",
-        "--offline",
+        "--prefer-offline",
         "--ignore-scripts",
         "--no-frozen-lockfile",
         "--reporter=append-only",
@@ -187,7 +187,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       }
     }
     console.log(
-      `isolated ${label}: ${entries.length} selected, ${closure.size} internal packages; offline packed consumption passed`,
+      `isolated ${label}: ${entries.length} selected, ${closure.size} internal packages; packed consumption passed`,
     );
   }
 }

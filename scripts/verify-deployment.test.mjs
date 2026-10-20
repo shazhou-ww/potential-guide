@@ -14,6 +14,9 @@ test("packed deployment CI invokes the eight isolated package consumers", async 
     /import \{ checkPackageConsumers \} from "\.\/check-package-consumers\.mjs"/,
   );
   assert.match(source, /if \(!installPublished\) \{\s+await checkPackageConsumers\(/);
+  const consumers = await readFile(new URL("scripts/check-package-consumers.mjs", root), "utf8");
+  assert.match(consumers, /"--prefer-offline"/);
+  assert.doesNotMatch(consumers, /"--offline"/);
   const ci = await readFile(new URL(".github/workflows/ci.yaml", root), "utf8");
   assert.match(ci, /run: pnpm deployment:verify/);
 });

@@ -125,7 +125,7 @@ temporary workspace manifests and relative source/type references.
 All scratch data stays under repository `.cache`.
 
 `pnpm pack:check` builds and packs the release inventory, checks exports and bins,
-then installs eight isolated offline tarball consumers: protocol-only,
+then installs eight isolated tarball consumers: protocol-only,
 main-only, each optional command package, and all commands together.
 The default packed `pnpm deployment:verify` runs these same eight combinations
 before its npm runtime scenarios, so the existing Ubuntu/macOS/Windows deployment
@@ -138,6 +138,11 @@ the isolated shim toolchain includes the standard shell utilities pnpm shims nee
 CLI integration tests retain execution, permissions, evidence, persistence,
 source revision and supervisor coverage. See [npm publishing](./npm-publishing.md)
 for package-specific release tags. No package is published by these checks.
+
+Internal packages are always resolved to the current local tarballs. Third-party
+dependencies use `--prefer-offline`, allowing registry downloads when a fresh
+consumer resolves a compatible version absent from the store; the checks do not
+assume that a developer's warmed cache is available in CI.
 
 ## Package-owned repository governance
 
