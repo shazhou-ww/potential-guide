@@ -35,6 +35,7 @@ import {
   type RegulationStrategy,
 } from "@potential-guide/objective-regulator";
 import { createAgentPlannerPolicy } from "../acp-planner.js";
+import { showCommandHelp } from "../command-help.js";
 import { withPilot } from "../pilot-source.js";
 import {
   createProcessRegulationRunner,
@@ -346,11 +347,7 @@ export async function runSupervise(
   globals: GlobalOptions,
 ): Promise<number | undefined> {
   if (globals.help) {
-    writeResult(
-      { schemaVersion: 1, command: "supervise" },
-      globals.format,
-      "Usage: pguide supervise --portfolio-file <json> --planner <profile> [--execute] [--duration-ms <ms>]",
-    );
+    showCommandHelp("supervise", globals);
     return;
   }
   rejectUnknownOptions(argv, {

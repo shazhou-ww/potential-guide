@@ -22,12 +22,13 @@ import { parseRegulationPermissions, type RegulationPermissions } from "./permis
 import { killProcessTree } from "./process-tree.js";
 import { pipeRedactedSecrets } from "./streaming-secret-redactor.js";
 
+export { type AhpSessionIdentity, executeAhp, inspectAhp } from "./ahp.js";
+export { type CommandHelp, formatCommandHelp } from "./help.js";
 export {
   type PermissionGrant,
   parseRegulationPermissions,
   type RegulationPermissions,
 } from "./permissions.js";
-export { type AhpSessionIdentity, executeAhp, inspectAhp } from "./ahp.js";
 export { killProcessTree } from "./process-tree.js";
 
 export const COMMAND_PROTOCOL = "pguide-command-v1";

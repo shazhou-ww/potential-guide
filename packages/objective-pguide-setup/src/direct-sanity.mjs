@@ -7,7 +7,7 @@ export async function directSanity(context, directory, selected) {
   const task = join(directory, "task");
   await mkdir(task, { mode: 0o700 });
   const marker = join(task, "marker.txt");
-  const expected = `ready-${randomBytes(24).toString("hex")}`;
+  const expected = `ready-${randomBytes(24).toString("hex")}\n`;
   await writeFile(marker, "not-ready", { mode: 0o600 });
   if ((await readFile(marker, "utf8")) === expected)
     throw new Fault("sanity: initial marker was not independently observed.");
@@ -18,7 +18,6 @@ export async function directSanity(context, directory, selected) {
       cwd: task,
       expected,
       profile: selected.profile,
-      permissions: selected.config.regulationPermissions,
       timeoutMs: Math.max(
         1,
         Math.min(
@@ -32,6 +31,10 @@ export async function directSanity(context, directory, selected) {
   const result = await context.execute(process.execPath, [join(here, "direct-agent.mjs"), input]);
   if (result.code !== 0) throw new Fault("sanity: direct Agent process failed.");
   const outcome = jsonOutput(result);
+  for (const phase of ["agent.initialize", "agent.session-new", "agent.prompt", "agent.cleanup"]) {
+    const duration = outcome.timings?.[phase];
+    if (Number.isSafeInteger(duration) && duration >= 0) context.timing(phase, duration);
+  }
   if (outcome.reason === "timeout")
     throw new Fault("timeout: direct Agent exceeded its deadline.", 504);
   if (outcome.reason === "startup-failed" && ["initialize", "session-new"].includes(outcome.stage))

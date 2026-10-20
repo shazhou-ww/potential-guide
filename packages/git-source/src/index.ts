@@ -39,6 +39,7 @@ export interface GitCommand {
   readonly args: readonly string[];
   readonly cwd?: string;
   readonly operation: string;
+  readonly input?: string;
 }
 
 export interface GitSourceEnvironment {
@@ -62,6 +63,12 @@ export interface GitSnapshot {
   readonly readDirectory: (
     path?: string,
   ) => Effect.Effect<readonly GitDirectoryEntry[], GitSourceError>;
+  readonly readFiles: () => Stream.Stream<GitFile, GitSourceError>;
+}
+
+export interface GitFile {
+  readonly path: string;
+  readonly bytes: Uint8Array;
 }
 
 export type GitSourceState =
@@ -201,7 +208,7 @@ export function runGitCommand(
       env: { ...process.env, ...environment, GIT_TERMINAL_PROMPT: "0", GCM_INTERACTIVE: "never" },
       shell: false,
       windowsHide: true,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ["pipe", "pipe", "pipe"],
     });
     const chunks: Buffer[] = [];
     let size = 0;
@@ -211,7 +218,7 @@ export function runGitCommand(
     });
     child.stdout.on("data", (chunk: Buffer) => {
       size += chunk.length;
-      if (size > 64 * 1024 * 1024) {
+      if (size > 64 * 1024 * 1024 + (command.operation === "read-batch" ? 1024 : 0)) {
         failed = true;
         child.kill("SIGKILL");
       } else {
@@ -219,6 +226,11 @@ export function runGitCommand(
       }
     });
     child.stderr.resume();
+    child.stdin.on("error", () => {
+      failed = true;
+      child.kill("SIGKILL");
+    });
+    child.stdin.end(command.input);
     child.once("error", () => {
       failed = true;
     });
@@ -254,6 +266,7 @@ interface RepositoryLease {
   readonly run: (
     operation: string,
     args: readonly string[],
+    input?: string,
   ) => Effect.Effect<Uint8Array, GitSourceError>;
 }
 
@@ -293,9 +306,14 @@ function acquireRepository(environment: GitSourceEnvironment, spec: GitSourceSpe
     return {
       directory,
       isOpen: () => open,
-      run: (operation: string, args: readonly string[]) =>
+      run: (operation: string, args: readonly string[], input?: string) =>
         // Explicit selection respects safe.bareRepository=explicit without relaxing Git policy.
-        execute({ operation, args: ["--git-dir", directory, ...args], cwd: directory }),
+        execute({
+          operation,
+          args: ["--git-dir", directory, ...args],
+          cwd: directory,
+          ...(input === undefined ? {} : { input }),
+        }),
     } satisfies RepositoryLease;
   });
 }
@@ -357,6 +375,105 @@ function pathSegments(path: string): Effect.Effect<readonly string[], GitSourceE
     );
   }
   return Effect.succeed(segments);
+}
+
+interface BlobEntry {
+  readonly path: string;
+  readonly objectId: string;
+  readonly size: number;
+}
+
+function readSnapshotFiles(lease: RepositoryLease, commit: string) {
+  const ensureOpen = () =>
+    lease.isOpen()
+      ? Effect.void
+      : Effect.fail(new GitSourceError("closed", "read", "Git snapshot scope has closed."));
+  const batches = Effect.gen(function* () {
+    yield* ensureOpen();
+    const listing = yield* lease.run("list-files", ["ls-tree", "-r", "-z", "-l", commit]);
+    const entries = yield* Effect.try({
+      try: () =>
+        new TextDecoder("utf-8", { fatal: true })
+          .decode(listing)
+          .split("\0")
+          .filter(Boolean)
+          .map((record): BlobEntry => {
+            const match = /^(100[0-7]{3}) blob ([0-9a-f]{40}|[0-9a-f]{64}) +(\d+)\t([\s\S]+)$/.exec(
+              record,
+            );
+            if (!match?.[2] || match[3] === undefined || match[4] === undefined)
+              throw new GitSourceError(
+                "unsupported-entry",
+                "list-files",
+                "Snapshot files must be regular Git blobs, not symlinks or submodules.",
+              );
+            const size = Number(match[3]);
+            if (!Number.isSafeInteger(size) || size > 64 * 1024 * 1024)
+              throw new GitSourceError(
+                "command",
+                "read-batch",
+                "Git blob exceeds the 64 MiB limit.",
+              );
+            return { path: match[4], objectId: match[2], size };
+          }),
+      catch: (cause) =>
+        cause instanceof GitSourceError
+          ? cause
+          : new GitSourceError("command", "list-files", "Git returned an invalid file listing."),
+    });
+    const result: BlobEntry[][] = [];
+    let batch: BlobEntry[] = [];
+    let size = 0;
+    for (const entry of entries) {
+      yield* pathSegments(entry.path);
+      if (batch.length > 0 && (size + entry.size > 8 * 1024 * 1024 || batch.length >= 256)) {
+        result.push(batch);
+        batch = [];
+        size = 0;
+      }
+      batch.push(entry);
+      size += entry.size;
+    }
+    if (batch.length > 0) result.push(batch);
+    return result;
+  });
+  const readBatch = (entries: BlobEntry[]) =>
+    Effect.gen(function* () {
+      yield* ensureOpen();
+      const output = Buffer.from(
+        yield* lease.run(
+          "read-batch",
+          ["cat-file", "--batch"],
+          `${entries.map((entry) => entry.objectId).join("\n")}\n`,
+        ),
+      );
+      return yield* Effect.try({
+        try: () => {
+          let offset = 0;
+          const files = entries.map((entry): GitFile => {
+            const end = output.indexOf(10, offset);
+            const header = `${entry.objectId} blob ${entry.size}`;
+            if (end < 0 || output.toString("ascii", offset, end) !== header)
+              throw new Error("Invalid batch header.");
+            offset = end + 1;
+            const bytes = output.subarray(offset, offset + entry.size);
+            offset += entry.size;
+            if (bytes.length !== entry.size || output[offset++] !== 10)
+              throw new Error("Invalid batch body.");
+            return { path: entry.path, bytes };
+          });
+          if (offset !== output.length) throw new Error("Unexpected batch output.");
+          return files;
+        },
+        catch: () =>
+          new GitSourceError("command", "read-batch", "Git returned an invalid blob batch."),
+      });
+    });
+  return Stream.fromEffect(batches).pipe(
+    Stream.flatMap((batches) => Stream.fromIterable(batches)),
+    Stream.mapEffect(readBatch),
+    Stream.flatMap((files) => Stream.fromIterable(files)),
+  );
 }
 
 function snapshotFromCommit(
@@ -463,6 +580,7 @@ function snapshotFromCommit(
         }
         return (yield* tree(entry.objectId)).map(({ name, kind }) => ({ name, kind }));
       }),
+    readFiles: () => readSnapshotFiles(lease, commit),
   });
 }
 

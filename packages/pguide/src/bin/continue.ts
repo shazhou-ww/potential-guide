@@ -1,13 +1,4 @@
 #!/usr/bin/env node
-import { commandMain } from "@potential-guide/cli-core";
-import { regulatorCommandVersion, runContinue } from "../commands/regulator.js";
+import { launchCommand } from "../command-help.js";
 
-void commandMain(
-  {
-    protocol: "pguide-command-v1",
-    command: "continue",
-    description: "Continue a persisted Regulation",
-    version: regulatorCommandVersion,
-  },
-  runContinue,
-);
+launchCommand("continue", async () => (await import("../commands/regulator.js")).runContinue);

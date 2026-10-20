@@ -233,7 +233,8 @@ async function directSanity(context, directory, selected) {
   const task = join(directory, "task");
   await mkdir(task, { mode: 448 });
   const marker = join(task, "marker.txt");
-  const expected = `ready-${randomBytes(24).toString("hex")}`;
+  const expected = `ready-${randomBytes(24).toString("hex")}
+`;
   await writeFile(marker, "not-ready", { mode: 384 });
   if (await readFile(marker, "utf8") === expected)
     throw new Fault("sanity: initial marker was not independently observed.");
@@ -244,7 +245,6 @@ async function directSanity(context, directory, selected) {
       cwd: task,
       expected,
       profile: selected.profile,
-      permissions: selected.config.regulationPermissions,
       timeoutMs: Math.max(
         1,
         Math.min(
@@ -258,6 +258,10 @@ async function directSanity(context, directory, selected) {
   const result = await context.execute(process.execPath, [join(here, "direct-agent.mjs"), input]);
   if (result.code !== 0) throw new Fault("sanity: direct Agent process failed.");
   const outcome = jsonOutput(result);
+  for (const phase of ["agent.initialize", "agent.session-new", "agent.prompt", "agent.cleanup"]) {
+    const duration = outcome.timings?.[phase];
+    if (Number.isSafeInteger(duration) && duration >= 0) context.timing(phase, duration);
+  }
   if (outcome.reason === "timeout")
     throw new Fault("timeout: direct Agent exceeded its deadline.", 504);
   if (outcome.reason === "startup-failed" && ["initialize", "session-new"].includes(outcome.stage))
@@ -388,6 +392,21 @@ async function stopTree(child) {
   });
 }
 function executionContext(subject, directory, signal, deadline) {
+  const timing = (phase, durationMs) => {
+    if (process.env.PGUIDE_TIMINGS === "1")
+      process.stderr.write(
+        `${JSON.stringify({ type: "pguide-timing", phase, durationMs: Math.round(durationMs) })}
+`
+      );
+  };
+  const measure = async (phase, run) => {
+    const start = performance.now();
+    try {
+      return await run();
+    } finally {
+      timing(phase, performance.now() - start);
+    }
+  };
   const env = { ...process.env };
   for (const key of Object.keys(env)) if (/^GIT_/i.test(key)) delete env[key];
   env.GIT_TERMINAL_PROMPT = "0";
@@ -474,17 +493,20 @@ function executionContext(subject, directory, signal, deadline) {
       else child.stdin.end();
     });
   }
-  const cli = (args, config = subject.configPath, cwd = directory) => execute(subject.pguide.command, [
-    ...subject.pguide.args ?? [],
-    ...args,
-    "--config",
-    config,
-    "--cwd",
-    cwd,
-    "--format",
-    "json"
-  ]);
-  return { execute, cli, env, remainingMs: () => deadline - Date.now() };
+  const cli = (args, config = subject.configPath, cwd = directory) => measure(
+    args[0] === "--help" ? "cli.help" : `cli.${args[0]}`,
+    () => execute(subject.pguide.command, [
+      ...subject.pguide.args ?? [],
+      ...args,
+      "--config",
+      config,
+      "--cwd",
+      cwd,
+      "--format",
+      "json"
+    ])
+  );
+  return { execute, cli, env, measure, timing, remainingMs: () => deadline - Date.now() };
 }
 var init_execution = __esm({
   "packages/objective-pguide-setup/src/execution.mjs"() {
@@ -906,13 +928,18 @@ async function check(stage, value, options = {}) {
       controller.signal,
       Date.now() + subject.timeoutMs
     );
-    if (stage === "installation") await installation(subject, context);
+    if (stage === "installation")
+      await context.measure("installation", () => installation(subject, context));
     else {
-      const selected = await configured(subject, context);
+      const selected = await context.measure("configuration", () => configured(subject, context));
       if (!(options.selfCheck && stage === "sanity"))
-        await acpReady(selected.profile, context, directory);
+        await context.measure(
+          "acp.readiness",
+          () => acpReady(selected.profile, context, directory)
+        );
       if (stage === "sanity") {
-        if (options.selfCheck) await directSanity(context, directory, selected);
+        if (options.selfCheck)
+          await context.measure("sanity", () => directSanity(context, directory, selected));
         else await sanity(subject, context, directory, selected);
       }
     }

@@ -91,5 +91,9 @@ monorepo 的库入口仍构建到 `dist/`，打包时同时包含库输出与 st
 self-check 仍是本机直接 Agent 修复与独立内容复查，不接受 target/allowSanity。
 health 本机检查仍要求受支持的 Linux 环境，Windows 不得被当作健康通过。
 
+本机 self-check 的轻量 sanity 是上述历史迁移之后的自动验收语义：
+仅该独占会话自动选择 ACP `allow_once`，不依赖正常修复任务的 grants，也不改写用户权限配置。
+正常 regulate 和旧 setup sanity 仍沿用各自的授权策略。
+
 单元测试不是部署证明。交付验证必须使用干净、固定版本、无目标依赖安装的隔离消费环境，
 检查资源加载、正反例和适用终态；真实 Agent、外部设备、费用、发布和生产修改仍需各自授权。

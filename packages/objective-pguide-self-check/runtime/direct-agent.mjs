@@ -2,7 +2,6 @@
 // Snapshot source. Imports are rewritten by build-self-check-runtime.mjs.
 import { readFile } from "node:fs/promises";
 import { AcpClient } from "./acp-client.mjs";
-import { createAcpPermissionPolicy } from "./acp-permissions.mjs";
 
 let outcome = { status: "failed", reason: "invocation-failed" };
 let client;
@@ -11,16 +10,22 @@ let stopping;
 let timer;
 let timedOut = false;
 let stage = "initialize";
+const timings = {};
+async function measure(phase, run) {
+  const start = performance.now();
+  try {
+    return await run();
+  } finally {
+    timings[phase] = Math.round(performance.now() - start);
+  }
+}
 const stop = () => {
   if (client !== undefined)
     stopping ??= sessionId === undefined ? client.stop() : client.cancelAndStop(sessionId);
   void stopping?.catch(() => {});
 };
 try {
-  const { cwd, expected, profile, permissions, timeoutMs } = JSON.parse(
-    await readFile(process.argv[2], "utf8"),
-  );
-  const policy = await createAcpPermissionPolicy(permissions, cwd);
+  const { cwd, expected, profile, timeoutMs } = JSON.parse(await readFile(process.argv[2], "utf8"));
   let denied = false;
   client = new AcpClient(
     profile,
@@ -28,33 +33,42 @@ try {
       client.updates.length = 0;
       if (update.method === "pguide/request_denied") denied = true;
     },
-    { permissionHandler: policy.handler, maxOutputBytes: 196608, requireEndTurn: true },
+    {
+      permissionHandler: async (request, signal) =>
+        signal.aborted
+          ? undefined
+          : request.options.find((option) => option.kind === "allow_once")?.optionId,
+      maxOutputBytes: 196608,
+      requireEndTurn: true,
+    },
   );
   timer = setTimeout(() => {
     timedOut = true;
     stop();
   }, timeoutMs);
-  const initialized = await client.initialize(profile.connection.protocolVersion);
+  const initialized = await measure("agent.initialize", () =>
+    client.initialize(profile.connection.protocolVersion),
+  );
   if (
     profile.requirements?.sessionResume === true &&
     initialized.agentCapabilities?.loadSession !== true
   )
     throw new Error("ACP session resume is unavailable.");
   stage = "session-new";
-  sessionId = await client.newSession(cwd);
+  sessionId = await measure("agent.session-new", () => client.newSession(cwd));
   const prompt = [
     "Potential Guide local self-check: one isolated marker repair.",
     `Self-check task: ${JSON.stringify({ marker: "marker.txt", expected })}`,
-    "Replace marker.txt in the current working directory with exactly the expected string, without a newline.",
+    "Replace marker.txt in the current working directory with exactly the expected string, including its final newline.",
+    "Use a direct file editing tool; do not use a shell or terminal.",
     "Modify only marker.txt. Do not use network, install dependencies, change configuration, run pguide, or use Git.",
     "Do not plan or report; finish after the single repair. Respect existing tool permissions.",
   ].join("\n");
   stage = "prompt";
-  const response = await client.prompt(sessionId, prompt);
-  outcome =
-    denied || policy.denied.length > 0
-      ? { status: "failed", reason: "denied" }
-      : { status: response.status, reason: response.status };
+  const response = await measure("agent.prompt", () => client.prompt(sessionId, prompt));
+  outcome = denied
+    ? { status: "failed", reason: "denied" }
+    : { status: response.status, reason: response.status };
 } catch (error) {
   outcome = {
     status: "failed",
@@ -71,11 +85,11 @@ try {
   if (client !== undefined) {
     try {
       stop();
-      await stopping;
+      await measure("agent.cleanup", () => stopping);
     } catch {
       outcome = { status: "failed", reason: "invocation-failed" };
     }
   }
 }
 if (timedOut) outcome = { status: "failed", reason: "timeout" };
-console.log(JSON.stringify(outcome));
+console.log(JSON.stringify({ ...outcome, timings }));

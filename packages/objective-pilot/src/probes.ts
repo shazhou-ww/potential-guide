@@ -100,8 +100,8 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
       signal.throwIfAborted();
       const inherited =
         process.platform === "win32"
-          ? ["Path", "PATH", "SystemRoot", "WINDIR", "TEMP", "TMP"]
-          : ["PATH", "HOME", "TMPDIR", "LANG", "LC_ALL"];
+          ? ["Path", "PATH", "SystemRoot", "WINDIR", "TEMP", "TMP", "PGUIDE_TIMINGS"]
+          : ["PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "PGUIDE_TIMINGS"];
       const environment = Object.fromEntries(
         inherited.flatMap((key) =>
           process.env[key] === undefined ? [] : [[key, process.env[key]]],

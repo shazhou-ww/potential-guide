@@ -74,13 +74,17 @@ export async function check(stage, value, options = {}) {
       controller.signal,
       Date.now() + subject.timeoutMs,
     );
-    if (stage === "installation") await installation(subject, context);
+    if (stage === "installation")
+      await context.measure("installation", () => installation(subject, context));
     else {
-      const selected = await configured(subject, context);
+      const selected = await context.measure("configuration", () => configured(subject, context));
       if (!(options.selfCheck && stage === "sanity"))
-        await acpReady(selected.profile, context, directory);
+        await context.measure("acp.readiness", () =>
+          acpReady(selected.profile, context, directory),
+        );
       if (stage === "sanity") {
-        if (options.selfCheck) await directSanity(context, directory, selected);
+        if (options.selfCheck)
+          await context.measure("sanity", () => directSanity(context, directory, selected));
         else await sanity(subject, context, directory, selected);
       }
     }

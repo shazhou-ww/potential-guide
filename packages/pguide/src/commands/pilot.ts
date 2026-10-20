@@ -3,8 +3,6 @@ import { dirname, join, resolve } from "node:path";
 import {
   atomicWrite,
   CliError,
-  type CommandMetadata,
-  commandMain,
   type GlobalOptions,
   loadConfig,
   option,
@@ -20,9 +18,8 @@ import {
   observe,
   type Subject,
 } from "@potential-guide/objective-pilot";
+import { showCommandHelp } from "../command-help.js";
 import { withPilot } from "../pilot-source.js";
-
-export const pilotCommandVersion = "0.4.0-rc.0";
 
 async function loadStaticPilot(path: string) {
   try {
@@ -38,15 +35,7 @@ async function loadStaticPilot(path: string) {
 
 export async function runProbe(argv: string[], globals: GlobalOptions): Promise<number | void> {
   if (globals.help) {
-    writeResult(
-      {
-        schemaVersion: 1,
-        command: "probe",
-        options: ["--pilot", "--subject-file", "--language", "--revision", "--report"],
-      },
-      globals.format,
-      "Usage: pguide probe --pilot <path|Git URI|objective> [--subject-file <path|->] [--language <tag>] [--revision <ref|commit>]\nSubject defaults to JSON from stdin.",
-    );
+    showCommandHelp("probe", globals);
     return;
   }
   rejectUnknownOptions(argv, {
@@ -107,11 +96,7 @@ function page(
 
 export async function runScaffold(argv: string[], globals: GlobalOptions): Promise<void> {
   if (globals.help) {
-    writeResult(
-      { schemaVersion: 1, command: "scaffold", types: ["pilot"] },
-      globals.format,
-      "Usage: pguide scaffold pilot <directory> [--language <tag>] [--level <id>] [--check <id>] [--problem <id>]",
-    );
+    showCommandHelp("scaffold", globals);
     return;
   }
   if (argv[0] !== "pilot" || argv[1] === undefined)
@@ -200,11 +185,7 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
 
 export async function runValidate(argv: string[], globals: GlobalOptions): Promise<void> {
   if (globals.help) {
-    writeResult(
-      { schemaVersion: 1, command: "validate", types: ["pilot"] },
-      globals.format,
-      "Usage: pguide validate pilot <pilot.yaml>",
-    );
+    showCommandHelp("validate", globals);
     return;
   }
   if (argv[0] !== "pilot" || argv[1] === undefined)
@@ -214,11 +195,4 @@ export async function runValidate(argv: string[], globals: GlobalOptions): Promi
   const pilot = await loadStaticPilot(resolve(globals.cwd, argv[1]));
   const value = { schemaVersion: 1, status: "valid", objectiveId: pilot.objectiveId };
   writeResult(value, globals.format, `Valid Objective Pilot: ${pilot.objectiveId}`);
-}
-
-export function launchPilotCommand(
-  metadata: CommandMetadata,
-  run: (argv: string[], globals: GlobalOptions) => Promise<number | void>,
-): void {
-  void commandMain(metadata, run);
 }

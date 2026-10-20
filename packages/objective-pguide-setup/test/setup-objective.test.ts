@@ -88,7 +88,7 @@ for await (const line of createInterface({input:process.stdin})) {
     const child=spawn(process.execPath,["-e","setInterval(()=>{},1000)"],{stdio:"ignore"});
     await appendFile(log,JSON.stringify({method:"fixture/descendant",pid:child.pid})+"\\n");
   }
-  await appendFile(log,JSON.stringify({method:m.method??"permission-response",cwd:m.params?.cwd,protocolVersion:m.params?.protocolVersion,text:m.params?.prompt?.[0]?.text,pid:process.pid})+"\\n");
+  await appendFile(log,JSON.stringify({method:m.method??"permission-response",cwd:m.params?.cwd,protocolVersion:m.params?.protocolVersion,text:m.params?.prompt?.[0]?.text,outcome:m.result?.outcome,pid:process.pid})+"\\n");
   if(m.method===undefined) {
     console.log(JSON.stringify({jsonrpc:"2.0",id:pendingPrompt,result:{stopReason:"end_turn",summary:"SECRET-MODEL-TEXT"}}));
     continue;
@@ -112,11 +112,12 @@ for await (const line of createInterface({input:process.stdin})) {
     const direct=text.includes("Self-check task: ");
     const subject=direct?JSON.parse(text.split("Self-check task: ")[1].split("\\n")[0]):JSON.parse(text.split("\\nSubject: ")[1].split("\\nComplete observation: ")[0]);
     if(direct)subject.marker=join(cwd,subject.marker);
-    if(mode==="fix" || mode==="home" || mode==="denied" || mode==="incomplete")await writeFile(subject.marker,subject.expected);
+    if(["fix","home","denied","incomplete","permission","permission-always"].includes(mode))await writeFile(subject.marker,subject.expected);
     if(mode==="wrong")await writeFile(subject.marker,"a different successful-looking marker");
-    if(mode==="denied"){
+    if(mode==="extra-newline")await writeFile(subject.marker,subject.expected+"\\n");
+    if(["denied","permission","permission-always"].includes(mode)){
       pendingPrompt=m.id;
-      console.log(JSON.stringify({jsonrpc:"2.0",id:"permission",method:"session/request_permission",params:{sessionId:"real-fixture-session",toolCall:{toolCallId:"write",kind:"edit",locations:[{path:subject.marker}],rawInput:{path:subject.marker}},options:[{optionId:"yes",name:"Yes",kind:"allow_once"}]}}));
+      console.log(JSON.stringify({jsonrpc:"2.0",id:"permission",method:mode==="denied"?"client/unsupported":"session/request_permission",params:{sessionId:"real-fixture-session",toolCall:{toolCallId:"write",kind:"edit",locations:[{path:subject.marker}],rawInput:{path:subject.marker}},options:[{optionId:"yes",name:"Yes",kind:mode==="permission-always"?"allow_always":"allow_once"}]}}));
       continue;
     }
     if(mode==="overflow"){console.log("x".repeat(220000));setInterval(()=>{},1000);continue;}
@@ -1205,11 +1206,53 @@ test("self-check repair session enforces readiness without starting a second Age
   }
 });
 
-test("self-check wrong, summary-only, denied, incomplete and oversized Agent runs cannot pass", async () => {
+test("self-check automatically grants once without repair grants or configuration changes", async () => {
+  const f = await setup("permission");
+  try {
+    const subject = selfSubject(f);
+    const original = await readFile(subject.configPath, "utf8");
+    const subjectFile = join(f.directory, "timing-subject.json");
+    await writeFile(subjectFile, JSON.stringify(subject));
+    const result = await run(selfHelper, ["sanity", "--subject-file", subjectFile], {
+      ...f.env,
+      PGUIDE_TIMINGS: "1",
+    });
+    assert.equal(result.code, 0, result.stderr);
+    passed(JSON.parse(result.stdout));
+    const timings = result.stderr
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    assert.ok(timings.some(({ phase }) => phase === "agent.prompt"));
+    for (const timing of timings) {
+      assert.equal(timing.type, "pguide-timing");
+      assert.ok(Number.isSafeInteger(timing.durationMs) && timing.durationMs >= 0);
+      assert.deepEqual(Object.keys(timing).sort(), ["durationMs", "phase", "type"]);
+    }
+    assert.deepEqual(await readdir(subject.scratchDirectory), []);
+    assert.equal(await readFile(subject.configPath, "utf8"), original);
+    const messages = (await readFile(f.log, "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    assert.deepEqual(messages.find(({ method }) => method === "permission-response")?.outcome, {
+      outcome: "selected",
+      optionId: "yes",
+    });
+    assert.equal(messages.filter(({ method }) => method === "session/prompt").length, 1);
+    for (const { pid } of messages) assert.throws(() => process.kill(pid, 0));
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+test("self-check wrong, summary-only, unsupported, persistent-grant, incomplete and oversized Agent runs cannot pass", async () => {
   for (const [mode, reason] of [
     ["wrong", "nonce-mismatch"],
+    ["extra-newline", "nonce-mismatch"],
     ["summary", "nonce-mismatch"],
     ["denied", "denied"],
+    ["permission-always", "denied"],
     ["incomplete", "blocked"],
     ["overflow", "output-limit"],
   ]) {

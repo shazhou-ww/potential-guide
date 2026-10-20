@@ -52,16 +52,20 @@ pguide probe --pilot "git+file:///D:/Code/potential-guide#packages/objective-pgu
   profile；真实 initialize + session/new，不 prompt。AHP 明确不支持。
 - sanity：复核依赖、ACP readiness，在独占 scratch/task 下创建错误的 marker.txt，
   **一次** AcpClient.prompt，要求只改 marker.txt，然后独立核验普通非链接文件、
-  单硬链接、大小和随机精确内容。仅摘要、错误内容、拒绝权限都不通过。
+  单硬链接、大小和随机精确内容（含一个末尾换行，兼容文件编辑工具）。
+  仅摘要、错误内容、多余换行、拒绝权限都不通过。
   readiness 由同一个修复 Agent 的 initialize、必需能力及 session/new 核验，
   不先启动另一个探测 Agent；configuration 仍独立建立无 prompt 的会话。
   修复会话启动失败返回 acp-unavailable 及安全 stage/startup-failed 分类，
   不输出原始服务端错误。
 
 执行 self-check 已包含一次低损耗 sanity，不另加 allowSanity 检查级授权。
-真实工具授权仍须遵守：沿用 profile 原有参数及有效配置 regulationPermissions，
-使用 pguide 现有权限策略，不自动生成 grants，不增加 allow-all，不修改用户配置。
-权限拒绝即失败，即使文件碰巧已正确也不通过。模型不可用、额度不足不重试。
+sanity 是自动执行的小型安装验收，不使用修复任务的 `regulationPermissions` grants，
+也不要求人工逐次确认。仅此独占任务的 ACP 会话自动选择 Agent 提供的 `allow_once`；
+不选择 `allow_always`，不修改用户配置或正常 regulate 的权限策略。
+沿用 profile 原有参数及 Agent 自身限制，不自动添加 CLI 的 allow-all。
+不支持的客户端请求、缺少单次授权选项或 Agent 自身拒绝仍失败，即使 marker 碰巧已正确。
+模型不可用、额度不足不重试。
 Agent 要求认证时，先由当前用户通过 Agent 的正常登录流程恢复认证
 （例如 Copilot 的 `copilot login`），正常登录后再运行一次自查；
 不复制凭据、不扩大权限，不在外部条件未变时自动重试。
@@ -105,6 +109,14 @@ watchdog，仍受现有执行期限及外层取消约束，没有额外编译时
 快照失败仍尝试终止受管进程树，但显式报告失败，不视为清理成功。
 强杀、断电或恶意逃逸进程不在自动清理保证内。失败诊断只返回安全 stage/reason，
 不输出模型文本、服务端错误或认证内容。
+
+## 性能诊断
+
+整次 probe 耗时包括 Git 快照准备、installation、configuration、sanity 和清理，
+并不等于模型推理时间。设置 `PGUIDE_TIMINGS=1` 可在 stderr 查看安全的 JSON 分段计时：
+CLI 帮助/配置查询、配置验证、ACP readiness，以及修复会话 initialize、session/new、
+prompt 和 cleanup。stdout 仍只有原有观察 envelope；计时不输出 prompt、模型内容或凭据。
+文本 `pguide` / `pguide --help` 不启动外部命令，机器可读帮助仍验证子命令协议。
 
 ## 快照实现与维护
 

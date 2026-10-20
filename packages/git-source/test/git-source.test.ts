@@ -187,6 +187,16 @@ test("relative paths are contained and symlinks are never followed", {
             (entry) => entry.name === "link" && entry.kind === "symlink",
           ),
         );
+        assert.equal(
+          yield* snapshot.readFiles().pipe(
+            Stream.runCollect,
+            Effect.match({
+              onFailure: (error) => error.code,
+              onSuccess: () => "unexpected-success",
+            }),
+          ),
+          "unsupported-entry",
+        );
         const missing = yield* snapshot.readText("absent").pipe(
           Effect.match({
             onFailure: (error) => error.code,
@@ -613,6 +623,151 @@ test("tree listings are reused across twenty text files, errors retry and warmed
     "closed",
   );
   assert.equal(listings.length, 3);
+});
+
+test("whole snapshots batch hundreds of binary files with bounded Git process counts", {
+  timeout: 30_000,
+}, async (t) => {
+  const repo = await fixture(t);
+  const bytes = Buffer.from([0, 10, 13, 255, 0, 65]);
+  for (let index = 0; index < 600; index++) {
+    const directory = join(repo.root, "nested", `${index}`);
+    await mkdir(directory, { recursive: true });
+    await writeFile(join(directory, "binary file.dat"), bytes);
+  }
+  await git(repo.root, "add", ".");
+  await git(repo.root, "commit", "-m", "many binary files");
+  const operations: string[] = [];
+  let retained: GitSnapshot | undefined;
+  await Effect.runPromise(
+    Effect.scoped(
+      Effect.gen(function* () {
+        const snapshot = yield* loadGitSnapshot(
+          {
+            runGit: (command) => {
+              operations.push(command.operation);
+              return runGitCommand(command);
+            },
+          },
+          source(repo.root),
+        );
+        retained = snapshot;
+        const files = yield* snapshot.readFiles().pipe(Stream.runCollect);
+        assert.equal(files.length, 601);
+        for (const file of files) {
+          assert.deepEqual(
+            Buffer.from(file.bytes),
+            file.path === "definition.txt" ? Buffer.from("first") : bytes,
+          );
+        }
+        assert.equal(operations.filter((operation) => operation === "list-files").length, 1);
+        assert.equal(operations.filter((operation) => operation === "read-batch").length, 3);
+        assert.equal(operations.length, 8);
+      }),
+    ),
+  );
+  assert.ok(retained);
+  const count = operations.length;
+  const closed = await Effect.runPromise(
+    retained
+      .readFiles()
+      .pipe(
+        Stream.runCollect,
+        Effect.match({ onFailure: (error) => error.code, onSuccess: () => "unexpected-success" }),
+      ),
+  );
+  assert.equal(closed, "closed");
+  assert.equal(operations.length, count);
+});
+
+test("batch reads bound large blobs and reject malformed output without yielding corrupt files", {
+  timeout: 30_000,
+}, async (t) => {
+  const repo = await fixture(t);
+  await writeFile(join(repo.root, "large.bin"), Buffer.alloc(9 * 1024 * 1024, 255));
+  await writeFile(join(repo.root, "small.bin"), Buffer.from([0, 10, 255]));
+  await git(repo.root, "add", ".");
+  await git(repo.root, "commit", "-m", "large batch boundary");
+  let batches = 0;
+  let malformed = false;
+  await Effect.runPromise(
+    Effect.scoped(
+      Effect.gen(function* () {
+        const snapshot = yield* loadGitSnapshot(
+          {
+            runGit: (command) => {
+              if (command.operation === "read-batch") {
+                batches++;
+                if (malformed) return Effect.succeed(Buffer.from("not a blob batch\n"));
+              }
+              return runGitCommand(command);
+            },
+          },
+          source(repo.root),
+        );
+        const files = yield* snapshot.readFiles().pipe(Stream.runCollect);
+        assert.equal(files.length, 3);
+        assert.equal(
+          files.find((file) => file.path === "large.bin")?.bytes.length,
+          9 * 1024 * 1024,
+        );
+        assert.equal(batches, 3);
+        malformed = true;
+        const result = yield* snapshot.readFiles().pipe(
+          Stream.runCollect,
+          Effect.match({
+            onFailure: (error) => error.operation,
+            onSuccess: () => "unexpected-success",
+          }),
+        );
+        assert.equal(result, "read-batch");
+      }),
+    ),
+  );
+});
+
+test("cancelling a blob batch awaits command cleanup and releases its owned cache", {
+  timeout: 30_000,
+}, async (t) => {
+  const repo = await fixture(t);
+  const cache = await testDirectory("git-source-batch-cancel-");
+  t.after(() => rm(cache, { recursive: true, force: true }));
+  let began!: () => void;
+  const running = new Promise<void>((resolve) => {
+    began = resolve;
+  });
+  let cleaned = false;
+  const handle = startEffect(
+    Effect.scoped(
+      Effect.gen(function* () {
+        const snapshot = yield* loadGitSnapshot(
+          {
+            cacheDirectory: cache,
+            runGit: (command) =>
+              command.operation === "read-batch"
+                ? Effect.callback<Uint8Array, GitSourceError>(() => {
+                    began();
+                    return Effect.sync(() => {
+                      cleaned = true;
+                    });
+                  })
+                : runGitCommand(command),
+          },
+          source(repo.root),
+        );
+        yield* snapshot.readFiles().pipe(Stream.runCollect);
+      }),
+    ),
+  );
+  t.after(async () => {
+    handle.cancel();
+    await handle.exit();
+  });
+  await running;
+  handle.cancel();
+  assert.ok(Exit.isFailure(await handle.exit()));
+  assert.equal(cleaned, true);
+  assert.deepEqual(await readdir(cache), []);
 });
 
 test("file URL repository with a self-referencing origin resolves HEAD and reads committed content", {

@@ -1,13 +1,4 @@
 #!/usr/bin/env node
-import { commandMain } from "@potential-guide/cli-core";
-import { runSupervise } from "../commands/supervisor.js";
+import { launchCommand } from "../command-help.js";
 
-void commandMain(
-  {
-    protocol: "pguide-command-v1",
-    command: "supervise",
-    description: "Supervise an Objective portfolio",
-    version: "0.4.0-rc.0",
-  },
-  runSupervise,
-);
+launchCommand("supervise", async () => (await import("../commands/supervisor.js")).runSupervise);

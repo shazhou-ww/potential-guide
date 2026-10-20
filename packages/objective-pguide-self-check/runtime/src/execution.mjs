@@ -113,6 +113,20 @@ export async function stopTree(child) {
   });
 }
 export function executionContext(subject, directory, signal, deadline) {
+  const timing = (phase, durationMs) => {
+    if (process.env.PGUIDE_TIMINGS === "1")
+      process.stderr.write(
+        `${JSON.stringify({ type: "pguide-timing", phase, durationMs: Math.round(durationMs) })}\n`,
+      );
+  };
+  const measure = async (phase, run) => {
+    const start = performance.now();
+    try {
+      return await run();
+    } finally {
+      timing(phase, performance.now() - start);
+    }
+  };
   const env = { ...process.env };
   // A caller's Git index/worktree/config overrides must not escape the owned fixture.
   for (const key of Object.keys(env)) if (/^GIT_/i.test(key)) delete env[key];
@@ -204,15 +218,17 @@ export function executionContext(subject, directory, signal, deadline) {
     });
   }
   const cli = (args, config = subject.configPath, cwd = directory) =>
-    execute(subject.pguide.command, [
-      ...(subject.pguide.args ?? []),
-      ...args,
-      "--config",
-      config,
-      "--cwd",
-      cwd,
-      "--format",
-      "json",
-    ]);
-  return { execute, cli, env, remainingMs: () => deadline - Date.now() };
+    measure(args[0] === "--help" ? "cli.help" : `cli.${args[0]}`, () =>
+      execute(subject.pguide.command, [
+        ...(subject.pguide.args ?? []),
+        ...args,
+        "--config",
+        config,
+        "--cwd",
+        cwd,
+        "--format",
+        "json",
+      ]),
+    );
+  return { execute, cli, env, measure, timing, remainingMs: () => deadline - Date.now() };
 }

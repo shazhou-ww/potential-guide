@@ -19,6 +19,7 @@ import {
 } from "@potential-guide/cli-core";
 import spawn from "cross-spawn";
 import { parse, stringify } from "yaml";
+import { configHelp, configSubcommands } from "./help.js";
 
 function targetPath(scope: string, globals: GlobalOptions): string {
   if (scope === "user") return userConfigPath();
@@ -49,29 +50,11 @@ function editorCommand(source: string): { command: string; args: string[] } {
 async function run(argv: string[], globals: GlobalOptions): Promise<void> {
   const subcommand = argv[0];
   if (globals.help || subcommand === undefined) {
-    const subcommands = [
-      "show",
-      "path",
-      "validate",
-      "edit",
-      "get",
-      "set",
-      "unset",
-      "list-agents",
-      "show-agent",
-      "add-agent",
-      "update-agent",
-      "remove-agent",
-      "list-objectives",
-      "add-objective",
-      "update-objective",
-      "remove-objective",
-    ];
     writeResult(
       {
         schemaVersion: 1,
         command: "config",
-        subcommands,
+        subcommands: configSubcommands,
         configurationSchemaVersion: 2,
         regulationStrategyDefaults: {
           quota: { timeoutMs: 300000, maxAgentRuns: 10, maxStallRuns: 3 },
@@ -79,7 +62,7 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
         },
       },
       globals.format,
-      `Usage: pguide config <${subcommands.join("|")}>\nConfiguration schemaVersion: 2; regulationStrategy configures a single-run quota and probe timeout/retry. Scheduling belongs to supervisor.`,
+      configHelp(subcommand),
     );
     return;
   }

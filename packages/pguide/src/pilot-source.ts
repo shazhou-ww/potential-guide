@@ -14,7 +14,7 @@ import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { CliError } from "@potential-guide/cli-core";
-import { Cause, Effect, Exit, Scope } from "@potential-guide/effects";
+import { Cause, Effect, Exit, Scope, Stream } from "@potential-guide/effects";
 import { type GitSnapshot, loadGitSnapshot } from "@potential-guide/git-source";
 import {
   type CheckResult,
@@ -98,6 +98,13 @@ async function bindPilot<T>(
   use: (spec: PilotSpec, runtime: PilotRuntime) => Promise<T>,
   options: PilotSourceOptions,
 ): Promise<T> {
+  const preparationTimeoutMs = options.preparationTimeoutMs ?? 60_000;
+  if (
+    !Number.isSafeInteger(preparationTimeoutMs) ||
+    preparationTimeoutMs < 1 ||
+    preparationTimeoutMs > 2_147_483_647
+  )
+    throw new PilotSourceError("preparationTimeoutMs must be a positive safe timer duration.");
   let objectiveUri: string;
   let repository: string;
   let snapshotRepository: string;
@@ -150,6 +157,25 @@ async function bindPilot<T>(
   const cache = await mkdtemp(join(scratch, "pguide-runtime-"));
   return afterCleanup(
     async () => {
+      const preparationStarted = performance.now();
+      const preparation = new AbortController();
+      const pendingReads = new Set<Promise<unknown>>();
+      function read<A, E>(effect: Effect.Effect<A, E>): Promise<A> {
+        const pending = Effect.runPromise(effect, { signal: preparation.signal });
+        pendingReads.add(pending);
+        void pending.then(
+          () => pendingReads.delete(pending),
+          () => pendingReads.delete(pending),
+        );
+        return pending;
+      }
+      let preparationTimedOut = false;
+      const timer = setTimeout(() => {
+        preparationTimedOut = true;
+        preparation.abort(
+          new Error(`Pilot source preparation timed out after ${preparationTimeoutMs}ms.`),
+        );
+      }, preparationTimeoutMs);
       const result = await Effect.runPromiseExit(
         Effect.scoped(
           Effect.gen(function* () {
@@ -165,8 +191,37 @@ async function bindPilot<T>(
               },
             );
             type Source = { snapshot: GitSnapshot; checkout: string };
+            function checkoutPath(checkout: string, path: string): string {
+              if (
+                path &&
+                path
+                  .split("/")
+                  .some((part) => !part || part === "." || part === ".." || /[\\:]/.test(part))
+              ) {
+                throw new PilotSourceError(
+                  "Snapshot entry cannot be materialized safely on this platform.",
+                );
+              }
+              return join(checkout, ...path.split("/"));
+            }
+            function materialize(source: Source) {
+              return source.snapshot.readFiles().pipe(
+                Stream.runForEach(({ path, bytes }) =>
+                  Effect.tryPromise({
+                    try: async () => {
+                      const destination = checkoutPath(source.checkout, path);
+                      await mkdir(dirname(destination), { recursive: true });
+                      await writeFile(destination, bytes);
+                    },
+                    catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+                  }).pipe(Effect.uninterruptible),
+                ),
+              );
+            }
+            const initialSource = { snapshot, checkout: join(cache, "checkout-0") };
+            yield* materialize(initialSource);
             const sources = new Map<string, Promise<Source>>([
-              [repository, Promise.resolve({ snapshot, checkout: join(cache, "checkout-0") })],
+              [repository, Promise.resolve(initialSource)],
             ]);
             function resourcePath(uri: string): string {
               const url = new URL(uri);
@@ -182,7 +237,7 @@ async function bindPilot<T>(
               const existing = sources.get(remote);
               if (existing !== undefined) return existing;
               const checkout = join(cache, `checkout-${sources.size}`);
-              const pending = Effect.runPromise(
+              const pending = read(
                 loadGitSnapshot(
                   { cacheDirectory: cache },
                   {
@@ -194,7 +249,11 @@ async function bindPilot<T>(
                     refresh: { type: "once" },
                   },
                 ).pipe(Effect.provideService(Scope.Scope, scope)),
-              ).then((snapshot) => ({ snapshot, checkout }));
+              ).then(async (snapshot) => {
+                const source = { snapshot, checkout };
+                await read(materialize(source));
+                return source;
+              });
               sources.set(remote, pending);
               return pending;
             }
@@ -206,23 +265,32 @@ async function bindPilot<T>(
                   throw new PilotSourceError(`Pinned source version mismatch for ${uri}.`);
                 return commit;
               },
-              readText: async (uri) =>
-                Effect.runPromise((await sourceFor(uri)).snapshot.readText(resourcePath(uri))),
+              readText: async (uri) => {
+                const source = await sourceFor(uri);
+                return new TextDecoder("utf-8", { fatal: true }).decode(
+                  await readFile(checkoutPath(source.checkout, resourcePath(uri))),
+                );
+              },
               async readPages(uri) {
-                const { snapshot } = await sourceFor(uri);
+                const { checkout } = await sourceFor(uri);
                 const origin = new URL(uri);
                 origin.hash = "";
                 const repoPrefix = origin.href;
                 const pages: PageResource[] = [];
                 const root = resourcePath(uri);
                 async function walk(path: string): Promise<void> {
-                  for (const entry of await Effect.runPromise(snapshot.readDirectory(path))) {
+                  preparation.signal.throwIfAborted();
+                  for (const entry of await readdir(checkoutPath(checkout, path), {
+                    withFileTypes: true,
+                  })) {
                     const child = `${path}/${entry.name}`;
-                    if (entry.kind === "directory") await walk(child);
-                    else if (entry.kind === "file" && entry.name.endsWith(".md"))
+                    if (entry.isDirectory()) await walk(child);
+                    else if (entry.isFile() && entry.name.endsWith(".md"))
                       pages.push({
                         uri: `${repoPrefix}#${child}`,
-                        source: await Effect.runPromise(snapshot.readText(child)),
+                        source: new TextDecoder("utf-8", { fatal: true }).decode(
+                          await readFile(checkoutPath(checkout, child)),
+                        ),
                       });
                     else
                       throw new PilotSourceError(
@@ -234,43 +302,12 @@ async function bindPilot<T>(
                 return pages;
               },
             };
+            const spec = yield* Effect.tryPromise({
+              try: () => loadPilotSpec(objectiveUri, resources),
+              catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+            });
             return yield* Effect.tryPromise({
               try: async (signal) => {
-                const spec = await loadPilotSpec(objectiveUri, resources);
-                function checkoutPath(checkout: string, path: string): string {
-                  if (
-                    path &&
-                    path
-                      .split("/")
-                      .some((part) => !part || part === "." || part === ".." || /[\\:]/.test(part))
-                  ) {
-                    throw new PilotSourceError(
-                      "Snapshot entry cannot be materialized safely on this platform.",
-                    );
-                  }
-                  return join(checkout, ...path.split("/"));
-                }
-                async function materialize(source: Source, path = ""): Promise<void> {
-                  signal.throwIfAborted();
-                  await mkdir(checkoutPath(source.checkout, path), { recursive: true });
-                  for (const entry of await Effect.runPromise(
-                    source.snapshot.readDirectory(path),
-                  )) {
-                    const child = path ? `${path}/${entry.name}` : entry.name;
-                    const destination = checkoutPath(source.checkout, child);
-                    if (entry.kind === "directory") await materialize(source, child);
-                    else if (entry.kind === "file") {
-                      await writeFile(
-                        destination,
-                        await Effect.runPromise(source.snapshot.readFile(child)),
-                      );
-                    } else
-                      throw new PilotSourceError(
-                        "Executable Pilot snapshots cannot contain symlinks or submodules.",
-                      );
-                  }
-                }
-                for (const source of sources.values()) await materialize(await source);
                 const executables = new Map<
                   string,
                   { command: string; args: string[]; cwd: string }
@@ -368,6 +405,11 @@ async function bindPilot<T>(
                     };
                   },
                 };
+                clearTimeout(timer);
+                if (process.env.PGUIDE_TIMINGS === "1")
+                  process.stderr.write(
+                    `${JSON.stringify({ type: "pguide-timing", phase: "source.preparation", durationMs: Math.round(performance.now() - preparationStarted) })}\n`,
+                  );
                 return afterCleanup(
                   () => use(spec, runtime),
                   async () => {
@@ -390,8 +432,17 @@ async function bindPilot<T>(
             });
           }),
         ),
-      );
+        { signal: preparation.signal },
+      ).finally(async () => {
+        clearTimeout(timer);
+        preparation.abort();
+        await Promise.allSettled([...pendingReads]);
+      });
       if (Exit.isFailure(result)) {
+        if (preparationTimedOut)
+          throw new PilotSourceError(
+            `Pilot source preparation timed out after ${preparationTimeoutMs}ms.`,
+          );
         const cause = Cause.squash(result.cause);
         if (cause instanceof CliError || cause instanceof RegulationError) throw cause;
         throw new PilotSourceError(cause instanceof Error ? cause.message : String(cause), cause);
@@ -421,4 +472,5 @@ export interface PilotSourceOptions {
   readonly versions?: Readonly<Record<string, string>>;
   readonly cacheDirectory?: string;
   readonly probeTimeoutMs?: number | undefined;
+  readonly preparationTimeoutMs?: number;
 }

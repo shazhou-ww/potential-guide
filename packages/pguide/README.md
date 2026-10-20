@@ -112,7 +112,27 @@ Unicode code points. Optional `references` defaults to `[]`. Guidance belongs
 in the Markdown body. `--language` selects localized Wiki guidance;
 prerequisite subject projections remain manifest-defined.
 
+Snapshot materialization reads the complete pinned repository with one recursive
+file listing and sequential binary-safe Git batches, not a new Git process per
+file. This preserves sibling resources and exact commit contents without running
+checkout filters or relying on archive attributes. Symlinks and submodules remain
+unsupported for executable snapshots. Preparation (clone, references and
+materialization) has a separate 60000 ms deadline; expiry is an explicit
+`pilot-error`, with owned command/cache cleanup, not a business observation.
+Library callers can set `withPilot`'s `preparationTimeoutMs`; the timer stops
+before the consumer starts, so check and Agent execution retain their own budgets.
+
 ## Configuration and recovery migration
+
+Text usage (`pguide` or `pguide --help`) lists discovered command names without
+executing external metadata probes. Use `pguide <command> --help` for details;
+`pguide --help --format json` retains verified command compatibility metadata.
+Official command launchers load business implementations only when executing a
+command, not when answering metadata or detailed-help requests. Every official
+command's text help includes its purpose, arguments/options, examples and shared
+global options. `config <operation> --help` documents individual configuration
+operations without reading or changing configuration. Dispatch still verifies the
+selected command's protocol; help output is not a readiness check.
 
 Configuration now requires:
 

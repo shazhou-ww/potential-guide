@@ -49,9 +49,8 @@ import {
   type PermissionDecision,
   unknownPermissionRequest,
 } from "../acp-permissions.js";
+import { showCommandHelp } from "../command-help.js";
 import { withPilot } from "../pilot-source.js";
-
-export const regulatorCommandVersion = "0.4.0-rc.0";
 
 export const defaultRegulationQuota = Object.freeze({
   timeoutMs: 300_000,
@@ -513,11 +512,7 @@ export async function runRegulate(
   globals: GlobalOptions,
 ): Promise<number | undefined> {
   if (globals.help) {
-    writeResult(
-      { schemaVersion: 1, command: "regulate" },
-      globals.format,
-      "Usage: pguide regulate --pilot <path|Git URI|objective> [--subject-file <path|->] --target <level> [--agent <profile>] [--agent-timeout-ms <positive integer>] [--revision <ref|commit>]\nSubject defaults to JSON from stdin.",
-    );
+    showCommandHelp("regulate", globals);
     return;
   }
   rejectUnknownOptions(argv, {
@@ -600,11 +595,7 @@ export async function runContinue(
   globals: GlobalOptions,
 ): Promise<number | undefined> {
   if (globals.help) {
-    writeResult(
-      { schemaVersion: 1, command: "continue" },
-      globals.format,
-      "Usage: pguide continue <regulation-id> [--report <path>]",
-    );
+    showCommandHelp("continue", globals);
     return;
   }
   rejectUnknownOptions(argv, { "--report": "value" }, 1);
