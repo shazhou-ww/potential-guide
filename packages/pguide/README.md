@@ -1,15 +1,17 @@
 # pguide
 
-The Potential Guide CLI discovers and dispatches independently installed
-`pguide-<command>` executables. Its only built-ins are `diagnose` and `complete`;
-it does not install Objective execution packages or config.
+The Potential Guide CLI discovers and dispatches `pguide-<command>` executables.
+It installs Pilot commands (`probe`, `scaffold`, `validate`), `config` and
+`objectives` by default; its built-ins are `diagnose` and `complete`.
+Regulation and supervision remain optional.
 
-Install commands explicitly (use explicit candidate versions when testing RCs):
+Install the default CLI and add optional commands as needed (use explicit
+candidate versions when testing RCs):
 
 ```sh
-npm install --global pguide @potential-guide/pguide-pilot
-npm install --global @potential-guide/pguide-regulate @potential-guide/pguide-objectives
-# Optional: @potential-guide/pguide-supervise and @potential-guide/config
+npm install --global pguide
+npm install --global @potential-guide/pguide-regulate
+# Optional: @potential-guide/pguide-supervise
 ```
 
 `pguide-pilot` owns `probe`, `scaffold`, `validate`; `pguide-regulate` owns
@@ -19,6 +21,14 @@ unchanged. Standalone binaries (for example `pguide-probe`) work without the
 main package. Missing commands name their installation package; duplicate
 same-priority executables fail as ambiguous rather than picking arbitrarily.
 Configured command directories take precedence over PATH.
+When no external candidate or conflict exists, Pilot, config and objectives commands use
+the installed dependencies' public bin exports through the current Node runtime.
+This works even if npm/pnpm does not expose transitive bins; structured help and
+diagnosis report source `bundled`. External incompatible commands or conflicts
+are never hidden by this fallback. Explicitly installing the same command
+packages alongside `pguide` does not add synthetic conflicts.
+`@potential-guide/config` was renamed to `@potential-guide/pguide-config`:
+replace explicit references and uninstall the old name to avoid duplicate shims.
 See [migration and layers](../../docs/package-layering.md).
 
 ```sh
@@ -664,9 +674,9 @@ Completed work is not repeated merely because capacity changes; a fresh
 observation can create new demand after regression. JSON output includes the
 final queue, observations, and the latest 1000 coordinator events.
 
-The package provides independent `pguide-probe`, `pguide-regulate`,
+The command packages provide independent `pguide-probe`, `pguide-regulate`,
 `pguide-continue`, `pguide-supervise`, `pguide-scaffold`, and `pguide-validate`
-executables. The optional `@potential-guide/config` extension provides
+executables. The default `@potential-guide/pguide-config` dependency provides
 `pguide-config`; `diagnose` and `complete` are built in. Executable discovery
 uses `pguide-command-v1` metadata and preserves argument boundaries without
 shell interpretation.

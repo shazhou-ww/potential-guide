@@ -20,7 +20,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     ["regulation", ["@potential-guide/pguide-regulate"]],
     ["supervision", ["@potential-guide/pguide-supervise"]],
     ["objectives", ["@potential-guide/pguide-objectives"]],
-    ["config", ["@potential-guide/config"]],
+    ["config", ["@potential-guide/pguide-config"]],
     [
       "combined",
       [
@@ -29,7 +29,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         "@potential-guide/pguide-regulate",
         "@potential-guide/pguide-supervise",
         "@potential-guide/pguide-objectives",
-        "@potential-guide/config",
+        "@potential-guide/pguide-config",
       ],
     ],
   ];
@@ -73,7 +73,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     }
     for (const entry of entries) visit(entry);
     await verifyConsumerGraph(directory, closure, entries);
-    if (label === "protocol" || label === "main") {
+    if (label === "protocol") {
       for (const name of closure.keys())
         assert.doesNotMatch(
           name,
@@ -151,11 +151,93 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         const result = JSON.parse(
           await run(executable, ["--help", "--format", "json"], directory, env),
         );
-        assert.ok(result.commands.every((entry) => entry.builtIn));
-        const missing = JSON.parse(
-          await run(executable, ["probe", "--format", "json"], directory, env, 2),
+        assert.deepEqual(result.commands.map((entry) => entry.command).sort(), [
+          "complete",
+          "config",
+          "diagnose",
+          "objectives",
+          "probe",
+          "scaffold",
+          "validate",
+        ]);
+        assert.deepEqual(result.conflicts, {});
+        for (const command of ["probe", "scaffold", "validate", "config", "objectives"]) {
+          const entry = result.commands.find((entry) => entry.command === command);
+          assert.equal(entry.compatible, true);
+          assert.equal(entry.source, "bundled");
+          const dispatched = JSON.parse(
+            await run(executable, [command, "--help", "--format", "json"], directory, env),
+          );
+          assert.equal(dispatched.command, command);
+        }
+        const configured = JSON.parse(
+          await run(executable, ["config", "path", "--format", "json"], directory, env),
         );
-        assert.match(missing.error, /Install @potential-guide\/pguide-pilot/);
+        assert.equal(configured.schemaVersion, 1);
+        const pilot = join(directory, "pilot");
+        const scaffolded = JSON.parse(
+          await run(executable, ["scaffold", "pilot", pilot, "--format", "json"], directory, env),
+        );
+        assert.equal(scaffolded.schemaVersion, 1);
+        const validated = JSON.parse(
+          await run(executable, ["validate", "pilot", pilot, "--format", "json"], directory, env),
+        );
+        assert.equal(validated.schemaVersion, 1);
+        const declaration = join(directory, "declaration.json");
+        await writeFile(
+          declaration,
+          JSON.stringify({
+            schemaVersion: 1,
+            objectives: {
+              local: {
+                description: "Default CLI alias",
+                pilot,
+                inputSchema: { type: "object", maxProperties: 0 },
+                subject: "{}",
+              },
+            },
+          }),
+        );
+        await run(
+          executable,
+          [
+            "objectives",
+            "set",
+            "local",
+            "--scope",
+            "user",
+            "--from",
+            declaration,
+            "--format",
+            "json",
+          ],
+          directory,
+          env,
+        );
+        const aliases = JSON.parse(
+          await run(
+            executable,
+            ["objectives", "show", "local", "--scope", "user", "--format", "json"],
+            directory,
+            env,
+          ),
+        );
+        assert.equal(aliases.objectives[0].name, "local");
+        for (const [command, packageName] of [
+          ["regulate", "pguide-regulate"],
+          ["continue", "pguide-regulate"],
+          ["supervise", "pguide-supervise"],
+        ]) {
+          const missing = JSON.parse(
+            await run(executable, [command, "--format", "json"], directory, env, 2),
+          );
+          assert.ok(missing.error.includes(`Install @potential-guide/${packageName}`));
+        }
+        for (const name of closure.keys())
+          assert.doesNotMatch(
+            name,
+            /objective-(?:regulator|portfolio)|pguide-(?:regulate|supervise)$/,
+          );
       }
     }
     if (label === "combined") {

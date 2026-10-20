@@ -162,12 +162,12 @@ importers:
 
   packages/objective-pguide-setup:
     devDependencies:
-      '@potential-guide/config':
-        specifier: workspace:^
-        version: link:../pguide-config
       '@potential-guide/objective-pilot':
         specifier: workspace:^
         version: link:../objective-pilot
+      '@potential-guide/pguide-config':
+        specifier: workspace:^
+        version: link:../pguide-config
       pguide:
         specifier: workspace:^
         version: link:../pguide
@@ -207,6 +207,15 @@ importers:
       '@potential-guide/cli-core':
         specifier: workspace:^
         version: link:../pguide-cli-core
+      '@potential-guide/pguide-config':
+        specifier: workspace:^
+        version: link:../pguide-config
+      '@potential-guide/pguide-objectives':
+        specifier: workspace:^
+        version: link:../pguide-objectives
+      '@potential-guide/pguide-pilot':
+        specifier: workspace:^
+        version: link:../pguide-pilot
       cross-spawn:
         specifier: 'catalog:'
         version: 7.0.6
@@ -214,9 +223,6 @@ importers:
       '@potential-guide/cli-runtime':
         specifier: workspace:^
         version: link:../cli-runtime
-      '@potential-guide/config':
-        specifier: workspace:^
-        version: link:../pguide-config
       '@potential-guide/effects':
         specifier: workspace:^
         version: link:../effects
@@ -235,12 +241,6 @@ importers:
       '@potential-guide/objective-regulator':
         specifier: workspace:^
         version: link:../objective-regulator
-      '@potential-guide/pguide-objectives':
-        specifier: workspace:^
-        version: link:../pguide-objectives
-      '@potential-guide/pguide-pilot':
-        specifier: workspace:^
-        version: link:../pguide-pilot
       '@potential-guide/pguide-regulate':
         specifier: workspace:^
         version: link:../pguide-regulate

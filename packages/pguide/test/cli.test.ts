@@ -309,11 +309,48 @@ test("missing optional commands explain installation and conflicting shims fail 
     };
     const config = join(temporary, "config.yaml");
     await writeFile(config, "schemaVersion: 2\n");
-    const missing = await run(top, ["probe", "--config", config, "--format", "json"], env);
-    assert.equal(missing.code, 2, `${missing.stderr}\n${missing.stdout}`);
-    const error = JSON.parse(missing.stdout);
-    assert.match(error.error, /Unknown command: probe/);
-    assert.match(error.error, /Install @potential-guide\/pguide-pilot/);
+    for (const [command, packageName] of [
+      ["regulate", "pguide-regulate"],
+      ["continue", "pguide-regulate"],
+      ["supervise", "pguide-supervise"],
+    ] as const) {
+      const missing = await run(top, [command, "--config", config, "--format", "json"], env);
+      assert.equal(missing.code, 2, `${missing.stderr}\n${missing.stdout}`);
+      const error = JSON.parse(missing.stdout);
+      assert.ok(error.error.includes(`Unknown command: ${command}`));
+      assert.ok(error.error.includes(`Install @potential-guide/${packageName}`));
+    }
+    const bundled = await run(top, ["--help", "--config", config, "--format", "json"], env);
+    assert.equal(bundled.code, 0, bundled.stderr);
+    const commands = JSON.parse(bundled.stdout).commands;
+    assert.deepEqual(commands.map((entry: { command: string }) => entry.command).sort(), [
+      "complete",
+      "config",
+      "diagnose",
+      "objectives",
+      "probe",
+      "scaffold",
+      "validate",
+    ]);
+    for (const command of ["probe", "scaffold", "validate", "config", "objectives"]) {
+      const entry = commands.find((entry: { command: string }) => entry.command === command);
+      assert.equal(entry.source, "bundled");
+      assert.equal(entry.compatible, true);
+      const dispatched = await run(
+        top,
+        [command, "--help", "--config", config, "--format", "json"],
+        env,
+      );
+      assert.equal(dispatched.code, 0, `${dispatched.stderr}\n${dispatched.stdout}`);
+      assert.equal(JSON.parse(dispatched.stdout).command, command);
+    }
+    const diagnosis = await run(top, ["diagnose", "--config", config, "--format", "json"], env);
+    assert.equal(diagnosis.code, 0, diagnosis.stderr);
+    assert.ok(
+      JSON.parse(diagnosis.stdout).commands.every(
+        (entry: { source: string }) => entry.source === "bundled",
+      ),
+    );
     const extension = process.platform === "win32" ? ".cmd" : "";
     for (const directory of [first, second]) {
       await writeFile(
@@ -332,10 +369,101 @@ test("missing optional commands explain installation and conflicting shims fail 
     const help = await run(top, ["--help", "--config", config, "--format", "json"], env);
     assert.equal(help.code, 0);
     assert.equal(JSON.parse(help.stdout).conflicts.probe.length, 2);
+    assert.ok(
+      !JSON.parse(help.stdout).commands.some(
+        (entry: { command: string }) => entry.command === "probe",
+      ),
+    );
     await writeFile(config, `schemaVersion: 2\ncommandDirectories: ${JSON.stringify([first])}\n`);
     const incompatible = await run(top, ["probe", "--config", config, "--format", "json"], env);
     assert.equal(incompatible.code, 2, incompatible.stderr);
     assert.equal(JSON.parse(incompatible.stdout).status, "protocol-error");
+    await writeFile(config, "schemaVersion: 2\n");
+    const pathConflict = await run(top, ["probe", "--config", config, "--format", "json"], {
+      ...env,
+      PATH: [first, second].join(delimiter),
+    });
+    assert.equal(pathConflict.code, 2, pathConflict.stderr);
+    assert.match(JSON.parse(pathConflict.stdout).error, /Ambiguous command probe/);
+    const pathOverride = await run(top, ["--help", "--config", config, "--format", "json"], {
+      ...env,
+      PATH: first,
+    });
+    assert.equal(pathOverride.code, 0, pathOverride.stderr);
+    const external = JSON.parse(pathOverride.stdout).commands.find(
+      (entry: { command: string }) => entry.command === "probe",
+    );
+    assert.equal(external.source, "PATH");
+    assert.equal(external.compatible, false);
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
+
+test("missing bundled dependencies and bin files fail visibly instead of disappearing", async () => {
+  const temporary = await mkdtemp(join(tmpdir(), "pguide-broken-bundle-"));
+  try {
+    await copyFile(top, join(temporary, "bin.js"));
+    await copyFile(join(root, "packages", "pguide", "dist", "path.js"), join(temporary, "path.js"));
+    await writeFile(join(temporary, "package.json"), '{"type":"module"}');
+    const modules = join(temporary, "node_modules");
+    await mkdir(join(modules, "@potential-guide"), { recursive: true });
+    await symlink(
+      join(root, "packages", "pguide-objectives"),
+      join(modules, "@potential-guide", "pguide-objectives"),
+      "junction",
+    );
+    for (const [name, target] of [
+      ["@potential-guide/cli-core", join(root, "packages", "pguide-cli-core")],
+      ["cross-spawn", join(root, "packages", "pguide", "node_modules", "cross-spawn")],
+    ] as const) {
+      await symlink(target, join(modules, ...name.split("/")), "junction");
+    }
+    const config = join(temporary, "config.yaml");
+    await writeFile(config, "schemaVersion: 2\n");
+    const env = {
+      ...process.env,
+      PATH: "",
+      HOME: temporary,
+      APPDATA: temporary,
+      XDG_CONFIG_HOME: temporary,
+    };
+    for (const [missing, installed] of [
+      ["pguide-pilot", "pguide-config"],
+      ["pguide-config", "pguide-pilot"],
+    ] as const) {
+      const installedPath = join(modules, "@potential-guide", installed);
+      await symlink(join(root, "packages", installed), installedPath, "junction");
+      const missingPath = join(modules, "@potential-guide", missing);
+      for (const brokenFile of [false, true]) {
+        if (brokenFile) {
+          await mkdir(missingPath);
+          await writeFile(
+            join(missingPath, "package.json"),
+            JSON.stringify({
+              name: `@potential-guide/${missing}`,
+              exports: { "./bin/*": "./missing-*.js" },
+            }),
+          );
+        }
+        for (const args of [
+          ["--help"],
+          ["diagnose"],
+          [missing === "pguide-pilot" ? "probe" : "config", "--help"],
+        ]) {
+          const result = await run(
+            join(temporary, "bin.js"),
+            [...args, "--config", config, "--format", "json"],
+            env,
+          );
+          assert.notEqual(result.code, 0, result.stdout);
+          assert.match(result.stdout + result.stderr, new RegExp(missing));
+          assert.doesNotMatch(result.stdout + result.stderr, /Unknown command/);
+        }
+      }
+      await rm(missingPath, { recursive: true, force: true });
+      await rm(installedPath, { recursive: true, force: true });
+    }
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

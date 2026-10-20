@@ -9,7 +9,7 @@ on:
       - "objective-regulator-v*"
       - "objective-portfolio-supervisor-v*"
       - "cli-core-v*"
-      - "config-v*"
+      - "pguide-config-v*"
       - "pguide-v*"
       - "pilot-protocol-v*"
       - "cli-runtime-v*"
@@ -31,7 +31,7 @@ on:
           - objective-regulator
           - objective-portfolio-supervisor
           - cli-core
-          - config
+          - pguide-config
           - pguide
           - pilot-protocol
           - cli-runtime

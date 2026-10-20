@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@potential-guide/objective-pilot": "workspace:^",
-    "@potential-guide/config": "workspace:^",
+    "@potential-guide/pguide-config": "workspace:^",
     "pguide": "workspace:^"
   }
 }

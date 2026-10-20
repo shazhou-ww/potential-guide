@@ -1,8 +1,10 @@
 # @potential-guide/pguide-pilot
 
-Optional Pilot authoring and observation commands: `pguide-probe`,
-`pguide-scaffold`, `pguide-validate`. Install independently, or alongside `pguide`
-to discover `probe`, `scaffold`, `validate`. They share source/definition
+Default Pilot authoring and observation commands: `pguide-probe`,
+`pguide-scaffold`, `pguide-validate`. Installed with `pguide`, or independently
+for standalone use. `pguide` exposes `probe`, `scaffold`, `validate` even when
+transitive bins are not on PATH, through the public `./bin/probe`,
+`./bin/scaffold`, and `./bin/validate` exports. They share source/definition
 conventions and preserve existing options, output envelopes and exit codes.
 
 ```sh

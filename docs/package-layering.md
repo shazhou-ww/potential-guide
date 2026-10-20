@@ -6,7 +6,7 @@
 | --- | --- |
 | Protocol | `@potential-guide/effects`, `@potential-guide/pilot-protocol` |
 | Business logic | `@potential-guide/objective-pilot`, `@potential-guide/objective-regulator`, `@potential-guide/objective-portfolio-supervisor` |
-| Tools | `pguide`, `@potential-guide/cli-core`, `@potential-guide/config`, `@potential-guide/cli-runtime`, `@potential-guide/objective-declarations`, `@potential-guide/pguide-pilot`, `@potential-guide/pguide-regulate`, `@potential-guide/pguide-supervise`, `@potential-guide/pguide-objectives` |
+| Tools | `pguide`, `@potential-guide/cli-core`, `@potential-guide/pguide-config`, `@potential-guide/cli-runtime`, `@potential-guide/objective-declarations`, `@potential-guide/pguide-pilot`, `@potential-guide/pguide-regulate`, `@potential-guide/pguide-supervise`, `@potential-guide/pguide-objectives` |
 
 Allowed dependencies point downwards, or stay within a layer. Tools can consume
 protocol directly. Same-layer dependencies are permitted, not special exceptions;
@@ -38,37 +38,37 @@ They remain in this workspace. This change does not choose repositories, migrate
 their source or alter their independent maintenance. Tools may consume Git
 source; the three layers must not depend on concrete Objective implementations.
 
-## Optional command packages
+## Default and optional command packages
 
 Command-wrapper npm packages follow `@potential-guide/pguide-<command-or-group>`.
 `pguide-pilot` groups Pilot authoring/validation/observation; `pguide-regulate`
 groups regulation and continuation. Shared libraries retain responsibility names
-(`cli-runtime`, `objective-declarations`). The published `@potential-guide/config`
-name is an explicit legacy compatibility exception: its existing `pguide-config`
-binary, `config` metadata and release tag remain unchanged.
+(`cli-runtime`, `objective-declarations`). Configuration now follows the same
+convention as `@potential-guide/pguide-config`; its existing `pguide-config`
+binary and `config` metadata remain unchanged.
 
 | Install | Commands / standalone binaries |
 | --- | --- |
-| `pguide` | discovery, dispatch, built-in `diagnose`, `complete` |
+| `pguide` | discovery, dispatch, built-in `diagnose`, `complete`; installs Pilot, config and objectives commands below |
 | `@potential-guide/pguide-pilot` | `probe`, `scaffold`, `validate` / `pguide-probe`, `pguide-scaffold`, `pguide-validate` |
 | `@potential-guide/pguide-regulate` | `regulate`, `continue` / `pguide-regulate`, `pguide-continue` |
 | `@potential-guide/pguide-supervise` | `supervise` / `pguide-supervise` |
 | `@potential-guide/pguide-objectives` | `objectives` / `pguide-objectives` |
-| `@potential-guide/config` | `config` / `pguide-config` |
+| `@potential-guide/pguide-config` | `config` / `pguide-config` |
 
 Pilot authoring, validation and observation share source/definition conventions.
 Regulation and continuation share persisted state and Agent execution. These
-closely cooperating commands ship together; supervision and declaration
-management remain separate optional tools.
+closely cooperating commands ship together; supervision remains optional.
+Declaration management is included by default so aliases can be managed alongside probing.
 
-Previously `pguide` shipped seven business bins and installed all execution
-packages and config. It now ships only `pguide`. Install selected command
-packages explicitly alongside the entrypoint:
+`pguide` ships only its own entrypoint bin, but installs `pguide-pilot`,
+`pguide-config` and `pguide-objectives` as production dependencies. Its default
+commands are `probe`, `scaffold`, `validate`, `config`, `objectives`, `diagnose`,
+and `complete`. Regulation and supervision still require explicit installation:
 
 ```sh
-npm install --global pguide @potential-guide/pguide-pilot @potential-guide/config
+npm install --global pguide
 pguide validate pilot ./objective
-pguide-validate pilot ./objective
 ```
 
 For an existing source checkout, run `pnpm clean`, then `pnpm install` and
@@ -76,20 +76,37 @@ For an existing source checkout, run `pnpm clean`, then `pnpm install` and
 Packing rejects stale JavaScript outputs with no corresponding source.
 
 For local installations use `pnpm exec pguide ...` or put the installation's
-`node_modules/.bin` on PATH. For one-shot invocation, select both packages:
+`node_modules/.bin` on PATH. One-shot invocation includes the default commands:
 
 ```sh
-npm exec --package=pguide --package=@potential-guide/pguide-pilot -- pguide probe --help
+npx pguide probe --help
 ```
 
 Append explicit `@<version>` selectors for RC testing. Merely running
-`npx pguide probe` no longer installs probe implicitly. `config` is optional too;
-other commands still read shared configuration without depending on its command
-package. Discovery uses configured directories before PATH, excludes the cwd
+`npx pguide probe` installs Pilot support implicitly. Standalone bins require
+explicit installation of their command package; transitive bins need not be
+exposed by npm or pnpm. Discovery uses configured directories before PATH, excludes the cwd
 PATH entry, deduplicates real paths, diagnoses same-tier conflicts and requires
-`pguide-command-v1`. A missing official command identifies the package to install.
+`pguide-command-v1`. Only when neither an external candidate nor a conflict exists,
+default commands fall back to the installed dependencies' public bin subpath
+exports, resolved with `import.meta.resolve` and executed by the current Node
+runtime. Structured help and diagnosis report source `bundled`; missing dependency
+files are errors, not silently missing commands. Explicitly installing the same
+command packages alongside `pguide` creates no synthetic conflicts. External
+incompatible commands and conflicts are never bypassed by the fallback.
+A missing optional official command identifies the package to install.
 Global options, stdin, cancellation, JSON/Markdown envelopes, passthrough
 arguments and exit codes retain their existing behavior.
+
+### Configuration package rename
+
+The old published name `@potential-guide/config` is retired in this source tree;
+existing published versions are not renamed or unpublished. Replace explicit
+dependencies/install scripts with `@potential-guide/pguide-config`, remove the
+old global/local package and regenerate the lockfile. Do not install both names:
+they expose the same binary. A default `pguide` installation needs neither name
+listed explicitly. Releases now use `pguide-config-v*`, not the historical
+`config-v*` tags; npm Trusted Publishing must be configured for the new name.
 
 ## Independent protocol consumption
 
@@ -126,13 +143,16 @@ All scratch data stays under repository `.cache`.
 
 `pnpm pack:check` builds and packs the release inventory, checks exports and bins,
 then installs eight isolated tarball consumers: protocol-only,
-main-only, each optional command package, and all commands together.
+main-only, each standalone command package, and all commands together.
 The default packed `pnpm deployment:verify` runs these same eight combinations
 before its npm runtime scenarios, so the existing Ubuntu/macOS/Windows deployment
 CI matrix executes them too; published/latest verification remains registry-based.
 Internal transitive versions are resolved from each real installed parent,
-including pnpm's physical symlink layout. Minimal installs prove no forced
-business packages; combination installs verify real generated command shims,
+including pnpm's physical symlink layout. Protocol-only consumption installs no
+business packages; main-only consumption installs Pilot, config and objectives but no
+regulation, supervision or declaration-management packages. Its exact six-command
+surface and bundled fallback run without transitive bins on PATH. Combination
+installs verify real generated command shims,
 metadata, discovery and dispatch without ambient global extensions. On POSIX,
 the isolated shim toolchain includes the standard shell utilities pnpm shims need.
 CLI integration tests retain execution, permissions, evidence, persistence,

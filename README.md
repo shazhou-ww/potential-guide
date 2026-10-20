@@ -20,10 +20,11 @@ and the extensible `pguide` command line:
   without depending on Objective logic.
 - `@potential-guide/objective-declarations` shares declaration selection/binding
   using protocol only; `@potential-guide/cli-runtime` assembles Git-backed Pilots.
-- `@potential-guide/config` is an optional scoped extension whose executable is
+- `@potential-guide/pguide-config` is the configuration extension whose executable is
   `pguide-config` and whose command name is `config`.
-- `pguide` is a lightweight discovery/dispatch entrypoint. Install the optional
-  command packages you need; it no longer installs Objective execution or config.
+- `pguide` is a discovery/dispatch entrypoint that installs Pilot commands and
+  configuration and Objective declaration management by default. Regulation and supervision
+  remain optional.
   `@potential-guide/pguide-pilot` owns `probe`, `scaffold`, `validate`;
   `@potential-guide/pguide-regulate` owns `regulate`, `continue`;
   `@potential-guide/pguide-supervise` owns `supervise`; and
@@ -63,7 +64,7 @@ Run `pnpm check` for the complete repository verification.
 ## CLI
 
 ```sh
-npm install --global pguide @potential-guide/pguide-pilot
+npm install --global pguide
 pguide --help
 pguide scaffold pilot ./my-pilot
 pguide validate pilot ./my-pilot/pilot.yaml
@@ -71,10 +72,14 @@ pguide probe --pilot ./my-pilot/pilot.yaml --subject-file ./subject.json
 ```
 
 Add `@potential-guide/pguide-regulate` for regulation, `@potential-guide/pguide-supervise`
-for supervision, `@potential-guide/pguide-objectives` for declaration management,
-and `@potential-guide/config` for configuration. Each package also provides
+for supervision. Pilot, config and objectives packages are production dependencies of `pguide`; their commands
+work even when a package manager does not expose transitive binaries on PATH.
+Each command package also provides
 standalone `pguide-<command>` binaries; no `pguide` installation is required for
 those entrypoints. Install selected RC versions explicitly when testing a candidate.
+The formerly published `@potential-guide/config` is now
+`@potential-guide/pguide-config`; remove the old package from explicit installations
+to avoid competing `pguide-config` shims. See [migration](./docs/package-layering.md).
 
 Commit the specification and its resources before probing so that the reported
 version identifies the contents actually evaluated. Validation and scaffolding

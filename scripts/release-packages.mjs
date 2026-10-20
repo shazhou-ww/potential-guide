@@ -71,9 +71,9 @@ export const releasePackages = [
     forbiddenDependencies: ["@potential-guide/objective-guide", "@potential-guide/objective-pilot"],
   },
   {
-    id: "config",
+    id: "pguide-config",
     directory: "pguide-config",
-    name: "@potential-guide/config",
+    name: "@potential-guide/pguide-config",
     bins: ["pguide-config"],
   },
   {
@@ -82,11 +82,10 @@ export const releasePackages = [
     name: "pguide",
     forbiddenDependencies: ["@potential-guide/objective-guide"],
     forbiddenRuntimeDependencies: [
-      "@potential-guide/objective-pilot",
       "@potential-guide/objective-regulator",
       "@potential-guide/objective-portfolio-supervisor",
-      "@potential-guide/config",
-      "@potential-guide/cli-runtime",
+      "@potential-guide/pguide-regulate",
+      "@potential-guide/pguide-supervise",
     ],
     forbiddenFiles: ["dist/commands/guide.js", "dist/commands/guide.d.ts"],
     bins: ["pguide"],
