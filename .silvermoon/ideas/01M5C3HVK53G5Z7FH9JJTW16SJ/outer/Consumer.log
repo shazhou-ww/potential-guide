@@ -1,0 +1,12 @@
+PASS global-objectives-wiring-and-user-discovery
+PASS readonly-discovery-and-explicit-scope
+PASS root-subdirectory-and-two-checkouts
+PASS input-types-are-orthogonal-to-scope
+PASS explicit-errors-and-atomic-management
+PASS probe-does-not-repair-and-bounded-regulation
+PASS directory-tree-and-retrieval-commit-are-distinct
+PASS continue-uses-original-binding-and-rejects-old-evidence
+PASS consumer-distinguishes-missing-declarations-and-source-call-failures
+PASS consumer-discovers-and-supervisor-advances-two-directory-dependencies
+PASS installed-continuous-supervise-follows-root-and-dependency-without-portfolio-edits
+PASS global-user-data-unselected-target-and-owned-resource-safety

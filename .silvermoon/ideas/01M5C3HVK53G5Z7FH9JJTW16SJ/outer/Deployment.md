@@ -2,6 +2,8 @@
 
 部署对象为已接受的 Inner `61ecfc89b1208bca68ca7ec98e8caf2adf4f77ea`。仅授权本机全局命令接线与独立安全消费者验证，不发布 npm、不调用真实模型/凭据、不执行真实发布目标，不修改 accepted Inner 或产品代码。可重放步骤见 [Validation-plan.md](./Validation-plan.md) 与 [consumer-validation.mjs](./consumer-validation.mjs)。
 
+已完成本机验证，十二个场景全部通过；结果、来源与清理边界见 [Evidence.md](./Evidence.md)。此记录是 Agent 的部署证据，不代表 Outer 已获审批。
+
 ## Steps
 
 ### D-S01: 验证独立消费者的目录目标
