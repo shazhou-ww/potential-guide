@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "outcome": "controlled-trial-passed-real-migration-blocked",
+  "startedAt": "2026-10-20T07:17:05.023Z",
+  "completedAt": "2026-10-20T07:17:23.102Z",
+  "sourceCommit": "de90468701d844ab67323430b3a7345ec7ec3ba8",
+  "deploymentContractRevision": "eebbf6b10f5aea6441f59acd491b3abb782a833a",
+  "acceptedImplementationRevision": "e94a791d179cd0aaf03ced4789efaa9999680b50",
+  "environment": {
+    "platform": "win32",
+    "node": "v24.12.0",
+    "pnpm": "11.22.0",
+    "runtime": "local built dist CLI and libraries, not npm publication"
+  },
+  "sources": {
+    "consumer": {
+      "objectiveId": "git+file:///C:/Users/Wei/AppData/Local/Temp/pg-dependency-trial-Kz1BmT/consumer#objective/pilot.yaml",
+      "commit": "b0770effec02643f49087b9db9a449c708a9e064",
+      "levels": ["entry", "release", "terminal"],
+      "blockedLevel": "release"
+    },
+    "provider": {
+      "objectiveId": "git+file:///C:/Users/Wei/AppData/Local/Temp/pg-dependency-trial-Kz1BmT/provider#objective/pilot.yaml",
+      "commit": "011c2916eeb5f38f0a1f0a882262a470540cec05",
+      "levels": ["unready", "terminal"]
+    },
+    "deletedFieldRejectionCommit": "80f8a73a4d07e1970add98c4794dc2f3413bc937",
+    "oldProblemRejectionCommit": "a16a5c93738ecd70f32c65faf5841f035fd01f8f"
+  },
+  "cliRuns": [
+    { "evidence": "18-initial-consumer-probe.json", "exitCode": 0, "current": "consumer/release", "dependency": "provider>=terminal", "observedProvider": "unready" },
+    { "evidence": "19-consumer-regulate-handoff.json", "exitCode": 3, "stopReason": "dependency-required", "iterations": 0, "stalledRuns": 0, "agentCalls": 0 },
+    { "evidence": "20-actual-supervise-closed-loop.json", "exitCode": 0, "consumerHandoffIterations": 0, "providerOutcome": "target-reached", "providerIterations": 1, "consumerFinalObservation": "terminal", "remainingDemands": 0 },
+    { "evidence": "21-independent-provider-after.json", "exitCode": 0, "current": "provider/terminal" },
+    { "evidence": "22-independent-consumer-after.json", "exitCode": 0, "current": "consumer/terminal" },
+    { "evidence": "26-deleted-prerequisite-rejected.json", "exitCode": 2, "status": "pilot-error", "error": "Expected fields: schemaVersion, domainSchema, levels, defaultLanguage, languages." },
+    { "evidence": "30-old-problem-rejected.json", "exitCode": 6, "status": 502, "payload": null, "message": "process-protocol: Expected fields: kind, id, parameters." },
+    { "evidence": "31-original-valid-schema-still-accepted.json", "exitCode": 0, "schemaVersion": 1, "current": "consumer/terminal", "explicitOriginalCommitAccepted": true }
+  ],
+  "repair": {
+    "role": "controlled-local-ACP-executor",
+    "actualExecutionPrompts": 1,
+    "consumerExecutionPrompts": 0,
+    "target": "provider/terminal",
+    "action": "write-owned-marker",
+    "expectedContent": "controlled-provider-ready",
+    "time": "2026-10-20T07:17:14.740Z",
+    "productionAgentOrAuthorizationClaim": false
+  },
+  "artifactSha256": {
+    "packages/pguide/dist/commands/supervisor.js": "56974616c63bfeca1120183bdcdc601435599a9463fc84205992f69d849086e3",
+    "packages/objective-pilot/dist/dependency.js": "30f6a406c82b2b05b2b527370ded7a911bac66d77cc8388727615c61df6a062a",
+    "packages/objective-pilot/dist/dependency-preload.js": "0a8351674ebfa98d9242df052c0c054f5a4be9962b08f6245a0ab0e0133addac",
+    "packages/objective-pilot/dist/dependency-loader.js": "3a3b9f9fcd14a0eb51a96189a352b82b07c9e2c8d8118f24bf97c9e1b84366ae",
+    "packages/objective-regulator/dist/index.js": "206ab3035e531d7c4ae22d238727ff3e766aab3e6ab5051944a377b012e1c546",
+    "packages/objective-portfolio-supervisor/dist/planner.js": "459f1ff8fe1dd65474a72fc4f1c2bdd425f90efbaf3cd278e9df91f7893f1a26"
+  },
+  "realMigrationBoundary": {
+    "potentialGuideCommit": "de90468701d844ab67323430b3a7345ec7ec3ba8",
+    "monorepoCheckBlob": "e2d1e1f0d68092ae984fe80d5cd255e0432eae03",
+    "setupContractBlob": "2a2d3758f74c692d3e6d4a4f4c7766a2f374dfa0",
+    "actualOldProblemParserError": "Expected fields: kind, id, parameters.",
+    "silvermoonCommit": "5c256bb76829240dafe648e3d5b7c7198a7927ea",
+    "silvermoonManifests": [
+      { "path": "src/business/objectives/project/manifest.yaml", "blob": "56dc7dc0de396c679b436e71d5d70538f0bf49b5", "containsPrerequisite": true },
+      { "path": "src/business/objectives/idea/manifest.yaml", "blob": "65780718702ae3e544e3f73fdf370f8605573c42", "containsPrerequisite": true }
+    ],
+    "knownIntegrationBlockers": [
+      "monorepo invalid-contract real probe old problem output",
+      "monorepo valid-internal-package real probe old problem output",
+      "setup Git snapshot missing environment real probe old problem output"
+    ],
+    "status": "blocked pending separate user manual migration",
+    "realDefinitionsOrProbesModified": false,
+    "productionSwitchCompleted": false,
+    "npmPublished": false
+  },
+  "localEvidence": {
+    "directory": "C:\\Users\\Wei\\.copilot\\session-state\\7246033c-6a5b-422e-8d04-10eb223d11ea\\files\\dependency-deployment-xpQyQl",
+    "reproducer": "C:\\Users\\Wei\\.copilot\\session-state\\7246033c-6a5b-422e-8d04-10eb223d11ea\\files\\verify-dependency-deployment.mjs",
+    "sha256": {
+      "reproducer": "36cf666115df49ad85290e7b41e150f5b46a6aa1166cb651fad9db8028daf24a",
+      "summary.json": "9ddc862201015157bee4d6a47e370314c55cda4301d595f112c489acd9d88bd8",
+      "consumer.bundle": "5e56abe84033a5cd60c496ed0c28b2fa3a835fc0fe50c3f6239f24cbc5485898",
+      "provider.bundle": "a297e94207782197c5a803af970a353e7f467fb90b3ed6955eade63af936d6b1"
+    },
+    "gitBundlesVerified": true,
+    "cacheChildrenBeforeCleanup": { "pguide-probes": [], "pguide-runs": [], "pguide-sources": [] },
+    "ownedTrialDirectoryRemoved": true,
+    "independentEvidenceDirectoryRetained": true
+  }
+}
