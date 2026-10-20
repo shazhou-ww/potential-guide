@@ -2,7 +2,7 @@
 
 本文保存规范讨论及逐项评审意见，不是已批准的完整格式设计。局部明确的修改方向与待讨论建议分别记录，不因排列顺序或候选建议而自动定案。
 
-可使用离线 [HTML 评审文档](./Review.html) 逐页阅读用途、用例、代表性示例、TypeScript 类型和 YAML 表达的 JSON Schema 草案。报告与 monorepo 的两种格式分别成页，并新增独立 Agent 定义提案页，共 12 页；各页注明现有快照或提案的范围及未展开的语义，不作为已发布规范或生产 validator。
+可使用离线 [HTML 评审文档](./Review.html) 逐页阅读用途、用例、示例、TypeScript 类型和 YAML 表达的 JSON Schema，共 12 页。2026-10-21 已将各页更新为源码 `fd591b9ddc2af389151cfdd7bebb0ec5cfd4d0a7` 的当前实现，而非继续展示最初评审快照：Objective Manifest、声明和 Agent 页展示与三份已发布 Schema 相同的定义；Portfolio 与恢复记录同步 objective 字段。未发布格式仍标注解释用草案及简化范围，JSONC 单独标注未实施提案。下方历次评审文字保留讨论过程，当前实现以 HTML、公开 Schema 和三个已完成子 IDEA 的交付证据为准。
 
 ## 讨论起点
 

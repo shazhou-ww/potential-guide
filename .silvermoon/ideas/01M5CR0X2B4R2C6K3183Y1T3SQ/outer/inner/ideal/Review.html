@@ -40,7 +40,7 @@
     .flow small { display:block; color:var(--muted); font-size:11px; letter-spacing:1px; }
     .arrow { color:#7c91b0; flex:0 0 18px !important; }
     .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
-    .card { background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:18px 20px; }
+    .card { background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:18px 20px; overflow-wrap:anywhere; }
     h3 { margin:0 0 8px; font-size:15px; }
     .card p { margin:0; }
     ul,ol { margin:8px 0 0; padding-left:21px; }
@@ -98,23 +98,23 @@
   </header>
   <div class="layout">
     <aside><div class="nav-inner">
-      <p class="nav-label" id="format-count">12 种格式 / 整体仍待讨论</p>
+      <p class="nav-label" id="format-count">12 种格式 / 当前实现与待评审项</p>
       <nav id="format-tabs" role="tablist" aria-label="数据格式" aria-orientation="vertical"></nav>
-      <p class="nav-note">每种格式独立一页。Agent 定义新增独立提案页；报告与 monorepo 的两种格式也分别展示，避免混淆不同契约。</p>
-      <details class="principles"><summary>阅读约定</summary><p>示例保留当前数字版本，未切换为候选 URI。TypeScript 是评审用自包含表达；JSON Schema 为 Draft 2020-12 的 YAML 草案，不是已发布规范。</p><p>JSON Schema 面板中的 $schema 声明的是 schema 方言，不是业务实例的格式 URI。实例标识字段仍待讨论。</p><p>内部格式也需要输入校验，但不因此成为公共协议。</p></details>
+      <p class="nav-note">已发布格式展示真实公共 Schema；其他格式展示当前结构与明确标注的校验草案。JSONC 主配置另列为未实施提案。</p>
+      <details class="principles"><summary>阅读约定</summary><p>Objective 定义、声明和 Agent 资源使用已发布的 URI；内部记录和 CLI 响应仍保留各自现有数字版本。每页注明代码展示范围。</p><p>JSON Schema 面板的 $schema 声明方言，$id 标识该定义；业务实例的 $schema 则选择具体公共契约。运行时随包离线校验，不自动下载任意 URI。</p><p>TypeScript 类型可引用已安装的标准 schema 类型；简化切片明确标注，不冒充完整业务类型。内部格式需要校验，但不因此成为公共协议。</p></details>
     </div></aside>
     <main>
-      <div class="notice"><strong>历史评审底稿，不是当前格式填写指南。</strong> 三种代码表示及源码链接保留初始快照 <code>50a80806e3ac</code>（2026-10-20），部分评审记录中的“未实施”描述属于当时状态，不与后续实现自动同步。示例中的仓库、UUID 和 Git 哈希均为演示值，不是可运行的远端证据。<br><strong>最新进展：</strong>Objective 定义与引用、声明 Unit/context/pathJoin、独立 Agent 资源及管理入口已实现。公共 schema 已部署并验证包内外字节一致；真实三平台打包消费及 Ubuntu Node 22/24 完整检查全部通过，交付证据已就绪。JSONC 主配置与扩展配置描述机制仍留在总 IDEA 讨论范围，未混入此次实施，也未发布 npm 包。</div>
+      <div class="notice"><strong>当前契约评审 · 更新于 2026-10-21。</strong> 示例、类型及源码依据已更新至提交 <code>fd591b9ddc2a</code>。Objective 定义、声明绑定和 Agent 独立化三个子 IDEA 已完成全部门限；三个公共 Schema 已部署并验证包内外一致。其他报告、事件流和业务格式继续评审，JSONC 主配置仅是未实施提案。<br>示例仓库、UUID、哈希及路径为演示值，不是可运行的 Git 来源证据；结构校验通过不代替语义校验。未发布 npm 包，使用新契约需安装或构建包含本次变更的版本。</div>
       <section class="card" style="margin-bottom:24px" aria-label="关联实施构想">
-        <h3>关联实施 IDEA · 当前门限以各自生命周期为准</h3>
+        <h3>关联实施 IDEA · 三项均已完成</h3>
         <p><a href="../../../../01M5CX0VMQ080XYSX96ZDCCTZS/outer/inner/ideal/Idea.md">1. Objective 定义与引用规范化</a> →
           <a href="../../../../01M5CX3F7EGCVZ3F7EEJWY1BJ1/outer/inner/ideal/Idea.md">2. 声明输入与 JSONata 绑定</a>；
-          <a href="../../../../01M5CX5GG5NDS07N4V3QQ4N7ZA/outer/inner/ideal/Idea.md">3. Agent 配置独立化</a>可独立准备。</p>
+          <a href="../../../../01M5CX5GG5NDS07N4V3QQ4N7ZA/outer/inner/ideal/Idea.md">3. Agent 配置独立化</a>。</p>
         <p>每项独立验收；canonical 地址已确定并部署，运行时随包离线校验：
           <a href="https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json">Objective schema</a> /
           <a href="https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json">Objectives schema</a> /
           <a href="https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json">Agents schema</a>。
-          初始页签用于保留评审上下文，实际使用以新 schema、包文档和子 IDEA 交付证据为准。</p>
+          旧格式普通读取统一拒绝，需显式迁移；固定 commit/tree 的历史证据不能靠改字段伪造成新版本。最新证据见各子 IDEA 的交付记录。</p>
       </section>
       <div id="pages"></div>
       <noscript><p>此离线文档需要启用 JavaScript 才能显示页签和代码示例。无需网络或外部依赖。</p></noscript>
@@ -124,26 +124,22 @@
   <script id="review-data">
     const formats = [
       {
-        id:"manifest", title:"Pilot Manifest", category:"公共核心协议 · 待确认", version:"当前 schemaVersion: 1",
-        producer:"Pilot 作者", artifact:"pilot.yaml", consumer:"loadPilotSpec → observe / regulate",
+        id:"manifest", title:"Objective Manifest", category:"公共核心协议 · 已实现 / 已发布", version:"契约 URI：objective/v1.json",
+        producer:"Objective 作者", artifact:"objective.yaml", consumer:"parseManifest / loadPilotSpec → observe / regulate",
         purpose:"描述一个 Pilot 能观察什么 subject、有哪些推进级别、每个级别运行哪些 check，以及文档支持哪些语言。它定义规则，不保存一次执行的结果。",
         usecase:"团队编写一个代码仓库健康 Pilot：subject 指向待检查目录，ready 级别通过 tests 检查推进。第三方工具读取同一份 manifest，展示目标并验证输入。",
-        boundary:"作者与运行时可以独立交付，因此是明确的公共契约候选。domainSchema 描述业务 subject，不是 manifest 自身的 schema，两者不能混淆。",
-        scope:"代表性完整 manifest。TypeScript 使用自包含 JSON 类型；schema 覆盖主要结构，语言规范化、ID 唯一性及 domainSchema 编译仍需语义校验。",
-        validation:["现有 parseManifest 严格检查字段、版本、级别、check/problem ID 和语言列表。","loadPilotSpec 另行 compileDomain；仅把 domainSchema 写成 object，并不能保证它是合法的 JSON Schema。"],
+        boundary:"作者与运行时独立交付，这是公共契约。subjectSchema 描述被观察的 subject，不是 manifest 自身的 schema；Pilot 仍是观察执行角色。",
+        scope:"完整代表性 manifest；Schema 面板与已发布 objective/v1.json 完全一致（仅转写为 YAML）。TypeScript 使用 json-schema-typed 的标准类型。ID 跨节点唯一、规范语言及内嵌 schema 的执行边界另由运行时验证。",
+        validation:["parseManifest 检查公共 URI、文档结构、ID、语言及唯一性；loadPilotSpec 编译 subjectSchema，调用时校验 subject。","subjectSchema 根显式为 object，采用 Draft 2020-12；本地 $defs 引用、同步编译与确定性边界均明确校验，不联网获取用户提供的引用。"],
         feedback:[
-          "M-01 · 用户已明确方向：去掉 levels[].advancement，直接采用 levels[].checks；仅简化结构，保留检查和推进语义。尚未实施，旧格式处理待整体兼容策略确定。",
-          "M-02 · 用户已确认：domainSchema 改名为 subjectSchema，使其直接对应被校验的 subject，并与 inputSchema 区分；不改变字段职责。",
-          "M-03 · 用户已确认：采用 Draft 2020-12 标准语法及对应 TypeScript schema 类型，不另造简化 DSL 或主动设置关键词白名单。根显式为 object，初期仅支持文档内 $defs 引用，不自动联网；加载时检查并编译 schema，调用时校验 subject；非法或不支持的定义明确报错。具体类型库仍待实施选型。",
-          "M-04 · 用户已确认：静态定义称为 Objective Manifest，入口改为 objective.yaml；Pilot 保留为观察执行角色。单个目标定义 objective.yaml 与命名调用声明 objectives.yaml 职责不同。",
-          "M-05 · 用户已确认：所有数据格式中引用目标定义的 pilot 统一改为 objective，pilotUri / pilotCommit / pilotTree / pilotSource 相应改为 objective*；覆盖公共输入、报告嵌套结构和内部记录，不改变来源与版本语义。API/CLI/包名按职责核对，不机械替换执行角色。",
-          "G-01 · 用户已确认：公共格式采用 schema URI，旧入口、旧结构和字段统一拒绝并提供迁移，不做静默兼容。域名/发布位置尚未定，运行时使用随包定义离线校验。",
-          "下方三种表示仍是现有源码快照，不是修改后格式；这些评审意见不代表构想整体获批或运行时变更授权。"
+          "已完成 M-01 至 M-05：objective.yaml、直接 checks、subjectSchema、标准 schema 类型，以及数据中的 objective 引用；观察顺序与来源证据语义保持。",
+          "已完成 G-01：$schema 选择不可变公共 URI，随包离线定义。旧 schemaVersion、advancement、domainSchema、pilot 引用与旧入口明确拒绝。",
+          "显式转换示例：objective-contract-migrate --format manifest --input pilot.yaml --output objective.yaml。输出必须不存在，原文件不改写；之后需提交新目标并重新绑定固定版本。"
         ],
-        questions:["canonical schema URI 使用自有域名还是 GitHub Pages？发布不可变性如何验证？","实例 URI 字段及显式迁移工具的范围是什么？","语言、唯一性和局部引用限制由哪个公共 validator 保证？"],
-        sources:["packages/pilot-protocol/src/types.ts","packages/pilot-protocol/src/validation.ts","packages/pilot-protocol/src/definition.ts"],
-        example:String.raw`schemaVersion: 1
-domainSchema:
+        questions:["本页已完成既定规范化；后续若修改公共定义须发布新 URI，不能覆盖现有定义。"],
+        sources:["schemas/objective/v1.json","packages/pilot-protocol/src/types.ts","packages/pilot-protocol/src/validation.ts","packages/pilot-protocol/src/definition.ts","packages/pilot-protocol/src/migration.ts"],
+        example:String.raw`$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json
+subjectSchema:
   type: object
   required: [directory]
   properties:
@@ -151,99 +147,91 @@ domainSchema:
   additionalProperties: false
 levels:
   - id: ready
-    advancement:
-      checks:
-        - id: tests
-          problems: [tests-failed]
+    checks:
+      - id: tests
+        problems: [tests-failed]
 defaultLanguage: zh-CN
 languages: [zh-CN]`,
-        types:String.raw`type Json = null | boolean | number | string
-  | Json[] | { [key: string]: Json };
-type JsonObject = { [key: string]: Json };
+        types:String.raw`import type { JSONSchema } from "json-schema-typed";
+type SubjectSchema =
+  Exclude<JSONSchema, boolean> & { readonly type: "object" };
 
-interface PilotManifest {
-  readonly schemaVersion: 1;
-  readonly domainSchema: JsonObject;
+interface ObjectiveManifest {
+  readonly $schema:
+    "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json";
+  readonly subjectSchema: SubjectSchema;
   readonly levels: readonly [Level, ...Level[]];
   readonly defaultLanguage: string;
   readonly languages: readonly [string, ...string[]];
 }
 interface Level {
   readonly id: string;
-  readonly advancement: {
-    readonly checks: readonly {
-      readonly id: string;
-      readonly problems: readonly string[];
-    }[];
-  };
+  readonly checks: readonly {
+    readonly id: string;
+    readonly problems: readonly string[];
+  }[];
 }`,
         schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
-title: Pilot Manifest（讨论草案）
+$id: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json
+title: Objective Manifest v1
 type: object
 additionalProperties: false
-required: [schemaVersion, domainSchema, levels, defaultLanguage, languages]
+required: [$schema, subjectSchema, levels, defaultLanguage, languages]
 properties:
-  schemaVersion: { const: 1 }
-  domainSchema:
-    type: object
-    required: [type]
-    properties:
-      type: { const: object }
+  $schema:
+    const: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json
+  subjectSchema:
+    allOf:
+      - $ref: https://json-schema.org/draft/2020-12/schema
+      - type: object
+        required: [type]
+        properties:
+          type: { const: object }
   levels:
     type: array
     minItems: 1
     items:
       type: object
       additionalProperties: false
-      required: [id, advancement]
+      required: [id, checks]
       properties:
         id:
-          allOf:
-            - $ref: '#/$defs/id'
-            - not: { const: terminal }
-        advancement:
-          type: object
-          additionalProperties: false
-          required: [checks]
-          properties:
-            checks:
-              type: array
-              items:
-                type: object
-                additionalProperties: false
-                required: [id, problems]
-                properties:
-                  id: { $ref: '#/$defs/id' }
-                  problems:
-                    type: array
-                    uniqueItems: true
-                    items: { $ref: '#/$defs/id' }
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+          not: { const: terminal }
+        checks:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, problems]
+            properties:
+              id: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }
+              problems:
+                type: array
+                uniqueItems: true
+                items: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }
   defaultLanguage: { type: string, minLength: 1 }
   languages:
     type: array
     minItems: 1
     uniqueItems: true
-    items: { type: string, minLength: 1 }
-$defs:
-  id: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }`
+    items: { type: string, minLength: 1 }`
       },
       {
-        id:"objectives", title:"Objective 声明", category:"公共声明格式 · 待确认", version:"当前 schemaVersion: 1",
+        id:"objectives", title:"Objective 声明", category:"公共声明格式 · 已实现 / 已发布", version:"契约 URI：objectives/v1.json",
         producer:"仓库 / npm 包作者", artifact:"objectives.yaml", consumer:"parseObjectives → selectObjective → bindObjective",
-        purpose:"给可发现的目标取名，并声明其 Pilot、调用输入及 subject 投影。它将用户的输入和目录上下文绑定成 Pilot 的 subject，不负责决定治理目标级别。",
-        usecase:"每个包提供 standardize 声明。用户在包目录选择这个目标时不必手写 subject；Unit 输入可省略，投影从 context.directory.absolutePath 取得目录。",
+        purpose:"给可发现的目标取名，并声明目标定义引用、调用输入及 subject 投影。它将 input 和 context 绑定成 subject，不负责决定治理目标级别。",
+        usecase:"每个包提供 standardize。Git 内可通过 $pathJoin(context.repo.rootPath, context.path) 取得调用目录；没有业务输入时省略 inputSchema 和实际 input 即采用 Unit。",
         boundary:"这是作者交给工具读取的开放入口，与 manifest 不同：manifest 定义规则，声明文件定义如何绑定和调用规则。target 不是声明字段。",
         feedback:[
-          "O-01 / M-05 · 已确认：声明条目的 pilot 改为 objective，仍引用目标定义目录；文档继续承担命名调用和 subject 绑定职责。",
-          "O-02 · 用户已澄清：inputSchema 可选，省略等价于 { const: {} }，即 Unit schema，只接受空对象值，不是任意 JSON。该 schema 校验 input 本身，而不是整个 { context, input }。",
-          "O-02 · Unit 输入：实际 input 省略时归一化为 {}，求值根保留 input: {}；显式非空对象、数组、标量或 null 都不能通过 Unit 校验。显式 inputSchema: {} 仍接受任意 JSON，与省略字段不同；不扩大既有 Unit-only 输入省略规则。",
-          "O-03 · 求值根保持 { context, input }；context 与 input 是根属性，不是 $context / $input 绑定变量。context 由工具构造，input 由调用者提供；投影结果再按 subjectSchema 校验。旧 directory / repository / checkout 结构只是现有源码快照。",
-          "O-04 · 用户已确认：Git 内 path 为仓库相对路径，根目录用 .；context 只有 repo、path，repo 内含 rootPath、origin。非 Git 时 repo=null、path 为绝对路径；Git 无 origin 时 origin=null，不伪造来源。",
-          "O-05 · 用户已确认：普通 $pathJoin，采用宿主 path.join 语义，不附加仓库包含性承诺，不改成 resolve。纯路径计算，不访问文件系统；当前受限 AST 还不支持该调用，须显式接入，不开放任意函数。",
-          "下方三种表示仍保留原始快照：inputSchema 在当前实现中必填。新增计划尚未实施；JSONata 仍是有边界的确定性投影 profile，不是任意动态执行。"
+          "已实现：objective 引用目标目录，inputSchema 可选且默认 { const: {} }；显式 {} 或 true 是任意 JSON schema，但实际输入仍必须提供。false 拒绝所有输入，显式 null 不会被缺省值覆盖。",
+          "已实现：求值根为 { context, input }。Git 内 repo={rootPath, origin}、path 相对仓库，根为 .；无 origin 用 null；非 Git 时 repo=null、path 绝对。",
+          "已实现：$pathJoin 恰好两个字符串，普通宿主 path.join；不访问文件系统或保证包含性。受限 AST、深度、执行时间及输出大小边界保持，不开放任意函数。",
+          "旧 context 表达式需显式 AST 迁移；不能保留语义的旧身份或整体 context 投影明确拒绝，需作者审阅后提供替代表达式。"
         ],
-        projectionHeading:"目标 context 与路径函数 · 规范化草案（未实施）",
-        projectionExample:String.raw`# 已确认的 Git 场景结构；函数尚未实施
+        projectionHeading:"当前 JSONata 根值、类型与结果",
+        projectionExample:String.raw`# Git 场景：context 的字段由工具构造，不由 input 提供
 evaluationRoot:
   context:
     repo:
@@ -252,46 +240,61 @@ evaluationRoot:
     path: packages/api
   input: {}
 
-# 扩展函数计划；不是当前生产投影器已经支持的表达式
+# 已实现，恰好两个字符串；不是任意函数调用
 expression: '{"directory": $pathJoin(context.repo.rootPath, context.path)}'
 
 # Windows 下的预期结果；POSIX 根路径将生成 POSIX 路径
 result:
-  directory: 'D:\work\repo\packages\api'`,
-        scope:"文档和条目结构可完整展示。JSONata 的能力限制、执行边界和 inputSchema 编译不能只靠字符串 schema 校验。",
-        validation:["parseObjectives 检查文档版本和精确字段，并编译 inputSchema 与受限投影。","bindObjective 校验输入、求值投影，再依据 Pilot domainSchema 校验最终 subject。"],
-        questions:["非 Git 场景的声明是否需要额外受限条件表达式能力？","$pathJoin 的参数个数、类型和输出边界如何表达？","声明格式的 canonical URI 和显式迁移工具如何交付？"],
-        sources:["packages/pilot-protocol/src/objectives.ts","packages/objective-declarations/src/index.ts","packages/pilot-protocol/src/projection.ts"],
-        example:String.raw`schemaVersion: 1
+  directory: 'D:\work\repo\packages\api'
+
+# 非 Git 时 root.context = { repo: null, path: 'D:\work\plain' }
+# 可直接写 {"directory": context.path}；读取 null repo 的字段会失败`,
+        scope:"Schema 面板等同已发布 objectives/v1.json；TypeScript 区分外部可选字段和解析后默认 Unit 的行为。标准 JSONSchema 类型包含布尔 schema。求值根结构也在类型区展示。",
+        validation:["parseObjectives 检查公共 URI、精确字段、标准 schema 和受限投影，并将省略 inputSchema 归一化为 Unit。","projectObjective 先校验 input，再求值有限 JSON 对象；bindObjective 最后按目标 subjectSchema 校验。"],
+        questions:["现有非 Git 声明可直接使用 context.path；是否新增条件表达式能力留待有具体用例后评审，不是本次已开放能力。"],
+        sources:["schemas/objectives/v1.json","packages/pilot-protocol/src/objectives.ts","packages/objective-declarations/src/index.ts","packages/pilot-protocol/src/projection.ts"],
+        example:String.raw`$schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
 objectives:
   standardize:
     description: 检查当前包的规范
-    pilot: 'git+https://example.test/rules.git#package-standard/'
-    inputSchema:
-      type: object
-      additionalProperties: false
-      maxProperties: 0
-    subject: '{"directory": context.directory.absolutePath}'`,
-        types:String.raw`type Json = null | boolean | number | string
+    objective: 'git+https://example.test/rules.git#package-standard/'
+    # inputSchema 省略 = { const: {} }，实际 input 也可省略
+    subject: '{"directory": $pathJoin(context.repo.rootPath, context.path)}'`,
+        types:String.raw`import type { JSONSchema } from "json-schema-typed";
+type Json = null | boolean | number | string
   | Json[] | { [key: string]: Json };
 interface ObjectiveDeclaration {
   readonly description: string;
-  readonly pilot: string;
-  readonly inputSchema: { [key: string]: Json };
+  readonly objective: string;
+  readonly inputSchema?: JSONSchema;
   readonly subject: string; // 受限 JSONata 表达式
 }
-// 评审用文档类型；当前源码只导出了条目类型。
+// 文档容器的评审表达；条目使用当前公开定义。
 interface ObjectivesDocument {
-  schemaVersion: 1;
+  $schema:
+    "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json";
   objectives: Record<string, ObjectiveDeclaration>;
+}
+type ObjectiveContext = {
+  readonly repo: {
+    readonly rootPath: string;
+    readonly origin: string | null;
+  } | null;
+  readonly path: string;
+};
+interface ProjectionRoot {
+  context: ObjectiveContext;
+  input: Json;
 }`,
         schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
-title: Objective 声明（讨论草案）
+$id: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
+title: Objective Declarations v1
 type: object
 additionalProperties: false
-required: [schemaVersion, objectives]
+required: [$schema, objectives]
 properties:
-  schemaVersion: { const: 1 }
+  $schema:
+    const: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
   objectives:
     type: object
     propertyNames:
@@ -299,27 +302,27 @@ properties:
     additionalProperties:
       type: object
       additionalProperties: false
-      required: [description, pilot, inputSchema, subject]
+      required: [description, objective, subject]
       properties:
         description: { type: string, pattern: '\S' }
-        pilot: { type: string, pattern: '\S' }
-        inputSchema: { type: object }
+        objective: { type: string, pattern: '\S' }
+        inputSchema: { $ref: 'https://json-schema.org/draft/2020-12/schema' }
         subject: { type: string, pattern: '\S' }`
       },
       {
         id:"config", title:"CLI 配置", category:"公共配置，不等于核心协议", version:"当前 schemaVersion: 2",
         producer:"用户 / 项目维护者", artifact:".pguide/config.yaml + 用户配置", consumer:"loadConfig / parseConfig → 各命令",
-        purpose:"配置命令默认值、Agent 连接、执行限制、报告位置和授权策略。配置文件决定工具如何运行，不定义 Pilot 检查规则。",
-        usecase:"团队为本地 ACP Agent 配置启动命令和环境变量名，设置每次 Agent 调用的超时。用户配置与项目配置合并后，命令消费有效配置。",
+        purpose:"保存命令默认选项、默认 Agent 名称、执行限制、报告位置和授权策略。完整 Agent 连接已剥离，主配置仍是 YAML v2，不是拟议的 JSONC。",
+        usecase:"用户设置 defaultAgent: local 和每次 Agent 调用超时；只有需要 Agent 的命令才从独立 agents.yaml 加载 local。普通 config/Objective 操作不会因无关 Agent 资源校验失败而被阻断。",
         boundary:"用户可编写且跨工具升级保存，值得维护公共配置契约；归属 CLI Core，而不是因为公开就移入 pilot-protocol。凭据值不能写进示例或配置。",
         feedback:[
-          "C-01 · 用户提出改造方向：agents 从主配置剥离到独立 agents.yaml，新增 pguide agents 管理；完整连接/传输定义不再混在普通选项内。",
+          "已完成 C-01：完整 Agent 定义在独立 agents.yaml，pguide agents 负责管理。主配置出现旧 agents 字段明确失败，使用 pguide agents migrate --scope user|project 显式迁移。",
           "C-02 / C-05 · 早期 Git 分段提案正与 VS Code settings 风格比较。官方 VS Code settings.json 使用 JSONC（带注释的 JSON），不是 YAML；Agent 建议采用完整的命名空间 key + 原生 JSON 值，不因重用 JSON 就恢复封闭的全局配置类型。",
-          "用户已明确作用域：初期只做用户级和项目级。建议 project > user；对象合并策略尚待确认，不把 VS Code 的对象合并机械用于权限策略或 Agent profile。",
+          "当前主配置仍有既有用户/项目/显式文件及环境处理规则；拟议新 settings 模型先做用户/项目两级，不能把提案误写成现有主配置只支持两级。Agent 资源本身已限制为用户/项目两级，项目同名整体覆盖。",
           "C-04 · 用户明确要求：所有扩展子命令，包括独立第三方命令，均可定义自身配置；新增自有 key 不需修改核心 PguideConfig 类型或等待主程序发布。具体命名空间和声明机制尚未定案。",
           "建议已知 key 的类型、默认值和约束由所属组件维护；保留作用域、来源与错误诊断。未知 key 是否允许存储与何时参与消费需明确，可扩展不等于静默忽略非法值。",
           "建议分离存储与语义：基础设施统一作用域、来源和 get/set/unset，保留未安装扩展的 key；扩展定义类型、默认值、帮助并在消费前校验。保存未知配置不能冒充语义校验成功，也不为通用编辑任意执行外部命令。",
-          "JSONC 能直接表达数组和对象，扩展描述可声明类型、默认值和说明，较 Git 语法更适合本需求；但描述发现、namespace、对象覆盖及权限信任仍需定义。JSONC 是最新推荐，用户尚未最终选定。下方三种表示仍是旧配置快照。"
+          "JSONC 能直接表达数组和对象；但描述发现、namespace、对象覆盖及权限信任仍需定义。下方三种表示为当前 YAML v2 的基础字段切片，上方 JSONC 卡片才是未实施提案。"
         ],
         proposalHeading:"VS Code settings 风格 · 最新建议（JSONC，未定案、未实施）",
         proposalExample:String.raw`{
@@ -336,8 +339,8 @@ properties:
 }
 // Agent 完整定义仍放独立 agents.yaml
 // 上述 key 与主配置文件名均未定案；不是 VS Code 配置 API 的直接复用`,
-        scope:"仅展示配置 v2 的基础字段及 ACP 分支。省略 AHP、授权、regulationStrategy、reports 等合法字段；本页窄 schema 不可用于校验任意现有配置。",
-        validation:["parseConfig 校验 v2、未知字段、Agent 类型、超时和授权等；loadConfig 负责合并与来源记录。","配置文件的 schema 不等于合并规则，也不代表能够连接或初始化 Agent。"],
+        scope:"当前 YAML v2 基础字段切片，不再包含 agents。省略授权、regulationStrategy 等其他合法字段；本页 schema 仅用于解释示例，不是已发布的完整配置 schema。",
+        validation:["parseConfig 校验 v2、已支持字段、超时及授权，并拒绝旧内嵌 agents；loadConfig 负责普通配置合并及来源。","Agent 消费者另行 loadAgents；JSONC 的扩展配置描述与对象合并规则尚未实施。"],
         questions:["是否采用推荐的 JSONC + 命名空间 key，如何发现扩展配置描述？","用户级与项目级中对象按完整 key 替换还是显式允许合并？","复杂策略与授权如何校验并维持信任边界？"],
         sources:["packages/pguide-cli-core/src/index.ts","packages/pguide-cli-core/src/permissions.ts"],
         example:String.raw`schemaVersion: 2
@@ -346,35 +349,20 @@ defaultLanguage: zh-CN
 format: json
 agentExecutionLimits:
   timeoutMs: 300000
-agents:
-  local:
-    type: acp
-    connection: { protocolVersion: "1" }
-    transport:
-      type: stdio
-      command: example-agent
-      args: []
-      env: [EXAMPLE_AGENT_TOKEN]`,
-        types:String.raw`// 配置 v2 的 ACP 示例分支，不是完整 PguideConfig。
+reports:
+  enabled: true
+# local 的完整定义见独立 agents.yaml，不是这里的字段`,
+        types:String.raw`// 当前 PguideConfig 的基础字段切片，不是完整类型。
 interface ConfigExample {
   schemaVersion: 2;
   defaultAgent?: string;
   defaultLanguage?: string;
   format?: "json" | "markdown";
   agentExecutionLimits?: { timeoutMs?: number };
-  agents?: Record<string, {
-    type: "acp";
-    connection: { protocolVersion: string };
-    transport: {
-      type: "stdio";
-      command: string;
-      args?: string[];
-      env?: string[]; // 环境变量名，不是秘密值
-    };
-  }>;
+  reports?: { enabled?: boolean; directory?: string };
 }`,
         schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
-title: CLI 配置 ACP 示例分支（非完整规范）
+title: 当前 CLI 配置基础字段切片（未发布的解释用草案）
 type: object
 additionalProperties: false
 required: [schemaVersion]
@@ -388,49 +376,30 @@ properties:
     additionalProperties: false
     properties:
       timeoutMs: { type: integer, minimum: 1, maximum: 2147483647 }
-  agents:
+  reports:
     type: object
-    propertyNames: { pattern: '^[a-z0-9][a-z0-9-]*$' }
-    additionalProperties:
-      type: object
-      additionalProperties: false
-      required: [type, connection, transport]
-      properties:
-        type: { const: acp }
-        connection:
-          type: object
-          additionalProperties: false
-          required: [protocolVersion]
-          properties:
-            protocolVersion: { type: string, pattern: '^[1-9][0-9]*$' }
-        transport:
-          type: object
-          additionalProperties: false
-          required: [type, command]
-          properties:
-            type: { const: stdio }
-            command: { type: string, pattern: '\S' }
-            args: { type: array, items: { type: string } }
-            env:
-              type: array
-              items: { type: string, pattern: '^[A-Z_][A-Z0-9_]*$' }`
+    additionalProperties: false
+    properties:
+      enabled: { type: boolean }
+      directory: { type: string, pattern: '\S' }`
       },
       {
-        id:"agents", title:"Agent 定义（拟拆分）", category:"独立命名资源 · 改造提案", version:"新格式提案 / 标识与作用域待定",
-        producer:"用户 / Agent 配置管理者", artifact:"拟议 agents.yaml", consumer:"拟议 pguide agents → Agent 执行与监督",
+        id:"agents", title:"Agent 定义", category:"公共资源格式 · 已实现 / 已发布", version:"契约 URI：agents/v1.json",
+        producer:"用户 / Agent 配置管理者", artifact:"用户/项目 agents.yaml", consumer:"pguide agents / loadAgents → 治理、监督及 Agent 诊断",
         purpose:"独立保存按名称组织的 Agent 连接、传输、认证引用和会话要求，供治理和监督按名称选择；不再与输出格式、语言、报告位置等普通 CLI 偏好混在一起。",
         usecase:"用户在 agents.yaml 中定义 local ACP Agent，使用 pguide agents 查看和管理；主配置只指定默认名称 local。更新连接方式不必改动普通 CLI 选项。",
-        boundary:"这是用户提出的新资源格式方向，当前代码还从 PguideConfig.agents 读取。Agent 定义仍需严格结构校验；可扩展主配置不能成为绕过协议选择、凭据引用或执行信任边界的理由。",
+        boundary:"资源已与主配置分离。用户配置目录旁的 agents.yaml 提供默认定义，项目配置边界内同名 profile 整体覆盖；--config 不是第三个 Agent 作用域。独立资源仍受协议和凭据校验。",
         feedback:[
-          "C-01 · 用户提出：剥离 agents，独立 agents.yaml，并新增 pguide agents 管理入口。",
-          "以下 agents 包装、ACP 片段及命令组织只是讨论示例。公共 schema URI、全量 ACP/AHP 类型、文件位置、同名覆盖和迁移策略尚未确定，也未创建真实配置或命令。",
-          "建议名称引用与定义分离；同名 profile 按整体覆盖而非深合并。默认 Agent 的具体配置 key 尚未冻结。"
+          "已完成：$schema + agents 映射，支持 canonical type: acp|ahp；旧无 type ACP 仅在显式迁移时规范化，不作为新资源的兼容读取。",
+          "已提供 pguide agents list/show/set/remove/edit/validate/path/migrate。写入指定 --scope user|project；项目同名整体覆盖，移除覆盖会显露用户定义。",
+          "迁移保留源备份、未知主配置字段及注释，目的地同名冲突明确失败。查看输出脱敏，凭据只保留环境引用；更改资源不扩大授权。",
+          "项目资源以发现的主配置目录为边界；没有主配置时采用最近的项目 agents.yaml，否则为 cwd/.pguide。非法资源只在真正消费 Agent 的分支报错。"
         ],
-        scope:"新格式候选，只展示 ACP 最小分支，不覆盖 AHP、认证或 requirements；schema 没有预先指定版本字段或公共 URI，不能直接取代现有配置 validator。",
-        validation:["计划复用现有 AgentProfile 验证与规范化能力，避免管理命令和执行命令各自维护不一致校验。","定义结构通过不等于 Agent 可启动；环境变量可用、默认名称存在、作用域及权限仍需分别检查。"],
-        questions:["agents.yaml 的顶层结构和公共 schema 标识是什么？","支持用户级、项目级与显式文件中的哪些层次，完整 profile 如何覆盖？","pguide agents 的操作及旧 config Agent 子命令如何迁移？"],
-        sources:["packages/pguide-cli-core/src/index.ts","packages/pguide-config/src/bin.ts","packages/pguide-config/README.md"],
-        example:String.raw`# 新格式候选，不是当前加载器已支持的文件
+        scope:"例子同时覆盖 ACP/AHP；类型包含完整 profile 联合；Schema 面板等同已发布 agents/v1.json。凭据模式、协议合法性及部分跨字段约束由共享运行时进一步校验。",
+        validation:["parseAgents 离线核对 URI、精确文档字段、名称及 canonical profile，并复用 validateAgentProfile 的严格字段和秘密值检查。","JSON Schema 的结构通过不等于 Agent 可启动或已获权限；环境引用、实际协议连接和当前授权仍各自验证。"],
+        questions:["本页既定拆分已完成。后续如增加协议分支须独立评审 schema 的新标识及兼容边界，不借主配置扩展放松资源校验。"],
+        sources:["schemas/agents/v1.json","packages/pguide-cli-core/src/agents.ts","packages/pguide-cli-core/src/index.ts","packages/pguide-agents/src/bin.ts","packages/pguide-agents/README.md"],
+        example:String.raw`$schema: https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json
 agents:
   local:
     type: acp
@@ -440,52 +409,139 @@ agents:
       type: stdio
       command: example-agent
       args: []
-      env: [EXAMPLE_AGENT_TOKEN]`,
-        types:String.raw`// 只展示拟议文档的 ACP 分支，不是完整 AgentProfile。
-interface AgentsProposal {
-  agents: Record<string, {
-    type: "acp";
-    connection: { protocolVersion: string };
-    transport: {
-      type: "stdio";
-      command: string;
-      args?: string[];
-      env?: string[]; // 引用环境变量名，不存秘密值
-    };
-  }>;
+      env: [EXAMPLE_AGENT_TOKEN]
+  remote:
+    type: ahp
+    connection: { protocolVersion: "1.0.0", agent: provider }
+    transport: { type: websocket, url: wss://example.test/agent }
+    authentication:
+      type: query-token
+      parameter: token
+      tokenEnv: EXAMPLE_AHP_TOKEN`,
+        types:String.raw`interface AcpAgentProfile {
+  type: "acp";
+  connection: { protocolVersion: string };
+  transport: {
+    type: "stdio"; command: string; args?: string[]; env?: string[];
+  };
+  requirements?: { sessionResume?: boolean };
+}
+interface AhpAgentProfile {
+  type: "ahp";
+  confirmations?: "deny" | "external";
+  connection: { protocolVersion: "1.0.0" | "0.9.0"; agent: string };
+  transport: { type: "websocket"; url: string };
+  authentication?: (
+    | { type: "none" }
+    | { type: "query-token"; parameter: string; tokenEnv: string }
+  ) & { resources?: { resource: string; tokenEnv: string }[] };
+  requirements?: { sessionResume?: boolean };
+}
+type AgentProfile = AcpAgentProfile | AhpAgentProfile;
+interface AgentsFile {
+  $schema:
+    "https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json";
+  agents: Record<string, AgentProfile>;
 }`,
         schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
-title: 独立 Agent 定义 ACP 分支（候选，非完整规范）
+$id: https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json
+title: Potential Guide Agent resources v1
+description: User and project Agent profiles. Credential values are forbidden; only environment references are permitted. Runtime validation additionally rejects secret-like arguments, URLs and values.
 type: object
 additionalProperties: false
-required: [agents]
+required: [$schema, agents]
 properties:
+  $schema:
+    const: https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json
   agents:
     type: object
-    propertyNames: { pattern: '^[a-z0-9][a-z0-9-]*$' }
-    additionalProperties:
-      type: object
-      additionalProperties: false
-      required: [type, connection, transport]
-      properties:
-        type: { const: acp }
-        connection:
-          type: object
-          additionalProperties: false
-          required: [protocolVersion]
-          properties:
-            protocolVersion: { type: string, pattern: '^[1-9][0-9]*$' }
-        transport:
-          type: object
-          additionalProperties: false
-          required: [type, command]
-          properties:
-            type: { const: stdio }
-            command: { type: string, pattern: '\S' }
-            args: { type: array, items: { type: string } }
-            env:
-              type: array
-              items: { type: string, pattern: '^[A-Z_][A-Z0-9_]*$' }`
+    propertyNames: { type: string, pattern: '^[a-z0-9][a-z0-9-]*$' }
+    additionalProperties: { $ref: '#/$defs/profile' }
+$defs:
+  nonempty: { type: string, pattern: '\S' }
+  environmentName: { type: string, pattern: '^[A-Z_][A-Z0-9_]*$' }
+  requirements:
+    type: object
+    additionalProperties: false
+    properties:
+      sessionResume: { type: boolean }
+  stdio:
+    type: object
+    additionalProperties: false
+    required: [type, command]
+    properties:
+      type: { const: stdio }
+      command: { $ref: '#/$defs/nonempty' }
+      args: { type: array, items: { $ref: '#/$defs/nonempty' } }
+      env: { type: array, items: { $ref: '#/$defs/environmentName' } }
+  acp:
+    type: object
+    additionalProperties: false
+    required: [type, connection, transport]
+    properties:
+      type: { const: acp }
+      connection:
+        type: object
+        additionalProperties: false
+        required: [protocolVersion]
+        properties:
+          protocolVersion: { type: string, pattern: '^[1-9][0-9]*$' }
+      transport: { $ref: '#/$defs/stdio' }
+      requirements: { $ref: '#/$defs/requirements' }
+  resourceCredential:
+    type: object
+    additionalProperties: false
+    required: [resource, tokenEnv]
+    properties:
+      resource: { $ref: '#/$defs/nonempty' }
+      tokenEnv: { $ref: '#/$defs/environmentName' }
+  authentication:
+    oneOf:
+      - type: object
+        additionalProperties: false
+        required: [type]
+        properties:
+          type: { const: none }
+          resources:
+            type: array
+            items: { $ref: '#/$defs/resourceCredential' }
+      - type: object
+        additionalProperties: false
+        required: [type, parameter, tokenEnv]
+        properties:
+          type: { const: query-token }
+          parameter: { type: string, pattern: '^[A-Za-z][A-Za-z0-9_-]*$' }
+          tokenEnv: { $ref: '#/$defs/environmentName' }
+          resources:
+            type: array
+            items: { $ref: '#/$defs/resourceCredential' }
+  ahp:
+    type: object
+    additionalProperties: false
+    required: [type, connection, transport]
+    properties:
+      type: { const: ahp }
+      confirmations: { enum: [deny, external] }
+      connection:
+        type: object
+        additionalProperties: false
+        required: [protocolVersion, agent]
+        properties:
+          protocolVersion: { enum: ["1.0.0", "0.9.0"] }
+          agent: { $ref: '#/$defs/nonempty' }
+      transport:
+        type: object
+        additionalProperties: false
+        required: [type, url]
+        properties:
+          type: { const: websocket }
+          url: { type: string, pattern: '^wss?://[^@?#\s]+$' }
+      authentication: { $ref: '#/$defs/authentication' }
+      requirements: { $ref: '#/$defs/requirements' }
+  profile:
+    oneOf:
+      - $ref: '#/$defs/acp'
+      - $ref: '#/$defs/ahp'`
       },
       {
         id:"portfolio", title:"Portfolio 输入", category:"supervise 公共输入 · 待确认", version:"当前 schemaVersion: 3",
@@ -493,15 +549,15 @@ properties:
         purpose:"把多个治理目标及可用 Agent 资源放在同一个调度视图中，提供目标优先级、观察间隔和资源能力。它不是单个 Pilot 的规则，也不是调度结果。",
         usecase:"同时监督 API 与 UI 两个仓库，让具有 code 能力且容量为 1 的 Agent 处理 ready 目标。planner 先观察，再决定执行顺序。",
         boundary:"由调用方提供、由 supervise 消费，是公共输入候选；其契约归属 supervise，不应自动升级成所有 Pilot 必须依赖的核心概念。",
-        feedback:["M-05 · 已确认的后续修改：goals[].pilot 改为 goals[].objective；相关队列、报告和其他嵌套结构若包含目标定义引用，同步统一命名。下方代码保留当前源码快照，尚未迁移。"],
+        feedback:["已完成 M-05：goals[].objective 及嵌套目标引用已统一命名。此格式仍为 schemaVersion: 3，未因引用改名就虚构一个已发布 Portfolio URI。","显式迁移支持非固定版本的旧 Portfolio；带固定来源的历史输入需先迁移并提交目标，再重新绑定，不能伪造 commit/tree。"],
         scope:"展示完整文件主结构。schema 能验证形状和数值边界，但 ID 按字段唯一、目标级别存在、subject 合法及资源可绑定需另行验证。",
         validation:["parsePortfolioFile 检查 v3、字段、重复 goal/resource ID、正整数和唯一字符串列表。","绑定 Pilot 时才检查目标级别；subject 的领域语义仍由对应 Pilot 决定。"],
-        questions:["是否作为稳定公共输入公开独立 schema？","goals 的 ID 唯一性与资源能力匹配由哪层保证？","文件格式是否允许旧版本迁移，或只明确拒绝？"],
+        questions:["Portfolio 是否需要自己的公共 schema URI，属于后续格式评审，不在这次三种已发布定义之内。","goals 的唯一性和资源匹配已由解析/业务层保证；若公开 schema，应明确哪些约束仍需语义校验。"],
         sources:["packages/pguide-supervise/src/commands/supervisor.ts","packages/objective-portfolio-supervisor/src/types.ts"],
         example:String.raw`schemaVersion: 3
 goals:
   - id: api-ready
-    pilot: 'git+https://example.test/rules.git#health/'
+    objective: 'git+https://example.test/rules.git#health/'
     subject: { directory: 'D:\work\api' }
     targetLevel: ready
     priority: 10
@@ -518,7 +574,7 @@ interface PortfolioFile {
   schemaVersion: 3;
   goals: {
     id: string;
-    pilot: string;
+    objective: string;
     revision?: string;
     subject: { [key: string]: Json };
     targetLevel: string;
@@ -546,10 +602,10 @@ properties:
     items:
       type: object
       additionalProperties: false
-      required: [id, pilot, subject, targetLevel, priority, observationIntervalMs]
+      required: [id, objective, subject, targetLevel, priority, observationIntervalMs]
       properties:
         id: { $ref: '#/$defs/text' }
-        pilot: { $ref: '#/$defs/text' }
+        objective: { $ref: '#/$defs/text' }
         revision: { $ref: '#/$defs/text' }
         subject: { type: object }
         targetLevel: { $ref: '#/$defs/text' }
@@ -581,18 +637,18 @@ $defs:
         purpose:"保存一次治理的身份、绑定来源、最终 subject、Agent 配置及尝试记录，让后续进程能继续执行，而不是重新发现同名目标。",
         usecase:"治理中断后运行 pguide continue <id>。工具恢复原 Pilot 的 commit/tree 和输入，避免远端分支变动后悄悄使用另一套规则。",
         boundary:"即使不公开，它也跨越程序升级，因此可能需要内部存储版本。保留版本和完整校验，不等于承诺第三方能读写此文件。",
-        feedback:["M-05 · 已确认的后续修改：pilotUri / pilotCommit / pilotTree / pilotSource 改为 objectiveUri / objectiveCommit / objectiveTree / objectiveSource；其他嵌套目标引用也同步调整。取回 commit、目录 tree 和来源证据的职责不变，旧记录处理待整体兼容策略决定。下方代码保留当前快照。"],
+        feedback:["已完成 M-05：恢复记录使用 objectiveUri / objectiveCommit / objectiveTree / objectiveSource。来源证据的意义保持；内部记录仍为 schemaVersion: 3。","旧字段和旧 context 明确拒绝。旧固定证据保留为历史记录，不能通过机械改名伪造新 tree；迁移并提交目标后新建绑定与观察，不把历史记录转换伪称为同一次可信恢复。"],
         scope:"只展示新建记录的最小必需字段及 ACP profile；省略 binding、权限、策略、session、expiresAt、history 等可选字段。attempts 的内部元素结构未展开，草案不能替代完整恢复 validator。哈希为占位证据。",
-        validation:["当前 continue 检查 v3、若干必需字段、来源绑定和 Git 证据，然后进行类型断言；不是完整结构校验。","必须额外检查 URI/commit/tree 一致、subjectDigest 匹配、会话有效和来源可恢复；形状合法不代表可以安全继续。"],
-        questions:["是否明确规定仅供工具内部读写，不发布公共 schema？","内部格式升级采取迁移还是拒绝旧记录？","恢复前应完整校验哪些字段，尤其 attempts、subject 和 Agent profile？"],
+        validation:["continue 检查 v3、新目标字段、旧字段/context 拒绝、来源绑定和 Git 证据；仍非独立完整文档 schema 校验。","形状合法不能证明 URI/commit/tree 一致、subjectDigest 正确或会话可恢复；下方占位哈希不是实际可恢复记录。"],
+        questions:["是否进一步把内部记录升级为完整读取 schema？尤其是 attempts、subject 与 Agent profile 的校验，仍需单独评审。","内部存储版本的后续演进策略需独立管理；本次旧固定证据已明确不作伪造迁移。"],
         sources:["packages/pguide-regulate/src/commands/regulator.ts","packages/pguide-cli-core/src/index.ts"],
         example:String.raw`schemaVersion: 3
 regulationId: 00000000-0000-4000-8000-000000000001
 createdAt: "2026-10-20T13:00:00.000Z"
-pilotUri: 'git+https://example.test/rules.git#health/'
-pilotCommit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-pilotTree: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-pilotSource:
+objectiveUri: 'git+https://example.test/rules.git#health/'
+objectiveCommit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+objectiveTree: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+objectiveSource:
   kind: git-tree
   repository: https://example.test/rules.git
   directory: health
@@ -633,10 +689,10 @@ interface RecoveryExample {
   schemaVersion: 3;
   regulationId: string;
   createdAt: string;
-  pilotUri: string;
-  pilotCommit: string;
-  pilotTree: string;
-  pilotSource: GitSource;
+  objectiveUri: string;
+  objectiveCommit: string;
+  objectiveTree: string;
+  objectiveSource: GitSource;
   sourceBindings: Record<string, GitSource>;
   subject: JsonObject;
   subjectDigest: string;
@@ -650,15 +706,15 @@ interface RecoveryExample {
 title: 内部恢复记录最小切片（非完整规范）
 type: object
 additionalProperties: false
-required: [schemaVersion, regulationId, createdAt, pilotUri, pilotCommit, pilotTree, pilotSource, sourceBindings, subject, subjectDigest, targetLevel, agentName, agentProfile, agentExecutionLimits, attempts]
+required: [schemaVersion, regulationId, createdAt, objectiveUri, objectiveCommit, objectiveTree, objectiveSource, sourceBindings, subject, subjectDigest, targetLevel, agentName, agentProfile, agentExecutionLimits, attempts]
 properties:
   schemaVersion: { const: 3 }
   regulationId: { type: string, pattern: '^[0-9a-f-]{36}$' }
   createdAt: { type: string }
-  pilotUri: { type: string, pattern: '^git\+' }
-  pilotCommit: { $ref: '#/$defs/gitHash' }
-  pilotTree: { $ref: '#/$defs/gitHash' }
-  pilotSource: { $ref: '#/$defs/source' }
+  objectiveUri: { type: string, pattern: '^git\+' }
+  objectiveCommit: { $ref: '#/$defs/gitHash' }
+  objectiveTree: { $ref: '#/$defs/gitHash' }
+  objectiveSource: { $ref: '#/$defs/source' }
   sourceBindings:
     type: object
     additionalProperties: { $ref: '#/$defs/source' }
@@ -806,7 +862,7 @@ properties:
         purpose:"提供版本、帮助、配置查看、诊断、操作结果及错误等机器可读响应。这是一组不同格式，不是一个拥有共同 payload 的既有统一协议。",
         usecase:"setup Pilot 调用 pguide --version --format json，检查 name/version；调用 config show 后检查配置。CI 也可能需要读取错误状态而不是解析 Markdown。",
         boundary:"工具插件发现另有 pguide-command-v1 元数据协议，不能和 schemaVersion: 1 的 CLI 输出混为一谈。公开响应范围应逐命令、逐操作明确。",
-        scope:"本页仅选主命令 --version 的成功响应。没有把 help、config show、错误等不同结构硬拼成一个虚构 envelope；它们应在范围确定后继续细分。",
+        scope:"本页选主命令 --version 成功响应。list/show/旧 alias 查询仍为 CLI 数组响应，不标注 objectives 声明文件 URI；声明文档才用对应 $schema。不同输出结构并未被硬拼为一个虚构 envelope。",
         validation:["writeResult 接受 Record<string, unknown>，仅序列化；不是共享响应 schema。","setup 对版本和 config show 做局部消费校验，但不代表所有响应已有完整公共契约。"],
         questions:["哪些命令响应正式支持第三方脚本消费？","用命令+操作确定 schema，还是新增显式响应类型？","错误是否单独统一；版本应在每条响应内还是由接口契约提供？"],
         sources:["packages/pguide/src/bin.ts","packages/pguide-cli-core/src/index.ts","packages/objective-pguide-setup/src/installation.mjs"],
@@ -1050,13 +1106,13 @@ $defs:
   <script id="review-ui">
     const nav = document.getElementById("format-tabs");
     const pages = document.getElementById("pages");
-    document.getElementById("format-count").textContent = `${formats.length} 种格式 / 整体仍待讨论`;
+    document.getElementById("format-count").textContent = `${formats.length} 种格式 / 当前实现与待评审项`;
     const labels = { example:"示例 · YAML", types:"TypeScript 类型", schema:"JSON Schema · YAML" };
     let active = 0;
     let representation = "example";
     let compare = false;
     let statusTimer;
-    const sourceBase = "https://github.com/shazhou-ww/potential-guide/blob/50a80806e3aca67acf3220cdbf8bfc274de4748d/";
+    const sourceBase = "https://github.com/shazhou-ww/potential-guide/blob/fd591b9ddc2af389151cfdd7bebb0ec5cfd4d0a7/";
     const narrowScreen = window.matchMedia("(max-width:760px)");
     function updateOrientation() {
       nav.setAttribute("aria-orientation", window.innerWidth <= 760 ? "horizontal" : "vertical");
@@ -1123,7 +1179,7 @@ $defs:
       const info = element("div", "info-grid");
       info.append(card("一个具体用例", format.usecase), card("为什么需要讨论它的边界", format.boundary));
       pagePanel.append(flow, info);
-      if (format.feedback) pagePanel.append(card("本轮评审 · 下一步规范化计划输入", format.feedback, "questions"));
+      if (format.feedback) pagePanel.append(card("当前实现与评审结论", format.feedback, "questions"));
       if (format.projectionExample || format.proposalExample) {
         const projection = element("section", "card");
         projection.append(element("h3", "", format.projectionHeading ?? format.proposalHeading ?? "JSONata 的入参、表达式与结果 · 当前机制"));
@@ -1183,7 +1239,7 @@ $defs:
         grid.append(codeCard);
       }
       const bottom = element("div", "bottom");
-      bottom.append(card("现有校验与 schema 的边界", format.validation), card("本页 Review 要回答的问题", format.questions, "questions"));
+      bottom.append(card("现有校验与 schema 的边界", format.validation), card("后续评审 / 使用边界", format.questions, "questions"));
       const sources = element("p", "sources", "源码依据（固定快照）：");
       for (const path of format.sources) {
         const link = element("a", "", path);
