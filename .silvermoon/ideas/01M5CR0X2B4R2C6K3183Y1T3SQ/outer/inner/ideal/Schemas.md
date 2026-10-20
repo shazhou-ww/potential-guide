@@ -2,7 +2,7 @@
 
 本文保存规范讨论及逐项评审意见，不是已批准的完整格式设计。局部明确的修改方向与待讨论建议分别记录，不因排列顺序或候选建议而自动定案。
 
-可使用离线 [HTML 评审文档](./Review.html) 逐页阅读用途、用例、代表性示例、TypeScript 类型和 YAML 表达的 JSON Schema 草案。报告与 monorepo 的两种格式分别成页，共 11 页；各页注明展示范围及未展开的语义，不作为已发布规范或生产 validator。
+可使用离线 [HTML 评审文档](./Review.html) 逐页阅读用途、用例、代表性示例、TypeScript 类型和 YAML 表达的 JSON Schema 草案。报告与 monorepo 的两种格式分别成页，并新增独立 Agent 定义提案页，共 12 页；各页注明现有快照或提案的范围及未展开的语义，不作为已发布规范或生产 validator。
 
 ## 讨论起点
 
@@ -18,6 +18,7 @@
 | 1 | Pilot Manifest | 1 | 公共核心协议 | 契约范围、标识字段、嵌入 domainSchema 的方言与语义校验。 |
 | 2 | Objective 声明文档 | 1 | 公共声明格式 | 文档与条目的边界、输入 schema 和投影的校验责任。 |
 | 3 | CLI 配置 | 2 | 公共配置格式 | 组件归属、配置合并、旧格式与新标识的兼容规则。 |
+| 3a | Agent 定义 | 拟从 CLI 配置中独立 | 结构化命名资源 | agents.yaml 的结构、作用域、校验与 pguide agents 管理边界。 |
 | 4 | Portfolio 输入 | 3 | supervise 公共输入 | 与核心协议的边界、引用及跨字段约束。 |
 | 5 | Regulation 恢复记录 | 3 | 内部持久化 | 是否保持内部存储版本、完整读取校验与升级处理。 |
 | 6 | regulate / supervise 报告 | 2 / 3 | 公共或内部输出待定 | 是否承诺第三方消费与历史读取，是否共享外层标识。 |
@@ -35,7 +36,7 @@
 
 ## 当前讨论入口
 
-先讨论 Pilot Manifest 的契约边界及标识方式；公共地址、迁移方案和实现细节留待对应决定，不使用示意域名充当真实发布地址。
+当前推进到 CLI 配置拆分与分段配置规则。前面明确的局部意见按各节记录；公共地址、迁移方案和实现细节留待对应决定，不使用示意域名充当真实发布地址。
 
 ## Pilot Manifest 第一轮评审（2026-10-20）
 
@@ -187,3 +188,46 @@ JSONata 求值根仍为 `{ context, input }`，表达式通过 `context.repo.roo
 当前项目以自有 AST 校验与求值器执行受限 JSONata，不是直接运行任意 JSONata 表达式；未来实现必须同时接入受限解析与求值，只开放明确的路径函数，不因原生 JSONata 的 registerFunction 可用就绕过现有能力、时限与输出边界。本轮仅用原生 JSONata 显式注册函数验证 Windows / POSIX 示例，未改变生产运行时。
 
 空路径、绝对第二参数、`..`、路径越界及输出大小边界应在实施前补齐规范与反例。普通 join 不是授权或沙箱边界；如要求限制在 repo.rootPath 内，需要独立明确并验证，不能把字符串拼接或 normalize 当作 containment 检查。
+
+## CLI 配置第一轮评审（2026-10-20）
+
+### C-01：独立 Agent 定义文件与管理命令（用户提出的改造方向）
+
+将现有主配置的 `agents` 剥离到独立 `agents.yaml`，新增 `pguide agents` 子命令管理。Agent profile 是带协议判别和嵌套结构的命名资源，独立格式应有对应类型、结构及语义校验；不能因主配置变为可扩展文本而放松 ACP / AHP 的验证和凭据保护。
+
+Agent 建议主配置只保存“选择哪个 Agent”这样的名称引用，连接、传输、认证引用及会话要求等完整定义进入 agents.yaml。`agents:` 包装、公开 schema 标识、文件位置和作用域尚未定案；HTML 的 ACP 示例只是候选形状，不是新的有效配置。
+
+`pguide agents list|show|add|edit|remove|validate|path` 为待讨论的命令组织示例，不代表已经冻结这些操作名。现有 config 的 Agent 增删改查迁移到独立入口，是否保留临时别名需显式决定；共享校验、脱敏、原子写入与错误提示不能分叉实现。
+
+### C-02：主配置改为 Git 风格的可扩展分段配置（用户提出的改造方向）
+
+剩余通用配置不再以一个统一 JSON/YAML 树及全局 schemaVersion 作为唯一文件契约，而按 section/key 组织，使用 `pguide config` 读写。当前配置实际上是 YAML，并非仅限 JSON；本次目标是改变配置模型、扩展方式和管理语义，而非只更换文本后缀。
+
+建议将通用选项、默认选择、报告、执行限额等分区。例如以下仅展示方向，不确定主配置文件名、section 名称或解析语法：
+
+```ini
+[core]
+    defaultAgent = local
+    language = zh-CN
+    format = json
+
+[reports]
+    enabled = true
+
+[agentExecution]
+    timeoutMs = 300000
+```
+
+建议已知 key 的类型、默认值、约束与说明归使用该 key 的组件所有，主配置保留来源与作用域信息。可扩展不等于无校验：语法错误和已知 key 的非法值必须明确报错，未知 section/key 的保留、读写与消费规则要单独定义，不将“未知”静默转换为某种默认有效行为。
+
+需区分“Git 风格语法和命令体验”与“完全兼容 Git config”。普通 INI、TOML 和 Git config 的引号、转义、重复 key、多值、子节及 include 语义并不等价；具体采用哪套规则仍待讨论，不先选解析器或承诺支持 include / includeIf。
+
+### C-03：拆分后仍需明确的边界
+
+- 用户级、项目级、显式文件等作用域是否分别适用于主配置和 agents.yaml；Agent 同名覆盖建议以完整 profile 为单位，不做可能拼出无效协议组合的深合并，最终规则待确认。
+- 默认 Agent 名称与有效 Agent 定义的交叉验证、未知名称错误、配置来源展示和写入目标必须一致；旧主配置及 Agent 定义如何迁移或拒绝待决定。
+- `commandDirectories` 等多值配置如何表达；`regulationStrategy` 与 `regulationPermissions` 这类嵌套策略是否使用子节、命名规则或独立资源，尚未决定，不用 JSON 字符串塞回 key 值来假装完成拆分。
+- schemaVersion 不是通用配置扩展的前提；若采用无全局版本的 key 模型，需要逐 key 定义兼容、弃用和非法值处理。agents.yaml 是否使用公共 schema URI 属于独立格式讨论。
+- 项目级配置涉及可执行 Agent 命令及授权信任，原有边界不能因移动文件而默认为扩大。保留环境变量名等凭据引用，不写入明文秘密。
+
+本轮只记录改造方向与待讨论问题，不创建真实配置、不新增可执行命令或依赖、不修改现有加载器，也不视为构想整体验收。

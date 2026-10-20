@@ -98,9 +98,9 @@
   </header>
   <div class="layout">
     <aside><div class="nav-inner">
-      <p class="nav-label">11 种格式 / 全部待讨论</p>
+      <p class="nav-label" id="format-count">12 种格式 / 整体仍待讨论</p>
       <nav id="format-tabs" role="tablist" aria-label="数据格式" aria-orientation="vertical"></nav>
-      <p class="nav-note">每种格式独立一页。报告与 monorepo 的两种格式已拆开，避免一个版本号掩盖不同契约。</p>
+      <p class="nav-note">每种格式独立一页。Agent 定义新增独立提案页；报告与 monorepo 的两种格式也分别展示，避免混淆不同契约。</p>
       <details class="principles"><summary>阅读约定</summary><p>示例保留当前数字版本，未切换为候选 URI。TypeScript 是评审用自包含表达；JSON Schema 为 Draft 2020-12 的 YAML 草案，不是已发布规范。</p><p>JSON Schema 面板中的 $schema 声明的是 schema 方言，不是业务实例的格式 URI。实例标识字段仍待讨论。</p><p>内部格式也需要输入校验，但不因此成为公共协议。</p></details>
     </div></aside>
     <main>
@@ -300,9 +300,29 @@ properties:
         purpose:"配置命令默认值、Agent 连接、执行限制、报告位置和授权策略。配置文件决定工具如何运行，不定义 Pilot 检查规则。",
         usecase:"团队为本地 ACP Agent 配置启动命令和环境变量名，设置每次 Agent 调用的超时。用户配置与项目配置合并后，命令消费有效配置。",
         boundary:"用户可编写且跨工具升级保存，值得维护公共配置契约；归属 CLI Core，而不是因为公开就移入 pilot-protocol。凭据值不能写进示例或配置。",
+        feedback:[
+          "C-01 · 用户提出改造方向：agents 从主配置剥离到独立 agents.yaml，新增 pguide agents 管理；完整连接/传输定义不再混在普通选项内。",
+          "C-02 · 用户提出改造方向：剩余主配置改为类似 Git config 的分段可扩展配置，按 section/key 管理，而不是一个统一 JSON/YAML 配置树。当前源码仍使用 YAML v2，并非此提案已实施。",
+          "建议已知 key 的类型、默认值和约束由所属组件维护；保留作用域、来源与错误诊断。未知 key 是否允许存储与何时参与消费需明确，可扩展不等于静默忽略非法值。",
+          "待讨论：是否严格兼容 Git config 语法、文件位置、作用域及多值/重复 key 规则；复杂权限和策略如何表达，不能简单塞回 JSON 字符串。下方三种表示仍是旧配置快照。"
+        ],
+        proposalHeading:"分段主配置 · 方向示例（语法与 key 名未定，未实施）",
+        proposalExample:String.raw`[core]
+    defaultAgent = local
+    language = zh-CN
+    format = json
+
+[reports]
+    enabled = true
+
+[agentExecution]
+    timeoutMs = 300000
+
+# Agent 的完整定义放到独立 agents.yaml
+# 上述 key、文件路径与 Git 兼容范围尚未定案`,
         scope:"仅展示配置 v2 的基础字段及 ACP 分支。省略 AHP、授权、regulationStrategy、reports 等合法字段；本页窄 schema 不可用于校验任意现有配置。",
         validation:["parseConfig 校验 v2、未知字段、Agent 类型、超时和授权等；loadConfig 负责合并与来源记录。","配置文件的 schema 不等于合并规则，也不代表能够连接或初始化 Agent。"],
-        questions:["配置是否独立发布 schema，归谁维护？","URI 版本策略是否与工具版本解耦？","局部配置与合并后的配置是否需要不同校验入口？"],
+        questions:["采用精确 Git config 语法还是仅借鉴分段形式？多值、引号、重复 key 如何处理？","主配置与 agents.yaml 各自有哪些作用域和覆盖规则？","复杂策略与授权放在哪一类资源中，哪些 key 正式支持？"],
         sources:["packages/pguide-cli-core/src/index.ts","packages/pguide-cli-core/src/permissions.ts"],
         example:String.raw`schemaVersion: 2
 defaultAgent: local
@@ -352,6 +372,78 @@ properties:
     additionalProperties: false
     properties:
       timeoutMs: { type: integer, minimum: 1, maximum: 2147483647 }
+  agents:
+    type: object
+    propertyNames: { pattern: '^[a-z0-9][a-z0-9-]*$' }
+    additionalProperties:
+      type: object
+      additionalProperties: false
+      required: [type, connection, transport]
+      properties:
+        type: { const: acp }
+        connection:
+          type: object
+          additionalProperties: false
+          required: [protocolVersion]
+          properties:
+            protocolVersion: { type: string, pattern: '^[1-9][0-9]*$' }
+        transport:
+          type: object
+          additionalProperties: false
+          required: [type, command]
+          properties:
+            type: { const: stdio }
+            command: { type: string, pattern: '\S' }
+            args: { type: array, items: { type: string } }
+            env:
+              type: array
+              items: { type: string, pattern: '^[A-Z_][A-Z0-9_]*$' }`
+      },
+      {
+        id:"agents", title:"Agent 定义（拟拆分）", category:"独立命名资源 · 改造提案", version:"新格式提案 / 标识与作用域待定",
+        producer:"用户 / Agent 配置管理者", artifact:"拟议 agents.yaml", consumer:"拟议 pguide agents → Agent 执行与监督",
+        purpose:"独立保存按名称组织的 Agent 连接、传输、认证引用和会话要求，供治理和监督按名称选择；不再与输出格式、语言、报告位置等普通 CLI 偏好混在一起。",
+        usecase:"用户在 agents.yaml 中定义 local ACP Agent，使用 pguide agents 查看和管理；主配置只指定默认名称 local。更新连接方式不必改动普通 CLI 选项。",
+        boundary:"这是用户提出的新资源格式方向，当前代码还从 PguideConfig.agents 读取。Agent 定义仍需严格结构校验；可扩展主配置不能成为绕过协议选择、凭据引用或执行信任边界的理由。",
+        feedback:[
+          "C-01 · 用户提出：剥离 agents，独立 agents.yaml，并新增 pguide agents 管理入口。",
+          "以下 agents 包装、ACP 片段及命令组织只是讨论示例。公共 schema URI、全量 ACP/AHP 类型、文件位置、同名覆盖和迁移策略尚未确定，也未创建真实配置或命令。",
+          "建议名称引用与定义分离；同名 profile 按整体覆盖而非深合并。默认 Agent 的具体配置 key 尚未冻结。"
+        ],
+        scope:"新格式候选，只展示 ACP 最小分支，不覆盖 AHP、认证或 requirements；schema 没有预先指定版本字段或公共 URI，不能直接取代现有配置 validator。",
+        validation:["计划复用现有 AgentProfile 验证与规范化能力，避免管理命令和执行命令各自维护不一致校验。","定义结构通过不等于 Agent 可启动；环境变量可用、默认名称存在、作用域及权限仍需分别检查。"],
+        questions:["agents.yaml 的顶层结构和公共 schema 标识是什么？","支持用户级、项目级与显式文件中的哪些层次，完整 profile 如何覆盖？","pguide agents 的操作及旧 config Agent 子命令如何迁移？"],
+        sources:["packages/pguide-cli-core/src/index.ts","packages/pguide-config/src/bin.ts","packages/pguide-config/README.md"],
+        example:String.raw`# 新格式候选，不是当前加载器已支持的文件
+agents:
+  local:
+    type: acp
+    connection:
+      protocolVersion: "1"
+    transport:
+      type: stdio
+      command: example-agent
+      args: []
+      env: [EXAMPLE_AGENT_TOKEN]`,
+        types:String.raw`// 只展示拟议文档的 ACP 分支，不是完整 AgentProfile。
+interface AgentsProposal {
+  agents: Record<string, {
+    type: "acp";
+    connection: { protocolVersion: string };
+    transport: {
+      type: "stdio";
+      command: string;
+      args?: string[];
+      env?: string[]; // 引用环境变量名，不存秘密值
+    };
+  }>;
+}`,
+        schema:String.raw`$schema: https://json-schema.org/draft/2020-12/schema
+title: 独立 Agent 定义 ACP 分支（候选，非完整规范）
+type: object
+additionalProperties: false
+required: [agents]
+properties:
   agents:
     type: object
     propertyNames: { pattern: '^[a-z0-9][a-z0-9-]*$' }
@@ -942,6 +1034,7 @@ $defs:
   <script id="review-ui">
     const nav = document.getElementById("format-tabs");
     const pages = document.getElementById("pages");
+    document.getElementById("format-count").textContent = `${formats.length} 种格式 / 整体仍待讨论`;
     const labels = { example:"示例 · YAML", types:"TypeScript 类型", schema:"JSON Schema · YAML" };
     let active = 0;
     let representation = "example";
@@ -1015,11 +1108,11 @@ $defs:
       info.append(card("一个具体用例", format.usecase), card("为什么需要讨论它的边界", format.boundary));
       pagePanel.append(flow, info);
       if (format.feedback) pagePanel.append(card("本轮评审 · 下一步规范化计划输入", format.feedback, "questions"));
-      if (format.projectionExample) {
+      if (format.projectionExample || format.proposalExample) {
         const projection = element("section", "card");
-        projection.append(element("h3", "", format.projectionHeading ?? "JSONata 的入参、表达式与结果 · 当前机制"));
+        projection.append(element("h3", "", format.projectionHeading ?? format.proposalHeading ?? "JSONata 的入参、表达式与结果 · 当前机制"));
         const pre = element("pre");
-        pre.append(element("code", "", format.projectionExample));
+        pre.append(element("code", "", format.projectionExample ?? format.proposalExample));
         projection.append(pre);
         pagePanel.append(projection);
       }
