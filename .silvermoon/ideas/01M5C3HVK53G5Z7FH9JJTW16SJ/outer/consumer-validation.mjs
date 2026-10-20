@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, writeFile } from "node:fs/promises";
-import { createRequire } from "node:module";
+import { createRequire, findPackageJSON } from "node:module";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -24,7 +24,11 @@ const packageReal = await realpath(packageRoot);
 assert.equal(packageReal.toLowerCase(), (await realpath(join(repoRoot, "packages", "pguide"))).toLowerCase(), "Global pguide must be the accepted worktree junction.");
 const requireInstalled = createRequire(join(packageRoot, "package.json"));
 const spawn = requireInstalled("cross-spawn");
-const installedPilot = requireInstalled.resolve("@potential-guide/objective-pilot");
+const pilotManifestPath = findPackageJSON("@potential-guide/objective-pilot", pathToFileURL(join(packageRoot, "dist", "bin.js")));
+assert.ok(pilotManifestPath, "Installed ESM dependency manifest must be discoverable.");
+const pilotManifest = JSON.parse(await readFile(pilotManifestPath, "utf8"));
+assert.equal(typeof pilotManifest.exports["."].import, "string");
+const installedPilot = resolve(dirname(pilotManifestPath), pilotManifest.exports["."].import);
 const shimModule = options["--cmd-shim"] ?? join(dirname(process.execPath), "node_modules", "npm", "node_modules", "cmd-shim", "lib", "index.js");
 const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
 const resultPath = join(outer, "Consumer-results.json");
@@ -61,7 +65,7 @@ const evidence = {
   planCommit: execFileSync("git", ["rev-parse", "HEAD"], { cwd: repoRoot, encoding: "utf8" }).trim(),
   acceptedInner,
   startedAt: new Date().toISOString(),
-  environment: { node: process.version, pguide: manifest.version, globalBin, packageRoot, packageReal, installedPilot },
+  environment: { node: process.version, pguide: manifest.version, globalBin, packageRoot, packageReal, installedPilot, objectivePilot: pilotManifest.version, objectivePilotSha256: createHash("sha256").update(await readFile(installedPilot)).digest("hex") },
   scratch,
   scenarios: [],
   commands: [],

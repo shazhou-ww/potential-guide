@@ -1,0 +1,35 @@
+$ turbo run build
+
+   • turbo 2.11.8
+   • Packages in scope: @potential-guide/cli-core, @potential-guide/config, @potential-guide/effects, @potential-guide/git-source, @potential-guide/objective-devbox-health, @potential-guide/objective-monorepo-standard, @potential-guide/objective-pguide-self-check, @potential-guide/objective-pguide-setup, @potential-guide/objective-pilot, @potential-guide/objective-portfolio-supervisor, @potential-guide/objective-regulator, pguide
+   • Running build in 12 packages
+   • Remote caching disabled, using shared worktree cache
+
+@potential-guide/cli-core:build: cache hit, replaying logs aedeb5ad5115eb84
+@potential-guide/cli-core:build: $ tsc -b
+@potential-guide/config:build: cache hit, replaying logs d2395997652fc38c
+@potential-guide/config:build: $ tsc -b
+@potential-guide/effects:build: cache hit, replaying logs f360ca5665056059
+@potential-guide/effects:build: $ tsc -b
+@potential-guide/git-source:build: cache hit, replaying logs 6d81123309770f0c
+@potential-guide/git-source:build: $ tsc -b
+@potential-guide/objective-pilot:build: cache hit, replaying logs 5edf266b3443b3d8
+@potential-guide/objective-pilot:build: $ tsc -b
+@potential-guide/objective-devbox-health:build: cache hit, replaying logs bd9713dd937b01fc
+@potential-guide/objective-devbox-health:build: $ node ../../scripts/build-health-runtime.mjs
+@potential-guide/objective-regulator:build: cache hit, replaying logs 4bd968df1cb22032
+@potential-guide/objective-regulator:build: $ tsc -b
+@potential-guide/objective-portfolio-supervisor:build: cache hit, replaying logs 9073c48d21ed7343
+@potential-guide/objective-portfolio-supervisor:build: $ tsc -b
+pguide:build: cache hit, replaying logs cfbd2e373d077be3
+pguide:build: $ tsc -b
+@potential-guide/objective-pguide-setup:build: cache hit, replaying logs f0c460d51ea97112
+@potential-guide/objective-pguide-setup:build: $ node ../../scripts/build-setup-runtime.mjs
+@potential-guide/objective-pguide-self-check:build: cache hit, replaying logs 4caccb7ea8439b4a
+@potential-guide/objective-pguide-self-check:build: $ node ../../scripts/build-self-check-runtime.mjs
+@potential-guide/objective-monorepo-standard:build: cache hit, replaying logs d9886e49715c3512
+@potential-guide/objective-monorepo-standard:build: $ tsc -b && node ../../scripts/build-monorepo-runtime.mjs
+
+ Tasks:    12 successful, 12 total
+Cached:    12 cached, 12 total
+  Time:    26ms >>> FULL TURBO

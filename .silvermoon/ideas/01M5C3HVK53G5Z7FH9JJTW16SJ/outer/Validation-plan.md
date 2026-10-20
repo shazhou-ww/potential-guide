@@ -17,6 +17,8 @@ node .silvermoon\ideas\01M5C3HVK53G5Z7FH9JJTW16SJ\outer\consumer-validation.mjs 
 
 程序默认从该目录的 node_modules/pguide 验证 junction；若本机布局不同，仅调整 `--package-root`。`--cmd-shim` 可指定当前 Node/npm 已安装的 cmd-shim 入口。验证资源不是产品补丁；资源有实质变更时先重新同步、观测，再运行。
 
+首次运行的验证资源使用 CommonJS require.resolve 定位 ESM-only 公共桥接包，在创建 scratch/全局接线前明确失败，见 Consumer-execution.log。资源已改用 Node 24 的 findPackageJSON 和安装包公开 import export，并额外记录桥接包版本及编译入口 SHA-256；没有更改产品。修订资源重新同步、观测后才重跑检查。
+
 ## 场景与断言
 
 - 独立 plain Git consumer，无 package.json/pnpm-workspace；根和普通子目录分别发现，没有父级继承。另一个 Git worktree 保持相同逻辑 repository，不同 checkout/目录 subject。
