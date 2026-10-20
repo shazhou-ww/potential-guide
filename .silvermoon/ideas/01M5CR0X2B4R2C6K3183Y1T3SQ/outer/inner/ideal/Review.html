@@ -303,7 +303,9 @@ properties:
         feedback:[
           "C-01 · 用户提出改造方向：agents 从主配置剥离到独立 agents.yaml，新增 pguide agents 管理；完整连接/传输定义不再混在普通选项内。",
           "C-02 · 用户提出改造方向：剩余主配置改为类似 Git config 的分段可扩展配置，按 section/key 管理，而不是一个统一 JSON/YAML 配置树。当前源码仍使用 YAML v2，并非此提案已实施。",
+          "C-04 · 用户明确要求：所有扩展子命令，包括独立第三方命令，均可定义自身配置；新增自有 key 不需修改核心 PguideConfig 类型或等待主程序发布。具体命名空间和声明机制尚未定案。",
           "建议已知 key 的类型、默认值和约束由所属组件维护；保留作用域、来源与错误诊断。未知 key 是否允许存储与何时参与消费需明确，可扩展不等于静默忽略非法值。",
+          "建议分离存储与语义：基础设施统一作用域、来源和 get/set/unset，保留未安装扩展的 key；扩展定义类型、默认值、帮助并在消费前校验。保存未知配置不能冒充语义校验成功，也不为通用编辑任意执行外部命令。",
           "待讨论：是否严格兼容 Git config 语法、文件位置、作用域及多值/重复 key 规则；复杂权限和策略如何表达，不能简单塞回 JSON 字符串。下方三种表示仍是旧配置快照。"
         ],
         proposalHeading:"分段主配置 · 方向示例（语法与 key 名未定，未实施）",
@@ -318,11 +320,16 @@ properties:
 [agentExecution]
     timeoutMs = 300000
 
+[commands "deploy"]
+    target = staging
+    timeoutMs = 60000
+
 # Agent 的完整定义放到独立 agents.yaml
-# 上述 key、文件路径与 Git 兼容范围尚未定案`,
+# commands.deploy.target 可由扩展命令独立定义，无须核心认识它
+# 上述 namespace、key、文件路径与 Git 兼容范围尚未定案`,
         scope:"仅展示配置 v2 的基础字段及 ACP 分支。省略 AHP、授权、regulationStrategy、reports 等合法字段；本页窄 schema 不可用于校验任意现有配置。",
         validation:["parseConfig 校验 v2、未知字段、Agent 类型、超时和授权等；loadConfig 负责合并与来源记录。","配置文件的 schema 不等于合并规则，也不代表能够连接或初始化 Agent。"],
-        questions:["采用精确 Git config 语法还是仅借鉴分段形式？多值、引号、重复 key 如何处理？","主配置与 agents.yaml 各自有哪些作用域和覆盖规则？","复杂策略与授权放在哪一类资源中，哪些 key 正式支持？"],
+        questions:["扩展的 namespace 如何归属，类型/帮助描述如何发现，未安装扩展如何诊断？","采用精确 Git config 语法还是仅借鉴分段形式，作用域及多值规则是什么？","复杂策略与授权放在哪一类资源中，主配置与 agents.yaml 如何配合？"],
         sources:["packages/pguide-cli-core/src/index.ts","packages/pguide-cli-core/src/permissions.ts"],
         example:String.raw`schemaVersion: 2
 defaultAgent: local
