@@ -6,6 +6,7 @@ import { test } from "node:test";
 import {
   AcpClient,
   atomicWrite,
+  CliError,
   digest,
   loadConfig,
   parseConfig,
@@ -27,6 +28,21 @@ test("interactive subject input fails explicitly instead of waiting for stdin", 
   try {
     await assert.rejects(readJsonSubject(undefined, scratch), /Pipe a JSON subject/);
     await assert.rejects(readJsonSubject("-", scratch), /Pipe a JSON subject/);
+    const subjectSchema = {
+      type: "object",
+      required: ["directory"],
+      properties: { directory: { type: "string", minLength: 1 } },
+    };
+    for (const path of [undefined, "-"]) {
+      await assert.rejects(readJsonSubject(path, scratch, subjectSchema), (error: unknown) => {
+        assert.ok(error instanceof CliError);
+        assert.equal(error.exitCode, 2);
+        assert.equal(error.status, "invalid");
+        assert.deepEqual(error.guidance?.subjectSchema, subjectSchema);
+        assert.match(String(error.guidance?.instructions), /--subject-file subject.json/);
+        return true;
+      });
+    }
   } finally {
     if (descriptor === undefined) Reflect.deleteProperty(process.stdin, "isTTY");
     else Object.defineProperty(process.stdin, "isTTY", descriptor);

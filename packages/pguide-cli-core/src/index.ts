@@ -108,6 +108,7 @@ export class CliError extends Error {
     message: string,
     readonly exitCode = 2,
     readonly status = "invalid",
+    readonly guidance?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -703,13 +704,31 @@ export function resolveObjective(location: string, config: PguideConfig): string
 export async function readJsonSubject(
   path: string | undefined,
   cwd: string,
+  subjectSchema?: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
+  const missingSubject = (message: string) =>
+    new CliError(
+      message,
+      2,
+      "invalid",
+      subjectSchema === undefined
+        ? undefined
+        : {
+            instructions:
+              "Create a JSON object matching subjectSchema below. Save it to subject.json and pass --subject-file subject.json, or pipe the JSON object to stdin. The schema is guidance, not a subject to submit.",
+            subjectSchema,
+          },
+    );
   if ((path === undefined || path === "-") && process.stdin.isTTY)
-    throw new CliError("Pipe a JSON subject to stdin or provide --subject-file <path>.");
+    throw missingSubject("Pipe a JSON subject to stdin or provide --subject-file <path>.");
   const source =
     path === undefined || path === "-"
       ? await readStdin()
       : await readFile(resolve(cwd, path), "utf8");
+  if (source.trim() === "")
+    throw missingSubject(
+      "Subject must be valid JSON. Pipe a JSON subject to stdin or provide --subject-file <path>.",
+    );
   let value: unknown;
   try {
     value = JSON.parse(source);
@@ -926,9 +945,18 @@ export async function commandMain(
         ? "json"
         : "markdown";
     writeResult(
-      { schemaVersion: 1, status: failure.status, error: failure.message },
+      {
+        schemaVersion: 1,
+        status: failure.status,
+        error: failure.message,
+        ...(failure.guidance === undefined ? {} : { guidance: failure.guidance }),
+      },
       format,
-      `Error: ${failure.message}`,
+      `Error: ${failure.message}${
+        failure.guidance === undefined
+          ? ""
+          : `\n\nSubject input guidance:\n\n\`\`\`json\n${JSON.stringify(failure.guidance, null, 2)}\n\`\`\``
+      }`,
     );
     process.exitCode = failure.exitCode;
   }
