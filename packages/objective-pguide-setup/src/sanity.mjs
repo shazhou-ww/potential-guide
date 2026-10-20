@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { cp, lstat, readFile, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Fault, here, Problem, record } from "./contract.mjs";
@@ -27,7 +27,6 @@ export async function sanity(subject, context, directory, selected) {
       resolve(subject.workingDirectory, path),
     ),
     defaultAgent: selected.name,
-    agents: { [selected.name]: selected.profile },
     stateDirectory: join(directory, "state"),
     agentExecutionLimits: { timeoutMs },
     regulationStrategy: {
@@ -36,6 +35,15 @@ export async function sanity(subject, context, directory, selected) {
     },
   };
   await writeFile(configPath, JSON.stringify(config), { mode: 0o600 });
+  await mkdir(join(repository, ".pguide"), { recursive: true });
+  await writeFile(
+    join(repository, ".pguide", "agents.yaml"),
+    JSON.stringify({
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json",
+      agents: { [selected.name]: selected.profile },
+    }),
+    { mode: 0o600 },
+  );
   const git = async (...args) => {
     const result = await context.execute("git", ["-C", repository, ...args], {
       missing: "git-unavailable",
@@ -54,8 +62,17 @@ export async function sanity(subject, context, directory, selected) {
   const probe = async () => {
     const result = await context.cli(["probe", ...common], configPath, repository);
     const report = jsonOutput(result);
-    if (result.code !== 0 || report.status !== 200 || !record(report.payload))
-      throw new Fault("protocol: independent sanity probe failed.");
+    if (result.code !== 0 || report.status !== 200 || !record(report.payload)) {
+      const reason =
+        typeof report.error === "string" && /dirty|uncommitted/.test(report.error)
+          ? "dirty-source"
+          : typeof report.error === "string" && /long|ENAMETOOLONG/.test(report.error)
+            ? "source-path"
+            : "invocation";
+      throw new Fault(
+        `protocol: independent sanity probe failed (${reason}; exit=${Number.isInteger(result.code) ? result.code : "unknown"}).`,
+      );
+    }
     return report.payload;
   };
   const initial = await probe();

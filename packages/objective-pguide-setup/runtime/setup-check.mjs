@@ -349,7 +349,7 @@ async function configured(subject, context) {
   const capabilities = jsonOutput(help);
   if (!Array.isArray(capabilities.commands) || !record(capabilities.conflicts))
     throw new Fault("protocol: unsupported command discovery response.");
-  for (const name2 of ["config", "probe", "regulate"])
+  for (const name2 of ["config", "agents", "probe", "regulate"])
     if (capabilities.conflicts[name2] !== void 0 || !capabilities.commands.some(
       (entry) => entry.command === name2 && entry.compatible === true && entry.protocol === "pguide-command-v1"
     ))
@@ -365,14 +365,22 @@ async function configured(subject, context) {
     throw new Fault("protocol: unsupported configuration response.");
   const config = value.config;
   const name = subject.agent ?? config.defaultAgent;
-  if (!nonempty(name) || !record(config.agents?.[name])) throw new Problem("agent-missing");
-  const profile = config.agents[name];
+  if (!nonempty(name)) throw new Problem("agent-missing");
+  const selected = await context.cli(
+    ["agents", "show", name],
+    subject.configPath,
+    subject.workingDirectory
+  );
+  if (selected.code !== 0) throw new Problem("agent-missing");
+  const resource = jsonOutput(selected);
+  if (!record(resource.profile)) throw new Fault("protocol: unsupported Agent resource response.");
+  const profile = resource.profile;
   if (profile.type === "ahp")
     throw new Problem("acp-unavailable", {
       reason: "This setup Pilot verifies ACP stdio readiness only. Select an ACP profile; AHP runtime support does not imply ACP compatibility."
     });
   if (!(profile.type === "acp" && profile.connection?.type === void 0 || profile.type === void 0 && profile.connection?.type === "acp") || !/^[1-9][0-9]*$/.test(profile.connection.protocolVersion) || typeof profile.connection.protocolVersion !== "string" || !Number.isSafeInteger(Number(profile.connection.protocolVersion)) || profile.transport?.type !== "stdio" || !nonempty(profile.transport.command) || profile.transport.args !== void 0 && (!Array.isArray(profile.transport.args) || !profile.transport.args.every(nonempty)) || profile.transport.env !== void 0 && (!Array.isArray(profile.transport.env) || !profile.transport.env.every((key) => /^[A-Z_][A-Z0-9_]*$/.test(key))))
-    throw new Fault("protocol: invalid Agent profile returned by config.");
+    throw new Fault("protocol: invalid Agent profile returned by agents.");
   if ((profile.transport.env ?? []).some((key) => !nonempty(context.env[key])))
     throw new Problem("environment-unavailable");
   return { config, name, profile };
@@ -789,7 +797,7 @@ var init_execution = __esm({
 
 // packages/objective-pguide-setup/src/sanity.mjs
 import { randomBytes as randomBytes2 } from "node:crypto";
-import { cp, lstat as lstat3, readFile as readFile2, writeFile as writeFile2 } from "node:fs/promises";
+import { cp, lstat as lstat3, mkdir as mkdir2, readFile as readFile2, writeFile as writeFile2 } from "node:fs/promises";
 import { join as join4, resolve as resolve2 } from "node:path";
 import { pathToFileURL } from "node:url";
 async function sanity(subject, context, directory, selected) {
@@ -812,7 +820,6 @@ async function sanity(subject, context, directory, selected) {
       (path) => resolve2(subject.workingDirectory, path)
     ),
     defaultAgent: selected.name,
-    agents: { [selected.name]: selected.profile },
     stateDirectory: join4(directory, "state"),
     agentExecutionLimits: { timeoutMs },
     regulationStrategy: {
@@ -821,6 +828,15 @@ async function sanity(subject, context, directory, selected) {
     }
   };
   await writeFile2(configPath, JSON.stringify(config), { mode: 384 });
+  await mkdir2(join4(repository, ".pguide"), { recursive: true });
+  await writeFile2(
+    join4(repository, ".pguide", "agents.yaml"),
+    JSON.stringify({
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json",
+      agents: { [selected.name]: selected.profile }
+    }),
+    { mode: 384 }
+  );
   const git = async (...args) => {
     const result2 = await context.execute("git", ["-C", repository, ...args], {
       missing: "git-unavailable"
@@ -839,8 +855,12 @@ async function sanity(subject, context, directory, selected) {
   const probe = async () => {
     const result2 = await context.cli(["probe", ...common], configPath, repository);
     const report2 = jsonOutput(result2);
-    if (result2.code !== 0 || report2.status !== 200 || !record(report2.payload))
-      throw new Fault("protocol: independent sanity probe failed.");
+    if (result2.code !== 0 || report2.status !== 200 || !record(report2.payload)) {
+      const reason = typeof report2.error === "string" && /dirty|uncommitted/.test(report2.error) ? "dirty-source" : typeof report2.error === "string" && /long|ENAMETOOLONG/.test(report2.error) ? "source-path" : "invocation";
+      throw new Fault(
+        `protocol: independent sanity probe failed (${reason}; exit=${Number.isInteger(result2.code) ? result2.code : "unknown"}).`
+      );
+    }
     return report2.payload;
   };
   const initial = await probe();
@@ -1140,7 +1160,7 @@ process.stdout.on("error",()=>{});
 });
 
 // packages/objective-pguide-setup/src/runner.mjs
-import { mkdir as mkdir2, mkdtemp, rm } from "node:fs/promises";
+import { mkdir as mkdir3, mkdtemp, rm } from "node:fs/promises";
 import { isAbsolute as isAbsolute3, join as join6 } from "node:path";
 async function check(stage, value, options = {}) {
   let directory;
@@ -1185,16 +1205,11 @@ async function check(stage, value, options = {}) {
       () => controller.abort(new Fault("timeout: setup check exceeded its deadline.", 504)),
       subject.timeoutMs
     );
-    await mkdir2(subject.scratchDirectory, { recursive: true });
+    await mkdir3(subject.scratchDirectory, { recursive: true });
     const probeDirectory = options.pilot && !options.selfCheck ? process.env.PGUIDE_PROBE_TEMP_DIR : void 0;
     if (probeDirectory !== void 0 && !isAbsolute3(probeDirectory))
       throw new Fault("outer-timeout: invalid PGUIDE_PROBE_TEMP_DIR runtime metadata.", 400);
-    directory = await mkdtemp(
-      join6(
-        probeDirectory ?? subject.scratchDirectory,
-        probeDirectory === void 0 ? "pguide-setup-" : "s-"
-      )
-    );
+    directory = await mkdtemp(join6(probeDirectory ?? subject.scratchDirectory, "s-"));
     const context = executionContext(
       subject,
       directory,

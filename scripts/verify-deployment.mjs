@@ -318,7 +318,7 @@ async function verifyCliContract() {
 
 async function writeConfig(path, state) {
   const agent = join(fixture, "agent.mjs");
-  await writeFile(
+  await writeConfiguration(
     path,
     `${JSON.stringify(
       {
@@ -329,7 +329,8 @@ async function writeConfig(path, state) {
         agentExecutionLimits: { timeoutMs: 30_000 },
         agents: {
           fixture: {
-            connection: { type: "acp", protocolVersion: "1" },
+            type: "acp",
+            connection: { protocolVersion: "1" },
             transport: {
               type: "stdio",
               command: process.execPath,
@@ -350,6 +351,24 @@ async function writeConfig(path, state) {
       2,
     )}\n`,
   );
+}
+
+async function writeConfiguration(path, source) {
+  const config = JSON.parse(source);
+  if (Object.hasOwn(config, "agents")) {
+    const directory = join(consumer, ".pguide");
+    await mkdir(directory, { recursive: true });
+    await writeFile(
+      join(directory, "agents.yaml"),
+      JSON.stringify({
+        $schema: "https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json",
+        agents: config.agents,
+      }),
+      { mode: 0o600 },
+    );
+    delete config.agents;
+  }
+  await writeFile(path, JSON.stringify(config), { mode: 0o600 });
 }
 
 async function invokeRegulate(config, subject, report, env, extra = []) {
@@ -577,13 +596,14 @@ for await (const line of createInterface({input:process.stdin})) {
 `,
   );
   const config = join(fixture, "supervisor-config.json");
-  await writeFile(
+  await writeConfiguration(
     config,
     JSON.stringify({
       schemaVersion: 2,
       agents: {
         planner: {
-          connection: { type: "acp", protocolVersion: "1" },
+          type: "acp",
+          connection: { protocolVersion: "1" },
           transport: { type: "stdio", command: process.execPath, args: [planner] },
         },
       },
@@ -697,7 +717,7 @@ for await (const line of createInterface({input:process.stdin})) {
 `,
   );
   const configPath = join(consumer, "setup-config.json");
-  await writeFile(
+  await writeConfiguration(
     configPath,
     JSON.stringify({
       schemaVersion: 2,
@@ -709,7 +729,8 @@ for await (const line of createInterface({input:process.stdin})) {
       },
       agents: {
         setup: {
-          connection: { type: "acp", protocolVersion: "1" },
+          type: "acp",
+          connection: { protocolVersion: "1" },
           transport: { type: "stdio", command: process.execPath, args: [agent] },
         },
       },
@@ -830,7 +851,8 @@ async function verifyRegulationPermissions(baseEnv) {
     },
     agents: {
       "permission-fixture": {
-        connection: { type: "acp", protocolVersion: "1" },
+        type: "acp",
+        connection: { protocolVersion: "1" },
         transport: {
           type: "stdio",
           command: process.execPath,
@@ -840,7 +862,7 @@ async function verifyRegulationPermissions(baseEnv) {
     },
   };
   await writeFile(subject, JSON.stringify({ marker }));
-  await writeFile(config, JSON.stringify(configuration));
+  await writeConfiguration(config, JSON.stringify(configuration));
   const denied = await invokeRegulate(config, subject, report, baseEnv);
   assert.equal(denied.code, 3, denied.stdout + denied.stderr);
   const deniedResult = JSON.parse(denied.stdout);
@@ -850,7 +872,7 @@ async function verifyRegulationPermissions(baseEnv) {
   await assert.rejects(access(marker), { code: "ENOENT" });
 
   configuration.regulationPermissions.grants = ["marker-edit"];
-  await writeFile(config, JSON.stringify(configuration));
+  await writeConfiguration(config, JSON.stringify(configuration));
   const args = ["continue", deniedResult.regulationId, "--config", config, "--format", "json"];
   const allowed = await successful(executable("pguide"), args, { cwd: consumer, env: baseEnv });
   assert.equal(JSON.parse(allowed.stdout).status, "target-reached");
@@ -858,7 +880,7 @@ async function verifyRegulationPermissions(baseEnv) {
 
   await unlink(marker);
   configuration.regulationPermissions = { ceiling: [], grants: [] };
-  await writeFile(config, JSON.stringify(configuration));
+  await writeConfiguration(config, JSON.stringify(configuration));
   const revoked = await execute(executable("pguide"), args, { cwd: consumer, env: baseEnv });
   assert.equal(revoked.code, 3, revoked.stdout + revoked.stderr);
   assert.equal(JSON.parse(revoked.stdout).status, "authorization-required");

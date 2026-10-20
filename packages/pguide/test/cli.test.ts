@@ -1,13 +1,20 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
-import { delimiter, join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 import { test } from "node:test";
 import { sameDirectory } from "../src/path.js";
 import { bin, commandPackage, fixture, git, scratch } from "./fixtures.js";
 
 const root = resolve(import.meta.dirname, "..", "..", "..");
 const tmpdir = () => scratch;
+const toolPath = [
+  dirname(process.execPath),
+  ...(process.env.PATH ?? "")
+    .split(delimiter)
+    .filter((path) => existsSync(join(path, process.platform === "win32" ? "git.exe" : "git"))),
+].join(delimiter);
 const top = join(root, "packages", "pguide", "dist", "bin.js");
 const bins = {
   probe: bin("probe"),
@@ -18,6 +25,7 @@ const bins = {
   validate: bin("validate"),
   objectives: bin("objectives"),
   config: join(root, "packages", "pguide-config", "dist", "bin.js"),
+  agents: join(root, "packages", "pguide-agents", "dist", "bin.js"),
 };
 
 function run(
@@ -26,7 +34,20 @@ function run(
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolveRun, reject) => {
-    const child = spawn(process.execPath, [script, ...args], { cwd: root, env, windowsHide: true });
+    const child = spawn(process.execPath, [script, ...args], {
+      cwd: root,
+      env: {
+        ...env,
+        PATH: env.PATH === process.env.PATH ? toolPath : env.PATH,
+        APPDATA:
+          env.APPDATA !== process.env.APPDATA ? env.APPDATA : join(scratch, "cli-isolated-user"),
+        XDG_CONFIG_HOME:
+          env.XDG_CONFIG_HOME !== process.env.XDG_CONFIG_HOME
+            ? env.XDG_CONFIG_HOME
+            : join(scratch, "cli-isolated-user"),
+      },
+      windowsHide: true,
+    });
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");
@@ -49,7 +70,11 @@ test("all package commands expose direct protocol metadata and help", async () =
         join(
           root,
           "packages",
-          command === "config" ? "pguide-config" : commandPackage(command),
+          command === "config"
+            ? "pguide-config"
+            : command === "agents"
+              ? "pguide-agents"
+              : commandPackage(command),
           "package.json",
         ),
         "utf8",
@@ -85,7 +110,7 @@ test("command metadata and detailed help do not load business implementations", 
       "junction",
     );
     for (const [command, source] of Object.entries(bins)) {
-      if (command === "config") continue;
+      if (command === "config" || command === "agents") continue;
       const entry = join(temporary, "dist", "bin", `${command}.js`);
       await copyFile(source, entry);
       for (const args of [
@@ -324,6 +349,7 @@ test("missing optional commands explain installation and conflicting shims fail 
     assert.equal(bundled.code, 0, bundled.stderr);
     const commands = JSON.parse(bundled.stdout).commands;
     assert.deepEqual(commands.map((entry: { command: string }) => entry.command).sort(), [
+      "agents",
       "complete",
       "config",
       "diagnose",
@@ -546,5 +572,112 @@ test("all official commands dispatch through the top-level CLI", async () => {
     }
   } finally {
     await rm(binDirectory, { recursive: true, force: true });
+  }
+});
+
+test("malformed user/project Agent resources do not break main config or Objective-only commands", async () => {
+  const f = await fixture();
+  const home = join(f.directory, "user");
+  const env = { ...process.env, APPDATA: home, XDG_CONFIG_HOME: home, PATH: toolPath };
+  try {
+    for (const scope of ["user", "project"]) {
+      const directory = scope === "user" ? join(home, "pguide") : join(f.repository, ".pguide");
+      await mkdir(directory, { recursive: true });
+      const resource = join(directory, "agents.yaml");
+      await writeFile(resource, "agents: [");
+      const common = ["--cwd", f.repository, "--format", "json"];
+      for (const args of [
+        ["config", "show"],
+        ["config", "path"],
+        ["config", "set", "defaultLanguage", "en-US", "--scope", "project"],
+        ["config", "get", "defaultLanguage"],
+        ["validate", "pilot", f.manifest],
+        ["diagnose"],
+      ]) {
+        const result = await run(top, [...args, ...common], env);
+        assert.equal(
+          result.code,
+          0,
+          `${scope} ${args.join(" ")}: ${result.stdout} ${result.stderr}`,
+        );
+      }
+      for (const args of [
+        ["agents", "validate"],
+        ["diagnose", "agent", "fixture"],
+      ]) {
+        const result = await run(top, [...args, ...common], env);
+        assert.equal(result.code, 2, `${args.join(" ")}: ${result.stdout} ${result.stderr}`);
+        assert.match(result.stdout, /agents YAML/);
+      }
+      const regulation = await run(
+        bins.regulate,
+        [
+          "--agent",
+          "fixture",
+          "--pilot",
+          f.uri,
+          "--subject-file",
+          f.subject,
+          "--target",
+          "terminal",
+          ...common,
+        ],
+        env,
+      );
+      assert.equal(regulation.code, 2, regulation.stdout);
+      assert.match(regulation.stdout, /agents YAML/);
+      await rm(resource);
+    }
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+test("bundled Agent migration is reachable when main configuration rejects embedded profiles", async () => {
+  const directory = await mkdtemp(join(scratch, "pguide-agents-dispatch-"));
+  try {
+    await mkdir(join(directory, ".pguide"));
+    const path = join(directory, ".pguide", "config.yaml");
+    await writeFile(
+      path,
+      JSON.stringify({
+        schemaVersion: 2,
+        defaultAgent: "fixture",
+        agents: {
+          fixture: {
+            type: "acp",
+            connection: { protocolVersion: "1" },
+            transport: { type: "stdio", command: "must-not-run" },
+          },
+        },
+      }),
+    );
+    const before = await run(top, ["config", "validate", "--cwd", directory, "--format", "json"]);
+    assert.equal(before.code, 2, before.stdout);
+    assert.match(before.stdout, /agents migrate/);
+    const migration = await run(top, [
+      "agents",
+      "migrate",
+      "--scope",
+      "project",
+      "--cwd",
+      directory,
+      "--format",
+      "json",
+    ]);
+    assert.equal(migration.code, 0, migration.stdout + migration.stderr);
+    const shown = await run(top, [
+      "agents",
+      "show",
+      "fixture",
+      "--cwd",
+      directory,
+      "--format",
+      "json",
+    ]);
+    assert.equal(shown.code, 0, shown.stdout);
+    assert.equal(JSON.parse(shown.stdout).source.scope, "project");
+    assert.equal((await run(top, ["config", "validate", "--cwd", directory])).code, 0);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
   }
 });

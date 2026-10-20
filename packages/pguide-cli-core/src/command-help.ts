@@ -8,6 +8,7 @@ import {
 } from "./index.js";
 
 type Command =
+  | "agents"
   | "objectives"
   | "probe"
   | "regulate"
@@ -18,6 +19,7 @@ type Command =
 type Handler = Parameters<typeof commandMain>[1];
 
 export const commandDescriptions: Record<Command, string> = {
+  agents: "Manage independent user and project Agent resources",
   objectives: "Discover and manage user and directory Objective declarations",
   probe: "Observe an Objective Pilot",
   regulate: "Run Pilot regulation with per-Agent execution limits",
@@ -28,6 +30,7 @@ export const commandDescriptions: Record<Command, string> = {
 };
 
 export const commandPackages: Record<Command, string> = {
+  agents: "@potential-guide/pguide-agents",
   objectives: "@potential-guide/pguide-objectives",
   probe: "@potential-guide/pguide-pilot",
   scaffold: "@potential-guide/pguide-pilot",
@@ -38,6 +41,21 @@ export const commandPackages: Record<Command, string> = {
 };
 
 const help: Record<Command, CommandHelp> = {
+  agents: {
+    description:
+      "Manage independent agents.yaml resources with complete project-over-user profile replacement.",
+    usage:
+      "pguide agents list|show|set|remove|edit|validate|path|migrate [name] [--scope user|project]",
+    sections: [
+      {
+        title: "Options",
+        lines: [
+          "  --from <file|-> Profile YAML for set",
+          "  --legacy-config <file> Same-scope main config for explicit migrate",
+        ],
+      },
+    ],
+  },
   objectives: {
     description:
       "List/show declarations without evaluation or remote resolution; set/remove/migrate require explicit scope.",

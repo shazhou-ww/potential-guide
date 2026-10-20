@@ -207,6 +207,9 @@ importers:
       '@potential-guide/cli-core':
         specifier: workspace:^
         version: link:../pguide-cli-core
+      '@potential-guide/pguide-agents':
+        specifier: workspace:^
+        version: link:../pguide-agents
       '@potential-guide/pguide-config':
         specifier: workspace:^
         version: link:../pguide-config
@@ -250,6 +253,25 @@ importers:
       '@types/cross-spawn':
         specifier: 'catalog:'
         version: 6.0.6
+
+  packages/pguide-agents:
+    dependencies:
+      '@potential-guide/cli-core':
+        specifier: workspace:^
+        version: link:../pguide-cli-core
+      cross-spawn:
+        specifier: 'catalog:'
+        version: 7.0.6
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.1
+    devDependencies:
+      '@types/cross-spawn':
+        specifier: 'catalog:'
+        version: 6.0.6
+      ajv:
+        specifier: 'catalog:'
+        version: 8.20.0
 
   packages/pguide-cli-core:
     dependencies:

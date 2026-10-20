@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { validateAgentProfile } from "@potential-guide/cli-core";
 
 export const root = resolve(import.meta.dirname, "..", "..", "..");
 export const scratch = join(root, ".cache");
@@ -27,6 +28,13 @@ export function run(
   env: NodeJS.ProcessEnv = process.env,
   input?: string,
 ) {
+  // Fixture configs no longer carry Agent resources; their containing directory
+  // is the isolated project scope unless the test explicitly chooses another.
+  const configIndex = args.indexOf("--config");
+  if (configIndex >= 0 && !args.includes("--cwd")) {
+    const config = args[configIndex + 1];
+    if (config) args = [...args, "--cwd", dirname(config)];
+  }
   return new Promise<{ code: number; stdout: string; stderr: string }>((done, reject) => {
     const child = spawn(process.execPath, [script, ...args], {
       cwd: root,
@@ -51,8 +59,28 @@ export function run(
     if (input !== undefined) child.stdin.end(input);
   });
 }
-export async function fixture(baseDirectory = scratch) {
-  const directory = await mkdtemp(join(baseDirectory, "pguide-test-"));
+export async function writeConfig(path: string, source: string, cwd = dirname(path)) {
+  const value = JSON.parse(source);
+  if (Object.hasOwn(value, "agents")) {
+    await mkdir(join(cwd, ".pguide"), { recursive: true });
+    await writeFile(
+      join(cwd, ".pguide", "agents.yaml"),
+      JSON.stringify({
+        $schema: "https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json",
+        agents: Object.fromEntries(
+          Object.entries(value.agents).map(([name, profile]) => [
+            name,
+            validateAgentProfile(profile),
+          ]),
+        ),
+      }),
+    );
+    delete value.agents;
+  }
+  await writeFile(path, JSON.stringify(value));
+}
+export async function fixture(baseDirectory = scratch, prefix = "pguide-test-") {
+  const directory = await mkdtemp(join(baseDirectory, prefix));
   const repository = join(directory, "repository");
   await mkdir(repository);
   await git(repository, "init", "-q");

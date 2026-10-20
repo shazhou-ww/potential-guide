@@ -123,10 +123,13 @@ test("top-level discriminants normalize only valid legacy ACP and reject mixed p
     transport: legacy.transport,
   });
   const ahp = profile("wss://host.example.invalid/ahp");
-  const config = parseConfig(
-    JSON.stringify({ schemaVersion: 2, agents: { old: legacy, new: normalized, remote: ahp } }),
+  assert.throws(
+    () =>
+      parseConfig(
+        JSON.stringify({ schemaVersion: 2, agents: { old: legacy, new: normalized, remote: ahp } }),
+      ),
+    /pguide agents migrate/,
   );
-  assert.deepEqual(config.agents, { old: normalized, new: normalized, remote: ahp });
   for (const invalid of [
     { ...legacy, type: "acp" },
     { ...legacy, type: "ahp" },

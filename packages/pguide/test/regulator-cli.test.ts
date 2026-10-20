@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import type { AgentInput } from "@potential-guide/objective-regulator";
 import { agentPrompt, executeAcpAgent } from "../../pguide-regulate/src/commands/regulator.js";
-import { bin, fixture, git, root, run, scratch } from "./fixtures.js";
+import { bin, fixture, git, root, run, scratch, writeConfig } from "./fixtures.js";
 
 test("permissions persist per attempt and continue uses current grants and revoked ceiling", async () => {
   const f = await fixture();
@@ -47,7 +47,7 @@ if(m.id!==undefined)console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result:m.m
         },
       },
     };
-    await writeFile(config, JSON.stringify(value));
+    await writeConfig(config, JSON.stringify(value));
     const first = await run(bin("regulate"), [
       "--pilot",
       f.uri,
@@ -68,7 +68,7 @@ if(m.id!==undefined)console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result:m.m
     assert.equal(denied.outcome.authorizationRequests[0].operation, "edit");
     assert.deepEqual(denied.attempts[0].permissions.grants, []);
     permissions.grants = ["marker"];
-    await writeFile(config, JSON.stringify(value));
+    await writeConfig(config, JSON.stringify(value));
     const args = [denied.regulationId, "--config", config, "--format", "json"];
     const resumed = await run(bin("continue"), args);
     assert.equal(resumed.code, 0, resumed.stdout + resumed.stderr);
@@ -76,7 +76,7 @@ if(m.id!==undefined)console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result:m.m
     assert.deepEqual(JSON.parse(resumed.stdout).attempts[1].permissions.grants, ["marker"]);
     await rm(marker);
     value.regulationPermissions = { ceiling: [], grants: [] };
-    await writeFile(config, JSON.stringify(value));
+    await writeConfig(config, JSON.stringify(value));
     const revoked = await run(bin("continue"), args);
     assert.equal(revoked.code, 3, revoked.stdout + revoked.stderr);
     const final = JSON.parse(revoked.stdout);
@@ -129,7 +129,7 @@ m.method==="session/new"?{sessionId:"same"}:m.method==="session/prompt"?{stopRea
 console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
     );
     const config = join(f.directory, "config.json");
-    await writeFile(
+    await writeConfig(
       config,
       JSON.stringify({
         schemaVersion: 2,
@@ -265,7 +265,7 @@ test("regulate and continue persist pinned Pilot observations and use the JSON c
       quota: { timeoutMs: 30000, maxAgentRuns: 10, maxStallRuns: 3 },
       probe: { timeoutMs: 5000, retry: { maxRetries: 1, delayMs: 1 } },
     };
-    await writeFile(
+    await writeConfig(
       config,
       JSON.stringify({
         schemaVersion: 2,
@@ -485,7 +485,7 @@ test("per-Agent timeout includes ACP startup and invocation failures never start
       'import{writeFileSync}from"node:fs";writeFileSync(process.env.STARTED,"yes");setInterval(()=>{},1000);',
     );
     const config = join(f.directory, "config.yaml");
-    await writeFile(
+    await writeConfig(
       config,
       JSON.stringify({
         schemaVersion: 2,
@@ -543,7 +543,7 @@ test("one-shot regulation finishes at target without scheduling another observat
   try {
     const commit = await f.commit();
     const config = join(f.directory, "one-shot.yaml");
-    await writeFile(
+    await writeConfig(
       config,
       JSON.stringify({
         schemaVersion: 2,
@@ -603,7 +603,7 @@ test("continue preserves local unpublished source metadata without changing the 
     const identity = "git+https://example.invalid/unpublished.git#objective/";
     const state = join(f.directory, "state");
     const config = join(f.directory, "config.yaml");
-    await writeFile(
+    await writeConfig(
       config,
       JSON.stringify({
         schemaVersion: 2,

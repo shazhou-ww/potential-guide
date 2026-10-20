@@ -5,6 +5,15 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
+    "@potential-guide/cli-core#build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/schemas/agents/v1.json",
+        "$TURBO_ROOT$/scripts/build-agents-schema.mjs"
+      ],
+      "outputs": ["dist/**"]
+    },
     "clean": {
       "cache": false
     },

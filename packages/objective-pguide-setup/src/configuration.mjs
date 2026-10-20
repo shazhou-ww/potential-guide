@@ -14,7 +14,7 @@ export async function configured(subject, context) {
   const capabilities = jsonOutput(help);
   if (!Array.isArray(capabilities.commands) || !record(capabilities.conflicts))
     throw new Fault("protocol: unsupported command discovery response.");
-  for (const name of ["config", "probe", "regulate"])
+  for (const name of ["config", "agents", "probe", "regulate"])
     if (
       capabilities.conflicts[name] !== undefined ||
       !capabilities.commands.some(
@@ -36,8 +36,16 @@ export async function configured(subject, context) {
     throw new Fault("protocol: unsupported configuration response.");
   const config = value.config;
   const name = subject.agent ?? config.defaultAgent;
-  if (!nonempty(name) || !record(config.agents?.[name])) throw new Problem("agent-missing");
-  const profile = config.agents[name];
+  if (!nonempty(name)) throw new Problem("agent-missing");
+  const selected = await context.cli(
+    ["agents", "show", name],
+    subject.configPath,
+    subject.workingDirectory,
+  );
+  if (selected.code !== 0) throw new Problem("agent-missing");
+  const resource = jsonOutput(selected);
+  if (!record(resource.profile)) throw new Fault("protocol: unsupported Agent resource response.");
+  const profile = resource.profile;
   if (profile.type === "ahp")
     throw new Problem("acp-unavailable", {
       reason:
@@ -59,7 +67,7 @@ export async function configured(subject, context) {
       (!Array.isArray(profile.transport.env) ||
         !profile.transport.env.every((key) => /^[A-Z_][A-Z0-9_]*$/.test(key))))
   )
-    throw new Fault("protocol: invalid Agent profile returned by config.");
+    throw new Fault("protocol: invalid Agent profile returned by agents.");
   if ((profile.transport.env ?? []).some((key) => !nonempty(context.env[key])))
     throw new Problem("environment-unavailable");
   return { config, name, profile };

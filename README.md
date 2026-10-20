@@ -22,6 +22,8 @@ and the extensible `pguide` command line:
   using protocol only; `@potential-guide/cli-runtime` assembles Git-backed Pilots.
 - `@potential-guide/pguide-config` is the configuration extension whose executable is
   `pguide-config` and whose command name is `config`.
+- `@potential-guide/pguide-agents` manages independent user/project `agents.yaml`
+  resources through `pguide agents`; profiles no longer belong in the main config.
 - `pguide` is a discovery/dispatch entrypoint that installs Pilot commands and
   configuration and Objective declaration management by default. Regulation and supervision
   remain optional.
@@ -85,8 +87,12 @@ Commit the specification and its resources before probing so that the reported
 version identifies the contents actually evaluated. Validation and scaffolding
 do not require a committed version.
 
-`pguide regulate` uses only named ACP Agent profiles from user, project, or
-explicit YAML configuration. Regulation state and protocol-visible transcript
+`pguide regulate` uses named ACP/AHP profiles from user/project `agents.yaml`.
+Project same-name profiles replace whole user profiles. Main config retains
+`defaultAgent`; `--config` is not a third Agent resource scope. Migrate old embedded
+profiles explicitly with `pguide agents migrate --scope user|project`.
+See the [Agent manager](./packages/pguide-agents/README.md).
+Regulation state and protocol-visible transcript
 are stored under the platform state directory; credentials are never persisted.
 
 ### Govern this repository

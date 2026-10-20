@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json",
+  "title": "Potential Guide Agent resources v1",
+  "description": "User and project Agent profiles. Credential values are forbidden; only environment references are permitted. Runtime validation additionally rejects secret-like arguments, URLs and values.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "agents"],
+  "properties": {
+    "$schema": { "const": "https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json" },
+    "agents": {
+      "type": "object",
+      "propertyNames": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+      "additionalProperties": { "$ref": "#/$defs/profile" }
+    }
+  },
+  "$defs": {
+    "nonempty": { "type": "string", "pattern": "\\S" },
+    "environmentName": { "type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$" },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "sessionResume": { "type": "boolean" } }
+    },
+    "stdio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "command"],
+      "properties": {
+        "type": { "const": "stdio" },
+        "command": { "$ref": "#/$defs/nonempty" },
+        "args": { "type": "array", "items": { "$ref": "#/$defs/nonempty" } },
+        "env": { "type": "array", "items": { "$ref": "#/$defs/environmentName" } }
+      }
+    },
+    "acp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "connection", "transport"],
+      "properties": {
+        "type": { "const": "acp" },
+        "connection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["protocolVersion"],
+          "properties": { "protocolVersion": { "type": "string", "pattern": "^[1-9][0-9]*$" } }
+        },
+        "transport": { "$ref": "#/$defs/stdio" },
+        "requirements": { "$ref": "#/$defs/requirements" }
+      }
+    },
+    "resourceCredential": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resource", "tokenEnv"],
+      "properties": {
+        "resource": { "$ref": "#/$defs/nonempty" },
+        "tokenEnv": { "$ref": "#/$defs/environmentName" }
+      }
+    },
+    "authentication": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "none" },
+            "resources": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/resourceCredential" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "parameter", "tokenEnv"],
+          "properties": {
+            "type": { "const": "query-token" },
+            "parameter": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+            "tokenEnv": { "$ref": "#/$defs/environmentName" },
+            "resources": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/resourceCredential" }
+            }
+          }
+        }
+      ]
+    },
+    "ahp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "connection", "transport"],
+      "properties": {
+        "type": { "const": "ahp" },
+        "confirmations": { "enum": ["deny", "external"] },
+        "connection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["protocolVersion", "agent"],
+          "properties": {
+            "protocolVersion": { "enum": ["1.0.0", "0.9.0"] },
+            "agent": { "$ref": "#/$defs/nonempty" }
+          }
+        },
+        "transport": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "url"],
+          "properties": {
+            "type": { "const": "websocket" },
+            "url": { "type": "string", "pattern": "^wss?://[^@?#\\s]+$" }
+          }
+        },
+        "authentication": { "$ref": "#/$defs/authentication" },
+        "requirements": { "$ref": "#/$defs/requirements" }
+      }
+    },
+    "profile": {
+      "oneOf": [{ "$ref": "#/$defs/acp" }, { "$ref": "#/$defs/ahp" }]
+    }
+  }
+}

@@ -18,6 +18,9 @@ import { homedir, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parse, stringify } from "yaml";
+
+export * from "./agents.js";
+
 import { parseRegulationPermissions, type RegulationPermissions } from "./permissions.js";
 import { killProcessTree } from "./process-tree.js";
 import { pipeRedactedSecrets } from "./streaming-secret-redactor.js";
@@ -84,7 +87,6 @@ export interface PguideConfig {
     probe?: { timeoutMs: number; retry: { maxRetries: number; delayMs: number } };
     quota?: { timeoutMs: number; maxAgentRuns: number; maxStallRuns: number };
   };
-  agents?: Record<string, AgentProfile>;
   objectives?: Record<string, string>;
 }
 
@@ -431,6 +433,10 @@ export function parseConfig(source: string): PguideConfig {
     throw new CliError(`Invalid YAML: ${error instanceof Error ? error.message : String(error)}`);
   }
   if (!record(raw)) throw new CliError("Configuration must be an object.");
+  if (Object.hasOwn(raw, "agents"))
+    throw new CliError(
+      "Embedded agents are retired. Run pguide agents migrate --scope user|project (optionally --legacy-config <main-config>) to move profiles to agents.yaml and preserve source evidence.",
+    );
   if (raw.schemaVersion === 1 || raw.limits !== undefined) {
     throw new CliError(
       "Legacy configuration is incompatible. Use schemaVersion: 2 and agentExecutionLimits.timeoutMs; cross-round iteration and stalled budgets are no longer supported.",
@@ -452,7 +458,6 @@ export function parseConfig(source: string): PguideConfig {
       "agentExecutionLimits",
       "regulationPermissions",
       "regulationStrategy",
-      "agents",
       "objectives",
     ],
     "Configuration",
@@ -561,13 +566,6 @@ export function parseConfig(source: string): PguideConfig {
       timer(strategy.probe.retry.delayMs, "regulationStrategy.probe.retry.delayMs", true);
     }
   }
-  if (raw.agents !== undefined) {
-    if (!record(raw.agents)) throw new CliError("agents must be an object.");
-    for (const [name, profile] of Object.entries(raw.agents)) {
-      if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) throw new CliError(`Invalid agent name: ${name}.`);
-      raw.agents[name] = validateAgentProfile(profile);
-    }
-  }
   if (raw.objectives !== undefined) {
     if (!record(raw.objectives)) throw new CliError("objectives must be an object.");
     for (const [name, location] of Object.entries(raw.objectives)) {
@@ -655,11 +653,9 @@ function mergeConfig(
     };
   if (incoming.regulationStrategy !== undefined)
     next.regulationStrategy = { ...target.regulationStrategy, ...incoming.regulationStrategy };
-  if (incoming.agents !== undefined) next.agents = { ...target.agents, ...incoming.agents };
   if (incoming.objectives !== undefined)
     next.objectives = { ...target.objectives, ...incoming.objectives };
   for (const key of Object.keys(incoming)) sources[key] = source;
-  for (const name of Object.keys(incoming.agents ?? {})) sources[`agents.${name}`] = source;
   for (const name of Object.keys(incoming.objectives ?? {})) sources[`objectives.${name}`] = source;
   return next;
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { randomUUID } from "node:crypto";
 import { readFile, unlink } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import {
   atomicWrite,
   CliError,
@@ -10,11 +10,8 @@ import {
   loadConfig,
   type PguideConfig,
   parseConfig,
-  readStdin,
   redactConfig,
-  redactSensitive,
   userConfigPath,
-  validateAgentProfile,
   writeResult,
 } from "@potential-guide/cli-core";
 import spawn from "cross-spawn";
@@ -66,6 +63,13 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     );
     return;
   }
+  if (
+    ["list-agents", "show-agent", "add-agent", "update-agent", "remove-agent"].includes(subcommand)
+  ) {
+    throw new CliError(
+      "Agent commands moved to pguide agents list|show|set|remove. Embedded profiles are rejected; run pguide agents migrate --scope user|project explicitly.",
+    );
+  }
   const loaded = await loadConfig(globals.cwd, globals.config);
   if (subcommand === "show") {
     writeResult(
@@ -93,21 +97,6 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     );
     return;
   }
-  if (subcommand === "list-agents") {
-    const agents = Object.entries(loaded.value.agents ?? {}).map(([name, profile]) => ({
-      name,
-      source: loaded.sources[`agents.${name}`],
-      type: profile.type,
-      protocolVersion: profile.connection.protocolVersion,
-      transport: profile.transport.type,
-    }));
-    writeResult(
-      { schemaVersion: 1, agents },
-      globals.format,
-      agents.map(({ name, source }) => `${name}\t${source}`).join("\n"),
-    );
-    return;
-  }
   if (subcommand === "list-objectives") {
     const objectives = Object.entries(loaded.value.objectives ?? {}).map(([name, location]) => ({
       name,
@@ -126,18 +115,6 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
                 `${name} (legacy source alias)\n  Location: ${location}\n  Source:   ${source}`,
             )
             .join("\n\n"),
-    );
-    return;
-  }
-  if (subcommand === "show-agent") {
-    const name = argv[1];
-    const profile = name === undefined ? undefined : loaded.value.agents?.[name];
-    if (profile === undefined) throw new CliError(`Unknown Agent profile: ${name ?? ""}.`);
-    const safeProfile = redactSensitive(profile);
-    writeResult(
-      { schemaVersion: 1, name, profile: safeProfile, source: loaded.sources[`agents.${name}`] },
-      globals.format,
-      stringify(safeProfile),
     );
     return;
   }
@@ -206,27 +183,6 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     )
       throw new CliError(`Objective does not exist in this scope: ${name ?? ""}.`);
     delete config.objectives[name];
-  } else if (subcommand === "add-agent" || subcommand === "update-agent") {
-    const name = argv[1];
-    const sourcePath = argv[2];
-    if (name === undefined || sourcePath === undefined)
-      throw new CliError(`${subcommand} requires <name> <source>.`);
-    const exists = config.agents?.[name] !== undefined;
-    if (subcommand === "add-agent" && exists) throw new CliError(`Agent already exists: ${name}.`);
-    if (subcommand === "update-agent" && !exists)
-      throw new CliError(`Agent does not exist: ${name}.`);
-    const source =
-      sourcePath === "-"
-        ? await readStdin()
-        : await readFile(resolve(globals.cwd, sourcePath), "utf8");
-    config.agents = { ...config.agents, [name]: validateAgentProfile(parse(source)) };
-  } else if (subcommand === "remove-agent") {
-    const name = argv[1];
-    if (name === undefined || config.agents?.[name] === undefined)
-      throw new CliError(`Agent does not exist: ${name ?? ""}.`);
-    const agents = { ...config.agents };
-    delete agents[name];
-    config.agents = agents;
   } else if (subcommand === "set") {
     const key = argv[1];
     const source = argv[2];
