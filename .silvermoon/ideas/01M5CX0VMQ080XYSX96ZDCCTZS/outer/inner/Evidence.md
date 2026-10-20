@@ -80,3 +80,15 @@ Pages workflow 的路径、内容不可变/删除/不可用保护通过本地测
 并发 Agent 分支已集成并再次完整检查。父协调者仍需重点复核 CLI profile 消费
 隔离性、root objectives/package 声明和 monorepo 包数量；新增 Agent workspace 的
 声明也已转换为当前 Objective 契约，未改变 Agent 资源加载语义。
+
+## 主协调者集成审查
+
+独立只读审查发现 discovery/alias CLI 响应错误标注为声明文档 URI；
+`f7ff6c1` 将其恢复为既有 CLI response version，并增加真实 list/show/alias
+输出回归。主协调者复核修复，不把发现响应数组误宣称为声明文件 schema。
+
+与 Agent 分支及 `2e92f07` 的部署验证工具修复集成后，在干净短路径工作区再次
+执行完整 `pnpm check`，退出 0：workspace test/build 40 个任务成功，
+pguide 88 项中 86 通过、2 平台跳过，根脚本 39/39，16 包及九种隔离消费通过。
+另直接执行 protocol 9/9 与不可变发布测试 2/2，避免只依赖缓存叙述。
+公开 Pages 和真实 POSIX 消费仍在外部阶段验证，不以本节替代。

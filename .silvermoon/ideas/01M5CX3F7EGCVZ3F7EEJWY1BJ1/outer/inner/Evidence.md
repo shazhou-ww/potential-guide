@@ -28,3 +28,11 @@
 `pnpm check` 和独立打包均在 Windows 执行。测试对 POSIX/Windows 标准函数的
 对照不冒充真实 POSIX 宿主消费；真实双平台独立消费和公共 schema 字节验证
 仍留给 Deployment。没有生命周期提交/验收事件、push 或 npm 发布。
+
+## 主协调者复核
+
+主协调者在 Agent 配置分支与 CLI schema 响应修复集成后，再次完成
+`pnpm check`，pguide 88 项中 86 通过、2 平台跳过，根脚本 39/39，
+16 包和九种隔离消费场景通过；protocol 9/9 和发布保护 2/2 另行直接运行。
+审查发现的 CLI 响应 schema 身份问题已修复并有实际响应回归覆盖。
+本节不声称真实 POSIX 环境或公开 URI 已通过外部验收。
