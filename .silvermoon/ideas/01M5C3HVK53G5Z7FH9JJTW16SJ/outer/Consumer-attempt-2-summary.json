@@ -1,0 +1,2048 @@
+{
+  "schemaVersion": 1,
+  "planRevision": "3a7de1c53fc74b391fb7913b15f701d1a7d6633d",
+  "planCommit": "3a6e2b3174567310fe957da24d0fc9981f9810db",
+  "acceptedInner": "61ecfc89b1208bca68ca7ec98e8caf2adf4f77ea",
+  "startedAt": "2026-10-20T09:55:57.607Z",
+  "environment": {
+    "node": "v24.12.0",
+    "pguide": "0.4.0-rc.0",
+    "globalBin": "C:\\Users\\Wei\\AppData\\Local\\pnpm\\bin",
+    "packageRoot": "C:\\Users\\Wei\\AppData\\Local\\pnpm\\bin\\node_modules\\pguide",
+    "packageReal": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\packages\\pguide",
+    "installedPilot": "C:\\Users\\Wei\\AppData\\Local\\pnpm\\bin\\node_modules\\pguide\\node_modules\\@potential-guide\\objective-pilot\\dist\\index.js",
+    "objectivePilot": "0.2.0-rc.0",
+    "objectivePilotSha256": "6a4440e385058b3b37f1ac4af56bee6230c63db4f5d36ac46f3b118c6093f8c5"
+  },
+  "scratch": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV",
+  "scenarios": [
+    {
+      "id": "global-objectives-wiring-and-user-discovery",
+      "passed": true,
+      "milliseconds": 1247,
+      "details": {
+        "metadata": {
+          "protocol": "pguide-command-v1",
+          "command": "objectives",
+          "description": "Discover and manage user and directory Objective declarations",
+          "version": "0.4.0-rc.0"
+        },
+        "discovered": {
+          "command": "objectives",
+          "description": "Discover and manage user and directory Objective declarations",
+          "builtIn": false,
+          "path": "C:\\Users\\Wei\\AppData\\Local\\pnpm\\bin\\pguide-objectives.cmd",
+          "compatible": true,
+          "source": "configured",
+          "protocol": "pguide-command-v1"
+        }
+      }
+    },
+    {
+      "id": "readonly-discovery-and-explicit-scope",
+      "passed": true,
+      "milliseconds": 3435,
+      "details": {
+        "entries": [
+          {
+            "name": "unit",
+            "scope": "user",
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\user\\pguide\\objectives.yaml",
+            "revision": "7ca563c313ea3eee72dd52470711b946af62578eee0debbef93e410506a745ff"
+          },
+          {
+            "name": "param",
+            "scope": "user",
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\user\\pguide\\objectives.yaml",
+            "revision": "7ca563c313ea3eee72dd52470711b946af62578eee0debbef93e410506a745ff"
+          },
+          {
+            "name": "unit",
+            "scope": "directory",
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\objectives.yaml",
+            "revision": "31b52ba33c979b46cdd6cfcdf3cc4da08d9fcade03540d3bd71c2e5b2fd38155"
+          },
+          {
+            "name": "param",
+            "scope": "directory",
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\objectives.yaml",
+            "revision": "31b52ba33c979b46cdd6cfcdf3cc4da08d9fcade03540d3bd71c2e5b2fd38155"
+          },
+          {
+            "name": "repair",
+            "scope": "directory",
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\objectives.yaml",
+            "revision": "31b52ba33c979b46cdd6cfcdf3cc4da08d9fcade03540d3bd71c2e5b2fd38155"
+          },
+          {
+            "name": "recover",
+            "scope": "directory",
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\objectives.yaml",
+            "revision": "31b52ba33c979b46cdd6cfcdf3cc4da08d9fcade03540d3bd71c2e5b2fd38155"
+          },
+          {
+            "name": "portfolio",
+            "scope": "directory",
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\objectives.yaml",
+            "revision": "31b52ba33c979b46cdd6cfcdf3cc4da08d9fcade03540d3bd71c2e5b2fd38155"
+          },
+          {
+            "name": "publish",
+            "scope": "directory",
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\objectives.yaml",
+            "revision": "31b52ba33c979b46cdd6cfcdf3cc4da08d9fcade03540d3bd71c2e5b2fd38155"
+          },
+          {
+            "name": "remote-unresolved",
+            "scope": "directory",
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\objectives.yaml",
+            "revision": "31b52ba33c979b46cdd6cfcdf3cc4da08d9fcade03540d3bd71c2e5b2fd38155"
+          },
+          {
+            "name": "extensible",
+            "scope": "directory",
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\objectives.yaml",
+            "revision": "31b52ba33c979b46cdd6cfcdf3cc4da08d9fcade03540d3bd71c2e5b2fd38155"
+          },
+          {
+            "name": "bad-projection",
+            "scope": "directory",
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\objectives.yaml",
+            "revision": "31b52ba33c979b46cdd6cfcdf3cc4da08d9fcade03540d3bd71c2e5b2fd38155"
+          },
+          {
+            "name": "bad-subject",
+            "scope": "directory",
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\objectives.yaml",
+            "revision": "31b52ba33c979b46cdd6cfcdf3cc4da08d9fcade03540d3bd71c2e5b2fd38155"
+          },
+          {
+            "name": "missing-source",
+            "scope": "directory",
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\objectives.yaml",
+            "revision": "31b52ba33c979b46cdd6cfcdf3cc4da08d9fcade03540d3bd71c2e5b2fd38155"
+          }
+        ],
+        "noChecksOrAgents": true,
+        "noParentInheritance": true
+      }
+    },
+    {
+      "id": "root-subdirectory-and-two-checkouts",
+      "passed": true,
+      "milliseconds": 3823,
+      "details": [
+        {
+          "directory": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer",
+          "relative": ".",
+          "checkout": "urn:pguide:checkout:d09988055afb0719428e65788340018fcb94023a80e4cfe826d22c2bce4cf724",
+          "tag": "directory-unit"
+        },
+        {
+          "directory": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\plain",
+          "relative": "plain",
+          "checkout": "urn:pguide:checkout:d09988055afb0719428e65788340018fcb94023a80e4cfe826d22c2bce4cf724",
+          "tag": "directory-unit"
+        },
+        {
+          "directory": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\checkout2",
+          "relative": ".",
+          "checkout": "urn:pguide:checkout:e67d6fd1c834ac0cca339c5e35601ea393bee277bbd4201eb14aafbc5b762e73",
+          "tag": "directory-unit"
+        }
+      ]
+    },
+    {
+      "id": "input-types-are-orthogonal-to-scope",
+      "passed": true,
+      "milliseconds": 12559,
+      "details": {
+        "unitAndParameterizedInBothScopes": true,
+        "extensibleObjectRequiresExplicitInput": true
+      }
+    },
+    {
+      "id": "explicit-errors-and-atomic-management",
+      "passed": true,
+      "milliseconds": 6676,
+      "details": {
+        "invalidTargetPreservedFile": true,
+        "explicitMigrationPreservedOtherAliases": true
+      }
+    },
+    {
+      "id": "probe-does-not-repair-and-bounded-regulation",
+      "passed": true,
+      "milliseconds": 3482,
+      "details": {
+        "stopReason": "target-reached",
+        "iterations": 1,
+        "regulationId": "438b7ef3-c693-40b3-8171-70c7de1cf2d5"
+      }
+    },
+    {
+      "id": "directory-tree-and-retrieval-commit-are-distinct",
+      "passed": true,
+      "milliseconds": 6084,
+      "details": {
+        "first": {
+          "kind": "git-tree",
+          "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+          "directory": "unit",
+          "commit": "b8f616dc3e802c9f66cd409cf0ef562ecbc9767f",
+          "tree": "91f88fa7b18636c2d787d2ad4026ecb9e771eca4",
+          "repositoryTree": "99f8a713aa889381896e49504379f60a3a55f593"
+        },
+        "unrelated": {
+          "kind": "git-tree",
+          "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+          "directory": "unit",
+          "commit": "f7f317469195351e1c14522ef296fa7d7cedc804",
+          "tree": "91f88fa7b18636c2d787d2ad4026ecb9e771eca4",
+          "repositoryTree": "9fcbfb3aa032af0148c4f7fbe7783989179f0a78"
+        },
+        "asset": {
+          "kind": "git-tree",
+          "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+          "directory": "unit",
+          "commit": "35eda6c4b021873bf0ebf4e7c5d11dd72abf050d",
+          "tree": "faf1c6d2736ffc38a0942021b644d42b7f24c349",
+          "repositoryTree": "77faf2109f900c2a711c87676874486e07c49825"
+        },
+        "references": {
+          "kind": "git-tree",
+          "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+          "directory": "unit",
+          "commit": "3f2e88d3073402dec68ff48f9ebfe5b211a8f011",
+          "tree": "dbf801e300cafd9a3e0203d993901f3c7e7f188d",
+          "repositoryTree": "2300b2f12a97c3896bc43376ca04cea4e4428e6a"
+        }
+      }
+    },
+    {
+      "id": "continue-uses-original-binding-and-rejects-old-evidence",
+      "passed": true,
+      "milliseconds": 4928,
+      "details": {
+        "savedCommit": "3f2e88d3073402dec68ff48f9ebfe5b211a8f011",
+        "savedTree": "a63449c9306bf409f79c0a745a60d5853e9b2d72",
+        "latest": {
+          "kind": "git-tree",
+          "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+          "directory": "recover",
+          "commit": "216c72d938cbbc35373691febea34d4a1bb7f297",
+          "tree": "280750461240aac2954463107421cd863fe2382e",
+          "repositoryTree": "35b8829cb51e6cab71a0a4c5dfda18852d1cc166"
+        },
+        "originalSubject": {},
+        "declarationRevision": "31b52ba33c979b46cdd6cfcdf3cc4da08d9fcade03540d3bd71c2e5b2fd38155"
+      }
+    },
+    {
+      "id": "consumer-discovers-and-supervisor-advances-two-directory-dependencies",
+      "passed": true,
+      "milliseconds": 51577,
+      "details": {
+        "dependencies": [
+          {
+            "kind": "dependency",
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#child-a/",
+            "subject": {
+              "marker": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\a\\ready.marker"
+            },
+            "expectedLevelId": "terminal",
+            "currentLevelId": "initial"
+          },
+          {
+            "kind": "dependency",
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#child-b/",
+            "subject": {
+              "marker": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\b\\ready.marker"
+            },
+            "expectedLevelId": "terminal",
+            "currentLevelId": "initial"
+          }
+        ],
+        "handoff": "dependency-required",
+        "discoveries": [
+          {
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\a\\objectives.yaml",
+            "revision": "3328caa0f06cd2735bf92cab69480753474035cba1f057ec288a0fa2f39ff380",
+            "pilot": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#child-a/",
+            "subject": {
+              "marker": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\a\\ready.marker"
+            },
+            "expectedLevelId": "terminal"
+          },
+          {
+            "file": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\b\\objectives.yaml",
+            "revision": "621830882add9939741e7a841f46f9b011d31393c26f9ad32e15f92b0bb0af5e",
+            "pilot": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#child-b/",
+            "subject": {
+              "marker": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\b\\ready.marker"
+            },
+            "expectedLevelId": "terminal"
+          }
+        ],
+        "final": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#portfolio/",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-20T09:57:30.598Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#portfolio/": "a3312c527a70d3d4077ae7f422a5b27f1bb54ce8",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#child-a/": "a6215010bcaaaf5bb7ad989aee0784057fda3354",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#child-b/": "bbefd7e01731986732d8f7e4436263fc169ef984"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#portfolio/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "portfolio",
+                "commit": "216c72d938cbbc35373691febea34d4a1bb7f297",
+                "tree": "a3312c527a70d3d4077ae7f422a5b27f1bb54ce8",
+                "repositoryTree": "35b8829cb51e6cab71a0a4c5dfda18852d1cc166"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#child-a/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "child-a",
+                "commit": "216c72d938cbbc35373691febea34d4a1bb7f297",
+                "tree": "a6215010bcaaaf5bb7ad989aee0784057fda3354",
+                "repositoryTree": "35b8829cb51e6cab71a0a4c5dfda18852d1cc166"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#child-b/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "child-b",
+                "commit": "796218c5735be8ba8d9180c63334bd53ed63ff69",
+                "tree": "bbefd7e01731986732d8f7e4436263fc169ef984",
+                "repositoryTree": "90b59a3426596c94f1a7cf31ee3afc5c43d8be2e"
+              }
+            }
+          }
+        },
+        "repairs": [
+          {
+            "type": "repair",
+            "pid": 42840,
+            "subject": {
+              "marker": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\a\\ready.marker"
+            }
+          },
+          {
+            "type": "repair",
+            "pid": 23164,
+            "subject": {
+              "marker": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\consumer\\b\\ready.marker"
+            }
+          }
+        ],
+        "events": [
+          "started",
+          "result",
+          "started",
+          "result",
+          "started",
+          "result",
+          "started",
+          "result"
+        ]
+      }
+    },
+    {
+      "id": "installed-continuous-supervise-follows-root-and-dependency-without-portfolio-edits",
+      "passed": true,
+      "milliseconds": 47114,
+      "details": {
+        "firstCommit": "216c72d938cbbc35373691febea34d4a1bb7f297",
+        "firstTree": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae",
+        "unrelatedCommit": "0dc838aedffbd40eb058e98eb520e2c6f2e32200",
+        "changedCommit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+        "changedTree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+        "firstDependency": "796218c5735be8ba8d9180c63334bd53ed63ff69",
+        "firstDependencyTree": "f9bf91c00cde331169234d36c24208b90bef723f",
+        "dependencyCommit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+        "dependencyTree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+        "portfolioUnchanged": true,
+        "stableFinal": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-20T09:58:18.329Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          }
+        },
+        "observedVersions": [
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "216c72d938cbbc35373691febea34d4a1bb7f297",
+                "tree": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae",
+                "repositoryTree": "35b8829cb51e6cab71a0a4c5dfda18852d1cc166"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "216c72d938cbbc35373691febea34d4a1bb7f297",
+                "tree": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae",
+                "repositoryTree": "35b8829cb51e6cab71a0a4c5dfda18852d1cc166"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "216c72d938cbbc35373691febea34d4a1bb7f297",
+                "tree": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae",
+                "repositoryTree": "35b8829cb51e6cab71a0a4c5dfda18852d1cc166"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "216c72d938cbbc35373691febea34d4a1bb7f297",
+                "tree": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae",
+                "repositoryTree": "35b8829cb51e6cab71a0a4c5dfda18852d1cc166"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "0dc838aedffbd40eb058e98eb520e2c6f2e32200",
+                "tree": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae",
+                "repositoryTree": "e4a59aff86c0d0463c88f316593fba43a6aa6097"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "0dc838aedffbd40eb058e98eb520e2c6f2e32200",
+                "tree": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae",
+                "repositoryTree": "e4a59aff86c0d0463c88f316593fba43a6aa6097"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "0dc838aedffbd40eb058e98eb520e2c6f2e32200",
+                "tree": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae",
+                "repositoryTree": "e4a59aff86c0d0463c88f316593fba43a6aa6097"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "0dc838aedffbd40eb058e98eb520e2c6f2e32200",
+                "tree": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae",
+                "repositoryTree": "e4a59aff86c0d0463c88f316593fba43a6aa6097"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "0dc838aedffbd40eb058e98eb520e2c6f2e32200",
+                "tree": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae",
+                "repositoryTree": "e4a59aff86c0d0463c88f316593fba43a6aa6097"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "0dc838aedffbd40eb058e98eb520e2c6f2e32200",
+                "tree": "792c492cd88ed75c1ed33c0d9d48dcebda2c6dae",
+                "repositoryTree": "e4a59aff86c0d0463c88f316593fba43a6aa6097"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "f9bf91c00cde331169234d36c24208b90bef723f"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "796218c5735be8ba8d9180c63334bd53ed63ff69",
+                "tree": "f9bf91c00cde331169234d36c24208b90bef723f",
+                "repositoryTree": "90b59a3426596c94f1a7cf31ee3afc5c43d8be2e"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "f9bf91c00cde331169234d36c24208b90bef723f"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "796218c5735be8ba8d9180c63334bd53ed63ff69",
+                "tree": "f9bf91c00cde331169234d36c24208b90bef723f",
+                "repositoryTree": "90b59a3426596c94f1a7cf31ee3afc5c43d8be2e"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "f9bf91c00cde331169234d36c24208b90bef723f"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "796218c5735be8ba8d9180c63334bd53ed63ff69",
+                "tree": "f9bf91c00cde331169234d36c24208b90bef723f",
+                "repositoryTree": "90b59a3426596c94f1a7cf31ee3afc5c43d8be2e"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "f9bf91c00cde331169234d36c24208b90bef723f"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "796218c5735be8ba8d9180c63334bd53ed63ff69",
+                "tree": "f9bf91c00cde331169234d36c24208b90bef723f",
+                "repositoryTree": "90b59a3426596c94f1a7cf31ee3afc5c43d8be2e"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "f9bf91c00cde331169234d36c24208b90bef723f"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "796218c5735be8ba8d9180c63334bd53ed63ff69",
+                "tree": "f9bf91c00cde331169234d36c24208b90bef723f",
+                "repositoryTree": "90b59a3426596c94f1a7cf31ee3afc5c43d8be2e"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "f9bf91c00cde331169234d36c24208b90bef723f"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "796218c5735be8ba8d9180c63334bd53ed63ff69",
+                "tree": "f9bf91c00cde331169234d36c24208b90bef723f",
+                "repositoryTree": "90b59a3426596c94f1a7cf31ee3afc5c43d8be2e"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "f9bf91c00cde331169234d36c24208b90bef723f"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "796218c5735be8ba8d9180c63334bd53ed63ff69",
+                "tree": "f9bf91c00cde331169234d36c24208b90bef723f",
+                "repositoryTree": "90b59a3426596c94f1a7cf31ee3afc5c43d8be2e"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "f9bf91c00cde331169234d36c24208b90bef723f"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "796218c5735be8ba8d9180c63334bd53ed63ff69",
+                "tree": "f9bf91c00cde331169234d36c24208b90bef723f",
+                "repositoryTree": "90b59a3426596c94f1a7cf31ee3afc5c43d8be2e"
+              }
+            }
+          },
+          {
+            "current": "initial",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "f9bf91c00cde331169234d36c24208b90bef723f"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "796218c5735be8ba8d9180c63334bd53ed63ff69",
+                "tree": "f9bf91c00cde331169234d36c24208b90bef723f",
+                "repositoryTree": "90b59a3426596c94f1a7cf31ee3afc5c43d8be2e"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          },
+          {
+            "current": "terminal",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+                "directory": "follow-root",
+                "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+                "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+                "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+              },
+              "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+                "directory": "follow-child",
+                "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+                "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+                "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "gitEvidence": [
+    {
+      "id": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#unit/",
+      "kind": "git-tree",
+      "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+      "directory": "unit",
+      "commit": "b8f616dc3e802c9f66cd409cf0ef562ecbc9767f",
+      "tree": "91f88fa7b18636c2d787d2ad4026ecb9e771eca4",
+      "repositoryTree": "99f8a713aa889381896e49504379f60a3a55f593"
+    },
+    {
+      "id": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#unit/",
+      "kind": "git-tree",
+      "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+      "directory": "unit",
+      "commit": "f7f317469195351e1c14522ef296fa7d7cedc804",
+      "tree": "91f88fa7b18636c2d787d2ad4026ecb9e771eca4",
+      "repositoryTree": "9fcbfb3aa032af0148c4f7fbe7783989179f0a78"
+    },
+    {
+      "id": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#unit/",
+      "kind": "git-tree",
+      "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+      "directory": "unit",
+      "commit": "35eda6c4b021873bf0ebf4e7c5d11dd72abf050d",
+      "tree": "faf1c6d2736ffc38a0942021b644d42b7f24c349",
+      "repositoryTree": "77faf2109f900c2a711c87676874486e07c49825"
+    },
+    {
+      "id": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#unit/",
+      "kind": "git-tree",
+      "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+      "directory": "unit",
+      "commit": "3f2e88d3073402dec68ff48f9ebfe5b211a8f011",
+      "tree": "dbf801e300cafd9a3e0203d993901f3c7e7f188d",
+      "repositoryTree": "2300b2f12a97c3896bc43376ca04cea4e4428e6a"
+    },
+    {
+      "id": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#portfolio/",
+      "kind": "git-tree",
+      "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+      "directory": "portfolio",
+      "commit": "216c72d938cbbc35373691febea34d4a1bb7f297",
+      "tree": "a3312c527a70d3d4077ae7f422a5b27f1bb54ce8",
+      "repositoryTree": "35b8829cb51e6cab71a0a4c5dfda18852d1cc166"
+    },
+    {
+      "id": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#child-a/",
+      "kind": "git-tree",
+      "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+      "directory": "child-a",
+      "commit": "216c72d938cbbc35373691febea34d4a1bb7f297",
+      "tree": "a6215010bcaaaf5bb7ad989aee0784057fda3354",
+      "repositoryTree": "35b8829cb51e6cab71a0a4c5dfda18852d1cc166"
+    },
+    {
+      "id": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#child-b/",
+      "kind": "git-tree",
+      "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+      "directory": "child-b",
+      "commit": "796218c5735be8ba8d9180c63334bd53ed63ff69",
+      "tree": "bbefd7e01731986732d8f7e4436263fc169ef984",
+      "repositoryTree": "90b59a3426596c94f1a7cf31ee3afc5c43d8be2e"
+    },
+    {
+      "id": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules#follow-root/",
+      "kind": "git-tree",
+      "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/rules",
+      "directory": "follow-root",
+      "commit": "4c32f2c320a24f6a910c65416e55cebb1db451c9",
+      "tree": "2056ede8eee7aec52adcaa04b5d6f2384589a92b",
+      "repositoryTree": "df12df298f831a1cb259bd5d03acb7a851a0d621"
+    },
+    {
+      "id": "git+file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external#follow-child/",
+      "kind": "git-tree",
+      "repository": "file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.cache/dco-deploy-NE5MQV/external",
+      "directory": "follow-child",
+      "commit": "f57f6ab1eb52fc226566accf9e155adbf67c7a9e",
+      "tree": "722e5b4ae1a44d5f97aa74bd1b5afc1880ec4ec6",
+      "repositoryTree": "2ec664f99ea02e1b1e4436e6e29eeb1de0be55c3"
+    }
+  ],
+  "globalShimsAdded": [
+    "pguide-objectives",
+    "pguide-objectives.cmd",
+    "pguide-objectives.ps1"
+  ],
+  "success": false,
+  "error": {
+    "message": "ENOENT: no such file or directory, scandir 'D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\.cache\\pguide-sources'",
+    "stack": "Error: ENOENT: no such file or directory, scandir 'D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV\\.cache\\pguide-sources'\n    at async readdir (node:internal/fs/promises:958:18)\n    at async file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.silvermoon/ideas/01M5C3HVK53G5Z7FH9JJTW16SJ/outer/consumer-validation.mjs:540:22\n    at async scenario (file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.silvermoon/ideas/01M5C3HVK53G5Z7FH9JJTW16SJ/outer/consumer-validation.mjs:82:19)\n    at async file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.silvermoon/ideas/01M5C3HVK53G5Z7FH9JJTW16SJ/outer/consumer-validation.mjs:526:3"
+  },
+  "cleanup": {
+    "completed": true,
+    "ownedDirectoryRemoved": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\.cache\\dco-deploy-NE5MQV"
+  },
+  "completedAt": "2026-10-20T09:58:19.801Z",
+  "commandCount": 43
+}

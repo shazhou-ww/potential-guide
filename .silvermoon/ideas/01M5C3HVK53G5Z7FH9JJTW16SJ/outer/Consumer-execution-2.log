@@ -1,0 +1,169 @@
+PASS global-objectives-wiring-and-user-discovery
+warning: in the working copy of 'child-a/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-a/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-a/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-a/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-a/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-a/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-a/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-a/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'a/objectives.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'b/objectives.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'objectives.yaml', LF will be replaced by CRLF the next time Git touches it
+Preparing worktree (detached HEAD 35b7dfc)
+PASS readonly-discovery-and-explicit-scope
+PASS root-subdirectory-and-two-checkouts
+PASS input-types-are-orthogonal-to-scope
+PASS explicit-errors-and-atomic-management
+PASS probe-does-not-repair-and-bounded-regulation
+warning: in the working copy of 'child-a/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-a/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-a/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-a/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-a/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-a/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-a/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-a/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'portfolio/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'publish/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'recover/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'repair/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+PASS directory-tree-and-retrieval-commit-are-distinct
+warning: in the working copy of 'recover/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'unit/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+PASS continue-uses-original-binding-and-rejects-old-evidence
+PASS consumer-discovers-and-supervisor-advances-two-directory-dependencies
+warning: in the working copy of 'recover/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-root/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'child-b/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/checks/ready/run.cjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/pilot.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/references/levels/initial/checks/ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/references/levels/initial/checks/ready/problems/not-ready/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/references/levels/initial/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/references/levels/terminal/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/references/system/404/en-US.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'follow-child/references/system/overview/en-US.md', LF will be replaced by CRLF the next time Git touches it
+PASS installed-continuous-supervise-follows-root-and-dependency-without-portfolio-edits
+Error: ENOENT: no such file or directory, scandir 'D:\Code\potential-guide.worktrees\setup-p-guide-and-monorepo-check\.cache\dco-deploy-NE5MQV\.cache\pguide-sources'
+    at async readdir (node:internal/fs/promises:958:18)
+    at async file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.silvermoon/ideas/01M5C3HVK53G5Z7FH9JJTW16SJ/outer/consumer-validation.mjs:540:22
+    at async scenario (file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.silvermoon/ideas/01M5C3HVK53G5Z7FH9JJTW16SJ/outer/consumer-validation.mjs:82:19)
+    at async file:///D:/Code/potential-guide.worktrees/setup-p-guide-and-monorepo-check/.silvermoon/ideas/01M5C3HVK53G5Z7FH9JJTW16SJ/outer/consumer-validation.mjs:526:3

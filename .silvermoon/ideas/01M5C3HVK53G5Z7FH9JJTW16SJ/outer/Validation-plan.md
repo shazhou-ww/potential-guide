@@ -19,6 +19,8 @@ node .silvermoon\ideas\01M5C3HVK53G5Z7FH9JJTW16SJ\outer\consumer-validation.mjs 
 
 首次运行的验证资源使用 CommonJS require.resolve 定位 ESM-only 公共桥接包，在创建 scratch/全局接线前明确失败，见 Consumer-execution.log。资源已改用 Node 24 的 findPackageJSON 和安装包公开 import export，并额外记录桥接包版本及编译入口 SHA-256；没有更改产品。修订资源重新同步、观测后才重跑检查。
 
+第二次运行实际完成新增全局 shim 与十个功能场景，但最后资源清理断言错误地假定 source cache 必定位于启动 shell 的 cwd；实际命令分派会使用所选 consumer cwd。见 Consumer-execution-2.log、Consumer-attempt-2-summary.json；该次 scratch 已定向清理，Wiring-receipt.json 保留首次接线证明。验证资源改为检查所有已知 consumer/shell cwd 的 cache：空目录或已删除均为释放成功，非空才失败；未修改产品。另补消费者缺少子声明与依赖来源调用失败的独立断言，以及实际 CLI 的非法 origin 负例。fixture 显式禁用 autocrlf 并清除继承的 Git/probe 内部定位环境，保持资源所有权边界。
+
 ## 场景与断言
 
 - 独立 plain Git consumer，无 package.json/pnpm-workspace；根和普通子目录分别发现，没有父级继承。另一个 Git worktree 保持相同逻辑 repository，不同 checkout/目录 subject。

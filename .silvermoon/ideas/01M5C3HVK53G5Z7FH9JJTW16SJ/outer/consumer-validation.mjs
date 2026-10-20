@@ -59,6 +59,8 @@ const environment = {
   GIT_TERMINAL_PROMPT: "0",
   GCM_INTERACTIVE: "never",
 };
+for (const key of ["GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE", "PGUIDE_PROBE_TEMP_DIR"])
+  delete environment[key];
 const evidence = {
   schemaVersion: 1,
   planRevision: options["--plan-revision"],
@@ -105,6 +107,7 @@ const init = async (root) => {
   git(root, "init", "-q");
   git(root, "config", "user.name", "Directory Objectives Fixture");
   git(root, "config", "user.email", "fixture@example.invalid");
+  git(root, "config", "core.autocrlf", "false");
   git(root, "remote", "add", "origin", pathToFileURL(root).href);
 };
 const commit = (root, label) => { git(root, "add", "."); git(root, "commit", "-qm", label); return git(root, "rev-parse", "HEAD"); };
@@ -114,12 +117,16 @@ function start(executable, args, { env = environment, cwd = scratch, timeoutMs =
   const child = spawn(executable, args, { cwd, env, windowsHide: true, shell: false, stdio: ["ignore", "pipe", "pipe"] });
   active.add(child);
   let stdout = "", stderr = "", timedOut = false, spawnError;
+  let rejectTimeout;
+  const timeout = new Promise((_, failed) => { rejectTimeout = failed; });
   const timer = setTimeout(() => {
     timedOut = true;
     if (child.pid !== undefined) {
-      const command = `$all = @(Get-CimInstance Win32_Process); $ids = [System.Collections.Generic.List[int]]::new(); $ids.Add(${child.pid}); for ($i = 0; $i -lt $ids.Count; $i++) { foreach ($p in $all) { if ($p.ParentProcessId -eq $ids[$i]) { $ids.Add([int]$p.ProcessId) } } }; for ($i = $ids.Count - 1; $i -ge 0; $i--) { Stop-Process -Id $ids[$i] -Force -ErrorAction SilentlyContinue }`;
+      const command = `$all = @(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId); $ids = [System.Collections.Generic.List[int]]::new(); $ids.Add(${child.pid}); for ($i = 0; $i -lt $ids.Count; $i++) { foreach ($p in $all) { if ($p.ParentProcessId -eq $ids[$i]) { $ids.Add([int]$p.ProcessId) } } }; for ($i = $ids.Count - 1; $i -ge 0; $i--) { Stop-Process -Id $ids[$i] -Force -ErrorAction SilentlyContinue }`;
       spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], { windowsHide: true, timeout: 20_000 });
     }
+    child.stdout.destroy(); child.stderr.destroy(); child.unref();
+    rejectTimeout(new Error(`Owned command PID ${child.pid} exceeded its hard timeout; unfinished ownership is retained for recovery.`));
   }, timeoutMs);
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
@@ -135,7 +142,7 @@ function start(executable, args, { env = environment, cwd = scratch, timeoutMs =
     evidence.commands.push({ executable, args, cwd, ...response });
     done(response);
   }));
-  return { finished };
+  return { finished: Promise.race([finished, timeout]) };
 }
 async function invoke(executable, args, settings) {
   return start(executable, args, settings).finished;
@@ -387,6 +394,13 @@ void (async () => { for await (const line of createInterface({input:process.stdi
     await cli(["probe", "--objective", "missing", "--scope", "directory"], 2);
     await cli(["probe", "--objective", "bad-projection", "--scope", "directory"], 2);
     await cli(["probe", "--objective", "bad-subject", "--scope", "directory"], 2);
+    git(consumer, "remote", "set-url", "origin", "git@example.invalid:fixture/repo.git");
+    try {
+      const invalidOrigin = await cli(["probe", "--objective", "unit", "--scope", "directory"], 2);
+      assert.equal(invalidOrigin.status, "context-error");
+    } finally {
+      git(consumer, "remote", "set-url", "origin", pathToFileURL(consumer).href);
+    }
     await cli(["probe", "--objective", "missing-source", "--scope", "directory"], 2);
     await cli(["probe", "--pilot", `${unitUri}pilot.yaml`, "--subject-file", input], 2);
     const legacy = join(scratch, "legacy.json"), migration = join(scratch, "migration.yaml");
@@ -450,6 +464,27 @@ void (async () => { for await (const line of createInterface({input:process.stdi
     await cli(["continue", forgedId], 6);
     await file(rootFile, doc(objectives));
     return { savedCommit, savedTree, latest: latest.payload.sources[recoverUri], originalSubject: saved.subject, declarationRevision: saved.binding.entry.revision };
+  });
+  await scenario("consumer-distinguishes-missing-declarations-and-source-call-failures", async () => {
+    const childFile = join(consumer, "b", "objectives.yaml");
+    const original = await readFile(childFile);
+    const repairs = (await lines(agentLog)).filter((entry) => entry.type === "repair").length;
+    let missing, failed;
+    try {
+      await rm(childFile);
+      missing = await cli(["probe", "--objective", "portfolio", "--scope", "directory"]);
+      assert.ok(missing.payload.problems.some((entry) => entry.kind === "internal" && entry.ref.objectiveId === rootUri && entry.parameters.missing === "b"));
+      const broken = JSON.parse(original.toString("utf8"));
+      broken.objectives.gate.pilot = `git+${pathToFileURL(join(scratch, "missing-dependency")).href}#pilot/`;
+      await file(childFile, broken);
+      failed = await cli(["probe", "--objective", "portfolio", "--scope", "directory"], 6);
+      assert.equal(failed.payload, null);
+      assert.equal(failed.status, 502);
+    } finally {
+      await writeFile(childFile, original);
+    }
+    assert.equal((await lines(agentLog)).filter((entry) => entry.type === "repair").length, repairs);
+    return { missingDeclaration: missing, sourceInvocationFailure: failed, noRepair: true };
   });
   await scenario("consumer-discovers-and-supervisor-advances-two-directory-dependencies", async () => {
     const before = (await lines(agentLog)).filter((entry) => entry.type === "repair").length;
@@ -536,9 +571,18 @@ ${finish(`await request(${JSON.stringify(followChildUri)}, {})`)}
     const alive = [...pids].filter((pid) => { try { process.kill(pid, 0); return true; } catch (error) { if (error.code === "ESRCH") return false; throw error; } });
     assert.deepEqual(alive, [], "Fake Agent processes must exit after bounded CLI cancellation.");
     assert.equal(active.size, 0);
-    const sourceCache = join(scratch, ".cache", "pguide-sources");
-    assert.deepEqual(await readdir(sourceCache), []);
-    return { existingCommandCount: existingPguide.size, existingGlobalCommandsUnchanged: true, realUserFilesUnchanged: true, publishNotExecuted: true, fakeAgentProcessCount: pids.size, liveFakeAgents: alive, sourceCacheReleased: true };
+    const sourceCaches = [];
+    for (const directory of [scratch, consumer, plain, secondCheckout]) {
+      const path = join(directory, ".cache", "pguide-sources");
+      try {
+        assert.deepEqual(await readdir(path), []);
+        sourceCaches.push({ path, state: "empty" });
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+        sourceCaches.push({ path, state: "absent" });
+      }
+    }
+    return { existingCommandCount: existingPguide.size, existingGlobalCommandsUnchanged: true, realUserFilesUnchanged: true, publishNotExecuted: true, fakeAgentProcessCount: pids.size, liveFakeAgents: alive, sourceCacheReleased: true, sourceCaches };
   });
   evidence.success = true;
 } catch (error) {

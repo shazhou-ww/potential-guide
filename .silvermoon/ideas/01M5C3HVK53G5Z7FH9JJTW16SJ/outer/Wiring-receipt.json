@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "planRevision": "3a7de1c53fc74b391fb7913b15f701d1a7d6633d",
+  "planCommit": "3a6e2b3174567310fe957da24d0fc9981f9810db",
+  "environment": {
+    "node": "v24.12.0",
+    "pguide": "0.4.0-rc.0",
+    "globalBin": "C:\\Users\\Wei\\AppData\\Local\\pnpm\\bin",
+    "packageRoot": "C:\\Users\\Wei\\AppData\\Local\\pnpm\\bin\\node_modules\\pguide",
+    "packageReal": "D:\\Code\\potential-guide.worktrees\\setup-p-guide-and-monorepo-check\\packages\\pguide",
+    "installedPilot": "C:\\Users\\Wei\\AppData\\Local\\pnpm\\bin\\node_modules\\pguide\\node_modules\\@potential-guide\\objective-pilot\\dist\\index.js",
+    "objectivePilot": "0.2.0-rc.0",
+    "objectivePilotSha256": "6a4440e385058b3b37f1ac4af56bee6230c63db4f5d36ac46f3b118c6093f8c5"
+  },
+  "created": [
+    "pguide-objectives",
+    "pguide-objectives.cmd",
+    "pguide-objectives.ps1"
+  ],
+  "proof": {
+    "id": "global-objectives-wiring-and-user-discovery",
+    "passed": true,
+    "milliseconds": 1247,
+    "details": {
+      "metadata": {
+        "protocol": "pguide-command-v1",
+        "command": "objectives",
+        "description": "Discover and manage user and directory Objective declarations",
+        "version": "0.4.0-rc.0"
+      },
+      "discovered": {
+        "command": "objectives",
+        "description": "Discover and manage user and directory Objective declarations",
+        "builtIn": false,
+        "path": "C:\\Users\\Wei\\AppData\\Local\\pnpm\\bin\\pguide-objectives.cmd",
+        "compatible": true,
+        "source": "configured",
+        "protocol": "pguide-command-v1"
+      }
+    }
+  }
+}
