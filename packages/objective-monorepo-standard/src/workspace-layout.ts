@@ -2,12 +2,7 @@ import type { Contract, Workspace } from "./contract.js";
 import type { Add } from "./shared.js";
 import { type Snapshot, under } from "./shared.js";
 
-export async function checkWorkspaceLayout(
-  snapshot: Snapshot,
-  contract: Contract,
-  workspace: Workspace,
-  add: Add,
-) {
+export function checkWorkspacePlacement(contract: Contract, workspace: Workspace, add: Add) {
   const dirs = contract.policy.directories;
   const executable = workspace.roles.some((role) =>
     ["browser", "cloudflare-worker"].includes(role),
@@ -26,6 +21,15 @@ export async function checkWorkspaceLayout(
     [],
     expected,
   );
+}
+
+export async function checkWorkspaceLayout(
+  snapshot: Snapshot,
+  contract: Contract,
+  workspace: Workspace,
+  add: Add,
+) {
+  checkWorkspacePlacement(contract, workspace, add);
   for (const file of ["README.md", ...workspace.entries, ...workspace.sources]) {
     try {
       if (!(await snapshot.exists(`${workspace.path}/${file}`)))

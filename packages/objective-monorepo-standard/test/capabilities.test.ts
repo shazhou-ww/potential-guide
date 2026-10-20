@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import type { Contract, Delivery, Workspace } from "../src/contract.js";
@@ -17,6 +16,10 @@ import { type Add, type Finding, type ReportPut, Snapshot } from "../src/shared.
 import { checkSourceImport } from "../src/source-boundaries.js";
 import { observeSourceImports } from "../src/source-observation.js";
 import { checkWorkspaceLayout } from "../src/workspace-layout.js";
+
+const scratch = join(process.cwd(), ".cache");
+await mkdir(scratch, { recursive: true });
+const tmpdir = () => scratch;
 
 function workspace(): Workspace {
   return {

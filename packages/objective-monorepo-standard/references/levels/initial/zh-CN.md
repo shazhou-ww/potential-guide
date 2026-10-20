@@ -1,6 +1,6 @@
 ---
 title: 结构尚未确认
-description: 全局契约、目录职责和 workspace 覆盖必须先成立。
+description: 根政策、目录职责、包声明和包结构依赖必须先成立。
 references: [checks/structure]
 ---
 

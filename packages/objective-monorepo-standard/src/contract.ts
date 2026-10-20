@@ -1,5 +1,3 @@
-import { Ajv } from "ajv";
-
 export type Runtime = "node" | "browser" | "worker" | "tool" | "universal";
 export type Role = "npm" | "cli" | "browser" | "cloudflare-worker" | "internal" | "tool";
 export interface Workspace {
@@ -71,15 +69,14 @@ const path = {
 };
 const paths = { type: "array", items: path, uniqueItems: true };
 const runtime = { enum: ["node", "browser", "worker", "tool", "universal"] };
-function object(properties: object, required: string[]) {
+function object<T extends object>(properties: T, required: string[]) {
   return { type: "object", additionalProperties: false, properties, required };
 }
 function array(items: object) {
   return { type: "array", items };
 }
-export const contractSchema = object(
+const modelSchema = object(
   {
-    schemaVersion: { const: 1 },
     policy: object(
       {
         source: { const: "pnpm-default-v1" },
@@ -132,26 +129,6 @@ export const contractSchema = object(
         "dependencyExceptions",
       ],
     ),
-    workspaces: array(
-      object(
-        {
-          path,
-          name: text,
-          roles: {
-            type: "array",
-            minItems: 1,
-            uniqueItems: true,
-            items: { enum: ["npm", "cli", "browser", "cloudflare-worker", "internal", "tool"] },
-          },
-          runtime,
-          allows: strings,
-          entries: paths,
-          sources: paths,
-          tasks: strings,
-        },
-        ["path", "name", "roles", "runtime", "allows", "entries", "sources", "tasks"],
-      ),
-    ),
     deliveries: array(
       object(
         {
@@ -200,14 +177,8 @@ export const contractSchema = object(
       ),
     ),
   },
-  ["schemaVersion", "policy", "workspaces", "deliveries"],
+  ["policy", "deliveries"],
 );
-const validate = new Ajv({ allErrors: true, strict: true }).compile<Contract>(contractSchema);
-export function parseContract(value: unknown): Contract {
-  if (!validate(value)) {
-    throw new Error(
-      validate.errors?.map((error) => `${error.instancePath} ${error.message}`).join("; "),
-    );
-  }
-  return value;
-}
+export const policySchema = modelSchema.properties.policy;
+export const deliverySchema = modelSchema.properties.deliveries;
+export { object, path, paths, runtime, strings, text };

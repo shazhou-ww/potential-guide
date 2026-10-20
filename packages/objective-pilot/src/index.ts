@@ -19,6 +19,12 @@ export {
   withCheckEvidence,
 } from "./evidence.js";
 export {
+  bindObjective,
+  type ObjectiveDeclaration,
+  parseObjectives,
+  projectObjective,
+} from "./objectives.js";
+export {
   describeLevels,
   loadPilotSpec,
   observe,

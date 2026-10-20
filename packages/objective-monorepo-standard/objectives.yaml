@@ -1,0 +1,17 @@
+schemaVersion: 1
+objectives:
+  standardize:
+    description: Standardize the private repository and package standardization Pilots.
+    pilot: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
+    inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
+    subject: |
+      {
+        "root": context.checkout.rootPath, "directory": context.directory.relativePath,
+        "roles": ["tool"], "runtime": "node",
+        "allows": ["@potential-guide/effects", "@potential-guide/objective-pilot", "@potential-guide/objective-regulator", "@potential-guide/objective-portfolio-supervisor", "pguide"],
+        "entries": ["src/index.ts"], "joins": [], "deliveries": [],
+        "generated": [
+          {"path": "runtime/pilot-checker.cjs", "reason": "Standalone bundle verified by monorepo:check."},
+          {"path": "package-standard/runtime/pilot-checker.cjs", "reason": "Self-contained package Pilot snapshot bundle verified by monorepo:check."}
+        ]
+      }

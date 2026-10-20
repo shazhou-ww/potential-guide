@@ -108,6 +108,16 @@ and uses AbortSignal for local cancellation and timeout. Aborting HTTP does
 
 ## Objective level checks and dependency probes
 
+Directory declarations are shared domain data rather than CLI-private bindings:
+`parseObjectives(yaml)` validates the strict version-1 declaration document;
+`projectObjective(entry, context, input)` validates explicit input and evaluates the
+direct JSONata subject; `bindObjective(entry, context, input, spec)` additionally
+validates the subject against the selected Pilot domain. Only Unit input may be
+omitted. Declarations contain description, directory pilot, inputSchema and
+subject, never a target or revision. Hosts provide repository/checkout/directory
+context and source resolution; these pure APIs do not depend on CLI configuration
+or inspect Git. The CLI reuses them, as does the monorepo dependency consumer.
+
 `checkObjectiveLevel({ spec, subject, expectedLevelId, language? }, runtime)`
 constructs an Effect returning `Envelope<{ passed, observation }>`. It observes
 once and compares levels in manifest array order, including explicit `terminal`.

@@ -1,0 +1,13 @@
+schemaVersion: 1
+objectives:
+  standardize:
+    description: Standardize the private development health Pilot.
+    pilot: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
+    inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
+    subject: |
+      {
+        "root": context.checkout.rootPath, "directory": context.directory.relativePath,
+        "roles": ["tool"], "runtime": "node",
+        "allows": ["@potential-guide/effects", "@potential-guide/objective-pilot"],
+        "entries": ["health-check.mjs"], "generated": [], "joins": [], "deliveries": []
+      }

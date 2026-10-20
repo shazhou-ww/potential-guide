@@ -1,0 +1,13 @@
+schemaVersion: 1
+objectives:
+  standardize:
+    description: Standardize the private pguide self-check Pilot.
+    pilot: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
+    inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
+    subject: |
+      {
+        "root": context.checkout.rootPath, "directory": context.directory.relativePath,
+        "roles": ["tool"], "runtime": "node",
+        "allows": ["@potential-guide/objective-pguide-setup", "@potential-guide/cli-core", "pguide"],
+        "entries": ["self-check.mjs"], "generated": [], "joins": [], "deliveries": []
+      }

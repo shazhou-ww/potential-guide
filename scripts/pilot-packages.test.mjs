@@ -1,14 +1,21 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { fileResources, loadPilotSpec } from "../packages/objective-pilot/dist/index.js";
+import {
+  fileResources,
+  loadPilotSpec,
+  parseObjectives,
+  projectObjective,
+} from "../packages/objective-pilot/dist/index.js";
 import { execute } from "./verify-deployment-helpers.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
+const scratchRoot = join(root, ".cache");
+await mkdir(scratchRoot, { recursive: true });
+const tmpdir = () => scratchRoot;
 const pilots = [
   ["objective-monorepo-standard", "check.mjs", ["structure", "deliveries"]],
   ["objective-pguide-setup", "setup-check.mjs", ["installation", "configuration", "sanity"]],
@@ -87,7 +94,20 @@ test("all private Pilot tarballs include same-version resources and run without 
       );
       const subject =
         directory === "objective-monorepo-standard"
-          ? { root, contract: "config/monorepo-requirements.json" }
+          ? projectObjective(
+              parseObjectives(
+                await readFile(join(root, "packages", directory, "objectives.yaml"), "utf8"),
+              ).standardize,
+              {
+                repository: { id: "urn:pack-fixture" },
+                checkout: { id: "urn:pack-checkout", rootPath: root },
+                directory: {
+                  absolutePath: join(root, "packages", directory),
+                  relativePath: `packages/${directory}`,
+                },
+              },
+              undefined,
+            )
           : {
               workingDirectory: scratch,
               configPath: join(scratch, "unused-config.json"),
@@ -97,7 +117,15 @@ test("all private Pilot tarballs include same-version resources and run without 
       const call = async (stage, value) => {
         const result = await execute(
           process.execPath,
-          [join(packageRoot, "checks", stage, "run.cjs")],
+          [
+            join(
+              packageRoot,
+              ...(directory === "objective-monorepo-standard" ? ["package-standard"] : []),
+              "checks",
+              stage,
+              "run.cjs",
+            ),
+          ],
           {
             cwd: consumer,
             input: JSON.stringify(value),
@@ -133,7 +161,12 @@ test("all private Pilot tarballs include same-version resources and run without 
         assert.equal(payload.files["sanity-fixture/gitignore"], "marker.txt\n.cache/\n");
       }
       if (directory === "objective-monorepo-standard")
-        assert.ok(paths.includes("runtime/pilot-checker.cjs"));
+        for (const resource of [
+          "runtime/pilot-checker.cjs",
+          "package-standard/pilot.yaml",
+          "package-standard/runtime/pilot-checker.cjs",
+        ])
+          assert.ok(paths.includes(resource));
     }
   } finally {
     await rm(scratch, { recursive: true, force: true, maxRetries: 3 });
