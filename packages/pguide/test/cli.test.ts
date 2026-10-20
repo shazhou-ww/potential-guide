@@ -4,18 +4,19 @@ import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node
 import { delimiter, join, resolve } from "node:path";
 import { test } from "node:test";
 import { sameDirectory } from "../src/path.js";
-import { fixture, git, scratch } from "./fixtures.js";
+import { bin, commandPackage, fixture, git, scratch } from "./fixtures.js";
 
 const root = resolve(import.meta.dirname, "..", "..", "..");
 const tmpdir = () => scratch;
 const top = join(root, "packages", "pguide", "dist", "bin.js");
 const bins = {
-  probe: join(root, "packages", "pguide", "dist", "bin", "probe.js"),
-  regulate: join(root, "packages", "pguide", "dist", "bin", "regulate.js"),
-  continue: join(root, "packages", "pguide", "dist", "bin", "continue.js"),
-  supervise: join(root, "packages", "pguide", "dist", "bin", "supervise.js"),
-  scaffold: join(root, "packages", "pguide", "dist", "bin", "scaffold.js"),
-  validate: join(root, "packages", "pguide", "dist", "bin", "validate.js"),
+  probe: bin("probe"),
+  regulate: bin("regulate"),
+  continue: bin("continue"),
+  supervise: bin("supervise"),
+  scaffold: bin("scaffold"),
+  validate: bin("validate"),
+  objectives: bin("objectives"),
   config: join(root, "packages", "pguide-config", "dist", "bin.js"),
 };
 
@@ -42,25 +43,30 @@ function run(
 }
 
 test("all package commands expose direct protocol metadata and help", async () => {
-  const versions = await Promise.all(
-    ["pguide", "pguide-config"].map(async (directory) => {
-      const manifest = JSON.parse(
-        await readFile(join(root, "packages", directory, "package.json"), "utf8"),
-      );
-      return manifest.version;
-    }),
-  );
   for (const [command, script] of Object.entries(bins)) {
+    const manifest = JSON.parse(
+      await readFile(
+        join(
+          root,
+          "packages",
+          command === "config" ? "pguide-config" : commandPackage(command),
+          "package.json",
+        ),
+        "utf8",
+      ),
+    );
     const metadata = await run(script, ["--pguide-command-metadata"]);
     assert.equal(metadata.code, 0, metadata.stderr);
     assert.equal(JSON.parse(metadata.stdout).command, command);
-    assert.equal(JSON.parse(metadata.stdout).version, versions[command === "config" ? 1 : 0]);
+    assert.equal(JSON.parse(metadata.stdout).version, manifest.version);
     const help = await run(script, ["--help", "--format", "json"]);
     assert.equal(help.code, 0, `${command}: ${help.stderr}\n${help.stdout}`);
     assert.equal(JSON.parse(help.stdout).schemaVersion, 1);
     const text = await run(script, ["--help"]);
     assert.equal(text.code, 0, text.stderr);
-    for (const heading of ["Usage:", "Examples:", "Global options:"])
+    for (const heading of command === "objectives"
+      ? ["Usage:", "Global options:"]
+      : ["Usage:", "Examples:", "Global options:"])
       assert.ok(text.stdout.includes(heading), `${command} missing ${heading}`);
     assert.match(text.stdout, /--config/);
     assert.match(text.stdout, /--format/);
@@ -70,12 +76,8 @@ test("all package commands expose direct protocol metadata and help", async () =
 test("command metadata and detailed help do not load business implementations", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "pguide-help-only-"));
   try {
-    await mkdir(join(temporary, "bin"));
-    await writeFile(join(temporary, "package.json"), '{"type":"module"}');
-    await copyFile(
-      join(root, "packages", "pguide", "dist", "command-help.js"),
-      join(temporary, "command-help.js"),
-    );
+    await mkdir(join(temporary, "dist", "bin"), { recursive: true });
+    await writeFile(join(temporary, "package.json"), '{"type":"module","version":"0.4.0-rc.0"}');
     await mkdir(join(temporary, "node_modules", "@potential-guide"), { recursive: true });
     await symlink(
       join(root, "packages", "pguide-cli-core"),
@@ -84,7 +86,7 @@ test("command metadata and detailed help do not load business implementations", 
     );
     for (const [command, source] of Object.entries(bins)) {
       if (command === "config") continue;
-      const entry = join(temporary, "bin", `${command}.js`);
+      const entry = join(temporary, "dist", "bin", `${command}.js`);
       await copyFile(source, entry);
       for (const args of [
         ["--pguide-command-metadata"],
@@ -95,7 +97,7 @@ test("command metadata and detailed help do not load business implementations", 
         assert.equal(result.code, 0, `${command}: ${result.stderr}`);
         if (args.includes("--pguide-command-metadata") || args.includes("json"))
           assert.equal(JSON.parse(result.stdout).command, command);
-        else assert.match(result.stdout, /Examples:/);
+        else assert.match(result.stdout, command === "objectives" ? /Usage:/ : /Examples:/);
       }
     }
   } finally {
@@ -286,6 +288,54 @@ test("top-level safely dispatches discovered commands and preserves arguments", 
       "--format",
       "literal",
     ]);
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
+
+test("missing optional commands explain installation and conflicting shims fail closed", async () => {
+  const temporary = await mkdtemp(join(tmpdir(), "pguide-optional-"));
+  try {
+    const empty = join(temporary, "empty");
+    const first = join(temporary, "first");
+    const second = join(temporary, "second");
+    await Promise.all([empty, first, second].map((path) => mkdir(path)));
+    const env = {
+      ...process.env,
+      PATH: empty,
+      APPDATA: empty,
+      HOME: empty,
+      XDG_CONFIG_HOME: empty,
+    };
+    const config = join(temporary, "config.yaml");
+    await writeFile(config, "schemaVersion: 2\n");
+    const missing = await run(top, ["probe", "--config", config, "--format", "json"], env);
+    assert.equal(missing.code, 2, `${missing.stderr}\n${missing.stdout}`);
+    const error = JSON.parse(missing.stdout);
+    assert.match(error.error, /Unknown command: probe/);
+    assert.match(error.error, /Install @potential-guide\/pguide-pilot/);
+    const extension = process.platform === "win32" ? ".cmd" : "";
+    for (const directory of [first, second]) {
+      await writeFile(
+        join(directory, `pguide-probe${extension}`),
+        process.platform === "win32" ? "@echo off\r\nexit /b 99\r\n" : "#!/bin/sh\nexit 99\n",
+        { mode: 0o755 },
+      );
+    }
+    await writeFile(
+      config,
+      `schemaVersion: 2\ncommandDirectories: ${JSON.stringify([first, second])}\n`,
+    );
+    const conflict = await run(top, ["probe", "--config", config, "--format", "json"], env);
+    assert.equal(conflict.code, 2, `${conflict.stderr}\n${conflict.stdout}`);
+    assert.match(JSON.parse(conflict.stdout).error, /Ambiguous command probe/);
+    const help = await run(top, ["--help", "--config", config, "--format", "json"], env);
+    assert.equal(help.code, 0);
+    assert.equal(JSON.parse(help.stdout).conflicts.probe.length, 2);
+    await writeFile(config, `schemaVersion: 2\ncommandDirectories: ${JSON.stringify([first])}\n`);
+    const incompatible = await run(top, ["probe", "--config", config, "--format", "json"], env);
+    assert.equal(incompatible.code, 2, incompatible.stderr);
+    assert.equal(JSON.parse(incompatible.stdout).status, "protocol-error");
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

@@ -4,6 +4,20 @@ import { basename, join } from "node:path";
 import test from "node:test";
 import { createDeploymentWorkspace, execute } from "./verify-deployment-helpers.mjs";
 
+test("packed deployment CI invokes the eight isolated package consumers", async () => {
+  const root = new URL("../", import.meta.url);
+  const manifest = JSON.parse(await readFile(new URL("package.json", root), "utf8"));
+  assert.match(manifest.scripts["deployment:verify"], /scripts\/verify-deployment\.mjs/);
+  const source = await readFile(new URL("scripts/verify-deployment.mjs", root), "utf8");
+  assert.match(
+    source,
+    /import \{ checkPackageConsumers \} from "\.\/check-package-consumers\.mjs"/,
+  );
+  assert.match(source, /if \(!installPublished\) \{\s+await checkPackageConsumers\(/);
+  const ci = await readFile(new URL(".github/workflows/ci.yaml", root), "utf8");
+  assert.match(ci, /run: pnpm deployment:verify/);
+});
+
 test("execute preserves paths and arguments containing shell metacharacters", async () => {
   const workspace = await createDeploymentWorkspace();
   try {

@@ -27,6 +27,27 @@
     },
     {
       "path": "./packages/pguide"
+    },
+    {
+      "path": "./packages/pilot-protocol"
+    },
+    {
+      "path": "./packages/cli-runtime"
+    },
+    {
+      "path": "./packages/pguide-pilot"
+    },
+    {
+      "path": "./packages/pguide-regulate"
+    },
+    {
+      "path": "./packages/pguide-supervise"
+    },
+    {
+      "path": "./packages/pguide-objectives"
+    },
+    {
+      "path": "./packages/objective-declarations"
     }
   ]
 }

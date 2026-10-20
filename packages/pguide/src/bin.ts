@@ -5,6 +5,8 @@ import {
   AcpClient,
   CliError,
   type CommandMetadata,
+  commandDescriptions,
+  commandPackages,
   expectedCliError,
   extractGlobals,
   formatCommandHelp,
@@ -15,7 +17,6 @@ import {
   writeResult,
 } from "@potential-guide/cli-core";
 import spawn from "cross-spawn";
-import { commandDescriptions } from "./command-help.js";
 import { sameDirectory } from "./path.js";
 
 const VERSION = "0.4.0-rc.0";
@@ -452,8 +453,22 @@ async function main(): Promise<number> {
     if (conflict !== undefined)
       throw new CliError(`Ambiguous command ${command}: ${conflict.join(", ")}.`);
     const candidate = found.commands.find((entry) => entry.command === command);
-    if (candidate === undefined) throw new CliError(`Unknown command: ${command}.`);
-    return dispatch(candidate, rest.slice(1), globals);
+    if (candidate === undefined) {
+      const packageName =
+        command === "config"
+          ? "@potential-guide/config"
+          : Object.hasOwn(commandPackages, command)
+            ? commandPackages[command as keyof typeof commandPackages]
+            : undefined;
+      throw new CliError(
+        `Unknown command: ${command}.${
+          packageName === undefined
+            ? ""
+            : ` Install ${packageName} and make its pguide-${command} executable discoverable on PATH or in commandDirectories.`
+        }`,
+      );
+    }
+    return await dispatch(candidate, rest.slice(1), globals);
   } catch (error) {
     const failure = expectedCliError(error);
     const format =

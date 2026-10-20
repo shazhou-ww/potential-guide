@@ -55,7 +55,7 @@ await emit(
 );
 for (const name of ["process-tree", "streaming-secret-redactor", "permissions"])
   await emit(`${name}.mjs`, await source(`packages/pguide-cli-core/src/${name}.ts`), true);
-const policy = await source("packages/pguide/src/acp-permissions.ts");
+const policy = await source("packages/pguide-regulate/src/acp-permissions.ts");
 const policyAst = ts.createSourceFile("policy.ts", policy, ts.ScriptTarget.Latest, true);
 await emit(
   "acp-permissions.mjs",

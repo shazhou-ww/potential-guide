@@ -28,9 +28,7 @@
   },
   "dependencies": {
     "@potential-guide/effects": "workspace:^",
-    "ajv": "catalog:",
-    "jsonata": "catalog:",
-    "yaml": "catalog:"
+    "@potential-guide/pilot-protocol": "workspace:^"
   },
   "publishConfig": {
     "access": "public"

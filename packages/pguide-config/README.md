@@ -1,5 +1,10 @@
 # `@potential-guide/config`
 
+This published npm name is a legacy compatibility exception to the
+`@potential-guide/pguide-<command-or-group>` naming used by new command wrappers.
+The package, `pguide-config` executable, `config` command metadata and `config-v*`
+release tags remain unchanged.
+
 Optional official configuration editor for `pguide`. Configuration is standard
 YAML and remains usable without this package.
 

@@ -3,10 +3,10 @@ import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
 import { makeRegulatorSpec } from "@potential-guide/objective-regulator";
+import { withPilot } from "../../cli-runtime/src/pilot-source.js";
 import { ahpHost } from "../../pguide-cli-core/test/ahp-fixture.js";
-import { createProcessRegulationRunner } from "../dist/regulation-process.js";
-import { createAgentPlannerPolicy } from "../src/acp-planner.js";
-import { withPilot } from "../src/pilot-source.js";
+import { createProcessRegulationRunner } from "../../pguide-regulate/dist/regulation-process.js";
+import { createAgentPlannerPolicy } from "../../pguide-supervise/src/acp-planner.js";
 import { bin, fixture, run } from "./fixtures.js";
 
 for (const mode of [

@@ -10,8 +10,8 @@ import { promisify } from "node:util";
 import { CliError } from "@potential-guide/cli-core";
 import { Effect } from "@potential-guide/effects";
 import { observe, type PilotManifest } from "@potential-guide/objective-pilot";
+import { withPilot } from "../../cli-runtime/src/pilot-source.js";
 import { manifest, fixture as wikiFixture } from "../../objective-pilot/test/fixtures.js";
-import { withPilot } from "../src/pilot-source.js";
 
 const execute = promisify(execFile);
 async function git(cwd: string, ...args: string[]) {

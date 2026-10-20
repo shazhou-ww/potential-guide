@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawn } from "cross-spawn";
 import { Effect } from "../packages/effects/dist/index.js";
 import { observe } from "../packages/objective-pilot/dist/index.js";
-import { withPilot } from "../packages/pguide/dist/pilot-source.js";
+import { withPilot } from "../packages/cli-runtime/dist/pilot-source.js";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const objective = join(root, "packages", "objective-devbox-health");

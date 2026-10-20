@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { makeRegulatorSpec } from "@potential-guide/objective-regulator";
-import { createProcessRegulationRunner } from "../dist/regulation-process.js";
-import { withPilot } from "../src/pilot-source.js";
+import { withPilot } from "../../cli-runtime/src/pilot-source.js";
+import { createProcessRegulationRunner } from "../../pguide-regulate/dist/regulation-process.js";
 import { fixture } from "./fixtures.js";
 
 test("process runner returns verified results only after worker cleanup", async () => {

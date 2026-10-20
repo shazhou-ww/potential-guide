@@ -4,7 +4,6 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { extractGlobals } from "@potential-guide/cli-core";
-import { fixture as pilotFixture } from "../../objective-pilot/test/fixtures.js";
 import {
   bindObjective,
   listObjectives,
@@ -12,7 +11,8 @@ import {
   objectiveContext,
   parseObjectives,
   selectObjective,
-} from "../src/objectives.js";
+} from "../../objective-declarations/src/index.js";
+import { fixture as pilotFixture } from "../../objective-pilot/test/fixtures.js";
 import { bin, fixture, git, run } from "./fixtures.js";
 
 const unit = { type: "object", additionalProperties: false, maxProperties: 0 } as const;

@@ -52,7 +52,7 @@
       "path": "packages/objective-pilot",
       "roles": ["npm"],
       "runtime": "node",
-      "allows": ["@potential-guide/effects"],
+      "allows": ["@potential-guide/effects", "@potential-guide/pilot-protocol"],
       "entries": ["src/index.ts"],
       "sources": ["src/index.ts"],
       "tasks": ["build", "lint", "test", "typecheck"]
@@ -62,7 +62,7 @@
       "path": "packages/objective-regulator",
       "roles": ["npm"],
       "runtime": "node",
-      "allows": ["@potential-guide/effects", "@potential-guide/objective-pilot"],
+      "allows": ["@potential-guide/objective-pilot", "@potential-guide/effects"],
       "entries": ["src/index.ts"],
       "sources": ["src/index.ts"],
       "tasks": ["build", "lint", "test", "typecheck"]
@@ -73,8 +73,8 @@
       "roles": ["npm"],
       "runtime": "node",
       "allows": [
-        "@potential-guide/effects",
         "@potential-guide/objective-pilot",
+        "@potential-guide/effects",
         "@potential-guide/objective-regulator"
       ],
       "entries": ["src/index.ts"],
@@ -108,12 +108,18 @@
       "runtime": "node",
       "allows": [
         "@potential-guide/cli-core",
-        "@potential-guide/config",
-        "@potential-guide/effects",
-        "@potential-guide/git-source",
+        "@potential-guide/cli-runtime",
+        "@potential-guide/pguide-pilot",
+        "@potential-guide/pguide-regulate",
+        "@potential-guide/pguide-supervise",
+        "@potential-guide/pguide-objectives",
         "@potential-guide/objective-pilot",
         "@potential-guide/objective-regulator",
-        "@potential-guide/objective-portfolio-supervisor"
+        "@potential-guide/objective-portfolio-supervisor",
+        "@potential-guide/effects",
+        "@potential-guide/config",
+        "@potential-guide/git-source",
+        "@potential-guide/objective-declarations"
       ],
       "entries": ["src/bin.ts"],
       "sources": ["src/bin.ts"],
@@ -190,6 +196,104 @@
       "entries": ["health-check.mjs"],
       "sources": ["health-check.mjs"],
       "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "@potential-guide/cli-runtime",
+      "path": "packages/cli-runtime",
+      "roles": ["npm"],
+      "runtime": "node",
+      "allows": [
+        "@potential-guide/cli-core",
+        "@potential-guide/effects",
+        "@potential-guide/git-source",
+        "@potential-guide/objective-pilot",
+        "@potential-guide/pilot-protocol"
+      ],
+      "entries": ["src/index.ts"],
+      "sources": ["src/index.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "@potential-guide/pguide-objectives",
+      "path": "packages/pguide-objectives",
+      "roles": ["npm", "cli"],
+      "runtime": "node",
+      "allows": ["@potential-guide/cli-core", "@potential-guide/objective-declarations"],
+      "entries": ["src/index.ts"],
+      "sources": ["src/index.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "@potential-guide/pilot-protocol",
+      "path": "packages/pilot-protocol",
+      "roles": ["npm"],
+      "runtime": "node",
+      "allows": [],
+      "entries": ["src/index.ts"],
+      "sources": ["src/index.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "@potential-guide/pguide-pilot",
+      "path": "packages/pguide-pilot",
+      "roles": ["npm", "cli"],
+      "runtime": "node",
+      "allows": [
+        "@potential-guide/cli-core",
+        "@potential-guide/cli-runtime",
+        "@potential-guide/effects",
+        "@potential-guide/objective-pilot",
+        "@potential-guide/pilot-protocol",
+        "@potential-guide/objective-declarations"
+      ],
+      "entries": ["src/index.ts"],
+      "sources": ["src/index.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "@potential-guide/pguide-regulate",
+      "path": "packages/pguide-regulate",
+      "roles": ["npm", "cli"],
+      "runtime": "node",
+      "allows": [
+        "@potential-guide/cli-core",
+        "@potential-guide/cli-runtime",
+        "@potential-guide/effects",
+        "@potential-guide/objective-pilot",
+        "@potential-guide/objective-regulator",
+        "@potential-guide/objective-declarations"
+      ],
+      "entries": ["src/index.ts"],
+      "sources": ["src/index.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "@potential-guide/pguide-supervise",
+      "path": "packages/pguide-supervise",
+      "roles": ["npm", "cli"],
+      "runtime": "node",
+      "allows": [
+        "@potential-guide/cli-core",
+        "@potential-guide/cli-runtime",
+        "@potential-guide/effects",
+        "@potential-guide/objective-pilot",
+        "@potential-guide/objective-regulator",
+        "@potential-guide/objective-portfolio-supervisor",
+        "@potential-guide/pguide-regulate"
+      ],
+      "entries": ["src/index.ts"],
+      "sources": ["src/index.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
+    },
+    {
+      "name": "@potential-guide/objective-declarations",
+      "path": "packages/objective-declarations",
+      "roles": ["npm"],
+      "runtime": "node",
+      "allows": ["@potential-guide/cli-core", "@potential-guide/pilot-protocol"],
+      "entries": ["src/index.ts"],
+      "sources": ["src/index.ts"],
+      "tasks": ["build", "lint", "test", "typecheck"]
     }
   ],
   "deliveries": [
@@ -205,7 +309,14 @@
         "@potential-guide/objective-portfolio-supervisor",
         "@potential-guide/cli-core",
         "@potential-guide/config",
-        "pguide"
+        "pguide",
+        "@potential-guide/pilot-protocol",
+        "@potential-guide/cli-runtime",
+        "@potential-guide/pguide-pilot",
+        "@potential-guide/pguide-regulate",
+        "@potential-guide/pguide-supervise",
+        "@potential-guide/pguide-objectives",
+        "@potential-guide/objective-declarations"
       ],
       "entry": {
         "package": "@potential-guide/objective-pilot",
@@ -229,7 +340,14 @@
         "@potential-guide/git-source",
         "@potential-guide/objective-pilot",
         "@potential-guide/objective-regulator",
-        "@potential-guide/objective-portfolio-supervisor"
+        "@potential-guide/objective-portfolio-supervisor",
+        "@potential-guide/pilot-protocol",
+        "@potential-guide/cli-runtime",
+        "@potential-guide/pguide-pilot",
+        "@potential-guide/pguide-regulate",
+        "@potential-guide/pguide-supervise",
+        "@potential-guide/pguide-objectives",
+        "@potential-guide/objective-declarations"
       ],
       "entry": {
         "package": "pguide",

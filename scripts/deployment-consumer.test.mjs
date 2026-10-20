@@ -85,7 +85,10 @@ test("entry graph requires every expected dependency, rejects missing, nested wr
   try {
     await manifest(workspace.path, "pguide", "0.4.0", { "@potential-guide/config": "^0.3.0" });
     const config = await manifest(workspace.path, "@potential-guide/config", "0.3.0");
-    await assert.rejects(verifyConsumerGraph(workspace.path, versions), /Entry must reach/);
+    await assert.rejects(
+      verifyConsumerGraph(workspace.path, versions),
+      /Selected entries must reach/,
+    );
     await manifest(workspace.path, "@potential-guide/config", "0.3.0", {
       "@potential-guide/cli-core": "^0.3.0",
     });
@@ -119,7 +122,7 @@ test("entry graph requires every expected dependency, rejects missing, nested wr
 test("current CLI command versions match their package candidate", async () => {
   const root = new URL("../", import.meta.url);
   for (const [directory, files] of [
-    ["pguide", ["src/bin.ts", "src/command-help.ts"]],
+    ["pguide", ["src/bin.ts"]],
     ["pguide-config", ["src/bin.ts"]],
   ]) {
     const manifest = JSON.parse(

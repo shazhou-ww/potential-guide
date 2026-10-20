@@ -1,7 +1,25 @@
 # pguide
 
-The Potential Guide CLI composes Objective Pilot observation, functional
-regulation, Git snapshots, and ACP or AHP Agent execution.
+The Potential Guide CLI discovers and dispatches independently installed
+`pguide-<command>` executables. Its only built-ins are `diagnose` and `complete`;
+it does not install Objective execution packages or config.
+
+Install commands explicitly (use explicit candidate versions when testing RCs):
+
+```sh
+npm install --global pguide @potential-guide/pguide-pilot
+npm install --global @potential-guide/pguide-regulate @potential-guide/pguide-objectives
+# Optional: @potential-guide/pguide-supervise and @potential-guide/config
+```
+
+`pguide-pilot` owns `probe`, `scaffold`, `validate`; `pguide-regulate` owns
+`regulate`, `continue`; `pguide-supervise` owns `supervise`; `pguide-objectives`
+owns `objectives`. Existing options, output envelopes and exit codes are
+unchanged. Standalone binaries (for example `pguide-probe`) work without the
+main package. Missing commands name their installation package; duplicate
+same-priority executables fail as ambiguous rather than picking arbitrarily.
+Configured command directories take precedence over PATH.
+See [migration and layers](../../docs/package-layering.md).
 
 ```sh
 pguide scaffold pilot ./objective --check ready --problem not-ready

@@ -5,9 +5,9 @@ import test from "node:test";
 import { parseReleaseTag, releasePackages, releaseVersion } from "./release-packages.mjs";
 
 test("release inventory contains the new packages and excludes the retired Guide", () => {
-  assert.equal(releasePackages.length, 8);
+  assert.equal(releasePackages.length, 15);
   for (const field of ["id", "directory", "name"]) {
-    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 8);
+    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 15);
   }
   for (const name of [
     "@potential-guide/effects",
@@ -28,6 +28,17 @@ test("package-specific RC tags preserve package identity and never select latest
     assert.equal(parsed.distTag, "rc");
   }
   assert.equal(parseReleaseTag("pguide-v0.3.0").distTag, "latest");
+});
+
+test("command wrappers use pguide-prefixed names while published config remains compatible", () => {
+  for (const id of ["pguide-pilot", "pguide-regulate", "pguide-supervise", "pguide-objectives"]) {
+    const entry = releasePackages.find((entry) => entry.id === id);
+    assert.equal(entry?.name, `@potential-guide/${id}`);
+    assert.equal(entry?.directory, id);
+  }
+  const config = releasePackages.find((entry) => entry.id === "config");
+  assert.equal(config.name, "@potential-guide/config");
+  assert.deepEqual(config.bins, ["pguide-config"]);
 });
 
 test("release metadata rejects 1.0, malformed SemVer, unknown packages and retired tags", () => {

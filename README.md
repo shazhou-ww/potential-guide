@@ -7,7 +7,9 @@ and the extensible `pguide` command line:
   handles, current-value observations, and dependency-scoped replacement.
 - `@potential-guide/git-source` observes Git refs and provides immutable,
   commit-bound repository snapshots without depending on Objective concepts.
-- `@potential-guide/objective-pilot` loads serializable objective specifications,
+- `@potential-guide/pilot-protocol` independently provides Pilot definitions,
+  schema compilation, strict parsing, reference validation and subject projection.
+- `@potential-guide/objective-pilot` consumes those definitions,
   evaluates ordered levels through uniform probes, and provides localized Wiki
   guidance. A Pilot observes; it never invokes an Agent.
 - `@potential-guide/objective-regulator` combines a serializable regulation recipe
@@ -16,17 +18,23 @@ and the extensible `pguide` command line:
   through an injected portfolio policy.
 - `@potential-guide/cli-core` provides command protocol and CLI infrastructure
   without depending on Objective logic.
+- `@potential-guide/objective-declarations` shares declaration selection/binding
+  using protocol only; `@potential-guide/cli-runtime` assembles Git-backed Pilots.
 - `@potential-guide/config` is an optional scoped extension whose executable is
   `pguide-config` and whose command name is `config`.
-- `pguide` is the composition package invoked by `npx pguide`. It owns the
-  official Objective command adapters and discovers other independent
-  `pguide-<command>` executables.
+- `pguide` is a lightweight discovery/dispatch entrypoint. Install the optional
+  command packages you need; it no longer installs Objective execution or config.
+  `@potential-guide/pguide-pilot` owns `probe`, `scaffold`, `validate`;
+  `@potential-guide/pguide-regulate` owns `regulate`, `continue`;
+  `@potential-guide/pguide-supervise` owns `supervise`; and
+  `@potential-guide/pguide-objectives` owns `objectives`.
 
-Objective dependencies flow from Pilot to Regulator to Portfolio Supervisor.
-Git source observation is independent of that domain graph; the composition
-layer connects commit-bound resources to Pilot specification loading.
-CLI dependencies flow from CLI Core into extensions and the `pguide`
-composition layer; Objective logic never depends on CLI Core.
+There are exactly three layers: **tools → business logic → protocol**.
+Tools may also use protocol directly; same-layer dependencies are allowed.
+`effects` remains the protocol's lifecycle primitives. Git source and the four
+concrete Objective packages are explicitly deferred externalization, not a fourth
+layer. See [package layering and command migration](./docs/package-layering.md).
+`pnpm layers:check` enforces the manifest and production-import boundaries.
 
 ## Requirements
 
@@ -55,11 +63,18 @@ Run `pnpm check` for the complete repository verification.
 ## CLI
 
 ```sh
-npx pguide --help
+npm install --global pguide @potential-guide/pguide-pilot
+pguide --help
 pguide scaffold pilot ./my-pilot
 pguide validate pilot ./my-pilot/pilot.yaml
 pguide probe --pilot ./my-pilot/pilot.yaml --subject-file ./subject.json
 ```
+
+Add `@potential-guide/pguide-regulate` for regulation, `@potential-guide/pguide-supervise`
+for supervision, `@potential-guide/pguide-objectives` for declaration management,
+and `@potential-guide/config` for configuration. Each package also provides
+standalone `pguide-<command>` binaries; no `pguide` installation is required for
+those entrypoints. Install selected RC versions explicitly when testing a candidate.
 
 Commit the specification and its resources before probing so that the reported
 version identifies the contents actually evaluated. Validation and scaffolding

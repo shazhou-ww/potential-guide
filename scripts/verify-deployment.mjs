@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { access, chmod, cp, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { basename, delimiter, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { checkPackageConsumers } from "./check-package-consumers.mjs";
 import {
   assertLatestVersion,
   consumerManifest,
@@ -27,6 +28,9 @@ const binExtension = process.platform === "win32" ? ".cmd" : "";
 const packageDefinitions = releasePackages;
 const installPublished = mode !== "packed";
 const expectedVersions = new Map();
+const consumerEntries = packageDefinitions
+  .filter(({ bins }) => bins.length > 0)
+  .map(({ name }) => name);
 
 async function successful(command, args, options) {
   const result = await execute(command, args, { cwd: root, ...options });
@@ -96,8 +100,25 @@ async function packAndInstall() {
     console.log(`packed ${definition.name}: ${paths.length} files`);
   }
 
+  if (!installPublished) {
+    await checkPackageConsumers(
+      root,
+      scratch,
+      packageDefinitions,
+      tarballs,
+      async (command, args, cwd, env = process.env, expectedCode = 0) => {
+        const result = await execute(command, args, { cwd, env });
+        assert.equal(
+          result.code,
+          expectedCode,
+          `${command} ${args.join(" ")}\n${result.stderr}\n${result.stdout}`,
+        );
+        return result.stdout;
+      },
+    );
+  }
   await mkdir(consumer, { recursive: true });
-  const manifest = consumerManifest(mode, expectedVersions, tarballs);
+  const manifest = consumerManifest(mode, expectedVersions, tarballs, consumerEntries);
   if (mode === "latest") {
     const latest = await successful(npm, ["view", "pguide@latest", "version", "--json"]);
     assertLatestVersion(JSON.parse(latest.stdout), expectedVersions.get("pguide"));
@@ -108,7 +129,7 @@ async function packAndInstall() {
     ["install", "--ignore-scripts", "--no-audit", "--no-fund", "--no-package-lock"],
     { cwd: consumer },
   );
-  await verifyConsumerGraph(consumer, expectedVersions);
+  await verifyConsumerGraph(consumer, expectedVersions, consumerEntries);
   for (const definition of packageDefinitions) {
     const installedManifest = JSON.parse(
       await readFile(join(consumer, "node_modules", ...definition.name.split("/"), "package.json")),
@@ -151,7 +172,9 @@ async function packAndInstall() {
   const smoke = join(consumer, "public-libraries.mjs");
   await writeFile(smoke, moduleSource);
   await successful(process.execPath, [smoke], { cwd: consumer });
-  console.log(`${mode} entry-only consumer: transitive versions and library imports verified`);
+  console.log(
+    `${mode} selected-command consumer: transitive versions and library imports verified`,
+  );
 }
 
 async function verifyCliContract() {
@@ -401,7 +424,7 @@ async function verifyRegulation(baseEnv) {
   const lineageSource = await readFile(join(regulationRoot, "regulation.json"), "utf8");
   const lineage = JSON.parse(lineageSource);
   assert.equal(lineage.attempts.length, 3);
-  assert.equal(lineage.schemaVersion, 2);
+  assert.equal(lineage.schemaVersion, 3);
   assert.equal(lineage.attempts[1].actions.length, 0);
   assert.ok(Date.parse(lineage.expiresAt) > Date.now());
   const transcript = await readFile(join(regulationRoot, "transcript.jsonl"), "utf8");

@@ -8,12 +8,8 @@
   },
   "include": ["src/**/*.ts"],
   "references": [
-    { "path": "../pguide-cli-core" },
-    { "path": "../objective-pilot" },
-    { "path": "../effects" },
-    { "path": "../git-source" },
-    { "path": "../objective-regulator" },
-    { "path": "../objective-portfolio-supervisor" },
-    { "path": "../pguide-config" }
+    {
+      "path": "../pguide-cli-core"
+    }
   ]
 }

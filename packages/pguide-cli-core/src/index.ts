@@ -1416,3 +1416,10 @@ export async function ensurePrivateDirectory(path: string): Promise<void> {
   const handle = await open(path, "r");
   await handle.close();
 }
+
+export {
+  commandDescriptions,
+  commandPackages,
+  launchCommand,
+  showCommandHelp,
+} from "./command-help.js";

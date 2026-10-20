@@ -6,9 +6,9 @@ import { test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { type AgentProfile, atomicWrite } from "@potential-guide/cli-core";
 import type { PlannerPolicyInput } from "@potential-guide/objective-portfolio-supervisor";
-import { createAcpPlannerPolicy, plannerPrompt } from "../src/acp-planner.js";
-import { parsePortfolioFile } from "../src/commands/supervisor.js";
-import { withPilot } from "../src/pilot-source.js";
+import { withPilot } from "../../cli-runtime/src/pilot-source.js";
+import { createAcpPlannerPolicy, plannerPrompt } from "../../pguide-supervise/src/acp-planner.js";
+import { parsePortfolioFile } from "../../pguide-supervise/src/commands/supervisor.js";
 import { bin, fixture, git, root, run, scratch } from "./fixtures.js";
 
 const stubSource = `

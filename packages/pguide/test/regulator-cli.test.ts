@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
 import type { AgentInput } from "@potential-guide/objective-regulator";
-import { agentPrompt, executeAcpAgent } from "../src/commands/regulator.js";
+import { agentPrompt, executeAcpAgent } from "../../pguide-regulate/src/commands/regulator.js";
 import { bin, fixture, git, root, run, scratch } from "./fixtures.js";
 
 test("permissions persist per attempt and continue uses current grants and revoked ceiling", async () => {

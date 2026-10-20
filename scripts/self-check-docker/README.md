@@ -44,7 +44,7 @@ the toolchain, the build reads the selected source catalog using the production
 cross-spawn declaration versions. This does not change source manifests or
 the source lockfile.
 
-It then packs every release package, installs an entry-only consumer with local tarball
+It then packs every release package, installs an explicitly selected CLI-command consumer with local tarball
 overrides, and verifies the complete internal dependency graph using the
 deployment consumer helpers. It never publishes or fetches a replacement
 published pguide/internal package. Consumer third-party resolution and apt

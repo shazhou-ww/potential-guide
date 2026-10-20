@@ -11,6 +11,13 @@ on:
       - "cli-core-v*"
       - "config-v*"
       - "pguide-v*"
+      - "pilot-protocol-v*"
+      - "cli-runtime-v*"
+      - "objective-declarations-v*"
+      - "pguide-pilot-v*"
+      - "pguide-regulate-v*"
+      - "pguide-supervise-v*"
+      - "pguide-objectives-v*"
   workflow_dispatch:
     inputs:
       package:
@@ -26,6 +33,13 @@ on:
           - cli-core
           - config
           - pguide
+          - pilot-protocol
+          - cli-runtime
+          - objective-declarations
+          - pguide-pilot
+          - pguide-regulate
+          - pguide-supervise
+          - pguide-objectives
       mode:
         description: Dry-run publishing or only verify an already-published version
         type: choice

@@ -7,7 +7,16 @@ import { promisify } from "node:util";
 export const root = resolve(import.meta.dirname, "..", "..", "..");
 export const scratch = join(root, ".cache");
 await mkdir(scratch, { recursive: true });
-export const bin = (name: string) => join(root, "packages", "pguide", "dist", "bin", `${name}.js`);
+export const commandPackage = (name: string) =>
+  name === "regulate" || name === "continue"
+    ? "pguide-regulate"
+    : name === "supervise"
+      ? "pguide-supervise"
+      : name === "objectives"
+        ? "pguide-objectives"
+        : "pguide-pilot";
+export const bin = (name: string) =>
+  join(root, "packages", commandPackage(name), "dist", "bin", `${name}.js`);
 const execute = promisify(execFile);
 export async function git(cwd: string, ...args: string[]): Promise<string> {
   return (await execute("git", ["-C", cwd, ...args], { windowsHide: true })).stdout.trim();

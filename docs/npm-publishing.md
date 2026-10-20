@@ -1,6 +1,6 @@
 # npm publishing
 
-Potential Guide publishes eight CLI and library packages independently from this monorepo:
+Potential Guide publishes fifteen CLI and library packages independently from this monorepo:
 
 | Package | Release tag |
 | --- | --- |
@@ -12,13 +12,31 @@ Potential Guide publishes eight CLI and library packages independently from this
 | `@potential-guide/cli-core` | `cli-core-vX.Y.Z` |
 | `@potential-guide/config` | `config-vX.Y.Z` |
 | `pguide` | `pguide-vX.Y.Z` |
+| `@potential-guide/pilot-protocol` | `pilot-protocol-vX.Y.Z` |
+| `@potential-guide/cli-runtime` | `cli-runtime-vX.Y.Z` |
+| `@potential-guide/objective-declarations` | `objective-declarations-vX.Y.Z` |
+| `@potential-guide/pguide-pilot` | `pguide-pilot-vX.Y.Z` |
+| `@potential-guide/pguide-regulate` | `pguide-regulate-vX.Y.Z` |
+| `@potential-guide/pguide-supervise` | `pguide-supervise-vX.Y.Z` |
+| `@potential-guide/pguide-objectives` | `pguide-objectives-vX.Y.Z` |
 
-Packages must be released in dependency order: `effects`, then `git-source`
-and `objective-pilot`, then `objective-regulator` and
-`objective-portfolio-supervisor`. `cli-core` must precede `config`; `pguide`
-comes after all its dependencies. The three Objective packages are domain logic and
-must not depend on `cli-core`; only `config` and the `pguide` composition layer
-consume CLI infrastructure.
+Command wrapper packages use the `pguide-` prefix, including grouped
+`pguide-pilot` and `pguide-regulate`. `@potential-guide/config` deliberately retains
+its published npm name and `config-v*` tags as a legacy compatibility exception;
+its executable remains `pguide-config`. Shared libraries are not command wrappers
+and keep their responsibility names.
+
+Release packages in manifest dependency order. `effects` and `pilot-protocol`
+are protocol; `objective-pilot` consumes both, then `objective-regulator` and
+`objective-portfolio-supervisor` build business capabilities. `cli-core` precedes
+`config` and the lightweight `pguide`; `pguide` no longer requires any business
+or command package. `objective-declarations` consumes CLI Core and Pilot protocol only;
+`cli-runtime` consumes Pilot and Git source;
+the optional command packages consume it and CLI Core. `pguide-regulate`
+must precede `pguide-supervise`. Publish changed transitive dependencies before
+their consumers. See [three-layer boundaries and migration](./package-layering.md).
+Git source and four concrete Objective packages remain deferred externalization;
+this implementation does not migrate them or publish concrete Objectives.
 
 All extension packages use the `@potential-guide` npm scope. Their executable
 and command names remain independent of the package name; for example,
@@ -65,6 +83,13 @@ rules must allow these release tags:
 - `cli-core-v*`
 - `config-v*`
 - `pguide-v*`
+- `pilot-protocol-v*`
+- `cli-runtime-v*`
+- `objective-declarations-v*`
+- `pguide-pilot-v*`
+- `pguide-regulate-v*`
+- `pguide-supervise-v*`
+- `pguide-objectives-v*`
 
 ## Publish the bootstrap placeholders
 
@@ -228,11 +253,11 @@ verification commit. Never rerun a successful publish step to repair a
 metadata propagation failure.
 
 After every selected candidate has published successfully, run the CI workflow
-manually with `published=true`. Its independent consumers install only
-`pguide@<manifest-version>` from npm, without overrides or other top-level internal
-dependencies. The verifier accepts the same `0.x` stable/RC versions as release
+manually with `published=true`. Its independent consumers explicitly install
+`pguide@<manifest-version>` and the five optional command/config packages from npm,
+without overrides. The verifier accepts the same `0.x` stable/RC versions as release
 tags, resolves every internal dependency from its actual parent (including nested
-copies), and checks all installed versions against the eight source manifests.
+copies), and checks all installed versions against the fifteen source manifests.
 It also imports the public libraries and verifies bins and runtime scenarios on
 the declared operating systems:
 
@@ -240,11 +265,11 @@ the declared operating systems:
 gh workflow run ci.yaml --ref main -f published=true
 ```
 
-The default local `pnpm deployment:verify` path also installs only the entry
-tarball. It packs all eight packages, checks their contents, and uses npm
-`overrides` pointing to the seven internal library/config tarballs. This isolated
-consumer makes unpublished RC dependencies available without installing them as
-top-level dependencies. It proves local entry composition, not real registry
+The default local `pnpm deployment:verify` path installs those explicitly selected
+CLI tarballs. It packs all fifteen packages, checks their contents, and uses npm
+`overrides` pointing to the internal tarballs. This isolated consumer makes
+unpublished RC dependencies available without requiring the main package to
+depend on optional commands. It proves local selected-command composition, not real registry
 dependency resolution, publication, provenance, or the `latest` dist-tag.
 Tarball overrides are never used in either registry mode.
 
@@ -258,7 +283,8 @@ gh workflow run ci.yaml --ref main -f latest=true
 ```
 
 This mode reads `npm view pguide@latest version`, requires it to equal the entry
-manifest version, installs only `pguide@latest`, and applies the same exact
+manifest version, installs `pguide@latest` plus the explicitly selected optional
+command/config manifest versions, and applies the same exact
 transitive-version checks. It is not interchangeable with `--published`:
 successful exact RC installation does not prove default installation. The
 `published` and `latest` inputs are mutually exclusive; ordinary push/PR CI

@@ -7,5 +7,12 @@
     "tsBuildInfoFile": "../../.cache/tsbuildinfo/objective-pilot.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../effects" }]
+  "references": [
+    {
+      "path": "../effects"
+    },
+    {
+      "path": "../pilot-protocol"
+    }
+  ]
 }

@@ -1,5 +1,13 @@
 # Objective Pilot
 
+Pilot definitions, schema compilation, strict parsing, reference validation and
+subject projection now have an independently installable canonical home:
+[`@potential-guide/pilot-protocol`](../pilot-protocol/README.md). This execution
+package reexports its former definition APIs for compatibility; observation,
+probes and execution evidence remain here. Consumers needing definitions only
+should install the protocol package, not this business package or CLI.
+See [three-layer boundaries](../../docs/package-layering.md).
+
 `@potential-guide/objective-pilot` observes an Objective. It never calls an Agent.
 It replaces the retired Objective Guide API, not a compatibility wrapper.
 

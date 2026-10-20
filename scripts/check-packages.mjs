@@ -1,27 +1,19 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
 import { access, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import spawn from "cross-spawn";
+import { checkPackageConsumers } from "./check-package-consumers.mjs";
 import { releasePackages } from "./release-packages.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const pnpmCommand = "pnpm";
 const packages = releasePackages;
 
-function run(command, args) {
+function run(command, args, cwd = root, env = process.env, expectedCode = 0) {
   return new Promise((resolve, reject) => {
-    const options = { cwd: root, windowsHide: true };
-    const child =
-      process.platform === "win32"
-        ? spawn(
-            [
-              command,
-              ...args.map((value) => `"${value.replaceAll("%", "%%").replaceAll('"', '""')}"`),
-            ].join(" "),
-            { ...options, shell: true },
-          )
-        : spawn(command, args, options);
+    const options = { cwd, env, windowsHide: true };
+    const child = spawn(command, args, { ...options, shell: false });
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");
@@ -34,10 +26,10 @@ function run(command, args) {
     });
     child.on("error", reject);
     child.on("close", (code) => {
-      if (code === 0) {
+      if (code === expectedCode) {
         resolve(stdout);
       } else {
-        reject(new Error(`${command} exited ${String(code)}.\n${stderr}`));
+        reject(new Error(`${command} exited ${String(code)}.\n${stderr}\n${stdout}`));
       }
     });
   });
@@ -45,12 +37,22 @@ function run(command, args) {
 
 await mkdir(join(root, ".cache"), { recursive: true });
 const destination = await mkdtemp(join(root, ".cache", "potential-guide-packs-"));
+const tarballs = new Map();
 try {
   for (const expected of packages) {
     const packageRoot = join(root, "packages", expected.directory);
     const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
     assert.equal(manifest.name, expected.name);
     assert.deepEqual(Object.keys(manifest.bin ?? {}).sort(), [...(expected.bins ?? [])].sort());
+    for (const dependency of expected.forbiddenRuntimeDependencies ?? []) {
+      for (const field of ["dependencies", "optionalDependencies", "peerDependencies"]) {
+        assert.equal(
+          manifest[field]?.[dependency],
+          undefined,
+          `${expected.name}: ${field}.${dependency}`,
+        );
+      }
+    }
     for (const dependency of expected.forbiddenDependencies ?? []) {
       for (const field of [
         "dependencies",
@@ -66,7 +68,7 @@ try {
       }
     }
     if (expected.requiredExports !== undefined) {
-      assert.deepEqual(Object.keys(manifest.exports), ["."]);
+      assert.ok(Object.hasOwn(manifest.exports, "."));
       assert.deepEqual(Object.keys(manifest.exports["."]).sort(), ["import", "types"]);
       const module = await import(pathToFileURL(join(packageRoot, "dist", "index.js")).href);
       for (const name of expected.requiredExports) {
@@ -86,6 +88,12 @@ try {
     assert.equal(packed.name, expected.name);
     assert.equal(packed.version, manifest.version);
     const files = packed.files.map(({ path }) => path);
+    for (const file of files.filter((path) => path.startsWith("dist/") && path.endsWith(".js"))) {
+      await assert.doesNotReject(
+        access(join(packageRoot, "src", `${file.slice(5, -3)}.ts`)),
+        `${expected.name} contains stale output ${file}; clean and rebuild before packing.`,
+      );
+    }
     for (const forbidden of expected.forbiddenFiles ?? []) {
       assert.ok(!files.includes(forbidden), `${expected.name} contains retired ${forbidden}.`);
     }
@@ -114,8 +122,10 @@ try {
       `${expected.name} contains development-only files.`,
     );
     await access(packed.filename);
+    tarballs.set(expected.name, packed.filename);
     console.log(`${expected.name}: ${String(files.length)} packed files`);
   }
+  await checkPackageConsumers(root, destination, packages, tarballs, run);
 } finally {
   await rm(destination, { recursive: true, force: true });
 }

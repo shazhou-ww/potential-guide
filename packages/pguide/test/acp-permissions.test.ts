@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { test } from "node:test";
 import type { AcpPermissionRequest } from "@potential-guide/cli-core";
 import type { AgentInput, RegulationPermissions } from "@potential-guide/objective-regulator";
-import { createAcpPermissionPolicy } from "../src/acp-permissions.js";
-import { executeAcpAgent } from "../src/commands/regulator.js";
+import { createAcpPermissionPolicy } from "../../pguide-regulate/src/acp-permissions.js";
+import { executeAcpAgent } from "../../pguide-regulate/src/commands/regulator.js";
 import { scratch } from "./fixtures.js";
 
 const signal = () => new AbortController().signal;

@@ -24,7 +24,7 @@ function run(command, args, cwd) {
 const registry = new URL(process.env.npm_config_registry ?? "https://registry.npmjs.org/");
 assert.equal(registry.protocol, "https:");
 assert.equal(registry.username + registry.password + registry.search + registry.hash, "");
-const { parse } = createRequire("/source/packages/objective-pilot/package.json")("yaml");
+const { parse } = createRequire("/source/packages/pilot-protocol/package.json")("yaml");
 const workspace = parse(await readFile("/source/pnpm-workspace.yaml", "utf8"));
 const toolchainVersions = {
   typescript: "5.9.3",
@@ -100,10 +100,23 @@ for (const { name, directory } of releasePackages) {
 }
 await writeFile(
   "/opt/consumer/package.json",
-  JSON.stringify(consumerManifest("packed", versions, tarballs), null, 2),
+  JSON.stringify(
+    consumerManifest(
+      "packed",
+      versions,
+      tarballs,
+      releasePackages.filter(({ bins }) => bins.length > 0).map(({ name }) => name),
+    ),
+    null,
+    2,
+  ),
 );
 run("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund"], "/opt/consumer");
-await verifyConsumerGraph("/opt/consumer", versions);
+await verifyConsumerGraph(
+  "/opt/consumer",
+  versions,
+  releasePackages.filter(({ bins }) => bins.length > 0).map(({ name }) => name),
+);
 
 await mkdir("/opt/objective/packages", { recursive: true });
 await cp(
