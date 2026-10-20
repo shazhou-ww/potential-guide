@@ -6,11 +6,14 @@ import { test } from "node:test";
 import {
   AcpClient,
   atomicWrite,
+  CliError,
   digest,
   loadConfig,
   parseConfig,
   pruneExpiredRegulations,
+  readJsonSubject,
   redactSensitive,
+  resolveObjective,
   validateAgentProfile,
 } from "@potential-guide/cli-core";
 import { pipeRedactedSecrets } from "../src/streaming-secret-redactor.js";
@@ -18,6 +21,93 @@ import { pipeRedactedSecrets } from "../src/streaming-secret-redactor.js";
 const scratch = resolve(import.meta.dirname, "..", "..", "..", ".cache");
 await mkdir(scratch, { recursive: true });
 const tmpdir = () => scratch;
+
+test("interactive subject input fails explicitly instead of waiting for stdin", async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
+  Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: true });
+  try {
+    await assert.rejects(readJsonSubject(undefined, scratch), /Pipe a JSON subject/);
+    await assert.rejects(readJsonSubject("-", scratch), /Pipe a JSON subject/);
+    const subjectSchema = {
+      type: "object",
+      required: ["directory"],
+      properties: { directory: { type: "string", minLength: 1 } },
+    };
+    for (const path of [undefined, "-"]) {
+      await assert.rejects(readJsonSubject(path, scratch, subjectSchema), (error: unknown) => {
+        assert.ok(error instanceof CliError);
+        assert.equal(error.exitCode, 2);
+        assert.equal(error.status, "invalid");
+        assert.deepEqual(error.guidance?.subjectSchema, subjectSchema);
+        assert.match(String(error.guidance?.instructions), /--subject-file subject.json/);
+        return true;
+      });
+    }
+  } finally {
+    if (descriptor === undefined) Reflect.deleteProperty(process.stdin, "isTTY");
+    else Object.defineProperty(process.stdin, "isTTY", descriptor);
+  }
+});
+
+test("Registered Objectives validate names and targets without changing literal paths", () => {
+  const config = parseConfig(
+    JSON.stringify({
+      schemaVersion: 2,
+      objectives: { health: "git+https://example.invalid/repo#pilot.yaml" },
+    }),
+  );
+  assert.equal(resolveObjective("health", config), config.objectives?.health);
+  assert.equal(resolveObjective("@health", config), config.objectives?.health);
+  assert.equal(resolveObjective("./health", config), "./health");
+  const unregisteredUri = "git+https://example.invalid/unregistered.git#pilot.yaml";
+  assert.equal(resolveObjective(unregisteredUri, config), unregisteredUri);
+  assert.equal(resolveObjective("unregistered.yaml", config), "unregistered.yaml");
+  assert.equal(resolveObjective("toString", config), "toString");
+  assert.throws(() => resolveObjective("@missing", config), /Unknown registered Objective/);
+  for (const objectives of [
+    [],
+    null,
+    { "bad/name": "path" },
+    { good: "" },
+    { good: 3 },
+    { good: "@other" },
+  ])
+    assert.throws(
+      () => parseConfig(JSON.stringify({ schemaVersion: 2, objectives })),
+      /objective/i,
+    );
+});
+
+test("Registered Objectives merge by name with per-entry provenance", async () => {
+  const cwd = await mkdtemp(join(scratch, "pguide-objective-config-"));
+  try {
+    await mkdir(join(cwd, ".pguide"));
+    const project = join(cwd, ".pguide", "config.yaml");
+    const explicit = join(cwd, "explicit.json");
+    await writeFile(
+      project,
+      JSON.stringify({
+        schemaVersion: 2,
+        objectives: { shared: "project", kept: "kept" },
+      }),
+    );
+    await writeFile(
+      explicit,
+      JSON.stringify({
+        schemaVersion: 2,
+        objectives: { shared: "explicit", extra: "extra" },
+      }),
+    );
+    const loaded = await loadConfig(cwd, explicit);
+    assert.equal(loaded.value.objectives?.shared, "explicit");
+    assert.equal(loaded.value.objectives?.kept, "kept");
+    assert.equal(loaded.value.objectives?.extra, "extra");
+    assert.equal(loaded.sources["objectives.shared"], explicit);
+    assert.equal(loaded.sources["objectives.kept"], project);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
 
 test("configuration limits apply only to individual Agent executions", () => {
   assert.deepEqual(parseConfig("schemaVersion: 2\nagentExecutionLimits:\n  timeoutMs: 1234\n"), {

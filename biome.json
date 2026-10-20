@@ -8,7 +8,10 @@
       "!**/dist",
       "!**/node_modules",
       "!.silvermoon",
-      "!objectives/pguide-self-check/runtime"
+      "!packages/objective-monorepo-standard/runtime",
+      "!packages/objective-pguide-self-check/runtime",
+      "!packages/objective-devbox-health/runtime",
+      "!packages/objective-pguide-setup/runtime"
     ]
   },
   "formatter": {

@@ -20,6 +20,7 @@ import {
   readJsonSubject,
   redactAgentValue,
   rejectUnknownOptions,
+  resolveObjective,
   stateRoot,
   validateAgentProfile,
   writeResult,
@@ -48,9 +49,8 @@ import {
   type PermissionDecision,
   unknownPermissionRequest,
 } from "../acp-permissions.js";
+import { showCommandHelp } from "../command-help.js";
 import { withPilot } from "../pilot-source.js";
-
-export const regulatorCommandVersion = "0.4.0-rc.0";
 
 export const defaultRegulationQuota = Object.freeze({
   timeoutMs: 300_000,
@@ -512,11 +512,7 @@ export async function runRegulate(
   globals: GlobalOptions,
 ): Promise<number | undefined> {
   if (globals.help) {
-    writeResult(
-      { schemaVersion: 1, command: "regulate" },
-      globals.format,
-      "Usage: pguide regulate --pilot <path|Git URI> --subject-file <path|-> --target <level> [--agent <profile>] [--agent-timeout-ms <positive integer>] [--revision <ref|commit>]",
-    );
+    showCommandHelp("regulate", globals);
     return;
   }
   rejectUnknownOptions(argv, {
@@ -537,10 +533,6 @@ export async function runRegulate(
   const profile = loaded.value.agents?.[agentName];
   if (profile === undefined) throw new CliError(`Unknown Agent profile: ${agentName}.`);
   validateAgentProfile(profile);
-  const subject = (await readJsonSubject(
-    option(argv, "--subject-file", { required: true }) as string,
-    globals.cwd,
-  )) as Subject;
   const language = option(argv, "--language") as string | undefined;
   const timeout = option(argv, "--agent-timeout-ms") as string | undefined;
   const timeoutMs =
@@ -549,12 +541,20 @@ export async function runRegulate(
       : Number(timeout);
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2_147_483_647)
     throw new CliError("--agent-timeout-ms must be a positive integer no greater than 2147483647.");
-  const location = option(argv, "--pilot", { required: true }) as string;
+  const location = resolveObjective(
+    option(argv, "--pilot", { required: true }) as string,
+    loaded.value,
+  );
   return withPilot(
     location,
     globals.cwd,
     option(argv, "--revision") as string | undefined,
     async (spec, runtime) => {
+      const subject = (await readJsonSubject(
+        option(argv, "--subject-file") as string | undefined,
+        globals.cwd,
+        spec.manifest.domainSchema,
+      )) as Subject;
       const regulation: Regulation = {
         schemaVersion: 2,
         regulationId: randomUUID(),
@@ -596,11 +596,7 @@ export async function runContinue(
   globals: GlobalOptions,
 ): Promise<number | undefined> {
   if (globals.help) {
-    writeResult(
-      { schemaVersion: 1, command: "continue" },
-      globals.format,
-      "Usage: pguide continue <regulation-id> [--report <path>]",
-    );
+    showCommandHelp("continue", globals);
     return;
   }
   rejectUnknownOptions(argv, { "--report": "value" }, 1);

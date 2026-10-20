@@ -1,6 +1,8 @@
 # Implementation
 
-本文件是可调整的实施种子；当前只准备方案，不执行迁移。范围与约束见 [架构规范](./ideal/architecture.md)。
+用户已明确启动实施。范围与约束仍以已接受的 [架构规范](./ideal/architecture.md) 为准；
+长期维护规范见 [Pilot packages](../../../../../docs/pilot-packages.md)。
+各阶段审批由父会话独立决定，本实施会话只提交准确候选，不自行接受或豁免。
 
 ## Steps
 
@@ -8,9 +10,17 @@
 
 核定全部正式 Objectives、内嵌 fixture、生成资源及调用方，确定 package 映射、可信运行时供应方式和历史入口迁移策略，形成仓库长期架构文档。
 
+保留 monorepo-objective 包身份并合并其 Pilot；setup、self-check、health 分别归
+pguide-setup-pilot、pguide-self-check-pilot、development-machine-health-pilot。
+旧路径仅在历史 commit 可用，新版本统一迁移 URI 并固定完整 commit。
+
 ### I-S02: 迁移完整 Pilot 与模块职责
 
 按统一规范合并每个 Pilot 的定义、References、实现和测试，拆分聚合脚本的独立职责，接线 workspace、构建及资源交付；复用已有基础能力，不复制实现。
+
+setup/self-check 的共用检查与 ACP/权限来源以生成器维护；health 的 Docker 传输生成
+单文件运行时；monorepo 的可信检查与第三方依赖生成 standalone 资源，以满足现有 Git
+loader 不安装依赖、不执行构建的契约。各生成器有新鲜度检查，不手改生成物。
 
 ### I-S03: 更新调用方并完成回归
 

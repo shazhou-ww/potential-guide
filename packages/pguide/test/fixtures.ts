@@ -12,7 +12,12 @@ const execute = promisify(execFile);
 export async function git(cwd: string, ...args: string[]): Promise<string> {
   return (await execute("git", ["-C", cwd, ...args], { windowsHide: true })).stdout.trim();
 }
-export function run(script: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
+export function run(
+  script: string,
+  args: string[],
+  env: NodeJS.ProcessEnv = process.env,
+  input?: string,
+) {
   return new Promise<{ code: number; stdout: string; stderr: string }>((done, reject) => {
     const child = spawn(process.execPath, [script, ...args], {
       cwd: root,
@@ -34,6 +39,7 @@ export function run(script: string, args: string[], env: NodeJS.ProcessEnv = pro
     });
     child.on("error", reject);
     child.on("close", (code) => done({ code: code ?? 70, stdout, stderr }));
+    if (input !== undefined) child.stdin.end(input);
   });
 }
 export async function fixture() {

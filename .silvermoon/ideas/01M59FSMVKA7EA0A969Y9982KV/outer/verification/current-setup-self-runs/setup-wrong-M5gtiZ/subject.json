@@ -1,0 +1,1 @@
+{"workingDirectory":"/work/runs/setup-wrong-M5gtiZ","configPath":"/work/runs/setup-wrong-M5gtiZ/config.json","scratchDirectory":"/work/runs/setup-wrong-M5gtiZ/scratch","pguide":{"command":"/opt/consumer/node_modules/.bin/pguide"},"desiredVersion":"0.4.0-rc.0","agent":"fixture","userHome":"/work/home","timeoutMs":20000,"allowSanity":true}

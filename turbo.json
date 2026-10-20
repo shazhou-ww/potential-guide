@@ -15,14 +15,58 @@
       "dependsOn": ["build"],
       "outputs": []
     },
+    "@potential-guide/objective-pguide-self-check#build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/scripts/build-self-check-runtime.mjs",
+        "$TURBO_ROOT$/scripts/self-check-agent.mjs"
+      ],
+      "outputs": ["runtime/**", "references/**"]
+    },
+    "@potential-guide/objective-monorepo-standard#build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/build-monorepo-runtime.mjs"],
+      "outputs": ["dist/**", "runtime/**", "THIRD_PARTY_NOTICES.txt"]
+    },
+    "@potential-guide/objective-monorepo-standard#test": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "outputs": []
+    },
+    "@potential-guide/objective-devbox-health#build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/build-health-runtime.mjs"],
+      "outputs": ["runtime/**"]
+    },
+    "@potential-guide/objective-pguide-setup#build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/build-setup-runtime.mjs"],
+      "outputs": ["runtime/**"]
+    },
     "pguide#test": {
       "dependsOn": ["build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/objectives/**"],
+      "inputs": ["$TURBO_DEFAULT$"],
       "outputs": []
     },
     "typecheck": {
       "dependsOn": ["^typecheck"],
       "outputs": ["dist/**"]
+    },
+    "@potential-guide/objective-pguide-setup#typecheck": {
+      "dependsOn": ["^typecheck"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/check-pilot-sources.mjs"],
+      "outputs": []
+    },
+    "@potential-guide/objective-pguide-self-check#typecheck": {
+      "dependsOn": ["^typecheck"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/check-pilot-sources.mjs"],
+      "outputs": []
+    },
+    "@potential-guide/objective-devbox-health#typecheck": {
+      "dependsOn": ["^typecheck"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/check-pilot-sources.mjs"],
+      "outputs": []
     }
   }
 }

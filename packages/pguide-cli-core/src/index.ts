@@ -22,12 +22,13 @@ import { parseRegulationPermissions, type RegulationPermissions } from "./permis
 import { killProcessTree } from "./process-tree.js";
 import { pipeRedactedSecrets } from "./streaming-secret-redactor.js";
 
+export { type AhpSessionIdentity, executeAhp, inspectAhp } from "./ahp.js";
+export { type CommandHelp, formatCommandHelp } from "./help.js";
 export {
   type PermissionGrant,
   parseRegulationPermissions,
   type RegulationPermissions,
 } from "./permissions.js";
-export { type AhpSessionIdentity, executeAhp, inspectAhp } from "./ahp.js";
 export { killProcessTree } from "./process-tree.js";
 
 export const COMMAND_PROTOCOL = "pguide-command-v1";
@@ -83,6 +84,7 @@ export interface PguideConfig {
     quota?: { timeoutMs: number; maxAgentRuns: number; maxStallRuns: number };
   };
   agents?: Record<string, AgentProfile>;
+  objectives?: Record<string, string>;
 }
 
 export interface LoadedConfig {
@@ -106,6 +108,7 @@ export class CliError extends Error {
     message: string,
     readonly exitCode = 2,
     readonly status = "invalid",
+    readonly guidance?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -448,6 +451,7 @@ export function parseConfig(source: string): PguideConfig {
       "regulationPermissions",
       "regulationStrategy",
       "agents",
+      "objectives",
     ],
     "Configuration",
   );
@@ -554,6 +558,17 @@ export function parseConfig(source: string): PguideConfig {
       raw.agents[name] = validateAgentProfile(profile);
     }
   }
+  if (raw.objectives !== undefined) {
+    if (!record(raw.objectives)) throw new CliError("objectives must be an object.");
+    for (const [name, location] of Object.entries(raw.objectives)) {
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(name))
+        throw new CliError(`Invalid Objective name: ${name}.`);
+      if (!nonempty(location) || location.startsWith("@"))
+        throw new CliError(
+          `Objective ${name} must reference a path or Git URI, not another registry entry.`,
+        );
+    }
+  }
   return raw as unknown as PguideConfig;
 }
 
@@ -613,8 +628,11 @@ function mergeConfig(
   if (incoming.regulationStrategy !== undefined)
     next.regulationStrategy = { ...target.regulationStrategy, ...incoming.regulationStrategy };
   if (incoming.agents !== undefined) next.agents = { ...target.agents, ...incoming.agents };
+  if (incoming.objectives !== undefined)
+    next.objectives = { ...target.objectives, ...incoming.objectives };
   for (const key of Object.keys(incoming)) sources[key] = source;
   for (const name of Object.keys(incoming.agents ?? {})) sources[`agents.${name}`] = source;
+  for (const name of Object.keys(incoming.objectives ?? {})) sources[`objectives.${name}`] = source;
   return next;
 }
 
@@ -674,8 +692,43 @@ export async function readStdin(): Promise<string> {
   return source;
 }
 
-export async function readJsonSubject(path: string, cwd: string): Promise<Record<string, unknown>> {
-  const source = path === "-" ? await readStdin() : await readFile(resolve(cwd, path), "utf8");
+export function resolveObjective(location: string, config: PguideConfig): string {
+  const name = location.startsWith("@") ? location.slice(1) : location;
+  const objectives = config.objectives;
+  if (objectives !== undefined && Object.hasOwn(objectives, name))
+    return objectives[name] as string;
+  if (location.startsWith("@")) throw new CliError(`Unknown registered Objective: ${name}.`);
+  return location;
+}
+
+export async function readJsonSubject(
+  path: string | undefined,
+  cwd: string,
+  subjectSchema?: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const missingSubject = (message: string) =>
+    new CliError(
+      message,
+      2,
+      "invalid",
+      subjectSchema === undefined
+        ? undefined
+        : {
+            instructions:
+              "Create a JSON object matching subjectSchema below. Save it to subject.json and pass --subject-file subject.json, or pipe the JSON object to stdin. The schema is guidance, not a subject to submit.",
+            subjectSchema,
+          },
+    );
+  if ((path === undefined || path === "-") && process.stdin.isTTY)
+    throw missingSubject("Pipe a JSON subject to stdin or provide --subject-file <path>.");
+  const source =
+    path === undefined || path === "-"
+      ? await readStdin()
+      : await readFile(resolve(cwd, path), "utf8");
+  if (source.trim() === "")
+    throw missingSubject(
+      "Subject must be valid JSON. Pipe a JSON subject to stdin or provide --subject-file <path>.",
+    );
   let value: unknown;
   try {
     value = JSON.parse(source);
@@ -892,9 +945,18 @@ export async function commandMain(
         ? "json"
         : "markdown";
     writeResult(
-      { schemaVersion: 1, status: failure.status, error: failure.message },
+      {
+        schemaVersion: 1,
+        status: failure.status,
+        error: failure.message,
+        ...(failure.guidance === undefined ? {} : { guidance: failure.guidance }),
+      },
       format,
-      `Error: ${failure.message}`,
+      `Error: ${failure.message}${
+        failure.guidance === undefined
+          ? ""
+          : `\n\nSubject input guidance:\n\n\`\`\`json\n${JSON.stringify(failure.guidance, null, 2)}\n\`\`\``
+      }`,
     );
     process.exitCode = failure.exitCode;
   }

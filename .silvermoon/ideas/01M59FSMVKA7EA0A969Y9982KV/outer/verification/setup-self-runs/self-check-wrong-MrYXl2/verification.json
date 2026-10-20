@@ -1,0 +1,29 @@
+{
+  "kind": "self-check",
+  "mode": "wrong",
+  "run": "/work/runs/self-check-wrong-MrYXl2",
+  "sourceRevision": "6c75d927aaefe361cb85746c055cb1a01114ad1c",
+  "sourceArchiveSha256": "f2221aebdf4d0b52b8b40ac9707d3305d0e29ecc2b5e57741382753f04886b3d",
+  "harnessSha256": {
+    "Dockerfile": "7d0f6b0786282cd5916ef0ab225f555be6e7f375ea8111a89de8bebd56374bd4",
+    "prepare-image.mjs": "56c40783743cefe5551d21776b70639d8a9e21a2995974f4940232a2d55bcbd9",
+    "fixture.mjs": "65538364aa67daaade5fc28f2b70e81b44844f0f5208f9b3f6b1058d78ed1803",
+    "verify.mjs": "a4d5059193b8f8f4b772928b8e1662af0063b677836947a627a5d1fa087b1571",
+    "README.md": "5f4d94282c766990cc023144f21ccf5e5bc117dbc40f3d570249718a8a90ada8"
+  },
+  "buildMethod": "frozen-prod-plus-tsc-project-references",
+  "toolchainVersions": {
+    "typescript": "5.9.3",
+    "@types/node": "22.20.5",
+    "@types/cross-spawn": "6.0.6",
+    "undici-types": "6.21.0"
+  },
+  "toolchainLockSha256": "dc4951b6b2fa4f3e230b177e39784ab31c6ba5bc6e3544d87ff232f23349b2f8",
+  "objectiveRevision": "e137025009324a3edc468371e7ddc2812b0e0e9a",
+  "pguideVersion": "0.4.0-rc.0",
+  "installedLockSha256": "146e2d22fddb17825c6dda7b046528d609ae01cf8e8315ef19845856d0a80320",
+  "level": "configured",
+  "promptCount": 1,
+  "scratchCleaned": true,
+  "verified": true
+}

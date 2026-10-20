@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cp, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { consumerManifest, verifyConsumerGraph } from "/source/scripts/deployment-consumer.mjs";
 import { releasePackages } from "/source/scripts/release-packages.mjs";
 
@@ -105,12 +105,25 @@ await writeFile(
 run("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund"], "/opt/consumer");
 await verifyConsumerGraph("/opt/consumer", versions);
 
-await mkdir("/opt/objective/objectives", { recursive: true });
-await cp("/source/objectives/pguide-self-check", "/opt/objective/objectives/pguide-self-check", {
-  recursive: true,
-});
+await mkdir("/opt/objective/packages", { recursive: true });
+await cp(
+  "/source/packages/objective-pguide-self-check",
+  "/opt/objective/packages/objective-pguide-self-check",
+  {
+    recursive: true,
+    filter: (source) => !["node_modules", ".turbo", "test"].includes(basename(source)),
+  },
+);
+await cp(
+  "/source/packages/objective-pguide-setup",
+  "/opt/objective/packages/objective-pguide-setup",
+  {
+    recursive: true,
+    filter: (source) => !["node_modules", ".turbo", "test"].includes(basename(source)),
+  },
+);
 run("git", ["init", "-q", "--initial-branch=fixture"], "/opt/objective");
-run("git", ["add", "objectives"], "/opt/objective");
+run("git", ["add", "packages"], "/opt/objective");
 run(
   "git",
   [

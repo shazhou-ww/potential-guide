@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { delimiter, join, resolve } from "node:path";
 import { test } from "node:test";
 import { sameDirectory } from "../src/path.js";
@@ -42,13 +42,92 @@ function run(
 }
 
 test("all package commands expose direct protocol metadata and help", async () => {
+  const versions = await Promise.all(
+    ["pguide", "pguide-config"].map(async (directory) => {
+      const manifest = JSON.parse(
+        await readFile(join(root, "packages", directory, "package.json"), "utf8"),
+      );
+      return manifest.version;
+    }),
+  );
   for (const [command, script] of Object.entries(bins)) {
     const metadata = await run(script, ["--pguide-command-metadata"]);
     assert.equal(metadata.code, 0, metadata.stderr);
     assert.equal(JSON.parse(metadata.stdout).command, command);
+    assert.equal(JSON.parse(metadata.stdout).version, versions[command === "config" ? 1 : 0]);
     const help = await run(script, ["--help", "--format", "json"]);
     assert.equal(help.code, 0, `${command}: ${help.stderr}\n${help.stdout}`);
     assert.equal(JSON.parse(help.stdout).schemaVersion, 1);
+    const text = await run(script, ["--help"]);
+    assert.equal(text.code, 0, text.stderr);
+    for (const heading of ["Usage:", "Examples:", "Global options:"])
+      assert.ok(text.stdout.includes(heading), `${command} missing ${heading}`);
+    assert.match(text.stdout, /--config/);
+    assert.match(text.stdout, /--format/);
+  }
+});
+
+test("command metadata and detailed help do not load business implementations", async () => {
+  const temporary = await mkdtemp(join(tmpdir(), "pguide-help-only-"));
+  try {
+    await mkdir(join(temporary, "bin"));
+    await writeFile(join(temporary, "package.json"), '{"type":"module"}');
+    await copyFile(
+      join(root, "packages", "pguide", "dist", "command-help.js"),
+      join(temporary, "command-help.js"),
+    );
+    await mkdir(join(temporary, "node_modules", "@potential-guide"), { recursive: true });
+    await symlink(
+      join(root, "packages", "pguide-cli-core"),
+      join(temporary, "node_modules", "@potential-guide", "cli-core"),
+      "junction",
+    );
+    for (const [command, source] of Object.entries(bins)) {
+      if (command === "config") continue;
+      const entry = join(temporary, "bin", `${command}.js`);
+      await copyFile(source, entry);
+      for (const args of [
+        ["--pguide-command-metadata"],
+        ["--help"],
+        ["--help", "--format", "json"],
+      ]) {
+        const result = await run(entry, args);
+        assert.equal(result.code, 0, `${command}: ${result.stderr}`);
+        if (args.includes("--pguide-command-metadata") || args.includes("json"))
+          assert.equal(JSON.parse(result.stdout).command, command);
+        else assert.match(result.stdout, /Examples:/);
+      }
+    }
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
+
+test("built-in and config operation help is detailed and does not read missing config", async () => {
+  for (const command of ["diagnose", "complete"]) {
+    const result = await run(top, [
+      command,
+      "--help",
+      "--config",
+      join(scratch, "missing-config.yaml"),
+    ]);
+    assert.equal(result.code, 0, result.stderr);
+    assert.match(result.stdout, /Usage:/);
+    assert.match(result.stdout, /Examples:/);
+    assert.match(result.stdout, /Global options:/);
+  }
+  const result = await run(bins.config, ["--help", "--format", "json"]);
+  for (const command of JSON.parse(result.stdout).subcommands) {
+    const operation = await run(bins.config, [
+      command,
+      "--help",
+      "--config",
+      join(scratch, "missing-config.yaml"),
+    ]);
+    assert.equal(operation.code, 0, operation.stderr);
+    assert.ok(operation.stdout.includes(`Usage: pguide config ${command}`));
+    assert.match(operation.stdout, /Examples:/);
+    assert.match(operation.stdout, /--scope/);
   }
 });
 
@@ -62,6 +141,47 @@ test("top-level built-ins return machine-readable help, diagnosis and completion
   assert.equal(diagnose.code, 0, diagnose.stdout);
   const complete = await run(top, ["complete", "--shell", "powershell", "--format", "json"]);
   assert.match(JSON.parse(complete.stdout).script, /Register-ArgumentCompleter/);
+});
+
+test("bare usage and text help never execute discovered command metadata", async () => {
+  const temporary = await mkdtemp(join(tmpdir(), "pguide-usage-"));
+  try {
+    const commands = join(temporary, "commands");
+    await mkdir(commands);
+    const marker = join(temporary, "started");
+    const script = join(temporary, "metadata.cjs");
+    await writeFile(
+      script,
+      `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "started");process.exit(91);`,
+    );
+    await writeFile(
+      join(commands, `pguide-sentinel${process.platform === "win32" ? ".cmd" : ""}`),
+      process.platform === "win32"
+        ? `@echo off\r\n"${process.execPath}" "${script}" %*\r\n`
+        : `#!/bin/sh\nexec "${process.execPath}" "${script}" "$@"\n`,
+      { mode: 0o755 },
+    );
+    const config = join(temporary, "config.json");
+    await writeFile(config, JSON.stringify({ schemaVersion: 2, commandDirectories: [commands] }));
+    for (const arguments_ of [[], ["--help"], ["--help", "probe"]]) {
+      const result = await run(top, ["--config", config, ...arguments_]);
+      assert.equal(result.code, 0, result.stderr);
+      assert.match(result.stdout, /Usage: pguide/);
+      assert.match(result.stdout, /sentinel/);
+      await assert.rejects(readFile(marker), { code: "ENOENT" });
+    }
+    const structured = await run(top, ["--config", config, "--help", "--format", "json"]);
+    const sentinel = JSON.parse(structured.stdout).commands.find(
+      (entry: { command: string }) => entry.command === "sentinel",
+    );
+    assert.equal(sentinel.compatible, false);
+    assert.equal(await readFile(marker, "utf8"), "started");
+    const dispatch = await run(top, ["--config", config, "sentinel", "--format", "json"]);
+    assert.notEqual(dispatch.code, 0);
+    assert.match(dispatch.stdout + dispatch.stderr, /does not implement pguide-command-v1/);
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
 });
 
 test("scaffold and static validate preserve multilingual Wiki; production probes require committed snapshots", async () => {

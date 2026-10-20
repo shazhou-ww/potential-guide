@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { appendFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 import { createInterface } from "node:readline";
 
 const [mode, log] = process.argv.slice(2);
@@ -20,14 +20,22 @@ for await (const line of createInterface({ input: process.stdin })) {
     assert.ok(cwd);
     const text = message.params.prompt.map(({ text }) => text ?? "").join("\n");
     const taskLine = text.split("\n").find((line) => line.startsWith("Self-check task: "));
-    assert.ok(taskLine);
-    const task = JSON.parse(taskLine.slice("Self-check task: ".length));
-    assert.equal(task.marker, "marker.txt");
+    const task = taskLine
+      ? JSON.parse(taskLine.slice("Self-check task: ".length))
+      : JSON.parse(text.split("\nSubject: ")[1].split("\nComplete observation: ")[0]);
+    if (taskLine) assert.equal(task.marker, "marker.txt");
+    else {
+      assert.ok(isAbsolute(task.marker));
+      assert.equal(dirname(task.marker), cwd);
+    }
     assert.equal(typeof task.expected, "string");
     // Safe count only: no nonce, prompt, model output, or environment is persisted.
     await appendFile(log, `${JSON.stringify({ method: "session/prompt", mode })}\n`);
     if (mode !== "summary-only") {
-      await writeFile(join(cwd, task.marker), mode === "fix" ? task.expected : "wrong");
+      await writeFile(
+        taskLine ? join(cwd, task.marker) : task.marker,
+        mode === "fix" ? task.expected : "wrong",
+      );
     }
     result = { stopReason: "end_turn", summary: "Fixture reports success" };
   } else {

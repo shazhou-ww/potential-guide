@@ -174,6 +174,7 @@ test("supervise plans once without repairs, then continuously observes and execu
       JSON.stringify({
         schemaVersion: 2,
         agentExecutionLimits: { timeoutMs: 12_000 },
+        objectives: { fixture: f.uri },
         agents: {
           strategist: profile(stub, "plan", plannerLog, marker),
           "private-execution-agent": profile(stub, "repair", executorLog, marker),
@@ -188,7 +189,7 @@ test("supervise plans once without repairs, then continuously observes and execu
         goals: [
           {
             id: "fixture",
-            pilot: f.uri,
+            pilot: "@fixture",
             revision,
             subject: { marker, counts },
             targetLevel: "terminal",

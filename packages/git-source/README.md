@@ -49,6 +49,14 @@ await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
   Empty string or `.` lists the root. Absolute paths, traversal, control
   characters, backslashes and colon syntax are rejected. Symlinks and submodules
   can be listed but are not followed or read as regular files.
+- `readFiles()` streams the entire committed tree as `{ path, bytes }` records.
+  One recursive tree listing and binary-safe `cat-file --batch` requests replace
+  per-file Git processes. Requests contain at most 256 blobs and target 8 MiB;
+  a larger individual blob is read alone, still limited to 64 MiB. Successful
+  batch headers, sizes and delimiters are validated before yielding any content.
+  Symlinks, submodules and unsafe paths fail explicitly rather than being omitted.
+  Stream interruption terminates and awaits the active Git command. Batches are
+  consumed sequentially without increasing process or file-write concurrency.
 - Snapshots are live only inside their acquisition Scope. Closing the Scope
   removes the cache; later reads fail explicitly with `closed`. Consumers needing
   old snapshots must keep their owning Scope open. No cache is written to the
@@ -80,7 +88,8 @@ source failure or business outcome.
 `environment` map for Git credential helpers/configuration, and `runGit` for an
 injected local command capability. Credentials must stay in this environment or
 the user's Git/SSH helpers, never in a serializable source spec. The default
-`runGitCommand` spawns Git with argument arrays, no shell, no interactive prompts,
+`runGitCommand` spawns Git with argument arrays and optional `GitCommand.input`
+on stdin, no shell, no interactive prompts,
 and no stderr/command-line leakage into errors. Command failures retain their
 operation and exit code in both structured fields and the safe error message.
 Git must be installed. On Windows each invocation enables `core.longpaths` so

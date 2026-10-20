@@ -11,6 +11,12 @@
   "scripts": {
     "self-check:build": "node scripts/build-self-check-runtime.mjs",
     "self-check:check": "node scripts/build-self-check-runtime.mjs --check",
+    "health:build": "node scripts/build-health-runtime.mjs",
+    "health:check": "node scripts/build-health-runtime.mjs --check",
+    "monorepo:build": "node scripts/build-monorepo-runtime.mjs",
+    "monorepo:check": "node scripts/build-monorepo-runtime.mjs --check",
+    "setup:build": "node scripts/build-setup-runtime.mjs",
+    "setup:check": "node scripts/build-setup-runtime.mjs --check",
     "bootstrap:pack": "node scripts/create-npm-bootstrap-packages.mjs",
     "build": "turbo run build",
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run pack:check",
@@ -19,15 +25,16 @@
     "health:verify": "pnpm run build && node scripts/verify-development-health.mjs",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "lint": "turbo run lint && biome lint scripts objectives",
+    "lint": "turbo run lint && biome lint scripts config",
     "pack:check": "pnpm run build && node scripts/check-packages.mjs",
-    "test": "pnpm self-check:check && turbo run test && node --test scripts/*.test.mjs",
+    "test": "pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && turbo run test && node --test scripts/*.test.mjs",
     "typecheck": "turbo run typecheck && tsc -p tsconfig.test.json --pretty false"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@types/node": "catalog:",
     "cross-spawn": "catalog:",
+    "esbuild": "catalog:",
     "tsx": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:"

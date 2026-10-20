@@ -7,6 +7,7 @@ import {
   loadConfig,
   option,
   rejectUnknownOptions,
+  resolveObjective,
   writeResult,
 } from "@potential-guide/cli-core";
 import { Effect, SubscriptionRef, startEffect, watchSnapshot } from "@potential-guide/effects";
@@ -34,6 +35,7 @@ import {
   type RegulationStrategy,
 } from "@potential-guide/objective-regulator";
 import { createAgentPlannerPolicy } from "../acp-planner.js";
+import { showCommandHelp } from "../command-help.js";
 import { withPilot } from "../pilot-source.js";
 import {
   createProcessRegulationRunner,
@@ -345,11 +347,7 @@ export async function runSupervise(
   globals: GlobalOptions,
 ): Promise<number | undefined> {
   if (globals.help) {
-    writeResult(
-      { schemaVersion: 1, command: "supervise" },
-      globals.format,
-      "Usage: pguide supervise --portfolio-file <json> --planner <profile> [--execute] [--duration-ms <ms>]",
-    );
+    showCommandHelp("supervise", globals);
     return;
   }
   rejectUnknownOptions(argv, {
@@ -396,13 +394,17 @@ export async function runSupervise(
   let activeBindings: Awaited<ReturnType<typeof bindGoal>>[] = [];
   const runtimes = new Map<string, PilotRuntime>();
   let goals: readonly ObjectiveGoal[] = [];
-  async function loadGoals(file: PortfolioFile) {
+  async function loadGoals(file: PortfolioFile, config = loaded.value) {
     const fresh: Awaited<ReturnType<typeof bindGoal>>[] = [];
     try {
       for (const entry of file.goals) {
         controller.signal.throwIfAborted();
         fresh.push(
-          await bindGoal(entry, globals.cwd, loaded.value.regulationStrategy?.probe?.timeoutMs),
+          await bindGoal(
+            { ...entry, pilot: resolveObjective(entry.pilot, config) },
+            globals.cwd,
+            config.regulationStrategy?.probe?.timeoutMs,
+          ),
         );
       }
       const next = fresh.map(({ goal }) => goal);
@@ -487,7 +489,7 @@ export async function runSupervise(
         const nextPlanner = agents[plannerName];
         if (nextPlanner === undefined) throw new CliError("--planner profile was removed.");
         const nextResources = resolveResources(nextPortfolio, agents);
-        const nextGoals = await loadGoals(nextPortfolio);
+        const nextGoals = await loadGoals(nextPortfolio, config.value);
         for (const name of Object.keys(profiles)) delete profiles[name];
         Object.assign(profiles, agents);
         plannerProfile = nextPlanner;

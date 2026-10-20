@@ -1,0 +1,42 @@
+{
+  "name": "@potential-guide/objective-monorepo-standard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Read-only, requirements-led pnpm monorepo Objective checks.",
+  "type": "module",
+  "files": [
+    "dist",
+    "runtime",
+    "pilot.yaml",
+    "checks",
+    "references",
+    "check.mjs",
+    "THIRD_PARTY_NOTICES.txt"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b && node ../../scripts/build-monorepo-runtime.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.ts\" \"test/*.test.mjs\"",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "ajv": "catalog:",
+    "typescript": "catalog:",
+    "yaml": "catalog:"
+  },
+  "devDependencies": {
+    "@potential-guide/effects": "workspace:^",
+    "@potential-guide/objective-pilot": "workspace:^",
+    "pguide": "workspace:^"
+  }
+}

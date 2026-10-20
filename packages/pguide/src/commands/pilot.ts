@@ -3,13 +3,12 @@ import { dirname, join, resolve } from "node:path";
 import {
   atomicWrite,
   CliError,
-  type CommandMetadata,
-  commandMain,
   type GlobalOptions,
   loadConfig,
   option,
   readJsonSubject,
   rejectUnknownOptions,
+  resolveObjective,
   writeResult,
 } from "@potential-guide/cli-core";
 import { startEffect } from "@potential-guide/effects";
@@ -19,9 +18,8 @@ import {
   observe,
   type Subject,
 } from "@potential-guide/objective-pilot";
+import { showCommandHelp } from "../command-help.js";
 import { withPilot } from "../pilot-source.js";
-
-export const pilotCommandVersion = "0.4.0-rc.0";
 
 async function loadStaticPilot(path: string) {
   try {
@@ -40,15 +38,7 @@ export async function runProbe(
   globals: GlobalOptions,
 ): Promise<number | undefined> {
   if (globals.help) {
-    writeResult(
-      {
-        schemaVersion: 1,
-        command: "probe",
-        options: ["--pilot", "--subject-file", "--language", "--revision", "--report"],
-      },
-      globals.format,
-      "Usage: pguide probe --pilot <path|Git URI> --subject-file <path|-> [--language <tag>] [--revision <ref|commit>]",
-    );
+    showCommandHelp("probe", globals);
     return;
   }
   rejectUnknownOptions(argv, {
@@ -58,10 +48,6 @@ export async function runProbe(
     "--revision": "value",
     "--report": "value",
   });
-  const subject = (await readJsonSubject(
-    option(argv, "--subject-file", { required: true }) as string,
-    globals.cwd,
-  )) as Subject;
   const language = option(argv, "--language") as string | undefined;
   const loaded = await loadConfig(globals.cwd, globals.config);
   const controller = new AbortController();
@@ -71,14 +57,20 @@ export async function runProbe(
   const value = await (async () => {
     try {
       return await withPilot(
-        option(argv, "--pilot", { required: true }) as string,
+        resolveObjective(option(argv, "--pilot", { required: true }) as string, loaded.value),
         globals.cwd,
         option(argv, "--revision") as string | undefined,
-        (spec, runtime) =>
-          startEffect(
+        async (spec, runtime) => {
+          const subject = (await readJsonSubject(
+            option(argv, "--subject-file") as string | undefined,
+            globals.cwd,
+            spec.manifest.domainSchema,
+          )) as Subject;
+          return startEffect(
             observe({ spec, subject, ...(language === undefined ? {} : { language }) }, runtime),
             controller.signal,
-          ).await(),
+          ).await();
+        },
         { probeTimeoutMs: loaded.value.regulationStrategy?.probe?.timeoutMs },
       );
     } finally {
@@ -109,11 +101,7 @@ function page(
 
 export async function runScaffold(argv: string[], globals: GlobalOptions): Promise<void> {
   if (globals.help) {
-    writeResult(
-      { schemaVersion: 1, command: "scaffold", types: ["pilot"] },
-      globals.format,
-      "Usage: pguide scaffold pilot <directory> [--language <tag>] [--level <id>] [--check <id>] [--problem <id>]",
-    );
+    showCommandHelp("scaffold", globals);
     return;
   }
   if (argv[0] !== "pilot" || argv[1] === undefined)
@@ -202,11 +190,7 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
 
 export async function runValidate(argv: string[], globals: GlobalOptions): Promise<void> {
   if (globals.help) {
-    writeResult(
-      { schemaVersion: 1, command: "validate", types: ["pilot"] },
-      globals.format,
-      "Usage: pguide validate pilot <pilot.yaml>",
-    );
+    showCommandHelp("validate", globals);
     return;
   }
   if (argv[0] !== "pilot" || argv[1] === undefined)
@@ -216,11 +200,4 @@ export async function runValidate(argv: string[], globals: GlobalOptions): Promi
   const pilot = await loadStaticPilot(resolve(globals.cwd, argv[1]));
   const value = { schemaVersion: 1, status: "valid", objectiveId: pilot.objectiveId };
   writeResult(value, globals.format, `Valid Objective Pilot: ${pilot.objectiveId}`);
-}
-
-export function launchPilotCommand(
-  metadata: CommandMetadata,
-  run: (argv: string[], globals: GlobalOptions) => Promise<number | undefined> | Promise<void>,
-): void {
-  void commandMain(metadata, run);
 }

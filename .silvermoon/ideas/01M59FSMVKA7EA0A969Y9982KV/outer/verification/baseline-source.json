@@ -1,0 +1,62 @@
+{
+  "baseline": "345027e47f4b530e66539bae822b51b2728e3427",
+  "reusedBuild": "5ff1c5105681379d910703a6d66ec66d5b336e7a",
+  "archiveSha256": "0b3ac71d646b6dcaa636702dc62e413fdf3af446eb61240076aaac58c9c577f0",
+  "setupSourceBlob": "32ba67b31b4ec5a9bfa1d0426b4850dbda573c63",
+  "setupTestBlob": "28fab08e6e25233a9441c795c3f20b2a36e644e5",
+  "foundations": [
+    {
+      "directory": "effects",
+      "name": "@potential-guide/effects",
+      "version": "0.1.0-rc.0",
+      "sourceTree": "6821075628b4b36edbad0aa127e6ab8fe09b8df5"
+    },
+    {
+      "directory": "git-source",
+      "name": "@potential-guide/git-source",
+      "version": "0.1.0-rc.0",
+      "sourceTree": "dd10352bf6214e1a14ea70f36005ff88a9516499"
+    },
+    {
+      "directory": "objective-pilot",
+      "name": "@potential-guide/objective-pilot",
+      "version": "0.2.0-rc.0",
+      "sourceTree": "4df0c7eacf10a85dc8660eb81539adfcb154582a"
+    },
+    {
+      "directory": "objective-regulator",
+      "name": "@potential-guide/objective-regulator",
+      "version": "0.4.0-rc.0",
+      "sourceTree": "0d7586f49ef1dabaa0c40bd32c6c2e96be15a29a"
+    },
+    {
+      "directory": "objective-portfolio-supervisor",
+      "name": "@potential-guide/objective-portfolio-supervisor",
+      "version": "0.4.0-rc.0",
+      "sourceTree": "d951774abdfd213ccef3842dfb1f6e8219bea7cd"
+    },
+    {
+      "directory": "pguide-cli-core",
+      "name": "@potential-guide/cli-core",
+      "version": "0.3.0-rc.0",
+      "sourceTree": "c3049614307cb71e2d991492d6cd28a4eb2169b9"
+    },
+    {
+      "directory": "pguide-config",
+      "name": "@potential-guide/config",
+      "version": "0.3.0-rc.0",
+      "sourceTree": "ec38a336f34e2e4525557ab72f2eee85c6b240d2"
+    },
+    {
+      "directory": "pguide",
+      "name": "pguide",
+      "version": "0.4.0-rc.0",
+      "sourceTree": "2054d24d6452c77b9aa3b85f9c8aeb73d8f973db"
+    }
+  ],
+  "scope": "原始 archive 包含旧 objectives 与旧 setup 测试；未复制迁移后的 setup/self-check package 或其 runtime。",
+  "buildOrigin": "基础包 dist 来自整合提交5ff1c51工作树中完整 pnpm check 的 TypeScript/Turbo 构建；上述8包源码树与manifest逐一同345027e。仅复用这些dist与依赖链接，基线业务源码和测试均来自原始archive。",
+  "reproduction": "在独立短路径提取上述archive，按锁安装依赖并构建8个基础包，运行原 packages/pguide/test/setup-objective.test.ts 的六项 name pattern；本次实际为.cache/b，不带Git worktree。依赖junction仅unlink，不递归跟随。",
+  "pattern": "remote payload uses|real sanity|sanity invocation diagnostics|sanity timeout during",
+  "limitation": "基础包dist非独立从零构建，来源如上；路径/宿主环境可能影响时序。六项结果只证明该环境可复现，不是普遍平台结论或任意豁免。"
+}

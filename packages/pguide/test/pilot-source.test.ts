@@ -97,6 +97,30 @@ test("level-scoped repeated check IDs execute their own committed probes", async
   assert.equal(result.payload.current.levelId, "terminal");
 });
 
+test("batched materialization preserves binary resources outside the Pilot directory", async (t) => {
+  const repo = await repository(
+    manifest({
+      levels: [{ id: "initial", advancement: { checks: [{ id: "ready", problems: ["broken"] }] } }],
+    }),
+  );
+  t.after(() => rm(repo.root, { recursive: true, force: true }));
+  await writeFile(join(repo.root, "binary resource.dat"), Buffer.from([0, 10, 13, 255]));
+  await repo.check(
+    "checks/ready/run.cjs",
+    `#!/usr/bin/env node
+const {readFileSync} = require("node:fs");
+const {resolve} = require("node:path");
+const data = readFileSync(resolve(__dirname, "../../..", "binary resource.dat"));
+process.stdout.write(JSON.stringify({status:200,message:"",payload:{ok:data.equals(Buffer.from([0,10,13,255])),problems:[]}}));
+`,
+  );
+  await repo.commit();
+  const result = await withPilot(repo.path, repo.root, undefined, (spec, runtime) =>
+    Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime)),
+  );
+  assert.equal(result.payload?.current.levelId, "terminal");
+});
+
 test("nested Pilot sources stay in the owning probe directory and preserve unrelated files", async (t) => {
   const repo = await repository(
     manifest({
@@ -257,6 +281,44 @@ test("Git source failure is reported as explicit pilot-error exit 2", async () =
   );
 });
 
+test("source preparation has its own deadline and releases only its owned cache", async (t) => {
+  const repo = await repository(
+    manifest({
+      levels: [{ id: "initial", advancement: { checks: [{ id: "ready", problems: ["broken"] }] } }],
+    }),
+  );
+  t.after(() => rm(repo.root, { recursive: true, force: true }));
+  await repo.check("checks/ready/run.cjs");
+  const revision = await repo.commit();
+  const cache = await mkdtemp(join(resolve(".cache"), "preparation-deadline-"));
+  t.after(() => rm(cache, { recursive: true, force: true }));
+  await writeFile(join(cache, "sentinel"), "keep");
+  let called = false;
+  await assert.rejects(
+    withPilot(
+      repo.uri,
+      repo.root,
+      revision,
+      async () => {
+        called = true;
+      },
+      { cacheDirectory: cache, preparationTimeoutMs: 1 },
+    ),
+    /Pilot source preparation timed out after 1ms/,
+  );
+  assert.equal(called, false);
+  assert.deepEqual(await filesystem.readdir(cache), ["sentinel"]);
+  for (const preparationTimeoutMs of [0, -1, Number.NaN, 2 ** 31]) {
+    await assert.rejects(
+      withPilot(repo.uri, repo.root, revision, async () => undefined, {
+        cacheDirectory: cache,
+        preparationTimeoutMs,
+      }),
+      /preparationTimeoutMs must be a positive safe timer duration/,
+    );
+  }
+});
+
 test("cleanup failure retains the primary CLI error and reports both causes", async (t) => {
   const repo = await repository(
     manifest({
@@ -271,7 +333,11 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{id:
 `,
   );
   await repo.commit();
-  const primary = new CliError("Primary consumer failure.", 37, "primary-test-failure");
+  const guidance = {
+    instructions: "Provide a subject matching subjectSchema.",
+    subjectSchema: { type: "object", required: ["name"] },
+  };
+  const primary = new CliError("Primary consumer failure.", 37, "primary-test-failure", guidance);
   const cleanup = new Error("Injected cleanup failure.");
   const originalRm = filesystem.rm;
   let cache = "";
@@ -299,6 +365,7 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{id:
         assert.ok(error instanceof CliError);
         assert.equal(error.exitCode, 37);
         assert.equal(error.status, "primary-test-failure");
+        assert.deepEqual(error.guidance, guidance);
         assert.match(error.message, /Primary consumer failure/);
         assert.match(error.message, /Injected cleanup failure/);
         assert.ok(error.cause instanceof AggregateError);

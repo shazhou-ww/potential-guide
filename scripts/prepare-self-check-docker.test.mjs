@@ -50,12 +50,21 @@ test("Docker context contains the exact commit archive plus only explicit harnes
       "Dockerfile",
       "README.md",
       "fixture.mjs",
+      "keychain-entrypoint.sh",
+      "keychain-unlock.sh",
+      "keychain.mjs",
       "prepare-image.mjs",
+      "real-agent.mjs",
       "verify.mjs",
     ]);
     const second = await prepareContext(repository, revision, join(repository, "second"));
     assert.equal(second.sourceArchiveSha256, result.sourceArchiveSha256);
     assert.deepEqual(second.harnessSha256, result.harnessSha256);
+    for (const script of ["keychain-entrypoint.sh", "keychain-unlock.sh"]) {
+      const content = await readFile(join(context, script), "utf8");
+      assert.ok(content.startsWith("#!/usr/bin/env bash\n"));
+      assert.equal(content.includes("\r"), false);
+    }
     assert.match(await readFile(join(context, ".dockerignore"), "utf8"), /^\*\*\n!source.tar\n/u);
     await assert.rejects(prepareContext(repository, revision, context), { code: "EEXIST" });
     await assert.rejects(

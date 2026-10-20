@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-import { launchPilotCommand, pilotCommandVersion, runValidate } from "../commands/pilot.js";
+import { launchCommand } from "../command-help.js";
 
-launchPilotCommand(
-  {
-    protocol: "pguide-command-v1",
-    command: "validate",
-    description: "Validate an Objective Pilot",
-    version: pilotCommandVersion,
-  },
-  runValidate,
-);
+launchCommand("validate", async () => (await import("../commands/pilot.js")).runValidate);

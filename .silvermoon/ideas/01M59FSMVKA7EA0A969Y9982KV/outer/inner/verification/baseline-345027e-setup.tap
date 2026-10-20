@@ -1,0 +1,147 @@
+TAP version 13
+# Subtest: remote payload uses target authentication and performs actual nonce sanity, not control evidence
+not ok 1 - remote payload uses target authentication and performs actual nonce sanity, not control evidence
+  ---
+  duration_ms: 9873.2095
+  type: 'test'
+  location: 'D:\\Code\\potential-guide.worktrees\\pilot-package-architecture-migration\\.cache\\b\\packages\\pguide\\test\\setup-objective.test.ts:591:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    protocol: independent sanity probe failed.
+    
+    502 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 502
+  operator: 'strictEqual'
+  stack: |-
+    passed (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\.cache\b\packages\pguide\test\setup-objective.test.ts:208:10)
+    TestContext.<anonymous> (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\.cache\b\packages\pguide\test\setup-objective.test.ts:610:5)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1113:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3)
+  ...
+# Subtest: real sanity rejects noop Agent completion
+not ok 2 - real sanity rejects noop Agent completion
+  ---
+  duration_ms: 9391.5089
+  type: 'test'
+  location: 'D:\\Code\\potential-guide.worktrees\\pilot-package-architecture-migration\\.cache\\b\\packages\\pguide\\test\\setup-objective.test.ts:653:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    protocol: independent sanity probe failed.
+    
+    502 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 502
+  operator: 'strictEqual'
+  stack: |-
+    isProblem (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\.cache\b\packages\pguide\test\setup-objective.test.ts:199:10)
+    TestContext.<anonymous> (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\.cache\b\packages\pguide\test\setup-objective.test.ts:665:9)
+    async Test.run (node:internal/test_runner/test:1113:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:788:7)
+  ...
+# Subtest: real sanity rejects wrong Agent completion
+not ok 3 - real sanity rejects wrong Agent completion
+  ---
+  duration_ms: 9757.2753
+  type: 'test'
+  location: 'D:\\Code\\potential-guide.worktrees\\pilot-package-architecture-migration\\.cache\\b\\packages\\pguide\\test\\setup-objective.test.ts:653:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    protocol: independent sanity probe failed.
+    
+    502 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 502
+  operator: 'strictEqual'
+  stack: |-
+    isProblem (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\.cache\b\packages\pguide\test\setup-objective.test.ts:199:10)
+    TestContext.<anonymous> (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\.cache\b\packages\pguide\test\setup-objective.test.ts:665:9)
+    async Test.run (node:internal/test_runner/test:1113:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:788:7)
+  ...
+# Subtest: real sanity verifies a finite repair
+not ok 4 - real sanity verifies a finite repair
+  ---
+  duration_ms: 9451.3759
+  type: 'test'
+  location: 'D:\\Code\\potential-guide.worktrees\\pilot-package-architecture-migration\\.cache\\b\\packages\\pguide\\test\\setup-objective.test.ts:653:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    protocol: independent sanity probe failed.
+    
+    502 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 502
+  operator: 'strictEqual'
+  stack: |-
+    passed (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\.cache\b\packages\pguide\test\setup-objective.test.ts:208:10)
+    TestContext.<anonymous> (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\.cache\b\packages\pguide\test\setup-objective.test.ts:663:27)
+    async Test.run (node:internal/test_runner/test:1113:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:788:7)
+  ...
+# Subtest: sanity invocation diagnostics expose fixed classifications, not arbitrary CLI error data
+not ok 5 - sanity invocation diagnostics expose fixed classifications, not arbitrary CLI error data
+  ---
+  duration_ms: 9751.3056
+  type: 'test'
+  location: 'D:\\Code\\potential-guide.worktrees\\pilot-package-architecture-migration\\.cache\\b\\packages\\pguide\\test\\setup-objective.test.ts:710:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(envelope.message.includes(`exit=70, ${expected}`))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\.cache\b\packages\pguide\test\setup-objective.test.ts:763:14)
+    async Test.run (node:internal/test_runner/test:1113:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:788:7)
+  ...
+# Subtest: sanity timeout during an actual ACP prompt cleans isolated config, state and descendants
+not ok 6 - sanity timeout during an actual ACP prompt cleans isolated config, state and descendants
+  ---
+  duration_ms: 9409.6353
+  type: 'test'
+  location: 'D:\\Code\\potential-guide.worktrees\\pilot-package-architecture-migration\\.cache\\b\\packages\\pguide\\test\\setup-objective.test.ts:845:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"status":502,"payload":null,"message":"protocol: independent sanity probe failed."}
+    
+    502 !== 504
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 504
+  actual: 502
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (D:\Code\potential-guide.worktrees\pilot-package-architecture-migration\.cache\b\packages\pguide\test\setup-objective.test.ts:878:12)
+    async Test.run (node:internal/test_runner/test:1113:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:788:7)
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 0
+# fail 6
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 59141.1589

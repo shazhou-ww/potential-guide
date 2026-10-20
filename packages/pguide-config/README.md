@@ -22,6 +22,32 @@ The npm package is organization-scoped, while its executable remains
 `pguide config edit` opens a temporary copy, validates it, and atomically
 replaces the selected configuration only after the editor exits successfully.
 
+## Objective registry
+
+Use `add-objective <name> <path|Git URI>`, `update-objective <name> <path|Git URI>`,
+`remove-objective <name>`, and `list-objectives` to manage the local `objectives` registry.
+Names are lowercase kebab-case. Local registrations are saved as absolute paths
+relative to `--cwd`; Git URIs are saved unchanged. Entries cannot reference other `@names`.
+Edits validate the complete configuration before atomically saving it.
+
+Edits default to `--scope project`; `--scope user` and
+`--scope explicit --config <path>` work as for Agent profiles. Add rejects
+duplicates in the selected scope, and update/remove require an entry in that
+scope. Registered Objectives merge by name, with project overriding user and explicit
+overriding project. Removing an override exposes a lower-scope entry if present.
+Listing returns effective names, locations and configuration sources.
+The default output shows each Objective in a separate block, with labeled
+`Location` and `Source` lines and full, untruncated paths or Git URIs.
+An empty registry prints `No registered Objectives.` Use `--format json` for
+machine-readable output; its schema is unchanged.
+
+`probe`, `regulate` and portfolio goal `pilot` fields accept registered names.
+Registration is optional: paths and Git URIs can still be used directly.
+Use `@name` to require a registered Objective or `./name` to force a local path.
+The machine-readable list contains `schemaVersion: 1` and an `objectives` array
+of entries with `name`, `location` and `source`.
+See [stdin and registry examples](../pguide/README.md#json-subjects-from-stdin-and-the-objective-registry).
+
 `regulationPermissions` is an optional administrative setting, defaulting to
 deny-all: `{ceiling: [{id: "edit-result", operation: "edit", resources:
 ["D:\\work\\result.json"]}], grants: ["edit-result"]}`. Read/edit rules contain

@@ -3,17 +3,19 @@ import { readdir, realpath, stat } from "node:fs/promises";
 import { delimiter, extname, join, resolve } from "node:path";
 import {
   AcpClient,
-  inspectAhp,
   CliError,
   type CommandMetadata,
   expectedCliError,
   extractGlobals,
+  formatCommandHelp,
   type GlobalOptions,
+  inspectAhp,
   loadConfig,
   option,
   writeResult,
 } from "@potential-guide/cli-core";
 import spawn from "cross-spawn";
+import { commandDescriptions } from "./command-help.js";
 import { sameDirectory } from "./path.js";
 
 const VERSION = "0.4.0-rc.0";
@@ -186,6 +188,46 @@ async function dispatch(
 
 async function help(globals: GlobalOptions): Promise<void> {
   const found = await discover(globals);
+  if (globals.format === "markdown") {
+    const commands = [
+      "  complete     Generate shell completion",
+      "  diagnose     Diagnose configuration and commands",
+      ...found.commands.map(
+        ({ command }) =>
+          `  ${command.padEnd(12)} ${command === "config" ? "Manage user/project configuration and Agent profiles" : Object.hasOwn(commandDescriptions, command) ? commandDescriptions[command as keyof typeof commandDescriptions] : "External command"}`,
+      ),
+    ];
+    const conflicts = Object.keys(found.conflicts);
+    process.stdout.write(
+      `${formatCommandHelp({
+        description: `pguide ${VERSION} - Observe Objectives, repair gaps, and supervise portfolios.`,
+        usage: "pguide [global options] <command> [arguments]",
+        sections: [
+          { title: "Commands", lines: commands },
+          {
+            title: "Examples",
+            lines: [
+              "  pguide config path",
+              "  pguide validate pilot .\\objective\\pilot.yaml",
+              "  pguide probe --pilot .\\objective --subject-file .\\subject.json --format json",
+            ],
+          },
+          {
+            title: "Help",
+            lines: [
+              "  pguide <command> --help     Detailed command usage and examples",
+              "  pguide --help --format json  Verify discovered command compatibility",
+              "  Text help lists commands without starting them.",
+              ...(conflicts.length === 0
+                ? []
+                : [`  Conflicting commands: ${conflicts.join(", ")}`]),
+            ],
+          },
+        ],
+      })}\n`,
+    );
+    return;
+  }
   const commands: {
     command: string;
     description: string;
@@ -242,6 +284,38 @@ async function help(globals: GlobalOptions): Promise<void> {
 }
 
 async function diagnose(argv: string[], globals: GlobalOptions): Promise<number> {
+  if (globals.help) {
+    writeResult(
+      { schemaVersion: 1, command: "diagnose" },
+      globals.format,
+      formatCommandHelp({
+        description:
+          "Inspect effective configuration paths, discovered commands and optional Agent readiness.",
+        usage: "pguide diagnose [agent <profile>]",
+        sections: [
+          {
+            title: "Arguments",
+            lines: ["  agent <profile>         Also initialize an existing ACP or AHP Agent"],
+          },
+          {
+            title: "Examples",
+            lines: [
+              "  pguide diagnose --format json",
+              "  pguide diagnose agent local --format json",
+            ],
+          },
+          {
+            title: "Notes",
+            lines: [
+              "  Without agent, no Agent process is started. Does not repair configuration.",
+              "  Agent initialization is not a complete self-check or a file-repair proof.",
+            ],
+          },
+        ],
+      }),
+    );
+    return 0;
+  }
   const config = await loadConfig(globals.cwd, globals.config);
   const found = await discover(globals);
   const agentIndex = argv.indexOf("agent");
@@ -290,6 +364,35 @@ async function diagnose(argv: string[], globals: GlobalOptions): Promise<number>
 }
 
 function complete(argv: string[], globals: GlobalOptions): void {
+  if (globals.help) {
+    writeResult(
+      { schemaVersion: 1, command: "complete" },
+      globals.format,
+      formatCommandHelp({
+        description:
+          "Print a shell completion script; does not install it or change your shell profile.",
+        usage: "pguide complete [--shell <shell>]",
+        sections: [
+          {
+            title: "Options",
+            lines: ["  --shell <shell>         bash | zsh | fish | powershell (default: bash)"],
+          },
+          {
+            title: "Examples",
+            lines: [
+              "  pguide complete --shell powershell",
+              "  pguide complete --shell bash --format json",
+            ],
+          },
+          {
+            title: "Notes",
+            lines: ["  Review and load the emitted script in your shell or profile."],
+          },
+        ],
+      }),
+    );
+    return;
+  }
   const shell = (option(argv, "--shell") as string | undefined) ?? "bash";
   const scripts: Record<string, string> = {
     bash: 'complete -W "probe regulate continue supervise scaffold validate config diagnose complete" pguide',

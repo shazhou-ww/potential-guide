@@ -1,0 +1,1429 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-19T11:17:52.149Z",
+  "scope": "local Docker only; controlled short-window samples, not long-term reliability",
+  "executionMode": "immutable Git-bound Pilot API with fresh process probes and real CLI parity",
+  "scenarios": [
+    {
+      "id": "healthy-all-four-stacks",
+      "passed": true,
+      "observation": {
+        "pilot": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-19T11:19:51.135Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+            }
+          }
+        },
+        "cliSmoke": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-19T11:21:12.149Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "history-required",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "orderly"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "orderly",
+                "checkId": "sustainability",
+                "problemId": "history-insufficient"
+              },
+              "parameters": {
+                "expected": "3 samples spanning 1000ms",
+                "actual": 0
+              }
+            }
+          ],
+          "gapSummary": "样本缺失、数量不足、时间跨度不足或最新样本过旧。",
+          "observedAt": "2026-10-19T11:21:21.393Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "docker-transport-does-not-fallback",
+      "passed": true,
+      "observation": {
+        "status": 502,
+        "payload": null,
+        "message": "docker-transport: exit 1: Error response from daemon: No such container: missing-a32d7c96-8e30-4523-986f-40e6016fb474\n"
+      }
+    },
+    {
+      "id": "invalid-input-explicitly-rejected",
+      "passed": true,
+      "observation": {
+        "status": 400,
+        "payload": null,
+        "message": "invalid-subject: expected the documented Linux machine-health subject."
+      }
+    },
+    {
+      "id": "root-is-not-dedicated-user",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "initial"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "identity-mismatch"
+              },
+              "parameters": {
+                "expected": {
+                  "user": "root",
+                  "home": "/root",
+                  "nonroot": true
+                },
+                "actual": {
+                  "user": "root",
+                  "home": "/root",
+                  "HOME": "/home/agent",
+                  "uid": 0
+                },
+                "recovery": "Run as the declared non-root account with its HOME; do not hide a root invocation."
+              }
+            },
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "directory-unusable"
+              },
+              "parameters": {
+                "directory": "workspace",
+                "path": "/home/agent/work",
+                "expected": "real directory owned by uid 0",
+                "actual": {
+                  "uid": 2000,
+                  "directory": true,
+                  "symlink": false
+                },
+                "recovery": "Correct ownership and use a canonical directory; do not move or delete user data."
+              }
+            },
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "directory-unusable"
+              },
+              "parameters": {
+                "directory": "scratchDirectory",
+                "path": "/home/agent/tmp",
+                "expected": "real directory owned by uid 0",
+                "actual": {
+                  "uid": 2000,
+                  "directory": true,
+                  "symlink": false
+                },
+                "recovery": "Correct ownership and use a canonical directory; do not move or delete user data."
+              }
+            },
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "directory-unusable"
+              },
+              "parameters": {
+                "directory": "cacheDirectory",
+                "path": "/home/agent/cache",
+                "expected": "real directory owned by uid 0",
+                "actual": {
+                  "uid": 2000,
+                  "directory": true,
+                  "symlink": false
+                },
+                "recovery": "Correct ownership and use a canonical directory; do not move or delete user data."
+              }
+            },
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "directory-unusable"
+              },
+              "parameters": {
+                "directory": "logDirectory",
+                "path": "/home/agent/logs",
+                "expected": "real directory owned by uid 0",
+                "actual": {
+                  "uid": 2000,
+                  "directory": true,
+                  "symlink": false
+                },
+                "recovery": "Correct ownership and use a canonical directory; do not move or delete user data."
+              }
+            },
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "directory-unusable"
+              },
+              "parameters": {
+                "directory": "tasksDirectory",
+                "path": "/home/agent/tasks",
+                "expected": "real directory owned by uid 0",
+                "actual": {
+                  "uid": 2000,
+                  "directory": true,
+                  "symlink": false
+                },
+                "recovery": "Correct ownership and use a canonical directory; do not move or delete user data."
+              }
+            },
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "sudo-unavailable"
+              },
+              "parameters": {
+                "expected": "(ALL : ALL) NOPASSWD: ALL from sudo -n -l",
+                "actual": "exit 0; unrestricted grant=false",
+                "recovery": "Have an administrator explicitly grant this trusted account unrestricted noninteractive sudo."
+              }
+            }
+          ],
+          "gapSummary": "当前 uid、用户名或 HOME 不符合受管账号。\n必要目录不存在、归属错误或不是规范真实目录。\n必要目录不存在、归属错误或不是规范真实目录。\n必要目录不存在、归属错误或不是规范真实目录。\n必要目录不存在、归属错误或不是规范真实目录。\n必要目录不存在、归属错误或不是规范真实目录。\nsudo -n -l 未显示完整 NOPASSWD ALL 授权。",
+          "observedAt": "2026-10-19T11:21:24.406Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "environment-mismatch",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "initial"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "initial",
+                "checkId": "identity",
+                "problemId": "environment-mismatch"
+              },
+              "parameters": {
+                "expected": "native-linux",
+                "actual": "container"
+              }
+            }
+          ],
+          "gapSummary": "实测 container、wsl 或 native-linux 与声明不同。",
+          "observedAt": "2026-10-19T11:21:25.548Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "home-owner-gap-and-recovery",
+      "passed": true,
+      "observation": {
+        "failed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+              "levelId": "initial"
+            },
+            "problems": [
+              {
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                  "levelId": "initial",
+                  "checkId": "identity",
+                  "problemId": "directory-unusable"
+                },
+                "parameters": {
+                  "directory": "workspace",
+                  "path": "/home/agent/work",
+                  "expected": "real directory owned by uid 2000",
+                  "actual": {
+                    "uid": 0,
+                    "directory": true,
+                    "symlink": false
+                  },
+                  "recovery": "Correct ownership and use a canonical directory; do not move or delete user data."
+                }
+              }
+            ],
+            "gapSummary": "必要目录不存在、归属错误或不是规范真实目录。",
+            "observedAt": "2026-10-19T11:21:26.880Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+            }
+          }
+        },
+        "recovered": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-19T11:21:37.638Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "sudo-gap-and-recovery",
+      "passed": true,
+      "observation": {
+        "failed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+              "levelId": "initial"
+            },
+            "problems": [
+              {
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                  "levelId": "initial",
+                  "checkId": "identity",
+                  "problemId": "sudo-unavailable"
+                },
+                "parameters": {
+                  "expected": "(ALL : ALL) NOPASSWD: ALL from sudo -n -l",
+                  "actual": "exit 1; unrestricted grant=false",
+                  "recovery": "Have an administrator explicitly grant this trusted account unrestricted noninteractive sudo."
+                }
+              }
+            ],
+            "gapSummary": "sudo -n -l 未显示完整 NOPASSWD ALL 授权。",
+            "observedAt": "2026-10-19T11:21:39.002Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+            }
+          }
+        },
+        "recovered": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-19T11:21:49.579Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "filesystem-space-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "managed"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "managed",
+                "checkId": "system",
+                "problemId": "capacity-low"
+              },
+              "parameters": {
+                "path": "/health-quota",
+                "expected": 1048576,
+                "actual": 524288,
+                "unit": "bytes"
+              }
+            }
+          ],
+          "gapSummary": "必要目录所在文件系统的可用容量低于策略。",
+          "observedAt": "2026-10-19T11:21:52.009Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "filesystem-inode-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "managed"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "managed",
+                "checkId": "system",
+                "problemId": "inodes-low"
+              },
+              "parameters": {
+                "path": "/health-quota",
+                "expected": 16,
+                "actual": 8,
+                "unit": "inodes"
+              }
+            }
+          ],
+          "gapSummary": "文件系统剩余 inode 低于策略。",
+          "observedAt": "2026-10-19T11:21:54.444Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "required-endpoint-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "managed"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "managed",
+                "checkId": "system",
+                "problemId": "http-unavailable"
+              },
+              "parameters": {
+                "url": "http://127.0.0.1:18080/unavailable",
+                "expected": "HTTP 2xx without redirect",
+                "actual": "file:///home/agent/[eval1]:1\nconst r=await fetch(process.argv[1],{signal:AbortSignal.timeout(4000),redirect:'error'});await r.body?.cancel();if(!r.ok)throw Error('HTTP '+r.status);\n                                                                                                                               ^\n\nError: HTTP 503\n    at file:///home/agent/[eval1]:1:128\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n\nNode.js v22.23.3\n"
+              }
+            }
+          ],
+          "gapSummary": "显式 URL 未直接返回成功的 2xx 状态。",
+          "observedAt": "2026-10-19T11:21:56.639Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "package-manager-incomplete",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "managed"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "managed",
+                "checkId": "system",
+                "problemId": "package-database-unhealthy"
+              },
+              "parameters": {
+                "tool": "dpkg --audit",
+                "actual": "dpkg: error: parsing file '/var/lib/dpkg/updates/0000' near line 0:\n field name 'invalid' must be followed by colon\n",
+                "code": 2
+              }
+            }
+          ],
+          "gapSummary": "dpkg audit 或 apt 只读依赖模拟发现已安装包状态不一致。",
+          "observedAt": "2026-10-19T11:21:58.404Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "version-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "system-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "system-ready",
+                "checkId": "toolchains",
+                "problemId": "tool-version"
+              },
+              "parameters": {
+                "tool": "node",
+                "expected": "999.0.0",
+                "actual": "22.23.3",
+                "code": 0,
+                "recovery": "Select an installed supported toolchain; no automatic download is attempted."
+              }
+            }
+          ],
+          "gapSummary": "版本低于最低值、输出无法解析或版本命令失败。",
+          "observedAt": "2026-10-19T11:22:04.491Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "typescript-missing",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "system-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "system-ready",
+                "checkId": "toolchains",
+                "problemId": "tool-missing"
+              },
+              "parameters": {
+                "tool": "tsc",
+                "expected": "5",
+                "actual": "ENOENT",
+                "recovery": "Install the declared tool explicitly outside this check."
+              }
+            }
+          ],
+          "gapSummary": "Git 或所选栈的必要工具出现 ENOENT。",
+          "observedAt": "2026-10-19T11:22:07.263Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "python-missing",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "system-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "system-ready",
+                "checkId": "toolchains",
+                "problemId": "tool-missing"
+              },
+              "parameters": {
+                "tool": "python3",
+                "expected": "3.10",
+                "actual": "ENOENT",
+                "recovery": "Install the declared tool explicitly outside this check."
+              }
+            }
+          ],
+          "gapSummary": "Git 或所选栈的必要工具出现 ENOENT。",
+          "observedAt": "2026-10-19T11:22:09.942Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "cpp-missing",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "system-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "system-ready",
+                "checkId": "toolchains",
+                "problemId": "tool-missing"
+              },
+              "parameters": {
+                "tool": "c++",
+                "expected": "10",
+                "actual": "ENOENT",
+                "recovery": "Install the declared tool explicitly outside this check."
+              }
+            }
+          ],
+          "gapSummary": "Git 或所选栈的必要工具出现 ENOENT。",
+          "observedAt": "2026-10-19T11:22:12.630Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "rust-missing",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "system-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "system-ready",
+                "checkId": "toolchains",
+                "problemId": "tool-missing"
+              },
+              "parameters": {
+                "tool": "cargo",
+                "expected": "1.75",
+                "actual": "ENOENT",
+                "recovery": "Install the declared tool explicitly outside this check."
+              }
+            }
+          ],
+          "gapSummary": "Git 或所选栈的必要工具出现 ENOENT。",
+          "observedAt": "2026-10-19T11:22:15.361Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "compiler-exists-but-fails",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "system-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "system-ready",
+                "checkId": "toolchains",
+                "problemId": "toolchain-failed"
+              },
+              "parameters": {
+                "stack": "cpp",
+                "tool": "cmake",
+                "expected": "exit 0",
+                "actual": {
+                  "code": 1,
+                  "stdout": "-- The CXX compiler identification is unknown\n-- Detecting CXX compiler ABI info\n-- Detecting CXX compiler ABI info - failed\n-- Check for working CXX compiler: /usr/bin/c++\n-- Check for working CXX compiler: /usr/bin/c++ - broken\n-- Configuring incomplete, errors occurred!\nSee also \"/home/agent/tmp/pguide-health-PGRHds/cpp-out/CMakeFiles/CMakeOutput.log\".\nSee also \"/home/agent/tmp/pguide-health-PGRHds/cpp-out/CMakeFiles/CMakeError.log\".\n",
+                  "stderr": "CMake Error at /usr/share/cmake-3.25/Modules/CMakeTestCXXCompiler.cmake:63 (message):\n  The C++ compiler\n\n    \"/usr/bin/c++\"\n\n  is not able to compile a simple test program.\n\n  It fails with the following output:\n\n    Change Dir: /home/agent/tmp/pguide-health-PGRHds/cpp-out/CMakeFiles/CMakeScratch/TryCompile-tbynl6\n    \n    Run Build Command(s):/usr/bin/ninja cmTC_0bb3b && [1/2] Building CXX object CMakeFiles/cmTC_0bb3b.dir/testCXXCompiler.cxx.o\n    FAILED: CMakeFiles/cmTC_0bb3b.dir/testCXXCompiler.cxx.o \n    /usr/bin/c++    -o CMakeFiles/cmTC_0bb3b.dir/testCXXCompiler.cxx.o -c /home/agent/tmp/pguide-health-PGRHds/cpp-out/CMakeFiles/CMakeScratch/TryCompile-tbynl6/testCXXCompiler.cxx\n    ninja: build stopped: subcommand failed.\n    \n    \n\n  \n\n  CMake will not be able to correctly generate this project.\nCall Stack (most recent call first):\n  CMakeLists.txt:2 (project)\n\n\n"
+                },
+                "recovery": "Repair this compiler, linker, runtime or offline standard library; preserve workspace data."
+              }
+            }
+          ],
+          "gapSummary": "所选开发栈未完成真实最小项目并输出期望标记。",
+          "observedAt": "2026-10-19T11:22:18.154Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "overlapping-layout",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "development-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "development-ready",
+                "checkId": "order",
+                "problemId": "layout-invalid"
+              },
+              "parameters": {
+                "directories": [
+                  "workspace",
+                  "cacheDirectory"
+                ],
+                "expected": "distinct, non-overlapping managed directories",
+                "actual": [
+                  "/home/agent/work",
+                  "/home/agent/work"
+                ]
+              }
+            }
+          ],
+          "gapSummary": "工作区、scratch、缓存、日志或任务注册目录重合或嵌套。",
+          "observedAt": "2026-10-19T11:22:25.887Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "invalid-task-registry",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "development-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "development-ready",
+                "checkId": "order",
+                "problemId": "task-registry-invalid"
+              },
+              "parameters": {
+                "file": "broken.json",
+                "actual": "invalid JSON"
+              }
+            }
+          ],
+          "gapSummary": "JSON、记录字段、文件身份、时间或 scratch 路径违反合约。",
+          "observedAt": "2026-10-19T11:22:33.781Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "stale-task-residue",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "development-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "development-ready",
+                "checkId": "order",
+                "problemId": "task-residue"
+              },
+              "parameters": {
+                "id": "ended",
+                "path": "/home/agent/tmp/ended",
+                "finishedAt": 1792408854770,
+                "expected": {
+                  "retentionSeconds": 1
+                },
+                "actual": {
+                  "ageSeconds": 107.141
+                },
+                "recovery": "Review retained output and uncommitted work before manually cleaning the registered directory."
+              }
+            }
+          ],
+          "gapSummary": "明确登记的 scratch 子目录超过 finishedAt 加保留周期仍存在。",
+          "observedAt": "2026-10-19T11:22:41.937Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "orphaned-task",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "development-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "development-ready",
+                "checkId": "order",
+                "problemId": "task-orphaned"
+              },
+              "parameters": {
+                "id": "orphan",
+                "pid": 2147483647
+              }
+            }
+          ],
+          "gapSummary": "active 记录缺少 pid，或其进程已不存在。",
+          "observedAt": "2026-10-19T11:22:50.147Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "task-deadline-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "development-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "development-ready",
+                "checkId": "order",
+                "problemId": "task-overdue"
+              },
+              "parameters": {
+                "id": "overdue",
+                "deadlineAt": 1792408970141,
+                "now": 1792408978116
+              }
+            }
+          ],
+          "gapSummary": "活动任务当前时间严格大于 deadlineAt。",
+          "observedAt": "2026-10-19T11:22:58.144Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "finished-task-process-leftover",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "development-ready"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "development-ready",
+                "checkId": "order",
+                "problemId": "task-process-leftover"
+              },
+              "parameters": {
+                "id": "leftover",
+                "pid": 1
+              }
+            }
+          ],
+          "gapSummary": "finished 记录对应的 pid 仍存在。",
+          "observedAt": "2026-10-19T11:23:06.083Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "active-work-and-uncommitted-data-protected",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "terminal"
+          },
+          "problems": [],
+          "gapSummary": "",
+          "observedAt": "2026-10-19T11:23:17.374Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "foreign-history-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "orderly"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "orderly",
+                "checkId": "sustainability",
+                "problemId": "history-invalid"
+              },
+              "parameters": {
+                "index": 0,
+                "reason": "identity-mismatch",
+                "expected": {
+                  "hostname": "pguide-health-b4e4285f-f240-4de1-80d2-99019f7ff6ae",
+                  "user": "agent",
+                  "home": "/home/agent",
+                  "measuredAt": {
+                    "greaterThan": -1,
+                    "maximum": 1792409007729
+                  },
+                  "metrics": "finite nonnegative numbers"
+                },
+                "actual": {
+                  "hostname": "other-device",
+                  "user": "agent",
+                  "home": "/home/agent",
+                  "measuredAt": 1792408998597,
+                  "freeBytes": 988945829888,
+                  "freeInodes": 66352330,
+                  "cacheBytes": 0,
+                  "logBytes": 0
+                }
+              }
+            }
+          ],
+          "gapSummary": "目标身份不匹配、未来时间、倒序或重复时间戳。",
+          "observedAt": "2026-10-19T11:23:28.529Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "stale-history-gap",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "orderly"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "orderly",
+                "checkId": "sustainability",
+                "problemId": "history-insufficient"
+              },
+              "parameters": {
+                "expected": {
+                  "samples": 3,
+                  "spanMs": 1000,
+                  "maxAgeMs": 300000
+                },
+                "actual": {
+                  "samples": 3,
+                  "spanMs": 1934,
+                  "ageMs": 607237
+                }
+              }
+            }
+          ],
+          "gapSummary": "样本缺失、数量不足、时间跨度不足或最新样本过旧。",
+          "observedAt": "2026-10-19T11:23:39.553Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "cacheBytes-growth-and-recovery",
+      "passed": true,
+      "observation": {
+        "failed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+              "levelId": "orderly"
+            },
+            "problems": [
+              {
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                  "levelId": "orderly",
+                  "checkId": "sustainability",
+                  "problemId": "cache-growth"
+                },
+                "parameters": {
+                  "expected": 1,
+                  "actual": 3599.297012302285,
+                  "unit": "bytes/second",
+                  "spanMs": 2276,
+                  "recovery": "Review growth and configure bounded retention; never blindly delete caches or logs."
+                }
+              }
+            ],
+            "gapSummary": "历史首尾缓存字节差除以真实秒数超过策略。",
+            "observedAt": "2026-10-19T11:23:51.042Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+            }
+          }
+        },
+        "recovered": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-19T11:24:01.497Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "logBytes-growth-and-recovery",
+      "passed": true,
+      "observation": {
+        "failed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+              "levelId": "orderly"
+            },
+            "problems": [
+              {
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                  "levelId": "orderly",
+                  "checkId": "sustainability",
+                  "problemId": "log-growth"
+                },
+                "parameters": {
+                  "expected": 1,
+                  "actual": 3546.3203463203463,
+                  "unit": "bytes/second",
+                  "spanMs": 2310,
+                  "recovery": "Review growth and configure bounded retention; never blindly delete caches or logs."
+                }
+              }
+            ],
+            "gapSummary": "历史首尾日志字节差除以真实秒数超过策略。",
+            "observedAt": "2026-10-19T11:24:13.058Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+            }
+          }
+        },
+        "recovered": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-19T11:24:23.490Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "package-index-stale",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "orderly"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "orderly",
+                "checkId": "sustainability",
+                "problemId": "package-index-stale"
+              },
+              "parameters": {
+                "expected": 604800,
+                "actual": 1792409072.953,
+                "source": "update-success-stamp mtime",
+                "unit": "seconds",
+                "recovery": "Explicitly refresh apt indexes outside this check; record an update-success-stamp only after a successful refresh."
+              }
+            }
+          ],
+          "gapSummary": "Packages 缺失、刷新证据陈旧或存在未来时间。",
+          "observedAt": "2026-10-19T11:24:34.732Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "pending-package-update",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "orderly"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "orderly",
+                "checkId": "sustainability",
+                "problemId": "updates-pending"
+              },
+              "parameters": {
+                "actual": {
+                  "upgraded": 1,
+                  "installed": 0,
+                  "removed": 0,
+                  "held": 0
+                },
+                "recovery": "Review and apply appropriate updates explicitly; this check never installs packages."
+              }
+            }
+          ],
+          "gapSummary": "apt-get 只读模拟显示升级、安装、删除或保留包。",
+          "observedAt": "2026-10-19T11:24:46.207Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "package-dependency-broken",
+      "passed": true,
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+            "levelId": "managed"
+          },
+          "problems": [
+            {
+              "ref": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                "levelId": "managed",
+                "checkId": "system",
+                "problemId": "package-database-unhealthy"
+              },
+              "parameters": {
+                "tool": "apt-get -s check",
+                "expected": "consistent installed package dependencies",
+                "actual": {
+                  "code": 100,
+                  "stdout": "NOTE: This is only a simulation!\n      apt-get needs root privileges for real execution.\n      Keep also in mind that locking is deactivated,\n      so don't depend on the relevance to the real current situation!\nReading package lists...\nBuilding dependency tree...\nReading state information...\nYou might want to run 'apt --fix-broken install' to correct these.\nThe following packages have unmet dependencies:\n bash : Depends: base-files (>= 2.1.12) but 0.0.1 is installed\n        Recommends: bash-completion (>= 20060301-0) but it is not installed\n",
+                  "stderr": "E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution).\n"
+                },
+                "recovery": "Review the unsatisfied dependencies and explicitly repair the installed package state; this check does not change packages, caches or configuration."
+              }
+            }
+          ],
+          "gapSummary": "dpkg audit 或 apt 只读依赖模拟发现已安装包状态不一致。",
+          "observedAt": "2026-10-19T11:24:48.623Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+          }
+        }
+      }
+    },
+    {
+      "id": "healthy-then-regression",
+      "passed": true,
+      "observation": {
+        "passed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+              "levelId": "terminal"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-19T11:24:59.565Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+            }
+          }
+        },
+        "regressed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+              "levelId": "initial"
+            },
+            "problems": [
+              {
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+                  "levelId": "initial",
+                  "checkId": "identity",
+                  "problemId": "directory-unusable"
+                },
+                "parameters": {
+                  "directory": "workspace",
+                  "path": "/home/agent/work",
+                  "expected": "real directory owned by uid 2000",
+                  "actual": {
+                    "uid": 0,
+                    "directory": true,
+                    "symlink": false
+                  },
+                  "recovery": "Correct ownership and use a canonical directory; do not move or delete user data."
+                }
+              }
+            ],
+            "gapSummary": "必要目录不存在、归属错误或不是规范真实目录。",
+            "observedAt": "2026-10-19T11:25:00.115Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml": "6c75d927aaefe361cb85746c055cb1a01114ad1c"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "cleaned": true,
+  "docker": {
+    "Client": {
+      "Version": "29.8.2",
+      "ApiVersion": "1.56",
+      "DefaultAPIVersion": "1.56",
+      "GitCommit": "7fc2dff",
+      "GoVersion": "go1.26.8",
+      "Os": "windows",
+      "Arch": "amd64",
+      "BuildTime": "Wed Sep 30 19:35:42 2026",
+      "Context": "desktop-linux"
+    },
+    "Server": {
+      "Platform": {
+        "Name": "Docker Desktop 4.95.0 (242831)"
+      },
+      "Version": "29.8.2",
+      "ApiVersion": "1.56",
+      "MinAPIVersion": "1.40",
+      "Os": "linux",
+      "Arch": "amd64",
+      "Components": [
+        {
+          "Name": "Engine",
+          "Version": "29.8.2",
+          "Details": {
+            "ApiVersion": "1.56",
+            "Arch": "amd64",
+            "BuildTime": "Wed Sep 30 19:32:25 2026",
+            "Experimental": "false",
+            "GitCommit": "8af9fe3",
+            "GoVersion": "go1.26.8",
+            "KernelVersion": "6.18.33.2-microsoft-standard-WSL2",
+            "MinAPIVersion": "1.40",
+            "Module": "github.com/moby/moby/v2",
+            "ModuleVersion": "v2.0.0+unknown",
+            "Os": "linux"
+          }
+        },
+        {
+          "Name": "containerd",
+          "Version": "v2.3.6",
+          "Details": {
+            "GitCommit": "ee2735368117d2eb259779949d5e75cdafec9761"
+          }
+        },
+        {
+          "Name": "runc",
+          "Version": "1.5.1",
+          "Details": {
+            "GitCommit": "v1.5.1-0-g8f2685a4"
+          }
+        },
+        {
+          "Name": "docker-init",
+          "Version": "0.19.0",
+          "Details": {
+            "GitCommit": "de40ad0"
+          }
+        }
+      ],
+      "GitCommit": "8af9fe3",
+      "GoVersion": "go1.26.8",
+      "KernelVersion": "6.18.33.2-microsoft-standard-WSL2",
+      "BuildTime": "2026-09-30T19:32:25.000000000+00:00"
+    }
+  },
+  "commit": "6c75d927aaefe361cb85746c055cb1a01114ad1c",
+  "pilot": "git+file:///D:/Code/potential-guide.worktrees/pilot-package-architecture-migration/#packages/development-machine-health-pilot/pilot.yaml",
+  "typescript": {
+    "version": "5.9.3",
+    "integrity": "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="
+  },
+  "image": "sha256:c6424de5df1b2e5a847249b381917635a8aa56d4f53395f5af7ea9571935e357",
+  "passed": true,
+  "finishedAt": "2026-10-19T11:25:00.941Z"
+}
