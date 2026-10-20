@@ -59,7 +59,7 @@ try {
   const prompt = [
     "Potential Guide local self-check: one isolated marker repair.",
     `Self-check task: ${JSON.stringify({ marker: "marker.txt", expected })}`,
-    "Replace marker.txt in the current working directory with exactly the expected string, including its final newline.",
+    "Replace marker.txt in the current working directory with exactly the expected string; one final LF or CRLF newline is allowed.",
     "Use a direct file editing tool; do not use a shell or terminal.",
     "Modify only marker.txt. Do not use network, install dependencies, change configuration, run pguide, or use Git.",
     "Do not plan or report; finish after the single repair. Respect existing tool permissions.",

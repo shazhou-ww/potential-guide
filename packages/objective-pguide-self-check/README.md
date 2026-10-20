@@ -52,7 +52,7 @@ pguide probe --pilot "git+file:///D:/Code/potential-guide#packages/objective-pgu
   profile；真实 initialize + session/new，不 prompt。AHP 明确不支持。
 - sanity：复核依赖、ACP readiness，在独占 scratch/task 下创建错误的 marker.txt，
   **一次** AcpClient.prompt，要求只改 marker.txt，然后独立核验普通非链接文件、
-  单硬链接、大小和随机精确内容（含一个末尾换行，兼容文件编辑工具）。
+  单硬链接、大小和随机精确内容（允许无行尾或一个末尾 LF/CRLF，兼容文件编辑工具）。
   仅摘要、错误内容、多余换行、拒绝权限都不通过。
   readiness 由同一个修复 Agent 的 initialize、必需能力及 session/new 核验，
   不先启动另一个探测 Agent；configuration 仍独立建立无 prompt 的会话。

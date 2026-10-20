@@ -7,7 +7,7 @@ export async function directSanity(context, directory, selected) {
   const task = join(directory, "task");
   await mkdir(task, { mode: 0o700 });
   const marker = join(task, "marker.txt");
-  const expected = `ready-${randomBytes(24).toString("hex")}\n`;
+  const expected = `ready-${randomBytes(24).toString("hex")}`;
   await writeFile(marker, "not-ready", { mode: 0o600 });
   if ((await readFile(marker, "utf8")) === expected)
     throw new Fault("sanity: initial marker was not independently observed.");
@@ -49,16 +49,25 @@ export async function directSanity(context, directory, selected) {
         : "invalid-outcome",
     });
   let correct = false;
+  let observed = "missing";
   try {
     const details = await lstat(marker);
-    correct =
-      details.isFile() &&
-      !details.isSymbolicLink() &&
-      details.nlink === 1 &&
-      details.size === Buffer.byteLength(expected) &&
-      (await readFile(marker, "utf8")) === expected;
+    if (!details.isFile() || details.isSymbolicLink() || details.nlink !== 1)
+      observed = "not-regular";
+    else if (details.size > Buffer.byteLength(expected) + 8) observed = "oversized";
+    else {
+      const content = await readFile(marker, "utf8");
+      correct = [expected, `${expected}\n`, `${expected}\r\n`].includes(content);
+      observed =
+        content === "not-ready"
+          ? "unchanged"
+          : content.trimEnd() === expected.trimEnd()
+            ? "line-ending"
+            : "different-content";
+    }
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
-  if (!correct) throw new Problem("sanity-failed", { stage: "recheck", reason: "nonce-mismatch" });
+  if (!correct)
+    throw new Problem("sanity-failed", { stage: "recheck", reason: "nonce-mismatch", observed });
 }

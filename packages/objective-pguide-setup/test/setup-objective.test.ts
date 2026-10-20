@@ -114,7 +114,9 @@ for await (const line of createInterface({input:process.stdin})) {
     if(direct)subject.marker=join(cwd,subject.marker);
     if(["fix","home","denied","incomplete","permission","permission-always"].includes(mode))await writeFile(subject.marker,subject.expected);
     if(mode==="wrong")await writeFile(subject.marker,"a different successful-looking marker");
-    if(mode==="extra-newline")await writeFile(subject.marker,subject.expected+"\\n");
+    if(mode==="extra-newline")await writeFile(subject.marker,subject.expected+"\\n\\n");
+    if(mode==="lf")await writeFile(subject.marker,subject.expected+"\\n");
+    if(mode==="crlf")await writeFile(subject.marker,subject.expected+"\\r\\n");
     if(["denied","permission","permission-always"].includes(mode)){
       pendingPrompt=m.id;
       console.log(JSON.stringify({jsonrpc:"2.0",id:"permission",method:mode==="denied"?"client/unsupported":"session/request_permission",params:{sessionId:"real-fixture-session",toolCall:{toolCallId:"write",kind:"edit",locations:[{path:subject.marker}],rawInput:{path:subject.marker}},options:[{optionId:"yes",name:"Yes",kind:mode==="permission-always"?"allow_always":"allow_once"}]}}));
@@ -1243,6 +1245,17 @@ test("self-check automatically grants once without repair grants or configuratio
     for (const { pid } of messages) assert.throws(() => process.kill(pid, 0));
   } finally {
     await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+test("self-check accepts only the exact nonce with zero or one LF/CRLF line ending", async () => {
+  for (const mode of ["lf", "crlf"]) {
+    const f = await setup(mode);
+    try {
+      passed(await f.direct("sanity", selfSubject(f), selfHelper));
+    } finally {
+      await rm(f.directory, { recursive: true, force: true });
+    }
   }
 });
 
