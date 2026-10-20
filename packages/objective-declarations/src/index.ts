@@ -15,25 +15,39 @@ import {
   userConfigPath,
 } from "@potential-guide/cli-core";
 import {
-  canonicalObjectiveUri,
-  compileDomain,
-  compileInputSchema,
-  compileSubjectProjection,
+  bindObjective as bindDomainObjective,
   isJsonValue,
   type JsonObject,
   type JsonValue,
+  type ObjectiveDeclaration,
+  ObjectiveOperationError,
   type PilotSpec,
-  parseStrictYaml,
+  parseObjectives as parseDomainObjectives,
   type Subject,
-  validateSubject,
 } from "@potential-guide/pilot-protocol";
 
 const execute = promisify(execFile);
-export interface ObjectiveDeclaration {
-  readonly description: string;
-  readonly pilot: string;
-  readonly inputSchema: JsonObject;
-  readonly subject: string;
+
+export type { ObjectiveDeclaration };
+
+function declarationOperation<T>(operation: () => T): T {
+  try {
+    return operation();
+  } catch (error) {
+    if (error instanceof ObjectiveOperationError) throw new CliError(error.message);
+    throw error;
+  }
+}
+export function parseObjectives(source: string): Record<string, ObjectiveDeclaration> {
+  return declarationOperation(() => parseDomainObjectives(source));
+}
+export function bindObjective(
+  entry: ObjectiveDeclaration,
+  context: JsonObject,
+  input: JsonValue | undefined,
+  spec: PilotSpec,
+): Subject {
+  return declarationOperation(() => bindDomainObjective(entry, context, input, spec));
 }
 export interface ObjectiveEntry extends ObjectiveDeclaration {
   readonly name: string;
@@ -43,49 +57,7 @@ export interface ObjectiveEntry extends ObjectiveDeclaration {
 }
 const object = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
-const text = (value: unknown): value is string => typeof value === "string" && value.trim() !== "";
 
-export function parseObjectives(source: string): Record<string, ObjectiveDeclaration> {
-  const value = parseStrictYaml(source);
-  if (
-    !object(value) ||
-    value.schemaVersion !== 1 ||
-    !object(value.objectives) ||
-    Object.keys(value).some((key) => !["schemaVersion", "objectives"].includes(key))
-  )
-    throw new CliError("objectives.yaml requires schemaVersion: 1 and objectives only.");
-  const entries: Record<string, ObjectiveDeclaration> = Object.create(null);
-  for (const [name, entry] of Object.entries(value.objectives)) {
-    if (
-      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) ||
-      !object(entry) ||
-      Object.keys(entry).length !== 4 ||
-      Object.keys(entry).some(
-        (key) => !["description", "pilot", "inputSchema", "subject"].includes(key),
-      ) ||
-      !text(entry.description) ||
-      !text(entry.pilot) ||
-      !text(entry.subject) ||
-      !object(entry.inputSchema) ||
-      !isJsonValue(entry.inputSchema)
-    )
-      throw new CliError(
-        `Invalid Objective ${name}: requires description, directory pilot, inputSchema and JSONata subject; target is not a declaration field.`,
-      );
-    compileInputSchema(entry.inputSchema);
-    compileSubjectProjection(entry.subject);
-    if (entry.pilot.startsWith("git+")) canonicalObjectiveUri(entry.pilot);
-    else if (entry.pilot.replace(/\\/g, "/").replace(/\/$/, "").split("/").at(-1) === "pilot.yaml")
-      throw new CliError(`Objective ${name} must reference a Pilot directory, not pilot.yaml.`);
-    entries[name] = {
-      description: entry.description,
-      pilot: entry.pilot,
-      inputSchema: entry.inputSchema,
-      subject: entry.subject,
-    };
-  }
-  return entries;
-}
 export function objectivesPath(scope: string, cwd: string): string {
   if (scope === "directory") return join(cwd, "objectives.yaml");
   if (scope === "user") return join(dirname(userConfigPath()), "objectives.yaml");
@@ -315,41 +287,6 @@ export async function objectiveContext(cwd: string, executeGit?: ContextGit): Pr
       relativePath: pathInRepository || ".",
     },
   };
-}
-export function bindObjective(
-  entry: ObjectiveDeclaration,
-  context: JsonObject,
-  input: JsonValue | undefined,
-  spec: PilotSpec,
-): Subject {
-  const validate = compileInputSchema(entry.inputSchema);
-  const schema = entry.inputSchema;
-  const empty = (value: unknown) => object(value) && Object.keys(value).length === 0;
-  const unit =
-    empty(schema.const) ||
-    (Array.isArray(schema.enum) && schema.enum.length === 1 && empty(schema.enum[0])) ||
-    (schema.type === "object" &&
-      (schema.maxProperties === 0 ||
-        (schema.additionalProperties === false &&
-          (schema.properties === undefined || empty(schema.properties)) &&
-          (schema.patternProperties === undefined || empty(schema.patternProperties)))));
-  const omittedIsValid = unit && validate({});
-  if (input === undefined && !omittedIsValid)
-    throw new CliError(
-      "Objective input is required; provide --input-file. Only Unit input may be omitted.",
-    );
-  const value = input === undefined ? {} : input;
-  if (!isJsonValue(value) || !validate(value))
-    throw new CliError(`Invalid Objective input: ${JSON.stringify(validate.errors)}`);
-  const subject = compileSubjectProjection(entry.subject, { requireDefined: true })({
-    context,
-    input: value,
-  });
-  if (!object(subject) || !isJsonValue(subject))
-    throw new CliError("Objective projection must return a finite JSON object.");
-  const issues = validateSubject(subject, compileDomain(spec.manifest.domainSchema));
-  if (issues !== null) throw new CliError(`Invalid projected subject: ${JSON.stringify(issues)}`);
-  return subject;
 }
 export async function selectObjective(
   argv: string[],

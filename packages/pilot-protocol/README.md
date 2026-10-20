@@ -17,3 +17,9 @@ include `parseCheckEnvelope`, `parseDependencyProblem`, URI canonicalization,
 `validateReferences`, and contract types. Public subpaths: `types`, `validation`,
 `resources`, `projection`. Existing business-package reexports remain compatible.
 See [layers and consumption](../../docs/package-layering.md).
+
+Objective declaration definitions also live here: `parseObjectives` validates
+`objectives.yaml`, `projectObjective` checks input and evaluates the bounded
+subject projection, and `bindObjective` additionally validates the projected
+subject against the Pilot domain. These APIs do not discover files, build Git
+context or acquire sources; those environment operations remain tool-side.

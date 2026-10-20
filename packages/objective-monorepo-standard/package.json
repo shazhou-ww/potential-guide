@@ -9,6 +9,7 @@
     "runtime",
     "pilot.yaml",
     "checks",
+    "package-standard",
     "references",
     "check.mjs",
     "THIRD_PARTY_NOTICES.txt"
@@ -30,13 +31,15 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@potential-guide/objective-pilot": "workspace:^",
     "ajv": "catalog:",
     "typescript": "catalog:",
     "yaml": "catalog:"
   },
   "devDependencies": {
     "@potential-guide/effects": "workspace:^",
-    "@potential-guide/objective-pilot": "workspace:^",
+    "@potential-guide/objective-regulator": "workspace:^",
+    "@potential-guide/objective-portfolio-supervisor": "workspace:^",
     "pguide": "workspace:^"
   }
 }

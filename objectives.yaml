@@ -1,0 +1,40 @@
+schemaVersion: 1
+objectives:
+  standardize:
+    description: Coordinate package-owned standardization and repository-wide delivery requirements.
+    pilot: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/
+    inputSchema:
+      type: object
+      additionalProperties: false
+      maxProperties: 0
+    subject: |
+      {
+        "context": context,
+        "policy": {
+          "source": "pnpm-default-v1",
+          "directories": {"apps": "apps", "packages": "packages", "docs": "docs", "scripts": "scripts"},
+          "requiredFiles": ["tsconfig.json", "biome.json"],
+          "exceptions": [],
+          "assignments": [],
+          "allowedDirectories": [{"path": "config", "reason": "Repository-owned release and package-layer policy."}],
+          "dependencyExceptions": []
+        },
+        "deliveries": [
+          {
+            "id": "public-library-suite",
+            "purpose": "Publish the public packages as consumable npm libraries through package-specific releases.",
+            "kind": "npm",
+            "packages": ["@potential-guide/effects","@potential-guide/git-source","@potential-guide/objective-pilot","@potential-guide/objective-regulator","@potential-guide/objective-portfolio-supervisor","@potential-guide/cli-core","@potential-guide/config","pguide","@potential-guide/pilot-protocol","@potential-guide/cli-runtime","@potential-guide/objective-declarations","@potential-guide/pguide-pilot","@potential-guide/pguide-regulate","@potential-guide/pguide-supervise","@potential-guide/pguide-objectives"],
+            "entry": {"package": "@potential-guide/objective-pilot", "path": "src/index.ts"},
+            "runtime": "node", "resources": [], "services": [], "capabilities": [], "independent": false
+          },
+          {
+            "id": "developer-commands",
+            "purpose": "Deliver pguide and its configuration extension without coupling private checking tools to the public distribution.",
+            "kind": "cli",
+            "packages": ["@potential-guide/effects","@potential-guide/git-source","@potential-guide/objective-pilot","@potential-guide/objective-regulator","@potential-guide/objective-portfolio-supervisor","@potential-guide/cli-core","@potential-guide/config","pguide","@potential-guide/pilot-protocol","@potential-guide/cli-runtime","@potential-guide/objective-declarations","@potential-guide/pguide-pilot","@potential-guide/pguide-regulate","@potential-guide/pguide-supervise","@potential-guide/pguide-objectives"],
+            "entry": {"package": "pguide", "path": "src/bin.ts"},
+            "runtime": "node", "resources": [], "services": [], "capabilities": [], "independent": false
+          }
+        ]
+      }

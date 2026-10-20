@@ -122,6 +122,9 @@ importers:
 
   packages/objective-monorepo-standard:
     dependencies:
+      '@potential-guide/objective-pilot':
+        specifier: workspace:^
+        version: link:../objective-pilot
       ajv:
         specifier: 'catalog:'
         version: 8.20.0
@@ -135,9 +138,12 @@ importers:
       '@potential-guide/effects':
         specifier: workspace:^
         version: link:../effects
-      '@potential-guide/objective-pilot':
+      '@potential-guide/objective-portfolio-supervisor':
         specifier: workspace:^
-        version: link:../objective-pilot
+        version: link:../objective-portfolio-supervisor
+      '@potential-guide/objective-regulator':
+        specifier: workspace:^
+        version: link:../objective-regulator
       pguide:
         specifier: workspace:^
         version: link:../pguide

@@ -63,9 +63,17 @@ Pilot 的编写、静态验证和观察共用来源及定义约定；调节与�
 - 本机为 Windows，Node.js `v24.12.0`，pnpm `11.22.0`。
 - `pnpm exec turbo run build --force`：19 个构建任务成功；清理迁移中间产物后执行 `pnpm exec turbo run build typecheck --force`，38 个任务成功，刷新旧缓存，避免已移走的源码残留在 tarball。
 - 统一 `pguide-` 命名后，定向 metadata/缺失/冲突/两种入口回归 5 项通过；包级发布命名、config 兼容性、CI 八组合接线及分发辅助回归 8 项通过。`pnpm layers:check` 通过。
-- 统一命名后重新执行 `pnpm check`：通过分层、格式、lint、typecheck、测试和打包全部阶段。CLI 集成测试 84 项，82 通过、2 项按平台条件跳过、0 失败；根脚本测试 37 项全部通过，独立协议测试 2 项通过。
-- `pnpm pack:check`（包含在完整检查中）：15 个发布包及上表八种离线隔离消费组合通过。主包 11 个打包文件，协议包 27 个打包文件；生产依赖闭包与上表一致。
+- 统一命名并合入并发治理迁移后重新执行 `pnpm check`：通过分层、格式、lint、typecheck、测试和打包全部阶段。CLI 集成测试 84 项，82 通过、2 项按平台条件跳过、0 失败；根脚本测试 37 项全部通过，独立协议测试 3 项通过，包级/仓库级治理测试 43 项全部通过。
+- `pnpm pack:check`（包含在完整检查中）：15 个发布包及上表八种离线隔离消费组合通过。主包 11 个打包文件，协议包 31 个打包文件；新增声明 API 也由仅协议消费者实际调用，生产依赖闭包与上表一致。
 - 统一命名后重新执行 `pnpm deployment:verify`：八种离线隔离组合和 Windows `win32/x64` 本地 npm tarball 消费验证全部通过，包含全部公开导出与命令协议、ACP 调节与继续、持久化及保留期、秘密脱敏及报告、已安装监督生命周期、已提交 setup 子目录加载和 nonce 修复、自检单次 Agent 修复、拒绝/继续授权/撤销边界。这是使用本地夹具的实施验证，不是外部目标部署或真实模型验收。验证器的持久化断言同步为既有 schemaVersion 3，未改变业务状态格式。
 - `silvermoon check --worktree --audience agent` 和 `git diff --check`：通过。只完成实施清单，未追加生命周期事件；部署清单仍全部未勾选。
 
 为遵守仓库内 scratch 限制，验证时将 Windows `TEMP`/`TMP` 指向仓库 `.cache`。较深的 `.cache/test-scratch` 曾触发现有嵌套 setup 测试的 Windows 路径长度限制；使用短 `.cache` 路径的定向 setup 修复验收通过，不更改业务超时或跳过失败。现有 POSIX 专属测试和文件符号链接权限测试按平台条件跳过；远端 Ubuntu/macOS/Windows CI、真实模型和 npm 发布未在本机伪称已执行。
+
+## 并发治理迁移的合并适配
+
+保留并发上游从集中式 `config/monorepo-requirements.json` 转向根目录和各包 `objectives.yaml` 的真实迁移，删除旧集中清单，不通过恢复已废弃配置消解冲突。七个抽取包分别补充自有声明；现有 Pilot 与主入口声明按实际依赖更新，根声明的两个联合交付列表覆盖全部十五个发布包。真实仓库检查验证十九个包拥有独立主体，而不是仍假设原先十二个包。
+
+上游新增的 `ObjectiveDeclaration`、`parseObjectives`、`projectObjective` 和 `bindObjective` 的定义、输入校验及有界投影规范实现放在 `pilot-protocol/src/objectives.ts`；`objective-pilot/src/objectives.ts` 只兼容重导出。工具服务继续仅依赖协议和 CLI Core，将协议操作错误转换为既有 CLI 错误，不反向依赖业务执行，也不维护第二份声明解析器。
+
+合并冲突中的依赖锁经 pnpm 根据合并后的真实清单重新生成。定向协议、CLI 声明选择/继续和包级/仓库级治理回归 25 项全部通过；完整构建与类型检查 38 个任务成功；完整 `pnpm check` 以及八种打包消费组合通过，闭包数量保持上表不变。未修改无关的既有中断测试时序，也未创建合并提交、推送或生命周期事件。

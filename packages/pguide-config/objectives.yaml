@@ -1,0 +1,13 @@
+schemaVersion: 1
+objectives:
+  standardize:
+    description: Standardize the public configuration command extension.
+    pilot: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
+    inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
+    subject: |
+      {
+        "root": context.checkout.rootPath, "directory": context.directory.relativePath,
+        "roles": ["npm", "cli"], "runtime": "node", "allows": ["@potential-guide/cli-core"],
+        "entries": ["src/bin.ts"], "generated": [], "deliveries": [],
+        "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "developer-commands", "kind": "cli"}]
+      }

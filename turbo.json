@@ -26,8 +26,21 @@
     },
     "@potential-guide/objective-monorepo-standard#build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/build-monorepo-runtime.mjs"],
-      "outputs": ["dist/**", "runtime/**", "THIRD_PARTY_NOTICES.txt"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/scripts/build-monorepo-runtime.mjs",
+        "$TURBO_ROOT$/scripts/build-evidence-runtime.mjs"
+      ],
+      "outputs": [
+        "dist/**",
+        "runtime/**",
+        "THIRD_PARTY_NOTICES.txt",
+        "pilot.yaml",
+        "package-standard/pilot.yaml",
+        "package-standard/check.mjs",
+        "package-standard/runtime/**",
+        "package-standard/THIRD_PARTY_NOTICES.txt"
+      ]
     },
     "@potential-guide/objective-monorepo-standard#test": {
       "dependsOn": ["build"],

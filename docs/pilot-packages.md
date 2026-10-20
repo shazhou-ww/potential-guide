@@ -1,8 +1,9 @@
 # Pilot package 架构与消费契约
 
-每个正式 Objective 是一个完整、私有的 pnpm workspace package。package 是
+正式 Objective 由完整、私有的 pnpm workspace package 交付。package 是
 源码版本、依赖、构建和资源交付边界，不代表公开 npm 发布，不改变 Objective 的业务身份。
 通用协议、进程执行和资源加载仍由既有基础包维护，不为每个 check 建包。
+紧密相关的仓库标准化和包标准化由同一 workspace 内两个自包含 Pilot 目录交付。
 
 ## Objective 实例包命名
 
@@ -30,7 +31,7 @@
 静默重定向。迁移调用方的 URI fragment、脚本路径及版本 pin，然后重新加载 manifest
 和 References。不能只改 fragment 却继续复用旧 commit；缓存、执行配方和 evidence 的
 Objective URI / version 随之改变，旧结果不自动证明新版本。检查 ID、problem ID、
-subject 的授权/预算/目标约束保持不变（monorepo 的受限字段迁移见下文）。
+其他 Pilot subject 的授权/预算/目标约束保持不变；monorepo 的目录声明迁移见下文。
 
 ## 源码与职责
 
@@ -53,7 +54,7 @@ subject 的授权/预算/目标约束保持不变（monorepo 的受限字段迁�
   必需的 ignore 模板命名为普通文件 `gitignore`，避免 pack 丢弃隐藏的 `.gitignore`；
   仅在本次独占 sanity 仓库中将其 materialize 为 `.gitignore`。
 - 不默认建立 examples。README 提供最小使用方式，纯测试样本按需放在 test。
-  本仓库真实 monorepo 需求由 [配置](../config/monorepo-requirements.json) 维护。
+  本仓库真实 monorepo 需求由各包 `objectives.yaml` 及[根联合约束](../objectives.yaml)维护。
 
 ## 生成物、依赖与实际消费
 
@@ -68,11 +69,12 @@ Git loader 只读取提交，不自动执行 install/build，且不从本机工�
 | objective-pguide-self-check | `scripts/build-self-check-runtime.mjs` | 提交的 runtime 与 References，从 setup、cli-core、pguide 权限实现和 direct-agent 源码生成 |
 | objective-devbox-health | `scripts/build-health-runtime.mjs` | Node 内置模块与提交的单文件 Docker transport runtime，从实际职责模块生成 |
 
-monorepo 正常 subject 只需 `root`、`contract`。旧 `checkerModule` 若存在只能是
-该 package 自身 `dist/index.js` 的绝对路径，不再用于动态执行，也不允许跨版本
-checker 替换。建议迁移时移除该字段；可信来源由完整 Pilot commit pin 确定，而非目标仓库
-提供的任意代码路径。打包消费包含 manifest、References、入口及必要生成物；私有
-workspace 不进入现有 npm 发布清单。
+monorepo 根 subject 为 `{context,policy,deliveries}`；嵌套的自包含 `package-standard/`
+Pilot 接受包自有 roles/runtime/allows/entries/joins/deliveries 等 subject。
+不再接受 contract 或 checkerModule。声明解析/投影复用 objective-pilot 公共 API，
+根通过既有 dependency API 获取包版本和低层级证据；Supervisor 处理交接。
+两个 Pilot 目录的运行资源独立包含，仍是同一私有 workspace。
+完整[迁移与约束归属](../packages/objective-monorepo-standard/README.md)说明源码版本要求。
 
 四个生成器均支持 `--check`，分别由 `pnpm monorepo:check`、`pnpm setup:check`、
 `pnpm self-check:check`、`pnpm health:check` 校验。共享第三方版本在 catalog，内部开发依赖使用 workspace range，
@@ -81,7 +83,7 @@ Turbo 按依赖构建并缓存生成资源；改变源码后必须重新生成�
 所有层级的 `dist/` 都是本地构建输出，由根 `.gitignore` 统一忽略，不保留例外。
 Git snapshot 必需的 standalone 生成物放在各包的 `runtime/` 并提交；
 monorepo 的库入口仍构建到 `dist/`，打包时同时包含库输出与 standalone runtime。
-需求契约将该 bundle 的确切路径标为 `generated`，源码边界扫描不重复解析此生成物；
+所有者包声明将该 bundle 的确切路径标为 `generated`，源码边界扫描不重复解析此生成物；
 未被明确标记的 `runtime/` 源码仍正常检查。生成物的新鲜度由上述生成器校验。
 
 ## 保持不变的边界

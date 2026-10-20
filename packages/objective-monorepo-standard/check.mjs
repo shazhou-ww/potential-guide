@@ -1,69 +1,50 @@
 import { readFile } from "node:fs/promises";
-import { isAbsolute, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { reportArguments, withCheckEvidence } from "./runtime/evidence.mjs";
 import checker from "./runtime/pilot-checker.cjs";
 
-export async function main(phase, subject, evidence) {
+export async function main(phase, subject, evidence, scope = "repository", dependencyProbe) {
   if (!["structure", "deliveries"].includes(phase)) {
     throw new Error("Expected structure or deliveries.");
   }
-  if (
-    subject === null ||
-    typeof subject !== "object" ||
-    Array.isArray(subject) ||
-    Object.keys(subject).some((key) => !["root", "contract", "checkerModule"].includes(key)) ||
-    typeof subject.root !== "string" ||
-    !isAbsolute(subject.root) ||
-    typeof subject.contract !== "string" ||
-    subject.contract.length === 0 ||
-    (subject.checkerModule !== undefined &&
-      (typeof subject.checkerModule !== "string" || !isAbsolute(subject.checkerModule)))
-  ) {
-    throw new Error("Subject requires absolute root and repository-relative contract paths.");
-  }
-  const bundledChecker = new URL("./dist/index.js", import.meta.url);
-  if (
-    subject.checkerModule !== undefined &&
-    pathToFileURL(resolve(subject.checkerModule)).href !== bundledChecker.href
-  )
-    throw new Error("checkerModule must name this Pilot package's own versioned checker.");
-  const report = await checker.checkMonorepo(
-    subject.root,
-    subject.contract,
-    phase === "structure" ? 1 : 2,
-  );
-  const ok = report.state === "pass";
+  const layer = phase === "structure" ? 1 : 2;
+  if (!["repository", "package"].includes(scope)) throw new Error("Invalid standardization scope.");
+  const result =
+    scope === "repository"
+      ? await checker.checkRepository(subject, layer, dependencyProbe)
+      : { report: await checker.checkPackage(subject, layer) };
+  const { report } = result;
+  const problems =
+    result.problems ??
+    (report.state === "pass"
+      ? []
+      : [
+          {
+            kind: "internal",
+            id: phase === "structure" ? "structure-incomplete" : "delivery-incomplete",
+            parameters: { report },
+          },
+        ]);
+  const ok = problems.length === 0;
   for (const finding of report.findings) evidence?.fact("assertion.result", finding);
   evidence?.fact("inspection.finished", { state: report.state, layer2: report.layer2 });
   return {
     status: 200,
-    payload: ok
-      ? { ok: true, problems: [] }
-      : {
-          ok: false,
-          problems: [
-            {
-              kind: "internal",
-              id: phase === "structure" ? "structure-incomplete" : "delivery-incomplete",
-              parameters: { report },
-            },
-          ],
-        },
+    payload: { ok, problems },
     message: JSON.stringify(report),
   };
 }
 
-export async function run(phase, subjectFile) {
+export async function run(phase, subjectFile, scope = "repository") {
   const { options } = reportArguments(process.argv.slice(2));
   const result = await withCheckEvidence(
     `monorepo.${phase}`,
-    (evidence) => runMonorepo(phase, subjectFile, evidence),
+    (evidence) => runMonorepo(phase, subjectFile, evidence, scope),
     options,
   );
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
-async function runMonorepo(phase, subjectFile, evidence) {
+async function runMonorepo(phase, subjectFile, evidence, scope) {
   try {
     let input = "";
     if (subjectFile) input = await readFile(subjectFile, "utf8");
@@ -75,13 +56,12 @@ async function runMonorepo(phase, subjectFile, evidence) {
     }
     const subject = JSON.parse(input);
     evidence?.stream.protect(subject);
-    return await main(phase, subject, evidence);
-  } catch {
+    return await main(phase, subject, evidence, scope);
+  } catch (error) {
     return {
-      status: 422,
+      status: 502,
       payload: null,
-      message:
-        "Monorepo observer invocation failed; verify subject paths, access and build. Source values are not echoed.",
+      message: `Monorepo observer invocation failed: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }

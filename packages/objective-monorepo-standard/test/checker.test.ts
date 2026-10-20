@@ -1,16 +1,16 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
-import {
-  type Contract,
-  checkMonorepo,
-  type Delivery,
-  type Report,
-  type Workspace,
-} from "../src/index.js";
+import type { Contract } from "../src/contract.js";
+import { type Delivery, parsePackageSubject, type Report, type Workspace } from "../src/index.js";
+import { Snapshot } from "../src/shared.js";
+import { checkFixture } from "./capability-fixture.js";
+
+const scratch = join(process.cwd(), ".cache");
+await mkdir(scratch, { recursive: true });
+const tmpdir = () => scratch;
 
 function workspace(name = "shared"): Workspace {
   return {
@@ -92,8 +92,7 @@ async function fixture(
       contract,
       write,
       check: async () => {
-        await write("requirements.json", contract);
-        return checkMonorepo(root, "requirements.json");
+        return checkFixture(root, contract);
       },
     });
   } finally {
@@ -104,7 +103,7 @@ function has(report: Report, rule: string, state = "fail") {
   return report.findings.some((finding) => finding.rule === rule && finding.state === state);
 }
 test("layer one can pass and internal packages do not require public release metadata", async () => {
-  await fixture(async ({ root, check, write }) => {
+  await fixture(async ({ root, contract, check, write }) => {
     const report = await check();
     assert.equal(report.layer2, "checked");
     assert.equal(has(report, "internal-role", "pass"), true);
@@ -116,7 +115,7 @@ test("layer one can pass and internal packages do not require public release met
     assert.equal(report.scope, "delivery-preparation");
     assert.ok(report.limitations.length > 0);
     assert.equal(report.onlineVerified, false);
-    const structure = await checkMonorepo(root, "requirements.json", 1);
+    const structure = await checkFixture(root, contract, 1);
     assert.equal(structure.state, "pass");
     assert.equal(structure.layer2, "not-requested");
     assert.equal(
@@ -147,20 +146,13 @@ test("only explicitly assigned generated files skip source observation", async (
     assert.equal(has(await check(), "external-import-resolution", "unverified"), true);
   });
 });
-test("invalid schema, unknown version/fields and invalid paths block layer two", async () => {
-  await fixture(async ({ root, contract, write }) => {
-    for (const value of [
-      { ...contract, schemaVersion: 2 },
-      { ...contract, typo: true },
-      { ...contract, workspaces: [{ ...workspace(), path: "../outside" }] },
-    ]) {
-      await write("requirements.json", value);
-      const report = await checkMonorepo(root, "requirements.json");
-      assert.equal(report.state, "fail");
-      assert.equal(report.layer2, "blocked");
-      assert.equal(has(report, "contract-schema-v1"), true);
-    }
-  });
+test("legacy contracts and invalid package subjects are rejected, not silently adapted", () => {
+  for (const value of [
+    { root: process.cwd(), contract: "requirements.json" },
+    { typo: true },
+    { directory: "../outside" },
+  ])
+    assert.throws(() => parsePackageSubject(value), /Invalid package subject/);
 });
 test("missing global files, YAML duplicate keys and wrong schema types are not success-shaped", async () => {
   await fixture(async ({ check, write, root }) => {
@@ -341,7 +333,7 @@ test("npm and CLI roles compose and absent artifacts are unverified, not validat
     assert.equal(has(report, "npm-artifact", "unverified"), true);
     assert.equal(has(report, "cli-artifact", "unverified"), true);
     assert.equal(
-      report.limitations.some((limitation) => limitation.includes("package packing")),
+      report.limitations.some((limitation) => limitation.includes("packing")),
       true,
     );
     assert.equal(report.state, "unverified");
@@ -491,7 +483,7 @@ test("unsupported delivery, capability and deployment formats never fall back to
   });
 });
 test("checker does not execute scripts or read secret-value files and leaves the target unchanged", async () => {
-  await fixture(async ({ root, write, check }) => {
+  await fixture(async ({ root, contract, write, check }) => {
     await write(".env", "DO_NOT_READ=fixture-canary");
     await check();
     async function digest(directory: string): Promise<string> {
@@ -508,12 +500,10 @@ test("checker does not execute scripts or read secret-value files and leaves the
       return hash.digest("hex");
     }
     const before = await digest(root);
-    const report = await checkMonorepo(root, "requirements.json");
+    const report = await checkFixture(root, contract);
     assert.equal(await digest(root), before);
     assert.equal(JSON.stringify(report).includes("fixture-canary"), false);
-    const denied = await checkMonorepo(root, ".env");
-    assert.equal(denied.state, "fail");
-    assert.equal(JSON.stringify(denied).includes("fixture-canary"), false);
+    await assert.rejects(new Snapshot(root).text(".env"), /secret-value/);
   });
 });
 

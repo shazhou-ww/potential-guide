@@ -2,21 +2,317 @@ schemaVersion: 1
 domainSchema:
   type: object
   additionalProperties: false
-  required: [root, contract]
   properties:
-    root: {type: string, minLength: 1}
-    contract: {type: string, minLength: 1}
-    checkerModule: {type: string, minLength: 1}
+    context:
+      type: object
+      additionalProperties: false
+      properties:
+        repository:
+          type: object
+          additionalProperties: false
+          properties:
+            id:
+              type: string
+              minLength: 1
+          required:
+            - id
+        checkout:
+          type: object
+          additionalProperties: false
+          properties:
+            id:
+              type: string
+              minLength: 1
+            rootPath:
+              type: string
+              minLength: 1
+          required:
+            - id
+            - rootPath
+        directory:
+          type: object
+          additionalProperties: false
+          properties:
+            absolutePath:
+              type: string
+              minLength: 1
+            relativePath:
+              type: string
+              minLength: 1
+          required:
+            - absolutePath
+            - relativePath
+      required:
+        - repository
+        - checkout
+        - directory
+    policy:
+      type: object
+      additionalProperties: false
+      properties:
+        source:
+          const: pnpm-default-v1
+        directories:
+          type: object
+          additionalProperties: false
+          properties:
+            apps:
+              type: string
+              pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
+            packages:
+              type: string
+              pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
+            docs:
+              type: string
+              pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
+            scripts:
+              type: string
+              pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
+          required:
+            - apps
+            - packages
+            - docs
+            - scripts
+        requiredFiles:
+          type: array
+          items:
+            type: string
+            pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
+          uniqueItems: true
+        exceptions:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              path:
+                type: string
+                pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
+              reason:
+                type: string
+                minLength: 1
+            required:
+              - path
+              - reason
+        assignments:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              path:
+                type: string
+                pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
+              purpose:
+                enum:
+                  - project-doc
+                  - package-doc
+                  - script
+                  - migration
+                  - generated
+                  - tool
+                  - unknown
+              owner:
+                type: string
+                minLength: 1
+              targetDirectory:
+                type: string
+                pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
+              reason:
+                type: string
+                minLength: 1
+            required:
+              - path
+              - purpose
+              - reason
+        allowedDirectories:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              path:
+                type: string
+                pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
+              reason:
+                type: string
+                minLength: 1
+            required:
+              - path
+              - reason
+        dependencyExceptions:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              from:
+                type: string
+                minLength: 1
+              to:
+                type: string
+                minLength: 1
+              reason:
+                type: string
+                minLength: 1
+              allowCycle:
+                type: boolean
+            required:
+              - from
+              - to
+              - reason
+      required:
+        - source
+        - directories
+        - requiredFiles
+        - exceptions
+        - assignments
+        - allowedDirectories
+        - dependencyExceptions
+    deliveries:
+      type: array
+      items:
+        type: object
+        additionalProperties: false
+        properties:
+          id:
+            type: string
+            minLength: 1
+          purpose:
+            type: string
+            minLength: 1
+          kind:
+            type: string
+            minLength: 1
+          packages:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            uniqueItems: true
+            minItems: 1
+          entry:
+            type: object
+            additionalProperties: false
+            properties:
+              package:
+                type: string
+                minLength: 1
+              path:
+                type: string
+                pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
+            required:
+              - package
+              - path
+          runtime:
+            enum:
+              - node
+              - browser
+              - worker
+              - tool
+              - universal
+          environment:
+            type: string
+            minLength: 1
+          config:
+            type: string
+            pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
+          output:
+            type: string
+            pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
+          resources:
+            type: array
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                kind:
+                  enum:
+                    - configuration
+                    - secret
+                    - resource
+                    - identity
+                    - service
+                visibility:
+                  enum:
+                    - public
+                    - server
+                supply:
+                  enum:
+                    - build
+                    - runtime
+                    - platform
+                environment:
+                  type: string
+                  minLength: 1
+              required:
+                - name
+                - kind
+                - visibility
+                - supply
+                - environment
+          services:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            uniqueItems: true
+          capabilities:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            uniqueItems: true
+          independent:
+            type: boolean
+          migration:
+            type: object
+            additionalProperties: false
+            properties:
+              package:
+                type: string
+                minLength: 1
+              entry:
+                type: string
+                pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
+              resource:
+                type: string
+                minLength: 1
+            required:
+              - package
+              - entry
+              - resource
+        required:
+          - id
+          - purpose
+          - kind
+          - packages
+          - entry
+          - runtime
+          - resources
+          - services
+          - capabilities
+          - independent
+  required:
+    - context
+    - policy
+    - deliveries
 levels:
   - id: initial
     advancement:
       checks:
         - id: structure
-          problems: [structure-incomplete]
+          problems:
+            - structure-incomplete
   - id: structured
     advancement:
       checks:
         - id: deliveries
-          problems: [delivery-incomplete]
+          problems:
+            - delivery-incomplete
 defaultLanguage: zh-CN
-languages: [zh-CN]
+languages:
+  - zh-CN

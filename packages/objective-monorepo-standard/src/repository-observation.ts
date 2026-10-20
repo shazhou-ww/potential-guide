@@ -61,7 +61,14 @@ export async function observeRepository(snapshot: Snapshot): Promise<RepositoryF
         patterns.some((pattern) => pattern.startsWith("!") && matches(directory, pattern.slice(1)))
       )
         continue;
-      const manifest = await snapshot.json(file);
+      let manifest: RecordValue;
+      try {
+        manifest = await snapshot.json(file);
+      } catch (error) {
+        if (!(error instanceof SyntaxError || error instanceof TypeError)) throw error;
+        facts.packages.push({ file, directory, manifest: {}, valid: false });
+        continue;
+      }
       const valid = packageValidator(manifest);
       facts.packages.push({ file, directory, manifest, valid });
       if (valid) facts.manifests.set(String(manifest.name), manifest);

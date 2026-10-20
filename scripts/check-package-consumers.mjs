@@ -91,6 +91,19 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         assert.throws(() => protocol.parseManifest("{}"), protocol.ObjectiveConfigurationError);
         assert.equal(typeof protocol.loadPilotSpec, "function");
         assert.equal(typeof protocol.parseCheckEnvelope, "function");
+        assert.equal(typeof protocol.parseObjectives, "function");
+        assert.equal(typeof protocol.projectObjective, "function");
+        assert.equal(typeof protocol.bindObjective, "function");
+        const declaration = protocol.parseObjectives(JSON.stringify({
+          schemaVersion: 1,
+          objectives: { standardize: {
+            description: "Independent declaration",
+            pilot: "git+https://example.test/rules.git#package-standard/",
+            inputSchema: { type: "object", additionalProperties: false, maxProperties: 0 },
+            subject: '{"ready": true}'
+          } }
+        }));
+        assert.deepEqual(protocol.projectObjective(declaration.standardize, {}, undefined), { ready: true });
         assert.equal(protocol.observe, undefined);
       `,
       );

@@ -9,6 +9,7 @@
       "!**/node_modules",
       "!.silvermoon",
       "!packages/objective-monorepo-standard/runtime",
+      "!packages/objective-monorepo-standard/package-standard/runtime",
       "!packages/objective-pguide-self-check/runtime",
       "!packages/objective-devbox-health/runtime",
       "!packages/objective-pguide-setup/runtime"

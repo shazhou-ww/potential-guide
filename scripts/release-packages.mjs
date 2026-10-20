@@ -102,6 +102,9 @@ export const releasePackages = [
       "loadPilotSpec",
       "parseCheckEnvelope",
       "validateReferences",
+      "parseObjectives",
+      "projectObjective",
+      "bindObjective",
     ],
     bins: [],
     forbiddenDependencies: [

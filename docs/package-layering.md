@@ -138,3 +138,18 @@ the isolated shim toolchain includes the standard shell utilities pnpm shims nee
 CLI integration tests retain execution, permissions, evidence, persistence,
 source revision and supervisor coverage. See [npm publishing](./npm-publishing.md)
 for package-specific release tags. No package is published by these checks.
+
+## Package-owned repository governance
+
+Repository preparation uses the root `objectives.yaml` and each workspace's own
+`objectives.yaml`, not a restored central `config/monorepo-requirements.json`.
+All nineteen workspaces, including the seven extracted packages, own their
+dependency intent, entrypoints and delivery joins. The root declaration retains
+joint delivery requirements and includes the complete fifteen-package release
+inventory. `config/package-layers.json` remains the independent three-layer policy.
+
+Declaration parsing, input validation, bounded projection and domain binding are
+canonical `pilot-protocol` APIs (`parseObjectives`, `projectObjective`,
+`bindObjective`). `objective-pilot` preserves compatibility reexports.
+`objective-declarations` only adds tool-side file discovery and Git context; it
+does not depend on business execution.

@@ -84,6 +84,38 @@ do not require a committed version.
 explicit YAML configuration. Regulation state and protocol-visible transcript
 are stored under the platform state directory; credentials are never persisted.
 
+### Govern this repository
+
+The root [Objective declarations](./objectives.yaml) expose `standardize` with
+Unit input (no extra parameters). Each workspace owns its own `standardize`
+declaration; the root discovers pnpm workspaces, observes those Objectives through
+the dependency API, and enforces common policy and joint delivery requirements.
+See the [ownership and migration guide](./packages/objective-monorepo-standard/README.md).
+
+```sh
+pguide objectives show standardize --scope directory
+pguide probe --objective standardize --scope directory --format json
+pguide regulate --objective standardize --scope directory --target terminal --agent copilot
+```
+
+Run these commands from the repository root. The Pilot is loaded from the
+upstream Git directory; the subject is the current local checkout, including
+uncommitted changes. Each invocation resolves the source and records its exact
+commit/tree evidence without pinning the declaration. Regulation requires an
+existing Agent profile (`copilot` above is an example) and appropriate permissions.
+An already satisfied target does not require an Agent repair.
+The upstream source must contain this migration before the default declaration
+can be consumed; an uncommitted local Pilot is not an upstream snapshot. Before
+publication, `scripts/verify-monorepo-pilot.mjs` verifies the generated resources
+from its own committed local Git fixture. Package directories expose the same
+command for independent observation. Dependency handoffs are advanced by the
+Supervisor, never by nested regulation inside checks.
+
+This entry checks the existing workspace-wide contract; it does not yet split
+that contract into per-package Objectives. It checks structure and delivery
+preparation without executing builds, publishing or deploying. Run `pnpm check`
+separately for formatting, lint, types, tests and package validation.
+
 ### Set up a target device
 
 For an already installed local device, prefer the standalone
@@ -160,6 +192,7 @@ checks structure before dependency, build and delivery preparation. It works on
 independent target repositories, reports unsupported or missing proof explicitly,
 and never installs, publishes, deploys or runs migrations.
 
-All four repository-owned Pilots are complete private workspace packages.
+The repository-owned Pilots are delivered by four complete private workspace
+packages; the monorepo package contains separate repository and package Pilots.
 See [Pilot package architecture and URI migration](./docs/pilot-packages.md) for
 their ownership, standalone resources, generation checks and consumption boundaries.
