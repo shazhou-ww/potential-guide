@@ -38,15 +38,27 @@ Pilot 相对来源以清单目录解析。subject 内路径由表达式和目标
 
 ```text
 pguide objectives list --cwd <directory>
+pguide objectives list --scope user
+pguide objectives show standardize --scope directory --cwd <directory>
 pguide probe --objective standardize --cwd <directory>
 pguide regulate --objective standardize --cwd <directory> --target <level> --agent <profile>
 ```
 
 以上命令拼写在实施阶段确认，关键语义是显式区分目录入口选择与现有 `--pilot` 来源/别名选择，禁止静默改变旧别名含义。未选择目标时可给出发现指导，但不自动选第一个或运行全部。`--objective` 与 `--pilot` 互斥；声明入口的 subject 来自投影，调用输入与既有直接 subject 参数必须明确区分，不能隐式覆盖。probe 只选择并观察 Objective，不从清单读取治理 target；regulate 的目标层级由本次调用请求决定，Supervisor 的需求层级由消费者或调度请求决定，均独立于可用性声明。固定 revision 与调用覆盖冲突必须报错，不能静默换版。
 
-列举仅解析清单，不执行 Pilot 检查、JSONata 外部操作或 Agent。表达式求值不得提供任意进程、网络或文件读写能力，并应有预算。选择后的统一绑定结果交给现有 probe/regulate，不另建执行引擎；probe 只观察，regulate 仍遵循 Agent 授权。恢复必须使用已记录的来源、精确规则版本、subject 和上下文绑定，清单后续变化不得重定向旧运行。
+列举仅解析清单，不执行 Pilot 检查、JSONata 外部操作或 Agent。列举和详情展示使用统一 objectives 入口，展示名称、描述、作用域、来源文件、Pilot 及 revision，不求值 subject 或要求调用输入齐全。表达式求值不得提供任意进程、网络或文件读写能力，并应有预算。选择后的统一绑定结果交给现有 probe/regulate，不另建执行引擎；probe 只观察，regulate 仍遵循 Agent 授权。恢复必须使用已记录的来源、精确规则版本、subject 和上下文绑定，清单后续变化不得重定向旧运行。
 
 清单来源 revision 与内容证据也须可追溯。Pilot 定义固定版本不要求目标工作树干净：对未提交清单的显式本地使用应记录实际内容摘要及绑定，不能把 HEAD 伪报成其来源；声明作为可信依赖来源时如何绑定该证据，实施阶段须与现有快照设施一起验证。
+
+## 用户级声明与配置分离
+
+用户级 objectives 从原有运行配置拆出，存放于平台用户配置目录内独立的 objectives.yaml，复用目录级声明格式，不加入 target、Agent、权限或配额。运行配置保留执行设置。用户级与当前目录级声明统一经 pguide objectives 查询和管理，写操作必须明确作用域并原子校验保存；本轮只定义方向，不立即迁移本机配置。
+
+默认查询同时展示用户级和当前目录级条目并保留来源；这不是父目录继承。跨作用域同名条目不静默覆盖或合并，裸名选择存在歧义时明确失败并指导显式选择作用域；具体选择参数在实施阶段统一。发现不能自动选取或执行目标。
+
+用户级文件存储位置不是其目标目录。其 JSONata context 使用本次选定的调用上下文，用户配置文件所在目录不伪装成 checkout。相对 Pilot 来源仍以声明文件所在目录解析；缺少表达式需要的 repo/checkout 上下文时明确失败，不补虚假身份。
+
+现有 config objectives 是名称到路径或 Git URI 的来源别名，没有固定 revision、subject 投影或治理 target。查询入口可以统一，但不能将旧别名悄悄解释为完整声明。迁移应明确识别旧条目、补齐精确 revision 和绑定意图并校验；不自动猜测 subject、不丢失已有注册。迁移及旧命令退役方案、直接 --pilot 别名调用的处理须在实施阶段显式设计和测试，不提供两个长期并行、优先级不明的权威注册表。迁移前旧查询必须准确标示其来源别名语义。
 
 ## 与依赖问题协议的关系
 
@@ -58,4 +70,4 @@ pguide regulate --objective standardize --cwd <directory> --target <level> --age
 
 ## 排除与迁移边界
 
-不在本轮实现软件、发布包、改造现有 monorepo 契约或迁移已有 Objective 定义。后续可用本机制承载标准化、发布准备等目标；真正发布仍需独立定义与授权。旧 Objective 别名注册表继续只承担来源注册职责，不能与本清单无区别合并。
+不在本轮实现软件、发布包、改造现有 monorepo 契约或迁移已有 Objective 定义。后续可用本机制承载标准化、发布准备等目标；真正发布仍需独立定义与授权。用户级注册与目录级声明的统一不得改变治理授权边界。
