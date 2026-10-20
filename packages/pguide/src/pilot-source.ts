@@ -79,7 +79,12 @@ async function afterCleanup<T>(
         { cause: outcome.error },
       );
       if (outcome.error instanceof CliError) {
-        const error = new CliError(combined.message, outcome.error.exitCode, outcome.error.status);
+        const error = new CliError(
+          combined.message,
+          outcome.error.exitCode,
+          outcome.error.status,
+          outcome.error.guidance,
+        );
         error.cause = combined;
         throw error;
       }
