@@ -91,3 +91,63 @@ schema 类型的具体来源及公共依赖归属仍为实施选型，不将其�
 已有 `objectiveId`、`objectives`、`sourceBindings` 等字段不因这条命名规则而无故再改名。重命名只统一指代，不混淆 URI、目录 tree、取回 commit 与来源证据，也不更改绑定、观察或恢复语义。
 
 后续实施需逐项覆盖各数据格式及其 TypeScript 类型、JSON Schema、生产者、消费者、生成文件、示例和测试，包括嵌入报告、队列或声明快照的目标引用。真正表达 Pilot 执行角色的运行时标识符不作盲目替换；旧字段和旧入口的兼容或拒绝策略仍待整体决定。本轮仅记录规范化计划，不实施格式迁移或记录整体验收。
+
+## Objective 声明第一轮评审（2026-10-20）
+
+### O-01：目标定义引用命名（已确认）
+
+声明条目的 `pilot` 改为 `objective`，遵循 M-05；仍引用目标定义目录，不改变命名调用、路径解析或 subject 绑定职责。
+
+### O-02：inputSchema 为可选 JSON Schema（修改方向已明确）
+
+用户要求 `inputSchema` 使用标准 JSON Schema，并设为可选；省略时按空 schema `{}` 处理。该 schema 校验的是调用者的 `input`，不是包含 context 的求值根对象。采用与前述一致的 Draft 2020-12 方言及离线引用边界，但不照搬 subjectSchema 的根对象要求，input 仍可由其 schema 声明为任意 JSON 类型。
+
+必须区分三件事：
+
+- `inputSchema: {}` 是接受任意 JSON 值的空 schema，字符串、数组、对象和 null 都可通过，不是 Unit 约束。
+- `inputSchema: { const: {} }` 才表示只接受空对象值；与省略 schema 不等价。
+- 调用者没有提供 input 时，求值根的 `input` 默认为什么，是独立的调用约定，不能从空 schema 自动推导。
+
+现有实现要求显式 inputSchema，且只允许 Unit 输入省略实际 input，故本项是待实施的行为变化。Agent 建议后续将缺省 input 归一化为 `{}` 并按有效 schema 校验，显式提供的 null 或其他 JSON 值保留；与既有 Unit-only 省略规则的取舍仍待用户确认，不在本轮擅自定案。
+
+### O-03：subject 的 JSONata 求值入参（当前机制说明）
+
+已核对当前调用链：工具构造 context 并取得调用者 input，协议层以单个根对象 `{ context, input }` 求值 subject 表达式。二者是根对象的命名属性，不是两个位置参数，也没有注册 `$context` / `$input` 自定义变量。
+
+当前工具构造的 context 主结构如下；这描述当前实现，不自动视为已经冻结的公共 context 规范：
+
+```ts
+interface ObjectiveContext {
+  repository: { id: string } | null;
+  checkout: { id: string; rootPath: string } | null;
+  directory: {
+    absolutePath: string;
+    relativePath: string | null;
+  };
+}
+```
+
+`directory` 来自调用工作目录。Git 内 relativePath 为仓库相对路径，根目录用 `"."`；非 Git 目录的 repository、checkout 和 relativePath 为 null。context 是工具提供的环境事实，不是用户 input，也不隐式开放 process、env、文件系统或网络。
+
+例如根值为：
+
+```json
+{
+  "context": {
+    "repository": { "id": "https://example.test/team/repo.git" },
+    "checkout": {
+      "id": "urn:pguide:checkout:example",
+      "rootPath": "D:\\work\\repo"
+    },
+    "directory": {
+      "absolutePath": "D:\\work\\repo\\packages\\api",
+      "relativePath": "packages/api"
+    }
+  },
+  "input": { "mode": "full" }
+}
+```
+
+则 subject 表达式 `{"directory": context.directory.absolutePath, "mode": input.mode}` 产生 `{"directory":"D:\\work\\repo\\packages\\api","mode":"full"}`。后者再按目标定义的 subjectSchema 校验，context 不被自动塞入最终 subject。
+
+当前执行的是确定性、有边界的 JSONata 投影 profile，而不是允许任意函数、变量和动态执行的完整 JSONata 运行时；缺失路径按当前 requireDefined 规则报错。投影根结构建议保留，context 字段的稳定公开范围及 input 缺省规则仍需分别确认。
