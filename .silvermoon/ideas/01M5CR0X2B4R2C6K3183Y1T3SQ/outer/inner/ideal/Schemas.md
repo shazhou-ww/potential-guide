@@ -98,17 +98,17 @@ schema 类型的具体来源及公共依赖归属仍为实施选型，不将其�
 
 声明条目的 `pilot` 改为 `objective`，遵循 M-05；仍引用目标定义目录，不改变命名调用、路径解析或 subject 绑定职责。
 
-### O-02：inputSchema 为可选 JSON Schema（修改方向已明确）
+### O-02：inputSchema 可选，省略为 Unit schema（已澄清）
 
-用户要求 `inputSchema` 使用标准 JSON Schema，并设为可选；省略时按空 schema `{}` 处理。该 schema 校验的是调用者的 `input`，不是包含 context 的求值根对象。采用与前述一致的 Draft 2020-12 方言及离线引用边界，但不照搬 subjectSchema 的根对象要求，input 仍可由其 schema 声明为任意 JSON 类型。
+用户明确澄清：`inputSchema` 使用标准 JSON Schema，并设为可选；省略时等价于 `inputSchema: { const: {} }`，即只接受空对象值的 Unit schema，不是接受任意 JSON 的空 schema `{}`。此澄清替代上一轮对省略含义的解释。该 schema 校验调用者的 `input`，不是包含 context 的求值根对象。采用与前述一致的 Draft 2020-12 方言及离线引用边界，但显式 inputSchema 不照搬 subjectSchema 的根对象要求，仍可声明其他 JSON 类型。
 
-必须区分三件事：
+规范化计划保持以下区别：
 
-- `inputSchema: {}` 是接受任意 JSON 值的空 schema，字符串、数组、对象和 null 都可通过，不是 Unit 约束。
-- `inputSchema: { const: {} }` 才表示只接受空对象值；与省略 schema 不等价。
-- 调用者没有提供 input 时，求值根的 `input` 默认为什么，是独立的调用约定，不能从空 schema 自动推导。
+- 省略 inputSchema 或显式 `inputSchema: { const: {} }`：采用 Unit 约束；实际 input 可以省略并归一化为 `{}`，JSONata 求值根仍包含 `input: {}`。
+- 对上述 Unit 约束，显式输入 `{}` 有效，非空对象、数组、字符串、数字、布尔值或 null 均无效，不得将显式 null 当成缺省输入覆盖。
+- 显式 `inputSchema: {}`：仍保留标准 JSON Schema 的任意 JSON 语义，与省略 inputSchema 不等价。
 
-现有实现要求显式 inputSchema，且只允许 Unit 输入省略实际 input，故本项是待实施的行为变化。Agent 建议后续将缺省 input 归一化为 `{}` 并按有效 schema 校验，显式提供的 null 或其他 JSON 值保留；与既有 Unit-only 省略规则的取舍仍待用户确认，不在本轮擅自定案。
+现有实现要求显式 inputSchema，因此未来需要在声明解析时为省略字段归一化出 Unit schema；本轮不实施。上一轮“任意 schema 下未提供实际 input 都默认成 `{}`”的建议不作为决定，不扩大既有 Unit-only 省略规则。声明原始输入类型可选与归一化后内部类型必有有效 schema 的区别，在实施时保持清晰。
 
 ### O-03：subject 的 JSONata 求值入参（当前机制说明）
 

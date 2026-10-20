@@ -223,8 +223,8 @@ $defs:
         boundary:"这是作者交给工具读取的开放入口，与 manifest 不同：manifest 定义规则，声明文件定义如何绑定和调用规则。target 不是声明字段。",
         feedback:[
           "O-01 / M-05 · 已确认：声明条目的 pilot 改为 objective，仍引用目标定义目录；文档继续承担命名调用和 subject 绑定职责。",
-          "O-02 · 用户明确的修改方向：inputSchema 使用标准 JSON Schema，改为可选，省略按空 schema {} 处理。注意空 schema 接受任意 JSON，不等于只能输入空对象；inputSchema 校验 input 本身，而不是整个 { context, input }。",
-          "O-02 · 尚待确认：调用时未提供 input 的默认值。建议归一化为 {} 后按有效 schema 校验；这是不同于现有 Unit-only 省略规则的行为选择，不能仅由省略 schema 自动推导。显式 null 不应被缺省值覆盖。",
+          "O-02 · 用户已澄清：inputSchema 可选，省略等价于 { const: {} }，即 Unit schema，只接受空对象值，不是任意 JSON。该 schema 校验 input 本身，而不是整个 { context, input }。",
+          "O-02 · Unit 输入：实际 input 省略时归一化为 {}，求值根保留 input: {}；显式非空对象、数组、标量或 null 都不能通过 Unit 校验。显式 inputSchema: {} 仍接受任意 JSON，与省略字段不同；不扩大既有 Unit-only 输入省略规则。",
           "O-03 · 当前机制：subject 以 { context, input } 为单个求值根，表达式通过 context.directory.absolutePath、input.mode 等路径取值，不是 $context / $input 绑定变量。context 由工具构造，input 由调用者提供；投影结果再按 subjectSchema 校验。",
           "下方三种表示仍保留原始快照：inputSchema 在当前实现中必填。新增计划尚未实施；JSONata 仍是有边界的确定性投影 profile，不是任意动态执行。"
         ],
@@ -246,7 +246,7 @@ result:
   mode: full`,
         scope:"文档和条目结构可完整展示。JSONata 的能力限制、执行边界和 inputSchema 编译不能只靠字符串 schema 校验。",
         validation:["parseObjectives 检查文档版本和精确字段，并编译 inputSchema 与受限投影。","bindObjective 校验输入、求值投影，再依据 Pilot domainSchema 校验最终 subject。"],
-        questions:["声明格式是否与 manifest 使用独立 schema URI？","未提供实际 input 时是否默认 {} 并校验，取代现有 Unit-only 规则？","context 中哪些字段承诺稳定，Git 外的 null 边界如何公开？"],
+        questions:["声明格式是否与 manifest 使用独立 schema URI？","旧字段及声明格式的迁移或拒绝策略如何定义？","context 中哪些字段承诺稳定，Git 外的 null 边界如何公开？"],
         sources:["packages/pilot-protocol/src/objectives.ts","packages/objective-declarations/src/index.ts","packages/pilot-protocol/src/projection.ts"],
         example:String.raw`schemaVersion: 1
 objectives:
