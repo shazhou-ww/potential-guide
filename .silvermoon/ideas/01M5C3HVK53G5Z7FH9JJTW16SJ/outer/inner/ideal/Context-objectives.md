@@ -22,10 +22,9 @@ objectives:
     subject:
       jsonata: |
         {"root": context.directory.absolutePath}
-    target: terminal
 ```
 
-`schemaVersion` 是清单协议版本；`description` 用于发现；`target` 必须明确，不默认 terminal。`subject.jsonata` 统一表示表达式，字面量也在表达式内表达，不对任意 JSON 字符串做模板替换。
+`schemaVersion` 是清单协议版本；`description` 用于发现。清单只描述哪些 Objectives 可用及其绑定，不包含 `target` 或默认治理层级；严格 schema 应拒绝这类治理请求字段。`subject.jsonata` 统一表示表达式，字面量也在表达式内表达，不对任意 JSON 字符串做模板替换。
 
 输入对象分为运行时提供的 `context` 与调用者提供的 `input`。context 提供 repository 的逻辑身份、checkout 的实际身份与根路径、directory 的绝对路径和仓库相对路径；不引入 package 或技术栈概念，不自动收集凭据和环境变量。input 不可覆盖 context。
 
@@ -40,10 +39,10 @@ Pilot 相对来源以清单目录解析。subject 内路径由表达式和目标
 ```text
 pguide objectives list --cwd <directory>
 pguide probe --objective standardize --cwd <directory>
-pguide regulate --objective standardize --cwd <directory> --agent <profile>
+pguide regulate --objective standardize --cwd <directory> --target <level> --agent <profile>
 ```
 
-以上命令拼写在实施阶段确认，关键语义是显式区分目录入口选择与现有 `--pilot` 来源/别名选择，禁止静默改变旧别名含义。未选择目标时可给出发现指导，但不自动选第一个或运行全部。`--objective` 与 `--pilot` 互斥；声明入口的 subject 来自投影，调用输入与既有直接 subject 参数必须明确区分，不能隐式覆盖。默认使用声明 target；如允许显式覆盖，需校验并展示实际目标。固定 revision 与调用覆盖冲突必须报错，不能静默换版。
+以上命令拼写在实施阶段确认，关键语义是显式区分目录入口选择与现有 `--pilot` 来源/别名选择，禁止静默改变旧别名含义。未选择目标时可给出发现指导，但不自动选第一个或运行全部。`--objective` 与 `--pilot` 互斥；声明入口的 subject 来自投影，调用输入与既有直接 subject 参数必须明确区分，不能隐式覆盖。probe 只选择并观察 Objective，不从清单读取治理 target；regulate 的目标层级由本次调用请求决定，Supervisor 的需求层级由消费者或调度请求决定，均独立于可用性声明。固定 revision 与调用覆盖冲突必须报错，不能静默换版。
 
 列举仅解析清单，不执行 Pilot 检查、JSONata 外部操作或 Agent。表达式求值不得提供任意进程、网络或文件读写能力，并应有预算。选择后的统一绑定结果交给现有 probe/regulate，不另建执行引擎；probe 只观察，regulate 仍遵循 Agent 授权。恢复必须使用已记录的来源、精确规则版本、subject 和上下文绑定，清单后续变化不得重定向旧运行。
 
@@ -53,7 +52,7 @@ pguide regulate --objective standardize --cwd <directory> --agent <profile>
 
 复用 [objective-dependency-problems](../../../../01M5BWMX4SCY4S3PBY8T44N5BG/outer/inner/ideal/Idea.md) 及其 [依赖模型](../../../../01M5BWMX4SCY4S3PBY8T44N5BG/outer/inner/ideal/Dependency-design.md)。该协议提供依赖观察和 Supervisor 交接；本 Idea 补充可发现声明及实例绑定，不修改其核心身份协议。
 
-具体 monorepo 标准化 Pilot 可以按 workspace 发现各包，解析各目录 standardize 并观察：缺少必需声明属于当前目标的 internal problem；可信观察确认未达标才生成 dependency problem；调用失败仍走错误路径。检查聚合全部未满足依赖，Regulator 交接且不调用当前 Agent，Supervisor 按调度策略推进后重新观察消费者。串行是调度策略，不把执行步骤写进清单，也不在 check 内启动 regulation。
+具体 monorepo 标准化 Pilot 可以按 workspace 发现各包，解析各目录 standardize 并观察：缺少必需声明属于当前目标的 internal problem；消费者检查决定所需 expectedLevelId，可信观察确认未达标才生成 dependency problem，不从目录清单读取阈值；调用失败仍走错误路径。检查聚合全部未满足依赖，Regulator 交接且不调用当前 Agent，Supervisor 按调度策略推进后重新观察消费者。串行是调度策略，不把执行步骤写进清单，也不在 check 内启动 regulation。
 
 实例仍以规范化 Objective ID + canonical subject 标识，相同身份的冲突规范版本明确失败。针对具体 checkout 的目标必须在 subject 中区分工作区；不需要 checkout 的目标不被强制加入该维度。交接使用同次绑定的 subject 和精确来源版本，不重新发现可变 HEAD。
 

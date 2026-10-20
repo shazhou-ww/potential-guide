@@ -11,7 +11,7 @@
 ## 边界
 
 - 目录仅是发现上下文，不预设 package 身份、继承或 Objective 嵌套；subject 的定义域由目标 schema 决定。
-- 引用固定 Pilot revision，通过 JSONata 投影上下文与调用输入；发现不授予执行权限。
+- 引用固定 Pilot revision，通过 JSONata 投影上下文与调用输入；清单只声明可用 Objectives，不声明治理 target，发现不授予执行权限。
 - 复用现有 Pilot 和 objective-dependency-problems 目标协议，不另建工作流、静态依赖树或发布系统。
 
 ## 验收标准
