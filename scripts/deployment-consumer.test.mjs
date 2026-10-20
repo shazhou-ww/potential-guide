@@ -119,10 +119,7 @@ test("entry graph requires every expected dependency, rejects missing, nested wr
 test("current CLI command versions match their package candidate", async () => {
   const root = new URL("../", import.meta.url);
   for (const [directory, files] of [
-    [
-      "pguide",
-      ["src/bin.ts", "src/bin/supervise.ts", "src/commands/pilot.ts", "src/commands/regulator.ts"],
-    ],
+    ["pguide", ["src/bin.ts", "src/command-help.ts"]],
     ["pguide-config", ["src/bin.ts"]],
   ]) {
     const manifest = JSON.parse(

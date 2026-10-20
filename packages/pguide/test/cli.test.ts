@@ -42,10 +42,19 @@ function run(
 }
 
 test("all package commands expose direct protocol metadata and help", async () => {
+  const versions = await Promise.all(
+    ["pguide", "pguide-config"].map(async (directory) => {
+      const manifest = JSON.parse(
+        await readFile(join(root, "packages", directory, "package.json"), "utf8"),
+      );
+      return manifest.version;
+    }),
+  );
   for (const [command, script] of Object.entries(bins)) {
     const metadata = await run(script, ["--pguide-command-metadata"]);
     assert.equal(metadata.code, 0, metadata.stderr);
     assert.equal(JSON.parse(metadata.stdout).command, command);
+    assert.equal(JSON.parse(metadata.stdout).version, versions[command === "config" ? 1 : 0]);
     const help = await run(script, ["--help", "--format", "json"]);
     assert.equal(help.code, 0, `${command}: ${help.stderr}\n${help.stdout}`);
     assert.equal(JSON.parse(help.stdout).schemaVersion, 1);
