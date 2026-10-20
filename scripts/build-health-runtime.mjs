@@ -2,6 +2,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { buildEvidenceRuntime } from "./build-evidence-runtime.mjs";
+
+await buildEvidenceRuntime("objective-devbox-health");
 
 const root = fileURLToPath(new URL("../packages/objective-devbox-health/", import.meta.url));
 const seen = new Set();

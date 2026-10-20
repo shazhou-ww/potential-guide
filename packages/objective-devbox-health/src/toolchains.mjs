@@ -42,6 +42,12 @@ export async function toolchains(subject, context) {
       continue;
     }
     const actual = parseToolVersion(result.stdout + result.stderr);
+    context.evidence?.fact("version.observed", {
+      tool,
+      actual: actual ?? null,
+      expected: subject.minimumVersions[tool],
+      code: result.code,
+    });
     if (
       result.code !== 0 ||
       !actual ||
@@ -63,6 +69,12 @@ export async function toolchains(subject, context) {
   const expected = "pguide-health-ok";
   const run = async (stack, command, args, output) => {
     const result = await execute(command, args, { ...context, cwd: scratch, timeout: 10000 });
+    context.evidence?.fact("assertion.result", {
+      stack,
+      code: result.code,
+      expected: output ?? "exit 0",
+      matches: result.code === 0 && (output === undefined || result.stdout.trim() === output),
+    });
     if (result.code !== 0 || (output !== undefined && result.stdout.trim() !== output)) {
       problems.push(
         issue("toolchain-failed", {

@@ -1,4 +1,13 @@
 export {
+  CheckEvidence,
+  type CheckEvidenceContext,
+  defaultReportDirectory,
+  type EvidenceOptions,
+  EvidenceStream,
+  RunEvidence,
+  withCheckEvidence,
+} from "./evidence.js";
+export {
   describeLevels,
   loadPilotSpec,
   observe,

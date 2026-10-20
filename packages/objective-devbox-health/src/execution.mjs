@@ -7,8 +7,9 @@ import { directories, Fault, issue } from "./contract.mjs";
 export function execute(
   command,
   args,
-  { deadline = Date.now() + 24000, cwd, input, timeout = 6000 } = {},
+  { deadline = Date.now() + 24000, cwd, input, timeout = 6000, evidence } = {},
 ) {
+  evidence?.fact("command.started", { command });
   return new Promise((resolve, reject) => {
     const remaining = Math.min(timeout, deadline - Date.now());
     if (remaining <= 0) {
@@ -68,6 +69,7 @@ export function execute(
     });
     child.once("close", (code) => {
       clearTimeout(timer);
+      evidence?.fact("command.finished", { command, code, failed: failure !== undefined });
       if (failure) reject(failure);
       else resolve({ code, stdout, stderr, missing: false });
     });

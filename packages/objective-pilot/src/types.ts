@@ -100,6 +100,7 @@ export interface PilotObservation {
   readonly versions: Readonly<Record<ObjectiveId, SpecVersion>>;
 }
 export interface PilotRuntime {
+  readonly onObservation?: (value: Envelope<PilotObservation>) => void;
   readonly resolveCheck: (ref: CheckRef) => CheckProbe;
   readonly checkConcurrency?: number;
 }

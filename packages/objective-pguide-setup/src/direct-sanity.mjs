@@ -68,6 +68,11 @@ export async function directSanity(context, directory, selected) {
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
+  context.evidence?.fact("assertion.result", {
+    assertion: "marker-nonce-match",
+    correct,
+    observed,
+  });
   if (!correct)
     throw new Problem("sanity-failed", { stage: "recheck", reason: "nonce-mismatch", observed });
 }

@@ -94,6 +94,53 @@ HTTP uses POST with subject JSON, requires status 200 for successful invocation,
 and uses AbortSignal for local cancellation and timeout. Aborting HTTP does
 **not** promise that remote business work stops.
 
+## Local evidence
+
+All three probe adapters retain local evidence by default. Pass a shared
+`RunEvidence({ directory })` as `evidence` to group invocations and retries, or
+`evidence: false` to disable persistence. Set `identity` to a stable check
+reference so `attempt` increments across retries; every call still receives a
+new `checkRunId`. Without a shared run, each adapter call owns a separate run.
+Do not store subject data in `identity`.
+
+```ts
+import { RunEvidence, createProcessCheckProbe } from "@potential-guide/objective-pilot";
+
+const evidence = new RunEvidence({ directory: "/safe/local/reports" });
+const probe = createProcessCheckProbe({
+  command: process.execPath,
+  args: ["/committed/check/run.mjs"],
+  evidence,
+  identity: { objectiveId, levelId, checkId },
+});
+const envelope = await probe(subject, signal);
+// After all invocations and cleanup, the run owner records its termination.
+evidence.stream.emit("run.finished", { outcome: "completed" });
+```
+
+Process probes pass runtime-owned `PGUIDE_EVIDENCE_CONTEXT` with the absolute
+check directory, run/check IDs and attempt. This does not change stdin or
+stdout. The parent alone writes the root stream and bounded/redacted
+`result.json`; a cooperating child alone writes check business `events.jsonl`.
+Disabled parents pass `PGUIDE_EVIDENCE_DISABLED=1`, preventing a standalone child
+from creating another run. These are runtime metadata, not subject fields.
+Use `PilotRuntime.onObservation` to retain final observations at composition.
+
+Check authors can use `withCheckEvidence("check-id", async evidence => { ... })`.
+It uses inherited context or creates a standalone run, records execution
+boundaries, and leaves the callback's result unchanged. Call
+`evidence?.fact("assertion.result", { actual, expected, passed })` for safe
+observations and `evidence?.artifact("proof/summary.txt", safeText)` for opt-in
+proof files. Artifacts are exclusive-create, limited to 1 MiB, relative to the
+check directory, and reject traversal and symlink parents. Never pass a full
+subject, environment, credentials or Agent transcript as a fact or artifact.
+`evidence.stream.protect(subject)` registers sensitive-key values for text
+redaction without persisting the subject itself.
+
+See [CLI evidence semantics](../pguide/README.md#local-check-and-probe-evidence)
+for layout, limits, failures and the distinction between completion and a
+business pass. No terminal record means unknown/incomplete, not success.
+
 ## Effects and behavior
 
 `observe(input, runtime)` constructs a native Effect; construction does not run

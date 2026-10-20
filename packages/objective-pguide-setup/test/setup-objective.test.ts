@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { cp, lstat, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { basename, delimiter, dirname, join } from "node:path";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
@@ -50,7 +51,8 @@ test("ACP-only setup reports an AHP selection as unsupported without starting an
 });
 
 async function setup(mode = "fix") {
-  const f = await fixture();
+  // Cold nested Git caches need path headroom on Windows worktree checkouts.
+  const f = await fixture(process.platform === "win32" ? tmpdir() : undefined);
   const work = join(f.directory, "work");
   const scratch = join(f.directory, "setup-scratch");
   const home = join(f.directory, "home");
@@ -132,6 +134,7 @@ for await (const line of createInterface({input:process.stdin})) {
   const configPath = join(f.directory, "config.json");
   const config = {
     schemaVersion: 2,
+    reports: { directory: join(f.directory, "reports") },
     commandDirectories: [commands],
     defaultAgent: "fixture",
     agents: {
@@ -173,10 +176,27 @@ for await (const line of createInterface({input:process.stdin})) {
     GIT_INDEX_FILE: join(f.directory, "must-not-use-index"),
   };
   async function direct(stage: string, value: unknown = subject, script = helper) {
+    const reports = join(f.directory, "reports");
+    await mkdir(reports, { recursive: true });
+    const previous = new Set(await readdir(reports));
     await writeFile(f.subject, JSON.stringify(value));
-    const result = await run(script, [stage, "--subject-file", f.subject], env);
+    const result = await run(
+      script,
+      [stage, "--subject-file", f.subject, "--report-dir", join(f.directory, "reports")],
+      env,
+    );
     assert.equal(result.code, 0, result.stdout + result.stderr);
     const envelope = JSON.parse(result.stdout) as CheckEnvelope;
+    const [runId] = (await readdir(reports)).filter((id) => !previous.has(id));
+    assert.ok(runId, "standalone check must retain a new evidence run");
+    const events = (await readFile(join(reports, runId, "events.jsonl"), "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    const check = events.find((entry) => entry.event === "check.started");
+    const checkDirectory = join(reports, runId, check.data.directory);
+    assert.match(await readFile(join(checkDirectory, "events.jsonl"), "utf8"), /business.finished/);
+    assert.equal(events.at(-1).event, "run.finished");
     assert.deepEqual(await readdir(scratch), [], "owned scratch must be cleaned");
     await assert.rejects(lstat(join(f.directory, "must-not-be-used")), { code: "ENOENT" });
     await assert.rejects(lstat(join(f.directory, "must-not-use-index")), { code: "ENOENT" });
@@ -620,7 +640,11 @@ test("remote payload uses target authentication and performs actual nonce sanity
     const payload = JSON.parse((await sshRequest("sanity", remoteSubject)).input);
     const { userHome: _home, ...subject } = f.subject;
     // Direct transport semantics include cold CLI startup, not the SSH Pilot cap.
-    payload.subject = { ...subject, allowSanity: true, timeoutMs: 60000 };
+    payload.subject = {
+      ...subject,
+      allowSanity: true,
+      timeoutMs: 60000,
+    };
     const result = await runSsh({
       command: process.execPath,
       args: ["-e", remoteBootstrap],
@@ -1296,7 +1320,11 @@ test("self-check bounded timeout cleans owned task/state and preserves unrelated
     await writeFile(sentinel, "preserve");
     await writeFile(f.subjectFile, JSON.stringify(subject));
     const started = Date.now();
-    const result = await run(selfHelper, ["sanity", "--subject-file", f.subjectFile], f.env);
+    const result = await run(
+      selfHelper,
+      ["sanity", "--subject-file", f.subjectFile, "--report-dir", join(f.directory, "reports")],
+      f.env,
+    );
     const envelope = JSON.parse(result.stdout);
     assert.equal(envelope.status, 504, result.stdout + result.stderr);
     assert.ok(Date.now() - started < 15000);

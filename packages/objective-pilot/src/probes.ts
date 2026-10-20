@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { type CheckEvidenceContext, RunEvidence } from "./evidence.js";
 import { parseCheckEnvelope } from "./pilot.js";
 import { stopPosixTree } from "./process-tree.js";
 import type { CheckProbe, CheckResult, Envelope, Subject } from "./types.js";
@@ -14,13 +15,50 @@ function failure(kind: string, cause: unknown, status = 502): Envelope<CheckResu
   };
 }
 
+function evidenceProbe(
+  invoke: (
+    subject: Subject,
+    signal: AbortSignal,
+    context?: CheckEvidenceContext,
+  ) => Promise<Envelope<CheckResult>>,
+  options: { readonly evidence?: RunEvidence | false; readonly identity?: unknown },
+): CheckProbe {
+  return async (subject, signal) => {
+    signal.throwIfAborted();
+    const ownRun = options.evidence === undefined;
+    const run =
+      options.evidence === false || process.env.PGUIDE_EVIDENCE_DISABLED === "1"
+        ? undefined
+        : (options.evidence ?? new RunEvidence());
+    const context = run?.startCheck(options.identity ?? { transport: "probe" });
+    run?.stream.protect(subject);
+    try {
+      const result = await invoke(subject, signal, context);
+      if (context !== undefined) run?.finishCheck(context, result);
+      if (ownRun) run?.stream.emit("run.finished", { outcome: "completed" });
+      return result;
+    } catch (error) {
+      run?.stream.emit("check.interrupted", {
+        checkRunId: context?.checkRunId,
+        outcome: signal.aborted ? "cancelled" : "execution-error",
+      });
+      if (ownRun)
+        run?.stream.emit("run.failed", {
+          outcome: signal.aborted ? "cancelled" : "execution-error",
+        });
+      throw error;
+    }
+  };
+}
+
 export function createMemoryCheckProbe(
   invoke: (
     subject: Subject,
     signal: AbortSignal,
   ) => Promise<Envelope<CheckResult>> | Envelope<CheckResult>,
+  options: { readonly evidence?: RunEvidence | false; readonly identity?: unknown } = {},
 ): CheckProbe {
-  return async (subject, signal) => {
+  return evidenceProbe(async (subject, signal) => {
     signal.throwIfAborted();
     try {
       const result = parseCheckEnvelope(await invoke(subject, signal));
@@ -30,7 +68,7 @@ export function createMemoryCheckProbe(
       signal.throwIfAborted();
       return failure("memory-invocation", cause);
     }
-  };
+  }, options);
 }
 
 function duration(value: number, name: string): number {
@@ -42,7 +80,11 @@ function duration(value: number, name: string): number {
 
 export function createHttpCheckProbe(
   url: string,
-  options: { readonly timeoutMs?: number } = {},
+  options: {
+    readonly timeoutMs?: number;
+    readonly evidence?: RunEvidence | false;
+    readonly identity?: unknown;
+  } = {},
 ): CheckProbe {
   const parsed = new URL(url);
   if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) {
@@ -51,7 +93,7 @@ export function createHttpCheckProbe(
     );
   }
   const timeoutMs = duration(options.timeoutMs ?? 30_000, "timeoutMs");
-  return async (subject, signal) => {
+  return evidenceProbe(async (subject, signal) => {
     signal.throwIfAborted();
     const timeout = AbortSignal.timeout(timeoutMs);
     try {
@@ -72,7 +114,7 @@ export function createHttpCheckProbe(
       signal.throwIfAborted();
       return failure(timeout.aborted ? "timeout" : "http-invocation", cause);
     }
-  };
+  }, options);
 }
 
 export interface ProcessCheckProbeOptions {
@@ -82,6 +124,8 @@ export interface ProcessCheckProbeOptions {
   readonly timeoutMs?: number;
   readonly gracePeriodMs?: number;
   readonly log?: (text: string) => void;
+  readonly evidence?: RunEvidence | false;
+  readonly identity?: unknown;
 }
 
 const OUTPUT_LIMIT = 1024 * 1024;
@@ -91,7 +135,11 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
     throw new ObjectiveConfigurationError("A process command is required.");
   const timeoutMs = duration(options.timeoutMs ?? 30_000, "timeoutMs");
   const gracePeriodMs = duration(options.gracePeriodMs ?? 250, "gracePeriodMs");
-  return async (subject, signal) => {
+  const invoke = async (
+    subject: Subject,
+    signal: AbortSignal,
+    context?: CheckEvidenceContext,
+  ): Promise<Envelope<CheckResult>> => {
     signal.throwIfAborted();
     const scratch = resolve(".cache", "pguide-probes");
     await mkdir(scratch, { recursive: true });
@@ -114,6 +162,9 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
             ...environment,
             PGUIDE_PROBE_TEMP_DIR: directory,
             PGUIDE_PROBE_TIMEOUT_MS: String(timeoutMs),
+            ...(context === undefined
+              ? { PGUIDE_EVIDENCE_DISABLED: "1" }
+              : { PGUIDE_EVIDENCE_CONTEXT: JSON.stringify(context) }),
           },
           shell: false,
           windowsHide: true,
@@ -222,4 +273,5 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
       await rm(directory, { recursive: true, force: true });
     }
   };
+  return evidenceProbe(invoke, options);
 }

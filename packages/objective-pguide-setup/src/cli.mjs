@@ -1,10 +1,20 @@
 import { lstat, readFile } from "node:fs/promises";
 import { isAbsolute } from "node:path";
+import { reportArguments, withCheckEvidence } from "../runtime/evidence.mjs";
 import { Fault, outputLimit } from "./contract.mjs";
 import { check } from "./runner.mjs";
 export async function main(stage = process.argv[2], options = {}) {
+  const parsed = reportArguments(process.argv.slice(options.pilot === true ? 2 : 3));
+  const output = await withCheckEvidence(
+    `${options.selfCheck ? "self-check" : "setup"}.${stage}`,
+    (evidence) => runSetup(stage, { ...options, evidence }, parsed.args),
+    parsed.options,
+  );
+  console.log(JSON.stringify(output));
+  return output;
+}
+async function runSetup(stage, options, args) {
   try {
-    const args = process.argv.slice(3);
     let source;
     if (args.length === 2 && args[0] === "--subject-file" && isAbsolute(args[1])) {
       const details = await lstat(args[1]);
@@ -33,14 +43,13 @@ export async function main(stage = process.argv[2], options = {}) {
     } catch {
       throw new Fault("invalid-subject: expected JSON.", 400);
     }
-    console.log(JSON.stringify(await check(stage, subject, options)));
+    options.evidence?.stream.protect(subject);
+    return await check(stage, subject, options);
   } catch (error) {
-    console.log(
-      JSON.stringify({
-        status: error instanceof Fault ? error.status : 502,
-        payload: null,
-        message: error instanceof Fault ? error.message : "io: setup input or cleanup failed.",
-      }),
-    );
+    return {
+      status: error instanceof Fault ? error.status : 502,
+      payload: null,
+      message: error instanceof Fault ? error.message : "io: setup input or cleanup failed.",
+    };
   }
 }

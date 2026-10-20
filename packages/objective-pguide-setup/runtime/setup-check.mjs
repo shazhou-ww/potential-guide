@@ -15,8 +15,249 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
+// packages/objective-pguide-setup/runtime/evidence.mjs
+import { randomUUID } from "node:crypto";
+import { appendFileSync, closeSync, constants, lstatSync, mkdirSync, openSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
+function reportArguments(argv) {
+  const args = [];
+  let enabled = true;
+  let directory;
+  for (let index = 0; index < argv.length; index++) {
+    const arg = argv[index];
+    if (arg === "--no-reports")
+      enabled = false;
+    else if (arg === "--report-dir") {
+      const value = argv[++index];
+      if (value === void 0 || value.trim() === "" || value.startsWith("--"))
+        throw new Error("--report-dir requires a directory.");
+      directory = resolve(value);
+    } else if (arg !== void 0)
+      args.push(arg);
+  }
+  return { args, options: { enabled, ...directory === void 0 ? {} : { directory } } };
+}
+function safeValue(value, key = "", depth = 0, secrets = /* @__PURE__ */ new Set()) {
+  if (SECRET.test(key))
+    return "[REDACTED]";
+  if (depth > 20)
+    return "[TRUNCATED]";
+  if (typeof value === "string") {
+    let text = value;
+    for (const secret of secrets)
+      text = text.replaceAll(secret, "[REDACTED]");
+    return text.length > 8192 ? `${text.slice(0, 8192)}[TRUNCATED]` : text;
+  }
+  if (Array.isArray(value))
+    return value.map((entry) => safeValue(entry, "", depth + 1, secrets));
+  if (value !== null && typeof value === "object")
+    return Object.fromEntries(Object.entries(value).map(([name, entry]) => [
+      name,
+      safeValue(entry, name, depth + 1, secrets)
+    ]));
+  return value;
+}
+function defaultReportDirectory() {
+  const state = process.env.PGUIDE_STATE_DIRECTORY ?? (process.platform === "win32" ? join(process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local"), "pguide") : join(process.env.XDG_STATE_HOME ?? join(homedir(), ".local", "state"), "pguide"));
+  return resolve(state, "reports");
+}
+function inheritedContext() {
+  const source = process.env.PGUIDE_EVIDENCE_CONTEXT;
+  if (source === void 0)
+    return void 0;
+  const value = JSON.parse(source);
+  if (value === null || typeof value !== "object" || !("directory" in value) || typeof value.directory !== "string" || !isAbsolute(value.directory) || !("runId" in value) || typeof value.runId !== "string" || !("checkRunId" in value) || typeof value.checkRunId !== "string" || !("attempt" in value) || !Number.isSafeInteger(value.attempt) || Number(value.attempt) < 1)
+    throw new Error("Invalid PGUIDE_EVIDENCE_CONTEXT.");
+  return {
+    directory: value.directory,
+    runId: value.runId,
+    checkRunId: value.checkRunId,
+    attempt: Number(value.attempt)
+  };
+}
+async function withCheckEvidence(identity, invoke, options = {}) {
+  if (options.enabled === false || process.env.PGUIDE_EVIDENCE_DISABLED === "1")
+    return invoke(void 0);
+  const inherited = inheritedContext();
+  const run = inherited === void 0 ? new RunEvidence(options) : void 0;
+  const context = inherited ?? run?.startCheck(identity);
+  if (context === void 0)
+    throw new Error("Missing check evidence context.");
+  const evidence = new CheckEvidence(context);
+  evidence.fact("business.started", { identity });
+  try {
+    const value = await invoke(evidence);
+    evidence.fact("business.finished", { result: value });
+    for (const secret of evidence.stream.secrets)
+      run?.stream.secrets.add(secret);
+    run?.finishCheck(context, value);
+    run?.stream.emit("run.finished", { outcome: "completed" });
+    return value;
+  } catch (error) {
+    evidence.fact("business.failed", { error: error instanceof Error ? error.name : "unknown" });
+    run?.stream.emit("run.failed", { outcome: "execution-error" });
+    throw error;
+  }
+}
+var LIMIT, SECRET, EvidenceStream, RunEvidence, CheckEvidence;
+var init_evidence = __esm({
+  "packages/objective-pguide-setup/runtime/evidence.mjs"() {
+    LIMIT = 1024 * 1024;
+    SECRET = /password|passwd|secret|token|authorization|credential|private.?key|api.?key/i;
+    EvidenceStream = class {
+      context;
+      directory;
+      secrets = /* @__PURE__ */ new Set();
+      seq = 0;
+      bytes = 0;
+      truncated = false;
+      path;
+      constructor(context, directory, filename = "events.jsonl") {
+        this.context = context;
+        this.directory = directory;
+        this.path = join(directory, filename);
+        writeFileSync(this.path, "", { flag: "wx", mode: 384 });
+      }
+      emit(event, data) {
+        if (this.truncated)
+          return;
+        const body = JSON.stringify({
+          schemaVersion: 1,
+          time: (/* @__PURE__ */ new Date()).toISOString(),
+          seq: ++this.seq,
+          ...this.context,
+          event,
+          data: safeValue(data, "", 0, this.secrets)
+        });
+        if (this.bytes + Buffer.byteLength(body) > LIMIT) {
+          this.truncated = true;
+          appendFileSync(this.path, `${JSON.stringify({ schemaVersion: 1, time: (/* @__PURE__ */ new Date()).toISOString(), seq: this.seq, ...this.context, event: "evidence.truncated", data: { limitBytes: LIMIT } })}
+`);
+          process.stderr.write(`pguide evidence truncated: ${this.path}
+`);
+          return;
+        }
+        try {
+          appendFileSync(this.path, `${body}
+`);
+        } catch (error) {
+          process.stderr.write(`pguide evidence write failed: ${this.path}
+`);
+          throw error;
+        }
+        this.bytes += Buffer.byteLength(body) + 1;
+      }
+      protect(value, sensitive = false) {
+        if (typeof value === "string" && sensitive && value !== "")
+          this.secrets.add(value);
+        else if (value !== null && typeof value === "object")
+          for (const [key, entry] of Object.entries(value))
+            this.protect(entry, sensitive || SECRET.test(key));
+      }
+    };
+    RunEvidence = class {
+      runId = randomUUID();
+      directory;
+      stream;
+      attempts = /* @__PURE__ */ new Map();
+      constructor(options = {}) {
+        this.directory = resolve(options.directory ?? defaultReportDirectory(), this.runId);
+        mkdirSync(this.directory, { recursive: true, mode: 448 });
+        this.stream = new EvidenceStream({ runId: this.runId }, this.directory);
+        this.stream.emit("run.started", { node: process.version, platform: process.platform });
+      }
+      startCheck(identity) {
+        const key = JSON.stringify(identity);
+        const attempt = (this.attempts.get(key) ?? 0) + 1;
+        this.attempts.set(key, attempt);
+        const checkRunId = randomUUID();
+        const directory = join(this.directory, "checks", checkRunId);
+        mkdirSync(directory, { recursive: true, mode: 448 });
+        const context = { runId: this.runId, checkRunId, attempt, directory };
+        this.stream.emit("check.started", { ...context, directory: `checks/${checkRunId}`, identity });
+        return context;
+      }
+      finishCheck(context, envelope) {
+        const result = JSON.stringify(safeValue(envelope, "", 0, this.stream.secrets));
+        const truncated = Buffer.byteLength(result) > LIMIT;
+        writeFileSync(join(context.directory, "result.json"), `${truncated ? JSON.stringify({ truncated: true, limitBytes: LIMIT }) : result}
+`, {
+          flag: "wx",
+          mode: 384
+        });
+        this.stream.emit("check.finished", {
+          checkRunId: context.checkRunId,
+          attempt: context.attempt,
+          result: `checks/${context.checkRunId}/result.json`,
+          resultPolicy: "redacted-bounded",
+          truncated,
+          envelope
+        });
+      }
+    };
+    CheckEvidence = class {
+      context;
+      stream;
+      constructor(context) {
+        this.context = context;
+        if (lstatSync(context.directory).isSymbolicLink() || !lstatSync(context.directory).isDirectory())
+          throw new Error("Check evidence directory must be a real directory.");
+        this.stream = new EvidenceStream({ runId: context.runId, checkRunId: context.checkRunId, attempt: context.attempt }, context.directory);
+      }
+      fact(event, data) {
+        this.stream.emit(event, data);
+      }
+      artifact(path, content) {
+        const parts = path.split(/[\\/]/);
+        if (isAbsolute(path) || parts.some((part) => !part || part === "." || part === ".." || part.includes(":")))
+          throw new Error("Artifact path must stay inside the check directory.");
+        const root = join(this.context.directory, "artifacts");
+        try {
+          mkdirSync(root, { mode: 448 });
+        } catch (error) {
+          if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST")
+            throw error;
+        }
+        if (lstatSync(root).isSymbolicLink() || !lstatSync(root).isDirectory())
+          throw new Error("Artifact root must be a real directory.");
+        let parent = root;
+        for (const part of parts.slice(0, -1)) {
+          parent = join(parent, part);
+          try {
+            mkdirSync(parent, { mode: 448 });
+          } catch (error) {
+            if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST")
+              throw error;
+          }
+          if (!lstatSync(parent).isDirectory() || lstatSync(parent).isSymbolicLink())
+            throw new Error("Artifact directories must not be symbolic links.");
+        }
+        const destination = join(root, ...parts);
+        const rel = relative(this.context.directory, destination);
+        if (rel.startsWith(`..${sep}`) || isAbsolute(rel))
+          throw new Error("Artifact path escaped the check directory.");
+        if (Buffer.byteLength(content) > LIMIT) {
+          this.fact("artifact.truncated", { path, limitBytes: LIMIT });
+          throw new Error("Artifact exceeds 1 MiB.");
+        }
+        const fd = openSync(destination, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 384);
+        try {
+          writeFileSync(fd, content);
+        } finally {
+          closeSync(fd);
+        }
+        this.fact("artifact.created", {
+          path: rel.split(sep).join("/"),
+          bytes: Buffer.byteLength(content)
+        });
+      }
+    };
+  }
+});
+
 // packages/objective-pguide-setup/src/contract.mjs
-import { isAbsolute, posix } from "node:path";
+import { isAbsolute as isAbsolute2, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 function subjectValue(value, selfCheck = false) {
   const required = ["workingDirectory", "configPath", "scratchDirectory", "pguide"];
@@ -24,8 +265,8 @@ function subjectValue(value, selfCheck = false) {
   const remote = value?.target?.type === "ssh";
   if (selfCheck && (value?.target !== void 0 || value?.allowSanity !== void 0))
     throw new Fault("invalid-subject: self-check is local-only and has no allowSanity input.", 400);
-  const absolute = remote ? posix.isAbsolute : isAbsolute;
-  if (!record(value) || required.some((key) => !Object.hasOwn(value, key)) || Object.keys(value).some((key) => ![...required, ...optional].includes(key)) || required.slice(0, 3).some((key) => !nonempty(value[key]) || !absolute(value[key])) || !record(value.pguide) || Object.keys(value.pguide).some((key) => !["command", "args"].includes(key)) || !nonempty(value.pguide.command) || value.pguide.args !== void 0 && (!Array.isArray(value.pguide.args) || !value.pguide.args.every(nonempty)) || ["desiredVersion", "agent"].some((key) => value[key] !== void 0 && !nonempty(value[key])) || value.userHome !== void 0 && (!nonempty(value.userHome) || !isAbsolute(value.userHome)) || remote && value.userHome !== void 0 || value.target !== void 0 && (!record(value.target) || !remote && (value.target.type !== "local" || Object.keys(value.target).length !== 1)) || value.allowSanity !== void 0 && typeof value.allowSanity !== "boolean" || value.timeoutMs !== void 0 && (!Number.isSafeInteger(value.timeoutMs) || value.timeoutMs < 100 || value.timeoutMs > 3e5))
+  const absolute = remote ? posix.isAbsolute : isAbsolute2;
+  if (!record(value) || required.some((key) => !Object.hasOwn(value, key)) || Object.keys(value).some((key) => ![...required, ...optional].includes(key)) || required.slice(0, 3).some((key) => !nonempty(value[key]) || !absolute(value[key])) || !record(value.pguide) || Object.keys(value.pguide).some((key) => !["command", "args"].includes(key)) || !nonempty(value.pguide.command) || value.pguide.args !== void 0 && (!Array.isArray(value.pguide.args) || !value.pguide.args.every(nonempty)) || ["desiredVersion", "agent"].some((key) => value[key] !== void 0 && !nonempty(value[key])) || value.userHome !== void 0 && (!nonempty(value.userHome) || !isAbsolute2(value.userHome)) || remote && value.userHome !== void 0 || value.target !== void 0 && (!record(value.target) || !remote && (value.target.type !== "local" || Object.keys(value.target).length !== 1)) || value.allowSanity !== void 0 && typeof value.allowSanity !== "boolean" || value.timeoutMs !== void 0 && (!Number.isSafeInteger(value.timeoutMs) || value.timeoutMs < 100 || value.timeoutMs > 3e5))
     throw new Fault("invalid-subject: see the setup subject contract.", 400);
   return { ...value, timeoutMs: value.timeoutMs ?? 2e4 };
 }
@@ -77,6 +318,11 @@ async function installation(subject, context) {
   ]);
   if (result.code !== 0) throw new Problem("installation-unusable");
   const value = jsonOutput(result);
+  context.evidence?.fact("version.observed", {
+    actual: value.version,
+    expected: subject.desiredVersion ?? null,
+    code: result.code
+  });
   if (value.schemaVersion !== 1 || value.name !== "pguide" || !nonempty(value.version))
     throw new Fault("protocol: unsupported pguide version response.");
   if (subject.desiredVersion !== void 0 && value.version !== subject.desiredVersion)
@@ -228,16 +474,16 @@ var init_configuration = __esm({
 // packages/objective-pguide-setup/src/direct-sanity.mjs
 import { randomBytes } from "node:crypto";
 import { lstat as lstat2, mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join as join2 } from "node:path";
 async function directSanity(context, directory, selected) {
-  const task = join(directory, "task");
+  const task = join2(directory, "task");
   await mkdir(task, { mode: 448 });
-  const marker = join(task, "marker.txt");
+  const marker = join2(task, "marker.txt");
   const expected = `ready-${randomBytes(24).toString("hex")}`;
   await writeFile(marker, "not-ready", { mode: 384 });
   if (await readFile(marker, "utf8") === expected)
     throw new Fault("sanity: initial marker was not independently observed.");
-  const input = join(directory, "agent-input.json");
+  const input = join2(directory, "agent-input.json");
   await writeFile(
     input,
     JSON.stringify({
@@ -254,7 +500,7 @@ async function directSanity(context, directory, selected) {
     }),
     { mode: 384 }
   );
-  const result = await context.execute(process.execPath, [join(here, "direct-agent.mjs"), input]);
+  const result = await context.execute(process.execPath, [join2(here, "direct-agent.mjs"), input]);
   if (result.code !== 0) throw new Fault("sanity: direct Agent process failed.");
   const outcome = jsonOutput(result);
   for (const phase of ["agent.initialize", "agent.session-new", "agent.prompt", "agent.cleanup"]) {
@@ -289,6 +535,11 @@ async function directSanity(context, directory, selected) {
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
+  context.evidence?.fact("assertion.result", {
+    assertion: "marker-nonce-match",
+    correct,
+    observed
+  });
   if (!correct)
     throw new Problem("sanity-failed", { stage: "recheck", reason: "nonce-mismatch", observed });
 }
@@ -302,12 +553,12 @@ var init_direct_sanity = __esm({
 // packages/objective-pguide-setup/src/execution.mjs
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { delimiter, join as join2 } from "node:path";
+import { delimiter, join as join3 } from "node:path";
 function launch(command, args, options) {
   if (process.platform === "win32" && !/[\\/:]/.test(command) && !/\.(exe|com|cmd|bat)$/i.test(command)) {
     const directories = (options.env.PATH ?? options.env.Path ?? "").split(delimiter).filter(Boolean);
     const candidates = directories.flatMap(
-      (directory) => [".exe", ".com", ".cmd", ".bat"].map((extension) => join2(directory, command + extension))
+      (directory) => [".exe", ".com", ".cmd", ".bat"].map((extension) => join3(directory, command + extension))
     );
     command = candidates.find((candidate) => existsSync(candidate)) ?? command;
   }
@@ -401,7 +652,7 @@ async function stopTree(child) {
     });
   });
 }
-function executionContext(subject, directory, signal, deadline) {
+function executionContext(subject, directory, signal, deadline, evidence) {
   const timing = (phase, durationMs) => {
     if (process.env.PGUIDE_TIMINGS === "1")
       process.stderr.write(
@@ -411,17 +662,29 @@ function executionContext(subject, directory, signal, deadline) {
   };
   const measure = async (phase, run) => {
     const start = performance.now();
+    evidence?.fact("step.started", { phase });
     try {
-      return await run();
+      const result = await run();
+      evidence?.fact("assertion.passed", { phase });
+      return result;
+    } catch (error) {
+      evidence?.fact("assertion.failed", {
+        phase,
+        problemId: error instanceof Problem ? error.id : void 0,
+        status: error instanceof Fault ? error.status : void 0
+      });
+      throw error;
     } finally {
       timing(phase, performance.now() - start);
     }
   };
   const env = { ...process.env };
+  delete env.PGUIDE_EVIDENCE_CONTEXT;
+  env.PGUIDE_EVIDENCE_DISABLED = "1";
   for (const key of Object.keys(env)) if (/^GIT_/i.test(key)) delete env[key];
   env.GIT_TERMINAL_PROMPT = "0";
   env.GIT_CONFIG_NOSYSTEM = "1";
-  env.GIT_CONFIG_GLOBAL = join2(directory, "empty-git-config");
+  env.GIT_CONFIG_GLOBAL = join3(directory, "empty-git-config");
   env.PATH = process.env.PATH ?? process.env.Path;
   if (process.platform === "win32") {
     env.SystemRoot = process.env.SystemRoot;
@@ -431,7 +694,7 @@ function executionContext(subject, directory, signal, deadline) {
     env.HOME = subject.userHome;
     env.USERPROFILE = subject.userHome;
   }
-  env.PGUIDE_STATE_DIRECTORY = join2(directory, "state");
+  env.PGUIDE_STATE_DIRECTORY = join3(directory, "state");
   delete env.PGUIDE_FORMAT;
   delete env.PGUIDE_LANGUAGE;
   async function execute(command, args, settings = {}) {
@@ -516,7 +779,7 @@ function executionContext(subject, directory, signal, deadline) {
       "json"
     ])
   );
-  return { execute, cli, env, measure, timing, remainingMs: () => deadline - Date.now() };
+  return { execute, cli, env, measure, timing, evidence, remainingMs: () => deadline - Date.now() };
 }
 var init_execution = __esm({
   "packages/objective-pguide-setup/src/execution.mjs"() {
@@ -527,30 +790,30 @@ var init_execution = __esm({
 // packages/objective-pguide-setup/src/sanity.mjs
 import { randomBytes as randomBytes2 } from "node:crypto";
 import { cp, lstat as lstat3, readFile as readFile2, writeFile as writeFile2 } from "node:fs/promises";
-import { join as join3, resolve } from "node:path";
+import { join as join4, resolve as resolve2 } from "node:path";
 import { pathToFileURL } from "node:url";
 async function sanity(subject, context, directory, selected) {
-  const repository = join3(directory, "fixture");
-  await cp(join3(here, "sanity-fixture"), repository, { recursive: true });
+  const repository = join4(directory, "fixture");
+  await cp(join4(here, "sanity-fixture"), repository, { recursive: true });
   await writeFile2(
-    join3(repository, ".gitignore"),
-    await readFile2(join3(repository, "gitignore"), "utf8")
+    join4(repository, ".gitignore"),
+    await readFile2(join4(repository, "gitignore"), "utf8")
   );
-  const marker = join3(repository, "marker.txt");
+  const marker = join4(repository, "marker.txt");
   const expected = randomBytes2(24).toString("hex");
   await writeFile2(marker, "not-repaired");
-  const subjectFile = join3(directory, "sanity-subject.json");
+  const subjectFile = join4(directory, "sanity-subject.json");
   await writeFile2(subjectFile, JSON.stringify({ marker, expected }));
-  const configPath = join3(directory, "sanity-config.json");
+  const configPath = join4(directory, "sanity-config.json");
   const timeoutMs = subject.timeoutMs;
   const config = {
     schemaVersion: 2,
     commandDirectories: (selected.config.commandDirectories ?? []).map(
-      (path) => resolve(subject.workingDirectory, path)
+      (path) => resolve2(subject.workingDirectory, path)
     ),
     defaultAgent: selected.name,
     agents: { [selected.name]: selected.profile },
-    stateDirectory: join3(directory, "state"),
+    stateDirectory: join4(directory, "state"),
     agentExecutionLimits: { timeoutMs },
     regulationStrategy: {
       quota: { timeoutMs, maxAgentRuns: 1, maxStallRuns: 1 },
@@ -654,7 +917,7 @@ __export(ssh_target_exports, {
 });
 import { spawn as spawn2 } from "node:child_process";
 import { readFile as readFile3 } from "node:fs/promises";
-import { dirname, join as join4 } from "node:path";
+import { dirname, join as join5 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 function validateTarget(target) {
   if (target?.type !== "ssh" || target.shell !== "posix" || Object.keys(target).some((key) => !["type", "host", "shell", "node", "port"].includes(key)) || typeof target.host !== "string" || !/^(?:[A-Za-z0-9_][A-Za-z0-9_.-]*@)?[A-Za-z0-9_][A-Za-z0-9_.-]*$/.test(target.host) || target.node !== void 0 && (typeof target.node !== "string" || !/^(?:[A-Za-z0-9_][A-Za-z0-9_.-]*|\/[A-Za-z0-9_./-]+)$/.test(target.node)) || target.port !== void 0 && (!Number.isSafeInteger(target.port) || target.port < 1 || target.port > 65535))
@@ -668,10 +931,10 @@ async function sshRequest(stage, subject) {
   const { target, userHome: _userHome, ...remoteSubject } = subject;
   const files = {
     "setup-check.mjs": 'export {check} from "./src/setup-runtime.mjs";\n',
-    "src/setup-runtime.mjs": await readFile3(join4(here2, "runtime", "setup-check.mjs"), "utf8")
+    "src/setup-runtime.mjs": await readFile3(join5(here2, "runtime", "setup-check.mjs"), "utf8")
   };
   for (const name of fixtures)
-    files[`sanity-fixture/${name}`] = await readFile3(join4(here2, "sanity-fixture", name), "utf8");
+    files[`sanity-fixture/${name}`] = await readFile3(join5(here2, "sanity-fixture", name), "utf8");
   const input = JSON.stringify({ stage, subject: remoteSubject, files });
   if (Buffer.byteLength(input) > limit)
     throw new TargetFault("remote-payload-limit: helper payload exceeded 256 KiB.", 400);
@@ -878,7 +1141,7 @@ process.stdout.on("error",()=>{});
 
 // packages/objective-pguide-setup/src/runner.mjs
 import { mkdir as mkdir2, mkdtemp, rm } from "node:fs/promises";
-import { isAbsolute as isAbsolute2, join as join5 } from "node:path";
+import { isAbsolute as isAbsolute3, join as join6 } from "node:path";
 async function check(stage, value, options = {}) {
   let directory;
   let timer;
@@ -924,10 +1187,10 @@ async function check(stage, value, options = {}) {
     );
     await mkdir2(subject.scratchDirectory, { recursive: true });
     const probeDirectory = options.pilot && !options.selfCheck ? process.env.PGUIDE_PROBE_TEMP_DIR : void 0;
-    if (probeDirectory !== void 0 && !isAbsolute2(probeDirectory))
+    if (probeDirectory !== void 0 && !isAbsolute3(probeDirectory))
       throw new Fault("outer-timeout: invalid PGUIDE_PROBE_TEMP_DIR runtime metadata.", 400);
     directory = await mkdtemp(
-      join5(
+      join6(
         probeDirectory ?? subject.scratchDirectory,
         probeDirectory === void 0 ? "pguide-setup-" : "s-"
       )
@@ -936,7 +1199,8 @@ async function check(stage, value, options = {}) {
       subject,
       directory,
       controller.signal,
-      Date.now() + subject.timeoutMs
+      Date.now() + subject.timeoutMs,
+      options.evidence
     );
     if (stage === "installation")
       await context.measure("installation", () => installation(subject, context));
@@ -983,12 +1247,21 @@ var init_runner = __esm({
 
 // packages/objective-pguide-setup/src/cli.mjs
 import { lstat as lstat4, readFile as readFile4 } from "node:fs/promises";
-import { isAbsolute as isAbsolute3 } from "node:path";
+import { isAbsolute as isAbsolute4 } from "node:path";
 async function main(stage = process.argv[2], options = {}) {
+  const parsed = reportArguments(process.argv.slice(options.pilot === true ? 2 : 3));
+  const output = await withCheckEvidence(
+    `${options.selfCheck ? "self-check" : "setup"}.${stage}`,
+    (evidence) => runSetup(stage, { ...options, evidence }, parsed.args),
+    parsed.options
+  );
+  console.log(JSON.stringify(output));
+  return output;
+}
+async function runSetup(stage, options, args) {
   try {
-    const args = process.argv.slice(3);
     let source;
-    if (args.length === 2 && args[0] === "--subject-file" && isAbsolute3(args[1])) {
+    if (args.length === 2 && args[0] === "--subject-file" && isAbsolute4(args[1])) {
       const details = await lstat4(args[1]);
       if (details.size > outputLimit)
         throw new Fault("input-limit: subject exceeded 256 KiB.", 400);
@@ -1015,26 +1288,26 @@ async function main(stage = process.argv[2], options = {}) {
     } catch {
       throw new Fault("invalid-subject: expected JSON.", 400);
     }
-    console.log(JSON.stringify(await check(stage, subject, options)));
+    options.evidence?.stream.protect(subject);
+    return await check(stage, subject, options);
   } catch (error) {
-    console.log(
-      JSON.stringify({
-        status: error instanceof Fault ? error.status : 502,
-        payload: null,
-        message: error instanceof Fault ? error.message : "io: setup input or cleanup failed."
-      })
-    );
+    return {
+      status: error instanceof Fault ? error.status : 502,
+      payload: null,
+      message: error instanceof Fault ? error.message : "io: setup input or cleanup failed."
+    };
   }
 }
 var init_cli = __esm({
   "packages/objective-pguide-setup/src/cli.mjs"() {
+    init_evidence();
     init_contract();
     init_runner();
   }
 });
 
 // packages/objective-pguide-setup/setup-check.mjs
-import { resolve as resolve2 } from "node:path";
+import { resolve as resolve3 } from "node:path";
 import { pathToFileURL as pathToFileURL2 } from "node:url";
 var init_setup_check = __esm({
   async "packages/objective-pguide-setup/setup-check.mjs"() {
@@ -1042,7 +1315,7 @@ var init_setup_check = __esm({
     init_cli();
     init_execution();
     init_runner();
-    if (process.argv[1] && pathToFileURL2(resolve2(process.argv[1])).href === import.meta.url)
+    if (process.argv[1] && pathToFileURL2(resolve3(process.argv[1])).href === import.meta.url)
       await main();
   }
 });

@@ -111,7 +111,7 @@ export async function stopTree(child) {
     });
   });
 }
-export function executionContext(subject, directory, signal, deadline) {
+export function executionContext(subject, directory, signal, deadline, evidence) {
   const timing = (phase, durationMs) => {
     if (process.env.PGUIDE_TIMINGS === "1")
       process.stderr.write(
@@ -120,13 +120,25 @@ export function executionContext(subject, directory, signal, deadline) {
   };
   const measure = async (phase, run) => {
     const start = performance.now();
+    evidence?.fact("step.started", { phase });
     try {
-      return await run();
+      const result = await run();
+      evidence?.fact("assertion.passed", { phase });
+      return result;
+    } catch (error) {
+      evidence?.fact("assertion.failed", {
+        phase,
+        problemId: error instanceof Problem ? error.id : undefined,
+        status: error instanceof Fault ? error.status : undefined,
+      });
+      throw error;
     } finally {
       timing(phase, performance.now() - start);
     }
   };
   const env = { ...process.env };
+  delete env.PGUIDE_EVIDENCE_CONTEXT;
+  env.PGUIDE_EVIDENCE_DISABLED = "1";
   // A caller's Git index/worktree/config overrides must not escape the owned fixture.
   for (const key of Object.keys(env)) if (/^GIT_/i.test(key)) delete env[key];
   env.GIT_TERMINAL_PROMPT = "0";
@@ -229,5 +241,5 @@ export function executionContext(subject, directory, signal, deadline) {
         "json",
       ]),
     );
-  return { execute, cli, env, measure, timing, remainingMs: () => deadline - Date.now() };
+  return { execute, cli, env, measure, timing, evidence, remainingMs: () => deadline - Date.now() };
 }

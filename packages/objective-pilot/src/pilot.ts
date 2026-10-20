@@ -366,7 +366,9 @@ export function observe(
           };
         };
       }
-      return prepare(input.spec, input.subject)();
+      const result = await prepare(input.spec, input.subject)();
+      runtime.onObservation?.(result);
+      return result;
     })();
     const settled = pending.then(
       (value) => resume(Effect.succeed(value)),

@@ -76,6 +76,7 @@ export interface PguideConfig {
   color?: "auto" | "always" | "never";
   logLevel?: "error" | "warn" | "info" | "debug";
   stateDirectory?: string;
+  reports?: { enabled?: boolean; directory?: string };
   retentionDays?: number;
   agentExecutionLimits?: { timeoutMs?: number };
   regulationPermissions?: RegulationPermissions;
@@ -446,6 +447,7 @@ export function parseConfig(source: string): PguideConfig {
       "color",
       "logLevel",
       "stateDirectory",
+      "reports",
       "retentionDays",
       "agentExecutionLimits",
       "regulationPermissions",
@@ -456,6 +458,14 @@ export function parseConfig(source: string): PguideConfig {
     "Configuration",
   );
   if (raw.schemaVersion !== 2) throw new CliError("Configuration schemaVersion must be 2.");
+  if (raw.reports !== undefined) {
+    if (!record(raw.reports)) throw new CliError("reports must be an object.");
+    exactKeys(raw.reports, ["enabled", "directory"], "reports");
+    if (raw.reports.enabled !== undefined && typeof raw.reports.enabled !== "boolean")
+      throw new CliError("reports.enabled must be a boolean.");
+    if (raw.reports.directory !== undefined && !nonempty(raw.reports.directory))
+      throw new CliError("reports.directory must be a nonempty string.");
+  }
   for (const field of ["defaultAgent", "defaultLanguage", "stateDirectory"] as const) {
     if (raw[field] !== undefined && !nonempty(raw[field])) {
       throw new CliError(`${field} must be a nonempty string.`);
@@ -588,7 +598,24 @@ export function stateRoot(config?: PguideConfig): string {
   if (platform() === "win32") {
     return join(process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local"), "pguide");
   }
+
   return join(process.env.XDG_STATE_HOME ?? join(homedir(), ".local", "state"), "pguide");
+}
+
+export function reportOptions(
+  argv: readonly string[],
+  config: PguideConfig,
+  cwd: string,
+): { enabled: boolean; directory: string } {
+  return {
+    enabled: !argv.includes("--no-reports") && config.reports?.enabled !== false,
+    directory: resolve(
+      cwd,
+      (option(argv, "--report-dir") as string | undefined) ??
+        config.reports?.directory ??
+        join(stateRoot(config), "reports"),
+    ),
+  };
 }
 
 async function existingProjectConfig(cwd: string): Promise<string | undefined> {
@@ -620,6 +647,7 @@ function mergeConfig(
   sources: Record<string, string>,
 ): PguideConfig {
   const next = { ...target, ...incoming };
+  if (incoming.reports !== undefined) next.reports = { ...target.reports, ...incoming.reports };
   if (incoming.agentExecutionLimits !== undefined)
     next.agentExecutionLimits = {
       ...target.agentExecutionLimits,

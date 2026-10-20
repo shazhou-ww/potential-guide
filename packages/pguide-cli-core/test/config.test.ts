@@ -13,6 +13,7 @@ import {
   pruneExpiredRegulations,
   readJsonSubject,
   redactSensitive,
+  reportOptions,
   resolveObjective,
   validateAgentProfile,
 } from "@potential-guide/cli-core";
@@ -21,6 +22,38 @@ import { pipeRedactedSecrets } from "../src/streaming-secret-redactor.js";
 const scratch = resolve(import.meta.dirname, "..", "..", "..", ".cache");
 await mkdir(scratch, { recursive: true });
 const tmpdir = () => scratch;
+
+test("reports validate, merge per field and resolve CLI, config and state-directory precedence", async (t) => {
+  for (const reports of [false, { enabled: 1 }, { directory: "" }, { unknown: true }])
+    assert.throws(() => parseConfig(JSON.stringify({ schemaVersion: 2, reports })), /reports/);
+  const cwd = await mkdtemp(join(scratch, "pguide-reports-config-"));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  await mkdir(join(cwd, ".pguide"));
+  await writeFile(
+    join(cwd, ".pguide", "config.yaml"),
+    JSON.stringify({
+      schemaVersion: 2,
+      stateDirectory: join(cwd, "state"),
+      reports: { directory: "project-reports", enabled: false },
+    }),
+  );
+  const explicit = join(cwd, "explicit.json");
+  await writeFile(explicit, JSON.stringify({ schemaVersion: 2, reports: { enabled: true } }));
+  const loaded = await loadConfig(cwd, explicit);
+  assert.deepEqual(loaded.value.reports, { directory: "project-reports", enabled: true });
+  assert.deepEqual(reportOptions([], loaded.value, cwd), {
+    enabled: true,
+    directory: join(cwd, "project-reports"),
+  });
+  assert.deepEqual(reportOptions(["--report-dir", "override", "--no-reports"], loaded.value, cwd), {
+    enabled: false,
+    directory: join(cwd, "override"),
+  });
+  assert.equal(
+    reportOptions([], { schemaVersion: 2, stateDirectory: join(cwd, "state") }, cwd).directory,
+    join(cwd, "state", "reports"),
+  );
+});
 
 test("interactive subject input fails explicitly instead of waiting for stdin", async () => {
   const descriptor = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");

@@ -11,17 +11,23 @@ export function failure(error) {
         : `health-check-fault: ${error.code ?? error.name}: ${error.message}`,
   };
 }
-export async function invoke(stage, value) {
+export async function invoke(stage, value, evidence) {
   try {
     if (![...stages, "sample"].includes(stage)) throw new Fault("invalid-stage.", 400);
     const subject = validateSubject(value);
     if (subject.target.type === "docker") return await remote(stage, subject);
     if (process.platform !== "linux")
       throw new Fault("unsupported-platform: local execution requires Linux (Debian/Ubuntu).", 501);
-    const context = { deadline: Date.now() + 24000 };
+    const context = { deadline: Date.now() + 24000, evidence };
+    evidence?.fact("stage.started", { stage });
     if (stage === "sample")
       return { status: 200, payload: await localSample(subject, context), message: "" };
-    return await { identity, system, toolchains, order, sustainability }[stage](subject, context);
+    const result = await { identity, system, toolchains, order, sustainability }[stage](
+      subject,
+      context,
+    );
+    evidence?.fact("assertion.result", { stage, result });
+    return result;
   } catch (error) {
     return failure(error);
   }

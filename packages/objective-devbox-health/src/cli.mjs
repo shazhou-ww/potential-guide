@@ -1,4 +1,5 @@
 import { readFile, stat } from "node:fs/promises";
+import { reportArguments, withCheckEvidence } from "../runtime/evidence.mjs";
 import { Fault } from "./contract.mjs";
 import { failure, invoke } from "./runner.mjs";
 export async function stdin() {
@@ -25,10 +26,19 @@ export async function stdin() {
   }
 }
 export async function main(stage) {
+  const { args, options } = reportArguments(process.argv.slice(2));
+  if (stage === undefined) stage = args.shift();
+  const output = await withCheckEvidence(
+    `health.${stage}`,
+    (evidence) => runHealth(stage, args, evidence),
+    options,
+  );
+  process.stdout.write(`${JSON.stringify(output)}\n`);
+  return output;
+}
+async function runHealth(stage, args, evidence) {
   let output;
   try {
-    const args = process.argv.slice(2);
-    if (stage === undefined) stage = args.shift();
     let data;
     if (args.length === 0) data = await stdin();
     else if (args.length === 2 && args[0] === "--subject-file") {
@@ -44,10 +54,10 @@ export async function main(stage) {
       if (!(error instanceof SyntaxError)) throw error;
       throw new Fault("invalid-subject: malformed JSON.", 400);
     }
-    output = await invoke(stage, subject);
+    evidence?.stream.protect(subject);
+    output = await invoke(stage, subject, evidence);
   } catch (error) {
     output = failure(error);
   }
-  process.stdout.write(`${JSON.stringify(output)}\n`);
   return output;
 }

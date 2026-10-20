@@ -101,8 +101,64 @@ reported as `pilot-error` with exit code 2.
 
 ## Checks and localized guidance
 
+### Local check and probe evidence
+
+Evidence is enabled by default, independently of the existing `--report <path>`
+JSON export. Each `probe` invocation creates a UUID directory under
+`stateRoot/reports`. The default state root is `%LOCALAPPDATA%\pguide` on Windows
+and `$XDG_STATE_HOME/pguide` (or `~/.local/state/pguide`) elsewhere.
+`stateDirectory` and `PGUIDE_STATE_DIRECTORY` retain their existing semantics.
+
+```yaml
+schemaVersion: 2
+reports:
+  enabled: true
+  directory: ./local-reports
+```
+
+For `probe`, directory precedence is `--report-dir`, `reports.directory`, then
+`stateRoot/reports`; relative overrides resolve against `--cwd`. Configuration
+layers merge `reports` per field. `--no-reports` or `reports.enabled: false`
+disables evidence without disabling `--report`. Regulation and continuation
+also honor the effective `reports` configuration. Evidence has no automatic
+retention cleanup and is never uploaded.
+
+Each run's `events.jsonl` records runtime metadata, check identities/attempts,
+observations and termination. Each check attempt has its own
+`checks/<checkRunId>/result.json`, containing the original envelope subject to
+redaction/bounds. Cooperating checks write business facts to that directory's
+separate `events.jsonl`, and optional proof files under `artifacts/`.
+Every JSONL event has `schemaVersion: 1`, `time`, file-local increasing `seq`,
+`event`, `data` and `runId`; check business streams also have `checkRunId` and
+`attempt`. Root check events carry those check associations in `data`.
+
+A finished invocation is **not** a business pass: inspect the result envelope's
+status and `payload.ok`. Faults have `payload:null`; business failures retain
+status 200 and `ok:false`. Cancellation records an interruption when the parent
+can still write. A killed process or truncated stream may have no terminal
+event; absence of a terminal event must never be interpreted as success.
+Cleanup completes before the parent records run completion.
+
+Subjects, environment snapshots, command arguments, stderr, and Agent
+conversations are not automatically persisted. Sensitive field names are
+redacted; credential values under sensitive subject keys are also removed from
+later text evidence. This is not a general DLP filter: check authors must emit
+only safe business facts and explicitly safe artifacts. JSONL files and result
+files are bounded to approximately 1 MiB; long values/deep structures use
+`[TRUNCATED]`, oversized results carry `truncated:true`, and full streams end
+with `evidence.truncated` plus a stderr warning. Evidence write failures are
+explicit errors, never silently successful persistence.
+
+The bundled monorepo, machine-health, setup and self-check executables, and
+newly scaffolded checks, support standalone evidence through `--report-dir`
+and `--no-reports`. Standalone checks use the default state root, not pguide's
+configuration loader. Source and bundled transport runtimes share the same
+generated evidence implementation. Nested setup fixtures suppress their own
+ephemeral evidence; their owning check retains safe phase/assertion facts.
+
 Scaffolding generates `pilot.yaml`, localized `references/**/<language>.md`,
-and Node checks at `checks/<check-id>/run.js`. Checks receive the **subject
+Node checks at `checks/<check-id>/run.js`, and a self-contained
+`runtime/evidence.mjs`. Commit all these generated files. Checks receive the **subject
 itself** as JSON on stdin, not a wrapper. Stdout is one JSON envelope:
 
 ```json

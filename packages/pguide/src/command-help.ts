@@ -35,6 +35,8 @@ const help: Record<Command, CommandHelp> = {
           "  --revision <ref|commit> Pin source version; local paths require a full commit hash",
           "  --language <tag>        Select localized references (default: Pilot language)",
           "  --report <path>         Also save the complete JSON observation",
+          "  --report-dir <path>     Override the default local JSONL evidence directory",
+          "  --no-reports            Disable local evidence (does not disable --report)",
         ],
       },
       {

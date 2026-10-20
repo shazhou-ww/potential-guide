@@ -42,8 +42,8 @@ export function run(
     if (input !== undefined) child.stdin.end(input);
   });
 }
-export async function fixture() {
-  const directory = await mkdtemp(join(scratch, "pguide-test-"));
+export async function fixture(baseDirectory = scratch) {
+  const directory = await mkdtemp(join(baseDirectory, "pguide-test-"));
   const repository = join(directory, "repository");
   await mkdir(repository);
   await git(repository, "init", "-q");

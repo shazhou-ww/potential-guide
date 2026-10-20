@@ -1,4 +1,4 @@
-import { chmod, mkdir, readdir, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import {
   atomicWrite,
@@ -8,6 +8,7 @@ import {
   option,
   readJsonSubject,
   rejectUnknownOptions,
+  reportOptions,
   resolveObjective,
   writeResult,
 } from "@potential-guide/cli-core";
@@ -47,6 +48,8 @@ export async function runProbe(
     "--language": "value",
     "--revision": "value",
     "--report": "value",
+    "--report-dir": "value",
+    "--no-reports": "flag",
   });
   const language = option(argv, "--language") as string | undefined;
   const loaded = await loadConfig(globals.cwd, globals.config);
@@ -71,7 +74,10 @@ export async function runProbe(
             controller.signal,
           ).await();
         },
-        { probeTimeoutMs: loaded.value.regulationStrategy?.probe?.timeoutMs },
+        {
+          probeTimeoutMs: loaded.value.regulationStrategy?.probe?.timeoutMs,
+          reports: reportOptions(argv, loaded.value, globals.cwd),
+        },
       );
     } finally {
       process.removeListener("SIGINT", cancel);
@@ -168,11 +174,17 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
     }
   }
   if (check !== undefined) {
+    const evidenceSource = await readFile(
+      new URL("./evidence.js", import.meta.resolve("@potential-guide/objective-pilot")),
+      "utf8",
+    );
+    await mkdir(join(root, "runtime"), { recursive: true });
+    await writeFile(join(root, "runtime", "evidence.mjs"), evidenceSource);
     const executable = join(root, "checks", check, "run.js");
     await mkdir(dirname(executable), { recursive: true });
     await writeFile(
       executable,
-      '#!/usr/bin/env node\nlet source="";process.stdin.setEncoding("utf8");process.stdin.on("data",c=>source+=c);process.stdin.on("end",()=>{JSON.parse(source);process.stdout.write(JSON.stringify({status:200,payload:{ok:true,problems:[]},message:""}));});\n',
+      `#!/usr/bin/env node\nvoid (async () => {\nconst { withCheckEvidence, reportArguments } = await import("../../runtime/evidence.mjs");\nconst { options } = reportArguments(process.argv.slice(2));\nconst value = await withCheckEvidence(${JSON.stringify(check)}, async evidence => {\n  let source = "";\n  for await (const chunk of process.stdin) source += chunk;\n  JSON.parse(source);\n  evidence?.fact("assertion.passed", { assertion: "generated-placeholder" });\n  return {status:200,payload:{ok:true,problems:[]},message:""};\n}, options);\nprocess.stdout.write(JSON.stringify(value));\n})();\n`,
     );
     if (process.platform !== "win32") await chmod(executable, 0o755);
   }

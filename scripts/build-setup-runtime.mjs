@@ -2,6 +2,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { buildEvidenceRuntime } from "./build-evidence-runtime.mjs";
+
+await buildEvidenceRuntime("objective-pguide-setup");
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const destination = join(root, "packages", "objective-pguide-setup", "runtime", "setup-check.mjs");

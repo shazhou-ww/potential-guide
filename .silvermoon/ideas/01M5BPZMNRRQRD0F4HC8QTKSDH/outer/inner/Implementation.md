@@ -10,6 +10,8 @@
 
 runtime 与 check 分别单写根流和业务流，通过环境传递明确上下文；保留运行元数据、probe observation、原始 check envelope 与相对路径 artifacts。接入相关 monorepo、machine health、setup/self-check 及生成、打包入口的实际检查和断言事实，明确错误、截断与清理行为。
 
+共享实现位于 `packages/objective-pilot/src/evidence.ts`。进程、HTTP 与内存 probe 复用运行身份与尝试计数；CLI 组合层在来源、检查及临时目录清理完成后记录运行终止。独立入口与 scaffold 使用同源生成的自包含 runtime，setup 内部临时 fixture 不另存可能随清理消失的证据。
+
 ### I-S03: 完善兼容测试与文档
 
 补充路径优先级、隔离、重试、业务失败、异常、中断、敏感信息及 artifact 越界测试，更新直接相关使用文档并运行针对性测试与 `pnpm check`。
@@ -20,6 +22,8 @@ runtime 与 check 分别单写根流和业务流，通过环境传递明确上�
 
 测试证明每次运行独立、每次调用或重试具有身份和 attempt，JSONL 包含 schemaVersion、时间、文件内递增 seq、event、data 及关联 ID；检查事实、断言与 artifact 引用可与原始结果关联。
 
+复核入口与测试对应关系见 [Evidence.md](./Evidence.md)。原始 envelope 留存遵守相同脱敏与大小边界，根流将其引用标记为 `redacted-bounded`；它不是无边界原始日志。
+
 ### I-AC02: 协议与安全边界保持
 
 测试证明 stdout envelope 和旧导出兼容，业务不通过与执行失败区分，中断不推断成功，写入失败与截断显式呈现，artifact 不越出 check 目录且不自动保存完整敏感输入。
@@ -27,3 +31,5 @@ runtime 与 check 分别单写根流和业务流，通过环境传递明确上�
 ### I-AC03: 相关入口与质量检查通过
 
 针对性测试覆盖内置、生成和打包表面，`pnpm check` 通过；直接相关文档说明默认路径、覆盖与禁用方式及证据语义。
+
+2026-10-20 在 Windows、Node.js v24.12.0、pnpm 11.22.0 下验证通过。实际外部运行与同步版本的现实世界复核仍由 Deployment 契约负责，本次不发布 npm。

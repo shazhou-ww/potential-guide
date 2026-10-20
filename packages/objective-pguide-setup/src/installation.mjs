@@ -17,6 +17,11 @@ export async function installation(subject, context) {
   ]);
   if (result.code !== 0) throw new Problem("installation-unusable");
   const value = jsonOutput(result);
+  context.evidence?.fact("version.observed", {
+    actual: value.version,
+    expected: subject.desiredVersion ?? null,
+    code: result.code,
+  });
   if (value.schemaVersion !== 1 || value.name !== "pguide" || !nonempty(value.version))
     throw new Fault("protocol: unsupported pguide version response.");
   if (subject.desiredVersion !== undefined && value.version !== subject.desiredVersion)

@@ -2,6 +2,9 @@ import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { buildEvidenceRuntime } from "./build-evidence-runtime.mjs";
+
+await buildEvidenceRuntime("objective-pguide-self-check");
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const destination = join(root, "packages", "objective-pguide-self-check", "runtime");
@@ -75,6 +78,7 @@ await emit(
 for (const name of await readdir(join(root, "packages", "objective-pguide-setup", "src"))) {
   if (name.endsWith(".mjs")) {
     let text = await source(`packages/objective-pguide-setup/src/${name}`);
+    if (name === "cli.mjs") text = text.replace("../runtime/evidence.mjs", "../evidence.mjs");
     if (name === "runner.mjs") {
       const ast = ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
       let removed = 0;

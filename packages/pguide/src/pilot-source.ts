@@ -26,6 +26,7 @@ import {
   type PilotRuntime,
   type PilotSpec,
   type ResourceResolver,
+  RunEvidence,
 } from "@potential-guide/objective-pilot";
 import { RegulationError } from "@potential-guide/objective-regulator";
 
@@ -102,6 +103,7 @@ async function bindPilot<T>(
   revision: string | undefined,
   use: (spec: PilotSpec, runtime: PilotRuntime) => Promise<T>,
   options: PilotSourceOptions,
+  evidence: RunEvidence | undefined,
 ): Promise<T> {
   const preparationTimeoutMs = options.preparationTimeoutMs ?? 60_000;
   if (
@@ -383,6 +385,7 @@ async function bindPilot<T>(
                 const activeProbes = new Map<Promise<Envelope<CheckResult>>, AbortSignal>();
                 const probeLifecycle = new AbortController();
                 const runtime: PilotRuntime = {
+                  onObservation: (value) => evidence?.stream.emit("probe.observation", value),
                   resolveCheck(ref) {
                     const executable = executables.get(
                       JSON.stringify([ref.objectiveId, ref.levelId, ref.checkId]),
@@ -397,6 +400,8 @@ async function bindPilot<T>(
                         ? {}
                         : { timeoutMs: options.probeTimeoutMs }),
                       log: (message) => process.stderr.write(message),
+                      evidence: evidence ?? false,
+                      identity: ref,
                     });
                     return (subject, signal) => {
                       const lifetime = AbortSignal.any([signal, probeLifecycle.signal]);
@@ -465,15 +470,23 @@ export async function withPilot<T>(
   use: (spec: PilotSpec, runtime: PilotRuntime) => Promise<T>,
   options: PilotSourceOptions = {},
 ): Promise<T> {
+  const evidence =
+    options.reports?.enabled === false || process.env.PGUIDE_EVIDENCE_DISABLED === "1"
+      ? undefined
+      : new RunEvidence(options.reports);
   try {
-    return await bindPilot(location, cwd, revision, use, options);
+    const result = await bindPilot(location, cwd, revision, use, options, evidence);
+    evidence?.stream.emit("run.finished", { outcome: "completed" });
+    return result;
   } catch (cause) {
+    evidence?.stream.emit("run.failed", { outcome: "interrupted-or-error" });
     if (cause instanceof CliError || cause instanceof RegulationError) throw cause;
     throw new PilotSourceError(cause instanceof Error ? cause.message : String(cause), cause);
   }
 }
 
 export interface PilotSourceOptions {
+  readonly reports?: { readonly enabled?: boolean; readonly directory?: string } | undefined;
   readonly versions?: Readonly<Record<string, string>>;
   readonly cacheDirectory?: string;
   readonly probeTimeoutMs?: number | undefined;

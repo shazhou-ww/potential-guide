@@ -1,9 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { reportArguments, withCheckEvidence } from "./runtime/evidence.mjs";
 import checker from "./runtime/pilot-checker.cjs";
 
-export async function main(phase, subject) {
+export async function main(phase, subject, evidence) {
   if (!["structure", "deliveries"].includes(phase)) {
     throw new Error("Expected structure or deliveries.");
   }
@@ -33,6 +34,8 @@ export async function main(phase, subject) {
     phase === "structure" ? 1 : 2,
   );
   const ok = report.state === "pass";
+  for (const finding of report.findings) evidence?.fact("assertion.result", finding);
+  evidence?.fact("inspection.finished", { state: report.state, layer2: report.layer2 });
   return {
     status: 200,
     payload: ok
@@ -51,6 +54,15 @@ export async function main(phase, subject) {
 }
 
 export async function run(phase, subjectFile) {
+  const { options } = reportArguments(process.argv.slice(2));
+  const result = await withCheckEvidence(
+    `monorepo.${phase}`,
+    (evidence) => runMonorepo(phase, subjectFile, evidence),
+    options,
+  );
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+}
+async function runMonorepo(phase, subjectFile, evidence) {
   try {
     let input = "";
     if (subjectFile) input = await readFile(subjectFile, "utf8");
@@ -60,21 +72,26 @@ export async function run(phase, subjectFile) {
         if (Buffer.byteLength(input) > 65536) throw new Error("Subject exceeds 64 KiB.");
       }
     }
-    const result = await main(phase, JSON.parse(input));
-    process.stdout.write(`${JSON.stringify(result)}\n`);
+    const subject = JSON.parse(input);
+    evidence?.stream.protect(subject);
+    return await main(phase, subject, evidence);
   } catch {
-    process.stdout.write(
-      `${JSON.stringify({ status: 422, payload: null, message: "Monorepo observer invocation failed; verify subject paths, access and build. Source values are not echoed." })}\n`,
-    );
+    return {
+      status: 422,
+      payload: null,
+      message:
+        "Monorepo observer invocation failed; verify subject paths, access and build. Source values are not echoed.",
+    };
   }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const [phase, option, subjectFile] = process.argv.slice(2);
+  const { args } = reportArguments(process.argv.slice(2));
+  const [phase, option, subjectFile] = args;
   if (
     !["structure", "deliveries"].includes(phase) ||
     option !== "--subject-file" ||
     !subjectFile ||
-    process.argv.length !== 5
+    args.length !== 3
   ) {
     process.stderr.write("Usage: node check.mjs structure|deliveries --subject-file <path>\n");
     process.exitCode = 2;

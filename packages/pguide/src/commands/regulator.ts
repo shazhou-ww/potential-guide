@@ -20,6 +20,7 @@ import {
   readJsonSubject,
   redactAgentValue,
   rejectUnknownOptions,
+  reportOptions,
   resolveObjective,
   stateRoot,
   validateAgentProfile,
@@ -463,6 +464,7 @@ async function run(
       try {
         outcome = await withPilot(location, globals.cwd, regulation.pilotCommit, execute, {
           probeTimeoutMs: regulation.regulationStrategy?.probe?.timeoutMs,
+          reports: reportOptions([], config, globals.cwd),
         });
       } catch (cause) {
         if (controller.signal.aborted) throw cause;
@@ -587,7 +589,10 @@ export async function runRegulate(
         runtime,
       });
     },
-    { probeTimeoutMs: loaded.value.regulationStrategy?.probe?.timeoutMs },
+    {
+      probeTimeoutMs: loaded.value.regulationStrategy?.probe?.timeoutMs,
+      reports: reportOptions([], loaded.value, globals.cwd),
+    },
   );
 }
 

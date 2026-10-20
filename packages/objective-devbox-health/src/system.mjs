@@ -68,6 +68,13 @@ export async function system(subject, context) {
   if (problems.length) return envelope(problems);
   for (const path of new Set(directories.map((key) => subject[key]))) {
     const fs = await statfs(path, { bigint: true });
+    context.evidence?.fact("capacity.observed", {
+      path,
+      freeBytes: Number(fs.bavail * fs.bsize),
+      freeInodes: Number(fs.ffree),
+      minFreeBytes: subject.policy.minFreeBytes,
+      minFreeInodes: subject.policy.minFreeInodes,
+    });
     problems.push(
       ...capacityProblems(Number(fs.bavail * fs.bsize), Number(fs.ffree), subject.policy, path),
     );

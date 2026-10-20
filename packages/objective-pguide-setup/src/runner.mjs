@@ -73,6 +73,7 @@ export async function check(stage, value, options = {}) {
       directory,
       controller.signal,
       Date.now() + subject.timeoutMs,
+      options.evidence,
     );
     if (stage === "installation")
       await context.measure("installation", () => installation(subject, context));
