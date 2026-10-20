@@ -20,6 +20,11 @@ the embedded representation. Package exports include both JSON files and
 `@potential-guide/pilot-protocol/schemas` validators. Runtime validation never
 downloads an instance-supplied URI. Unknown URIs and unknown document fields fail.
 
+CLI discovery (`objectives list|show`) and alias (`config list-objectives`)
+responses retain `schemaVersion: 1`. Their `objectives` arrays and discovery
+metadata are not declaration documents and must not advertise the declaration
+`$schema`; that URI is reserved for conforming file documents with an `objectives` map.
+
 `.github/workflows/schemas.yml` stages a Pages artifact containing `schemas/`,
 preserving the canonical URL path under the project site. Before publication,
 the build compares every existing published definition byte-for-byte and refuses

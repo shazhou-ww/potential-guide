@@ -3,6 +3,10 @@ import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
+import {
+  OBJECTIVES_SCHEMA_URI,
+  validateObjectivesDocument,
+} from "../../pilot-protocol/src/schemas.js";
 
 const script = resolve(import.meta.dirname, "..", "dist", "bin.js");
 const scratch = resolve(import.meta.dirname, "..", "..", "..", ".cache");
@@ -140,7 +144,7 @@ test("Objective list separates long locations and configuration sources without 
     const json = await run(["list-objectives", "--cwd", cwd, "--format", "json"], env);
     assert.equal(json.code, 0, json.stdout);
     assert.deepEqual(JSON.parse(json.stdout), {
-      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
+      schemaVersion: 1,
       objectives: Object.entries(objectives).map(([name, location]) => ({
         name,
         location,
@@ -148,6 +152,10 @@ test("Objective list separates long locations and configuration sources without 
         source: configPath,
       })),
     });
+    const { schemaVersion, ...aliases } = JSON.parse(json.stdout);
+    assert.equal(schemaVersion, 1);
+    assert.equal(Object.hasOwn(aliases, "$schema"), false);
+    assert.equal(validateObjectivesDocument({ $schema: OBJECTIVES_SCHEMA_URI, ...aliases }), false);
     await writeFile(configPath, JSON.stringify({ schemaVersion: 2 }));
     const empty = await run(["list-objectives", "--cwd", cwd], env);
     assert.equal(empty.code, 0, empty.stdout);
@@ -155,7 +163,7 @@ test("Objective list separates long locations and configuration sources without 
     const emptyJson = await run(["list-objectives", "--cwd", cwd, "--format", "json"], env);
     assert.equal(emptyJson.code, 0, emptyJson.stdout);
     assert.deepEqual(JSON.parse(emptyJson.stdout), {
-      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
+      schemaVersion: 1,
       objectives: [],
     });
   } finally {

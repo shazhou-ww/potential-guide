@@ -1,5 +1,19 @@
 # 实施验证与边界
 
+## 评审修正：发现响应不是声明文档
+
+评审发现 `objectives list|show` 以及 `config list-objectives` 的实际 JSON 是数组式
+CLI 响应（发现响应还含 legacyAliases），不能声明 `objectives/v1.json` 文件契约。
+修正仅恢复这些响应原有的 `schemaVersion: 1`；真正的声明文件仍使用 `$schema`
+和 objectives map。回归调用真实 CLI，检查 list、show、非空/空 alias 响应，
+并用声明 validator 证明数组式 payload 不应标记为声明文档，同时验证文件文档符合契约。
+
+`pnpm exec tsx --test --test-name-pattern="list and show identify|Objective list separates"
+packages\pguide\test\objectives.test.ts packages\pguide-config\test\config-command.test.ts`
+为 2/2；`pnpm exec tsc -p tsconfig.test.json --pretty false` 和再次执行的
+`pnpm check` 均退出 0，包含 16 个包和 9 个独立消费场景。
+未修改 Ideal、生命周期事件或父协调者并行维护的 deployment harness。
+
 ## 验证环境
 
 在隔离的 `objective-worktree`、`schema/objective-normalization` 分支完成；
