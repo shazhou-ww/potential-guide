@@ -73,8 +73,11 @@ test("publication workflow covers the inventory and its embedded scripts compile
     "utf8",
   );
   assert.ok(workflow.includes("./scripts/release-packages.mjs"));
+  const dispatchPackages =
+    workflow.match(/ {6}package:\r?\n([\s\S]*?)^ {6}mode:/m)?.[1].split(/\r?\n/) ?? [];
   for (const { id } of releasePackages) {
     assert.ok(workflow.includes(`"${id}-v*"`), `Missing release trigger: ${id}`);
+    assert.ok(dispatchPackages.includes(`          - ${id}`), `Missing dispatch choice: ${id}`);
   }
   assert.ok(!workflow.includes('"objective-guide-v*"'));
   const scripts = [

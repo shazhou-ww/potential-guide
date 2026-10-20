@@ -4,10 +4,14 @@ Shared configuration, command protocol, atomic persistence, and ACP/AHP clients 
 by the `pguide` command packages. This package is an implementation component;
 most users should install `pguide` and the desired command packages instead.
 Agent profiles are loaded from independent user/project `agents.yaml` resources,
-not `PguideConfig`. `loadConfig().agents` exposes the effective whole-profile map,
-source scopes and paths; explicit main config overlays never create a third
-Agent scope. `parseAgents` validates offline, normalizes ACP and rejects unknown
-schema URIs. The public schema is exported at
+not `PguideConfig`. `loadAgents(cwd)` explicitly loads the effective whole-profile
+map, source scopes and paths only for profile-consuming commands. `loadConfig`
+does not read or validate Agent resources, so malformed resources cannot break
+unrelated config or Objective operations. Explicit main config overlays never
+create a third Agent scope. `parseAgents` validates canonical discriminated
+profiles offline and rejects unknown schema URIs and untyped legacy profiles;
+only explicit migration normalizes embedded legacy ACP definitions.
+The Draft2020-12 public schema is exported at
 `@potential-guide/cli-core/schemas/agents/v1.json`.
 Agent profiles inherit credentials only by environment-variable name; common
 secret-bearing transport arguments are rejected before profiles can be shown
@@ -27,8 +31,10 @@ production observation identity/version comes from the Git source commit.
 
 `AgentProfile` is the top-level `type: "acp" | "ahp"` discriminated union
 of `AcpAgentProfile` and `AhpAgentProfile`. `validateAgentProfile` returns the
-normalized shape; `parseConfig` normalizes every profile, including valid
-legacy ACP `connection.type` records. New profiles must not repeat the
+normalized shape for internal/persisted callers, including valid legacy ACP
+`connection.type` recovery records and explicit migration inputs.
+`parseConfig` rejects embedded profiles; `parseAgents` requires canonical ones.
+New profiles must not repeat the
 discriminator in `connection`. `LegacyAcpAgentProfile` remains accepted by
 the ACP client for source compatibility; it is not a third normalized variant.
 `redactAgentValue` redacts configured environment secrets and sensitive keys.

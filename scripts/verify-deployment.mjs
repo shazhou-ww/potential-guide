@@ -329,7 +329,8 @@ async function writeConfig(path, state) {
         agentExecutionLimits: { timeoutMs: 30_000 },
         agents: {
           fixture: {
-            connection: { type: "acp", protocolVersion: "1" },
+            type: "acp",
+            connection: { protocolVersion: "1" },
             transport: {
               type: "stdio",
               command: process.execPath,
@@ -601,7 +602,8 @@ for await (const line of createInterface({input:process.stdin})) {
       schemaVersion: 2,
       agents: {
         planner: {
-          connection: { type: "acp", protocolVersion: "1" },
+          type: "acp",
+          connection: { protocolVersion: "1" },
           transport: { type: "stdio", command: process.execPath, args: [planner] },
         },
       },
@@ -727,7 +729,8 @@ for await (const line of createInterface({input:process.stdin})) {
       },
       agents: {
         setup: {
-          connection: { type: "acp", protocolVersion: "1" },
+          type: "acp",
+          connection: { protocolVersion: "1" },
           transport: { type: "stdio", command: process.execPath, args: [agent] },
         },
       },
@@ -848,7 +851,8 @@ async function verifyRegulationPermissions(baseEnv) {
     },
     agents: {
       "permission-fixture": {
-        connection: { type: "acp", protocolVersion: "1" },
+        type: "acp",
+        connection: { protocolVersion: "1" },
         transport: {
           type: "stdio",
           command: process.execPath,

@@ -8,6 +8,7 @@ import {
   atomicWrite,
   CliError,
   digest,
+  loadAgents,
   loadConfig,
   parseConfig,
   pruneExpiredRegulations,
@@ -420,11 +421,11 @@ test("explicit configuration merges profiles by whole profile and atomic writes"
     const resource = join(root, ".pguide", "agents.yaml");
     await writeFile(
       resource,
-      "$schema: https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json\nagents:\n  fixture:\n    connection: {type: acp, protocolVersion: '1'}\n    transport: {type: stdio, command: fixture}\n",
+      "$schema: https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json\nagents:\n  fixture:\n    type: acp\n    connection: {protocolVersion: '1'}\n    transport: {type: stdio, command: fixture}\n",
     );
     const loaded = await loadConfig(root, path);
     assert.equal(loaded.value.defaultAgent, "fixture");
-    assert.equal(loaded.agents.sources.fixture?.path, resource);
+    assert.equal((await loadAgents(root)).sources.fixture?.path, resource);
     assert.deepEqual(loaded.value.regulationStrategy, {
       quota: { timeoutMs: 20000, maxAgentRuns: 5, maxStallRuns: 2 },
       probe: { timeoutMs: 5000, retry: { maxRetries: 2, delayMs: 10 } },

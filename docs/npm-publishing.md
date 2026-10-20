@@ -44,6 +44,8 @@ this implementation does not migrate them or publish concrete Objectives.
 All extension packages use the `@potential-guide` npm scope. Their executable
 and command names remain independent of the package name; for example,
 `@potential-guide/pguide-config` installs `pguide-config` and advertises `config`.
+`@potential-guide/pguide-agents` installs `pguide-agents` and advertises `agents`;
+use its package-specific tag or select `pguide-agents` for a manual dry-run.
 Only the composition package is named `pguide` because it is the package users
 invoke through `npx pguide`.
 

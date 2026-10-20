@@ -269,6 +269,9 @@ importers:
       '@types/cross-spawn':
         specifier: 'catalog:'
         version: 6.0.6
+      ajv:
+        specifier: 'catalog:'
+        version: 8.20.0
 
   packages/pguide-cli-core:
     dependencies:

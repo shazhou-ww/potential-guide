@@ -13,6 +13,7 @@ import {
   formatCommandHelp,
   type GlobalOptions,
   inspectAhp,
+  loadAgents,
   loadConfig,
   option,
   writeResult,
@@ -343,13 +344,14 @@ async function diagnose(argv: string[], globals: GlobalOptions): Promise<number>
   const agentIndex = argv.indexOf("agent");
   let agent: Record<string, unknown> | undefined;
   if (agentIndex >= 0) {
+    const agents = await loadAgents(globals.cwd);
     const name = argv[agentIndex + 1];
-    const profile = name === undefined ? undefined : config.agents.agents[name];
+    const profile = name === undefined ? undefined : agents.agents[name];
     if (profile === undefined) throw new CliError(`Unknown Agent profile: ${name ?? ""}.`);
     if (profile.type === "ahp") {
       agent = {
         name,
-        source: name === undefined ? undefined : config.agents.sources[name],
+        source: name === undefined ? undefined : agents.sources[name],
         type: profile.type,
         initialize: await inspectAhp(
           profile,
@@ -361,7 +363,7 @@ async function diagnose(argv: string[], globals: GlobalOptions): Promise<number>
       try {
         agent = {
           name,
-          source: name === undefined ? undefined : config.agents.sources[name],
+          source: name === undefined ? undefined : agents.sources[name],
           type: profile.type,
           initialize: await client.initialize(profile.connection.protocolVersion),
         };
@@ -465,7 +467,7 @@ async function main(): Promise<number> {
       await help(globals);
       return 0;
     }
-    if (command === "diagnose") return diagnose(rest.slice(1), globals);
+    if (command === "diagnose") return await diagnose(rest.slice(1), globals);
     if (command === "complete") {
       complete(rest.slice(1), globals);
       return 0;

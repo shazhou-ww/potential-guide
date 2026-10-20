@@ -13,6 +13,7 @@ import {
   executeAhp,
   type GlobalOptions,
   type LegacyAcpAgentProfile,
+  loadAgents,
   loadConfig,
   option,
   type PguideConfig,
@@ -553,7 +554,7 @@ export async function runRegulate(
   const agentName = (option(argv, "--agent") as string | undefined) ?? loaded.value.defaultAgent;
   if (agentName === undefined)
     throw new CliError("--agent is required when defaultAgent is not configured.");
-  const profile = loaded.agents.agents[agentName];
+  const profile = (await loadAgents(globals.cwd)).agents[agentName];
   if (profile === undefined) throw new CliError(`Unknown Agent profile: ${agentName}.`);
   validateAgentProfile(profile);
   const language = option(argv, "--language") as string | undefined;
@@ -631,6 +632,7 @@ export async function runContinue(
   if (id === undefined || !/^[0-9a-f-]{36}$/.test(id))
     throw new CliError("A valid regulation ID is required.");
   const loaded = await loadConfig(globals.cwd, globals.config);
+  await loadAgents(globals.cwd);
   await pruneExpiredRegulations(stateRoot(loaded.value));
   const path = join(stateRoot(loaded.value), "regulations", id, "regulation.json");
   const record: unknown = JSON.parse(await readFile(path, "utf8"));

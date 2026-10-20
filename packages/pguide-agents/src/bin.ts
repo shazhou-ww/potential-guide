@@ -18,7 +18,6 @@ import {
   redactAgentValue,
   resourceText,
   validateAgentName,
-  validateAgentProfile,
   withResourceLocks,
   writeAgents,
   writeResult,
@@ -184,8 +183,13 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
           from === "-" ? await readStdin() : await readFile(resolve(globals.cwd, from), "utf8");
         const document = parseDocument(source, { uniqueKeys: true });
         if (document.errors.length) throw new CliError("Invalid profile YAML.");
-        const profile = validateAgentProfile(document.toJS({ maxAliasCount: 100 }));
-        file.agents = { ...file.agents, [name]: profile };
+        const profiles = parseAgents(
+          stringify({
+            $schema: AGENTS_SCHEMA,
+            agents: { [name]: document.toJS({ maxAliasCount: 100 }) },
+          }),
+        ).agents;
+        file.agents = { ...file.agents, ...profiles };
       }
     }
     await writeAgents(path, file, before);

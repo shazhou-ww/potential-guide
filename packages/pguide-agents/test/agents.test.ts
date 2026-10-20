@@ -14,6 +14,7 @@ import {
   withResourceLocks,
   writeAgents,
 } from "@potential-guide/cli-core";
+import { Ajv2020 } from "ajv/dist/2020.js";
 import { stringify } from "yaml";
 
 const root = resolve(import.meta.dirname, "..", "..", "..");
@@ -68,13 +69,41 @@ function invoke(cwd: string, home: string, args: string[], env: NodeJS.ProcessEn
     child.on("close", (code) => done({ code: code ?? 70, stdout, stderr }));
   });
 }
-test("offline resource validation normalizes ACP, preserves AHP and rejects unknown formats and secrets", () => {
+test("Draft2020-12 public schema and offline parser agree on canonical profile structure", async () => {
+  const schema = JSON.parse(await readFile(join(root, "schemas", "agents", "v1.json"), "utf8"));
+  assert.equal(schema.$schema, "https://json-schema.org/draft/2020-12/schema");
+  assert.ok(schema.$defs);
+  assert.equal(schema.definitions, undefined);
+  const validate = new Ajv2020({ strict: true, allErrors: true }).compile(schema);
+  for (const [profiles, expected] of [
+    [{ local: acp, remote: ahp }, true],
+    [{}, true],
+    [
+      { old: { connection: { type: "acp", protocolVersion: "1" }, transport: acp.transport } },
+      false,
+    ],
+    [{ local: { ...acp, connection: { type: "acp", protocolVersion: "1" } } }, false],
+    [{ local: { ...acp, extra: true } }, false],
+    [{ "bad/name": acp }, false],
+    [
+      { remote: { ...ahp, transport: { type: "websocket", url: "wss://host/?token=secret" } } },
+      false,
+    ],
+  ] as const) {
+    const value = { $schema: AGENTS_SCHEMA, agents: profiles };
+    assert.equal(validate(value), expected, JSON.stringify(validate.errors));
+    if (expected) assert.doesNotThrow(() => parseAgents(stringify(value)));
+    else assert.throws(() => parseAgents(stringify(value)));
+  }
+});
+test("offline resource validation requires canonical profiles and rejects unknown formats and secrets", () => {
   const legacy = { connection: { type: "acp", protocolVersion: "1" }, transport: acp.transport };
-  assert.deepEqual(parseAgents(file({ local: legacy, remote: ahp })).agents, {
+  assert.deepEqual(parseAgents(file({ local: acp, remote: ahp })).agents, {
     local: acp,
     remote: ahp,
   });
   for (const source of [
+    file({ local: legacy }),
     file([]),
     file({ "bad/name": acp }),
     file({ local: { ...acp, extra: true } }),
@@ -102,7 +131,9 @@ test("only user/project resources select whole profiles with provenance, indepen
     const explicit = join(explicitDirectory, "config.yaml");
     await writeFile(explicit, "schemaVersion: 2\ndefaultAgent: shared\n");
     await writeFile(join(explicitDirectory, "agents.yaml"), file({ ignored: acp }));
-    const loaded = await loadConfig(child, explicit);
+    const config = await loadConfig(child, explicit);
+    assert.equal(config.value.defaultAgent, "shared");
+    const loaded = { agents: await loadAgents(child) };
     assert.deepEqual(loaded.agents.agents.shared, acp);
     assert.equal(loaded.agents.agents.shared?.type, "acp");
     assert.equal(loaded.agents.agents.ignored, undefined);
@@ -113,7 +144,7 @@ test("only user/project resources select whole profiles with provenance, indepen
     await writeFile(join(f.cwd, ".pguide", "config.yaml"), "schemaVersion: 2\n");
     await mkdir(join(child, ".pguide"));
     await writeFile(join(child, ".pguide", "agents.yaml"), file({ nested: ahp }));
-    const sameBoundary = await loadConfig(child, explicit);
+    const sameBoundary = { agents: await loadAgents(child) };
     assert.equal(sameBoundary.agents.paths.project, project);
     assert.equal(sameBoundary.agents.agents.nested, undefined);
     await writeFile(project, file({ shared: { type: "acp", transport: acp.transport } }));
@@ -153,7 +184,7 @@ test("explicit migration preserves exact evidence, comments and unknown settings
   const f = await fixture();
   try {
     const source = join(f.cwd, ".pguide", "config.yaml");
-    const original = `# retained evidence\nschemaVersion: 2\ndefaultAgent: local\nunknown-setting: { nested: 42 }\n${stringify({ agents: { local: acp, remote: ahp } })}`;
+    const original = `# retained evidence\nschemaVersion: 2\ndefaultAgent: local\nunknown-setting: { nested: 42 }\n${stringify({ agents: { local: { connection: { type: "acp", protocolVersion: "1" }, transport: acp.transport }, remote: ahp } })}`;
     await writeFile(source, original);
     const migration = await migrateAgents(f.cwd, "project");
     assert.equal(await readFile(migration.backup, "utf8"), original);

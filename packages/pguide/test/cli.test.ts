@@ -39,8 +39,12 @@ function run(
       env: {
         ...env,
         PATH: env.PATH === process.env.PATH ? toolPath : env.PATH,
-        APPDATA: join(scratch, "cli-isolated-user"),
-        XDG_CONFIG_HOME: join(scratch, "cli-isolated-user"),
+        APPDATA:
+          env.APPDATA !== process.env.APPDATA ? env.APPDATA : join(scratch, "cli-isolated-user"),
+        XDG_CONFIG_HOME:
+          env.XDG_CONFIG_HOME !== process.env.XDG_CONFIG_HOME
+            ? env.XDG_CONFIG_HOME
+            : join(scratch, "cli-isolated-user"),
       },
       windowsHide: true,
     });
@@ -571,6 +575,63 @@ test("all official commands dispatch through the top-level CLI", async () => {
   }
 });
 
+test("malformed user/project Agent resources do not break main config or Objective-only commands", async () => {
+  const f = await fixture();
+  const home = join(f.directory, "user");
+  const env = { ...process.env, APPDATA: home, XDG_CONFIG_HOME: home, PATH: toolPath };
+  try {
+    for (const scope of ["user", "project"]) {
+      const directory = scope === "user" ? join(home, "pguide") : join(f.repository, ".pguide");
+      await mkdir(directory, { recursive: true });
+      const resource = join(directory, "agents.yaml");
+      await writeFile(resource, "agents: [");
+      const common = ["--cwd", f.repository, "--format", "json"];
+      for (const args of [
+        ["config", "show"],
+        ["config", "path"],
+        ["config", "set", "defaultLanguage", "en-US", "--scope", "project"],
+        ["config", "get", "defaultLanguage"],
+        ["validate", "pilot", f.manifest],
+        ["diagnose"],
+      ]) {
+        const result = await run(top, [...args, ...common], env);
+        assert.equal(
+          result.code,
+          0,
+          `${scope} ${args.join(" ")}: ${result.stdout} ${result.stderr}`,
+        );
+      }
+      for (const args of [
+        ["agents", "validate"],
+        ["diagnose", "agent", "fixture"],
+      ]) {
+        const result = await run(top, [...args, ...common], env);
+        assert.equal(result.code, 2, `${args.join(" ")}: ${result.stdout} ${result.stderr}`);
+        assert.match(result.stdout, /agents YAML/);
+      }
+      const regulation = await run(
+        bins.regulate,
+        [
+          "--agent",
+          "fixture",
+          "--pilot",
+          f.uri,
+          "--subject-file",
+          f.subject,
+          "--target",
+          "terminal",
+          ...common,
+        ],
+        env,
+      );
+      assert.equal(regulation.code, 2, regulation.stdout);
+      assert.match(regulation.stdout, /agents YAML/);
+      await rm(resource);
+    }
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
 test("bundled Agent migration is reachable when main configuration rejects embedded profiles", async () => {
   const directory = await mkdtemp(join(scratch, "pguide-agents-dispatch-"));
   try {

@@ -10,6 +10,7 @@ on:
       - "objective-portfolio-supervisor-v*"
       - "cli-core-v*"
       - "pguide-config-v*"
+      - "pguide-agents-v*"
       - "pguide-v*"
       - "pilot-protocol-v*"
       - "cli-runtime-v*"
@@ -32,6 +33,7 @@ on:
           - objective-portfolio-supervisor
           - cli-core
           - pguide-config
+          - pguide-agents
           - pguide
           - pilot-protocol
           - cli-runtime

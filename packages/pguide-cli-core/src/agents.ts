@@ -44,6 +44,10 @@ export function parseAgents(source: string): AgentsFile {
   const agents: Record<string, AgentProfile> = {};
   for (const [name, profile] of Object.entries(raw.agents)) {
     validateAgentName(name);
+    if (!profile || typeof profile !== "object" || !Object.hasOwn(profile, "type"))
+      throw new CliError(
+        "Agent resources require canonical type: acp|ahp. Use pguide agents migrate for embedded legacy profiles.",
+      );
     Object.defineProperty(agents, name, {
       value: validateAgentProfile(profile),
       enumerable: true,
@@ -188,8 +192,16 @@ export async function migrateAgents(
     const raw: unknown = document.toJS({ maxAliasCount: 100 });
     if (!raw || typeof raw !== "object" || Array.isArray(raw) || !Object.hasOwn(raw, "agents"))
       throw new CliError("Migration source has no embedded agents.");
+    const legacy = (raw as Record<string, unknown>).agents;
+    if (!legacy || typeof legacy !== "object" || Array.isArray(legacy))
+      throw new CliError("Embedded agents must be a name-to-profile map.");
     const profiles = parseAgents(
-      stringify({ $schema: AGENTS_SCHEMA, agents: (raw as Record<string, unknown>).agents }),
+      stringify({
+        $schema: AGENTS_SCHEMA,
+        agents: Object.fromEntries(
+          Object.entries(legacy).map(([name, profile]) => [name, validateAgentProfile(profile)]),
+        ),
+      }),
     );
     const before = await resourceText(destination);
     const target = before === undefined ? emptyAgents() : parseAgents(before);

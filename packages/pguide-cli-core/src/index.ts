@@ -18,7 +18,6 @@ import { homedir, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parse, stringify } from "yaml";
-import { type LoadedAgents, loadAgents } from "./agents.js";
 
 export * from "./agents.js";
 
@@ -93,7 +92,6 @@ export interface PguideConfig {
 
 export interface LoadedConfig {
   value: PguideConfig;
-  agents: LoadedAgents;
   sources: Record<string, string>;
   paths: { user: string; project?: string; explicit?: string };
 }
@@ -684,7 +682,6 @@ export async function loadConfig(cwd: string, explicit?: string): Promise<Loaded
     value = mergeConfig(value, env as PguideConfig, "environment", sources);
   }
   return {
-    agents: await loadAgents(cwd),
     value: parseConfig(stringify({ ...value, schemaVersion: 2 })),
     sources,
     paths: {

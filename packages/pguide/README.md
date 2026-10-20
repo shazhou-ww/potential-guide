@@ -470,10 +470,11 @@ administrative config and allowed commands remain trusted.
 Each new profile uses a top-level `type: acp | ahp`. `connection` contains
 protocol-specific settings, while `transport.type` independently selects the
 transport. The old ACP shape `connection: { type: acp, protocolVersion: "1" }`
-with a valid stdio transport is still readable, including in schema 2 recovery
-records. It is normalized to the top-level form when loaded, edited or saved.
-Recovery schema 2 is retained. Embedded main-config profiles require explicit
-resource migration even when their ACP profile shape is legal.
+with a valid stdio transport remains readable only in existing schema 2 recovery
+records and by explicit migration of embedded main-config profiles.
+New `agents.yaml` resources and `agents set` inputs reject that old shape;
+`agents migrate` normalizes it into the canonical top-level form.
+Recovery schema 2 is retained without reinterpretation.
 Mixed new/old discriminants, missing protocol selectors, and ACP/AHP field
 combinations are rejected, not silently defaulted. `--agent` and `defaultAgent`
 always select the local profile, not a Host product.

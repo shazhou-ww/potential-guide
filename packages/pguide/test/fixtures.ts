@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { validateAgentProfile } from "@potential-guide/cli-core";
 
 export const root = resolve(import.meta.dirname, "..", "..", "..");
 export const scratch = join(root, ".cache");
@@ -66,7 +67,12 @@ export async function writeConfig(path: string, source: string, cwd = dirname(pa
       join(cwd, ".pguide", "agents.yaml"),
       JSON.stringify({
         $schema: "https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json",
-        agents: value.agents,
+        agents: Object.fromEntries(
+          Object.entries(value.agents).map(([name, profile]) => [
+            name,
+            validateAgentProfile(profile),
+          ]),
+        ),
       }),
     );
     delete value.agents;

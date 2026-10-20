@@ -29,6 +29,11 @@ whole profile. `profile.yaml` contains the profile, not the file wrapper.
 the same offline validator as regulation and supervision. Unknown schema URIs
 are rejected without network access. Values must reference credentials through
 environment names, never embed credentials.
+The public schema uses Draft2020-12. New resource files and `set` inputs require
+canonical top-level `type: acp|ahp`; untyped legacy ACP definitions are rejected.
+Only explicit `migrate` normalizes old embedded profiles into this canonical form.
+Main configuration and Objective-only commands do not validate Agent resources;
+profile-consuming commands explicitly use the shared loader and fail on invalid files.
 
 Old embedded main-config `agents` are rejected. Run
 `pguide agents migrate --scope user` or `--scope project` explicitly. An optional
