@@ -1,0 +1,99 @@
+{
+  "sourceCommit": "3b78e69943fcbe5b44e89fc31cdee9bf77e1c6ee",
+  "verifiedDeploymentRevision": "8f6aa83aa5ddfda64260cd971e72745df0270c1f",
+  "environment": {
+    "platform": "win32",
+    "node": "v24.12.0",
+    "pnpm": "11.22.0"
+  },
+  "buildExitCode": 0,
+  "verificationExitCode": 0,
+  "passedScenarioCount": 10,
+  "npmPublished": false,
+  "observations": [
+    {
+      "scenario": "default-probe",
+      "runId": "37acb826-3c7b-464b-906a-662c5d668fbd",
+      "checkRunId": "38632af4-e6fe-4116-aa0f-3f781b71f628",
+      "exitCode": 0,
+      "stdoutEqualsLegacyExport": true,
+      "events": ["run.started", "check.started", "check.finished", "probe.observation", "run.finished"]
+    },
+    {
+      "scenario": "standalone-installation",
+      "runId": "02654cd3-34c0-4abe-bfe7-1763d2e9a14c",
+      "checkRunId": "f2d707a6-ffe8-44ad-9809-7be9c7d540d4",
+      "status": 200,
+      "ok": true,
+      "observedVersion": "0.4.0-rc.0",
+      "businessEventsInclude": ["version.observed", "assertion.passed", "business.finished"]
+    },
+    {
+      "scenario": "business-failure",
+      "runId": "10f9fd98-9649-4621-bf69-453d19d05d66",
+      "checkRunId": "8246ccb2-d370-4ed2-be06-12b8e65949b2",
+      "exitCode": 0,
+      "envelope": {
+        "status": 200,
+        "payload": {
+          "ok": false,
+          "problems": [{"id": "not-ready", "parameters": {"actual": 2, "expected": 3}}]
+        },
+        "message": ""
+      },
+      "artifact": {"path": "artifacts/proof/summary.txt", "content": "actual=2 expected=3"},
+      "sensitiveSubjectNotPersisted": true
+    },
+    {
+      "scenario": "protocol-failure",
+      "runId": "b54987ba-b79d-4994-9215-91291f0cbb00",
+      "checkRunId": "771e5732-6701-4277-a3c7-97e7018b82d9",
+      "exitCode": 6,
+      "status": 502,
+      "payload": null,
+      "messageIncludes": "process-protocol"
+    },
+    {
+      "scenario": "timeout",
+      "runId": "5f0d1d18-6f6c-44f3-8a63-19884b62527c",
+      "checkRunId": "86ba6f6c-3945-4750-a209-56f075156948",
+      "exitCode": 6,
+      "status": 504,
+      "businessLastEvent": "step.started",
+      "businessFinished": false,
+      "ownedScratchCleaned": true
+    },
+    {
+      "scenario": "hard-interruption",
+      "runId": "4145ec5e-7783-4312-b165-b206bba11a9f",
+      "rootEvents": ["run.started", "check.started"],
+      "businessEvents": ["business.started", "step.started"],
+      "resultAbsent": true,
+      "successfulTerminalAbsent": true
+    },
+    {
+      "scenario": "safety",
+      "runId": "f7714785-4315-453b-b9d1-124bcbed1709",
+      "traversalRejected": true,
+      "symlinkRejected": true,
+      "duplicateArtifactRejected": true,
+      "writeFailureExplicit": true,
+      "businessLastEvent": "evidence.truncated"
+    },
+    {
+      "scenario": "retries",
+      "runId": "5f9c1b91-92a6-4c6a-b281-7626f2d23019",
+      "attempts": [
+        {"attempt": 1, "checkRunId": "4accf50a-17af-4e8f-9960-cbb3c610f6fa"},
+        {"attempt": 2, "checkRunId": "e509f519-ad6d-420e-8a5f-a78eb4596cf2"}
+      ]
+    }
+  ],
+  "pathAndCompatibilityAssertions": {
+    "configuredRunsDistinct": 2,
+    "cliDirectoryOverridesConfig": true,
+    "configDisabledWritesNoEvidence": true,
+    "cliDisabledWritesNoEvidence": true,
+    "legacyExportWorksWhenEvidenceDisabled": true
+  }
+}
