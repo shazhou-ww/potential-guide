@@ -50,6 +50,14 @@
 
 第二项的目标引用改名由第一项拥有，避免两边重复实施；第二项补足输入和投影行为，不重新设计来源身份。Agent 独立化不要求主配置先改为 JSONC。公共 schema 发布策略应保持一致，但不把这表述成 Agent 文件已部署。
 
+### 本轮实施授权与准备决策
+
+用户明确要求 subagents 实施，由主 Agent 负责各阶段门限审批；除无法合理决断的问题外不必暂停询问。此委托允许逐阶段代理审查与准确 revision 的审批，不代表未经检查的批量验收，也不授权 npm 发布或秘密处理。
+
+主 Agent 在该授权下收敛实施所需的普通准备决策：canonical schema 使用既有项目 GitHub Pages 身份的 `/schemas/<format>/v1.json`，实例字段为 `$schema`；尚未启用 Pages，后续须实际验证部署。路径函数固定为两个字符串，非 Git 的投影直接使用 context.path；Agent 文件采用 `$schema` + agents，放在用户/项目原主配置目录旁，同名完整 profile 由项目级覆盖；管理操作采用 list/show/set/remove/edit/validate/path/migrate。实际文件和旧格式迁移须保持原子写入、脱敏及现有信任边界。
+
+后续引用以上三个子 IDEA 的当前方向卡作为实施与门限依据；旧表格中的准备问题由本节及子 IDEA 的准确 revision 取代。JSONC 主配置仍不在这三项的实施范围内。
+
 总 IDEA 继续承载剩余数据格式评审，以及 JSONC、扩展配置描述、namespace 和合并策略的讨论。这次创建不代替任何子 IDEA 的 exact revision 验收，不进入实施、不发布包；各自保留方向卡、轻量实施/部署种子和未勾选 ledger。
 
 ## Pilot Manifest 第一轮评审（2026-10-20）
