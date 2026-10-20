@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { makeRegulatorSpec } from "@potential-guide/objective-regulator";
 import { ahpHost } from "../../pguide-cli-core/test/ahp-fixture.js";
-import { createAgentPlannerPolicy } from "../src/acp-planner.js";
 import { createProcessRegulationRunner } from "../dist/regulation-process.js";
+import { createAgentPlannerPolicy } from "../src/acp-planner.js";
 import { withPilot } from "../src/pilot-source.js";
 import { bin, fixture, run } from "./fixtures.js";
 
@@ -30,7 +30,7 @@ for (const mode of [
       await writeFile(
         join(f.repository, "objective", "checks", "ready", "run.js"),
         `#!/usr/bin/env node
-import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{id:"not-ready",parameters:{}}]}}));});`,
+import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{kind:"internal",id:"not-ready",parameters:{}}]}}));});`,
       );
       await writeFile(f.subject, JSON.stringify({ marker }));
       const commit = await f.commit();
@@ -138,7 +138,7 @@ for (const scenario of ["repair", "unchanged", "denied"] as const) {
       await writeFile(
         join(f.repository, "objective", "checks", "ready", "run.js"),
         `#!/usr/bin/env node
-import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{id:"not-ready",parameters:{}}]}}));});`,
+import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{kind:"internal",id:"not-ready",parameters:{}}]}}));});`,
       );
       await writeFile(f.subject, JSON.stringify({ marker }));
       const commit = await f.commit();
@@ -256,7 +256,7 @@ test("AHP CLI closes the observation loop, pins its recipe, and skips all sessio
       await writeFile(
         join(f.repository, "objective", "checks", "ready", "run.js"),
         `#!/usr/bin/env node
-  import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{id:"not-ready",parameters:{}}]}}));});`,
+  import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{kind:"internal",id:"not-ready",parameters:{}}]}}));});`,
       );
       const commit = await f.commit();
       await withPilot(f.uri, f.directory, commit, async (pilot) => {
@@ -313,7 +313,7 @@ test("AHP CLI closes the observation loop, pins its recipe, and skips all sessio
     await writeFile(
       join(f.repository, "objective", "checks", "ready", "run.js"),
       `#!/usr/bin/env node
-import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const subject=JSON.parse(s);const ok=existsSync(subject.marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{id:"not-ready",parameters:{scope:1}},{id:"not-ready",parameters:{scope:2}}]}}));});`,
+import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const subject=JSON.parse(s);const ok=existsSync(subject.marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{kind:"internal",id:"not-ready",parameters:{scope:1}},{kind:"internal",id:"not-ready",parameters:{scope:2}}]}}));});`,
     );
     await writeFile(f.subject, JSON.stringify({ marker }));
     const commit = await f.commit();
@@ -419,7 +419,7 @@ test("AHP Agent self-reported completion cannot satisfy an unchanged target", as
   try {
     await writeFile(
       join(f.repository, "objective", "checks", "ready", "run.js"),
-      '#!/usr/bin/env node\nconsole.log(JSON.stringify({status:200,message:"",payload:{ok:false,problems:[{id:"not-ready",parameters:{}}]}}));',
+      '#!/usr/bin/env node\nconsole.log(JSON.stringify({status:200,message:"",payload:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]}}));',
     );
     const commit = await f.commit();
     const config = join(f.directory, "config.json");

@@ -167,8 +167,10 @@ async function bindPilot<T>(
       const preparationStarted = performance.now();
       const preparation = new AbortController();
       const pendingReads = new Set<Promise<unknown>>();
-      function read<A, E>(effect: Effect.Effect<A, E>): Promise<A> {
-        const pending = Effect.runPromise(effect, { signal: preparation.signal });
+      function read<A, E>(effect: Effect.Effect<A, E>, signal = preparation.signal): Promise<A> {
+        const pending = Effect.runPromise(effect, {
+          signal: AbortSignal.any([signal, preparation.signal]),
+        });
         pendingReads.add(pending);
         void pending.then(
           () => pendingReads.delete(pending),
@@ -230,6 +232,8 @@ async function bindPilot<T>(
             const sources = new Map<string, Promise<Source>>([
               [repository, Promise.resolve(initialSource)],
             ]);
+            const requestedVersions = new Map(Object.entries(options.versions ?? {}));
+            const sourceSignals = new Map<string, AbortSignal>();
             function resourcePath(uri: string): string {
               const url = new URL(uri);
               const path = decodeURIComponent(url.hash.slice(1)).replace(/\/$/, "");
@@ -242,7 +246,13 @@ async function bindPilot<T>(
               origin.hash = "";
               const remote = repositoryUri(origin.href.slice(4));
               const existing = sources.get(remote);
-              if (existing !== undefined) return existing;
+              const required = requestedVersions.get(uri);
+              if (existing !== undefined)
+                return existing.then((source) => {
+                  if (required !== undefined && source.snapshot.commit !== required)
+                    throw new PilotSourceError(`Pinned source version mismatch for ${uri}.`);
+                  return source;
+                });
               const checkout = join(cache, `checkout-${sources.size}`);
               const pending = read(
                 loadGitSnapshot(
@@ -250,15 +260,16 @@ async function bindPilot<T>(
                   {
                     repository: remote,
                     revision:
-                      options.versions?.[uri] === undefined
+                      required === undefined
                         ? { type: "ref", value: "HEAD" }
-                        : { type: "commit", value: options.versions[uri] },
+                        : { type: "commit", value: required },
                     refresh: { type: "once" },
                   },
                 ).pipe(Effect.provideService(Scope.Scope, scope)),
+                sourceSignals.get(uri),
               ).then(async (snapshot) => {
                 const source = { snapshot, checkout };
-                await read(materialize(source));
+                await read(materialize(source), sourceSignals.get(uri));
                 return source;
               });
               sources.set(remote, pending);
@@ -268,7 +279,7 @@ async function bindPilot<T>(
               version: snapshot.commit,
               versionFor: async (uri) => {
                 const commit = (await sourceFor(uri)).snapshot.commit;
-                if (options.versions !== undefined && options.versions[uri] !== commit)
+                if (requestedVersions.has(uri) && requestedVersions.get(uri) !== commit)
                   throw new PilotSourceError(`Pinned source version mismatch for ${uri}.`);
                 return commit;
               },
@@ -317,10 +328,12 @@ async function bindPilot<T>(
               try: async (signal) => {
                 const executables = new Map<
                   string,
-                  { command: string; args: string[]; cwd: string }
+                  { command: string; args: string[]; cwd: string; dependencyBinding: boolean }
                 >();
-                async function prepareChecks(pilot: PilotSpec): Promise<void> {
-                  if (pilot.prerequisite !== undefined) await prepareChecks(pilot.prerequisite);
+                async function prepareChecks(
+                  pilot: PilotSpec,
+                  preparationSignal = signal,
+                ): Promise<void> {
                   const source = await sourceFor(pilot.objectiveId);
                   const root = dirname(
                     join(source.checkout, ...resourcePath(pilot.objectiveId).split("/")),
@@ -330,7 +343,7 @@ async function bindPilot<T>(
                   );
                   for (const level of pilot.manifest.levels) {
                     for (const check of level.advancement.checks) {
-                      signal.throwIfAborted();
+                      preparationSignal.throwIfAborted();
                       const scoped = join(root, "levels", level.id, "checks", check.id);
                       let directory = scoped;
                       try {
@@ -359,9 +372,11 @@ async function bindPilot<T>(
                         throw new PilotSourceError("Check executable must be a regular file.");
                       let command = entry;
                       let args: string[] = [];
+                      const firstLine = entry.toLowerCase().endsWith(".exe")
+                        ? ""
+                        : ((await readFile(entry, "utf8")).split(/\r?\n/, 1)[0] ?? "");
+                      const dependencyBinding = /^#!\/usr\/bin\/env node$/.test(firstLine);
                       if (process.platform === "win32" && !entry.toLowerCase().endsWith(".exe")) {
-                        const firstLine =
-                          (await readFile(entry, "utf8")).split(/\r?\n/, 1)[0] ?? "";
                         const shebang = /^#!\/usr\/bin\/env ([A-Za-z0-9._+-]+)$/.exec(firstLine);
                         const interpreter = shebang?.[1];
                         if (interpreter === undefined)
@@ -377,6 +392,7 @@ async function bindPilot<T>(
                         command,
                         args,
                         cwd: directory,
+                        dependencyBinding,
                       });
                     }
                   }
@@ -386,6 +402,23 @@ async function bindPilot<T>(
                 const probeLifecycle = new AbortController();
                 const runtime: PilotRuntime = {
                   onObservation: (value) => evidence?.stream.emit("probe.observation", value),
+                  async resolveObjective(objectiveId, version, dependencySignal) {
+                    dependencySignal.throwIfAborted();
+                    if (
+                      canonicalManifestUri(objectiveId) !== objectiveId ||
+                      !objectiveId.startsWith("git+")
+                    )
+                      throw new PilotSourceError(
+                        "Dependency requires a canonical Git manifest URI.",
+                      );
+                    if (version !== undefined) requestedVersions.set(objectiveId, version);
+                    sourceSignals.set(objectiveId, dependencySignal);
+                    const spec = await loadPilotSpec(objectiveId, resources);
+                    dependencySignal.throwIfAborted();
+                    await prepareChecks(spec, dependencySignal);
+                    dependencySignal.throwIfAborted();
+                    return { spec, runtime };
+                  },
                   resolveCheck(ref) {
                     const executable = executables.get(
                       JSON.stringify([ref.objectiveId, ref.levelId, ref.checkId]),
@@ -442,7 +475,12 @@ async function bindPilot<T>(
             });
           }),
         ),
-        { signal: preparation.signal },
+        {
+          signal:
+            options.signal === undefined
+              ? preparation.signal
+              : AbortSignal.any([preparation.signal, options.signal]),
+        },
       ).finally(async () => {
         clearTimeout(timer);
         preparation.abort();
@@ -486,6 +524,7 @@ export async function withPilot<T>(
 }
 
 export interface PilotSourceOptions {
+  readonly signal?: AbortSignal;
   readonly reports?: { readonly enabled?: boolean; readonly directory?: string } | undefined;
   readonly versions?: Readonly<Record<string, string>>;
   readonly cacheDirectory?: string;

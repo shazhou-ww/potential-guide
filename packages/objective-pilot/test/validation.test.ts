@@ -57,7 +57,7 @@ test("same-level concurrency is opt-in, bounded and deterministic; later levels 
   assert.equal(calls, 0);
 });
 
-test("subject snapshots and wiki pages are immutable; invalid projection fails before child probes", async () => {
+test("subject snapshots and wiki pages are immutable; invalid subject fails before probes", async () => {
   const data = fixture();
   const spec = await data.load();
   const subject = { name: "repo" };
@@ -74,16 +74,11 @@ test("subject snapshots and wiki pages are immutable; invalid projection fails b
   );
   assert.equal(Object.isFrozen(subject), false);
   assert.equal(Object.isFrozen(readPage(spec, "system/404")), true);
-  const child = "git+https://example.test/objectives.git#child/pilot.yaml";
-  const invalid = await fixture({
-    [objectiveId]: manifest({ prerequisite: { manifestUri: child, subject: '{"wrong": name}' } }),
-    [child]: manifest(),
-  }).load();
   let calls = 0;
   await assert.rejects(
     Effect.runPromise(
       observe(
-        { spec: invalid, subject },
+        { spec, subject: { wrong: "repo" } },
         {
           resolveCheck: () => async () => {
             calls++;

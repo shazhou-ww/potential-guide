@@ -45,7 +45,12 @@ test("runs isolate identities, retries increment attempts and preserve business-
   assert.notEqual(run.runId, other.runId);
   const result = {
     status: 200,
-    payload: { ok: false, problems: [{ id: "missing", parameters: { actual: 2, expected: 3 } }] },
+    payload: {
+      ok: false,
+      problems: [
+        { kind: "internal" as const, id: "missing", parameters: { actual: 2, expected: 3 } },
+      ],
+    },
     message: "",
   } as const;
   const probe = createMemoryCheckProbe(() => result, { evidence: run, identity: "ready" });

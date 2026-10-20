@@ -16,7 +16,7 @@ test("permissions persist per attempt and continue uses current grants and revok
     };
     await writeFile(
       join(f.repository, "objective", "checks", "ready", "run.js"),
-      `#!/usr/bin/env node\nimport {existsSync} from "node:fs";let s="";for await(const c of process.stdin)s+=c;const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{id:"not-ready",parameters:{}}]}}));`,
+      `#!/usr/bin/env node\nimport {existsSync} from "node:fs";let s="";for await(const c of process.stdin)s+=c;const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{kind:"internal",id:"not-ready",parameters:{}}]}}));`,
     );
     await writeFile(
       f.subject,
@@ -115,7 +115,7 @@ test("explicit continue grants another stall allowance while retaining history",
   try {
     await writeFile(
       join(f.repository, "objective", "checks", "ready", "run.js"),
-      '#!/usr/bin/env node\nconsole.log(JSON.stringify({status:200,message:"",payload:{ok:false,problems:[{id:"not-ready",parameters:{}}]}}));',
+      '#!/usr/bin/env node\nconsole.log(JSON.stringify({status:200,message:"",payload:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]}}));',
     );
     const commit = await f.commit();
     const agent = join(f.directory, "noop.mjs");
@@ -192,6 +192,7 @@ test("Agent prompts contain the subject, target and every problem, not a selecte
         levelId: "initial",
       },
       problems: ["first", "second"].map((problemId) => ({
+        kind: "internal" as const,
         ref: {
           objectiveId: "git+https://example.invalid/repo.git#pilot.yaml",
           levelId: "initial",
@@ -247,7 +248,7 @@ test("regulate and continue persist pinned Pilot observations and use the JSON c
     const probeCount = join(f.directory, "probe-count");
     await writeFile(
       join(f.repository, "objective", "checks", "ready", "run.js"),
-      `#!/usr/bin/env node\nimport{existsSync,readFileSync,writeFileSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const subject=JSON.parse(s);const count=existsSync(subject.probeCount)?Number(readFileSync(subject.probeCount,"utf8")):0;writeFileSync(subject.probeCount,String(count+1));if(count===0){console.log(JSON.stringify({status:503,payload:null,message:"transient source failure"}));return;}const ok=existsSync(subject.marker);console.log(JSON.stringify({status:200,payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{id:"not-ready",parameters:{index:1}},{id:"not-ready",parameters:{index:2}}]},message:""}));});`,
+      `#!/usr/bin/env node\nimport{existsSync,readFileSync,writeFileSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const subject=JSON.parse(s);const count=existsSync(subject.probeCount)?Number(readFileSync(subject.probeCount,"utf8")):0;writeFileSync(subject.probeCount,String(count+1));if(count===0){console.log(JSON.stringify({status:503,payload:null,message:"transient source failure"}));return;}const ok=existsSync(subject.marker);console.log(JSON.stringify({status:200,payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{index:1}},{kind:"internal",id:"not-ready",parameters:{index:2}}]},message:""}));});`,
     );
     await writeFile(f.subject, JSON.stringify({ marker, probeCount }));
     const commit = await f.commit();
@@ -471,7 +472,7 @@ test("per-Agent timeout includes ACP startup and invocation failures never start
     const check = join(f.repository, "objective", "checks", "ready", "run.js");
     await writeFile(
       check,
-      '#!/usr/bin/env node\nconsole.log(JSON.stringify({status:200,payload:{ok:false,problems:[{id:"not-ready",parameters:{}}]},message:""}));',
+      '#!/usr/bin/env node\nconsole.log(JSON.stringify({status:200,payload:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]},message:""}));',
     );
     const commit = await f.commit();
     const agent = join(f.directory, "hang.mjs");

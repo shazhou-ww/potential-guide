@@ -161,7 +161,7 @@ test("supervise plans once without repairs, then continuously observes and execu
     const counts = join(f.directory, "observations.jsonl");
     await writeFile(
       join(f.repository, "objective", "checks", "ready", "run.js"),
-      `#!/usr/bin/env node\nimport{existsSync,appendFileSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const x=JSON.parse(s);appendFileSync(x.counts,"observed\\n");const ok=existsSync(x.marker);console.log(JSON.stringify({status:200,payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{id:"not-ready",parameters:{}}]},message:""}));});`,
+      `#!/usr/bin/env node\nimport{existsSync,appendFileSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const x=JSON.parse(s);appendFileSync(x.counts,"observed\\n");const ok=existsSync(x.marker);console.log(JSON.stringify({status:200,payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]},message:""}));});`,
     );
     const revision = await f.commit();
     const stub = join(f.directory, "agent.mjs");
@@ -336,5 +336,133 @@ test("supervise rejects legacy portfolios and invalid registrations before plann
     );
   } finally {
     await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("supervise dynamically binds a cross-process dependency, repairs it, then re-observes the consumer", async () => {
+  const consumer = await fixture();
+  const provider = await fixture();
+  let running: ReturnType<typeof run> | undefined;
+  try {
+    const marker = join(consumer.directory, "dependency-repaired");
+    await writeFile(
+      join(consumer.repository, "objective", "checks", "ready", "run.js"),
+      `#!/usr/bin/env node
+import {createSourceObjectiveDependencyProbe} from "@potential-guide/objective-pilot";
+let source = ""; for await (const chunk of process.stdin) source += chunk;
+const subject = JSON.parse(source);
+const probe = createSourceObjectiveDependencyProbe({objectiveId:${JSON.stringify(provider.uri)},expectedLevelId:"terminal"});
+process.stdout.write(JSON.stringify(await probe({marker:subject.marker}, new AbortController().signal)));
+`,
+    );
+    await writeFile(
+      join(provider.repository, "objective", "checks", "ready", "run.js"),
+      `#!/usr/bin/env node
+import {existsSync} from "node:fs";
+let source = ""; for await (const chunk of process.stdin) source += chunk;
+const {marker} = JSON.parse(source), ok = existsSync(marker);
+process.stdout.write(JSON.stringify({status:200,message:"",payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]}}));
+`,
+    );
+    const consumerRevision = await consumer.commit();
+    const providerRevision = await provider.commit();
+    const stub = join(consumer.directory, "agent.mjs");
+    await writeFile(stub, stubSource);
+    const config = join(consumer.directory, "config.json");
+    await writeFile(
+      config,
+      JSON.stringify({
+        schemaVersion: 2,
+        agentExecutionLimits: { timeoutMs: 12_000 },
+        agents: {
+          strategist: profile(stub, "plan", join(consumer.directory, "planner.jsonl"), marker),
+          worker: profile(stub, "repair", join(consumer.directory, "worker.jsonl"), marker),
+        },
+      }),
+    );
+    const portfolio = join(consumer.directory, "portfolio.json");
+    await writeFile(
+      portfolio,
+      JSON.stringify({
+        schemaVersion: 3,
+        goals: [
+          {
+            id: "fixture",
+            pilot: consumer.uri,
+            revision: consumerRevision,
+            subject: { marker },
+            targetLevel: "terminal",
+            priority: 2,
+            observationIntervalMs: 500,
+          },
+        ],
+        resources: [{ id: "worker", agent: "worker", capacity: 1, capabilities: [] }],
+      }),
+    );
+    const runner = join(consumer.directory, "until-terminal.mjs");
+    await writeFile(
+      runner,
+      `
+import {existsSync} from "node:fs";
+const timer = setInterval(() => {
+  if (existsSync(${JSON.stringify(`${marker}.terminal`)})) { clearInterval(timer); process.emit("SIGINT"); }
+}, 25); timer.unref();
+await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
+`,
+    );
+    running = run(runner, [
+      "--portfolio-file",
+      portfolio,
+      "--planner",
+      "strategist",
+      "--config",
+      config,
+      "--execute",
+      "--duration-ms",
+      "60000",
+      "--format",
+      "json",
+    ]);
+    const executed = await running;
+    assert.equal(executed.code, 0, executed.stdout + executed.stderr);
+    const result = JSON.parse(executed.stdout);
+    assert.equal(
+      existsSync(`${marker}.terminal`),
+      true,
+      "Consumer was not freshly observed at terminal.",
+    );
+    assert.equal(result.observations.fixture.payload.current.objectiveId, consumer.uri);
+    assert.equal(result.observations.fixture.payload.current.levelId, "terminal");
+    assert.equal(result.observations.fixture.payload.versions[provider.uri], providerRevision);
+    assert.equal(result.queue.demands.length, 0);
+    const handoff = result.events.find(
+      (event: { type: string; outcome?: { stopReason: string } }) =>
+        event.type === "result" && event.outcome?.stopReason === "dependency-required",
+    );
+    assert.ok(handoff);
+    assert.equal(handoff.outcome.iterations, 0);
+    assert.equal(handoff.outcome.dependencies[0].objectiveId, provider.uri);
+    assert.ok(
+      result.events.some(
+        (event: {
+          type: string;
+          demand: { pilot: { objectiveId: string; version: string } };
+          outcome?: { stopReason: string };
+        }) =>
+          event.type === "result" &&
+          event.demand.pilot.objectiveId === provider.uri &&
+          event.demand.pilot.version === providerRevision &&
+          event.outcome?.stopReason === "target-reached",
+      ),
+    );
+    const messages = (await readFile(join(consumer.directory, "worker.jsonl"), "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    assert.equal(messages.filter((message) => message.method === "session/prompt").length, 1);
+  } finally {
+    await running;
+    await rm(consumer.directory, { recursive: true, force: true });
+    await rm(provider.directory, { recursive: true, force: true });
   }
 });

@@ -322,7 +322,7 @@ async function save(root: string, regulation: Regulation, attempt: Attempt): Pro
 
 function code(reason: string): number {
   if (reason === "target-reached") return 0;
-  if (reason === "prerequisite-unmet") return 3;
+  if (reason === "dependency-required") return 3;
   if (reason === "authorization-required") return 3;
   if (reason === "exhausted" || reason === "cancelled") return 5;
   return 6;

@@ -92,10 +92,10 @@ change the clean Git snapshot requirement or Objective identity. Recovery record
 store the resolved URI, exact commit and local source path, so later registry edits
 do not retarget `continue`.
 
-Cross-repository prerequisites are supported. Each repository has its own
+Dynamic cross-repository dependency checks are supported. Each repository has its own
 snapshot, commit, checkout, and check routing, with all resources owned by the
 same Scope. External repositories without an explicit pin resolve HEAD when
-the current `withPilot` binding is created and remain immutable throughout
+first requested in the current `withPilot` binding and remain immutable throughout
 that binding. This is not a cross-source transaction. All source failures are
 reported as `pilot-error` with exit code 2.
 
@@ -162,20 +162,24 @@ Node checks at `checks/<check-id>/run.js`, and a self-contained
 itself** as JSON on stdin, not a wrapper. Stdout is one JSON envelope:
 
 ```json
-{"status":200,"payload":{"ok":false,"problems":[{"id":"not-ready","parameters":{}}]},"message":""}
+{"status":200,"payload":{"ok":false,"problems":[{"kind":"internal","id":"not-ready","parameters":{}}]},"message":""}
 ```
 
 Business failure exits zero and has `ok:false`; success is
 `{"status":200,"payload":{"ok":true,"problems":[]},"message":""}`.
 An invocation failure uses `{"status":503,"payload":null,"message":"Probe unavailable"}`
 and never establishes a trustworthy level. Diagnostic logs belong on stderr.
-Pilot observations preserve every same-level problem with its full
-Objective/Level/Check/Problem reference, the localized gap summary, and versions.
+Pilot observations preserve every same-level problem, the localized gap summary,
+and exact source versions. Internal problems have full scoped references;
+dependency problems instead carry `objectiveId`, projected `subject`,
+`expectedLevelId` and `currentLevelId`, without ID/ref/parameters.
+The observation's current level always belongs to the consumer Objective.
+See [dependency probe APIs and process binding](../objective-pilot/README.md#objective-level-checks-and-dependency-probes).
 
 Reference pages require `title` and a nonempty `description` of at most 200
 Unicode code points. Optional `references` defaults to `[]`. Guidance belongs
 in the Markdown body. `--language` selects localized Wiki guidance;
-prerequisite subject projections remain manifest-defined.
+dependency subject projection belongs to the check script.
 
 Snapshot materialization reads the complete pinned repository with one recursive
 file listing and sequential binary-safe Git batches, not a new Git process per
@@ -245,7 +249,9 @@ Use paths with Windows Git headroom: a process timeout opt-in does not remove
 Windows Git path-length limits.
 
 Normal outcomes are `target-reached` (exit 0), `exhausted` (exit 5),
-`authorization-required` (exit 3), and `prerequisite-unmet` (exit 3).
+`authorization-required` (exit 3), and `dependency-required` (exit 3).
+The last variant carries all dependency problems from the latest observation and
+does not call the current Agent, even when internal problems are also present.
 Typed 4xx/5xx invocation errors are failures,
 not normal outcomes. The strategy is persisted and `continue` restores it
 rather than silently adopting changed current configuration.
@@ -548,7 +554,7 @@ released after replacement. Invalid live updates stop supervision rather than
 silently retaining stale inputs. Regulation quotas and execution timeout settings
 are fixed at command startup.
 
-The planner sees goals, observations, derived prerequisite candidates, previous
+The planner sees goals, observations, derived dependency candidates, previous
 demands, and resource-free execution feedback—never the Agent inventory.
 It must emit a JSON object through ACP `agent_message_chunk` text updates or
 AHP terminal-turn markdown response parts:

@@ -25,7 +25,6 @@ async function run(message: StartMessage) {
   const versions: Record<string, string> = {};
   function collect(spec: PilotSpec) {
     versions[spec.objectiveId] = spec.version;
-    if (spec.prerequisite !== undefined) collect(spec.prerequisite);
   }
   collect(message.input.spec.pilot);
   let sessionId: string | undefined;

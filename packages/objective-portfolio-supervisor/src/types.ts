@@ -94,6 +94,12 @@ export interface PortfolioPlannerOptions {
   readonly goals: readonly ObjectiveGoal[];
   readonly policy?: PlannerPolicy;
   readonly periodic?: boolean;
+  readonly resolveObjective?: (
+    objectiveId: string,
+    version: string,
+    signal: AbortSignal,
+  ) => Promise<PilotSpec>;
+  readonly releaseObjective?: (spec: PilotSpec) => Promise<void>;
   readonly observe: (
     goal: ObjectiveGoal,
     signal: AbortSignal,

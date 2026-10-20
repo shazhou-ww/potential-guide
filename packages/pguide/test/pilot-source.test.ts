@@ -208,7 +208,7 @@ test("explicit Git URI can select an older exact commit independently of current
   );
 });
 
-test("two repository prerequisites preserve distinct commits, check routing and source cleanup", async (t) => {
+test("cross-process dependency source binding preserves exact commits, routing and cleanup", async (t) => {
   const levels: PilotManifest["levels"] = [
     { id: "initial", advancement: { checks: [{ id: "ready", problems: ["broken"] }] } },
   ];
@@ -217,29 +217,50 @@ test("two repository prerequisites preserve distinct commits, check routing and 
   const childScript = await child.check(
     "checks/ready/run.cjs",
     `#!/usr/bin/env node
-process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{id:"broken",parameters:{directory:process.cwd()}}]},message:""}));
+process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kind:"internal",id:"broken",parameters:{directory:process.cwd()}}]},message:""}));
 `,
   );
   const childCommit = await child.commit();
-  const parent = await repository(
-    manifest({ levels, prerequisite: { manifestUri: child.uri, subject: '{"name":name}' } }),
-  );
+  const parent = await repository(manifest({ levels }));
   t.after(() => rm(parent.root, { recursive: true, force: true }));
-  await parent.check("checks/ready/run.cjs");
+  await parent.check(
+    "checks/ready/run.cjs",
+    `#!/usr/bin/env node
+(async () => {
+  const {createSourceObjectiveDependencyProbe} = await import("@potential-guide/objective-pilot");
+  let source = ""; for await (const chunk of process.stdin) source += chunk;
+  const probe = createSourceObjectiveDependencyProbe({objectiveId:${JSON.stringify(child.uri)},expectedLevelId:"terminal"});
+  const envelope = await probe(JSON.parse(source), new AbortController().signal);
+  process.stdout.write(JSON.stringify(envelope));
+})().catch(error => { console.error(error); process.exitCode = 1; });
+`,
+  );
   const parentCommit = await parent.commit();
   assert.notEqual(parentCommit, childCommit);
   let checkDirectory = "";
   await withPilot(parent.path, parent.root, undefined, async (spec, runtime) => {
     assert.equal(spec.version, parentCommit);
-    assert.equal(spec.prerequisite?.version, childCommit);
     const first = await Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime));
     assert.ok(first.payload !== null);
-    assert.equal(first.payload.current.objectiveId, child.uri);
+    assert.equal(first.payload.current.objectiveId, parent.uri);
+    assert.equal(first.payload.problems[0]?.kind, "dependency");
     assert.deepEqual(first.payload.versions, {
       [parent.uri]: parentCommit,
       [child.uri]: childCommit,
     });
-    const directory = first.payload.problems[0]?.parameters.directory;
+    assert.ok(runtime.resolveObjective);
+    const binding = await runtime.resolveObjective(
+      child.uri,
+      childCommit,
+      new AbortController().signal,
+    );
+    const detail = await binding.runtime.resolveCheck({
+      objectiveId: child.uri,
+      levelId: "initial",
+      checkId: "ready",
+    })({ name: "repo" }, new AbortController().signal);
+    const problem = detail.payload?.problems[0];
+    const directory = problem?.kind === "internal" ? problem.parameters.directory : undefined;
     assert.equal(typeof directory, "string");
     if (typeof directory !== "string") throw new Error("Expected child check directory.");
     checkDirectory = directory;
@@ -248,7 +269,8 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{id:
     await child.commit();
     const second = await Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime));
     assert.ok(second.payload !== null);
-    assert.equal(second.payload.current.objectiveId, child.uri);
+    assert.equal(second.payload.current.objectiveId, parent.uri);
+    assert.equal(second.payload.current.levelId, "initial");
     assert.equal(second.payload.versions[child.uri], childCommit);
   });
   await assert.rejects(stat(checkDirectory), { code: "ENOENT" });
@@ -266,7 +288,8 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{id:
     { versions: { [parent.uri]: parentCommit, [child.uri]: childCommit } },
   );
   assert.ok(pinned.payload !== null);
-  assert.equal(pinned.payload.current.objectiveId, child.uri);
+  assert.equal(pinned.payload.current.objectiveId, parent.uri);
+  assert.equal(pinned.payload.current.levelId, "initial");
   assert.equal(pinned.payload.versions[child.uri], childCommit);
 });
 
@@ -329,7 +352,7 @@ test("cleanup failure retains the primary CLI error and reports both causes", as
   await repo.check(
     "checks/ready/run.cjs",
     `#!/usr/bin/env node
-process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{id:"broken",parameters:{directory:process.cwd()}}]},message:""}));
+process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kind:"internal",id:"broken",parameters:{directory:process.cwd()}}]},message:""}));
 `,
   );
   await repo.commit();
@@ -348,7 +371,8 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{id:
           observe({ spec, subject: { name: "repo" } }, runtime),
         );
         assert.ok(observation.payload !== null);
-        const directory = observation.payload.problems.at(0)?.parameters.directory;
+        const problem = observation.payload.problems.at(0);
+        const directory = problem?.kind === "internal" ? problem.parameters.directory : undefined;
         assert.equal(typeof directory, "string");
         if (typeof directory !== "string") throw new Error("Expected a process check directory.");
         cache = dirname(dirname(dirname(dirname(directory))));

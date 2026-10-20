@@ -3,12 +3,14 @@ import { test } from "node:test";
 import { Effect, startEffect } from "@potential-guide/effects";
 import {
   canonicalManifestUri,
+  createObjectiveDependencyProbe,
   describeLevels,
   observe,
   type PilotRuntime,
   type PilotSpec,
   parseCheckEnvelope,
   readPage,
+  recordDependencyObservation,
   searchPages,
 } from "../src/index.js";
 import { commit, fixture, manifest, objectiveId } from "./fixtures.js";
@@ -19,7 +21,9 @@ const fail = {
   message: "",
   payload: {
     ok: false,
-    problems: [{ id: "broken", parameters: { description: "broken instance" } }],
+    problems: [
+      { kind: "internal" as const, id: "broken", parameters: { description: "broken instance" } },
+    ],
   },
 } as const;
 const subject = { name: "same-spec-different-subject" };
@@ -63,7 +67,9 @@ test("all checks at first blocked level aggregate, level traversal is serial not
   assert.deepEqual(calls, ["z-first/one", "z-first/two"]);
   assert.equal(envelope.payload.current.levelId, "z-first");
   assert.deepEqual(
-    envelope.payload.problems.map(({ ref }) => ref),
+    envelope.payload.problems.map((problem) =>
+      problem.kind === "internal" ? problem.ref : undefined,
+    ),
     [
       { objectiveId, levelId: "z-first", checkId: "one", problemId: "broken" },
       { objectiveId, levelId: "z-first", checkId: "two", problemId: "broken" },
@@ -88,50 +94,41 @@ test("all checks at first blocked level aggregate, level traversal is serial not
   assert.deepEqual(inputs[0], { name: "another" });
 });
 
-test("prerequisites run first with projected subject and retain their Objective ownership", async () => {
+test("dependency checks retain consumer ownership and aggregate external instances", async () => {
   const child = "git+https://example.test/objectives.git#child/pilot.yaml";
-  const spec = await fixture({
-    [objectiveId]: manifest({
-      prerequisite: {
-        manifestUri: "../child/pilot.yaml",
-        subject: '{"name": name}',
-        minimumLevelId: "a-next",
-      },
-    }),
+  const data = fixture({
+    [objectiveId]: manifest(),
     [child]: manifest(),
-  }).load();
+  });
+  const spec = await data.load();
+  const external = await data.load(child);
   const calls: string[] = [];
+  const dependency = createObjectiveDependencyProbe(
+    { spec: external, expectedLevelId: "a-next" },
+    {
+      resolveCheck: () => async () => {
+        calls.push(child);
+        return fail;
+      },
+    },
+    { recordObservation: recordDependencyObservation },
+  );
   const first = await Effect.runPromise(
     observe(
       { spec, subject },
       {
-        resolveCheck: (ref) => async (input) => {
-          calls.push(ref.objectiveId);
-          assert.deepEqual(input, subject);
-          return fail;
-        },
+        resolveCheck: () => dependency,
       },
     ),
   );
   assert.ok(first.payload !== null);
-  assert.equal(first.payload.current.objectiveId, child);
-  assert.deepEqual(calls, [child, child]);
-  assert.deepEqual(first.payload.versions, { [objectiveId]: commit, [child]: commit });
-  calls.length = 0;
-  const second = await Effect.runPromise(
-    observe(
-      { spec, subject },
-      {
-        resolveCheck: (ref) => async () => {
-          calls.push(`${ref.objectiveId}/${ref.levelId}`);
-          return ref.levelId === "z-first" && ref.objectiveId === child ? pass : fail;
-        },
-      },
-    ),
+  assert.equal(first.payload.current.objectiveId, objectiveId);
+  assert.deepEqual(calls, [child, child, child, child]);
+  assert.equal(first.payload.problems.length, 2);
+  assert.ok(
+    first.payload.problems.every((problem) => problem.kind === "dependency" && !("ref" in problem)),
   );
-  assert.ok(second.payload !== null);
-  assert.equal(second.payload.current.objectiveId, objectiveId);
-  assert.ok(calls.indexOf(`${child}/a-next`) < calls.indexOf(`${objectiveId}/z-first`));
+  assert.deepEqual(first.payload.versions, { [objectiveId]: commit, [child]: commit });
 });
 
 test("invocation failure never manufactures a trusted level and cannot mask sibling checks", async () => {
@@ -190,7 +187,10 @@ test("rejects invalid domain, unsupported language, undeclared problems and nonc
         resolveCheck: () => async () => ({
           status: 200,
           message: "",
-          payload: { ok: false, problems: [{ id: "undeclared", parameters: {} }] },
+          payload: {
+            ok: false,
+            problems: [{ kind: "internal" as const, id: "undeclared", parameters: {} }],
+          },
         }),
       },
     ),
@@ -199,14 +199,16 @@ test("rejects invalid domain, unsupported language, undeclared problems and nonc
   assert.match(invalid.message, /Undeclared/);
 });
 
-test("strict YAML, duplicate scope IDs, locales and cyclic prerequisites fail before observation", async () => {
+test("strict YAML, duplicate scope IDs, locales and deleted fields fail before observation", async () => {
   const data = fixture();
   data.texts.set(objectiveId, "schemaVersion: 1\nschemaVersion: 1\n");
   await assert.rejects(data.load(), /Invalid YAML/);
-  const cyclic = fixture({
-    [objectiveId]: manifest({ prerequisite: { manifestUri: objectiveId, subject: "$" } }),
-  });
-  await assert.rejects(cyclic.load(), /Cyclic/);
+  const cyclic = fixture();
+  cyclic.texts.set(
+    objectiveId,
+    JSON.stringify({ ...manifest(), prerequisite: { manifestUri: objectiveId, subject: "$" } }),
+  );
+  await assert.rejects(cyclic.load(), /Expected fields/);
   const missingLocale = fixture();
   for (const resources of missingLocale.pages.values()) resources.pop();
   await assert.rejects(missingLocale.load(), /every language/);
@@ -255,7 +257,11 @@ test("business failure is a successful envelope; malformed protocol is not accep
   assert.deepEqual(parseCheckEnvelope(fail), fail);
   for (const value of [
     { pass: false },
-    { status: 200, message: "", payload: { ok: true, problems: [{ id: "bad", parameters: {} }] } },
+    {
+      status: 200,
+      message: "",
+      payload: { ok: true, problems: [{ kind: "internal" as const, id: "bad", parameters: {} }] },
+    },
     { status: 200, error: { kind: "oops", message: "not a success" } },
     { status: 500, value: { ok: true, problems: [] } },
   ])

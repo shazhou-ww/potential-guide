@@ -36,7 +36,7 @@ level ends this run; there is no scheduling mode or periodic recheck.
 
 The required `RegulationQuota` contains:
 
-- `timeoutMs`: elapsed time for the entire run, including validation, prerequisite
+- `timeoutMs`: elapsed time for the entire run, including validation, dependency
   probes, retries, delays, Agent work, and re-observation.
 - `maxAgentRuns`: maximum Agent invocations in this run.
 - `maxStallRuns`: maximum consecutive completed repairs without observed
@@ -62,7 +62,9 @@ Every normal `RegulationOutcome` contains `iterations` (Agent invocation count),
 
 - `target-reached`: the latest observation reaches the requested local level.
 - `exhausted`: `exhaustedBy` is `time`, `agent-runs`, `stall`, or `agent-limit`.
-- `prerequisite-unmet`: `prerequisite` contains `{ spec, subject, minimumLevelId }`.
+- `dependency-required`: a nonempty `dependencies` array contains exactly the
+  dependency problems in `latestObservation`. Other outcome variants do not
+  carry this field.
 - `authorization-required`: `authorizationRequests` describes denied operations
   that remain unresolved after a fresh trusted observation.
 
@@ -70,17 +72,16 @@ The final `agentOutcome`, when available, is included. If time expires before
 any observation, `latestObservation` explicitly has `payload: null` and status
 408; otherwise it retains the last actual envelope. A completed final allowed
 Agent run is re-observed before agent-run or stall exhaustion is decided.
-Target attainment or prerequisite regression takes precedence over those
+Target attainment or dependency handoff takes precedence over those
 counts. Time expiration aborts inner work without trusting late results.
 
-An unmet prerequisite at entry **or after a root repair** never authorizes the
-root Agent. The outcome identifies the projected **direct child**, even if
-the current observation belongs to a deeper ancestor. A planner can recursively
-discover the rest of the dependency chain. The exported
-`regulationPrerequisite(input)` helper returns this direct dependency (or
-`undefined` when absent); it performs deterministic subject projection.
-Pilot validates subjects throughout the dependency chain before any check or
-Agent executes.
+An unmet dependency at entry **or after a root repair** never authorizes the
+root Agent. The observation still belongs to the root. First, target attainment
+wins; otherwise any dependency causes normal handoff of all dependencies,
+including when internal problems are mixed in. Handoff adds neither an Agent
+invocation nor an internal stall. Only internal problems reach the Agent.
+The old static prerequisite types, helper and stop reason are removed without
+a compatibility layer.
 
 Agent outcomes are `{ status: "completed", summary, authorizationRequests? }`,
 `{ status: "authorization-required", reason, authorizationRequests }`, or
@@ -143,7 +144,7 @@ outcome.
 ## Probe policy
 
 `probe` defaults to a 30-second whole-observation timeout with zero retries.
-Its timeout covers prerequisites too. Timeout aborts the observation and raises
+Its timeout covers dependency observations too. Timeout aborts the observation and raises
 a 504 invocation error after retries are exhausted. Only 5xx invocation failures
 are retried; `retry.maxRetries` counts additional attempts, and
 `retry.delayMs` is a nonnegative timer duration. A 4xx fault or successful

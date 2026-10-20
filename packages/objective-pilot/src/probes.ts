@@ -1,11 +1,12 @@
 import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { bindDependencyRequest, type ObjectiveDependencySource } from "./dependency.js";
 import { type CheckEvidenceContext, RunEvidence } from "./evidence.js";
 import { parseCheckEnvelope } from "./pilot.js";
 import { stopPosixTree } from "./process-tree.js";
 import type { CheckProbe, CheckResult, Envelope, Subject } from "./types.js";
-import { ObjectiveConfigurationError } from "./validation.js";
+import { fields, json, ObjectiveConfigurationError, record } from "./validation.js";
 
 function failure(kind: string, cause: unknown, status = 502): Envelope<CheckResult> {
   return {
@@ -126,6 +127,7 @@ export interface ProcessCheckProbeOptions {
   readonly log?: (text: string) => void;
   readonly evidence?: RunEvidence | false;
   readonly identity?: unknown;
+  readonly dependencyBinding?: boolean;
 }
 
 const OUTPUT_LIMIT = 1024 * 1024;
@@ -135,6 +137,8 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
     throw new ObjectiveConfigurationError("A process command is required.");
   const timeoutMs = duration(options.timeoutMs ?? 30_000, "timeoutMs");
   const gracePeriodMs = duration(options.gracePeriodMs ?? 250, "gracePeriodMs");
+  const dependencyBinding =
+    options.dependencyBinding ?? /(?:^|[\\/])node(?:\.exe)?$/i.test(options.command);
   const invoke = async (
     subject: Subject,
     signal: AbortSignal,
@@ -156,12 +160,20 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
         ),
       );
       const result = await new Promise<Envelope<CheckResult>>((resolve, reject) => {
+        const dependencyRequest = bindDependencyRequest();
+        const dependencyLifetime = new AbortController();
+        const requests = new Set<Promise<void>>();
         const child = spawn(options.command, [...(options.args ?? [])], {
           cwd: options.cwd,
           env: {
             ...environment,
             PGUIDE_PROBE_TEMP_DIR: directory,
             PGUIDE_PROBE_TIMEOUT_MS: String(timeoutMs),
+            ...(dependencyBinding
+              ? {
+                  NODE_OPTIONS: `--import=${new URL("./dependency-preload.js", import.meta.resolve("@potential-guide/objective-pilot")).href}`,
+                }
+              : {}),
             ...(context === undefined
               ? { PGUIDE_EVIDENCE_DISABLED: "1" }
               : { PGUIDE_EVIDENCE_CONTEXT: JSON.stringify(context) }),
@@ -169,7 +181,74 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
           shell: false,
           windowsHide: true,
           detached: process.platform !== "win32",
-          stdio: ["pipe", "pipe", "pipe"],
+          stdio: dependencyBinding ? ["pipe", "pipe", "pipe", "ipc"] : ["pipe", "pipe", "pipe"],
+        });
+        if (!child.stdin || !child.stdout || !child.stderr) {
+          reject(new Error("Process probe requires piped stdin/stdout/stderr."));
+          return;
+        }
+        child.on("message", (value: unknown) => {
+          const pending = (async () => {
+            if (!record(value) || value.type !== "pguide.dependency.request")
+              throw new Error("Invalid dependency IPC request.");
+            if (Buffer.byteLength(JSON.stringify(value)) > OUTPUT_LIMIT)
+              throw new Error("Dependency IPC request exceeded the output limit.");
+            fields(value, ["type", "requestId", "target", "subject"]);
+            if (
+              typeof value.requestId !== "string" ||
+              value.requestId.length > 128 ||
+              !record(value.target) ||
+              !record(value.subject) ||
+              !json(value.subject)
+            )
+              throw new Error("Invalid dependency IPC payload.");
+            fields(value.target, ["objectiveId", "expectedLevelId"], ["language"]);
+            if (
+              typeof value.target.objectiveId !== "string" ||
+              typeof value.target.expectedLevelId !== "string" ||
+              (value.target.language !== undefined && typeof value.target.language !== "string")
+            )
+              throw new Error("Invalid dependency source.");
+            const target: ObjectiveDependencySource = {
+              objectiveId: value.target.objectiveId,
+              expectedLevelId: value.target.expectedLevelId,
+              ...(value.target.language === undefined ? {} : { language: value.target.language }),
+            };
+            try {
+              const envelope = await dependencyRequest(
+                target,
+                value.subject,
+                AbortSignal.any([signal, dependencyLifetime.signal]),
+              );
+              if (!dependencyLifetime.signal.aborted && child.connected)
+                child.send(
+                  {
+                    type: "pguide.dependency.result",
+                    requestId: value.requestId,
+                    envelope,
+                  },
+                  (cause) => {
+                    if (cause && !dependencyLifetime.signal.aborted)
+                      stop(failure("dependency-binding", cause));
+                  },
+                );
+            } catch (cause) {
+              if (!dependencyLifetime.signal.aborted && child.connected)
+                child.send(
+                  {
+                    type: "pguide.dependency.result",
+                    requestId: value.requestId,
+                    error: cause instanceof Error ? cause.message : String(cause),
+                  },
+                  (error) => {
+                    if (error && !dependencyLifetime.signal.aborted)
+                      stop(failure("dependency-binding", error));
+                  },
+                );
+            }
+          })().catch((cause) => stop(failure("dependency-binding", cause)));
+          requests.add(pending);
+          void pending.finally(() => requests.delete(pending));
         });
         let stdout = "";
         let stderrBytes = 0;
@@ -236,6 +315,7 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
         });
         child.stdin.once("error", (cause) => stop(failure("process-stdin", cause)));
         child.once("close", async (code, exitSignal) => {
+          dependencyLifetime.abort(new Error("Owning check exited."));
           clearTimeout(timer);
           if (hardTimer !== undefined) {
             // A child can exit before descendants. Complete the group teardown before cleanup.
@@ -245,6 +325,7 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
           signal.removeEventListener("abort", onAbort);
           try {
             await Promise.all(killers);
+            await Promise.all(requests);
           } catch (cause) {
             reject(cause);
             return;

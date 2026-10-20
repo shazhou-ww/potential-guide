@@ -96,9 +96,38 @@ function observed(spec: PilotSpec, levelId = "initial"): Envelope<PilotObservati
     },
   };
 }
+function dependenciesObserved(
+  spec: PilotSpec,
+  dependencies: readonly {
+    readonly pilot: PilotSpec;
+    readonly minimum?: string;
+    readonly subject?: Record<string, string>;
+    readonly current?: string;
+  }[],
+): Envelope<PilotObservation> {
+  const base = required(observed(spec).payload ?? undefined);
+  return {
+    status: 200,
+    message: "",
+    payload: {
+      ...base,
+      problems: dependencies.map((dependency) => ({
+        kind: "dependency",
+        objectiveId: dependency.pilot.objectiveId,
+        subject: dependency.subject ?? {},
+        expectedLevelId: dependency.minimum ?? "ready",
+        currentLevelId: dependency.current ?? "initial",
+      })),
+      versions: {
+        ...base.versions,
+        ...Object.fromEntries(dependencies.map(({ pilot }) => [pilot.objectiveId, pilot.version])),
+      },
+    },
+  };
+}
 function outcome(
   input: RegulationInput,
-  stopReason: RegulationOutcome["stopReason"] = "target-reached",
+  stopReason: Exclude<RegulationOutcome["stopReason"], "dependency-required"> = "target-reached",
   stalledRuns = 0,
 ): RegulationOutcome {
   return {
@@ -109,6 +138,40 @@ function outcome(
       input.spec.pilot,
       stopReason === "target-reached" ? "terminal" : "initial",
     ),
+  };
+}
+function handoff(
+  entry: QueueDemand,
+  child: PilotSpec,
+  minimum = "ready",
+  subject = {},
+): CoordinatorEvent & { readonly type: "result" } {
+  const dependency = {
+    kind: "dependency" as const,
+    objectiveId: child.objectiveId,
+    subject,
+    expectedLevelId: minimum,
+    currentLevelId: "initial",
+  };
+  const observation = required(observed(entry.pilot).payload ?? undefined);
+  return {
+    type: "result",
+    demand: entry,
+    outcome: {
+      stopReason: "dependency-required",
+      iterations: 0,
+      stalledRuns: 0,
+      dependencies: [dependency],
+      latestObservation: {
+        status: 200,
+        message: "",
+        payload: {
+          ...observation,
+          problems: [dependency],
+          versions: { ...observation.versions, [child.objectiveId]: child.version },
+        },
+      },
+    },
   };
 }
 const resource: AgentResource = {
@@ -648,59 +711,59 @@ test("planner deduplicates canonical registrations and priority-only updates pre
   }
 });
 
-test("two roots merge known shared direct prerequisite at highest target then re-observe roots", async () => {
+test("two roots merge a dynamic instance and resume independently at their own thresholds", async () => {
   const child = pilot("shared");
-  const root = (id: string) => {
-    const spec = pilot(id);
-    return goal(id, {
-      subject: { shared: "common", root: id },
-      pilot: {
-        ...spec,
-        prerequisite: child,
-        manifest: {
-          ...spec.manifest,
-          prerequisite: {
-            manifestUri: "shared",
-            subject: '{"key": shared}',
-            minimumLevelId: "ready",
-          },
-        },
-      },
-    });
-  };
-  let childReady = false;
+  let childLevel = "initial";
   const planner = await createPortfolioPlanner({
-    goals: [root("a"), root("b")],
+    goals: [goal("a"), goal("b")],
     periodic: false,
+    resolveObjective: async (id, version) => {
+      assert.equal(id, child.objectiveId);
+      assert.equal(version, child.version);
+      return child;
+    },
     observe: async (entry) =>
-      observed(
-        entry.pilot,
-        childReady && entry.id.startsWith("prerequisite:") ? "terminal" : "initial",
-      ),
+      entry.pilot.objectiveId === child.objectiveId
+        ? observed(entry.pilot, childLevel)
+        : dependenciesObserved(
+            entry.pilot,
+            (entry.id === "a" ? childLevel === "initial" : childLevel !== "terminal")
+              ? [
+                  {
+                    pilot: child,
+                    minimum: entry.id === "a" ? "ready" : "terminal",
+                    subject: { key: "common" },
+                    current: childLevel,
+                  },
+                ]
+              : [],
+          ),
   });
   try {
     const [a, b] = (await read(planner.queue)).demands;
-    const dependency = (entry: QueueDemand, minimumLevelId: string): CoordinatorEvent => ({
-      type: "result",
-      demand: entry,
-      outcome: {
-        stopReason: "prerequisite-unmet",
-        iterations: 0,
-        stalledRuns: 0,
-        latestObservation: observed(child),
-        prerequisite: { spec: child, subject: { key: "common" }, minimumLevelId },
-      },
-    });
-    await planner.feedback(dependency(required(a), "ready"));
-    await planner.feedback(dependency(required(b), "terminal"));
+    await planner.feedback(handoff(required(a), child, "ready", { key: "common" }));
+    await planner.feedback(handoff(required(b), child, "terminal", { key: "common" }));
     const demands = (await read(planner.queue)).demands;
     assert.equal(demands.length, 1);
     assert.equal(required(demands[0]).pilot.objectiveId, child.objectiveId);
     assert.equal(required(demands[0]).targetLevel, "terminal");
-    childReady = true;
+    childLevel = "ready";
+    await planner.refresh();
+    assert.deepEqual(
+      (await read(planner.queue)).demands
+        .map((entry) => (entry.id === "a" ? "a" : entry.targetLevel))
+        .sort(),
+      ["a", "terminal"],
+    );
+    childLevel = "terminal";
+    const provider = required(
+      (await read(planner.queue)).demands.find(
+        (entry) => entry.pilot.objectiveId === child.objectiveId,
+      ),
+    );
     await planner.feedback({
       type: "result",
-      demand: required(demands[0]),
+      demand: provider,
       outcome: {
         stopReason: "target-reached",
         iterations: 1,
@@ -835,23 +898,13 @@ test("quota exhaustion before an observation remains normal eligible planner dem
   }
 });
 
-test("observed prerequisite satisfaction renews blocked root without requiring a child run result", async () => {
+test("observed dependency satisfaction renews blocked root without requiring a child run result", async () => {
   const child = pilot("child");
   const root = goal("root");
-  const registered = {
-    ...root,
-    pilot: {
-      ...root.pilot,
-      prerequisite: child,
-      manifest: {
-        ...root.pilot.manifest,
-        prerequisite: { manifestUri: child.objectiveId, subject: "$", minimumLevelId: "ready" },
-      },
-    },
-  };
   let childLevel = "initial";
   const planner = await createPortfolioPlanner({
-    goals: [registered],
+    goals: [root],
+    resolveObjective: async () => child,
     periodic: false,
     observe: async (entry) =>
       observed(entry.pilot, entry.pilot.objectiveId === child.objectiveId ? childLevel : "initial"),
@@ -859,17 +912,7 @@ test("observed prerequisite satisfaction renews blocked root without requiring a
 
   try {
     const active = required((await read(planner.queue)).demands[0]);
-    await planner.feedback({
-      type: "result",
-      demand: active,
-      outcome: {
-        stopReason: "prerequisite-unmet",
-        iterations: 0,
-        stalledRuns: 0,
-        latestObservation: observed(child),
-        prerequisite: { spec: child, subject: {}, minimumLevelId: "ready" },
-      },
-    });
+    await planner.feedback(handoff(active, child));
     assert.equal(
       required((await read(planner.queue)).demands[0]).pilot.objectiveId,
       child.objectiveId,
@@ -880,6 +923,277 @@ test("observed prerequisite satisfaction renews blocked root without requiring a
     assert.equal(renewed.length, 1);
     assert.equal(required(renewed[0]).id, root.id);
     assert.ok(required(renewed[0]).revision > active.revision);
+  } finally {
+    await planner.close();
+  }
+});
+
+test("multiple dependencies all satisfy before consumer re-observation; root removal collects only orphans", async () => {
+  const first = pilot("first");
+  const second = pilot("second");
+  const levels = new Map<string, string>();
+  const released: string[] = [];
+  let consumerObservations = 0;
+  const planner = await createPortfolioPlanner({
+    goals: [goal("a"), goal("b")],
+    periodic: false,
+    resolveObjective: async (id) => (id === first.objectiveId ? first : second),
+    releaseObjective: async (spec) => {
+      released.push(spec.objectiveId);
+    },
+    observe: async (entry) => {
+      if (entry.id === "a") consumerObservations++;
+      if (entry.id === "a" || entry.id === "b")
+        return dependenciesObserved(
+          entry.pilot,
+          (entry.id === "a" ? [first, second] : [first])
+            .filter((pilot) => (levels.get(pilot.objectiveId) ?? "initial") === "initial")
+            .map((pilot) => ({ pilot })),
+        );
+      return observed(entry.pilot, levels.get(entry.pilot.objectiveId) ?? "initial");
+    },
+  });
+  try {
+    const initial = (await read(planner.queue)).demands;
+    const a = required(initial.find((entry) => entry.id === "a"));
+    const b = required(initial.find((entry) => entry.id === "b"));
+    const one = handoff(a, first);
+    const two = handoff(a, second);
+    assert.equal(one.outcome.stopReason, "dependency-required");
+    assert.equal(two.outcome.stopReason, "dependency-required");
+    if (
+      one.outcome.stopReason !== "dependency-required" ||
+      two.outcome.stopReason !== "dependency-required"
+    )
+      assert.fail();
+    const base = required(one.outcome.latestObservation.payload ?? undefined);
+    await planner.feedback({
+      ...one,
+      outcome: {
+        ...one.outcome,
+        dependencies: [one.outcome.dependencies[0], two.outcome.dependencies[0]],
+        latestObservation: {
+          status: 200,
+          message: "",
+          payload: {
+            ...base,
+            problems: [one.outcome.dependencies[0], two.outcome.dependencies[0]],
+            versions: { ...base.versions, [second.objectiveId]: second.version },
+          },
+        },
+      },
+    });
+    await planner.feedback(handoff(b, first));
+    assert.equal((await read(planner.queue)).demands.length, 2);
+    levels.set(first.objectiveId, "ready");
+    await planner.refresh();
+    assert.equal(
+      (await read(planner.queue)).demands.some((entry) => entry.id === "a"),
+      false,
+    );
+    assert.equal(
+      (await read(planner.queue)).demands.some((entry) => entry.id === "b"),
+      true,
+    );
+    const before = consumerObservations;
+    levels.set(second.objectiveId, "ready");
+    await planner.refresh();
+    assert.ok(consumerObservations > before);
+    assert.ok((await read(planner.queue)).demands.some((entry) => entry.id === "a"));
+    assert.ok(released.includes(first.objectiveId));
+    assert.ok(released.includes(second.objectiveId));
+    await planner.updateGoals([]);
+    await planner.feedback(one);
+    assert.deepEqual((await read(planner.queue)).demands, []);
+  } finally {
+    await planner.close();
+  }
+});
+
+test("shared provider survives one owner removal, while recipe replacement isolates old handoff", async () => {
+  const child = pilot("child");
+  const planner = await createPortfolioPlanner({
+    goals: [goal("a"), goal("b")],
+    periodic: false,
+    resolveObjective: async () => child,
+    observe: async (entry) => observed(entry.pilot),
+  });
+  try {
+    const [a, b] = (await read(planner.queue)).demands;
+    await planner.feedback(handoff(required(a), child));
+    await planner.feedback(handoff(required(b), child));
+    await planner.updateGoals([goal("b")]);
+    assert.equal(
+      required((await read(planner.queue)).demands[0]).pilot.objectiveId,
+      child.objectiveId,
+    );
+    await planner.updateGoals([goal("b", { subject: { replacement: true } })]);
+    await planner.feedback(handoff(required(b), child));
+    const current = await read(planner.queue);
+    assert.equal(current.demands.length, 1);
+    assert.deepEqual(required(current.demands[0]).subject, { replacement: true });
+  } finally {
+    await planner.close();
+  }
+});
+
+test("actual instance wait cycles and conflicting exact source evidence are explicit failures", async () => {
+  const child = pilot("child");
+  const planner = await createPortfolioPlanner({
+    goals: [goal("a")],
+    periodic: false,
+    resolveObjective: async () => child,
+    observe: async (entry) => observed(entry.pilot),
+  });
+  try {
+    const a = required((await read(planner.queue)).demands[0]);
+    await assert.rejects(
+      planner.feedback(handoff(a, { ...child, version: "b".repeat(40) })),
+      /source/,
+    );
+    await planner.feedback(handoff(a, child));
+    const provider = required((await read(planner.queue)).demands[0]);
+    await assert.rejects(planner.feedback(handoff(provider, a.pilot)), /wait cycle/);
+    assert.match(String((await read(planner.state)).error), /wait cycle/);
+  } finally {
+    await planner.close();
+  }
+  const self = await createPortfolioPlanner({
+    goals: [goal("self")],
+    periodic: false,
+    observe: async (entry) => observed(entry.pilot),
+  });
+  try {
+    const entry = required((await read(self.queue)).demands[0]);
+    await assert.rejects(self.feedback(handoff(entry, entry.pilot)), /wait cycle/);
+  } finally {
+    await self.close();
+  }
+});
+
+test("fresh consumer observations withdraw obsolete waits, renew revisions and preserve shared owners", async () => {
+  const child = pilot("child");
+  const requires = new Set(["a", "b"]);
+  const released: string[] = [];
+  const planner = await createPortfolioPlanner({
+    goals: [goal("a"), goal("b")],
+    periodic: false,
+    resolveObjective: async () => child,
+    releaseObjective: async (spec) => {
+      released.push(spec.objectiveId);
+    },
+    observe: async (entry) => {
+      if (requires.has(entry.id)) return dependenciesObserved(entry.pilot, [{ pilot: child }]);
+      const envelope = observed(entry.pilot);
+      assert.ok(envelope.payload);
+      return {
+        ...envelope,
+        payload: {
+          ...envelope.payload,
+          problems: [
+            {
+              kind: "internal",
+              ref: {
+                objectiveId: entry.pilot.objectiveId,
+                levelId: "initial",
+                checkId: "check",
+                problemId: "missing",
+              },
+              parameters: {},
+            },
+          ],
+        },
+      };
+    },
+  });
+  try {
+    const initial = (await read(planner.queue)).demands;
+    const a = required(initial.find((entry) => entry.id === "a"));
+    const b = required(initial.find((entry) => entry.id === "b"));
+    await planner.feedback(handoff(a, child));
+    await planner.feedback(handoff(b, child));
+    requires.delete("a");
+    await planner.refresh();
+    const resumed = (await read(planner.queue)).demands;
+    assert.ok(required(resumed.find((entry) => entry.id === "a")).revision > a.revision);
+    assert.equal(
+      resumed.some((entry) => entry.id === "b"),
+      false,
+    );
+    assert.ok(resumed.some((entry) => entry.pilot.objectiveId === child.objectiveId));
+    assert.equal(released.includes(child.objectiveId), false);
+    requires.delete("b");
+    await planner.refresh();
+    assert.deepEqual((await read(planner.queue)).demands.map((entry) => entry.id).sort(), [
+      "a",
+      "b",
+    ]);
+    assert.deepEqual(released, [child.objectiveId]);
+  } finally {
+    await planner.close();
+  }
+});
+
+test("a dependency changing from B to C requeues the consumer for a new handoff and isolates the old revision", async () => {
+  const first = pilot("first");
+  const second = pilot("second");
+  let selected = first;
+  const planner = await createPortfolioPlanner({
+    goals: [goal("consumer")],
+    periodic: false,
+    resolveObjective: async (id) => (id === first.objectiveId ? first : second),
+    observe: async (entry) =>
+      entry.id === "consumer"
+        ? dependenciesObserved(entry.pilot, [{ pilot: selected }])
+        : observed(entry.pilot),
+  });
+  try {
+    const before = required((await read(planner.queue)).demands[0]);
+    await planner.feedback(handoff(before, first));
+    selected = second;
+    await planner.refresh();
+    const resumed = required((await read(planner.queue)).demands[0]);
+    assert.equal(resumed.id, "consumer");
+    assert.ok(resumed.revision > before.revision);
+    assert.equal(
+      (await read(planner.state)).goals.some(
+        (entry) => entry.pilot.objectiveId === first.objectiveId,
+      ),
+      false,
+    );
+    await planner.feedback(handoff(before, first));
+    assert.equal(required((await read(planner.queue)).demands[0]).id, "consumer");
+    await planner.feedback(handoff(resumed, second));
+    const pending = (await read(planner.queue)).demands;
+    assert.equal(pending.length, 1);
+    assert.equal(required(pending[0]).pilot.objectiveId, second.objectiveId);
+  } finally {
+    await planner.close();
+  }
+});
+
+test("replacing a registered provider subject cannot satisfy consumers of its retained old instance", async () => {
+  const child = goal("provider");
+  const planner = await createPortfolioPlanner({
+    goals: [goal("consumer"), child],
+    periodic: false,
+    observe: async (entry) =>
+      observed(entry.pilot, entry.subject.replacement ? "terminal" : "initial"),
+  });
+  try {
+    const consumer = required(
+      (await read(planner.queue)).demands.find((entry) => entry.id === "consumer"),
+    );
+    await planner.feedback(handoff(consumer, child.pilot));
+    await planner.updateGoals([
+      goal("consumer"),
+      goal("provider", { subject: { replacement: true } }),
+    ]);
+    const queue = await read(planner.queue);
+    assert.equal(queue.demands.length, 1);
+    assert.equal(required(queue.demands[0]).pilot.objectiveId, child.pilot.objectiveId);
+    assert.deepEqual(required(queue.demands[0]).subject, {});
+    assert.notEqual(required(queue.demands[0]).id, "provider");
   } finally {
     await planner.close();
   }
@@ -907,13 +1221,12 @@ test("target update with a canonically equal subject preserves serialization but
   }
 });
 
-test("prerequisite-blocked revisions never auto retry, even when only the queue snapshot changes", async () => {
+test("dependency-blocked revisions never auto retry, even when only the queue snapshot changes", async () => {
   const h = await harness([demand("a")]);
   try {
     await until(() => h.executions.length === 1);
     required(h.executions[0]).completion.resolve({
-      ...outcome(required(h.executions[0]).input, "prerequisite-unmet"),
-      prerequisite: { spec: pilot("child"), subject: {}, minimumLevelId: "ready" },
+      ...handoff(demand("a"), pilot("child")).outcome,
     });
     await until(async () => (await read(h.coordinator.state)).runs.length === 0);
     await delay(20);
@@ -1030,7 +1343,10 @@ test("automatic exhausted continuation grants another actual Agent round despite
             pilot: {
               resolveCheck: () => async () => ({
                 status: 200,
-                payload: { ok: false, problems: [{ id: "missing", parameters: {} }] },
+                payload: {
+                  ok: false,
+                  problems: [{ kind: "internal" as const, id: "missing", parameters: {} }],
+                },
                 message: "",
               }),
             },

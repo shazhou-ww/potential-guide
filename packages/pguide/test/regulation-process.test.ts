@@ -122,7 +122,7 @@ test("worker forwards capability requests as events without treating them as new
     import {existsSync} from "node:fs";
     let text="";process.stdin.on("data",c=>text+=c);process.stdin.on("end",()=>{
     const ok=existsSync(JSON.parse(text).marker);
-    console.log(JSON.stringify({status:200,message:"",payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{id:"not-ready",parameters:{}}]}}));});`,
+    console.log(JSON.stringify({status:200,message:"",payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]}}));});`,
     );
     const commit = await f.commit();
     const marker = join(f.directory, "ready");

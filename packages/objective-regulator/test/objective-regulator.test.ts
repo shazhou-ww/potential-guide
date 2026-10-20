@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { Effect, Exit, SubscriptionRef, startEffect } from "@potential-guide/effects";
-import type { PilotManifest } from "@potential-guide/objective-pilot";
+import {
+  createObjectiveDependencyProbe,
+  type PilotRuntime,
+  recordDependencyObservation,
+} from "@potential-guide/objective-pilot";
 import { fixture, manifest, objectiveId } from "../../objective-pilot/test/fixtures.js";
 import {
   type AgentInput,
@@ -15,7 +19,6 @@ import {
   type RegulationRuntime,
   type RegulationStrategy,
   regulate,
-  regulationPrerequisite,
   regulatorBehavior,
 } from "../src/index.js";
 
@@ -23,7 +26,7 @@ const pass = { status: 200, message: "", payload: { ok: true, problems: [] } } a
 const fail = {
   status: 200,
   message: "",
-  payload: { ok: false, problems: [{ id: "broken", parameters: {} }] },
+  payload: { ok: false, problems: [{ kind: "internal" as const, id: "broken", parameters: {} }] },
 } as const;
 const completed = { status: "completed", summary: "Repair finished." } as const;
 const quota = { timeoutMs: 10_000, maxAgentRuns: 10, maxStallRuns: 10 };
@@ -456,7 +459,10 @@ test("changing problem parameters alone is not progress", async () => {
       pilot: {
         resolveCheck: () => async () => ({
           ...fail,
-          payload: { ok: false, problems: [{ id: "broken", parameters: { round } }] },
+          payload: {
+            ok: false,
+            problems: [{ kind: "internal" as const, id: "broken", parameters: { round } }],
+          },
         }),
       },
       executeAgent: async () => {
@@ -571,102 +577,98 @@ test("each Agent round receives its own fresh limit", async () => {
 });
 
 const childId = "git+https://example.test/objectives.git#child/pilot.yaml";
-const grandchildId = "git+https://example.test/objectives.git#grandchild/pilot.yaml";
-async function dependencyInput(deep = false): Promise<RegulationInput> {
-  const configs: Record<string, PilotManifest> = {
-    [objectiveId]: manifest({
-      prerequisite: {
-        manifestUri: "../child/pilot.yaml",
-        subject: '{"name": name & "-child"}',
-        minimumLevelId: "a-next",
-      },
-    }),
-    [childId]: manifest(
-      deep
-        ? {
-            prerequisite: {
-              manifestUri: "../grandchild/pilot.yaml",
-              subject: '{"name": name & "-deep"}',
-            },
-          }
-        : {},
-    ),
-    ...(deep ? { [grandchildId]: manifest() } : {}),
-  };
-  const base = await input();
+async function dependencyRuntime(ready: () => boolean, mixed = false): Promise<PilotRuntime> {
+  const child = await fixture({ [childId]: manifest() }).load(childId);
+  const probe = createObjectiveDependencyProbe(
+    { spec: child, expectedLevelId: "a-next" },
+    { resolveCheck: () => async () => (ready() ? pass : fail) },
+    { recordObservation: recordDependencyObservation },
+  );
   return {
-    ...base,
-    spec: makeRegulatorSpec(await fixture(configs).load(), base.spec.strategy, base.spec.binding),
+    resolveCheck: (ref) => async (subject, signal) =>
+      mixed && ref.checkId === "two"
+        ? fail
+        : probe({ name: `${subject.name}-${ref.checkId}` }, signal),
   };
 }
 
-test("initial unmet prerequisite returns projected direct child without invoking root Agent", async () => {
-  for (const deep of [false, true]) {
-    const value = await dependencyInput(deep);
-    const probed: string[] = [];
+test("all dependency problems and mixed internal problems hand off without an Agent or stall", async () => {
+  for (const mixed of [false, true]) {
+    const value = await input();
     const result = await Effect.runPromise(
       regulate(value, {
-        pilot: {
-          resolveCheck: (ref) => async (subject) => {
-            probed.push(ref.objectiveId);
-            assert.equal(subject.name, deep ? "repo-child-deep" : "repo-child");
-            return fail;
-          },
-        },
-        executeAgent: async () => assert.fail("Prerequisites must never reach root Agent."),
+        pilot: await dependencyRuntime(() => false, mixed),
+        executeAgent: async () => assert.fail("Dependencies must never reach root Agent."),
       }),
     );
-    assert.equal(result.stopReason, "prerequisite-unmet");
+    assert.equal(result.stopReason, "dependency-required");
+    if (result.stopReason !== "dependency-required") assert.fail();
     assert.equal(result.iterations, 0);
-    assert.equal(result.prerequisite?.spec.objectiveId, childId);
-    assert.equal(result.prerequisite?.minimumLevelId, "a-next");
-    assert.deepEqual(result.prerequisite?.subject, { name: "repo-child" });
-    assert.equal(
-      result.latestObservation.payload?.current.objectiveId,
-      deep ? grandchildId : childId,
+    assert.equal(result.stalledRuns, 0);
+    assert.equal(result.dependencies.length, mixed ? 1 : 2);
+    assert.equal(result.dependencies[0].objectiveId, childId);
+    assert.equal(result.latestObservation.payload?.current.objectiveId, objectiveId);
+    assert.deepEqual(
+      result.dependencies,
+      result.latestObservation.payload?.problems.filter((problem) => problem.kind === "dependency"),
     );
-    assert.ok(probed.every((id) => id !== objectiveId));
-    assert.deepEqual(regulationPrerequisite(value), result.prerequisite);
   }
 });
 
-test("prerequisite regression after a root repair returns dependency instead of a second root Agent", async () => {
+test("dependency after a repair hands off before accumulating an internal stall", async () => {
   let regressed = false;
   let agents = 0;
+  const dependency = await dependencyRuntime(() => !regressed);
   const result = await Effect.runPromise(
-    regulate(await dependencyInput(), {
+    regulate(await input(), {
       pilot: {
-        resolveCheck: (ref) => async () =>
-          ref.objectiveId === childId && !regressed ? pass : fail,
+        resolveCheck: (ref) => async (subject, signal) =>
+          regressed ? dependency.resolveCheck(ref)(subject, signal) : fail,
       },
       executeAgent: async (request) => {
-        assert.ok(request.observation.problems.every(({ ref }) => ref.objectiveId === objectiveId));
+        assert.ok(
+          request.observation.problems.every(
+            (problem) => problem.kind === "internal" && problem.ref.objectiveId === objectiveId,
+          ),
+        );
         agents++;
         regressed = true;
         return completed;
       },
     }),
   );
-  assert.equal(result.stopReason, "prerequisite-unmet");
+  assert.equal(result.stopReason, "dependency-required");
   assert.equal(result.iterations, 1);
-  assert.equal(result.stalledRuns, 1);
-  assert.equal(result.prerequisite?.spec.objectiveId, childId);
+  assert.equal(result.stalledRuns, 0);
   assert.equal(agents, 1);
 });
 
-test("meeting a direct prerequisite minimum permits root Agent even below child terminal", async () => {
-  let repaired = false;
+test("requested target attainment wins over dependencies needed only above that target", async () => {
   const result = await Effect.runPromise(
-    regulate(await dependencyInput(), {
+    regulate(
+      { ...(await input({ targetLevel: "z-first" })), history: { stalledRuns: 2 } },
+      {
+        pilot: await dependencyRuntime(() => false, true),
+        executeAgent: async () => assert.fail("The requested target is already reached."),
+      },
+    ),
+  );
+  assert.equal(result.stopReason, "target-reached");
+  assert.equal(result.iterations, 0);
+  assert.equal(result.stalledRuns, 2);
+  assert.equal("dependencies" in result, false);
+});
+
+test("satisfied dependency permits internal repair and same-run target completion", async () => {
+  let repaired = false;
+  const dependency = await dependencyRuntime(() => true);
+  const result = await Effect.runPromise(
+    regulate(await input(), {
       pilot: {
-        resolveCheck: (ref) => async () =>
-          ref.objectiveId === childId
-            ? ref.levelId === "z-first"
-              ? pass
-              : fail
-            : repaired
-              ? pass
-              : fail,
+        resolveCheck: (ref) => async (subject, signal) => {
+          const result = await dependency.resolveCheck(ref)(subject, signal);
+          return result.payload?.ok && !repaired ? fail : result;
+        },
       },
       executeAgent: async (request) => {
         assert.equal(request.observation.current.objectiveId, objectiveId);
@@ -679,9 +681,8 @@ test("meeting a direct prerequisite minimum permits root Agent even below child 
   assert.equal(result.iterations, 1);
 });
 
-test("subject and prerequisite projection validation failures precede every probe and Agent", async () => {
-  const base = await dependencyInput();
-  assert.ok(base.spec.pilot.manifest.prerequisite !== undefined);
+test("subject and deleted prerequisite validation failures precede every probe and Agent", async () => {
+  const base = await input();
   for (const value of [
     { ...base, subject: {} },
     {
@@ -692,7 +693,7 @@ test("subject and prerequisite projection validation failures precede every prob
           ...base.spec.pilot,
           manifest: {
             ...base.spec.pilot.manifest,
-            prerequisite: { ...base.spec.pilot.manifest.prerequisite, subject: '{"wrong": name}' },
+            prerequisite: { manifestUri: childId, subject: "$" },
           },
         },
       },
@@ -893,7 +894,7 @@ test("decision uses local level order and rejects foreign problems", async () =>
     problems: [],
     gapSummary: "",
     observedAt: "",
-    versions: {},
+    versions: { [objectiveId]: value.spec.pilot.version },
   };
   assert.equal(decideRegulation(value, observation).type, "stop");
   assert.throws(

@@ -7,7 +7,7 @@ import {
 } from "@potential-guide/effects";
 import {
   canonicalManifestUri,
-  compileSubjectProjection,
+  type DependencyProblem,
   type Envelope,
   isJsonValue,
   type JsonObject,
@@ -18,6 +18,7 @@ import {
   type PilotObservation,
   type PilotRuntime,
   type PilotSpec,
+  parseCheckEnvelope,
   parseManifest,
   type Subject,
   SubjectProjectionError,
@@ -97,23 +98,24 @@ export type AgentOutcome =
 export type StopReason =
   | "target-reached"
   | "exhausted"
-  | "prerequisite-unmet"
+  | "dependency-required"
   | "authorization-required";
-export interface RegulationPrerequisite {
-  readonly spec: PilotSpec;
-  readonly subject: Subject;
-  readonly minimumLevelId: string;
-}
-export interface RegulationOutcome {
-  readonly stopReason: StopReason;
+export interface RegulationOutcomeBase {
   readonly iterations: number;
   readonly latestObservation: Envelope<PilotObservation>;
   readonly stalledRuns: number;
   readonly exhaustedBy?: "time" | "agent-runs" | "stall" | "agent-limit";
-  readonly prerequisite?: RegulationPrerequisite;
   readonly agentOutcome?: AgentOutcome;
   readonly authorizationRequests?: readonly AuthorizationRequest[];
 }
+export type RegulationOutcome = RegulationOutcomeBase &
+  (
+    | {
+        readonly stopReason: "dependency-required";
+        readonly dependencies: readonly [DependencyProblem, ...DependencyProblem[]];
+      }
+    | { readonly stopReason: Exclude<StopReason, "dependency-required"> }
+  );
 export interface RegulationRuntime {
   readonly pilot: PilotRuntime;
   readonly executeAgent: (input: AgentInput, signal: AbortSignal) => Promise<AgentOutcome>;
@@ -234,21 +236,19 @@ function executionError(cause: unknown): RegulationError {
   });
 }
 
-function validatePilot(value: unknown, ancestors = new Set<string>()): asserts value is PilotSpec {
-  fields(value, ["objectiveId", "version", "manifest", "locales"], ["prerequisite"]);
+function validatePilot(value: unknown): asserts value is PilotSpec {
+  fields(value, ["objectiveId", "version", "manifest", "locales"]);
   if (
     !text(value.objectiveId) ||
     !value.objectiveId.startsWith("git+") ||
     canonicalManifestUri(value.objectiveId) !== value.objectiveId ||
     typeof value.version !== "string" ||
-    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(value.version) ||
-    ancestors.has(value.objectiveId)
+    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(value.version)
   )
     throw new RegulationError(
       400,
       "Pilot requires unique stable Git identities and exact versions.",
     );
-  ancestors.add(value.objectiveId);
   const manifest = parseManifest(JSON.stringify(value.manifest));
   if (!record(value.locales))
     throw new RegulationError(400, "Pilot locales must be reference page maps.");
@@ -269,21 +269,6 @@ function validatePilot(value: unknown, ancestors = new Set<string>()): asserts v
         throw new RegulationError(400, "Invalid Pilot reference page.");
     }
   }
-  if ((manifest.prerequisite === undefined) !== (value.prerequisite === undefined))
-    throw new RegulationError(400, "Mismatched prerequisite specification.");
-  if (manifest.prerequisite !== undefined) {
-    validatePilot(value.prerequisite, ancestors);
-    const child = value.prerequisite;
-    const minimum = manifest.prerequisite.minimumLevelId ?? "terminal";
-    if (
-      canonicalManifestUri(manifest.prerequisite.manifestUri, value.objectiveId) !==
-        child.objectiveId ||
-      (minimum !== "terminal" && !child.manifest.levels.some(({ id }) => id === minimum))
-    )
-      throw new RegulationError(400, "Invalid direct prerequisite identity or minimum level.");
-    compileSubjectProjection(manifest.prerequisite.subject);
-  }
-  ancestors.delete(value.objectiveId);
 }
 
 function validateSpec(value: unknown): asserts value is RegulatorSpec {
@@ -394,32 +379,12 @@ export function agentInput(input: RegulationInput, observation: PilotObservation
   );
 }
 
-/** Return the direct dependency, never a deeper ancestor that happens to be current. */
-export function regulationPrerequisite(input: RegulationInput): RegulationPrerequisite | undefined {
-  const stable = snapshotInput(input);
-  const spec = stable.spec.pilot.prerequisite;
-  const prerequisite = stable.spec.pilot.manifest.prerequisite;
-  if (spec === undefined || prerequisite === undefined) return undefined;
-  try {
-    const subject = compileSubjectProjection(prerequisite.subject)(stable.subject);
-    if (!record(subject) || !isJsonValue(subject))
-      throw new RegulationError(400, "Prerequisite projection must produce a subject object.");
-    return immutable({
-      spec,
-      subject: subject as Subject,
-      minimumLevelId: prerequisite.minimumLevelId ?? "terminal",
-    });
-  } catch (cause) {
-    throw inputError(cause);
-  }
-}
-
 export type RegulationDecision =
   | { readonly type: "stop"; readonly reason: "target-reached" }
   | {
       readonly type: "stop";
-      readonly reason: "prerequisite-unmet";
-      readonly prerequisite: RegulationPrerequisite;
+      readonly reason: "dependency-required";
+      readonly dependencies: readonly [DependencyProblem, ...DependencyProblem[]];
     }
   | { readonly type: "execute"; readonly input: AgentInput };
 
@@ -428,28 +393,58 @@ function decide(input: RegulationInput, observation: PilotObservation): Regulati
   const rootLevels = [...pilot.manifest.levels.map(({ id }) => id), "terminal"];
   const current = observation.current;
   if (current.objectiveId !== pilot.objectiveId) {
-    let owner = pilot.prerequisite;
-    while (owner !== undefined && owner.objectiveId !== current.objectiveId)
-      owner = owner.prerequisite;
-    if (
-      owner === undefined ||
-      ![...owner.manifest.levels.map(({ id }) => id), "terminal"].includes(current.levelId)
-    )
-      throw new RegulationError(500, "Observation belongs to an unrelated Objective or level.");
-    const prerequisite = regulationPrerequisite(input);
-    if (prerequisite === undefined)
-      throw new RegulationError(500, "Observation has no matching prerequisite.");
-    return { type: "stop", reason: "prerequisite-unmet", prerequisite };
+    throw new RegulationError(500, "Observation belongs to an unrelated Objective.");
   }
   const index = rootLevels.indexOf(current.levelId);
   if (index < 0) throw new RegulationError(500, "Observation contains an unknown root level.");
+  const parsed = parseCheckEnvelope({
+    status: 200,
+    message: "",
+    payload: {
+      ok: observation.problems.length === 0,
+      problems: observation.problems.map((problem) =>
+        problem.kind === "dependency"
+          ? problem
+          : {
+              kind: problem.kind,
+              id: problem.ref.problemId,
+              parameters: problem.parameters,
+            },
+      ),
+    },
+  });
+  if (
+    parsed.payload === null ||
+    observation.versions[pilot.objectiveId] !== pilot.version ||
+    observation.problems.some(
+      (problem) =>
+        problem.kind === "internal" &&
+        (problem.ref.objectiveId !== pilot.objectiveId ||
+          problem.ref.levelId !== current.levelId ||
+          !pilot.manifest.levels[index]?.advancement.checks.some(
+            (check) =>
+              check.id === problem.ref.checkId && check.problems.includes(problem.ref.problemId),
+          )),
+    )
+  )
+    throw new RegulationError(500, "Invalid observation evidence or scoped problems.");
   if (index >= rootLevels.indexOf(input.spec.strategy.targetLevel))
     return { type: "stop", reason: "target-reached" };
+  const dependencies = observation.problems.filter((problem) => problem.kind === "dependency");
+  const [first, ...rest] = dependencies;
+  if (first) {
+    if (
+      dependencies.some(
+        (problem) =>
+          !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(observation.versions[problem.objectiveId] ?? ""),
+      )
+    )
+      throw new RegulationError(500, "Missing dependency version evidence.");
+    return { type: "stop", reason: "dependency-required", dependencies: [first, ...rest] };
+  }
   if (
     observation.problems.length === 0 ||
-    observation.problems.some(
-      ({ ref }) => ref.objectiveId !== pilot.objectiveId || ref.levelId !== current.levelId,
-    )
+    observation.problems.some((problem) => problem.kind !== "internal")
   )
     throw new RegulationError(500, "Observation has no actionable root-scoped problems.");
   return { type: "execute", input: agentInput(input, observation) };
@@ -593,9 +588,11 @@ function progressed(before: PilotObservation, after: PilotObservation, pilot: Pi
   if (current > previous) return true;
   const scopedCount = (observation: PilotObservation) =>
     new Set(
-      observation.problems.map(({ ref }) =>
-        JSON.stringify([ref.objectiveId, ref.levelId, ref.checkId, ref.problemId]),
-      ),
+      observation.problems
+        .filter((problem) => problem.kind === "internal")
+        .map(({ ref }) =>
+          JSON.stringify([ref.objectiveId, ref.levelId, ref.checkId, ref.problemId]),
+        ),
     ).size;
   return current === previous && scopedCount(after) < scopedCount(before);
 }
@@ -619,10 +616,21 @@ export function regulate(
     let agentOutcome: AgentOutcome | undefined;
     const outcome = (
       stopReason: StopReason,
-      extra: Pick<RegulationOutcome, "exhaustedBy" | "prerequisite" | "authorizationRequests"> = {},
+      extra: Pick<RegulationOutcomeBase, "exhaustedBy" | "authorizationRequests"> & {
+        readonly dependencies?: readonly [DependencyProblem, ...DependencyProblem[]];
+      } = {},
     ): RegulationOutcome =>
       immutable({
-        stopReason,
+        ...(stopReason === "dependency-required"
+          ? {
+              stopReason,
+              dependencies:
+                extra.dependencies ??
+                (() => {
+                  throw new RegulationError(500, "Missing dependency handoff.");
+                })(),
+            }
+          : { stopReason }),
         iterations,
         latestObservation,
         stalledRuns,
@@ -663,6 +671,9 @@ export function regulate(
           const observation = latestObservation.payload;
           if (observation === null)
             throw new RegulationError(500, "Missing successful observation.");
+          const decision = decide(stable, observation);
+          if (decision.type === "stop" && decision.reason === "dependency-required")
+            return outcome("dependency-required", { dependencies: decision.dependencies });
           const madeProgress =
             previous !== undefined && progressed(previous, observation, stable.spec.pilot);
           const authorizationRequests =
@@ -677,15 +688,8 @@ export function regulate(
               : authorizationBlocked
                 ? stalledRuns
                 : Math.min(Number.MAX_SAFE_INTEGER, stalledRuns + 1);
-          const decision = decide(stable, observation);
           checkTime();
-          if (decision.type === "stop")
-            return outcome(
-              decision.reason,
-              decision.reason === "prerequisite-unmet"
-                ? { prerequisite: decision.prerequisite }
-                : {},
-            );
+          if (decision.type === "stop") return outcome(decision.reason);
           if (authorizationBlocked && authorizationRequests)
             return outcome("authorization-required", { authorizationRequests });
           if (stalledRuns >= quota.maxStallRuns)

@@ -16,7 +16,10 @@ import { fixture } from "./fixtures.js";
 const fail = {
   status: 200,
   message: "",
-  payload: { ok: false, problems: [{ id: "missing", parameters: { observed: 2 } }] },
+  payload: {
+    ok: false,
+    problems: [{ kind: "internal" as const, id: "missing", parameters: { observed: 2 } }],
+  },
 } as const;
 const subject = { root: "subject-json-only" };
 const signal = new AbortController().signal;
@@ -30,11 +33,13 @@ test("process timeout metadata is runtime-owned and preserves the 30s default", 
         command: process.execPath,
         args: [
           "-e",
-          'console.log(JSON.stringify({status:200,message:"",payload:{ok:false,problems:[{id:"missing",parameters:{timeoutMs:process.env.PGUIDE_PROBE_TIMEOUT_MS}}]}}))',
+          'console.log(JSON.stringify({status:200,message:"",payload:{ok:false,problems:[{kind:"internal",id:"missing",parameters:{timeoutMs:process.env.PGUIDE_PROBE_TIMEOUT_MS}}]}}))',
         ],
         ...(timeoutMs === undefined ? {} : { timeoutMs }),
       })(subject, signal);
-      assert.equal(result.payload?.problems[0]?.parameters.timeoutMs, String(timeoutMs ?? 30000));
+      const problem = result.payload?.problems[0];
+      assert.ok(problem?.kind === "internal");
+      assert.equal(problem.parameters.timeoutMs, String(timeoutMs ?? 30000));
     }
   } finally {
     if (previous === undefined) delete process.env.PGUIDE_PROBE_TIMEOUT_MS;

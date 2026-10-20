@@ -11,12 +11,7 @@ import {
   writeResult,
 } from "@potential-guide/cli-core";
 import { Effect, SubscriptionRef, startEffect, watchSnapshot } from "@potential-guide/effects";
-import {
-  observe,
-  type PilotRuntime,
-  type PilotSpec,
-  type Subject,
-} from "@potential-guide/objective-pilot";
+import { observe, type PilotRuntime, type Subject } from "@potential-guide/objective-pilot";
 import {
   type AgentResource,
   type CoordinatorEvent,
@@ -65,7 +60,16 @@ interface PortfolioFile {
   resources: FileResource[];
 }
 
-async function bindGoal(entry: FileGoal, cwd: string, probeTimeoutMs?: number) {
+async function bindGoal(
+  entry: FileGoal,
+  cwd: string,
+  probeTimeoutMs?: number,
+  signal?: AbortSignal,
+) {
+  const preparation = new AbortController();
+  const cancel = () => preparation.abort(signal?.reason);
+  signal?.addEventListener("abort", cancel, { once: true });
+  if (signal?.aborted) cancel();
   let publish!: (value: { goal: ObjectiveGoal; runtime: PilotRuntime }) => void;
   let reject!: (error: unknown) => void;
   let release!: () => void;
@@ -100,10 +104,10 @@ async function bindGoal(entry: FileGoal, cwd: string, probeTimeoutMs?: number) {
       });
       await released;
     },
-    { probeTimeoutMs },
+    { probeTimeoutMs, signal: preparation.signal },
   );
   void lifetime.catch(reject);
-  const value = await ready;
+  const value = await ready.finally(() => signal?.removeEventListener("abort", cancel));
   return {
     ...value,
     async close() {
@@ -231,6 +235,12 @@ export async function supervisePortfolio(
     observe: options.observe,
     policy: options.policy(signal),
     periodic: options.execute,
+    ...(options.resolveObjective === undefined
+      ? {}
+      : { resolveObjective: options.resolveObjective }),
+    ...(options.releaseObjective === undefined
+      ? {}
+      : { releaseObjective: options.releaseObjective }),
   }).catch((error: unknown) => {
     clearTimeout(timeout);
     throw error;
@@ -413,13 +423,7 @@ export async function runSupervise(
         return { goals };
       }
       for (const { goal, runtime } of fresh) {
-        for (
-          let current: PilotSpec | undefined = goal.pilot;
-          current !== undefined;
-          current = current.prerequisite
-        ) {
-          runtimes.set(JSON.stringify(current), runtime);
-        }
+        runtimes.set(JSON.stringify(goal.pilot), runtime);
       }
       const previous = activeBindings;
       activeBindings = fresh;
@@ -436,13 +440,9 @@ export async function runSupervise(
           );
           const retained = new Set<string>();
           for (const binding of activeBindings) {
-            for (
-              let spec: PilotSpec | undefined = binding.goal.pilot;
-              spec !== undefined;
-              spec = spec.prerequisite
-            )
-              retained.add(JSON.stringify(spec));
+            retained.add(JSON.stringify(binding.goal.pilot));
           }
+          for (const binding of bindings) retained.add(JSON.stringify(binding.goal.pilot));
           for (const key of runtimes.keys()) if (!retained.has(key)) runtimes.delete(key);
         },
       };
@@ -456,6 +456,47 @@ export async function runSupervise(
     if (durationMs !== undefined) durationTimer = setTimeout(cancel, durationMs);
     const result = await supervisePortfolio({
       goals,
+      async resolveObjective(objectiveId, version, signal) {
+        signal.throwIfAborted();
+        const binding = await bindGoal(
+          {
+            id: `binding:${objectiveId}`,
+            pilot: objectiveId,
+            revision: version,
+            subject: {},
+            targetLevel: "terminal",
+            priority: 0,
+            observationIntervalMs: 1_000,
+          },
+          globals.cwd,
+          loaded.value.regulationStrategy?.probe?.timeoutMs,
+          signal,
+        );
+        if (signal.aborted) {
+          await binding.close();
+          signal.throwIfAborted();
+        }
+        bindings.add(binding);
+        runtimes.set(JSON.stringify(binding.goal.pilot), binding.runtime);
+        return binding.goal.pilot;
+      },
+      async releaseObjective(spec) {
+        for (const binding of [...bindings]) {
+          if (
+            activeBindings.includes(binding) ||
+            JSON.stringify(binding.goal.pilot) !== JSON.stringify(spec)
+          )
+            continue;
+          await binding.close();
+          bindings.delete(binding);
+        }
+        if (
+          !activeBindings.some(
+            (binding) => JSON.stringify(binding.goal.pilot) === JSON.stringify(spec),
+          )
+        )
+          runtimes.delete(JSON.stringify(spec));
+      },
       policy: (signal) => (input) =>
         createAgentPlannerPolicy(plannerProfile, globals.cwd, {
           signal,

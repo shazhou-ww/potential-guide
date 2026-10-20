@@ -108,11 +108,7 @@ export function parseManifest(source: string): PilotManifest {
   const value: unknown = parseStrictYaml(source);
   if (!record(value))
     throw new ObjectiveConfigurationError("Objective Manifest must be an object.");
-  fields(
-    value,
-    ["schemaVersion", "domainSchema", "levels", "defaultLanguage", "languages"],
-    ["prerequisite"],
-  );
+  fields(value, ["schemaVersion", "domainSchema", "levels", "defaultLanguage", "languages"]);
   if (
     value.schemaVersion !== 1 ||
     !record(value.domainSchema) ||
@@ -168,36 +164,12 @@ export function parseManifest(source: string): PilotManifest {
       throw new ObjectiveConfigurationError("Duplicate check ID within a level.");
     }
   }
-  let prerequisite: PilotManifest["prerequisite"];
-  if (Object.hasOwn(value, "prerequisite")) {
-    if (!record(value.prerequisite)) throw new ObjectiveConfigurationError("Invalid prerequisite.");
-    fields(value.prerequisite, ["manifestUri", "subject"], ["minimumLevelId"]);
-    if (
-      !text(value.prerequisite.manifestUri) ||
-      !text(value.prerequisite.subject) ||
-      (Object.hasOwn(value.prerequisite, "minimumLevelId") &&
-        value.prerequisite.minimumLevelId !== "terminal" &&
-        !identifier(value.prerequisite.minimumLevelId))
-    ) {
-      throw new ObjectiveConfigurationError(
-        "Invalid prerequisite URI, projection or minimum level.",
-      );
-    }
-    prerequisite = {
-      manifestUri: value.prerequisite.manifestUri,
-      subject: value.prerequisite.subject,
-      ...(typeof value.prerequisite.minimumLevelId === "string"
-        ? { minimumLevelId: value.prerequisite.minimumLevelId }
-        : {}),
-    };
-  }
   return immutable({
     schemaVersion: 1,
     domainSchema: value.domainSchema,
     levels: [first, ...levels.slice(1)],
     defaultLanguage: value.defaultLanguage,
     languages: [value.languages[0], ...value.languages.slice(1)],
-    ...(prerequisite === undefined ? {} : { prerequisite }),
   });
 }
 export function compileDomain(schema: JsonObject): ValidateFunction {

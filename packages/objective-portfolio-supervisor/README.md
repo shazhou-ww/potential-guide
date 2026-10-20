@@ -6,7 +6,8 @@ does not provision agents or resolve executable configurations.
 
 ## Planner
 
-`await createPortfolioPlanner({ goals, observe, policy?, periodic? })` observes
+`await createPortfolioPlanner({ goals, observe, policy?, periodic?,
+resolveObjective?, releaseObjective? })` observes
 the initial portfolio and awaits its first plan. It returns:
 
 - `queue`: `SubscriptionRef<PriorityQueueSnapshot>` containing `{ revision, demands }`.
@@ -42,13 +43,28 @@ there is no silent fallback. The built-in deterministic policy schedules all
 eligible candidates using their registered priority. The CLI supplies an ACP
 policy; a custom policy owns cancellation of its own external work.
 
-When a root returns `prerequisite-unmet`, the planner validates the reported
-**direct child** against the root specification and its projected subject,
-blocks the root, and adds/merges a child demand. Equivalent objective IDs and
-canonical JSON subjects share one demand, with the highest requested minimum.
-The coordinator never invents dependencies. Child completion or an observation
-showing satisfaction permits renewed root demand. Derived work is removed when
-its owning root registrations disappear.
+When a current revision returns `dependency-required`, the planner validates all
+dependencies against the same observation and exact `versions`. The injected
+`resolveObjective(objectiveId, version, signal)` loads that exact specification
+and binds its runtime at composition; resolution failure is visible in state and
+the rejected feedback call. It never silently resolves a new HEAD. Subjects and
+both levels are validated, including current being below expected.
+
+Equivalent Objective IDs and canonical subjects share one provider demand at the
+highest required level. Each consumer retains all its own minimums: reaching L1
+unblocks a consumer requiring L1 even while another still requires L3. All of a
+consumer's dependencies must be satisfied; it is then re-observed, not declared
+successful. Provider observations, not Agent claims, release waits. Periodic
+observations handle external attainment and later regression.
+
+Waiting edges are replaced per current handoff. Root removal or recipe
+replacement removes unreachable derived work; shared and explicitly registered
+goals remain. `releaseObjective(spec)` releases unused dynamic bindings after
+reclamation. Old revisions cannot add dependencies or wake new consumers.
+Actual unsatisfied instance wait cycles (including self-waits) fail with a path;
+potential specification references alone do not constitute a cycle.
+The coordinator's goals/resources/result feedback paradigm and permission
+boundaries are unchanged.
 
 ## Coordinator
 

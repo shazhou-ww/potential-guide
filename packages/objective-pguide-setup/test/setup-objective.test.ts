@@ -557,7 +557,10 @@ test("SSH unreachable, missing Node and helper faults never fall back to local e
       identity: { hostname: "actual-target-name", user: "worker" },
       result: {
         status: 200,
-        payload: { ok: false, problems: [{ id: "installation-missing", parameters: {} }] },
+        payload: {
+          ok: false,
+          problems: [{ kind: "internal" as const, id: "installation-missing", parameters: {} }],
+        },
         message: "",
       },
     }),

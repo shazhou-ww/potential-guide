@@ -1,4 +1,15 @@
 export {
+  checkObjectiveLevel,
+  createObjectiveDependencyProbe,
+  createSourceObjectiveDependencyProbe,
+  type DependencyObservationContext,
+  type ObjectiveDependencySource,
+  type ObjectiveDependencyTarget,
+  type ObjectiveLevelCheck,
+  type ObjectiveLevelCheckInput,
+  recordDependencyObservation,
+} from "./dependency.js";
+export {
   CheckEvidence,
   type CheckEvidenceContext,
   defaultReportDirectory,
@@ -12,6 +23,7 @@ export {
   loadPilotSpec,
   observe,
   parseCheckEnvelope,
+  parseDependencyProblem,
   pilotBehavior,
   readPage,
   searchPages,
@@ -25,8 +37,10 @@ export {
 export { canonicalManifestUri, fileResources } from "./resources.js";
 export type * from "./types.js";
 export {
+  compileDomain,
   json as isJsonValue,
   ObjectiveConfigurationError,
   ObjectiveOperationError,
   parseManifest,
+  validateSubject,
 } from "./validation.js";

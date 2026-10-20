@@ -16,10 +16,22 @@ export interface CheckRef extends LevelRef {
 export interface ProblemRef extends CheckRef {
   readonly problemId: ProblemId;
 }
-export interface Problem {
+export interface InternalProblem {
+  readonly kind: "internal";
   readonly ref: ProblemRef;
   readonly parameters: JsonObject;
 }
+export interface DependencyProblem {
+  readonly kind: "dependency";
+  readonly objectiveId: ObjectiveId;
+  readonly subject: Subject;
+  readonly expectedLevelId: LevelId;
+  readonly currentLevelId: LevelId;
+}
+export type Problem = InternalProblem | DependencyProblem;
+export type CheckProblem =
+  | { readonly kind: "internal"; readonly id: ProblemId; readonly parameters: JsonObject }
+  | DependencyProblem;
 export interface InvocationError {
   readonly kind: string;
   readonly message: string;
@@ -34,10 +46,7 @@ export type CheckResult =
   | { readonly ok: true; readonly problems: readonly [] }
   | {
       readonly ok: false;
-      readonly problems: readonly [
-        { readonly id: ProblemId; readonly parameters: JsonObject },
-        ...{ readonly id: ProblemId; readonly parameters: JsonObject }[],
-      ];
+      readonly problems: readonly [CheckProblem, ...CheckProblem[]];
     };
 export type CheckProbe = (subject: Subject, signal: AbortSignal) => Promise<Envelope<CheckResult>>;
 export interface PilotManifest {
@@ -63,11 +72,6 @@ export interface PilotManifest {
       };
     }[],
   ];
-  readonly prerequisite?: {
-    readonly manifestUri: string;
-    readonly subject: string;
-    readonly minimumLevelId?: LevelId;
-  };
   readonly defaultLanguage: string;
   readonly languages: readonly [string, ...string[]];
 }
@@ -84,7 +88,6 @@ export interface PilotSpec {
   readonly objectiveId: ObjectiveId;
   readonly version: SpecVersion;
   readonly manifest: PilotManifest;
-  readonly prerequisite?: PilotSpec;
   readonly locales: Readonly<Record<string, Readonly<Record<string, ReferencePage>>>>;
 }
 export interface PilotInput {
@@ -103,6 +106,16 @@ export interface PilotRuntime {
   readonly onObservation?: (value: Envelope<PilotObservation>) => void;
   readonly resolveCheck: (ref: CheckRef) => CheckProbe;
   readonly checkConcurrency?: number;
+  readonly resolveObjective?: (
+    objectiveId: ObjectiveId,
+    version: SpecVersion | undefined,
+    signal: AbortSignal,
+  ) => Promise<{ readonly spec: PilotSpec; readonly runtime: PilotRuntime }>;
+  readonly observationBudget?: {
+    readonly timeoutMs: number;
+    readonly maxDepth: number;
+    readonly maxObservations: number;
+  };
 }
 export interface PageResource {
   readonly uri: string;

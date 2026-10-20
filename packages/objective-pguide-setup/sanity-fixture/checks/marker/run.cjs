@@ -26,6 +26,7 @@ process.stdin.on("end", () => {
             ok: false,
             problems: [
               {
+                kind: "internal",
                 id: "marker-incorrect",
                 parameters: {
                   marker,

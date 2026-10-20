@@ -6,8 +6,9 @@ It replaces the retired Objective Guide API, not a compatibility wrapper.
 ## Specifications and observations
 
 `PilotSpec` is JSON data: a stable `objectiveId`, an immutable source `version`,
-a strictly validated manifest, localized Wiki pages, and an optional prerequisite
-specification. Subjects and executable bindings are separate:
+a strictly validated manifest and localized Wiki pages. Subjects and executable
+bindings are separate. `Manifest.prerequisite` and `PilotSpec.prerequisite` are
+removed and rejected; manifest `schemaVersion` remains `1`:
 
 ```ts
 import { startEffect } from "@potential-guide/effects";
@@ -33,21 +34,23 @@ adapter belongs at composition, not in this package. `ResourceResolver` supplies
 `version`, `readText(uri)`, and `readPages(uri)`; page resources are `{ uri, source }`.
 Resource reads must be immutable for the resolver's lifetime.
 Resolvers spanning repositories implement `versionFor(objectiveId)` to return
-each Objective's own immutable source commit. Cross-repository prerequisites
-without that capability fail explicitly rather than inheriting the root commit.
+each Objective's own immutable source commit.
 
 Levels are ordered by the manifest array, never by their ID spelling. The final
 local ID is `terminal`. Checks at a level are all evaluated and aggregated;
-levels and prerequisites are evaluated serially. Prerequisite subjects use the
-bounded deterministic JSONata projection profile. The whole prerequisite chain
-is validated before any check starts.
+levels are evaluated serially. A dependency is discovered by a check at the
+actual level where it is needed, not by a static chain.
 Checks default to serial execution; `PilotRuntime.checkConcurrency` opts into a
 positive concurrency bound without changing result order or aggregation.
 
 An observation contains `current: { objectiveId, levelId }`, fully scoped
-`problems: [{ ref: { objectiveId, levelId, checkId, problemId }, parameters }]`,
+`problems` with either `{ kind: "internal", ref: { objectiveId, levelId, checkId,
+problemId }, parameters }` or `{ kind: "dependency", objectiveId, subject,
+expectedLevelId, currentLevelId }`,
 `gapSummary`, `observedAt`, and a map of Objective commit versions. It has no
 top-level business `ok`. An invocation fault has no trusted current level.
+`current` always belongs to the observed Objective, including when it is blocked
+by dependencies. Dependency problems have no ID, ref, parameters or nested report.
 
 Wiki pages retain strict YAML frontmatter, multilingual coverage, metadata and
 `[[page-id]]` link validation, search and 404 fallback. Scoped pages use
@@ -61,7 +64,7 @@ unambiguous. Check IDs are unique within a level, Problem IDs within a check.
 use the same envelope:
 
 ```json
-{"status":200,"payload":{"ok":false,"problems":[{"id":"missing","parameters":{}}]},"message":""}
+{"status":200,"payload":{"ok":false,"problems":[{"kind":"internal","id":"missing","parameters":{}}]},"message":""}
 ```
 
 Business success is `{"status":200,"payload":{"ok":true,"problems":[]},"message":""}`.
@@ -93,6 +96,68 @@ the timer starts after spawn, and cancellation may end it earlier.
 HTTP uses POST with subject JSON, requires status 200 for successful invocation,
 and uses AbortSignal for local cancellation and timeout. Aborting HTTP does
 **not** promise that remote business work stops.
+
+## Objective level checks and dependency probes
+
+`checkObjectiveLevel({ spec, subject, expectedLevelId, language? }, runtime)`
+constructs an Effect returning `Envelope<{ passed, observation }>`. It observes
+once and compares levels in manifest array order, including explicit `terminal`.
+Equal or higher is true. Invalid input, invocation errors and cancellation never
+become false. The returned observation is the very same observation, not a second
+sample.
+
+`createObjectiveDependencyProbe({ spec, expectedLevelId, language? }, runtime,
+{ recordObservation })` returns a `CheckProbe`. It maps true to a passing check
+and false to one dependency problem. The callback is mandatory and runs for both
+results. In an owning Pilot observation, use the exported
+`recordDependencyObservation`; it validates identity and merges exact versions.
+Conflicting commits fail explicitly. Memory/HTTP/process payload shape alone is
+not proof: dependency output must match source-bound evidence from that invocation.
+
+For committed Node check scripts executed by the existing process adapter:
+
+```js
+import { createSourceObjectiveDependencyProbe } from "@potential-guide/objective-pilot";
+
+const dependency = createSourceObjectiveDependencyProbe({
+  objectiveId: "git+https://example.org/team/objectives.git#environment/pilot.yaml",
+  expectedLevelId: "ready",
+});
+let input = "";
+for await (const chunk of process.stdin) input += chunk;
+const subject = JSON.parse(input);
+const envelope = await dependency({ environment: subject.environment }, new AbortController().signal);
+process.stdout.write(JSON.stringify(envelope));
+```
+
+This helper uses the owning process probe's IPC channel, not a CLI subprocess,
+boolean stdout or a report file. The parent binds and observes the external
+Objective through `PilotRuntime.resolveObjective(objectiveId, version?, signal)`,
+then invokes the same library APIs. The core has no Git/CLI dependency; pguide
+implements the binding with its existing immutable Git sources and executables.
+Standalone use without the owning IPC channel fails explicitly. Non-Node
+transports must supply an equivalent trusted in-process observation contribution;
+bare dependency declarations are rejected.
+
+Direct process adapters enable IPC for `node`/`node.exe` commands, or explicitly
+with `dependencyBinding: true` for a custom Node interpreter. Pguide enables it
+for committed `#!/usr/bin/env node` scripts. Other executables retain their
+ordinary three-pipe process protocol and do not inherit Node IPC metadata.
+The owning adapter supplies a runtime-owned Node preload that resolves only the
+bare `@potential-guide/objective-pilot` import to its installed runtime. Committed
+snapshot scripts therefore do not need a checkout-local `node_modules` to import
+this API. Other imports use normal Node resolution; this does not install target
+dependencies or execute package scripts. Caller `NODE_OPTIONS` is not inherited.
+
+One observation scope freezes source identities, records successful and blocked
+dependencies in `versions`, and shares deadline, recursion stack and total budget.
+The stack key is Objective ID plus canonical subject. Defaults are 30 seconds,
+32 nested observations and 128 total observations; override with
+`PilotRuntime.observationBudget: { timeoutMs, maxDepth, maxObservations }`.
+IPC requests remain in that same scope. Cancellation propagates to source
+preparation and external probes; completion waits for owned process cleanup.
+Evidence report persistence remains independent and can be disabled without
+disabling dependency correctness.
 
 ## Local evidence
 

@@ -132,7 +132,13 @@ test("Pilot freshly starts identity, runs each group once, and stops at first bl
                   status: 200,
                   payload: {
                     ok: false,
-                    problems: [{ id: "tool-missing", parameters: { tool: "tsc" } }],
+                    problems: [
+                      {
+                        kind: "internal" as const,
+                        id: "tool-missing",
+                        parameters: { tool: "tsc" },
+                      },
+                    ],
                   },
                   message: "",
                 }
