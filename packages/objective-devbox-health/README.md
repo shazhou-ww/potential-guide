@@ -21,6 +21,10 @@ Debian／Ubuntu 的 dpkg／apt 能力；其他发行版不能被静默判定通�
 check 只观测及执行独占临时目录内的最小能力验证，不安装、修复、清理用户数据或
 终止登记的开发任务。临时读写探测和构建产物由 check 自行清理。
 
+原生 Linux 可省略 `target` 或指定 `{"type":"local"}`，同时设置
+`environment: native-linux`。本机模块化入口与 Docker 单文件 runtime
+分别执行；Linux 回归测试覆盖本机入口的五个阶段，不能仅凭打包入口通过推断本机入口可用。
+
 ## 五层状态
 
 | 当前层级 | 晋级条件 |

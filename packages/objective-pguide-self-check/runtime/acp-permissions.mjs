@@ -60,10 +60,20 @@ function unifiedFilePaths(fileName, diff) {
         if (!value.startsWith(prefix))
             return false;
         const path = value.slice(2);
-        return pathText(path) && isAbsolute(path) && identity(resolve(path)) === expected;
+        if (!pathText(path))
+            return false;
+        if (isAbsolute(path))
+            return identity(resolve(path)) === expected;
+        return expected.startsWith("/") && path === expected.slice(1);
     };
     const header = /^diff --git (\S+) (\S+)$/.exec(lines.shift() ?? "");
-    if (header === null || !samePath(header[1] ?? "", "a/") || !samePath(header[2] ?? "", "b/"))
+    if (header === null)
+        return undefined;
+    const headerOldNull = header[1] === "/dev/null" || header[1] === "a/dev/null";
+    const headerNewNull = header[2] === "/dev/null" || header[2] === "b/dev/null";
+    if ((headerOldNull && headerNewNull) ||
+        (!headerOldNull && !samePath(header[1] ?? "", "a/")) ||
+        (!headerNewNull && !samePath(header[2] ?? "", "b/")))
         return undefined;
     let oldHeader = false;
     let newHeader = false;
@@ -147,6 +157,8 @@ function unifiedFilePaths(fileName, diff) {
         remainingOld !== 0 ||
         remainingNew !== 0 ||
         (oldNull && newNull) ||
+        (headerOldNull && !oldNull) ||
+        (headerNewNull && !newNull) ||
         (mode === "create" && !oldNull) ||
         (mode === "delete" && !newNull))
         return undefined;

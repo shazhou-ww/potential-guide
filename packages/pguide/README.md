@@ -431,7 +431,10 @@ configured command exactly: no shell-prefix, wildcard, or cwd-based allowances.
 Unsupported Agent argument shapes require explicit adapter support, not looser rules.
 Copilot's `{fileName, diff}` permission input is also supported for single-file
 unified Git diffs: the absolute filename, all diff headers and every ACP location
-must agree. Creation/deletion null-file headers are recognized; renames,
+must agree. Copilot's root-relative POSIX header spelling is matched against the
+complete absolute filename, never relative to the working directory.
+Creation/deletion null-file headers are recognized in both the `diff --git`
+line and the file headers; renames,
 multi-file diffs, symlink modes, quoted/ambiguous paths and malformed hunks are denied.
 
 Only an offered `allow_once` option is selected. Individual denials do not kill

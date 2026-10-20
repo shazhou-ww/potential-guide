@@ -151,6 +151,29 @@ test("Pilot freshly starts identity, runs each group once, and stops at first bl
   assert.deepEqual(calls, ["identity", "system", "toolchains"]);
 });
 
+test("native Linux dispatch invokes every stage through the modular CLI", {
+  skip: process.platform !== "linux",
+}, async () => {
+  const input = JSON.stringify({
+    ...subject,
+    environment: "native-linux",
+    home: "/nonexistent/pguide-health-dispatch",
+    workspace: "/nonexistent/pguide-health-dispatch/work",
+    scratchDirectory: "/nonexistent/pguide-health-dispatch/tmp",
+    cacheDirectory: "/nonexistent/pguide-health-dispatch/cache",
+    logDirectory: "/nonexistent/pguide-health-dispatch/logs",
+    tasksDirectory: "/nonexistent/pguide-health-dispatch/tasks",
+  });
+  for (const stage of health.stages) {
+    const result = await direct(helperPath, [stage], input);
+    assert.equal(result.code, 0, result.stderr);
+    const envelope = JSON.parse(result.stdout);
+    assert.equal(envelope.status, 200, `${stage}: ${envelope.message}`);
+    assert.equal(envelope.payload.ok, false);
+    assert.ok(envelope.payload.problems.length > 0);
+  }
+});
+
 test("subject defaults are explicit, numeric, and do not mutate caller input", () => {
   assert.equal(normalized.minimumVersions.node, "22.13");
   assert.equal(normalized.minimumVersions.npm, "10");

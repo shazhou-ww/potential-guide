@@ -104,6 +104,61 @@ test("Copilot fileName/unified-diff permissions verify every path before allowin
   }
 });
 
+test("Copilot root-relative and null Git headers still require one exact authorized file", async () => {
+  const cwd = await mkdtemp(join(scratch, "permission-copilot-null-"));
+  try {
+    const path = join(cwd, "marker.txt");
+    const other = join(cwd, "other.txt");
+    const policy = await createAcpPermissionPolicy(
+      {
+        ceiling: [{ id: "files", operation: "edit", resources: [path, other] }],
+        grants: ["files"],
+      },
+      cwd,
+    );
+    const absolute = path.replaceAll("\\", "/");
+    const target = absolute.startsWith("/") ? absolute.slice(1) : absolute;
+    const deletion = `\ndiff --git a/${target} b/dev/null\nindex 0000000..0000000 100644\n--- a/${target}\n+++ b/dev/null\n@@ -1,2 +0,0 @@\n-not-ready\n-\n\n`;
+    const creation = `diff --git a/dev/null b/${target}\nnew file mode 100644\n--- a/dev/null\n+++ b/${target}\n@@ -0,0 +1 @@\n+ready\n`;
+    const update = `diff --git a/${target} b/${target}\n--- a/${target}\n+++ b/${target}\n@@ -1 +1 @@\n-before\n+after\n`;
+    const tool = {
+      kind: "edit",
+      locations: [{ path }],
+      rawInput: { fileName: path, diff: deletion },
+    };
+    for (const diff of [deletion, creation, update])
+      assert.equal(
+        await policy.handler(request({ ...tool, rawInput: { fileName: path, diff } }), signal()),
+        "once",
+      );
+    const invalid = [
+      { ...tool, rawInput: { fileName: other, diff: deletion } },
+      { ...tool, locations: [{ path: other }] },
+      {
+        ...tool,
+        rawInput: {
+          fileName: path,
+          diff: deletion.replace("b/dev/null", `b/${target}`) + creation,
+        },
+      },
+      { ...tool, rawInput: { fileName: path, diff: update.replace(`a/${target}`, "a/dev/null") } },
+      { ...tool, rawInput: { fileName: path, diff: update.replace(`b/${target}`, "b/dev/null") } },
+      {
+        ...tool,
+        rawInput: { fileName: path, diff: creation.replace(`b/${target}`, "b/dev/null") },
+      },
+      {
+        ...tool,
+        rawInput: { fileName: path, diff: deletion.replace(`a/${target}`, "a/dev/null") },
+      },
+    ];
+    for (const entry of invalid)
+      assert.equal(await policy.handler(request(entry), signal()), undefined);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 test("ACP permissions default deny, require explicit subset and snapshot mutable input", async () => {
   const cwd = await mkdtemp(join(scratch, "permission-default-"));
   try {
