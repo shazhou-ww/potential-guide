@@ -47,23 +47,31 @@
 
 后续实施需同步类型、解析器、观察逻辑、作者文件、生成模板、运行时副本、测试及文档；旧格式处理随整体格式标识与兼容策略决定，本轮不自行指定版本或兼容别名。
 
-### M-02：domainSchema 是否改名为 subjectSchema
+### M-02：domainSchema 改名为 subjectSchema（已确认）
 
-状态：用户提出讨论，尚未定案。Agent 建议改为 `subjectSchema`，因为它直接验证传给 Pilot 的 subject，与 `inputSchema` 形成“调用输入 / 观察对象”的清晰对应；`domain` 更偏抽象概念，不能直接说明被校验的数据。
+状态：用户于 2026-10-20 明确同意此建议，作为下一步规范化修改方向。字段改为 `subjectSchema`，因为它直接验证传给 Pilot 的 subject，与 `inputSchema` 形成“调用输入 / 观察对象”的清晰对应；`domain` 更偏抽象概念，不能直接说明被校验的数据。
 
 这个改名只澄清字段职责，不代表扩大 subject 的取值范围，也不预先决定相关 API 的最终名称。
 
-### M-03：JSON Schema 类型及支持范围
+### M-03：JSON Schema 类型及支持范围（已确认）
 
-状态：用户提出讨论，尚未定案。应分开讨论 TypeScript 类型表达与运行时支持的 schema 能力，不能因为把字段从 `JsonObject` 换成一个类型名称，就认为完成 schema 校验。
+状态：用户于 2026-10-20 明确同意采用标准 JSON Schema，不另造简化类型语言，不主动设置关键词白名单，只施加必要约束。TypeScript 类型表达与运行时支持的 schema 能力分开定义，不能因为把字段从 `JsonObject` 换成一个类型名称，就认为完成 schema 校验。
 
 当前实现采用 Ajv Draft 2020-12 严格编译，要求 Pilot 的根 schema 显式声明 `type: object`，`$schema` 若出现须为 Draft 2020-12，并把 `$ref` 限于本地 `#/$defs/` 引用。
 
-Agent 建议继续采用标准 JSON Schema 的明确受限 profile，而非另造字段简写或校验 DSL：
+已确认的规范方向如下：
 
 - TypeScript 使用匹配 Draft 2020-12 的 schema 类型表达，并明确根对象约束；具体类型来源待选，不把不同方言的类型混用，也不直接把整个 manifest 业务类型当作 subject 类型。
 - 保持 subject 为 JSON 对象；嵌套字段仍可包含标量、数组和对象，不因根对象约束而限制业务表达力。
-- 明确引用和离线编译边界，保留运行时 schema 合法性检查与 subject 实例校验，不宣称无条件支持完整标准。
-- 若将来确需进一步缩减关键词，使用标准 JSON Schema 的显式子集并对不支持的关键词报错，不静默忽略；新增简化表示须有具体作者用例证明其必要性。
+- 初期仅支持文档内的 `$defs` 引用，不自动联网取得远端 schema。保留运行时 schema 合法性检查与 subject 实例校验，不宣称支持所有扩展、format 或远端引用。
+- 保留标准嵌套、数组、枚举、组合约束等表达能力，不另造简写或维护无必要的关键词白名单；非法或运行时不支持的定义明确报错，不静默忽略。
 
-后续需要确认是否采用上述 profile、允许哪些引用、是否进一步限制关键词，以及 schema 类型的公共依赖归属。
+schema 类型的具体来源及公共依赖归属仍为实施选型，不将其误记为已选定的库。manifest 自身的格式标识、旧格式兼容及公共 schema 发布位置仍待后续讨论。
+
+### M-04：Pilot Manifest 是否改名为 Objective Manifest / objective.yaml
+
+状态：用户提出讨论，尚未定案。Agent 建议将静态定义称为 Objective Manifest，文件名使用 `objective.yaml`，让名称对应其描述的目标、subject 约束、级别、检查和参考文档；Pilot 则保留为读取该定义并进行观察的执行角色，不表示 manifest 是可直接执行的运行时。
+
+需明确单数 `objective.yaml` 是一个目标定义入口，复数 `objectives.yaml` 是目录提供的命名调用声明，负责选择定义并绑定 input/context 到 subject；后者不是多个完整 manifest 的集合。输入声明中的 `pilot` 字段、CLI 参数、类型与包名是否调整，应分别核对职责，不把本项讨论自动扩大成整套 API 或包重命名授权。
+
+若确认改名，实施范围需覆盖固定入口解析、作者文件、生成模板、资源加载、错误提示、文档与测试，并显式决定旧入口如何处理。目录 Objective URI 身份不必仅因入口文件改名而改变；内容树版本仍会随文件变化。
