@@ -231,7 +231,7 @@ test("Windows source-write failure rolls migration destination back without chan
     await rm(f.cwd, { recursive: true, force: true });
   }
 });
-test("CLI discovers all operations, enforces scopes and migrates a rejected embedded config", async () => {
+test("CLI discovers all operations, enforces scopes and migrates a rejected embedded config", async (t) => {
   const f = await fixture();
   try {
     const profile = join(f.cwd, "profile.yaml");
@@ -254,54 +254,57 @@ test("CLI discovers all operations, enforces scopes and migrates a rejected embe
       AGENT_TOKEN: "sensitive-runtime-token",
     });
 
-    test("editor drafts validate before replacement and reject concurrent external edits", async () => {
-      const f = await fixture();
-      try {
-        const path = join(f.cwd, ".pguide", "agents.yaml");
-        const before = file({ local: acp });
-        await writeFile(path, before);
-        const editor = join(f.cwd, "editor.mjs");
-        await writeFile(
-          editor,
-          'import{writeFile}from"node:fs/promises";if(process.env.EXTERNAL_EDIT)await writeFile(process.env.EXTERNAL_EDIT,process.env.EXTERNAL_CONTENT);await writeFile(process.argv.at(-1),process.env.EDIT_CONTENT);',
-        );
-        const env = {
-          VISUAL: `"${process.execPath}" "${editor}"`,
-          EDIT_CONTENT: file({ remote: ahp }),
-        };
-        const written = await invoke(f.cwd, f.home, ["edit", "--scope", "project"], env);
-        assert.equal(written.code, 0, written.stdout);
-        assert.deepEqual(parseAgents(await readFile(path, "utf8")).agents, { remote: ahp });
-        const invalid = await invoke(f.cwd, f.home, ["edit", "--scope", "project"], {
-          ...env,
-          EDIT_CONTENT: "agents: [",
-        });
-        assert.equal(invalid.code, 2, invalid.stdout);
-        const concurrent = await invoke(f.cwd, f.home, ["edit", "--scope", "project"], {
-          ...env,
-          EXTERNAL_EDIT: path,
-          EXTERNAL_CONTENT: before,
-        });
-        assert.equal(concurrent.code, 2, concurrent.stdout);
-        assert.match(concurrent.stdout, /Concurrent/);
-        assert.equal(await readFile(path, "utf8"), before);
-        assert.deepEqual(await readdir(join(f.cwd, ".pguide")), ["agents.yaml"]);
-        for (const args of [
-          ["remove", "local", "--scope", "explicit"],
-          ["remove", "local", "--scope", "project", "--scope", "user"],
-          ["remove", "local", "--scope", "project", "--unknown", "value"],
-          ["remove", "local", "extra", "--scope", "project"],
-        ]) {
-          const rejected = await invoke(f.cwd, f.home, args);
-          assert.equal(rejected.code, 2, rejected.stdout);
+    await t.test(
+      "editor drafts validate before replacement and reject concurrent external edits",
+      async () => {
+        const f = await fixture();
+        try {
+          const path = join(f.cwd, ".pguide", "agents.yaml");
+          const before = file({ local: acp });
+          await writeFile(path, before);
+          const editor = join(f.cwd, "editor.mjs");
+          await writeFile(
+            editor,
+            'import{writeFile}from"node:fs/promises";if(process.env.EXTERNAL_EDIT)await writeFile(process.env.EXTERNAL_EDIT,process.env.EXTERNAL_CONTENT);await writeFile(process.argv.at(-1),process.env.EDIT_CONTENT);',
+          );
+          const env = {
+            VISUAL: `"${process.execPath}" "${editor}"`,
+            EDIT_CONTENT: file({ remote: ahp }),
+          };
+          const written = await invoke(f.cwd, f.home, ["edit", "--scope", "project"], env);
+          assert.equal(written.code, 0, written.stdout);
+          assert.deepEqual(parseAgents(await readFile(path, "utf8")).agents, { remote: ahp });
+          const invalid = await invoke(f.cwd, f.home, ["edit", "--scope", "project"], {
+            ...env,
+            EDIT_CONTENT: "agents: [",
+          });
+          assert.equal(invalid.code, 2, invalid.stdout);
+          const concurrent = await invoke(f.cwd, f.home, ["edit", "--scope", "project"], {
+            ...env,
+            EXTERNAL_EDIT: path,
+            EXTERNAL_CONTENT: before,
+          });
+          assert.equal(concurrent.code, 2, concurrent.stdout);
+          assert.match(concurrent.stdout, /Concurrent/);
           assert.equal(await readFile(path, "utf8"), before);
+          assert.deepEqual(await readdir(join(f.cwd, ".pguide")), ["agents.yaml"]);
+          for (const args of [
+            ["remove", "local", "--scope", "explicit"],
+            ["remove", "local", "--scope", "project", "--scope", "user"],
+            ["remove", "local", "--scope", "project", "--unknown", "value"],
+            ["remove", "local", "extra", "--scope", "project"],
+          ]) {
+            const rejected = await invoke(f.cwd, f.home, args);
+            assert.equal(rejected.code, 2, rejected.stdout);
+            assert.equal(await readFile(path, "utf8"), before);
+          }
+        } finally {
+          await rm(f.cwd, { recursive: true, force: true });
         }
-      } finally {
-        await rm(f.cwd, { recursive: true, force: true });
-      }
-    });
+      },
+    );
 
-    test("packaged offline schema is byte-identical to its public source", async () => {
+    await t.test("packaged offline schema is byte-identical to its public source", async () => {
       assert.equal(
         await readFile(
           new URL(import.meta.resolve("@potential-guide/cli-core/schemas/agents/v1.json")),

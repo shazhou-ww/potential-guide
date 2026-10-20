@@ -82,3 +82,20 @@ layers、format、lint、typecheck 通过，`silvermoon check --worktree --audie
 pguide 87 项中 85 通过、2 项平台跳过，脚本测试 37/37 通过。
 首次评审后全量运行曾触发监督测试既有 8 秒反馈 deadline，单独重跑该测试通过；
 保留原阈值后再次完整运行通过，没有将失败归为部署证据或静默忽略。
+
+Ubuntu CI run `39462606984`、job `118765903264` 在 Node 22.13.0 暴露了测试生命周期问题：
+两个嵌套异步测试没有被父测试等待，结果为 `cancelledByParent`，不是 Agent runtime 故障。
+在快进到 `origin/main` 的 `f3d80b3e2d1a1672f721998cb6447a5032270bc3` 后，
+Windows Node 22.13.0 的修复前复现为 6 通过、1 失败、2 取消；
+同一代码在 Node 24.12.0 虽然 9/9 通过，但该结果不能证明父子测试等待关系正确。
+
+修复只将父测试改为显式接收 TestContext，并依次 `await t.test(...)` 等待 editor drafts
+和 packaged schema 两个子测试，使其完成后才执行父测试的后续断言与 finally 清理；
+没有生产代码、超时、跳过或断言豁免变更。最终文件在 Windows Node 22.13.0 和 24.12.0
+分别直接运行 `node --import tsx --test packages\pguide-agents\test\agents.test.ts`，
+均为 9 通过、0 失败、0 取消、0 跳过，不是 Turbo 缓存结果。
+该修复的 `pnpm check` 返回 0：40 个 workspace 测试任务通过（30 个缓存），
+pguide 88 项中 86 通过、2 项既有平台跳过，脚本测试 39/39 通过，
+16 个包的九种隔离消费场景通过。
+此更新改变 Inner revision；真实 Ubuntu CI 复验及对应接受刷新由父协调者负责，
+本修复没有追加或改写任何生命周期事件，也没有宣称新 CI 已通过。
