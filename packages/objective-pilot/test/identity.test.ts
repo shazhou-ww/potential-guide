@@ -47,8 +47,8 @@ test("directory identity normalizes roots, trailing slash, encoded names and Win
   ])
     assert.equal(canonicalObjectiveUri(value), "git+https://example.test/r.git#/");
   assert.equal(
-    pilotResourceUri("git+https://example.test/r.git#/", "pilot.yaml"),
-    "git+https://example.test/r.git#pilot.yaml",
+    pilotResourceUri("git+https://example.test/r.git#/", "objective.yaml"),
+    "git+https://example.test/r.git#objective.yaml",
   );
   assert.equal(
     pilotResourceUri("git+https://example.test/r.git#folder", "checks/run.js"),
@@ -56,7 +56,7 @@ test("directory identity normalizes roots, trailing slash, encoded names and Win
   );
   assert.notEqual(
     canonicalManifestUri("git+https://example.test/r.git#a/run.js"),
-    canonicalManifestUri("git+https://example.test/r.git#a/pilot.yaml"),
+    canonicalManifestUri("git+https://example.test/r.git#a/objective.yaml"),
   );
   const local = resolve("packages", "objective-pilot");
   assert.equal(canonicalObjectiveUri(local), `${pathToFileURL(local).href}/`);
@@ -68,7 +68,7 @@ test("directory identity normalizes roots, trailing slash, encoded names and Win
 
 test("identity rejects old manifest IDs and path escapes, while distinct folders remain distinct", () => {
   for (const value of [
-    "#rules/pilot.yaml",
+    "#rules/objective.yaml",
     "#../rules/",
     "#rules/../a/",
     "#rules//",

@@ -102,7 +102,7 @@ export async function fixture(baseDirectory = scratch, prefix = "pguide-test-") 
     "json",
   ]);
   if (scaffold.code !== 0) throw new Error(scaffold.stdout + scaffold.stderr);
-  const manifest = join(repository, "objective", "pilot.yaml");
+  const manifest = join(repository, "objective", "objective.yaml");
   const uri = `git+${pathToFileURL(repository).href}#objective/`;
   const subject = join(directory, "subject.json");
   await writeFile(subject, "{}");

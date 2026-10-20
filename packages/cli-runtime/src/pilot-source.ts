@@ -21,7 +21,7 @@ import {
   canonicalObjectiveUri,
   createProcessCheckProbe,
   type Envelope,
-  type GitPilotSource,
+  type GitObjectiveSource,
   loadPilotSpec,
   type PageResource,
   type PilotRuntime,
@@ -128,9 +128,9 @@ async function bindPilot<T>(
   } else {
     let path = await realpath(resolve(cwd, location));
     if (!(await stat(path)).isDirectory()) {
-      if (basename(path) !== "pilot.yaml")
+      if (basename(path) !== "objective.yaml")
         throw new PilotSourceError(
-          "Pilot sources must be directories; only an exact pilot.yaml entry can be converted at the CLI boundary.",
+          "Pilot sources must be directories; only an exact objective.yaml entry can be converted at the CLI boundary.",
         );
       path = dirname(path);
     }
@@ -315,7 +315,7 @@ async function bindPilot<T>(
               sources.set(key, pending);
               return pending;
             }
-            async function sourceEvidence(uri: string): Promise<GitPilotSource> {
+            async function sourceEvidence(uri: string): Promise<GitObjectiveSource> {
               const source = await sourceFor(uri);
               const directory = resourcePath(uri);
               const tree = await read(source.snapshot.treeOid(directory), sourceSignals.get(uri));
@@ -400,16 +400,17 @@ async function bindPilot<T>(
                   { command: string; args: string[]; cwd: string; dependencyBinding: boolean }
                 >();
                 async function prepareChecks(
-                  pilot: PilotSpec,
+                  objective: PilotSpec,
                   preparationSignal = signal,
                 ): Promise<void> {
-                  const source = await sourceFor(pilot.objectiveId);
-                  const root = join(source.checkout, ...resourcePath(pilot.objectiveId).split("/"));
-                  const allChecks = pilot.manifest.levels.flatMap(
-                    ({ advancement }) => advancement.checks,
+                  const source = await sourceFor(objective.objectiveId);
+                  const root = join(
+                    source.checkout,
+                    ...resourcePath(objective.objectiveId).split("/"),
                   );
-                  for (const level of pilot.manifest.levels) {
-                    for (const check of level.advancement.checks) {
+                  const allChecks = objective.manifest.levels.flatMap(({ checks }) => checks);
+                  for (const level of objective.manifest.levels) {
+                    for (const check of level.checks) {
                       preparationSignal.throwIfAborted();
                       const scoped = join(root, "levels", level.id, "checks", check.id);
                       let directory = scoped;
@@ -455,7 +456,7 @@ async function bindPilot<T>(
                       } else if (process.platform !== "win32") {
                         await chmod(entry, 0o755);
                       }
-                      executables.set(JSON.stringify([pilot.objectiveId, level.id, check.id]), {
+                      executables.set(JSON.stringify([objective.objectiveId, level.id, check.id]), {
                         command,
                         args,
                         cwd: directory,
@@ -617,7 +618,7 @@ export interface PilotSourceOptions {
   readonly signal?: AbortSignal;
   readonly reports?: { readonly enabled?: boolean; readonly directory?: string } | undefined;
   readonly versions?: Readonly<Record<string, string>>;
-  readonly sources?: Readonly<Record<string, GitPilotSource>>;
+  readonly sources?: Readonly<Record<string, GitObjectiveSource>>;
   readonly cacheDirectory?: string;
   readonly probeTimeoutMs?: number | undefined;
   readonly preparationTimeoutMs?: number;

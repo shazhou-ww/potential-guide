@@ -1,5 +1,5 @@
-schemaVersion: 1
-domainSchema:
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json
+subjectSchema:
   type: object
   required: [marker, expected]
   additionalProperties: false
@@ -8,9 +8,8 @@ domainSchema:
     expected: {type: string, minLength: 48, maxLength: 48}
 levels:
   - id: unrepaired
-    advancement:
-      checks:
-        - id: marker
-          problems: [marker-incorrect]
+    checks:
+      - id: marker
+        problems: [marker-incorrect]
 defaultLanguage: en-US
 languages: [en-US]

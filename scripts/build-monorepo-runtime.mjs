@@ -102,24 +102,24 @@ async function generated(path, content) {
     await writeFile(destination, content);
   }
 }
-for (const [prefix, domainSchema] of [
+for (const [prefix, subjectSchema] of [
   ["", repositorySubjectSchema],
   ["package-standard/", packageSubjectSchema],
 ]) {
   await generated(
-    `${prefix}pilot.yaml`,
+    `${prefix}objective.yaml`,
     stringify(
       {
-        schemaVersion: 1,
-        domainSchema,
+        $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json",
+        subjectSchema,
         levels: [
           {
             id: "initial",
-            advancement: { checks: [{ id: "structure", problems: ["structure-incomplete"] }] },
+            checks: [{ id: "structure", problems: ["structure-incomplete"] }],
           },
           {
             id: "structured",
-            advancement: { checks: [{ id: "deliveries", problems: ["delivery-incomplete"] }] },
+            checks: [{ id: "deliveries", problems: ["delivery-incomplete"] }],
           },
         ],
         defaultLanguage: "zh-CN",

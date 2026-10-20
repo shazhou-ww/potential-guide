@@ -21,7 +21,7 @@ const packs = join(scratch, "packs");
 const consumer = join(scratch, "consumer");
 const fixtureSource = join(root, "scripts", "fixtures", "deployment-acp");
 const fixture = join(consumer, "fixture");
-const pilotUri = `git+${pathToFileURL(fixture).href}#guide/`;
+const objectiveUri = `git+${pathToFileURL(fixture).href}#guide/`;
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const binExtension = process.platform === "win32" ? ".cmd" : "";
@@ -283,25 +283,25 @@ async function verifyCliContract() {
   }
   const direct = await successful(
     executable("pguide-probe"),
-    ["--pilot", pilotUri, "--subject-file", subject, "--format", "json"],
+    ["--pilot", objectiveUri, "--subject-file", subject, "--format", "json"],
     { cwd: consumer, env },
   );
   const dispatched = await successful(
     executable("pguide"),
-    ["probe", "--pilot", pilotUri, "--subject-file", subject, "--format", "json"],
+    ["probe", "--pilot", objectiveUri, "--subject-file", subject, "--format", "json"],
     { cwd: consumer, env },
   );
   const directObservation = JSON.parse(direct.stdout);
   const dispatchedObservation = JSON.parse(dispatched.stdout);
   assert.equal(directObservation.status, 200);
   assert.equal(dispatchedObservation.status, 200);
-  assert.equal(directObservation.payload.current.objectiveId, pilotUri);
+  assert.equal(directObservation.payload.current.objectiveId, objectiveUri);
   assert.equal(directObservation.payload.current.levelId, "initial");
   assert.equal(directObservation.payload.problems[0].ref.problemId, "not-ready");
   assert.deepEqual(dispatchedObservation.payload.current, directObservation.payload.current);
   const stdin = await successful(
     executable("pguide-probe"),
-    ["--pilot", pilotUri, "--subject-file", "-", "--format", "json"],
+    ["--pilot", objectiveUri, "--subject-file", "-", "--format", "json"],
     { cwd: consumer, env, input: await readFile(subject, "utf8") },
   );
   assert.equal(JSON.parse(stdin.stdout).status, 200);
@@ -379,7 +379,7 @@ async function invokeRegulate(config, subject, report, env, extra = []) {
       "--config",
       config,
       "--pilot",
-      pilotUri,
+      objectiveUri,
       "--subject-file",
       subject,
       "--target",
@@ -501,7 +501,7 @@ async function verifyRegulation(baseEnv) {
         "--config",
         config,
         "--pilot",
-        pilotUri,
+        objectiveUri,
         "--subject-file",
         blockedSubject,
         "--target",
@@ -617,7 +617,7 @@ for await (const line of createInterface({input:process.stdin})) {
       goals: [
         {
           id: "maintained",
-          pilot: pilotUri,
+          objective: objectiveUri,
           subject: { marker: join(fixture, "ready") },
           targetLevel: "terminal",
           priority: 1,

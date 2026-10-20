@@ -7,7 +7,7 @@
   "files": [
     "dist",
     "runtime",
-    "pilot.yaml",
+    "objective.yaml",
     "checks",
     "package-standard",
     "references",

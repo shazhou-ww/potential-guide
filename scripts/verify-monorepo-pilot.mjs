@@ -8,6 +8,7 @@ import {
   defaultPolicy,
 } from "../packages/objective-monorepo-standard/dist/index.js";
 import { parseObjectives, projectObjective } from "../packages/objective-pilot/dist/index.js";
+import { objectiveContext } from "../packages/objective-declarations/dist/index.js";
 import { execute } from "./verify-deployment-helpers.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -65,8 +66,8 @@ try {
     "Snapshot current standardization Pilots",
   );
   report.commit = await git(source, "rev-parse", "HEAD");
-  report.pilot = `git+${pathToFileURL(source).href}#packages/objective-monorepo-standard/`;
-  report.packagePilot = `${report.pilot}package-standard/`;
+  report.objective = `git+${pathToFileURL(source).href}#packages/objective-monorepo-standard/`;
+  report.packageObjective = `${report.objective}package-standard/`;
   await write(target, "package.json", { name: "independent-target", private: true });
   await write(target, "README.md", "# Independent target");
   await write(target, "pnpm-workspace.yaml", "packages: [packages/*]");
@@ -91,23 +92,23 @@ try {
   };
   const unit = { type: "object", additionalProperties: false, maxProperties: 0 };
   const packageDeclaration = {
-    schemaVersion: 1,
+    $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
     objectives: {
       standardize: {
         description: "Prepare the fixture package",
-        pilot: report.packagePilot,
+        objective: report.packageObjective,
         inputSchema: unit,
-        subject: `{"root":context.checkout.rootPath,"directory":context.directory.relativePath,${JSON.stringify(own).slice(1)}`,
+        subject: `{"root":context.repo.rootPath,"directory":context.path,${JSON.stringify(own).slice(1)}`,
       },
     },
   };
   await write(target, "packages/shared/objectives.yaml", packageDeclaration);
   await write(target, "objectives.yaml", {
-    schemaVersion: 1,
+    $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
     objectives: {
       standardize: {
         description: "Coordinate fixture standardization",
-        pilot: report.pilot,
+        objective: report.objective,
         inputSchema: unit,
         subject: `{"context":context,"policy":${JSON.stringify(defaultPolicy)},"deliveries":[]}`,
       },
@@ -150,7 +151,8 @@ try {
     const observation = JSON.parse(result.stdout);
     assert.equal(observation.status, 200, result.stdout);
     assert.equal(observation.payload.current.levelId, expectedLevel, result.stdout);
-    const identities = cwd === target ? [report.pilot, report.packagePilot] : [report.packagePilot];
+    const identities =
+      cwd === target ? [report.objective, report.packageObjective] : [report.packageObjective];
     for (const identity of identities) {
       if (expectedKind === "internal" && identity === report.packagePilot) continue;
       const path = new URL(identity).hash.slice(1).replace(/\/$/, "");
@@ -176,11 +178,7 @@ try {
   await write(target, "packages/shared/objectives.yaml", packageDeclaration);
   await probe("declaration-repaired", "terminal");
 
-  const context = {
-    repository: { id: "https://github.com/shazhou-ww/potential-guide.git" },
-    checkout: { id: "urn:verification:current-checkout", rootPath: resolve(root) },
-    directory: { absolutePath: resolve(root), relativePath: "." },
-  };
+  const context = await objectiveContext(resolve(root));
   const entry = parseObjectives(await readFile(join(root, "objectives.yaml"), "utf8")).standardize;
   const subject = projectObjective(entry, context, undefined);
   const actual = await checkRepository(subject, 2, (target) => async (subject) => {

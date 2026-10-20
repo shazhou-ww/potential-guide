@@ -17,19 +17,19 @@ import {
 test("definition schemas and subject validation are usable without an execution runtime", async () => {
   const manifest = parseManifest(
     JSON.stringify({
-      schemaVersion: 1,
-      domainSchema: {
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json",
+      subjectSchema: {
         type: "object",
         required: ["name"],
         properties: { name: { type: "string" } },
         additionalProperties: false,
       },
-      levels: [{ id: "initial", advancement: { checks: [] } }],
+      levels: [{ id: "initial", checks: [] }],
       defaultLanguage: "en-US",
       languages: ["en-US"],
     }),
   );
-  const domain = compileDomain(manifest.domainSchema);
+  const domain = compileDomain(manifest.subjectSchema);
   assert.equal(domain({ name: "independent" }), true);
   assert.equal(domain({ name: 1 }), false);
   assert.ok(validateSubject({ name: 1 }, domain));
@@ -41,30 +41,30 @@ test("definition schemas and subject validation are usable without an execution 
 test("package-owned declaration parsing and binding remain independently consumable protocol", () => {
   const declarations = parseObjectives(
     JSON.stringify({
-      schemaVersion: 1,
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
       objectives: {
         standardize: {
           description: "Package-owned standardization",
-          pilot: "git+https://example.test/rules.git#package-standard/",
+          objective: "git+https://example.test/rules.git#package-standard/",
           inputSchema: { type: "object", additionalProperties: false, maxProperties: 0 },
-          subject: '{"directory": context.directory.absolutePath}',
+          subject: '{"directory": context.path}',
         },
       },
     }),
   );
   const entry = declarations.standardize;
   assert.ok(entry);
-  const context = { directory: { absolutePath: "D:\\fixture" } };
+  const context = { repo: null, path: "D:\\fixture" };
   assert.deepEqual(projectObjective(entry, context, undefined), { directory: "D:\\fixture" });
   const manifest = parseManifest(
     JSON.stringify({
-      schemaVersion: 1,
-      domainSchema: {
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json",
+      subjectSchema: {
         type: "object",
         required: ["directory"],
         properties: { directory: { type: "string" } },
       },
-      levels: [{ id: "initial", advancement: { checks: [] } }],
+      levels: [{ id: "initial", checks: [] }],
       defaultLanguage: "en-US",
       languages: ["en-US"],
     }),

@@ -1,17 +1,17 @@
 import {
   canonicalManifestUri,
   loadPilotSpec,
-  type PilotManifest,
+  type ObjectiveManifest,
   type ResourceResolver,
 } from "../src/index.js";
 
 export const objectiveId = "git+https://example.test/objectives.git#root/";
 export const commit = "a".repeat(40);
 
-export function manifest(overrides: Partial<PilotManifest> = {}): PilotManifest {
+export function manifest(overrides: Partial<ObjectiveManifest> = {}): ObjectiveManifest {
   return {
-    schemaVersion: 1,
-    domainSchema: {
+    $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json",
+    subjectSchema: {
       type: "object",
       required: ["name"],
       properties: { name: { type: "string" } },
@@ -20,14 +20,12 @@ export function manifest(overrides: Partial<PilotManifest> = {}): PilotManifest 
     levels: [
       {
         id: "z-first",
-        advancement: {
-          checks: [
-            { id: "one", problems: ["broken"] },
-            { id: "two", problems: ["broken"] },
-          ],
-        },
+        checks: [
+          { id: "one", problems: ["broken"] },
+          { id: "two", problems: ["broken"] },
+        ],
       },
-      { id: "a-next", advancement: { checks: [{ id: "one", problems: ["broken"] }] } },
+      { id: "a-next", checks: [{ id: "one", problems: ["broken"] }] },
     ],
     defaultLanguage: "en-US",
     languages: ["en-US", "zh-CN"],
@@ -35,10 +33,12 @@ export function manifest(overrides: Partial<PilotManifest> = {}): PilotManifest 
   };
 }
 
-export function fixture(configs: Record<string, PilotManifest> = { [objectiveId]: manifest() }) {
+export function fixture(
+  configs: Record<string, ObjectiveManifest> = { [objectiveId]: manifest() },
+) {
   const texts = new Map(
     Object.entries(configs).map(([uri, config]) => [
-      canonicalManifestUri("pilot.yaml", uri),
+      canonicalManifestUri("objective.yaml", uri),
       JSON.stringify(config),
     ]),
   );
@@ -51,7 +51,7 @@ export function fixture(configs: Record<string, PilotManifest> = { [objectiveId]
       "levels/terminal",
       ...config.levels.flatMap((level) => [
         `levels/${level.id}`,
-        ...level.advancement.checks.flatMap((check) => [
+        ...level.checks.flatMap((check) => [
           `levels/${level.id}/checks/${check.id}`,
           ...check.problems.map(
             (problem) => `levels/${level.id}/checks/${check.id}/problems/${problem}`,

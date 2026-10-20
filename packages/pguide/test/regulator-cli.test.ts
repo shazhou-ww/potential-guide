@@ -185,16 +185,19 @@ test("Agent prompts contain the subject, target and every problem, not a selecte
     permissions: { ceiling: [], grants: [] },
     binding: { id: "fixture" },
     subject: { name: "subject" },
-    target: { objectiveId: "git+https://example.invalid/repo.git#pilot.yaml", levelId: "terminal" },
+    target: {
+      objectiveId: "git+https://example.invalid/repo.git#objective.yaml",
+      levelId: "terminal",
+    },
     observation: {
       current: {
-        objectiveId: "git+https://example.invalid/repo.git#pilot.yaml",
+        objectiveId: "git+https://example.invalid/repo.git#objective.yaml",
         levelId: "initial",
       },
       problems: ["first", "second"].map((problemId) => ({
         kind: "internal" as const,
         ref: {
-          objectiveId: "git+https://example.invalid/repo.git#pilot.yaml",
+          objectiveId: "git+https://example.invalid/repo.git#objective.yaml",
           levelId: "initial",
           checkId: "ready",
           problemId,
@@ -220,9 +223,9 @@ test("Agent prompt exposes effective grants without the ungranted administrative
   const prompt = agentPrompt({
     binding: { id: "fixture" },
     subject: {},
-    target: { objectiveId: "git+file:///fixture.git#pilot.yaml", levelId: "terminal" },
+    target: { objectiveId: "git+file:///fixture.git#objective.yaml", levelId: "terminal" },
     observation: {
-      current: { objectiveId: "git+file:///fixture.git#pilot.yaml", levelId: "initial" },
+      current: { objectiveId: "git+file:///fixture.git#objective.yaml", levelId: "initial" },
       problems: [],
       gapSummary: "",
       observedAt: new Date().toISOString(),
@@ -328,7 +331,7 @@ test("regulate and continue persist pinned Pilot observations and use the JSON c
       await readFile(join(state, "regulations", report.regulationId, "regulation.json"), "utf8"),
     );
     assert.equal(persisted.schemaVersion, 3);
-    assert.equal(persisted.pilotCommit, commit);
+    assert.equal(persisted.objectiveCommit, commit);
     assert.deepEqual(persisted.agentExecutionLimits, { timeoutMs: 10_000 });
     assert.equal("limits" in persisted, false);
     assert.deepEqual(persisted.regulationStrategy, regulationStrategy);
@@ -373,9 +376,9 @@ test("continuation without a real session ID fails when required and is explicit
     permissions: { ceiling: [], grants: [] },
     binding: { id: "fixture" },
     subject: {},
-    target: { objectiveId: "git+file:///fixture.git#pilot.yaml", levelId: "terminal" },
+    target: { objectiveId: "git+file:///fixture.git#objective.yaml", levelId: "terminal" },
     observation: {
-      current: { objectiveId: "git+file:///fixture.git#pilot.yaml", levelId: "initial" },
+      current: { objectiveId: "git+file:///fixture.git#objective.yaml", levelId: "initial" },
       problems: [],
       gapSummary: "",
       observedAt: new Date().toISOString(),
@@ -639,7 +642,7 @@ test("continue preserves local unpublished source metadata without changing the 
       await readFile(join(state, "regulations", report.regulationId, "regulation.json"), "utf8"),
     );
     assert.equal(persisted.sourcePath, f.manifest);
-    assert.equal(persisted.pilotUri, identity);
+    assert.equal(persisted.objectiveUri, identity);
     await writeFile(join(f.repository, "advanced.txt"), "The current checkout has advanced.");
     assert.notEqual(await f.commit(), commit);
     const continued = await run(bin("continue"), [

@@ -83,15 +83,15 @@ test("health manifest defines five ordered, nonredundant levels and complete zh-
     ["initial", "managed", "system-ready", "development-ready", "orderly"],
   );
   assert.deepEqual(
-    loaded.manifest.levels.flatMap((level) => level.advancement.checks.map((check) => check.id)),
+    loaded.manifest.levels.flatMap((level) => level.checks.map((check) => check.id)),
     ["identity", "system", "toolchains", "order", "sustainability"],
   );
   const pages = loaded.locales["zh-CN"];
   assert.ok(pages?.["levels/terminal"]);
   assert.match(pages["system/overview"]?.content ?? "", /historyMinSamples=3/);
   for (const level of loaded.manifest.levels) {
-    assert.equal(level.advancement.checks.length, 1);
-    for (const check of level.advancement.checks) {
+    assert.equal(level.checks.length, 1);
+    for (const check of level.checks) {
       assert.deepEqual(check.problems, health.problemIds[check.id]);
       assert.ok(pages[`checks/${check.id}`]);
       for (const problem of check.problems) {

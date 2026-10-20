@@ -44,7 +44,7 @@ export async function checkRepository(
   signal: AbortSignal = new AbortController().signal,
 ): Promise<RepositoryReport> {
   const subject = parseRepositorySubject(value);
-  const snapshot = new Snapshot(await realpath(subject.context.checkout.rootPath));
+  const snapshot = new Snapshot(await realpath(subject.context.repo.rootPath));
   const output = recorder();
   const { add } = output;
   const facts = await observeRepository(snapshot);
@@ -62,15 +62,11 @@ export async function checkRepository(
     try {
       const entry = parseObjectives(await snapshot.text(file)).standardize;
       if (!entry) throw new Error("Missing standardize Objective.");
-      const wire = projectObjective(
-        entry,
-        packageContext(subject, actual.directory, resolve(snapshot.root, actual.directory)),
-        undefined,
-      );
+      const wire = projectObjective(entry, packageContext(subject, actual.directory), undefined);
       const own = parsePackageSubject(wire);
       if (resolve(own.root) !== snapshot.root || own.directory !== actual.directory)
         throw new Error("Package standardize must bind its discovered directory in this checkout.");
-      const objectiveId = canonicalObjectiveUri(entry.pilot);
+      const objectiveId = canonicalObjectiveUri(entry.objective);
       const name = String(actual.manifest.name);
       bindings.push({ objectiveId, subject: own, wire, name });
       model.workspaces.push(workspaceMetadata(own, actual.manifest, facts.inventory, tasks));

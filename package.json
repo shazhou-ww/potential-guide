@@ -9,6 +9,8 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "schemas:build": "node scripts/sync-objective-schemas.mjs",
+    "schemas:check": "node scripts/sync-objective-schemas.mjs --check",
     "self-check:build": "node scripts/build-self-check-runtime.mjs",
     "self-check:check": "node scripts/build-self-check-runtime.mjs --check",
     "health:build": "node scripts/build-health-runtime.mjs",
@@ -28,7 +30,7 @@
     "format:check": "biome format .",
     "lint": "turbo run lint && biome lint scripts config",
     "pack:check": "pnpm run build && node scripts/check-packages.mjs",
-    "test": "pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && turbo run test && node --test scripts/*.test.mjs",
+    "test": "pnpm schemas:check && pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && turbo run test && node --test scripts/*.test.mjs",
     "typecheck": "turbo run typecheck && tsc -p tsconfig.test.json --pretty false"
   },
   "devDependencies": {

@@ -2,10 +2,13 @@ import { types } from "node:util";
 import type { ValidateFunction } from "ajv";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { parseDocument } from "yaml";
-import type { JsonObject, JsonValue, PilotManifest, ValidationIssues } from "./types.js";
+import type { JSONSchema } from "json-schema-typed";
+import { OBJECTIVE_SCHEMA_URI, validateObjectiveDocument } from "./schemas.js";
+import type { JsonValue, ObjectiveManifest, SubjectSchema, ValidationIssues } from "./types.js";
 
 export class ObjectiveConfigurationError extends TypeError {}
 export class ObjectiveOperationError extends TypeError {}
+const inputSchemaCache = new Map<string, ValidateFunction>();
 
 export function parseStrictYaml(source: string): unknown {
   const document = parseDocument(source, {
@@ -104,15 +107,19 @@ function canonicalLanguage(language: string) {
     return false;
   }
 }
-export function parseManifest(source: string): PilotManifest {
+export function parseManifest(source: string): ObjectiveManifest {
   const value: unknown = parseStrictYaml(source);
   if (!record(value))
     throw new ObjectiveConfigurationError("Objective Manifest must be an object.");
-  fields(value, ["schemaVersion", "domainSchema", "levels", "defaultLanguage", "languages"]);
+  if (!validateObjectiveDocument(value))
+    throw new ObjectiveConfigurationError(
+      `Invalid Objective Manifest. Expected fields: $schema, subjectSchema, levels, defaultLanguage, languages. Migrate pilot.yaml/schemaVersion/domainSchema/advancement explicitly with objective-contract-migrate; expected ${OBJECTIVE_SCHEMA_URI}: ${JSON.stringify(validateObjectiveDocument.errors)}`,
+    );
+  fields(value, ["$schema", "subjectSchema", "levels", "defaultLanguage", "languages"]);
   if (
-    value.schemaVersion !== 1 ||
-    !record(value.domainSchema) ||
-    !json(value.domainSchema) ||
+    value.$schema !== OBJECTIVE_SCHEMA_URI ||
+    !record(value.subjectSchema) ||
+    !json(value.subjectSchema) ||
     !Array.isArray(value.levels) ||
     value.levels.length === 0 ||
     !text(value.defaultLanguage) ||
@@ -127,15 +134,14 @@ export function parseManifest(source: string): PilotManifest {
   }
   const levels = value.levels.map((entry: unknown) => {
     if (!record(entry)) throw new ObjectiveConfigurationError("Invalid level.");
-    fields(entry, ["id", "advancement"]);
-    if (!identifier(entry.id) || entry.id === "terminal" || !record(entry.advancement)) {
-      throw new ObjectiveConfigurationError("Levels require a non-reserved ID and advancement.");
+    fields(entry, ["id", "checks"]);
+    if (!identifier(entry.id) || entry.id === "terminal") {
+      throw new ObjectiveConfigurationError("Levels require a non-reserved ID and checks.");
     }
-    fields(entry.advancement, ["checks"]);
-    if (!Array.isArray(entry.advancement.checks)) {
-      throw new ObjectiveConfigurationError("Advancement checks must be check nodes.");
+    if (!Array.isArray(entry.checks)) {
+      throw new ObjectiveConfigurationError("Level checks must be check nodes.");
     }
-    const checks = entry.advancement.checks.map((check: unknown) => {
+    const checks = entry.checks.map((check: unknown) => {
       if (!record(check)) throw new ObjectiveConfigurationError("Invalid check.");
       fields(check, ["id", "problems"]);
       if (
@@ -150,7 +156,7 @@ export function parseManifest(source: string): PilotManifest {
       }
       return { id: check.id, problems: check.problems.map(String) };
     });
-    return { id: entry.id, advancement: { checks } };
+    return { id: entry.id, checks };
   });
   const first = levels[0];
   if (first === undefined)
@@ -159,48 +165,81 @@ export function parseManifest(source: string): PilotManifest {
     throw new ObjectiveConfigurationError("Duplicate level ID.");
   }
   for (const level of levels) {
-    const checks = level.advancement.checks;
+    const checks = level.checks;
     if (new Set(checks.map(({ id }) => id)).size !== checks.length) {
       throw new ObjectiveConfigurationError("Duplicate check ID within a level.");
     }
   }
+  compileDomain(value.subjectSchema as unknown as SubjectSchema);
   return immutable({
-    schemaVersion: 1,
-    domainSchema: value.domainSchema,
+    $schema: OBJECTIVE_SCHEMA_URI,
+    subjectSchema: value.subjectSchema as unknown as SubjectSchema,
     levels: [first, ...levels.slice(1)],
     defaultLanguage: value.defaultLanguage,
     languages: [value.languages[0], ...value.languages.slice(1)],
   });
 }
-export function compileDomain(schema: JsonObject): ValidateFunction {
-  if (schema.type !== "object")
+export function compileDomain(schema: JSONSchema): ValidateFunction {
+  if (typeof schema !== "object" || schema.type !== "object")
     throw new ObjectiveConfigurationError("Domain must be a Draft 2020-12 root object schema.");
   return compileInputSchema(schema);
 }
-export function compileInputSchema(schema: JsonObject): ValidateFunction {
+export function compileInputSchema(schema: JSONSchema): ValidateFunction {
   if (
+    typeof schema === "object" &&
     schema.$schema !== undefined &&
     schema.$schema !== "https://json-schema.org/draft/2020-12/schema"
   ) {
     throw new ObjectiveConfigurationError("Expected a Draft 2020-12 schema.");
   }
   function inspect(value: unknown) {
-    if (Array.isArray(value)) {
-      for (const child of value) inspect(child);
-      return;
-    }
     if (!record(value)) return;
     for (const [key, child] of Object.entries(value)) {
       if (key === "$ref" && (typeof child !== "string" || !child.startsWith("#/$defs/"))) {
         throw new ObjectiveConfigurationError("Only local #/$defs schema references are allowed.");
       }
-      inspect(child);
+      if (
+        ["$defs", "properties", "patternProperties", "dependentSchemas"].includes(key) &&
+        record(child)
+      )
+        for (const schema of Object.values(child)) inspect(schema);
+      else if (["allOf", "anyOf", "oneOf", "prefixItems"].includes(key) && Array.isArray(child))
+        for (const schema of child) inspect(schema);
+      else if (
+        [
+          "items",
+          "additionalProperties",
+          "unevaluatedProperties",
+          "contains",
+          "not",
+          "if",
+          "then",
+          "else",
+          "propertyNames",
+          "unevaluatedItems",
+          "contentSchema",
+        ].includes(key)
+      )
+        inspect(child);
     }
   }
   inspect(schema);
   try {
-    return new Ajv2020({ strict: true, allErrors: true }).compile(schema);
+    const serialized = JSON.stringify(schema);
+    const cached = inputSchemaCache.get(serialized);
+    if (cached !== undefined) return cached;
+    // Content keys and detached schema data keep mutable callers from poisoning later bindings.
+    const validate = new Ajv2020({ strict: true, allErrors: true }).compile(JSON.parse(serialized));
+    if ("$async" in validate && validate.$async === true)
+      throw new ObjectiveConfigurationError("Asynchronous JSON Schema validation is unsupported.");
+    if (inputSchemaCache.size >= 128) {
+      const first = inputSchemaCache.keys().next().value;
+      if (first !== undefined) inputSchemaCache.delete(first);
+    }
+    inputSchemaCache.set(serialized, validate);
+    return validate;
   } catch (caught) {
+    if (caught instanceof ObjectiveConfigurationError) throw caught;
     throw new ObjectiveConfigurationError("Invalid Objective domain schema.", { cause: caught });
   }
 }

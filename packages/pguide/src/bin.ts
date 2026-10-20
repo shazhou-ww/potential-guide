@@ -231,7 +231,7 @@ async function help(globals: GlobalOptions): Promise<void> {
             title: "Examples",
             lines: [
               "  pguide config path",
-              "  pguide validate pilot .\\objective\\pilot.yaml",
+              "  pguide validate pilot .\\objective\\objective.yaml",
               "  pguide probe --pilot .\\objective --subject-file .\\subject.json --format json",
             ],
           },

@@ -23,11 +23,11 @@ function record(value: unknown): value is Record<string, unknown> {
 function goalSummary(goal: ObjectiveGoal) {
   return {
     id: goal.id,
-    objectiveId: goal.pilot.objectiveId,
-    version: goal.pilot.version,
+    objectiveId: goal.objective.objectiveId,
+    version: goal.objective.version,
     subject: goal.subject,
     targetLevel: goal.targetLevel,
-    levels: [...goal.pilot.manifest.levels.map(({ id }) => id), "terminal"],
+    levels: [...goal.objective.manifest.levels.map(({ id }) => id), "terminal"],
     priority: goal.priority,
     observationIntervalMs: goal.observationIntervalMs,
     requirements: goal.requirements ?? [],
@@ -95,12 +95,12 @@ export function validatePlannerPlan(value: unknown, input: PlannerPolicyInput): 
       entry.targetLevel !== undefined &&
       (typeof entry.targetLevel !== "string" ||
         (entry.targetLevel !== "terminal" &&
-          !goal.pilot.manifest.levels.some(({ id }) => id === entry.targetLevel)))
+          !goal.objective.manifest.levels.some(({ id }) => id === entry.targetLevel)))
     )
       throw invalid();
     if (
       typeof entry.targetLevel === "string" &&
-      levelRank(goal.pilot, entry.targetLevel) < levelRank(goal.pilot, goal.targetLevel)
+      levelRank(goal.objective, entry.targetLevel) < levelRank(goal.objective, goal.targetLevel)
     )
       throw invalid();
     if (

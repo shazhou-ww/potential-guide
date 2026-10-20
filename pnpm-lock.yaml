@@ -30,6 +30,9 @@ catalogs:
     esbuild:
       specifier: 0.28.2
       version: 0.28.2
+    json-schema-typed:
+      specifier: 9.0.0
+      version: 9.0.0
     jsonata:
       specifier: 2.1.0
       version: 2.1.0
@@ -378,6 +381,9 @@ importers:
       ajv:
         specifier: 'catalog:'
         version: 8.20.0
+      json-schema-typed:
+        specifier: 'catalog:'
+        version: 9.0.0
       jsonata:
         specifier: 'catalog:'
         version: 2.1.0
@@ -671,6 +677,9 @@ packages:
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
 
+  json-schema-typed@9.0.0:
+    resolution: {integrity: sha512-t+dkn3pLaz7ku3ELaBKBSQNjd0Sir5zR7Y4CpAR5a+UEH60NefBEAhAgJuWqDH5o4HDfH+EQjmXeQMLc+Xnbdg==}
+
   jsonata@2.1.0:
     resolution: {integrity: sha512-OCzaRMK8HobtX8fp37uIVmL8CY1IGc/a6gLsDqz3quExFR09/U78HUzWYr7T31UEB6+Eu0/8dkVD5fFDOl9a8w==}
     engines: {node: '>= 8'}
@@ -915,6 +924,8 @@ snapshots:
   isexe@2.0.0: {}
 
   json-schema-traverse@1.0.0: {}
+
+  json-schema-typed@9.0.0: {}
 
   jsonata@2.1.0: {}
 

@@ -1,5 +1,5 @@
-schemaVersion: 1
-domainSchema:
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json
+subjectSchema:
   type: object
   additionalProperties: false
   properties:
@@ -209,17 +209,15 @@ domainSchema:
     - deliveries
 levels:
   - id: initial
-    advancement:
-      checks:
-        - id: structure
-          problems:
-            - structure-incomplete
+    checks:
+      - id: structure
+        problems:
+          - structure-incomplete
   - id: structured
-    advancement:
-      checks:
-        - id: deliveries
-          problems:
-            - delivery-incomplete
+    checks:
+      - id: deliveries
+        problems:
+          - delivery-incomplete
 defaultLanguage: zh-CN
 languages:
   - zh-CN

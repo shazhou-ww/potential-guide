@@ -1,0 +1,14 @@
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json
+subjectSchema:
+  type: object
+  required: [marker]
+  properties:
+    marker:
+      type: string
+levels:
+  - id: initial
+    checks:
+      - id: ready
+        problems: [not-ready]
+defaultLanguage: en-US
+languages: [en-US]

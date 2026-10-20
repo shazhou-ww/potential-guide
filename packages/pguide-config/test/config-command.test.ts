@@ -49,7 +49,7 @@ test("config path is available without creating configuration", async () => {
 test("legacy source aliases remain readable/removable; retired writes preserve configuration", async () => {
   const cwd = await mkdtemp(join(scratch, "pguide-config-objective-"));
   const env = { ...process.env, APPDATA: cwd, XDG_CONFIG_HOME: cwd };
-  const uri = "git+https://example.invalid/repo.git#objective/pilot.yaml";
+  const uri = "git+https://example.invalid/repo.git#objective/objective.yaml";
   const invoke = (args: string[]) => run([...args, "--cwd", cwd, "--format", "json"], env);
   try {
     const help = JSON.parse((await invoke(["--help"])).stdout);
@@ -77,7 +77,7 @@ test("legacy source aliases remain readable/removable; retired writes preserve c
     await mkdir(join(cwd, ".pguide"), { recursive: true });
     await writeFile(
       configPath,
-      JSON.stringify({ schemaVersion: 2, objectives: { health: join(cwd, "pilot.yaml") } }),
+      JSON.stringify({ schemaVersion: 2, objectives: { health: join(cwd, "objective.yaml") } }),
     );
     const before = await readFile(configPath, "utf8");
     for (const args of [
@@ -93,7 +93,7 @@ test("legacy source aliases remain readable/removable; retired writes preserve c
       assert.equal(await readFile(configPath, "utf8"), before);
     }
     const shown = JSON.parse((await invoke(["list-objectives"])).stdout).objectives;
-    assert.equal(shown[0].location, join(cwd, "pilot.yaml"));
+    assert.equal(shown[0].location, join(cwd, "objective.yaml"));
     const updated = await invoke(["update-objective", "health", uri]);
     assert.equal(updated.code, 2, updated.stdout);
     assert.match(updated.stdout, /retired/);
@@ -115,11 +115,11 @@ test("Objective list separates long locations and configuration sources without 
   const env = { ...process.env, APPDATA: cwd, XDG_CONFIG_HOME: cwd };
   const objectives = {
     "monorepo-standard":
-      "D:\\Code\\potential guide\\packages\\objective-monorepo-standard\\pilot.yaml",
-    "pguide-setup": "D:\\Code\\potential guide\\packages\\objective-pguide-setup\\pilot.yaml",
+      "D:\\Code\\potential guide\\packages\\objective-monorepo-standard\\objective.yaml",
+    "pguide-setup": "D:\\Code\\potential guide\\packages\\objective-pguide-setup\\objective.yaml",
     "pguide-self-check":
-      "D:\\Code\\potential guide\\packages\\objective-pguide-self-check\\pilot.yaml",
-    "devbox-health": "git+https://example.invalid/repo.git#objective/pilot.yaml",
+      "D:\\Code\\potential guide\\packages\\objective-pguide-self-check\\objective.yaml",
+    "devbox-health": "git+https://example.invalid/repo.git#objective/objective.yaml",
   };
   const configPath = join(cwd, ".pguide", "config.yaml");
   try {
@@ -140,7 +140,7 @@ test("Objective list separates long locations and configuration sources without 
     const json = await run(["list-objectives", "--cwd", cwd, "--format", "json"], env);
     assert.equal(json.code, 0, json.stdout);
     assert.deepEqual(JSON.parse(json.stdout), {
-      schemaVersion: 1,
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
       objectives: Object.entries(objectives).map(([name, location]) => ({
         name,
         location,
@@ -154,7 +154,10 @@ test("Objective list separates long locations and configuration sources without 
     assert.equal(empty.stdout, "No registered Objectives.\n");
     const emptyJson = await run(["list-objectives", "--cwd", cwd, "--format", "json"], env);
     assert.equal(emptyJson.code, 0, emptyJson.stdout);
-    assert.deepEqual(JSON.parse(emptyJson.stdout), { schemaVersion: 1, objectives: [] });
+    assert.deepEqual(JSON.parse(emptyJson.stdout), {
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
+      objectives: [],
+    });
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

@@ -121,7 +121,7 @@ import {
 } from "@potential-guide/pilot-protocol";
 
 const definition = parseManifest(manifestYaml);
-const issues = validateSubject(subject, compileDomain(definition.domainSchema));
+const issues = validateSubject(subject, compileDomain(definition.subjectSchema));
 ```
 
 This installation has no dependency on business logic, tools, or `effects` when

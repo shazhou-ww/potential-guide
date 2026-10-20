@@ -1,5 +1,5 @@
-schemaVersion: 1
-domainSchema:
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json
+subjectSchema:
   type: object
   additionalProperties: false
   required: [workingDirectory, configPath, scratchDirectory, pguide]
@@ -37,19 +37,16 @@ domainSchema:
     timeoutMs: {type: integer, minimum: 100, maximum: 300000, default: 20000}
 levels:
   - id: initial
-    advancement:
-      checks:
-        - id: installation
-          problems: [installation-missing, installation-unusable, version-mismatch]
+    checks:
+      - id: installation
+        problems: [installation-missing, installation-unusable, version-mismatch]
   - id: installed
-    advancement:
-      checks:
-        - id: configuration
-          problems: [installation-missing, installation-unusable, version-mismatch, configuration-missing, configuration-invalid, command-unavailable, agent-missing, environment-unavailable, acp-unavailable]
+    checks:
+      - id: configuration
+        problems: [installation-missing, installation-unusable, version-mismatch, configuration-missing, configuration-invalid, command-unavailable, agent-missing, environment-unavailable, acp-unavailable]
   - id: configured
-    advancement:
-      checks:
-        - id: sanity
-          problems: [installation-missing, installation-unusable, version-mismatch, configuration-missing, configuration-invalid, command-unavailable, agent-missing, environment-unavailable, acp-unavailable, sanity-consent-required, git-unavailable, sanity-failed]
+    checks:
+      - id: sanity
+        problems: [installation-missing, installation-unusable, version-mismatch, configuration-missing, configuration-invalid, command-unavailable, agent-missing, environment-unavailable, acp-unavailable, sanity-consent-required, git-unavailable, sanity-failed]
 defaultLanguage: zh-CN
 languages: [zh-CN]

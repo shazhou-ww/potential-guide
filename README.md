@@ -69,8 +69,8 @@ Run `pnpm check` for the complete repository verification.
 npm install --global pguide
 pguide --help
 pguide scaffold pilot ./my-pilot
-pguide validate pilot ./my-pilot/pilot.yaml
-pguide probe --pilot ./my-pilot/pilot.yaml --subject-file ./subject.json
+pguide validate pilot ./my-pilot/objective.yaml
+pguide probe --pilot ./my-pilot/objective.yaml --subject-file ./subject.json
 ```
 
 Add `@potential-guide/pguide-regulate` for regulation, `@potential-guide/pguide-supervise`
@@ -151,7 +151,7 @@ not need pguide to begin checking. Omitting `target` (or `type:local`) preserves
 local bootstrap. It is a Git-subdirectory Pilot, not a new CLI command:
 
 ```sh
-pguide probe --pilot 'git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-pguide-setup/pilot.yaml' --revision <commit> --subject-file <absolute-subject.json> --format json
+pguide probe --pilot 'git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-pguide-setup/objective.yaml' --revision <commit> --subject-file <absolute-subject.json> --format json
 ```
 
 Start with its control-Agent bootstrap instructions if B lacks Node or `pguide`.

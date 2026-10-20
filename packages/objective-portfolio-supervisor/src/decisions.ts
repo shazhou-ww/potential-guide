@@ -31,21 +31,22 @@ export function canonicalJson(value: unknown): string {
   return JSON.stringify(normalize(value));
 }
 
-export function objectiveKey(goal: Pick<ObjectiveGoal, "pilot" | "subject">): string {
-  return canonicalJson([goal.pilot.objectiveId, goal.subject]);
+export function objectiveKey(goal: Pick<ObjectiveGoal, "objective" | "subject">): string {
+  return canonicalJson([goal.objective.objectiveId, goal.subject]);
 }
 
-export function levelRank(pilot: PilotSpec, level: string): number {
-  if (level === "terminal") return pilot.manifest.levels.length;
-  const rank = pilot.manifest.levels.findIndex(({ id }) => id === level);
+export function levelRank(objective: PilotSpec, level: string): number {
+  if (level === "terminal") return objective.manifest.levels.length;
+  const rank = objective.manifest.levels.findIndex(({ id }) => id === level);
   if (rank < 0) throw new ObjectivePortfolioError(`Unknown target level: ${level}.`);
   return rank;
 }
 
 export function reached(goal: ObjectiveGoal, observation: PilotObservation): boolean {
   return (
-    observation.current.objectiveId === goal.pilot.objectiveId &&
-    levelRank(goal.pilot, observation.current.levelId) >= levelRank(goal.pilot, goal.targetLevel)
+    observation.current.objectiveId === goal.objective.objectiveId &&
+    levelRank(goal.objective, observation.current.levelId) >=
+      levelRank(goal.objective, goal.targetLevel)
   );
 }
 
@@ -56,7 +57,7 @@ export function validateGoal(goal: ObjectiveGoal): void {
       (key) =>
         ![
           "id",
-          "pilot",
+          "objective",
           "subject",
           "targetLevel",
           "priority",
@@ -69,7 +70,7 @@ export function validateGoal(goal: ObjectiveGoal): void {
         ].includes(key),
     ) ||
     !goal.id?.trim() ||
-    !goal.pilot?.objectiveId?.trim() ||
+    !goal.objective?.objectiveId?.trim() ||
     !goal.subject ||
     typeof goal.subject !== "object" ||
     Array.isArray(goal.subject) ||
@@ -84,15 +85,19 @@ export function validateGoal(goal: ObjectiveGoal): void {
   )
     throw new ObjectivePortfolioError("Invalid objective goal.");
   if (
-    !goal.pilot.objectiveId.startsWith("git+") ||
-    canonicalObjectiveUri(goal.pilot.objectiveId) !== goal.pilot.objectiveId ||
-    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(goal.pilot.version)
+    !goal.objective.objectiveId.startsWith("git+") ||
+    canonicalObjectiveUri(goal.objective.objectiveId) !== goal.objective.objectiveId ||
+    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(goal.objective.version)
   )
     throw new ObjectivePortfolioError(
       "Goal requires a canonical Pilot directory and exact content version.",
     );
-  if (goal.pilot.source !== undefined)
-    validateGitPilotSource(goal.pilot.objectiveId, goal.pilot.version, goal.pilot.source);
+  if (goal.objective.source !== undefined)
+    validateGitPilotSource(
+      goal.objective.objectiveId,
+      goal.objective.version,
+      goal.objective.source,
+    );
   if (goal.sourceBindings !== undefined) {
     if (
       goal.sourceBindings === null ||
@@ -103,7 +108,7 @@ export function validateGoal(goal: ObjectiveGoal): void {
     for (const [id, source] of Object.entries(goal.sourceBindings))
       validateGitPilotSource(id, source.tree, source);
   }
-  levelRank(goal.pilot, goal.targetLevel);
+  levelRank(goal.objective, goal.targetLevel);
 }
 
 export function validatePlan(plan: PlannerPlan, input: PlannerPolicyInput): PlannerPlan {
@@ -136,7 +141,7 @@ export function validatePlan(plan: PlannerPlan, input: PlannerPolicyInput): Plan
     seen.add(goal.id);
     if (
       directive.targetLevel !== undefined &&
-      levelRank(goal.pilot, directive.targetLevel) < levelRank(goal.pilot, goal.targetLevel)
+      levelRank(goal.objective, directive.targetLevel) < levelRank(goal.objective, goal.targetLevel)
     )
       throw new ObjectivePortfolioError("Planner cannot weaken a required target.");
     if (

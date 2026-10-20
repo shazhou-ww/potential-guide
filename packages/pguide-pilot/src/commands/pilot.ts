@@ -20,7 +20,7 @@ async function loadStaticPilot(path: string) {
   try {
     const entry = resolve(path);
     return await loadPilotSpec(
-      basename(entry) === "pilot.yaml" ? dirname(entry) : entry,
+      basename(entry) === "objective.yaml" ? dirname(entry) : entry,
       fileResources,
     );
   } catch (error) {
@@ -145,8 +145,8 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
     throw new CliError("Problems require one check and must be unique.");
   await mkdir(root, { recursive: true });
   await writeFile(
-    join(root, "pilot.yaml"),
-    `schemaVersion: 1\ndomainSchema:\n  type: object\nlevels:\n  - id: ${level}\n    advancement:\n      checks:${check === undefined ? " []" : `\n        - id: ${check}\n          problems: [${problems.join(", ")}]`}\ndefaultLanguage: ${languages[0]}\nlanguages: [${languages.join(", ")}]\n`,
+    join(root, "objective.yaml"),
+    `$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json\nsubjectSchema:\n  type: object\nlevels:\n  - id: ${level}\n    checks:${check === undefined ? " []" : `\n      - id: ${check}\n        problems: [${problems.join(", ")}]`}\ndefaultLanguage: ${languages[0]}\nlanguages: [${languages.join(", ")}]\n`,
   );
   for (const language of languages) {
     const pages: [string, string][] = [
@@ -191,7 +191,7 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
       schemaVersion: 1,
       status: "created",
       directory: root,
-      manifest: join(root, "pilot.yaml"),
+      manifest: join(root, "objective.yaml"),
     },
     globals.format,
     `Created Objective Pilot skeleton at ${root}.`,
@@ -207,7 +207,7 @@ export async function runValidate(argv: string[], globals: GlobalOptions): Promi
     throw new CliError(
       "Expected validate pilot <manifest>; legacy Guide manifests are incompatible.",
     );
-  const pilot = await loadStaticPilot(resolve(globals.cwd, argv[1]));
-  const value = { schemaVersion: 1, status: "valid", objectiveId: pilot.objectiveId };
-  writeResult(value, globals.format, `Valid Objective Pilot: ${pilot.objectiveId}`);
+  const objective = await loadStaticPilot(resolve(globals.cwd, argv[1]));
+  const value = { schemaVersion: 1, status: "valid", objectiveId: objective.objectiveId };
+  writeResult(value, globals.format, `Valid Objective Pilot: ${objective.objectiveId}`);
 }

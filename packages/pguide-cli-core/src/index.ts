@@ -728,7 +728,7 @@ export function resolveObjective(location: string, config: PguideConfig): string
 export async function readJsonSubject(
   path: string | undefined,
   cwd: string,
-  subjectSchema?: Record<string, unknown>,
+  subjectSchema?: unknown,
 ): Promise<Record<string, unknown>> {
   const missingSubject = (message: string) =>
     new CliError(

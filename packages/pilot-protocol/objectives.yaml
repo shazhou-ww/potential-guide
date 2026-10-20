@@ -1,12 +1,12 @@
-schemaVersion: 1
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
 objectives:
   standardize:
     description: Standardize @potential-guide/pilot-protocol through its package-owned declaration.
-    pilot: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
+    objective: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
     inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
     subject: |
       {
-        "root": context.checkout.rootPath, "directory": context.directory.relativePath,
+        "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm"], "runtime": "node",
         "allows": [],
         "entries": ["src/index.ts"], "generated": [], "deliveries": [],

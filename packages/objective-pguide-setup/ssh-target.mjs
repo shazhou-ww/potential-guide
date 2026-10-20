@@ -8,7 +8,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const limit = 262144;
 const fixtures = [
   "gitignore",
-  "pilot.yaml",
+  "objective.yaml",
   "checks/marker/run.cjs",
   "references/checks/marker/en-US.md",
   "references/levels/terminal/en-US.md",

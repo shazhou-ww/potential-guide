@@ -110,8 +110,11 @@ export const releasePackages = [
       "parseObjectives",
       "projectObjective",
       "bindObjective",
+      "migrateLegacyObjectiveDocument",
+      "validateObjectiveDocument",
+      "validateObjectivesDocument",
     ],
-    bins: [],
+    bins: ["objective-contract-migrate"],
     forbiddenDependencies: [
       "@potential-guide/objective-pilot",
       "@potential-guide/cli-core",

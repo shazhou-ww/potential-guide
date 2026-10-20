@@ -1,6 +1,10 @@
+import type { JSONSchema } from "json-schema-typed";
+
+export type { JSONSchema } from "json-schema-typed";
+export type SubjectSchema = Exclude<JSONSchema, boolean> & { readonly type: "object" };
 export type ObjectiveId = string;
 export type SpecVersion = string;
-export interface GitPilotSource {
+export interface GitObjectiveSource {
   readonly kind: "git-tree";
   readonly repository: string;
   readonly directory: string;
@@ -15,6 +19,10 @@ export type ProblemId = string;
 export type JsonValue = string | number | boolean | null | readonly JsonValue[] | JsonObject;
 export type JsonObject = Readonly<{ [key: string]: JsonValue }>;
 export type Subject = JsonObject;
+export type ObjectiveContext = {
+  readonly repo: { readonly rootPath: string; readonly origin: string | null } | null;
+  readonly path: string;
+};
 export interface LevelRef {
   readonly objectiveId: ObjectiveId;
   readonly levelId: LevelId;
@@ -58,27 +66,23 @@ export type CheckResult =
       readonly problems: readonly [CheckProblem, ...CheckProblem[]];
     };
 export type CheckProbe = (subject: Subject, signal: AbortSignal) => Promise<Envelope<CheckResult>>;
-export interface PilotManifest {
-  readonly schemaVersion: 1;
-  readonly domainSchema: JsonObject;
+export interface ObjectiveManifest {
+  readonly $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json";
+  readonly subjectSchema: SubjectSchema;
   readonly levels: readonly [
     {
       readonly id: LevelId;
-      readonly advancement: {
-        readonly checks: readonly {
-          readonly id: CheckId;
-          readonly problems: readonly ProblemId[];
-        }[];
-      };
+      readonly checks: readonly {
+        readonly id: CheckId;
+        readonly problems: readonly ProblemId[];
+      }[];
     },
     ...{
       readonly id: LevelId;
-      readonly advancement: {
-        readonly checks: readonly {
-          readonly id: CheckId;
-          readonly problems: readonly ProblemId[];
-        }[];
-      };
+      readonly checks: readonly {
+        readonly id: CheckId;
+        readonly problems: readonly ProblemId[];
+      }[];
     }[],
   ];
   readonly defaultLanguage: string;
@@ -96,8 +100,8 @@ export interface ReferencePage extends ReferencePageSummary {
 export interface PilotSpec {
   readonly objectiveId: ObjectiveId;
   readonly version: SpecVersion;
-  readonly source?: GitPilotSource;
-  readonly manifest: PilotManifest;
+  readonly source?: GitObjectiveSource;
+  readonly manifest: ObjectiveManifest;
   readonly locales: Readonly<Record<string, Readonly<Record<string, ReferencePage>>>>;
 }
 export interface PilotInput {
@@ -111,7 +115,7 @@ export interface PilotObservation {
   readonly gapSummary: string;
   readonly observedAt: string;
   readonly versions: Readonly<Record<ObjectiveId, SpecVersion>>;
-  readonly sources?: Readonly<Record<ObjectiveId, GitPilotSource>>;
+  readonly sources?: Readonly<Record<ObjectiveId, GitObjectiveSource>>;
 }
 export interface PilotRuntime {
   readonly boundObjectives?: () => readonly PilotSpec[];
@@ -122,7 +126,7 @@ export interface PilotRuntime {
     objectiveId: ObjectiveId,
     version: SpecVersion | undefined,
     signal: AbortSignal,
-    source?: GitPilotSource,
+    source?: GitObjectiveSource,
   ) => Promise<{ readonly spec: PilotSpec; readonly runtime: PilotRuntime }>;
   readonly observationBudget?: {
     readonly timeoutMs: number;
@@ -137,7 +141,7 @@ export interface PageResource {
 export interface ResourceResolver {
   readonly version: SpecVersion;
   versionFor?(objectiveId: ObjectiveId): Promise<SpecVersion>;
-  sourceFor?(objectiveId: ObjectiveId): Promise<GitPilotSource>;
+  sourceFor?(objectiveId: ObjectiveId): Promise<GitObjectiveSource>;
   readText(uri: string): Promise<string>;
   readPages(uri: string): Promise<readonly PageResource[]>;
 }

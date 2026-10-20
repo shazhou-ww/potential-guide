@@ -777,7 +777,7 @@ test("file URL repository with a self-referencing origin resolves HEAD and reads
   const repository = pathToFileURL(repo.root).href;
   await git(repo.root, "remote", "add", "origin", repository);
   await mkdir(join(repo.root, "guide"));
-  await writeFile(join(repo.root, "guide", "pilot.yaml"), "id: immutable-pilot\n");
+  await writeFile(join(repo.root, "guide", "objective.yaml"), "id: immutable-pilot\n");
   await git(repo.root, "add", ".");
   await git(repo.root, "commit", "-m", "pilot definition");
   const commit = await git(repo.root, "rev-parse", "HEAD");
@@ -799,9 +799,9 @@ test("file URL repository with a self-referencing origin resolves HEAD and reads
         assert.equal(yield* snapshot.treeOid(), rootTree);
         assert.equal(yield* snapshot.treeOid("."), rootTree);
         assert.equal(yield* snapshot.treeOid("guide"), guideTree);
-        assert.ok(Exit.isFailure(yield* Effect.exit(snapshot.treeOid("guide/pilot.yaml"))));
+        assert.ok(Exit.isFailure(yield* Effect.exit(snapshot.treeOid("guide/objective.yaml"))));
         assert.ok(Exit.isFailure(yield* Effect.exit(snapshot.treeOid("../guide"))));
-        assert.equal(yield* snapshot.readText("guide/pilot.yaml"), "id: immutable-pilot\n");
+        assert.equal(yield* snapshot.readText("guide/objective.yaml"), "id: immutable-pilot\n");
       }),
     ),
   );

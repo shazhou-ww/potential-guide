@@ -198,7 +198,7 @@ stdout 恰好一份 CheckResult Envelope：`status:200` 的 `payload.ok:false` �
 通过仓库 Git 子目录加载，固定提交而非未提交的工作区：
 
 ```powershell
-pguide validate pilot .\packages\objective-pguide-setup\pilot.yaml
+pguide validate pilot .\packages\objective-pguide-setup\objective.yaml
 pguide probe --pilot "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-pguide-setup/" --revision <完整提交哈希> --subject-file D:\setup\subject.json --format json
 ```
 

@@ -250,12 +250,12 @@ test("externally provided malformed inputs reject as 400 before any execution", 
     ...[
       null,
       {},
-      { ...base.spec.pilot, manifest: null },
-      { ...base.spec.pilot, locales: null },
-      { ...base.spec.pilot, objectiveId: 1 },
-      { ...base.spec.pilot, version: null },
-      { ...base.spec.pilot, manifest: { ...base.spec.pilot.manifest, levels: [null] } },
-    ].map((pilot) => ({ ...base, spec: { ...base.spec, pilot } })),
+      { ...base.spec.objective, manifest: null },
+      { ...base.spec.objective, locales: null },
+      { ...base.spec.objective, objectiveId: 1 },
+      { ...base.spec.objective, version: null },
+      { ...base.spec.objective, manifest: { ...base.spec.objective.manifest, levels: [null] } },
+    ].map((objective) => ({ ...base, spec: { ...base.spec, objective } })),
     ...[
       null,
       {},
@@ -315,7 +315,7 @@ test("quota timers and counts are required, positive and safe", async () => {
       assert.throws(
         () =>
           makeRegulatorSpec(
-            base.spec.pilot,
+            base.spec.objective,
             {
               ...base.spec.strategy,
               quota: { ...base.spec.strategy.quota, [field]: value },
@@ -329,7 +329,7 @@ test("quota timers and counts are required, positive and safe", async () => {
   assert.throws(
     () =>
       makeRegulatorSpec(
-        base.spec.pilot,
+        base.spec.objective,
         {
           ...base.spec.strategy,
           quota: { ...base.spec.strategy.quota, timeoutMs: 2_147_483_648 },

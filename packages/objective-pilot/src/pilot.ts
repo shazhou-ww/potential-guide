@@ -71,7 +71,7 @@ export function observe(
             );
           }
           const manifest = parseManifest(JSON.stringify(spec.manifest));
-          const issues = validateSubject(subject, compileDomain(manifest.domainSchema));
+          const issues = validateSubject(subject, compileDomain(manifest.subjectSchema));
           if (issues !== null || !record(subject) || !json(subject)) {
             throw new ObjectiveConfigurationError(
               `Invalid subject for ${spec.objectiveId}: ${JSON.stringify(issues)}.`,
@@ -89,7 +89,7 @@ export function observe(
               signal.throwIfAborted();
               const results = await Effect.runPromise(
                 Effect.forEach(
-                  level.advancement.checks,
+                  level.checks,
                   (check) =>
                     Effect.callback<Envelope<CheckResult>, Error>((resume, checkSignal) => {
                       const pending = (async (): Promise<Envelope<CheckResult>> => {
@@ -144,7 +144,7 @@ export function observe(
                 results.find((result) => result.payload === null);
               if (failure !== undefined && failure.payload === null) return failure;
               const problems: Problem[] = results.flatMap((result, index) => {
-                const check = level.advancement.checks[index];
+                const check = level.checks[index];
                 if (check === undefined)
                   throw new ObjectiveOperationError("Unexpected check result index.");
                 return result.payload === null

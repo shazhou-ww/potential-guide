@@ -15,7 +15,7 @@ import {
 import { withPilot } from "@potential-guide/cli-runtime";
 import { Effect, SubscriptionRef, startEffect, watchSnapshot } from "@potential-guide/effects";
 import {
-  type GitPilotSource,
+  type GitObjectiveSource,
   observe,
   type PilotRuntime,
   type Subject,
@@ -46,7 +46,7 @@ import { createAgentPlannerPolicy } from "../acp-planner.js";
 
 interface FileGoal {
   id: string;
-  pilot: string;
+  objective: string;
   revision?: string;
   subject: Subject;
   targetLevel: string;
@@ -66,8 +66,8 @@ interface PortfolioFile {
   resources: FileResource[];
 }
 
-function runtimeKey(goal: Pick<ObjectiveGoal, "pilot" | "bindingRevision">): string {
-  return JSON.stringify([goal.pilot, goal.bindingRevision ?? null]);
+function runtimeKey(goal: Pick<ObjectiveGoal, "objective" | "bindingRevision">): string {
+  return JSON.stringify([goal.objective, goal.bindingRevision ?? null]);
 }
 
 async function bindGoal(
@@ -75,7 +75,7 @@ async function bindGoal(
   cwd: string,
   probeTimeoutMs?: number,
   signal?: AbortSignal,
-  source?: GitPilotSource,
+  source?: GitObjectiveSource,
 ) {
   const preparation = new AbortController();
   const cancel = () => preparation.abort(signal?.reason);
@@ -92,26 +92,26 @@ async function bindGoal(
     release = done;
   });
   const lifetime = withPilot(
-    entry.pilot,
+    entry.objective,
     cwd,
     entry.revision,
-    async (pilot, runtime) => {
+    async (objective, runtime) => {
       if (
         entry.targetLevel !== "terminal" &&
-        !pilot.manifest.levels.some(({ id }) => id === entry.targetLevel)
+        !objective.manifest.levels.some(({ id }) => id === entry.targetLevel)
       )
         throw new CliError(`Goal ${entry.id} has an unknown target level.`);
       publish({
         goal: {
           id: entry.id,
-          pilot,
+          objective,
           subject: entry.subject,
           targetLevel: entry.targetLevel,
           priority: entry.priority,
           observationIntervalMs: entry.observationIntervalMs,
-          ...(pilot.source === undefined
+          ...(objective.source === undefined
             ? {}
-            : { sourceBindings: { [pilot.objectiveId]: pilot.source } }),
+            : { sourceBindings: { [objective.objectiveId]: objective.source } }),
           ...(entry.requirements === undefined ? {} : { requirements: entry.requirements }),
         },
         runtime,
@@ -123,7 +123,7 @@ async function bindGoal(
       signal: preparation.signal,
       ...(source === undefined
         ? {}
-        : { versions: { [entry.pilot]: source.tree }, sources: { [entry.pilot]: source } }),
+        : { versions: { [entry.objective]: source.tree }, sources: { [entry.objective]: source } }),
     },
   );
   void lifetime.catch(reject);
@@ -168,7 +168,7 @@ export function parsePortfolioFile(value: unknown): PortfolioFile {
         (key) =>
           ![
             "id",
-            "pilot",
+            "objective",
             "revision",
             "subject",
             "targetLevel",
@@ -179,7 +179,7 @@ export function parsePortfolioFile(value: unknown): PortfolioFile {
       ) ||
       !text(goal.id) ||
       goalIds.has(goal.id) ||
-      !text(goal.pilot) ||
+      !text(goal.objective) ||
       (goal.revision !== undefined && !text(goal.revision)) ||
       !record(goal.subject) ||
       !text(goal.targetLevel) ||
@@ -188,7 +188,9 @@ export function parsePortfolioFile(value: unknown): PortfolioFile {
       !positive(goal.observationIntervalMs) ||
       (goal.requirements !== undefined && !strings(goal.requirements))
     )
-      throw new CliError("Portfolio contains an invalid or duplicate goal.");
+      throw new CliError(
+        "Portfolio contains an invalid or duplicate goal. Legacy pilot references require explicit objective-contract-migrate --format portfolio migration; pinned sources must be deliberately rebound after committing the migrated Objective.",
+      );
     goalIds.add(goal.id);
   }
   const resourceIds = new Set<string>();
@@ -433,7 +435,7 @@ export async function runSupervise(
       for (const entry of file.goals) {
         controller.signal.throwIfAborted();
         const binding = await bindGoal(
-          { ...entry, pilot: resolveObjective(entry.pilot, config) },
+          { ...entry, objective: resolveObjective(entry.objective, config) },
           globals.cwd,
           config.regulationStrategy?.probe?.timeoutMs,
         );
@@ -442,7 +444,7 @@ export async function runSupervise(
         const dependencies =
           previous?.runtime
             .boundObjectives?.()
-            .filter((spec) => spec.objectiveId !== binding.goal.pilot.objectiveId) ?? [];
+            .filter((spec) => spec.objectiveId !== binding.goal.objective.objectiveId) ?? [];
         const versions: Record<string, unknown> = {};
         for (const dependency of [...dependencies].sort((a, b) =>
           a.objectiveId.localeCompare(b.objectiveId),
@@ -459,7 +461,7 @@ export async function runSupervise(
           versions[dependency.objectiveId] = next.spec.source;
         }
         if (dependencies.length > 0) {
-          const sourceBindings: Record<string, GitPilotSource> = {};
+          const sourceBindings: Record<string, GitObjectiveSource> = {};
           for (const spec of [...(binding.runtime.boundObjectives?.() ?? [])].sort((a, b) =>
             a.objectiveId.localeCompare(b.objectiveId),
           )) {
@@ -518,7 +520,7 @@ export async function runSupervise(
         const binding = await bindGoal(
           {
             id: `binding:${objectiveId}`,
-            pilot: objectiveId,
+            objective: objectiveId,
             revision: source.commit,
             subject: {},
             targetLevel: "terminal",
@@ -536,13 +538,13 @@ export async function runSupervise(
         }
         bindings.add(binding);
         runtimes.set(runtimeKey(binding.goal), binding.runtime);
-        return binding.goal.pilot;
+        return binding.goal.objective;
       },
       async releaseObjective(spec) {
         for (const binding of [...bindings]) {
           if (
             activeBindings.includes(binding) ||
-            JSON.stringify(binding.goal.pilot) !== JSON.stringify(spec)
+            JSON.stringify(binding.goal.objective) !== JSON.stringify(spec)
           )
             continue;
           await binding.close();
@@ -561,13 +563,13 @@ export async function runSupervise(
         if (runtime === undefined) throw new CliError("Missing pinned Pilot runtime.");
         return (async () => {
           for (const [id, source] of Object.entries(goal.sourceBindings ?? {})) {
-            if (id === goal.pilot.objectiveId) continue;
+            if (id === goal.objective.objectiveId) continue;
             if (runtime.resolveObjective === undefined)
               throw new CliError("Missing source binding resolver.");
             await runtime.resolveObjective(id, source.tree, signal, source);
           }
           return startEffect(
-            observe({ spec: goal.pilot, subject: goal.subject }, runtime),
+            observe({ spec: goal.objective, subject: goal.subject }, runtime),
             AbortSignal.any([signal, controller.signal]),
           ).await();
         })();

@@ -89,13 +89,13 @@ test("Registered Objectives validate names and targets without changing literal 
   const config = parseConfig(
     JSON.stringify({
       schemaVersion: 2,
-      objectives: { health: "git+https://example.invalid/repo#pilot.yaml" },
+      objectives: { health: "git+https://example.invalid/repo#objective.yaml" },
     }),
   );
   assert.equal(resolveObjective("health", config), config.objectives?.health);
   assert.equal(resolveObjective("@health", config), config.objectives?.health);
   assert.equal(resolveObjective("./health", config), "./health");
-  const unregisteredUri = "git+https://example.invalid/unregistered.git#pilot.yaml";
+  const unregisteredUri = "git+https://example.invalid/unregistered.git#objective.yaml";
   assert.equal(resolveObjective(unregisteredUri, config), unregisteredUri);
   assert.equal(resolveObjective("unregistered.yaml", config), "unregistered.yaml");
   assert.equal(resolveObjective("toString", config), "toString");

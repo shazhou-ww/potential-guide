@@ -1,5 +1,5 @@
-schemaVersion: 1
-domainSchema:
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json
+subjectSchema:
   type: object
   additionalProperties: false
   properties:
@@ -7,45 +7,26 @@ domainSchema:
       type: object
       additionalProperties: false
       properties:
-        repository:
+        repo:
           type: object
           additionalProperties: false
           properties:
-            id:
-              type: string
-              minLength: 1
-          required:
-            - id
-        checkout:
-          type: object
-          additionalProperties: false
-          properties:
-            id:
-              type: string
-              minLength: 1
             rootPath:
               type: string
               minLength: 1
+            origin:
+              type:
+                - string
+                - "null"
           required:
-            - id
             - rootPath
-        directory:
-          type: object
-          additionalProperties: false
-          properties:
-            absolutePath:
-              type: string
-              minLength: 1
-            relativePath:
-              type: string
-              minLength: 1
-          required:
-            - absolutePath
-            - relativePath
+            - origin
+        path:
+          type: string
+          minLength: 1
       required:
-        - repository
-        - checkout
-        - directory
+        - repo
+        - path
     policy:
       type: object
       additionalProperties: false
@@ -302,17 +283,15 @@ domainSchema:
     - deliveries
 levels:
   - id: initial
-    advancement:
-      checks:
-        - id: structure
-          problems:
-            - structure-incomplete
+    checks:
+      - id: structure
+        problems:
+          - structure-incomplete
   - id: structured
-    advancement:
-      checks:
-        - id: deliveries
-          problems:
-            - delivery-incomplete
+    checks:
+      - id: deliveries
+        problems:
+          - delivery-incomplete
 defaultLanguage: zh-CN
 languages:
   - zh-CN

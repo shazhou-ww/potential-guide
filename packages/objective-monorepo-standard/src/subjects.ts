@@ -1,4 +1,4 @@
-import { isAbsolute, resolve } from "node:path";
+import { isAbsolute } from "node:path";
 import type { JsonObject } from "@potential-guide/objective-pilot";
 import { Ajv } from "ajv";
 import {
@@ -29,9 +29,8 @@ export interface PackageSubject {
 }
 export interface RepositorySubject {
   context: {
-    repository: { id: string };
-    checkout: { id: string; rootPath: string };
-    directory: { absolutePath: string; relativePath: string };
+    repo: { rootPath: string; origin: string | null };
+    path: string;
   };
   policy: Contract["policy"];
   deliveries: Delivery[];
@@ -69,14 +68,13 @@ export const repositorySubjectSchema = object(
   {
     context: object(
       {
-        repository: object({ id: text }, ["id"]),
-        checkout: object({ id: text, rootPath: text }, ["id", "rootPath"]),
-        directory: object({ absolutePath: text, relativePath: text }, [
-          "absolutePath",
-          "relativePath",
+        repo: object({ rootPath: text, origin: { type: ["string", "null"] } }, [
+          "rootPath",
+          "origin",
         ]),
+        path: text,
       },
-      ["repository", "checkout", "directory"],
+      ["repo", "path"],
     ),
     policy: policySchema,
     deliveries: deliverySchema,
@@ -96,24 +94,14 @@ export function parsePackageSubject(value: unknown): PackageSubject {
 export function parseRepositorySubject(value: unknown): RepositorySubject {
   if (!repositoryValidator(value))
     throw new Error(`Invalid repository subject: ${ajv.errorsText(repositoryValidator.errors)}`);
-  if (
-    !isAbsolute(value.context.checkout.rootPath) ||
-    !isAbsolute(value.context.directory.absolutePath) ||
-    resolve(value.context.directory.absolutePath) !== resolve(value.context.checkout.rootPath) ||
-    value.context.directory.relativePath !== "."
-  )
+  if (!isAbsolute(value.context.repo.rootPath) || value.context.path !== ".")
     throw new Error("Repository standardize must bind the checkout root directory.");
   return value;
 }
-export function packageContext(
-  subject: RepositorySubject,
-  directory: string,
-  absolutePath: string,
-): JsonObject {
+export function packageContext(subject: RepositorySubject, directory: string): JsonObject {
   return {
-    repository: subject.context.repository,
-    checkout: subject.context.checkout,
-    directory: { absolutePath, relativePath: directory },
+    repo: subject.context.repo,
+    path: directory,
   };
 }
 export const defaultPolicy: Contract["policy"] = {

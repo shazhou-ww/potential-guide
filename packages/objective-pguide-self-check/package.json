@@ -5,14 +5,14 @@
   "description": "Dependency-free snapshot delivery of the local pguide self-check Pilot.",
   "type": "module",
   "files": [
-    "pilot.yaml",
+    "objective.yaml",
     "checks",
     "references",
     "runtime",
     "self-check.mjs"
   ],
   "exports": {
-    "./pilot.yaml": "./pilot.yaml"
+    "./objective.yaml": "./objective.yaml"
   },
   "scripts": {
     "build": "node ../../scripts/build-self-check-runtime.mjs",

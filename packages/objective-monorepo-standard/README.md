@@ -7,7 +7,7 @@
 
 第二个目录不是额外 workspace。两个目录均有 manifest、References、checks 和 standalone
 bundle，可以独立从 Git committed snapshot 消费；不需要安装目标依赖。
-源码共享并由 `pnpm monorepo:build` 生成运行资源、严格 domainSchema 和第三方许可证；
+源码共享并由 `pnpm monorepo:build` 生成运行资源、严格 subjectSchema 和第三方许可证；
 `pnpm monorepo:check` 校验新鲜度。不得手改生成物。
 
 ## 目录声明
@@ -15,16 +15,15 @@ bundle，可以独立从 Git committed snapshot 消费；不需要安装目标�
 每个 pnpm 实际发现的 workspace 必须有自己的 `objectives.yaml` / `standardize`：
 
 ```yaml
-schemaVersion: 1
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
 objectives:
   standardize:
     description: Prepare this internal library.
-    pilot: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
-    inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
+    objective: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
     subject: |
       {
-        "root": context.checkout.rootPath,
-        "directory": context.directory.relativePath,
+        "root": context.repo.rootPath,
+        "directory": context.path,
         "roles": ["internal"], "runtime": "universal", "allows": [],
         "entries": ["src/index.ts"], "generated": [], "joins": [], "deliveries": []
       }
@@ -34,7 +33,9 @@ objectives:
 声明不含 target、revision 或 manifest 文件名。依赖调用要求可复现的 canonical Git Pilot
 目录 URI；不解析用户配置别名，不把相对文件目录猜成远程来源。
 `root` 为绝对 checkout 路径，`directory`、入口和配置路径为显式仓库/包相对 POSIX 路径。
-仅接受 `context.repository`、`context.checkout`、`context.directory`，不注入其他便利上下文。
+绑定上下文仅包含 `context.repo`（`rootPath`、`origin`）和 `context.path`。
+仓库级 subject 保留该结构；包级 subject 显式投影 root/directory，不把旧的 opaque
+repository/checkout ID 冒充 origin。没有 origin 时保留 null；不伪造身份或来源证据。
 
 角色为 npm/cli/browser/cloudflare-worker/internal/tool，可组合；runtime 为
 node/browser/worker/tool/universal。`allows` 是维护者确认的内部依赖白名单，绝不从

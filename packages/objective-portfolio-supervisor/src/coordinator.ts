@@ -41,7 +41,7 @@ function token(demand: QueueDemand): string {
 }
 function recipe(demand: QueueDemand): string {
   return canonicalJson([
-    demand.pilot,
+    demand.objective,
     demand.subject,
     demand.language ?? null,
     demand.sourceBindings ?? null,
@@ -219,8 +219,8 @@ export async function createPortfolioCoordinator(
             if (
               objectiveKey(demand) === objectiveKey(run.demand) &&
               recipe(demand) === recipe(run.demand) &&
-              levelRank(demand.pilot, demand.targetLevel) <=
-                levelRank(run.demand.pilot, run.demand.targetLevel)
+              levelRank(demand.objective, demand.targetLevel) <=
+                levelRank(run.demand.objective, run.demand.targetLevel)
             )
               completed.add(token(demand));
           }
@@ -338,7 +338,7 @@ export async function createPortfolioCoordinator(
           );
         const input = {
           spec: makeRegulatorSpec(
-            demand.pilot,
+            demand.objective,
             {
               targetLevel: demand.targetLevel,
               // The regulator's cumulative ceiling includes carried telemetry.

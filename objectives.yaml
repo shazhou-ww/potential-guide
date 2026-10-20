@@ -1,8 +1,8 @@
-schemaVersion: 1
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
 objectives:
   standardize:
     description: Coordinate package-owned standardization and repository-wide delivery requirements.
-    pilot: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/
+    objective: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/
     inputSchema:
       type: object
       additionalProperties: false
@@ -16,7 +16,10 @@ objectives:
           "requiredFiles": ["tsconfig.json", "biome.json"],
           "exceptions": [],
           "assignments": [],
-          "allowedDirectories": [{"path": "config", "reason": "Repository-owned release and package-layer policy."}, {"path": "schemas", "reason": "Public versioned schemas bundled offline and hosted through Pages."}],
+          "allowedDirectories": [
+            {"path": "config", "reason": "Repository-owned release and package-layer policy."},
+            {"path": "schemas", "reason": "Canonical immutable JSON Schema publication sources."}
+          ],
           "dependencyExceptions": []
         },
         "deliveries": [

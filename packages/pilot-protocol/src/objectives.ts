@@ -1,5 +1,7 @@
 import { compileSubjectProjection } from "./projection.js";
 import { canonicalObjectiveUri } from "./resources.js";
+import type { JSONSchema } from "json-schema-typed";
+import { OBJECTIVES_SCHEMA_URI, validateObjectivesDocument } from "./schemas.js";
 import type { JsonObject, JsonValue, PilotSpec, Subject } from "./types.js";
 import {
   compileDomain,
@@ -13,8 +15,8 @@ import {
 
 export interface ObjectiveDeclaration {
   readonly description: string;
-  readonly pilot: string;
-  readonly inputSchema: JsonObject;
+  readonly objective: string;
+  readonly inputSchema?: JSONSchema;
   readonly subject: string;
 }
 
@@ -22,12 +24,13 @@ export function parseObjectives(source: string): Record<string, ObjectiveDeclara
   const value = parseStrictYaml(source);
   if (
     !record(value) ||
-    value.schemaVersion !== 1 ||
+    !validateObjectivesDocument(value) ||
+    value.$schema !== OBJECTIVES_SCHEMA_URI ||
     !record(value.objectives) ||
-    Object.keys(value).some((key) => !["schemaVersion", "objectives"].includes(key))
+    Object.keys(value).some((key) => !["$schema", "objectives"].includes(key))
   )
     throw new ObjectiveOperationError(
-      "objectives.yaml requires schemaVersion: 1 and objectives only.",
+      `objectives.yaml requires $schema: ${OBJECTIVES_SCHEMA_URI} and objectives only. Legacy schemaVersion/pilot fields require explicit objective-contract-migrate migration.`,
     );
   const entries: Record<string, ObjectiveDeclaration> = Object.create(null);
   const text = (entry: unknown): entry is string =>
@@ -36,30 +39,38 @@ export function parseObjectives(source: string): Record<string, ObjectiveDeclara
     if (
       !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) ||
       !record(entry) ||
-      Object.keys(entry).length !== 4 ||
+      ![3, 4].includes(Object.keys(entry).length) ||
       Object.keys(entry).some(
-        (key) => !["description", "pilot", "inputSchema", "subject"].includes(key),
+        (key) => !["description", "objective", "inputSchema", "subject"].includes(key),
       ) ||
       !text(entry.description) ||
-      !text(entry.pilot) ||
+      !text(entry.objective) ||
       !text(entry.subject) ||
-      !record(entry.inputSchema) ||
-      !json(entry.inputSchema)
+      (entry.inputSchema !== undefined &&
+        !(
+          (record(entry.inputSchema) || typeof entry.inputSchema === "boolean") &&
+          json(entry.inputSchema)
+        ))
     )
       throw new ObjectiveOperationError(
-        `Invalid Objective ${name}: requires description, directory pilot, inputSchema and JSONata subject; target is not a declaration field.`,
+        `Invalid Objective ${name}: requires description, directory objective and JSONata subject; inputSchema is optional. Migrate legacy pilot fields explicitly.`,
       );
-    compileInputSchema(entry.inputSchema);
+    const schema = (entry.inputSchema ?? { const: {} }) as JSONSchema;
+    compileInputSchema(schema);
     compileSubjectProjection(entry.subject);
-    if (entry.pilot.startsWith("git+")) canonicalObjectiveUri(entry.pilot);
-    else if (entry.pilot.replace(/\\/g, "/").replace(/\/$/, "").split("/").at(-1) === "pilot.yaml")
+    if (entry.objective.startsWith("git+")) canonicalObjectiveUri(entry.objective);
+    else if (
+      ["objective.yaml", "pilot.yaml"].includes(
+        entry.objective.replace(/\\/g, "/").replace(/\/$/, "").split("/").at(-1) ?? "",
+      )
+    )
       throw new ObjectiveOperationError(
-        `Objective ${name} must reference a Pilot directory, not pilot.yaml.`,
+        `Objective ${name} must reference a Pilot directory, not objective.yaml.`,
       );
     entries[name] = {
       description: entry.description,
-      pilot: entry.pilot,
-      inputSchema: entry.inputSchema,
+      objective: entry.objective,
+      inputSchema: schema,
       subject: entry.subject,
     };
   }
@@ -71,17 +82,33 @@ export function projectObjective(
   context: JsonObject,
   input: JsonValue | undefined,
 ): Subject {
-  const validate = compileInputSchema(entry.inputSchema);
-  const schema = entry.inputSchema;
+  if (
+    Object.keys(context).length !== 2 ||
+    !Object.hasOwn(context, "repo") ||
+    typeof context.path !== "string" ||
+    context.path.length === 0 ||
+    (context.repo !== null &&
+      (!record(context.repo) ||
+        Object.keys(context.repo).length !== 2 ||
+        typeof context.repo.rootPath !== "string" ||
+        context.repo.rootPath.length === 0 ||
+        !(context.repo.origin === null || typeof context.repo.origin === "string")))
+  )
+    throw new ObjectiveOperationError(
+      "Objective context must be exactly {repo: {rootPath, origin: string|null}|null, path: string}. Legacy context requires explicit expression/subject migration.",
+    );
+  const schema = entry.inputSchema ?? { const: {} };
+  const validate = compileInputSchema(schema);
   const empty = (value: unknown) => record(value) && Object.keys(value).length === 0;
   const unit =
-    empty(schema.const) ||
-    (Array.isArray(schema.enum) && schema.enum.length === 1 && empty(schema.enum[0])) ||
-    (schema.type === "object" &&
-      (schema.maxProperties === 0 ||
-        (schema.additionalProperties === false &&
-          (schema.properties === undefined || empty(schema.properties)) &&
-          (schema.patternProperties === undefined || empty(schema.patternProperties)))));
+    typeof schema === "object" &&
+    (empty(schema.const) ||
+      (Array.isArray(schema.enum) && schema.enum.length === 1 && empty(schema.enum[0])) ||
+      (schema.type === "object" &&
+        (schema.maxProperties === 0 ||
+          (schema.additionalProperties === false &&
+            (schema.properties === undefined || empty(schema.properties)) &&
+            (schema.patternProperties === undefined || empty(schema.patternProperties))))));
   if (input === undefined && !(unit && validate({})))
     throw new ObjectiveOperationError(
       "Objective input is required; provide --input-file. Only Unit input may be omitted.",
@@ -107,7 +134,7 @@ export function bindObjective(
   spec: PilotSpec,
 ): Subject {
   const subject = projectObjective(entry, context, input);
-  const issues = validateSubject(subject, compileDomain(spec.manifest.domainSchema));
+  const issues = validateSubject(subject, compileDomain(spec.manifest.subjectSchema));
   if (issues !== null)
     throw new ObjectiveOperationError(`Invalid projected subject: ${JSON.stringify(issues)}`);
   return subject;

@@ -1,9 +1,8 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstat, readFile, realpath } from "node:fs/promises";
-import { hostname } from "node:os";
 import { delimiter, dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import {
   CliError,
@@ -20,6 +19,7 @@ import {
   type JsonObject,
   type JsonValue,
   type ObjectiveDeclaration,
+  type ObjectiveContext,
   ObjectiveOperationError,
   type PilotSpec,
   parseObjectives as parseDomainObjectives,
@@ -160,7 +160,10 @@ async function verifyNonRepository(directory: string, filesystemBoundary: boolea
   }
 }
 
-export async function objectiveContext(cwd: string, executeGit?: ContextGit): Promise<JsonObject> {
+export async function objectiveContext(
+  cwd: string,
+  executeGit?: ContextGit,
+): Promise<ObjectiveContext> {
   let directory: string;
   try {
     directory = await realpath(cwd);
@@ -212,9 +215,8 @@ export async function objectiveContext(cwd: string, executeGit?: ContextGit): Pr
     if (!nonRepository) throw contextError("repository detection", error);
     await verifyNonRepository(directory, filesystemBoundary);
     return {
-      repository: null,
-      checkout: null,
-      directory: { absolutePath: directory, relativePath: null },
+      repo: null,
+      path: directory,
     };
   }
   let root: string;
@@ -245,7 +247,7 @@ export async function objectiveContext(cwd: string, executeGit?: ContextGit): Pr
     if (!ordinaryExit(error, 1) || error.stdout !== "" || error.stderr !== "")
       throw contextError("origin configuration", error);
   }
-  let repository = pathToFileURL(commonDirectory).href;
+  let repository: string | null = null;
   if (configuredOrigin !== undefined) {
     let rawOrigin: string;
     try {
@@ -275,17 +277,8 @@ export async function objectiveContext(cwd: string, executeGit?: ContextGit): Pr
     }
   }
   return {
-    repository: { id: repository },
-    checkout: {
-      id: `urn:pguide:checkout:${createHash("sha256")
-        .update(JSON.stringify([hostname(), commonDirectory, root]))
-        .digest("hex")}`,
-      rootPath: root,
-    },
-    directory: {
-      absolutePath: directory,
-      relativePath: pathInRepository || ".",
-    },
+    repo: { rootPath: root, origin: repository },
+    path: pathInRepository || ".",
   };
 }
 export async function selectObjective(
@@ -294,28 +287,28 @@ export async function selectObjective(
   config: PguideConfig,
 ) {
   const name = option(argv, "--objective") as string | undefined;
-  const pilot = option(argv, "--pilot") as string | undefined;
+  const objective = option(argv, "--pilot") as string | undefined;
   const scope = option(argv, "--scope") as string | undefined;
   const inputFile = option(argv, "--input-file") as string | undefined;
   if (name === undefined) {
     if (scope !== undefined || inputFile !== undefined)
       throw new CliError("--scope and --input-file require --objective.");
-    if (pilot === undefined)
+    if (objective === undefined)
       throw new CliError(
         "Select --objective <name> or --pilot <directory>; use pguide objectives list to discover entries.",
       );
     return {
-      location: resolveObjective(pilot, config),
+      location: resolveObjective(objective, config),
       binding: undefined,
       subject: async (spec: PilotSpec) =>
         (await readJsonSubject(
           option(argv, "--subject-file") as string | undefined,
           globals.cwd,
-          spec.manifest.domainSchema,
+          spec.manifest.subjectSchema,
         )) as Subject,
     };
   }
-  if (pilot !== undefined || option(argv, "--subject-file") !== undefined)
+  if (objective !== undefined || option(argv, "--subject-file") !== undefined)
     throw new CliError(
       "--objective is mutually exclusive with --pilot and --subject-file; use --input-file.",
     );
@@ -344,9 +337,9 @@ export async function selectObjective(
   }
   return {
     location:
-      entry.pilot.startsWith("git+") || isAbsolute(entry.pilot)
-        ? entry.pilot
-        : resolve(dirname(entry.file), entry.pilot),
+      entry.objective.startsWith("git+") || isAbsolute(entry.objective)
+        ? entry.objective
+        : resolve(dirname(entry.file), entry.objective),
     binding: { entry, context, input: input === undefined ? {} : input },
     subject: async (spec: PilotSpec) => bindObjective(entry, context, input, spec),
   };

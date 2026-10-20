@@ -1,7 +1,7 @@
 import type { AgentProfile, AhpSessionIdentity } from "@potential-guide/cli-core";
 import { withPilot } from "@potential-guide/cli-runtime";
 import { Effect } from "@potential-guide/effects";
-import type { GitPilotSource, PilotSpec } from "@potential-guide/objective-pilot";
+import type { GitObjectiveSource, PilotSpec } from "@potential-guide/objective-pilot";
 import {
   type AgentOutcome,
   RegulationError,
@@ -22,7 +22,7 @@ const controller = new AbortController();
 let started = false;
 
 async function run(message: StartMessage) {
-  const sources: Record<string, GitPilotSource> = { ...message.input.sourceBindings };
+  const sources: Record<string, GitObjectiveSource> = { ...message.input.sourceBindings };
   const versions: Record<string, string> = Object.fromEntries(
     Object.entries(sources).map(([id, source]) => [id, source.tree]),
   );
@@ -30,24 +30,24 @@ async function run(message: StartMessage) {
     versions[spec.objectiveId] = spec.version;
     if (spec.source !== undefined) sources[spec.objectiveId] = spec.source;
   }
-  collect(message.input.spec.pilot);
+  collect(message.input.spec.objective);
   let sessionId: string | undefined;
   let ahpSession: AhpSessionIdentity | undefined;
   const executions: Promise<AgentOutcome>[] = [];
   try {
     return await withPilot(
-      message.input.spec.pilot.objectiveId,
+      message.input.spec.objective.objectiveId,
       message.cwd,
-      message.input.spec.pilot.source?.commit,
-      async (spec, pilot) => {
-        if (JSON.stringify(spec) !== JSON.stringify(message.input.spec.pilot))
+      message.input.spec.objective.source?.commit,
+      async (spec, pilotRuntime) => {
+        if (JSON.stringify(spec) !== JSON.stringify(message.input.spec.objective))
           throw new RegulationError(
             "Pinned Pilot specification differs from the requested recipe.",
             409,
           );
         return Effect.runPromise(
           regulate(message.input, {
-            pilot,
+            pilot: pilotRuntime,
             executeAgent: (input, signal) => {
               const execution = executeAgent(
                 input,

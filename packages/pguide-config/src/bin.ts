@@ -105,7 +105,10 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
       source: loaded.sources[`objectives.${name}`],
     }));
     writeResult(
-      { schemaVersion: 1, objectives },
+      {
+        $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
+        objectives,
+      },
       globals.format,
       objectives.length === 0
         ? "No registered Objectives."

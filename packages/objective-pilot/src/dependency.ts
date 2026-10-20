@@ -7,7 +7,7 @@ import type {
   CheckResult,
   DependencyProblem,
   Envelope,
-  GitPilotSource,
+  GitObjectiveSource,
   PilotInput,
   PilotObservation,
   PilotRuntime,
@@ -61,7 +61,7 @@ function rank(spec: PilotSpec, level: string): number {
 }
 interface Scope {
   readonly versions: Record<string, string>;
-  readonly sources: Record<string, GitPilotSource>;
+  readonly sources: Record<string, GitObjectiveSource>;
   readonly bindings: Map<
     string,
     Promise<{ readonly spec: PilotSpec; readonly runtime: PilotRuntime }>
@@ -94,7 +94,7 @@ export async function observationScope<T>(
   use: (
     versions: Record<string, string>,
     signal: AbortSignal,
-    sources: Record<string, GitPilotSource>,
+    sources: Record<string, GitObjectiveSource>,
   ) => Promise<T>,
 ): Promise<T> {
   const parent = scopes.getStore();
@@ -198,7 +198,8 @@ export function validateDependencyEvidence(problem: DependencyProblem): void {
   if (
     !evidence ||
     evidence.observation.current.levelId !== problem.currentLevelId ||
-    validateSubject(problem.subject, compileDomain(evidence.spec.manifest.domainSchema)) !== null ||
+    validateSubject(problem.subject, compileDomain(evidence.spec.manifest.subjectSchema)) !==
+      null ||
     rank(evidence.spec, problem.currentLevelId) >= rank(evidence.spec, problem.expectedLevelId)
   )
     throw new ObjectiveOperationError(

@@ -44,8 +44,8 @@
         "dist/**",
         "runtime/**",
         "THIRD_PARTY_NOTICES.txt",
-        "pilot.yaml",
-        "package-standard/pilot.yaml",
+        "objective.yaml",
+        "package-standard/objective.yaml",
         "package-standard/check.mjs",
         "package-standard/runtime/**",
         "package-standard/THIRD_PARTY_NOTICES.txt"

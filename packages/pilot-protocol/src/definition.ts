@@ -8,7 +8,6 @@ import type {
   ResourceResolver,
 } from "./types.js";
 import {
-  compileDomain,
   fields,
   identifier,
   immutable,
@@ -24,16 +23,24 @@ export async function loadPilotSpec(uri: string, resources: ResourceResolver): P
     throw new ObjectiveConfigurationError("A source version is required.");
   async function load(input: string): Promise<PilotSpec> {
     const objectiveId = canonicalObjectiveUri(input);
-    const manifest = parseManifest(
-      await resources.readText(pilotResourceUri(objectiveId, "pilot.yaml")),
-    );
+    let sourceText: string;
+    try {
+      sourceText = await resources.readText(pilotResourceUri(objectiveId, "objective.yaml"));
+    } catch (cause) {
+      if (cause instanceof Error && "code" in cause && cause.code === "ENOENT")
+        throw new ObjectiveConfigurationError(
+          "Missing objective.yaml. Legacy pilot.yaml is not read: use objective-contract-migrate --format manifest --input pilot.yaml --output objective.yaml, then commit the migrated source before rebinding.",
+          { cause },
+        );
+      throw cause;
+    }
+    const manifest = parseManifest(sourceText);
     const version =
       resources.versionFor === undefined
         ? resources.version
         : await resources.versionFor(objectiveId);
     if (!version.trim())
       throw new ObjectiveConfigurationError("An Objective source version is required.");
-    compileDomain(manifest.domainSchema);
     const source = pilotResourceUri(objectiveId, "references/");
     const locales = Object.fromEntries(
       [...validateReferences(await resources.readPages(source), source, manifest)].map(

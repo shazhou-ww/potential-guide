@@ -28,18 +28,17 @@ await mkdir(scratch, { recursive: true });
 
 export function context(root, directory = ".") {
   return {
-    repository: { id: "https://example.test/target.git" },
-    checkout: { id: "urn:fixture:checkout", rootPath: root },
-    directory: { absolutePath: join(root, directory), relativePath: directory },
+    repo: { rootPath: root, origin: "https://example.test/target.git" },
+    path: directory,
   };
 }
-function declaration(own, pilot = packageId) {
+function declaration(own, objective = packageId) {
   return JSON.stringify({
-    schemaVersion: 1,
+    $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
     objectives: {
       standardize: {
         description: "Fixture package preparation",
-        pilot,
+        objective,
         inputSchema: { type: "object", additionalProperties: false, maxProperties: 0 },
         subject: JSON.stringify(own),
       },
@@ -188,7 +187,7 @@ test("missing or malformed declarations are root internal structure problems; no
       "schemaVersion: [",
       '{"schemaVersion":1,"objectives":{}}',
       declaration({ invalid: true }),
-      declaration({}, "../pilot.yaml"),
+      declaration({}, "../objective.yaml"),
     ]) {
       if (content !== undefined) await write("packages/shared/objectives.yaml", content);
       const calls = [];
@@ -415,7 +414,7 @@ test("real repository has twenty package-owned subjects and no old contract inpu
         goals: [
           {
             id: "standardize",
-            pilot: spec,
+            objective: spec,
             subject,
             targetLevel: "terminal",
             priority: 3,
@@ -425,8 +424,8 @@ test("real repository has twenty package-owned subjects and no old contract inpu
         periodic: false,
         resolveObjective: fixtureSpec,
         observe: async (goal) => {
-          observed.push(goal.pilot.objectiveId);
-          return observation(goal.subject, goal.pilot.objectiveId);
+          observed.push(goal.objective.objectiveId);
+          return observation(goal.subject, goal.objective.objectiveId);
         },
       });
       const queue = () => Effect.runPromise(SubscriptionRef.get(planner.queue));
@@ -437,7 +436,7 @@ test("real repository has twenty package-owned subjects and no old contract inpu
       };
       try {
         const rootDemand = (await queue()).demands[0];
-        assert.equal(rootDemand.pilot.objectiveId, rootId);
+        assert.equal(rootDemand.objective.objectiveId, rootId);
         const handoff = await Effect.runPromise(
           regulate(
             {
@@ -454,12 +453,14 @@ test("real repository has twenty package-owned subjects and no old contract inpu
         assert.equal(handoff.stopReason, "dependency-required");
         await planner.feedback({ type: "result", demand: rootDemand, outcome: handoff });
         const child = (await queue()).demands[0];
-        assert.equal(child.pilot.objectiveId, packageId);
+        assert.equal(child.objective.objectiveId, packageId);
         let runs = 0;
         const repaired = await Effect.runPromise(
           regulate(
             {
-              spec: makeRegulatorSpec(child.pilot, strategy, { id: "controlled-local-fixture" }),
+              spec: makeRegulatorSpec(child.objective, strategy, {
+                id: "controlled-local-fixture",
+              }),
               subject: child.subject,
             },
             {
@@ -492,8 +493,8 @@ test("real repository has twenty package-owned subjects and no old contract inpu
       }
     });
   });
-  assert.equal(observed.length, 20);
   assert.equal(result.report.state, "pass", JSON.stringify(result.report.findings));
+  assert.equal(observed.length, 20);
   assert.deepEqual(result.problems, []);
   assert.ok(observed.every(({ source }) => source.expectedLevelId === "terminal"));
   assert.throws(() =>

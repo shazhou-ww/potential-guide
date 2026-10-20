@@ -97,15 +97,39 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         assert.equal(typeof protocol.projectObjective, "function");
         assert.equal(typeof protocol.bindObjective, "function");
         const declaration = protocol.parseObjectives(JSON.stringify({
-          schemaVersion: 1,
+          $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
           objectives: { standardize: {
             description: "Independent declaration",
-            pilot: "git+https://example.test/rules.git#package-standard/",
+            objective: "git+https://example.test/rules.git#package-standard/",
             inputSchema: { type: "object", additionalProperties: false, maxProperties: 0 },
             subject: '{"ready": true}'
           } }
         }));
-        assert.deepEqual(protocol.projectObjective(declaration.standardize, {}, undefined), { ready: true });
+        assert.deepEqual(protocol.projectObjective(declaration.standardize, {repo:null,path:"/independent"}, undefined), { ready: true });
+        const {readFileSync,writeFileSync} = await import("node:fs");
+        const {createRequire} = await import("node:module");
+        const require = createRequire(import.meta.url);
+        for (const format of ["objective", "objectives"]) {
+          const schema = JSON.parse(readFileSync(require.resolve("@potential-guide/pilot-protocol/schemas/" + format + "/v1.json"), "utf8"));
+          assert.equal(schema.$id, "https://shazhou-ww.github.io/potential-guide/schemas/" + format + "/v1.json");
+          assert.deepEqual(schema, format === "objective" ? protocol.objectiveSchema : protocol.objectivesSchema);
+        }
+        assert.equal(protocol.validateObjectivesDocument({$schema: protocol.OBJECTIVES_SCHEMA_URI, objectives: {}}), true);
+        assert.equal(protocol.validateObjectivesDocument({schemaVersion: 1, objectives: {}}), false);
+        const legacy = JSON.stringify({
+          schemaVersion: 1, domainSchema: {type: "object"},
+          levels: [{id:"initial",advancement:{checks:[]}}],
+          defaultLanguage:"en-US",languages:["en-US"]
+        });
+        writeFileSync("legacy-objective.json", legacy);
+        const {execFileSync} = await import("node:child_process");
+        const {fileURLToPath} = await import("node:url");
+        const migration = fileURLToPath(new URL("./migrate-cli.js", import.meta.resolve("@potential-guide/pilot-protocol")));
+        const migrationArgs = [migration,"--format","manifest","--input","legacy-objective.json","--output","objective.json"];
+        execFileSync(process.execPath,migrationArgs,{stdio:"pipe"});
+        assert.equal(protocol.parseManifest(readFileSync("objective.json","utf8")).$schema,protocol.OBJECTIVE_SCHEMA_URI);
+        assert.equal(readFileSync("legacy-objective.json","utf8"),legacy);
+        assert.throws(()=>execFileSync(process.execPath,migrationArgs,{stdio:"pipe"}),/EEXIST/);
         assert.equal(protocol.observe, undefined);
       `,
       );
@@ -177,24 +201,34 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
           await run(executable, ["config", "path", "--format", "json"], directory, env),
         );
         assert.equal(configured.schemaVersion, 1);
-        const pilot = join(directory, "pilot");
+        const objective = join(directory, "pilot");
         const scaffolded = JSON.parse(
-          await run(executable, ["scaffold", "pilot", pilot, "--format", "json"], directory, env),
+          await run(
+            executable,
+            ["scaffold", "pilot", objective, "--format", "json"],
+            directory,
+            env,
+          ),
         );
         assert.equal(scaffolded.schemaVersion, 1);
         const validated = JSON.parse(
-          await run(executable, ["validate", "pilot", pilot, "--format", "json"], directory, env),
+          await run(
+            executable,
+            ["validate", "pilot", objective, "--format", "json"],
+            directory,
+            env,
+          ),
         );
         assert.equal(validated.schemaVersion, 1);
         const declaration = join(directory, "declaration.json");
         await writeFile(
           declaration,
           JSON.stringify({
-            schemaVersion: 1,
+            $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
             objectives: {
               local: {
                 description: "Default CLI alias",
-                pilot,
+                objective,
                 inputSchema: { type: "object", maxProperties: 0 },
                 subject: "{}",
               },

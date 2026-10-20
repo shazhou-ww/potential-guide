@@ -5,7 +5,7 @@
   "description": "Complete local and SSH pguide setup Pilot.",
   "type": "module",
   "files": [
-    "pilot.yaml",
+    "objective.yaml",
     "checks",
     "references",
     "src",
@@ -16,7 +16,7 @@
   ],
   "exports": {
     ".": "./setup-check.mjs",
-    "./pilot.yaml": "./pilot.yaml"
+    "./objective.yaml": "./objective.yaml"
   },
   "scripts": {
     "build": "node ../../scripts/build-setup-runtime.mjs",

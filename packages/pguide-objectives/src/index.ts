@@ -43,14 +43,20 @@ export async function runObjectives(argv: string[], globals: GlobalOptions): Pro
     if (command === "show" && entries.length !== 1)
       throw new CliError("show requires one unambiguous name; specify --scope.");
     const config = await loadConfig(globals.cwd, globals.config);
-    const legacyAliases = Object.entries(config.value.objectives ?? {}).map(([alias, pilot]) => ({
-      name: alias,
-      pilot,
-      semantics: "legacy-source-alias",
-      file: config.sources[`objectives.${alias}`],
-    }));
+    const legacyAliases = Object.entries(config.value.objectives ?? {}).map(
+      ([alias, objective]) => ({
+        name: alias,
+        objective,
+        semantics: "legacy-source-alias",
+        file: config.sources[`objectives.${alias}`],
+      }),
+    );
     writeResult(
-      { schemaVersion: 1, objectives: entries, legacyAliases },
+      {
+        $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
+        objectives: entries,
+        legacyAliases,
+      },
       globals.format,
       JSON.stringify({ objectives: entries, legacyAliases }, null, 2),
     );
@@ -70,7 +76,7 @@ export async function runObjectives(argv: string[], globals: GlobalOptions): Pro
     const selected = candidate[name];
     if (Object.keys(candidate).length !== 1 || selected === undefined)
       throw new CliError(
-        "--from must declare exactly the selected Objective, with explicit inputSchema and subject.",
+        "--from must declare exactly the selected Objective with subject; omitted inputSchema defaults to Unit.",
       );
     entries[name] = selected;
     if (command === "migrate") {
@@ -88,7 +94,7 @@ export async function runObjectives(argv: string[], globals: GlobalOptions): Pro
       legacy = { path, config };
     }
   }
-  const source = `${JSON.stringify({ schemaVersion: 1, objectives: entries }, null, 2)}\n`;
+  const source = `${JSON.stringify({ $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json", objectives: entries }, null, 2)}\n`;
   parseObjectives(source);
   await atomicWrite(file, source);
   if (legacy !== undefined)

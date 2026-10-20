@@ -1,5 +1,5 @@
-schemaVersion: 1
-domainSchema:
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json
+subjectSchema:
   type: object
   additionalProperties: false
   required: [environment, user, home, workspace, scratchDirectory, cacheDirectory, logDirectory, tasksDirectory, stacks]
@@ -86,29 +86,24 @@ domainSchema:
           logBytes: {type: number, minimum: 0}
 levels:
   - id: initial
-    advancement:
-      checks:
-        - id: identity
-          problems: [identity-mismatch, environment-mismatch, directory-unusable, sudo-unavailable]
+    checks:
+      - id: identity
+        problems: [identity-mismatch, environment-mismatch, directory-unusable, sudo-unavailable]
   - id: managed
-    advancement:
-      checks:
-        - id: system
-          problems: [directory-unusable, capacity-low, inodes-low, unsupported-package-manager, package-database-unhealthy, dns-unavailable, http-unavailable]
+    checks:
+      - id: system
+        problems: [directory-unusable, capacity-low, inodes-low, unsupported-package-manager, package-database-unhealthy, dns-unavailable, http-unavailable]
   - id: system-ready
-    advancement:
-      checks:
-        - id: toolchains
-          problems: [directory-unusable, tool-missing, tool-version, toolchain-failed]
+    checks:
+      - id: toolchains
+        problems: [directory-unusable, tool-missing, tool-version, toolchain-failed]
   - id: development-ready
-    advancement:
-      checks:
-        - id: order
-          problems: [layout-invalid, directory-unusable, task-registry-invalid, task-orphaned, task-overdue, task-residue, task-process-leftover]
+    checks:
+      - id: order
+        problems: [layout-invalid, directory-unusable, task-registry-invalid, task-orphaned, task-overdue, task-residue, task-process-leftover]
   - id: orderly
-    advancement:
-      checks:
-        - id: sustainability
-          problems: [directory-unusable, history-insufficient, history-invalid, cache-growth, log-growth, unsupported-package-manager, package-index-stale, updates-pending, reboot-required]
+    checks:
+      - id: sustainability
+        problems: [directory-unusable, history-insufficient, history-invalid, cache-growth, log-growth, unsupported-package-manager, package-index-stale, updates-pending, reboot-required]
 defaultLanguage: zh-CN
 languages: [zh-CN]

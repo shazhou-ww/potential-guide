@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
+  "title": "Objective Declarations v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "objectives"],
+  "properties": {
+    "$schema": {
+      "const": "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json"
+    },
+    "objectives": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description", "objective", "subject"],
+        "properties": {
+          "description": { "type": "string", "pattern": "\\S" },
+          "objective": { "type": "string", "pattern": "\\S" },
+          "inputSchema": { "$ref": "https://json-schema.org/draft/2020-12/schema" },
+          "subject": { "type": "string", "pattern": "\\S" }
+        }
+      }
+    }
+  }
+}

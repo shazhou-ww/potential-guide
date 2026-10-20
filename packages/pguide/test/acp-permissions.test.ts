@@ -350,9 +350,9 @@ test("ACP invocation allows an authorized alternative after denial without killi
     binding: { id: "fixture" },
     subject: {},
     permissions: permission(path),
-    target: { objectiveId: "git+file:///fixture.git#pilot.yaml", levelId: "terminal" },
+    target: { objectiveId: "git+file:///fixture.git#objective.yaml", levelId: "terminal" },
     observation: {
-      current: { objectiveId: "git+file:///fixture.git#pilot.yaml", levelId: "initial" },
+      current: { objectiveId: "git+file:///fixture.git#objective.yaml", levelId: "initial" },
       problems: [],
       gapSummary: "",
       observedAt: new Date().toISOString(),

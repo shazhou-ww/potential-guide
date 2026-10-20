@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { pathToFileURL } from "node:url";
 import { extractGlobals } from "@potential-guide/cli-core";
 import {
   bindObjective,
@@ -18,13 +17,13 @@ import { bin, fixture, git, run, writeConfig } from "./fixtures.js";
 const unit = { type: "object", additionalProperties: false, maxProperties: 0 } as const;
 const declaration: ObjectiveDeclaration = {
   description: "显式绑定",
-  pilot: "git+https://unreachable.invalid/rules.git#rules/",
+  objective: "git+https://unreachable.invalid/rules.git#rules/",
   inputSchema: unit,
-  subject: '{"name": context.directory.absolutePath}',
+  subject: '{"name": $pathJoin(context.repo.rootPath, context.path)}',
 };
 const document = (entry: ObjectiveDeclaration = declaration) =>
   JSON.stringify({
-    schemaVersion: 1,
+    $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",
     objectives: { check: entry },
   });
 
@@ -32,9 +31,8 @@ test("strict declarations reject governance fields, legacy wrappers, aliases and
   for (const entry of [
     { ...declaration, target: "terminal" },
     { ...declaration, subject: { jsonata: "{}" } },
-    { ...declaration, inputSchema: undefined },
-    { ...declaration, pilot: "git+https://example.test/repo.git#rules/pilot.yaml" },
-    { ...declaration, pilot: ".\\rules\\pilot.yaml" },
+    { ...declaration, objective: "git+https://example.test/repo.git#rules/objective.yaml" },
+    { ...declaration, objective: ".\\rules\\objective.yaml" },
   ])
     assert.throws(() => parseObjectives(document(entry as ObjectiveDeclaration)));
   assert.throws(() => parseObjectives("schemaVersion: 1\nschemaVersion: 1\nobjectives: {}\n"));
@@ -44,7 +42,7 @@ test("strict declarations reject governance fields, legacy wrappers, aliases and
 
 test("Unit is unique {}, optional-object is not Unit, and both schema boundaries are enforced", async () => {
   const spec = await pilotFixture().load();
-  const context = { directory: { absolutePath: "checkout" } };
+  const context = { repo: { rootPath: "checkout", origin: null }, path: "." };
   assert.deepEqual(bindObjective(declaration, context, undefined, spec), { name: "checkout" });
   assert.deepEqual(
     bindObjective({ ...declaration, inputSchema: { const: {} } }, context, undefined, spec),
@@ -170,7 +168,7 @@ test("user and directory input types are orthogonal, source provenance and name 
 
 test("Unit inference is conservative about expandable schemas and validates the empty value", async () => {
   const spec = await pilotFixture().load();
-  const context = { directory: { absolutePath: "checkout" } };
+  const context = { repo: { rootPath: "checkout", origin: null }, path: "." };
   const expandable = [
     {
       type: "object",
@@ -253,14 +251,14 @@ test("discovery is exact-directory, technology independent and never evaluates o
   ]);
   assert.equal(listed.code, 0, listed.stdout + listed.stderr);
   const entry = JSON.parse(listed.stdout).objectives[0];
-  assert.equal(entry.pilot, declaration.pilot);
+  assert.equal(entry.objective, declaration.objective);
   assert.equal(entry.file, join(f.repository, "objectives.yaml"));
   assert.match(entry.revision, /^[a-f0-9]{64}$/);
   assert.equal(entry.scope, "directory");
   assert.equal(JSON.parse(listed.stdout).objectives.length, 1);
 });
 
-test("repository, checkout and directory context are independent and do not expose environment secrets", async (t) => {
+test("context exposes only repo root/origin and repo-relative path across worktrees and non-Git directories", async (t) => {
   const f = await fixture();
   t.after(() => rm(f.directory, { recursive: true, force: true }));
   await writeFile(join(f.repository, "objectives.yaml"), document());
@@ -269,27 +267,26 @@ test("repository, checkout and directory context are independent and do not expo
   await git(f.repository, "worktree", "add", "--detach", checkout);
   const one = await objectiveContext(f.repository);
   const two = await objectiveContext(checkout);
-  assert.deepEqual(one.repository, two.repository);
-  assert.notDeepEqual(one.checkout, two.checkout);
-  assert.notDeepEqual(one.directory, two.directory);
-  assert.equal((one.directory as { relativePath: string }).relativePath, ".");
+  assert.equal(one.repo?.origin, two.repo?.origin);
+  assert.equal(one.repo?.rootPath, f.repository);
+  assert.equal(two.repo?.rootPath, checkout);
+  assert.equal(one.path, ".");
+  assert.equal(two.path, ".");
   const nested = join(f.repository, "plain", "nested");
   await mkdir(nested, { recursive: true });
-  assert.equal(
-    ((await objectiveContext(nested)).directory as { relativePath: string }).relativePath,
-    "plain/nested",
-  );
+  assert.equal((await objectiveContext(nested)).path, "plain/nested");
   assert.notDeepEqual(
     (await listObjectives(f.repository, "directory"))[0]?.file,
     (await listObjectives(checkout, "directory"))[0]?.file,
   );
-  assert.deepEqual(Object.keys(one).sort(), ["checkout", "directory", "repository"]);
+  assert.deepEqual(Object.keys(one).sort(), ["path", "repo"]);
+  assert.deepEqual(Object.keys(one.repo ?? {}).sort(), ["origin", "rootPath"]);
   const plain = join(f.directory, "plain");
   await mkdir(plain);
   const ceiling = process.env.GIT_CEILING_DIRECTORIES;
   try {
     process.env.GIT_CEILING_DIRECTORIES = f.directory;
-    assert.equal((await objectiveContext(plain)).checkout, null);
+    assert.deepEqual(await objectiveContext(plain), { repo: null, path: plain });
   } finally {
     if (ceiling === undefined) delete process.env.GIT_CEILING_DIRECTORIES;
     else process.env.GIT_CEILING_DIRECTORIES = ceiling;
@@ -300,8 +297,9 @@ test("context recognizes absent origin but explicitly rejects malformed and non-
   const f = await fixture();
   t.after(() => rm(f.directory, { recursive: true, force: true }));
   await git(f.repository, "remote", "remove", "origin");
-  assert.deepEqual((await objectiveContext(f.repository)).repository, {
-    id: pathToFileURL(join(f.repository, ".git")).href,
+  assert.deepEqual((await objectiveContext(f.repository)).repo, {
+    rootPath: f.repository,
+    origin: null,
   });
   await git(f.repository, "remote", "add", "origin", "git@example.invalid:team/repo.git");
   for (const origin of [
@@ -391,8 +389,8 @@ test("Git operational failures and corrupt metadata never become successful fall
         `fatal: not a git repository (or any parent up to mount point ${dirname(f.directory)})\nStopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).\n`,
       );
     });
-    assert.equal(context.repository, null);
-    assert.equal(context.checkout, null);
+    assert.equal(context.repo, null);
+    assert.equal(context.path, plain);
   } finally {
     if (ceiling === undefined) delete process.env.GIT_CEILING_DIRECTORIES;
     else process.env.GIT_CEILING_DIRECTORIES = ceiling;
@@ -402,7 +400,11 @@ test("Git operational failures and corrupt metadata never become successful fall
 test("declaration probe and direct probe agree; declaration mutation does not redirect continue", async (t) => {
   const f = await fixture();
   t.after(() => rm(f.directory, { recursive: true, force: true }));
-  const selected: ObjectiveDeclaration = { ...declaration, pilot: "./objective", subject: "{}" };
+  const selected: ObjectiveDeclaration = {
+    ...declaration,
+    objective: "./objective",
+    subject: "{}",
+  };
   await writeFile(join(f.repository, "objectives.yaml"), document(selected));
   const commit = await f.commit();
   const args = ["--cwd", f.repository, "--format", "json", "--no-reports"];
@@ -469,8 +471,8 @@ test("declaration probe and direct probe agree; declaration mutation does not re
   const saved = JSON.parse(
     await readFile(join(state, "regulations", id, "regulation.json"), "utf8"),
   );
-  assert.equal(saved.pilotCommit, commit);
-  assert.equal(saved.pilotTree, await git(f.repository, "rev-parse", `${commit}:objective`));
+  assert.equal(saved.objectiveCommit, commit);
+  assert.equal(saved.objectiveTree, await git(f.repository, "rev-parse", `${commit}:objective`));
   assert.equal(saved.binding.entry.name, "check");
   await writeFile(join(f.repository, "objectives.yaml"), document());
   await f.commit();
@@ -500,7 +502,7 @@ test("management requires scope, atomically validates, and migration preserves u
     legacy,
     JSON.stringify({
       schemaVersion: 2,
-      objectives: { check: ".\\old\\pilot.yaml", keep: ".\\keep" },
+      objectives: { check: ".\\old\\objective.yaml", keep: ".\\keep" },
     }),
   );
   const invoke = (args: string[]) =>

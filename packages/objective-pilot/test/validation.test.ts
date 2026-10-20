@@ -127,9 +127,9 @@ test("Wiki missing or dangling metadata, aliases and invalid frontmatter fail ex
 
 test("strict manifest schema rejects external references, reserved levels and duplicate problems in one check", async () => {
   for (const overrides of [
-    { levels: [{ id: "terminal", advancement: { checks: [] } }] },
+    { levels: [{ id: "terminal", checks: [] }] },
     {
-      domainSchema: {
+      subjectSchema: {
         type: "object",
         properties: { value: { $ref: "https://external.test/schema" } },
       },
@@ -138,13 +138,13 @@ test("strict manifest schema rejects external references, reserved levels and du
       levels: [
         {
           id: "first",
-          advancement: { checks: [{ id: "check", problems: ["problem", "problem"] }] },
+          checks: [{ id: "check", problems: ["problem", "problem"] }],
         },
       ],
     },
   ]) {
     const data = fixture();
-    data.texts.set(`${objectiveId}pilot.yaml`, JSON.stringify({ ...manifest(), ...overrides }));
+    data.texts.set(`${objectiveId}objective.yaml`, JSON.stringify({ ...manifest(), ...overrides }));
     await assert.rejects(data.load());
   }
   assert.throws(

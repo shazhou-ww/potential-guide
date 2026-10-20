@@ -250,7 +250,7 @@ const help: Record<Command, CommandHelp> = {
         title: "Next steps",
         lines: [
           "  Replace TODO guidance and implement the generated check. IDs use lowercase kebab-case.",
-          "  Validate with pguide validate pilot .\\objective\\pilot.yaml, then commit before probing.",
+          "  Validate with pguide validate pilot .\\objective\\objective.yaml, then commit before probing.",
         ],
       },
     ],
@@ -258,20 +258,20 @@ const help: Record<Command, CommandHelp> = {
   validate: {
     description:
       "Validate a Pilot manifest and its localized reference graph without executing checks.",
-    usage: "pguide validate pilot <pilot.yaml>",
+    usage: "pguide validate pilot <objective.yaml>",
     sections: [
       {
         title: "Arguments",
         lines: [
           "  pilot                   Supported validation type",
-          "  <pilot.yaml>            Local manifest path",
+          "  <objective.yaml>            Local manifest path",
         ],
       },
       {
         title: "Examples",
         lines: [
-          "  pguide validate pilot .\\objective\\pilot.yaml",
-          "  pguide validate pilot .\\objective\\pilot.yaml --format json",
+          "  pguide validate pilot .\\objective\\objective.yaml",
+          "  pguide validate pilot .\\objective\\objective.yaml --format json",
         ],
       },
       {

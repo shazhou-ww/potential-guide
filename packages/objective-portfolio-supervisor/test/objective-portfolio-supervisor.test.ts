@@ -42,16 +42,16 @@ function deferred<A>() {
   });
   return { promise, resolve, reject };
 }
-function pilot(id: string): PilotSpec {
+function objective(id: string): PilotSpec {
   return {
     objectiveId: `git+file:///fixture.git#${id}/`,
     version: "1".repeat(40),
     manifest: {
-      schemaVersion: 1,
-      domainSchema: { type: "object" },
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json",
+      subjectSchema: { type: "object" },
       levels: [
-        { id: "initial", advancement: { checks: [{ id: "check", problems: ["missing"] }] } },
-        { id: "ready", advancement: { checks: [] } },
+        { id: "initial", checks: [{ id: "check", problems: ["missing"] }] },
+        { id: "ready", checks: [] },
       ],
       defaultLanguage: "en",
       languages: ["en"],
@@ -72,7 +72,7 @@ function pilot(id: string): PilotSpec {
 function goal(id: string, overrides: Partial<ObjectiveGoal> = {}): ObjectiveGoal {
   return {
     id,
-    pilot: pilot(id),
+    objective: objective(id),
     subject: {},
     targetLevel: "terminal",
     priority: 3,
@@ -99,7 +99,7 @@ function observed(spec: PilotSpec, levelId = "initial"): Envelope<PilotObservati
 function dependenciesObserved(
   spec: PilotSpec,
   dependencies: readonly {
-    readonly pilot: PilotSpec;
+    readonly objective: PilotSpec;
     readonly minimum?: string;
     readonly subject?: Record<string, string>;
     readonly current?: string;
@@ -113,14 +113,16 @@ function dependenciesObserved(
       ...base,
       problems: dependencies.map((dependency) => ({
         kind: "dependency",
-        objectiveId: dependency.pilot.objectiveId,
+        objectiveId: dependency.objective.objectiveId,
         subject: dependency.subject ?? {},
         expectedLevelId: dependency.minimum ?? "ready",
         currentLevelId: dependency.current ?? "initial",
       })),
       versions: {
         ...base.versions,
-        ...Object.fromEntries(dependencies.map(({ pilot }) => [pilot.objectiveId, pilot.version])),
+        ...Object.fromEntries(
+          dependencies.map(({ objective }) => [objective.objectiveId, objective.version]),
+        ),
       },
     },
   };
@@ -135,7 +137,7 @@ function outcome(
     iterations: 1,
     stalledRuns,
     latestObservation: observed(
-      input.spec.pilot,
+      input.spec.objective,
       stopReason === "target-reached" ? "terminal" : "initial",
     ),
   };
@@ -153,7 +155,7 @@ function handoff(
     expectedLevelId: minimum,
     currentLevelId: "initial",
   };
-  const observation = required(observed(entry.pilot).payload ?? undefined);
+  const observation = required(observed(entry.objective).payload ?? undefined);
   return {
     type: "result",
     demand: entry,
@@ -187,25 +189,28 @@ test("controlled binding replacement invalidates live consumer waits and ignores
   const planner = await createPortfolioPlanner({
     goals: [consumer, provider],
     periodic: false,
-    observe: async (entry) => observed(entry.pilot),
+    observe: async (entry) => observed(entry.objective),
   });
   try {
     const before = await read(planner.queue);
     const rootDemand = required(before.demands.find(({ id }) => id === consumer.id));
-    await planner.feedback(handoff(rootDemand, provider.pilot));
+    await planner.feedback(handoff(rootDemand, provider.objective));
     const waiting = await read(planner.queue);
     const oldProvider = required(waiting.demands.find(({ id }) => id === provider.id));
     assert.ok(!waiting.demands.some(({ id }) => id === consumer.id));
-    const replacement = { ...provider, pilot: { ...provider.pilot, version: "2".repeat(40) } };
+    const replacement = {
+      ...provider,
+      objective: { ...provider.objective, version: "2".repeat(40) },
+    };
     await planner.updateGoals([{ ...consumer, bindingRevision: "dependency-tree-2" }, replacement]);
     const current = await read(planner.queue);
     const newConsumer = required(current.demands.find(({ id }) => id === consumer.id));
     const newProvider = required(current.demands.find(({ id }) => id === provider.id));
     assert.ok(newConsumer.revision > rootDemand.revision);
     assert.ok(newProvider.revision > oldProvider.revision);
-    await planner.feedback(handoff(oldProvider, pilot("late-foreign-target")));
+    await planner.feedback(handoff(oldProvider, objective("late-foreign-target")));
     assert.deepEqual(await read(planner.queue), current);
-    await planner.feedback(handoff(newConsumer, replacement.pilot));
+    await planner.feedback(handoff(newConsumer, replacement.objective));
     assert.ok(!(await read(planner.queue)).demands.some(({ id }) => id === consumer.id));
   } finally {
     await planner.close();
@@ -412,7 +417,7 @@ test("authorization feedback reaches planner without grants and cannot self-auth
   const planner = await createPortfolioPlanner({
     goals: [goal("a")],
     periodic: false,
-    observe: async (entry) => observed(entry.pilot),
+    observe: async (entry) => observed(entry.objective),
     policy: async (input) => {
       received.push(...input.events);
       assert.equal(JSON.stringify(input).includes('"ceiling"'), false);
@@ -556,14 +561,14 @@ test("P0 waits for abort grace and confirmed kill, retains FIFO and deduplicates
     gate.resolve();
     await until(() => h.executions.length === 2);
     assert.equal(
-      required(h.executions[1]).input.spec.pilot.objectiveId,
-      pilot("first").objectiveId,
+      required(h.executions[1]).input.spec.objective.objectiveId,
+      objective("first").objectiveId,
     );
     required(h.executions[1]).completion.resolve(outcome(required(h.executions[1]).input));
     await until(() => h.executions.length === 3);
     assert.equal(
-      required(h.executions[2]).input.spec.pilot.objectiveId,
-      pilot("second").objectiveId,
+      required(h.executions[2]).input.spec.objective.objectiveId,
+      objective("second").objectiveId,
     );
   } finally {
     gate.resolve();
@@ -613,7 +618,7 @@ test("stale completion cannot complete a superseding specification", async () =>
     await until(() => h.executions.length === 1);
     const changed = demand("a", 3, {
       revision: 2,
-      pilot: { ...pilot("a"), version: "2".repeat(40) },
+      objective: { ...objective("a"), version: "2".repeat(40) },
     });
     await h.update([changed]);
     await until(() => h.executions.length === 2);
@@ -627,8 +632,8 @@ test("stale completion cannot complete a superseding specification", async () =>
 });
 
 test("canonical subjects serialize and deduplicate equivalent objective demands", async () => {
-  const a = demand("a", 2, { pilot: pilot("same"), subject: { a: 1, b: { c: 2, d: 3 } } });
-  const b = demand("b", 1, { pilot: pilot("same"), subject: { b: { d: 3, c: 2 }, a: 1 } });
+  const a = demand("a", 2, { objective: objective("same"), subject: { a: 1, b: { c: 2, d: 3 } } });
+  const b = demand("b", 1, { objective: objective("same"), subject: { b: { d: 3, c: 2 }, a: 1 } });
   assert.equal(objectiveKey(a), objectiveKey(b));
   const h = await harness([a, b], { maxConcurrency: 2, resources: [{ ...resource, capacity: 2 }] });
   try {
@@ -680,7 +685,7 @@ test("planner observes successful goals at cadence and queues only later regress
     goals: [root],
     observe: async (entry) => {
       count++;
-      return observed(entry.pilot, level);
+      return observed(entry.objective, level);
     },
   });
   try {
@@ -697,12 +702,14 @@ test("planner observes successful goals at cadence and queues only later regress
         stopReason: "target-reached",
         iterations: 1,
         stalledRuns: 0,
-        latestObservation: observed(root.pilot, "terminal"),
+        latestObservation: observed(root.objective, "terminal"),
       },
     });
     assert.equal((await read(planner.queue)).demands.length, 0);
     level = "initial";
-    await planner.updateGoals([{ ...root, pilot: { ...root.pilot, version: "2".repeat(40) } }]);
+    await planner.updateGoals([
+      { ...root, objective: { ...root.objective, version: "2".repeat(40) } },
+    ]);
     const next = required((await read(planner.queue)).demands[0]);
     assert.ok(next.revision > old.revision);
     await planner.feedback({
@@ -712,7 +719,7 @@ test("planner observes successful goals at cadence and queues only later regress
         stopReason: "target-reached",
         iterations: 1,
         stalledRuns: 0,
-        latestObservation: observed(root.pilot, "terminal"),
+        latestObservation: observed(root.objective, "terminal"),
       },
     });
     assert.equal(required((await read(planner.queue)).demands[0]).revision, next.revision);
@@ -722,11 +729,11 @@ test("planner observes successful goals at cadence and queues only later regress
 });
 
 test("planner deduplicates canonical registrations and priority-only updates preserve demand revision", async () => {
-  const one = goal("one", { pilot: pilot("same"), subject: { x: 1, y: 2 } });
+  const one = goal("one", { objective: objective("same"), subject: { x: 1, y: 2 } });
   const planner = await createPortfolioPlanner({
     goals: [one, { ...one, id: "two", subject: { y: 2, x: 1 }, priority: 1 }],
     periodic: false,
-    observe: async (entry) => observed(entry.pilot),
+    observe: async (entry) => observed(entry.objective),
   });
   try {
     const initial = (await read(planner.queue)).demands;
@@ -743,7 +750,7 @@ test("planner deduplicates canonical registrations and priority-only updates pre
 });
 
 test("two roots merge a dynamic instance and resume independently at their own thresholds", async () => {
-  const child = pilot("shared");
+  const child = objective("shared");
   let childLevel = "initial";
   const planner = await createPortfolioPlanner({
     goals: [goal("a"), goal("b")],
@@ -754,14 +761,14 @@ test("two roots merge a dynamic instance and resume independently at their own t
       return child;
     },
     observe: async (entry) =>
-      entry.pilot.objectiveId === child.objectiveId
-        ? observed(entry.pilot, childLevel)
+      entry.objective.objectiveId === child.objectiveId
+        ? observed(entry.objective, childLevel)
         : dependenciesObserved(
-            entry.pilot,
+            entry.objective,
             (entry.id === "a" ? childLevel === "initial" : childLevel !== "terminal")
               ? [
                   {
-                    pilot: child,
+                    objective: child,
                     minimum: entry.id === "a" ? "ready" : "terminal",
                     subject: { key: "common" },
                     current: childLevel,
@@ -776,7 +783,7 @@ test("two roots merge a dynamic instance and resume independently at their own t
     await planner.feedback(handoff(required(b), child, "terminal", { key: "common" }));
     const demands = (await read(planner.queue)).demands;
     assert.equal(demands.length, 1);
-    assert.equal(required(demands[0]).pilot.objectiveId, child.objectiveId);
+    assert.equal(required(demands[0]).objective.objectiveId, child.objectiveId);
     assert.equal(required(demands[0]).targetLevel, "terminal");
     childLevel = "ready";
     await planner.refresh();
@@ -789,7 +796,7 @@ test("two roots merge a dynamic instance and resume independently at their own t
     childLevel = "terminal";
     const provider = required(
       (await read(planner.queue)).demands.find(
-        (entry) => entry.pilot.objectiveId === child.objectiveId,
+        (entry) => entry.objective.objectiveId === child.objectiveId,
       ),
     );
     await planner.feedback({
@@ -816,7 +823,7 @@ test("malformed/rejected policies surface errors, never silently use a fallback"
     createPortfolioPlanner({
       goals: [goal("a")],
       periodic: false,
-      observe: async (entry) => observed(entry.pilot),
+      observe: async (entry) => observed(entry.objective),
       policy: async () => ({ directives: [{ goalId: "unknown", priority: 0 }] }),
     }),
     /unique eligible goal/,
@@ -825,7 +832,7 @@ test("malformed/rejected policies surface errors, never silently use a fallback"
     createPortfolioPlanner({
       goals: [goal("a")],
       periodic: false,
-      observe: async (entry) => observed(entry.pilot),
+      observe: async (entry) => observed(entry.objective),
       policy: async () => {
         throw new Error("policy rejected");
       },
@@ -878,7 +885,7 @@ test("runner capability notifications bind to exact live input and ignore stale 
     await until(() => h.events.some((event) => event.type === "capability-request"));
     assert.equal(h.events.filter((event) => event.type === "capability-request").length, 1);
     await h.update([
-      demand("a", 3, { revision: 2, pilot: { ...pilot("a"), version: "2".repeat(40) } }),
+      demand("a", 3, { revision: 2, objective: { ...objective("a"), version: "2".repeat(40) } }),
     ]);
     await until(() => h.executions.length === 2);
     h.coordinator.reportCapabilityRequest(original, { ...request, capability: "other" });
@@ -897,7 +904,10 @@ test("exhausted retry reconsiders priority instead of immediately reclaiming its
       outcome(required(h.executions[0]).input, "exhausted", 7),
     );
     await until(() => h.executions.length === 2);
-    assert.equal(required(h.executions[1]).input.spec.pilot.objectiveId, pilot("b").objectiveId);
+    assert.equal(
+      required(h.executions[1]).input.spec.objective.objectiveId,
+      objective("b").objectiveId,
+    );
   } finally {
     await h.coordinator.close();
   }
@@ -907,7 +917,7 @@ test("quota exhaustion before an observation remains normal eligible planner dem
   const planner = await createPortfolioPlanner({
     goals: [goal("a")],
     periodic: false,
-    observe: async (entry) => observed(entry.pilot),
+    observe: async (entry) => observed(entry.objective),
   });
   try {
     const active = required((await read(planner.queue)).demands[0]);
@@ -930,7 +940,7 @@ test("quota exhaustion before an observation remains normal eligible planner dem
 });
 
 test("observed dependency satisfaction renews blocked root without requiring a child run result", async () => {
-  const child = pilot("child");
+  const child = objective("child");
   const root = goal("root");
   let childLevel = "initial";
   const planner = await createPortfolioPlanner({
@@ -938,14 +948,17 @@ test("observed dependency satisfaction renews blocked root without requiring a c
     resolveObjective: async () => child,
     periodic: false,
     observe: async (entry) =>
-      observed(entry.pilot, entry.pilot.objectiveId === child.objectiveId ? childLevel : "initial"),
+      observed(
+        entry.objective,
+        entry.objective.objectiveId === child.objectiveId ? childLevel : "initial",
+      ),
   });
 
   try {
     const active = required((await read(planner.queue)).demands[0]);
     await planner.feedback(handoff(active, child));
     assert.equal(
-      required((await read(planner.queue)).demands[0]).pilot.objectiveId,
+      required((await read(planner.queue)).demands[0]).objective.objectiveId,
       child.objectiveId,
     );
     childLevel = "ready";
@@ -960,8 +973,8 @@ test("observed dependency satisfaction renews blocked root without requiring a c
 });
 
 test("multiple dependencies all satisfy before consumer re-observation; root removal collects only orphans", async () => {
-  const first = pilot("first");
-  const second = pilot("second");
+  const first = objective("first");
+  const second = objective("second");
   const levels = new Map<string, string>();
   const released: string[] = [];
   let consumerObservations = 0;
@@ -976,12 +989,12 @@ test("multiple dependencies all satisfy before consumer re-observation; root rem
       if (entry.id === "a") consumerObservations++;
       if (entry.id === "a" || entry.id === "b")
         return dependenciesObserved(
-          entry.pilot,
+          entry.objective,
           (entry.id === "a" ? [first, second] : [first])
-            .filter((pilot) => (levels.get(pilot.objectiveId) ?? "initial") === "initial")
-            .map((pilot) => ({ pilot })),
+            .filter((objective) => (levels.get(objective.objectiveId) ?? "initial") === "initial")
+            .map((objective) => ({ objective })),
         );
-      return observed(entry.pilot, levels.get(entry.pilot.objectiveId) ?? "initial");
+      return observed(entry.objective, levels.get(entry.objective.objectiveId) ?? "initial");
     },
   });
   try {
@@ -1042,12 +1055,12 @@ test("multiple dependencies all satisfy before consumer re-observation; root rem
 });
 
 test("shared provider survives one owner removal, while recipe replacement isolates old handoff", async () => {
-  const child = pilot("child");
+  const child = objective("child");
   const planner = await createPortfolioPlanner({
     goals: [goal("a"), goal("b")],
     periodic: false,
     resolveObjective: async () => child,
-    observe: async (entry) => observed(entry.pilot),
+    observe: async (entry) => observed(entry.objective),
   });
   try {
     const [a, b] = (await read(planner.queue)).demands;
@@ -1055,7 +1068,7 @@ test("shared provider survives one owner removal, while recipe replacement isola
     await planner.feedback(handoff(required(b), child));
     await planner.updateGoals([goal("b")]);
     assert.equal(
-      required((await read(planner.queue)).demands[0]).pilot.objectiveId,
+      required((await read(planner.queue)).demands[0]).objective.objectiveId,
       child.objectiveId,
     );
     await planner.updateGoals([goal("b", { subject: { replacement: true } })]);
@@ -1069,12 +1082,12 @@ test("shared provider survives one owner removal, while recipe replacement isola
 });
 
 test("actual instance wait cycles and conflicting exact source evidence are explicit failures", async () => {
-  const child = pilot("child");
+  const child = objective("child");
   const planner = await createPortfolioPlanner({
     goals: [goal("a")],
     periodic: false,
     resolveObjective: async () => child,
-    observe: async (entry) => observed(entry.pilot),
+    observe: async (entry) => observed(entry.objective),
   });
   try {
     const a = required((await read(planner.queue)).demands[0]);
@@ -1084,7 +1097,7 @@ test("actual instance wait cycles and conflicting exact source evidence are expl
     );
     await planner.feedback(handoff(a, child));
     const provider = required((await read(planner.queue)).demands[0]);
-    await assert.rejects(planner.feedback(handoff(provider, a.pilot)), /wait cycle/);
+    await assert.rejects(planner.feedback(handoff(provider, a.objective)), /wait cycle/);
     assert.match(String((await read(planner.state)).error), /wait cycle/);
   } finally {
     await planner.close();
@@ -1092,18 +1105,18 @@ test("actual instance wait cycles and conflicting exact source evidence are expl
   const self = await createPortfolioPlanner({
     goals: [goal("self")],
     periodic: false,
-    observe: async (entry) => observed(entry.pilot),
+    observe: async (entry) => observed(entry.objective),
   });
   try {
     const entry = required((await read(self.queue)).demands[0]);
-    await assert.rejects(self.feedback(handoff(entry, entry.pilot)), /wait cycle/);
+    await assert.rejects(self.feedback(handoff(entry, entry.objective)), /wait cycle/);
   } finally {
     await self.close();
   }
 });
 
 test("fresh consumer observations withdraw obsolete waits, renew revisions and preserve shared owners", async () => {
-  const child = pilot("child");
+  const child = objective("child");
   const requires = new Set(["a", "b"]);
   const released: string[] = [];
   const planner = await createPortfolioPlanner({
@@ -1114,8 +1127,9 @@ test("fresh consumer observations withdraw obsolete waits, renew revisions and p
       released.push(spec.objectiveId);
     },
     observe: async (entry) => {
-      if (requires.has(entry.id)) return dependenciesObserved(entry.pilot, [{ pilot: child }]);
-      const envelope = observed(entry.pilot);
+      if (requires.has(entry.id))
+        return dependenciesObserved(entry.objective, [{ objective: child }]);
+      const envelope = observed(entry.objective);
       assert.ok(envelope.payload);
       return {
         ...envelope,
@@ -1125,7 +1139,7 @@ test("fresh consumer observations withdraw obsolete waits, renew revisions and p
             {
               kind: "internal",
               ref: {
-                objectiveId: entry.pilot.objectiveId,
+                objectiveId: entry.objective.objectiveId,
                 levelId: "initial",
                 checkId: "check",
                 problemId: "missing",
@@ -1151,7 +1165,7 @@ test("fresh consumer observations withdraw obsolete waits, renew revisions and p
       resumed.some((entry) => entry.id === "b"),
       false,
     );
-    assert.ok(resumed.some((entry) => entry.pilot.objectiveId === child.objectiveId));
+    assert.ok(resumed.some((entry) => entry.objective.objectiveId === child.objectiveId));
     assert.equal(released.includes(child.objectiveId), false);
     requires.delete("b");
     await planner.refresh();
@@ -1166,8 +1180,8 @@ test("fresh consumer observations withdraw obsolete waits, renew revisions and p
 });
 
 test("a dependency changing from B to C requeues the consumer for a new handoff and isolates the old revision", async () => {
-  const first = pilot("first");
-  const second = pilot("second");
+  const first = objective("first");
+  const second = objective("second");
   let selected = first;
   const planner = await createPortfolioPlanner({
     goals: [goal("consumer")],
@@ -1175,8 +1189,8 @@ test("a dependency changing from B to C requeues the consumer for a new handoff 
     resolveObjective: async (id) => (id === first.objectiveId ? first : second),
     observe: async (entry) =>
       entry.id === "consumer"
-        ? dependenciesObserved(entry.pilot, [{ pilot: selected }])
-        : observed(entry.pilot),
+        ? dependenciesObserved(entry.objective, [{ objective: selected }])
+        : observed(entry.objective),
   });
   try {
     const before = required((await read(planner.queue)).demands[0]);
@@ -1188,7 +1202,7 @@ test("a dependency changing from B to C requeues the consumer for a new handoff 
     assert.ok(resumed.revision > before.revision);
     assert.equal(
       (await read(planner.state)).goals.some(
-        (entry) => entry.pilot.objectiveId === first.objectiveId,
+        (entry) => entry.objective.objectiveId === first.objectiveId,
       ),
       false,
     );
@@ -1197,7 +1211,7 @@ test("a dependency changing from B to C requeues the consumer for a new handoff 
     await planner.feedback(handoff(resumed, second));
     const pending = (await read(planner.queue)).demands;
     assert.equal(pending.length, 1);
-    assert.equal(required(pending[0]).pilot.objectiveId, second.objectiveId);
+    assert.equal(required(pending[0]).objective.objectiveId, second.objectiveId);
   } finally {
     await planner.close();
   }
@@ -1209,20 +1223,20 @@ test("replacing a registered provider subject cannot satisfy consumers of its re
     goals: [goal("consumer"), child],
     periodic: false,
     observe: async (entry) =>
-      observed(entry.pilot, entry.subject.replacement ? "terminal" : "initial"),
+      observed(entry.objective, entry.subject.replacement ? "terminal" : "initial"),
   });
   try {
     const consumer = required(
       (await read(planner.queue)).demands.find((entry) => entry.id === "consumer"),
     );
-    await planner.feedback(handoff(consumer, child.pilot));
+    await planner.feedback(handoff(consumer, child.objective));
     await planner.updateGoals([
       goal("consumer"),
       goal("provider", { subject: { replacement: true } }),
     ]);
     const queue = await read(planner.queue);
     assert.equal(queue.demands.length, 1);
-    assert.equal(required(queue.demands[0]).pilot.objectiveId, child.pilot.objectiveId);
+    assert.equal(required(queue.demands[0]).objective.objectiveId, child.objective.objectiveId);
     assert.deepEqual(required(queue.demands[0]).subject, {});
     assert.notEqual(required(queue.demands[0]).id, "provider");
   } finally {
@@ -1242,7 +1256,7 @@ test("target update with a canonically equal subject preserves serialization but
     assert.equal(required(h.executions[0]).aborted, false);
     required(h.executions[0]).completion.resolve({
       ...outcome(required(h.executions[0]).input),
-      latestObservation: observed(required(h.executions[0]).input.spec.pilot, "ready"),
+      latestObservation: observed(required(h.executions[0]).input.spec.objective, "ready"),
     });
     await until(() => h.executions.length === 2);
     assert.equal(required(h.executions[1]).input.spec.strategy.targetLevel, "terminal");
@@ -1257,7 +1271,7 @@ test("dependency-blocked revisions never auto retry, even when only the queue sn
   try {
     await until(() => h.executions.length === 1);
     required(h.executions[0]).completion.resolve({
-      ...handoff(demand("a"), pilot("child")).outcome,
+      ...handoff(demand("a"), objective("child")).outcome,
     });
     await until(async () => (await read(h.coordinator.state)).runs.length === 0);
     await delay(20);
@@ -1275,7 +1289,7 @@ test("planner goal removal publishes an empty queue and late feedback cannot res
   const planner = await createPortfolioPlanner({
     goals: [goal("a")],
     periodic: false,
-    observe: async (entry) => observed(entry.pilot),
+    observe: async (entry) => observed(entry.objective),
   });
   try {
     const before = await read(planner.queue);
@@ -1292,7 +1306,7 @@ test("planner goal removal publishes an empty queue and late feedback cannot res
         exhaustedBy: "stall",
         iterations: 1,
         stalledRuns: 4,
-        latestObservation: observed(active.pilot),
+        latestObservation: observed(active.objective),
       },
     });
     assert.deepEqual((await read(planner.queue)).demands, []);
@@ -1306,7 +1320,7 @@ test("live worker capability requests reach the replaceable planner policy witho
   const planner = await createPortfolioPlanner({
     goals: [goal("a")],
     periodic: false,
-    observe: async (entry) => observed(entry.pilot),
+    observe: async (entry) => observed(entry.objective),
     policy: async (input) => {
       received.push(...input.events);
       return {

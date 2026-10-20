@@ -1,6 +1,11 @@
 import { isAbsolute } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { GitPilotSource, PageResource, PilotManifest, ReferencePage } from "./types.js";
+import type {
+  GitObjectiveSource,
+  PageResource,
+  ObjectiveManifest,
+  ReferencePage,
+} from "./types.js";
 import {
   fields,
   identifier,
@@ -19,7 +24,7 @@ export function validateGitPilotSource(
   objectiveId: string,
   version: string,
   source: unknown,
-): asserts source is GitPilotSource {
+): asserts source is GitObjectiveSource {
   const id = canonicalObjectiveUri(objectiveId);
   const url = new URL(id);
   const directory = decodeURIComponent(url.hash.slice(1)).replace(/\/$/, "");
@@ -48,15 +53,15 @@ export function canonicalObjectiveUri(uri: string): string {
   const url = new URL(canonical);
   if (canonical.startsWith("git+")) {
     const folder = decodeURIComponent(url.hash.slice(1)).replace(/\/$/, "");
-    if (folder.split("/").at(-1) === "pilot.yaml")
+    if (["objective.yaml", "pilot.yaml"].includes(folder.split("/").at(-1) ?? ""))
       throw new ObjectiveConfigurationError(
-        "Pilot identity must be a directory URI, not pilot.yaml. Select its containing directory.",
+        "Objective identity must be a directory URI, not a manifest file. Legacy pilot.yaml requires explicit objective-contract-migrate migration.",
       );
     url.hash = folder === "" ? "/" : `${folder.split("/").map(encodeURIComponent).join("/")}/`;
   } else {
-    if (url.pathname.endsWith("/pilot.yaml"))
+    if (["/objective.yaml", "/pilot.yaml"].some((name) => url.pathname.endsWith(name)))
       throw new ObjectiveConfigurationError(
-        "Pilot identity must be a directory URI, not pilot.yaml.",
+        "Objective identity must be a directory URI, not a manifest file. Legacy pilot.yaml requires explicit objective-contract-migrate migration.",
       );
     url.pathname = `${url.pathname.replace(/\/$/, "")}/`;
   }
@@ -186,12 +191,12 @@ function parsePage(resource: PageResource, id: string): ReferencePage {
 export function validateReferences(
   resources: readonly PageResource[],
   sourceUri: string,
-  manifest: PilotManifest,
+  manifest: ObjectiveManifest,
 ): ReadonlyMap<string, LoadedLocale> {
   const root = canonicalManifestUri(sourceUri.endsWith("/") ? sourceUri : `${sourceUri}/`);
   const languages = new Set(manifest.languages);
   const levelIds = new Set(manifest.levels.map(({ id }) => id));
-  const checks = manifest.levels.flatMap(({ advancement }) => advancement.checks);
+  const checks = manifest.levels.flatMap(({ checks }) => checks);
   const checkIds = new Set(checks.map(({ id }) => id));
   const problemIds = new Set(checks.flatMap(({ problems }) => problems));
   const nodes = new Map<string, Map<string, ReferencePage>>();
@@ -229,7 +234,7 @@ export function validateReferences(
     }
     if (parts.length > 3) {
       const level = manifest.levels.find(({ id }) => id === localId);
-      const check = level?.advancement.checks.find(({ id }) => id === parts[3]);
+      const check = level?.checks.find(({ id }) => id === parts[3]);
       if (
         namespace !== "levels" ||
         parts[2] !== "checks" ||
@@ -254,7 +259,7 @@ export function validateReferences(
     ...[...levelIds].map((id) => `levels/${id}`),
   ];
   for (const level of manifest.levels) {
-    for (const check of level.advancement.checks) {
+    for (const check of level.checks) {
       const scoped = `levels/${level.id}/checks/${check.id}`;
       const uniqueCheck = checks.filter(({ id }) => id === check.id).length === 1;
       required.push(nodes.has(scoped) ? scoped : uniqueCheck ? `checks/${check.id}` : scoped);

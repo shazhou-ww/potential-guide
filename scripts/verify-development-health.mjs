@@ -102,7 +102,7 @@ async function verify(reportPath) {
     ]);
     assert.equal(changed, "", "Commit the exact Pilot and runner before verification");
     report.commit = await execute("git", ["rev-parse", "HEAD"]);
-    report.pilot = `git+${pathToFileURL(root).href}#packages/objective-devbox-health/`;
+    report.objective = `git+${pathToFileURL(root).href}#packages/objective-devbox-health/`;
     const context = join(scratch, "build");
     await mkdir(context);
     for (const name of ["Dockerfile", ".dockerignore", "server.mjs"])
@@ -168,7 +168,7 @@ async function verify(reportPath) {
           [
             cli,
             "--pilot",
-            report.pilot,
+            report.objective,
             "--revision",
             report.commit,
             "--subject-file",
@@ -180,7 +180,7 @@ async function verify(reportPath) {
         ),
       );
     }
-    await withPilot(report.pilot, root, report.commit, async (spec, runtime) => {
+    await withPilot(report.objective, root, report.commit, async (spec, runtime) => {
       async function probe(subject) {
         return Effect.runPromise(observe({ spec, subject }, runtime));
       }
@@ -252,11 +252,11 @@ async function verify(reportPath) {
 
       await scenario("healthy-all-four-stacks", async ({ subject, samples, probe }) => {
         subject.history = await samples(subject);
-        const pilot = healthy(await probe(subject));
+        const objective = healthy(await probe(subject));
         const cliSmoke = healthy(await probeCLI(subject));
-        assert.deepEqual(cliSmoke.payload.current, pilot.payload.current);
-        assert.deepEqual(cliSmoke.payload.versions, pilot.payload.versions);
-        return { pilot, cliSmoke };
+        assert.deepEqual(cliSmoke.payload.current, objective.payload.current);
+        assert.deepEqual(cliSmoke.payload.versions, objective.payload.versions);
+        return { objective, cliSmoke };
       });
       await scenario("history-required", async ({ subject, probe }) =>
         gap(await probe(subject), "orderly", "history-insufficient"),

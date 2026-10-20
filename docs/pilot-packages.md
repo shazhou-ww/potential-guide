@@ -14,7 +14,7 @@
    `objective` 等类型词，也不使用难以理解的自造缩写。
    产品名只在明确目标范围时保留，例如 `pguide-setup` 和 `pguide-self-check`。
 
-这些规则适用于携带 `pilot.yaml` 的 Objective 实例包。`objective-pilot`、
+这些规则适用于携带 `objective.yaml` 的 Objective 实例包。`objective-pilot`、
 `objective-regulator`、`objective-portfolio-supervisor` 是共享基础设施，不是实例，
 不参与本次重命名。包名与路径变化不修改 manifest 的业务身份、检查 ID 或 problem ID。
 

@@ -1,12 +1,12 @@
-schemaVersion: 1
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
 objectives:
   standardize:
     description: Standardize the private repository and package standardization Pilots.
-    pilot: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
+    objective: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
     inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
     subject: |
       {
-        "root": context.checkout.rootPath, "directory": context.directory.relativePath,
+        "root": context.repo.rootPath, "directory": context.path,
         "roles": ["tool"], "runtime": "node",
         "allows": ["@potential-guide/effects", "@potential-guide/objective-pilot", "@potential-guide/objective-regulator", "@potential-guide/objective-portfolio-supervisor", "pguide"],
         "entries": ["src/index.ts"], "joins": [], "deliveries": [],

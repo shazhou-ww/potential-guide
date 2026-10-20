@@ -9,7 +9,7 @@ import {
   canonicalObjectiveUri,
   type DependencyProblem,
   type Envelope,
-  type GitPilotSource,
+  type GitObjectiveSource,
   isJsonValue,
   type JsonObject,
   type LevelRef,
@@ -66,7 +66,7 @@ export interface AgentBinding {
   readonly configuration?: JsonObject;
 }
 export interface RegulatorSpec {
-  readonly pilot: PilotSpec;
+  readonly objective: PilotSpec;
   readonly strategy: RegulationStrategy;
   readonly binding: AgentBinding;
 }
@@ -76,7 +76,7 @@ export interface RegulationInput {
   readonly language?: string;
   readonly history?: { readonly stalledRuns: number };
   readonly permissions?: RegulationPermissions;
-  readonly sourceBindings?: Readonly<Record<string, GitPilotSource>>;
+  readonly sourceBindings?: Readonly<Record<string, GitObjectiveSource>>;
 }
 export interface AgentInput {
   readonly binding: AgentBinding;
@@ -279,8 +279,8 @@ function validatePilot(value: unknown): asserts value is PilotSpec {
 function validateSpec(value: unknown): asserts value is RegulatorSpec {
   if (!isJsonValue(value))
     throw new RegulationError(400, "Regulator specifications must contain only finite JSON data.");
-  fields(value, ["pilot", "strategy", "binding"]);
-  validatePilot(value.pilot);
+  fields(value, ["objective", "strategy", "binding"]);
+  validatePilot(value.objective);
   const strategy = value.strategy;
   fields(strategy, ["targetLevel", "agentExecutionLimits", "quota"], ["probe"]);
   fields(strategy.agentExecutionLimits, ["timeoutMs"]);
@@ -298,7 +298,7 @@ function validateSpec(value: unknown): asserts value is RegulatorSpec {
     );
   if (
     strategy.targetLevel !== "terminal" &&
-    !value.pilot.manifest.levels.some(({ id }) => id === strategy.targetLevel)
+    !value.objective.manifest.levels.some(({ id }) => id === strategy.targetLevel)
   )
     throw new RegulationError(400, "Target level must belong to the root Pilot Objective.");
   fields(value.binding, ["id"], ["configuration"]);
@@ -326,12 +326,12 @@ function validateSpec(value: unknown): asserts value is RegulatorSpec {
 }
 
 export function makeRegulatorSpec(
-  pilot: PilotSpec,
+  objective: PilotSpec,
   strategy: RegulationStrategy,
   binding: AgentBinding,
 ): RegulatorSpec {
   try {
-    const value = { pilot, strategy, binding };
+    const value = { objective, strategy, binding };
     validateSpec(value);
     return immutable(structuredClone(value));
   } catch (cause) {
@@ -368,7 +368,7 @@ function snapshotInput(value: RegulationInput): RegulationInput {
 
 export function pilotInput(input: RegulationInput): PilotInput {
   return {
-    spec: input.spec.pilot,
+    spec: input.spec.objective,
     subject: input.subject,
     ...(input.language === undefined ? {} : { language: input.language }),
   };
@@ -380,7 +380,7 @@ export function agentInput(input: RegulationInput, observation: PilotObservation
       binding: input.spec.binding,
       subject: input.subject,
       target: {
-        objectiveId: input.spec.pilot.objectiveId,
+        objectiveId: input.spec.objective.objectiveId,
         levelId: input.spec.strategy.targetLevel,
       },
       observation,
@@ -400,10 +400,10 @@ export type RegulationDecision =
   | { readonly type: "execute"; readonly input: AgentInput };
 
 function decide(input: RegulationInput, observation: PilotObservation): RegulationDecision {
-  const pilot = input.spec.pilot;
-  const rootLevels = [...pilot.manifest.levels.map(({ id }) => id), "terminal"];
+  const objective = input.spec.objective;
+  const rootLevels = [...objective.manifest.levels.map(({ id }) => id), "terminal"];
   const current = observation.current;
-  if (current.objectiveId !== pilot.objectiveId) {
+  if (current.objectiveId !== objective.objectiveId) {
     throw new RegulationError(500, "Observation belongs to an unrelated Objective.");
   }
   const index = rootLevels.indexOf(current.levelId);
@@ -426,23 +426,23 @@ function decide(input: RegulationInput, observation: PilotObservation): Regulati
   });
   if (
     parsed.payload === null ||
-    observation.versions[pilot.objectiveId] !== pilot.version ||
+    observation.versions[objective.objectiveId] !== objective.version ||
     observation.problems.some(
       (problem) =>
         problem.kind === "internal" &&
-        (problem.ref.objectiveId !== pilot.objectiveId ||
+        (problem.ref.objectiveId !== objective.objectiveId ||
           problem.ref.levelId !== current.levelId ||
-          !pilot.manifest.levels[index]?.advancement.checks.some(
+          !objective.manifest.levels[index]?.checks.some(
             (check) =>
               check.id === problem.ref.checkId && check.problems.includes(problem.ref.problemId),
           )),
     )
   )
     throw new RegulationError(500, "Invalid observation evidence or scoped problems.");
-  if (pilot.source !== undefined) {
+  if (objective.source !== undefined) {
     for (const [id, version] of Object.entries(observation.versions))
       validateGitPilotSource(id, version, observation.sources?.[id]);
-    if (observation.sources?.[pilot.objectiveId]?.commit !== pilot.source.commit)
+    if (observation.sources?.[objective.objectiveId]?.commit !== objective.source.commit)
       throw new RegulationError(500, "Observation snapshot mismatch.");
   }
   if (index >= rootLevels.indexOf(input.spec.strategy.targetLevel))
@@ -597,9 +597,13 @@ async function probeWithPolicy(
   }
 }
 
-function progressed(before: PilotObservation, after: PilotObservation, pilot: PilotSpec): boolean {
-  if (after.current.objectiveId !== pilot.objectiveId) return false;
-  const levels = [...pilot.manifest.levels.map(({ id }) => id), "terminal"];
+function progressed(
+  before: PilotObservation,
+  after: PilotObservation,
+  objective: PilotSpec,
+): boolean {
+  if (after.current.objectiveId !== objective.objectiveId) return false;
+  const levels = [...objective.manifest.levels.map(({ id }) => id), "terminal"];
   const previous = levels.indexOf(before.current.levelId);
   const current = levels.indexOf(after.current.levelId);
   if (current > previous) return true;
@@ -692,7 +696,7 @@ export function regulate(
           if (decision.type === "stop" && decision.reason === "dependency-required")
             return outcome("dependency-required", { dependencies: decision.dependencies });
           const madeProgress =
-            previous !== undefined && progressed(previous, observation, stable.spec.pilot);
+            previous !== undefined && progressed(previous, observation, stable.spec.objective);
           const authorizationRequests =
             agentOutcome && "authorizationRequests" in agentOutcome
               ? agentOutcome.authorizationRequests

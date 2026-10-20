@@ -48,13 +48,13 @@ await writeFile(
     ...(kind === "setup" ? { allowSanity: true } : {}),
   }),
 );
-const pilot = `git+file:///opt/objective#packages/objective-pguide-${kind}/`;
+const objective = `git+file:///opt/objective#packages/objective-pguide-${kind}/`;
 const result = spawnSync(
   "/opt/consumer/node_modules/.bin/pguide",
   [
     "probe",
     "--pilot",
-    pilot,
+    objective,
     "--revision",
     provenance.objectiveRevision,
     "--config",
@@ -95,8 +95,8 @@ const tree = spawnSync(
   { encoding: "utf8" },
 );
 assert.equal(tree.status, 0, tree.stderr);
-assert.equal(observation.payload.versions[pilot], tree.stdout.trim());
-assert.equal(observation.payload.sources[pilot].commit, provenance.objectiveRevision);
+assert.equal(observation.payload.versions[objective], tree.stdout.trim());
+assert.equal(observation.payload.sources[objective].commit, provenance.objectiveRevision);
 const prompts = (await readFile(log, "utf8")).trim().split("\n").filter(Boolean).map(JSON.parse);
 assert.deepEqual(prompts, [{ method: "session/prompt", mode }], "Exactly one prompt per probe");
 assert.deepEqual(await readdir(scratch), ["keep.txt"], "Owned task scratch must be cleaned");

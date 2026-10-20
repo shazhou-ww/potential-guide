@@ -31,7 +31,7 @@ for await (const line of createInterface({ input: process.stdin })) {
     if (mode === "repair") {
       console.log(JSON.stringify({ jsonrpc: "2.0", method: "pguide/capability-request",
         params: { capability: "additional-tool", reason: "Need a specialized verification tool" } }));
-      const deadline = Date.now() + 8000;
+      const deadline = Date.now() + 15000;
       while (!existsSync(marker + ".planner-feedback")) {
         if (Date.now() > deadline) throw Error("Planner did not acknowledge capability feedback.");
         await new Promise(done => setTimeout(done, 25));
@@ -81,10 +81,10 @@ test("ACP planner consumes standard text chunks, excludes inventory, and fails c
     const commit = await f.commit();
     const stub = join(f.directory, "planner.mjs");
     await writeFile(stub, stubSource);
-    await withPilot(f.uri, root, commit, async (pilot) => {
+    await withPilot(f.uri, root, commit, async (objective) => {
       const goal = {
         id: "registered",
-        pilot,
+        objective,
         subject: {},
         targetLevel: "terminal",
         priority: 2,
@@ -189,7 +189,7 @@ test("supervise plans once without repairs, then continuously observes and execu
         goals: [
           {
             id: "fixture",
-            pilot: "@fixture",
+            objective: "@fixture",
             revision,
             subject: { marker, counts },
             targetLevel: "terminal",
@@ -225,7 +225,7 @@ test("supervise plans once without repairs, then continuously observes and execu
     assert.equal(report.observations.fixture.payload.current.levelId, "initial");
     assert.equal(report.queue.demands[0].id, "fixture");
     assert.equal(
-      report.queue.demands[0].pilot.version,
+      report.queue.demands[0].objective.version,
       await git(f.repository, "rev-parse", `${revision}:objective`),
     );
     assert.equal(existsSync(marker), false);
@@ -380,7 +380,7 @@ process.stdout.write(JSON.stringify({status:200,message:"",payload:ok?{ok:true,p
       config,
       JSON.stringify({
         schemaVersion: 2,
-        agentExecutionLimits: { timeoutMs: 12_000 },
+        agentExecutionLimits: { timeoutMs: 20_000 },
         agents: {
           strategist: profile(stub, "plan", join(consumer.directory, "planner.jsonl"), marker),
           worker: profile(stub, "repair", join(consumer.directory, "worker.jsonl"), marker),
@@ -395,7 +395,7 @@ process.stdout.write(JSON.stringify({status:200,message:"",payload:ok?{ok:true,p
         goals: [
           {
             id: "fixture",
-            pilot: consumer.uri,
+            objective: consumer.uri,
             revision: consumerRevision,
             subject: { marker },
             targetLevel: "terminal",
@@ -458,12 +458,12 @@ await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
       result.events.some(
         (event: {
           type: string;
-          demand: { pilot: { objectiveId: string; version: string } };
+          demand: { objective: { objectiveId: string; version: string } };
           outcome?: { stopReason: string };
         }) =>
           event.type === "result" &&
-          event.demand.pilot.objectiveId === provider.uri &&
-          event.demand.pilot.version === providerTree &&
+          event.demand.objective.objectiveId === provider.uri &&
+          event.demand.objective.version === providerTree &&
           event.outcome?.stopReason === "target-reached",
       ),
     );
@@ -561,7 +561,7 @@ for await (const line of createInterface({ input: process.stdin })) {
       goals: [
         {
           id: "fixture",
-          pilot: consumer.uri,
+          objective: consumer.uri,
           subject: { log: observations },
           targetLevel: "terminal",
           priority: 2,

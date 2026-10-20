@@ -62,17 +62,13 @@ a Git commit.
 `pguide config path` 所示用户 config.yaml 的同级 `objectives.yaml`，与运行设置分离。
 
 ```yaml
-schemaVersion: 1
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
 objectives:
   standardize:
     description: 检查选定目录
-    pilot: git+https://example.org/rules.git#directory-standard/
-    inputSchema:
-      type: object
-      additionalProperties: false
-      maxProperties: 0
+    objective: git+https://example.org/rules.git#directory-standard/
     subject: |
-      {"root": context.directory.absolutePath}
+      {"root": $pathJoin(context.repo.rootPath, context.path)}
 ```
 
 ```powershell
@@ -92,7 +88,7 @@ list/show 返回名称、描述、作用域、原始来源、清单内容 SHA-25
 `--objective` 与 `--pilot`、`--subject-file` 互斥。声明输入使用 `--input-file <file|->`；
 仅唯一空对象 Unit 可省略，非空值拒绝；普通可选字段对象不是 Unit。inputSchema 支持
 Draft 2020-12 JSON 类型，与存储作用域正交。绑定先校验 input，再以受预算限制、无外部能力的
-JSONata 确定性投影计算 subject，最后独立校验 Pilot domainSchema。只允许本地 `$defs` 引用。
+JSONata 确定性投影计算 subject，最后独立校验 Pilot subjectSchema。只允许本地 `$defs` 引用。
 上下文仅提供 repository.id、checkout.id/rootPath、directory.absolutePath/relativePath；
 checkout.id 是主机名、规范化 Git common 目录和 checkout 路径的摘要，不仅凭路径跨设备合并，
 也不是密码学设备身份证明。没有 Git 上下文时 repository/checkout 为 null；
@@ -116,7 +112,7 @@ continue schemaVersion 3 保存已选择的清单快照、上下文、输入、�
 ### 来源与更新边界
 
 目录 ID 统一以 `/` 结尾，仓库根目录写作 `git+https://host/repo.git#/`；入口为目录内部
-pilot.yaml。Git manifest URI 不再接受；本地 CLI 输入仅对名称恰好为 pilot.yaml 的文件提供
+objective.yaml。Git manifest URI 不再接受；本地 CLI 输入仅对名称恰好为 objective.yaml 的文件提供
 入口转换，核心协议只保存目录 ID。其他文件不会被剪裁成目录身份。
 默认远程 HEAD（远程默认分支）、本地 checkout HEAD；每次 withPilot 固定整个观察及依赖交接的
 快照。Supervisor 在受控刷新边界重新绑定根与已发现依赖，更新需求 revision 并重新观察；
@@ -147,7 +143,7 @@ scalars and malformed JSON fail explicitly. In an interactive terminal, provide
 a file or pipe JSON instead of waiting for terminal input. An explicit file
 continues to take precedence over piped input.
 When input is missing (an interactive terminal or empty input), both commands
-include subject input guidance with the selected Pilot's complete `domainSchema`
+include subject input guidance with the selected Pilot's complete `subjectSchema`
 as indented JSON. The schema describes required fields, types, nested objects,
 defaults and other constraints; it is not itself a subject to submit. Save a
 matching JSON object to `subject.json` and pass `--subject-file subject.json`, or
@@ -255,7 +251,7 @@ configuration loader. Source and bundled transport runtimes share the same
 generated evidence implementation. Nested setup fixtures suppress their own
 ephemeral evidence; their owning check retains safe phase/assertion facts.
 
-Scaffolding generates `pilot.yaml`, localized `references/**/<language>.md`,
+Scaffolding generates `objective.yaml`, localized `references/**/<language>.md`,
 Node checks at `checks/<check-id>/run.js`, and a self-contained
 `runtime/evidence.mjs`. Commit all these generated files. Checks receive the **subject
 itself** as JSON on stdin, not a wrapper. Stdout is one JSON envelope:
@@ -645,7 +641,7 @@ portfolios are rejected:
   "schemaVersion": 3,
   "goals": [{
     "id": "service",
-    "pilot": "git+https://github.com/example/service.git#objective/",
+    "objective": "git+https://github.com/example/service.git#objective/",
     "subject": {},
     "targetLevel": "terminal",
     "priority": 1,

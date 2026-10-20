@@ -121,8 +121,8 @@ test("regulate persists the resolved source and piped subject; continue ignores 
         await readFile(join(state, "regulations", id, "regulation.json"), "utf8"),
       );
       assert.deepEqual(persisted.subject, subject);
-      assert.equal(persisted.pilotUri, f.uri);
-      assert.equal(persisted.pilotCommit, commit);
+      assert.equal(persisted.objectiveUri, f.uri);
+      assert.equal(persisted.objectiveCommit, commit);
       assert.equal(persisted.sourcePath, f.manifest);
       await writeConfig(config, JSON.stringify({ ...value, objectives: { local: "missing" } }));
       const continued = await run(bin("continue"), [id, "--config", config, "--format", "json"]);
@@ -158,8 +158,8 @@ test("missing subjects show the selected Objective schema as readable and struct
     await writeFile(
       f.manifest,
       manifest.replace(
-        "domainSchema:\n  type: object",
-        `domainSchema: ${JSON.stringify(subjectSchema)}`,
+        "subjectSchema:\n  type: object",
+        `subjectSchema: ${JSON.stringify(subjectSchema)}`,
       ),
     );
     const commit = await f.commit();

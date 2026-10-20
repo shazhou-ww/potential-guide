@@ -12,7 +12,7 @@ test("process runner returns verified results only after worker cleanup", async 
   const f = await fixture();
   try {
     const commit = await f.commit();
-    await withPilot(f.uri, f.directory, commit, async (pilot) => {
+    await withPilot(f.uri, f.directory, commit, async (objective) => {
       const runner = createProcessRegulationRunner(
         {
           unused: {
@@ -30,7 +30,7 @@ test("process runner returns verified results only after worker cleanup", async 
       const handle = runner.start(
         {
           spec: makeRegulatorSpec(
-            pilot,
+            objective,
             {
               targetLevel: "terminal",
               quota: { timeoutMs: 10000, maxAgentRuns: 2, maxStallRuns: 2 },
@@ -61,7 +61,7 @@ test("force termination stops a live process tree and cleans the owned run direc
       `#!/usr/bin/env node\nimport fs from "node:fs";let text="";process.stdin.on("data",c=>text+=c);process.stdin.on("end",()=>{fs.writeFileSync(JSON.parse(text).pidFile,String(process.pid));setInterval(()=>{},1000);});`,
     );
     const commit = await f.commit();
-    await withPilot(f.uri, f.directory, commit, async (pilot) => {
+    await withPilot(f.uri, f.directory, commit, async (objective) => {
       const runner = createProcessRegulationRunner(
         {
           unused: {
@@ -75,7 +75,7 @@ test("force termination stops a live process tree and cleans the owned run direc
       const handle = runner.start(
         {
           spec: makeRegulatorSpec(
-            pilot,
+            objective,
             {
               targetLevel: "terminal",
               quota: { timeoutMs: 30000, maxAgentRuns: 2, maxStallRuns: 2 },
@@ -149,7 +149,7 @@ test("worker forwards capability requests as events without treating them as new
     `,
     );
     const events: unknown[] = [];
-    await withPilot(f.uri, f.directory, commit, async (pilot) => {
+    await withPilot(f.uri, f.directory, commit, async (objective) => {
       const runner = createProcessRegulationRunner(
         {
           fixture: {
@@ -164,7 +164,7 @@ test("worker forwards capability requests as events without treating them as new
       const result = await runner.start(
         {
           spec: makeRegulatorSpec(
-            pilot,
+            objective,
             {
               targetLevel: "terminal",
               quota: { timeoutMs: 10000, maxAgentRuns: 2, maxStallRuns: 2 },

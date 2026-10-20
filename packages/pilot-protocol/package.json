@@ -6,7 +6,16 @@
   "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "objective-contract-migrate": "./dist/migrate-cli.js"
+  },
   "exports": {
+    "./schemas/objective/v1.json": "./schemas/objective/v1.json",
+    "./schemas/objectives/v1.json": "./schemas/objectives/v1.json",
+    "./schemas": {
+      "types": "./dist/schemas.d.ts",
+      "import": "./dist/schemas.js"
+    },
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
@@ -29,6 +38,7 @@
     }
   },
   "files": [
+    "schemas",
     "dist",
     "README.md"
   ],
@@ -45,6 +55,7 @@
   "dependencies": {
     "ajv": "catalog:",
     "jsonata": "catalog:",
+    "json-schema-typed": "catalog:",
     "yaml": "catalog:"
   },
   "publishConfig": {

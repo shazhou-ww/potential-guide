@@ -259,7 +259,7 @@ test("AHP CLI closes the observation loop, pins its recipe, and skips all sessio
   import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{kind:"internal",id:"not-ready",parameters:{}}]}}));});`,
       );
       const commit = await f.commit();
-      await withPilot(f.uri, f.directory, commit, async (pilot) => {
+      await withPilot(f.uri, f.directory, commit, async (objective) => {
         const profile = (url: string) => ({
           type: "ahp" as const,
           connection: { protocolVersion: "1.0.0" as const, agent: "generic-provider" },
@@ -267,7 +267,7 @@ test("AHP CLI closes the observation loop, pins its recipe, and skips all sessio
         });
         const goal = {
           id: "registered",
-          pilot,
+          objective,
           subject: { marker },
           targetLevel: "terminal",
           priority: 2,
@@ -288,7 +288,7 @@ test("AHP CLI closes the observation loop, pins its recipe, and skips all sessio
         const handle = runner.start(
           {
             spec: makeRegulatorSpec(
-              pilot,
+              objective,
               {
                 targetLevel: "terminal",
                 quota: { timeoutMs: 10000, maxAgentRuns: 2, maxStallRuns: 2 },
@@ -400,7 +400,7 @@ import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);proces
     const final = JSON.parse(await readFile(path, "utf8"));
     assert.equal(final.sessionId, original.sessionId);
     assert.equal(final.ahpSession.chatUri, original.ahpSession.chatUri);
-    assert.equal(final.pilotCommit, original.pilotCommit);
+    assert.equal(final.objectiveCommit, original.objectiveCommit);
     assert.equal(final.attempts[2].resumeMode, "resumed");
     assert.equal(host.messages.filter(({ method }) => method === "createSession").length, 1);
     assert.equal(

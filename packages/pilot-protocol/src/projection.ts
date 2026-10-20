@@ -1,4 +1,5 @@
 import jsonata from "jsonata";
+import { join } from "node:path";
 import type { Subject } from "./types.js";
 import { json, ObjectiveConfigurationError, record } from "./validation.js";
 
@@ -14,6 +15,7 @@ export class SubjectProjectionError extends TypeError {}
 type Node = { value?: unknown } & (
   | { type: "string" | "number" | "value" | "name"; value: unknown }
   | { type: "variable" }
+  | { type: "function"; arguments: readonly Node[] }
   | { type: "path"; steps: readonly Node[] }
   | { type: "unary"; value: "{"; lhs: readonly (readonly [Node, Node])[] }
   | { type: "unary"; value: "["; expressions: readonly Node[] }
@@ -45,17 +47,39 @@ export function compileSubjectProjection(
       !record(value) ||
       typeof value.type !== "string" ||
       Object.keys(value).some(
-        (key) => !["type", "value", "position", "steps", "lhs", "rhs", "expressions"].includes(key),
+        (key) =>
+          ![
+            "type",
+            "value",
+            "position",
+            "steps",
+            "lhs",
+            "rhs",
+            "expressions",
+            "procedure",
+            "arguments",
+          ].includes(key),
       )
     ) {
       throw new ObjectiveConfigurationError("Unsupported or oversized JSONata AST.");
     }
     const child = (entry: unknown) => parse(entry, depth + 1);
     switch (value.type) {
+      case "function":
+        if (
+          !record(value.procedure) ||
+          value.procedure.type !== "variable" ||
+          value.procedure.value !== "pathJoin" ||
+          !Array.isArray(value.arguments) ||
+          value.arguments.length !== 2 ||
+          Object.keys(value.procedure).some((key) => !["type", "value", "position"].includes(key))
+        )
+          break;
+        return { type: "function", arguments: value.arguments.map(child) };
       case "string":
       case "number":
       case "value":
-        if (!json(value.value) || typeof value.value === "object") break;
+        if (!json(value.value) || (value.value !== null && typeof value.value === "object")) break;
         return { type: value.type, value: value.value };
       case "name":
         if (typeof value.value !== "string") break;
@@ -108,6 +132,12 @@ export function compileSubjectProjection(
         throw new SubjectProjectionError("Subject projection exceeded execution limit.");
       }
       switch (node.type) {
+        case "function": {
+          const values = node.arguments.map((argument) => evaluate(argument, input));
+          if (values.length !== 2 || typeof values[0] !== "string" || typeof values[1] !== "string")
+            throw new SubjectProjectionError("$pathJoin requires exactly two strings.");
+          return join(values[0], values[1]);
+        }
         case "string":
         case "number":
         case "value":

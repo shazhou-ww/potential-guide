@@ -242,7 +242,7 @@ test("setup Pilot strictly loads with all level-scoped check and problem wiki co
     ["initial", "installed", "configured"],
   );
   for (const level of spec.manifest.levels) {
-    for (const check of level.advancement.checks) {
+    for (const check of level.checks) {
       const scope = `levels/${level.id}/checks/${check.id}`;
       assert.ok(spec.locales["zh-CN"]?.[scope]);
       for (const id of check.problems)
@@ -251,7 +251,7 @@ test("setup Pilot strictly loads with all level-scoped check and problem wiki co
   }
   const result = await run(bin("validate"), [
     "pilot",
-    join(objective, "pilot.yaml"),
+    join(objective, "objective.yaml"),
     "--format",
     "json",
   ]);
@@ -1072,7 +1072,7 @@ function selfSubject(f: Awaited<ReturnType<typeof setup>>) {
 
 test("self-check manifest loads local-only input, implicit terminal and every reference", async () => {
   const spec = await loadPilotSpec(selfObjective, fileResources);
-  const properties = spec.manifest.domainSchema.properties;
+  const properties = spec.manifest.subjectSchema.properties;
   assert.ok(properties !== null && typeof properties === "object" && "timeoutMs" in properties);
   assert.deepEqual(properties.timeoutMs, {
     type: "integer",
@@ -1085,8 +1085,8 @@ test("self-check manifest loads local-only input, implicit terminal and every re
     ["initial", "installed", "configured"],
   );
   for (const level of spec.manifest.levels) {
-    assert.equal(level.advancement.checks.length, 1);
-    for (const check of level.advancement.checks) {
+    assert.equal(level.checks.length, 1);
+    for (const check of level.checks) {
       const scope = `levels/${level.id}/checks/${check.id}`;
       assert.ok(spec.locales["zh-CN"]?.[scope]);
       for (const id of check.problems) {
@@ -1098,7 +1098,7 @@ test("self-check manifest loads local-only input, implicit terminal and every re
   }
   const validated = await run(bin("validate"), [
     "pilot",
-    join(selfObjective, "pilot.yaml"),
+    join(selfObjective, "objective.yaml"),
     "--format",
     "json",
   ]);

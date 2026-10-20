@@ -689,10 +689,10 @@ test("subject and deleted prerequisite validation failures precede every probe a
       ...base,
       spec: {
         ...base.spec,
-        pilot: {
-          ...base.spec.pilot,
+        objective: {
+          ...base.spec.objective,
           manifest: {
-            ...base.spec.pilot.manifest,
+            ...base.spec.objective.manifest,
             prerequisite: { manifestUri: childId, subject: "$" },
           },
         },
@@ -825,7 +825,7 @@ test("behavior refreshes changed strategies after Agent mutation and rejects lat
       SubscriptionRef.set(source, {
         ...value,
         spec: makeRegulatorSpec(
-          value.spec.pilot,
+          value.spec.objective,
           { ...value.spec.strategy, targetLevel: "a-next" },
           value.spec.binding,
         ),
@@ -894,14 +894,17 @@ test("decision uses local level order and rejects foreign problems", async () =>
     problems: [],
     gapSummary: "",
     observedAt: "",
-    versions: { [objectiveId]: value.spec.pilot.version },
+    versions: { [objectiveId]: value.spec.objective.version },
   };
   assert.equal(decideRegulation(value, observation).type, "stop");
   assert.throws(
     () =>
       decideRegulation(value, {
         ...observation,
-        current: { objectiveId: "git+https://other.test/repo.git#pilot.yaml", levelId: "terminal" },
+        current: {
+          objectiveId: "git+https://other.test/repo.git#objective.yaml",
+          levelId: "terminal",
+        },
       }),
     RegulationError,
   );

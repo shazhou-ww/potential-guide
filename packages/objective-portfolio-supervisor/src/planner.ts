@@ -37,7 +37,7 @@ function immutable<T>(value: T): T {
 }
 function recipe(goal: ObjectiveGoal): string {
   return canonicalJson([
-    goal.pilot,
+    goal.objective,
     goal.subject,
     goal.targetLevel,
     goal.requirements ?? [],
@@ -124,15 +124,15 @@ export async function createPortfolioPlanner(
       const key = objectiveKey(goal);
       const previous = byKey.get(key);
       if (previous) {
-        if (canonicalJson(previous.pilot) !== canonicalJson(goal.pilot))
+        if (canonicalJson(previous.objective) !== canonicalJson(goal.objective))
           throw new ObjectivePortfolioError(
             "Conflicting specifications for the same objective and subject.",
           );
         byKey.set(key, {
           ...previous,
           targetLevel:
-            levelRank(goal.pilot, goal.targetLevel) >
-            levelRank(previous.pilot, previous.targetLevel)
+            levelRank(goal.objective, goal.targetLevel) >
+            levelRank(previous.objective, previous.targetLevel)
               ? goal.targetLevel
               : previous.targetLevel,
           priority: Math.min(previous.priority, goal.priority),
@@ -188,7 +188,7 @@ export async function createPortfolioPlanner(
         ...consumers.map(({ wait }) => wait.minimum),
       ];
       const targetLevel = minimums.reduce((a, b) =>
-        levelRank(goal.pilot, a) >= levelRank(goal.pilot, b) ? a : b,
+        levelRank(goal.objective, a) >= levelRank(goal.objective, b) ? a : b,
       );
       const updated = immutable({
         ...goal,
@@ -232,10 +232,10 @@ export async function createPortfolioPlanner(
     for (const [, goal] of removed) {
       if (
         ![...goals.values()].some(
-          (entry) => canonicalJson(entry.pilot) === canonicalJson(goal.pilot),
+          (entry) => canonicalJson(entry.objective) === canonicalJson(goal.objective),
         )
       )
-        await options.releaseObjective?.(goal.pilot);
+        await options.releaseObjective?.(goal.objective);
     }
   }
   function markObserved(goal: ObjectiveGoal, observation: Envelope<PilotObservation>) {
@@ -245,15 +245,16 @@ export async function createPortfolioPlanner(
         `Observation failed for ${goal.id}: ${observation.message}`,
       );
     if (
-      observation.payload.current.objectiveId !== goal.pilot.objectiveId ||
-      observation.payload.versions[goal.pilot.objectiveId] !== goal.pilot.version
+      observation.payload.current.objectiveId !== goal.objective.objectiveId ||
+      observation.payload.versions[goal.objective.objectiveId] !== goal.objective.version
     )
       throw new ObjectivePortfolioError(`Observation source mismatch for ${goal.id}.`);
-    if (goal.pilot.source !== undefined) {
+    if (goal.objective.source !== undefined) {
       for (const [id, version] of Object.entries(observation.payload.versions))
         validateGitPilotSource(id, version, observation.payload.sources?.[id]);
       if (
-        observation.payload.sources?.[goal.pilot.objectiveId]?.commit !== goal.pilot.source.commit
+        observation.payload.sources?.[goal.objective.objectiveId]?.commit !==
+        goal.objective.source.commit
       )
         throw new ObjectivePortfolioError(`Observation snapshot mismatch for ${goal.id}.`);
     }
@@ -266,10 +267,10 @@ export async function createPortfolioPlanner(
         const provider = goals.get(wait.provider);
         return (
           provider !== undefined &&
-          provider.pilot.objectiveId === dependency.objectiveId &&
+          provider.objective.objectiveId === dependency.objectiveId &&
           canonicalJson(provider.subject) === canonicalJson(dependency.subject) &&
           wait.minimum === dependency.expectedLevelId &&
-          observation.payload?.versions[dependency.objectiveId] === provider.pilot.version
+          observation.payload?.versions[dependency.objectiveId] === provider.objective.version
         );
       };
       const retained = previousWaits.filter((wait) =>
@@ -295,8 +296,8 @@ export async function createPortfolioPlanner(
       const remaining = entries.filter(
         (wait) =>
           wait.provider !== goal.id ||
-          levelRank(goal.pilot, observation.payload?.current.levelId ?? "") <
-            levelRank(goal.pilot, wait.minimum),
+          levelRank(goal.objective, observation.payload?.current.levelId ?? "") <
+            levelRank(goal.objective, wait.minimum),
       );
       if (remaining.length === entries.length) continue;
       if (remaining.length) waits.set(consumer, remaining);
@@ -389,12 +390,12 @@ export async function createPortfolioPlanner(
           return (
             old !== undefined &&
             objectiveKey(old) === objectiveKey(goal) &&
-            (canonicalJson(old.pilot) !== canonicalJson(goal.pilot) ||
+            (canonicalJson(old.objective) !== canonicalJson(goal.objective) ||
               old.bindingRevision !== goal.bindingRevision)
           );
         });
         if (bindingChanged) {
-          for (const goal of derived.values()) await options.releaseObjective?.(goal.pilot);
+          for (const goal of derived.values()) await options.releaseObjective?.(goal.objective);
           derived.clear();
           waits.clear();
           for (const id of goals.keys()) {
@@ -412,7 +413,7 @@ export async function createPortfolioPlanner(
           );
           if (!replacement || !hasConsumers) continue;
           if (objectiveKey(old) === objectiveKey(replacement)) {
-            if (canonicalJson(old.pilot) !== canonicalJson(replacement.pilot))
+            if (canonicalJson(old.objective) !== canonicalJson(replacement.objective))
               throw new ObjectivePortfolioError(
                 "Conflicting specifications for a provider with live consumers.",
               );
@@ -443,7 +444,7 @@ export async function createPortfolioPlanner(
             (entry) => objectiveKey(entry) === objectiveKey(goal),
           );
           if (!previous || previous.id === goal.id) continue;
-          if (canonicalJson(previous.pilot) !== canonicalJson(goal.pilot))
+          if (canonicalJson(previous.objective) !== canonicalJson(goal.objective))
             throw new ObjectivePortfolioError(
               "Conflicting specifications for the same objective and subject.",
             );
@@ -490,8 +491,8 @@ export async function createPortfolioPlanner(
             if (
               !observation ||
               outcome.latestObservation.status !== 200 ||
-              observation.current.objectiveId !== goal.pilot.objectiveId ||
-              observation.versions[goal.pilot.objectiveId] !== goal.pilot.version ||
+              observation.current.objectiveId !== goal.objective.objectiveId ||
+              observation.versions[goal.objective.objectiveId] !== goal.objective.version ||
               canonicalJson(outcome.dependencies) !==
                 canonicalJson(
                   observation.problems.filter((problem) => problem.kind === "dependency"),
@@ -501,15 +502,16 @@ export async function createPortfolioPlanner(
               throw new ObjectivePortfolioError(
                 "Invalid dependency handoff observation or payload.",
               );
-            if (goal.pilot.source !== undefined) {
+            if (goal.objective.source !== undefined) {
               for (const [id, version] of Object.entries(observation.versions))
                 validateGitPilotSource(id, version, observation.sources?.[id]);
               if (
-                observation.sources?.[goal.pilot.objectiveId]?.commit !== goal.pilot.source.commit
+                observation.sources?.[goal.objective.objectiveId]?.commit !==
+                goal.objective.source.commit
               )
                 throw new ObjectivePortfolioError("Handoff snapshot mismatch.");
             }
-            levelRank(goal.pilot, observation.current.levelId);
+            levelRank(goal.objective, observation.current.levelId);
             const additions = new Map<string, ObjectiveGoal>();
             const requirements: Wait[] = [];
             for (const value of outcome.dependencies) {
@@ -517,7 +519,7 @@ export async function createPortfolioPlanner(
               const version = observation.versions[requirement.objectiveId];
               if (!version || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(version))
                 throw new ObjectivePortfolioError("Missing exact dependency version.");
-              if (goal.pilot.source !== undefined)
+              if (goal.objective.source !== undefined)
                 validateGitPilotSource(
                   requirement.objectiveId,
                   version,
@@ -528,8 +530,8 @@ export async function createPortfolioPlanner(
                   objectiveKey(entry) ===
                   canonicalJson([requirement.objectiveId, requirement.subject]),
               );
-              const pilot: PilotSpec =
-                existing?.pilot ??
+              const objective: PilotSpec =
+                existing?.objective ??
                 (await (options.resolveObjective?.(
                   requirement.objectiveId,
                   version,
@@ -541,18 +543,22 @@ export async function createPortfolioPlanner(
                   )));
               if (closed) return;
               if (
-                pilot.objectiveId !== requirement.objectiveId ||
-                pilot.version !== version ||
-                validateSubject(requirement.subject, compileDomain(pilot.manifest.domainSchema)) !==
-                  null ||
-                levelRank(pilot, requirement.currentLevelId) >=
-                  levelRank(pilot, requirement.expectedLevelId)
+                objective.objectiveId !== requirement.objectiveId ||
+                objective.version !== version ||
+                validateSubject(
+                  requirement.subject,
+                  compileDomain(objective.manifest.subjectSchema),
+                ) !== null ||
+                levelRank(objective, requirement.currentLevelId) >=
+                  levelRank(objective, requirement.expectedLevelId)
               )
                 throw new ObjectivePortfolioError(
                   "Invalid dependency source, subject or level evidence.",
                 );
               const sourceBindings = {
-                ...(pilot.source === undefined ? {} : { [pilot.objectiveId]: pilot.source }),
+                ...(objective.source === undefined
+                  ? {}
+                  : { [objective.objectiveId]: objective.source }),
                 ...existing?.sourceBindings,
               };
               for (const [id, source] of Object.entries(observation.sources ?? {})) {
@@ -569,7 +575,7 @@ export async function createPortfolioPlanner(
               const candidate: ObjectiveGoal = {
                 ...(existing ?? {
                   id: `dependency:${canonicalJson([requirement.objectiveId, requirement.subject])}`,
-                  pilot,
+                  objective,
                   subject: requirement.subject,
                   targetLevel: requirement.expectedLevelId,
                   priority: event.demand.priority,

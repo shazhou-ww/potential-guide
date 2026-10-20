@@ -43,8 +43,8 @@ test("serializable recipe preserves stable IDs, source version and multilingual 
     ["z-first", "a-next", "terminal"],
   );
   assert.equal(
-    canonicalManifestUri("../child/pilot.yaml", objectiveId),
-    "git+https://example.test/objectives.git#child/pilot.yaml",
+    canonicalManifestUri("../child/objective.yaml", objectiveId),
+    "git+https://example.test/objectives.git#child/objective.yaml",
   );
 });
 
@@ -175,7 +175,7 @@ test("rejects invalid domain, unsupported language, undeclared problems and nonc
   );
   await assert.rejects(
     Effect.runPromise(
-      observe({ spec: { ...spec, objectiveId: "file:///tmp/pilot.yaml" }, subject }, runtime),
+      observe({ spec: { ...spec, objectiveId: "file:///tmp/objective.yaml" }, subject }, runtime),
     ),
     /canonical Git/,
   );
@@ -202,13 +202,13 @@ test("rejects invalid domain, unsupported language, undeclared problems and nonc
 test("strict YAML, duplicate scope IDs, locales and deleted fields fail before observation", async () => {
   const data = fixture();
   data.texts.set(
-    canonicalManifestUri("pilot.yaml", objectiveId),
+    canonicalManifestUri("objective.yaml", objectiveId),
     "schemaVersion: 1\nschemaVersion: 1\n",
   );
   await assert.rejects(data.load(), /Invalid YAML/);
   const cyclic = fixture();
   cyclic.texts.set(
-    canonicalManifestUri("pilot.yaml", objectiveId),
+    canonicalManifestUri("objective.yaml", objectiveId),
     JSON.stringify({ ...manifest(), prerequisite: { manifestUri: objectiveId, subject: "$" } }),
   );
   await assert.rejects(cyclic.load(), /Expected fields/);
@@ -221,13 +221,13 @@ test("strict YAML, duplicate scope IDs, locales and deleted fields fail before o
   const first = duplicated.levels[0];
   assert.ok(first);
   bad.texts.set(
-    canonicalManifestUri("pilot.yaml", objectiveId),
+    canonicalManifestUri("objective.yaml", objectiveId),
     JSON.stringify({
       ...duplicated,
       levels: [
         {
           ...first,
-          advancement: { checks: [first.advancement.checks[0], first.advancement.checks[0]] },
+          checks: [first.checks[0], first.checks[0]],
         },
       ],
     }),

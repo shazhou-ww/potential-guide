@@ -31,7 +31,7 @@ test("every Objective instance uses a matching objective-prefixed workspace name
   const directories = (await readdir(join(root, "packages"), { withFileTypes: true }))
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
-    .filter((directory) => existsSync(join(root, "packages", directory, "pilot.yaml")));
+    .filter((directory) => existsSync(join(root, "packages", directory, "objective.yaml")));
   assert.deepEqual(directories.sort(), pilots.map(([directory]) => directory).sort());
   for (const directory of directories) {
     assert.match(directory, /^objective-[a-z0-9]+(?:-[a-z0-9]+)*$/);
@@ -75,7 +75,7 @@ test("all private Pilot tarballs include same-version resources and run without 
       assert.equal(packed.code, 0, packed.stderr);
       const pack = JSON.parse(packed.stdout);
       const paths = pack.files.map(({ path }) => path);
-      for (const required of ["package.json", "README.md", "pilot.yaml", entry])
+      for (const required of ["package.json", "README.md", "objective.yaml", entry])
         assert.ok(paths.includes(required), `${directory} missing ${required}`);
       assert.ok(
         paths.every((path) => !path.startsWith("node_modules/") && !path.startsWith("test/")),
@@ -89,7 +89,7 @@ test("all private Pilot tarballs include same-version resources and run without 
       assert.equal(manifest.private, true);
       const spec = await loadPilotSpec(packageRoot, fileResources);
       assert.deepEqual(
-        spec.manifest.levels.flatMap((level) => level.advancement.checks.map((check) => check.id)),
+        spec.manifest.levels.flatMap((level) => level.checks.map((check) => check.id)),
         checks,
       );
       const subject =
@@ -99,12 +99,8 @@ test("all private Pilot tarballs include same-version resources and run without 
                 await readFile(join(root, "packages", directory, "objectives.yaml"), "utf8"),
               ).standardize,
               {
-                repository: { id: "urn:pack-fixture" },
-                checkout: { id: "urn:pack-checkout", rootPath: root },
-                directory: {
-                  absolutePath: join(root, "packages", directory),
-                  relativePath: `packages/${directory}`,
-                },
+                repo: { rootPath: root, origin: null },
+                path: `packages/${directory}`,
               },
               undefined,
             )
@@ -144,7 +140,7 @@ test("all private Pilot tarballs include same-version resources and run without 
         assert.equal(result.payload.ok, true, JSON.stringify(result));
       }
       if (directory === "objective-pguide-setup") {
-        for (const resource of ["pilot.yaml", "gitignore"])
+        for (const resource of ["objective.yaml", "gitignore"])
           assert.ok(paths.includes(`sanity-fixture/${resource}`));
         const { sshRequest } = await import(
           pathToFileURL(join(packageRoot, "ssh-target.mjs")).href
@@ -163,7 +159,7 @@ test("all private Pilot tarballs include same-version resources and run without 
       if (directory === "objective-monorepo-standard")
         for (const resource of [
           "runtime/pilot-checker.cjs",
-          "package-standard/pilot.yaml",
+          "package-standard/objective.yaml",
           "package-standard/runtime/pilot-checker.cjs",
         ])
           assert.ok(paths.includes(resource));

@@ -31,7 +31,7 @@ import { Exit, startEffect } from "@potential-guide/effects";
 import { selectObjective } from "@potential-guide/objective-declarations";
 import type {
   Envelope,
-  GitPilotSource,
+  GitObjectiveSource,
   PilotObservation,
   PilotRuntime,
   PilotSpec,
@@ -78,11 +78,11 @@ interface Regulation {
   schemaVersion: 3;
   regulationId: string;
   createdAt: string;
-  pilotUri: string;
-  pilotCommit: string;
-  pilotTree: string;
-  pilotSource: GitPilotSource;
-  sourceBindings: Record<string, GitPilotSource>;
+  objectiveUri: string;
+  objectiveCommit: string;
+  objectiveTree: string;
+  objectiveSource: GitObjectiveSource;
+  sourceBindings: Record<string, GitObjectiveSource>;
   binding?: Awaited<ReturnType<typeof selectObjective>>["binding"];
   sourcePath?: string;
   subject: Subject;
@@ -374,11 +374,11 @@ async function run(
   let outcome: RegulationOutcome | undefined;
   const executions: Promise<AgentOutcome>[] = [];
   try {
-    const execute = async (pilot: PilotSpec, runtime: PilotRuntime) => {
+    const execute = async (objective: PilotSpec, runtime: PilotRuntime) => {
       if (
-        pilot.objectiveId !== regulation.pilotUri ||
-        pilot.version !== regulation.pilotTree ||
-        pilot.source?.commit !== regulation.pilotCommit
+        objective.objectiveId !== regulation.objectiveUri ||
+        objective.version !== regulation.objectiveTree ||
+        objective.source?.commit !== regulation.objectiveCommit
       )
         throw new CliError(
           "Recovery source does not match the pinned Pilot identity and commit; no newer version was selected.",
@@ -387,7 +387,7 @@ async function run(
         );
       const quota = regulation.regulationStrategy?.quota ?? defaultRegulationQuota;
       const spec = makeRegulatorSpec(
-        pilot,
+        objective,
         {
           ...regulation.regulationStrategy,
           quota: {
@@ -466,7 +466,7 @@ async function run(
       return Exit.hasInterrupts(exit) ? undefined : operation.await();
     };
     if (prepared === undefined) {
-      let location = regulation.pilotUri;
+      let location = regulation.objectiveUri;
       if (regulation.sourcePath !== undefined) {
         try {
           await stat(regulation.sourcePath);
@@ -476,7 +476,7 @@ async function run(
         }
       }
       try {
-        outcome = await withPilot(location, globals.cwd, regulation.pilotCommit, execute, {
+        outcome = await withPilot(location, globals.cwd, regulation.objectiveCommit, execute, {
           propagateError: (cause) => cause instanceof RegulationError,
           versions: Object.fromEntries(
             Object.entries(regulation.sourceBindings).map(([id, source]) => [id, source.tree]),
@@ -489,7 +489,7 @@ async function run(
         if (controller.signal.aborted) throw cause;
         if (cause instanceof RegulationError) throw cause;
         throw new CliError(
-          `Cannot restore pinned Pilot commit ${regulation.pilotCommit}: ${cause instanceof Error ? cause.message : String(cause)} No source version was substituted.`,
+          `Cannot restore pinned Pilot commit ${regulation.objectiveCommit}: ${cause instanceof Error ? cause.message : String(cause)} No source version was substituted.`,
           6,
           "pilot-error",
         );
@@ -579,10 +579,10 @@ export async function runRegulate(
         schemaVersion: 3,
         regulationId: randomUUID(),
         createdAt: new Date().toISOString(),
-        pilotUri: spec.objectiveId,
-        pilotCommit: spec.source.commit,
-        pilotTree: spec.version,
-        pilotSource: spec.source,
+        objectiveUri: spec.objectiveId,
+        objectiveCommit: spec.source.commit,
+        objectiveTree: spec.version,
+        objectiveSource: spec.source,
         sourceBindings: { [spec.objectiveId]: spec.source },
         ...(selected.binding === undefined ? {} : { binding: selected.binding }),
         ...(location.startsWith("git+") ? {} : { sourcePath: resolve(globals.cwd, location) }),
@@ -647,23 +647,43 @@ export async function runContinue(
     );
   const regulation = record as Regulation;
   if (
+    ["pilot", "pilotUri", "pilotCommit", "pilotTree", "pilotSource"].some((key) =>
+      Object.hasOwn(record, key),
+    ) ||
+    (regulation.binding !== undefined &&
+      (regulation.binding === null ||
+        !Object.hasOwn(Object(regulation.binding.entry), "objective") ||
+        Object.hasOwn(Object(regulation.binding.entry), "pilot") ||
+        !Object.hasOwn(Object(regulation.binding.context), "repo") ||
+        !Object.hasOwn(Object(regulation.binding.context), "path")))
+  )
+    throw new CliError(
+      "Legacy Objective references/context in recovery records are incompatible. Explicitly migrate and commit the Objective, then start a new regulation; never rewrite or substitute pinned commit/tree/source evidence.",
+      6,
+      "io-error",
+    );
+  if (
     regulation.regulationId !== id ||
-    typeof regulation.pilotUri !== "string" ||
-    !regulation.pilotUri.startsWith("git+") ||
-    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(regulation.pilotCommit) ||
-    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(regulation.pilotTree) ||
-    regulation.pilotSource?.kind !== "git-tree" ||
-    regulation.pilotSource.commit !== regulation.pilotCommit ||
-    regulation.pilotSource.tree !== regulation.pilotTree ||
-    regulation.sourceBindings?.[regulation.pilotUri]?.commit !== regulation.pilotCommit ||
-    regulation.sourceBindings[regulation.pilotUri]?.tree !== regulation.pilotTree ||
+    typeof regulation.objectiveUri !== "string" ||
+    !regulation.objectiveUri.startsWith("git+") ||
+    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(regulation.objectiveCommit) ||
+    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(regulation.objectiveTree) ||
+    regulation.objectiveSource?.kind !== "git-tree" ||
+    regulation.objectiveSource.commit !== regulation.objectiveCommit ||
+    regulation.objectiveSource.tree !== regulation.objectiveTree ||
+    regulation.sourceBindings?.[regulation.objectiveUri]?.commit !== regulation.objectiveCommit ||
+    regulation.sourceBindings[regulation.objectiveUri]?.tree !== regulation.objectiveTree ||
     !Array.isArray(regulation.attempts) ||
     !Number.isSafeInteger(regulation.agentExecutionLimits?.timeoutMs) ||
     regulation.agentExecutionLimits.timeoutMs < 1
   )
     throw new CliError("Invalid Pilot regulation recovery record.", 6, "io-error");
   try {
-    validateGitPilotSource(regulation.pilotUri, regulation.pilotTree, regulation.pilotSource);
+    validateGitPilotSource(
+      regulation.objectiveUri,
+      regulation.objectiveTree,
+      regulation.objectiveSource,
+    );
     if (
       regulation.sourceBindings === null ||
       typeof regulation.sourceBindings !== "object" ||
