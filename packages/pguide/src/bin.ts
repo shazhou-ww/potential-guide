@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readdir, realpath, stat } from "node:fs/promises";
 import { delimiter, extname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   AcpClient,
   CliError,
@@ -26,7 +27,7 @@ const commandPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 interface Candidate {
   command: string;
   path: string;
-  source: "configured" | "PATH";
+  source: "configured" | "PATH" | "bundled";
   metadata?: CommandMetadata;
 }
 
@@ -99,7 +100,26 @@ async function discover(
     if (unique.length === 1) commands.push(unique[0] as Candidate);
     else if (unique.length > 1) conflicts[command] = unique.map(({ path }) => path);
   }
+  for (const [command, specifier] of Object.entries({
+    probe: "@potential-guide/pguide-pilot/bin/probe",
+    scaffold: "@potential-guide/pguide-pilot/bin/scaffold",
+    validate: "@potential-guide/pguide-pilot/bin/validate",
+    config: "@potential-guide/pguide-config/bin/config",
+    objectives: "@potential-guide/pguide-objectives/bin/objectives",
+  })) {
+    if (commands.some((entry) => entry.command === command) || Object.hasOwn(conflicts, command))
+      continue;
+    const path = fileURLToPath(import.meta.resolve(specifier));
+    await stat(path);
+    commands.push({ command, path, source: "bundled" });
+  }
   return { commands: commands.sort((a, b) => a.command.localeCompare(b.command)), conflicts };
+}
+
+function invocation(candidate: Candidate, args: string[]): [string, string[]] {
+  return candidate.source === "bundled"
+    ? [process.execPath, [candidate.path, ...args]]
+    : [candidate.path, args];
 }
 
 async function runCapture(
@@ -124,7 +144,7 @@ async function runCapture(
 }
 
 async function metadata(candidate: Candidate): Promise<CommandMetadata | undefined> {
-  const result = await runCapture(candidate.path, ["--pguide-command-metadata"]);
+  const result = await runCapture(...invocation(candidate, ["--pguide-command-metadata"]));
   if (result.code !== 0) return undefined;
   try {
     const value = JSON.parse(result.stdout) as CommandMetadata;
@@ -169,7 +189,7 @@ async function dispatch(
       ? [...args, ...globalArguments(globals)]
       : [...args.slice(0, separator), ...globalArguments(globals), ...args.slice(separator)];
   return new Promise((resolveChild, reject) => {
-    const child = spawn(candidate.path, childArguments, {
+    const child = spawn(...invocation(candidate, childArguments), {
       cwd: globals.cwd,
       stdio: "inherit",
       windowsHide: true,
@@ -235,7 +255,7 @@ async function help(globals: GlobalOptions): Promise<void> {
     builtIn: boolean;
     path: string | null;
     compatible: boolean;
-    source: "built-in" | "configured" | "PATH";
+    source: "built-in" | Candidate["source"];
     protocol: "built-in" | "pguide-command-v1" | null;
   }[] = [
     {
@@ -456,7 +476,7 @@ async function main(): Promise<number> {
     if (candidate === undefined) {
       const packageName =
         command === "config"
-          ? "@potential-guide/config"
+          ? "@potential-guide/pguide-config"
           : Object.hasOwn(commandPackages, command)
             ? commandPackages[command as keyof typeof commandPackages]
             : undefined;

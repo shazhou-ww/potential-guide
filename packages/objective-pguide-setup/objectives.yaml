@@ -8,6 +8,6 @@ objectives:
       {
         "root": context.checkout.rootPath, "directory": context.directory.relativePath,
         "roles": ["tool"], "runtime": "node",
-        "allows": ["@potential-guide/objective-pilot", "@potential-guide/config", "pguide"],
+        "allows": ["@potential-guide/objective-pilot", "@potential-guide/pguide-config", "pguide"],
         "entries": ["setup-check.mjs"], "generated": [], "joins": [], "deliveries": []
       }

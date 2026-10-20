@@ -30,14 +30,20 @@ test("package-specific RC tags preserve package identity and never select latest
   assert.equal(parseReleaseTag("pguide-v0.3.0").distTag, "latest");
 });
 
-test("command wrappers use pguide-prefixed names while published config remains compatible", () => {
-  for (const id of ["pguide-pilot", "pguide-regulate", "pguide-supervise", "pguide-objectives"]) {
+test("command wrappers use pguide-prefixed names including config", () => {
+  for (const id of [
+    "pguide-pilot",
+    "pguide-regulate",
+    "pguide-supervise",
+    "pguide-objectives",
+    "pguide-config",
+  ]) {
     const entry = releasePackages.find((entry) => entry.id === id);
     assert.equal(entry?.name, `@potential-guide/${id}`);
     assert.equal(entry?.directory, id);
   }
-  const config = releasePackages.find((entry) => entry.id === "config");
-  assert.equal(config.name, "@potential-guide/config");
+  const config = releasePackages.find((entry) => entry.id === "pguide-config");
+  assert.equal(config.name, "@potential-guide/pguide-config");
   assert.deepEqual(config.bins, ["pguide-config"]);
 });
 
@@ -57,6 +63,7 @@ test("release metadata rejects 1.0, malformed SemVer, unknown packages and retir
   }
   assert.throws(() => parseReleaseTag("objective-guide-v0.3.0-rc.0"));
   assert.throws(() => parseReleaseTag("unknown-v0.3.0-rc.0"));
+  assert.throws(() => parseReleaseTag("config-v0.3.0-rc.0"));
 });
 
 test("publication workflow covers the inventory and its embedded scripts compile", async () => {

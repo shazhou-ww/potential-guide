@@ -8,7 +8,7 @@ objectives:
       {
         "root": context.checkout.rootPath, "directory": context.directory.relativePath,
         "roles": ["npm", "cli"], "runtime": "node",
-        "allows": ["@potential-guide/cli-core","@potential-guide/cli-runtime","@potential-guide/pguide-pilot","@potential-guide/pguide-regulate","@potential-guide/pguide-supervise","@potential-guide/pguide-objectives","@potential-guide/objective-pilot","@potential-guide/objective-regulator","@potential-guide/objective-portfolio-supervisor","@potential-guide/effects","@potential-guide/config","@potential-guide/git-source","@potential-guide/objective-declarations"],
+        "allows": ["@potential-guide/cli-core","@potential-guide/cli-runtime","@potential-guide/pguide-pilot","@potential-guide/pguide-regulate","@potential-guide/pguide-supervise","@potential-guide/pguide-objectives","@potential-guide/objective-pilot","@potential-guide/objective-regulator","@potential-guide/objective-portfolio-supervisor","@potential-guide/effects","@potential-guide/pguide-config","@potential-guide/git-source","@potential-guide/objective-declarations"],
         "entries": ["src/bin.ts"], "generated": [], "deliveries": [],
         "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "developer-commands", "kind": "cli"}]
       }

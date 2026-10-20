@@ -23,20 +23,20 @@
   },
   "dependencies": {
     "@potential-guide/cli-core": "workspace:^",
+    "@potential-guide/pguide-pilot": "workspace:^",
+    "@potential-guide/pguide-config": "workspace:^",
+    "@potential-guide/pguide-objectives": "workspace:^",
     "cross-spawn": "catalog:"
   },
   "devDependencies": {
     "@types/cross-spawn": "catalog:",
     "@potential-guide/cli-runtime": "workspace:^",
-    "@potential-guide/pguide-pilot": "workspace:^",
     "@potential-guide/pguide-regulate": "workspace:^",
     "@potential-guide/pguide-supervise": "workspace:^",
-    "@potential-guide/pguide-objectives": "workspace:^",
     "@potential-guide/objective-pilot": "workspace:^",
     "@potential-guide/objective-regulator": "workspace:^",
     "@potential-guide/objective-portfolio-supervisor": "workspace:^",
     "@potential-guide/effects": "workspace:^",
-    "@potential-guide/config": "workspace:^",
     "@potential-guide/git-source": "workspace:^",
     "@potential-guide/objective-declarations": "workspace:^"
   },

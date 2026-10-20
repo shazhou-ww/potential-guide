@@ -7,6 +7,18 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
+    "./bin/probe": {
+      "types": "./dist/bin/probe.d.ts",
+      "import": "./dist/bin/probe.js"
+    },
+    "./bin/scaffold": {
+      "types": "./dist/bin/scaffold.d.ts",
+      "import": "./dist/bin/scaffold.js"
+    },
+    "./bin/validate": {
+      "types": "./dist/bin/validate.d.ts",
+      "import": "./dist/bin/validate.js"
+    },
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"

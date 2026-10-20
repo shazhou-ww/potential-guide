@@ -10,7 +10,7 @@ Potential Guide publishes fifteen CLI and library packages independently from th
 | `@potential-guide/objective-regulator` | `objective-regulator-vX.Y.Z` |
 | `@potential-guide/objective-portfolio-supervisor` | `objective-portfolio-supervisor-vX.Y.Z` |
 | `@potential-guide/cli-core` | `cli-core-vX.Y.Z` |
-| `@potential-guide/config` | `config-vX.Y.Z` |
+| `@potential-guide/pguide-config` | `pguide-config-vX.Y.Z` |
 | `pguide` | `pguide-vX.Y.Z` |
 | `@potential-guide/pilot-protocol` | `pilot-protocol-vX.Y.Z` |
 | `@potential-guide/cli-runtime` | `cli-runtime-vX.Y.Z` |
@@ -21,18 +21,19 @@ Potential Guide publishes fifteen CLI and library packages independently from th
 | `@potential-guide/pguide-objectives` | `pguide-objectives-vX.Y.Z` |
 
 Command wrapper packages use the `pguide-` prefix, including grouped
-`pguide-pilot` and `pguide-regulate`. `@potential-guide/config` deliberately retains
-its published npm name and `config-v*` tags as a legacy compatibility exception;
-its executable remains `pguide-config`. Shared libraries are not command wrappers
+`pguide-pilot` and `pguide-regulate`. Configuration is now
+`@potential-guide/pguide-config` with `pguide-config-v*` tags; its executable remains
+`pguide-config`. Shared libraries are not command wrappers
 and keep their responsibility names.
 
 Release packages in manifest dependency order. `effects` and `pilot-protocol`
 are protocol; `objective-pilot` consumes both, then `objective-regulator` and
 `objective-portfolio-supervisor` build business capabilities. `cli-core` precedes
-`config` and the lightweight `pguide`; `pguide` no longer requires any business
-or command package. `objective-declarations` consumes CLI Core and Pilot protocol only;
+`pguide-config`. `objective-declarations` consumes CLI Core and Pilot protocol only;
 `cli-runtime` consumes Pilot and Git source;
-the optional command packages consume it and CLI Core. `pguide-regulate`
+the command packages consume it and CLI Core. Publish `pguide-pilot` and
+`pguide-config` and `pguide-objectives` before `pguide`, which installs all three as production dependencies.
+It does not install regulation or supervision. `pguide-regulate`
 must precede `pguide-supervise`. Publish changed transitive dependencies before
 their consumers. See [three-layer boundaries and migration](./package-layering.md).
 Git source and four concrete Objective packages remain deferred externalization;
@@ -40,7 +41,7 @@ this implementation does not migrate them or publish concrete Objectives.
 
 All extension packages use the `@potential-guide` npm scope. Their executable
 and command names remain independent of the package name; for example,
-`@potential-guide/config` installs `pguide-config` and advertises `config`.
+`@potential-guide/pguide-config` installs `pguide-config` and advertises `config`.
 Only the composition package is named `pguide` because it is the package users
 invoke through `npx pguide`.
 
@@ -81,7 +82,7 @@ rules must allow these release tags:
 - `objective-regulator-v*`
 - `objective-portfolio-supervisor-v*`
 - `cli-core-v*`
-- `config-v*`
+- `pguide-config-v*`
 - `pguide-v*`
 - `pilot-protocol-v*`
 - `cli-runtime-v*`
@@ -130,7 +131,7 @@ npm publish .cache/npm-bootstrap/potential-guide-objective-regulator-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/potential-guide-objective-portfolio-supervisor-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
-npm publish .cache/npm-bootstrap/potential-guide-config-0.0.0.tgz \
+npm publish .cache/npm-bootstrap/potential-guide-pguide-config-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/pguide-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
@@ -162,6 +163,16 @@ workflow runs `npm publish`. Do not create an `NPM_TOKEN` GitHub secret. The
 workflow requests `id-token: write` and exchanges GitHub's OIDC identity for a
 short-lived npm credential. Trusted Publishing automatically adds provenance
 because this is a public repository on a GitHub-hosted runner.
+
+### Previously published configuration package
+
+`@potential-guide/config` remains a historical published package, not an alias
+for the new name. Existing versions are not republished or unpublished by this
+migration. Replace explicit dependencies with `@potential-guide/pguide-config`
+and remove the old installation to avoid competing `pguide-config` binaries.
+The historical `config-v*` tag is no longer accepted. Configure a new Trusted
+Publisher for `@potential-guide/pguide-config` and bootstrap it only if absent;
+the old package's publisher configuration does not transfer to the new name.
 
 Configure the publishers only when the first product RC can run immediately.
 Each connection expires if it does not complete a successful publish within two
@@ -254,7 +265,7 @@ metadata propagation failure.
 
 After every selected candidate has published successfully, run the CI workflow
 manually with `published=true`. Its independent consumers explicitly install
-`pguide@<manifest-version>` and the five optional command/config packages from npm,
+`pguide@<manifest-version>` and all five explicitly selected command/config packages from npm,
 without overrides. The verifier accepts the same `0.x` stable/RC versions as release
 tags, resolves every internal dependency from its actual parent (including nested
 copies), and checks all installed versions against the fifteen source manifests.
@@ -269,7 +280,11 @@ The default local `pnpm deployment:verify` path installs those explicitly select
 CLI tarballs. It packs all fifteen packages, checks their contents, and uses npm
 `overrides` pointing to the internal tarballs. This isolated consumer makes
 unpublished RC dependencies available without requiring the main package to
-depend on optional commands. It proves local selected-command composition, not real registry
+depend on optional commands. `pnpm pack:check` additionally checks main-only
+consumption: exactly seven default commands, working bundled entrypoints without
+transitive PATH bins, and installation hints for missing optional commands.
+It also checks protocol-only consumption without business logic and combined
+explicit installation without synthetic conflicts. These prove local composition, not real registry
 dependency resolution, publication, provenance, or the `latest` dist-tag.
 Tarball overrides are never used in either registry mode.
 

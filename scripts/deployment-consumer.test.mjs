@@ -70,7 +70,7 @@ test("entry graph requires every expected dependency, rejects missing, nested wr
   const workspace = await createDeploymentWorkspace();
   const versions = new Map([
     ["pguide", "0.4.0"],
-    ["@potential-guide/config", "0.3.0"],
+    ["@potential-guide/pguide-config", "0.3.0"],
     ["@potential-guide/cli-core", "0.3.0"],
   ]);
   async function manifest(base, name, version, dependencies = {}) {
@@ -83,20 +83,22 @@ test("entry graph requires every expected dependency, rejects missing, nested wr
     return directory;
   }
   try {
-    await manifest(workspace.path, "pguide", "0.4.0", { "@potential-guide/config": "^0.3.0" });
-    const config = await manifest(workspace.path, "@potential-guide/config", "0.3.0");
+    await manifest(workspace.path, "pguide", "0.4.0", {
+      "@potential-guide/pguide-config": "^0.3.0",
+    });
+    const config = await manifest(workspace.path, "@potential-guide/pguide-config", "0.3.0");
     await assert.rejects(
       verifyConsumerGraph(workspace.path, versions),
       /Selected entries must reach/,
     );
-    await manifest(workspace.path, "@potential-guide/config", "0.3.0", {
+    await manifest(workspace.path, "@potential-guide/pguide-config", "0.3.0", {
       "@potential-guide/cli-core": "^0.3.0",
     });
     await assert.rejects(verifyConsumerGraph(workspace.path, versions), /Missing transitive/);
     await manifest(workspace.path, "@potential-guide/cli-core", "0.3.0");
     await verifyConsumerGraph(workspace.path, versions);
     const isolated = join(workspace.path, "isolated");
-    await manifest(isolated, "pguide", "0.4.0", { "@potential-guide/config": "^0.3.0" });
+    await manifest(isolated, "pguide", "0.4.0", { "@potential-guide/pguide-config": "^0.3.0" });
     await assert.rejects(verifyConsumerGraph(isolated, versions), /Missing transitive/);
     await manifest(config, "@potential-guide/cli-core", "0.2.0");
     await assert.rejects(
@@ -105,11 +107,13 @@ test("entry graph requires every expected dependency, rejects missing, nested wr
     );
     await manifest(config, "@potential-guide/cli-core", "0.3.0");
     await verifyConsumerGraph(workspace.path, versions);
-    await manifest(workspace.path, "@potential-guide/config", "0.3.0", {
+    await manifest(workspace.path, "@potential-guide/pguide-config", "0.3.0", {
       "@potential-guide/cli-core": "^0.2.0",
     });
     await assert.rejects(verifyConsumerGraph(workspace.path, versions), /packed internal range/);
-    await manifest(workspace.path, "pguide", "0.4.0", { "@potential-guide/config": "workspace:^" });
+    await manifest(workspace.path, "pguide", "0.4.0", {
+      "@potential-guide/pguide-config": "workspace:^",
+    });
     await assert.rejects(
       verifyConsumerGraph(workspace.path, versions),
       /unresolved workspace range/,

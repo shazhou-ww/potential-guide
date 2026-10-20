@@ -1,12 +1,21 @@
-# `@potential-guide/config`
+# `@potential-guide/pguide-config`
 
-This published npm name is a legacy compatibility exception to the
-`@potential-guide/pguide-<command-or-group>` naming used by new command wrappers.
-The package, `pguide-config` executable, `config` command metadata and `config-v*`
-release tags remain unchanged.
+Official configuration editor, installed by default with `pguide`. It can also
+be installed independently for the standalone `pguide-config` executable:
 
-Optional official configuration editor for `pguide`. Configuration is standard
-YAML and remains usable without this package.
+```sh
+npm install --global pguide
+# Or, for the standalone editor only:
+npm install --global @potential-guide/pguide-config
+```
+
+The former published name `@potential-guide/config` is retired; replace explicit
+dependencies/install scripts and remove the old installation to avoid duplicate
+`pguide-config` shims. Existing published versions are not renamed or unpublished.
+The executable and `config` command metadata are unchanged; new release tags are
+`pguide-config-v*` instead of `config-v*`. The public `./bin/config` export lets
+`pguide` dispatch via Node even when transitive binaries are not on PATH.
+Configuration is standard YAML and remains usable without this editor.
 
 Configuration requires `schemaVersion: 2`. Use
 `agentExecutionLimits: { timeoutMs: 30000 }` for each individual Agent execution.

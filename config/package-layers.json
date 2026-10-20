@@ -8,7 +8,7 @@
   "tools": [
     "pguide",
     "@potential-guide/cli-core",
-    "@potential-guide/config",
+    "@potential-guide/pguide-config",
     "@potential-guide/cli-runtime",
     "@potential-guide/pguide-pilot",
     "@potential-guide/pguide-regulate",
