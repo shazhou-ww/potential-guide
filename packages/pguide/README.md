@@ -25,6 +25,64 @@ Objective identity excludes the commit while each observation's `versions`
 records the exact commit. Static `validate pilot` and scaffolding do not require
 a Git commit.
 
+## JSON subjects from stdin and the Objective registry
+
+`probe` and `regulate` accept a JSON object directly from stdin. Omit
+`--subject-file` or explicitly use `--subject-file -`:
+
+```sh
+printf '%s\n' '{"repository":"/work/project"}' | pguide probe --pilot health
+cat subject.json | pguide regulate --pilot health --subject-file - --target terminal
+```
+
+In PowerShell:
+
+```powershell
+'{"repository":"D:\\work\\project"}' | pguide probe --pilot health
+Get-Content -Raw .\subject.json | pguide regulate --pilot health --target terminal
+```
+
+Input must be exactly one JSON object, without a wrapper; empty input, arrays,
+scalars and malformed JSON fail explicitly. In an interactive terminal, provide
+a file or pipe JSON instead of waiting for terminal input. An explicit file
+continues to take precedence over piped input.
+
+Register Objectives locally through the optional configuration command:
+
+```sh
+pguide config add-objective health 'git+https://github.com/owner/repo.git#objective/pilot.yaml'
+pguide config list-objectives
+pguide config update-objective health ./objective/pilot.yaml
+pguide config remove-objective health
+```
+
+These edits default to project scope; use `--scope user` for cross-project
+registrations or `--scope explicit --config <path>` for a selected configuration.
+Registration stores local paths as absolute paths relative to `--cwd`.
+Alternatively, edit standard YAML:
+
+```yaml
+schemaVersion: 2
+objectives:
+  health: git+https://github.com/owner/repo.git#objective/pilot.yaml
+```
+
+Registration is optional: unregistered paths and Git URIs remain valid inputs.
+Registry names are lowercase kebab-case. `--pilot health` uses a registered Objective;
+`--pilot @health` additionally fails explicitly if the name is not registered. To
+disambiguate a local path with the same name, use `./health` or an absolute path.
+Targets are paths or Git URIs, not references to other registry entries. Manually configured
+relative paths resolve against the invocation's `--cwd`, as other CLI paths do.
+Objectives merge by name in user, project, then explicit configuration order.
+Removing an override exposes any lower-scope registration; update/remove acts
+only on the selected scope. Listing includes each effective registration's source.
+
+Portfolio goal `pilot` fields accept the same names and `@name` syntax.
+`--revision` and portfolio `revision` retain their normal meaning. Registration does not
+change the clean Git snapshot requirement or Objective identity. Recovery records
+store the resolved URI, exact commit and local source path, so later registry edits
+do not retarget `continue`.
+
 Cross-repository prerequisites are supported. Each repository has its own
 snapshot, commit, checkout, and check routing, with all resources owned by the
 same Scope. External repositories without an explicit pin resolve HEAD when

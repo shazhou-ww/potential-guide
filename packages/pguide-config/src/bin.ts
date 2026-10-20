@@ -62,6 +62,10 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
       "add-agent",
       "update-agent",
       "remove-agent",
+      "list-objectives",
+      "add-objective",
+      "update-objective",
+      "remove-objective",
     ];
     writeResult(
       {
@@ -118,6 +122,19 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
       { schemaVersion: 1, agents },
       globals.format,
       agents.map(({ name, source }) => `${name}\t${source}`).join("\n"),
+    );
+    return;
+  }
+  if (subcommand === "list-objectives") {
+    const objectives = Object.entries(loaded.value.objectives ?? {}).map(([name, location]) => ({
+      name,
+      location,
+      source: loaded.sources[`objectives.${name}`],
+    }));
+    writeResult(
+      { schemaVersion: 1, objectives },
+      globals.format,
+      objectives.map(({ name, location, source }) => `${name}\t${location}\t${source}`).join("\n"),
     );
     return;
   }
@@ -185,7 +202,32 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     return;
   }
   const config = await editable(path);
-  if (subcommand === "add-agent" || subcommand === "update-agent") {
+  if (subcommand === "add-objective" || subcommand === "update-objective") {
+    const name = argv[1];
+    const location = argv[2];
+    if (name === undefined || location === undefined || location.startsWith("--"))
+      throw new CliError(`${subcommand} requires <name> <path|Git URI>.`);
+    const exists = config.objectives !== undefined && Object.hasOwn(config.objectives, name);
+    if (subcommand === "add-objective" && exists)
+      throw new CliError(`Objective already exists in this scope: ${name}.`);
+    if (subcommand === "update-objective" && !exists)
+      throw new CliError(`Objective does not exist in this scope: ${name}.`);
+    if (location.startsWith("@"))
+      throw new CliError("Objective registry entries must reference a path or Git URI.");
+    config.objectives = {
+      ...config.objectives,
+      [name]: location.startsWith("git+") ? location : resolve(globals.cwd, location),
+    };
+  } else if (subcommand === "remove-objective") {
+    const name = argv[1];
+    if (
+      name === undefined ||
+      config.objectives === undefined ||
+      !Object.hasOwn(config.objectives, name)
+    )
+      throw new CliError(`Objective does not exist in this scope: ${name ?? ""}.`);
+    delete config.objectives[name];
+  } else if (subcommand === "add-agent" || subcommand === "update-agent") {
     const name = argv[1];
     const sourcePath = argv[2];
     if (name === undefined || sourcePath === undefined)

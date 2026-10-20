@@ -46,6 +46,62 @@ test("config path is available without creating configuration", async () => {
   }
 });
 
+test("Objective commands persist scoped registrations and reject invalid edits atomically", async () => {
+  const cwd = await mkdtemp(join(scratch, "pguide-config-objective-"));
+  const env = { ...process.env, APPDATA: cwd, XDG_CONFIG_HOME: cwd };
+  const uri = "git+https://example.invalid/repo.git#objective/pilot.yaml";
+  const invoke = (args: string[]) => run([...args, "--cwd", cwd, "--format", "json"], env);
+  try {
+    const help = JSON.parse((await invoke(["--help"])).stdout);
+    for (const command of [
+      "add-objective",
+      "list-objectives",
+      "update-objective",
+      "remove-objective",
+    ])
+      assert.ok(help.subcommands.includes(command));
+    assert.ok(help.subcommands.every((command: string) => !command.includes("alias")));
+    const added = await invoke(["add-objective", "health", uri, "--scope", "user"]);
+    assert.equal(added.code, 0, added.stdout);
+    const listed = JSON.parse((await invoke(["list-objectives"])).stdout).objectives;
+    assert.deepEqual(
+      listed.map(({ name, location }: { name: string; location: string }) => ({ name, location })),
+      [{ name: "health", location: uri }],
+    );
+    assert.ok(listed[0].source);
+    const local = await invoke(["add-objective", "health", "./pilot.yaml"]);
+    assert.equal(local.code, 0, local.stdout);
+    const configPath = join(cwd, ".pguide", "config.yaml");
+    const before = await readFile(configPath, "utf8");
+    for (const args of [
+      ["add-objective", "health", uri],
+      ["update-objective", "missing", uri],
+      ["add-objective", "bad/name", uri],
+      ["update-objective", "health", "@other"],
+      ["remove-objective", "missing"],
+      ["add-objective", "missing"],
+    ]) {
+      const result = await invoke(args);
+      assert.equal(result.code, 2, result.stdout);
+      assert.equal(await readFile(configPath, "utf8"), before);
+    }
+    const shown = JSON.parse((await invoke(["list-objectives"])).stdout).objectives;
+    assert.equal(shown[0].location, join(cwd, "pilot.yaml"));
+    const updated = await invoke(["update-objective", "health", uri]);
+    assert.equal(updated.code, 0, updated.stdout);
+    const removed = await invoke(["remove-objective", "health"]);
+    assert.equal(removed.code, 0, removed.stdout);
+    const inherited = JSON.parse((await invoke(["list-objectives"])).stdout).objectives;
+    assert.equal(inherited[0].location, uri);
+    assert.equal(inherited[0].source, listed[0].source);
+    const removedUser = await invoke(["remove-objective", "health", "--scope", "user"]);
+    assert.equal(removedUser.code, 0, removedUser.stdout);
+    assert.deepEqual(JSON.parse((await invoke(["list-objectives"])).stdout).objectives, []);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 test("user config permissions round trip and invalid grants cannot replace the ceiling", async () => {
   const cwd = await mkdtemp(join(scratch, "pguide-config-permissions-"));
   const env = { ...process.env, APPDATA: cwd, XDG_CONFIG_HOME: cwd };

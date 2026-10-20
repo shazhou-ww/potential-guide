@@ -20,6 +20,7 @@ import {
   readJsonSubject,
   redactAgentValue,
   rejectUnknownOptions,
+  resolveObjective,
   stateRoot,
   validateAgentProfile,
   writeResult,
@@ -515,7 +516,7 @@ export async function runRegulate(
     writeResult(
       { schemaVersion: 1, command: "regulate" },
       globals.format,
-      "Usage: pguide regulate --pilot <path|Git URI> --subject-file <path|-> --target <level> [--agent <profile>] [--agent-timeout-ms <positive integer>] [--revision <ref|commit>]",
+      "Usage: pguide regulate --pilot <path|Git URI|objective> [--subject-file <path|->] --target <level> [--agent <profile>] [--agent-timeout-ms <positive integer>] [--revision <ref|commit>]\nSubject defaults to JSON from stdin.",
     );
     return;
   }
@@ -538,7 +539,7 @@ export async function runRegulate(
   if (profile === undefined) throw new CliError(`Unknown Agent profile: ${agentName}.`);
   validateAgentProfile(profile);
   const subject = (await readJsonSubject(
-    option(argv, "--subject-file", { required: true }) as string,
+    option(argv, "--subject-file") as string | undefined,
     globals.cwd,
   )) as Subject;
   const language = option(argv, "--language") as string | undefined;
@@ -549,7 +550,10 @@ export async function runRegulate(
       : Number(timeout);
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2_147_483_647)
     throw new CliError("--agent-timeout-ms must be a positive integer no greater than 2147483647.");
-  const location = option(argv, "--pilot", { required: true }) as string;
+  const location = resolveObjective(
+    option(argv, "--pilot", { required: true }) as string,
+    loaded.value,
+  );
   return withPilot(
     location,
     globals.cwd,

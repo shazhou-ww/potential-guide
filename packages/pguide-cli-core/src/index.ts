@@ -83,6 +83,7 @@ export interface PguideConfig {
     quota?: { timeoutMs: number; maxAgentRuns: number; maxStallRuns: number };
   };
   agents?: Record<string, AgentProfile>;
+  objectives?: Record<string, string>;
 }
 
 export interface LoadedConfig {
@@ -448,6 +449,7 @@ export function parseConfig(source: string): PguideConfig {
       "regulationPermissions",
       "regulationStrategy",
       "agents",
+      "objectives",
     ],
     "Configuration",
   );
@@ -554,6 +556,17 @@ export function parseConfig(source: string): PguideConfig {
       raw.agents[name] = validateAgentProfile(profile);
     }
   }
+  if (raw.objectives !== undefined) {
+    if (!record(raw.objectives)) throw new CliError("objectives must be an object.");
+    for (const [name, location] of Object.entries(raw.objectives)) {
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(name))
+        throw new CliError(`Invalid Objective name: ${name}.`);
+      if (!nonempty(location) || location.startsWith("@"))
+        throw new CliError(
+          `Objective ${name} must reference a path or Git URI, not another registry entry.`,
+        );
+    }
+  }
   return raw as unknown as PguideConfig;
 }
 
@@ -613,8 +626,11 @@ function mergeConfig(
   if (incoming.regulationStrategy !== undefined)
     next.regulationStrategy = { ...target.regulationStrategy, ...incoming.regulationStrategy };
   if (incoming.agents !== undefined) next.agents = { ...target.agents, ...incoming.agents };
+  if (incoming.objectives !== undefined)
+    next.objectives = { ...target.objectives, ...incoming.objectives };
   for (const key of Object.keys(incoming)) sources[key] = source;
   for (const name of Object.keys(incoming.agents ?? {})) sources[`agents.${name}`] = source;
+  for (const name of Object.keys(incoming.objectives ?? {})) sources[`objectives.${name}`] = source;
   return next;
 }
 
@@ -674,8 +690,25 @@ export async function readStdin(): Promise<string> {
   return source;
 }
 
-export async function readJsonSubject(path: string, cwd: string): Promise<Record<string, unknown>> {
-  const source = path === "-" ? await readStdin() : await readFile(resolve(cwd, path), "utf8");
+export function resolveObjective(location: string, config: PguideConfig): string {
+  const name = location.startsWith("@") ? location.slice(1) : location;
+  const objectives = config.objectives;
+  if (objectives !== undefined && Object.hasOwn(objectives, name))
+    return objectives[name] as string;
+  if (location.startsWith("@")) throw new CliError(`Unknown registered Objective: ${name}.`);
+  return location;
+}
+
+export async function readJsonSubject(
+  path: string | undefined,
+  cwd: string,
+): Promise<Record<string, unknown>> {
+  if ((path === undefined || path === "-") && process.stdin.isTTY)
+    throw new CliError("Pipe a JSON subject to stdin or provide --subject-file <path>.");
+  const source =
+    path === undefined || path === "-"
+      ? await readStdin()
+      : await readFile(resolve(cwd, path), "utf8");
   let value: unknown;
   try {
     value = JSON.parse(source);

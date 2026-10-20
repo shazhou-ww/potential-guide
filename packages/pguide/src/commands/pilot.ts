@@ -10,6 +10,7 @@ import {
   option,
   readJsonSubject,
   rejectUnknownOptions,
+  resolveObjective,
   writeResult,
 } from "@potential-guide/cli-core";
 import { startEffect } from "@potential-guide/effects";
@@ -44,7 +45,7 @@ export async function runProbe(argv: string[], globals: GlobalOptions): Promise<
         options: ["--pilot", "--subject-file", "--language", "--revision", "--report"],
       },
       globals.format,
-      "Usage: pguide probe --pilot <path|Git URI> --subject-file <path|-> [--language <tag>] [--revision <ref|commit>]",
+      "Usage: pguide probe --pilot <path|Git URI|objective> [--subject-file <path|->] [--language <tag>] [--revision <ref|commit>]\nSubject defaults to JSON from stdin.",
     );
     return;
   }
@@ -56,7 +57,7 @@ export async function runProbe(argv: string[], globals: GlobalOptions): Promise<
     "--report": "value",
   });
   const subject = (await readJsonSubject(
-    option(argv, "--subject-file", { required: true }) as string,
+    option(argv, "--subject-file") as string | undefined,
     globals.cwd,
   )) as Subject;
   const language = option(argv, "--language") as string | undefined;
@@ -68,7 +69,7 @@ export async function runProbe(argv: string[], globals: GlobalOptions): Promise<
   const value = await (async () => {
     try {
       return await withPilot(
-        option(argv, "--pilot", { required: true }) as string,
+        resolveObjective(option(argv, "--pilot", { required: true }) as string, loaded.value),
         globals.cwd,
         option(argv, "--revision") as string | undefined,
         (spec, runtime) =>
