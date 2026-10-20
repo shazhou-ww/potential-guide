@@ -120,6 +120,12 @@
         boundary:"作者与运行时可以独立交付，因此是明确的公共契约候选。domainSchema 描述业务 subject，不是 manifest 自身的 schema，两者不能混淆。",
         scope:"代表性完整 manifest。TypeScript 使用自包含 JSON 类型；schema 覆盖主要结构，语言规范化、ID 唯一性及 domainSchema 编译仍需语义校验。",
         validation:["现有 parseManifest 严格检查字段、版本、级别、check/problem ID 和语言列表。","loadPilotSpec 另行 compileDomain；仅把 domainSchema 写成 object，并不能保证它是合法的 JSON Schema。"],
+        feedback:[
+          "M-01 · 用户已明确方向：去掉 levels[].advancement，直接采用 levels[].checks；仅简化结构，保留检查和推进语义。尚未实施，旧格式处理待整体兼容策略确定。",
+          "M-02 · 待讨论：domainSchema 是否改名为 subjectSchema。建议改名，使其直接对应被校验的 subject，并与 inputSchema 区分。",
+          "M-03 · 待讨论：TypeScript 类型与支持范围分开决定。建议采用 Draft 2020-12 标准类型及明确受限 profile，不另造简化 DSL；根为 object、本地引用、运行时编译校验。具体类型来源和能力边界待确认。",
+          "下方三种表示仍是现有源码快照，不是修改后格式；这些评审意见不代表构想整体获批或运行时变更授权。"
+        ],
         questions:["公共文档是否用一个不可变 schema URI 替代 schemaVersion？","标识字段是否选 $schema；旧 manifest 是迁移、兼容读取还是明确拒绝？","语言、唯一性和局部引用限制由哪个公共 validator 保证？"],
         sources:["packages/pilot-protocol/src/types.ts","packages/pilot-protocol/src/validation.ts","packages/pilot-protocol/src/definition.ts"],
         example:String.raw`schemaVersion: 1
@@ -978,7 +984,9 @@ $defs:
       });
       const info = element("div", "info-grid");
       info.append(card("一个具体用例", format.usecase), card("为什么需要讨论它的边界", format.boundary));
-      pagePanel.append(flow, info, element("p", "scope", `展示范围：${format.scope}`));
+      pagePanel.append(flow, info);
+      if (format.feedback) pagePanel.append(card("本轮评审 · 下一步规范化计划输入", format.feedback, "questions"));
+      pagePanel.append(element("p", "scope", `展示范围：${format.scope}`));
       const bar = element("div", "representation-bar");
       const views = element("div", "view-tabs");
       views.setAttribute("role", "tablist");
