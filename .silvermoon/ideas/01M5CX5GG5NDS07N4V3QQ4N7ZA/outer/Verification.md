@@ -4,7 +4,8 @@
 
 验证对象是已合并的 `511e9ac`、`090d4c6` 及其集成提交 `96fd7c7`，不是 npm 发布版本。
 Implementation 精确 revision `845317e657e70dc940afd2cb6998f1c524d33ef0` 经代理审查后通过门限。
-公共 schema 的网络可取得性仍待 Pages 工作流部署，本记录不将包内可用冒充公共 URI 已可访问。
+公共 schema 的网络可取得性已通过实际 Pages 部署及 HTTP 200/字节比对验证，
+具体证据见下节；没有把包内可用冒充公共 URI 已可访问。
 
 ## 独立安装与实际操作
 
@@ -40,8 +41,21 @@ bf6f4e634b0167cbd6302ab56e3a6c56f798c4855e565795e74dbe55c2ed9cba
 - 原始 D 盘工作区存在无 package.json 的遗留 monorepo-objective 目录，基线检查已明确失败；
   干净工作区同一基线通过。未删除、修改该未知遗留目录。
 
-## 尚待的公共交付证据
+## 公共交付与最终跨平台证据
 
-Pages 已启用 Actions 部署，但 schema 工作流尚待 Objective 分支集成。
-应在同步当前 Deployment revision 后验证实际 URL、响应内容及不可变检查，
-再完成 D-S01/D-AC01，不能以仓库文件存在代替公共可取得性。
+[Pages run 39462410887](https://github.com/shazhou-ww/potential-guide/actions/runs/39462410887)
+已成功。主协调者实际获取
+`https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json` 返回 HTTP 200，
+响应按字节等于仓库及已安装包内 schema，SHA-256 与上文一致。
+基于已发布索引的内存修改/删除候选均被不可变检查明确拒绝，没有远端改写。
+
+真实 Ubuntu CI 的 Node 22 首次暴露嵌套子测试未等待的取消问题。
+`59ae128`、`a24148e` 显式等待 Agent/AHP 的 TestContext 子测试；
+没有修改生产行为、超时或增加跳过。Node 22/24 本地重现/验证及后续完整矩阵
+均已通过，更新后的准确实施 revision 已重新审查验收。
+
+[CI run 39469580773](https://github.com/shazhou-ww/potential-guide/actions/runs/39469580773)
+在 `e906e0fa27d9a3317fbed453006657b81894a371` 整体 success：
+Ubuntu Node 22.13.0 与 24.11.1 的完整检查，以及 Windows/macOS/Ubuntu 三个平台的
+实际打包 CLI 消费五项全部通过。最终代码未依赖 JSONC 主配置改造。
+这是源码 tarball 的独立交付验证，仍不宣称 npm 已发布。

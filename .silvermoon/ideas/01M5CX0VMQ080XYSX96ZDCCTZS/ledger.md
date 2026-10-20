@@ -18,10 +18,10 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 验证公共 schema 交付
-- [ ] **D-S02:** 验证作者与恢复场景
+- [x] **D-S01:** 验证公共 schema 交付
+- [x] **D-S02:** 验证作者与恢复场景
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** URI 真实可用且不可变
-- [ ] **D-AC02:** 新旧边界可观察
+- [x] **D-AC01:** URI 真实可用且不可变
+- [x] **D-AC02:** 新旧边界可观察
