@@ -104,7 +104,7 @@
       <details class="principles"><summary>阅读约定</summary><p>示例保留当前数字版本，未切换为候选 URI。TypeScript 是评审用自包含表达；JSON Schema 为 Draft 2020-12 的 YAML 草案，不是已发布规范。</p><p>JSON Schema 面板中的 $schema 声明的是 schema 方言，不是业务实例的格式 URI。实例标识字段仍待讨论。</p><p>内部格式也需要输入校验，但不因此成为公共协议。</p></details>
     </div></aside>
     <main>
-      <div class="notice"><strong>讨论稿，不是迁移通知。</strong> 基于源码快照 <code>50a80806e3ac</code>（2026-10-20）。所有分类与 schema 均待确认；未发布公共地址、未修改现有解析器。示例中的仓库、UUID 和 Git 哈希均为演示值，不是可运行的远端证据。草案校验通过不代表生产语义校验通过。</div>
+      <div class="notice"><strong>讨论稿，不是迁移通知。</strong> 基于源码快照 <code>50a80806e3ac</code>（2026-10-20）。整体规范仍待确认，已明确的局部修改方向见各页评审记录；未发布公共地址、未修改现有解析器。示例中的仓库、UUID 和 Git 哈希均为演示值，不是可运行的远端证据。草案校验通过不代表生产语义校验通过。<br><strong>已确认的跨格式命名方向：</strong>静态定义改称 Objective Manifest，入口为 objective.yaml；所有数据格式中指向目标定义的 pilot / pilot* 引用统一改为 objective / objective*。下方代码仍展示原始快照，不表示新格式已实施。</div>
       <div id="pages"></div>
       <noscript><p>此离线文档需要启用 JavaScript 才能显示页签和代码示例。无需网络或外部依赖。</p></noscript>
     </main>
@@ -124,7 +124,8 @@
           "M-01 · 用户已明确方向：去掉 levels[].advancement，直接采用 levels[].checks；仅简化结构，保留检查和推进语义。尚未实施，旧格式处理待整体兼容策略确定。",
           "M-02 · 用户已确认：domainSchema 改名为 subjectSchema，使其直接对应被校验的 subject，并与 inputSchema 区分；不改变字段职责。",
           "M-03 · 用户已确认：采用 Draft 2020-12 标准语法及对应 TypeScript schema 类型，不另造简化 DSL 或主动设置关键词白名单。根显式为 object，初期仅支持文档内 $defs 引用，不自动联网；加载时检查并编译 schema，调用时校验 subject；非法或不支持的定义明确报错。具体类型库仍待实施选型。",
-          "M-04 · 待讨论：将静态定义称为 Objective Manifest，入口改为 objective.yaml；Pilot 保留为观察执行角色。需区分单个目标定义 objective.yaml 与命名调用声明 objectives.yaml；关联字段/API/包名是否改动单独核对，不自动扩大范围。",
+          "M-04 · 用户已确认：静态定义称为 Objective Manifest，入口改为 objective.yaml；Pilot 保留为观察执行角色。单个目标定义 objective.yaml 与命名调用声明 objectives.yaml 职责不同。",
+          "M-05 · 用户已确认：所有数据格式中引用目标定义的 pilot 统一改为 objective，pilotUri / pilotCommit / pilotTree / pilotSource 相应改为 objective*；覆盖公共输入、报告嵌套结构和内部记录，不改变来源与版本语义。API/CLI/包名按职责核对，不机械替换执行角色。",
           "下方三种表示仍是现有源码快照，不是修改后格式；这些评审意见不代表构想整体获批或运行时变更授权。"
         ],
         questions:["公共文档是否用一个不可变 schema URI 替代 schemaVersion？","标识字段是否选 $schema；旧 manifest 是迁移、兼容读取还是明确拒绝？","语言、唯一性和局部引用限制由哪个公共 validator 保证？"],
@@ -220,6 +221,7 @@ $defs:
         purpose:"给可发现的目标取名，并声明其 Pilot、调用输入及 subject 投影。它将用户的输入和目录上下文绑定成 Pilot 的 subject，不负责决定治理目标级别。",
         usecase:"每个包提供 standardize 声明。用户在包目录选择这个目标时不必手写 subject；Unit 输入可省略，投影从 context.directory.absolutePath 取得目录。",
         boundary:"这是作者交给工具读取的开放入口，与 manifest 不同：manifest 定义规则，声明文件定义如何绑定和调用规则。target 不是声明字段。",
+        feedback:["M-05 · 已确认的后续修改：声明条目的 pilot 字段改为 objective，仍引用目标定义目录；文档继续承担命名调用和 subject 绑定职责。下方三种表示保留当前源码快照，尚未迁移。"],
         scope:"文档和条目结构可完整展示。JSONata 的能力限制、执行边界和 inputSchema 编译不能只靠字符串 schema 校验。",
         validation:["parseObjectives 检查文档版本和精确字段，并编译 inputSchema 与受限投影。","bindObjective 校验输入、求值投影，再依据 Pilot domainSchema 校验最终 subject。"],
         questions:["声明格式是否与 manifest 使用独立 schema URI？","文档级标识是否足够，条目与嵌入 inputSchema 是否需要额外标识？","Unit 输入约定与投影上下文是否属于稳定公共契约？"],
@@ -359,6 +361,7 @@ properties:
         purpose:"把多个治理目标及可用 Agent 资源放在同一个调度视图中，提供目标优先级、观察间隔和资源能力。它不是单个 Pilot 的规则，也不是调度结果。",
         usecase:"同时监督 API 与 UI 两个仓库，让具有 code 能力且容量为 1 的 Agent 处理 ready 目标。planner 先观察，再决定执行顺序。",
         boundary:"由调用方提供、由 supervise 消费，是公共输入候选；其契约归属 supervise，不应自动升级成所有 Pilot 必须依赖的核心概念。",
+        feedback:["M-05 · 已确认的后续修改：goals[].pilot 改为 goals[].objective；相关队列、报告和其他嵌套结构若包含目标定义引用，同步统一命名。下方代码保留当前源码快照，尚未迁移。"],
         scope:"展示完整文件主结构。schema 能验证形状和数值边界，但 ID 按字段唯一、目标级别存在、subject 合法及资源可绑定需另行验证。",
         validation:["parsePortfolioFile 检查 v3、字段、重复 goal/resource ID、正整数和唯一字符串列表。","绑定 Pilot 时才检查目标级别；subject 的领域语义仍由对应 Pilot 决定。"],
         questions:["是否作为稳定公共输入公开独立 schema？","goals 的 ID 唯一性与资源能力匹配由哪层保证？","文件格式是否允许旧版本迁移，或只明确拒绝？"],
@@ -446,6 +449,7 @@ $defs:
         purpose:"保存一次治理的身份、绑定来源、最终 subject、Agent 配置及尝试记录，让后续进程能继续执行，而不是重新发现同名目标。",
         usecase:"治理中断后运行 pguide continue <id>。工具恢复原 Pilot 的 commit/tree 和输入，避免远端分支变动后悄悄使用另一套规则。",
         boundary:"即使不公开，它也跨越程序升级，因此可能需要内部存储版本。保留版本和完整校验，不等于承诺第三方能读写此文件。",
+        feedback:["M-05 · 已确认的后续修改：pilotUri / pilotCommit / pilotTree / pilotSource 改为 objectiveUri / objectiveCommit / objectiveTree / objectiveSource；其他嵌套目标引用也同步调整。取回 commit、目录 tree 和来源证据的职责不变，旧记录处理待整体兼容策略决定。下方代码保留当前快照。"],
         scope:"只展示新建记录的最小必需字段及 ACP profile；省略 binding、权限、策略、session、expiresAt、history 等可选字段。attempts 的内部元素结构未展开，草案不能替代完整恢复 validator。哈希为占位证据。",
         validation:["当前 continue 检查 v3、若干必需字段、来源绑定和 Git 证据，然后进行类型断言；不是完整结构校验。","必须额外检查 URI/commit/tree 一致、subjectDigest 匹配、会话有效和来源可恢复；形状合法不代表可以安全继续。"],
         questions:["是否明确规定仅供工具内部读写，不发布公共 schema？","内部格式升级采取迁移还是拒绝旧记录？","恢复前应完整校验哪些字段，尤其 attempts、subject 和 Agent profile？"],

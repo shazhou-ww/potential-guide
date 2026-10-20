@@ -68,10 +68,26 @@
 
 schema 类型的具体来源及公共依赖归属仍为实施选型，不将其误记为已选定的库。manifest 自身的格式标识、旧格式兼容及公共 schema 发布位置仍待后续讨论。
 
-### M-04：Pilot Manifest 是否改名为 Objective Manifest / objective.yaml
+### M-04：改名为 Objective Manifest / objective.yaml（已确认）
 
-状态：用户提出讨论，尚未定案。Agent 建议将静态定义称为 Objective Manifest，文件名使用 `objective.yaml`，让名称对应其描述的目标、subject 约束、级别、检查和参考文档；Pilot 则保留为读取该定义并进行观察的执行角色，不表示 manifest 是可直接执行的运行时。
+状态：用户于 2026-10-20 明确同意改名，并要求其他数据格式中的相关引用同步改名。静态定义称为 Objective Manifest，文件名使用 `objective.yaml`，让名称对应其描述的目标、subject 约束、级别、检查和参考文档；Pilot 则保留为读取该定义并进行观察的执行角色，不表示 manifest 是可直接执行的运行时。
 
-需明确单数 `objective.yaml` 是一个目标定义入口，复数 `objectives.yaml` 是目录提供的命名调用声明，负责选择定义并绑定 input/context 到 subject；后者不是多个完整 manifest 的集合。输入声明中的 `pilot` 字段、CLI 参数、类型与包名是否调整，应分别核对职责，不把本项讨论自动扩大成整套 API 或包重命名授权。
+需明确单数 `objective.yaml` 是一个目标定义入口，复数 `objectives.yaml` 是目录提供的命名调用声明，负责选择定义并绑定 input/context 到 subject；后者不是多个完整 manifest 的集合。数据格式引用的统一改名见 M-05；CLI 参数与包名仍按职责分别核对，不把本项决定自动扩大成全部标识符的机械替换。
 
-若确认改名，实施范围需覆盖固定入口解析、作者文件、生成模板、资源加载、错误提示、文档与测试，并显式决定旧入口如何处理。目录 Objective URI 身份不必仅因入口文件改名而改变；内容树版本仍会随文件变化。
+实施范围需覆盖固定入口解析、作者文件、生成模板、资源加载、错误提示、文档与测试，并显式决定旧入口如何处理。目录 Objective URI 身份不必仅因入口文件改名而改变；内容树版本仍会随文件变化。
+
+### M-05：所有数据格式的目标引用统一使用 objective（已确认）
+
+状态：用户明确要求，不仅重命名 manifest，其他数据格式里凡是引用目标定义的 `pilot` 也统一改为 `objective`。该规则同时覆盖公共输入、业务输出、嵌套快照和内部持久化，不因格式是否公开而保留混用术语。
+
+| 当前引用 | 规范化方向 | 主要位置 |
+| --- | --- | --- |
+| `pilot` | `objective` | Objective 命名调用声明、Portfolio goal，以及其他引用目标定义的嵌套字段。 |
+| `pilotUri` | `objectiveUri` | Regulation 恢复记录等目标定位字段。 |
+| `pilotCommit` | `objectiveCommit` | 固定目标来源的取回 commit。 |
+| `pilotTree` | `objectiveTree` | 目标目录内容树版本。 |
+| `pilotSource` | `objectiveSource` | 目标来源证据。 |
+
+已有 `objectiveId`、`objectives`、`sourceBindings` 等字段不因这条命名规则而无故再改名。重命名只统一指代，不混淆 URI、目录 tree、取回 commit 与来源证据，也不更改绑定、观察或恢复语义。
+
+后续实施需逐项覆盖各数据格式及其 TypeScript 类型、JSON Schema、生产者、消费者、生成文件、示例和测试，包括嵌入报告、队列或声明快照的目标引用。真正表达 Pilot 执行角色的运行时标识符不作盲目替换；旧字段和旧入口的兼容或拒绝策略仍待整体决定。本轮仅记录规范化计划，不实施格式迁移或记录整体验收。
