@@ -1,6 +1,6 @@
 # 依赖问题模型与治理闭环
 
-本文服务于 [Idea](./Idea.md)，是设计候选，不是实现完成声明。包级修改与测试见 [修改清单](./Change-map.md)。
+本文服务于 [Idea](./Idea.md)，是设计候选，不是实现完成声明。包级修改与测试见 [修改清单](./Change-map.md)，协议和行为抽象的对照见 [Haskell Before / After](./Protocol-before-after.md)。
 
 ## 1. 核心决策
 
@@ -133,6 +133,8 @@ type DependencyRequiredOutcome = RegulationOutcomeBase & {
 Regulator 不递归运行另一个 Regulator、不自动授权、不接受 Agent 用自然语言 blocked 原因创建外部目标。运行中新发现的依赖须经后续 check 确认为结构化问题。
 
 ## 5. Supervisor
+
+顶层业务接口与行为范式保持不变：仍接收目标、资源并通过已有 result 事件处理治理结果，不增加独立依赖提交接口。RegulationOutcome 的更新会传递到事件载荷类型；内部调度与运行时解析接线需要修改，不能将「抽象接口不变」理解为所有类型和实现都不动。形式化对照见 [Supervisor 协议边界](./Protocol-before-after.md#5-supervisor顶层交互范式不变)。
 
 ### 接收与派生目标
 
