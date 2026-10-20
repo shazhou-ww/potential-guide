@@ -260,16 +260,21 @@ test("nested observations share a total budget and cancellation waits for child 
   assert.equal(cleaned, true);
 });
 
-function processDependency(objectiveId: string) {
+function processDependency(
+  objectiveId: string,
+  options: { timeoutMs?: number; log?: (text: string) => void } = {},
+) {
   return createProcessCheckProbe({
     command: process.execPath,
     evidence: false,
-    timeoutMs: 5_000,
+    timeoutMs: options.timeoutMs ?? 5_000,
+    ...(options.log === undefined ? {} : { log: options.log }),
     args: [
       "-e",
       `
       (async () => {
         const {createSourceObjectiveDependencyProbe} = await import("@potential-guide/objective-pilot");
+        process.stderr.write(JSON.stringify({directory:process.env.PGUIDE_PROBE_TEMP_DIR,pid:process.pid})+"\\n");
         let source = ""; for await (const chunk of process.stdin) source += chunk;
         const result = await createSourceObjectiveDependencyProbe({
           objectiveId:${JSON.stringify(objectiveId)},expectedLevelId:"terminal"
@@ -282,21 +287,44 @@ function processDependency(objectiveId: string) {
 }
 
 test("real process dependency requests share recursion, depth and total observation budgets", async () => {
-  const { consumer, external } = await specs();
+  const definition = manifest({
+    levels: [{ id: "initial", checks: [{ id: "dependency", problems: [] }] }],
+  });
+  const data = fixture({ [objectiveId]: definition, [externalId]: definition });
+  const consumer = await data.load();
+  const external = await data.load(externalId);
+  // Two cold Node module graphs are setup, not the recursion/count/depth behavior under test.
+  const startupAllowanceMs = 15_000;
   for (const mode of ["recursive", "depth", "count"] as const) {
-    const rootProbe = processDependency(externalId);
-    const childProbe = processDependency(objectiveId);
+    const requested: string[] = [];
+    let rootLog = "";
+    let childLog = "";
+    const rootProbe = processDependency(externalId, {
+      timeoutMs: startupAllowanceMs,
+      log: (text) => {
+        rootLog += text;
+      },
+    });
+    const childProbe = processDependency(objectiveId, {
+      timeoutMs: startupAllowanceMs,
+      log: (text) => {
+        childLog += text;
+      },
+    });
     const runtime: PilotRuntime = {
       observationBudget: {
-        timeoutMs: 5_000,
+        timeoutMs: startupAllowanceMs,
         maxDepth: mode === "depth" ? 1 : 8,
         maxObservations: mode === "count" ? 1 : 16,
       },
       resolveCheck: () => rootProbe,
-      resolveObjective: async (id) => ({
-        spec: id === objectiveId ? consumer : external,
-        runtime: id === objectiveId ? runtime : { ...runtime, resolveCheck: () => childProbe },
-      }),
+      resolveObjective: async (id) => {
+        requested.push(id);
+        return {
+          spec: id === objectiveId ? consumer : external,
+          runtime: id === objectiveId ? runtime : { ...runtime, resolveCheck: () => childProbe },
+        };
+      },
     };
     const result = await Effect.runPromise(observe({ spec: consumer, subject }, runtime));
     assert.equal(result.payload, null);
@@ -304,6 +332,18 @@ test("real process dependency requests share recursion, depth and total observat
       result.message,
       mode === "recursive" ? /Recursive dependency observation/ : /budget exhausted/,
     );
+    assert.deepEqual(requested, mode === "recursive" ? [externalId, objectiveId] : [externalId]);
+    assert.ok(rootLog.trim(), `${mode}: root process must reach its dependency request`);
+    assert.equal(childLog.trim() !== "", mode === "recursive");
+    const children: { directory: string; pid: number }[] = `${rootLog}${childLog}`
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    assert.equal(children.length, mode === "recursive" ? 2 : 1);
+    for (const child of children) {
+      await assert.rejects(stat(child.directory), { code: "ENOENT" });
+      assert.throws(() => process.kill(child.pid, 0), { code: "ESRCH" });
+    }
   }
 });
 

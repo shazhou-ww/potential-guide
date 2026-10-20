@@ -1,5 +1,29 @@
 # 实施验证与边界
 
+## Ubuntu CI 进程夹具可靠性修正
+
+同步到已接受 inner 的 primary `f3d80b3` 后，核对 run `39462606984`、
+job `118765903264` 的真实日志：共享依赖预算用例在约 5.2 秒遭到截止中断，
+200ms timeout 用例约 329ms 返回但子进程尚未输出目录。没有调整生产预算或进程实现。
+
+共享递归/depth/count 夹具只保留每个目标所需的一个 check，明确给两个冷 Node
+模块图 15 秒有界夹具窗口；depth/count 限额仍为 1。除原有错误断言外，还验证
+实际跨进程请求序列、只有递归场景进入第二个子进程、所有子进程 PID 已退出、
+各自临时目录已删除，不能用普通 timeout 或未启动的进程冒充预算检查成功。
+
+timeout 夹具用真实 15 秒 watchdog 等待子进程 readiness，再驱动测试时钟：
+199ms 不得完成，200ms 必须返回原有 timeout fault，状态为 504、payload 为 null，
+错误正文仍明确 200ms。清理阶段推进时钟但保留真实 OS 退出验证；
+另有真实 5 秒失败清理 watchdog，验证 PID 不存在和临时目录 `ENOENT`。
+这只隔离测试的冷启动时间，不改变生产 deadline 包含启动时间的契约。
+
+Windows Node.js 24.12.0 上，`pnpm --filter @potential-guide/objective-pilot test`
+为 46/46；两项指定回归额外连续执行 5 次全部通过（10 次断言场景）。
+`pnpm exec tsc -p tsconfig.test.json --pretty false` 与 Pilot lint 均通过。
+再次执行完整 `pnpm check` 退出 0，包括 16 个公开包和 9 个隔离消费场景。
+未在本机冒充 Ubuntu/Node 22 实测；真实双 Node Ubuntu 复验由父协调者重新运行 CI。
+未修改 Agent 子测试、Ideal、生产时间限制或生命周期事件。
+
 ## 评审修正：发现响应不是声明文档
 
 评审发现 `objectives list|show` 以及 `config list-objectives` 的实际 JSON 是数组式
