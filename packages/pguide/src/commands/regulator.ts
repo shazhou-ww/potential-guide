@@ -533,10 +533,6 @@ export async function runRegulate(
   const profile = loaded.value.agents?.[agentName];
   if (profile === undefined) throw new CliError(`Unknown Agent profile: ${agentName}.`);
   validateAgentProfile(profile);
-  const subject = (await readJsonSubject(
-    option(argv, "--subject-file") as string | undefined,
-    globals.cwd,
-  )) as Subject;
   const language = option(argv, "--language") as string | undefined;
   const timeout = option(argv, "--agent-timeout-ms") as string | undefined;
   const timeoutMs =
@@ -554,6 +550,11 @@ export async function runRegulate(
     globals.cwd,
     option(argv, "--revision") as string | undefined,
     async (spec, runtime) => {
+      const subject = (await readJsonSubject(
+        option(argv, "--subject-file") as string | undefined,
+        globals.cwd,
+        spec.manifest.domainSchema,
+      )) as Subject;
       const regulation: Regulation = {
         schemaVersion: 2,
         regulationId: randomUUID(),

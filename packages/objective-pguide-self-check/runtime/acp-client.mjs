@@ -7,10 +7,12 @@ import { pipeRedactedSecrets } from "./streaming-secret-redactor.mjs";
 export class CliError extends Error {
     exitCode;
     status;
-    constructor(message, exitCode = 2, status = "invalid") {
+    guidance;
+    constructor(message, exitCode = 2, status = "invalid", guidance) {
         super(message);
         this.exitCode = exitCode;
         this.status = status;
+        this.guidance = guidance;
     }
 }
 function record(value) {

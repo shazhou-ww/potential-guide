@@ -220,6 +220,28 @@ test("unknown purpose is pending classification; generated and tool-fixed except
     assert.equal(report.layer2, "checked");
   });
 });
+test("structure inventory excludes dist directories but still classifies source files and files named dist", async () => {
+  await fixture(async ({ check, write }) => {
+    await write("dist/package.json", "not a source manifest");
+    await write("packages/removed/dist/package.json", "not a workspace manifest");
+    await write("packages/removed/dist/index.js", "generated output");
+    assert.equal((await check()).state, "pass");
+
+    await write("packages/removed/src/index.ts", "export const value = 1;");
+    await write("unclassified/dist", "not a build directory");
+    const report = await check();
+    for (const path of ["packages/removed/src/index.ts", "unclassified/dist"]) {
+      assert.ok(
+        report.findings.some(
+          (finding) =>
+            finding.rule === "file-classification" &&
+            finding.state === "unverified" &&
+            finding.location === path,
+        ),
+      );
+    }
+  });
+});
 test("migration responsibility follows its owner; cross-service migrations require a declared target", async () => {
   await fixture(async ({ contract, write, check }) => {
     await write("move.sql", "-- fixture only");
@@ -398,6 +420,7 @@ test("browser positive configuration supports multi-package association; API and
     );
     assert.equal(report.state, "pass");
     assert.equal(report.onlineVerified, false);
+    assert.equal(has(report, "delivery-artifact", "pass"), true);
     item.resources.push({
       name: "TOKEN",
       kind: "secret",

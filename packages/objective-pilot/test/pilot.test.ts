@@ -30,10 +30,9 @@ test("serializable recipe preserves stable IDs, source version and multilingual 
   assert.equal(spec.objectiveId, objectiveId);
   assert.equal(spec.version, commit);
   assert.equal(readPage(spec, "levels/z-first", "zh-CN").title, "levels/z-first zh-CN");
-  assert.equal(
-    searchPages(spec, "Wiki", "en-US").length,
-    Object.keys(spec.locales["en-US"]!).length,
-  );
+  const locale = spec.locales["en-US"];
+  assert.ok(locale);
+  assert.equal(searchPages(spec, "Wiki", "en-US").length, Object.keys(locale).length);
   assert.equal(readPage(spec, "not-found").id, "system/404");
   assert.deepEqual(
     describeLevels(spec).map(({ levelId }) => levelId),
@@ -214,7 +213,8 @@ test("strict YAML, duplicate scope IDs, locales and cyclic prerequisites fail be
   const bad = fixture();
   const config = manifest();
   const duplicated = structuredClone(config);
-  const first = duplicated.levels[0]!;
+  const first = duplicated.levels[0];
+  assert.ok(first);
   bad.texts.set(
     objectiveId,
     JSON.stringify({

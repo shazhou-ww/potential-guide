@@ -252,7 +252,8 @@ export function launchCommand(command: Command, load: () => Promise<Handler>): v
         showCommandHelp(command, globals);
         return;
       }
-      return (await load())(argv, globals);
+      const run = await load();
+      return (await run(argv, globals)) ?? undefined;
     },
   );
 }

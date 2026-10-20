@@ -33,7 +33,10 @@ async function loadStaticPilot(path: string) {
   }
 }
 
-export async function runProbe(argv: string[], globals: GlobalOptions): Promise<number | void> {
+export async function runProbe(
+  argv: string[],
+  globals: GlobalOptions,
+): Promise<number | undefined> {
   if (globals.help) {
     showCommandHelp("probe", globals);
     return;
@@ -45,10 +48,6 @@ export async function runProbe(argv: string[], globals: GlobalOptions): Promise<
     "--revision": "value",
     "--report": "value",
   });
-  const subject = (await readJsonSubject(
-    option(argv, "--subject-file") as string | undefined,
-    globals.cwd,
-  )) as Subject;
   const language = option(argv, "--language") as string | undefined;
   const loaded = await loadConfig(globals.cwd, globals.config);
   const controller = new AbortController();
@@ -61,11 +60,17 @@ export async function runProbe(argv: string[], globals: GlobalOptions): Promise<
         resolveObjective(option(argv, "--pilot", { required: true }) as string, loaded.value),
         globals.cwd,
         option(argv, "--revision") as string | undefined,
-        (spec, runtime) =>
-          startEffect(
+        async (spec, runtime) => {
+          const subject = (await readJsonSubject(
+            option(argv, "--subject-file") as string | undefined,
+            globals.cwd,
+            spec.manifest.domainSchema,
+          )) as Subject;
+          return startEffect(
             observe({ spec, subject, ...(language === undefined ? {} : { language }) }, runtime),
             controller.signal,
-          ).await(),
+          ).await();
+        },
         { probeTimeoutMs: loaded.value.regulationStrategy?.probe?.timeoutMs },
       );
     } finally {

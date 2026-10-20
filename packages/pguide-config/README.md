@@ -36,6 +36,10 @@ duplicates in the selected scope, and update/remove require an entry in that
 scope. Registered Objectives merge by name, with project overriding user and explicit
 overriding project. Removing an override exposes a lower-scope entry if present.
 Listing returns effective names, locations and configuration sources.
+The default output shows each Objective in a separate block, with labeled
+`Location` and `Source` lines and full, untruncated paths or Git URIs.
+An empty registry prints `No registered Objectives.` Use `--format json` for
+machine-readable output; its schema is unchanged.
 
 `probe`, `regulate` and portfolio goal `pilot` fields accept registered names.
 Registration is optional: paths and Git URIs can still be used directly.

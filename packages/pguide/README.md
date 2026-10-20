@@ -46,6 +46,15 @@ Input must be exactly one JSON object, without a wrapper; empty input, arrays,
 scalars and malformed JSON fail explicitly. In an interactive terminal, provide
 a file or pipe JSON instead of waiting for terminal input. An explicit file
 continues to take precedence over piped input.
+When input is missing (an interactive terminal or empty input), both commands
+include subject input guidance with the selected Pilot's complete `domainSchema`
+as indented JSON. The schema describes required fields, types, nested objects,
+defaults and other constraints; it is not itself a subject to submit. Save a
+matching JSON object to `subject.json` and pass `--subject-file subject.json`, or
+pipe that object to stdin. `--format json` includes this information in a
+structured `guidance` field alongside the error. The command still exits with
+code 2 without running checks or starting an Agent. The Pilot must be loadable
+from its Git snapshot to provide schema guidance; source errors remain explicit.
 
 Register Objectives locally through the optional configuration command:
 

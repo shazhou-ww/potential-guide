@@ -93,12 +93,17 @@ export class Snapshot {
     if (!record(parsed)) throw new TypeError("Expected a JSON object.");
     return parsed;
   }
-  async files(directory = ""): Promise<string[]> {
+  async files(directory = "", includeBuildOutputs = false): Promise<string[]> {
     const results: string[] = [];
     for (const item of await readdir(await this.path(directory), { withFileTypes: true })) {
       const path = directory ? `${directory}/${item.name}` : item.name;
-      if (ignored.has(item.name) || item.isSymbolicLink()) continue;
-      if (item.isDirectory()) results.push(...(await this.files(path)));
+      if (
+        ignored.has(item.name) ||
+        (!includeBuildOutputs && item.isDirectory() && item.name === "dist") ||
+        item.isSymbolicLink()
+      )
+        continue;
+      if (item.isDirectory()) results.push(...(await this.files(path, includeBuildOutputs)));
       else if (item.isFile()) results.push(path);
       if (results.length > 20000)
         throw new Error("Inventory exceeds 20,000 files; narrow the target.");

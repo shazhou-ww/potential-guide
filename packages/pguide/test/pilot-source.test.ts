@@ -333,7 +333,11 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{id:
 `,
   );
   await repo.commit();
-  const primary = new CliError("Primary consumer failure.", 37, "primary-test-failure");
+  const guidance = {
+    instructions: "Provide a subject matching subjectSchema.",
+    subjectSchema: { type: "object", required: ["name"] },
+  };
+  const primary = new CliError("Primary consumer failure.", 37, "primary-test-failure", guidance);
   const cleanup = new Error("Injected cleanup failure.");
   const originalRm = filesystem.rm;
   let cache = "";
@@ -361,6 +365,7 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{id:
         assert.ok(error instanceof CliError);
         assert.equal(error.exitCode, 37);
         assert.equal(error.status, "primary-test-failure");
+        assert.deepEqual(error.guidance, guidance);
         assert.match(error.message, /Primary consumer failure/);
         assert.match(error.message, /Injected cleanup failure/);
         assert.ok(error.cause instanceof AggregateError);

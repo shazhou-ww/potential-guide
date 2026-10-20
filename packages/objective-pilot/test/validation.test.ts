@@ -100,9 +100,10 @@ test("subject snapshots and wiki pages are immutable; invalid projection fails b
 test("Wiki descriptions enforce exact Unicode codepoint limit across all declared languages", async () => {
   for (const size of [200, 201]) {
     const data = fixture();
-    const page = [...data.pages.values()][0]!.find(({ uri }) =>
-      uri.endsWith("system/overview/zh-CN.md"),
-    )!;
+    const pages = [...data.pages.values()][0];
+    assert.ok(pages);
+    const page = pages.find(({ uri }) => uri.endsWith("system/overview/zh-CN.md"));
+    assert.ok(page);
     page.source = `---\ntitle: Title\ndescription: ${JSON.stringify("😀".repeat(size))}\nreferences: []\n---\n`;
     if (size === 200) {
       assert.equal(
@@ -122,7 +123,9 @@ test("Wiki missing or dangling metadata, aliases and invalid frontmatter fail ex
     "---\ntitle: &title Title\ndescription: *title\n---\nBody",
   ]) {
     const data = fixture();
-    [...data.pages.values()][0]![0]!.source = source;
+    const page = [...data.pages.values()][0]?.[0];
+    assert.ok(page);
+    page.source = source;
     await assert.rejects(data.load());
   }
 });

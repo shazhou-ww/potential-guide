@@ -117,7 +117,14 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     writeResult(
       { schemaVersion: 1, objectives },
       globals.format,
-      objectives.map(({ name, location, source }) => `${name}\t${location}\t${source}`).join("\n"),
+      objectives.length === 0
+        ? "No registered Objectives."
+        : objectives
+            .map(
+              ({ name, location, source }) =>
+                `${name}\n  Location: ${location}\n  Source:   ${source}`,
+            )
+            .join("\n\n"),
     );
     return;
   }

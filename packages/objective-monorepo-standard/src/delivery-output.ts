@@ -22,7 +22,7 @@ export async function checkDeliveryOutput(
       "Delivery output is not covered by the entry package's Turbo build outputs.",
       "Align build and deployment output directories.",
     );
-  const outputFiles = await snapshot.files(outputDirectory).catch((error: unknown) => {
+  const outputFiles = await snapshot.files(outputDirectory, true).catch((error: unknown) => {
     if (record(error) && error.code === "ENOENT") return [];
     throw error;
   });

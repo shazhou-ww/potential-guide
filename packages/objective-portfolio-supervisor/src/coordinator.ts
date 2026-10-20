@@ -152,8 +152,9 @@ export async function createPortfolioCoordinator(
     if (events.length > 256) events.shift();
     publish();
     if (options.onEvent) {
+      const onEvent = options.onEvent;
       const pending = Promise.resolve()
-        .then(() => options.onEvent!(event))
+        .then(() => onEvent(event))
         .catch(failed);
       callbacks.add(pending);
       void pending.finally(() => callbacks.delete(pending));
@@ -281,6 +282,12 @@ export async function createPortfolioCoordinator(
       if (demand.priority !== 0) p0Arrivals.delete(key);
     }
   }
+  function arrival(demand: QueueDemand): number {
+    const order = (demand.priority === 0 ? p0Arrivals : arrivals).get(token(demand));
+    if (order === undefined)
+      throw new ObjectivePortfolioError(`Missing arrival order for demand: ${demand.id}.`);
+    return order;
+  }
   function drain() {
     if (closed || permissionInvalid) return;
     rememberArrivals();
@@ -296,13 +303,7 @@ export async function createPortfolioCoordinator(
           authorizationBlocked.get(demand.id) !== authorizationSignature(demand, permissions) &&
           ![...runs].some((run) => token(run.demand) === token(demand)),
       )
-      .sort(
-        (a, b) =>
-          a.priority - b.priority ||
-          (a.priority === 0
-            ? p0Arrivals.get(token(a))! - p0Arrivals.get(token(b))!
-            : arrivals.get(token(a))! - arrivals.get(token(b))!),
-      );
+      .sort((a, b) => a.priority - b.priority || arrival(a) - arrival(b));
     for (const demand of ordered) {
       const capable = resources.some((resource) => supports(resource, demand));
       if (!capable && !notifications.has(`capability:${token(demand)}`)) {

@@ -79,7 +79,12 @@ async function afterCleanup<T>(
         { cause: outcome.error },
       );
       if (outcome.error instanceof CliError) {
-        const error = new CliError(combined.message, outcome.error.exitCode, outcome.error.status);
+        const error = new CliError(
+          combined.message,
+          outcome.error.exitCode,
+          outcome.error.status,
+          outcome.error.guidance,
+        );
         error.cause = combined;
         throw error;
       }
@@ -193,7 +198,7 @@ async function bindPilot<T>(
             type Source = { snapshot: GitSnapshot; checkout: string };
             function checkoutPath(checkout: string, path: string): string {
               if (
-                path &&
+                path.length > 0 &&
                 path
                   .split("/")
                   .some((part) => !part || part === "." || part === ".." || /[\\:]/.test(part))

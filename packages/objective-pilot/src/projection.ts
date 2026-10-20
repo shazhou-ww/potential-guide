@@ -11,14 +11,14 @@ export const SUBJECT_PROJECTION_LIMITS = Object.freeze({
 });
 export class SubjectProjectionError extends TypeError {}
 
-interface Node {
-  type: string;
-  value?: unknown;
-  steps?: readonly Node[];
-  lhs?: Node | readonly (readonly [Node, Node])[];
-  rhs?: Node;
-  expressions?: readonly Node[];
-}
+type Node = { value?: unknown } & (
+  | { type: "string" | "number" | "value" | "name"; value: unknown }
+  | { type: "variable" }
+  | { type: "path"; steps: readonly Node[] }
+  | { type: "unary"; value: "{"; lhs: readonly (readonly [Node, Node])[] }
+  | { type: "unary"; value: "["; expressions: readonly Node[] }
+  | { type: "binary"; value: unknown; lhs: Node; rhs: Node }
+);
 
 export function compileSubjectProjection(expression: string): (subject: Subject) => unknown {
   if (Buffer.byteLength(expression) > SUBJECT_PROJECTION_LIMITS.expressionBytes) {
@@ -117,7 +117,7 @@ export function compileSubjectProjection(expression: string): (subject: Subject)
             : undefined;
         case "path": {
           let result = input;
-          for (const step of node.steps!) {
+          for (const step of node.steps) {
             if (Array.isArray(result)) {
               const values: unknown[] = result.flatMap((item) => {
                 const value = evaluate(step, item);
@@ -130,7 +130,7 @@ export function compileSubjectProjection(expression: string): (subject: Subject)
         }
         case "unary": {
           if (node.value === "[")
-            return node.expressions!.flatMap((entry) => {
+            return node.expressions.flatMap((entry) => {
               const value = evaluate(entry, input);
               return value === undefined
                 ? []
@@ -156,8 +156,8 @@ export function compileSubjectProjection(expression: string): (subject: Subject)
           const lhs = node.lhs;
           if (lhs === undefined || Array.isArray(lhs))
             throw new SubjectProjectionError("Invalid binary projection.");
-          const left = evaluate(lhs as Node, input);
-          const right = evaluate(node.rhs!, input);
+          const left = evaluate(lhs, input);
+          const right = evaluate(node.rhs, input);
           if (node.value === "&") {
             if (typeof left !== "string" || typeof right !== "string")
               throw new SubjectProjectionError("Concatenation requires strings.");

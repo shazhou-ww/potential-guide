@@ -156,7 +156,9 @@ export function parseManifest(source: string): PilotManifest {
     });
     return { id: entry.id, advancement: { checks } };
   });
-  const first = levels[0]!;
+  const first = levels[0];
+  if (first === undefined)
+    throw new ObjectiveConfigurationError("Manifest must contain at least one level.");
   if (new Set(levels.map(({ id }) => id)).size !== levels.length) {
     throw new ObjectiveConfigurationError("Duplicate level ID.");
   }
@@ -231,16 +233,17 @@ export function validateSubject(
   validate: ValidateFunction,
 ): ValidationIssues | null {
   if (!record(subject) || !json(subject) || !validate(subject)) {
-    const issues = (
-      validate.errors ?? [
-        { instancePath: "", keyword: "type", message: "Subject must be a JSON object." },
-      ]
-    ).map(({ instancePath = "", keyword, message = "Validation failed." }) => ({
-      instancePath,
-      keyword,
-      message,
-    }));
-    return [issues[0]!, ...issues.slice(1)];
+    const [
+      first = { instancePath: "", keyword: "type", message: "Subject must be a JSON object." },
+      ...remaining
+    ] = (validate.errors ?? []).map(
+      ({ instancePath = "", keyword, message = "Validation failed." }) => ({
+        instancePath,
+        keyword,
+        message,
+      }),
+    );
+    return [first, ...remaining];
   }
   return null;
 }

@@ -111,9 +111,9 @@ export const fileResources: ResourceResolver = {
 function parsePage(resource: PageResource, id: string): ReferencePage {
   const normalized = resource.source.replace(/\r\n/g, "\n");
   const match = /^---\n([\s\S]*?)\n---(?:\n([\s\S]*))?$/.exec(normalized);
-  if (match === null)
+  if (match === null || match[1] === undefined)
     throw new ObjectiveConfigurationError(`Reference page needs frontmatter: ${resource.uri}.`);
-  const metadata: unknown = parseStrictYaml(match[1]!);
+  const metadata: unknown = parseStrictYaml(match[1]);
   if (!record(metadata))
     throw new ObjectiveConfigurationError(`Invalid page metadata: ${resource.uri}.`);
   fields(metadata, ["title", "description"], ["references"]);
@@ -168,13 +168,13 @@ export function validateReferences(
     if (!uri.startsWith(root))
       throw new ObjectiveConfigurationError(`Reference escapes source: ${uri}.`);
     const parts = decodeURIComponent(uri.slice(root.length)).split("/");
-    if (![3, 5, 7].includes(parts.length) || !parts.at(-1)!.endsWith(".md")) {
+    const file = parts.at(-1);
+    if (![3, 5, 7].includes(parts.length) || file === undefined || !file.endsWith(".md")) {
       throw new ObjectiveConfigurationError(
         `References require <namespace>/<id>/<language>.md: ${uri}.`,
       );
     }
     const [namespace, localId] = parts as [string, string, ...string[]];
-    const file = parts.at(-1)!;
     const language = file.slice(0, -3);
     if (
       !["system", "levels", "checks", "problems", "pages"].includes(namespace) ||
@@ -202,7 +202,8 @@ export function validateReferences(
         namespace !== "levels" ||
         parts[2] !== "checks" ||
         check === undefined ||
-        (parts.length === 7 && (parts[4] !== "problems" || !check.problems.includes(parts[5]!)))
+        (parts.length === 7 &&
+          (parts[4] !== "problems" || parts[5] === undefined || !check.problems.includes(parts[5])))
       ) {
         throw new ObjectiveConfigurationError(`Invalid scoped Reference identity: ${uri}.`);
       }
@@ -259,7 +260,7 @@ export function validateReferences(
           );
       }
       for (const match of page.content.matchAll(/\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g)) {
-        if (!nodes.has(match[1]!))
+        if (match[1] === undefined || !nodes.has(match[1]))
           throw new ObjectiveConfigurationError(`Dangling References link: ${match[1]}.`);
       }
     }
@@ -267,7 +268,14 @@ export function validateReferences(
     manifest.languages.map((language) => [
       language,
       {
-        pages: new Map([...nodes].map(([id, locales]) => [id, locales.get(language)!])),
+        pages: new Map(
+          [...nodes].map(([id, locales]) => {
+            const page = locales.get(language);
+            if (page === undefined)
+              throw new ObjectiveConfigurationError(`Reference must cover every language: ${id}.`);
+            return [id, page];
+          }),
+        ),
       },
     ]),
   );
