@@ -219,7 +219,46 @@ observeOwnLevels 仍执行当前层的全部 checks，聚合问题，在首个�
 ownerOf (current observation) == rootObjective input
 ```
 
-例如 A 的 publish check 根据环境输入观察 B，发现 B 尚未 ready，就返回 DependencyCheckProblem。这不使 A 的 current 变成 B，也不强制 A 从第一层就等待 B。
+例如 A 的 publish probe 根据环境输入调用独立 check 命令检查 B 是否 ready：命令先返回 false，probe 再将同次报告转换为 DependencyCheckProblem。命令自身不生成 problem。这不使 A 的 current 变成 B，也不强制 A 从第一层就等待 B。
+
+### 3.2.1 独立命令判断，probe 转换结果
+
+```haskell
+data Target = Target ObjectiveId Subject LevelId
+
+data LevelCheck = LevelCheck
+  { passed   :: Bool
+  , evidence :: LevelEvidence
+  }
+
+checkObjective
+  :: CheckRuntime
+  -> Target
+  -> Effect CheckError LevelCheck
+
+checkObjective runtime target = do
+  observation <- observeTargetOrFail runtime target
+  pure (LevelCheck
+    (reachesExpected target observation)
+    (levelEvidence target observation))
+
+probeDependency
+  :: CheckRuntime
+  -> Target
+  -> Effect CheckError CheckResult
+
+probeDependency runtime target = do
+  result <- checkObjective runtime target
+  validateEvidence target result
+  contributeVersions (evidence result)
+  if passed result
+    then pure CheckPassed
+    else pure (CheckBlocked
+      (DependencyCheckProblem
+        (dependencyFrom (evidence result)) :| []))
+```
+
+checkObjective 的业务判定是 Bool；LevelCheck 保留同一次观察的证据，供进程命令通过 report 传递。CLI 的 stdout 只有 true/false，依赖 probe 是唯一构造依赖 problem 的转换边界。错误在 Effect 中传播，不折叠为 false；一条命令可独立使用，也可由 level 的一个或多个 probe 组合使用，见 [命令契约](./Check-command.md)。
 
 ### 3.3 Regulator：通过问题类型决定交接
 

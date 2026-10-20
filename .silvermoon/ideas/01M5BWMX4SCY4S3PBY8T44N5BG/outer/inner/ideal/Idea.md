@@ -6,7 +6,7 @@
 
 ## 结果
 
-Observation 始终描述当前 Objective；problem 分为内部问题与统一格式的外部依赖问题。Regulator 遇到依赖即正常结束本次治理，由 Supervisor 调度外部目标，满足后重新观察当前目标。
+Observation 始终描述当前 Objective；独立 check 命令判断外部目标是否达到预期层级，probe 将 false 转为依赖问题。Regulator 遇到依赖即交接 Supervisor，满足后重新观察当前目标。
 
 ## 边界
 
@@ -23,5 +23,6 @@ Observation 始终描述当前 Objective；problem 分为内部问题与统一�
 ## 支持文档
 
 - [具体模型与治理闭环](./Dependency-design.md)
+- [独立 check 命令与 probe 结果转换](./Check-command.md)
 - [Haskell 伪代码：协议与 Behavior 的 Before / After](./Protocol-before-after.md)
 - [修改范围、迁移方式与验证矩阵](./Change-map.md)

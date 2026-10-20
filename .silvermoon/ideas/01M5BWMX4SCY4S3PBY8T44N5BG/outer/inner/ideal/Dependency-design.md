@@ -86,7 +86,9 @@ gapSummary 对内部问题使用现有引用页；依赖问题采用本地化统
 
 ## 3. 发现依赖与来源证据
 
-静态已知与运行期发现的依赖使用相同协议：check 执行到相关层级时，根据当前输入决定是否观察外部 Objective。入口依赖可写成第一层的 check，中间依赖写在实际需要它的层级。subject 投影属于具体 check 逻辑，可复用现有工具，不再需要 prerequisite 专用配置。
+静态已知与运行期发现的依赖使用相同协议：相关层级的 probe 调用独立、可复用的 `pguide check` 命令，判断外部目标是否达到 expected level。命令先得到 true/false，probe 再将 false 转为统一的 DependencyProblem；命令自身不生成 problem。具体契约见 [check 命令与 probe](./Check-command.md)。
+
+入口依赖可写成第一层的 check，中间依赖写在实际需要它的层级。一个 level 可配置一个依赖 probe，也可拆成多个分别调用命令；每次命令判断一个外部目标实例。subject 投影属于具体检查组合逻辑，可复用现有工具，不再需要 prerequisite 专用配置。
 
 检查应复用外部 Pilot 观察，而不是根据 Agent 自报或命令退出码推测层级。目标达标不产生依赖问题；目标未达标才产生 DependencyProblem。外部 B 自己被 C 阻塞时，A 的问题仍指向 B，currentLevelId 仍是 B 自身层级；C 由之后治理 B 时交接。
 
@@ -94,14 +96,15 @@ gapSummary 对内部问题使用现有引用页；依赖问题采用本地化统
 
 删除静态加载链后，必须显式补齐动态解析，不能假设外部规范及 probes 已加载：
 
-- Pilot 的来源适配层提供受控的外部观察接口，输入目标、subject、预期层级，输出经过校验的观察和版本证据。
-- 保留 memory/HTTP/process 的统一 envelope；process stdin 继续只有 subject，不将内部运行时对象混入 subject。
-- 各适配器必须接通外部观察与证据通道；原始 dependency payload 不能只做形状校验就视为可信状态。
+- check 命令复用受控来源解析和 Pilot.observe，一次观察同时得到布尔值和证据；probe 使用命令本次生成的结构化 report，不在 false 后重新观察。
+- 通用 memory/HTTP/process probe 仍消费统一 envelope，不将 stdout 裸布尔值直接传给 parseCheckEnvelope；专用依赖 probe 在此之前完成命令执行和结果转换。
+- process stdin 继续只有 subject；命令使用 probe 分配的 report 路径传递证据，适配层将该次调用的版本贡献合并入观察上下文，不将内部运行时对象混入 subject。
+- 其他传输若承载依赖结果，同样必须提供与本次调用关联的可信证据；不能只因 dependency payload 形状合法就接受状态。
 - versions 记录当前 Objective 与本次实际观察的所有外部 Objective 的精确提交；同 ID 冲突版本明确失败。
 - 复用观察级 versions，不给每个 dependency 重复携带完整 PilotSpec 或提交字段。
 - Supervisor 根据交接 observation 的版本表解析目标，不重新使用可变 HEAD；目标与 subject 校验失败明确暴露。
 
-外部观察辅助接口与 HTTP/process 证据传递属于必做实现点。其具体传输应沿用已有来源与探针设施，在实现阶段确定并用集成测试证明；不以提前加载静态 prerequisite 链兜底，也不要求本轮另建通用服务框架。
+实现复用现有来源绑定、`--report` 写出模式及进程清理设施，抽取共享进程执行逻辑供专用依赖 probe 使用，不另建通用服务框架。command/report/probe 的端到端关联与版本贡献合并属于必做验证点，不以静态 prerequisite 链兜底。
 
 同一观察作用域内固定来源快照、共享截止时间并传递 AbortSignal。递归观察以 Objective ID + canonical subject 检测调用栈重入；限制深度和总预算，错误明确可诊断。
 
