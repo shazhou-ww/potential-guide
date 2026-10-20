@@ -295,7 +295,7 @@ test("show-agent rejects secret-bearing transport arguments without echoing them
   }
 });
 
-test("config editor and Agent commands normalize legacy ACP and preserve AHP profiles", async () => {
+test("config editor rejects embedded Agents and retired Agent commands give actionable guidance", async () => {
   const cwd = await mkdtemp(join(scratch, "pguide-config-ahp-"));
   try {
     const editor = join(cwd, "editor.mjs");
@@ -324,27 +324,24 @@ test("config editor and Agent commands normalize legacy ACP and preserve AHP pro
         },
       }),
     });
-    assert.equal(edited.code, 0, edited.stdout);
+    assert.equal(edited.code, 2, edited.stdout);
+    assert.match(edited.stdout, /pguide agents migrate/);
     const list = await run(["list-agents", "--cwd", cwd, "--format", "json"]);
-    assert.deepEqual(
-      JSON.parse(list.stdout)
-        .agents.filter(({ name }: { name: string }) => ["legacy", "remote"].includes(name))
-        .map(({ type }: { type: string }) => type),
-      ["acp", "ahp"],
-    );
+    assert.equal(list.code, 2, list.stdout);
+    assert.match(list.stdout, /pguide agents/);
     const shown = await run(["show-agent", "remote", "--cwd", cwd, "--format", "json"]);
-    assert.deepEqual(JSON.parse(shown.stdout).profile, ahp);
+    assert.equal(shown.code, 2, shown.stdout);
     const legacy = await run(["show-agent", "legacy", "--cwd", cwd, "--format", "json"]);
-    assert.equal(JSON.parse(legacy.stdout).profile.type, "acp");
-    assert.equal(JSON.parse(legacy.stdout).profile.connection.type, undefined);
+    assert.equal(legacy.code, 2, legacy.stdout);
     const source = join(cwd, "profile.json");
     await writeFile(source, JSON.stringify(ahp));
-    assert.equal((await run(["add-agent", "added", source, "--cwd", cwd])).code, 0);
+    assert.equal((await run(["add-agent", "added", source, "--cwd", cwd])).code, 2);
     const updated = { ...ahp, connection: { ...ahp.connection, agent: "another-provider" } };
     await writeFile(source, JSON.stringify(updated));
-    assert.equal((await run(["update-agent", "added", source, "--cwd", cwd])).code, 0);
+    assert.equal((await run(["update-agent", "added", source, "--cwd", cwd])).code, 2);
     const actual = await run(["show-agent", "added", "--cwd", cwd, "--format", "json"]);
-    assert.deepEqual(JSON.parse(actual.stdout).profile, updated);
+    assert.equal(actual.code, 2, actual.stdout);
+    await assert.rejects(readFile(join(cwd, ".pguide", "config.yaml")), { code: "ENOENT" });
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

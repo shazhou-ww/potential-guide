@@ -22,6 +22,7 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@potential-guide/pguide-agents": "workspace:^",
     "@potential-guide/cli-core": "workspace:^",
     "@potential-guide/pguide-pilot": "workspace:^",
     "@potential-guide/pguide-config": "workspace:^",

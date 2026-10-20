@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { cp, lstat, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { basename, delimiter, dirname, join } from "node:path";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
@@ -12,7 +11,7 @@ import {
   fileResources,
   loadPilotSpec,
 } from "@potential-guide/objective-pilot";
-import { bin, fixture, git, root, run } from "../../pguide/test/fixtures.js";
+import { bin, fixture, git, root, run, writeConfig } from "../../pguide/test/fixtures.js";
 
 const objective = join(root, "packages", "objective-pguide-setup");
 const helper = join(objective, "setup-check.mjs");
@@ -27,7 +26,7 @@ interface CheckEnvelope {
 test("ACP-only setup reports an AHP selection as unsupported without starting an Agent", async () => {
   const f = await setup();
   try {
-    await writeFile(
+    await writeConfig(
       f.subject.configPath,
       JSON.stringify({
         ...f.config,
@@ -39,6 +38,7 @@ test("ACP-only setup reports an AHP selection as unsupported without starting an
           },
         },
       }),
+      f.work,
     );
     const envelope = await f.direct("configuration");
     assert.equal(envelope.status, 200);
@@ -51,10 +51,9 @@ test("ACP-only setup reports an AHP selection as unsupported without starting an
 });
 
 async function setup(mode = "fix") {
-  // Cold nested Git caches need path headroom on Windows worktree checkouts.
-  const f = await fixture(process.platform === "win32" ? tmpdir() : undefined);
+  const f = await fixture(join(root, ".cache"), "s-");
   const work = join(f.directory, "work");
-  const scratch = join(f.directory, "setup-scratch");
+  const scratch = join(f.directory, "s");
   const home = join(f.directory, "home");
   await mkdir(work);
   await mkdir(scratch);
@@ -63,6 +62,7 @@ async function setup(mode = "fix") {
   await mkdir(commands);
   for (const [name, script] of Object.entries({
     config: join(root, "packages", "pguide-config", "dist", "bin.js"),
+    agents: join(root, "packages", "pguide-agents", "dist", "bin.js"),
     probe: bin("probe"),
     regulate: bin("regulate"),
   })) {
@@ -144,7 +144,7 @@ for await (const line of createInterface({input:process.stdin})) {
       },
     },
   };
-  await writeFile(configPath, JSON.stringify(config));
+  await writeConfig(configPath, JSON.stringify(config), work);
   const subject = {
     workingDirectory: work,
     configPath,
@@ -203,7 +203,7 @@ for await (const line of createInterface({input:process.stdin})) {
     return envelope;
   }
   async function updateConfig() {
-    await writeFile(configPath, JSON.stringify(config));
+    await writeConfig(configPath, JSON.stringify(config), work);
   }
   return {
     ...f,
@@ -724,7 +724,7 @@ for (const mode of ["noop", "wrong", "fix"]) {
         .map((line) => JSON.parse(line));
       assert.equal(messages.filter(({ method }) => method === "session/prompt").length, 1);
       assert.equal(await readFile(f.subject.configPath, "utf8"), original);
-      assert.deepEqual(await readdir(f.work), []);
+      assert.deepEqual(await readdir(f.work), [".pguide"]);
     } finally {
       await rm(f.directory, { recursive: true, force: true });
     }
@@ -932,7 +932,7 @@ try { await main(undefined, {signal: controller.signal}); } finally { clearInter
     assert.equal(entries.filter(({ method }) => method === "session/prompt").length, 1);
     for (const { pid } of entries) assert.throws(() => process.kill(pid, 0));
     assert.equal(await readFile(f.subject.configPath, "utf8"), original);
-    assert.deepEqual(await readdir(f.work), []);
+    assert.deepEqual(await readdir(f.work), [".pguide"]);
   } finally {
     await rm(f.directory, { recursive: true, force: true });
   }
@@ -945,7 +945,7 @@ test("Git subdirectory snapshot coordinates long local budgets and existing file
     f.config.agents.fixture.transport.env = ["USERPROFILE"];
     await f.updateConfig();
     const writeProbeConfig = () =>
-      writeFile(
+      writeConfig(
         f.subject.configPath,
         JSON.stringify({
           ...f.config,
@@ -953,6 +953,7 @@ test("Git subdirectory snapshot coordinates long local budgets and existing file
             probe: { timeoutMs: 75000, retry: { maxRetries: 0, delayMs: 0 } },
           },
         }),
+        f.work,
       );
     await writeProbeConfig();
     await cp(objective, join(f.repository, "packages", "objective-pguide-setup"), {
@@ -1206,7 +1207,7 @@ test("self-check repair session enforces readiness without starting a second Age
   ]) {
     const f = await setup(mode);
     try {
-      await writeFile(
+      await writeConfig(
         f.subject.configPath,
         JSON.stringify({
           ...f.config,
@@ -1214,6 +1215,7 @@ test("self-check repair session enforces readiness without starting a second Age
             fixture: { ...f.config.agents.fixture, requirements: { sessionResume: true } },
           },
         }),
+        f.work,
       );
       const result = await f.direct("sanity", selfSubject(f), selfHelper);
       isProblem(result, "acp-unavailable");
@@ -1347,9 +1349,10 @@ test("self-check bounded timeout cleans owned task/state and preserves unrelated
 test("self-check preserves a shorter configured Agent execution timeout", async () => {
   const f = await setup("prompt-timeout");
   try {
-    await writeFile(
+    await writeConfig(
       f.subject.configPath,
       JSON.stringify({ ...f.config, agentExecutionLimits: { timeoutMs: 500 } }),
+      f.work,
     );
     const result = await f.direct("sanity", selfSubject(f), selfHelper);
     assert.equal(result.status, 504);
@@ -1378,7 +1381,7 @@ test("self-check committed snapshots coordinate default and explicit long budget
       const revision = await git(f.repository, "rev-parse", "HEAD");
       const uri = `git+${pathToFileURL(f.repository).href}#packages/objective-pguide-self-check/`;
       if (extended)
-        await writeFile(
+        await writeConfig(
           f.subject.configPath,
           JSON.stringify({
             ...f.config,
@@ -1386,6 +1389,7 @@ test("self-check committed snapshots coordinate default and explicit long budget
               probe: { timeoutMs: 90000, retry: { maxRetries: 0, delayMs: 0 } },
             },
           }),
+          f.work,
         );
       await writeFile(
         f.subjectFile,

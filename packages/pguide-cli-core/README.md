@@ -3,6 +3,12 @@
 Shared configuration, command protocol, atomic persistence, and ACP/AHP clients used
 by the `pguide` command packages. This package is an implementation component;
 most users should install `pguide` and the desired command packages instead.
+Agent profiles are loaded from independent user/project `agents.yaml` resources,
+not `PguideConfig`. `loadConfig().agents` exposes the effective whole-profile map,
+source scopes and paths; explicit main config overlays never create a third
+Agent scope. `parseAgents` validates offline, normalizes ACP and rejects unknown
+schema URIs. The public schema is exported at
+`@potential-guide/cli-core/schemas/agents/v1.json`.
 Agent profiles inherit credentials only by environment-variable name; common
 secret-bearing transport arguments are rejected before profiles can be shown
 or persisted. Configuration uses `schemaVersion: 2`. Optional

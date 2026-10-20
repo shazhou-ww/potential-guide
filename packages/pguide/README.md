@@ -312,12 +312,32 @@ agentExecutionLimits:
 regulationStrategy:
   quota: { timeoutMs: 300000, maxAgentRuns: 10, maxStallRuns: 3 }
   probe: { timeoutMs: 30000, retry: { maxRetries: 0, delayMs: 0 } }
+```
+
+Agent definitions live separately in `agents.yaml` beside the user or project
+main config, not inside it:
+
+```yaml
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json
 agents:
   fixture:
     type: acp
     connection: { protocolVersion: "1" }
     transport: { type: stdio, command: your-acp-agent }
 ```
+
+Manage them with `pguide agents list|show|set|remove|edit|validate|path|migrate`.
+Writes require `--scope user|project`; `set <name> --from profile.yaml` replaces
+the entire selected profile. Project profiles override whole same-name user
+profiles, never deep-merge. Reads expose scope and source path. `--config` still
+selects an ordinary main config overlay, **not** a third Agent resource scope.
+Embedded `agents` are explicitly rejected: run
+`pguide agents migrate --scope user` or `--scope project`. Migration retains an
+exact private source backup, preserves comments and unrelated/unknown settings,
+and refuses malformed input or conflicting destination names. See the
+[Agent resource manager](../pguide-agents/README.md) for write safety and recovery.
+The schema is bundled offline in `@potential-guide/cli-core/schemas/agents/v1.json`;
+runtime validation never fetches schema URLs.
 
 Version 1 configuration and recovery records are **incompatible** and rejected
 explicitly. Replace `--guide` with `--pilot`, `scaffold guide`/`validate guide`
@@ -452,7 +472,8 @@ protocol-specific settings, while `transport.type` independently selects the
 transport. The old ACP shape `connection: { type: acp, protocolVersion: "1" }`
 with a valid stdio transport is still readable, including in schema 2 recovery
 records. It is normalized to the top-level form when loaded, edited or saved.
-Schema 2 is retained: no migration is required for legal existing ACP profiles.
+Recovery schema 2 is retained. Embedded main-config profiles require explicit
+resource migration even when their ACP profile shape is legal.
 Mixed new/old discriminants, missing protocol selectors, and ACP/AHP field
 combinations are rejected, not silently defaulted. `--agent` and `defaultAgent`
 always select the local profile, not a Host product.
@@ -466,8 +487,7 @@ a different negotiated value fails explicitly. No Host/version combination
 is claimed as real-world verified by the automated tests.
 
 ```yaml
-schemaVersion: 2
-defaultAgent: repair
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json
 agents:
   repair:
     type: ahp
@@ -484,6 +504,8 @@ agents:
     requirements:
       sessionResume: true
 ```
+
+This is `agents.yaml`; set `defaultAgent: repair` in the main `config.yaml`.
 
 Replace the address, version and provider with explicitly authorized Host
 settings. The adapter does not discover endpoints, start a Host, connect to
@@ -676,7 +698,7 @@ final queue, observations, and the latest 1000 coordinator events.
 
 The command packages provide independent `pguide-probe`, `pguide-regulate`,
 `pguide-continue`, `pguide-supervise`, `pguide-scaffold`, and `pguide-validate`
-executables. The default `@potential-guide/pguide-config` dependency provides
-`pguide-config`; `diagnose` and `complete` are built in. Executable discovery
+executables. Default management dependencies provide `pguide-config`,
+`pguide-agents` and `pguide-objectives`; `diagnose` and `complete` are built in. Executable discovery
 uses `pguide-command-v1` metadata and preserves argument boundaries without
 shell interpretation.

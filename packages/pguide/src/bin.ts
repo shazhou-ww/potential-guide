@@ -105,6 +105,7 @@ async function discover(
     scaffold: "@potential-guide/pguide-pilot/bin/scaffold",
     validate: "@potential-guide/pguide-pilot/bin/validate",
     config: "@potential-guide/pguide-config/bin/config",
+    agents: "@potential-guide/pguide-agents/bin/agents",
     objectives: "@potential-guide/pguide-objectives/bin/objectives",
   })) {
     if (commands.some((entry) => entry.command === command) || Object.hasOwn(conflicts, command))
@@ -343,11 +344,12 @@ async function diagnose(argv: string[], globals: GlobalOptions): Promise<number>
   let agent: Record<string, unknown> | undefined;
   if (agentIndex >= 0) {
     const name = argv[agentIndex + 1];
-    const profile = name === undefined ? undefined : config.value.agents?.[name];
+    const profile = name === undefined ? undefined : config.agents.agents[name];
     if (profile === undefined) throw new CliError(`Unknown Agent profile: ${name ?? ""}.`);
     if (profile.type === "ahp") {
       agent = {
         name,
+        source: name === undefined ? undefined : config.agents.sources[name],
         type: profile.type,
         initialize: await inspectAhp(
           profile,
@@ -359,6 +361,7 @@ async function diagnose(argv: string[], globals: GlobalOptions): Promise<number>
       try {
         agent = {
           name,
+          source: name === undefined ? undefined : config.agents.sources[name],
           type: profile.type,
           initialize: await client.initialize(profile.connection.protocolVersion),
         };
@@ -416,11 +419,11 @@ function complete(argv: string[], globals: GlobalOptions): void {
   }
   const shell = (option(argv, "--shell") as string | undefined) ?? "bash";
   const scripts: Record<string, string> = {
-    bash: 'complete -W "probe regulate continue supervise scaffold validate config diagnose complete" pguide',
-    zsh: '#compdef pguide\n_arguments "1:command:(probe regulate continue supervise scaffold validate config diagnose complete)"',
-    fish: "complete -c pguide -f -a 'probe regulate continue supervise scaffold validate config diagnose complete'",
+    bash: 'complete -W "probe regulate continue supervise scaffold validate config agents objectives diagnose complete" pguide',
+    zsh: '#compdef pguide\n_arguments "1:command:(probe regulate continue supervise scaffold validate config agents objectives diagnose complete)"',
+    fish: "complete -c pguide -f -a 'probe regulate continue supervise scaffold validate config agents objectives diagnose complete'",
     powershell:
-      "Register-ArgumentCompleter -Native -CommandName pguide -ScriptBlock { param($wordToComplete) 'probe','regulate','continue','supervise','scaffold','validate','config','diagnose','complete' | Where-Object { $_ -like \"$wordToComplete*\" } }",
+      "Register-ArgumentCompleter -Native -CommandName pguide -ScriptBlock { param($wordToComplete) 'probe','regulate','continue','supervise','scaffold','validate','config','agents','objectives','diagnose','complete' | Where-Object { $_ -like \"$wordToComplete*\" } }",
   };
   const script = scripts[shell];
   if (script === undefined) throw new CliError("Unsupported shell.");
@@ -466,6 +469,19 @@ async function main(): Promise<number> {
     if (command === "complete") {
       complete(rest.slice(1), globals);
       return 0;
+    }
+    // Resource repair/migration must remain available when the main config still
+    // contains retired embedded profiles or the resource itself needs repair.
+    if (command === "agents" && (rest[1] === "migrate" || rest[1] === "path" || globals.help)) {
+      return await dispatch(
+        {
+          command: "agents",
+          path: fileURLToPath(import.meta.resolve("@potential-guide/pguide-agents/bin/agents")),
+          source: "bundled",
+        },
+        rest.slice(1),
+        globals,
+      );
     }
     if (!commandPattern.test(command)) throw new CliError(`Invalid command name: ${command}.`);
     const found = await discover(globals);

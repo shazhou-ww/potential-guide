@@ -62,12 +62,7 @@ export async function check(stage, value, options = {}) {
     if (probeDirectory !== undefined && !isAbsolute(probeDirectory))
       throw new Fault("outer-timeout: invalid PGUIDE_PROBE_TEMP_DIR runtime metadata.", 400);
     // Nested Git caches also create directories; keep Windows path headroom inside the probe.
-    directory = await mkdtemp(
-      join(
-        probeDirectory ?? subject.scratchDirectory,
-        probeDirectory === undefined ? "pguide-setup-" : "s-",
-      ),
-    );
+    directory = await mkdtemp(join(probeDirectory ?? subject.scratchDirectory, "s-"));
     const context = executionContext(
       subject,
       directory,

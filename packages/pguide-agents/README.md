@@ -1,0 +1,51 @@
+# @potential-guide/pguide-agents
+
+Independent Agent resources and management for pguide. Installed with `pguide`,
+or install this package to expose `pguide-agents`.
+
+`pguide agents list|show|set|remove|edit|validate|path|migrate` manages two scopes:
+`user` and `project`. Writes require `--scope`. Files are `agents.yaml` beside
+the corresponding `config.yaml`; a project resource can exist without a main
+config. Discovery uses the nearest existing project main config directory; if
+there is no project main config, it uses the nearest existing project Agent
+resource, or `--cwd\.pguide` for a new resource. An explicit main config does
+not affect that discovery.
+Project profiles replace same-name user profiles completely; no protocol fields
+are deep-merged. Read commands show the selected scope and path. `--config`
+continues to select a main config only, not an extra Agent scope.
+
+```yaml
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json
+agents:
+  local:
+    type: acp
+    connection: { protocolVersion: "1" }
+    transport: { type: stdio, command: my-agent, env: [AGENT_TOKEN] }
+```
+
+Use `pguide agents set local --from profile.yaml --scope project` to replace a
+whole profile. `profile.yaml` contains the profile, not the file wrapper.
+`defaultAgent: local` remains in the YAML main config. ACP and AHP profiles use
+the same offline validator as regulation and supervision. Unknown schema URIs
+are rejected without network access. Values must reference credentials through
+environment names, never embed credentials.
+
+Old embedded main-config `agents` are rejected. Run
+`pguide agents migrate --scope user` or `--scope project` explicitly. An optional
+`--legacy-config <path>` must refer to the main file beside the selected resource.
+Migration validates all profiles, rejects destination name conflicts, keeps an
+exact private `.agents-migration.<id>.bak` source backup, and removes only the
+YAML `agents` node, preserving other fields and comments. Unknown main-config
+fields are preserved, not silently accepted by the runtime.
+
+Writes use private files, cooperative exclusive locks, atomic replacement and
+snapshot checks. Malformed existing resources are never overwritten. Editor
+changes are validated in a separate draft; concurrent changes cancel the write.
+Inspect interrupted `.lock` files before manually removing them. Migration
+rollback restores the destination on source-write failure while the original
+source remains unchanged. If the source has already committed or another writer
+changed it, the validated destination is retained to prevent profile loss; inspect
+both files and the backup before retrying. The retained source backup
+also supplies crash-recovery evidence. This is not a distributed multi-file
+transaction: after abrupt process termination, inspect both endpoints and the
+backup before retrying. No operation grants permissions or changes trust ceilings.

@@ -6,7 +6,7 @@
 | --- | --- |
 | Protocol | `@potential-guide/effects`, `@potential-guide/pilot-protocol` |
 | Business logic | `@potential-guide/objective-pilot`, `@potential-guide/objective-regulator`, `@potential-guide/objective-portfolio-supervisor` |
-| Tools | `pguide`, `@potential-guide/cli-core`, `@potential-guide/pguide-config`, `@potential-guide/cli-runtime`, `@potential-guide/objective-declarations`, `@potential-guide/pguide-pilot`, `@potential-guide/pguide-regulate`, `@potential-guide/pguide-supervise`, `@potential-guide/pguide-objectives` |
+| Tools | `pguide`, `@potential-guide/cli-core`, `@potential-guide/pguide-config`, `@potential-guide/pguide-agents`, `@potential-guide/cli-runtime`, `@potential-guide/objective-declarations`, `@potential-guide/pguide-pilot`, `@potential-guide/pguide-regulate`, `@potential-guide/pguide-supervise`, `@potential-guide/pguide-objectives` |
 
 Allowed dependencies point downwards, or stay within a layer. Tools can consume
 protocol directly. Same-layer dependencies are permitted, not special exceptions;
@@ -55,6 +55,7 @@ binary and `config` metadata remain unchanged.
 | `@potential-guide/pguide-supervise` | `supervise` / `pguide-supervise` |
 | `@potential-guide/pguide-objectives` | `objectives` / `pguide-objectives` |
 | `@potential-guide/pguide-config` | `config` / `pguide-config` |
+| `@potential-guide/pguide-agents` | `agents` / `pguide-agents` |
 
 Pilot authoring, validation and observation share source/definition conventions.
 Regulation and continuation share persisted state and Agent execution. These
@@ -62,7 +63,7 @@ closely cooperating commands ship together; supervision remains optional.
 Declaration management is included by default so aliases can be managed alongside probing.
 
 `pguide` ships only its own entrypoint bin, but installs `pguide-pilot`,
-`pguide-config` and `pguide-objectives` as production dependencies. Its default
+`pguide-config`, `pguide-agents` and `pguide-objectives` as production dependencies. Its default
 commands are `probe`, `scaffold`, `validate`, `config`, `objectives`, `diagnose`,
 and `complete`. Regulation and supervision still require explicit installation:
 

@@ -1,6 +1,6 @@
 # npm publishing
 
-Potential Guide publishes fifteen CLI and library packages independently from this monorepo:
+Potential Guide publishes sixteen CLI and library packages independently from this monorepo:
 
 | Package | Release tag |
 | --- | --- |
@@ -11,6 +11,7 @@ Potential Guide publishes fifteen CLI and library packages independently from th
 | `@potential-guide/objective-portfolio-supervisor` | `objective-portfolio-supervisor-vX.Y.Z` |
 | `@potential-guide/cli-core` | `cli-core-vX.Y.Z` |
 | `@potential-guide/pguide-config` | `pguide-config-vX.Y.Z` |
+| `@potential-guide/pguide-agents` | `pguide-agents-vX.Y.Z` |
 | `pguide` | `pguide-vX.Y.Z` |
 | `@potential-guide/pilot-protocol` | `pilot-protocol-vX.Y.Z` |
 | `@potential-guide/cli-runtime` | `cli-runtime-vX.Y.Z` |
@@ -32,7 +33,8 @@ are protocol; `objective-pilot` consumes both, then `objective-regulator` and
 `pguide-config`. `objective-declarations` consumes CLI Core and Pilot protocol only;
 `cli-runtime` consumes Pilot and Git source;
 the command packages consume it and CLI Core. Publish `pguide-pilot` and
-`pguide-config` and `pguide-objectives` before `pguide`, which installs all three as production dependencies.
+`pguide-config`, `pguide-agents` and `pguide-objectives` before `pguide`, which
+installs all four as production dependencies.
 It does not install regulation or supervision. `pguide-regulate`
 must precede `pguide-supervise`. Publish changed transitive dependencies before
 their consumers. See [three-layer boundaries and migration](./package-layering.md).
@@ -83,6 +85,7 @@ rules must allow these release tags:
 - `objective-portfolio-supervisor-v*`
 - `cli-core-v*`
 - `pguide-config-v*`
+- `pguide-agents-v*`
 - `pguide-v*`
 - `pilot-protocol-v*`
 - `cli-runtime-v*`

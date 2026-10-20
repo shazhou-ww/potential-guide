@@ -5,9 +5,9 @@ import test from "node:test";
 import { parseReleaseTag, releasePackages, releaseVersion } from "./release-packages.mjs";
 
 test("release inventory contains the new packages and excludes the retired Guide", () => {
-  assert.equal(releasePackages.length, 15);
+  assert.equal(releasePackages.length, 16);
   for (const field of ["id", "directory", "name"]) {
-    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 15);
+    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 16);
   }
   for (const name of [
     "@potential-guide/effects",
@@ -37,6 +37,7 @@ test("command wrappers use pguide-prefixed names including config", () => {
     "pguide-supervise",
     "pguide-objectives",
     "pguide-config",
+    "pguide-agents",
   ]) {
     const entry = releasePackages.find((entry) => entry.id === id);
     assert.equal(entry?.name, `@potential-guide/${id}`);

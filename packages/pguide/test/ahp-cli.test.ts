@@ -7,7 +7,7 @@ import { withPilot } from "../../cli-runtime/src/pilot-source.js";
 import { ahpHost } from "../../pguide-cli-core/test/ahp-fixture.js";
 import { createProcessRegulationRunner } from "../../pguide-regulate/dist/regulation-process.js";
 import { createAgentPlannerPolicy } from "../../pguide-supervise/src/acp-planner.js";
-import { bin, fixture, run } from "./fixtures.js";
+import { bin, fixture, run, writeConfig } from "./fixtures.js";
 
 for (const mode of [
   "deny-all",
@@ -35,7 +35,7 @@ import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);proces
       await writeFile(f.subject, JSON.stringify({ marker }));
       const commit = await f.commit();
       const config = join(f.directory, "config.json");
-      await writeFile(
+      await writeConfig(
         config,
         JSON.stringify({
           schemaVersion: 2,
@@ -143,7 +143,7 @@ import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);proces
       await writeFile(f.subject, JSON.stringify({ marker }));
       const commit = await f.commit();
       const config = join(f.directory, "config.json");
-      await writeFile(
+      await writeConfig(
         config,
         JSON.stringify({
           schemaVersion: 2,
@@ -324,7 +324,7 @@ import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);proces
       transport: { type: "websocket", url: host.url },
       requirements: { sessionResume: true },
     };
-    await writeFile(
+    await writeConfig(
       config,
       JSON.stringify({
         schemaVersion: 2,
@@ -375,7 +375,7 @@ import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);proces
     assert.equal(satisfied.code, 0, satisfied.stdout + satisfied.stderr);
     assert.equal(host.messages.length, calls);
     await rm(marker);
-    await writeFile(
+    await writeConfig(
       config,
       JSON.stringify({
         schemaVersion: 2,
@@ -423,7 +423,7 @@ test("AHP Agent self-reported completion cannot satisfy an unchanged target", as
     );
     const commit = await f.commit();
     const config = join(f.directory, "config.json");
-    await writeFile(
+    await writeConfig(
       config,
       JSON.stringify({
         schemaVersion: 2,

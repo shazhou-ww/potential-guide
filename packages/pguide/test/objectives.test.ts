@@ -13,7 +13,7 @@ import {
   selectObjective,
 } from "../../objective-declarations/src/index.js";
 import { fixture as pilotFixture } from "../../objective-pilot/test/fixtures.js";
-import { bin, fixture, git, run } from "./fixtures.js";
+import { bin, fixture, git, run, writeConfig } from "./fixtures.js";
 
 const unit = { type: "object", additionalProperties: false, maxProperties: 0 } as const;
 const declaration: ObjectiveDeclaration = {
@@ -434,7 +434,8 @@ test("declaration probe and direct probe agree; declaration mutation does not re
   assert.equal(invalid.code, 2, invalid.stdout);
   const config = join(f.directory, "config.json");
   const state = join(f.directory, "state");
-  await writeFile(
+  await writeFile(join(f.repository, ".git", "info", "exclude"), ".pguide/agents.yaml\n");
+  await writeConfig(
     config,
     JSON.stringify({
       schemaVersion: 2,
@@ -447,6 +448,7 @@ test("declaration probe and direct probe agree; declaration mutation does not re
         },
       },
     }),
+    f.repository,
   );
   const regulated = await run(bin("regulate"), [
     "--objective",
@@ -556,7 +558,7 @@ void (async () => {
   await parent.commit();
   const state = join(parent.directory, "state");
   const config = join(parent.directory, "config.json");
-  await writeFile(
+  await writeConfig(
     config,
     JSON.stringify({
       schemaVersion: 2,

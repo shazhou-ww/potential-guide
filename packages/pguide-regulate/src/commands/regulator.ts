@@ -553,7 +553,7 @@ export async function runRegulate(
   const agentName = (option(argv, "--agent") as string | undefined) ?? loaded.value.defaultAgent;
   if (agentName === undefined)
     throw new CliError("--agent is required when defaultAgent is not configured.");
-  const profile = loaded.value.agents?.[agentName];
+  const profile = loaded.agents.agents[agentName];
   if (profile === undefined) throw new CliError(`Unknown Agent profile: ${agentName}.`);
   validateAgentProfile(profile);
   const language = option(argv, "--language") as string | undefined;

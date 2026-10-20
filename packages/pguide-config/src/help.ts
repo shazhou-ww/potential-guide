@@ -39,28 +39,27 @@ const commands = {
   },
   "list-agents": {
     arguments: "",
-    description: "List effective Agent names, origins, protocols and transports.",
+    description: "Retired: use pguide agents list; embedded profiles require explicit migrate.",
     example: "pguide config list-agents --format json",
   },
   "show-agent": {
     arguments: "<name>",
-    description: "Show one effective Agent profile with sensitive values redacted.",
+    description: "Retired: use pguide agents show <name>.",
     example: "pguide config show-agent local",
   },
   "add-agent": {
     arguments: "<name> <source|-> [--scope <scope>]",
-    description:
-      "Add a new profile from a JSON/YAML file or stdin (-); the name must not exist in that file.",
+    description: "Retired: use pguide agents set <name> --from <file|-> --scope user|project.",
     example: "pguide config add-agent local .\\agent.yaml --scope user",
   },
   "update-agent": {
     arguments: "<name> <source|-> [--scope <scope>]",
-    description: "Replace a profile already present in the selected file; source may be stdin (-).",
+    description: "Retired: use pguide agents set <name> --from <file|-> --scope user|project.",
     example: "pguide config update-agent local .\\agent.yaml --scope user",
   },
   "remove-agent": {
     arguments: "<name> [--scope <scope>]",
-    description: "Remove a profile from the selected file, not from other configuration layers.",
+    description: "Retired: use pguide agents remove <name> --scope user|project.",
     example: "pguide config remove-agent local --scope user",
   },
   "list-objectives": {

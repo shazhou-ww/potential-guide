@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
-import { bin, fixture, git, root, run } from "./fixtures.js";
+import { bin, fixture, git, root, run, writeConfig } from "./fixtures.js";
 
 test("probe accepts piped JSON through direct and dispatched commands with Registered Objectives", async () => {
   const f = await fixture();
@@ -96,7 +96,7 @@ test("regulate persists the resolved source and piped subject; continue ignores 
         },
       },
     };
-    await writeFile(config, JSON.stringify(value));
+    await writeConfig(config, JSON.stringify(value));
     const subject = { name: "piped", nested: { values: [1, 2], enabled: true } };
     for (const subjectArgs of [[], ["--subject-file", "-"]]) {
       const result = await run(
@@ -124,10 +124,10 @@ test("regulate persists the resolved source and piped subject; continue ignores 
       assert.equal(persisted.pilotUri, f.uri);
       assert.equal(persisted.pilotCommit, commit);
       assert.equal(persisted.sourcePath, f.manifest);
-      await writeFile(config, JSON.stringify({ ...value, objectives: { local: "missing" } }));
+      await writeConfig(config, JSON.stringify({ ...value, objectives: { local: "missing" } }));
       const continued = await run(bin("continue"), [id, "--config", config, "--format", "json"]);
       assert.equal(continued.code, 0, continued.stdout + continued.stderr);
-      await writeFile(config, JSON.stringify(value));
+      await writeConfig(config, JSON.stringify(value));
     }
   } finally {
     await rm(f.directory, { recursive: true, force: true });
@@ -164,7 +164,7 @@ test("missing subjects show the selected Objective schema as readable and struct
     );
     const commit = await f.commit();
     const config = join(f.directory, "config.json");
-    await writeFile(
+    await writeConfig(
       config,
       JSON.stringify({
         schemaVersion: 2,

@@ -22,6 +22,8 @@ import { pipeRedactedSecrets } from "../src/streaming-secret-redactor.js";
 const scratch = resolve(import.meta.dirname, "..", "..", "..", ".cache");
 await mkdir(scratch, { recursive: true });
 const tmpdir = () => scratch;
+process.env.APPDATA = join(scratch, "core-config-isolated-user");
+process.env.XDG_CONFIG_HOME = join(scratch, "core-config-isolated-user");
 
 test("reports validate, merge per field and resolve CLI, config and state-directory precedence", async (t) => {
   for (const reports of [false, { enabled: 1 }, { directory: "" }, { unknown: true }])
@@ -413,11 +415,16 @@ test("explicit configuration merges profiles by whole profile and atomic writes"
     );
     await atomicWrite(
       path,
-      "schemaVersion: 2\ndefaultAgent: fixture\nregulationStrategy:\n  probe: {timeoutMs: 5000, retry: {maxRetries: 2, delayMs: 10}}\nagents:\n  fixture:\n    connection: {type: acp, protocolVersion: '1'}\n    transport: {type: stdio, command: fixture}\n",
+      "schemaVersion: 2\ndefaultAgent: fixture\nregulationStrategy:\n  probe: {timeoutMs: 5000, retry: {maxRetries: 2, delayMs: 10}}\n",
+    );
+    const resource = join(root, ".pguide", "agents.yaml");
+    await writeFile(
+      resource,
+      "$schema: https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json\nagents:\n  fixture:\n    connection: {type: acp, protocolVersion: '1'}\n    transport: {type: stdio, command: fixture}\n",
     );
     const loaded = await loadConfig(root, path);
     assert.equal(loaded.value.defaultAgent, "fixture");
-    assert.equal(loaded.sources["agents.fixture"], path);
+    assert.equal(loaded.agents.sources.fixture?.path, resource);
     assert.deepEqual(loaded.value.regulationStrategy, {
       quota: { timeoutMs: 20000, maxAgentRuns: 5, maxStallRuns: 2 },
       probe: { timeoutMs: 5000, retry: { maxRetries: 2, delayMs: 10 } },

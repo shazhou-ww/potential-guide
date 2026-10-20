@@ -9,6 +9,7 @@
     "pguide",
     "@potential-guide/cli-core",
     "@potential-guide/pguide-config",
+    "@potential-guide/pguide-agents",
     "@potential-guide/cli-runtime",
     "@potential-guide/pguide-pilot",
     "@potential-guide/pguide-regulate",

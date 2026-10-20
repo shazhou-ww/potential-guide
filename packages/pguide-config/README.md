@@ -47,7 +47,7 @@ relative to `--cwd`; Git URIs are saved unchanged. Entries cannot reference othe
 Edits validate the complete configuration before atomically saving it.
 
 Legacy removal defaults to `--scope project`; `--scope user` and
-`--scope explicit --config <path>` work as for Agent profiles. Removal requires an entry in that
+`--scope explicit --config <path>` apply to main configuration only. Removal requires an entry in that
 scope. Legacy source aliases merge by name, with project overriding user and explicit
 overriding project. Removing an override exposes a lower-scope entry if present.
 Listing returns effective names, locations and configuration sources.
@@ -81,11 +81,14 @@ not reliably declared; configured grants are not inferred from tool names or
 inputs. Such requests receive an explicit denial and safe `unknown`
 authorization feedback, not silent policy bypass.
 
-Agent profiles use top-level `type: acp | ahp`; `connection.type` is accepted
-only in a valid legacy ACP profile and is normalized away on save. The editor,
-`add-agent`, `update-agent`, `show-agent`, `get` and `list-agents` share the same
-validator and normalized profiles. `list-agents` includes the protocol `type`
-alongside protocol version and transport. Mixed/missing selectors and
-credential literals are rejected without replacing the configuration.
+Agent definitions are no longer main configuration. `list-agents`, `show-agent`,
+`add-agent`, `update-agent` and `remove-agent` fail with actionable guidance to
+`pguide agents`. `config set agents` and edits introducing embedded profiles
+are rejected, never silently read in compatibility mode.
+Run `pguide agents migrate --scope user|project` explicitly for old files.
+The main config retains `defaultAgent`, permission ceilings and ordinary options;
+Agent resources have only USER and PROJECT scopes, not an explicit overlay.
+See the [resource manager](../pguide-agents/README.md) for offline validation,
+credential references, whole-profile precedence and migration recovery.
 See [protocol configuration](../pguide/README.md#protocol-selection-and-legacy-acp-profiles)
 and [AHP connection prerequisites](../pguide/README.md#ahp-host-support).

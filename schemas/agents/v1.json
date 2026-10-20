@@ -1,0 +1,146 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json",
+  "title": "Potential Guide Agent resources v1",
+  "description": "User and project Agent profiles. Credential values are forbidden; only environment references are permitted. Runtime validation additionally rejects secret-like arguments, URLs and values.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "agents"],
+  "properties": {
+    "$schema": { "const": "https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json" },
+    "agents": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]*$" },
+      "additionalProperties": { "$ref": "#/definitions/profile" }
+    }
+  },
+  "definitions": {
+    "nonempty": { "type": "string", "pattern": "\\S" },
+    "environmentName": { "type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$" },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "sessionResume": { "type": "boolean" } }
+    },
+    "stdio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "command"],
+      "properties": {
+        "type": { "const": "stdio" },
+        "command": { "$ref": "#/definitions/nonempty" },
+        "args": { "type": "array", "items": { "$ref": "#/definitions/nonempty" } },
+        "env": { "type": "array", "items": { "$ref": "#/definitions/environmentName" } }
+      }
+    },
+    "acp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "connection", "transport"],
+      "properties": {
+        "type": { "const": "acp" },
+        "connection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["protocolVersion"],
+          "properties": { "protocolVersion": { "type": "string", "pattern": "^[1-9][0-9]*$" } }
+        },
+        "transport": { "$ref": "#/definitions/stdio" },
+        "requirements": { "$ref": "#/definitions/requirements" }
+      }
+    },
+    "legacyAcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["connection", "transport"],
+      "properties": {
+        "connection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "protocolVersion"],
+          "properties": {
+            "type": { "const": "acp" },
+            "protocolVersion": { "type": "string", "pattern": "^[1-9][0-9]*$" }
+          }
+        },
+        "transport": { "$ref": "#/definitions/stdio" },
+        "requirements": { "$ref": "#/definitions/requirements" }
+      }
+    },
+    "resourceCredential": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resource", "tokenEnv"],
+      "properties": {
+        "resource": { "$ref": "#/definitions/nonempty" },
+        "tokenEnv": { "$ref": "#/definitions/environmentName" }
+      }
+    },
+    "authentication": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "none" },
+            "resources": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/resourceCredential" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "parameter", "tokenEnv"],
+          "properties": {
+            "type": { "const": "query-token" },
+            "parameter": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+            "tokenEnv": { "$ref": "#/definitions/environmentName" },
+            "resources": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/resourceCredential" }
+            }
+          }
+        }
+      ]
+    },
+    "ahp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "connection", "transport"],
+      "properties": {
+        "type": { "const": "ahp" },
+        "confirmations": { "enum": ["deny", "external"] },
+        "connection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["protocolVersion", "agent"],
+          "properties": {
+            "protocolVersion": { "enum": ["1.0.0", "0.9.0"] },
+            "agent": { "$ref": "#/definitions/nonempty" }
+          }
+        },
+        "transport": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "url"],
+          "properties": {
+            "type": { "const": "websocket" },
+            "url": { "type": "string", "pattern": "^wss?://[^@?#\\s]+$" }
+          }
+        },
+        "authentication": { "$ref": "#/definitions/authentication" },
+        "requirements": { "$ref": "#/definitions/requirements" }
+      }
+    },
+    "profile": {
+      "oneOf": [
+        { "$ref": "#/definitions/acp" },
+        { "$ref": "#/definitions/legacyAcp" },
+        { "$ref": "#/definitions/ahp" }
+      ]
+    }
+  }
+}

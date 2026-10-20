@@ -21,6 +21,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     ["supervision", ["@potential-guide/pguide-supervise"]],
     ["objectives", ["@potential-guide/pguide-objectives"]],
     ["config", ["@potential-guide/pguide-config"]],
+    ["agents", ["@potential-guide/pguide-agents"]],
     [
       "combined",
       [
@@ -30,6 +31,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         "@potential-guide/pguide-supervise",
         "@potential-guide/pguide-objectives",
         "@potential-guide/pguide-config",
+        "@potential-guide/pguide-agents",
       ],
     ],
   ];
@@ -152,6 +154,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
           await run(executable, ["--help", "--format", "json"], directory, env),
         );
         assert.deepEqual(result.commands.map((entry) => entry.command).sort(), [
+          "agents",
           "complete",
           "config",
           "diagnose",
@@ -161,7 +164,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
           "validate",
         ]);
         assert.deepEqual(result.conflicts, {});
-        for (const command of ["probe", "scaffold", "validate", "config", "objectives"]) {
+        for (const command of ["probe", "scaffold", "validate", "config", "agents", "objectives"]) {
           const entry = result.commands.find((entry) => entry.command === command);
           assert.equal(entry.compatible, true);
           assert.equal(entry.source, "bundled");
@@ -249,6 +252,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       );
       assert.deepEqual(result.conflicts, {});
       for (const name of [
+        "agents",
         "objectives",
         "probe",
         "regulate",

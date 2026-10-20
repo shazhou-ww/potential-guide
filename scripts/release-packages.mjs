@@ -77,6 +77,12 @@ export const releasePackages = [
     bins: ["pguide-config"],
   },
   {
+    id: "pguide-agents",
+    directory: "pguide-agents",
+    name: "@potential-guide/pguide-agents",
+    bins: ["pguide-agents"],
+  },
+  {
     id: "pguide",
     directory: "pguide",
     name: "pguide",

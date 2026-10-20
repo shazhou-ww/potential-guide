@@ -1,0 +1,47 @@
+{
+  "name": "@potential-guide/pguide-agents",
+  "version": "0.1.0",
+  "description": "Independent user and project Agent resource management for pguide.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./bin/agents": {
+      "types": "./dist/bin.d.ts",
+      "import": "./dist/bin.js"
+    }
+  },
+  "bin": {
+    "pguide-agents": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.ts\"",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@potential-guide/cli-core": "workspace:^",
+    "cross-spawn": "catalog:",
+    "yaml": "catalog:"
+  },
+  "devDependencies": {
+    "@types/cross-spawn": "catalog:"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shazhou-ww/potential-guide.git",
+    "directory": "packages/pguide-agents"
+  }
+}

@@ -153,11 +153,14 @@ shim 目录，其中 `pguide-config` 指向 `packages\pguide-config\dist\bin.js`
 - `userHome` 不修改系统用户，不复制登录态，不推断 ACP 兼容性。检查结果仅证明当前
   观察的设备、用户、配置和时间，不是永久安装凭证。
 
-示例非秘密 profile（替换为实际已存在的 ACP 命令，不要原样假设某产品支持）：
+主配置只保留 `schemaVersion: 2`、`defaultAgent: existing-agent` 等普通设置。
+profile 放在用户或项目配置目录的独立 `agents.yaml`，通过
+`pguide agents show existing-agent` 读取，`--config` 不创建第三个 Agent 作用域。
+旧内嵌配置必须先显式执行 `pguide agents migrate --scope user|project`。
+示例非秘密资源（替换为实际已存在的 ACP 命令，不要原样假设某产品支持）：
 
 ```yaml
-schemaVersion: 2
-defaultAgent: existing-agent
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json
 agents:
   existing-agent:
     connection: {type: acp, protocolVersion: "1"}

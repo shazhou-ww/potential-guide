@@ -9,7 +9,7 @@ import type { PlannerPolicyInput } from "@potential-guide/objective-portfolio-su
 import { withPilot } from "../../cli-runtime/src/pilot-source.js";
 import { createAcpPlannerPolicy, plannerPrompt } from "../../pguide-supervise/src/acp-planner.js";
 import { parsePortfolioFile } from "../../pguide-supervise/src/commands/supervisor.js";
-import { bin, fixture, git, root, run, scratch } from "./fixtures.js";
+import { bin, fixture, git, root, run, scratch, writeConfig } from "./fixtures.js";
 
 const stubSource = `
 import { createInterface } from "node:readline";
@@ -169,7 +169,7 @@ test("supervise plans once without repairs, then continuously observes and execu
     const executorLog = join(f.directory, "executor.jsonl");
     await writeFile(stub, stubSource);
     const config = join(f.directory, "config.json");
-    await writeFile(
+    await writeConfig(
       config,
       JSON.stringify({
         schemaVersion: 2,
@@ -236,10 +236,11 @@ test("supervise plans once without repairs, then continuously observes and execu
     portfolioValue.resources = [];
     delete portfolioValue.goals[0].revision;
     await writeFile(portfolio, JSON.stringify(portfolioValue));
-    const configured = JSON.parse(await readFile(config, "utf8"));
-    const configuredExecutor = configured.agents["private-execution-agent"];
-    delete configured.agents["private-execution-agent"];
-    await writeFile(config, JSON.stringify(configured));
+    const resourcePath = join(f.directory, ".pguide", "agents.yaml");
+    const resource = JSON.parse(await readFile(resourcePath, "utf8"));
+    const configuredExecutor = resource.agents["private-execution-agent"];
+    delete resource.agents["private-execution-agent"];
+    await atomicWrite(resourcePath, JSON.stringify(resource));
     const runner = join(f.directory, "supervise-until-observed.mjs");
     await writeFile(
       runner,
@@ -263,8 +264,8 @@ await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
     }
     await writeFile(join(f.repository, "new-revision.txt"), "Updated pinned source");
     const updatedRevision = await f.commit();
-    configured.agents["private-execution-agent"] = configuredExecutor;
-    await atomicWrite(config, JSON.stringify(configured));
+    resource.agents["private-execution-agent"] = configuredExecutor;
+    await atomicWrite(resourcePath, JSON.stringify(resource));
     portfolioValue.resources = registeredResources;
     portfolioValue.goals[0].subject.generation = 2;
     await atomicWrite(portfolio, JSON.stringify(portfolioValue));
@@ -375,7 +376,7 @@ process.stdout.write(JSON.stringify({status:200,message:"",payload:ok?{ok:true,p
     const stub = join(consumer.directory, "agent.mjs");
     await writeFile(stub, stubSource);
     const config = join(consumer.directory, "config.json");
-    await writeFile(
+    await writeConfig(
       config,
       JSON.stringify({
         schemaVersion: 2,
@@ -547,7 +548,7 @@ for await (const line of createInterface({ input: process.stdin })) {
 `,
     );
     const config = join(consumer.directory, "config.json");
-    await writeFile(
+    await writeConfig(
       config,
       JSON.stringify({
         schemaVersion: 2,

@@ -393,7 +393,10 @@ export async function runSupervise(
   if (durationMs !== undefined && (!execute || !positive(durationMs)))
     throw new CliError("--duration-ms requires --execute and a positive integer.");
   const loaded = await loadConfig(globals.cwd, globals.config);
-  const profiles: Record<string, AgentProfile> = { ...loaded.value.agents };
+  const profiles: Record<string, AgentProfile> = Object.assign(
+    Object.create(null),
+    loaded.agents.agents,
+  );
   const plannerName = option(argv, "--planner", { required: true }) as string;
   const profile = profiles[plannerName];
   if (profile === undefined) throw new CliError("--planner must name an existing Agent profile.");
@@ -584,7 +587,7 @@ export async function runSupervise(
           JSON.parse(await readFile(path, "utf8")) as unknown,
         );
         const config = await loadConfig(globals.cwd, globals.config);
-        const agents = config.value.agents ?? {};
+        const agents = config.agents.agents;
         const nextPlanner = agents[plannerName];
         if (nextPlanner === undefined) throw new CliError("--planner profile was removed.");
         const nextResources = resolveResources(nextPortfolio, agents);
