@@ -46,3 +46,17 @@ pnpm check
 最终结果：Windows、Node.js 24.12、pnpm 11.22；`pnpm check` exit 0。全部 runner 合计 441 tests，439 pass、0 fail、2 skip；跳过项是既有文件 symlink 权限与平台大小写场景，不是将失败标成通过。12 个 workspace 的 lint/typecheck/build 及 24 个 build/test 任务成功，32 个脚本测试通过，八个发布包的 pack:check 全部通过；pguide 包含新增 objectives 命令（79 个打包文件）。编辑器对关键实现文件亦报告无错误。
 
 开发期间的定向日志位于仓库 `.cache\directory-objectives-*.log`，不作为必须恢复的生产状态；最终持久证据以本文件、同目录完整日志和已同步的源码/测试为准。部署尚未执行，D-* ledger 保持未完成。
+
+## 父审查后的修订
+
+保留上述初次候选与 `Verification.log` 的历史输出；初次提交未获 acceptInner。父审查指出原 Unit 判断遗漏 patternProperties、根相对路径使用空字符串、Git broad catch 会错误降级，这些是旧候选的已确认缺口，不能以旧测试通过代替修复。
+
+- Unit：仅在可证明最多接受 `{}` 的结构条件成立，且实际 schema 校验 `{}` 通过时允许省略；增加 expandable patternProperties、properties、unevaluatedProperties/allOf、多个 enum 值，以及 const/enum 与 required/minProperties 冲突组合的回归。显式传入可扩展字段仍正常校验，不把它们忽略。
+- context：根使用 `"."`，多层子目录使用 `/` 相对路径。Git 命令固定英文诊断并有 5 秒/64 KiB 边界；非仓库识别同时检查可见 `.git` 元数据，损坏/访问失败不能转为 null。仅 local config 查询明确以 exit 1 且无输出返回缺失时，才认定没有 origin；存在但为空、读取失败、非 URL/SCP-like、凭据/query/fragment URL 都明确失败。
+- 新负例同时包含真实无 origin、真实非法 origin/损坏 gitfile，以及确定性的 Git ENOENT、EACCES、超时/终止、损坏配置/所有权、config 读取错误和无效 stdout 注入。错误使用标准 context-error，不输出带秘密的 origin 文本。
+- 在实现阶段新增真正启动 compiled supervise CLI 的持续更新 E2E，避免把 planner unit replacement 等同于持续 CLI 行为：不修改 portfolio、不提供 repair resource；先证明无关提交不改 root tree，再修改 root 脚本，最后仅更新外部 dependency。等待同一精确来源的三次稳定 terminal 观察后结束，断言 root/dependency 的 commit/tree 与实际 Git 对象一致。
+- 该 E2E 首次揭示额外接线缺口：CLI runtime 表原先只以 PilotSpec 为键，同一 root 定义下的 dependency-only 更新会在 planner 完成替换前覆盖旧 runtime。已改为 Pilot + bindingRevision 的独立 runtime 槽，依赖证据含取回 commit 并排序，旧槽保留到受控替换完成；根 goal 及 worker 携带刷新后的完整来源表。此实现修复不推迟到部署阶段。
+
+新回归与完整 `pnpm check` 的修订证据保存在 `Review-revision.log`。后续部署仍须通过本机安装/发现的 pguide 与 pguide-objectives 重做外部消费验证，尤其持续 supervise 更新及新增扩展接线；本阶段不部署、不 accept/waive。
+
+修订验证结果：`Review-targeted.log` 的 identity/objectives/pilot-source/portfolio/CLI-supervisor 共 79 tests，79 pass、0 fail、0 skip；包括不修改 portfolio 的持续来源更新 E2E。`Review-revision.log` 为完整 `pnpm check` exit 0，445 tests、443 pass、0 fail、同前的 2 个既有平台 skip；lint、typecheck、build 与 pack:check 均通过。四个修改的 TypeScript 文件在编辑器亦无错误。新日志同样仅规范化换行与三个 Turbo 耗时行尾空格，旧验证文件保持不变。

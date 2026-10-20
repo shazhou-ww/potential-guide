@@ -70,6 +70,17 @@ checkout.id 是主机名、规范化 Git common 目录和 checkout 路径的摘�
 也不是密码学设备身份证明。没有 Git 上下文时 repository/checkout 为 null；
 表达式需要却缺失的字段报错，不收集凭据、环境变量或 package 身份。
 
+仓库根目录的 `directory.relativePath` 是 `"."`，子目录使用仓库相对 `/` 路径。
+仅 Git 的可识别非仓库诊断可返回 null；Git 缺失、超时、访问失败、损坏元数据或无效输出均为
+`context-error`，不降级成非仓库。仅明确缺少 `remote.origin.url` 时使用本地 common Git
+目录的 file 身份；origin 解析或读取失败不替换身份。origin 支持无 user info、query、fragment
+的 HTTPS/SSH/file URL；SCP-like 及其他非 URL 来源明确拒绝。Git 元数据命令有 5 秒边界。
+
+Unit 省略判断采用保守充分条件，并实际验证 `{}`：const {}、单值 enum [{}]、
+object/maxProperties: 0，或 properties 与 patternProperties 均未声明或为空且
+additionalProperties: false 的 object。不能可靠证明为 Unit 的 schema 必须显式传 input，
+即使它接受 `{}`；不会尝试求解任意 schema 等价。
+
 清单没有 target，probe 只观察，regulate 的 target 来自请求，依赖阈值来自消费者。
 continue schemaVersion 3 保存已选择的清单快照、上下文、输入、最终 subject、目录 ID、
 取回 commit 和 tree，恢复不重新发现同名入口；旧 schemaVersion 2 记录明确拒绝并指导重新绑定。

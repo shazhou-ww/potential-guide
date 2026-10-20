@@ -1,9 +1,9 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFile, realpath } from "node:fs/promises";
+import { lstat, readFile, realpath } from "node:fs/promises";
 import { hostname } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { delimiter, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import {
   atomicWrite,
@@ -128,39 +128,184 @@ export async function listObjectives(cwd: string, scope?: string): Promise<Objec
     )
   ).flat();
 }
-export async function objectiveContext(cwd: string): Promise<JsonObject> {
-  const directory = await realpath(cwd);
-  const git = async (...args: string[]) =>
-    (
-      await execute("git", ["--no-pager", "-C", directory, ...args], {
-        windowsHide: true,
-        env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
-      })
-    ).stdout.trim();
-  let root: string;
+type ContextGit = (args: readonly string[]) => Promise<string>;
+
+function ordinaryExit(error: unknown, code: number): error is Record<string, unknown> {
+  return (
+    object(error) &&
+    error.code === code &&
+    error.killed !== true &&
+    (error.signal === undefined || error.signal === null)
+  );
+}
+
+function contextError(operation: string, cause: unknown): CliError {
+  if (cause instanceof CliError) return cause;
+  const code = object(cause) ? cause.code : undefined;
+  const reason =
+    code === "ENOENT"
+      ? "Git executable or required repository metadata is unavailable"
+      : code === "EACCES" || code === "EPERM"
+        ? "access was denied"
+        : code === "ETIMEDOUT" || (object(cause) && cause.killed === true)
+          ? "Git timed out or was terminated"
+          : "Git failed or returned invalid repository metadata";
+  return new CliError(
+    `Cannot build Objective context during ${operation}: ${reason}; no fallback identity was substituted.`,
+    2,
+    "context-error",
+  );
+}
+
+async function verifyNonRepository(directory: string, filesystemBoundary: boolean): Promise<void> {
+  const key = (path: string) => (process.platform === "win32" ? path.toLowerCase() : path);
+  const ceilings = new Set(
+    (process.env.GIT_CEILING_DIRECTORIES ?? "")
+      .split(delimiter)
+      .filter(Boolean)
+      .map((path) => key(resolve(path))),
+  );
+  const metadata = async (path: string) => {
+    try {
+      return await lstat(path);
+    } catch (error) {
+      throw contextError("repository metadata inspection", error);
+    }
+  };
+  const device = filesystemBoundary ? (await metadata(directory)).dev : undefined;
+  let current = directory;
+  for (;;) {
+    try {
+      await lstat(join(current, ".git"));
+      throw new CliError(
+        "Git rejected a directory with repository metadata; repair the checkout instead of treating it as a non-repository.",
+        2,
+        "context-error",
+      );
+    } catch (error) {
+      if (!object(error) || error.code !== "ENOENT")
+        throw contextError("repository metadata inspection", error);
+    }
+    const parent = dirname(current);
+    if (parent === current || ceilings.has(key(parent))) return;
+    if (filesystemBoundary && (await metadata(parent)).dev !== device) return;
+    current = parent;
+  }
+}
+
+export async function objectiveContext(cwd: string, executeGit?: ContextGit): Promise<JsonObject> {
+  let directory: string;
   try {
-    root = await realpath(await git("rev-parse", "--show-toplevel"));
-  } catch {
+    directory = await realpath(cwd);
+  } catch (error) {
+    throw contextError("directory resolution", error);
+  }
+  const run: ContextGit =
+    executeGit ??
+    (async (args) =>
+      (
+        await execute("git", ["--no-pager", "-C", directory, ...args], {
+          windowsHide: true,
+          timeout: 5_000,
+          maxBuffer: 64 * 1024,
+          env: { ...process.env, GIT_TERMINAL_PROMPT: "0", LC_ALL: "C", LANG: "C" },
+        })
+      ).stdout);
+  const line = (source: string) => {
+    if (typeof source !== "string") throw new Error("Invalid Git output.");
+    const value = source.replace(/\r?\n$/, "");
+    if (
+      !value ||
+      [...value].some(
+        (character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
+      )
+    )
+      throw new Error("Expected one nonempty Git output line.");
+    return value;
+  };
+  const git = async (...args: string[]) => line(await run(args));
+  let top: string;
+  try {
+    top = await run(["rev-parse", "--show-toplevel"]);
+  } catch (error) {
+    const filesystemBoundary =
+      ordinaryExit(error, 128) &&
+      typeof error.stderr === "string" &&
+      /^fatal: not a git repository \(or any parent up to mount point [^\r\n]+\)\r?\nStopping at filesystem boundary \(GIT_DISCOVERY_ACROSS_FILESYSTEM not set\)\.\r?\n?$/.test(
+        error.stderr,
+      );
+    const nonRepository =
+      ordinaryExit(error, 128) &&
+      error.stdout === "" &&
+      typeof error.stderr === "string" &&
+      (filesystemBoundary ||
+        /^fatal: not a git repository \(or any of the parent directories\): \.git\r?\n?$/.test(
+          error.stderr,
+        ));
+    if (!nonRepository) throw contextError("repository detection", error);
+    await verifyNonRepository(directory, filesystemBoundary);
     return {
       repository: null,
       checkout: null,
       directory: { absolutePath: directory, relativePath: null },
     };
   }
-  const commonDirectory = await realpath(
-    resolve(directory, await git("rev-parse", "--git-common-dir")),
-  );
-  let repository: string;
+  let root: string;
+  let commonDirectory: string;
   try {
-    const origin = new URL(await git("remote", "get-url", "origin"));
-    if (origin.username || origin.password || origin.search || origin.hash)
-      throw new CliError(
-        "Repository context origin must not contain credentials, query or fragment.",
-      );
-    repository = origin.href;
+    const path = line(top);
+    if (!isAbsolute(path)) throw new Error("Git checkout root must be absolute.");
+    root = await realpath(path);
+    commonDirectory = await realpath(
+      resolve(directory, await git("rev-parse", "--git-common-dir")),
+    );
+    if (!(await lstat(commonDirectory)).isDirectory())
+      throw new Error("Invalid common Git directory.");
   } catch (error) {
-    if (error instanceof CliError) throw error;
-    repository = pathToFileURL(commonDirectory).href;
+    throw contextError("checkout resolution", error);
+  }
+  const pathInRepository = relative(root, directory).split("\\").join("/");
+  if (
+    pathInRepository === ".." ||
+    pathInRepository.startsWith("../") ||
+    isAbsolute(pathInRepository)
+  )
+    throw contextError("directory resolution", new Error("Directory is outside checkout."));
+  let configuredOrigin: string | undefined;
+  try {
+    configuredOrigin = await run(["config", "--local", "--get", "remote.origin.url"]);
+  } catch (error) {
+    if (!ordinaryExit(error, 1) || error.stdout !== "" || error.stderr !== "")
+      throw contextError("origin configuration", error);
+  }
+  let repository = pathToFileURL(commonDirectory).href;
+  if (configuredOrigin !== undefined) {
+    let rawOrigin: string;
+    try {
+      line(configuredOrigin);
+      rawOrigin = await git("remote", "get-url", "origin");
+    } catch (error) {
+      throw contextError("origin resolution", error);
+    }
+    try {
+      const origin = new URL(rawOrigin);
+      if (
+        !["https:", "ssh:", "file:"].includes(origin.protocol) ||
+        origin.username ||
+        origin.password ||
+        origin.search ||
+        origin.hash
+      )
+        throw new Error("Unsupported or credential-bearing origin.");
+      if (origin.protocol === "file:") fileURLToPath(origin);
+      repository = origin.href;
+    } catch {
+      throw new CliError(
+        "Repository origin must be an HTTPS, SSH or file URL without user info, query or fragment. SCP-like and other non-URL origins are unsupported; configure an explicit URL.",
+        2,
+        "context-error",
+      );
+    }
   }
   return {
     repository: { id: repository },
@@ -172,7 +317,7 @@ export async function objectiveContext(cwd: string): Promise<JsonObject> {
     },
     directory: {
       absolutePath: directory,
-      relativePath: relative(root, directory).split("\\").join("/"),
+      relativePath: pathInRepository || ".",
     },
   };
 }
@@ -191,8 +336,10 @@ export function bindObjective(
     (schema.type === "object" &&
       (schema.maxProperties === 0 ||
         (schema.additionalProperties === false &&
-          (schema.properties === undefined || empty(schema.properties)))));
-  if (input === undefined && !unit)
+          (schema.properties === undefined || empty(schema.properties)) &&
+          (schema.patternProperties === undefined || empty(schema.patternProperties)))));
+  const omittedIsValid = unit && validate({});
+  if (input === undefined && !omittedIsValid)
     throw new CliError(
       "Objective input is required; provide --input-file. Only Unit input may be omitted.",
     );

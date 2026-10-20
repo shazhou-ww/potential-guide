@@ -12,6 +12,8 @@
 
 规范化 ID 使用末尾 `/`，仓库根目录为 `#/`；资源 URI 保留实际文件路径。Git 来源将 `version` 定义为目录 tree，`source` 独立记录 `kind: git-tree`、repository、directory、commit、tree 和 repositoryTree。后者为同时 materialize 的目录外仓库支持内容提供独立、保守的版本证据，不声称覆盖环境、网络或动态安装；链接和子模块明确拒绝。
 
+父审查后的修订采用保守 Unit 充分条件并验证 `{}`，不得把可由 patternProperties 扩展的对象误判为 Unit。context 根相对路径为 `"."`；Git 缺失/超时/访问/解析故障与非法 origin 都明确报 context-error，只有可识别的非仓库与缺少 origin 配置才能使用各自明确边界，不对不支持的 SCP-like 来源伪造 file 身份。
+
 ### I-S02: 接入 CLI 发现与运行入口
 
 为用户级和目录级目标列举、管理、选择、probe 和 regulate 复用统一绑定逻辑；从运行配置分离用户级声明，明确旧来源别名的迁移与命令退役方案，保留直接 Pilot 调用语义，恢复使用原绑定而非重新发现。
@@ -25,6 +27,8 @@
 结合依赖问题协议接入 Behavior 来源更新和绑定替换，完成新旧 ID、版本证据与恢复记录的迁移或明确拒绝。逐项覆盖影响矩阵，更新仓库自有 Pilot 消费方、脚本、测试、示例和相关公共文档，不修改其他 Idea 的历史契约。
 
 单个 withPilot 生命周期缓存已解析定义与固定快照；跨进程 RegulationInput、派生 goal 与 worker 保留完整来源绑定表。Supervisor 刷新边界重新绑定根及已发现依赖，失效旧观察/等待需求并递增 revision；迟到反馈按 revision 隔离，来源失败显式中止监督而不声称已更新。消费者阈值、Agent 权限与声明仍相互独立。
+
+连续 CLI 来源更新回归同时覆盖无关提交、根检查脚本修改与仅依赖仓库修改，保持 portfolio 不变。runtime 按 Pilot 与完整依赖 bindingRevision 隔离并保留至边界替换完成，不提前用新 runtime 服务旧 goal；刷新后的 worker 同样携带已解析依赖的精确 commit/tree 表。
 
 ## Acceptance criteria
 

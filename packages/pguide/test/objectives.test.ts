@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 import { extractGlobals } from "@potential-guide/cli-core";
 import { fixture as pilotFixture } from "../../objective-pilot/test/fixtures.js";
 import {
@@ -167,6 +168,61 @@ test("user and directory input types are orthogonal, source provenance and name 
   }
 });
 
+test("Unit inference is conservative about expandable schemas and validates the empty value", async () => {
+  const spec = await pilotFixture().load();
+  const context = { directory: { absolutePath: "checkout" } };
+  const expandable = [
+    {
+      type: "object",
+      additionalProperties: false,
+      patternProperties: { "^x": { type: "string" } },
+    },
+    { type: "object", additionalProperties: false, properties: { x: { type: "string" } } },
+    {
+      type: "object",
+      unevaluatedProperties: false,
+      allOf: [{ properties: { x: { type: "string" } } }],
+    },
+    { enum: [{}, { x: "value" }] },
+  ] as const;
+  for (const inputSchema of expandable) {
+    const entry = { ...declaration, inputSchema };
+    assert.deepEqual(bindObjective(entry, context, {}, spec), { name: "checkout" });
+    assert.deepEqual(bindObjective(entry, context, { x: "value" }, spec), { name: "checkout" });
+    assert.throws(() => bindObjective(entry, context, undefined, spec), /Only Unit/);
+  }
+  for (const inputSchema of [
+    { type: "object", additionalProperties: false, patternProperties: {} },
+    { type: "object", maxProperties: 0, patternProperties: { "^x": { type: "string" } } },
+    { type: "object", const: {}, patternProperties: { "^x": { type: "string" } } },
+    { type: "object", additionalProperties: true, enum: [{}] },
+    { const: {}, enum: [{}, { x: "value" }] },
+  ] as const) {
+    assert.deepEqual(bindObjective({ ...declaration, inputSchema }, context, undefined, spec), {
+      name: "checkout",
+    });
+    assert.throws(
+      () => bindObjective({ ...declaration, inputSchema }, context, { x: "value" }, spec),
+      /Invalid Objective input/,
+    );
+  }
+  for (const inputSchema of [
+    { type: "object", maxProperties: 0, minProperties: 1 },
+    { type: "object", const: {}, required: ["x"], properties: { x: { type: "string" } } },
+    { type: "object", enum: [{}], minProperties: 1 },
+    { const: { x: "value" }, enum: [{}] },
+  ] as const) {
+    assert.throws(
+      () => bindObjective({ ...declaration, inputSchema }, context, undefined, spec),
+      /Only Unit/,
+    );
+    assert.throws(
+      () => bindObjective({ ...declaration, inputSchema }, context, {}, spec),
+      /Invalid Objective input/,
+    );
+  }
+});
+
 test("discovery is exact-directory, technology independent and never evaluates or resolves remote sources", async (t) => {
   const f = await fixture();
   t.after(() => rm(f.directory, { recursive: true, force: true }));
@@ -216,6 +272,13 @@ test("repository, checkout and directory context are independent and do not expo
   assert.deepEqual(one.repository, two.repository);
   assert.notDeepEqual(one.checkout, two.checkout);
   assert.notDeepEqual(one.directory, two.directory);
+  assert.equal((one.directory as { relativePath: string }).relativePath, ".");
+  const nested = join(f.repository, "plain", "nested");
+  await mkdir(nested, { recursive: true });
+  assert.equal(
+    ((await objectiveContext(nested)).directory as { relativePath: string }).relativePath,
+    "plain/nested",
+  );
   assert.notDeepEqual(
     (await listObjectives(f.repository, "directory"))[0]?.file,
     (await listObjectives(checkout, "directory"))[0]?.file,
@@ -227,6 +290,109 @@ test("repository, checkout and directory context are independent and do not expo
   try {
     process.env.GIT_CEILING_DIRECTORIES = f.directory;
     assert.equal((await objectiveContext(plain)).checkout, null);
+  } finally {
+    if (ceiling === undefined) delete process.env.GIT_CEILING_DIRECTORIES;
+    else process.env.GIT_CEILING_DIRECTORIES = ceiling;
+  }
+});
+
+test("context recognizes absent origin but explicitly rejects malformed and non-URL origins", async (t) => {
+  const f = await fixture();
+  t.after(() => rm(f.directory, { recursive: true, force: true }));
+  await git(f.repository, "remote", "remove", "origin");
+  assert.deepEqual((await objectiveContext(f.repository)).repository, {
+    id: pathToFileURL(join(f.repository, ".git")).href,
+  });
+  await git(f.repository, "remote", "add", "origin", "git@example.invalid:team/repo.git");
+  for (const origin of [
+    "",
+    "git@example.invalid:team/repo.git",
+    "not-a-url",
+    "https://name:secret@example.invalid/repo.git",
+    "https://example.invalid/repo.git?token=secret",
+  ]) {
+    await git(f.repository, "remote", "set-url", "origin", origin);
+    await assert.rejects(objectiveContext(f.repository), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal((error as { status?: string }).status, "context-error");
+      assert.match(error.message, /origin|SCP-like/);
+      assert.ok(!error.message.includes("secret"));
+      return true;
+    });
+  }
+  await writeFile(join(f.repository, "objectives.yaml"), document());
+  const invalid = await run(bin("probe"), [
+    "--objective",
+    "check",
+    "--scope",
+    "directory",
+    "--cwd",
+    f.repository,
+    "--format",
+    "json",
+  ]);
+  assert.equal(invalid.code, 2, invalid.stdout + invalid.stderr);
+  assert.equal(JSON.parse(invalid.stdout).status, "context-error");
+  assert.ok(!invalid.stdout.includes("secret"));
+});
+
+test("Git operational failures and corrupt metadata never become successful fallback context", async (t) => {
+  const f = await fixture();
+  t.after(() => rm(f.directory, { recursive: true, force: true }));
+  const fault = (code: string | number | null, stderr = "", extra = {}) =>
+    Object.assign(new Error("simulated Git fault"), { code, stdout: "", stderr, ...extra });
+  for (const error of [
+    fault("ENOENT"),
+    fault("EACCES"),
+    fault("ETIMEDOUT"),
+    fault(null, "", { killed: true }),
+    fault(128, "fatal: bad config line 1"),
+    fault(128, "fatal: detected dubious ownership"),
+  ]) {
+    await assert.rejects(
+      objectiveContext(f.repository, async () => {
+        throw error;
+      }),
+      { exitCode: 2, status: "context-error" },
+    );
+  }
+  const answers = async (args: readonly string[]) => {
+    if (args.includes("--show-toplevel")) return `${f.repository}\n`;
+    if (args.includes("--git-common-dir")) return `${join(f.repository, ".git")}\n`;
+    throw fault(1, "error: permission denied while reading config");
+  };
+  await assert.rejects(objectiveContext(f.repository, answers), {
+    exitCode: 2,
+    status: "context-error",
+  });
+  for (const stdout of ["", "relative-root\n", `${f.repository}\nextra\n`])
+    await assert.rejects(
+      objectiveContext(f.repository, async () => stdout),
+      { exitCode: 2, status: "context-error" },
+    );
+  await assert.rejects(
+    objectiveContext(f.repository, async () => {
+      throw fault(128, "fatal: not a git repository (or any of the parent directories): .git\n");
+    }),
+    /repository metadata/,
+  );
+  const broken = join(f.directory, "broken");
+  await mkdir(broken);
+  await writeFile(join(broken, ".git"), "not a gitfile\n");
+  await assert.rejects(objectiveContext(broken), { exitCode: 2, status: "context-error" });
+  const plain = join(f.directory, "plain");
+  await mkdir(plain);
+  const ceiling = process.env.GIT_CEILING_DIRECTORIES;
+  try {
+    process.env.GIT_CEILING_DIRECTORIES = f.directory;
+    const context = await objectiveContext(plain, async () => {
+      throw fault(
+        128,
+        `fatal: not a git repository (or any parent up to mount point ${dirname(f.directory)})\nStopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).\n`,
+      );
+    });
+    assert.equal(context.repository, null);
+    assert.equal(context.checkout, null);
   } finally {
     if (ceiling === undefined) delete process.env.GIT_CEILING_DIRECTORIES;
     else process.env.GIT_CEILING_DIRECTORIES = ceiling;

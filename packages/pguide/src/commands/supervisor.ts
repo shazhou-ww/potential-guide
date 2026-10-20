@@ -65,6 +65,10 @@ interface PortfolioFile {
   resources: FileResource[];
 }
 
+function runtimeKey(goal: Pick<ObjectiveGoal, "pilot" | "bindingRevision">): string {
+  return JSON.stringify([goal.pilot, goal.bindingRevision ?? null]);
+}
+
 async function bindGoal(
   entry: FileGoal,
   cwd: string,
@@ -104,6 +108,9 @@ async function bindGoal(
           targetLevel: entry.targetLevel,
           priority: entry.priority,
           observationIntervalMs: entry.observationIntervalMs,
+          ...(pilot.source === undefined
+            ? {}
+            : { sourceBindings: { [pilot.objectiveId]: pilot.source } }),
           ...(entry.requirements === undefined ? {} : { requirements: entry.requirements }),
         },
         runtime,
@@ -433,7 +440,9 @@ export async function runSupervise(
             .boundObjectives?.()
             .filter((spec) => spec.objectiveId !== binding.goal.pilot.objectiveId) ?? [];
         const versions: Record<string, unknown> = {};
-        for (const dependency of dependencies) {
+        for (const dependency of [...dependencies].sort((a, b) =>
+          a.objectiveId.localeCompare(b.objectiveId),
+        )) {
           if (binding.runtime.resolveObjective === undefined)
             throw new CliError("Missing dependency source resolver.");
           const next = await binding.runtime.resolveObjective(
@@ -441,13 +450,23 @@ export async function runSupervise(
             undefined,
             controller.signal,
           );
-          versions[dependency.objectiveId] = {
-            tree: next.spec.version,
-            repositoryTree: next.spec.source?.repositoryTree,
+          if (next.spec.source === undefined)
+            throw new CliError("Missing dependency snapshot evidence.");
+          versions[dependency.objectiveId] = next.spec.source;
+        }
+        if (dependencies.length > 0) {
+          const sourceBindings: Record<string, GitPilotSource> = {};
+          for (const spec of [...(binding.runtime.boundObjectives?.() ?? [])].sort((a, b) =>
+            a.objectiveId.localeCompare(b.objectiveId),
+          )) {
+            if (spec.source !== undefined) sourceBindings[spec.objectiveId] = spec.source;
+          }
+          binding.goal = {
+            ...binding.goal,
+            bindingRevision: JSON.stringify(versions),
+            sourceBindings,
           };
         }
-        if (dependencies.length > 0)
-          binding.goal = { ...binding.goal, bindingRevision: JSON.stringify(versions) };
       }
       const next = fresh.map(({ goal }) => goal);
       if (JSON.stringify(next) === JSON.stringify(goals)) {
@@ -455,7 +474,7 @@ export async function runSupervise(
         return { goals };
       }
       for (const { goal, runtime } of fresh) {
-        runtimes.set(JSON.stringify(goal.pilot), runtime);
+        runtimes.set(runtimeKey(goal), runtime);
       }
       const previous = activeBindings;
       activeBindings = fresh;
@@ -472,9 +491,9 @@ export async function runSupervise(
           );
           const retained = new Set<string>();
           for (const binding of activeBindings) {
-            retained.add(JSON.stringify(binding.goal.pilot));
+            retained.add(runtimeKey(binding.goal));
           }
-          for (const binding of bindings) retained.add(JSON.stringify(binding.goal.pilot));
+          for (const binding of bindings) retained.add(runtimeKey(binding.goal));
           for (const key of runtimes.keys()) if (!retained.has(key)) runtimes.delete(key);
         },
       };
@@ -512,7 +531,7 @@ export async function runSupervise(
           signal.throwIfAborted();
         }
         bindings.add(binding);
-        runtimes.set(JSON.stringify(binding.goal.pilot), binding.runtime);
+        runtimes.set(runtimeKey(binding.goal), binding.runtime);
         return binding.goal.pilot;
       },
       async releaseObjective(spec) {
@@ -525,12 +544,8 @@ export async function runSupervise(
           await binding.close();
           bindings.delete(binding);
         }
-        if (
-          !activeBindings.some(
-            (binding) => JSON.stringify(binding.goal.pilot) === JSON.stringify(spec),
-          )
-        )
-          runtimes.delete(JSON.stringify(spec));
+        const retained = new Set([...bindings].map((binding) => runtimeKey(binding.goal)));
+        for (const key of runtimes.keys()) if (!retained.has(key)) runtimes.delete(key);
       },
       policy: (signal) => (input) =>
         createAgentPlannerPolicy(plannerProfile, globals.cwd, {
@@ -538,7 +553,7 @@ export async function runSupervise(
           timeoutMs: agentExecutionLimits.timeoutMs,
         })(input),
       observe: (goal, signal) => {
-        const runtime = runtimes.get(JSON.stringify(goal.pilot));
+        const runtime = runtimes.get(runtimeKey(goal));
         if (runtime === undefined) throw new CliError("Missing pinned Pilot runtime.");
         return (async () => {
           for (const [id, source] of Object.entries(goal.sourceBindings ?? {})) {

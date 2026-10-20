@@ -477,3 +477,216 @@ await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
     await rm(provider.directory, { recursive: true, force: true });
   }
 });
+
+test("continuous supervise follows script and dependency source updates without portfolio edits", async () => {
+  const consumer = await fixture();
+  const provider = await fixture();
+  let running: ReturnType<typeof run> | undefined;
+  try {
+    const marker = join(consumer.directory, "source-follow");
+    const observations = join(consumer.directory, "observations.jsonl");
+    const plannerLog = join(consumer.directory, "planner.jsonl");
+    const consumerScript = join(consumer.repository, "objective", "checks", "ready", "run.js");
+    const providerScript = join(provider.repository, "objective", "checks", "ready", "run.js");
+    const probeSource = (ok: boolean) => `#!/usr/bin/env node
+process.stdout.write(JSON.stringify({status:200,message:"",payload:${JSON.stringify(ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: {} }] })}}));
+`;
+    await writeFile(providerScript, probeSource(false));
+    const providerCommit = await provider.commit();
+    const providerTree = await git(provider.repository, "rev-parse", `${providerCommit}:objective`);
+    const consumerSource = (phase: string, dependency: boolean) => `#!/usr/bin/env node
+void (async () => {
+  const { appendFileSync } = await import("node:fs");
+  let input = ""; for await (const chunk of process.stdin) input += chunk;
+  const subject = JSON.parse(input);
+  appendFileSync(subject.log, ${JSON.stringify(`${phase}\n`)});
+  ${
+    dependency
+      ? `const { createSourceObjectiveDependencyProbe } = await import("@potential-guide/objective-pilot");
+  const probe = createSourceObjectiveDependencyProbe({objectiveId:${JSON.stringify(provider.uri)},expectedLevelId:"terminal"});
+  const result = await probe({}, new AbortController().signal);`
+      : 'const result = {status:200,message:"",payload:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]}};'
+  }
+  process.stdout.write(JSON.stringify(result));
+})().catch(error => { console.error(error); process.exitCode = 1; });
+`;
+    await writeFile(consumerScript, consumerSource("v1", false));
+    const initialCommit = await consumer.commit();
+    const initialTree = await git(consumer.repository, "rev-parse", `${initialCommit}:objective`);
+    const stub = join(consumer.directory, "planner.mjs");
+    await writeFile(
+      stub,
+      `
+import { createInterface } from "node:readline";
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+const [, log, marker] = process.argv.slice(2);
+for await (const line of createInterface({ input: process.stdin })) {
+  const message = JSON.parse(line);
+  appendFileSync(log, JSON.stringify(message) + "\\n");
+  if (!message.id) continue;
+  let result = {};
+  if (message.method === "initialize") result = { protocolVersion: 1 };
+  if (message.method === "session/new") result = { sessionId: "source-follow" };
+  if (message.method === "session/prompt") {
+    const context = JSON.parse(message.params.prompt[0].text.split("\\n").at(-1));
+    const payload = context.observations.fixture?.payload;
+    if (payload?.current.levelId === "terminal" && context.previousQueue.demands.length === 0) {
+      const key = JSON.stringify({ versions: payload.versions, sources: payload.sources });
+      appendFileSync(marker + ".samples", key + "\\n");
+      const last = readFileSync(marker + ".samples", "utf8").trim().split("\\n").slice(-3);
+      if (last.length === 3 && last.every(sample => sample === key))
+        writeFileSync(marker + ".terminal", key);
+    }
+    const text = JSON.stringify({ directives: context.candidates.map(goal => ({ goalId: goal.id, priority: goal.priority })) });
+    console.log(JSON.stringify({ jsonrpc: "2.0", method: "session/update", params: { sessionId: "source-follow",
+      update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text } } } }));
+    result = { stopReason: "end_turn" };
+  }
+  console.log(JSON.stringify({ jsonrpc: "2.0", id: message.id, result }));
+}
+`,
+    );
+    const config = join(consumer.directory, "config.json");
+    await writeFile(
+      config,
+      JSON.stringify({
+        schemaVersion: 2,
+        agents: { strategist: profile(stub, "plan", plannerLog, marker) },
+      }),
+    );
+    const portfolio = join(consumer.directory, "portfolio.json");
+    const content = JSON.stringify({
+      schemaVersion: 3,
+      goals: [
+        {
+          id: "fixture",
+          pilot: consumer.uri,
+          subject: { log: observations },
+          targetLevel: "terminal",
+          priority: 2,
+          observationIntervalMs: 500,
+        },
+      ],
+      resources: [],
+    });
+    await writeFile(portfolio, content);
+    const runner = join(consumer.directory, "until-source-followed.mjs");
+    await writeFile(
+      runner,
+      `import {existsSync} from "node:fs";
+const timer = setInterval(() => {
+  if (existsSync(${JSON.stringify(`${marker}.terminal`)})) { clearInterval(timer); process.emit("SIGINT"); }
+}, 25); timer.unref();
+await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
+`,
+    );
+    running = run(runner, [
+      "--portfolio-file",
+      portfolio,
+      "--planner",
+      "strategist",
+      "--config",
+      config,
+      "--execute",
+      "--duration-ms",
+      "60000",
+      "--format",
+      "json",
+    ]);
+    let completed: Awaited<ReturnType<typeof run>> | undefined;
+    void running.then((result) => {
+      completed = result;
+    });
+    const snapshots = async () => {
+      let source: string;
+      try {
+        source = await readFile(plannerLog, "utf8");
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+        throw error;
+      }
+      return source
+        .split("\n")
+        .slice(0, -1)
+        .filter(Boolean)
+        .map((line) => JSON.parse(line))
+        .filter((message) => message.method === "session/prompt")
+        .map(
+          (message) =>
+            JSON.parse(message.params.prompt[0].text.split("\n").at(-1)).observations.fixture
+              ?.payload,
+        );
+    };
+    const deadline = Date.now() + 60_000;
+    const waitFor = async (
+      predicate: (values: Awaited<ReturnType<typeof snapshots>>) => boolean,
+    ) => {
+      while (!predicate(await snapshots())) {
+        if (completed !== undefined) assert.fail(completed.stdout + completed.stderr);
+        assert.ok(Date.now() < deadline, "Continuous supervise did not follow source updates.");
+        await new Promise((done) => setTimeout(done, 25));
+      }
+    };
+    await waitFor((values) =>
+      values.some((value) => value?.sources?.[consumer.uri]?.commit === initialCommit),
+    );
+    await writeFile(join(consumer.repository, "unrelated.txt"), "outside the Pilot");
+    const unrelatedCommit = await consumer.commit();
+    assert.equal(
+      await git(consumer.repository, "rev-parse", `${unrelatedCommit}:objective`),
+      initialTree,
+    );
+    await waitFor((values) =>
+      values.some(
+        (value) =>
+          value?.sources?.[consumer.uri]?.commit === unrelatedCommit &&
+          value.versions[consumer.uri] === initialTree,
+      ),
+    );
+    await writeFile(consumerScript, consumerSource("v2", true));
+    const updatedCommit = await consumer.commit();
+    const updatedTree = await git(consumer.repository, "rev-parse", `${updatedCommit}:objective`);
+    assert.notEqual(updatedTree, initialTree);
+    await waitFor((values) =>
+      values.some(
+        (value) =>
+          value?.versions?.[consumer.uri] === updatedTree &&
+          value?.versions?.[provider.uri] === providerTree,
+      ),
+    );
+    await writeFile(providerScript, probeSource(true));
+    const dependencyCommit = await provider.commit();
+    const dependencyTree = await git(
+      provider.repository,
+      "rev-parse",
+      `${dependencyCommit}:objective`,
+    );
+    assert.notEqual(dependencyTree, providerTree);
+    const result = await running;
+    assert.equal(result.code, 0, result.stdout + result.stderr);
+    const report = JSON.parse(result.stdout);
+    assert.ok(
+      report.observations.fixture,
+      result.stderr + JSON.stringify({ providerTree, dependencyTree, report }),
+    );
+    const final = report.observations.fixture.payload;
+    assert.equal(final.current.levelId, "terminal");
+    assert.equal(final.versions[consumer.uri], updatedTree);
+    assert.equal(final.sources[consumer.uri].commit, updatedCommit);
+    assert.equal(final.versions[provider.uri], dependencyTree);
+    assert.equal(final.sources[provider.uri].commit, dependencyCommit);
+    assert.equal(await readFile(portfolio, "utf8"), content);
+    assert.deepEqual(
+      new Set((await readFile(observations, "utf8")).trim().split("\n")),
+      new Set(["v1", "v2"]),
+    );
+    assert.ok(!report.events.some((event: { type: string }) => event.type === "started"));
+  } finally {
+    if (running !== undefined) await running;
+    await Promise.all(
+      [consumer.directory, provider.directory].map((directory) =>
+        rm(directory, { recursive: true, force: true }),
+      ),
+    );
+  }
+});
