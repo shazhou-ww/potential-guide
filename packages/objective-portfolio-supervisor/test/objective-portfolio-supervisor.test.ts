@@ -20,6 +20,10 @@ import {
 } from "../src/index.js";
 
 const delay = (ms = 5) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+function required<T>(value: T | undefined): T {
+  assert.ok(value !== undefined, "Expected a value to be present.");
+  return value;
+}
 async function until(predicate: () => boolean | Promise<boolean>) {
   const deadline = Date.now() + 2000;
   while (!(await predicate())) {
@@ -204,7 +208,7 @@ test("authorization block survives priority, revision, resource identity and equ
   const h = await harness([demand("a")], { permissionUpdates });
   try {
     await until(() => h.executions.length === 1);
-    const first = h.executions[0]!;
+    const first = required(h.executions[0]);
     assert.deepEqual(first.input.permissions, policy);
     // Irrelevant revisions arriving during a run must not discard its blocked signature.
     await h.update([demand("a", 0, { revision: 2 })]);
@@ -245,7 +249,7 @@ test("effective permission changes retry blocked demand with a new frozen policy
   const h = await harness([demand("a")], { permissionUpdates });
   try {
     await until(() => h.executions.length === 1);
-    const first = h.executions[0]!;
+    const first = required(h.executions[0]);
     first.completion.resolve({
       ...outcome(first.input, "authorization-required"),
       authorizationRequests: [authorizationRequest],
@@ -256,8 +260,8 @@ test("effective permission changes retry blocked demand with a new frozen policy
     );
     await until(() => h.executions.length === 2);
     assert.deepEqual(first.input.permissions?.grants, []);
-    assert.deepEqual(h.executions[1]!.input.permissions?.grants, ["repair"]);
-    assert.ok(Object.isFrozen(h.executions[1]!.input.permissions));
+    assert.deepEqual(required(h.executions[1]).input.permissions?.grants, ["repair"]);
+    assert.ok(Object.isFrozen(required(h.executions[1]).input.permissions));
   } finally {
     await h.coordinator.close();
   }
@@ -275,10 +279,10 @@ test("removing live permission policy cancels old authority and ignores its late
   });
   try {
     await until(() => h.executions.length === 1);
-    const first = h.executions[0]!;
+    const first = required(h.executions[0]);
     await Effect.runPromise(SubscriptionRef.set(permissionUpdates, undefined));
     await until(() => first.aborted && h.executions.length === 2);
-    assert.deepEqual(h.executions[1]!.input.permissions, { ceiling: [], grants: [] });
+    assert.deepEqual(required(h.executions[1]).input.permissions, { ceiling: [], grants: [] });
     first.completion.resolve(outcome(first.input));
     await delay(20);
     assert.equal(h.events.filter((event) => event.type === "result").length, 0);
@@ -292,8 +296,8 @@ test("quota-exhausted unresolved authorization does not create an automatic cont
   const h = await harness([demand("a")]);
   try {
     await until(() => h.executions.length === 1);
-    h.executions[0]!.completion.resolve({
-      ...outcome(h.executions[0]!.input, "exhausted"),
+    required(h.executions[0]).completion.resolve({
+      ...outcome(required(h.executions[0]).input, "exhausted"),
       exhaustedBy: "agent-runs",
       authorizationRequests: [authorizationRequest],
     });
@@ -333,7 +337,7 @@ test("authorization feedback reaches planner without grants and cannot self-auth
   });
   try {
     await until(() => h.executions.length === 1);
-    const first = h.executions[0]!;
+    const first = required(h.executions[0]);
     h.coordinator.reportAuthorizationRequest(first.input, authorizationRequest);
     h.coordinator.reportAuthorizationRequest(first.input, authorizationRequest);
     await until(() => received.some((event) => event.type === "authorization-request"));
@@ -383,13 +387,13 @@ test("malformed live grant selection stops active work and suspends launches unt
     await Effect.runPromise(
       SubscriptionRef.set(permissionUpdates, { ceiling: [], grants: ["outside-ceiling"] }),
     );
-    await until(() => h.executions[0]!.aborted && h.executions[0]!.killed);
+    await until(() => required(h.executions[0]).aborted && required(h.executions[0]).killed);
     await delay(20);
     assert.equal(h.executions.length, 1);
     assert.ok((await read(h.coordinator.state)).error);
     await Effect.runPromise(SubscriptionRef.set(permissionUpdates, undefined));
     await until(() => h.executions.length === 2);
-    assert.deepEqual(h.executions[1]!.input.permissions, { ceiling: [], grants: [] });
+    assert.deepEqual(required(h.executions[1]).input.permissions, { ceiling: [], grants: [] });
   } finally {
     await h.coordinator.close();
   }
@@ -409,7 +413,7 @@ test("resource capacity two and live load enforce global/per-resource ceilings",
     });
     await delay(20);
     assert.equal(h.executions.length, 2);
-    h.executions[0]!.completion.resolve(outcome(h.executions[0]!.input));
+    required(h.executions[0]).completion.resolve(outcome(required(h.executions[0]).input));
     await until(() => h.executions.length === 3);
     assert.equal((await read(h.coordinator.state)).runs.length, 2);
   } finally {
@@ -423,10 +427,10 @@ test("ordinary priority changes do not preempt; completion is suppressed on stal
     await until(() => h.executions.length === 1);
     await h.update([demand("b", 1), demand("a", 9)]);
     await delay(20);
-    assert.equal(h.executions[0]!.aborted, false);
-    h.executions[0]!.completion.resolve(outcome(h.executions[0]!.input));
+    assert.equal(required(h.executions[0]).aborted, false);
+    required(h.executions[0]).completion.resolve(outcome(required(h.executions[0]).input));
     await until(() => h.executions.length === 2);
-    h.executions[1]!.completion.resolve(outcome(h.executions[1]!.input));
+    required(h.executions[1]).completion.resolve(outcome(required(h.executions[1]).input));
     await until(async () => (await read(h.coordinator.state)).runs.length === 0);
     await h.update([demand("a"), demand("b")]);
     await delay(20);
@@ -444,11 +448,11 @@ test("P0 waits for abort grace and confirmed kill, retains FIFO and deduplicates
   try {
     await until(() => h.executions.length === 1);
     await h.update([demand("a"), demand("first", 0), demand("second", 0)]);
-    await until(() => h.executions[0]!.aborted);
-    assert.equal(h.executions[0]!.killed, false);
-    await until(() => h.executions[0]!.killed);
+    await until(() => required(h.executions[0]).aborted);
+    assert.equal(required(h.executions[0]).killed, false);
+    await until(() => required(h.executions[0]).killed);
     assert.equal(h.executions.length, 1);
-    assert.equal((await read(h.coordinator.state)).runs[0]!.status, "stopping");
+    assert.equal(required((await read(h.coordinator.state)).runs[0]).status, "stopping");
     await h.update([demand("second", 0), demand("first", 0), demand("a")]);
     await delay(10);
     assert.equal(
@@ -457,10 +461,16 @@ test("P0 waits for abort grace and confirmed kill, retains FIFO and deduplicates
     );
     gate.resolve();
     await until(() => h.executions.length === 2);
-    assert.equal(h.executions[1]!.input.spec.pilot.objectiveId, pilot("first").objectiveId);
-    h.executions[1]!.completion.resolve(outcome(h.executions[1]!.input));
+    assert.equal(
+      required(h.executions[1]).input.spec.pilot.objectiveId,
+      pilot("first").objectiveId,
+    );
+    required(h.executions[1]).completion.resolve(outcome(required(h.executions[1]).input));
     await until(() => h.executions.length === 3);
-    assert.equal(h.executions[2]!.input.spec.pilot.objectiveId, pilot("second").objectiveId);
+    assert.equal(
+      required(h.executions[2]).input.spec.pilot.objectiveId,
+      pilot("second").objectiveId,
+    );
   } finally {
     gate.resolve();
     await h.coordinator.close();
@@ -479,7 +489,7 @@ test("P0 preempts only one necessary lower run and never an equal-priority run",
     assert.equal(h.executions.slice(0, 2).filter((entry) => entry.aborted).length, 1);
     await h.update([demand("next", 0), demand("urgent", 0)]);
     await until(() => h.executions.length === 4);
-    assert.equal(h.executions[2]!.aborted, false);
+    assert.equal(required(h.executions[2]).aborted, false);
   } finally {
     await h.coordinator.close();
   }
@@ -491,11 +501,13 @@ test("exhausted demand yields and resumes with retained stalls/latest resource s
     await until(() => h.executions.length === 1);
     const newer = { ...resource, id: "two", binding: { id: "new-worker" } };
     await Effect.runPromise(SubscriptionRef.set(h.resources, [newer]));
-    h.executions[0]!.completion.resolve(outcome(h.executions[0]!.input, "exhausted", 4));
+    required(h.executions[0]).completion.resolve(
+      outcome(required(h.executions[0]).input, "exhausted", 4),
+    );
     assert.equal(h.executions.length, 1);
     await until(() => h.executions.length === 2);
-    assert.equal(h.executions[1]!.input.history?.stalledRuns, 4);
-    assert.equal(h.executions[1]!.resource.id, "two");
+    assert.equal(required(h.executions[1]).input.history?.stalledRuns, 4);
+    assert.equal(required(h.executions[1]).resource.id, "two");
   } finally {
     await h.coordinator.close();
   }
@@ -511,9 +523,9 @@ test("stale completion cannot complete a superseding specification", async () =>
     });
     await h.update([changed]);
     await until(() => h.executions.length === 2);
-    h.executions[0]!.completion.resolve(outcome(h.executions[0]!.input));
+    required(h.executions[0]).completion.resolve(outcome(required(h.executions[0]).input));
     await delay(10);
-    assert.equal((await read(h.coordinator.state)).runs[0]!.demand.revision, 2);
+    assert.equal(required((await read(h.coordinator.state)).runs[0]).demand.revision, 2);
     assert.equal(h.events.filter((event) => event.type === "result").length, 0);
   } finally {
     await h.coordinator.close();
@@ -527,7 +539,7 @@ test("canonical subjects serialize and deduplicate equivalent objective demands"
   const h = await harness([a, b], { maxConcurrency: 2, resources: [{ ...resource, capacity: 2 }] });
   try {
     await until(() => h.executions.length === 1);
-    h.executions[0]!.completion.resolve(outcome(h.executions[0]!.input));
+    required(h.executions[0]).completion.resolve(outcome(required(h.executions[0]).input));
     await delay(30);
     assert.equal(h.executions.length, 1);
   } finally {
@@ -562,7 +574,7 @@ test("failed kill retains occupied resources and surfaces error", async () => {
   await until(async () => (await read(h.coordinator.state)).error !== undefined);
   assert.equal(h.executions.length, 1);
   assert.equal((await read(h.coordinator.state)).runs.length, 1);
-  h.executions[0]!.completion.resolve(outcome(h.executions[0]!.input));
+  required(h.executions[0]).completion.resolve(outcome(required(h.executions[0]).input));
   await assert.rejects(h.coordinator.close(), /kill failed/);
 });
 
@@ -582,7 +594,7 @@ test("planner observes successful goals at cadence and queues only later regress
     await until(() => count >= 2);
     level = "initial";
     await until(async () => (await read(planner.queue)).demands.length === 1);
-    const old = (await read(planner.queue)).demands[0]!;
+    const old = required((await read(planner.queue)).demands[0]);
     level = "terminal";
     await planner.feedback({
       type: "result",
@@ -597,7 +609,7 @@ test("planner observes successful goals at cadence and queues only later regress
     assert.equal((await read(planner.queue)).demands.length, 0);
     level = "initial";
     await planner.updateGoals([{ ...root, pilot: { ...root.pilot, version: "2" } }]);
-    const next = (await read(planner.queue)).demands[0]!;
+    const next = required((await read(planner.queue)).demands[0]);
     assert.ok(next.revision > old.revision);
     await planner.feedback({
       type: "result",
@@ -609,7 +621,7 @@ test("planner observes successful goals at cadence and queues only later regress
         latestObservation: observed(root.pilot, "terminal"),
       },
     });
-    assert.equal((await read(planner.queue)).demands[0]!.revision, next.revision);
+    assert.equal(required((await read(planner.queue)).demands[0]).revision, next.revision);
   } finally {
     await planner.close();
   }
@@ -625,9 +637,12 @@ test("planner deduplicates canonical registrations and priority-only updates pre
   try {
     const initial = (await read(planner.queue)).demands;
     assert.equal(initial.length, 1);
-    assert.equal(initial[0]!.priority, 1);
+    assert.equal(required(initial[0]).priority, 1);
     await planner.updateGoals([{ ...one, priority: 0 }]);
-    assert.equal((await read(planner.queue)).demands[0]!.revision, initial[0]!.revision);
+    assert.equal(
+      required((await read(planner.queue)).demands[0]).revision,
+      required(initial[0]).revision,
+    );
   } finally {
     await planner.close();
   }
@@ -676,16 +691,16 @@ test("two roots merge known shared direct prerequisite at highest target then re
         prerequisite: { spec: child, subject: { key: "common" }, minimumLevelId },
       },
     });
-    await planner.feedback(dependency(a!, "ready"));
-    await planner.feedback(dependency(b!, "terminal"));
+    await planner.feedback(dependency(required(a), "ready"));
+    await planner.feedback(dependency(required(b), "terminal"));
     const demands = (await read(planner.queue)).demands;
     assert.equal(demands.length, 1);
-    assert.equal(demands[0]!.pilot.objectiveId, child.objectiveId);
-    assert.equal(demands[0]!.targetLevel, "terminal");
+    assert.equal(required(demands[0]).pilot.objectiveId, child.objectiveId);
+    assert.equal(required(demands[0]).targetLevel, "terminal");
     childReady = true;
     await planner.feedback({
       type: "result",
-      demand: demands[0]!,
+      demand: required(demands[0]),
       outcome: {
         stopReason: "target-reached",
         iterations: 1,
@@ -732,7 +747,7 @@ test("all queued P0 demands notify immediately and a running promotion is not pr
     await h.update([demand("a", 0), demand("first", 0), demand("second", 0)]);
     await until(() => h.events.filter((event) => event.type === "p0-queued").length === 2);
     await delay(15);
-    assert.equal(h.executions[0]!.aborted, false);
+    assert.equal(required(h.executions[0]).aborted, false);
     assert.deepEqual(
       h.events.filter((event) => event.type === "p0-queued").map((event) => event.demand.id),
       ["first", "second"],
@@ -747,11 +762,11 @@ test("confirmed abort completion releases before grace without calling kill", as
   try {
     await until(() => h.executions.length === 1);
     await h.update([demand("a"), demand("urgent", 0)]);
-    await until(() => h.executions[0]!.aborted);
-    h.executions[0]!.completion.reject(new Error("aborted and process exited"));
+    await until(() => required(h.executions[0]).aborted);
+    required(h.executions[0]).completion.reject(new Error("aborted and process exited"));
     await until(() => h.executions.length === 2);
-    assert.equal(h.executions[0]!.killed, false);
-    h.executions[1]!.completion.resolve(outcome(h.executions[1]!.input));
+    assert.equal(required(h.executions[0]).killed, false);
+    required(h.executions[1]).completion.resolve(outcome(required(h.executions[1]).input));
     await h.update([]);
   } finally {
     await h.coordinator.close();
@@ -762,7 +777,7 @@ test("runner capability notifications bind to exact live input and ignore stale 
   const h = await harness([demand("a")]);
   try {
     await until(() => h.executions.length === 1);
-    const original = h.executions[0]!.input;
+    const original = required(h.executions[0]).input;
     const request = { capability: "publish", reason: "deployment approval needed" };
     h.coordinator.reportCapabilityRequest(original, request);
     h.coordinator.reportCapabilityRequest(original, request);
@@ -784,9 +799,11 @@ test("exhausted retry reconsiders priority instead of immediately reclaiming its
   try {
     await until(() => h.executions.length === 1);
     await h.update([demand("a", 3), demand("b", 1)]);
-    h.executions[0]!.completion.resolve(outcome(h.executions[0]!.input, "exhausted", 7));
+    required(h.executions[0]).completion.resolve(
+      outcome(required(h.executions[0]).input, "exhausted", 7),
+    );
     await until(() => h.executions.length === 2);
-    assert.equal(h.executions[1]!.input.spec.pilot.objectiveId, pilot("b").objectiveId);
+    assert.equal(required(h.executions[1]).input.spec.pilot.objectiveId, pilot("b").objectiveId);
   } finally {
     await h.coordinator.close();
   }
@@ -799,7 +816,7 @@ test("quota exhaustion before an observation remains normal eligible planner dem
     observe: async (entry) => observed(entry.pilot),
   });
   try {
-    const active = (await read(planner.queue)).demands[0]!;
+    const active = required((await read(planner.queue)).demands[0]);
     await planner.feedback({
       type: "result",
       demand: active,
@@ -811,7 +828,7 @@ test("quota exhaustion before an observation remains normal eligible planner dem
         latestObservation: { status: 408, payload: null, message: "deadline before observation" },
       },
     });
-    assert.equal((await read(planner.queue)).demands[0]!.revision, active.revision);
+    assert.equal(required((await read(planner.queue)).demands[0]).revision, active.revision);
     assert.equal((await read(planner.state)).error, undefined);
   } finally {
     await planner.close();
@@ -841,7 +858,7 @@ test("observed prerequisite satisfaction renews blocked root without requiring a
   });
 
   try {
-    const active = (await read(planner.queue)).demands[0]!;
+    const active = required((await read(planner.queue)).demands[0]);
     await planner.feedback({
       type: "result",
       demand: active,
@@ -853,13 +870,16 @@ test("observed prerequisite satisfaction renews blocked root without requiring a
         prerequisite: { spec: child, subject: {}, minimumLevelId: "ready" },
       },
     });
-    assert.equal((await read(planner.queue)).demands[0]!.pilot.objectiveId, child.objectiveId);
+    assert.equal(
+      required((await read(planner.queue)).demands[0]).pilot.objectiveId,
+      child.objectiveId,
+    );
     childLevel = "ready";
     await planner.refresh();
     const renewed = (await read(planner.queue)).demands;
     assert.equal(renewed.length, 1);
-    assert.equal(renewed[0]!.id, root.id);
-    assert.ok(renewed[0]!.revision > active.revision);
+    assert.equal(required(renewed[0]).id, root.id);
+    assert.ok(required(renewed[0]).revision > active.revision);
   } finally {
     await planner.close();
   }
@@ -874,13 +894,13 @@ test("target update with a canonically equal subject preserves serialization but
     ]);
     await delay(15);
     assert.equal(h.executions.length, 1);
-    assert.equal(h.executions[0]!.aborted, false);
-    h.executions[0]!.completion.resolve({
-      ...outcome(h.executions[0]!.input),
-      latestObservation: observed(h.executions[0]!.input.spec.pilot, "ready"),
+    assert.equal(required(h.executions[0]).aborted, false);
+    required(h.executions[0]).completion.resolve({
+      ...outcome(required(h.executions[0]).input),
+      latestObservation: observed(required(h.executions[0]).input.spec.pilot, "ready"),
     });
     await until(() => h.executions.length === 2);
-    assert.equal(h.executions[1]!.input.spec.strategy.targetLevel, "terminal");
+    assert.equal(required(h.executions[1]).input.spec.strategy.targetLevel, "terminal");
     assert.equal(h.events.filter((event) => event.type === "result").length, 0);
   } finally {
     await h.coordinator.close();
@@ -891,8 +911,8 @@ test("prerequisite-blocked revisions never auto retry, even when only the queue 
   const h = await harness([demand("a")]);
   try {
     await until(() => h.executions.length === 1);
-    h.executions[0]!.completion.resolve({
-      ...outcome(h.executions[0]!.input, "prerequisite-unmet"),
+    required(h.executions[0]).completion.resolve({
+      ...outcome(required(h.executions[0]).input, "prerequisite-unmet"),
       prerequisite: { spec: pilot("child"), subject: {}, minimumLevelId: "ready" },
     });
     await until(async () => (await read(h.coordinator.state)).runs.length === 0);
@@ -915,7 +935,7 @@ test("planner goal removal publishes an empty queue and late feedback cannot res
   });
   try {
     const before = await read(planner.queue);
-    const active = before.demands[0]!;
+    const active = required(before.demands[0]);
     await planner.updateGoals([]);
     const removed = await read(planner.queue);
     assert.ok(removed.revision > before.revision);
@@ -958,7 +978,7 @@ test("live worker capability requests reach the replaceable planner policy witho
   });
   try {
     await until(() => h.executions.length === 1);
-    h.coordinator.reportCapabilityRequest(h.executions[0]!.input, {
+    h.coordinator.reportCapabilityRequest(required(h.executions[0]).input, {
       capability: "approval",
       reason: "requires human authorization",
     });
@@ -1035,10 +1055,10 @@ test("automatic exhausted continuation grants another actual Agent round despite
   try {
     await until(() => results.length === 2);
     assert.equal(agentCalls, 2);
-    assert.equal(results[0]!.iterations, 1);
-    assert.equal(results[1]!.iterations, 1);
-    assert.equal(inputs[1]!.history?.stalledRuns, 1);
-    assert.equal(results[1]!.stalledRuns, 2);
+    assert.equal(required(results[0]).iterations, 1);
+    assert.equal(required(results[1]).iterations, 1);
+    assert.equal(required(inputs[1]).history?.stalledRuns, 1);
+    assert.equal(required(results[1]).stalledRuns, 2);
   } finally {
     await coordinator.close();
   }

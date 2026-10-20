@@ -239,7 +239,7 @@ async function bindPilot<T>(
                 const spec = await loadPilotSpec(objectiveUri, resources);
                 function checkoutPath(checkout: string, path: string): string {
                   if (
-                    path &&
+                    path.length > 0 &&
                     path
                       .split("/")
                       .some((part) => !part || part === "." || part === ".." || /[\\:]/.test(part))

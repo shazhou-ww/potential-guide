@@ -156,7 +156,9 @@ export async function createPortfolioPlanner(
     const plan = validatePlan(await policy(input), input);
     if (closed) return;
     const demands: QueueDemand[] = plan.directives.map((directive) => {
-      const goal = goals.get(directive.goalId)!;
+      const goal = goals.get(directive.goalId);
+      if (goal === undefined)
+        throw new ObjectivePortfolioError(`Unknown directive goal: ${directive.goalId}.`);
       const next = {
         ...goal,
         priority: directive.priority,

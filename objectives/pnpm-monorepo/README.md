@@ -122,6 +122,10 @@ purpose 为 project-doc/package-doc/script/migration/generated/tool/unknown。
 目录内未知用途同样可用 unknown assignment 显式阻止误判；未声明的包内内容暂按包职责
 容纳，不能把这种容纳当成已识别每个文件的具体业务用途。
 
+结构清单扫描会跳过各层级的 `dist/` 构建输出目录，不将旧 workspace 遗留的产物
+误识别为源码或 workspace；名为 `dist` 的普通文件仍参与职责分类。
+交付检查仍会显式读取契约声明的 `output` 目录，验证已有产物，不执行构建。
+
 支持的全局配置是根 package.json（npm 可扩展元数据中的身份、依赖、scripts、
 files、engines、bin 类型）、pnpm-workspace.yaml（packages、catalog(s) 类型与已知
 pnpm 配置字段）以及 Turbo 的 tasks/dependsOn/outputs/inputs/env/cache/persistent

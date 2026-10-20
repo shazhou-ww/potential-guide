@@ -35,7 +35,10 @@ async function loadStaticPilot(path: string) {
   }
 }
 
-export async function runProbe(argv: string[], globals: GlobalOptions): Promise<number | void> {
+export async function runProbe(
+  argv: string[],
+  globals: GlobalOptions,
+): Promise<number | undefined> {
   if (globals.help) {
     writeResult(
       {
@@ -217,7 +220,7 @@ export async function runValidate(argv: string[], globals: GlobalOptions): Promi
 
 export function launchPilotCommand(
   metadata: CommandMetadata,
-  run: (argv: string[], globals: GlobalOptions) => Promise<number | void>,
+  run: (argv: string[], globals: GlobalOptions) => Promise<number | undefined> | Promise<void>,
 ): void {
   void commandMain(metadata, run);
 }

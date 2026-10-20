@@ -867,7 +867,7 @@ export function expectedCliError(error: unknown): CliError {
 
 export async function commandMain(
   metadata: CommandMetadata,
-  run: (argv: string[], globals: GlobalOptions) => Promise<number | void>,
+  run: (argv: string[], globals: GlobalOptions) => Promise<number | undefined> | Promise<void>,
 ): Promise<void> {
   try {
     if (process.argv[2] === "--pguide-command-metadata") {
