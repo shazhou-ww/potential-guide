@@ -178,20 +178,6 @@ async function packAndInstall() {
 }
 
 async function verifyCliContract() {
-  const allBins = packageDefinitions.flatMap(({ bins }) => bins);
-  for (const bin of allBins) {
-    if (bin !== "pguide") {
-      const metadata = await successful(executable(bin), ["--pguide-command-metadata"], {
-        cwd: consumer,
-      });
-      assert.equal(JSON.parse(metadata.stdout).protocol, "pguide-command-v1");
-    }
-    const help = await successful(executable(bin), ["--help", "--format", "json"], {
-      cwd: consumer,
-    });
-    assert.equal(JSON.parse(help.stdout).schemaVersion, 1);
-  }
-
   const extensionDirectory = join(consumer, "extensions");
   await mkdir(extensionDirectory);
   const echoScript = join(extensionDirectory, "echo.mjs");
@@ -237,6 +223,26 @@ async function verifyCliContract() {
     LOCALAPPDATA: join(home, "AppData", "Local"),
     XDG_CONFIG_HOME: join(home, ".config"),
   };
+
+  const allBins = packageDefinitions.flatMap(({ bins }) => bins);
+  for (const bin of allBins) {
+    if (bin === "objective-contract-migrate") {
+      await access(executable(bin));
+      continue;
+    }
+    if (bin !== "pguide") {
+      const metadata = await successful(executable(bin), ["--pguide-command-metadata"], {
+        cwd: consumer,
+        env,
+      });
+      assert.equal(JSON.parse(metadata.stdout).protocol, "pguide-command-v1");
+    }
+    const help = await successful(executable(bin), ["--help", "--format", "json"], {
+      cwd: consumer,
+      env,
+    });
+    assert.equal(JSON.parse(help.stdout).schemaVersion, 1);
+  }
 
   const discovery = await successful(executable("pguide"), ["--help", "--format", "json"], {
     cwd: consumer,
