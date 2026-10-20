@@ -15,7 +15,7 @@ try {
   const revision = await execute("git", ["rev-parse", "HEAD"], { cwd: root });
   assert.equal(revision.code, 0, revision.stderr);
   report.commit = revision.stdout.trim();
-  report.pilot = `git+${pathToFileURL(root).href}#packages/monorepo-objective/pilot.yaml`;
+  report.pilot = `git+${pathToFileURL(root).href}#packages/objective-monorepo-standard/pilot.yaml`;
   const write = async (path, content) => {
     await mkdir(dirname(join(target, path)), { recursive: true });
     await writeFile(

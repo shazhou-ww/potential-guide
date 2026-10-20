@@ -72,7 +72,7 @@ are stored under the platform state directory; credentials are never persisted.
 ### Set up a target device
 
 For an already installed local device, prefer the standalone
-[self-check Objective](./packages/pguide-self-check-pilot/README.md). Its
+[self-check Objective](./packages/objective-pguide-self-check/README.md). Its
 `initial → installed → configured → terminal` checks verify installation,
 ACP stdio configuration and one isolated, directly prompted marker repair with
 independent exact-content verification. It does not nest regulation or require
@@ -85,7 +85,7 @@ builds an explicit source commit, installs packed packages in a clean Linux
 consumer, and verifies positive and negative marker repairs with a local ACP
 fixture—without credentials or real model calls.
 
-The repository-owned [setup Objective](./packages/pguide-setup-pilot/README.md) checks
+The repository-owned [setup Objective](./packages/objective-pguide-setup/README.md) checks
 installation, configuration and ACP readiness on target **B**, while an already-ready
 control machine **A** runs setup regulation and guides its Agent to install/configure
 B. An explicit SSH target uses a dependency-free Node helper on POSIX B: B does
@@ -93,7 +93,7 @@ not need pguide to begin checking. Omitting `target` (or `type:local`) preserves
 local bootstrap. It is a Git-subdirectory Pilot, not a new CLI command:
 
 ```sh
-pguide probe --pilot 'git+https://github.com/shazhou-ww/potential-guide.git#packages/pguide-setup-pilot/pilot.yaml' --revision <commit> --subject-file <absolute-subject.json> --format json
+pguide probe --pilot 'git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-pguide-setup/pilot.yaml' --revision <commit> --subject-file <absolute-subject.json> --format json
 ```
 
 Start with its control-Agent bootstrap instructions if B lacks Node or `pguide`.
@@ -111,7 +111,7 @@ probe allowance. A successful direct check is not a cached Git Pilot terminal re
 
 ### Maintain a development environment
 
-The independent [development-machine health Pilot](./packages/development-machine-health-pilot/README.md)
+The independent [development-machine health Pilot](./packages/objective-devbox-health/README.md)
 checks a dedicated Linux account, basic system health, selected TypeScript/Python/C++/Rust
 toolchains, task residue and sampled health trends. Checks do not install or repair;
 an authorized Agent performs maintenance and re-observes. Docker targets are inspected
@@ -140,7 +140,7 @@ See the [functional migration guide](./docs/functional-migration.md) for
 consumer imports, specification/subject separation, the probe envelope,
 Agent input, CLI/config changes, and running-effect cancellation.
 
-The [requirements-led pnpm monorepo Objective](./packages/monorepo-objective/README.md)
+The [requirements-led pnpm monorepo Objective](./packages/objective-monorepo-standard/README.md)
 checks structure before dependency, build and delivery preparation. It works on
 independent target repositories, reports unsupported or missing proof explicitly,
 and never installs, publishes, deploys or runs migrations.

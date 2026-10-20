@@ -13,7 +13,7 @@ import {
 } from "@potential-guide/objective-pilot";
 import { bin, fixture, git, root, run } from "../../pguide/test/fixtures.js";
 
-const objective = join(root, "packages", "pguide-setup-pilot");
+const objective = join(root, "packages", "objective-pguide-setup");
 const helper = join(objective, "setup-check.mjs");
 const composition = join(root, "packages", "pguide", "dist", "bin.js");
 
@@ -380,8 +380,9 @@ test("local setup and self-check deadlines require coordinated metadata and a cl
   try {
     const { check } = await import(pathToFileURL(helper).href);
     const { check: selfCheck } = await import(
-      pathToFileURL(join(root, "packages", "pguide-self-check-pilot", "runtime", "setup-check.mjs"))
-        .href
+      pathToFileURL(
+        join(root, "packages", "objective-pguide-self-check", "runtime", "setup-check.mjs"),
+      ).href
     );
     for (const [metadata, timeoutMs, accepted] of [
       [undefined, 20000, true],
@@ -924,7 +925,7 @@ test("Git subdirectory snapshot coordinates long local budgets and existing file
         }),
       );
     await writeProbeConfig();
-    await cp(objective, join(f.repository, "packages", "pguide-setup-pilot"), {
+    await cp(objective, join(f.repository, "packages", "objective-pguide-setup"), {
       recursive: true,
       filter: (source) => !["node_modules", ".turbo", "test"].includes(basename(source)),
     });
@@ -933,7 +934,7 @@ test("Git subdirectory snapshot coordinates long local budgets and existing file
       f.subjectFile,
       JSON.stringify({ ...f.subject, allowSanity: true, timeoutMs: 60000 }),
     );
-    const uri = `git+${pathToFileURL(f.repository).href}#packages/pguide-setup-pilot/pilot.yaml`;
+    const uri = `git+${pathToFileURL(f.repository).href}#packages/objective-pguide-setup/pilot.yaml`;
     const probeEnv: NodeJS.ProcessEnv = { ...f.env };
     delete probeEnv.GIT_DIR;
     delete probeEnv.GIT_INDEX_FILE;
@@ -1028,7 +1029,7 @@ test("Windows installed command and ACP npm shims preserve spaces without shell 
   }
 });
 
-const selfObjective = join(root, "packages", "pguide-self-check-pilot");
+const selfObjective = join(root, "packages", "objective-pguide-self-check");
 const selfHelper = join(selfObjective, "self-check.mjs");
 function selfSubject(f: Awaited<ReturnType<typeof setup>>) {
   const { allowSanity: _, ...subject } = f.subject;
@@ -1277,7 +1278,7 @@ test("self-check committed snapshots coordinate default and explicit long budget
   for (const extended of [false, true]) {
     const f = await setup();
     try {
-      const snapshot = join(f.repository, "packages", "pguide-self-check-pilot");
+      const snapshot = join(f.repository, "packages", "objective-pguide-self-check");
       await cp(selfObjective, snapshot, {
         recursive: true,
         filter: (source) => !["node_modules", ".turbo", "test"].includes(basename(source)),
@@ -1285,7 +1286,7 @@ test("self-check committed snapshots coordinate default and explicit long budget
       await git(f.repository, "add", ".");
       await git(f.repository, "commit", "-qm", "Self-check snapshot");
       const revision = await git(f.repository, "rev-parse", "HEAD");
-      const uri = `git+${pathToFileURL(f.repository).href}#packages/pguide-self-check-pilot/pilot.yaml`;
+      const uri = `git+${pathToFileURL(f.repository).href}#packages/objective-pguide-self-check/pilot.yaml`;
       if (extended)
         await writeFile(
           f.subject.configPath,

@@ -4,7 +4,7 @@
     "composite": true,
     "rootDir": "src",
     "outDir": "dist",
-    "tsBuildInfoFile": "../../.cache/tsbuildinfo/monorepo-objective.tsbuildinfo"
+    "tsBuildInfoFile": "../../.cache/tsbuildinfo/objective-monorepo-standard.tsbuildinfo"
   },
   "include": ["src/**/*.ts"]
 }

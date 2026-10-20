@@ -1,8 +1,5 @@
 node_modules/
 dist/
-!packages/monorepo-objective/dist/
-packages/monorepo-objective/dist/*
-!packages/monorepo-objective/dist/pilot-checker.cjs
 .cache/
 .turbo/
 *.tgz

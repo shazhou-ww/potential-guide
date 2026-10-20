@@ -131,12 +131,15 @@ export async function checkSourceImport(
 }
 
 export async function checkSourceBoundaries(context: SourceBoundaryContext, inventory: string[]) {
-  const { snapshot, workspace, put } = context;
+  const { snapshot, contract, workspace, put } = context;
   const actualSources = inventory.filter(
     (file) =>
       under(file, workspace.path) &&
       /\.[cm]?[jt]sx?$/.test(file) &&
       !file.includes("/dist/") &&
+      !contract.policy.assignments.some(
+        (assignment) => assignment.path === file && assignment.purpose === "generated",
+      ) &&
       !/(?:\/(?:test|tests|__tests__)\/|[.](?:test|spec)[.])/.test(file),
   );
   for (const source of actualSources) {

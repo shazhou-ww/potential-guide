@@ -13,14 +13,13 @@ import {
 } from "@potential-guide/objective-pilot";
 import { root } from "../../pguide/test/fixtures.js";
 
-const objective = join(root, "packages", "development-machine-health-pilot");
+const objective = join(root, "packages", "objective-devbox-health");
 const helperPath = join(objective, "health-check.mjs");
 const health = await import(pathToFileURL(helperPath).href);
 const loaded = await loadPilotSpec(join(objective, "pilot.yaml"), fileResources);
 const spec: PilotSpec = {
   ...loaded,
-  objectiveId:
-    "git+https://example.invalid/health.git#packages/development-machine-health-pilot/pilot.yaml",
+  objectiveId: "git+https://example.invalid/health.git#packages/objective-devbox-health/pilot.yaml",
   version: "1".repeat(40),
 };
 const subject = {

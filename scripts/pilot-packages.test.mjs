@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -9,15 +10,44 @@ import { execute } from "./verify-deployment-helpers.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const pilots = [
-  ["monorepo-objective", "check.mjs", ["structure", "deliveries"]],
-  ["pguide-setup-pilot", "setup-check.mjs", ["installation", "configuration", "sanity"]],
-  ["pguide-self-check-pilot", "self-check.mjs", ["installation", "configuration", "sanity"]],
+  ["objective-monorepo-standard", "check.mjs", ["structure", "deliveries"]],
+  ["objective-pguide-setup", "setup-check.mjs", ["installation", "configuration", "sanity"]],
+  ["objective-pguide-self-check", "self-check.mjs", ["installation", "configuration", "sanity"]],
   [
-    "development-machine-health-pilot",
+    "objective-devbox-health",
     "health-check.mjs",
     ["identity", "system", "toolchains", "order", "sustainability"],
   ],
 ];
+
+test("every Objective instance uses a matching objective-prefixed workspace name", async () => {
+  const directories = (await readdir(join(root, "packages"), { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((directory) => existsSync(join(root, "packages", directory, "pilot.yaml")));
+  assert.deepEqual(directories.sort(), pilots.map(([directory]) => directory).sort());
+  for (const directory of directories) {
+    assert.match(directory, /^objective-[a-z0-9]+(?:-[a-z0-9]+)*$/);
+    const manifest = JSON.parse(
+      await readFile(join(root, "packages", directory, "package.json"), "utf8"),
+    );
+    assert.equal(manifest.name, `@potential-guide/${directory}`);
+  }
+});
+
+test("dist outputs are ignored while standalone Pilot runtimes remain versionable", async () => {
+  const outputs = [
+    "dist/probe.js",
+    "packages/future-objective/dist/probe.js",
+    ...pilots.map(([directory]) => `packages/${directory}/dist/probe.js`),
+  ];
+  const result = await execute("git", ["check-ignore", "--no-index", "--stdin"], {
+    cwd: root,
+    input: `${outputs.join("\n")}\npackages/objective-monorepo-standard/runtime/pilot-checker.cjs\n`,
+  });
+  assert.equal(result.code, 0, result.stderr);
+  assert.deepEqual(result.stdout.trim().split(/\r?\n/), outputs);
+});
 
 test("all private Pilot tarballs include same-version resources and run without dependency installation", async () => {
   const scratch = await mkdtemp(join(tmpdir(), "pguide-pilot-packs-"));
@@ -56,7 +86,7 @@ test("all private Pilot tarballs include same-version resources and run without 
         checks,
       );
       const subject =
-        directory === "monorepo-objective"
+        directory === "objective-monorepo-standard"
           ? { root, contract: "config/monorepo-requirements.json" }
           : {
               workingDirectory: scratch,
@@ -80,12 +110,12 @@ test("all private Pilot tarballs include same-version resources and run without 
       const invalid = await call(checks[0], {});
       assert.equal(invalid.payload, null);
       assert.notEqual(invalid.status, 200);
-      if (directory !== "development-machine-health-pilot") {
+      if (directory !== "objective-devbox-health") {
         const result = await call(checks[0], subject);
         assert.equal(result.status, 200, JSON.stringify(result));
         assert.equal(result.payload.ok, true, JSON.stringify(result));
       }
-      if (directory === "pguide-setup-pilot") {
+      if (directory === "objective-pguide-setup") {
         for (const resource of ["pilot.yaml", "gitignore"])
           assert.ok(paths.includes(`sanity-fixture/${resource}`));
         const { sshRequest } = await import(
@@ -102,7 +132,8 @@ test("all private Pilot tarballs include same-version resources and run without 
         assert.equal(Object.keys(payload.files).length, 11);
         assert.equal(payload.files["sanity-fixture/gitignore"], "marker.txt\n.cache/\n");
       }
-      if (directory === "monorepo-objective") assert.ok(paths.includes("dist/pilot-checker.cjs"));
+      if (directory === "objective-monorepo-standard")
+        assert.ok(paths.includes("runtime/pilot-checker.cjs"));
     }
   } finally {
     await rm(scratch, { recursive: true, force: true, maxRetries: 3 });

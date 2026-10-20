@@ -46,7 +46,7 @@ async function fixture(
     check: () => Promise<Report>;
   }) => Promise<void>,
 ) {
-  const root = await mkdtemp(join(tmpdir(), "monorepo-objective-"));
+  const root = await mkdtemp(join(tmpdir(), "objective-monorepo-standard-"));
   async function write(path: string, value: unknown) {
     await mkdir(dirname(join(root, path)), { recursive: true });
     await writeFile(join(root, path), typeof value === "string" ? value : JSON.stringify(value));
@@ -128,6 +128,22 @@ test("layer one can pass and internal packages do not require public release met
     await write("packages/shared/src/index.ts", "import './missing.js';");
     assert.equal(has(await check(), "source-import-resolution", "unverified"), true);
     await write("packages/shared/src/index.ts", "import 'unmapped-runtime';");
+    assert.equal(has(await check(), "external-import-resolution", "unverified"), true);
+  });
+});
+test("only explicitly assigned generated files skip source observation", async () => {
+  await fixture(async ({ contract, check, write }) => {
+    const bundle = "packages/shared/runtime/bundle.cjs";
+    await write(bundle, " ".repeat(1024 * 1024 + 1));
+    assert.equal(has(await check(), "source-observation", "unverified"), true);
+    contract.policy.assignments.push({
+      path: bundle,
+      purpose: "generated",
+      owner: "shared",
+      reason: "Verified standalone build output.",
+    });
+    assert.equal((await check()).state, "pass");
+    await write("packages/shared/runtime/manual.cjs", "require('undeclared-runtime');");
     assert.equal(has(await check(), "external-import-resolution", "unverified"), true);
   });
 });

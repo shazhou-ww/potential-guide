@@ -107,17 +107,21 @@ await verifyConsumerGraph("/opt/consumer", versions);
 
 await mkdir("/opt/objective/packages", { recursive: true });
 await cp(
-  "/source/packages/pguide-self-check-pilot",
-  "/opt/objective/packages/pguide-self-check-pilot",
+  "/source/packages/objective-pguide-self-check",
+  "/opt/objective/packages/objective-pguide-self-check",
   {
     recursive: true,
     filter: (source) => !["node_modules", ".turbo", "test"].includes(basename(source)),
   },
 );
-await cp("/source/packages/pguide-setup-pilot", "/opt/objective/packages/pguide-setup-pilot", {
-  recursive: true,
-  filter: (source) => !["node_modules", ".turbo", "test"].includes(basename(source)),
-});
+await cp(
+  "/source/packages/objective-pguide-setup",
+  "/opt/objective/packages/objective-pguide-setup",
+  {
+    recursive: true,
+    filter: (source) => !["node_modules", ".turbo", "test"].includes(basename(source)),
+  },
+);
 run("git", ["init", "-q", "--initial-branch=fixture"], "/opt/objective");
 run("git", ["add", "packages"], "/opt/objective");
 run(

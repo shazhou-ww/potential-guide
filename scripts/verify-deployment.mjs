@@ -622,16 +622,16 @@ for await (const line of createInterface({input:process.stdin})) {
 
 async function verifySetupObjective(baseEnv) {
   const setupRoot = join(consumer, "setup-objective");
-  const setup = join(setupRoot, "packages", "pguide-setup-pilot");
+  const setup = join(setupRoot, "packages", "objective-pguide-setup");
   await mkdir(setupRoot, { recursive: true });
   const pilotCopy = {
     recursive: true,
     filter: (source) => !["node_modules", ".turbo", "test"].includes(basename(source)),
   };
-  await cp(join(root, "packages", "pguide-setup-pilot"), setup, pilotCopy);
+  await cp(join(root, "packages", "objective-pguide-setup"), setup, pilotCopy);
   await cp(
-    join(root, "packages", "pguide-self-check-pilot"),
-    join(setupRoot, "packages", "pguide-self-check-pilot"),
+    join(root, "packages", "objective-pguide-self-check"),
+    join(setupRoot, "packages", "objective-pguide-self-check"),
     pilotCopy,
   );
   await successful("git", ["init", "-q"], { cwd: setupRoot });
@@ -645,7 +645,7 @@ async function verifySetupObjective(baseEnv) {
   const revision = (
     await successful("git", ["rev-parse", "HEAD"], { cwd: setupRoot })
   ).stdout.trim();
-  const setupUri = `git+${pathToFileURL(setupRoot).href}#packages/pguide-setup-pilot/pilot.yaml`;
+  const setupUri = `git+${pathToFileURL(setupRoot).href}#packages/objective-pguide-setup/pilot.yaml`;
   const agent = join(consumer, "setup-agent.mjs");
   await writeFile(
     agent,
@@ -741,7 +741,7 @@ for await (const line of createInterface({input:process.stdin})) {
   delete selfSubject.allowSanity;
   selfSubject.timeoutMs = 24000;
   await writeFile(subject, JSON.stringify(selfSubject));
-  const selfUri = setupUri.replace("/pguide-setup-pilot/", "/pguide-self-check-pilot/");
+  const selfUri = setupUri.replace("/objective-pguide-setup/", "/objective-pguide-self-check/");
   const selfResult = await successful(
     executable("pguide"),
     [

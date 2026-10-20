@@ -1,6 +1,6 @@
 # Credential-free self-check Docker harness
 
-Validates the existing `packages/pguide-self-check-pilot` through a **source-built,
+Validates the existing `packages/objective-pguide-self-check` through a **source-built,
 packed, installed** pguide in Linux. No real model, credentials, user config,
 host HOME, host environment forwarding, bind mounts, or Docker socket. This is
 controlled ACP integration evidence, **not** real-device/model acceptance.

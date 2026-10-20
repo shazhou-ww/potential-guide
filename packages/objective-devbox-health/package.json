@@ -1,8 +1,8 @@
 {
-  "name": "@potential-guide/pguide-setup-pilot",
+  "name": "@potential-guide/objective-devbox-health",
   "version": "0.1.0",
   "private": true,
-  "description": "Complete local and SSH pguide setup Pilot.",
+  "description": "Complete Linux development-machine health Pilot with bounded Docker transport.",
   "type": "module",
   "files": [
     "pilot.yaml",
@@ -10,16 +10,15 @@
     "references",
     "src",
     "runtime",
-    "setup-check.mjs",
-    "ssh-target.mjs",
-    "sanity-fixture"
+    "health-check.mjs",
+    "docker"
   ],
   "exports": {
-    ".": "./setup-check.mjs",
+    ".": "./health-check.mjs",
     "./pilot.yaml": "./pilot.yaml"
   },
   "scripts": {
-    "build": "node ../../scripts/build-setup-runtime.mjs",
+    "build": "node ../../scripts/build-health-runtime.mjs",
     "clean": "node -e \"\"",
     "lint": "biome lint .",
     "test": "tsx --test \"test/*.test.ts\"",
@@ -29,8 +28,7 @@
     "node": ">=22.13.0"
   },
   "devDependencies": {
-    "@potential-guide/objective-pilot": "workspace:^",
-    "@potential-guide/config": "workspace:^",
-    "pguide": "workspace:^"
+    "@potential-guide/effects": "workspace:^",
+    "@potential-guide/objective-pilot": "workspace:^"
   }
 }

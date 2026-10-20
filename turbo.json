@@ -15,7 +15,7 @@
       "dependsOn": ["build"],
       "outputs": []
     },
-    "@potential-guide/pguide-self-check-pilot#build": {
+    "@potential-guide/objective-pguide-self-check#build": {
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -24,22 +24,22 @@
       ],
       "outputs": ["runtime/**", "references/**"]
     },
-    "@potential-guide/monorepo-objective#build": {
+    "@potential-guide/objective-monorepo-standard#build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/build-monorepo-runtime.mjs"],
-      "outputs": ["dist/**", "THIRD_PARTY_NOTICES.txt"]
+      "outputs": ["dist/**", "runtime/**", "THIRD_PARTY_NOTICES.txt"]
     },
-    "@potential-guide/monorepo-objective#test": {
+    "@potential-guide/objective-monorepo-standard#test": {
       "dependsOn": ["build"],
       "cache": false,
       "outputs": []
     },
-    "@potential-guide/development-machine-health-pilot#build": {
+    "@potential-guide/objective-devbox-health#build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/build-health-runtime.mjs"],
       "outputs": ["runtime/**"]
     },
-    "@potential-guide/pguide-setup-pilot#build": {
+    "@potential-guide/objective-pguide-setup#build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/build-setup-runtime.mjs"],
       "outputs": ["runtime/**"]
@@ -53,17 +53,17 @@
       "dependsOn": ["^typecheck"],
       "outputs": ["dist/**"]
     },
-    "@potential-guide/pguide-setup-pilot#typecheck": {
+    "@potential-guide/objective-pguide-setup#typecheck": {
       "dependsOn": ["^typecheck"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/check-pilot-sources.mjs"],
       "outputs": []
     },
-    "@potential-guide/pguide-self-check-pilot#typecheck": {
+    "@potential-guide/objective-pguide-self-check#typecheck": {
       "dependsOn": ["^typecheck"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/check-pilot-sources.mjs"],
       "outputs": []
     },
-    "@potential-guide/development-machine-health-pilot#typecheck": {
+    "@potential-guide/objective-devbox-health#typecheck": {
       "dependsOn": ["^typecheck"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/check-pilot-sources.mjs"],
       "outputs": []

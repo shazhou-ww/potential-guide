@@ -3,9 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
-const root = fileURLToPath(
-  new URL("../packages/development-machine-health-pilot/", import.meta.url),
-);
+const root = fileURLToPath(new URL("../packages/objective-devbox-health/", import.meta.url));
 const seen = new Set();
 const imports = new Map();
 const declarations = [];

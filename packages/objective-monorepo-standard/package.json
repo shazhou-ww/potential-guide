@@ -1,11 +1,12 @@
 {
-  "name": "@potential-guide/monorepo-objective",
+  "name": "@potential-guide/objective-monorepo-standard",
   "version": "0.1.0",
   "private": true,
   "description": "Read-only, requirements-led pnpm monorepo Objective checks.",
   "type": "module",
   "files": [
     "dist",
+    "runtime",
     "pilot.yaml",
     "checks",
     "references",

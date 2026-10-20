@@ -201,7 +201,7 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
     });
     if (keychainState().locked) throw new Error("keychain-locked");
     const { AcpClient } = await import(
-      "/opt/objective/packages/pguide-self-check-pilot/runtime/acp-client.mjs"
+      "/opt/objective/packages/objective-pguide-self-check/runtime/acp-client.mjs"
     );
     const versionOutput = execFileSync("copilot", ["--version"], {
       encoding: "utf8",

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import checker from "./dist/pilot-checker.cjs";
+import checker from "./runtime/pilot-checker.cjs";
 
 export async function main(phase, subject) {
   if (!["structure", "deliveries"].includes(phase)) {

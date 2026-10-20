@@ -15,13 +15,15 @@ import {
 import { main } from "../check.mjs";
 
 const root = fileURLToPath(new URL("../../..", import.meta.url));
-const manifest = pathToFileURL(join(root, "packages", "monorepo-objective", "pilot.yaml")).href;
+const manifest = pathToFileURL(
+  join(root, "packages", "objective-monorepo-standard", "pilot.yaml"),
+).href;
 const contract = "config/monorepo-requirements.json";
-const checkerModule = join(root, "packages", "monorepo-objective", "dist", "index.js");
+const checkerModule = join(root, "packages", "objective-monorepo-standard", "dist", "index.js");
 const subject = { root, contract };
 async function fixtureSpec() {
   const objectiveId =
-    "git+https://example.test/monorepo-fixture.git#packages/monorepo-objective/pilot.yaml";
+    "git+https://example.test/monorepo-fixture.git#packages/objective-monorepo-standard/pilot.yaml";
   function local(uri) {
     return pathToFileURL(join(root, decodeURIComponent(new URL(uri).hash.slice(1)))).href;
   }
@@ -51,7 +53,16 @@ test("real repository manifest and process probes advance through both layers to
           calls.push(ref.checkId);
           return createProcessCheckProbe({
             command: process.execPath,
-            args: [join(root, "packages", "monorepo-objective", "checks", ref.checkId, "run.cjs")],
+            args: [
+              join(
+                root,
+                "packages",
+                "objective-monorepo-standard",
+                "checks",
+                ref.checkId,
+                "run.cjs",
+              ),
+            ],
             cwd: root,
           });
         },
@@ -79,7 +90,7 @@ test("direct adapter emits the existing check envelope and invalid invocation ne
   );
   const probe = createProcessCheckProbe({
     command: process.execPath,
-    args: [join(root, "packages", "monorepo-objective", "checks", "structure", "run.cjs")],
+    args: [join(root, "packages", "objective-monorepo-standard", "checks", "structure", "run.cjs")],
     cwd: root,
   });
   const invalid = await probe({ root }, new AbortController().signal);
@@ -102,7 +113,14 @@ test("real probe stops at structure for invalid contract and does not fall throu
             return createProcessCheckProbe({
               command: process.execPath,
               args: [
-                join(root, "packages", "monorepo-objective", "checks", ref.checkId, "run.cjs"),
+                join(
+                  root,
+                  "packages",
+                  "objective-monorepo-standard",
+                  "checks",
+                  ref.checkId,
+                  "run.cjs",
+                ),
               ],
               cwd: root,
             });
@@ -181,7 +199,9 @@ test("a valid internal package reaches Pilot terminal without execution or onlin
         calls.push(ref.checkId);
         return createProcessCheckProbe({
           command: process.execPath,
-          args: [join(root, "packages", "monorepo-objective", "checks", ref.checkId, "run.cjs")],
+          args: [
+            join(root, "packages", "objective-monorepo-standard", "checks", ref.checkId, "run.cjs"),
+          ],
           cwd: root,
         });
       },

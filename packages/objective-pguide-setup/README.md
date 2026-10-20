@@ -6,7 +6,7 @@
 职责与历史 URI 迁移见 [Pilot packages](../../docs/pilot-packages.md)。
 
 已有本机 pguide 的设备优先运行独立的
-[本机自查 Objective](../pguide-self-check-pilot/README.md)：默认一次直接 Agent marker 修复，
+[本机自查 Objective](../objective-pguide-self-check/README.md)：默认一次直接 Agent marker 修复，
 不嵌套 regulation、不需要 allowSanity。本文旧 bootstrap/setup 的授权及 SSH 行为不变；
 后续远程整备接入新自查仍待单独实施。
 
@@ -25,7 +25,7 @@ Agent 根据检查结果和引导、按授权在 B 安装配置前置条件；�
 
 1. 读取本文件，确认目标 B 的 Node.js ≥22.13、Git 和用户身份。进程树清理需要 Windows 的
    `taskkill` 或 POSIX 的 `ps`（包括 Agent 建立的独立进程组）。外部 Agent 可以直接运行
-   `node packages\pguide-setup-pilot\setup-check.mjs installation --subject-file D:\setup\subject.json`。
+   `node packages\objective-pguide-setup\setup-check.mjs installation --subject-file D:\setup\subject.json`。
    SSH 时 helper 从 A 经 stdin 发送到 B，不需要预装 pguide、pnpm 或 npm 依赖。
    若 B 连 Node 都没有，返回 `remote-node-missing`；控制 Agent 应先按授权通过既有 SSH
    管理方式安装 Node，再重新检查，绝不改为检查 A。
@@ -177,10 +177,10 @@ agents:
 本地直接检查，未安装 pguide 也可运行第一条：
 
 ```powershell
-node packages\pguide-setup-pilot\setup-check.mjs installation --subject-file D:\setup\subject.json
-node packages\pguide-setup-pilot\setup-check.mjs configuration --subject-file D:\setup\subject.json
+node packages\objective-pguide-setup\setup-check.mjs installation --subject-file D:\setup\subject.json
+node packages\objective-pguide-setup\setup-check.mjs configuration --subject-file D:\setup\subject.json
 # 用户明确同意并在 subject 中设置 allowSanity:true 后：
-node packages\pguide-setup-pilot\setup-check.mjs sanity --subject-file D:\setup\subject.json
+node packages\objective-pguide-setup\setup-check.mjs sanity --subject-file D:\setup\subject.json
 ```
 
 上述命令也用于 SSH subject：命令在 A，检查与真正的 pguide/Agent 执行在 B。
@@ -195,8 +195,8 @@ stdout 恰好一份 CheckResult Envelope：`status:200` 的 `payload.ok:false` �
 通过仓库 Git 子目录加载，固定提交而非未提交的工作区：
 
 ```powershell
-pguide validate pilot .\packages\pguide-setup-pilot\pilot.yaml
-pguide probe --pilot "git+https://github.com/shazhou-ww/potential-guide.git#packages/pguide-setup-pilot/pilot.yaml" --revision <完整提交哈希> --subject-file D:\setup\subject.json --format json
+pguide validate pilot .\packages\objective-pguide-setup\pilot.yaml
+pguide probe --pilot "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-pguide-setup/pilot.yaml" --revision <完整提交哈希> --subject-file D:\setup\subject.json --format json
 ```
 
 `initial` 表示尚未确认安装；`installed` 已确认版本，但尚未确认配置；

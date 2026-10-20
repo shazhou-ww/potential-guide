@@ -4,10 +4,10 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const destination = join(root, "packages", "pguide-setup-pilot", "runtime", "setup-check.mjs");
+const destination = join(root, "packages", "objective-pguide-setup", "runtime", "setup-check.mjs");
 const result = await build({
   absWorkingDir: root,
-  entryPoints: ["packages/pguide-setup-pilot/setup-check.mjs"],
+  entryPoints: ["packages/objective-pguide-setup/setup-check.mjs"],
   bundle: true,
   platform: "node",
   format: "esm",
@@ -20,6 +20,6 @@ if (process.argv.includes("--check")) {
   if ((await readFile(destination, "utf8")).replaceAll("\r\n", "\n") !== text)
     throw new Error("Stale setup transport runtime; run pnpm setup:build.");
 } else {
-  await mkdir(join(root, "packages", "pguide-setup-pilot", "runtime"), { recursive: true });
+  await mkdir(join(root, "packages", "objective-pguide-setup", "runtime"), { recursive: true });
   await writeFile(destination, text);
 }

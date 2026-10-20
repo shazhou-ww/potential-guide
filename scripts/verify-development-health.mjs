@@ -9,7 +9,7 @@ import { observe } from "../packages/objective-pilot/dist/index.js";
 import { withPilot } from "../packages/pguide/dist/pilot-source.js";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const objective = join(root, "packages", "development-machine-health-pilot");
+const objective = join(root, "packages", "objective-devbox-health");
 const helper = join(objective, "health-check.mjs");
 const cli = join(root, "packages", "pguide", "dist", "bin", "probe.js");
 const pause = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -97,12 +97,12 @@ async function verify(reportPath) {
       "status",
       "--porcelain",
       "--",
-      "packages/development-machine-health-pilot",
+      "packages/objective-devbox-health",
       "scripts/verify-development-health.mjs",
     ]);
     assert.equal(changed, "", "Commit the exact Pilot and runner before verification");
     report.commit = await execute("git", ["rev-parse", "HEAD"]);
-    report.pilot = `git+${pathToFileURL(root).href}#packages/development-machine-health-pilot/pilot.yaml`;
+    report.pilot = `git+${pathToFileURL(root).href}#packages/objective-devbox-health/pilot.yaml`;
     const context = join(scratch, "build");
     await mkdir(context);
     for (const name of ["Dockerfile", ".dockerignore", "server.mjs"])

@@ -4,10 +4,16 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const destination = join(root, "packages", "monorepo-objective", "dist", "pilot-checker.cjs");
+const destination = join(
+  root,
+  "packages",
+  "objective-monorepo-standard",
+  "runtime",
+  "pilot-checker.cjs",
+);
 const result = await build({
   absWorkingDir: root,
-  entryPoints: ["packages/monorepo-objective/src/index.ts"],
+  entryPoints: ["packages/objective-monorepo-standard/src/index.ts"],
   bundle: true,
   platform: "node",
   format: "cjs",
@@ -49,7 +55,7 @@ const notices = `${[...licenses]
   .sort(([a], [b]) => a.localeCompare(b))
   .map(([, license]) => license)
   .join("\n\n---\n\n")}\n`;
-const noticePath = join(root, "packages", "monorepo-objective", "THIRD_PARTY_NOTICES.txt");
+const noticePath = join(root, "packages", "objective-monorepo-standard", "THIRD_PARTY_NOTICES.txt");
 if (process.argv.includes("--check")) {
   if ((await readFile(destination, "utf8")).replaceAll("\r\n", "\n") !== text)
     throw new Error("Stale monorepo standalone runtime; run pnpm monorepo:build.");

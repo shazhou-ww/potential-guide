@@ -6,7 +6,7 @@
 职责与历史 URI 迁移见 [Pilot packages](../../docs/pilot-packages.md)。
 
 独立、只观测的本机 Objective，由被检查设备上**已安装的 pguide** 运行；
-没有新增 CLI 命令。缺 pguide 时先用 [setup/bootstrap](../pguide-setup-pilot/README.md)
+没有新增 CLI 命令。缺 pguide 时先用 [setup/bootstrap](../objective-pguide-setup/README.md)
 补齐安装。旧 setup（含 SSH、`allowSanity` 和 regulation fixture）保持原行为。
 后续远程整备应以 B 的 pguide 运行本自查达到 terminal 为依据，不能用 A 的结果替代。
 
@@ -35,12 +35,12 @@ Windows 也可将 pguide 指定为 Node + 已安装的绝对 JS 入口：
 用已安装的 pguide 与提交过的 Git 子目录快照运行（将 URI、revision、subject 替换为实际值）：
 
 ```powershell
-pguide probe --pilot "git+file:///D:/Code/potential-guide#packages/pguide-self-check-pilot/pilot.yaml" --revision <commit> --subject-file D:\self-check\subject.json --config C:\Users\me\AppData\Roaming\pguide\config.yaml --format json
+pguide probe --pilot "git+file:///D:/Code/potential-guide#packages/objective-pguide-self-check/pilot.yaml" --revision <commit> --subject-file D:\self-check\subject.json --config C:\Users\me\AppData\Roaming\pguide\config.yaml --format json
 ```
 
 这条 probe 会执行一次 sanity；不要紧接着为“确认”重复运行，避免额外模型调用。
 也可在已授权的 regulation 中使用同一 Pilot；自查内部不会再次 regulate。
-直接诊断入口为 `node packages\pguide-self-check-pilot\self-check.mjs <installation|configuration|sanity> --subject-file D:\self-check\subject.json`。
+直接诊断入口为 `node packages\objective-pguide-self-check\self-check.mjs <installation|configuration|sanity> --subject-file D:\self-check\subject.json`。
 单独运行 helper 成功**不等于**完整 Pilot terminal，更不等于真实设备验收通过。
 
 ## 分级与边界

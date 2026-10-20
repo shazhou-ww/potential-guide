@@ -15,7 +15,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// packages/pguide-setup-pilot/src/contract.mjs
+// packages/objective-pguide-setup/src/contract.mjs
 import { isAbsolute, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 function subjectValue(value, selfCheck = false) {
@@ -31,7 +31,7 @@ function subjectValue(value, selfCheck = false) {
 }
 var here, outputLimit, record, nonempty, Fault, Problem, success, problem;
 var init_contract = __esm({
-  "packages/pguide-setup-pilot/src/contract.mjs"() {
+  "packages/objective-pguide-setup/src/contract.mjs"() {
     here = fileURLToPath(new URL("..", import.meta.url));
     outputLimit = 262144;
     record = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -58,7 +58,7 @@ var init_contract = __esm({
   }
 });
 
-// packages/pguide-setup-pilot/src/installation.mjs
+// packages/objective-pguide-setup/src/installation.mjs
 function jsonOutput(result) {
   try {
     const value = JSON.parse(result.stdout);
@@ -83,12 +83,12 @@ async function installation(subject, context) {
     throw new Problem("version-mismatch");
 }
 var init_installation = __esm({
-  "packages/pguide-setup-pilot/src/installation.mjs"() {
+  "packages/objective-pguide-setup/src/installation.mjs"() {
     init_contract();
   }
 });
 
-// packages/pguide-setup-pilot/src/configuration.mjs
+// packages/objective-pguide-setup/src/configuration.mjs
 import { lstat } from "node:fs/promises";
 async function configured(subject, context) {
   await installation(subject, context);
@@ -219,13 +219,13 @@ async function acpReady(profile, context, directory) {
     });
 }
 var init_configuration = __esm({
-  "packages/pguide-setup-pilot/src/configuration.mjs"() {
+  "packages/objective-pguide-setup/src/configuration.mjs"() {
     init_contract();
     init_installation();
   }
 });
 
-// packages/pguide-setup-pilot/src/direct-sanity.mjs
+// packages/objective-pguide-setup/src/direct-sanity.mjs
 import { randomBytes } from "node:crypto";
 import { lstat as lstat2, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -279,13 +279,13 @@ async function directSanity(context, directory, selected) {
   if (!correct) throw new Problem("sanity-failed", { stage: "recheck", reason: "nonce-mismatch" });
 }
 var init_direct_sanity = __esm({
-  "packages/pguide-setup-pilot/src/direct-sanity.mjs"() {
+  "packages/objective-pguide-setup/src/direct-sanity.mjs"() {
     init_contract();
     init_installation();
   }
 });
 
-// packages/pguide-setup-pilot/src/execution.mjs
+// packages/objective-pguide-setup/src/execution.mjs
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { delimiter, join as join2 } from "node:path";
@@ -487,12 +487,12 @@ function executionContext(subject, directory, signal, deadline) {
   return { execute, cli, env, remainingMs: () => deadline - Date.now() };
 }
 var init_execution = __esm({
-  "packages/pguide-setup-pilot/src/execution.mjs"() {
+  "packages/objective-pguide-setup/src/execution.mjs"() {
     init_contract();
   }
 });
 
-// packages/pguide-setup-pilot/src/sanity.mjs
+// packages/objective-pguide-setup/src/sanity.mjs
 import { randomBytes as randomBytes2 } from "node:crypto";
 import { cp, lstat as lstat3, readFile as readFile2, writeFile as writeFile2 } from "node:fs/promises";
 import { join as join3, resolve } from "node:path";
@@ -605,13 +605,13 @@ async function sanity(subject, context, directory, selected) {
     });
 }
 var init_sanity = __esm({
-  "packages/pguide-setup-pilot/src/sanity.mjs"() {
+  "packages/objective-pguide-setup/src/sanity.mjs"() {
     init_contract();
     init_installation();
   }
 });
 
-// packages/pguide-setup-pilot/ssh-target.mjs
+// packages/objective-pguide-setup/ssh-target.mjs
 var ssh_target_exports = {};
 __export(ssh_target_exports, {
   checkSsh: () => checkSsh,
@@ -780,7 +780,7 @@ async function checkSsh(stage, subject, execute = runSsh) {
 }
 var here2, limit, fixtures, TargetFault, remoteBootstrap, quote;
 var init_ssh_target = __esm({
-  async "packages/pguide-setup-pilot/ssh-target.mjs"() {
+  async "packages/objective-pguide-setup/ssh-target.mjs"() {
     await init_setup_check();
     here2 = dirname(fileURLToPath2(import.meta.url));
     limit = 262144;
@@ -844,7 +844,7 @@ process.stdout.on("error",()=>{});
   }
 });
 
-// packages/pguide-setup-pilot/src/runner.mjs
+// packages/objective-pguide-setup/src/runner.mjs
 import { mkdir as mkdir2, mkdtemp, rm } from "node:fs/promises";
 import { isAbsolute as isAbsolute2, join as join5 } from "node:path";
 async function check(stage, value, options = {}) {
@@ -934,7 +934,7 @@ async function check(stage, value, options = {}) {
   }
 }
 var init_runner = __esm({
-  "packages/pguide-setup-pilot/src/runner.mjs"() {
+  "packages/objective-pguide-setup/src/runner.mjs"() {
     init_configuration();
     init_contract();
     init_direct_sanity();
@@ -944,7 +944,7 @@ var init_runner = __esm({
   }
 });
 
-// packages/pguide-setup-pilot/src/cli.mjs
+// packages/objective-pguide-setup/src/cli.mjs
 import { lstat as lstat4, readFile as readFile4 } from "node:fs/promises";
 import { isAbsolute as isAbsolute3 } from "node:path";
 async function main(stage = process.argv[2], options = {}) {
@@ -990,17 +990,17 @@ async function main(stage = process.argv[2], options = {}) {
   }
 }
 var init_cli = __esm({
-  "packages/pguide-setup-pilot/src/cli.mjs"() {
+  "packages/objective-pguide-setup/src/cli.mjs"() {
     init_contract();
     init_runner();
   }
 });
 
-// packages/pguide-setup-pilot/setup-check.mjs
+// packages/objective-pguide-setup/setup-check.mjs
 import { resolve as resolve2 } from "node:path";
 import { pathToFileURL as pathToFileURL2 } from "node:url";
 var init_setup_check = __esm({
-  async "packages/pguide-setup-pilot/setup-check.mjs"() {
+  async "packages/objective-pguide-setup/setup-check.mjs"() {
     init_cli();
     init_cli();
     init_execution();

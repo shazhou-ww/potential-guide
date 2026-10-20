@@ -1,8 +1,8 @@
 {
-  "name": "@potential-guide/development-machine-health-pilot",
+  "name": "@potential-guide/objective-pguide-setup",
   "version": "0.1.0",
   "private": true,
-  "description": "Complete Linux development-machine health Pilot with bounded Docker transport.",
+  "description": "Complete local and SSH pguide setup Pilot.",
   "type": "module",
   "files": [
     "pilot.yaml",
@@ -10,15 +10,16 @@
     "references",
     "src",
     "runtime",
-    "health-check.mjs",
-    "docker"
+    "setup-check.mjs",
+    "ssh-target.mjs",
+    "sanity-fixture"
   ],
   "exports": {
-    ".": "./health-check.mjs",
+    ".": "./setup-check.mjs",
     "./pilot.yaml": "./pilot.yaml"
   },
   "scripts": {
-    "build": "node ../../scripts/build-health-runtime.mjs",
+    "build": "node ../../scripts/build-setup-runtime.mjs",
     "clean": "node -e \"\"",
     "lint": "biome lint .",
     "test": "tsx --test \"test/*.test.ts\"",
@@ -28,7 +29,8 @@
     "node": ">=22.13.0"
   },
   "devDependencies": {
-    "@potential-guide/effects": "workspace:^",
-    "@potential-guide/objective-pilot": "workspace:^"
+    "@potential-guide/objective-pilot": "workspace:^",
+    "@potential-guide/config": "workspace:^",
+    "pguide": "workspace:^"
   }
 }

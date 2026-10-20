@@ -8,7 +8,7 @@
 
 ```powershell
 pnpm install --frozen-lockfile
-pnpm --filter @potential-guide/monorepo-objective build
+pnpm --filter @potential-guide/objective-monorepo-standard build
 ```
 
 subject 只需要目标根目录及目标仓库相对需求契约路径：
@@ -18,13 +18,13 @@ subject 只需要目标根目录及目标仓库相对需求契约路径：
 ```
 
 ```powershell
-node packages\monorepo-objective\check.mjs structure --subject-file D:\subject.json
-node packages\monorepo-objective\check.mjs deliveries --subject-file D:\subject.json
-pguide probe --pilot "git+https://github.com/shazhou-ww/potential-guide.git#packages/monorepo-objective/pilot.yaml" --subject-file D:\subject.json --format json
+node packages\objective-monorepo-standard\check.mjs structure --subject-file D:\subject.json
+node packages\objective-monorepo-standard\check.mjs deliveries --subject-file D:\subject.json
+pguide probe --pilot "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/pilot.yaml" --subject-file D:\subject.json --format json
 ```
 
 使用 `--revision <完整 commit>` 固定可信版本；Git snapshot 不安装依赖或执行构建。
-提交的 `dist/pilot-checker.cjs` 由源码与锁定依赖生成，包含运行时依赖，并由
+提交的 `runtime/pilot-checker.cjs` 由源码与锁定依赖生成，包含运行时依赖，并由
 `pnpm monorepo:check` 检查新鲜度。目标仓库无需安装依赖。
 普通调用不再接受调用者选择其他 checker 的代码。`checkerModule` 仅保留受限迁移：
 若提供，必须指向当前 package 自身的 `dist/index.js`，不会导入它；其他路径明确拒绝。
@@ -42,7 +42,7 @@ pguide probe --pilot "git+https://github.com/shazhou-ww/potential-guide.git#pack
 契约是维护者确认的交付需求，不从现有源码自动推断意图。
 [本仓库实际需求](../../config/monorepo-requirements.json)声明两个多包交付物，展示多对多关联，
 不是强制每个 package 独立发布。可直接用其相对路径检查本仓库。
-严格 JSON schema 可从构建的 `@potential-guide/monorepo-objective` 导出
+严格 JSON schema 可从构建的 `@potential-guide/objective-monorepo-standard` 导出
 `contractSchema`，或用 `parseContract(unknown)` 验证；未知字段、未知版本和悬空引用
 不能被当作默认成功。所有契约内路径使用仓库相对 POSIX 表示（`/`），不能含 `..`；
 这与命令行的 Windows 路径不同。
@@ -180,5 +180,5 @@ location、evidence、remedy、requirements、packages 和可用的 targetDirect
 请只在可信且检查期间不并发改写的目标 checkout 上运行；不是恶意文件系统的安全沙箱。
 外部构建/打包/消费验证须单独授权、隔离运行，并把证据持久化，不由此检查器执行。
 
-测试：`pnpm --filter @potential-guide/monorepo-objective test`；
-Pilot/probe 集成测试：`node --test scripts/monorepo-objective.test.mjs`（先 `pnpm build`）。
+测试：`pnpm --filter @potential-guide/objective-monorepo-standard test`；
+Pilot/probe 集成测试：`node --test scripts/objective-monorepo-standard.test.mjs`（先 `pnpm build`）。

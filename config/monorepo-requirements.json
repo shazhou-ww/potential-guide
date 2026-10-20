@@ -10,7 +10,14 @@
     },
     "requiredFiles": ["tsconfig.json", "biome.json"],
     "exceptions": [],
-    "assignments": [],
+    "assignments": [
+      {
+        "path": "packages/objective-monorepo-standard/runtime/pilot-checker.cjs",
+        "purpose": "generated",
+        "owner": "@potential-guide/objective-monorepo-standard",
+        "reason": "Standalone bundle generated from checked sources and verified by monorepo:check."
+      }
+    ],
     "allowedDirectories": [
       {
         "path": "config",
@@ -113,8 +120,8 @@
       "tasks": ["build", "lint", "test", "typecheck"]
     },
     {
-      "name": "@potential-guide/monorepo-objective",
-      "path": "packages/monorepo-objective",
+      "name": "@potential-guide/objective-monorepo-standard",
+      "path": "packages/objective-monorepo-standard",
       "roles": ["tool"],
       "runtime": "node",
       "allows": ["@potential-guide/effects", "@potential-guide/objective-pilot", "pguide"],
@@ -155,8 +162,8 @@
       "tasks": ["build", "lint", "test", "typecheck"]
     },
     {
-      "name": "@potential-guide/pguide-setup-pilot",
-      "path": "packages/pguide-setup-pilot",
+      "name": "@potential-guide/objective-pguide-setup",
+      "path": "packages/objective-pguide-setup",
       "roles": ["tool"],
       "runtime": "node",
       "allows": ["@potential-guide/objective-pilot", "@potential-guide/config", "pguide"],
@@ -165,18 +172,18 @@
       "tasks": ["build", "lint", "test", "typecheck"]
     },
     {
-      "name": "@potential-guide/pguide-self-check-pilot",
-      "path": "packages/pguide-self-check-pilot",
+      "name": "@potential-guide/objective-pguide-self-check",
+      "path": "packages/objective-pguide-self-check",
       "roles": ["tool"],
       "runtime": "node",
-      "allows": ["@potential-guide/pguide-setup-pilot", "@potential-guide/cli-core", "pguide"],
+      "allows": ["@potential-guide/objective-pguide-setup", "@potential-guide/cli-core", "pguide"],
       "entries": ["self-check.mjs"],
       "sources": ["self-check.mjs"],
       "tasks": ["build", "lint", "test", "typecheck"]
     },
     {
-      "name": "@potential-guide/development-machine-health-pilot",
-      "path": "packages/development-machine-health-pilot",
+      "name": "@potential-guide/objective-devbox-health",
+      "path": "packages/objective-devbox-health",
       "roles": ["tool"],
       "runtime": "node",
       "allows": ["@potential-guide/effects", "@potential-guide/objective-pilot"],
