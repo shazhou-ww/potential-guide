@@ -225,28 +225,30 @@ $defs:
           "O-01 / M-05 · 已确认：声明条目的 pilot 改为 objective，仍引用目标定义目录；文档继续承担命名调用和 subject 绑定职责。",
           "O-02 · 用户已澄清：inputSchema 可选，省略等价于 { const: {} }，即 Unit schema，只接受空对象值，不是任意 JSON。该 schema 校验 input 本身，而不是整个 { context, input }。",
           "O-02 · Unit 输入：实际 input 省略时归一化为 {}，求值根保留 input: {}；显式非空对象、数组、标量或 null 都不能通过 Unit 校验。显式 inputSchema: {} 仍接受任意 JSON，与省略字段不同；不扩大既有 Unit-only 输入省略规则。",
-          "O-03 · 当前机制：subject 以 { context, input } 为单个求值根，表达式通过 context.directory.absolutePath、input.mode 等路径取值，不是 $context / $input 绑定变量。context 由工具构造，input 由调用者提供；投影结果再按 subjectSchema 校验。",
+          "O-03 · 求值根保持 { context, input }；context 与 input 是根属性，不是 $context / $input 绑定变量。context 由工具构造，input 由调用者提供；投影结果再按 subjectSchema 校验。旧 directory / repository / checkout 结构只是现有源码快照。",
+          "O-04 · 用户已明确结构：context 只有 repo、path，repo 内含 rootPath、origin。path 的绝对/相对含义、无 Git 或无 origin 时的边界尚待确认；结合拼接用法，建议采用仓库相对路径，但不作为已定规则。",
+          "O-05 · 用户同意新增跨平台路径拼接能力，计划使用 $pathJoin(context.repo.rootPath, context.path)，按宿主系统生成本地路径。仅作纯路径计算，不访问文件系统，不自动证明路径在仓库内；当前受限 AST 还不支持该调用，须显式接入，不开放任意函数。",
           "下方三种表示仍保留原始快照：inputSchema 在当前实现中必填。新增计划尚未实施；JSONata 仍是有边界的确定性投影 profile，不是任意动态执行。"
         ],
-        projectionExample:String.raw`# JSONata 求值根（只展示本用例用到的 context 字段）
+        projectionHeading:"目标 context 与路径函数 · 规范化草案（未实施）",
+        projectionExample:String.raw`# Git 场景示例；本例选用相对 path 演示，精确路径规则仍待确认
 evaluationRoot:
   context:
-    directory:
-      absolutePath: 'D:\work\repo\packages\api'
-      relativePath: packages/api
-  input:
-    mode: full
+    repo:
+      rootPath: 'D:\work\repo'
+      origin: https://example.test/team/repo.git
+    path: packages/api
+  input: {}
 
-# subject 字段的表达式
-expression: '{"directory": context.directory.absolutePath, "mode": input.mode}'
+# 扩展函数计划；不是当前生产投影器已经支持的表达式
+expression: '{"directory": $pathJoin(context.repo.rootPath, context.path)}'
 
-# 投影结果：接着交给目标的 subjectSchema 校验
+# Windows 下的预期结果；POSIX 根路径将生成 POSIX 路径
 result:
-  directory: 'D:\work\repo\packages\api'
-  mode: full`,
+  directory: 'D:\work\repo\packages\api'`,
         scope:"文档和条目结构可完整展示。JSONata 的能力限制、执行边界和 inputSchema 编译不能只靠字符串 schema 校验。",
         validation:["parseObjectives 检查文档版本和精确字段，并编译 inputSchema 与受限投影。","bindObjective 校验输入、求值投影，再依据 Pilot domainSchema 校验最终 subject。"],
-        questions:["声明格式是否与 manifest 使用独立 schema URI？","旧字段及声明格式的迁移或拒绝策略如何定义？","context 中哪些字段承诺稳定，Git 外的 null 边界如何公开？"],
+        questions:["context.path 是否采用仓库相对路径；无 Git / 无 origin 时如何处理？","$pathJoin 如何处理绝对第二参数、空路径、.. 与越界？","声明格式的 schema URI、旧字段和 context 的迁移或拒绝策略如何定义？"],
         sources:["packages/pilot-protocol/src/objectives.ts","packages/objective-declarations/src/index.ts","packages/pilot-protocol/src/projection.ts"],
         example:String.raw`schemaVersion: 1
 objectives:
@@ -1015,7 +1017,7 @@ $defs:
       if (format.feedback) pagePanel.append(card("本轮评审 · 下一步规范化计划输入", format.feedback, "questions"));
       if (format.projectionExample) {
         const projection = element("section", "card");
-        projection.append(element("h3", "", "JSONata 的入参、表达式与结果 · 当前机制"));
+        projection.append(element("h3", "", format.projectionHeading ?? "JSONata 的入参、表达式与结果 · 当前机制"));
         const pre = element("pre");
         pre.append(element("code", "", format.projectionExample));
         projection.append(pre);

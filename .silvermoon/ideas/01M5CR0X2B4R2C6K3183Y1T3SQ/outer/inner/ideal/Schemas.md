@@ -110,7 +110,7 @@ schema 类型的具体来源及公共依赖归属仍为实施选型，不将其�
 
 现有实现要求显式 inputSchema，因此未来需要在声明解析时为省略字段归一化出 Unit schema；本轮不实施。上一轮“任意 schema 下未提供实际 input 都默认成 `{}`”的建议不作为决定，不扩大既有 Unit-only 省略规则。声明原始输入类型可选与归一化后内部类型必有有效 schema 的区别，在实施时保持清晰。
 
-### O-03：subject 的 JSONata 求值入参（当前机制说明）
+### O-03：subject 的 JSONata 求值入参（现有实现快照，非新 context 规范）
 
 已核对当前调用链：工具构造 context 并取得调用者 input，协议层以单个根对象 `{ context, input }` 求值 subject 表达式。二者是根对象的命名属性，不是两个位置参数，也没有注册 `$context` / `$input` 自定义变量。
 
@@ -150,4 +150,40 @@ interface ObjectiveContext {
 
 则 subject 表达式 `{"directory": context.directory.absolutePath, "mode": input.mode}` 产生 `{"directory":"D:\\work\\repo\\packages\\api","mode":"full"}`。后者再按目标定义的 subjectSchema 校验，context 不被自动塞入最终 subject。
 
-当前执行的是确定性、有边界的 JSONata 投影 profile，而不是允许任意函数、变量和动态执行的完整 JSONata 运行时；缺失路径按当前 requireDefined 规则报错。投影根结构建议保留，context 字段的稳定公开范围及 input 缺省规则仍需分别确认。
+当前执行的是确定性、有边界的 JSONata 投影 profile，而不是允许任意函数、变量和动态执行的完整 JSONata 运行时；缺失路径按当前 requireDefined 规则报错。本节保留现有实现作为迁移依据；新 context 结构见 O-04，Unit 缺省输入规则见 O-02，不将旧字段当作已确认的新公共契约。
+
+### O-04：context 收敛为 repo 与 path（结构已确认）
+
+用户明确要求 context 只有两项信息：`repo` 和 `path`；`repo` 中包含 `rootPath` 与 `origin`。新的 Git 场景结构如下，取代旧的 repository / checkout / directory 分组，不默认保留旧字段别名：
+
+```ts
+interface GitProjectionContext {
+  repo: {
+    rootPath: string;
+    origin: string;
+  };
+  path: string;
+}
+```
+
+JSONata 求值根仍为 `{ context, input }`，表达式通过 `context.repo.rootPath`、`context.repo.origin`、`context.path` 和 `input` 取值。context 仍由工具提供，不允许用户 input 覆盖，不自动暴露进程环境、秘密值或文件系统能力。origin 表达实际仓库来源，不把旧 repository.id 或 checkout.id 直接改名后冒充来源。
+
+`path` 是仓库相对路径还是绝对路径的精确规则尚未取得明确选择。结合用户希望与 repo.rootPath 拼接的用法，Agent 建议采用仓库相对路径，根目录为 `"."`，仓库相对部分使用 `/`；这仍为建议，不把示例值当成最终决定。非 Git 场景、无 origin 时的结构或错误策略，以及 origin 的 URL 规范化仍待讨论，不引入静默的伪造 origin。
+
+### O-05：支持跨平台路径拼接函数（方向已确认）
+
+用户同意在 JSONata 不提供路径拼接内置函数的情况下，增加一个用于抹平系统差异的函数。已验证已安装 JSONata 的 `$join` 仅拼接字符串数组，没有绑定 `$pathJoin`；`$join([root, path], "/")` 不提供路径规范化语义。
+
+规范化计划使用显式扩展函数 `$pathJoin(root, path)`，让作者可写：
+
+```jsonata
+{
+  "directory": $pathJoin(context.repo.rootPath, context.path)
+}
+```
+
+设计方向是按宿主路径语义计算本地路径：Windows 生成本地反斜杠路径，POSIX 生成斜杠路径。抹平差异指相同表达式可移植，不要求不同系统生成完全相同的字符串。函数只做纯路径计算，不访问文件系统、不调用 realpath、不检查文件存在，也不据此宣称路径一定在仓库内。
+
+当前项目以自有 AST 校验与求值器执行受限 JSONata，不是直接运行任意 JSONata 表达式；未来实现必须同时接入受限解析与求值，只开放明确的路径函数，不因原生 JSONata 的 registerFunction 可用就绕过现有能力、时限与输出边界。本轮仅用原生 JSONata 显式注册函数验证 Windows / POSIX 示例，未改变生产运行时。
+
+空路径、绝对第二参数、`..`、路径越界及输出大小边界应在实施前补齐规范与反例。普通 join 不是授权或沙箱边界；如要求限制在 repo.rootPath 内，需要独立明确并验证，不能把字符串拼接或 normalize 当作 containment 检查。
