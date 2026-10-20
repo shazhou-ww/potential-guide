@@ -38,6 +38,20 @@
 
 当前推进到 CLI 配置拆分与分段配置规则。前面明确的局部意见按各节记录；公共地址、迁移方案和实现细节留待对应决定，不使用示意域名充当真实发布地址。
 
+## 分拆实施的关联 IDEA
+
+按用户要求，将已明确方向拆成三个独立生命周期的关联 IDEA；这里只通过文档建立总分关系，不向 Silvermoon 虚构 parentId、依赖事件或已获验收状态。
+
+| 建议顺序 | Alias 与入口 | 独立范围 | 准备阶段仍需收敛 |
+| --- | --- | --- | --- |
+| 1 | [objective-contracts](../../../../01M5CX0VMQ080XYSX96ZDCCTZS/outer/inner/ideal/Idea.md) | Objective Manifest、checks 扁平化、subjectSchema、跨格式目标引用、URI 与显式迁移。 | canonical URI 地址与实例标识字段；GitHub Pages 仍为建议。 |
+| 2 | [objective-bindings](../../../../01M5CX3F7EGCVZ3F7EEJWY1BJ1/outer/inner/ideal/Idea.md) | Unit 缺省声明、repo/path context、普通 pathJoin 和受限投影。 | 路径函数签名及非 Git 声明使用约定，沿用第一项的格式身份与迁移策略。 |
+| 可独立准备 | [agent-config-separation](../../../../01M5CX5GG5NDS07N4V3QQ4N7ZA/outer/inner/ideal/Idea.md) | agents.yaml、pguide agents、用户/项目作用域、所有 Agent 消费者与迁移。 | 文件结构与位置、同名覆盖及最小命令集。 |
+
+第二项的目标引用改名由第一项拥有，避免两边重复实施；第二项补足输入和投影行为，不重新设计来源身份。Agent 独立化不要求主配置先改为 JSONC。公共 schema 发布策略应保持一致，但不把这表述成 Agent 文件已部署。
+
+总 IDEA 继续承载剩余数据格式评审，以及 JSONC、扩展配置描述、namespace 和合并策略的讨论。这次创建不代替任何子 IDEA 的 exact revision 验收，不进入实施、不发布包；各自保留方向卡、轻量实施/部署种子和未勾选 ledger。
+
 ## Pilot Manifest 第一轮评审（2026-10-20）
 
 ### G-01：公共格式标识与旧格式处理（已确认）
