@@ -224,41 +224,71 @@ ownerOf (current observation) == rootObjective input
 ### 3.2.1 库函数判断，probe 转换结果
 
 ```haskell
-data Target = Target ObjectiveId Subject LevelId
+data ObjectiveLevelCheckInput
+  = ObjectiveLevelCheckInput PilotInput LevelId
 
-data LevelCheck = LevelCheck
-  { passed   :: Bool
-  , evidence :: LevelEvidence
+data ObjectiveLevelCheck = ObjectiveLevelCheck
+  { passed      :: Bool
+  , observation :: Observation
   }
 
 checkObjectiveLevel
-  :: CheckRuntime
-  -> Target
-  -> Effect CheckError LevelCheck
+  :: ObjectiveLevelCheckInput
+  -> PilotRuntime
+  -> Effect PilotError (Envelope ObjectiveLevelCheck)
 
-checkObjectiveLevel runtime target = do
-  observation <- observeTargetOrFail runtime target
-  pure (LevelCheck
-    (reachesExpected target observation)
-    (levelEvidence target observation))
+checkObjectiveLevel request runtime = do
+  validateExpectedLevel request
+  result <- observe runtime (pilotInputOf request)
+  case result of
+    InvocationFault status message ->
+      pure (InvocationFault status message)
+    Success observation -> do
+      validateOwnObservationFor request observation
+      pure (Success (ObjectiveLevelCheck
+        (reachesExpected request observation)
+        observation))
 
-objectiveDependencyProbe
-  :: CheckRuntime
-  -> Target
-  -> Effect CheckError CheckResult
+data ObjectiveDependencyTarget
+  = ObjectiveDependencyTarget PilotSpec LevelId (Maybe Language)
 
-objectiveDependencyProbe runtime target = do
-  result <- checkObjectiveLevel runtime target
-  validateEvidence target result
-  contributeVersions (evidence result)
-  if passed result
-    then pure CheckPassed
-    else pure (CheckBlocked
-      (DependencyCheckProblem
-        (dependencyFrom (evidence result)) :| []))
+data DependencyObservationContext = DependencyObservationContext
+  { recordObservation
+      :: PilotInput -> Observation -> Effect PilotError ()
+  }
+
+type CheckProbe =
+  Subject -> AbortSignal -> Promise (Envelope CheckResult)
+
+createObjectiveDependencyProbe
+  :: ObjectiveDependencyTarget
+  -> PilotRuntime
+  -> DependencyObservationContext
+  -> CheckProbe
+
+createObjectiveDependencyProbe target runtime context subject signal =
+  runWithSignal signal $ do
+    let request = checkInput target subject
+    result <- checkObjectiveLevel request runtime
+    case result of
+      InvocationFault status message ->
+        pure (InvocationFault status message)
+      Success checked -> do
+        recordObservation context
+          (pilotInputOf request) (observation checked)
+        pure (Success
+          (if passed checked
+            then CheckPassed
+            else CheckBlocked
+              (DependencyCheckProblem
+                (dependencyFrom request (observation checked)) :| [])))
 ```
 
-checkObjectiveLevel 的业务判定是 Bool；LevelCheck 的 evidence 表示同次 observation 的所需信息，在真实 API 中直接保留 observation，不重复定义外部 report。objectiveDependencyProbe 是 createObjectiveDependencyProbe 生成的计算的抽象；直接复用前者，无额外 CLI、裸布尔 stdout 或临时文件。错误不折叠为 false；level 的一个或多个 probe 可以组合调用，见 [库函数契约](./Dependency-check-api.md)。Envelope 错误返回与 Effect 失败仍按第 1 节的双层模型保留，此处略去机械解包。
+这与 [TypeScript 库函数契约](./Dependency-check-api.md) 使用同一数据模型：passed + 同次 observation，不再定义独立 LevelEvidence、report 或隐式解析服务。目标绑定显式携带 PilotSpec，PilotRuntime 仍由组合层提供。
+
+runWithSignal 表示在调用者取消作用域内运行 Effect，并桥接到现有 CheckProbe 的 Promise 形状；伪代码不展开通用故障转换和清理。recordObservation 在此用 Effect 表示可失败回调，TypeScript 中是同步、可抛错的本次观察贡献函数。两个调用路径都保留 InvocationFault 与原生失败/取消，不能将调用错误变成业务 false。
+
+这些接口定义同进程组合；recordObservation 不会自动穿过子进程边界。跨进程接线仍需在现有来源/探针适配层确定并验证，不属于已经完成的 API 实现。
 
 ### 3.3 Regulator：通过问题类型决定交接
 

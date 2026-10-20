@@ -36,7 +36,7 @@
 
 ## 3. 不兼容更新与手动迁移边界
 
-1. 新运行时不读取旧 prerequisite，不提供别名、兼容结果或静默转换。Manifest schemaVersion 提升为 2，新运行时明确拒绝旧版。
+1. 新运行时不读取旧 prerequisite，不提供别名、兼容结果或静默转换；保持当前 Manifest schemaVersion，不额外引入版本升级流程。严格拒绝被删除的 prerequisite 字段；未涉及变更的合法 Manifest 仍可使用，不等于保留旧协议兼容层。
 2. 新内部 check result 必须显式 kind: internal；依赖采用统一结构，旧输出明确报错。
 3. 更新实现测试所需的 fixture 和新增示例，以验证新版协议；这不等于迁移真实工程的 Objective 定义。
 4. 当前工程与 Silvermoon 工程已有 Objective 定义，全部留待之后单独手动迁移。本次设计及后续核心协议实施不自动重写这些定义、其探针或派生生成物。
@@ -61,7 +61,7 @@
 | 混合问题/多个依赖 | 聚合全部问题，零 Agent 调用交接全部依赖 |
 | 本次 target 已达成 | 不因更高阶段的依赖扩大目标 |
 | 外部观察失败 | 没有可信 current 时是调用错误，不伪造低层级 |
-| 严格新协议 | 旧 manifest/problem/stop reason、额外字段明确拒绝 |
+| 严格新协议 | 被删除的 prerequisite、旧 problem/stop reason、额外字段明确拒绝；未变化的合法 Manifest 不被无故拒绝 |
 | 层级合法性 | 未知 level、current 不低于 expected 的依赖声明不被错误接纳 |
 | 跨仓库/版本 | 精确提交证据完整；冲突明确失败；解析不改用 HEAD |
 | 动态绑定 | 无预加载 prerequisite 也能加载、观察、治理、清理外部目标 |
@@ -79,3 +79,11 @@
 实施时先运行 Pilot、Regulator、Portfolio 和 pguide 对应定向测试，再执行 `pnpm check`。若因尚未手动迁移的真实 Objective 定义失败，单独报告该集成阻塞；核心协议的定向测试仍必须通过，真实工程接入不能宣称完成。
 
 本轮仅设计文档：检查相对引用、Silvermoon worktree/staged 快照和契约/ledger 镜像。所有下游实施与部署项保持未完成，不将设计写作当作实现或迁移证据。
+
+## 6. 设计一致性边界
+
+- checkObjectiveLevel 与 createObjectiveDependencyProbe 是唯一的 MVP 检查入口，均从现有 objective-pilot 包导出；不增加包、子命令、布尔 stdout 或 report 中转。
+- TypeScript 与 Haskell 均保留 passed + 同次 observation、Envelope 错误与 Effect 失败，不另建 LevelEvidence 业务模型或隐式解析运行时。
+- 当前目标已达成优先返回 target-reached；只有未达目标且存在依赖问题才交接。混合问题仍不调用 Agent。
+- Haskell 的 Before 部分及“当前实现依据”有意保留旧 prerequisite 描述，用于解释删除范围；不代表 After 或兼容支持。
+- 跨进程证据回传仍是具体实现接线与集成验收点，未完成前不声称 run.js 使用闭环已验证；两工程真实定义迁移始终另行手动进行。

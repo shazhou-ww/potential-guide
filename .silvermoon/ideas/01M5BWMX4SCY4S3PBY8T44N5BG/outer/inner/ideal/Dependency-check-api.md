@@ -50,7 +50,28 @@ declare function checkObjectiveLevel(
 
 ## 3. 依赖 probe
 
-createObjectiveDependencyProbe 绑定外部 spec、expectedLevelId 与 runtime，返回符合现有 CheckProbe 调用形状的函数：
+createObjectiveDependencyProbe 绑定外部 spec、expectedLevelId、语言与 runtime，返回符合现有 CheckProbe 调用形状的函数。补齐证据收集回调的类型，避免示例依赖未定义的服务：
+
+```ts
+type ObjectiveDependencyTarget = Omit<ObjectiveLevelCheckInput, "subject">;
+
+interface DependencyObservationContext {
+  readonly recordObservation: (
+    input: PilotInput,
+    observation: PilotObservation,
+  ) => void;
+}
+
+declare function createObjectiveDependencyProbe(
+  target: ObjectiveDependencyTarget,
+  runtime: PilotRuntime,
+  context: DependencyObservationContext,
+): CheckProbe;
+```
+
+这是同进程的最小证据贡献契约：回调核对本次来源身份并合并 versions，冲突或缺失证据抛出显式错误。它不是可省略的日志，也不执行第二次观察。来源绑定层提供回调，检查作者不需要自行实现状态存储或报告解析。
+
+调用示意：
 
 ```ts
 import {
@@ -67,7 +88,7 @@ const probe = createObjectiveDependencyProbe(
 const envelope = await probe(externalSubject, signal);
 ```
 
-observationContext 代表绑定层提供的本次观察证据贡献能力，不是新增业务 subject 字段或通用服务。实现阶段结合现有来源/探针上下文确定其具体类型；它必须显式保留版本归属，不能成为可省略的“证据丢弃”选项。
+observationContext 的类型是 DependencyObservationContext，不是新增业务 subject 字段或通用服务。返回的 CheckProbe 保持现有 Promise/envelope 调用形状；它内部在调用者 signal 下运行 checkObjectiveLevel 的 Effect，并等待该次运行清理完成，不增加脱离调用者的后台任务。
 
 probe 内部运行 checkObjectiveLevel，并在同一计算中完成转换：
 
@@ -90,6 +111,8 @@ probe 将同次 observation 的 versions 贡献给父观察上下文，true 和 
 import 不会消除实际进程边界：外部来源的精确版本、递归调用栈、截止时间、取消与清理仍由来源/探针适配层显式关联。MVP 复用既有绑定与运行脚本设施，仅补齐依赖观察所需的最小上下文传递，不另建进程执行框架、通用服务或新包。
 
 现有 process probe 仍接收 Envelope<CheckResult>，而不是裸 boolean。运行脚本调用库函数转换后输出该 envelope；依赖证据必须通过受控适配关联回父观察作用域，不能只相信脚本输出的目标与层级字段。
+
+**尚需实施阶段确定并验证的接线**：recordObservation 回调只能在同进程贡献状态，不能穿过 stdout 自动修改父观察。跨进程版本贡献的传递格式与来源绑定仍需在现有探针适配层落地；预算/调用栈关联也需跨进程测试证明。在完成这一步之前，只能说进程内 API 分层已定义，不能宣称“任意 run.js 只 import 就已端到端可用”。本设计不以重新增加 CLI/report 框架来掩盖这一边界。
 
 ## 5. 验证与排除项
 

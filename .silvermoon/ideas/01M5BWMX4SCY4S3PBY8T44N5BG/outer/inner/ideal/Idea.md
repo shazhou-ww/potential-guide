@@ -6,7 +6,7 @@
 
 ## 结果
 
-Observation 始终描述当前 Objective；从现有 objective-pilot 包导出层级判断与依赖 probe，检查脚本直接复用，probe 将 false 转为依赖问题。Regulator 遇到依赖即交接 Supervisor，满足后重新观察当前目标。
+Observation 始终描述当前 Objective；从现有 objective-pilot 包导出层级判断与依赖 probe，检查脚本直接复用，probe 将 false 转为依赖问题。本次目标未达成且存在依赖时，Regulator 交接 Supervisor，满足后重新观察当前目标。
 
 ## 边界
 
@@ -17,7 +17,7 @@ Observation 始终描述当前 Objective；从现有 objective-pilot 包导出�
 ## 验收标准
 
 - 静态已知、运行期发现及中间层级依赖使用同一问题协议。
-- 存在依赖时不调用当前 Agent，全部外部依赖由 Supervisor 接管。
+- 本次目标未达成且存在依赖时不调用当前 Agent，全部外部依赖由 Supervisor 接管。
 - 共享目标按消费者各自阈值解除等待；失败、循环和过期结果不造成错误放行。
 
 ## 支持文档
