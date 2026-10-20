@@ -4,3 +4,4 @@
 {"type":"submitIdeal","timestamp":"2026-10-20T06:00:16.234Z","payload":{"idealRevision":"c71ccae8921ae85c916b50c8a80498d8bfd8ab3e"}}
 {"type":"submitIdeal","timestamp":"2026-10-20T06:10:20.661Z","payload":{"idealRevision":"4756266b73040397010d57e64e6ef899167826c2"}}
 {"type":"submitIdeal","timestamp":"2026-10-20T06:16:45.810Z","payload":{"idealRevision":"f609cab0d8354a2aea1e6bb5479057b5ddab77b0"}}
+{"type":"acceptIdeal","timestamp":"2026-10-20T06:19:45.291Z","payload":{"idealRevision":"f609cab0d8354a2aea1e6bb5479057b5ddab77b0"}}
