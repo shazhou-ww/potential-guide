@@ -219,7 +219,7 @@ import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);proces
   });
 }
 
-test("AHP CLI closes the observation loop, pins its recipe, and skips all session calls for satisfied targets", async () => {
+test("AHP CLI closes the observation loop, pins its recipe, and skips all session calls for satisfied targets", async (t) => {
   const f = await fixture();
   const marker = join(f.directory, "repaired");
   const state = join(f.directory, "state");
@@ -241,74 +241,83 @@ test("AHP CLI closes the observation loop, pins its recipe, and skips all sessio
     },
   });
 
-  await test("AHP profiles route both supervisor planning and process-worker execution through AHP", async () => {
-    const f = await fixture();
-    const marker = join(f.directory, "worker-repaired");
-    const planner = await ahpHost({
-      text: '{"directives":[{"goalId":"registered","priority":2}]}',
-    });
-    const worker = await ahpHost({
-      onTurn: async () => {
-        await writeFile(marker, "repaired");
-      },
-    });
-    try {
-      await writeFile(
-        join(f.repository, "objective", "checks", "ready", "run.js"),
-        `#!/usr/bin/env node
-  import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{kind:"internal",id:"not-ready",parameters:{}}]}}));});`,
-      );
-      const commit = await f.commit();
-      await withPilot(f.uri, f.directory, commit, async (objective) => {
-        const profile = (url: string) => ({
-          type: "ahp" as const,
-          connection: { protocolVersion: "1.0.0" as const, agent: "generic-provider" },
-          transport: { type: "websocket" as const, url },
-        });
-        const goal = {
-          id: "registered",
-          objective,
-          subject: { marker },
-          targetLevel: "terminal",
-          priority: 2,
-          observationIntervalMs: 1000,
-        };
-        const plan = await createAgentPlannerPolicy(
-          profile(planner.url),
-          f.directory,
-        )({
-          goals: [goal],
-          candidates: [goal],
-          observations: {},
-          previousQueue: { revision: 0, demands: [] },
-          events: [],
-        });
-        assert.deepEqual(plan, { directives: [{ goalId: "registered", priority: 2 }] });
-        const runner = createProcessRegulationRunner({ worker: profile(worker.url) }, f.directory);
-        const handle = runner.start(
-          {
-            spec: makeRegulatorSpec(
-              objective,
-              {
-                targetLevel: "terminal",
-                quota: { timeoutMs: 10000, maxAgentRuns: 2, maxStallRuns: 2 },
-                agentExecutionLimits: { timeoutMs: 5000 },
-              },
-              { id: "worker" },
-            ),
-            subject: { marker },
-          },
-          { binding: { id: "worker" } },
-        );
-        assert.equal((await handle.result).stopReason, "target-reached");
-        assert.equal(worker.messages.filter(({ method }) => method === "createSession").length, 1);
+  await t.test(
+    "AHP profiles route both supervisor planning and process-worker execution through AHP",
+    async () => {
+      const f = await fixture();
+      const marker = join(f.directory, "worker-repaired");
+      const planner = await ahpHost({
+        text: '{"directives":[{"goalId":"registered","priority":2}]}',
       });
-    } finally {
-      await planner.close();
-      await worker.close();
-      await rm(f.directory, { recursive: true, force: true });
-    }
-  });
+      const worker = await ahpHost({
+        onTurn: async () => {
+          await writeFile(marker, "repaired");
+        },
+      });
+      try {
+        await writeFile(
+          join(f.repository, "objective", "checks", "ready", "run.js"),
+          `#!/usr/bin/env node
+  import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{kind:"internal",id:"not-ready",parameters:{}}]}}));});`,
+        );
+        const commit = await f.commit();
+        await withPilot(f.uri, f.directory, commit, async (objective) => {
+          const profile = (url: string) => ({
+            type: "ahp" as const,
+            connection: { protocolVersion: "1.0.0" as const, agent: "generic-provider" },
+            transport: { type: "websocket" as const, url },
+          });
+          const goal = {
+            id: "registered",
+            objective,
+            subject: { marker },
+            targetLevel: "terminal",
+            priority: 2,
+            observationIntervalMs: 1000,
+          };
+          const plan = await createAgentPlannerPolicy(
+            profile(planner.url),
+            f.directory,
+          )({
+            goals: [goal],
+            candidates: [goal],
+            observations: {},
+            previousQueue: { revision: 0, demands: [] },
+            events: [],
+          });
+          assert.deepEqual(plan, { directives: [{ goalId: "registered", priority: 2 }] });
+          const runner = createProcessRegulationRunner(
+            { worker: profile(worker.url) },
+            f.directory,
+          );
+          const handle = runner.start(
+            {
+              spec: makeRegulatorSpec(
+                objective,
+                {
+                  targetLevel: "terminal",
+                  quota: { timeoutMs: 10000, maxAgentRuns: 2, maxStallRuns: 2 },
+                  agentExecutionLimits: { timeoutMs: 5000 },
+                },
+                { id: "worker" },
+              ),
+              subject: { marker },
+            },
+            { binding: { id: "worker" } },
+          );
+          assert.equal((await handle.result).stopReason, "target-reached");
+          assert.equal(
+            worker.messages.filter(({ method }) => method === "createSession").length,
+            1,
+          );
+        });
+      } finally {
+        await planner.close();
+        await worker.close();
+        await rm(f.directory, { recursive: true, force: true });
+      }
+    },
+  );
   try {
     await writeFile(
       join(f.repository, "objective", "checks", "ready", "run.js"),
