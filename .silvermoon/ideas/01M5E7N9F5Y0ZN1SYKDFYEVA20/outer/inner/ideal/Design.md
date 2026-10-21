@@ -21,6 +21,7 @@ Behavior ResourceAllocation ──┘
 
 ## Singleton State、Collection States 与查询
 
+- singleton 在每个 revision 下恰有一个，沿版本展开时可建模为 revision 为 PK 的快照表；current 选择当前 revision 的那一行，不额外维护另一份权威状态。RegulationTarget 与 CoordinatorState 各有独立版本空间；集合成员键包含快照版本与对象或记录身份，具体 ER 见 Types.md。这是逻辑模型，不要求逐版全量复制或保留全部快照。
 - 字段进入 current 的依据是当前调度、执行或恢复是否必需，不是 UI 是否可能查看；这项最小化原则不排除完整 CoordinatorState 包含历史。
 - current.activeRegulations 只含正在运行、停止中或恢复后尚未核实的调用。确认结束时移除，向 regulations 写入终结记录，并原子更新仍必要的当前信息；不保留 ended Task。
 - 累计预算限制继续执行，有效依赖和必要证据支持未完成编排；这些是当前状态而非历史明细。撤回 processedIntents 这一历史处理水位字段，待从新意图接收、待处理需求和恢复接续推导防重跑机制。
