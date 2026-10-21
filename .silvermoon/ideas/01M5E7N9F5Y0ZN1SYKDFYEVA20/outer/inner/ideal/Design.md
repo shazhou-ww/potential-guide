@@ -14,18 +14,19 @@ Behavior ResourceAllocation ──┘
 
 - RegulationTarget 是治理目标意图：针对特定 Objective 与 subject，在某时刻要求一次向 targetLevel 推进的尝试，具有 priority。它不承诺一定达到，不是持续保持目标的控制器。
 - ResourceAllocation 是资源分配意图：期望使用的 agent binding 及并发度，不是实际资源分配、真实空闲数或权限集合；每次以完整值更新，不另建资源 delta 协议。
-- CoordinatorState 只保存继续正确运行所必需的当前状态：已确认的两类意图、活跃 Regulation、必要的意图处理进度、当前有效观察及依赖、实际 binding 与占用、累计预算和服务生命周期。pending 需求不包装成独立 Task，历史终结结果不驻留 state。
+- CoordinatorState 是完整领域状态，由 current singleton state 与若干 collection states 组成。current 保存已确认的两类意图、活跃 Regulation、当前有效观察及依赖、实际 binding 与占用、累计预算和服务生命周期；Collections 可以表达实体、聚合或历史，终结结果不进入当前活跃集合。pending 需求不包装成覆盖完整生命周期的 Task，其具体表达仍待推导。
 - 核心状态不携带外部实例 ID 或输入通道生命周期；外部身份由宿主或 envelope 关联，连接、结束与重连由适配层管理。通道结束不撤销当前意图、不自动取消调用或关闭服务；错误仍明确报告，影响服务可用性时体现为服务自身的状态变化。
 - 外部接口是有状态、带副作用及反馈的二元 Behavior 变换，不是仅依赖当前两个值的无记忆逐点函数。输入保持不变时，runner 反馈、观察及超时仍能改变输出状态。
 - 内部可以通过 monadic bind（>>=）组合依赖前一步结果的副作用步骤；monadic composition 不等于 monadic lift，不将整个 Coordinator 称为 liftM2 或普通 applicative lift。
 
-## 当前状态最小化与历史查询
+## Singleton State、Collection States 与查询
 
-- 字段进入 state 的依据是当前调度、执行或恢复是否必需，不是 UI 是否可能查看。移除后仍能不查询历史而正确运行的信息，不为历史展示保留。
-- activeRegulations 只含正在运行、停止中或恢复后尚未核实的调用。确认结束时移除，并原子更新仍必要的进度、依赖、观察和预算摘要；不增加 pastRegulations，也不保留 ended Task。
-- 不保存历史记录，不等于删除过去对当前的影响。意图已处理修订防止重跑，累计预算限制继续执行，有效依赖和必要证据支持未完成编排；这些是当前状态而非历史明细。
-- 完整调用结果、过去的观察、已解除依赖和诊断由持久化消息历史或独立查询投影承担。UI 查询历史不要求 CoordinatorState 保存历史；lastFault 不作为最近错误的历史展示字段，持续阻断运行的故障仍须在当前状态明确表达。
-- 当前 state 无需查询历史即可决定下一步；恢复可以使用一致快照及必要后续增量。历史查询的可靠存储与索引是适配层职责，实时 Stream 不自动成为历史数据库。
+- 字段进入 current 的依据是当前调度、执行或恢复是否必需，不是 UI 是否可能查看；这项最小化原则不排除完整 CoordinatorState 包含历史。
+- current.activeRegulations 只含正在运行、停止中或恢复后尚未核实的调用。确认结束时移除，向 regulations 写入终结记录，并原子更新仍必要的当前信息；不保留 ended Task。
+- 累计预算限制继续执行，有效依赖和必要证据支持未完成编排；这些是当前状态而非历史明细。撤回 processedIntents 这一历史处理水位字段，待从新意图接收、待处理需求和恢复接续推导防重跑机制。
+- Collection 表达领域记录集合，不是 HTML 表格、数据库实现或一次查询结果，也不限于历史。不设 history 分组：例如 regulationObjects 按对象维护最新 Probe 时间与结果，regulations 保存终结记录。筛选、排序和分页产生派生的 QueryResult，不改变权威状态；UI 可以分别读取 current 和查询 Collections。
+- 当前切片不以 lastFault 保存最近诊断，完整结果、观察和故障记录进入相应历史集合；持续阻断运行的故障仍须在 current 明确表达。集合范围及记录身份见 Types.md 草案，不预定完整历史 schema。
+- singleton 与各个 collections 可以分开存储、查询和传输，但同一事件对它们的状态效果必须保持逻辑一致。对象聚合不能将最近观察冒充此刻现实，最新 Probe 的顺序、失败和未知须明确表达。存储及索引是适配层职责，实时 Stream 不自动成为历史数据库。
 
 ## delta 与两个纯 reducer
 
@@ -74,7 +75,7 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 - 设计支持 RegulationTarget 和 CoordinatorState 的持久化及恢复。CoordinatorCheckpoint 仅封装两份领域状态，不包含固定 positions 字段，不要求现在选定日志或存储方案。
 - 若采用快照加后续增量，持久化适配层负责在外层保存与快照一致的命令/事件处理位置并定义接续规则；领域 revision 不默认等于日志位置。无论采用何种方案，都须保存意图发生修订并保证一致恢复，不能把已完成或 blocked 的同一意图当成新请求重跑，也不能遗漏未处理请求或重复预留预算。
 - 保存 RegulationTarget 的全局版本水位与 Record 条目更新版本，不能用剩余条目的最大值替代水位或把版本当作消息游标；使用普通 JSON 对象持久化映射，仍须校验对象身份、版本与可持久化值。
-- 当前快照持久化目标、活跃调用、处理进度、仍有效的观察与依赖、累计预算和恢复元数据，不保存完整历史结果、Promise、进程句柄或活跃内存节点。完整结果另由消息历史保存；恢复失败明确呈现，不能静默从空状态启动。
+- current 持久化目标、活跃调用、仍有效的观察与依赖、累计预算和恢复元数据；完整领域状态还包括实体、聚合及历史 Collections，不保存 Promise、进程句柄或活跃内存节点。适配层保证 singleton、各个集合和输入接续位置一致；恢复失败明确呈现，不能静默从空状态启动。
 - 回放只运行 reducer，不重放启动、停止、文件写入等副作用。恢复出的 running 是历史记录，不是当前存活证明；须核实外部执行能否重关联、是否已结束或是否无法确认，再将恢复事实通过 events 纳入状态。
 - 外部执行未核实前，不虚报终止、释放占用、退还预算或启动可能重复的替代调用。具体重关联/失联协议与恢复阶段状态在实施时定义。
 - ResourceAllocation 恢复时以可信当前输入为准；是否保存为恢复上下文可后续决定，不仅凭旧分配意图自行执行。实时无重放 Stream 不自动获得历史恢复能力，晚订阅需匹配快照与后续增量或明确只消费后续事实。

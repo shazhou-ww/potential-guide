@@ -6,7 +6,7 @@
 
 ### I-S01 — 定义双意图、纯归约与恢复契约
 
-依据 [Design.md](./ideal/Design.md) 与 [Types.md](./ideal/Types.md) 先收敛 RegulationTarget/ResourceAllocation/CoordinatorState 及合法转换，再推导 Command/Event，落实两个纯 reducer、资源意图全量更新、单命令及单次调用边界。核心状态只保留当前运行必需信息，以 activeRegulations 替代包含历史的 Task，不含实例 ID、输入通道生命周期或固定日志位置；明确意图处理进度、当前依赖、终结移除的原子边界、一致快照、适配层历史查询与接续元数据、存储错误和外部执行核实协议；[Events.md](./ideal/Events.md) 仅作遗漏检查，不引入长期目标控制器。
+依据 [Design.md](./ideal/Design.md) 与 [Types.md](./ideal/Types.md) 先收敛 RegulationTarget/ResourceAllocation/CoordinatorState 及合法转换，再推导 Command/Event，落实两个纯 reducer、资源意图全量更新、单命令及单次调用边界。完整状态包含 current singleton 与实体、聚合或历史 collection states，以 activeRegulations 替代包含历史的 Task，不含实例 ID、输入通道生命周期或固定日志位置；明确当前待处理需求、输入接续、依赖、终结移除与集合写入、对象最近 Probe 聚合的原子边界、一致快照、适配层查询与接续元数据、存储错误和外部执行核实协议，不预设 processedIntents；[Events.md](./ideal/Events.md) 仅作遗漏检查，不引入长期目标控制器。
 
 ### I-S02 — 接入资源意图、资源侧授权与副作用执行
 
@@ -24,7 +24,7 @@
 
 ### I-AC02 — 恢复、生命周期与资源边界正确
 
-反例证明 pending/block 边界和有限依赖正确；确认结束的调用不驻留 state，无用依赖和观察可回收，诊断及完整结果可由独立消息历史查询，移除历史不导致意图重跑、故障静默或依赖提前完成。目标/状态可持久化接续，采用日志时由适配层保存一致处理位置，回放不触发副作用，未知执行核实前不释放占用或重复启动。no-resource 是合法初值而非故障兜底，不冒充实际终止；输入通道结束不取消意图或服务。资源拒绝明确返回，不另设 harness 审批；存储故障不静默从零开始，恢复不退还或重置预算。
+反例证明 pending/block 边界和有限依赖正确；确认结束的调用从当前切片移除并一致写入终结记录 Collection，当前无用依赖和观察可回收且不误删其他集合记录，查询结果不冒充权威集合，对象聚合区分无 Probe、最新失败和过期反馈，不导致意图重跑、故障静默或依赖提前完成。目标/完整状态可持久化接续，采用日志时由适配层保存一致处理位置，回放不触发副作用、重复历史写入或错误回退聚合，未知执行核实前不释放占用或重复启动。no-resource 是合法初值而非故障兜底，不冒充实际终止；输入通道结束不取消意图或服务。资源拒绝明确返回，不另设 harness 审批；存储故障不静默从零开始，恢复不退还或重置预算。
 
 ### I-AC03 — 交付与兼容验证可复查
 
