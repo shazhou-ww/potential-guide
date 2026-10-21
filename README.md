@@ -89,7 +89,9 @@ do not require a committed version.
 
 `pguide regulate` uses named ACP/AHP profiles from user/project `agents.yaml`.
 Project same-name profiles replace whole user profiles. Main config retains
-`defaultAgent`; `--config` is not a third Agent resource scope. Migrate old embedded
+`agents.defaultAgent` in user/project `config.jsonc`; `--config` is retired.
+See [package settings and manual migration](docs/package-settings.md).
+Migrate old embedded
 profiles explicitly with `pguide agents migrate --scope user|project`.
 See the [Agent manager](./packages/pguide-agents/README.md).
 Regulation state and protocol-visible transcript

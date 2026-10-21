@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { objectiveContext } from "../packages/objective-declarations/dist/index.js";
 import {
   checkPackage,
   checkRepository,
   defaultPolicy,
 } from "../packages/objective-monorepo-standard/dist/index.js";
 import { parseObjectives, projectObjective } from "../packages/objective-pilot/dist/index.js";
-import { objectiveContext } from "../packages/objective-declarations/dist/index.js";
 import { execute } from "./verify-deployment-helpers.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -115,8 +115,6 @@ try {
     },
   });
   await git(target, "init", "--quiet");
-  const config = join(scratch, "config.json");
-  await writeFile(config, JSON.stringify({ schemaVersion: 2 }));
   async function probe(id, expectedLevel, cwd = target, expectedKind) {
     const result = await execute(
       "pguide-probe",
@@ -127,8 +125,6 @@ try {
         "directory",
         "--revision",
         report.commit,
-        "--config",
-        config,
         "--cwd",
         cwd,
         "--format",

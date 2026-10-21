@@ -260,13 +260,15 @@ var init_evidence = __esm({
 import { isAbsolute as isAbsolute2, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 function subjectValue(value, selfCheck = false) {
-  const required = ["workingDirectory", "configPath", "scratchDirectory", "pguide"];
+  const required = ["workingDirectory", "scratchDirectory", "pguide"];
   const optional = ["desiredVersion", "agent", "userHome", "allowSanity", "timeoutMs", "target"];
   const remote = value?.target?.type === "ssh";
   if (selfCheck && (value?.target !== void 0 || value?.allowSanity !== void 0))
     throw new Fault("invalid-subject: self-check is local-only and has no allowSanity input.", 400);
   const absolute = remote ? posix.isAbsolute : isAbsolute2;
-  if (!record(value) || required.some((key) => !Object.hasOwn(value, key)) || Object.keys(value).some((key) => ![...required, ...optional].includes(key)) || required.slice(0, 3).some((key) => !nonempty(value[key]) || !absolute(value[key])) || !record(value.pguide) || Object.keys(value.pguide).some((key) => !["command", "args"].includes(key)) || !nonempty(value.pguide.command) || value.pguide.args !== void 0 && (!Array.isArray(value.pguide.args) || !value.pguide.args.every(nonempty)) || ["desiredVersion", "agent"].some((key) => value[key] !== void 0 && !nonempty(value[key])) || value.userHome !== void 0 && (!nonempty(value.userHome) || !isAbsolute2(value.userHome)) || remote && value.userHome !== void 0 || value.target !== void 0 && (!record(value.target) || !remote && (value.target.type !== "local" || Object.keys(value.target).length !== 1)) || value.allowSanity !== void 0 && typeof value.allowSanity !== "boolean" || value.timeoutMs !== void 0 && (!Number.isSafeInteger(value.timeoutMs) || value.timeoutMs < 100 || value.timeoutMs > 3e5))
+  if (!record(value) || required.some((key) => !Object.hasOwn(value, key)) || Object.keys(value).some((key) => ![...required, ...optional].includes(key)) || ["workingDirectory", "scratchDirectory"].some(
+    (key) => !nonempty(value[key]) || !absolute(value[key])
+  ) || !record(value.pguide) || Object.keys(value.pguide).some((key) => !["command", "args"].includes(key)) || !nonempty(value.pguide.command) || value.pguide.args !== void 0 && (!Array.isArray(value.pguide.args) || !value.pguide.args.every(nonempty)) || ["desiredVersion", "agent"].some((key) => value[key] !== void 0 && !nonempty(value[key])) || value.userHome !== void 0 && (!nonempty(value.userHome) || !isAbsolute2(value.userHome)) || remote && value.userHome !== void 0 || value.target !== void 0 && (!record(value.target) || !remote && (value.target.type !== "local" || Object.keys(value.target).length !== 1)) || value.allowSanity !== void 0 && typeof value.allowSanity !== "boolean" || value.timeoutMs !== void 0 && (!Number.isSafeInteger(value.timeoutMs) || value.timeoutMs < 100 || value.timeoutMs > 3e5))
     throw new Fault("invalid-subject: see the setup subject contract.", 400);
   return { ...value, timeoutMs: value.timeoutMs ?? 2e4 };
 }
@@ -335,42 +337,37 @@ var init_installation = __esm({
 });
 
 // packages/objective-pguide-setup/src/configuration.mjs
-import { lstat } from "node:fs/promises";
 async function configured(subject, context) {
   await installation(subject, context);
-  try {
-    if (!(await lstat(subject.configPath)).isFile()) throw new Problem("configuration-invalid");
-  } catch (error) {
-    if (error.code === "ENOENT") throw new Problem("configuration-missing");
-    throw error;
-  }
-  const help = await context.cli(["--help"], subject.configPath, subject.workingDirectory);
+  const help = await context.cli(["--help"], subject.workingDirectory);
   if (help.code !== 0) throw new Problem("configuration-invalid");
   const capabilities = jsonOutput(help);
   if (!Array.isArray(capabilities.commands) || !record(capabilities.conflicts))
     throw new Fault("protocol: unsupported command discovery response.");
-  for (const name2 of ["config", "agents", "probe", "regulate"])
+  const requireCommand = (name2) => {
     if (capabilities.conflicts[name2] !== void 0 || !capabilities.commands.some(
       (entry) => entry.command === name2 && entry.compatible === true && entry.protocol === "pguide-command-v1"
     ))
       throw new Problem("command-unavailable");
-  const result = await context.cli(
-    ["config", "show"],
-    subject.configPath,
-    subject.workingDirectory
-  );
+  };
+  requireCommand("config");
+  const result = await context.cli(["config", "show"], subject.workingDirectory);
   if (result.code !== 0) throw new Problem("configuration-invalid");
   const value = jsonOutput(result);
-  if (value.schemaVersion !== 1 || !record(value.config) || value.config.schemaVersion !== 2)
+  if (value.schemaVersion !== 1 || !record(value.config) || !Array.isArray(value.files) || !value.files.every(nonempty) || !Array.isArray(value.issues))
     throw new Fault("protocol: unsupported configuration response.");
+  if (value.files.length === 0) throw new Problem("configuration-missing");
+  for (const name2 of ["agents", "probe", "regulate"]) requireCommand(name2);
+  if (value.issues.some(
+    (issue) => ["agents", "pguide", "cli-core", "pilot", "regulate"].includes(
+      typeof issue?.id === "string" ? issue.id.split(".")[0] : ""
+    )
+  ))
+    throw new Problem("configuration-invalid");
   const config = value.config;
-  const name = subject.agent ?? config.defaultAgent;
+  const name = subject.agent ?? config["agents.defaultAgent"];
   if (!nonempty(name)) throw new Problem("agent-missing");
-  const selected = await context.cli(
-    ["agents", "show", name],
-    subject.configPath,
-    subject.workingDirectory
-  );
+  const selected = await context.cli(["agents", "show", name], subject.workingDirectory);
   if (selected.code !== 0) throw new Problem("agent-missing");
   const resource = jsonOutput(selected);
   if (!record(resource.profile)) throw new Fault("protocol: unsupported Agent resource response.");
@@ -481,7 +478,7 @@ var init_configuration = __esm({
 
 // packages/objective-pguide-setup/src/direct-sanity.mjs
 import { randomBytes } from "node:crypto";
-import { lstat as lstat2, mkdir, readFile, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join as join2 } from "node:path";
 async function directSanity(context, directory, selected) {
   const task = join2(directory, "task");
@@ -502,7 +499,7 @@ async function directSanity(context, directory, selected) {
         1,
         Math.min(
           context.remainingMs() - 2500,
-          selected.config.agentExecutionLimits?.timeoutMs ?? Number.POSITIVE_INFINITY
+          selected.config["regulate.agentTimeoutMs"] ?? Number.POSITIVE_INFINITY
         )
       )
     }),
@@ -529,7 +526,7 @@ async function directSanity(context, directory, selected) {
   let correct = false;
   let observed = "missing";
   try {
-    const details = await lstat2(marker);
+    const details = await lstat(marker);
     if (!details.isFile() || details.isSymbolicLink() || details.nlink !== 1)
       observed = "not-regular";
     else if (details.size > Buffer.byteLength(expected) + 8) observed = "oversized";
@@ -774,13 +771,11 @@ function executionContext(subject, directory, signal, deadline, evidence) {
       else child.stdin.end();
     });
   }
-  const cli = (args, config = subject.configPath, cwd = directory) => measure(
+  const cli = (args, cwd = subject.workingDirectory) => measure(
     args[0] === "--help" ? "cli.help" : `cli.${args[0]}`,
     () => execute(subject.pguide.command, [
       ...subject.pguide.args ?? [],
       ...args,
-      "--config",
-      config,
       "--cwd",
       cwd,
       "--format",
@@ -797,7 +792,7 @@ var init_execution = __esm({
 
 // packages/objective-pguide-setup/src/sanity.mjs
 import { randomBytes as randomBytes2 } from "node:crypto";
-import { cp, lstat as lstat3, mkdir as mkdir2, readFile as readFile2, writeFile as writeFile2 } from "node:fs/promises";
+import { cp, lstat as lstat2, mkdir as mkdir2, readFile as readFile2, writeFile as writeFile2 } from "node:fs/promises";
 import { join as join4, resolve as resolve2 } from "node:path";
 import { pathToFileURL } from "node:url";
 async function sanity(subject, context, directory, selected) {
@@ -812,20 +807,21 @@ async function sanity(subject, context, directory, selected) {
   await writeFile2(marker, "not-repaired");
   const subjectFile = join4(directory, "sanity-subject.json");
   await writeFile2(subjectFile, JSON.stringify({ marker, expected }));
-  const configPath = join4(directory, "sanity-config.json");
+  await mkdir2(join4(repository, ".pguide"), { recursive: true });
+  const configPath = join4(repository, ".pguide", "config.jsonc");
   const timeoutMs = subject.timeoutMs;
   const config = {
-    schemaVersion: 2,
-    commandDirectories: (selected.config.commandDirectories ?? []).map(
+    "pguide.commandDirectories": (selected.config["pguide.commandDirectories"] ?? []).map(
       (path) => resolve2(subject.workingDirectory, path)
     ),
-    defaultAgent: selected.name,
-    stateDirectory: join4(directory, "state"),
-    agentExecutionLimits: { timeoutMs },
-    regulationStrategy: {
-      quota: { timeoutMs, maxAgentRuns: 1, maxStallRuns: 1 },
-      probe: { timeoutMs: 3e3, retry: { maxRetries: 0, delayMs: 0 } }
-    }
+    "agents.defaultAgent": selected.name,
+    "cli-core.stateDirectory": join4(directory, "state"),
+    "regulate.agentTimeoutMs": timeoutMs,
+    "regulate.quota": { timeoutMs, maxAgentRuns: 1, maxStallRuns: 1 },
+    "pilot.probe": { timeoutMs: 3e3, retry: { maxRetries: 0, delayMs: 0 } },
+    "pilot.reportsEnabled": false,
+    "pilot.reportDirectory": join4(directory, "reports"),
+    "regulate.permissions": selected.config["regulate.permissions"]
   };
   await writeFile2(configPath, JSON.stringify(config), { mode: 384 });
   await mkdir2(join4(repository, ".pguide"), { recursive: true });
@@ -853,7 +849,7 @@ async function sanity(subject, context, directory, selected) {
   const uri = `git+${pathToFileURL(repository).href}#/`;
   const common = ["--pilot", uri, "--revision", revision, "--subject-file", subjectFile];
   const probe = async () => {
-    const result2 = await context.cli(["probe", ...common], configPath, repository);
+    const result2 = await context.cli(["probe", ...common], repository);
     const report2 = jsonOutput(result2);
     if (result2.code !== 0 || report2.status !== 200 || !record(report2.payload)) {
       const reason = typeof report2.error === "string" && /dirty|uncommitted/.test(report2.error) ? "dirty-source" : typeof report2.error === "string" && /long|ENAMETOOLONG/.test(report2.error) ? "source-path" : "invocation";
@@ -868,7 +864,6 @@ async function sanity(subject, context, directory, selected) {
     throw new Fault("sanity: initial failure was not independently observed.");
   const result = await context.cli(
     ["regulate", ...common, "--target", "terminal", "--agent", selected.name],
-    configPath,
     repository
   );
   const report = jsonOutput(result);
@@ -908,7 +903,7 @@ async function sanity(subject, context, directory, selected) {
   const final = await probe();
   let correct = false;
   try {
-    const details = await lstat3(marker);
+    const details = await lstat2(marker);
     correct = details.isFile() && details.size === expected.length && await readFile2(marker, "utf8") === expected;
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
@@ -1261,7 +1256,7 @@ var init_runner = __esm({
 });
 
 // packages/objective-pguide-setup/src/cli.mjs
-import { lstat as lstat4, readFile as readFile4 } from "node:fs/promises";
+import { lstat as lstat3, readFile as readFile4 } from "node:fs/promises";
 import { isAbsolute as isAbsolute4 } from "node:path";
 async function main(stage = process.argv[2], options = {}) {
   const parsed = reportArguments(process.argv.slice(options.pilot === true ? 2 : 3));
@@ -1277,7 +1272,7 @@ async function runSetup(stage, options, args) {
   try {
     let source;
     if (args.length === 2 && args[0] === "--subject-file" && isAbsolute4(args[1])) {
-      const details = await lstat4(args[1]);
+      const details = await lstat3(args[1]);
       if (details.size > outputLimit)
         throw new Fault("input-limit: subject exceeded 256 KiB.", 400);
       source = await readFile4(args[1], "utf8");

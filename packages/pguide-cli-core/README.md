@@ -38,24 +38,31 @@ Agent profiles are loaded from independent user/project `agents.yaml` resources,
 not `PguideConfig`. `loadAgents(cwd)` explicitly loads the effective whole-profile
 map, source scopes and paths only for profile-consuming commands. `loadConfig`
 does not read or validate Agent resources, so malformed resources cannot break
-unrelated config or Objective operations. Explicit main config overlays never
-create a third Agent scope. `parseAgents` validates canonical discriminated
+unrelated config or Objective operations. Main configuration has only user/project
+JSONC scopes, never a third Agent scope. `parseAgents` validates canonical discriminated
 profiles offline and rejects unknown schema URIs and untyped legacy profiles;
 only explicit migration normalizes embedded legacy ACP definitions.
 The Draft2020-12 public schema is exported at
 `@potential-guide/cli-core/schemas/agents/v1.json`.
 Agent profiles inherit credentials only by environment-variable name; common
 secret-bearing transport arguments are rejected before profiles can be shown
-or persisted. Configuration uses `schemaVersion: 2`. Optional
-`agentExecutionLimits: { timeoutMs: 30000 }` limits each Agent execution,
-not the complete regulation feedback loop. Version 1 configuration and old
-`limits` fields are rejected.
-Optional `regulationStrategy` configures
-`quota: { timeoutMs, maxAgentRuns, maxStallRuns }` for one regulation run and
-`probe: { timeoutMs, retry: { maxRetries, delayMs } }`.
-The CLI defaults to a 300000 ms run quota, 10 Agent calls, 3 stalled rounds,
-a 30000 ms probe timeout and zero retries. Removed `mode` and `effectTtlMs`
-fields are rejected rather than silently changing old periodic recipes.
+or persisted. Main configuration is a generic complete-ID JSONC record, with
+per-package static schemas and whole-setting defaults. `loadConfig(cwd, namespaces)`
+checks each selected layer for the consumer's namespaces; omitted namespaces
+validate all, and `[]` gives the neutral issue-bearing view. Syntax, duplicates,
+descriptor damage and ownership conflicts always fail. `setting<T>` and
+`requiredSetting<T>` let consumers own their types, including third-party packages.
+`parseConfig` parses JSONC structure, while `inspectSettings` validates values
+against the loaded catalog. `parseLegacyConfig` is reserved for explicit
+independent-resource migration, never ordinary main-config loading.
+Metadata-only imports do not initialize JSONC/YAML parsers, built-in settings
+validators or the AHP SDK. These load when their operation needs them; only
+immutable code and bundled descriptions are reused. Registered descriptions,
+configuration values and Agent resources are still read and validated on each
+explicit load, and existing execution deadlines are unchanged.
+See [package settings](../../docs/package-settings.md) for defaults, registration,
+comment-preserving edits and manual migration. `regulate.quota` remains shared
+with supervise; `pilot.probe` remains separate from the three Agent timeouts.
 Periodic observation and subsequent run scheduling belong to supervisor.
 The generic JSON `digest` utility supports persisted subject integrity;
 production observation identity/version comes from the Git source commit.
@@ -64,7 +71,7 @@ production observation identity/version comes from the Git source commit.
 of `AcpAgentProfile` and `AhpAgentProfile`. `validateAgentProfile` returns the
 normalized shape for internal/persisted callers, including valid legacy ACP
 `connection.type` recovery records and explicit migration inputs.
-`parseConfig` rejects embedded profiles; `parseAgents` requires canonical ones.
+`parseConfig` rejects legacy top-level fields and embedded profiles; `parseAgents` requires canonical ones.
 New profiles must not repeat the
 discriminator in `connection`. `LegacyAcpAgentProfile` remains accepted by
 the ACP client for source compatibility; it is not a third normalized variant.

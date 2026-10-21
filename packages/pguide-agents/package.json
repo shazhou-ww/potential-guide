@@ -1,5 +1,8 @@
 {
   "name": "@potential-guide/pguide-agents",
+  "pguide": {
+    "settings": "./settings.json"
+  },
   "version": "0.1.0",
   "description": "Independent user and project Agent resource management for pguide.",
   "type": "module",
@@ -14,6 +17,7 @@
     "pguide-agents": "./dist/bin.js"
   },
   "files": [
+    "settings.json",
     "dist",
     "README.md"
   ],

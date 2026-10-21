@@ -67,7 +67,7 @@ import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);proces
         f.subject,
         "--target",
         "terminal",
-        "--config",
+        "--fixture-config",
         config,
         "--format",
         "json",
@@ -171,7 +171,7 @@ import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);proces
         f.subject,
         "--target",
         "terminal",
-        "--config",
+        "--fixture-config",
         config,
         "--format",
         "json",
@@ -352,7 +352,7 @@ import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);proces
       f.subject,
       "--target",
       "terminal",
-      "--config",
+      "--fixture-config",
       config,
       "--format",
       "json",
@@ -376,7 +376,7 @@ import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);proces
     const calls = host.messages.length;
     const satisfied = await run(bin("continue"), [
       report.regulationId,
-      "--config",
+      "--fixture-config",
       config,
       "--format",
       "json",
@@ -400,7 +400,7 @@ import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);proces
     );
     const resumed = await run(bin("continue"), [
       report.regulationId,
-      "--config",
+      "--fixture-config",
       config,
       "--format",
       "json",
@@ -457,7 +457,7 @@ test("AHP Agent self-reported completion cannot satisfy an unchanged target", as
       f.subject,
       "--target",
       "terminal",
-      "--config",
+      "--fixture-config",
       config,
       "--format",
       "json",

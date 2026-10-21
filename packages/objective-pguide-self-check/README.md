@@ -9,7 +9,7 @@
 没有新增 CLI 命令。缺 pguide 时先用 [setup/bootstrap](../objective-pguide-setup/README.md)
 补齐安装。旧 setup（含 SSH、`allowSanity` 和 regulation fixture）保持原行为。
 Agent profile 由被检查设备的 `pguide agents show` 从用户/项目 `agents.yaml`
-读取，主配置只保留默认名称等设置；`configPath` 不创建第三个 Agent 作用域。
+读取，主配置只保留默认名称等设置；新 subject 拒绝 `configPath`。
 旧内嵌 profiles 必须先显式执行 `pguide agents migrate --scope user|project`。
 后续远程整备应以 B 的 pguide 运行本自查达到 terminal 为依据，不能用 A 的结果替代。
 
@@ -20,7 +20,6 @@ subject 示例（路径必须属于当前设备和用户，且均为绝对路径
 ```json
 {
   "workingDirectory": "D:\\self-check",
-  "configPath": "C:\\Users\\me\\AppData\\Roaming\\pguide\\config.yaml",
   "scratchDirectory": "D:\\self-check\\scratch",
   "pguide": {"command": "pguide"},
   "agent": "existing-acp",
@@ -31,14 +30,17 @@ subject 示例（路径必须属于当前设备和用户，且均为绝对路径
 Windows 也可将 pguide 指定为 Node + 已安装的绝对 JS 入口：
 `{"command":"C:\\Program Files\\nodejs\\node.exe","args":["D:\\installed\\pguide\\dist\\bin.js"]}`。
 可选 `desiredVersion` 精确匹配版本；可选 `userHome` 仅指定本机现有 HOME，
-不复制认证。有效配置按 pguide 的用户→项目→explicit 规则在 workingDirectory
-读取。不要指向非预期项目 override，不要在 subject 中放凭据。
+不复制认证，也不覆盖 APPDATA/XDG 配置根优先级。有效配置按 pguide 的用户→最近项目
+两级规则在 workingDirectory 发现，至少须有一份实际 `config.jsonc`；
+均缺失报 configuration-missing，默认设置不能代替文件。不要指向非预期项目 override，
+不要在 subject 中放凭据。旧声明只定点移除 configPath 投影及真正依赖它的输入约束，
+不重建资源或改历史 pin；见[手工迁移](../../docs/package-settings.md#setupself-check-declarations)。
 `target`（包括 local/SSH）及 `allowSanity` 均不是本自查输入，提供时拒绝。
 
 用已安装的 pguide 与提交过的 Git 子目录快照运行（将 URI、revision、subject 替换为实际值）：
 
 ```powershell
-pguide probe --pilot "git+file:///D:/Code/potential-guide#packages/objective-pguide-self-check/" --revision <commit> --subject-file D:\self-check\subject.json --config C:\Users\me\AppData\Roaming\pguide\config.yaml --format json
+pguide probe --pilot "git+file:///D:/Code/potential-guide#packages/objective-pguide-self-check/" --revision <commit> --subject-file D:\self-check\subject.json --cwd D:\self-check --format json
 ```
 
 这条 probe 会执行一次 sanity；不要紧接着为“确认”重复运行，避免额外模型调用。
@@ -64,7 +66,7 @@ pguide probe --pilot "git+file:///D:/Code/potential-guide#packages/objective-pgu
   不输出原始服务端错误。
 
 执行 self-check 已包含一次低损耗 sanity，不另加 allowSanity 检查级授权。
-sanity 是自动执行的小型安装验收，不使用修复任务的 `regulationPermissions` grants，
+sanity 是自动执行的小型安装验收，不使用修复任务的 `regulate.permissions` grants，
 也不要求人工逐次确认。仅此独占任务的 ACP 会话自动选择 Agent 提供的 `allow_once`；
 不选择 `allow_always`，不修改用户配置或正常 regulate 的权限策略。
 沿用 profile 原有参数及 Agent 自身限制，不自动添加 CLI 的 allow-all。
@@ -77,21 +79,21 @@ Agent 要求认证时，先由当前用户通过 Agent 的正常登录流程恢�
 快照所需。隔离 cwd 不是恶意全权限 Agent 的安全沙箱。
 
 每个 check 默认总预算仍为 20 秒，外层 probe 默认仍为 **30 秒**。
-Pilot 要求 `subject.timeoutMs + 6000 <= regulationStrategy.probe.timeoutMs`，
+Pilot 要求 `subject.timeoutMs + 6000 <= pilot.probe` 的 `timeoutMs`，
 为启动、响应输出及进程树/scratch 清理留余量；因此默认外层期限下仍最多 24 秒。
 `timeoutMs` 可显式指定 100–300000 ms，预算包含命令发现、ACP readiness、
 一次 prompt 和清理，不会自动延长外层期限或重试。
 
 真实 Agent 启动和任务执行较慢时，可显式将 subject 的 `timeoutMs` 设为 `60000`，
-同时在本次 `--config` 使用的配置中协调外层期限，例如：
+同时在本次 `--cwd` 发现的用户/项目 `config.jsonc` 中协调外层期限，例如：
 
-```yaml
-regulationStrategy:
-  probe:
-    timeoutMs: 90000
-    retry:
-      maxRetries: 0
-      delayMs: 0
+```jsonc
+{
+  "pilot.probe": {
+    "timeoutMs": 90000,
+    "retry": { "maxRetries": 0, "delayMs": 0 }
+  }
+}
 ```
 
 只增加 subject 预算而不增加外层期限会在执行前报 `outer-timeout`，不是等待后超时。
@@ -100,7 +102,7 @@ regulationStrategy:
 直接 helper 可显式使用最多 300 秒，但只有使用协调期限的完整 probe 达到
 terminal 才是通过证据，不能以长 helper 或独立 Agent baseline 替代。
 Agent 原始 stdout+stderr 上限 192 KiB，外围进程 stdout+stderr 上限 256 KiB。
-已有 agentExecutionLimits.timeoutMs 若更短仍生效，不放宽用户执行期限。
+`regulate.agentTimeoutMs` 若更短仍生效，不放宽用户执行期限；迁移时保留旧显式值。
 超时/输出超限终止受管进程树；无重试，只删除本次 mkdtemp 独占目录及其状态，
 不删除 scratch 根目录或其他任务。POSIX 需 ps。Windows 需 PATH 中可用的
 `taskkill`（按受管 PID 执行 `/PID <pid> /T /F`），以及系统

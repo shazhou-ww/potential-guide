@@ -38,7 +38,7 @@ test("probe accepts piped JSON through direct and dispatched commands with Regis
               "--revision",
               commit,
               ...subjectArgs,
-              "--config",
+              "--fixture-config",
               config,
               "--format",
               "json",
@@ -57,7 +57,7 @@ test("probe accepts piped JSON through direct and dispatched commands with Regis
     for (const input of ["", "{", "[]", "null", '"text"', "1", "{}\n{}"]) {
       const result = await run(
         bin("probe"),
-        ["--pilot", "@remote", "--config", config, "--format", "json"],
+        ["--pilot", "@remote", "--fixture-config", config, "--format", "json"],
         process.env,
         input,
       );
@@ -66,7 +66,7 @@ test("probe accepts piped JSON through direct and dispatched commands with Regis
     }
     const unknown = await run(
       bin("probe"),
-      ["--pilot", "@missing", "--config", config, "--format", "json"],
+      ["--pilot", "@missing", "--fixture-config", config, "--format", "json"],
       process.env,
       "{}",
     );
@@ -107,7 +107,7 @@ test("regulate persists the resolved source and piped subject; continue ignores 
           ...subjectArgs,
           "--target",
           "terminal",
-          "--config",
+          "--fixture-config",
           config,
           "--format",
           "json",
@@ -125,7 +125,13 @@ test("regulate persists the resolved source and piped subject; continue ignores 
       assert.equal(persisted.objectiveCommit, commit);
       assert.equal(persisted.sourcePath, f.manifest);
       await writeConfig(config, JSON.stringify({ ...value, objectives: { local: "missing" } }));
-      const continued = await run(bin("continue"), [id, "--config", config, "--format", "json"]);
+      const continued = await run(bin("continue"), [
+        id,
+        "--fixture-config",
+        config,
+        "--format",
+        "json",
+      ]);
       assert.equal(continued.code, 0, continued.stdout + continued.stderr);
       await writeConfig(config, JSON.stringify(value));
     }
@@ -189,7 +195,7 @@ test("missing subjects show the selected Objective schema as readable and struct
             objective,
             "--revision",
             commit,
-            "--config",
+            "--fixture-config",
             config,
             ...(command === "regulate" ? ["--target", "terminal"] : []),
             ...subjectArgs,
@@ -212,7 +218,7 @@ test("missing subjects show the selected Objective schema as readable and struct
     }
     const malformed = await run(
       bin("probe"),
-      ["--pilot", "@local", "--config", config, "--format", "json"],
+      ["--pilot", "@local", "--fixture-config", config, "--format", "json"],
       process.env,
       "{",
     );

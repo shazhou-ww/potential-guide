@@ -10,6 +10,7 @@ import {
   option,
   rejectUnknownOptions,
   reportOptions,
+  requiredSetting,
   showCommandHelp,
   writeResult,
 } from "@potential-guide/cli-core";
@@ -123,7 +124,7 @@ export async function runProbe(
     "--no-reports": "flag",
   });
   const language = option(argv, "--language") as string | undefined;
-  const loaded = await loadConfig(globals.cwd, globals.config);
+  const loaded = await loadConfig(globals.cwd, ["pilot", "cli-core", "objectives"]);
   const selected = await selectObjective(argv, globals, loaded.value);
   const controller = new AbortController();
   const cancel = () => controller.abort();
@@ -147,7 +148,8 @@ export async function runProbe(
           return observation;
         },
         {
-          probeTimeoutMs: loaded.value.regulationStrategy?.probe?.timeoutMs,
+          probeTimeoutMs: requiredSetting<{ timeoutMs: number }>(loaded.value, "pilot.probe")
+            .timeoutMs,
           reports: reportOptions(argv, loaded.value, globals.cwd),
         },
       );

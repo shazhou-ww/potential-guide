@@ -101,7 +101,7 @@ console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
     "--subject-file",
     f.subject,
     "--no-reports",
-    "--config",
+    "--fixture-config",
     config,
   ];
   const regulationArgs = [
@@ -113,7 +113,7 @@ console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
     f.subject,
     "--target",
     "terminal",
-    "--config",
+    "--fixture-config",
     config,
   ];
   const supervisionArgs = [
@@ -121,7 +121,7 @@ console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
     portfolio,
     "--planner",
     "fixture",
-    "--config",
+    "--fixture-config",
     config,
   ];
   return { ...f, config, state, portfolio, setSubject, probeArgs, regulationArgs, supervisionArgs };
@@ -276,13 +276,17 @@ test("regulate and continue expose stop conditions and persisted recovery withou
     const persisted = JSON.parse(await readFile(state, "utf8"));
     assert.equal(persisted.schemaVersion, 4);
     assert.equal(persisted.subject.privateValue, "SUBJECT_MUST_NOT_APPEAR");
-    const continued = await run(bin("continue"), [saved.regulationId, "--config", f.config]);
+    const continued = await run(bin("continue"), [
+      saved.regulationId,
+      "--fixture-config",
+      f.config,
+    ]);
     assert.equal(continued.code, 5, continued.stdout + continued.stderr);
     assert.match(continued.stdout, /Stop reason: exhausted \(stall\)/u);
     assert.match(continued.stdout, /Stalled runs: 2/u);
     const continuationJson = await run(bin("continue"), [
       saved.regulationId,
-      "--config",
+      "--fixture-config",
       f.config,
       "--format",
       "json",
@@ -335,7 +339,7 @@ test("regulate and continue render supported locales without changing the outer 
     assert.match(normal.stdout, /Continue retains the original language/u);
     const [id] = await readdir(join(f.state, "regulations"));
     assert.ok(id);
-    const continued = await run(bin("continue"), [id, "--config", f.config]);
+    const continued = await run(bin("continue"), [id, "--fixture-config", f.config]);
     assert.equal(continued.code, 2, continued.stdout + continued.stderr);
     assert.equal(continued.stderr, "");
     assert.equal(continued.stdout, normal.stdout);
@@ -348,7 +352,7 @@ test("regulate and continue render supported locales without changing the outer 
     };
     for (const [script, argv] of [
       [bin("regulate"), args],
-      [bin("continue"), [id, "--config", f.config]],
+      [bin("continue"), [id, "--fixture-config", f.config]],
     ] as const) {
       const json = await run(script, [...argv, "--format", "json"]);
       assert.equal(json.code, 2, json.stdout + json.stderr);

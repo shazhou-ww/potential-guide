@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { lstat, mkdir, open, readFile, stat, unlink } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
-import { parseDocument, stringify } from "yaml";
 import {
   type AgentProfile,
   atomicWrite,
@@ -11,6 +11,8 @@ import {
 } from "./index.js";
 
 export const AGENTS_SCHEMA = "https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json";
+const require = createRequire(import.meta.url);
+const yaml = (): typeof import("yaml") => require("yaml");
 export interface AgentsFile {
   $schema: typeof AGENTS_SCHEMA;
   agents: Record<string, AgentProfile>;
@@ -24,7 +26,7 @@ export function validateAgentName(name: string): void {
   if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) throw new CliError(`Invalid agent name: ${name}.`);
 }
 export function parseAgents(source: string): AgentsFile {
-  const document = parseDocument(source, { uniqueKeys: true });
+  const document = yaml().parseDocument(source, { uniqueKeys: true });
   if (document.errors.length)
     throw new CliError(
       "Invalid agents YAML; duplicate keys and malformed documents are not allowed.",
@@ -76,13 +78,20 @@ export async function agentsPaths(cwd: string): Promise<LoadedAgents["paths"]> {
   let resourceDirectory: string | undefined;
   while (true) {
     const directory = join(current, ".pguide");
-    const mainExists = await stat(join(directory, "config.yaml")).then(
-      (info) => info.isFile(),
-      (error: NodeJS.ErrnoException) => {
-        if (error.code === "ENOENT") return false;
-        throw error;
-      },
-    );
+    // Retired main files still anchor resource rescue; their values are never loaded here.
+    const mainExists = (
+      await Promise.all(
+        ["config.jsonc", "config.yaml"].map((name) =>
+          stat(join(directory, name)).then(
+            (info) => info.isFile(),
+            (error: NodeJS.ErrnoException) => {
+              if (error.code === "ENOENT") return false;
+              throw error;
+            },
+          ),
+        ),
+      )
+    ).some(Boolean);
     if (mainExists) {
       return {
         user: join(dirname(userConfigPath()), "agents.yaml"),
@@ -164,7 +173,7 @@ export async function writeAgents(
   file: AgentsFile,
   expected: string | undefined,
 ): Promise<void> {
-  const content = stringify(file);
+  const content = yaml().stringify(file);
   parseAgents(content);
   if ((await resourceText(path)) !== expected)
     throw new CliError(`Concurrent edit detected: ${path}. No changes written.`);
@@ -187,7 +196,7 @@ export async function migrateAgents(
   return withResourceLocks([source, destination], async () => {
     const original = await resourceText(source);
     if (original === undefined) throw new CliError(`Migration source not found: ${source}.`);
-    const document = parseDocument(original, { uniqueKeys: true });
+    const document = yaml().parseDocument(original, { uniqueKeys: true });
     if (document.errors.length) throw new CliError("Migration source is malformed YAML.");
     const raw: unknown = document.toJS({ maxAliasCount: 100 });
     if (!raw || typeof raw !== "object" || Array.isArray(raw) || !Object.hasOwn(raw, "agents"))
@@ -196,7 +205,7 @@ export async function migrateAgents(
     if (!legacy || typeof legacy !== "object" || Array.isArray(legacy))
       throw new CliError("Embedded agents must be a name-to-profile map.");
     const profiles = parseAgents(
-      stringify({
+      yaml().stringify({
         $schema: AGENTS_SCHEMA,
         agents: Object.fromEntries(
           Object.entries(legacy).map(([name, profile]) => [name, validateAgentProfile(profile)]),
@@ -234,7 +243,7 @@ export async function migrateAgents(
       // A post-rename filesystem error must not remove the only live copy of
       // profiles if the main document has already committed its removal.
       if ((await resourceText(source)) !== original) throw error;
-      const written = stringify(next);
+      const written = yaml().stringify(next);
       if ((await resourceText(destination)) === written) {
         if (before === undefined) await unlink(destination);
         else await atomicWrite(destination, before);

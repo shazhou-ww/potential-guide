@@ -10,7 +10,7 @@ import {
   digest,
   loadAgents,
   loadConfig,
-  parseConfig,
+  parseLegacyConfig as parseConfig,
   pruneExpiredRegulations,
   readJsonSubject,
   redactSensitive,
@@ -26,24 +26,22 @@ const tmpdir = () => scratch;
 process.env.APPDATA = join(scratch, "core-config-isolated-user");
 process.env.XDG_CONFIG_HOME = join(scratch, "core-config-isolated-user");
 
-test("reports validate, merge per field and resolve CLI, config and state-directory precedence", async (t) => {
+test("legacy reports validation and JSONC report/state-directory precedence", async (t) => {
   for (const reports of [false, { enabled: 1 }, { directory: "" }, { unknown: true }])
     assert.throws(() => parseConfig(JSON.stringify({ schemaVersion: 2, reports })), /reports/);
   const cwd = await mkdtemp(join(scratch, "pguide-reports-config-"));
   t.after(() => rm(cwd, { recursive: true, force: true }));
   await mkdir(join(cwd, ".pguide"));
   await writeFile(
-    join(cwd, ".pguide", "config.yaml"),
+    join(cwd, ".pguide", "config.jsonc"),
     JSON.stringify({
-      schemaVersion: 2,
-      stateDirectory: join(cwd, "state"),
-      reports: { directory: "project-reports", enabled: false },
+      "cli-core.stateDirectory": join(cwd, "state"),
+      "pilot.reportDirectory": "project-reports",
+      "pilot.reportsEnabled": true,
     }),
   );
-  const explicit = join(cwd, "explicit.json");
-  await writeFile(explicit, JSON.stringify({ schemaVersion: 2, reports: { enabled: true } }));
-  const loaded = await loadConfig(cwd, explicit);
-  assert.deepEqual(loaded.value.reports, { directory: "project-reports", enabled: true });
+  const loaded = await loadConfig(cwd);
+  assert.equal(loaded.value["pilot.reportDirectory"], "project-reports");
   assert.deepEqual(reportOptions([], loaded.value, cwd), {
     enabled: true,
     directory: join(cwd, "project-reports"),
@@ -53,7 +51,11 @@ test("reports validate, merge per field and resolve CLI, config and state-direct
     directory: join(cwd, "override"),
   });
   assert.equal(
-    reportOptions([], { schemaVersion: 2, stateDirectory: join(cwd, "state") }, cwd).directory,
+    reportOptions(
+      [],
+      { "cli-core.stateDirectory": join(cwd, "state"), "pilot.reportsEnabled": true },
+      cwd,
+    ).directory,
     join(cwd, "state", "reports"),
   );
 });
@@ -86,14 +88,15 @@ test("interactive subject input fails explicitly instead of waiting for stdin", 
 });
 
 test("Registered Objectives validate names and targets without changing literal paths", () => {
-  const config = parseConfig(
+  const legacy = parseConfig(
     JSON.stringify({
       schemaVersion: 2,
       objectives: { health: "git+https://example.invalid/repo#objective.yaml" },
     }),
   );
-  assert.equal(resolveObjective("health", config), config.objectives?.health);
-  assert.equal(resolveObjective("@health", config), config.objectives?.health);
+  const config = { "objectives.aliases": legacy.objectives };
+  assert.equal(resolveObjective("health", config), legacy.objectives?.health);
+  assert.equal(resolveObjective("@health", config), legacy.objectives?.health);
   assert.equal(resolveObjective("./health", config), "./health");
   const unregisteredUri = "git+https://example.invalid/unregistered.git#objective.yaml";
   assert.equal(resolveObjective(unregisteredUri, config), unregisteredUri);
@@ -114,32 +117,26 @@ test("Registered Objectives validate names and targets without changing literal 
     );
 });
 
-test("Registered Objectives merge by name with per-entry provenance", async () => {
+test("Registered Objective aliases use complete-ID provenance and whole-object replacement", async () => {
   const cwd = await mkdtemp(join(scratch, "pguide-objective-config-"));
   try {
     await mkdir(join(cwd, ".pguide"));
-    const project = join(cwd, ".pguide", "config.yaml");
-    const explicit = join(cwd, "explicit.json");
+    const project = join(cwd, ".pguide", "config.jsonc");
     await writeFile(
       project,
       JSON.stringify({
-        schemaVersion: 2,
-        objectives: { shared: "project", kept: "kept" },
+        "objectives.aliases": { shared: "project", kept: "kept" },
       }),
     );
     await writeFile(
-      explicit,
+      project,
       JSON.stringify({
-        schemaVersion: 2,
-        objectives: { shared: "explicit", extra: "extra" },
+        "objectives.aliases": { shared: "replacement", extra: "extra" },
       }),
     );
-    const loaded = await loadConfig(cwd, explicit);
-    assert.equal(loaded.value.objectives?.shared, "explicit");
-    assert.equal(loaded.value.objectives?.kept, "kept");
-    assert.equal(loaded.value.objectives?.extra, "extra");
-    assert.equal(loaded.sources["objectives.shared"], explicit);
-    assert.equal(loaded.sources["objectives.kept"], project);
+    const loaded = await loadConfig(cwd);
+    assert.deepEqual(loaded.value["objectives.aliases"], { shared: "replacement", extra: "extra" });
+    assert.equal(loaded.sources["objectives.aliases"], project);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -405,33 +402,38 @@ test("configuration validates ACP profiles and rejects secret literals", () => {
   );
 });
 
-test("explicit configuration merges profiles by whole profile and atomic writes", async () => {
+test("JSONC discovery and atomic writes do not merge independent Agent profiles", async () => {
   const root = await mkdtemp(join(tmpdir(), "pguide-config-"));
   try {
-    const path = join(root, "config.yaml");
+    const path = join(root, ".pguide", "config.jsonc");
     await mkdir(join(root, ".pguide"));
-    await writeFile(
-      join(root, ".pguide", "config.yaml"),
-      "schemaVersion: 2\nregulationStrategy:\n  quota: {timeoutMs: 20000, maxAgentRuns: 5, maxStallRuns: 2}\n",
-    );
     await atomicWrite(
       path,
-      "schemaVersion: 2\ndefaultAgent: fixture\nregulationStrategy:\n  probe: {timeoutMs: 5000, retry: {maxRetries: 2, delayMs: 10}}\n",
+      JSON.stringify({
+        "agents.defaultAgent": "fixture",
+        "regulate.quota": { timeoutMs: 20000, maxAgentRuns: 5, maxStallRuns: 2 },
+        "pilot.probe": { timeoutMs: 5000, retry: { maxRetries: 2, delayMs: 10 } },
+      }),
     );
     const resource = join(root, ".pguide", "agents.yaml");
     await writeFile(
       resource,
       "$schema: https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json\nagents:\n  fixture:\n    type: acp\n    connection: {protocolVersion: '1'}\n    transport: {type: stdio, command: fixture}\n",
     );
-    const loaded = await loadConfig(root, path);
-    assert.equal(loaded.value.defaultAgent, "fixture");
+    const loaded = await loadConfig(root);
+    assert.equal(loaded.value["agents.defaultAgent"], "fixture");
     assert.equal((await loadAgents(root)).sources.fixture?.path, resource);
-    assert.deepEqual(loaded.value.regulationStrategy, {
-      quota: { timeoutMs: 20000, maxAgentRuns: 5, maxStallRuns: 2 },
-      probe: { timeoutMs: 5000, retry: { maxRetries: 2, delayMs: 10 } },
+    assert.deepEqual(loaded.value["regulate.quota"], {
+      timeoutMs: 20000,
+      maxAgentRuns: 5,
+      maxStallRuns: 2,
     });
-    await writeFile(join(root, "bad.yaml"), "schemaVersion: 1\n");
-    await assert.rejects(loadConfig(root, join(root, "bad.yaml")));
+    assert.deepEqual(loaded.value["pilot.probe"], {
+      timeoutMs: 5000,
+      retry: { maxRetries: 2, delayMs: 10 },
+    });
+    await writeFile(join(root, ".pguide", "config.yaml"), "schemaVersion: 1\n");
+    await assert.rejects(loadConfig(root), /Legacy main configuration/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

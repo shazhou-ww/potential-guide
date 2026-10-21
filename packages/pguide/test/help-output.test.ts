@@ -82,7 +82,7 @@ test("agents operation help retains resource metadata and works through dispatch
   assert.equal(JSON.parse(noCommand.stdout).command, "agents");
 });
 
-test("config help retains existing metadata and recommends only supported replacement examples", async () => {
+test("config help retains command metadata and recommends JSONC and supported replacement examples", async () => {
   for (const subcommand of [
     undefined,
     "add-agent",
@@ -99,7 +99,8 @@ test("config help retains existing metadata and recommends only supported replac
     assert.equal(json.code, 0, json.stdout);
     const help = JSON.parse(json.stdout);
     assert.equal(help.command, "config");
-    assert.equal(help.configurationSchemaVersion, 2);
+    assert.equal(help.configurationSchemaVersion, undefined);
+    assert.equal(help.configurationFormat, "jsonc");
     assert.equal(help.regulationStrategyDefaults.quota.maxAgentRuns, 10);
     assert.ok(help.subcommands.includes("add-agent"));
     for (const example of help.examples) {

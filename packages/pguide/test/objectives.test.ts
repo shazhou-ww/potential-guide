@@ -280,7 +280,7 @@ test("list and show identify discovery responses separately from declaration doc
       "directory",
       "--cwd",
       f.repository,
-      "--config",
+      "--fixture-config",
       config,
       "--format",
       "json",
@@ -296,7 +296,7 @@ test("list and show identify discovery responses separately from declaration doc
         name: "old",
         objective: declaration.objective,
         semantics: "legacy-source-alias",
-        file: config,
+        file: join(f.repository, ".pguide", "config.jsonc"),
       },
     ]);
     assert.equal(
@@ -485,7 +485,10 @@ test("declaration probe and direct probe agree; declaration mutation does not re
   assert.equal(invalid.code, 2, invalid.stdout);
   const config = join(f.directory, "config.json");
   const state = join(f.directory, "state");
-  await writeFile(join(f.repository, ".git", "info", "exclude"), ".pguide/agents.yaml\n");
+  await writeFile(
+    join(f.repository, ".git", "info", "exclude"),
+    ".pguide/agents.yaml\n.pguide/config.jsonc\n",
+  );
   await writeConfig(
     config,
     JSON.stringify({
@@ -508,7 +511,7 @@ test("declaration probe and direct probe agree; declaration mutation does not re
     "directory",
     "--target",
     "terminal",
-    "--config",
+    "--fixture-config",
     config,
     "--cwd",
     f.repository,
@@ -527,7 +530,7 @@ test("declaration probe and direct probe agree; declaration mutation does not re
   await f.commit();
   const continued = await run(bin("continue"), [
     id,
-    "--config",
+    "--fixture-config",
     config,
     "--cwd",
     f.repository,
@@ -630,7 +633,7 @@ void (async () => {
     parent.subject,
     "--target",
     "terminal",
-    "--config",
+    "--fixture-config",
     config,
     "--format",
     "json",
@@ -650,7 +653,7 @@ void (async () => {
   assert.notEqual(updated, childCommit);
   const resumed = await run(bin("continue"), [
     firstReport.regulationId,
-    "--config",
+    "--fixture-config",
     config,
     "--format",
     "json",

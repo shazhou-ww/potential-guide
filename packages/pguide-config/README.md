@@ -15,19 +15,19 @@ dependencies/install scripts and remove the old installation to avoid duplicate
 The executable and `config` command metadata are unchanged; new release tags are
 `pguide-config-v*` instead of `config-v*`. The public `./bin/config` export lets
 `pguide` dispatch via Node even when transitive binaries are not on PATH.
-Configuration is standard YAML and remains usable without this editor.
+Configuration is JSONC with literal complete setting IDs and no top-level
+schemaVersion. User `config.jsonc` and the nearest project `.pguide/config.jsonc`
+merge shallowly; objects and arrays replace as a whole. Static package defaults
+apply only to missing settings. Old YAML and `--config`/explicit scope are rejected.
+See [package settings and manual migration](../../docs/package-settings.md) for
+the complete mapping, three independent Agent timeouts, descriptor format and
+explicit `config packages register|unregister <root>` recovery commands.
 
-Configuration requires `schemaVersion: 2`. Use
-`agentExecutionLimits: { timeoutMs: 30000 }` for each individual Agent execution.
-Schema 1 configuration and the legacy top-level `limits` are
-explicitly rejected rather than silently reinterpreted.
-`regulationStrategy` accepts optional
-`quota: { timeoutMs: 300000, maxAgentRuns: 10, maxStallRuns: 3 }` and
-`probe: { timeoutMs: 30000, retry: { maxRetries: 0, delayMs: 0 } }`.
-These are the CLI defaults. A run finishes on reaching its target or quota;
-scheduling belongs to supervisor. Removed `mode` and `effectTtlMs` are rejected.
-`set regulationStrategy '<JSON or YAML object>'` validates
-all nested fields before saving; `get regulationStrategy` reads the selection.
+`set pilot.probe '<JSONC object>'` validates the complete timeout/retry object;
+`get pilot.probe` reads that whole setting, not a nested path. Known settings
+must validate; unknown namespaces may be saved with an unverified warning.
+Set/unset retain untouched comments and ordering. Registration never installs
+or executes packages; same-identity upgrades revalidate automatically.
 
 The npm package is organization-scoped, while its executable remains
 `pguide-config` and advertises the `config` command through
@@ -42,8 +42,9 @@ that mode, keeping stdout independently parseable. Failed edits never report
 successful saving.
 
 Default and `--format markdown` reports use headings and labeled paths.
-`show` includes the redacted effective YAML and per-key provenance, explaining
-user → nearest project → explicit precedence. `get` intentionally remains an
+`show` includes redacted effective JSON and complete-ID provenance, explaining
+user → nearest project precedence and static defaults. It also exposes invalid
+and unverified items. `get` intentionally remains an
 unadorned raw value; no heading or provenance is added. Existing JSON fields,
 envelopes and exit codes are unchanged for other operations.
 
@@ -52,15 +53,14 @@ envelopes and exit codes are unchanged for other operations.
 `add-objective`、`update-objective` 已退役并明确拒绝写入；使用
 `pguide objectives set|migrate` 将带显式 inputSchema 和 JSONata subject 的声明保存到
 独立 objectives.yaml。迁移不猜测旧来源别名的输入或绑定意图。
-`remove-objective <name>` 和 `list-objectives` 保留旧 config.objectives 的清理与查询。
+`remove-objective <name>` 和 `list-objectives` 保留迁入 `objectives.aliases` 的旧来源别名清理与查询。
 Names are lowercase kebab-case. Local registrations are saved as absolute paths
 relative to `--cwd`; Git URIs are saved unchanged. Entries cannot reference other `@names`.
 Edits validate the complete configuration before atomically saving it.
 
-Legacy removal defaults to `--scope project`; `--scope user` and
-`--scope explicit --config <path>` apply to main configuration only. Removal requires an entry in that
-scope. Legacy source aliases merge by name, with project overriding user and explicit
-overriding project. Removing an override exposes a lower-scope entry if present.
+Legacy removal defaults to `--scope project`; `--scope user` selects the user
+main file. Removal requires an entry in that scope. The aliases object replaces
+as a whole; unset `objectives.aliases` to expose the lower-layer object.
 Listing returns effective names, locations and configuration sources.
 The default output shows each legacy alias in a separate labeled bullet, with
 `Location` and `Source` lines and full, untruncated paths or Git URIs.
@@ -77,15 +77,15 @@ This CLI response is not an Objective declaration document and does not carry
 the declaration file's `$schema` URI.
 See [stdin and registry examples](../pguide/README.md#json-subjects-from-stdin-and-the-objective-registry).
 
-`regulationPermissions` is an optional administrative setting, defaulting to
+`regulate.permissions` is an optional administrative setting, defaulting to
 deny-all: `{ceiling: [{id: "edit-result", operation: "edit", resources:
 ["D:\\work\\result.json"]}], grants: ["edit-result"]}`. Read/edit rules contain
 nonempty absolute exact filesystem paths; execute rules instead contain an exact
 complete `command`. Rule IDs are unique and grants must be a subset of those IDs.
 No wildcard or directory-recursive authority is inferred.
-`pguide config set regulationPermissions '<JSON or YAML object>' --scope user`
-validates and saves the complete setting; `get regulationPermissions` reads it.
-Normal user/project/explicit configuration precedence applies, so protect every
+`pguide config set regulate.permissions '<JSONC object>' --scope user`
+validates and saves the complete setting; `get regulate.permissions` reads it.
+Normal user/project configuration precedence applies, so protect every
 source as trusted administrative input. Subjects and planners cannot grant
 permissions. `continue` uses current permissions, not the persisted old ceiling.
 These settings mediate ACP requests only; preauthorized Agent flags can bypass
@@ -100,7 +100,7 @@ Agent definitions are no longer main configuration. `list-agents`, `show-agent`,
 `pguide agents`. `config set agents` and edits introducing embedded profiles
 are rejected, never silently read in compatibility mode.
 Run `pguide agents migrate --scope user|project` explicitly for old files.
-The main config retains `defaultAgent`, permission ceilings and ordinary options;
+The main config retains `agents.defaultAgent`, permission ceilings and ordinary settings;
 Agent resources have only USER and PROJECT scopes, not an explicit overlay.
 See the [resource manager](../pguide-agents/README.md) for offline validation,
 credential references, whole-profile precedence and migration recovery.

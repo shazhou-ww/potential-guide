@@ -10,9 +10,12 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/schemas/agents/v1.json",
-        "$TURBO_ROOT$/scripts/build-agents-schema.mjs"
+        "$TURBO_ROOT$/scripts/build-agents-schema.mjs",
+        "$TURBO_ROOT$/scripts/build-settings.mjs",
+        "$TURBO_ROOT$/packages/*/settings.json",
+        "$TURBO_ROOT$/packages/*/package.json"
       ],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "src/built-in-settings.ts"]
     },
     "clean": {
       "cache": false

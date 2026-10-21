@@ -2,10 +2,9 @@ $schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json
 subjectSchema:
   type: object
   additionalProperties: false
-  required: [workingDirectory, configPath, scratchDirectory, pguide]
+  required: [workingDirectory, scratchDirectory, pguide]
   properties:
     workingDirectory: {type: string, minLength: 1}
-    configPath: {type: string, minLength: 1}
     scratchDirectory: {type: string, minLength: 1}
     pguide:
       type: object

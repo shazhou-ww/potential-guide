@@ -23,7 +23,7 @@ export async function directSanity(context, directory, selected) {
         1,
         Math.min(
           context.remainingMs() - 2500,
-          selected.config.agentExecutionLimits?.timeoutMs ?? Number.POSITIVE_INFINITY,
+          selected.config["regulate.agentTimeoutMs"] ?? Number.POSITIVE_INFINITY,
         ),
       ),
     }),

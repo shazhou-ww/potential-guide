@@ -29,8 +29,7 @@
   },
   "dependencies": {
     "@potential-guide/cli-core": "workspace:^",
-    "cross-spawn": "catalog:",
-    "yaml": "catalog:"
+    "cross-spawn": "catalog:"
   },
   "devDependencies": {
     "@types/cross-spawn": "catalog:"

@@ -16,8 +16,8 @@ async function context() {
   const user = join(directory, "user");
   const cwd = join(directory, "项目 `resource`");
   await mkdir(join(cwd, ".pguide"), { recursive: true });
-  const configuration = join(cwd, ".pguide", "config.yaml");
-  await writeFile(configuration, JSON.stringify({ schemaVersion: 2 }));
+  const configuration = join(cwd, ".pguide", "config.jsonc");
+  await writeFile(configuration, "{}");
   const env = {
     ...process.env,
     APPDATA: user,
@@ -204,13 +204,13 @@ test("Agent summaries, redacted details and operation receipts retain JSON contr
 test("config show adds provenance while get and completion scripts remain unadorned", async () => {
   const f = await context();
   try {
-    await writeFile(f.configuration, JSON.stringify({ schemaVersion: 2, defaultAgent: "fixture" }));
+    await writeFile(f.configuration, JSON.stringify({ "agents.defaultAgent": "fixture" }));
     const shown = await f.run(config, ["show"]);
     assert.equal(shown.code, 0, shown.stdout + shown.stderr);
     assert.match(shown.stdout, /## Sources/);
-    assert.match(shown.stdout, /`defaultAgent`:/);
-    assert.match(shown.stdout, /user → nearest project → explicit/);
-    const raw = await f.run(config, ["get", "defaultAgent"]);
+    assert.match(shown.stdout, /`agents.defaultAgent`:/);
+    assert.match(shown.stdout, /user → nearest project by complete ID/);
+    const raw = await f.run(config, ["get", "agents.defaultAgent"]);
     assert.equal(raw.stdout, "fixture\n");
     const script = await f.run(top, ["complete", "--shell", "powershell"]);
     const json = await f.run(top, ["complete", "--shell", "powershell", "--format", "json"]);
@@ -219,7 +219,7 @@ test("config show adds provenance while get and completion scripts remain unador
     const help = await f.run(config, ["edit", "--help", "--format", "json"]);
     const metadata = JSON.parse(help.stdout);
     assert.equal(metadata.command, "config");
-    assert.equal(metadata.configurationSchemaVersion, 2);
+    assert.equal(metadata.configurationFormat, "jsonc");
     assert.match(metadata.usage, /config edit/);
     assert.ok(metadata.sections.length > 0);
   } finally {
@@ -240,7 +240,8 @@ test("Agent migration receipt identifies names, scope, endpoints and exact backu
         },
       },
     });
-    await writeFile(f.configuration, original);
+    const legacy = join(dirname(f.configuration), "config.yaml");
+    await writeFile(legacy, original);
     const migrated = await f.run(agents, ["migrate", "--scope", "project"]);
     assert.equal(migrated.code, 0, migrated.stdout + migrated.stderr);
     assert.match(migrated.stdout, /# Agent profiles migrated/);
@@ -249,7 +250,7 @@ test("Agent migration receipt identifies names, scope, endpoints and exact backu
     assert.match(migrated.stdout, /Source:/);
     assert.match(migrated.stdout, /Destination:/);
     assert.match(migrated.stdout, /Backup:.*agents-migration/);
-    assert.doesNotMatch(await readFile(f.configuration, "utf8"), /"agents"/);
+    assert.doesNotMatch(await readFile(legacy, "utf8"), /"agents"/);
   } finally {
     await f.cleanup();
   }
@@ -357,10 +358,7 @@ test("diagnosis exposes command/config paths, conflicts and actual Agent initial
         { mode: 0o755 },
       );
     }
-    await writeFile(
-      f.configuration,
-      JSON.stringify({ schemaVersion: 2, commandDirectories: directories }),
-    );
+    await writeFile(f.configuration, JSON.stringify({ "pguide.commandDirectories": directories }));
     const conflicted = await f.run(top, ["diagnose"]);
     assert.equal(conflicted.code, 2);
     assert.match(conflicted.stdout, /Status: command conflicts found/);

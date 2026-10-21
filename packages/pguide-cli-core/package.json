@@ -1,5 +1,8 @@
 {
   "name": "@potential-guide/cli-core",
+  "pguide": {
+    "settings": "./settings.json"
+  },
   "version": "0.3.0-rc.0",
   "description": "Shared CLI protocol, configuration, persistence, and ACP/AHP clients for Potential Guide.",
   "type": "module",
@@ -14,11 +17,12 @@
     }
   },
   "files": [
+    "settings.json",
     "dist",
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -b && node ../../scripts/build-agents-schema.mjs",
+    "build": "node ../../scripts/build-settings.mjs && tsc -b && node ../../scripts/build-agents-schema.mjs",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "lint": "biome lint .",
     "test": "tsx --test \"test/*.test.ts\"",
@@ -29,6 +33,8 @@
   },
   "dependencies": {
     "@microsoft/agent-host-protocol": "catalog:",
+    "ajv": "catalog:",
+    "jsonc-parser": "catalog:",
     "yaml": "catalog:"
   },
   "publishConfig": {

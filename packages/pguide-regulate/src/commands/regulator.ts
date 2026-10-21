@@ -18,11 +18,12 @@ import {
   markdownInlineCode,
   markdownText,
   option,
-  type PguideConfig,
   pruneExpiredRegulations,
   redactAgentValue,
   rejectUnknownOptions,
   reportOptions,
+  requiredSetting,
+  setting,
   showCommandHelp,
   stateRoot,
   validateAgentProfile,
@@ -52,6 +53,7 @@ import {
   RegulationError,
   type RegulationOutcome,
   type RegulationPermissions,
+  type RegulationStrategy,
   regulate,
 } from "@potential-guide/objective-regulator";
 import {
@@ -97,7 +99,7 @@ interface Regulation {
   agentName: string;
   agentProfile: AgentProfile;
   agentExecutionLimits: { timeoutMs: number };
-  regulationStrategy?: PguideConfig["regulationStrategy"];
+  regulationStrategy?: Partial<Pick<RegulationStrategy, "probe" | "quota">>;
   permissions?: RegulationPermissions;
   sessionId?: string;
   ahpSession?: AhpSessionIdentity;
@@ -430,9 +432,11 @@ async function run(
   prepared?: { spec: PilotSpec; runtime: PilotRuntime },
   continuing = false,
 ): Promise<number> {
-  const config = (await loadConfig(globals.cwd, globals.config)).value;
+  const config = (await loadConfig(globals.cwd, ["regulate", "pilot", "cli-core"])).value;
   // Persisted ceilings are audit snapshots, never authority for a new attempt.
-  const permissions = makeRegulationPermissions(config.regulationPermissions);
+  const permissions = makeRegulationPermissions(
+    requiredSetting<RegulationPermissions>(config, "regulate.permissions"),
+  );
   regulation.permissions = permissions;
   const root = join(stateRoot(config), "regulations", regulation.regulationId);
   await ensurePrivateDirectory(root);
@@ -675,15 +679,22 @@ export async function runRegulate(
     "--revision": "value",
     "--report": "value",
   });
-  const loaded = await loadConfig(globals.cwd, globals.config);
+  const loaded = await loadConfig(globals.cwd, [
+    "regulate",
+    "pilot",
+    "cli-core",
+    "agents",
+    "objectives",
+  ]);
   await pruneExpiredRegulations(stateRoot(loaded.value));
   const targetLevel = option(argv, "--target", { required: true }) as string;
   const intrinsic = targetLevel === "initial";
   const agentName = intrinsic
     ? "$intrinsic-initial"
-    : ((option(argv, "--agent") as string | undefined) ?? loaded.value.defaultAgent);
+    : ((option(argv, "--agent") as string | undefined) ??
+      setting<string>(loaded.value, "agents.defaultAgent"));
   if (agentName === undefined)
-    throw new CliError("--agent is required when defaultAgent is not configured.");
+    throw new CliError("--agent is required when agents.defaultAgent is not configured.");
   // Retain the ordinary durable Regulation lifecycle without requiring an Agent
   // profile for intrinsic validation. This defensive binding is never executed.
   const profile: AgentProfile | undefined = intrinsic
@@ -703,7 +714,7 @@ export async function runRegulate(
   const timeout = option(argv, "--agent-timeout-ms") as string | undefined;
   const timeoutMs =
     timeout === undefined
-      ? (loaded.value.agentExecutionLimits?.timeoutMs ?? 1_800_000)
+      ? requiredSetting<number>(loaded.value, "regulate.agentTimeoutMs")
       : Number(timeout);
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2_147_483_647)
     throw new CliError("--agent-timeout-ms must be a positive integer no greater than 2147483647.");
@@ -736,14 +747,18 @@ export async function runRegulate(
         agentProfile: profile,
         agentExecutionLimits: { timeoutMs },
         regulationStrategy: {
-          ...loaded.value.regulationStrategy,
-          quota: loaded.value.regulationStrategy?.quota ?? defaultRegulationQuota,
+          probe: requiredSetting<NonNullable<RegulationStrategy["probe"]>>(
+            loaded.value,
+            "pilot.probe",
+          ),
+          quota: requiredSetting<RegulationStrategy["quota"]>(loaded.value, "regulate.quota"),
         },
-        ...(loaded.value.retentionDays === undefined
+        ...(setting<number>(loaded.value, "regulate.retentionDays") === undefined
           ? {}
           : {
               expiresAt: new Date(
-                Date.now() + loaded.value.retentionDays * 86_400_000,
+                Date.now() +
+                  requiredSetting<number>(loaded.value, "regulate.retentionDays") * 86_400_000,
               ).toISOString(),
             }),
         attempts: [],
@@ -754,7 +769,10 @@ export async function runRegulate(
       });
     },
     {
-      probeTimeoutMs: loaded.value.regulationStrategy?.probe?.timeoutMs,
+      probeTimeoutMs: requiredSetting<NonNullable<RegulationStrategy["probe"]>>(
+        loaded.value,
+        "pilot.probe",
+      ).timeoutMs,
       propagateError: (cause) => cause instanceof RegulationError,
       reports: reportOptions([], loaded.value, globals.cwd),
     },
@@ -773,7 +791,7 @@ export async function runContinue(
   const id = argv[0];
   if (id === undefined || !/^[0-9a-f-]{36}$/.test(id))
     throw new CliError("A valid regulation ID is required.");
-  const loaded = await loadConfig(globals.cwd, globals.config);
+  const loaded = await loadConfig(globals.cwd, ["cli-core", "pilot", "regulate"]);
   await loadAgents(globals.cwd);
   await pruneExpiredRegulations(stateRoot(loaded.value));
   const path = join(stateRoot(loaded.value), "regulations", id, "regulation.json");

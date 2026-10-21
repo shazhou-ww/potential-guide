@@ -5,14 +5,15 @@ or install this package to expose `pguide-agents`.
 
 `pguide agents list|show|set|remove|edit|validate|path|migrate` manages two scopes:
 `user` and `project`. Writes require `--scope`. Files are `agents.yaml` beside
-the corresponding `config.yaml`; a project resource can exist without a main
+the corresponding `config.jsonc`; a project resource can exist without a main
 config. Discovery uses the nearest existing project main config directory; if
 there is no project main config, it uses the nearest existing project Agent
-resource, or `--cwd\.pguide` for a new resource. An explicit main config does
-not affect that discovery.
+resource, or `--cwd\.pguide` for a new resource.
+The former `config.yaml` also remains a resource-rescue anchor until manually
+migrated; Agent discovery does not load its values or re-enable legacy main configuration.
 Project profiles replace same-name user profiles completely; no protocol fields
 are deep-merged. Read commands show the selected scope and path. `--config`
-continues to select a main config only, not an extra Agent scope.
+is retired; resource `--legacy-config` remains an explicit YAML migration input.
 
 Default and `--format markdown` output includes labeled names, types, scopes
 and source files. Lists summarize profiles; `show <name>` expands the redacted
@@ -34,7 +35,9 @@ agents:
 
 Use `pguide agents set local --from profile.yaml --scope project` to replace a
 whole profile. `profile.yaml` contains the profile, not the file wrapper.
-`defaultAgent: local` remains in the YAML main config. ACP and AHP profiles use
+`"agents.defaultAgent": "local"` belongs in the JSONC main config. Existing
+Agent resources do not need migration when only the main config changes.
+See [manual migration](../../docs/package-settings.md). ACP and AHP profiles use
 the same offline validator as regulation and supervision. Unknown schema URIs
 are rejected without network access. Values must reference credentials through
 environment names, never embed credentials.

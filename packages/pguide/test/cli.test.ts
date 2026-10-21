@@ -5,7 +5,7 @@ import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node
 import { delimiter, dirname, join, resolve } from "node:path";
 import { test } from "node:test";
 import { sameDirectory } from "../src/path.js";
-import { bin, commandPackage, fixture, git, scratch } from "./fixtures.js";
+import { bin, commandPackage, fixture, git, scratch, settingsFixture } from "./fixtures.js";
 
 const root = resolve(import.meta.dirname, "..", "..", "..");
 const tmpdir = () => scratch;
@@ -28,11 +28,72 @@ const bins = {
   agents: join(root, "packages", "pguide-agents", "dist", "bin.js"),
 };
 
-function run(
+test("every root and direct wrapper rejects retired overlays explicitly", async () => {
+  for (const script of [top, ...Object.values(bins)]) {
+    for (const flag of [["--config", "unused"], ["--config=unused"]]) {
+      const result = await run(script, [...flag, "--help", "--format", "json"]);
+      assert.equal(result.code, 2, `${script}: ${result.stdout}${result.stderr}`);
+      assert.match(result.stdout, /--config is retired/);
+      assert.match(result.stdout, /config.jsonc/);
+    }
+  }
+});
+
+test("root registration recovery stays available when a registered description disappears", async (t) => {
+  const cwd = await mkdtemp(join(scratch, "settings-recovery-"));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const home = join(cwd, "user");
+  const env = { ...process.env, APPDATA: home, XDG_CONFIG_HOME: home };
+  const extension = join(cwd, "extension");
+  await mkdir(extension);
+  await writeFile(
+    join(extension, "package.json"),
+    JSON.stringify({
+      name: "@test/local-settings",
+      pguide: { settings: "settings.json" },
+    }),
+  );
+  const descriptor = join(extension, "settings.json");
+  await writeFile(
+    descriptor,
+    JSON.stringify({
+      schemaVersion: 1,
+      namespace: "test-extension",
+      settings: {
+        "test-extension.value": {
+          description: "Fixture",
+          schema: { type: "boolean" },
+          default: true,
+        },
+      },
+    }),
+  );
+  const invoke = (args: string[]) => run(top, [...args, "--cwd", cwd, "--format", "json"], env);
+  assert.equal((await invoke(["config", "packages", "register", "extension"])).code, 0);
+  const shown = await invoke(["config", "show"]);
+  assert.equal(JSON.parse(shown.stdout).config["test-extension.value"], true);
+  await rm(descriptor);
+  assert.equal((await invoke(["config", "show"])).code, 2);
+  assert.equal((await invoke(["config", "packages", "unregister", extension])).code, 0);
+  assert.equal((await invoke(["config", "validate"])).code, 0);
+});
+
+async function run(
   script: string,
   args: string[],
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
+  const index = args.indexOf("--fixture-config");
+  if (index >= 0) {
+    const file = args[index + 1] as string;
+    const cwd = dirname(file);
+    await mkdir(join(cwd, ".pguide"), { recursive: true });
+    await writeFile(
+      join(cwd, ".pguide", "config.jsonc"),
+      JSON.stringify(settingsFixture(await readFile(file, "utf8"))),
+    );
+    args = [...args.slice(0, index), ...args.slice(index + 2), "--cwd", cwd];
+  }
   return new Promise((resolveRun, reject) => {
     const child = spawn(process.execPath, [script, ...args], {
       cwd: root,
@@ -93,7 +154,7 @@ test("all package commands expose direct protocol metadata and help", async () =
       ? ["Usage:", "Global options:"]
       : ["Usage:", "Examples:", "Global options:"])
       assert.ok(text.stdout.includes(heading), `${command} missing ${heading}`);
-    assert.match(text.stdout, /--config/);
+    assert.match(text.stdout, /--cwd/);
     assert.match(text.stdout, /--format/);
   }
 });
@@ -132,12 +193,7 @@ test("command metadata and detailed help do not load business implementations", 
 
 test("built-in and config operation help is detailed and does not read missing config", async () => {
   for (const command of ["diagnose", "complete"]) {
-    const result = await run(top, [
-      command,
-      "--help",
-      "--config",
-      join(scratch, "missing-config.yaml"),
-    ]);
+    const result = await run(top, [command, "--help", "--cwd", join(scratch, "missing-project")]);
     assert.equal(result.code, 0, result.stderr);
     assert.match(result.stdout, /Usage:/);
     assert.match(result.stdout, /Examples:/);
@@ -148,8 +204,8 @@ test("built-in and config operation help is detailed and does not read missing c
     const operation = await run(bins.config, [
       command,
       "--help",
-      "--config",
-      join(scratch, "missing-config.yaml"),
+      "--cwd",
+      join(scratch, "missing-project"),
     ]);
     assert.equal(operation.code, 0, operation.stderr);
     assert.ok(operation.stdout.includes(`Usage: pguide config ${command}`));
@@ -191,19 +247,19 @@ test("bare usage and text help never execute discovered command metadata", async
     const config = join(temporary, "config.json");
     await writeFile(config, JSON.stringify({ schemaVersion: 2, commandDirectories: [commands] }));
     for (const arguments_ of [[], ["--help"], ["--help", "probe"]]) {
-      const result = await run(top, ["--config", config, ...arguments_]);
+      const result = await run(top, ["--fixture-config", config, ...arguments_]);
       assert.equal(result.code, 0, result.stderr);
       assert.match(result.stdout, /Usage: pguide/);
       assert.match(result.stdout, /sentinel/);
       await assert.rejects(readFile(marker), { code: "ENOENT" });
     }
-    const structured = await run(top, ["--config", config, "--help", "--format", "json"]);
+    const structured = await run(top, ["--fixture-config", config, "--help", "--format", "json"]);
     const sentinel = JSON.parse(structured.stdout).commands.find(
       (entry: { command: string }) => entry.command === "sentinel",
     );
     assert.equal(sentinel.compatible, false);
     assert.equal(await readFile(marker, "utf8"), "started");
-    const dispatch = await run(top, ["--config", config, "sentinel", "--format", "json"]);
+    const dispatch = await run(top, ["--fixture-config", config, "sentinel", "--format", "json"]);
     assert.notEqual(dispatch.code, 0);
     assert.match(dispatch.stdout + dispatch.stderr, /does not implement pguide-command-v1/);
   } finally {
@@ -336,13 +392,17 @@ test("missing optional commands explain installation and conflicting shims fail 
       ["continue", "pguide-regulate"],
       ["supervise", "pguide-supervise"],
     ] as const) {
-      const missing = await run(top, [command, "--config", config, "--format", "json"], env);
+      const missing = await run(
+        top,
+        [command, "--fixture-config", config, "--format", "json"],
+        env,
+      );
       assert.equal(missing.code, 2, `${missing.stderr}\n${missing.stdout}`);
       const error = JSON.parse(missing.stdout);
       assert.ok(error.error.includes(`Unknown command: ${command}`));
       assert.ok(error.error.includes(`Install @potential-guide/${packageName}`));
     }
-    const bundled = await run(top, ["--help", "--config", config, "--format", "json"], env);
+    const bundled = await run(top, ["--help", "--fixture-config", config, "--format", "json"], env);
     assert.equal(bundled.code, 0, bundled.stderr);
     const commands = JSON.parse(bundled.stdout).commands;
     assert.deepEqual(commands.map((entry: { command: string }) => entry.command).sort(), [
@@ -361,13 +421,17 @@ test("missing optional commands explain installation and conflicting shims fail 
       assert.equal(entry.compatible, true);
       const dispatched = await run(
         top,
-        [command, "--help", "--config", config, "--format", "json"],
+        [command, "--help", "--fixture-config", config, "--format", "json"],
         env,
       );
       assert.equal(dispatched.code, 0, `${dispatched.stderr}\n${dispatched.stdout}`);
       assert.equal(JSON.parse(dispatched.stdout).command, command);
     }
-    const diagnosis = await run(top, ["diagnose", "--config", config, "--format", "json"], env);
+    const diagnosis = await run(
+      top,
+      ["diagnose", "--fixture-config", config, "--format", "json"],
+      env,
+    );
     assert.equal(diagnosis.code, 0, diagnosis.stderr);
     assert.ok(
       JSON.parse(diagnosis.stdout).commands.every(
@@ -386,10 +450,10 @@ test("missing optional commands explain installation and conflicting shims fail 
       config,
       `schemaVersion: 2\ncommandDirectories: ${JSON.stringify([first, second])}\n`,
     );
-    const conflict = await run(top, ["probe", "--config", config, "--format", "json"], env);
+    const conflict = await run(top, ["probe", "--fixture-config", config, "--format", "json"], env);
     assert.equal(conflict.code, 2, `${conflict.stderr}\n${conflict.stdout}`);
     assert.match(JSON.parse(conflict.stdout).error, /Ambiguous command probe/);
-    const help = await run(top, ["--help", "--config", config, "--format", "json"], env);
+    const help = await run(top, ["--help", "--fixture-config", config, "--format", "json"], env);
     assert.equal(help.code, 0);
     assert.equal(JSON.parse(help.stdout).conflicts.probe.length, 2);
     assert.ok(
@@ -398,20 +462,28 @@ test("missing optional commands explain installation and conflicting shims fail 
       ),
     );
     await writeFile(config, `schemaVersion: 2\ncommandDirectories: ${JSON.stringify([first])}\n`);
-    const incompatible = await run(top, ["probe", "--config", config, "--format", "json"], env);
+    const incompatible = await run(
+      top,
+      ["probe", "--fixture-config", config, "--format", "json"],
+      env,
+    );
     assert.equal(incompatible.code, 2, incompatible.stderr);
     assert.equal(JSON.parse(incompatible.stdout).status, "protocol-error");
     await writeFile(config, "schemaVersion: 2\n");
-    const pathConflict = await run(top, ["probe", "--config", config, "--format", "json"], {
+    const pathConflict = await run(top, ["probe", "--fixture-config", config, "--format", "json"], {
       ...env,
       PATH: [first, second].join(delimiter),
     });
     assert.equal(pathConflict.code, 2, pathConflict.stderr);
     assert.match(JSON.parse(pathConflict.stdout).error, /Ambiguous command probe/);
-    const pathOverride = await run(top, ["--help", "--config", config, "--format", "json"], {
-      ...env,
-      PATH: first,
-    });
+    const pathOverride = await run(
+      top,
+      ["--help", "--fixture-config", config, "--format", "json"],
+      {
+        ...env,
+        PATH: first,
+      },
+    );
     assert.equal(pathOverride.code, 0, pathOverride.stderr);
     const external = JSON.parse(pathOverride.stdout).commands.find(
       (entry: { command: string }) => entry.command === "probe",
@@ -476,7 +548,7 @@ test("missing bundled dependencies and bin files fail visibly instead of disappe
         ]) {
           const result = await run(
             join(temporary, "bin.js"),
-            [...args, "--config", config, "--format", "json"],
+            [...args, "--fixture-config", config, "--format", "json"],
             env,
           );
           assert.notEqual(result.code, 0, result.stdout);
@@ -515,7 +587,7 @@ test("real-path deduplication follows platform case sensitivity", {
       config,
       `schemaVersion: 2\ncommandDirectories:\n  - ${JSON.stringify(lower)}\n  - ${JSON.stringify(upper)}\n`,
     );
-    const help = await run(top, ["--config", config, "--help", "--format", "json"]);
+    const help = await run(top, ["--fixture-config", config, "--help", "--format", "json"]);
     assert.equal(help.code, 0, help.stderr);
     assert.equal(JSON.parse(help.stdout).conflicts.case.length, 2);
   } finally {
@@ -560,8 +632,8 @@ test("all official commands dispatch through the top-level CLI", async () => {
       const result = await run(
         top,
         command === "probe"
-          ? ["--config", config, "--format", "json", command, "--help"]
-          : ["--config", config, command, "--help", "--format", "json"],
+          ? ["--fixture-config", config, "--format", "json", command, "--help"]
+          : ["--fixture-config", config, command, "--help", "--format", "json"],
         env,
       );
       assert.equal(result.code, 0, `${command}: ${result.stderr}\n${result.stdout}`);
@@ -586,8 +658,8 @@ test("malformed user/project Agent resources do not break main config or Objecti
       for (const args of [
         ["config", "show"],
         ["config", "path"],
-        ["config", "set", "defaultLanguage", "en-US", "--scope", "project"],
-        ["config", "get", "defaultLanguage"],
+        ["config", "set", "cli-core.defaultLanguage", '"en-US"', "--scope", "project"],
+        ["config", "get", "cli-core.defaultLanguage"],
         ["validate", "pilot", f.manifest],
         ["diagnose"],
       ]) {
@@ -650,7 +722,7 @@ test("bundled Agent migration is reachable when main configuration rejects embed
     );
     const before = await run(top, ["config", "validate", "--cwd", directory, "--format", "json"]);
     assert.equal(before.code, 2, before.stdout);
-    assert.match(before.stdout, /agents migrate/);
+    assert.match(before.stdout, /Legacy main configuration/);
     const migration = await run(top, [
       "agents",
       "migrate",
@@ -662,6 +734,12 @@ test("bundled Agent migration is reachable when main configuration rejects embed
       "json",
     ]);
     assert.equal(migration.code, 0, migration.stdout + migration.stderr);
+    assert.equal((await run(top, ["config", "validate", "--cwd", directory])).code, 2);
+    await rm(path);
+    await writeFile(
+      join(directory, ".pguide", "config.jsonc"),
+      '{"agents.defaultAgent":"fixture"}',
+    );
     const shown = await run(top, [
       "agents",
       "show",

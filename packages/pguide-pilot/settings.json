@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "namespace": "pilot",
+  "settings": {
+    "pilot.reportsEnabled": {
+      "description": "Enable probe/regulate reports.",
+      "schema": { "type": "boolean" },
+      "default": true
+    },
+    "pilot.reportDirectory": {
+      "description": "Report directory relative to effective cwd; absent means reports under the resolved state root.",
+      "schema": { "type": "string", "pattern": "\\S" }
+    },
+    "pilot.probe": {
+      "description": "Regulate probe timeout and retry. Probe and supervise observations only consume timeout; supervise workers do not inherit this setting.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["timeoutMs", "retry"],
+        "properties": {
+          "timeoutMs": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+          "retry": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["maxRetries", "delayMs"],
+            "properties": {
+              "maxRetries": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+              "delayMs": { "type": "integer", "minimum": 0, "maximum": 2147483647 }
+            }
+          }
+        }
+      },
+      "default": { "timeoutMs": 30000, "retry": { "maxRetries": 0, "delayMs": 0 } }
+    }
+  }
+}

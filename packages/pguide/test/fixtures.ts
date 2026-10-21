@@ -1,9 +1,9 @@
 import { execFile, spawn } from "node:child_process";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { validateAgentProfile } from "@potential-guide/cli-core";
+import { parseConfig, parseLegacyConfig, validateAgentProfile } from "@potential-guide/cli-core";
 
 export const root = resolve(import.meta.dirname, "..", "..", "..");
 export const scratch = join(root, ".cache");
@@ -22,18 +22,65 @@ const execute = promisify(execFile);
 export async function git(cwd: string, ...args: string[]): Promise<string> {
   return (await execute("git", ["-C", cwd, ...args], { windowsHide: true })).stdout.trim();
 }
-export function run(
+export function settingsFixture(source: string): Record<string, unknown> {
+  if (source.trimStart().startsWith("{") && !Object.hasOwn(JSON.parse(source), "schemaVersion"))
+    return parseConfig(source);
+  const value = parseLegacyConfig(source);
+  const settings: Record<string, unknown> = {};
+  const scalar: Record<string, string> = {
+    defaultAgent: "agents.defaultAgent",
+    commandDirectories: "pguide.commandDirectories",
+    stateDirectory: "cli-core.stateDirectory",
+    defaultLanguage: "cli-core.defaultLanguage",
+    format: "cli-core.format",
+    color: "cli-core.color",
+    logLevel: "cli-core.logLevel",
+    retentionDays: "regulate.retentionDays",
+    regulationPermissions: "regulate.permissions",
+    objectives: "objectives.aliases",
+  };
+  for (const [key, entry] of Object.entries(value)) {
+    if (key === "schemaVersion" && entry === 2) continue;
+    if (key === "reports") {
+      const reports = entry as { enabled?: boolean; directory?: string };
+      if (reports.enabled !== undefined) settings["pilot.reportsEnabled"] = reports.enabled;
+      if (reports.directory !== undefined) settings["pilot.reportDirectory"] = reports.directory;
+    } else if (key === "agentExecutionLimits") {
+      const timeout = (entry as { timeoutMs?: number }).timeoutMs;
+      if (timeout !== undefined)
+        for (const id of [
+          "regulate.agentTimeoutMs",
+          "supervise.agentTimeoutMs",
+          "pguide.diagnoseAhpTimeoutMs",
+        ])
+          settings[id] = timeout;
+    } else if (key === "regulationStrategy") {
+      const strategy = entry as { probe?: unknown; quota?: unknown };
+      if (strategy.probe !== undefined) settings["pilot.probe"] = strategy.probe;
+      if (strategy.quota !== undefined) settings["regulate.quota"] = strategy.quota;
+    } else settings[scalar[key] ?? key] = entry;
+  }
+  return settings;
+}
+export async function run(
   script: string,
   args: string[],
   env: NodeJS.ProcessEnv = process.env,
   input?: string,
 ) {
-  // Fixture configs no longer carry Agent resources; their containing directory
-  // is the isolated project scope unless the test explicitly chooses another.
-  const configIndex = args.indexOf("--config");
-  if (configIndex >= 0 && !args.includes("--cwd")) {
+  // Test-only fixture notation, never passed to the CLI. Existing execution
+  // scenarios retain their data builders while running against real JSONC discovery.
+  const configIndex = args.indexOf("--fixture-config");
+  if (configIndex >= 0) {
     const config = args[configIndex + 1];
-    if (config) args = [...args, "--cwd", dirname(config)];
+    if (!config) throw new Error("--fixture-config requires a test fixture file.");
+    const cwdIndex = args.indexOf("--cwd");
+    const cwd = cwdIndex >= 0 ? (args[cwdIndex + 1] as string) : dirname(config);
+    const settings = settingsFixture(await readFile(config, "utf8"));
+    await mkdir(join(cwd, ".pguide"), { recursive: true });
+    await writeFile(join(cwd, ".pguide", "config.jsonc"), JSON.stringify(settings));
+    args = [...args.slice(0, configIndex), ...args.slice(configIndex + 2)];
+    if (cwdIndex < 0) args.push("--cwd", cwd);
   }
   return new Promise<{ code: number; stdout: string; stderr: string }>((done, reject) => {
     const child = spawn(process.execPath, [script, ...args], {
@@ -77,7 +124,11 @@ export async function writeConfig(path: string, source: string, cwd = dirname(pa
     );
     delete value.agents;
   }
-  await writeFile(path, JSON.stringify(value));
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(
+    path,
+    JSON.stringify(path.endsWith("config.jsonc") ? settingsFixture(JSON.stringify(value)) : value),
+  );
 }
 export async function fixture(baseDirectory = scratch, prefix = "pguide-test-") {
   const directory = await mkdtemp(join(baseDirectory, prefix));

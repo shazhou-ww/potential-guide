@@ -16,11 +16,6 @@ export const globalHelpOptions = [
     default: "current directory",
   },
   {
-    name: "--config",
-    argument: "<path>",
-    description: "Explicit config overlay (user -> project -> explicit)",
-  },
-  {
     name: "--format",
     argument: "<format>",
     description: "markdown | json",

@@ -26,7 +26,7 @@ export const problem = (id, parameters = {}) => ({
   message: "",
 });
 export function subjectValue(value, selfCheck = false) {
-  const required = ["workingDirectory", "configPath", "scratchDirectory", "pguide"];
+  const required = ["workingDirectory", "scratchDirectory", "pguide"];
   const optional = ["desiredVersion", "agent", "userHome", "allowSanity", "timeoutMs", "target"];
   const remote = value?.target?.type === "ssh";
   if (selfCheck && (value?.target !== undefined || value?.allowSanity !== undefined))
@@ -36,7 +36,9 @@ export function subjectValue(value, selfCheck = false) {
     !record(value) ||
     required.some((key) => !Object.hasOwn(value, key)) ||
     Object.keys(value).some((key) => ![...required, ...optional].includes(key)) ||
-    required.slice(0, 3).some((key) => !nonempty(value[key]) || !absolute(value[key])) ||
+    ["workingDirectory", "scratchDirectory"].some(
+      (key) => !nonempty(value[key]) || !absolute(value[key]),
+    ) ||
     !record(value.pguide) ||
     Object.keys(value.pguide).some((key) => !["command", "args"].includes(key)) ||
     !nonempty(value.pguide.command) ||

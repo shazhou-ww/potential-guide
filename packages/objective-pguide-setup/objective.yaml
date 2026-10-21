@@ -2,7 +2,7 @@ $schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json
 subjectSchema:
   type: object
   additionalProperties: false
-  required: [workingDirectory, configPath, scratchDirectory, pguide]
+  required: [workingDirectory, scratchDirectory, pguide]
   properties:
     target:
       oneOf:
@@ -21,7 +21,6 @@ subjectSchema:
             node: {type: string, pattern: '^(?:[A-Za-z0-9_][A-Za-z0-9_.-]*|/[A-Za-z0-9_./-]+)$'}
             port: {type: integer, minimum: 1, maximum: 65535}
     workingDirectory: {type: string, minLength: 1}
-    configPath: {type: string, minLength: 1}
     scratchDirectory: {type: string, minLength: 1}
     pguide:
       type: object

@@ -38,9 +38,10 @@ Agent 根据检查结果和引导、按授权在 B 安装配置前置条件；�
 3. 优先检查执行 setup 的 Agent 是否**在 B 上确实提供可运行的 ACP stdio 命令**以及其认证方式。
    当前 IDE 聊天并不自动等于 ACP 入口。没有已知 ACP 入口时明确报告，选择用户已有的
    其他 ACP Agent；不要伪造入口、读取/复制令牌、自动申请订阅或付费资源。
-4. 在 B 使用安装后的 `pguide config path` 找到目标用户配置，设置 schemaVersion 2、
-   ACP profile 与 defaultAgent（或者 subject.agent）。`pguide config validate` 只检查
-   配置语法；本 Objective 还必须成功 initialize 和 session/new。只对用户明确同意的配置
+4. 在 B 使用安装后的 `pguide config path` 找到目标用户 `config.jsonc`，设置
+   `agents.defaultAgent`（或者 subject.agent），ACP profile 保留在独立 agents.yaml。
+   `pguide config validate` 检查已知设置的语法和约束；本 Objective 还必须成功
+   initialize 和 session/new。只对用户明确同意的配置
    作修改；setup 检查本身永不修改它。
 5. 先检查 installation 和 configuration。只有用户明确同意可能产生模型费用、
    一次 Agent 执行和以下时间边界后，才把 `allowSanity` 改为 `true` 并运行 sanity。
@@ -48,17 +49,19 @@ Agent 根据检查结果和引导、按授权在 B 安装配置前置条件；�
 
 ## Subject（只放非秘密信息）
 
-所有目录及配置路径必须是**目标机绝对路径**，不得把 A 的工作区、配置或 HOME 当作 B。
+所有目录必须是**目标机绝对路径**，不得把 A 的工作区、配置或 HOME 当作 B。
 `workingDirectory` 定义配置合并上下文；
 真实命令的操作 cwd 是独占 scratch 或其中的测试仓库。
-`configPath` 必须存在，表示明确的当前用户配置目标；有效配置仍按 pguide 的
-用户 → 项目 → explicit 合并规则读取。建议 workingDirectory 使用没有项目配置的
-当前用户目录，避免意外复用项目 override。配置文件不得存储秘密字面量。
+新 subject 拒绝 `configPath`；自动发现目标机用户目录及 workingDirectory 向上的
+最近项目 `config.jsonc`，至少一份实际文件存在，否则 configuration-missing。
+默认值不能满足此门槛。两级按完整 ID 浅合并，配置文件不得存储秘密字面量。
+`userHome` 保留 HOME/USERPROFILE 原职责，不覆盖 APPDATA/XDG 优先级。
+旧声明仅定点删除该字段及真正依赖它的输入约束，不改历史 pin 或重建资源；
+见[手工迁移](../../docs/package-settings.md#setupself-check-declarations)。
 
 ```json
 {
   "workingDirectory": "D:\\setup",
-  "configPath": "C:\\Users\\me\\AppData\\Roaming\\pguide\\config.yaml",
   "scratchDirectory": "D:\\setup\\scratch",
   "pguide": {
     "command": "C:\\Program Files\\nodejs\\node.exe",
@@ -84,7 +87,6 @@ SSH 示例（POSIX B；本机保存的 subject 文件路径仍是 A 的路径）
     "port": 22
   },
   "workingDirectory": "/home/worker",
-  "configPath": "/home/worker/.config/pguide/config.yaml",
   "scratchDirectory": "/home/worker/setup-scratch",
   "pguide": {"command": "pguide"},
   "agent": "existing-agent",
@@ -153,9 +155,9 @@ shim 目录，其中 `pguide-config` 指向 `packages\pguide-config\dist\bin.js`
 - `userHome` 不修改系统用户，不复制登录态，不推断 ACP 兼容性。检查结果仅证明当前
   观察的设备、用户、配置和时间，不是永久安装凭证。
 
-主配置只保留 `schemaVersion: 2`、`defaultAgent: existing-agent` 等普通设置。
+主配置使用 JSONC，保留 `"agents.defaultAgent": "existing-agent"` 等普通设置。
 profile 放在用户或项目配置目录的独立 `agents.yaml`，通过
-`pguide agents show existing-agent` 读取，`--config` 不创建第三个 Agent 作用域。
+`pguide agents show existing-agent` 读取；`--config` 已移除，资源仍只有用户/项目两级。
 旧内嵌配置必须先显式执行 `pguide agents migrate --scope user|project`。
 示例非秘密资源（替换为实际已存在的 ACP 命令，不要原样假设某产品支持）：
 
@@ -163,7 +165,8 @@ profile 放在用户或项目配置目录的独立 `agents.yaml`，通过
 $schema: https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json
 agents:
   existing-agent:
-    connection: {type: acp, protocolVersion: "1"}
+    type: acp
+    connection: {protocolVersion: "1"}
     transport:
       type: stdio
       command: "C:\\tools\\actual-acp-agent.exe"
@@ -224,10 +227,10 @@ helper 清除继承的 `GIT_*` 覆盖并禁用全局/系统 Git 配置，避免�
 hooks 或签名配置把测试带到其他仓库；同样覆盖 `PGUIDE_STATE_DIRECTORY` 到独占目录。
 不能设置准确金额预算；用户同意的是一次有界执行，具体计费依 Agent/供应商。
 核心 process probe 默认 30 秒，本地 Pilot 的 run.cjs 默认仍拒绝总预算超过 24000 毫秒。
-可在**启动 probe 的显式配置**中设置
-`regulationStrategy.probe: { timeoutMs: 75000, retry: { maxRetries: 0, delayMs: 0 } }`，
+可在**启动 probe 的用户/最近项目 JSONC**中设置
+`"pilot.probe": { "timeoutMs": 75000, "retry": { "maxRetries": 0, "delayMs": 0 } }`，
 同时在本地 subject 设置 `allowSanity:true, timeoutMs:60000`；例如使用
-`pguide probe --config D:\setup\config.json --pilot <固定 Git URI> --revision <commit> --subject-file D:\setup\subject.json --format json`。
+`pguide probe --cwd D:\setup --pilot <固定 Git URI> --revision <commit> --subject-file D:\setup\subject.json --format json`。
 这会实际运行同一 Git snapshot 的检查及随机 nonce 修复/复核，不接受缓存或直接 helper
 结果代替 terminal。subject 上限仍为 300000ms；process 总预算必须至少为 subject
 期限加 6000ms，留给进程/模块启动、stdin 读取、结果输出和进程树/scratch 清理。

@@ -17,22 +17,23 @@ export async function sanity(subject, context, directory, selected) {
   await writeFile(marker, "not-repaired");
   const subjectFile = join(directory, "sanity-subject.json");
   await writeFile(subjectFile, JSON.stringify({ marker, expected }));
-  const configPath = join(directory, "sanity-config.json");
+  await mkdir(join(repository, ".pguide"), { recursive: true });
+  const configPath = join(repository, ".pguide", "config.jsonc");
   // The outer deadline already bounds preparation, execution and cleanup. A fixed
   // reserve could exhaust regulation during module startup, before any ACP prompt.
   const timeoutMs = subject.timeoutMs;
   const config = {
-    schemaVersion: 2,
-    commandDirectories: (selected.config.commandDirectories ?? []).map((path) =>
+    "pguide.commandDirectories": (selected.config["pguide.commandDirectories"] ?? []).map((path) =>
       resolve(subject.workingDirectory, path),
     ),
-    defaultAgent: selected.name,
-    stateDirectory: join(directory, "state"),
-    agentExecutionLimits: { timeoutMs },
-    regulationStrategy: {
-      quota: { timeoutMs, maxAgentRuns: 1, maxStallRuns: 1 },
-      probe: { timeoutMs: 3000, retry: { maxRetries: 0, delayMs: 0 } },
-    },
+    "agents.defaultAgent": selected.name,
+    "cli-core.stateDirectory": join(directory, "state"),
+    "regulate.agentTimeoutMs": timeoutMs,
+    "regulate.quota": { timeoutMs, maxAgentRuns: 1, maxStallRuns: 1 },
+    "pilot.probe": { timeoutMs: 3000, retry: { maxRetries: 0, delayMs: 0 } },
+    "pilot.reportsEnabled": false,
+    "pilot.reportDirectory": join(directory, "reports"),
+    "regulate.permissions": selected.config["regulate.permissions"],
   };
   await writeFile(configPath, JSON.stringify(config), { mode: 0o600 });
   await mkdir(join(repository, ".pguide"), { recursive: true });
@@ -60,7 +61,7 @@ export async function sanity(subject, context, directory, selected) {
   const uri = `git+${pathToFileURL(repository).href}#/`;
   const common = ["--pilot", uri, "--revision", revision, "--subject-file", subjectFile];
   const probe = async () => {
-    const result = await context.cli(["probe", ...common], configPath, repository);
+    const result = await context.cli(["probe", ...common], repository);
     const report = jsonOutput(result);
     if (result.code !== 0 || report.status !== 200 || !record(report.payload)) {
       const reason =
@@ -83,7 +84,6 @@ export async function sanity(subject, context, directory, selected) {
     throw new Fault("sanity: initial failure was not independently observed.");
   const result = await context.cli(
     ["regulate", ...common, "--target", "terminal", "--agent", selected.name],
-    configPath,
     repository,
   );
   const report = jsonOutput(result);

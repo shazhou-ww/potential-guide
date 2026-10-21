@@ -7,7 +7,7 @@ import {
   type AhpSessionIdentity,
   executeAhp,
   inspectAhp,
-  parseConfig,
+  parseLegacyConfig as parseConfig,
   validateAgentProfile,
 } from "@potential-guide/cli-core";
 import { ahpHost } from "./ahp-fixture.js";

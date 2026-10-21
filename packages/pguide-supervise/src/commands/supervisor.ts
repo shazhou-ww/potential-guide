@@ -11,6 +11,7 @@ import {
   markdownText,
   option,
   rejectUnknownOptions,
+  requiredSetting,
   resolveObjective,
   showCommandHelp,
   writeResult,
@@ -44,7 +45,6 @@ import {
 } from "@potential-guide/objective-regulator";
 import {
   createProcessRegulationRunner,
-  defaultRegulationQuota,
   type RegulationProcessEvent,
 } from "@potential-guide/pguide-regulate";
 import { createAgentPlannerPolicy } from "../acp-planner.js";
@@ -496,7 +496,7 @@ export async function runSupervise(
   const durationMs = duration === undefined ? undefined : Number(duration);
   if (durationMs !== undefined && (!execute || !positive(durationMs)))
     throw new CliError("--duration-ms requires --execute and a positive integer.");
-  const loaded = await loadConfig(globals.cwd, globals.config);
+  const loaded = await loadConfig(globals.cwd, ["supervise", "regulate", "pilot", "objectives"]);
   const profiles: Record<string, AgentProfile> = Object.assign(
     Object.create(null),
     (await loadAgents(globals.cwd)).agents,
@@ -520,7 +520,7 @@ export async function runSupervise(
   const resources = resolveResources(portfolio, profiles);
   let currentResources = resources;
   const agentExecutionLimits = {
-    timeoutMs: loaded.value.agentExecutionLimits?.timeoutMs ?? 30_000,
+    timeoutMs: requiredSetting<number>(loaded.value, "supervise.agentTimeoutMs"),
   };
   const controller = new AbortController();
   const cancel = () => controller.abort();
@@ -543,7 +543,8 @@ export async function runSupervise(
         const binding = await bindGoal(
           { ...entry, objective: resolveObjective(entry.objective, config) },
           globals.cwd,
-          config.regulationStrategy?.probe?.timeoutMs,
+          requiredSetting<NonNullable<RegulationStrategy["probe"]>>(config, "pilot.probe")
+            .timeoutMs,
         );
         fresh.push(binding);
         const previous = activeBindings.find(({ goal }) => goal.id === entry.id);
@@ -638,7 +639,8 @@ export async function runSupervise(
             observationIntervalMs: 1_000,
           },
           globals.cwd,
-          loaded.value.regulationStrategy?.probe?.timeoutMs,
+          requiredSetting<NonNullable<RegulationStrategy["probe"]>>(loaded.value, "pilot.probe")
+            .timeoutMs,
           signal,
           source,
         );
@@ -697,9 +699,11 @@ export async function runSupervise(
       execute,
       resources,
       runner: (report) => createProcessRegulationRunner(profiles, globals.cwd, report),
-      quota: loaded.value.regulationStrategy?.quota ?? defaultRegulationQuota,
+      quota: requiredSetting<RegulationStrategy["quota"]>(loaded.value, "regulate.quota"),
       agentExecutionLimits,
-      permissions: makeRegulationPermissions(loaded.value.regulationPermissions),
+      permissions: makeRegulationPermissions(
+        requiredSetting<RegulationPermissions>(loaded.value, "regulate.permissions"),
+      ),
       signal: controller.signal,
       refreshIntervalMs: Math.min(
         1_000,
@@ -709,7 +713,12 @@ export async function runSupervise(
         const nextPortfolio = parsePortfolioFile(
           JSON.parse(await readFile(path, "utf8")) as unknown,
         );
-        const config = await loadConfig(globals.cwd, globals.config);
+        const config = await loadConfig(globals.cwd, [
+          "supervise",
+          "regulate",
+          "pilot",
+          "objectives",
+        ]);
         const agents = (await loadAgents(globals.cwd)).agents;
         const nextPlanner = agents[plannerName];
         if (nextPlanner === undefined) throw new CliError("--planner profile was removed.");
@@ -722,7 +731,9 @@ export async function runSupervise(
         return {
           ...nextGoals,
           resources: nextResources,
-          permissions: makeRegulationPermissions(config.value.regulationPermissions),
+          permissions: makeRegulationPermissions(
+            requiredSetting<RegulationPermissions>(config.value, "regulate.permissions"),
+          ),
         };
       },
     });

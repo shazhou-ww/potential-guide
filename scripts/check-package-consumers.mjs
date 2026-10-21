@@ -216,6 +216,19 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       PATH: [binaries, toolchain].join(delimiter),
     };
     for (const definition of definitions.filter(({ name }) => entries.includes(name))) {
+      const manifest = manifests.get(definition.name);
+      if (manifest.pguide?.settings) {
+        const installed = join(directory, "node_modules", definition.name);
+        const description = JSON.parse(
+          await readFile(join(installed, manifest.pguide.settings), "utf8"),
+        );
+        assert.equal(description.schemaVersion, 1);
+        assert.ok(
+          Object.keys(description.settings).every((id) =>
+            id.startsWith(`${description.namespace}.`),
+          ),
+        );
+      }
       for (const bin of definition.bins ?? []) {
         const executable = join(binaries, process.platform === "win32" ? `${bin}.cmd` : bin);
         const result = JSON.parse(
@@ -252,6 +265,74 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
           await run(executable, ["config", "path", "--format", "json"], directory, env),
         );
         assert.equal(configured.schemaVersion, 1);
+        assert.ok(configured.paths.user.endsWith("config.jsonc"));
+        const extension = join(directory, "static-settings");
+        await mkdir(extension);
+        await writeFile(
+          join(extension, "package.json"),
+          JSON.stringify({
+            name: "@fixture/static-settings",
+            pguide: { settings: "./settings.json" },
+            main: "./never-run.cjs",
+          }),
+        );
+        await writeFile(
+          join(extension, "never-run.cjs"),
+          "throw new Error('settings must not execute packages');",
+        );
+        await writeFile(
+          join(extension, "settings.json"),
+          JSON.stringify({
+            schemaVersion: 1,
+            namespace: "fixture",
+            settings: {
+              "fixture.value": {
+                description: "Packed extension",
+                schema: { type: "integer" },
+                default: 2,
+              },
+            },
+          }),
+        );
+        await run(
+          executable,
+          ["config", "packages", "register", extension, "--format", "json"],
+          directory,
+          env,
+        );
+        const effective = JSON.parse(
+          await run(executable, ["config", "show", "--format", "json"], directory, env),
+        );
+        assert.equal(effective.config["fixture.value"], 2);
+        assert.equal(effective.sources["fixture.value"], "default:@fixture/static-settings");
+        await run(
+          executable,
+          ["config", "set", "fixture.value", "4", "--scope", "project", "--format", "json"],
+          directory,
+          env,
+        );
+        const directConfig = result.commands.find(({ command }) => command === "config").path;
+        const directValue = JSON.parse(
+          await run(
+            process.execPath,
+            [directConfig, "get", "fixture.value", "--format", "json"],
+            directory,
+            env,
+          ),
+        );
+        assert.equal(directValue.value, 4);
+        await run(
+          executable,
+          ["config", "unset", "fixture.value", "--format", "json"],
+          directory,
+          env,
+        );
+        await run(
+          executable,
+          ["config", "packages", "unregister", extension, "--format", "json"],
+          directory,
+          env,
+        );
         const objective = join(directory, "pilot");
         const scaffolded = JSON.parse(
           await run(

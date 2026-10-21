@@ -4,14 +4,15 @@ import {
   atomicWrite,
   CliError,
   type GlobalOptions,
+  type LegacyPguideConfig,
   loadConfig,
   markdownCodeBlock,
   markdownInlineCode,
   markdownText,
   option,
-  type PguideConfig,
-  parseConfig,
+  parseLegacyConfig,
   rejectUnknownOptions,
+  setting,
   writeResult,
 } from "@potential-guide/cli-core";
 import {
@@ -55,15 +56,15 @@ export async function runObjectives(argv: string[], globals: GlobalOptions): Pro
       throw new CliError(
         `Objective ${name} is ambiguous: ${entries.map((entry) => `${entry.scope} (${entry.file})`).join("; ")}. Select one with pguide objectives show ${name} --scope user|directory.`,
       );
-    const config = await loadConfig(globals.cwd, globals.config);
-    const legacyAliases = Object.entries(config.value.objectives ?? {}).map(
-      ([alias, objective]) => ({
-        name: alias,
-        objective,
-        semantics: "legacy-source-alias",
-        file: config.sources[`objectives.${alias}`],
-      }),
-    );
+    const config = await loadConfig(globals.cwd, ["objectives"]);
+    const legacyAliases = Object.entries(
+      setting<Record<string, string>>(config.value, "objectives.aliases") ?? {},
+    ).map(([alias, objective]) => ({
+      name: alias,
+      objective,
+      semantics: "legacy-source-alias",
+      file: config.sources["objectives.aliases"],
+    }));
     writeResult(
       {
         schemaVersion: 1,
@@ -111,7 +112,7 @@ export async function runObjectives(argv: string[], globals: GlobalOptions): Pro
     throw new CliError("Expected set|remove|migrate <name> --scope user|directory; see --help.");
   const file = objectivesPath(scope, globals.cwd);
   const { entries } = await readObjectiveEntries(file);
-  let legacy: { path: string; config: PguideConfig } | undefined;
+  let legacy: { path: string; config: LegacyPguideConfig } | undefined;
   if (command === "remove") {
     if (!Object.hasOwn(entries, name))
       throw new CliError(
@@ -134,7 +135,7 @@ export async function runObjectives(argv: string[], globals: GlobalOptions): Pro
         globals.cwd,
         option(argv, "--legacy-config", { required: true }) as string,
       );
-      const config = parseConfig(await readFile(path, "utf8"));
+      const config = parseLegacyConfig(await readFile(path, "utf8"));
       if (!config.objectives || !Object.hasOwn(config.objectives, name))
         throw new CliError("No matching legacy source alias in --legacy-config.");
       delete config.objectives[name];

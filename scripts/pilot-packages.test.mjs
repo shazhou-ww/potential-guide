@@ -106,7 +106,6 @@ test("all private Pilot tarballs include same-version resources and run without 
             )
           : {
               workingDirectory: scratch,
-              configPath: join(scratch, "unused-config.json"),
               scratchDirectory: join(scratch, "tasks"),
               pguide: { command: process.execPath, args: [version] },
             };
@@ -148,7 +147,6 @@ test("all private Pilot tarballs include same-version resources and run without 
         const request = await sshRequest("installation", {
           target: { type: "ssh", host: "fixture", shell: "posix" },
           workingDirectory: "/home/fixture",
-          configPath: "/home/fixture/config.json",
           scratchDirectory: "/home/fixture/tmp",
           pguide: { command: "pguide" },
         });

@@ -1,5 +1,8 @@
 {
   "name": "@potential-guide/pguide-supervise",
+  "pguide": {
+    "settings": "./settings.json"
+  },
   "version": "0.4.0-rc.0",
   "description": "@potential-guide/pguide-supervise for Potential Guide.",
   "type": "module",
@@ -13,6 +16,7 @@
     }
   },
   "files": [
+    "settings.json",
     "dist",
     "README.md"
   ],

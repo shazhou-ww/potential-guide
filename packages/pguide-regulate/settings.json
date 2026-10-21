@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "namespace": "regulate",
+  "settings": {
+    "regulate.agentTimeoutMs": {
+      "description": "New regulation Agent execution timeout; continue retains its archived timeout.",
+      "schema": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+      "default": 1800000
+    },
+    "regulate.retentionDays": {
+      "description": "Lifetime for new regulation archives; absent means no calculated expiry.",
+      "schema": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
+    },
+    "regulate.quota": {
+      "description": "Shared regulate and supervise quota, captured at run startup.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["timeoutMs", "maxAgentRuns", "maxStallRuns"],
+        "properties": {
+          "timeoutMs": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+          "maxAgentRuns": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+          "maxStallRuns": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
+        }
+      },
+      "default": { "timeoutMs": 300000, "maxAgentRuns": 10, "maxStallRuns": 3 }
+    },
+    "regulate.permissions": {
+      "description": "Explicit unique permission rules and granted IDs within the ceiling. Continue re-reads current authorization. Paths must be unique absolute non-glob resources.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ceiling", "grants"],
+        "properties": {
+          "ceiling": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "operation", "resources"],
+                  "properties": {
+                    "id": { "type": "string", "pattern": "\\S" },
+                    "operation": { "enum": ["read", "edit"] },
+                    "resources": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": { "type": "string", "pattern": "\\S" }
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "operation", "command"],
+                  "properties": {
+                    "id": { "type": "string", "pattern": "\\S" },
+                    "operation": { "const": "execute" },
+                    "command": { "type": "string", "pattern": "\\S" }
+                  }
+                }
+              ]
+            }
+          },
+          "grants": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "\\S" }
+          }
+        }
+      },
+      "default": { "ceiling": [], "grants": [] }
+    }
+  }
+}

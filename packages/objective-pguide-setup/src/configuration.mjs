@@ -1,20 +1,13 @@
-import { lstat } from "node:fs/promises";
 import { Fault, nonempty, Problem, record } from "./contract.mjs";
 import { installation, jsonOutput } from "./installation.mjs";
 export async function configured(subject, context) {
   await installation(subject, context);
-  try {
-    if (!(await lstat(subject.configPath)).isFile()) throw new Problem("configuration-invalid");
-  } catch (error) {
-    if (error.code === "ENOENT") throw new Problem("configuration-missing");
-    throw error;
-  }
-  const help = await context.cli(["--help"], subject.configPath, subject.workingDirectory);
+  const help = await context.cli(["--help"], subject.workingDirectory);
   if (help.code !== 0) throw new Problem("configuration-invalid");
   const capabilities = jsonOutput(help);
   if (!Array.isArray(capabilities.commands) || !record(capabilities.conflicts))
     throw new Fault("protocol: unsupported command discovery response.");
-  for (const name of ["config", "agents", "probe", "regulate"])
+  const requireCommand = (name) => {
     if (
       capabilities.conflicts[name] !== undefined ||
       !capabilities.commands.some(
@@ -25,23 +18,33 @@ export async function configured(subject, context) {
       )
     )
       throw new Problem("command-unavailable");
-  const result = await context.cli(
-    ["config", "show"],
-    subject.configPath,
-    subject.workingDirectory,
-  );
+  };
+  requireCommand("config");
+  const result = await context.cli(["config", "show"], subject.workingDirectory);
   if (result.code !== 0) throw new Problem("configuration-invalid");
   const value = jsonOutput(result);
-  if (value.schemaVersion !== 1 || !record(value.config) || value.config.schemaVersion !== 2)
+  if (
+    value.schemaVersion !== 1 ||
+    !record(value.config) ||
+    !Array.isArray(value.files) ||
+    !value.files.every(nonempty) ||
+    !Array.isArray(value.issues)
+  )
     throw new Fault("protocol: unsupported configuration response.");
+  if (value.files.length === 0) throw new Problem("configuration-missing");
+  for (const name of ["agents", "probe", "regulate"]) requireCommand(name);
+  if (
+    value.issues.some((issue) =>
+      ["agents", "pguide", "cli-core", "pilot", "regulate"].includes(
+        typeof issue?.id === "string" ? issue.id.split(".")[0] : "",
+      ),
+    )
+  )
+    throw new Problem("configuration-invalid");
   const config = value.config;
-  const name = subject.agent ?? config.defaultAgent;
+  const name = subject.agent ?? config["agents.defaultAgent"];
   if (!nonempty(name)) throw new Problem("agent-missing");
-  const selected = await context.cli(
-    ["agents", "show", name],
-    subject.configPath,
-    subject.workingDirectory,
-  );
+  const selected = await context.cli(["agents", "show", name], subject.workingDirectory);
   if (selected.code !== 0) throw new Problem("agent-missing");
   const resource = jsonOutput(selected);
   if (!record(resource.profile)) throw new Fault("protocol: unsupported Agent resource response.");

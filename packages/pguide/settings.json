@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "namespace": "pguide",
+  "settings": {
+    "pguide.commandDirectories": {
+      "description": "Command search directories relative to effective cwd, in order; does not register settings or grant execution permissions.",
+      "schema": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
+      "default": []
+    },
+    "pguide.diagnoseAhpTimeoutMs": {
+      "description": "AHP diagnose initialization timeout; does not affect ACP or probe budgets.",
+      "schema": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+      "default": 30000
+    }
+  }
+}

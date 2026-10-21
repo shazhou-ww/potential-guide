@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { access, chmod, cp, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
-import { basename, delimiter, join, resolve } from "node:path";
+import { basename, delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { checkPackageConsumers } from "./check-package-consumers.mjs";
 import {
@@ -328,11 +328,10 @@ async function writeConfig(path, state) {
     path,
     `${JSON.stringify(
       {
-        schemaVersion: 2,
-        defaultAgent: "fixture",
-        stateDirectory: state,
-        retentionDays: 1,
-        agentExecutionLimits: { timeoutMs: 30_000 },
+        "agents.defaultAgent": "fixture",
+        "cli-core.stateDirectory": state,
+        "regulate.retentionDays": 1,
+        "regulate.agentTimeoutMs": 30_000,
         agents: {
           fixture: {
             type: "acp",
@@ -382,8 +381,8 @@ async function invokeRegulate(config, subject, report, env, extra = []) {
     executable("pguide"),
     [
       "regulate",
-      "--config",
-      config,
+      "--cwd",
+      dirname(dirname(config)),
       "--pilot",
       objectiveUri,
       "--subject-file",
@@ -404,7 +403,7 @@ async function verifyRegulation(baseEnv) {
   const state = join(fixture, "state");
   const marker = join(fixture, "ready");
   const resumeMarker = join(fixture, "resumed");
-  const config = join(fixture, "config.json");
+  const config = join(consumer, ".pguide", "config.jsonc");
   const subject = join(fixture, "subject.json");
   const report = join(fixture, "report.json");
   const secret = 'deployment-"secret"-雪';
@@ -423,14 +422,7 @@ async function verifyRegulation(baseEnv) {
   const reportSource = await readFile(report, "utf8");
   assert.doesNotMatch(`${regulated.stdout}${regulated.stderr}${reportSource}`, new RegExp(secret));
 
-  const continuationArgs = [
-    "continue",
-    "--config",
-    config,
-    result.regulationId,
-    "--format",
-    "json",
-  ];
+  const continuationArgs = ["continue", "--cwd", consumer, result.regulationId, "--format", "json"];
   const stillSatisfied = await successful(executable("pguide"), continuationArgs, {
     cwd: consumer,
     env,
@@ -504,8 +496,8 @@ async function verifyRegulation(baseEnv) {
       executable("pguide"),
       [
         "regulate",
-        "--config",
-        config,
+        "--cwd",
+        consumer,
         "--pilot",
         objectiveUri,
         "--subject-file",
@@ -601,11 +593,10 @@ for await (const line of createInterface({input:process.stdin})) {
 }
 `,
   );
-  const config = join(fixture, "supervisor-config.json");
+  const config = join(consumer, ".pguide", "config.jsonc");
   await writeConfiguration(
     config,
     JSON.stringify({
-      schemaVersion: 2,
       agents: {
         planner: {
           type: "acp",
@@ -639,8 +630,8 @@ for await (const line of createInterface({input:process.stdin})) {
     portfolio,
     "--planner",
     "planner",
-    "--config",
-    config,
+    "--cwd",
+    consumer,
     "--format",
     "json",
   ];
@@ -722,17 +713,14 @@ for await (const line of createInterface({input:process.stdin})) {
 }
 `,
   );
-  const configPath = join(consumer, "setup-config.json");
+  const configPath = join(consumer, ".pguide", "config.jsonc");
   await writeConfiguration(
     configPath,
     JSON.stringify({
-      schemaVersion: 2,
-      commandDirectories: [join(consumer, "node_modules", ".bin")],
-      defaultAgent: "setup",
+      "pguide.commandDirectories": [join(consumer, "node_modules", ".bin")],
+      "agents.defaultAgent": "setup",
       // Opt in both budgets for the real installed Git Pilot; defaults remain unchanged.
-      regulationStrategy: {
-        probe: { timeoutMs: 75000, retry: { maxRetries: 0, delayMs: 0 } },
-      },
+      "pilot.probe": { timeoutMs: 75000, retry: { maxRetries: 0, delayMs: 0 } },
       agents: {
         setup: {
           type: "acp",
@@ -749,7 +737,6 @@ for await (const line of createInterface({input:process.stdin})) {
     subject,
     JSON.stringify({
       workingDirectory: consumer,
-      configPath,
       scratchDirectory,
       pguide: {
         command: process.execPath,
@@ -770,8 +757,8 @@ for await (const line of createInterface({input:process.stdin})) {
       setupUri,
       "--revision",
       revision,
-      "--config",
-      configPath,
+      "--cwd",
+      consumer,
       "--subject-file",
       subject,
       "--format",
@@ -806,8 +793,8 @@ for await (const line of createInterface({input:process.stdin})) {
       selfUri,
       "--revision",
       revision,
-      "--config",
-      configPath,
+      "--cwd",
+      consumer,
       "--subject-file",
       subject,
       "--format",
@@ -839,7 +826,7 @@ for await (const line of createInterface({input:process.stdin})) {
 async function verifyRegulationPermissions(baseEnv) {
   const marker = join(consumer, "authorized-marker.txt");
   const subject = join(consumer, "permission-subject.json");
-  const config = join(consumer, "permission-config.json");
+  const config = join(consumer, ".pguide", "config.jsonc");
   const report = join(consumer, "permission-report.json");
   const stateDirectory = join(consumer, "permission-state");
   const policy = {
@@ -847,14 +834,11 @@ async function verifyRegulationPermissions(baseEnv) {
     grants: [],
   };
   const configuration = {
-    schemaVersion: 2,
-    defaultAgent: "permission-fixture",
-    stateDirectory,
-    commandDirectories: [join(consumer, "node_modules", ".bin")],
-    regulationPermissions: policy,
-    regulationStrategy: {
-      quota: { timeoutMs: 30000, maxAgentRuns: 2, maxStallRuns: 2 },
-    },
+    "agents.defaultAgent": "permission-fixture",
+    "cli-core.stateDirectory": stateDirectory,
+    "pguide.commandDirectories": [join(consumer, "node_modules", ".bin")],
+    "regulate.permissions": policy,
+    "regulate.quota": { timeoutMs: 30000, maxAgentRuns: 2, maxStallRuns: 2 },
     agents: {
       "permission-fixture": {
         type: "acp",
@@ -877,15 +861,15 @@ async function verifyRegulationPermissions(baseEnv) {
   assert.deepEqual(deniedResult.outcome.authorizationRequests[0].resources, [marker]);
   await assert.rejects(access(marker), { code: "ENOENT" });
 
-  configuration.regulationPermissions.grants = ["marker-edit"];
+  configuration["regulate.permissions"].grants = ["marker-edit"];
   await writeConfiguration(config, JSON.stringify(configuration));
-  const args = ["continue", deniedResult.regulationId, "--config", config, "--format", "json"];
+  const args = ["continue", deniedResult.regulationId, "--cwd", consumer, "--format", "json"];
   const allowed = await successful(executable("pguide"), args, { cwd: consumer, env: baseEnv });
   assert.equal(JSON.parse(allowed.stdout).status, "target-reached");
   assert.equal(await readFile(marker, "utf8"), "permission-verified");
 
   await unlink(marker);
-  configuration.regulationPermissions = { ceiling: [], grants: [] };
+  configuration["regulate.permissions"] = { ceiling: [], grants: [] };
   await writeConfiguration(config, JSON.stringify(configuration));
   const revoked = await execute(executable("pguide"), args, { cwd: consumer, env: baseEnv });
   assert.equal(revoked.code, 3, revoked.stdout + revoked.stderr);

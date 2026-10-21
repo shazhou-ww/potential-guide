@@ -114,12 +114,13 @@ const descriptions = {
   "installation-unusable":
     "本机指定 pguide 无法正常返回版本；检查可执行文件、Node 版本和入口参数。",
   "version-mismatch": "指定安装版本与 desiredVersion 不一致；版本号不证明源码 commit。",
-  "configuration-missing": "本机指定用户配置文件不存在；按授权先配置现有 ACP 入口。",
+  "configuration-missing":
+    "本机自动发现的用户/最近项目位置均无实际 config.jsonc；默认值不能代替文件，按授权先配置现有 ACP 入口。",
   "configuration-invalid":
-    "有效配置不可读取；在 workingDirectory 中检查用户、项目和 explicit 合并上下文。",
+    "有效配置不可读取；在 workingDirectory 中检查用户及最近项目 JSONC 的完整 ID、整项替换和已知 namespace 约束。",
   "command-unavailable":
     "config、probe 或 regulate 未被兼容且无冲突地发现；检查已安装命令和 commandDirectories。",
-  "agent-missing": "指定 agent 或 defaultAgent 无有效 profile；不自动选择其他 Agent。",
+  "agent-missing": "指定 agent 或 agents.defaultAgent 无有效 profile；不自动选择其他 Agent。",
   "environment-unavailable":
     "所选 profile 引用的必需环境变量缺失；使用当前用户已有认证，不复制秘密。",
   "acp-unavailable": "所选 ACP stdio 入口、协议协商或 session/new 不可用；AHP 不在本轮范围内。",
@@ -183,6 +184,6 @@ await reference(
 await reference(
   "pages/self-check",
   "本机自查边界",
-  "本机已安装的 pguide 运行此 Objective。subject 不接受 target 或 allowSanity；sanity 无额外人工授权门，不依赖修复任务 grants，仅本次独占会话自动选择 allow_once，不选择 allow_always 或修改用户配置，沿用 Agent 自身限制。每项默认 20 秒，显式 timeoutMs 最多 300 秒；Pilot 必须满足本项预算加 6000ms 不超过外层 probe timeoutMs，默认外层 30 秒时仍最多 24 秒。较长预算必须显式同步配置 regulationStrategy.probe.timeoutMs；保留已有更短 Agent 期限。原始 Agent 输出最多 192 KiB，外围输出最多 256 KiB。只清理本次独占 scratch/state，不重试、不嵌套 regulate。小修复不依赖 Git、网络或安装；Git 仅供加载 Objective。只有完整 Pilot terminal 才通过，不以直接 helper 成功替代。PGUIDE_TIMINGS=1 在 stderr 输出安全的分段耗时。",
+  "本机已安装的 pguide 运行此 Objective。subject 不接受 target、allowSanity 或 configPath；配置按 workingDirectory 自动发现用户/最近项目 JSONC，至少一份实际文件。sanity 无额外人工授权门，不依赖修复任务 grants，仅本次独占会话自动选择 allow_once，不选择 allow_always 或修改用户配置，沿用 Agent 自身限制。每项默认 20 秒，显式 timeoutMs 最多 300 秒；Pilot 必须满足本项预算加 6000ms 不超过外层 probe timeoutMs，默认外层 30 秒时仍最多 24 秒。较长预算必须显式同步配置 pilot.probe 的 timeoutMs；保留已有更短 Agent 期限。原始 Agent 输出最多 192 KiB，外围输出最多 256 KiB。只清理本次独占 scratch/state，不重试、不嵌套 regulate。小修复不依赖 Git、网络或安装；Git 仅供加载 Objective。只有完整 Pilot terminal 才通过，不以直接 helper 成功替代。PGUIDE_TIMINGS=1 在 stderr 输出安全的分段耗时。",
   [],
 );

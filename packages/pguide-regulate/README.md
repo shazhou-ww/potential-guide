@@ -14,7 +14,7 @@ Default output and `--format markdown` report the run ID, Objective, target and
 latest observed level, stop reason (including exhaustion cause), iterations,
 stalled-run history, per-attempt quota, persisted state path and continue command.
 `--report` also identifies the written JSON report. Continue with the same
-`--config` and `--cwd` context; each explicit continuation grants another bounded
+user/project `config.jsonc` and `--cwd` context; each explicit continuation grants another bounded
 attempt rather than resetting retained stall history. Reaching a nonterminal
 target is not the same as completing the Objective.
 
