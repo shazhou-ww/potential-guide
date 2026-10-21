@@ -4,7 +4,7 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 完善命令人类输出
+- [ ] **I-S01:** 统一输出格式和关键信息
 - [ ] **I-S02:** 补充兼容性测试和说明
 
 ### Implementation acceptance criteria
