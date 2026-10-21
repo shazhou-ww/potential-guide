@@ -10,9 +10,11 @@
 
 ## ER 模型约定
 
-两张图都是一个状态实例、一个逻辑 revision 下的概念模型，不是物理数据库 schema。singleton 在该状态中恰有一个，不引入额外的 Coordinator ID 或实例表；Collection 可以有零到多条记录。`||` 表示一个，`o|` 表示零或一个，`o{` 表示零到多个。
+两张图将单个状态实例沿 revision 维度展开，是版本化状态的概念模型，不是物理数据库 schema。singleton 在一个 revision 下恰有一个，跨 revision 则成为以 revision 为 PK 的快照表；current 是选定当前 revision 对应的那一行，不是另一份独立权威状态。Collection 可以在每个 revision 下有零到多条成员记录。`||` 表示一个，`o|` 表示零或一个，`o{` 表示零到多个。
 
-PK 表示模型中的逻辑唯一键；图中的 objectKey 是由精确 Objective 版本、来源和 subject 推导的身份，不要求在 TypeScript 值中重复保存。嵌套值可以展开成实体以说明关系，不意味着新增存储集合。尚未确定的记录键不虚构为 PK；可选字段、联合类型和跨记录约束由图后规则补充。
+PK 表示模型中的逻辑唯一键，多列标为 PK 表示复合主键；FK 表示版本归属或对象引用。图中的 objectKey 是由精确 Objective 版本、来源和 subject 推导的身份，不要求在 TypeScript 值中重复保存。嵌套值可以展开成实体以说明关系，不意味着新增存储集合。尚未确定的记录键不虚构为 PK；可选字段、联合类型和跨记录约束由图后规则补充。
+
+revision 的唯一性限定在单个状态实例内；两边各有自己的版本空间，不要求编号相等或同步推进。若物理存储混合多个实例，键需额外带宿主提供的实例作用域，不因此把外部 Coordinator ID 加回领域状态。版本化模型也不要求逐版全量复制或永久保留全部快照，可以采用结构共享、增量或快照加日志。
 
 ## Regulation Target ER 模型
 
@@ -21,14 +23,15 @@ PK 表示模型中的逻辑唯一键；图中的 objectKey 是由精确 Objectiv
 ```mermaid
 erDiagram
     direction LR
-    REGULATION_TARGET ||--o{ TARGET_INTENT : intents
-    REGULATION_OBJECT ||--o| TARGET_INTENT : identifies
+    REGULATION_TARGET ||--o{ TARGET_INTENT_AT_REVISION : intents
+    REGULATION_OBJECT ||--o{ TARGET_INTENT_AT_REVISION : identifies
 
     REGULATION_TARGET {
-        number revision "Singleton: global intent revision"
+        number revision PK "One singleton snapshot per revision"
     }
-    TARGET_INTENT {
-        string objectKey PK "Derived object identity"
+    TARGET_INTENT_AT_REVISION {
+        number targetRevision PK, FK "Snapshot membership"
+        string objectKey PK, FK "Object within this snapshot"
         string targetLevel
         number priority
         number updatedAtRevision "Revision of this occurrence"
@@ -42,9 +45,10 @@ erDiagram
     }
 ```
 
-- **一个 singleton，加一个意图集合。** REGULATION_TARGET 保存全局 revision；TARGET_INTENT 是 intents Record 的 ER 表达，每个对象最多一条当前意图，不是命令历史。REGULATION_OBJECT 表示意图内的对象值，不新增第三份独立状态。
-- **对象身份决定覆盖范围。** 同一精确对象的新意图覆盖对应条目；不同 Objective 版本、来源或 subject 不能静默合并。targetLevel 和 priority 属于意图，不属于对象身份。
-- **全局版本与条目版本共用一个空间。** 每次合法更新令全局 revision 加一，并写入该条目的 updatedAtRevision；同值更新也产生新的意图发生身份。条目版本不是另一条 singleton 记录的外键。
+- **singleton 沿版本展开。** REGULATION_TARGET 每个 revision 一行，以 revision 为 PK；current 选择其中一个当前版本。TARGET_INTENT_AT_REVISION 是该版本 intents Record 的 ER 表达，以 `(targetRevision, objectKey)` 为复合 PK，一个对象可出现在多个版本中，但每版最多一条。REGULATION_OBJECT 表示对象身份值，不新增第三份独立状态。
+- **对象身份决定更新范围。** 同一精确对象的新意图改变新快照中的对应条目，不改写旧快照；不同 Objective 版本、来源或 subject 不能静默合并。targetLevel 和 priority 属于意图，不属于对象身份。
+- **快照成员身份与意图发生身份不同。** targetRevision 指定条目属于哪个快照；updatedAtRevision 记录该意图最后发生更新的全局版本。每次合法更新全局 revision 加一并写入条目版本，同值更新也产生新发生身份。IntentRef 仍是 `(objectKey, updatedAtRevision)`，不能用 `(targetRevision, objectKey)` 替代。
+- **未变化条目可以跨版本沿用。** A 在版本 5 更新、版本 6 只更新 B 时，快照 6 中 A 的 targetRevision 是 6，updatedAtRevision 仍是 5。updatedAtRevision 必须不大于 targetRevision，不要求等于它；它不是快照成员归属的 FK。
 - **只表示期望。** 本图不包含 Regulation、实际资源或执行结果。priority 升序、updatedAtRevision 升序给出意图排序；确认、调度和终结不由本图直接表达。
 
 ## Coordinator State ER 模型
@@ -54,15 +58,15 @@ erDiagram
 ```mermaid
 erDiagram
     direction LR
-    COORDINATOR_STATE ||--|| COORDINATOR_CURRENT : current
-    COORDINATOR_STATE ||--o{ REGULATION_OBJECT_STATE : regulationObjects
-    COORDINATOR_STATE ||--o{ REGULATION_RECORD : regulations
-    COORDINATOR_STATE ||--o{ OBSERVATION_RECORD : observations
-    COORDINATOR_STATE ||--o{ FAULT_RECORD : faults
-    COORDINATOR_CURRENT ||--o{ ACTIVE_REGULATION : activeRegulations
-    COORDINATOR_CURRENT ||--o{ CURRENT_DEPENDENCY : dependencies
-    COORDINATOR_CURRENT ||--o{ CURRENT_OBSERVATION : observations
-    REGULATION_OBJECT ||--o| REGULATION_OBJECT_STATE : summarizedBy
+    REGULATION_TARGET ||--o{ COORDINATOR_SNAPSHOT : acknowledgedBy
+    COORDINATOR_SNAPSHOT ||--o{ REGULATION_OBJECT_STATE : regulationObjects
+    COORDINATOR_SNAPSHOT ||--o{ REGULATION_RECORD : regulations
+    COORDINATOR_SNAPSHOT ||--o{ OBSERVATION_RECORD : observations
+    COORDINATOR_SNAPSHOT ||--o{ FAULT_RECORD : faults
+    COORDINATOR_SNAPSHOT ||--o{ ACTIVE_REGULATION : activeRegulations
+    COORDINATOR_SNAPSHOT ||--o{ CURRENT_DEPENDENCY : dependencies
+    COORDINATOR_SNAPSHOT ||--o{ CURRENT_OBSERVATION : currentObservations
+    REGULATION_OBJECT ||--o{ REGULATION_OBJECT_STATE : summarizedBy
     REGULATION_OBJECT_STATE ||--o| PROBE_SUMMARY : lastProbe
     REGULATION_OBJECT ||--o{ ACTIVE_REGULATION : regulatedBy
     REGULATION_OBJECT ||--o{ REGULATION_RECORD : hasEndedCalls
@@ -71,11 +75,12 @@ erDiagram
     REGULATION_OBJECT ||--o{ CURRENT_DEPENDENCY : consumer
     REGULATION_OBJECT ||--o{ CURRENT_DEPENDENCY : provider
 
-    COORDINATOR_STATE {
-        number revision "One logical version for the whole state"
+    REGULATION_TARGET {
+        number revision PK "Independent target version space"
     }
-    COORDINATOR_CURRENT {
-        RegulationTarget acknowledgedTargets "Same model as the first diagram"
+    COORDINATOR_SNAPSHOT {
+        number revision PK "One singleton snapshot per revision"
+        number acknowledgedTargetRevision FK "Exact accepted input snapshot"
         AllocationAcknowledgement acknowledgedAllocation
         ExecutionConstraints constraints
         BudgetReservation reserved
@@ -86,17 +91,21 @@ erDiagram
         RegulationObject value
     }
     REGULATION_OBJECT_STATE {
-        string objectKey PK "One aggregate per known object"
+        number coordinatorRevision PK, FK "Snapshot membership"
+        string objectKey PK, FK "One aggregate per object per revision"
     }
     PROBE_SUMMARY {
+        number coordinatorRevision PK, FK "Owner snapshot"
+        string objectKey PK, FK "Owner object aggregate"
         string probedAt "Actual Probe time"
         number recordedAtRevision
         string regulationId "Nullable source call"
         ProbeResult result "Observed or error"
     }
     ACTIVE_REGULATION {
-        string id PK
-        string objectKey
+        number coordinatorRevision PK, FK "Snapshot membership"
+        string id PK "Call identity across revisions"
+        string objectKey FK
         IntentRef intent "Nullable occurrence captured at start"
         string targetLevel
         AgentBinding binding
@@ -104,8 +113,9 @@ erDiagram
         ActiveExecution execution "Running, stopping or unverified"
     }
     REGULATION_RECORD {
+        number coordinatorRevision PK, FK "Snapshot membership"
         string id PK "Same identity as the ended active call"
-        string objectKey
+        string objectKey FK
         IntentRef intent "Nullable occurrence captured at start"
         string targetLevel
         AgentBinding binding
@@ -113,30 +123,37 @@ erDiagram
         RegulationOutcome outcome
     }
     CURRENT_DEPENDENCY {
-        string consumerObjectKey
-        string providerObjectKey
+        number coordinatorRevision FK "Snapshot membership; row key pending"
+        string consumerObjectKey FK
+        string providerObjectKey FK
         string minimumLevel
     }
     CURRENT_OBSERVATION {
-        string objectKey PK "Latest currently useful valid evidence"
+        number coordinatorRevision PK, FK "Snapshot membership"
+        string objectKey PK, FK "One current observation per object per revision"
         string regulationId
         PilotObservation value
     }
     OBSERVATION_RECORD {
+        number coordinatorRevision FK "Snapshot membership; row key pending"
         number recordedAtRevision
-        string objectKey
+        string objectKey FK
         string regulationId
         PilotObservation value
     }
     FAULT_RECORD {
+        number coordinatorRevision FK "Snapshot membership; row key pending"
         number reportedAtRevision
         string regulationId "Nullable diagnostic association"
         Fault fault
     }
 ```
 
-- **状态组织形式与时间范围分开。** current 是 singleton；regulationObjects、regulations、observations、faults 是顶层 collection states。前者是对象聚合，后三者示范明细记录，不统一归入 history。
-- **聚合一对象一条，记录一对象多条。** regulationObjects 中每个已知精确对象最多一条摘要，lastProbe 可为空；一个对象则可以关联多次已结束 Regulation 和多条观察记录。图中的 REGULATION_OBJECT 是共享身份值，不是额外的顶层 Collection，也不要求对象摘要行永远保留才能引用对象。
+- **快照行合并整体版本与 singleton 值。** COORDINATOR_SNAPSHOT 以 revision 为 PK，包含该版 singleton 的属性；不再把 COORDINATOR_STATE 和 COORDINATOR_CURRENT 画成两张一对一表。current 选择当前版本的 singleton 行，完整状态还包含该版各个集合。TypeScript 的嵌套 current 只是单版本值的组织形式，不是另一张权威表。
+- **集合成员带版本归属。** coordinatorRevision 指向所属快照。对象摘要和当前观察的 PK 是 `(coordinatorRevision, objectKey)`，活跃调用与终结记录的 PK 是 `(coordinatorRevision, id)`；同一对象或调用可以出现在多版快照中，不是在整个版本历史里只能出现一次。依赖、观察和诊断的完整行键仍待推导，coordinatorRevision 不能独自作为这些集合的 PK。
+- **成员版本不等于事实发生版本。** endedAtRevision、recordedAtRevision、reportedAtRevision 表示相应事实发生或采纳的版本，不是集合成员归属；例如在版本 10 结束的调用可以仍属于快照 12 的 regulations。不得因属于新快照就重写历史事实版本。
+- **输入与执行版本独立。** acknowledgedTargetRevision 引用第一张图中的精确目标快照；多个 Coordinator 快照可以确认同一个目标版本，编号无需相等。它是已确认输入，不保证等于调用方最新目标。
+- **状态组织形式与时间范围分开。** regulationObjects 是对象聚合，regulations、observations、faults 示范明细记录，不统一归入 history。regulationObjects 每版每个已知对象最多一条摘要，lastProbe 可为空；同一对象可以关联多次已结束调用和多条观察。REGULATION_OBJECT 是共享身份值，不是额外顶层 Collection，也不要求对象摘要行永久保留。
 - **只在真实退出后从活跃转为终结记录。** ACTIVE_REGULATION 与 REGULATION_RECORD 使用相同的调用身份，不能在同一 revision 同时表示同一调用仍活跃且已结束；两者不是新的 Task/Run 双层身份。停止中和未核实调用仍留在活跃集合，真实终结时移除并原子写入结果。
 - **关系引用不强制保留历史父行。** observation、Probe 和 fault 中的 regulationId 用于关联来源，不保证对应调用仍在活跃集合；Probe 和 fault 也允许没有来源调用。它们不被画成必须引用某条当前活跃记录的外键。
 - **意图发生身份不是当前条目的外键。** IntentRef 引用 objectKey 与启动时的 updatedAtRevision；目标被覆盖后，旧调用仍保留原始引用，不能连到最新意图并冒充新需求的执行结果。acknowledgedTargets 复用第一张图的结构，但不必等于调用方当前的 RegulationTarget。
@@ -158,7 +175,7 @@ Collection<T> 表达领域中的记录集合，选用 Collection 而不是 Table
 
 ## TypeScript 补充表达
 
-下面的可独立类型检查代码块补充 ER 模型中的值类型、可选性与联合分支，不替代实体关系讨论。图中的 ProbeResult 和 ActiveExecution 标签概括对应字段的完整联合类型，不新增协议类型。复用已有协议的对象、观察与 binding 数据类型，不复用旧五命令、资源池或 harness 权限类型。所有别名暂用普通 string/number；合法标识、有限 JSON、非负安全整数、引用完整性等仍需运行时验证，不能因 TS 通过便视为有效输入。
+下面的可独立类型检查代码块表达某一个 revision 下的状态值，补充 ER 模型中的值类型、可选性与联合分支，不替代版本化实体关系。外层 revision 已为嵌套集合提供版本作用域，因此不在每个 TypeScript 条目重复 targetRevision/coordinatorRevision；这不表示集合只有一个全局版本。图中的 ProbeResult 和 ActiveExecution 标签概括对应字段的完整联合类型，不新增协议类型。复用已有协议的对象、观察与 binding 数据类型，不复用旧五命令、资源池或 harness 权限类型。所有别名暂用普通 string/number；合法标识、有限 JSON、非负安全整数、引用完整性等仍需运行时验证，不能因 TS 通过便视为有效输入。
 
 ```typescript
 import type {

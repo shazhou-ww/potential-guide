@@ -6,6 +6,8 @@
 
 CoordinatorState 包含 current singleton state 和若干 collection states，而不是前端 ReadView。集合可表达实体、聚合或历史，不统一归入 history。事件可以改变 singleton、collections 或同时改变它们；纯 reducer 必须能确定性归约完整领域状态，不执行存储或查询副作用。历史记录不积累在当前活跃列表中；原始消息历史与领域集合不是同一个概念。
 
+沿版本展开时，每个 revision 对应一行 singleton 快照及该版集合成员，current 是当前版选择。事件产生新状态版本，不改写已保留的旧快照；未变化条目可以沿用其事实版本。集合所属的 coordinatorRevision 与 endedAtRevision/recordedAtRevision 等事实版本不能混淆，目标快照版本也不等于 Coordinator 版本；逻辑快照不要求实际逐版复制全部数据。
+
 新建 Coordinator 的 initial 为：current 中服务 open；已确认目标为空，资源基线为 revision 0 的 no-resource；activeRegulations、有效依赖和当前必要观察为空，累计预算预留为零；各个 Collections 为空。可信约束由宿主提供。恢复不是重新使用空初值，unknown 也不等于 level initial；待处理需求及输入接续类型仍待推导，不预设 processedIntents 字段。
 
 ## 候选事实与状态效果
