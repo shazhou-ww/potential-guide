@@ -12,7 +12,7 @@
 
 ### D-S02 — 从隔离 consumer 验证
 
-用本地 tarball overrides 安装 effects、Coordinator、旧 Portfolio Supervisor 三个直接入口及完整六包闭包。复用现有消费者依赖图检查，确认实际物理解析路径不逃离 consumer、无残留 workspace range；fixtures 仅用公开包 imports。执行 Node consumer 测试和真实 `.d.ts` 编译，禁止 paths 指向 monorepo source。
+用本地 tarball overrides 安装 effects、Coordinator、旧 Portfolio Supervisor 三个直接入口及完整六包闭包。内部包只使用本地产物，不回退 registry/latest；第三方已声明依赖通过 `--prefer-offline` 优先复用缓存，缺少 metadata 时允许普通下载，仍禁止 lifecycle scripts 与发布。复用现有消费者依赖图检查，确认实际物理解析路径不逃离 consumer、无残留 workspace range；fixtures 仅用公开包 imports。执行 Node consumer 测试和真实 `.d.ts` 编译，禁止 paths 指向 monorepo source。
 
 代表性运行验证：有限命令结束后的资源/结果反馈驻留与两个输出订阅单调度器；非法命令、资源及执行失败后的有效输入恢复；同一 provider 的 L1/L3 独立唤醒、取消一个 root 后共享保留、最后引用终止确认后释放；取消和 stopping 占槽直到 kill 确认；可信 lifetime 预算不能重置；正常同 Effect.scoped 消费者清理；旧 Planner+Coordinator 同一包边界组合 smoke。
 

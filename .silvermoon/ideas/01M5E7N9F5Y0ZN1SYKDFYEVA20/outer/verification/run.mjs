@@ -162,7 +162,7 @@ try {
     `packages: []\noverrides: ${JSON.stringify(Object.fromEntries([...tarballs].map(([name, path]) => [name, pathToFileURL(path).href])))}\n`);
   await writeFile(join(consumer, ".npmrc"), "link-workspace-packages=false\nprefer-workspace-packages=false\n");
   const installEnv = { ...process.env, npm_config_userconfig: join(consumer, ".npmrc") };
-  await run("pnpm", ["install", "--offline", "--ignore-scripts", "--no-frozen-lockfile", "--reporter=append-only"], consumer, installEnv);
+  await run("pnpm", ["install", "--prefer-offline", "--ignore-scripts", "--no-frozen-lockfile", "--reporter=append-only"], consumer, installEnv);
   report.consumerLockSha256 = hash(await readFile(join(consumer, "pnpm-lock.yaml")));
   await verifyConsumerGraph(consumer, versions, entries);
   report.physicalGraph = { verified: true, internalPackages: manifests.size, entries, escapedConsumer: false, workspaceRangesRemaining: false };
