@@ -1,3 +1,4 @@
 {"type":"setAlias","timestamp":"2026-10-21T09:56:23.819Z","payload":{"alias":"probe-efficiency"}}
 {"type":"submitIdeal","timestamp":"2026-10-21T09:57:45.504Z","payload":{"idealRevision":"cb9a7ca6ba72006fa0abdde1aae632a557761e1b"}}
 {"type":"submitIdeal","timestamp":"2026-10-21T11:48:20.419Z","payload":{"idealRevision":"64eeb12acc60cd7d5a4fb79388cbf48eba012b13"}}
+{"type":"acceptIdeal","timestamp":"2026-10-21T11:49:02.970Z","payload":{"idealRevision":"64eeb12acc60cd7d5a4fb79388cbf48eba012b13"}}
