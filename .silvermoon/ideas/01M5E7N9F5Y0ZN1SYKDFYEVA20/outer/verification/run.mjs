@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { basename, join, relative, resolve, sep } from "node:path";
+import { createRequire } from "node:module";
+import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import spawn from "cross-spawn";
 import { verifyConsumerGraph } from "../../../../../scripts/deployment-consumer.mjs";
@@ -60,7 +61,7 @@ const report = {
   outcome: "running", startedAt: new Date().toISOString(), contractRevision,
   implementationRevision: acceptedInner, acceptedCommit,
   runnerKind: "deterministic-in-process", realAgentProcessIntegration: false,
-  isolationDirectory: isolation, inputs: await hashes(), commands: [], packages: [],
+  isolationDirectory: isolation, inputs: await hashes(), commands: [], packages: [], thirdPartyPackages: [],
   cleanup: { directoryExistsAfter: true },
 };
 let created = false;
@@ -112,6 +113,13 @@ try {
   const packs = join(isolation, "packs"), consumer = join(isolation, "consumer");
   await mkdir(packs);
   await mkdir(consumer);
+  const npmConfig = join(isolation, "npm-pack.npmrc");
+  await writeFile(npmConfig, "ignore-scripts=true\naudit=false\nfund=false\nupdate-notifier=false\n");
+  const packEnv = {
+    ...process.env, npm_config_userconfig: npmConfig,
+    npm_config_cache: join(isolation, "npm-cache"),
+    npm_config_update_notifier: "false",
+  };
   await run(process.execPath, ["--check", join(directory, "consumer.test.mjs")]);
   await run(process.execPath, ["--check", join(directory, "run.mjs")]);
   report.nodeVersion = process.version;
@@ -133,6 +141,32 @@ try {
   for (const entry of entries) await visit(entry);
   assert.equal(manifests.size, 6);
   const tarballs = new Map(), versions = new Map();
+  const thirdParty = new Map(), visitedInstalled = new Set();
+  async function installedDependencies(packageRoot) {
+    const physical = realpathSync(packageRoot);
+    const location = relative(root, physical);
+    assert.ok(!isAbsolute(location) && location !== ".." && !location.startsWith(`..${sep}`));
+    assert.ok(normalized(physical).startsWith(`${normalized(root)}${sep}`), "Installed dependency must remain inside this worktree");
+    if (visitedInstalled.has(physical)) return;
+    visitedInstalled.add(physical);
+    const manifest = JSON.parse(await readFile(join(physical, "package.json")));
+    if (!manifests.has(manifest.name)) {
+      const prior = thirdParty.get(manifest.name);
+      assert.ok(!prior || prior.manifest.version === manifest.version, "Conflicting installed dependency versions need explicit selectors");
+      thirdParty.set(manifest.name, { physical, manifest });
+    }
+    const require = createRequire(join(physical, "package.json"));
+    for (const name of Object.keys(manifest.dependencies ?? {})) {
+      const found = (require.resolve.paths(name) ?? [])
+        .map((base) => join(base, ...name.split("/")))
+        .find((path) => existsSync(join(path, "package.json")));
+      assert.ok(found, `Missing installed production dependency ${name}`);
+      await installedDependencies(found);
+    }
+  }
+  for (const name of entries)
+    await installedDependencies(join(root, "packages", definitions.get(name).directory));
+  report.workspaceLockSha256 = hash(await readFile(join(root, "pnpm-lock.yaml")));
   for (const [name, manifest] of manifests) {
     const definition = definitions.get(name);
     const packageRoot = join(root, "packages", definition.directory);
@@ -154,15 +188,34 @@ try {
       packedFileCount: files.length, developmentFilesExcluded: true,
     });
   }
+  for (const [name, { physical, manifest }] of thirdParty) {
+    const packed = JSON.parse(await run("npm", [
+      "pack", "--ignore-scripts", "--pack-destination", packs, "--json", physical,
+    ], root, packEnv))[0];
+    assert.equal(packed.name, name);
+    assert.equal(packed.version, manifest.version);
+    const filename = join(packs, packed.filename);
+    tarballs.set(name, filename);
+    report.thirdPartyPackages.push({
+      name, version: manifest.version,
+      provenance: "installed-distribution-inside-this-worktree",
+      sourceDirectory: repoPath(physical), manifestSha256: hash(await readFile(join(physical, "package.json"))),
+      tarball: packed.filename, tarballSha256: hash(await readFile(filename)),
+      packedFileCount: packed.files.length, lifecycleScriptsDisabled: true,
+    });
+  }
   await writeFile(join(consumer, "package.json"), JSON.stringify({
     name: "regulation-coordinator-isolated-deployment", private: true, type: "module",
     dependencies: Object.fromEntries(entries.map((name) => [name, pathToFileURL(tarballs.get(name)).href])),
   }, null, 2));
   await writeFile(join(consumer, "pnpm-workspace.yaml"),
     `packages: []\noverrides: ${JSON.stringify(Object.fromEntries([...tarballs].map(([name, path]) => [name, pathToFileURL(path).href])))}\n`);
-  await writeFile(join(consumer, ".npmrc"), "link-workspace-packages=false\nprefer-workspace-packages=false\n");
+  await writeFile(join(consumer, ".npmrc"), "link-workspace-packages=false\nprefer-workspace-packages=false\nauto-install-peers=false\n");
   const installEnv = { ...process.env, npm_config_userconfig: join(consumer, ".npmrc") };
-  await run("pnpm", ["install", "--prefer-offline", "--ignore-scripts", "--no-frozen-lockfile", "--reporter=append-only"], consumer, installEnv);
+  await run("pnpm", [
+    "install", "--offline", "--ignore-scripts", "--no-frozen-lockfile", "--reporter=append-only",
+    "--store-dir", join(isolation, "pnpm-store"),
+  ], consumer, installEnv);
   report.consumerLockSha256 = hash(await readFile(join(consumer, "pnpm-lock.yaml")));
   await verifyConsumerGraph(consumer, versions, entries);
   report.physicalGraph = { verified: true, internalPackages: manifests.size, entries, escapedConsumer: false, workspaceRangesRemaining: false };
@@ -179,6 +232,8 @@ try {
   await run(process.execPath, [join(root, "node_modules", "typescript", "bin", "tsc"), "-p", consumer, "--pretty", "false"], consumer, env, 60000);
   await run(process.execPath, ["--test", "--test-concurrency=1", join(consumer, "consumer.test.mjs")], consumer, env, 60000);
   report.runtime = JSON.parse(await readFile(join(consumer, "runtime-evidence.json")));
+  for (const resolved of report.runtime.resolvedEntrypoints)
+    assert.equal(resolved.sha256, report.packages.find((entry) => entry.name === resolved.name).entrySha256);
   await run("git", ["diff", "--exit-code", "HEAD", "--", "packages", "scripts"]);
   report.outcome = "passed";
 } catch (error) {

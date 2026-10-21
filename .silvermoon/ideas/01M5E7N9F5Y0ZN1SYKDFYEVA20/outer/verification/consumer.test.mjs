@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, relative, sep } from "node:path";
 import { after, test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -367,11 +368,13 @@ test("legacy Planner and Coordinator compose through the same installed package 
 });
 
 after(async () => {
+  const resolvedEntrypoints = [];
   for (const name of ["@potential-guide/effects", "@potential-guide/regulation-coordinator", "@potential-guide/objective-portfolio-supervisor"]) {
     const path = fileURLToPath(import.meta.resolve(name));
     const location = relative(process.cwd(), path);
     assert.ok(!isAbsolute(location) && location !== ".." && !location.startsWith(`..${sep}`));
     assert.ok(!location.split(sep).includes("src"), "Consumer must resolve packed dist, not workspace source");
+    resolvedEntrypoints.push({ name, path: location, sha256: createHash("sha256").update(await readFile(path)).digest("hex") });
   }
   assert.equal(totals.starts, totals.terminated);
   assert.equal(totals.acquisitions, totals.releases);
@@ -380,6 +383,6 @@ after(async () => {
   assert.equal(cases.length, 7);
   await writeFile("runtime-evidence.json", `${JSON.stringify({
     runnerKind: "deterministic-in-process", realAgentProcessIntegration: false,
-    cases, totals, activeExecutions: totals.starts - totals.terminated,
+    cases, totals, resolvedEntrypoints, activeExecutions: totals.starts - totals.terminated,
   }, null, 2)}\n`);
 });
