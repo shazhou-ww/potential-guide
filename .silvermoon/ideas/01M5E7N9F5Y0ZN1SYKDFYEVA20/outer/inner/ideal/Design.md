@@ -14,10 +14,18 @@ Behavior ResourceAllocation ──┘
 
 - RegulationTarget 是治理目标意图：针对特定 Objective 与 subject，在某时刻要求一次向 targetLevel 推进的尝试，具有 priority。它不承诺一定达到，不是持续保持目标的控制器。
 - ResourceAllocation 是资源分配意图：期望使用的 agent binding 及并发度，不是实际资源分配、真实空闲数或权限集合；每次以完整值更新，不另建资源 delta 协议。
-- CoordinatorState 是整个 Coordinator 的可观察执行状态：已确认的两类意图、pending/运行/停止/终结、已采纳的治理观察、依赖、实际 binding 与占用、累计预算、异常和服务生命周期。
+- CoordinatorState 只保存继续正确运行所必需的当前状态：已确认的两类意图、活跃 Regulation、必要的意图处理进度、当前有效观察及依赖、实际 binding 与占用、累计预算和服务生命周期。pending 需求不包装成独立 Task，历史终结结果不驻留 state。
 - 核心状态不携带外部实例 ID 或输入通道生命周期；外部身份由宿主或 envelope 关联，连接、结束与重连由适配层管理。通道结束不撤销当前意图、不自动取消调用或关闭服务；错误仍明确报告，影响服务可用性时体现为服务自身的状态变化。
 - 外部接口是有状态、带副作用及反馈的二元 Behavior 变换，不是仅依赖当前两个值的无记忆逐点函数。输入保持不变时，runner 反馈、观察及超时仍能改变输出状态。
 - 内部可以通过 monadic bind（>>=）组合依赖前一步结果的副作用步骤；monadic composition 不等于 monadic lift，不将整个 Coordinator 称为 liftM2 或普通 applicative lift。
+
+## 当前状态最小化与历史查询
+
+- 字段进入 state 的依据是当前调度、执行或恢复是否必需，不是 UI 是否可能查看。移除后仍能不查询历史而正确运行的信息，不为历史展示保留。
+- activeRegulations 只含正在运行、停止中或恢复后尚未核实的调用。确认结束时移除，并原子更新仍必要的进度、依赖、观察和预算摘要；不增加 pastRegulations，也不保留 ended Task。
+- 不保存历史记录，不等于删除过去对当前的影响。意图已处理修订防止重跑，累计预算限制继续执行，有效依赖和必要证据支持未完成编排；这些是当前状态而非历史明细。
+- 完整调用结果、过去的观察、已解除依赖和诊断由持久化消息历史或独立查询投影承担。UI 查询历史不要求 CoordinatorState 保存历史；lastFault 不作为最近错误的历史展示字段，持续阻断运行的故障仍须在当前状态明确表达。
+- 当前 state 无需查询历史即可决定下一步；恢复可以使用一致快照及必要后续增量。历史查询的可靠存储与索引是适配层职责，实时 Stream 不自动成为历史数据库。
 
 ## delta 与两个纯 reducer
 
@@ -66,7 +74,7 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 - 设计支持 RegulationTarget 和 CoordinatorState 的持久化及恢复。CoordinatorCheckpoint 仅封装两份领域状态，不包含固定 positions 字段，不要求现在选定日志或存储方案。
 - 若采用快照加后续增量，持久化适配层负责在外层保存与快照一致的命令/事件处理位置并定义接续规则；领域 revision 不默认等于日志位置。无论采用何种方案，都须保存意图发生修订并保证一致恢复，不能把已完成或 blocked 的同一意图当成新请求重跑，也不能遗漏未处理请求或重复预留预算。
 - 保存 RegulationTarget 的全局版本水位与 Record 条目更新版本，不能用剩余条目的最大值替代水位或把版本当作消息游标；使用普通 JSON 对象持久化映射，仍须校验对象身份、版本与可持久化值。
-- 持久化的是目标、观察、结果、依赖和恢复元数据，不是 Promise、进程句柄或活跃内存节点；恢复失败明确呈现，不能静默从空状态启动。
+- 当前快照持久化目标、活跃调用、处理进度、仍有效的观察与依赖、累计预算和恢复元数据，不保存完整历史结果、Promise、进程句柄或活跃内存节点。完整结果另由消息历史保存；恢复失败明确呈现，不能静默从空状态启动。
 - 回放只运行 reducer，不重放启动、停止、文件写入等副作用。恢复出的 running 是历史记录，不是当前存活证明；须核实外部执行能否重关联、是否已结束或是否无法确认，再将恢复事实通过 events 纳入状态。
 - 外部执行未核实前，不虚报终止、释放占用、退还预算或启动可能重复的替代调用。具体重关联/失联协议与恢复阶段状态在实施时定义。
 - ResourceAllocation 恢复时以可信当前输入为准；是否保存为恢复上下文可后续决定，不仅凭旧分配意图自行执行。实时无重放 Stream 不自动获得历史恢复能力，晚订阅需匹配快照与后续增量或明确只消费后续事实。
@@ -75,7 +83,7 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 
 - 只有当前调用返回合法 dependency-required 才建立依赖并排 provider 调用；原调用已终结。共享依据精确 Objective/subject/版本/来源及真实执行身份，聚合最低需求中的最强目标与最高 priority，不引入旧 capabilities 匹配层。
 - provider 的有效证据只支持 consumer 的新调用重新观察，不等于 consumer 成功。新边检查自环/传递环并原子安装；解析前后核对需求修订，拒绝非法或旧证据，不隐式解析 latest。
-- 当前有效需求锚定可达性；覆盖目标或设为 initial 后回收不再需要的关系，保留共享 provider。仍在运行的无引用调用按停止策略处理，实际退出后释放资源；resolver acquisition/release 成对，失败明确呈现。
+- 当前有效需求锚定可达性；覆盖目标或设为 initial 后回收不再需要的关系和观察，保留共享 provider。历史调用不作为永久依赖节点；仍在运行的无引用调用按停止策略处理，实际退出后释放资源；resolver acquisition/release 成对，失败明确呈现。
 - 保留资源意图为第一参数的 FRP 接口。每实例一个 scoped 调度循环、内部单队列与图；多输出订阅不复制执行，空闲或命令流正常结束不结束服务。
 - 输入、执行、证据和清理错误可归属地报告；真正基础设施缺陷可使服务失败，但不得静默失去调度循环或伪报成功。订阅背压、scope 清理与停止策略需测试。
 - 沿用 @potential-guide/effects 的 Effect/Stream/SubscriptionRef 及适用的纯比较、runner 和精确来源 helpers；旧资源池、权限模型及有状态 Planner 不是必须复用的契约。
