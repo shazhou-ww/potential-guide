@@ -1,4 +1,4 @@
-$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json
 subjectSchema:
   type: object
   required: [marker]
@@ -6,7 +6,7 @@ subjectSchema:
     marker:
       type: string
 levels:
-  - id: initial
+  - id: ready
     checks:
       - id: ready
         problems: [not-ready]

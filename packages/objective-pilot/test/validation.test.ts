@@ -34,7 +34,7 @@ test("same-level concurrency is opt-in, bounded and deterministic; later levels 
       ),
     );
     assert.ok(result.payload !== null);
-    assert.equal(result.payload.current.levelId, "terminal");
+    assert.equal(result.payload.current.levelId, "a-next");
     assert.equal(maximum, concurrency);
   }
   let calls = 0;

@@ -47,11 +47,12 @@ function objective(id: string): PilotSpec {
     objectiveId: `git+file:///fixture.git#${id}/`,
     version: "1".repeat(40),
     manifest: {
-      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json",
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json",
       subjectSchema: { type: "object" },
       levels: [
-        { id: "initial", checks: [{ id: "check", problems: ["missing"] }] },
+        { id: "available", checks: [{ id: "check", problems: ["missing"] }] },
         { id: "ready", checks: [] },
+        { id: "complete", checks: [] },
       ],
       defaultLanguage: "en",
       languages: ["en"],
@@ -138,7 +139,7 @@ function outcome(
     stalledRuns,
     latestObservation: observed(
       input.spec.objective,
-      stopReason === "target-reached" ? "terminal" : "initial",
+      stopReason === "target-reached" ? "complete" : "initial",
     ),
   };
 }
@@ -678,7 +679,7 @@ test("failed kill retains occupied resources and surfaces error", async () => {
 });
 
 test("planner observes successful goals at cadence and queues only later regression/spec changes", async () => {
-  let level = "terminal";
+  let level = "complete";
   let count = 0;
   const root = goal("root", { observationIntervalMs: 20 });
   const planner = await createPortfolioPlanner({
@@ -694,7 +695,7 @@ test("planner observes successful goals at cadence and queues only later regress
     level = "initial";
     await until(async () => (await read(planner.queue)).demands.length === 1);
     const old = required((await read(planner.queue)).demands[0]);
-    level = "terminal";
+    level = "complete";
     await planner.feedback({
       type: "result",
       demand: old,
@@ -702,7 +703,7 @@ test("planner observes successful goals at cadence and queues only later regress
         stopReason: "target-reached",
         iterations: 1,
         stalledRuns: 0,
-        latestObservation: observed(root.objective, "terminal"),
+        latestObservation: observed(root.objective, "complete"),
       },
     });
     assert.equal((await read(planner.queue)).demands.length, 0);
@@ -719,7 +720,7 @@ test("planner observes successful goals at cadence and queues only later regress
         stopReason: "target-reached",
         iterations: 1,
         stalledRuns: 0,
-        latestObservation: observed(root.objective, "terminal"),
+        latestObservation: observed(root.objective, "complete"),
       },
     });
     assert.equal(required((await read(planner.queue)).demands[0]).revision, next.revision);
@@ -765,7 +766,7 @@ test("two roots merge a dynamic instance and resume independently at their own t
         ? observed(entry.objective, childLevel)
         : dependenciesObserved(
             entry.objective,
-            (entry.id === "a" ? childLevel === "initial" : childLevel !== "terminal")
+            (entry.id === "a" ? childLevel === "initial" : childLevel !== "complete")
               ? [
                   {
                     objective: child,
@@ -793,7 +794,7 @@ test("two roots merge a dynamic instance and resume independently at their own t
         .sort(),
       ["a", "terminal"],
     );
-    childLevel = "terminal";
+    childLevel = "complete";
     const provider = required(
       (await read(planner.queue)).demands.find(
         (entry) => entry.objective.objectiveId === child.objectiveId,
@@ -806,7 +807,7 @@ test("two roots merge a dynamic instance and resume independently at their own t
         stopReason: "target-reached",
         iterations: 1,
         stalledRuns: 0,
-        latestObservation: observed(child, "terminal"),
+        latestObservation: observed(child, "complete"),
       },
     });
     assert.deepEqual((await read(planner.queue)).demands.map((entry) => entry.id).sort(), [
@@ -1223,7 +1224,7 @@ test("replacing a registered provider subject cannot satisfy consumers of its re
     goals: [goal("consumer"), child],
     periodic: false,
     observe: async (entry) =>
-      observed(entry.objective, entry.subject.replacement ? "terminal" : "initial"),
+      observed(entry.objective, entry.subject.replacement ? "complete" : "initial"),
   });
   try {
     const consumer = required(

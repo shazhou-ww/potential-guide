@@ -1,4 +1,9 @@
 export {
+  attainedLevelRank,
+  levelRank,
+  resolveLevelId,
+} from "@potential-guide/pilot-protocol";
+export {
   checkObjectiveLevel,
   createObjectiveDependencyProbe,
   createSourceObjectiveDependencyProbe,

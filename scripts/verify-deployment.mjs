@@ -449,7 +449,7 @@ async function verifyRegulation(baseEnv) {
   const lineageSource = await readFile(join(regulationRoot, "regulation.json"), "utf8");
   const lineage = JSON.parse(lineageSource);
   assert.equal(lineage.attempts.length, 3);
-  assert.equal(lineage.schemaVersion, 3);
+  assert.equal(lineage.schemaVersion, 4);
   assert.equal(lineage.attempts[1].actions.length, 0);
   assert.ok(Date.parse(lineage.expiresAt) > Date.now());
   const transcript = await readFile(join(regulationRoot, "transcript.jsonl"), "utf8");
@@ -619,7 +619,7 @@ for await (const line of createInterface({input:process.stdin})) {
   await writeFile(
     portfolio,
     JSON.stringify({
-      schemaVersion: 3,
+      schemaVersion: 4,
       goals: [
         {
           id: "maintained",
@@ -646,9 +646,9 @@ for await (const line of createInterface({input:process.stdin})) {
   ];
   const planned = await successful(executable("pguide"), args, { cwd: consumer, env: baseEnv });
   const plan = JSON.parse(planned.stdout);
-  assert.equal(plan.schemaVersion, 3);
+  assert.equal(plan.schemaVersion, 4);
   assert.equal(plan.status, "planned");
-  assert.equal(plan.observations.maintained.payload.current.levelId, "terminal");
+  assert.equal(plan.observations.maintained.payload.current.levelId, "ready");
   assert.deepEqual(plan.queue.demands, []);
   assert.deepEqual(plan.events, []);
   assert.match(await readFile(log, "utf8"), /maintained/);
@@ -661,9 +661,9 @@ for await (const line of createInterface({input:process.stdin})) {
     },
   );
   const executed = JSON.parse(execution.stdout);
-  assert.equal(executed.schemaVersion, 3);
+  assert.equal(executed.schemaVersion, 4);
   assert.equal(executed.status, "executed");
-  assert.equal(executed.observations.maintained.payload.current.levelId, "terminal");
+  assert.equal(executed.observations.maintained.payload.current.levelId, "ready");
   assert.deepEqual(executed.queue.demands, []);
   assert.deepEqual(executed.events, []);
   console.log("installed ACP planner and bounded supervisor lifecycle verified");
@@ -783,7 +783,7 @@ for await (const line of createInterface({input:process.stdin})) {
   const observation = JSON.parse(result.stdout);
   assert.equal(observation.status, 200, result.stdout);
   assert.equal(observation.payload.current.objectiveId, setupUri);
-  assert.equal(observation.payload.current.levelId, "terminal", result.stdout);
+  assert.equal(observation.payload.current.levelId, "verified", result.stdout);
   const setupTree = await successful(
     "git",
     ["rev-parse", `${revision}:packages/objective-pguide-setup`],
@@ -817,7 +817,7 @@ for await (const line of createInterface({input:process.stdin})) {
   );
   const selfObservation = JSON.parse(selfResult.stdout);
   assert.equal(selfObservation.status, 200, selfResult.stdout);
-  assert.equal(selfObservation.payload.current.levelId, "terminal", selfResult.stdout);
+  assert.equal(selfObservation.payload.current.levelId, "verified", selfResult.stdout);
   const selfTree = await successful(
     "git",
     ["rev-parse", `${revision}:packages/objective-pguide-self-check`],

@@ -6,6 +6,47 @@ import type { AgentInput } from "@potential-guide/objective-regulator";
 import { agentPrompt, executeAcpAgent } from "../../pguide-regulate/src/commands/regulator.js";
 import { bin, fixture, git, root, run, scratch, writeConfig } from "./fixtures.js";
 
+test("initial regulation persists the normal lifecycle without an Agent profile or business check", async () => {
+  const f = await fixture();
+  try {
+    await writeFile(
+      join(f.repository, "objective", "checks", "ready", "run.js"),
+      "#!/usr/bin/env node\nthrow new Error('initial must not run a business check');",
+    );
+    const revision = await f.commit();
+    const config = join(f.directory, "intrinsic-config.json");
+    await writeConfig(
+      config,
+      JSON.stringify({
+        schemaVersion: 2,
+        stateDirectory: join(f.directory, "intrinsic-state"),
+      }),
+    );
+    const result = await run(bin("regulate"), [
+      "--pilot",
+      f.uri,
+      "--revision",
+      revision,
+      "--subject-file",
+      f.subject,
+      "--target",
+      "initial",
+      "--config",
+      config,
+      "--format",
+      "json",
+    ]);
+    assert.equal(result.code, 0, result.stdout + result.stderr);
+    const record = JSON.parse(result.stdout);
+    assert.equal(record.status, "target-reached");
+    assert.equal(record.outcome.iterations, 0);
+    assert.equal(record.outcome.latestObservation.payload.current.levelId, "initial");
+    assert.equal(record.attempts.length, 1);
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
 test("permissions persist per attempt and continue uses current grants and revoked ceiling", async () => {
   const f = await fixture();
   try {
@@ -320,7 +361,7 @@ test("regulate and continue persist pinned Pilot observations and use the JSON c
     assert.equal(report.attempts[0].observations[0].payload, null);
     assert.match(report.attempts[0].observations[0].message, /transient source failure/);
     assert.equal(successfulObservations[0].payload.problems.length, 2);
-    assert.equal(successfulObservations[1].payload.current.levelId, "terminal");
+    assert.equal(successfulObservations[1].payload.current.levelId, "ready");
     assert.equal(
       successfulObservations[0].payload.versions[f.uri],
       await git(f.repository, "rev-parse", `${commit}:objective`),
@@ -330,7 +371,7 @@ test("regulate and continue persist pinned Pilot observations and use the JSON c
     const persisted = JSON.parse(
       await readFile(join(state, "regulations", report.regulationId, "regulation.json"), "utf8"),
     );
-    assert.equal(persisted.schemaVersion, 3);
+    assert.equal(persisted.schemaVersion, 4);
     assert.equal(persisted.objectiveCommit, commit);
     assert.deepEqual(persisted.agentExecutionLimits, { timeoutMs: 10_000 });
     assert.equal("limits" in persisted, false);

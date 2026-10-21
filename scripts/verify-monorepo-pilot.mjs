@@ -165,18 +165,18 @@ try {
     else assert.deepEqual(observation.payload.problems, []);
     report.scenarios.push({ id, passed: true, observation });
   }
-  await probe("independent-package", "terminal", join(target, "packages", "shared"));
-  await probe("root-with-dependency-tree-evidence", "terminal");
+  await probe("independent-package", "standardized", join(target, "packages", "shared"));
+  await probe("root-with-dependency-tree-evidence", "standardized");
   await write(target, "packages/shared/src/index.ts", "import './missing.js';");
   await probe("real-package-dependency-handoff", "structured", target, "dependency");
   await write(target, "packages/shared/src/missing.ts", "export {};");
-  await probe("repaired-root", "terminal");
+  await probe("repaired-root", "standardized");
   await rm(join(target, "packages", "shared", "objectives.yaml"));
   await probe("missing-declaration-root-internal", "initial", target, "internal");
   await write(target, "packages/shared/objectives.yaml", "schemaVersion: [");
   await probe("damaged-declaration-root-internal", "initial", target, "internal");
   await write(target, "packages/shared/objectives.yaml", packageDeclaration);
-  await probe("declaration-repaired", "terminal");
+  await probe("declaration-repaired", "standardized");
 
   const context = await objectiveContext(resolve(root));
   const entry = parseObjectives(await readFile(join(root, "objectives.yaml"), "utf8")).standardize;

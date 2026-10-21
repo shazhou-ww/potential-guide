@@ -1,4 +1,5 @@
 import {
+  attainedLevelRank,
   compileDomain,
   type Envelope,
   type GitObjectiveSource,
@@ -8,11 +9,7 @@ import {
   validateGitPilotSource,
   validateSubject,
 } from "@potential-guide/objective-pilot";
-import {
-  canonicalJson,
-  levelRank,
-  validateGoal,
-} from "@potential-guide/objective-portfolio-supervisor";
+import { canonicalJson, validateGoal } from "@potential-guide/objective-portfolio-supervisor";
 import { makeRegulatorSpec, type RegulationOutcome } from "@potential-guide/objective-regulator";
 import type { AgentResource, Regulation } from "./types.js";
 
@@ -155,7 +152,21 @@ export function validateObservation(
         throw new TypeError("Invalid observed problem.");
     }
   }
-  levelRank(regulation.objective, value.current.levelId);
+  const rank = attainedLevelRank(regulation.objective, value.current.levelId);
+  for (const problem of value.problems) {
+    if (problem.kind !== "internal") continue;
+    const next = regulation.objective.manifest.levels[rank];
+    if (
+      next === undefined ||
+      problem.ref.objectiveId !== regulation.objective.objectiveId ||
+      problem.ref.levelId !== next?.id ||
+      !next.checks.some(
+        ({ id, problems }) =>
+          id === problem.ref.checkId && problems.includes(problem.ref.problemId),
+      )
+    )
+      throw new TypeError("Problem must belong to the next unattained business level.");
+  }
   for (const [id, version] of Object.entries(value.versions))
     validateGitPilotSource(id, version, value.sources?.[id]);
   for (const [id, source] of Object.entries(value.sources ?? {}))

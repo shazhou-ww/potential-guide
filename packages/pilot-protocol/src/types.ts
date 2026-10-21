@@ -67,7 +67,7 @@ export type CheckResult =
     };
 export type CheckProbe = (subject: Subject, signal: AbortSignal) => Promise<Envelope<CheckResult>>;
 export interface ObjectiveManifest {
-  readonly $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json";
+  readonly $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json";
   readonly subjectSchema: SubjectSchema;
   readonly levels: readonly [
     {
@@ -108,6 +108,8 @@ export interface PilotInput {
   readonly spec: PilotSpec;
   readonly subject: Subject;
   readonly language?: string;
+  /** Validate the input and return intrinsic initial without running business checks. */
+  readonly targetLevel?: "initial";
 }
 export interface PilotObservation {
   readonly current: LevelRef;

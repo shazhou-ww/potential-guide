@@ -1,4 +1,4 @@
-$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json
 subjectSchema:
   type: object
   additionalProperties: false
@@ -19,15 +19,15 @@ subjectSchema:
     userHome: {type: string, minLength: 1}
     timeoutMs: {type: integer, minimum: 100, maximum: 300000, default: 20000}
 levels:
-  - id: initial
+  - id: installed
     checks:
       - id: installation
         problems: [installation-missing, installation-unusable, version-mismatch]
-  - id: installed
+  - id: configured
     checks:
       - id: configuration
         problems: [installation-missing, installation-unusable, version-mismatch, configuration-missing, configuration-invalid, command-unavailable, agent-missing, environment-unavailable, acp-unavailable]
-  - id: configured
+  - id: verified
     checks:
       - id: sanity
         problems: [installation-missing, installation-unusable, version-mismatch, configuration-missing, configuration-invalid, command-unavailable, agent-missing, environment-unavailable, acp-unavailable, sanity-failed]

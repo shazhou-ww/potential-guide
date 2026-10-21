@@ -30,6 +30,39 @@ const legacyManifest = {
   languages: ["en-US"],
 };
 
+test("attainment migration requires reviewed IDs and never silently reinterprets v1 or terminal targets", () => {
+  const old = {
+    $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json",
+    subjectSchema: legacyManifest.domainSchema,
+    levels: [{ id: "initial", checks: [{ id: "ready", problems: ["missing"] }] }],
+    defaultLanguage: "en-US",
+    languages: ["en-US"],
+  };
+  assert.throws(() => parseManifest(JSON.stringify(old)), /Migrate/);
+  assert.throws(() => migrateLegacyObjectiveDocument(old, "manifest"), /attainment-levels/);
+  const migrated = migrateLegacyObjectiveDocument(old, "manifest", { attainmentLevels: ["ready"] });
+  assert.deepEqual(parseManifest(JSON.stringify(migrated)).levels, [
+    { id: "ready", checks: [{ id: "ready", problems: ["missing"] }] },
+  ]);
+  assert.equal(old.levels[0]?.id, "initial");
+  for (const id of ["initial", "terminal"])
+    assert.throws(() =>
+      migrateLegacyObjectiveDocument(old, "manifest", { attainmentLevels: [id] }),
+    );
+  assert.throws(
+    () =>
+      migrateLegacyObjectiveDocument(
+        {
+          schemaVersion: 3,
+          goals: [{ targetLevel: "terminal" }],
+          resources: [],
+        },
+        "portfolio",
+      ),
+    /explicit review/,
+  );
+});
+
 test("omitted schema normalizes to Unit; explicit empty schema never implies omitted input", () => {
   const source = (declaration: unknown) =>
     JSON.stringify({ $schema: OBJECTIVES_SCHEMA_URI, objectives: { test: declaration } });
@@ -125,7 +158,9 @@ test("context is exact, non-Git context.path works, and null repo field reads fa
 });
 
 test("canonical documents reject legacy and unknown fields and schemas compile offline", () => {
-  const migrated = migrateLegacyObjectiveDocument(legacyManifest, "manifest");
+  const migrated = migrateLegacyObjectiveDocument(legacyManifest, "manifest", {
+    attainmentLevels: ["ready"],
+  });
   assert.ok(validateObjectiveDocument(migrated));
   assert.equal(parseManifest(JSON.stringify(migrated)).$schema, OBJECTIVE_SCHEMA_URI);
   for (const value of [
@@ -255,7 +290,7 @@ test("migration changes AST paths, never text literals, and refuses unknown or u
         },
         "portfolio",
       ),
-    /Pinned/,
+    /pinned/,
   );
 });
 
@@ -268,7 +303,16 @@ test("file migration never overwrites input, existing output, or damaged/unknown
   const output = join(directory, "objective.yaml");
   const source = JSON.stringify(legacyManifest);
   await writeFile(input, source);
-  const args = ["--format", "manifest", "--input", input, "--output", output];
+  const args = [
+    "--format",
+    "manifest",
+    "--input",
+    input,
+    "--output",
+    output,
+    "--attainment-levels",
+    "ready",
+  ];
   await migrateFiles(args);
   assert.equal(await readFile(input, "utf8"), source);
   assert.equal(parseManifest(await readFile(output, "utf8")).$schema, OBJECTIVE_SCHEMA_URI);

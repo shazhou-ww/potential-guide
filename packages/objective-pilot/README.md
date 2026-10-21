@@ -16,7 +16,7 @@ It replaces the retired Objective Guide API, not a compatibility wrapper.
 `PilotSpec` is JSON data: a stable `objectiveId`, an immutable source `version`,
 a strictly validated manifest and localized Wiki pages. Subjects and executable
 bindings are separate. `Manifest.prerequisite` and `PilotSpec.prerequisite` are
-removed and rejected; manifest `schemaVersion` remains `1`:
+removed and rejected; manifests require the canonical Objective v2 `$schema`:
 
 ```ts
 import { startEffect } from "@potential-guide/effects";
@@ -52,9 +52,14 @@ be passed as a commit. Static/custom memory resolvers do not claim Git evidence.
 tree；不得将其作为生产 Git 依赖、跨进程恢复或 continue 的版本证据。fileResources 的
 working-tree 版本仅用于静态验证。Git-bound 观察中的每个依赖都必须携带完整 tagged 来源证据。
 
-Levels are ordered by the manifest array, never by their ID spelling. The final
-local ID is `terminal`. Checks at a level are all evaluated and aggregated;
-levels are evaluated serially. A dependency is discovered by a check at the
+Levels are ordered by the manifest array, never by their ID spelling. Protocol
+`initial` has no business requirements; manifests declare at least one business
+level, excluding reserved `initial` and `terminal`. Checks are conditions to
+attain their level. First failure reports `initial`; later failure reports the
+previous attained level, while problem references identify the unattained level.
+All pass reports the real last business ID. `terminal` is only its target alias.
+Checks at a level are all evaluated and aggregated; levels are evaluated serially.
+A dependency is discovered by a check at the
 actual level where it is needed, not by a static chain.
 Checks default to serial execution; `PilotRuntime.checkConcurrency` opts into a
 positive concurrency bound without changing result order or aggregation.
@@ -128,7 +133,8 @@ or inspect Git. The CLI reuses them, as does the monorepo dependency consumer.
 
 `checkObjectiveLevel({ spec, subject, expectedLevelId, language? }, runtime)`
 constructs an Effect returning `Envelope<{ passed, observation }>`. It observes
-once and compares levels in manifest array order, including explicit `terminal`.
+once and compares cumulative ranks, resolving `terminal` to the owning Objective's
+highest business level. An `initial` target validates inputs without business probes.
 Equal or higher is true. Invalid input, invocation errors and cancellation never
 become false. The returned observation is the very same observation, not a second
 sample.

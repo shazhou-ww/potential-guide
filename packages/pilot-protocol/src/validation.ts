@@ -157,7 +157,7 @@ export function parseManifest(source: string): ObjectiveManifest {
   const levels = value.levels.map((entry: unknown) => {
     if (!record(entry)) throw new ObjectiveConfigurationError("Invalid level.");
     fields(entry, ["id", "checks"]);
-    if (!identifier(entry.id) || entry.id === "terminal") {
+    if (!identifier(entry.id) || entry.id === "terminal" || entry.id === "initial") {
       throw new ObjectiveConfigurationError("Levels require a non-reserved ID and checks.");
     }
     if (!Array.isArray(entry.checks)) {

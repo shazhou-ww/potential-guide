@@ -93,7 +93,14 @@ export function observe(
           const stableSubject = immutable(structuredClone(subject));
           return async () => {
             signal.throwIfAborted();
-            for (const level of manifest.levels) {
+            if (input.targetLevel !== undefined && input.targetLevel !== "initial")
+              throw new ObjectiveInputError("Invalid observation target.", {
+                kind: "subject",
+                objectiveId: spec.objectiveId,
+                issues: null,
+              });
+            let attained = "initial";
+            for (const level of input.targetLevel === "initial" ? [] : manifest.levels) {
               signal.throwIfAborted();
               const results = await Effect.runPromise(
                 Effect.forEach(
@@ -178,7 +185,7 @@ export function observe(
                   status: 200,
                   message: "",
                   payload: immutable({
-                    current: { objectiveId: spec.objectiveId, levelId: level.id },
+                    current: { objectiveId: spec.objectiveId, levelId: attained },
                     problems,
                     gapSummary: problems
                       .map((problem) => {
@@ -205,12 +212,13 @@ export function observe(
                     sources: { ...sources },
                   }),
                 };
+              attained = level.id;
             }
             return {
               status: 200,
               message: "",
               payload: immutable({
-                current: { objectiveId: spec.objectiveId, levelId: "terminal" },
+                current: { objectiveId: spec.objectiveId, levelId: attained },
                 problems: [],
                 gapSummary: "",
                 observedAt: new Date().toISOString(),

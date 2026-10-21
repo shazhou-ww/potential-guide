@@ -7,10 +7,16 @@ import { type MigrationFormat, migrateLegacyObjectiveDocument } from "./migratio
 import { parseStrictYaml, record } from "./validation.js";
 
 const usage =
-  "objective-contract-migrate --format manifest|declarations|portfolio --input <file> --output <new-file> [--context-kind git|non-git] [--subjects-file <reviewed-name-to-expression.json>] [--output-format markdown|json]";
+  "objective-contract-migrate --format manifest|declarations|portfolio --input <file> --output <new-file> [--attainment-levels <id,id,...>] [--context-kind git|non-git] [--subjects-file <reviewed-name-to-expression.json>] [--output-format markdown|json]";
 const safety =
   "Input remains untouched. Output must not exist. Pinned source evidence is never rewritten.";
 const options = [
+  {
+    name: "--attainment-levels",
+    argument: "<id,id,...>",
+    description:
+      "Explicit reviewed attained IDs, one per old exit-check group; targets and evidence need separate review",
+  },
   {
     name: "--format",
     argument: "<kind>",
@@ -59,7 +65,7 @@ const notes = [
   "Default failures retain exit 1 and stderr. JSON failures use one stdout object and exit 1.",
 ];
 const examples = [
-  "objective-contract-migrate --format manifest --input legacy.json --output objective.yaml",
+  "objective-contract-migrate --format manifest --input legacy.json --output objective.yaml --attainment-levels ready",
   "objective-contract-migrate --format declarations --input legacy.yaml --output objectives.json --output-format json",
   "objective-contract-migrate --format portfolio --input portfolio.yaml --output migrated.yaml",
   "objective-contract-migrate --help --output-format json",
@@ -107,6 +113,7 @@ export async function migrateFiles(argv: readonly string[]): Promise<void> {
         "--output",
         "--context-kind",
         "--subjects-file",
+        "--attainment-levels",
         "--output-format",
       ].includes(key) ||
       value === undefined ||
@@ -131,9 +138,14 @@ export async function migrateFiles(argv: readonly string[]): Promise<void> {
   const kind = values["--context-kind"];
   if (kind !== undefined && kind !== "git" && kind !== "non-git")
     throw new TypeError("--context-kind must be git or non-git.");
-  const migrationOptions: { contextKind?: "git" | "non-git"; subjects?: Record<string, string> } =
-    {};
+  const migrationOptions: {
+    contextKind?: "git" | "non-git";
+    subjects?: Record<string, string>;
+    attainmentLevels?: string[];
+  } = {};
   if (kind !== undefined) migrationOptions.contextKind = kind;
+  if (values["--attainment-levels"] !== undefined)
+    migrationOptions.attainmentLevels = values["--attainment-levels"].split(",");
   const subjectsFile = values["--subjects-file"];
   if (subjectsFile) {
     const subjects: unknown = JSON.parse(await readFile(subjectsFile, "utf8"));

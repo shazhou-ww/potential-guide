@@ -30,8 +30,8 @@ const context = { recordObservation: recordDependencyObservation };
 
 test("level check is lazy, uses array order, and returns the exact single observation", async () => {
   const { external } = await specs();
-  for (const actual of ["z-first", "a-next", "terminal"]) {
-    for (const expected of ["z-first", "a-next", "terminal"]) {
+  for (const actual of ["initial", "z-first", "a-next"]) {
+    for (const expected of ["initial", "z-first", "a-next", "terminal"]) {
       let published: unknown;
       let probes = 0;
       const effect = checkObjectiveLevel(
@@ -42,7 +42,10 @@ test("level check is lazy, uses array order, and returns the exact single observ
           },
           resolveCheck: (ref) => async () => {
             probes++;
-            return ref.levelId === actual ? fail : pass;
+            return ref.levelId ===
+              (actual === "initial" ? "z-first" : actual === "z-first" ? "a-next" : "")
+              ? fail
+              : pass;
           },
         },
       );
@@ -52,10 +55,11 @@ test("level check is lazy, uses array order, and returns the exact single observ
       assert.equal(envelope.payload.observation, published);
       assert.equal(
         envelope.payload.passed,
-        ["z-first", "a-next", "terminal"].indexOf(actual) >=
-          ["z-first", "a-next", "terminal"].indexOf(expected),
+        expected === "initial" ||
+          ["initial", "z-first", "a-next"].indexOf(actual) >=
+            ["initial", "z-first", "a-next"].indexOf(expected === "terminal" ? "a-next" : expected),
       );
-      assert.equal(probes, actual === "z-first" ? 2 : 3);
+      assert.equal(probes, expected === "initial" ? 0 : actual === "initial" ? 2 : 3);
     }
   }
 });
@@ -105,7 +109,7 @@ test("true and false probes both contribute versions, and middle-level dependenc
     assert.ok(result.payload);
     assert.equal(observations, 1);
     assert.equal(result.payload.current.objectiveId, objectiveId);
-    assert.equal(result.payload.current.levelId, satisfied ? "terminal" : "a-next");
+    assert.equal(result.payload.current.levelId, satisfied ? "a-next" : "z-first");
     assert.deepEqual(result.payload.versions, { [objectiveId]: commit, [externalId]: commit });
     if (!satisfied)
       assert.deepEqual(result.payload.problems, [
@@ -114,7 +118,7 @@ test("true and false probes both contribute versions, and middle-level dependenc
           objectiveId: externalId,
           subject,
           expectedLevelId: "terminal",
-          currentLevelId: "z-first",
+          currentLevelId: "initial",
         },
       ]);
   }
@@ -288,7 +292,7 @@ function processDependency(
 
 test("real process dependency requests share recursion, depth and total observation budgets", async () => {
   const definition = manifest({
-    levels: [{ id: "initial", checks: [{ id: "dependency", problems: [] }] }],
+    levels: [{ id: "ready", checks: [{ id: "dependency", problems: [] }] }],
   });
   const data = fixture({ [objectiveId]: definition, [externalId]: definition });
   const consumer = await data.load();

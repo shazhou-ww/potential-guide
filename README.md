@@ -131,7 +131,7 @@ separately for formatting, lint, types, tests and package validation.
 
 For an already installed local device, prefer the standalone
 [self-check Objective](./packages/objective-pguide-self-check/README.md). Its
-`initial → installed → configured → terminal` checks verify installation,
+`initial → installed → configured → verified` cumulative attainment checks verify installation,
 ACP stdio configuration and one isolated, directly prompted marker repair with
 independent exact-content verification. It does not nest regulation or require
 an extra `allowSanity` input; existing tool permissions still apply. Each check

@@ -1,6 +1,6 @@
 ---
 title: 包结构尚未确认
-description: 先建立本包结构。
+description: 协议内置基线，尚未达成本包结构；本层没有业务检查。
 references: [checks/structure]
 ---
 

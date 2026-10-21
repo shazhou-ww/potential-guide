@@ -10,11 +10,12 @@ and the direct-source `--pilot` CLI option are not renamed.
 
 | Document | Required root `$schema` |
 | --- | --- |
-| `objective.yaml` | `https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json` |
+| `objective.yaml` | `https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json` |
 | `objectives.yaml` | `https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json` |
 
-The repository sources are `schemas/<format>/v1.json`. `pnpm schemas:build`
-copies them to `@potential-guide/pilot-protocol/schemas/<format>/v1.json` and
+The active repository sources are `schemas/objective/v2.json` and
+`schemas/objectives/v1.json`; published v1 bytes remain unchanged. `pnpm schemas:build`
+copies them to the matching `@potential-guide/pilot-protocol/schemas/` paths and
 generates embedded definitions; `pnpm schemas:check` checks byte equality and
 the embedded representation. Package exports include both JSON files and
 `@potential-guide/pilot-protocol/schemas` validators. Runtime validation never
@@ -34,7 +35,7 @@ publication. Pages activation, running the workflow, and externally checking
 published bytes are deployment work, not evidence supplied by a source build.
 
 ```yaml
-$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json
 subjectSchema:
   type: object
   properties:
@@ -42,7 +43,7 @@ subjectSchema:
   required: [root]
   additionalProperties: false
 levels:
-  - id: initial
+  - id: ready
     checks:
       - id: ready
         problems: [not-ready]
@@ -58,6 +59,30 @@ Ajv compiles schemas strictly, then validates actual subjects. Only local
 and remote references fail rather than being ignored or fetched. The document
 schemas validate structure; parsers additionally enforce identifiers, duplicate
 level/check IDs, canonical languages, and the default-language membership rule.
+
+## Cumulative attainment (Manifest v2)
+
+`initial` is intrinsic, has no business checks and cannot be declared.
+A manifest declares at least one business level in attainment order. Each
+level's checks are the conditions **to attain that level**, not to leave it.
+Checks at a level aggregate; traversal stops at the first failed level.
+First-level failure reports `current: initial`; later failure reports the
+previous attained level. Internal problems retain references to the **unattained**
+level/check/problem. Invocation failures have no observation payload and never
+manufacture `initial`. Empty check groups attain their level unconditionally.
+
+All pass reports the real last business ID. `terminal` remains reserved:
+it is a target alias for the actual highest business level of its owning
+Objective, not an additional level or valid attained evidence. `describeLevels`
+lists `initial` followed by real business IDs; `resolveLevelId`/`levelRank`
+resolve targets, while `attainedLevelRank` rejects alias evidence.
+Dependency expected levels may use the alias; dependency current levels,
+observations and persisted attained evidence must use real IDs.
+
+An `initial` target validates the manifest, subject and target but invokes no
+business check or repair Agent. `checkObjectiveLevel` and Regulator use this
+fast path; ordinary probes still evaluate business levels. Regulation lifecycle
+commands remain unchanged.
 
 ## Declaration input and context
 
@@ -108,9 +133,8 @@ Build/install `@potential-guide/pilot-protocol`, then invoke its
 namespace). In this checkout after `pnpm build`:
 
 ```powershell
-node packages\pilot-protocol\dist\migrate-cli.js --format manifest --input rules\pilot.yaml --output rules\objective.yaml
+node packages\pilot-protocol\dist\migrate-cli.js --format manifest --input rules\pilot.yaml --output rules\objective.yaml --attainment-levels installed,configured,verified
 node packages\pilot-protocol\dist\migrate-cli.js --format declarations --input legacy-objectives.yaml --output migrated-objectives.yaml --context-kind git
-node packages\pilot-protocol\dist\migrate-cli.js --format portfolio --input legacy-portfolio.json --output migrated-portfolio.json
 ```
 
 The command requires a separate, nonexistent output file, never overwrites,
@@ -120,8 +144,14 @@ the migrated Objective source before deliberately switching bindings. Old
 `pilot.yaml`, numeric-version manifests/declarations, `advancement`, `domainSchema`
 and reference fields are never runtime aliases.
 
-Manifest migration preserves check order and schemas while flattening
-`levels[].advancement.checks` to `levels[].checks`. Declaration migration
+Manifest migration accepts old numeric manifests and schema-identified Manifest v1.
+It requires `--attainment-levels` with one explicitly reviewed attained business
+ID per old exit-check group, preserving check order and subject schema while
+flattening `levels[].advancement.checks` when present. This is not a schema-field
+rename: review and migrate level/scoped reference pages too. For example, old
+`initial → installed → configured → implicit terminal` becomes
+`installed → configured → verified` groups, with intrinsic `initial` preceding
+them. Declaration migration
 renames `pilot` to `objective`; legacy context paths are converted through the
 JSONata AST, not string replacement. `--context-kind git|non-git` makes the
 directory interpretation explicit. String literals remain untouched.
@@ -133,11 +163,14 @@ to reviewed replacement expressions, and update the target subject contract
 as needed. The monorepo business Objective explicitly adopts the new repo/path
 contract instead of inventing replacements for old repository/checkout IDs.
 
-Unpinned Portfolio v3 goals can be renamed without changing other Portfolio
-semantics or its version. Pinned Portfolio revisions, recovery records, reports
+Portfolio inputs and Regulation recovery records now use `schemaVersion: 4`.
+All old Portfolio inputs are rejected, including unpinned and `terminal` targets:
+review each target against its newly committed Manifest v2 before creating a
+new v4 input. Merely retaining the spelling `terminal` does not preserve old
+contract identity. Pinned Portfolio revisions, recovery records, reports
 and queue snapshots cannot be safely rebound just by replacing a string:
 their commit, directory tree and repository-tree evidence identifies old bytes.
-The migrator refuses unsupported/pinned records instead of guessing a new
+The migrator refuses Portfolio conversion instead of guessing a new
 source. Commit the converted Objective, start a new explicit observation or
 regulation, and retain the original evidence for audit. New recovery records,
 declaration snapshots, reports and queues consistently use `objective`,

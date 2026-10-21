@@ -239,7 +239,7 @@ test("setup Pilot strictly loads with all level-scoped check and problem wiki co
   const spec = await loadPilotSpec(objective, fileResources);
   assert.deepEqual(
     spec.manifest.levels.map(({ id }) => id),
-    ["initial", "installed", "configured"],
+    ["installed", "configured", "verified"],
   );
   for (const level of spec.manifest.levels) {
     for (const check of level.checks) {
@@ -985,7 +985,7 @@ test("Git subdirectory snapshot coordinates long local budgets and existing file
     assert.equal(result.code, 0, result.stdout + result.stderr);
     const report = JSON.parse(result.stdout);
     assert.equal(report.status, 200, result.stdout);
-    assert.equal(report.payload.current.levelId, "terminal", result.stdout);
+    assert.equal(report.payload.current.levelId, "verified", result.stdout);
     assert.deepEqual(report.payload.problems, []);
     assert.equal(
       report.payload.versions[uri],
@@ -1070,7 +1070,7 @@ function selfSubject(f: Awaited<ReturnType<typeof setup>>) {
   return subject;
 }
 
-test("self-check manifest loads local-only input, implicit terminal and every reference", async () => {
+test("self-check manifest loads local-only input, attained verified and every reference", async () => {
   const spec = await loadPilotSpec(selfObjective, fileResources);
   const properties = spec.manifest.subjectSchema.properties;
   assert.ok(properties !== null && typeof properties === "object" && "timeoutMs" in properties);
@@ -1082,7 +1082,7 @@ test("self-check manifest loads local-only input, implicit terminal and every re
   });
   assert.deepEqual(
     spec.manifest.levels.map(({ id }) => id),
-    ["initial", "installed", "configured"],
+    ["installed", "configured", "verified"],
   );
   for (const level of spec.manifest.levels) {
     assert.equal(level.checks.length, 1);
@@ -1415,7 +1415,7 @@ test("self-check committed snapshots coordinate default and explicit long budget
       assert.equal(result.code, 0, result.stdout + result.stderr);
       const report = JSON.parse(result.stdout);
       assert.equal(report.status, 200);
-      assert.equal(report.payload.current.levelId, "terminal");
+      assert.equal(report.payload.current.levelId, "verified");
       assert.equal(
         report.payload.versions[uri],
         await git(f.repository, "rev-parse", `${revision}:packages/objective-pguide-self-check`),

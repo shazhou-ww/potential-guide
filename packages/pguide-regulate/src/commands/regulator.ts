@@ -80,7 +80,7 @@ interface Attempt {
 }
 
 interface Regulation {
-  schemaVersion: 3;
+  schemaVersion: 4;
   regulationId: string;
   createdAt: string;
   objectiveUri: string;
@@ -677,10 +677,26 @@ export async function runRegulate(
   });
   const loaded = await loadConfig(globals.cwd, globals.config);
   await pruneExpiredRegulations(stateRoot(loaded.value));
-  const agentName = (option(argv, "--agent") as string | undefined) ?? loaded.value.defaultAgent;
+  const targetLevel = option(argv, "--target", { required: true }) as string;
+  const intrinsic = targetLevel === "initial";
+  const agentName = intrinsic
+    ? "$intrinsic-initial"
+    : ((option(argv, "--agent") as string | undefined) ?? loaded.value.defaultAgent);
   if (agentName === undefined)
     throw new CliError("--agent is required when defaultAgent is not configured.");
-  const profile = (await loadAgents(globals.cwd)).agents[agentName];
+  // Retain the ordinary durable Regulation lifecycle without requiring an Agent
+  // profile for intrinsic validation. This defensive binding is never executed.
+  const profile: AgentProfile | undefined = intrinsic
+    ? {
+        type: "acp",
+        connection: { protocolVersion: "1" },
+        transport: {
+          type: "stdio",
+          command: process.execPath,
+          args: ["-e", "throw new Error('initial must never execute an Agent')"],
+        },
+      }
+    : (await loadAgents(globals.cwd)).agents[agentName];
   if (profile === undefined) throw new CliError(`Unknown Agent profile: ${agentName}.`);
   validateAgentProfile(profile);
   const language = option(argv, "--language") as string | undefined;
@@ -702,7 +718,7 @@ export async function runRegulate(
       if (spec.source === undefined)
         throw new CliError("Regulation requires Git directory source evidence.");
       const regulation: Regulation = {
-        schemaVersion: 3,
+        schemaVersion: 4,
         regulationId: randomUUID(),
         createdAt: new Date().toISOString(),
         objectiveUri: spec.objectiveId,
@@ -714,7 +730,7 @@ export async function runRegulate(
         ...(location.startsWith("git+") ? {} : { sourcePath: resolve(globals.cwd, location) }),
         subject,
         subjectDigest: digest(subject),
-        targetLevel: option(argv, "--target", { required: true }) as string,
+        targetLevel,
         ...(language === undefined ? {} : { language }),
         agentName,
         agentProfile: profile,
@@ -766,10 +782,10 @@ export async function runContinue(
     record === null ||
     typeof record !== "object" ||
     !("schemaVersion" in record) ||
-    record.schemaVersion !== 3
+    record.schemaVersion !== 4
   )
     throw new CliError(
-      "Legacy continue records are incompatible: missing directory tree/commit evidence. Start a new regulation with --pilot <directory> or --objective.",
+      "Legacy continue records are incompatible with cumulative attainment or missing directory tree/commit evidence. Review the v2 Objective and target, then start a new regulation with --pilot <directory> or --objective; pinned evidence is not rebound.",
     );
   const regulation = record as Regulation;
   if (

@@ -18,7 +18,9 @@ import {
 import { withPilot } from "@potential-guide/cli-runtime";
 import { Effect, SubscriptionRef, startEffect, watchSnapshot } from "@potential-guide/effects";
 import {
+  attainedLevelRank,
   type GitObjectiveSource,
+  levelRank,
   observe,
   type PilotRuntime,
   type Subject,
@@ -64,7 +66,7 @@ interface FileResource {
   capabilities: string[];
 }
 interface PortfolioFile {
-  schemaVersion: 3;
+  schemaVersion: 4;
   goals: FileGoal[];
   resources: FileResource[];
 }
@@ -100,6 +102,7 @@ async function bindGoal(
     entry.revision,
     async (objective, runtime) => {
       if (
+        entry.targetLevel !== "initial" &&
         entry.targetLevel !== "terminal" &&
         !objective.manifest.levels.some(({ id }) => id === entry.targetLevel)
       )
@@ -154,8 +157,10 @@ function positive(value: unknown): value is number {
 }
 
 export function parsePortfolioFile(value: unknown): PortfolioFile {
-  if (!record(value) || value.schemaVersion !== 3)
-    throw new CliError("Portfolio requires schemaVersion: 3; older portfolios are incompatible.");
+  if (!record(value) || value.schemaVersion !== 4)
+    throw new CliError(
+      "Portfolio requires schemaVersion: 4 with explicitly reviewed attainment targets; older portfolios and pinned evidence are incompatible.",
+    );
   if (
     Object.keys(value).some((key) => !["schemaVersion", "goals", "resources"].includes(key)) ||
     !Array.isArray(value.goals) ||
@@ -369,7 +374,7 @@ export async function supervisePortfolio(
   const queue = await Effect.runPromise(SubscriptionRef.get(planner.queue));
   const state = await Effect.runPromise(SubscriptionRef.get(planner.state));
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     status: options.execute ? "executed" : "planned",
     observations: state.observations,
     queue,
@@ -402,11 +407,9 @@ export function supervisionMarkdown(
   for (const goal of goals) {
     const observation = result.observations[goal.id];
     const current = observation?.payload?.current.levelId;
-    const levels = [...goal.objective.manifest.levels.map(({ id }) => id), "terminal"];
     const reached =
       current !== undefined &&
-      levels.indexOf(current) >= 0 &&
-      levels.indexOf(current) >= levels.indexOf(goal.targetLevel);
+      attainedLevelRank(goal.objective, current) >= levelRank(goal.objective, goal.targetLevel);
     lines.push(
       `- Goal: ${markdownInlineCode(goal.id)}; Objective: ${markdownInlineCode(goal.objective.objectiveId)}; target: ${markdownInlineCode(goal.targetLevel)}; current: ${current === undefined ? "not observed" : markdownInlineCode(current)}; status: ${reached ? "target reached" : current === undefined ? "target not established" : "target not reached"}.`,
     );
@@ -676,7 +679,14 @@ export async function runSupervise(
             await runtime.resolveObjective(id, source.tree, signal, source);
           }
           const observation = await startEffect(
-            observe({ spec: goal.objective, subject: goal.subject }, runtime),
+            observe(
+              {
+                spec: goal.objective,
+                subject: goal.subject,
+                ...(goal.targetLevel === "initial" ? { targetLevel: "initial" as const } : {}),
+              },
+              runtime,
+            ),
             AbortSignal.any([signal, controller.signal]),
           ).await();
           if (observation.payload === null)

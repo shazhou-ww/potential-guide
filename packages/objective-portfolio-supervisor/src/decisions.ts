@@ -1,6 +1,9 @@
 import {
+  attainedLevelRank,
   canonicalObjectiveUri,
   isJsonValue,
+  levelRank as protocolLevelRank,
+  parseManifest,
   type PilotObservation,
   type PilotSpec,
   validateGitPilotSource,
@@ -36,22 +39,20 @@ export function objectiveKey(goal: Pick<ObjectiveGoal, "objective" | "subject">)
 }
 
 export function levelRank(objective: PilotSpec, level: string): number {
-  if (level === "terminal") return objective.manifest.levels.length;
-  const rank = objective.manifest.levels.findIndex(({ id }) => id === level);
-  if (rank < 0) throw new ObjectivePortfolioError(`Unknown target level: ${level}.`);
-  return rank;
+  return protocolLevelRank(objective, level);
 }
 
 export function reached(goal: ObjectiveGoal, observation: PilotObservation): boolean {
   return (
     observation.current.objectiveId === goal.objective.objectiveId &&
-    levelRank(goal.objective, observation.current.levelId) >=
+    attainedLevelRank(goal.objective, observation.current.levelId) >=
       levelRank(goal.objective, goal.targetLevel)
   );
 }
 
 export function validateGoal(goal: ObjectiveGoal): void {
   canonicalJson(goal);
+  parseManifest(JSON.stringify(goal.objective.manifest));
   if (
     Object.keys(goal).some(
       (key) =>

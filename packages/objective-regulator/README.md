@@ -57,6 +57,13 @@ replace the whole-run quota.
 
 ## Outcomes, dependencies, and faults
 
+Manifest v2 uses cumulative attainment: `initial` is intrinsic and `terminal`
+targets the actual highest business level, not a separate state. Observations
+and attained evidence use real IDs. Internal problems belong to the next
+unattained business level. Targeting `initial` validates contract and subject
+without resolving business checks or executing an Agent. Old manifests and
+alias-valued attained evidence are rejected rather than reinterpreted.
+
 Every normal `RegulationOutcome` contains `iterations` (Agent invocation count),
 `stalledRuns`, `latestObservation` (an envelope), and one of exactly:
 

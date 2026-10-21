@@ -62,12 +62,33 @@ export async function loadPilotSpec(uri: string, resources: ResourceResolver): P
 
 export function describeLevels(spec: PilotSpec): readonly LevelRef[] {
   return [
+    { objectiveId: spec.objectiveId, levelId: "initial" },
     ...spec.manifest.levels.map(({ id }) => ({ objectiveId: spec.objectiveId, levelId: id })),
-    {
-      objectiveId: spec.objectiveId,
-      levelId: "terminal",
-    },
   ];
+}
+
+export function resolveLevelId(spec: PilotSpec, levelId: string): string {
+  parseManifest(JSON.stringify(spec.manifest));
+  const resolved = levelId === "terminal" ? spec.manifest.levels.at(-1)?.id : levelId;
+  if (
+    resolved === undefined ||
+    (resolved !== "initial" && !spec.manifest.levels.some(({ id }) => id === resolved))
+  )
+    throw new ObjectiveOperationError(`Unknown level ${levelId} for ${spec.objectiveId}.`);
+  return resolved;
+}
+
+export function levelRank(spec: PilotSpec, levelId: string): number {
+  const resolved = resolveLevelId(spec, levelId);
+  return resolved === "initial"
+    ? 0
+    : spec.manifest.levels.findIndex(({ id }) => id === resolved) + 1;
+}
+
+export function attainedLevelRank(spec: PilotSpec, levelId: string): number {
+  if (levelId === "terminal")
+    throw new ObjectiveOperationError("Attained evidence must use a real level ID, not terminal.");
+  return levelRank(spec, levelId);
 }
 
 export function readPage(
@@ -161,7 +182,8 @@ export function parseDependencyProblem(value: unknown) {
     !record(value.subject) ||
     !json(value.subject) ||
     !identifier(value.expectedLevelId) ||
-    !identifier(value.currentLevelId)
+    !identifier(value.currentLevelId) ||
+    value.currentLevelId === "terminal"
   )
     throw new ObjectiveOperationError("Invalid dependency identity, subject or levels.");
   return {

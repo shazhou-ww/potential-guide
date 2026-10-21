@@ -59,11 +59,12 @@ const documents = {
   },
 };
 
-test("all three migration kinds save artifacts and print separate human/JSON receipts", async (t) => {
+test("safe migration kinds save artifacts and print separate human/JSON receipts", async (t) => {
   await mkdir(join(root, ".cache"), { recursive: true });
   const directory = await mkdtemp(join(root, ".cache", "migration-cli-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   for (const [kind, document] of Object.entries(documents)) {
+    if (kind === "portfolio") continue;
     for (const display of ["markdown", "json", "default"]) {
       const input = join(directory, `${kind}-${display}-input.json`);
       const output = join(directory, `${kind}-${display}.${display === "json" ? "yaml" : "json"}`);
@@ -76,6 +77,7 @@ test("all three migration kinds save artifacts and print separate human/JSON rec
         input,
         "--output",
         output,
+        ...(kind === "manifest" ? ["--attainment-levels", "ready"] : []),
         ...(display === "default" ? [] : ["--output-format", display]),
       ];
       const result = await run(args);
@@ -175,7 +177,7 @@ test("migration CLI refuses same-file output and pinned Portfolio evidence witho
       "json",
     ]);
     assert.equal(result.code, 1);
-    assert.match(JSON.parse(result.stdout).error.message, /never overwrites|Pinned/);
+    assert.match(JSON.parse(result.stdout).error.message, /never overwrites|pinned/);
     assert.equal(await readFile(input, "utf8"), source);
   }
   await assert.rejects(readFile(join(directory, "output.json")), /ENOENT/);

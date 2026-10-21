@@ -1,4 +1,4 @@
-$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json
 subjectSchema:
   type: object
   additionalProperties: false
@@ -85,23 +85,23 @@ subjectSchema:
           cacheBytes: {type: number, minimum: 0}
           logBytes: {type: number, minimum: 0}
 levels:
-  - id: initial
+  - id: managed
     checks:
       - id: identity
         problems: [identity-mismatch, environment-mismatch, directory-unusable, sudo-unavailable]
-  - id: managed
+  - id: system-ready
     checks:
       - id: system
         problems: [directory-unusable, capacity-low, inodes-low, unsupported-package-manager, package-database-unhealthy, dns-unavailable, http-unavailable]
-  - id: system-ready
+  - id: development-ready
     checks:
       - id: toolchains
         problems: [directory-unusable, tool-missing, tool-version, toolchain-failed]
-  - id: development-ready
+  - id: orderly
     checks:
       - id: order
         problems: [layout-invalid, directory-unusable, task-registry-invalid, task-orphaned, task-overdue, task-residue, task-process-leftover]
-  - id: orderly
+  - id: sustainable
     checks:
       - id: sustainability
         problems: [directory-unusable, history-insufficient, history-invalid, cache-growth, log-growth, unsupported-package-manager, package-index-stale, updates-pending, reboot-required]

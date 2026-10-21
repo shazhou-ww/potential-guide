@@ -6,11 +6,13 @@ import {
   watchSnapshot,
 } from "@potential-guide/effects";
 import {
+  attainedLevelRank,
   canonicalObjectiveUri,
   type DependencyProblem,
   type Envelope,
   type GitObjectiveSource,
   isJsonValue,
+  levelRank,
   type JsonObject,
   type LevelRef,
   ObjectiveConfigurationError,
@@ -297,6 +299,7 @@ function validateSpec(value: unknown): asserts value is RegulatorSpec {
       "Quota requires a positive safe timer and positive safe counts.",
     );
   if (
+    strategy.targetLevel !== "initial" &&
     strategy.targetLevel !== "terminal" &&
     !value.objective.manifest.levels.some(({ id }) => id === strategy.targetLevel)
   )
@@ -371,6 +374,7 @@ export function pilotInput(input: RegulationInput): PilotInput {
     spec: input.spec.objective,
     subject: input.subject,
     ...(input.language === undefined ? {} : { language: input.language }),
+    ...(input.spec.strategy.targetLevel === "initial" ? { targetLevel: "initial" as const } : {}),
   };
 }
 
@@ -401,12 +405,11 @@ export type RegulationDecision =
 
 function decide(input: RegulationInput, observation: PilotObservation): RegulationDecision {
   const objective = input.spec.objective;
-  const rootLevels = [...objective.manifest.levels.map(({ id }) => id), "terminal"];
   const current = observation.current;
   if (current.objectiveId !== objective.objectiveId) {
     throw new RegulationError(500, "Observation belongs to an unrelated Objective.");
   }
-  const index = rootLevels.indexOf(current.levelId);
+  const index = attainedLevelRank(objective, current.levelId);
   if (index < 0) throw new RegulationError(500, "Observation contains an unknown root level.");
   const parsed = parseCheckEnvelope({
     status: 200,
@@ -431,7 +434,7 @@ function decide(input: RegulationInput, observation: PilotObservation): Regulati
       (problem) =>
         problem.kind === "internal" &&
         (problem.ref.objectiveId !== objective.objectiveId ||
-          problem.ref.levelId !== current.levelId ||
+          problem.ref.levelId !== objective.manifest.levels[index]?.id ||
           !objective.manifest.levels[index]?.checks.some(
             (check) =>
               check.id === problem.ref.checkId && check.problems.includes(problem.ref.problemId),
@@ -445,7 +448,7 @@ function decide(input: RegulationInput, observation: PilotObservation): Regulati
     if (observation.sources?.[objective.objectiveId]?.commit !== objective.source.commit)
       throw new RegulationError(500, "Observation snapshot mismatch.");
   }
-  if (index >= rootLevels.indexOf(input.spec.strategy.targetLevel))
+  if (index >= levelRank(objective, input.spec.strategy.targetLevel))
     return { type: "stop", reason: "target-reached" };
   const dependencies = observation.problems.filter((problem) => problem.kind === "dependency");
   const [first, ...rest] = dependencies;
@@ -603,9 +606,8 @@ function progressed(
   objective: PilotSpec,
 ): boolean {
   if (after.current.objectiveId !== objective.objectiveId) return false;
-  const levels = [...objective.manifest.levels.map(({ id }) => id), "terminal"];
-  const previous = levels.indexOf(before.current.levelId);
-  const current = levels.indexOf(after.current.levelId);
+  const previous = attainedLevelRank(objective, before.current.levelId);
+  const current = attainedLevelRank(objective, after.current.levelId);
   if (current > previous) return true;
   const scopedCount = (observation: PilotObservation) =>
     new Set(

@@ -127,7 +127,7 @@ const help: Record<Command, CommandHelp> = {
         title: "Required",
         lines: [
           "  Choose exactly one: --objective <name> OR --pilot <source> (never both).",
-          "  --target <level>        Target level ID, including terminal",
+          "  --target <level>        initial, business level ID, or terminal (highest-level alias)",
         ],
       },
       {
@@ -195,7 +195,7 @@ const help: Record<Command, CommandHelp> = {
       {
         title: "Required",
         lines: [
-          "  --portfolio-file <json> Portfolio schemaVersion 3 with goals and resources",
+          "  --portfolio-file <json> Portfolio schemaVersion 4 with reviewed attainment targets",
           "  --planner <profile>     Existing Agent profile used for planning",
         ],
       },
@@ -238,7 +238,7 @@ const help: Record<Command, CommandHelp> = {
         title: "Options",
         lines: [
           "  --language <tag>        BCP 47 language; repeat for multiple languages (default: en-US)",
-          "  --level <id>            Initial level ID (default: initial)",
+          "  --level <id>            Business level ID (default: ready; initial/terminal reserved)",
           "  --check <id>            Generate one runnable check",
           "  --problem <id>          Problem ID; repeat for multiple problems; requires --check",
         ],

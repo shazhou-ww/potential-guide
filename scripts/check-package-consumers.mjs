@@ -160,8 +160,9 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         const {createRequire} = await import("node:module");
         const require = createRequire(import.meta.url);
         for (const format of ["objective", "objectives"]) {
-          const schema = JSON.parse(readFileSync(require.resolve("@potential-guide/pilot-protocol/schemas/" + format + "/v1.json"), "utf8"));
-          assert.equal(schema.$id, "https://shazhou-ww.github.io/potential-guide/schemas/" + format + "/v1.json");
+          const version = format === "objective" ? "v2" : "v1";
+          const schema = JSON.parse(readFileSync(require.resolve("@potential-guide/pilot-protocol/schemas/" + format + "/" + version + ".json"), "utf8"));
+          assert.equal(schema.$id, "https://shazhou-ww.github.io/potential-guide/schemas/" + format + "/" + version + ".json");
           assert.deepEqual(schema, format === "objective" ? protocol.objectiveSchema : protocol.objectivesSchema);
         }
         assert.equal(protocol.validateObjectivesDocument({$schema: protocol.OBJECTIVES_SCHEMA_URI, objectives: {}}), true);
@@ -175,7 +176,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         const {execFileSync} = await import("node:child_process");
         const {fileURLToPath} = await import("node:url");
         const migration = fileURLToPath(new URL("./migrate-cli.js", import.meta.resolve("@potential-guide/pilot-protocol")));
-        const migrationArgs = [migration,"--format","manifest","--input","legacy-objective.json","--output","objective.json"];
+        const migrationArgs = [migration,"--format","manifest","--input","legacy-objective.json","--output","objective.json","--attainment-levels","ready"];
         execFileSync(process.execPath,migrationArgs,{stdio:"pipe"});
         assert.equal(protocol.parseManifest(readFileSync("objective.json","utf8")).$schema,protocol.OBJECTIVE_SCHEMA_URI);
         assert.equal(readFileSync("legacy-objective.json","utf8"),legacy);

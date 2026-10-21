@@ -48,7 +48,8 @@ pguide probe --pilot "git+file:///D:/Code/potential-guide#packages/objective-pgu
 
 ## 分级与边界
 
-`initial → installed → configured → terminal`，每个显式 level 只有一个 advancement check：
+`initial → installed → configured → verified`，initial 是协议内置基线；
+每个业务 level 的一个 check 是累计达成该层的条件，terminal 仅为 verified 的目标别名：
 
 - installation：指定安装的结构化身份/版本及可选 desiredVersion。
 - configuration：复核安装、配置、config/probe/regulate 发现和所选 ACP stdio

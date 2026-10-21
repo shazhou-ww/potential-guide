@@ -17,14 +17,14 @@ import {
 test("definition schemas and subject validation are usable without an execution runtime", async () => {
   const manifest = parseManifest(
     JSON.stringify({
-      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json",
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json",
       subjectSchema: {
         type: "object",
         required: ["name"],
         properties: { name: { type: "string" } },
         additionalProperties: false,
       },
-      levels: [{ id: "initial", checks: [] }],
+      levels: [{ id: "ready", checks: [] }],
       defaultLanguage: "en-US",
       languages: ["en-US"],
     }),
@@ -58,13 +58,13 @@ test("package-owned declaration parsing and binding remain independently consuma
   assert.deepEqual(projectObjective(entry, context, undefined), { directory: "D:\\fixture" });
   const manifest = parseManifest(
     JSON.stringify({
-      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json",
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json",
       subjectSchema: {
         type: "object",
         required: ["directory"],
         properties: { directory: { type: "string" } },
       },
-      levels: [{ id: "initial", checks: [] }],
+      levels: [{ id: "ready", checks: [] }],
       defaultLanguage: "en-US",
       languages: ["en-US"],
     }),

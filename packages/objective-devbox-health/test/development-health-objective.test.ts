@@ -80,7 +80,7 @@ function direct(script: string, args: string[], input: string) {
 test("health manifest defines five ordered, nonredundant levels and complete zh-CN wiki", () => {
   assert.deepEqual(
     loaded.manifest.levels.map((level) => level.id),
-    ["initial", "managed", "system-ready", "development-ready", "orderly"],
+    ["managed", "system-ready", "development-ready", "orderly", "sustainable"],
   );
   assert.deepEqual(
     loaded.manifest.levels.flatMap((level) => level.checks.map((check) => check.id)),
@@ -115,7 +115,7 @@ test("Pilot freshly starts identity, runs each group once, and stops at first bl
   for (let i = 0; i < 2; i++) {
     calls.length = 0;
     const result = await Effect.runPromise(observe({ spec, subject }, runtime));
-    assert.equal(result.payload?.current.levelId, "terminal");
+    assert.equal(result.payload?.current.levelId, "sustainable");
     assert.deepEqual(calls, health.stages);
   }
   calls.length = 0;
@@ -257,7 +257,7 @@ test("direct and Pilot subject validation reject the same malformed contracts be
   const result = await Effect.runPromise(
     observe({ spec, subject: valid }, { resolveCheck: () => async () => pass }),
   );
-  assert.equal(result.payload?.current.levelId, "terminal");
+  assert.equal(result.payload?.current.levelId, "sustainable");
 });
 
 test("numeric version comparison and capacity equality do not use lexicographic order", () => {

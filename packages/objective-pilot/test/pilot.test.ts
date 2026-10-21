@@ -40,7 +40,7 @@ test("serializable recipe preserves stable IDs, source version and multilingual 
   assert.equal(readPage(spec, "not-found").id, "system/404");
   assert.deepEqual(
     describeLevels(spec).map(({ levelId }) => levelId),
-    ["z-first", "a-next", "terminal"],
+    ["initial", "z-first", "a-next"],
   );
   assert.equal(
     canonicalManifestUri("../child/objective.yaml", objectiveId),
@@ -65,7 +65,7 @@ test("all checks at first blocked level aggregate, level traversal is serial not
   assert.ok(envelope.payload !== null);
   assert.equal(completed, 2);
   assert.deepEqual(calls, ["z-first/one", "z-first/two"]);
-  assert.equal(envelope.payload.current.levelId, "z-first");
+  assert.equal(envelope.payload.current.levelId, "initial");
   assert.deepEqual(
     envelope.payload.problems.map((problem) =>
       problem.kind === "internal" ? problem.ref : undefined,

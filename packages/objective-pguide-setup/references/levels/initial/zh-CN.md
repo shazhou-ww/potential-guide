@@ -1,7 +1,7 @@
 ---
-title: 尚未确认安装
-description: 需要可执行的 pguide 和可选的精确版本匹配。
-references: [levels/initial/checks/installation, pages/bootstrap]
+title: 初始
+description: 协议内置基线，尚未达成任何业务层级。
+references: [levels/installed/checks/installation, pages/bootstrap]
 ---
 
-检查不会自动安装。按来源与目标版本完成安装或构建，再重新观测。
+initial 没有业务检查。installed 的安装检查不会自动安装；按来源与目标版本完成安装或构建，再重新观测。

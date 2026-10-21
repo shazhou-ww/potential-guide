@@ -37,6 +37,7 @@ test("immutable publication permits new URIs, rejects modifications, deletions a
 test("schema sources identify exact canonical Draft 2020-12 definitions", async () => {
   const schemas = await collectSchemas(fileURLToPath(new URL("..", import.meta.url)));
   assert.ok(schemas.has("schemas/objective/v1.json"));
+  assert.ok(schemas.has("schemas/objective/v2.json"));
   assert.ok(schemas.has("schemas/objectives/v1.json"));
   const request = async (url) => {
     const path = url.slice(schemaBase.length);

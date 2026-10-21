@@ -40,7 +40,7 @@ export function observationMarkdown(
     return lines.join("\n");
   }
   const observation = value.payload;
-  const terminal = observation.current.levelId === "terminal";
+  const terminal = observation.current.levelId === spec.manifest.levels.at(-1)?.id;
   lines.push(
     `- Status: ${terminal ? "complete - terminal reached." : "observed - Objective not yet complete."}`,
     `- Current level: ${markdownInlineCode(observation.current.levelId)}`,
@@ -200,11 +200,12 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
   } catch {
     throw new CliError("Languages must be valid BCP 47 language tags.");
   }
-  const level = (option(argv, "--level") as string | undefined) ?? "initial";
+  const level = (option(argv, "--level") as string | undefined) ?? "ready";
   const check = option(argv, "--check") as string | undefined;
   const problems = option(argv, "--problem", { multiple: true }) as string[];
   if (
-    !/^[a-z0-9][a-z0-9-]*$/.test(level) ||
+    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(level) ||
+    ["initial", "terminal"].includes(level) ||
     (check !== undefined && !/^[a-z0-9][a-z0-9-]*$/.test(check)) ||
     problems.some((problem) => !/^[a-z0-9][a-z0-9-]*$/.test(problem))
   )
@@ -214,7 +215,7 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
   await mkdir(root, { recursive: true });
   await writeFile(
     join(root, "objective.yaml"),
-    `$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json\nsubjectSchema:\n  type: object\nlevels:\n  - id: ${level}\n    checks:${check === undefined ? " []" : `\n      - id: ${check}\n        problems: [${problems.join(", ")}]`}\ndefaultLanguage: ${languages[0]}\nlanguages: [${languages.join(", ")}]\n`,
+    `$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json\nsubjectSchema:\n  type: object\nlevels:\n  - id: ${level}\n    checks:${check === undefined ? " []" : `\n      - id: ${check}\n        problems: [${problems.join(", ")}]`}\ndefaultLanguage: ${languages[0]}\nlanguages: [${languages.join(", ")}]\n`,
   );
   for (const language of languages) {
     const pages: [string, string][] = [
@@ -222,9 +223,17 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
       ["system/404", page("Not found", "The requested Reference does not exist.")],
       [
         `levels/${level}`,
-        page("Initial", "TODO: describe this level.", "TODO: describe advancement."),
+        page(
+          "Business level",
+          "TODO: describe this attained level.",
+          "TODO: describe attainment conditions.",
+        ),
       ],
-      ["levels/terminal", page("Complete", "The Objective is complete.")],
+      ["levels/initial", page("Initial", "No business level has been attained.")],
+      [
+        "levels/terminal",
+        page("Highest level alias", "terminal targets the highest declared business level."),
+      ],
     ];
     if (check !== undefined)
       pages.push([`checks/${check}`, page("Generated check", "TODO: describe this check.")]);
@@ -269,7 +278,7 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
       `- Directory: ${markdownInlineCode(root)}`,
       `- Manifest: ${markdownInlineCode(join(root, "objective.yaml"))}`,
       `- Languages: ${languages.map(markdownInlineCode).join(", ")}`,
-      `- Initial level: ${markdownInlineCode(level)}`,
+      `- Business level: ${markdownInlineCode(level)}`,
       `- Check: ${check === undefined ? "none" : markdownInlineCode(check)}`,
       `- Next action: replace TODO guidance${check === undefined ? "" : " and implement the generated check"}, then run ${markdownInlineCode(`pguide validate pilot "${root}"`)}. Commit the Pilot before probing.`,
     ].join("\n"),

@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { Effect } from "@potential-guide/effects";
+import { attainedLevelRank, levelRank } from "@potential-guide/pilot-protocol";
 import { observe } from "./pilot.js";
 import { validateGitPilotSource } from "./resources.js";
 import type {
@@ -54,10 +55,7 @@ function canonical(value: unknown): string {
   return JSON.stringify(sort(value));
 }
 function rank(spec: PilotSpec, level: string): number {
-  const index = [...spec.manifest.levels.map(({ id }) => id), "terminal"].indexOf(level);
-  if (index < 0)
-    throw new ObjectiveOperationError(`Unknown level ${level} for ${spec.objectiveId}.`);
-  return index;
+  return levelRank(spec, level);
 }
 interface Scope {
   readonly versions: Record<string, string>;
@@ -113,7 +111,7 @@ export async function observationScope<T>(
     deadline: Date.now() + limits.timeoutMs,
     maxDepth: limits.maxDepth,
   };
-  const key = canonical([input.spec.objectiveId, input.subject]);
+  const key = canonical([input.spec.objectiveId, input.subject, input.targetLevel ?? null]);
   const stack = parent?.stack ?? [];
   if (stack.includes(key))
     throw new ObjectiveOperationError(
@@ -166,7 +164,7 @@ export function recordDependencyObservation(
     observation.versions[input.spec.objectiveId] !== input.spec.version
   )
     throw new ObjectiveOperationError("Dependency evidence has mismatched source identity.");
-  rank(input.spec, observation.current.levelId);
+  attainedLevelRank(input.spec, observation.current.levelId);
   if (input.spec.source !== undefined) {
     for (const [id, version] of Object.entries(observation.versions))
       validateGitPilotSource(id, version, observation.sources?.[id]);
@@ -213,13 +211,19 @@ export function checkObjectiveLevel(
 ): Effect.Effect<Envelope<ObjectiveLevelCheck>, Error> {
   return Effect.gen(function* () {
     const expected = yield* Effect.try(() => rank(input.spec, input.expectedLevelId));
-    const result = yield* observe(input, runtime);
+    const result = yield* observe(
+      {
+        ...input,
+        ...(input.expectedLevelId === "initial" ? { targetLevel: "initial" as const } : {}),
+      },
+      runtime,
+    );
     if (result.payload === null) return result;
     const observation = result.payload;
     const current = yield* Effect.try(() => {
       if (observation.current.objectiveId !== input.spec.objectiveId)
         throw new ObjectiveOperationError("Observation belongs to a different Objective.");
-      return rank(input.spec, observation.current.levelId);
+      return attainedLevelRank(input.spec, observation.current.levelId);
     });
     return {
       status: 200,

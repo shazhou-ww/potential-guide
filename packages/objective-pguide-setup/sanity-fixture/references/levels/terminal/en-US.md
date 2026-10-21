@@ -1,7 +1,7 @@
 ---
-title: Verified repair
-description: The pinned check observed the exact expected marker.
+title: Highest-level target alias
+description: terminal targets repaired; observations use the real repaired ID.
 references: []
 ---
 
-No further work is required.
+The repaired business level requires the pinned check to observe the exact expected marker.

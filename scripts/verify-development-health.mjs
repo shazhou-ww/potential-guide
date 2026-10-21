@@ -235,7 +235,7 @@ async function verify(reportPath) {
       }
       function healthy(result) {
         assert.equal(result.status, 200, JSON.stringify(result));
-        assert.equal(result.payload.current.levelId, "terminal", JSON.stringify(result));
+        assert.equal(result.payload.current.levelId, "sustainable", JSON.stringify(result));
         assert.deepEqual(result.payload.problems, []);
         return result;
       }

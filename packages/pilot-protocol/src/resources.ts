@@ -223,7 +223,11 @@ export function validateReferences(
     if (namespace === "system" && !["overview", "404"].includes(localId)) {
       throw new ObjectiveConfigurationError(`Unknown system Reference: ${localId}.`);
     }
-    if (namespace === "levels" && localId !== "terminal" && !levelIds.has(localId)) {
+    if (
+      namespace === "levels" &&
+      !["initial", "terminal"].includes(localId) &&
+      !levelIds.has(localId)
+    ) {
       throw new ObjectiveConfigurationError(`Unknown level Reference: ${localId}.`);
     }
     if (namespace === "checks" && !checkIds.has(localId)) {
@@ -252,12 +256,7 @@ export function validateReferences(
     locales.set(language, parsePage(resource, id));
     nodes.set(id, locales);
   }
-  const required = [
-    "system/overview",
-    "system/404",
-    "levels/terminal",
-    ...[...levelIds].map((id) => `levels/${id}`),
-  ];
+  const required = ["system/overview", "system/404", ...[...levelIds].map((id) => `levels/${id}`)];
   for (const level of manifest.levels) {
     for (const check of level.checks) {
       const scoped = `levels/${level.id}/checks/${check.id}`;

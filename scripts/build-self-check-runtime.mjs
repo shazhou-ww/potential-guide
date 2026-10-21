@@ -127,14 +127,14 @@ const descriptions = {
     "唯一一次真实文件修复或独立内容复查失败；查看安全 stage/reason，不相信 Agent 摘要，不自动重试或扩大权限。",
 };
 const sections = [
-  ["initial", "installation", "核验本机安装及可选精确版本。"],
+  ["installed", "installation", "已核验本机安装及可选精确版本。"],
   [
-    "installed",
+    "configured",
     "configuration",
     "复核安装与配置，真实 ACP initialize 和 session/new；不发送 prompt。",
   ],
   [
-    "configured",
+    "verified",
     "sanity",
     "复核依赖，在独占 task 中执行一次直接 AcpClient.prompt 修复 marker.txt，并独立精确复查；没有 allowSanity 门，不嵌套 regulation。",
   ],
@@ -164,15 +164,16 @@ for (const [level, check, body] of sections) {
     await reference(`${scope}/problems/${id}`, id, descriptions[id]);
   }
 }
+await reference("levels/initial", "初始", "协议内置基线，尚未达成任何业务层级；没有业务检查。");
 await reference(
   "levels/terminal",
-  "本次自查完成",
-  "安装、配置、真实隔离文件修复及独立内容复查均通过；仅证明本次指定设备、用户、配置与版本。不是永久凭证，也不能代替其他设备的结果。",
+  "最高层级别名",
+  "terminal 是 verified 的目标别名，不是独立层级或观察结果。verified 表示安装、配置、真实隔离文件修复及独立内容复查均通过；仅证明本次指定设备、用户、配置与版本，不是永久凭证。",
 );
 await reference(
   "system/overview",
   "本机自查",
-  "initial → installed → configured → 隐式 terminal。只观测本机，缺安装先外部 bootstrap；自查不安装、不改用户配置。只有一次真实修复及独立内容校验成功才完成。",
+  "initial → installed → configured → verified。每层 checks 是累计达成该层的条件，terminal 仅为 verified 的目标别名。只观测本机，缺安装先外部 bootstrap；自查不安装、不改用户配置。只有一次真实修复及独立内容校验成功才完成。",
 );
 await reference(
   "system/404",

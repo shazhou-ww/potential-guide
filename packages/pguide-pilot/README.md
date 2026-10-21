@@ -18,8 +18,13 @@ Scaffolding reports the destination, manifest, languages and next validation
 step. Validation identifies the Objective and explicitly checks only the manifest
 and localized references, not runtime readiness; unknown options are rejected.
 Observation summaries identify the Objective, current level, problems and Pilot
-references, with local advancement guidance and a next action. Terminal
-observations explicitly report completion. Dependency subjects are not printed.
+references, with local attainment guidance and a next action. Observing the real
+highest business ID explicitly reports completion; terminal is only its target
+alias. Dependency subjects are not printed.
+
+Scaffolds use Manifest v2 and a business `ready` level by default. `--level`
+selects a business ID; reserved `initial` and `terminal` are rejected. Intrinsic
+initial has no business checks. See [attainment and explicit migration](../../docs/objective-contracts.md).
 
 `--format json` retains the original observation envelope and scaffold/validation
 fields. A failed check invocation still returns its observation envelope on stdout

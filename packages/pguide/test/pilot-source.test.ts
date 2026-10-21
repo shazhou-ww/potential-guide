@@ -60,7 +60,7 @@ async function repository(config: ObjectiveManifest, origin?: string) {
 test("local Pilot maps origin identity but reads its exact local commit without fetching origin", async (t) => {
   const repo = await repository(
     manifest({
-      levels: [{ id: "initial", checks: [{ id: "ready", problems: ["broken"] }] }],
+      levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }],
     }),
     "https://not-a-reachable-origin.invalid/objectives.git",
   );
@@ -77,7 +77,7 @@ test("local Pilot maps origin identity but reads its exact local commit without 
     return Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime));
   });
   assert.ok(result.payload !== null);
-  assert.equal(result.payload.current.levelId, "terminal");
+  assert.equal(result.payload.current.levelId, "ready");
   assert.deepEqual(result.payload.versions, { [repo.uri]: tree });
   await assert.rejects(
     withPilot(repo.path, repo.root, undefined, async () => undefined),
@@ -96,13 +96,13 @@ test("level-scoped repeated check IDs execute their own committed probes", async
     Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime)),
   );
   assert.ok(result.payload !== null);
-  assert.equal(result.payload.current.levelId, "terminal");
+  assert.equal(result.payload.current.levelId, "a-next");
 });
 
 test("folder tree versions cover manifest, scripts, References and resources, not unrelated commits; moves change identity", async (t) => {
   const repo = await repository(
     manifest({
-      levels: [{ id: "initial", checks: [{ id: "ready", problems: ["broken"] }] }],
+      levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }],
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
@@ -114,7 +114,7 @@ test("folder tree versions cover manifest, scripts, References and resources, no
   for (const [path, source] of [
     [
       "objective.yaml",
-      `${JSON.stringify(manifest({ levels: [{ id: "initial", checks: [{ id: "ready", problems: ["broken"] }] }] }))}\n`,
+      `${JSON.stringify(manifest({ levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }] }))}\n`,
     ],
     ["checks/ready/run.cjs", `${successfulProbe}\n`],
     [
@@ -158,7 +158,7 @@ test("folder tree versions cover manifest, scripts, References and resources, no
 test("repository-root Pilot has canonical #/ identity and a verified root tree", async (t) => {
   const repo = await repository(
     manifest({
-      levels: [{ id: "initial", checks: [{ id: "ready", problems: ["broken"] }] }],
+      levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }],
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
@@ -173,13 +173,13 @@ test("repository-root Pilot has canonical #/ identity and a verified root tree",
     assert.equal(spec.source?.directory, "");
     return Effect.runPromise(observe({ spec, subject: { name: "root" } }, runtime));
   });
-  assert.equal(result.payload?.current.levelId, "terminal");
+  assert.equal(result.payload?.current.levelId, "ready");
 });
 
 test("same repository folders can bind different retrieval commits and reject forged tree evidence", async (t) => {
   const repo = await repository(
     manifest({
-      levels: [{ id: "initial", checks: [{ id: "ready", problems: ["broken"] }] }],
+      levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }],
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
@@ -217,7 +217,7 @@ test("same repository folders can bind different retrieval commits and reject fo
 test("batched materialization preserves binary resources outside the Pilot directory", async (t) => {
   const repo = await repository(
     manifest({
-      levels: [{ id: "initial", checks: [{ id: "ready", problems: ["broken"] }] }],
+      levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }],
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
@@ -235,13 +235,13 @@ process.stdout.write(JSON.stringify({status:200,message:"",payload:{ok:data.equa
   const result = await withPilot(repo.path, repo.root, undefined, (spec, runtime) =>
     Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime)),
   );
-  assert.equal(result.payload?.current.levelId, "terminal");
+  assert.equal(result.payload?.current.levelId, "ready");
 });
 
 test("nested Pilot sources stay in the owning probe directory and preserve unrelated files", async (t) => {
   const repo = await repository(
     manifest({
-      levels: [{ id: "initial", checks: [{ id: "ready", problems: ["broken"] }] }],
+      levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }],
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
@@ -259,7 +259,7 @@ test("nested Pilot sources stay in the owning probe directory and preserve unrel
       assert.match(entries[0] as string, /^pguide-runtime-/);
       return Effect.runPromise(observe({ spec, subject: { name: "nested" } }, runtime));
     });
-    assert.equal(result.payload?.current.levelId, "terminal");
+    assert.equal(result.payload?.current.levelId, "ready");
     assert.deepEqual(await filesystem.readdir(join(parent, "sources")), []);
     assert.equal(await filesystem.readFile(join(parent, "sentinel"), "utf8"), "keep");
     process.env.PGUIDE_PROBE_TEMP_DIR = "relative-probe-directory";
@@ -295,7 +295,7 @@ test("ambiguous flat executables and multiple run entries fail explicitly", asyn
 test("explicit Git URI can select an older exact commit independently of current checkout", async (t) => {
   const repo = await repository(
     manifest({
-      levels: [{ id: "initial", checks: [{ id: "ready", problems: ["broken"] }] }],
+      levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }],
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
@@ -310,14 +310,14 @@ test("explicit Git URI can select an older exact commit independently of current
     return Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime));
   });
   assert.ok(result.payload !== null);
-  assert.equal(result.payload.current.levelId, "terminal");
+  assert.equal(result.payload.current.levelId, "ready");
   const local = await withPilot(repo.path, repo.root, old, (spec, runtime) => {
     assert.equal(spec.version, oldTree);
     assert.equal(spec.objectiveId, repo.uri);
     return Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime));
   });
   assert.ok(local.payload !== null);
-  assert.equal(local.payload.current.levelId, "terminal");
+  assert.equal(local.payload.current.levelId, "ready");
   await assert.rejects(
     withPilot(repo.path, repo.root, "HEAD", async () => undefined),
     {
@@ -329,7 +329,7 @@ test("explicit Git URI can select an older exact commit independently of current
 
 test("cross-process dependency source binding preserves exact commits, routing and cleanup", async (t) => {
   const levels: ObjectiveManifest["levels"] = [
-    { id: "initial", checks: [{ id: "ready", problems: ["broken"] }] },
+    { id: "ready", checks: [{ id: "ready", problems: ["broken"] }] },
   ];
   const child = await repository(manifest({ levels }));
   t.after(() => rm(child.root, { recursive: true, force: true }));
@@ -384,7 +384,7 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kin
     );
     const detail = await binding.runtime.resolveCheck({
       objectiveId: child.uri,
-      levelId: "initial",
+      levelId: "ready",
       checkId: "ready",
     })({ name: "repo" }, new AbortController().signal);
     const problem = detail.payload?.problems[0];
@@ -407,7 +407,7 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kin
   );
   assert.ok(refreshed.payload !== null);
   assert.equal(refreshed.payload.current.objectiveId, parent.uri);
-  assert.equal(refreshed.payload.current.levelId, "terminal");
+  assert.equal(refreshed.payload.current.levelId, "ready");
   const pinned = await withPilot(
     parent.uri,
     parent.root,
@@ -440,7 +440,7 @@ test("Git source failure is reported as explicit pilot-error exit 2", async () =
 test("source preparation has its own deadline and releases only its owned cache", async (t) => {
   const repo = await repository(
     manifest({
-      levels: [{ id: "initial", checks: [{ id: "ready", problems: ["broken"] }] }],
+      levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }],
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
@@ -478,7 +478,7 @@ test("source preparation has its own deadline and releases only its owned cache"
 test("cleanup failure retains the primary CLI error and reports both causes", async (t) => {
   const repo = await repository(
     manifest({
-      levels: [{ id: "initial", checks: [{ id: "ready", problems: ["broken"] }] }],
+      levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }],
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));

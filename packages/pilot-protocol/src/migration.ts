@@ -8,6 +8,8 @@ export type MigrationFormat = "manifest" | "declarations" | "portfolio";
 export interface MigrationOptions {
   readonly contextKind?: "git" | "non-git";
   readonly subjects?: Readonly<Record<string, string>>;
+  /** Reviewed attained IDs, in the order of the old exit-check groups. */
+  readonly attainmentLevels?: readonly string[];
 }
 
 function fail(message: string): never {
@@ -106,22 +108,36 @@ export function migrateLegacyObjectiveDocument(
   options: MigrationOptions = {},
 ): unknown {
   if (!record(value) || !json(value)) return fail("Input must be a finite JSON document.");
-  if (Object.hasOwn(value, "$schema"))
+  const legacyV1 =
+    value.$schema === "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json";
+  if (Object.hasOwn(value, "$schema") && !(format === "manifest" && legacyV1))
     return fail(
       "Input is already schema-identified; no automatic downgrade or overwrite is allowed.",
     );
   if (format === "manifest") {
-    fields(value, ["schemaVersion", "domainSchema", "levels", "defaultLanguage", "languages"]);
-    if (value.schemaVersion !== 1 || !Array.isArray(value.levels))
+    fields(
+      value,
+      legacyV1
+        ? ["$schema", "subjectSchema", "levels", "defaultLanguage", "languages"]
+        : ["schemaVersion", "domainSchema", "levels", "defaultLanguage", "languages"],
+    );
+    if ((!legacyV1 && value.schemaVersion !== 1) || !Array.isArray(value.levels))
       return fail("Expected legacy Manifest schemaVersion: 1.");
+    if (!options.attainmentLevels || options.attainmentLevels.length !== value.levels.length)
+      return fail(
+        "Provide explicitly reviewed --attainment-levels (one attained ID per old exit-check group). Review old targets separately and reobserve all pinned evidence.",
+      );
     const result = {
       $schema: OBJECTIVE_SCHEMA_URI,
-      subjectSchema: value.domainSchema,
-      levels: value.levels.map((level) => {
-        if (!record(level) || !record(level.advancement)) return fail("Invalid legacy level.");
-        fields(level, ["id", "advancement"]);
-        fields(level.advancement, ["checks"]);
-        return { id: level.id, checks: level.advancement.checks };
+      subjectSchema: legacyV1 ? value.subjectSchema : value.domainSchema,
+      levels: value.levels.map((level, index) => {
+        if (!record(level)) return fail("Invalid legacy level.");
+        fields(level, legacyV1 ? ["id", "checks"] : ["id", "advancement"]);
+        if (!legacyV1 && !record(level.advancement)) return fail("Invalid legacy advancement.");
+        const advancement = legacyV1 ? level : level.advancement;
+        if (!record(advancement)) return fail("Invalid legacy advancement.");
+        if (!legacyV1) fields(advancement, ["checks"]);
+        return { id: options.attainmentLevels?.[index], checks: advancement.checks };
       }),
       defaultLanguage: value.defaultLanguage,
       languages: value.languages,
@@ -153,24 +169,7 @@ export function migrateLegacyObjectiveDocument(
     parseObjectives(JSON.stringify(result));
     return result;
   }
-  fields(value, ["schemaVersion", "goals", "resources"]);
-  if (value.schemaVersion !== 3 || !Array.isArray(value.goals) || !Array.isArray(value.resources))
-    return fail(
-      "Only legacy Portfolio schemaVersion: 3 is supported. Recovery/report/queue records containing pinned source evidence must be reobserved from a deliberately migrated and committed Objective; commit/tree evidence is never rewritten or invented.",
-    );
-  const goals = value.goals.map((goal) => {
-    if (!record(goal)) return fail("Invalid Portfolio goal.");
-    fields(
-      goal,
-      ["id", "pilot", "subject", "targetLevel", "priority", "observationIntervalMs"],
-      ["revision", "requirements"],
-    );
-    if (goal.revision !== undefined)
-      return fail(
-        "Pinned Portfolio revisions cannot be silently rebound. Commit the migrated Objective, then create a new explicit binding; do not replace commit/tree evidence.",
-      );
-    const { pilot, ...rest } = goal;
-    return { ...rest, objective: pilot };
-  });
-  return { schemaVersion: 3, goals, resources: structuredClone(value.resources) };
+  return fail(
+    "Portfolio targets require explicit review against each committed v2 Objective. Create a schemaVersion: 4 Portfolio with reviewed targets and new bindings; pinned source evidence must be reobserved, never rewritten or invented.",
+  );
 }

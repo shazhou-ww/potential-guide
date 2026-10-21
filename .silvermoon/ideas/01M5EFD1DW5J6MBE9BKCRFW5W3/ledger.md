@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 明确协议与迁移边界
-- [ ] **I-S02:** 对齐运行链路与自有 Objective
-- [ ] **I-S03:** 验证层级与兼容性反例
+- [x] **I-S01:** 明确协议与迁移边界
+- [x] **I-S02:** 对齐运行链路与自有 Objective
+- [x] **I-S03:** 验证层级与兼容性反例
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 达成判定准确
-- [ ] **I-AC02:** 消费面与迁移一致
-- [ ] **I-AC03:** 仓库校验通过
+- [x] **I-AC01:** 达成判定准确
+- [x] **I-AC02:** 消费面与迁移一致
+- [x] **I-AC03:** 仓库校验与偏差归档
 
 ## Deployment
 

@@ -132,8 +132,8 @@ additionalProperties: false 的 object。不能可靠证明为 Unit 的 schema �
 即使它接受 `{}`；不会尝试求解任意 schema 等价。
 
 清单没有 target，probe 只观察，regulate 的 target 来自请求，依赖阈值来自消费者。
-continue schemaVersion 3 保存已选择的清单快照、上下文、输入、最终 subject、目录 ID、
-取回 commit 和 tree，恢复不重新发现同名入口；旧 schemaVersion 2 记录明确拒绝并指导重新绑定。
+continue schemaVersion 4 保存已选择的清单快照、上下文、输入、最终 subject、目录 ID、
+取回 commit 和 tree，恢复不重新发现同名入口；旧记录（包括 schemaVersion 3）明确拒绝，必须审核 v2 层级和目标后重新绑定。
 
 ### 来源与更新边界
 
@@ -667,7 +667,7 @@ portfolios are rejected:
 
 ```json
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "goals": [{
     "id": "service",
     "objective": "git+https://github.com/example/service.git#objective/",

@@ -137,12 +137,12 @@ test("ordinary independent package and root use distinct source Objectives and r
   await fixture(async ({ own, subject }) => {
     const isolated = await observation(own, packageId);
     assert.equal(isolated.status, 200, isolated.message);
-    assert.equal(isolated.payload.current.levelId, "terminal");
+    assert.equal(isolated.payload.current.levelId, "standardized");
     assert.deepEqual(Object.keys(isolated.payload.versions), [packageId]);
     const calls = [];
     const result = await observation(subject, rootId, calls);
     assert.equal(result.status, 200, result.message);
-    assert.equal(result.payload.current.levelId, "terminal", JSON.stringify(result));
+    assert.equal(result.payload.current.levelId, "standardized", JSON.stringify(result));
     assert.deepEqual(result.payload.versions, {
       [rootId]: "a".repeat(40),
       [packageId]: "b".repeat(40),
@@ -194,7 +194,7 @@ test("root architecture policy blocks structure before dependency probes and rec
     await write("packages/shared/src/index.ts", "export const value = 1;");
     const repaired = await observation(subject);
     assert.equal(repaired.status, 200, repaired.message);
-    assert.equal(repaired.payload.current.levelId, "terminal", JSON.stringify(repaired));
+    assert.equal(repaired.payload.current.levelId, "standardized", JSON.stringify(repaired));
   });
 });
 
@@ -212,7 +212,7 @@ test("package source failure becomes a real dependency problem, then repaired co
       currentLevelId: "structured",
     });
     await write("packages/shared/src/missing.ts", "export {};");
-    assert.equal((await observation(subject)).payload.current.levelId, "terminal");
+    assert.equal((await observation(subject)).payload.current.levelId, "standardized");
   });
 });
 
@@ -269,7 +269,7 @@ test("pnpm exclusion determines package membership rather than directory names o
     });
     const result = await observation(subject);
     assert.equal(result.status, 200, result.message);
-    assert.equal(result.payload.current.levelId, "terminal");
+    assert.equal(result.payload.current.levelId, "standardized");
   });
 });
 
@@ -356,9 +356,9 @@ test("dependency intent is not inferred from actual manifests and sibling defect
       extends: ["//"],
       tasks: { build: { outputs: ["out/**"] } },
     });
-    assert.equal((await observation(own, packageId)).payload.current.levelId, "terminal");
+    assert.equal((await observation(own, packageId)).payload.current.levelId, "standardized");
     await write("packages/unrelated/package.json", "{malformed");
-    assert.equal((await observation(own, packageId)).payload.current.levelId, "terminal");
+    assert.equal((await observation(own, packageId)).payload.current.levelId, "standardized");
     assert.equal((await observation(subject)).payload.current.levelId, "initial");
   });
 });
@@ -524,7 +524,7 @@ test("real repository has twenty-one package-owned subjects and no old contract 
             Object.values(state.observations).some(
               (entry) =>
                 entry.payload?.current.objectiveId === rootId &&
-                entry.payload.current.levelId === "terminal",
+                entry.payload.current.levelId === "standardized",
             ),
           );
         } finally {

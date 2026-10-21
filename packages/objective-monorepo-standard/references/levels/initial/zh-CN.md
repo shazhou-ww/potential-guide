@@ -1,6 +1,6 @@
 ---
 title: 结构尚未确认
-description: 根政策、目录职责、包声明和包结构依赖必须先成立。
+description: 协议内置基线，尚未达成结构层级；本层没有业务检查。
 references: [checks/structure]
 ---
 

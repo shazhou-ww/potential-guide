@@ -77,7 +77,7 @@ export async function sanity(subject, context, directory, selected) {
   };
   const initial = await probe();
   if (
-    initial.current?.levelId !== "unrepaired" ||
+    initial.current?.levelId !== "initial" ||
     !initial.problems?.some((entry) => entry.ref?.problemId === "marker-incorrect")
   )
     throw new Fault("sanity: initial failure was not independently observed.");
@@ -140,7 +140,7 @@ export async function sanity(subject, context, directory, selected) {
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
-  if (!correct || final.current?.levelId !== "terminal" || final.problems?.length !== 0)
+  if (!correct || final.current?.levelId !== "repaired" || final.problems?.length !== 0)
     throw new Problem("sanity-failed", {
       stage: "recheck",
       reason: !correct ? "nonce-mismatch" : "target-not-reached",

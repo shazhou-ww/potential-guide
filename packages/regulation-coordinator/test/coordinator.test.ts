@@ -56,10 +56,10 @@ function spec(id: string, version = "1".repeat(40)): PilotSpec {
       repositoryTree: "b".repeat(40),
     },
     manifest: {
-      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json",
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json",
       subjectSchema: { type: "object", additionalProperties: false },
       levels: [
-        { id: "initial", checks: [] },
+        { id: "available", checks: [] },
         { id: "ready", checks: [] },
       ],
       defaultLanguage: "en",
@@ -297,7 +297,7 @@ function multiLevelSpec(version = "1".repeat(40)): PilotSpec {
     manifest: {
       ...objective.manifest,
       levels: [
-        { id: "initial", checks: [] },
+        { id: "available", checks: [] },
         { id: "l1", checks: [] },
         { id: "l2", checks: [] },
         { id: "l3", checks: [] },
@@ -953,7 +953,14 @@ test("scope close aborts, waits for kill confirmation and releases owned source 
 
 test("provider demand aggregates strongest level, capabilities and priority without duplicate execution", async () => {
   const h = await harness({}, [{ ...resource, capacity: 3, capabilities: ["read", "edit"] }]);
-  const provider = spec("provider");
+  const base = spec("provider");
+  const provider: PilotSpec = {
+    ...base,
+    manifest: {
+      ...base.manifest,
+      levels: [...base.manifest.levels, { id: "complete", checks: [] }],
+    },
+  };
   h.catalog.set(provider.objectiveId, provider);
   try {
     await h.add(regulation("a", { requirements: ["read"], priority: 5 }));
@@ -1532,6 +1539,13 @@ test("invalid progress envelopes, sources, versions, levels and timestamps never
         payload: {
           ...valid.payload,
           current: { objectiveId: p.objectiveId, levelId: "unknown" },
+        },
+      },
+      {
+        ...valid,
+        payload: {
+          ...valid.payload,
+          current: { objectiveId: p.objectiveId, levelId: "terminal" },
         },
       },
       { ...valid, payload: { ...valid.payload, observedAt: "not-a-time" } },

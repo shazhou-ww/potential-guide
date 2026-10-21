@@ -451,9 +451,7 @@ export class Engine {
     const live = [...this.nodes.values()].filter((node) => !node.retiring);
     for (const node of live) {
       const root = this.roots.get(node.work.id) === node.uid;
-      node.target = root
-        ? node.regulation.targetLevel
-        : node.regulation.objective.manifest.levels[0].id;
+      node.target = root ? node.regulation.targetLevel : "initial";
       node.priority = root ? node.regulation.priority : Number.MAX_SAFE_INTEGER;
       node.requirements = root ? [...(node.regulation.requirements ?? [])] : [];
     }

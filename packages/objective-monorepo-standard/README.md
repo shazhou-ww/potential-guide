@@ -54,7 +54,8 @@ package.json，不由根清单枚举。原集中 requirements 文件及 contract
 
 ## 观察顺序、依赖与交接
 
-两个 Pilot 均为 initial → structured → terminal：
+两个 Pilot 均为 initial → structured → standardized。initial 为协议内置基线，
+terminal 仅为 standardized 的目标别名，观察与证据使用实际业务 ID：
 
 1. 根先检查声明完整性、共通配置、布局、文件职责、联合交付映射和闭包。
    可选 `policy.packageLayers` 指向仓库相对 YAML 分层政策；本仓库使用根目录

@@ -1,4 +1,4 @@
-$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json
 subjectSchema:
   type: object
   required: [marker, expected]
@@ -7,7 +7,7 @@ subjectSchema:
     marker: {type: string, minLength: 1}
     expected: {type: string, minLength: 48, maxLength: 48}
 levels:
-  - id: unrepaired
+  - id: repaired
     checks:
       - id: marker
         problems: [marker-incorrect]

@@ -17,7 +17,7 @@ execution was not requested, matching capabilities are unavailable, or work
 remained at the termination boundary. A cycle ending, duration expiring or an
 empty queue does not by itself prove all goals have reached their targets.
 
-Full subjects and Agent transcripts are not included. JSON schemaVersion 3 and
+Full subjects and Agent transcripts are not included. JSON schemaVersion 4 and
 existing exit codes remain unchanged. In particular, an observation failure
 retains the historical `internal-error` JSON category and exit code 70 for
 compatibility; human errors clearly identify the external observation/check

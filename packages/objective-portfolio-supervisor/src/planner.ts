@@ -511,6 +511,8 @@ export async function createPortfolioPlanner(
               )
                 throw new ObjectivePortfolioError("Handoff snapshot mismatch.");
             }
+            if (observation.current.levelId === "terminal")
+              throw new ObjectivePortfolioError("Attained evidence must use a real level ID.");
             levelRank(goal.objective, observation.current.levelId);
             const additions = new Map<string, ObjectiveGoal>();
             const requirements: Wait[] = [];

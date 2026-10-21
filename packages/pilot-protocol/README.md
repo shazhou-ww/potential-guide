@@ -5,7 +5,7 @@ and the canonical `$schema` URI. Declarations use `objective`; omitted
 `inputSchema` is Unit. Context is exactly `{repo, path}` and the bounded
 projection profile includes only the additional `$pathJoin(root, path)` function.
 See [document contracts and explicit migration](../../docs/objective-contracts.md).
-Offline JSON schemas are exported at `./schemas/objective/v1.json` and
+Offline JSON schemas are exported at `./schemas/objective/v2.json` and
 `./schemas/objectives/v1.json`, with strict validators at `./schemas`.
 The package also supplies the non-overwriting `objective-contract-migrate` command.
 
@@ -18,9 +18,8 @@ The input is never modified, existing outputs are refused, and pinned source
 evidence is never rewritten or invented.
 
 ```sh
-objective-contract-migrate --format manifest --input legacy.json --output objective.yaml
+objective-contract-migrate --format manifest --input legacy.json --output objective.yaml --attainment-levels ready
 objective-contract-migrate --format declarations --input legacy.yaml --output objectives.json --output-format json
-objective-contract-migrate --format portfolio --input legacy.yaml --output portfolio.yaml
 objective-contract-migrate --help --output-format json
 ```
 
@@ -39,6 +38,12 @@ Help includes additive option, default, constraint and example metadata.
 Projection migrations may require `--context-kind git|non-git` or explicitly
 reviewed subject expressions via `--subjects-file <name-to-expression.json>`;
 no binding is guessed.
+
+Manifest v2 uses cumulative attainment checks. `initial` is intrinsic and
+`terminal` is a reserved target alias for the real highest business level.
+Neither can be declared. Old manifests are rejected; migration requires reviewed
+`--attainment-levels`. Old Portfolio targets require explicit review and a new
+v4 input; pinned observations/recovery evidence must be reobserved, never rebound.
 
 Canonical Pilot definitions, schema compilation, strict YAML/manifest/reference
 parsing and validation, bounded subject projection and resource capability types.

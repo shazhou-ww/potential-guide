@@ -12,7 +12,7 @@ const fixtures = [
   "checks/marker/run.cjs",
   "references/checks/marker/en-US.md",
   "references/levels/terminal/en-US.md",
-  "references/levels/unrepaired/en-US.md",
+  "references/levels/repaired/en-US.md",
   "references/problems/marker-incorrect/en-US.md",
   "references/system/404/en-US.md",
   "references/system/overview/en-US.md",

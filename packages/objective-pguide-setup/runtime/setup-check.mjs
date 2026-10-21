@@ -864,7 +864,7 @@ async function sanity(subject, context, directory, selected) {
     return report2.payload;
   };
   const initial = await probe();
-  if (initial.current?.levelId !== "unrepaired" || !initial.problems?.some((entry) => entry.ref?.problemId === "marker-incorrect"))
+  if (initial.current?.levelId !== "initial" || !initial.problems?.some((entry) => entry.ref?.problemId === "marker-incorrect"))
     throw new Fault("sanity: initial failure was not independently observed.");
   const result = await context.cli(
     ["regulate", ...common, "--target", "terminal", "--agent", selected.name],
@@ -913,7 +913,7 @@ async function sanity(subject, context, directory, selected) {
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
-  if (!correct || final.current?.levelId !== "terminal" || final.problems?.length !== 0)
+  if (!correct || final.current?.levelId !== "repaired" || final.problems?.length !== 0)
     throw new Problem("sanity-failed", {
       stage: "recheck",
       reason: !correct ? "nonce-mismatch" : "target-not-reached"
@@ -1105,7 +1105,7 @@ var init_ssh_target = __esm({
       "checks/marker/run.cjs",
       "references/checks/marker/en-US.md",
       "references/levels/terminal/en-US.md",
-      "references/levels/unrepaired/en-US.md",
+      "references/levels/repaired/en-US.md",
       "references/problems/marker-incorrect/en-US.md",
       "references/system/404/en-US.md",
       "references/system/overview/en-US.md"

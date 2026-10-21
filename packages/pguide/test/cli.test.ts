@@ -241,7 +241,7 @@ test("scaffold and static validate preserve multilingual Wiki; production probes
     ]);
     assert.equal(probe.code, 0, probe.stdout);
     assert.equal(JSON.parse(probe.stdout).status, 200);
-    assert.equal(JSON.parse(probe.stdout).payload.current.levelId, "terminal");
+    assert.equal(JSON.parse(probe.stdout).payload.current.levelId, "ready");
     assert.equal(
       JSON.parse(probe.stdout).payload.versions[f.uri],
       await git(f.repository, "rev-parse", `${commit}:objective`),
@@ -249,12 +249,9 @@ test("scaffold and static validate preserve multilingual Wiki; production probes
     const overviewPath = join(guide, "references", "system", "overview", "en-US.md");
     const overview = await readFile(overviewPath, "utf8");
     assert.match(overview, /references: \[\]/);
-    const level = await readFile(
-      join(guide, "references", "levels", "initial", "en-US.md"),
-      "utf8",
-    );
+    const level = await readFile(join(guide, "references", "levels", "ready", "en-US.md"), "utf8");
     assert.doesNotMatch(level, /\noutcome:/);
-    assert.match(level, /---\n\nTODO: describe advancement\./);
+    assert.match(level, /---\n\nTODO: describe attainment conditions\./);
     for (const invalid of [
       overview.replace(/description: .*/, 'description: ""'),
       overview.replace(/description: .*/, `description: ${"a".repeat(201)}`),

@@ -110,15 +110,15 @@ for (const [prefix, subjectSchema] of [
     `${prefix}objective.yaml`,
     stringify(
       {
-        $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json",
+        $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json",
         subjectSchema,
         levels: [
           {
-            id: "initial",
+            id: "structured",
             checks: [{ id: "structure", problems: ["structure-incomplete"] }],
           },
           {
-            id: "structured",
+            id: "standardized",
             checks: [{ id: "deliveries", problems: ["delivery-incomplete"] }],
           },
         ],

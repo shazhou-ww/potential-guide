@@ -10,6 +10,7 @@
     "objective-contract-migrate": "./dist/migrate-cli.js"
   },
   "exports": {
+    "./schemas/objective/v2.json": "./schemas/objective/v2.json",
     "./schemas/objective/v1.json": "./schemas/objective/v1.json",
     "./schemas/objectives/v1.json": "./schemas/objectives/v1.json",
     "./schemas": {

@@ -40,7 +40,7 @@ for await (const line of createInterface({ input: process.stdin })) {
       result = { stopReason: "end_turn", summary: "Repaired" };
     } else {
       const context = JSON.parse(message.params.prompt[0].text.split("\\n").at(-1));
-      if (context.observations.fixture?.payload?.current?.levelId === "terminal" &&
+      if (context.observations.fixture?.payload?.current?.levelId === "ready" &&
           context.previousQueue.demands.length === 0)
         writeFileSync(marker + ".terminal", "observed");
       if (message.params.prompt[0].text.includes("Need a specialized verification tool"))
@@ -185,7 +185,7 @@ test("supervise plans once without repairs, then continuously observes and execu
     await writeFile(
       portfolio,
       JSON.stringify({
-        schemaVersion: 3,
+        schemaVersion: 4,
         goals: [
           {
             id: "fixture",
@@ -220,7 +220,7 @@ test("supervise plans once without repairs, then continuously observes and execu
     const planned = await run(bin("supervise"), args);
     assert.equal(planned.code, 0, planned.stdout + planned.stderr);
     const report = JSON.parse(planned.stdout);
-    assert.equal(report.schemaVersion, 3);
+    assert.equal(report.schemaVersion, 4);
     assert.equal(report.status, "planned");
     assert.equal(report.observations.fixture.payload.current.levelId, "initial");
     assert.equal(report.queue.demands[0].id, "fixture");
@@ -273,7 +273,7 @@ await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
     assert.equal(executed.code, 0, executed.stdout + executed.stderr);
     const execution = JSON.parse(executed.stdout);
     assert.equal(execution.status, "executed");
-    assert.equal(execution.observations.fixture.payload.current.levelId, "terminal");
+    assert.equal(execution.observations.fixture.payload.current.levelId, "ready");
     assert.equal(
       execution.observations.fixture.payload.versions[f.uri],
       await git(f.repository, "rev-parse", `${updatedRevision}:objective`),
@@ -330,12 +330,12 @@ test("supervise rejects legacy portfolios and invalid registrations before plann
       await writeFile(path, JSON.stringify({ schemaVersion, objectives: [] }));
       const result = await run(bin("supervise"), ["--portfolio-file", path, "--format", "json"]);
       assert.equal(result.code, 2, result.stdout + result.stderr);
-      assert.match(result.stdout, /schemaVersion: 3/);
+      assert.match(result.stdout, /schemaVersion: 4/);
     }
     assert.throws(
       () =>
         parsePortfolioFile({
-          schemaVersion: 3,
+          schemaVersion: 4,
           goals: [{ id: "bad" }],
           resources: [],
         }),
@@ -391,7 +391,7 @@ process.stdout.write(JSON.stringify({status:200,message:"",payload:ok?{ok:true,p
     await writeFile(
       portfolio,
       JSON.stringify({
-        schemaVersion: 3,
+        schemaVersion: 4,
         goals: [
           {
             id: "fixture",
@@ -439,7 +439,7 @@ await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
       "Consumer was not freshly observed at terminal.",
     );
     assert.equal(result.observations.fixture.payload.current.objectiveId, consumer.uri);
-    assert.equal(result.observations.fixture.payload.current.levelId, "terminal");
+    assert.equal(result.observations.fixture.payload.current.levelId, "ready");
     const providerTree = await git(
       provider.repository,
       "rev-parse",
@@ -531,7 +531,7 @@ for await (const line of createInterface({ input: process.stdin })) {
   if (message.method === "session/prompt") {
     const context = JSON.parse(message.params.prompt[0].text.split("\\n").at(-1));
     const payload = context.observations.fixture?.payload;
-    if (payload?.current.levelId === "terminal" && context.previousQueue.demands.length === 0) {
+    if (payload?.current.levelId === "ready" && context.previousQueue.demands.length === 0) {
       const key = JSON.stringify({ versions: payload.versions, sources: payload.sources });
       appendFileSync(marker + ".samples", key + "\\n");
       const last = readFileSync(marker + ".samples", "utf8").trim().split("\\n").slice(-3);
@@ -557,7 +557,7 @@ for await (const line of createInterface({ input: process.stdin })) {
     );
     const portfolio = join(consumer.directory, "portfolio.json");
     const content = JSON.stringify({
-      schemaVersion: 3,
+      schemaVersion: 4,
       goals: [
         {
           id: "fixture",
@@ -671,7 +671,7 @@ await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
       result.stderr + JSON.stringify({ providerTree, dependencyTree, report }),
     );
     const final = report.observations.fixture.payload;
-    assert.equal(final.current.levelId, "terminal");
+    assert.equal(final.current.levelId, "ready");
     assert.equal(final.versions[consumer.uri], updatedTree);
     assert.equal(final.sources[consumer.uri].commit, updatedCommit);
     assert.equal(final.versions[provider.uri], dependencyTree);

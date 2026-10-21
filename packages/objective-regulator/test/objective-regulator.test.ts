@@ -164,7 +164,7 @@ test("unresolved authorization is normal after a fresh observation and does not 
     assert.equal(result.stopReason, "authorization-required");
     assert.deepEqual(result.authorizationRequests, [deniedRequest]);
     assert.equal(result.latestObservation.status, 200);
-    assert.equal(result.latestObservation.payload?.current.levelId, "z-first");
+    assert.equal(result.latestObservation.payload?.current.levelId, "initial");
     assert.equal(result.stalledRuns, 2);
     assert.equal(result.iterations, 1);
     assert.equal(observations, 2);
@@ -367,6 +367,19 @@ test("an already reached target completes once without scheduling rechecks", asy
   assert.equal(result.iterations, 0);
   assert.equal(observations, 1);
   assert.equal(agents, 0);
+});
+
+test("intrinsic initial target validates subject but needs neither business checks nor Agent execution", async () => {
+  const value = await input({ targetLevel: "initial" });
+  const runtime: RegulationRuntime = {
+    pilot: { resolveCheck: () => assert.fail("initial must not resolve checks") },
+    executeAgent: async () => assert.fail("initial must not execute an Agent"),
+  };
+  const result = await Effect.runPromise(regulate(value, runtime));
+  assert.equal(result.stopReason, "target-reached");
+  assert.equal(result.iterations, 0);
+  assert.equal(result.latestObservation.payload?.current.levelId, "initial");
+  assert.equal((await errorOf({ ...value, subject: {} }, runtime)).status, 400);
 });
 
 test("agent-run quota exhausts only after observing the final completed repair", async () => {
@@ -644,11 +657,15 @@ test("dependency after a repair hands off before accumulating an internal stall"
 });
 
 test("requested target attainment wins over dependencies needed only above that target", async () => {
+  const dependency = await dependencyRuntime(() => false, true);
   const result = await Effect.runPromise(
     regulate(
       { ...(await input({ targetLevel: "z-first" })), history: { stalledRuns: 2 } },
       {
-        pilot: await dependencyRuntime(() => false, true),
+        pilot: {
+          resolveCheck: (ref) =>
+            ref.levelId === "z-first" ? async () => pass : dependency.resolveCheck(ref),
+        },
         executeAgent: async () => assert.fail("The requested target is already reached."),
       },
     ),
@@ -836,7 +853,7 @@ test("behavior refreshes changed strategies after Agent mutation and rejects lat
     assert.equal(last.state, "ready");
     if (last.state === "ready") assert.equal(last.value.stopReason, "target-reached");
     assert.deepEqual(events, ["observation", "abort", "observation"]);
-    assert.deepEqual(reports, ["z-first", "terminal"]);
+    assert.deepEqual(reports, ["initial", "a-next"]);
     assert.equal(agents, 1, "Replacement must observe mutation rather than reuse stale failure.");
     release?.();
     await delay(10);
@@ -897,6 +914,14 @@ test("decision uses local level order and rejects foreign problems", async () =>
     versions: { [objectiveId]: value.spec.objective.version },
   };
   assert.equal(decideRegulation(value, observation).type, "stop");
+  assert.throws(
+    () =>
+      decideRegulation(value, {
+        ...observation,
+        current: { objectiveId, levelId: "terminal" },
+      }),
+    /real level/,
+  );
   assert.throws(
     () =>
       decideRegulation(value, {

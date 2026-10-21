@@ -76,7 +76,7 @@ console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
     await writeFile(
       portfolio,
       JSON.stringify({
-        schemaVersion: 3,
+        schemaVersion: 4,
         goals: [
           {
             id: "readiness",
@@ -274,7 +274,7 @@ test("regulate and continue expose stop conditions and persisted recovery withou
     ]);
     const state = join(f.state, "regulations", saved.regulationId, "regulation.json");
     const persisted = JSON.parse(await readFile(state, "utf8"));
-    assert.equal(persisted.schemaVersion, 3);
+    assert.equal(persisted.schemaVersion, 4);
     assert.equal(persisted.subject.privateValue, "SUBJECT_MUST_NOT_APPEAR");
     const continued = await run(bin("continue"), [saved.regulationId, "--config", f.config]);
     assert.equal(continued.code, 5, continued.stdout + continued.stderr);
@@ -435,7 +435,7 @@ test("supervise distinguishes planning, queued work, execution boundary and comp
       "schemaVersion",
       "status",
     ]);
-    assert.equal(plan.schemaVersion, 3);
+    assert.equal(plan.schemaVersion, 4);
     assert.equal(plan.status, "planned");
     assert.equal(plan.queue.demands.length, 1);
     const executionArgs = [...f.supervisionArgs, "--execute", "--duration-ms", "1500"];
@@ -488,9 +488,9 @@ test("renderers escape Markdown and never display dependency subjects or transcr
     objectiveId,
     version: "a".repeat(40),
     manifest: {
-      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json",
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json",
       subjectSchema: { type: "object" },
-      levels: [{ id: "initial", checks: [] }],
+      levels: [{ id: "ready", checks: [] }],
       defaultLanguage: "en-US",
       languages: ["en-US"],
     },
@@ -528,7 +528,7 @@ test("renderers escape Markdown and never display dependency subjects or transcr
   };
   const supervision = supervisionMarkdown(
     {
-      schemaVersion: 3,
+      schemaVersion: 4,
       status: "executed",
       observations: { [goal.id]: observation },
       queue: { revision: 1, demands: [{ ...goal, revision: 1, requirements: ["repair"] }] },

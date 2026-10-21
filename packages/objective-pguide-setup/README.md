@@ -204,8 +204,8 @@ pguide probe --pilot "git+https://github.com/shazhou-ww/potential-guide.git#pack
 
 `initial` 表示尚未确认安装；`installed` 已确认版本，但尚未确认配置；
 `configured` 已确认配置、Agent 和无 prompt 的 ACP 会话建立；
-隐式 `terminal` 才表示本次真实 sanity 完成。没有显式 `verified` 等级：
-**terminal 就是 verified**，不会把开始 sanity 当成完成。
+`verified` 表示本次真实 sanity 完成。每层 checks 是累计达成该层的条件，
+不是离开该层的条件；`terminal` 仅为 verified 的目标别名，不是独立层级或观察结果。
 
 configuration 会启动实际 ACP 进程但不发送 session/prompt，不主动调用付费模型。
 如果某 Agent 在 initialize/session/new 自身就执行付费操作，请不要选用它进行无费用检查。
