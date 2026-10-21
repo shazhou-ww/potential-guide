@@ -1,3 +1,4 @@
 {"type":"setAlias","timestamp":"2026-10-21T05:38:34.181Z","payload":{"alias":"level-attainment"}}
 {"type":"submitIdeal","timestamp":"2026-10-21T05:40:03.934Z","payload":{"idealRevision":"0b23755e287c7c14d06955e7734b4ff277fc64bf"}}
 {"type":"submitIdeal","timestamp":"2026-10-21T06:29:27.570Z","payload":{"idealRevision":"f0f1a769ad02af3aa4b4cb13912724b56e65f994"}}
+{"type":"acceptIdeal","timestamp":"2026-10-21T06:35:53.077Z","payload":{"idealRevision":"f0f1a769ad02af3aa4b4cb13912724b56e65f994"}}
