@@ -50,10 +50,13 @@ export interface RegulationTarget {
   readonly intents: Readonly<Partial<Record<ObjectKey, TargetIntent>>>;
 }
 
-export interface ResourceAllocation {
-  readonly binding: AgentBinding;
-  readonly concurrency: number;
-}
+export type ResourceAllocation =
+  | { readonly kind: "no-resource" }
+  | {
+      readonly kind: "configured";
+      readonly binding: AgentBinding;
+      readonly concurrency: number;
+    };
 
 export interface AllocationAcknowledgement {
   readonly revision: Revision;
@@ -191,23 +194,11 @@ export type CoordinatorLifecycle =
       readonly fault: Fault;
     };
 
-export type InputState =
-  | { readonly phase: "open" | "ended" }
-  | {
-      readonly phase: "failed";
-      readonly fault: Fault;
-    };
-
 export interface CoordinatorState {
-  readonly instanceId: string;
   readonly revision: Revision;
   readonly acknowledged: {
     readonly targets: RegulationTarget;
-    readonly allocation: AllocationAcknowledgement | null;
-  };
-  readonly inputs: {
-    readonly targets: InputState;
-    readonly allocation: InputState;
+    readonly allocation: AllocationAcknowledgement;
   };
   readonly tasks: readonly Task[];
   readonly observations: readonly ObservedObject[];
@@ -228,10 +219,6 @@ export type CoordinatorStateReducer<Event> =
 export interface CoordinatorCheckpoint {
   readonly targets: RegulationTarget;
   readonly coordinator: CoordinatorState;
-  readonly positions: {
-    readonly commands: string | null;
-    readonly events: string | null;
-  };
 }
 ```
 
@@ -273,18 +260,21 @@ dependencies 是真实采用的编排关系，而不是所有可能依赖；prov
 
 ## 权威状态与推导值
 
+- ResourceAllocation 的 no-resource 是合法的无资源分配意图，也是输入 Behavior 的初值；不是输入缺失、错误或 dummy binding。configured 表达 binding 与非负安全整数 concurrency，允许 concurrency 为 0 以保留配置。采纳 no-resource 不代表实际调用已停止或占用归零。
 - acknowledged.allocation 表达期望，Run.binding 表达实际使用；改变前者不修改后者。确认 concurrency 从 4 变为 2 后，实际占用仍可为 4，停止策略不由这个类型自动规定。
 - 实际占用从 running、stopping 和尚未核实的 unverified 调用推导，不另存一个可能漂移的 activeCount。未核实调用在确认退出前保守保留占用。
 - observations 每个精确对象保留最新采纳的成功观察；没有条目表示未知，不等于 initial。旧 run 和错误 envelope 不可作为成功观察写入，终结时的历史证据引用是否独立保留需继续讨论。
 - reserved 是累计权威预留，不能仅从当前任务数重算；启动抛错也可能已经预留。limits 来自可信配置，持久化副本用于核对恢复上下文，不允许快照自行扩充限制。
-- lastFault 只投影最近一次诊断，不表示所有历史错误或永久未解决故障；完整历史如需保留属于事件存储。任务终结错误、输入失败与服务失败存于各自类型，诊断记录不自动改变它们。
+- lastFault 只投影最近一次诊断，不表示所有历史错误或永久未解决故障；完整历史如需保留属于事件存储。任务终结错误与服务失败存于各自类型，诊断记录不自动改变它们；输入校验或传输错误仍须明确反馈，不因移除通道状态而被静默忽略。
 - 无 resource ID、capabilities、requirements 或 grants/ceiling。AgentBinding 的配置只能使用可持久化的非秘密数据或安全凭据引用，真实资源自行授权；配额和预算仍独立约束执行。
 
 ## 初值、恢复与下一步
 
-新建 RegulationTarget 为 revision 0、intents 为 {}。新建 CoordinatorState 的 acknowledged.targets 同为空，allocation 为 null、tasks/observations 为空、reserved 全零、lastFault 为 null、输入 open，服务 open；instanceId 与可信 constraints 由宿主提供，未确认资源意图前不自行启动。
+新建 RegulationTarget 为 revision 0、intents 为 {}。新建 CoordinatorState 的 revision 为 0，acknowledged.targets 同为空，acknowledged.allocation 为 { revision: 0, value: { kind: "no-resource" } }；tasks/observations 为空、reserved 全零、lastFault 为 null、服务 open，可信 constraints 由宿主提供。这是已知的初始基线，不声称收到过外部资源更新；后续采纳更新才推进 allocation 修订，初值不启动调用。
 
-Checkpoint 是两份状态与消息处理位置的一致保存边界，不是公布持久化文件格式。需要验证对象唯一性、修订与引用一致性、可信约束及消息位置；不能把任意时刻分别读取的两个 state 拼成“原子快照”。恢复先纯归约，再以 recovering/unverified 核实外部运行，不清空预算、不重放动作、不把同一已终结意图当新请求；格式版本、重关联协议和存储失败行为待实施时明确。
+CoordinatorState 不含 instanceId 或 inputs。Coordinator 身份由宿主、存储 key 或传输 envelope 关联，不能与调用 RunId 混为一谈；是否另需恢复代次由执行协议决定。输入通道的 open/ended/failed、连接与重连属于适配层；通道结束或断开不撤销目标、不把资源意图变为 no-resource，也不自动取消任务或关闭服务。真正影响服务继续运行的故障以明确诊断和相应服务生命周期变化表达。
+
+CoordinatorCheckpoint 仅封装两份领域状态，不固定日志方案或存储格式。需验证对象唯一性、修订与引用一致性及可信约束，不能把任意时刻分别读取的两个 state 拼成“原子快照”。若采用快照加日志重放，由持久化适配层在外层封装与快照一致的 command/event 处理位置，并负责可靠接续；不预设两个 string | null 字段，也不默认领域 revision 就是日志位置。恢复先还原状态，采用增量回放时只做纯归约，再以 recovering/unverified 核实外部运行，不清空预算、不重放动作、不把同一已终结意图当新请求；格式版本、重关联协议和存储失败行为待实施时明确。
 
 全局 revision 与各条目的 updatedAtRevision 必须一起保存，恢复从保存的全局水位继续。Record 使用普通 JSON 对象表达，无需 Map 专用的 entries 转换；仍须校验所有值可持久化、key 与对象身份一致及版本有效，缺失条目用属性不存在表达，不写入 undefined。具体快照格式仍待确定。
 

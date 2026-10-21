@@ -6,16 +6,16 @@
 
 ## 先界定状态
 
-新建 Coordinator 实例的候选 initial 为：服务已取得并处于 open；没有已确认意图、任务、调用、依赖、观察或资源侧协助请求；尚未确认资源分配意图；累计预算预留为零。可信约束绑定该实例。恢复实例应从持久化状态及处理位置接续，不能套用新建空初值。资源意图即使一开始已经提供，也须通过确认事件进入状态；reducer 不偷读输入。open 不等于资源已就绪，unknown 不等于 level initial。
+新建 Coordinator 的 initial 为：服务处于 open；已确认目标为空，资源基线为 revision 0 的 no-resource；没有任务、调用、依赖、观察或资源侧协助请求，累计预算预留为零。可信约束由宿主提供，外部实例身份不放进 state。恢复应从持久化状态接续，若采用日志则由适配层关联处理位置，不能套用新建空初值。非初值的资源意图须通过确认事件进入状态；reducer 不偷读输入。open 不等于资源已就绪，unknown 不等于 level initial。
 
 候选可观察投影包括：
 
 - 意图：已接受的 Objective/subject 目标、priority、请求发生身份与修订，以及请求处理结果。
 - 任务与调用：pending/running/stopping/ended、有效调度要求、依赖关系、来源关联、执行资源与终结结果。
 - 观察：按精确 Objective/subject/版本与来源关联的最新有效观察及证据，不维护历史最高 level 作为当前事实。
-- 资源：已确认的分配意图（binding/期望并发度）与实际使用的 binding/占用分别表达；占用从尚未真正终结的调用推导，期望小于实际是合法过渡。
+- 资源：已确认的分配意图（no-resource 或 configured 的 binding/期望并发度）与实际使用的 binding/占用分别表达；占用从尚未真正终结的调用推导，无资源意图或期望小于实际均可与尚未归零的占用并存。
 - 协助与异常：真实资源返回的拒绝、必要的登录/授权交互及可归属故障；不保留 harness 自有 grants/ceiling 审批或 capabilities 匹配需求。
-- 服务：open/closing/closed/failed、输入生命周期和累计可信预算预留。
+- 服务：open/closing/closed/failed 和累计可信预算预留；不投影输入通道的连接、结束或失败状态，输入错误仍明确报告。
 
 这些是公开投影，不要求暴露内部队列布局、Promise、resolver 句柄或保存无限历史数组。精确快照、保留和压缩策略须另定。
 
@@ -27,9 +27,9 @@
 | task-changed | 单次任务、调用与依赖 | 创建/更新/终结，pending/running/stopping/ended，任务及可选 run 身份、原因、有效调度要求、依赖与派生来源、终结 outcome |
 | observation-recorded | 已采纳的观察 | 精确对象和来源、有效观察 envelope、观察与采纳顺序、产生它的调用关联 |
 | assistance-requested | 真实资源需要的外部协助（是否独立保留待定） | 如确有登录/授权挑战，关联实际请求及调用；不是 harness 自建审批，不等于自动授予权限 |
-| resources-changed | 已确认的资源分配意图，不是已经完成的分配 | 记录完整 binding/期望 concurrency 及修订；不带资源池增删改或只给 IDs，不用期望覆盖实际占用 |
+| resources-changed | 已确认的资源分配意图，不是已经完成的分配 | 记录完整 no-resource 或 configured 值及修订；不带资源池增删改或只给 IDs，不用期望覆盖实际占用 |
 | fault-reported | 可归属异常记录 | 发生阶段、原因、关联对象及诊断；任务/资源/服务的实际状态效果由对应状态 delta 明确表达 |
-| coordinator-changed | 服务、输入与全局约束 | 输入 ended/failed、服务 closing/closed/failed；预算预留必须可由调用启动或失败启动事件明确归约，不以隐藏重算或退还改变 |
+| coordinator-changed | 服务与全局约束 | 服务 closing/closed/failed，不含输入通道 ended/failed；预算预留必须可由调用启动或失败启动事件明确归约，不以隐藏重算或退还改变 |
 
 这里的 changed 不是任意 JSON patch 或可选字段袋；后续应为每种合法转换定义具体 payload、前置修订和归约规则。七是候选状态分区的数量，不是压低事件 discriminator 数量的指标。
 
@@ -57,7 +57,8 @@
 | capability-request、authorization-request | harness 自有审批/匹配模型取消；真实资源协助如仍需要，另行定义 assistance-requested，不照搬旧 union |
 | resources-accepted | 资源分配意图的确认 delta；实际分配和占用仍从任务/调用 delta 推导 |
 | failure | 调用错误以 task-changed ended(error) 表达；非终结故障以 fault-reported 表达，涉及状态变化时另有明确 delta |
-| input-ended、closed | coordinator-changed |
+| input-ended | 输入适配层事实，不是核心状态 delta；不隐式撤销意图或关闭服务 |
+| closed | coordinator-changed |
 | stale-result | 若需公开可归属异常则 fault-reported，否则仅诊断日志；绝不改变新调用的观察或结果 |
 | reclaimed | 内部内存回收不公开；有效任务或依赖从公开状态移除必须有显式 task-changed，不可静默删除 |
 
