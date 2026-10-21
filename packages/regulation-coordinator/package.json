@@ -1,0 +1,44 @@
+{
+  "name": "@potential-guide/regulation-coordinator",
+  "version": "0.1.0-rc.0",
+  "description": "Scoped command-driven Regulation scheduling and runtime dependency ownership.",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.ts\"",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@potential-guide/effects": "workspace:^",
+    "@potential-guide/objective-pilot": "workspace:^",
+    "@potential-guide/objective-regulator": "workspace:^",
+    "@potential-guide/objective-portfolio-supervisor": "workspace:^"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shazhou-ww/potential-guide.git",
+    "directory": "packages/regulation-coordinator"
+  }
+}

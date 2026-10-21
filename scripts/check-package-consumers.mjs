@@ -19,6 +19,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     ["pilot", ["@potential-guide/pguide-pilot"]],
     ["regulation", ["@potential-guide/pguide-regulate"]],
     ["supervision", ["@potential-guide/pguide-supervise"]],
+    ["coordinator", ["@potential-guide/effects", "@potential-guide/regulation-coordinator"]],
     ["objectives", ["@potential-guide/pguide-objectives"]],
     ["config", ["@potential-guide/pguide-config"]],
     ["agents", ["@potential-guide/pguide-agents"]],
@@ -75,6 +76,55 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     }
     for (const entry of entries) visit(entry);
     await verifyConsumerGraph(directory, closure, entries);
+    if (label === "coordinator") {
+      await writeFile(
+        join(directory, "api.ts"),
+        `
+        import { Effect, Stream, SubscriptionRef } from "@potential-guide/effects";
+        import { regulationCoordinator, type AgentResource, type CoordinatorCommand, type CoordinatorOptions } from "@potential-guide/regulation-coordinator";
+        export const api = (
+          resources: SubscriptionRef.SubscriptionRef<readonly AgentResource[]>,
+          commands: Stream.Stream<CoordinatorCommand>,
+          options: CoordinatorOptions
+        ) => Effect.scoped(regulationCoordinator(resources, commands, options));
+        `,
+      );
+      await writeFile(
+        join(directory, "tsconfig.json"),
+        JSON.stringify({
+          compilerOptions: {
+            target: "ES2023",
+            module: "NodeNext",
+            moduleResolution: "NodeNext",
+            strict: true,
+            noEmit: true,
+            skipLibCheck: true,
+            types: [],
+          },
+          files: ["api.ts"],
+        }),
+      );
+      await run(
+        process.execPath,
+        [
+          join(root, "node_modules", "typescript", "bin", "tsc"),
+          "-p",
+          directory,
+          "--pretty",
+          "false",
+        ],
+        directory,
+      );
+      await run(
+        process.execPath,
+        [
+          "--input-type=module",
+          "-e",
+          'import { regulationCoordinator } from "@potential-guide/regulation-coordinator"; if (typeof regulationCoordinator !== "function") throw new Error("Missing coordinator export");',
+        ],
+        directory,
+      );
+    }
     if (label === "protocol") {
       for (const name of closure.keys())
         assert.doesNotMatch(

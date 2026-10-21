@@ -1,0 +1,14 @@
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
+objectives:
+  standardize:
+    description: Standardize the independent scoped Regulation Coordinator library.
+    objective: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
+    inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
+    subject: |
+      {
+        "root": context.repo.rootPath, "directory": context.path,
+        "roles": ["npm"], "runtime": "node",
+        "allows": ["@potential-guide/effects", "@potential-guide/objective-pilot", "@potential-guide/objective-regulator", "@potential-guide/objective-portfolio-supervisor"],
+        "entries": ["src/index.ts"], "generated": [], "deliveries": [],
+        "joins": [{"id": "public-library-suite", "kind": "npm"}]
+      }

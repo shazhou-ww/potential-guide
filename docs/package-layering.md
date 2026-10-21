@@ -5,12 +5,16 @@
 | Layer | Packages |
 | --- | --- |
 | Protocol | `@potential-guide/effects`, `@potential-guide/pilot-protocol` |
-| Business logic | `@potential-guide/objective-pilot`, `@potential-guide/objective-regulator`, `@potential-guide/objective-portfolio-supervisor` |
+| Business logic | `@potential-guide/objective-pilot`, `@potential-guide/objective-regulator`, `@potential-guide/objective-portfolio-supervisor`, `@potential-guide/regulation-coordinator` |
 | Tools | `pguide`, `@potential-guide/cli-core`, `@potential-guide/pguide-config`, `@potential-guide/pguide-agents`, `@potential-guide/cli-runtime`, `@potential-guide/objective-declarations`, `@potential-guide/pguide-pilot`, `@potential-guide/pguide-regulate`, `@potential-guide/pguide-supervise`, `@potential-guide/pguide-objectives` |
 
 Allowed dependencies point downwards, or stay within a layer. Tools can consume
 protocol directly. Same-layer dependencies are permitted, not special exceptions;
 ordinary workspace/build cycle restrictions still apply.
+
+`regulation-coordinator` is an independent scoped command-to-fact service. Its
+transition dependency on Portfolio is limited to public pure decisions and runner
+types; no existing Planner, Supervisor or command is redirected to the new service.
 
 `effects` remains executable protocol primitives, not an empty types package.
 `pilot-protocol` contains the canonical Pilot contract types, manifest and
