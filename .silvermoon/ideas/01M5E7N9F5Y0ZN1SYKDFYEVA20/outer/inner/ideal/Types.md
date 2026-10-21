@@ -6,7 +6,13 @@
 
 - RegulationTarget：治理目标意图的状态；包含多个 Objective/subject 的最新意图及发生修订。
 - ResourceAllocation：资源分配意图；binding 与期望并发度整体替换，不表示已经分配或已经停止调用。
-- CoordinatorState：Coordinator 已确认输入及实际执行的可观察状态；不包含 Promise、进程句柄或调度器内部对象。
+- CoordinatorState：Coordinator 继续正确运行所必需的当前状态；不包含历史调用、Promise、进程句柄或调度器内部对象。
+
+## 当前状态与历史查询
+
+state 只保存当下调度、执行及恢复必需的信息，不承担历史查询。判断字段是否必要的标准是：去掉它以后，不查询历史，Coordinator 能否仍正确决定下一步。历史对当前仍有效的影响可以保留为最小摘要，例如累计预算、已处理意图修订和尚未解除的依赖；不为 UI 翻看而保留完整历史记录。
+
+正在进行的 Regulation 直接进入 activeRegulations，不再用 Task 包装排队、执行和终结的完整生命周期，也不增加 pastRegulations。调用确认结束后从 activeRegulations 移除，结果及其关联由事件保存。UI 用当前 state 展示现状，通过独立的持久化消息历史或查询投影查看过去；实时 Stream 本身不提供历史查询保证。
 
 下面是一个可独立类型检查的代码块。复用已有协议的对象、观察与 binding 数据类型，不复用旧五命令、资源池或 harness 权限类型。所有别名暂用普通 string/number；合法标识、有限 JSON、非负安全整数、引用完整性等仍需运行时验证，不能因 TS 通过便视为有效输入。
 
@@ -20,8 +26,7 @@ import type { AgentBinding } from "@potential-guide/objective-regulator";
 
 export type Revision = number;
 export type ObjectKey = string;
-export type TaskId = string;
-export type RunId = string;
+export type RegulationId = string;
 
 export interface RegulationObject {
   readonly objective: {
@@ -76,88 +81,42 @@ export interface Fault {
     | "recovery"
     | "infrastructure";
   readonly message: string;
-  readonly taskId: TaskId | null;
-  readonly runId: RunId | null;
-}
-
-export interface Run {
-  readonly id: RunId;
-  readonly binding: AgentBinding;
-  readonly intent: IntentRef | null;
-  readonly targetLevel: string;
-  readonly recoveryRef: string | null;
+  readonly regulationId: RegulationId | null;
 }
 
 export type ActiveExecution =
   | {
       readonly phase: "running";
-      readonly run: Run;
     }
   | {
       readonly phase: "stopping";
-      readonly run: Run;
       readonly reason: string;
     };
 
-export type TaskOutcome =
-  | { readonly kind: "target-reached" }
-  | {
-      readonly kind: "blocked";
-      readonly reason: string;
-    }
-  | {
-      readonly kind: "exhausted";
-      readonly limit: "time" | "agent-runs" | "stall" | "agent-limit";
-    }
-  | {
-      readonly kind: "cancelled" | "superseded";
-      readonly reason: string;
-    }
-  | {
-      readonly kind: "error";
-      readonly fault: Fault;
-    };
-
-export type TaskExecution =
-  | {
-      readonly phase: "pending";
-      readonly reason: string | null;
-    }
-  | ActiveExecution
-  | {
-      readonly phase: "unverified";
-      readonly lastKnown: ActiveExecution;
-    }
-  | {
-      readonly phase: "ended";
-      readonly run: Run;
-      readonly outcome: TaskOutcome;
-    }
-  | {
-      readonly phase: "ended";
-      readonly run: null;
-      readonly outcome: Exclude<TaskOutcome, { readonly kind: "target-reached" }>;
-    };
-
-export interface TaskDependency {
-  readonly providerTaskId: TaskId;
-  readonly minimumLevel: string;
-}
-
-export interface Task {
-  readonly id: TaskId;
+export interface ActiveRegulation {
+  readonly id: RegulationId;
   readonly object: RegulationObject;
   readonly intent: IntentRef | null;
-  readonly previousTaskId: TaskId | null;
   readonly targetLevel: string;
-  readonly priority: number;
-  readonly dependencies: readonly TaskDependency[];
-  readonly execution: TaskExecution;
+  readonly binding: AgentBinding;
+  readonly recoveryRef: string | null;
+  readonly execution:
+    | ActiveExecution
+    | {
+        readonly phase: "unverified";
+        readonly lastKnown: ActiveExecution;
+      };
+}
+
+export interface CurrentDependency {
+  readonly consumer: RegulationObject;
+  readonly provider: RegulationObject;
+  readonly minimumLevel: string;
 }
 
 export interface ObservedObject {
   readonly object: RegulationObject;
-  readonly runId: RunId;
+  readonly regulationId: RegulationId;
   readonly value: PilotObservation;
 }
 
@@ -200,11 +159,12 @@ export interface CoordinatorState {
     readonly targets: RegulationTarget;
     readonly allocation: AllocationAcknowledgement;
   };
-  readonly tasks: readonly Task[];
+  readonly activeRegulations: readonly ActiveRegulation[];
+  readonly processedIntents: Readonly<Partial<Record<ObjectKey, Revision>>>;
+  readonly dependencies: readonly CurrentDependency[];
   readonly observations: readonly ObservedObject[];
   readonly constraints: ExecutionConstraints;
   readonly reserved: BudgetReservation;
-  readonly lastFault: Fault | null;
   readonly lifecycle: CoordinatorLifecycle;
 }
 
@@ -246,36 +206,37 @@ IntentRef 由对象 key 与该条目的 updatedAtRevision 组成，其 revision 
 
 意图顺序按 priority 升序、updatedAtRevision 升序确定，不依赖 Record 的属性枚举顺序或墙钟时间。同优先级下按最近更新的先后排序，不保留首次加入位置：A(priority 1, revision 10)、B(1, 12)、C(0, 15) 排为 C、A、B；再次更新 A 得到全局版本 16 后排为 C、B、A。仅 priority 更新也刷新逻辑时间，但重新排序不等于无故重启正在运行的调用。
 
-映射加上述排序表达意图的优先队列视图，不是已就绪的实际执行队列。Coordinator 仍结合已处理意图修订、实际调用和依赖决定可执行项；initial 意图不推进，已终结的同一意图不因扫描或恢复被重新执行。派生任务的有效 priority 与排序关联仍需在 CoordinatorState 的转换讨论中明确。
+映射加上述排序表达意图的优先队列视图，不是已就绪的实际执行队列。Coordinator 仍结合已处理意图修订、实际调用和依赖决定可执行项；initial 意图不推进，已终结的同一意图不因扫描或恢复被重新执行。派生需求的有效 priority 与排序关联仍需在 CoordinatorState 的转换讨论中明确。
 
-## 任务、调用与依赖
+## 当前调用、意图进度与依赖
 
-Task 是一次排队到终结的执行任务，不是长期业务目标。intent 非空表示关联外部的一次意图；派生 provider 可以没有自己的外部意图，由其他任务的 dependencies 引用。previousTaskId 关联有限依赖编排中新排的 consumer 调用，不表示旧调用复活；共享 provider 的引用从消费者记录推导，不再重复存反向依赖表。
+ActiveRegulation 只表示已经发起且尚未确认结束的一次调用。intent 非空表示启动时关联的外部意图；派生 provider 可以没有自己的外部意图。object、intent、targetLevel 和 binding 捕获启动事实，后续意图更新不改写旧调用的身份或目标；不再同时维护 TaskId 与 RunId 两套执行身份。
 
-Task 的 targetLevel/priority 是实际采用的调度要求，可以因共享聚合与新意图确认而不同于单个外部意图。Run.intent/targetLevel 捕获启动时的关联与目标，不能仅凭任务更新后的 targetLevel 判定旧 run 的成功；更新和终结证据的完整规则仍需细化。
+activeRegulations 只有 running、stopping 和恢复后尚未核实的 unverified，不含 pending 或 ended。停止请求不移除调用；确认退出后，通过明确的终结事件移除调用，并原子更新仍影响当前运行的摘要。达标、blocked、耗尽、取消或错误的完整结果属于事件历史，不另存历史数组；启动前撤销、initial 或未产生外部调用的启动失败也不伪造一次 Regulation。启动副作用与持久化之间的故障窗口仍须由恢复协议覆盖，不能因尚未确认启动就漏记可能存在的外部执行。
 
-pending 不包含 Run；running/stopping 才包含当前调用。恢复时先保留为 unverified，再核实是否重关联或已经退出。ended 是终态，run 为 null 允许尚未启动就撤销或启动失败，但不能声称 target-reached；有 run 的达标结果仍须有效证据支持，类型检查不能代替事实验证。initial 无工作需求的完成方式仍需定义，不伪造一次 run 或 observation。
+pending 是尚未执行的当前需求，可以从已确认意图、processedIntents、活跃调用及有效依赖关系推导，不预先包装成 Task。processedIntents 是每个对象已处理完意图的修订摘要，不是确认收到输入的水位，也不是完整结果表。它防止调用结束移除后再次执行同一意图；initial 或未启动即终结的需求也须明确推进相应进度。旧调用反馈不得把新意图标记为已处理，仍有有限依赖后续工作时也不能过早标记完成。具体确认、覆盖和进度推进的原子转换仍待推导。
 
-dependencies 是真实采用的编排关系，而不是所有可能依赖；providerTaskId 必须存在、对象/level 合法且图无环。blocked outcome 不保存活跃调用，但仍可以保留不可变的终结结果和持久化关系，为 provider 调用及后续新 consumer 调用提供上下文。
+CurrentDependency 暂以精确 consumer/provider 对象和最低 level 表达仍有效的需求关系，不引用必须永久保存的历史 Task。关系须合法、无环且锚定当前未完成需求；需求覆盖或完成时撤销无用边，共享 provider 仍被引用时保留。blocked 调用已经结束，其完整结果不为依赖而驻留 state；只提取继续编排必需的当前关系和证据。provider 的结果只能支持新的 consumer 调用，不能复活旧调用。边的意图修订归属、真实执行身份、共享聚合和满足条件仍须在转换设计中细化，本类型不是已定案的依赖协议。
 
 ## 权威状态与推导值
 
 - ResourceAllocation 的 no-resource 是合法的无资源分配意图，也是输入 Behavior 的初值；不是输入缺失、错误或 dummy binding。configured 表达 binding 与非负安全整数 concurrency，允许 concurrency 为 0 以保留配置。采纳 no-resource 不代表实际调用已停止或占用归零。
-- acknowledged.allocation 表达期望，Run.binding 表达实际使用；改变前者不修改后者。确认 concurrency 从 4 变为 2 后，实际占用仍可为 4，停止策略不由这个类型自动规定。
+- acknowledged.allocation 表达期望，ActiveRegulation.binding 表达实际使用；改变前者不修改后者。确认 concurrency 从 4 变为 2 后，实际占用仍可为 4，停止策略不由这个类型自动规定。
 - 实际占用从 running、stopping 和尚未核实的 unverified 调用推导，不另存一个可能漂移的 activeCount。未核实调用在确认退出前保守保留占用。
-- observations 每个精确对象保留最新采纳的成功观察；没有条目表示未知，不等于 initial。旧 run 和错误 envelope 不可作为成功观察写入，终结时的历史证据引用是否独立保留需继续讨论。
-- reserved 是累计权威预留，不能仅从当前任务数重算；启动抛错也可能已经预留。limits 来自可信配置，持久化副本用于核对恢复上下文，不允许快照自行扩充限制。
-- lastFault 只投影最近一次诊断，不表示所有历史错误或永久未解决故障；完整历史如需保留属于事件存储。任务终结错误与服务失败存于各自类型，诊断记录不自动改变它们；输入校验或传输错误仍须明确反馈，不因移除通道状态而被静默忽略。
+- observations 只保留当前调度或有效依赖仍需要的最新成功观察，不作为所有曾访问对象的缓存；失去当前用途时显式移除。没有条目表示未知，不等于 initial。旧调用和错误 envelope 不可作为当前成功观察写入，完整历史证据属于事件或独立证据存储。
+- reserved 是累计权威预留，不能仅从当前调用数重算；启动抛错也可能已经预留。limits 来自可信配置，持久化副本用于核对恢复上下文，不允许快照自行扩充限制。
+- 不再以 lastFault 保存最近一次历史诊断。输入校验、传输和非终结故障仍须通过明确回执或事件报告；持续影响当前运行的故障由相应服务或执行状态表达，服务 failed 可以保留当前故障原因。移除诊断历史不等于静默失败。
+- processedIntents、累计预算和有效依赖是历史作用于现在的必要摘要，不是历史查询接口。摘要压缩不得让旧意图再次可执行；具体保留策略须与当前意图及可靠输入接续协议共同确定。
 - 无 resource ID、capabilities、requirements 或 grants/ceiling。AgentBinding 的配置只能使用可持久化的非秘密数据或安全凭据引用，真实资源自行授权；配额和预算仍独立约束执行。
 
 ## 初值、恢复与下一步
 
-新建 RegulationTarget 为 revision 0、intents 为 {}。新建 CoordinatorState 的 revision 为 0，acknowledged.targets 同为空，acknowledged.allocation 为 { revision: 0, value: { kind: "no-resource" } }；tasks/observations 为空、reserved 全零、lastFault 为 null、服务 open，可信 constraints 由宿主提供。这是已知的初始基线，不声称收到过外部资源更新；后续采纳更新才推进 allocation 修订，初值不启动调用。
+新建 RegulationTarget 为 revision 0、intents 为 {}。新建 CoordinatorState 的 revision 为 0，acknowledged.targets 同为空，acknowledged.allocation 为 { revision: 0, value: { kind: "no-resource" } }；activeRegulations/dependencies/observations 为空、processedIntents 为 {}、reserved 全零、服务 open，可信 constraints 由宿主提供。这是已知的初始基线，不声称收到过外部资源更新；后续采纳更新才推进 allocation 修订，初值不启动调用。
 
-CoordinatorState 不含 instanceId 或 inputs。Coordinator 身份由宿主、存储 key 或传输 envelope 关联，不能与调用 RunId 混为一谈；是否另需恢复代次由执行协议决定。输入通道的 open/ended/failed、连接与重连属于适配层；通道结束或断开不撤销目标、不把资源意图变为 no-resource，也不自动取消任务或关闭服务。真正影响服务继续运行的故障以明确诊断和相应服务生命周期变化表达。
+CoordinatorState 不含 instanceId 或 inputs。Coordinator 身份由宿主、存储 key 或传输 envelope 关联，不能与调用 RegulationId 混为一谈；是否另需恢复代次由执行协议决定。输入通道的 open/ended/failed、连接与重连属于适配层；通道结束或断开不撤销目标、不把资源意图变为 no-resource，也不自动取消调用或关闭服务。真正影响服务继续运行的故障以明确诊断和相应服务生命周期变化表达。
 
 CoordinatorCheckpoint 仅封装两份领域状态，不固定日志方案或存储格式。需验证对象唯一性、修订与引用一致性及可信约束，不能把任意时刻分别读取的两个 state 拼成“原子快照”。若采用快照加日志重放，由持久化适配层在外层封装与快照一致的 command/event 处理位置，并负责可靠接续；不预设两个 string | null 字段，也不默认领域 revision 就是日志位置。恢复先还原状态，采用增量回放时只做纯归约，再以 recovering/unverified 核实外部运行，不清空预算、不重放动作、不把同一已终结意图当新请求；格式版本、重关联协议和存储失败行为待实施时明确。
 
 全局 revision 与各条目的 updatedAtRevision 必须一起保存，恢复从保存的全局水位继续。Record 使用普通 JSON 对象表达，无需 Map 专用的 entries 转换；仍须校验所有值可持久化、key 与对象身份一致及版本有效，缺失条目用属性不存在表达，不写入 undefined。具体快照格式仍待确定。
 
-下一步先检查这些类型的对象身份、确认粒度、任务与调用边界、终结证据及保留策略，再列合法状态转换，最后推导 Command/Event。本稿的 string 原因、诊断粒度、恢复字段及数据结构均为讨论选择，不作为最终 API 或已验收决定。
+下一步先检查当前状态是否足以调度和恢复，明确意图处理进度、依赖归属、终结移除与必要摘要的原子更新，再列合法状态转换，最后推导 Command/Event。本稿的 string 原因、诊断粒度、恢复字段及数据结构均为讨论选择，不作为最终 API 或已验收决定。

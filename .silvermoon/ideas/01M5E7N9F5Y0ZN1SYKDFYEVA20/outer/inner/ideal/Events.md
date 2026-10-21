@@ -1,69 +1,48 @@
-# 从 Coordinator 状态推导事件
+# 从 Coordinator 当前状态推导事件
 
-本文是 [Design.md](./Design.md) 的讨论支撑，不是独立验收合同。以下七类是事件讨论的候选分区，已按后续确定的双意图、资源侧授权及纯恢复原则修正；类别数量、名称及字段仍需重新推导，不是已批准 API，也不要求现在实现。
+本文支撑 [Design.md](./Design.md) 与 [Types.md](./Types.md)，不是独立验收合同。先收敛当前 state 及合法转换，再推导 Command/Event；下面是覆盖检查，不冻结事件类别、数量或 payload。
 
-当前先讨论 [Types.md](./Types.md) 的 state 数据类型与合法转换。下列分类退回为历史候选及覆盖检查，不冻结事件数量，也不据此强行划分 CoordinatorState。
+## state 与消息历史的职责
 
-## 先界定状态
+CoordinatorState 只保存继续正确调度、执行及恢复所需的当前状态。事件既表达当前状态的变化，也可以承载完整终结结果或诊断，供独立消息历史及 UI 查询；事件中的所有信息不必长期驻留 state。纯 reducer 可以验证事件并仅保留其仍有效的当前影响，不能为了历史展示不断累积记录。
 
-新建 Coordinator 的 initial 为：服务处于 open；已确认目标为空，资源基线为 revision 0 的 no-resource；没有任务、调用、依赖、观察或资源侧协助请求，累计预算预留为零。可信约束由宿主提供，外部实例身份不放进 state。恢复应从持久化状态接续，若采用日志则由适配层关联处理位置，不能套用新建空初值。非初值的资源意图须通过确认事件进入状态；reducer 不偷读输入。open 不等于资源已就绪，unknown 不等于 level initial。
+新建 Coordinator 的 initial 为：服务 open；已确认目标为空，资源基线为 revision 0 的 no-resource；activeRegulations、有效依赖和当前必要观察为空，processedIntents 为空，累计预算预留为零。可信约束由宿主提供。恢复不是重新使用空初值，unknown 也不等于 level initial。
 
-候选可观察投影包括：
+## 候选事实与当前效果
 
-- 意图：已接受的 Objective/subject 目标、priority、请求发生身份与修订，以及请求处理结果。
-- 任务与调用：pending/running/stopping/ended、有效调度要求、依赖关系、来源关联、执行资源与终结结果。
-- 观察：按精确 Objective/subject/版本与来源关联的最新有效观察及证据，不维护历史最高 level 作为当前事实。
-- 资源：已确认的分配意图（no-resource 或 configured 的 binding/期望并发度）与实际使用的 binding/占用分别表达；占用从尚未真正终结的调用推导，无资源意图或期望小于实际均可与尚未归零的占用并存。
-- 协助与异常：真实资源返回的拒绝、必要的登录/授权交互及可归属故障；不保留 harness 自有 grants/ceiling 审批或 capabilities 匹配需求。
-- 服务：open/closing/closed/failed 和累计可信预算预留；不投影输入通道的连接、结束或失败状态，输入错误仍明确报告。
-
-这些是公开投影，不要求暴露内部队列布局、Promise、resolver 句柄或保存无限历史数组。精确快照、保留和压缩策略须另定。
-
-## 七类候选 delta
-
-| 类别 | 改变的状态 | 最少需要表达的事实 |
+| 事实 | 必须明确的内容 | 对当前 state 的效果 |
 | --- | --- | --- |
-| intent-decided | 意图确认与请求处理 | 请求身份、accepted/rejected；接受时给出工作对象、目标、priority 和需求修订，拒绝时保留原因且不覆盖原意图 |
-| task-changed | 单次任务、调用与依赖 | 创建/更新/终结，pending/running/stopping/ended，任务及可选 run 身份、原因、有效调度要求、依赖与派生来源、终结 outcome |
-| observation-recorded | 已采纳的观察 | 精确对象和来源、有效观察 envelope、观察与采纳顺序、产生它的调用关联 |
-| assistance-requested | 真实资源需要的外部协助（是否独立保留待定） | 如确有登录/授权挑战，关联实际请求及调用；不是 harness 自建审批，不等于自动授予权限 |
-| resources-changed | 已确认的资源分配意图，不是已经完成的分配 | 记录完整 no-resource 或 configured 值及修订；不带资源池增删改或只给 IDs，不用期望覆盖实际占用 |
-| fault-reported | 可归属异常记录 | 发生阶段、原因、关联对象及诊断；任务/资源/服务的实际状态效果由对应状态 delta 明确表达 |
-| coordinator-changed | 服务与全局约束 | 服务 closing/closed/failed，不含输入通道 ended/failed；预算预留必须可由调用启动或失败启动事件明确归约，不以隐藏重算或退还改变 |
+| 意图处理 | 请求关联、接受或拒绝、准确对象及意图修订、完整目标值或拒绝原因 | 接受更新已确认意图；确认收到不等于意图已经处理完 |
+| 调用发起 | Regulation 身份、对象、启动时意图及目标、实际 binding、恢复关联和预算预留 | 纳入 activeRegulations，保留当前实际占用；启动失败也须明确预留及可能存在的外部执行 |
+| 请求停止或恢复核实 | 准确调用身份、停止原因或外部核实结果 | 显式转换 running/stopping/unverified；停止请求不释放占用 |
+| 调用确认结束 | 准确调用与意图身份、真实终止事实、结果、必要证据及当前摘要更新 | 原子移除活跃调用并更新必要的进度和依赖等；完整结果只进历史，不建立 ended Task 或 pastRegulations |
+| 意图无需调用即处理完 | 准确意图修订及原因，例如 initial 或启动前撤销 | 更新必要的处理进度，不伪造 Regulation 或观察 |
+| 有效依赖变化 | consumer/provider 精确对象、需求归属、最低 level、安装或撤销关系 | 仅保存仍支持当前未完成需求的关系；不引用必须永久保存的历史 Task |
+| 观察采纳或移除 | 精确对象、来源、产生观察的调用、证据及当前用途 | 只保留当前决策仍需要的最新有效观察；失去用途时显式移除 |
+| 资源意图确认 | 完整 no-resource 或 configured 值及采纳修订 | 更新期望，不修改旧调用的 binding，不宣称实际占用已变化 |
+| 故障报告 | 阶段、原因、关联调用或输入及必要诊断 | 诊断明确对外报告，不另存 lastFault 历史；持续运行影响须有相应执行或服务状态变化 |
+| 服务及预算变化 | 服务状态、可信约束和明确累计预留事实 | 不投影输入通道生命周期；释放槽位不退还预算 |
 
-这里的 changed 不是任意 JSON patch 或可选字段袋；后续应为每种合法转换定义具体 payload、前置修订和归约规则。七是候选状态分区的数量，不是压低事件 discriminator 数量的指标。
+这些不是任意 JSON patch 或可选字段袋。每种合法转换仍须定义具体 payload、前置修订、归属和原子规则。独立 reducer 不读私有队列、不重新观察现实、不执行副作用；历史查询也不应成为正常调度的隐含前提。
 
-## 生命周期与依赖边界
+## 关键转换边界
 
-- task-changed 是任务生命周期的唯一权威表达。blocked 是 ended 的 outcome，不是与 pending 并列的等待状态；pending 被撤销可以 ended，但没有 runId。
-- 对已启动的 run，stopping 仍占槽；只有 result 真正 settlement 或 kill 确认终止后才 ended。kill/abort 故障不暗含结束。业务结束和实际终止不能被两个重复终态事件分别宣称。
-- 资源意图从并发 4 变为 2 只改变期望，实际占用可仍为 4。是否排空、抢占或停止由 Coordinator 策略决定，实际响应须以调用状态 delta 表达；binding 意图改变不冒充旧调用已经切换。
-- 目标 initial 可以只改变已确认意图及撤销相关任务，不伪造观察或 running。纯 priority 更新不能自动构成新的调用。更新意图与旧调用清理必须分别可追踪，不能把新修订挂到旧 run 上。
-- 单个任务的依赖引用是公开状态，依赖图由这些引用推导。因此不再单独公开一份 dependencies 图事件；引用增加、撤销、provider 身份及 minimumLevel 变化须进入 task-changed，不能只报告 dependency-required 就省略后续实际采用的关系。
-- provider/consumer 的新任务通过 task-changed 明确创建与关联。provider 证据可支持重新排 consumer，但不直接将其标记达标；旧调用已经 ended，不能从 ended 回到 running。
-- 已消费的总预算不能因为调用终结或意图更新消失。成功和失败的 start 尝试都必须携带明确预留事实或独立的有类型预留变体；详细原子边界留给类型设计。
-- 一次终结若携带最终观察，应规定先采纳 observation-recorded 再结束任务，或由一个原子 delta 承载两者，不能让两个事件竞争更新同一观察。
-- fault-reported 记录一次异常，不默认创建一个永久未解决的故障状态。需要持续阻止分配或标记服务失败时，资源/任务/服务状态及恢复也必须有显式 delta。
+- pending 表示当前需求尚待调度，不表示已存在一次 Regulation。单纯因需求尚未启动而创建 pending Task、再保留 ended Task 的模型取消。
+- blocked 是本次调用的终结结果，不是保留活跃调用等待复活的状态。调用退出后移除，必要依赖提取为当前编排关系；provider 证据只能支持 consumer 的新调用。
+- result settlement 或 kill 确认真实退出，才允许移除活跃调用、释放占用。abort/kill 故障明确报告，不能据此虚构终止；恢复时未核实调用继续保守占用。
+- 移除调用与更新必要摘要须保持一致。已经处理完的同一意图不能因 activeRegulations 为空而再次调度；processedIntents 不是已确认输入水位，有限依赖尚未完成时不能提前结束整个需求。
+- 旧调用反馈不得把新意图标记完成，意图或 priority 更新也不改写旧调用的启动事实。确切的覆盖和新旧结果采用规则仍待推导。
+- 依赖增加与撤销须核对当前需求修订、对象身份及无环性。共享 provider、尚有效的证据保留；无用关系和观察显式移除，不为历史查询驻留。
+- 一次终结携带最终观察时，应规定一个原子 delta，或明确有序的采纳与终结转换；不能让两个事件竞争写同一事实，也不能让移除后的旧反馈污染当前观察。
+- 成功或失败的启动预留都必须明确归约；终结、意图覆盖、依赖派生或恢复不重置累计预算。持久化与外部启动之间的故障窗口由恢复协议解决，不因简化 state 而跳过。
+- 输入通道结束或断开不撤销意图、不切换为 no-resource、不自动结束服务。非法输入和传输故障仍须明确反馈，历史不驻留 state 不等于静默忽略错误。
 
-## 原有事件的候选归宿
+## 历史消费与恢复验证
 
-| 原有事件 | 候选归宿 |
-| --- | --- |
-| accepted、rejected | intent-decided |
-| started、stopping、terminated、result、终态 blocked | task-changed 的合法状态转换及 outcome |
-| 资源不足时的 blocked | task-changed 的 pending 及等待原因，不是 Regulation block |
-| observation | observation-recorded；运行中与最终观察使用同一采纳规则 |
-| dependencies | task-changed 中被采用的依赖引用及派生任务来源 |
-| capability-request、authorization-request | harness 自有审批/匹配模型取消；真实资源协助如仍需要，另行定义 assistance-requested，不照搬旧 union |
-| resources-accepted | 资源分配意图的确认 delta；实际分配和占用仍从任务/调用 delta 推导 |
-| failure | 调用错误以 task-changed ended(error) 表达；非终结故障以 fault-reported 表达，涉及状态变化时另有明确 delta |
-| input-ended | 输入适配层事实，不是核心状态 delta；不隐式撤销意图或关闭服务 |
-| closed | coordinator-changed |
-| stale-result | 若需公开可归属异常则 fault-reported，否则仅诊断日志；绝不改变新调用的观察或结果 |
-| reclaimed | 内部内存回收不公开；有效任务或依赖从公开状态移除必须有显式 task-changed，不可静默删除 |
+UI 通过持久化消息历史或独立查询投影查看过去的 Regulation、结果、观察和诊断，当前 state 只提供现状。历史存储的可靠性、查询与保留由适配层承担；实时 Stream 没有自动历史回放能力。消息中须有足够身份和关联支持查询，但不因此在 state 中保留完整历史链。
 
-## 如何判断提案足够
+给定同一个初值或一致快照与相同完整事件前缀，独立 reducer 应得到相同的当前状态，不重放执行动作。采用日志恢复时，适配层必须关联快照与可靠处理位置；不能把领域 revision 当作消息游标。
 
-给定同一个初值或一致快照与同一个后续完整事件前缀，独立 reducer 应得到相同投影，不执行调度、读取输入或重放副作用。反例至少覆盖：同值新意图、资源意图确认与实际占用分离、binding 更新、资源侧拒绝、pending 与 block、停止与 kill 失败、依赖关系变化、观察下降、启动失败预留及跨重启处理位置接续；恢复不复活已终结意图、不清空未核实占用或预算。
+后续验证至少覆盖：同值新意图；正常终结、blocked、initial 和未启动失败后无历史驻留且旧意图不重跑；依赖继续期间不过早完成需求；旧结果不完成新意图；停止失败及恢复未核实占用；资源期望低于实际、binding 变更和资源侧拒绝；无用观察及依赖回收；启动失败预算不退还；独立历史查询不依赖当前活跃列表。
 
-后续按双意图接口、纯 reducer、资源侧授权和持久化恢复原则重新审视公开状态边界、资源侧协助是否必要、原子性与快照接续；未达共识前不冻结消息类型或把原则确认当作整份构想验收。
+未达成完整转换共识前，不冻结消息类型，也不把原则确认当作整份构想验收。
