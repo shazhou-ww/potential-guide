@@ -1,12 +1,148 @@
-# Coordinator 核心数据类型草案
+# Regulation Target 与 Coordinator State 模型草案
 
-本文支撑 [Idea.md](./Idea.md) 与 [Design.md](./Design.md)，不是独立验收合同或已发布 API。以下使用 TypeScript 将讨论对象具体化；先讨论两个 state 与资源意图，再从合法转换推导 Command/Event。旧 [Events.md](./Events.md) 中的分类仅作覆盖检查，不反过来决定状态结构。
+本文支撑 [Idea.md](./Idea.md) 与 [Design.md](./Design.md)，不是独立验收合同或已发布 API。先分别用 ER 模型讨论 RegulationTarget 和 CoordinatorState，再以 TypeScript 作为补充表达，最后从合法转换推导 Command/Event。旧 [Events.md](./Events.md) 中的分类仅作覆盖检查，不反过来决定状态结构。
 
 ## 三个核心类型
 
 - RegulationTarget：治理目标意图的状态；包含多个 Objective/subject 的最新意图及发生修订。
 - ResourceAllocation：资源分配意图；binding 与期望并发度整体替换，不表示已经分配或已经停止调用。
 - CoordinatorState：Coordinator 的完整领域状态，由 current singleton state 与若干 collection states 组成；集合可以表达历史、实体状态或聚合结果，不包含 Promise、进程句柄或调度器内部对象。
+
+## ER 模型约定
+
+两张图都是一个状态实例、一个逻辑 revision 下的概念模型，不是物理数据库 schema。singleton 在该状态中恰有一个，不引入额外的 Coordinator ID 或实例表；Collection 可以有零到多条记录。`||` 表示一个，`o|` 表示零或一个，`o{` 表示零到多个。
+
+PK 表示模型中的逻辑唯一键；图中的 objectKey 是由精确 Objective 版本、来源和 subject 推导的身份，不要求在 TypeScript 值中重复保存。嵌套值可以展开成实体以说明关系，不意味着新增存储集合。尚未确定的记录键不虚构为 PK；可选字段、联合类型和跨记录约束由图后规则补充。
+
+## Regulation Target ER 模型
+
+[独立 SVG：Regulation Target](./diagrams/regulation-target.svg)。在浏览器单独打开可缩放；使用 22px 基础字号和横向布局。SVG 由本节 Mermaid 源生成，模型变化时须同步重新渲染。
+
+```mermaid
+erDiagram
+    direction LR
+    REGULATION_TARGET ||--o{ TARGET_INTENT : intents
+    REGULATION_OBJECT ||--o| TARGET_INTENT : identifies
+
+    REGULATION_TARGET {
+        number revision "Singleton: global intent revision"
+    }
+    TARGET_INTENT {
+        string objectKey PK "Derived object identity"
+        string targetLevel
+        number priority
+        number updatedAtRevision "Revision of this occurrence"
+    }
+    REGULATION_OBJECT {
+        string objectKey PK "Canonical identity"
+        string objectiveId
+        string objectiveVersion
+        GitObjectiveSource source
+        Subject subject
+    }
+```
+
+- **一个 singleton，加一个意图集合。** REGULATION_TARGET 保存全局 revision；TARGET_INTENT 是 intents Record 的 ER 表达，每个对象最多一条当前意图，不是命令历史。REGULATION_OBJECT 表示意图内的对象值，不新增第三份独立状态。
+- **对象身份决定覆盖范围。** 同一精确对象的新意图覆盖对应条目；不同 Objective 版本、来源或 subject 不能静默合并。targetLevel 和 priority 属于意图，不属于对象身份。
+- **全局版本与条目版本共用一个空间。** 每次合法更新令全局 revision 加一，并写入该条目的 updatedAtRevision；同值更新也产生新的意图发生身份。条目版本不是另一条 singleton 记录的外键。
+- **只表示期望。** 本图不包含 Regulation、实际资源或执行结果。priority 升序、updatedAtRevision 升序给出意图排序；确认、调度和终结不由本图直接表达。
+
+## Coordinator State ER 模型
+
+[独立 SVG：Coordinator State](./diagrams/coordinator-state.svg)。在浏览器单独打开可缩放；使用 22px 基础字号和横向布局。SVG 由本节 Mermaid 源生成，模型变化时须同步重新渲染。
+
+```mermaid
+erDiagram
+    direction LR
+    COORDINATOR_STATE ||--|| COORDINATOR_CURRENT : current
+    COORDINATOR_STATE ||--o{ REGULATION_OBJECT_STATE : regulationObjects
+    COORDINATOR_STATE ||--o{ REGULATION_RECORD : regulations
+    COORDINATOR_STATE ||--o{ OBSERVATION_RECORD : observations
+    COORDINATOR_STATE ||--o{ FAULT_RECORD : faults
+    COORDINATOR_CURRENT ||--o{ ACTIVE_REGULATION : activeRegulations
+    COORDINATOR_CURRENT ||--o{ CURRENT_DEPENDENCY : dependencies
+    COORDINATOR_CURRENT ||--o{ CURRENT_OBSERVATION : observations
+    REGULATION_OBJECT ||--o| REGULATION_OBJECT_STATE : summarizedBy
+    REGULATION_OBJECT_STATE ||--o| PROBE_SUMMARY : lastProbe
+    REGULATION_OBJECT ||--o{ ACTIVE_REGULATION : regulatedBy
+    REGULATION_OBJECT ||--o{ REGULATION_RECORD : hasEndedCalls
+    REGULATION_OBJECT ||--o{ OBSERVATION_RECORD : hasObservations
+    REGULATION_OBJECT ||--o{ CURRENT_OBSERVATION : hasCurrentEvidence
+    REGULATION_OBJECT ||--o{ CURRENT_DEPENDENCY : consumer
+    REGULATION_OBJECT ||--o{ CURRENT_DEPENDENCY : provider
+
+    COORDINATOR_STATE {
+        number revision "One logical version for the whole state"
+    }
+    COORDINATOR_CURRENT {
+        RegulationTarget acknowledgedTargets "Same model as the first diagram"
+        AllocationAcknowledgement acknowledgedAllocation
+        ExecutionConstraints constraints
+        BudgetReservation reserved
+        CoordinatorLifecycle lifecycle
+    }
+    REGULATION_OBJECT {
+        string objectKey PK "Canonical identity"
+        RegulationObject value
+    }
+    REGULATION_OBJECT_STATE {
+        string objectKey PK "One aggregate per known object"
+    }
+    PROBE_SUMMARY {
+        string probedAt "Actual Probe time"
+        number recordedAtRevision
+        string regulationId "Nullable source call"
+        ProbeResult result "Observed or error"
+    }
+    ACTIVE_REGULATION {
+        string id PK
+        string objectKey
+        IntentRef intent "Nullable occurrence captured at start"
+        string targetLevel
+        AgentBinding binding
+        string recoveryRef "Nullable"
+        ActiveExecution execution "Running, stopping or unverified"
+    }
+    REGULATION_RECORD {
+        string id PK "Same identity as the ended active call"
+        string objectKey
+        IntentRef intent "Nullable occurrence captured at start"
+        string targetLevel
+        AgentBinding binding
+        number endedAtRevision
+        RegulationOutcome outcome
+    }
+    CURRENT_DEPENDENCY {
+        string consumerObjectKey
+        string providerObjectKey
+        string minimumLevel
+    }
+    CURRENT_OBSERVATION {
+        string objectKey PK "Latest currently useful valid evidence"
+        string regulationId
+        PilotObservation value
+    }
+    OBSERVATION_RECORD {
+        number recordedAtRevision
+        string objectKey
+        string regulationId
+        PilotObservation value
+    }
+    FAULT_RECORD {
+        number reportedAtRevision
+        string regulationId "Nullable diagnostic association"
+        Fault fault
+    }
+```
+
+- **状态组织形式与时间范围分开。** current 是 singleton；regulationObjects、regulations、observations、faults 是顶层 collection states。前者是对象聚合，后三者示范明细记录，不统一归入 history。
+- **聚合一对象一条，记录一对象多条。** regulationObjects 中每个已知精确对象最多一条摘要，lastProbe 可为空；一个对象则可以关联多次已结束 Regulation 和多条观察记录。图中的 REGULATION_OBJECT 是共享身份值，不是额外的顶层 Collection，也不要求对象摘要行永远保留才能引用对象。
+- **只在真实退出后从活跃转为终结记录。** ACTIVE_REGULATION 与 REGULATION_RECORD 使用相同的调用身份，不能在同一 revision 同时表示同一调用仍活跃且已结束；两者不是新的 Task/Run 双层身份。停止中和未核实调用仍留在活跃集合，真实终结时移除并原子写入结果。
+- **关系引用不强制保留历史父行。** observation、Probe 和 fault 中的 regulationId 用于关联来源，不保证对应调用仍在活跃集合；Probe 和 fault 也允许没有来源调用。它们不被画成必须引用某条当前活跃记录的外键。
+- **意图发生身份不是当前条目的外键。** IntentRef 引用 objectKey 与启动时的 updatedAtRevision；目标被覆盖后，旧调用仍保留原始引用，不能连到最新意图并冒充新需求的执行结果。acknowledgedTargets 复用第一张图的结构，但不必等于调用方当前的 RegulationTarget。
+- **当前依赖是对象之间的关系。** consumer/provider 各自指向一个精确对象，一个对象可参与多条依赖；额外要求无环、最低 level 合法并锚定尚未完成的需求。边的意图归属、共享聚合和唯一键仍待转换设计，不引入历史 Task 节点。
+- **对象 Probe 摘要不等于当前成功证据。** lastProbe 包括最近 Probe 的实际时间与成功或失败结果；CURRENT_OBSERVATION 则只保留当前调度仍有效的成功证据。无 Probe、失败、旧反馈和时间顺序规则见下文，最近观察不保证实时现实。
+- **图仍是候选，不冒充完整执行协议。** 待处理需求、无调用意图的处理记录、Probe/观察/诊断记录键和恢复接续还未收敛。实体关系明确这些问题的位置，不用 processedIntents 或虚构主键替代转换讨论。
 
 ## 完整状态、Singleton State 与 Collection State
 
@@ -20,7 +156,9 @@ Collection<T> 表达领域中的记录集合，选用 Collection 而不是 Table
 
 例如 regulationObjects 是按精确对象身份维护的聚合状态集合，每个对象一条记录，包含它最后一次 Probe 的时间和结果，而不是每次 Probe 都增加一行的历史表。regulations 则示范终结记录集合，两者都是 collection state，不使用 history 分组来限定所有集合的含义。
 
-下面是一个可独立类型检查的代码块。复用已有协议的对象、观察与 binding 数据类型，不复用旧五命令、资源池或 harness 权限类型。所有别名暂用普通 string/number；合法标识、有限 JSON、非负安全整数、引用完整性等仍需运行时验证，不能因 TS 通过便视为有效输入。
+## TypeScript 补充表达
+
+下面的可独立类型检查代码块补充 ER 模型中的值类型、可选性与联合分支，不替代实体关系讨论。图中的 ProbeResult 和 ActiveExecution 标签概括对应字段的完整联合类型，不新增协议类型。复用已有协议的对象、观察与 binding 数据类型，不复用旧五命令、资源池或 harness 权限类型。所有别名暂用普通 string/number；合法标识、有限 JSON、非负安全整数、引用完整性等仍需运行时验证，不能因 TS 通过便视为有效输入。
 
 ```typescript
 import type {
