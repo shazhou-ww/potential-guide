@@ -40,6 +40,8 @@
 
 ## 分拆实施的关联 IDEA
 
+2026-10-21，Portfolio 输入讨论已转向基础调度模型，新增独立子 IDEA [regulation-coordinator](../../../../01M5E7N9F5Y0ZN1SYKDFYEVA20/outer/inner/ideal/Idea.md)（`01M5E7N9F5Y0ZN1SYKDFYEVA20`）。已确认范围是新增长期驻留的 `@potential-guide/regulation-coordinator`：资源池 Behavior 为第一参数，命令 Event stream 输入、事实 Event stream 输出；内部单优先队列，由命令增删/替换/调优先级，仅在 Regulation 返回 dependency-required 后维护 consumer-owned 依赖图、共享派生工作及回收。支持动态容量/能力、终止确认、可恢复错误事件、旧结果/旧证据/环隔离和可信权限预算；不接受外部队列快照或依赖图，不改现有 Supervisor/Planner/Portfolio 代码及接线，Portfolio 是否消解留后续。用户委托主 Agent 审批该子 IDEA 各阶段，不代表本总 IDEA 或 package-settings 获批；不发布 npm 或改全局设备配置。详细契约由子 IDEA 独立维护。
+
 按用户要求，将已明确方向拆成三个独立生命周期的关联 IDEA；这里只通过文档建立总分关系，不向 Silvermoon 虚构 parentId、依赖事件或已获验收状态。
 
 | 建议顺序 | Alias 与入口 | 独立范围 | 准备阶段仍需收敛 |

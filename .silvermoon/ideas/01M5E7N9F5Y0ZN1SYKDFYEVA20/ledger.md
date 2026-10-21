@@ -1,0 +1,29 @@
+# Ledger
+
+## Implementation
+
+### Implementation steps
+
+- [ ] **I-S01:** 新增独立包与 FRP 生命周期
+- [ ] **I-S02:** 实现单队列与运行时依赖调度
+- [ ] **I-S03:** 固化反例与兼容回归
+
+### Implementation acceptance criteria
+
+- [ ] **I-AC01:** 公共包接口与驻留可用
+- [ ] **I-AC02:** 调度与安全反例通过
+- [ ] **I-AC03:** 仓库与既有服务保持兼容
+
+## Deployment
+
+### Deployment steps
+
+- [ ] **D-S01:** 准备可消费的本地产物
+- [ ] **D-S02:** 从隔离 consumer 验证
+- [ ] **D-S03:** 确认兼容边界并交付证据
+
+### Deployment acceptance criteria
+
+- [ ] **D-AC01:** 本地产物完整可安装
+- [ ] **D-AC02:** 隔离运行符合新契约
+- [ ] **D-AC03:** 既有 Supervisor 和设备不变
