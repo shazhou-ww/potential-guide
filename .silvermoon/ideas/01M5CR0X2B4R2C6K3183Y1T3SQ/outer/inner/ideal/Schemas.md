@@ -361,4 +361,4 @@ quota 中缺失的 timeoutMs 不从用户级对象继承；替换后的值由所
 
 同一 package 提供的多个命令可以共用 namespace；配置定义者与消费者可以不同，跨组件消费必须明确约定，不因 namespace 调整悄悄改变既有共享配置行为。regulate.defaultAgent 与 regulate.quota 为方向示例：默认 Agent 仍只是独立 Agent 资源的名称引用，supervise 对既有 quota 的消费需明确保留或另行决定，不默认切断。
 
-用户要求创建独立 IDEA 推进主配置及扩展配置契约；部署阶段须全局安装本机迭代后的 pguide 本地 build，并手工迁移本机用户级配置。该要求不授权当前准备阶段修改设备配置、发布 npm 或验收规范。
+用户要求创建独立 IDEA [package-settings](../../../../01M5E26G8ABEJVCMBQN3VKTNQH/outer/inner/ideal/Idea.md) 推进主配置及扩展配置契约；部署阶段须全局安装本机迭代后的 pguide 本地 build，并手工迁移本机用户级配置。该要求不授权当前准备阶段修改设备配置、发布 npm 或验收规范。该子 IDEA 仍在 preparing，JSONC、配置描述发现及默认值等待定问题继续由用户逐项讨论，不沿用先前三个子 IDEA 的代理审批授权。
