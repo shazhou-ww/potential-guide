@@ -148,7 +148,7 @@ export const builtInSettings = [
           }
         },
         "pilot.probe": {
-          "description": "Regulate probe timeout and retry. Probe and supervise observations only consume timeout; supervise workers do not inherit this setting.",
+          "description": "Probe budgets and Regulation retry. timeoutMs retains the Regulation outer probe deadline and legacy check fallback; checkTimeoutMs overrides the single-check deadline. preparationTimeoutMs covers each source preparation; observationBudget is shared by the complete dependency observation, including lazy preparation. Supervise workers retain their archived policy.",
           "schema": {
             "type": "object",
             "additionalProperties": false,
@@ -161,6 +161,42 @@ export const builtInSettings = [
                 "type": "integer",
                 "minimum": 1,
                 "maximum": 2147483647
+              },
+              "checkTimeoutMs": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "preparationTimeoutMs": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "observationBudget": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "timeoutMs",
+                  "maxDepth",
+                  "maxObservations"
+                ],
+                "properties": {
+                  "timeoutMs": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2147483647
+                  },
+                  "maxDepth": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "maxObservations": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  }
+                }
               },
               "retry": {
                 "type": "object",
@@ -770,7 +806,7 @@ return errors === 0;
 }
 
 export const setting11 = validate21;
-const schema22 = {"type":"object","additionalProperties":false,"required":["timeoutMs","retry"],"properties":{"timeoutMs":{"type":"integer","minimum":1,"maximum":2147483647},"retry":{"type":"object","additionalProperties":false,"required":["maxRetries","delayMs"],"properties":{"maxRetries":{"type":"integer","minimum":0,"maximum":9007199254740991},"delayMs":{"type":"integer","minimum":0,"maximum":2147483647}}}}};
+const schema22 = {"type":"object","additionalProperties":false,"required":["timeoutMs","retry"],"properties":{"timeoutMs":{"type":"integer","minimum":1,"maximum":2147483647},"checkTimeoutMs":{"type":"integer","minimum":1,"maximum":2147483647},"preparationTimeoutMs":{"type":"integer","minimum":1,"maximum":2147483647},"observationBudget":{"type":"object","additionalProperties":false,"required":["timeoutMs","maxDepth","maxObservations"],"properties":{"timeoutMs":{"type":"integer","minimum":1,"maximum":2147483647},"maxDepth":{"type":"integer","minimum":1,"maximum":9007199254740991},"maxObservations":{"type":"integer","minimum":1,"maximum":9007199254740991}}},"retry":{"type":"object","additionalProperties":false,"required":["maxRetries","delayMs"],"properties":{"maxRetries":{"type":"integer","minimum":0,"maximum":9007199254740991},"delayMs":{"type":"integer","minimum":0,"maximum":2147483647}}}}};
 
 function validate21(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
 let vErrors = null;
@@ -797,7 +833,7 @@ vErrors.push(err1);
 errors++;
 }
 for(const key0 in data){
-if(!((key0 === "timeoutMs") || (key0 === "retry"))){
+if(!(((((key0 === "timeoutMs") || (key0 === "checkTimeoutMs")) || (key0 === "preparationTimeoutMs")) || (key0 === "observationBudget")) || (key0 === "retry"))){
 const err2 = {instancePath,schemaPath:"#/additionalProperties",keyword:"additionalProperties",params:{additionalProperty: key0},message:"must NOT have additional properties"};
 if(vErrors === null){
 vErrors = [err2];
@@ -843,11 +879,10 @@ errors++;
 }
 }
 }
-if(data.retry !== undefined){
-let data1 = data.retry;
-if(data1 && typeof data1 == "object" && !Array.isArray(data1)){
-if(data1.maxRetries === undefined){
-const err6 = {instancePath:instancePath+"/retry",schemaPath:"#/properties/retry/required",keyword:"required",params:{missingProperty: "maxRetries"},message:"must have required property '"+"maxRetries"+"'"};
+if(data.checkTimeoutMs !== undefined){
+let data1 = data.checkTimeoutMs;
+if(!(((typeof data1 == "number") && (!(data1 % 1) && !isNaN(data1))) && (isFinite(data1)))){
+const err6 = {instancePath:instancePath+"/checkTimeoutMs",schemaPath:"#/properties/checkTimeoutMs/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
 if(vErrors === null){
 vErrors = [err6];
 }
@@ -856,8 +891,9 @@ vErrors.push(err6);
 }
 errors++;
 }
-if(data1.delayMs === undefined){
-const err7 = {instancePath:instancePath+"/retry",schemaPath:"#/properties/retry/required",keyword:"required",params:{missingProperty: "delayMs"},message:"must have required property '"+"delayMs"+"'"};
+if((typeof data1 == "number") && (isFinite(data1))){
+if(data1 > 2147483647 || isNaN(data1)){
+const err7 = {instancePath:instancePath+"/checkTimeoutMs",schemaPath:"#/properties/checkTimeoutMs/maximum",keyword:"maximum",params:{comparison: "<=", limit: 2147483647},message:"must be <= 2147483647"};
 if(vErrors === null){
 vErrors = [err7];
 }
@@ -866,9 +902,8 @@ vErrors.push(err7);
 }
 errors++;
 }
-for(const key1 in data1){
-if(!((key1 === "maxRetries") || (key1 === "delayMs"))){
-const err8 = {instancePath:instancePath+"/retry",schemaPath:"#/properties/retry/additionalProperties",keyword:"additionalProperties",params:{additionalProperty: key1},message:"must NOT have additional properties"};
+if(data1 < 1 || isNaN(data1)){
+const err8 = {instancePath:instancePath+"/checkTimeoutMs",schemaPath:"#/properties/checkTimeoutMs/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"};
 if(vErrors === null){
 vErrors = [err8];
 }
@@ -878,10 +913,11 @@ vErrors.push(err8);
 errors++;
 }
 }
-if(data1.maxRetries !== undefined){
-let data2 = data1.maxRetries;
+}
+if(data.preparationTimeoutMs !== undefined){
+let data2 = data.preparationTimeoutMs;
 if(!(((typeof data2 == "number") && (!(data2 % 1) && !isNaN(data2))) && (isFinite(data2)))){
-const err9 = {instancePath:instancePath+"/retry/maxRetries",schemaPath:"#/properties/retry/properties/maxRetries/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
+const err9 = {instancePath:instancePath+"/preparationTimeoutMs",schemaPath:"#/properties/preparationTimeoutMs/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
 if(vErrors === null){
 vErrors = [err9];
 }
@@ -891,8 +927,8 @@ vErrors.push(err9);
 errors++;
 }
 if((typeof data2 == "number") && (isFinite(data2))){
-if(data2 > 9007199254740991 || isNaN(data2)){
-const err10 = {instancePath:instancePath+"/retry/maxRetries",schemaPath:"#/properties/retry/properties/maxRetries/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"};
+if(data2 > 2147483647 || isNaN(data2)){
+const err10 = {instancePath:instancePath+"/preparationTimeoutMs",schemaPath:"#/properties/preparationTimeoutMs/maximum",keyword:"maximum",params:{comparison: "<=", limit: 2147483647},message:"must be <= 2147483647"};
 if(vErrors === null){
 vErrors = [err10];
 }
@@ -901,8 +937,8 @@ vErrors.push(err10);
 }
 errors++;
 }
-if(data2 < 0 || isNaN(data2)){
-const err11 = {instancePath:instancePath+"/retry/maxRetries",schemaPath:"#/properties/retry/properties/maxRetries/minimum",keyword:"minimum",params:{comparison: ">=", limit: 0},message:"must be >= 0"};
+if(data2 < 1 || isNaN(data2)){
+const err11 = {instancePath:instancePath+"/preparationTimeoutMs",schemaPath:"#/properties/preparationTimeoutMs/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"};
 if(vErrors === null){
 vErrors = [err11];
 }
@@ -913,10 +949,11 @@ errors++;
 }
 }
 }
-if(data1.delayMs !== undefined){
-let data3 = data1.delayMs;
-if(!(((typeof data3 == "number") && (!(data3 % 1) && !isNaN(data3))) && (isFinite(data3)))){
-const err12 = {instancePath:instancePath+"/retry/delayMs",schemaPath:"#/properties/retry/properties/delayMs/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
+if(data.observationBudget !== undefined){
+let data3 = data.observationBudget;
+if(data3 && typeof data3 == "object" && !Array.isArray(data3)){
+if(data3.timeoutMs === undefined){
+const err12 = {instancePath:instancePath+"/observationBudget",schemaPath:"#/properties/observationBudget/required",keyword:"required",params:{missingProperty: "timeoutMs"},message:"must have required property '"+"timeoutMs"+"'"};
 if(vErrors === null){
 vErrors = [err12];
 }
@@ -925,9 +962,8 @@ vErrors.push(err12);
 }
 errors++;
 }
-if((typeof data3 == "number") && (isFinite(data3))){
-if(data3 > 2147483647 || isNaN(data3)){
-const err13 = {instancePath:instancePath+"/retry/delayMs",schemaPath:"#/properties/retry/properties/delayMs/maximum",keyword:"maximum",params:{comparison: "<=", limit: 2147483647},message:"must be <= 2147483647"};
+if(data3.maxDepth === undefined){
+const err13 = {instancePath:instancePath+"/observationBudget",schemaPath:"#/properties/observationBudget/required",keyword:"required",params:{missingProperty: "maxDepth"},message:"must have required property '"+"maxDepth"+"'"};
 if(vErrors === null){
 vErrors = [err13];
 }
@@ -936,8 +972,8 @@ vErrors.push(err13);
 }
 errors++;
 }
-if(data3 < 0 || isNaN(data3)){
-const err14 = {instancePath:instancePath+"/retry/delayMs",schemaPath:"#/properties/retry/properties/delayMs/minimum",keyword:"minimum",params:{comparison: ">=", limit: 0},message:"must be >= 0"};
+if(data3.maxObservations === undefined){
+const err14 = {instancePath:instancePath+"/observationBudget",schemaPath:"#/properties/observationBudget/required",keyword:"required",params:{missingProperty: "maxObservations"},message:"must have required property '"+"maxObservations"+"'"};
 if(vErrors === null){
 vErrors = [err14];
 }
@@ -946,11 +982,9 @@ vErrors.push(err14);
 }
 errors++;
 }
-}
-}
-}
-else {
-const err15 = {instancePath:instancePath+"/retry",schemaPath:"#/properties/retry/type",keyword:"type",params:{type: "object"},message:"must be object"};
+for(const key1 in data3){
+if(!(((key1 === "timeoutMs") || (key1 === "maxDepth")) || (key1 === "maxObservations"))){
+const err15 = {instancePath:instancePath+"/observationBudget",schemaPath:"#/properties/observationBudget/additionalProperties",keyword:"additionalProperties",params:{additionalProperty: key1},message:"must NOT have additional properties"};
 if(vErrors === null){
 vErrors = [err15];
 }
@@ -960,14 +994,248 @@ vErrors.push(err15);
 errors++;
 }
 }
-}
-else {
-const err16 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(data3.timeoutMs !== undefined){
+let data4 = data3.timeoutMs;
+if(!(((typeof data4 == "number") && (!(data4 % 1) && !isNaN(data4))) && (isFinite(data4)))){
+const err16 = {instancePath:instancePath+"/observationBudget/timeoutMs",schemaPath:"#/properties/observationBudget/properties/timeoutMs/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
 if(vErrors === null){
 vErrors = [err16];
 }
 else {
 vErrors.push(err16);
+}
+errors++;
+}
+if((typeof data4 == "number") && (isFinite(data4))){
+if(data4 > 2147483647 || isNaN(data4)){
+const err17 = {instancePath:instancePath+"/observationBudget/timeoutMs",schemaPath:"#/properties/observationBudget/properties/timeoutMs/maximum",keyword:"maximum",params:{comparison: "<=", limit: 2147483647},message:"must be <= 2147483647"};
+if(vErrors === null){
+vErrors = [err17];
+}
+else {
+vErrors.push(err17);
+}
+errors++;
+}
+if(data4 < 1 || isNaN(data4)){
+const err18 = {instancePath:instancePath+"/observationBudget/timeoutMs",schemaPath:"#/properties/observationBudget/properties/timeoutMs/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"};
+if(vErrors === null){
+vErrors = [err18];
+}
+else {
+vErrors.push(err18);
+}
+errors++;
+}
+}
+}
+if(data3.maxDepth !== undefined){
+let data5 = data3.maxDepth;
+if(!(((typeof data5 == "number") && (!(data5 % 1) && !isNaN(data5))) && (isFinite(data5)))){
+const err19 = {instancePath:instancePath+"/observationBudget/maxDepth",schemaPath:"#/properties/observationBudget/properties/maxDepth/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
+if(vErrors === null){
+vErrors = [err19];
+}
+else {
+vErrors.push(err19);
+}
+errors++;
+}
+if((typeof data5 == "number") && (isFinite(data5))){
+if(data5 > 9007199254740991 || isNaN(data5)){
+const err20 = {instancePath:instancePath+"/observationBudget/maxDepth",schemaPath:"#/properties/observationBudget/properties/maxDepth/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"};
+if(vErrors === null){
+vErrors = [err20];
+}
+else {
+vErrors.push(err20);
+}
+errors++;
+}
+if(data5 < 1 || isNaN(data5)){
+const err21 = {instancePath:instancePath+"/observationBudget/maxDepth",schemaPath:"#/properties/observationBudget/properties/maxDepth/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"};
+if(vErrors === null){
+vErrors = [err21];
+}
+else {
+vErrors.push(err21);
+}
+errors++;
+}
+}
+}
+if(data3.maxObservations !== undefined){
+let data6 = data3.maxObservations;
+if(!(((typeof data6 == "number") && (!(data6 % 1) && !isNaN(data6))) && (isFinite(data6)))){
+const err22 = {instancePath:instancePath+"/observationBudget/maxObservations",schemaPath:"#/properties/observationBudget/properties/maxObservations/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
+if(vErrors === null){
+vErrors = [err22];
+}
+else {
+vErrors.push(err22);
+}
+errors++;
+}
+if((typeof data6 == "number") && (isFinite(data6))){
+if(data6 > 9007199254740991 || isNaN(data6)){
+const err23 = {instancePath:instancePath+"/observationBudget/maxObservations",schemaPath:"#/properties/observationBudget/properties/maxObservations/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"};
+if(vErrors === null){
+vErrors = [err23];
+}
+else {
+vErrors.push(err23);
+}
+errors++;
+}
+if(data6 < 1 || isNaN(data6)){
+const err24 = {instancePath:instancePath+"/observationBudget/maxObservations",schemaPath:"#/properties/observationBudget/properties/maxObservations/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"};
+if(vErrors === null){
+vErrors = [err24];
+}
+else {
+vErrors.push(err24);
+}
+errors++;
+}
+}
+}
+}
+else {
+const err25 = {instancePath:instancePath+"/observationBudget",schemaPath:"#/properties/observationBudget/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(vErrors === null){
+vErrors = [err25];
+}
+else {
+vErrors.push(err25);
+}
+errors++;
+}
+}
+if(data.retry !== undefined){
+let data7 = data.retry;
+if(data7 && typeof data7 == "object" && !Array.isArray(data7)){
+if(data7.maxRetries === undefined){
+const err26 = {instancePath:instancePath+"/retry",schemaPath:"#/properties/retry/required",keyword:"required",params:{missingProperty: "maxRetries"},message:"must have required property '"+"maxRetries"+"'"};
+if(vErrors === null){
+vErrors = [err26];
+}
+else {
+vErrors.push(err26);
+}
+errors++;
+}
+if(data7.delayMs === undefined){
+const err27 = {instancePath:instancePath+"/retry",schemaPath:"#/properties/retry/required",keyword:"required",params:{missingProperty: "delayMs"},message:"must have required property '"+"delayMs"+"'"};
+if(vErrors === null){
+vErrors = [err27];
+}
+else {
+vErrors.push(err27);
+}
+errors++;
+}
+for(const key2 in data7){
+if(!((key2 === "maxRetries") || (key2 === "delayMs"))){
+const err28 = {instancePath:instancePath+"/retry",schemaPath:"#/properties/retry/additionalProperties",keyword:"additionalProperties",params:{additionalProperty: key2},message:"must NOT have additional properties"};
+if(vErrors === null){
+vErrors = [err28];
+}
+else {
+vErrors.push(err28);
+}
+errors++;
+}
+}
+if(data7.maxRetries !== undefined){
+let data8 = data7.maxRetries;
+if(!(((typeof data8 == "number") && (!(data8 % 1) && !isNaN(data8))) && (isFinite(data8)))){
+const err29 = {instancePath:instancePath+"/retry/maxRetries",schemaPath:"#/properties/retry/properties/maxRetries/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
+if(vErrors === null){
+vErrors = [err29];
+}
+else {
+vErrors.push(err29);
+}
+errors++;
+}
+if((typeof data8 == "number") && (isFinite(data8))){
+if(data8 > 9007199254740991 || isNaN(data8)){
+const err30 = {instancePath:instancePath+"/retry/maxRetries",schemaPath:"#/properties/retry/properties/maxRetries/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"};
+if(vErrors === null){
+vErrors = [err30];
+}
+else {
+vErrors.push(err30);
+}
+errors++;
+}
+if(data8 < 0 || isNaN(data8)){
+const err31 = {instancePath:instancePath+"/retry/maxRetries",schemaPath:"#/properties/retry/properties/maxRetries/minimum",keyword:"minimum",params:{comparison: ">=", limit: 0},message:"must be >= 0"};
+if(vErrors === null){
+vErrors = [err31];
+}
+else {
+vErrors.push(err31);
+}
+errors++;
+}
+}
+}
+if(data7.delayMs !== undefined){
+let data9 = data7.delayMs;
+if(!(((typeof data9 == "number") && (!(data9 % 1) && !isNaN(data9))) && (isFinite(data9)))){
+const err32 = {instancePath:instancePath+"/retry/delayMs",schemaPath:"#/properties/retry/properties/delayMs/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
+if(vErrors === null){
+vErrors = [err32];
+}
+else {
+vErrors.push(err32);
+}
+errors++;
+}
+if((typeof data9 == "number") && (isFinite(data9))){
+if(data9 > 2147483647 || isNaN(data9)){
+const err33 = {instancePath:instancePath+"/retry/delayMs",schemaPath:"#/properties/retry/properties/delayMs/maximum",keyword:"maximum",params:{comparison: "<=", limit: 2147483647},message:"must be <= 2147483647"};
+if(vErrors === null){
+vErrors = [err33];
+}
+else {
+vErrors.push(err33);
+}
+errors++;
+}
+if(data9 < 0 || isNaN(data9)){
+const err34 = {instancePath:instancePath+"/retry/delayMs",schemaPath:"#/properties/retry/properties/delayMs/minimum",keyword:"minimum",params:{comparison: ">=", limit: 0},message:"must be >= 0"};
+if(vErrors === null){
+vErrors = [err34];
+}
+else {
+vErrors.push(err34);
+}
+errors++;
+}
+}
+}
+}
+else {
+const err35 = {instancePath:instancePath+"/retry",schemaPath:"#/properties/retry/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(vErrors === null){
+vErrors = [err35];
+}
+else {
+vErrors.push(err35);
+}
+errors++;
+}
+}
+}
+else {
+const err36 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(vErrors === null){
+vErrors = [err36];
+}
+else {
+vErrors.push(err36);
 }
 errors++;
 }

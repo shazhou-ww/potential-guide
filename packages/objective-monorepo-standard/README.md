@@ -68,7 +68,8 @@ terminal 仅为 standardized 的目标别名，观察与证据使用实际业务
    根通过 `createSourceObjectiveDependencyProbe`（进程 IPC，宿主执行既有
    `createObjectiveDependencyProbe`/`checkObjectiveLevel`）观察每个包的具体 ID + subject，
    消费者要求 structured。包只检查自身文件、角色意图和适用配置。
-2. 根交付阶段再次观察包，要求 terminal。包检查实际 package scripts、Turbo、
+2. 根交付阶段再次请求包的完整观察，要求 terminal。同轮可信只读视图下可复用完整事实，
+   但仍逐调用校验来源与依赖证据、独立比较目标层级。包检查实际 package scripts、Turbo、
    依赖范围/方向/catalog、发布/CLI 元数据、已有产物、所有相关源码导入和包局部交付。
    根在依赖合格后检查跨包循环、任务图、运行时边界以及联合交付准备。
 
@@ -82,6 +83,42 @@ build 必需；check script 存在时要求它与 Turbo 对齐，否则要求 li
 Supervisor 接收真实 dependency-required 交接，推进包后重新观察消费者。
 公共声明解析/投影在 `@potential-guide/objective-pilot`，CLI 与检查器复用同一实现，
 不反向依赖 CLI-core，也不导入 pguide 私有源码。
+
+### 只读输入视图与采集分层
+
+两个入口均由生成器提供 `observation-inputs.json`，显式声明
+`bounded-readonly-filesystem-v1`：判断只依赖受限读取器中的文件事实，无目标脚本、
+网络或时钟状态。CLI 宿主采集并以第二次字节遍历校验整轮视图，以 SHA-256 绑定
+私有传递文件；checks 只消费并校验该视图，不向宿主提供公共事实或“已通过”结论。
+所有 check 继续在独立进程按原层级顺序执行，subject 和问题归属不被替换。
+完整观察结束即销毁视图与结果；修复、新 probe 和 Regulation 新轮次重新采集。
+捕获后的并发目标变化在下一次观察可见，当前整轮始终判断捕获的同一视图。
+捕获不稳定、不可读或超过边界时退回完整 live 检查，不启用结果复用。
+
+包入口无宿主视图时仍可独立运行：采集 workspace/root 配置和**全部实际包 manifest**，
+但 inventory 仅展开自身源码树；受支持的 pnpm pattern 前缀引导 manifest 发现，不再
+为每个包递归扫描其他包源码。未知 pattern 保留全仓 fallback 与 unverified 诊断。
+根检查继续采集完整 inventory，源码导入的不同语义判断均保留。
+路径越界、符号链接、秘密文件及其子目录均不可读取。ignored 目录仅在输入视图契约下
+拒绝显式读取；无视图/live 入口保留旧的显式文件读取行为，inventory 仍跳过这些目录。
+单文件 1 MiB、
+inventory 20000 文件边界不变。视图传递额外受 40000 条目与 128 MiB 总量限制。
+预期捕获不可用会记录 `input-view.unavailable` evidence；`PGUIDE_TIMINGS=1` 同时输出
+`input-view.capture` / `status: unavailable` 和 `reason`（必要时 `code`）。原因区分
+input-changed、inventory-limit、byte-limit、unreadable；程序错误不降级为 live 检查。
+
+架构分层的 TypeScript `extends`、glob 和 alias/module resolution 也使用同一受限视图
+宿主，不再把 `ts.sys` 传入视图模式。文件/目录存在性、读取、目录枚举和 realpath 均来自
+捕获事实，glob 使用所绑定 TypeScript 版本自身的匹配器；越界、链接、秘密及排除路径
+显式报错，不回退目标实时 FS。无视图模式保留原 TypeScript 系统宿主与既有 options 判断。
+视图模式的配置解析错误
+不能留下部分 options 后静默跳过 alias 检查；实际生产源码覆盖仍由完整 inventory 决定。
+
+全通过路径的包完整观察从每包两次变为一次：`2 + 4N` → `2 + 2N`
+个检查进程；21 包为 86 → 44。失败路径次数不作此承诺，热运行也不跨 probe 保留结果。
+以 `PGUIDE_TIMINGS=1` 采集准备、视图、整体观察计时；进程和文件操作插桩应同时覆盖
+宿主采集及 checks，并用 PID + UUID 标识进程，避免 Windows PID 重用漏计。
+同等输入、来源、Node、预算和插桩分别比较冷/热轮次；不能拿不同环境历史耗时直接比较。
 
 ## 原约束归属
 

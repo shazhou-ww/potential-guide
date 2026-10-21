@@ -220,7 +220,7 @@ test("process timeout returns an invocation fault and reclaims its resources", a
     const result = await Promise.race([work, deadline]);
     assert.equal(result.status, 504);
     assert.ok(result.payload === null);
-    assert.match(result.message, /^timeout: Check timed out after 200ms\.$/);
+    assert.match(result.message, /^timeout: check-timeout: .*: Check timed out after 200ms\.$/);
     assert.match(logs, /pguide-check-/);
     await assert.rejects(stat(metadata.directory), { code: "ENOENT" });
     assert.throws(() => process.kill(metadata.pid, 0), { code: "ESRCH" });

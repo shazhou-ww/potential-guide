@@ -12,13 +12,25 @@
       "schema": { "type": "string", "pattern": "\\S" }
     },
     "pilot.probe": {
-      "description": "Regulate probe timeout and retry. Probe and supervise observations only consume timeout; supervise workers do not inherit this setting.",
+      "description": "Probe budgets and Regulation retry. timeoutMs retains the Regulation outer probe deadline and legacy check fallback; checkTimeoutMs overrides the single-check deadline. preparationTimeoutMs covers each source preparation; observationBudget is shared by the complete dependency observation, including lazy preparation. Supervise workers retain their archived policy.",
       "schema": {
         "type": "object",
         "additionalProperties": false,
         "required": ["timeoutMs", "retry"],
         "properties": {
           "timeoutMs": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+          "checkTimeoutMs": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+          "preparationTimeoutMs": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+          "observationBudget": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["timeoutMs", "maxDepth", "maxObservations"],
+            "properties": {
+              "timeoutMs": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+              "maxDepth": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+              "maxObservations": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
+            }
+          },
           "retry": {
             "type": "object",
             "additionalProperties": false,

@@ -99,7 +99,13 @@ export interface LegacyPguideConfig {
   agentExecutionLimits?: { timeoutMs?: number };
   regulationPermissions?: RegulationPermissions;
   regulationStrategy?: {
-    probe?: { timeoutMs: number; retry: { maxRetries: number; delayMs: number } };
+    probe?: {
+      timeoutMs: number;
+      checkTimeoutMs?: number;
+      preparationTimeoutMs?: number;
+      observationBudget?: { timeoutMs: number; maxDepth: number; maxObservations: number };
+      retry: { maxRetries: number; delayMs: number };
+    };
     quota?: { timeoutMs: number; maxAgentRuns: number; maxStallRuns: number };
   };
   objectives?: Record<string, string>;
@@ -560,8 +566,29 @@ export function parseLegacyConfig(source: string): LegacyPguideConfig {
     if (strategy.probe !== undefined) {
       if (!record(strategy.probe))
         throw new CliError("regulationStrategy.probe must be an object.");
-      exactKeys(strategy.probe, ["timeoutMs", "retry"], "regulationStrategy.probe");
+      exactKeys(
+        strategy.probe,
+        ["timeoutMs", "retry", "checkTimeoutMs", "preparationTimeoutMs", "observationBudget"],
+        "regulationStrategy.probe",
+      );
       timer(strategy.probe.timeoutMs, "regulationStrategy.probe.timeoutMs");
+      for (const key of ["checkTimeoutMs", "preparationTimeoutMs"])
+        if (strategy.probe[key] !== undefined)
+          timer(strategy.probe[key], `regulationStrategy.probe.${key}`);
+      if (strategy.probe.observationBudget !== undefined) {
+        const budget = strategy.probe.observationBudget;
+        if (!record(budget))
+          throw new CliError("regulationStrategy.probe.observationBudget must be an object.");
+        exactKeys(
+          budget,
+          ["timeoutMs", "maxDepth", "maxObservations"],
+          "regulationStrategy.probe.observationBudget",
+        );
+        timer(budget.timeoutMs, "regulationStrategy.probe.observationBudget.timeoutMs");
+        for (const key of ["maxDepth", "maxObservations"])
+          if (!Number.isSafeInteger(budget[key]) || Number(budget[key]) < 1)
+            throw new CliError(`Invalid observationBudget.${key}.`);
+      }
       if (!record(strategy.probe.retry))
         throw new CliError("regulationStrategy.probe.retry is required.");
       exactKeys(strategy.probe.retry, ["maxRetries", "delayMs"], "regulationStrategy.probe.retry");

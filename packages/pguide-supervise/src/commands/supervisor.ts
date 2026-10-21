@@ -16,7 +16,7 @@ import {
   showCommandHelp,
   writeResult,
 } from "@potential-guide/cli-core";
-import { withPilot } from "@potential-guide/cli-runtime";
+import { pilotSourceBudgets, withPilot } from "@potential-guide/cli-runtime";
 import { Effect, SubscriptionRef, startEffect, watchSnapshot } from "@potential-guide/effects";
 import {
   attainedLevelRank,
@@ -78,7 +78,7 @@ function runtimeKey(goal: Pick<ObjectiveGoal, "objective" | "bindingRevision">):
 async function bindGoal(
   entry: FileGoal,
   cwd: string,
-  probeTimeoutMs?: number,
+  probeSettings?: NonNullable<RegulationStrategy["probe"]>,
   signal?: AbortSignal,
   source?: GitObjectiveSource,
 ) {
@@ -125,7 +125,7 @@ async function bindGoal(
       await released;
     },
     {
-      probeTimeoutMs,
+      ...pilotSourceBudgets(probeSettings),
       signal: preparation.signal,
       ...(source === undefined
         ? {}
@@ -543,8 +543,7 @@ export async function runSupervise(
         const binding = await bindGoal(
           { ...entry, objective: resolveObjective(entry.objective, config) },
           globals.cwd,
-          requiredSetting<NonNullable<RegulationStrategy["probe"]>>(config, "pilot.probe")
-            .timeoutMs,
+          requiredSetting<NonNullable<RegulationStrategy["probe"]>>(config, "pilot.probe"),
         );
         fresh.push(binding);
         const previous = activeBindings.find(({ goal }) => goal.id === entry.id);
@@ -639,8 +638,7 @@ export async function runSupervise(
             observationIntervalMs: 1_000,
           },
           globals.cwd,
-          requiredSetting<NonNullable<RegulationStrategy["probe"]>>(loaded.value, "pilot.probe")
-            .timeoutMs,
+          requiredSetting<NonNullable<RegulationStrategy["probe"]>>(loaded.value, "pilot.probe"),
           signal,
           source,
         );

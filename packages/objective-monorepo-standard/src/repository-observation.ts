@@ -22,7 +22,10 @@ export interface RepositoryFacts {
   failure?: string;
 }
 
-export async function observeRepository(snapshot: Snapshot): Promise<RepositoryFacts> {
+export async function observeRepository(
+  snapshot: Snapshot,
+  packageDirectory?: string,
+): Promise<RepositoryFacts> {
   const facts: RepositoryFacts = {
     inventory: [],
     workspaceConfig: {},
@@ -33,7 +36,7 @@ export async function observeRepository(snapshot: Snapshot): Promise<RepositoryF
     manifests: new Map(),
   };
   try {
-    facts.inventory = await snapshot.files();
+    if (packageDirectory === undefined) facts.inventory = await snapshot.files();
     const document = parseDocument(await snapshot.text("pnpm-workspace.yaml"), {
       uniqueKeys: true,
     });
@@ -44,6 +47,18 @@ export async function observeRepository(snapshot: Snapshot): Promise<RepositoryF
     facts.workspaceConfig = { ...parsed };
     facts.workspaceObserved = true;
     const patterns = texts(parsed.packages);
+    if (packageDirectory !== undefined) {
+      facts.inventory = patterns.some((pattern) => /[{}[\]?\\]/.test(pattern))
+        ? await snapshot.files()
+        : [
+            ...new Set([
+              ...(await snapshot.workspaceManifests(patterns)),
+              ...(await snapshot.files(packageDirectory)),
+            ]),
+          ];
+    }
+    if (facts.inventory.length > 20000)
+      throw new Error("Inventory exceeds 20,000 files; narrow the target.");
     const turbo = await snapshot.json("turbo.json");
     facts.turboValidity = turboValidator(turbo)
       ? "valid"

@@ -6,6 +6,7 @@ import { sourceImports } from "./imports.js";
 import { recorder } from "./report.js";
 import { observeRepository, type RepositoryFacts } from "./repository-observation.js";
 import { type Add, ajv, dependencyGroups, Snapshot, under } from "./shared.js";
+import { typeScriptHost } from "./typescript-host.js";
 
 const ranks = { protocol: 0, business: 1, tools: 2 };
 type Layer = keyof typeof ranks | "deferredExternalization";
@@ -88,6 +89,7 @@ export async function observePackageLayers(
   );
   for (const error of errors) fail("package-layer-classification", policyPath, error);
   const names = [...layers.keys()].sort((a, b) => b.length - a.length);
+  const host = await typeScriptHost(snapshot);
   function target(specifier: string, file: string) {
     if (specifier.startsWith(".") || isAbsolute(specifier) || specifier.startsWith("file:")) {
       const path = specifier.startsWith("file:")
@@ -146,7 +148,17 @@ export async function observePackageLayers(
           await snapshot.text(configFile),
         );
         if (configuration.error) throw new Error("Invalid TypeScript configuration.");
-        options = ts.parseJsonConfigFileContent(configuration.config, ts.sys, pkg.path).options;
+        const parsed = ts.parseJsonConfigFileContent(configuration.config, host, pkg.path);
+        const errors = parsed.errors.filter(
+          (error) => error.code !== 18002 && error.code !== 18003,
+        );
+        if (host !== ts.sys && errors.length)
+          throw new Error(
+            errors
+              .map((error) => ts.flattenDiagnosticMessageText(error.messageText, "\n"))
+              .join("\n"),
+          );
+        options = parsed.options;
       }
     } catch (error) {
       fail("package-layer-configuration", configFile, String(error), [pkg.name]);
@@ -166,7 +178,7 @@ export async function observePackageLayers(
           const absolute = resolve(snapshot.root, file);
           let dependency = target(specifier, absolute);
           if (!dependency && (options.paths || specifier.startsWith("#"))) {
-            const resolved = ts.resolveModuleName(specifier, absolute, options, ts.sys, cache)
+            const resolved = ts.resolveModuleName(specifier, absolute, options, host, cache)
               .resolvedModule?.resolvedFileName;
             if (resolved) dependency = target(resolve(resolved), absolute);
           }
@@ -189,7 +201,7 @@ export async function observePackageLayers(
 }
 
 export async function checkPackageLayers(root: string, policyPath = "package-layers.yaml") {
-  const snapshot = new Snapshot(root);
+  const snapshot = await Snapshot.open(root);
   const output = recorder();
   await observePackageLayers(snapshot, await observeRepository(snapshot), policyPath, output.add);
   return output.report(1);

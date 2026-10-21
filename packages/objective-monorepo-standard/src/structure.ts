@@ -1,4 +1,3 @@
-import { realpath } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
   type CheckProbe,
@@ -16,8 +15,8 @@ import { checkDelivery } from "./delivery.js";
 import { checkDeliveryMappings, checkUnmappedDeploymentFiles } from "./delivery-mapping.js";
 import { checkDependencyCycles } from "./dependency-graph.js";
 import { checkFileAssignments, checkFileClassification } from "./file-placement.js";
-import { applicableTasks, workspaceMetadata } from "./package-standard.js";
 import { observePackageLayers } from "./package-layers.js";
+import { applicableTasks, workspaceMetadata } from "./package-standard.js";
 import { recorder } from "./report.js";
 import { checkRepositoryConfiguration } from "./repository-configuration.js";
 import { observeRepository } from "./repository-observation.js";
@@ -45,7 +44,7 @@ export async function checkRepository(
   signal: AbortSignal = new AbortController().signal,
 ): Promise<RepositoryReport> {
   const subject = parseRepositorySubject(value);
-  const snapshot = new Snapshot(await realpath(subject.context.repo.rootPath));
+  const snapshot = await Snapshot.open(subject.context.repo.rootPath);
   const output = recorder();
   const { add } = output;
   const facts = await observeRepository(snapshot);

@@ -1,0 +1,4 @@
+{
+  "contract": "bounded-readonly-filesystem-v1",
+  "subjectRoot": ["root"]
+}

@@ -120,6 +120,14 @@ export interface PilotObservation {
   readonly sources?: Readonly<Record<ObjectiveId, GitObjectiveSource>>;
 }
 export interface PilotRuntime {
+  /** Opt-in for read-only checks: a content revision of every observable input.
+   * Return undefined when stability cannot be established. Called before and after
+   * execution, and before every reuse; never infer stability from a source version.
+   */
+  readonly observationRevision?: (
+    input: PilotInput,
+    signal: AbortSignal,
+  ) => Promise<string | undefined>;
   readonly boundObjectives?: () => readonly PilotSpec[];
   readonly onObservation?: (value: Envelope<PilotObservation>) => void;
   readonly resolveCheck: (ref: CheckRef) => CheckProbe;

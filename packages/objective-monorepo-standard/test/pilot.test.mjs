@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Effect, SubscriptionRef } from "@potential-guide/effects";
 import {
+  captureFilesystemObservation,
   createProcessCheckProbe,
   fileResources,
+  filesystemObservationRevision,
   loadPilotSpec,
   observe,
   parseCheckEnvelope,
@@ -60,11 +63,17 @@ async function fixtureSpec(objectiveId) {
     },
   });
 }
-async function runtimeFor(id, calls = [], failBinding = false) {
+async function runtimeFor(id, calls = [], failBinding = false, inputView) {
   return {
+    observationRevision: (input, signal) =>
+      filesystemObservationRevision(
+        input.subject.root ?? input.subject.context.repo.rootPath,
+        signal,
+      ),
     resolveCheck(ref) {
       calls.push({ id, check: ref.checkId });
       return createProcessCheckProbe({
+        ...(inputView === undefined ? {} : { inputView }),
         command: process.execPath,
         args: [
           join(
@@ -83,11 +92,64 @@ async function runtimeFor(id, calls = [], failBinding = false) {
       assert.equal(objectiveId, packageId);
       return {
         spec: await fixtureSpec(objectiveId),
-        runtime: await runtimeFor(objectiveId, calls),
+        runtime: await runtimeFor(objectiveId, calls, false, inputView),
       };
     },
   };
 }
+
+test("host input view preserves complete independent package checks and rejects forged view bytes", async () => {
+  await fixture(async ({ target, own, subject, write }) => {
+    subject.policy.packageLayers = "package-layers.yaml";
+    await write("package-layers.yaml", "protocol: [shared]\nbusiness: []\ntools: []");
+    await write("tsconfig.base.json", { compilerOptions: { strict: true } });
+    await write("packages/shared/tsconfig.json", { extends: "../../tsconfig.base.json" });
+    const captured = await captureFilesystemObservation(target, new AbortController().signal);
+    assert.ok(captured);
+    const bytes = JSON.stringify(captured);
+    const path = join(scratch, `monorepo-view-${crypto.randomUUID()}.json`);
+    const inputView = { path, sha256: createHash("sha256").update(bytes).digest("hex") };
+    await writeFile(path, bytes);
+    try {
+      await rm(join(target, "packages/shared/README.md"));
+      await write("tsconfig.base.json", "{invalid live TypeScript configuration");
+      for (const [id, wire] of [
+        [packageId, own],
+        [rootId, subject],
+      ]) {
+        const result = await Effect.runPromise(
+          observe(
+            { spec: await fixtureSpec(id), subject: wire },
+            await runtimeFor(id, [], false, inputView),
+          ),
+        );
+        assert.equal(result.payload?.current.levelId, "standardized", result.message);
+      }
+      assert.equal((await observation(own, packageId)).payload.current.levelId, "initial");
+      await writeFile(path, bytes.replace("# Shared", "# Forged"));
+      const forged = await Effect.runPromise(
+        observe(
+          { spec: await fixtureSpec(packageId), subject: own },
+          await runtimeFor(packageId, [], false, inputView),
+        ),
+      );
+      assert.notEqual(forged.payload?.current.levelId, "standardized");
+      await write("packages/shared/README.md", "# Repaired");
+      assert.equal((await observation(own, packageId)).payload.current.levelId, "standardized");
+      await writeFile(path, bytes);
+      await rm(target, { recursive: true, force: true });
+      const removedRoot = await Effect.runPromise(
+        observe(
+          { spec: await fixtureSpec(packageId), subject: own },
+          await runtimeFor(packageId, [], false, inputView),
+        ),
+      );
+      assert.equal(removedRoot.payload?.current.levelId, "standardized");
+    } finally {
+      await rm(path, { force: true });
+    }
+  });
+});
 async function observation(subject, id = rootId, calls = [], failBinding = false) {
   return Effect.runPromise(
     observe({ spec: await fixtureSpec(id), subject }, await runtimeFor(id, calls, failBinding)),
@@ -154,8 +216,6 @@ test("ordinary independent package and root use distinct source Objectives and r
         ["package", "structure"],
         ["package", "deliveries"],
         ["root", "deliveries"],
-        ["package", "structure"],
-        ["package", "deliveries"],
       ],
     );
   });
@@ -201,7 +261,9 @@ test("root architecture policy blocks structure before dependency probes and rec
 test("package source failure becomes a real dependency problem, then repaired consumer re-observes terminal", async () => {
   await fixture(async ({ write, own, subject }) => {
     await write("packages/shared/src/index.ts", "import './missing.js';");
-    const result = await observation(subject);
+    const calls = [];
+    const result = await observation(subject, rootId, calls);
+    assert.equal(calls.length, 4);
     assert.equal(result.status, 200, result.message);
     assert.equal(result.payload.current.levelId, "structured");
     assert.deepEqual(result.payload.problems[0], {

@@ -14,7 +14,7 @@ import {
   showCommandHelp,
   writeResult,
 } from "@potential-guide/cli-core";
-import { withPilot } from "@potential-guide/cli-runtime";
+import { pilotSourceBudgets, withPilot } from "@potential-guide/cli-runtime";
 import { startEffect } from "@potential-guide/effects";
 import { selectObjective } from "@potential-guide/objective-declarations";
 import {
@@ -148,8 +148,10 @@ export async function runProbe(
           return observation;
         },
         {
-          probeTimeoutMs: requiredSetting<{ timeoutMs: number }>(loaded.value, "pilot.probe")
-            .timeoutMs,
+          ...pilotSourceBudgets(
+            requiredSetting<Parameters<typeof pilotSourceBudgets>[0]>(loaded.value, "pilot.probe"),
+          ),
+          signal: controller.signal,
           reports: reportOptions(argv, loaded.value, globals.cwd),
         },
       );

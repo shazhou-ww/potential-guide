@@ -1,4 +1,3 @@
-import { realpath } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { Contract, Workspace } from "./contract.js";
 import { checkDelivery } from "./delivery.js";
@@ -97,13 +96,13 @@ export function factualWorkspaces(facts: RepositoryFacts): Workspace[] {
 
 export async function checkPackage(value: unknown, maxLayer: 1 | 2 = 2) {
   const subject = parsePackageSubject(value);
-  const snapshot = new Snapshot(await realpath(subject.root));
+  const snapshot = await Snapshot.open(subject.root);
   await snapshot.path(subject.directory);
   if (resolve(snapshot.root, subject.directory) === snapshot.root)
     throw new Error("Expected a workspace directory.");
   const output = recorder();
   const { add } = output;
-  const facts = await observeRepository(snapshot);
+  const facts = await observeRepository(snapshot, subject.directory);
   const actual = facts.packages.find(({ directory }) => directory === subject.directory);
   if (!actual?.valid || facts.failure !== undefined) {
     add(
