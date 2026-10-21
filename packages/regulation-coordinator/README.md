@@ -57,10 +57,11 @@ its rejection retains the slot until `result` actually settles.
 
 An optional-to-use third runner argument is `ExecutionContext` with `runId`,
 `work` and async `report(feedback)`. A two-argument existing runner is structurally
-compatible. Requests reported through this context enter the same serialized
-mailbox; authorization/capability request facts carry that exact run ID, obsolete
-feedback is rejected as `stale-result`, and reporting never grants authority or
-implicitly changes capability constraints. Await `report` to honor backpressure.
+compatible. Requests and observation progress reported through this context enter
+the same serialized mailbox; facts carry that exact run ID and work generation.
+Obsolete/stopping runs or mismatched work are rejected as `stale-result`.
+Reporting never grants authority or implicitly changes capability constraints.
+Await `report` to honor backpressure.
 For a process runner, construct it per start and adapt its callback to this
 context (the adapter is owned by the host, not this library):
 
@@ -77,6 +78,20 @@ const runner = {
 The legacy process callback is synchronous, so its host adapter must also bound
 request production if it permits high-volume notifications; a producer ignoring
 an async backpressure promise can create pending offers outside the service.
+
+A runner hosting Regulation's `RegulationRuntime.onObservation` can bridge its
+callback using the current execution context:
+
+```ts
+onObservation: (observation) => {
+  void execution.report({ type: "observation", observation });
+}
+```
+
+This callback follows the same producer-backpressure caveat as the synchronous
+legacy process callback. The existing process runner does not automatically relay
+observations; no legacy runner is changed here. Runners without progress reporting
+still expose validated partial achievement through their final `latestObservation`.
 
 Every root and resolved Pilot must include canonical Git Objective identity,
 exact 40/64-character content version, and a validated `git-tree` source. This is
@@ -108,11 +123,17 @@ not an idempotency key or a retained command history.
 Facts are the exported discriminated `CoordinatorEvent` union: `accepted`,
 `rejected`, `started`, `result`, `dependencies`, `blocked`, `stopping`,
 `terminated`, `stale-result`, `reclaimed`, `resources-accepted`, `input-ended`,
-`capability-request`, `authorization-request`, `failure`, and `closed`. They have a scope-local increasing `sequence`; work
+`capability-request`, `authorization-request`, `observation`, `failure`, and `closed`. They have a scope-local increasing `sequence`; work
 references contain `id, generation`; execution facts contain `runId`. `result`
 reports a validated Regulation outcome, **not** an assertion that every target
 was met: inspect `stopReason`. Provider success never substitutes for a consumer
 outcome. Published facts are cloned and deeply frozen.
+
+`observation` is a validated progress fact, not provider completion. Its success
+envelope must match the current run's Objective/version/full source and contain
+valid levels, problems and a timestamp. Older timestamps within that run are
+rejected; equal timestamps follow mailbox order. Invalid progress reports a
+feedback failure without changing readiness.
 
 ## Lifetime, delivery and supervision
 
@@ -133,6 +154,23 @@ before closing the service, so a slow external consumer cannot deadlock shutdown
 Interrupting a subscription explicitly relinquishes its pending deliveries.
 The upstream resource Behavior has its own storage policy; this service does not
 promise to bound buffers owned by an external producer.
+
+Cancellation and service close are mailbox messages, **not bypass lanes**. A full
+PubSub can pause the loop, then a full mailbox can backpressure results, cancel,
+and close alike. A consumer must not wait for cancellation/close acknowledgement
+while also refusing to drain or cancel its subscription. `drain` means buffered
+facts have been taken from the PubSub, not that arbitrary consumer side effects
+have finished.
+
+Recommended shutdown: acquire the service first, then fork its interruptible
+event consumer with `Effect.forkScoped` in the **same** enclosing `Effect.scoped`.
+On leaving that scope, LIFO finalization interrupts/unsubscribes the consumer and
+input fibers before the service's execution cleanup, so cleanup does not wait for
+its own live subscription. That subscription relinquishes pending/final cleanup
+facts when interrupted. If cleanup facts must be consumed, use a separately owned
+consumer that keeps draining until service close finishes, and only then stop it;
+do not await close inside that consumer's blocked callback. Tests exercise both
+same-scope interruption under full-buffer pressure and external drain-before-close.
 
 Command/resource/execution/evidence/resolution/cleanup failures become attributable
 facts. Invalid resources invalidate **all** new allocations and stop existing
@@ -171,6 +209,25 @@ anchor reachability; cancel/replace drops old outgoing waits, collects complete
 unreferenced chains, retains shared/still-root providers, and confirms termination
 before releasing a running provider's lease.
 
+Each wait uses its **own minimum**, independently of the provider's aggregated
+target. A current L1 observation can therefore wake an L1 consumer while the same
+provider continues toward L3 and the L3 consumer remains waiting. Every validated
+final outcome (including exhausted, authorization-required, dependency-required)
+also records its actual observed level. This never completes the provider or its
+consumers implicitly, retries the blocked provider, grants permissions, or refunds
+budget. Each awakened consumer still runs its own Regulation with its own remaining
+trusted allocation.
+
+Readiness is the latest validated level, **not a historical maximum**: a newer
+downgrade retracts unscheduled wakeups, a new start clears prior-run readiness,
+and replacement generations cannot reuse an old run's evidence. A newer,
+exact-source consumer handoff showing a lower provider level also invalidates the
+cached high level, atomically with graph installation. A delayed resolver's older
+handoff cannot overwrite newer direct progress. Final
+`target-reached` is separately checked against the target captured at start, even
+if later cancellation weakens the aggregate target; a prior progress report cannot
+bypass that check.
+
 Budget is a conservative scope-wide reservation policy, never a renewable
 allowance: every start attempt (even one that throws) consumes one `maxStarts`
 token, reserves the full `quota.maxAgentRuns` and full `quota.timeoutMs` against
@@ -181,6 +238,11 @@ Stall history is carried forward monotonically. The default retry policy is
 by the remaining trusted reservations. Authorization-required work suspends;
 commands cannot change grants. To change trusted authority or replenish budget,
 the host must deliberately end the scope and construct a new instance.
+
+All budget/quota/concurrency/termination values are mandatory trusted options;
+there is no default one-start budget. Finite available starts are bounded by the
+minimum of maxStarts and the two full-quota reservation ratios. The only optional
+buffer setting defaults to 64.
 
 `closed.cleanupFailures` records failed lease-release attempts; a prior
 `failure(stage: "release")` identifies each one. Such failures are not reported

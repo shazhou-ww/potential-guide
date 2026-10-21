@@ -1,6 +1,7 @@
 import {
   type DependencyProblem,
   type GitObjectiveSource,
+  type PilotObservation,
   parseDependencyProblem,
 } from "@potential-guide/objective-pilot";
 import {
@@ -26,6 +27,7 @@ import {
   mergeSources,
   observation,
   priority,
+  validateObservation,
   validateRegulation,
   validateResources,
   validateSpec,
@@ -47,6 +49,7 @@ interface Node {
   sources: Record<string, GitObjectiveSource>;
   waits: Edge[];
   reached: number;
+  evidenceAt?: number;
   stalledRuns: number;
   retiring: boolean;
   blockedReason?: string;
@@ -61,11 +64,13 @@ interface Run {
   readonly target: string;
   readonly requirements: readonly string[];
   status: "running" | "stopping";
+  observedAt?: number;
   timer?: ReturnType<typeof setTimeout>;
 }
 interface Resolution {
   readonly requirement: DependencyProblem;
   readonly lease: ResolvedObjective;
+  readonly observedAt: number;
 }
 export type Message =
   | {
@@ -140,7 +145,13 @@ export class Engine {
     switch (message.type) {
       case "feedback": {
         const run = this.runs.get(message.runId);
-        if (run?.status !== "running" || run.node.retiring) {
+        if (
+          run?.status !== "running" ||
+          run.node.retiring ||
+          this.nodes.get(run.node.uid) !== run.node ||
+          message.work.id !== run.node.work.id ||
+          message.work.generation !== run.node.work.generation
+        ) {
           await this.emit({
             type: "stale-result",
             work: message.work,
@@ -151,7 +162,14 @@ export class Engine {
         }
         try {
           const feedback = structuredClone(message.feedback);
-          if (feedback.type === "capability-request") {
+          if (feedback.type === "observation") {
+            fields(feedback, ["type", "observation"]);
+            const value = validateObservation(
+              { ...run.node.regulation, sourceBindings: run.node.sources },
+              feedback.observation,
+            );
+            this.recordObservation(run.node, run, value);
+          } else if (feedback.type === "capability-request") {
             fields(feedback, ["type", "capability", "reason"]);
             if (!feedback.capability?.trim() || !feedback.reason?.trim())
               throw new TypeError("Capability feedback requires a capability and reason.");
@@ -457,16 +475,15 @@ export class Engine {
         }
     }
     for (const node of live) {
-      if (
-        node.state === "waiting" &&
-        node.waits.every((edge) => {
+      if ((node.state === "waiting" || node.state === "queued") && node.waits.length > 0) {
+        const satisfied = node.waits.every((edge) => {
           const provider = this.nodes.get(edge.provider);
           return (
             provider && provider.reached >= levelRank(provider.regulation.objective, edge.minimum)
           );
-        })
-      )
-        node.state = "queued";
+        });
+        node.state = satisfied ? "queued" : "waiting";
+      }
       if (node.state === "done" && node.reached < levelRank(node.regulation.objective, node.target))
         node.state = "queued";
       const run = [...this.runs.values()].find((entry) => entry.node.uid === node.uid);
@@ -584,6 +601,8 @@ export class Engine {
     this.reservedAgentRuns += this.options.quota.maxAgentRuns;
     this.reservedDuration += this.options.quota.timeoutMs;
     const id = `run:${++this.counter}`;
+    node.reached = -1;
+    delete node.evidenceAt;
     delete node.blockedReason;
     try {
       const input = {
@@ -657,6 +676,21 @@ export class Engine {
     await this.emit({ type: "terminated", work: run.node.work, runId: run.id, reason: why });
   }
 
+  private recordObservation(node: Node, run: Run, value: PilotObservation): void {
+    const observedAt = Date.parse(value.observedAt);
+    if (
+      (run.observedAt !== undefined && observedAt < run.observedAt) ||
+      (node.evidenceAt !== undefined && observedAt < node.evidenceAt)
+    )
+      throw new TypeError("Observation precedes newer evidence for this work.");
+    const sources = mergeSources(node.sources, value.sources ?? {});
+    run.observedAt = observedAt;
+    node.sources = sources;
+    node.evidenceAt = observedAt;
+    // The latest verified level can decrease; a historical maximum is not evidence.
+    node.reached = levelRank(node.regulation.objective, value.current.levelId);
+  }
+
   private async settled(message: Extract<Message, { type: "settled" }>): Promise<void> {
     const { run } = message;
     const node = this.nodes.get(run.node.uid);
@@ -697,10 +731,10 @@ export class Engine {
       if (
         outcome.stopReason === "target-reached" &&
         levelRank(node.regulation.objective, value.current.levelId) <
-          levelRank(node.regulation.objective, node.target)
+          levelRank(node.regulation.objective, run.target)
       )
         throw new TypeError("Target-reached outcome is below the requested level.");
-      node.sources = mergeSources(node.sources, value.sources ?? {});
+      this.recordObservation(node, run, value);
       node.stalledRuns = Math.max(node.stalledRuns, outcome.stalledRuns);
       await this.emit({
         type: "result",
@@ -710,10 +744,15 @@ export class Engine {
       });
       switch (outcome.stopReason) {
         case "dependency-required":
-          this.resolve(node, outcome.dependencies, value.versions, value.sources ?? {});
+          this.resolve(
+            node,
+            outcome.dependencies,
+            value.versions,
+            value.sources ?? {},
+            Date.parse(value.observedAt),
+          );
           break;
         case "target-reached":
-          node.reached = levelRank(node.regulation.objective, value.current.levelId);
           node.waits = [];
           node.state = "done";
           break;
@@ -727,6 +766,7 @@ export class Engine {
           throw new TypeError("Unknown Regulation outcome.");
       }
     } catch (error) {
+      node.reached = -1;
       await this.emit({
         type: "failure",
         stage: "evidence",
@@ -743,6 +783,7 @@ export class Engine {
     dependencies: readonly DependencyProblem[],
     versions: Readonly<Record<string, string>>,
     sources: Readonly<Record<string, GitObjectiveSource>>,
+    observedAt: number,
   ): void {
     node.state = "resolving";
     const controller = new AbortController();
@@ -763,7 +804,7 @@ export class Engine {
             structuredClone(source),
             controller.signal,
           );
-          resolutions.push({ requirement, lease });
+          resolutions.push({ requirement, lease, observedAt });
           if (controller.signal.aborted) throw new Error("Obsolete dependency resolution.");
           if (
             lease.spec.objectiveId !== requirement.objectiveId ||
@@ -805,8 +846,9 @@ export class Engine {
       if (message.error !== undefined) throw message.error;
       const additions = new Map<string, Node>();
       const sourceUpdates = new Map<Node, Record<string, GitObjectiveSource>>();
+      const downgrades = new Map<Node, { readonly level: number; readonly observedAt: number }>();
       const waits: Edge[] = [];
-      for (const { requirement, lease } of resolutions) {
+      for (const { requirement, lease, observedAt } of resolutions) {
         const regulation: Regulation = {
           id: `$dependency:${++this.counter}`,
           objective: structuredClone(lease.spec),
@@ -830,6 +872,13 @@ export class Engine {
           current.sources,
         );
         sourceUpdates.set(provider, merged);
+        const previous = downgrades.get(provider) ?? {
+          level: provider.reached,
+          observedAt: provider.evidenceAt ?? -Infinity,
+        };
+        const level = levelRank(provider.regulation.objective, requirement.currentLevelId);
+        if (observedAt >= previous.observedAt && level < previous.level)
+          downgrades.set(provider, { level, observedAt });
         waits.push({ provider: provider.uid, minimum: requirement.expectedLevelId });
       }
       const graph = new Map(
@@ -853,6 +902,10 @@ export class Engine {
         if (entry.lease) retained.add(entry.lease);
       }
       for (const [provider, sources] of sourceUpdates) provider.sources = sources;
+      for (const [provider, evidence] of downgrades) {
+        provider.reached = evidence.level;
+        provider.evidenceAt = evidence.observedAt;
+      }
       current.waits = waits;
       current.state = "waiting";
       await this.emit({

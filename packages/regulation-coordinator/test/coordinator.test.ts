@@ -156,6 +156,7 @@ interface TestRun {
   readonly resource: AgentResource;
   readonly outcome: ReturnType<typeof deferred<RegulationOutcome>>;
   readonly killed: ReturnType<typeof deferred<void>>;
+  readonly execution?: ExecutionContext;
   aborts: number;
   kills: number;
 }
@@ -181,7 +182,7 @@ async function harness(
     permissions: { ceiling: [], grants: [] },
     budget: { maxStarts: 50, maxAgentRuns: 100, maxDurationMs: 5000 },
     runner: {
-      start(input, selectedResource) {
+      start(input, selectedResource, execution) {
         const run: TestRun = {
           input,
           resource: selectedResource,
@@ -189,6 +190,7 @@ async function harness(
           killed: deferred(),
           aborts: 0,
           kills: 0,
+          execution,
         };
         runs.push(run);
         return {
@@ -286,6 +288,85 @@ async function harness(
     setResources,
     close,
   };
+}
+
+function multiLevelSpec(version = "1".repeat(40)): PilotSpec {
+  const objective = spec("provider", version);
+  return {
+    ...objective,
+    manifest: {
+      ...objective.manifest,
+      levels: [
+        { id: "initial", checks: [] },
+        { id: "l1", checks: [] },
+        { id: "l2", checks: [] },
+        { id: "l3", checks: [] },
+      ],
+    },
+  };
+}
+
+function atLevel(
+  outcome: RegulationOutcome,
+  levelId: string,
+  observedAt?: string,
+): RegulationOutcome {
+  const payload = outcome.latestObservation.payload;
+  assert.ok(payload);
+  return {
+    ...outcome,
+    latestObservation: {
+      status: 200,
+      message: "",
+      payload: {
+        ...payload,
+        current: { ...payload.current, levelId },
+        observedAt: observedAt ?? payload.observedAt,
+      },
+    },
+  };
+}
+
+async function sharedLevels(overrides: Partial<CoordinatorOptions> = {}) {
+  const p = multiLevelSpec();
+  const catalog = new Map([[p.objectiveId, p]]);
+  const gate = deferred<void>();
+  let resolutions = 0;
+  const h = await harness(
+    {
+      ...overrides,
+      maxConcurrency: 3,
+      async resolveObjective(id) {
+        resolutions++;
+        await gate.promise;
+        const objective = catalog.get(id);
+        assert.ok(objective);
+        return { spec: objective, async release() {} };
+      },
+    },
+    [{ ...resource, capacity: 3 }],
+  );
+  try {
+    await h.add(regulation("low"));
+    await h.add(regulation("high"));
+    await until(() => h.runs.length === 2);
+    h.runs[0]?.outcome.resolve(handoff(spec("low"), [p], "l1"));
+    h.runs[1]?.outcome.resolve(handoff(spec("high"), [p], "l3"));
+    await until(() => resolutions === 2);
+    await h.setResources([]);
+    gate.resolve();
+    await until(() => h.events.filter((event) => event.type === "dependencies").length === 2);
+    await h.setResources([{ ...resource, capacity: 3 }]);
+    await until(() => h.runs.length === 3);
+    const provider = h.runs[2];
+    assert.ok(provider?.execution);
+    assert.equal(provider.input.spec.strategy.targetLevel, "l3");
+    return { h, p, catalog, provider, context: provider.execution };
+  } catch (error) {
+    gate.resolve();
+    await h.close();
+    throw error;
+  }
 }
 
 test("idle service, bounded live multicast, normal input end, and resource wakeup use one scheduler", async () => {
@@ -1266,6 +1347,7 @@ test("runner requests carry execution IDs, are serialized as facts, and cannot g
       },
     },
   });
+
   try {
     await h.add(regulation("a"));
     await until(() => contexts.length === 1);
@@ -1306,5 +1388,468 @@ test("runner requests carry execution IDs, are serialized as facts, and cannot g
     );
   } finally {
     await h.close();
+  }
+});
+
+test("current-run L1 progress wakes only the L1 consumer while the shared L3 provider continues", async () => {
+  const { h, p, provider, context } = await sharedLevels();
+  try {
+    await context.report({
+      type: "observation",
+      observation: atLevel(result(p), "l1").latestObservation,
+    });
+    await until(() => h.runs.length === 4);
+    assert.equal(h.runs[3]?.input.spec.objective.objectiveId, spec("low").objectiveId);
+    assert.equal(provider.aborts, 0);
+    assert.equal(provider.kills, 0);
+    assert.equal(
+      h.events.filter((event) => event.type === "started" && event.work.id === "high").length,
+      1,
+    );
+    assert.ok(!h.events.some((event) => event.type === "result" && event.runId === context.runId));
+    const progress = h.events.find((event) => event.type === "observation");
+    assert.ok(progress?.type === "observation");
+    assert.equal(progress.runId, context.runId);
+    assert.deepEqual(progress.work, context.work);
+    await context.report({
+      type: "observation",
+      observation: atLevel(result(p), "l3").latestObservation,
+    });
+    await until(() => h.runs.length === 5);
+    assert.equal(h.runs[4]?.input.spec.objective.objectiveId, spec("high").objectiveId);
+    assert.equal(provider.aborts, 0);
+  } finally {
+    await h.close();
+  }
+});
+
+test("verified exhausted, authorization-required and dependency-required L1 outcomes release only L1 waits", async () => {
+  for (const stopReason of [
+    "exhausted",
+    "authorization-required",
+    "dependency-required",
+  ] as const) {
+    const { h, p, catalog, provider, context } = await sharedLevels();
+    const leaf = spec("leaf");
+    catalog.set(leaf.objectiveId, leaf);
+    try {
+      const outcome =
+        stopReason === "dependency-required" ? handoff(p, [leaf]) : result(p, stopReason);
+      provider.outcome.resolve(atLevel(outcome, "l1"));
+      await until(() =>
+        h.runs.some(
+          (run, index) =>
+            index > 2 && run.input.spec.objective.objectiveId === spec("low").objectiveId,
+        ),
+      );
+      const low = h.runs.find(
+        (run, index) =>
+          index > 2 && run.input.spec.objective.objectiveId === spec("low").objectiveId,
+      );
+      assert.ok(low);
+      assert.deepEqual(low.input.permissions, { ceiling: [], grants: [] });
+      assert.equal(
+        h.events.filter((event) => event.type === "started" && event.work.id === "high").length,
+        1,
+      );
+      assert.equal(
+        h.events.filter((event) => event.type === "started" && event.work.id === context.work.id)
+          .length,
+        1,
+      );
+      low.outcome.resolve(result(spec("low"), "authorization-required"));
+      await until(() =>
+        h.events.some(
+          (event) =>
+            event.type === "blocked" &&
+            event.work.id === "low" &&
+            event.reason === "authorization-required",
+        ),
+      );
+      assert.ok(
+        !h.events.some(
+          (event) =>
+            event.type === "result" &&
+            event.work.id === "low" &&
+            event.outcome.stopReason === "target-reached",
+        ),
+      );
+      if (stopReason === "authorization-required")
+        assert.ok(
+          h.events.some(
+            (event) =>
+              event.type === "blocked" &&
+              event.work.id === context.work.id &&
+              event.reason === "authorization-required",
+          ),
+        );
+    } finally {
+      await h.close();
+    }
+  }
+});
+
+test("partial provider evidence cannot bypass the L1 consumer's exhausted lifetime budget", async () => {
+  const { h, p, provider } = await sharedLevels({
+    budget: { maxStarts: 3, maxAgentRuns: 6, maxDurationMs: 300 },
+  });
+  try {
+    provider.outcome.resolve(atLevel(result(p, "authorization-required"), "l1"));
+    await until(() =>
+      h.events.some(
+        (event) =>
+          event.type === "blocked" &&
+          event.work.id === "low" &&
+          event.reason === "trusted-budget-exhausted",
+      ),
+    );
+    assert.equal(h.runs.length, 3);
+    assert.ok(
+      !h.events.some(
+        (event) =>
+          event.type === "blocked" &&
+          event.work.id === "high" &&
+          event.reason === "trusted-budget-exhausted",
+      ),
+    );
+  } finally {
+    await h.close();
+  }
+});
+
+test("invalid progress envelopes, sources, versions, levels and timestamps never release waits", async () => {
+  const { h, p, context } = await sharedLevels();
+  try {
+    const valid = atLevel(result(p), "l1").latestObservation;
+    assert.ok(valid.payload);
+    assert.ok(p.source);
+    const invalid = [
+      { status: 500, payload: null, message: "unavailable" },
+      { ...valid, payload: { ...valid.payload, sources: {} } },
+      { ...valid, payload: { ...valid.payload, versions: { [p.objectiveId]: "2".repeat(40) } } },
+      {
+        ...valid,
+        payload: {
+          ...valid.payload,
+          current: { objectiveId: p.objectiveId, levelId: "unknown" },
+        },
+      },
+      { ...valid, payload: { ...valid.payload, observedAt: "not-a-time" } },
+      {
+        ...valid,
+        payload: {
+          ...valid.payload,
+          problems: [
+            {
+              kind: "dependency",
+              objectiveId: spec("unbound").objectiveId,
+              subject: {},
+              currentLevelId: "initial",
+              expectedLevelId: "ready",
+            },
+          ],
+        },
+      },
+      {
+        ...valid,
+        payload: {
+          ...valid.payload,
+          sources: { [p.objectiveId]: { ...p.source, commit: "f".repeat(40) } },
+        },
+      },
+    ] as const;
+    for (const observation of invalid) await context.report({ type: "observation", observation });
+    await until(
+      () =>
+        h.events.filter((event) => event.type === "failure" && event.stage === "feedback")
+          .length === invalid.length,
+    );
+    assert.equal(h.runs.length, 3);
+    assert.ok(!h.events.some((event) => event.type === "observation"));
+    await context.report({ type: "observation", observation: valid });
+    await until(() => h.runs.length === 4);
+  } finally {
+    await h.close();
+  }
+});
+
+test("a newer downgrade retracts unscheduled L1 wakeups and rejects delayed higher evidence", async () => {
+  const { h, p, context } = await sharedLevels();
+  const time = Date.now();
+  try {
+    await h.setResources([{ ...resource, capacity: 1 }]);
+    await context.report({
+      type: "observation",
+      observation: atLevel(result(p), "l1", new Date(time).toISOString()).latestObservation,
+    });
+    await until(() =>
+      h.events.some(
+        (event) =>
+          event.type === "blocked" &&
+          event.work.id === "low" &&
+          event.reason === "capacity-unavailable",
+      ),
+    );
+    await context.report({
+      type: "observation",
+      observation: atLevel(result(p), "initial", new Date(time + 1).toISOString())
+        .latestObservation,
+    });
+    await until(() => h.events.filter((event) => event.type === "observation").length === 2);
+    await context.report({
+      type: "observation",
+      observation: atLevel(result(p), "l3", new Date(time).toISOString()).latestObservation,
+    });
+    await until(() =>
+      h.events.some(
+        (event) =>
+          event.type === "failure" &&
+          event.stage === "feedback" &&
+          event.reason.includes("newer evidence"),
+      ),
+    );
+    await h.setResources([{ ...resource, capacity: 3 }]);
+    assert.equal(h.runs.length, 3, "old high-water evidence is not cached");
+    await context.report({
+      type: "observation",
+      observation: atLevel(result(p), "l1", new Date(time + 2).toISOString()).latestObservation,
+    });
+    await until(() => h.runs.length === 4);
+    assert.equal(h.runs[3]?.input.spec.objective.objectiveId, spec("low").objectiveId);
+  } finally {
+    await h.close();
+  }
+});
+
+test("old run progress and mismatched source cannot wake consumers of a replacement generation", async () => {
+  const old = multiLevelSpec(),
+    current = multiLevelSpec("2".repeat(40));
+  const h = await harness({ maxConcurrency: 3 }, [{ ...resource, capacity: 3 }]);
+  h.catalog.set(current.objectiveId, current);
+  try {
+    await h.add(regulation("provider-root", { objective: old, targetLevel: "l3" }));
+    await until(() => h.runs.length === 1);
+    const oldContext = h.runs[0]?.execution;
+    assert.ok(oldContext);
+    await oldContext.report({
+      type: "observation",
+      observation: atLevel(result(old), "l3").latestObservation,
+    });
+    await until(() => h.events.some((event) => event.type === "observation"));
+    await h.send({
+      type: "replace",
+      commandId: "new-provider",
+      generation: 1,
+      regulation: regulation("provider-root", { objective: current, targetLevel: "l3" }),
+    });
+    await until(() => h.runs.length === 2);
+    const currentContext = h.runs[1]?.execution;
+    assert.ok(currentContext);
+    h.runs[0]?.killed.resolve();
+    await h.add(regulation("low"));
+    await until(() => h.runs.length === 3);
+    h.runs[2]?.outcome.resolve(handoff(spec("low"), [current], "l1"));
+    await until(() => h.events.some((event) => event.type === "dependencies"));
+    await oldContext.report({
+      type: "observation",
+      observation: atLevel(result(old), "l3").latestObservation,
+    });
+    await currentContext.report({
+      type: "observation",
+      observation: atLevel(result(old), "l3").latestObservation,
+    });
+    await until(() =>
+      h.events.some((event) => event.type === "stale-result" && event.runId === oldContext.runId),
+    );
+    await until(() =>
+      h.events.some(
+        (event) =>
+          event.type === "failure" &&
+          event.stage === "feedback" &&
+          event.runId === currentContext.runId,
+      ),
+    );
+    assert.equal(h.runs.length, 3);
+    await currentContext.report({
+      type: "observation",
+      observation: atLevel(result(current), "l1").latestObservation,
+    });
+    await until(() => h.runs.length === 4);
+    assert.equal(h.runs[3]?.input.spec.objective.version, spec("low").version);
+    assert.equal(currentContext.work.generation, 2);
+  } finally {
+    await h.close();
+  }
+});
+
+test("target-reached below the started L3 target is rejected even after aggregate target weakens", async () => {
+  const { h, p, provider } = await sharedLevels();
+  try {
+    await h.send({ type: "cancel", commandId: "remove-L3", id: "high", generation: 1 });
+    provider.outcome.resolve(atLevel(result(p), "l1"));
+    await until(() =>
+      h.events.some(
+        (event) =>
+          event.type === "failure" &&
+          event.stage === "evidence" &&
+          event.reason.includes("below the requested level"),
+      ),
+    );
+    assert.equal(h.runs.length, 3);
+    assert.ok(
+      !h.events.some(
+        (event) => event.type === "result" && event.work.id.startsWith("$dependency:"),
+      ),
+    );
+  } finally {
+    await h.close();
+  }
+});
+
+test("same Effect.scoped subscriber is interrupted before service cleanup under bounded backpressure", async () => {
+  const order: string[] = [];
+  const started = deferred<void>();
+  const options: CoordinatorOptions = {
+    maxConcurrency: 1,
+    abortGraceMs: 1,
+    bufferSize: 1,
+    permissions: { ceiling: [], grants: [] },
+    quota: { timeoutMs: 100, maxAgentRuns: 1, maxStallRuns: 1 },
+    agentExecutionLimits: { timeoutMs: 100 },
+    budget: { maxStarts: 10, maxAgentRuns: 10, maxDurationMs: 1000 },
+    resolveObjective: async () => {
+      throw new Error("not needed");
+    },
+    runner: {
+      start() {
+        return {
+          result: new Promise<RegulationOutcome>(() => {}),
+          abort() {
+            order.push("abort");
+          },
+          async kill() {
+            order.push("kill-confirmed");
+          },
+        };
+      },
+    },
+  };
+  let reader: Fiber.Fiber<unknown> | undefined;
+  let timedOut = false;
+  const watchdog = setTimeout(() => {
+    timedOut = true;
+    if (reader) Effect.runFork(Fiber.interrupt(reader));
+  }, 2000);
+  try {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const resources = yield* SubscriptionRef.make<readonly AgentResource[]>([resource]);
+          const commands = yield* Queue.bounded<CoordinatorCommand>(8);
+          const service = yield* regulationCoordinator(
+            resources,
+            Stream.fromQueue(commands),
+            options,
+          );
+          reader = yield* service.events.pipe(
+            Stream.runForEach((event) =>
+              event.type === "started"
+                ? Effect.sync(() => started.resolve()).pipe(Effect.andThen(Effect.never))
+                : Effect.void,
+            ),
+            Effect.ensuring(
+              Effect.sync(() => {
+                order.push("subscriber-released");
+              }),
+            ),
+            Effect.forkScoped({ startImmediately: true }),
+          );
+          yield* Queue.offer(commands, {
+            type: "add",
+            commandId: "active",
+            regulation: regulation("active"),
+          });
+          yield* Effect.promise(() => started.promise);
+          for (let index = 0; index < 4; index++)
+            yield* Queue.offer(commands, {
+              type: "add",
+              commandId: `pending:${index}`,
+              regulation: regulation(`pending-${index}`),
+            });
+          yield* Effect.sleep("10 millis");
+        }),
+      ),
+    );
+    order.push("scope-closed");
+    assert.equal(timedOut, false, "scope cleanup must not need external subscriber interruption");
+    assert.ok(order.indexOf("subscriber-released") < order.indexOf("abort"));
+    assert.ok(order.indexOf("abort") < order.indexOf("kill-confirmed"));
+    assert.equal(order.at(-1), "scope-closed");
+  } finally {
+    clearTimeout(watchdog);
+  }
+});
+
+test("fresh handoff downgrade invalidates cached progress but a delayed handoff cannot overwrite newer progress", async () => {
+  for (const delayed of [false, true]) {
+    const p = multiLevelSpec();
+    const gate = deferred<void>();
+    const h = await harness(
+      {
+        maxConcurrency: 3,
+        async resolveObjective() {
+          await gate.promise;
+          return { spec: p, async release() {} };
+        },
+      },
+      [{ ...resource, capacity: 3 }],
+    );
+    const time = Date.now();
+    try {
+      await h.add(regulation("provider-root", { objective: p, targetLevel: "l3" }));
+      await until(() => h.runs.length === 1);
+      const context = h.runs[0]?.execution;
+      assert.ok(context);
+      if (!delayed) {
+        await context.report({
+          type: "observation",
+          observation: atLevel(result(p), "l3", new Date(time + 1).toISOString()).latestObservation,
+        });
+        await until(() => h.events.some((event) => event.type === "observation"));
+      }
+      await h.add(regulation("low"));
+      await until(() => h.runs.length === 2);
+      h.runs[1]?.outcome.resolve(
+        atLevel(
+          handoff(spec("low"), [p], "l1"),
+          "initial",
+          new Date(time + (delayed ? 1 : 2)).toISOString(),
+        ),
+      );
+      await until(() =>
+        h.events.some((event) => event.type === "result" && event.work.id === "low"),
+      );
+      if (delayed) {
+        await context.report({
+          type: "observation",
+          observation: atLevel(result(p), "l3", new Date(time + 2).toISOString()).latestObservation,
+        });
+        await until(() => h.events.some((event) => event.type === "observation"));
+      }
+      gate.resolve();
+      await until(() => h.events.some((event) => event.type === "dependencies"));
+      if (!delayed) {
+        assert.equal(h.runs.length, 2);
+        await context.report({
+          type: "observation",
+          observation: atLevel(result(p), "l1", new Date(time + 3).toISOString()).latestObservation,
+        });
+      }
+      await until(() => h.runs.length === 3);
+      assert.equal(h.runs[2]?.input.spec.objective.objectiveId, spec("low").objectiveId);
+    } finally {
+      gate.resolve();
+      await h.close();
+    }
   }
 });

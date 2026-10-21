@@ -1,8 +1,10 @@
 import {
   compileDomain,
+  type Envelope,
   type GitObjectiveSource,
   type PilotObservation,
   type PilotSpec,
+  parseDependencyProblem,
   validateGitPilotSource,
   validateSubject,
 } from "@potential-guide/objective-pilot";
@@ -105,8 +107,12 @@ export function mergeSources(
   return merged;
 }
 
-export function observation(regulation: Regulation, outcome: RegulationOutcome): PilotObservation {
-  const envelope = outcome.latestObservation;
+export function validateObservation(
+  regulation: Regulation,
+  envelope: Envelope<PilotObservation>,
+): PilotObservation {
+  fields(envelope, ["status", "payload", "message"]);
+  canonicalJson(envelope);
   const value = envelope.payload;
   if (
     envelope.status !== 200 ||
@@ -115,6 +121,40 @@ export function observation(regulation: Regulation, outcome: RegulationOutcome):
     value.versions[regulation.objective.objectiveId] !== regulation.objective.version
   )
     throw new TypeError("Invalid observation envelope, objective or exact version.");
+  fields(value, ["current", "problems", "gapSummary", "observedAt", "versions"], ["sources"]);
+  fields(value.current, ["objectiveId", "levelId"]);
+  if (
+    typeof envelope.message !== "string" ||
+    typeof value.gapSummary !== "string" ||
+    typeof value.observedAt !== "string" ||
+    !Number.isFinite(Date.parse(value.observedAt)) ||
+    !Array.isArray(value.problems) ||
+    value.versions === null ||
+    typeof value.versions !== "object" ||
+    Array.isArray(value.versions)
+  )
+    throw new TypeError("Invalid observation fields or timestamp.");
+  for (const problem of value.problems) {
+    if (problem.kind === "dependency") {
+      const dependency = parseDependencyProblem(problem);
+      validateGitPilotSource(
+        dependency.objectiveId,
+        value.versions[dependency.objectiveId] ?? "",
+        value.sources?.[dependency.objectiveId],
+      );
+    } else {
+      fields(problem, ["kind", "ref", "parameters"]);
+      fields(problem.ref, ["objectiveId", "levelId", "checkId", "problemId"]);
+      if (
+        problem.kind !== "internal" ||
+        Object.values(problem.ref).some((entry) => typeof entry !== "string" || !entry.trim()) ||
+        problem.parameters === null ||
+        typeof problem.parameters !== "object" ||
+        Array.isArray(problem.parameters)
+      )
+        throw new TypeError("Invalid observed problem.");
+    }
+  }
   levelRank(regulation.objective, value.current.levelId);
   for (const [id, version] of Object.entries(value.versions))
     validateGitPilotSource(id, version, value.sources?.[id]);
@@ -126,6 +166,11 @@ export function observation(regulation: Regulation, outcome: RegulationOutcome):
     canonicalJson(regulation.objective.source)
   )
     throw new TypeError("Observation source does not match execution source.");
+  return value;
+}
+
+export function observation(regulation: Regulation, outcome: RegulationOutcome): PilotObservation {
+  const value = validateObservation(regulation, outcome.latestObservation);
   if (
     !Number.isSafeInteger(outcome.iterations) ||
     outcome.iterations < 0 ||

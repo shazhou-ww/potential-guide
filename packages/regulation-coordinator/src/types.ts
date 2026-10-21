@@ -1,5 +1,11 @@
 import type { Stream } from "@potential-guide/effects";
-import type { GitObjectiveSource, PilotSpec, Subject } from "@potential-guide/objective-pilot";
+import type {
+  Envelope,
+  GitObjectiveSource,
+  PilotObservation,
+  PilotSpec,
+  Subject,
+} from "@potential-guide/objective-pilot";
 import type { AgentResource, RunHandle } from "@potential-guide/objective-portfolio-supervisor";
 import type {
   AgentExecutionLimits,
@@ -14,12 +20,13 @@ export type { AgentResource, RunHandle };
 
 export type CoordinatorFeedback =
   | { readonly type: "capability-request"; readonly capability: string; readonly reason: string }
-  | { readonly type: "authorization-request"; readonly request: AuthorizationRequest };
+  | { readonly type: "authorization-request"; readonly request: AuthorizationRequest }
+  | { readonly type: "observation"; readonly observation: Envelope<PilotObservation> };
 
 export interface ExecutionContext {
   readonly runId: string;
   readonly work: WorkRef;
-  /** Reports a request fact, never grants permission or expands capabilities. */
+  /** Serializes requests or exact run observations; never grants authority. */
   readonly report: (feedback: CoordinatorFeedback) => Promise<void>;
 }
 
