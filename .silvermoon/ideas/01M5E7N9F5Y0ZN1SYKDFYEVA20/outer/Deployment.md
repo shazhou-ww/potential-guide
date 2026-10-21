@@ -8,7 +8,7 @@
 
 ### D-S01 — 准备可消费的本地产物
 
-沿用现有 release inventory 的 manifest、`pnpm pack` 及 `verifyConsumerGraph`，构建/打包 Coordinator 的六包内部传递闭包；第三方 production 依赖从本 worktree 已安装的分发目录用 `npm pack --ignore-scripts` 生成本地 tarballs，递归固定完整闭包，不复制 node_modules 或全局链接冒充安装。记录源码 commit、accepted inner、每包 Git tree、版本、入口 JS/声明 hash、tarball SHA-256 和打包文件摘要；第三方另记精确版本、本地来源、manifest/tarball hash 和 root lock hash，不声称已验证 registry 发布身份。新包源树须与接受提交一致。driver 位于本 worktree，所有实际 pack/install/consumer 目录只在本 worktree 的 `.cache` 下独立创建，不使用其他 worktree 或全局 links。
+沿用现有 release inventory 的 manifest、`pnpm pack` 及 `verifyConsumerGraph`，构建/打包 Coordinator 的六包内部传递闭包；第三方 production 依赖来自本 worktree 已安装的分发目录，先物化到 operation-owned staging 的独立普通文件，再用 `npm pack --ignore-scripts` 生成 tarballs，递归固定完整闭包。这样消除 pnpm content-store 硬链接被 npm 编码成零字节 link archive entry 的问题，并核对每个非 manifest 打包条目的字节长度；staging 不是 consumer 的 node_modules，最终消费仍须 tarball install，不能复制 node_modules 或全局链接冒充安装。记录源码 commit、accepted inner、每包 Git tree、版本、入口 JS/声明 hash、tarball SHA-256 和打包文件摘要；第三方另记精确版本、本地来源、manifest/tarball hash 和 root lock hash，不声称已验证 registry 发布身份。新包源树须与接受提交一致。driver 位于本 worktree，所有实际 pack/install/consumer 目录只在本 worktree 的 `.cache` 下独立创建，不使用其他 worktree 或全局 links。
 
 ### D-S02 — 从隔离 consumer 验证
 

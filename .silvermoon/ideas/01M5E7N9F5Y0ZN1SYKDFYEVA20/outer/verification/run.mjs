@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync, realpathSync } from "node:fs";
-import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -188,13 +188,28 @@ try {
       packedFileCount: files.length, developmentFilesExcluded: true,
     });
   }
+  await mkdir(join(isolation, "third-party"));
   for (const [name, { physical, manifest }] of thirdParty) {
+    const staging = join(isolation, "third-party", name.replace(/[@/]/g, "-"));
+    await cp(physical, staging, {
+      recursive: true, dereference: true,
+      filter(source) {
+        const parts = relative(physical, source).split(sep);
+        if (parts.includes("node_modules") || parts.includes(".git")) return false;
+        assert.ok(normalized(realpathSync(source)).startsWith(`${normalized(root)}${sep}`));
+        return true;
+      },
+    });
     const packed = JSON.parse(await run("npm", [
-      "pack", "--ignore-scripts", "--pack-destination", packs, "--json", physical,
+      "pack", "--ignore-scripts", "--pack-destination", packs, "--json", staging,
     ], root, packEnv))[0];
     assert.equal(packed.name, name);
     assert.equal(packed.version, manifest.version);
     const filename = join(packs, packed.filename);
+    for (const file of packed.files) {
+      if (file.path !== "package.json")
+        assert.equal(file.size, (await stat(join(staging, file.path))).size, "Repacked distribution must not turn hardlinked content into empty archive entries");
+    }
     tarballs.set(name, filename);
     report.thirdPartyPackages.push({
       name, version: manifest.version,
@@ -202,6 +217,7 @@ try {
       sourceDirectory: repoPath(physical), manifestSha256: hash(await readFile(join(physical, "package.json"))),
       tarball: packed.filename, tarballSha256: hash(await readFile(filename)),
       packedFileCount: packed.files.length, lifecycleScriptsDisabled: true,
+      materializedRegularFilesBeforePack: true, packedFileSizesVerified: true,
     });
   }
   await writeFile(join(consumer, "package.json"), JSON.stringify({
