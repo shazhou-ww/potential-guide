@@ -2,6 +2,8 @@
 
 本文支撑 [Idea.md](./Idea.md)，不是第二份验收合同。以下原则记录本轮讨论确定的设计方向，替代上一版五命令、资源池、harness 自有授权和 blocked 节点恢复模型；不等于整份修订构想已验收或代码已实现。事件名称、精确类型、存储格式和响应策略仍须继续细化，候选事件见 [Events.md](./Events.md)。总讨论入口为 [schema-contracts / Schemas.md](../../../../01M5CR0X2B4R2C6K3183Y1T3SQ/outer/inner/ideal/Schemas.md)。
 
+类型讨论入口为 [Types.md](./Types.md)：先定义 RegulationTarget、ResourceAllocation、CoordinatorState 及合法转换，再推导 Command/Event。Events.md 的既有分类仅作遗漏检查，不作为类型设计的先验框架。
+
 ## 两个意图输入，一个执行状态输出
 
 ```text

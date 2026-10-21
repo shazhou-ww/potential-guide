@@ -6,7 +6,7 @@
 
 ### I-S01 — 定义双意图、纯归约与恢复契约
 
-依据 [Design.md](./ideal/Design.md) 定义 RegulationTarget/ResourceAllocation 两类意图与 CoordinatorState，落实两个纯 reducer、资源意图全量更新、单命令及单次调用边界。明确一致快照、处理位置、存储错误和外部执行核实协议，再收敛 [Events.md](./ideal/Events.md) 的候选 delta；不引入长期目标控制器。
+依据 [Design.md](./ideal/Design.md) 与 [Types.md](./ideal/Types.md) 先收敛 RegulationTarget/ResourceAllocation/CoordinatorState 及合法转换，再推导 Command/Event，落实两个纯 reducer、资源意图全量更新、单命令及单次调用边界。明确一致快照、处理位置、存储错误和外部执行核实协议；[Events.md](./ideal/Events.md) 仅作遗漏检查，不引入长期目标控制器。
 
 ### I-S02 — 接入资源意图、资源侧授权与副作用执行
 

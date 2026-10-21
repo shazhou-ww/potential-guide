@@ -6,7 +6,7 @@
 
 ## 结果
 
-Coordinator 将治理目标意图与资源分配意图两个 Behavior 转换为执行状态 Behavior。Command/Event 分别由纯 reducer 归约，资源意图全量更新；支持目标与状态持久化恢复，副作用通过 monadic composition 组织，不称为 monadic lift。原则见 [Design.md](./Design.md)，事件候选见 [Events.md](./Events.md)。
+Coordinator 将治理目标意图与资源分配意图两个 Behavior 转换为执行状态 Behavior。Command/Event 分别由纯 reducer 归约，资源意图全量更新；支持目标与状态持久化恢复，副作用通过 monadic composition 组织。原则见 [Design.md](./Design.md)，先参考 [Types.md](./Types.md) 讨论 state，再推导 Command/Event。
 
 ## 边界
 
@@ -22,4 +22,4 @@ Coordinator 将治理目标意图与资源分配意图两个 Behavior 转换为�
 
 ## 下一步
 
-依据已确定原则继续讨论 events 的公开状态及原子 delta 边界；事件契约收敛后再提交整份构想验收。
+先讨论 Types.md 的核心 state 与合法转换，再推导 Command/Event；类型及增量契约收敛后提交整份构想验收。
