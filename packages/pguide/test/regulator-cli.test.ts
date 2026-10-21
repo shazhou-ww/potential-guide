@@ -14,12 +14,11 @@ test("initial regulation persists the normal lifecycle without an Agent profile 
       "#!/usr/bin/env node\nthrow new Error('initial must not run a business check');",
     );
     const revision = await f.commit();
-    const config = join(f.directory, "intrinsic-config.json");
+    const config = join(f.directory, ".pguide", "config.jsonc");
     await writeConfig(
       config,
       JSON.stringify({
-        schemaVersion: 2,
-        stateDirectory: join(f.directory, "intrinsic-state"),
+        "cli-core.stateDirectory": join(f.directory, "intrinsic-state"),
       }),
     );
     const result = await run(bin("regulate"), [
@@ -31,8 +30,8 @@ test("initial regulation persists the normal lifecycle without an Agent profile 
       f.subject,
       "--target",
       "initial",
-      "--config",
-      config,
+      "--cwd",
+      f.directory,
       "--format",
       "json",
     ]);
@@ -98,7 +97,7 @@ if(m.id!==undefined)console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result:m.m
       f.subject,
       "--target",
       "terminal",
-      "--config",
+      "--fixture-config",
       config,
       "--format",
       "json",
@@ -110,7 +109,7 @@ if(m.id!==undefined)console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result:m.m
     assert.deepEqual(denied.attempts[0].permissions.grants, []);
     permissions.grants = ["marker"];
     await writeConfig(config, JSON.stringify(value));
-    const args = [denied.regulationId, "--config", config, "--format", "json"];
+    const args = [denied.regulationId, "--fixture-config", config, "--format", "json"];
     const resumed = await run(bin("continue"), args);
     assert.equal(resumed.code, 0, resumed.stdout + resumed.stderr);
     assert.equal(await readFile(marker, "utf8"), "yes");
@@ -196,7 +195,7 @@ console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
       f.subject,
       "--target",
       "terminal",
-      "--config",
+      "--fixture-config",
       config,
       "--format",
       "json",
@@ -207,7 +206,7 @@ console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
     assert.equal(firstReport.outcome.stalledRuns, 1);
     const second = await run(bin("continue"), [
       firstReport.regulationId,
-      "--config",
+      "--fixture-config",
       config,
       "--format",
       "json",
@@ -343,7 +342,7 @@ test("regulate and continue persist pinned Pilot observations and use the JSON c
         f.subject,
         "--target",
         "terminal",
-        "--config",
+        "--fixture-config",
         config,
         "--format",
         "json",
@@ -390,7 +389,7 @@ test("regulate and continue persist pinned Pilot observations and use the JSON c
     await writeFile(config, JSON.stringify(updatedConfig));
     const continued = await run(
       bin("continue"),
-      [report.regulationId, "--config", config, "--format", "json"],
+      [report.regulationId, "--fixture-config", config, "--format", "json"],
       env,
     );
     assert.equal(continued.code, 0, continued.stdout + continued.stderr);
@@ -500,7 +499,7 @@ test("legacy continue records and cross-round CLI budgets fail explicitly", asyn
     );
     const config = join(directory, "config.yaml");
     await writeFile(config, JSON.stringify({ schemaVersion: 2, stateDirectory: state }));
-    const legacy = await run(bin("continue"), [id, "--config", config, "--format", "json"]);
+    const legacy = await run(bin("continue"), [id, "--fixture-config", config, "--format", "json"]);
     assert.equal(legacy.code, 2, legacy.stdout);
     assert.match(legacy.stdout, /Legacy continue records are incompatible/);
     for (const flag of ["--max-iterations", "--max-stalled-iterations", "--timeout", "--guide"]) {
@@ -560,7 +559,7 @@ test("per-Agent timeout includes ACP startup and invocation failures never start
       "terminal",
       "--agent-timeout-ms",
       "500",
-      "--config",
+      "--fixture-config",
       config,
       "--format",
       "json",
@@ -618,7 +617,7 @@ test("one-shot regulation finishes at target without scheduling another observat
       f.subject,
       "--target",
       "terminal",
-      "--config",
+      "--fixture-config",
       config,
       "--format",
       "json",
@@ -672,7 +671,7 @@ test("continue preserves local unpublished source metadata without changing the 
       f.subject,
       "--target",
       "terminal",
-      "--config",
+      "--fixture-config",
       config,
       "--format",
       "json",
@@ -688,7 +687,7 @@ test("continue preserves local unpublished source metadata without changing the 
     assert.notEqual(await f.commit(), commit);
     const continued = await run(bin("continue"), [
       report.regulationId,
-      "--config",
+      "--fixture-config",
       config,
       "--format",
       "json",

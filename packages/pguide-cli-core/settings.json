@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "namespace": "cli-core",
+  "settings": {
+    "cli-core.stateDirectory": {
+      "description": "State root; absent means the platform state directory. Relative paths use process cwd.",
+      "schema": { "type": "string", "pattern": "\\S" }
+    },
+    "cli-core.defaultLanguage": {
+      "description": "Stored default language; does not override command language selection.",
+      "schema": { "type": "string", "pattern": "\\S" }
+    },
+    "cli-core.format": {
+      "description": "Stored output preference; command global options retain precedence and behavior.",
+      "schema": { "enum": ["markdown", "json"] }
+    },
+    "cli-core.color": {
+      "description": "Stored color preference.",
+      "schema": { "enum": ["auto", "always", "never"] }
+    },
+    "cli-core.logLevel": {
+      "description": "Stored log level.",
+      "schema": { "enum": ["error", "warn", "info", "debug"] }
+    }
+  }
+}

@@ -229,13 +229,11 @@ export function executionContext(subject, directory, signal, deadline, evidence)
       else child.stdin.end();
     });
   }
-  const cli = (args, config = subject.configPath, cwd = directory) =>
+  const cli = (args, cwd = subject.workingDirectory) =>
     measure(args[0] === "--help" ? "cli.help" : `cli.${args[0]}`, () =>
       execute(subject.pguide.command, [
         ...(subject.pguide.args ?? []),
         ...args,
-        "--config",
-        config,
         "--cwd",
         cwd,
         "--format",

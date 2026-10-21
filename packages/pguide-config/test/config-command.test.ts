@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
+import { parseConfig } from "@potential-guide/cli-core";
 import {
   OBJECTIVES_SCHEMA_URI,
   validateObjectivesDocument,
@@ -16,7 +17,7 @@ const tmpdir = () => scratch;
 function run(
   args: string[],
   env: NodeJS.ProcessEnv = process.env,
-): Promise<{ code: number; stdout: string }> {
+): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolveRun, reject) => {
     const child = spawn(process.execPath, [script, ...args], {
       env: {
@@ -30,14 +31,92 @@ function run(
       },
     });
     let stdout = "";
+    let stderr = "";
     child.stdout.setEncoding("utf8");
     child.stdout.on("data", (chunk) => {
       stdout += chunk;
     });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
     child.on("error", reject);
-    child.on("close", (code) => resolveRun({ code: code ?? 70, stdout }));
+    child.on("close", (code) => resolveRun({ code: code ?? 70, stdout, stderr }));
   });
 }
+
+test("unknown namespace saves warn, edits preserve comments, validation cannot claim verified", async (t) => {
+  const cwd = await mkdtemp(join(scratch, "jsonc-command-"));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  await mkdir(join(cwd, ".pguide"));
+  const path = join(cwd, ".pguide", "config.jsonc");
+  await writeFile(
+    path,
+    '{\n // retained for other\n "custom.other": 1,\n "agents.defaultAgent": "local"\n}\n',
+  );
+  const invoke = (args: string[]) => run([...args, "--cwd", cwd, "--format", "json"]);
+  const changed = await invoke(["set", "custom.other", '{"enabled":true,}']);
+  assert.equal(changed.code, 0, changed.stdout);
+  assert.match(changed.stderr, /unverified.*custom.other/);
+  const saved = await readFile(path, "utf8");
+  assert.match(saved, /\/\/ retained for other/);
+  assert.ok(saved.indexOf('"custom.other"') < saved.indexOf('"agents.defaultAgent"'));
+  const validated = await invoke(["validate"]);
+  assert.equal(validated.code, 0, validated.stdout);
+  assert.equal(JSON.parse(validated.stdout).status, "unverified");
+  for (const args of [
+    ["set", "agents.unknown", "1"],
+    ["set", "pilot.probe", '{"timeoutMs":1}'],
+    ["set", "custom.other", '{"x":1,"x":2}'],
+    ["set", "custom.other", "1", "--scope", "explicit"],
+    ["show", "--scope=explicit"],
+  ]) {
+    const invalid = await invoke(args);
+    assert.equal(invalid.code, 2, invalid.stdout);
+    assert.equal(await readFile(path, "utf8"), saved);
+  }
+});
+
+test("config unset preserves neighboring comments on disk for first, middle, last and sole properties", async (t) => {
+  const cwd = await mkdtemp(join(scratch, "jsonc-unset-"));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  await mkdir(join(cwd, ".pguide"));
+  const path = join(cwd, ".pguide", "config.jsonc");
+  const cases = [
+    {
+      key: "custom.a",
+      source: '{\n  "custom.a": 1,\n  // important comment for b\n  "custom.b": 2\n}',
+      expected: '{\n  \n  // important comment for b\n  "custom.b": 2\n}',
+      values: { "custom.b": 2 },
+    },
+    {
+      key: "custom.b",
+      source:
+        '{"custom.a":[1,2],/* keep a */"custom.b":2/* keep b */,/* keep c */"custom.c":3/* tail */}',
+      expected: '{"custom.a":[1,2],/* keep a *//* keep b *//* keep c */"custom.c":3/* tail */}',
+      values: { "custom.a": [1, 2], "custom.c": 3 },
+    },
+    {
+      key: "custom.b",
+      source: '{\r\n  "custom.a":1, // after a\r\n  /* before b */"custom.b":2/* after b */\r\n}',
+      expected: '{\r\n  "custom.a":1 // after a\r\n  /* before b *//* after b */\r\n}',
+      values: { "custom.a": 1 },
+    },
+    {
+      key: "custom.only",
+      source: '{/* before only */\n"custom.only":[1,2]/* after only */, // tail\n}',
+      expected: "{/* before only */\n/* after only */ // tail\n}",
+      values: {},
+    },
+  ];
+  for (const entry of cases) {
+    await writeFile(path, entry.source);
+    const result = await run(["unset", entry.key, "--cwd", cwd, "--format", "json"]);
+    assert.equal(result.code, 0, result.stdout + result.stderr);
+    const saved = await readFile(path, "utf8");
+    assert.equal(saved, entry.expected);
+    assert.deepEqual(parseConfig(saved), entry.values);
+  }
+});
 
 test("config path is available without creating configuration", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "pguide-config-command-"));
@@ -67,8 +146,8 @@ test("legacy source aliases remain readable/removable; retired writes preserve c
     assert.ok(help.subcommands.every((command: string) => !command.includes("alias")));
     await mkdir(join(cwd, "pguide"), { recursive: true });
     await writeFile(
-      join(cwd, "pguide", "config.yaml"),
-      JSON.stringify({ schemaVersion: 2, objectives: { health: uri } }),
+      join(cwd, "pguide", "config.jsonc"),
+      JSON.stringify({ "objectives.aliases": { health: uri } }),
     );
     const listed = JSON.parse((await invoke(["list-objectives"])).stdout).objectives;
     assert.deepEqual(
@@ -77,11 +156,11 @@ test("legacy source aliases remain readable/removable; retired writes preserve c
     );
     assert.ok(listed[0].source);
     assert.equal(listed[0].semantics, "legacy-source-alias");
-    const configPath = join(cwd, ".pguide", "config.yaml");
+    const configPath = join(cwd, ".pguide", "config.jsonc");
     await mkdir(join(cwd, ".pguide"), { recursive: true });
     await writeFile(
       configPath,
-      JSON.stringify({ schemaVersion: 2, objectives: { health: join(cwd, "objective.yaml") } }),
+      JSON.stringify({ "objectives.aliases": { health: join(cwd, "objective.yaml") } }),
     );
     const before = await readFile(configPath, "utf8");
     for (const args of [
@@ -103,6 +182,8 @@ test("legacy source aliases remain readable/removable; retired writes preserve c
     assert.match(updated.stdout, /retired/);
     const removed = await invoke(["remove-objective", "health"]);
     assert.equal(removed.code, 0, removed.stdout);
+    assert.deepEqual(JSON.parse((await invoke(["list-objectives"])).stdout).objectives, []);
+    assert.equal((await invoke(["unset", "objectives.aliases"])).code, 0);
     const inherited = JSON.parse((await invoke(["list-objectives"])).stdout).objectives;
     assert.equal(inherited[0].location, uri);
     assert.equal(inherited[0].source, listed[0].source);
@@ -125,10 +206,10 @@ test("Objective list separates long locations and configuration sources without 
       "D:\\Code\\potential guide\\packages\\objective-pguide-self-check\\objective.yaml",
     "devbox-health": "git+https://example.invalid/repo.git#objective/objective.yaml",
   };
-  const configPath = join(cwd, ".pguide", "config.yaml");
+  const configPath = join(cwd, ".pguide", "config.jsonc");
   try {
     await mkdir(join(cwd, ".pguide"), { recursive: true });
-    await writeFile(configPath, JSON.stringify({ schemaVersion: 2, objectives }));
+    await writeFile(configPath, JSON.stringify({ "objectives.aliases": objectives }));
     const result = await run(["list-objectives", "--cwd", cwd], env);
     assert.equal(result.code, 0, result.stdout);
     assert.match(result.stdout, /^# Legacy Objective source aliases\n/);
@@ -156,7 +237,7 @@ test("Objective list separates long locations and configuration sources without 
     assert.equal(schemaVersion, 1);
     assert.equal(Object.hasOwn(aliases, "$schema"), false);
     assert.equal(validateObjectivesDocument({ $schema: OBJECTIVES_SCHEMA_URI, ...aliases }), false);
-    await writeFile(configPath, JSON.stringify({ schemaVersion: 2 }));
+    await writeFile(configPath, "{}");
     const empty = await run(["list-objectives", "--cwd", cwd], env);
     assert.equal(empty.code, 0, empty.stdout);
     assert.match(empty.stdout, /No registered Objectives\. No legacy source aliases were found\./);
@@ -183,7 +264,7 @@ test("user config permissions round trip and invalid grants cannot replace the c
     const configured = await run(
       [
         "set",
-        "regulationPermissions",
+        "regulate.permissions",
         JSON.stringify(permissions),
         "--scope",
         "user",
@@ -195,12 +276,12 @@ test("user config permissions round trip and invalid grants cannot replace the c
       env,
     );
     assert.equal(configured.code, 0, configured.stdout);
-    const read = await run(["get", "regulationPermissions", "--cwd", cwd, "--format", "json"], env);
+    const read = await run(["get", "regulate.permissions", "--cwd", cwd, "--format", "json"], env);
     assert.deepEqual(JSON.parse(read.stdout).value, permissions);
     const invalid = await run(
       [
         "set",
-        "regulationPermissions",
+        "regulate.permissions",
         JSON.stringify({ ...permissions, grants: ["unlisted"] }),
         "--scope",
         "user",
@@ -213,7 +294,7 @@ test("user config permissions round trip and invalid grants cannot replace the c
     );
     assert.equal(invalid.code, 2, invalid.stdout);
     const unchanged = await run(
-      ["get", "regulationPermissions", "--cwd", cwd, "--format", "json"],
+      ["get", "regulate.permissions", "--cwd", cwd, "--format", "json"],
       env,
     );
     assert.deepEqual(JSON.parse(unchanged.stdout).value, permissions);
@@ -222,18 +303,18 @@ test("user config permissions round trip and invalid grants cannot replace the c
   }
 });
 
-test("config exposes schema 2 strategy help and validates strategy edits", async () => {
+test("config exposes JSONC help and validates whole probe edits", async () => {
   const cwd = await mkdtemp(join(scratch, "pguide-config-strategy-"));
   try {
     const help = await run(["--help", "--format", "json"]);
-    assert.equal(JSON.parse(help.stdout).configurationSchemaVersion, 2);
+    assert.equal(JSON.parse(help.stdout).configurationFormat, "jsonc");
     const strategy = {
-      quota: { timeoutMs: 20000, maxAgentRuns: 5, maxStallRuns: 2 },
-      probe: { timeoutMs: 5000, retry: { maxRetries: 2, delayMs: 10 } },
+      timeoutMs: 5000,
+      retry: { maxRetries: 2, delayMs: 10 },
     };
     const configured = await run([
       "set",
-      "regulationStrategy",
+      "pilot.probe",
       JSON.stringify(strategy),
       "--cwd",
       cwd,
@@ -241,11 +322,11 @@ test("config exposes schema 2 strategy help and validates strategy edits", async
       "json",
     ]);
     assert.equal(configured.code, 0, configured.stdout);
-    const read = await run(["get", "regulationStrategy", "--cwd", cwd, "--format", "json"]);
+    const read = await run(["get", "pilot.probe", "--cwd", cwd, "--format", "json"]);
     assert.deepEqual(JSON.parse(read.stdout).value, strategy);
     const invalid = await run([
       "set",
-      "regulationStrategy",
+      "pilot.probe",
       '{"effectTtlMs":0}',
       "--cwd",
       cwd,
@@ -253,7 +334,7 @@ test("config exposes schema 2 strategy help and validates strategy edits", async
       "json",
     ]);
     assert.equal(invalid.code, 2);
-    const unchanged = await run(["get", "regulationStrategy", "--cwd", cwd, "--format", "json"]);
+    const unchanged = await run(["get", "pilot.probe", "--cwd", cwd, "--format", "json"]);
     assert.deepEqual(JSON.parse(unchanged.stdout).value, strategy);
   } finally {
     await rm(cwd, { recursive: true, force: true });
@@ -263,7 +344,7 @@ test("config exposes schema 2 strategy help and validates strategy edits", async
 test("config edit validates a temporary copy before atomically replacing the target", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "pguide-config-edit-"));
   try {
-    const target = join(cwd, ".pguide", "config.yaml");
+    const target = join(cwd, ".pguide", "config.jsonc");
     const editor = join(cwd, "editor.mjs");
     await writeFile(
       editor,
@@ -273,10 +354,10 @@ test("config edit validates a temporary copy before atomically replacing the tar
     const first = await run(["edit", "--cwd", cwd], {
       ...process.env,
       VISUAL: visual,
-      EDIT_CONTENT: "schemaVersion: 2\nretentionDays: 7\n",
+      EDIT_CONTENT: '{ // retained\n"regulate.retentionDays": 7\n}\n',
     });
     assert.equal(first.code, 0, first.stdout);
-    assert.match(await readFile(target, "utf8"), /retentionDays: 7/);
+    assert.match(await readFile(target, "utf8"), /"regulate.retentionDays": 7/);
 
     const invalid = await run(["edit", "--cwd", cwd], {
       ...process.env,
@@ -284,8 +365,8 @@ test("config edit validates a temporary copy before atomically replacing the tar
       EDIT_CONTENT: "schemaVersion: 1\n",
     });
     assert.equal(invalid.code, 2, invalid.stdout);
-    assert.match(await readFile(target, "utf8"), /retentionDays: 7/);
-    assert.deepEqual((await readdir(join(cwd, ".pguide"))).sort(), ["config.yaml"]);
+    assert.match(await readFile(target, "utf8"), /"regulate.retentionDays": 7/);
+    assert.deepEqual((await readdir(join(cwd, ".pguide"))).sort(), ["config.jsonc"]);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -337,7 +418,7 @@ test("config editor rejects embedded Agents and retired Agent commands give acti
       }),
     });
     assert.equal(edited.code, 2, edited.stdout);
-    assert.match(edited.stdout, /pguide agents migrate/);
+    assert.match(edited.stdout, /Invalid setting ID/);
     const list = await run(["list-agents", "--cwd", cwd, "--format", "json"]);
     assert.equal(list.code, 2, list.stdout);
     assert.match(list.stdout, /pguide agents/);
@@ -353,7 +434,7 @@ test("config editor rejects embedded Agents and retired Agent commands give acti
     assert.equal((await run(["update-agent", "added", source, "--cwd", cwd])).code, 2);
     const actual = await run(["show-agent", "added", "--cwd", cwd, "--format", "json"]);
     assert.equal(actual.code, 2, actual.stdout);
-    await assert.rejects(readFile(join(cwd, ".pguide", "config.yaml")), { code: "ENOENT" });
+    await assert.rejects(readFile(join(cwd, ".pguide", "config.jsonc")), { code: "ENOENT" });
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

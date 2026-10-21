@@ -8,14 +8,14 @@ const commands = {
   },
   path: {
     arguments: "",
-    description: "Show user, discovered project and explicit configuration paths.",
+    description: "Show user and nearest discovered project configuration paths.",
     example: "pguide config path",
   },
   validate: {
     arguments: "",
     description:
-      "Validate schemaVersion 2 and the effective configuration; does not connect to Agents.",
-    example: "pguide config validate --config .\\config.yaml",
+      "Validate every selected layer and registered setting; unknown namespaces remain unverified. Does not connect to Agents.",
+    example: "pguide config validate --cwd .",
   },
   edit: {
     arguments: "[--scope <scope>]",
@@ -24,18 +24,24 @@ const commands = {
   },
   get: {
     arguments: "<key>",
-    description: "Read an effective value; dot-separated keys are supported.",
-    example: "pguide config get regulationStrategy.probe.timeoutMs",
+    description: "Read a complete setting ID; dots are literal, not nested paths.",
+    example: "pguide config get pilot.probe",
   },
   set: {
     arguments: "<key> <value> [--scope <scope>]",
-    description: "Set a top-level key; the quoted value is parsed as YAML, not a secret store.",
-    example: "pguide config set defaultAgent local --scope user",
+    description: "Set a complete ID using a JSONC value, retaining other keys and comments.",
+    example: "pguide config set agents.defaultAgent '\"local\"' --scope user",
   },
   unset: {
     arguments: "<key> [--scope <scope>]",
-    description: "Remove a top-level key from the selected file; schemaVersion cannot be removed.",
-    example: "pguide config unset defaultAgent --scope project",
+    description: "Remove a complete ID from the selected file; static defaults are never written.",
+    example: "pguide config unset agents.defaultAgent --scope project",
+  },
+  packages: {
+    arguments: "register|unregister <package-root> | path",
+    description:
+      "Explicitly register local static package settings, remove a registration, or locate the registry for recovery. Never installs or executes packages.",
+    example: "pguide config packages register .\\installed-package",
   },
   "list-agents": {
     arguments: "",
@@ -117,10 +123,10 @@ function definition(subcommand?: string): CommandHelp {
       {
         title: "Configuration",
         lines: [
-          "  Effective values merge user -> nearest project -> explicit --config.",
-          "  --scope <scope> applies to writes: user | project | explicit (default: project).",
-          "  --scope explicit requires --config <path>; reads always use the effective merge.",
-          "  Writes validate schemaVersion 2 before saving. Agent credentials stay in the",
+          "  config.jsonc values merge user -> nearest project by complete ID, without deep merge.",
+          "  --scope <scope> applies to writes: user | project (default: project, at effective cwd).",
+          "  --config and --scope explicit are retired; migrate YAML manually before use.",
+          "  Writes validate known settings; unknown namespaces are saved with a warning. Credentials stay in the",
           "  Agent's login store or named environment variables, never profile literals.",
         ],
       },
@@ -130,9 +136,9 @@ function definition(subcommand?: string): CommandHelp {
           selected === undefined
             ? [
                 "  pguide config path",
-                "  pguide config set defaultAgent local --scope user",
+                "  pguide config set agents.defaultAgent '\"local\"' --scope user",
                 "  pguide agents set local --from .\\agent.yaml --scope user",
-                "  pguide config get regulationStrategy.probe.timeoutMs",
+                "  pguide config get pilot.probe",
                 "  pguide objectives set health --from .\\declaration.yaml --scope user",
               ]
             : [`  ${selected.example}`],
@@ -140,7 +146,7 @@ function definition(subcommand?: string): CommandHelp {
       {
         title: "Notes",
         lines: [
-          "  regulationStrategy configures finite regulation quotas and check deadlines;",
+          "  regulate.quota and pilot.probe configure finite quotas and check deadlines;",
           "  portfolio scheduling belongs to supervise. Validation alone does not prove",
           "  Agent authentication or repair readiness. Use pguide diagnose agent <name>.",
           "  Select declarations with --objective; legacy --pilot aliases remain source references.",
@@ -149,8 +155,8 @@ function definition(subcommand?: string): CommandHelp {
       },
     ],
     constraints: [
-      "--scope is user | project | explicit (default: project) for config writes.",
-      "--scope explicit requires --config; reads always use the effective merge.",
+      "--scope is user | project (default: project) for config writes.",
+      "Project writes target effective cwd, not an ancestor's discovered configuration.",
       "Retired commands reject execution; use the supported replacement shown in Examples.",
     ],
   };
@@ -166,7 +172,7 @@ export function configHelpSpec(subcommand?: string) {
         name: "--scope",
         argument: "<scope>",
         description: "Config write scope; reads use the effective merge",
-        values: ["user", "project", "explicit"],
+        values: ["user", "project"],
         default: "project",
       },
     ],

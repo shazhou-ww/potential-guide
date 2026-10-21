@@ -22,6 +22,7 @@ import {
   markdownText,
   option,
   redactAgentValue,
+  requiredSetting,
   writeResult,
 } from "@potential-guide/cli-core";
 import spawn from "cross-spawn";
@@ -76,10 +77,10 @@ async function directoryCandidates(
 async function discover(
   globals: GlobalOptions,
 ): Promise<{ commands: Candidate[]; conflicts: Record<string, string[]> }> {
-  const config = await loadConfig(globals.cwd, globals.config);
+  const config = await loadConfig(globals.cwd, ["pguide"]);
   const configured = (
     await Promise.all(
-      (config.value.commandDirectories ?? []).map((path) =>
+      requiredSetting<string[]>(config.value, "pguide.commandDirectories").map((path) =>
         directoryCandidates(resolve(globals.cwd, path), "configured"),
       ),
     )
@@ -168,7 +169,6 @@ function globalArguments(globals: GlobalOptions): string[] {
   return [
     "--cwd",
     globals.cwd,
-    ...(globals.config ? ["--config", globals.config] : []),
     "--format",
     globals.format,
     "--color",
@@ -348,7 +348,7 @@ async function diagnose(argv: string[], globals: GlobalOptions): Promise<number>
     );
     return 0;
   }
-  const config = await loadConfig(globals.cwd, globals.config);
+  const config = await loadConfig(globals.cwd, ["pguide"]);
   const found = await discover(globals);
   const agentIndex = argv.indexOf("agent");
   let agent: Record<string, unknown> | undefined;
@@ -368,7 +368,7 @@ async function diagnose(argv: string[], globals: GlobalOptions): Promise<number>
         type: profile.type,
         initialize: await inspectAhp(
           profile,
-          AbortSignal.timeout(config.value.agentExecutionLimits?.timeoutMs ?? 30_000),
+          AbortSignal.timeout(requiredSetting<number>(config.value, "pguide.diagnoseAhpTimeoutMs")),
         ),
       };
     } else {
@@ -482,7 +482,7 @@ function complete(argv: string[], globals: GlobalOptions): void {
 }
 
 function topLevelFlag(argv: string[], flag: "--help" | "--version"): boolean {
-  const optionsWithValues = new Set(["--cwd", "--config", "--format", "--color", "--log-level"]);
+  const optionsWithValues = new Set(["--cwd", "--format", "--color", "--log-level"]);
   let commandIndex = Number.POSITIVE_INFINITY;
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index] as string;
@@ -520,6 +520,17 @@ async function main(): Promise<number> {
     if (command === "complete") {
       complete(rest.slice(1), globals);
       return 0;
+    }
+    if (command === "config" && rest[1] === "packages") {
+      return await dispatch(
+        {
+          command: "config",
+          path: fileURLToPath(import.meta.resolve("@potential-guide/pguide-config/bin/config")),
+          source: "bundled",
+        },
+        rest.slice(1),
+        globals,
+      );
     }
     // Resource repair/migration must remain available when the main config still
     // contains retired embedded profiles or the resource itself needs repair.

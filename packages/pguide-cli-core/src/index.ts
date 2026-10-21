@@ -10,23 +10,30 @@ import {
   realpath,
   rename,
   rm,
-  stat,
   unlink,
   writeFile,
 } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { homedir, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
-import { parse, stringify } from "yaml";
 import { markdownCodeBlock } from "./output.js";
+import { type PguideConfig, requiredSetting, setting } from "./settings.js";
 
 export * from "./agents.js";
+export * from "./settings.js";
 
 import { parseRegulationPermissions, type RegulationPermissions } from "./permissions.js";
 import { killProcessTree } from "./process-tree.js";
 import { pipeRedactedSecrets } from "./streaming-secret-redactor.js";
 
-export { type AhpSessionIdentity, executeAhp, inspectAhp } from "./ahp.js";
+export type { AhpSessionIdentity } from "./ahp.js";
+export async function executeAhp(...args: Parameters<typeof import("./ahp.js").executeAhp>) {
+  return (await import("./ahp.js")).executeAhp(...args);
+}
+export async function inspectAhp(...args: Parameters<typeof import("./ahp.js").inspectAhp>) {
+  return (await import("./ahp.js")).inspectAhp(...args);
+}
 export {
   type CommandHelp,
   formatCommandHelp,
@@ -42,6 +49,7 @@ export {
 export { killProcessTree } from "./process-tree.js";
 
 export const COMMAND_PROTOCOL = "pguide-command-v1";
+const require = createRequire(import.meta.url);
 
 export interface CommandMetadata {
   protocol: typeof COMMAND_PROTOCOL;
@@ -77,7 +85,7 @@ export interface AhpAgentProfile {
 
 export type AgentProfile = AcpAgentProfile | AhpAgentProfile;
 
-export interface PguideConfig {
+export interface LegacyPguideConfig {
   schemaVersion: 2;
   defaultAgent?: string;
   commandDirectories?: string[];
@@ -97,15 +105,8 @@ export interface PguideConfig {
   objectives?: Record<string, string>;
 }
 
-export interface LoadedConfig {
-  value: PguideConfig;
-  sources: Record<string, string>;
-  paths: { user: string; project?: string; explicit?: string };
-}
-
 export interface GlobalOptions {
   cwd: string;
-  config?: string;
   format: "markdown" | "json";
   color: "auto" | "always" | "never";
   logLevel: "error" | "warn" | "info" | "debug";
@@ -433,10 +434,10 @@ function environmentName(value: unknown): value is string {
   return nonempty(value) && /^[A-Z_][A-Z0-9_]*$/.test(value);
 }
 
-export function parseConfig(source: string): PguideConfig {
+export function parseLegacyConfig(source: string): LegacyPguideConfig {
   let raw: unknown;
   try {
-    raw = parse(source);
+    raw = (require("yaml") as typeof import("yaml")).parse(source);
   } catch (error) {
     throw new CliError(`Invalid YAML: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -585,22 +586,12 @@ export function parseConfig(source: string): PguideConfig {
         );
     }
   }
-  return raw as unknown as PguideConfig;
-}
-
-export function userConfigPath(): string {
-  if (platform() === "win32") {
-    return join(
-      process.env.APPDATA ?? join(homedir(), "AppData", "Roaming"),
-      "pguide",
-      "config.yaml",
-    );
-  }
-  return join(process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"), "pguide", "config.yaml");
+  return raw as unknown as LegacyPguideConfig;
 }
 
 export function stateRoot(config?: PguideConfig): string {
-  if (config?.stateDirectory !== undefined) return resolve(config.stateDirectory);
+  const directory = config && setting<string>(config, "cli-core.stateDirectory");
+  if (directory !== undefined) return resolve(directory);
   if (platform() === "win32") {
     return join(process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local"), "pguide");
   }
@@ -614,89 +605,14 @@ export function reportOptions(
   cwd: string,
 ): { enabled: boolean; directory: string } {
   return {
-    enabled: !argv.includes("--no-reports") && config.reports?.enabled !== false,
+    enabled:
+      !argv.includes("--no-reports") && requiredSetting<boolean>(config, "pilot.reportsEnabled"),
     directory: resolve(
       cwd,
       (option(argv, "--report-dir") as string | undefined) ??
-        config.reports?.directory ??
+        setting<string>(config, "pilot.reportDirectory") ??
         join(stateRoot(config), "reports"),
     ),
-  };
-}
-
-async function existingProjectConfig(cwd: string): Promise<string | undefined> {
-  let current = resolve(cwd);
-  while (true) {
-    const candidate = join(current, ".pguide", "config.yaml");
-    try {
-      if ((await stat(candidate)).isFile()) return candidate;
-    } catch {}
-    const parent = dirname(current);
-    if (parent === current) return undefined;
-    current = parent;
-  }
-}
-
-async function readOptional(path: string): Promise<PguideConfig | undefined> {
-  try {
-    return parseConfig(await readFile(path, "utf8"));
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
-    throw error;
-  }
-}
-
-function mergeConfig(
-  target: PguideConfig,
-  incoming: PguideConfig,
-  source: string,
-  sources: Record<string, string>,
-): PguideConfig {
-  const next = { ...target, ...incoming };
-  if (incoming.reports !== undefined) next.reports = { ...target.reports, ...incoming.reports };
-  if (incoming.agentExecutionLimits !== undefined)
-    next.agentExecutionLimits = {
-      ...target.agentExecutionLimits,
-      ...incoming.agentExecutionLimits,
-    };
-  if (incoming.regulationStrategy !== undefined)
-    next.regulationStrategy = { ...target.regulationStrategy, ...incoming.regulationStrategy };
-  if (incoming.objectives !== undefined)
-    next.objectives = { ...target.objectives, ...incoming.objectives };
-  for (const key of Object.keys(incoming)) sources[key] = source;
-  for (const name of Object.keys(incoming.objectives ?? {})) sources[`objectives.${name}`] = source;
-  return next;
-}
-
-export async function loadConfig(cwd: string, explicit?: string): Promise<LoadedConfig> {
-  const user = userConfigPath();
-  const project = await existingProjectConfig(cwd);
-  let value: PguideConfig = { schemaVersion: 2 };
-  const sources: Record<string, string> = { schemaVersion: "built-in" };
-  for (const path of [user, project, explicit].filter(
-    (entry): entry is string => entry !== undefined,
-  )) {
-    const layer = await readOptional(resolve(path));
-    if (layer === undefined && path === explicit) throw new CliError(`Config not found: ${path}.`);
-    if (layer !== undefined) value = mergeConfig(value, layer, resolve(path), sources);
-  }
-  const env: Partial<PguideConfig> = {};
-  if (process.env.PGUIDE_FORMAT !== undefined) env.format = process.env.PGUIDE_FORMAT as "json";
-  if (process.env.PGUIDE_LANGUAGE !== undefined) env.defaultLanguage = process.env.PGUIDE_LANGUAGE;
-  if (process.env.PGUIDE_STATE_DIRECTORY !== undefined) {
-    env.stateDirectory = process.env.PGUIDE_STATE_DIRECTORY;
-  }
-  if (Object.keys(env).length > 0) {
-    value = mergeConfig(value, env as PguideConfig, "environment", sources);
-  }
-  return {
-    value: parseConfig(stringify({ ...value, schemaVersion: 2 })),
-    sources,
-    paths: {
-      user,
-      ...(project === undefined ? {} : { project }),
-      ...(explicit ? { explicit } : {}),
-    },
   };
 }
 
@@ -726,7 +642,7 @@ export async function readStdin(): Promise<string> {
 
 export function resolveObjective(location: string, config: PguideConfig): string {
   const name = location.startsWith("@") ? location.slice(1) : location;
-  const objectives = config.objectives;
+  const objectives = setting<Record<string, string>>(config, "objectives.aliases");
   if (objectives !== undefined && Object.hasOwn(objectives, name))
     return objectives[name] as string;
   if (location.startsWith("@")) throw new CliError(`Unknown registered Objective: ${name}.`);
@@ -771,7 +687,7 @@ export async function readJsonSubject(
   return value;
 }
 
-const globalValues = new Set(["--cwd", "--config", "--format", "--color", "--log-level"]);
+const globalValues = new Set(["--cwd", "--format", "--color", "--log-level"]);
 
 export function extractGlobals(argv: readonly string[]): {
   options: GlobalOptions;
@@ -789,6 +705,10 @@ export function extractGlobals(argv: readonly string[]): {
       rest.push(argument);
       continue;
     }
+    if (!stopped && (argument === "--config" || argument.startsWith("--config=")))
+      throw new CliError(
+        "--config is retired. Use the user config.jsonc or nearest project .pguide/config.jsonc selected by --cwd.",
+      );
     if (!stopped && globalValues.has(argument)) {
       const value = argv[index + 1];
       if (value === undefined) throw new CliError(`${argument} requires a value.`);
@@ -813,7 +733,6 @@ export function extractGlobals(argv: readonly string[]): {
   return {
     options: {
       cwd: resolve(values["--cwd"] ?? process.cwd()),
-      ...(values["--config"] === undefined ? {} : { config: resolve(values["--config"]) }),
       format,
       color: color as GlobalOptions["color"],
       logLevel: logLevel as GlobalOptions["logLevel"],
@@ -963,11 +882,11 @@ export async function commandMain(
   run: (argv: string[], globals: GlobalOptions) => Promise<number | undefined> | Promise<void>,
 ): Promise<void> {
   try {
+    const { options, rest } = extractGlobals(process.argv.slice(2));
     if (process.argv[2] === "--pguide-command-metadata") {
       process.stdout.write(`${JSON.stringify(metadata)}\n`);
       return;
     }
-    const { options, rest } = extractGlobals(process.argv.slice(2));
     if (options.version) {
       writeResult(
         { schemaVersion: 1, command: metadata.command, version: metadata.version },

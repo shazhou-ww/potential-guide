@@ -1,5 +1,8 @@
 {
   "name": "@potential-guide/pguide-regulate",
+  "pguide": {
+    "settings": "./settings.json"
+  },
   "version": "0.4.0-rc.0",
   "description": "@potential-guide/pguide-regulate for Potential Guide.",
   "type": "module",
@@ -13,6 +16,7 @@
     }
   },
   "files": [
+    "settings.json",
     "dist",
     "README.md"
   ],

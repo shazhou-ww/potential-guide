@@ -85,7 +85,7 @@ a Git commit.
 
 `pguide-objectives` 是与 probe 等一致的可发现命令扩展。任意技术栈仓库的选定目录可以放置
 `objectives.yaml`；不查找父目录、不递归发现、不需要 package.json。用户级清单位于
-`pguide config path` 所示用户 config.yaml 的同级 `objectives.yaml`，与运行设置分离。
+`pguide config path` 所示用户 config.jsonc 的同级 `objectives.yaml`，与运行设置分离。
 
 ```yaml
 $schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
@@ -189,12 +189,14 @@ pguide config remove-objective health
 
 `migrate` 校验显式提供的新声明，先原子保存清单，再删除指定旧文件的同名别名；
 其他别名保留。若第二次写入失败，两处数据仍可检查恢复，不会先删除旧数据。
-旧配置仍可只读加载：
+旧来源别名须手工迁入 JSONC；独立资源的 `--legacy-config` 仍只用于显式旧 YAML 迁移：
 
-```yaml
-schemaVersion: 2
-objectives:
-  health: git+https://github.com/owner/repo.git#objective/
+```jsonc
+{
+  "objectives.aliases": {
+    "health": "git+https://github.com/owner/repo.git#objective/"
+  }
+}
 ```
 
 Registration is optional: unregistered paths and Git URIs remain valid inputs.
@@ -203,9 +205,9 @@ Registry names are lowercase kebab-case. `--pilot health` uses a registered Obje
 disambiguate a local path with the same name, use `./health` or an absolute path.
 Targets are paths or Git URIs, not references to other registry entries. Manually configured
 relative paths resolve against the invocation's `--cwd`, as other CLI paths do.
-Objectives merge by name in user, project, then explicit configuration order.
-Removing an override exposes any lower-scope registration; update/remove acts
-only on the selected scope. Listing includes each effective registration's source.
+The `objectives.aliases` object replaces as a whole, project over user.
+Unset the overriding setting to expose the lower-scope object; remove acts
+only on the selected scope. Listing includes the setting's effective source.
 
 Portfolio goal `pilot` fields accept the same names and `@name` syntax.
 `--revision` and portfolio `revision` retain their normal meaning. Registration does not
@@ -228,20 +230,20 @@ Evidence is enabled by default, independently of the existing `--report <path>`
 JSON export. Each `probe` invocation creates a UUID directory under
 `stateRoot/reports`. The default state root is `%LOCALAPPDATA%\pguide` on Windows
 and `$XDG_STATE_HOME/pguide` (or `~/.local/state/pguide`) elsewhere.
-`stateDirectory` and `PGUIDE_STATE_DIRECTORY` retain their existing semantics.
+`cli-core.stateDirectory` and `PGUIDE_STATE_DIRECTORY` retain their existing semantics.
 
-```yaml
-schemaVersion: 2
-reports:
-  enabled: true
-  directory: ./local-reports
+```jsonc
+{
+  "pilot.reportsEnabled": true,
+  "pilot.reportDirectory": "./local-reports"
+}
 ```
 
-For `probe`, directory precedence is `--report-dir`, `reports.directory`, then
+For `probe`, directory precedence is `--report-dir`, `pilot.reportDirectory`, then
 `stateRoot/reports`; relative overrides resolve against `--cwd`. Configuration
-layers merge `reports` per field. `--no-reports` or `reports.enabled: false`
+layers override each complete setting ID. `--no-reports` or `"pilot.reportsEnabled": false`
 disables evidence without disabling `--report`. Regulation and continuation
-also honor the effective `reports` configuration. Evidence has no automatic
+also honor these effective report settings. Evidence has no automatic
 retention cleanup and is never uploaded.
 
 Each run's `events.jsonl` records runtime metadata, check identities/attempts,
@@ -324,16 +326,20 @@ global options. `config <operation> --help` documents individual configuration
 operations without reading or changing configuration. Dispatch still verifies the
 selected command's protocol; help output is not a readiness check.
 
-Configuration now requires:
+Configuration uses two JSONC scopes and complete setting IDs. See
+[package settings and manual migration](../../docs/package-settings.md) for
+static package descriptors, registration/recovery, defaults, validation isolation,
+comment-preserving editing and the full old-to-new field map.
+Do not put `schemaVersion: 2` in a new main config; old YAML and `--config`
+are rejected. For example:
 
-```yaml
-schemaVersion: 2
-defaultAgent: fixture
-agentExecutionLimits:
-  timeoutMs: 30000
-regulationStrategy:
-  quota: { timeoutMs: 300000, maxAgentRuns: 10, maxStallRuns: 3 }
-  probe: { timeoutMs: 30000, retry: { maxRetries: 0, delayMs: 0 } }
+```jsonc
+{
+  "agents.defaultAgent": "fixture",
+  "regulate.agentTimeoutMs": 30000,
+  "regulate.quota": { "timeoutMs": 300000, "maxAgentRuns": 10, "maxStallRuns": 3 },
+  "pilot.probe": { "timeoutMs": 30000, "retry": { "maxRetries": 0, "delayMs": 0 } }
+}
 ```
 
 Agent definitions live separately in `agents.yaml` beside the user or project
@@ -351,8 +357,8 @@ agents:
 Manage them with `pguide agents list|show|set|remove|edit|validate|path|migrate`.
 Writes require `--scope user|project`; `set <name> --from profile.yaml` replaces
 the entire selected profile. Project profiles override whole same-name user
-profiles, never deep-merge. Reads expose scope and source path. `--config` still
-selects an ordinary main config overlay, **not** a third Agent resource scope.
+profiles, never deep-merge. Reads expose scope and source path. `--config` is
+retired; independent Agent scopes and existing resources do not change.
 Embedded `agents` are explicitly rejected: run
 `pguide agents migrate --scope user` or `--scope project`. Migration retains an
 exact private source backup, preserves comments and unrelated/unknown settings,
@@ -366,17 +372,18 @@ explicitly. Replace `--guide` with `--pilot`, `scaffold guide`/`validate guide`
 with `scaffold pilot`/`validate pilot`, and migrate checks to the envelope
 protocol. Remove `limits.maxIterations`, `limits.maxStalledIterations`,
 `--max-iterations`, `--max-stalled-iterations`, and whole-loop `--timeout`.
-`agentExecutionLimits.timeoutMs` / `--agent-timeout-ms` applies separately to each
+`regulate.agentTimeoutMs` / `--agent-timeout-ms` applies separately to each
 Agent execution, including connection and session startup. Each regulation is one bounded run.
-Optional `regulationStrategy.quota` defaults to a 300000 ms whole-run timeout,
-10 Agent runs, and 3 stalled runs. Optional `regulationStrategy.probe` controls
+`regulate.quota` defaults to a 300000 ms whole-run timeout,
+10 Agent runs, and 3 stalled runs. `pilot.probe` controls
 per-observation timeouts and finite retries/delays; its defaults are a 30000 ms
 timeout and zero retries. Probe retries apply to retryable invocation failures,
 not business problems. Remove legacy `mode` and `effectTtlMs`; ongoing scheduling
 belongs to portfolio supervision, not regulation.
 
-`regulationStrategy.probe.timeoutMs` also configures each Git Pilot check process
-used by `probe`, `regulate`/`continue`, and supervisor observation/worker runtimes.
+The `timeoutMs` field of `pilot.probe` also configures each Git Pilot check process
+used by `probe`, `regulate`/`continue`, and supervisor observations. Supervise workers
+do not newly inherit this configured policy; continue retains its archived policy.
 The process default remains 30000 ms. During regulation the same setting also bounds
 the whole observation, so all checks in that observation must fit that separate
 budget; a larger process limit does not extend the regulation quota or Agent limit.
@@ -422,24 +429,22 @@ Profiles inherit credentials by environment-variable name only.
 
 ## Explicit run permissions
 
-Configuration optionally contains `regulationPermissions`. Omission denies all
+Configuration optionally contains `regulate.permissions`. Its static default denies all
 ACP permission requests. Administrators define a ceiling of named rules and
 explicitly activate a subset in `grants`; neither subjects, model plans, tool
 titles nor capability labels grant authority:
 
-```yaml
-regulationPermissions:
-  ceiling:
-    - id: edit-result
-      operation: edit
-      resources: ['D:\work\project\result.json']
-    - id: read-input
-      operation: read
-      resources: ['D:\work\project\input.json']
-    - id: verify
-      operation: execute
-      command: 'node verify.mjs'
-  grants: [edit-result, read-input]
+```jsonc
+{
+  "regulate.permissions": {
+    "ceiling": [
+      { "id": "edit-result", "operation": "edit", "resources": ["D:\\work\\project\\result.json"] },
+      { "id": "read-input", "operation": "read", "resources": ["D:\\work\\project\\input.json"] },
+      { "id": "verify", "operation": "execute", "command": "node verify.mjs" }
+    ],
+    "grants": ["edit-result", "read-input"]
+  }
+}
 ```
 
 Use absolute paths appropriate to your OS. Resources identify **exact files or
@@ -501,7 +506,7 @@ New `agents.yaml` resources and `agents set` inputs reject that old shape;
 `agents migrate` normalizes it into the canonical top-level form.
 Recovery schema 2 is retained without reinterpretation.
 Mixed new/old discriminants, missing protocol selectors, and ACP/AHP field
-combinations are rejected, not silently defaulted. `--agent` and `defaultAgent`
+combinations are rejected, not silently defaulted. `--agent` and `agents.defaultAgent`
 always select the local profile, not a Host product.
 
 ## AHP Host support
@@ -531,7 +536,7 @@ agents:
       sessionResume: true
 ```
 
-This is `agents.yaml`; set `defaultAgent: repair` in the main `config.yaml`.
+This is `agents.yaml`; set `"agents.defaultAgent": "repair"` in the main `config.jsonc`.
 
 Replace the address, version and provider with explicitly authorized Host
 settings. The adapter does not discover endpoints, start a Host, connect to
@@ -709,7 +714,7 @@ AHP terminal-turn markdown response parts:
 are `targetLevel` (a known level) and `requirements` (capability names).
 Unknown or duplicate IDs, arbitrary commands, invalid JSON, refusal,
 cancellation, excessive output, and timeout fail closed; there is no fallback
-policy. Planning uses `agentExecutionLimits.timeoutMs`, separately from each
+policy. Planning uses `supervise.agentTimeoutMs`, separately from each
 execution's timeout and regulation quota.
 
 The coordinator alone binds demands to compatible resources, enforces capacity,

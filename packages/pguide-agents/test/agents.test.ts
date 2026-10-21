@@ -10,7 +10,7 @@ import {
   loadConfig,
   migrateAgents,
   parseAgents,
-  parseConfig,
+  parseLegacyConfig as parseConfig,
   withResourceLocks,
   writeAgents,
 } from "@potential-guide/cli-core";
@@ -115,7 +115,7 @@ test("offline resource validation requires canonical profiles and rejects unknow
     assert.throws(() => parseAgents(source));
   assert.throws(() => parseConfig("schemaVersion: 2\nagents: {}\n"), /pguide agents migrate/);
 });
-test("only user/project resources select whole profiles with provenance, independent of explicit main config", async () => {
+test("only user/project resources select whole profiles with provenance, independent of main settings", async () => {
   const f = await fixture();
   const old = { APPDATA: process.env.APPDATA, XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME };
   process.env.APPDATA = f.home;
@@ -131,8 +131,9 @@ test("only user/project resources select whole profiles with provenance, indepen
     const explicit = join(explicitDirectory, "config.yaml");
     await writeFile(explicit, "schemaVersion: 2\ndefaultAgent: shared\n");
     await writeFile(join(explicitDirectory, "agents.yaml"), file({ ignored: acp }));
-    const config = await loadConfig(child, explicit);
-    assert.equal(config.value.defaultAgent, "shared");
+    await writeFile(join(f.cwd, ".pguide", "config.jsonc"), '{"agents.defaultAgent":"shared"}');
+    const config = await loadConfig(child);
+    assert.equal(config.value["agents.defaultAgent"], "shared");
     const loaded = { agents: await loadAgents(child) };
     assert.deepEqual(loaded.agents.agents.shared, acp);
     assert.equal(loaded.agents.agents.shared?.type, "acp");
@@ -141,7 +142,7 @@ test("only user/project resources select whole profiles with provenance, indepen
     assert.deepEqual(loaded.agents.sources.shared, { scope: "project", path: project });
     assert.equal(loaded.agents.sources.user?.scope, "user");
     assert.deepEqual(await agentsPaths(child), loaded.agents.paths);
-    await writeFile(join(f.cwd, ".pguide", "config.yaml"), "schemaVersion: 2\n");
+    await writeFile(join(f.cwd, ".pguide", "config.jsonc"), "{}\n");
     await mkdir(join(child, ".pguide"));
     await writeFile(join(child, ".pguide", "agents.yaml"), file({ nested: ahp }));
     const sameBoundary = { agents: await loadAgents(child) };

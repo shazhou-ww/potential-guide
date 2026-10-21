@@ -138,7 +138,7 @@ const help: Record<Command, CommandHelp> = {
           "  --scope <scope>         user | directory; disambiguate declaration scope",
           "  --input-file <path|->   Declaration input; only Unit may omit it",
           "  --subject-file <path|-> JSON subject (default: stdin); use - explicitly for stdin",
-          "  --agent <profile>       Existing Agent profile (default: configured defaultAgent)",
+          "  --agent <profile>       Existing Agent profile (default: agents.defaultAgent)",
           "  --agent-timeout-ms <ms> Per-Agent deadline; includes connection and session startup",
           "  --revision <ref|commit> Pin Pilot version",
           "  --language <tag>        Select localized references",
@@ -157,7 +157,7 @@ const help: Record<Command, CommandHelp> = {
         title: "Notes",
         lines: [
           "  May invoke a real Agent and consume tokens. Repair tool requests require configured grants.",
-          "  regulationStrategy.quota bounds the run; regulationStrategy.probe controls checks.",
+          "  regulate.quota bounds the run; pilot.probe controls checks.",
           "  The saved regulation ID can be resumed with pguide continue <regulation-id>.",
           "  Recovery retains the resolved source and commit, even if a registered name changes.",
         ],
@@ -183,7 +183,7 @@ const help: Record<Command, CommandHelp> = {
         lines: [
           "  Restores the saved target, subject, Agent recipe and quotas; does not accept a new --pilot.",
           "  Current permission grants apply. A required Agent session must be resumable.",
-          "  Use the same --config / --cwd context to find the saved state directory.",
+          "  Use the same --cwd and user/project config.jsonc context to find the saved state directory.",
         ],
       },
     ],
@@ -403,7 +403,7 @@ export function getCommandHelp(command: Command, subcommand?: string): CommandHe
       `Writes require explicit --scope (${scopes}); there is no default write scope.`,
       ...(command === "agents"
         ? [
-            "--config selects a main config overlay, never a third Agent scope.",
+            "Main configuration uses user/project config.jsonc; --config is retired. Agent resources retain two independent scopes.",
             "Project profiles replace entire same-name user profiles; credentials are references, never secrets.",
             "--legacy-config must be the main config beside the selected scope's agents.yaml.",
           ]

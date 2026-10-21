@@ -19,7 +19,7 @@ test("probe and scaffold preserve stdout/export while retaining default, configu
       f.manifest,
       "--subject-file",
       f.subject,
-      "--config",
+      "--fixture-config",
       config,
       "--format",
       "json",

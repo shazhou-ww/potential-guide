@@ -9,7 +9,8 @@ assert.ok(["self-check", "setup"].includes(kind));
 assert.notEqual(process.getuid(), 0, "Run as the image's non-root user");
 const provenance = JSON.parse(await readFile("/harness/provenance.json", "utf8"));
 const run = await mkdtemp(`/work/runs/${kind}-${mode}-`);
-const configPath = join(run, "config.json");
+await mkdir(join(run, ".pguide"));
+const configPath = join(run, ".pguide", "config.jsonc");
 const subjectPath = join(run, "subject.json");
 const log = join(run, "prompts.jsonl");
 const scratch = join(run, "scratch");
@@ -19,12 +20,18 @@ await writeFile(log, "");
 await writeFile(
   configPath,
   JSON.stringify({
-    schemaVersion: 2,
-    commandDirectories: ["/opt/consumer/node_modules/.bin"],
-    defaultAgent: "fixture",
+    "pguide.commandDirectories": ["/opt/consumer/node_modules/.bin"],
+    "agents.defaultAgent": "fixture",
+  }),
+);
+await writeFile(
+  join(run, ".pguide", "agents.yaml"),
+  JSON.stringify({
+    $schema: "https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json",
     agents: {
       fixture: {
-        connection: { type: "acp", protocolVersion: "1" },
+        type: "acp",
+        connection: { protocolVersion: "1" },
         transport: {
           type: "stdio",
           command: "/usr/local/bin/node",
@@ -38,7 +45,6 @@ await writeFile(
   subjectPath,
   JSON.stringify({
     workingDirectory: run,
-    configPath,
     scratchDirectory: scratch,
     pguide: { command: "/opt/consumer/node_modules/.bin/pguide" },
     desiredVersion: provenance.pguideVersion,
@@ -57,8 +63,8 @@ const result = spawnSync(
     objective,
     "--revision",
     provenance.objectiveRevision,
-    "--config",
-    configPath,
+    "--cwd",
+    run,
     "--subject-file",
     subjectPath,
     "--format",
