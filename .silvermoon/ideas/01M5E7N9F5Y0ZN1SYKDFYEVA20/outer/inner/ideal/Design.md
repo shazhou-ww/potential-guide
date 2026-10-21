@@ -1,21 +1,36 @@
-# Coordinator 已确认语义与复用决策
+# Coordinator 单一目标命令与调度边界
 
-本文支撑本 IDEA 的方向卡，记录基础调度模型及影响可行性的决策，不是第二份验收合同。总讨论入口为 [schema-contracts / Schemas.md](../../../../01M5CR0X2B4R2C6K3183Y1T3SQ/outer/inner/ideal/Schemas.md)。以下语义已经用户确认，不再作为待定建议；具体类型字段和模块划分留给实施阶段。
+本文支撑本 IDEA 的方向卡，不是第二份验收合同。总讨论入口为 [schema-contracts / Schemas.md](../../../../01M5CR0X2B4R2C6K3183Y1T3SQ/outer/inner/ideal/Schemas.md)。本次修订体现单一目标命令讨论，替代上一版五命令与 blocked 节点恢复模型；具体类型字段、持久化接口和实现方案留到实施阶段明确。本候选尚待重新验收，旧验收事件和证据仅证明历史交付。
+
+## 单一目标命令
+
+- 每条请求在被 Coordinator 串行接受时，为特定 Objective 与 subject 指定目标 level 和 priority；它是一次性尝试的需求，不是长期保持目标状态的订阅。资源变化不自动复活已经终结的调用，外部状态退化也不触发无限纠偏。
+- 公共命令只有设置目标这一种，不再分别提供 add、replace、cancel、priority 或 retry。当前需求尚未终结时，新请求更新该工作对象的目标与优先级；前次已终结时，即使参数相同，新请求仍表示新的一次尝试，不因值相等被吞掉。commandId 只关联请求，不默认充当幂等键。
+- 覆盖对象必须由明确的 Objective 与 subject 身份确定；精确版本、来源及可信权限边界不能混淆。具体键及规范化规则在实施时定义，不能只用 Objective URI 把不同 subject 合并，也不能继续要求调用者靠任意 regulation ID 区分同一需求的更新。
+- 对同一工作对象，以接受顺序确定新旧，不依赖生产者时钟。优先级仍为非负整数、小者优先、同级 FIFO；纯 priority 更新不应无故重启执行。目标更新如何替换不再适用的运行须显式说明，并保留请求、需求修订、执行及事件顺序关联。
+- 目标 initial 来自先行 [level-attainment](../../../../01M5EFD1DW5J6MBE9BKCRFW5W3/outer/inner/ideal/Idea.md) 的无要求最低层级：不为它启动检查或 Agent，撤销尚未开始的推进需求并停止不再需要的执行。它不是未知状态，不将已达成 subject 降级，不回滚已发生的修改；共享 provider 仍有其他需求时不得被误撤销。
+
+## 任务与单次调用
+
+- pending 是 Coordinator 为 regulator 排队的任务状态，此时尚未进入 Regulation；资源容量或能力暂时不足可以保持 pending，后续合法资源变化可触发调度。
+- Regulation 一旦开始，达标、业务 block 或内部 exception/error 都结束本次调用。目标 level 是尝试意图，不承诺最终达到；authorization-required、exhausted 等终结结果不能保留成同一调用的挂起态，也不存在专门复活它的 retry 命令。
+- 后续尝试使用新的执行身份，必要进展、阻塞原因和恢复信息须可持久化，不能依靠旧 Promise、进程句柄或内存节点跨长时间等待及设备重启。持久化数据、提交责任和失败呈现需在实施合同中明确；不默认承诺整个 Coordinator 的持久化目标数据库。
+- Coordinator 只保留当前单次任务与必要的有限依赖编排，不拥有长期业务目标。依赖结束后如需重新调用 consumer，它是读取有效证据后发起的新调用，不是恢复已终结的 Regulation；编排不能绕过授权、总预算或假定 consumer 已达标。
 
 ## 公共边界与驻留
 
 - FRP 入口的第一参数是资源池 Behavior；沿用 `@potential-guide/effects` 的 `SubscriptionRef` 表达随时间变化的当前值，`Stream` 表达命令和事实。可信构造配置包含 runner、精确来源解析器、权限上限、预算、并发及终止策略，不混入业务命令。
-- 一个 scoped Coordinator 实例拥有一个内部 priority queue、执行集合和依赖图。没有 `Map<QueueId, Queue>`，也不接受 queue snapshot 或 dependency graph 输入。调用者增加、替换、取消 Regulation 或改变 priority；输出的是已接受、已拒绝、已启动、依赖发现、阻塞、结果、停止等已发生事实，而非指令回声。
+- 一个 scoped Coordinator 实例拥有一个内部 priority queue、执行集合和依赖图。没有 `Map<QueueId, Queue>`，也不接受 queue snapshot 或 dependency graph 输入。调用者只设置目标与 priority；输出的是已接受、已拒绝、已启动、依赖发现、阻塞、结果、停止等已发生事实，而非指令回声。
 - 接口由 scope 管理唯一调度循环和订阅；多个事件消费者不创建多个调度器。空队列及正常命令流结束不关闭服务；资源后续变化和运行中的后续反馈仍有效。显式 scope 关闭才停止接收，终止执行并等待清理。订阅与缓存策略须在实施中说明并测试：不以无限历史数组代替事件流，也不静默丢失在订阅期内必须交付的事实。
-- 业务 ID、命令关联 ID、需求 generation、执行 ID 和事件顺序可追踪。替换改变 generation，priority 变化不冒充新工作；过期命令或未知对象产生拒绝事件而不改状态。优先级采用非负整数，小者优先、同级 FIFO，避免没有理由地另造排序模型。
+- 工作对象身份、命令关联 ID、需求修订、执行 ID 和事件顺序可追踪；旧执行反馈不能完成或修改新需求。非法命令产生拒绝事实且不改变现有需求。仅凭当前需求不存在不能拒绝一条新的合法目标请求。
 
 ## 依赖发现与所有权
 
-- 只有当前 Regulation 返回 `dependency-required` 才建立等待边和派生工作；不得先借 Planner 周期 observe 预展开整张图。复用 Regulation 自己的观察/重观察闭环；provider 达标只唤醒 consumer 再运行、重新观察，绝不把 provider 的成功当作 consumer 的成功。
+- 只有当前 Regulation 返回 `dependency-required` 才建立依赖关系和派生任务；返回该结果的调用已经结束，Coordinator 自主为 provider 排一个调用，不保留原调用等待。不得先借 Planner 周期 observe 预展开整张图；provider 达标只支持 consumer 的新调用重新观察，绝不把 provider 的成功当作 consumer 的成功。
 - 等待边保留 consumer generation、provider 的 Objective/subject/精确版本与来源、最低 level。共享只发生在相同执行身份及兼容来源/权限边界内，聚合消费者所需的最强 level、最高 priority 和能力约束；不以仅含 Objective URI 与 subject 的旧 key 混合不同版本或信任域。
-- 当前 roots 是可达性锚点。取消或替换 root 时移除其旧等待边，再按存活 roots 的可达性回收无引用派生工作，包括下游链条；共享 provider 及仍为 root 的 provider 保留。无引用但仍运行的工作先停止、确认终止后才释放资源；解析得到的来源句柄也必须成对释放。
+- 当前有效需求是依赖可达性锚点。新目标覆盖旧目标或目标设为 initial 时，清理不再需要的边，并回收无引用派生工作及下游链条；共享 provider 及仍被独立需求需要的 provider 保留。无引用但仍运行的工作先停止、确认终止后才释放资源；解析得到的来源句柄必须成对释放。
 - 验证 handoff 的成功 envelope、consumer generation、Objective/version/source、dependencies 与观察中的 problems 一致，以及 provider subject/level 合法。异步解析完成前后均校验 generation；旧执行结果或旧版本证据不得改变新图或完成新需求。来源冲突、缺少精确版本、非法证据明确失败，而不是退回 latest。
-- 新边先在候选图检查自环和传递环，通过后原子安装；拒绝时不留下半张图。事件标明受影响 consumer 和原因，其他独立工作继续。消费者通过替换或显式重试恢复，而不是服务 crash 或无限自动重试。
+- 新边先在候选图检查自环和传递环，通过后原子安装；拒绝时不留下半张图。事件标明受影响 consumer 和原因，其他独立工作继续；需要再次尝试时通过新的目标请求表达，不引入旧 retry/replace 恢复入口，也不无限自动重试。
 
 ## 资源、生命周期与失败
 
@@ -23,7 +38,7 @@
 - 全局并发和每资源容量均计算 running 与 stopping。资源移除、binding/能力失效及容量收缩触发必要的停止；超额期间禁止新增。P0 可复用既有最少受害者抢占规则，停止中的执行仍占槽位，不重复选作受害者。
 - runner.start 抛错、result 拒绝、abort 抛错、kill 拒绝与正常业务阻塞分别转换为可归属事件。abort 只是请求；result settlement 必须代表执行实际结束，或等待 kill 的终止确认，之后才释放槽位。kill 失败保留占用并报告，不能假装停止成功；后续实际结束仍可完成清理。关闭也不虚报清理完成。
 - expected failures（命令校验、资源更新、解析/观察、授权/能力不足、依赖、执行和清理失败）在事实流中明确呈现，不传播成顶层退出。只有未处理的缺陷、不可恢复的服务基础设施失败属于 crash；不得把一切异常吞成成功。命令流/资源流异常亦须被监督和明确报告，不能悄悄让调度 fiber 消失。
-- 权限和预算取可信构造配置；派生工作没有新增授权，命令中注入 grant/ceiling/budget 被拒绝。授权不足挂起并发事件，不通过自动 continuation 绕过。耗尽、执行失败采用有界、可追踪的重试策略，不能无限提升 stall allowance 或重置总预算；具体默认退避在实施中用测试固定，显式 retry 也受剩余可信预算限制。
+- 权限和预算取可信构造配置；派生工作没有新增授权，命令中注入 grant/ceiling/budget 被拒绝。授权不足以明确结果结束本次调用，不通过自动 continuation 绕过。新的目标请求、依赖派生、抢占或资源撤销均不补充实例总预算；不保留旧 retry 入口，也不能以更换执行身份无限重置同一编排的 stall allowance。
 
 ## 源码研究与最简单完整方案
 
