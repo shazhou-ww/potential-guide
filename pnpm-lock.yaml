@@ -391,6 +391,21 @@ importers:
         specifier: 'catalog:'
         version: 2.9.1
 
+  packages/regulation-coordinator:
+    dependencies:
+      '@potential-guide/effects':
+        specifier: workspace:^
+        version: link:../effects
+      '@potential-guide/objective-pilot':
+        specifier: workspace:^
+        version: link:../objective-pilot
+      '@potential-guide/objective-portfolio-supervisor':
+        specifier: workspace:^
+        version: link:../objective-portfolio-supervisor
+      '@potential-guide/objective-regulator':
+        specifier: workspace:^
+        version: link:../objective-regulator
+
 packages:
 
   '@biomejs/biome@2.5.15':

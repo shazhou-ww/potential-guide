@@ -63,6 +63,14 @@ export const releasePackages = [
     forbiddenDependencies: ["@potential-guide/cli-core", "@potential-guide/objective-guide"],
   },
   {
+    id: "regulation-coordinator",
+    directory: "regulation-coordinator",
+    name: "@potential-guide/regulation-coordinator",
+    requiredExports: ["regulationCoordinator"],
+    bins: [],
+    forbiddenDependencies: ["@potential-guide/cli-core", "@potential-guide/objective-guide"],
+  },
+  {
     id: "cli-core",
     directory: "pguide-cli-core",
     name: "@potential-guide/cli-core",

@@ -5,6 +5,7 @@ business:
   - "@potential-guide/objective-pilot"
   - "@potential-guide/objective-regulator"
   - "@potential-guide/objective-portfolio-supervisor"
+  - "@potential-guide/regulation-coordinator"
 tools:
   - pguide
   - "@potential-guide/cli-core"

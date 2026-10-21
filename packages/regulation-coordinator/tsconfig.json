@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "../../.cache/tsbuildinfo/regulation-coordinator.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../effects" },
+    { "path": "../objective-pilot" },
+    { "path": "../objective-regulator" },
+    { "path": "../objective-portfolio-supervisor" }
+  ]
+}

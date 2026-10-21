@@ -1,57 +1,66 @@
-# 主配置准备决定与待定问题
+# 主配置准备规则与行为阻塞项
 
-本文服务于 [Idea.md](./Idea.md)，不是已批准的完整设计。总评审的历史依据见 [Schemas.md](../../../../01M5CR0X2B4R2C6K3183Y1T3SQ/outer/inner/ideal/Schemas.md)。
+本文服务于 [Idea.md](./Idea.md)。状态仍为 preparing / downstream / unsubmitted；以下区分用户已确认规则、技术候选和需用户决定的行为，不授权实施。详尽现状、旧新映射及源码索引集中在 [Settings.md](./Settings.md)，不在多处重复维护。
 
-## 已确认
+## 已确认：存储与合并
 
-- 用户于 2026-10-21 明确确认 JSONC 作为唯一新主配置格式，不并行提供 YAML、INI 或 TOML 主配置格式；这不改变独立 Agent 和 Objective 资源的格式，也不代表 JSONC 已实施或旧 YAML v2 已迁移。
-- 所有扩展子命令，包括独立第三方命令，均可独立定义和演进自有设置，不修改核心全局配置类型或等待核心发布。
-- 初期只做用户级、项目级设置；现有 YAML v2 加载器还存在其他入口，不把新模型的范围误写为现有行为。
-- 顶层 key 是完整 setting ID，点号只分隔名字，不表示对象路径。按顶层 key 浅合并，项目同名值整体替换用户值，数组和对象不递归合并。未覆盖的 key 保留用户值。
-- namespace 按所属 package 功能后缀约定，如 pguide-regulate 对应 regulate；package 配置描述显式声明归属，核心不截取包名猜测。不同 package 的 namespace 归属冲突明确失败，不以发现顺序解决。
-- 同一 package 的多个命令可共用 namespace。配置定义者与消费者可以不同，跨组件消费要明确约定。
-- package 配置描述采用独立静态 JSON 文件，由 package 元数据引用，不采用可执行模块作为描述载体。
-- 内置描述随构建接入；第三方描述须显式注册，不因 PATH 上发现命令而自动加载其描述。普通配置操作不执行扩展来获取描述。
-- 描述随 package 交付和更新，与设置值的用户级、项目级作用域分离；同一份 package 描述用于解释两个作用域的设置值，不按作用域复制描述或逐项目注册。第三方 package 由外部工具安装后，再显式接入一次已安装 package；接入定位其元数据引用的静态描述，不授予命令执行权限。第一版不新增 package 安装器。具体元数据字段、接入记录位置、定位及信任边界仍待讨论。
-- 显式对象值整体替换后不自动补字段默认值；缺少必填字段明确报错，可选字段允许缺失。可选字段缺失的含义须由描述明确，消费者不得暗中回填字段默认值。
-- 仅当用户级和项目级都未提供某个 setting 时，才应用所属 package 静态描述中声明且通过约束校验的整个 setting 默认值。默认对象整体使用，不与显式对象拼接。无默认值的可选 setting 保持缺失，必需 setting 在相关命令消费时明确报错。
-- 默认值不自动写入配置文件；有效配置展示标明其 package 默认来源。描述是默认值的唯一依据，消费者不得维护另一套隐式默认规则。迁移须显式保留旧有效值，不因新默认值而省略原有预算或权限设置。具体默认值及 quota 等对象是否拆分为独立 setting ID 尚未决定。
-- 未加载所属 namespace 描述的设置保留原值并明确标为未验证，不自动删除，也不阻断无关命令。已加载所属 namespace 描述但未定义的 key 是明确的未知设置错误，保留原文而不静默忽略。
-- 全量 config validate 报告全部问题；已知描述中的未知 key 或非法值导致校验失败。缺少描述本身不使全量校验失败，但结果须明确展示未验证项，不得将其表述为验证通过。
-- 命令消费时严格校验其消费的配置及相关 namespace，包括跨组件共享消费；无关扩展的语义错误不阻断无关命令。JSONC 语法错误、重复顶层 key、namespace 所有权冲突等使配置无法可靠解释的错误不能按无关语义错误绕过。编辑命令是否允许保存未验证设置尚待决定。
-- Agent 完整定义、Objective 声明保持独立；默认 Agent 设置仅引用名称，不嵌入连接或凭据。
-- 用户级主配置沿用系统用户配置目录，文件名为 config.jsonc；Windows 为 %APPDATA%\pguide\config.jsonc。项目级为 .pguide\config.jsonc，从命令有效工作目录向上仅选择最近一份，不叠加祖先项目配置。主配置换名不得切断独立 Agent、Objective 资源发现。
-- 应读取的位置发现旧 YAML 主配置时明确要求迁移；新旧文件并存不静默选择或合并。旧格式不再参与主配置读取，也不在普通读取时自动改写。当前仅自用，本次提供手工迁移说明，不新增主配置自动迁移命令；手工迁移完成后将旧文件移出自动发现位置。
+- JSONC 是唯一新主配置；用户级使用系统用户配置目录的 `config.jsonc`（Windows 为 `%APPDATA%\pguide\config.jsonc`），项目级从命令有效工作目录向上只选最近的 `.pguide\config.jsonc`，不叠加祖先项目配置。
+- 顶层 key 是完整 setting ID，点号不是对象路径。用户级后叠加项目级，按 key 浅合并；同 key 的对象、数组整体替换，不深合并或拼接。
+- 显式对象不补字段默认：必填缺失报错，可选缺失含义由描述明确。仅整个 setting 在两级均缺失时，才采用所属 package 静态描述中已通过约束校验的整个默认值。可选且无默认的 setting 保持缺失；必需项在相关命令消费时缺失则报错。
+- 默认值不写回，来源可见；消费者不得另藏 setting 默认值。
+- 移除所有主配置 `--config` 入口及依赖它的 `config --scope explicit`；旧入口明确报错并说明两级替代方式，不能静默忽略。其他 CLI、环境、凭据和独立资源入口不因本项自动删除。
+- 应读取位置出现旧 YAML 主配置时拒绝并要求手工迁移；新旧并存失败，不选择其中一份、不普通读取时改写。只提供手工迁移说明，不新增主配置迁移命令；迁后旧文件移出发现位置。
 
-## 覆盖示例
+## 已确认：归属、描述与校验
 
-用户级：
+- namespace 按 package 功能后缀约定，package 显式声明所有权，核心不从包名猜。不同 package 冲突失败，同 package 多命令可共用。第三方新增设置不修改核心全局类型。
+- 描述为随 package 交付的静态 JSON，由 package 元数据引用；内置随构建接入，第三方由外部工具安装后显式接入一次。描述与设置值的两个作用域无关，不逐项目注册。
+- 不新增安装器，不通过执行扩展获得描述，不因 PATH 命令发现自动信任描述；描述接入不授予执行权限。载体已确认，不再列为待定。
+- 未加载 namespace 描述的值保留并标未验证。已知 namespace 中未知 key 或非法值是错误，保留原文不静默忽略。
+- 全量 `config validate` 报全部问题；已知描述的语义错误导致失败，未知描述本身不导致失败，但不可把未验证项称为已验证。
+- 命令校验其相关 namespace，包括共享消费；无关 namespace 语义错误不阻断。JSONC 语法、重复 key、namespace 冲突等结构错误不可通过“无关”绕过。
 
-```json
-{
-  "regulate.defaultAgent": "local",
-  "regulate.quota": { "timeoutMs": 90000, "maxAgentRuns": 10 }
-}
-```
+### B1、B2：用户已确认，不再待定
 
-项目级：
+- **B1 写入：** 允许 `config edit/set/unset` 保留及写入未知 namespace 的值，明确警告“未验证”，不称为验证成功；已知 namespace 的非法值/未知 key 及结构错误仍拒绝写入，原文件不变。此为已明确批准的写入政策变化，而不是从读取容忍推导的授权。
+- **B2 接入与升级：** 按原建议使用用户配置目录中的独立接入记录（候选名称 `settings-packages.json`），保存 package 身份与安装根目录，读取元数据指向的包内静态 JSON 并校验身份、namespace、描述和默认值。同位置、同身份、同 namespace 升级重新校验后使用，无需逐版本确认；身份/namespace 改变须重新显式接入。相同根目录重复发现去重，冲突的同 package 描述失败。
+- 注册记录损坏，或已注册 package/描述缺失、损坏时明确失败；这是描述装配失败，不能降格为未知 namespace 或按无关语义错误跳过。未注册 namespace 的值仍保留为未验证。既有不读取主配置的资源救援通道按 B4 保留。接入不授予执行权限，不增加签名服务、hash 审批链或安装器。
 
-```json
-{
-  "regulate.quota": { "maxAgentRuns": 3 }
-}
-```
+## 已确认：共享、迁移与部署边界
 
-覆盖后保留 regulate.defaultAgent；quota 的显式值只有 maxAgentRuns，不继承用户对象中的 timeoutMs，也不补字段默认值。若描述要求 timeoutMs 必填则报错，若为可选则保持缺失。只有两个作用域都没有 quota 时，才可能应用描述声明的整个 quota 默认值。具体 setting ID、字段必填性及默认值仍为候选，不能把示例当完整有效配置。
+- 第一版 quota **保持一个共享对象，不拆分**；supervise 继续消费。具体候选为 `regulate.quota`，三个必填字段及默认值见映射表。
+- Agent 执行超时拆为 regulate、supervise、`pguide diagnose agent` AHP 初始化三个独立 setting。旧 `agentExecutionLimits.timeoutMs` 有有效显式值则分别复制到三者；没有则分别保持 `1800000`、`30000`、`30000` 毫秒。不改变 ACP 诊断或独立 probe 预算。
+- Agent 完整定义、Objective 声明继续独立；默认 Agent 只存名称引用，不嵌入连接、模型、工具授权或秘密。换主配置文件名不能切断独立资源定位，也不重新迁移已独立资源。
+- 部署由主代理在后续阶段使用已验收 worktree build，全局安装 pguide 及全部包装入口，备份后手工迁移实际本机配置；逐字段核验默认 Agent、`gpt-5-mini`、工具权限、probe `90000` 毫秒及独立资源。准备阶段不读取设备秘密、不更换全局入口、不改设备配置、不发布 npm。
 
-## 待与用户讨论
+## 技术命名候选（不作为新的行为批准）
 
-1. JSONC 主配置的注释编辑规则如何规定。
-2. package 静态描述的元数据引用字段、第三方接入记录的位置、已安装 package 的定位及信任边界、namespace 合法性和身份匹配、同一 package 的重复发现如何处理。描述来源接入不按设置值作用域划分。
-3. 具体设置的必填性与默认值、弃用规则，以及编辑命令是否允许保存未验证设置。
-4. 默认 Agent、quota、probe、权限等设置的具体归属及共享消费契约。当前 supervise 读取共享 quota，不能机械重命名后切断或新增隐式继承。
-5. 现有显式文件、环境和 CLI 参数入口如何保留、替代或显式移除，以及新格式身份和旧 YAML v2 的手工字段映射。不把局部配置建议当作删除现有入口的授权，不新增自动迁移命令。
+完整 setting ID、namespace owner/consumers、静态默认和约束以 Settings.md 的表为唯一候选清单。普通技术选择：描述文件名 `settings.json`，元数据 `package.json` 的 `pguide.settings` 指向包内相对路径；描述以 `schemaVersion: 1`、`namespace`、`settings` 表达，package 身份以该元数据的 `name` 核对。主配置候选不再携带旧 `schemaVersion: 2`，顶层只放完整 setting ID；描述版本与命令输出 envelope 的版本不是主配置 setting。
 
-## 部署限定
+JSONC 编辑推荐保留原始文本、未编辑 key 的注释/顺序，以局部修改替代整文件 YAML stringify；完整 ID 的 `get/set/unset` 不作点路径访问，`set` 的值改为 JSONC 值而不是 YAML。此为新格式的技术候选；未验证内容的写入已按 B1 获准。
 
-用户明确要求在部署阶段全局安装本机迭代后的 pguide 本地 build，并手工迁移本机用户级配置。准备阶段不重新指向全局入口，也不改动全局设备配置；部署前须重新读取实际设备状态，不沿用交接快照作为证据。实施与部署种子中的验证要求仍可在后续阶段细化，不代表已完成。
+保留系统资源目录定位的候选：stateDirectory/reportDirectory 缺失仍不注入 setting 值，由描述说明“按平台/状态根定位资源”的缺失语义，展示时区分计算的资源路径与静态默认来源；不把依赖机器环境的路径伪造成固定 JSON 默认。
+
+## 主代理审查：保持既有行为
+
+依据用户对本 idea 的代理门限审批授权，B3、B4 按源码证据选择不改变既有行为的兼容方向，不作为新增功能授权：默认 Agent 与 probe 的 owner 命名采用下表候选，但保留现有消费者和传播边界；除已明确移除的主配置入口外，保留现有 CLI、环境覆盖和不读取主配置的资源救援通道，不激活当前仅存储的展示/语言设置。项目写目标仍为有效 cwd 下的新配置位置，并展示目标。后续用户已确认 B1、B2；B5 的输入契约迁移仍须用户确认，不能以代理审批替用户决定。
+
+## 已由主代理审查选定：B3、B4
+
+| ID | 已选定的保留边界 | 具体契约 |
+| --- | --- | --- |
+| B3 | 默认 Agent 与 probe 保持共享归属及原消费边界 | `agents.defaultAgent` 归 `@potential-guide/pguide-agents`，regulate 与 setup/self-check 共同引用；不让 supervise 的 `--planner` 或 diagnose 自动采用它。`pilot.probe` 归 `@potential-guide/pguide-pilot`，regulate 消费 timeout+retry，probe 及 supervise 的 goal/dependency observation 只消费现有 timeout，不新增重试，也不顺便把该策略传入 supervise worker（目前未传）。不借换名拆成各命令独立配置或扩大消费。 |
+| B4 | 其他运行入口及配置修复路径按现状保留 | 保留 `PGUIDE_FORMAT/LANGUAGE/STATE_DIRECTORY` 运行时覆盖（不算第三文件作用域，来源为 environment）、其余 CLI/凭据入口和现有配置独立的资源修复路径。`format/defaultLanguage/color/logLevel` 当前多数只存储/展示，不顺手激活。`config --scope project` 仍写有效 cwd 下的新文件并显式展示目标。不把不读取主配置的救援命令变成主配置消费者。独立 `agents/objectives migrate --legacy-config` 保留专用旧 YAML 读取，既不恢复主配置覆盖层，也不自动重迁资源。详见 Settings.md 入口表。 |
+
+## B5：彻底移除 configPath，输入契约迁移仍待确认
+
+用户已选择彻底移除 `subject.configPath`，不再推荐“保留为路径断言”、可选旧字段或改名后的第三层入口。最小候选及源码依据见 Settings.md 第 9 节：从 setup/self-check 的 subjectSchema、运行时校验、内部 CLI 参数、示例及相关声明投影移除该字段；配置发现仍使用目标机用户目录与 `workingDirectory`，不把 scratch 改成被诊断对象。外层 `objective/v1.json`、`objectives/v1.json` 的身份不因 package 自有 subject 字段变化而升级；`inputSchema` 与投影按实际目标声明逐项处理。
+
+以下仅两项仍需主代理询问用户，其他保留现状的技术适配不再包装成问题：
+
+| ID | 用户决定 | 最小推荐 |
+| --- | --- | --- |
+| B5a | 去掉指定路径后，setup/self-check 的 configuration 阶段是否仍要求至少存在一份实际主配置文件？ | 推荐要求自动发现的用户/最近项目位置至少一份存在，两处都无文件仍报 `configuration-missing`；存在但无效报 invalid。这样保留“配置已落地”的检查目的，不因静态默认或独立 Agent 文件存在就宣称完成。另一选择是允许零主配置文件，只要求有效默认/值及 Agent 就绪；这是取消旧存在性门槛的行为变化。 |
+| B5b | 是否批准新 snapshot 明确拒绝旧 configPath 输入，并在后续部署备份后只手工修改相关本机 Objective 声明及其输入，使它们与新契约配套？ | 推荐新契约不兼容旧字段、不静默忽略；只移除目标声明 subject 输出的 configPath、仅为它服务的 inputSchema properties/required/依赖和输入值（如存在），保留其余约束、名称、URI、权限、预算与目录语义。不重建 objectives.yaml、不运行资源 migrate、不改旧 pinned snapshot 或存档。先静态验证投影，再切换新已验收 source revision/入口；只改实际涉及的文件，发现额外身份/权限变动则停止。 |
+
+B1/B2 已获用户确认，B3/B4 已由主代理按保留现状审查选定；B5a/B5b 未决定前，准备仍未收敛，不提交门限或开始生产代码。本轮未读取本机 objectives.yaml 或配置，部署中的定点改动也尚未获准执行。

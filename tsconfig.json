@@ -24,6 +24,9 @@
       "path": "./packages/objective-portfolio-supervisor"
     },
     {
+      "path": "./packages/regulation-coordinator"
+    },
+    {
       "path": "./packages/pguide-config"
     },
     {

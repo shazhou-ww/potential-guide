@@ -22,4 +22,4 @@
 
 ## 下一步
 
-在独立 IDEA [package-settings](../../../../01M5E26G8ABEJVCMBQN3VKTNQH/outer/inner/ideal/Idea.md) 中继续主配置与扩展配置规范讨论；本 IDEA 保留其他数据格式的逐项评审，不因拆分视为整体验收。
+主配置与扩展配置由独立 IDEA [package-settings](../../../../01M5E26G8ABEJVCMBQN3VKTNQH/outer/inner/ideal/Idea.md) 推进；Portfolio 输入讨论转向独立 IDEA [regulation-coordinator](../../../../01M5E7N9F5Y0ZN1SYKDFYEVA20/outer/inner/ideal/Idea.md) 的基础调度模型。本 IDEA 保留其余数据格式评审，不因子 IDEA 的委托或验收视为整体验收。

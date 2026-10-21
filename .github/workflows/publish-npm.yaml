@@ -8,6 +8,7 @@ on:
       - "objective-pilot-v*"
       - "objective-regulator-v*"
       - "objective-portfolio-supervisor-v*"
+      - "regulation-coordinator-v*"
       - "cli-core-v*"
       - "pguide-config-v*"
       - "pguide-agents-v*"
@@ -31,6 +32,7 @@ on:
           - objective-pilot
           - objective-regulator
           - objective-portfolio-supervisor
+          - regulation-coordinator
           - cli-core
           - pguide-config
           - pguide-agents

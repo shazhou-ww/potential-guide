@@ -28,7 +28,7 @@ objectives:
             "id": "public-library-suite",
             "purpose": "Publish the public packages as consumable npm libraries through package-specific releases.",
             "kind": "npm",
-            "packages": ["@potential-guide/effects","@potential-guide/git-source","@potential-guide/objective-pilot","@potential-guide/objective-regulator","@potential-guide/objective-portfolio-supervisor","@potential-guide/cli-core","@potential-guide/pguide-config","@potential-guide/pguide-agents","pguide","@potential-guide/pilot-protocol","@potential-guide/cli-runtime","@potential-guide/objective-declarations","@potential-guide/pguide-pilot","@potential-guide/pguide-regulate","@potential-guide/pguide-supervise","@potential-guide/pguide-objectives"],
+            "packages": ["@potential-guide/effects","@potential-guide/git-source","@potential-guide/objective-pilot","@potential-guide/objective-regulator","@potential-guide/objective-portfolio-supervisor","@potential-guide/regulation-coordinator","@potential-guide/cli-core","@potential-guide/pguide-config","@potential-guide/pguide-agents","pguide","@potential-guide/pilot-protocol","@potential-guide/cli-runtime","@potential-guide/objective-declarations","@potential-guide/pguide-pilot","@potential-guide/pguide-regulate","@potential-guide/pguide-supervise","@potential-guide/pguide-objectives"],
             "entry": {"package": "@potential-guide/objective-pilot", "path": "src/index.ts"},
             "runtime": "node", "resources": [], "services": [], "capabilities": [], "independent": false
           },

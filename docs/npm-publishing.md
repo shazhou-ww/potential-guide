@@ -1,6 +1,6 @@
 # npm publishing
 
-Potential Guide publishes sixteen CLI and library packages independently from this monorepo:
+Potential Guide publishes seventeen CLI and library packages independently from this monorepo:
 
 | Package | Release tag |
 | --- | --- |
@@ -9,6 +9,7 @@ Potential Guide publishes sixteen CLI and library packages independently from th
 | `@potential-guide/objective-pilot` | `objective-pilot-vX.Y.Z` |
 | `@potential-guide/objective-regulator` | `objective-regulator-vX.Y.Z` |
 | `@potential-guide/objective-portfolio-supervisor` | `objective-portfolio-supervisor-vX.Y.Z` |
+| `@potential-guide/regulation-coordinator` | `regulation-coordinator-vX.Y.Z` |
 | `@potential-guide/cli-core` | `cli-core-vX.Y.Z` |
 | `@potential-guide/pguide-config` | `pguide-config-vX.Y.Z` |
 | `@potential-guide/pguide-agents` | `pguide-agents-vX.Y.Z` |
@@ -29,7 +30,10 @@ and keep their responsibility names.
 
 Release packages in manifest dependency order. `effects` and `pilot-protocol`
 are protocol; `objective-pilot` consumes both, then `objective-regulator` and
-`objective-portfolio-supervisor` build business capabilities. `cli-core` precedes
+`objective-portfolio-supervisor` build business capabilities. The independent
+`regulation-coordinator` library follows
+`objective-portfolio-supervisor` (public pure helpers and runner types only);
+it does not replace or reconnect any existing supervision package. `cli-core` precedes
 `pguide-config`. `objective-declarations` consumes CLI Core and Pilot protocol only;
 `cli-runtime` consumes Pilot and Git source;
 the command packages consume it and CLI Core. Publish `pguide-pilot` and
