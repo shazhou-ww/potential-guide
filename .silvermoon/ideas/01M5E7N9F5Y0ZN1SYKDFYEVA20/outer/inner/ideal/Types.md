@@ -24,7 +24,6 @@ export type TaskId = string;
 export type RunId = string;
 
 export interface RegulationObject {
-  readonly key: ObjectKey;
   readonly objective: {
     readonly id: string;
     readonly version: string;
@@ -35,19 +34,20 @@ export interface RegulationObject {
 
 export interface IntentRef {
   readonly objectKey: ObjectKey;
+  // 引用 TargetIntent.updatedAtRevision，属于 RegulationTarget 的全局版本空间。
   readonly revision: Revision;
 }
 
 export interface TargetIntent {
   readonly object: RegulationObject;
-  readonly revision: Revision;
   readonly targetLevel: string;
   readonly priority: number;
+  readonly updatedAtRevision: Revision;
 }
 
 export interface RegulationTarget {
   readonly revision: Revision;
-  readonly intents: readonly TargetIntent[];
+  readonly intents: ReadonlyMap<ObjectKey, TargetIntent>;
 }
 
 export interface ResourceAllocation {
@@ -237,11 +237,27 @@ export interface CoordinatorCheckpoint {
 
 ## 意图身份与确认
 
-ObjectKey 由精确 Objective 身份、版本、来源与 subject 的规范化语义确定，规则待定；它不是任意 regulation ID。intents 中同一 key 只保留最新意图，revision 是 Command reducer 分配的单调发生修订，同值新请求仍递增。各 TargetIntent.revision 记录其最近变化，不要求所有条目等于外层最新 revision。
+ObjectKey 由精确 Objective 身份、版本、来源与 subject 的规范化语义确定，可对规范化值哈希，具体规则待定；不是任意 regulation ID，也不能直接依赖普通 JSON 属性顺序。intents 是按此 key 索引的 Map，value 保留完整 RegulationObject、targetLevel、priority 与 updatedAtRevision。RegulationObject 不再重复存 key；恢复和输入验证须核对 key 与完整对象一致，并明确哈希碰撞处理，不能静默合并不同对象。
 
-IntentRef 由对象 key 与该次意图修订组成。CoordinatorState.acknowledged.targets 是已确认的目标意图，而 checkpoint.targets 是调用方当前意图，两者允许暂时不同；确认目标不代表创建、启动或完成任务。资源输入本身没有 delta 协议，AllocationAcknowledgement.revision 只是 Coordinator 采纳顺序的元数据。
+RegulationTarget.revision 是整个意图状态迭代的全局版本号；TargetIntent.updatedAtRevision 表示该对象当前意图最后在哪个全局版本更新。两者共用一个版本空间，不是对象各自递增的两个计数器。
+
+每条合法目标更新按以下规则纯归约：
+
+1. 取 nextRevision = state.revision + 1，不依赖系统时间。
+2. 创建新的 Map，在指定 key 上覆盖完整意图，并令 updatedAtRevision = nextRevision；其他条目保持不变，不修改旧 state/Map。
+3. 返回 revision = nextRevision 的 RegulationTarget。同值新请求也推进版本；非法更新明确报错，不静默消耗版本或更改意图。
+
+例如全局 revision = 8，A.updatedAtRevision = 8、B = 5、C = 7，表示 B 从全局版本 5 起未更新，而非 B 已被修改五次。条目版本是正安全整数且不超过全局版本；版本耗尽须显式失败，不回绕。全局版本作为独立水位保存，不通过当前条目最大值代替；未来即使压缩条目也不能重用旧版本号。
+
+IntentRef 由对象 key 与该条目的 updatedAtRevision 组成，其 revision 引用意图发生时的全局版本，而非随集合更新而改变。CoordinatorState.acknowledged.targets 是已确认的目标意图，而 checkpoint.targets 是调用方当前意图，两者允许暂时不同；确认目标不代表创建、启动或完成任务。资源输入本身没有 delta 协议，AllocationAcknowledgement.revision 只是 Coordinator 采纳顺序的元数据，不属于治理意图版本空间。
 
 命令关联 ID、非法输入回执、拒绝原因以及是否需要逐对象确认应在转换讨论中补足；不能把遗漏字段解释为允许静默丢弃请求。revision 也不等于底层消息位置，不能用它代替外部输入的可靠接续协议。
+
+## Map 与优先顺序
+
+意图顺序按 priority 升序、updatedAtRevision 升序确定，不依赖 Map 的插入/遍历顺序或墙钟时间。同优先级下按最近更新的先后排序，不保留首次加入位置：A(priority 1, revision 10)、B(1, 12)、C(0, 15) 排为 C、A、B；再次更新 A 得到全局版本 16 后排为 C、B、A。仅 priority 更新也刷新逻辑时间，但重新排序不等于无故重启正在运行的调用。
+
+Map 加上述排序表达意图的优先队列视图，不是已就绪的实际执行队列。Coordinator 仍结合已处理意图修订、实际调用和依赖决定可执行项；initial 意图不推进，已终结的同一意图不因扫描或恢复被重新执行。派生任务的有效 priority 与排序关联仍需在 CoordinatorState 的转换讨论中明确。
 
 ## 任务、调用与依赖
 
@@ -264,8 +280,10 @@ dependencies 是真实采用的编排关系，而不是所有可能依赖；prov
 
 ## 初值、恢复与下一步
 
-新建 RegulationTarget 为 revision 0、空 intents。新建 CoordinatorState 的 acknowledged.targets 同为空，allocation 为 null、tasks/observations 为空、reserved 全零、lastFault 为 null、输入 open，服务 open；instanceId 与可信 constraints 由宿主提供，未确认资源意图前不自行启动。
+新建 RegulationTarget 为 revision 0、空 Map。新建 CoordinatorState 的 acknowledged.targets 同为空，allocation 为 null、tasks/observations 为空、reserved 全零、lastFault 为 null、输入 open，服务 open；instanceId 与可信 constraints 由宿主提供，未确认资源意图前不自行启动。
 
 Checkpoint 是两份状态与消息处理位置的一致保存边界，不是公布持久化文件格式。需要验证对象唯一性、修订与引用一致性、可信约束及消息位置；不能把任意时刻分别读取的两个 state 拼成“原子快照”。恢复先纯归约，再以 recovering/unverified 核实外部运行，不清空预算、不重放动作、不把同一已终结意图当新请求；格式版本、重关联协议和存储失败行为待实施时明确。
+
+全局 revision 与各条目的 updatedAtRevision 必须一起保存，恢复从保存的全局水位继续。ReadonlyMap 是内存类型，不是 JSON 存储格式；持久化须显式编码/解码 entries 并校验重复 key、对象身份与版本，不能直接 JSON.stringify(Map) 而丢失内容。具体编码仍待确定。
 
 下一步先检查这些类型的对象身份、确认粒度、任务与调用边界、终结证据及保留策略，再列合法状态转换，最后推导 Command/Event。本稿的 string 原因、诊断粒度、恢复字段及数据结构均为讨论选择，不作为最终 API 或已验收决定。
