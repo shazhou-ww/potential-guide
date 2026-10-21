@@ -1,0 +1,956 @@
+{
+  "outcome": "passed",
+  "startedAt": "2026-10-21T05:47:26.664Z",
+  "contractRevision": "978eae99f062e7e46442e3c7ab6093f34b44c1b9",
+  "implementationRevision": "271a21e6881e739c6cb9100dac298a0a4deb8bdf",
+  "acceptedCommit": "f441ae05bedffb80ec6b1b888672d5947d367f8f",
+  "runnerKind": "deterministic-in-process",
+  "realAgentProcessIntegration": false,
+  "isolationDirectory": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988",
+  "inputs": {
+    ".silvermoon/ideas/01M5E7N9F5Y0ZN1SYKDFYEVA20/outer/Deployment.md": "efeb8faa1589619cee5fb5e52b66298503496cffe9a28c899c223d6c0c925ce8",
+    ".silvermoon/ideas/01M5E7N9F5Y0ZN1SYKDFYEVA20/outer/verification/run.mjs": "8a9af2408da6be3172f6c04b189a357a37391b92b49e4a8e227e48e0ffed491b",
+    ".silvermoon/ideas/01M5E7N9F5Y0ZN1SYKDFYEVA20/outer/verification/consumer.test.mjs": "0c7845aba3e92eafe7261381ca98b486e2f015ecfd38dfa180652e03eb67dcc0",
+    ".silvermoon/ideas/01M5E7N9F5Y0ZN1SYKDFYEVA20/outer/verification/consumer.ts": "bbe21dab868e159e8ad439781af2325542415ff08b1fc5207a381276644b1a37"
+  },
+  "commands": [
+    {
+      "command": "git",
+      "args": [
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 11548,
+      "signal": null,
+      "stdoutSha256": "9ea977a79beb3c02c056481344b5693e8f3f058dae296464966d46a09498be72",
+      "stdoutSummary": "d98e68f4a7380e408835e7121f22a3548ed4f89a\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "git",
+      "args": [
+        "rev-parse",
+        "HEAD:.silvermoon/ideas/01M5E7N9F5Y0ZN1SYKDFYEVA20/outer"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 27508,
+      "signal": null,
+      "stdoutSha256": "82ce128f5b15fd4ae7dc5e03fcaa7d4b95c10554370890313a6de55482e01d15",
+      "stdoutSummary": "978eae99f062e7e46442e3c7ab6093f34b44c1b9\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "git",
+      "args": [
+        "rev-parse",
+        "HEAD:.silvermoon/ideas/01M5E7N9F5Y0ZN1SYKDFYEVA20/outer/inner"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 16476,
+      "signal": null,
+      "stdoutSha256": "0319db2f32faaddac1cbd61fcefcb83a039a427b31cc828f745b38c9772714e7",
+      "stdoutSummary": "271a21e6881e739c6cb9100dac298a0a4deb8bdf\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "git",
+      "args": [
+        "rev-parse",
+        "HEAD:packages/regulation-coordinator"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 32788,
+      "signal": null,
+      "stdoutSha256": "fc1410d196f0037e56766b144339646eaeb2c4befb8eba41108dc07f299f5311",
+      "stdoutSummary": "39976b20244bb46677b9b6bd80e6a8e52b86c475\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "git",
+      "args": [
+        "rev-parse",
+        "f441ae05bedffb80ec6b1b888672d5947d367f8f:packages/regulation-coordinator"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 12392,
+      "signal": null,
+      "stdoutSha256": "fc1410d196f0037e56766b144339646eaeb2c4befb8eba41108dc07f299f5311",
+      "stdoutSummary": "39976b20244bb46677b9b6bd80e6a8e52b86c475\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "git",
+      "args": [
+        "diff",
+        "--exit-code",
+        "HEAD",
+        "--",
+        "packages",
+        "scripts"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 27600,
+      "signal": null,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutSummary": "",
+      "stderrSummary": ""
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "--check",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.silvermoon\\ideas\\01M5E7N9F5Y0ZN1SYKDFYEVA20\\outer\\verification\\consumer.test.mjs"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 11060,
+      "signal": null,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutSummary": "",
+      "stderrSummary": ""
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "--check",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.silvermoon\\ideas\\01M5E7N9F5Y0ZN1SYKDFYEVA20\\outer\\verification\\run.mjs"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 12396,
+      "signal": null,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutSummary": "",
+      "stderrSummary": ""
+    },
+    {
+      "command": "pnpm",
+      "args": [
+        "--version"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 13352,
+      "signal": null,
+      "stdoutSha256": "a8608bace4e3de4e6d8c1f809759eab6c60aa908a62f739089cab67e9c4955c6",
+      "stdoutSummary": "11.22.0\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "pnpm",
+      "args": [
+        "exec",
+        "turbo",
+        "run",
+        "build",
+        "--filter=@potential-guide/regulation-coordinator..."
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 26952,
+      "signal": null,
+      "stdoutSha256": "eda1c94c3bf47c8522d96337bc067e68480a26aa5855830f4312e285a75f3def",
+      "stdoutSummary": "\n   • turbo 2.11.8\n   • Packages in scope: @potential-guide/effects, @potential-guide/objective-pilot, @potential-guide/objective-portfolio-supervisor, @potential-guide/objective-regulator, @potential-guide/pilot-protocol, @potential-guide/regulation-coordinator\n   • Running build in 6 packages\n   • Remote caching disabled, using shared worktree cache\n\n@potential-guide/effects:build: cache hit, replaying logs 828e160082ca32bd\n@potential-guide/effects:build: $ tsc -b\n@potential-guide/pilot-protocol:build: cache hit, replaying logs 53d0fabcf47bf247\n@potential-guide/pilot-protocol:build: $ tsc -b\n@potential-guide/objective-pilot:build: cache hit, replaying logs f158f819055e3880\n@potential-guide/objective-pilot:build: $ tsc -b\n@potential-guide/objective-regulator:build: cache hit, replaying logs 5be25d1c920ef1a2\n@potential-guide/objective-regulator:build: $ tsc -b\n@potential-guide/objective-portfolio-supervisor:build: cache hit, replaying logs 05d3c0a670d2e882\n@potential-guide/objective-portfolio-supervisor:build: $ tsc -b\n@potential-guide/regulation-coordinator:build: cache hit, replaying logs b363845a8e343193\n@potential-guide/regulation-coordinator:build: $ tsc -b\n\n Tasks:    6 successful, 6 total\nCached:    6 cached, 6 total\n  Time:    341ms >>> FULL TURBO\n\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "pnpm",
+      "args": [
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\packages\\effects",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 33036,
+      "signal": null,
+      "stdoutSha256": "049b7270106ef5ef8606006147976e95cb85131566a2f1105bcc8bc903c77b8f",
+      "stdoutSummary": "{\n  \"name\": \"@potential-guide/effects\",\n  \"version\": \"0.1.0-rc.0\",\n  \"filename\": \"D:\\\\Code\\\\potential-guide.worktrees\\\\schema-contracts-review-silvermoon\\\\.cache\\\\regulation-coordinator-deployment-1792561646664-25988\\\\packs\\\\potential-guide-effects-0.1.0-rc.0.tgz\",\n  \"files\": [\n    {\n      \"path\": \"dist/index.d.ts\"\n    },\n    {\n      \"path\": \"dist/index.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/index.js\"\n    },\n    {\n      \"path\": \"dist/index.js.map\"\n    },\n    {\n      \"path\": \"LICENSE\"\n    },\n    {\n      \"path\": \"package.json\"\n    },\n    {\n      \"path\": \"README.md\"\n    }\n  ]\n}\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "git",
+      "args": [
+        "rev-parse",
+        "HEAD:packages/effects"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 30572,
+      "signal": null,
+      "stdoutSha256": "a632aff8ce0b9106fb9709f19be2460306a908dcb8ab2c1d34034905ab8492e2",
+      "stdoutSummary": "5a756fb760d1fbe740f8af8c2d18093fae99188f\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "pnpm",
+      "args": [
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\packages\\regulation-coordinator",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 12148,
+      "signal": null,
+      "stdoutSha256": "44a8cbd2dcc32f0cd12f693ffef47020cb1ad7167e25a979676cf5ae1ed847af",
+      "stdoutSummary": "{\n  \"name\": \"@potential-guide/regulation-coordinator\",\n  \"version\": \"0.1.0-rc.0\",\n  \"filename\": \"D:\\\\Code\\\\potential-guide.worktrees\\\\schema-contracts-review-silvermoon\\\\.cache\\\\regulation-coordinator-deployment-1792561646664-25988\\\\packs\\\\potential-guide-regulation-coordinator-0.1.0-rc.0.tgz\",\n  \"files\": [\n    {\n      \"path\": \"dist/engine.d.ts\"\n    },\n    {\n      \"path\": \"dist/engine.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/engine.js\"\n    },\n    {\n      \"path\": \"dist/engine.js.map\"\n    },\n    {\n      \"path\": \"dist/index.d.ts\"\n    },\n    {\n      \"path\": \"dist/index.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/index.js\"\n    },\n    {\n      \"path\": \"dist/index.js.map\"\n    },\n    {\n      \"path\": \"dist/types.d.ts\"\n    },\n    {\n      \"path\": \"dist/types.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/types.js\"\n    },\n    {\n      \"path\": \"dist/types.js.map\"\n    },\n    {\n      \"path\": \"dist/validation.d.ts\"\n    },\n    {\n      \"path\": \"dist/validation.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/validation.js\"\n    },\n    {\n      \"path\": \"dist/validation.js.map\"\n    },\n    {\n      \"path\": \"LICENSE\"\n    },\n    {\n      \"path\": \"package.json\"\n    },\n    {\n      \"path\": \"README.md\"\n    }\n  ]\n}\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "git",
+      "args": [
+        "rev-parse",
+        "HEAD:packages/regulation-coordinator"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 1736,
+      "signal": null,
+      "stdoutSha256": "fc1410d196f0037e56766b144339646eaeb2c4befb8eba41108dc07f299f5311",
+      "stdoutSummary": "39976b20244bb46677b9b6bd80e6a8e52b86c475\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "pnpm",
+      "args": [
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\packages\\objective-pilot",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 10736,
+      "signal": null,
+      "stdoutSha256": "d86322edd2bfdb9ce41078d4218a45f5bb47cdc58fd6b6bdaf35c9764c3bc8dc",
+      "stdoutSummary": "{\n  \"name\": \"@potential-guide/objective-pilot\",\n  \"version\": \"0.2.0-rc.0\",\n  \"filename\": \"D:\\\\Code\\\\potential-guide.worktrees\\\\schema-contracts-review-silvermoon\\\\.cache\\\\regulation-coordinator-deployment-1792561646664-25988\\\\packs\\\\potential-guide-objective-pilot-0.2.0-rc.0.tgz\",\n  \"files\": [\n    {\n      \"path\": \"dist/dependency-loader.d.ts\"\n    },\n    {\n      \"path\": \"dist/dependency-loader.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/dependency-loader.js\"\n    },\n    {\n      \"path\": \"dist/dependency-loader.js.map\"\n    },\n    {\n      \"path\": \"dist/dependency-preload.d.ts\"\n    },\n    {\n      \"path\": \"dist/dependency-preload.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/dependency-preload.js\"\n    },\n    {\n      \"path\": \"dist/dependency-preload.js.map\"\n    },\n    {\n      \"path\": \"dist/dependency.d.ts\"\n    },\n    {\n      \"path\": \"dist/dependency.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/dependency.js\"\n    },\n    {\n      \"path\": \"dist/dependency.js.map\"\n    },\n    {\n      \"path\": \"dist/evidence.d.ts\"\n    },\n    {\n      \"path\": \"dist/evidence.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/evidence.js\"\n    },\n    {\n      \"path\": \"dist/evidence.js.map\"\n    },\n    {\n      \"path\": \"dist/index.d.ts\"\n    },\n    {\n      \"path\": \"dist/index.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/index.js\"\n    },\n    {\n      \"path\": \"dist/index.js.map\"\n    },\n    {\n      \"path\": \"dist/objectives.d.ts\"\n    },\n    {\n      \"path\": \"dist/objectives.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/objectives.js\"\n    },\n    {\n      \"path\": \"dist/objectives.js.map\"\n    },\n    {\n      \"path\": \"dist/pilot.d.ts\"\n    },\n    {\n      \"path\": \"dist/pilot.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/pilot.js\"\n    },\n    {\n      \"path\": \"dist/pilot.js.map\"\n    },\n    {\n      \"path\": \"dist/probes.d.ts\"\n    },\n    {\n      \"path\": \"dist/probes.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/probes.js\"\n    },\n    {\n      \"path\": \"dist/probes.js.map\"\n    },\n    {\n      \"path\": \"dist/process-tree.d.ts\"\n    },\n    {\n      \"path\": \"dist/process-tree.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/process-tree.js\"\n    },\n    {\n      \"path\": \"dist/process-tree.js.map\"\n    },\n    {\n      \"path\": \"dist/projection.d.ts\"\n    },\n    {\n      \"path\": \"dist/projection.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/projection.js\"\n    },\n    {\n      \"path\": \"dist/projection.js.map\"\n    },\n    {\n      \"path\": \"dist/resources.d.ts\"\n    },\n    {\n      \"path\": \"dist/resources.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/resources.js\"\n    },\n    {\n      \"path\": \"dist/resources.js.map\"\n    },\n    {\n      \"path\": \"dist/types.d.ts\"\n    },\n    {\n      \"path\": \"dist/types.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/types.js\"\n    },\n    {\n      \"path\": \"dist/types.js.map\"\n    },\n    {\n      \"path\": \"dist/validation.d.ts\"\n    },\n    {\n      \"path\": \"dist/validation.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/validation.js\"\n    },\n    {\n      \"path\": \"dist/validation.js.map\"\n    },\n    {\n      \"path\": \"LICENSE\"\n    },\n    {\n      \"path\": \"package.json\"\n    },\n    {\n      \"path\": \"README.md\"\n    }\n  ]\n}\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "git",
+      "args": [
+        "rev-parse",
+        "HEAD:packages/objective-pilot"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 10424,
+      "signal": null,
+      "stdoutSha256": "d302d79441ea554db8a4bf65cb3f79e4d6d5fc615c829ccdac277be31fd6b42d",
+      "stdoutSummary": "5a87762c7861a6bddccd22e4c38a9d5dc3a12fa5\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "pnpm",
+      "args": [
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\packages\\pilot-protocol",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 17176,
+      "signal": null,
+      "stdoutSha256": "3788e719026e33909f233eb4a308be934e13db53130513edac7280ec87d7a12c",
+      "stdoutSummary": "{\n  \"name\": \"@potential-guide/pilot-protocol\",\n  \"version\": \"0.1.0-rc.0\",\n  \"filename\": \"D:\\\\Code\\\\potential-guide.worktrees\\\\schema-contracts-review-silvermoon\\\\.cache\\\\regulation-coordinator-deployment-1792561646664-25988\\\\packs\\\\potential-guide-pilot-protocol-0.1.0-rc.0.tgz\",\n  \"files\": [\n    {\n      \"path\": \"dist/definition.d.ts\"\n    },\n    {\n      \"path\": \"dist/definition.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/definition.js\"\n    },\n    {\n      \"path\": \"dist/definition.js.map\"\n    },\n    {\n      \"path\": \"dist/index.d.ts\"\n    },\n    {\n      \"path\": \"dist/index.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/index.js\"\n    },\n    {\n      \"path\": \"dist/index.js.map\"\n    },\n    {\n      \"path\": \"dist/migrate-cli.d.ts\"\n    },\n    {\n      \"path\": \"dist/migrate-cli.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/migrate-cli.js\"\n    },\n    {\n      \"path\": \"dist/migrate-cli.js.map\"\n    },\n    {\n      \"path\": \"dist/migration.d.ts\"\n    },\n    {\n      \"path\": \"dist/migration.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/migration.js\"\n    },\n    {\n      \"path\": \"dist/migration.js.map\"\n    },\n    {\n      \"path\": \"dist/objectives.d.ts\"\n    },\n    {\n      \"path\": \"dist/objectives.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/objectives.js\"\n    },\n    {\n      \"path\": \"dist/objectives.js.map\"\n    },\n    {\n      \"path\": \"dist/projection.d.ts\"\n    },\n    {\n      \"path\": \"dist/projection.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/projection.js\"\n    },\n    {\n      \"path\": \"dist/projection.js.map\"\n    },\n    {\n      \"path\": \"dist/resources.d.ts\"\n    },\n    {\n      \"path\": \"dist/resources.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/resources.js\"\n    },\n    {\n      \"path\": \"dist/resources.js.map\"\n    },\n    {\n      \"path\": \"dist/schema-definitions.d.ts\"\n    },\n    {\n      \"path\": \"dist/schema-definitions.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/schema-definitions.js\"\n    },\n    {\n      \"path\": \"dist/schema-definitions.js.map\"\n    },\n    {\n      \"path\": \"dist/schemas.d.ts\"\n    },\n    {\n      \"path\": \"dist/schemas.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/schemas.js\"\n    },\n    {\n      \"path\": \"dist/schemas.js.map\"\n    },\n    {\n      \"path\": \"dist/types.d.ts\"\n    },\n    {\n      \"path\": \"dist/types.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/types.js\"\n    },\n    {\n      \"path\": \"dist/types.js.map\"\n    },\n    {\n      \"path\": \"dist/validation.d.ts\"\n    },\n    {\n      \"path\": \"dist/validation.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/validation.js\"\n    },\n    {\n      \"path\": \"dist/validation.js.map\"\n    },\n    {\n      \"path\": \"LICENSE\"\n    },\n    {\n      \"path\": \"package.json\"\n    },\n    {\n      \"path\": \"README.md\"\n    },\n    {\n      \"path\": \"schemas/objective/v1.json\"\n    },\n    {\n      \"path\": \"schemas/objectives/v1.json\"\n    }\n  ]\n}\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "git",
+      "args": [
+        "rev-parse",
+        "HEAD:packages/pilot-protocol"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 7036,
+      "signal": null,
+      "stdoutSha256": "bdc85256f44a2cacde20f327cfe98703565cd91afee10ad9f9388c4bc272530d",
+      "stdoutSummary": "0feb90714392c1b51c86c83a5ba2717f1ce6d7ef\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "pnpm",
+      "args": [
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\packages\\objective-regulator",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 11680,
+      "signal": null,
+      "stdoutSha256": "778e85f8f854ae532e50c8ad0c244fb70dff57778dcd8b423910829b6428dc70",
+      "stdoutSummary": "{\n  \"name\": \"@potential-guide/objective-regulator\",\n  \"version\": \"0.4.0-rc.0\",\n  \"filename\": \"D:\\\\Code\\\\potential-guide.worktrees\\\\schema-contracts-review-silvermoon\\\\.cache\\\\regulation-coordinator-deployment-1792561646664-25988\\\\packs\\\\potential-guide-objective-regulator-0.4.0-rc.0.tgz\",\n  \"files\": [\n    {\n      \"path\": \"dist/index.d.ts\"\n    },\n    {\n      \"path\": \"dist/index.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/index.js\"\n    },\n    {\n      \"path\": \"dist/index.js.map\"\n    },\n    {\n      \"path\": \"LICENSE\"\n    },\n    {\n      \"path\": \"package.json\"\n    },\n    {\n      \"path\": \"README.md\"\n    }\n  ]\n}\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "git",
+      "args": [
+        "rev-parse",
+        "HEAD:packages/objective-regulator"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 7092,
+      "signal": null,
+      "stdoutSha256": "aaf8e0b55429512221273df39094ee5750c9b089d9bf65772736feb09c0fd6a0",
+      "stdoutSummary": "b7fad9fa5b724eda13fcfa8a0e32589ca2d4fa5c\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "pnpm",
+      "args": [
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\packages\\objective-portfolio-supervisor",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 10832,
+      "signal": null,
+      "stdoutSha256": "653cafb516c74e4e72afb8d1eeffca5edec1f79909381a7e8cecda456b426113",
+      "stdoutSummary": "{\n  \"name\": \"@potential-guide/objective-portfolio-supervisor\",\n  \"version\": \"0.4.0-rc.0\",\n  \"filename\": \"D:\\\\Code\\\\potential-guide.worktrees\\\\schema-contracts-review-silvermoon\\\\.cache\\\\regulation-coordinator-deployment-1792561646664-25988\\\\packs\\\\potential-guide-objective-portfolio-supervisor-0.4.0-rc.0.tgz\",\n  \"files\": [\n    {\n      \"path\": \"dist/coordinator.d.ts\"\n    },\n    {\n      \"path\": \"dist/coordinator.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/coordinator.js\"\n    },\n    {\n      \"path\": \"dist/coordinator.js.map\"\n    },\n    {\n      \"path\": \"dist/decisions.d.ts\"\n    },\n    {\n      \"path\": \"dist/decisions.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/decisions.js\"\n    },\n    {\n      \"path\": \"dist/decisions.js.map\"\n    },\n    {\n      \"path\": \"dist/index.d.ts\"\n    },\n    {\n      \"path\": \"dist/index.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/index.js\"\n    },\n    {\n      \"path\": \"dist/index.js.map\"\n    },\n    {\n      \"path\": \"dist/planner.d.ts\"\n    },\n    {\n      \"path\": \"dist/planner.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/planner.js\"\n    },\n    {\n      \"path\": \"dist/planner.js.map\"\n    },\n    {\n      \"path\": \"dist/types.d.ts\"\n    },\n    {\n      \"path\": \"dist/types.d.ts.map\"\n    },\n    {\n      \"path\": \"dist/types.js\"\n    },\n    {\n      \"path\": \"dist/types.js.map\"\n    },\n    {\n      \"path\": \"LICENSE\"\n    },\n    {\n      \"path\": \"package.json\"\n    },\n    {\n      \"path\": \"README.md\"\n    }\n  ]\n}\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "git",
+      "args": [
+        "rev-parse",
+        "HEAD:packages/objective-portfolio-supervisor"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 32060,
+      "signal": null,
+      "stdoutSha256": "9f280e21373b0e235be2913ef430a7c042b842e08b774b5f88a1a03e70cf4a48",
+      "stdoutSummary": "b3a96def14159ffeaf91e4ad99161430597a6bf1\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "npm",
+      "args": [
+        "pack",
+        "--ignore-scripts",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\third-party\\effect"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 31360,
+      "signal": null,
+      "stdoutSha256": "49979b7a213f095acfbab9a6b0122c5688ef6e706cdac3c11b25a05bb538a208",
+      "stdoutSummary": "[\n  {\n    \"id\": \"effect@4.0.2\",\n    \"name\": \"effect\",\n    \"version\": \"4.0.2\",\n    \"size\": 8877738,\n    \"unpackedSize\": 50116983,\n    \"shasum\": \"016db3bd6b4efa46981ee5c38caab4c3e719df71\",\n    \"integrity\": \"sha512-yqqvNlTkAzKPb2zTB8SH7950Yl/AYcvxh+DGD33FLQAhkNm3xxioO4/8f70AWpxzVJXwlwwq8UaDF6Uwz6H0tg==\",\n    \"filename\": \"effect-4.0.2.tgz\",\n    \"files\": [\n      {\n        \"path\": \"AGENTS.md\",\n        \"size\": 17955,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"CLAUDE.md\",\n        \"size\": 17955,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"LICENSE\",\n        \"size\": 1083,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"README.md\",\n        \"size\": 3985,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"ai-docs/package.json\",\n        \"size\": 1193,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"ai-docs/README.md\",\n        \"size\": 1733,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"ai-docs/src/01_effect/01_basics/01_effect-gen.ts\",\n        \"size\": 963,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"ai-docs/src/01_effect/01_basics/02_effect-fn.ts\",\n        \"size\": 2090,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"ai-docs/src/01_effect/01_basics/10_creating-effects.ts\",\n        \"size\": 2420,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"ai-docs/src/01_effect/01_basics/index.md\",\n        \"size\": 422,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"ai-docs/src/01_effect/02_schema/10_schema-basics.ts\",\n        \"size\": 1\n...\nng.ts\",\n        \"size\": 53276,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/Struct.ts\",\n        \"size\": 49586,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/SubscriptionRef.ts\",\n        \"size\": 62597,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/Symbol.ts\",\n        \"size\": 842,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/SynchronizedRef.ts\",\n        \"size\": 45318,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/Take.ts\",\n        \"size\": 1679,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/Terminal.ts\",\n        \"size\": 5526,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/testing/index.ts\",\n        \"size\": 386,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/testing/TestClock.ts\",\n        \"size\": 18862,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/testing/TestConsole.ts\",\n        \"size\": 11499,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/testing/TestSchema.ts\",\n        \"size\": 27771,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/Tracer.ts\",\n        \"size\": 21838,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/Trie.ts\",\n        \"size\": 46468,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/Tuple.ts\",\n        \"size\": 37964,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/TxChunk.ts\",\n        \"size\": 50941,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/TxDeferred.ts\",\n        \"size\": 15057,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/TxHashMap.ts\",\n        \"size\": 131743,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/TxHashSet.ts\",\n        \"size\": 72766,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/TxPriorityQueue.ts\",\n        \"size\": 23976,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/TxPubSub.ts\",\n        \"size\": 29578,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/TxQueue.ts\",\n        \"size\": 61855,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/TxReentrantLock.ts\",\n        \"size\": 25064,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/TxRef.ts\",\n        \"size\": 12568,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/TxSemaphore.ts\",\n        \"size\": 37003,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/TxSubscriptionRef.ts\",\n        \"size\": 27776,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/Types.ts\",\n        \"size\": 32171,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/UndefinedOr.ts\",\n        \"size\": 11207,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/Unify.ts\",\n        \"size\": 17284,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/Utils.ts\",\n        \"size\": 6262,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/Version.ts\",\n        \"size\": 857,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workers/index.ts\",\n        \"size\": 484,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workers/Transferable.ts\",\n        \"size\": 6461,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workers/Worker.ts\",\n        \"size\": 7960,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workers/WorkerError.ts\",\n        \"size\": 3814,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workers/WorkerRunner.ts\",\n        \"size\": 1934,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workflow/Activity.ts\",\n        \"size\": 11861,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workflow/DurableClock.ts\",\n        \"size\": 3515,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workflow/DurableDeferred.ts\",\n        \"size\": 22676,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workflow/DurableQueue.ts\",\n        \"size\": 11208,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workflow/index.ts\",\n        \"size\": 900,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workflow/internal/crypto.ts\",\n        \"size\": 447,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workflow/Workflow.ts\",\n        \"size\": 32413,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workflow/WorkflowEngine.ts\",\n        \"size\": 27789,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workflow/WorkflowProxy.ts\",\n        \"size\": 7033,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"src/workflow/WorkflowProxyServer.ts\",\n        \"size\": 5188,\n        \"mode\": 420\n      }\n    ],\n    \"entryCount\": 2581,\n    \"bundled\": []\n  }\n]\n",
+      "stderrSummary": "npm warn Unknown project config \"link-workspace-packages\". This will stop working in the next major version of npm.\n"
+    },
+    {
+      "command": "npm",
+      "args": [
+        "pack",
+        "--ignore-scripts",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\third-party\\ajv"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 10820,
+      "signal": null,
+      "stdoutSha256": "d1ad2a6c9fdbcce5f1f27e005e11a45f17943dcd59d320ceed89b17f92707c7d",
+      "stdoutSummary": "[\n  {\n    \"id\": \"ajv@8.20.0\",\n    \"name\": \"ajv\",\n    \"version\": \"8.20.0\",\n    \"size\": 217611,\n    \"unpackedSize\": 1033496,\n    \"shasum\": \"304b3636add88ba7d936760dd50ece006dea95f9\",\n    \"integrity\": \"sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==\",\n    \"filename\": \"ajv-8.20.0.tgz\",\n    \"files\": [\n      {\n        \"path\": \".runkit_example.js\",\n        \"size\": 496,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"LICENSE\",\n        \"size\": 1090,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"README.md\",\n        \"size\": 13781,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/2019.d.ts\",\n        \"size\": 1241,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/2019.js\",\n        \"size\": 3188,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/2019.js.map\",\n        \"size\": 1639,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/2020.d.ts\",\n        \"size\": 1241,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/2020.js\",\n        \"size\": 2894,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/2020.js.map\",\n        \"size\": 1473,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/ajv.d.ts\",\n        \"size\": 1211,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/ajv.js\",\n        \"size\": 2841,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/ajv.js.map\",\n        \"size\": 1476,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/compile/codegen/cod\n...\n     {\n        \"path\": \"lib/vocabularies/dynamic/dynamicRef.ts\",\n        \"size\": 1797,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/dynamic/index.ts\",\n        \"size\": 328,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/dynamic/recursiveAnchor.ts\",\n        \"size\": 401,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/dynamic/recursiveRef.ts\",\n        \"size\": 253,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/errors.ts\",\n        \"size\": 731,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/format/format.ts\",\n        \"size\": 3987,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/format/index.ts\",\n        \"size\": 148,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/jtd/discriminator.ts\",\n        \"size\": 2656,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/jtd/elements.ts\",\n        \"size\": 976,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/jtd/enum.ts\",\n        \"size\": 1627,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/jtd/error.ts\",\n        \"size\": 746,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/jtd/index.ts\",\n        \"size\": 1007,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/jtd/metadata.ts\",\n        \"size\": 716,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/jtd/nullable.ts\",\n        \"size\": 649,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/jtd/optionalProperties.ts\",\n        \"size\": 394,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/jtd/properties.ts\",\n        \"size\": 6244,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/jtd/ref.ts\",\n        \"size\": 2346,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/jtd/type.ts\",\n        \"size\": 2547,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/jtd/union.ts\",\n        \"size\": 292,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/jtd/values.ts\",\n        \"size\": 1681,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/metadata.ts\",\n        \"size\": 304,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/next.ts\",\n        \"size\": 320,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/unevaluated/index.ts\",\n        \"size\": 257,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/unevaluated/unevaluatedItems.ts\",\n        \"size\": 1524,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/unevaluated/unevaluatedProperties.ts\",\n        \"size\": 2440,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/validation/const.ts\",\n        \"size\": 863,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/validation/dependentRequired.ts\",\n        \"size\": 510,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/validation/enum.ts\",\n        \"size\": 1837,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/validation/index.ts\",\n        \"size\": 1271,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/validation/limitContains.ts\",\n        \"size\": 485,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/validation/limitItems.ts\",\n        \"size\": 812,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/validation/limitLength.ts\",\n        \"size\": 1025,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/validation/limitNumber.ts\",\n        \"size\": 1350,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/validation/limitProperties.ts\",\n        \"size\": 851,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/validation/multipleOf.ts\",\n        \"size\": 1072,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/validation/pattern.ts\",\n        \"size\": 1299,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/validation/required.ts\",\n        \"size\": 2961,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/vocabularies/validation/uniqueItems.ts\",\n        \"size\": 2690,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"package.json\",\n        \"size\": 4405,\n        \"mode\": 420\n      }\n    ],\n    \"entryCount\": 466,\n    \"bundled\": []\n  }\n]\n",
+      "stderrSummary": "npm warn Unknown project config \"link-workspace-packages\". This will stop working in the next major version of npm.\n"
+    },
+    {
+      "command": "npm",
+      "args": [
+        "pack",
+        "--ignore-scripts",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\third-party\\fast-deep-equal"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 30592,
+      "signal": null,
+      "stdoutSha256": "0658c0d18181d3b6df646f852a0f2565e73be475a2fc32dc16532a810e187da9",
+      "stdoutSummary": "[\n  {\n    \"id\": \"fast-deep-equal@3.1.3\",\n    \"name\": \"fast-deep-equal\",\n    \"version\": \"3.1.3\",\n    \"size\": 3638,\n    \"unpackedSize\": 12966,\n    \"shasum\": \"9c72645866026b0a33803f0a653366ceb0f2b537\",\n    \"integrity\": \"sha512-iVMDpfJ4xM/o14cSQ0/GNF/5ZZg98n5tLclPHrRh28jLPBclIi9fTkrRIAhjHaHTe2D6Ln3q7l5Au7vXGpe35g==\",\n    \"filename\": \"fast-deep-equal-3.1.3.tgz\",\n    \"files\": [\n      {\n        \"path\": \"LICENSE\",\n        \"size\": 1074,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"README.md\",\n        \"size\": 3323,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"es6/index.d.ts\",\n        \"size\": 66,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"es6/index.js\",\n        \"size\": 1935,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"es6/react.d.ts\",\n        \"size\": 66,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"es6/react.js\",\n        \"size\": 2209,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"index.d.ts\",\n        \"size\": 103,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"index.js\",\n        \"size\": 1177,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"package.json\",\n        \"size\": 1496,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"react.d.ts\",\n        \"size\": 66,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"react.js\",\n        \"size\": 1451,\n        \"mode\": 420\n      }\n    ],\n    \"entryCount\": 11,\n    \"bundled\": []\n  }\n]\n",
+      "stderrSummary": "npm warn Unknown project config \"link-workspace-packages\". This will stop working in the next major version of npm.\n"
+    },
+    {
+      "command": "npm",
+      "args": [
+        "pack",
+        "--ignore-scripts",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\third-party\\fast-uri"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 28840,
+      "signal": null,
+      "stdoutSha256": "077ea75b738aa875ed637ec85789d40d5542bb2c34e2b32548cd9069ae3cee64",
+      "stdoutSummary": "[\n  {\n    \"id\": \"fast-uri@3.1.8\",\n    \"name\": \"fast-uri\",\n    \"version\": \"3.1.8\",\n    \"size\": 44269,\n    \"unpackedSize\": 220886,\n    \"shasum\": \"f7db8d942e20eead3cfe93b0beeb4eb0169e938b\",\n    \"integrity\": \"sha512-GZMtZUTNRpOVIECoXwLNZS5xUGE+mVNbTB8h/7Rwh2TFWcBQiPzTgyZi05BF9UMZKkLJv8XBRJTlU7zg8+ZfMg==\",\n    \"filename\": \"fast-uri-3.1.8.tgz\",\n    \"files\": [\n      {\n        \"path\": \".gitattributes\",\n        \"size\": 80,\n        \"mode\": 420\n      },\n      {\n        \"path\": \".github/dependabot.yml\",\n        \"size\": 274,\n        \"mode\": 420\n      },\n      {\n        \"path\": \".github/workflows/ci.yml\",\n        \"size\": 2592,\n        \"mode\": 420\n      },\n      {\n        \"path\": \".github/workflows/lock-threads.yml\",\n        \"size\": 293,\n        \"mode\": 420\n      },\n      {\n        \"path\": \".github/workflows/package-manager-ci.yml\",\n        \"size\": 370,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"LICENSE\",\n        \"size\": 1813,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"README.md\",\n        \"size\": 11726,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"benchmark/benchmark.mjs\",\n        \"size\": 4421,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"benchmark/equal.mjs\",\n        \"size\": 1305,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"benchmark/non-simple-domain.mjs\",\n        \"size\": 838,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"benchmark/package.json\",\n        \"size\": 293,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"benchmark/string-array-to-hex-stripped.mjs\",\n        \"size\": 819,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"benchmark/ws-is-secure.mjs\",\n        \"size\": 1891,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"eslint.config.js\",\n        \"size\": 135,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"index.js\",\n        \"size\": 22264,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/schemes.js\",\n        \"size\": 7367,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"lib/utils.js\",\n        \"size\": 20835,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"package.json\",\n        \"size\": 1983,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/ajv.test.js\",\n        \"size\": 752,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/component-safe-serialization.test.js\",\n        \"size\": 4690,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/equal.test.js\",\n        \"size\": 5117,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/fixtures/uri-js-parse.json\",\n        \"size\": 9888,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/fixtures/uri-js-serialize.json\",\n        \"size\": 1688,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/ipv6-canonical.test.js\",\n        \"size\": 1144,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/ipv6-validation.test.js\",\n        \"size\": 3897,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/malformed-percent.test.js\",\n        \"size\": 2795,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/malformed-urn.test.js\",\n        \"size\": 2196,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/parse.test.js\",\n        \"size\": 14516,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/query-fragment-normalization.test.js\",\n        \"size\": 1716,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/reserved-path-normalization.test.js\",\n        \"size\": 3661,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/resolve.test.js\",\n        \"size\": 4480,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/rfc-3986.test.js\",\n        \"size\": 5279,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/scheme-validation.test.js\",\n        \"size\": 3687,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/security-normalization.test.js\",\n        \"size\": 6859,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/security.test.js\",\n        \"size\": 14258,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/serialize.test.js\",\n        \"size\": 6283,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/uri-js-compatibility.test.js\",\n        \"size\": 1019,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/uri-js.test.js\",\n        \"size\": 42039,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/urn-full-input.test.js\",\n        \"size\": 1320,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/util.test.js\",\n        \"size\": 1147,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"test/websocket-query-preservation.test.js\",\n        \"size\": 903,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"tsconfig.json\",\n        \"size\": 166,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"types/index.d.ts\",\n        \"size\": 1608,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"types/index.test-d.ts\",\n        \"size\": 479,\n        \"mode\": 420\n      }\n    ],\n    \"entryCount\": 44,\n    \"bundled\": []\n  }\n]\n",
+      "stderrSummary": "npm warn Unknown project config \"link-workspace-packages\". This will stop working in the next major version of npm.\n"
+    },
+    {
+      "command": "npm",
+      "args": [
+        "pack",
+        "--ignore-scripts",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\third-party\\json-schema-traverse"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 21700,
+      "signal": null,
+      "stdoutSha256": "5b8b09a9ccec25acf9f025685882850fe2f77bd3bbdf77defa06842f4352cc0a",
+      "stdoutSummary": "[\n  {\n    \"id\": \"json-schema-traverse@1.0.0\",\n    \"name\": \"json-schema-traverse\",\n    \"version\": \"1.0.0\",\n    \"size\": 6062,\n    \"unpackedSize\": 22220,\n    \"shasum\": \"003a9c15b58eff4800864bbc754e7ebcedb4b7f3\",\n    \"integrity\": \"sha512-9eUvgrGD3AfSw/H6OMn80FjuxtHE0PBxApeQ2I2/Zqbb7sshXEfk7ZOfL5dDQllyt6hEZ+eg4Nr11o6C2Ylr3g==\",\n    \"filename\": \"json-schema-traverse-1.0.0.tgz\",\n    \"files\": [\n      {\n        \"path\": \".eslintrc.yml\",\n        \"size\": 630,\n        \"mode\": 420\n      },\n      {\n        \"path\": \".github/FUNDING.yml\",\n        \"size\": 57,\n        \"mode\": 420\n      },\n      {\n        \"path\": \".github/workflows/build.yml\",\n        \"size\": 582,\n        \"mode\": 420\n      },\n      {\n        \"path\": \".github/workflows/publish.yml\",\n        \"size\": 678,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"LICENSE\",\n        \"size\": 1074,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"README.md\",\n        \"size\": 3350,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"index.d.ts\",\n        \"size\": 740,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"index.js\",\n        \"size\": 2428,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"package.json\",\n        \"size\": 1004,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"spec/.eslintrc.yml\",\n        \"size\": 91,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"spec/fixtures/schema.js\",\n        \"size\": 5544,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"spec/index.spec.js\",\n        \"size\": 6042,\n        \"mode\": 420\n      }\n    ],\n    \"entryCount\": 12,\n    \"bundled\": []\n  }\n]\n",
+      "stderrSummary": "npm warn Unknown project config \"link-workspace-packages\". This will stop working in the next major version of npm.\n"
+    },
+    {
+      "command": "npm",
+      "args": [
+        "pack",
+        "--ignore-scripts",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\third-party\\require-from-string"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 23764,
+      "signal": null,
+      "stdoutSha256": "9867df4abd07fd628db27e22a2196818941ed177f7a83cbab30110b97ea6d327",
+      "stdoutSummary": "[\n  {\n    \"id\": \"require-from-string@2.0.2\",\n    \"name\": \"require-from-string\",\n    \"version\": \"2.0.2\",\n    \"size\": 1815,\n    \"unpackedSize\": 3422,\n    \"shasum\": \"b41a2d142e7c4ce4d7ce4fcdf30de1fa674796df\",\n    \"integrity\": \"sha512-1vbF2pCOF1Btps/aBFb2+na5J2JCTB4SZCDpM/zTCjKjMsJ4SuInOpw9EJsvUBkmx54I0olKNZXvob58CoghbA==\",\n    \"filename\": \"require-from-string-2.0.2.tgz\",\n    \"files\": [\n      {\n        \"path\": \"index.js\",\n        \"size\": 866,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"license\",\n        \"size\": 1128,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"package.json\",\n        \"size\": 511,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"readme.md\",\n        \"size\": 917,\n        \"mode\": 420\n      }\n    ],\n    \"entryCount\": 4,\n    \"bundled\": []\n  }\n]\n",
+      "stderrSummary": "npm warn Unknown project config \"link-workspace-packages\". This will stop working in the next major version of npm.\n"
+    },
+    {
+      "command": "npm",
+      "args": [
+        "pack",
+        "--ignore-scripts",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\third-party\\jsonata"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 32064,
+      "signal": null,
+      "stdoutSha256": "4d826438ee516d0706d922d35aa7ab13fd0b9f6b8497751ba24ad64a3db7335f",
+      "stdoutSummary": "[\n  {\n    \"id\": \"jsonata@2.1.0\",\n    \"name\": \"jsonata\",\n    \"version\": \"2.1.0\",\n    \"size\": 183505,\n    \"unpackedSize\": 831205,\n    \"shasum\": \"75547a3b1d3b83a61a9c98e01ce5d1d399832f34\",\n    \"integrity\": \"sha512-OCzaRMK8HobtX8fp37uIVmL8CY1IGc/a6gLsDqz3quExFR09/U78HUzWYr7T31UEB6+Eu0/8dkVD5fFDOl9a8w==\",\n    \"filename\": \"jsonata-2.1.0.tgz\",\n    \"files\": [\n      {\n        \"path\": \"LICENSE\",\n        \"size\": 1035,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"README.md\",\n        \"size\": 1673,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"jsonata-es5.js\",\n        \"size\": 345620,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"jsonata-es5.min.js\",\n        \"size\": 108966,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"jsonata.d.ts\",\n        \"size\": 1857,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"jsonata.js\",\n        \"size\": 292828,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"jsonata.min.js\",\n        \"size\": 77068,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"package.json\",\n        \"size\": 2158,\n        \"mode\": 420\n      }\n    ],\n    \"entryCount\": 8,\n    \"bundled\": []\n  }\n]\n",
+      "stderrSummary": "npm warn Unknown project config \"link-workspace-packages\". This will stop working in the next major version of npm.\n"
+    },
+    {
+      "command": "npm",
+      "args": [
+        "pack",
+        "--ignore-scripts",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\third-party\\json-schema-typed"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 21716,
+      "signal": null,
+      "stdoutSha256": "46b95e5a9efcb3cf98699d460111685fd3cb2cd0f1392c50df32b0106e5f3c23",
+      "stdoutSummary": "[\n  {\n    \"id\": \"json-schema-typed@9.0.0\",\n    \"name\": \"json-schema-typed\",\n    \"version\": \"9.0.0\",\n    \"size\": 57783,\n    \"unpackedSize\": 300283,\n    \"shasum\": \"007374a321081ede4417d7c5ab19795ce35a4524\",\n    \"integrity\": \"sha512-t+dkn3pLaz7ku3ELaBKBSQNjd0Sir5zR7Y4CpAR5a+UEH60NefBEAhAgJuWqDH5o4HDfH+EQjmXeQMLc+Xnbdg==\",\n    \"filename\": \"json-schema-typed-9.0.0.tgz\",\n    \"files\": [\n      {\n        \"path\": \"2019_09.d.ts\",\n        \"size\": 63862,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"2019_09.js\",\n        \"size\": 13699,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"2020_12.d.ts\",\n        \"size\": 66760,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"2020_12.js\",\n        \"size\": 13960,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"LICENSE.md\",\n        \"size\": 3089,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"README.md\",\n        \"size\": 7218,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"draft_07.d.ts\",\n        \"size\": 42459,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"draft_07.js\",\n        \"size\": 11746,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"draft_2019_09.d.ts\",\n        \"size\": 208,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"draft_2019_09.js\",\n        \"size\": 208,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"draft_2020_12.d.ts\",\n        \"size\": 208,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"draft_2020_12.js\",\n        \"size\": 208,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"next.d.ts\",\n        \"size\": 184,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"next.js\",\n        \"size\": 184,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"package.json\",\n        \"size\": 2325,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"v1.d.ts\",\n        \"size\": 60373,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"v1.js\",\n        \"size\": 13592,\n        \"mode\": 420\n      }\n    ],\n    \"entryCount\": 17,\n    \"bundled\": []\n  }\n]\n",
+      "stderrSummary": "npm warn Unknown project config \"link-workspace-packages\". This will stop working in the next major version of npm.\n"
+    },
+    {
+      "command": "npm",
+      "args": [
+        "pack",
+        "--ignore-scripts",
+        "--pack-destination",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\packs",
+        "--json",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\third-party\\yaml"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 23468,
+      "signal": null,
+      "stdoutSha256": "183dc10873794c2709d5805a0d3f8896f08920ceb6f8ae3eb88dd42a785d9557",
+      "stdoutSummary": "[\n  {\n    \"id\": \"yaml@2.9.1\",\n    \"name\": \"yaml\",\n    \"version\": \"2.9.1\",\n    \"size\": 112446,\n    \"unpackedSize\": 686297,\n    \"shasum\": \"131baca2e0369e08f92d9536a29633934ed26a0d\",\n    \"integrity\": \"sha512-37ZJ7dvdS3p3Rlu7qIbxubZRqwb/uJJsEb5NWQaj+adE1yc1juiiiNonRPb7ZZpfXbjaY70oI1H24ZIHq5w/kw==\",\n    \"filename\": \"yaml-2.9.1.tgz\",\n    \"files\": [\n      {\n        \"path\": \"LICENSE\",\n        \"size\": 738,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"README.md\",\n        \"size\": 6266,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"bin.mjs\",\n        \"size\": 310,\n        \"mode\": 493\n      },\n      {\n        \"path\": \"browser/dist/compose/compose-collection.js\",\n        \"size\": 3500,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"browser/dist/compose/compose-doc.js\",\n        \"size\": 1555,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"browser/dist/compose/compose-node.js\",\n        \"size\": 4122,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"browser/dist/compose/compose-scalar.js\",\n        \"size\": 3316,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"browser/dist/compose/composer.js\",\n        \"size\": 8484,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"browser/dist/compose/resolve-block-map.js\",\n        \"size\": 4915,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"browser/dist/compose/resolve-block-scalar.js\",\n        \"size\": 7447,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"browser/dist/compose/resolve-block-seq.js\",\n       \n...\n/yaml-1.1/bool.d.ts\",\n        \"size\": 174,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/bool.js\",\n        \"size\": 841,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/float.d.ts\",\n        \"size\": 166,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/float.js\",\n        \"size\": 1626,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/int.d.ts\",\n        \"size\": 200,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/int.js\",\n        \"size\": 2232,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/merge.d.ts\",\n        \"size\": 459,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/merge.js\",\n        \"size\": 2616,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/omap.d.ts\",\n        \"size\": 936,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/omap.js\",\n        \"size\": 2581,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/pairs.d.ts\",\n        \"size\": 725,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/pairs.js\",\n        \"size\": 2854,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/schema.d.ts\",\n        \"size\": 98,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/schema.js\",\n        \"size\": 912,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/set.d.ts\",\n        \"size\": 1259,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/set.js\",\n        \"size\": 3114,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/timestamp.d.ts\",\n        \"size\": 194,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/schema/yaml-1.1/timestamp.js\",\n        \"size\": 3775,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/foldFlowLines.d.ts\",\n        \"size\": 1273,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/foldFlowLines.js\",\n        \"size\": 4885,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/stringify.d.ts\",\n        \"size\": 865,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/stringify.js\",\n        \"size\": 4534,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/stringifyCollection.d.ts\",\n        \"size\": 528,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/stringifyCollection.js\",\n        \"size\": 5718,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/stringifyComment.d.ts\",\n        \"size\": 419,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/stringifyComment.js\",\n        \"size\": 801,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/stringifyDocument.d.ts\",\n        \"size\": 260,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/stringifyDocument.js\",\n        \"size\": 3104,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/stringifyNumber.d.ts\",\n        \"size\": 147,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/stringifyNumber.js\",\n        \"size\": 808,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/stringifyPair.d.ts\",\n        \"size\": 248,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/stringifyPair.js\",\n        \"size\": 5470,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/stringifyString.d.ts\",\n        \"size\": 357,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/stringify/stringifyString.js\",\n        \"size\": 13345,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/test-events.d.ts\",\n        \"size\": 96,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/test-events.js\",\n        \"size\": 4274,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/util.d.ts\",\n        \"size\": 835,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/util.js\",\n        \"size\": 1008,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/visit.d.ts\",\n        \"size\": 5048,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/visit.js\",\n        \"size\": 9253,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"package.json\",\n        \"size\": 3254,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"util.js\",\n        \"size\": 80,\n        \"mode\": 420\n      }\n    ],\n    \"entryCount\": 233,\n    \"bundled\": []\n  }\n]\n",
+      "stderrSummary": "npm warn Unknown project config \"link-workspace-packages\". This will stop working in the next major version of npm.\n"
+    },
+    {
+      "command": "pnpm",
+      "args": [
+        "install",
+        "--offline",
+        "--ignore-scripts",
+        "--no-frozen-lockfile",
+        "--reporter=append-only",
+        "--store-dir",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\pnpm-store"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\consumer",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 19092,
+      "signal": null,
+      "stdoutSha256": "d44620c3a5f2d5258f9bf076653ef8301043b01ff19266d587fc726699fbe812",
+      "stdoutSummary": "Progress: resolved 0, reused 0, downloaded 1, added 0\nProgress: resolved 5, reused 0, downloaded 5, added 0\nProgress: resolved 5, reused 0, downloaded 6, added 0\nProgress: resolved 10, reused 0, downloaded 10, added 0\nPackages: +15\n+++++++++++++++\nPackages are hard linked from the content-addressable store to the virtual store.\n  Content-addressable store is at: D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\pnpm-store\\v11\n  Virtual store is at:             node_modules/.pnpm\nProgress: resolved 15, reused 0, downloaded 15, added 14\nProgress: resolved 15, reused 0, downloaded 15, added 15\nProgress: resolved 15, reused 0, downloaded 15, added 15, done\n\ndependencies:\n+ @potential-guide/effects 0.1.0-rc.0\n+ @potential-guide/objective-portfolio-supervisor 0.4.0-rc.0\n+ @potential-guide/regulation-coordinator 0.1.0-rc.0\n\nDone in 8.8s using pnpm v11.22.0\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\node_modules\\typescript\\bin\\tsc",
+        "-p",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\consumer",
+        "--pretty",
+        "false"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\consumer",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 2352,
+      "signal": null,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutSummary": "",
+      "stderrSummary": ""
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "--test",
+        "--test-concurrency=1",
+        "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\consumer\\consumer.test.mjs"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon\\.cache\\regulation-coordinator-deployment-1792561646664-25988\\consumer",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 28760,
+      "signal": null,
+      "stdoutSha256": "ae13c1db50ef29d5dc7df11aea153d77831e6a1ac80cce7d7fb3b6448a7b01ba",
+      "stdoutSummary": "✔ finite commands remain resident, two public subscriptions share one scheduler (149.2197ms)\n✔ invalid requests/resources and execution failure recover; idle service accepts new work (91.7725ms)\n✔ one shared provider releases independent minima and is reclaimed only after last reference and termination (127.0536ms)\n✔ cancel keeps stopping slot until explicit kill confirmation (94.7211ms)\n✔ trusted finite budget cannot be renewed by new work (63.2194ms)\n✔ same Effect scope interrupts a slow subscriber before service finalization (47.5994ms)\n✔ legacy Planner and Coordinator compose through the same installed package boundary (9.6988ms)\nℹ tests 7\nℹ suites 0\nℹ pass 7\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 1720.606\n",
+      "stderrSummary": ""
+    },
+    {
+      "command": "git",
+      "args": [
+        "diff",
+        "--exit-code",
+        "HEAD",
+        "--",
+        "packages",
+        "scripts"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\schema-contracts-review-silvermoon",
+      "exitCode": 0,
+      "timedOut": false,
+      "closed": true,
+      "pid": 27116,
+      "signal": null,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutSummary": "",
+      "stderrSummary": ""
+    }
+  ],
+  "packages": [
+    {
+      "name": "@potential-guide/effects",
+      "version": "0.1.0-rc.0",
+      "sourceDirectory": "packages/effects",
+      "sourceTree": "5a756fb760d1fbe740f8af8c2d18093fae99188f",
+      "tarball": "potential-guide-effects-0.1.0-rc.0.tgz",
+      "tarballSha256": "0fe03517fa0d74ee2e6f6d45fa1b9716fd3de939c80654ed3283478b5b6c7c00",
+      "entrySha256": "ab73854e1653b8e5a925875f0b45c2c46ed680fc69ceaa8a5bcfd0cf3d28f030",
+      "declarationsSha256": "a8db6cc87b44efc4c64358a00a479183392df2b535160e587768df85bf229184",
+      "packedFileCount": 7,
+      "developmentFilesExcluded": true
+    },
+    {
+      "name": "@potential-guide/regulation-coordinator",
+      "version": "0.1.0-rc.0",
+      "sourceDirectory": "packages/regulation-coordinator",
+      "sourceTree": "39976b20244bb46677b9b6bd80e6a8e52b86c475",
+      "tarball": "potential-guide-regulation-coordinator-0.1.0-rc.0.tgz",
+      "tarballSha256": "8329b9fef059ba859da890b11b5c4eb89933b001e1f1e6d2ffcd5ab167f02ba3",
+      "entrySha256": "3ffc6f38e1711e32e55f8741d06f08953103e4a87117ac399d465b10785c7c0d",
+      "declarationsSha256": "63f98b7b4eb2bf66a12a01eec584881048edc1caa11abd03b66da86bc966e5a6",
+      "packedFileCount": 19,
+      "developmentFilesExcluded": true
+    },
+    {
+      "name": "@potential-guide/objective-pilot",
+      "version": "0.2.0-rc.0",
+      "sourceDirectory": "packages/objective-pilot",
+      "sourceTree": "5a87762c7861a6bddccd22e4c38a9d5dc3a12fa5",
+      "tarball": "potential-guide-objective-pilot-0.2.0-rc.0.tgz",
+      "tarballSha256": "1533bb3dbe1b1bcdda6677aa56aae0e670ba4ac9bd075c754a50deab7224b55f",
+      "entrySha256": "bb74d21c5d551d8c6f64ccbbade6bbe567898a50aee6a1ce71d7167c6368cb03",
+      "declarationsSha256": "187c5c27707a5536d234d24769ba173168df60d9546bfaf7def6610ea9790fcc",
+      "packedFileCount": 55,
+      "developmentFilesExcluded": true
+    },
+    {
+      "name": "@potential-guide/pilot-protocol",
+      "version": "0.1.0-rc.0",
+      "sourceDirectory": "packages/pilot-protocol",
+      "sourceTree": "0feb90714392c1b51c86c83a5ba2717f1ce6d7ef",
+      "tarball": "potential-guide-pilot-protocol-0.1.0-rc.0.tgz",
+      "tarballSha256": "9e82cac5b1129ec717385541145b3290c0aecdbf08a888574359660721ba4247",
+      "entrySha256": "58c96ad87996a37c280cb98892194ee3ad4ea59277f9cc7689e9c96b99e51533",
+      "declarationsSha256": "179e27c38981c64c57853d3446abc4e3b2452ff30e979db35db569eb829a7994",
+      "packedFileCount": 49,
+      "developmentFilesExcluded": true
+    },
+    {
+      "name": "@potential-guide/objective-regulator",
+      "version": "0.4.0-rc.0",
+      "sourceDirectory": "packages/objective-regulator",
+      "sourceTree": "b7fad9fa5b724eda13fcfa8a0e32589ca2d4fa5c",
+      "tarball": "potential-guide-objective-regulator-0.4.0-rc.0.tgz",
+      "tarballSha256": "154bb22d8974f4f57ef8adb5bdc7c444c75c99a95722f076d217b5851bc40b32",
+      "entrySha256": "5dd3590944720ae8067fa74213c597e3d686c6e605a6fdf9c36511d28cef16f3",
+      "declarationsSha256": "b4016beda8002469eff3926545f5c658ad4a99b6c48d7a5883ab8d13bafd3164",
+      "packedFileCount": 7,
+      "developmentFilesExcluded": true
+    },
+    {
+      "name": "@potential-guide/objective-portfolio-supervisor",
+      "version": "0.4.0-rc.0",
+      "sourceDirectory": "packages/objective-portfolio-supervisor",
+      "sourceTree": "b3a96def14159ffeaf91e4ad99161430597a6bf1",
+      "tarball": "potential-guide-objective-portfolio-supervisor-0.4.0-rc.0.tgz",
+      "tarballSha256": "ad580dde6e798d4cd68601e9274060c3f11c7e7de2d3e853f1dc94a3ed4c1c36",
+      "entrySha256": "f42783e95208aeeb6a3991ec79c3261f7e3442d579d682641383b76bfcd9f93e",
+      "declarationsSha256": "e231de7047083ab1e4db28a4e05b8e86c770c2eb601c462399f32e48fcbfbb96",
+      "packedFileCount": 23,
+      "developmentFilesExcluded": true
+    }
+  ],
+  "thirdPartyPackages": [
+    {
+      "name": "effect",
+      "version": "4.0.2",
+      "provenance": "installed-distribution-inside-this-worktree",
+      "sourceDirectory": "node_modules/.pnpm/effect@4.0.2/node_modules/effect",
+      "manifestSha256": "e737d4586f0c0f075950337f8e1b2f8eed1712bcd3fb44c19a7211005e2d414a",
+      "tarball": "effect-4.0.2.tgz",
+      "tarballSha256": "d5f3223766e512444391b2e2bd65812272c8c8062f7431a8ecec6f9154043424",
+      "packedFileCount": 2581,
+      "lifecycleScriptsDisabled": true,
+      "materializedRegularFilesBeforePack": true,
+      "packedFileSizesVerified": true
+    },
+    {
+      "name": "ajv",
+      "version": "8.20.0",
+      "provenance": "installed-distribution-inside-this-worktree",
+      "sourceDirectory": "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv",
+      "manifestSha256": "1f9033ee5a6515e7d76938b7072941862d1ed228a6879cc7fe10cdeb75107989",
+      "tarball": "ajv-8.20.0.tgz",
+      "tarballSha256": "b2f0b3a893bbb8cc5efb6814f08b1499e19e31d5dd73683f5893382f48f6e7b3",
+      "packedFileCount": 466,
+      "lifecycleScriptsDisabled": true,
+      "materializedRegularFilesBeforePack": true,
+      "packedFileSizesVerified": true
+    },
+    {
+      "name": "fast-deep-equal",
+      "version": "3.1.3",
+      "provenance": "installed-distribution-inside-this-worktree",
+      "sourceDirectory": "node_modules/.pnpm/fast-deep-equal@3.1.3/node_modules/fast-deep-equal",
+      "manifestSha256": "a5c63940db0260739be9e2ac67f3aac268df4db5770420ee4e34e493152f97d2",
+      "tarball": "fast-deep-equal-3.1.3.tgz",
+      "tarballSha256": "38eb4a20cd6c9407734685e56f37cc6e7ecb29ccf12c541378379b49f0cc28ea",
+      "packedFileCount": 11,
+      "lifecycleScriptsDisabled": true,
+      "materializedRegularFilesBeforePack": true,
+      "packedFileSizesVerified": true
+    },
+    {
+      "name": "fast-uri",
+      "version": "3.1.8",
+      "provenance": "installed-distribution-inside-this-worktree",
+      "sourceDirectory": "node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri",
+      "manifestSha256": "30cad05aad3d3596513706451dbfc7e0422f9c1d00f2903ecc34580327d54bc7",
+      "tarball": "fast-uri-3.1.8.tgz",
+      "tarballSha256": "86be033b406a7737c0521edc8fe3e15c7ac0cb6b5e509478cc9539a2efaa086c",
+      "packedFileCount": 44,
+      "lifecycleScriptsDisabled": true,
+      "materializedRegularFilesBeforePack": true,
+      "packedFileSizesVerified": true
+    },
+    {
+      "name": "json-schema-traverse",
+      "version": "1.0.0",
+      "provenance": "installed-distribution-inside-this-worktree",
+      "sourceDirectory": "node_modules/.pnpm/json-schema-traverse@1.0.0/node_modules/json-schema-traverse",
+      "manifestSha256": "156fb24af02845c190701360d06dfda35ef04282e34a734289ea9535ad9819ae",
+      "tarball": "json-schema-traverse-1.0.0.tgz",
+      "tarballSha256": "47eafdfa33602838ad6249f4d7079ffce313b864fe4661d7cfe03b3d23d8992a",
+      "packedFileCount": 12,
+      "lifecycleScriptsDisabled": true,
+      "materializedRegularFilesBeforePack": true,
+      "packedFileSizesVerified": true
+    },
+    {
+      "name": "require-from-string",
+      "version": "2.0.2",
+      "provenance": "installed-distribution-inside-this-worktree",
+      "sourceDirectory": "node_modules/.pnpm/require-from-string@2.0.2/node_modules/require-from-string",
+      "manifestSha256": "c0002f7d4c7d7e2a885cf0f97226344902417c3a0980f2beca41962d2bc1f6d8",
+      "tarball": "require-from-string-2.0.2.tgz",
+      "tarballSha256": "e44931ac0b86a37293a8d796ea8b84350475b385f6066ce13640aa0eb1375b93",
+      "packedFileCount": 4,
+      "lifecycleScriptsDisabled": true,
+      "materializedRegularFilesBeforePack": true,
+      "packedFileSizesVerified": true
+    },
+    {
+      "name": "jsonata",
+      "version": "2.1.0",
+      "provenance": "installed-distribution-inside-this-worktree",
+      "sourceDirectory": "node_modules/.pnpm/jsonata@2.1.0/node_modules/jsonata",
+      "manifestSha256": "d3d96617c2561acc5c46bdf4930348deafc2cb9e38c81904aca1a72aac566d77",
+      "tarball": "jsonata-2.1.0.tgz",
+      "tarballSha256": "eb722bbf74eeb4df2117a50c2ca9502e262e1f6a04e057a8c20c291d1f6517cc",
+      "packedFileCount": 8,
+      "lifecycleScriptsDisabled": true,
+      "materializedRegularFilesBeforePack": true,
+      "packedFileSizesVerified": true
+    },
+    {
+      "name": "json-schema-typed",
+      "version": "9.0.0",
+      "provenance": "installed-distribution-inside-this-worktree",
+      "sourceDirectory": "node_modules/.pnpm/json-schema-typed@9.0.0/node_modules/json-schema-typed",
+      "manifestSha256": "d43bec35d0ded971d0c73061a7bcd278f189fab9b2dbcfbcf3af7bda49c5ced4",
+      "tarball": "json-schema-typed-9.0.0.tgz",
+      "tarballSha256": "cf1b6ec9ee33fc51b6b8252ac68cc95872661cec49d12dc4ad9b8ee259e00af3",
+      "packedFileCount": 17,
+      "lifecycleScriptsDisabled": true,
+      "materializedRegularFilesBeforePack": true,
+      "packedFileSizesVerified": true
+    },
+    {
+      "name": "yaml",
+      "version": "2.9.1",
+      "provenance": "installed-distribution-inside-this-worktree",
+      "sourceDirectory": "node_modules/.pnpm/yaml@2.9.1/node_modules/yaml",
+      "manifestSha256": "1c6441703d8204a23ded0d37ddf57c3b69d821dc392f20852d1f605bb9b8861c",
+      "tarball": "yaml-2.9.1.tgz",
+      "tarballSha256": "5648e80d3e8969770b61c1e3a48b701dea49cf6b690b039221bfd3df91a2a0c1",
+      "packedFileCount": 233,
+      "lifecycleScriptsDisabled": true,
+      "materializedRegularFilesBeforePack": true,
+      "packedFileSizesVerified": true
+    }
+  ],
+  "cleanup": {
+    "directoryExistsAfter": false,
+    "operationOwnedDirectoryRemoved": true,
+    "commandProcessesClosed": true,
+    "globalInstallPublishLinkOrConfigurationWrite": false
+  },
+  "sourceCommit": "d98e68f4a7380e408835e7121f22a3548ed4f89a",
+  "nodeVersion": "v24.11.1",
+  "pnpmVersion": "11.22.0",
+  "workspaceLockSha256": "fed77545e909aa22b1f56f12357b2e175764c407e2a26a19c81b96ab932e05eb",
+  "consumerLockSha256": "08db065768c157bd9d31fa8e98f52ceacff8e79051f0f0ffbf7fb6ada3587853",
+  "physicalGraph": {
+    "verified": true,
+    "internalPackages": 6,
+    "entries": [
+      "@potential-guide/effects",
+      "@potential-guide/regulation-coordinator",
+      "@potential-guide/objective-portfolio-supervisor"
+    ],
+    "escapedConsumer": false,
+    "workspaceRangesRemaining": false
+  },
+  "runtime": {
+    "runnerKind": "deterministic-in-process",
+    "realAgentProcessIntegration": false,
+    "cases": [
+      {
+        "name": "residency-multicast",
+        "starts": 1,
+        "commandEndedBeforeResource": true
+      },
+      {
+        "name": "failure-recovery-idle",
+        "commandRejected": true,
+        "executionFailure": true,
+        "resourceRecovery": true
+      },
+      {
+        "name": "minimum-sharing-reclamation",
+        "minima": [
+          "l1",
+          "l3"
+        ],
+        "sharedProviderStarts": 1,
+        "acquisitions": 2,
+        "releases": 2
+      },
+      {
+        "name": "cancel-confirmation",
+        "startsBeforeConfirmation": 1,
+        "startsAfterConfirmation": 2
+      },
+      {
+        "name": "budget",
+        "maxStarts": 1,
+        "actualStarts": 1,
+        "retryAndReplacementDoNotRenew": true
+      },
+      {
+        "name": "same-scope-cleanup",
+        "order": [
+          "subscriber-released",
+          "abort",
+          "kill-confirmed"
+        ],
+        "forcedInterruption": false
+      },
+      {
+        "name": "legacy-supervisor",
+        "starts": 1,
+        "plannerClosed": true,
+        "coordinatorClosed": true
+      }
+    ],
+    "totals": {
+      "starts": 13,
+      "terminated": 13,
+      "aborts": 4,
+      "kills": 4,
+      "acquisitions": 2,
+      "releases": 2,
+      "scopesOpened": 7,
+      "scopesClosed": 7,
+      "subscriptionsOpened": 8,
+      "subscriptionsClosed": 8
+    },
+    "resolvedEntrypoints": [
+      {
+        "name": "@potential-guide/effects",
+        "path": "node_modules\\.pnpm\\@potential-guide+effects@fi_c3748d1b47a724fef184ec8e609a1788\\node_modules\\@potential-guide\\effects\\dist\\index.js",
+        "sha256": "ab73854e1653b8e5a925875f0b45c2c46ed680fc69ceaa8a5bcfd0cf3d28f030"
+      },
+      {
+        "name": "@potential-guide/regulation-coordinator",
+        "path": "node_modules\\.pnpm\\@potential-guide+regulation_a61993f3ec01448b7a06d83d195be7ba\\node_modules\\@potential-guide\\regulation-coordinator\\dist\\index.js",
+        "sha256": "3ffc6f38e1711e32e55f8741d06f08953103e4a87117ac399d465b10785c7c0d"
+      },
+      {
+        "name": "@potential-guide/objective-portfolio-supervisor",
+        "path": "node_modules\\.pnpm\\@potential-guide+objective-_afbfbbb448466189d395939ec15884cf\\node_modules\\@potential-guide\\objective-portfolio-supervisor\\dist\\index.js",
+        "sha256": "f42783e95208aeeb6a3991ec79c3261f7e3442d579d682641383b76bfcd9f93e"
+      }
+    ],
+    "activeExecutions": 0
+  },
+  "finishedAt": "2026-10-21T05:48:39.932Z"
+}
