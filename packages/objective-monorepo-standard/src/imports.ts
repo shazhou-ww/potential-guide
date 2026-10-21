@@ -16,6 +16,12 @@ export function sourceImports(path: string, content: string) {
           : node.isTypeOnly,
       });
     } else if (
+      ts.isImportTypeNode(node) &&
+      ts.isLiteralTypeNode(node.argument) &&
+      ts.isStringLiteralLike(node.argument.literal)
+    ) {
+      imports.push({ specifier: node.argument.literal.text, typeOnly: true });
+    } else if (
       ts.isImportEqualsDeclaration(node) &&
       ts.isExternalModuleReference(node.moduleReference) &&
       node.moduleReference.expression &&

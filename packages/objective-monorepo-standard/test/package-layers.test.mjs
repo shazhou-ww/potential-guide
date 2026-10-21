@@ -2,7 +2,16 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
-import { allowed, checkLayers, classify, imports } from "./check-layers.mjs";
+import { stringify } from "yaml";
+import { sourceImports } from "../src/imports.ts";
+import { allowed, checkPackageLayers, classify } from "../src/package-layers.ts";
+
+const imports = (source) => sourceImports("source.ts", source).map(({ specifier }) => specifier);
+async function checkLayers(root) {
+  return (await checkPackageLayers(root)).findings
+    .filter(({ state }) => state === "fail" || state === "unverified")
+    .map(({ location, evidence }) => `${location}: ${evidence}`);
+}
 
 const policy = {
   protocol: ["protocol", "primitives"],
@@ -64,10 +73,12 @@ test("manifest and cross-package source paths cannot bypass reverse dependency c
   await mkdir(".cache", { recursive: true });
   const root = await mkdtemp(join(".cache", "layer-test-"));
   try {
-    await mkdir(join(root, "config"));
+    await writeFile(join(root, "package.json"), JSON.stringify({ name: "fixture" }));
+    await writeFile(join(root, "pnpm-workspace.yaml"), "packages: [packages/*]");
+    await writeFile(join(root, "turbo.json"), JSON.stringify({ tasks: {} }));
     await writeFile(
-      join(root, "config", "package-layers.json"),
-      JSON.stringify({
+      join(root, "package-layers.yaml"),
+      stringify({
         protocol: ["low"],
         business: ["mid"],
         tools: ["high"],
@@ -125,6 +136,73 @@ test("manifest and cross-package source paths cannot bypass reverse dependency c
     const paths = await checkLayers(root);
     assert.equal(paths.length, 1, paths.join("\n"));
     assert.match(paths[0], /low -> high/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("invalid and missing YAML policies fail explicitly", async () => {
+  await mkdir(".cache", { recursive: true });
+  const root = await mkdtemp(join(".cache", "layer-policy-"));
+  try {
+    const policyPath = join(root, "package-layers.yaml");
+    assert.match((await checkLayers(root)).join(), /ENOENT/);
+    for (const value of [
+      "protocol: [",
+      "protocol: []\nprotocol: []\nbusiness: []\ntools: []",
+      "protocol: wrong\nbusiness: []\ntools: []",
+      "protocol: []\nbusiness: []\ntools: []\nunknown: []",
+      "[]",
+      "null",
+      "protocol: []",
+    ]) {
+      await writeFile(policyPath, value);
+      const report = await checkPackageLayers(root);
+      assert.equal(report.state, "fail", value);
+      assert.equal(report.findings[0].rule, "package-layer-policy", value);
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("workspace discovery uses pnpm patterns, not a hard-coded packages directory", async () => {
+  await mkdir(".cache", { recursive: true });
+  const root = await mkdtemp(join(".cache", "layer-workspaces-"));
+  try {
+    await writeFile(join(root, "package.json"), '{"name":"fixture"}');
+    await writeFile(
+      join(root, "pnpm-workspace.yaml"),
+      "packages: [modules/*, apps/*, '!modules/excluded']",
+    );
+    await writeFile(join(root, "turbo.json"), '{"tasks":{}}');
+    await writeFile(
+      join(root, "package-layers.yaml"),
+      "protocol: [low]\nbusiness: []\ntools: [high]",
+    );
+    for (const [directory, name] of [
+      ["modules/low", "low"],
+      ["apps/high", "high"],
+      ["modules/excluded", "excluded"],
+    ]) {
+      await mkdir(join(root, directory), { recursive: true });
+      await writeFile(join(root, directory, "package.json"), JSON.stringify({ name }));
+    }
+    assert.deepEqual(await checkLayers(root), []);
+    await writeFile(
+      join(root, "modules", "low", "package.json"),
+      '{"name":"low","dependencies":{"alias":"link:../../apps/high"}}',
+    );
+    assert.match((await checkLayers(root)).join(), /low -> high/);
+    await writeFile(join(root, "modules", "low", "package.json"), '{"name":"low"}');
+    await writeFile(
+      join(root, "modules", "low", "source.ts"),
+      'type X = import("../../apps/high/source.js").X;',
+    );
+    assert.match((await checkLayers(root)).join(), /low -> high/);
+    await writeFile(join(root, "modules", "low", "source.ts"), "export {};");
+    await writeFile(join(root, "modules", "low", "tsconfig.json"), "{");
+    assert.match((await checkLayers(root)).join(), /Invalid TypeScript configuration/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

@@ -37,6 +37,7 @@ export interface Contract {
   schemaVersion: 1;
   policy: {
     source: "pnpm-default-v1";
+    packageLayers?: string;
     directories: { apps: string; packages: string; docs: string; scripts: string };
     requiredFiles: string[];
     exceptions: { path: string; reason: string }[];
@@ -80,6 +81,7 @@ const modelSchema = object(
     policy: object(
       {
         source: { const: "pnpm-default-v1" },
+        packageLayers: path,
         directories: object({ apps: path, packages: path, docs: path, scripts: path }, [
           "apps",
           "packages",

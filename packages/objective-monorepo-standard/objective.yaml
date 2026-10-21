@@ -33,6 +33,9 @@ subjectSchema:
       properties:
         source:
           const: pnpm-default-v1
+        packageLayers:
+          type: string
+          pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
         directories:
           type: object
           additionalProperties: false

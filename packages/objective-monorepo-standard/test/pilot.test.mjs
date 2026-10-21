@@ -161,6 +161,43 @@ test("ordinary independent package and root use distinct source Objectives and r
   });
 });
 
+test("root architecture policy blocks structure before dependency probes and recovers after repair", async () => {
+  await fixture(async ({ subject, write, own, scripts }) => {
+    subject.policy.packageLayers = "package-layers.yaml";
+    const calls = [];
+    const missing = await observation(subject, rootId, calls);
+    assert.equal(missing.status, 200, missing.message);
+    assert.equal(missing.payload.current.levelId, "initial");
+    assert.ok(
+      missing.payload.problems[0].parameters.report.findings.some(
+        ({ rule, state }) => rule === "package-layer-policy" && state === "fail",
+      ),
+    );
+    assert.deepEqual(calls, [{ id: rootId, check: "structure" }]);
+    await write("package-layers.yaml", "protocol: [shared]\nbusiness: []\ntools: [upper]");
+    await write("packages/upper/package.json", { name: "upper", private: true, scripts });
+    await write("packages/upper/README.md", "# Upper");
+    await write("packages/upper/src/index.ts", "export const value = 1;");
+    await write(
+      "packages/upper/objectives.yaml",
+      declaration({ ...own, directory: "packages/upper" }),
+    );
+    await write("packages/shared/src/index.ts", 'type X = import("upper").X;');
+    const forbidden = await observation(subject);
+    assert.equal(forbidden.status, 200, forbidden.message);
+    assert.equal(forbidden.payload.current.levelId, "initial");
+    const finding = forbidden.payload.problems[0].parameters.report.findings.find(
+      ({ rule }) => rule === "package-layer-dependency",
+    );
+    assert.deepEqual(finding.packages, ["shared", "upper"]);
+    assert.equal(finding.location, "packages/shared/src/index.ts");
+    await write("packages/shared/src/index.ts", "export const value = 1;");
+    const repaired = await observation(subject);
+    assert.equal(repaired.status, 200, repaired.message);
+    assert.equal(repaired.payload.current.levelId, "terminal", JSON.stringify(repaired));
+  });
+});
+
 test("package source failure becomes a real dependency problem, then repaired consumer re-observes terminal", async () => {
   await fixture(async ({ write, own, subject }) => {
     await write("packages/shared/src/index.ts", "import './missing.js';");

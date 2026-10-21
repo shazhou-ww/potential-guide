@@ -108,6 +108,7 @@ export function checkFileClassification(
     "tsconfig.test.json",
     contractPath,
   ]);
+  if (contract.policy.packageLayers) rootAllowed.add(contract.policy.packageLayers);
   for (const file of inventory) {
     if (
       assignments.has(file) ||

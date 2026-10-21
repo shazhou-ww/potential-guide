@@ -12,12 +12,13 @@ objectives:
         "context": context,
         "policy": {
           "source": "pnpm-default-v1",
+          "packageLayers": "package-layers.yaml",
           "directories": {"apps": "apps", "packages": "packages", "docs": "docs", "scripts": "scripts"},
           "requiredFiles": ["tsconfig.json", "biome.json"],
           "exceptions": [],
           "assignments": [],
           "allowedDirectories": [
-            {"path": "config", "reason": "Repository-owned release and package-layer policy."},
+            {"path": "config", "reason": "Repository-owned release policy."},
             {"path": "schemas", "reason": "Canonical immutable JSON Schema publication sources."}
           ],
           "dependencyExceptions": []

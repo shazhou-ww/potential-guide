@@ -17,6 +17,7 @@ import { checkDeliveryMappings, checkUnmappedDeploymentFiles } from "./delivery-
 import { checkDependencyCycles } from "./dependency-graph.js";
 import { checkFileAssignments, checkFileClassification } from "./file-placement.js";
 import { applicableTasks, workspaceMetadata } from "./package-standard.js";
+import { observePackageLayers } from "./package-layers.js";
 import { recorder } from "./report.js";
 import { checkRepositoryConfiguration } from "./repository-configuration.js";
 import { observeRepository } from "./repository-observation.js";
@@ -83,6 +84,8 @@ export async function checkRepository(
     }
   }
   checkRepositoryConfiguration(facts, model, add);
+  if (model.policy.packageLayers)
+    await observePackageLayers(snapshot, facts, model.policy.packageLayers, add);
   const byName = new Map(model.workspaces.map((workspace) => [workspace.name, workspace]));
   checkWorkspaceIdentities(model, "objectives.yaml", byName, add);
   await checkRequiredFiles(snapshot, model, add);

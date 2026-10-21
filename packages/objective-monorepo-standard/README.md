@@ -57,6 +57,13 @@ package.json，不由根清单枚举。原集中 requirements 文件及 contract
 两个 Pilot 均为 initial → structured → terminal：
 
 1. 根先检查声明完整性、共通配置、布局、文件职责、联合交付映射和闭包。
+   可选 `policy.packageLayers` 指向仓库相对 YAML 分层政策；本仓库使用根目录
+   `package-layers.yaml`。结构阶段的架构合理化检查验证所有实际 pnpm workspace 的
+   protocol/business/tools 归属、暂缓外部化包及依赖方向，覆盖所有依赖字段、
+   生产源码与类型导入、重导出、动态导入、CommonJS、npm/TypeScript alias 和跨包路径。
+   配置缺失、损坏、未知分层、重复/遗漏归属及反向依赖均阻塞结构阶段；
+   未配置此政策的消费者不强制采用三层架构。`pnpm layers:check` 复用相同 bundle，
+   不保留仓库脚本内的第二套规则。
    根通过 `createSourceObjectiveDependencyProbe`（进程 IPC，宿主执行既有
    `createObjectiveDependencyProbe`/`checkObjectiveLevel`）观察每个包的具体 ID + subject，
    消费者要求 structured。包只检查自身文件、角色意图和适用配置。
@@ -88,6 +95,7 @@ Supervisor 接收真实 dependency-required 交接，推进包后重新观察消
 | standalone bundle 生成物豁免 | 所有者包的 generated 声明，精确路径与理由 |
 | public-library-suite / developer-commands | 根 deliveries 保存原联合包集合、入口、runtime、目的、非独立交付意图；每包 joins 确认参与 |
 | 依赖循环、任务循环/悬空引用、跨包 runtime、运行/peer 支撑闭包 | 根跨包观察 |
+| 三层归属与跨层依赖方向 | 根 policy.packageLayers 引用 YAML；根结构阶段架构检查，包 allows 仍独立生效 |
 | 有理由的依赖例外 | 根保留 dependencyExceptions，allowCycle 仅豁免该循环边；不再越权覆盖包自身 allows，方向例外须同时明确修改所属包意图 |
 | Worker/browser/service/OIDC/migration 配置引用与独立交付要求 | 复用原 delivery adapters；包局部或根联合交付按归属验证 |
 
@@ -112,6 +120,8 @@ pguide probe --objective standardize --scope directory --format json
 在包目录执行相同命令即可独立观察包。需要固定版本时由调用方提供完整 `--revision`，
 清单本身不 pin。库入口为 `checkPackage(subject, layer?)`、
 `checkRepository(subject, layer?, dependencyProbeFactory?, signal?)` 和对应严格 subject schema。
+`checkPackageLayers(root, policyPath?)` 可独立返回相同架构检查报告，默认读取根
+`package-layers.yaml`，供本仓库快捷命令使用。
 根默认 factory 需要宿主 IPC；直接库消费者应使用既有 dependency API 提供绑定，
 不能伪造观察证据。`checkMonorepo(root, contractPath)` 已移除。
 

@@ -130,14 +130,19 @@ and `projection` are supported; there is one canonical implementation.
 
 ## Enforcement and verification
 
-`config/package-layers.json` explicitly classifies every workspace. Unknown,
-duplicate or missing assignments fail `pnpm layers:check`, the first step of
-`pnpm check`. The checker covers all package dependency fields and production
+Root `package-layers.yaml` explicitly classifies every workspace. The repository
+`standardize` subject opts in with `policy.packageLayers: "package-layers.yaml"`.
+The `objective-monorepo-standard` structure phase owns this cross-package
+architecture check; an unreadable/invalid policy or unknown, duplicate or missing
+assignment blocks structure before package dependency probes.
+`pnpm layers:check`, the first step of `pnpm check`, is a thin adapter to the same
+bundled implementation, not an independent rule engine.
+The checker uses actual pnpm workspace discovery and covers all package dependency fields and production
 imports/reexports (including type imports, import types, dynamic imports,
 CommonJS, npm/TypeScript path aliases and cross-package relative/file paths). Generated `dist`,
 dependency directories and test fixtures are not production origins.
 
-`scripts/check-layers.test.mjs` exercises valid downward/direct-protocol/same-layer
+`packages/objective-monorepo-standard/test/package-layers.test.mjs` exercises valid downward/direct-protocol/same-layer
 edges and rejects reverse/deferred-concrete/unknown edges, including actual
 temporary workspace manifests and relative source/type references.
 All scratch data stays under repository `.cache`.
@@ -172,7 +177,8 @@ Repository preparation uses the root `objectives.yaml` and each workspace's own
 All nineteen workspaces, including the seven extracted packages, own their
 dependency intent, entrypoints and delivery joins. The root declaration retains
 joint delivery requirements and includes the complete fifteen-package release
-inventory. `config/package-layers.json` remains the independent three-layer policy.
+inventory. Root `package-layers.yaml` declares the three-layer architecture policy,
+enforced by the repository standardization Objective.
 
 Declaration parsing, input validation, bounded projection and domain binding are
 canonical `pilot-protocol` APIs (`parseObjectives`, `projectObjective`,
