@@ -13,7 +13,7 @@ import {
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { CliError } from "@potential-guide/cli-core";
+import { CliError, markdownInlineCode, markdownText } from "@potential-guide/cli-core";
 import { Cause, Effect, Exit, Scope, Stream } from "@potential-guide/effects";
 import { type GitSnapshot, loadGitSnapshot } from "@potential-guide/git-source";
 import {
@@ -30,6 +30,7 @@ import {
   RunEvidence,
   validateGitPilotSource,
 } from "@potential-guide/objective-pilot";
+import { ObjectiveInputError } from "@potential-guide/pilot-protocol";
 
 const execute = promisify(execFile);
 
@@ -56,9 +57,36 @@ function repositoryUri(value: string): string {
 
 class PilotSourceError extends CliError {
   constructor(message: string, cause?: unknown) {
-    super(message, 2, "pilot-error");
+    super(
+      message,
+      2,
+      "pilot-error",
+      undefined,
+      cause instanceof ObjectiveInputError ? inputErrorMessage(cause) : undefined,
+    );
     if (cause !== undefined) this.cause = cause;
   }
+}
+
+function inputErrorMessage(error: ObjectiveInputError): string {
+  const details = error.details;
+  const objective = markdownInlineCode(details.objectiveId);
+  if (details.kind === "language") {
+    return [
+      `Unsupported language ${markdownInlineCode(details.requested)} for ${objective}.`,
+      `Supported languages: ${details.supported.map(markdownInlineCode).join(", ")}.`,
+      "Next: choose a supported --language, or omit it to use the Objective default.",
+    ].join("\n\n");
+  }
+  const issues = details.issues?.map(
+    (issue) =>
+      `- ${markdownInlineCode(issue.instancePath || "/")}: ${markdownText(issue.message)} (${markdownInlineCode(issue.keyword)})`,
+  ) ?? ["- Subject must be a JSON object matching the Objective subjectSchema."];
+  return [
+    `Invalid subject for ${objective}.`,
+    `Input issues:\n${issues.join("\n")}`,
+    "Next: correct the subject fields against subjectSchema and retry --subject-file <path> or stdin.",
+  ].join("\n\n");
 }
 
 async function afterCleanup<T>(
@@ -86,6 +114,9 @@ async function afterCleanup<T>(
           outcome.error.exitCode,
           outcome.error.status,
           outcome.error.guidance,
+          outcome.error.humanMessage === undefined
+            ? undefined
+            : `${outcome.error.humanMessage}\n\nCleanup failed: ${markdownText(cleanupError instanceof Error ? cleanupError.message : String(cleanupError))}`,
         );
         error.cause = combined;
         throw error;

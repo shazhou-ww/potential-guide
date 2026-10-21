@@ -8,6 +8,9 @@ import {
   commandMain,
   type GlobalOptions,
   loadConfig,
+  markdownCodeBlock,
+  markdownInlineCode,
+  markdownText,
   type PguideConfig,
   parseConfig,
   redactConfig,
@@ -16,7 +19,7 @@ import {
 } from "@potential-guide/cli-core";
 import spawn from "cross-spawn";
 import { parse, stringify } from "yaml";
-import { configHelp, configSubcommands } from "./help.js";
+import { configHelp, configHelpSpec, configSubcommands } from "./help.js";
 
 function targetPath(scope: string, globals: GlobalOptions): string {
   if (scope === "user") return userConfigPath();
@@ -53,6 +56,7 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
         command: "config",
         subcommands: configSubcommands,
         configurationSchemaVersion: 2,
+        ...configHelpSpec(subcommand),
         regulationStrategyDefaults: {
           quota: { timeoutMs: 300000, maxAgentRuns: 10, maxStallRuns: 3 },
           probe: { timeoutMs: 30000, retry: { maxRetries: 0, delayMs: 0 } },
@@ -75,7 +79,17 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     writeResult(
       { schemaVersion: 1, config: redactConfig(loaded.value), sources: loaded.sources },
       globals.format,
-      stringify(redactConfig(loaded.value)),
+      [
+        "# Effective configuration",
+        "Values merge user → nearest project → explicit configuration; later layers override earlier ones.",
+        markdownCodeBlock(stringify(redactConfig(loaded.value)), "yaml"),
+        "## Sources",
+        Object.keys(loaded.sources).length === 0
+          ? "No configured values have file provenance; defaults apply."
+          : Object.entries(loaded.sources)
+              .map(([key, source]) => `- ${markdownInlineCode(key)}: ${markdownInlineCode(source)}`)
+              .join("\n"),
+      ].join("\n\n"),
     );
     return;
   }
@@ -83,9 +97,9 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     writeResult(
       { schemaVersion: 1, paths: loaded.paths },
       globals.format,
-      Object.entries(loaded.paths)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join("\n"),
+      `# Configuration paths\n\n${Object.entries(loaded.paths)
+        .map(([key, value]) => `- ${key}: ${value ? markdownInlineCode(value) : "not selected"}`)
+        .join("\n")}`,
     );
     return;
   }
@@ -93,7 +107,11 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     writeResult(
       { schemaVersion: 1, status: "valid", paths: loaded.paths },
       globals.format,
-      "Configuration is valid.",
+      `# Configuration valid\n\nConfiguration is valid. Offline validation succeeded; Agent initialization, authentication and repair were not checked.\n\n${Object.entries(
+        loaded.paths,
+      )
+        .map(([key, value]) => `- ${key}: ${value ? markdownInlineCode(value) : "not selected"}`)
+        .join("\n")}`,
     );
     return;
   }
@@ -110,14 +128,16 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
         objectives,
       },
       globals.format,
-      objectives.length === 0
-        ? "No registered Objectives."
-        : objectives
-            .map(
-              ({ name, location, source }) =>
-                `${name} (legacy source alias)\n  Location: ${location}\n  Source:   ${source}`,
-            )
-            .join("\n\n"),
+      `# Legacy Objective source aliases\n\n- Context: ${markdownInlineCode(globals.cwd)}\n- Scope: effective user, nearest project and explicit configuration\n\n${
+        objectives.length === 0
+          ? "No registered Objectives. No legacy source aliases were found. Use `pguide objectives list` for declarations or `pguide objectives set --help` to add one."
+          : objectives
+              .map(
+                ({ name, location, source }) =>
+                  `- Name: ${markdownInlineCode(name)} (legacy source alias)\n  - Location: ${markdownInlineCode(location)}\n  - Source: ${source ? markdownInlineCode(source) : "not recorded"}`,
+              )
+              .join("\n\n")
+      }`,
     );
     return;
   }
@@ -156,7 +176,7 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
       await new Promise<void>((resolveEditor, rejectEditor) => {
         const child = spawn(parsed.command, [...parsed.args, temporary], {
           cwd: globals.cwd,
-          stdio: "inherit",
+          stdio: globals.format === "json" ? ["inherit", process.stderr, "inherit"] : "inherit",
           shell: false,
         });
         child.on("error", rejectEditor);
@@ -170,6 +190,11 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     } finally {
       await unlink(temporary).catch(() => undefined);
     }
+    writeResult(
+      { schemaVersion: 1, status: "updated", path },
+      globals.format,
+      `# Configuration saved\n\n- Action: edit\n- Scope: ${scope}\n- File: ${markdownInlineCode(path)}`,
+    );
     return;
   }
   const config = await editable(path);
@@ -201,7 +226,11 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     throw new CliError(`Unknown config subcommand: ${subcommand}.`);
   }
   await atomicWrite(path, stringify(parseConfig(stringify(config))));
-  writeResult({ schemaVersion: 1, status: "updated", path }, globals.format, `Updated ${path}.`);
+  writeResult(
+    { schemaVersion: 1, status: "updated", path },
+    globals.format,
+    `# Configuration updated\n\n- Action: ${markdownText(subcommand)}\n- ${subcommand === "remove-objective" ? "Name" : "Key"}: ${markdownInlineCode(argv[1] ?? "")}\n- Scope: ${scope}\n- File: ${markdownInlineCode(path)}`,
+  );
 }
 
 void commandMain(

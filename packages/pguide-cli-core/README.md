@@ -3,6 +3,37 @@
 Shared configuration, command protocol, atomic persistence, and ACP/AHP clients used
 by the `pguide` command packages. This package is an implementation component;
 most users should install `pguide` and the desired command packages instead.
+
+## Output compatibility
+
+Ordinary commands default to human-readable Markdown; `--format json` selects
+their existing machine envelope. Human summaries identify the result, its scope
+and source, and an applicable next action. Lists have explicit empty states;
+details may include fenced configuration or schema content. Shared Markdown
+helpers escape dynamic labels, fence paths and code safely, and remove terminal
+formatting from displayed values without changing their machine representation.
+
+For compatibility, ordinary command results and error envelopes retain stdout
+and their existing exit codes. Diagnostics from child editors belong on stderr
+when JSON output is requested. The contract migration tool has its own
+documented result-format option and retains stderr for ordinary usage failures.
+These stream boundaries are deliberate: changing an error's presentation does
+not silently change its machine category, process status, or output stream.
+
+`CliError.humanMessage` optionally provides readable input issues while
+`message`, `status`, `exitCode`, and `guidance` retain the existing machine
+contract. `formatCliError` shares this presentation between standalone commands
+and the main dispatcher. Optional human details are not serialized as machine
+fields. Observation input failures carry structured issues or supported locales
+through the runtime instead of reparsing error-message text.
+
+Shell completion scripts, command-discovery metadata, raw `config get` values,
+Objective check/runtime envelopes, and report files remain machine or verbatim
+outputs. Do not wrap them in human headings or infer Objective completion from
+a successful observation or a normally completed supervision interval.
+
+## Resources and execution
+
 Agent profiles are loaded from independent user/project `agents.yaml` resources,
 not `PguideConfig`. `loadAgents(cwd)` explicitly loads the effective whole-profile
 map, source scopes and paths only for profile-consuming commands. `loadConfig`

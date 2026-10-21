@@ -3,9 +3,12 @@ import { resolve } from "node:path";
 import {
   type AgentProfile,
   CliError,
+  expectedCliError,
   type GlobalOptions,
   loadAgents,
   loadConfig,
+  markdownInlineCode,
+  markdownText,
   option,
   rejectUnknownOptions,
   resolveObjective,
@@ -374,6 +377,101 @@ export async function supervisePortfolio(
   };
 }
 
+export function supervisionMarkdown(
+  result: Awaited<ReturnType<typeof supervisePortfolio>>,
+  goals: readonly ObjectiveGoal[],
+  resources: readonly AgentResource[],
+  boundary: string,
+): string {
+  const execute = result.status === "executed";
+  const failed = result.events.filter((event) => event.type === "failed");
+  const lines = [
+    "# Portfolio supervision",
+    "",
+    `- Mode: ${execute ? "execution" : "planning only - no repairs dispatched"}.`,
+    `- Status: ${failed.length > 0 ? "execution failures recorded" : execute ? "supervision cycle ended" : "plan created"}.`,
+    `- Goals: ${goals.length} ${goals.length === 1 ? "goal" : "goals"}.`,
+    `- Remaining demands: ${result.queue.demands.length} ${result.queue.demands.length === 1 ? "demand" : "demands"}.`,
+    `- Resources: ${resources.length} ${resources.length === 1 ? "resource" : "resources"}; total capacity ${resources.reduce((total, resource) => total + resource.capacity, 0)}.`,
+    `- Termination boundary: ${markdownText(boundary)}.`,
+    "- Completion: a completed cycle or empty queue does not prove all goals are reached; see the latest observations below.",
+    "",
+    "## Goals",
+    "",
+  ];
+  for (const goal of goals) {
+    const observation = result.observations[goal.id];
+    const current = observation?.payload?.current.levelId;
+    const levels = [...goal.objective.manifest.levels.map(({ id }) => id), "terminal"];
+    const reached =
+      current !== undefined &&
+      levels.indexOf(current) >= 0 &&
+      levels.indexOf(current) >= levels.indexOf(goal.targetLevel);
+    lines.push(
+      `- Goal: ${markdownInlineCode(goal.id)}; Objective: ${markdownInlineCode(goal.objective.objectiveId)}; target: ${markdownInlineCode(goal.targetLevel)}; current: ${current === undefined ? "not observed" : markdownInlineCode(current)}; status: ${reached ? "target reached" : current === undefined ? "target not established" : "target not reached"}.`,
+    );
+    if (observation?.payload === null)
+      lines.push(`  - Observation failure: ${markdownText(observation.message)}`);
+  }
+  if (result.queue.demands.length > 0) {
+    lines.push("", "## Remaining demands", "");
+    for (const demand of result.queue.demands) {
+      const eligible = resources.filter((resource) =>
+        (demand.requirements ?? []).every((requirement) =>
+          resource.capabilities.includes(requirement),
+        ),
+      );
+      lines.push(
+        `- Demand: ${markdownInlineCode(demand.id)}; target: ${markdownInlineCode(demand.targetLevel)}; requirements: ${demand.requirements?.length ? demand.requirements.map(markdownInlineCode).join(", ") : "none"}; pending reason: ${!execute ? "planning only; execution was not requested" : eligible.length === 0 ? "no resource matches the required capabilities" : "still queued at the termination boundary; matching capacity does not establish dispatch or completion"}.`,
+      );
+    }
+  }
+  if (resources.length > 0) {
+    lines.push("", "## Resources", "");
+    for (const resource of resources)
+      lines.push(
+        `- Resource: ${markdownInlineCode(resource.id)}; Agent: ${markdownInlineCode(resource.binding.id)}; capacity: ${resource.capacity}; capabilities: ${resource.capabilities.length ? resource.capabilities.map(markdownInlineCode).join(", ") : "none"}.`,
+      );
+  }
+  if (failed.length > 0) {
+    lines.push("", "## Failures", "");
+    for (const event of failed)
+      lines.push(
+        `- Goal: ${markdownInlineCode(event.demand.id)}; failure: ${markdownText(
+          (event.error instanceof Error
+            ? event.error.message
+            : typeof event.error === "string"
+              ? event.error
+              : record(event.error) && typeof event.error.message === "string"
+                ? event.error.message
+                : "regulation worker failed; inspect persisted state and check reports"
+          )
+            .split(/\r?\n/u)[0]
+            ?.slice(0, 300) ?? "regulation worker failed",
+        )}.`,
+      );
+  }
+  for (const event of result.events) {
+    if (event.type === "result" && event.outcome.stopReason !== "target-reached")
+      lines.push(
+        `- Goal stop reason: ${markdownInlineCode(event.demand.id)} - ${markdownText(event.outcome.stopReason)}${event.outcome.exhaustedBy === undefined ? "" : ` (${markdownText(event.outcome.exhaustedBy)})`}.`,
+      );
+    if (event.type === "authorization-request")
+      lines.push(
+        `- Action required: goal ${markdownInlineCode(event.demand.id)} needs explicit permission grants.`,
+      );
+    if (event.type === "capability-request")
+      lines.push(
+        `- Action required: goal ${markdownInlineCode(event.demand.id)} needs capabilities ${event.requirements.map(markdownInlineCode).join(", ")}.`,
+      );
+  }
+  lines.push(
+    "",
+    `- Next action: ${!execute ? "review the plan and resources, then rerun the same command with --execute and an optional --duration-ms bound." : "review unmet goals and stop conditions, adjust resources or permissions if needed, then rerun supervision to obtain fresh observations."}`,
+  );
+  return lines.join("\n");
+}
+
 export async function runSupervise(
   argv: string[],
   globals: GlobalOptions,
@@ -417,6 +515,7 @@ export async function runSupervise(
     });
   }
   const resources = resolveResources(portfolio, profiles);
+  let currentResources = resources;
   const agentExecutionLimits = {
     timeoutMs: loaded.value.agentExecutionLimits?.timeoutMs ?? 30_000,
   };
@@ -429,6 +528,10 @@ export async function runSupervise(
   let activeBindings: Awaited<ReturnType<typeof bindGoal>>[] = [];
   const runtimes = new Map<string, PilotRuntime>();
   let goals: readonly ObjectiveGoal[] = [];
+  let boundary = execute
+    ? "cancellation requested; active work was stopped"
+    : "planning pass finished";
+  let failedObservation: { goal: ObjectiveGoal; message: string } | undefined;
   async function loadGoals(file: PortfolioFile, config = loaded.value) {
     const fresh: Awaited<ReturnType<typeof bindGoal>>[] = [];
     try {
@@ -510,7 +613,11 @@ export async function runSupervise(
   }
   try {
     await loadGoals(portfolio);
-    if (durationMs !== undefined) durationTimer = setTimeout(cancel, durationMs);
+    if (durationMs !== undefined)
+      durationTimer = setTimeout(() => {
+        boundary = `duration limit reached (${durationMs} ms); active work was stopped`;
+        cancel();
+      }, durationMs);
     const result = await supervisePortfolio({
       goals,
       async resolveObjective(objectiveId, version, signal, source) {
@@ -568,10 +675,13 @@ export async function runSupervise(
               throw new CliError("Missing source binding resolver.");
             await runtime.resolveObjective(id, source.tree, signal, source);
           }
-          return startEffect(
+          const observation = await startEffect(
             observe({ spec: goal.objective, subject: goal.subject }, runtime),
             AbortSignal.any([signal, controller.signal]),
           ).await();
+          if (observation.payload === null)
+            failedObservation = { goal, message: observation.message };
+          return observation;
         })();
       },
       execute,
@@ -594,6 +704,7 @@ export async function runSupervise(
         const nextPlanner = agents[plannerName];
         if (nextPlanner === undefined) throw new CliError("--planner profile was removed.");
         const nextResources = resolveResources(nextPortfolio, agents);
+        currentResources = nextResources;
         const nextGoals = await loadGoals(nextPortfolio, config.value);
         for (const name of Object.keys(profiles)) delete profiles[name];
         Object.assign(profiles, agents);
@@ -608,9 +719,23 @@ export async function runSupervise(
     writeResult(
       result,
       globals.format,
-      `${execute ? "Supervised" : "Planned"} ${goals.length} goals; ${result.queue.demands.length} queued demands.`,
+      globals.format === "json"
+        ? ""
+        : supervisionMarkdown(result, goals, currentResources, boundary),
     );
     return result.events.some((event) => event.type === "failed") ? 6 : 0;
+  } catch (error) {
+    if (globals.format !== "json" && failedObservation !== undefined) {
+      const compatibility = expectedCliError(error);
+      throw new CliError(
+        compatibility.message,
+        compatibility.exitCode,
+        compatibility.status,
+        compatibility.guidance,
+        `Observation failed for goal ${markdownInlineCode(failedObservation.goal.id)}, Objective ${markdownInlineCode(failedObservation.goal.objective.objectiveId)}, target ${markdownInlineCode(failedObservation.goal.targetLevel)}: ${markdownText(failedObservation.message)}. Inspect the failing check/report, then rerun supervision. Goal completion could not be determined.`,
+      );
+    }
+    throw error;
   } finally {
     clearTimeout(durationTimer);
     controller.abort();

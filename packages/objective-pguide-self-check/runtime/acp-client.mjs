@@ -8,11 +8,13 @@ export class CliError extends Error {
     exitCode;
     status;
     guidance;
-    constructor(message, exitCode = 2, status = "invalid", guidance) {
+    humanMessage;
+    constructor(message, exitCode = 2, status = "invalid", guidance, humanMessage) {
         super(message);
         this.exitCode = exitCode;
         this.status = status;
         this.guidance = guidance;
+        this.humanMessage = humanMessage;
     }
 }
 function record(value) {

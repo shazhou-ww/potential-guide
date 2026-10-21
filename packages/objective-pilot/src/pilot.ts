@@ -18,6 +18,7 @@ import {
   immutable,
   json,
   ObjectiveConfigurationError,
+  ObjectiveInputError,
   ObjectiveOperationError,
   parseManifest,
   record,
@@ -73,13 +74,20 @@ export function observe(
           const manifest = parseManifest(JSON.stringify(spec.manifest));
           const issues = validateSubject(subject, compileDomain(manifest.subjectSchema));
           if (issues !== null || !record(subject) || !json(subject)) {
-            throw new ObjectiveConfigurationError(
+            throw new ObjectiveInputError(
               `Invalid subject for ${spec.objectiveId}: ${JSON.stringify(issues)}.`,
+              { kind: "subject", objectiveId: spec.objectiveId, issues },
             );
           }
           if (spec.locales[language] === undefined)
-            throw new ObjectiveConfigurationError(
+            throw new ObjectiveInputError(
               `Unsupported language ${language} for ${spec.objectiveId}.`,
+              {
+                kind: "language",
+                objectiveId: spec.objectiveId,
+                requested: language,
+                supported: Object.keys(spec.locales).sort(),
+              },
             );
           versions[spec.objectiveId] = spec.version;
           const stableSubject = immutable(structuredClone(subject));

@@ -31,6 +31,32 @@ packages alongside `pguide` does not add synthetic conflicts.
 replace explicit references and uninstall the old name to avoid duplicate shims.
 See [migration and layers](../../docs/package-layering.md).
 
+## Resource output and diagnosis
+
+Default output and `--format markdown` use the same human-readable headings
+and labeled summaries. Objective and Agent lists show identity, scope and
+provenance, with explicit empty states; details expand schemas or redacted
+profiles separately. Write receipts identify the actual action, target, scope
+and file. `config show` includes per-key sources; `config get` remains raw.
+JSON envelopes and exit codes are preserved. The previously silent
+`config edit --format json` now returns
+`{schemaVersion: 1, status: "updated", path}` after successful saving.
+Editor stdout is redirected to stderr in JSON mode for both resource editors.
+
+`pguide diagnose` reports the discovery context, configuration paths and each
+discovered command's source and executable. Conflicts identify every candidate
+path and suggest checking `commandDirectories` and PATH. The optional
+`pguide diagnose agent <profile>` displays the selected profile's source,
+protocol type and actual initialization response. A successful initialization
+does **not** prove authentication, permissions or repair capability; without
+`agent` no Agent process is started. Diagnosis does not repair configuration.
+`complete` intentionally emits an unadorned shell script; Markdown headings
+are never added to it.
+For compatibility, existing managed-command errors still use their historical
+stdout routing and exit codes (including JSON error envelopes). Consumers
+should inspect the exit code and parse the selected format rather than assuming
+all failures use stderr. Editor chatter is a separate stderr stream in JSON mode.
+
 ```sh
 pguide scaffold pilot ./objective --check ready --problem not-ready
 pguide validate pilot ./objective

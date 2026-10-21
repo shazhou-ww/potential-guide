@@ -11,12 +11,16 @@ import {
   emptyAgents,
   type GlobalOptions,
   loadAgents,
+  markdownCodeBlock,
+  markdownInlineCode,
+  markdownText,
   migrateAgents,
   option,
   parseAgents,
   readStdin,
   redactAgentValue,
   resourceText,
+  showCommandHelp,
   validateAgentName,
   withResourceLocks,
   writeAgents,
@@ -25,46 +29,10 @@ import {
 import spawn from "cross-spawn";
 import { parseDocument, stringify } from "yaml";
 
-const help = `Usage: pguide agents list|show|set|remove|edit|validate|path|migrate [name]
-
-  list / show <name>       Effective profiles with scope and file provenance
-  set <name> --from <file|->  Validate and replace a whole profile
-  remove <name>            Remove only from the selected scope
-  edit                     Edit a validated draft; failed edits preserve the original
-  validate / path          Validate resources / show their locations
-  migrate                  Move embedded profiles, preserving a source backup
-
-Writes require --scope user|project. migrate accepts --legacy-config <file>
-only for the main config beside that scope's agents.yaml. --config selects a
-main configuration, never a third agents scope. Project profiles replace entire
-same-name user profiles. Profiles contain credential references, never secrets.
-
-Examples:
-  pguide agents set local --from profile.yaml --scope project
-  pguide agents migrate --scope user
-
-Global options:
-  --cwd <directory> Configuration and resource discovery context
-  --config <path> Main config overlay only; never an Agent scope
-  --format markdown|json
-  --color auto|always|never
-  --log-level error|warn|info|debug
-  --help
-  --version`;
-
 async function run(argv: string[], globals: GlobalOptions): Promise<void> {
   const command = argv[0];
   if (globals.help || command === undefined) {
-    writeResult(
-      {
-        schemaVersion: 1,
-        command: "agents",
-        subcommands: ["list", "show", "set", "remove", "edit", "validate", "path", "migrate"],
-        resourceSchema: AGENTS_SCHEMA,
-      },
-      globals.format,
-      help,
-    );
+    showCommandHelp("agents", globals, argv[0]);
     return;
   }
   const allowed = new Set(
@@ -96,7 +64,13 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     );
   if (command === "path") {
     const paths = await agentsPaths(globals.cwd);
-    writeResult({ schemaVersion: 1, paths }, globals.format, stringify(paths));
+    writeResult(
+      { schemaVersion: 1, paths },
+      globals.format,
+      `# Agent resource paths\n\n${Object.entries(paths)
+        .map(([scope, path]) => `- ${scope}: ${markdownInlineCode(path)}`)
+        .join("\n")}`,
+    );
     return;
   }
   if (["list", "show", "validate"].includes(command)) {
@@ -110,17 +84,39 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     if (command === "show") {
       const name = positional[0];
       if (name === undefined || !Object.hasOwn(agents, name))
-        throw new CliError(`Unknown Agent profile: ${name ?? ""}.`);
+        throw new CliError(
+          `Agent profile ${name ?? ""} was not found in user or project resources. Run pguide agents list to find effective profiles.`,
+        );
       writeResult(
         { schemaVersion: 1, name, ...agents[name] },
         globals.format,
-        stringify(agents[name]),
+        `# Agent ${markdownInlineCode(name)}\n\n- Type: ${loaded.agents[name]?.type}\n- Scope: ${loaded.sources[name]?.scope}\n- Source: ${markdownInlineCode(loaded.sources[name]?.path ?? "")}\n\n## Profile (redacted)\n\n${markdownCodeBlock(stringify(agents[name]?.profile), "yaml")}`,
       );
     } else
       writeResult(
         { schemaVersion: 1, status: "valid", agents, paths: loaded.paths },
         globals.format,
-        command === "validate" ? "Agents resources are valid." : stringify(agents),
+        [
+          command === "validate" ? "# Agent resources valid" : "# Agents",
+          `- Context: ${markdownInlineCode(globals.cwd)}\n- Scopes: user and project (project profiles replace same-name user profiles)\n${Object.entries(
+            loaded.paths,
+          )
+            .map(([scope, path]) => `- ${scope} file: ${markdownInlineCode(path)}`)
+            .join("\n")}`,
+          ...(Object.keys(agents).length === 0
+            ? [
+                "No Agent profiles found. Use `pguide agents set <name> --from <profile.yaml> --scope user|project` to add a profile.",
+              ]
+            : Object.entries(loaded.agents).map(
+                ([name, profile]) =>
+                  `- Name: ${markdownInlineCode(name)}\n  - Type: ${markdownText(profile.type)}\n  - Scope: ${loaded.sources[name]?.scope}\n  - Source: ${markdownInlineCode(loaded.sources[name]?.path ?? "")}`,
+              )),
+          ...(command === "validate"
+            ? [
+                "Offline resource validation succeeded. Agent initialization, authentication and repair were not checked.",
+              ]
+            : []),
+        ].join("\n\n"),
       );
     return;
   }
@@ -136,7 +132,11 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
       scope,
       typeof source === "string" ? resolve(globals.cwd, source) : undefined,
     );
-    writeResult({ schemaVersion: 1, ...result }, globals.format, stringify(result));
+    writeResult(
+      { schemaVersion: 1, ...result },
+      globals.format,
+      `# Agent profiles migrated\n\n- Names: ${result.names.map(markdownInlineCode).join(", ")}\n- Scope: ${scope}\n- Source: ${markdownInlineCode(result.source)}\n- Destination: ${markdownInlineCode(result.destination)}\n- Backup: ${markdownInlineCode(result.backup)}`,
+    );
     return;
   }
   const path = (await agentsPaths(globals.cwd))[scope];
@@ -156,7 +156,7 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
         await new Promise<void>((done, fail) => {
           const child = spawn(unquote(executable), [...parts.map(unquote), draft], {
             cwd: globals.cwd,
-            stdio: "inherit",
+            stdio: globals.format === "json" ? ["inherit", process.stderr, "inherit"] : "inherit",
             shell: false,
           });
           child.on("error", fail);
@@ -174,7 +174,9 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
       validateAgentName(name);
       if (command === "remove") {
         if (!Object.hasOwn(file.agents, name))
-          throw new CliError(`Agent not found in ${scope} scope: ${name}.`);
+          throw new CliError(
+            `Agent ${name} was not found in ${scope} scope (${path}). Run pguide agents list to inspect effective profiles; remove only affects the selected scope.`,
+          );
         delete file.agents[name];
       } else {
         const from = option(argv, "--from");
@@ -197,7 +199,7 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
   writeResult(
     { schemaVersion: 1, status: "written", path, scope },
     globals.format,
-    `${scope}: ${path}`,
+    `# Agent ${command === "remove" ? "removed" : "saved"}\n\n- Action: ${command}\n- ${command === "edit" ? "Target: resource file" : `Name: ${markdownInlineCode(positional[0] ?? "")}`}\n- Scope: ${scope}\n- File: ${markdownInlineCode(path)}`,
   );
 }
 await commandMain(

@@ -35,6 +35,17 @@ The npm package is organization-scoped, while its executable remains
 
 `pguide config edit` opens a temporary copy, validates it, and atomically
 replaces the selected configuration only after the editor exits successfully.
+Successful edits print a save receipt with scope and file. `--format json`
+adds the previously missing success result
+`{schemaVersion: 1, status: "updated", path}`; editor stdout goes to stderr in
+that mode, keeping stdout independently parseable. Failed edits never report
+successful saving.
+
+Default and `--format markdown` reports use headings and labeled paths.
+`show` includes the redacted effective YAML and per-key provenance, explaining
+user → nearest project → explicit precedence. `get` intentionally remains an
+unadorned raw value; no heading or provenance is added. Existing JSON fields,
+envelopes and exit codes are unchanged for other operations.
 
 ## Objective registry
 
@@ -51,9 +62,10 @@ Legacy removal defaults to `--scope project`; `--scope user` and
 scope. Legacy source aliases merge by name, with project overriding user and explicit
 overriding project. Removing an override exposes a lower-scope entry if present.
 Listing returns effective names, locations and configuration sources.
-The default output shows each Objective in a separate block, with labeled
+The default output shows each legacy alias in a separate labeled bullet, with
 `Location` and `Source` lines and full, untruncated paths or Git URIs.
-An empty registry prints `No registered Objectives.` Use `--format json` for
+An empty registry prints `No registered Objectives.` and explains the effective
+search scope and declaration-management commands. Use `--format json` for
 machine-readable output; each entry now explicitly marks `semantics: legacy-source-alias`.
 
 `probe`, `regulate` and portfolio goal `pilot` fields accept registered names.

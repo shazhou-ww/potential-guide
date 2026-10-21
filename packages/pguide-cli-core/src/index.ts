@@ -18,6 +18,7 @@ import { homedir, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parse, stringify } from "yaml";
+import { markdownCodeBlock } from "./output.js";
 
 export * from "./agents.js";
 
@@ -26,7 +27,13 @@ import { killProcessTree } from "./process-tree.js";
 import { pipeRedactedSecrets } from "./streaming-secret-redactor.js";
 
 export { type AhpSessionIdentity, executeAhp, inspectAhp } from "./ahp.js";
-export { type CommandHelp, formatCommandHelp } from "./help.js";
+export {
+  type CommandHelp,
+  formatCommandHelp,
+  globalHelpOptions,
+  helpMetadata,
+} from "./help.js";
+export { markdownCodeBlock, markdownInlineCode, markdownText } from "./output.js";
 export {
   type PermissionGrant,
   parseRegulationPermissions,
@@ -112,6 +119,7 @@ export class CliError extends Error {
     readonly exitCode = 2,
     readonly status = "invalid",
     readonly guidance?: Record<string, unknown>,
+    readonly humanMessage?: string,
   ) {
     super(message);
   }
@@ -942,6 +950,14 @@ export function expectedCliError(error: unknown): CliError {
   return new CliError(error instanceof Error ? error.message : String(error), 70, "internal-error");
 }
 
+export function formatCliError(failure: CliError): string {
+  return `Error: ${failure.humanMessage ?? failure.message}${
+    failure.guidance === undefined
+      ? ""
+      : `\n\nSubject input guidance:\n\n${markdownCodeBlock(JSON.stringify(failure.guidance, null, 2), "json")}`
+  }`;
+}
+
 export async function commandMain(
   metadata: CommandMetadata,
   run: (argv: string[], globals: GlobalOptions) => Promise<number | undefined> | Promise<void>,
@@ -976,11 +992,7 @@ export async function commandMain(
         ...(failure.guidance === undefined ? {} : { guidance: failure.guidance }),
       },
       format,
-      `Error: ${failure.message}${
-        failure.guidance === undefined
-          ? ""
-          : `\n\nSubject input guidance:\n\n\`\`\`json\n${JSON.stringify(failure.guidance, null, 2)}\n\`\`\``
-      }`,
+      formatCliError(failure),
     );
     process.exitCode = failure.exitCode;
   }
@@ -1416,6 +1428,7 @@ export async function ensurePrivateDirectory(path: string): Promise<void> {
 export {
   commandDescriptions,
   commandPackages,
+  getCommandHelp,
   launchCommand,
   showCommandHelp,
 } from "./command-help.js";

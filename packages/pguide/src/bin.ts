@@ -10,12 +10,18 @@ import {
   commandPackages,
   expectedCliError,
   extractGlobals,
+  formatCliError,
   formatCommandHelp,
   type GlobalOptions,
+  helpMetadata,
   inspectAhp,
   loadAgents,
   loadConfig,
+  markdownCodeBlock,
+  markdownInlineCode,
+  markdownText,
   option,
+  redactAgentValue,
   writeResult,
 } from "@potential-guide/cli-core";
 import spawn from "cross-spawn";
@@ -211,44 +217,48 @@ async function dispatch(
 
 async function help(globals: GlobalOptions): Promise<void> {
   const found = await discover(globals);
-  if (globals.format === "markdown") {
-    const commands = [
-      "  complete     Generate shell completion",
-      "  diagnose     Diagnose configuration and commands",
-      ...found.commands.map(
-        ({ command }) =>
-          `  ${command.padEnd(12)} ${command === "config" ? "Manage user/project configuration and Agent profiles" : Object.hasOwn(commandDescriptions, command) ? commandDescriptions[command as keyof typeof commandDescriptions] : "External command"}`,
-      ),
-    ];
-    const conflicts = Object.keys(found.conflicts);
-    process.stdout.write(
-      `${formatCommandHelp({
-        description: `pguide ${VERSION} - Observe Objectives, repair gaps, and supervise portfolios.`,
-        usage: "pguide [global options] <command> [arguments]",
-        sections: [
-          { title: "Commands", lines: commands },
-          {
-            title: "Examples",
-            lines: [
-              "  pguide config path",
-              "  pguide validate pilot .\\objective\\objective.yaml",
-              "  pguide probe --pilot .\\objective --subject-file .\\subject.json --format json",
-            ],
-          },
-          {
-            title: "Help",
-            lines: [
-              "  pguide <command> --help     Detailed command usage and examples",
-              "  pguide --help --format json  Verify discovered command compatibility",
-              "  Text help lists commands without starting them.",
-              ...(conflicts.length === 0
-                ? []
-                : [`  Conflicting commands: ${conflicts.join(", ")}`]),
-            ],
-          },
+  const helpSpec = {
+    description: `pguide ${VERSION} - Observe Objectives, repair gaps, and supervise portfolios.`,
+    usage: "pguide [global options] <command> [arguments]",
+    sections: [
+      {
+        title: "Commands",
+        lines: [
+          "  complete     Generate shell completion",
+          "  diagnose     Diagnose configuration and commands",
+          ...found.commands.map(
+            ({ command }) =>
+              `  ${command}     ${Object.hasOwn(commandDescriptions, command) ? commandDescriptions[command as keyof typeof commandDescriptions] : "External command"}`,
+          ),
         ],
-      })}\n`,
-    );
+      },
+      {
+        title: "Examples",
+        lines: [
+          "  pguide config path",
+          "  pguide validate pilot .\\objective\\objective.yaml",
+          "  pguide probe --pilot .\\objective --subject-file .\\subject.json --format json",
+        ],
+      },
+      {
+        title: "Help",
+        lines: [
+          "  pguide <command> --help     Detailed command usage and examples",
+          "  pguide --help --format json  Verify discovered command compatibility",
+          "  Text help lists commands without starting them.",
+          ...Object.entries(found.conflicts).flatMap(([command, paths]) => [
+            `  Command conflict: ${markdownInlineCode(command)} (dispatch blocked)`,
+            ...paths.map((path) => `    - Candidate: ${markdownInlineCode(path)}`),
+          ]),
+          ...(Object.keys(found.conflicts).length
+            ? ["  Inspect commandDirectories and PATH; run pguide diagnose for details."]
+            : []),
+        ],
+      },
+    ],
+  };
+  if (globals.format === "markdown") {
+    process.stdout.write(`${formatCommandHelp(helpSpec)}\n`);
     return;
   }
   const commands: {
@@ -298,6 +308,7 @@ async function help(globals: GlobalOptions): Promise<void> {
     version: VERSION,
     commands,
     conflicts: found.conflicts,
+    ...helpMetadata(helpSpec),
   };
   writeResult(
     value,
@@ -308,34 +319,32 @@ async function help(globals: GlobalOptions): Promise<void> {
 
 async function diagnose(argv: string[], globals: GlobalOptions): Promise<number> {
   if (globals.help) {
+    const helpSpec = {
+      description:
+        "Inspect effective configuration paths, discovered commands and optional Agent readiness.",
+      usage: "pguide diagnose [agent <profile>]",
+      sections: [
+        {
+          title: "Arguments",
+          lines: ["  agent <profile>         Also initialize an existing ACP or AHP Agent"],
+        },
+        {
+          title: "Examples",
+          lines: ["  pguide diagnose --format json", "  pguide diagnose agent local --format json"],
+        },
+        {
+          title: "Notes",
+          lines: [
+            "  Without agent, no Agent process is started. Does not repair configuration.",
+            "  Agent initialization is not authentication verification or a file-repair proof.",
+          ],
+        },
+      ],
+    };
     writeResult(
-      { schemaVersion: 1, command: "diagnose" },
+      { schemaVersion: 1, command: "diagnose", ...helpMetadata(helpSpec) },
       globals.format,
-      formatCommandHelp({
-        description:
-          "Inspect effective configuration paths, discovered commands and optional Agent readiness.",
-        usage: "pguide diagnose [agent <profile>]",
-        sections: [
-          {
-            title: "Arguments",
-            lines: ["  agent <profile>         Also initialize an existing ACP or AHP Agent"],
-          },
-          {
-            title: "Examples",
-            lines: [
-              "  pguide diagnose --format json",
-              "  pguide diagnose agent local --format json",
-            ],
-          },
-          {
-            title: "Notes",
-            lines: [
-              "  Without agent, no Agent process is started. Does not repair configuration.",
-              "  Agent initialization is not a complete self-check or a file-repair proof.",
-            ],
-          },
-        ],
-      }),
+      formatCommandHelp(helpSpec),
     );
     return 0;
   }
@@ -343,11 +352,15 @@ async function diagnose(argv: string[], globals: GlobalOptions): Promise<number>
   const found = await discover(globals);
   const agentIndex = argv.indexOf("agent");
   let agent: Record<string, unknown> | undefined;
+  let humanInitialize: unknown;
   if (agentIndex >= 0) {
     const agents = await loadAgents(globals.cwd);
     const name = argv[agentIndex + 1];
     const profile = name === undefined ? undefined : agents.agents[name];
-    if (profile === undefined) throw new CliError(`Unknown Agent profile: ${name ?? ""}.`);
+    if (profile === undefined)
+      throw new CliError(
+        `Agent profile ${name ?? ""} was not found in user or project resources. Run pguide agents list to find effective profiles.`,
+      );
     if (profile.type === "ahp") {
       agent = {
         name,
@@ -371,6 +384,7 @@ async function diagnose(argv: string[], globals: GlobalOptions): Promise<number>
         client.close();
       }
     }
+    humanInitialize = redactAgentValue(agent.initialize, profile);
   }
   const value = {
     schemaVersion: 1,
@@ -384,38 +398,73 @@ async function diagnose(argv: string[], globals: GlobalOptions): Promise<number>
   writeResult(
     value,
     globals.format,
-    `pguide diagnosis: ${value.status}\nNode: ${process.version}\nCommands: ${found.commands.length}`,
+    [
+      "# pguide diagnosis",
+      `- Status: ${value.status === "ok" ? "no command conflicts found" : "command conflicts found; resolve before dispatch"}\n- Node: ${markdownInlineCode(process.version)}\n- Context: ${markdownInlineCode(globals.cwd)}\n- Discovered commands: ${found.commands.length}`,
+      "## Configuration",
+      ...Object.entries(config.paths).map(
+        ([scope, path]) => `- ${scope}: ${path ? markdownInlineCode(path) : "not selected"}`,
+      ),
+      "## Commands",
+      ...(found.commands.length === 0
+        ? ["No commands discovered. Check `commandDirectories`, PATH and the bundled installation."]
+        : found.commands.map(
+            (candidate) =>
+              `- ${markdownInlineCode(candidate.command)}\n  - Source: ${candidate.source}\n  - Executable: ${markdownInlineCode(candidate.path)}`,
+          )),
+      ...(Object.keys(found.conflicts).length === 0
+        ? []
+        : [
+            "## Command conflicts",
+            ...Object.entries(found.conflicts).map(
+              ([command, paths]) =>
+                `- Command: ${markdownInlineCode(command)}\n${paths.map((path) => `  - Candidate: ${markdownInlineCode(path)}`).join("\n")}`,
+            ),
+            "Inspect `commandDirectories` with `pguide config show` and the PATH directories above. Remove duplicate candidates from the selected discovery tier, then rerun `pguide diagnose`.",
+          ]),
+      ...(agent
+        ? [
+            "## Agent initialization",
+            `- Name: ${markdownInlineCode(String(agent.name))}\n- Type: ${markdownText(String(agent.type))}\n- Scope: ${markdownText(String((agent.source as { scope?: string } | undefined)?.scope ?? "not recorded"))}\n- Source: ${markdownInlineCode((agent.source as { path?: string } | undefined)?.path ?? "not recorded")}\n- Result: initialization returned successfully`,
+            markdownCodeBlock(JSON.stringify(humanInitialize, null, 2), "json"),
+            "Only Agent initialization was checked. Authentication, permissions and actual repair capability were not verified.",
+          ]
+        : [
+            "No Agent process was started. Use `pguide diagnose agent <profile>` to inspect initialization; this does not verify authentication or repair capability.",
+          ]),
+    ].join("\n\n"),
   );
   return value.status === "ok" ? 0 : 2;
 }
 
 function complete(argv: string[], globals: GlobalOptions): void {
   if (globals.help) {
+    const helpSpec = {
+      description:
+        "Print a shell completion script; does not install it or change your shell profile.",
+      usage: "pguide complete [--shell <shell>]",
+      sections: [
+        {
+          title: "Options",
+          lines: ["  --shell <shell>         bash | zsh | fish | powershell (default: bash)"],
+        },
+        {
+          title: "Examples",
+          lines: [
+            "  pguide complete --shell powershell",
+            "  pguide complete --shell bash --format json",
+          ],
+        },
+        {
+          title: "Notes",
+          lines: ["  Review and load the emitted script in your shell or profile."],
+        },
+      ],
+    };
     writeResult(
-      { schemaVersion: 1, command: "complete" },
+      { schemaVersion: 1, command: "complete", ...helpMetadata(helpSpec) },
       globals.format,
-      formatCommandHelp({
-        description:
-          "Print a shell completion script; does not install it or change your shell profile.",
-        usage: "pguide complete [--shell <shell>]",
-        sections: [
-          {
-            title: "Options",
-            lines: ["  --shell <shell>         bash | zsh | fish | powershell (default: bash)"],
-          },
-          {
-            title: "Examples",
-            lines: [
-              "  pguide complete --shell powershell",
-              "  pguide complete --shell bash --format json",
-            ],
-          },
-          {
-            title: "Notes",
-            lines: ["  Review and load the emitted script in your shell or profile."],
-          },
-        ],
-      }),
+      formatCommandHelp(helpSpec),
     );
     return;
   }
@@ -489,7 +538,9 @@ async function main(): Promise<number> {
     const found = await discover(globals);
     const conflict = found.conflicts[command];
     if (conflict !== undefined)
-      throw new CliError(`Ambiguous command ${command}: ${conflict.join(", ")}.`);
+      throw new CliError(
+        `Ambiguous command ${command}: ${conflict.join(", ")}. Inspect commandDirectories and PATH; run pguide diagnose for details.`,
+      );
     const candidate = found.commands.find((entry) => entry.command === command);
     if (candidate === undefined) {
       const packageName =
@@ -517,7 +568,7 @@ async function main(): Promise<number> {
     writeResult(
       { schemaVersion: 1, status: failure.status, error: failure.message },
       format,
-      `Error: ${failure.message}`,
+      formatCliError(failure),
     );
     return failure.exitCode;
   }

@@ -9,6 +9,37 @@ Offline JSON schemas are exported at `./schemas/objective/v1.json` and
 `./schemas/objectives/v1.json`, with strict validators at `./schemas`.
 The package also supplies the non-overwriting `objective-contract-migrate` command.
 
+## Migration CLI
+
+`--format manifest|declarations|portfolio` selects the legacy document kind.
+It does **not** select the display or artifact encoding. Input is JSON or YAML;
+the new output artifact is JSON when its filename ends in `.json`, otherwise YAML.
+The input is never modified, existing outputs are refused, and pinned source
+evidence is never rewritten or invented.
+
+```sh
+objective-contract-migrate --format manifest --input legacy.json --output objective.yaml
+objective-contract-migrate --format declarations --input legacy.yaml --output objectives.json --output-format json
+objective-contract-migrate --format portfolio --input legacy.yaml --output portfolio.yaml
+objective-contract-migrate --help --output-format json
+```
+
+The default (or `--output-format markdown`) prints a human success receipt with
+document kind, input, saved path and artifact encoding. `--output-format json`
+instead prints one result object on stdout: success includes `schemaVersion: 1`,
+`status: "migrated"`, `format`, absolute `input`/`output`, `artifactFormat`,
+`inputUnchanged: true` and `overwritten: false`. Failure includes
+`schemaVersion: 1`, `status: "error"` and `error.message`, exits 1, and leaves
+stderr empty. Default failures retain their existing stderr and exit-1 contract.
+These receipts are separate from the migrated document's schema.
+
+Help includes additive option, default, constraint and example metadata.
+`--help --format json` remains a **legacy help-only** alias for JSON help;
+`--format json` is not valid for migration. Prefer `--help --output-format json`.
+Projection migrations may require `--context-kind git|non-git` or explicitly
+reviewed subject expressions via `--subjects-file <name-to-expression.json>`;
+no binding is guessed.
+
 Canonical Pilot definitions, schema compilation, strict YAML/manifest/reference
 parsing and validation, bounded subject projection and resource capability types.
 This protocol-only package does not depend on observation, regulation, CLI or
@@ -26,6 +57,13 @@ include `parseCheckEnvelope`, `parseDependencyProblem`, URI canonicalization,
 `validateReferences`, and contract types. Public subpaths: `types`, `validation`,
 `resources`, `projection`. Existing business-package reexports remain compatible.
 See [layers and consumption](../../docs/package-layering.md).
+
+`ObjectiveInputError` is an additive public subclass of
+`ObjectiveConfigurationError`. It preserves the original message and exposes
+typed `details`: subject failures include `objectiveId` and `issues`; language
+failures include `objectiveId`, `requested` and `supported`. CLI consumers can
+provide human field guidance without parsing messages or changing machine error
+payloads.
 
 Objective declaration definitions also live here: `parseObjectives` validates
 `objectives.yaml`, `projectObjective` checks input and evaluates the bounded

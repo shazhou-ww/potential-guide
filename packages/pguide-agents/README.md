@@ -14,6 +14,15 @@ Project profiles replace same-name user profiles completely; no protocol fields
 are deep-merged. Read commands show the selected scope and path. `--config`
 continues to select a main config only, not an extra Agent scope.
 
+Default and `--format markdown` output includes labeled names, types, scopes
+and source files. Lists summarize profiles; `show <name>` expands the redacted
+profile in a YAML code block. Empty lists include discovery paths and an
+actionable `set` command. Writes identify the action, target, scope and file;
+migration also reports the exact source backup. `--format json` preserves the
+existing envelopes and redaction. In JSON mode editor stdout is redirected to
+stderr so a successful `edit` emits only the parseable result on stdout.
+`validate` checks resources offline, not initialization, authentication or repair.
+
 ```yaml
 $schema: https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json
 agents:

@@ -15,6 +15,8 @@ import {
   type LegacyAcpAgentProfile,
   loadAgents,
   loadConfig,
+  markdownInlineCode,
+  markdownText,
   option,
   type PguideConfig,
   pruneExpiredRegulations,
@@ -37,7 +39,10 @@ import type {
   PilotSpec,
   Subject,
 } from "@potential-guide/objective-pilot";
-import { validateGitPilotSource } from "@potential-guide/objective-pilot";
+import {
+  ObjectiveConfigurationError,
+  validateGitPilotSource,
+} from "@potential-guide/objective-pilot";
 import {
   type AgentInput,
   type AgentOutcome,
@@ -334,6 +339,90 @@ function code(reason: string): number {
   return 6;
 }
 
+export function regulationInputGuidance(error: RegulationError): string | undefined {
+  const visited = new Set<unknown>();
+  let cause = error.cause;
+  while (cause instanceof Error && !visited.has(cause)) {
+    visited.add(cause);
+    if (cause instanceof CliError && cause.humanMessage !== undefined) return cause.humanMessage;
+    if (
+      cause instanceof ObjectiveConfigurationError &&
+      "details" in cause &&
+      cause.details !== null &&
+      typeof cause.details === "object" &&
+      "kind" in cause.details &&
+      cause.details.kind === "language" &&
+      "supported" in cause.details &&
+      Array.isArray(cause.details.supported) &&
+      cause.details.supported.every((language): language is string => typeof language === "string")
+    )
+      return [
+        `Supported languages: ${cause.details.supported.map(markdownInlineCode).join(", ")}.`,
+        "Next: choose a supported --language for a new regulation, or omit it to use the Objective default. Continue retains the original language.",
+      ].join("\n\n");
+    cause = cause.cause;
+  }
+  return undefined;
+}
+
+export function regulationMarkdown(input: {
+  regulationId: string;
+  objectiveId: string;
+  targetLevel: string;
+  status: string;
+  outcome?: RegulationOutcome;
+  quota: {
+    readonly timeoutMs: number;
+    readonly maxAgentRuns: number;
+    readonly maxStallRuns: number;
+  };
+  statePath: string;
+  reportPath?: string;
+  recoveryCommand: string;
+}): string {
+  const observation = input.outcome?.latestObservation;
+  const lines = [
+    "# Regulation",
+    "",
+    `- Run: ${markdownInlineCode(input.regulationId)}`,
+    `- Objective: ${markdownInlineCode(input.objectiveId)}`,
+    `- Status: ${markdownText(input.status)}`,
+    `- Target level: ${markdownInlineCode(input.targetLevel)}`,
+    `- Current level: ${observation?.payload == null ? "not available" : markdownInlineCode(observation.payload.current.levelId)}`,
+    `- Stop reason: ${markdownText(input.status)}${input.outcome?.exhaustedBy === undefined ? "" : ` (${markdownText(input.outcome.exhaustedBy)})`}.`,
+    `- Iterations: ${input.outcome?.iterations ?? "not available"}`,
+    `- Stalled runs: ${input.outcome?.stalledRuns ?? "not available"} (retained across attempts).`,
+    `- Attempt quota: ${input.quota.timeoutMs} ms; ${input.quota.maxAgentRuns} Agent ${input.quota.maxAgentRuns === 1 ? "run" : "runs"}; ${input.quota.maxStallRuns} additional stalled ${input.quota.maxStallRuns === 1 ? "run" : "runs"}.`,
+    `- State: ${markdownInlineCode(input.statePath)}`,
+  ];
+  if (input.reportPath !== undefined)
+    lines.push(`- Report: ${markdownInlineCode(input.reportPath)}`);
+  if (input.outcome?.stopReason === "dependency-required")
+    for (const dependency of input.outcome.dependencies)
+      lines.push(
+        `- Required dependency: ${markdownInlineCode(dependency.objectiveId)}; current ${markdownInlineCode(dependency.currentLevelId)}; required ${markdownInlineCode(dependency.expectedLevelId)}.`,
+      );
+  if (input.status === "authorization-required")
+    lines.push("- Action required: review configured permission grants before continuing.");
+  if (input.status === "exhausted")
+    lines.push("- Outcome: target not reached within this attempt's quota.");
+  else if (input.status === "target-reached")
+    lines.push(
+      input.targetLevel === "terminal"
+        ? "- Outcome: Objective complete - terminal reached."
+        : "- Outcome: requested target reached; the Objective is not necessarily terminal.",
+    );
+  else if (input.status === "cancelled")
+    lines.push("- Outcome: attempt cancelled; target completion is not established.");
+  if (observation?.payload === null)
+    lines.push(`- Observation failure: ${markdownText(observation.message)}`);
+  lines.push(
+    `- Continue command: ${markdownInlineCode(input.recoveryCommand)}`,
+    `- Next action: ${input.status === "target-reached" ? "no continuation is needed for this target." : "resolve the stop condition, then use the continue command with the same configuration and working directory."}`,
+  );
+  return lines.join("\n");
+}
+
 async function run(
   regulation: Regulation,
   globals: GlobalOptions,
@@ -488,10 +577,15 @@ async function run(
       } catch (cause) {
         if (controller.signal.aborted) throw cause;
         if (cause instanceof RegulationError) throw cause;
+        const message = `Cannot restore pinned Pilot commit ${regulation.objectiveCommit}: ${cause instanceof Error ? cause.message : String(cause)} No source version was substituted.`;
         throw new CliError(
-          `Cannot restore pinned Pilot commit ${regulation.objectiveCommit}: ${cause instanceof Error ? cause.message : String(cause)} No source version was substituted.`,
+          message,
           6,
           "pilot-error",
+          undefined,
+          cause instanceof CliError && cause.humanMessage !== undefined
+            ? `${markdownText(message)}\n\n${cause.humanMessage}`
+            : undefined,
         );
       }
     } else outcome = await execute(prepared.spec, prepared.runtime);
@@ -499,8 +593,19 @@ async function run(
     if (outcome !== undefined) regulation.history = { stalledRuns: outcome.stalledRuns };
   } catch (error) {
     attempt.status = controller.signal.aborted ? "cancelled" : "failed";
-    if (error instanceof RegulationError)
-      throw new CliError(error.message, error.status < 500 ? 2 : 6, "regulation-error");
+    if (error instanceof RegulationError) {
+      const inputGuidance = regulationInputGuidance(error);
+      throw new CliError(
+        error.message,
+        error.status < 500 ? 2 : 6,
+        "regulation-error",
+        undefined,
+        safeAgentValue(
+          `Regulation failed for Objective ${markdownInlineCode(regulation.objectiveUri)}, target ${markdownInlineCode(regulation.targetLevel)}: ${markdownText(safeAgentValue(error.message, regulation.agentProfile))} State: ${markdownInlineCode(join(root, "regulation.json"))}.${inputGuidance === undefined ? ` Inspect the failing check/report before running ${markdownInlineCode(`pguide continue ${regulation.regulationId}`)} with the same configuration and working directory.` : `\n\n${safeAgentValue(inputGuidance, regulation.agentProfile)}`}`,
+          regulation.agentProfile,
+        ),
+      );
+    }
     if (!controller.signal.aborted) throw error;
   } finally {
     process.removeListener("SIGINT", cancel);
@@ -524,7 +629,28 @@ async function run(
   );
   if (reportPath !== undefined)
     await atomicWrite(resolve(globals.cwd, reportPath), `${JSON.stringify(value, null, 2)}\n`);
-  writeResult(value, globals.format, `Regulation ${regulation.regulationId}: ${attempt.status}.`);
+  writeResult(
+    value,
+    globals.format,
+    globals.format === "json"
+      ? ""
+      : regulationMarkdown(
+          safeAgentValue(
+            {
+              regulationId: regulation.regulationId,
+              objectiveId: regulation.objectiveUri,
+              targetLevel: regulation.targetLevel,
+              status: attempt.status ?? "failed",
+              ...(outcome === undefined ? {} : { outcome }),
+              quota: regulation.regulationStrategy?.quota ?? defaultRegulationQuota,
+              statePath: join(root, "regulation.json"),
+              ...(reportPath === undefined ? {} : { reportPath: resolve(globals.cwd, reportPath) }),
+              recoveryCommand: value.recovery.command,
+            },
+            regulation.agentProfile,
+          ),
+        ),
+  );
   return code(attempt.status ?? "failed");
 }
 

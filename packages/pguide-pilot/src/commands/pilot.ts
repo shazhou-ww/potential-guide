@@ -5,6 +5,8 @@ import {
   CliError,
   type GlobalOptions,
   loadConfig,
+  markdownInlineCode,
+  markdownText,
   option,
   rejectUnknownOptions,
   reportOptions,
@@ -14,7 +16,75 @@ import {
 import { withPilot } from "@potential-guide/cli-runtime";
 import { startEffect } from "@potential-guide/effects";
 import { selectObjective } from "@potential-guide/objective-declarations";
-import { fileResources, loadPilotSpec, observe } from "@potential-guide/objective-pilot";
+import {
+  type Envelope,
+  fileResources,
+  loadPilotSpec,
+  observe,
+  type PilotObservation,
+  type PilotSpec,
+} from "@potential-guide/objective-pilot";
+
+export function observationMarkdown(
+  value: Envelope<PilotObservation>,
+  spec: PilotSpec,
+  language = spec.manifest.defaultLanguage,
+): string {
+  const lines = ["# Observation", "", `- Objective: ${markdownInlineCode(spec.objectiveId)}`];
+  if (value.status !== 200 || value.payload === null) {
+    lines.push(
+      "- Status: observation failed; completion could not be determined.",
+      `- Cause: ${markdownText(value.message)}`,
+      "- Next action: inspect the failing check and its report, then rerun this probe.",
+    );
+    return lines.join("\n");
+  }
+  const observation = value.payload;
+  const terminal = observation.current.levelId === "terminal";
+  lines.push(
+    `- Status: ${terminal ? "complete - terminal reached." : "observed - Objective not yet complete."}`,
+    `- Current level: ${markdownInlineCode(observation.current.levelId)}`,
+    `- Problems: ${observation.problems.length}`,
+  );
+  const pages = spec.locales[language] ?? {};
+  const references = new Set<string>([`levels/${observation.current.levelId}`]);
+  if (observation.problems.length > 0) {
+    lines.push("", "## Problems", "");
+    for (const problem of observation.problems) {
+      if (problem.kind === "dependency") {
+        lines.push(
+          `- Dependency: ${markdownInlineCode(problem.objectiveId)}; current ${markdownInlineCode(problem.currentLevelId)}; required ${markdownInlineCode(problem.expectedLevelId)}.`,
+        );
+      } else {
+        const scoped = `levels/${problem.ref.levelId}/checks/${problem.ref.checkId}/problems/${problem.ref.problemId}`;
+        const id = pages[scoped] === undefined ? `problems/${problem.ref.problemId}` : scoped;
+        references.add(id);
+        const page = pages[id];
+        const description =
+          typeof problem.parameters.description === "string" &&
+          problem.parameters.description.trim()
+            ? problem.parameters.description
+            : page?.description;
+        lines.push(
+          `- Problem: ${markdownInlineCode(problem.ref.problemId)}; check: ${markdownInlineCode(problem.ref.checkId)}; level: ${markdownInlineCode(problem.ref.levelId)}${description === undefined ? "." : ` - ${markdownText(description)}`}`,
+        );
+      }
+    }
+  }
+  lines.push("", "## References", "");
+  for (const id of references)
+    lines.push(
+      `- Reference: ${markdownInlineCode(id)}; language: ${markdownInlineCode(language)}.`,
+    );
+  const guidance = pages[`levels/${observation.current.levelId}`];
+  if (!terminal && guidance?.content.trim())
+    lines.push("", "## Guidance", "", markdownText(guidance.content));
+  lines.push(
+    "",
+    `- Next action: ${terminal ? "no repair is needed for this observation." : "review the listed Pilot references, address the problems, then rerun this probe with the same Objective and input."}`,
+  );
+  return lines.join("\n");
+}
 
 async function loadStaticPilot(path: string) {
   try {
@@ -59,6 +129,7 @@ export async function runProbe(
   const cancel = () => controller.abort();
   process.once("SIGINT", cancel);
   process.once("SIGTERM", cancel);
+  let markdown = "";
   const value = await (async () => {
     try {
       return await withPilot(
@@ -67,10 +138,13 @@ export async function runProbe(
         option(argv, "--revision") as string | undefined,
         async (spec, runtime) => {
           const subject = await selected.subject(spec);
-          return startEffect(
+          const observation = await startEffect(
             observe({ spec, subject, ...(language === undefined ? {} : { language }) }, runtime),
             controller.signal,
           ).await();
+          if (globals.format !== "json")
+            markdown = observationMarkdown(observation, spec, language);
+          return observation;
         },
         {
           probeTimeoutMs: loaded.value.regulationStrategy?.probe?.timeoutMs,
@@ -85,13 +159,7 @@ export async function runProbe(
   const report = option(argv, "--report") as string | undefined;
   if (report !== undefined)
     await atomicWrite(resolve(globals.cwd, report), `${JSON.stringify(value, null, 2)}\n`);
-  writeResult(
-    value,
-    globals.format,
-    value.status === 200 && value.payload !== null
-      ? `# Observation\n\nCurrent level: \`${value.payload.current.levelId}\`\n\n${value.payload.gapSummary}`
-      : `Pilot invocation failed: ${value.message}`,
-  );
+  writeResult(value, globals.format, markdown);
   return value.status === 200 && value.payload !== null ? 0 : 6;
 }
 
@@ -194,7 +262,17 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
       manifest: join(root, "objective.yaml"),
     },
     globals.format,
-    `Created Objective Pilot skeleton at ${root}.`,
+    [
+      "# Pilot scaffold created",
+      "",
+      "- Action: created Objective Pilot skeleton.",
+      `- Directory: ${markdownInlineCode(root)}`,
+      `- Manifest: ${markdownInlineCode(join(root, "objective.yaml"))}`,
+      `- Languages: ${languages.map(markdownInlineCode).join(", ")}`,
+      `- Initial level: ${markdownInlineCode(level)}`,
+      `- Check: ${check === undefined ? "none" : markdownInlineCode(check)}`,
+      `- Next action: replace TODO guidance${check === undefined ? "" : " and implement the generated check"}, then run ${markdownInlineCode(`pguide validate pilot "${root}"`)}. Commit the Pilot before probing.`,
+    ].join("\n"),
   );
 }
 
@@ -203,11 +281,25 @@ export async function runValidate(argv: string[], globals: GlobalOptions): Promi
     showCommandHelp("validate", globals);
     return;
   }
+  rejectUnknownOptions(argv, {}, 2);
   if (argv[0] !== "pilot" || argv[1] === undefined)
     throw new CliError(
       "Expected validate pilot <manifest>; legacy Guide manifests are incompatible.",
     );
   const objective = await loadStaticPilot(resolve(globals.cwd, argv[1]));
   const value = { schemaVersion: 1, status: "valid", objectiveId: objective.objectiveId };
-  writeResult(value, globals.format, `Valid Objective Pilot: ${objective.objectiveId}`);
+  writeResult(
+    value,
+    globals.format,
+    [
+      "# Pilot validation",
+      "",
+      "- Status: valid.",
+      `- Objective: ${markdownInlineCode(objective.objectiveId)}`,
+      `- Manifest: ${markdownInlineCode(resolve(globals.cwd, argv[1]))}`,
+      "- Scope: manifest and localized references; checks were not executed.",
+      `- Languages: ${objective.manifest.languages.map(markdownInlineCode).join(", ")}`,
+      "- Next action: commit the Pilot, then probe it with a subject to observe its current level.",
+    ].join("\n"),
+  );
 }

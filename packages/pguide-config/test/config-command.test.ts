@@ -131,15 +131,15 @@ test("Objective list separates long locations and configuration sources without 
     await writeFile(configPath, JSON.stringify({ schemaVersion: 2, objectives }));
     const result = await run(["list-objectives", "--cwd", cwd], env);
     assert.equal(result.code, 0, result.stdout);
-    assert.equal(
-      result.stdout,
-      `${Object.entries(objectives)
-        .map(
-          ([name, location]) =>
-            `${name} (legacy source alias)\n  Location: ${location}\n  Source:   ${configPath}`,
-        )
-        .join("\n\n")}\n`,
-    );
+    assert.match(result.stdout, /^# Legacy Objective source aliases\n/);
+    assert.ok(result.stdout.includes(`- Context: \`${cwd}\``));
+    const lines = result.stdout.split("\n");
+    for (const [name, location] of Object.entries(objectives)) {
+      const index = lines.indexOf(`- Name: \`${name}\` (legacy source alias)`);
+      assert.ok(index >= 0, `Missing alias ${name}`);
+      assert.equal(lines[index + 1], `  - Location: \`${location}\``);
+      assert.equal(lines[index + 2], `  - Source: \`${configPath}\``);
+    }
     assert.ok(!result.stdout.includes("\t"));
     const json = await run(["list-objectives", "--cwd", cwd, "--format", "json"], env);
     assert.equal(json.code, 0, json.stdout);
@@ -159,7 +159,8 @@ test("Objective list separates long locations and configuration sources without 
     await writeFile(configPath, JSON.stringify({ schemaVersion: 2 }));
     const empty = await run(["list-objectives", "--cwd", cwd], env);
     assert.equal(empty.code, 0, empty.stdout);
-    assert.equal(empty.stdout, "No registered Objectives.\n");
+    assert.match(empty.stdout, /No registered Objectives\. No legacy source aliases were found\./);
+    assert.ok(empty.stdout.includes("`pguide objectives list`"));
     const emptyJson = await run(["list-objectives", "--cwd", cwd, "--format", "json"], env);
     assert.equal(emptyJson.code, 0, emptyJson.stdout);
     assert.deepEqual(JSON.parse(emptyJson.stdout), {

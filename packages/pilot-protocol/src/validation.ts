@@ -8,6 +8,28 @@ import type { JsonValue, ObjectiveManifest, SubjectSchema, ValidationIssues } fr
 
 export class ObjectiveConfigurationError extends TypeError {}
 export class ObjectiveOperationError extends TypeError {}
+export type ObjectiveInputDetails =
+  | {
+      readonly kind: "subject";
+      readonly objectiveId: string;
+      readonly issues: ValidationIssues | null;
+    }
+  | {
+      readonly kind: "language";
+      readonly objectiveId: string;
+      readonly requested: string;
+      readonly supported: readonly string[];
+    };
+
+export class ObjectiveInputError extends ObjectiveConfigurationError {
+  constructor(
+    message: string,
+    readonly details: ObjectiveInputDetails,
+  ) {
+    super(message);
+  }
+}
+
 const inputSchemaCache = new Map<string, ValidateFunction>();
 
 export function parseStrictYaml(source: string): unknown {

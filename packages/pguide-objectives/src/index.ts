@@ -5,6 +5,9 @@ import {
   CliError,
   type GlobalOptions,
   loadConfig,
+  markdownCodeBlock,
+  markdownInlineCode,
+  markdownText,
   option,
   type PguideConfig,
   parseConfig,
@@ -37,11 +40,21 @@ export async function runObjectives(argv: string[], globals: GlobalOptions): Pro
   const name = argv[1];
   const scope = option(argv, "--scope") as string | undefined;
   if (command === "list" || command === "show") {
+    if (command === "show" && !text(name))
+      throw new CliError(
+        "show requires an Objective name. Run pguide objectives list to find declarations.",
+      );
     const entries = (await listObjectives(globals.cwd, scope)).filter(
       (entry) => command === "list" || entry.name === name,
     );
-    if (command === "show" && entries.length !== 1)
-      throw new CliError("show requires one unambiguous name; specify --scope.");
+    if (command === "show" && entries.length === 0)
+      throw new CliError(
+        `Objective ${name} was not found in ${scope ?? "user and directory"} scope. Run pguide objectives list${scope ? ` --scope ${scope}` : ""} to find declarations; legacy source aliases are not declarations.`,
+      );
+    if (command === "show" && entries.length > 1)
+      throw new CliError(
+        `Objective ${name} is ambiguous: ${entries.map((entry) => `${entry.scope} (${entry.file})`).join("; ")}. Select one with pguide objectives show ${name} --scope user|directory.`,
+      );
     const config = await loadConfig(globals.cwd, globals.config);
     const legacyAliases = Object.entries(config.value.objectives ?? {}).map(
       ([alias, objective]) => ({
@@ -58,7 +71,39 @@ export async function runObjectives(argv: string[], globals: GlobalOptions): Pro
         legacyAliases,
       },
       globals.format,
-      JSON.stringify({ objectives: entries, legacyAliases }, null, 2),
+      [
+        command === "show" ? `# Objective ${markdownInlineCode(name ?? "")}` : "# Objectives",
+        `- Scope: ${markdownText(scope ?? "user and directory")}\n- Context: ${markdownInlineCode(globals.cwd)}`,
+        ...(entries.length === 0
+          ? [
+              "No Objective declarations found. Use `pguide objectives set <name> --scope user|directory --from <file>` to add a declaration.",
+            ]
+          : entries.map((entry) =>
+              [
+                ...(command === "list" ? [`## ${markdownInlineCode(entry.name)}`] : []),
+                ...(entry.description ? [`- Description: ${markdownText(entry.description)}`] : []),
+                `- Scope: ${entry.scope}\n- Source: ${markdownInlineCode(entry.file)}`,
+                ...(command === "show"
+                  ? [
+                      `- Objective source: ${markdownInlineCode(entry.objective)}`,
+                      `- Revision: ${markdownInlineCode(entry.revision)}`,
+                      `## Input schema\n\n${markdownCodeBlock(JSON.stringify(entry.inputSchema, null, 2), "json")}`,
+                      `## Subject\n\n${markdownCodeBlock(entry.subject, "text")}`,
+                    ]
+                  : []),
+              ].join("\n\n"),
+            )),
+        ...(legacyAliases.length > 0
+          ? [
+              "## Legacy source aliases",
+              "These aliases are not Objective declarations and are not selected by `objectives show`.",
+              ...legacyAliases.map(
+                (alias) =>
+                  `- Name: ${markdownInlineCode(alias.name)}; semantics: legacy-source-alias\n  - Location: ${markdownInlineCode(alias.objective)}\n  - Source: ${alias.file ? markdownInlineCode(alias.file) : "not recorded"}`,
+              ),
+            ]
+          : []),
+      ].join("\n\n"),
     );
     return;
   }
@@ -68,7 +113,10 @@ export async function runObjectives(argv: string[], globals: GlobalOptions): Pro
   const { entries } = await readObjectiveEntries(file);
   let legacy: { path: string; config: PguideConfig } | undefined;
   if (command === "remove") {
-    if (!Object.hasOwn(entries, name)) throw new CliError(`Unknown Objective ${name}.`);
+    if (!Object.hasOwn(entries, name))
+      throw new CliError(
+        `Objective ${name} was not found in ${scope} scope (${file}). Run pguide objectives list --scope ${scope} to find declarations.`,
+      );
     delete entries[name];
   } else {
     const from = option(argv, "--from", { required: true }) as string;
@@ -102,6 +150,6 @@ export async function runObjectives(argv: string[], globals: GlobalOptions): Pro
   writeResult(
     { schemaVersion: 1, status: command, file, name },
     globals.format,
-    `${command}: ${name} (${file})`,
+    `# Objective ${command === "remove" ? "removed" : command === "migrate" ? "migrated" : "saved"}\n\n- Name: ${markdownInlineCode(name)}\n- Scope: ${scope}\n- File: ${markdownInlineCode(file)}${legacy ? `\n- Legacy source updated: ${markdownInlineCode(legacy.path)}` : ""}`,
   );
 }

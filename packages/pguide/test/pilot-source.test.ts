@@ -493,7 +493,13 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kin
     instructions: "Provide a subject matching subjectSchema.",
     subjectSchema: { type: "object", required: ["name"] },
   };
-  const primary = new CliError("Primary consumer failure.", 37, "primary-test-failure", guidance);
+  const primary = new CliError(
+    "Primary consumer failure.",
+    37,
+    "primary-test-failure",
+    guidance,
+    "Readable primary consumer failure.",
+  );
   const cleanup = new Error("Injected cleanup failure.");
   const originalRm = filesystem.rm;
   let cache = "";
@@ -525,6 +531,8 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kin
         assert.deepEqual(error.guidance, guidance);
         assert.match(error.message, /Primary consumer failure/);
         assert.match(error.message, /Injected cleanup failure/);
+        assert.match(error.humanMessage ?? "", /Readable primary consumer failure/);
+        assert.match(error.humanMessage ?? "", /Cleanup failed: Injected cleanup failure/);
         assert.ok(error.cause instanceof AggregateError);
         assert.equal(error.cause.cause, primary);
         assert.deepEqual(error.cause.errors, [primary, cleanup]);

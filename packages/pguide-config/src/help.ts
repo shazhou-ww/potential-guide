@@ -1,4 +1,4 @@
-import { formatCommandHelp } from "@potential-guide/cli-core";
+import { type CommandHelp, formatCommandHelp, helpMetadata } from "@potential-guide/cli-core";
 
 const commands = {
   show: {
@@ -40,27 +40,27 @@ const commands = {
   "list-agents": {
     arguments: "",
     description: "Retired: use pguide agents list; embedded profiles require explicit migrate.",
-    example: "pguide config list-agents --format json",
+    example: "pguide agents list --format json",
   },
   "show-agent": {
     arguments: "<name>",
     description: "Retired: use pguide agents show <name>.",
-    example: "pguide config show-agent local",
+    example: "pguide agents show local",
   },
   "add-agent": {
     arguments: "<name> <source|-> [--scope <scope>]",
     description: "Retired: use pguide agents set <name> --from <file|-> --scope user|project.",
-    example: "pguide config add-agent local .\\agent.yaml --scope user",
+    example: "pguide agents set local --from .\\agent.yaml --scope user",
   },
   "update-agent": {
     arguments: "<name> <source|-> [--scope <scope>]",
     description: "Retired: use pguide agents set <name> --from <file|-> --scope user|project.",
-    example: "pguide config update-agent local .\\agent.yaml --scope user",
+    example: "pguide agents set local --from .\\agent.yaml --scope user",
   },
   "remove-agent": {
     arguments: "<name> [--scope <scope>]",
     description: "Retired: use pguide agents remove <name> --scope user|project.",
-    example: "pguide config remove-agent local --scope user",
+    example: "pguide agents remove local --scope user",
   },
   "list-objectives": {
     arguments: "",
@@ -72,13 +72,13 @@ const commands = {
     arguments: "<name> <path|Git URI> [--scope <scope>]",
     description:
       "Retired: use pguide objectives set/migrate with explicit inputSchema and subject.",
-    example: "pguide config add-objective health .\\objective --scope user",
+    example: "pguide objectives set health --from .\\declaration.yaml --scope user",
   },
   "update-objective": {
     arguments: "<name> <path|Git URI> [--scope <scope>]",
     description:
       "Retired: use pguide objectives set/migrate; existing source aliases are read-only.",
-    example: "pguide config update-objective health .\\updated-objective --scope user",
+    example: "pguide objectives migrate health --help",
   },
   "remove-objective": {
     arguments: "<name> [--scope <scope>]",
@@ -89,14 +89,15 @@ const commands = {
 
 export const configSubcommands = Object.keys(commands);
 
-export function configHelp(subcommand?: string): string {
+function definition(subcommand?: string): CommandHelp {
   const selected =
     subcommand !== undefined && Object.hasOwn(commands, subcommand)
       ? commands[subcommand as keyof typeof commands]
       : undefined;
-  return formatCommandHelp({
+  return {
     description:
-      selected?.description ?? "Inspect and manage pguide configuration and Agent profiles.",
+      selected?.description ??
+      "Inspect and manage pguide configuration; Agent profiles are independent resources.",
     usage:
       selected === undefined
         ? "pguide config <subcommand> [arguments] [options]"
@@ -130,9 +131,9 @@ export function configHelp(subcommand?: string): string {
             ? [
                 "  pguide config path",
                 "  pguide config set defaultAgent local --scope user",
-                "  pguide config add-agent local .\\agent.yaml --scope user",
+                "  pguide agents set local --from .\\agent.yaml --scope user",
                 "  pguide config get regulationStrategy.probe.timeoutMs",
-                "  pguide config add-objective health .\\objective --scope user",
+                "  pguide objectives set health --from .\\declaration.yaml --scope user",
               ]
             : [`  ${selected.example}`],
       },
@@ -142,11 +143,36 @@ export function configHelp(subcommand?: string): string {
           "  regulationStrategy configures finite regulation quotas and check deadlines;",
           "  portfolio scheduling belongs to supervise. Validation alone does not prove",
           "  Agent authentication or repair readiness. Use pguide diagnose agent <name>.",
-          "  Registered Objective names work in probe, regulate and portfolio goals;",
-          "  @name requires a registry match. Registry entries point to paths or Git URIs, not aliases.",
+          "  Select declarations with --objective; legacy --pilot aliases remain source references.",
           "  Run pguide config <subcommand> --help for operation-specific usage.",
         ],
       },
     ],
-  });
+    constraints: [
+      "--scope is user | project | explicit (default: project) for config writes.",
+      "--scope explicit requires --config; reads always use the effective merge.",
+      "Retired commands reject execution; use the supported replacement shown in Examples.",
+    ],
+  };
+}
+
+export function configHelpSpec(subcommand?: string) {
+  const spec = definition(subcommand);
+  return {
+    ...helpMetadata(spec),
+    optionDetails: [
+      ...helpMetadata(spec).optionDetails.filter(({ name }) => name !== "--scope"),
+      {
+        name: "--scope",
+        argument: "<scope>",
+        description: "Config write scope; reads use the effective merge",
+        values: ["user", "project", "explicit"],
+        default: "project",
+      },
+    ],
+  };
+}
+
+export function configHelp(subcommand?: string): string {
+  return formatCommandHelp(definition(subcommand));
 }

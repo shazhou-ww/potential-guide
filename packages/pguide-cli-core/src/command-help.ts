@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs";
+import { AGENTS_SCHEMA } from "./agents.js";
+import { helpMetadata } from "./help.js";
 import {
   type CommandHelp,
   commandMain,
@@ -77,13 +79,14 @@ const help: Record<Command, CommandHelp> = {
     sections: [
       {
         title: "Required",
-        lines: ["  --pilot <source>        Committed path, Git URI, or registered Objective name"],
+        lines: ["  Choose exactly one: --objective <name> OR --pilot <source> (never both)."],
       },
       {
         title: "Options",
         lines: [
           "  --objective <name>     Select a declaration instead of --pilot",
-          "  --scope user|directory Disambiguate declaration scope",
+          "  --pilot <source>        Committed path, Git URI, or legacy source alias",
+          "  --scope <scope>        user | directory; disambiguate declaration scope",
           "  --input-file <path|->  Declaration input; only Unit may omit it",
           "  --subject-file <path|-> JSON subject (default: stdin); use - explicitly for stdin",
           "  --revision <ref|commit> Pin source version; local paths require a full commit hash",
@@ -123,16 +126,17 @@ const help: Record<Command, CommandHelp> = {
       {
         title: "Required",
         lines: [
-          "  --objective <name>     Select a declaration instead of --pilot",
-          "  --scope user|directory Disambiguate declaration scope",
-          "  --input-file <path|->  Declaration input; cannot combine with --subject-file",
-          "  --pilot <source>        Committed path, Git URI, or registered Objective name",
+          "  Choose exactly one: --objective <name> OR --pilot <source> (never both).",
           "  --target <level>        Target level ID, including terminal",
         ],
       },
       {
         title: "Options",
         lines: [
+          "  --objective <name>      Select a declaration instead of --pilot",
+          "  --pilot <source>        Committed path, Git URI, or legacy source alias",
+          "  --scope <scope>         user | directory; disambiguate declaration scope",
+          "  --input-file <path|->   Declaration input; only Unit may omit it",
           "  --subject-file <path|-> JSON subject (default: stdin); use - explicitly for stdin",
           "  --agent <profile>       Existing Agent profile (default: configured defaultAgent)",
           "  --agent-timeout-ms <ms> Per-Agent deadline; includes connection and session startup",
@@ -285,17 +289,199 @@ const help: Record<Command, CommandHelp> = {
   },
 };
 
-export function showCommandHelp(command: Command, globals: GlobalOptions): void {
+const agentOperations = {
+  list: {
+    arguments: "",
+    description: "List effective profiles with scope and file provenance.",
+    example: "pguide agents list",
+  },
+  show: {
+    arguments: "<name>",
+    description: "Show one effective profile with its name, scope and source; unknown names fail.",
+    example: "pguide agents show local",
+  },
+  set: {
+    arguments: "<name> --from <file|-> --scope <scope>",
+    description: "Validate and replace a whole profile in the selected scope.",
+    example: "pguide agents set local --from .\\profile.yaml --scope project",
+  },
+  remove: {
+    arguments: "<name> --scope <scope>",
+    description:
+      "Remove only the selected scope's profile; a user profile may become visible again.",
+    example: "pguide agents remove local --scope project",
+  },
+  edit: {
+    arguments: "--scope <scope>",
+    description:
+      "Edit the selected resource using VISUAL or EDITOR; failed edits preserve the original.",
+    example: "pguide agents edit --scope project",
+  },
+  validate: {
+    arguments: "",
+    description: "Validate both resources without connecting to Agents.",
+    example: "pguide agents validate",
+  },
+  path: {
+    arguments: "",
+    description: "Show user and project resource locations without loading profiles.",
+    example: "pguide agents path",
+  },
+  migrate: {
+    arguments: "--scope <scope> [--legacy-config <file>]",
+    description:
+      "Move embedded profiles from the same-scope main config, preserving a source backup.",
+    example: "pguide agents migrate --scope user",
+  },
+};
+
+const objectiveOperations = {
+  list: {
+    arguments: "[--scope <scope>]",
+    description:
+      "List declarations and legacy aliases with scope and source; no evaluation or remote resolution.",
+    example: "pguide objectives list",
+  },
+  show: {
+    arguments: "<name> [--scope <scope>]",
+    description: "Show a declaration; use scope to disambiguate same-name declarations.",
+    example: "pguide objectives show health --scope directory",
+  },
+  set: {
+    arguments: "<name> --from <file> --scope <scope>",
+    description: "Validate and save a complete declaration in an explicit scope.",
+    example: "pguide objectives set health --from .\\declaration.yaml --scope directory",
+  },
+  remove: {
+    arguments: "<name> --scope <scope>",
+    description: "Remove only the declaration in the selected scope.",
+    example: "pguide objectives remove health --scope directory",
+  },
+  migrate: {
+    arguments: "<name> --from <file> --scope <scope> --legacy-config <file>",
+    description:
+      "Explicitly migrate a legacy source alias using a reviewed declaration; never guess input or subject.",
+    example:
+      "pguide objectives migrate health --from .\\declaration.yaml --scope user --legacy-config .\\config.yaml",
+  },
+};
+
+export function getCommandHelp(command: Command, subcommand?: string): CommandHelp {
+  if (command !== "agents" && command !== "objectives")
+    return {
+      ...help[command],
+      constraints:
+        command === "probe" || command === "regulate"
+          ? [
+              "--objective and --pilot are mutually exclusive; exactly one is required.",
+              "--scope and --input-file require --objective.",
+              "--input-file cannot combine with --subject-file; --subject-file requires --pilot.",
+              ...(command === "regulate" ? ["--target is required."] : []),
+            ]
+          : command === "supervise"
+            ? [
+                "--portfolio-file and --planner are required.",
+                "--duration-ms must be positive and requires --execute.",
+              ]
+            : command === "scaffold"
+              ? ["--problem requires --check; destination must be absent or empty."]
+              : [],
+    };
+  const operations = command === "agents" ? agentOperations : objectiveOperations;
+  const selected =
+    subcommand && Object.hasOwn(operations, subcommand)
+      ? operations[subcommand as keyof typeof operations]
+      : undefined;
+  const scopes = command === "agents" ? "user | project" : "user | directory";
+  const names = selected ? [subcommand] : Object.keys(operations);
+  return {
+    description: selected?.description ?? help[command].description,
+    usage: selected
+      ? `pguide ${command} ${subcommand} ${selected.arguments}`.trimEnd()
+      : help[command].usage,
+    constraints: [
+      `Writes require explicit --scope (${scopes}); there is no default write scope.`,
+      ...(command === "agents"
+        ? [
+            "--config selects a main config overlay, never a third Agent scope.",
+            "Project profiles replace entire same-name user profiles; credentials are references, never secrets.",
+            "--legacy-config must be the main config beside the selected scope's agents.yaml.",
+          ]
+        : [
+            "Same-name user and directory declarations are ambiguous without --scope.",
+            "set and migrate require a complete single-entry declaration with explicit subject; omitted inputSchema is Unit.",
+          ]),
+    ],
+    sections: [
+      ...(!selected
+        ? [
+            {
+              title: "Subcommands",
+              lines: Object.entries(operations).map(
+                ([name, entry]) => `  ${name} ${entry.arguments}\n      ${entry.description}`,
+              ),
+            },
+          ]
+        : []),
+      {
+        title: "Options",
+        lines: [
+          ...(names.some(
+            (name) =>
+              name &&
+              [
+                "set",
+                "remove",
+                "edit",
+                "migrate",
+                ...(command === "objectives" ? ["list", "show"] : []),
+              ].includes(name),
+          )
+            ? [`  --scope <scope>         ${scopes}; writes require an explicit scope`]
+            : []),
+          ...(names.some(
+            (name) => name === "set" || (command === "objectives" && name === "migrate"),
+          )
+            ? [
+                `  --from <${command === "agents" ? "file|-" : "file"}>         ${command === "agents" ? "Profile YAML; - reads stdin" : "Complete single-entry objectives.yaml"}`,
+              ]
+            : []),
+          ...(names.includes("migrate")
+            ? ["  --legacy-config <file>  Explicit same-scope legacy main configuration"]
+            : []),
+        ],
+      },
+      {
+        title: "Examples",
+        lines: selected
+          ? [`  ${selected.example}`]
+          : Object.values(operations).map(({ example }) => `  ${example}`),
+      },
+    ],
+  };
+}
+
+export function showCommandHelp(
+  command: Command,
+  globals: GlobalOptions,
+  subcommand?: string,
+): void {
+  const selected = getCommandHelp(command, subcommand);
   const value = {
     schemaVersion: 1,
     command,
     ...(command === "probe"
-      ? { options: ["--pilot", "--subject-file", "--language", "--revision", "--report"] }
+      ? { options: helpMetadata(selected).optionDetails.map(({ name }) => name) }
       : command === "scaffold" || command === "validate"
         ? { types: ["pilot"] }
-        : {}),
+        : command === "agents"
+          ? { subcommands: Object.keys(agentOperations), resourceSchema: AGENTS_SCHEMA }
+          : command === "objectives"
+            ? { subcommands: Object.keys(objectiveOperations) }
+            : {}),
+    ...helpMetadata(selected),
   };
-  writeResult(value, globals.format, formatCommandHelp(help[command]));
+  writeResult(value, globals.format, formatCommandHelp(selected));
 }
 
 export function launchCommand(command: Command, load: () => Promise<Handler>, manifest: URL): void {
@@ -309,7 +495,7 @@ export function launchCommand(command: Command, load: () => Promise<Handler>, ma
     },
     async (argv, globals) => {
       if (globals.help) {
-        showCommandHelp(command, globals);
+        showCommandHelp(command, globals, argv[0]);
         return;
       }
       const run = await load();
