@@ -34,8 +34,8 @@ catalogs:
       specifier: 9.0.0
       version: 9.0.0
     jsonata:
-      specifier: 2.1.0
-      version: 2.1.0
+      specifier: 2.2.2
+      version: 2.2.2
     jsonc-parser:
       specifier: 3.3.1
       version: 3.3.1
@@ -392,7 +392,7 @@ importers:
         version: 9.0.0
       jsonata:
         specifier: 'catalog:'
-        version: 2.1.0
+        version: 2.2.2
       yaml:
         specifier: 'catalog:'
         version: 2.9.1
@@ -701,8 +701,8 @@ packages:
   json-schema-typed@9.0.0:
     resolution: {integrity: sha512-t+dkn3pLaz7ku3ELaBKBSQNjd0Sir5zR7Y4CpAR5a+UEH60NefBEAhAgJuWqDH5o4HDfH+EQjmXeQMLc+Xnbdg==}
 
-  jsonata@2.1.0:
-    resolution: {integrity: sha512-OCzaRMK8HobtX8fp37uIVmL8CY1IGc/a6gLsDqz3quExFR09/U78HUzWYr7T31UEB6+Eu0/8dkVD5fFDOl9a8w==}
+  jsonata@2.2.2:
+    resolution: {integrity: sha512-XDFH2PuaAXv0AXJEWwElXbqADmKFGKMLMkFb+qOz0EhjQW2EIJ6pgtordLU+4u3IVERyBfqy6bi6kZKEncvRqA==}
     engines: {node: '>= 8'}
 
   jsonc-parser@3.3.1:
@@ -951,7 +951,7 @@ snapshots:
 
   json-schema-typed@9.0.0: {}
 
-  jsonata@2.1.0: {}
+  jsonata@2.2.2: {}
 
   jsonc-parser@3.3.1: {}
 
