@@ -1,0 +1,9 @@
+{
+  "packages.json": "01f4cc9d01238495e41f61e82242cc903acc139c8a56a429bf5aa7ffc20194a4",
+  "installed-graph.json": "5eec754863dad6ac901b8b8252731de68bddd97c13895bf7264d6e8ba5ab2bb4",
+  "results.json": "29fc94fbb91ae30dc8650eaa989fc26ef32ff78b8453e81f2447dee4357af686",
+  "module-paths.json": "5b83454edf31d7e361bec45335ef0d22dab0018bf227c3594dcdf884a4050682",
+  "consumer-lock.yaml": "687840e854e9edf85eae7f77b564fb23ddb39fd4970f2f14f91cb84f46849abf",
+  "install-consumer.log": "5159e5a7402a674b4b9ad5b8bc382889b1f9e72c8ad506a8e814640e26c37eca",
+  "fixture.bundle": "b2f36e190fec40ec499e195cad20aa74d013bd7090aad39d7822c86247b5d0c9"
+}

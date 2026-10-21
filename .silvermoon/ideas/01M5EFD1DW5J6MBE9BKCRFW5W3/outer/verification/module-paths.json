@@ -1,0 +1,3730 @@
+{
+  "rawTraceSha256": "cb785dcfd16c8c2e643b0f34191dc15f636213cf0ec58c2867dfaab397215a43",
+  "resolutionCount": 26399,
+  "paths": [
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\consume.mjs",
+      "resolutions": 1,
+      "specifiers": [
+        "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/consume.mjs"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\client\\async-queue.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./async-queue.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\client\\canvas-state.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./canvas-state.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\client\\client.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./client.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\client\\error.js",
+      "resolutions": 60,
+      "specifiers": [
+        "../client/error.js",
+        "./error.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\client\\index.js",
+      "resolutions": 12,
+      "specifiers": [
+        "@microsoft/agent-host-protocol/client"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\client\\managed-subscriptions.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./managed-subscriptions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\client\\state-mirror.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./state-mirror.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\client\\transport.js",
+      "resolutions": 36,
+      "specifiers": [
+        "../client/transport.js",
+        "./transport.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\action-origin.generated.js",
+      "resolutions": 24,
+      "specifiers": [
+        "../action-origin.generated.js",
+        "./action-origin.generated.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\actions.js",
+      "resolutions": 36,
+      "specifiers": [
+        "../actions.js",
+        "./actions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-annotations\\actions.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-annotations/actions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-annotations\\reducer.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-annotations/reducer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-annotations\\state.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-annotations/state.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-automation-run\\actions.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-automation-run/actions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-automation-run\\reducer.js",
+      "resolutions": 24,
+      "specifiers": [
+        "../types/channels-automation-run/reducer.js",
+        "./channels-automation-run/reducer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-automation-run\\state.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-automation-run/state.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-automation\\actions.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-automation/actions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-automation\\commands.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-automation/commands.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-automation\\reducer.js",
+      "resolutions": 24,
+      "specifiers": [
+        "../types/channels-automation/reducer.js",
+        "./channels-automation/reducer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-automation\\state.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-automation/state.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-canvas\\actions.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-canvas/actions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-canvas\\reducer.js",
+      "resolutions": 24,
+      "specifiers": [
+        "../types/channels-canvas/reducer.js",
+        "./channels-canvas/reducer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-canvas\\state.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-canvas/state.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-changeset\\actions.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-changeset/actions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-changeset\\commands.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-changeset/commands.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-changeset\\reducer.js",
+      "resolutions": 24,
+      "specifiers": [
+        "../types/channels-changeset/reducer.js",
+        "./channels-changeset/reducer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-changeset\\state.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./channels-changeset/state.js",
+        "./state.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-chat\\actions.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-chat/actions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-chat\\commands.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-chat/commands.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-chat\\reducer.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-chat/reducer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-chat\\state.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./channels-chat/state.js",
+        "./state.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-otlp\\notifications.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-otlp/notifications.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-otlp\\state.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-otlp/state.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-resource-watch\\actions.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-resource-watch/actions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-resource-watch\\commands.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-resource-watch/commands.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-resource-watch\\reducer.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-resource-watch/reducer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-resource-watch\\state.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-resource-watch/state.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-root\\actions.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-root/actions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-root\\commands.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-root/commands.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-root\\notifications.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-root/notifications.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-root\\reducer.js",
+      "resolutions": 24,
+      "specifiers": [
+        "../types/channels-root/reducer.js",
+        "./channels-root/reducer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-root\\state.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-root/state.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-session\\actions.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-session/actions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-session\\commands.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-session/commands.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-session\\reducer.js",
+      "resolutions": 24,
+      "specifiers": [
+        "../types/channels-session/reducer.js",
+        "./channels-session/reducer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-session\\state.js",
+      "resolutions": 36,
+      "specifiers": [
+        "../channels-session/state.js",
+        "./channels-session/state.js",
+        "./state.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-terminal\\actions.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-terminal/actions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-terminal\\commands.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./channels-terminal/commands.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-terminal\\reducer.js",
+      "resolutions": 24,
+      "specifiers": [
+        "../types/channels-terminal/reducer.js",
+        "./channels-terminal/reducer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\channels-terminal\\state.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./channels-terminal/state.js",
+        "./state.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\commands.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./commands.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\common\\actions.js",
+      "resolutions": 144,
+      "specifiers": [
+        "../common/actions.js",
+        "../types/common/actions.js",
+        "./common/actions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\common\\commands.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./common/commands.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\common\\errors.js",
+      "resolutions": 24,
+      "specifiers": [
+        "../types/common/errors.js",
+        "./common/errors.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\common\\messages.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./common/messages.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\common\\notifications.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./common/notifications.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\common\\reducer-helpers.js",
+      "resolutions": 108,
+      "specifiers": [
+        "../common/reducer-helpers.js",
+        "./common/reducer-helpers.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\common\\state.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./common/state.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\common\\timestamps.js",
+      "resolutions": 12,
+      "specifiers": [
+        "../common/timestamps.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\errors.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./errors.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\index.js",
+      "resolutions": 12,
+      "specifiers": [
+        "@microsoft/agent-host-protocol"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\messages.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./messages.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\notifications.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./notifications.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\reducers.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./reducers.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\state.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./state.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\types\\version\\registry.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./version/registry.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\ws\\index.js",
+      "resolutions": 12,
+      "specifiers": [
+        "@microsoft/agent-host-protocol/ws"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol\\dist\\ws\\transport.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./transport.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+cli-core@f_d05d266de997024ff45bf21b43d6aea9\\node_modules\\@potential-guide\\cli-core\\dist\\agents.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./agents.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+cli-core@f_d05d266de997024ff45bf21b43d6aea9\\node_modules\\@potential-guide\\cli-core\\dist\\ahp.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./ahp.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+cli-core@f_d05d266de997024ff45bf21b43d6aea9\\node_modules\\@potential-guide\\cli-core\\dist\\command-help.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./command-help.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+cli-core@f_d05d266de997024ff45bf21b43d6aea9\\node_modules\\@potential-guide\\cli-core\\dist\\help.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./help.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+cli-core@f_d05d266de997024ff45bf21b43d6aea9\\node_modules\\@potential-guide\\cli-core\\dist\\index.js",
+      "resolutions": 84,
+      "specifiers": [
+        "./index.js",
+        "@potential-guide/cli-core"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+cli-core@f_d05d266de997024ff45bf21b43d6aea9\\node_modules\\@potential-guide\\cli-core\\dist\\output.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./output.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+cli-core@f_d05d266de997024ff45bf21b43d6aea9\\node_modules\\@potential-guide\\cli-core\\dist\\permissions.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./permissions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+cli-core@f_d05d266de997024ff45bf21b43d6aea9\\node_modules\\@potential-guide\\cli-core\\dist\\process-tree.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./process-tree.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+cli-core@f_d05d266de997024ff45bf21b43d6aea9\\node_modules\\@potential-guide\\cli-core\\dist\\streaming-secret-redactor.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./streaming-secret-redactor.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+cli-runtim_9ebea0a80b18a1510c461186a60f6f2d\\node_modules\\@potential-guide\\cli-runtime\\dist\\index.js",
+      "resolutions": 13,
+      "specifiers": [
+        "@potential-guide/cli-runtime"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+cli-runtim_9ebea0a80b18a1510c461186a60f6f2d\\node_modules\\@potential-guide\\cli-runtime\\dist\\pilot-source.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./pilot-source.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+effects@fi_f818f410050ce6d3175fdfa556c63bc7\\node_modules\\@potential-guide\\effects\\dist\\index.js",
+      "resolutions": 68,
+      "specifiers": [
+        "@potential-guide/effects"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+git-source_51374c47d8327d435699cd71746813ed\\node_modules\\@potential-guide\\git-source\\dist\\index.js",
+      "resolutions": 12,
+      "specifiers": [
+        "@potential-guide/git-source"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_056b8bdcc29a3cd0ebfa5d6324dcc10c\\node_modules\\@potential-guide\\objective-declarations\\dist\\index.js",
+      "resolutions": 11,
+      "specifiers": [
+        "@potential-guide/objective-declarations"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_08a63276c25d6952f3433cfc207fc303\\node_modules\\@potential-guide\\objective-portfolio-supervisor\\dist\\coordinator.js",
+      "resolutions": 1,
+      "specifiers": [
+        "./coordinator.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_08a63276c25d6952f3433cfc207fc303\\node_modules\\@potential-guide\\objective-portfolio-supervisor\\dist\\decisions.js",
+      "resolutions": 3,
+      "specifiers": [
+        "./decisions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_08a63276c25d6952f3433cfc207fc303\\node_modules\\@potential-guide\\objective-portfolio-supervisor\\dist\\index.js",
+      "resolutions": 2,
+      "specifiers": [
+        "@potential-guide/objective-portfolio-supervisor"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_08a63276c25d6952f3433cfc207fc303\\node_modules\\@potential-guide\\objective-portfolio-supervisor\\dist\\planner.js",
+      "resolutions": 1,
+      "specifiers": [
+        "./planner.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_08a63276c25d6952f3433cfc207fc303\\node_modules\\@potential-guide\\objective-portfolio-supervisor\\dist\\types.js",
+      "resolutions": 1,
+      "specifiers": [
+        "./types.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_0b2b9fd0024671c9bf16065f733e88db\\node_modules\\@potential-guide\\objective-regulator\\dist\\index.js",
+      "resolutions": 12,
+      "specifiers": [
+        "@potential-guide/objective-regulator"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_3045e2431e5de181bf3b7e6997eb6970\\node_modules\\@potential-guide\\objective-pilot\\dist\\dependency.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./dependency.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_3045e2431e5de181bf3b7e6997eb6970\\node_modules\\@potential-guide\\objective-pilot\\dist\\evidence.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./evidence.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_3045e2431e5de181bf3b7e6997eb6970\\node_modules\\@potential-guide\\objective-pilot\\dist\\index.js",
+      "resolutions": 68,
+      "specifiers": [
+        "@potential-guide/objective-pilot"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_3045e2431e5de181bf3b7e6997eb6970\\node_modules\\@potential-guide\\objective-pilot\\dist\\objectives.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./objectives.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_3045e2431e5de181bf3b7e6997eb6970\\node_modules\\@potential-guide\\objective-pilot\\dist\\pilot.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./pilot.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_3045e2431e5de181bf3b7e6997eb6970\\node_modules\\@potential-guide\\objective-pilot\\dist\\probes.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./probes.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_3045e2431e5de181bf3b7e6997eb6970\\node_modules\\@potential-guide\\objective-pilot\\dist\\process-tree.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./process-tree.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_3045e2431e5de181bf3b7e6997eb6970\\node_modules\\@potential-guide\\objective-pilot\\dist\\projection.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./projection.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_3045e2431e5de181bf3b7e6997eb6970\\node_modules\\@potential-guide\\objective-pilot\\dist\\resources.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./resources.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_3045e2431e5de181bf3b7e6997eb6970\\node_modules\\@potential-guide\\objective-pilot\\dist\\validation.js",
+      "resolutions": 48,
+      "specifiers": [
+        "./validation.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-pil_3e2c8b57a2832830daaf88fcff1c3d26\\node_modules\\@potential-guide\\pguide-pilot\\dist\\bin\\probe.js",
+      "resolutions": 6,
+      "specifiers": [
+        "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/node_modules/.pnpm/@potential-guide+pguide-pil_3e2c8b57a2832830daaf88fcff1c3d26/node_modules/@potential-guide/pguide-pilot/dist/bin/probe.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-pil_3e2c8b57a2832830daaf88fcff1c3d26\\node_modules\\@potential-guide\\pguide-pilot\\dist\\bin\\validate.js",
+      "resolutions": 1,
+      "specifiers": [
+        "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/node_modules/.pnpm/@potential-guide+pguide-pil_3e2c8b57a2832830daaf88fcff1c3d26/node_modules/@potential-guide/pguide-pilot/dist/bin/validate.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-pil_3e2c8b57a2832830daaf88fcff1c3d26\\node_modules\\@potential-guide\\pguide-pilot\\dist\\commands\\pilot.js",
+      "resolutions": 7,
+      "specifiers": [
+        "../commands/pilot.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-reg_c3d68532983e383b758160affbddcc92\\node_modules\\@potential-guide\\pguide-regulate\\dist\\acp-permissions.js",
+      "resolutions": 5,
+      "specifiers": [
+        "../acp-permissions.js",
+        "./acp-permissions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-reg_c3d68532983e383b758160affbddcc92\\node_modules\\@potential-guide\\pguide-regulate\\dist\\bin\\continue.js",
+      "resolutions": 1,
+      "specifiers": [
+        "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/node_modules/.pnpm/@potential-guide+pguide-reg_c3d68532983e383b758160affbddcc92/node_modules/@potential-guide/pguide-regulate/dist/bin/continue.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-reg_c3d68532983e383b758160affbddcc92\\node_modules\\@potential-guide\\pguide-regulate\\dist\\bin\\regulate.js",
+      "resolutions": 2,
+      "specifiers": [
+        "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/node_modules/.pnpm/@potential-guide+pguide-reg_c3d68532983e383b758160affbddcc92/node_modules/@potential-guide/pguide-regulate/dist/bin/regulate.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-reg_c3d68532983e383b758160affbddcc92\\node_modules\\@potential-guide\\pguide-regulate\\dist\\commands\\regulator.js",
+      "resolutions": 4,
+      "specifiers": [
+        "../commands/regulator.js",
+        "./commands/regulator.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-reg_c3d68532983e383b758160affbddcc92\\node_modules\\@potential-guide\\pguide-regulate\\dist\\index.js",
+      "resolutions": 1,
+      "specifiers": [
+        "@potential-guide/pguide-regulate"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-reg_c3d68532983e383b758160affbddcc92\\node_modules\\@potential-guide\\pguide-regulate\\dist\\regulation-process.js",
+      "resolutions": 1,
+      "specifiers": [
+        "./regulation-process.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-sup_be48e162a6592570a6df2ee469562542\\node_modules\\@potential-guide\\pguide-supervise\\dist\\acp-planner.js",
+      "resolutions": 1,
+      "specifiers": [
+        "../acp-planner.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-sup_be48e162a6592570a6df2ee469562542\\node_modules\\@potential-guide\\pguide-supervise\\dist\\bin\\supervise.js",
+      "resolutions": 1,
+      "specifiers": [
+        "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/node_modules/.pnpm/@potential-guide+pguide-sup_be48e162a6592570a6df2ee469562542/node_modules/@potential-guide/pguide-supervise/dist/bin/supervise.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-sup_be48e162a6592570a6df2ee469562542\\node_modules\\@potential-guide\\pguide-supervise\\dist\\commands\\supervisor.js",
+      "resolutions": 1,
+      "specifiers": [
+        "../commands/supervisor.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pilot-prot_1165b735c9c71f6f0bcf788287482e0b\\node_modules\\@potential-guide\\pilot-protocol\\dist\\definition.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./definition.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pilot-prot_1165b735c9c71f6f0bcf788287482e0b\\node_modules\\@potential-guide\\pilot-protocol\\dist\\index.js",
+      "resolutions": 84,
+      "specifiers": [
+        "@potential-guide/pilot-protocol"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pilot-prot_1165b735c9c71f6f0bcf788287482e0b\\node_modules\\@potential-guide\\pilot-protocol\\dist\\migrate-cli.js",
+      "resolutions": 3,
+      "specifiers": [
+        "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/node_modules/.pnpm/@potential-guide+pilot-prot_1165b735c9c71f6f0bcf788287482e0b/node_modules/@potential-guide/pilot-protocol/dist/migrate-cli.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pilot-prot_1165b735c9c71f6f0bcf788287482e0b\\node_modules\\@potential-guide\\pilot-protocol\\dist\\migration.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./migration.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pilot-prot_1165b735c9c71f6f0bcf788287482e0b\\node_modules\\@potential-guide\\pilot-protocol\\dist\\objectives.js",
+      "resolutions": 27,
+      "specifiers": [
+        "./objectives.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pilot-prot_1165b735c9c71f6f0bcf788287482e0b\\node_modules\\@potential-guide\\pilot-protocol\\dist\\projection.js",
+      "resolutions": 54,
+      "specifiers": [
+        "./projection.js",
+        "@potential-guide/pilot-protocol/projection"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pilot-prot_1165b735c9c71f6f0bcf788287482e0b\\node_modules\\@potential-guide\\pilot-protocol\\dist\\resources.js",
+      "resolutions": 51,
+      "specifiers": [
+        "./resources.js",
+        "@potential-guide/pilot-protocol/resources"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pilot-prot_1165b735c9c71f6f0bcf788287482e0b\\node_modules\\@potential-guide\\pilot-protocol\\dist\\schema-definitions.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./schema-definitions.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pilot-prot_1165b735c9c71f6f0bcf788287482e0b\\node_modules\\@potential-guide\\pilot-protocol\\dist\\schemas.js",
+      "resolutions": 57,
+      "specifiers": [
+        "./schemas.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pilot-prot_1165b735c9c71f6f0bcf788287482e0b\\node_modules\\@potential-guide\\pilot-protocol\\dist\\types.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./types.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pilot-prot_1165b735c9c71f6f0bcf788287482e0b\\node_modules\\@potential-guide\\pilot-protocol\\dist\\validation.js",
+      "resolutions": 99,
+      "specifiers": [
+        "./validation.js",
+        "@potential-guide/pilot-protocol/validation"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\2020.js",
+      "resolutions": 45,
+      "specifiers": [
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\2020.js",
+        "ajv/dist/2020.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\codegen\\code.js",
+      "resolutions": 30,
+      "specifiers": [
+        "./code",
+        "./codegen/code"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\codegen\\index.js",
+      "resolutions": 570,
+      "specifiers": [
+        "../../compile/codegen",
+        "../codegen",
+        "../compile/codegen",
+        "./codegen",
+        "./compile/codegen"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\codegen\\scope.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./scope"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\errors.js",
+      "resolutions": 15,
+      "specifiers": [
+        "../errors"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\index.js",
+      "resolutions": 60,
+      "specifiers": [
+        "../../compile",
+        "./compile"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\names.js",
+      "resolutions": 150,
+      "specifiers": [
+        "../../compile/names",
+        "../compile/names",
+        "../names",
+        "./names"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\ref_error.js",
+      "resolutions": 45,
+      "specifiers": [
+        "../../compile/ref_error",
+        "./compile/ref_error"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\resolve.js",
+      "resolutions": 60,
+      "specifiers": [
+        "../resolve",
+        "./compile/resolve",
+        "./resolve"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\rules.js",
+      "resolutions": 30,
+      "specifiers": [
+        "../rules",
+        "./compile/rules"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\util.js",
+      "resolutions": 525,
+      "specifiers": [
+        "../../compile/util",
+        "../compile/util",
+        "../util",
+        "./compile/util",
+        "./util"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\validate\\applicability.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./applicability"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\validate\\boolSchema.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./boolSchema"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\validate\\dataType.js",
+      "resolutions": 45,
+      "specifiers": [
+        "../../compile/validate/dataType",
+        "./compile/validate/dataType",
+        "./dataType"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\validate\\defaults.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./defaults"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\validate\\index.js",
+      "resolutions": 45,
+      "specifiers": [
+        "../../compile/validate",
+        "./compile/validate",
+        "./validate"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\validate\\keyword.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./keyword"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\validate\\subschema.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./subschema"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\core.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./core"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\data.json",
+      "resolutions": 15,
+      "specifiers": [
+        "./refs/data.json"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\index.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./refs/json-schema-2020-12"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\meta\\applicator.json",
+      "resolutions": 15,
+      "specifiers": [
+        "./meta/applicator.json"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\meta\\content.json",
+      "resolutions": 15,
+      "specifiers": [
+        "./meta/content.json"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\meta\\core.json",
+      "resolutions": 15,
+      "specifiers": [
+        "./meta/core.json"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\meta\\format-annotation.json",
+      "resolutions": 15,
+      "specifiers": [
+        "./meta/format-annotation.json"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\meta\\meta-data.json",
+      "resolutions": 15,
+      "specifiers": [
+        "./meta/meta-data.json"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\meta\\unevaluated.json",
+      "resolutions": 15,
+      "specifiers": [
+        "./meta/unevaluated.json"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\meta\\validation.json",
+      "resolutions": 15,
+      "specifiers": [
+        "./meta/validation.json"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\schema.json",
+      "resolutions": 15,
+      "specifiers": [
+        "./schema.json"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\runtime\\equal.js",
+      "resolutions": 15,
+      "specifiers": [
+        "../../runtime/equal"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\runtime\\ucs2length.js",
+      "resolutions": 15,
+      "specifiers": [
+        "../../runtime/ucs2length"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\runtime\\uri.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./runtime/uri"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\runtime\\validation_error.js",
+      "resolutions": 30,
+      "specifiers": [
+        "../runtime/validation_error",
+        "./runtime/validation_error"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\additionalItems.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./additionalItems"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\additionalProperties.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./additionalProperties"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\allOf.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./allOf"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\anyOf.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./anyOf"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\contains.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./contains"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\dependencies.js",
+      "resolutions": 30,
+      "specifiers": [
+        "../applicator/dependencies",
+        "./dependencies"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\dependentSchemas.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./applicator/dependentSchemas"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\if.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./if"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\index.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./applicator"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\items.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./items"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\items2020.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./items2020"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\not.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./not"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\oneOf.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./oneOf"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\patternProperties.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./patternProperties"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\prefixItems.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./prefixItems"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\properties.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./properties"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\propertyNames.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./propertyNames"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\thenElse.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./thenElse"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\code.js",
+      "resolutions": 165,
+      "specifiers": [
+        "../../vocabularies/code",
+        "../code"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\core\\id.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./id"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\core\\index.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./core"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\core\\ref.js",
+      "resolutions": 45,
+      "specifiers": [
+        "../core/ref",
+        "./ref"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\discriminator\\index.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./vocabularies/discriminator"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\discriminator\\types.js",
+      "resolutions": 15,
+      "specifiers": [
+        "../discriminator/types"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\draft2020.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./vocabularies/draft2020"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\dynamic\\dynamicAnchor.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./dynamicAnchor"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\dynamic\\dynamicRef.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./dynamicRef"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\dynamic\\index.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./dynamic"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\dynamic\\recursiveAnchor.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./recursiveAnchor"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\dynamic\\recursiveRef.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./recursiveRef"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\format\\format.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./format"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\format\\index.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./format"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\metadata.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./metadata"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\next.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./next"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\unevaluated\\index.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./unevaluated"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\unevaluated\\unevaluatedItems.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./unevaluatedItems"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\unevaluated\\unevaluatedProperties.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./unevaluatedProperties"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\const.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./const"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\dependentRequired.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./validation/dependentRequired"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\enum.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./enum"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\index.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./validation"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\limitContains.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./validation/limitContains"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\limitItems.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./limitItems"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\limitLength.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./limitLength"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\limitNumber.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./limitNumber"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\limitProperties.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./limitProperties"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\multipleOf.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./multipleOf"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\pattern.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./pattern"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\required.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./required"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\uniqueItems.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./uniqueItems"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Arbitrary.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Arbitrary.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Array.js",
+      "resolutions": 348,
+      "specifiers": [
+        "../../Array.js",
+        "../Array.js",
+        "./Array.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\BigDecimal.js",
+      "resolutions": 60,
+      "specifiers": [
+        "../../BigDecimal.js",
+        "./BigDecimal.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\BigInt.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./BigInt.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Boolean.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Boolean.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Brand.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Brand.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\ByteSize.js",
+      "resolutions": 60,
+      "specifiers": [
+        "./ByteSize.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Cache.js",
+      "resolutions": 36,
+      "specifiers": [
+        "../Cache.js",
+        "./Cache.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Cause.js",
+      "resolutions": 312,
+      "specifiers": [
+        "../../Cause.js",
+        "../Cause.js",
+        "./Cause.js",
+        "effect/Cause"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Channel.js",
+      "resolutions": 48,
+      "specifiers": [
+        "./Channel.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\ChannelSchema.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./ChannelSchema.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Chunk.js",
+      "resolutions": 84,
+      "specifiers": [
+        "../../Chunk.js",
+        "./Chunk.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Clock.js",
+      "resolutions": 108,
+      "specifiers": [
+        "../Clock.js",
+        "./Clock.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Combiner.js",
+      "resolutions": 84,
+      "specifiers": [
+        "./Combiner.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Config.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Config.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\ConfigProvider.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./ConfigProvider.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Console.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Console.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Context.js",
+      "resolutions": 480,
+      "specifiers": [
+        "../Context.js",
+        "./Context.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Cron.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./Cron.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Crypto.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Crypto.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Data.js",
+      "resolutions": 120,
+      "specifiers": [
+        "../Data.js",
+        "./Data.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\DateTime.js",
+      "resolutions": 48,
+      "specifiers": [
+        "./DateTime.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Deferred.js",
+      "resolutions": 96,
+      "specifiers": [
+        "./Deferred.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Differ.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Differ.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Duration.js",
+      "resolutions": 240,
+      "specifiers": [
+        "../Duration.js",
+        "./Duration.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Effect.js",
+      "resolutions": 780,
+      "specifiers": [
+        "../../Effect.js",
+        "../Effect.js",
+        "./Effect.js",
+        "effect/Effect"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Effectable.js",
+      "resolutions": 48,
+      "specifiers": [
+        "../Effectable.js",
+        "./Effectable.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\encoding\\Base64.js",
+      "resolutions": 48,
+      "specifiers": [
+        "../encoding/Base64.js",
+        "./Base64.js",
+        "./encoding/Base64.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\encoding\\Base64Url.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./encoding/Base64Url.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\encoding\\EncodingError.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./EncodingError.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\encoding\\Hex.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./encoding/Hex.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Equal.js",
+      "resolutions": 432,
+      "specifiers": [
+        "../../Equal.js",
+        "../Equal.js",
+        "./Equal.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Equivalence.js",
+      "resolutions": 228,
+      "specifiers": [
+        "../../Equivalence.js",
+        "../Equivalence.js",
+        "./Equivalence.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\ErrorReporter.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./ErrorReporter.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\ExecutionPlan.js",
+      "resolutions": 36,
+      "specifiers": [
+        "../ExecutionPlan.js",
+        "./ExecutionPlan.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Exit.js",
+      "resolutions": 336,
+      "specifiers": [
+        "../../Exit.js",
+        "../Exit.js",
+        "./Exit.js",
+        "effect/Exit"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Fiber.js",
+      "resolutions": 144,
+      "specifiers": [
+        "../Fiber.js",
+        "./Fiber.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\FiberHandle.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./FiberHandle.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\FiberMap.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./FiberMap.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\FiberSet.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./FiberSet.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\FileSystem.js",
+      "resolutions": 48,
+      "specifiers": [
+        "../FileSystem.js",
+        "./FileSystem.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Filter.js",
+      "resolutions": 72,
+      "specifiers": [
+        "../Filter.js",
+        "./Filter.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Formatter.js",
+      "resolutions": 324,
+      "specifiers": [
+        "../../Formatter.js",
+        "../Formatter.js",
+        "./Formatter.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Function.js",
+      "resolutions": 1452,
+      "specifiers": [
+        "../../Function.js",
+        "../Function.js",
+        "./Function.js",
+        "effect/Function"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Graph.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Graph.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Hash.js",
+      "resolutions": 348,
+      "specifiers": [
+        "../../Hash.js",
+        "../Hash.js",
+        "./Hash.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\HashMap.js",
+      "resolutions": 60,
+      "specifiers": [
+        "../../HashMap.js",
+        "./HashMap.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\HashRing.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./HashRing.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\HashSet.js",
+      "resolutions": 48,
+      "specifiers": [
+        "../../HashSet.js",
+        "./HashSet.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\HKT.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./HKT.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\http\\Cookies.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./http/Cookies.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\http\\Headers.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./http/Headers.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\http\\UrlParams.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./http/UrlParams.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\index.js",
+      "resolutions": 12,
+      "specifiers": [
+        "effect"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Inspectable.js",
+      "resolutions": 384,
+      "specifiers": [
+        "../Inspectable.js",
+        "./Inspectable.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\arbitrary\\array.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./array.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\arbitrary\\bigDecimal.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./bigDecimal.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\arbitrary\\bigInt.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./bigInt.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\arbitrary\\model.js",
+      "resolutions": 72,
+      "specifiers": [
+        "./model.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\arbitrary\\regexp.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./regexp.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\arbitrary\\runner.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/arbitrary/runner.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\arbitrary\\schema.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./schema.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\array.js",
+      "resolutions": 60,
+      "specifiers": [
+        "../array.js",
+        "./internal/array.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\core.js",
+      "resolutions": 540,
+      "specifiers": [
+        "../core.js",
+        "../internal/core.js",
+        "./core.js",
+        "./internal/core.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\count.js",
+      "resolutions": 156,
+      "specifiers": [
+        "./internal/count.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\dateTime.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./internal/dateTime.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\doNotation.js",
+      "resolutions": 48,
+      "specifiers": [
+        "./doNotation.js",
+        "./internal/doNotation.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\effect.js",
+      "resolutions": 516,
+      "specifiers": [
+        "../effect.js",
+        "../internal/effect.js",
+        "./effect.js",
+        "./internal/effect.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\equal.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./internal/equal.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\errors.js",
+      "resolutions": 60,
+      "specifiers": [
+        "../errors.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\executionPlan.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./internal/executionPlan.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\graph.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./graph.js",
+        "./internal/graph.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\graphCsr.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/graphCsr.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\hash.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./hash.js",
+        "./internal/hash.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\hashMap.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./hashMap.js",
+        "./internal/hashMap.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\hashSet.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/hashSet.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\layer.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./internal/layer.js",
+        "./layer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\matcher.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/matcher.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\metric.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./internal/metric.js",
+        "./metric.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\option.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./internal/option.js",
+        "./option.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\persistence.js",
+      "resolutions": 12,
+      "specifiers": [
+        "../internal/persistence.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\random.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./internal/random.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\rcRef.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/rcRef.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\record.js",
+      "resolutions": 384,
+      "specifiers": [
+        "../internal/record.js",
+        "../record.js",
+        "./internal/record.js",
+        "./record.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\redacted.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/redacted.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\references.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./internal/references.js",
+        "./references.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\request.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./internal/request.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\result.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./internal/result.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schedule.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./internal/schedule.js",
+        "./schedule.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\annotations.js",
+      "resolutions": 108,
+      "specifiers": [
+        "./annotations.js",
+        "./internal/schema/annotations.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\cause.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./internal/schema/cause.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\compilerRegistry.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/schema/compilerRegistry.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\fromJsonSchemaDocument.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/schema/fromJsonSchemaDocument.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\fromRepresentation.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./fromRepresentation.js",
+        "./internal/schema/fromRepresentation.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\interpreter.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./interpreter.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\make.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./internal/schema/make.js",
+        "./make.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\parser.js",
+      "resolutions": 60,
+      "specifiers": [
+        "./internal/schema/parser.js",
+        "./parser.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\standardSchema.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/schema/standardSchema.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\toCodec.js",
+      "resolutions": 72,
+      "specifiers": [
+        "./internal/schema/toCodec.js",
+        "./toCodec.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\toCodeDocument.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/schema/toCodeDocument.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\toDifferJsonPatch.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/schema/toDifferJsonPatch.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\toEncoderXml.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/schema/toEncoderXml.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\toEquivalence.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/schema/toEquivalence.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\toFormatter.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/schema/toFormatter.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\toIso.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/schema/toIso.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\toJsonSchemaDocument.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./internal/schema/toJsonSchemaDocument.js",
+        "./toJsonSchemaDocument.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schema\\toRepresentation.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./internal/schema/toRepresentation.js",
+        "./toRepresentation.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\schemaError.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/schemaError.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\stackTraceLimit.js",
+      "resolutions": 84,
+      "specifiers": [
+        "./internal/stackTraceLimit.js",
+        "./stackTraceLimit.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\stream.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./internal/stream.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\tracer.js",
+      "resolutions": 48,
+      "specifiers": [
+        "./internal/tracer.js",
+        "./tracer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\trie.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/trie.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\ulid.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/ulid.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\uuid.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/uuid.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\internal\\version.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./internal/version.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Iterable.js",
+      "resolutions": 132,
+      "specifiers": [
+        "../../Iterable.js",
+        "../Iterable.js",
+        "./Iterable.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\JsonPatch.js",
+      "resolutions": 24,
+      "specifiers": [
+        "../../JsonPatch.js",
+        "./JsonPatch.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\JsonPointer.js",
+      "resolutions": 48,
+      "specifiers": [
+        "../../JsonPointer.js",
+        "./JsonPointer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\JsonSchema.js",
+      "resolutions": 48,
+      "specifiers": [
+        "../../JsonSchema.js",
+        "./JsonSchema.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Latch.js",
+      "resolutions": 48,
+      "specifiers": [
+        "./Latch.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Layer.js",
+      "resolutions": 216,
+      "specifiers": [
+        "../Layer.js",
+        "./Layer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\LayerMap.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./LayerMap.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\LayerRef.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./LayerRef.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Logger.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Logger.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\LogLevel.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./LogLevel.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\ManagedRuntime.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./ManagedRuntime.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Match.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Match.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Metric.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./Metric.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\MutableHashMap.js",
+      "resolutions": 120,
+      "specifiers": [
+        "./MutableHashMap.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\MutableHashSet.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./MutableHashSet.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\MutableList.js",
+      "resolutions": 48,
+      "specifiers": [
+        "./MutableList.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\MutableRef.js",
+      "resolutions": 48,
+      "specifiers": [
+        "./MutableRef.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\net\\IpInterface.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./IpInterface.js",
+        "./net/IpInterface.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\net\\IpNetwork.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./net/IpNetwork.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\net\\NetAddress.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./NetAddress.js",
+        "./net/NetAddress.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Newtype.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Newtype.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\NonEmptyIterable.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./NonEmptyIterable.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Number.js",
+      "resolutions": 72,
+      "specifiers": [
+        "../../Number.js",
+        "./Number.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Optic.js",
+      "resolutions": 36,
+      "specifiers": [
+        "../../Optic.js",
+        "./Optic.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Option.js",
+      "resolutions": 744,
+      "specifiers": [
+        "../../Option.js",
+        "../Option.js",
+        "./Option.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Order.js",
+      "resolutions": 216,
+      "specifiers": [
+        "../../Order.js",
+        "../Order.js",
+        "./Order.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Ordering.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Ordering.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\PartitionedSemaphore.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./PartitionedSemaphore.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Path.js",
+      "resolutions": 36,
+      "specifiers": [
+        "../Path.js",
+        "./Path.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\persistence\\KeyValueStore.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./KeyValueStore.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\persistence\\Persistable.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Persistable.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\persistence\\Persistence.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./persistence/Persistence.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\persistence\\Redis.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Redis.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Pipeable.js",
+      "resolutions": 576,
+      "specifiers": [
+        "../../Pipeable.js",
+        "../Pipeable.js",
+        "./Pipeable.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\PlatformError.js",
+      "resolutions": 48,
+      "specifiers": [
+        "./PlatformError.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Pool.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Pool.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Predicate.js",
+      "resolutions": 1188,
+      "specifiers": [
+        "../../Predicate.js",
+        "../Predicate.js",
+        "./Predicate.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\PrimaryKey.js",
+      "resolutions": 48,
+      "specifiers": [
+        "../PrimaryKey.js",
+        "./PrimaryKey.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\PubSub.js",
+      "resolutions": 60,
+      "specifiers": [
+        "./PubSub.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Pull.js",
+      "resolutions": 96,
+      "specifiers": [
+        "../Pull.js",
+        "./Pull.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Queue.js",
+      "resolutions": 84,
+      "specifiers": [
+        "../Queue.js",
+        "./Queue.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Random.js",
+      "resolutions": 24,
+      "specifiers": [
+        "../../Random.js",
+        "./Random.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\RcMap.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./RcMap.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\RcRef.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./RcRef.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\reactivity\\Reactivity.js",
+      "resolutions": 12,
+      "specifiers": [
+        "../reactivity/Reactivity.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Record.js",
+      "resolutions": 72,
+      "specifiers": [
+        "../Record.js",
+        "./Record.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Redactable.js",
+      "resolutions": 60,
+      "specifiers": [
+        "../Redactable.js",
+        "./Redactable.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Redacted.js",
+      "resolutions": 36,
+      "specifiers": [
+        "../Redacted.js",
+        "./Redacted.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Reducer.js",
+      "resolutions": 180,
+      "specifiers": [
+        "./Reducer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Ref.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./Ref.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\References.js",
+      "resolutions": 108,
+      "specifiers": [
+        "../References.js",
+        "./References.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\RegExp.js",
+      "resolutions": 36,
+      "specifiers": [
+        "../../RegExp.js",
+        "./RegExp.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Request.js",
+      "resolutions": 36,
+      "specifiers": [
+        "../Request.js",
+        "./Request.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\RequestResolver.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./RequestResolver.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Resource.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Resource.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Result.js",
+      "resolutions": 456,
+      "specifiers": [
+        "../../Result.js",
+        "../Result.js",
+        "./Result.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Runtime.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Runtime.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Schedule.js",
+      "resolutions": 84,
+      "specifiers": [
+        "../Schedule.js",
+        "./Schedule.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Scheduler.js",
+      "resolutions": 72,
+      "specifiers": [
+        "../../Scheduler.js",
+        "../Scheduler.js",
+        "./Scheduler.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Schema.js",
+      "resolutions": 144,
+      "specifiers": [
+        "../../Schema.js",
+        "../Schema.js",
+        "./Schema.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\SchemaAST.js",
+      "resolutions": 204,
+      "specifiers": [
+        "../../SchemaAST.js",
+        "./SchemaAST.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\SchemaGetter.js",
+      "resolutions": 96,
+      "specifiers": [
+        "../../SchemaGetter.js",
+        "./SchemaGetter.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\SchemaIssue.js",
+      "resolutions": 144,
+      "specifiers": [
+        "../../SchemaIssue.js",
+        "./SchemaIssue.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\SchemaParser.js",
+      "resolutions": 144,
+      "specifiers": [
+        "../../SchemaParser.js",
+        "./SchemaParser.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\SchemaRepresentation.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./SchemaRepresentation.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\SchemaTransformation.js",
+      "resolutions": 60,
+      "specifiers": [
+        "../../SchemaTransformation.js",
+        "./SchemaTransformation.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Scope.js",
+      "resolutions": 204,
+      "specifiers": [
+        "../Scope.js",
+        "./Scope.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\ScopedCache.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./ScopedCache.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\ScopedRef.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./ScopedRef.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Semaphore.js",
+      "resolutions": 72,
+      "specifiers": [
+        "../Semaphore.js",
+        "./Semaphore.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Sink.js",
+      "resolutions": 48,
+      "specifiers": [
+        "./Sink.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\sql\\SqlClient.js",
+      "resolutions": 24,
+      "specifiers": [
+        "../sql/SqlClient.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\sql\\SqlError.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./SqlError.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\sql\\Statement.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Statement.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\StandardSchema.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./StandardSchema.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Stdio.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Stdio.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Stream.js",
+      "resolutions": 96,
+      "specifiers": [
+        "../Stream.js",
+        "./Stream.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\String.js",
+      "resolutions": 84,
+      "specifiers": [
+        "./String.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Struct.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./Struct.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\SubscriptionRef.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./SubscriptionRef.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Symbol.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Symbol.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\SynchronizedRef.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./SynchronizedRef.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Take.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./Take.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Terminal.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Terminal.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Tracer.js",
+      "resolutions": 96,
+      "specifiers": [
+        "../Tracer.js",
+        "./Tracer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Trie.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Trie.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Tuple.js",
+      "resolutions": 48,
+      "specifiers": [
+        "../Tuple.js",
+        "./Tuple.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\TxChunk.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./TxChunk.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\TxDeferred.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./TxDeferred.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\TxHashMap.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./TxHashMap.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\TxHashSet.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./TxHashSet.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\TxPriorityQueue.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./TxPriorityQueue.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\TxPubSub.js",
+      "resolutions": 24,
+      "specifiers": [
+        "./TxPubSub.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\TxQueue.js",
+      "resolutions": 36,
+      "specifiers": [
+        "./TxQueue.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\TxReentrantLock.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./TxReentrantLock.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\TxRef.js",
+      "resolutions": 132,
+      "specifiers": [
+        "./TxRef.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\TxSemaphore.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./TxSemaphore.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\TxSubscriptionRef.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./TxSubscriptionRef.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Types.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Types.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\UndefinedOr.js",
+      "resolutions": 24,
+      "specifiers": [
+        "../UndefinedOr.js",
+        "./UndefinedOr.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Unify.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Unify.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Utils.js",
+      "resolutions": 72,
+      "specifiers": [
+        "../Utils.js",
+        "./Utils.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect\\dist\\Version.js",
+      "resolutions": 12,
+      "specifiers": [
+        "./Version.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\fast-deep-equal@3.1.3\\node_modules\\fast-deep-equal\\index.js",
+      "resolutions": 30,
+      "specifiers": [
+        "fast-deep-equal"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\fast-uri@3.1.9\\node_modules\\fast-uri\\index.js",
+      "resolutions": 15,
+      "specifiers": [
+        "fast-uri"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\fast-uri@3.1.9\\node_modules\\fast-uri\\lib\\schemes.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./lib/schemes"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\fast-uri@3.1.9\\node_modules\\fast-uri\\lib\\utils.js",
+      "resolutions": 30,
+      "specifiers": [
+        "./lib/utils",
+        "./utils"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\json-schema-traverse@1.0.0\\node_modules\\json-schema-traverse\\index.js",
+      "resolutions": 15,
+      "specifiers": [
+        "json-schema-traverse"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\jsonata@2.1.0\\node_modules\\jsonata\\jsonata.js",
+      "resolutions": 45,
+      "specifiers": [
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\jsonata@2.1.0\\node_modules\\jsonata\\jsonata.js",
+        "jsonata"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\compose-collection.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./compose-collection.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\compose-doc.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./compose-doc.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\compose-node.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./compose-node.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\compose-scalar.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./compose-scalar.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\composer.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./compose/composer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\resolve-block-map.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./resolve-block-map.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\resolve-block-scalar.js",
+      "resolutions": 30,
+      "specifiers": [
+        "../compose/resolve-block-scalar.js",
+        "./resolve-block-scalar.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\resolve-block-seq.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./resolve-block-seq.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\resolve-end.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./resolve-end.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\resolve-flow-collection.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./resolve-flow-collection.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\resolve-flow-scalar.js",
+      "resolutions": 30,
+      "specifiers": [
+        "../compose/resolve-flow-scalar.js",
+        "./resolve-flow-scalar.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\resolve-props.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./resolve-props.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\util-contains-newline.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./util-contains-newline.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\util-empty-scalar-position.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./util-empty-scalar-position.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\util-flow-indent-check.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./util-flow-indent-check.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\util-map-includes.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./util-map-includes.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\doc\\anchors.js",
+      "resolutions": 45,
+      "specifiers": [
+        "../doc/anchors.js",
+        "./anchors.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\doc\\applyReviver.js",
+      "resolutions": 30,
+      "specifiers": [
+        "../doc/applyReviver.js",
+        "./applyReviver.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\doc\\createNode.js",
+      "resolutions": 30,
+      "specifiers": [
+        "../doc/createNode.js",
+        "./createNode.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\doc\\directives.js",
+      "resolutions": 30,
+      "specifiers": [
+        "../doc/directives.js",
+        "./directives.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\doc\\Document.js",
+      "resolutions": 45,
+      "specifiers": [
+        "../doc/Document.js",
+        "./doc/Document.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\errors.js",
+      "resolutions": 60,
+      "specifiers": [
+        "../errors.js",
+        "./errors.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\index.js",
+      "resolutions": 57,
+      "specifiers": [
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\index.js",
+        "yaml"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\log.js",
+      "resolutions": 30,
+      "specifiers": [
+        "../log.js",
+        "./log.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\addPairToJSMap.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./addPairToJSMap.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\Alias.js",
+      "resolutions": 45,
+      "specifiers": [
+        "../nodes/Alias.js",
+        "./nodes/Alias.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\Collection.js",
+      "resolutions": 45,
+      "specifiers": [
+        "../nodes/Collection.js",
+        "./Collection.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\identity.js",
+      "resolutions": 450,
+      "specifiers": [
+        "../../nodes/identity.js",
+        "../nodes/identity.js",
+        "./identity.js",
+        "./nodes/identity.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\Node.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./Node.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\Pair.js",
+      "resolutions": 105,
+      "specifiers": [
+        "../../nodes/Pair.js",
+        "../nodes/Pair.js",
+        "./Pair.js",
+        "./nodes/Pair.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\Scalar.js",
+      "resolutions": 285,
+      "specifiers": [
+        "../../nodes/Scalar.js",
+        "../nodes/Scalar.js",
+        "./Scalar.js",
+        "./nodes/Scalar.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\toJS.js",
+      "resolutions": 45,
+      "specifiers": [
+        "../../nodes/toJS.js",
+        "../nodes/toJS.js",
+        "./toJS.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\YAMLMap.js",
+      "resolutions": 105,
+      "specifiers": [
+        "../../nodes/YAMLMap.js",
+        "../nodes/YAMLMap.js",
+        "./nodes/YAMLMap.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\YAMLSeq.js",
+      "resolutions": 105,
+      "specifiers": [
+        "../../nodes/YAMLSeq.js",
+        "../nodes/YAMLSeq.js",
+        "./nodes/YAMLSeq.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\parse\\cst-scalar.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./cst-scalar.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\parse\\cst-stringify.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./cst-stringify.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\parse\\cst-visit.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./cst-visit.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\parse\\cst.js",
+      "resolutions": 45,
+      "specifiers": [
+        "./cst.js",
+        "./parse/cst.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\parse\\lexer.js",
+      "resolutions": 30,
+      "specifiers": [
+        "./lexer.js",
+        "./parse/lexer.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\parse\\line-counter.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./parse/line-counter.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\parse\\parser.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./parse/parser.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\public-api.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./public-api.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\common\\map.js",
+      "resolutions": 60,
+      "specifiers": [
+        "../common/map.js",
+        "./common/map.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\common\\null.js",
+      "resolutions": 45,
+      "specifiers": [
+        "../common/null.js",
+        "./common/null.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\common\\seq.js",
+      "resolutions": 60,
+      "specifiers": [
+        "../common/seq.js",
+        "./common/seq.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\common\\string.js",
+      "resolutions": 45,
+      "specifiers": [
+        "../common/string.js",
+        "./common/string.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\core\\bool.js",
+      "resolutions": 30,
+      "specifiers": [
+        "./bool.js",
+        "./core/bool.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\core\\float.js",
+      "resolutions": 30,
+      "specifiers": [
+        "./core/float.js",
+        "./float.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\core\\int.js",
+      "resolutions": 30,
+      "specifiers": [
+        "./core/int.js",
+        "./int.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\core\\schema.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./core/schema.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\json\\schema.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./json/schema.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\Schema.js",
+      "resolutions": 30,
+      "specifiers": [
+        "../schema/Schema.js",
+        "./schema/Schema.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\tags.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./tags.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\binary.js",
+      "resolutions": 30,
+      "specifiers": [
+        "./binary.js",
+        "./yaml-1.1/binary.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\bool.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./bool.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\float.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./float.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\int.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./int.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\merge.js",
+      "resolutions": 45,
+      "specifiers": [
+        "../schema/yaml-1.1/merge.js",
+        "./merge.js",
+        "./yaml-1.1/merge.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\omap.js",
+      "resolutions": 30,
+      "specifiers": [
+        "./omap.js",
+        "./yaml-1.1/omap.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\pairs.js",
+      "resolutions": 30,
+      "specifiers": [
+        "./pairs.js",
+        "./yaml-1.1/pairs.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\schema.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./yaml-1.1/schema.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\set.js",
+      "resolutions": 30,
+      "specifiers": [
+        "./set.js",
+        "./yaml-1.1/set.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\timestamp.js",
+      "resolutions": 30,
+      "specifiers": [
+        "./timestamp.js",
+        "./yaml-1.1/timestamp.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\foldFlowLines.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./foldFlowLines.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\stringify.js",
+      "resolutions": 30,
+      "specifiers": [
+        "../stringify/stringify.js",
+        "./stringify.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\stringifyCollection.js",
+      "resolutions": 15,
+      "specifiers": [
+        "../stringify/stringifyCollection.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\stringifyComment.js",
+      "resolutions": 15,
+      "specifiers": [
+        "./stringifyComment.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\stringifyDocument.js",
+      "resolutions": 15,
+      "specifiers": [
+        "../stringify/stringifyDocument.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\stringifyNumber.js",
+      "resolutions": 60,
+      "specifiers": [
+        "../../stringify/stringifyNumber.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\stringifyPair.js",
+      "resolutions": 15,
+      "specifiers": [
+        "../stringify/stringifyPair.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\stringifyString.js",
+      "resolutions": 60,
+      "specifiers": [
+        "../../stringify/stringifyString.js",
+        "../stringify/stringifyString.js",
+        "./stringifyString.js"
+      ]
+    },
+    {
+      "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\visit.js",
+      "resolutions": 45,
+      "specifiers": [
+        "../visit.js",
+        "./visit.js"
+      ]
+    }
+  ]
+}

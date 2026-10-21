@@ -1,0 +1,30 @@
+[WARN] The store at C:\Users\leescott.REDMOND\AppData\Local\pnpm\store\v11 is not used because packages cannot be hard linked from it into this project. Using the store at D:\.pnpm-store\v11 instead. Set storeDir to choose the store.
+Progress: resolved 0, reused 8, downloaded 0, added 0
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: D:\.pnpm-store\v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 1, reused 16, downloaded 0, added 0
+Packages: +33
++++++++++++++++++++++++++++++++++
+Progress: resolved 33, reused 16, downloaded 17, added 33, done
+
+dependencies:
++ @potential-guide/cli-core 0.3.0-rc.0
++ @potential-guide/cli-runtime 0.1.0-rc.0
++ @potential-guide/effects 0.1.0-rc.0
++ @potential-guide/git-source 0.1.0-rc.0
++ @potential-guide/objective-declarations 0.1.0-rc.0
++ @potential-guide/objective-pilot 0.2.0-rc.0
++ @potential-guide/objective-portfolio-supervisor 0.4.0-rc.0
++ @potential-guide/objective-regulator 0.4.0-rc.0
++ @potential-guide/pguide-agents 0.1.0
++ @potential-guide/pguide-config 0.3.0-rc.0
++ @potential-guide/pguide-objectives 0.4.0-rc.0
++ @potential-guide/pguide-pilot 0.4.0-rc.0
++ @potential-guide/pguide-regulate 0.4.0-rc.0
++ @potential-guide/pguide-supervise 0.4.0-rc.0
++ @potential-guide/pilot-protocol 0.1.0-rc.0
++ @potential-guide/regulation-coordinator 0.1.0-rc.0
++ pguide 0.4.0-rc.0
+
+Done in 6.8s using pnpm v12.14.0

@@ -1,0 +1,167 @@
+[
+  {
+    "name": "@potential-guide/effects",
+    "version": "0.1.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+effects@fi_f818f410050ce6d3175fdfa556c63bc7\\node_modules\\@potential-guide\\effects"
+  },
+  {
+    "name": "effect",
+    "version": "4.0.2",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\effect@4.0.2\\node_modules\\effect"
+  },
+  {
+    "name": "@potential-guide/git-source",
+    "version": "0.1.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+git-source_51374c47d8327d435699cd71746813ed\\node_modules\\@potential-guide\\git-source"
+  },
+  {
+    "name": "@potential-guide/objective-pilot",
+    "version": "0.2.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_3045e2431e5de181bf3b7e6997eb6970\\node_modules\\@potential-guide\\objective-pilot"
+  },
+  {
+    "name": "@potential-guide/pilot-protocol",
+    "version": "0.1.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pilot-prot_1165b735c9c71f6f0bcf788287482e0b\\node_modules\\@potential-guide\\pilot-protocol"
+  },
+  {
+    "name": "ajv",
+    "version": "8.20.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv"
+  },
+  {
+    "name": "fast-deep-equal",
+    "version": "3.1.3",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\fast-deep-equal@3.1.3\\node_modules\\fast-deep-equal"
+  },
+  {
+    "name": "fast-uri",
+    "version": "3.1.9",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\fast-uri@3.1.9\\node_modules\\fast-uri"
+  },
+  {
+    "name": "json-schema-traverse",
+    "version": "1.0.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\json-schema-traverse@1.0.0\\node_modules\\json-schema-traverse"
+  },
+  {
+    "name": "require-from-string",
+    "version": "2.0.2",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\require-from-string@2.0.2\\node_modules\\require-from-string"
+  },
+  {
+    "name": "jsonata",
+    "version": "2.1.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\jsonata@2.1.0\\node_modules\\jsonata"
+  },
+  {
+    "name": "json-schema-typed",
+    "version": "9.0.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\json-schema-typed@9.0.0\\node_modules\\json-schema-typed"
+  },
+  {
+    "name": "yaml",
+    "version": "2.9.1",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml"
+  },
+  {
+    "name": "@potential-guide/objective-regulator",
+    "version": "0.4.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_0b2b9fd0024671c9bf16065f733e88db\\node_modules\\@potential-guide\\objective-regulator"
+  },
+  {
+    "name": "@potential-guide/objective-portfolio-supervisor",
+    "version": "0.4.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_08a63276c25d6952f3433cfc207fc303\\node_modules\\@potential-guide\\objective-portfolio-supervisor"
+  },
+  {
+    "name": "@potential-guide/regulation-coordinator",
+    "version": "0.1.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+regulation_0c70b03ca5fa8226f199df5cd802150d\\node_modules\\@potential-guide\\regulation-coordinator"
+  },
+  {
+    "name": "@potential-guide/cli-core",
+    "version": "0.3.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+cli-core@f_d05d266de997024ff45bf21b43d6aea9\\node_modules\\@potential-guide\\cli-core"
+  },
+  {
+    "name": "@microsoft/agent-host-protocol",
+    "version": "1.0.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@microsoft+agent-host-protocol@1.0.0\\node_modules\\@microsoft\\agent-host-protocol"
+  },
+  {
+    "name": "@potential-guide/pguide-config",
+    "version": "0.3.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-con_4d76b731fbbcdeac9459a61e1e803629\\node_modules\\@potential-guide\\pguide-config"
+  },
+  {
+    "name": "cross-spawn",
+    "version": "7.0.6",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\cross-spawn@7.0.6\\node_modules\\cross-spawn"
+  },
+  {
+    "name": "path-key",
+    "version": "3.1.1",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\path-key@3.1.1\\node_modules\\path-key"
+  },
+  {
+    "name": "shebang-command",
+    "version": "2.0.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\shebang-command@2.0.0\\node_modules\\shebang-command"
+  },
+  {
+    "name": "shebang-regex",
+    "version": "3.0.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\shebang-regex@3.0.0\\node_modules\\shebang-regex"
+  },
+  {
+    "name": "which",
+    "version": "2.0.2",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\which@2.0.2\\node_modules\\which"
+  },
+  {
+    "name": "isexe",
+    "version": "2.0.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\isexe@2.0.0\\node_modules\\isexe"
+  },
+  {
+    "name": "@potential-guide/pguide-agents",
+    "version": "0.1.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-age_b33b910c5006a87e12208be8ba6d871a\\node_modules\\@potential-guide\\pguide-agents"
+  },
+  {
+    "name": "pguide",
+    "version": "0.4.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\pguide@file+..+tarballs+pguide-0.4.0-rc.0.tgz\\node_modules\\pguide"
+  },
+  {
+    "name": "@potential-guide/pguide-objectives",
+    "version": "0.4.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-obj_d1237bc3f4af96e165610e7cf6828466\\node_modules\\@potential-guide\\pguide-objectives"
+  },
+  {
+    "name": "@potential-guide/objective-declarations",
+    "version": "0.1.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+objective-_056b8bdcc29a3cd0ebfa5d6324dcc10c\\node_modules\\@potential-guide\\objective-declarations"
+  },
+  {
+    "name": "@potential-guide/pguide-pilot",
+    "version": "0.4.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-pil_3e2c8b57a2832830daaf88fcff1c3d26\\node_modules\\@potential-guide\\pguide-pilot"
+  },
+  {
+    "name": "@potential-guide/cli-runtime",
+    "version": "0.1.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+cli-runtim_9ebea0a80b18a1510c461186a60f6f2d\\node_modules\\@potential-guide\\cli-runtime"
+  },
+  {
+    "name": "@potential-guide/pguide-regulate",
+    "version": "0.4.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-reg_c3d68532983e383b758160affbddcc92\\node_modules\\@potential-guide\\pguide-regulate"
+  },
+  {
+    "name": "@potential-guide/pguide-supervise",
+    "version": "0.4.0-rc.0",
+    "path": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\node_modules\\.pnpm\\@potential-guide+pguide-sup_be48e162a6592570a6df2ee469562542\\node_modules\\@potential-guide\\pguide-supervise"
+  }
+]

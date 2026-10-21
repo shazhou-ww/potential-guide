@@ -1,0 +1,390 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+overrides:
+  '@potential-guide/effects': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-effects-0.1.0-rc.0.tgz
+  '@potential-guide/git-source': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-git-source-0.1.0-rc.0.tgz
+  '@potential-guide/objective-pilot': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-objective-pilot-0.2.0-rc.0.tgz
+  '@potential-guide/objective-regulator': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-objective-regulator-0.4.0-rc.0.tgz
+  '@potential-guide/objective-portfolio-supervisor': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-objective-portfolio-supervisor-0.4.0-rc.0.tgz
+  '@potential-guide/regulation-coordinator': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-regulation-coordinator-0.1.0-rc.0.tgz
+  '@potential-guide/cli-core': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz
+  '@potential-guide/pguide-config': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-pguide-config-0.3.0-rc.0.tgz
+  '@potential-guide/pguide-agents': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-pguide-agents-0.1.0.tgz
+  pguide: file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/pguide-0.4.0-rc.0.tgz
+  '@potential-guide/pilot-protocol': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-pilot-protocol-0.1.0-rc.0.tgz
+  '@potential-guide/cli-runtime': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-cli-runtime-0.1.0-rc.0.tgz
+  '@potential-guide/objective-declarations': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-objective-declarations-0.1.0-rc.0.tgz
+  '@potential-guide/pguide-pilot': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-pguide-pilot-0.4.0-rc.0.tgz
+  '@potential-guide/pguide-regulate': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-pguide-regulate-0.4.0-rc.0.tgz
+  '@potential-guide/pguide-supervise': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-pguide-supervise-0.4.0-rc.0.tgz
+  '@potential-guide/pguide-objectives': file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-pguide-objectives-0.4.0-rc.0.tgz
+
+importers:
+
+  .:
+    dependencies:
+      '@potential-guide/cli-core':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz
+      '@potential-guide/cli-runtime':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-cli-runtime-0.1.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-cli-runtime-0.1.0-rc.0.tgz
+      '@potential-guide/effects':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-effects-0.1.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-effects-0.1.0-rc.0.tgz
+      '@potential-guide/git-source':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-git-source-0.1.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-git-source-0.1.0-rc.0.tgz
+      '@potential-guide/objective-declarations':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-objective-declarations-0.1.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-objective-declarations-0.1.0-rc.0.tgz
+      '@potential-guide/objective-pilot':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-objective-pilot-0.2.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-objective-pilot-0.2.0-rc.0.tgz
+      '@potential-guide/objective-portfolio-supervisor':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-objective-portfolio-supervisor-0.4.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-objective-portfolio-supervisor-0.4.0-rc.0.tgz
+      '@potential-guide/objective-regulator':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-objective-regulator-0.4.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-objective-regulator-0.4.0-rc.0.tgz
+      '@potential-guide/pguide-agents':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-pguide-agents-0.1.0.tgz
+        version: file:../tarballs/potential-guide-pguide-agents-0.1.0.tgz
+      '@potential-guide/pguide-config':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-pguide-config-0.3.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-pguide-config-0.3.0-rc.0.tgz
+      '@potential-guide/pguide-objectives':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-pguide-objectives-0.4.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-pguide-objectives-0.4.0-rc.0.tgz
+      '@potential-guide/pguide-pilot':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-pguide-pilot-0.4.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-pguide-pilot-0.4.0-rc.0.tgz
+      '@potential-guide/pguide-regulate':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-pguide-regulate-0.4.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-pguide-regulate-0.4.0-rc.0.tgz
+      '@potential-guide/pguide-supervise':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-pguide-supervise-0.4.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-pguide-supervise-0.4.0-rc.0.tgz
+      '@potential-guide/pilot-protocol':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-pilot-protocol-0.1.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-pilot-protocol-0.1.0-rc.0.tgz
+      '@potential-guide/regulation-coordinator':
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/potential-guide-regulation-coordinator-0.1.0-rc.0.tgz
+        version: file:../tarballs/potential-guide-regulation-coordinator-0.1.0-rc.0.tgz
+      pguide:
+        specifier: file:D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/tarballs/pguide-0.4.0-rc.0.tgz
+        version: file:../tarballs/pguide-0.4.0-rc.0.tgz
+
+packages:
+
+  '@microsoft/agent-host-protocol@1.0.0':
+    resolution: {integrity: sha512-swjikGoqZ/bv3Mn4vkkLzwpmS/j9tV7Aas7ruD2a/R3KVsUlokwCJNSET57mdsmZLMnrawDaCr/ctufbpjE4iA==}
+
+  '@potential-guide/cli-core@file:../tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz':
+    resolution: {integrity: sha512-MOjGZ1k5ZkCHOnLw/iJ5tsnauGuYEQ3P2coQX72O+oy79FFmfKIBg9gMnKaekfWLJH2rRjPNvN89a9QReJaLeg==, tarball: file:../tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz}
+    version: 0.3.0-rc.0
+    engines: {node: '>=22.13.0'}
+
+  '@potential-guide/cli-runtime@file:../tarballs/potential-guide-cli-runtime-0.1.0-rc.0.tgz':
+    resolution: {integrity: sha512-yoJMmNHZe+fKXDbWY9P25j9hoAeAZBPQ6BoiN/E4WUVu8tNbafu8R5k2t65qrcj/8ISH/UvMob/2Lhd8LVlXDg==, tarball: file:../tarballs/potential-guide-cli-runtime-0.1.0-rc.0.tgz}
+    version: 0.1.0-rc.0
+    engines: {node: '>=22.13.0'}
+
+  '@potential-guide/effects@file:../tarballs/potential-guide-effects-0.1.0-rc.0.tgz':
+    resolution: {integrity: sha512-K+ihRAIsvS9ssQN9xu0L/XDUxuTQwmrX6R9GnTvR/f2hQW/7JqWA+FXO6UwqYMGhv1Y1bx9yhNL+rZUd3pggAQ==, tarball: file:../tarballs/potential-guide-effects-0.1.0-rc.0.tgz}
+    version: 0.1.0-rc.0
+    engines: {node: '>=22.13.0'}
+
+  '@potential-guide/git-source@file:../tarballs/potential-guide-git-source-0.1.0-rc.0.tgz':
+    resolution: {integrity: sha512-bB9XP7goJed7j08RmCwOtVDezlmlg342iT8dSyWsZRK9izcTFPJo6arXsNFv+/NCD+UCWTYeO4osja+y17fuvA==, tarball: file:../tarballs/potential-guide-git-source-0.1.0-rc.0.tgz}
+    version: 0.1.0-rc.0
+    engines: {node: '>=22.13.0'}
+
+  '@potential-guide/objective-declarations@file:../tarballs/potential-guide-objective-declarations-0.1.0-rc.0.tgz':
+    resolution: {integrity: sha512-dMnqV9SOsXdZ3VhvOX7tRFXJR+bPMDo0GZKlm1JtPPu/rW4G9pPbzdU4RcEtxy3mKJg5QYSyKha92A7FgkrPpQ==, tarball: file:../tarballs/potential-guide-objective-declarations-0.1.0-rc.0.tgz}
+    version: 0.1.0-rc.0
+    engines: {node: '>=22.13.0'}
+
+  '@potential-guide/objective-pilot@file:../tarballs/potential-guide-objective-pilot-0.2.0-rc.0.tgz':
+    resolution: {integrity: sha512-rq0ZhUAp2FgukquovUkk+xN3pCR9mXt+ChxA/FqOTuIlyEYQYy5r3iToEVrIgZYwufzsseCUNyycdrjlCm3RUg==, tarball: file:../tarballs/potential-guide-objective-pilot-0.2.0-rc.0.tgz}
+    version: 0.2.0-rc.0
+    engines: {node: '>=22.13.0'}
+
+  '@potential-guide/objective-portfolio-supervisor@file:../tarballs/potential-guide-objective-portfolio-supervisor-0.4.0-rc.0.tgz':
+    resolution: {integrity: sha512-WB1iJd6OP3aS+ReQG6DDCKdZ9NzIcpGvxE59lsTTdfUGALymWlGb+bTaP9L6cAwwUD1UtgpYXRxylDtqSoC9pQ==, tarball: file:../tarballs/potential-guide-objective-portfolio-supervisor-0.4.0-rc.0.tgz}
+    version: 0.4.0-rc.0
+    engines: {node: '>=22.13.0'}
+
+  '@potential-guide/objective-regulator@file:../tarballs/potential-guide-objective-regulator-0.4.0-rc.0.tgz':
+    resolution: {integrity: sha512-2V3gX72mCpMEk7o94dnF6ql1iT0xCj/R0zac1Y8blkUSCIdOH/PkeTGKCeHC8pbSbr7JfhYeUUU/yWBjBNM10g==, tarball: file:../tarballs/potential-guide-objective-regulator-0.4.0-rc.0.tgz}
+    version: 0.4.0-rc.0
+    engines: {node: '>=22.13.0'}
+
+  '@potential-guide/pguide-agents@file:../tarballs/potential-guide-pguide-agents-0.1.0.tgz':
+    resolution: {integrity: sha512-jk/20WQCQedvz/1V+q/r8Q2kOo/ooc7or6DEtYSbsehcAbP2aDq5h9eI1MpmNs3y2I72ur4QnazSWxFqwHEWhg==, tarball: file:../tarballs/potential-guide-pguide-agents-0.1.0.tgz}
+    version: 0.1.0
+    engines: {node: '>=22.13.0'}
+    hasBin: true
+
+  '@potential-guide/pguide-config@file:../tarballs/potential-guide-pguide-config-0.3.0-rc.0.tgz':
+    resolution: {integrity: sha512-4AcOTqh2yhmLWrQPtqhs7NkiqDOXEjAmf2l1+ChTlTNTU4rsxcMdkuL1i2d21kjzoF+zODGWlLqzibrbzmIswA==, tarball: file:../tarballs/potential-guide-pguide-config-0.3.0-rc.0.tgz}
+    version: 0.3.0-rc.0
+    engines: {node: '>=22.13.0'}
+    hasBin: true
+
+  '@potential-guide/pguide-objectives@file:../tarballs/potential-guide-pguide-objectives-0.4.0-rc.0.tgz':
+    resolution: {integrity: sha512-wA8/fF5G0n33sHCxz0wgr0glhHJ9c/n5hFZAWmNSrTuyUS+FDd7KpvT/C5+SxqfFcTpoAdeyWz7srK9KEQhgiA==, tarball: file:../tarballs/potential-guide-pguide-objectives-0.4.0-rc.0.tgz}
+    version: 0.4.0-rc.0
+    engines: {node: '>=22.13.0'}
+    hasBin: true
+
+  '@potential-guide/pguide-pilot@file:../tarballs/potential-guide-pguide-pilot-0.4.0-rc.0.tgz':
+    resolution: {integrity: sha512-8HJbevgfIdvXBUnJl1oWnKJshJrIwjIPzXsu8ltAr+QOxYj62aOL146xz+3LDSepLB+jHYNrnf360b4D/KBS6g==, tarball: file:../tarballs/potential-guide-pguide-pilot-0.4.0-rc.0.tgz}
+    version: 0.4.0-rc.0
+    engines: {node: '>=22.13.0'}
+    hasBin: true
+
+  '@potential-guide/pguide-regulate@file:../tarballs/potential-guide-pguide-regulate-0.4.0-rc.0.tgz':
+    resolution: {integrity: sha512-CIbMi9xKYt1+GllOIj1ycFjEUaBLtTvBBoZNZJ1FY5olOevB04pVLM5vpt3tp0REk6bAPBCWtrvbiUtO6iYEkQ==, tarball: file:../tarballs/potential-guide-pguide-regulate-0.4.0-rc.0.tgz}
+    version: 0.4.0-rc.0
+    engines: {node: '>=22.13.0'}
+    hasBin: true
+
+  '@potential-guide/pguide-supervise@file:../tarballs/potential-guide-pguide-supervise-0.4.0-rc.0.tgz':
+    resolution: {integrity: sha512-ittWeuawa68lc+63d9VZMGkxCX09iZ4rW4ZA+aZy6Ifkn2gvantmH5B99zCIHSjbf62M1Vu0tCk4ZVSE7uIDaw==, tarball: file:../tarballs/potential-guide-pguide-supervise-0.4.0-rc.0.tgz}
+    version: 0.4.0-rc.0
+    engines: {node: '>=22.13.0'}
+    hasBin: true
+
+  '@potential-guide/pilot-protocol@file:../tarballs/potential-guide-pilot-protocol-0.1.0-rc.0.tgz':
+    resolution: {integrity: sha512-4i7p5gHpMl9WN1AXtlKsaMr5qhFFNlz/i7vNEuX80gF04C/uPWE90ZD+BKNecilQF9ng0B7JO0Dnk1InbciyvQ==, tarball: file:../tarballs/potential-guide-pilot-protocol-0.1.0-rc.0.tgz}
+    version: 0.1.0-rc.0
+    engines: {node: '>=22.13.0'}
+    hasBin: true
+
+  '@potential-guide/regulation-coordinator@file:../tarballs/potential-guide-regulation-coordinator-0.1.0-rc.0.tgz':
+    resolution: {integrity: sha512-HF/az1ADzGmgsiKf4jXgE04tz84TfRMArG/v1X8c2bqXqMElHBxIQAordhI2HGm3HxSEyB6oywqMLDhb4OuQUQ==, tarball: file:../tarballs/potential-guide-regulation-coordinator-0.1.0-rc.0.tgz}
+    version: 0.1.0-rc.0
+    engines: {node: '>=22.13.0'}
+
+  ajv@8.20.0:
+    resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
+
+  cross-spawn@7.0.6:
+    resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
+    engines: {node: '>= 8'}
+
+  effect@4.0.2:
+    resolution: {integrity: sha512-YeYnLqSFrL4+tCOXRrfNP03w8FILoF/wDl+ukraJAGzXrjcS383W7LAAvGBbLatEyktmLxRq+9xJinx7QzXW5A==}
+
+  fast-deep-equal@3.1.3:
+    resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
+
+  fast-uri@3.1.9:
+    resolution: {integrity: sha512-hS/0Wt3Ya043oKXs0sIxrMpKQITXhMLIrVAKKXi4gozGC9v7YRWVnXIZzjNPTO02M9BdxLCWqK1yRXgNziVyJQ==}
+
+  isexe@2.0.0:
+    resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
+
+  json-schema-traverse@1.0.0:
+    resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
+
+  json-schema-typed@9.0.0:
+    resolution: {integrity: sha512-t+dkn3pLaz7ku3ELaBKBSQNjd0Sir5zR7Y4CpAR5a+UEH60NefBEAhAgJuWqDH5o4HDfH+EQjmXeQMLc+Xnbdg==}
+
+  jsonata@2.1.0:
+    resolution: {integrity: sha512-OCzaRMK8HobtX8fp37uIVmL8CY1IGc/a6gLsDqz3quExFR09/U78HUzWYr7T31UEB6+Eu0/8dkVD5fFDOl9a8w==}
+    engines: {node: '>= 8'}
+
+  path-key@3.1.1:
+    resolution: {integrity: sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==}
+    engines: {node: '>=8'}
+
+  pguide@file:../tarballs/pguide-0.4.0-rc.0.tgz:
+    resolution: {integrity: sha512-PJECfeK+gFae1D09iPbh+36FEUyDUiY23ZUKuxlE+IoZxkDuVhrWowX/j7Npimdyze3irH2B3pD6eJmkX5r2xA==, tarball: file:../tarballs/pguide-0.4.0-rc.0.tgz}
+    version: 0.4.0-rc.0
+    engines: {node: '>=22.13.0'}
+    hasBin: true
+
+  require-from-string@2.0.2:
+    resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
+    engines: {node: '>=0.10.0'}
+
+  shebang-command@2.0.0:
+    resolution: {integrity: sha512-kHxr2zZpYtdmrN1qDjrrX/Z1rR1kG8Dx+gkpK1G4eXmvXswmcE1hTWBWYUzlraYw1/yZp6YuDY77YtvbN0dmDA==}
+    engines: {node: '>=8'}
+
+  shebang-regex@3.0.0:
+    resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
+    engines: {node: '>=8'}
+
+  which@2.0.2:
+    resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
+    engines: {node: '>= 8'}
+    hasBin: true
+
+  yaml@2.9.1:
+    resolution: {integrity: sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
+snapshots:
+
+  '@microsoft/agent-host-protocol@1.0.0': {}
+
+  '@potential-guide/cli-core@file:../tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz':
+    dependencies:
+      '@microsoft/agent-host-protocol': 1.0.0
+      yaml: 2.9.1
+
+  '@potential-guide/cli-runtime@file:../tarballs/potential-guide-cli-runtime-0.1.0-rc.0.tgz':
+    dependencies:
+      '@potential-guide/cli-core': file:../tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz
+      '@potential-guide/effects': file:../tarballs/potential-guide-effects-0.1.0-rc.0.tgz
+      '@potential-guide/git-source': file:../tarballs/potential-guide-git-source-0.1.0-rc.0.tgz
+      '@potential-guide/objective-pilot': file:../tarballs/potential-guide-objective-pilot-0.2.0-rc.0.tgz
+      '@potential-guide/pilot-protocol': file:../tarballs/potential-guide-pilot-protocol-0.1.0-rc.0.tgz
+
+  '@potential-guide/effects@file:../tarballs/potential-guide-effects-0.1.0-rc.0.tgz':
+    dependencies:
+      effect: 4.0.2
+
+  '@potential-guide/git-source@file:../tarballs/potential-guide-git-source-0.1.0-rc.0.tgz':
+    dependencies:
+      '@potential-guide/effects': file:../tarballs/potential-guide-effects-0.1.0-rc.0.tgz
+
+  '@potential-guide/objective-declarations@file:../tarballs/potential-guide-objective-declarations-0.1.0-rc.0.tgz':
+    dependencies:
+      '@potential-guide/cli-core': file:../tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz
+      '@potential-guide/pilot-protocol': file:../tarballs/potential-guide-pilot-protocol-0.1.0-rc.0.tgz
+
+  '@potential-guide/objective-pilot@file:../tarballs/potential-guide-objective-pilot-0.2.0-rc.0.tgz':
+    dependencies:
+      '@potential-guide/effects': file:../tarballs/potential-guide-effects-0.1.0-rc.0.tgz
+      '@potential-guide/pilot-protocol': file:../tarballs/potential-guide-pilot-protocol-0.1.0-rc.0.tgz
+
+  '@potential-guide/objective-portfolio-supervisor@file:../tarballs/potential-guide-objective-portfolio-supervisor-0.4.0-rc.0.tgz':
+    dependencies:
+      '@potential-guide/effects': file:../tarballs/potential-guide-effects-0.1.0-rc.0.tgz
+      '@potential-guide/objective-pilot': file:../tarballs/potential-guide-objective-pilot-0.2.0-rc.0.tgz
+      '@potential-guide/objective-regulator': file:../tarballs/potential-guide-objective-regulator-0.4.0-rc.0.tgz
+
+  '@potential-guide/objective-regulator@file:../tarballs/potential-guide-objective-regulator-0.4.0-rc.0.tgz':
+    dependencies:
+      '@potential-guide/effects': file:../tarballs/potential-guide-effects-0.1.0-rc.0.tgz
+      '@potential-guide/objective-pilot': file:../tarballs/potential-guide-objective-pilot-0.2.0-rc.0.tgz
+
+  '@potential-guide/pguide-agents@file:../tarballs/potential-guide-pguide-agents-0.1.0.tgz':
+    dependencies:
+      '@potential-guide/cli-core': file:../tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz
+      cross-spawn: 7.0.6
+      yaml: 2.9.1
+
+  '@potential-guide/pguide-config@file:../tarballs/potential-guide-pguide-config-0.3.0-rc.0.tgz':
+    dependencies:
+      '@potential-guide/cli-core': file:../tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz
+      cross-spawn: 7.0.6
+      yaml: 2.9.1
+
+  '@potential-guide/pguide-objectives@file:../tarballs/potential-guide-pguide-objectives-0.4.0-rc.0.tgz':
+    dependencies:
+      '@potential-guide/cli-core': file:../tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz
+      '@potential-guide/objective-declarations': file:../tarballs/potential-guide-objective-declarations-0.1.0-rc.0.tgz
+
+  '@potential-guide/pguide-pilot@file:../tarballs/potential-guide-pguide-pilot-0.4.0-rc.0.tgz':
+    dependencies:
+      '@potential-guide/cli-core': file:../tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz
+      '@potential-guide/cli-runtime': file:../tarballs/potential-guide-cli-runtime-0.1.0-rc.0.tgz
+      '@potential-guide/effects': file:../tarballs/potential-guide-effects-0.1.0-rc.0.tgz
+      '@potential-guide/objective-declarations': file:../tarballs/potential-guide-objective-declarations-0.1.0-rc.0.tgz
+      '@potential-guide/objective-pilot': file:../tarballs/potential-guide-objective-pilot-0.2.0-rc.0.tgz
+      '@potential-guide/pilot-protocol': file:../tarballs/potential-guide-pilot-protocol-0.1.0-rc.0.tgz
+
+  '@potential-guide/pguide-regulate@file:../tarballs/potential-guide-pguide-regulate-0.4.0-rc.0.tgz':
+    dependencies:
+      '@potential-guide/cli-core': file:../tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz
+      '@potential-guide/cli-runtime': file:../tarballs/potential-guide-cli-runtime-0.1.0-rc.0.tgz
+      '@potential-guide/effects': file:../tarballs/potential-guide-effects-0.1.0-rc.0.tgz
+      '@potential-guide/objective-declarations': file:../tarballs/potential-guide-objective-declarations-0.1.0-rc.0.tgz
+      '@potential-guide/objective-pilot': file:../tarballs/potential-guide-objective-pilot-0.2.0-rc.0.tgz
+      '@potential-guide/objective-regulator': file:../tarballs/potential-guide-objective-regulator-0.4.0-rc.0.tgz
+
+  '@potential-guide/pguide-supervise@file:../tarballs/potential-guide-pguide-supervise-0.4.0-rc.0.tgz':
+    dependencies:
+      '@potential-guide/cli-core': file:../tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz
+      '@potential-guide/cli-runtime': file:../tarballs/potential-guide-cli-runtime-0.1.0-rc.0.tgz
+      '@potential-guide/effects': file:../tarballs/potential-guide-effects-0.1.0-rc.0.tgz
+      '@potential-guide/objective-pilot': file:../tarballs/potential-guide-objective-pilot-0.2.0-rc.0.tgz
+      '@potential-guide/objective-portfolio-supervisor': file:../tarballs/potential-guide-objective-portfolio-supervisor-0.4.0-rc.0.tgz
+      '@potential-guide/objective-regulator': file:../tarballs/potential-guide-objective-regulator-0.4.0-rc.0.tgz
+      '@potential-guide/pguide-regulate': file:../tarballs/potential-guide-pguide-regulate-0.4.0-rc.0.tgz
+
+  '@potential-guide/pilot-protocol@file:../tarballs/potential-guide-pilot-protocol-0.1.0-rc.0.tgz':
+    dependencies:
+      ajv: 8.20.0
+      json-schema-typed: 9.0.0
+      jsonata: 2.1.0
+      yaml: 2.9.1
+
+  '@potential-guide/regulation-coordinator@file:../tarballs/potential-guide-regulation-coordinator-0.1.0-rc.0.tgz':
+    dependencies:
+      '@potential-guide/effects': file:../tarballs/potential-guide-effects-0.1.0-rc.0.tgz
+      '@potential-guide/objective-pilot': file:../tarballs/potential-guide-objective-pilot-0.2.0-rc.0.tgz
+      '@potential-guide/objective-portfolio-supervisor': file:../tarballs/potential-guide-objective-portfolio-supervisor-0.4.0-rc.0.tgz
+      '@potential-guide/objective-regulator': file:../tarballs/potential-guide-objective-regulator-0.4.0-rc.0.tgz
+
+  ajv@8.20.0:
+    dependencies:
+      fast-deep-equal: 3.1.3
+      fast-uri: 3.1.9
+      json-schema-traverse: 1.0.0
+      require-from-string: 2.0.2
+
+  cross-spawn@7.0.6:
+    dependencies:
+      path-key: 3.1.1
+      shebang-command: 2.0.0
+      which: 2.0.2
+
+  effect@4.0.2: {}
+
+  fast-deep-equal@3.1.3: {}
+
+  fast-uri@3.1.9: {}
+
+  isexe@2.0.0: {}
+
+  json-schema-traverse@1.0.0: {}
+
+  json-schema-typed@9.0.0: {}
+
+  jsonata@2.1.0: {}
+
+  path-key@3.1.1: {}
+
+  pguide@file:../tarballs/pguide-0.4.0-rc.0.tgz:
+    dependencies:
+      '@potential-guide/cli-core': file:../tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz
+      '@potential-guide/pguide-agents': file:../tarballs/potential-guide-pguide-agents-0.1.0.tgz
+      '@potential-guide/pguide-config': file:../tarballs/potential-guide-pguide-config-0.3.0-rc.0.tgz
+      '@potential-guide/pguide-objectives': file:../tarballs/potential-guide-pguide-objectives-0.4.0-rc.0.tgz
+      '@potential-guide/pguide-pilot': file:../tarballs/potential-guide-pguide-pilot-0.4.0-rc.0.tgz
+      cross-spawn: 7.0.6
+
+  require-from-string@2.0.2: {}
+
+  shebang-command@2.0.0:
+    dependencies:
+      shebang-regex: 3.0.0
+
+  shebang-regex@3.0.0: {}
+
+  which@2.0.2:
+    dependencies:
+      isexe: 2.0.0
+
+  yaml@2.9.1: {}

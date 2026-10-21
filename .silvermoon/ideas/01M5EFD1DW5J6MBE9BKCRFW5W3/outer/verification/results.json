@@ -1,0 +1,988 @@
+{
+  "sourceCommit": "682311db15c41344232a5d3f5cd806d5750779d5",
+  "fixtureCommit": "6d74db73a54386a5253fa848c12416ffbc342186",
+  "matrixTree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+  "matrix": [
+    {
+      "passed": 0,
+      "current": "initial",
+      "invoked": [
+        "c1"
+      ],
+      "observation": {
+        "current": {
+          "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+          "levelId": "initial"
+        },
+        "problems": [
+          {
+            "kind": "internal",
+            "ref": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+              "levelId": "prepared",
+              "checkId": "c1",
+              "problemId": "blocked"
+            },
+            "parameters": {}
+          }
+        ],
+        "gapSummary": "Consumer fixture levels/prepared/checks/c1/problems/blocked",
+        "observedAt": "2026-10-21T07:39:32.923Z",
+        "versions": {
+          "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+        },
+        "sources": {
+          "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+            "kind": "git-tree",
+            "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+            "directory": "matrix",
+            "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+            "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+            "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+          }
+        }
+      }
+    },
+    {
+      "passed": 1,
+      "current": "prepared",
+      "invoked": [
+        "c1",
+        "c2"
+      ],
+      "observation": {
+        "current": {
+          "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+          "levelId": "prepared"
+        },
+        "problems": [
+          {
+            "kind": "internal",
+            "ref": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+              "levelId": "ready",
+              "checkId": "c2",
+              "problemId": "blocked"
+            },
+            "parameters": {}
+          }
+        ],
+        "gapSummary": "Consumer fixture levels/ready/checks/c2/problems/blocked",
+        "observedAt": "2026-10-21T07:39:38.076Z",
+        "versions": {
+          "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+        },
+        "sources": {
+          "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+            "kind": "git-tree",
+            "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+            "directory": "matrix",
+            "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+            "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+            "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+          }
+        }
+      }
+    },
+    {
+      "passed": 2,
+      "current": "ready",
+      "invoked": [
+        "c1",
+        "c2",
+        "c3"
+      ],
+      "observation": {
+        "current": {
+          "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+          "levelId": "ready"
+        },
+        "problems": [
+          {
+            "kind": "internal",
+            "ref": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+              "levelId": "verified",
+              "checkId": "c3",
+              "problemId": "blocked"
+            },
+            "parameters": {}
+          }
+        ],
+        "gapSummary": "Consumer fixture levels/verified/checks/c3/problems/blocked",
+        "observedAt": "2026-10-21T07:39:44.682Z",
+        "versions": {
+          "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+        },
+        "sources": {
+          "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+            "kind": "git-tree",
+            "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+            "directory": "matrix",
+            "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+            "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+            "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+          }
+        }
+      }
+    },
+    {
+      "passed": 3,
+      "current": "verified",
+      "invoked": [
+        "c1",
+        "c2",
+        "c3"
+      ],
+      "observation": {
+        "current": {
+          "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+          "levelId": "verified"
+        },
+        "problems": [],
+        "gapSummary": "",
+        "observedAt": "2026-10-21T07:39:49.241Z",
+        "versions": {
+          "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+        },
+        "sources": {
+          "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+            "kind": "git-tree",
+            "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+            "directory": "matrix",
+            "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+            "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+            "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+          }
+        }
+      }
+    }
+  ],
+  "api": [
+    {
+      "passed": 0,
+      "target": "verified",
+      "result": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "passed": false,
+          "observation": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+              "levelId": "initial"
+            },
+            "problems": [
+              {
+                "kind": "internal",
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+                  "levelId": "prepared",
+                  "checkId": "c1",
+                  "problemId": "blocked"
+                },
+                "parameters": {}
+              }
+            ],
+            "gapSummary": "Consumer fixture levels/prepared/checks/c1/problems/blocked",
+            "observedAt": "2026-10-21T07:39:50.532Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+                "directory": "matrix",
+                "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+                "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+                "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "passed": 0,
+      "target": "terminal",
+      "result": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "passed": false,
+          "observation": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+              "levelId": "initial"
+            },
+            "problems": [
+              {
+                "kind": "internal",
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+                  "levelId": "prepared",
+                  "checkId": "c1",
+                  "problemId": "blocked"
+                },
+                "parameters": {}
+              }
+            ],
+            "gapSummary": "Consumer fixture levels/prepared/checks/c1/problems/blocked",
+            "observedAt": "2026-10-21T07:39:50.682Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+                "directory": "matrix",
+                "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+                "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+                "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "passed": 1,
+      "target": "verified",
+      "result": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "passed": false,
+          "observation": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+              "levelId": "prepared"
+            },
+            "problems": [
+              {
+                "kind": "internal",
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+                  "levelId": "ready",
+                  "checkId": "c2",
+                  "problemId": "blocked"
+                },
+                "parameters": {}
+              }
+            ],
+            "gapSummary": "Consumer fixture levels/ready/checks/c2/problems/blocked",
+            "observedAt": "2026-10-21T07:39:50.980Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+                "directory": "matrix",
+                "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+                "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+                "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "passed": 1,
+      "target": "terminal",
+      "result": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "passed": false,
+          "observation": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+              "levelId": "prepared"
+            },
+            "problems": [
+              {
+                "kind": "internal",
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+                  "levelId": "ready",
+                  "checkId": "c2",
+                  "problemId": "blocked"
+                },
+                "parameters": {}
+              }
+            ],
+            "gapSummary": "Consumer fixture levels/ready/checks/c2/problems/blocked",
+            "observedAt": "2026-10-21T07:39:51.273Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+                "directory": "matrix",
+                "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+                "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+                "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "passed": 2,
+      "target": "verified",
+      "result": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "passed": false,
+          "observation": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+              "levelId": "ready"
+            },
+            "problems": [
+              {
+                "kind": "internal",
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+                  "levelId": "verified",
+                  "checkId": "c3",
+                  "problemId": "blocked"
+                },
+                "parameters": {}
+              }
+            ],
+            "gapSummary": "Consumer fixture levels/verified/checks/c3/problems/blocked",
+            "observedAt": "2026-10-21T07:39:51.710Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+                "directory": "matrix",
+                "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+                "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+                "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "passed": 2,
+      "target": "terminal",
+      "result": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "passed": false,
+          "observation": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+              "levelId": "ready"
+            },
+            "problems": [
+              {
+                "kind": "internal",
+                "ref": {
+                  "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+                  "levelId": "verified",
+                  "checkId": "c3",
+                  "problemId": "blocked"
+                },
+                "parameters": {}
+              }
+            ],
+            "gapSummary": "Consumer fixture levels/verified/checks/c3/problems/blocked",
+            "observedAt": "2026-10-21T07:39:52.136Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+                "directory": "matrix",
+                "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+                "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+                "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "passed": 3,
+      "target": "verified",
+      "result": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "passed": true,
+          "observation": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+              "levelId": "verified"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-21T07:39:52.570Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+                "directory": "matrix",
+                "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+                "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+                "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "passed": 3,
+      "target": "terminal",
+      "result": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "passed": true,
+          "observation": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+              "levelId": "verified"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-21T07:39:53.000Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+                "directory": "matrix",
+                "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+                "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+                "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "target": "initial",
+      "result": {
+        "stopReason": "target-reached",
+        "iterations": 0,
+        "latestObservation": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+              "levelId": "initial"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-21T07:39:53.009Z",
+            "versions": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+            },
+            "sources": {
+              "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+                "kind": "git-tree",
+                "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+                "directory": "matrix",
+                "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+                "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+                "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+              }
+            }
+          }
+        },
+        "stalledRuns": 0
+      },
+      "agentRuns": 0,
+      "businessChecks": 0,
+      "invalidSubjectRejected": true
+    }
+  ],
+  "initialCli": {
+    "schemaVersion": 2,
+    "regulationId": "835dbc64-111e-4698-9f11-4e31fc9c8713",
+    "status": "target-reached",
+    "outcome": {
+      "stopReason": "target-reached",
+      "iterations": 0,
+      "latestObservation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+            "levelId": "initial"
+          },
+          "problems": [],
+          "gapSummary": "",
+          "observedAt": "2026-10-21T07:39:57.169Z",
+          "versions": {
+            "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+          },
+          "sources": {
+            "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+              "kind": "git-tree",
+              "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+              "directory": "matrix",
+              "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+              "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+              "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+            }
+          }
+        }
+      },
+      "stalledRuns": 0
+    },
+    "attempts": [
+      {
+        "id": "04655423-187c-4312-8eaf-2d270624f045",
+        "startedAt": "2026-10-21T07:39:57.153Z",
+        "observations": [
+          {
+            "status": 200,
+            "message": "",
+            "payload": {
+              "current": {
+                "objectiveId": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+                "levelId": "initial"
+              },
+              "problems": [],
+              "gapSummary": "",
+              "observedAt": "2026-10-21T07:39:57.169Z",
+              "versions": {
+                "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": "f4630216d2a52016d1b7d3e3c2897b11544e9c39"
+              },
+              "sources": {
+                "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/": {
+                  "kind": "git-tree",
+                  "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+                  "directory": "matrix",
+                  "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+                  "tree": "f4630216d2a52016d1b7d3e3c2897b11544e9c39",
+                  "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+                }
+              }
+            }
+          }
+        ],
+        "actions": [],
+        "resumeMode": "not-needed",
+        "permissions": {
+          "ceiling": [],
+          "grants": []
+        },
+        "status": "target-reached",
+        "completedAt": "2026-10-21T07:39:57.178Z"
+      }
+    ],
+    "recovery": {
+      "command": "pguide continue 835dbc64-111e-4698-9f11-4e31fc9c8713"
+    }
+  },
+  "migrations": {
+    "input": {
+      "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/objective/v1.json",
+      "subjectSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "passed",
+          "calls"
+        ],
+        "properties": {
+          "passed": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "calls": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "levels": [
+        {
+          "id": "initial",
+          "checks": [
+            {
+              "id": "c1",
+              "problems": [
+                "blocked"
+              ]
+            }
+          ]
+        }
+      ],
+      "defaultLanguage": "en-US",
+      "languages": [
+        "en-US"
+      ]
+    },
+    "output": {
+      "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json",
+      "subjectSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "passed",
+          "calls"
+        ],
+        "properties": {
+          "passed": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "calls": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "levels": [
+        {
+          "id": "prepared",
+          "checks": [
+            {
+              "id": "c1",
+              "problems": [
+                "blocked"
+              ]
+            }
+          ]
+        }
+      ],
+      "defaultLanguage": "en-US",
+      "languages": [
+        "en-US"
+      ]
+    },
+    "legacyHash": "93ecfcf9d94292df0fd3cd8e927e7b89b808dd4738c22205d5c8c0a386262ff0",
+    "migratedHash": "8d26be5453ee71829061148027521fda946d1c9ae516b0b3053bb8d14dc567a3",
+    "portfolioHash": "e4514c9b008af1aed98c2248a68e84a549da06506325f9baf69fa67bdc372787",
+    "recoveryHash": "896cc54a208782fd0bd58bbe5f5afc21d3cc8ae9f9f0a3b71477d93230378d5c",
+    "pinned": {
+      "objective": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#legacy-v1/",
+      "revision": "6d74db73a54386a5253fa848c12416ffbc342186",
+      "targetLevel": "terminal",
+      "subject": {
+        "passed": 3,
+        "calls": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\calls\\legacy.txt"
+      },
+      "objectiveCommit": "6d74db73a54386a5253fa848c12416ffbc342186",
+      "objectiveTree": "5b780b0927e3c56d38486841fae87616a789e09f"
+    },
+    "recovery": {
+      "schemaVersion": 3,
+      "regulationId": "11111111-1111-4111-8111-111111111111",
+      "createdAt": "2026-10-21T07:39:57.144Z",
+      "objectiveUri": "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#legacy-v1/",
+      "objectiveCommit": "6d74db73a54386a5253fa848c12416ffbc342186",
+      "objectiveTree": "5b780b0927e3c56d38486841fae87616a789e09f",
+      "objectiveSource": {
+        "kind": "git-tree",
+        "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+        "directory": "legacy-v1",
+        "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+        "tree": "5b780b0927e3c56d38486841fae87616a789e09f",
+        "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+      },
+      "sourceBindings": {
+        "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#legacy-v1/": {
+          "kind": "git-tree",
+          "repository": "file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture",
+          "directory": "legacy-v1",
+          "commit": "6d74db73a54386a5253fa848c12416ffbc342186",
+          "tree": "5b780b0927e3c56d38486841fae87616a789e09f",
+          "repositoryTree": "f6300b048efe8ccf70d793861d1e38ef6a299c9a"
+        }
+      },
+      "subject": {
+        "passed": 0,
+        "calls": "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\calls\\cli-initial.txt"
+      },
+      "subjectDigest": "a98a9aba2f6ddca8d5dd08a360c4fa31e2511f3a4c4fddc909116fea1be53b80",
+      "targetLevel": "terminal",
+      "agentName": "$intrinsic-initial",
+      "agentProfile": {
+        "type": "acp",
+        "connection": {
+          "protocolVersion": "1"
+        },
+        "transport": {
+          "type": "stdio",
+          "command": "C:\\nvm4w\\nodejs\\node.exe",
+          "args": [
+            "-e",
+            "throw new Error('initial must never execute an Agent')"
+          ]
+        }
+      },
+      "agentExecutionLimits": {
+        "timeoutMs": 1800000
+      },
+      "regulationStrategy": {
+        "quota": {
+          "timeoutMs": 300000,
+          "maxAgentRuns": 10,
+          "maxStallRuns": 3
+        }
+      },
+      "attempts": [],
+      "permissions": {
+        "ceiling": [],
+        "grants": []
+      },
+      "history": {
+        "stalledRuns": 0
+      }
+    },
+    "originalsUnchanged": true
+  },
+  "installedPackages": 33,
+  "resolvedModulePaths": 501,
+  "isolationEscapes": 0,
+  "reports": [
+    {
+      "label": "probe-0",
+      "command": "pguide-probe",
+      "args": [
+        "--pilot",
+        "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+        "--revision",
+        "6d74db73a54386a5253fa848c12416ffbc342186",
+        "--subject-file",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\subject-0.json",
+        "--no-reports"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"status\": 200,\n  \"message\": \"\",\n  \"payload\": {\n    \"current\": {\n      \"objectiveId\": \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\",\n      \"levelId\": \"initial\"\n    },\n    \"problems\": [\n      {\n        \"kind\": \"internal\",\n        \"ref\": {\n          \"objectiveId\": \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\",\n          \"levelId\": \"prepared\",\n          \"checkId\": \"c1\",\n          \"problemId\": \"blocked\"\n        },\n        \"parameters\": {}\n      }\n    ],\n    \"gapSummary\": \"Consumer fixture levels/prepared/checks/c1/problems/blocked\",\n    \"observedAt\": \"2026-10-21T07:39:32.923Z\",\n    \"versions\": {\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\"\n    },\n    \"sources\": {\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": {\n        \"kind\": \"git-tree\",\n        \"repository\": \"file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture\",\n        \"directory\": \"matrix\",\n        \"commit\": \"6d74db73a54386a5253fa848c12416ffbc342186\",\n        \"tree\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\",\n        \"repositoryTree\": \"f6300b048efe8ccf70d793861d1e38ef6a299c9a\"\n      }\n    }\n  }\n}\n",
+      "stderr": ""
+    },
+    {
+      "label": "probe-1",
+      "command": "pguide-probe",
+      "args": [
+        "--pilot",
+        "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+        "--revision",
+        "6d74db73a54386a5253fa848c12416ffbc342186",
+        "--subject-file",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\subject-1.json",
+        "--no-reports"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"status\": 200,\n  \"message\": \"\",\n  \"payload\": {\n    \"current\": {\n      \"objectiveId\": \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\",\n      \"levelId\": \"prepared\"\n    },\n    \"problems\": [\n      {\n        \"kind\": \"internal\",\n        \"ref\": {\n          \"objectiveId\": \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\",\n          \"levelId\": \"ready\",\n          \"checkId\": \"c2\",\n          \"problemId\": \"blocked\"\n        },\n        \"parameters\": {}\n      }\n    ],\n    \"gapSummary\": \"Consumer fixture levels/ready/checks/c2/problems/blocked\",\n    \"observedAt\": \"2026-10-21T07:39:38.076Z\",\n    \"versions\": {\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\"\n    },\n    \"sources\": {\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": {\n        \"kind\": \"git-tree\",\n        \"repository\": \"file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture\",\n        \"directory\": \"matrix\",\n        \"commit\": \"6d74db73a54386a5253fa848c12416ffbc342186\",\n        \"tree\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\",\n        \"repositoryTree\": \"f6300b048efe8ccf70d793861d1e38ef6a299c9a\"\n      }\n    }\n  }\n}\n",
+      "stderr": ""
+    },
+    {
+      "label": "probe-2",
+      "command": "pguide-probe",
+      "args": [
+        "--pilot",
+        "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+        "--revision",
+        "6d74db73a54386a5253fa848c12416ffbc342186",
+        "--subject-file",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\subject-2.json",
+        "--no-reports"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"status\": 200,\n  \"message\": \"\",\n  \"payload\": {\n    \"current\": {\n      \"objectiveId\": \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\",\n      \"levelId\": \"ready\"\n    },\n    \"problems\": [\n      {\n        \"kind\": \"internal\",\n        \"ref\": {\n          \"objectiveId\": \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\",\n          \"levelId\": \"verified\",\n          \"checkId\": \"c3\",\n          \"problemId\": \"blocked\"\n        },\n        \"parameters\": {}\n      }\n    ],\n    \"gapSummary\": \"Consumer fixture levels/verified/checks/c3/problems/blocked\",\n    \"observedAt\": \"2026-10-21T07:39:44.682Z\",\n    \"versions\": {\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\"\n    },\n    \"sources\": {\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": {\n        \"kind\": \"git-tree\",\n        \"repository\": \"file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture\",\n        \"directory\": \"matrix\",\n        \"commit\": \"6d74db73a54386a5253fa848c12416ffbc342186\",\n        \"tree\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\",\n        \"repositoryTree\": \"f6300b048efe8ccf70d793861d1e38ef6a299c9a\"\n      }\n    }\n  }\n}\n",
+      "stderr": ""
+    },
+    {
+      "label": "probe-3",
+      "command": "pguide-probe",
+      "args": [
+        "--pilot",
+        "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+        "--revision",
+        "6d74db73a54386a5253fa848c12416ffbc342186",
+        "--subject-file",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\subject-3.json",
+        "--no-reports"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"status\": 200,\n  \"message\": \"\",\n  \"payload\": {\n    \"current\": {\n      \"objectiveId\": \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\",\n      \"levelId\": \"verified\"\n    },\n    \"problems\": [],\n    \"gapSummary\": \"\",\n    \"observedAt\": \"2026-10-21T07:39:49.241Z\",\n    \"versions\": {\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\"\n    },\n    \"sources\": {\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": {\n        \"kind\": \"git-tree\",\n        \"repository\": \"file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture\",\n        \"directory\": \"matrix\",\n        \"commit\": \"6d74db73a54386a5253fa848c12416ffbc342186\",\n        \"tree\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\",\n        \"repositoryTree\": \"f6300b048efe8ccf70d793861d1e38ef6a299c9a\"\n      }\n    }\n  }\n}\n",
+      "stderr": ""
+    },
+    {
+      "label": "initial-no-agent",
+      "command": "pguide-regulate",
+      "args": [
+        "--pilot",
+        "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+        "--revision",
+        "6d74db73a54386a5253fa848c12416ffbc342186",
+        "--subject-file",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\initial-subject.json",
+        "--target",
+        "initial"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"schemaVersion\": 2,\n  \"regulationId\": \"835dbc64-111e-4698-9f11-4e31fc9c8713\",\n  \"status\": \"target-reached\",\n  \"outcome\": {\n    \"stopReason\": \"target-reached\",\n    \"iterations\": 0,\n    \"latestObservation\": {\n      \"status\": 200,\n      \"message\": \"\",\n      \"payload\": {\n        \"current\": {\n          \"objectiveId\": \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\",\n          \"levelId\": \"initial\"\n        },\n        \"problems\": [],\n        \"gapSummary\": \"\",\n        \"observedAt\": \"2026-10-21T07:39:57.169Z\",\n        \"versions\": {\n          \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\"\n        },\n        \"sources\": {\n          \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": {\n            \"kind\": \"git-tree\",\n            \"repository\": \"file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture\",\n            \"directory\": \"matrix\",\n            \"commit\": \"6d74db73a54386a5253fa848c12416ffbc342186\",\n            \"tree\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\",\n            \"repositoryTree\": \"f6300b048efe8ccf70d793861d1e38ef6a299c9a\"\n          }\n        }\n      }\n    },\n    \"stalledRuns\": 0\n  },\n  \"attempts\": [\n    {\n      \"id\": \"04655423-187c-4312-8eaf-2d270624f045\",\n      \"startedAt\": \"2026-10-21T07:39:57.153Z\",\n      \"observations\": [\n        {\n          \"status\": 200,\n          \"message\": \"\",\n          \"payload\": {\n            \"current\": {\n              \"objectiveId\": \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\",\n              \"levelId\": \"initial\"\n            },\n            \"problems\": [],\n            \"gapSummary\": \"\",\n            \"observedAt\": \"2026-10-21T07:39:57.169Z\",\n            \"versions\": {\n              \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\"\n            },\n            \"sources\": {\n              \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": {\n                \"kind\": \"git-tree\",\n                \"repository\": \"file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture\",\n                \"directory\": \"matrix\",\n                \"commit\": \"6d74db73a54386a5253fa848c12416ffbc342186\",\n                \"tree\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\",\n                \"repositoryTree\": \"f6300b048efe8ccf70d793861d1e38ef6a299c9a\"\n              }\n            }\n          }\n        }\n      ],\n      \"actions\": [],\n      \"resumeMode\": \"not-needed\",\n      \"permissions\": {\n        \"ceiling\": [],\n        \"grants\": []\n      },\n      \"status\": \"target-reached\",\n      \"completedAt\": \"2026-10-21T07:39:57.178Z\"\n    }\n  ],\n  \"recovery\": {\n    \"command\": \"pguide continue 835dbc64-111e-4698-9f11-4e31fc9c8713\"\n  }\n}\n",
+      "stderr": ""
+    },
+    {
+      "label": "initial-invalid-subject",
+      "command": "pguide-regulate",
+      "args": [
+        "--pilot",
+        "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/",
+        "--revision",
+        "6d74db73a54386a5253fa848c12416ffbc342186",
+        "--subject-file",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\invalid-subject.json",
+        "--target",
+        "initial"
+      ],
+      "exitCode": 2,
+      "stdout": "{\n  \"schemaVersion\": 1,\n  \"status\": \"regulation-error\",\n  \"error\": \"Invalid subject for git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/: [{\\\"instancePath\\\":\\\"/passed\\\",\\\"keyword\\\":\\\"type\\\",\\\"message\\\":\\\"must be integer\\\"}].\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "label": "dependency-2",
+      "command": "pguide-probe",
+      "args": [
+        "--pilot",
+        "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#dependent/",
+        "--revision",
+        "6d74db73a54386a5253fa848c12416ffbc342186",
+        "--subject-file",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\subject-2.json",
+        "--no-reports"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"status\": 200,\n  \"message\": \"\",\n  \"payload\": {\n    \"current\": {\n      \"objectiveId\": \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#dependent/\",\n      \"levelId\": \"initial\"\n    },\n    \"problems\": [\n      {\n        \"kind\": \"dependency\",\n        \"objectiveId\": \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\",\n        \"subject\": {\n          \"passed\": 2,\n          \"calls\": \"D:\\\\Code\\\\potential-guide.worktrees\\\\silvermoon-level-up\\\\.cache\\\\level-deploy-20261021\\\\consumer\\\\calls\\\\probe-2.txt\"\n        },\n        \"expectedLevelId\": \"terminal\",\n        \"currentLevelId\": \"ready\"\n      }\n    ],\n    \"gapSummary\": \"Dependency git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/ {\\\"passed\\\":2,\\\"calls\\\":\\\"D:\\\\\\\\Code\\\\\\\\potential-guide.worktrees\\\\\\\\silvermoon-level-up\\\\\\\\.cache\\\\\\\\level-deploy-20261021\\\\\\\\consumer\\\\\\\\calls\\\\\\\\probe-2.txt\\\"}: requires terminal, current ready.\",\n    \"observedAt\": \"2026-10-21T07:40:12.562Z\",\n    \"versions\": {\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#dependent/\": \"e31c53bce97a6cacc15c3232602ad86046d3c8ae\",\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\"\n    },\n    \"sources\": {\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#dependent/\": {\n        \"kind\": \"git-tree\",\n        \"repository\": \"file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture\",\n        \"directory\": \"dependent\",\n        \"commit\": \"6d74db73a54386a5253fa848c12416ffbc342186\",\n        \"tree\": \"e31c53bce97a6cacc15c3232602ad86046d3c8ae\",\n        \"repositoryTree\": \"f6300b048efe8ccf70d793861d1e38ef6a299c9a\"\n      },\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": {\n        \"kind\": \"git-tree\",\n        \"repository\": \"file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture\",\n        \"directory\": \"matrix\",\n        \"commit\": \"6d74db73a54386a5253fa848c12416ffbc342186\",\n        \"tree\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\",\n        \"repositoryTree\": \"f6300b048efe8ccf70d793861d1e38ef6a299c9a\"\n      }\n    }\n  }\n}\n",
+      "stderr": ""
+    },
+    {
+      "label": "dependency-3",
+      "command": "pguide-probe",
+      "args": [
+        "--pilot",
+        "git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#dependent/",
+        "--revision",
+        "6d74db73a54386a5253fa848c12416ffbc342186",
+        "--subject-file",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\subject-3.json",
+        "--no-reports"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"status\": 200,\n  \"message\": \"\",\n  \"payload\": {\n    \"current\": {\n      \"objectiveId\": \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#dependent/\",\n      \"levelId\": \"ready\"\n    },\n    \"problems\": [],\n    \"gapSummary\": \"\",\n    \"observedAt\": \"2026-10-21T07:40:23.190Z\",\n    \"versions\": {\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#dependent/\": \"e31c53bce97a6cacc15c3232602ad86046d3c8ae\",\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\"\n    },\n    \"sources\": {\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#dependent/\": {\n        \"kind\": \"git-tree\",\n        \"repository\": \"file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture\",\n        \"directory\": \"dependent\",\n        \"commit\": \"6d74db73a54386a5253fa848c12416ffbc342186\",\n        \"tree\": \"e31c53bce97a6cacc15c3232602ad86046d3c8ae\",\n        \"repositoryTree\": \"f6300b048efe8ccf70d793861d1e38ef6a299c9a\"\n      },\n      \"git+file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture#matrix/\": {\n        \"kind\": \"git-tree\",\n        \"repository\": \"file:///D:/Code/potential-guide.worktrees/silvermoon-level-up/.cache/level-deploy-20261021/consumer/objective-fixture\",\n        \"directory\": \"matrix\",\n        \"commit\": \"6d74db73a54386a5253fa848c12416ffbc342186\",\n        \"tree\": \"f4630216d2a52016d1b7d3e3c2897b11544e9c39\",\n        \"repositoryTree\": \"f6300b048efe8ccf70d793861d1e38ef6a299c9a\"\n      }\n    }\n  }\n}\n",
+      "stderr": ""
+    },
+    {
+      "label": "legacy-manifest",
+      "command": "pguide-validate",
+      "args": [
+        "pilot",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\objective-fixture\\legacy-v1"
+      ],
+      "exitCode": 2,
+      "stdout": "{\n  \"schemaVersion\": 1,\n  \"status\": \"pilot-error\",\n  \"error\": \"Invalid Objective Manifest. Expected fields: $schema, subjectSchema, levels, defaultLanguage, languages. Migrate pilot.yaml/schemaVersion/domainSchema/advancement explicitly with objective-contract-migrate; expected https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json: [{\\\"instancePath\\\":\\\"/$schema\\\",\\\"schemaPath\\\":\\\"#/properties/%24schema/const\\\",\\\"keyword\\\":\\\"const\\\",\\\"params\\\":{\\\"allowedValue\\\":\\\"https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json\\\"},\\\"message\\\":\\\"must be equal to constant\\\"},{\\\"instancePath\\\":\\\"/levels/0/id\\\",\\\"schemaPath\\\":\\\"#/properties/levels/items/properties/id/not\\\",\\\"keyword\\\":\\\"not\\\",\\\"params\\\":{},\\\"message\\\":\\\"must NOT be valid\\\"}]\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "label": "migration-needs-review",
+      "command": "objective-contract-migrate",
+      "args": [
+        "--format",
+        "manifest",
+        "--input",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\legacy-objective.json",
+        "--output",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\migrated-objective.json"
+      ],
+      "exitCode": 1,
+      "stdout": "{\"schemaVersion\":1,\"status\":\"error\",\"error\":{\"message\":\"Migration refused: Provide explicitly reviewed --attainment-levels (one attained ID per old exit-check group). Review old targets separately and reobserve all pinned evidence. Original input has not been changed.\"}}\n",
+      "stderr": ""
+    },
+    {
+      "label": "migration-explicit",
+      "command": "objective-contract-migrate",
+      "args": [
+        "--format",
+        "manifest",
+        "--input",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\legacy-objective.json",
+        "--output",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\migrated-objective.json",
+        "--attainment-levels",
+        "prepared"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"schemaVersion\":1,\"status\":\"migrated\",\"format\":\"manifest\",\"input\":\"D:\\\\Code\\\\potential-guide.worktrees\\\\silvermoon-level-up\\\\.cache\\\\level-deploy-20261021\\\\consumer\\\\legacy-objective.json\",\"output\":\"D:\\\\Code\\\\potential-guide.worktrees\\\\silvermoon-level-up\\\\.cache\\\\level-deploy-20261021\\\\consumer\\\\migrated-objective.json\",\"artifactFormat\":\"json\",\"inputUnchanged\":true,\"overwritten\":false}\n",
+      "stderr": ""
+    },
+    {
+      "label": "migration-no-overwrite",
+      "command": "objective-contract-migrate",
+      "args": [
+        "--format",
+        "manifest",
+        "--input",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\legacy-objective.json",
+        "--output",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\migrated-objective.json",
+        "--attainment-levels",
+        "prepared"
+      ],
+      "exitCode": 1,
+      "stdout": "{\"schemaVersion\":1,\"status\":\"error\",\"error\":{\"message\":\"EEXIST: file already exists, open 'D:\\\\Code\\\\potential-guide.worktrees\\\\silvermoon-level-up\\\\.cache\\\\level-deploy-20261021\\\\consumer\\\\migrated-objective.json'\"}}\n",
+      "stderr": ""
+    },
+    {
+      "label": "legacy-portfolio",
+      "command": "pguide-supervise",
+      "args": [
+        "--portfolio-file",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-level-up\\.cache\\level-deploy-20261021\\consumer\\legacy-portfolio.json"
+      ],
+      "exitCode": 2,
+      "stdout": "{\n  \"schemaVersion\": 1,\n  \"status\": \"invalid\",\n  \"error\": \"Portfolio requires schemaVersion: 4 with explicitly reviewed attainment targets; older portfolios and pinned evidence are incompatible.\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "label": "legacy-recovery",
+      "command": "pguide-continue",
+      "args": [
+        "11111111-1111-4111-8111-111111111111"
+      ],
+      "exitCode": 2,
+      "stdout": "{\n  \"schemaVersion\": 1,\n  \"status\": \"invalid\",\n  \"error\": \"Legacy continue records are incompatible with cumulative attainment or missing directory tree/commit evidence. Review the v2 Objective and target, then start a new regulation with --pilot <directory> or --objective; pinned evidence is not rebound.\"\n}\n",
+      "stderr": ""
+    }
+  ]
+}
