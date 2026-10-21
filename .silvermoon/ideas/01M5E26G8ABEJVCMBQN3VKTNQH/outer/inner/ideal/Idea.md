@@ -6,7 +6,7 @@
 
 ## 结果
 
-建立用户级、项目级的可扩展设置模型，由 package 独立声明和校验自身设置。已确认规则与待定问题见 [Configuration.md](./Configuration.md)，背景见 [schema-contracts](../../../../01M5CR0X2B4R2C6K3183Y1T3SQ/outer/inner/ideal/Schemas.md) 的 C-04 至 C-07。
+建立用户级、项目级的可扩展设置模型，由 package 独立声明和校验自身设置。已确认规则及最小待确认问题见 [Configuration.md](./Configuration.md)，现状、候选字段映射和源码依据见 [Settings.md](./Settings.md)。
 
 ## 边界
 
@@ -22,4 +22,4 @@
 
 ## 下一步
 
-与用户收敛 package 配置描述的载体与发现机制。
+由主代理向用户确认 Configuration.md 的行为阻塞项；目前仅为准备候选，尚未收敛、提交或获准实施。
