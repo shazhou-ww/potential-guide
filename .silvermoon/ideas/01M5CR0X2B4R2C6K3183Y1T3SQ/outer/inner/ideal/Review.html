@@ -317,12 +317,12 @@ properties:
         boundary:"用户可编写且跨工具升级保存，值得维护公共配置契约；归属 CLI Core，而不是因为公开就移入 pilot-protocol。凭据值不能写进示例或配置。",
         feedback:[
           "已完成 C-01：完整 Agent 定义在独立 agents.yaml，pguide agents 负责管理。主配置出现旧 agents 字段明确失败，使用 pguide agents migrate --scope user|project 显式迁移。",
-          "C-02 / C-05 · 早期 Git 分段提案正与 VS Code settings 风格比较。官方 VS Code settings.json 使用 JSONC（带注释的 JSON），不是 YAML；Agent 建议采用完整的命名空间 key + 原生 JSON 值，不因重用 JSON 就恢复封闭的全局配置类型。",
+          "C-02 / C-05 / C-06 · 早期 Git 分段提案正与 VS Code settings 风格比较。JSONC 格式尚未定案；用户已确认顶层 key 为完整 setting ID，点号只是命名分隔符，不是隐含对象路径，不恢复封闭的全局配置类型。",
           "当前主配置仍有既有用户/项目/显式文件及环境处理规则；拟议新 settings 模型先做用户/项目两级，不能把提案误写成现有主配置只支持两级。Agent 资源本身已限制为用户/项目两级，项目同名整体覆盖。",
-          "C-04 · 用户明确要求：所有扩展子命令，包括独立第三方命令，均可定义自身配置；新增自有 key 不需修改核心 PguideConfig 类型或等待主程序发布。具体命名空间和声明机制尚未定案。",
+          "C-04 / C-07 · 所有扩展子命令，包括独立第三方命令，均可定义自身配置，不需修改核心 PguideConfig 类型。用户已确认按所属 package 功能后缀约定 namespace，并由配置描述显式声明；归属冲突明确报错。配置描述载体与发现机制仍待定，跨组件消费须明确保留既有行为。",
           "建议已知 key 的类型、默认值和约束由所属组件维护；保留作用域、来源与错误诊断。未知 key 是否允许存储与何时参与消费需明确，可扩展不等于静默忽略非法值。",
           "建议分离存储与语义：基础设施统一作用域、来源和 get/set/unset，保留未安装扩展的 key；扩展定义类型、默认值、帮助并在消费前校验。保存未知配置不能冒充语义校验成功，也不为通用编辑任意执行外部命令。",
-          "JSONC 能直接表达数组和对象；但描述发现、namespace、对象覆盖及权限信任仍需定义。下方三种表示为当前 YAML v2 的基础字段切片，上方 JSONC 卡片才是未实施提案。"
+          "C-06 已确认：用户/项目按顶层 key 浅合并，项目同名值整体替换，数组和对象不做递归合并；项目未设置的 key 保留用户级值。替换后由所属组件校验，不从被替换对象继承缺失字段。描述发现、namespace 分配、默认值应用及权限信任仍需定义。下方三种表示为当前 YAML v2 的基础字段切片，上方 JSONC 卡片才是未实施提案。"
         ],
         proposalHeading:"VS Code settings 风格 · 最新建议（JSONC，未定案、未实施）",
         proposalExample:String.raw`{
@@ -338,10 +338,11 @@ properties:
   "deploy.target": "staging"
 }
 // Agent 完整定义仍放独立 agents.yaml
-// 上述 key 与主配置文件名均未定案；不是 VS Code 配置 API 的直接复用`,
+// 完整顶层 key 与整体替换已确认；具体 key、文件名及 JSONC 格式未定案
+// 不是 VS Code 配置 API 的直接复用`,
         scope:"当前 YAML v2 基础字段切片，不再包含 agents。省略授权、regulationStrategy 等其他合法字段；本页 schema 仅用于解释示例，不是已发布的完整配置 schema。",
-        validation:["parseConfig 校验 v2、已支持字段、超时及授权，并拒绝旧内嵌 agents；loadConfig 负责普通配置合并及来源。","Agent 消费者另行 loadAgents；JSONC 的扩展配置描述与对象合并规则尚未实施。"],
-        questions:["是否采用推荐的 JSONC + 命名空间 key，如何发现扩展配置描述？","用户级与项目级中对象按完整 key 替换还是显式允许合并？","复杂策略与授权如何校验并维持信任边界？"],
+        validation:["parseConfig 校验 v2、已支持字段、超时及授权，并拒绝旧内嵌 agents；loadConfig 负责普通配置合并及来源。","Agent 消费者另行 loadAgents；拟议 settings 模型的顶层 key 整体替换已确认但未实施，JSONC 与扩展配置描述仍待定。"],
+        questions:["是否采用 JSONC，package 如何提供可发现的声明式配置描述？","整体替换后，所属组件如何应用默认值并校验不完整的对象？","复杂策略与授权如何校验并维持信任边界？"],
         sources:["packages/pguide-cli-core/src/index.ts","packages/pguide-cli-core/src/permissions.ts"],
         example:String.raw`schemaVersion: 2
 defaultAgent: local

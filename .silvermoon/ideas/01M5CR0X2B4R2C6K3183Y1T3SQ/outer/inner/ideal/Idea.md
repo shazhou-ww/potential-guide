@@ -22,4 +22,4 @@
 
 ## 下一步
 
-比较 VS Code settings 风格的 JSONC 主配置方案，明确用户级/项目级覆盖与扩展配置描述机制。
+在独立 IDEA [package-settings](../../../../01M5E26G8ABEJVCMBQN3VKTNQH/outer/inner/ideal/Idea.md) 中继续主配置与扩展配置规范讨论；本 IDEA 保留其他数据格式的逐项评审，不因拆分视为整体验收。

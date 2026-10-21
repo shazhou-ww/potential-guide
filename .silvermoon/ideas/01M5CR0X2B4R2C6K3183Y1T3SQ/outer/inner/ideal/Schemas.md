@@ -325,7 +325,7 @@ Agent 建议采用 JSONC + 顶层命名空间 key + 原生 JSON 值，例如：
 
 建议每个扩展声明自身 namespace 的配置描述，由配置基础设施统一支持来源、读写、默认值、提示和结构校验；描述如何发现尚需单独规范，不能声称 VS Code 的扩展 API 已能被本 CLI 直接使用。未知或未安装扩展的 key 可保留，但不宣称已经完成语义验证；不为了普通 get/set 自动执行任意扩展。
 
-这能更自然地解决扩展配置归属及复杂值表达，但不能自动决定覆盖/合并和授权语义。VS Code 对标量和数组覆盖，对对象合并；不建议把这整套规则机械复制到治理工具。这里建议初期 project > user，按完整 setting key 覆盖、数组整体替换；普通对象是否按 key 整体替换待确认。Agent profile 与权限策略尤其不做隐式深合并或授权并集，保留显式校验与信任边界。
+这能更自然地解决扩展配置归属及复杂值表达，但不能自动决定覆盖/合并和授权语义。VS Code 对标量和数组覆盖，对对象合并；不把这整套规则机械复制到治理工具。顶层完整 setting ID 与覆盖规则已由用户进一步确认，见 C-06；Agent profile 与权限策略不因配置覆盖而获得隐式授权并集，保留显式校验与信任边界。
 
 官方依据：
 
@@ -333,4 +333,32 @@ Agent 建议采用 JSONC + 顶层命名空间 key + 原生 JSON 值，例如：
 - [JSON with Comments](https://code.visualstudio.com/docs/languages/json#_json-with-comments)：JSONC 与注释支持。
 - [contributes.configuration](https://code.visualstudio.com/api/references/contribution-points#contributes.configuration)：扩展配置描述。
 
-官网抓取因网络解析限制不可用时，本次通过官方 microsoft/vscode-docs GitHub 仓库对应文档核对以上事实。JSONC 是否作为最终格式、具体 namespace、配置描述发现及对象合并规则均未因本次比较自动定案。
+官网抓取因网络解析限制不可用时，本次通过官方 microsoft/vscode-docs GitHub 仓库对应文档核对以上事实。JSONC 是否作为最终格式、具体 namespace 和配置描述发现均未因本次比较自动定案；后续确认的覆盖规则见 C-06。
+
+### C-06：顶层完整 setting ID 与浅合并（已确认，2026-10-21）
+
+用户明确同意：每个顶层 key 是完整的 setting ID，点号只用于命名，不表示隐含的对象路径。namespace 是 ID 的归属部分，不是单独参与合并的对象节点；具体 namespace 分配与冲突规则仍待讨论。
+
+用户级与项目级配置按顶层 key 浅合并，项目级同名 key 的值整体替换用户级值。标量、数组和对象使用相同的替换规则，不递归合并对象，不拼接数组；项目级未设置的 key 保留用户级值。希望独立覆盖的选项应声明为独立 setting ID，需要整体维护的结构可作为一个 setting 的对象值。
+
+例如用户级有 `"deploy.target": "staging"`、`"deploy.timeoutMs": 60000` 和 `"regulate.quota": { "timeoutMs": 90000, "maxAgentRuns": 10 }`，项目级有 `"deploy.target": "production"` 和 `"regulate.quota": { "maxAgentRuns": 3 }`，则作用域覆盖后的显式值为：
+
+```json
+{
+  "deploy.target": "production",
+  "deploy.timeoutMs": 60000,
+  "regulate.quota": { "maxAgentRuns": 3 }
+}
+```
+
+quota 中缺失的 timeoutMs 不从用户级对象继承；替换后的值由所属组件按自身契约校验，不以静默深合并补救非法值。默认值的具体应用规则另行讨论，不能借默认处理重新引入用户级对象的部分字段。
+
+上述 key 仍为示例。本次仅确认 setting ID 的结构与作用域覆盖规则，不确认 JSONC 最终格式、文件名、namespace 分配或扩展配置描述发现机制，不授权运行时实现或构想整体验收。
+
+### C-07：package namespace 归属（已确认，2026-10-21）
+
+用户同意以配置所属 package 的功能后缀作为 namespace 命名约定，例如 pguide-regulate 对应 regulate；package 的配置描述须显式声明归属，不由核心截取包名猜测。不同 package 声明同一 namespace 时明确报错，不按发现顺序覆盖。描述的载体和发现机制仍待设计。
+
+同一 package 提供的多个命令可以共用 namespace；配置定义者与消费者可以不同，跨组件消费必须明确约定，不因 namespace 调整悄悄改变既有共享配置行为。regulate.defaultAgent 与 regulate.quota 为方向示例：默认 Agent 仍只是独立 Agent 资源的名称引用，supervise 对既有 quota 的消费需明确保留或另行决定，不默认切断。
+
+用户要求创建独立 IDEA [package-settings](../../../../01M5E26G8ABEJVCMBQN3VKTNQH/outer/inner/ideal/Idea.md) 推进主配置及扩展配置契约；部署阶段须全局安装本机迭代后的 pguide 本地 build，并手工迁移本机用户级配置。该要求不授权当前准备阶段修改设备配置、发布 npm 或验收规范。该子 IDEA 仍在 preparing，JSONC、配置描述发现及默认值等待定问题继续由用户逐项讨论，不沿用先前三个子 IDEA 的代理审批授权。
