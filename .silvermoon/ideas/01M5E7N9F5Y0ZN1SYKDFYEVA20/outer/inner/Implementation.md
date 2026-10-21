@@ -1,30 +1,30 @@
-# Regulation Coordinator 单一目标命令实施
+# Regulation Coordinator 双意图与可恢复状态实施
 
 本文件是修订构想的轻量实施初版，须待新 ideal 验收及先行 level-attainment 协议就绪后细化。[Verification.md](./Verification.md) 记录上一版五命令实现的历史证据，不证明本次需求已完成。
 
 ## Steps
 
-### I-S01 — 定义目标请求与调用终结边界
+### I-S01 — 定义双意图、纯归约与恢复契约
 
-依据 [Design.md](./ideal/Design.md) 明确 Objective/subject 身份、接受顺序、同一需求更新与终结后新尝试、initial 无工作语义及事实关联。先定义意图与 Coordinator 的 initial/公开状态和确定性 reducer，再依据 [Events.md](./ideal/Events.md) 的讨论收敛有类型 delta；同时明确 pending、执行终态与恢复数据持久化边界，不引入长期目标控制器。
+依据 [Design.md](./ideal/Design.md) 定义 RegulationTarget/ResourceAllocation 两类意图与 CoordinatorState，落实两个纯 reducer、资源意图全量更新、单命令及单次调用边界。明确一致快照、处理位置、存储错误和外部执行核实协议，再收敛 [Events.md](./ideal/Events.md) 的候选 delta；不引入长期目标控制器。
 
-### I-S02 — 接入单一命令与有限依赖编排
+### I-S02 — 接入资源意图、资源侧授权与副作用执行
 
-以单一设置目标命令替代 add/replace/cancel/priority/retry，更新直接相关 API、状态机、文档和 consumer。保留资源第一参数、共享依赖、过期反馈隔离、真实终止确认及可信预算；依赖编排创建新的调用，不复活 blocked 执行，不迁移旧 Supervisor/Planner/Portfolio。
+以单一目标命令和 binding/期望并发意图替代五命令、旧资源池及 harness grants/ceiling；使用真实资源授权并保留独立 quota/budget。以 monadic composition 组织调度、runner 和持久化副作用，reducer 回放不执行动作；明确资源更新响应和恢复核实，保留有限依赖、终止确认，不迁移旧服务。
 
-### I-S03 — 补充反例并验证仓库
+### I-S03 — 验证归约、资源响应与跨重启恢复
 
-重写命令及生命周期测试，覆盖先行 initial 契约、相同参数的新尝试、需求覆盖、优先级调整、依赖及故障；用独立 reducer 验证公开事件前缀能重建约定状态，运行定向校验和 pnpm check，明确披露仍存在的基线失败，不复用旧通过记录。
+测试 initial、同值新意图、需求覆盖、期望并发低于实际、binding 变更、资源侧拒绝、有限依赖与真实终止。独立 reducer 验证纯归约，进程/存储反例验证一致恢复、未知运行核实、无副作用重放与预算不重置；执行定向校验和 pnpm check，披露真实基线限制。
 
 ## Acceptance criteria
 
-### I-AC01 — 单命令语义完整
+### I-AC01 — 双意图与纯归约语义完整
 
-公开类型、运行测试和包 consumer 证明仅有设置目标命令；身份隔离、顺序覆盖及终结后同值新请求成立。initial 不触发检查/Agent、不回滚 subject，priority 更新不无故重复执行，旧命令按明确契约拒绝。
+公开类型及测试证明单一目标命令、资源意图完整更新和两个纯 reducer 成立；同值新意图不丢失，initial 不执行业务检查或回滚，资源期望不冒充实际占用，priority 更新不无故重复执行；旧不兼容输入明确拒绝。
 
-### I-AC02 — 生命周期与依赖安全
+### I-AC02 — 恢复、生命周期与资源边界正确
 
-反例证明 pending 未进入 Regulation，block/error 后调用终结；新尝试不使用旧活跃执行状态，恢复数据及持久化失败有明确行为。独立 reducer 从约定初值和完整事件前缀重建意图确认、任务、观察、依赖、资源及异常状态；依赖派生、共享撤销及迟到反馈不伪报成功，不提前释放槽位、不绕过权限或补充总预算。
+反例证明 pending/block 边界和有限依赖正确；目标/状态及处理位置可持久化接续，已终结意图不重跑，回放不触发副作用，未知执行核实前不释放占用或重复启动。资源拒绝明确返回，不另设 harness 审批；存储故障不静默从零开始，恢复不退还或重置预算。
 
 ### I-AC03 — 交付与兼容验证可复查
 
