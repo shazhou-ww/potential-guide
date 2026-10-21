@@ -1,8 +1,10 @@
 import { execFile } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
 import {
   chmod,
   mkdir,
   mkdtemp,
+  open,
   readdir,
   readFile,
   realpath,
@@ -19,10 +21,12 @@ import { type GitSnapshot, loadGitSnapshot } from "@potential-guide/git-source";
 import {
   type CheckResult,
   canonicalObjectiveUri,
+  captureFilesystemObservation,
   createProcessCheckProbe,
   type Envelope,
   type GitObjectiveSource,
   loadPilotSpec,
+  observationResource,
   type PageResource,
   type PilotRuntime,
   type PilotSpec,
@@ -34,10 +38,15 @@ import { ObjectiveInputError } from "@potential-guide/pilot-protocol";
 
 const execute = promisify(execFile);
 
-async function git(cwd: string, ...args: string[]): Promise<string> {
+async function git(
+  cwd: string,
+  signal: AbortSignal | undefined,
+  ...args: string[]
+): Promise<string> {
   const result = await execute("git", ["--no-pager", "-C", cwd, ...args], {
     windowsHide: true,
     env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+    ...(signal === undefined ? {} : { signal }),
   });
   return result.stdout.trim();
 }
@@ -78,6 +87,7 @@ function inputErrorMessage(error: ObjectiveInputError): string {
       "Next: choose a supported --language, or omit it to use the Objective default.",
     ].join("\n\n");
   }
+
   const issues = details.issues?.map(
     (issue) =>
       `- ${markdownInlineCode(issue.instancePath || "/")}: ${markdownText(issue.message)} (${markdownInlineCode(issue.keyword)})`,
@@ -87,6 +97,13 @@ function inputErrorMessage(error: ObjectiveInputError): string {
     `Input issues:\n${issues.join("\n")}`,
     "Next: correct the subject fields against subjectSchema and retry --subject-file <path> or stdin.",
   ].join("\n\n");
+}
+
+function aggregateFailure(cause: unknown): boolean {
+  return (
+    cause instanceof AggregateError ||
+    (cause instanceof Error && cause.cause instanceof AggregateError)
+  );
 }
 
 async function afterCleanup<T>(
@@ -129,6 +146,21 @@ async function afterCleanup<T>(
   return outcome.value;
 }
 
+async function writeInputView(path: string, text: string): Promise<void> {
+  const handle = await open(path, "wx");
+  try {
+    await afterCleanup(
+      () => handle.writeFile(text),
+      () => handle.close(),
+    );
+  } catch (error) {
+    await afterCleanup(
+      () => Promise.reject(error),
+      () => rm(path, { force: true }),
+    );
+  }
+}
+
 async function bindPilot<T>(
   location: string,
   cwd: string,
@@ -166,17 +198,19 @@ async function bindPilot<T>(
       path = dirname(path);
     }
     const directory = path;
-    const root = await realpath(await git(directory, "rev-parse", "--show-toplevel"));
-    if (await git(root, "status", "--porcelain", "--untracked-files=all"))
+    const root = await realpath(
+      await git(directory, options.signal, "rev-parse", "--show-toplevel"),
+    );
+    if (await git(root, options.signal, "status", "--porcelain", "--untracked-files=all"))
       throw new PilotSourceError(
         "Pilot repository is dirty or contains uncommitted files. Commit the Pilot before probing or regulating.",
       );
-    repository = repositoryUri(await git(root, "remote", "get-url", "origin"));
+    repository = repositoryUri(await git(root, options.signal, "remote", "get-url", "origin"));
     snapshotRepository = pathToFileURL(root).href;
     if (revision !== undefined && !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(revision)) {
       throw new PilotSourceError("Local Pilot revisions must be full commit hashes, not refs.");
     }
-    commitOrRef = revision ?? (await git(root, "rev-parse", "HEAD"));
+    commitOrRef = revision ?? (await git(root, options.signal, "rev-parse", "HEAD"));
     const pathInRepository = relative(root, path).split("\\").join("/");
     if (pathInRepository.startsWith("../") || isAbsolute(pathInRepository))
       throw new PilotSourceError("Pilot manifest must be inside its Git repository.");
@@ -273,6 +307,17 @@ async function bindPilot<T>(
             const requestedSources = new Map(Object.entries(options.sources ?? {}));
             const boundSources = new Map<string, Source>([[objectiveUri, initialSource]]);
             const sourceSignals = new Map<string, AbortSignal>();
+            function resourceSignal(uri: string): AbortSignal {
+              let selected = preparation.signal;
+              let length = 0;
+              for (const [id, signal] of sourceSignals) {
+                if (uri.startsWith(id) && id.length > length) {
+                  selected = signal;
+                  length = id.length;
+                }
+              }
+              return AbortSignal.any([preparation.signal, selected]);
+            }
             function resourcePath(uri: string): string {
               const url = new URL(uri);
               const path = decodeURIComponent(url.hash.slice(1)).replace(/\/$/, "");
@@ -337,10 +382,10 @@ async function bindPilot<T>(
                     refresh: { type: "once" },
                   },
                 ).pipe(Effect.provideService(Scope.Scope, scope)),
-                sourceSignals.get(uri),
+                resourceSignal(uri),
               ).then(async (snapshot) => {
                 const source = { snapshot, checkout };
-                await read(materialize(source), sourceSignals.get(uri));
+                await read(materialize(source), resourceSignal(uri));
                 return source;
               });
               sources.set(key, pending);
@@ -349,14 +394,14 @@ async function bindPilot<T>(
             async function sourceEvidence(uri: string): Promise<GitObjectiveSource> {
               const source = await sourceFor(uri);
               const directory = resourcePath(uri);
-              const tree = await read(source.snapshot.treeOid(directory), sourceSignals.get(uri));
+              const tree = await read(source.snapshot.treeOid(directory), resourceSignal(uri));
               const required = requestedVersions.get(uri);
               if (required !== undefined && required !== tree)
                 throw new PilotSourceError(`Pinned tree version mismatch for ${uri}.`);
               boundSources.set(uri, source);
               const origin = new URL(uri);
               origin.hash = "";
-              const repositoryTree = await read(source.snapshot.treeOid(), sourceSignals.get(uri));
+              const repositoryTree = await read(source.snapshot.treeOid(), resourceSignal(uri));
               const expected = requestedSources.get(uri);
               if (
                 expected !== undefined &&
@@ -386,7 +431,9 @@ async function bindPilot<T>(
               readText: async (uri) => {
                 const source = await sourceFor(uri);
                 return new TextDecoder("utf-8", { fatal: true }).decode(
-                  await readFile(checkoutPath(source.checkout, resourcePath(uri))),
+                  await readFile(checkoutPath(source.checkout, resourcePath(uri)), {
+                    signal: resourceSignal(uri),
+                  }),
                 );
               },
               async readPages(uri) {
@@ -397,7 +444,7 @@ async function bindPilot<T>(
                 const pages: PageResource[] = [];
                 const root = resourcePath(uri);
                 async function walk(path: string): Promise<void> {
-                  preparation.signal.throwIfAborted();
+                  resourceSignal(uri).throwIfAborted();
                   for (const entry of await readdir(checkoutPath(checkout, path), {
                     withFileTypes: true,
                   })) {
@@ -407,7 +454,9 @@ async function bindPilot<T>(
                       pages.push({
                         uri: `${repoPrefix}#${child}`,
                         source: new TextDecoder("utf-8", { fatal: true }).decode(
-                          await readFile(checkoutPath(checkout, child)),
+                          await readFile(checkoutPath(checkout, child), {
+                            signal: resourceSignal(uri),
+                          }),
                         ),
                       });
                     else
@@ -430,15 +479,48 @@ async function bindPilot<T>(
                   string,
                   { command: string; args: string[]; cwd: string; dependencyBinding: boolean }
                 >();
+                const observationInputs = new Map<string, readonly string[]>();
                 async function prepareChecks(
                   objective: PilotSpec,
-                  preparationSignal = signal,
+                  preparationSignal = AbortSignal.any([
+                    signal,
+                    preparation.signal,
+                    ...(options.signal === undefined ? [] : [options.signal]),
+                  ]),
                 ): Promise<void> {
                   const source = await sourceFor(objective.objectiveId);
                   const root = join(
                     source.checkout,
                     ...resourcePath(objective.objectiveId).split("/"),
                   );
+                  try {
+                    const descriptor: unknown = JSON.parse(
+                      await readFile(join(root, "observation-inputs.json"), "utf8"),
+                    );
+                    if (
+                      typeof descriptor !== "object" ||
+                      descriptor === null ||
+                      Object.keys(descriptor).sort().join(",") !== "contract,subjectRoot" ||
+                      !("contract" in descriptor) ||
+                      descriptor.contract !== "bounded-readonly-filesystem-v1" ||
+                      !("subjectRoot" in descriptor) ||
+                      !Array.isArray(descriptor.subjectRoot) ||
+                      descriptor.subjectRoot.length === 0 ||
+                      !descriptor.subjectRoot.every(
+                        (part: unknown) =>
+                          typeof part === "string" && /^[A-Za-z][A-Za-z0-9]*$/.test(part),
+                      )
+                    )
+                      throw new PilotSourceError(
+                        "Invalid observation-inputs.json read-only input contract.",
+                      );
+                    observationInputs.set(
+                      objective.objectiveId,
+                      descriptor.subjectRoot as string[],
+                    );
+                  } catch (error) {
+                    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+                  }
                   const allChecks = objective.manifest.levels.flatMap(({ checks }) => checks);
                   for (const level of objective.manifest.levels) {
                     for (const check of level.checks) {
@@ -500,45 +582,160 @@ async function bindPilot<T>(
                 const activeProbes = new Map<Promise<Envelope<CheckResult>>, AbortSignal>();
                 const probeLifecycle = new AbortController();
                 const boundObjectives = new Map<string, PilotSpec>([[spec.objectiveId, spec]]);
+                async function inputView(objectiveId: string, subject: unknown) {
+                  const pointer = observationInputs.get(objectiveId);
+                  if (pointer === undefined) return undefined;
+                  let value = subject;
+                  for (const part of pointer) {
+                    if (typeof value !== "object" || value === null || Array.isArray(value))
+                      throw new PilotSourceError(
+                        "Input-view subjectRoot must resolve to a filesystem root string.",
+                      );
+                    value = (value as Record<string, unknown>)[part];
+                  }
+                  if (typeof value !== "string")
+                    throw new PilotSourceError(
+                      "Input-view subjectRoot must resolve to a filesystem root string.",
+                    );
+                  const requestedRoot = value;
+                  const root = await observationResource(
+                    `bounded-readonly-root-v1:${resolve(requestedRoot)}`,
+                    () => realpath(requestedRoot),
+                    async () => {},
+                  );
+                  return observationResource<{ path: string; sha256: string } | undefined>(
+                    `bounded-readonly-filesystem-v1:${root}`,
+                    async (signal) => {
+                      const started = performance.now();
+                      const view = await captureFilesystemObservation(
+                        root,
+                        AbortSignal.any([
+                          signal,
+                          ...(options.signal === undefined ? [] : [options.signal]),
+                        ]),
+                        (diagnostic) => {
+                          const value = { objectiveId, ...diagnostic };
+                          evidence?.stream.emit("input-view.unavailable", value);
+                          if (process.env.PGUIDE_TIMINGS === "1")
+                            process.stderr.write(
+                              `${JSON.stringify({
+                                type: "pguide-timing",
+                                phase: "input-view.capture",
+                                status: "unavailable",
+                                durationMs: Math.round(performance.now() - started),
+                                ...value,
+                              })}\n`,
+                            );
+                        },
+                      );
+                      if (view === undefined) return undefined;
+                      const text = JSON.stringify(view);
+                      const path = join(cache, `input-view-${randomUUID()}.json`);
+                      await writeInputView(path, text);
+                      if (process.env.PGUIDE_TIMINGS === "1")
+                        process.stderr.write(
+                          `${JSON.stringify({
+                            type: "pguide-timing",
+                            phase: "input-view.capture",
+                            status: "captured",
+                            durationMs: Math.round(performance.now() - started),
+                            entries: Object.keys(view.entries).length,
+                            bytes: Buffer.byteLength(text),
+                          })}\n`,
+                        );
+                      return { path, sha256: createHash("sha256").update(text).digest("hex") };
+                    },
+                    async (view) => {
+                      if (view !== undefined) await rm(view.path, { force: true });
+                    },
+                  );
+                }
                 const runtime: PilotRuntime = {
+                  ...(options.observationBudget === undefined
+                    ? {}
+                    : { observationBudget: options.observationBudget }),
+                  async observationRevision(input, signal) {
+                    signal.throwIfAborted();
+                    const view = await inputView(input.spec.objectiveId, input.subject);
+                    if (view === undefined) return undefined;
+                    const digest = createHash("sha256")
+                      .update(await readFile(view.path))
+                      .digest("hex");
+                    signal.throwIfAborted();
+                    if (digest !== view.sha256)
+                      throw new PilotSourceError("Input view integrity mismatch.");
+                    return view.sha256;
+                  },
                   boundObjectives: () => [...boundObjectives.values()],
                   onObservation: (value) => evidence?.stream.emit("probe.observation", value),
                   async resolveObjective(objectiveId, version, dependencySignal, source) {
-                    dependencySignal.throwIfAborted();
-                    if (
-                      canonicalObjectiveUri(objectiveId) !== objectiveId ||
-                      !objectiveId.startsWith("git+")
-                    )
-                      throw new PilotSourceError(
-                        "Dependency requires a canonical Git Pilot directory URI.",
-                      );
-                    const bound = boundObjectives.get(objectiveId);
-                    if (bound !== undefined) {
-                      if (version !== undefined && version !== bound.version)
+                    const started = performance.now();
+                    const deadline = new AbortController();
+                    const timer = setTimeout(
+                      () =>
+                        deadline.abort(
+                          new PilotSourceError(
+                            `source-preparation-timeout: ${objectiveId}: dependency source preparation exceeded ${preparationTimeoutMs}ms.`,
+                          ),
+                        ),
+                      preparationTimeoutMs,
+                    );
+                    const requestSignal = AbortSignal.any([
+                      dependencySignal,
+                      deadline.signal,
+                      ...(options.signal === undefined ? [] : [options.signal]),
+                    ]);
+                    try {
+                      requestSignal.throwIfAborted();
+                      if (
+                        canonicalObjectiveUri(objectiveId) !== objectiveId ||
+                        !objectiveId.startsWith("git+")
+                      )
                         throw new PilotSourceError(
-                          `Conflicting bound tree version for ${objectiveId}.`,
+                          "Dependency requires a canonical Git Pilot directory URI.",
                         );
-                      if (source !== undefined) {
-                        validateGitPilotSource(objectiveId, bound.version, source);
-                        if (
-                          source.commit !== bound.source?.commit ||
-                          source.repositoryTree !== bound.source?.repositoryTree
-                        )
+                      const bound = boundObjectives.get(objectiveId);
+                      if (bound !== undefined) {
+                        if (version !== undefined && version !== bound.version)
                           throw new PilotSourceError(
-                            `Conflicting bound snapshot evidence for ${objectiveId}.`,
+                            `Conflicting bound tree version for ${objectiveId}.`,
                           );
+                        if (source !== undefined) {
+                          validateGitPilotSource(objectiveId, bound.version, source);
+                          if (
+                            source.commit !== bound.source?.commit ||
+                            source.repositoryTree !== bound.source?.repositoryTree
+                          )
+                            throw new PilotSourceError(
+                              `Conflicting bound snapshot evidence for ${objectiveId}.`,
+                            );
+                        }
+                        return { spec: bound, runtime };
                       }
-                      return { spec: bound, runtime };
+                      if (version !== undefined) requestedVersions.set(objectiveId, version);
+                      if (source !== undefined) requestedSources.set(objectiveId, source);
+                      sourceSignals.set(objectiveId, requestSignal);
+                      const spec = await loadPilotSpec(objectiveId, resources);
+                      requestSignal.throwIfAborted();
+                      await prepareChecks(spec, requestSignal);
+                      requestSignal.throwIfAborted();
+                      boundObjectives.set(objectiveId, spec);
+                      return { spec, runtime };
+                    } catch (error) {
+                      if (requestSignal.aborted) throw requestSignal.reason;
+                      throw error;
+                    } finally {
+                      clearTimeout(timer);
+                      if (process.env.PGUIDE_TIMINGS === "1")
+                        process.stderr.write(
+                          `${JSON.stringify({
+                            type: "pguide-timing",
+                            phase: "source.dependency-preparation",
+                            objectiveId,
+                            durationMs: Math.round(performance.now() - started),
+                          })}\n`,
+                        );
                     }
-                    if (version !== undefined) requestedVersions.set(objectiveId, version);
-                    if (source !== undefined) requestedSources.set(objectiveId, source);
-                    sourceSignals.set(objectiveId, dependencySignal);
-                    const spec = await loadPilotSpec(objectiveId, resources);
-                    dependencySignal.throwIfAborted();
-                    await prepareChecks(spec, dependencySignal);
-                    dependencySignal.throwIfAborted();
-                    boundObjectives.set(objectiveId, spec);
-                    return { spec, runtime };
                   },
                   resolveCheck(ref) {
                     const executable = executables.get(
@@ -548,17 +745,24 @@ async function bindPilot<T>(
                       throw new PilotSourceError(
                         `Unknown check reference: ${JSON.stringify(ref)}.`,
                       );
-                    const probe = createProcessCheckProbe({
-                      ...executable,
-                      ...(options.probeTimeoutMs === undefined
-                        ? {}
-                        : { timeoutMs: options.probeTimeoutMs }),
-                      log: (message) => process.stderr.write(message),
-                      evidence: evidence ?? false,
-                      identity: ref,
-                    });
-                    return (subject, signal) => {
-                      const lifetime = AbortSignal.any([signal, probeLifecycle.signal]);
+                    return async (subject, signal) => {
+                      const view = await inputView(ref.objectiveId, subject);
+                      signal.throwIfAborted();
+                      const probe = createProcessCheckProbe({
+                        ...executable,
+                        ...(view === undefined ? {} : { inputView: view }),
+                        ...(options.probeTimeoutMs === undefined
+                          ? {}
+                          : { timeoutMs: options.probeTimeoutMs }),
+                        log: (message) => process.stderr.write(message),
+                        evidence: evidence ?? false,
+                        identity: ref,
+                      });
+                      const lifetime = AbortSignal.any([
+                        signal,
+                        probeLifecycle.signal,
+                        ...(options.signal === undefined ? [] : [options.signal]),
+                      ]);
                       const pending = probe(subject, lifetime);
                       activeProbes.set(pending, lifetime);
                       void pending.then(
@@ -593,7 +797,7 @@ async function bindPilot<T>(
                 );
               },
               catch: (error) => (error instanceof Error ? error : new Error(String(error))),
-            });
+            }).pipe(Effect.uninterruptible);
           }),
         ),
         {
@@ -608,11 +812,13 @@ async function bindPilot<T>(
         await Promise.allSettled([...pendingReads]);
       });
       if (Exit.isFailure(result)) {
+        const cause = Cause.squash(result.cause);
+        if (aggregateFailure(cause)) throw cause;
         if (preparationTimedOut)
           throw new PilotSourceError(
-            `Pilot source preparation timed out after ${preparationTimeoutMs}ms.`,
+            `source-preparation-timeout: ${objectiveUri}: Pilot source preparation timed out after ${preparationTimeoutMs}ms.`,
           );
-        const cause = Cause.squash(result.cause);
+        if (options.signal?.aborted) throw options.signal.reason;
         if (cause instanceof CliError || options.propagateError?.(cause)) throw cause;
         throw new PilotSourceError(cause instanceof Error ? cause.message : String(cause), cause);
       }
@@ -629,18 +835,58 @@ export async function withPilot<T>(
   use: (spec: PilotSpec, runtime: PilotRuntime) => Promise<T>,
   options: PilotSourceOptions = {},
 ): Promise<T> {
+  const preparationTimeoutMs = options.preparationTimeoutMs ?? 60_000;
+  if (
+    !Number.isSafeInteger(preparationTimeoutMs) ||
+    preparationTimeoutMs < 1 ||
+    preparationTimeoutMs > 2_147_483_647
+  )
+    throw new PilotSourceError("preparationTimeoutMs must be a positive safe timer duration.");
+  const deadline = new AbortController();
+  const timer = setTimeout(
+    () =>
+      deadline.abort(
+        new PilotSourceError(
+          `source-preparation-timeout: ${location}: Pilot source preparation timed out after ${preparationTimeoutMs}ms.`,
+        ),
+      ),
+    preparationTimeoutMs,
+  );
   const evidence =
     options.reports?.enabled === false || process.env.PGUIDE_EVIDENCE_DISABLED === "1"
       ? undefined
       : new RunEvidence(options.reports);
   try {
-    const result = await bindPilot(location, cwd, revision, use, options, evidence);
+    const result = await bindPilot(
+      location,
+      cwd,
+      revision,
+      async (spec, runtime) => {
+        clearTimeout(timer);
+        deadline.signal.throwIfAborted();
+        return use(spec, runtime);
+      },
+      {
+        ...options,
+        signal: AbortSignal.any([
+          deadline.signal,
+          ...(options.signal === undefined ? [] : [options.signal]),
+        ]),
+      },
+      evidence,
+    );
     evidence?.stream.emit("run.finished", { outcome: "completed" });
     return result;
   } catch (cause) {
     evidence?.stream.emit("run.failed", { outcome: "interrupted-or-error" });
+    if (!aggregateFailure(cause)) {
+      if (deadline.signal.aborted) throw deadline.signal.reason;
+      if (options.signal?.aborted) throw options.signal.reason;
+    }
     if (cause instanceof CliError || options.propagateError?.(cause)) throw cause;
     throw new PilotSourceError(cause instanceof Error ? cause.message : String(cause), cause);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -653,4 +899,22 @@ export interface PilotSourceOptions {
   readonly cacheDirectory?: string;
   readonly probeTimeoutMs?: number | undefined;
   readonly preparationTimeoutMs?: number;
+  readonly observationBudget?: PilotRuntime["observationBudget"];
+}
+
+export function pilotSourceBudgets(probe?: {
+  readonly timeoutMs: number;
+  readonly checkTimeoutMs?: number;
+  readonly preparationTimeoutMs?: number;
+  readonly observationBudget?: PilotRuntime["observationBudget"];
+}): Pick<PilotSourceOptions, "probeTimeoutMs" | "preparationTimeoutMs" | "observationBudget"> {
+  return {
+    ...(probe === undefined ? {} : { probeTimeoutMs: probe.checkTimeoutMs ?? probe.timeoutMs }),
+    ...(probe?.preparationTimeoutMs === undefined
+      ? {}
+      : { preparationTimeoutMs: probe.preparationTimeoutMs }),
+    ...(probe?.observationBudget === undefined
+      ? {}
+      : { observationBudget: probe.observationBudget }),
+  };
 }

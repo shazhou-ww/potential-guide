@@ -119,6 +119,7 @@ export function createHttpCheckProbe(
 }
 
 export interface ProcessCheckProbeOptions {
+  readonly inputView?: { readonly path: string; readonly sha256: string };
   readonly command: string;
   readonly args?: readonly string[];
   readonly cwd?: string;
@@ -169,6 +170,12 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
             ...environment,
             PGUIDE_PROBE_TEMP_DIR: directory,
             PGUIDE_PROBE_TIMEOUT_MS: String(timeoutMs),
+            ...(options.inputView === undefined
+              ? {}
+              : {
+                  PGUIDE_INPUT_VIEW: options.inputView.path,
+                  PGUIDE_INPUT_VIEW_SHA256: options.inputView.sha256,
+                }),
             ...(dependencyBinding
               ? {
                   NODE_OPTIONS: `--import=${new URL("./dependency-preload.js", import.meta.resolve("@potential-guide/objective-pilot")).href}`,
@@ -290,7 +297,14 @@ export function createProcessCheckProbe(options: ProcessCheckProbeOptions): Chec
         }
         const onAbort = () => stop(failure("cancelled", "Check cancelled.", 499));
         const timer = setTimeout(
-          () => stop(failure("timeout", `Check timed out after ${timeoutMs}ms.`, 504)),
+          () =>
+            stop(
+              failure(
+                "timeout",
+                `check-timeout: ${JSON.stringify(options.identity ?? { command: options.command })}: Check timed out after ${timeoutMs}ms.`,
+                504,
+              ),
+            ),
           timeoutMs,
         );
         signal.addEventListener("abort", onAbort, { once: true });

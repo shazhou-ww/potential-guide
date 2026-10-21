@@ -64,12 +64,21 @@ interface Scope {
     string,
     Promise<{ readonly spec: PilotSpec; readonly runtime: PilotRuntime }>
   >;
+  readonly observations: Map<PilotRuntime, Map<string, Envelope<PilotObservation>>>;
+  readonly resources: Map<string, Promise<unknown>>;
+  readonly releases: (() => Promise<void>)[];
   readonly stack: readonly string[];
   readonly evidence: Map<
     string,
     { readonly spec: PilotSpec; readonly observation: PilotObservation }
   >;
-  readonly budget: { remaining: number; readonly deadline: number; readonly maxDepth: number };
+  readonly budget: {
+    remaining: number;
+    executed: number;
+    reused: number;
+    readonly deadline: number;
+    readonly maxDepth: number;
+  };
   readonly runtime: PilotRuntime;
   readonly signal: AbortSignal;
 }
@@ -94,7 +103,9 @@ export async function observationScope<T>(
     signal: AbortSignal,
     sources: Record<string, GitObjectiveSource>,
   ) => Promise<T>,
+  reused = false,
 ): Promise<T> {
+  const started = performance.now();
   const parent = scopes.getStore();
   const limits = runtime.observationBudget ?? {
     timeoutMs: 30_000,
@@ -108,6 +119,8 @@ export async function observationScope<T>(
     throw new ObjectiveOperationError("Invalid observation budget.");
   const budget = parent?.budget ?? {
     remaining: limits.maxObservations,
+    executed: 0,
+    reused: 0,
     deadline: Date.now() + limits.timeoutMs,
     maxDepth: limits.maxDepth,
   };
@@ -118,7 +131,17 @@ export async function observationScope<T>(
       `Recursive dependency observation: ${[...stack, key].join(" -> ")}.`,
     );
   if (stack.length >= budget.maxDepth || --budget.remaining < 0 || Date.now() >= budget.deadline)
-    throw new ObjectiveOperationError("Dependency observation budget exhausted.");
+    throw new ObjectiveOperationError(
+      `observation-budget: ${input.spec.objectiveId}: budget exhausted: ${
+        stack.length >= budget.maxDepth
+          ? "maximum dependency depth exceeded"
+          : budget.remaining < 0
+            ? "maximum logical observations exceeded"
+            : "total observation deadline exceeded"
+      }.`,
+    );
+  if (reused) budget.reused++;
+  else budget.executed++;
   const versions = parent?.versions ?? {};
   const sources = parent?.sources ?? {};
   mergeVersion(versions, input.spec.objectiveId, input.spec.version);
@@ -129,15 +152,27 @@ export async function observationScope<T>(
   const timeout = new AbortController();
   const combined = AbortSignal.any([signal, ...(parent ? [parent.signal] : []), timeout.signal]);
   const timer = setTimeout(
-    () => timeout.abort(new Error("Dependency observation deadline exceeded.")),
+    () =>
+      timeout.abort(
+        new ObjectiveOperationError(
+          `observation-timeout: ${input.spec.objectiveId}: total observation deadline exceeded (${limits.timeoutMs}ms budget).`,
+        ),
+      ),
     budget.deadline - Date.now(),
   );
+  const resources = parent?.resources ?? new Map<string, Promise<unknown>>();
+  const releases = parent?.releases ?? [];
+  let outcome: { value: T } | { error: unknown };
   try {
-    return await scopes.run(
+    combined.throwIfAborted();
+    const value = await scopes.run(
       {
         versions,
         sources,
         bindings: parent?.bindings ?? new Map(),
+        observations: parent?.observations ?? new Map(),
+        resources,
+        releases,
         stack: [...stack, key],
         evidence: new Map(),
         budget,
@@ -146,9 +181,59 @@ export async function observationScope<T>(
       },
       () => use(versions, combined, sources),
     );
+    combined.throwIfAborted();
+    outcome = { value };
+  } catch (error) {
+    outcome = { error: combined.aborted ? combined.reason : error };
   } finally {
     clearTimeout(timer);
   }
+  if (parent === undefined) {
+    await Promise.allSettled(resources.values());
+    const exits = await Promise.allSettled(releases.map((release) => release()));
+    const errors = exits.flatMap((exit) => (exit.status === "rejected" ? [exit.reason] : []));
+    if (errors.length)
+      throw new AggregateError(
+        [...("error" in outcome ? [outcome.error] : []), ...errors],
+        "Observation input-view cleanup failed.",
+        "error" in outcome ? { cause: outcome.error } : undefined,
+      );
+    if (process.env.PGUIDE_TIMINGS === "1")
+      process.stderr.write(
+        `${JSON.stringify({
+          type: "pguide-timing",
+          phase: "observation",
+          objectiveId: input.spec.objectiveId,
+          durationMs: Math.round(performance.now() - started),
+          executedObservations: budget.executed,
+          reusedObservations: budget.reused,
+          logicalObservations: budget.executed + budget.reused,
+          inputViewResources: resources.size,
+        })}\n`,
+      );
+  }
+  if ("error" in outcome) throw outcome.error;
+  return outcome.value;
+}
+
+/** Host-owned resources live for one complete observation, not the source binding. */
+export async function observationResource<T>(
+  key: string,
+  acquire: (signal: AbortSignal) => Promise<T>,
+  release: (value: T) => Promise<void>,
+): Promise<T> {
+  const scope = scopes.getStore();
+  if (!scope) throw new ObjectiveOperationError("Input views require an active observation.");
+  scope.signal.throwIfAborted();
+  let pending = scope.resources.get(key);
+  if (pending === undefined) {
+    pending = acquire(scope.signal).then((value) => {
+      scope.releases.push(() => release(value));
+      return value;
+    });
+    scope.resources.set(key, pending);
+  }
+  return pending as Promise<T>;
 }
 
 export function recordDependencyObservation(
@@ -211,13 +296,54 @@ export function checkObjectiveLevel(
 ): Effect.Effect<Envelope<ObjectiveLevelCheck>, Error> {
   return Effect.gen(function* () {
     const expected = yield* Effect.try(() => rank(input.spec, input.expectedLevelId));
-    const result = yield* observe(
-      {
-        ...input,
-        ...(input.expectedLevelId === "initial" ? { targetLevel: "initial" as const } : {}),
-      },
-      runtime,
-    );
+    const request = {
+      ...input,
+      ...(input.expectedLevelId === "initial" ? { targetLevel: "initial" as const } : {}),
+    };
+    const scope = scopes.getStore();
+    const revision =
+      scope && input.expectedLevelId !== "initial"
+        ? yield* Effect.tryPromise({
+            try: () =>
+              runtime.observationRevision?.(request, scope.signal) ?? Promise.resolve(undefined),
+            catch: (error) =>
+              error instanceof Error ? error : new ObjectiveOperationError(String(error)),
+          })
+        : undefined;
+    const key =
+      revision === undefined
+        ? undefined
+        : canonical([
+            input.spec,
+            input.subject,
+            input.language ?? input.spec.manifest.defaultLanguage,
+            request.targetLevel ?? null,
+            revision,
+          ]);
+    const observations = scope?.observations.get(runtime);
+    const prior = key === undefined ? undefined : observations?.get(key);
+    const result =
+      prior === undefined || scope === undefined
+        ? yield* observe(request, runtime)
+        : yield* Effect.tryPromise({
+            try: () => observationScope(request, runtime, scope.signal, async () => prior, true),
+            catch: (error) =>
+              error instanceof Error ? error : new ObjectiveOperationError(String(error)),
+          });
+    if (prior === undefined && key !== undefined && scope && result.payload !== null) {
+      const after = yield* Effect.tryPromise({
+        try: () =>
+          runtime.observationRevision?.(request, scope.signal) ?? Promise.resolve(undefined),
+        catch: (error) =>
+          error instanceof Error ? error : new ObjectiveOperationError(String(error)),
+      });
+      scope.signal.throwIfAborted();
+      if (after === revision) {
+        const entries = observations ?? new Map<string, Envelope<PilotObservation>>();
+        entries.set(key, result);
+        scope.observations.set(runtime, entries);
+      }
+    }
     if (result.payload === null) return result;
     const observation = result.payload;
     const current = yield* Effect.try(() => {

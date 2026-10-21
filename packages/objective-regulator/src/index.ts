@@ -12,9 +12,9 @@ import {
   type Envelope,
   type GitObjectiveSource,
   isJsonValue,
-  levelRank,
   type JsonObject,
   type LevelRef,
+  levelRank,
   ObjectiveConfigurationError,
   observe,
   type PilotInput,
@@ -60,6 +60,9 @@ export interface RegulationStrategy {
   readonly quota: RegulationQuota;
   readonly probe?: {
     readonly timeoutMs: number;
+    readonly checkTimeoutMs?: number;
+    readonly preparationTimeoutMs?: number;
+    readonly observationBudget?: PilotRuntime["observationBudget"];
     readonly retry: { readonly maxRetries: number; readonly delayMs: number };
   };
 }
@@ -314,7 +317,21 @@ function validateSpec(value: unknown): asserts value is RegulatorSpec {
       "Agent binding requires a nonempty ID and object configuration.",
     );
   if (strategy.probe !== undefined) {
-    fields(strategy.probe, ["timeoutMs", "retry"]);
+    fields(
+      strategy.probe,
+      ["timeoutMs", "retry"],
+      ["checkTimeoutMs", "preparationTimeoutMs", "observationBudget"],
+    );
+    for (const key of ["checkTimeoutMs", "preparationTimeoutMs"]) {
+      if (strategy.probe[key] !== undefined && !duration(strategy.probe[key]))
+        throw new RegulationError(400, `Invalid probe ${key}.`);
+    }
+    if (strategy.probe.observationBudget !== undefined) {
+      const budget = strategy.probe.observationBudget;
+      fields(budget, ["timeoutMs", "maxDepth", "maxObservations"]);
+      if (!duration(budget.timeoutMs) || !count(budget.maxDepth) || !count(budget.maxObservations))
+        throw new RegulationError(400, "Invalid probe observationBudget.");
+    }
     fields(strategy.probe.retry, ["maxRetries", "delayMs"]);
     if (
       !duration(strategy.probe.timeoutMs) ||

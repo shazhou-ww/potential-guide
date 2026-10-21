@@ -1,5 +1,5 @@
 import type { AgentProfile, AhpSessionIdentity } from "@potential-guide/cli-core";
-import { withPilot } from "@potential-guide/cli-runtime";
+import { pilotSourceBudgets, withPilot } from "@potential-guide/cli-runtime";
 import { Effect } from "@potential-guide/effects";
 import type { GitObjectiveSource, PilotSpec } from "@potential-guide/objective-pilot";
 import {
@@ -137,7 +137,8 @@ async function run(message: StartMessage) {
         sources,
         cacheDirectory: message.directory,
         propagateError: (cause) => cause instanceof RegulationError,
-        probeTimeoutMs: message.input.spec.strategy?.probe?.timeoutMs,
+        ...pilotSourceBudgets(message.input.spec.strategy?.probe),
+        signal: controller.signal,
       },
     );
   } finally {

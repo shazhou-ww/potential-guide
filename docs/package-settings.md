@@ -151,11 +151,35 @@ preferences: CLI option behavior is unchanged. Existing `PGUIDE_FORMAT`,
 `--config` (including `--config=...`) and main-config `--scope explicit` are
 retired with explicit diagnostics; use user/project discovery and `--cwd`.
 
-Quota stays shared between regulate and supervise. Probe/regulate use the
-existing probe boundaries; probe and supervise observations consume timeout
-only. The existing observation/dependency scope has a separate aggregate budget
-(currently 30000 ms by default); `pilot.probe.timeoutMs` sets process-check
-timeouts, not that aggregate limit. Supervise workers do not newly inherit the configured probe policy.
+Quota stays shared between regulate and supervise. `pilot.probe` supports three
+independent runtime budgets:
+
+```jsonc
+"pilot.probe": {
+  "timeoutMs": 300000,
+  "checkTimeoutMs": 60000,
+  "preparationTimeoutMs": 60000,
+  "observationBudget": {
+    "timeoutMs": 300000,
+    "maxDepth": 32,
+    "maxObservations": 128
+  },
+  "retry": { "maxRetries": 0, "delayMs": 0 }
+}
+```
+
+`preparationTimeoutMs` defaults to 60000 and bounds root preparation, including
+local Git inspection. Each lazily prepared dependency also gets this limit, but
+its preparation still consumes the **existing** aggregate observation deadline.
+`observationBudget` defaults to 30000 ms, depth 32 and 128 logical observations;
+reuse hits still consume the logical count and depth checks. `checkTimeoutMs`
+defaults to `timeoutMs` for backward compatibility and bounds each isolated
+process check. `timeoutMs` retains the Regulation outer probe deadline and retry
+semantics; increasing a check timeout alone never extends the aggregate deadline.
+All three settings reach probe, regulate and supervise observation bindings.
+Supervise workers do not newly inherit the configured probe policy.
+Diagnostics distinguish `source-preparation-timeout`, `observation-timeout`,
+`observation-budget` and `check-timeout`, and retain Objective/check identity.
 Continue keeps archived profiles, timeouts, probe/quota and pinned sources,
 but re-reads **current** permissions and state/report locations. The saved
 permission snapshot never authorizes a new attempt. ACP diagnosis is unaffected.

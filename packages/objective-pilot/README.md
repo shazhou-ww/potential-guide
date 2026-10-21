@@ -64,6 +64,73 @@ actual level where it is needed, not by a static chain.
 Checks default to serial execution; `PilotRuntime.checkConcurrency` opts into a
 positive concurrency bound without changing result order or aggregation.
 
+### Observation-local reuse and input views
+
+Source versions identify rules, **not mutable targets**. Reuse is disabled unless
+the host supplies `PilotRuntime.observationRevision(input, signal)`, a revision of
+**every observable input** for explicitly read-only checks. Undefined disables
+reuse. The revision is checked before each request and after execution; only
+complete, non-fault observations enter the enclosing observation's cache.
+Subject, effective language, full specification/source, observation mode and
+runtime identity are separate keys. Expected levels compare the same complete
+observation; `initial` is never a substitute. Low attained levels can be reused,
+but exceptions, timeout and cancellation cannot. Each hit still validates caller
+evidence and consumes recursion/depth/logical-observation limits.
+No cache survives a root observation, repair/reprobe, or Regulation round.
+In-flight calls are deliberately not merged.
+
+The CLI recognizes a committed, strict `observation-inputs.json` beside the
+manifest, for example:
+
+```json
+{"contract":"bounded-readonly-filesystem-v1","subjectRoot":["root"]}
+```
+
+This is an explicit **source-author contract**, not automatic detection of check
+purity: every check in that Objective must read only the bounded filesystem view,
+and must not use live filesystem contents, network, clock or other external inputs
+to decide its result. Arbitrary checks remain isolated processes and get no reuse.
+The host captures directory/type facts and readable file contents, verifies a
+second byte traversal, and provides one immutable view per real root for the
+entire observation. It captures no secret values, follows no links, limits files
+to 1 MiB, entries to 40000 and total readable bytes to 128 MiB; `.git`,
+`node_modules`, `.cache`, `.turbo`, `.next`, `.wrangler`, and `coverage` are outside
+the contract. Build outputs are included. Unstable/unreadable/oversized captures
+fall back to ordinary live checks without reuse. Excluded-path rejection applies
+to the view contract only; live consumers keep their previous explicit-read
+behavior, while inventories continue excluding these directories.
+This is not an atomic OS snapshot;
+the two traversals detect capture-time changes, while the accepted view fixes all
+subsequent check inputs. Changes after capture become visible on the next root
+observation, not halfway through the current view.
+
+`captureFilesystemObservation` and `filesystemObservationRevision` implement the
+bounded collector; the latter can support live-input custom hosts but is not a
+purity guarantee. `observationResource` owns host-only resources and release
+callbacks for one complete observation. Process `inputView: {path, sha256}` is
+runtime-owned metadata (`PGUIDE_INPUT_VIEW`, `PGUIDE_INPUT_VIEW_SHA256`), never
+subject data or check-supplied facts. Consumers must verify the digest and root,
+and enforce the same path/link/secret/size boundaries. The host revalidates view
+integrity before reuse and removes owned files after success, fault or cancel.
+`PGUIDE_TIMINGS=1` logs source preparation, input capture and whole-observation
+duration plus executed/reused/logical counts on stderr; these diagnostics do not
+change stdout envelopes.
+
+Captured `text` retains the bounded reader's existing UTF-8 behavior. UTF-16
+BOM files additionally carry original base64 `encodedBytes`, allowing a bound
+consumer such as TypeScript to preserve its BOM decoding without live reads.
+
+Both filesystem helpers accept an optional third `onUnavailable` callback with
+`{reason, code?}`. Expected reasons are `input-changed`, `inventory-limit`,
+`byte-limit`, and `unreadable`; only recognized filesystem failures and explicit
+capture guards can return undefined. Cancellation and unexpected/programming
+errors propagate instead. Without a callback, `PGUIDE_TIMINGS=1` reports the
+reason. The CLI supplies a callback which emits `input-view.unavailable` evidence
+and, when enabled, a timing event with Objective identity, `status: "unavailable"`,
+reason and filesystem code. Successful capture timing uses `status: "captured"`.
+Explicitly disabling both evidence and timings suppresses these diagnostic
+channels; fallback does not become a successful cached observation.
+
 An observation contains `current: { objectiveId, levelId }`, fully scoped
 `problems` with either `{ kind: "internal", ref: { objectiveId, levelId, checkId,
 problemId }, parameters }` or `{ kind: "dependency", objectiveId, subject,

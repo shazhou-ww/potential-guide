@@ -12,6 +12,7 @@ export {
   type ObjectiveDependencyTarget,
   type ObjectiveLevelCheck,
   type ObjectiveLevelCheckInput,
+  observationResource,
   recordDependencyObservation,
 } from "./dependency.js";
 export {
@@ -23,6 +24,14 @@ export {
   RunEvidence,
   withCheckEvidence,
 } from "./evidence.js";
+export type {
+  FilesystemObservationUnavailable,
+  FilesystemObservationView,
+} from "./filesystem-revision.js";
+export {
+  captureFilesystemObservation,
+  filesystemObservationRevision,
+} from "./filesystem-revision.js";
 export {
   bindObjective,
   type ObjectiveDeclaration,

@@ -107,6 +107,10 @@ for (const [prefix, subjectSchema] of [
   ["package-standard/", packageSubjectSchema],
 ]) {
   await generated(
+    `${prefix}observation-inputs.json`,
+    `{\n  "contract": "bounded-readonly-filesystem-v1",\n  "subjectRoot": ${prefix ? '["root"]' : '["context", "repo", "rootPath"]'}\n}\n`,
+  );
+  await generated(
     `${prefix}objective.yaml`,
     stringify(
       {

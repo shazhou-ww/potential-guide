@@ -29,7 +29,7 @@ import {
   validateAgentProfile,
   writeResult,
 } from "@potential-guide/cli-core";
-import { withPilot } from "@potential-guide/cli-runtime";
+import { pilotSourceBudgets, withPilot } from "@potential-guide/cli-runtime";
 import { Exit, startEffect } from "@potential-guide/effects";
 import { selectObjective } from "@potential-guide/objective-declarations";
 import type {
@@ -575,7 +575,8 @@ async function run(
             Object.entries(regulation.sourceBindings).map(([id, source]) => [id, source.tree]),
           ),
           sources: regulation.sourceBindings,
-          probeTimeoutMs: regulation.regulationStrategy?.probe?.timeoutMs,
+          ...pilotSourceBudgets(regulation.regulationStrategy?.probe),
+          signal: controller.signal,
           reports: reportOptions([], config, globals.cwd),
         });
       } catch (cause) {
@@ -769,10 +770,9 @@ export async function runRegulate(
       });
     },
     {
-      probeTimeoutMs: requiredSetting<NonNullable<RegulationStrategy["probe"]>>(
-        loaded.value,
-        "pilot.probe",
-      ).timeoutMs,
+      ...pilotSourceBudgets(
+        requiredSetting<NonNullable<RegulationStrategy["probe"]>>(loaded.value, "pilot.probe"),
+      ),
       propagateError: (cause) => cause instanceof RegulationError,
       reports: reportOptions([], loaded.value, globals.cwd),
     },

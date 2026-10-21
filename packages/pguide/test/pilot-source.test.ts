@@ -5,11 +5,12 @@ import { cp, mkdir, mkdtemp, rename, rm, stat, writeFile } from "node:fs/promise
 import { syncBuiltinESMExports } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { test } from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { CliError } from "@potential-guide/cli-core";
 import { Effect } from "@potential-guide/effects";
-import { observe, type ObjectiveManifest } from "@potential-guide/objective-pilot";
+import { type ObjectiveManifest, observe } from "@potential-guide/objective-pilot";
 import { withPilot } from "../../cli-runtime/src/pilot-source.js";
 import { manifest, fixture as wikiFixture } from "../../objective-pilot/test/fixtures.js";
 
@@ -419,6 +420,65 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kin
   assert.equal(pinned.payload.current.objectiveId, parent.uri);
   assert.equal(pinned.payload.current.levelId, "initial");
   assert.equal(pinned.payload.versions[child.uri], childTree);
+  const originalRead = filesystem.readFile;
+  let delayed = 0;
+  try {
+    t.mock.method(
+      filesystem,
+      "readFile",
+      async (...args: Parameters<typeof filesystem.readFile>) => {
+        if (String(args[0]).includes("checkout-1")) {
+          delayed++;
+          const options = args[1];
+          const signal =
+            typeof options === "object" && options !== null ? options.signal : undefined;
+          await delay(8000, undefined, { signal });
+        }
+        return originalRead(...args);
+      },
+    );
+    syncBuiltinESMExports();
+    const sourceDeadline = await withPilot(
+      parent.path,
+      parent.root,
+      undefined,
+      (spec, runtime) => Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime)),
+      {
+        preparationTimeoutMs: 3000,
+        probeTimeoutMs: 15000,
+        observationBudget: { timeoutMs: 10000, maxDepth: 8, maxObservations: 16 },
+        reports: { enabled: false },
+      },
+    );
+    assert.equal(sourceDeadline.payload, null);
+    assert.match(
+      sourceDeadline.message,
+      /source-preparation-timeout:.*dependency source preparation/,
+    );
+    const before = delayed;
+    await assert.rejects(
+      withPilot(
+        parent.path,
+        parent.root,
+        undefined,
+        (spec, runtime) => Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime)),
+        {
+          preparationTimeoutMs: 10000,
+          probeTimeoutMs: 15000,
+          observationBudget: { timeoutMs: 1500, maxDepth: 8, maxObservations: 16 },
+          reports: { enabled: false },
+        },
+      ),
+      /observation-timeout:.*total observation deadline/,
+    );
+    assert.ok(
+      delayed > before,
+      "The total deadline must expire during lazy preparation, not before its request.",
+    );
+  } finally {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  }
 });
 
 test("Git source failure is reported as explicit pilot-error exit 2", async () => {
@@ -475,6 +535,234 @@ test("source preparation has its own deadline and releases only its owned cache"
   }
 });
 
+test("host-owned input views are immutable within a round, refreshed between rounds and cleaned before return", async (t) => {
+  const repo = await repository(
+    manifest({
+      subjectSchema: {
+        type: "object",
+        required: ["root"],
+        properties: { root: { type: "string" } },
+        additionalProperties: false,
+      },
+      levels: [
+        { id: "first", checks: [{ id: "first", problems: ["broken"] }] },
+        { id: "last", checks: [{ id: "last", problems: ["broken"] }] },
+      ],
+    }),
+  );
+  t.after(() => rm(repo.root, { recursive: true, force: true }));
+  await writeFile(
+    join(repo.path, "observation-inputs.json"),
+    JSON.stringify({
+      contract: "bounded-readonly-filesystem-v1",
+      subjectRoot: ["root"],
+    }),
+  );
+  const source = `#!/usr/bin/env node
+const fs = require("node:fs");
+(async () => {
+let input = ""; for await (const chunk of process.stdin) input += chunk;
+const view = process.env.PGUIDE_INPUT_VIEW ? JSON.parse(fs.readFileSync(process.env.PGUIDE_INPUT_VIEW, "utf8")) : undefined;
+const text = view ? view.entries["input.txt"].text : fs.readFileSync(require("node:path").join(JSON.parse(input).root, "input.txt"), "utf8");
+const ok = text === "before";
+process.stdout.write(JSON.stringify({status:200,message:"",payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{kind:"internal",id:"broken",parameters:{viewPath:process.env.PGUIDE_INPUT_VIEW}}]}}));
+})().catch(error => {console.error(error); process.exitCode = 1;});
+`;
+  await repo.check("checks/first/run.cjs", source);
+  await repo.check("checks/last/run.cjs", source);
+  await repo.commit();
+  const target = await mkdtemp(join(resolve(".cache", "pilot-source-tests"), "input-view-target-"));
+  t.after(() => rm(target, { recursive: true, force: true }));
+  await writeFile(join(target, "input.txt"), "before");
+  await withPilot(
+    repo.path,
+    repo.root,
+    undefined,
+    async (spec, runtime) => {
+      let changed = false;
+      const wrapped = {
+        ...runtime,
+        resolveCheck: (ref: Parameters<typeof runtime.resolveCheck>[0]) => {
+          const invoke = runtime.resolveCheck(ref);
+          return async (subject: Parameters<typeof invoke>[0], signal: AbortSignal) => {
+            const result = await invoke(subject, signal);
+            if (!changed) {
+              changed = true;
+              await writeFile(join(target, "input.txt"), "after");
+            }
+            return result;
+          };
+        },
+      };
+      const first = await Effect.runPromise(observe({ spec, subject: { root: target } }, wrapped));
+      assert.equal(first.payload?.current.levelId, "last");
+      const second = await Effect.runPromise(observe({ spec, subject: { root: target } }, wrapped));
+      assert.equal(second.payload?.current.levelId, "initial");
+      const problem = second.payload?.problems[0];
+      assert.equal(problem?.kind, "internal");
+      if (problem?.kind !== "internal") throw new Error("Expected fresh target failure.");
+      const path = problem.parameters.viewPath;
+      assert.equal(typeof path, "string");
+      await assert.rejects(stat(String(path)), { code: "ENOENT" });
+      const originalOpen = filesystem.open;
+      let partial = "";
+      try {
+        t.mock.method(filesystem, "open", async (...args: Parameters<typeof filesystem.open>) => {
+          const handle = await originalOpen(...args);
+          if (String(args[0]).includes("input-view-") && args[1] === "wx") {
+            partial = String(args[0]);
+            const write = handle.writeFile.bind(handle);
+            t.mock.method(handle, "writeFile", async () => {
+              await write("{");
+              throw new Error("Injected input view write failure.");
+            });
+          }
+          return handle;
+        });
+        syncBuiltinESMExports();
+        const failed = await Effect.runPromise(
+          observe({ spec, subject: { root: target } }, wrapped),
+        );
+        assert.equal(failed.payload, null);
+        assert.match(failed.message, /Injected input view write failure/);
+        assert.ok(partial);
+        await assert.rejects(stat(partial), { code: "ENOENT" });
+      } finally {
+        t.mock.restoreAll();
+        syncBuiltinESMExports();
+      }
+      const originalReadDirectory = filesystem.readdir;
+      const timings: string[] = [];
+      const priorTimings = process.env.PGUIDE_TIMINGS;
+      try {
+        process.env.PGUIDE_TIMINGS = "1";
+        t.mock.method(process.stderr, "write", (chunk: string | Uint8Array) => {
+          timings.push(String(chunk));
+          return true;
+        });
+        t.mock.method(
+          filesystem,
+          "readdir",
+          async (...args: Parameters<typeof filesystem.readdir>) => {
+            if (resolve(String(args[0])).toLowerCase() === resolve(target).toLowerCase())
+              throw Object.assign(new Error("Capture unavailable."), {
+                code: "EACCES",
+                syscall: "scandir",
+              });
+            return originalReadDirectory(...args);
+          },
+        );
+        syncBuiltinESMExports();
+        const fallback = await Effect.runPromise(
+          observe({ spec, subject: { root: target } }, wrapped),
+        );
+        assert.equal(fallback.payload?.current.levelId, "initial", fallback.message);
+        const event = timings
+          .flatMap((line) =>
+            line
+              .trim()
+              .split("\n")
+              .map((item) => JSON.parse(item)),
+          )
+          .find((value) => value.phase === "input-view.capture" && value.status === "unavailable");
+        assert.ok(event);
+        assert.equal(event.objectiveId, repo.uri);
+        assert.equal(event.reason, "unreadable");
+        assert.equal(event.code, "EACCES");
+      } finally {
+        t.mock.restoreAll();
+        syncBuiltinESMExports();
+        if (priorTimings === undefined) delete process.env.PGUIDE_TIMINGS;
+        else process.env.PGUIDE_TIMINGS = priorTimings;
+      }
+    },
+    { reports: { enabled: false } },
+  );
+});
+
+test("runtime budgets retain distinct observation and check timeout causes", async (t) => {
+  const repo = await repository(
+    manifest({
+      levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }],
+    }),
+  );
+  t.after(() => rm(repo.root, { recursive: true, force: true }));
+  await repo.check("checks/ready/run.cjs", "#!/usr/bin/env node\nsetTimeout(() => {}, 60000);");
+  await repo.commit();
+  for (const observationTimeout of [true, false]) {
+    const run = () =>
+      withPilot(
+        repo.path,
+        repo.root,
+        undefined,
+        (spec, runtime) =>
+          Effect.runPromise(observe({ spec, subject: { name: "target" } }, runtime)),
+        {
+          reports: { enabled: false },
+          probeTimeoutMs: observationTimeout ? 10000 : 100,
+          observationBudget: {
+            timeoutMs: observationTimeout ? 100 : 10000,
+            maxDepth: 8,
+            maxObservations: 16,
+          },
+        },
+      );
+    if (observationTimeout)
+      await assert.rejects(run(), /observation-timeout:.*total observation deadline/);
+    else {
+      const result = await run();
+      assert.equal(result.payload, null);
+      assert.match(result.message, /check-timeout:.*ready.*100ms/);
+    }
+  }
+});
+
+test("source lifetime cancellation waits for active process teardown before removing its source", async (t) => {
+  const repo = await repository(
+    manifest({
+      levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }],
+    }),
+  );
+  t.after(() => rm(repo.root, { recursive: true, force: true }));
+  const pidFile = join(
+    resolve(".cache", "pilot-source-tests"),
+    `cancelled-${crypto.randomUUID()}.pid`,
+  );
+  t.after(() => rm(pidFile, { force: true }));
+  await repo.check(
+    "checks/ready/run.cjs",
+    `#!/usr/bin/env node
+require("node:fs").writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));
+setInterval(() => {}, 1000);
+`,
+  );
+  await repo.commit();
+  const controller = new AbortController();
+  let pid = 0;
+  await assert.rejects(
+    withPilot(
+      repo.path,
+      repo.root,
+      undefined,
+      async (spec, runtime) => {
+        const pending = Effect.runPromise(observe({ spec, subject: { name: "target" } }, runtime));
+        const deadline = Date.now() + 10000;
+        while (!(await filesystem.stat(pidFile).catch(() => undefined))) {
+          if (Date.now() > deadline) throw new Error("Probe did not start.");
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        pid = Number(await filesystem.readFile(pidFile, "utf8"));
+        controller.abort(new Error("cancelled-source-use"));
+        await pending;
+      },
+      { signal: controller.signal, reports: { enabled: false } },
+    ),
+    /cancelled-source-use/,
+  );
+  assert.ok(pid > 0);
+  assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+});
+
 test("cleanup failure retains the primary CLI error and reports both causes", async (t) => {
   const repo = await repository(
     manifest({
@@ -502,28 +790,36 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kin
   );
   const cleanup = new Error("Injected cleanup failure.");
   const originalRm = filesystem.rm;
+  const controller = new AbortController();
   let cache = "";
   try {
     await assert.rejects(
-      withPilot(repo.path, repo.root, undefined, async (spec, runtime) => {
-        const observation = await Effect.runPromise(
-          observe({ spec, subject: { name: "repo" } }, runtime),
-        );
-        assert.ok(observation.payload !== null);
-        const problem = observation.payload.problems.at(0);
-        const directory = problem?.kind === "internal" ? problem.parameters.directory : undefined;
-        assert.equal(typeof directory, "string");
-        if (typeof directory !== "string") throw new Error("Expected a process check directory.");
-        cache = dirname(dirname(dirname(dirname(directory))));
-        assert.equal(dirname(cache), resolve(".cache", "pguide-sources"));
-        t.mock.method(filesystem, "rm", async (...args: Parameters<typeof filesystem.rm>) => {
-          const [path, options] = args;
-          if (String(path) === cache) throw cleanup;
-          return originalRm(path, options);
-        });
-        syncBuiltinESMExports();
-        throw primary;
-      }),
+      withPilot(
+        repo.path,
+        repo.root,
+        undefined,
+        async (spec, runtime) => {
+          const observation = await Effect.runPromise(
+            observe({ spec, subject: { name: "repo" } }, runtime),
+          );
+          assert.ok(observation.payload !== null);
+          const problem = observation.payload.problems.at(0);
+          const directory = problem?.kind === "internal" ? problem.parameters.directory : undefined;
+          assert.equal(typeof directory, "string");
+          if (typeof directory !== "string") throw new Error("Expected a process check directory.");
+          cache = dirname(dirname(dirname(dirname(directory))));
+          assert.equal(dirname(cache), resolve(".cache", "pguide-sources"));
+          t.mock.method(filesystem, "rm", async (...args: Parameters<typeof filesystem.rm>) => {
+            const [path, options] = args;
+            if (String(path) === cache) throw cleanup;
+            return originalRm(path, options);
+          });
+          syncBuiltinESMExports();
+          controller.abort(primary);
+          throw primary;
+        },
+        { signal: controller.signal },
+      ),
       (error: unknown) => {
         assert.ok(error instanceof CliError);
         assert.equal(error.exitCode, 37);
