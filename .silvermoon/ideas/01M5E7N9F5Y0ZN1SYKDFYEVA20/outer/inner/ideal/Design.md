@@ -15,6 +15,7 @@ Behavior ResourceAllocation ──┘
 - RegulationTarget 是治理目标意图：针对特定 Objective 与 subject，在某时刻要求一次向 targetLevel 推进的尝试，具有 priority。它不承诺一定达到，不是持续保持目标的控制器。
 - ResourceAllocation 是资源分配意图：期望使用的 agent binding 及并发度，不是实际资源分配、真实空闲数或权限集合；每次以完整值更新，不另建资源 delta 协议。
 - CoordinatorState 是整个 Coordinator 的可观察执行状态：已确认的两类意图、pending/运行/停止/终结、已采纳的治理观察、依赖、实际 binding 与占用、累计预算、异常和服务生命周期。
+- 核心状态不携带外部实例 ID 或输入通道生命周期；外部身份由宿主或 envelope 关联，连接、结束与重连由适配层管理。通道结束不撤销当前意图、不自动取消调用或关闭服务；错误仍明确报告，影响服务可用性时体现为服务自身的状态变化。
 - 外部接口是有状态、带副作用及反馈的二元 Behavior 变换，不是仅依赖当前两个值的无记忆逐点函数。输入保持不变时，runner 反馈、观察及超时仍能改变输出状态。
 - 内部可以通过 monadic bind（>>=）组合依赖前一步结果的副作用步骤；monadic composition 不等于 monadic lift，不将整个 Coordinator 称为 liftM2 或普通 applicative lift。
 
@@ -43,9 +44,10 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 
 ## 资源分配意图与实际占用
 
-- ResourceAllocation 的最小核心为 binding 与期望 concurrency；binding 固定时可置于实例配置，使动态部分仅剩 concurrency。具体 API 稍后确定，不预设异构资源池、独立 resource ID、capabilities/requirements 匹配或重复的两级并发约束。
+- ResourceAllocation 包含 no-resource 与 configured 两种合法值；前者是无资源意图及 Behavior 初值，后者携带 binding 与期望 concurrency，允许 0 以保留配置。不使用 dummy binding，已确认资源初值为 revision 0 的 no-resource，不再使用外层 null。不预设异构资源池、独立 resource ID、capabilities/requirements 匹配或重复的两级并发约束。
 - concurrency 是期望总并发度，不是宿主上报的剩余空闲槽位。实际 running/stopping、每次调用使用的 binding 及资源利用由 CoordinatorState 和 events 表达。
 - 从 4 调为 2 只是资源意图变化，不会直接杀掉两个调用；已确认期望为 2、实际占用仍为 4 是合法的过渡状态。binding 更新同样不等于旧调用已经切换。
+- 切换为 no-resource 同样只改变意图，不宣称实际占用已归零，也不自动指定现有调用的终止策略；它不是输入故障的兜底值。
 - 是否等待自然排空、停止哪些调用、如何抢占以及何时采用新 binding，是 Coordinator 的业务响应策略，须后续明确验证；资源输入本身不编码强制停止语义。
 - 原始输入、已确认意图及实际响应分开记录。非法资源输入明确报错，不能静默当作合法零并发、成功采纳或凭空宣称权限已撤销；有效性故障后的运行策略也需明确。
 - 实际占用包括 running 与 stopping。abort 只提出请求；result settlement 或 kill 必须确认实际退出，才释放槽位。kill 失败保留未确认占用并报告，不能虚构终止。
@@ -61,8 +63,8 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 
 ## 持久化、纯回放与恢复
 
-- 设计支持 RegulationTarget 和 CoordinatorState 的持久化及恢复。可采用快照加后续增量；初值、快照版本、命令/事件处理位置与接续规则必须明确，不要求现在固定存储技术或永久保留无限日志。
-- 保存目标意图的发生修订和 Coordinator 已处理位置，使两者能一致接续。恢复后不能把已完成或 blocked 的同一意图当成新请求重跑，也不能遗漏未处理请求或重复预留预算。
+- 设计支持 RegulationTarget 和 CoordinatorState 的持久化及恢复。CoordinatorCheckpoint 仅封装两份领域状态，不包含固定 positions 字段，不要求现在选定日志或存储方案。
+- 若采用快照加后续增量，持久化适配层负责在外层保存与快照一致的命令/事件处理位置并定义接续规则；领域 revision 不默认等于日志位置。无论采用何种方案，都须保存意图发生修订并保证一致恢复，不能把已完成或 blocked 的同一意图当成新请求重跑，也不能遗漏未处理请求或重复预留预算。
 - 保存 RegulationTarget 的全局版本水位与 Record 条目更新版本，不能用剩余条目的最大值替代水位或把版本当作消息游标；使用普通 JSON 对象持久化映射，仍须校验对象身份、版本与可持久化值。
 - 持久化的是目标、观察、结果、依赖和恢复元数据，不是 Promise、进程句柄或活跃内存节点；恢复失败明确呈现，不能静默从空状态启动。
 - 回放只运行 reducer，不重放启动、停止、文件写入等副作用。恢复出的 running 是历史记录，不是当前存活证明；须核实外部执行能否重关联、是否已结束或是否无法确认，再将恢复事实通过 events 纳入状态。
