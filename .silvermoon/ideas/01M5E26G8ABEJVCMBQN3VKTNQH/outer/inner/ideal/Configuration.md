@@ -11,7 +11,7 @@
 - namespace 按所属 package 功能后缀约定，如 pguide-regulate 对应 regulate；package 配置描述显式声明归属，核心不截取包名猜测。不同 package 的 namespace 归属冲突明确失败，不以发现顺序解决。
 - 同一 package 的多个命令可共用 namespace。配置定义者与消费者可以不同，跨组件消费要明确约定。
 - 第一版 quota 保持共享对象，不拆成多个 setting ID；supervise 继续消费同一份共享 quota，并遵守对象整体替换规则。
-- regulate 与 supervise 的 Agent 执行超时拆为两个互不共享的 setting，不继续共用旧 agentExecutionLimits.timeoutMs。具体 ID、默认值和手工迁移映射待确认；旧字段还被 pguide diagnose agent 的 AHP 初始化超时消费，该用途的归属须单独收敛，不能因拆分而遗漏。
+- regulate、supervise 的 Agent 执行超时及 pguide diagnose agent 的 AHP 初始化超时拆为三个互不共享的 setting，由各用途所属 package 声明，不继续共用旧 agentExecutionLimits.timeoutMs。旧字段有有效显式值时，手工迁移分别保留到三个对应 setting；无旧值时，描述分别声明原默认值：regulate 为 1800000 毫秒，supervise 和 AHP 诊断各为 30000 毫秒。迁移后可独立调整，不再联动；此决定不改变 ACP 诊断行为或独立 probe 预算。具体 setting ID 在完整映射表中统一确定。
 - package 配置描述采用独立静态 JSON 文件，由 package 元数据引用，不采用可执行模块作为描述载体。
 - 内置描述随构建接入；第三方描述须显式注册，不因 PATH 上发现命令而自动加载其描述。普通配置操作不执行扩展来获取描述。
 - 描述随 package 交付和更新，与设置值的用户级、项目级作用域分离；同一份 package 描述用于解释两个作用域的设置值，不按作用域复制描述或逐项目注册。第三方 package 由外部工具安装后，再显式接入一次已安装 package；接入定位其元数据引用的静态描述，不授予命令执行权限。第一版不新增 package 安装器。具体元数据字段、接入记录位置、定位及信任边界仍待讨论。
@@ -52,7 +52,7 @@
 1. JSONC 主配置的注释编辑规则如何规定。
 2. package 静态描述的元数据引用字段、第三方接入记录的位置、已安装 package 的定位及信任边界、namespace 合法性和身份匹配、同一 package 的重复发现如何处理。描述来源接入不按设置值作用域划分。
 3. 具体设置的必填性与默认值、弃用规则，以及编辑命令是否允许保存未验证设置。
-4. 默认 Agent、共享 quota、probe、权限等设置的具体归属及共享消费契约；regulate、supervise 独立超时设置及 diagnose agent AHP 初始化超时的默认值和手工迁移映射。不能机械重命名后切断已确认的共享消费或新增隐式继承。
+4. 默认 Agent、共享 quota、probe、权限等设置的具体归属及共享消费契约，以及三种独立超时 setting 的具体 ID。不能机械重命名后切断已确认的共享消费或新增隐式继承。
 5. 除已明确移除的 --config 及其主配置 explicit scope 外，现有环境和 CLI 参数入口如何保留、替代或显式移除，以及新格式身份和旧 YAML v2 的手工字段映射。不把局部配置建议当作删除其他入口的授权，不新增自动迁移命令。
 
 ## 部署限定
