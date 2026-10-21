@@ -1,21 +1,25 @@
-# 以单一目标命令驱动 Regulation Coordinator
+# 以双意图 Behavior 驱动 Regulation Coordinator
 
 ## 问题
 
-已交付的 Coordinator 使用 add/replace/cancel/priority/retry，要求调用者操纵任务生命周期，并将 blocked 工作保留为可恢复节点；不能直接表达某个时刻对特定 Objective 与 subject 的一次性目标需求。
+已交付的 Coordinator 使用五类命令、复杂资源池和 harness 授权模型，混淆了意图、实际执行及可恢复状态。
 
 ## 结果
 
-命令统一为设置特定 Objective 与 subject 的目标 level 和 priority，initial 表示不再需要推进。commands 表达意图 delta，events 表达整个 Coordinator 可观察执行状态的 delta，由明确初值和有序完整前缀归约出 Behavior；保留 pending、有限依赖编排及单次调用终结。原则见 [Design.md](./Design.md)，事件候选见 [Events.md](./Events.md)。
+Coordinator 将治理目标意图与资源分配意图两个 Behavior 转换为执行状态 Behavior。Command/Event 分别由纯 reducer 归约，资源意图全量更新；支持目标与状态持久化恢复，副作用通过 monadic composition 组织。原则见 [Design.md](./Design.md)，先参考 [Types.md](./Types.md) 讨论 state，再推导 Command/Event。
 
 ## 边界
 
 - 先完成 [level-attainment](../../../../01M5EFD1DW5J6MBE9BKCRFW5W3/outer/inner/ideal/Idea.md) 的协议语义，再接入统一 initial；本 idea 不重复修改层级协议。
-- 保留资源 Behavior 第一参数、单队列及命令/事实分离；不迁移或重接既有 Supervisor、Planner、Portfolio，不增加长期目标控制器。
-- 权限和总预算仍来自可信配置；终结调用不靠内存挂起恢复，必要的恢复信息须有明确持久化边界。不发布 npm，不改设备配置。
+- 保留资源意图第一参数、单队列与单次尝试；pending 属调度，block 属调用终态，不增加长期目标控制器，不重接既有服务。
+- 当前账号委托范围内由实际资源实施授权，harness 不另设 grants/ceiling；预算仍独立受控，恢复不重复执行副作用、不重置预算。不发布 npm，不改设备配置。
 
 ## 验收标准
 
-- 单一目标命令覆盖提交、目标/优先级更新、撤销及终结后再次尝试；同一工作对象的覆盖顺序明确，initial 不检查、不回滚。
-- pending 尚未进入 Regulation；blocked 调用已结束，依赖可自主排新调用，迟到反馈不复活旧执行、不伪报消费者成功。
-- 明确初值、公开状态及 delta 归约规则；动态资源、共享依赖、实际终止确认、可信预算及隔离包消费有新证据，不依赖私有内存或旧交付结果冒充新验收。
+- 单一目标命令保留意图发生身份；initial 不执行业务检查、不回滚。资源 binding/并发度全量更新表达期望，不伪报实际占用。
+- 两个纯 reducer 可重建约定状态；目标及执行状态可一致恢复，已终结意图不被重跑，失联调用核实前不虚报终止或释放占用。
+- pending、依赖、真实终止、资源拒绝及累计预算均有新验证；event 类型仍待推导，旧证据不冒充新验收。
+
+## 下一步
+
+先讨论 Types.md 的核心 state 与合法转换，再推导 Command/Event；类型及增量契约收敛后提交整份构想验收。
