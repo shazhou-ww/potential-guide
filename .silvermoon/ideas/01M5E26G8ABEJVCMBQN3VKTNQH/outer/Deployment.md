@@ -1,6 +1,6 @@
 # Deployment
 
-本文件仅为准备阶段种子，全部未完成；设备操作与全局安装由主代理在后续已验收实现上执行，本次不执行。
+主代理已在实现验收后执行本机部署。已验收 implementationRevision 为 `aa9624dd2dced414f9b91538aef3d64986e236e9`，部署源码提交为 `d105c425694ef4e3688901e1ec1e40efec403f4e`。结果、脱敏证据及恢复条件见 [Verification.md](./Verification.md)；门限记录仍以准确部署 revision 为准。
 
 ## Steps
 
