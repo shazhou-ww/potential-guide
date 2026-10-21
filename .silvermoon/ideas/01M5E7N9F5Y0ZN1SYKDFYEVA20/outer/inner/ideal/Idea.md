@@ -6,7 +6,7 @@
 
 ## 结果
 
-将命令统一为为特定 Objective 与 subject 设置目标 level 和 priority；新请求更新当前需求，目标 initial 表示不再需要推进。保留 pending 调度及自主依赖编排，Regulation 达标、block 或出错均终结本次调用，不维护长期目标。语义见 [Design.md](./Design.md)。
+命令统一为设置特定 Objective 与 subject 的目标 level 和 priority，initial 表示不再需要推进。commands 表达意图 delta，events 表达整个 Coordinator 可观察执行状态的 delta，由明确初值和有序完整前缀归约出 Behavior；保留 pending、有限依赖编排及单次调用终结。原则见 [Design.md](./Design.md)，事件候选见 [Events.md](./Events.md)。
 
 ## 边界
 
@@ -18,4 +18,4 @@
 
 - 单一目标命令覆盖提交、目标/优先级更新、撤销及终结后再次尝试；同一工作对象的覆盖顺序明确，initial 不检查、不回滚。
 - pending 尚未进入 Regulation；blocked 调用已结束，依赖可自主排新调用，迟到反馈不复活旧执行、不伪报消费者成功。
-- 动态资源、共享依赖、实际终止确认、可信预算及隔离包消费均有新契约证据，旧交付结果不冒充新验收。
+- 明确初值、公开状态及 delta 归约规则；动态资源、共享依赖、实际终止确认、可信预算及隔离包消费有新证据，不依赖私有内存或旧交付结果冒充新验收。
