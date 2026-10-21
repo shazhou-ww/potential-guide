@@ -25,7 +25,8 @@ TypeScript 配置继承、glob 与 alias/module resolution 也绑定同一受限
 
 运行针对性正确性、超时、取消、视图篡改及独立入口测试，生成受版本控制的运行资源；
 更新直接相关 API/设置说明并执行 pnpm check。源码实施证据与复现边界见
-[Validation.md](./Validation.md)。固定版本真实消费者的冷/热测量由主 Agent 补充，
+[Validation.md](./Validation.md) 与 [performance.json](./performance.json)。
+固定版本独立消费者已完成同输入冷/热测量、变化/修复、独立包、预算及取消反例，
 不把历史不同环境耗时与本轮结果混比。
 
 ## Acceptance criteria

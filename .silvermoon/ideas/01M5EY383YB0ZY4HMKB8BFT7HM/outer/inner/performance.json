@@ -1,0 +1,2230 @@
+{
+  "schemaVersion": 1,
+  "implementationCommit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+  "baselineCommit": "a163adf0cd032b9ee085225f32da72bf96585b47",
+  "environment": {
+    "platform": "win32",
+    "node": "v24.12.0",
+    "pnpm": "11.22.0",
+    "thirdPartyPackages": [
+      "@microsoft/agent-host-protocol@1.0.0",
+      "ajv@8.20.0",
+      "effect@4.0.2",
+      "fast-deep-equal@3.1.3",
+      "fast-uri@3.1.9",
+      "json-schema-traverse@1.0.0",
+      "json-schema-typed@9.0.0",
+      "jsonata@2.1.0",
+      "jsonc-parser@3.3.1",
+      "require-from-string@2.0.2",
+      "yaml@2.9.1"
+    ]
+  },
+  "method": {
+    "consumer": "Eight pnpm-packed packages independently installed with local tarball overrides; no live workspace modules.",
+    "source": "Immutable HTTPS Git source at the corresponding full commit.",
+    "input": "Same archive of the baseline commit plus baseline build outputs for every run.",
+    "coldHot": "Fresh Node process and private source scope for every run; baseline/candidate runs interleaved, then repeated as hot. OS caches are not flushed; not a latency distribution or SLA.",
+    "counters": "Identical --import preload in host and child Node processes: fs/promises, FileHandle stat/readFile, byte counts and root inventory traversals. PID+UUID record names.",
+    "limits": "Counters do not include native Git/tar I/O or the old TypeScript synchronous fs API; do not interpret them as all physical disk I/O.",
+    "reports": "API reports enabled in both variants; CLI diagnostics use --no-reports and isolated HOME/USERPROFILE/APPDATA/XDG_CONFIG_HOME.",
+    "timers": "PGUIDE_TIMINGS=1 for all four comparable API runs; 300000ms preparation, observation and single-check budgets.",
+    "sourceTiming": "Network preparation varies independently of the optimized observation; report both total and observation times."
+  },
+  "target": {
+    "files": 1390,
+    "bytes": 16337057,
+    "sha256": "fc9749289598f9f55246f1c0f4ede520e4e6967e8ee1a45efee7d32d1b53fbe7"
+  },
+  "tarballs": {
+    "baseline": {
+      "potential-guide-cli-core-0.3.0-rc.0.tgz": "080e3bd40429b53dfa19a7835db052e8b91d435e0b7f726462ab307e5e941d13",
+      "potential-guide-cli-runtime-0.1.0-rc.0.tgz": "c55b431581ba07563e2a87df98d5b2d332f5ce47a3e5d93b1858c5752a4d1969",
+      "potential-guide-effects-0.1.0-rc.0.tgz": "0fe03517fa0d74ee2e6f6d45fa1b9716fd3de939c80654ed3283478b5b6c7c00",
+      "potential-guide-git-source-0.1.0-rc.0.tgz": "3a4a742d893fda8b32e35b95c9a5b7784450243ad79155437c455f0bf7d7f813",
+      "potential-guide-objective-declarations-0.1.0-rc.0.tgz": "26c79b2c32465e6f94152bcca587257df1406870e82228f54b6d45d5ba9242dc",
+      "potential-guide-objective-pilot-0.2.0-rc.0.tgz": "50ec50c54f0c0e895e6b04e1a82fc3e127689bca555287c6ca1f34348d7fb2c5",
+      "potential-guide-pguide-pilot-0.4.0-rc.0.tgz": "5011bf935a44d5d174b05e75d23f5ebd7007f538d16b824c34cdfcd2a3c88344",
+      "potential-guide-pilot-protocol-0.1.0-rc.0.tgz": "915fe86c40b5063f05b8d5503cba1979ea9c2d06f835214b6f0965c59dbde09b"
+    },
+    "candidate": {
+      "potential-guide-cli-core-0.3.0-rc.0.tgz": "9398ed7449dfb38f5ef62e2bdef8c69d26ec6b7e73cf070e3e69396767eac3fa",
+      "potential-guide-cli-runtime-0.1.0-rc.0.tgz": "e59d837d6866a4332df7cf59a7d722d0db34f50e2dd23fc12d3150fafd361e34",
+      "potential-guide-effects-0.1.0-rc.0.tgz": "0fe03517fa0d74ee2e6f6d45fa1b9716fd3de939c80654ed3283478b5b6c7c00",
+      "potential-guide-git-source-0.1.0-rc.0.tgz": "3a4a742d893fda8b32e35b95c9a5b7784450243ad79155437c455f0bf7d7f813",
+      "potential-guide-objective-declarations-0.1.0-rc.0.tgz": "26c79b2c32465e6f94152bcca587257df1406870e82228f54b6d45d5ba9242dc",
+      "potential-guide-objective-pilot-0.2.0-rc.0.tgz": "712d7c3d38caf4bb70f6294d7f2785df56ef81e475baca94fbce29f7a6f365c9",
+      "potential-guide-pguide-pilot-0.4.0-rc.0.tgz": "afbbd9cb84217f9ea3ac3cc3bc665c6c3da41561bc3d1d5aeccfffd4bfbdd487",
+      "potential-guide-pilot-protocol-0.1.0-rc.0.tgz": "1b43824431e575a68a2855870238e0aa38d33ac9db0861fcdb12e116815bc9b5"
+    }
+  },
+  "runs": [
+    {
+      "label": "baseline-v4-cold",
+      "node": "v24.12.0",
+      "sourceCommit": "a163adf0cd032b9ee085225f32da72bf96585b47",
+      "target": "Fixed archive of a163adf0cd03 plus that checkout's baseline dist; same input for all runs.",
+      "budgetsMs": {
+        "preparation": 300000,
+        "observation": 300000,
+        "check": 300000
+      },
+      "instrumentation": "Identical Node --import preload in each check; counts fs/promises and root inventory.",
+      "elapsedMs": 83666.4241,
+      "observationMs": 45572.2873,
+      "preparationAndCleanupMs": 38094.1368,
+      "processCount": 86,
+      "checkCalls": [
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        }
+      ],
+      "counts": {
+        "readdir": 39904,
+        "lstat": 224056,
+        "readFile": 2646,
+        "inventory": 86,
+        "realpath": 86,
+        "open": 0,
+        "fstat": 0,
+        "fileHandleReadFile": 0,
+        "readBytes": 6595432
+      },
+      "hostCounts": {
+        "readdir": 34,
+        "lstat": 0,
+        "readFile": 27,
+        "inventory": 0,
+        "realpath": 0,
+        "open": 0,
+        "fstat": 0,
+        "fileHandleReadFile": 0,
+        "readBytes": 25261
+      },
+      "hostTargetCounts": {
+        "readdir": 0,
+        "lstat": 0,
+        "readFile": 1,
+        "inventory": 0,
+        "realpath": 0,
+        "open": 0,
+        "fstat": 0,
+        "fileHandleReadFile": 0,
+        "readBytes": 3075
+      },
+      "allCounts": {
+        "readdir": 39938,
+        "lstat": 224056,
+        "readFile": 2673,
+        "inventory": 86,
+        "realpath": 86,
+        "open": 0,
+        "fstat": 0,
+        "fileHandleReadFile": 0,
+        "readBytes": 6620693
+      },
+      "allTargetCounts": {
+        "readdir": 39904,
+        "lstat": 224056,
+        "readFile": 2647,
+        "inventory": 86,
+        "realpath": 86,
+        "open": 0,
+        "fstat": 0,
+        "fileHandleReadFile": 0,
+        "readBytes": 6598507
+      },
+      "current": {
+        "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+        "levelId": "standardized"
+      },
+      "versions": {
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": "5933e1bbf2e44aa9477f2c0c27f7331c61449385",
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": "5a890f730b189c522dd5dc7ef85e943087fa1506"
+      },
+      "sources": {
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": {
+          "kind": "git-tree",
+          "repository": "https://github.com/shazhou-ww/potential-guide.git",
+          "directory": "packages/objective-monorepo-standard",
+          "commit": "a163adf0cd032b9ee085225f32da72bf96585b47",
+          "tree": "5933e1bbf2e44aa9477f2c0c27f7331c61449385",
+          "repositoryTree": "b5aa939b94f2595fcd6f05e0f09814f7cd8d5fba"
+        },
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": {
+          "kind": "git-tree",
+          "repository": "https://github.com/shazhou-ww/potential-guide.git",
+          "directory": "packages/objective-monorepo-standard/package-standard",
+          "commit": "a163adf0cd032b9ee085225f32da72bf96585b47",
+          "tree": "5a890f730b189c522dd5dc7ef85e943087fa1506",
+          "repositoryTree": "b5aa939b94f2595fcd6f05e0f09814f7cd8d5fba"
+        }
+      },
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+            "levelId": "standardized"
+          },
+          "problems": [],
+          "gapSummary": "",
+          "observedAt": "2026-10-21T14:28:31.822Z",
+          "versions": {
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": "5933e1bbf2e44aa9477f2c0c27f7331c61449385",
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": "5a890f730b189c522dd5dc7ef85e943087fa1506"
+          },
+          "sources": {
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": {
+              "kind": "git-tree",
+              "repository": "https://github.com/shazhou-ww/potential-guide.git",
+              "directory": "packages/objective-monorepo-standard",
+              "commit": "a163adf0cd032b9ee085225f32da72bf96585b47",
+              "tree": "5933e1bbf2e44aa9477f2c0c27f7331c61449385",
+              "repositoryTree": "b5aa939b94f2595fcd6f05e0f09814f7cd8d5fba"
+            },
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": {
+              "kind": "git-tree",
+              "repository": "https://github.com/shazhou-ww/potential-guide.git",
+              "directory": "packages/objective-monorepo-standard/package-standard",
+              "commit": "a163adf0cd032b9ee085225f32da72bf96585b47",
+              "tree": "5a890f730b189c522dd5dc7ef85e943087fa1506",
+              "repositoryTree": "b5aa939b94f2595fcd6f05e0f09814f7cd8d5fba"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "baseline-v4-hot",
+      "node": "v24.12.0",
+      "sourceCommit": "a163adf0cd032b9ee085225f32da72bf96585b47",
+      "target": "Fixed archive of a163adf0cd03 plus that checkout's baseline dist; same input for all runs.",
+      "budgetsMs": {
+        "preparation": 300000,
+        "observation": 300000,
+        "check": 300000
+      },
+      "instrumentation": "Identical Node --import preload in each check; counts fs/promises and root inventory.",
+      "elapsedMs": 56906.6754,
+      "observationMs": 45628.444,
+      "preparationAndCleanupMs": 11278.231399999997,
+      "processCount": 86,
+      "checkCalls": [
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        }
+      ],
+      "counts": {
+        "readdir": 39904,
+        "lstat": 224056,
+        "readFile": 2646,
+        "inventory": 86,
+        "realpath": 86,
+        "open": 0,
+        "fstat": 0,
+        "fileHandleReadFile": 0,
+        "readBytes": 6595432
+      },
+      "hostCounts": {
+        "readdir": 34,
+        "lstat": 0,
+        "readFile": 27,
+        "inventory": 0,
+        "realpath": 0,
+        "open": 0,
+        "fstat": 0,
+        "fileHandleReadFile": 0,
+        "readBytes": 25261
+      },
+      "hostTargetCounts": {
+        "readdir": 0,
+        "lstat": 0,
+        "readFile": 1,
+        "inventory": 0,
+        "realpath": 0,
+        "open": 0,
+        "fstat": 0,
+        "fileHandleReadFile": 0,
+        "readBytes": 3075
+      },
+      "allCounts": {
+        "readdir": 39938,
+        "lstat": 224056,
+        "readFile": 2673,
+        "inventory": 86,
+        "realpath": 86,
+        "open": 0,
+        "fstat": 0,
+        "fileHandleReadFile": 0,
+        "readBytes": 6620693
+      },
+      "allTargetCounts": {
+        "readdir": 39904,
+        "lstat": 224056,
+        "readFile": 2647,
+        "inventory": 86,
+        "realpath": 86,
+        "open": 0,
+        "fstat": 0,
+        "fileHandleReadFile": 0,
+        "readBytes": 6598507
+      },
+      "current": {
+        "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+        "levelId": "standardized"
+      },
+      "versions": {
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": "5933e1bbf2e44aa9477f2c0c27f7331c61449385",
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": "5a890f730b189c522dd5dc7ef85e943087fa1506"
+      },
+      "sources": {
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": {
+          "kind": "git-tree",
+          "repository": "https://github.com/shazhou-ww/potential-guide.git",
+          "directory": "packages/objective-monorepo-standard",
+          "commit": "a163adf0cd032b9ee085225f32da72bf96585b47",
+          "tree": "5933e1bbf2e44aa9477f2c0c27f7331c61449385",
+          "repositoryTree": "b5aa939b94f2595fcd6f05e0f09814f7cd8d5fba"
+        },
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": {
+          "kind": "git-tree",
+          "repository": "https://github.com/shazhou-ww/potential-guide.git",
+          "directory": "packages/objective-monorepo-standard/package-standard",
+          "commit": "a163adf0cd032b9ee085225f32da72bf96585b47",
+          "tree": "5a890f730b189c522dd5dc7ef85e943087fa1506",
+          "repositoryTree": "b5aa939b94f2595fcd6f05e0f09814f7cd8d5fba"
+        }
+      },
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+            "levelId": "standardized"
+          },
+          "problems": [],
+          "gapSummary": "",
+          "observedAt": "2026-10-21T14:29:59.049Z",
+          "versions": {
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": "5933e1bbf2e44aa9477f2c0c27f7331c61449385",
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": "5a890f730b189c522dd5dc7ef85e943087fa1506"
+          },
+          "sources": {
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": {
+              "kind": "git-tree",
+              "repository": "https://github.com/shazhou-ww/potential-guide.git",
+              "directory": "packages/objective-monorepo-standard",
+              "commit": "a163adf0cd032b9ee085225f32da72bf96585b47",
+              "tree": "5933e1bbf2e44aa9477f2c0c27f7331c61449385",
+              "repositoryTree": "b5aa939b94f2595fcd6f05e0f09814f7cd8d5fba"
+            },
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": {
+              "kind": "git-tree",
+              "repository": "https://github.com/shazhou-ww/potential-guide.git",
+              "directory": "packages/objective-monorepo-standard/package-standard",
+              "commit": "a163adf0cd032b9ee085225f32da72bf96585b47",
+              "tree": "5a890f730b189c522dd5dc7ef85e943087fa1506",
+              "repositoryTree": "b5aa939b94f2595fcd6f05e0f09814f7cd8d5fba"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "candidate-v4-cold",
+      "node": "v24.12.0",
+      "sourceCommit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+      "target": "Fixed archive of a163adf0cd03 plus that checkout's baseline dist; same input for all runs.",
+      "budgetsMs": {
+        "preparation": 300000,
+        "observation": 300000,
+        "check": 300000
+      },
+      "instrumentation": "Identical Node --import preload in each check; counts fs/promises and root inventory.",
+      "elapsedMs": 29548.6631,
+      "observationMs": 22199.2647,
+      "preparationAndCleanupMs": 7349.398400000002,
+      "processCount": 44,
+      "checkCalls": [
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        }
+      ],
+      "counts": {
+        "readdir": 0,
+        "lstat": 0,
+        "readFile": 44,
+        "inventory": 0,
+        "realpath": 0,
+        "open": 0,
+        "fstat": 0,
+        "fileHandleReadFile": 0,
+        "readBytes": 365043184
+      },
+      "hostCounts": {
+        "readdir": 1016,
+        "lstat": 3760,
+        "readFile": 92,
+        "inventory": 2,
+        "realpath": 3759,
+        "open": 2775,
+        "fstat": 2774,
+        "fileHandleReadFile": 2774,
+        "readBytes": 538218458
+      },
+      "hostTargetCounts": {
+        "readdir": 982,
+        "lstat": 3760,
+        "readFile": 1,
+        "inventory": 2,
+        "realpath": 3759,
+        "open": 2774,
+        "fstat": 2774,
+        "fileHandleReadFile": 2774,
+        "readBytes": 15520625
+      },
+      "allCounts": {
+        "readdir": 1016,
+        "lstat": 3760,
+        "readFile": 136,
+        "inventory": 2,
+        "realpath": 3759,
+        "open": 2775,
+        "fstat": 2774,
+        "fileHandleReadFile": 2774,
+        "readBytes": 903261642
+      },
+      "allTargetCounts": {
+        "readdir": 982,
+        "lstat": 3760,
+        "readFile": 1,
+        "inventory": 2,
+        "realpath": 3759,
+        "open": 2774,
+        "fstat": 2774,
+        "fileHandleReadFile": 2774,
+        "readBytes": 15520625
+      },
+      "current": {
+        "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+        "levelId": "standardized"
+      },
+      "versions": {
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66"
+      },
+      "sources": {
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": {
+          "kind": "git-tree",
+          "repository": "https://github.com/shazhou-ww/potential-guide.git",
+          "directory": "packages/objective-monorepo-standard",
+          "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+          "tree": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+          "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+        },
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": {
+          "kind": "git-tree",
+          "repository": "https://github.com/shazhou-ww/potential-guide.git",
+          "directory": "packages/objective-monorepo-standard/package-standard",
+          "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+          "tree": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66",
+          "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+        }
+      },
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+            "levelId": "standardized"
+          },
+          "problems": [],
+          "gapSummary": "",
+          "observedAt": "2026-10-21T14:29:01.744Z",
+          "versions": {
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66"
+          },
+          "sources": {
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": {
+              "kind": "git-tree",
+              "repository": "https://github.com/shazhou-ww/potential-guide.git",
+              "directory": "packages/objective-monorepo-standard",
+              "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+              "tree": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+              "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+            },
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": {
+              "kind": "git-tree",
+              "repository": "https://github.com/shazhou-ww/potential-guide.git",
+              "directory": "packages/objective-monorepo-standard/package-standard",
+              "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+              "tree": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66",
+              "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "candidate-v4-hot",
+      "node": "v24.12.0",
+      "sourceCommit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+      "target": "Fixed archive of a163adf0cd03 plus that checkout's baseline dist; same input for all runs.",
+      "budgetsMs": {
+        "preparation": 300000,
+        "observation": 300000,
+        "check": 300000
+      },
+      "instrumentation": "Identical Node --import preload in each check; counts fs/promises and root inventory.",
+      "elapsedMs": 32776.8356,
+      "observationMs": 22536.3838,
+      "preparationAndCleanupMs": 10240.451799999999,
+      "processCount": 44,
+      "checkCalls": [
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "structured",
+          "checkId": "structure"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        },
+        {
+          "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+          "levelId": "standardized",
+          "checkId": "deliveries"
+        }
+      ],
+      "counts": {
+        "readdir": 0,
+        "lstat": 0,
+        "readFile": 44,
+        "inventory": 0,
+        "realpath": 0,
+        "open": 0,
+        "fstat": 0,
+        "fileHandleReadFile": 0,
+        "readBytes": 365043184
+      },
+      "hostCounts": {
+        "readdir": 1016,
+        "lstat": 3760,
+        "readFile": 92,
+        "inventory": 2,
+        "realpath": 3759,
+        "open": 2775,
+        "fstat": 2774,
+        "fileHandleReadFile": 2774,
+        "readBytes": 538218458
+      },
+      "hostTargetCounts": {
+        "readdir": 982,
+        "lstat": 3760,
+        "readFile": 1,
+        "inventory": 2,
+        "realpath": 3759,
+        "open": 2774,
+        "fstat": 2774,
+        "fileHandleReadFile": 2774,
+        "readBytes": 15520625
+      },
+      "allCounts": {
+        "readdir": 1016,
+        "lstat": 3760,
+        "readFile": 136,
+        "inventory": 2,
+        "realpath": 3759,
+        "open": 2775,
+        "fstat": 2774,
+        "fileHandleReadFile": 2774,
+        "readBytes": 903261642
+      },
+      "allTargetCounts": {
+        "readdir": 982,
+        "lstat": 3760,
+        "readFile": 1,
+        "inventory": 2,
+        "realpath": 3759,
+        "open": 2774,
+        "fstat": 2774,
+        "fileHandleReadFile": 2774,
+        "readBytes": 15520625
+      },
+      "current": {
+        "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+        "levelId": "standardized"
+      },
+      "versions": {
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66"
+      },
+      "sources": {
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": {
+          "kind": "git-tree",
+          "repository": "https://github.com/shazhou-ww/potential-guide.git",
+          "directory": "packages/objective-monorepo-standard",
+          "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+          "tree": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+          "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+        },
+        "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": {
+          "kind": "git-tree",
+          "repository": "https://github.com/shazhou-ww/potential-guide.git",
+          "directory": "packages/objective-monorepo-standard/package-standard",
+          "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+          "tree": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66",
+          "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+        }
+      },
+      "observation": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+            "levelId": "standardized"
+          },
+          "problems": [],
+          "gapSummary": "",
+          "observedAt": "2026-10-21T14:30:32.199Z",
+          "versions": {
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66"
+          },
+          "sources": {
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": {
+              "kind": "git-tree",
+              "repository": "https://github.com/shazhou-ww/potential-guide.git",
+              "directory": "packages/objective-monorepo-standard",
+              "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+              "tree": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+              "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+            },
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": {
+              "kind": "git-tree",
+              "repository": "https://github.com/shazhou-ww/potential-guide.git",
+              "directory": "packages/objective-monorepo-standard/package-standard",
+              "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+              "tree": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66",
+              "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "comparison": {
+    "cold": {
+      "totalReductionPercent": 64.68277039702,
+      "observationReductionPercent": 51.28779788062119
+    },
+    "hot": {
+      "totalReductionPercent": 42.402476740013526,
+      "observationReductionPercent": 50.60891447448876
+    }
+  },
+  "cli": {
+    "baseline-cli-default-isolated": {
+      "code": 2,
+      "elapsedMs": 36363.7043,
+      "sourceCommit": "a163adf0cd032b9ee085225f32da72bf96585b47",
+      "stdout": {
+        "schemaVersion": 1,
+        "status": "pilot-error",
+        "error": "All fibers interrupted without error"
+      },
+      "stderr": ""
+    },
+    "candidate-cli-default": {
+      "code": 0,
+      "elapsedMs": 35013.7826,
+      "sourceCommit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+      "stdout": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+            "levelId": "standardized"
+          },
+          "problems": [],
+          "gapSummary": "",
+          "observedAt": "2026-10-21T14:19:23.643Z",
+          "versions": {
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66"
+          },
+          "sources": {
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": {
+              "kind": "git-tree",
+              "repository": "https://github.com/shazhou-ww/potential-guide.git",
+              "directory": "packages/objective-monorepo-standard",
+              "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+              "tree": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+              "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+            },
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": {
+              "kind": "git-tree",
+              "repository": "https://github.com/shazhou-ww/potential-guide.git",
+              "directory": "packages/objective-monorepo-standard/package-standard",
+              "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+              "tree": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66",
+              "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+            }
+          }
+        }
+      },
+      "stderr": "{\"type\":\"pguide-timing\",\"phase\":\"source.preparation\",\"durationMs\":12510}\n{\"type\":\"pguide-timing\",\"phase\":\"input-view.capture\",\"status\":\"captured\",\"durationMs\":1189,\"entries\":1881,\"bytes\":8296436}\n{\"type\":\"pguide-timing\",\"phase\":\"source.dependency-preparation\",\"objectiveId\":\"git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/\",\"durationMs\":120}\n{\"type\":\"pguide-timing\",\"phase\":\"observation\",\"objectiveId\":\"git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/\",\"durationMs\":22080,\"executedObservations\":22,\"reusedObservations\":21,\"logicalObservations\":43,\"inputViewResources\":2}\n"
+    },
+    "candidate-cli-explicit-budgets": {
+      "code": 0,
+      "elapsedMs": 52552.3388,
+      "sourceCommit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+      "stdout": {
+        "status": 200,
+        "message": "",
+        "payload": {
+          "current": {
+            "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+            "levelId": "standardized"
+          },
+          "problems": [],
+          "gapSummary": "",
+          "observedAt": "2026-10-21T14:20:16.566Z",
+          "versions": {
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66"
+          },
+          "sources": {
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": {
+              "kind": "git-tree",
+              "repository": "https://github.com/shazhou-ww/potential-guide.git",
+              "directory": "packages/objective-monorepo-standard",
+              "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+              "tree": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+              "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+            },
+            "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": {
+              "kind": "git-tree",
+              "repository": "https://github.com/shazhou-ww/potential-guide.git",
+              "directory": "packages/objective-monorepo-standard/package-standard",
+              "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+              "tree": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66",
+              "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+            }
+          }
+        }
+      },
+      "stderr": "{\"type\":\"pguide-timing\",\"phase\":\"source.preparation\",\"durationMs\":29640}\n{\"type\":\"pguide-timing\",\"phase\":\"input-view.capture\",\"status\":\"captured\",\"durationMs\":953,\"entries\":1881,\"bytes\":8296436}\n{\"type\":\"pguide-timing\",\"phase\":\"source.dependency-preparation\",\"objectiveId\":\"git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/\",\"durationMs\":134}\n{\"type\":\"pguide-timing\",\"phase\":\"observation\",\"objectiveId\":\"git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/\",\"durationMs\":22424,\"executedObservations\":22,\"reusedObservations\":21,\"logicalObservations\":43,\"inputViewResources\":2}\n"
+    },
+    "candidate-cli-preparation-timeout": {
+      "code": 2,
+      "elapsedMs": 362.57560000000007,
+      "sourceCommit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+      "stdout": {
+        "schemaVersion": 1,
+        "status": "pilot-error",
+        "error": "source-preparation-timeout: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/: Pilot source preparation timed out after 1ms."
+      },
+      "stderr": ""
+    },
+    "candidate-cli-observation-timeout": {
+      "code": 2,
+      "elapsedMs": 44412.790499999996,
+      "sourceCommit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+      "stdout": {
+        "schemaVersion": 1,
+        "status": "pilot-error",
+        "error": "observation-timeout: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/: total observation deadline exceeded (1ms budget)."
+      },
+      "stderr": "{\"type\":\"pguide-timing\",\"phase\":\"source.preparation\",\"durationMs\":43991}\n{\"type\":\"pguide-timing\",\"phase\":\"observation\",\"objectiveId\":\"git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/\",\"durationMs\":8,\"executedObservations\":1,\"reusedObservations\":0,\"logicalObservations\":1,\"inputViewResources\":1}\n"
+    },
+    "candidate-cli-check-timeout": {
+      "code": 6,
+      "elapsedMs": 10023.5571,
+      "sourceCommit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+      "stdout": {
+        "status": 504,
+        "payload": null,
+        "message": "timeout: check-timeout: {\"objectiveId\":\"git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/\",\"levelId\":\"structured\",\"checkId\":\"structure\"}: Check timed out after 1ms."
+      },
+      "stderr": "{\"type\":\"pguide-timing\",\"phase\":\"source.preparation\",\"durationMs\":7896}\n{\"type\":\"pguide-timing\",\"phase\":\"input-view.capture\",\"status\":\"captured\",\"durationMs\":854,\"entries\":1881,\"bytes\":8296436}\n{\"type\":\"pguide-timing\",\"phase\":\"observation\",\"objectiveId\":\"git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/\",\"durationMs\":1722,\"executedObservations\":1,\"reusedObservations\":0,\"logicalObservations\":1,\"inputViewResources\":2}\n"
+    }
+  },
+  "cancellation": {
+    "passed": true,
+    "childCount": 3,
+    "allChildrenClosedAndTemporaryInputsRemoved": true,
+    "elapsedMs": 30453.0751
+  },
+  "changes": {
+    "sourceCommit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+    "scenarios": [
+      {
+        "id": "root-before-change",
+        "passed": true,
+        "result": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+              "levelId": "standardized"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-21T14:23:43.219Z",
+            "versions": {
+              "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+              "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66"
+            },
+            "sources": {
+              "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": {
+                "kind": "git-tree",
+                "repository": "https://github.com/shazhou-ww/potential-guide.git",
+                "directory": "packages/objective-monorepo-standard",
+                "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+                "tree": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+                "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+              },
+              "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": {
+                "kind": "git-tree",
+                "repository": "https://github.com/shazhou-ww/potential-guide.git",
+                "directory": "packages/objective-monorepo-standard/package-standard",
+                "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+                "tree": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66",
+                "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+              }
+            }
+          }
+        },
+        "viewReleased": true
+      },
+      {
+        "id": "same-runtime-after-delete",
+        "passed": true,
+        "result": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+              "levelId": "initial"
+            },
+            "problems": [
+              {
+                "kind": "dependency",
+                "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+                "subject": {
+                  "root": "C:\\Users\\Wei\\.copilot\\session-state\\8fb9439e-20ad-4b37-b8a3-3ca57c302063\\files\\baseline-target",
+                  "directory": "packages/effects",
+                  "roles": [
+                    "npm"
+                  ],
+                  "runtime": "node",
+                  "allows": [],
+                  "entries": [
+                    "src/index.ts"
+                  ],
+                  "generated": [],
+                  "deliveries": [],
+                  "joins": [
+                    {
+                      "id": "public-library-suite",
+                      "kind": "npm"
+                    },
+                    {
+                      "id": "developer-commands",
+                      "kind": "cli"
+                    }
+                  ]
+                },
+                "expectedLevelId": "structured",
+                "currentLevelId": "initial"
+              }
+            ],
+            "gapSummary": "依赖 git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/ {\"root\":\"C:\\\\Users\\\\Wei\\\\.copilot\\\\session-state\\\\8fb9439e-20ad-4b37-b8a3-3ca57c302063\\\\files\\\\baseline-target\",\"directory\":\"packages/effects\",\"roles\":[\"npm\"],\"runtime\":\"node\",\"allows\":[],\"entries\":[\"src/index.ts\"],\"generated\":[],\"deliveries\":[],\"joins\":[{\"id\":\"public-library-suite\",\"kind\":\"npm\"},{\"id\":\"developer-commands\",\"kind\":\"cli\"}]}：需要 structured，当前 initial。",
+            "observedAt": "2026-10-21T14:24:02.254Z",
+            "versions": {
+              "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+              "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66"
+            },
+            "sources": {
+              "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": {
+                "kind": "git-tree",
+                "repository": "https://github.com/shazhou-ww/potential-guide.git",
+                "directory": "packages/objective-monorepo-standard",
+                "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+                "tree": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+                "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+              },
+              "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": {
+                "kind": "git-tree",
+                "repository": "https://github.com/shazhou-ww/potential-guide.git",
+                "directory": "packages/objective-monorepo-standard/package-standard",
+                "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+                "tree": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66",
+                "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+              }
+            }
+          }
+        },
+        "viewReleased": true
+      },
+      {
+        "id": "same-runtime-after-repair",
+        "passed": true,
+        "result": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/",
+              "levelId": "standardized"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-21T14:24:22.527Z",
+            "versions": {
+              "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+              "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66"
+            },
+            "sources": {
+              "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/": {
+                "kind": "git-tree",
+                "repository": "https://github.com/shazhou-ww/potential-guide.git",
+                "directory": "packages/objective-monorepo-standard",
+                "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+                "tree": "2c0d86065d6bcf7fcf297bd5de760446c0b3e1b2",
+                "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+              },
+              "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": {
+                "kind": "git-tree",
+                "repository": "https://github.com/shazhou-ww/potential-guide.git",
+                "directory": "packages/objective-monorepo-standard/package-standard",
+                "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+                "tree": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66",
+                "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+              }
+            }
+          }
+        },
+        "viewReleased": true
+      },
+      {
+        "id": "independent-package-entry",
+        "passed": true,
+        "result": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/",
+              "levelId": "standardized"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-21T14:24:46.027Z",
+            "versions": {
+              "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66"
+            },
+            "sources": {
+              "git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/": {
+                "kind": "git-tree",
+                "repository": "https://github.com/shazhou-ww/potential-guide.git",
+                "directory": "packages/objective-monorepo-standard/package-standard",
+                "commit": "e4a7428bc969135a1ef1ba84042f4b1c59c36ddf",
+                "tree": "52cc3edb31f478d2724bc90b2e9e9e8f8f797f66",
+                "repositoryTree": "335addcd8f821f042992677fbc3fdc40a4bbe7b0"
+              }
+            }
+          }
+        },
+        "viewReleased": true
+      }
+    ]
+  }
+}

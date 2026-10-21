@@ -121,10 +121,10 @@ FileHandle 的读取、open/fstat/realpath，或明确旧计数仅是该 API 子
 旧 TypeScript 系统宿主还可能执行同步 FS 操作；仅 promises 插桩不能代表该部分，
 跨版本比较须区分同步/异步 API 子集。候选视图模式的 TypeScript 读取不再访问目标 FS。
 
-## 待主 Agent 核实的边界
+## 测量前交接的边界
 
-- `I-AC02` 的真实冷/热耗时、21 包进程/采集计数及候选 CLI 原始症状修复，等待候选固定
-  commit 与独立安装消费者；因此不声明本阶段已达到门限。
+- 当时 `I-AC02` 尚待固定版本消费者验证；现已由下面的最终证据补齐，不以先前的
+  次数公式或单测替代真实测量。
 - 视图契约不支持显式读取 node_modules、.cache 等排除目录；未启用视图的 live 消费者
   不受该限制影响。定向测试同时验证 live 可读取、inventory 仍排除、view 明确拒绝。
 - 只读声明是规则来源的明确契约，不是任意外部 check 的纯度证明或 OS 沙箱；
@@ -171,3 +171,93 @@ FileHandle 的读取、open/fstat/realpath，或明确旧计数仅是该 API 子
   视图进程 1/1 通过；TypeScript 分层 runner 6/6（含旧 live options 兼容）通过。
   更新生成物后完整 `pnpm check` 再次 exit0：60/53/115 项关键 suite 及全部独立打包
   消费通过。未提交、未记录事件；最终固定版本消费仍交由主 Agent。
+
+## 最终固定版本验收证据
+
+主 Agent 对审阅修正后的候选 `e4a7428bc969` 进行了独立安装及 HTTPS Git 固定版本消费，
+基线为 `a163adf0cd03`。完整原始观察、来源 tree 校验、逐 check 身份、计数、CLI 原始
+stdout/stderr、第三方版本及 tarball SHA-256 见 [performance.json](./performance.json)。
+两个消费者各自安装八个实际打包包，以本地 tarball overrides 固定内部依赖；11 个第三方
+包版本完全一致，均使用 Node v24.12.0、pnpm 11.22.0，不引用实时 workspace 模块。
+
+### 最终冷/热对照
+
+四次按基线冷、候选冷、基线热、候选热交错执行。每次均为新 Node 进程与新的来源/观察
+作用域；热表示后续重复，不保留旧 observation。未清空操作系统缓存，不代表磁盘冷启动、
+统计分布或 SLA。观察与单 check、来源准备均显式为 300000ms，API reports 与
+`PGUIDE_TIMINGS=1` 相同。目标始终是基线提交的 archive 加基线 dist，共 1390 个文件、
+16337057 字节；字节/路径摘要与 tarball 摘要在 JSON 中。变化反例恢复了原始字节。
+
+| 轮次 | 基线总耗时 | 候选总耗时 | 基线观察 | 候选观察 | 观察下降 |
+| --- | --- | --- | --- | --- | --- |
+| 冷 | 83.666s | 29.549s | 45.572s | 22.199s | 51.29% |
+| 热 | 56.907s | 32.777s | 45.628s | 22.536s | 50.61% |
+
+来源准备存在明显网络波动，基线冷轮约 38 秒、候选冷轮约 7 秒；因此不能将总耗时差额
+全部归因于本优化。更稳定的同输入观察阶段约减半，且下列确定性工作量在冷/热均一致。
+历史 110–124 秒、早期 v1/v2/v3 插桩及 pnpm 环境未统一的试跑均不作为这张最终表的对照。
+
+| 工作量（宿主与子进程合计） | 基线 | 候选 |
+| --- | --- | --- |
+| check 进程 | 86 | 44 |
+| 根 inventory 遍历 | 86 | 2 |
+| 宿主输入捕获 | 无 | 1 次捕获，内部两次字节遍历 |
+| 实际 / 复用 / 逻辑观察 | 43 / 0 / 43 | 22 / 21 / 43 |
+| readdir | 39938 | 1016 |
+| lstat | 224056 | 3760 |
+| realpath | 86 | 3759 |
+| open / FileHandle.stat / FileHandle.readFile | 0 / 0 / 0 | 2775 / 2774 / 2774 |
+| promises.readFile | 2673 | 136 |
+| 上述 API 实际读取字节 | 6620693 | 903261642 |
+| 其中目标文件读取字节 | 6598507 | 15520625 |
+
+不能把 promises.readFile 下降等同于全部读取减少：候选包含 FileHandle 捕获，并重复校验、
+传递和解析约 8.30 MB 的视图，导致计数范围内读取字节明显增加。这是保留独立进程、
+可信视图与逐调用完整性校验的成本；当前输入的墙钟仍下降，但不是所有规模都已有收益
+证明。该指标还不包含 Git/tar 原生 I/O 或旧 TypeScript 的同步 FS API，不能冒充物理磁盘
+流量。后续如需要，应先测量受限视图投影/传递成本，不能删完整性检查来降低计数。
+
+### 原始故障、预算和变化反例
+
+- 基线真实 CLI 默认预算复现 code2 / `All fibers interrupted without error`。
+  候选默认值未加大，真实 CLI 在约 22.080 秒观察后 standardized、0 problems、code0；
+  含准备总耗时 35.014 秒，所以不宣称整条 CLI 小于 30 秒。
+- 显式配置三层 300000ms 的 CLI 同样通过，约 22.424 秒观察、52.552 秒总耗时；
+  时间差主要来自来源准备。隔离用户配置，没有修改本机旧配置文件。
+- 从已安装 CLI 分别将来源准备、整次观察或单 check 设置为 1ms，实际得到
+  `source-preparation-timeout`（code2）、`observation-timeout`（code2）、
+  带 Objective/level/check 身份的 `check-timeout`（504 / code6）。
+  来源准备耗时不算入后两者的 1ms；清理也不承诺在 1ms 内结束。
+- 同一个已安装 runtime 中依次成功观察、删除 effects README、再次观察、恢复并重观察：
+  成功 → initial/dependency → 成功；失败归属仍为包 Objective、expected structured、
+  current initial，修复后没有旧结果命中。每轮均新建并删除视图。
+- 包级 Git Objective 单独消费成功，来源集合只包含包 Objective；没有借用根的通过结论。
+- 在真实嵌套检查的第三个进程启动后取消，错误保留测试取消原因；三个进程均已 close，
+  它们的临时目录与共享视图文件均 ENOENT 后调用才返回。
+- 整合并发的其他 Idea 文档后，主 Agent 再次运行完整 `pnpm check`，exit0；
+  代理的定向/整套反例与生成物检查证据仍有效。代码没有在测量过程中继续改动。
+
+### 复现入口
+
+Windows 测量程序保存在 [measure-probe.mjs](./verification/measure-probe.mjs) 与
+[probe-count-preload.mjs](./verification/probe-count-preload.mjs)。它们与本轮实际测量
+程序一致；文件操作计数覆盖宿主、checks 及 FileHandle，记录采用 PID + UUID。
+该程序是测量工具，不是运行时功能，也不自动安装依赖。
+
+在仓库外准备一个共同父目录：`baseline-target` 为相同业务 archive 加相同基线 dist；
+`baseline-consumer`、`candidate-consumer` 各自用对应提交构建并经 pnpm pack 的八个包
+安装，内部依赖必须全部 override 到对应 tarball。pnpm 11 的 overrides 放在各消费者的
+pnpm-workspace.yaml，而不是已不读取的 package.json `pnpm` 字段。
+将测量程序复制到两个消费者目录，把 preload 放在共同父目录。设置
+`PGUIDE_TIMINGS=1`、`PROBE_SOURCE_COMMIT` 为相应完整提交，依次运行：
+
+```powershell
+node .\baseline-consumer\measure-probe.mjs baseline-cold
+node .\candidate-consumer\measure-probe.mjs candidate-cold
+node .\baseline-consumer\measure-probe.mjs baseline-hot
+node .\candidate-consumer\measure-probe.mjs candidate-hot
+```
+
+每次使用新的 label，避免把已有进程记录合入新一轮。程序保存 observation、逐进程
+计数和 summary；核对来源 commit/tree、两者第三方版本及输入摘要后再比较。
+完整输入摘要、实际提交、包摘要与本次原始结果以 performance.json 为准。
