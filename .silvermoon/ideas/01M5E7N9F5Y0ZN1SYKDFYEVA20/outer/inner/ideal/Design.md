@@ -37,7 +37,8 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 ```
 
 - commands 描述治理意图的 delta，events 描述 Coordinator 执行状态的 delta。给定明确初值与有序、完整的 delta 前缀，确定性归约得到相应 Behavior。
-- RegulationTarget 使用 ObjectKey 到完整意图的映射，TS 表达为 Readonly<Partial<Record<ObjectKey, TargetIntent>>>，key 由规范化 Objective/subject 身份确定。外层 revision 是整个状态的全局版本；条目 updatedAtRevision 是最后更新它的全局版本，两者共用一个版本空间。每条合法 command 令全局版本加一并覆盖对应条目，即使参数相同也保留新发生身份；意图提出与 Coordinator 确认是不同事实。
+- RegulationTarget 使用 ObjectKey 到完整意图的只读稀疏 Record，不含外层 revision；每条合法 command 仅递增该对象的 TargetIntent.revision 并覆盖对应条目，同值更新也产生新发生身份。不同对象意图版本不可比较；意图提出与 Coordinator 确认是不同事实。
+- CoordinatorState 与对象状态是一对多关系；Coordinator revision 是该 Coordinator 内统一的逻辑时序。对象状态 updatedAtRevision、意图 acknowledgedAtRevision 及执行事实分别记录各自变化发生时的 Coordinator 版本，快照归属版本与最后变化版本分开；多个对象在同次原子转换改变可共享版本。
 - 两个 reducer 都是纯的。尤其 CoordinatorStateReducer 不访问当前输入或私有队列、不执行检查、不作调度决策、不启动或停止进程；事件回放不重复任何执行副作用。
 - 命令合法性及拒绝行为须明确，不能以静默返回原状态掩盖非法输入。事件必须携带足够身份、修订与变化值，让独立 reducer 无需重新观察现实即可归约。
 - 调度与执行过程读取意图和已有状态，作决策、执行动作，并将真实结果形成 events；同一状态变化只有一个权威表达。停止请求不等于终止，异常通知不暗含任务结束。
@@ -47,7 +48,7 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 
 - 公共命令只有为特定 Objective/subject 设置目标 level 与 priority，不再分别提供 add、replace、cancel、priority 或 retry。未终结需求可被更新，前次终结后新请求形成新尝试。
 - 覆盖身份须包含明确对象，精确 Objective 版本、来源和实际资源身份不能混淆；不依靠任意 regulation ID 区分同一需求更新。按接受顺序区分新旧，不依赖生产者时钟；commandId 用于关联，不默认是幂等键。
-- 意图按非负整数 priority 升序、updatedAtRevision 升序排序；同级 FIFO 以最近更新为准，而非首次加入时间。每次更新刷新条目逻辑时间，Record 属性枚举顺序不决定队列顺序；纯 priority 更新可重新排序，但不无故重启。意图发生引用为对象 key 加条目更新版本，旧反馈不能完成新意图。
+- 已确认意图按非负整数 priority 升序、acknowledgedAtRevision 升序排序；新意图的确认刷新排序时间，重复确认同一意图不刷新。对象普通状态/观察更新不改变排队顺序，不用对象独立版本跨对象排序；同次确认的并列决胜规则待定。纯 priority 更新可重新排序但不无故重启。意图引用为对象 key 加对象意图 revision，旧反馈不能完成新意图。
 - 先行 [level-attainment](../../../../01M5EFD1DW5J6MBE9BKCRFW5W3/outer/inner/ideal/Idea.md) 提供无要求 initial。目标 initial 不执行业务检查或 Agent，但仍校验契约、目标和 subject；它撤销推进需求，不将现实降级、不回滚修改、不虚构观察。
 - pending 是 Coordinator 等待 regulator 调度的任务，尚未进入 Regulation。Regulation 开始后，达标、block、预算耗尽或 exception/error 都结束本次调用；不存在以 blocked 状态保留活跃调用、等输入后原地复活的 retry。
 - Coordinator 只维护当前单次需求和必要的有限依赖编排，不因 subject 后续退化或资源变化自动重跑已终结意图。
@@ -75,7 +76,7 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 
 - 设计支持 RegulationTarget 和 CoordinatorState 的持久化及恢复。CoordinatorCheckpoint 仅封装两份领域状态，不包含固定 positions 字段，不要求现在选定日志或存储方案。
 - 若采用快照加后续增量，持久化适配层负责在外层保存与快照一致的命令/事件处理位置并定义接续规则；领域 revision 不默认等于日志位置。无论采用何种方案，都须保存意图发生修订并保证一致恢复，不能把已完成或 blocked 的同一意图当成新请求重跑，也不能遗漏未处理请求或重复预留预算。
-- 保存 RegulationTarget 的全局版本水位与 Record 条目更新版本，不能用剩余条目的最大值替代水位或把版本当作消息游标；使用普通 JSON 对象持久化映射，仍须校验对象身份、版本与可持久化值。
+- 分别保存对象意图版本水位和 Coordinator 全局版本及各事实的引用，不重用已清理对象的旧意图身份，也不把领域版本当作消息游标；使用普通 JSON 对象持久化目标映射，仍须校验对象身份、版本与可持久化值。
 - current 持久化目标、活跃调用、仍有效的观察与依赖、累计预算和恢复元数据；完整领域状态还包括实体、聚合及历史 Collections，不保存 Promise、进程句柄或活跃内存节点。适配层保证 singleton、各个集合和输入接续位置一致；恢复失败明确呈现，不能静默从空状态启动。
 - 回放只运行 reducer，不重放启动、停止、文件写入等副作用。恢复出的 running 是历史记录，不是当前存活证明；须核实外部执行能否重关联、是否已结束或是否无法确认，再将恢复事实通过 events 纳入状态。
 - 外部执行未核实前，不虚报终止、释放占用、退还预算或启动可能重复的替代调用。具体重关联/失联协议与恢复阶段状态在实施时定义。

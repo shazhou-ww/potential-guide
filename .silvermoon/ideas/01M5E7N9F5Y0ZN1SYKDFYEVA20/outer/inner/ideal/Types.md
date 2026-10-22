@@ -10,11 +10,11 @@
 
 ## ER 模型约定
 
-两张图将单个状态实例沿 revision 维度展开，是版本化状态的概念模型，不是物理数据库 schema。singleton 在一个 revision 下恰有一个，跨 revision 则成为以 revision 为 PK 的快照表；current 是选定当前 revision 对应的那一行，不是另一份独立权威状态。Collection 可以在每个 revision 下有零到多条成员记录。`||` 表示一个，`o|` 表示零或一个，`o{` 表示零到多个。
+两张图是版本化状态的概念模型，不是物理数据库 schema。目标意图按对象独立版本化，不再为 RegulationTarget 设置全局 revision 或 singleton 快照实体。Coordinator 的 singleton 在一个 revision 下恰有一个，跨 revision 则成为以 revision 为 PK 的快照表；current 是选定当前 revision 对应的那一行，不是另一份独立权威状态。Collection 可以在每个 Coordinator revision 下有零到多条成员记录。`||` 表示一个，`o|` 表示零或一个，`o{` 表示零到多个。
 
 PK 表示模型中的逻辑唯一键，多列标为 PK 表示复合主键；FK 表示版本归属或对象引用。图中的 objectKey 是由精确 Objective 版本、来源和 subject 推导的身份，不要求在 TypeScript 值中重复保存。嵌套值可以展开成实体以说明关系，不意味着新增存储集合。尚未确定的记录键不虚构为 PK；可选字段、联合类型和跨记录约束由图后规则补充。
 
-revision 的唯一性限定在单个状态实例内；两边各有自己的版本空间，不要求编号相等或同步推进。若物理存储混合多个实例，键需额外带宿主提供的实例作用域，不因此把外部 Coordinator ID 加回领域状态。版本化模型也不要求逐版全量复制或永久保留全部快照，可以采用结构共享、增量或快照加日志。
+目标意图 revision 的唯一性限定在同一 objectKey 内，不同对象之间不可比较。CoordinatorState.revision 是单个 Coordinator 范围内的全局逻辑时序，对象状态更新、意图确认和执行事实引用此版本空间；同一次原子转换可更新多个对象，它们共享该版本，不保证每条事实各有唯一编号。若物理存储混合多个实例，键需额外带宿主提供的实例作用域，不因此把外部 Coordinator ID 加回领域状态。版本化模型不要求逐版全量复制或永久保留全部快照。
 
 ## Regulation Target ER 模型
 
@@ -23,18 +23,13 @@ revision 的唯一性限定在单个状态实例内；两边各有自己的版�
 ```mermaid
 erDiagram
     direction LR
-    REGULATION_TARGET ||--o{ TARGET_INTENT_AT_REVISION : intents
-    REGULATION_OBJECT ||--o{ TARGET_INTENT_AT_REVISION : identifies
+    REGULATION_OBJECT ||--o{ TARGET_INTENT_VERSION : hasIntents
 
-    REGULATION_TARGET {
-        number revision PK "One singleton snapshot per revision"
-    }
-    TARGET_INTENT_AT_REVISION {
-        number targetRevision PK, FK "Snapshot membership"
-        string objectKey PK, FK "Object within this snapshot"
+    TARGET_INTENT_VERSION {
+        string objectKey PK, FK "Canonical object identity"
+        number revision PK "Per-object intent version"
         string targetLevel
         number priority
-        number updatedAtRevision "Revision of this occurrence"
     }
     REGULATION_OBJECT {
         string objectKey PK "Canonical identity"
@@ -45,11 +40,10 @@ erDiagram
     }
 ```
 
-- **singleton 沿版本展开。** REGULATION_TARGET 每个 revision 一行，以 revision 为 PK；current 选择其中一个当前版本。TARGET_INTENT_AT_REVISION 是该版本 intents Record 的 ER 表达，以 `(targetRevision, objectKey)` 为复合 PK，一个对象可出现在多个版本中，但每版最多一条。REGULATION_OBJECT 表示对象身份值，不新增第三份独立状态。
-- **对象身份决定更新范围。** 同一精确对象的新意图改变新快照中的对应条目，不改写旧快照；不同 Objective 版本、来源或 subject 不能静默合并。targetLevel 和 priority 属于意图，不属于对象身份。
-- **快照成员身份与意图发生身份不同。** targetRevision 指定条目属于哪个快照；updatedAtRevision 记录该意图最后发生更新的全局版本。每次合法更新全局 revision 加一并写入条目版本，同值更新也产生新发生身份。IntentRef 仍是 `(objectKey, updatedAtRevision)`，不能用 `(targetRevision, objectKey)` 替代。
-- **未变化条目可以跨版本沿用。** A 在版本 5 更新、版本 6 只更新 B 时，快照 6 中 A 的 targetRevision 是 6，updatedAtRevision 仍是 5。updatedAtRevision 必须不大于 targetRevision，不要求等于它；它不是快照成员归属的 FK。
-- **只表示期望。** 本图不包含 Regulation、实际资源或执行结果。priority 升序、updatedAtRevision 升序给出意图排序；确认、调度和终结不由本图直接表达。
+- **对象独立版本化。** TARGET_INTENT_VERSION 以 `(objectKey, revision)` 为复合 PK，每条合法更新只递增该对象的意图版本，同值更新也产生新发生身份。RegulationTarget 是各对象最新意图的映射，不再有全局目标版本。
+- **对象身份决定更新范围。** 更新 A 不改变 B 的版本，不改写旧意图；不同 Objective 版本、来源或 subject 不能静默合并。targetLevel 和 priority 属于意图，不属于对象身份。REGULATION_OBJECT 是共享身份值，不新增独立状态。
+- **意图发生身份。** IntentRef 为 `(objectKey, revision)`。A 的版本 5 与 B 的版本 2 不能用于判断更新先后；快照存储若需标识完整目标组合，由外层关联各对象版本，不因此引入领域全局 revision。
+- **只表示期望。** 本图不包含执行结果或 Coordinator 的确认时间。跨对象的同 priority 排序依据 Coordinator 采纳意图的逻辑时间，而不是比较对象自身版本；尚未确认的原始意图映射不承诺全局 FIFO。
 
 ## Coordinator State ER 模型
 
@@ -58,7 +52,8 @@ erDiagram
 ```mermaid
 erDiagram
     direction LR
-    REGULATION_TARGET ||--o{ COORDINATOR_SNAPSHOT : acknowledgedBy
+    COORDINATOR_SNAPSHOT ||--o{ ACKNOWLEDGED_TARGET : acknowledgedTargets
+    TARGET_INTENT_VERSION ||--o{ ACKNOWLEDGED_TARGET : confirms
     COORDINATOR_SNAPSHOT ||--o{ REGULATION_OBJECT_STATE : regulationObjects
     COORDINATOR_SNAPSHOT ||--o{ REGULATION_RECORD : regulations
     COORDINATOR_SNAPSHOT ||--o{ OBSERVATION_RECORD : observations
@@ -75,12 +70,12 @@ erDiagram
     REGULATION_OBJECT ||--o{ CURRENT_DEPENDENCY : consumer
     REGULATION_OBJECT ||--o{ CURRENT_DEPENDENCY : provider
 
-    REGULATION_TARGET {
-        number revision PK "Independent target version space"
+    TARGET_INTENT_VERSION {
+        string objectKey PK "Canonical object identity"
+        number revision PK "Per-object intent version"
     }
     COORDINATOR_SNAPSHOT {
         number revision PK "One singleton snapshot per revision"
-        number acknowledgedTargetRevision FK "Exact accepted input snapshot"
         AllocationAcknowledgement acknowledgedAllocation
         ExecutionConstraints constraints
         BudgetReservation reserved
@@ -93,6 +88,13 @@ erDiagram
     REGULATION_OBJECT_STATE {
         number coordinatorRevision PK, FK "Snapshot membership"
         string objectKey PK, FK "One aggregate per object per revision"
+        number updatedAtRevision "Last state change on coordinator timeline"
+    }
+    ACKNOWLEDGED_TARGET {
+        number coordinatorRevision PK, FK "Snapshot membership"
+        string objectKey PK, FK "Confirmed object"
+        number intentRevision FK "With objectKey identifies intent version"
+        number acknowledgedAtRevision "Confirmation on coordinator timeline"
     }
     PROBE_SUMMARY {
         number coordinatorRevision PK, FK "Owner snapshot"
@@ -152,11 +154,12 @@ erDiagram
 - **快照行合并整体版本与 singleton 值。** COORDINATOR_SNAPSHOT 以 revision 为 PK，包含该版 singleton 的属性；不再把 COORDINATOR_STATE 和 COORDINATOR_CURRENT 画成两张一对一表。current 选择当前版本的 singleton 行，完整状态还包含该版各个集合。TypeScript 的嵌套 current 只是单版本值的组织形式，不是另一张权威表。
 - **集合成员带版本归属。** coordinatorRevision 指向所属快照。对象摘要和当前观察的 PK 是 `(coordinatorRevision, objectKey)`，活跃调用与终结记录的 PK 是 `(coordinatorRevision, id)`；同一对象或调用可以出现在多版快照中，不是在整个版本历史里只能出现一次。依赖、观察和诊断的完整行键仍待推导，coordinatorRevision 不能独自作为这些集合的 PK。
 - **成员版本不等于事实发生版本。** endedAtRevision、recordedAtRevision、reportedAtRevision 表示相应事实发生或采纳的版本，不是集合成员归属；例如在版本 10 结束的调用可以仍属于快照 12 的 regulations。不得因属于新快照就重写历史事实版本。
-- **输入与执行版本独立。** acknowledgedTargetRevision 引用第一张图中的精确目标快照；多个 Coordinator 快照可以确认同一个目标版本，编号无需相等。它是已确认输入，不保证等于调用方最新目标。
+- **按对象确认输入。** 每个 Coordinator 快照包含零到多条 ACKNOWLEDGED_TARGET，每个对象最多一条，通过 `(objectKey, intentRevision)` 引用目标意图；不再引用一个全局目标快照。acknowledgedAtRevision 是该意图首次被采纳时的 Coordinator 版本，后续观察或重复确认同一意图不刷新它；新意图版本被确认时才更新，不保证等于调用方最新意图。
+- **归属版本与更新版本分开。** CoordinatorState 与 RegulationObjectState 是一对多关系，每个快照内每个已知对象最多一条。coordinatorRevision 表达快照归属，updatedAtRevision 表达对象状态最近改变的 Coordinator 版本，不是对象本地计数器。快照 12 中 A 可以仍为 updatedAtRevision 10；仅资源变化不刷新 A，多个对象在同次转换更新则共享版本。更新/确认/记录版本均不大于所属快照版本，不要求物理保留被引用的所有旧快照。
 - **状态组织形式与时间范围分开。** regulationObjects 是对象聚合，regulations、observations、faults 示范明细记录，不统一归入 history。regulationObjects 每版每个已知对象最多一条摘要，lastProbe 可为空；同一对象可以关联多次已结束调用和多条观察。REGULATION_OBJECT 是共享身份值，不是额外顶层 Collection，也不要求对象摘要行永久保留。
 - **只在真实退出后从活跃转为终结记录。** ACTIVE_REGULATION 与 REGULATION_RECORD 使用相同的调用身份，不能在同一 revision 同时表示同一调用仍活跃且已结束；两者不是新的 Task/Run 双层身份。停止中和未核实调用仍留在活跃集合，真实终结时移除并原子写入结果。
 - **关系引用不强制保留历史父行。** observation、Probe 和 fault 中的 regulationId 用于关联来源，不保证对应调用仍在活跃集合；Probe 和 fault 也允许没有来源调用。它们不被画成必须引用某条当前活跃记录的外键。
-- **意图发生身份不是当前条目的外键。** IntentRef 引用 objectKey 与启动时的 updatedAtRevision；目标被覆盖后，旧调用仍保留原始引用，不能连到最新意图并冒充新需求的执行结果。acknowledgedTargets 复用第一张图的结构，但不必等于调用方当前的 RegulationTarget。
+- **意图发生身份不是当前条目的外键。** IntentRef 引用 objectKey 与启动时的对象意图 revision；目标被覆盖后，旧调用仍保留原始引用，不能连到最新意图并冒充新需求的执行结果。目标历史保留策略仍待定义，逻辑引用不强制永久保存历史行。
 - **当前依赖是对象之间的关系。** consumer/provider 各自指向一个精确对象，一个对象可参与多条依赖；额外要求无环、最低 level 合法并锚定尚未完成的需求。边的意图归属、共享聚合和唯一键仍待转换设计，不引入历史 Task 节点。
 - **对象 Probe 摘要不等于当前成功证据。** lastProbe 包括最近 Probe 的实际时间与成功或失败结果；CURRENT_OBSERVATION 则只保留当前调度仍有效的成功证据。无 Probe、失败、旧反馈和时间顺序规则见下文，最近观察不保证实时现实。
 - **图仍是候选，不冒充完整执行协议。** 待处理需求、无调用意图的处理记录、Probe/观察/诊断记录键和恢复接续还未收敛。实体关系明确这些问题的位置，不用 processedIntents 或虚构主键替代转换讨论。
@@ -175,7 +178,7 @@ Collection<T> 表达领域中的记录集合，选用 Collection 而不是 Table
 
 ## TypeScript 补充表达
 
-下面的可独立类型检查代码块表达某一个 revision 下的状态值，补充 ER 模型中的值类型、可选性与联合分支，不替代版本化实体关系。外层 revision 已为嵌套集合提供版本作用域，因此不在每个 TypeScript 条目重复 targetRevision/coordinatorRevision；这不表示集合只有一个全局版本。图中的 ProbeResult 和 ActiveExecution 标签概括对应字段的完整联合类型，不新增协议类型。复用已有协议的对象、观察与 binding 数据类型，不复用旧五命令、资源池或 harness 权限类型。所有别名暂用普通 string/number；合法标识、有限 JSON、非负安全整数、引用完整性等仍需运行时验证，不能因 TS 通过便视为有效输入。
+下面的可独立类型检查代码块表达当前目标映射与某一个 Coordinator revision 下的状态值，补充 ER 模型中的值类型、可选性与联合分支。CoordinatorState 外层 revision 提供快照作用域，因此不在每个条目重复 coordinatorRevision；对象意图 revision 则各自独立。图中的 ProbeResult 和 ActiveExecution 标签概括对应字段的完整联合类型。复用已有协议的对象、观察与 binding 数据类型，不复用旧五命令、资源池或 harness 权限类型。别名暂用普通 string/number；合法标识、有限 JSON、安全整数及引用完整性仍需运行时验证。
 
 ```typescript
 import type {
@@ -201,7 +204,7 @@ export interface RegulationObject {
 
 export interface IntentRef {
   readonly objectKey: ObjectKey;
-  // 引用 TargetIntent.updatedAtRevision，属于 RegulationTarget 的全局版本空间。
+  // 引用该 objectKey 对应的 TargetIntent.revision。
   readonly revision: Revision;
 }
 
@@ -209,12 +212,15 @@ export interface TargetIntent {
   readonly object: RegulationObject;
   readonly targetLevel: string;
   readonly priority: number;
-  readonly updatedAtRevision: Revision;
+  readonly revision: Revision;
 }
 
 export interface RegulationTarget {
-  readonly revision: Revision;
   readonly intents: Readonly<Partial<Record<ObjectKey, TargetIntent>>>;
+}
+
+export interface AcknowledgedTargetIntent extends TargetIntent {
+  readonly acknowledgedAtRevision: Revision;
 }
 
 export type ResourceAllocation =
@@ -324,6 +330,7 @@ export interface ProbeSummary {
 
 export interface RegulationObjectState {
   readonly object: RegulationObject;
+  readonly updatedAtRevision: Revision;
   readonly lastProbe: ProbeSummary | null;
 }
 
@@ -362,7 +369,11 @@ export type CoordinatorLifecycle =
 
 export interface CoordinatorCurrent {
   readonly acknowledged: {
-    readonly targets: RegulationTarget;
+    readonly targets: {
+      readonly intents: Readonly<
+        Partial<Record<ObjectKey, AcknowledgedTargetIntent>>
+      >;
+    };
     readonly allocation: AllocationAcknowledgement;
   };
   readonly activeRegulations: readonly ActiveRegulation[];
@@ -398,27 +409,27 @@ export interface CoordinatorCheckpoint {
 
 ## 意图身份与确认
 
-ObjectKey 由精确 Objective 身份、版本、来源与 subject 的规范化语义确定，可对规范化值哈希，具体规则待定；不是任意 regulation ID，也不能直接依赖普通 JSON 属性顺序。intents 是按此 key 索引的只读稀疏 Record，value 保留完整 RegulationObject、targetLevel、priority 与 updatedAtRevision。RegulationObject 不再重复存 key；恢复和输入验证须核对 key 与完整对象一致，并明确哈希碰撞处理，不能静默合并不同对象。
+ObjectKey 由精确 Objective 身份、版本、来源与 subject 的规范化语义确定，可对规范化值哈希，具体规则待定；不是任意 regulation ID，也不能直接依赖普通 JSON 属性顺序。intents 是按此 key 索引的只读稀疏 Record，value 保留完整 RegulationObject、targetLevel、priority 与对象意图 revision。RegulationObject 不再重复存 key；恢复和输入验证须核对 key 与完整对象一致，并明确哈希碰撞处理，不能静默合并不同对象。
 
 Partial 表达并非每个 ObjectKey 都有条目，索引结果为 TargetIntent | undefined。readonly intents 限制属性重新赋值，Readonly 限制条目的增删替换；这些是编译期约束，不是运行时冻结或递归不可变保证。只将对象自身属性视为意图条目，查询须区分缺失 key 与原型链属性，构造和恢复不能让特殊 key 改变对象原型。
 
-RegulationTarget.revision 是整个意图状态迭代的全局版本号；TargetIntent.updatedAtRevision 表示该对象当前意图最后在哪个全局版本更新。两者共用一个版本空间，不是对象各自递增的两个计数器。
+RegulationTarget 不含外层 revision；TargetIntent.revision 是该对象的意图版本。CoordinatorState.revision 则统一标识 Coordinator 状态转换；RegulationObjectState.updatedAtRevision 和 AcknowledgedTargetIntent.acknowledgedAtRevision 分别引用对象状态更新及意图确认所在的 Coordinator 版本，不能与对象意图版本混用。
 
 每条合法目标更新按以下规则纯归约：
 
-1. 取 nextRevision = state.revision + 1，不依赖系统时间。
-2. 创建新的 Record 对象，在指定 key 上覆盖完整意图，并令 updatedAtRevision = nextRevision；其他条目保持不变，不修改旧 state 或其条目。
-3. 返回 revision = nextRevision 的 RegulationTarget。同值新请求也推进版本；非法更新明确报错，不静默消耗版本或更改意图。
+1. 取该对象当前意图 revision + 1；首次出现从 1 开始，不依赖系统时间。
+2. 创建新的 Record 对象，在指定 key 上覆盖完整意图，并令 revision = nextRevision；其他对象的条目和版本保持不变，不修改旧 state。
+3. 返回新的 RegulationTarget。同值新请求也推进该对象版本；非法更新明确报错，不静默消耗版本或更改意图。
 
-例如全局 revision = 8，A.updatedAtRevision = 8、B = 5、C = 7，表示 B 从全局版本 5 起未更新，而非 B 已被修改五次。条目版本是正安全整数且不超过全局版本；版本耗尽须显式失败，不回绕。全局版本作为独立水位保存，不通过当前条目最大值代替；未来即使压缩条目也不能重用旧版本号。
+例如 A.revision = 8、B.revision = 5，更新 B 后只有 B 变为 6，不能据此比较 A 与 B 的更新时间。意图版本为正安全整数，耗尽须显式失败、不回绕；未来若移除当前条目，须保留该对象的版本水位或另定不重用身份的协议，不能再次从 1 开始而碰撞旧 IntentRef。
 
-IntentRef 由对象 key 与该条目的 updatedAtRevision 组成，其 revision 引用意图发生时的全局版本，而非随集合更新而改变。CoordinatorState.current.acknowledged.targets 是已确认的目标意图，而 checkpoint.targets 是调用方当前意图，两者允许暂时不同；确认目标不代表创建、启动或完成调用。资源输入本身没有 delta 协议，AllocationAcknowledgement.revision 只是 Coordinator 采纳顺序的元数据，不属于治理意图版本空间。完整状态的 revision 关联 current singleton 与各个 Collection 的一致逻辑版本，不是查询页的位置。
+IntentRef 由对象 key 与该对象意图 revision 组成。CoordinatorState.current.acknowledged.targets 逐对象保留已确认意图并附带 acknowledgedAtRevision，而 checkpoint.targets 是调用方当前意图，两者允许暂时不同；确认目标不代表创建、启动或完成调用。资源输入本身没有 delta 协议，AllocationAcknowledgement.revision 表达采纳该资源意图时的 Coordinator 版本，初值为 0，不另建采纳计数器。完整状态的 revision 关联 current singleton 与各个 Collection 的一致逻辑版本，不是查询页或底层日志位置。
 
 命令关联 ID、非法输入回执、拒绝原因以及是否需要逐对象确认应在转换讨论中补足；不能把遗漏字段解释为允许静默丢弃请求。revision 也不等于底层消息位置，不能用它代替外部输入的可靠接续协议。
 
 ## 映射与优先顺序
 
-意图顺序按 priority 升序、updatedAtRevision 升序确定，不依赖 Record 的属性枚举顺序或墙钟时间。同优先级下按最近更新的先后排序，不保留首次加入位置：A(priority 1, revision 10)、B(1, 12)、C(0, 15) 排为 C、A、B；再次更新 A 得到全局版本 16 后排为 C、B、A。仅 priority 更新也刷新逻辑时间，但重新排序不等于无故重启正在运行的调用。
+已确认意图按 priority 升序、acknowledgedAtRevision 升序排序，不比较不同对象的 intent revision，也不使用对象状态的 updatedAtRevision：观察更新不能改变意图排队位置。例如 A(priority 1, confirmed 10)、B(1, 12)、C(0, 15) 排为 C、A、B；A 的新意图在 Coordinator 版本 16 被确认后排为 C、B、A。仅 priority 更新形成新意图并在确认时更新排序时间，但不等于重启调用；重复确认同一意图不刷新时间。同次原子转换确认多个同 priority 意图时允许并列，进一步决胜规则待调度设计明确，不用对象版本或墙钟伪造先后。
 
 映射加上述排序表达意图的优先队列视图，不是已就绪的实际执行队列。Coordinator 仍须结合当前待处理需求、实际调用和依赖决定可执行项；initial 意图不推进，已终结的同一意图不因扫描或恢复被重新执行。派生需求的有效 priority 与排序关联仍需在 CoordinatorState 的转换讨论中明确。
 
@@ -435,6 +446,8 @@ CurrentDependency 暂以精确 consumer/provider 对象和最低 level 表达仍
 ## 对象聚合状态
 
 regulationObjects 表达 Coordinator 已知对象的集合，而不是扫描所有可能外部对象的保证。集合内按规范化 Objective/subject 身份唯一；对象进入集合的时机、失去当前需求后是否保留及移除规则仍待转换设计，不能因缺少活跃调用就认定对象不存在。
+
+updatedAtRevision 表达该对象聚合最近实际改变的 Coordinator 版本，新增对象也记录当次版本；未改变的对象跨快照沿用原值。它不是意图确认时间、Probe 实际时间或对象独立计数器，不因其他对象或仅资源状态变化而刷新。
 
 lastProbe 为 null 表示没有已知 Probe 结果，不伪造时间、成功或 level initial。ProbeSummary 记录实际 Probe 时间、采纳修订、来源调用及结果；probedAt 须由事实提供并验证为 RFC 3339 时间，不在 reducer 中读取系统时钟。最后一次 Probe 失败也须如实表达，不沿用旧成功结果冒充最新结果；当前调度仍需要的成功证据由 current.observations 按自己的有效性规则保留。
 
@@ -453,12 +466,12 @@ lastProbe 为 null 表示没有已知 Probe 结果，不伪造时间、成功或
 
 ## 初值、恢复与下一步
 
-新建 RegulationTarget 为 revision 0、intents 为 {}。新建 CoordinatorState 的 revision 为 0，current.acknowledged.targets 同为空，current.acknowledged.allocation 为 { revision: 0, value: { kind: "no-resource" } }；当前活跃调用、依赖和观察为空，reserved 全零、服务 open，可信 constraints 由宿主提供；各个 Collections 均为空。这是已知的初始基线，不声称收到过外部资源更新；后续采纳更新才推进 allocation 修订，初值不启动调用。
+新建 RegulationTarget 为 intents: {}，没有全局 revision。新建 CoordinatorState 的 revision 为 0，current.acknowledged.targets.intents 同为空，current.acknowledged.allocation 为 { revision: 0, value: { kind: "no-resource" } }；当前活跃调用、依赖和观察为空，reserved 全零、服务 open，可信 constraints 由宿主提供；各个 Collections 均为空。这是已知初始基线，不声称收到过外部资源更新；后续采纳资源更新记录当次 Coordinator revision，初值不启动调用。
 
 CoordinatorState 不含 instanceId 或 inputs。Coordinator 身份由宿主、存储 key 或传输 envelope 关联，不能与调用 RegulationId 混为一谈；是否另需恢复代次由执行协议决定。输入通道的 open/ended/failed、连接与重连属于适配层；通道结束或断开不撤销目标、不把资源意图变为 no-resource，也不自动取消调用或关闭服务。真正影响服务继续运行的故障以明确诊断和相应服务生命周期变化表达。
 
 CoordinatorCheckpoint 仅封装两份领域状态，不固定日志方案或存储格式。需验证对象唯一性、修订与引用一致性及可信约束，不能把任意时刻分别读取的两个 state 拼成“原子快照”，也不能把 current 和来自不同版本的 Collections 拼成一致状态。持久化适配层可以分开存储 singleton 与各个 collections，但须保证共同的逻辑 revision 和原子转换。若采用快照加日志重放，由适配层在外层封装与快照一致的 command/event 处理位置，并负责可靠接续；不预设两个 string | null 字段，也不默认领域 revision 就是日志位置。恢复先还原状态，采用增量回放时只做纯归约，再以 recovering/unverified 核实外部运行，不清空预算、不重放动作、不把同一已终结意图当新请求；格式版本、重关联协议和存储失败行为待实施时明确。
 
-全局 revision 与各条目的 updatedAtRevision 必须一起保存，恢复从保存的全局水位继续。Record 使用普通 JSON 对象表达，无需 Map 专用的 entries 转换；仍须校验所有值可持久化、key 与对象身份一致及版本有效，缺失条目用属性不存在表达，不写入 undefined。具体快照格式仍待确定。
+各对象意图 revision 与 Coordinator 的全局 revision、对象更新时间及确认时间必须一致保存，各自在原版本空间继续，不重置或互相代替。Record 使用普通 JSON 对象表达，无需 Map 专用的 entries 转换；仍须校验所有值可持久化、key 与对象身份一致及版本有效，缺失条目用属性不存在表达，不写入 undefined。具体快照格式仍待确定。
 
 下一步先明确当前待处理需求和输入接续，检查 current 是否足以调度和恢复，并收敛 Collection 记录身份、依赖归属及终结时当前切片与历史写入的原子更新，再列合法状态转换，最后推导 Command/Event。本稿的 string 原因、诊断粒度、恢复字段及数据结构均为讨论选择，不作为最终 API 或已验收决定。
