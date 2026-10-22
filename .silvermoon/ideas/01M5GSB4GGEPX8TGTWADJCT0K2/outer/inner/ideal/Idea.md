@@ -6,20 +6,20 @@
 
 ## 结果
 
-每个 Objective Pilot 可提供一个服务启动入口，其所有 check 通过同一驻留服务的 HTTP 请求执行；统一调度器管理实例，多次 probe 和 Regulation 观察可以复用加载好的代码。
+check 纳入 PB 协议并形成统一入口，由 CLI 按协议调度每个 Objective Pilot 的 HTTP 检查服务。独立 probe 或 regulation 在执行前启动所需服务，regulation 内反复 probe 复用已有实例。
 
 ## 边界
 
 - 服务按准确规则来源、版本及兼容执行策略隔离，不按包 subject 或单次 check 启动；Pilot 的观察逻辑无需新增独立进程。
 - 复用进程不等于复用输入、结果或证据；保留层级顺序、依赖来源、每轮视图、截止及取消语义。
-- 跨 CLI 生命周期、协议、隔离与兼容范围尚待讨论，不把当前建议当成已确认决定，见 [Research.md](./Research.md)。
+- CLI 是调度器，服务随本次顶层调用按需启停；不要求跨独立 CLI 复用或另设全局常驻调度器。PB 的具体字段、隔离与兼容仍待讨论，见 [Research.md](./Research.md)。
 
 ## 验收标准
 
-- 同一服务处理多项 check、多个 subject 及连续观察，实测启动次数与重复初始化减少，业务结果和问题归属不变。
+- 独立 probe 和 regulation 均通过 PB 统一入口调度；同一 regulation 内多次 probe 不重复启动有效服务，业务结果和问题归属不变。
 - 依赖回调、目标变化、请求混淆、崩溃、取消及回收有明确行为与可验证证据，不以断开 HTTP 连接冒充停止检查。
 - 服务启动、就绪、路由、使用权与退出可观测；现有检查器的迁移或兼容边界明确，不静默改变已发布契约。
 
 ## 下一步
 
-讨论并收敛 [OpenQuestions.md](./OpenQuestions.md) 中的生命周期与协议问题，再决定构想验收范围；本次仅调研和记录。
+Q01 已明确 CLI 调度及顶层调用内复用；继续讨论 [OpenQuestions.md](./OpenQuestions.md) 的剩余协议与失败边界，再决定构想验收范围。
