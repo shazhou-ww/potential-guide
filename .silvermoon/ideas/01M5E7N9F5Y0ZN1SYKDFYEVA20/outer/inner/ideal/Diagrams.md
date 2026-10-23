@@ -20,13 +20,20 @@
 
 图中英文标签与 TS 字段对应，解释使用中文。全部源固定为 22px Arial，SVG 可独立放大查看；修改后须重新生成并验证文字边界。实线表达关系/组成或明确数据流，虚线表达决策输入、选择条件或派生关系；只有第一张 ER 图使用基数符号。
 
+文档直接内嵌已生成的 SVG，不依赖 Markdown 预览器执行 Mermaid。每张图的 Mermaid 图源保留在下方折叠区，以普通文本展示；图源是唯一编辑入口，修改后须同步生成对应 SVG。验证须同时覆盖 Mermaid 生成、SVG 文字边界和不加载 Mermaid 脚本的 Markdown 图片预览，不能仅以 CLI 成功代替预览可用性。
+
 ## 1. 业务实体关系
 
 [打开实体关系 SVG](./diagrams/regulation-target.svg)
 
+<img src="./diagrams/regulation-target.svg" width="100%" alt="业务实体关系：ObjectiveRevision、Target、Request、Run、Observation 与 Fault">
+
 同一张图包含上游的 RegulationRequest 和下游的 RegulationRun、Observation、Fault，展示实体身份、关联及主要查询属性，不画 coordinatorRevision、快照成员表或当前/历史分组。图的既有文件名保留以兼容旧链接，不再表示只画请求意图。嵌套值展开不意味着新增实体或强制数据库平铺。
 
-```mermaid
+<details>
+<summary>Mermaid 图源：业务实体关系</summary>
+
+```text
 ---
 config:
   fontFamily: Arial, Helvetica, sans-serif
@@ -88,6 +95,8 @@ erDiagram
     }
 ```
 
+</details>
+
 - ObjectiveRevision 的 source/version 共同决定 objectiveKey；targetKey 由该 key 与 subject 身份决定。
 - requestSeq 单独标识不可变请求。每个 Run 必须且只归属一条 Request；一个 Request 可以尚无调用或涉及多次调用。外部与依赖派生都先形成 Request，不能绕过 Request 直接启动 Run。
 - Observation 是成功观察事实，不把 Probe 失败伪装为成功观察。成功观察以 runId 关联来源 RegulationRun，经 Run → Request → Target 推导 RegulationTarget，不重复保存 targetKey；是否需要其他来源另行讨论。
@@ -102,7 +111,12 @@ erDiagram
 
 [打开请求与确认 SVG](./diagrams/request-state.svg)
 
-```mermaid
+<img src="./diagrams/request-state.svg" width="100%" alt="请求与确认：请求形成、不可变记录与已确认请求">
+
+<details>
+<summary>Mermaid 图源：请求与确认视图</summary>
+
+```text
 ---
 config:
   fontFamily: Arial, Helvetica, sans-serif
@@ -137,6 +151,8 @@ flowchart TB
     ACK -.->|filter by execution and dependencies| ORDER
 ```
 
+</details>
+
 最新提交和最新确认是两条不同状态线，确认不等于执行或完成。拒绝须明确反馈且不覆盖已确认请求。图未规定命令/事件的原子消息边界。
 
 requestSeq 表达请求身份与接收先后，lastRequestSeq 是分配水位；acknowledgedAtRevision 只表达 Coordinator 何时确认。重复确认或 Probe 更新不刷新请求排序，批量确认也不合并请求身份。最新映射不等于完整请求历史，覆盖条目不修改原请求。
@@ -147,7 +163,12 @@ requestSeq 表达请求身份与接收先后，lastRequestSeq 是分配水位；
 
 [打开 Target 状态 SVG](./diagrams/target-state.svg)
 
-```mermaid
+<img src="./diagrams/target-state.svg" width="100%" alt="Target 状态：最近 Probe、观察事实与当前有效证据">
+
+<details>
+<summary>Mermaid 图源：单个 Target 状态视图</summary>
+
+```text
 ---
 config:
   fontFamily: Arial, Helvetica, sans-serif
@@ -174,6 +195,8 @@ flowchart TB
     VALIDITY -.->|retain or remove| CURRENT
 ```
 
+</details>
+
 lastProbe 可以为空或失败，不等于“最新成功观察”。当前有效证据也不必等于最近 Probe：最新失败不能被旧成功冒充，但仍有效且有当前用途的旧证据可以按规则保留。
 
 updatedAtRevision 表达聚合最后改变的 Coordinator 版本，recordedAtRevision 表达事实采纳版本，probedAt 表达实际 Probe 时间；三者不互相替代。“最近”的事实顺序不能由晚到消息采纳时间猜测。当前证据选择和对象聚合都需要明确转换规则，不能当成 UI 临时查询。
@@ -182,7 +205,12 @@ updatedAtRevision 表达聚合最后改变的 Coordinator 版本，recordedAtRev
 
 [打开当前执行与依赖 SVG](./diagrams/execution-state.svg)
 
-```mermaid
+<img src="./diagrams/execution-state.svg" width="100%" alt="当前执行与依赖：Provider 请求、活跃运行及终结记录">
+
+<details>
+<summary>Mermaid 图源：当前执行与依赖视图</summary>
+
+```text
 ---
 config:
   fontFamily: Arial, Helvetica, sans-serif
@@ -216,6 +244,8 @@ flowchart TB
     ACTIVE -->|confirmed exit: remove active and record result| ENDED
 ```
 
+</details>
+
 依赖是明确采用的业务关系，不从所有 target 自动生成，须验证无环、最低 level 与未完成请求归属。先形成或按明确规则复用 provider Request，再由调度策略启动 Run；策略不能绕过请求前置条件。provider 证据支持 consumer 的新调用，不复活旧调用；详细共享与满足规则仍待定。
 
 ActiveRegulationRun 和 RegulationRunRecord 不代表两个业务实体。只有确认真实退出，才原子移除活跃状态并写入终结记录；stopping/unverified 仍保守占用。占用是派生值，资源期望缩减不自动终止调用；图不新建权威 activeCount 或 Task。
@@ -224,7 +254,12 @@ ActiveRegulationRun 和 RegulationRunRecord 不代表两个业务实体。只有
 
 [打开意图与状态聚合总览 SVG](./diagrams/coordinator-state.svg)
 
-```mermaid
+<img src="./diagrams/coordinator-state.svg" width="100%" alt="意图与状态聚合总览：输入、CoordinatorState 与 checkpoint 边界">
+
+<details>
+<summary>Mermaid 图源：意图与状态聚合总览</summary>
+
+```text
 ---
 config:
   fontFamily: Arial, Helvetica, sans-serif
@@ -256,6 +291,8 @@ flowchart TB
     CHECKPOINT --- REQUESTS
     CHECKPOINT --- STATE
 ```
+
+</details>
 
 此图统一展示 intention 与 state，不把相同实体在两侧各画一份。Coordinator 是有状态、带副作用的过程，不是另一个业务实体或纯逐点映射；箭头表达归约后的状态效果，不表示副作用过程绕过纯 reducer 直接写状态。
 
