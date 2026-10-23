@@ -6,7 +6,7 @@
 
 ## 结果
 
-Coordinator 将治理目标意图与资源分配意图两个 Behavior 转换为执行状态 Behavior。Command/Event 分别由纯 reducer 归约，资源意图全量更新；支持目标与状态持久化恢复，副作用通过 monadic composition 组织。原则见 [Design.md](./Design.md)，先参考 [Types.md](./Types.md) 讨论 state，再推导 Command/Event。
+Coordinator 将治理请求与资源分配意图两个 Behavior 转换为执行状态 Behavior。ObjectiveDefinition 在 subject 上具体化为 RegulationTarget，RegulationRequest 表达对该 target 的 desiredLevel 与 priority 请求，实际执行仍为 Regulation。Command/Event 分别由纯 reducer 归约，资源意图全量更新；支持请求与状态持久化恢复，副作用通过 monadic composition 组织。原则见 [Design.md](./Design.md)，先参考 [Types.md](./Types.md) 讨论 state，再推导 Command/Event。
 
 ## 边界
 
@@ -16,7 +16,7 @@ Coordinator 将治理目标意图与资源分配意图两个 Behavior 转换为�
 
 ## 验收标准
 
-- 单一目标命令保留意图发生身份；initial 不执行业务检查、不回滚。资源 binding/并发度全量更新表达期望，不伪报实际占用。
+- 单一请求命令保留递增 requestSeq 身份，区分治理指向物、请求与实际调用；initial 不执行业务检查、不回滚。资源 binding/并发度全量更新表达期望，不伪报实际占用。
 - 两个纯 reducer 可重建约定状态；目标及执行状态可一致恢复，已终结意图不被重跑，失联调用核实前不虚报终止或释放占用。
 - pending、依赖、真实终止、资源拒绝及累计预算均有新验证；event 类型仍待推导，旧证据不冒充新验收。
 

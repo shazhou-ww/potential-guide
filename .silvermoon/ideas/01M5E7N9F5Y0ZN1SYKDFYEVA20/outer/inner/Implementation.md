@@ -6,7 +6,7 @@
 
 ### I-S01 — 定义双意图、纯归约与恢复契约
 
-依据 [Design.md](./ideal/Design.md) 与 [Types.md](./ideal/Types.md) 先收敛 RegulationTargets/ResourceAllocation/CoordinatorState 及合法转换，再推导 Command/Event，落实两个纯 reducer、资源意图全量更新、单命令及单次调用边界。区分单条 RegulationTarget 与集合 RegulationTargets；ObjectiveDefinition 的 key 编码 source 和固定 commit，RegulationObject 以单外键引用。完整状态包含 current singleton 与实体、聚合或历史 collection states，以 activeRegulations 替代包含历史的 Task，不含实例 ID、输入通道生命周期或固定日志位置；明确当前待处理需求、输入接续、依赖、终结移除与集合写入、对象最近 Probe 聚合的原子边界、一致快照、适配层查询与接续元数据、存储错误和外部执行核实协议，不预设 processedIntents；[Events.md](./ideal/Events.md) 仅作遗漏检查，不引入长期目标控制器。
+依据 [Design.md](./ideal/Design.md) 与 [Types.md](./ideal/Types.md) 先收敛 RegulationRequests/ResourceAllocation/CoordinatorState 及合法转换，再推导 Command/Event，落实两个纯 reducer、资源意图全量更新、单命令及单次调用边界。区分单条 RegulationRequest 与集合 RegulationRequests；ObjectiveDefinition 的 key 编码 source 和固定 commit，RegulationTarget 以单外键引用。完整状态包含 current singleton 与实体、聚合或历史 collection states，以 activeRegulations 替代包含历史的 Task，不含实例 ID、输入通道生命周期或固定日志位置；明确当前待处理需求、输入接续、依赖、终结移除与集合写入、对象最近 Probe 聚合的原子边界、一致快照、适配层查询与接续元数据、存储错误和外部执行核实协议，不预设 processedIntents；[Events.md](./ideal/Events.md) 仅作遗漏检查，不引入长期目标控制器。
 
 ### I-S02 — 接入资源意图、资源侧授权与副作用执行
 
@@ -20,7 +20,7 @@
 
 ### I-AC01 — 双意图与纯归约语义完整
 
-公开类型及测试证明单一目标命令、资源意图完整更新和两个纯 reducer 成立；目标 Record 每次合法更新仅递增该对象意图 revision，同值新意图不丢失。Coordinator 版本统一标记对象状态更新及意图确认，快照归属与更新时间分离；同 priority 按意图确认版本排序，观察更新不改变排队位置，不同对象意图版本不比较。initial 不执行业务检查或回滚，资源期望不冒充实际占用，旧不兼容输入明确拒绝。JSON 往返及恢复保留对象意图版本、Coordinator 水位及事实引用。
+公开类型及测试证明单一请求命令、资源意图完整更新和两个纯 reducer 成立；区分 ObjectiveDefinition、RegulationTarget、RegulationRequest 与实际 Regulation 调用。每条合法新请求分配唯一递增 requestSeq，仅更新相应 target 的最新请求，同值请求不丢失；清理和恢复不复用序号。Coordinator revision 标记 target 状态变化及请求确认，与 requestSeq 分属不同序列；同 priority 按 requestSeq 排序，观察或重复确认不改变排队位置。initial 不执行业务检查或回滚，资源期望不冒充实际占用，非法输入明确拒绝。JSON 往返保留 lastRequestSeq、请求身份、Coordinator 水位及事实引用。
 
 ### I-AC02 — 恢复、生命周期与资源边界正确
 

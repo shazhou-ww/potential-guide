@@ -2,17 +2,17 @@
 
 本文支撑 [Idea.md](./Idea.md)，不是第二份验收合同。以下原则记录本轮讨论确定的设计方向，替代上一版五命令、资源池、harness 自有授权和 blocked 节点恢复模型；不等于整份修订构想已验收或代码已实现。事件名称、精确类型、存储格式和响应策略仍须继续细化，候选事件见 [Events.md](./Events.md)。总讨论入口为 [schema-contracts / Schemas.md](../../../../01M5CR0X2B4R2C6K3183Y1T3SQ/outer/inner/ideal/Schemas.md)。
 
-类型讨论入口为 [Types.md](./Types.md)：先定义 RegulationTargets、ResourceAllocation、CoordinatorState 及合法转换，再推导 Command/Event。Events.md 的既有分类仅作遗漏检查，不作为类型设计的先验框架。
+类型讨论入口为 [Types.md](./Types.md)：先定义 RegulationRequests、ResourceAllocation、CoordinatorState 及合法转换，再推导 Command/Event。Events.md 的既有分类仅作遗漏检查，不作为类型设计的先验框架。
 
 ## 两个意图输入，一个执行状态输出
 
 ```text
-Behavior RegulationTargets ───┐
+Behavior RegulationRequests ───┐
                              ├── Coordinator ── Behavior CoordinatorState
 Behavior ResourceAllocation ──┘
 ```
 
-- RegulationTarget 是单条治理目标意图，RegulationTargets 是各对象最新目标的集合：针对特定 Objective 与 subject，在某时刻要求一次向 targetLevel 推进的尝试，具有 priority。它不承诺一定达到，不是持续保持目标的控制器。
+- RegulationTarget 是特定 ObjectiveDefinition 在 subject 上的治理指向物；RegulationRequest 是对该 target 提出的 desiredLevel 与 priority 请求，不是执行 Task。RegulationRequests 保留各 target 最新请求及序号水位；请求不承诺启动或达标，也不是持续保持目标的控制器。
 - ResourceAllocation 是资源分配意图：期望使用的 agent binding 及并发度，不是实际资源分配、真实空闲数或权限集合；每次以完整值更新，不另建资源 delta 协议。
 - CoordinatorState 是完整领域状态，由 current singleton state 与若干 collection states 组成。current 保存已确认的两类意图、活跃 Regulation、当前有效观察及依赖、实际 binding 与占用、累计预算和服务生命周期；Collections 可以表达实体、聚合或历史，终结结果不进入当前活跃集合。pending 需求不包装成覆盖完整生命周期的 Task，其具体表达仍待推导。
 - 核心状态不携带外部实例 ID 或输入通道生命周期；外部身份由宿主或 envelope 关联，连接、结束与重连由适配层管理。通道结束不撤销当前意图、不自动取消调用或关闭服务；错误仍明确报告，影响服务可用性时体现为服务自身的状态变化。
@@ -21,23 +21,23 @@ Behavior ResourceAllocation ──┘
 
 ## Singleton State、Collection States 与查询
 
-- Coordinator singleton 在每个 revision 下恰有一个，沿版本展开时可建模为 revision 为 PK 的快照表；current 选择当前 revision 的那一行，不额外维护另一份权威状态。目标按对象独立版本化，RegulationTargets 没有全局版本；Coordinator 集合成员键包含快照版本与对象或记录身份，具体 ER 见 Types.md。这是逻辑模型，不要求逐版全量复制或保留全部快照。
+- Coordinator singleton 在每个 revision 下恰有一个，沿版本展开时可建模为 revision 为 PK 的快照表；current 选择当前 revision 的那一行，不额外维护另一份权威状态。请求使用表内递增 requestSeq 单主键，不是整个 RegulationRequests 的快照版本；Coordinator 集合成员键包含快照版本与 target 或记录身份，具体 ER 见 Types.md。逻辑模型不要求逐版全量复制或保留全部快照。
 - 字段进入 current 的依据是当前调度、执行或恢复是否必需，不是 UI 是否可能查看；这项最小化原则不排除完整 CoordinatorState 包含历史。
 - current.activeRegulations 只含正在运行、停止中或恢复后尚未核实的调用。确认结束时移除，向 regulations 写入终结记录，并原子更新仍必要的当前信息；不保留 ended Task。
 - 累计预算限制继续执行，有效依赖和必要证据支持未完成编排；这些是当前状态而非历史明细。撤回 processedIntents 这一历史处理水位字段，待从新意图接收、待处理需求和恢复接续推导防重跑机制。
-- Collection 表达领域记录集合，不是 HTML 表格、数据库实现或一次查询结果，也不限于历史。不设 history 分组：例如 regulationObjects 按对象维护最新 Probe 时间与结果，regulations 保存终结记录。筛选、排序和分页产生派生的 QueryResult，不改变权威状态；UI 可以分别读取 current 和查询 Collections。
+- Collection 表达领域记录集合，不是 HTML 表格、数据库实现或一次查询结果，也不限于历史。不设 history 分组：例如 regulationTargets 按对象维护最新 Probe 时间与结果，regulations 保存终结记录。筛选、排序和分页产生派生的 QueryResult，不改变权威状态；UI 可以分别读取 current 和查询 Collections。
 - 当前切片不以 lastFault 保存最近诊断，完整结果、观察和故障记录进入相应历史集合；持续阻断运行的故障仍须在 current 明确表达。集合范围及记录身份见 Types.md 草案，不预定完整历史 schema。
 - singleton 与各个 collections 可以分开存储、查询和传输，但同一事件对它们的状态效果必须保持逻辑一致。对象聚合不能将最近观察冒充此刻现实，最新 Probe 的顺序、失败和未知须明确表达。存储及索引是适配层职责，实时 Stream 不自动成为历史数据库。
 
 ## delta 与两个纯 reducer
 
 ```haskell
-RegulationTargetsReducer :: Command -> RegulationTargets -> RegulationTargets
+RegulationRequestsReducer :: Command -> RegulationRequests -> RegulationRequests
 CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 ```
 
 - commands 描述治理意图的 delta，events 描述 Coordinator 执行状态的 delta。给定明确初值与有序、完整的 delta 前缀，确定性归约得到相应 Behavior。
-- RegulationTargets 使用 ObjectKey 到完整目标的只读稀疏 Record，不含外层 revision；每条合法 command 仅递增该对象的 RegulationTarget.revision 并覆盖对应条目，同值更新也产生新发生身份。不同对象目标版本不可比较；意图提出与 Coordinator 确认是不同事实。
+- RegulationRequests.latestByTarget 使用 TargetKey 到完整请求的只读稀疏 Record；每条合法新 command 从 lastRequestSeq 分配下一序号，只替换对应 target 的最新请求，不改写旧请求或其他 target。水位是身份分配元数据而非集合快照 revision，同值新请求仍分配新序号。序号单调、可有空号、不回绕或重用，宿主保证接收与持久化的一致性；纯 reducer 不调用数据库发号器。请求提出与 Coordinator 确认是不同事实。
 - CoordinatorState 与对象状态是一对多关系；Coordinator revision 是该 Coordinator 内统一的逻辑时序。对象状态 updatedAtRevision、意图 acknowledgedAtRevision 及执行事实分别记录各自变化发生时的 Coordinator 版本，快照归属版本与最后变化版本分开；多个对象在同次原子转换改变可共享版本。
 - 两个 reducer 都是纯的。尤其 CoordinatorStateReducer 不访问当前输入或私有队列、不执行检查、不作调度决策、不启动或停止进程；事件回放不重复任何执行副作用。
 - 命令合法性及拒绝行为须明确，不能以静默返回原状态掩盖非法输入。事件必须携带足够身份、修订与变化值，让独立 reducer 无需重新观察现实即可归约。
@@ -46,10 +46,10 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 
 ## 单一治理目标命令与单次调用
 
-- 实体边界分为 source、ObjectiveDefinition、RegulationObject、RegulationTarget 四层。source 是 Git 仓库定位地址与仓库内路径的字符串值，不单独建实体，不加 git+ 前缀；允许 HTTPS、SSH 或本地 Git 来源。objectiveKey = Hash(Encode(Canonicalize(source), resolvedCommitId)) 是 ObjectiveDefinition 的单主键，标识精确定义版本而非跨版本来源；version 为完整 commit ID，不是可移动 ref 或工作区内容，source/version 保留用于解析与校验。RegulationObject 只引用 objectiveKey 一个外键，与 subject 身份共同推导 objectKey；RegulationTarget 以 `(objectKey, revision)` 标识。换定义版本是另一个治理对象，换目标不是；RegulationObject 不与执行调用混淆。集合名为 RegulationTargets，规范化、无歧义编码、哈希及地址等价规则仍待确定，详见 [Types.md](./Types.md)。
+- 实体边界分为 source、ObjectiveDefinition、RegulationTarget、RegulationRequest 四层。source 是 Git 仓库定位地址与仓库内路径的字符串值，不单独建实体，不加 git+ 前缀；允许 HTTPS、SSH 或本地 Git 来源。objectiveKey = Hash(Encode(Canonicalize(source), resolvedCommitId)) 是精确定义的单主键；version 为完整 commit ID，source/version 保留用于校验。RegulationTarget 只引用 objectiveKey，与 subject 身份推导 targetKey；RegulationRequest 以 requestSeq 单独标识，targetKey 仅为外键。换定义版本是另一个 target，改变 desiredLevel/priority 则是该 target 的新请求。RegulationTarget 不与执行调用混淆，RegulationRequest 不包装 Task 生命周期。规范化、编码、哈希及地址等价规则仍待确定，详见 [Types.md](./Types.md)。
 - 公共命令只有为特定 Objective/subject 设置目标 level 与 priority，不再分别提供 add、replace、cancel、priority 或 retry。未终结需求可被更新，前次终结后新请求形成新尝试。
 - 覆盖身份须包含明确对象，精确 Objective 版本、来源和实际资源身份不能混淆；不依靠任意 regulation ID 区分同一需求更新。按接受顺序区分新旧，不依赖生产者时钟；commandId 用于关联，不默认是幂等键。
-- 已确认意图按非负整数 priority 升序、acknowledgedAtRevision 升序排序；新意图的确认刷新排序时间，重复确认同一意图不刷新。对象普通状态/观察更新不改变排队顺序，不用对象独立版本跨对象排序；同次确认的并列决胜规则待定。纯 priority 更新可重新排序但不无故重启。意图引用为对象 key 加对象意图 revision，旧反馈不能完成新意图。
+- 请求按非负整数 priority 升序、requestSeq 升序排序，序号表达逻辑接收先后，不把数据库自增分配顺序直接当成事务提交顺序。acknowledgedAtRevision 仅记录 Coordinator 的确认时间；重复确认和 Probe 更新不改变排序。仅 priority 更新也形成新请求，但不无故重启调用；旧调用以启动时 requestSeq 关联，不得完成新请求。
 - 先行 [level-attainment](../../../../01M5EFD1DW5J6MBE9BKCRFW5W3/outer/inner/ideal/Idea.md) 提供无要求 initial。目标 initial 不执行业务检查或 Agent，但仍校验契约、目标和 subject；它撤销推进需求，不将现实降级、不回滚修改、不虚构观察。
 - pending 是 Coordinator 等待 regulator 调度的任务，尚未进入 Regulation。Regulation 开始后，达标、block、预算耗尽或 exception/error 都结束本次调用；不存在以 blocked 状态保留活跃调用、等输入后原地复活的 retry。
 - Coordinator 只维护当前单次需求和必要的有限依赖编排，不因 subject 后续退化或资源变化自动重跑已终结意图。
@@ -75,9 +75,9 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 
 ## 持久化、纯回放与恢复
 
-- 设计支持 RegulationTargets 和 CoordinatorState 的持久化及恢复。CoordinatorCheckpoint 仅封装两份领域状态，不包含固定 positions 字段，不要求现在选定日志或存储方案。
+- 设计支持 RegulationRequests 和 CoordinatorState 的持久化及恢复。CoordinatorCheckpoint 仅封装两份领域状态，不包含固定 positions 字段，不要求现在选定日志或存储方案。
 - 若采用快照加后续增量，持久化适配层负责在外层保存与快照一致的命令/事件处理位置并定义接续规则；领域 revision 不默认等于日志位置。无论采用何种方案，都须保存意图发生修订并保证一致恢复，不能把已完成或 blocked 的同一意图当成新请求重跑，也不能遗漏未处理请求或重复预留预算。
-- 分别保存对象意图版本水位和 Coordinator 全局版本及各事实的引用，不重用已清理对象的旧意图身份，也不把领域版本当作消息游标；使用普通 JSON 对象持久化目标映射，仍须校验对象身份、版本与可持久化值。
+- 分别保存 lastRequestSeq、请求身份与 Coordinator revision 及事实引用；清理请求不降低水位或复用序号，也不把序号或状态版本当作消息游标。使用普通 JSON 对象持久化最新请求映射，仍须校验 target 身份、序号唯一性、水位与可持久化值。
 - current 持久化目标、活跃调用、仍有效的观察与依赖、累计预算和恢复元数据；完整领域状态还包括实体、聚合及历史 Collections，不保存 Promise、进程句柄或活跃内存节点。适配层保证 singleton、各个集合和输入接续位置一致；恢复失败明确呈现，不能静默从空状态启动。
 - 回放只运行 reducer，不重放启动、停止、文件写入等副作用。恢复出的 running 是历史记录，不是当前存活证明；须核实外部执行能否重关联、是否已结束或是否无法确认，再将恢复事实通过 events 纳入状态。
 - 外部执行未核实前，不虚报终止、释放占用、退还预算或启动可能重复的替代调用。具体重关联/失联协议与恢复阶段状态在实施时定义。
