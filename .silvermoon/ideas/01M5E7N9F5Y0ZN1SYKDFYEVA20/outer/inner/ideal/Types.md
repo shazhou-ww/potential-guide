@@ -22,12 +22,21 @@ PK 表示模型中的逻辑唯一键，多列标为 PK 表示复合主键；FK �
 
 概念上有四层：Objective source → Objective definition → RegulationObject → TargetIntent；其中 source 是字符串值，不单独建实体。RegulationObject 表示治理对象，不是一次有开始与终结的 Regulation 调用。
 
-- **Objective source 确定 Objective 身份。** objectiveKey 直接使用规范化 source URL，或由该 source 哈希推导；不是另一个任意分配的 objectiveId。source 标识稳定来源，version 单独表达同一来源的不同定义版本。URL 规范化、版本定位部分的分离及哈希规则仍待确定，不把可变 latest 解析当成固定版本身份。
-- **Objective definition 是版本化实体。** 逻辑主键为 `(objectiveKey, version)`；同一来源可有多个版本，同一精确版本的定义不能在原身份下被静默替换。source 是该实体的来源值，若 key 直接使用 URL 可省去重复存储；若 key 是哈希则保留 source 以便解析、校验与追溯，两者必须一致，不能独立修改。
+- **Objective source 确定 Objective 身份。** source 必须标识 Git 仓库中的位置，表达仓库定位地址与仓库内相对路径；可以访问 HTTPS、SSH 或本地 Git 仓库，不要求整个 repo 就是一个 Objective。Git 语义由类型契约与校验保证，不添加 git+ 前缀，也不接受任意非 Git 文件目录。
+- **Objective definition 是版本化实体。** 逻辑主键为 `(objectiveKey, version)`，version 固定为解析后的完整 Git commit object ID；同一来源可有多个版本，同一精确版本的定义不能在原身份下被静默替换。objectiveKey 必须是规范化 source 的确定性哈希，不直接使用 URL，也不是任意分配的 objectiveId；保留 source 以便定位、校验与追溯。
 - **RegulationObject 绑定精确 definition。** 每个对象引用一个 `(objectiveKey, objectiveVersion)`，再结合 subject 身份确定 objectKey。同一 subject 使用另一个 definition version 会形成另一个治理对象；一份 definition 可以被多个对象共享。
 - **TargetIntent 是对象的历次目标。** 每条目标意图以 `(objectKey, revision)` 唯一标识；targetLevel 与 priority 不属于对象身份，同值新请求也产生新的意图版本。
 
 三个实体表达这些业务边界，不强制建立 source 表、独立 Objective 目录服务或新的顶层状态集合。TS 可以嵌套实体值，物理存储也可以用外键；表示方式不能改变上述身份关系。
+
+### Git 来源与版本的设计不动点
+
+- source 是字符串值，编码“仓库定位地址 + 仓库内相对路径”，不包含版本选择。内部路径相对于 Git 仓库根目录，不能依赖进程当前目录，也不能越出仓库；仓库地址与内部路径的分界必须无歧义，不能从普通 URL 猜测。具体字符串语法仍待确定，不引入 git+https、git+ssh 或 git+local 等前缀。
+- version 是仓库级 commit 身份，不是路径内容哈希。branch、tag、HEAD 等可以作为解析入口，但必须解析成完整 commit ID 后才成为 definition version；读取的是该 commit 下指定路径的内容，路径或定义不存在须明确报错。本地未提交修改不属于此版本，不能用工作区内容冒充固定 commit。
+- 仓库其他路径的变更也可能产生新 commit，因此同一 Objective 内容可能对应不同 definition version；此模型不自动按路径内容去重。
+- objectiveKey = Hash(Canonicalize(source))，不包含 version。规范化、哈希算法及输出编码须由统一协议固定，不能由调用方自由选择；具体算法与规则尚未选定，不在本文假定 SHA-1、SHA-256 或某种编码。
+- HTTPS、SSH、本地地址即使访问同一仓库，也不天然是相同 source。没有明确等价/别名规则时不自动合并；不得通过丢弃主机、路径等身份信息制造相同 key。source 与 key 必须一致，哈希碰撞不得静默合并对象。
+- source 不嵌入密码或 token，认证由外部提供；凭据变化不应成为 Objective 身份变化。解析协议与现有 Git 来源结构的适配留待实施，不声称运行时代码已经支持本设计。
 
 [独立 SVG：Regulation Target](./diagrams/regulation-target.svg)。在浏览器单独打开可缩放；使用 22px 基础字号和横向布局。SVG 由本节 Mermaid 源生成，模型变化时须同步重新渲染。
 
@@ -38,9 +47,9 @@ erDiagram
     REGULATION_OBJECT ||--o{ TARGET_INTENT_VERSION : hasIntents
 
     OBJECTIVE_DEFINITION {
-        string objectiveKey PK "Source URL or derived hash"
-        string version PK "Definition version within source"
-        string source "Source value; determines objectiveKey"
+        string objectiveKey PK "Hash of canonical source"
+        string version PK "Full Git commit object ID"
+        string source "Git repository location and internal path"
     }
     TARGET_INTENT_VERSION {
         string objectKey PK, FK "Canonical object identity"
@@ -93,9 +102,9 @@ erDiagram
         number revision PK "Per-object intent version"
     }
     OBJECTIVE_DEFINITION {
-        string objectiveKey PK "Source URL or derived hash"
-        string version PK "Definition version within source"
-        string source "Source value; determines objectiveKey"
+        string objectiveKey PK "Hash of canonical source"
+        string version PK "Full Git commit object ID"
+        string source "Git repository location and internal path"
     }
     COORDINATOR_SNAPSHOT {
         number revision PK "One singleton snapshot per revision"
@@ -437,7 +446,7 @@ export interface CoordinatorCheckpoint {
 
 ## 意图身份与确认
 
-ObjectiveKey 由 ObjectiveSource 确定；ObjectKey 再由 `(objectiveKey, objectiveVersion, subjectIdentity)` 的规范化语义确定，可对规范化值哈希，具体规则待定；不是任意 regulation ID，也不能直接依赖普通 JSON 属性顺序。intents 是按此 key 索引的只读稀疏 Record，value 保留完整 RegulationObject、targetLevel、priority 与对象意图 revision。RegulationObject 不再重复存 key；恢复和输入验证须核对 source 与 objectiveKey、完整对象与 objectKey 一致，并明确哈希碰撞处理，不能静默合并不同来源、版本或 subject。
+ObjectiveKey 是规范化 Git ObjectiveSource 的确定性哈希；ObjectKey 再由 `(objectiveKey, objectiveVersion, subjectIdentity)` 的规范化语义确定，可对规范化值哈希，具体规则待定；不是任意 regulation ID，也不能直接依赖普通 JSON 属性顺序。intents 是按此 key 索引的只读稀疏 Record，value 保留完整 RegulationObject、targetLevel、priority 与对象意图 revision。RegulationObject 不再重复存 key；恢复和输入验证须核对 source 与 objectiveKey、完整对象与 objectKey 一致，并明确哈希碰撞处理，不能静默合并不同来源、版本或 subject。
 
 TS 中的 ObjectiveDefinition 独立表达定义实体的身份与来源字段，暂不展开定义正文；RegulationObject.objective 嵌套此值不表示必须重复存储它。该 source 字符串是本模型的领域来源标识，不照搬现有 GitObjectiveSource 传输结构；未来实现须明确与解析协议的适配。objectiveId 若作为名称保留，不构成另一套身份。
 
