@@ -17,7 +17,8 @@ executeCheck :: WorkerDirectory -> Revision -> Subject -> IO (Behavior CheckStat
 
 IO 发起一次执行，Behavior 提供当前状态及变化，观察它不再次执行；
 终态携带 CheckResult 或故障。Host 是调度与 Web 封装，不是内核本身，
-HTTP 响应投影同一状态源，依赖/证据作为旁路消息保留。完整含义见
+HTTP 响应投影同一状态源，证据可作旁路消息；Objective 依赖由内置 check 的
+CheckResult 表达并交上层解释，不进入 Host 的消息或调度协议。完整含义见
 [设计不动点](./Design.md#0-架构不动点)。
 
 按用户要求收缩 MVP：有界复用、按任务数退役、异常隔离和容量允许时的同版本替补预热；
@@ -27,8 +28,8 @@ HTTP 响应投影同一状态源，依赖/证据作为旁路消息保留。完�
 ## 三个重点阅读入口
 
 - [Design.md：调整范围](./Design.md#1-调整范围)：包边界、现有调用链以及全部内置检查器。
-- [Design.md：worker 消息](./Design.md#3-worker-messageport-消息)：执行/进度/完成信号如何形成 Behavior，依赖与证据单独关联。
-- [Design.md：HTTP 接口](./Design.md#4-对外-http-rpc)：五个接口，Subject 输入、当前状态快照和变化投影。
+- [Design.md：worker 消息](./Design.md#3-worker-messageport-消息)：执行/进度/完成信号如何形成 Behavior，证据单独关联。
+- [Design.md：HTTP 接口](./Design.md#4-对外-http-rpc)：四个接口，Subject 输入、当前状态快照和变化投影，无业务依赖回调。
 
 设计稿还集中定义模块生命周期、退役/预热和端到端时序；本文件不复制另一套接口。
 已确认/待审阅状态统一见 [OpenQuestions.md](./OpenQuestions.md)。
@@ -39,7 +40,9 @@ HTTP 响应投影同一状态源，依赖/证据作为旁路消息保留。完�
 首版不做会话租约、自动闲置关闭 Host、任务查询/恢复、独立视图管理或 cursor/ack 事件平台。
 Host 统一管理目录/revision、执行资源与排队，通过内核一次执行得到 Behavior 后再做 HTTP 适配；
 Objective 的版本来源、层级及业务依赖证据仍由现有调用链解释。
-完整 check 迁移与依赖往返保持必要范围，不能用“MVP”名义跳过真实根/包依赖检查。
+完整 check 迁移包含业务依赖结果的产生和上层消费，不能用“MVP”名义跳过真实根/包依赖验证。
+当前依赖 IPC 与同轮证据机制是需要迁移的旧接线，不再作为通用 Host 必须复刻的能力；
+要求与事实分别表示，Host 不伪造 currentLevelId 或目标已达成。
 
 ## 性能动机与证据边界
 
@@ -71,7 +74,7 @@ bundle 约 4.3 MB，TypeScript 约 3.58 MB；体积比例不等于 CPU 比例。
 | [effects/index.ts](../../../../../../packages/effects/src/index.ts) | 当前状态 SubscriptionRef、运行句柄和作用域清理可作先例；新的内核需保证订阅不会重复执行，不把 Promise 当作 Behavior |
 | [probes.ts](../../../../../../packages/objective-pilot/src/probes.ts) | HTTP 结果解析/取消已有基础，但裸 subject POST 不是新 Host 契约 |
 | [pilot-source.ts](../../../../../../packages/cli-runtime/src/pilot-source.ts) | 当前发现 run.*、逐次进程 probe，checkout 随作用域清理；需准备稳定产物目录与 revision，由 Host 校验并持有不可变执行副本 |
-| [dependency.ts](../../../../../../packages/objective-pilot/src/dependency.ts) | 依赖证据绑定原观察作用域，不能被普通 HTTP 或线程返回值替代 |
+| [dependency.ts](../../../../../../packages/objective-pilot/src/dependency.ts) | 旧依赖回调和同轮证据验证需向业务层迁移；依赖要求不等于已观察事实，不能复制到 Host 协议或省略验证 |
 | [regulation-worker.ts](../../../../../../packages/pguide-regulate/src/regulation-worker.ts) | 一次 runtime 已覆盖多轮观察；要替换的是 check 执行机制而非业务循环 |
 | [check.mjs](../../../../../../packages/objective-monorepo-standard/check.mjs) | 业务函数可适配 worker，原 stdin/stdout/进程证据上下文不能继续作为任务边界 |
 | [shared.ts](../../../../../../packages/objective-monorepo-standard/src/shared.ts) | 视图使用进程环境及 IPC 前提，多请求需要显式上下文 |

@@ -5,20 +5,21 @@
 
 架构不动点已确认：`executeCheck :: WorkerDirectory -> Revision -> Subject -> IO (Behavior CheckState)`。
 业务输入就是 Subject；IO 发起一次执行，Behavior 表达该次执行的当前状态与变化，
-Host 统一调度并做 Web 封装。取消、预算和依赖能力通过运行时作用域关联，不混入业务 Subject。
+Host 统一调度并做 Web 封装。取消和预算通过运行时作用域关联，不混入业务 Subject。
+Objective 依赖是特定内置 check 的业务返回类型，不进入 Host 的调度或回调协议。
 
 | 编号 | MVP 收敛 |
 | --- | --- |
 | Q01 调度与生命周期 | 用户级单 Host，多 CLI 共用；按需启动、保持驻留、显式停止，不做租约或自动闲置退出 |
 | Q02 迁移 | 6 个 Objective、16 个 check 全量 worker 化，旧协议明确拒绝，历史契约/证据不改写 |
-| Q03 依赖往返 | 当前执行的 HTTP 响应流传出依赖，客户端在原观察作用域登记证据后 POST 结果；不反向监听、不建事件队列 |
+| Q03 业务依赖结果 | 特定 check 正常完成，在 CheckResult 中报告目标 Objective/subject/level 的依赖要求；上层消费，Host 不编码或调度依赖 |
 | Q04 取消 | 协作取消、有界等待、必要时终止对应线程；清理失败不回池，连接断开不等于停止确认 |
 | Q05 信任 | 本机同用户、loopback/访问能力/边界校验；已授权 worker 不是恶意代码沙箱，不做远程服务 |
 | Q06 worker 池 | 固定总容量，一线程一任务，按准确产物复用；按任务数退役、异常隔离，同版本有余量才预热替补 |
 | Q07 身份与版本 | 规范化目录为 key、完整产物 hash 为 revision；执行时按需加载，同版复用，排空后顺序更新；旧任务在途时版本冲突明确拒绝 |
 | Q08 重试 | execute 不透明重试，重复 ID 拒绝；不提供断线恢复或历史结果查询，未知结果显式报告 |
 | Q09 输入与资源 | 请求级受限 staging 视图副本及清理，不新增视图 HTTP 资源；业务来源与证据在 adapter 保留 |
-| Q10 HTTP | 五个端点，execute 携带 directory/revision/subject；响应投影 Behavior 当前快照和变化，旁路传递依赖/证据；无预注册、资源 CRUD 或回放 |
+| Q10 HTTP | 四个端点，execute 携带 directory/revision/subject；响应投影 Behavior 当前快照和变化，旁路传递证据；无依赖接口、预注册、资源 CRUD 或回放 |
 | Q11 内核与 worker | 内核返回 IO (Behavior CheckState)，worker 的进度/完成信号由 runner/内核转换为状态；Host 只调度和封装，不以 Promise 或事件日志代替 Behavior |
 | Q12 内存 | 请求清理、有界缓存、任务数退役、简单替补预热；长期混合负载验证，不靠每请求重建或强制 GC 掩盖泄漏 |
 
@@ -27,9 +28,11 @@ Host 统一调度并做 Web 封装。取消、预算和依赖能力通过运行�
 1. **产物和状态 schema**：目录规范化、完整产物 hash、具体 check 入口、CheckState 字段，
    当前快照与更新的原子衔接、终态及执行作用域释放；Subject 不再包装通用 input。
 2. **容量与测量值**：线程/队列/负载/去重上限、任务数退役与预热额度、
-   依赖余量及失败策略；必须使实际根/包依赖链可执行，不允许池耗尽后无限等待。
+   过载及失败策略；不为业务依赖预留回调槽或让父 check 等待子目标。
 3. **跨平台资源边界**：启动竞争、Host 发现、私有 staging 校验/复制、
    单请求取消和外部工具资源清理，完成确认后才能复用线程。
+4. **业务依赖结果**：内置 check 如何返回要求、上层如何观察并处理目标再重查，
+   区分要求与已经取得的观察证据；既有 currentLevelId 不能无证据填充。
 
 ## 后续再做
 

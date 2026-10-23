@@ -2,7 +2,7 @@
 
 **只做一个可靠的本地执行器，不做可恢复任务平台。**
 目标：多个 CLI 共用一个 Node Host，重复执行 check 不反复加载重依赖，
-同时保持依赖观察、取消、证据和资源清理正确。以下接口是简化后的审阅建议，尚未实现。
+同时保持业务结果、取消、证据和资源清理正确。以下接口是简化后的审阅建议，尚未实现。
 
 ## 0. 架构不动点
 
@@ -32,9 +32,10 @@ Queued 表示已受理但尚在排队/准备代码，不能误称 worker 已运�
 清理未结束前仍是非终态；清理失败或无法确认停止要明确 Failed 并隔离资源，
 不能宣告 Completed/Cancelled 或让 worker 回池。
 
-状态变化只是 Behavior 的一种观察方式；依赖请求和证据是请求级旁路消息，
-不能只塞进会被下一状态覆盖的 CheckState 而丢失，也不能要求观察状态就必须处理业务依赖。
-调用者的执行适配器处理依赖/证据，普通状态观察者只消费 Behavior。
+状态变化只是 Behavior 的一种观察方式；Objective 之间的依赖属于某类内置 check 的
+业务返回值，位于 Completed 的 CheckResult 中，不是执行器的回调或调度指令。
+Host 不编码目标 Objective、subject、level 的依赖协议，也不挂起 worker 等待依赖响应。
+证据事件仍可作为请求级旁路消息；业务结果的解释、依赖处理与事实校验归上层。
 首版不新增历史查询/重连恢复；释放执行作用域后终态对象和订阅引用可回收，
 不因此永久缓存全部执行结果。单个订阅退出不等于结束执行，取消仍是显式生命周期操作。
 
@@ -46,7 +47,7 @@ CLI / Pilot：选择检查产物、提供 Subject、维护观察与证据
 Check Host：校验/调度多次执行、管理统一 worker 资源、投影状态
                          ↓ 调用内核一次
 executeCheck directory revision subject → IO (Behavior CheckState)
-                         ↕ MessagePort（执行/进度/完成/依赖/证据）
+                         ↕ MessagePort（执行/进度/完成/证据）
 worker：执行检查 → 清理本次资源 → 等待下一项
 ```
 
@@ -57,8 +58,8 @@ worker：执行检查 → 清理本次资源 → 等待下一项
 | 调整面 | MVP 要做的事 |
 | --- | --- |
 | check-host | 无 HTTP 依赖的执行内核/Behavior，统一调度与池，再由 HTTP adapter 封装当前状态和变化 |
-| pilot-protocol / objective-pilot | worker 契约和 check adapter；层级判断、CheckRef、subject、结果 envelope 及依赖证据语义保留 |
-| cli-runtime 与 probe/regulate/supervise | 发现 Host、准备稳定产物目录和 Subject、观察 CheckState，在原作用域处理依赖/证据；按终态接入既有业务循环 |
+| pilot-protocol / objective-pilot | worker 契约和 adapter；层级/业务结果校验留在业务层，依赖要求改由特定 check 的结果表达，区分要求与已观测事实 |
+| cli-runtime 与 probe/regulate/supervise | 发现 Host、准备目录/Subject、观察 CheckState；上层读取业务结果决定后续行为，不经 Host 发起依赖回调 |
 | 所有 Objective、生成器、脚手架、消费测试 | 进程入口改为 worker handler，输入/证据/取消改为显式请求上下文 |
 
 **迁移范围不缩减：6 个内置 Objective，16 个 check。**
@@ -124,8 +125,9 @@ interface WorkerModule {
 Subject/CheckResult 沿用既有业务数据；context 在 worker 本地构建，不是业务输入包装。
 handler 的 Promise 仅表示 worker 内部最终业务结果；runner 报告执行进度与清理结果，
 内核将这些信号转换为同一次执行的 Behavior，不能把 Promise 当作对外接口。
-RequestContext 提供 signal、可选进度报告、输入视图、依赖往返、证据发送及异步清理登记，
+RequestContext 提供 signal、可选进度报告、输入视图、证据发送及异步清理登记，
 不通过线程直接发送函数、AbortSignal 或任意对象实例。
+不提供 Objective 依赖调用能力；内置依赖 check 将业务要求作为 CheckResult 返回。
 业务故障由 handler/runner 报调用错误并映射 Failed；业务 ok:false 仍是 Completed 的 CheckResult。
 
 MVP 固定总体线程/队列上限，一线程同时一任务，按准确产物及兼容配置复用。
@@ -134,7 +136,7 @@ MVP 固定总体线程/队列上限，一线程同时一任务，按准确产物
 预热、运行及退役中线程均计入额度；没有空位就先退出再启动，不执行真实 check 来预热。
 时间、内存压力、自适应扩缩容及特殊一次性策略列为后续能力，不同时实现。
 
-每次请求在成功、失败、取消路径都清理输入引用、AST/Buffer、待决依赖、监听器、
+每次请求在成功、失败、取消路径都清理输入引用、AST/Buffer、待决任务引用、监听器、
 定时器、文件/网络句柄和外部任务。只保留有界、明确允许的模块/编译器缓存。
 只有清理成功才回池；失败明确报告并销毁 worker，不能用退役次数掩盖泄漏。
 强制终止不保证 finally 执行，Host 仍需收回自己管理的文件与执行资源。
@@ -152,8 +154,6 @@ Node worker 不是安全沙箱，模块缓存通常按线程独立；内存验�
 | Host → runner | execute | requestId、worker 代际、subject、剩余预算、受限运行上下文 |
 | runner → Host | started / progress | 关联身份及可选进度；由内核更新同一 Behavior，不另建状态源 |
 | Host → runner | cancel | requestId、原因；runner 触发本地 signal |
-| runner → Host | dependency | requestId、dependencyId、不透明的依赖请求数据 |
-| Host → runner | dependencyResult | 相同关联 ID、结果或调用故障 |
 | runner → Host | evidence | requestId、受限且已脱敏的证据数据 |
 | runner → Host | done | requestId、结果/错误/取消、清理是否成功 |
 | Host → runner | dispose | 停止接新任务并卸载；Host 等待真实线程 exit |
@@ -162,19 +162,19 @@ Node worker 不是安全沙箱，模块缓存通常按线程独立；内存验�
 初始化/协议异常、线程 error/exit 由 runner 或 Host 明确报错，不依赖额外“完成”消息才处理。
 done 在 runner 清理后发送；内核校验后形成 Completed、Failed 或 Cancelled。
 清理失败不能作为普通业务成功。HTTP 不自行推导终态；迟到消息不能完成下一项任务。
-started/progress 是 worker 信号，CheckState 是内核维护的当前状态；依赖/证据不是状态快照。
-具体进度字段及是否合并中间更新待定义，必须保留终态和完整依赖往返，不把进度当审计日志。
+started/progress 是 worker 信号，CheckState 是内核维护的当前状态；证据不是状态快照。
+具体进度字段及是否合并中间更新待定义，必须保留携带完整 CheckResult 的终态，
+包括业务依赖要求，不把进度当审计日志。消息协议中没有 Objective 依赖请求/响应类型。
 
 ## 4. 对外 HTTP RPC
 
-### 五个接口，不提供提前注册或 session/observation/view 的独立资源管理
+### 四个接口，不提供提前注册或 session/observation/view 的独立资源管理
 
 | 方法与路径 | 作用 |
 | --- | --- |
 | GET /v1/host | 鉴权后读取协议、Host 代际、基本状态 |
-| POST /v1/execute | 给定 directory、revision 和 subject，发起一次内核执行，在原响应中投影当前 CheckState 及后续变化，旁路传递依赖/证据 |
+| POST /v1/execute | 给定 directory、revision 和 subject，发起一次内核执行，投影当前 CheckState 及变化，旁路传递证据 |
 | POST /v1/execute/{requestId}/cancel | 请求取消指定任务；不把受理取消当成停止确认 |
-| POST /v1/execute/{requestId}/dependencies/{dependencyId} | 提交当前待决依赖的结果 |
 | POST /v1/shutdown | 管理能力下显式停止；有活动任务时拒绝，不误杀其他客户端 |
 
 不返回 202 然后让客户端查询任务库，也不提供断线后领取结果或恢复事件的承诺。
@@ -204,8 +204,8 @@ requestId、鉴权、预算、语言及视图等执行元数据与 Subject 分�
 断线时 Host 依靠自己的副本清理，不依赖客户端还活着。不新增视图上传/查询 API。
 同轮复用仍需原有稳定输入证明；不为了简化把 captured view 改成 live 读取。
 
-响应使用有界 NDJSON，类型为 `state`、`dependency`、`evidence`，均带 requestId，
-dependency 另带 dependencyId。state 携带本次执行的完整 CheckState 快照和单调状态序号。
+响应使用有界 NDJSON，类型为 `state`、`evidence`，均带 requestId。
+state 携带本次执行的完整 CheckState 快照和单调状态序号。
 先发送订阅时的当前快照，再发送后续变化；原子衔接由内核观察机制保证，
 不是通过再次调用 executeCheck 生成快照。即使不产生业务进度，也不能退回只承诺一行最终结果。
 Host HTTP adapter 只序列化内核状态，客户端可投影为远端当前状态及其变化，
@@ -215,53 +215,55 @@ Host HTTP adapter 只序列化内核状态，客户端可投影为远端当前�
 HTTP 200、开始收流、done 信号或 EOF 都不独立证明检查成功。
 未收到终态前断流，客户端只能报告传输失败/远端状态未知，不伪造远端 Failed 或 Cancelled；
 已收到有效终态则保留该结果，不因随后的正常连接结束再执行。
-依赖与证据在同一 HTTP 响应中多路传递，但不合并为可覆盖的状态字段。
-调用适配器必须边读边处理依赖，普通状态观察者不消费依赖控制能力。
+证据在同一响应中旁路传递，不合并为可覆盖的状态字段。
+业务依赖要求随终态 CheckResult 返回，不需要反向 HTTP 回调或依赖控制通道。
 这不是事件存储，没有持久任务、cursor、ack 或重连回放；积压超限明确取消/报故障，不无限缓冲。
 
 ### 取消、安全与重复请求
 
 Host 显式 loopback，发现记录及访问凭据限制到同用户，校验 Host/Origin，
 不开放任意 CORS；管理操作与执行能力分开。每次 execute 另带不记录日志的请求能力，
-cancel/依赖响应必须证明持有该能力，不能仅凭猜到 requestId 操作其他任务。
+cancel 必须证明持有该能力，不能仅凭猜到 requestId 操作其他任务。
 requestId 绑定 Host 代际和调用者能力；重复 execute 明确拒绝，不重放、不返回旧结果。
 Host 只保留有界已受理 ID 标记和活动执行的 Behavior，不提供历史结果库；
 终态在执行观察作用域释放前可读，随后释放状态、subject、订阅及相关引用。
 容量满时拒绝新任务而不是淘汰仍有效 ID。
 重启更换代际，客户端不能自动把未知任务提交到新 Host。
 
-传输不自动重试执行。依赖响应只完成相同待决项一次，重复/迟到响应拒绝；
-丢失确认后父任务明确失败/取消，不重新执行依赖来猜测结果。
+传输不自动重试执行，迟到消息不能改变已完成执行或归属到后续任务。
 客户端取消发 cancel，连接断开也触发 Host 取消；服务端停止仍须单独确认。
-队列、执行和依赖共享剩余预算，超时协作取消后有界等待，再终止该线程；
+队列和执行共享剩余预算，超时协作取消后有界等待，再终止该线程；
 外部工具回收失败明确报告，不让脏 worker 回池。结果和取消由同一执行控制器串行仲裁，
 HTTP cancel 只调用该执行的取消能力，不直接写 Cancelled。
 MVP 选择响应连接失联触发取消，这是 Host 的连接生命周期策略，不是 Behavior 订阅的普遍语义；
 后续仅断开一个本地观察者不会重新执行或自动取消仍被其他观察者使用的任务。
 取得执行 Behavior 前的拒绝用 400/401/403/409/413/429/503；取得后执行故障由 Failed 状态表达。
 
-## 5. 依赖往返与最小验证链路
+## 5. 业务依赖结果与最小验证链路
 
 ```text
-CLI 提交 directory/revision/subject → Host 调度 → 内核创建一次执行及 Behavior → worker
-Host 订阅 Behavior → HTTP 当前状态快照及后续变化
-worker dependency → Host 写入当前 HTTP 响应流
-CLI 在原观察作用域处理依赖（子 check 仍可经 Host 执行）
-CLI 验证并登记依赖证据 → POST dependency result → Host → 原 worker
-原 worker 完成并清理 → 内核更新终态 → HTTP state → CLI 按终态恢复既有业务结果/调用错误
+调用者提交 directory/revision/subject → 内核执行 check
+内置依赖 check 返回不通过及目标 Objective、目标 subject、要求 level
+清理完成 → Completed CheckResult → Host 原样投影
+上层业务逻辑解释依赖要求，按其规则观察/推进目标，必要时重新检查原目标
 ```
 
-不需要 CLI 反向监听 HTTP。Host 路由依赖数据，不理解 Objective 的层级或自建观察证据。
-客户端断开时本请求及其关联依赖不能无限存活；请求取消及截止继续约束子任务。
-调用者传入经 Host 校验的父请求关联/能力后才能继承取消和预算，不能用任意 parent ID
-影响另一客户端。所有业务递归/来源/次数检查仍在原观察逻辑中执行。
+这里的依赖是业务关系，不是 worker bundle 的代码依赖；后者仍纳入产物 revision。
+依赖结果表达“该 Objective 在该 subject 上需要达到该 level”，Host 不解释这些字段，
+不递归调用其他 Objective，也不提供等待子 check 的特殊调度槽。
+这种 check 正常执行完且清理成功，状态是 Completed，业务结果可以是 ok:false；
+不能因依赖未满足把执行状态改为 Failed 或让 worker 一直占槽等待上层处理。
 
-线程容量仍需防死锁：建议预留有界依赖执行余量，父任务等待时保留其真实占用；
-无法提供依赖槽时明确报容量失败并取消相应链路，不能永久排队或无限扩线程。
-必须验证本仓库“根 → 包”的实际依赖链成功，及更深/循环请求的明确失败，
-具体容量值在实现前确定。不能把拒绝所有依赖当作 MVP。
+依赖要求本身不证明目标当前处于何层，更不证明依赖已经满足。
+上层需要准确来源、实际观察及循环/预算保护才能处理这些要求；缺少观察时不能捏造
+currentLevelId 或把旧证据绑定到新请求。业务依赖产生、消费、再次检查和证据校验
+需随内置 checks 一起调整，不能只删旧 IPC 而让现有根/包链路失效。
+现有 DependencyProblem 包含 currentLevelId 且要求同轮已验证证据，与纯依赖要求不是同一契约；
+新的业务结果结构、已有事实与待满足要求的区别，以及上层处理规则需在业务协议层明确，
+不借通用 Host 协议补入回调。这是此次用户明确的边界调整，不宣称旧回调代码能原样复用。
 
-先验证：两个 CLI → 同一 Host → 根/包依赖检查 → 连续复用 → 取消/清理。
+先验证：两个 CLI → 同一 Host → 根检查返回业务依赖 → 上层处理包级目标 →
+重新检查根目标 → 连续复用/取消/清理。拒绝跳过依赖验证直接判定通过。
 随后完成全部 16 个 check 迁移；验证顺序不缩小最终交付范围。
 
 ## 6. 首版不做什么
@@ -273,6 +275,7 @@ worker 的最小预热保留；自适应扩缩容、时间/内存压力退役和
 这些是交付分期，不改变正确清理、有界资源和隔离要求。
 
 本稿保留三个实施前细化点：产物/worker schema、容量和退役数值、
-staging/启动锁及权限的跨平台细节。设计审阅完成前不创建产品包、不记录生命周期验收。
+staging/启动锁及权限的跨平台细节。业务层还需定稿依赖要求结果及其消费方式，
+不得把它再移回 Host 控制协议。设计审阅完成前不创建产品包、不记录生命周期验收。
 Behavior 的具体状态字段及 TypeScript 表达复用现有 Effect/SubscriptionRef 等生命周期原语，
 但需明确实现采样、订阅和资源释放的契约，不照搬“每次订阅重新执行”的冷流语义。
