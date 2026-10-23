@@ -1,9 +1,9 @@
 # @potential-guide/check-host
 
-**Windows safety hold:** private NTFS directory/descriptor ACLs are not yet
-enforced or validated. POSIX `mode` values do not establish that boundary on
-Windows. Do not run the Windows shared Host until owner-only access is implemented
-and verified; a readable descriptor exposes its bearer token to other local users.
+Discovery requires a dedicated private directory. Windows uses protected NTFS
+ACLs, not POSIX `mode` values; existing insecure directories or metadata are refused
+without changing their permissions. Choose a fresh private location rather than
+reusing a descriptor that may have exposed its bearer token.
 
 One user-local Node Host, one bounded scheduler, one `SubscriptionRef<CheckState>`
 per execution. `CheckKernel.executeCheck({directory, revision, subject, checkId})`
@@ -24,6 +24,32 @@ Only authenticated loopback HTTP is supported:
 | Cancel | `POST /checks/{checkId}/cancel` |
 | Observe one | `GET /checks/{checkId}` |
 | Observe active collection | `GET /checks` |
+
+On Windows, directory/file creation supplies the security descriptor atomically:
+the owner is the current SID; only that SID, SYSTEM (`S-1-5-18`) and Administrators
+(`S-1-5-32-544`) receive access. Native handle-based ACL/owner, reparse-point,
+hard-link and local-volume checks run before secret IO. Startup records, the store
+mutex, descriptors and leftover JSON publications must also be private. No token
+is first written with inherited broad permissions and repaired afterward.
+POSIX uses actual owner UID, no-follow regular files and private `0700`/`0600`
+permissions, not an assumption about umask.
+
+Windows discovery requires Windows PowerShell and its .NET/native security APIs.
+The assembly uses the trusted absolute system executable/module paths, no profile
+or module autoloading, and fixed code with JSON data over anonymous pipes (`shell:
+false`). It does not interpolate paths or tokens into commands. A private compiler
+directory is established and verified before in-memory native-helper compilation,
+then removed; system temporary directories are not used for those files. One
+reusable permission helper belongs to each caller process. Normal shutdown, client
+pipe closure and process-exit cleanup stop only that owned helper. Backend/permission
+failures are explicit; there is no insecure fallback. This extra Windows process
+is not included in the kernel-only RSS measurements below.
+
+Publication uses private temporary files and atomic replacement. Windows mutation
+uses a private OS-exclusively-held store mutex and expected-content transitions;
+startup reservations cannot overwrite a changed reservation, and shutdown removes
+only its own descriptor version. An already live descriptor is not replaced by a
+second startup. Failed replacement leaves the prior descriptor intact.
 
 All requests need the descriptor's bearer token. `context` is opaque per-execution
 JSON supplied by the adapter, not a Host dependency protocol. GET returns JSON,
@@ -88,6 +114,11 @@ the real generated package-standard checker against one owned, fixed repository
 fixture and reports twelve-process versus twelve-Host totals. No target package
 build/check script executes. These are kernel timings, not end-to-end CLI timings;
 first snapshot publication can make the real checker's cold run slower.
+An additional 512-execution mixed workload crosses 32 retention windows, checks
+record eviction and post-close release, and samples RSS/heap without imposing an
+unjustified leak threshold. Native ACL tests independently inspect real Windows
+security descriptors, reject ordinary-group grants, race independent publishers,
+and verify failed replacement and permission-backend teardown.
 Host RSS includes the test runtime and worker threads, whereas baseline RSS is one
 isolated child process. Short samples and noisy concurrent CI results are not proof
 of reduced absolute memory or indefinite leak freedom.

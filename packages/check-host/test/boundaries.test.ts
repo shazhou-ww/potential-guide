@@ -49,8 +49,8 @@ const basic = `
 let calls=0;
 exports.execute=async(subject,context)=>{
   calls++;
-  if(subject.wait)await new Promise(done=>{
-    const timer=setTimeout(done,subject.wait);
+  if(subject.wait || subject.hold)await new Promise(done=>{
+    const timer=subject.hold?undefined:setTimeout(done,subject.wait);
     const abort=()=>{clearTimeout(timer);done()};
     context.signal.addEventListener("abort",abort,{once:true});
     context.defer(()=>{clearTimeout(timer);context.signal.removeEventListener("abort",abort)});
@@ -86,12 +86,13 @@ test("worker runtime excludes caller loader flags and rejects unbundled dependen
 
 test("HTTP snapshots and terminal resubscriptions project the same kernel execution; observer capacity recovers", async () => {
   const f = await fixture(basic, { observers: 1, retentionMs: 3000 });
-  const host = await serve(f.kernel, "boundaries");
-  const headers = { authorization: "Bearer boundaries" };
+  const token = randomUUID();
+  const host = await serve(f.kernel, token);
+  const headers = { authorization: `Bearer ${token}` };
   try {
     const client = new CheckClient({
       endpoint: host.endpoint,
-      token: "boundaries",
+      token,
       pid: process.pid,
       instance: randomUUID(),
     });
@@ -150,11 +151,12 @@ test("HTTP snapshots and terminal resubscriptions project the same kernel execut
 
 test("lost start responses recover the same client ID without repeating work", async (t) => {
   const f = await fixture(basic);
-  const host = await serve(f.kernel, "recovery");
+  const token = randomUUID();
+  const host = await serve(f.kernel, token);
   try {
     const client = new CheckClient({
       endpoint: host.endpoint,
-      token: "recovery",
+      token,
       pid: process.pid,
       instance: randomUUID(),
     });
@@ -199,7 +201,7 @@ test("resource bytes, links, canonical paths and drain-before-revision-switch ar
       checkId: "old",
       directory: join(f.directory, "."),
       revision: first.revision,
-      subject: { wait: 200 },
+      subject: { hold: true },
     });
     await writeFile(join(f.directory, "data.txt"), "two");
     const second = await readArtifact(f.directory);
@@ -222,7 +224,8 @@ test("resource bytes, links, canonical paths and drain-before-revision-switch ar
       }),
       /mismatch/,
     );
-    await finished(f.kernel, "old");
+    f.kernel.cancel("old");
+    assert.equal((await finished(f.kernel, "old")).state, "Cancelled");
     await f.start("updated", { value: "new" });
     const updated = await finished(f.kernel, "updated");
     assert.equal(updated.state, "Completed");

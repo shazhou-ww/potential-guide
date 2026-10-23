@@ -95,11 +95,12 @@ test("HTTP-free execution has one Behavior, reused threads, authentic business r
 });
 test("real four-route HTTP observation disconnect does not cancel; collection omits secrets", async () => {
   const f = await fixture();
-  const host = await serve(f.kernel, "secret");
+  const token = randomUUID();
+  const host = await serve(f.kernel, token);
   try {
     const client = new CheckClient({
       endpoint: host.endpoint,
-      token: "secret",
+      token,
       pid: process.pid,
       instance: randomUUID(),
     });
@@ -108,7 +109,7 @@ test("real four-route HTTP observation disconnect does not cancel; collection om
       revision: f.revision,
       subject: { wait: 200, value: "PRIVATE" },
     });
-    const headers = { authorization: "Bearer secret" };
+    const headers = { authorization: `Bearer ${token}` };
     const active = await (await fetch(`${host.endpoint}/checks`, { headers })).json();
     assert.ok(!JSON.stringify(active).includes("PRIVATE"));
     const stream = await fetch(`${host.endpoint}/checks/${id}`, {

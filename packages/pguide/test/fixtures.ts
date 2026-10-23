@@ -5,28 +5,38 @@ import { after, before } from "node:test";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { parseConfig, parseLegacyConfig, validateAgentProfile } from "@potential-guide/cli-core";
-import { CheckKernel, connectHost, serve } from "../../check-host/dist/index.js";
+import {
+  CheckKernel,
+  connectHost,
+  createPrivateDirectory,
+  publishPrivateFile,
+  serve,
+} from "../../check-host/dist/index.js";
 
 export const root = resolve(import.meta.dirname, "..", "..", "..");
 export const scratch = join(root, ".cache");
 await mkdir(scratch, { recursive: true });
-const testHostDirectory = await mkdtemp(join(scratch, "pguide-suite-host-"));
+const testHostDirectory = await createPrivateDirectory(scratch, "pguide-suite-host-");
 const previousHostDirectory = process.env.PGUIDE_CHECK_HOST_DIRECTORY;
 let testHost: Awaited<ReturnType<typeof serve>> | undefined;
 before(async () => {
   const kernel = await CheckKernel.create(join(testHostDirectory, "snapshots"));
   const token = crypto.randomUUID();
   testHost = await serve(kernel, token);
-  await writeFile(
-    join(testHostDirectory, "host.json"),
-    JSON.stringify({
-      endpoint: testHost.endpoint,
-      token,
-      pid: process.pid,
-      instance: crypto.randomUUID(),
-    }),
-    { flag: "wx" },
-  );
+  if (
+    !(await publishPrivateFile(
+      testHostDirectory,
+      "host.json",
+      JSON.stringify({
+        endpoint: testHost.endpoint,
+        token,
+        pid: process.pid,
+        instance: crypto.randomUUID(),
+      }),
+      null,
+    ))
+  )
+    throw new Error("Fixture Host descriptor already exists.");
   process.env.PGUIDE_CHECK_HOST_DIRECTORY = testHostDirectory;
   await connectHost(testHostDirectory);
 });

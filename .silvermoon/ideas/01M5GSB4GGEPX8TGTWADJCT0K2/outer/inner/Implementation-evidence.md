@@ -293,3 +293,143 @@ ACL 创建、校验及 fail-closed 行为，不能只改 mode 或假设项目目
 可靠的 owner-only ACL 验证后，由协调者决定恢复受控验证。
 随后重跑最终完整 pnpm check/pack 消费、补充更长内存和真实启动故障压力证据。
 当前 I-* 仍全部未完成；不 submit、不 accept、不推送、不发布。
+
+## Checkpoint 4：恢复中断的 ACL candidate
+
+本轮完整读取并保留原会话的 14 个 tracked 修改和两个 untracked 文件，
+确认均属于 Windows 私有文件边界及其调用/测试迁移；没有 reset/revert，
+未修改 accepted Ideal。Deployment 只保留实现新引入的 PowerShell/.NET
+外部环境要求和真实 ACL 验证要求，没有实施部署或记录部署结果。
+下述是新操作授权下的受控验证，不是此前危险删除事件的完整性结论。
+
+### 私有边界与失败路径
+
+- 新增 `check-host/src/private-files.ts`，在创建 Windows 目录/文件时原子提供
+  owner=current SID、protected DACL，Allow 仅含 current SID、SYSTEM
+  `S-1-5-18`、Administrators `S-1-5-32-544`。写秘密前通过 native handle
+  验证 owner/DACL、类型、单硬链、大小和本地卷，拒绝 reparse point。
+  startup、store mutex、descriptor 和遗留 JSON publication 都需通过校验。
+  不修补不可信既有 ACL，不先写 token 再收紧权限。
+- Windows 权限后端使用绝对系统 PowerShell/模块路径、无 profile/模块自动加载，
+  固定程序与 JSON pipe 数据分离；编译中间文件仅进入本次创建并先验证的私有目录。
+  设置/校验失败只返回固定错误码，未将 token 写入命令、日志或证据。
+  POSIX 继续验证实际 UID、private mode、no-follow regular file 和单硬链。
+- Windows 原生独占 mutex 串行化 publication/删除；expected-content
+  compare/replace 使旧 reservation 和旧 shutdown 无法覆盖/删除新内容。
+  失败 replacement 保留旧 descriptor，清理本次独有 publication 文件。
+  discovery claim 使用随机 reservation；发现 live descriptor 不重复启动。
+- 所有相关 fixture 和 CLI artifact publication 在使用前验证私有 discovery 根。
+  真实双 CLI 保留精确 spawn journal（PID、main、directory），仅终止 journal
+  对应操作拥有的 Host，不信任 descriptor PID 作为终止授权。
+- 后端正常关闭、客户端被强制结束后的 pipe closure 均有真实退出测试；
+  本轮另修复 helper 重启时的 process exit listener 回收，并断言 listener 不累积。
+  私有后端额外 Windows 进程未被算进 kernel-only 性能/RSS 优势。
+
+### 恢复已有有界验证
+
+定向读取 `.cache/checkpoint4-check-be42d318-25d2-4f54-8958-b19fd7af69de/check.log`，
+发现原会话的全量 runner 尚在运行，而非重复启动另一份全量检查。
+先只查询 descriptor 指定 PID，再独立查询其精确 parent command line：
+guard `11888` 的 parent `28952` 明确为该目录下的 `pnpm check` wrapper，
+其 direct children 只按已确认的 parent PID 查询。未全机扫描或停止无关进程。
+随后 runner 自行完成并退出，旧 descriptor 被正常移除；旧日志包括 20 个
+Host tests、真实双 CLI 与 isolated combined 消费通过，但退出码未被恢复捕获，
+因此不把旧日志拼接成完整 `pnpm check` 成功证据。
+最终结果以本轮下述带持久 exit code 的新检查为准。
+
+### 本轮针对性验证与实测
+
+- `pnpm exec tsc -b --pretty false` 与
+  `pnpm exec tsc -p tsconfig.test.json --pretty false` 均 exit 0。
+- `pnpm exec biome check --write` 针对新增/修补的三个 Host 文件通过；
+  `git diff --check` 通过。未添加依赖或重新安装工作区依赖；
+  pack 消费测试按既有脚本安装其操作拥有目录内的待验 tarball。
+- 一次串行 targeted runner：
+  `pnpm exec tsx --test --test-concurrency=1`，选择 private-files、discovery、
+  workload、shared-host-cli 四个测试文件，**13/13、0 fail，exit 0**，48.44 s。
+  日志与持久 exit code 在
+  `.cache/checkpoint4-target-2de9edea-e369-4754-be9d-fda71cfba71c/{target.log,result.json}`。
+- 真实 ACL 独立读取新建目录和文件，owner=current SID、protected=true，
+  allowed 恰为 current SID/SYSTEM/Administrators；分别向目录和文件增加
+  Authenticated Users、Users、Everyone（用 SID，不依赖本地化名称）的授权，
+  均在任何凭据写入前拒绝，且不改写宽 ACL。宽 descriptor/startup/mutex/
+  legacy publication 在 HTTP 前拒绝（fetch 次数为 0）。
+- 四个独立 Node/权限后端进程并发 compare/replace 同一 startup reservation，
+  恰好一个成功；旧 expected-content 删除失败，不残留 publication 文件。
+  read-only replacement 故障保留旧内容，后端启动故障无降级，
+  junction alias 被拒绝；正常/强制客户端关闭仅回收本次拥有的 helper。
+  真实双 CLI 1/1 通过，检查实际 descriptor ACL，共用一个 Host 并复用 worker；
+  收尾只用精确 spawn journal PID，删除操作拥有的随机 fixture 根。
+- 新增 **512 次混合任务**跨 32 个 retention window：
+  Completed 448 / Failed 32 / Cancelled 32；17 initializations、16 retirements，
+  peakWorkers=2、peakRecords=16；每批过期后 records=0，queue/ownedProcesses=0；
+  每个已保存 worker sample 的 timers/processes=0，sample 数量不超过 64。
+  kernel.close 后 workers/records 均为 0。32 个 RSS 样本 141.91→134.09 MiB，
+  range 131.49–141.91 MiB；heap 29.79→36.89 MiB，中间有回落。
+  这是有界样本与资源回收断言，不声称无限期无泄漏。
+- 本次同输入实测（Windows / Node v24.11.1）：
+  小 fixture fresh-process median 87.49 ms，worker cold 44.64 ms、
+  hot median 6.35 ms；原 96 次混合任务仍是 77/7/12，workers≤2。
+  此 96 次 RSS 从 144.64 到 172.59 MiB（range 27.95 MiB），如实保留，
+  不用另一 workload 的下降样本覆盖它。
+  真实 package-standard/structure：12 fresh-process 总 5533.42 ms、
+  median 463.57 ms；12 Host 总 3552.00 ms，cold **3369.50 ms**、
+  hot median 16.42 ms、1 initialization。冷启动仍明显更慢，
+  多次复用才有本次总耗时收益；不替代完整 CLI/Git/discovery 的性能测量。
+
+### 本轮全量检查的首个失败与收敛
+
+第一次新 `pnpm check` 取得明确 exit 1，而非安全停止：
+`.cache/checkpoint4-final-91d58d4c-da2d-42f2-bb81-179355e9bb02/{check.log,result.json}`。
+layers/format/lint/typecheck 通过，Turbo test 阶段的 revision boundary 测试失败：
+它用 200 ms sleep 假设旧任务仍在执行；并发全量负载下写入/读取新 artifact
+已超过此时长，故 `/busy/` 断言没有拒绝。未把这次 40 successful tasks
+当作完整成功，pack 阶段尚未进入。
+
+将该 fixture 改成明确等待取消的 hold，而非放大 sleep；
+先验证在途 revision 拒绝，再明确取消、确认 Cancelled，最后切换 revision。
+更改未放宽产品断言或改变内核规则。
+修补后单次串行 **完整 Host suite 23/23、0 fail、exit 0**（54.51 s），
+日志 `.cache/checkpoint4-target-2de9edea-e369-4754-be9d-fda71cfba71c/host-final.log`；
+对应文件 Biome 检查通过。
+
+### 最终全量检查与资源收尾
+
+修补后的第二次新 **`pnpm check` exit 0**，包含完整 layers/format/lint/typecheck、
+生成物校验、workspace/root tests 和 **`pack:check`**。持久证据：
+`.cache/checkpoint4-final-0e69cfd6-4071-44da-9e24-15cd00fb3650/{check.log,runner.json,result.json}`。
+Turbo test 为 44/44 successful（16 cached，12m36.559s），Host 23/23，
+Objective Pilot 61/61；根 scripts 36/36。pguide 与 devbox-health
+各有一项平台 skip，没有将其解释为 Linux 实机通过。
+打包 **18 个包**，10 组 isolated tarball 消费全部通过，
+含 combined 7 selected/17 internal 的消费；worker 校验及全部 16 个
+内置入口的 tarball 资源/执行测试通过。没有发布包、push 或生命周期提交事件。
+
+本轮新执行的产品验证顶层命令计数为：`tsc` 两次、四文件 targeted 一次、
+完整 Host suite 一次、`pnpm check` 两次（首次 1、最终 0）；
+另有两次定向 Biome。恢复中的旧 runner 不算本轮新启动的命令，
+没有用旧退出码未知的结果替代最终成功结果。
+
+最终 guard 在写 descriptor 前验证私有边界，并经真实认证请求确认 readiness。
+全量结束时正常 close server/kernel、按 expected-content 删除自己的 descriptor、
+关闭权限 helper。再只按已记录精确 PID 查询，最终 guard `11612`、其 direct
+children、`pnpm check` child `34576` 均已不存在；首次新 runner `5712`、
+其 direct children/child `4452`，以及恢复的旧 `11888`/`28952`/`8312` 也已退出。
+最终 descriptor 已不存在。该结论只覆盖这些已核实归属的进程，
+不扩大成已排除此前所有未知 detached Host 的断言。
+
+只清理本轮三个明确拥有的 runner 根下 `scratch`、`state`、`host-state`、
+`host` 子目录；保留日志/result/runner journals。测试本身正常删除其随机 fixture 根，
+新 512 任务用例在 kernel.close 后断言 workers/records=0。
+未清理未知 cache 前缀、工作区祖先、机器其他目录或旧 session 的未知资源。
+
+### 本 checkpoint 仍不代表完整实施验收
+
+I-* 继续保持 unchecked，不追加 submit/accept，也不推送或发布。
+Windows 的真实 ACL 与互斥测试不是 POSIX 实机证据；当前 POSIX
+expected-content 读/改/删仍是分离操作，没有 Windows 后端对应的跨进程 mutex，
+尚不能据此宣称多进程 compare/replace 在 POSIX 也原子成立。
+需要后续收敛这一并发边界及启动保留/发布中途崩溃的真实故障压力测试。
+512 次负载只证明有限运行中的资源断言，不证明长期无限运行无泄漏；
+包含权限 helper 的完整共享服务内存，以及完整 CLI/Git/discovery 的端到端性能，
+仍不能由现有 kernel-only 测量代替。部署与跨平台消费证明留在其对应阶段。

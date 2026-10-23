@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
 import { pathToFileURL } from "node:url";
-import { CheckClient } from "../../check-host/dist/index.js";
+import {
+  CheckClient,
+  createPrivateDirectory,
+  privateFileProof,
+} from "../../check-host/dist/index.js";
 import { bin, fixture, root, run, scratch } from "./fixtures.js";
 
 async function stopOwnedHost(pid: number) {
@@ -26,7 +30,7 @@ async function stopOwnedHost(pid: number) {
 
 test("two real CLI processes race discovery once, share a Host and reuse its workers", async () => {
   const f = await fixture();
-  const directory = await mkdtemp(join(scratch, "shared-cli-host-"));
+  const directory = await createPrivateDirectory(scratch, "shared-cli-host-");
   const journal = join(directory, "spawned-hosts.jsonl");
   const preload = join(directory, "track-host.mjs");
   const main = join(root, "packages", "check-host", "dist", "main.js");
@@ -42,7 +46,7 @@ const spawn=cp.spawn;
 cp.spawn=function(command,args,options){
   const child=spawn(command,args,options);
   if(command===process.execPath && args[0]===${JSON.stringify(main)} && args[1]===${JSON.stringify(directory)})
-    child.once("spawn",()=>appendFileSync(${JSON.stringify(journal)},JSON.stringify({pid:child.pid})+"\\n"));
+    child.once("spawn",()=>appendFileSync(${JSON.stringify(journal)},JSON.stringify({pid:child.pid,directory:${JSON.stringify(directory)},main:${JSON.stringify(main)}})+"\\n"));
   return child;
 };
 syncBuiltinESMExports();
@@ -97,6 +101,12 @@ exports.execute=async()=>({status:200,message:"",payload:{ok:false,problems:[{ki
       return result.value;
     });
     const descriptor = JSON.parse(await readFile(join(directory, "host.json"), "utf8"));
+    const proof = await privateFileProof(directory, "host.json");
+    assert.equal(proof.owner, proof.currentUser);
+    assert.ok(proof.protected);
+    assert.ok(
+      proof.allowed.every((sid) => [proof.currentUser, "S-1-5-18", "S-1-5-32-544"].includes(sid)),
+    );
     const launched = (await readFile(journal, "utf8"))
       .trim()
       .split("\n")
@@ -126,7 +136,13 @@ exports.execute=async()=>({status:200,message:"",payload:{ok:false,problems:[{ki
   } finally {
     const journalText = await readFile(journal, "utf8").catch(() => "");
     for (const line of journalText.trim().split("\n").filter(Boolean)) {
-      const { pid } = JSON.parse(line) as { pid: number };
+      const {
+        pid,
+        directory: recorded,
+        main: entry,
+      } = JSON.parse(line) as { pid: number; directory: string; main: string };
+      assert.equal(recorded, directory);
+      assert.equal(entry, main);
       assert.ok(Number.isSafeInteger(pid) && pid > 0 && pid !== process.pid);
       owned.add(pid);
     }

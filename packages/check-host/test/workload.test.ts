@@ -286,3 +286,90 @@ test("same-input process baselines, 96 bounded mixed executions and real package
   }
   await measureRealChecker();
 });
+
+test("512 mixed executions cross retention windows without retaining unbounded request resources", async (t) => {
+  const parent = resolve(".cache", "check-host-tests");
+  await mkdir(parent, { recursive: true });
+  const root = await mkdtemp(join(parent, "retention-workload-"));
+  const directory = join(root, "artifact");
+  await mkdir(directory);
+  await writeFile(join(directory, "worker.cjs"), source);
+  const kernel = await CheckKernel.create(join(root, "snapshots"), {
+    workers: 2,
+    retireAfter: 32,
+    records: 64,
+    retentionMs: 100,
+    deadlineMs: 10_000,
+    cleanupMs: 2000,
+  });
+  const memory: NodeJS.MemoryUsage[] = [];
+  const counts = { Completed: 0, Failed: 0, Cancelled: 0 };
+  let peakRecords = 0;
+  try {
+    const artifact = await readArtifact(directory);
+    for (let batch = 0; batch < 32; batch++) {
+      for (let n = 0; n < 16; n++) {
+        const id = `retention-${batch}-${n}`;
+        await kernel.executeCheck({
+          checkId: id,
+          directory,
+          revision: artifact.revision,
+          subject: {
+            text: `${batch}-${n}-${"x".repeat(65536)}`,
+            wait: n === 0,
+            fault: n === 1,
+            businessFail: n % 3 === 0,
+          },
+        });
+        if (n === 0) {
+          const end = Date.now() + 5000;
+          while (kernel.sample(id).state === "Queued") {
+            assert.ok(Date.now() < end);
+            await new Promise((done) => setTimeout(done, 1));
+          }
+          kernel.cancel(id);
+        }
+        const state = await finished(kernel, id);
+        assert.ok(
+          state.state === "Completed" || state.state === "Failed" || state.state === "Cancelled",
+        );
+        counts[state.state]++;
+        const stats = kernel.diagnostics();
+        peakRecords = Math.max(peakRecords, stats.records);
+        assert.ok(stats.records <= 64 && stats.workers <= 2);
+        assert.equal(stats.ownedProcesses, 0);
+      }
+      await new Promise((done) => setTimeout(done, 210));
+      assert.throws(() => kernel.sample(`retention-${batch}-0`), { status: 404 });
+      assert.equal(kernel.diagnostics().records, 0);
+      memory.push(process.memoryUsage());
+    }
+    const stats = kernel.diagnostics();
+    assert.deepEqual(counts, { Completed: 448, Failed: 32, Cancelled: 32 });
+    assert.equal(stats.executions, 512);
+    assert.ok(stats.initializations < 64 && stats.retirements >= 14);
+    assert.ok(kernel.workerSamples.length <= 64);
+    assert.ok(
+      kernel.workerSamples.every(
+        ({ resources }) => resources.timers === 0 && resources.processes === 0,
+      ),
+    );
+    t.diagnostic(
+      JSON.stringify({
+        workload: "512-retention-windows",
+        node: process.version,
+        platform: process.platform,
+        mixedOutcomes: counts,
+        diagnostics: stats,
+        peakRecords,
+        hostRssMiB: memory.map(({ rss }) => round(rss / 1048576)),
+        hostHeapMiB: memory.map(({ heapUsed }) => round(heapUsed / 1048576)),
+      }),
+    );
+  } finally {
+    await kernel.close();
+    await rm(root, { recursive: true, force: true });
+  }
+  assert.equal(kernel.diagnostics().workers, 0);
+  assert.equal(kernel.diagnostics().records, 0);
+});

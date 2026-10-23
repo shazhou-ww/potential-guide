@@ -11,7 +11,13 @@ import { promisify } from "node:util";
 import { CliError } from "@potential-guide/cli-core";
 import { Effect } from "@potential-guide/effects";
 import { type ObjectiveManifest, observe } from "@potential-guide/objective-pilot";
-import { CheckKernel, connectHost, serve } from "../../check-host/dist/index.js";
+import {
+  CheckKernel,
+  connectHost,
+  createPrivateDirectory,
+  publishPrivateFile,
+  serve,
+} from "../../check-host/dist/index.js";
 import { withPilot } from "../../cli-runtime/src/pilot-source.js";
 import { manifest, fixture as wikiFixture } from "../../objective-pilot/test/fixtures.js";
 import { dependencyWorker, ownedChildWorker, waitingWorker } from "./worker-fixtures.js";
@@ -19,23 +25,27 @@ import { dependencyWorker, ownedChildWorker, waitingWorker } from "./worker-fixt
 const execute = promisify(execFile);
 const hostParent = resolve(".cache", "pilot-source-tests");
 await mkdir(hostParent, { recursive: true });
-const hostRoot = await mkdtemp(join(hostParent, "host-"));
+const hostRoot = await createPrivateDirectory(hostParent, "host-");
 const previousHost = process.env.PGUIDE_CHECK_HOST_DIRECTORY;
 let host: Awaited<ReturnType<typeof serve>> | undefined;
 before(async () => {
   const kernel = await CheckKernel.create(join(hostRoot, "snapshots"));
   const token = crypto.randomUUID();
   host = await serve(kernel, token);
-  await writeFile(
-    join(hostRoot, "host.json"),
-    JSON.stringify({
-      endpoint: host.endpoint,
-      token,
-      pid: process.pid,
-      instance: crypto.randomUUID(),
-    }),
-    { flag: "wx" },
-  );
+  if (
+    !(await publishPrivateFile(
+      hostRoot,
+      "host.json",
+      JSON.stringify({
+        endpoint: host.endpoint,
+        token,
+        pid: process.pid,
+        instance: crypto.randomUUID(),
+      }),
+      null,
+    ))
+  )
+    throw new Error("Fixture Host descriptor already exists.");
   process.env.PGUIDE_CHECK_HOST_DIRECTORY = hostRoot;
   await connectHost(hostRoot);
 });

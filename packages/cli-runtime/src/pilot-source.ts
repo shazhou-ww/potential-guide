@@ -14,7 +14,12 @@ import {
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { hostDirectory, publishArtifact, readArtifact } from "@potential-guide/check-host";
+import {
+  ensurePrivateDirectory,
+  hostDirectory,
+  publishArtifact,
+  readArtifact,
+} from "@potential-guide/check-host";
 import { CliError, markdownInlineCode, markdownText } from "@potential-guide/cli-core";
 import { Cause, Effect, Exit, Scope, Stream } from "@potential-guide/effects";
 import { type GitSnapshot, loadGitSnapshot } from "@potential-guide/git-source";
@@ -733,6 +738,7 @@ async function bindPilot<T>(
                     return async (subject, signal, resolutions) => {
                       const view = await inputView(ref.objectiveId, subject);
                       signal.throwIfAborted();
+                      await ensurePrivateDirectory(hostDirectory());
                       const revision = await publishArtifact(
                         executable.sourceDirectory,
                         executable.directory,

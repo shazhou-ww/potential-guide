@@ -1,10 +1,17 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { Effect, SubscriptionRef, startEffect } from "@potential-guide/effects";
-import { CheckKernel, connectHost, readArtifact, serve } from "../../check-host/dist/index.js";
+import {
+  CheckKernel,
+  connectHost,
+  createPrivateDirectory,
+  publishPrivateFile,
+  readArtifact,
+  serve,
+} from "../../check-host/dist/index.js";
 import {
   createHttpCheckProbe,
   createMemoryCheckProbe,
@@ -31,7 +38,7 @@ async function withWorker(
 ) {
   const parent = resolve(".cache");
   await mkdir(parent, { recursive: true });
-  const root = await mkdtemp(join(parent, "worker-probe-"));
+  const root = await createPrivateDirectory(parent, "worker-probe-");
   const directory = join(root, "artifact");
   await mkdir(directory);
   await writeFile(join(directory, "worker.cjs"), source);
@@ -40,16 +47,20 @@ async function withWorker(
   const host = await serve(kernel, token);
   const previous = process.env.PGUIDE_CHECK_HOST_DIRECTORY;
   try {
-    await writeFile(
-      join(root, "host.json"),
-      JSON.stringify({
-        endpoint: host.endpoint,
-        token,
-        pid: process.pid,
-        instance: crypto.randomUUID(),
-      }),
-      { flag: "wx" },
-    );
+    if (
+      !(await publishPrivateFile(
+        root,
+        "host.json",
+        JSON.stringify({
+          endpoint: host.endpoint,
+          token,
+          pid: process.pid,
+          instance: crypto.randomUUID(),
+        }),
+        null,
+      ))
+    )
+      throw new Error("Fixture Host descriptor already exists.");
     process.env.PGUIDE_CHECK_HOST_DIRECTORY = root;
     await connectHost(root);
     const artifact = await readArtifact(directory);
