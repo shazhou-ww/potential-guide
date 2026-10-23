@@ -6,11 +6,11 @@
 
 ## 结果
 
-检查器统一为 Node worker 模块，由单用户级共享 Check Host 通过有界复用池、条件退役和受控预热执行。CLI 使用本地 HTTP RPC，Host 使用 Worker Threads 消息；subject 与 regulation object 属于独立请求。
+以 MVP 落地本地共享 Node 执行器：多个 CLI 通过 HTTP 调用一个 Host，内部有界复用 worker、按次数退役并受控预热替补。每次请求直接取得结果或依赖消息，不建设可恢复任务平台。
 
 ## 边界
 
-- 用户级发现只定位一个 Host；Pilot ID 在 Host 内注册 worker 入口，同一 ID 不允许不同执行版本并存，版本冲突不得静默重绑。
+- 用户级发现只定位一个 Host；业务层映射 Pilot 到准确产物，Host 按不透明绑定键限制单执行版本，冲突不静默重绑，不承担层级判断或自动依赖安装。
 - check 是最小并发单元；进程/线程复用不复用过期输入或证据，保留层级顺序、来源、预算和取消边界。Worker Threads 不作为不可信代码的安全沙箱。
 - 全部现有 Objective 的 check 从进程入口迁移为 worker 入口，消息上下文显式传递；可复用 worker 必须释放请求资源并限制缓存。旧运行协议不兼容，历史契约不改写，不默认扩展远程部署。
 
@@ -22,4 +22,4 @@
 
 ## 下一步
 
-重点审阅 [Design.md](./Design.md) 的调整范围、worker 消息和 HTTP 接口，收敛 [OpenQuestions.md](./OpenQuestions.md) 的具体参数与边界，再提交构想验收。
+审阅 [MVP 设计](./Design.md) 的调整范围、worker 消息和七个 HTTP 接口；其余参数见 [OpenQuestions.md](./OpenQuestions.md)，本次不记录构想验收。
