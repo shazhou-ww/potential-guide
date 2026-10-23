@@ -1,6 +1,6 @@
-# Coordinator 实体与状态视图
+# Coordinator 业务实体关系
 
-本文支撑 [Types.md](./Types.md) 与 [Design.md](./Design.md)，不是独立合同。以一张统一实体图表达上游请求意图与下游执行事实，不按 intention/state 分设两套实体图；其余四张图分别展开请求确认、Target 状态、当前执行和意图与状态的聚合总览。保留业务实体与聚合视图的拆分，不把存储版本归属关系画进业务实体图。
+本文支撑 [Types.md](./Types.md) 与 [Design.md](./Design.md)，不是独立合同。只保留一张统一实体图，表达上游请求意图与下游执行事实，不按 intention/state 分设两套实体图。视图状态改由 [Views.md](./Views.md) 的表结构、属性来源、SELECT 和更新依赖定义，不再绘制聚合视图图形。
 
 ## 分类与阅读约定
 
@@ -8,19 +8,18 @@
 | --- | --- | --- |
 | 业务实体 | ObjectiveRevision、RegulationTarget、RegulationRequest、RegulationRun | 具有独立身份；RegulationRun 是调用，不是请求或 Task |
 | 事实记录 | Observation、Fault | 具有发生与来源意义，记录主键仍待确定 |
-| 权威聚合或投影 | 已确认请求、Target 状态、当前有效观察 | 由已采纳事实和明确决策维护，不必能从现有实体表随时重算 |
-| 派生视图 | 从调用状态选出的活跃集合、实际占用 | 不另设竞争的权威计数；现有 activeRuns 仍是调用状态的当前存放位置 |
-| 业务关系 | 当前采用的依赖 | 不是从所有 target 自动推导，安装/撤销须明确记录 |
+| 查询视图 | 已确认请求、Target 状态、当前有效观察、活跃集合、实际占用 | 属性来源与 SELECT 明确；可物化，但必须能从基础事实或充分基线重算 |
+| 基础决定与业务关系 | 请求确认、证据选择、Probe 顺序、已采用的依赖 | 安装、采纳、撤销与可靠顺序须明确记录，不能只藏在视图中 |
 | Coordinator 控制状态 | 已确认资源意图、可信约束、累计预留、生命周期 | 不只是调用记录的汇总；预算不能从已裁剪历史简单求和 |
-| 一致快照 | CoordinatorSnapshot | 聚合以上状态在一个 Coordinator revision 下的一致版本，不是新的业务实体 |
+| 一致快照 | CoordinatorSnapshot | 组合基础状态与视图在同一事件版本下的结果，不是新的业务实体或独立视图图形 |
 
-“视图”是语义分类，不等于 UI 查询结果或可丢弃缓存，也不要求新增数据库 View。查询筛选与分页仍产生派生 QueryResult，不改变权威状态。当前 TS 中的 ActiveRegulationRun 与 RegulationRunRecord 是同一 RegulationRun 在不同生命周期阶段的表达，不引入第二套执行身份。
+视图是可重算的查询冗余，不是独立业务事实；选择物化、SQL View 或内存索引是实现问题。查询分页不改变完整逻辑视图。ActiveRegulationRun 与 RegulationRunRecord 是同一 Run 基础状态在不同生命周期的选择，不引入第二套执行身份。当前尚缺少的基础事实契约在 Views.md 单独标注，不将它们伪装成已完成的实体协议。
 
 命名以单个实体的业务含义为准，不强制“父实体 + 子实体”规则：ObjectiveRevision、RegulationTarget、RegulationRequest、RegulationRun、Observation、Fault。ObjectiveRevision 是固定来源与 commit 的定义版本，不是 Coordinator 状态的数字 revision；Observation 展开 ObjectiveObservation 的属性，观察对象不是 Pilot 自身。
 
-图中英文标签与 TS 字段对应，解释使用中文。全部源固定为 22px Arial，SVG 可独立放大查看；修改后须重新生成并验证文字边界。实线表达关系/组成或明确数据流，虚线表达决策输入、选择条件或派生关系；只有第一张 ER 图使用基数符号。
+图中英文标签与 TS 字段对应，解释使用中文。图源固定为 22px Arial，SVG 可独立放大查看；修改后须重新生成并验证文字边界。ER 关系使用基数符号，不将快照成员或视图依赖画成业务实体关联。
 
-文档直接内嵌已生成的 SVG，不依赖 Markdown 预览器执行 Mermaid。每张图的 Mermaid 图源保留在下方折叠区，以普通文本展示；图源是唯一编辑入口，修改后须同步生成对应 SVG。验证须同时覆盖 Mermaid 生成、SVG 文字边界和不加载 Mermaid 脚本的 Markdown 图片预览，不能仅以 CLI 成功代替预览可用性。
+文档直接内嵌已生成的 SVG，不依赖 Markdown 预览器执行 Mermaid。Mermaid 图源保留在下方折叠区，以普通文本展示；图源是唯一编辑入口，修改后须同步生成 SVG。验证须同时覆盖 Mermaid 生成、SVG 文字边界和不加载 Mermaid 脚本的 Markdown 图片预览，不能仅以 CLI 成功代替预览可用性。
 
 ## 1. 业务实体关系
 
@@ -107,197 +106,4 @@ erDiagram
 - Run 的 target 和 desiredLevel 均由固定 requestSeq 对应的 Request 推导，不重复保存，也不直接关联 Target。provider Request 表达 provider 自己的对象与目标，不能借用 consumer Request；旧 Run 不能通过 target 的最新请求解释。
 - 请求来源与 consumer 需求归属必须可追溯；共享 provider 的请求形成、复用、优先级和回收规则仍待细化，不要求每次发现依赖都重复创建请求。被 Run 或有效证据引用的请求须保留可解析记录，不能只靠 latestByTarget 映射。
 
-## 2. 请求与确认视图
-
-[打开请求与确认 SVG](./diagrams/request-state.svg)
-
-<img src="./diagrams/request-state.svg" width="100%" alt="请求与确认：请求形成、不可变记录与已确认请求">
-
-<details>
-<summary>Mermaid 图源：请求与确认视图</summary>
-
-```text
----
-config:
-  fontFamily: Arial, Helvetica, sans-serif
-  themeVariables:
-    fontFamily: Arial, Helvetica, sans-serif
-    fontSize: 22px
-  flowchart:
-    wrappingWidth: 340
-    nodeSpacing: 50
-    rankSpacing: 65
-    padding: 24
----
-flowchart TB
-    COMMAND["External request command"]
-    DERIVED["Dependency-derived request decision"]
-    subgraph INPUT["Shared request formation"]
-        SEQ["lastRequestSeq<br/>Allocation watermark"]
-        REQUEST["RegulationRequest<br/>requestSeq / target / desiredLevel / priority"]
-        LATEST["latestByTarget<br/>Latest submitted request per target"]
-        SEQ -->|assign next sequence| REQUEST
-        REQUEST -->|replace this target entry| LATEST
-    end
-    COMMAND --> SEQ
-    DERIVED --> SEQ
-    DECISION["Coordinator acceptance decision"]
-    RECORDS["CoordinatorState.requests<br/>Immutable records by requestSeq"]
-    ACK["acknowledged.requests.latestByTarget<br/>Confirmed request per target<br/>+ acknowledgedAtRevision"]
-    ORDER["Eligible request ordering<br/>priority, then requestSeq"]
-    LATEST --> DECISION
-    DECISION -->|record accepted request| ACK
-    DECISION -->|retain exact request before any run| RECORDS
-    ACK -.->|filter by execution and dependencies| ORDER
-```
-
-</details>
-
-最新提交和最新确认是两条不同状态线，确认不等于执行或完成。拒绝须明确反馈且不覆盖已确认请求。图未规定命令/事件的原子消息边界。
-
-requestSeq 表达请求身份与接收先后，lastRequestSeq 是分配水位；acknowledgedAtRevision 只表达 Coordinator 何时确认。重复确认或 Probe 更新不刷新请求排序，批量确认也不合并请求身份。最新映射不等于完整请求历史，覆盖条目不修改原请求。
-
-外部与内部请求共用序号空间和分配路径，不允许两套独立水位产生冲突。图展示新请求形成的共同路径，不决定共享请求的合并/覆盖规则；内部编排先明确需求归属和有效目标，再形成或复用请求，不能因更新最新映射而丢失其他仍有效的需求。
-
-## 3. 单个 Target 状态视图
-
-[打开 Target 状态 SVG](./diagrams/target-state.svg)
-
-<img src="./diagrams/target-state.svg" width="100%" alt="Target 状态：最近 Probe、观察事实与当前有效证据">
-
-<details>
-<summary>Mermaid 图源：单个 Target 状态视图</summary>
-
-```text
----
-config:
-  fontFamily: Arial, Helvetica, sans-serif
-  themeVariables:
-    fontFamily: Arial, Helvetica, sans-serif
-    fontSize: 22px
-  flowchart:
-    wrappingWidth: 340
-    nodeSpacing: 50
-    rankSpacing: 65
-    padding: 24
----
-flowchart TB
-    TARGET["One RegulationTarget"]
-    PROBE["Adopted Probe outcome<br/>Actual time, source, observed OR error"]
-    SUMMARY["RegulationTargetState<br/>updatedAtRevision<br/>lastProbe: ProbeSummary or null"]
-    FACTS["Observation records<br/>current / observedAt / problems<br/>Known facts, not live reality"]
-    VALIDITY["Current use and validity decisions"]
-    CURRENT["current.observations<br/>Evidence still needed for this target"]
-    TARGET -->|one aggregate per known target| SUMMARY
-    PROBE -->|explicit latest-Probe rule| SUMMARY
-    PROBE -.->|successful outcome only| FACTS
-    FACTS -->|select adopted evidence| CURRENT
-    VALIDITY -.->|retain or remove| CURRENT
-```
-
-</details>
-
-lastProbe 可以为空或失败，不等于“最新成功观察”。当前有效证据也不必等于最近 Probe：最新失败不能被旧成功冒充，但仍有效且有当前用途的旧证据可以按规则保留。
-
-updatedAtRevision 表达聚合最后改变的 Coordinator 版本，recordedAtRevision 表达事实采纳版本，probedAt 表达实际 Probe 时间；三者不互相替代。“最近”的事实顺序不能由晚到消息采纳时间猜测。当前证据选择和对象聚合都需要明确转换规则，不能当成 UI 临时查询。
-
-## 4. 当前执行与依赖视图
-
-[打开当前执行与依赖 SVG](./diagrams/execution-state.svg)
-
-<img src="./diagrams/execution-state.svg" width="100%" alt="当前执行与依赖：Provider 请求、活跃运行及终结记录">
-
-<details>
-<summary>Mermaid 图源：当前执行与依赖视图</summary>
-
-```text
----
-config:
-  fontFamily: Arial, Helvetica, sans-serif
-  themeVariables:
-    fontFamily: Arial, Helvetica, sans-serif
-    fontSize: 22px
-  flowchart:
-    wrappingWidth: 340
-    nodeSpacing: 50
-    rankSpacing: 65
-    padding: 24
----
-flowchart TB
-    CONSUMER["Consumer RegulationTarget"]
-    PROVIDER["Provider RegulationTarget"]
-    DEP["CurrentDependency<br/>minimumLevel<br/>Only adopted, still-needed edges"]
-    REQUEST["Provider RegulationRequest<br/>Own target / desiredLevel / priority<br/>Immutable requestSeq"]
-    ACTIVE["ActiveRegulationRun<br/>running / stopping / unverified<br/>requestSeq / bindingId<br/>bindingConfiguration snapshot"]
-    OCCUPANCY["Actual occupancy<br/>Derived from unconfirmed exits"]
-    ENDED["RegulationRunRecord<br/>Same runId<br/>endedAtRevision / outcome"]
-    RESOURCE["Acknowledged ResourceAllocation<br/>Desired binding and concurrency"]
-    POLICY["Coordinator scheduling / stop policy"]
-    CONSUMER -->|consumer| DEP
-    DEP -->|provider| PROVIDER
-    DEP -.->|constrains scheduling| POLICY
-    DEP -->|form or explicitly reuse request| REQUEST
-    REQUEST -->|required before start| ACTIVE
-    RESOURCE -.->|intent, not actual occupancy| POLICY
-    POLICY -->|start or request stop| ACTIVE
-    ACTIVE -.->|count occupied calls| OCCUPANCY
-    ACTIVE -->|confirmed exit: remove active and record result| ENDED
-```
-
-</details>
-
-依赖是明确采用的业务关系，不从所有 target 自动生成，须验证无环、最低 level 与未完成请求归属。先形成或按明确规则复用 provider Request，再由调度策略启动 Run；策略不能绕过请求前置条件。provider 证据支持 consumer 的新调用，不复活旧调用；详细共享与满足规则仍待定。
-
-ActiveRegulationRun 和 RegulationRunRecord 不代表两个业务实体。只有确认真实退出，才原子移除活跃状态并写入终结记录；stopping/unverified 仍保守占用。占用是派生值，资源期望缩减不自动终止调用；图不新建权威 activeCount 或 Task。
-
-## 5. 意图与状态聚合总览
-
-[打开意图与状态聚合总览 SVG](./diagrams/coordinator-state.svg)
-
-<img src="./diagrams/coordinator-state.svg" width="100%" alt="意图与状态聚合总览：输入、CoordinatorState 与 checkpoint 边界">
-
-<details>
-<summary>Mermaid 图源：意图与状态聚合总览</summary>
-
-```text
----
-config:
-  fontFamily: Arial, Helvetica, sans-serif
-  themeVariables:
-    fontFamily: Arial, Helvetica, sans-serif
-    fontSize: 22px
-  flowchart:
-    wrappingWidth: 340
-    nodeSpacing: 50
-    rankSpacing: 65
-    padding: 24
----
-flowchart TB
-    REQUESTS["RegulationRequests<br/>lastRequestSeq / latestByTarget"]
-    RESOURCE["ResourceAllocation<br/>Desired binding / concurrency"]
-    COORDINATOR["Coordinator<br/>Stateful decisions and effects"]
-    subgraph STATE["CoordinatorState @ revision"]
-        CURRENT["current singleton<br/>Confirmed requests / resource intention<br/>Active runs / dependencies / evidence<br/>Constraints / reserved budget / lifecycle"]
-        TARGETS["regulationTargets<br/>Per-target aggregates"]
-        RECORDS["Entity and fact collections<br/>requests / runs / observations / faults"]
-    end
-    REQUESTS -->|request intention| COORDINATOR
-    RESOURCE -->|resource intention| COORDINATOR
-    COORDINATOR -->|events update state consistently| CURRENT
-    COORDINATOR --> TARGETS
-    COORDINATOR --> RECORDS
-    CURRENT -.->|execution feedback and retained state| COORDINATOR
-    CHECKPOINT["CoordinatorCheckpoint<br/>Consistent persistence boundary"]
-    CHECKPOINT --- REQUESTS
-    CHECKPOINT --- STATE
-```
-
-</details>
-
-此图统一展示 intention 与 state，不把相同实体在两侧各画一份。Coordinator 是有状态、带副作用的过程，不是另一个业务实体或纯逐点映射；箭头表达归约后的状态效果，不表示副作用过程绕过纯 reducer 直接写状态。
-
-CoordinatorSnapshot 是框内完整 CoordinatorState 在某个 revision 的一致聚合，不是新增 TS 类型或另一份权威状态；它包含 current 和 collections，不只表示 singleton 行。CoordinatorCheckpoint 在外层封装 RegulationRequests 与 CoordinatorState，连线表达组成而非执行流。ResourceAllocation 是当前外部输入，不自动加入 checkpoint；状态内的资源确认不等于当前输入。
-
-快照版本关联同一转换下的状态，updatedAtRevision、acknowledgedAtRevision、endedAtRevision 等记录各自事实版本，跨快照保留原值。记录可结构共享，不要求每版复制；不能把不同 revision 的查询页拼成完整一致快照。
-
-资源确认、可信约束、累计预留与服务生命周期是控制状态，不是从保留的调用历史简单汇总出来的。尤其启动失败也可能预留预算，历史裁剪不应退还预算。当前权威投影、历史事实与消息日志的持久化映射、复合成员键和一致接续留待存储设计，不在业务实体图中重复展开。
+视图状态、来源契约及重算定义统一见 [Views.md](./Views.md)；不再维护原请求、Target、执行和快照组成的四张视图 SVG。

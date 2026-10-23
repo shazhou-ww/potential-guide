@@ -1,6 +1,6 @@
 # Coordinator 业务实体与聚合视图模型草案
 
-本文支撑 [Idea.md](./Idea.md) 与 [Design.md](./Design.md)，不是独立验收合同或已发布 API。先区分业务实体、事实记录与状态投影，按 [五张图](./Diagrams.md) 讨论 RegulationRequests 和 CoordinatorState，再以 TypeScript 补充表达，最后从合法转换推导 Command/Event。[Events.md](./Events.md) 仅作覆盖检查，不反过来决定状态结构。
+本文支撑 [Idea.md](./Idea.md) 与 [Design.md](./Design.md)，不是独立验收合同或已发布 API。先用 [实体图](./Diagrams.md) 定义业务身份，用 [视图表与 SELECT](./Views.md) 定义查询冗余及其基础来源，再从合法转换推导 Command/Event。[Events.md](./Events.md) 仅作覆盖检查，不反过来决定状态结构。
 
 ## 三个核心类型
 
@@ -39,46 +39,47 @@ requestSeq 在同一个请求序列范围内唯一并按逻辑接收顺序递增
 - HTTPS、SSH、本地地址即使访问同一仓库，也不天然是相同 source。没有明确等价/别名规则时不自动合并；不得通过丢弃主机、路径等身份信息制造相同 key。source/version 与 key 必须一致，哈希碰撞不得静默合并定义。查询同一来源的全部版本可按规范化 source 筛选，不另建 sourceKey。
 - source 不嵌入密码或 token，认证由外部提供；凭据变化不应成为 Objective 身份变化。解析协议与现有 Git 来源结构的适配留待实施，不声称运行时代码已经支持本设计。
 
-三层实体及其执行事实关系见 [图 1：业务实体关系](./Diagrams.md#1-业务实体关系)，请求的最新映射与确认投影见 [图 2：请求与确认视图](./Diagrams.md#2-请求与确认视图)。图源统一维护在 Diagrams.md，避免实体身份、快照成员和投影关系混在一张 ER 图中。
+实体及其执行事实关系见 [业务实体关系](./Diagrams.md#1-业务实体关系)，请求的最新映射与确认投影见 [视图目录](./Views.md#视图目录)。实体图源维护在 Diagrams.md，视图只以属性、来源、SELECT 和更新依赖表达，不再分别绘图。
 
 - **请求序号是身份。** REGULATION_REQUEST 以 requestSeq 为单主键，同值新请求也获得新序号。RegulationRequests.latestByTarget 是每个 target 最新请求的映射，不是历史请求表的全部内容；覆盖映射不改写旧请求，历史保留策略另定。
 - **target 身份决定覆盖范围。** A 的新请求只替换 A 的最新请求，不改变 B 的请求；不同 Objective 定义或 subject 不能静默合并。desiredLevel 和 priority 属于请求，不属于 target。REGULATION_TARGET 是共享身份值，不新增独立顶层状态。
 - **序号不是数组下标。** requestSeq 为正安全整数，按逻辑接收顺序单调分配，可有空号，删除历史也不重排或复用；耗尽显式失败。并发写入须保证分配和接收/持久化一致，不能把普通数据库自增 ID 自动当成事务提交顺序。
 - **只表示期望。** 同 priority 按 requestSeq 升序，不用确认时间或 Probe 更新时间排序。确认、调度和实际调用顺序另由 Coordinator 表达，未就绪请求并不保证先执行。
 
-## Coordinator 状态分图导航
+## 基础状态与视图表导航
 
-以下五张图的源、分类边界和解释见 [Diagrams.md](./Diagrams.md)。第一张统一表达上游 intention 和下游 state 涉及的业务实体，其余为聚合视图；不再分别维护请求侧和状态侧的实体模型，也不把每个集合连到 snapshot 实体上。
+业务实体共用 [一张 ER 图](./diagrams/regulation-target.svg)。[Views.md](./Views.md) 列出各视图的行粒度、逻辑键、属性类型与可空性、基础来源、SELECT 和增量更新依赖；视图是一层可重算的查询冗余，而不是独立事实来源。
 
-| 图 | 阅读问题 | 独立 SVG |
+| 状态表达 | 基础来源或视图 | 说明 |
 | --- | --- | --- |
-| 1. 业务实体关系 | 定义、指向物、请求、调用及事实如何关联？ | [实体关系](./diagrams/regulation-target.svg) |
-| 2. 请求与确认 | 最新提交与已确认请求有何区别？ | [请求视图](./diagrams/request-state.svg) |
-| 3. 单个 Target 状态 | 最近 Probe 与当前有效证据有何区别？ | [Target 状态](./diagrams/target-state.svg) |
-| 4. 当前执行与依赖 | 哪些调用占用资源，哪些依赖仍有效？ | [执行视图](./diagrams/execution-state.svg) |
-| 5. 意图与状态聚合总览 | 请求、资源意图、完整状态及持久化边界如何关联？ | [聚合总览](./diagrams/coordinator-state.svg) |
+| latestByTarget | v_latest_requests | 每个 target 最新请求；lastRequestSeq 是独立的权威发号水位 |
+| acknowledged.requests.latestByTarget | v_confirmed_requests | 请求与明确确认事实的投影，不从最新提交猜测 |
+| current.activeRuns / runs | v_active_runs / v_ended_runs | 同一 Run 基础状态的两个生命周期选择，不是两个实体 |
+| 实际占用 | v_actual_occupancy | 未确认退出的 Run 计数，可物化但不可独立改写 |
+| regulationTargets | v_target_state | target 登记与可靠有序的成功/失败 Probe |
+| current.observations | v_current_observations | 观察事实与明确的采纳/撤销决定 |
+| current.dependencies | v_current_dependencies | 有效请求级依赖关系；当前 target-only TS 草案尚需细化来源归属 |
+| allocation、constraints、reserved、lifecycle | coordinator_control / v_coordinator_summary | 控制状态是权威来源，摘要只是查询组合 |
+| requests、observations、faults | 对应实体与事实关系 | 基础记录，不因可查询就都叫聚合视图；故障计数另为可重算示例 |
+| CoordinatorSnapshot | 同一 revision 的组合读取边界 | 不新增实体或单独绘制聚合图 |
 
-- 实体和事实具有业务身份或发生意义；ActiveRegulationRun/RegulationRunRecord 是同一次 RegulationRun 的不同生命周期表达，不是两个实体。
-- 已确认请求、target 聚合、有效证据可以是持久化权威投影；“视图”不意味着只读 UI 查询或能从现有实体表任意重算。
-- 当前依赖是已采用的业务关系；资源确认、预算和生命周期是控制状态。实际占用可由尚未确认退出的调用推导，累计预算不能从裁剪后的历史求和。
-- CoordinatorSnapshot 是完整 CoordinatorState 在某个 revision 的一致聚合，不只是 current singleton，也不是新业务实体。业务实体图不表达物理快照成员键。
-- 快照归属与事实更新时间不同。依赖、Observation/Fault 的独立身份及存储成员键仍待推导，不为了绘图虚构主键或要求永久保留历史父行。
+撤回此前“视图可含无法从基础关系重算的权威决定”的表达。确认、证据选择、Probe 顺序、依赖采用等若影响视图，须先有基础事实；SQL 所需的新来源契约在 Views.md 明确标为待收敛，不声称当前 TS 已完整覆盖。只有保留这些事实或充分基线，才能保证增量视图与完整重算相等。
 
 ## 完整状态、Singleton State 与 Collection State
 
-CoordinatorState 是领域状态，不是 CoordinatorReadView 或某次查询的结果。current 是一个 singleton state，用单一对象表达 Coordinator 的当前整体状态；其余 collection states 用记录集合表达多个实体、历史明细或聚合结果。singleton/collection 区分的是状态组织形式，不是现在/过去。累计预算和尚未解除的依赖虽然由过去产生，仍影响当前运行；完整终结结果和诊断明细不因此塞进 current。
+CoordinatorState 包含基础领域状态与可重算视图，不等于某次 UI 筛选结果。current 是当前整体状态的组合表达，collection states 则承载多行基础记录或视图；singleton/collection 不区分权威/派生，也不区分现在/过去。累计预算与已采纳关系必须有权威来源，不能只存在于加速查询的视图中。
 
-Collection<T> 表达领域中的记录集合，选用 Collection 而不是 Table 或 Relation，避免暗示 UI 表格、具体数据库或关系代数接口。QueryResult 是对 Collection 按条件筛选、排序、分页后的派生结果，不属于权威状态，也不把某次查询条件写入 Collection 的定义。
+Collection<T> 是 TS 的集合表达，逻辑上可以对应基础表或视图表，不预选数据库。QueryResult 是按条件筛选、排序、分页后的查询结果；物化视图则有固定 SELECT 定义，其完整逻辑内容不由当前页面决定。
 
 下面暂用 readonly T[] 表达 Collection 的逻辑内容，便于讨论纯归约；不规定物理存储、索引、查询 API、分页或保留策略，也不要求把完整集合加载进内存或随 current 一起传输。它不是把分页查询返回的一小段数组冒充完整集合。
 
-正在进行的 RegulationRun 进入 current.activeRuns，不再用 Task 包装排队、执行和终结的完整生命周期。调用确认结束时，从活跃集合移除并向 runs 写入终结记录；同一事件对 singleton 与 collections 的变化须保持一致。UI 可分别读取 current 对象和查询各个 Collection，实时 Stream 本身不提供持久化或历史查询保证。
+正在进行的 RegulationRun 由 current.activeRuns 视图选择，不再用 Task 包装排队、执行和终结。确认退出事件改变同一 Run 的基础状态，使它离开活跃视图并进入 runs 终结视图，不删除业务实体；基础状态与物化视图在同一事件版本保持一致。UI 可分别读取这些表，实时 Stream 本身不提供持久化或历史查询保证。
 
 例如 regulationTargets 是按精确对象身份维护的聚合状态集合，每个对象一条记录，包含它最后一次 Probe 的时间和结果，而不是每次 Probe 都增加一行的历史表。runs 则示范终结记录集合，两者都是 collection state，不使用 history 分组来限定所有集合的含义。
 
 ## TypeScript 补充表达
 
-下面的可独立类型检查代码块表达最新请求映射、序号水位与某一个 Coordinator revision 下的状态值，补充各图中的值类型、可选性与联合分支。CoordinatorState 外层 revision 提供快照作用域，不在每个条目重复 coordinatorRevision；requestSeq 属于独立的请求序列。ObjectiveObservation 暂以导入别名复用已有 PilotObservation 的结构，表示拟采用的领域名称，不声称运行时包已导出新名称；binding 也复用已有类型，不复用旧五命令、资源池或 harness 权限类型。别名暂用普通 string/number；合法标识、有限 JSON、安全整数及引用完整性仍需运行时验证。
+下面的可独立类型检查代码块保留状态值的 TS 组合草案，不是规范化基础表 schema，也尚未补齐 Views.md 所列的确认、Probe、证据选择与依赖来源契约。CoordinatorState 外层 revision 提供一致读取作用域，不在每个条目重复 coordinatorRevision；requestSeq 属于独立的请求序列。ObjectiveObservation 暂以导入别名复用已有 PilotObservation 的结构，表示拟采用的领域名称，不声称运行时包已导出新名称；binding 也复用已有类型，不复用旧五命令、资源池或 harness 权限类型。别名暂用普通 string/number；合法标识、有限 JSON、安全整数及引用完整性仍需运行时验证。
 
 ```typescript
 import type {
@@ -402,11 +403,11 @@ Run → Request → Target 以及 Request → desiredLevel 是模型不变量，
 
 Observation 仅以 runId 关联来源 Run，经 Run → Request → Target 推导治理对象，不重复保存 target。Fault 则为分层查询保留经校验的 targetKey/requestSeq/runId 完整归属链，支持 Coordinator、Target、Request、Run 四层。运行历史裁剪或分开存储时必须保留足够的来源关联，使观察及故障来源仍可追溯；可以采用明确的归档/查询投影，但不能静默丢失语义。
 
-current.activeRuns 只有 running、stopping 和恢复后尚未核实的 unverified，不含 pending 或 ended。停止请求不移除调用；确认退出后，通过明确的终结事件移除调用、写入 runs，并原子更新仍影响当前运行的信息。RegulationRunRecord 保留启动身份、实际 binding 和终结结果，不包含活跃执行状态；达标仍须有效证据支持。启动前撤销、initial 或未产生外部调用的启动失败不伪造一次 RegulationRun，其意图处理事实的记录类型留待转换设计。启动副作用与持久化之间的故障窗口仍须由恢复协议覆盖，不能因尚未确认启动就漏记可能存在的外部执行。
+current.activeRuns 只有 running、stopping 和恢复后尚未核实的 unverified，不含 pending 或 ended。停止请求不移除调用；确认退出后，通过明确的终结事件改变 Run 基础状态，从活跃视图移出并进入 runs 终结视图，同时原子更新仍影响当前运行的信息。RegulationRunRecord 保留启动身份、实际 binding 和终结结果，不包含活跃执行状态；达标仍须有效证据支持。启动前撤销、initial 或未产生外部调用的启动失败不伪造一次 RegulationRun，其意图处理事实的记录类型留待转换设计。启动副作用与持久化之间的故障窗口仍须由恢复协议覆盖，不能因尚未确认启动就漏记可能存在的外部执行。
 
 pending 是尚未执行的当前需求，不预先包装成覆盖完整生命周期的 Task。本稿撤回 processedIntents 这一按对象保存历史处理水位的具体字段，不假定它是当前切片的必需组成。新意图如何进入待处理需求、何时完成或被覆盖、恢复时如何可靠接续，仍须从合法转换推导；不能因为已确认目标仍存在且活跃集合为空，就重新创建需求。历史 Collection 的存在也不自动解决无调用的意图处理记录或输入去重。旧反馈不得完成新意图，有限依赖尚未完成时不得过早结束整个需求；本稿不声称待处理状态类型已经完整。
 
-CurrentDependency 暂以精确 consumer/provider target 和最低 level 表达仍有效的需求关系，不引用必须永久保存的历史 Task。关系须合法、无环且锚定当前未完成需求；需求覆盖或完成时撤销无用边，共享 provider 仍被引用时保留。blocked 调用已经结束，其完整结果进入 runs，current 只提取继续编排必需的当前关系和证据。provider 的结果只能支持新的 consumer 调用，不能复活旧调用。边的 requestSeq 归属、真实执行身份、共享聚合和满足条件仍须在转换设计中细化，本类型不是已定案的依赖协议。
+CurrentDependency 的 TS 草案暂以精确 consumer/provider target 和最低 level 表达，不是已定案的依赖协议。Views.md 的查询明确需要 consumer/provider 请求归属及安装/撤销基础事实；请求级多行不能直接合并为 target 对而丢失共享来源。关系须合法、无环且锚定当前未完成需求；需求覆盖或完成时撤销无用边，共享 provider 仍被引用时保留。blocked 调用已经结束，其完整结果进入 runs，current 只选择仍有效的关系和证据。provider 的结果只能支持新的 consumer 调用，不能复活旧调用；真实执行身份、共享聚合和满足条件仍待细化。
 
 ## 对象聚合状态
 
@@ -416,17 +417,17 @@ updatedAtRevision 表达该对象聚合最近实际改变的 Coordinator 版本�
 
 lastProbe 为 null 表示没有已知 Probe 结果，不伪造时间、成功或 level initial。ProbeSummary 记录实际 Probe 时间、采纳修订、来源调用及结果；probedAt 须由事实提供并验证为 RFC 3339 时间，不在 reducer 中读取系统时钟。最后一次 Probe 失败也须如实表达，不沿用旧成功结果冒充最新结果；当前调度仍需要的成功证据由 current.observations 按自己的有效性规则保留。
 
-“最后一次”必须按明确的 Probe 身份和顺序确定，不按集合枚举顺序、任意生产者时钟或晚到消息的采纳时间猜测；并发、过期反馈和跨重启排序规则仍待推导。recordedAtRevision 只表达采纳顺序，不自动等于实际 Probe 先后。最近一次观察是有时间和来源的已知事实，不承诺对象此刻未发生变化。该聚合由同一事实流确定性更新，不是前端临时查询出来的页面。
+“最后一次”必须按明确的 Probe 身份和顺序确定，不按集合枚举顺序、任意生产者时钟或晚到消息的采纳时间猜测；并发、过期反馈和跨重启排序规则仍待推导。recordedAtRevision 只表达采纳顺序，不自动等于实际 Probe 先后。最近一次观察是有时间和来源的已知事实，不承诺对象此刻未发生变化。Views.md 在可靠 probe_order 的基础契约上给出完整重算 SELECT；增量维护必须得到相同结果，不能把“最近”的规则只藏在视图更新代码里。
 
 ## 权威状态与推导值
 
 - ResourceAllocation 的 no-resource 是合法的无资源分配意图，也是输入 Behavior 的初值；不是输入缺失、错误或 dummy binding。configured 表达 binding 与非负安全整数 concurrency，允许 concurrency 为 0 以保留配置。采纳 no-resource 不代表实际调用已停止或占用归零。
 - acknowledged.allocation 表达期望，ActiveRegulationRun 的 bindingId/bindingConfiguration 表达实际使用；改变前者不修改后者。确认 concurrency 从 4 变为 2 后，实际占用仍可为 4，停止策略不由这个类型自动规定。
-- 实际占用从 running、stopping 和尚未核实的 unverified 调用推导，不另存一个可能漂移的 activeCount。未核实调用在确认退出前保守保留占用。
+- 实际占用从 running、stopping 和尚未核实的 unverified 调用推导；可物化 active_count 加速查询，但不得独立改写或与完整 COUNT 重算漂移。未核实调用在确认退出前保守保留占用。
 - current.observations 只保留当前调度或有效依赖仍需要的最新成功观察，不作为所有曾访问对象的缓存；失去当前用途时显式移除，不因此删除 observations 的历史记录或 regulationTargets 中的对象摘要。没有当前条目表示未知，不等于 initial。旧调用和错误 envelope 不可作为当前成功观察写入。
 - reserved 是累计权威预留，不能仅从当前调用数重算；启动抛错也可能已经预留。limits 来自可信配置，持久化副本用于核对恢复上下文，不允许快照自行扩充限制。
 - current 不以 lastFault 保存最近一次历史诊断；领域故障进入 faults，其他输入校验或传输诊断仍须通过回执或宿主错误出口明确反馈，不要求全部入库。持续影响当前运行的故障由相应服务、请求或执行状态表达，服务 failed 可以保留当前故障原因。
-- collection states 是权威领域状态的一部分，不是对事件存储的一次查询结果，也不要求复制所有原始消息。实体、聚合及历史都可以用集合表达；消息历史与各个 Collections 的持久化映射、记录键、保留策略及是否还需其他集合，留待具体转换与存储协议确定，查询分页不能改变逻辑集合内容。
+- collection states 可包含权威基础记录或可重算视图，不统一视作独立权威，也不要求复制所有原始消息。事件维护基础状态及相应视图；消息历史与各个 Collections 的持久化映射、记录键和保留策略仍待确定，裁剪须保留重算所需事实或基线，查询分页不能改变逻辑集合内容。
 - 无 resource ID、capabilities、requirements 或 grants/ceiling。AgentBinding 的配置只能使用可持久化的非秘密数据或安全凭据引用，真实资源自行授权；配额和预算仍独立约束执行。
 
 ## 初值、恢复与下一步
