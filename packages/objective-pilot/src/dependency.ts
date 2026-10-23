@@ -7,6 +7,7 @@ import type {
   CheckProbe,
   CheckResult,
   DependencyProblem,
+  DependencyResolution,
   Envelope,
   GitObjectiveSource,
   PilotInput,
@@ -83,6 +84,10 @@ interface Scope {
   readonly signal: AbortSignal;
 }
 const scopes = new AsyncLocalStorage<Scope>();
+const workerResolutions = new AsyncLocalStorage<readonly DependencyResolution[]>();
+export function withDependencyResolutions<T>(resolutions: readonly DependencyResolution[], use: () => T): T {
+  return workerResolutions.run(resolutions, use);
+}
 function mergeVersion(versions: Record<string, string>, id: string, version: string) {
   if (
     !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(version) ||
@@ -447,56 +452,12 @@ export function createSourceObjectiveDependencyProbe(
 ): CheckProbe {
   return async (subject, signal) => {
     signal.throwIfAborted();
-    if (!process.send || !process.connected)
-      throw new ObjectiveOperationError(
-        "A source dependency probe requires the owning process-probe IPC binding.",
-      );
-    const requestId = crypto.randomUUID();
-    return new Promise((resolve, reject) => {
-      const clean = () => {
-        process.off("message", onMessage);
-        process.off("disconnect", onDisconnect);
-        signal.removeEventListener("abort", onAbort);
-      };
-      const onAbort = () => {
-        clean();
-        reject(signal.reason);
-      };
-      const onDisconnect = () => {
-        clean();
-        reject(new ObjectiveOperationError("Dependency source binding disconnected."));
-      };
-      const onMessage = (value: unknown) => {
-        if (
-          !record(value) ||
-          value.type !== "pguide.dependency.result" ||
-          value.requestId !== requestId
-        )
-          return;
-        clean();
-        if (typeof value.error === "string")
-          resolve({
-            status: 502,
-            payload: null,
-            message: `dependency-observation: ${value.error}`,
-          });
-        else {
-          // The ordinary parser is imported lazily to keep the pilot/dependency module cycle inert.
-          void import("./pilot.js")
-            .then(({ parseCheckEnvelope }) => resolve(parseCheckEnvelope(value.envelope)))
-            .catch(reject);
-        }
-      };
-      process.on("message", onMessage);
-      process.once("disconnect", onDisconnect);
-      signal.addEventListener("abort", onAbort, { once: true });
-      if (signal.aborted) return onAbort();
-      process.send?.({ type: "pguide.dependency.request", requestId, target, subject }, (error) => {
-        if (error) {
-          clean();
-          reject(error);
-        }
-      });
-    });
+    const requirement = { objectiveId: target.objectiveId, subject, expectedLevelId: target.expectedLevelId };
+    const resolved = workerResolutions.getStore()?.find((entry) => canonical(entry.requirement) === canonical(requirement));
+    return {
+      status: 200,
+      message: "",
+      payload: resolved?.result ?? { ok: false, problems: [], requirements: [requirement] },
+    };
   };
 }

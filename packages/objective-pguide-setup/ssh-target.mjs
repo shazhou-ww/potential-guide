@@ -2,14 +2,14 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { stopTree } from "./setup-check.mjs";
+import { stopTree } from "./src/execution.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const limit = 262144;
 const fixtures = [
   "gitignore",
   "objective.yaml",
-  "checks/marker/run.cjs",
+  "checks/marker/worker.cjs",
   "references/checks/marker/en-US.md",
   "references/levels/terminal/en-US.md",
   "references/levels/repaired/en-US.md",

@@ -1,7 +1,7 @@
 import type { SubscriptionRef } from "@potential-guide/effects";
 import { activate, Effect } from "@potential-guide/effects";
 import { parseCheckEnvelope, readPage } from "@potential-guide/pilot-protocol";
-import { observationScope, validateDependencyEvidence } from "./dependency.js";
+import { bindDependencyRequest, observationScope, validateDependencyEvidence } from "./dependency.js";
 import { canonicalObjectiveUri } from "./resources.js";
 import type {
   CheckResult,
@@ -115,9 +115,22 @@ export function observe(
                           checkId: check.id,
                         };
                         try {
-                          const envelope = parseCheckEnvelope(
-                            await runtime.resolveCheck(ref)(stableSubject, checkSignal),
+                          const probe = runtime.resolveCheck(ref);
+                          let envelope = parseCheckEnvelope(
+                            await probe(stableSubject, checkSignal),
                           );
+                          if (envelope.payload?.requirements?.length) {
+                            const resolve = bindDependencyRequest();
+                            const resolutions = [];
+                            for (const requirement of envelope.payload.requirements) {
+                              const result = await resolve(requirement, requirement.subject, checkSignal);
+                              if (result.payload === null) return result;
+                              resolutions.push({ requirement, result: result.payload });
+                            }
+                            envelope = parseCheckEnvelope(await probe(stableSubject, checkSignal, resolutions));
+                            if (envelope.payload?.requirements?.length)
+                              throw new ObjectiveOperationError("Check returned unresolved requirements after same-observation dependency resolution.");
+                          }
                           if (envelope.payload === null) return envelope;
                           for (const problem of envelope.payload.problems) {
                             if (problem.kind === "dependency") validateDependencyEvidence(problem);

@@ -10,8 +10,8 @@ test("initial regulation persists the normal lifecycle without an Agent profile 
   const f = await fixture();
   try {
     await writeFile(
-      join(f.repository, "objective", "checks", "ready", "run.js"),
-      "#!/usr/bin/env node\nthrow new Error('initial must not run a business check');",
+      join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+      "exports.execute=async()=>{throw new Error('initial must not run a business check');};",
     );
     const revision = await f.commit();
     const config = join(f.directory, ".pguide", "config.jsonc");
@@ -55,8 +55,8 @@ test("permissions persist per attempt and continue uses current grants and revok
       grants: [] as string[],
     };
     await writeFile(
-      join(f.repository, "objective", "checks", "ready", "run.js"),
-      `#!/usr/bin/env node\nimport {existsSync} from "node:fs";let s="";for await(const c of process.stdin)s+=c;const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{kind:"internal",id:"not-ready",parameters:{}}]}}));`,
+      join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+      "exports.execute = async (subject) => { const { existsSync } = require('node:fs'); const ok = existsSync(subject.marker); return { status: 200, message: '', payload: { ok, problems: ok ? [] : [{ kind: 'internal', id: 'not-ready', parameters: {} }] } }; };\n",
     );
     await writeFile(
       f.subject,
@@ -154,8 +154,8 @@ test("explicit continue grants another stall allowance while retaining history",
   const f = await fixture();
   try {
     await writeFile(
-      join(f.repository, "objective", "checks", "ready", "run.js"),
-      '#!/usr/bin/env node\nconsole.log(JSON.stringify({status:200,message:"",payload:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]}}));',
+      join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+      "exports.execute = async (inputSubject, context) => { return { status: 200, message: \"\", payload: { ok: false, problems: [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] } }; };\n",
     );
     const commit = await f.commit();
     const agent = join(f.directory, "noop.mjs");
@@ -290,8 +290,8 @@ test("regulate and continue persist pinned Pilot observations and use the JSON c
     const marker = join(f.directory, "repaired");
     const probeCount = join(f.directory, "probe-count");
     await writeFile(
-      join(f.repository, "objective", "checks", "ready", "run.js"),
-      `#!/usr/bin/env node\nimport{existsSync,readFileSync,writeFileSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const subject=JSON.parse(s);const count=existsSync(subject.probeCount)?Number(readFileSync(subject.probeCount,"utf8")):0;writeFileSync(subject.probeCount,String(count+1));if(count===0){console.log(JSON.stringify({status:503,payload:null,message:"transient source failure"}));return;}const ok=existsSync(subject.marker);console.log(JSON.stringify({status:200,payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{index:1}},{kind:"internal",id:"not-ready",parameters:{index:2}}]},message:""}));});`,
+      join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+      "const { existsSync, readFileSync, writeFileSync } = require(\"node:fs\");\nexports.execute = async (inputSubject, context) => { const s = JSON.stringify(inputSubject); const subject = JSON.parse(s); const count = existsSync(subject.probeCount) ? Number(readFileSync(subject.probeCount, \"utf8\")) : 0; writeFileSync(subject.probeCount, String(count + 1)); if (count === 0) {\n    return { status: 503, payload: null, message: \"transient source failure\" };\n    return;\n} const ok = existsSync(subject.marker); return { status: 200, payload: ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: \"internal\", id: \"not-ready\", parameters: { index: 1 } }, { kind: \"internal\", id: \"not-ready\", parameters: { index: 2 } }] }, message: \"\" }; };\n",
     );
     await writeFile(f.subject, JSON.stringify({ marker, probeCount }));
     const commit = await f.commit();
@@ -515,10 +515,10 @@ test("legacy continue records and cross-round CLI budgets fail explicitly", asyn
 test("per-Agent timeout includes ACP startup and invocation failures never start an Agent", async () => {
   const f = await fixture();
   try {
-    const check = join(f.repository, "objective", "checks", "ready", "run.js");
+    const check = join(f.repository, "objective", "checks", "ready", "worker.cjs");
     await writeFile(
       check,
-      '#!/usr/bin/env node\nconsole.log(JSON.stringify({status:200,payload:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]},message:""}));',
+      "exports.execute = async (inputSubject, context) => { return { status: 200, payload: { ok: false, problems: [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] }, message: \"\" }; };\n",
     );
     const commit = await f.commit();
     const agent = join(f.directory, "hang.mjs");

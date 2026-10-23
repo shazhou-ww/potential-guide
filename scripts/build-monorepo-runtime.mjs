@@ -114,7 +114,7 @@ for (const [prefix, subjectSchema] of [
     `${prefix}objective.yaml`,
     stringify(
       {
-        $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json",
+        $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json",
         subjectSchema,
         levels: [
           {

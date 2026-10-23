@@ -1,4 +1,5 @@
-export { createSourceObjectiveDependencyProbe } from "@potential-guide/objective-pilot";
+export { createSourceObjectiveDependencyProbe, withDependencyResolutions } from "@potential-guide/objective-pilot";
+export { withInputView } from "./shared.js";
 export type { Delivery, Workspace } from "./contract.js";
 export { checkPackage } from "./package-standard.js";
 export { checkPackageLayers } from "./package-layers.js";

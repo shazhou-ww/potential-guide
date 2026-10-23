@@ -15,14 +15,14 @@ export function failure(error) {
         : `health-check-fault: ${error.code ?? error.name}: ${error.message}`,
   };
 }
-export async function invoke(stage, value, evidence) {
+export async function invoke(stage, value, evidence, options = {}) {
   try {
     if (![...stages, "sample"].includes(stage)) throw new Fault("invalid-stage.", 400);
     const subject = validateSubject(value);
-    if (subject.target.type === "docker") return await remote(stage, subject);
+    if (subject.target.type === "docker") return await remote(stage, subject, options);
     if (process.platform !== "linux")
       throw new Fault("unsupported-platform: local execution requires Linux (Debian/Ubuntu).", 501);
-    const context = { deadline: Date.now() + 24000, evidence };
+    const context = { deadline: Math.min(options.deadline ?? Infinity, Date.now() + 24000), evidence, signal: options.signal };
     evidence?.fact("stage.started", { stage });
     if (stage === "sample")
       return { status: 200, payload: await localSample(subject, context), message: "" };
@@ -36,10 +36,10 @@ export async function invoke(stage, value, evidence) {
     return failure(error);
   }
 }
-export async function check(stage, subject) {
+export async function check(stage, subject, options = {}) {
   if (!stages.includes(stage))
     return failure(new Fault("invalid-stage: sample is not a Pilot check.", 400));
-  return invoke(stage, subject);
+  return invoke(stage, subject, options.evidence, options);
 }
 export async function sample(subject) {
   return invoke("sample", subject);

@@ -27,6 +27,7 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@potential-guide/check-host": "workspace:^",
     "@potential-guide/cli-core": "workspace:^",
     "@potential-guide/effects": "workspace:^",
     "@potential-guide/git-source": "workspace:^",

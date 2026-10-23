@@ -56,7 +56,7 @@ function spec(id: string, version = "1".repeat(40)): PilotSpec {
       repositoryTree: "b".repeat(40),
     },
     manifest: {
-      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json",
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json",
       subjectSchema: { type: "object", additionalProperties: false },
       levels: [
         { id: "available", checks: [] },

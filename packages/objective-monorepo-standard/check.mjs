@@ -25,12 +25,13 @@ export async function main(phase, subject, evidence, scope = "repository", depen
             parameters: { report },
           },
         ]);
-  const ok = problems.length === 0;
+  const requirements = result.requirements ?? [];
+  const ok = problems.length === 0 && requirements.length === 0;
   for (const finding of report.findings) evidence?.fact("assertion.result", finding);
   evidence?.fact("inspection.finished", { state: report.state, layer2: report.layer2 });
   return {
     status: 200,
-    payload: { ok, problems },
+    payload: { ok, problems, ...(requirements.length ? { requirements } : {}) },
     message: JSON.stringify(report),
   };
 }

@@ -13,13 +13,14 @@ import { Effect } from "@potential-guide/effects";
 import { type ObjectiveManifest, observe } from "@potential-guide/objective-pilot";
 import { withPilot } from "../../cli-runtime/src/pilot-source.js";
 import { manifest, fixture as wikiFixture } from "../../objective-pilot/test/fixtures.js";
+import { dependencyWorker, ownedChildWorker, waitingWorker } from "./worker-fixtures.js";
 
 const execute = promisify(execFile);
 async function git(cwd: string, ...args: string[]) {
   return (await execute("git", ["-C", cwd, ...args], { windowsHide: true })).stdout.trim();
 }
 const successfulProbe =
-  '#!/usr/bin/env node\nprocess.stdout.write(JSON.stringify({status: 200, message: "", payload:{ok:true,problems:[]}}));\n';
+  "exports.execute = async (inputSubject, context) => {\n    return { status: 200, message: \"\", payload: { ok: true, problems: [] } };\n};\n";
 
 async function repository(config: ObjectiveManifest, origin?: string) {
   const scratch = resolve(".cache", "pilot-source-tests");
@@ -66,7 +67,7 @@ test("local Pilot maps origin identity but reads its exact local commit without 
     "https://not-a-reachable-origin.invalid/objectives.git",
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
-  const script = await repo.check("checks/ready/run.cjs");
+  const script = await repo.check("checks/ready/worker.cjs");
   const commit = await repo.commit();
   const tree = await git(repo.root, "rev-parse", `${commit}:objective`);
   const result = await withPilot(repo.path, repo.root, undefined, async (spec, runtime) => {
@@ -89,9 +90,9 @@ test("local Pilot maps origin identity but reads its exact local commit without 
 test("level-scoped repeated check IDs execute their own committed probes", async (t) => {
   const repo = await repository(manifest());
   t.after(() => rm(repo.root, { recursive: true, force: true }));
-  await repo.check("levels/z-first/checks/one/run.cjs");
-  await repo.check("levels/z-first/checks/two/run.cjs");
-  await repo.check("levels/a-next/checks/one/run.cjs");
+  await repo.check("levels/z-first/checks/one/worker.cjs");
+  await repo.check("levels/z-first/checks/two/worker.cjs");
+  await repo.check("levels/a-next/checks/one/worker.cjs");
   await repo.commit();
   const result = await withPilot(repo.path, repo.root, undefined, (spec, runtime) =>
     Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime)),
@@ -107,7 +108,7 @@ test("folder tree versions cover manifest, scripts, References and resources, no
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
-  await repo.check("checks/ready/run.cjs");
+  await repo.check("checks/ready/worker.cjs");
   await repo.commit();
   const bind = (location = repo.path) =>
     withPilot(location, repo.root, undefined, async (spec) => spec);
@@ -117,7 +118,7 @@ test("folder tree versions cover manifest, scripts, References and resources, no
       "objective.yaml",
       `${JSON.stringify(manifest({ levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }] }))}\n`,
     ],
-    ["checks/ready/run.cjs", `${successfulProbe}\n`],
+    ["checks/ready/worker.cjs", `${successfulProbe}\n`],
     [
       "references/system/overview/en-US.md",
       "---\ntitle: Updated\ndescription: Updated reference\nreferences: []\n---\nContent.\n",
@@ -163,7 +164,7 @@ test("repository-root Pilot has canonical #/ identity and a verified root tree",
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
-  await repo.check("checks/ready/run.cjs");
+  await repo.check("checks/ready/worker.cjs");
   for (const name of await filesystem.readdir(repo.path))
     await rename(join(repo.path, name), join(repo.root, name));
   await rm(repo.path, { recursive: true });
@@ -184,7 +185,7 @@ test("same repository folders can bind different retrieval commits and reject fo
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
-  await repo.check("checks/ready/run.cjs");
+  await repo.check("checks/ready/worker.cjs");
   await cp(repo.path, join(repo.root, "other"), { recursive: true });
   const old = await repo.commit();
   const otherUri = repo.uri.replace("#objective/", "#other/");
@@ -224,13 +225,8 @@ test("batched materialization preserves binary resources outside the Pilot direc
   t.after(() => rm(repo.root, { recursive: true, force: true }));
   await writeFile(join(repo.root, "binary resource.dat"), Buffer.from([0, 10, 13, 255]));
   await repo.check(
-    "checks/ready/run.cjs",
-    `#!/usr/bin/env node
-const {readFileSync} = require("node:fs");
-const {resolve} = require("node:path");
-const data = readFileSync(resolve(__dirname, "../../..", "binary resource.dat"));
-process.stdout.write(JSON.stringify({status:200,message:"",payload:{ok:data.equals(Buffer.from([0,10,13,255])),problems:[]}}));
-`,
+    "checks/ready/worker.cjs",
+    "exports.execute = async (inputSubject, context) => {\n    const { readFileSync } = require(\"node:fs\");\n    const { resolve } = require(\"node:path\");\n    const data = readFileSync(resolve(__dirname, \"../../..\", \"binary resource.dat\"));\n    return { status: 200, message: \"\", payload: { ok: data.equals(Buffer.from([0, 10, 13, 255])), problems: [] } };\n};\n",
   );
   await repo.commit();
   const result = await withPilot(repo.path, repo.root, undefined, (spec, runtime) =>
@@ -246,7 +242,7 @@ test("nested Pilot sources stay in the owning probe directory and preserve unrel
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
-  await repo.check("checks/ready/run.cjs");
+  await repo.check("checks/ready/worker.cjs");
   const revision = await repo.commit();
   const parent = await mkdtemp(join(resolve(".cache"), "p-"));
   t.after(() => rm(parent, { recursive: true, force: true }));
@@ -277,15 +273,15 @@ test("nested Pilot sources stay in the owning probe directory and preserve unrel
 test("ambiguous flat executables and multiple run entries fail explicitly", async (t) => {
   const repo = await repository(manifest());
   t.after(() => rm(repo.root, { recursive: true, force: true }));
-  await repo.check("checks/one/run.cjs");
-  await repo.check("checks/two/run.cjs");
+  await repo.check("checks/one/worker.cjs");
+  await repo.check("checks/two/worker.cjs");
   await repo.commit();
   await assert.rejects(
     withPilot(repo.path, repo.root, undefined, async () => undefined),
     /level-scoped/,
   );
-  await repo.check("levels/z-first/checks/one/run.cjs");
-  await repo.check("levels/z-first/checks/one/run.js");
+  await repo.check("levels/z-first/checks/one/worker.cjs");
+  await repo.check("levels/z-first/checks/one/worker.cjs");
   await repo.commit();
   await assert.rejects(
     withPilot(repo.path, repo.root, undefined, async () => undefined),
@@ -300,7 +296,7 @@ test("explicit Git URI can select an older exact commit independently of current
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
-  const script = await repo.check("checks/ready/run.cjs");
+  const script = await repo.check("checks/ready/worker.cjs");
   const old = await repo.commit();
   const oldTree = await git(repo.root, "rev-parse", `${old}:objective`);
   await writeFile(script, "process.exit(9);");
@@ -335,26 +331,16 @@ test("cross-process dependency source binding preserves exact commits, routing a
   const child = await repository(manifest({ levels }));
   t.after(() => rm(child.root, { recursive: true, force: true }));
   const childScript = await child.check(
-    "checks/ready/run.cjs",
-    `#!/usr/bin/env node
-process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kind:"internal",id:"broken",parameters:{directory:process.cwd()}}]},message:""}));
-`,
+    "checks/ready/worker.cjs",
+    "exports.execute = async (inputSubject, context) => {\n    return { status: 200, payload: { ok: false, problems: [{ kind: \"internal\", id: \"broken\", parameters: { directory: process.cwd() } }] }, message: \"\" };\n};\n",
   );
   const childCommit = await child.commit();
   const childTree = await git(child.root, "rev-parse", `${childCommit}:objective`);
   const parent = await repository(manifest({ levels }));
   t.after(() => rm(parent.root, { recursive: true, force: true }));
   await parent.check(
-    "checks/ready/run.cjs",
-    `#!/usr/bin/env node
-(async () => {
-  const {createSourceObjectiveDependencyProbe} = await import("@potential-guide/objective-pilot");
-  let source = ""; for await (const chunk of process.stdin) source += chunk;
-  const probe = createSourceObjectiveDependencyProbe({objectiveId:${JSON.stringify(child.uri)},expectedLevelId:"terminal"});
-  const envelope = await probe(JSON.parse(source), new AbortController().signal);
-  process.stdout.write(JSON.stringify(envelope));
-})().catch(error => { console.error(error); process.exitCode = 1; });
-`,
+    "checks/ready/worker.cjs",
+    dependencyWorker(child.uri),
   );
   const parentCommit = await parent.commit();
   const parentTree = await git(parent.root, "rev-parse", `${parentCommit}:objective`);
@@ -504,7 +490,7 @@ test("source preparation has its own deadline and releases only its owned cache"
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
-  await repo.check("checks/ready/run.cjs");
+  await repo.check("checks/ready/worker.cjs");
   const revision = await repo.commit();
   const cache = await mkdtemp(join(resolve(".cache"), "preparation-deadline-"));
   t.after(() => rm(cache, { recursive: true, force: true }));
@@ -558,18 +544,14 @@ test("host-owned input views are immutable within a round, refreshed between rou
       subjectRoot: ["root"],
     }),
   );
-  const source = `#!/usr/bin/env node
-const fs = require("node:fs");
-(async () => {
-let input = ""; for await (const chunk of process.stdin) input += chunk;
-const view = process.env.PGUIDE_INPUT_VIEW ? JSON.parse(fs.readFileSync(process.env.PGUIDE_INPUT_VIEW, "utf8")) : undefined;
-const text = view ? view.entries["input.txt"].text : fs.readFileSync(require("node:path").join(JSON.parse(input).root, "input.txt"), "utf8");
-const ok = text === "before";
-process.stdout.write(JSON.stringify({status:200,message:"",payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{kind:"internal",id:"broken",parameters:{viewPath:process.env.PGUIDE_INPUT_VIEW}}]}}));
-})().catch(error => {console.error(error); process.exitCode = 1;});
-`;
-  await repo.check("checks/first/run.cjs", source);
-  await repo.check("checks/last/run.cjs", source);
+  const source = `exports.execute = async (subject, context) => {
+    const view = context.data.inputView;
+    const text = view ? view.entries["input.txt"].text : require("node:fs").readFileSync(require("node:path").join(subject.root,"input.txt"),"utf8");
+    const ok = text === "before";
+    return {status:200,message:"",payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{kind:"internal",id:"broken",parameters:{view:!!view}}]}};
+  };`;
+  await repo.check("checks/first/worker.cjs", source);
+  await repo.check("checks/last/worker.cjs", source);
   await repo.commit();
   const target = await mkdtemp(join(resolve(".cache", "pilot-source-tests"), "input-view-target-"));
   t.after(() => rm(target, { recursive: true, force: true }));
@@ -601,9 +583,7 @@ process.stdout.write(JSON.stringify({status:200,message:"",payload:ok?{ok:true,p
       const problem = second.payload?.problems[0];
       assert.equal(problem?.kind, "internal");
       if (problem?.kind !== "internal") throw new Error("Expected fresh target failure.");
-      const path = problem.parameters.viewPath;
-      assert.equal(typeof path, "string");
-      await assert.rejects(stat(String(path)), { code: "ENOENT" });
+      assert.equal(problem.parameters.view, true);
       const originalOpen = filesystem.open;
       let partial = "";
       try {
@@ -687,7 +667,7 @@ test("runtime budgets retain distinct observation and check timeout causes", asy
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
-  await repo.check("checks/ready/run.cjs", "#!/usr/bin/env node\nsetTimeout(() => {}, 60000);");
+  await repo.check("checks/ready/worker.cjs", waitingWorker);
   await repo.commit();
   for (const observationTimeout of [true, false]) {
     const run = () =>
@@ -730,11 +710,8 @@ test("source lifetime cancellation waits for active process teardown before remo
   );
   t.after(() => rm(pidFile, { force: true }));
   await repo.check(
-    "checks/ready/run.cjs",
-    `#!/usr/bin/env node
-require("node:fs").writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));
-setInterval(() => {}, 1000);
-`,
+    "checks/ready/worker.cjs",
+    ownedChildWorker(pidFile),
   );
   await repo.commit();
   const controller = new AbortController();
@@ -771,10 +748,8 @@ test("cleanup failure retains the primary CLI error and reports both causes", as
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
   await repo.check(
-    "checks/ready/run.cjs",
-    `#!/usr/bin/env node
-process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kind:"internal",id:"broken",parameters:{directory:process.cwd()}}]},message:""}));
-`,
+    "checks/ready/worker.cjs",
+    "exports.execute = async (inputSubject, context) => {\n    return { status: 200, payload: { ok: false, problems: [{ kind: \"internal\", id: \"broken\", parameters: { directory: process.cwd() } }] }, message: \"\" };\n};\n",
   );
   await repo.commit();
   const guidance = {
@@ -791,6 +766,8 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kin
   const cleanup = new Error("Injected cleanup failure.");
   const originalRm = filesystem.rm;
   const controller = new AbortController();
+  const cleanupRoot = resolve(".cache", "pilot-source-tests", `cleanup-${crypto.randomUUID()}`);
+  await mkdir(cleanupRoot, { recursive: true });
   let cache = "";
   try {
     await assert.rejects(
@@ -803,12 +780,11 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kin
             observe({ spec, subject: { name: "repo" } }, runtime),
           );
           assert.ok(observation.payload !== null);
-          const problem = observation.payload.problems.at(0);
-          const directory = problem?.kind === "internal" ? problem.parameters.directory : undefined;
-          assert.equal(typeof directory, "string");
-          if (typeof directory !== "string") throw new Error("Expected a process check directory.");
-          cache = dirname(dirname(dirname(dirname(directory))));
-          assert.equal(dirname(cache), resolve(".cache", "pguide-sources"));
+          const children = await filesystem.readdir(cleanupRoot);
+          assert.equal(children.length, 1);
+          const child = children[0];
+          assert.ok(child?.startsWith("pguide-runtime-"));
+          cache = join(cleanupRoot, child);
           t.mock.method(filesystem, "rm", async (...args: Parameters<typeof filesystem.rm>) => {
             const [path, options] = args;
             if (String(path) === cache) throw cleanup;
@@ -818,7 +794,7 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kin
           controller.abort(primary);
           throw primary;
         },
-        { signal: controller.signal },
+        { signal: controller.signal, cacheDirectory: cleanupRoot },
       ),
       (error: unknown) => {
         assert.ok(error instanceof CliError);
@@ -838,6 +814,6 @@ process.stdout.write(JSON.stringify({status:200,payload:{ok:false,problems:[{kin
   } finally {
     t.mock.restoreAll();
     syncBuiltinESMExports();
-    if (cache) await originalRm(cache, { recursive: true, force: true });
+    await originalRm(cleanupRoot, { recursive: true, force: true });
   }
 });

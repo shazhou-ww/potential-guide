@@ -142,14 +142,25 @@ export function parseCheckEnvelope(value: unknown): Envelope<CheckResult> {
   if (value.status !== 200 || !record(value.payload))
     throw new ObjectiveOperationError("Successful check invocation requires status 200.");
   const result = value.payload;
-  fields(result, ["ok", "problems"]);
+  fields(result, ["ok", "problems"], ["requirements"]);
+  const requirements = result.requirements === undefined ? [] : result.requirements;
   if (
     typeof result.ok !== "boolean" ||
     !Array.isArray(result.problems) ||
-    (result.ok ? result.problems.length !== 0 : result.problems.length === 0)
+    !Array.isArray(requirements) ||
+    (result.ok ? result.problems.length + requirements.length !== 0 : result.problems.length + requirements.length === 0)
   ) {
     throw new ObjectiveOperationError("Check result must contain ok and consistent problems.");
   }
+  const parsedRequirements = requirements.map((entry: unknown) => {
+    if (!record(entry)) throw new ObjectiveOperationError("Invalid dependency requirement.");
+    fields(entry, ["objectiveId", "subject", "expectedLevelId"]);
+    if (typeof entry.objectiveId !== "string" || !entry.objectiveId.startsWith("git+") ||
+      canonicalObjectiveUri(entry.objectiveId) !== entry.objectiveId ||
+      !record(entry.subject) || !json(entry.subject) || !identifier(entry.expectedLevelId))
+      throw new ObjectiveOperationError("Invalid dependency requirement.");
+    return { objectiveId: entry.objectiveId, subject: entry.subject, expectedLevelId: entry.expectedLevelId };
+  });
   const problems = result.problems.map((entry: unknown) => {
     if (!record(entry)) throw new ObjectiveOperationError("Invalid problem.");
     if (entry.kind === "dependency") return parseDependencyProblem(entry);
@@ -161,12 +172,9 @@ export function parseCheckEnvelope(value: unknown): Envelope<CheckResult> {
   });
   if (result.ok)
     return { status: 200, payload: { ok: true, problems: [] }, message: value.message };
-  const [first, ...remaining] = problems;
-  if (first === undefined)
-    throw new ObjectiveOperationError("A failed check must report problems.");
   return {
     status: 200,
-    payload: { ok: false, problems: [first, ...remaining] },
+    payload: { ok: false, problems, ...(parsedRequirements.length ? { requirements: parsedRequirements } : {}) },
     message: value.message,
   };
 }

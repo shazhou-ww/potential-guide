@@ -1,4 +1,5 @@
 protocol:
+  - "@potential-guide/check-host"
   - "@potential-guide/effects"
   - "@potential-guide/pilot-protocol"
 business:

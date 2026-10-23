@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash } from "node:crypto";
 import { lstat, readdir, readFile, realpath } from "node:fs/promises";
 import { builtinModules } from "node:module";
@@ -50,6 +51,8 @@ export const ignored = new Set([
 export const secretPath =
   /(?:^|\/)(?:\.env(?:\.[^/]*)?|\.npmrc|[^/]*\.(?:pem|key|p12)|credentials(?:\.[^/]*)?|secrets?(?:\.[^/]*)?)(?:\/|$)/i;
 async function readInputView(): Promise<FilesystemObservationView | undefined> {
+  const provided = inputViews.getStore();
+  if (provided) return provided;
   const path = process.env.PGUIDE_INPUT_VIEW;
   if (path === undefined) return undefined;
   if (!process.send || !process.connected)
@@ -62,6 +65,9 @@ async function readInputView(): Promise<FilesystemObservationView | undefined> {
     throw new Error("Input view boundary mismatch.");
   return view;
 }
+const inputViews = new AsyncLocalStorage<FilesystemObservationView>();
+export const withInputView = <T>(view: FilesystemObservationView | undefined, use: () => T): T =>
+  view === undefined ? use() : inputViews.run(view, use);
 export class Snapshot {
   private readonly view: Promise<FilesystemObservationView | undefined>;
   constructor(
