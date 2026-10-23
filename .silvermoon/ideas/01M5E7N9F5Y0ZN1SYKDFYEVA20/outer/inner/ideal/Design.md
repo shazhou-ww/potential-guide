@@ -4,9 +4,13 @@
 
 类型讨论入口为 [Types.md](./Types.md)：先定义基础实体与状态，再按 [Views.md](./Views.md) 明确视图表属性、来源及 SELECT，从合法转换推导 Command/Event。Events.md 的既有分类仅作遗漏检查，不作为类型设计的先验框架。
 
+观测模型不与 ER 一一对应：Host、Objective、Target、Request、Run 是观察中心，Objective 是稳定业务实体，其视图跨定义版本聚合；资源及 binding 版本是支撑事实。先从观察需求检验事实是否充分，再定义可重算视图；事实实体与变化记录均 append-only，可变当前状态是查询冗余。已讨论需求见 [Host 观察需求](./Views.md#host-观察需求) 与 [Objective 观察需求](./Views.md#objective-观察需求)，其他观察中心仍待逐项收敛。
+
 ## 两个意图输入，一个执行状态输出
 
 Host 是逻辑 worker 身份，每个 Host 对应一个 Coordinator 的运行与状态边界，同时至多有一个活动实例，重启不更换逻辑身份。一台物理设备可通过虚拟机、容器或不同用户/profile 承载多个 Host；守护进程应阻止同一系统、同一 profile 内重复启动。资源配置归属 Host，执行 Run 的 Host 由实例归属确定；ObjectiveRevision 不与 Host 绑定。中央观察服务汇集多个 Host 的状态，跨 Host 引用与版本保留 hostId 作用域，不将局部请求序号视为全局身份。本轮不定义同步传输、跨 Host 路由或一致性协议。Host 的 ER 表达与值草案边界见 [Types.md](./Types.md#host-与运行作用域)。
+
+Coordinator 自身就是守护进程，通过运行全程持有冲突空间的 OS 文件锁防止本地重复实例；不增加外层守护进程，也不以锁文件存在判断互斥。Host 视图的 online/offline 属于中央联系观测，不等于本地生命周期阶段或是否仍有 Run 执行。主要展示最后联系、最后收到更新和业务变更发生时间；事件序号及连续应用水位属于同步内部信息，不作为主要观测目标。
 
 ```text
 Behavior RegulationRequests ───┐
@@ -14,7 +18,7 @@ Behavior RegulationRequests ───┐
 Behavior ResourceAllocation ──┘
 ```
 
-- RegulationTarget 是特定 ObjectiveRevision 在 subject 上的治理指向物；RegulationRequest 是对该 target 提出的 desiredLevel 与 priority 请求，不是执行 Task。RegulationRequests 保留各 target 最新请求及序号水位；请求不承诺启动或达标，也不是持续保持目标的控制器。
+- RegulationTarget 是稳定 Objective 在 subject 上的治理指向物，版本升级不改变 Target。RegulationRequest 固定采用的 ObjectiveRevision、desiredLevel 与 priority，不是执行 Task。RegulationRequests 保留各 target 最新请求及序号水位；请求不承诺启动或达标，也不是持续保持目标的控制器。
 - ResourceAllocation 是资源分配意图：期望使用的 agent binding 及并发度，不是实际资源分配、真实空闲数或权限集合；每次以完整值更新，不另建资源 delta 协议。
 - CoordinatorState 是完整领域状态，由 current singleton state 与若干 collection states 组成。current 保存已确认的两类意图、活跃 RegulationRun、当前有效观察及依赖、实际 binding 与占用、累计预算和服务生命周期；Collections 可以表达实体、聚合或历史，终结结果不进入当前活跃集合。pending 需求不包装成覆盖完整生命周期的 Task，其具体表达仍待推导。
 - 核心状态不携带外部实例 ID 或输入通道生命周期；外部身份由宿主或 envelope 关联，连接、结束与重连由适配层管理。通道结束不撤销当前意图、不自动取消调用或关闭服务；错误仍明确报告，影响服务可用性时体现为服务自身的状态变化。
@@ -27,7 +31,7 @@ Behavior ResourceAllocation ──┘
 - 上游请求意图与下游执行事实共用实体模型，不分设 intention/state 两套实体图。CoordinatorSnapshot 是完整状态在某个 revision 下的一致读取边界，不是新实体或单独的聚合图。请求序号、Coordinator 版本和存储成员键分开，不要求逐版全量复制。实体命名仍以业务含义准确为先。
 - 请求确认、Probe 顺序、证据采用/撤销、依赖安装/撤销必须有基础事实来源；预算、资源确认、可信约束与生命周期是权威控制状态，不能由已裁剪的调用历史猜测。Views.md 将当前尚缺少的来源契约标为待收敛，SQL 不能冒充已经完成的协议设计。
 - Observation 展开 ObjectiveObservation 的属性，观察的是 Objective 在 subject 上的状态而非 Pilot 自身；通过 Run → Request → Target 推导 target，不重复保存 target 关联。每个 Run 必须且只关联一条不可变 Request，requestSeq 必填，target/desiredLevel 由该 Request 推导，不再在 Run 中重复保存。
-- Fault 移除 stage，以 kind 标识故障种类、message 说明具体详情；最终分类集合仍待确定，不从 message 解析策略。统一 faults 集合有意冗余展开 targetKey/requestSeq/runId，支持分层 umbrella 查询；仅允许全 null、仅 target、target+request、完整链四种形状。引用从确定的父关系展开并校验，最深非空字段表示直接归属，不另存 ownerKind。归属与影响范围分离，provider 故障不复制到 consumer 链，kind 不自动决定终结状态。
+- Fault 移除 stage，以 kind 标识种类、message 说明详情；最终分类集合仍待确定，不从 message 解析策略。每条 Fault 必填所属 Coordinator 的 hostId，并冗余展开 targetKey/requestSeq/runId，支持 Host 及下层 umbrella 查询。后三者仅允许全 null、仅 target、target+request、完整链四种形状；引用须从固定父关系展开，并在同一 Host 内校验。最深非空字段表示直接归属，不另存 ownerKind；中央服务自身故障不挂到被观察 Host。归属与影响范围分离，provider 故障不复制到 consumer 链，kind 不自动决定终结状态。
 - 值对象是否展开取决于业务可理解性和过滤、排序、分组、聚合诉求；独立实体另需身份或生命周期理由。Observation 显式表达 current、observedAt、problems、gapSummary 和兼容 provenance，不保留重复 value；problems 可用嵌套集合或子记录。Run 展开 bindingId 和可选 bindingConfiguration 快照，配置保持嵌套且不含明文秘密；后续资源意图不改写旧执行配置。具体索引及物理布局由适配层决定，详见 [Types.md](./Types.md)。
 - Request 是治理要求，不限定为外部输入；外部提出与依赖派生共用实体和 requestSeq 身份空间，采用同一串行化分配路径，不各自维护发号水位。CoordinatorState.requests 保留已纳入状态的不可变请求，最新映射不替代引用记录；启动 Run 前必须存在准确的请求，缺失或冲突显式拒绝。恢复与历史裁剪不能破坏 Run → Request → Target 的可追溯性。
 - 字段进入 current 的依据是当前调度、执行或恢复是否必需，不是 UI 是否可能查看；这项最小化原则不排除完整 CoordinatorState 包含历史。
@@ -55,7 +59,8 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 
 ## 单一治理目标命令与单次调用
 
-- 实体边界分为 source、ObjectiveRevision、RegulationTarget、RegulationRequest 四层。source 是 Git 仓库定位地址与仓库内路径的字符串值，不单独建实体，不加 git+ 前缀；允许 HTTPS、SSH 或本地 Git 来源。objectiveKey = Hash(Encode(Canonicalize(source), resolvedCommitId)) 是精确定义的单主键；version 为完整 commit ID，source/version 保留用于校验。RegulationTarget 只引用 objectiveKey，与 subject 身份推导 targetKey；RegulationRequest 以 requestSeq 单独标识，targetKey 仅为外键。换定义版本是另一个 target，改变 desiredLevel/priority 则是该 target 的新请求。RegulationTarget 不与执行调用混淆，RegulationRequest 不包装 Task 生命周期。规范化、编码、哈希及地址等价规则仍待确定，详见 [Types.md](./Types.md)。
+- Objective 以规范化 source 决定稳定 objectiveKey；ObjectiveRevision 以 objectiveKey 和完整 commit 决定 objectiveRevisionKey。Target 关联 Objective，以 objectiveKey 与 subject 决定身份；Request 同时固定 Target 和 Revision，两者必须属于同一 Objective，desiredLevel 按该版本解释。定义升级不改变 Target，改变版本/desiredLevel/priority 则形成新请求，不改写旧记录。source 为 Git 仓库定位地址及仓库内路径，不加 git+ 前缀；允许 HTTPS、SSH 或本地 Git。规范化、编码、哈希及旧身份迁移仍待实施，详见 [Types.md](./Types.md)。
+- 最新上线版本是追加发布事实的可重算视图，不是 Objective 上的可变指针或任意新 commit。新建 Request 应采用最新上线版本，旧 Request/Run 保持准确引用；离线 Host 的新建策略、发布顺序协议及旧请求替代策略仍待定，不隐式迁移或取消旧执行。
 - 公共命令只有为特定 Objective/subject 设置目标 level 与 priority，不再分别提供 add、replace、cancel、priority 或 retry。未终结需求可被更新，前次终结后新请求形成新尝试。
 - 覆盖身份须包含明确对象，精确 Objective 版本、来源和实际资源身份不能混淆；不依靠任意 regulation ID 区分同一需求更新。按接受顺序区分新旧，不依赖生产者时钟；commandId 用于关联，不默认是幂等键。
 - 请求按非负整数 priority 升序、requestSeq 升序排序，序号表达逻辑接收先后，不把数据库自增分配顺序直接当成事务提交顺序。acknowledgedAtRevision 仅记录 Coordinator 的确认时间；重复确认和 Probe 更新不改变排序。仅 priority 更新也形成新请求，但不无故重启调用；旧调用以启动时 requestSeq 关联，不得完成新请求。

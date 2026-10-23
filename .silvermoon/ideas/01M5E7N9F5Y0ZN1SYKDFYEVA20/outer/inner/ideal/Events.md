@@ -12,6 +12,8 @@ CoordinatorState 包含基础实体/事实、控制状态及可重算视图。si
 
 ## 候选事实与状态效果
 
+Objective 与 Revision 是不同的不可变事实：Objective 固定来源身份，Revision 固定所属 Objective 与完整 commit。发布/生效须有追加事实以推导最新上线版本，发现 commit 不等于发布；权威来源和可靠顺序协议待定。请求形成必须记录固定 objectiveRevisionKey，并校验其与 Target 属于同一 Objective，目标 level 按该版本校验。发布不改写旧请求或执行，也不自动替代它们；新请求采用最新上线版本的离线边界见 [Objective 观察需求](./Views.md#objective-观察需求)。
+
 | 事实 | 必须明确的内容 | 对 singleton 及 collections 的效果 |
 | --- | --- | --- |
 | 请求形成与确认 | 外部或内部来源、需求归属、准确 target；合法 requestSeq、desiredLevel、priority，以及单独的确认版本或拒绝原因 | 形成并接收合法请求后保存不可变记录，影响最新请求视图；明确确认事实再影响已确认视图；不把接收、确认、完成混为一谈，非法输入不伪造请求 |
@@ -23,7 +25,7 @@ CoordinatorState 包含基础实体/事实、控制状态及可重算视图。si
 | 观察记录及使用决定 | 来源 runId、观察属性、兼容 provenance，以及明确的采纳/撤销决定 | 观察事实和当前用途分别留存；由它们重算当前有效观察，不以最新成功记录替代使用决定 |
 | Probe 结果采纳 | 精确对象、实际 Probe 时间、可靠身份与顺序、来源及成功或失败结果 | 保存包含失败的 Probe 基础事实，再更新 target 最近 Probe 视图；不能仅发一个改写摘要字段的事件而丢失重算来源 |
 | 资源意图确认 | 完整 no-resource 或 configured 值及采纳修订 | 更新期望，不修改旧调用的 binding，不宣称实际占用已变化 |
-| 故障报告 | kind、message 及一致的 targetKey/requestSeq/runId 归属链；仅四种合法空值形状 | 领域故障写入 faults 并明确对外报告，支持 umbrella 查询；不另存 current.lastFault，归属或分类不隐含请求、执行或服务状态转换 |
+| 故障报告 | 必填 hostId、kind、message 及同一 Host 内一致的 targetKey/requestSeq/runId 归属链；后三者仅四种合法空值形状 | hostId 从所属 Coordinator 确定，领域故障只追加并明确对外报告，支持 Host umbrella 查询；中央服务自身诊断不挂到被观察 Host，归属或分类不隐含生命周期转换 |
 | 服务及预算变化 | 服务状态、可信约束和明确累计预留事实 | 不投影输入通道生命周期；释放槽位不退还预算 |
 
 这些不是任意 JSON patch 或可选字段袋。每种合法转换仍须定义具体 payload、前置修订、归属和原子规则。决定也须作为事实记录，不能在重放时重新作出。当前待处理工作如何推进仍须明确，不能以查询视图替代尚未定义的请求处理状态。

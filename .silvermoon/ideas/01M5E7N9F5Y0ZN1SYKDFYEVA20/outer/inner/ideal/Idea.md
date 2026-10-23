@@ -6,7 +6,7 @@
 
 ## 结果
 
-Coordinator 将治理请求与资源分配意图两个 Behavior 转换为执行状态 Behavior。ObjectiveRevision 在 subject 上具体化为 RegulationTarget，RegulationRequest 表达对该 target 的 desiredLevel 与 priority 请求，实际执行仍为 RegulationRun。Command/Event 分别由纯 reducer 归约，资源意图全量更新；支持请求与状态持久化恢复，副作用通过 monadic composition 组织。原则见 [Design.md](./Design.md)，先参考 [Types.md](./Types.md) 讨论 state，再推导 Command/Event。
+Coordinator 将治理请求与资源分配意图两个 Behavior 转换为执行状态 Behavior。稳定 Objective 在 subject 上具体化为 RegulationTarget，RegulationRequest 固定采用的 ObjectiveRevision、desiredLevel 与 priority，实际执行为 RegulationRun。Command/Event 分别由纯 reducer 归约，资源意图全量更新；支持请求与状态持久化恢复，副作用通过 monadic composition 组织。原则见 [Design.md](./Design.md)，先参考 [Types.md](./Types.md) 讨论 state，再推导 Command/Event。
 
 ## 边界
 

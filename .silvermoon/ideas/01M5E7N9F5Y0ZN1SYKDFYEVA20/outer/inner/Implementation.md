@@ -6,7 +6,7 @@
 
 ### I-S01 — 定义双意图、纯归约与恢复契约
 
-依据 [Design.md](./ideal/Design.md) 与 [Types.md](./ideal/Types.md) 先收敛 RegulationRequests/ResourceAllocation/CoordinatorState 及合法转换，再推导 Command/Event，落实两个纯 reducer、资源意图全量更新、单命令及单次调用边界。区分单条 RegulationRequest 与集合 RegulationRequests；ObjectiveRevision 的 key 编码 source 和固定 commit，RegulationTarget 以单外键引用。完整状态包含 current singleton 与实体、聚合或历史 collection states，以 activeRuns 替代包含历史的 Task，不含实例 ID、输入通道生命周期或固定日志位置；明确当前待处理需求、输入接续、依赖、终结移除与集合写入、对象最近 Probe 聚合的原子边界、一致快照、适配层查询与接续元数据、存储错误和外部执行核实协议，不预设 processedIntents；[Events.md](./ideal/Events.md) 仅作遗漏检查，不引入长期目标控制器。
+依据 [Design.md](./ideal/Design.md) 与 [Types.md](./ideal/Types.md) 先收敛 RegulationRequests/ResourceAllocation/CoordinatorState 及合法转换，再推导 Command/Event，落实两个纯 reducer、资源意图全量更新、单命令及单次调用边界。区分单条 RegulationRequest 与集合 RegulationRequests；Objective 的 key 只编码稳定来源，ObjectiveRevision 另编码 Objective 与固定 commit，Target 关联 Objective，Request 固定版本并校验归属及 level。明确旧身份和引用的迁移，不将旧版 key 按新语义静默读取。完整状态包含 current singleton 与实体、聚合或历史 collection states，以 activeRuns 替代包含历史的 Task，不含实例 ID、输入通道生命周期或固定日志位置；明确当前待处理需求、输入接续、依赖、终结移除与集合写入、对象最近 Probe 聚合的原子边界、一致快照、适配层查询与接续元数据、存储错误和外部执行核实协议，不预设 processedIntents；[Events.md](./ideal/Events.md) 仅作遗漏检查，不引入长期目标控制器。
 
 ### I-S02 — 接入资源意图、资源侧授权与副作用执行
 
