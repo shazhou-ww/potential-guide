@@ -10,7 +10,7 @@
 
 ## 边界
 
-- 用户级发现只定位一个 Host；业务层映射 Pilot 到准确产物，Host 按不透明绑定键限制单执行版本，冲突不静默重绑，不承担层级判断或自动依赖安装。
+- 用户级发现只定位一个 Host；执行直接提供目录与 revision，无需提前注册。Host 按规范目录复用，校验完整产物 hash，旧任务排空后顺序更新，不静默重绑或理解层级。
 - check 是最小并发单元；进程/线程复用不复用过期输入或证据，保留层级顺序、来源、预算和取消边界。Worker Threads 不作为不可信代码的安全沙箱。
 - 全部现有 Objective 的 check 从进程入口迁移为 worker 入口，消息上下文显式传递；可复用 worker 必须释放请求资源并限制缓存。旧运行协议不兼容，历史契约不改写，不默认扩展远程部署。
 
@@ -22,4 +22,4 @@
 
 ## 下一步
 
-审阅 [MVP 设计](./Design.md) 的调整范围、worker 消息和七个 HTTP 接口；其余参数见 [OpenQuestions.md](./OpenQuestions.md)，本次不记录构想验收。
+审阅 [MVP 设计](./Design.md) 的目录按需加载、worker 消息和五个 HTTP 接口；其余参数见 [OpenQuestions.md](./OpenQuestions.md)，本次不记录构想验收。

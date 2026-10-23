@@ -5,7 +5,9 @@
 用户已选择统一 Node worker、单用户级共享 Check Host、外部本地 HTTP RPC、
 内部 Worker Threads MessagePort；全部现有 check 及直接消费面全量迁移。
 check 是最小并发任务，subject 和 regulation object 仅属于请求上下文。
-同 Pilot ID 不允许不同执行版本并存；历史 schema/源码和固定证据保持不变。
+业务层保留 Pilot 到准确代码的映射；Host 直接按规范目录及完整产物 revision 按需加载，
+不要求提前注册。相同目录不并存执行版本，旧任务排空后才顺序更新；
+历史 schema/源码和固定证据保持不变。
 
 按用户要求收缩 MVP：有界复用、按任务数退役、异常隔离和容量允许时的同版本替补预热；
 时间/内存压力退役、自适应策略及特殊一次性模式后续扩展。清理完成才可回池，
@@ -15,7 +17,7 @@ check 是最小并发任务，subject 和 regulation object 仅属于请求上�
 
 - [Design.md：调整范围](./Design.md#1-调整范围)：包边界、现有调用链以及全部内置检查器。
 - [Design.md：worker 消息](./Design.md#3-worker-messageport-消息)：任务身份、消息方向、完成与清理顺序。
-- [Design.md：HTTP 接口](./Design.md#4-对外-http-rpc)：七个接口，执行响应流内的依赖/结果及失败边界。
+- [Design.md：HTTP 接口](./Design.md#4-对外-http-rpc)：五个接口，目录/revision 执行及流内依赖/结果。
 
 设计稿还集中定义模块生命周期、退役/预热和端到端时序；本文件不复制另一套接口。
 已确认/待审阅状态统一见 [OpenQuestions.md](./OpenQuestions.md)。
@@ -24,7 +26,7 @@ check 是最小并发任务，subject 和 regulation object 仅属于请求上�
 复用现有协议层，本次只简化设计文档，不创建产品包。
 
 首版不做会话租约、自动闲置关闭 Host、任务查询/恢复、独立视图管理或 cursor/ack 事件平台。
-Host 只加载已准备的自包含产物、排队、复用线程和返回结果；
+Host 直接从授权的 directory 校验自包含产物及 revision，准备受控副本、排队、复用线程和返回结果；
 Objective 的版本来源、层级及业务依赖证据仍由现有调用链解释。
 完整 check 迁移与依赖往返保持必要范围，不能用“MVP”名义跳过真实根/包依赖检查。
 
@@ -56,7 +58,7 @@ bundle 约 4.3 MB，TypeScript 约 3.58 MB；体积比例不等于 CPU 比例。
 | --- | --- |
 | [types.ts](../../../../../../packages/pilot-protocol/src/types.ts) | CheckRef、Subject、Envelope、CheckResult 及准确 Git 来源可作为消息业务数据 |
 | [probes.ts](../../../../../../packages/objective-pilot/src/probes.ts) | HTTP 结果解析/取消已有基础，但裸 subject POST 不是新 Host 契约 |
-| [pilot-source.ts](../../../../../../packages/cli-runtime/src/pilot-source.ts) | 当前发现 run.*、逐次进程 probe，checkout 随作用域清理，需迁移到 Host 所有的准确注册来源 |
+| [pilot-source.ts](../../../../../../packages/cli-runtime/src/pilot-source.ts) | 当前发现 run.*、逐次进程 probe，checkout 随作用域清理；需准备稳定产物目录与 revision，由 Host 校验并持有不可变执行副本 |
 | [dependency.ts](../../../../../../packages/objective-pilot/src/dependency.ts) | 依赖证据绑定原观察作用域，不能被普通 HTTP 或线程返回值替代 |
 | [regulation-worker.ts](../../../../../../packages/pguide-regulate/src/regulation-worker.ts) | 一次 runtime 已覆盖多轮观察；要替换的是 check 执行机制而非业务循环 |
 | [check.mjs](../../../../../../packages/objective-monorepo-standard/check.mjs) | 业务函数可适配 worker，原 stdin/stdout/进程证据上下文不能继续作为任务边界 |

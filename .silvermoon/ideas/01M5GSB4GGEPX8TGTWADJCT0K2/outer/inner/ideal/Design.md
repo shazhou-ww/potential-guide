@@ -9,7 +9,7 @@
 ```text
 CLI / Pilot：解析业务检查、准备代码产物、维护观察与证据
                          ↓ 本地 HTTP
-Check Host：加载已注册产物 → 有界队列 → 复用 worker
+Check Host：按目录和 revision 加载产物 → 有界队列 → 复用 worker
                          ↓ MessagePort
 worker：执行请求 → 清理本次资源 → 等待下一项
 ```
@@ -21,7 +21,7 @@ worker：执行请求 → 清理本次资源 → 等待下一项
 | --- | --- |
 | check-host | 用户级单 Host、HTTP 请求、产物加载、有界队列/worker 池、取消与清理 |
 | pilot-protocol / objective-pilot | worker 契约和 check adapter；层级判断、CheckRef、subject、结果 envelope 及依赖证据语义保留 |
-| cli-runtime 与 probe/regulate/supervise | 发现 Host、准备准确来源、注册产物、消费响应消息、在原观察作用域处理依赖 |
+| cli-runtime 与 probe/regulate/supervise | 发现 Host、准备准确来源及稳定产物目录、消费响应消息、在原观察作用域处理依赖 |
 | 所有 Objective、生成器、脚手架、消费测试 | 进程入口改为 worker handler，输入/证据/取消改为显式请求上下文 |
 
 **迁移范围不缩减：6 个内置 Objective，16 个 check。**
@@ -42,15 +42,32 @@ worker：执行请求 → 清理本次资源 → 等待下一项
 ### 代码身份与依赖
 
 业务层负责 Objective/level/check 与准确代码的映射；Host 不判断层级或下载 Git 仓库。
-建议调用者提供已准备好的**自包含 Node 产物**，首版以 bundle 加显式资源为主；
+调用者提供已准备好的**自包含 Node 产物目录**，首版以 bundle 加显式资源为主；
 Host 不安装 npm 依赖，也不从调用者的任意 node_modules 向上解析。
 产物 revision 覆盖规范化文件清单、全部代码/资源内容和入口，不只 hash 入口 JS。
-Host 校验并复制到自己管理的不可变目录后才执行；路径只用于定位，不作为代码身份。
+**规范化目录是 key，完整内容 hash 是 revision。** 路径标识这份可更新产物的位置，
+不单独证明代码内容。客户端直接在 execute 中提供 directory 和预期 revision，无需预注册或卸载 API。
+Host 校验并复制到自己管理的不可变目录后才执行，复制后的内容必须匹配预期 hash；
+源目录在采集期间变化或内容不匹配时明确拒绝，不从一边修改一边读取的目录执行。
+目录必须是经授权的绝对本机路径；按文件系统真实路径和大小写/链接规则取得规范身份，
+不能简单把所有平台路径一律小写。目录内入口/资源路径不得通过链接或相对路径越界。
+调用方使用相对稳定的产物目录，不能每次创建新临时路径却期望复用同一个池。
 
-注册用 `bindingKey` 这个不透明逻辑键；Pilot adapter 将规范 Pilot ID 映射到该键。
-Host 仅实施“一键一个活动产物 revision”，不理解 Objective 语义。
-不同 revision 注册同键返回冲突；无排队/运行任务时显式卸载旧注册，再加载新版本。
-不做热升级或自动换版本；代码相同但 Node/执行配置不兼容也不混用线程。
+Host 内部按目录持有池，加载和切换在该 key 下串行仲裁：
+
+| 状态 | execute 的行为 |
+| --- | --- |
+| 未加载目录 | 验证 revision、准备不可变副本、初始化 worker 后执行 |
+| 已加载且 revision 相同 | 验证请求对应的产物身份，复用已有 worker |
+| revision 不同，旧任务已排空 | 停止旧池派发，卸载并确认旧线程退出，再加载请求的新 revision |
+| revision 不同，旧版仍有排队/运行/清理任务 | 返回版本冲突，不并存版本、不抢占旧任务；调用者在旧任务结束后可明确发起新请求 |
+
+不提供复杂版本等待队列；排队任务始终绑定受理时的 revision，不能悄悄转到新版。
+自动更新指下一次符合切换条件的执行请求触发顺序卸旧载新，不是文件 watcher 热替换。
+切换失败明确报错，不执行旧版来冒充新版。预热不得提前加载另一 revision；
+代码相同但 Node/执行配置不兼容也不混用线程。
+Pilot 到目录的业务映射由 adapter 负责；Host 不再维护 Pilot ID 注册表，也不能识别
+两个不同目录是否属于同一 Pilot。业务层仍需维持一致映射，不利用不同目录绕开既有单版本约束。
 来源与业务证据由 adapter 保留，不能因为 Host 只看产物就把准确 commit/tree 丢掉。
 
 ## 2. worker 复用与清理
@@ -71,7 +88,7 @@ RequestContext 提供 signal、输入视图、依赖往返、证据发送及异�
 不通过线程直接发送函数、AbortSignal 或任意对象实例。
 
 MVP 固定总体线程/队列上限，一线程同时一任务，按准确产物及兼容配置复用。
-首版退役只做**任务数上限、异常/清理失败隔离、显式卸载**；
+首版退役只做**任务数上限、异常/清理失败隔离、目录 revision 切换时卸载**；
 动态预热只做**容量允许时，为即将按次数退役的同版本 worker 准备一个替补**。
 预热、运行及退役中线程均计入额度；没有空位就先退出再启动，不执行真实 check 来预热。
 时间、内存压力、自适应扩缩容及特殊一次性策略列为后续能力，不同时实现。
@@ -89,7 +106,7 @@ Node worker 不是安全沙箱，模块缓存通常按线程独立；内存验�
 
 | 方向 | 消息 | 内容 |
 | --- | --- | --- |
-| Host → runner | initialize | 已验证的产物/入口、worker 代际和配置 |
+| Host → runner | initialize | 已验证的不可变产物/入口及 revision、worker 代际和配置 |
 | runner → Host | ready | 初始化完成；才可接收执行 |
 | Host → runner | execute | requestId、worker 代际、input、剩余预算、受限视图引用 |
 | Host → runner | cancel | requestId、原因；runner 触发本地 signal |
@@ -106,28 +123,26 @@ Host 返回结果前校验关联身份；迟到消息不能完成下一项任务
 
 ## 4. 对外 HTTP RPC
 
-### 七个接口，不提供 session/observation/view 的独立资源管理
+### 五个接口，不提供提前注册或 session/observation/view 的独立资源管理
 
 | 方法与路径 | 作用 |
 | --- | --- |
 | GET /v1/host | 鉴权后读取协议、Host 代际、基本状态 |
-| PUT /v1/bindings/{bindingKey} | 注册已准备的产物；相同内容可复用，不同 revision 返回 409 |
-| DELETE /v1/bindings/{bindingKey} | 仅无排队/执行任务时卸载；忙时返回 409 |
-| POST /v1/execute | 提交一次执行，在原 HTTP 响应中等待/读取依赖、证据和最终结果 |
+| POST /v1/execute | 给定 directory、revision 和 input，按需加载/更新后执行，在原响应中读取依赖、证据和最终结果 |
 | POST /v1/execute/{requestId}/cancel | 请求取消指定任务；不把受理取消当成停止确认 |
 | POST /v1/execute/{requestId}/dependencies/{dependencyId} | 提交当前待决依赖的结果 |
 | POST /v1/shutdown | 管理能力下显式停止；有活动任务时拒绝，不误杀其他客户端 |
 
 不返回 202 然后让客户端查询任务库，也不提供断线后领取结果或恢复事件的承诺。
-注册/卸载在 Host 内与任务受理互斥，不能卸载后让旧队列继续执行。
-绑定键在 URL 中编码；它是受校验的标识符，不是任意文件路径。
+目录加载/更新在 Host 内与任务受理互斥，不提供显式注册、卸载或版本管理接口。
+directory 通过 JSON body 传递并验证授权与路径边界，不能据此读取或执行任意未授权目录。
 
 ### 一次执行的请求与响应
 
 ```json
 {
   "requestId": "client-generated-unique-id",
-  "bindingKey": "opaque-logical-binding",
+  "directory": "D:\\workers\\repo-check",
   "revision": "sha256-of-artifact",
   "timeoutMs": 30000,
   "input": {}
@@ -135,7 +150,8 @@ Host 返回结果前校验关联身份；迟到消息不能完成下一项任务
 ```
 
 `input` 对 Host 不透明；check adapter 在其中传递业务 ref/subject 和必要的请求数据。
-Host 负责基础协议、大小、产物绑定和预算校验，业务 handler/adapter 负责业务 schema。
+Host 负责基础协议、大小、目录/revision 和预算校验，业务 handler/adapter 负责业务 schema。
+首次加载及 revision 切换也消耗该请求预算，不在加载后重新起算。
 视图作为可选的受限运行元数据引用传递：仅允许约定的本机私有 staging 根下文件、
 摘要和大小，Host 校验边界/链接并复制至自己持有的请求目录后再使用；
 不能让请求触发任意宿主文件读取。调用者保留 staging 到请求结束确认，
