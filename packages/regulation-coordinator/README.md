@@ -6,6 +6,62 @@ Only their public pure validation/ranking/capability helpers and runner types ar
 reused. There is one internal priority queue and a runtime-discovered dependency
 graph per acquisition; neither is an input snapshot.
 
+## Simplified-design request model (preview)
+
+`RequestModel` is an additive, pure foundation for the revised Coordinator design.
+The existing `regulationCoordinator` below is unchanged; it is still the legacy
+five-command scheduler and does not consume this model yet.
+
+```ts
+import { RequestModel } from "@potential-guide/regulation-coordinator";
+
+const requests = RequestModel.reduceRegulationRequests({
+  type: "request",
+  requestRef: "a-stable-reference-supplied-by-the-caller",
+  objective: exactPilotSpec,
+  subject: {},
+  desiredLevel: "terminal",
+  priority: 0,
+  origin: { kind: "external" },
+}, RequestModel.createRegulationRequests());
+
+const details = RequestModel.requestDetails(requests, requests.requests[0]!.ref);
+const restored = RequestModel.restoreRegulationRequests(
+  JSON.parse(JSON.stringify(requests)),
+);
+```
+
+The reducer admits immutable Objective, ObjectiveRevision, Target and Request
+facts. Objective identity uses the validated Git repository and directory, Target
+adds the subject, and ObjectiveRevision adds the **commit**, not the path tree
+hash. Keys use version-1 SHA-256 identity encoding with locale-independent JSON
+property ordering. Git address aliases are not merged. The existing exact
+`PilotSpec` transport is retained here; the proposed new source-string protocol
+is not implemented.
+
+Request references are supplied, not randomly generated or allocated during
+replay. The same reference and normalized contents are an idempotent redelivery;
+conflicting contents fail explicitly. A new reference preserves a new occurrence
+even for identical values. Dependency requests use the same command and refer to
+an already admitted consumer request. Subject and desired level are validated
+against the pinned definition; `terminal` resolves to its highest business level
+and `initial` does not execute checks.
+
+The model's `revision` is a local projection counter, **not** a global request
+sequence, Coordinator execution version or persistence cursor. The arrays are an
+append-only admission prefix, not a scheduling queue or a cross-Host latest-request
+decision. `requestDetails` resolves the request's fixed relationships, never a
+target's latest request. Each consuming Host can admit the same shared reference.
+Reference allocation, global ordering, conflict coordination and selection of
+current requests remain outside this first increment.
+
+New states are cloned and deeply frozen without freezing inputs. Snapshot restore
+rebuilds and checks facts and references instead of trusting serialized keys or
+indexes. Only complete version-1 prefixes are supported; compaction and migration
+are not implied. Restore and replay perform no runner, filesystem, network or
+clock effects. This preview does not yet implement Run facts, projections for all
+five observation levels, resource behavior, scheduling or external recovery.
+
 ## API
 
 ```ts

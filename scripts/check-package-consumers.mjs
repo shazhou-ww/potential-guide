@@ -81,7 +81,11 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         join(directory, "api.ts"),
         `
         import { Effect, Stream, SubscriptionRef } from "@potential-guide/effects";
-        import { regulationCoordinator, type AgentResource, type CoordinatorCommand, type CoordinatorOptions } from "@potential-guide/regulation-coordinator";
+        import { regulationCoordinator, RequestModel, type AgentResource, type CoordinatorCommand, type CoordinatorOptions } from "@potential-guide/regulation-coordinator";
+        export const reduceRequest = (command: RequestModel.RequestCommand) =>
+          RequestModel.reduceRegulationRequests(command, RequestModel.createRegulationRequests());
+        export const restoreRequests = (snapshot: unknown) =>
+          RequestModel.restoreRegulationRequests(snapshot);
         export const api = (
           resources: SubscriptionRef.SubscriptionRef<readonly AgentResource[]>,
           commands: Stream.Stream<CoordinatorCommand>,
@@ -120,7 +124,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         [
           "--input-type=module",
           "-e",
-          'import { regulationCoordinator } from "@potential-guide/regulation-coordinator"; if (typeof regulationCoordinator !== "function") throw new Error("Missing coordinator export");',
+          'import assert from "node:assert/strict"; import { regulationCoordinator, RequestModel } from "@potential-guide/regulation-coordinator"; if (typeof regulationCoordinator !== "function") throw new Error("Missing coordinator export"); const state = RequestModel.createRegulationRequests(); assert.deepEqual(RequestModel.restoreRegulationRequests(JSON.parse(JSON.stringify(state))), state); assert.ok(Object.isFrozen(state));',
         ],
         directory,
       );

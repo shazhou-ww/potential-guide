@@ -75,7 +75,7 @@ export const releasePackages = [
     id: "regulation-coordinator",
     directory: "regulation-coordinator",
     name: "@potential-guide/regulation-coordinator",
-    requiredExports: ["regulationCoordinator"],
+    requiredExports: ["regulationCoordinator", "RequestModel"],
     bins: [],
     forbiddenDependencies: ["@potential-guide/cli-core", "@potential-guide/objective-guide"],
   },

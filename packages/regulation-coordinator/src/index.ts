@@ -21,6 +21,7 @@ import type {
 } from "./types.js";
 import { immutable, positive } from "./validation.js";
 
+export * as RequestModel from "./requests.js";
 export * from "./types.js";
 
 /** Acquisition, not output subscriptions, starts the single scheduler. */
