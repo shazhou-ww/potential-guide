@@ -220,3 +220,12 @@ Q02 已确认当前执行链全量迁移到新的 probe 服务契约，无 run.*
 候选首轮限定本机服务，不包含公网托管、远端路径或 secret/subject 上传。
 远程 HTTP 能力不代表本地文件路径可跨机器读取；远程部署、授权及输入传输须另行决定。
 此限制为建议，尚非用户已确认的排除项。
+
+## 后续替代方向：统一 Node 的共享 Check Host
+
+用户要求探索限制所有 check 使用 Node（或同一技术栈），全局由一个进程调度，
+各 Objective Pilot 注册 worker 模块入口的做法。比较重点和未决边界记录于
+[OpenQuestions.md](./OpenQuestions.md) 的 Q11；当前仅探索，没有替换本 idea 的已记录进程方案。
+共享 Host 可统一线程调度并通过本地 IPC 避免 per-Pilot TCP 端口管理，
+但代价是统一模块契约、扩大进程故障域及重新界定信任/资源边界。
+这不是简单把多个 executable 塞入同一进程，也不代表自动共享 worker 的模块缓存。
