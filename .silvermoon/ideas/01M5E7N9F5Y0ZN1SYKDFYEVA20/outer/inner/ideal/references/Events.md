@@ -1,6 +1,6 @@
 # 从 Coordinator 当前状态推导事件
 
-本文支撑 [Design.md](./Design.md)、[Types.md](./Types.md) 与 [Views.md](./Views.md)，不是独立验收合同。先收敛基础状态和视图 SELECT，再列合法转换并推导 Command/Event；下面是覆盖检查，不冻结事件类别、数量或 payload。
+本文为历史讨论参考，当前入口为 [简化设计](../Design.md)，以下事件候选不作为当前实施规范。原文支撑 [原设计](./Design.md)、[Types.md](./Types.md) 与 [Views.md](./Views.md)，不是独立验收合同；以下保留原稿，不冻结事件类别、数量或 payload。
 
 ## 完整状态与消息历史的职责
 

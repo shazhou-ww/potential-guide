@@ -1,6 +1,6 @@
 # Coordinator 业务实体关系
 
-本文支撑 [Types.md](./Types.md) 与 [Design.md](./Design.md)，不是独立合同。只保留一张统一实体图，表达上游请求意图与下游执行事实，不按 intention/state 分设两套实体图。视图状态改由 [Views.md](./Views.md) 的表结构、属性来源、SELECT 和更新依赖定义，不再绘制聚合视图图形。
+本文为历史讨论参考，当前 ER 与观察需求统一见 [简化设计](../Design.md)。以下保留原图及其阶段性说明，不作为当前实施规范。原图支撑 [Types.md](./Types.md) 与 [原设计](./Design.md)，不是独立合同；原查询草案见 [Views.md](./Views.md)。
 
 ## 分类与阅读约定
 

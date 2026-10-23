@@ -1,6 +1,6 @@
 # Coordinator 业务实体与聚合视图模型草案
 
-本文支撑 [Idea.md](./Idea.md) 与 [Design.md](./Design.md)，不是独立验收合同或已发布 API。先用 [实体图](./Diagrams.md) 定义业务身份，用 [视图表与 SELECT](./Views.md) 定义查询冗余及其基础来源，再从合法转换推导 Command/Event。[Events.md](./Events.md) 仅作覆盖检查，不反过来决定状态结构。
+本文为历史讨论参考，当前入口为 [简化设计](../Design.md)，不作为当前实施规范。原文支撑 [Idea.md](../Idea.md) 与 [原设计](./Design.md)，不是独立验收合同或已发布 API。原讨论以 [实体图](./Diagrams.md)、[视图表与 SELECT](./Views.md) 和 [Events.md](./Events.md) 推导模型，以下保留原稿。
 
 ## 三个核心类型
 

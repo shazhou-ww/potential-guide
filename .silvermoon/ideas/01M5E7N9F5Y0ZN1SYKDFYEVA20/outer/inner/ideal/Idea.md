@@ -6,7 +6,7 @@
 
 ## 结果
 
-Coordinator 将治理请求与资源分配意图两个 Behavior 转换为执行状态 Behavior。稳定 Objective 在 subject 上具体化为 RegulationTarget，RegulationRequest 固定采用的 ObjectiveRevision、desiredLevel 与 priority，实际执行为 RegulationRun。Command/Event 分别由纯 reducer 归约，资源意图全量更新；支持请求与状态持久化恢复，副作用通过 monadic composition 组织。原则见 [Design.md](./Design.md)，先参考 [Types.md](./Types.md) 讨论 state，再推导 Command/Event。
+Coordinator 将治理请求与资源分配意图两个 Behavior 转换为完整状态 Behavior，保留纯归约与副作用分离。以统一业务 ER 和 Objective/Host 双主视角表达治理对象、要求与实际执行；关键不动点及各层观察需求统一见 [简化设计](./Design.md)。
 
 ## 边界
 
@@ -16,10 +16,10 @@ Coordinator 将治理请求与资源分配意图两个 Behavior 转换为执行�
 
 ## 验收标准
 
-- 单一请求命令保留递增 requestSeq 身份，每次运行必须归属一条不可变请求并由其推导对象与目标；依赖派生也先形成请求再执行。initial 不执行业务检查、不回滚；资源 binding/并发度全量更新表达期望，不伪报实际占用。
-- 两个纯 reducer 可重建约定状态；视图表有明确属性来源及 SELECT，事件增量维护与同版本完整重算一致。目标及执行状态可一致恢复，已终结意图不被重跑，失联调用核实前不虚报终止或释放占用。
-- pending、依赖、真实终止、资源拒绝及累计预算均有新验证；event 类型仍待推导，旧证据不冒充新验收。
+- 统一 ER 区分 Objective、Revision、Target、Request 与 Run；每个 Run 关联准确 Request 与执行 Host，同一 Request 可以跨 Host 执行，不随最新版本改写旧事实。
+- 观察层级为 Objective → Target → Request → Run 与 Host → Run；已讨论需求及候选补充均有清楚边界，不以查询实现或局部 Run 结果代替共享请求结论。
+- 资源第一参数的双 Behavior 输入、完整状态输出与两个纯 reducer 成立；回放不重做副作用，恢复及终止核实不伪报成功，旧交付证据不冒充本次验证。
 
 ## 下一步
 
-先按 [Types.md](./Types.md) 与 [Views.md](./Views.md) 收敛基础状态、视图 SELECT 和合法转换，再推导 Command/Event；类型及增量契约收敛后提交整份构想验收。
+先复核 [简化设计](./Design.md) 中 Target、Request、Run 的候选观察需求，再推导必要状态转换与 Command/Event；旧辅助文档移入参考目录，不将本次整理视为整份构想验收。

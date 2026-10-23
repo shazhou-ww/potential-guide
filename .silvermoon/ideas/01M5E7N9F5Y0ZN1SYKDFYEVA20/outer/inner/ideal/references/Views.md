@@ -1,6 +1,6 @@
 # Coordinator 观测模型与查询视图草案
 
-本文支撑 [Idea.md](./Idea.md)、[Types.md](./Types.md) 与 [Design.md](./Design.md)。业务实体关系只在 [Diagrams.md](./Diagrams.md) 绘图；视图以行粒度、属性来源、SELECT 和更新依赖定义。视图是可重算的查询冗余，不是另一个业务事实来源。以下为逻辑关系草案，不是已实现的数据库 schema，也不冻结尚未确定的事件协议。
+本文为历史讨论参考，当前观察需求见 [简化设计](../Design.md#4-观察主视角与层级)，以下 SQL 不作为当前实施规范。原文支撑 [Idea.md](../Idea.md)、[Types.md](./Types.md) 与 [原设计](./Design.md)；业务实体关系见 [Diagrams.md](./Diagrams.md)。以下保留原稿，不是已实现的数据库 schema，也不冻结事件协议。
 
 ## 观察中心与业务实体的区别
 
