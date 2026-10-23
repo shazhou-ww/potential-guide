@@ -7,6 +7,7 @@ import { executionContext } from "./execution.mjs";
 import { installation } from "./installation.mjs";
 import { sanity } from "./sanity.mjs";
 export async function check(stage, value, options = {}) {
+  const environment = options.environment ?? process.env;
   let directory;
   let timer;
   let abort;
@@ -29,7 +30,7 @@ export async function check(stage, value, options = {}) {
       } else {
         const metadata =
           options.timeoutMs === undefined
-            ? process.env.PGUIDE_PROBE_TIMEOUT_MS
+            ? environment.PGUIDE_PROBE_TIMEOUT_MS
             : String(options.timeoutMs);
         const outerTimeoutMs = metadata === undefined ? 30000 : Number(metadata);
         if (
@@ -61,7 +62,7 @@ export async function check(stage, value, options = {}) {
     );
     await mkdir(subject.scratchDirectory, { recursive: true });
     const probeDirectory =
-      options.pilot && !options.selfCheck ? process.env.PGUIDE_PROBE_TEMP_DIR : undefined;
+      options.pilot && !options.selfCheck ? environment.PGUIDE_PROBE_TEMP_DIR : undefined;
     if (probeDirectory !== undefined && !isAbsolute(probeDirectory))
       throw new Fault("outer-timeout: invalid PGUIDE_PROBE_TEMP_DIR runtime metadata.", 400);
     // Nested Git caches also create directories; keep Windows path headroom inside the probe.
@@ -72,6 +73,7 @@ export async function check(stage, value, options = {}) {
       controller.signal,
       Date.now() + subject.timeoutMs,
       options.evidence,
+      environment,
     );
     if (stage === "installation")
       await context.measure("installation", () => installation(subject, context));

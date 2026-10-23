@@ -7,7 +7,15 @@ import { directories, Fault, issue } from "./contract.mjs";
 export function execute(
   command,
   args,
-  { deadline = Date.now() + 24000, cwd, input, timeout = 6000, evidence, signal } = {},
+  {
+    deadline = Date.now() + 24000,
+    cwd,
+    input,
+    timeout = 6000,
+    evidence,
+    signal,
+    environment = process.env,
+  } = {},
 ) {
   evidence?.fact("command.started", { command });
   signal?.throwIfAborted();
@@ -17,7 +25,7 @@ export function execute(
       reject(new Fault("deadline-exceeded: stage execution budget exhausted.", 504));
       return;
     }
-    const env = { ...process.env, LC_ALL: "C", LANG: "C", GIT_TERMINAL_PROMPT: "0" };
+    const env = { ...environment, LC_ALL: "C", LANG: "C", GIT_TERMINAL_PROMPT: "0" };
     for (const name of Object.keys(env)) if (name.startsWith("GIT_")) delete env[name];
     env.GIT_TERMINAL_PROMPT = "0";
     const child = spawn(command, args, {

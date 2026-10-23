@@ -76,7 +76,7 @@ function launch(command, args, options) {
     if ([command, ...args].some((part) => /[%!&|<>^"\r\n]/.test(part)))
       throw new Fault("unsupported-command: use node with the absolute CLI .js entrypoint.");
     return spawn(
-      process.env.ComSpec ?? "cmd.exe",
+      options.env.ComSpec ?? "cmd.exe",
       ["/d", "/s", "/c", `"${[command, ...args].map((part) => `"${part}"`).join(" ")}"`],
       { ...options, windowsVerbatimArguments: true }
     );
@@ -162,9 +162,9 @@ async function stopTree(child) {
     });
   });
 }
-function executionContext(subject, directory, signal, deadline, evidence) {
+function executionContext(subject, directory, signal, deadline, evidence, environment = process.env) {
   const timing = (phase, durationMs) => {
-    if (process.env.PGUIDE_TIMINGS === "1")
+    if (environment.PGUIDE_TIMINGS === "1")
       process.stderr.write(
         `${JSON.stringify({ type: "pguide-timing", phase, durationMs: Math.round(durationMs) })}
 `
@@ -188,17 +188,17 @@ function executionContext(subject, directory, signal, deadline, evidence) {
       timing(phase, performance.now() - start);
     }
   };
-  const env = { ...process.env };
+  const env = { ...environment };
   delete env.PGUIDE_EVIDENCE_CONTEXT;
   env.PGUIDE_EVIDENCE_DISABLED = "1";
   for (const key of Object.keys(env)) if (/^GIT_/i.test(key)) delete env[key];
   env.GIT_TERMINAL_PROMPT = "0";
   env.GIT_CONFIG_NOSYSTEM = "1";
   env.GIT_CONFIG_GLOBAL = join3(directory, "empty-git-config");
-  env.PATH = process.env.PATH ?? process.env.Path;
+  env.PATH = environment.PATH ?? environment.Path;
   if (process.platform === "win32") {
-    env.SystemRoot = process.env.SystemRoot;
-    env.ComSpec = process.env.ComSpec;
+    env.SystemRoot = environment.SystemRoot;
+    env.ComSpec = environment.ComSpec;
   }
   if (subject.userHome !== void 0) {
     env.HOME = subject.userHome;
@@ -1155,6 +1155,7 @@ async function sanity(subject, context, directory, selected) {
 
 // packages/objective-pguide-setup/src/runner.mjs
 async function check(stage, value, options = {}) {
+  const environment = options.environment ?? process.env;
   let directory;
   let timer;
   let abort;
@@ -1174,7 +1175,7 @@ async function check(stage, value, options = {}) {
         if (subject.timeoutMs + 1e4 > 24e3)
           throw new Fault("outer-timeout: SSH Pilot checks require a total budget <=24000ms.", 400);
       } else {
-        const metadata = options.timeoutMs === void 0 ? process.env.PGUIDE_PROBE_TIMEOUT_MS : String(options.timeoutMs);
+        const metadata = options.timeoutMs === void 0 ? environment.PGUIDE_PROBE_TIMEOUT_MS : String(options.timeoutMs);
         const outerTimeoutMs = metadata === void 0 ? 3e4 : Number(metadata);
         if (metadata !== void 0 && metadata !== String(outerTimeoutMs) || !Number.isSafeInteger(outerTimeoutMs) || outerTimeoutMs < 1 || outerTimeoutMs > 2147483647)
           throw new Fault("outer-timeout: invalid PGUIDE_PROBE_TIMEOUT_MS runtime metadata.", 400);
@@ -1198,7 +1199,7 @@ async function check(stage, value, options = {}) {
       subject.timeoutMs
     );
     await mkdir3(subject.scratchDirectory, { recursive: true });
-    const probeDirectory = options.pilot && !options.selfCheck ? process.env.PGUIDE_PROBE_TEMP_DIR : void 0;
+    const probeDirectory = options.pilot && !options.selfCheck ? environment.PGUIDE_PROBE_TEMP_DIR : void 0;
     if (probeDirectory !== void 0 && !isAbsolute3(probeDirectory))
       throw new Fault("outer-timeout: invalid PGUIDE_PROBE_TEMP_DIR runtime metadata.", 400);
     directory = await mkdtemp(join6(probeDirectory ?? subject.scratchDirectory, "s-"));
@@ -1207,7 +1208,8 @@ async function check(stage, value, options = {}) {
       directory,
       controller.signal,
       Date.now() + subject.timeoutMs,
-      options.evidence
+      options.evidence,
+      environment
     );
     if (stage === "installation")
       await context.measure("installation", () => installation(subject, context));

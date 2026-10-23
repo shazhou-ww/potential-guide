@@ -42,6 +42,10 @@ terminal 仅为 sustainable 的目标别名，不作为观察结果。
 
 ## Subject 与入口
 
+共享 Check Host 执行时，HOME、PATH 等环境来自每次请求的显式上下文，而非 Host
+首次启动时的环境；身份检查、本机工具和 Docker transport 使用同一请求上下文。
+独立 helper 的环境行为保持不变。
+
 以下路径属于目标容器，不属于控制机。`target.type: docker` 通过已存在的本地 Docker
 引擎执行；目标必须具备 Node.js。它只发送检查源码和非秘密 subject，不挂载宿主目录，
 也不复制宿主 HOME 或凭据。容器名与执行用户分别传参，连接失败绝不回退到本机。

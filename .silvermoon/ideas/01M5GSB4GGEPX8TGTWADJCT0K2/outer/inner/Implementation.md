@@ -1,48 +1,32 @@
 # Implementation
 
-## 当前进度（2026-10-23 交接）
+## 当前进度（2026-10-23 实施候选）
 
-当前仍为 `implementing`，未记录 `submitInner` 或实施验收；ledger 中 I-S01 已完成，
-其余步骤和验收项仍未完成。步骤完成不代表整体实施验收通过。
-实现检查点 `add8c7ea9f4f` 已随合并提交 `ba7e9f82134b` 同步至 primary，
-可从另一台机器接手。详细命令、结果与限制见
-[实施证据的 Checkpoint 5](./Implementation-evidence.md#checkpoint-5可跨机器继续的未完成候选2026-10-23)；
-以下为当前候选摘要，不以此前检查点的通过结果替代最新验证。
+本轮实施步骤与验收项已有完成证据，ledger 的 I-* 已勾选；这不代表用户已验收。
+候选同步至 primary 后才提交准确 revision 的 `submitInner`，在显式实施验收前不进入部署或发布。
+详细结果和限制见 [实施证据的 Checkpoint 6](./Implementation-evidence.md#checkpoint-6跨平台验证与实施候选2026-10-23)。
 
-### 已实现与已有证据
+- 无 HTTP 内核、worker 调度、四路由、CLI discovery 与业务依赖结果处理均已接通；
+  6 个 Objective、16 个入口完成迁移，无旧协议回退。
+- 修复了 POSIX 强杀后未确认退出、并发 discovery 多启动，以及原子发布期间权限扫描
+  误判已删除 metadata 的实际缺口；attached 子进程也在清理范围内。
+- setup/self-check 与 health 使用每次请求的显式环境，不继承共享 Host 首次启动的
+  PATH/HOME/配置路径；嵌套 CLI 保留隔离 Host 位置，不转发任意环境变量。
+  Host cwd 固定在私有目录，测试清理等待自身拥有的并发连接与有界 OS 锁释放。
+- Windows Node 24.12.0 与 Ubuntu/WSL2 Node 24.14.1 的 Host suite 均无失败：
+  28 项分别为 27 通过/1 POSIX 跳过、26 通过/2 Windows 跳过；Linux 实际 owner/mode、CAS、
+  独立进程竞争、锁持有者崩溃和六轮 discovery 恢复均已执行。
+- 最终 `pnpm check` exit 0：Turbo 44/44、root tests、18 包打包、
+  10 组隔离消费及全部 16 个 tarball worker 入口通过。
+- 同一轮真实 CLI 测量 cold 17.00 s、每次新服务 median 20.02 s、
+  共享 hot median 3.70 s；shared 7 次 CLI 始终只初始化 2 个 worker。
+  冷后完整服务 RSS 253.80 MiB，包含 Windows 权限 helper。
 
-- I-S01/I-S02：已接通无 HTTP 内核、worker 调度、开始/取消/观察四路由、
-  CLI discovery 和业务依赖结果处理；6 个 Objective、16 个 check 已迁移，
-  无旧协议回退，生成物检查通过。
-- I-AC01/I-AC02：已有真实双 CLI、线程复用、revision 冲突及排空、
-  观察容量回收、退役/预热、取消及清理隔离、六轮启动/崩溃验证。
-  Windows discovery 私有 ACL 已有实际验证；POSIX 互斥已有候选实现，尚缺实机证据。
-- 最新独立 Host suite 为 27 项：26 通过、1 POSIX 跳过。
-  512 次混合任务为 Completed 448 / Failed 32 / Cancelled 32，
-  关闭后 workers/records 为 0；这不是无限期无泄漏证明。
-- 同环境完整 CLI 实测 cold 17.39 s、复用服务 hot median 5.03 s，
-  每次新服务 median 17.08 s；完整服务冷后 RSS 248.08 MiB。
-  该样本证明复用收益，不证明冷启动或绝对内存优于旧架构。
-
-### 未闭合项与接手顺序
-
-1. 定位最新 `pnpm check` 的失败：
-   `packages/objective-pilot/test/dependency.test.ts:349` 的进程退出确认断言
-   预期 ESRCH，但 `process.kill(child.pid, 0)` 未抛异常。根因未知，
-   不预判为 PID 复用、测试噪声或真实清理失败。
-2. 在实际 POSIX 平台验证 private owner/mode、CAS 互斥、
-   discovery 和锁持有者崩溃恢复；Windows 通过与平台 mock 不能替代这些证据。
-3. 修复后对最终候选运行完整 `pnpm check`（含 pack），
-   完成当前版本的 18 包/16 入口隔离消费验证。此前 checkpoint 4 的
-   `pnpm check` 和打包通过仅适用于当时版本；最新候选全量检查 exit 1，
-   后续 root tests/pack:check 未进入。
-4. 证据闭合后再更新 ledger、同步最终候选并提交实施门禁；
-   当前不进入部署或发布。
-
-换机器先刷新 primary 并确认上述检查点可达，再读本文件、实施证据和 accepted Design。
-本机 `.cache` 日志不随 Git 同步，不复制 descriptor/token 或运行状态；
-新验证创建专属私有 Host 根，先审查清理路径及 PID 归属并认证 readiness。
-此前危险清理的历史影响仍未知，用户已明确授权继续实施，不将该授权视为环境完整性结论。
+原 checkpoint 5 的 Windows ESRCH 断言本轮定向、全量和额外连续五次均未复现，
+未放宽断言；其历史根因仍未知，不将新发现的 POSIX 缺口冒充为该失败的根因。
+POSIX 证据来自实际 Linux/WSL2，不外推到所有 POSIX 系统；512 次负载和短时 RSS
+不能证明无限期无泄漏，也不证明冷启动或绝对内存优于旧架构。
+此前危险清理的历史影响仍未知，本轮验证不等于历史环境完整性结论。
 
 ## Steps
 

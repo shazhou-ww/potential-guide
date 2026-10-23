@@ -59,12 +59,18 @@ deleted during operation; process death releases the OS lock. Validation uses
 same process would release POSIX record locks. SQLite is experimental in the
 supported Node versions and may emit Node's standard experimental warning.
 Lock acquisition is bounded and failures have no unlocked fallback.
+Privacy scans retry metadata that disappears during atomic publication; surviving
+insecure owner/mode/link metadata still fails closed. Windows scan handles exclude
+deletion during validation; POSIX also retries an already unlinked old inode.
 
 After spawn, discovery conditionally transfers the startup reservation to the
 actual child PID. A child that dies before running its assembly no longer leaves
 a live launcher incorrectly owning its stale startup record. The assembly accepts
 the same reservation already transferred to itself. Unknown/partial startup
 ownership still times out rather than authorizing deletion of an unknown record.
+After acquiring a reservation, discovery rechecks the live descriptor before
+spawning, closing the publication/removal race between concurrent callers.
+The Host starts in its private directory, never in a caller's transient cwd.
 
 All requests need the descriptor's bearer token. `context` is opaque per-execution
 JSON supplied by the adapter, not a Host dependency protocol. GET returns JSON,
@@ -100,6 +106,9 @@ The runner loads the verified CommonJS entry with a boundary-checked require.
 Caller loader/debug flags and `NODE_OPTIONS` are not forwarded to worker threads.
 Request-owned `spawn`, `exec`, `execFile` (including its promisified form), and
 `fork` children are tracked; unfinished children prevent a successful terminal state.
+Forced cleanup signals both the owned POSIX process group and its root (including
+non-detached children), then waits for OS exit acknowledgement within the cleanup
+budget before reporting a terminal failure. Signal delivery alone is not cleanup.
 
 Defaults: four total threads (including startup/retirement/prewarm), 64 queued
 tasks, 64 artifact directories, 30-second execution deadline, five-second cleanup

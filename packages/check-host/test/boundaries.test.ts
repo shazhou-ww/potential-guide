@@ -269,7 +269,7 @@ const {promisify}=require("node:util");
 const {writeFileSync}=require("node:fs");
 const {join}=require("node:path");
 exports.execute=async(subject)=>{
-  const options={stdio:"ignore",detached:process.platform!=="win32"};
+  const options={stdio:"ignore",detached:process.platform!=="win32" && subject.kind!=="attached"};
   const pending=subject.kind==="fork"
     ? cp.fork(join(__dirname,"child.cjs"),[],{...options,stdio:["ignore","ignore","ignore","ipc"]})
     : subject.kind==="promise"
@@ -284,7 +284,7 @@ exports.execute=async(subject)=>{
   const owned = new Set<number>();
   try {
     await writeFile(join(f.directory, "child.cjs"), "setInterval(()=>{},1000);");
-    for (const kind of ["execFile", "promise", "fork"]) {
+    for (const kind of ["execFile", "promise", "fork", "attached"]) {
       const pidFile = join(f.root, `${kind}.pid`);
       await f.start(kind, { kind, pidFile });
       const state = await finished(f.kernel, kind);

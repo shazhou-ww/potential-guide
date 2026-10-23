@@ -80,7 +80,7 @@ for (const stage of ["identity", "system", "toolchains", "order", "sustainabilit
     source: `import { check } from "./packages/objective-devbox-health/src/runner.mjs";
 ${common}
 export async function execute(subject, context) {
-  return envelope(await check(${JSON.stringify(stage)}, subject, {signal:context.signal,deadline:context.deadline}));
+  return envelope(await check(${JSON.stringify(stage)}, subject, {signal:context.signal,deadline:context.deadline,environment:context.data.environment ?? {}}));
 }`,
     resources: [["runtime/health-check.mjs", "health-check.mjs"]],
   });
@@ -92,7 +92,7 @@ for (const name of ["objective-pguide-setup", "objective-pguide-self-check"])
       source: `import { check } from "./packages/${name === "objective-pguide-setup" ? name : `${name}/runtime`}/${name === "objective-pguide-setup" ? "src/runner.mjs" : "src/runner.mjs"}";
 ${common}
 export async function execute(subject, context) {
-  return envelope(await check(${JSON.stringify(stage)},subject,{pilot:true,selfCheck:${name === "objective-pguide-self-check"},signal:context.signal,timeoutMs:context.data.timeoutMs}));
+  return envelope(await check(${JSON.stringify(stage)},subject,{pilot:true,selfCheck:${name === "objective-pguide-self-check"},signal:context.signal,timeoutMs:context.data.timeoutMs,environment:context.data.environment ?? {}}));
 }`,
       resourceTree: name === "objective-pguide-setup" ? "sanity-fixture" : "runtime",
     });

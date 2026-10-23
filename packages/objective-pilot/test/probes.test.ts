@@ -148,6 +148,41 @@ exports.execute=async(subject)=>{
   );
 });
 
+test("reused workers receive fresh caller environment without forwarding arbitrary secrets", async () => {
+  const previous = process.env.XDG_CONFIG_HOME;
+  const secret = process.env.PGUIDE_PROBE_TEST_SECRET;
+  process.env.PGUIDE_PROBE_TEST_SECRET = "not-for-the-worker";
+  try {
+    await withWorker(
+      `exports.execute=async(_,context)=>({
+        status:200,message:JSON.stringify(context.data.environment),
+        payload:{ok:true,problems:[]}
+      });`,
+      async (probe, kernel) => {
+        for (const home of ["first-caller", "second-caller"]) {
+          process.env.XDG_CONFIG_HOME = home;
+          const result = await probe(subject, signal);
+          const environment = JSON.parse(result.message);
+          assert.equal(environment.XDG_CONFIG_HOME, home);
+          assert.equal(environment.PATH, process.env.PATH);
+          assert.equal(
+            environment.PGUIDE_CHECK_HOST_DIRECTORY,
+            process.env.PGUIDE_CHECK_HOST_DIRECTORY,
+          );
+          assert.equal(environment.PGUIDE_PROBE_TEST_SECRET, undefined);
+          assert.equal(environment.PGUIDE_EVIDENCE_CONTEXT, undefined);
+        }
+        assert.equal(kernel.diagnostics().initializations, 1);
+      },
+    );
+  } finally {
+    if (previous === undefined) delete process.env.XDG_CONFIG_HOME;
+    else process.env.XDG_CONFIG_HOME = previous;
+    if (secret === undefined) delete process.env.PGUIDE_PROBE_TEST_SECRET;
+    else process.env.PGUIDE_PROBE_TEST_SECRET = secret;
+  }
+});
+
 test("transport failures and malformed process output cannot look like business defects", async () => {
   for (const script of [
     "process.stdout.write('not json')",

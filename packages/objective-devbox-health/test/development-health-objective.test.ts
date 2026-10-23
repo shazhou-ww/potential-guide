@@ -79,6 +79,17 @@ function direct(script: string, args: string[], input: string) {
   });
 }
 
+test("health subprocesses use the request environment rather than inherited Host state", async () => {
+  const { execute } = await import(pathToFileURL(join(objective, "src", "execution.mjs")).href);
+  const result = await execute(
+    process.execPath,
+    ["-e", "console.log(JSON.stringify({home:process.env.HOME,path:process.env.PATH}))"],
+    { environment: { HOME: "request-home", PATH: "request-path" } },
+  );
+  assert.equal(result.code, 0);
+  assert.deepEqual(JSON.parse(result.stdout), { home: "request-home", path: "request-path" });
+});
+
 test("health manifest defines five ordered, nonredundant levels and complete zh-CN wiki", () => {
   assert.deepEqual(
     loaded.manifest.levels.map((level) => level.id),

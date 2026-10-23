@@ -27,6 +27,7 @@ export async function remote(stage, subject, options = {}) {
       deadline: Date.now() + 27000,
       timeout: 27000,
       signal: options.signal,
+      environment: options.environment,
     },
   );
   if (result.code !== 0)

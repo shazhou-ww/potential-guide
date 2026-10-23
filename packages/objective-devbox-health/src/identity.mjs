@@ -14,12 +14,13 @@ export function sudoUnrestricted(output) {
 }
 export async function identity(subject, context) {
   const actual = userInfo();
+  const environment = context.environment ?? process.env;
   const problems = [];
   if (
     actual.uid === 0 ||
     actual.username !== subject.user ||
     actual.homedir !== subject.home ||
-    process.env.HOME !== subject.home
+    environment.HOME !== subject.home
   )
     problems.push(
       issue("identity-mismatch", {
@@ -27,17 +28,17 @@ export async function identity(subject, context) {
         actual: {
           user: actual.username,
           home: actual.homedir,
-          HOME: process.env.HOME ?? "",
+          HOME: environment.HOME ?? "",
           uid: actual.uid,
         },
         recovery:
           "Run as the declared non-root account with its HOME; do not hide a root invocation.",
       }),
     );
-  const environment = await detectedEnvironment();
-  if (environment !== subject.environment)
+  const detected = await detectedEnvironment();
+  if (detected !== subject.environment)
     problems.push(
-      issue("environment-mismatch", { expected: subject.environment, actual: environment }),
+      issue("environment-mismatch", { expected: subject.environment, actual: detected }),
     );
   problems.push(...(await directoryProblems(subject)));
   const sudo = await execute("sudo", ["-n", "-l"], context);

@@ -128,6 +128,28 @@ test("broad legacy directory is rejected without rewriting its ACL or creating c
   }
 });
 
+test("privacy scans tolerate atomic publication without accepting insecure metadata", async () => {
+  const root = await fixture();
+  try {
+    await createPrivateFile(root, "host.json", "0");
+    await Promise.all([
+      (async () => {
+        for (let n = 1; n <= 32; n++)
+          assert.equal(await publishPrivateFile(root, "host.json", String(n), String(n - 1)), true);
+      })(),
+      ...Array.from({ length: 4 }, async () => {
+        for (let n = 0; n < 64; n++) await ensurePrivateDirectory(root);
+      }),
+    ]);
+    assert.equal(await readPrivateFile(root, "host.json"), "32");
+    if (process.platform === "win32") await acl(root, join(root, "host.json"), false, "S-1-1-0");
+    else await chmod(join(root, "host.json"), 0o644);
+    await assert.rejects(ensurePrivateDirectory(root), { code: "EPRIVATE" });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("broad descriptor, startup, store mutex and legacy publication files fail closed before HTTP", async (t) => {
   const originalFetch = globalThis.fetch;
   let requests = 0;

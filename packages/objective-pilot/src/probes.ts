@@ -82,6 +82,29 @@ export function createWorkerCheckProbe(options: {
           revision: options.revision,
           subject: structuredClone(subject) as HostSubject,
           context: {
+            environment: Object.fromEntries(
+              [
+                "PATH",
+                "Path",
+                "SystemRoot",
+                "WINDIR",
+                "ComSpec",
+                "TEMP",
+                "TMP",
+                "HOME",
+                "USERPROFILE",
+                "APPDATA",
+                "LOCALAPPDATA",
+                "XDG_CONFIG_HOME",
+                "XDG_STATE_HOME",
+                "XDG_CACHE_HOME",
+                "TMPDIR",
+                "LANG",
+                "LC_ALL",
+                "PGUIDE_TIMINGS",
+                "PGUIDE_CHECK_HOST_DIRECTORY",
+              ].flatMap((key) => (process.env[key] === undefined ? [] : [[key, process.env[key]]])),
+            ),
             resolutions: JSON.parse(JSON.stringify(resolutions ?? [])),
             inputView:
               options.inputView === undefined

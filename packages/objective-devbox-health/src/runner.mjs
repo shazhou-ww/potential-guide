@@ -26,6 +26,7 @@ export async function invoke(stage, value, evidence, options = {}) {
       deadline: Math.min(options.deadline ?? Infinity, Date.now() + 24000),
       evidence,
       signal: options.signal,
+      environment: options.environment ?? process.env,
     };
     evidence?.fact("stage.started", { stage });
     if (stage === "sample")

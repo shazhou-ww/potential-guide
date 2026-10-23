@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 import { Worker } from "node:worker_threads";
 import { Effect, SubscriptionRef } from "@potential-guide/effects";
@@ -396,7 +397,7 @@ export class CheckKernel {
     }
   }
   private async cleanChildren(slot: Slot) {
-    for (const pid of slot.owned) {
+    for (const pid of [...slot.owned]) {
       if (process.platform === "win32") {
         try {
           await promisify(execFile)("taskkill", ["/PID", String(pid), "/T", "/F"], {
@@ -417,9 +418,26 @@ export class CheckKernel {
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
         }
+        try {
+          process.kill(pid, "SIGKILL");
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+        }
       }
+      const deadline = performance.now() + this.limits.cleanupMs;
+      for (;;) {
+        try {
+          process.kill(pid, 0);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+          break;
+        }
+        if (performance.now() >= deadline)
+          throw new Error(`Owned process ${pid} did not exit during bounded cleanup.`);
+        await delay(10);
+      }
+      slot.owned.delete(pid);
     }
-    slot.owned.clear();
   }
   private async breakSlot(slot: Slot, reason: string) {
     if (slot.retiring) return;

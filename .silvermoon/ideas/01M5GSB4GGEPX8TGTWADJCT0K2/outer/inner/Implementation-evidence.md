@@ -606,3 +606,100 @@ Node SQLite 的 experimental warning 如实保留，未用 warning suppression �
 discovery 和实际 owner/mode 路径，保留对应精确 commit/平台证据；然后对最终候选重新
 `pnpm check`（含 pack），必要时再核对 18 包/16 入口消费。没有新的用户批准，不扩为
 远程服务或认证平台。证据完整前 I-* 不勾选，不 submit/accept，不发布。
+
+## Checkpoint 6：跨平台验证与实施候选（2026-10-23）
+
+本轮从 primary `f4d42cb106ec` 开始，工作树初始干净。用户要求继续推进实施；
+期间普通 fast-forward 整合并发 primary `aa347f647b71` 的 coordinator 工作，
+保留其代码与事件历史；整合后的最终候选重新完整验证通过。
+没有修改 accepted Ideal、Deployment、历史契约或固定证据，没有记录实施验收或发布。
+以下结果取代 checkpoint 5 的候选阻断结论，但不抹除历史失败或未知环境影响。
+
+### 定位与修复
+
+- 原 Windows dependency ESRCH 断言在首次定向和全量中通过；额外连续五次定向均通过，
+  Linux 也通过。未删除或放宽断言，历史根因仍未知，不认定为 PID 复用或测试噪声。
+- 第一次实际 Linux Host suite 为 27 项、23 pass/2 fail/2 skip：
+  owned child 强杀后仍存活，以及四个 discovery caller 多启动了一个替补。
+  kernel 现在同时处理 POSIX 进程组与 tracked root，等待有界 OS 退出确认后才终结失败；
+  覆盖 execFile、promisified execFile、fork 和非 detached 子进程。
+  discovery 获得 startup reservation 后重查 live descriptor，再决定是否启动。
+- 后续 Linux 复测捕获权限扫描与原子发布的真实竞态：readdir 后文件消失，或 open 后
+  旧 inode 已被 unlink。仅对此类瞬态用既有有界 EBUSY 策略重新扫描；
+  surviving metadata 的实际 UID、mode、单硬链、regular/no-follow 检查不放宽。
+  新用例在并发发布/扫描后故意 chmod 0644，仍必须拒绝为 EPRIVATE。
+- 整合 primary 后第一次全量复验又捕获 Windows 原生目录扫描的同类 ENOENT：
+  枚举后的文件可能在 CreateFileW 前被删除。仅扫描阶段将此瞬态映射为 EBUSY，
+  metadata handle 验证期间不共享删除权限，阻止验证中 inode 被替换。
+  新并发扫描回归现在也在 Windows 执行，随后实际放宽 ACL 仍须 EPRIVATE；
+  Windows 完整 Host suite 和额外连续三轮并发恢复/扫描通过后再跑全量。
+- Windows 全量另稳定复现两个 setup/self-check Git snapshot 用例停在 installed。
+  worker adapter 现在显式传递调用方 PATH、系统/临时目录、HOME/USERPROFILE、
+  APPDATA/XDG 路径和 PGUIDE_CHECK_HOST_DIRECTORY；setup/self-check 与 health
+  的 subprocess、身份检查和 Docker transport 消费同一请求上下文。
+  不转发任意认证变量，不回退到 Host 首次启动的遗留环境。
+- Host cwd 固定为其私有目录，不持有调用方的瞬态工作目录。
+  Windows 强杀 Host 后，权限 helper 因管道关闭退出；双 CLI fixture 对自身目录采用
+  有界删除重试，仍须实际删除成功。discovery fixture 逐个等待全部已启动连接，
+  不因 Promise.all 首个失败而提前恢复 mock、漏记后续 Host。
+  失败轮次遗留的两个 Linux Host 按精确 PID、命令行、私有目录和 reservation
+  核实归属后停止；不按进程名称或模糊路径清理。
+
+### 验证环境与可复现入口
+
+Windows 使用 Node v24.12.0 / pnpm 11.22.0。实际 POSIX 为 Ubuntu/WSL2、
+Linux 5.15.167.4-microsoft-standard-WSL2 / Node v24.14.1 / pnpm 11.22.0。
+Linux 从同一 Git baseline 的 archive 加本轮完整 candidate diff 建立独立临时快照，
+单独安装依赖、构建，不复用 Windows node_modules、descriptor、token 或运行状态。
+最终 Windows/Linux private-files.js SHA-256 同为
+`b46e0c22ca761d9545ca068652651e92cc6c9704edd643521cdf40624c0fcd8d`。
+
+| 验证 | 本轮结果 |
+| --- | --- |
+| `pnpm setup:build`、`self-check:build`、`health:build`、`workers:build` / `workers:check` | 相关资源重新生成，16 个 worker 入口新鲜度通过，没有手改 bundle |
+| `pnpm --filter @potential-guide/check-host test` | 各 28 项：Windows 27 pass/1 POSIX skip，Linux 26 pass/2 Windows skip，均 0 fail |
+| Linux private owner/mode、独立 CAS publisher、SQLite mutex 与 owner 强杀恢复 | 全部实际执行并通过，不是 Windows 路径或 mock 的替代 |
+| Linux 六阶段 discovery 恢复及新并发 privacy scan | 完整 suite 通过，另连续三轮定向通过；最后完整 suite 再通过 |
+| 双真实 CLI 的共享/线程复用 | Windows 与 Linux 均通过；失败路径连接收尾调整另定向通过 |
+| 新请求环境回归、dependency 历史用例 | Windows 与 Linux 均通过；连续请求只初始化 1 worker，环境不同且任意 secret 不被转发 |
+| setup/self-check Git snapshot 与实际 Agent fixture | Windows 与 Linux 两项均通过；使用测试 Agent，无真实模型请求 |
+| 最终 `pnpm check` | exit 0；layers/format/lint/typecheck、Turbo 44/44、root tests、pack:check 全部通过 |
+| 私有 Objective tarball 消费 | 同版本资源与全部 16 个内置 worker 入口通过 |
+| 发布包隔离消费 | 18 包打包、10 场景通过；combined 7 selected/17 internal，无 workspace 借用 |
+
+512 次 Linux 混合任务为 Completed 448 / Failed 32 / Cancelled 32，
+peakWorkers=2、peakRecords=16；末批 records/queue/ownedProcesses=0，
+关闭后继续断言 workers/records=0。最后一轮 RSS 样本 215.82→205.16 MiB，
+区间 205.16–215.82 MiB；96 次负载仍保留上涨样本，不以有限负载宣称无限期无泄漏。
+本轮既有 CJS import.meta build warning 和 Node SQLite experimental warning 仍明确保留。
+
+### 最终同环境真实消费测量
+
+完整验证结束后，无其他验证并行运行时执行 `node scripts/measure-check-host.mjs`，
+exit 0。Windows / Node v24.12.0，原样 package-standard Objective、
+279-byte 固定 Subject；structure artifact revision 仍为
+`180cb74cc92eeeaca0fc4080e4fe2ecbda8b4ab98621cc1b748477da841cd4ff`。
+测量脚本拥有并核实每个 Host/helper PID，结束后停止自身服务并删除自身 fixture。
+
+| 观测 | 本轮实测 |
+| --- | --- |
+| fresh Node + 单独 structure checker，7 次 | median 247.57 ms；不包含 CLI/Git/discovery |
+| 完整 CLI、shared cold | 17004.94 ms |
+| 完整 CLI、每次新服务，3 次 | median 20017.33 ms |
+| 完整 CLI、shared hot，6 次 | median 3699.72 ms |
+| shared cold 后完整服务 RSS / private bytes | 253.80 / 243.10 MiB，包含实际权限 helper |
+| 实际初始化计数 | shared 7 次 CLI 始终 2 个 worker，无按请求重建 |
+| 短时 RSS guard | 2×本轮 cold RSS = 507.60 MiB；不是长期泄漏 SLA |
+
+只将本轮同环境完整 CLI 的 fresh-service 与 shared-hot 比较为复用收益。
+不把 247.57 ms 单 checker 与完整 CLI 相比；不与旧 Node/不同输入长度的 checkpoint
+跨轮宣称加速，不证明 cold 或绝对内存优于旧架构。
+
+### 合同与门禁
+
+I-S01/I-S02/I-S03 与 I-AC01/I-AC02/I-AC03 的实现和当前验证均闭合；
+ledger 的全部 I-* 记录 Agent 完成，全部 D-* 仍未执行。
+候选需先验证并同步 primary，再为准确 implementation revision 提交 submitInner；
+只有随后明确的人类实施验收才能进入 deploying。没有 acceptance、npm 发布或远程生产变更。
+本机原始日志保存在当前会话的验证资料中，跨机器接手以本节已提交结果和上述重跑入口为准，
+不复制秘密 discovery 运行态。

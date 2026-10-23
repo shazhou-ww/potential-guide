@@ -56,6 +56,10 @@ Agent 根据检查结果和引导、按授权在 B 安装配置前置条件；�
 最近项目 `config.jsonc`，至少一份实际文件存在，否则 configuration-missing。
 默认值不能满足此门槛。两级按完整 ID 浅合并，配置文件不得存储秘密字面量。
 `userHome` 保留 HOME/USERPROFILE 原职责，不覆盖 APPDATA/XDG 优先级。
+共享 Host 的 worker 通过每次请求的显式上下文接收调用方的 PATH、系统/临时目录、
+HOME/USERPROFILE、APPDATA/XDG 路径和隔离 Host 位置，不使用首次启动 Host 时遗留的环境。
+不会转发任意环境变量或认证秘密；Agent 声明的额外环境若不可用，仍返回
+`environment-unavailable`，不会从 Host 的环境补取。
 旧声明仅定点删除该字段及真正依赖它的输入约束，不改历史 pin 或重建资源；
 见[手工迁移](../../docs/package-settings.md#setupself-check-declarations)。
 

@@ -75,11 +75,17 @@ export async function connectHost(directory = hostDirectory()): Promise<CheckCli
       try {
         await createPrivateFile(directory, "startup.json", record);
         created = true;
+        const published = await optionalPrivateFile(directory, "host.json");
+        if (published !== undefined && processAlive(parseHostAddress(published).pid)) {
+          await removePrivateFile(directory, "startup.json", record);
+          continue;
+        }
         const reservation = (JSON.parse(record) as { reservation: string }).reservation;
         const child = spawn(
           process.execPath,
           [fileURLToPath(new URL("./main.js", import.meta.url)), directory, reservation],
           {
+            cwd: directory,
             detached: true,
             windowsHide: true,
             stdio: "ignore",

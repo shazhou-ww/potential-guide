@@ -85,6 +85,11 @@ test("real startup and published Host crashes recover once without replaying old
   const claimed = new Set<ChildProcess>();
   const early = new Set<ChildProcess>();
   const pending: Promise<unknown>[] = [];
+  const connect = (directory: string) => {
+    const connection = connectHost(directory);
+    pending.push(connection);
+    return connection;
+  };
   await writeFile(
     preload,
     `import cp from "node:child_process";
@@ -110,6 +115,7 @@ if(existsSync(${JSON.stringify(pauseEarly)})){
     (command: string, args: readonly string[] = [], options: SpawnOptions = {}) => {
       if (command !== process.execPath || args[0] !== main || !args[1]?.startsWith(root))
         return originalSpawn(command, args, options);
+      if (options.detached) assert.equal(options.cwd, args[1]);
       const child = originalSpawn(command, ["--import", pathToFileURL(preload).href, ...args], {
         ...options,
         stdio: ["ignore", "ignore", "ignore", "ipc"],
@@ -155,9 +161,8 @@ context.defer(()=>clearTimeout(timer));
       if (phase === "early") {
         await writeFile(pauseEarly, "");
         const count = hosts.size;
-        recovering = Promise.all(Array.from({ length: 4 }, () => connectHost(directory)));
+        recovering = Promise.all(Array.from({ length: 4 }, () => connect(directory)));
         void recovering.catch(() => {});
-        pending.push(recovering);
         await eventually(() => hosts.size > count, "Discovery did not launch its owned child.");
         first = [...hosts.keys()].at(-1) as ChildProcess;
         await eventually(() => early.has(first), "Owned child did not reach pre-main phase.");
@@ -206,7 +211,7 @@ context.defer(()=>clearTimeout(timer));
       await hosts.get(first);
       const before = hosts.size;
       const clients = await (recovering ??
-        Promise.all(Array.from({ length: 4 }, () => connectHost(directory))));
+        Promise.all(Array.from({ length: 4 }, () => connect(directory))));
       assert.equal(hosts.size, before + 1, "Concurrent recovery must launch exactly one Host.");
       const replacement = [...hosts.keys()].at(-1);
       assert.ok(replacement);

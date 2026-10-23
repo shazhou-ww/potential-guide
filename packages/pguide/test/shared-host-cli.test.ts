@@ -147,7 +147,7 @@ exports.execute=async()=>({status:200,message:"",payload:{ok:false,problems:[{ki
       owned.add(pid);
     }
     for (const pid of owned) await stopOwnedHost(pid);
-    await rm(directory, { recursive: true, force: true });
+    await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
     await rm(f.directory, { recursive: true, force: true });
   }
 });

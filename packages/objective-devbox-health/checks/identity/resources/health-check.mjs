@@ -434,7 +434,15 @@ export function validateSubject(value) {
 export function execute(
   command,
   args,
-  { deadline = Date.now() + 24000, cwd, input, timeout = 6000, evidence, signal } = {},
+  {
+    deadline = Date.now() + 24000,
+    cwd,
+    input,
+    timeout = 6000,
+    evidence,
+    signal,
+    environment = process.env,
+  } = {},
 ) {
   evidence?.fact("command.started", { command });
   signal?.throwIfAborted();
@@ -444,7 +452,7 @@ export function execute(
       reject(new Fault("deadline-exceeded: stage execution budget exhausted.", 504));
       return;
     }
-    const env = { ...process.env, LC_ALL: "C", LANG: "C", GIT_TERMINAL_PROMPT: "0" };
+    const env = { ...environment, LC_ALL: "C", LANG: "C", GIT_TERMINAL_PROMPT: "0" };
     for (const name of Object.keys(env)) if (name.startsWith("GIT_")) delete env[name];
     env.GIT_TERMINAL_PROMPT = "0";
     const child = spawn(command, args, {
@@ -596,12 +604,13 @@ export function sudoUnrestricted(output) {
 }
 export async function identity(subject, context) {
   const actual = userInfo();
+  const environment = context.environment ?? process.env;
   const problems = [];
   if (
     actual.uid === 0 ||
     actual.username !== subject.user ||
     actual.homedir !== subject.home ||
-    process.env.HOME !== subject.home
+    environment.HOME !== subject.home
   )
     problems.push(
       issue("identity-mismatch", {
@@ -609,17 +618,17 @@ export async function identity(subject, context) {
         actual: {
           user: actual.username,
           home: actual.homedir,
-          HOME: process.env.HOME ?? "",
+          HOME: environment.HOME ?? "",
           uid: actual.uid,
         },
         recovery:
           "Run as the declared non-root account with its HOME; do not hide a root invocation.",
       }),
     );
-  const environment = await detectedEnvironment();
-  if (environment !== subject.environment)
+  const detected = await detectedEnvironment();
+  if (detected !== subject.environment)
     problems.push(
-      issue("environment-mismatch", { expected: subject.environment, actual: environment }),
+      issue("environment-mismatch", { expected: subject.environment, actual: detected }),
     );
   problems.push(...(await directoryProblems(subject)));
   const sudo = await execute("sudo", ["-n", "-l"], context);
@@ -1074,7 +1083,7 @@ export async function localSample(subject, context) {
     identityValue.uid === 0 ||
     identityValue.username !== subject.user ||
     identityValue.homedir !== subject.home ||
-    process.env.HOME !== subject.home
+    (context.environment ?? process.env).HOME !== subject.home
   )
     throw new Fault("sample-identity: run as the declared non-root user with its HOME.", 409);
   const fs = await statfs(subject.workspace, { bigint: true });
@@ -1396,6 +1405,7 @@ export async function remote(stage, subject, options = {}) {
       deadline: Date.now() + 27000,
       timeout: 27000,
       signal: options.signal,
+      environment: options.environment,
     },
   );
   if (result.code !== 0)
@@ -1462,6 +1472,7 @@ export async function invoke(stage, value, evidence, options = {}) {
       deadline: Math.min(options.deadline ?? Infinity, Date.now() + 24000),
       evidence,
       signal: options.signal,
+      environment: options.environment ?? process.env,
     };
     evidence?.fact("stage.started", { stage });
     if (stage === "sample")

@@ -1,7 +1,7 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { lstat, mkdir, open, readdir, rename, unlink } from "node:fs/promises";
+import { type FileHandle, lstat, mkdir, open, readdir, rename, unlink } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { withFileMutex } from "./store-lock.js";
 
@@ -187,8 +187,13 @@ public static class PrivateHostFiles {
       if(++count>64)throw new PrivatePathException("EPRIVATE");
       string name=Path.GetFileName(entry);
       if(name.EndsWith(".json",StringComparison.OrdinalIgnoreCase) || String.Equals(name,"private-store.lock",StringComparison.OrdinalIgnoreCase)) {
-        using(var file=CreateFileW(entry,Control|0x80,7,IntPtr.Zero,3,Reparse,IntPtr.Zero)) {
-          CheckHandle(file);Validate(file,false);
+        using(var file=CreateFileW(entry,Control|0x80,3,IntPtr.Zero,3,Reparse,IntPtr.Zero)) {
+          try {CheckHandle(file);}
+          catch(PrivatePathException error) {
+            if(error.Code=="ENOENT")throw new PrivatePathException("EBUSY");
+            throw;
+          }
+          Validate(file,false);
         }
       }
     }
@@ -524,6 +529,9 @@ export async function ensurePrivateDirectory(
     (stat.mode & 0o700) !== 0o700
   )
     throw privacyError();
+  await retryBusy(() => validatePosixMetadata(directory));
+}
+async function validatePosixMetadata(directory: string): Promise<void> {
   const names = await readdir(directory);
   if (names.length > 64) throw privacyError();
   for (const name of names) {
@@ -541,9 +549,17 @@ export async function ensurePrivateDirectory(
         throw privacyError();
       continue;
     }
-    const file = await open(childPath(directory, name), constants.O_NOFOLLOW | constants.O_RDONLY);
+    let file: FileHandle;
+    try {
+      file = await open(childPath(directory, name), constants.O_NOFOLLOW | constants.O_RDONLY);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") throw privacyError("EBUSY");
+      throw error;
+    }
     try {
       const value = await file.stat();
+      // Publication may replace/unlink a descriptor after readdir or open.
+      if (value.nlink === 0) throw privacyError("EBUSY");
       if (
         !value.isFile() ||
         value.nlink !== 1 ||

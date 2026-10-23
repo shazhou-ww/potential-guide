@@ -114,7 +114,7 @@ export async function localSample(subject, context) {
     identityValue.uid === 0 ||
     identityValue.username !== subject.user ||
     identityValue.homedir !== subject.home ||
-    process.env.HOME !== subject.home
+    (context.environment ?? process.env).HOME !== subject.home
   )
     throw new Fault("sample-identity: run as the declared non-root user with its HOME.", 409);
   const fs = await statfs(subject.workspace, { bigint: true });

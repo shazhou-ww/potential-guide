@@ -22,7 +22,7 @@ export function launch(command, args, options) {
     if ([command, ...args].some((part) => /[%!&|<>^"\r\n]/.test(part)))
       throw new Fault("unsupported-command: use node with the absolute CLI .js entrypoint.");
     return spawn(
-      process.env.ComSpec ?? "cmd.exe",
+      options.env.ComSpec ?? "cmd.exe",
       ["/d", "/s", "/c", `"${[command, ...args].map((part) => `"${part}"`).join(" ")}"`],
       { ...options, windowsVerbatimArguments: true },
     );
@@ -112,9 +112,16 @@ export async function stopTree(child) {
     });
   });
 }
-export function executionContext(subject, directory, signal, deadline, evidence) {
+export function executionContext(
+  subject,
+  directory,
+  signal,
+  deadline,
+  evidence,
+  environment = process.env,
+) {
   const timing = (phase, durationMs) => {
-    if (process.env.PGUIDE_TIMINGS === "1")
+    if (environment.PGUIDE_TIMINGS === "1")
       process.stderr.write(
         `${JSON.stringify({ type: "pguide-timing", phase, durationMs: Math.round(durationMs) })}\n`,
       );
@@ -137,7 +144,7 @@ export function executionContext(subject, directory, signal, deadline, evidence)
       timing(phase, performance.now() - start);
     }
   };
-  const env = { ...process.env };
+  const env = { ...environment };
   delete env.PGUIDE_EVIDENCE_CONTEXT;
   env.PGUIDE_EVIDENCE_DISABLED = "1";
   // A caller's Git index/worktree/config overrides must not escape the owned fixture.
@@ -145,10 +152,10 @@ export function executionContext(subject, directory, signal, deadline, evidence)
   env.GIT_TERMINAL_PROMPT = "0";
   env.GIT_CONFIG_NOSYSTEM = "1";
   env.GIT_CONFIG_GLOBAL = join(directory, "empty-git-config");
-  env.PATH = process.env.PATH ?? process.env.Path;
+  env.PATH = environment.PATH ?? environment.Path;
   if (process.platform === "win32") {
-    env.SystemRoot = process.env.SystemRoot;
-    env.ComSpec = process.env.ComSpec;
+    env.SystemRoot = environment.SystemRoot;
+    env.ComSpec = environment.ComSpec;
   }
   if (subject.userHome !== undefined) {
     env.HOME = subject.userHome;
