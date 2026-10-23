@@ -1,18 +1,18 @@
-# 以驻留 HTTP 服务复用 Objective 检查器
+# 以 Pilot 进程入口复用 Objective 检查器
 
 ## 问题
 
-一次性 check 进程反复加载相同重依赖；此前优化已减少重复观察，但进程初始化仍是主要开销。现有 HTTP probe 尚未接入 Pilot 的服务启动、路由及完整执行上下文。
+一次性 check 进程反复加载相同重依赖；此前优化已减少重复观察，但进程初始化仍是主要开销。当前模型缺少 Pilot 级统一 executable 及可复用的请求执行上下文。
 
 ## 结果
 
-check 纳入 probe 协议，由 CLI 调度 HTTP 检查服务；同一 Pilot 实例对应同一服务进程，check 调用是最小并发单元，可由独立线程执行。服务可接收不同 regulation object 和 subject 的请求，不随每次 probe 重启。
+每个 Objective Pilot 定义独立的进程 executable，由 CLI 启停并复用；同一兼容 Pilot 实例对应同一进程，内部自行管理 check 队列和执行线程。check 是最小并发单元，regulation object 和 subject 属于请求；指令传输方式另行选择。
 
 ## 边界
 
-- 服务按准确规则来源、版本及兼容执行策略隔离，不按 regulation object、subject 或单次 check 启动；各 check 请求的线程、输入和证据独立，Pilot 观察逻辑无需新增进程。
+- Pilot 进程按准确来源、版本及兼容策略隔离，不按 regulation object、subject 或 check 启动；执行请求上下文独立，不为每次 probe 再起一个进程。
 - 复用进程不等于复用输入、结果或证据；保留层级顺序、依赖来源、每轮视图、截止及取消语义。
-- CLI 是调度器，服务随顶层调用按需启停，不要求跨 CLI 共享。全量迁移至新的 probe 服务契约，不保留旧协议运行时兼容；历史 schema、源码和证据不改写。
+- CLI 管进程生命周期与路由，Pilot 管内部排队和线程；HTTP RPC 或其他传输尚未决定。保持顶层调用范围及全量迁移原则，旧运行协议不回退，历史契约与证据不改写。
 
 ## 验收标准
 
@@ -22,4 +22,4 @@ check 纳入 probe 协议，由 CLI 调度 HTTP 检查服务；同一 Pilot 实�
 
 ## 下一步
 
-Q01/Q02 已明确；[OpenQuestions.md](./OpenQuestions.md) 已收敛其余可解答的技术方案，继续讨论取消隔离、远程范围与同服务重入，再决定构想验收范围。
+进程入口和排队所有权已明确；先讨论 [OpenQuestions.md](./OpenQuestions.md) 的 Q10 指令传输，再收敛 Q03 依赖回传及其他边界，不预先固定 HTTP。

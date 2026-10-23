@@ -1,11 +1,12 @@
-# 驻留 HTTP Check 服务：调研与候选方案
+# Pilot 进程与 Check 请求：调研与候选方案
 
 ## 状态与已确认方向
 
-2026-10-22 的用户讨论明确选择 HTTP，而非为每次 check 启动 executable：
-每个 Objective Pilot 提供服务启动入口，所有 check 变为对该服务的请求；
-统一调度器管理进程生命周期。一次 Regulation 内多次 probe 可复用服务，
-无需再为观察逻辑创建一个 Pilot 进程。
+2026-10-23 的最新明确模型优先于此前 HTTP 方向：每个 Objective Pilot 定义独立的
+进程 executable，同一兼容 Pilot 实例启动一个可复用进程，由它管理内部 check 排队与线程。
+regulation object 和 subject 都随请求传入，不因此新建进程。
+check 指令通过本地 HTTP RPC 还是其他机制下发，重新作为待讨论选择。
+下文 HTTP 调研保留为候选资料，而非强制传输要求；alias `http-check-services` 暂保留用于定位。
 
 Q01 随后由用户明确：check 纳入 probe 协议，形成统一入口；调度器就是 CLI。
 顶层调用 regulation 或 probe 时事先启动所需服务，regulation 内再次 probe 时，
@@ -17,8 +18,9 @@ Q01 随后由用户明确：check 纳入 probe 协议，形成统一入口；调
 此前另一 idea 的门限委托不自动沿用到这里。Q02 随后经用户确认：破坏性升级、全量迁移，
 不保留旧 executable/裸 subject HTTP 的运行时兼容，保留明确版本及迁移边界。
 用户同时要求收敛可解答的其他问题；Q07/Q08/Q09 给出技术方案。
-Q03 仅归属方向已收敛，其 HTTP 回调入口、身份/证据闭环、预算取消、死锁及失联处理
-尚未定稿；Q04/Q05/Q06 也仍有行为取舍，状态详见 [OpenQuestions.md](./OpenQuestions.md)。
+Q03 仅归属方向已收敛，依赖回传、身份/证据闭环、预算取消、死锁及失联处理尚未定稿；
+Q04/Q05/Q06 也仍有行为取舍。先讨论新增 Q10 的指令传输，再决定是否需要 HTTP 回调入口，
+状态详见 [OpenQuestions.md](./OpenQuestions.md)。
 
 ## 性能动机与证据边界
 
@@ -90,7 +92,8 @@ HTTP 不提供远端业务停止保证，这一点同时有仓库测试证明。
     -> 启动所需服务并等待就绪
     -> probe / regulation 共用服务调度上下文
         -> 每轮 Pilot 观察及证据上下文
-        -> HTTP check 请求 -> 已有 Objective 服务实例
+        -> check 请求（传输待定）-> 已有 Pilot executable 进程
+            -> Pilot 内部请求队列与线程分配
             -> check 执行线程（请求 1，subject A / regulation X）
             -> check 执行线程（请求 2，subject B / regulation Y）
     -> 结束时 drain / 停止及资源回收
@@ -105,6 +108,10 @@ probe 协议的统一入口属于已确认要求；建议由协议包定义版�
 执行层提供 HTTP 请求适配，Git 来源适配层提供服务来源绑定，
 CLI 负责管理服务注册与使用，具体模块拆分及端点字段在后续协议设计确定。
 不将独立常驻 app、跨 CLI 租约注册或新的业务调度器作为本次必需架构。
+此处执行层的 HTTP 适配仅在 Q10 选择 HTTP 时采用；也可由双向本地消息通道承载。
+CLI 管进程生命周期和请求路由，Pilot executable 自己管理内部队列与线程，
+两者不是两套重复的 check 排队器。统一 executable 位于每个 Pilot 模型中，
+不是所有 Objective 共用一个万能业务程序，也不是为每个 check 保留一个启动脚本。
 
 ### 用户明确的进程与线程边界
 
@@ -136,8 +143,9 @@ regulation object、subject、观察 ID、check ref 和语言属于请求，不�
 建议模型为 absent -> starting -> ready -> draining -> stopped，失败为明确 fault。
 同身份并发 acquire 需要单次启动的仲裁；ready 需确认协议、来源和实例代际，
 不能通过“某个端口能连上”就认定是目标服务。
-建议首轮仅本机明确 loopback 地址，由 OS 分配端口并返回就绪消息；
-仅 loopback 并不等于已认证，仍需调用者与控制接口的能力限制。
+若 Q10 采用 HTTP，建议首轮明确 loopback 地址，由 OS 分配端口并返回就绪消息；
+仅 loopback 并不等于已认证。若采用本地消息通道，同样需限定连接和请求能力，
+但不要求额外 HTTP 地址或监听端口。
 
 顶层 CLI 在 probe 或 regulation 执行前启动所需服务并等待就绪；
 regulation 内多轮 probe 复用注册的有效实例。内层 probe 完成不关闭外层仍使用的服务，
@@ -152,7 +160,7 @@ shutdown 须先停止新请求、等待/取消活动任务，
 保留“业务未达成也是成功观察”的现有 envelope；不可将服务故障包装成低层级。
 候选管理协议需区分服务/实例、客户端/观察、requestId、完整 level/check ref、
 subject、语言、输入视图引用/摘要、剩余预算与证据身份，但不提前锁定 wire schema。
-新运行时统一采用版本化的 probe 服务请求，不再并行保留裸 subject HTTP 运行协议。
+新运行时统一采用版本化的 probe 服务请求，传输方式待 Q10 选择，不保留旧一次性运行协议。
 旧输入明确拒绝；可复用现有 envelope 校验、超时与 evidence 代码，
 但不能以相同接口静默重新解释旧 POST 语义。
 服务可拒绝不匹配版本或未声明 check，不能根据任意路径加载客户端提供的代码。
@@ -163,12 +171,13 @@ subject、语言、输入视图引用/摘要、剩余预算与证据身份，但
 
 ### 依赖、调度与取消的关键缺口
 
-根 HTTP check 仍会请求 package-standard 的依赖观察。当前建议为 CLI 提供请求级受限回调，
+根 check 仍会请求 package-standard 的依赖观察。当前建议为 CLI 提供请求级受限回传能力，
 将服务依赖请求路由回原观察宿主，由宿主调用现有绑定、预算及证据验证。
 跨 regulation worker 边界可转发控制消息，但不另起无关观察；
 回调绑定观察及父请求，结束时失效，具体协议字段仍待设计。
 不接受任意 subject 内 callback URL，也不让服务另起无宿主观察来冒充原轮证据。
-尚需讨论 CLI 是否临时监听 HTTP 回调、如何路由至 regulation worker 的原观察作用域，
+依赖回传不必预设为反向 HTTP：双向消息通道可承载依赖子请求；若选 HTTP，
+尚需讨论 CLI 是否临时监听回调、如何路由至 regulation worker 的原观察作用域，
 以及迟到响应、登记证据后再响应、预算取消和失联的完整状态；
 这些不是已确定的接口细节，问题集中记录于 [Q03](./OpenQuestions.md#q03-依赖请求回到谁如何保持原观察作用域方向已收敛协议闭环待讨论)。
 
@@ -180,7 +189,7 @@ subject、语言、输入视图引用/摘要、剩余预算与证据身份，但
 是否挂起/释放执行容量、预留依赖容量或明确拒绝仍待讨论，不能默默挂起或无限创建线程。
 
 HTTP 断线只表明客户端不再等待。取消应有请求身份及状态确认；
-Node 同步 TypeScript 运算应在线程中运行，不能占用 HTTP 控制面的事件循环。
+Node 同步 TypeScript 运算应在线程中运行，不能占用进程控制面的事件循环。
 建议协作取消加独立宿主截止，不能确认停止时终止对应工作线程并等待退出；
 单请求取消不应主动终止其他请求，服务整体崩溃时才涉及所有在途请求。
 线程终止对原生调用、外部子进程及资源清理的保证仍需验证，不能直接视为外部任务已停止。
