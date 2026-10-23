@@ -6,7 +6,7 @@
 
 | 类别 | 内容 | 含义 |
 | --- | --- | --- |
-| 业务实体 | Host、BindingRevision、HostResourceRevision、RegulationTarget、ObjectiveRevision、RegulationRequest、RegulationRun | 固定身份与属性只追加；资源版本的成员关系由 HostResourceBinding 表达 |
+| 业务实体 | Host、HostBindingRevision、HostResourceRevision、RegulationTarget、ObjectiveRevision、RegulationRequest、RegulationRun | 固定身份与属性只追加；资源版本的成员关系由 HostResourceBinding 表达 |
 | 事实记录 | Observation、Fault | 具有发生与来源意义，记录主键仍待确定 |
 | 查询视图 | 最新请求、Target 状态、当前观察、活跃集合、当前资源配置与实际占用 | 可物化，但必须能从不可变事实或充分基线重算；详细定义待统一 |
 | 变化事实与业务关系 | Run 生命周期、依赖发现/解除、Probe 开始/结束、配置生效 | 只追加发生事实；不另设请求 acknowledgement 或证据采纳事件 |
@@ -37,14 +37,14 @@ Host 是中央观察服务识别的逻辑 worker 身份，对应一个 Coordinat
 
 - ObjectiveRevision 不归属特定 Host，可被不同 Host 上的治理活动引用；不将 hostId 加入 objectiveKey。
 - Host 关联在其上执行的 RegulationRun。图中 hostId 显式表达跨 Host 查询所需的执行归属，由所属 Coordinator 的 Host 确定，不是每次 Run 任意选择的参数；Observation 经 Run 推导执行 Host。
-- Host 仅保留固定身份，不原地更新 resourceConfiguration。BindingRevision 保存不可变 binding 配置；HostResourceRevision 保存一次完整、生效的资源配置版本，HostResourceBinding 表达该版本包含哪些 binding 及各自 capacity。成员条目随版本一并追加，不独立修改或删除；空成员集合表示没有可用 binding。
-- 修改 binding 内容生成新的 BindingRevision；仅调整 capacity 则生成新的 HostResourceRevision，复用已有 BindingRevision。停用 binding 时，新资源版本不再包含它；旧版本及被 Run 引用的 binding 仍可解析。配置不含明文凭据，实际占用不写入这些记录。
+- Host 仅保留固定身份，不原地更新 resourceConfiguration。HostBindingRevision 保存不可变 binding 配置；HostResourceRevision 保存一次完整、生效的资源配置版本，HostResourceBinding 表达该版本包含哪些 binding 及各自 capacity。成员条目随版本一并追加，不独立修改或删除；空成员集合表示没有可用 binding。
+- 修改 binding 内容生成新的 HostBindingRevision；仅调整 capacity 则生成新的 HostResourceRevision，复用已有 HostBindingRevision。停用 binding 时，新资源版本不再包含它；旧版本及被 Run 引用的 binding 仍可解析。配置不含明文凭据，实际占用不写入这些记录。
 - 图中 Request、Run、Observation 和 Fault 的局部键及引用均处于所属 Host 的 Coordinator 状态范围；跨 Host 存储或查询必须携带 hostId。例如 Request 的跨 Host 身份是 (hostId, requestSeq)，状态版本也按 (hostId, revision) 解释，不能跨 Host 比大小。Host 的重启不能重置同一请求序列的水位。
 - 本轮只补 Host 层，不改变 targetKey 的定义，也不据此允许同一 Request 在多个 Host 上执行。同一 targetKey 可以出现在不同 Host 的状态中，但各自的请求、Probe 状态和执行事实不自动合并。中央观察服务汇集多个 Host 的状态，不因此成为运行这些 Run 的 Host；连接身份也不是 Host 身份。同步传输、跨 Host 依赖和一致性协议另行收敛。
 
 ### Append-only 资源模型与视图边界
 
-图中的实体属性及资源成员记录不可原地修改。HostResourceRevision 的 appliedAtRevision 表示该 Host 内配置完整生效的事件版本，不是待确认状态；同一 Host 的生效顺序必须唯一，完整配置及成员原子可见。版本身份的分配协议、配置 JSON schema 与 capacity 的具体合法值约束仍待收敛。跨 Host 引用保留所属 hostId，资源成员及 Run 引用的 BindingRevision 必须属于同一 Host。
+图中的实体属性及资源成员记录不可原地修改。HostResourceRevision 的 appliedAtRevision 表示该 Host 内配置完整生效的事件版本，不是待确认状态；同一 Host 的生效顺序必须唯一，完整配置及成员原子可见。版本身份的分配协议、配置 JSON schema 与 capacity 的具体合法值约束仍待收敛。跨 Host 引用保留所属 hostId，资源成员及 Run 引用的 HostBindingRevision 必须属于同一 Host。
 
 当前资源配置、当前可用 bindings/capacity、Run 当前执行阶段、实际占用和剩余容量均属于后续视图，不在 Host 或配置版本上保存可变指针、enabled 标记或占用计数。配置缩容不会改写已有 Run，也不能把负的容量差当成可用容量。当前图先更新资源事实模型；[Types.md](./Types.md) 的 TS 值草案及 [Views.md](./Views.md) 的旧来源契约尚待按讨论统一，不作为本轮图审阅已完成的部分。
 
@@ -66,11 +66,11 @@ config:
 erDiagram
     direction LR
     HOST ||--o{ REGULATION_RUN : hosts
-    HOST ||--o{ BINDING_REVISION : owns_binding
+    HOST ||--o{ HOST_BINDING_REVISION : owns_binding
     HOST ||--o{ HOST_RESOURCE_REVISION : configures
     HOST_RESOURCE_REVISION ||--o{ HOST_RESOURCE_BINDING : contains
-    BINDING_REVISION ||--o{ HOST_RESOURCE_BINDING : included_in
-    BINDING_REVISION ||--o{ REGULATION_RUN : used_by
+    HOST_BINDING_REVISION ||--o{ HOST_RESOURCE_BINDING : included_in
+    HOST_BINDING_REVISION ||--o{ REGULATION_RUN : used_by
     OBJECTIVE_REVISION ||--o{ REGULATION_TARGET : defines
     REGULATION_TARGET ||--o{ REGULATION_REQUEST : receives
     REGULATION_REQUEST ||--o{ REGULATION_RUN : executes
@@ -82,8 +82,8 @@ erDiagram
     HOST {
         string hostId PK "Logical worker identity"
     }
-    BINDING_REVISION {
-        string bindingRevisionId PK
+    HOST_BINDING_REVISION {
+        string hostBindingRevisionId PK
         string hostId FK
         string bindingId "Agent binding identity"
         JsonObject configuration "Optional immutable config"
@@ -95,7 +95,7 @@ erDiagram
     }
     HOST_RESOURCE_BINDING {
         string resourceRevisionId PK,FK
-        string bindingRevisionId PK,FK
+        string hostBindingRevisionId PK,FK
         number capacity "Configured concurrency"
     }
     OBJECTIVE_REVISION {
@@ -118,7 +118,7 @@ erDiagram
         string runId PK
         string hostId FK
         number requestSeq FK
-        string bindingRevisionId FK "Fixed actual binding"
+        string hostBindingRevisionId FK "Fixed actual binding"
         JsonObject executionLimits "Immutable per-run limits"
     }
     OBSERVATION {
@@ -147,7 +147,7 @@ erDiagram
 - Fault 为 umbrella 查询展开归属链；三条可选关系不是任意组合：Coordinator 层三个引用全 null，Target 层仅 targetKey，Request 层包含 targetKey/requestSeq，Run 层包含全部引用。必须由确定的父关系展开并校验一致，不用最新请求补齐。kind 表达种类，message 表达详情，不再存 stage 或另加 ownerKind；详见 [Fault 查询约束](./Types.md#fault-分类归属链与-umbrella-查询)。
 - Observation/Fault 不虚构主键；图中 FK 表达逻辑来源，历史归档须保留足够的引用证据，不强制永久保留全部在线父行。provider 故障不挂入 consumer 的链条，依赖影响另由关系与转换表达。
 - Observation 展开 current、observedAt、problems、gapSummary 以及现有 provenance 字段，不再重复存 value。problems 仍是集合，versions/sources 与新版本模型的适配待定，不为了查询臆造新实体。
-- Run 以 bindingRevisionId 引用实际使用的不可变配置，不再重复保存 bindingId/bindingConfiguration 快照；恢复不能换成最新 binding 版本。executionLimits 保存本次 Run 的固定执行限制，具体结构待定；不引入共享总预算或预算预留实体。执行进度与终结通过追加变化事实表达，后续再定义当前状态视图。
+- Run 以 hostBindingRevisionId 引用实际使用的不可变配置，不再重复保存 bindingId/bindingConfiguration 快照；恢复不能换成最新 binding 版本。executionLimits 保存本次 Run 的固定执行限制，具体结构待定；不引入共享总预算或预算预留实体。执行进度与终结通过追加变化事实表达，后续再定义当前状态视图。
 - Run 的 target 和 desiredLevel 均由固定 requestSeq 对应的 Request 推导，不重复保存，也不直接关联 Target。provider Request 表达 provider 自己的对象与目标，不能借用 consumer Request；旧 Run 不能通过 target 的最新请求解释。
 - 请求来源与 consumer 需求归属必须可追溯；共享 provider 的请求形成、复用、优先级和回收规则仍待细化，不要求每次发现依赖都重复创建请求。被 Run 或有效证据引用的请求须保留可解析记录，不能只靠 latestByTarget 映射。
 
