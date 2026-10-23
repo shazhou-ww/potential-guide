@@ -1,0 +1,122 @@
+{
+  "checkedAt": "2026-10-23T14:07:54.574Z",
+  "sourceCommit": "07a5890293504dcaac9ad0ec1d69dd2b0812d806",
+  "acceptedCode": "344136c5b47bd4a55663b23089efd7dd7cedef6b",
+  "implementationRevision": "764bdf07cd0496708947495ae96c8b70f1bdc382",
+  "contractBlob": "93709de37a3d054a17c033720027e6cdc5c5be6c",
+  "deploymentRevision": "c0e526f2594174a3982fa8718637b573e2a9adff",
+  "node": "v24.12.0",
+  "pnpm": "11.22.0",
+  "temporaryDirectory": "coordinator-deployment-l2UGYL",
+  "artifacts": [
+    {
+      "name": "@potential-guide/effects",
+      "version": "0.1.0-rc.0",
+      "file": "potential-guide-effects-0.1.0-rc.0.tgz",
+      "sha256": "0fe03517fa0d74ee2e6f6d45fa1b9716fd3de939c80654ed3283478b5b6c7c00",
+      "sourceTree": "5a756fb760d1fbe740f8af8c2d18093fae99188f"
+    },
+    {
+      "name": "@potential-guide/regulation-coordinator",
+      "version": "0.1.0-rc.0",
+      "file": "potential-guide-regulation-coordinator-0.1.0-rc.0.tgz",
+      "sha256": "28a0dba099b6799af12787af665603a62b5e9474825baa639cabb87ea3649a5c",
+      "sourceTree": "ccf3cf59b031a1f12519fe3371cfde5b8c162887"
+    },
+    {
+      "name": "@potential-guide/objective-pilot",
+      "version": "0.2.0-rc.0",
+      "file": "potential-guide-objective-pilot-0.2.0-rc.0.tgz",
+      "sha256": "7d14e3b1e6e2a44c9a16b8b0018ad20dc37cbf0f2e39796c38c2d42922a65bd6",
+      "sourceTree": "4cf8a6343c33474dda868ce8a9da26216e1d125d"
+    },
+    {
+      "name": "@potential-guide/check-host",
+      "version": "0.1.0",
+      "file": "potential-guide-check-host-0.1.0.tgz",
+      "sha256": "b0ca2d1d2c3426b13eb91beac58d698a25e60b8cd577f2e3f8fe32a313d0910d",
+      "sourceTree": "d0616b979870e054a774b86b1f6074447829d351"
+    },
+    {
+      "name": "@potential-guide/pilot-protocol",
+      "version": "0.1.0-rc.0",
+      "file": "potential-guide-pilot-protocol-0.1.0-rc.0.tgz",
+      "sha256": "9ccd8af6c8ed96f9214379ba2d29df298f657bfa92f6137f37e651cec50468c2",
+      "sourceTree": "cea81ed3c4c179529ad2056ec1e1f7836909971c"
+    },
+    {
+      "name": "@potential-guide/objective-regulator",
+      "version": "0.4.0-rc.0",
+      "file": "potential-guide-objective-regulator-0.4.0-rc.0.tgz",
+      "sha256": "37dbc15ec3d8b09750d4f6fbd7c09a47d84954c0e59e2028a83ab9f040cdb698",
+      "sourceTree": "8b618cb56e8cf9e1905e438dffd8c971b3ca3108"
+    },
+    {
+      "name": "@potential-guide/objective-portfolio-supervisor",
+      "version": "0.4.0-rc.0",
+      "file": "potential-guide-objective-portfolio-supervisor-0.4.0-rc.0.tgz",
+      "sha256": "be306092bcfaa971777abfd16059b4d5d9f4366d2681e75f25843c1ceaa96113",
+      "sourceTree": "032f6e88036d055aefea1c44559047d3cde153b4"
+    }
+  ],
+  "consumers": [
+    {
+      "phase": "first",
+      "starts": 2,
+      "childStarts": 1,
+      "childExits": 1,
+      "recoveries": 0,
+      "errors": [
+        "Error: EACCES: fixture resource denied."
+      ],
+      "revision": 14,
+      "runCount": 2,
+      "occupied": 0,
+      "legacyScopeClosed": true,
+      "storeClosed": true,
+      "resolutions": {
+        "@potential-guide/effects": "node_modules\\.pnpm\\@potential-guide+effects@fi_c3748d1b47a724fef184ec8e609a1788\\node_modules\\@potential-guide\\effects\\dist\\index.js",
+        "@potential-guide/regulation-coordinator": "node_modules\\.pnpm\\@potential-guide+regulation_a61993f3ec01448b7a06d83d195be7ba\\node_modules\\@potential-guide\\regulation-coordinator\\dist\\index.js"
+      }
+    },
+    {
+      "phase": "resume",
+      "starts": 0,
+      "childStarts": 0,
+      "childExits": 0,
+      "recoveries": 0,
+      "errors": [],
+      "revision": 14,
+      "runCount": 2,
+      "occupied": 0,
+      "legacyScopeClosed": true,
+      "storeClosed": true,
+      "resolutions": {
+        "@potential-guide/effects": "node_modules\\.pnpm\\@potential-guide+effects@fi_c3748d1b47a724fef184ec8e609a1788\\node_modules\\@potential-guide\\effects\\dist\\index.js",
+        "@potential-guide/regulation-coordinator": "node_modules\\.pnpm\\@potential-guide+regulation_a61993f3ec01448b7a06d83d195be7ba\\node_modules\\@potential-guide\\regulation-coordinator\\dist\\index.js"
+      }
+    },
+    {
+      "phase": "unknown",
+      "starts": 0,
+      "childStarts": 0,
+      "childExits": 0,
+      "recoveries": 1,
+      "errors": [
+        "Error: Cannot verify unverified-fixture."
+      ],
+      "revision": 6,
+      "runCount": 1,
+      "occupied": 1,
+      "legacyScopeClosed": true,
+      "storeClosed": true,
+      "resolutions": {
+        "@potential-guide/effects": "node_modules\\.pnpm\\@potential-guide+effects@fi_c3748d1b47a724fef184ec8e609a1788\\node_modules\\@potential-guide\\effects\\dist\\index.js",
+        "@potential-guide/regulation-coordinator": "node_modules\\.pnpm\\@potential-guide+regulation_a61993f3ec01448b7a06d83d195be7ba\\node_modules\\@potential-guide\\regulation-coordinator\\dist\\index.js"
+      }
+    }
+  ],
+  "cleanup": true,
+  "isolatedDependencyGraph": true,
+  "declarationCheck": true
+}
