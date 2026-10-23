@@ -1,4 +1,4 @@
-# Regulation Request 与 Coordinator State 模型草案
+# Coordinator 业务实体与聚合视图模型草案
 
 本文支撑 [Idea.md](./Idea.md) 与 [Design.md](./Design.md)，不是独立验收合同或已发布 API。先区分业务实体、事实记录与状态投影，按 [五张图](./Diagrams.md) 讨论 RegulationRequests 和 CoordinatorState，再以 TypeScript 补充表达，最后从合法转换推导 Command/Event。[Events.md](./Events.md) 仅作覆盖检查，不反过来决定状态结构。
 
@@ -16,18 +16,18 @@ PK 表示模型中的逻辑唯一键，多列标为 PK 表示复合主键；FK �
 
 requestSeq 在同一个请求序列范围内唯一并按逻辑接收顺序递增，可跨 target 比较；它是请求身份与顺序，不是每个 target 的修订号，也不代表实际调用顺序。CoordinatorState.revision 则是该 Coordinator 内的状态逻辑时序，状态更新、确认和执行事实引用此版本空间；两者不可直接比较。同次 Coordinator 转换可改变多个 target，它们共享该版本。存储混合多个请求序列或 Coordinator 时需宿主提供外部作用域，不因此把实例 ID 加回领域状态。
 
-## Regulation Request ER 模型
+## 统一业务实体模型
 
 ### 实体边界与身份假设
 
-概念上有四层：Objective source → ObjectiveDefinition → RegulationTarget → RegulationRequest；source 是字符串值，不单独建实体。三个实体分别表达定义、治理指向物、治理请求。RegulationTarget 是某个 Objective 在特定 subject 上的投射，不是一次执行；RegulationRequest 是在特定逻辑时序上要求向 desiredLevel 推进的请求，不是 Task。真正有开始与终结的执行仍叫 Regulation，一个请求可能尚未执行，也可能涉及有限依赖编排中的多次调用。
+概念上从 Objective source → ObjectiveRevision → RegulationTarget → RegulationRequest 延伸到 RegulationRun 及 Observation、Fault；source 是字符串值，不单独建实体。ObjectiveRevision 表达固定定义版本，RegulationTarget 是该版本在特定 subject 上的投射，不是一次执行；RegulationRequest 是在特定逻辑时序上要求向 desiredLevel 推进的请求，不是 Task。真正有开始与终结的执行叫 RegulationRun，一个请求可能尚未执行，也可能涉及有限依赖编排中的多次调用。命名优先表达单个实体含义，不强制前缀继承父实体名称。
 
 - **Objective source 标识来源。** source 必须标识 Git 仓库中的位置，表达仓库定位地址与仓库内相对路径；可以访问 HTTPS、SSH 或本地 Git 仓库，不要求整个 repo 就是一个 Objective。Git 语义由类型契约与校验保证，不添加 git+ 前缀，也不接受任意非 Git 文件目录。
-- **ObjectiveDefinition 使用单主键。** objectiveKey 是规范化 source 与固定 version 共同编码后的确定性哈希，标识一份精确定义版本，不再标识跨版本来源。version 是解析后的完整 Git commit object ID，同一 source 的不同 version 得到不同 key；保留 source 和 version 用于读取、追溯及校验，不能在原 key 下静默替换它们。
+- **ObjectiveRevision 使用单主键。** objectiveKey 是规范化 source 与固定 version 共同编码后的确定性哈希，标识一份精确定义版本，不再标识跨版本来源。version 是解析后的完整 Git commit object ID，同一 source 的不同 version 得到不同 key；保留 source 和 version 用于读取、追溯及校验，不能在原 key 下静默替换它们。
 - **RegulationTarget 绑定精确 definition。** 每个对象只以 objectiveKey 一个外键引用 definition，再结合 subject 身份推导 targetKey，不重复保存 objectiveVersion 外键。同一 subject 使用另一个 definition version 会形成另一个治理对象；一份 definition 可以被多个对象共享。
 - **RegulationRequest 表达历次请求。** requestSeq 是单主键，targetKey 仅是指向 RegulationTarget 的外键；desiredLevel、priority 属于请求，不属于 target 身份。同值新请求也获得新序号，不覆盖或修改旧请求记录。
 
-三个实体表达这些业务边界，不强制建立 source 表、独立 Objective 目录服务或新的顶层状态集合。TS 可以嵌套实体值，物理存储也可以用外键；表示方式不能改变上述身份关系。
+这些实体表达业务边界，不强制建立 source 表、独立 Objective 目录服务或新的顶层状态集合。TS 可以嵌套实体值，物理存储也可以用外键；表示方式不能改变上述身份关系。ObjectiveRevision 的 version 是 Git commit 身份，与 CoordinatorState.revision 的数字逻辑时序不是同一个版本空间；objectiveKey 仍标识精确 ObjectiveRevision，本轮不另换主键协议。
 
 ### Git 来源与版本的设计不动点
 
@@ -47,7 +47,7 @@ requestSeq 在同一个请求序列范围内唯一并按逻辑接收顺序递增
 
 ## Coordinator 状态分图导航
 
-以下五张图的源、分类边界和解释见 [Diagrams.md](./Diagrams.md)。第一张为实体 ER 图，其余为状态投影或组成图，不再把每个集合连到 snapshot 实体上。
+以下五张图的源、分类边界和解释见 [Diagrams.md](./Diagrams.md)。第一张统一表达上游 intention 和下游 state 涉及的业务实体，其余为聚合视图；不再分别维护请求侧和状态侧的实体模型，也不把每个集合连到 snapshot 实体上。
 
 | 图 | 阅读问题 | 独立 SVG |
 | --- | --- | --- |
@@ -55,9 +55,9 @@ requestSeq 在同一个请求序列范围内唯一并按逻辑接收顺序递增
 | 2. 请求与确认 | 最新提交与已确认请求有何区别？ | [请求视图](./diagrams/request-state.svg) |
 | 3. 单个 Target 状态 | 最近 Probe 与当前有效证据有何区别？ | [Target 状态](./diagrams/target-state.svg) |
 | 4. 当前执行与依赖 | 哪些调用占用资源，哪些依赖仍有效？ | [执行视图](./diagrams/execution-state.svg) |
-| 5. 快照组成 | 同一 Coordinator revision 下哪些状态必须一致？ | [快照组成](./diagrams/coordinator-state.svg) |
+| 5. 意图与状态聚合总览 | 请求、资源意图、完整状态及持久化边界如何关联？ | [聚合总览](./diagrams/coordinator-state.svg) |
 
-- 实体和事实具有业务身份或发生意义；ActiveRegulation/RegulationRecord 是同一次 Regulation 的不同生命周期表达，不是两个实体。
+- 实体和事实具有业务身份或发生意义；ActiveRegulationRun/RegulationRunRecord 是同一次 RegulationRun 的不同生命周期表达，不是两个实体。
 - 已确认请求、target 聚合、有效证据可以是持久化权威投影；“视图”不意味着只读 UI 查询或能从现有实体表任意重算。
 - 当前依赖是已采用的业务关系；资源确认、预算和生命周期是控制状态。实际占用可由尚未确认退出的调用推导，累计预算不能从裁剪后的历史求和。
 - CoordinatorSnapshot 是完整 CoordinatorState 在某个 revision 的一致聚合，不只是 current singleton，也不是新业务实体。业务实体图不表达物理快照成员键。
@@ -71,37 +71,39 @@ Collection<T> 表达领域中的记录集合，选用 Collection 而不是 Table
 
 下面暂用 readonly T[] 表达 Collection 的逻辑内容，便于讨论纯归约；不规定物理存储、索引、查询 API、分页或保留策略，也不要求把完整集合加载进内存或随 current 一起传输。它不是把分页查询返回的一小段数组冒充完整集合。
 
-正在进行的 Regulation 进入 current.activeRegulations，不再用 Task 包装排队、执行和终结的完整生命周期。调用确认结束时，从活跃集合移除并向 regulations 写入终结记录；同一事件对 singleton 与 collections 的变化须保持一致。UI 可分别读取 current 对象和查询各个 Collection，实时 Stream 本身不提供持久化或历史查询保证。
+正在进行的 RegulationRun 进入 current.activeRuns，不再用 Task 包装排队、执行和终结的完整生命周期。调用确认结束时，从活跃集合移除并向 runs 写入终结记录；同一事件对 singleton 与 collections 的变化须保持一致。UI 可分别读取 current 对象和查询各个 Collection，实时 Stream 本身不提供持久化或历史查询保证。
 
-例如 regulationTargets 是按精确对象身份维护的聚合状态集合，每个对象一条记录，包含它最后一次 Probe 的时间和结果，而不是每次 Probe 都增加一行的历史表。regulations 则示范终结记录集合，两者都是 collection state，不使用 history 分组来限定所有集合的含义。
+例如 regulationTargets 是按精确对象身份维护的聚合状态集合，每个对象一条记录，包含它最后一次 Probe 的时间和结果，而不是每次 Probe 都增加一行的历史表。runs 则示范终结记录集合，两者都是 collection state，不使用 history 分组来限定所有集合的含义。
 
 ## TypeScript 补充表达
 
-下面的可独立类型检查代码块表达最新请求映射、序号水位与某一个 Coordinator revision 下的状态值，补充各图中的值类型、可选性与联合分支；本次拆图不改变这些运行模型草案。CoordinatorState 外层 revision 提供快照作用域，不在每个条目重复 coordinatorRevision；requestSeq 属于独立的请求序列。复用已有观察与 binding 类型，不复用旧五命令、资源池或 harness 权限类型。别名暂用普通 string/number；合法标识、有限 JSON、安全整数及引用完整性仍需运行时验证。
+下面的可独立类型检查代码块表达最新请求映射、序号水位与某一个 Coordinator revision 下的状态值，补充各图中的值类型、可选性与联合分支。CoordinatorState 外层 revision 提供快照作用域，不在每个条目重复 coordinatorRevision；requestSeq 属于独立的请求序列。ObjectiveObservation 暂以导入别名复用已有 PilotObservation 的结构，表示拟采用的领域名称，不声称运行时包已导出新名称；binding 也复用已有类型，不复用旧五命令、资源池或 harness 权限类型。别名暂用普通 string/number；合法标识、有限 JSON、安全整数及引用完整性仍需运行时验证。
 
 ```typescript
 import type {
-  PilotObservation,
+  PilotObservation as ObjectiveObservation,
   Subject,
 } from "@potential-guide/objective-pilot";
 import type { AgentBinding } from "@potential-guide/objective-regulator";
+
+export type { ObjectiveObservation };
 
 export type Revision = number;
 export type RequestSeq = number;
 export type ObjectiveSource = string;
 export type ObjectiveKey = string;
 export type TargetKey = string;
-export type RegulationId = string;
+export type RegulationRunId = string;
 export type Collection<T> = readonly T[];
 
-export interface ObjectiveDefinition {
+export interface ObjectiveRevision {
   readonly key: ObjectiveKey;
   readonly version: string;
   readonly source: ObjectiveSource;
 }
 
 export interface RegulationTarget {
-  readonly objective: ObjectiveDefinition;
+  readonly objective: ObjectiveRevision;
   readonly subject: Subject;
 }
 
@@ -147,7 +149,7 @@ export interface Fault {
     | "recovery"
     | "infrastructure";
   readonly message: string;
-  readonly regulationId: RegulationId | null;
+  readonly runId: RegulationRunId | null;
 }
 
 export type ActiveExecution =
@@ -159,15 +161,15 @@ export type ActiveExecution =
       readonly reason: string;
     };
 
-export interface RegulationContext {
-  readonly id: RegulationId;
+export interface RegulationRunContext {
+  readonly id: RegulationRunId;
   readonly target: RegulationTarget;
   readonly requestSeq: RequestSeq | null;
   readonly desiredLevel: string;
   readonly binding: AgentBinding;
 }
 
-export interface ActiveRegulation extends RegulationContext {
+export interface ActiveRegulationRun extends RegulationRunContext {
   readonly recoveryRef: string | null;
   readonly execution:
     | ActiveExecution
@@ -183,13 +185,12 @@ export interface CurrentDependency {
   readonly minimumLevel: string;
 }
 
-export interface ObservedTarget {
-  readonly target: RegulationTarget;
-  readonly regulationId: RegulationId;
-  readonly value: PilotObservation;
+export interface Observation {
+  readonly runId: RegulationRunId;
+  readonly value: ObjectiveObservation;
 }
 
-export type RegulationOutcome =
+export type RegulationRunOutcome =
   | { readonly kind: "target-reached" }
   | { readonly kind: "blocked"; readonly reason: string }
   | {
@@ -202,14 +203,14 @@ export type RegulationOutcome =
     }
   | { readonly kind: "error"; readonly fault: Fault };
 
-export interface RegulationRecord extends RegulationContext {
+export interface RegulationRunRecord extends RegulationRunContext {
   readonly endedAtRevision: Revision;
-  readonly outcome: RegulationOutcome;
+  readonly outcome: RegulationRunOutcome;
 }
 
 export interface ObservationRecord {
   readonly recordedAtRevision: Revision;
-  readonly observation: ObservedTarget;
+  readonly observation: Observation;
 }
 
 export interface FaultRecord {
@@ -220,9 +221,9 @@ export interface FaultRecord {
 export interface ProbeSummary {
   readonly probedAt: string;
   readonly recordedAtRevision: Revision;
-  readonly regulationId: RegulationId | null;
+  readonly runId: RegulationRunId | null;
   readonly result:
-    | { readonly kind: "observed"; readonly observation: PilotObservation }
+    | { readonly kind: "observed"; readonly observation: ObjectiveObservation }
     | { readonly kind: "error"; readonly fault: Fault };
 }
 
@@ -274,9 +275,9 @@ export interface CoordinatorCurrent {
     };
     readonly allocation: AllocationAcknowledgement;
   };
-  readonly activeRegulations: readonly ActiveRegulation[];
+  readonly activeRuns: readonly ActiveRegulationRun[];
   readonly dependencies: readonly CurrentDependency[];
-  readonly observations: readonly ObservedTarget[];
+  readonly observations: readonly Observation[];
   readonly constraints: ExecutionConstraints;
   readonly reserved: BudgetReservation;
   readonly lifecycle: CoordinatorLifecycle;
@@ -286,7 +287,7 @@ export interface CoordinatorState {
   readonly revision: Revision;
   readonly current: CoordinatorCurrent;
   readonly regulationTargets: Collection<RegulationTargetState>;
-  readonly regulations: Collection<RegulationRecord>;
+  readonly runs: Collection<RegulationRunRecord>;
   readonly observations: Collection<ObservationRecord>;
   readonly faults: Collection<FaultRecord>;
 }
@@ -309,7 +310,7 @@ export interface CoordinatorCheckpoint {
 
 ObjectiveKey 是规范化 Git source 与完整 commit ID 的无歧义编码的确定性哈希；TargetKey = Hash(Encode(objectiveKey, subjectIdentity))，不再额外编码 objectiveVersion，具体规范仍待确定。它不是任意 regulation ID，也不能直接依赖普通 JSON 属性顺序。latestByTarget 按 targetKey 索引，value 是包含 target、desiredLevel、priority、requestSeq 的 RegulationRequest。RegulationTarget 不重复存 key；恢复和输入验证须核对 source/version 与 objectiveKey、target 与 targetKey 一致，哈希碰撞不能静默合并不同来源、版本或 subject。
 
-TS 中的 ObjectiveDefinition 独立表达定义实体的身份与来源字段，暂不展开定义正文；RegulationTarget.objective 嵌套此值不表示必须重复存储它。该 source 字符串是本模型的领域来源标识，不照搬现有 GitObjectiveSource 传输结构；未来实现须明确与解析协议的适配。objectiveId 若作为名称保留，不构成另一套身份。
+TS 中的 ObjectiveRevision 独立表达定义实体的身份与来源字段，暂不展开定义正文；RegulationTarget.objective 嵌套此值不表示必须重复存储它。该 source 字符串是本模型的领域来源标识，不照搬现有 GitObjectiveSource 传输结构；未来实现须明确与解析协议的适配。objectiveId 若作为名称保留，不构成另一套身份。
 
 Partial 表达并非每个 TargetKey 都有条目，索引结果为 RegulationRequest | undefined。readonly latestByTarget 限制属性重新赋值，Readonly 限制条目的增删替换；这些是编译期约束，不是运行时冻结或递归不可变保证。只将对象自身属性视为请求条目，查询须区分缺失 key 与原型链属性，构造和恢复不能让特殊 key 改变对象原型。
 
@@ -335,13 +336,17 @@ RegulationRequests 不含集合快照 revision，lastRequestSeq 仅保存请求�
 
 ## 当前调用、意图进度与依赖
 
-ActiveRegulation 只表示已经发起且尚未确认结束的一次调用。requestSeq 非空表示启动时关联的外部请求；派生 provider 可以没有自己的外部请求。target、requestSeq、desiredLevel 和 binding 捕获启动事实，新请求不改写旧调用身份或目标；不再同时维护 TaskId 与 RunId 两套执行身份。RegulationRequest 是输入意图，不替代当前执行或 pending 状态，也不要求每条请求恰好对应一次调用。
+ActiveRegulationRun 只表示已经发起且尚未确认结束的一次调用。requestSeq 非空表示启动时关联的外部请求；派生 provider 可以没有自己的外部请求。target、requestSeq、desiredLevel 和 binding 捕获启动事实，新请求不改写旧调用身份或目标；不再同时维护 TaskId 与 RunId 两套执行身份。RegulationRequest 是输入意图，不替代当前执行或 pending 状态，也不要求每条请求恰好对应一次调用。
 
-current.activeRegulations 只有 running、stopping 和恢复后尚未核实的 unverified，不含 pending 或 ended。停止请求不移除调用；确认退出后，通过明确的终结事件移除调用、写入 regulations，并原子更新仍影响当前运行的信息。RegulationRecord 保留启动身份、实际 binding 和终结结果，不包含活跃执行状态；达标仍须有效证据支持。启动前撤销、initial 或未产生外部调用的启动失败不伪造一次 Regulation，其意图处理事实的记录类型留待转换设计。启动副作用与持久化之间的故障窗口仍须由恢复协议覆盖，不能因尚未确认启动就漏记可能存在的外部执行。
+Run → Request → Target 以及 Request → desiredLevel 的函数依赖只有在每次 Run 都关联准确表达其执行需求的不可变 Request 时，才能消除 Run 的 target 和 desiredLevel。本轮保留可空 requestSeq 及启动事实，不通过命名调整擅自引入内部请求；派生请求、共享 provider 聚合及其序号协议仍待确定。
+
+Observation 仅以 runId 关联来源 Run，治理对象由 Run 推导，不重复保存 target。Fault 保留可空 runId，覆盖输入、持久化或恢复等非运行故障，不强制拆成 RunFault。运行历史裁剪或分开存储时必须保留足够的来源关联，使观察仍可解析到准确 target；可以采用明确的归档/查询投影，但不能静默丢失语义。
+
+current.activeRuns 只有 running、stopping 和恢复后尚未核实的 unverified，不含 pending 或 ended。停止请求不移除调用；确认退出后，通过明确的终结事件移除调用、写入 runs，并原子更新仍影响当前运行的信息。RegulationRunRecord 保留启动身份、实际 binding 和终结结果，不包含活跃执行状态；达标仍须有效证据支持。启动前撤销、initial 或未产生外部调用的启动失败不伪造一次 RegulationRun，其意图处理事实的记录类型留待转换设计。启动副作用与持久化之间的故障窗口仍须由恢复协议覆盖，不能因尚未确认启动就漏记可能存在的外部执行。
 
 pending 是尚未执行的当前需求，不预先包装成覆盖完整生命周期的 Task。本稿撤回 processedIntents 这一按对象保存历史处理水位的具体字段，不假定它是当前切片的必需组成。新意图如何进入待处理需求、何时完成或被覆盖、恢复时如何可靠接续，仍须从合法转换推导；不能因为已确认目标仍存在且活跃集合为空，就重新创建需求。历史 Collection 的存在也不自动解决无调用的意图处理记录或输入去重。旧反馈不得完成新意图，有限依赖尚未完成时不得过早结束整个需求；本稿不声称待处理状态类型已经完整。
 
-CurrentDependency 暂以精确 consumer/provider target 和最低 level 表达仍有效的需求关系，不引用必须永久保存的历史 Task。关系须合法、无环且锚定当前未完成需求；需求覆盖或完成时撤销无用边，共享 provider 仍被引用时保留。blocked 调用已经结束，其完整结果进入 regulations，current 只提取继续编排必需的当前关系和证据。provider 的结果只能支持新的 consumer 调用，不能复活旧调用。边的 requestSeq 归属、真实执行身份、共享聚合和满足条件仍须在转换设计中细化，本类型不是已定案的依赖协议。
+CurrentDependency 暂以精确 consumer/provider target 和最低 level 表达仍有效的需求关系，不引用必须永久保存的历史 Task。关系须合法、无环且锚定当前未完成需求；需求覆盖或完成时撤销无用边，共享 provider 仍被引用时保留。blocked 调用已经结束，其完整结果进入 runs，current 只提取继续编排必需的当前关系和证据。provider 的结果只能支持新的 consumer 调用，不能复活旧调用。边的 requestSeq 归属、真实执行身份、共享聚合和满足条件仍须在转换设计中细化，本类型不是已定案的依赖协议。
 
 ## 对象聚合状态
 
@@ -356,7 +361,7 @@ lastProbe 为 null 表示没有已知 Probe 结果，不伪造时间、成功或
 ## 权威状态与推导值
 
 - ResourceAllocation 的 no-resource 是合法的无资源分配意图，也是输入 Behavior 的初值；不是输入缺失、错误或 dummy binding。configured 表达 binding 与非负安全整数 concurrency，允许 concurrency 为 0 以保留配置。采纳 no-resource 不代表实际调用已停止或占用归零。
-- acknowledged.allocation 表达期望，ActiveRegulation.binding 表达实际使用；改变前者不修改后者。确认 concurrency 从 4 变为 2 后，实际占用仍可为 4，停止策略不由这个类型自动规定。
+- acknowledged.allocation 表达期望，ActiveRegulationRun.binding 表达实际使用；改变前者不修改后者。确认 concurrency 从 4 变为 2 后，实际占用仍可为 4，停止策略不由这个类型自动规定。
 - 实际占用从 running、stopping 和尚未核实的 unverified 调用推导，不另存一个可能漂移的 activeCount。未核实调用在确认退出前保守保留占用。
 - current.observations 只保留当前调度或有效依赖仍需要的最新成功观察，不作为所有曾访问对象的缓存；失去当前用途时显式移除，不因此删除 observations 的历史记录或 regulationTargets 中的对象摘要。没有当前条目表示未知，不等于 initial。旧调用和错误 envelope 不可作为当前成功观察写入。
 - reserved 是累计权威预留，不能仅从当前调用数重算；启动抛错也可能已经预留。limits 来自可信配置，持久化副本用于核对恢复上下文，不允许快照自行扩充限制。
@@ -368,7 +373,7 @@ lastProbe 为 null 表示没有已知 Probe 结果，不伪造时间、成功或
 
 新建 RegulationRequests 为 { lastRequestSeq: 0, latestByTarget: {} }，没有集合快照 revision。新建 CoordinatorState 的 revision 为 0，current.acknowledged.requests.latestByTarget 为空，current.acknowledged.allocation 为 { revision: 0, value: { kind: "no-resource" } }；当前活跃调用、依赖和观察为空，reserved 全零、服务 open，可信 constraints 由宿主提供；各个 Collections 均为空。这是已知初始基线，不声称收到过外部资源更新；后续采纳资源更新记录当次 Coordinator revision，初值不启动调用。
 
-CoordinatorState 不含 instanceId 或 inputs。Coordinator 身份由宿主、存储 key 或传输 envelope 关联，不能与调用 RegulationId 混为一谈；是否另需恢复代次由执行协议决定。输入通道的 open/ended/failed、连接与重连属于适配层；通道结束或断开不撤销目标、不把资源意图变为 no-resource，也不自动取消调用或关闭服务。真正影响服务继续运行的故障以明确诊断和相应服务生命周期变化表达。
+CoordinatorState 不含 instanceId 或 inputs。Coordinator 身份由宿主、存储 key 或传输 envelope 关联，不能与调用 RegulationRunId 混为一谈；是否另需恢复代次由执行协议决定。输入通道的 open/ended/failed、连接与重连属于适配层；通道结束或断开不撤销目标、不把资源意图变为 no-resource，也不自动取消调用或关闭服务。真正影响服务继续运行的故障以明确诊断和相应服务生命周期变化表达。
 
 CoordinatorCheckpoint 仅封装两份领域状态，不固定日志方案或存储格式。需验证对象唯一性、修订与引用一致性及可信约束，不能把任意时刻分别读取的两个 state 拼成“原子快照”，也不能把 current 和来自不同版本的 Collections 拼成一致状态。持久化适配层可以分开存储 singleton 与各个 collections，但须保证共同的逻辑 revision 和原子转换。若采用快照加日志重放，由适配层在外层封装与快照一致的 command/event 处理位置，并负责可靠接续；不预设两个 string | null 字段，也不默认领域 revision 就是日志位置。恢复先还原状态，采用增量回放时只做纯归约，再以 recovering/unverified 核实外部运行，不清空预算、不重放动作、不把同一已终结意图当新请求；格式版本、重关联协议和存储失败行为待实施时明确。
 

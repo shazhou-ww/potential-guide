@@ -8,17 +8,17 @@ CoordinatorState 包含 current singleton state 和若干 collection states，�
 
 沿 Coordinator 版本展开时，每个 revision 对应一行 singleton 快照及该版集合成员，current 是当前版选择。事件产生新状态版本，不改写旧快照；未变化 target 沿用 updatedAtRevision。RegulationTarget 是治理指向物，RegulationRequest 以表内递增 requestSeq 单独标识；确认逐 target 关联请求并记录 acknowledgedAtRevision。集合归属版本与更新、确认、终结或采纳的 Coordinator 版本不能混淆，也不能与 requestSeq 直接比较。同 priority 按 requestSeq 排序，确认时间和 Probe 更新不改变请求顺序。
 
-新建 Coordinator 的 initial 为：current 中服务 open；已确认目标为空，资源基线为 revision 0 的 no-resource；activeRegulations、有效依赖和当前必要观察为空，累计预算预留为零；各个 Collections 为空。可信约束由宿主提供。恢复不是重新使用空初值，unknown 也不等于 level initial；待处理需求及输入接续类型仍待推导，不预设 processedIntents 字段。
+新建 Coordinator 的 initial 为：current 中服务 open；已确认目标为空，资源基线为 revision 0 的 no-resource；activeRuns、有效依赖和当前必要观察为空，累计预算预留为零；各个 Collections 为空。可信约束由宿主提供。恢复不是重新使用空初值，unknown 也不等于 level initial；待处理需求及输入接续类型仍待推导，不预设 processedIntents 字段。
 
 ## 候选事实与状态效果
 
 | 事实 | 必须明确的内容 | 对 singleton 及 collections 的效果 |
 | --- | --- | --- |
 | 请求处理 | 命令关联、接受或拒绝、准确 target；合法请求的 requestSeq、desiredLevel、priority，或拒绝原因 | 接受更新已确认请求；确认收到不等于请求已经处理完；非法命令不伪造已分配请求 |
-| 调用发起 | Regulation 身份、对象、启动时意图及目标、实际 binding、恢复关联和预算预留 | 纳入 activeRegulations，保留当前实际占用；启动失败也须明确预留及可能存在的外部执行 |
+| 调用发起 | RegulationRun 身份、对象、启动时意图及目标、实际 binding、恢复关联和预算预留 | 纳入 activeRuns，保留当前实际占用；启动失败也须明确预留及可能存在的外部执行 |
 | 请求停止或恢复核实 | 准确调用身份、停止原因或外部核实结果 | 显式转换 running/stopping/unverified；停止请求不释放占用 |
-| 调用确认结束 | 准确调用与意图身份、真实终止事实、结果、必要证据及当前信息更新 | 原子从 current 移除活跃调用、向 regulations 写入终结记录并更新必要依赖等；不建立 ended Task |
-| 请求无需调用即处理完 | 准确 requestSeq 及原因，例如 initial 或启动前撤销 | 更新必要的处理进度，不伪造 Regulation 或观察 |
+| 调用确认结束 | 准确调用与意图身份、真实终止事实、结果、必要证据及当前信息更新 | 原子从 current 移除活跃调用、向 runs 写入终结记录并更新必要依赖等；不建立 ended Task |
+| 请求无需调用即处理完 | 准确 requestSeq 及原因，例如 initial 或启动前撤销 | 更新必要的处理进度，不伪造 RegulationRun 或观察 |
 | 有效依赖变化 | consumer/provider 精确对象、需求归属、最低 level、安装或撤销关系 | 仅保存仍支持当前未完成需求的关系；不引用必须永久保存的历史 Task |
 | 观察采纳或移除 | 精确对象、来源、产生观察的调用、证据及当前用途 | 采纳时记录历史观察，current 只保留当前决策需要的最新有效观察；当前用途结束不等于删除历史 |
 | 对象 Probe 摘要变化 | 精确对象、实际 Probe 时间、身份与顺序、来源及成功或失败结果 | 按对象更新 regulationTargets 的 lastProbe，不为每次 Probe 追加聚合行，不把错误当成功或最近观察当实时事实 |
@@ -30,10 +30,10 @@ CoordinatorState 包含 current singleton state 和若干 collection states，�
 
 ## 关键转换边界
 
-- pending 表示当前需求尚待调度，不表示已存在一次 Regulation。单纯因需求尚未启动而创建 pending Task、再保留 ended Task 的模型取消。
+- pending 表示当前需求尚待调度，不表示已存在一次 RegulationRun。单纯因需求尚未启动而创建 pending Task、再保留 ended Task 的模型取消。
 - blocked 是本次调用的终结结果，不是保留活跃调用等待复活的状态。调用退出后移除，必要依赖提取为当前编排关系；provider 证据只能支持 consumer 的新调用。
 - result settlement 或 kill 确认真实退出，才允许移除活跃调用、释放占用。abort/kill 故障明确报告，不能据此虚构终止；恢复时未核实调用继续保守占用。
-- 移除调用、写入历史与更新必要当前信息须保持一致。已经处理完的同一意图不能因 activeRegulations 为空而再次调度；不预设 processedIntents，以新意图接收、待处理需求及可靠恢复接续推导规则。有限依赖尚未完成时不能提前结束整个需求，历史集合的存在不自动补足无调用意图的处理语义。
+- 移除调用、写入历史与更新必要当前信息须保持一致。已经处理完的同一意图不能因 activeRuns 为空而再次调度；不预设 processedIntents，以新意图接收、待处理需求及可靠恢复接续推导规则。有限依赖尚未完成时不能提前结束整个需求，历史集合的存在不自动补足无调用意图的处理语义。
 - 旧调用反馈不得把新意图标记完成，意图或 priority 更新也不改写旧调用的启动事实。确切的覆盖和新旧结果采用规则仍待推导。
 - 依赖增加与撤销须核对当前请求 requestSeq、target 身份及无环性。共享 provider、尚有效的证据保留；无用关系和观察显式移除，不为历史查询驻留。
 - 一次终结携带最终观察时，应规定一个原子 delta，或明确有序的采纳与终结转换；不能让两个事件竞争写同一事实，也不能让移除后的旧反馈污染当前观察。
