@@ -6,20 +6,20 @@
 
 ## 结果
 
-每个 Objective Pilot 定义独立的进程 executable，由 CLI 启停并复用；同一兼容 Pilot 实例对应同一进程，内部自行管理 check 队列和执行线程。check 是最小并发单元，regulation object 和 subject 属于请求；指令传输方式另行选择。
+每个 Objective Pilot 定义独立 executable，由 CLI 经用户级共享注册表发现和协调启动；同一 Pilot ID 只对应一个活动进程及端口，不允许多版本同时启动。进程内部管理 check 队列与线程，供不同调用者、regulation object 和 subject 使用。
 
 ## 边界
 
-- Pilot 进程按准确来源、版本及兼容策略隔离，不按 regulation object、subject 或 check 启动；执行请求上下文独立，不为每次 probe 再起一个进程。
+- Pilot ID 是进程去重键，版本与配置是实例属性及请求校验条件，不得通过追加版本键另起实例；版本不匹配不得静默改用已运行版本。
 - 复用进程不等于复用输入、结果或证据；保留层级顺序、依赖来源、每轮视图、截止及取消语义。
-- CLI 管进程生命周期与路由，Pilot 管内部排队和线程；HTTP RPC 或其他传输尚未决定。保持顶层调用范围及全量迁移原则，旧运行协议不回退，历史契约与证据不改写。
+- CLI 协同管理共享注册与使用，Pilot 管内部排队和线程；当前按 HTTP/端口发现方向设计，客户端退出不能关闭他人仍使用的进程。全量迁移原则与历史契约不变。
 
 ## 验收标准
 
-- 独立 probe 和 regulation 通过统一入口调度，同一调度上下文内相同 Pilot 不重复启动有效进程；不同对象和 subject 的 check 可按并发额度独立执行，结果与问题归属不变。
+- 两个独立 CLI 并发请求同一 Pilot ID 时发现同一活动端口与进程，不因版本不同并行拉起；不同对象和 subject 的 check 独立执行且结果与证据不混淆。
 - 依赖回调、目标变化、请求混淆、崩溃、取消及回收有明确行为与可验证证据，不以断开 HTTP 连接冒充停止检查。
 - 服务启动、就绪、路由与退出可观测；内置 Objective、脚手架及消费面全量迁移，旧输入明确拒绝，新契约不原地覆盖已发布 schema。
 
 ## 下一步
 
-进程入口和排队所有权已明确；先讨论 [OpenQuestions.md](./OpenQuestions.md) 的 Q10 指令传输，再收敛 Q03 依赖回传及其他边界，不预先固定 HTTP。
+Pilot ID 单实例与端口注册/进程去重原则已明确；继续讨论 [OpenQuestions.md](./OpenQuestions.md) 的版本冲突、升级切换、共享回收及发现协议细节。
