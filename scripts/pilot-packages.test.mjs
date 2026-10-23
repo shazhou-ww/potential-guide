@@ -11,6 +11,7 @@ import {
   projectObjective,
 } from "../packages/objective-pilot/dist/index.js";
 import { execute } from "./verify-deployment-helpers.mjs";
+import { createWorkerHost } from "./worker-test-helpers.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const scratchRoot = join(root, ".cache");
@@ -58,7 +59,9 @@ test("dist outputs are ignored while standalone Pilot runtimes remain versionabl
 
 test("all private Pilot tarballs include same-version resources and run without dependency installation", async () => {
   const scratch = await mkdtemp(join(tmpdir(), "pguide-pilot-packs-"));
+  let host;
   try {
+    host = await createWorkerHost(join(scratch, "host"));
     const packs = join(scratch, "packs");
     await mkdir(packs);
     const version = join(scratch, "version.mjs");
@@ -110,25 +113,15 @@ test("all private Pilot tarballs include same-version resources and run without 
               pguide: { command: process.execPath, args: [version] },
             };
       const call = async (stage, value) => {
-        const result = await execute(
-          process.execPath,
-          [
-            join(
-              packageRoot,
-              ...(directory === "objective-monorepo-standard" ? ["package-standard"] : []),
-              "checks",
-              stage,
-              "run.cjs",
-            ),
-          ],
-          {
-            cwd: consumer,
-            input: JSON.stringify(value),
-            env: { ...process.env, NODE_PATH: "", PGUIDE_STATE_DIRECTORY: join(scratch, "state") },
-          },
+        return host.execute(
+          join(
+            packageRoot,
+            ...(directory === "objective-monorepo-standard" ? ["package-standard"] : []),
+            "checks",
+            stage,
+          ),
+          value,
         );
-        assert.equal(result.code, 0, result.stderr);
-        return JSON.parse(result.stdout);
       };
       const invalid = await call(checks[0], {});
       assert.equal(invalid.payload, null);
@@ -163,6 +156,10 @@ test("all private Pilot tarballs include same-version resources and run without 
           assert.ok(paths.includes(resource));
     }
   } finally {
-    await rm(scratch, { recursive: true, force: true, maxRetries: 3 });
+    try {
+      await host?.close();
+    } finally {
+      await rm(scratch, { recursive: true, force: true, maxRetries: 3 });
+    }
   }
 });

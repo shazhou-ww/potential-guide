@@ -2,7 +2,7 @@
 
 正式 Objective 由完整、私有的 pnpm workspace package 交付。package 是
 源码版本、依赖、构建和资源交付边界，不代表公开 npm 发布，不改变 Objective 的业务身份。
-通用协议、进程执行和资源加载仍由既有基础包维护，不为每个 check 建包。
+通用协议、共享 Host 执行和资源加载由基础包维护，不为每个 check 建包。
 紧密相关的仓库标准化和包标准化由同一 workspace 内两个自包含 Pilot 目录交付。
 
 ## Objective 实例包命名
@@ -36,7 +36,10 @@ Objective URI / version 随之改变，旧结果不自动证明新版本。检�
 ## 源码与职责
 
 - 每个 package 自有 manifest、References、README、入口、运行资源和测试。
-  `checks/<id>/run.cjs` 仅作协议适配；业务实现按实际独立检查职责放在 `src`。
+  v3 的 `checks/<id>/worker.cjs` 是自包含 worker，显式资源放在同一产物目录内；
+  重复 check ID 使用 `levels/<level>/checks/<id>/worker.cjs`。
+  业务实现按实际独立检查职责放在 `src`，使用 `pnpm workers:build` 统一生成，
+  不手改 bundle。Git loader 明确拒绝旧 `run.*`，不回退到逐 check 进程执行。
 - monorepo 的 structure、packages/delivery、task graph、schema/import 观察分离；
   deliveries 保留结构前置验证，不是运行全部业务后过滤 findings。
   `repository-observation` 只读取/解析一次仓库事实，`repository-configuration`
@@ -72,13 +75,16 @@ Git loader 只读取提交，不自动执行 install/build，且不从本机工�
 monorepo 根 subject 为 `{context,policy,deliveries}`；嵌套的自包含 `package-standard/`
 Pilot 接受包自有 roles/runtime/allows/entries/joins/deliveries 等 subject。
 不再接受 contract 或 checkerModule。声明解析/投影复用 objective-pilot 公共 API，
-根通过既有 dependency API 获取包版本和低层级证据；Supervisor 处理交接。
+根 check 返回 dependency requirements 并释放 worker；上层绑定真实包版本、观察目标层级，
+校验实际事实后重查根 check。requirements 不等于已经满足的依赖证据；Supervisor 处理交接。
 两个 Pilot 目录的运行资源独立包含，仍是同一私有 workspace。
 完整[迁移与约束归属](../packages/objective-monorepo-standard/README.md)说明源码版本要求。
 
-四个生成器均支持 `--check`，分别由 `pnpm monorepo:check`、`pnpm setup:check`、
+运行资源生成器均支持 `--check`，分别由 `pnpm monorepo:check`、`pnpm setup:check`、
 `pnpm self-check:check`、`pnpm health:check` 校验。共享第三方版本在 catalog，内部开发依赖使用 workspace range，
 Turbo 按依赖构建并缓存生成资源；改变源码后必须重新生成并提交对应运行资源。
+全部 16 个 worker 及其显式资源由 `pnpm workers:check` 校验，直接消费测试通过
+目录和完整 revision 调用 Host，不将 `worker.cjs` 当作 stdin/stdout 可执行文件。
 
 所有层级的 `dist/` 都是本地构建输出，由根 `.gitignore` 统一忽略，不保留例外。
 Git snapshot 必需的 standalone 生成物放在各包的 `runtime/` 并提交；

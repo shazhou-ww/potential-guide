@@ -3,24 +3,56 @@ import { execFile } from "node:child_process";
 import { promises as filesystem } from "node:fs";
 import { cp, mkdir, mkdtemp, rename, rm, stat, writeFile } from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
-import { dirname, join, resolve } from "node:path";
-import { test } from "node:test";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { after, before, test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { CliError } from "@potential-guide/cli-core";
 import { Effect } from "@potential-guide/effects";
 import { type ObjectiveManifest, observe } from "@potential-guide/objective-pilot";
+import { CheckKernel, connectHost, serve } from "../../check-host/dist/index.js";
 import { withPilot } from "../../cli-runtime/src/pilot-source.js";
 import { manifest, fixture as wikiFixture } from "../../objective-pilot/test/fixtures.js";
 import { dependencyWorker, ownedChildWorker, waitingWorker } from "./worker-fixtures.js";
 
 const execute = promisify(execFile);
+const hostParent = resolve(".cache", "pilot-source-tests");
+await mkdir(hostParent, { recursive: true });
+const hostRoot = await mkdtemp(join(hostParent, "host-"));
+const previousHost = process.env.PGUIDE_CHECK_HOST_DIRECTORY;
+let host: Awaited<ReturnType<typeof serve>> | undefined;
+before(async () => {
+  const kernel = await CheckKernel.create(join(hostRoot, "snapshots"));
+  const token = crypto.randomUUID();
+  host = await serve(kernel, token);
+  await writeFile(
+    join(hostRoot, "host.json"),
+    JSON.stringify({
+      endpoint: host.endpoint,
+      token,
+      pid: process.pid,
+      instance: crypto.randomUUID(),
+    }),
+    { flag: "wx" },
+  );
+  process.env.PGUIDE_CHECK_HOST_DIRECTORY = hostRoot;
+  await connectHost(hostRoot);
+});
+after(async () => {
+  try {
+    await host?.close();
+  } finally {
+    if (previousHost === undefined) delete process.env.PGUIDE_CHECK_HOST_DIRECTORY;
+    else process.env.PGUIDE_CHECK_HOST_DIRECTORY = previousHost;
+    await rm(hostRoot, { recursive: true, force: true });
+  }
+});
 async function git(cwd: string, ...args: string[]) {
   return (await execute("git", ["-C", cwd, ...args], { windowsHide: true })).stdout.trim();
 }
 const successfulProbe =
-  "exports.execute = async (inputSubject, context) => {\n    return { status: 200, message: \"\", payload: { ok: true, problems: [] } };\n};\n";
+  'exports.execute = async (inputSubject, context) => {\n    return { status: 200, message: "", payload: { ok: true, problems: [] } };\n};\n';
 
 async function repository(config: ObjectiveManifest, origin?: string) {
   const scratch = resolve(".cache", "pilot-source-tests");
@@ -216,17 +248,21 @@ test("same repository folders can bind different retrieval commits and reject fo
   });
 });
 
-test("batched materialization preserves binary resources outside the Pilot directory", async (t) => {
+test("worker artifacts preserve explicitly owned binary resources", async (t) => {
   const repo = await repository(
     manifest({
       levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }],
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
-  await writeFile(join(repo.root, "binary resource.dat"), Buffer.from([0, 10, 13, 255]));
+  await repo.check("checks/ready/resources/binary resource.dat", "");
+  await writeFile(
+    join(repo.path, "checks", "ready", "resources", "binary resource.dat"),
+    Buffer.from([0, 10, 13, 255]),
+  );
   await repo.check(
     "checks/ready/worker.cjs",
-    "exports.execute = async (inputSubject, context) => {\n    const { readFileSync } = require(\"node:fs\");\n    const { resolve } = require(\"node:path\");\n    const data = readFileSync(resolve(__dirname, \"../../..\", \"binary resource.dat\"));\n    return { status: 200, message: \"\", payload: { ok: data.equals(Buffer.from([0, 10, 13, 255])), problems: [] } };\n};\n",
+    'exports.execute = async (inputSubject, context) => {\n    const { readFileSync } = require("node:fs");\n    const { join } = require("node:path");\n    const data = readFileSync(join(__dirname, "resources", "binary resource.dat"));\n    return { status: 200, message: "", payload: { ok: data.equals(Buffer.from([0, 10, 13, 255])), problems: [] } };\n};\n',
   );
   await repo.commit();
   const result = await withPilot(repo.path, repo.root, undefined, (spec, runtime) =>
@@ -270,7 +306,7 @@ test("nested Pilot sources stay in the owning probe directory and preserve unrel
   }
 });
 
-test("ambiguous flat executables and multiple run entries fail explicitly", async (t) => {
+test("ambiguous flat workers and legacy run entries fail explicitly", async (t) => {
   const repo = await repository(manifest());
   t.after(() => rm(repo.root, { recursive: true, force: true }));
   await repo.check("checks/one/worker.cjs");
@@ -281,11 +317,13 @@ test("ambiguous flat executables and multiple run entries fail explicitly", asyn
     /level-scoped/,
   );
   await repo.check("levels/z-first/checks/one/worker.cjs");
-  await repo.check("levels/z-first/checks/one/worker.cjs");
+  await repo.check("levels/z-first/checks/two/worker.cjs");
+  await repo.check("levels/a-next/checks/one/worker.cjs");
+  await repo.check("levels/z-first/checks/one/run.cjs", "process.exit(1);");
   await repo.commit();
   await assert.rejects(
     withPilot(repo.path, repo.root, undefined, async () => undefined),
-    /exactly one/,
+    /Legacy run\.\* checks are unsupported/,
   );
 });
 
@@ -324,7 +362,7 @@ test("explicit Git URI can select an older exact commit independently of current
   );
 });
 
-test("cross-process dependency source binding preserves exact commits, routing and cleanup", async (t) => {
+test("worker dependency source binding preserves exact commits, routing and owned cleanup", async (t) => {
   const levels: ObjectiveManifest["levels"] = [
     { id: "ready", checks: [{ id: "ready", problems: ["broken"] }] },
   ];
@@ -332,16 +370,13 @@ test("cross-process dependency source binding preserves exact commits, routing a
   t.after(() => rm(child.root, { recursive: true, force: true }));
   const childScript = await child.check(
     "checks/ready/worker.cjs",
-    "exports.execute = async (inputSubject, context) => {\n    return { status: 200, payload: { ok: false, problems: [{ kind: \"internal\", id: \"broken\", parameters: { directory: process.cwd() } }] }, message: \"\" };\n};\n",
+    'exports.execute = async () => {\n    return { status: 200, payload: { ok: false, problems: [{ kind: "internal", id: "broken", parameters: { directory: __dirname } }] }, message: "" };\n};\n',
   );
   const childCommit = await child.commit();
   const childTree = await git(child.root, "rev-parse", `${childCommit}:objective`);
   const parent = await repository(manifest({ levels }));
   t.after(() => rm(parent.root, { recursive: true, force: true }));
-  await parent.check(
-    "checks/ready/worker.cjs",
-    dependencyWorker(child.uri),
-  );
+  await parent.check("checks/ready/worker.cjs", dependencyWorker(child.uri));
   const parentCommit = await parent.commit();
   const parentTree = await git(parent.root, "rev-parse", `${parentCommit}:objective`);
   let pinnedSources: NonNullable<
@@ -379,7 +414,8 @@ test("cross-process dependency source binding preserves exact commits, routing a
     assert.equal(typeof directory, "string");
     if (typeof directory !== "string") throw new Error("Expected child check directory.");
     checkDirectory = directory;
-    assert.match(checkDirectory, /checkout-1/);
+    const snapshotPath = relative(join(hostRoot, "snapshots"), checkDirectory);
+    assert.ok(snapshotPath && !isAbsolute(snapshotPath) && !snapshotPath.startsWith(".."));
     await writeFile(childScript, successfulProbe);
     await child.commit();
     const second = await Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime));
@@ -388,7 +424,7 @@ test("cross-process dependency source binding preserves exact commits, routing a
     assert.equal(second.payload.current.levelId, "initial");
     assert.equal(second.payload.versions[child.uri], childTree);
   });
-  await assert.rejects(stat(checkDirectory), { code: "ENOENT" });
+  assert.ok((await stat(checkDirectory)).isDirectory(), "Host snapshots outlive source leases.");
   const refreshed = await withPilot(parent.path, parent.root, undefined, (spec, runtime) =>
     Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime)),
   );
@@ -407,13 +443,20 @@ test("cross-process dependency source binding preserves exact commits, routing a
   assert.equal(pinned.payload.current.levelId, "initial");
   assert.equal(pinned.payload.versions[child.uri], childTree);
   const originalRead = filesystem.readFile;
+  const deadlineCache = await mkdtemp(join(hostParent, "dependency-deadline-"));
+  t.after(() => rm(deadlineCache, { recursive: true, force: true }));
   let delayed = 0;
   try {
     t.mock.method(
       filesystem,
       "readFile",
       async (...args: Parameters<typeof filesystem.readFile>) => {
-        if (String(args[0]).includes("checkout-1")) {
+        const path = relative(deadlineCache, resolve(String(args[0])));
+        if (
+          !isAbsolute(path) &&
+          !path.startsWith("..") &&
+          path.split(/[\\/]/).includes("checkout-1")
+        ) {
           delayed++;
           const options = args[1];
           const signal =
@@ -430,6 +473,7 @@ test("cross-process dependency source binding preserves exact commits, routing a
       undefined,
       (spec, runtime) => Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime)),
       {
+        cacheDirectory: deadlineCache,
         preparationTimeoutMs: 3000,
         probeTimeoutMs: 15000,
         observationBudget: { timeoutMs: 10000, maxDepth: 8, maxObservations: 16 },
@@ -449,6 +493,7 @@ test("cross-process dependency source binding preserves exact commits, routing a
         undefined,
         (spec, runtime) => Effect.runPromise(observe({ spec, subject: { name: "repo" } }, runtime)),
         {
+          cacheDirectory: deadlineCache,
           preparationTimeoutMs: 10000,
           probeTimeoutMs: 15000,
           observationBudget: { timeoutMs: 1500, maxDepth: 8, maxObservations: 16 },
@@ -709,10 +754,7 @@ test("source lifetime cancellation waits for active process teardown before remo
     `cancelled-${crypto.randomUUID()}.pid`,
   );
   t.after(() => rm(pidFile, { force: true }));
-  await repo.check(
-    "checks/ready/worker.cjs",
-    ownedChildWorker(pidFile),
-  );
+  await repo.check("checks/ready/worker.cjs", ownedChildWorker(pidFile));
   await repo.commit();
   const controller = new AbortController();
   let pid = 0;
@@ -747,10 +789,7 @@ test("cleanup failure retains the primary CLI error and reports both causes", as
     }),
   );
   t.after(() => rm(repo.root, { recursive: true, force: true }));
-  await repo.check(
-    "checks/ready/worker.cjs",
-    "exports.execute = async (inputSubject, context) => {\n    return { status: 200, payload: { ok: false, problems: [{ kind: \"internal\", id: \"broken\", parameters: { directory: process.cwd() } }] }, message: \"\" };\n};\n",
-  );
+  await repo.check("checks/ready/worker.cjs");
   await repo.commit();
   const guidance = {
     instructions: "Provide a subject matching subjectSchema.",
@@ -766,8 +805,7 @@ test("cleanup failure retains the primary CLI error and reports both causes", as
   const cleanup = new Error("Injected cleanup failure.");
   const originalRm = filesystem.rm;
   const controller = new AbortController();
-  const cleanupRoot = resolve(".cache", "pilot-source-tests", `cleanup-${crypto.randomUUID()}`);
-  await mkdir(cleanupRoot, { recursive: true });
+  const cleanupRoot = await mkdtemp(join(hostParent, "cleanup-"));
   let cache = "";
   try {
     await assert.rejects(
@@ -783,7 +821,8 @@ test("cleanup failure retains the primary CLI error and reports both causes", as
           const children = await filesystem.readdir(cleanupRoot);
           assert.equal(children.length, 1);
           const child = children[0];
-          assert.ok(child?.startsWith("pguide-runtime-"));
+          assert.ok(child);
+          assert.match(child, /^pguide-runtime-/);
           cache = join(cleanupRoot, child);
           t.mock.method(filesystem, "rm", async (...args: Parameters<typeof filesystem.rm>) => {
             const [path, options] = args;

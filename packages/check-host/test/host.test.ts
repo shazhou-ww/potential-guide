@@ -78,7 +78,7 @@ test("real four-route HTTP observation disconnect does not cancel; collection om
     assert.equal((await fetch(`${host.endpoint}/checks`)).status,401);
     assert.equal((await fetch(`${host.endpoint}/checks`,{method:"POST",headers:{...headers,"content-type":"application/json"},body:'{"root":"/"}'})).status,400);
     assert.equal((await fetch(`${host.endpoint}/register`,{method:"POST",headers})).status,404);
-  } finally { await host.close(); await rm(join(f.directory,".."),{recursive:true,force:true}); }
+  } finally { await host.close(); await f.close(); }
 });
 test("cancellation, queue limits, full resource revisions, expiry and unhealthy isolation", async () => {
   const f = await fixture({workers:1,queue:1,retentionMs:60,retireAfter:4});
