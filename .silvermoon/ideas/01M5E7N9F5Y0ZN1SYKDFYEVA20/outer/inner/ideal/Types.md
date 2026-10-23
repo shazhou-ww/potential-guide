@@ -38,9 +38,20 @@ requestSeq 在同一个请求序列范围内唯一并按逻辑接收顺序递增
 - HTTPS、SSH、本地地址即使访问同一仓库，也不天然是相同 source。没有明确等价/别名规则时不自动合并；不得通过丢弃主机、路径等身份信息制造相同 key。source/version 与 key 必须一致，哈希碰撞不得静默合并定义。查询同一来源的全部版本可按规范化 source 筛选，不另建 sourceKey。
 - source 不嵌入密码或 token，认证由外部提供；凭据变化不应成为 Objective 身份变化。解析协议与现有 Git 来源结构的适配留待实施，不声称运行时代码已经支持本设计。
 
-[独立 SVG：Regulation Request](./diagrams/regulation-target.svg)。文件路径保持不变，图中展示三层实体；在浏览器单独打开可缩放，使用 22px 基础字号和横向布局。SVG 由本节 Mermaid 源生成，模型变化时须同步重新渲染。
+[独立 SVG：Regulation Request](./diagrams/regulation-target.svg)。文件路径保持不变，图中展示三层实体；在浏览器单独打开可缩放，使用 22px Arial 和横向布局。两图的字体、内边距与最小实体宽度均固定在 Mermaid 配置中，避免渲染时字体与独立 SVG 回退字体的度量不同而裁切文字；模型变化时须同步重新渲染，并检查文本边界，不只验证 SVG 语法。
 
 ```mermaid
+---
+config:
+  fontFamily: Arial, Helvetica, sans-serif
+  themeVariables:
+    fontFamily: Arial, Helvetica, sans-serif
+    fontSize: 22px
+  er:
+    minEntityWidth: 280
+    entityPadding: 24
+    diagramPadding: 24
+---
 erDiagram
     direction LR
     OBJECTIVE_DEFINITION ||--o{ REGULATION_TARGET : governs
@@ -71,9 +82,20 @@ erDiagram
 
 ## Coordinator State ER 模型
 
-[独立 SVG：Coordinator State](./diagrams/coordinator-state.svg)。在浏览器单独打开可缩放；使用 22px 基础字号和横向布局。SVG 由本节 Mermaid 源生成，模型变化时须同步重新渲染。
+[独立 SVG：Coordinator State](./diagrams/coordinator-state.svg)。在浏览器单独打开可缩放；沿用 22px Arial、横向布局及显式留白配置。SVG 由本节 Mermaid 源生成，模型变化时须同步重新渲染并检查文本边界。
 
 ```mermaid
+---
+config:
+  fontFamily: Arial, Helvetica, sans-serif
+  themeVariables:
+    fontFamily: Arial, Helvetica, sans-serif
+    fontSize: 22px
+  er:
+    minEntityWidth: 280
+    entityPadding: 24
+    diagramPadding: 24
+---
 erDiagram
     direction LR
     OBJECTIVE_DEFINITION ||--o{ REGULATION_TARGET : governs
