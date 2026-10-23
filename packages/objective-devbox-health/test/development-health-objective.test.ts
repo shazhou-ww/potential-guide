@@ -5,12 +5,14 @@ import { test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { Effect } from "@potential-guide/effects";
 import {
+  createWorkerCheckProbe,
   fileResources,
   loadPilotSpec,
   observe,
   type PilotSpec,
   parseCheckEnvelope,
 } from "@potential-guide/objective-pilot";
+import { readArtifact } from "../../check-host/dist/index.js";
 import { root } from "../../pguide/test/fixtures.js";
 
 const objective = join(root, "packages", "objective-devbox-health");
@@ -487,16 +489,18 @@ test("task boundaries preserve healthy long tasks and never conflate deadline wi
   );
 });
 
-test("helper and all wrappers emit only strict envelopes for malformed input", async () => {
+test("helper and all workers report malformed input as explicit invocation faults", async () => {
   for (const stage of health.stages) {
-    const wrapper = join(objective, "checks", stage, "run.cjs");
-    const result = await direct(wrapper, [], "{}");
-    assert.equal(result.code, 0);
-    assert.equal(result.stderr, "");
-    const parsed = parseCheckEnvelope(JSON.parse(result.stdout));
-    assert.equal(parsed.status, 400);
+    const artifact = await readArtifact(join(objective, "checks", stage));
+    const probe = createWorkerCheckProbe({
+      directory: artifact.directory,
+      revision: artifact.revision,
+      evidence: false,
+    });
+    const parsed = parseCheckEnvelope(await probe({}, new AbortController().signal));
+    assert.equal(parsed.status, 502);
     assert.equal(parsed.payload, null);
-    assert.equal(result.stdout.trim().split("\n").length, 1);
+    assert.match(parsed.message, /worker-invocation/);
   }
   const malformed = await direct(helperPath, ["identity"], "{broken");
   assert.equal(JSON.parse(malformed.stdout).status, 400);

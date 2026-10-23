@@ -1,11 +1,11 @@
-import { Ajv2020 } from "ajv/dist/2020.js";
 import type { AnySchema, ValidateFunction } from "ajv";
+import { Ajv2020 } from "ajv/dist/2020.js";
 import { objectiveSchema, objectivesSchema } from "./schema-definitions.js";
 
 export { objectiveSchema, objectivesSchema } from "./schema-definitions.js";
 
 export const OBJECTIVE_SCHEMA_URI =
-  "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json" as const;
+  "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json" as const;
 export const OBJECTIVES_SCHEMA_URI =
   "https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json" as const;
 type DocumentValidator = ((value: unknown) => boolean) & {

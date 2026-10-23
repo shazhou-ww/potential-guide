@@ -45,6 +45,15 @@ export interface DependencyProblem {
   readonly expectedLevelId: LevelId;
   readonly currentLevelId: LevelId;
 }
+export interface DependencyRequirement {
+  readonly objectiveId: ObjectiveId;
+  readonly subject: Subject;
+  readonly expectedLevelId: LevelId;
+}
+export interface DependencyResolution {
+  readonly requirement: DependencyRequirement;
+  readonly result: CheckResult;
+}
 export type Problem = InternalProblem | DependencyProblem;
 export type CheckProblem =
   | { readonly kind: "internal"; readonly id: ProblemId; readonly parameters: JsonObject }
@@ -60,14 +69,19 @@ export type Sample<A> =
   | { readonly state: "initial" }
   | { readonly state: "ready"; readonly value: A };
 export type CheckResult =
-  | { readonly ok: true; readonly problems: readonly [] }
+  | { readonly ok: true; readonly problems: readonly []; readonly requirements?: never }
   | {
       readonly ok: false;
-      readonly problems: readonly [CheckProblem, ...CheckProblem[]];
+      readonly problems: readonly CheckProblem[];
+      readonly requirements?: readonly DependencyRequirement[];
     };
-export type CheckProbe = (subject: Subject, signal: AbortSignal) => Promise<Envelope<CheckResult>>;
+export type CheckProbe = (
+  subject: Subject,
+  signal: AbortSignal,
+  resolutions?: readonly DependencyResolution[],
+) => Promise<Envelope<CheckResult>>;
 export interface ObjectiveManifest {
-  readonly $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json";
+  readonly $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json";
   readonly subjectSchema: SubjectSchema;
   readonly levels: readonly [
     {

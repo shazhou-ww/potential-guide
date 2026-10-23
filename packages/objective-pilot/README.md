@@ -161,30 +161,26 @@ Invocation failure is `{"status":502,"payload":null,"message":"transport: offlin
 A malformed envelope, undeclared problem, unsuccessful process exit, or
 non-200 HTTP response is an invocation fault, not a business defect.
 
-Process stdin contains **only the subject JSON**. Stdout contains exactly one
-envelope; stderr is a log side channel. Business failure exits **0**.
-`createProcessCheckProbe({ command, args, cwd, timeoutMs, gracePeriodMs, log })`
-owns a project `.cache/pguide-probes` directory exposed through `PGUIDE_PROBE_TEMP_DIR`, its timeout,
-and process cleanup. POSIX requires `ps` to snapshot the owned descendant tree (bounded
-to 1000 ms), including descendants in detached process groups, before sending
-SIGTERM and grace-period SIGKILL. It then verifies that every captured owned PID
-has exited, allowing at most 2000 ms for hard-kill exit/reaping acknowledgement;
-unobservable or still-live PIDs and invalid snapshots fail cleanup explicitly.
-These bounded cleanup phases are separate from the unchanged process deadline.
-Windows attempts PID-scoped `taskkill /T`, then `/T /F`; unlike POSIX,
-arbitrary Windows console programs have no portable cooperative SIGTERM contract.
-The probe waits for process-tree termination and removes its own directory.
-Only essential platform environment variables are inherited.
-The process timeout defaults to 30000 ms. Each child receives the actual configured
-timeout as the canonical decimal `PGUIDE_PROBE_TIMEOUT_MS`; this runtime-owned value
-and `PGUIDE_PROBE_TEMP_DIR` override any caller environment values. Checks can use
-the metadata to reject an inner workload that leaves insufficient startup/cleanup
-headroom. This is a per-process budget, not a whole observation or regulation quota;
-the timer starts after spawn, and cancellation may end it earlier.
+Committed v3 checks are self-contained `worker.cjs` modules with explicit resources
+inside the same artifact directory. `createWorkerCheckProbe({ directory, revision,
+timeoutMs })` submits the subject to the authenticated shared Check Host and observes
+that execution's current state. `revision` covers every artifact file, not just the
+entrypoint. The worker exports `execute(subject, context)` and returns the envelope;
+it does not read stdin or write a result to stdout. Worker cwd is not the source
+checkout: resolve packaged resources relative to `__dirname`, never from cwd or an
+assumed number of parent directories.
 
-HTTP uses POST with subject JSON, requires status 200 for successful invocation,
-and uses AbortSignal for local cancellation and timeout. Aborting HTTP does
-**not** promise that remote business work stops.
+Host observation disconnect does not cancel execution. AbortSignal cancellation
+sends an explicit cancellation request and waits for the execution's terminal
+state and cleanup acknowledgement. A failed cleanup is an invocation failure.
+The default adapter timeout is 30000 ms; this is distinct from the whole observation
+budget. See [Check Host](../check-host/README.md) for capacities and retention.
+Legacy process entrypoints and bare-subject HTTP are not Git-loader fallbacks;
+the old bare-subject HTTP factory rejects use explicitly. Standalone business
+CLI helpers remain separate from the committed worker execution protocol.
+Preparing another immutable source binding does not publish over the active
+binding's artifact. Publication occurs immediately before invocation; conflicting
+concurrent directory revisions are still explicit failures, not blind retries.
 
 ## Objective level checks and dependency probes
 
@@ -214,54 +210,47 @@ results. In an owning Pilot observation, use the exported
 Conflicting commits fail explicitly. Memory/HTTP/process payload shape alone is
 not proof: dependency output must match source-bound evidence from that invocation.
 
-For committed Node check scripts executed by the existing process adapter:
+An unresolved business dependency is returned in the check result:
 
 ```js
-import { createSourceObjectiveDependencyProbe } from "@potential-guide/objective-pilot";
-
-const dependency = createSourceObjectiveDependencyProbe({
-  objectiveId: "git+https://example.org/team/objectives.git#environment/",
-  expectedLevelId: "ready",
+exports.execute = async (subject) => ({
+  status: 200,
+  payload: {
+    ok: false,
+    problems: [],
+    requirements: [{
+      objectiveId: "git+https://example.org/team/objectives.git#environment/",
+      subject: { environment: subject.environment },
+      expectedLevelId: "ready",
+    }],
+  },
+  message: "",
 });
-let input = "";
-for await (const chunk of process.stdin) input += chunk;
-const subject = JSON.parse(input);
-const envelope = await dependency({ environment: subject.environment }, new AbortController().signal);
-process.stdout.write(JSON.stringify(envelope));
 ```
 
-This helper uses the owning process probe's IPC channel, not a CLI subprocess,
-boolean stdout or a report file. The parent binds and observes the external
-Objective through `PilotRuntime.resolveObjective(objectiveId, version?, signal)`,
-then invokes the same library APIs. The core has no Git/CLI dependency; pguide
-implements the binding with its existing immutable Git sources and executables.
-Standalone use without the owning IPC channel fails explicitly. Non-Node
-transports must supply an equivalent trusted in-process observation contribution;
-bare dependency declarations are rejected.
-
-Direct process adapters enable IPC for `node`/`node.exe` commands, or explicitly
-with `dependencyBinding: true` for a custom Node interpreter. Pguide enables it
-for committed `#!/usr/bin/env node` scripts. Other executables retain their
-ordinary three-pipe process protocol and do not inherit Node IPC metadata.
-The owning adapter supplies a runtime-owned Node preload that resolves only the
-bare `@potential-guide/objective-pilot` import to its installed runtime. Committed
-snapshot scripts therefore do not need a checkout-local `node_modules` to import
-this API. Other imports use normal Node resolution; this does not install target
-dependencies or execute package scripts. Caller `NODE_OPTIONS` is not inherited.
+The worker returns immediately, releasing its thread before the parent binds and
+observes the dependency through `PilotRuntime.resolveObjective`. The business layer
+validates actual source-bound observations and rechecks the original check with
+the corresponding resolutions. Bundled checks using
+`createSourceObjectiveDependencyProbe` consume these through
+`withDependencyResolutions(context.data.resolutions, use)`.
+The Host transports opaque context and results: no dependency callbacks, IPC
+requests or recursive Objective scheduler are part of its protocol. Requirements
+are not evidence of attainment; fabricated dependency payloads remain invalid.
 
 One observation scope freezes source identities, records successful and blocked
 dependencies in `versions`, and shares deadline, recursion stack and total budget.
 The stack key is Objective ID plus canonical subject. Defaults are 30 seconds,
 32 nested observations and 128 total observations; override with
 `PilotRuntime.observationBudget: { timeoutMs, maxDepth, maxObservations }`.
-IPC requests remain in that same scope. Cancellation propagates to source
+Dependency observations remain in that same scope. Cancellation propagates to source
 preparation and external probes; completion waits for owned process cleanup.
 Evidence report persistence remains independent and can be disabled without
 disabling dependency correctness.
 
 ## Local evidence
 
-All three probe adapters retain local evidence by default. Pass a shared
+Worker and memory probes retain caller-owned local evidence by default. Pass a shared
 `RunEvidence({ directory })` as `evidence` to group invocations and retries, or
 `evidence: false` to disable persistence. Set `identity` to a stable check
 reference so `attempt` increments across retries; every call still receives a
@@ -269,12 +258,14 @@ new `checkRunId`. Without a shared run, each adapter call owns a separate run.
 Do not store subject data in `identity`.
 
 ```ts
-import { RunEvidence, createProcessCheckProbe } from "@potential-guide/objective-pilot";
+import { readArtifact } from "@potential-guide/check-host";
+import { RunEvidence, createWorkerCheckProbe } from "@potential-guide/objective-pilot";
 
 const evidence = new RunEvidence({ directory: "/safe/local/reports" });
-const probe = createProcessCheckProbe({
-  command: process.execPath,
-  args: ["/committed/check/run.mjs"],
+const artifact = await readArtifact("/committed/check");
+const probe = createWorkerCheckProbe({
+  directory: artifact.directory,
+  revision: artifact.revision,
   evidence,
   identity: { objectiveId, levelId, checkId },
 });
@@ -283,7 +274,10 @@ const envelope = await probe(subject, signal);
 evidence.stream.emit("run.finished", { outcome: "completed" });
 ```
 
-Process probes pass runtime-owned `PGUIDE_EVIDENCE_CONTEXT` with the absolute
+Worker results are recorded by the calling probe in the owning run's
+`check.finished` event and bounded/redacted `result.json`. A worker is not promised
+a per-check business event file or inherited process evidence context.
+Separately, standalone process helpers use runtime-owned `PGUIDE_EVIDENCE_CONTEXT` with the absolute
 check directory, run/check IDs and attempt. This does not change stdin or
 stdout. The parent alone writes the root stream and bounded/redacted
 `result.json`; a cooperating child alone writes check business `events.jsonl`.

@@ -7,6 +7,7 @@ import { makeRegulatorSpec } from "@potential-guide/objective-regulator";
 import { withPilot } from "../../cli-runtime/src/pilot-source.js";
 import { createProcessRegulationRunner } from "../../pguide-regulate/dist/regulation-process.js";
 import { fixture } from "./fixtures.js";
+import { ownedChildWorker } from "./worker-fixtures.js";
 
 test("process runner returns verified results only after worker cleanup", async () => {
   const f = await fixture();
@@ -57,8 +58,8 @@ test("force termination stops a live process tree and cleans the owned run direc
   const pidFile = join(f.directory, "probe.pid");
   try {
     await writeFile(
-      join(f.repository, "objective", "checks", "ready", "run.js"),
-      `#!/usr/bin/env node\nimport fs from "node:fs";let text="";process.stdin.on("data",c=>text+=c);process.stdin.on("end",()=>{fs.writeFileSync(JSON.parse(text).pidFile,String(process.pid));setInterval(()=>{},1000);});`,
+      join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+      ownedChildWorker(pidFile),
     );
     const commit = await f.commit();
     await withPilot(f.uri, f.directory, commit, async (objective) => {
@@ -100,7 +101,7 @@ test("force termination stops a live process tree and cleans the owned run direc
           }
         }
         await handle.kill();
-        await assert.rejects(handle.result, /cancelled|exited/);
+        await assert.rejects(handle.result, /cancelled|exited|abort/i);
         assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
         assert.deepEqual(await readdir(join(f.directory, ".cache", "pguide-runs")), []);
       } finally {
@@ -117,21 +118,19 @@ test("worker forwards capability requests as events without treating them as new
   const f = await fixture();
   try {
     await writeFile(
-      join(f.repository, "objective", "checks", "ready", "run.js"),
-      `#!/usr/bin/env node
-    import {existsSync} from "node:fs";
-    let text="";process.stdin.on("data",c=>text+=c);process.stdin.on("end",()=>{
-    const ok=existsSync(JSON.parse(text).marker);
-    console.log(JSON.stringify({status:200,message:"",payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]}}));});`,
+      join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+      'const { existsSync } = require("node:fs");\nexports.execute = async (inputSubject, context) => {\n    const text = JSON.stringify(inputSubject);\n    const ok = existsSync(JSON.parse(text).marker);\n    return { status: 200, message: "", payload: ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: {} }] } };\n};\n',
     );
     const commit = await f.commit();
     const marker = join(f.directory, "ready");
     const agent = join(f.directory, "agent.mjs");
+    const agentPid = join(f.directory, "agent.pid");
     await writeFile(
       agent,
       `
     import {createInterface} from "node:readline";
     import {writeFileSync} from "node:fs";
+    writeFileSync(${JSON.stringify(agentPid)},String(process.pid));
     for await (const line of createInterface({input:process.stdin})) {
     const m=JSON.parse(line);if(!m.id)continue;let result={};
     if(m.method==="initialize"){
@@ -149,6 +148,7 @@ test("worker forwards capability requests as events without treating them as new
     `,
     );
     const events: unknown[] = [];
+    let rejectEvent = false;
     await withPilot(f.uri, f.directory, commit, async (objective) => {
       const runner = createProcessRegulationRunner(
         {
@@ -159,7 +159,10 @@ test("worker forwards capability requests as events without treating them as new
           },
         },
         f.directory,
-        (_input, event) => events.push(event),
+        (_input, event) => {
+          if (rejectEvent) throw new Error("Injected event callback failure.");
+          events.push(event);
+        },
       );
       const result = await runner.start(
         {
@@ -178,6 +181,27 @@ test("worker forwards capability requests as events without treating them as new
       ).result;
       assert.equal(result.stopReason, "target-reached");
       assert.equal(result.iterations, 1);
+      rejectEvent = true;
+      await rm(marker);
+      const failed = runner.start(
+        {
+          spec: makeRegulatorSpec(
+            objective,
+            {
+              targetLevel: "terminal",
+              quota: { timeoutMs: 10000, maxAgentRuns: 2, maxStallRuns: 2 },
+              agentExecutionLimits: { timeoutMs: 5000 },
+            },
+            { id: "fixture" },
+          ),
+          subject: { marker },
+        },
+        { binding: { id: "fixture" } },
+      );
+      await assert.rejects(failed.result, /Injected event callback failure/);
+      const pid = Number(await readFile(agentPid, "utf8"));
+      assert.ok(Number.isSafeInteger(pid) && pid > 0 && pid !== process.pid);
+      assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
     });
     assert.deepEqual(events, [
       {

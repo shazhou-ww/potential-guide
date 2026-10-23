@@ -1,11 +1,20 @@
 import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { bindDependencyRequest, type ObjectiveDependencySource } from "./dependency.js";
+import {
+  type CheckState,
+  connectHost,
+  type Subject as HostSubject,
+} from "@potential-guide/check-host";
+import {
+  bindDependencyRequest,
+  type ObjectiveDependencySource,
+  withDependencyResolutions,
+} from "./dependency.js";
 import { type CheckEvidenceContext, RunEvidence } from "./evidence.js";
 import { parseCheckEnvelope } from "./pilot.js";
 import { stopPosixTree } from "./process-tree.js";
-import type { CheckProbe, CheckResult, Envelope, Subject } from "./types.js";
+import type { CheckProbe, CheckResult, DependencyResolution, Envelope, Subject } from "./types.js";
 import { fields, json, ObjectiveConfigurationError, record } from "./validation.js";
 
 function failure(kind: string, cause: unknown, status = 502): Envelope<CheckResult> {
@@ -21,10 +30,11 @@ function evidenceProbe(
     subject: Subject,
     signal: AbortSignal,
     context?: CheckEvidenceContext,
+    resolutions?: readonly DependencyResolution[],
   ) => Promise<Envelope<CheckResult>>,
   options: { readonly evidence?: RunEvidence | false; readonly identity?: unknown },
 ): CheckProbe {
-  return async (subject, signal) => {
+  return async (subject, signal, resolutions) => {
     signal.throwIfAborted();
     const ownRun = options.evidence === undefined;
     const run =
@@ -34,7 +44,7 @@ function evidenceProbe(
     const context = run?.startCheck(options.identity ?? { transport: "probe" });
     run?.stream.protect(subject);
     try {
-      const result = await invoke(subject, signal, context);
+      const result = await invoke(subject, signal, context, resolutions);
       if (context !== undefined) run?.finishCheck(context, result);
       if (ownRun) run?.stream.emit("run.finished", { outcome: "completed" });
       return result;
@@ -52,6 +62,50 @@ function evidenceProbe(
   };
 }
 
+export function createWorkerCheckProbe(options: {
+  readonly directory: string;
+  readonly revision: string;
+  readonly inputView?: unknown;
+  readonly timeoutMs?: number;
+  readonly evidence?: RunEvidence | false;
+  readonly identity?: unknown;
+}): CheckProbe {
+  return evidenceProbe(async (subject, signal, _evidence, resolutions) => {
+    signal.throwIfAborted();
+    const client = await connectHost();
+    const timeout = AbortSignal.timeout(options.timeoutMs ?? 30_000);
+    let state: CheckState;
+    try {
+      state = await client.execute(
+        {
+          directory: options.directory,
+          revision: options.revision,
+          subject: structuredClone(subject) as HostSubject,
+          context: {
+            resolutions: JSON.parse(JSON.stringify(resolutions ?? [])),
+            inputView:
+              options.inputView === undefined
+                ? null
+                : JSON.parse(JSON.stringify(options.inputView)),
+            timeoutMs: options.timeoutMs ?? 30_000,
+          },
+        },
+        AbortSignal.any([signal, timeout]),
+      );
+    } catch (error) {
+      signal.throwIfAborted();
+      if (timeout.aborted)
+        return failure(
+          "check-timeout",
+          `${JSON.stringify(options.identity)}: ${options.timeoutMs ?? 30_000}ms`,
+        );
+      throw error;
+    }
+    if (state.state === "Completed") return parseCheckEnvelope(state.result);
+    return failure("worker-invocation", state.state === "Failed" ? state.error : state.state);
+  }, options);
+}
+
 export function createMemoryCheckProbe(
   invoke: (
     subject: Subject,
@@ -59,10 +113,12 @@ export function createMemoryCheckProbe(
   ) => Promise<Envelope<CheckResult>> | Envelope<CheckResult>,
   options: { readonly evidence?: RunEvidence | false; readonly identity?: unknown } = {},
 ): CheckProbe {
-  return evidenceProbe(async (subject, signal) => {
+  return evidenceProbe(async (subject, signal, _context, resolutions) => {
     signal.throwIfAborted();
     try {
-      const result = parseCheckEnvelope(await invoke(subject, signal));
+      const result = parseCheckEnvelope(
+        await withDependencyResolutions(resolutions ?? [], () => invoke(subject, signal)),
+      );
       signal.throwIfAborted();
       return result;
     } catch (cause) {
@@ -81,41 +137,15 @@ function duration(value: number, name: string): number {
 
 export function createHttpCheckProbe(
   url: string,
-  options: {
+  _options: {
     readonly timeoutMs?: number;
     readonly evidence?: RunEvidence | false;
     readonly identity?: unknown;
   } = {},
 ): CheckProbe {
-  const parsed = new URL(url);
-  if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) {
-    throw new ObjectiveConfigurationError(
-      "HTTP probes require an HTTP(S) URL without credentials.",
-    );
-  }
-  const timeoutMs = duration(options.timeoutMs ?? 30_000, "timeoutMs");
-  return evidenceProbe(async (subject, signal) => {
-    signal.throwIfAborted();
-    const timeout = AbortSignal.timeout(timeoutMs);
-    try {
-      const response = await fetch(parsed, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(subject),
-        signal: AbortSignal.any([signal, timeout]),
-      });
-      if (response.status !== 200) {
-        await response.body?.cancel();
-        return failure("http-status", `HTTP ${response.status}`, response.status);
-      }
-      const result = parseCheckEnvelope(await response.json());
-      signal.throwIfAborted();
-      return result;
-    } catch (cause) {
-      signal.throwIfAborted();
-      return failure(timeout.aborted ? "timeout" : "http-invocation", cause);
-    }
-  }, options);
+  throw new ObjectiveConfigurationError(
+    `Legacy bare-subject HTTP checks are unsupported (${url}); use a worker directory/revision with createWorkerCheckProbe.`,
+  );
 }
 
 export interface ProcessCheckProbeOptions {

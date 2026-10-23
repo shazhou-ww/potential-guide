@@ -3,6 +3,7 @@ name: Publish package to npm
 on:
   push:
     tags:
+      - "check-host-v*"
       - "effects-v*"
       - "git-source-v*"
       - "objective-pilot-v*"
@@ -27,6 +28,7 @@ on:
         required: true
         type: choice
         options:
+          - check-host
           - effects
           - git-source
           - objective-pilot

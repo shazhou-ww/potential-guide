@@ -1,7 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
-  chmod,
   mkdir,
   mkdtemp,
   open,
@@ -15,6 +14,12 @@ import {
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import {
+  ensurePrivateDirectory,
+  hostDirectory,
+  publishArtifact,
+  readArtifact,
+} from "@potential-guide/check-host";
 import { CliError, markdownInlineCode, markdownText } from "@potential-guide/cli-core";
 import { Cause, Effect, Exit, Scope, Stream } from "@potential-guide/effects";
 import { type GitSnapshot, loadGitSnapshot } from "@potential-guide/git-source";
@@ -22,7 +27,7 @@ import {
   type CheckResult,
   canonicalObjectiveUri,
   captureFilesystemObservation,
-  createProcessCheckProbe,
+  createWorkerCheckProbe,
   type Envelope,
   type GitObjectiveSource,
   loadPilotSpec,
@@ -477,7 +482,7 @@ async function bindPilot<T>(
               try: async (signal) => {
                 const executables = new Map<
                   string,
-                  { command: string; args: string[]; cwd: string; dependencyBinding: boolean }
+                  { directory: string; revision: string; sourceDirectory: string }
                 >();
                 const observationInputs = new Map<string, readonly string[]>();
                 async function prepareChecks(
@@ -540,40 +545,25 @@ async function bindPilot<T>(
 
                         directory = join(root, "checks", check.id);
                       }
-                      const entries = (await readdir(directory)).filter(
-                        (name) => name === "run" || name.startsWith("run."),
-                      );
-                      const [entryName] = entries;
-                      if (entries.length !== 1 || entryName === undefined)
+                      const entries = await readdir(directory);
+                      if (
+                        entries.some((name) => name === "run" || name.startsWith("run.")) ||
+                        !entries.includes("worker.cjs")
+                      )
                         throw new PilotSourceError(
-                          `Check ${level.id}/${check.id} requires exactly one run or run.* executable.`,
+                          "Legacy run.* checks are unsupported; provide a self-contained worker.cjs artifact.",
                         );
-                      const entry = join(directory, entryName);
-                      if (!(await stat(entry)).isFile())
-                        throw new PilotSourceError("Check executable must be a regular file.");
-                      let command = entry;
-                      let args: string[] = [];
-                      const firstLine = entry.toLowerCase().endsWith(".exe")
-                        ? ""
-                        : ((await readFile(entry, "utf8")).split(/\r?\n/, 1)[0] ?? "");
-                      const dependencyBinding = /^#!\/usr\/bin\/env node$/.test(firstLine);
-                      if (process.platform === "win32" && !entry.toLowerCase().endsWith(".exe")) {
-                        const shebang = /^#!\/usr\/bin\/env ([A-Za-z0-9._+-]+)$/.exec(firstLine);
-                        const interpreter = shebang?.[1];
-                        if (interpreter === undefined)
-                          throw new PilotSourceError(
-                            "Windows script probes require #!/usr/bin/env <interpreter>.",
-                          );
-                        command = interpreter;
-                        args = [entry];
-                      } else if (process.platform !== "win32") {
-                        await chmod(entry, 0o755);
-                      }
+                      const identity = JSON.stringify([objective.objectiveId, level.id, check.id]);
+                      const stable = join(
+                        hostDirectory(),
+                        "artifacts",
+                        createHash("sha256").update(identity).digest("hex"),
+                      );
+                      const artifactRevision = (await readArtifact(directory)).revision;
                       executables.set(JSON.stringify([objective.objectiveId, level.id, check.id]), {
-                        command,
-                        args,
-                        cwd: directory,
-                        dependencyBinding,
+                        directory: stable,
+                        revision: artifactRevision,
+                        sourceDirectory: directory,
                       });
                     }
                   }
@@ -745,16 +735,27 @@ async function bindPilot<T>(
                       throw new PilotSourceError(
                         `Unknown check reference: ${JSON.stringify(ref)}.`,
                       );
-                    return async (subject, signal) => {
+                    return async (subject, signal, resolutions) => {
                       const view = await inputView(ref.objectiveId, subject);
                       signal.throwIfAborted();
-                      const probe = createProcessCheckProbe({
+                      await ensurePrivateDirectory(hostDirectory());
+                      const revision = await publishArtifact(
+                        executable.sourceDirectory,
+                        executable.directory,
+                      );
+                      if (revision !== executable.revision)
+                        throw new PilotSourceError(
+                          "Bound worker artifact changed before invocation.",
+                        );
+                      signal.throwIfAborted();
+                      const probe = createWorkerCheckProbe({
                         ...executable,
-                        ...(view === undefined ? {} : { inputView: view }),
+                        ...(view === undefined
+                          ? {}
+                          : { inputView: JSON.parse(await readFile(view.path, "utf8")) }),
                         ...(options.probeTimeoutMs === undefined
                           ? {}
                           : { timeoutMs: options.probeTimeoutMs }),
-                        log: (message) => process.stderr.write(message),
                         evidence: evidence ?? false,
                         identity: ref,
                       });
@@ -763,7 +764,7 @@ async function bindPilot<T>(
                         probeLifecycle.signal,
                         ...(options.signal === undefined ? [] : [options.signal]),
                       ]);
-                      const pending = probe(subject, lifetime);
+                      const pending = probe(subject, lifetime, resolutions);
                       activeProbes.set(pending, lifetime);
                       void pending.then(
                         () => activeProbes.delete(pending),

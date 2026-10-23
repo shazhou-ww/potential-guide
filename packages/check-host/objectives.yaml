@@ -1,0 +1,13 @@
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
+objectives:
+  standardize:
+    description: Standardize the reusable local execution kernel and its shared Host assembly.
+    objective: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
+    inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
+    subject: |
+      {
+        "root": context.repo.rootPath, "directory": context.path,
+        "roles": ["npm"], "runtime": "node", "allows": ["@potential-guide/effects"],
+        "entries": ["src/index.ts", "src/main.ts"], "generated": [], "deliveries": [],
+        "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "developer-commands", "kind": "cli"}]
+      }

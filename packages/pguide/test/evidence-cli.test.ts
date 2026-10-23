@@ -39,8 +39,15 @@ test("probe and scaffold preserve stdout/export while retaining default, configu
     const start = entries.find((entry) => entry.event === "check.started");
     assert.ok(start);
     assert.equal(start.data.identity.checkId, "ready");
-    const business = await readFile(join(directory, start.data.directory, "events.jsonl"), "utf8");
-    assert.match(business, /assertion.passed/);
+    const checkDirectory = join(directory, start.data.directory);
+    const result = JSON.parse(await readFile(join(checkDirectory, "result.json"), "utf8"));
+    assert.equal(result.status, 200);
+    assert.equal(result.payload.ok, true);
+    assert.deepEqual(
+      result,
+      entries.find((entry) => entry.event === "check.finished").data.envelope,
+    );
+    await assert.rejects(readFile(join(checkDirectory, "events.jsonl")), { code: "ENOENT" });
     assert.equal(entries.at(-1).event, "run.finished");
     assert.deepEqual(
       entries.find((entry) => entry.event === "probe.observation").data,

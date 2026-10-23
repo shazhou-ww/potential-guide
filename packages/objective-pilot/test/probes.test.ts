@@ -1,14 +1,22 @@
 import assert from "node:assert/strict";
-import { once } from "node:events";
-import { stat } from "node:fs/promises";
-import { createServer } from "node:http";
+import { mkdir, rm, stat, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
-import { startEffect } from "@potential-guide/effects";
+import { Effect, SubscriptionRef, startEffect } from "@potential-guide/effects";
+import {
+  CheckKernel,
+  connectHost,
+  createPrivateDirectory,
+  publishPrivateFile,
+  readArtifact,
+  serve,
+} from "../../check-host/dist/index.js";
 import {
   createHttpCheckProbe,
   createMemoryCheckProbe,
   createProcessCheckProbe,
+  createWorkerCheckProbe,
   observe,
 } from "../src/index.js";
 import { fixture } from "./fixtures.js";
@@ -23,6 +31,54 @@ const fail = {
 } as const;
 const subject = { root: "subject-json-only" };
 const signal = new AbortController().signal;
+
+async function withWorker(
+  source: string,
+  use: (probe: ReturnType<typeof createWorkerCheckProbe>, kernel: CheckKernel) => Promise<void>,
+) {
+  const parent = resolve(".cache");
+  await mkdir(parent, { recursive: true });
+  const root = await createPrivateDirectory(parent, "worker-probe-");
+  const directory = join(root, "artifact");
+  await mkdir(directory);
+  await writeFile(join(directory, "worker.cjs"), source);
+  const kernel = await CheckKernel.create(join(root, "snapshots"));
+  const token = crypto.randomUUID();
+  const host = await serve(kernel, token);
+  const previous = process.env.PGUIDE_CHECK_HOST_DIRECTORY;
+  try {
+    if (
+      !(await publishPrivateFile(
+        root,
+        "host.json",
+        JSON.stringify({
+          endpoint: host.endpoint,
+          token,
+          pid: process.pid,
+          instance: crypto.randomUUID(),
+        }),
+        null,
+      ))
+    )
+      throw new Error("Fixture Host descriptor already exists.");
+    process.env.PGUIDE_CHECK_HOST_DIRECTORY = root;
+    await connectHost(root);
+    const artifact = await readArtifact(directory);
+    await use(
+      createWorkerCheckProbe({
+        directory: artifact.directory,
+        revision: artifact.revision,
+        evidence: false,
+      }),
+      kernel,
+    );
+  } finally {
+    if (previous === undefined) delete process.env.PGUIDE_CHECK_HOST_DIRECTORY;
+    else process.env.PGUIDE_CHECK_HOST_DIRECTORY = previous;
+    await host.close();
+    await rm(root, { recursive: true, force: true });
+  }
+}
 
 test("process timeout metadata is runtime-owned and preserves the 30s default", async () => {
   const previous = process.env.PGUIDE_PROBE_TIMEOUT_MS;
@@ -75,21 +131,21 @@ test("in-memory and real process probes share business-failure envelope and subj
   await assert.rejects(stat(logs), { code: "ENOENT" });
 });
 
-test("real HTTP probe posts subject JSON and treats business failure as HTTP 200 success", async (t) => {
-  const server = createServer(async (request, response) => {
-    let body = "";
-    for await (const chunk of request) body += chunk;
-    assert.deepEqual(JSON.parse(body), subject);
-    response.setHeader("content-type", "application/json");
-    response.end(JSON.stringify(fail));
-  });
-  t.after(() => new Promise<void>((resolve) => server.close(() => resolve())));
-  server.listen(0, "127.0.0.1");
-  await once(server, "listening");
-  const address = server.address();
-  assert.ok(address && typeof address !== "string");
-  const probe = createHttpCheckProbe(`http://127.0.0.1:${address.port}`);
-  assert.deepEqual(await probe(subject, signal), fail);
+test("legacy bare-subject HTTP factory is explicitly rejected", () => {
+  assert.throws(() => createHttpCheckProbe("http://127.0.0.1:1"), /Legacy bare-subject HTTP/);
+});
+
+test("worker probes send the subject once and preserve business failure envelopes", async () => {
+  await withWorker(
+    `
+exports.execute=async(subject)=>{
+  if(subject.root!=="subject-json-only" || "subject" in subject)throw Error("Wrong subject");
+  return ${JSON.stringify(fail)};
+};`,
+    async (probe) => {
+      assert.deepEqual(await probe(subject, signal), fail);
+    },
+  );
 });
 
 test("transport failures and malformed process output cannot look like business defects", async () => {
@@ -245,44 +301,43 @@ test("process timeout returns an invocation fault and reclaims its resources", a
   }
 });
 
-test("HTTP cancellation is local and does not promise remote business termination", async (t) => {
-  let received: (() => void) | undefined;
-  const requestReceived = new Promise<void>((resolve) => {
-    received = resolve;
+test("worker cancellation waits for Host cleanup before rejecting the caller", async () => {
+  await withWorker(
+    `
+exports.execute=async(subject,context)=>{
+  context.progress("ready");
+  await new Promise(done=>{
+    context.signal.addEventListener("abort",done,{once:true});
+    context.defer(()=>context.signal.removeEventListener("abort",done));
+    if(context.signal.aborted)done();
   });
-  let completed: (() => void) | undefined;
-  const remoteCompleted = new Promise<void>((resolve) => {
-    completed = resolve;
-  });
-  const server = createServer(async (request, response) => {
-    for await (const _chunk of request) {
-      /* consume subject before server-side work */
-    }
-    received?.();
-    await delay(30);
-    response.end(JSON.stringify(fail));
-    completed?.();
-  });
-  t.after(
-    () =>
-      new Promise<void>((resolve) => {
-        server.closeAllConnections();
-        server.close(() => resolve());
-      }),
+  return ${JSON.stringify(fail)};
+};`,
+    async (probe, kernel) => {
+      const controller = new AbortController();
+      const work = probe(subject, controller.signal);
+      const deadline = Date.now() + 10_000;
+      let id = "";
+      try {
+        while (Date.now() < deadline) {
+          id = Effect.runSync(SubscriptionRef.get(kernel.active))[0]?.checkId ?? "";
+          const state = id ? kernel.sample(id) : undefined;
+          if (state?.state === "Running" && state.progress === "ready") break;
+          await delay(5);
+        }
+        assert.ok(id && Date.now() < deadline, "Worker must be ready before cancellation.");
+        controller.abort(new Error("local cancel"));
+        await assert.rejects(work, /local cancel/);
+        assert.equal(kernel.sample(id).state, "Cancelled");
+      } finally {
+        controller.abort();
+        await work.catch(() => {});
+      }
+    },
   );
-  server.listen(0, "127.0.0.1");
-  await once(server, "listening");
-  const address = server.address();
-  assert.ok(address && typeof address !== "string");
-  const controller = new AbortController();
-  const work = createHttpCheckProbe(`http://127.0.0.1:${address.port}`)(subject, controller.signal);
-  await requestReceived;
-  controller.abort(new Error("local cancel"));
-  await assert.rejects(work, /local cancel/);
-  await remoteCompleted;
 });
 
-test("already aborted probes never start user code, HTTP, or a process", async () => {
+test("already aborted probes never start user code, a Host request, or a process", async () => {
   const controller = new AbortController();
   controller.abort(new Error("pre-cancelled"));
   let calls = 0;
@@ -297,7 +352,11 @@ test("already aborted probes never start user code, HTTP, or a process", async (
     /pre-cancelled/,
   );
   await assert.rejects(
-    createHttpCheckProbe("http://127.0.0.1:1")(subject, controller.signal),
+    createWorkerCheckProbe({
+      directory: "must-not-read",
+      revision: "0".repeat(64),
+      evidence: false,
+    })(subject, controller.signal),
     /pre-cancelled/,
   );
   assert.equal(calls, 0);

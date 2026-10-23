@@ -1,5 +1,13 @@
 export const releasePackages = [
   {
+    id: "check-host",
+    directory: "check-host",
+    name: "@potential-guide/check-host",
+    requiredExports: ["CheckKernel", "CheckClient", "connectHost", "readArtifact", "serve"],
+    bins: ["pguide-check-host"],
+    forbiddenDependencies: ["@potential-guide/objective-pilot", "@potential-guide/cli-core"],
+  },
+  {
     id: "effects",
     directory: "effects",
     name: "@potential-guide/effects",
@@ -37,6 +45,7 @@ export const releasePackages = [
       "parseCheckEnvelope",
       "createProcessCheckProbe",
       "createHttpCheckProbe",
+      "createWorkerCheckProbe",
     ],
     bins: [],
     forbiddenDependencies: [

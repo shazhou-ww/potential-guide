@@ -13,7 +13,9 @@
       "!packages/objective-monorepo-standard/package-standard/runtime",
       "!packages/objective-pguide-self-check/runtime",
       "!packages/objective-devbox-health/runtime",
-      "!packages/objective-pguide-setup/runtime"
+      "!packages/objective-pguide-setup/runtime",
+      "!packages/objective-*/**/checks/**/worker.cjs",
+      "!packages/objective-*/**/checks/**/resources"
     ]
   },
   "formatter": {

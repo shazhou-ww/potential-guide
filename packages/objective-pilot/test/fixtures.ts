@@ -10,7 +10,7 @@ export const commit = "a".repeat(40);
 
 export function manifest(overrides: Partial<ObjectiveManifest> = {}): ObjectiveManifest {
   return {
-    $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json",
+    $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json",
     subjectSchema: {
       type: "object",
       required: ["name"],

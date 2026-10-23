@@ -1,13 +1,51 @@
 import { execFile, spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { after, before } from "node:test";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { parseConfig, parseLegacyConfig, validateAgentProfile } from "@potential-guide/cli-core";
+import {
+  CheckKernel,
+  connectHost,
+  createPrivateDirectory,
+  publishPrivateFile,
+  serve,
+} from "../../check-host/dist/index.js";
 
 export const root = resolve(import.meta.dirname, "..", "..", "..");
 export const scratch = join(root, ".cache");
 await mkdir(scratch, { recursive: true });
+const testHostDirectory = await createPrivateDirectory(scratch, "pguide-suite-host-");
+const previousHostDirectory = process.env.PGUIDE_CHECK_HOST_DIRECTORY;
+let testHost: Awaited<ReturnType<typeof serve>> | undefined;
+before(async () => {
+  const kernel = await CheckKernel.create(join(testHostDirectory, "snapshots"));
+  const token = crypto.randomUUID();
+  testHost = await serve(kernel, token);
+  if (
+    !(await publishPrivateFile(
+      testHostDirectory,
+      "host.json",
+      JSON.stringify({
+        endpoint: testHost.endpoint,
+        token,
+        pid: process.pid,
+        instance: crypto.randomUUID(),
+      }),
+      null,
+    ))
+  )
+    throw new Error("Fixture Host descriptor already exists.");
+  process.env.PGUIDE_CHECK_HOST_DIRECTORY = testHostDirectory;
+  await connectHost(testHostDirectory);
+});
+after(async () => {
+  await testHost?.close();
+  if (previousHostDirectory === undefined) delete process.env.PGUIDE_CHECK_HOST_DIRECTORY;
+  else process.env.PGUIDE_CHECK_HOST_DIRECTORY = previousHostDirectory;
+  await rm(testHostDirectory, { recursive: true, force: true });
+});
 export const commandPackage = (name: string) =>
   name === "regulate" || name === "continue"
     ? "pguide-regulate"

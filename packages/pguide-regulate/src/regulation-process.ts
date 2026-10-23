@@ -47,13 +47,43 @@ export function createProcessRegulationRunner(
       let killRequested = false;
       let ready: Promise<void>;
       let closed: Promise<void> = Promise.resolve();
+      let cleanupAcknowledged = false;
+      let acknowledge!: () => void;
+      const cleaned = new Promise<void>((resolve) => {
+        acknowledge = resolve;
+      });
       let stop: Promise<void> | undefined;
       const force = () => {
         killRequested = true;
         stop ??= (async () => {
           await ready;
-          if (child !== undefined) await killProcessTree(child);
+          let cleanupConfirmed = cleanupAcknowledged;
+          if (child !== undefined) {
+            if (!cleanupAcknowledged && child.connected) {
+              // Killing an observer process alone does not cancel its shared Host execution.
+              aborted = true;
+              child.send({ type: "abort" }, () => {});
+              let timer: ReturnType<typeof setTimeout> | undefined;
+              try {
+                await Promise.race([
+                  cleaned,
+                  new Promise<void>((resolve) => {
+                    timer = setTimeout(resolve, 10_000);
+                  }),
+                ]);
+              } finally {
+                clearTimeout(timer);
+              }
+            }
+            cleanupConfirmed = cleanupAcknowledged;
+            await killProcessTree(child);
+          }
           await closed;
+          if (!cleanupConfirmed)
+            throw new RegulationError(
+              "Regulation process stopped before shared-check cleanup was confirmed.",
+              500,
+            );
         })();
         return stop;
       };
@@ -103,8 +133,12 @@ export function createProcessRegulationRunner(
                   rejectReply(error);
                 }
               } else if (message.type === "outcome" && "outcome" in message) {
+                cleanupAcknowledged = true;
+                acknowledge();
                 resolveReply(message.outcome as RegulationOutcome);
               } else if (message.type === "error" && "message" in message) {
+                cleanupAcknowledged = true;
+                acknowledge();
                 const status =
                   "status" in message && typeof message.status === "number" ? message.status : 500;
                 rejectReply(new RegulationError(String(message.message), status));

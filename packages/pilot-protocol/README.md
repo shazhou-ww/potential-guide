@@ -5,8 +5,11 @@ and the canonical `$schema` URI. Declarations use `objective`; omitted
 `inputSchema` is Unit. Context is exactly `{repo, path}` and the bounded
 projection profile includes only the additional `$pathJoin(root, path)` function.
 See [document contracts and explicit migration](../../docs/objective-contracts.md).
-Offline JSON schemas are exported at `./schemas/objective/v2.json` and
+The active offline JSON schemas are exported at `./schemas/objective/v3.json` and
 `./schemas/objectives/v1.json`, with strict validators at `./schemas`.
+Historical v1/v2 schema bytes remain immutable. V3 check execution uses
+self-contained worker artifacts; the legacy document migration command does not
+bundle entrypoints or provide an old process-protocol fallback.
 The package also supplies the non-overwriting `objective-contract-migrate` command.
 
 ## Migration CLI
@@ -39,7 +42,7 @@ Projection migrations may require `--context-kind git|non-git` or explicitly
 reviewed subject expressions via `--subjects-file <name-to-expression.json>`;
 no binding is guessed.
 
-Manifest v2 uses cumulative attainment checks. `initial` is intrinsic and
+Manifest v3 preserves v2's cumulative attainment checks. `initial` is intrinsic and
 `terminal` is a reserved target alias for the real highest business level.
 Neither can be declared. Old manifests are rejected; migration requires reviewed
 `--attainment-levels`. Old Portfolio targets require explicit review and a new

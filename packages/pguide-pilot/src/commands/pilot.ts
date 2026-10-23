@@ -1,4 +1,4 @@
-import { chmod, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import {
   atomicWrite,
@@ -219,7 +219,7 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
   await mkdir(root, { recursive: true });
   await writeFile(
     join(root, "objective.yaml"),
-    `$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json\nsubjectSchema:\n  type: object\nlevels:\n  - id: ${level}\n    checks:${check === undefined ? " []" : `\n      - id: ${check}\n        problems: [${problems.join(", ")}]`}\ndefaultLanguage: ${languages[0]}\nlanguages: [${languages.join(", ")}]\n`,
+    `$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json\nsubjectSchema:\n  type: object\nlevels:\n  - id: ${level}\n    checks:${check === undefined ? " []" : `\n      - id: ${check}\n        problems: [${problems.join(", ")}]`}\ndefaultLanguage: ${languages[0]}\nlanguages: [${languages.join(", ")}]\n`,
   );
   for (const language of languages) {
     const pages: [string, string][] = [
@@ -253,19 +253,12 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
     }
   }
   if (check !== undefined) {
-    const evidenceSource = await readFile(
-      new URL("./evidence.js", import.meta.resolve("@potential-guide/objective-pilot")),
-      "utf8",
-    );
-    await mkdir(join(root, "runtime"), { recursive: true });
-    await writeFile(join(root, "runtime", "evidence.mjs"), evidenceSource);
-    const executable = join(root, "checks", check, "run.js");
+    const executable = join(root, "checks", check, "worker.cjs");
     await mkdir(dirname(executable), { recursive: true });
     await writeFile(
       executable,
-      `#!/usr/bin/env node\nvoid (async () => {\nconst { withCheckEvidence, reportArguments } = await import("../../runtime/evidence.mjs");\nconst { options } = reportArguments(process.argv.slice(2));\nconst value = await withCheckEvidence(${JSON.stringify(check)}, async evidence => {\n  let source = "";\n  for await (const chunk of process.stdin) source += chunk;\n  JSON.parse(source);\n  evidence?.fact("assertion.passed", { assertion: "generated-placeholder" });\n  return {status:200,payload:{ok:true,problems:[]},message:""};\n}, options);\nprocess.stdout.write(JSON.stringify(value));\n})();\n`,
+      `exports.execute = async function execute(subject, context) {\n  context.signal.throwIfAborted();\n  // TODO: inspect subject; register request-owned cleanup with context.defer.\n  return {status:200,payload:{ok:true,problems:[]},message:""};\n};\n`,
     );
-    if (process.platform !== "win32") await chmod(executable, 0o755);
   }
   writeResult(
     {

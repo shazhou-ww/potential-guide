@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json",
+  "title": "Objective Manifest v3 — reusable Node worker checks",
+  "description": "Checks use self-contained worker.cjs artifacts. Business dependency requirements are not observed dependency facts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "subjectSchema", "levels", "defaultLanguage", "languages"],
+  "properties": {
+    "$schema": {
+      "const": "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json"
+    },
+    "subjectSchema": {
+      "allOf": [
+        { "$ref": "https://json-schema.org/draft/2020-12/schema" },
+        { "type": "object", "required": ["type"], "properties": { "type": { "const": "object" } } }
+      ]
+    },
+    "levels": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "checks"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "not": { "enum": ["initial", "terminal"] }
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "problems"],
+              "properties": {
+                "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+                "problems": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "defaultLanguage": { "type": "string", "minLength": 1 },
+    "languages": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

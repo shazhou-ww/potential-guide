@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
-import { test } from "node:test";
+import { after, before, test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Effect, SubscriptionRef } from "@potential-guide/effects";
 import {
   captureFilesystemObservation,
-  createProcessCheckProbe,
+  createWorkerCheckProbe,
   fileResources,
   filesystemObservationRevision,
   loadPilotSpec,
@@ -18,6 +18,8 @@ import {
 } from "@potential-guide/objective-pilot";
 import { createPortfolioPlanner } from "@potential-guide/objective-portfolio-supervisor";
 import { makeRegulatorSpec, regulate } from "@potential-guide/objective-regulator";
+import { createWorkerHost } from "../../../scripts/worker-test-helpers.mjs";
+import { readArtifact } from "../../check-host/dist/index.js";
 import { main } from "../check.mjs";
 import { checkPackage, checkRepository, defaultPolicy } from "../src/index.ts";
 
@@ -28,6 +30,15 @@ const rootId =
 const packageId = `${rootId}package-standard/`;
 const scratch = join(root, ".cache");
 await mkdir(scratch, { recursive: true });
+const hostRoot = await mkdtemp(join(scratch, "monorepo-worker-host-"));
+let host;
+before(async () => {
+  host = await createWorkerHost(hostRoot);
+});
+after(async () => {
+  await host?.close();
+  await rm(hostRoot, { recursive: true, force: true });
+});
 
 export function context(root, directory = ".") {
   return {
@@ -64,6 +75,14 @@ async function fixtureSpec(objectiveId) {
   });
 }
 async function runtimeFor(id, calls = [], failBinding = false, inputView) {
+  const artifacts = new Map();
+  for (const check of ["structure", "deliveries"])
+    artifacts.set(
+      check,
+      await readArtifact(
+        join(pilotRoot, ...(id === rootId ? [] : ["package-standard"]), "checks", check),
+      ),
+    );
   return {
     observationRevision: (input, signal) =>
       filesystemObservationRevision(
@@ -72,20 +91,22 @@ async function runtimeFor(id, calls = [], failBinding = false, inputView) {
       ),
     resolveCheck(ref) {
       calls.push({ id, check: ref.checkId });
-      return createProcessCheckProbe({
-        ...(inputView === undefined ? {} : { inputView }),
-        command: process.execPath,
-        args: [
-          join(
-            pilotRoot,
-            ...(id === rootId ? [] : ["package-standard"]),
-            "checks",
-            ref.checkId,
-            "run.cjs",
-          ),
-        ],
-        cwd: root,
-      });
+      return async (subject, signal, resolutions) => {
+        let view;
+        if (inputView !== undefined) {
+          const bytes = await readFile(inputView.path);
+          if (createHash("sha256").update(bytes).digest("hex") !== inputView.sha256)
+            return { status: 502, payload: null, message: "Input view integrity mismatch." };
+          view = JSON.parse(bytes);
+        }
+        const artifact = artifacts.get(ref.checkId);
+        return createWorkerCheckProbe({
+          directory: artifact.directory,
+          revision: artifact.revision,
+          ...(view === undefined ? {} : { inputView: view }),
+          evidence: false,
+        })(subject, signal, resolutions);
+      };
     },
     async resolveObjective(objectiveId) {
       if (failBinding) throw new Error("Controlled source binding failure");
@@ -487,7 +508,7 @@ test("root retains joint delivery coverage, dependency closure, layout and runti
   });
 });
 
-test("real repository has twenty-one package-owned subjects and no old contract input", async (t) => {
+test("real repository has twenty-two package-owned subjects and no old contract input", async (t) => {
   const entry = parseObjectives(await readFile(join(root, "objectives.yaml"), "utf8")).standardize;
   const subject = projectObjective(entry, context(root), undefined);
   const observed = [];
@@ -595,8 +616,14 @@ test("real repository has twenty-one package-owned subjects and no old contract 
       });
     },
   );
-  assert.equal(result.report.state, "pass", JSON.stringify(result.report.findings));
-  assert.equal(observed.length, 21);
+  assert.equal(
+    result.report.state,
+    "pass",
+    JSON.stringify(
+      result.report.findings.filter(({ state }) => state === "fail" || state === "unverified"),
+    ),
+  );
+  assert.equal(observed.length, 22);
   assert.deepEqual(result.problems, []);
   assert.ok(observed.every(({ source }) => source.expectedLevelId === "terminal"));
   assert.throws(() =>

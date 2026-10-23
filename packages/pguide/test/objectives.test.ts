@@ -18,6 +18,7 @@ import {
   validateObjectivesDocument,
 } from "../../pilot-protocol/src/index.js";
 import { bin, fixture, git, run, writeConfig } from "./fixtures.js";
+import { dependencyWorker } from "./worker-fixtures.js";
 
 const unit = { type: "object", additionalProperties: false, maxProperties: 0 } as const;
 const declaration: ObjectiveDeclaration = {
@@ -592,22 +593,15 @@ test("continue restores cross-repository dependency snapshots while a new bindin
       ),
     ),
   );
-  const childScript = join(child.repository, "objective", "checks", "ready", "run.js");
+  const childScript = join(child.repository, "objective", "checks", "ready", "worker.cjs");
   await writeFile(
     childScript,
-    '#!/usr/bin/env node\nprocess.stdout.write(JSON.stringify({status:200,message:"",payload:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]}}));\n',
+    'exports.execute = async (inputSubject, context) => {\n    return { status: 200, message: "", payload: { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: {} }] } };\n};\n',
   );
   const childCommit = await child.commit();
   await writeFile(
-    join(parent.repository, "objective", "checks", "ready", "run.js"),
-    `#!/usr/bin/env node
-void (async () => {
-  const { createSourceObjectiveDependencyProbe } = await import("@potential-guide/objective-pilot");
-  let input = ""; for await (const chunk of process.stdin) input += chunk;
-  const probe = createSourceObjectiveDependencyProbe({ objectiveId: ${JSON.stringify(child.uri)}, expectedLevelId: "terminal" });
-  process.stdout.write(JSON.stringify(await probe(JSON.parse(input), new AbortController().signal)));
-})();
-`,
+    join(parent.repository, "objective", "checks", "ready", "worker.cjs"),
+    dependencyWorker(child.uri),
   );
   await parent.commit();
   const state = join(parent.directory, "state");
@@ -647,7 +641,7 @@ void (async () => {
   assert.equal(saved.sourceBindings[child.uri].commit, childCommit);
   await writeFile(
     childScript,
-    '#!/usr/bin/env node\nprocess.stdout.write(JSON.stringify({status:200,message:"",payload:{ok:true,problems:[]}}));\n',
+    'exports.execute = async (inputSubject, context) => {\n    return { status: 200, message: "", payload: { ok: true, problems: [] } };\n};\n',
   );
   const updated = await child.commit();
   assert.notEqual(updated, childCommit);

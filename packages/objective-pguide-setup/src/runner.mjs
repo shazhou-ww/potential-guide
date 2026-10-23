@@ -27,7 +27,10 @@ export async function check(stage, value, options = {}) {
         if (subject.timeoutMs + 10000 > 24000)
           throw new Fault("outer-timeout: SSH Pilot checks require a total budget <=24000ms.", 400);
       } else {
-        const metadata = process.env.PGUIDE_PROBE_TIMEOUT_MS;
+        const metadata =
+          options.timeoutMs === undefined
+            ? process.env.PGUIDE_PROBE_TIMEOUT_MS
+            : String(options.timeoutMs);
         const outerTimeoutMs = metadata === undefined ? 30000 : Number(metadata);
         if (
           (metadata !== undefined && metadata !== String(outerTimeoutMs)) ||

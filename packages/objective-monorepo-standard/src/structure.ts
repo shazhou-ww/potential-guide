@@ -4,6 +4,7 @@ import {
   type CheckProblem,
   canonicalObjectiveUri,
   createSourceObjectiveDependencyProbe,
+  type DependencyRequirement,
   type ObjectiveDependencySource,
   parseCheckEnvelope,
   parseObjectives,
@@ -36,6 +37,7 @@ export type DependencyProbeFactory = (source: ObjectiveDependencySource) => Chec
 export interface RepositoryReport {
   report: Report;
   problems: CheckProblem[];
+  requirements: DependencyRequirement[];
 }
 export async function checkRepository(
   value: unknown,
@@ -132,6 +134,7 @@ export async function checkRepository(
   checkFileAssignments(model, "objectives.yaml", facts.inventory, byName, add);
   checkFileClassification(model, "objectives.yaml", facts.inventory, add);
   const problems: CheckProblem[] = [];
+  const requirements: DependencyRequirement[] = [];
   if (!output.blocked()) {
     for (const binding of bindings) {
       signal.throwIfAborted();
@@ -146,8 +149,9 @@ export async function checkRepository(
           `Package Objective invocation failed (${binding.name}): ${envelope.message}`,
         );
       problems.push(...envelope.payload.problems);
+      requirements.push(...(envelope.payload.requirements ?? []));
     }
-    if (problems.length === 0 && maxLayer === 2) {
+    if (problems.length === 0 && requirements.length === 0 && maxLayer === 2) {
       for (const binding of bindings) {
         tasks = await applicableTasks(snapshot, binding.subject.directory, binding.name, tasks);
         const workspace = byName.get(binding.name);
@@ -204,9 +208,9 @@ export async function checkRepository(
         report: { ...report, findings: report.findings.map((finding) => ({ ...finding })) },
       },
     });
-  if (problems.some(({ kind }) => kind === "dependency")) {
+  if (requirements.length || problems.some(({ kind }) => kind === "dependency")) {
     report.state = "fail";
     if (maxLayer === 2) report.layer2 = "blocked";
   }
-  return { report, problems };
+  return { report, problems, requirements };
 }
