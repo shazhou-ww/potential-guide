@@ -1,16 +1,16 @@
 # Regulation Target 与 Coordinator State 模型草案
 
-本文支撑 [Idea.md](./Idea.md) 与 [Design.md](./Design.md)，不是独立验收合同或已发布 API。先分别用 ER 模型讨论 RegulationTarget 和 CoordinatorState，再以 TypeScript 作为补充表达，最后从合法转换推导 Command/Event。旧 [Events.md](./Events.md) 中的分类仅作覆盖检查，不反过来决定状态结构。
+本文支撑 [Idea.md](./Idea.md) 与 [Design.md](./Design.md)，不是独立验收合同或已发布 API。先分别用 ER 模型讨论 RegulationTargets 和 CoordinatorState，再以 TypeScript 作为补充表达，最后从合法转换推导 Command/Event。旧 [Events.md](./Events.md) 中的分类仅作覆盖检查，不反过来决定状态结构。
 
 ## 三个核心类型
 
-- RegulationTarget：治理目标意图的状态；包含多个 Objective/subject 的最新意图及发生修订。
+- RegulationTargets：治理目标集合状态，按对象保存最新 RegulationTarget；单个 RegulationTarget 表达一次目标意图及其修订。
 - ResourceAllocation：资源分配意图；binding 与期望并发度整体替换，不表示已经分配或已经停止调用。
 - CoordinatorState：Coordinator 的完整领域状态，由 current singleton state 与若干 collection states 组成；集合可以表达历史、实体状态或聚合结果，不包含 Promise、进程句柄或调度器内部对象。
 
 ## ER 模型约定
 
-两张图是版本化状态的概念模型，不是物理数据库 schema。目标意图按对象独立版本化，不再为 RegulationTarget 设置全局 revision 或 singleton 快照实体。Coordinator 的 singleton 在一个 revision 下恰有一个，跨 revision 则成为以 revision 为 PK 的快照表；current 是选定当前 revision 对应的那一行，不是另一份独立权威状态。Collection 可以在每个 Coordinator revision 下有零到多条成员记录。`||` 表示一个，`o|` 表示零或一个，`o{` 表示零到多个。
+两张图是版本化状态的概念模型，不是物理数据库 schema。目标意图按对象独立版本化，不为 RegulationTargets 设置全局 revision 或 singleton 快照实体。Coordinator 的 singleton 在一个 revision 下恰有一个，跨 revision 则成为以 revision 为 PK 的快照表；current 是选定当前 revision 对应的那一行，不是另一份独立权威状态。Collection 可以在每个 Coordinator revision 下有零到多条成员记录。`||` 表示一个，`o|` 表示零或一个，`o{` 表示零到多个。
 
 PK 表示模型中的逻辑唯一键，多列标为 PK 表示复合主键；FK 表示版本归属或对象引用。图中的 objectKey 是由精确 Objective 版本、来源和 subject 推导的身份，不要求在 TypeScript 值中重复保存。嵌套值可以展开成实体以说明关系，不意味着新增存储集合。尚未确定的记录键不虚构为 PK；可选字段、联合类型和跨记录约束由图后规则补充。
 
@@ -20,12 +20,12 @@ PK 表示模型中的逻辑唯一键，多列标为 PK 表示复合主键；FK �
 
 ### 实体边界与身份假设
 
-概念上有四层：Objective source → Objective definition → RegulationObject → TargetIntent；其中 source 是字符串值，不单独建实体。RegulationObject 表示治理对象，不是一次有开始与终结的 Regulation 调用。
+概念上有四层：Objective source → ObjectiveDefinition → RegulationObject → RegulationTarget；其中 source 是字符串值，不单独建实体。三个实体分别是定义、治理对象、目标；RegulationObject 不是一次有开始与终结的 Regulation 调用。单条目标不再称 TargetIntent，目标集合另称 RegulationTargets。
 
-- **Objective source 确定 Objective 身份。** source 必须标识 Git 仓库中的位置，表达仓库定位地址与仓库内相对路径；可以访问 HTTPS、SSH 或本地 Git 仓库，不要求整个 repo 就是一个 Objective。Git 语义由类型契约与校验保证，不添加 git+ 前缀，也不接受任意非 Git 文件目录。
-- **Objective definition 是版本化实体。** 逻辑主键为 `(objectiveKey, version)`，version 固定为解析后的完整 Git commit object ID；同一来源可有多个版本，同一精确版本的定义不能在原身份下被静默替换。objectiveKey 必须是规范化 source 的确定性哈希，不直接使用 URL，也不是任意分配的 objectiveId；保留 source 以便定位、校验与追溯。
-- **RegulationObject 绑定精确 definition。** 每个对象引用一个 `(objectiveKey, objectiveVersion)`，再结合 subject 身份确定 objectKey。同一 subject 使用另一个 definition version 会形成另一个治理对象；一份 definition 可以被多个对象共享。
-- **TargetIntent 是对象的历次目标。** 每条目标意图以 `(objectKey, revision)` 唯一标识；targetLevel 与 priority 不属于对象身份，同值新请求也产生新的意图版本。
+- **Objective source 标识来源。** source 必须标识 Git 仓库中的位置，表达仓库定位地址与仓库内相对路径；可以访问 HTTPS、SSH 或本地 Git 仓库，不要求整个 repo 就是一个 Objective。Git 语义由类型契约与校验保证，不添加 git+ 前缀，也不接受任意非 Git 文件目录。
+- **ObjectiveDefinition 使用单主键。** objectiveKey 是规范化 source 与固定 version 共同编码后的确定性哈希，标识一份精确定义版本，不再标识跨版本来源。version 是解析后的完整 Git commit object ID，同一 source 的不同 version 得到不同 key；保留 source 和 version 用于读取、追溯及校验，不能在原 key 下静默替换它们。
+- **RegulationObject 绑定精确 definition。** 每个对象只以 objectiveKey 一个外键引用 definition，再结合 subject 身份推导 objectKey，不重复保存 objectiveVersion 外键。同一 subject 使用另一个 definition version 会形成另一个治理对象；一份 definition 可以被多个对象共享。
+- **RegulationTarget 是对象的历次目标。** 每条目标以 `(objectKey, revision)` 唯一标识；targetLevel 与 priority 不属于对象身份，同值新请求也产生新的目标版本。
 
 三个实体表达这些业务边界，不强制建立 source 表、独立 Objective 目录服务或新的顶层状态集合。TS 可以嵌套实体值，物理存储也可以用外键；表示方式不能改变上述身份关系。
 
@@ -34,8 +34,8 @@ PK 表示模型中的逻辑唯一键，多列标为 PK 表示复合主键；FK �
 - source 是字符串值，编码“仓库定位地址 + 仓库内相对路径”，不包含版本选择。内部路径相对于 Git 仓库根目录，不能依赖进程当前目录，也不能越出仓库；仓库地址与内部路径的分界必须无歧义，不能从普通 URL 猜测。具体字符串语法仍待确定，不引入 git+https、git+ssh 或 git+local 等前缀。
 - version 是仓库级 commit 身份，不是路径内容哈希。branch、tag、HEAD 等可以作为解析入口，但必须解析成完整 commit ID 后才成为 definition version；读取的是该 commit 下指定路径的内容，路径或定义不存在须明确报错。本地未提交修改不属于此版本，不能用工作区内容冒充固定 commit。
 - 仓库其他路径的变更也可能产生新 commit，因此同一 Objective 内容可能对应不同 definition version；此模型不自动按路径内容去重。
-- objectiveKey = Hash(Canonicalize(source))，不包含 version。规范化、哈希算法及输出编码须由统一协议固定，不能由调用方自由选择；具体算法与规则尚未选定，不在本文假定 SHA-1、SHA-256 或某种编码。
-- HTTPS、SSH、本地地址即使访问同一仓库，也不天然是相同 source。没有明确等价/别名规则时不自动合并；不得通过丢弃主机、路径等身份信息制造相同 key。source 与 key 必须一致，哈希碰撞不得静默合并对象。
+- objectiveKey = Hash(Encode(Canonicalize(source), resolvedCommitId))，必须同时包含 source 和 version。Encode 必须无歧义，不能简单拼接字符串；规范化、元组编码、哈希算法及输出编码须由统一协议固定，不能由调用方自由选择。具体算法与规则尚未选定，不在本文假定 SHA-1、SHA-256 或某种编码。
+- HTTPS、SSH、本地地址即使访问同一仓库，也不天然是相同 source。没有明确等价/别名规则时不自动合并；不得通过丢弃主机、路径等身份信息制造相同 key。source/version 与 key 必须一致，哈希碰撞不得静默合并定义。查询同一来源的全部版本可按规范化 source 筛选，不另建 sourceKey。
 - source 不嵌入密码或 token，认证由外部提供；凭据变化不应成为 Objective 身份变化。解析协议与现有 Git 来源结构的适配留待实施，不声称运行时代码已经支持本设计。
 
 [独立 SVG：Regulation Target](./diagrams/regulation-target.svg)。在浏览器单独打开可缩放；使用 22px 基础字号和横向布局。SVG 由本节 Mermaid 源生成，模型变化时须同步重新渲染。
@@ -44,14 +44,14 @@ PK 表示模型中的逻辑唯一键，多列标为 PK 表示复合主键；FK �
 erDiagram
     direction LR
     OBJECTIVE_DEFINITION ||--o{ REGULATION_OBJECT : governs
-    REGULATION_OBJECT ||--o{ TARGET_INTENT_VERSION : hasIntents
+    REGULATION_OBJECT ||--o{ REGULATION_TARGET : hasTargets
 
     OBJECTIVE_DEFINITION {
-        string objectiveKey PK "Hash of canonical source"
-        string version PK "Full Git commit object ID"
+        string objectiveKey PK "Hash of encoded source and version"
+        string version "Full Git commit object ID"
         string source "Git repository location and internal path"
     }
-    TARGET_INTENT_VERSION {
+    REGULATION_TARGET {
         string objectKey PK, FK "Canonical object identity"
         number revision PK "Per-object intent version"
         string targetLevel
@@ -59,13 +59,12 @@ erDiagram
     }
     REGULATION_OBJECT {
         string objectKey PK "Canonical identity"
-        string objectiveKey FK "With objectiveVersion identifies definition"
-        string objectiveVersion FK
+        string objectiveKey FK "Exact definition version"
         Subject subject
     }
 ```
 
-- **对象独立版本化。** TARGET_INTENT_VERSION 以 `(objectKey, revision)` 为复合 PK，每条合法更新只递增该对象的意图版本，同值更新也产生新发生身份。RegulationTarget 是各对象最新意图的映射，不再有全局目标版本。
+- **对象独立版本化。** REGULATION_TARGET 以 `(objectKey, revision)` 为复合 PK，每条合法更新只递增该对象的目标版本，同值更新也产生新发生身份。RegulationTargets 是各对象最新目标的映射，不再有全局目标版本。
 - **对象身份决定更新范围。** 更新 A 不改变 B 的版本，不改写旧意图；不同 Objective 版本、来源或 subject 不能静默合并。targetLevel 和 priority 属于意图，不属于对象身份。REGULATION_OBJECT 是共享身份值，不新增独立状态。
 - **意图发生身份。** IntentRef 为 `(objectKey, revision)`。A 的版本 5 与 B 的版本 2 不能用于判断更新先后；快照存储若需标识完整目标组合，由外层关联各对象版本，不因此引入领域全局 revision。
 - **只表示期望。** 本图不包含执行结果或 Coordinator 的确认时间。跨对象的同 priority 排序依据 Coordinator 采纳意图的逻辑时间，而不是比较对象自身版本；尚未确认的原始意图映射不承诺全局 FIFO。
@@ -78,9 +77,9 @@ erDiagram
 erDiagram
     direction LR
     OBJECTIVE_DEFINITION ||--o{ REGULATION_OBJECT : governs
-    REGULATION_OBJECT ||--o{ TARGET_INTENT_VERSION : hasIntents
+    REGULATION_OBJECT ||--o{ REGULATION_TARGET : hasTargets
     COORDINATOR_SNAPSHOT ||--o{ ACKNOWLEDGED_TARGET : acknowledgedTargets
-    TARGET_INTENT_VERSION ||--o{ ACKNOWLEDGED_TARGET : confirms
+    REGULATION_TARGET ||--o{ ACKNOWLEDGED_TARGET : confirms
     COORDINATOR_SNAPSHOT ||--o{ REGULATION_OBJECT_STATE : regulationObjects
     COORDINATOR_SNAPSHOT ||--o{ REGULATION_RECORD : regulations
     COORDINATOR_SNAPSHOT ||--o{ OBSERVATION_RECORD : observations
@@ -97,13 +96,13 @@ erDiagram
     REGULATION_OBJECT ||--o{ CURRENT_DEPENDENCY : consumer
     REGULATION_OBJECT ||--o{ CURRENT_DEPENDENCY : provider
 
-    TARGET_INTENT_VERSION {
+    REGULATION_TARGET {
         string objectKey PK, FK "Canonical object identity"
         number revision PK "Per-object intent version"
     }
     OBJECTIVE_DEFINITION {
-        string objectiveKey PK "Hash of canonical source"
-        string version PK "Full Git commit object ID"
+        string objectiveKey PK "Hash of encoded source and version"
+        string version "Full Git commit object ID"
         string source "Git repository location and internal path"
     }
     COORDINATOR_SNAPSHOT {
@@ -115,8 +114,7 @@ erDiagram
     }
     REGULATION_OBJECT {
         string objectKey PK "Canonical identity"
-        string objectiveKey FK "With objectiveVersion identifies definition"
-        string objectiveVersion FK
+        string objectiveKey FK "Exact definition version"
         Subject subject
     }
     REGULATION_OBJECT_STATE {
@@ -241,22 +239,22 @@ export interface RegulationObject {
 
 export interface IntentRef {
   readonly objectKey: ObjectKey;
-  // 引用该 objectKey 对应的 TargetIntent.revision。
+  // 引用该 objectKey 对应的 RegulationTarget.revision。
   readonly revision: Revision;
 }
 
-export interface TargetIntent {
+export interface RegulationTarget {
   readonly object: RegulationObject;
   readonly targetLevel: string;
   readonly priority: number;
   readonly revision: Revision;
 }
 
-export interface RegulationTarget {
-  readonly intents: Readonly<Partial<Record<ObjectKey, TargetIntent>>>;
+export interface RegulationTargets {
+  readonly intents: Readonly<Partial<Record<ObjectKey, RegulationTarget>>>;
 }
 
-export interface AcknowledgedTargetIntent extends TargetIntent {
+export interface AcknowledgedRegulationTarget extends RegulationTarget {
   readonly acknowledgedAtRevision: Revision;
 }
 
@@ -408,7 +406,7 @@ export interface CoordinatorCurrent {
   readonly acknowledged: {
     readonly targets: {
       readonly intents: Readonly<
-        Partial<Record<ObjectKey, AcknowledgedTargetIntent>>
+        Partial<Record<ObjectKey, AcknowledgedRegulationTarget>>
       >;
     };
     readonly allocation: AllocationAcknowledgement;
@@ -432,33 +430,33 @@ export interface CoordinatorState {
 
 export type Reducer<Delta, State> = (delta: Delta, state: State) => State;
 
-export type RegulationTargetReducer<Command> =
-  Reducer<Command, RegulationTarget>;
+export type RegulationTargetsReducer<Command> =
+  Reducer<Command, RegulationTargets>;
 
 export type CoordinatorStateReducer<Event> =
   Reducer<Event, CoordinatorState>;
 
 export interface CoordinatorCheckpoint {
-  readonly targets: RegulationTarget;
+  readonly targets: RegulationTargets;
   readonly coordinator: CoordinatorState;
 }
 ```
 
 ## 意图身份与确认
 
-ObjectiveKey 是规范化 Git ObjectiveSource 的确定性哈希；ObjectKey 再由 `(objectiveKey, objectiveVersion, subjectIdentity)` 的规范化语义确定，可对规范化值哈希，具体规则待定；不是任意 regulation ID，也不能直接依赖普通 JSON 属性顺序。intents 是按此 key 索引的只读稀疏 Record，value 保留完整 RegulationObject、targetLevel、priority 与对象意图 revision。RegulationObject 不再重复存 key；恢复和输入验证须核对 source 与 objectiveKey、完整对象与 objectKey 一致，并明确哈希碰撞处理，不能静默合并不同来源、版本或 subject。
+ObjectiveKey 是规范化 Git source 与完整 commit ID 的无歧义编码的确定性哈希；ObjectKey = Hash(Encode(objectiveKey, subjectIdentity))，不再额外编码 objectiveVersion，具体规范仍待确定。它不是任意 regulation ID，也不能直接依赖普通 JSON 属性顺序。intents 按 objectKey 索引，value 保留 RegulationObject、targetLevel、priority 与目标 revision。RegulationObject 不重复存 key；恢复和输入验证须核对 source/version 与 objectiveKey、完整对象与 objectKey 一致，哈希碰撞不能静默合并不同来源、版本或 subject。
 
 TS 中的 ObjectiveDefinition 独立表达定义实体的身份与来源字段，暂不展开定义正文；RegulationObject.objective 嵌套此值不表示必须重复存储它。该 source 字符串是本模型的领域来源标识，不照搬现有 GitObjectiveSource 传输结构；未来实现须明确与解析协议的适配。objectiveId 若作为名称保留，不构成另一套身份。
 
-Partial 表达并非每个 ObjectKey 都有条目，索引结果为 TargetIntent | undefined。readonly intents 限制属性重新赋值，Readonly 限制条目的增删替换；这些是编译期约束，不是运行时冻结或递归不可变保证。只将对象自身属性视为意图条目，查询须区分缺失 key 与原型链属性，构造和恢复不能让特殊 key 改变对象原型。
+Partial 表达并非每个 ObjectKey 都有条目，索引结果为 RegulationTarget | undefined。readonly intents 限制属性重新赋值，Readonly 限制条目的增删替换；这些是编译期约束，不是运行时冻结或递归不可变保证。只将对象自身属性视为意图条目，查询须区分缺失 key 与原型链属性，构造和恢复不能让特殊 key 改变对象原型。
 
-RegulationTarget 不含外层 revision；TargetIntent.revision 是该对象的意图版本。CoordinatorState.revision 则统一标识 Coordinator 状态转换；RegulationObjectState.updatedAtRevision 和 AcknowledgedTargetIntent.acknowledgedAtRevision 分别引用对象状态更新及意图确认所在的 Coordinator 版本，不能与对象意图版本混用。
+RegulationTargets 不含外层 revision；RegulationTarget.revision 是该对象的目标版本。CoordinatorState.revision 则统一标识 Coordinator 状态转换；RegulationObjectState.updatedAtRevision 和 AcknowledgedRegulationTarget.acknowledgedAtRevision 分别引用对象状态更新及意图确认所在的 Coordinator 版本，不能与对象目标版本混用。
 
 每条合法目标更新按以下规则纯归约：
 
 1. 取该对象当前意图 revision + 1；首次出现从 1 开始，不依赖系统时间。
 2. 创建新的 Record 对象，在指定 key 上覆盖完整意图，并令 revision = nextRevision；其他对象的条目和版本保持不变，不修改旧 state。
-3. 返回新的 RegulationTarget。同值新请求也推进该对象版本；非法更新明确报错，不静默消耗版本或更改意图。
+3. 返回新的 RegulationTargets。同值新请求也推进该对象版本；非法更新明确报错，不静默消耗版本或更改意图。
 
 例如 A.revision = 8、B.revision = 5，更新 B 后只有 B 变为 6，不能据此比较 A 与 B 的更新时间。意图版本为正安全整数，耗尽须显式失败、不回绕；未来若移除当前条目，须保留该对象的版本水位或另定不重用身份的协议，不能再次从 1 开始而碰撞旧 IntentRef。
 
@@ -505,7 +503,7 @@ lastProbe 为 null 表示没有已知 Probe 结果，不伪造时间、成功或
 
 ## 初值、恢复与下一步
 
-新建 RegulationTarget 为 intents: {}，没有全局 revision。新建 CoordinatorState 的 revision 为 0，current.acknowledged.targets.intents 同为空，current.acknowledged.allocation 为 { revision: 0, value: { kind: "no-resource" } }；当前活跃调用、依赖和观察为空，reserved 全零、服务 open，可信 constraints 由宿主提供；各个 Collections 均为空。这是已知初始基线，不声称收到过外部资源更新；后续采纳资源更新记录当次 Coordinator revision，初值不启动调用。
+新建 RegulationTargets 为 intents: {}，没有全局 revision。新建 CoordinatorState 的 revision 为 0，current.acknowledged.targets.intents 同为空，current.acknowledged.allocation 为 { revision: 0, value: { kind: "no-resource" } }；当前活跃调用、依赖和观察为空，reserved 全零、服务 open，可信 constraints 由宿主提供；各个 Collections 均为空。这是已知初始基线，不声称收到过外部资源更新；后续采纳资源更新记录当次 Coordinator revision，初值不启动调用。
 
 CoordinatorState 不含 instanceId 或 inputs。Coordinator 身份由宿主、存储 key 或传输 envelope 关联，不能与调用 RegulationId 混为一谈；是否另需恢复代次由执行协议决定。输入通道的 open/ended/failed、连接与重连属于适配层；通道结束或断开不撤销目标、不把资源意图变为 no-resource，也不自动取消调用或关闭服务。真正影响服务继续运行的故障以明确诊断和相应服务生命周期变化表达。
 
