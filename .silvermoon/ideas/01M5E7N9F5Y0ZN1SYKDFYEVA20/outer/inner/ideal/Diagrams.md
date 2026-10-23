@@ -16,7 +16,7 @@
 
 “视图”是语义分类，不等于 UI 查询结果或可丢弃缓存，也不要求新增数据库 View。查询筛选与分页仍产生派生 QueryResult，不改变权威状态。当前 TS 中的 ActiveRegulationRun 与 RegulationRunRecord 是同一 RegulationRun 在不同生命周期阶段的表达，不引入第二套执行身份。
 
-命名以单个实体的业务含义为准，不强制“父实体 + 子实体”规则：ObjectiveRevision、RegulationTarget、RegulationRequest、RegulationRun、Observation、Fault。ObjectiveRevision 是固定来源与 commit 的定义版本，不是 Coordinator 状态的数字 revision；Observation 的值类型称 ObjectiveObservation，观察对象不是 Pilot 自身。
+命名以单个实体的业务含义为准，不强制“父实体 + 子实体”规则：ObjectiveRevision、RegulationTarget、RegulationRequest、RegulationRun、Observation、Fault。ObjectiveRevision 是固定来源与 commit 的定义版本，不是 Coordinator 状态的数字 revision；Observation 展开 ObjectiveObservation 的属性，观察对象不是 Pilot 自身。
 
 图中英文标签与 TS 字段对应，解释使用中文。全部源固定为 22px Arial，SVG 可独立放大查看；修改后须重新生成并验证文字边界。实线表达关系/组成或明确数据流，虚线表达决策输入、选择条件或派生关系；只有第一张 ER 图使用基数符号。
 
@@ -24,7 +24,7 @@
 
 [打开实体关系 SVG](./diagrams/regulation-target.svg)
 
-同一张图包含上游的 RegulationRequest 和下游的 RegulationRun、Observation、Fault，只画实体身份及关联，不画 coordinatorRevision、快照成员表或当前/历史分组。图的既有文件名保留以兼容旧链接，不再表示只画请求意图。
+同一张图包含上游的 RegulationRequest 和下游的 RegulationRun、Observation、Fault，展示实体身份、关联及主要查询属性，不画 coordinatorRevision、快照成员表或当前/历史分组。图的既有文件名保留以兼容旧链接，不再表示只画请求意图。嵌套值展开不意味着新增实体或强制数据库平铺。
 
 ```mermaid
 ---
@@ -44,7 +44,9 @@ erDiagram
     REGULATION_TARGET ||--o{ REGULATION_REQUEST : receives
     REGULATION_REQUEST ||--o{ REGULATION_RUN : executes
     REGULATION_RUN ||--o{ OBSERVATION : produces
-    REGULATION_RUN o|--o{ FAULT : associated
+    REGULATION_TARGET o|--o{ FAULT : target_scope
+    REGULATION_REQUEST o|--o{ FAULT : request_scope
+    REGULATION_RUN o|--o{ FAULT : run_scope
 
     OBJECTIVE_REVISION {
         string objectiveKey PK
@@ -65,23 +67,34 @@ erDiagram
     REGULATION_RUN {
         string runId PK
         number requestSeq FK
-        AgentBinding binding "Actual binding"
+        string bindingId "Actual binding"
+        JsonObject bindingConfiguration "Optional snapshot"
     }
     OBSERVATION {
         string runId FK
-        ObjectiveObservation value
+        LevelRef current "Query current.levelId"
+        string observedAt "Actual observation time"
+        Problem[] problems "Nested collection"
+        string gapSummary
+        Record versions "Evidence provenance"
+        Record sources "Optional provenance"
     }
     FAULT {
+        string kind "Fault classification"
+        string message "Occurrence details"
+        string targetKey FK "Optional"
+        number requestSeq FK "Optional"
         string runId FK "Optional"
-        string stage
-        string message
     }
 ```
 
 - ObjectiveRevision 的 source/version 共同决定 objectiveKey；targetKey 由该 key 与 subject 身份决定。
 - requestSeq 单独标识不可变请求。每个 Run 必须且只归属一条 Request；一个 Request 可以尚无调用或涉及多次调用。外部与依赖派生都先形成 Request，不能绕过 Request 直接启动 Run。
 - Observation 是成功观察事实，不把 Probe 失败伪装为成功观察。成功观察以 runId 关联来源 RegulationRun，经 Run → Request → Target 推导 RegulationTarget，不重复保存 targetKey；是否需要其他来源另行讨论。
-- Fault 可以关联调用，也可以来自输入、持久化或恢复。Observation/Fault 不虚构主键；图中 FK 表达逻辑来源，不要求永久保留全部历史父行。
+- Fault 为 umbrella 查询展开归属链；三条可选关系不是任意组合：Coordinator 层三个引用全 null，Target 层仅 targetKey，Request 层包含 targetKey/requestSeq，Run 层包含全部引用。必须由确定的父关系展开并校验一致，不用最新请求补齐。kind 表达种类，message 表达详情，不再存 stage 或另加 ownerKind；详见 [Fault 查询约束](./Types.md#fault-分类归属链与-umbrella-查询)。
+- Observation/Fault 不虚构主键；图中 FK 表达逻辑来源，历史归档须保留足够的引用证据，不强制永久保留全部在线父行。provider 故障不挂入 consumer 的链条，依赖影响另由关系与转换表达。
+- Observation 展开 current、observedAt、problems、gapSummary 以及现有 provenance 字段，不再重复存 value。problems 仍是集合，versions/sources 与新版本模型的适配待定，不为了查询臆造新实体。
+- Run 展开 bindingId 与可选配置快照；configuration 保持嵌套，资源意图更新不改写旧 Run。查询路径和独立实体边界的判断见 [属性展开规则](./Types.md#查询属性与值对象展开)。
 - Run 的 target 和 desiredLevel 均由固定 requestSeq 对应的 Request 推导，不重复保存，也不直接关联 Target。provider Request 表达 provider 自己的对象与目标，不能借用 consumer Request；旧 Run 不能通过 target 的最新请求解释。
 - 请求来源与 consumer 需求归属必须可追溯；共享 provider 的请求形成、复用、优先级和回收规则仍待细化，不要求每次发现依赖都重复创建请求。被 Run 或有效证据引用的请求须保留可解析记录，不能只靠 latestByTarget 映射。
 
@@ -151,7 +164,7 @@ flowchart TB
     TARGET["One RegulationTarget"]
     PROBE["Adopted Probe outcome<br/>Actual time, source, observed OR error"]
     SUMMARY["RegulationTargetState<br/>updatedAtRevision<br/>lastProbe: ProbeSummary or null"]
-    FACTS["Successful observation records<br/>Known facts, not live reality"]
+    FACTS["Observation records<br/>current / observedAt / problems<br/>Known facts, not live reality"]
     VALIDITY["Current use and validity decisions"]
     CURRENT["current.observations<br/>Evidence still needed for this target"]
     TARGET -->|one aggregate per known target| SUMMARY
@@ -187,7 +200,7 @@ flowchart TB
     PROVIDER["Provider RegulationTarget"]
     DEP["CurrentDependency<br/>minimumLevel<br/>Only adopted, still-needed edges"]
     REQUEST["Provider RegulationRequest<br/>Own target / desiredLevel / priority<br/>Immutable requestSeq"]
-    ACTIVE["ActiveRegulationRun<br/>running / stopping / unverified<br/>requestSeq / actual binding"]
+    ACTIVE["ActiveRegulationRun<br/>running / stopping / unverified<br/>requestSeq / bindingId<br/>bindingConfiguration snapshot"]
     OCCUPANCY["Actual occupancy<br/>Derived from unconfirmed exits"]
     ENDED["RegulationRunRecord<br/>Same runId<br/>endedAtRevision / outcome"]
     RESOURCE["Acknowledged ResourceAllocation<br/>Desired binding and concurrency"]

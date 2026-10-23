@@ -23,13 +23,15 @@ Behavior ResourceAllocation ──┘
 
 - 业务实体、事实记录和聚合视图分别表达，见 [Diagrams.md](./Diagrams.md) 的五张图。CoordinatorSnapshot 是完整状态在某个 revision 下的一致聚合，不是业务实体，也不只代表 current singleton；已确认请求和有效证据等视图可包含权威决策，不能都当作 UI 查询。请求序号、Coordinator 版本和存储成员键分开，具体快照表映射留待存储设计，不要求逐版全量复制。
 - 上游请求意图与下游执行事实共用一张业务实体关系图，不分设 intention/state 两套模型；聚合总览同时展示两个意图输入及完整状态，仍按具体阅读问题拆分聚合视图。实体采用 ObjectiveRevision、RegulationTarget、RegulationRequest、RegulationRun、Observation、Fault，以业务含义准确为先，不强制父实体前缀规则。
-- Observation 的值类型称 ObjectiveObservation，观察的是 Objective 在 subject 上的状态而非 Pilot 自身；通过 Run → Request → Target 推导 target，不重复保存 target 关联。Fault 的 runId 可空，非运行故障仍可明确报告。每个 Run 必须且只关联一条不可变 Request，requestSeq 必填，target/desiredLevel 由该 Request 推导，不再在 Run 中重复保存。
+- Observation 展开 ObjectiveObservation 的属性，观察的是 Objective 在 subject 上的状态而非 Pilot 自身；通过 Run → Request → Target 推导 target，不重复保存 target 关联。每个 Run 必须且只关联一条不可变 Request，requestSeq 必填，target/desiredLevel 由该 Request 推导，不再在 Run 中重复保存。
+- Fault 移除 stage，以 kind 标识故障种类、message 说明具体详情；最终分类集合仍待确定，不从 message 解析策略。统一 faults 集合有意冗余展开 targetKey/requestSeq/runId，支持分层 umbrella 查询；仅允许全 null、仅 target、target+request、完整链四种形状。引用从确定的父关系展开并校验，最深非空字段表示直接归属，不另存 ownerKind。归属与影响范围分离，provider 故障不复制到 consumer 链，kind 不自动决定终结状态。
+- 值对象是否展开取决于业务可理解性和过滤、排序、分组、聚合诉求；独立实体另需身份或生命周期理由。Observation 显式表达 current、observedAt、problems、gapSummary 和兼容 provenance，不保留重复 value；problems 可用嵌套集合或子记录。Run 展开 bindingId 和可选 bindingConfiguration 快照，配置保持嵌套且不含明文秘密；后续资源意图不改写旧执行配置。具体索引及物理布局由适配层决定，详见 [Types.md](./Types.md)。
 - Request 是治理要求，不限定为外部输入；外部提出与依赖派生共用实体和 requestSeq 身份空间，采用同一串行化分配路径，不各自维护发号水位。CoordinatorState.requests 保留已纳入状态的不可变请求，最新映射不替代引用记录；启动 Run 前必须存在准确的请求，缺失或冲突显式拒绝。恢复与历史裁剪不能破坏 Run → Request → Target 的可追溯性。
 - 字段进入 current 的依据是当前调度、执行或恢复是否必需，不是 UI 是否可能查看；这项最小化原则不排除完整 CoordinatorState 包含历史。
 - current.activeRuns 只含正在运行、停止中或恢复后尚未核实的调用。确认结束时移除，向 runs 写入终结记录，并原子更新仍必要的当前信息；不保留 ended Task。
 - 累计预算限制继续执行，有效依赖和必要证据支持未完成编排；这些是当前状态而非历史明细。撤回 processedIntents 这一历史处理水位字段，待从新意图接收、待处理需求和恢复接续推导防重跑机制。
 - Collection 表达领域记录集合，不是 HTML 表格、数据库实现或一次查询结果，也不限于历史。不设 history 分组：例如 regulationTargets 按对象维护最新 Probe 时间与结果，runs 保存终结记录。筛选、排序和分页产生派生的 QueryResult，不改变权威状态；UI 可以分别读取 current 和查询 Collections。
-- 当前切片不以 lastFault 保存最近诊断，完整结果、观察和故障记录进入相应历史集合；持续阻断运行的故障仍须在 current 明确表达。集合范围及记录身份见 Types.md 草案，不预定完整历史 schema。
+- 当前切片不以 lastFault 保存最近诊断，完整结果、观察和领域故障记录进入相应历史集合；纯技术诊断可留在宿主日志/健康信息，非法输入仍须明确拒绝。影响请求进度、调度或恢复的故障须在相应状态明确表达，持久化故障不能只依赖写回不可用存储来报告。集合范围及记录身份见 Types.md 草案，不预定完整历史 schema。
 - singleton 与各个 collections 可以分开存储、查询和传输，但同一事件对它们的状态效果必须保持逻辑一致。对象聚合不能将最近观察冒充此刻现实，最新 Probe 的顺序、失败和未知须明确表达。存储及索引是适配层职责，实时 Stream 不自动成为历史数据库。
 
 ## delta 与两个纯 reducer

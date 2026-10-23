@@ -15,15 +15,15 @@ CoordinatorState 包含 current singleton state 和若干 collection states，�
 | 事实 | 必须明确的内容 | 对 singleton 及 collections 的效果 |
 | --- | --- | --- |
 | 请求处理 | 外部或内部来源、需求归属、接受或拒绝、准确 target；合法请求的 requestSeq、desiredLevel、priority，或拒绝原因 | 接受保存不可变 requests 记录并更新已确认请求；确认收到不等于请求已经处理完；非法命令不伪造已分配请求 |
-| 调用发起 | RegulationRun 身份、必填且固定的 requestSeq、实际 binding、恢复关联和预算预留；target/desiredLevel 从该请求推导 | 请求必须已存在于状态；纳入 activeRuns，保留当前实际占用；启动失败也须明确预留及可能存在的外部执行 |
+| 调用发起 | RegulationRun 身份、必填且固定的 requestSeq、实际 bindingId/可选 bindingConfiguration 快照、恢复关联和预算预留；target/desiredLevel 从该请求推导 | 请求必须已存在于状态；纳入 activeRuns，保留当前实际占用与配置；启动失败也须明确预留及可能存在的外部执行 |
 | 请求停止或恢复核实 | 准确调用身份、停止原因或外部核实结果 | 显式转换 running/stopping/unverified；停止请求不释放占用 |
 | 调用确认结束 | 准确调用与意图身份、真实终止事实、结果、必要证据及当前信息更新 | 原子从 current 移除活跃调用、向 runs 写入终结记录并更新必要依赖等；不建立 ended Task |
 | 请求无需调用即处理完 | 准确 requestSeq 及原因，例如 initial 或启动前撤销 | 更新必要的处理进度，不伪造 RegulationRun 或观察 |
 | 有效依赖变化 | consumer/provider 精确对象、需求归属、最低 level、安装或撤销关系 | 仅保存仍支持当前未完成需求的关系；不引用必须永久保存的历史 Task |
-| 观察采纳或移除 | 精确对象、来源、产生观察的调用、证据及当前用途 | 采纳时记录历史观察，current 只保留当前决策需要的最新有效观察；当前用途结束不等于删除历史 |
+| 观察采纳或移除 | 来源 runId、current、observedAt、problems、gapSummary、兼容 provenance 及当前用途；对象由运行链推导 | 采纳时记录展开属性的历史观察，不重复存 value；current 只保留当前决策需要的最新有效观察；当前用途结束不等于删除历史 |
 | 对象 Probe 摘要变化 | 精确对象、实际 Probe 时间、身份与顺序、来源及成功或失败结果 | 按对象更新 regulationTargets 的 lastProbe，不为每次 Probe 追加聚合行，不把错误当成功或最近观察当实时事实 |
 | 资源意图确认 | 完整 no-resource 或 configured 值及采纳修订 | 更新期望，不修改旧调用的 binding，不宣称实际占用已变化 |
-| 故障报告 | 阶段、原因、关联调用或输入及必要诊断 | 写入 faults 并明确对外报告，不另存 current.lastFault；持续运行影响须有相应执行或服务状态变化 |
+| 故障报告 | kind、message 及一致的 targetKey/requestSeq/runId 归属链；仅四种合法空值形状 | 领域故障写入 faults 并明确对外报告，支持 umbrella 查询；不另存 current.lastFault，归属或分类不隐含请求、执行或服务状态转换 |
 | 服务及预算变化 | 服务状态、可信约束和明确累计预留事实 | 不投影输入通道生命周期；释放槽位不退还预算 |
 
 这些不是任意 JSON patch 或可选字段袋。每种合法转换仍须定义具体 payload、前置修订、归属和原子规则。独立 reducer 不读私有队列、不重新观察现实、不执行副作用；当前待处理工作如何推进仍须明确，不能用前端的一次历史查询结果充当运行状态。
@@ -33,6 +33,8 @@ CoordinatorState 包含 current singleton state 和若干 collection states，�
 - pending 表示当前需求尚待调度，不表示已存在一次 RegulationRun。单纯因需求尚未启动而创建 pending Task、再保留 ended Task 的模型取消。
 - 所有 Run 必须且只引用一条已记录的 Request；依赖派生也先形成或按明确规则复用 provider Request，再启动 Run，不借用 consumer Request。外部与内部共用唯一序号空间；请求形成/采纳与启动的事件顺序或原子边界必须保证引用存在，reducer 不在回放中重新发现依赖或分配另一条请求。
 - requests 保存不可变内容，latestByTarget 的更新不改写旧记录。缺失请求或同序号异内容明确拒绝；恢复、历史查询与观察归属经 Run → Request → Target 解析，不用最新请求兜底。共享 provider 的来源归属及回收规则仍须明确，裁剪不能留下不可解析的引用。
+- Fault 的冗余引用须与状态内的固定运行/请求链一致。事件提供完整链时必须校验；按最深引用展开时只能读取归约状态已有的不可变关系，不访问最新外部输入或现实。缺失或冲突不能静默降级为全 null，重放也不随最新请求重写旧故障；provider 故障不混入 consumer 链。
+- 观察展开属性与可选来源完整保留，不同时维护重复 value；observedAt 不替代采纳版本。Run 的 bindingId/配置快照来自真实启动事实，不从后续资源意图重建；缺省配置不自动补成空对象，嵌套值须可持久化且不含明文秘密。
 - blocked 是本次调用的终结结果，不是保留活跃调用等待复活的状态。调用退出后移除，必要依赖提取为当前编排关系；provider 证据只能支持 consumer 的新调用。
 - result settlement 或 kill 确认真实退出，才允许移除活跃调用、释放占用。abort/kill 故障明确报告，不能据此虚构终止；恢复时未核实调用继续保守占用。
 - 移除调用、写入历史与更新必要当前信息须保持一致。已经处理完的同一意图不能因 activeRuns 为空而再次调度；不预设 processedIntents，以新意图接收、待处理需求及可靠恢复接续推导规则。有限依赖尚未完成时不能提前结束整个需求，历史集合的存在不自动补足无调用意图的处理语义。
@@ -45,6 +47,8 @@ CoordinatorState 包含 current singleton state 和若干 collection states，�
 ## 历史消费与恢复验证
 
 UI 读取 current singleton，对实体、聚合或历史 Collections 筛选、排序、分页得到 QueryResult。Collection 是完整领域状态的一部分，查询结果是派生数据，不把前端过滤条件写进权威状态。例如按对象唯一的最近 Probe 摘要与逐次观察记录是不同集合，不因可查询就都称为历史。物理存储、索引、查询与保留由适配层承担，不要求把完整集合全部加载进内存或一次传输；实时 Stream 没有自动历史回放能力。消息中须有足够身份和关联支持确定性归约与查询。
+
+验证 Fault 按 target/request/run 的 umbrella 查询和最深归属筛选，拒绝四种合法形状之外的空值组合及跨链引用；同条故障不因上卷复制，未解析来源不能假装 Coordinator 直接故障。验证按观察 level、实际时间、问题集合以及 bindingId 的查询路径，查询投影不改变原始事实；版本/来源载荷、缺省配置和旧运行的配置快照在 JSON 往返及恢复后保持语义。
 
 给定同一个初值或一致快照与相同完整事件前缀，独立 reducer 应得到相同的 singleton 及各个 Collections，不重放执行动作。采用日志恢复时，适配层必须关联 singleton、各个集合与可靠处理位置；不能把领域 revision 当作消息游标，重复恢复也不得重复插入同一历史事实或把对象摘要回退为旧 Probe。
 

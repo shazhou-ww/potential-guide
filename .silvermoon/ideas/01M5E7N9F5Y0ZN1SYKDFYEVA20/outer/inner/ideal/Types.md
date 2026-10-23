@@ -82,6 +82,7 @@ Collection<T> 表达领域中的记录集合，选用 Collection 而不是 Table
 
 ```typescript
 import type {
+  JsonObject,
   PilotObservation as ObjectiveObservation,
   Subject,
 } from "@potential-guide/objective-pilot";
@@ -95,6 +96,7 @@ export type ObjectiveSource = string;
 export type ObjectiveKey = string;
 export type TargetKey = string;
 export type RegulationRunId = string;
+export type FaultKind = string;
 export type Collection<T> = readonly T[];
 
 export interface ObjectiveRevision {
@@ -137,21 +139,31 @@ export interface AllocationAcknowledgement {
   readonly value: ResourceAllocation;
 }
 
-export interface Fault {
-  readonly stage:
-    | "input"
-    | "resolve"
-    | "start"
-    | "execution"
-    | "observation"
-    | "stop"
-    | "release"
-    | "persistence"
-    | "recovery"
-    | "infrastructure";
+export type Fault = {
+  readonly kind: FaultKind;
   readonly message: string;
-  readonly runId: RegulationRunId | null;
-}
+} & (
+  | {
+      readonly targetKey: null;
+      readonly requestSeq: null;
+      readonly runId: null;
+    }
+  | {
+      readonly targetKey: TargetKey;
+      readonly requestSeq: null;
+      readonly runId: null;
+    }
+  | {
+      readonly targetKey: TargetKey;
+      readonly requestSeq: RequestSeq;
+      readonly runId: null;
+    }
+  | {
+      readonly targetKey: TargetKey;
+      readonly requestSeq: RequestSeq;
+      readonly runId: RegulationRunId;
+    }
+);
 
 export type ActiveExecution =
   | {
@@ -165,7 +177,8 @@ export type ActiveExecution =
 export interface RegulationRunContext {
   readonly id: RegulationRunId;
   readonly requestSeq: RequestSeq;
-  readonly binding: AgentBinding;
+  readonly bindingId: AgentBinding["id"];
+  readonly bindingConfiguration?: JsonObject;
 }
 
 export interface ActiveRegulationRun extends RegulationRunContext {
@@ -184,9 +197,8 @@ export interface CurrentDependency {
   readonly minimumLevel: string;
 }
 
-export interface Observation {
+export interface Observation extends ObjectiveObservation {
   readonly runId: RegulationRunId;
-  readonly value: ObjectiveObservation;
 }
 
 export type RegulationRunOutcome =
@@ -306,6 +318,50 @@ export interface CoordinatorCheckpoint {
 }
 ```
 
+## Fault 分类、归属链与 umbrella 查询
+
+Fault.kind 表达稳定、机器可识别的故障种类，message 表达本次具体详情；移除 stage，不把发生环节直接改名为故障分类。FaultKind 暂以 string 表达，最终分类集合与标识规范仍待推导，须校验非空合法标识；示例不构成已冻结枚举。程序不解析 message 作策略判断。某类故障以后若需要机器读取参数，应为其定义结构化字段，而不是隐藏在 message 中。
+
+同一 faults 集合保存不同层级的故障。为支持 umbrella 查询，有意展开 targetKey、requestSeq、runId；最深的非空字段表示直接归属，不另存 ownerKind，也不在核心状态增加 coordinatorId。三个字段必须全部出现，null 表示该层不适用，不是未知、尚未解析或可以任意缺省：
+
+| 直接归属 | targetKey | requestSeq | runId |
+| --- | --- | --- | --- |
+| Coordinator | null | null | null |
+| Target | 有值 | null | null |
+| Request | 有值 | 有值 | null |
+| Run | 有值 | 有值 | 有值 |
+
+TS 联合约束四种空值形状；实际引用一致性仍须运行时校验。记录 Run 故障时，经固定 Run → Request → Target 展开；记录 Request 故障时，从该不可变请求展开 targetKey。不能由调用方自由拼装不相干的引用，不能使用 target 的最新请求补齐，也不能在请求覆盖后改写旧 Fault。缺失父引用、链条断裂或身份冲突须明确拒绝并报告，不能静默降为 Coordinator 故障。
+
+- 按 targetKey 查询，包含该 Target 直接故障及其 Request、Run 故障。
+- 按 requestSeq 查询，包含该 Request 直接故障及其 Run 故障；按 runId 查询只包含该 Run 故障。
+- 不加上述过滤得到该 Coordinator 的全部故障；三个字段全为 null 才表示 Coordinator 直接故障。跨 Coordinator 存储由宿主作用域隔离。
+- 直接层级查询可组合过滤：Target 直接故障要求 requestSeq 为 null，Request 直接故障要求 runId 为 null。每条 Fault 只记录一次，不因上卷查询复制多份。
+
+归属不等于影响范围：provider Run 的故障沿 provider 自己的链展开，不挂到 consumer 的请求或 target 下。跨依赖影响由依赖关系与明确转换表达。kind 和最深归属均不自动决定 Run 是否结束、Request 是否终结或 Coordinator 是否 failed；停止失败、恢复未核实等仍须维护真实执行状态。生命周期或 Probe 结果引用故障时也不改变该故障的原归属。
+
+Fault 记录有领域意义的失败，不充当所有日志的集合；未被接受的非法输入可由拒绝回执表达，不能虚构 Request/Run。纯技术诊断留在宿主日志或健康信息中；影响请求进度、调度或恢复的事实不能只写日志。持久化自身失败仍须有宿主侧错误出口，不能假定可以把故障写回不可写的存储。
+
+## 查询属性与值对象展开
+
+业务上需要明确理解的属性在模型中展开；参与过滤、排序、分组或聚合的属性提供明确查询路径；只有需要独立身份、引用或生命周期时才拆成实体。模型展开不强制数据库平铺，存储可以使用列、嵌套属性索引或子记录，具体索引与物理映射留待实施。
+
+Observation 直接继承 ObjectiveObservation 的属性，不再包一层 value，也不同时保存完整 value 和重复的查询字段：
+
+| 属性 | 表达与查询边界 |
+| --- | --- |
+| current | 观察到的 LevelRef；可按 current.levelId 过滤或统计，level 的含义与顺序须限定在对应 ObjectiveRevision 中 |
+| observedAt | 实际观察时间；校验 RFC 3339，支持时间范围与排序，不等于 recordedAtRevision 或对象最后更新时间 |
+| problems | 一对多问题集合；可按问题种类或标识查询，但不摊成固定几列；可用嵌套集合或子记录，不因此宣告独立业务实体 |
+| gapSummary | 人可读的差距说明，保留文本；如有需求可提供全文查询，不从文本解析领域判断 |
+| versions / sources | 现有载荷的证据版本与来源；sources 可缺省，仍保留原结构，不将它们直接改造为新的实体外键 |
+
+versions/sources 与 ObjectiveRevision 的具体适配尚待确定；当前继承是兼容既有观察载荷，不表示这些映射可替代 Run → Request → Target 的身份关系。ProbeSummary 中的成功结果仍复用 ObjectiveObservation 值，聚合视图不需要照搬实体存储布局。派生摘要或索引必须由同一事实维护，不能形成另一份可独立修改的观察。
+
+Run 将实际 AgentBinding 展开为 bindingId 和可选 bindingConfiguration。bindingId 支持按执行接入过滤或分组，不是某个进程、设备或单次 Agent 调用的身份。configuration 仍是嵌套 JsonObject，只有明确、稳定的配置属性确有查询需求时再提升为查询字段或索引；不臆造 provider/model 等现有契约没有的固定列。
+
+bindingConfiguration 是当次实际使用的配置快照，只含可持久化的非秘密数据或安全凭据引用，不是指向随时可变的当前配置。缺省与空对象保留原契约差别，不写入 undefined；不同时再保存一份 binding 对象。资源意图仍保留 AgentBinding 值，后续意图更新不能改变旧 Run 的 bindingId/configuration，也不能用当前配置重建旧执行事实。
+
 ## 意图身份与确认
 
 ObjectiveKey 是规范化 Git source 与完整 commit ID 的无歧义编码的确定性哈希；TargetKey = Hash(Encode(objectiveKey, subjectIdentity))，不再额外编码 objectiveVersion，具体规范仍待确定。它不是任意 regulation ID，也不能直接依赖普通 JSON 属性顺序。latestByTarget 按 targetKey 索引，value 是包含 target、desiredLevel、priority、requestSeq 的 RegulationRequest。RegulationTarget 不重复存 key；恢复和输入验证须核对 source/version 与 objectiveKey、target 与 targetKey 一致，哈希碰撞不能静默合并不同来源、版本或 subject。
@@ -340,11 +396,11 @@ CoordinatorState.requests 按 requestSeq 唯一保留已纳入状态的不可变
 
 ## 当前调用、意图进度与依赖
 
-ActiveRegulationRun 只表示已经发起且尚未确认结束的一次调用。requestSeq 必填且固定关联一条已记录的 RegulationRequest，binding 捕获实际执行接入；新请求不改写旧调用身份或请求归属。不再同时维护 TaskId 与 RunId 两套执行身份。RegulationRequest 表达治理要求，不限定为外部输入，不替代当前执行或 pending 状态，也不要求每条请求恰好对应一次调用。
+ActiveRegulationRun 只表示已经发起且尚未确认结束的一次调用。requestSeq 必填且固定关联一条已记录的 RegulationRequest，bindingId/bindingConfiguration 捕获实际执行接入及配置快照；新请求不改写旧调用身份或请求归属。不再同时维护 TaskId 与 RunId 两套执行身份。RegulationRequest 表达治理要求，不限定为外部输入，不替代当前执行或 pending 状态，也不要求每条请求恰好对应一次调用。
 
 Run → Request → Target 以及 Request → desiredLevel 是模型不变量，因此 Run 不重复保存 target 和 desiredLevel，也没有直连 Target 的关系。依赖派生路径同样是：consumer Run 返回依赖并终结 → Coordinator 采纳需求 → 形成或按明确规则复用 provider Request → 调度 → provider Run。provider Request 必须表达 provider 自己的 target、desiredLevel、priority 与 requestSeq，不能借用 consumer Request。共享或聚合改变执行目标时形成新的不可变请求，不改写旧 Request 或旧 Run；没有外部请求不等于可以没有 Request。
 
-Observation 仅以 runId 关联来源 Run，经 Run → Request → Target 推导治理对象，不重复保存 target。Fault 保留可空 runId，覆盖输入、持久化或恢复等非运行故障，不强制拆成 RunFault。运行历史裁剪或分开存储时必须保留足够的来源关联，使观察仍可解析到准确 target；可以采用明确的归档/查询投影，但不能静默丢失语义。
+Observation 仅以 runId 关联来源 Run，经 Run → Request → Target 推导治理对象，不重复保存 target。Fault 则为分层查询保留经校验的 targetKey/requestSeq/runId 完整归属链，支持 Coordinator、Target、Request、Run 四层。运行历史裁剪或分开存储时必须保留足够的来源关联，使观察及故障来源仍可追溯；可以采用明确的归档/查询投影，但不能静默丢失语义。
 
 current.activeRuns 只有 running、stopping 和恢复后尚未核实的 unverified，不含 pending 或 ended。停止请求不移除调用；确认退出后，通过明确的终结事件移除调用、写入 runs，并原子更新仍影响当前运行的信息。RegulationRunRecord 保留启动身份、实际 binding 和终结结果，不包含活跃执行状态；达标仍须有效证据支持。启动前撤销、initial 或未产生外部调用的启动失败不伪造一次 RegulationRun，其意图处理事实的记录类型留待转换设计。启动副作用与持久化之间的故障窗口仍须由恢复协议覆盖，不能因尚未确认启动就漏记可能存在的外部执行。
 
@@ -365,11 +421,11 @@ lastProbe 为 null 表示没有已知 Probe 结果，不伪造时间、成功或
 ## 权威状态与推导值
 
 - ResourceAllocation 的 no-resource 是合法的无资源分配意图，也是输入 Behavior 的初值；不是输入缺失、错误或 dummy binding。configured 表达 binding 与非负安全整数 concurrency，允许 concurrency 为 0 以保留配置。采纳 no-resource 不代表实际调用已停止或占用归零。
-- acknowledged.allocation 表达期望，ActiveRegulationRun.binding 表达实际使用；改变前者不修改后者。确认 concurrency 从 4 变为 2 后，实际占用仍可为 4，停止策略不由这个类型自动规定。
+- acknowledged.allocation 表达期望，ActiveRegulationRun 的 bindingId/bindingConfiguration 表达实际使用；改变前者不修改后者。确认 concurrency 从 4 变为 2 后，实际占用仍可为 4，停止策略不由这个类型自动规定。
 - 实际占用从 running、stopping 和尚未核实的 unverified 调用推导，不另存一个可能漂移的 activeCount。未核实调用在确认退出前保守保留占用。
 - current.observations 只保留当前调度或有效依赖仍需要的最新成功观察，不作为所有曾访问对象的缓存；失去当前用途时显式移除，不因此删除 observations 的历史记录或 regulationTargets 中的对象摘要。没有当前条目表示未知，不等于 initial。旧调用和错误 envelope 不可作为当前成功观察写入。
 - reserved 是累计权威预留，不能仅从当前调用数重算；启动抛错也可能已经预留。limits 来自可信配置，持久化副本用于核对恢复上下文，不允许快照自行扩充限制。
-- current 不以 lastFault 保存最近一次历史诊断；诊断记录进入 faults，输入校验、传输和非终结故障仍须明确对外反馈。持续影响当前运行的故障由相应服务或执行状态表达，服务 failed 可以保留当前故障原因。
+- current 不以 lastFault 保存最近一次历史诊断；领域故障进入 faults，其他输入校验或传输诊断仍须通过回执或宿主错误出口明确反馈，不要求全部入库。持续影响当前运行的故障由相应服务、请求或执行状态表达，服务 failed 可以保留当前故障原因。
 - collection states 是权威领域状态的一部分，不是对事件存储的一次查询结果，也不要求复制所有原始消息。实体、聚合及历史都可以用集合表达；消息历史与各个 Collections 的持久化映射、记录键、保留策略及是否还需其他集合，留待具体转换与存储协议确定，查询分页不能改变逻辑集合内容。
 - 无 resource ID、capabilities、requirements 或 grants/ceiling。AgentBinding 的配置只能使用可持久化的非秘密数据或安全凭据引用，真实资源自行授权；配额和预算仍独立约束执行。
 
