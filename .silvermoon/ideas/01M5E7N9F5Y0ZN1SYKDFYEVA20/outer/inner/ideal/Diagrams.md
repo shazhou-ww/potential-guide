@@ -46,7 +46,7 @@ Host 是中央观察服务识别的逻辑 worker 身份，对应一个 Coordinat
 
 图中的实体属性及资源成员记录不可原地修改。HostResourceRevision 的 appliedAtRevision 表示该 Host 内配置完整生效的事件版本，不是待确认状态；同一 Host 的生效顺序必须唯一，完整配置及成员原子可见。版本身份的分配协议、配置 JSON schema 与 capacity 的具体合法值约束仍待收敛。跨 Host 引用保留所属 hostId，资源成员及 Run 引用的 HostBindingRevision 必须属于同一 Host。
 
-当前资源配置、当前可用 bindings/capacity、Run 当前执行阶段、实际占用和剩余容量均属于后续视图，不在 Host 或配置版本上保存可变指针、enabled 标记或占用计数。配置缩容不会改写已有 Run，也不能把负的容量差当成可用容量。当前图先更新资源事实模型；[Types.md](./Types.md) 的 TS 值草案及 [Views.md](./Views.md) 的旧来源契约尚待按讨论统一，不作为本轮图审阅已完成的部分。
+当前资源配置、当前可用 bindings/capacity、Run 当前执行阶段、实际占用和剩余容量均属于视图，不在 Host 或配置版本上保存可变指针、enabled 标记或占用计数。配置缩容不会改写已有 Run，也不能把负的容量差当成可用容量。Host 观察需求已记录于 [Views.md](./Views.md#host-观察需求)，包括中央联系状态和时间语义；它不是 Host 业务事件序列的简单投影。[Types.md](./Types.md) 的旧 TS 值草案及其他观察中心的旧查询仍待按 append-only 原则统一。
 
 <details>
 <summary>Mermaid 图源：业务实体关系</summary>

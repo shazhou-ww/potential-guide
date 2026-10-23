@@ -1,6 +1,44 @@
-# Coordinator 视图表与 SELECT 定义
+# Coordinator 观测模型与查询视图草案
 
 本文支撑 [Idea.md](./Idea.md)、[Types.md](./Types.md) 与 [Design.md](./Design.md)。业务实体关系只在 [Diagrams.md](./Diagrams.md) 绘图；视图以行粒度、属性来源、SELECT 和更新依赖定义。视图是可重算的查询冗余，不是另一个业务事实来源。以下为逻辑关系草案，不是已实现的数据库 schema，也不冻结尚未确定的事件协议。
+
+## 观察中心与业务实体的区别
+
+观测建模从“用户围绕什么对象想知道什么”出发，不按 ER 的每个实体各建一张视图。观察中心与业务实体是多对多关系，可以直接对应、跨实体组合、向上聚合或向下切片；路由和子页面是识别观察中心的产品参考，不预定 URL 协议或物理表。
+
+当前观察中心为 Host、Objective、Target、Request、Run。Objective 是跨 ObjectiveRevision 的上层观察对象，其跨版本识别规则仍待明确；HostResourceRevision、HostResourceBinding、HostBindingRevision 是支撑事实，不是独立的主观察中心。观察中心可以由多张视图与关联查询组成，不要求一张巨型表。
+
+本节先收敛 Host 的需求；其余四类观察中心仍待逐项讨论。已删除旧的独立请求确认、证据采纳、共享预算预留及直接读取可变 Run 基础行的查询定义；它们不再作为实现依据。剩余关系与 SQL 仅为待复核草案，不定义 Host 观察模型。
+
+## Host 观察需求
+
+每个逻辑 Host 一个观察入口，以 hostId 定位；固定身份来自 Host，资源版本、执行和治理活动按相同 Host 作用域组合。当前可变信息只在可重建视图中体现，不回写不可变实体。这里先记录需求和来源，不为尚未确定的连接、心跳、同步协议编造 SELECT 或表结构。
+
+| 信息组 | 观察需求 | 来源与边界 |
+| --- | --- | --- |
+| 身份 | 识别这是哪个逻辑 worker | Host 的固定 hostId；展示名称若需要，另行明确来源，不以物理设备名替代逻辑身份 |
+| 联系状态 | online / offline | 中央服务的连接或心跳观测；不等于 Coordinator 本地是否仍运行，也不等于是否可接收新工作 |
+| 时间与新鲜度 | 最后联系时间、最后收到状态更新时间、最近业务变更发生时间 | 各时间的语义见下文；尚无记录时为空，不伪造当前时间或推断 offline |
+| 资源 | 当前配置、可用 binding 及 capacity、实际占用与剩余容量 | 生效的 HostResourceRevision 及成员关联 HostBindingRevision，再组合活跃 Run；配置 capacity 不等于实际空闲量 |
+| 治理活动 | 本 Host 涉及哪些 Objectives、Targets、Requests，哪些正在推进或受阻 | 同 Host 的事实及后续对应观察模型；不在本轮预定进度状态枚举 |
+| 执行 | 活跃 Run、近期终结 Run 及其结果 | Run 固定属性与生命周期事件；失联不能把 Run 自动结束或释放占用 |
+| 异常与历史 | 需要关注的问题，以及资源配置、运行和治理活动的变化 | Fault、配置版本及 AO 事件；历史故障不自动等于当前故障，恢复须有依据 |
+
+### 时间信息与 online / offline
+
+- 最后联系时间：中央服务最近收到可信联系信号的时间；联系可来自连接、心跳或状态更新，具体协议待定。Host 没有业务变化时仍可保持 online。
+- 最后收到状态更新时间：中央服务最近收到该 Host 状态更新的时间。心跳若不包含状态更新，不因此刷新该时间；收到消息不等于其已通过校验或已连续应用。
+- 最近业务变更发生时间：中央已知的最新业务变更在 Host 上实际发生的时间，不是中央接收时间。离线期间的变更可以在重连后才收到；未知或未收到就为空，不推断 Host 当前没有活动。
+- 本地发生时间与中央接收/联系时间来自不同时间来源，须保留区别。Host 内的最新事件按逻辑顺序判定，不能以不同设备的墙钟排序代替；延迟、补传、重复投递和时钟偏差的精确规则待同步协议收敛。
+- online / offline 由中央的观测协议决定，不用“多久没有业务事件”直接推导。尚无足够联系证据时保持未确定，不把缺失记录默认成 offline；超时阈值及断连规则不在本轮假定。
+
+### 同步内部信息与业务展示分离
+
+Host 的主视图关注时间，不以“同步到哪个 revision”作为主要业务展示。事件序号、连续应用水位和缺口检查仍是同步、防重及重建所需的内部信息，不因 UI 不展示而删除。
+
+每个 Host 的 Coordinator 状态变更共用一条有序事件序列，区别于 requestSeq 和各配置版本身份；重启继续原序列，不同 Host 没有天然全局顺序。收到较大序号不代表此前事件已连续应用；内部水位只能表示完整前缀。一个事件是否对应一次 CoordinatorState.revision、批次的原子边界仍须在事件协议中明确，不在 Host 视图需求中冻结。
+
+Host 本地状态与中央联系观测分别保留来源和重建输入，不强行归入同一条 Host 业务事件序列。重放 Host 业务事件不能恢复中央曾经的连接事实；若需重建中央联系历史，中央也须保留相应观测记录或充分基线。
 
 ## 基础状态、视图与一致版本
 
@@ -20,7 +58,7 @@
 | --- | --- | --- |
 | regulation_target | target_key、objective_key、subject、introduced_at_revision | Coordinator 已知 target 的登记事实；introduced_at_revision 是首次纳入状态的版本，不是 Objective 固有属性 |
 | regulation_request | request_seq、target_key、desired_level、priority | 已合法形成并接收到该作用域的不可变请求，含外部与内部来源；尚未接收的外部输入不在此快照中 |
-| regulation_run | run_id、request_seq、binding_id、binding_configuration、phase、execution_detail、recovery_ref、ended_at_revision、outcome | 同一 Run 的基础状态；phase 为 running/stopping/unverified/ended，execution_detail 保留停止原因或 lastKnown 等分支参数；结束时保留同一身份 |
+| regulation_run | run_id、request_seq、hostBindingRevisionId、executionLimits | Run 的不可变启动属性；执行阶段、进度、终结由 AO 变化记录推导，具体关系 schema 待 Run 观察模型收敛 |
 | observation | observation_ref、run_id、current、observed_at、problems、gap_summary、versions、sources、recorded_at_revision | 成功观察事实；observation_ref 暂表示准确记录引用，业务记录主键的最终形式未定 |
 | fault | kind、message、target_key、request_seq、run_id | 已校验的完整归属链；故障引用方式仍未定，不为计数虚构业务主键 |
 
@@ -28,11 +66,8 @@
 
 | 基础关系 | 最小属性与行粒度 | 尚需明确的业务协议 |
 | --- | --- | --- |
-| request_acknowledgement | 每条已确认请求一行：request_seq、acknowledged_at_revision | 接收与确认的边界；重复确认不改写首次确认版本，晚到的旧确认不能覆盖较新的已确认请求 |
 | probe_result | 每个 target 的一次 Probe 一行：(target_key, probe_order)、probed_at、recorded_at_revision、run_id?、result_kind、observation_ref?、fault_ref? | 包含成功和失败；probe_order 必须表达该 target 内可靠顺序且唯一，不以消息采纳版本或墙钟代替；顺序的产生、并发和恢复协议待定 |
-| evidence_selection | 每个 target 一行：target_key、observation_ref?、decided_at_revision | 保存明确的采纳/撤销决定；null 表示当前无选中证据，选中的观察必须属于该 target；不能只取最近成功观察 |
 | dependency_relation | 每条需求关系一行：(consumer_request_seq, provider_request_seq)、minimum_level、is_active | 请求级归属与安装/撤销事实；共享、有效性和满足协议待定，不按 target 对合并而丢失需求来源 |
-| coordinator_control | 每个作用域一行：revision、allocation_acknowledgement、constraints、reserved、lifecycle | 可信配置、资源采纳、累计预留和服务状态的权威事实；reserved 不由裁剪后的 Run 历史求和 |
 | request_sequence | 每个请求序列一行：last_request_seq | 唯一发号水位；不以 MAX(request_seq) 重建，不因裁剪而降低 |
 
 probe_result 的 observed 分支只引用 observation，error 分支只引用 fault；未知用没有 Probe 行表达，不伪造成功。所有 JOIN 的引用完整性、跨 target 一致性和字段合法性必须在基础状态转换时校验；不能把查询因坏引用丢行当成正常空结果。
@@ -42,15 +77,13 @@ probe_result 的 observed 分支只引用 observation，error 分支只引用 fa
 | 视图 | 行粒度 / 逻辑键 | 对应用途 |
 | --- | --- | --- |
 | v_latest_requests | 每个有请求的 target 一行 / target_key | 最新意图映射，不等于待执行队列 |
-| v_confirmed_requests | 每个有已确认请求的 target 一行 / target_key | 已确认请求映射 |
 | v_active_runs | 每个未确认退出的 Run 一行 / run_id | 当前执行与恢复核实 |
 | v_ended_runs | 每个已结束 Run 一行 / run_id | 终结结果集合 |
 | v_actual_occupancy | 每个作用域一行 / singleton | 实际占用数 |
 | v_target_state | 每个已知 target 一行 / target_key | 最近 Probe 与对象更新时间 |
-| v_current_observations | 每个选中证据的 target 一行 / target_key | 当前决策需要的观察 |
+| v_current_observations | 每个 target 的当前观察 / target_key | 由观察使用规则推导，不另存证据采纳事件；规则待定 |
 | v_current_dependencies | 每条活跃需求关系一行 / 请求序号对 | 当前依赖，不丢失共享来源 |
 | v_target_fault_counts | 每个 target、kind 一行 / (target_key, kind) | umbrella 聚合查询示例，不强制新增顶层字段 |
-| v_coordinator_summary | 每个作用域一行 / singleton | 控制状态与实际占用的查询组合 |
 
 下面每个 SELECT 的输出列就是该视图的属性，不额外保存完整实体副本。引用可在 DTO 装配时按同一快照解析；类型中的嵌套值不要求物理重复存储。
 
@@ -78,59 +111,13 @@ WHERE position = 1;
 
 新请求形成后只影响对应 target；同值新请求仍替换身份，initial 也保留为请求而非删除行。排序消费可以按 priority、request_seq 升序，但这不表示就绪、启动或完成。清理必须保留当前请求或等价基线；不能删掉最新记录后让旧请求重新成为最新。若允许主动移除映射，须另定义成员撤销事实，本查询不臆造该语义。
 
-## 2. 已确认请求
+## 2. 请求接收边界
 
-| 属性 | 类型 / 可空 | 来源 |
-| --- | --- | --- |
-| target_key、request_seq、desired_level、priority | 同上 / 否 | 已确认请求中序号最大的条目 |
-| acknowledged_at_revision | Revision / 否 | 该请求的确认事实，不用查询时的当前版本 |
-
-```sql
--- view: v_confirmed_requests
-WITH ranked AS (
-    SELECT r.target_key, r.request_seq, r.desired_level, r.priority,
-           a.acknowledged_at_revision,
-           ROW_NUMBER() OVER (
-               PARTITION BY r.target_key ORDER BY r.request_seq DESC
-           ) AS position
-    FROM regulation_request AS r
-    JOIN request_acknowledgement AS a ON a.request_seq = r.request_seq
-)
-SELECT target_key, request_seq, desired_level, priority,
-       acknowledged_at_revision
-FROM ranked
-WHERE position = 1;
-```
-
-确认事实变化影响该 target；尚未确认的新请求不覆盖已确认值，晚到旧确认也不使序号回退。确认不表示执行或达标。请求的外部发布值可以领先于 actor 接收到的状态，不能混入同一快照直接比较版本。
+Request 进入同一 actor 的状态即表示已被接受，不再维护已确认请求表或视图。接纳不代表已执行或达标；外部消息的持久化响应、去重与重试属于边界协议，不另造内部 acknowledgement 状态。
 
 ## 3. 活跃运行与终结记录
 
-| 属性 | 类型 / 可空 | 来源 |
-| --- | --- | --- |
-| run_id、request_seq、binding_id | 对应身份类型 / 否 | 同一 Run 的固定身份与启动事实 |
-| binding_configuration | JsonObject / 是 | 当次配置；SQL null 映射为 TS 属性缺省，不改成空对象 |
-| phase、execution_detail | string、分支参数值 / 活跃分支参数按类型校验 | Run 的已确认执行状态，不从时间或资源期望猜测 |
-| recovery_ref | string / 是 | 外部运行重关联信息 |
-| ended_at_revision、outcome | Revision、RegulationRunOutcome / 仅终结视图且非空 | 真实终结事实 |
-
-```sql
--- view: v_active_runs
-SELECT run_id, request_seq, binding_id, binding_configuration,
-       phase, execution_detail, recovery_ref
-FROM regulation_run
-WHERE phase IN ('running', 'stopping', 'unverified');
-```
-
-```sql
--- view: v_ended_runs
-SELECT run_id, request_seq, binding_id, binding_configuration,
-       ended_at_revision, outcome
-FROM regulation_run
-WHERE phase = 'ended';
-```
-
-启动、请求停止、恢复核实或确认退出改变 Run 基础状态，然后影响这两个互斥视图。确认退出不是删除 Run 实体；是将同一身份从活跃选择中移出、进入终结选择。pending 不在两者中，也不为了排队虚构 Run。
+Run 固定属性与追加的启动、停止、恢复核实及终结事实共同决定当前状态。旧版从可变 regulation_run.phase 直接筛选的 SQL 已撤回；待 Run 观察需求与生命周期记录协议收敛后再给出完整 SELECT。终结不删除 Run，pending 不虚构 Run；失联不等于确认退出。
 
 ## 4. 实际占用
 
@@ -138,14 +125,7 @@ WHERE phase = 'ended';
 | --- | --- | --- |
 | active_count | 非负整数 / 否 | 尚未确认退出的 Run 数量，包括 stopping/unverified |
 
-```sql
--- view: v_actual_occupancy
-SELECT COUNT(*) AS active_count
-FROM regulation_run
-WHERE phase IN ('running', 'stopping', 'unverified');
-```
-
-空集合也返回一行 0。只受 Run 状态变化影响；资源期望缩减、换 binding、发出停止请求不会自动降低占用。该计数可物化，但不是独立可写的权威计数。
+从 AO 生命周期事实重建的 Run 当前状态计数，具体 SELECT 随 Run 模型定义；不从可变基础实体读取 phase。空集合也返回一行 0。资源期望缩减、换 binding、发出停止请求不会自动降低占用。该计数可物化，但不是独立可写的权威计数。
 
 ## 5. Target 最近 Probe 状态
 
@@ -182,22 +162,7 @@ target 登记和 Probe 事实影响该视图；晚到旧 Probe 不改变已选�
 
 ## 6. 当前有效观察
 
-| 属性 | 类型 / 可空 | 来源 |
-| --- | --- | --- |
-| target_key | TargetKey / 否 | 经校验的证据选择归属 |
-| observation_ref、run_id | 精确记录引用、RegulationRunId / 否 | 被明确选中的观察及其来源 |
-| current、observed_at、problems、gap_summary、versions、sources | ObjectiveObservation 属性 / 仅 sources 可缺省 | 该观察事实，不是重新 Probe 的结果 |
-
-```sql
--- view: v_current_observations
-SELECT s.target_key, o.observation_ref, o.run_id, o.current,
-       o.observed_at, o.problems, o.gap_summary, o.versions, o.sources
-FROM evidence_selection AS s
-JOIN observation AS o ON o.observation_ref = s.observation_ref
-WHERE s.observation_ref IS NOT NULL;
-```
-
-采纳或撤销决定改变该视图。最新 Probe 失败与旧观察仍被明确保留可以同时成立，不能把当前证据冒充最新 Probe。有效性到期若影响状态，须形成撤销事实；SELECT 不读取当前墙钟来隐式改变视图。基础校验必须经 Observation → Run → Request 核对 target 一致；坏引用必须报错，不可任由 JOIN 隐藏。
+当前用于判断的 Observation 由明确规则从已有事实推导，不新增独立证据采纳或撤销事件。最新 Probe 失败后旧观察是否仍适用、何时过时，留待 Target 观察需求收敛；不提前假定最近成功即有效，也不把历史观察冒充此刻现实。旧的 evidence_selection 表与 SELECT 已删除。
 
 ## 7. 当前依赖
 
@@ -239,22 +204,7 @@ GROUP BY target_key, kind;
 
 ## 9. Coordinator 摘要与快照边界
 
-| 属性 | 类型 / 可空 | 来源 |
-| --- | --- | --- |
-| revision | Revision / 否 | 基础状态共同的已应用版本，不是视图自行加一 |
-| allocation_acknowledgement、constraints、reserved、lifecycle | 对应 TS 值 / 否 | coordinator_control 权威状态 |
-| active_count | 非负整数 / 否 | Run 状态计数，不由 concurrency 推导 |
-
-```sql
--- view: v_coordinator_summary
-SELECT c.revision, c.allocation_acknowledgement, c.constraints,
-       c.reserved, c.lifecycle,
-       (SELECT COUNT(*) FROM regulation_run
-        WHERE phase IN ('running', 'stopping', 'unverified')) AS active_count
-FROM coordinator_control AS c;
-```
-
-控制状态和 Run 状态变化影响摘要；coordinator_control 必须恰好一行，缺失不能静默当成空 Coordinator。预算预留、服务生命周期、资源确认和发号水位本身不是从 Run 历史聚合出的视图，也不会因没有活跃 Run 而消失。
+旧版包含资源确认、累计预算预留和可变 Run 基础行的 Coordinator 摘要 SELECT 已删除。当前资源来自不可变 Host 资源版本，单次限制属于 Run，没有共享总预算需求；内部发号水位和同步连续前缀仍必须可靠延续，但不是 Host 主要展示信息。
 
 完整 CoordinatorState 由这些基础状态与视图表在同一版本组合，不用一个巨大的笛卡尔 JOIN 把所有集合拼成“快照表”。CoordinatorSnapshot 表示一致读取边界，不再作为单独的聚合图或新增实体。CoordinatorCheckpoint 是否保留输入包装与适配层接续信息，仍按 Types.md 的恢复边界处理，不把输入尚未接收的值混入 actor 的当前版本。
 
@@ -264,6 +214,6 @@ FROM coordinator_control AS c;
 
 对每个合法前缀 n，验证基础归约 `B_n = reduce(B_(n-1), event_n)` 后，增量维护结果与这些 SELECT 的完整重算结果相等。比较按逻辑键与值进行，不依赖数据库行枚举顺序；显式排序属于查询消费。
 
-基础状态与视图的删除/撤销同样属于事件效果，不能只实现追加路径。外部消息重投的去重、断点接续和持久化原子性须明确；纯事件回放不重新分配请求、不重新判断证据有效性、不启动或停止外部进程。历史裁剪必须保留重算所需事实或充分基线，不能把物化缓存变成唯一真相。
+事实层只追加，解除关系、结束执行或停用配置由新记录表达；视图行可以随之更新或移除，不删除或改写原事实来表达业务撤销。外部消息重投的去重、断点接续和持久化原子性须明确；纯事件回放不重新分配请求、不重新作业务决定、不启动或停止外部进程。历史裁剪必须保留重算所需事实或充分基线，不能把物化缓存变成唯一真相。
 
-验证至少覆盖：空初值；同值新请求；未确认新请求及晚到旧确认；stopping/unverified 占用与确认退出；无 Probe、最新失败、旧 Probe 晚到；观察选择与撤销；共享 provider 的单边撤销；故障各层统计；资源意图改变不改实际占用；预算在运行历史裁剪后不回退；完整重算、增量维护和跨重启恢复在同一版本一致。
+Host 后续验证至少覆盖：未有联系或业务变更时的空值；在线但没有业务变化；离线补传使发生时间与接收时间不同；心跳不冒充业务更新；旧事件补传不替代最新事件；失联不结束 Run；配置缩容不释放真实占用；收到较大事件号但存在缺口；中央观测与本地业务事实分别重建。其余观察中心的查询用例随对应需求完善，完整重算、增量维护和跨重启恢复须在同一输入边界一致。

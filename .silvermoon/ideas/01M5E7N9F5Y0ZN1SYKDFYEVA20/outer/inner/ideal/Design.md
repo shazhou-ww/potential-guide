@@ -4,9 +4,13 @@
 
 类型讨论入口为 [Types.md](./Types.md)：先定义基础实体与状态，再按 [Views.md](./Views.md) 明确视图表属性、来源及 SELECT，从合法转换推导 Command/Event。Events.md 的既有分类仅作遗漏检查，不作为类型设计的先验框架。
 
+观测模型不与 ER 一一对应：Host、Objective、Target、Request、Run 是观察中心，Objective 可跨定义版本聚合，资源及 binding 版本是支撑事实。先从观察需求检验事实是否充分，再定义可重算视图；事实实体与变化记录均 append-only，可变当前状态是查询冗余。Host 的已讨论需求见 [Host 观察需求](./Views.md#host-观察需求)，其他观察中心仍待逐项收敛。
+
 ## 两个意图输入，一个执行状态输出
 
 Host 是逻辑 worker 身份，每个 Host 对应一个 Coordinator 的运行与状态边界，同时至多有一个活动实例，重启不更换逻辑身份。一台物理设备可通过虚拟机、容器或不同用户/profile 承载多个 Host；守护进程应阻止同一系统、同一 profile 内重复启动。资源配置归属 Host，执行 Run 的 Host 由实例归属确定；ObjectiveRevision 不与 Host 绑定。中央观察服务汇集多个 Host 的状态，跨 Host 引用与版本保留 hostId 作用域，不将局部请求序号视为全局身份。本轮不定义同步传输、跨 Host 路由或一致性协议。Host 的 ER 表达与值草案边界见 [Types.md](./Types.md#host-与运行作用域)。
+
+Coordinator 自身就是守护进程，通过运行全程持有冲突空间的 OS 文件锁防止本地重复实例；不增加外层守护进程，也不以锁文件存在判断互斥。Host 视图的 online/offline 属于中央联系观测，不等于本地生命周期阶段或是否仍有 Run 执行。主要展示最后联系、最后收到更新和业务变更发生时间；事件序号及连续应用水位属于同步内部信息，不作为主要观测目标。
 
 ```text
 Behavior RegulationRequests ───┐
