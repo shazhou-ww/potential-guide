@@ -12,17 +12,18 @@
 
 | 位置 | 建议调整 |
 | --- | --- |
-| 新 `apps/check-host` | 用户级共享进程入口、loopback HTTP、启动/就绪、配置与优雅退出；不承载具体业务规则 |
-| 新 `packages/check-host-runtime` | Host 注册表、任务状态、有界调度/worker 池、生命周期和消息路由；可被应用装配与测试 |
+| 拟议 `packages/check-host` | 可复用 Host 包：loopback HTTP、启动/就绪、注册表、任务状态、有界 worker 池、消息路由与退出；不承载具体业务规则 |
 | 现有 `packages/pilot-protocol` | 新 worker descriptor、公共消息/DTO、序列化及验证契约；保留 CheckRef、Subject、CheckResult 的既有业务意义 |
-| 现有 `packages/objective-pilot` | Host check adapter 与 worker runner/上下文能力，保留 observe、层级及依赖证据判断；不依赖 CLI 或 Host 应用 |
+| 现有 `packages/objective-pilot` | Host check adapter 与 worker runner/上下文能力，保留 observe、层级及依赖证据判断；不依赖 CLI 或 Host 运行时 |
 | 现有 `packages/cli-runtime` | CLI 侧 Host 发现、会话与注册、准确 Git 来源、观察事件泵和依赖回传；公开客户端接口供其他调用入口复用 |
 | probe / regulate / supervise CLI 及 regulation worker | 使用同一 Host，建立各自请求/观察上下文，不再逐 check spawn；取消、恢复、报告和配置接线一致 |
 | Regulator / Coordinator / Portfolio | 业务循环保持原意；适配新增执行错误与异步取消，版本变化不得悄悄改绑固定来源 |
 | 各 Objective 检查包 | 注册 Node worker 模块，业务函数接入请求级上下文，移除进程级输入/输出/退出假设 |
 
-新应用使用 Node 入口，运行时建议归 business 层，仅向 protocol/既有允许的 business 能力依赖；
-CLI 工具层可以装配客户端，但 business 不反向依赖 CLI。新 workspace 需同步
+仓库 workspace 仅使用 `packages/*`，不新增应用目录；Host 作为独立可复用包规划，
+不预先拆成独立应用和 runtime 两个 workspace。运行时建议归 business 层，
+仅向 protocol/既有允许的 business 能力依赖；启动装配复用现有 CLI 工具层，
+business 不反向依赖 CLI。新增包在实施阶段需同步
 pnpm/Turbo、package-layers、包自有 objectives、构建/发布清单和测试；
 具体包名是建议，不在准备阶段创建空壳包，也不因设计文件出现名字就视为已批准发布。
 

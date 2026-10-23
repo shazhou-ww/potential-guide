@@ -13,14 +13,15 @@ worker 策略已确认采用有界复用、按任务数/时间/内存等条件�
 
 ## 三个重点阅读入口
 
-- [Design.md：调整范围](./Design.md#1-调整范围)：应用/包边界、现有调用链以及全部内置检查器。
+- [Design.md：调整范围](./Design.md#1-调整范围)：包边界、现有调用链以及全部内置检查器。
 - [Design.md：worker 消息](./Design.md#3-worker-messageport-消息)：任务身份、消息方向、完成与清理顺序。
 - [Design.md：HTTP 接口](./Design.md#4-对外-http-rpc)：异步任务资源、会话、注册、依赖事件和错误语义。
 
 设计稿还集中定义模块生命周期、退役/预热和端到端时序；本文件不复制另一套接口。
 已确认/待审阅状态统一见 [OpenQuestions.md](./OpenQuestions.md)。
-建议以独立 workspace 承载 Host：应用入口位于 apps、可复用能力位于 packages，
-复用现有协议层，不在本次文档阶段增加空壳包。
+仓库 workspace 仅使用 packages，Host 按独立可复用包规划于 `packages/check-host`，
+启动装配复用现有 CLI 工具层，不另增应用目录或预先拆分 runtime 包；
+复用现有协议层，本次仅调整 workspace 配置和文档，不创建产品包。
 
 ## 性能动机与证据边界
 

@@ -53,6 +53,9 @@ The immediate parent and branch are recorded in `.git-lineage.yaml`. Run
 
 ## Development
 
+Workspaces are discovered only under `packages/*`; this repository does not use
+an `apps/` workspace directory.
+
 ```sh
 corepack pnpm install --frozen-lockfile
 pnpm build
