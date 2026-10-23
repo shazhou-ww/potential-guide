@@ -1,231 +1,138 @@
-# Pilot 进程与 Check 请求：调研与候选方案
+# 共享 Check Host：收敛方案与调研依据
 
-## 状态与已确认方向
+## 当前选定方向
 
-2026-10-23 的最新模型为每个 Objective Pilot 定义独立 executable，由它管理内部 check
-排队与线程，regulation object 和 subject 随请求传入。后续因独立 CLI 的并发 Regulation
-共享进程，用户提出 HTTP 与用户级端口注册文件，并明确同一 Pilot ID 不允许多版本并存：
-注册表的 key 为 Pilot ID，既发现同一端口，又对活动进程去重。
-版本是实例属性和请求校验条件，不是多实例键。启动竞争、版本切换和共享回收机制仍待细化。
+2026-10-23 用户确认：检查器统一为 Node worker 模块，单用户级共享 Check Host
+负责全部 Pilot 的 check 执行调度；外部采用本地 HTTP RPC，内部采用 Worker Threads
+消息通信。check 是最小并发任务，不同 subject、regulation object 和 CLI 共用执行宿主。
 
-Q01 随后由用户明确：check 纳入 probe 协议，形成统一入口；调度器就是 CLI。
-顶层调用 regulation 或 probe 时事先启动所需服务，regulation 内再次 probe 时，
-若相同服务已经存在，则直接复用。用户级共享注册要求修正了此前只限顶层调用的推导：
-多个 CLI 共同发现和使用同一实例，某个 CLI 结束不能关闭他人仍使用的服务。
-无需因此自动引入额外的全局常驻调度进程；CLI 仍是协议参与者和调度入口。
-此处沿用 probe 协议的现有术语，不引入新协议名称；服务扩展的 wire 细节仍待讨论。
+本文件只保留这一方向及其依据。idea alias `http-check-services` 继续用于定位。
+已确认全量迁移新运行契约，不保留旧运行协议兼容；历史 schema 和固定证据不改写。
+本次是方案收敛，不是构想生命周期验收，也未开始实现。
 
-本 idea 仍只记录调研与逐项澄清，没有授权构想验收、实现或部署；
-此前另一 idea 的门限委托不自动沿用到这里。Q02 随后经用户确认：破坏性升级、全量迁移，
-不保留旧 executable/裸 subject HTTP 的运行时兼容，保留明确版本及迁移边界。
-用户同时要求收敛可解答的其他问题；Q07/Q08/Q09 给出技术方案。
-Q03 仅归属方向已收敛，依赖回传、身份/证据闭环、预算取消、死锁及失联处理尚未定稿；
-Q04/Q05/Q06 也仍有行为取舍；Q07 重新明确 ID 单实例，Q09/Q10 补充共享生命周期与注册问题，
-状态详见 [OpenQuestions.md](./OpenQuestions.md)。
+## 职责与请求链路
+
+```text
+CLI A / Regulation A ── 本地 HTTP RPC ──┐
+                                       ├─ 用户级 Check Host
+CLI B / Regulation B ── 本地 HTTP RPC ──┘    ├─ Pilot ID → Node worker 入口及执行版本
+                                            ├─ 有界 check 队列 / 线程调度
+                                            ├─ MessagePort → worker A
+                                            └─ MessagePort → worker B
+```
+
+- CLI 负责发现/必要时协调启动 Host，以及调用者的控制和业务入口；不为每次 check 创建进程。
+- Host 负责注册与版本校验、请求路由、队列、执行容量、线程复用和清理。
+- worker 执行具体 check，返回 envelope、依赖请求及相关证据消息。
+- Pilot 的层级判断、观察作用域和 Regulator 的观察/修复决策不因共享 Host 而被重定义。
+
+检查定义与执行调度分开：每个 Pilot 提供一个准确版本的 worker 模块入口，
+Host 根据完整 check ref 路由。请求携带独立的调用者/观察/父请求身份、subject、
+语言、输入视图、预算、取消和证据关联；不得保存进程全局的“当前 subject/regulation”。
+具体模块 API、wire schema 和上下文所在进程留待协议设计，不提前发明字段集合。
+
+建议以独立 workspace 承载 Host，不把常驻执行服务嵌入 CLI 或某个 Objective 的检查包。
+遵循仓库约定：可执行应用入口放在 apps，可复用运行时/客户端能力放在 packages；
+协议边界优先复用现有协议包。具体包名、是否拆分运行时与客户端，以实际依赖方向决定，
+不在准备阶段增加空壳包。CLI 通过公开契约连接 Host，检查包仅提供 worker 入口和业务规则。
+
+## 发现、版本与生命周期
+
+用户级发现记录只定位一个 Host 的 endpoint、协议与实例身份；Pilot worker 注册在 Host 内。
+建议动态绑定 loopback 端口、启动仲裁、ready 后原子发布记录并验证身份；
+这是机制建议，具体配置、认证和启动失败恢复尚待明确。
+多个 CLI 并发发现时不能各自启动一个有效 Host。地址可达不等于身份正确，
+端口/PID 重用、过期记录和失联恢复都需要代际边界。
+
+Pilot ID 唯一定位 Host 内当前执行版本，不允许不同版本的 worker 同时执行。
+一个版本可有多个线程实例；请求的准确来源仍需验证，不把版本从证据中删除。
+冲突不静默降级或重绑；升级必须排空并卸载旧 worker 后再加载新版本，
+升级授权、等待及固定版本恢复的策略尚待确定。
+
+单个 CLI 退出仅结束自身使用，不误杀其他客户端任务。Host 持有来源和线程资源，
+不依赖某个客户端临时 checkout 的寿命。建议有限租约与活动任务计数支撑闲置回收，
+具体时长和权限未定。确认任务结束或取消前，输入视图与证据资源不能提前删除。
+真正关闭 Host 时先停止受理、完成或取消任务、确认执行资源停止，再清理所属资源。
+
+## 执行、依赖和隔离
+
+线程池复用用于摊薄模块加载；可评估按 Pilot 入口保持线程亲和性。
+Node Worker Threads 的 JS 模块缓存通常按线程独立，不能声称所有线程共享一份 TypeScript
+实例。池容量、闲置线程回收与内存成本需实测，不能每请求新建线程却宣称初始化已消除。
+
+Host HTTP 控制面不执行 check 的同步 CPU 工作。建议一个 worker 同时运行一个请求，
+独立取消和资源清理后才接受下一个请求；必要时终止并重建该 worker。
+线程终止对原生代码、外部子进程和副作用的保证需验证；Host 崩溃是共享故障，
+不能将线程隔离当作恶意代码沙箱。注册来源授权与执行权限必须明确。
+
+worker 依赖请求可直接通过 MessagePort 回到 Host，但 Host/CLI 之间仍是 HTTP：
+若观察上下文位于 CLI 或 regulation worker，需要明确事件投递和响应方式。
+不能把内部双向消息误当成外部 HTTP 已有双向回调，也不能另起无关观察伪造同轮证据。
+依赖来源和观察证据须在原作用域登记后才能作为父 check 的依赖结论。
+请求能力在父请求/观察结束后失效，迟到结果不得流入下一轮。
+
+父任务等待子任务会消耗实际线程，池被占满时仍可能死锁；需设计容量释放、
+依赖执行余量或明确失败，保留递归/深度/逻辑次数及整体剩余预算。
+不能无限扩线程，也不能以队列计数变化冒充实际执行容量释放。
+
+HTTP 连接取消仅停止客户端等待，不保证 worker 任务停止；取消必须进入 Host 的执行协议。
+结果未知时不透明重试，重复请求身份不能二次执行；新尝试使用新身份和独立证据。
+不承诺跨 Host 重启的 exactly-once。队列、请求/响应大小及去重记录都要有界。
+当前未决点集中在 [OpenQuestions.md](./OpenQuestions.md)，不在此维护另一套状态。
 
 ## 性能动机与证据边界
 
-前一轮优化及其固定消费证据见
+前一轮固定消费证据见
 [probe-efficiency](../../../../01M5EY383YB0ZY4HMKB8BFT7HM/outer/Consumption.md)。
 本会话在 `e2f0b1a6d0c761f4df8c1e3529c3f713d075c60e` 上复测：
-默认预算三次超时，显式预算两次完整 CLI 调用约 50.5 / 48.5 秒，
-结果均 standardized、0 个问题，22 次实际观察、21 次复用、43 次逻辑观察。
+默认预算三次超时；显式预算完整 CLI 两次约 50.5 / 48.5 秒，
+均 standardized、0 problems，22 次实际观察、21 次复用、43 次逻辑观察。
 
-后续插桩确认 44 个 check 进程，其中 42 个包进程累计生命周期约 35.0 秒；
+后续插桩确认 44 个 check 进程；42 个包进程累计生命周期约 35.0 秒，
 启动到首次读取视图约 29.5 秒，其中 bundle 加载和初始化约 18.0 秒。
-这些是包含关系，不能相加。视图读取及大 JSON 解析累计约 1.25 秒。
-checker bundle 约 4.3 MB，TypeScript 占约 3.58 MB；体积比例不等于 CPU 比例。
-两个包级 CPU 样本指向模块编译、CJS 导出分析和顶层初始化。
+这些是包含关系，不能相加。读取视图和解析大 JSON 累计约 1.25 秒。
+bundle 约 4.3 MB，TypeScript 约 3.58 MB；体积比例不等于 CPU 比例。
+两个包级 CPU 样本主要落在模块编译、CJS 导出分析和顶层初始化。
 
-以上为方向依据，不是本 idea 的实施或部署证据。插桩总观察约 59 秒，其中捕获约 19 秒，
-不能与未插桩约 42 秒直接混比；共享机器与首次加载均存在波动。
-进程减少不自动构成默认 30 秒 SLA，需后续同环境、同输入、冷/热真实消费验证。
+以上是问题依据，不是共享 Host 已获收益的证据。插桩观察约 59 秒、其中捕获约 19 秒，
+不能与未插桩约 42 秒直接混比，也不承诺默认 30 秒 SLA。
+后续固定环境/来源/输入比较需统计 Host/线程启动、初始化次数、内存和冷/热时延，
+同时验证业务输出、跨客户端隔离、变化后刷新和真正执行停止。
 
-## 仓库现状与可复用能力
+## 现有代码可复用点与缺口
 
-调研代码基线为 `5055e96c2271035c641e9eb810c0768e6c7e991e`；
-相对上面的测量版本仅并入另一个 idea 的文档，未改变这些产品路径。
+调研代码基线 `5055e96c2271035c641e9eb810c0768e6c7e991e`。
 
-| 位置 | 已有行为 | 对本方案的意义 |
+| 位置 | 可复用能力 | 需要改变或补齐 |
 | --- | --- | --- |
-| [probes.ts](../../../../../../packages/objective-pilot/src/probes.ts) / createHttpCheckProbe | POST subject，HTTP 200 时严格解析现有 CheckResult envelope；支持客户端超时、取消和宿主证据 | 可复用结果语义，但没有服务管理、请求上下文、握手或依赖回调协议 |
-| 同文件 / createProcessCheckProbe | 每次创建临时目录并 spawn；经 IPC 处理依赖请求，环境变量提供视图和证据 | 不能只把 spawn 换成 fetch 而忽略这些能力 |
-| [pilot-source.ts](../../../../../../packages/cli-runtime/src/pilot-source.ts) | 固定 Git commit/tree/repositoryTree，发现 run/run.*，仅绑定进程 probe；退出删除来源 checkout | HTTP 绑定尚未接入；长期服务必须独立持有来源与文件的寿命，不能引用已清理的 checkout |
-| [dependency.ts](../../../../../../packages/objective-pilot/src/dependency.ts) | bindDependencyRequest 捕获调用者观察作用域；createSourceObjectiveDependencyProbe 依赖 process.send 和 requestId | HTTP 服务需把依赖观察路由回本次宿主，继续由宿主验证来源和同轮证据 |
-| [regulation-worker.ts](../../../../../../packages/pguide-regulate/src/regulation-worker.ts) | 一次 withPilot 包含一次 regulate；Regulator 在内部循环调用观察 | 当前已非“每次 probe 一个 Pilot 进程”；主要重复的是 check 子进程 |
-| [check.mjs](../../../../../../packages/objective-monorepo-standard/check.mjs) | main 可按 phase、scope、subject、evidence、dependencyProbe 调用 checker | 有可复用业务入口，但环境变量、进程绑定和取消仍需请求化 |
-| [shared.ts](../../../../../../packages/objective-monorepo-standard/src/shared.ts) | 从进程环境读取视图，要求拥有 IPC 连接，验证 digest/root | 多请求服务不能继续用进程全局环境切换不同请求的视图 |
-| [evidence.ts](../../../../../../packages/objective-pilot/src/evidence.ts) | 每个 check 有 runId/checkRunId/attempt，记录与脱敏有既有边界 | 服务日志不能代替调用者证据，也不能跨请求混用目录、身份或秘密值保护集合 |
+| [probes.ts](../../../../../../packages/objective-pilot/src/probes.ts) | HTTP 结果解析、超时及宿主 evidence 包装 | 裸 subject POST 不含完整任务上下文；需要新的 Host 请求协议，不能静默重解释旧输入 |
+| [pilot-source.ts](../../../../../../packages/cli-runtime/src/pilot-source.ts) | Git commit/tree/repositoryTree 固定与校验 | 当前只发现 run.* 并创建进程 probe；迁移为 worker 注册，来源寿命须覆盖 Host 使用 |
+| [dependency.ts](../../../../../../packages/objective-pilot/src/dependency.ts) | 同轮来源、递归预算及依赖证据登记 | 现有 process.send 传输不能直接作为 Host 多客户端协议；需请求级消息路由 |
+| [regulation-worker.ts](../../../../../../packages/pguide-regulate/src/regulation-worker.ts) | 一次 runtime 供 Regulation 内多轮观察使用 | 接入共享 Host，同时保留每轮独立上下文 |
+| [check.mjs](../../../../../../packages/objective-monorepo-standard/check.mjs) | phase/scope/subject 业务函数入口 | 转为 Node worker handler，视图、证据和取消显式请求化 |
+| [shared.ts](../../../../../../packages/objective-monorepo-standard/src/shared.ts) | 受限视图读取及摘要校验 | 环境变量和进程 IPC 前提不能用于多请求切换 |
+| [evidence.ts](../../../../../../packages/objective-pilot/src/evidence.ts) | runId/checkRunId/attempt、脱敏及记录限制 | Host 日志不替代每次请求证据，保护集合和目录不能跨客户端混用 |
 
-本次独立运行：
+调研时独立运行以下现有测试，4/4 通过：
 
 ```powershell
 pnpm exec tsx --test --test-name-pattern='HTTP|already aborted|transport failures' packages\objective-pilot\test\probes.test.ts
 ```
 
-4/4 通过，覆盖 HTTP POST/业务失败 envelope、传输故障、预取消不执行及
-客户端取消后服务端仍继续完成。它验证已有行为，不证明驻留服务已经实现。
+覆盖业务失败 envelope、传输故障、预取消不执行及客户端取消后服务端仍继续完成。
+它只验证已有行为，不证明 Host、线程池或新协议已经实现。
 
-## 外部资料核对
-
-使用 Node v24.11.1 官方文档与 HTTP 标准核对，未将仓库代码或 subject 发送到外部服务：
+## 官方资料与适用结论
 
 - [Node net](https://github.com/nodejs/node/blob/v24.11.1/doc/api/net.md)：
-  listen 端口为 0 时由 OS 分配，listening 后从 address 获取端口；
-  省略 host 可能监听所有接口，不应把默认监听地址当成 loopback。
+  端口 0 可由 OS 分配，listening 后获取实际地址；省略 host 可能监听所有接口。
 - [Node HTTP](https://github.com/nodejs/node/blob/v24.11.1/doc/api/http.md)：
-  server.close 停止接收新连接并关闭空闲连接；closeAllConnections 可强制关闭活动
-  HTTP(S) 连接，但不关闭升级后的连接，也不证明应用任务已停止。应用仍需 drain 和 deadline。
+  close 与 closeAllConnections 控制连接，不保证业务任务停止，Host 仍需执行级 drain/取消。
 - [Node child_process](https://github.com/nodejs/node/blob/v24.11.1/doc/api/child_process.md)：
-  detached、unref 与 stdio/IPC 引用决定父子进程退出关系；单个 detached 标志不是完整服务管理，
-  也不提供租约、就绪、自动回收或崩溃恢复。
+  detached/unref/stdio 影响父子寿命，但不自动提供 Host 的发现、认证、使用权或回收。
 - [RFC 9110 §9.2.2](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2)：
-  非幂等请求在不能确认未执行或语义幂等时不应自动重放。check 可能执行工具或有副作用，
-  不能仅因 POST 超时或断线就重发。请求去重、结果未知与业务幂等须单独定义。
+  非幂等请求在不能确认语义幂等或未执行时不应自动重放。
 
-HTTP keep-alive 仅复用连接；加载好的 checker 由持续存活的应用进程复用，两者不可混为一谈。
-HTTP 不提供远端业务停止保证，这一点同时有仓库测试证明。
-
-## 已明确的调度所有权与候选接线
-
-```text
-多个 CLI（按 probe 协议协调服务）
-    -> 用户级注册表：Pilot ID -> 一个活动端口/进程
-    -> 发现已有实例，或按 ID 协调启动并等待就绪
-    -> 各自 probe / regulation 的调度上下文
-        -> 每轮 Pilot 观察及证据上下文
-        -> HTTP check 请求 -> 同一 Pilot executable 进程
-            -> Pilot 内部请求队列与线程分配
-            -> check 执行线程（请求 1，subject A / regulation X）
-            -> check 执行线程（请求 2，subject B / regulation Y）
-    -> 各自结束时释放使用权；共享实例回收机制待定
-```
-
-Pilot 保留层级判断和问题聚合；Regulator 保留观察与修复循环；服务调度器不另造业务
-Coordinator。CLI 通过共享注册协调服务，内层 probe 借用其调用上下文，
-不能在每次 probe 或每个 check 时重新启动服务。
-这也不要求把库调用实现为再次执行 CLI 命令。
-
-probe 协议的统一入口属于已确认要求；建议由协议包定义版本化的互操作边界，
-执行层提供 HTTP 请求适配，Git 来源适配层提供服务来源绑定，
-CLI 负责管理服务注册与使用，具体模块拆分及端点字段在后续协议设计确定。
-不将独立常驻调度 app 或新的业务 Coordinator 作为必需架构。
-当前采用 HTTP/端口发现方向；跨 CLI 使用权跟踪与失联恢复是必需问题，租约是候选实现。
-CLI 管进程生命周期和请求路由，Pilot executable 自己管理内部队列与线程，
-两者不是两套重复的 check 排队器。统一 executable 位于每个 Pilot 模型中，
-不是所有 Objective 共用一个万能业务程序，也不是为每个 check 保留一个启动脚本。
-
-### 用户明确的进程与线程边界
-
-同一 Pilot 实例对应同一服务进程，check 调用是最小并发单元，可在独立线程执行。
-服务可为不同 regulation object 与 subject 处理请求，不按这些业务对象重复创建进程。
-不同 CLI 可共享同一 Pilot ID 的活动实例；实例寿命不再简单绑定某个 regulation 或首个启动 CLI。
-
-服务控制面与 check 的 CPU 工作应分离；每个请求显式携带观察/父请求身份、输入视图、
-预算、依赖能力和证据，不能使用进程全局的“当前 subject/regulation”。
-线程池复用是候选机制而非已确认实现；新建线程也可能重复加载重依赖，
-尤其 Node worker_threads 的 JavaScript 执行环境不自动共享模块实例。
-后续性能证据需同时统计进程启动、线程启动及每线程初始化次数，
-不能只把 44 个进程改为 44 个新线程就宣称重初始化已消除。
-
-### 实例身份与复用粒度
-
-用户明确在用户级注册范围内以规范 Pilot ID 唯一去重。同 ID 只能有一个活动进程和端口，
-不按版本或配置扩展注册键。准确 commit/tree/repositoryTree、协议版本和执行配置
-是已运行实例的属性，用于请求兼容性及证据校验，不是允许新实例并存的理由。
-请求版本不匹配时不静默换版本执行，也不另开端口启动另一版本。
-建议明确冲突后按授权停旧启新，但冲突等待、切换授权和固定版本恢复处理仍待讨论。
-重启后是否必须保留相同数值端口也未明确；服务停止后注册记录不构成 OS 端口预留。
-
-regulation object、subject、观察 ID、check ref 和语言属于请求，不是“一对象一个服务”的理由。
-本仓库根与 package-standard 是两个 Objective；若每个各一实例，
-21 个包的 42 次检查可由同一个 package-standard 服务处理，另一个根服务处理根检查。
-这是假设一致配置下的目标模型，不承诺所有第三方服务都能跨 subject 安全共享。
-
-### 生命周期
-
-建议模型为 absent -> starting -> ready -> draining -> stopped，失败为明确 fault。
-同 ID 并发 acquire 需要跨 CLI 单次启动仲裁，包括不同请求版本的竞争；
-ready 需确认协议、来源和实例代际，
-不能通过“某个端口能连上”就认定是目标服务。
-当前 HTTP 方向下，建议明确 loopback 地址、动态绑定后 ready 握手并原子登记，
-仅 loopback 并不等于已认证。动态端口、锁、记录结构和访问能力仍是技术建议，
-不得把它们写成用户已经确认的字段或机制。
-
-CLI 在 probe 或 regulation 前发现并验证注册实例；确无运行实例时协调启动，
-内层 probe 和独立并发 CLI 都复用该 ID 的同一实例。单个调用结束只释放本调用的使用权，
-不得停止另一个调用仍使用的实例。动态依赖同样经过共享 ID 去重。
-建议服务维护有界使用租约，在无活动任务和使用者时闲置回收，机制及参数仍待讨论。
-CLI 异常退出、旧进程失联但未退出、注册残留和升级竞争必须有明确处理，不盲目再起。
-shutdown 须先停止新请求、等待/取消活动任务，
-再以明确截止回收；共享来源资源不能随启动 CLI 退出而删除，必须等最后使用结束。
-终止需验证实例身份及权限，避免 PID 重用、误杀或删除新代际的注册记录。
-
-### 请求与结果
-
-保留“业务未达成也是成功观察”的现有 envelope；不可将服务故障包装成低层级。
-候选管理协议需区分服务/实例、客户端/观察、requestId、完整 level/check ref、
-subject、语言、输入视图引用/摘要、剩余预算与证据身份，但不提前锁定 wire schema。
-新运行时统一采用版本化的 probe 服务请求，传输方式待 Q10 选择，不保留旧一次性运行协议。
-旧输入明确拒绝；可复用现有 envelope 校验、超时与 evidence 代码，
-但不能以相同接口静默重新解释旧 POST 语义。
-服务可拒绝不匹配版本或未声明 check，不能根据任意路径加载客户端提供的代码。
-
-每轮输入与结果仍刷新；共享服务只保留允许跨请求存在的代码和编译器缓存。
-输入视图在请求完成或取消确认前保持有效，不可在 HTTP 客户端返回后立即删除，
-除非已确认服务端不再读取。多请求状态必须显式隔离，不能改写全局 process.env/cwd。
-
-### 依赖、调度与取消的关键缺口
-
-根 check 仍会请求 package-standard 的依赖观察。当前建议为 CLI 提供请求级受限回传能力，
-将服务依赖请求路由回原观察宿主，由宿主调用现有绑定、预算及证据验证。
-跨 regulation worker 边界可转发控制消息，但不另起无关观察；
-回调绑定观察及父请求，结束时失效，具体协议字段仍待设计。
-不接受任意 subject 内 callback URL，也不让服务另起无宿主观察来冒充原轮证据。
-依赖回传不必预设为反向 HTTP：双向消息通道可承载依赖子请求；若选 HTTP，
-尚需讨论 CLI 是否临时监听回调、如何路由至 regulation worker 的原观察作用域，
-以及迟到响应、登记证据后再响应、预算取消和失联的完整状态；
-这些不是已确定的接口细节，问题集中记录于 [Q03](./OpenQuestions.md#q03-依赖请求回到谁如何保持原观察作用域方向已收敛协议闭环待讨论)。
-
-按新明确模型，check 请求在线程中独立执行，容量与队列有界，控制面不执行同步业务工作，
-也不排在阻塞业务后方。之前“服务内首轮串行”的建议被该并发模型取代。
-不同服务并不自动排除死锁：全局并发上限若被等待依赖的父请求占满，
-子服务仍可能无法调度。依赖派发不能被等待的父请求占满全局槽，排队也消耗剩余预算；
-同一服务有空闲线程时可处理依赖重入，但线程全被等待子请求的父任务占满仍会死锁；
-是否挂起/释放执行容量、预留依赖容量或明确拒绝仍待讨论，不能默默挂起或无限创建线程。
-
-HTTP 断线只表明客户端不再等待。取消应有请求身份及状态确认；
-Node 同步 TypeScript 运算应在线程中运行，不能占用进程控制面的事件循环。
-建议协作取消加独立宿主截止，不能确认停止时终止对应工作线程并等待退出；
-单请求取消不应主动终止其他请求，服务整体崩溃时才涉及所有在途请求。
-线程终止对原生调用、外部子进程及资源清理的保证仍需验证，不能直接视为外部任务已停止。
-未确认结束前不得复用请求状态、释放输入资源或自动重放。
-请求去重以调用/观察/实例代际为边界，重复 ID 不二次执行，不提供跨重启 exactly-once；
-显式 Regulation 新尝试需新身份与证据，不由传输层透明重试。
-
-## 迁移、验证与范围建议
-
-Q02 已确认当前执行链全量迁移到新的 probe 服务契约，无 run.* 或旧裸 subject HTTP 回退。
-迁移包含全部内置 Objective、脚手架、示例、测试、生成物和直接相关消费入口；
-可复用业务函数，不维持两套协议。旧输入明确拒绝并给出迁移要求，历史固定证据不重绑。
-若改变 manifest，遵守已发布 schema 字节/URI 不可变并引入新版本；
-具体声明形式后续设计，不在调研阶段猜未来 schema 或直接改版本字段。
-
-实施时需同时覆盖：服务启动失败/就绪超时/竞争启动、重复请求与丢响应、
-顶层退出/内层借用及异常退出、不同版本隔离、跨 subject 和跨观察刷新、
-依赖请求证据及死锁、CPU 阻塞取消、视图与 checkout 保留和最终清理。
-固定版本隔离消费再比较真实进程数、初始化次数、冷启动与连续 probe 耗时；
-不能以 API 单测或单次启动日志代替完整 Regulation/CLI 路径。
-
-候选首轮限定本机服务，不包含公网托管、远端路径或 secret/subject 上传。
-远程 HTTP 能力不代表本地文件路径可跨机器读取；远程部署、授权及输入传输须另行决定。
-此限制为建议，尚非用户已确认的排除项。
-
-## 后续替代方向：统一 Node 的共享 Check Host
-
-用户要求探索限制所有 check 使用 Node（或同一技术栈），全局由一个进程调度，
-各 Objective Pilot 注册 worker 模块入口的做法。比较重点和未决边界记录于
-[OpenQuestions.md](./OpenQuestions.md) 的 Q11；当前仅探索，没有替换本 idea 的已记录进程方案。
-共享 Host 可统一线程调度并通过本地 IPC 避免 per-Pilot TCP 端口管理，
-但代价是统一模块契约、扩大进程故障域及重新界定信任/资源边界。
-这不是简单把多个 executable 塞入同一进程，也不代表自动共享 worker 的模块缓存。
+当前按本机、同用户、loopback 和访问能力校验推进，不默认扩展远端输入传输或生产部署。
+全量迁移覆盖全部检查器、脚手架和消费面；保持历史契约不变，旧输入明确拒绝，
+不同时维护其他运行架构。

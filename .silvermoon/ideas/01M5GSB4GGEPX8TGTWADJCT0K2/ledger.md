@@ -5,7 +5,7 @@
 ### Implementation steps
 
 - [ ] **I-S01:** 收敛协议与所有权
-- [ ] **I-S02:** 接通服务调度与真实检查器
+- [ ] **I-S02:** 接通共享 Host 与检查器
 - [ ] **I-S03:** 验证失败边界与收益
 
 ### Implementation acceptance criteria
