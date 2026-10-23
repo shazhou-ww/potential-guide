@@ -9,6 +9,17 @@ check 是最小并发任务，subject 和 regulation object 仅属于请求上�
 不要求提前注册。相同目录不并存执行版本，旧任务排空后才顺序更新；
 历史 schema/源码和固定证据保持不变。
 
+已确认的执行内核不动点：
+
+```haskell
+executeCheck :: WorkerDirectory -> Revision -> Subject -> IO (Behavior CheckState)
+```
+
+IO 发起一次执行，Behavior 提供当前状态及变化，观察它不再次执行；
+终态携带 CheckResult 或故障。Host 是调度与 Web 封装，不是内核本身，
+HTTP 响应投影同一状态源，依赖/证据作为旁路消息保留。完整含义见
+[设计不动点](./Design.md#0-架构不动点)。
+
 按用户要求收缩 MVP：有界复用、按任务数退役、异常隔离和容量允许时的同版本替补预热；
 时间/内存压力退役、自适应策略及特殊一次性模式后续扩展。清理完成才可回池，
 资源上限不因分期取消。不把设计方向确认当作生命周期验收或实现完成。
@@ -16,8 +27,8 @@ check 是最小并发任务，subject 和 regulation object 仅属于请求上�
 ## 三个重点阅读入口
 
 - [Design.md：调整范围](./Design.md#1-调整范围)：包边界、现有调用链以及全部内置检查器。
-- [Design.md：worker 消息](./Design.md#3-worker-messageport-消息)：任务身份、消息方向、完成与清理顺序。
-- [Design.md：HTTP 接口](./Design.md#4-对外-http-rpc)：五个接口，目录/revision 执行及流内依赖/结果。
+- [Design.md：worker 消息](./Design.md#3-worker-messageport-消息)：执行/进度/完成信号如何形成 Behavior，依赖与证据单独关联。
+- [Design.md：HTTP 接口](./Design.md#4-对外-http-rpc)：五个接口，Subject 输入、当前状态快照和变化投影。
 
 设计稿还集中定义模块生命周期、退役/预热和端到端时序；本文件不复制另一套接口。
 已确认/待审阅状态统一见 [OpenQuestions.md](./OpenQuestions.md)。
@@ -26,7 +37,7 @@ check 是最小并发任务，subject 和 regulation object 仅属于请求上�
 复用现有协议层，本次只简化设计文档，不创建产品包。
 
 首版不做会话租约、自动闲置关闭 Host、任务查询/恢复、独立视图管理或 cursor/ack 事件平台。
-Host 直接从授权的 directory 校验自包含产物及 revision，准备受控副本、排队、复用线程和返回结果；
+Host 统一管理目录/revision、执行资源与排队，通过内核一次执行得到 Behavior 后再做 HTTP 适配；
 Objective 的版本来源、层级及业务依赖证据仍由现有调用链解释。
 完整 check 迁移与依赖往返保持必要范围，不能用“MVP”名义跳过真实根/包依赖检查。
 
@@ -57,6 +68,7 @@ bundle 约 4.3 MB，TypeScript 约 3.58 MB；体积比例不等于 CPU 比例。
 | 位置 | 与迁移相关的事实 |
 | --- | --- |
 | [types.ts](../../../../../../packages/pilot-protocol/src/types.ts) | CheckRef、Subject、Envelope、CheckResult 及准确 Git 来源可作为消息业务数据 |
+| [effects/index.ts](../../../../../../packages/effects/src/index.ts) | 当前状态 SubscriptionRef、运行句柄和作用域清理可作先例；新的内核需保证订阅不会重复执行，不把 Promise 当作 Behavior |
 | [probes.ts](../../../../../../packages/objective-pilot/src/probes.ts) | HTTP 结果解析/取消已有基础，但裸 subject POST 不是新 Host 契约 |
 | [pilot-source.ts](../../../../../../packages/cli-runtime/src/pilot-source.ts) | 当前发现 run.*、逐次进程 probe，checkout 随作用域清理；需准备稳定产物目录与 revision，由 Host 校验并持有不可变执行副本 |
 | [dependency.ts](../../../../../../packages/objective-pilot/src/dependency.ts) | 依赖证据绑定原观察作用域，不能被普通 HTTP 或线程返回值替代 |

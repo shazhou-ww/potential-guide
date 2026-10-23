@@ -3,6 +3,10 @@
 唯一设计入口为 [Design.md](./Design.md)。本文保留 Q01-Q12 方便追溯讨论，
 只说明 MVP 取舍，不维护另一套协议。此前平台化接口不再作为首版要求。
 
+架构不动点已确认：`executeCheck :: WorkerDirectory -> Revision -> Subject -> IO (Behavior CheckState)`。
+业务输入就是 Subject；IO 发起一次执行，Behavior 表达该次执行的当前状态与变化，
+Host 统一调度并做 Web 封装。取消、预算和依赖能力通过运行时作用域关联，不混入业务 Subject。
+
 | 编号 | MVP 收敛 |
 | --- | --- |
 | Q01 调度与生命周期 | 用户级单 Host，多 CLI 共用；按需启动、保持驻留、显式停止，不做租约或自动闲置退出 |
@@ -14,14 +18,14 @@
 | Q07 身份与版本 | 规范化目录为 key、完整产物 hash 为 revision；执行时按需加载，同版复用，排空后顺序更新；旧任务在途时版本冲突明确拒绝 |
 | Q08 重试 | execute 不透明重试，重复 ID 拒绝；不提供断线恢复或历史结果查询，未知结果显式报告 |
 | Q09 输入与资源 | 请求级受限 staging 视图副本及清理，不新增视图 HTTP 资源；业务来源与证据在 adapter 保留 |
-| Q10 HTTP | 五个端点，execute 直接携带 directory/revision；无预注册/卸载 API、session/observation CRUD、游标或 ack |
-| Q11 Node 契约 | 自包含 worker 产物、统一 runner 的 initialize/execute/dispose；Host 不安装依赖或理解层级 |
+| Q10 HTTP | 五个端点，execute 携带 directory/revision/subject；响应投影 Behavior 当前快照和变化，旁路传递依赖/证据；无预注册、资源 CRUD 或回放 |
+| Q11 内核与 worker | 内核返回 IO (Behavior CheckState)，worker 的进度/完成信号由 runner/内核转换为状态；Host 只调度和封装，不以 Promise 或事件日志代替 Behavior |
 | Q12 内存 | 请求清理、有界缓存、任务数退役、简单替补预热；长期混合负载验证，不靠每请求重建或强制 GC 掩盖泄漏 |
 
 ## 仍需细化，不另开架构分支
 
-1. **产物和消息 schema**：目录规范化、完整依赖/资源 hash 算法、入口定位、基础运行上下文，
-   Host 的不透明输入与 check adapter 的业务数据如何对应。
+1. **产物和状态 schema**：目录规范化、完整产物 hash、具体 check 入口、CheckState 字段，
+   当前快照与更新的原子衔接、终态及执行作用域释放；Subject 不再包装通用 input。
 2. **容量与测量值**：线程/队列/负载/去重上限、任务数退役与预热额度、
    依赖余量及失败策略；必须使实际根/包依赖链可执行，不允许池耗尽后无限等待。
 3. **跨平台资源边界**：启动竞争、Host 发现、私有 staging 校验/复制、
