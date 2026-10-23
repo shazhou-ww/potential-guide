@@ -6,7 +6,7 @@
 
 ## 结果
 
-Coordinator 将治理请求与资源分配意图两个 Behavior 转换为执行状态 Behavior。ObjectiveDefinition 在 subject 上具体化为 RegulationTarget，RegulationRequest 表达对该 target 的 desiredLevel 与 priority 请求，实际执行仍为 Regulation。Command/Event 分别由纯 reducer 归约，资源意图全量更新；支持请求与状态持久化恢复，副作用通过 monadic composition 组织。原则见 [Design.md](./Design.md)，先参考 [Types.md](./Types.md) 讨论 state，再推导 Command/Event。
+Coordinator 将治理请求与资源分配意图两个 Behavior 转换为执行状态 Behavior。ObjectiveRevision 在 subject 上具体化为 RegulationTarget，RegulationRequest 表达对该 target 的 desiredLevel 与 priority 请求，实际执行仍为 RegulationRun。Command/Event 分别由纯 reducer 归约，资源意图全量更新；支持请求与状态持久化恢复，副作用通过 monadic composition 组织。原则见 [Design.md](./Design.md)，先参考 [Types.md](./Types.md) 讨论 state，再推导 Command/Event。
 
 ## 边界
 
@@ -16,10 +16,10 @@ Coordinator 将治理请求与资源分配意图两个 Behavior 转换为执行�
 
 ## 验收标准
 
-- 单一请求命令保留递增 requestSeq 身份，区分治理指向物、请求与实际调用；initial 不执行业务检查、不回滚。资源 binding/并发度全量更新表达期望，不伪报实际占用。
-- 两个纯 reducer 可重建约定状态；目标及执行状态可一致恢复，已终结意图不被重跑，失联调用核实前不虚报终止或释放占用。
+- 单一请求命令保留递增 requestSeq 身份，每次运行必须归属一条不可变请求并由其推导对象与目标；依赖派生也先形成请求再执行。initial 不执行业务检查、不回滚；资源 binding/并发度全量更新表达期望，不伪报实际占用。
+- 两个纯 reducer 可重建约定状态；视图表有明确属性来源及 SELECT，事件增量维护与同版本完整重算一致。目标及执行状态可一致恢复，已终结意图不被重跑，失联调用核实前不虚报终止或释放占用。
 - pending、依赖、真实终止、资源拒绝及累计预算均有新验证；event 类型仍待推导，旧证据不冒充新验收。
 
 ## 下一步
 
-先讨论 Types.md 的核心 state 与合法转换，再推导 Command/Event；类型及增量契约收敛后提交整份构想验收。
+先按 [Types.md](./Types.md) 与 [Views.md](./Views.md) 收敛基础状态、视图 SELECT 和合法转换，再推导 Command/Event；类型及增量契约收敛后提交整份构想验收。

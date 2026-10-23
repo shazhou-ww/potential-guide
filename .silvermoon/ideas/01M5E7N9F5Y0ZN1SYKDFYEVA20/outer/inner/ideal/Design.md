@@ -2,9 +2,11 @@
 
 本文支撑 [Idea.md](./Idea.md)，不是第二份验收合同。以下原则记录本轮讨论确定的设计方向，替代上一版五命令、资源池、harness 自有授权和 blocked 节点恢复模型；不等于整份修订构想已验收或代码已实现。事件名称、精确类型、存储格式和响应策略仍须继续细化，候选事件见 [Events.md](./Events.md)。总讨论入口为 [schema-contracts / Schemas.md](../../../../01M5CR0X2B4R2C6K3183Y1T3SQ/outer/inner/ideal/Schemas.md)。
 
-类型讨论入口为 [Types.md](./Types.md)：先定义 RegulationRequests、ResourceAllocation、CoordinatorState 及合法转换，再推导 Command/Event。Events.md 的既有分类仅作遗漏检查，不作为类型设计的先验框架。
+类型讨论入口为 [Types.md](./Types.md)：先定义基础实体与状态，再按 [Views.md](./Views.md) 明确视图表属性、来源及 SELECT，从合法转换推导 Command/Event。Events.md 的既有分类仅作遗漏检查，不作为类型设计的先验框架。
 
 ## 两个意图输入，一个执行状态输出
+
+Host 是逻辑 worker 身份，每个 Host 对应一个 Coordinator 的运行与状态边界，同时至多有一个活动实例，重启不更换逻辑身份。一台物理设备可通过虚拟机、容器或不同用户/profile 承载多个 Host；守护进程应阻止同一系统、同一 profile 内重复启动。资源配置归属 Host，执行 Run 的 Host 由实例归属确定；ObjectiveRevision 不与 Host 绑定。中央观察服务汇集多个 Host 的状态，跨 Host 引用与版本保留 hostId 作用域，不将局部请求序号视为全局身份。本轮不定义同步传输、跨 Host 路由或一致性协议。Host 的 ER 表达与值草案边界见 [Types.md](./Types.md#host-与运行作用域)。
 
 ```text
 Behavior RegulationRequests ───┐
@@ -12,22 +14,28 @@ Behavior RegulationRequests ───┐
 Behavior ResourceAllocation ──┘
 ```
 
-- RegulationTarget 是特定 ObjectiveDefinition 在 subject 上的治理指向物；RegulationRequest 是对该 target 提出的 desiredLevel 与 priority 请求，不是执行 Task。RegulationRequests 保留各 target 最新请求及序号水位；请求不承诺启动或达标，也不是持续保持目标的控制器。
+- RegulationTarget 是特定 ObjectiveRevision 在 subject 上的治理指向物；RegulationRequest 是对该 target 提出的 desiredLevel 与 priority 请求，不是执行 Task。RegulationRequests 保留各 target 最新请求及序号水位；请求不承诺启动或达标，也不是持续保持目标的控制器。
 - ResourceAllocation 是资源分配意图：期望使用的 agent binding 及并发度，不是实际资源分配、真实空闲数或权限集合；每次以完整值更新，不另建资源 delta 协议。
-- CoordinatorState 是完整领域状态，由 current singleton state 与若干 collection states 组成。current 保存已确认的两类意图、活跃 Regulation、当前有效观察及依赖、实际 binding 与占用、累计预算和服务生命周期；Collections 可以表达实体、聚合或历史，终结结果不进入当前活跃集合。pending 需求不包装成覆盖完整生命周期的 Task，其具体表达仍待推导。
+- CoordinatorState 是完整领域状态，由 current singleton state 与若干 collection states 组成。current 保存已确认的两类意图、活跃 RegulationRun、当前有效观察及依赖、实际 binding 与占用、累计预算和服务生命周期；Collections 可以表达实体、聚合或历史，终结结果不进入当前活跃集合。pending 需求不包装成覆盖完整生命周期的 Task，其具体表达仍待推导。
 - 核心状态不携带外部实例 ID 或输入通道生命周期；外部身份由宿主或 envelope 关联，连接、结束与重连由适配层管理。通道结束不撤销当前意图、不自动取消调用或关闭服务；错误仍明确报告，影响服务可用性时体现为服务自身的状态变化。
 - 外部接口是有状态、带副作用及反馈的二元 Behavior 变换，不是仅依赖当前两个值的无记忆逐点函数。输入保持不变时，runner 反馈、观察及超时仍能改变输出状态。
 - 内部可以通过 monadic bind（>>=）组合依赖前一步结果的副作用步骤；monadic composition 不等于 monadic lift，不将整个 Coordinator 称为 liftM2 或普通 applicative lift。
 
 ## Singleton State、Collection States 与查询
 
-- 业务实体、事实记录和聚合视图分别表达，见 [Diagrams.md](./Diagrams.md) 的五张图。CoordinatorSnapshot 是完整状态在某个 revision 下的一致聚合，不是业务实体，也不只代表 current singleton；已确认请求和有效证据等视图可包含权威决策，不能都当作 UI 查询。请求序号、Coordinator 版本和存储成员键分开，具体快照表映射留待存储设计，不要求逐版全量复制。
+- 业务实体只保留 [Diagrams.md](./Diagrams.md) 的统一 ER 图；视图改用 [Views.md](./Views.md) 的表定义，每个视图明确行粒度、逻辑键、属性来源、SELECT 和更新依赖。视图是查询冗余，可物化但必须可从基础事实或充分基线重算，不再把无法解释的权威决定藏在投影中。
+- 上游请求意图与下游执行事实共用实体模型，不分设 intention/state 两套实体图。CoordinatorSnapshot 是完整状态在某个 revision 下的一致读取边界，不是新实体或单独的聚合图。请求序号、Coordinator 版本和存储成员键分开，不要求逐版全量复制。实体命名仍以业务含义准确为先。
+- 请求确认、Probe 顺序、证据采用/撤销、依赖安装/撤销必须有基础事实来源；预算、资源确认、可信约束与生命周期是权威控制状态，不能由已裁剪的调用历史猜测。Views.md 将当前尚缺少的来源契约标为待收敛，SQL 不能冒充已经完成的协议设计。
+- Observation 展开 ObjectiveObservation 的属性，观察的是 Objective 在 subject 上的状态而非 Pilot 自身；通过 Run → Request → Target 推导 target，不重复保存 target 关联。每个 Run 必须且只关联一条不可变 Request，requestSeq 必填，target/desiredLevel 由该 Request 推导，不再在 Run 中重复保存。
+- Fault 移除 stage，以 kind 标识故障种类、message 说明具体详情；最终分类集合仍待确定，不从 message 解析策略。统一 faults 集合有意冗余展开 targetKey/requestSeq/runId，支持分层 umbrella 查询；仅允许全 null、仅 target、target+request、完整链四种形状。引用从确定的父关系展开并校验，最深非空字段表示直接归属，不另存 ownerKind。归属与影响范围分离，provider 故障不复制到 consumer 链，kind 不自动决定终结状态。
+- 值对象是否展开取决于业务可理解性和过滤、排序、分组、聚合诉求；独立实体另需身份或生命周期理由。Observation 显式表达 current、observedAt、problems、gapSummary 和兼容 provenance，不保留重复 value；problems 可用嵌套集合或子记录。Run 展开 bindingId 和可选 bindingConfiguration 快照，配置保持嵌套且不含明文秘密；后续资源意图不改写旧执行配置。具体索引及物理布局由适配层决定，详见 [Types.md](./Types.md)。
+- Request 是治理要求，不限定为外部输入；外部提出与依赖派生共用实体和 requestSeq 身份空间，采用同一串行化分配路径，不各自维护发号水位。CoordinatorState.requests 保留已纳入状态的不可变请求，最新映射不替代引用记录；启动 Run 前必须存在准确的请求，缺失或冲突显式拒绝。恢复与历史裁剪不能破坏 Run → Request → Target 的可追溯性。
 - 字段进入 current 的依据是当前调度、执行或恢复是否必需，不是 UI 是否可能查看；这项最小化原则不排除完整 CoordinatorState 包含历史。
-- current.activeRegulations 只含正在运行、停止中或恢复后尚未核实的调用。确认结束时移除，向 regulations 写入终结记录，并原子更新仍必要的当前信息；不保留 ended Task。
+- current.activeRuns 只选择正在运行、停止中或恢复后尚未核实的调用。确认结束时改变同一 Run 的基础状态，使其离开活跃视图并进入 runs 终结视图，同时原子更新仍必要的当前信息；不删除 Run 实体，也不保留 ended Task。
 - 累计预算限制继续执行，有效依赖和必要证据支持未完成编排；这些是当前状态而非历史明细。撤回 processedIntents 这一历史处理水位字段，待从新意图接收、待处理需求和恢复接续推导防重跑机制。
-- Collection 表达领域记录集合，不是 HTML 表格、数据库实现或一次查询结果，也不限于历史。不设 history 分组：例如 regulationTargets 按对象维护最新 Probe 时间与结果，regulations 保存终结记录。筛选、排序和分页产生派生的 QueryResult，不改变权威状态；UI 可以分别读取 current 和查询 Collections。
-- 当前切片不以 lastFault 保存最近诊断，完整结果、观察和故障记录进入相应历史集合；持续阻断运行的故障仍须在 current 明确表达。集合范围及记录身份见 Types.md 草案，不预定完整历史 schema。
-- singleton 与各个 collections 可以分开存储、查询和传输，但同一事件对它们的状态效果必须保持逻辑一致。对象聚合不能将最近观察冒充此刻现实，最新 Probe 的顺序、失败和未知须明确表达。存储及索引是适配层职责，实时 Stream 不自动成为历史数据库。
+- Collection 表达领域记录集合，不是 HTML 表格、数据库实现或一次查询结果，也不限于历史。不设 history 分组：例如 regulationTargets 按对象维护最新 Probe 时间与结果，runs 保存终结记录。筛选、排序和分页产生派生的 QueryResult，不改变权威状态；UI 可以分别读取 current 和查询 Collections。
+- 当前切片不以 lastFault 保存最近诊断，完整结果、观察和领域故障记录进入相应历史集合；纯技术诊断可留在宿主日志/健康信息，非法输入仍须明确拒绝。影响请求进度、调度或恢复的故障须在相应状态明确表达，持久化故障不能只依赖写回不可用存储来报告。集合范围及记录身份见 Types.md 草案，不预定完整历史 schema。
+- singleton 与各个 collections 可以分开存储、查询和传输，但同一事件前缀必须满足“增量维护的视图 = SELECT(基础状态)”。原子更新，或让异步投影公开 appliedRevision 并只组合一致版本；不能把缓存当作另一份可独立写入的事实。对象聚合不能将最近观察冒充此刻现实，最新 Probe 的顺序、失败和未知须明确表达。存储及索引是适配层职责，实时 Stream 不自动成为历史数据库。
 
 ## delta 与两个纯 reducer
 
@@ -40,18 +48,19 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 - RegulationRequests.latestByTarget 使用 TargetKey 到完整请求的只读稀疏 Record；每条合法新 command 从 lastRequestSeq 分配下一序号，只替换对应 target 的最新请求，不改写旧请求或其他 target。水位是身份分配元数据而非集合快照 revision，同值新请求仍分配新序号。序号单调、可有空号、不回绕或重用，宿主保证接收与持久化的一致性；纯 reducer 不调用数据库发号器。请求提出与 Coordinator 确认是不同事实。
 - CoordinatorState 与对象状态是一对多关系；Coordinator revision 是该 Coordinator 内统一的逻辑时序。对象状态 updatedAtRevision、意图 acknowledgedAtRevision 及执行事实分别记录各自变化发生时的 Coordinator 版本，快照归属版本与最后变化版本分开；多个对象在同次原子转换改变可共享版本。
 - 两个 reducer 都是纯的。尤其 CoordinatorStateReducer 不访问当前输入或私有队列、不执行检查、不作调度决策、不启动或停止进程；事件回放不重复任何执行副作用。
+- 状态设计顺序为基础实体/事实、视图 SELECT、合法转换、事件。最终所有已采纳的状态变化均有事件表达；一个事件先产生确定的基础变更，再增量维护受影响视图，不为实体和视图各设一套竞争写入。视图撤销与删除也须覆盖，去重、原子提交及断点接续由明确协议保证。
 - 命令合法性及拒绝行为须明确，不能以静默返回原状态掩盖非法输入。事件必须携带足够身份、修订与变化值，让独立 reducer 无需重新观察现实即可归约。
 - 调度与执行过程读取意图和已有状态，作决策、执行动作，并将真实结果形成 events；同一状态变化只有一个权威表达。停止请求不等于终止，异常通知不暗含任务结束。
 - level 事件表示 Coordinator 采纳的有来源观察，不声称外部变化完全由本次治理造成；观察允许下降，未知或检查异常不伪装成 level initial。
 
 ## 单一治理目标命令与单次调用
 
-- 实体边界分为 source、ObjectiveDefinition、RegulationTarget、RegulationRequest 四层。source 是 Git 仓库定位地址与仓库内路径的字符串值，不单独建实体，不加 git+ 前缀；允许 HTTPS、SSH 或本地 Git 来源。objectiveKey = Hash(Encode(Canonicalize(source), resolvedCommitId)) 是精确定义的单主键；version 为完整 commit ID，source/version 保留用于校验。RegulationTarget 只引用 objectiveKey，与 subject 身份推导 targetKey；RegulationRequest 以 requestSeq 单独标识，targetKey 仅为外键。换定义版本是另一个 target，改变 desiredLevel/priority 则是该 target 的新请求。RegulationTarget 不与执行调用混淆，RegulationRequest 不包装 Task 生命周期。规范化、编码、哈希及地址等价规则仍待确定，详见 [Types.md](./Types.md)。
+- 实体边界分为 source、ObjectiveRevision、RegulationTarget、RegulationRequest 四层。source 是 Git 仓库定位地址与仓库内路径的字符串值，不单独建实体，不加 git+ 前缀；允许 HTTPS、SSH 或本地 Git 来源。objectiveKey = Hash(Encode(Canonicalize(source), resolvedCommitId)) 是精确定义的单主键；version 为完整 commit ID，source/version 保留用于校验。RegulationTarget 只引用 objectiveKey，与 subject 身份推导 targetKey；RegulationRequest 以 requestSeq 单独标识，targetKey 仅为外键。换定义版本是另一个 target，改变 desiredLevel/priority 则是该 target 的新请求。RegulationTarget 不与执行调用混淆，RegulationRequest 不包装 Task 生命周期。规范化、编码、哈希及地址等价规则仍待确定，详见 [Types.md](./Types.md)。
 - 公共命令只有为特定 Objective/subject 设置目标 level 与 priority，不再分别提供 add、replace、cancel、priority 或 retry。未终结需求可被更新，前次终结后新请求形成新尝试。
 - 覆盖身份须包含明确对象，精确 Objective 版本、来源和实际资源身份不能混淆；不依靠任意 regulation ID 区分同一需求更新。按接受顺序区分新旧，不依赖生产者时钟；commandId 用于关联，不默认是幂等键。
 - 请求按非负整数 priority 升序、requestSeq 升序排序，序号表达逻辑接收先后，不把数据库自增分配顺序直接当成事务提交顺序。acknowledgedAtRevision 仅记录 Coordinator 的确认时间；重复确认和 Probe 更新不改变排序。仅 priority 更新也形成新请求，但不无故重启调用；旧调用以启动时 requestSeq 关联，不得完成新请求。
 - 先行 [level-attainment](../../../../01M5EFD1DW5J6MBE9BKCRFW5W3/outer/inner/ideal/Idea.md) 提供无要求 initial。目标 initial 不执行业务检查或 Agent，但仍校验契约、目标和 subject；它撤销推进需求，不将现实降级、不回滚修改、不虚构观察。
-- pending 是 Coordinator 等待 regulator 调度的任务，尚未进入 Regulation。Regulation 开始后，达标、block、预算耗尽或 exception/error 都结束本次调用；不存在以 blocked 状态保留活跃调用、等输入后原地复活的 retry。
+- pending 是 Coordinator 等待 regulator 调度的任务，尚未进入 RegulationRun。RegulationRun 开始后，达标、block、预算耗尽或 exception/error 都结束本次调用；不存在以 blocked 状态保留活跃调用、等输入后原地复活的 retry。
 - Coordinator 只维护当前单次需求和必要的有限依赖编排，不因 subject 后续退化或资源变化自动重跑已终结意图。
 
 ## 资源分配意图与实际占用
@@ -85,7 +94,8 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 
 ## 有限依赖、驻留与复用边界
 
-- 只有当前调用返回合法 dependency-required 才建立依赖并排 provider 调用；原调用已终结。共享依据精确 Objective/subject/版本/来源及真实执行身份，聚合最低需求中的最强目标与最高 priority，不引入旧 capabilities 匹配层。
+- 只有当前调用返回合法 dependency-required 才采纳依赖需求；原调用已终结。先形成或按明确规则复用 provider Request，再调度 provider Run，不存在无 Request 的派生调用。provider Request 表达自己的 target、desiredLevel 与 priority，不借用 consumer Request。共享依据精确 Objective/subject/版本/来源及真实执行身份，聚合最低需求中的最强目标与最高 priority，不引入旧 capabilities 匹配层。
+- 内部请求须保留来源和有效 consumer 需求归属；共享请求如何形成、复用、覆盖及回收仍待转换设计。聚合目标改变时形成新请求，不修改已存在 Request 或 Run；最新映射不能抹去仍有效的其他来源需求。请求可以不产生 Run，发现依赖也不意味着必须重复创建请求。
 - provider 的有效证据只支持 consumer 的新调用重新观察，不等于 consumer 成功。新边检查自环/传递环并原子安装；解析前后核对需求修订，拒绝非法或旧证据，不隐式解析 latest。
 - 当前有效需求锚定可达性；覆盖目标或设为 initial 后回收不再需要的关系和观察，保留共享 provider。历史调用不作为永久依赖节点；仍在运行的无引用调用按停止策略处理，实际退出后释放资源；resolver acquisition/release 成对，失败明确呈现。
 - 保留资源意图为第一参数的 FRP 接口。每实例一个 scoped 调度循环、内部单队列与图；多输出订阅不复制执行，空闲或命令流正常结束不结束服务。
