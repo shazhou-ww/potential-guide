@@ -23,7 +23,8 @@ Behavior ResourceAllocation ──┘
 
 - 业务实体、事实记录和聚合视图分别表达，见 [Diagrams.md](./Diagrams.md) 的五张图。CoordinatorSnapshot 是完整状态在某个 revision 下的一致聚合，不是业务实体，也不只代表 current singleton；已确认请求和有效证据等视图可包含权威决策，不能都当作 UI 查询。请求序号、Coordinator 版本和存储成员键分开，具体快照表映射留待存储设计，不要求逐版全量复制。
 - 上游请求意图与下游执行事实共用一张业务实体关系图，不分设 intention/state 两套模型；聚合总览同时展示两个意图输入及完整状态，仍按具体阅读问题拆分聚合视图。实体采用 ObjectiveRevision、RegulationTarget、RegulationRequest、RegulationRun、Observation、Fault，以业务含义准确为先，不强制父实体前缀规则。
-- Observation 的值类型称 ObjectiveObservation，观察的是 Objective 在 subject 上的状态而非 Pilot 自身；通过 runId 推导 target，不重复保存 target 关联。Fault 的 runId 可空，非运行故障仍可明确报告。Run 是否统一关联内部或外部 Request 尚待确定，因此暂保留 Run 捕获的 target/desiredLevel，不把去冗余误作已确定的内部请求协议。
+- Observation 的值类型称 ObjectiveObservation，观察的是 Objective 在 subject 上的状态而非 Pilot 自身；通过 Run → Request → Target 推导 target，不重复保存 target 关联。Fault 的 runId 可空，非运行故障仍可明确报告。每个 Run 必须且只关联一条不可变 Request，requestSeq 必填，target/desiredLevel 由该 Request 推导，不再在 Run 中重复保存。
+- Request 是治理要求，不限定为外部输入；外部提出与依赖派生共用实体和 requestSeq 身份空间，采用同一串行化分配路径，不各自维护发号水位。CoordinatorState.requests 保留已纳入状态的不可变请求，最新映射不替代引用记录；启动 Run 前必须存在准确的请求，缺失或冲突显式拒绝。恢复与历史裁剪不能破坏 Run → Request → Target 的可追溯性。
 - 字段进入 current 的依据是当前调度、执行或恢复是否必需，不是 UI 是否可能查看；这项最小化原则不排除完整 CoordinatorState 包含历史。
 - current.activeRuns 只含正在运行、停止中或恢复后尚未核实的调用。确认结束时移除，向 runs 写入终结记录，并原子更新仍必要的当前信息；不保留 ended Task。
 - 累计预算限制继续执行，有效依赖和必要证据支持未完成编排；这些是当前状态而非历史明细。撤回 processedIntents 这一历史处理水位字段，待从新意图接收、待处理需求和恢复接续推导防重跑机制。
@@ -87,7 +88,8 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 
 ## 有限依赖、驻留与复用边界
 
-- 只有当前调用返回合法 dependency-required 才建立依赖并排 provider 调用；原调用已终结。共享依据精确 Objective/subject/版本/来源及真实执行身份，聚合最低需求中的最强目标与最高 priority，不引入旧 capabilities 匹配层。
+- 只有当前调用返回合法 dependency-required 才采纳依赖需求；原调用已终结。先形成或按明确规则复用 provider Request，再调度 provider Run，不存在无 Request 的派生调用。provider Request 表达自己的 target、desiredLevel 与 priority，不借用 consumer Request。共享依据精确 Objective/subject/版本/来源及真实执行身份，聚合最低需求中的最强目标与最高 priority，不引入旧 capabilities 匹配层。
+- 内部请求须保留来源和有效 consumer 需求归属；共享请求如何形成、复用、覆盖及回收仍待转换设计。聚合目标改变时形成新请求，不修改已存在 Request 或 Run；最新映射不能抹去仍有效的其他来源需求。请求可以不产生 Run，发现依赖也不意味着必须重复创建请求。
 - provider 的有效证据只支持 consumer 的新调用重新观察，不等于 consumer 成功。新边检查自环/传递环并原子安装；解析前后核对需求修订，拒绝非法或旧证据，不隐式解析 latest。
 - 当前有效需求锚定可达性；覆盖目标或设为 initial 后回收不再需要的关系和观察，保留共享 provider。历史调用不作为永久依赖节点；仍在运行的无引用调用按停止策略处理，实际退出后释放资源；resolver acquisition/release 成对，失败明确呈现。
 - 保留资源意图为第一参数的 FRP 接口。每实例一个 scoped 调度循环、内部单队列与图；多输出订阅不复制执行，空闲或命令流正常结束不结束服务。

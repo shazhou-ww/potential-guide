@@ -22,6 +22,8 @@
 
 公开类型及测试证明单一请求命令、资源意图完整更新和两个纯 reducer 成立；区分 ObjectiveRevision、RegulationTarget、RegulationRequest 与实际 RegulationRun 调用。每条合法新请求分配唯一递增 requestSeq，仅更新相应 target 的最新请求，同值请求不丢失；清理和恢复不复用序号。Coordinator revision 标记 target 状态变化及请求确认，与 requestSeq 分属不同序列；同 priority 按 requestSeq 排序，观察或重复确认不改变排队位置。initial 不执行业务检查或回滚，资源期望不冒充实际占用，非法输入明确拒绝。JSON 往返保留 lastRequestSeq、请求身份、Coordinator 水位及事实引用。
 
+类型与反例测试证明每个 Run 必须且只引用一条已记录的不可变 Request，target/desiredLevel 通过请求推导。依赖派生先形成或明确复用 provider 自己的请求，外部与内部请求共用序号空间及分配路径；拒绝缺失、冲突或错误归属的请求引用。最新映射覆盖、请求归档与恢复不能改变旧 Run/Observation 的对象和目标，纯回放不重复派生请求或启动调用。
+
 ### I-AC02 — 恢复、生命周期与资源边界正确
 
 反例证明 pending/block 边界和有限依赖正确；确认结束的调用从当前切片移除并一致写入终结记录 Collection，当前无用依赖和观察可回收且不误删其他集合记录，查询结果不冒充权威集合，对象聚合区分无 Probe、最新失败和过期反馈，不导致意图重跑、故障静默或依赖提前完成。目标/完整状态可持久化接续，采用日志时由适配层保存一致处理位置，回放不触发副作用、重复历史写入或错误回退聚合，未知执行核实前不释放占用或重复启动。no-resource 是合法初值而非故障兜底，不冒充实际终止；输入通道结束不取消意图或服务。资源拒绝明确返回，不另设 harness 审批；存储故障不静默从零开始，恢复不退还或重置预算。

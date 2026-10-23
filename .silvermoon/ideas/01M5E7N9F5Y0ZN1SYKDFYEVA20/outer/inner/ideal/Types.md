@@ -26,6 +26,7 @@ requestSeq 在同一个请求序列范围内唯一并按逻辑接收顺序递增
 - **ObjectiveRevision 使用单主键。** objectiveKey 是规范化 source 与固定 version 共同编码后的确定性哈希，标识一份精确定义版本，不再标识跨版本来源。version 是解析后的完整 Git commit object ID，同一 source 的不同 version 得到不同 key；保留 source 和 version 用于读取、追溯及校验，不能在原 key 下静默替换它们。
 - **RegulationTarget 绑定精确 definition。** 每个对象只以 objectiveKey 一个外键引用 definition，再结合 subject 身份推导 targetKey，不重复保存 objectiveVersion 外键。同一 subject 使用另一个 definition version 会形成另一个治理对象；一份 definition 可以被多个对象共享。
 - **RegulationRequest 表达历次请求。** requestSeq 是单主键，targetKey 仅是指向 RegulationTarget 的外键；desiredLevel、priority 属于请求，不属于 target 身份。同值新请求也获得新序号，不覆盖或修改旧请求记录。
+- **每个 RegulationRun 必须且只属于一条 RegulationRequest。** Request 可以由外部提出，也可以由 Coordinator 因依赖编排产生；来源不同不形成两套实体。Run 只引用固定 requestSeq，由不可变 Request 推导 target 和 desiredLevel，不引用 target 的“最新请求”来解释旧调用。
 
 这些实体表达业务边界，不强制建立 source 表、独立 Objective 目录服务或新的顶层状态集合。TS 可以嵌套实体值，物理存储也可以用外键；表示方式不能改变上述身份关系。ObjectiveRevision 的 version 是 Git commit 身份，与 CoordinatorState.revision 的数字逻辑时序不是同一个版本空间；objectiveKey 仍标识精确 ObjectiveRevision，本轮不另换主键协议。
 
@@ -163,9 +164,7 @@ export type ActiveExecution =
 
 export interface RegulationRunContext {
   readonly id: RegulationRunId;
-  readonly target: RegulationTarget;
-  readonly requestSeq: RequestSeq | null;
-  readonly desiredLevel: string;
+  readonly requestSeq: RequestSeq;
   readonly binding: AgentBinding;
 }
 
@@ -286,6 +285,7 @@ export interface CoordinatorCurrent {
 export interface CoordinatorState {
   readonly revision: Revision;
   readonly current: CoordinatorCurrent;
+  readonly requests: Collection<RegulationRequest>;
   readonly regulationTargets: Collection<RegulationTargetState>;
   readonly runs: Collection<RegulationRunRecord>;
   readonly observations: Collection<ObservationRecord>;
@@ -316,7 +316,9 @@ Partial 表达并非每个 TargetKey 都有条目，索引结果为 RegulationRe
 
 RegulationRequests 不含集合快照 revision，lastRequestSeq 仅保存请求身份分配水位，不能从当前保留条目的最大值重新计算。RegulationRequest.requestSeq 唯一定位一条请求；CoordinatorState.revision 标识状态转换。RegulationTargetState.updatedAtRevision 和 AcknowledgedRegulationRequest.acknowledgedAtRevision 引用 Coordinator 版本，与 requestSeq 分属两个序列。
 
-在当前纯 reducer 草案中，每条合法请求命令按以下规则归约：
+外部请求与依赖派生请求共用 requestSeq 身份空间及同一分配水位，不能各自从独立的 lastRequestSeq 发号。内部编排先作出请求决策，再进入串行化的请求形成流程；纯 reducer 不自行发现依赖或执行调度。内部请求的来源与当前 consumer 需求归属必须可追溯，具体关联类型及共享策略仍待细化。
+
+在当前纯 reducer 草案中，每条合法的新请求形成命令（外部提出或内部派生）按以下规则归约：
 
 1. 取 state.lastRequestSeq + 1 作为新 requestSeq，首次为 1；安全整数耗尽显式失败，不读取系统时间或数据库。
 2. 创建新的请求及 latestByTarget 映射，只替换对应 targetKey 的最新请求；其他条目不变，不修改旧状态或历史请求。
@@ -324,7 +326,9 @@ RegulationRequests 不含集合快照 revision，lastRequestSeq 仅保存请求�
 
 例如依次接收 A、B、A 的请求，requestSeq 为 1、2、3；最新映射为 A→3、B→2，水位为 3。允许序号有空号但不重用，清理历史或最新映射不降低水位。这里的 +1 是确定性归约方案，不是要求物理数据库无空号；若改由外部序列分配器发号，须让命令携带固定序号并明确校验和恢复协议，不能把分配副作用藏进 reducer。宿主须串行化或事务化同一序列的接收与持久化，防止并发分配重复身份；重放同一前缀不产生新身份，消息重投与新命令的区分仍须接续协议明确。
 
-调用直接以 requestSeq 引用请求，不再需要 targetKey 加 revision 的 RequestRef。CoordinatorState.current.acknowledged.requests.latestByTarget 逐 target 保留已确认请求及 acknowledgedAtRevision，checkpoint.requests 则是调用方当前请求状态，两者允许暂时不同；确认不代表启动或完成调用。资源输入没有 delta 协议，AllocationAcknowledgement.revision 表达采纳时的 Coordinator 版本，初值为 0，不另建计数器。完整状态 revision 关联 current singleton 与各个 Collection，不是查询页或底层日志位置。
+调用直接以 requestSeq 引用请求，不再需要 targetKey 加 revision 的 RequestRef。CoordinatorState.current.acknowledged.requests.latestByTarget 逐 target 保留已确认请求及 acknowledgedAtRevision，checkpoint.requests 则是请求形成流程的当前状态，两者允许暂时不同；确认不代表启动或完成调用。两个位置不能独立分配序号，内部派生也必须经过同一身份分配路径，具体 actor 接入与消息原子边界仍待细化。资源输入没有 delta 协议，AllocationAcknowledgement.revision 表达采纳时的 Coordinator 版本，初值为 0，不另建计数器。完整状态 revision 关联 current singleton 与各个 Collection，不是查询页或底层日志位置。
+
+CoordinatorState.requests 按 requestSeq 唯一保留已纳入状态的不可变请求，包含外部与内部来源。latestByTarget 只是最新映射，不能承担旧 Run 的引用解析；采纳请求时保存其完整内容，再允许对应 Run 出现。独立 reducer 从状态中的请求记录解析 target/desiredLevel，不读取外部最新输入或私有缓存。缺失请求、同序号异内容或不匹配的执行引用必须明确拒绝；恢复不能用最新请求补齐旧引用。保留的 Run、Observation 或有效依赖仍需要某条 Request 时不得将其裁剪为悬空引用；归档与保留协议另定。
 
 命令关联 ID、非法输入回执、拒绝原因以及是否需要逐对象确认应在转换讨论中补足；不能把遗漏字段解释为允许静默丢弃请求。revision 也不等于底层消息位置，不能用它代替外部输入的可靠接续协议。
 
@@ -332,15 +336,15 @@ RegulationRequests 不含集合快照 revision，lastRequestSeq 仅保存请求�
 
 请求按 priority 升序、requestSeq 升序排序，不使用 acknowledgedAtRevision、updatedAtRevision 或墙钟时间。例如 A(priority 1, seq 10)、B(1, 12)、C(0, 15) 排为 C、A、B；A 的新请求为 seq 16 后排为 C、B、A。仅 priority 改变也产生新请求序号，但不等于重启调用；重复确认同一请求和 Probe 更新不改变排序。即使多个请求在同一 Coordinator revision 被确认，其 requestSeq 仍区分先后。
 
-映射加上述排序表达意图的优先队列视图，不是已就绪的实际执行队列。Coordinator 仍须结合当前待处理需求、实际调用和依赖决定可执行项；initial 意图不推进，已终结的同一意图不因扫描或恢复被重新执行。派生需求的有效 priority 与排序关联仍需在 CoordinatorState 的转换讨论中明确。
+映射加上述排序表达意图的优先队列视图，不是已就绪的实际执行队列。Coordinator 仍须结合当前待处理需求、实际调用和依赖决定可执行项；initial 意图不推进，已终结的同一意图不因扫描或恢复被重新执行。派生需求的有效 priority、共享 provider 请求的形成或复用，以及外部与内部需求作用于同一 target 时的合并/覆盖规则仍须细化；latestByTarget 不是所有有效需求来源的集合，不能因最新映射被覆盖就丢失仍有效的 consumer 归属。
 
 ## 当前调用、意图进度与依赖
 
-ActiveRegulationRun 只表示已经发起且尚未确认结束的一次调用。requestSeq 非空表示启动时关联的外部请求；派生 provider 可以没有自己的外部请求。target、requestSeq、desiredLevel 和 binding 捕获启动事实，新请求不改写旧调用身份或目标；不再同时维护 TaskId 与 RunId 两套执行身份。RegulationRequest 是输入意图，不替代当前执行或 pending 状态，也不要求每条请求恰好对应一次调用。
+ActiveRegulationRun 只表示已经发起且尚未确认结束的一次调用。requestSeq 必填且固定关联一条已记录的 RegulationRequest，binding 捕获实际执行接入；新请求不改写旧调用身份或请求归属。不再同时维护 TaskId 与 RunId 两套执行身份。RegulationRequest 表达治理要求，不限定为外部输入，不替代当前执行或 pending 状态，也不要求每条请求恰好对应一次调用。
 
-Run → Request → Target 以及 Request → desiredLevel 的函数依赖只有在每次 Run 都关联准确表达其执行需求的不可变 Request 时，才能消除 Run 的 target 和 desiredLevel。本轮保留可空 requestSeq 及启动事实，不通过命名调整擅自引入内部请求；派生请求、共享 provider 聚合及其序号协议仍待确定。
+Run → Request → Target 以及 Request → desiredLevel 是模型不变量，因此 Run 不重复保存 target 和 desiredLevel，也没有直连 Target 的关系。依赖派生路径同样是：consumer Run 返回依赖并终结 → Coordinator 采纳需求 → 形成或按明确规则复用 provider Request → 调度 → provider Run。provider Request 必须表达 provider 自己的 target、desiredLevel、priority 与 requestSeq，不能借用 consumer Request。共享或聚合改变执行目标时形成新的不可变请求，不改写旧 Request 或旧 Run；没有外部请求不等于可以没有 Request。
 
-Observation 仅以 runId 关联来源 Run，治理对象由 Run 推导，不重复保存 target。Fault 保留可空 runId，覆盖输入、持久化或恢复等非运行故障，不强制拆成 RunFault。运行历史裁剪或分开存储时必须保留足够的来源关联，使观察仍可解析到准确 target；可以采用明确的归档/查询投影，但不能静默丢失语义。
+Observation 仅以 runId 关联来源 Run，经 Run → Request → Target 推导治理对象，不重复保存 target。Fault 保留可空 runId，覆盖输入、持久化或恢复等非运行故障，不强制拆成 RunFault。运行历史裁剪或分开存储时必须保留足够的来源关联，使观察仍可解析到准确 target；可以采用明确的归档/查询投影，但不能静默丢失语义。
 
 current.activeRuns 只有 running、stopping 和恢复后尚未核实的 unverified，不含 pending 或 ended。停止请求不移除调用；确认退出后，通过明确的终结事件移除调用、写入 runs，并原子更新仍影响当前运行的信息。RegulationRunRecord 保留启动身份、实际 binding 和终结结果，不包含活跃执行状态；达标仍须有效证据支持。启动前撤销、initial 或未产生外部调用的启动失败不伪造一次 RegulationRun，其意图处理事实的记录类型留待转换设计。启动副作用与持久化之间的故障窗口仍须由恢复协议覆盖，不能因尚未确认启动就漏记可能存在的外部执行。
 

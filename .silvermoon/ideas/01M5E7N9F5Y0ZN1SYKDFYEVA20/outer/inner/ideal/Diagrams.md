@@ -42,8 +42,7 @@ erDiagram
     direction LR
     OBJECTIVE_REVISION ||--o{ REGULATION_TARGET : defines
     REGULATION_TARGET ||--o{ REGULATION_REQUEST : receives
-    REGULATION_TARGET ||--o{ REGULATION_RUN : undergoes
-    REGULATION_REQUEST o|--o{ REGULATION_RUN : motivates
+    REGULATION_REQUEST ||--o{ REGULATION_RUN : executes
     REGULATION_RUN ||--o{ OBSERVATION : produces
     REGULATION_RUN o|--o{ FAULT : associated
 
@@ -65,9 +64,7 @@ erDiagram
     }
     REGULATION_RUN {
         string runId PK
-        string targetKey FK
-        number requestSeq FK "Optional"
-        string desiredLevel "Captured at start"
+        number requestSeq FK
         AgentBinding binding "Actual binding"
     }
     OBSERVATION {
@@ -82,11 +79,11 @@ erDiagram
 ```
 
 - ObjectiveRevision 的 source/version 共同决定 objectiveKey；targetKey 由该 key 与 subject 身份决定。
-- requestSeq 单独标识请求。一个请求可以尚无调用或涉及多次调用；派生调用允许无直接外部请求。
-- Observation 是成功观察事实，不把 Probe 失败伪装为成功观察。成功观察以 runId 关联来源 RegulationRun，再由该 Run 推导 RegulationTarget，不重复保存 targetKey；是否需要其他来源另行讨论。
+- requestSeq 单独标识不可变请求。每个 Run 必须且只归属一条 Request；一个 Request 可以尚无调用或涉及多次调用。外部与依赖派生都先形成 Request，不能绕过 Request 直接启动 Run。
+- Observation 是成功观察事实，不把 Probe 失败伪装为成功观察。成功观察以 runId 关联来源 RegulationRun，经 Run → Request → Target 推导 RegulationTarget，不重复保存 targetKey；是否需要其他来源另行讨论。
 - Fault 可以关联调用，也可以来自输入、持久化或恢复。Observation/Fault 不虚构主键；图中 FK 表达逻辑来源，不要求永久保留全部历史父行。
-- 图不宣称任意请求都能用于任意 target 的调用；关联的 target 必须按执行协议验证。
-- Run 的 target 与 desiredLevel 暂保留为启动事实：当前模型仍允许没有外部请求的派生 provider 调用。若后续确定每个 Run 都引用一条准确表达其目标的不可变 Request（含内部派生请求），再通过 Run → Request → Target 推导并删除冗余；本轮正名不隐式决定内部请求协议。
+- Run 的 target 和 desiredLevel 均由固定 requestSeq 对应的 Request 推导，不重复保存，也不直接关联 Target。provider Request 表达 provider 自己的对象与目标，不能借用 consumer Request；旧 Run 不能通过 target 的最新请求解释。
+- 请求来源与 consumer 需求归属必须可追溯；共享 provider 的请求形成、复用、优先级和回收规则仍待细化，不要求每次发现依赖都重复创建请求。被 Run 或有效证据引用的请求须保留可解析记录，不能只靠 latestByTarget 映射。
 
 ## 2. 请求与确认视图
 
@@ -106,8 +103,9 @@ config:
     padding: 24
 ---
 flowchart TB
-    COMMAND["Valid new Command"]
-    subgraph INPUT["Request input state"]
+    COMMAND["External request command"]
+    DERIVED["Dependency-derived request decision"]
+    subgraph INPUT["Shared request formation"]
         SEQ["lastRequestSeq<br/>Allocation watermark"]
         REQUEST["RegulationRequest<br/>requestSeq / target / desiredLevel / priority"]
         LATEST["latestByTarget<br/>Latest submitted request per target"]
@@ -115,17 +113,22 @@ flowchart TB
         REQUEST -->|replace this target entry| LATEST
     end
     COMMAND --> SEQ
+    DERIVED --> SEQ
     DECISION["Coordinator acceptance decision"]
+    RECORDS["CoordinatorState.requests<br/>Immutable records by requestSeq"]
     ACK["acknowledged.requests.latestByTarget<br/>Confirmed request per target<br/>+ acknowledgedAtRevision"]
     ORDER["Eligible request ordering<br/>priority, then requestSeq"]
     LATEST --> DECISION
     DECISION -->|record accepted request| ACK
+    DECISION -->|retain exact request before any run| RECORDS
     ACK -.->|filter by execution and dependencies| ORDER
 ```
 
 最新提交和最新确认是两条不同状态线，确认不等于执行或完成。拒绝须明确反馈且不覆盖已确认请求。图未规定命令/事件的原子消息边界。
 
 requestSeq 表达请求身份与接收先后，lastRequestSeq 是分配水位；acknowledgedAtRevision 只表达 Coordinator 何时确认。重复确认或 Probe 更新不刷新请求排序，批量确认也不合并请求身份。最新映射不等于完整请求历史，覆盖条目不修改原请求。
+
+外部与内部请求共用序号空间和分配路径，不允许两套独立水位产生冲突。图展示新请求形成的共同路径，不决定共享请求的合并/覆盖规则；内部编排先明确需求归属和有效目标，再形成或复用请求，不能因更新最新映射而丢失其他仍有效的需求。
 
 ## 3. 单个 Target 状态视图
 
@@ -183,7 +186,8 @@ flowchart TB
     CONSUMER["Consumer RegulationTarget"]
     PROVIDER["Provider RegulationTarget"]
     DEP["CurrentDependency<br/>minimumLevel<br/>Only adopted, still-needed edges"]
-    ACTIVE["ActiveRegulationRun<br/>running / stopping / unverified<br/>target / requestSeq / actual binding"]
+    REQUEST["Provider RegulationRequest<br/>Own target / desiredLevel / priority<br/>Immutable requestSeq"]
+    ACTIVE["ActiveRegulationRun<br/>running / stopping / unverified<br/>requestSeq / actual binding"]
     OCCUPANCY["Actual occupancy<br/>Derived from unconfirmed exits"]
     ENDED["RegulationRunRecord<br/>Same runId<br/>endedAtRevision / outcome"]
     RESOURCE["Acknowledged ResourceAllocation<br/>Desired binding and concurrency"]
@@ -191,13 +195,15 @@ flowchart TB
     CONSUMER -->|consumer| DEP
     DEP -->|provider| PROVIDER
     DEP -.->|constrains scheduling| POLICY
+    DEP -->|form or explicitly reuse request| REQUEST
+    REQUEST -->|required before start| ACTIVE
     RESOURCE -.->|intent, not actual occupancy| POLICY
     POLICY -->|start or request stop| ACTIVE
     ACTIVE -.->|count occupied calls| OCCUPANCY
     ACTIVE -->|confirmed exit: remove active and record result| ENDED
 ```
 
-依赖是明确采用的业务关系，不从所有 target 自动生成，须验证无环、最低 level 与未完成请求归属。provider 证据支持 consumer 的新调用，不复活旧调用；详细共享与满足规则仍待定。
+依赖是明确采用的业务关系，不从所有 target 自动生成，须验证无环、最低 level 与未完成请求归属。先形成或按明确规则复用 provider Request，再由调度策略启动 Run；策略不能绕过请求前置条件。provider 证据支持 consumer 的新调用，不复活旧调用；详细共享与满足规则仍待定。
 
 ActiveRegulationRun 和 RegulationRunRecord 不代表两个业务实体。只有确认真实退出，才原子移除活跃状态并写入终结记录；stopping/unverified 仍保守占用。占用是派生值，资源期望缩减不自动终止调用；图不新建权威 activeCount 或 Task。
 
@@ -225,7 +231,7 @@ flowchart TB
     subgraph STATE["CoordinatorState @ revision"]
         CURRENT["current singleton<br/>Confirmed requests / resource intention<br/>Active runs / dependencies / evidence<br/>Constraints / reserved budget / lifecycle"]
         TARGETS["regulationTargets<br/>Per-target aggregates"]
-        RECORDS["Fact record collections<br/>runs / observations / faults"]
+        RECORDS["Entity and fact collections<br/>requests / runs / observations / faults"]
     end
     REQUESTS -->|request intention| COORDINATOR
     RESOURCE -->|resource intention| COORDINATOR

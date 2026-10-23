@@ -14,8 +14,8 @@ CoordinatorState 包含 current singleton state 和若干 collection states，�
 
 | 事实 | 必须明确的内容 | 对 singleton 及 collections 的效果 |
 | --- | --- | --- |
-| 请求处理 | 命令关联、接受或拒绝、准确 target；合法请求的 requestSeq、desiredLevel、priority，或拒绝原因 | 接受更新已确认请求；确认收到不等于请求已经处理完；非法命令不伪造已分配请求 |
-| 调用发起 | RegulationRun 身份、对象、启动时意图及目标、实际 binding、恢复关联和预算预留 | 纳入 activeRuns，保留当前实际占用；启动失败也须明确预留及可能存在的外部执行 |
+| 请求处理 | 外部或内部来源、需求归属、接受或拒绝、准确 target；合法请求的 requestSeq、desiredLevel、priority，或拒绝原因 | 接受保存不可变 requests 记录并更新已确认请求；确认收到不等于请求已经处理完；非法命令不伪造已分配请求 |
+| 调用发起 | RegulationRun 身份、必填且固定的 requestSeq、实际 binding、恢复关联和预算预留；target/desiredLevel 从该请求推导 | 请求必须已存在于状态；纳入 activeRuns，保留当前实际占用；启动失败也须明确预留及可能存在的外部执行 |
 | 请求停止或恢复核实 | 准确调用身份、停止原因或外部核实结果 | 显式转换 running/stopping/unverified；停止请求不释放占用 |
 | 调用确认结束 | 准确调用与意图身份、真实终止事实、结果、必要证据及当前信息更新 | 原子从 current 移除活跃调用、向 runs 写入终结记录并更新必要依赖等；不建立 ended Task |
 | 请求无需调用即处理完 | 准确 requestSeq 及原因，例如 initial 或启动前撤销 | 更新必要的处理进度，不伪造 RegulationRun 或观察 |
@@ -31,6 +31,8 @@ CoordinatorState 包含 current singleton state 和若干 collection states，�
 ## 关键转换边界
 
 - pending 表示当前需求尚待调度，不表示已存在一次 RegulationRun。单纯因需求尚未启动而创建 pending Task、再保留 ended Task 的模型取消。
+- 所有 Run 必须且只引用一条已记录的 Request；依赖派生也先形成或按明确规则复用 provider Request，再启动 Run，不借用 consumer Request。外部与内部共用唯一序号空间；请求形成/采纳与启动的事件顺序或原子边界必须保证引用存在，reducer 不在回放中重新发现依赖或分配另一条请求。
+- requests 保存不可变内容，latestByTarget 的更新不改写旧记录。缺失请求或同序号异内容明确拒绝；恢复、历史查询与观察归属经 Run → Request → Target 解析，不用最新请求兜底。共享 provider 的来源归属及回收规则仍须明确，裁剪不能留下不可解析的引用。
 - blocked 是本次调用的终结结果，不是保留活跃调用等待复活的状态。调用退出后移除，必要依赖提取为当前编排关系；provider 证据只能支持 consumer 的新调用。
 - result settlement 或 kill 确认真实退出，才允许移除活跃调用、释放占用。abort/kill 故障明确报告，不能据此虚构终止；恢复时未核实调用继续保守占用。
 - 移除调用、写入历史与更新必要当前信息须保持一致。已经处理完的同一意图不能因 activeRuns 为空而再次调度；不预设 processedIntents，以新意图接收、待处理需求及可靠恢复接续推导规则。有限依赖尚未完成时不能提前结束整个需求，历史集合的存在不自动补足无调用意图的处理语义。
