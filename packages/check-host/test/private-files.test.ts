@@ -147,7 +147,6 @@ test("broad descriptor, startup, store mutex and legacy publication files fail c
       try {
         if (name === "private-store.lock") {
           await createPrivateFile(root, "fixture.json", "fixture");
-          if (process.platform !== "win32") await createPrivateFile(root, name, "");
         } else await createPrivateFile(root, name, content);
         if (process.platform === "win32") await acl(root, join(root, name), false, "S-1-1-0");
         else await chmod(join(root, name), 0o644);
@@ -215,8 +214,7 @@ test("ordinary Windows group grants are refused for directories and metadata", a
   }
 });
 
-test("independent Windows publishers compare and replace exactly one reservation", async (t) => {
-  if (process.platform !== "win32") return t.skip("Windows native store mutex only");
+test("independent publishers compare and replace exactly one reservation", async () => {
   const root = await fixture();
   try {
     await createPrivateFile(root, "startup.json", "before");
@@ -253,6 +251,59 @@ test("independent Windows publishers compare and replace exactly one reservation
       [],
     );
   } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("POSIX mutation lock releases on process death without deleting or stealing its inode", async (t) => {
+  if (process.platform === "win32") return t.skip("Actual POSIX SQLite/OS locking required");
+  const root = await fixture();
+  let child: ReturnType<typeof spawn> | undefined;
+  let closed: Promise<void> | undefined;
+  let publication: Promise<boolean> | undefined;
+  try {
+    await createPrivateFile(root, "startup.json", "before");
+    const lock = join(root, "private-store.lock");
+    const inode = (await lstat(lock)).ino;
+    child = spawn(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        `import {DatabaseSync} from "node:sqlite";
+const guard=new DatabaseSync(process.argv[1]);guard.exec("BEGIN EXCLUSIVE");
+console.log("locked");setInterval(()=>{},1000);`,
+        lock,
+      ],
+      { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] },
+    );
+    closed = new Promise<void>((done) => child?.once("close", () => done()));
+    await new Promise<void>((done, reject) => {
+      const timer = setTimeout(() => reject(new Error("Owned POSIX lock holder not ready.")), 5000);
+      child?.stdout?.once("data", () => {
+        clearTimeout(timer);
+        done();
+      });
+      child?.once("error", (error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+    });
+    let settled = false;
+    publication = publishPrivateFile(root, "startup.json", "after", "before").finally(() => {
+      settled = true;
+    });
+    await new Promise((done) => setTimeout(done, 100));
+    assert.equal(settled, false, "A live owner's mutex must not be stolen.");
+    child.kill("SIGKILL");
+    await closed;
+    assert.equal(await publication, true);
+    assert.equal((await lstat(lock)).ino, inode);
+    assert.equal(await readPrivateFile(root, "startup.json"), "after");
+  } finally {
+    if (child && child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+    await closed;
+    await publication?.catch(() => {});
     await rm(root, { recursive: true, force: true });
   }
 });

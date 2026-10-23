@@ -24,7 +24,11 @@ const startup = await readPrivateFile(directory, "startup.json");
 if ((JSON.parse(startup) as { reservation?: string }).reservation !== reservation)
   throw new Error("Host startup reservation changed.");
 const claimed = JSON.stringify({ pid: process.pid, reservation });
-if (!(await publishPrivateFile(directory, "startup.json", claimed, startup)))
+if (
+  startup !== claimed &&
+  !(await publishPrivateFile(directory, "startup.json", claimed, startup)) &&
+  (await optionalPrivateFile(directory, "startup.json")) !== claimed
+)
   throw new Error("Host startup reservation was superseded.");
 const kernel = await CheckKernel.create(join(directory, "snapshots"));
 const token = randomUUID() + randomUUID();

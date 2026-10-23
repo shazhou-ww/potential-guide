@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import { lstat, mkdir, open, readdir, rename, unlink } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import { withFileMutex } from "./store-lock.js";
 
 export interface PrivatePathProof {
   owner: string;
@@ -527,6 +528,19 @@ export async function ensurePrivateDirectory(
   if (names.length > 64) throw privacyError();
   for (const name of names) {
     if (!name.toLowerCase().endsWith(".json") && name !== "private-store.lock") continue;
+    if (name === "private-store.lock") {
+      // Closing another descriptor for this inode would release this process's POSIX locks.
+      const value = await lstat(childPath(directory, name));
+      if (
+        !value.isFile() ||
+        value.nlink !== 1 ||
+        value.uid !== process.getuid?.() ||
+        value.mode & 0o077 ||
+        value.size > 16384
+      )
+        throw privacyError();
+      continue;
+    }
     const file = await open(childPath(directory, name), constants.O_NOFOLLOW | constants.O_RDONLY);
     try {
       const value = await file.stat();
@@ -554,7 +568,24 @@ function childPath(directory: string, name: string) {
   if (!name || name === "." || name === ".." || /[\\/:]/.test(name)) throw privacyError();
   return join(directory, name);
 }
+async function posixMutation<T>(directory: string, operation: () => Promise<T>): Promise<T> {
+  await ensurePrivateDirectory(directory);
+  const path = childPath(directory, "private-store.lock");
+  try {
+    const file = await open(
+      path,
+      constants.O_CREAT | constants.O_EXCL | constants.O_RDWR | constants.O_NOFOLLOW,
+      0o600,
+    );
+    await file.close();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+  }
+  await ensurePrivateDirectory(directory);
+  return withFileMutex(path, operation);
+}
 async function posixFile(directory: string, name: string, create = false) {
+  if (name === "private-store.lock") throw privacyError();
   await ensurePrivateDirectory(directory);
   const handle = await open(
     childPath(directory, name),
@@ -598,6 +629,9 @@ export async function createPrivateFile(
   if (Buffer.byteLength(text) > 16384) throw privacyError();
   if (process.platform === "win32")
     return windows({ op: "create", directory: resolve(directory), name, text });
+  return posixMutation(directory, () => createPosixFile(directory, name, text));
+}
+async function createPosixFile(directory: string, name: string, text: string): Promise<void> {
   const handle = await posixFile(directory, name, true);
   try {
     await handle.writeFile(text);
@@ -627,24 +661,27 @@ export async function publishPrivateFile(
         expected,
       }),
     );
-  let before: string | undefined;
-  try {
-    before = await readPrivateFile(directory, name);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-  }
-  if (expected !== undefined && (expected === null ? before !== undefined : before !== expected))
-    return false;
-  await createPrivateFile(directory, temporary, text);
-  try {
-    await rename(childPath(directory, temporary), childPath(directory, name));
-    await readPrivateFile(directory, name);
-  } finally {
-    await unlink(childPath(directory, temporary)).catch((error: NodeJS.ErrnoException) => {
-      if (error.code !== "ENOENT") throw error;
-    });
-  }
-  return true;
+  return posixMutation(directory, async () => {
+    let before: string | undefined;
+    try {
+      before = await readPrivateFile(directory, name);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    if (expected !== undefined && (expected === null ? before !== undefined : before !== expected))
+      return false;
+    if (Buffer.byteLength(text) > 16384) throw privacyError();
+    await createPosixFile(directory, temporary, text);
+    try {
+      await rename(childPath(directory, temporary), childPath(directory, name));
+      await readPrivateFile(directory, name);
+    } finally {
+      await unlink(childPath(directory, temporary)).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== "ENOENT") throw error;
+      });
+    }
+    return true;
+  });
 }
 export async function removePrivateFile(
   directory: string,
@@ -663,12 +700,14 @@ export async function removePrivateFile(
           expected,
         }),
       );
-    if (expected !== undefined && (await readPrivateFile(directory, name)) !== expected)
-      return false;
-    const handle = await posixFile(directory, name);
-    await handle.close();
-    await unlink(childPath(directory, name));
-    return true;
+    return await posixMutation(directory, async () => {
+      if (expected !== undefined && (await readPrivateFile(directory, name)) !== expected)
+        return false;
+      const handle = await posixFile(directory, name);
+      await handle.close();
+      await unlink(childPath(directory, name));
+      return true;
+    });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
     throw error;
@@ -686,6 +725,16 @@ async function retryBusy<T>(operation: () => Promise<T>): Promise<T> {
 }
 export async function privateFileProof(directory: string, name: string): Promise<PrivatePathProof> {
   if (process.platform !== "win32") {
+    if (name === "private-store.lock") {
+      await ensurePrivateDirectory(directory);
+      const stat = await lstat(childPath(directory, name));
+      return {
+        owner: String(stat.uid),
+        currentUser: String(process.getuid?.()),
+        protected: (stat.mode & 0o077) === 0,
+        allowed: [String(stat.uid)],
+      };
+    }
     const handle = await posixFile(directory, name);
     try {
       const stat = await handle.stat();

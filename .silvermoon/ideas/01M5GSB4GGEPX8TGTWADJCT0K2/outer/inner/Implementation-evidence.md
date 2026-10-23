@@ -433,3 +433,176 @@ expected-content 读/改/删仍是分离操作，没有 Windows 后端对应的�
 512 次负载只证明有限运行中的资源断言，不证明长期无限运行无泄漏；
 包含权限 helper 的完整共享服务内存，以及完整 CLI/Git/discovery 的端到端性能，
 仍不能由现有 kernel-only 测量代替。部署与跨平台消费证明留在其对应阶段。
+
+## Checkpoint 5：可跨机器继续的未完成候选（2026-10-23）
+
+用户最新要求工作告一段落后先同步 primary，回家换机器继续，因此本轮停止扩展范围，
+只保存有界候选与交接；同步、并发 primary 整合及 reachable 核实交由父 agent，
+本实施 agent 不 push。没有修改 accepted Ideal、Deployment、历史契约或固定证据，
+没有 submit/accept/npm 发布。**本轮最终 `pnpm check` 失败，所有 I-* 继续 unchecked，
+不能用 checkpoint 4 的成功替代本 candidate 的完整验收。**
+
+开始时工作树干净，HEAD 为 `1d181c581ddeebf4af4f53dea2cb0d194791aa80`。
+先普通合并 primary `a8f122b9ac320674422310360eaf9739ebb0725d`，得到
+`6a7b18decd778eb5d6553314e20e27e069b3f8c7`；该合并的 Silvermoon
+worktree/staged 检查均 exit 0。fresh `whats-next` 仍报告本分支 ahead；
+按用户的父子职责划分只制作本地候选，未越权同步或进入 gate。
+
+### 最小实现与真实差距
+
+- HTTP 实际为 `server.listen(0, "127.0.0.1", ...)`，client 也只接受
+  `http://127.0.0.1`；不是 `0.0.0.0`，没有远程 TLS、账户或认证平台。
+  loopback 不隔离同机其他用户，保留随机 bearer token 和先验证后写秘密的
+  私有 discovery 目录/文件；没有取消 checkpoint 4 的 Windows ACL 边界。
+- POSIX 原 compare/read/rename 或 compare/read/unlink 可被另一进程穿插，
+  旧 reservation/shutdown 因而可能覆盖/删除新版本，这是实际合同缺口而非投机平台建设。
+  `private-files.ts` 现在让创建、compare/replace、compare/remove 共享
+  `store-lock.ts` 的跨进程 OS mutex。复用 Node 自带 SQLite `BEGIN EXCLUSIVE`，
+  只锁私有空文件：不建表、不写数据库、不持久化任务、不增加依赖或 helper 进程。
+  inode 运行期间不删不抢；崩溃由 OS 释放锁，获取最多 40 次/25 ms 间隔后明确 EBUSY。
+  同进程串行保护避免自身同步 SQLite 锁等待与异步持锁操作互相阻塞。
+  保留真实 UID/mode、no-follow、单硬链校验；保留空 mutex inode 时只 `lstat`，
+  避免同进程另开再关闭该 inode 导致 POSIX record locks 被释放。
+  该保留名不能通过普通 POSIX metadata API 改写/删除。
+- 另发现 launcher 存活而 child 在 main claim 前崩溃时，startup 仍可错误归属
+  launcher。discovery 在真实 spawn 后按 expected-content 转交给实际 child PID；
+  main 接受同 reservation 已转交给自身的等价状态。未知/半写 startup 仍有界等待，
+  不以猜测所有权授权删除。
+- 最低版本实测暴露 Windows Node 22.13 的 path `lstat.dev=0`、同文件 handle
+  `stat.dev=8955306`，原逻辑误报 Artifact changed。改用 BigInt inode/纳秒时间戳，
+  不把 Windows 未提供的零 volume ID 当作真实 volume 变化；非零 dev、完整 inode、
+  hard-link/大小、内容 hash 和前后变化校验仍保留，句柄读取前也检查实际大小。
+  这不是把文件身份检查整体跳过。
+- 新真实进程测试每阶段两轮：main 运行前、claim 后 listen/publication 前、
+  认证 ready 且存在在途任务后强杀，四个并发 caller 都只启动一个替补；
+  重启旧 checkId 返回 404，不透明重跑。测试仅增加 preload 观测/暂停点，
+  不增加生产 HTTP 管理接口。精确 spawn journal 持久记录本轮 Host/helper PID，
+  等待 detached child 退出前显式 ref，避免 Node 22 测试 event loop 提前结束。
+
+### 验证结果、首个失败与计数
+
+直接顶层验证命令计数（不把脚本内部 child 或 Turbo 子命令再算一次）：
+`tsc -b` 4 次、`tsc -p tsconfig.test.json` 5 次、定向测试 7 次、
+测量脚本 5 次、`workers:check` 1 次、`pnpm check` 1 次、定向 Biome 6 次。
+测量 5 次中 3 次失败、2 次通过；失败是测量 fixture 缩减 Objective 后的
+Reference/metadata link 不完整及首轮 finally 掩盖原异常，不是产品性能通过。
+最终测量不再缩减 Objective，执行原样 structure 与 deliveries 两个真实 check。
+
+- `tsc` 两种均最终通过；Biome 最终通过；`pnpm workers:check` 验证
+  **16 个生成入口**通过，没有手改 bundle。既有 CJS import.meta warning 仍在。
+- Node 24 的三文件 targeted：14 项、13 pass/1 实际 POSIX skip、exit 0。
+  最后一次日志：
+  `.cache/checkpoint5-target-999a8c3e-4bea-4765-8eff-f8ed96f695fa/targeted.log`。
+- 已有本机 Node **22.13.0** 二进制直接运行，不切换共享 nvm 版本、不安装新 runtime。
+  首次 14 项为 12 pass/1 fail/1 skip（上述 dev=0）；修正后四文件 20 项为
+  18 pass/1 cancelled/1 skip（测试等待 unref child 的问题，**不是成功**）。
+  修正测试生命周期后，只重跑受影响 discovery 文件 **2/2、exit 0**：
+  `.cache/checkpoint5-node22-3a4edea8-369c-4200-9e27-35580efd44d9/targeted.log`。
+  SQLite 原生跨进程/强杀锁持有者测试在 Node 22.13 和 24.11.1 的 Windows
+  均通过；不能据此称 POSIX 路径已执行。
+- 最终独立、串行完整 Host suite：**27 项、26 pass/1 POSIX skip、0 fail、exit 0**，
+  61.33 s。日志：
+  `.cache/checkpoint5-handoff-32115917-1b10-46a4-8881-348c33fe7f54/{host.log,result.json}`。
+  含六轮真实启动/崩溃、ACL、独立 publisher、native mutex、revision 排空、
+  响应丢失、观察容量回收、进程清理、任务退役/预热与 512 混合任务。
+  512 任务为 Completed 448 / Failed 32 / Cancelled 32，peakWorkers=2、
+  peakRecords=16、末批 records/queue/ownedProcesses=0；用例 close 后继续断言
+  workers/records=0。RSS 148.74→137.52 MiB，范围 132.73–148.74 MiB；
+  另 96 任务 RSS 146.11→173.74 MiB，如实保留上涨样本，不宣称无限期无泄漏。
+- 最终 **`pnpm check` exit 1**：
+  `.cache/checkpoint5-final-7chRRF/{check.log,runner.json,result.json}`。
+  layers/format/lint/typecheck 通过，Turbo test 为 35 successful/42 total，
+  首个失败是既有 `objective-pilot/test/dependency.test.ts:349`：
+  `real process dependency requests share recursion, depth and total observation budgets`
+  的 `process.kill(child.pid, 0)` 预期 ESRCH 却未抛异常。
+  根因尚未定位，不能认定一定是 PID 复用、测试噪声或真实清理失败。
+  按用户交接优先级没有扩展修补或重跑全仓；后续 root tests/pack:check 未进入。
+  本 candidate **未重跑 18 包/16 入口 tarball 消费**；checkpoint 4 的消费结果仅为
+  其当时版本的证据。
+
+### 同环境真实 CLI 与完整服务内存
+
+最终脚本 `node scripts/measure-check-host.mjs`，Windows / Node v24.11.1，
+原样 package-standard Objective、固定 operation-owned Git repository 和 274-byte
+Subject；structure artifact revision
+`180cb74cc92eeeaca0fc4080e4fe2ecbda8b4ab98621cc1b748477da841cd4ff`。
+同一轮按顺序执行 7 个 fresh process、shared cold、3 个 fresh-service CLI、
+6 个 shared hot CLI；没有并发跑其他验证来污染这一轮测量。
+最终持久日志：
+`.cache/checkpoint5-measure-918b6cc9-ddbf-4621-87f4-1a9b7a38161d/{measurement.log,result.json}`。
+
+| 观测 | 最终实测 |
+| --- | --- |
+| 单独 fresh Node + structure checker | 7 次 median **452.40 ms**；RSS 83.44–83.98 MiB |
+| 完整 probe CLI/Git/discovery/HTTP/两个真实 check，shared cold | **17387.53 ms** |
+| 同完整 CLI、每次新服务 | 17111.40 / 17081.01 / 16902.00 ms；median **17081.01 ms** |
+| 同完整 CLI、复用服务 hot | 5000.09 / 5009.14 / 5016.77 / 5025.39 / 5061.64 / 5559.03 ms；median **5025.39 ms** |
+| shared 服务冷后 RSS / private bytes | **248.08 / 241.81 MiB** |
+| 冷后组成 | Host 含两个 worker 160.17 MiB RSS；真实权限 helper 87.91 MiB RSS |
+| shared hot 完整服务 RSS | 211.92 / 220.67 / 217.97 / 219.38 / 216.36 / 224.23 MiB |
+| shared hot 完整服务 private bytes | 205.58 / 214.01 / 211.30 / 212.01 / 208.36 / 215.70 MiB |
+| 实际 ready 计数 | shared 7 个 CLI 始终 **2**，3 个 fresh 服务各 **2**；没有按请求重建 |
+
+服务 RSS 是已核实所属 Node Host（含所有线程）及其实际 Windows 权限 helper 的
+working-set 总和，不含已退出 CLI、collector 或 Git 子进程的瞬时峰值，不是 PSS，
+共享页可重复计数；每次 RSS 采集放在 CLI 计时窗口外、任务结束后。
+预算为脚本事先采用的规则 **2×本轮 cold 完整服务 RSS = 496.16 MiB**；
+它只检查短样本是否增长到初始化参考量两倍，依据是已实际驻留的完整初始化服务，
+不是未经产品同意的固定内存 SLA，更不是长期泄漏证明。
+
+同完整 CLI 的 hot 相对 fresh-service 约 3.40×，只证明本次真实复用收益。
+fresh-process 单 checker 不含 CLI/Git/discovery，不能冒充旧架构端到端基线；
+完整 CLI cold 17.39 s 和 hot 5.03 s 也不能包装成相对 452 ms 单 checker 的加速。
+最终 Host suite 的另一独立 kernel 实测为 12 fresh-process 总 6694.79 ms、
+worker 总 4207.23 ms，cold **3993.25 ms**、hot median 18.38 ms、一次初始化。
+这些不同范围/不同轮次不可拼成普遍冷启动或绝对内存收益。
+
+### 合同逐项映射与未闭合点
+
+| ID | 对应实现/证据 | 当前边界 |
+| --- | --- | --- |
+| I-S01 | types/kernel/worker/client/http 与 README；单一 Behavior、四路由、容量/退役/预热、业务依赖结果 | 候选协议已实现；默认 4 workers、queue 64、records 256、directories 64、observers 64、8 MiB message、30 s deadline/5 s cleanup、60 s retention、100 tasks 退役 |
+| I-S02 | checkpoint 4 全迁移/pack 证据、真实双 CLI 测试、本轮 workers:check 16 入口和真实 Objective CLI | 无旧协议回退；本轮完整 pack 尚未执行，不能更新成新的消费验收 |
+| I-S03 | Host 27 项、本轮真实崩溃与 E2E/RSS、POSIX CAS candidate | 本 candidate pnpm check 失败；实际 POSIX 证据缺失 |
+| I-AC01 | Host/HTTP/依赖业务/真实双 CLI、资源 revision 冲突及旧版本排空测试 | 对应 Windows 候选证据具备；整体实施 gate 未就绪 |
+| I-AC02 | ACL、观察容量归还、512 保留窗口/record 回收、清理隔离、退役预热、native mutex 与六轮崩溃 | POSIX private owner/mode + CAS 及锁持有者崩溃仍须实际平台；全量 ESRCH 失败须定位 |
+| I-AC03 | 固定输入 process/kernel/full CLI 与完整服务 RSS、生成物/类型/定向 suite | 没有完整 pnpm check 或本 candidate pack 成功，不勾选 |
+
+POSIX 实机限制明确：Docker daemon 不可达；仅列出既有 wsl distribution，
+没有启动/安装/配置新系统。没有用 platform mock 冒充 POSIX。
+既有 CI 提供 Linux Node 22.13/24.11，但当前 primary 历史的结果不是本候选的结果；
+只读观察到 primary a8f122b 的 24.11 job 成功、22.13 和 packed CLI job 失败，
+没有对尚未同步的本地 commit 宣称远程通过。本轮未触发远程运行。
+Node SQLite 的 experimental warning 如实保留，未用 warning suppression 隐藏限制。
+
+### 资源收尾与换机器恢复
+
+- 最终 full-check runner 在写 descriptor 前验证 ACL、经 connectHost 认证 readiness；
+  结束时 result 明确 `guardClosed: true`，关闭 server/kernel/permission backend，
+  删除自己的 guard/scratch/state，只留日志与 journal。guard PID 36736、
+  check child 35528 已退出。
+- Turbo 失败中断留下的本轮 crash fixture 有持久 spawn journal；
+  精确核对其 Host 38368/13348/37140/38844/36952 与 helper
+  38104/20492/37208/14672 均已不存在，没有按名称杀进程或扫全机。
+  最终独立 Host suite 和最终测量正常完成其 owned-PID 等待/关闭及随机根清理。
+- 较早 Node 22 cancelled fixture 没有完成 finally。仅在该本轮随机根内把 descriptor
+  PID 用作**只读候选**查询，发现 PID 21400 的当前创建时间 17:18:48，
+  晚于该 fixture descriptor 的 17:17:25，已不是原来的进程；**没有终止该 PID**。
+  这也是新增持久 spawn journal 与显式 ref 等待的原因，不能据此诊断上述另一个
+  dependency 测试失败。只删除本轮明确创建的具体目录，不声称已排除历史未知资源。
+- `.cache` 原始日志不随 Git 同步；本文件保留关键结果、失败位置、数值和复现命令。
+  不把机器私有 descriptor/token/startup/ACL 或本机 state 拷到另一台机器。
+  accepted Ideal 与历史环境完整性结论均未改变。
+
+换机器后先确认父 agent 给出的最终 checkpoint commit 已可从刷新 primary 到达；
+普通拉取该历史，读本文件、Implementation、ledger 和 accepted Design，再运行
+`silvermoon whats-next 01M5GSB4GGEPX8TGTWADJCT0K2 --audience agent --language zh-CN`。
+使用 Node >=22.13、pnpm >=11.22；依赖缺失失败后再 `pnpm install --frozen-lockfile`，
+不复制本机 node_modules 或全局切换共享 runtime。新验证一律创建新专属私有 Host 根，
+先审查 helper 的递归删除与 PID ownership，并先认证 readiness。
+
+下一步只需：定位 `objective-pilot/test/dependency.test.ts:349` 的退出确认失败；
+在真正 POSIX（优先父 agent 同步后现有 Linux CI）运行 private-files/store-lock/
+discovery 和实际 owner/mode 路径，保留对应精确 commit/平台证据；然后对最终候选重新
+`pnpm check`（含 pack），必要时再核对 18 包/16 入口消费。没有新的用户批准，不扩为
+远程服务或认证平台。证据完整前 I-* 不勾选，不 submit/accept，不发布。

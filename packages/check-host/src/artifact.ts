@@ -27,7 +27,7 @@ export async function readArtifact(directory: string) {
       if (entry.name === "node_modules" || /[:\\]/.test(entry.name))
         throw new HostError(400, "Artifact contains a forbidden path.");
       const full = join(path, entry.name);
-      const details = await lstat(full);
+      const details = await lstat(full, { bigint: true });
       if (details.isSymbolicLink() || (!details.isFile() && !details.isDirectory()))
         throw new HostError(400, "Artifact links and special files are forbidden.");
       if ((await realpath(full)) !== full)
@@ -36,20 +36,34 @@ export async function readArtifact(directory: string) {
         await visit(full);
         continue;
       }
-      if (details.nlink !== 1 || details.size > limit || size + details.size > limit)
+      if (
+        details.nlink !== 1n ||
+        details.size > BigInt(limit) ||
+        size + Number(details.size) > limit
+      )
         throw new HostError(413, "Artifact exceeds size or hard-link boundary.");
       const handle = await open(full, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
       let bytes: Buffer;
       try {
-        const before = await handle.stat();
-        if (before.ino !== details.ino || before.dev !== details.dev || !before.isFile())
-          throw new HostError(409, "Artifact changed while reading.");
-        bytes = await handle.readFile();
-        const after = await handle.stat();
+        const before = await handle.stat({ bigint: true });
+        // Node 22 on Windows reports no volume ID in path stats, but does in handle stats.
+        const missingDevice = process.platform === "win32" && details.dev === 0n;
         if (
-          after.mtimeMs !== before.mtimeMs ||
-          after.ctimeMs !== before.ctimeMs ||
-          bytes.length !== before.size
+          before.ino !== details.ino ||
+          (!missingDevice && before.dev !== details.dev) ||
+          !before.isFile() ||
+          before.nlink !== 1n
+        )
+          throw new HostError(409, "Artifact changed while reading.");
+        if (before.size > BigInt(limit) || size + Number(before.size) > limit)
+          throw new HostError(413, "Artifact exceeds size boundary.");
+        bytes = await handle.readFile();
+        const after = await handle.stat({ bigint: true });
+        if (
+          after.mtimeNs !== before.mtimeNs ||
+          after.ctimeNs !== before.ctimeNs ||
+          after.nlink !== 1n ||
+          BigInt(bytes.length) !== before.size
         )
           throw new HostError(409, "Artifact changed while reading.");
       } finally {

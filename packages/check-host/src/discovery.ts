@@ -7,6 +7,7 @@ import { CheckClient, type HostAddress } from "./client.js";
 import {
   createPrivateFile,
   ensurePrivateDirectory,
+  publishPrivateFile,
   readPrivateFile,
   removePrivateFile,
 } from "./private-files.js";
@@ -90,6 +91,13 @@ export async function connectHost(directory = hostDirectory()): Promise<CheckCli
           child.once("error", reject);
         });
         child.unref();
+        // A child can die before main claims the reservation while its launcher stays alive.
+        await publishPrivateFile(
+          directory,
+          "startup.json",
+          JSON.stringify({ pid: child.pid, reservation }),
+          record,
+        );
       } catch (error) {
         if (created) await removePrivateFile(directory, "startup.json", record);
         if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
