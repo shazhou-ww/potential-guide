@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | ER 模型 | Objective、Revision、Target、Request、Run、Host 及资源版本、Observation、Fault 的业务边界和关系 | 标识编码、变化事实载荷、物理存储与同步协议 |
 | 观察层级 | Objective 与 Host 双主视角；Objective → Target → Request → Run，Host → Run；两者交汇于同一 Run | 具体页面、字段布局、交互和查询实现 |
-| 观察内容 | 保留已讨论的 Host、Objective 需求；下文补齐 Target、Request、Run 的候选展示需求 | 新补充部分等待后续逐层讨论，不视为用户已经确认 |
+| 观察内容 | Host、Objective、Target、Request、Run 的信息需求作为本次实施起点 | 具体状态转换、交互与展示细节在实施契约中细化，不将信息需求当作已定稿的协议 |
 | 函数结构 | 两个意图 Behavior 输入，一个完整状态 Behavior 输出；资源第一参数；两个纯 reducer；副作用在归约之外组合 | 调度策略、生命周期转换、Command/Event 的具体类型 |
 
 此前的详细讨论已移入 [references/](./references/)，仅供追溯，不作为当前实施规范。尤其旧稿中的 Host 内 requestSeq、独立请求确认、共享预算预留、旧 TS 和 SQL，不能因留在参考目录就继续视为已确定设计。
@@ -186,7 +186,7 @@ Target、Request、Run 是下钻视角，不新增为并列主入口。两个主
 
 发现 commit 不等于上线。最新上线版本须有发布依据；新建 Request 原则上采用最新上线版本，旧 Request/Run 不被改写。无发布依据、离线或消息滞后时明确未知/已知范围，不静默替换版本或从历史执行推断 Host 落后；离线新建和旧请求替代策略待定。
 
-### 4.3 Target：这个 Objective 应用于这个 subject（候选补充）
+### 4.3 Target：这个 Objective 应用于这个 subject
 
 | 信息组 | 要展示的信息 |
 | --- | --- |
@@ -198,7 +198,7 @@ Target、Request、Run 是下钻视角，不新增为并列主入口。两个主
 
 Target 观察的是 subject 上已知现实，不承诺实时状态。最后一次 Probe 失败不显示旧成功为“最新结果”；旧成功是否仍可用须明确标注依据。Probe 先后不能只按晚到消息决定。
 
-### 4.4 Request：一次不可变治理要求（候选补充）
+### 4.4 Request：一次不可变治理要求
 
 | 信息组 | 要展示的信息 |
 | --- | --- |
@@ -210,7 +210,7 @@ Target 观察的是 subject 上已知现实，不承诺实时状态。最后一�
 
 展示满足结论时必须可追溯到该 Request 的版本和目标。某 Run 达标、blocked、失败或取消，不能直接替代整个共享 Request 的结论；多个 Run 互相矛盾或缺少协调依据时展示各自事实与未确定部分，不编造全局完成状态。
 
-### 4.5 Run：一次实际执行（候选补充）
+### 4.5 Run：一次实际执行
 
 | 信息组 | 要展示的信息 |
 | --- | --- |
@@ -226,7 +226,7 @@ pending 请求不伪造 Run。Run 终结不删除历史身份；重连或恢复�
 
 - 保留资源侧真实授权，不回到 harness grants/ceiling；拒绝与错误明确反馈，不绕过资源边界。
 - 仍是有限依赖编排与单次 Run，不扩展为自动维持 level 的长期控制器；不迁移既有服务，不发布 npm 或改设备配置。统一 initial 语义先由 [level-attainment](../../../../01M5EFD1DW5J6MBE9BKCRFW5W3/outer/inner/ideal/Idea.md) 提供，不执行业务检查或回滚。
-- 下一步优先逐层复核 Target、Request、Run 的候选观察需求，再由必要事实推导合法转换和 Command/Event。共享 Request 的满足/替代与协调、标识与顺序、资源响应、恢复及存储协议届时讨论，不以旧稿细节填补。
+- 实施时以各层观察需求为起点，由必要事实推导合法转换和 Command/Event。共享 Request 的满足/替代与协调、标识与顺序、资源响应、恢复及存储协议在实施契约中细化，不以旧稿细节填补；改变本设计的业务边界时须重新修订构想。
 - 本次只整理设计边界；不表示整份 Idea 已验收、类型已定稿或实现已完成。
 
 ## 参考资料索引

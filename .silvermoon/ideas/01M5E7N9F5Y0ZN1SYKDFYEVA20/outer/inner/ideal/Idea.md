@@ -17,9 +17,5 @@ Coordinator 将治理请求与资源分配意图两个 Behavior 转换为完整�
 ## 验收标准
 
 - 统一 ER 区分 Objective、Revision、Target、Request 与 Run；每个 Run 关联准确 Request 与执行 Host，同一 Request 可以跨 Host 执行，不随最新版本改写旧事实。
-- 观察层级为 Objective → Target → Request → Run 与 Host → Run；已讨论需求及候选补充均有清楚边界，不以查询实现或局部 Run 结果代替共享请求结论。
+- 观察层级为 Objective → Target → Request → Run 与 Host → Run；各层观察需求作为实施起点，具体协议另行细化，不以查询实现或局部 Run 结果代替共享请求结论。
 - 资源第一参数的双 Behavior 输入、完整状态输出与两个纯 reducer 成立；回放不重做副作用，恢复及终止核实不伪报成功，旧交付证据不冒充本次验证。
-
-## 下一步
-
-先复核 [简化设计](./Design.md) 中 Target、Request、Run 的候选观察需求，再推导必要状态转换与 Command/Event；旧辅助文档移入参考目录，不将本次整理视为整份构想验收。
