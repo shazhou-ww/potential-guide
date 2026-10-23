@@ -6,7 +6,7 @@
 
 ## 结果
 
-检查器统一采用 Node worker 模块，由单用户级共享 Check Host 进程注册、排队和调度。CLI 通过本地 HTTP RPC 调用 Host，Host 通过 Worker Threads 消息通信执行 check；subject 与 regulation object 属于独立请求。
+检查器统一为 Node worker 模块，由单用户级共享 Check Host 通过有界复用池、条件退役和受控预热执行。CLI 使用本地 HTTP RPC，Host 使用 Worker Threads 消息；subject 与 regulation object 属于独立请求。
 
 ## 边界
 
@@ -22,4 +22,4 @@
 
 ## 下一步
 
-沿 [Research.md](./Research.md) 的唯一架构方向，收敛 [OpenQuestions.md](./OpenQuestions.md) 中的发现、worker 契约、依赖与资源边界，再提交构想验收。
+重点审阅 [Design.md](./Design.md) 的调整范围、worker 消息和 HTTP 接口，收敛 [OpenQuestions.md](./OpenQuestions.md) 的具体参数与边界，再提交构想验收。
