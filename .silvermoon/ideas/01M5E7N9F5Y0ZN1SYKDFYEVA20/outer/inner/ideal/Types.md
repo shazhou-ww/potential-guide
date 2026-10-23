@@ -1,6 +1,6 @@
 # Regulation Request 与 Coordinator State 模型草案
 
-本文支撑 [Idea.md](./Idea.md) 与 [Design.md](./Design.md)，不是独立验收合同或已发布 API。先分别用 ER 模型讨论 RegulationRequests 和 CoordinatorState，再以 TypeScript 作为补充表达，最后从合法转换推导 Command/Event。旧 [Events.md](./Events.md) 中的分类仅作覆盖检查，不反过来决定状态结构。
+本文支撑 [Idea.md](./Idea.md) 与 [Design.md](./Design.md)，不是独立验收合同或已发布 API。先区分业务实体、事实记录与状态投影，按 [五张图](./Diagrams.md) 讨论 RegulationRequests 和 CoordinatorState，再以 TypeScript 补充表达，最后从合法转换推导 Command/Event。[Events.md](./Events.md) 仅作覆盖检查，不反过来决定状态结构。
 
 ## 三个核心类型
 
@@ -8,9 +8,9 @@
 - ResourceAllocation：资源分配意图；binding 与期望并发度整体替换，不表示已经分配或已经停止调用。
 - CoordinatorState：Coordinator 的完整领域状态，由 current singleton state 与若干 collection states 组成；集合可以表达历史、实体状态或聚合结果，不包含 Promise、进程句柄或调度器内部对象。
 
-## ER 模型约定
+## 模型与视图约定
 
-两张图是概念模型，不是物理数据库 schema。RegulationRequest 使用表内单调递增的 requestSeq 作为单主键，不为整个 RegulationRequests 集合设置快照 revision。Coordinator 的 singleton 在一个 revision 下恰有一个，跨 revision 则成为以 revision 为 PK 的快照表；current 是选定当前 revision 对应的那一行，不是另一份独立权威状态。Collection 可以在每个 Coordinator revision 下有零到多条成员记录。`||` 表示一个，`o|` 表示零或一个，`o{` 表示零到多个。
+实体 ER 与状态视图是概念模型，不是物理数据库 schema。RegulationRequest 使用递增 requestSeq 单主键，不为整个请求集合设置快照 revision。CoordinatorSnapshot 表达一个 revision 下完整 CoordinatorState 的一致聚合，包含 current singleton 与 collections，不作为业务实体。快照表及成员复合键是后续存储映射问题，不混入业务实体关系图。ER 中 `||` 表示一个，`o|` 表示零或一个，`o{` 表示零到多个。
 
 PK 表示模型中的逻辑唯一键，多列标为 PK 表示复合主键；FK 表示版本归属或对象引用。图中的 targetKey 是由精确 Objective 版本、来源和 subject 推导的身份，不要求在 TypeScript 值中重复保存。嵌套值可以展开成实体以说明关系，不意味着新增存储集合。尚未确定的记录键不虚构为 PK；可选字段、联合类型和跨记录约束由图后规则补充。
 
@@ -38,185 +38,30 @@ requestSeq 在同一个请求序列范围内唯一并按逻辑接收顺序递增
 - HTTPS、SSH、本地地址即使访问同一仓库，也不天然是相同 source。没有明确等价/别名规则时不自动合并；不得通过丢弃主机、路径等身份信息制造相同 key。source/version 与 key 必须一致，哈希碰撞不得静默合并定义。查询同一来源的全部版本可按规范化 source 筛选，不另建 sourceKey。
 - source 不嵌入密码或 token，认证由外部提供；凭据变化不应成为 Objective 身份变化。解析协议与现有 Git 来源结构的适配留待实施，不声称运行时代码已经支持本设计。
 
-[独立 SVG：Regulation Request](./diagrams/regulation-target.svg)。文件路径保持不变，图中展示三层实体；在浏览器单独打开可缩放，使用 22px Arial 和横向布局。两图的字体、内边距与最小实体宽度均固定在 Mermaid 配置中，避免渲染时字体与独立 SVG 回退字体的度量不同而裁切文字；模型变化时须同步重新渲染，并检查文本边界，不只验证 SVG 语法。
-
-```mermaid
----
-config:
-  fontFamily: Arial, Helvetica, sans-serif
-  themeVariables:
-    fontFamily: Arial, Helvetica, sans-serif
-    fontSize: 22px
-  er:
-    minEntityWidth: 280
-    entityPadding: 24
-    diagramPadding: 24
----
-erDiagram
-    direction LR
-    OBJECTIVE_DEFINITION ||--o{ REGULATION_TARGET : governs
-    REGULATION_TARGET ||--o{ REGULATION_REQUEST : hasRequests
-
-    OBJECTIVE_DEFINITION {
-        string objectiveKey PK "Hash of encoded source and version"
-        string version "Full Git commit object ID"
-        string source "Git repository location and internal path"
-    }
-    REGULATION_REQUEST {
-        number requestSeq PK "Monotonic request identity"
-        string targetKey FK "Regulation target identity"
-        string desiredLevel
-        number priority
-    }
-    REGULATION_TARGET {
-        string targetKey PK "Canonical identity"
-        string objectiveKey FK "Exact definition version"
-        Subject subject
-    }
-```
+三层实体及其执行事实关系见 [图 1：业务实体关系](./Diagrams.md#1-业务实体关系)，请求的最新映射与确认投影见 [图 2：请求与确认视图](./Diagrams.md#2-请求与确认视图)。图源统一维护在 Diagrams.md，避免实体身份、快照成员和投影关系混在一张 ER 图中。
 
 - **请求序号是身份。** REGULATION_REQUEST 以 requestSeq 为单主键，同值新请求也获得新序号。RegulationRequests.latestByTarget 是每个 target 最新请求的映射，不是历史请求表的全部内容；覆盖映射不改写旧请求，历史保留策略另定。
 - **target 身份决定覆盖范围。** A 的新请求只替换 A 的最新请求，不改变 B 的请求；不同 Objective 定义或 subject 不能静默合并。desiredLevel 和 priority 属于请求，不属于 target。REGULATION_TARGET 是共享身份值，不新增独立顶层状态。
 - **序号不是数组下标。** requestSeq 为正安全整数，按逻辑接收顺序单调分配，可有空号，删除历史也不重排或复用；耗尽显式失败。并发写入须保证分配和接收/持久化一致，不能把普通数据库自增 ID 自动当成事务提交顺序。
 - **只表示期望。** 同 priority 按 requestSeq 升序，不用确认时间或 Probe 更新时间排序。确认、调度和实际调用顺序另由 Coordinator 表达，未就绪请求并不保证先执行。
 
-## Coordinator State ER 模型
+## Coordinator 状态分图导航
 
-[独立 SVG：Coordinator State](./diagrams/coordinator-state.svg)。在浏览器单独打开可缩放；沿用 22px Arial、横向布局及显式留白配置。SVG 由本节 Mermaid 源生成，模型变化时须同步重新渲染并检查文本边界。
+以下五张图的源、分类边界和解释见 [Diagrams.md](./Diagrams.md)。第一张为实体 ER 图，其余为状态投影或组成图，不再把每个集合连到 snapshot 实体上。
 
-```mermaid
----
-config:
-  fontFamily: Arial, Helvetica, sans-serif
-  themeVariables:
-    fontFamily: Arial, Helvetica, sans-serif
-    fontSize: 22px
-  er:
-    minEntityWidth: 280
-    entityPadding: 24
-    diagramPadding: 24
----
-erDiagram
-    direction LR
-    OBJECTIVE_DEFINITION ||--o{ REGULATION_TARGET : governs
-    REGULATION_TARGET ||--o{ REGULATION_REQUEST : hasRequests
-    COORDINATOR_SNAPSHOT ||--o{ ACKNOWLEDGED_REQUEST : acknowledgedRequests
-    REGULATION_REQUEST ||--o{ ACKNOWLEDGED_REQUEST : confirms
-    COORDINATOR_SNAPSHOT ||--o{ REGULATION_TARGET_STATE : regulationTargets
-    COORDINATOR_SNAPSHOT ||--o{ REGULATION_RECORD : regulations
-    COORDINATOR_SNAPSHOT ||--o{ OBSERVATION_RECORD : observations
-    COORDINATOR_SNAPSHOT ||--o{ FAULT_RECORD : faults
-    COORDINATOR_SNAPSHOT ||--o{ ACTIVE_REGULATION : activeRegulations
-    COORDINATOR_SNAPSHOT ||--o{ CURRENT_DEPENDENCY : dependencies
-    COORDINATOR_SNAPSHOT ||--o{ CURRENT_OBSERVATION : currentObservations
-    REGULATION_TARGET ||--o{ REGULATION_TARGET_STATE : summarizedBy
-    REGULATION_TARGET_STATE ||--o| PROBE_SUMMARY : lastProbe
-    REGULATION_TARGET ||--o{ ACTIVE_REGULATION : regulatedBy
-    REGULATION_TARGET ||--o{ REGULATION_RECORD : hasEndedCalls
-    REGULATION_TARGET ||--o{ OBSERVATION_RECORD : hasObservations
-    REGULATION_TARGET ||--o{ CURRENT_OBSERVATION : hasCurrentEvidence
-    REGULATION_TARGET ||--o{ CURRENT_DEPENDENCY : consumer
-    REGULATION_TARGET ||--o{ CURRENT_DEPENDENCY : provider
+| 图 | 阅读问题 | 独立 SVG |
+| --- | --- | --- |
+| 1. 业务实体关系 | 定义、指向物、请求、调用及事实如何关联？ | [实体关系](./diagrams/regulation-target.svg) |
+| 2. 请求与确认 | 最新提交与已确认请求有何区别？ | [请求视图](./diagrams/request-state.svg) |
+| 3. 单个 Target 状态 | 最近 Probe 与当前有效证据有何区别？ | [Target 状态](./diagrams/target-state.svg) |
+| 4. 当前执行与依赖 | 哪些调用占用资源，哪些依赖仍有效？ | [执行视图](./diagrams/execution-state.svg) |
+| 5. 快照组成 | 同一 Coordinator revision 下哪些状态必须一致？ | [快照组成](./diagrams/coordinator-state.svg) |
 
-    REGULATION_REQUEST {
-        number requestSeq PK "Monotonic request identity"
-        string targetKey FK "Regulation target identity"
-    }
-    OBJECTIVE_DEFINITION {
-        string objectiveKey PK "Hash of encoded source and version"
-        string version "Full Git commit object ID"
-        string source "Git repository location and internal path"
-    }
-    COORDINATOR_SNAPSHOT {
-        number revision PK "One singleton snapshot per revision"
-        AllocationAcknowledgement acknowledgedAllocation
-        ExecutionConstraints constraints
-        BudgetReservation reserved
-        CoordinatorLifecycle lifecycle
-    }
-    REGULATION_TARGET {
-        string targetKey PK "Canonical identity"
-        string objectiveKey FK "Exact definition version"
-        Subject subject
-    }
-    REGULATION_TARGET_STATE {
-        number coordinatorRevision PK, FK "Snapshot membership"
-        string targetKey PK, FK "One aggregate per object per revision"
-        number updatedAtRevision "Last state change on coordinator timeline"
-    }
-    ACKNOWLEDGED_REQUEST {
-        number coordinatorRevision PK, FK "Snapshot membership"
-        string targetKey PK, FK "Confirmed object"
-        number requestSeq FK "Exact confirmed request"
-        number acknowledgedAtRevision "Confirmation on coordinator timeline"
-    }
-    PROBE_SUMMARY {
-        number coordinatorRevision PK, FK "Owner snapshot"
-        string targetKey PK, FK "Owner object aggregate"
-        string probedAt "Actual Probe time"
-        number recordedAtRevision
-        string regulationId "Nullable source call"
-        ProbeResult result "Observed or error"
-    }
-    ACTIVE_REGULATION {
-        number coordinatorRevision PK, FK "Snapshot membership"
-        string id PK "Call identity across revisions"
-        string targetKey FK
-        number requestSeq "Nullable request captured at start"
-        string desiredLevel
-        AgentBinding binding
-        string recoveryRef "Nullable"
-        ActiveExecution execution "Running, stopping or unverified"
-    }
-    REGULATION_RECORD {
-        number coordinatorRevision PK, FK "Snapshot membership"
-        string id PK "Same identity as the ended active call"
-        string targetKey FK
-        number requestSeq "Nullable request captured at start"
-        string desiredLevel
-        AgentBinding binding
-        number endedAtRevision
-        RegulationOutcome outcome
-    }
-    CURRENT_DEPENDENCY {
-        number coordinatorRevision FK "Snapshot membership; row key pending"
-        string consumerTargetKey FK
-        string providerTargetKey FK
-        string minimumLevel
-    }
-    CURRENT_OBSERVATION {
-        number coordinatorRevision PK, FK "Snapshot membership"
-        string targetKey PK, FK "One current observation per object per revision"
-        string regulationId
-        PilotObservation value
-    }
-    OBSERVATION_RECORD {
-        number coordinatorRevision FK "Snapshot membership; row key pending"
-        number recordedAtRevision
-        string targetKey FK
-        string regulationId
-        PilotObservation value
-    }
-    FAULT_RECORD {
-        number coordinatorRevision FK "Snapshot membership; row key pending"
-        number reportedAtRevision
-        string regulationId "Nullable diagnostic association"
-        Fault fault
-    }
-```
-
-- **快照行合并整体版本与 singleton 值。** COORDINATOR_SNAPSHOT 以 revision 为 PK，包含该版 singleton 的属性；不再把 COORDINATOR_STATE 和 COORDINATOR_CURRENT 画成两张一对一表。current 选择当前版本的 singleton 行，完整状态还包含该版各个集合。TypeScript 的嵌套 current 只是单版本值的组织形式，不是另一张权威表。
-- **集合成员带版本归属。** coordinatorRevision 指向所属快照。对象摘要和当前观察的 PK 是 `(coordinatorRevision, targetKey)`，活跃调用与终结记录的 PK 是 `(coordinatorRevision, id)`；同一对象或调用可以出现在多版快照中，不是在整个版本历史里只能出现一次。依赖、观察和诊断的完整行键仍待推导，coordinatorRevision 不能独自作为这些集合的 PK。
-- **成员版本不等于事实发生版本。** endedAtRevision、recordedAtRevision、reportedAtRevision 表示相应事实发生或采纳的版本，不是集合成员归属；例如在版本 10 结束的调用可以仍属于快照 12 的 regulations。不得因属于新快照就重写历史事实版本。
-- **按 target 确认请求。** 每个快照包含零到多条 ACKNOWLEDGED_REQUEST，每个 target 最多一条，通过 requestSeq 单独引用准确请求，并校验其 targetKey 一致。acknowledgedAtRevision 记录该请求首次采纳时的 Coordinator 版本，重复确认不刷新；新请求被确认时更新，不保证等于调用方最新请求，也不参与同 priority 排序。
-- **归属版本与更新版本分开。** CoordinatorState 与 RegulationTargetState 是一对多关系，每个快照内每个已知对象最多一条。coordinatorRevision 表达快照归属，updatedAtRevision 表达对象状态最近改变的 Coordinator 版本，不是对象本地计数器。快照 12 中 A 可以仍为 updatedAtRevision 10；仅资源变化不刷新 A，多个对象在同次转换更新则共享版本。更新/确认/记录版本均不大于所属快照版本，不要求物理保留被引用的所有旧快照。
-- **状态组织形式与时间范围分开。** regulationTargets 是对象聚合，regulations、observations、faults 示范明细记录，不统一归入 history。regulationTargets 每版每个已知对象最多一条摘要，lastProbe 可为空；同一对象可以关联多次已结束调用和多条观察。REGULATION_TARGET 是共享身份值，不是额外顶层 Collection，也不要求对象摘要行永久保留。
-- **只在真实退出后从活跃转为终结记录。** ACTIVE_REGULATION 与 REGULATION_RECORD 使用相同的调用身份，不能在同一 revision 同时表示同一调用仍活跃且已结束；两者不是新的 Task/Run 双层身份。停止中和未核实调用仍留在活跃集合，真实终结时移除并原子写入结果。
-- **关系引用不强制保留历史父行。** observation、Probe 和 fault 中的 regulationId 用于关联来源，不保证对应调用仍在活跃集合；Probe 和 fault 也允许没有来源调用。它们不被画成必须引用某条当前活跃记录的外键。
-- **请求引用不指向当前映射。** 调用捕获启动时的 requestSeq，新请求覆盖映射后仍保留旧序号，不能冒充新请求的执行结果。target 随调用保留以支持关联和校验，不再是请求身份的主键分量。历史保留策略另定，逻辑引用不强制永久保存历史父行。
-- **当前依赖是对象之间的关系。** consumer/provider 各自指向一个精确对象，一个对象可参与多条依赖；额外要求无环、最低 level 合法并锚定尚未完成的需求。边的意图归属、共享聚合和唯一键仍待转换设计，不引入历史 Task 节点。
-- **对象 Probe 摘要不等于当前成功证据。** lastProbe 包括最近 Probe 的实际时间与成功或失败结果；CURRENT_OBSERVATION 则只保留当前调度仍有效的成功证据。无 Probe、失败、旧反馈和时间顺序规则见下文，最近观察不保证实时现实。
-- **图仍是候选，不冒充完整执行协议。** 待处理需求、无调用意图的处理记录、Probe/观察/诊断记录键和恢复接续还未收敛。实体关系明确这些问题的位置，不用 processedIntents 或虚构主键替代转换讨论。
+- 实体和事实具有业务身份或发生意义；ActiveRegulation/RegulationRecord 是同一次 Regulation 的不同生命周期表达，不是两个实体。
+- 已确认请求、target 聚合、有效证据可以是持久化权威投影；“视图”不意味着只读 UI 查询或能从现有实体表任意重算。
+- 当前依赖是已采用的业务关系；资源确认、预算和生命周期是控制状态。实际占用可由尚未确认退出的调用推导，累计预算不能从裁剪后的历史求和。
+- CoordinatorSnapshot 是完整 CoordinatorState 在某个 revision 的一致聚合，不只是 current singleton，也不是新业务实体。业务实体图不表达物理快照成员键。
+- 快照归属与事实更新时间不同。依赖、Observation/Fault 的独立身份及存储成员键仍待推导，不为了绘图虚构主键或要求永久保留历史父行。
 
 ## 完整状态、Singleton State 与 Collection State
 
@@ -232,7 +77,7 @@ Collection<T> 表达领域中的记录集合，选用 Collection 而不是 Table
 
 ## TypeScript 补充表达
 
-下面的可独立类型检查代码块表达最新请求映射、序号水位与某一个 Coordinator revision 下的状态值，补充 ER 模型中的值类型、可选性与联合分支。CoordinatorState 外层 revision 提供快照作用域，不在每个条目重复 coordinatorRevision；requestSeq 属于独立的请求序列。图中的 ProbeResult 和 ActiveExecution 标签概括对应字段的完整联合类型。复用已有观察与 binding 类型，不复用旧五命令、资源池或 harness 权限类型。别名暂用普通 string/number；合法标识、有限 JSON、安全整数及引用完整性仍需运行时验证。
+下面的可独立类型检查代码块表达最新请求映射、序号水位与某一个 Coordinator revision 下的状态值，补充各图中的值类型、可选性与联合分支；本次拆图不改变这些运行模型草案。CoordinatorState 外层 revision 提供快照作用域，不在每个条目重复 coordinatorRevision；requestSeq 属于独立的请求序列。复用已有观察与 binding 类型，不复用旧五命令、资源池或 harness 权限类型。别名暂用普通 string/number；合法标识、有限 JSON、安全整数及引用完整性仍需运行时验证。
 
 ```typescript
 import type {
