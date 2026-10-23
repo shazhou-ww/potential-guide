@@ -434,9 +434,10 @@ export function validateSubject(value) {
 export function execute(
   command,
   args,
-  { deadline = Date.now() + 24000, cwd, input, timeout = 6000, evidence } = {},
+  { deadline = Date.now() + 24000, cwd, input, timeout = 6000, evidence, signal } = {},
 ) {
   evidence?.fact("command.started", { command });
+  signal?.throwIfAborted();
   return new Promise((resolve, reject) => {
     const remaining = Math.min(timeout, deadline - Date.now());
     if (remaining <= 0) {
@@ -470,6 +471,9 @@ export function execute(
       failure = new Fault(`command-timeout: ${command}`, 504);
       stop();
     }, remaining);
+    const abort = () => { failure = new Fault("command-cancelled", 499); stop(); };
+    signal?.addEventListener("abort", abort, {once:true});
+    if (signal?.aborted) abort();
     for (const [stream, name] of [
       [child.stdout, "stdout"],
       [child.stderr, "stderr"],
@@ -495,6 +499,7 @@ export function execute(
       else reject(new Fault(`command-launch: ${command}: ${error.code}`));
     });
     child.once("close", (code) => {
+      signal?.removeEventListener("abort", abort);
       clearTimeout(timer);
       evidence?.fact("command.finished", { command, code, failed: failure !== undefined });
       if (failure) reject(failure);
@@ -1365,7 +1370,7 @@ export async function toolchains(subject, context) {
 }
 export const bootstrap =
   "let text='';for await(const chunk of process.stdin){text+=chunk;if(Buffer.byteLength(text)>2097152)throw Error('transport-input-limit');}const {source,stage,subject}=JSON.parse(text);const m=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));console.log(JSON.stringify(stage==='sample'?await m.sample(subject):await m.check(stage,subject)));";
-export async function remote(stage, subject) {
+export async function remote(stage, subject, options = {}) {
   const source = await readFile(
     fileURLToPath(new URL("../runtime/health-check.mjs", import.meta.url)),
     "utf8",
@@ -1387,6 +1392,7 @@ export async function remote(stage, subject) {
       input: JSON.stringify({ source, stage, subject: { ...subject, target: { type: "local" } } }),
       deadline: Date.now() + 27000,
       timeout: 27000,
+      signal: options.signal,
     },
   );
   if (result.code !== 0)
@@ -1442,14 +1448,14 @@ export function failure(error) {
         : `health-check-fault: ${error.code ?? error.name}: ${error.message}`,
   };
 }
-export async function invoke(stage, value, evidence) {
+export async function invoke(stage, value, evidence, options = {}) {
   try {
     if (![...stages, "sample"].includes(stage)) throw new Fault("invalid-stage.", 400);
     const subject = validateSubject(value);
-    if (subject.target.type === "docker") return await remote(stage, subject);
+    if (subject.target.type === "docker") return await remote(stage, subject, options);
     if (process.platform !== "linux")
       throw new Fault("unsupported-platform: local execution requires Linux (Debian/Ubuntu).", 501);
-    const context = { deadline: Date.now() + 24000, evidence };
+    const context = { deadline: Math.min(options.deadline ?? Infinity, Date.now() + 24000), evidence, signal: options.signal };
     evidence?.fact("stage.started", { stage });
     if (stage === "sample")
       return { status: 200, payload: await localSample(subject, context), message: "" };
@@ -1463,10 +1469,10 @@ export async function invoke(stage, value, evidence) {
     return failure(error);
   }
 }
-export async function check(stage, subject) {
+export async function check(stage, subject, options = {}) {
   if (!stages.includes(stage))
     return failure(new Fault("invalid-stage: sample is not a Pilot check.", 400));
-  return invoke(stage, subject);
+  return invoke(stage, subject, options.evidence, options);
 }
 export async function sample(subject) {
   return invoke("sample", subject);

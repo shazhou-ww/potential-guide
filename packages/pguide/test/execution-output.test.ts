@@ -20,13 +20,8 @@ const normalize = (value: string) =>
 async function executionFixture() {
   const f = await fixture(scratch, "execution-output-");
   await writeFile(
-    join(f.repository, "objective", "checks", "ready", "run.js"),
-    `#!/usr/bin/env node
-let source="";for await(const chunk of process.stdin)source+=chunk;
-const subject=JSON.parse(source);
-const value=subject.mode==="failure"?{status:502,payload:null,message:"Synthetic check invocation failed"}:
-{status:200,message:"",payload:{ok:subject.mode==="terminal",problems:subject.mode==="terminal"?[]:[{kind:"internal",id:"not-ready",parameters:{}}]}};
-console.log(JSON.stringify(value));`,
+    join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+    "exports.execute = async (inputSubject, context) => {\n    const source = JSON.stringify(inputSubject);\n    const subject = JSON.parse(source);\n    const value = subject.mode === \"failure\" ? { status: 502, payload: null, message: \"Synthetic check invocation failed\" } :\n        { status: 200, message: \"\", payload: { ok: subject.mode === \"terminal\", problems: subject.mode === \"terminal\" ? [] : [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] } };\n    return value;\n};\n",
   );
   await writeFile(
     join(f.repository, "objective", "references", "levels", "initial", "en-US.md"),
@@ -492,7 +487,7 @@ test("renderers escape Markdown and never display dependency subjects or transcr
     objectiveId,
     version: "a".repeat(40),
     manifest: {
-      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json",
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json",
       subjectSchema: { type: "object" },
       levels: [{ id: "ready", checks: [] }],
       defaultLanguage: "en-US",

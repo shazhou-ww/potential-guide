@@ -21,7 +21,7 @@ export async function check(stage, value, options = {}) {
             return problem("sanity-consent-required");
         if (options.pilot === true) {
             {
-                const metadata = process.env.PGUIDE_PROBE_TIMEOUT_MS;
+                const metadata = options.timeoutMs === undefined ? process.env.PGUIDE_PROBE_TIMEOUT_MS : String(options.timeoutMs);
                 const outerTimeoutMs = metadata === undefined ? 30000 : Number(metadata);
                 if ((metadata !== undefined && metadata !== String(outerTimeoutMs)) ||
                     !Number.isSafeInteger(outerTimeoutMs) ||

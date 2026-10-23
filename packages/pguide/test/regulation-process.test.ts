@@ -57,8 +57,8 @@ test("force termination stops a live process tree and cleans the owned run direc
   const pidFile = join(f.directory, "probe.pid");
   try {
     await writeFile(
-      join(f.repository, "objective", "checks", "ready", "run.js"),
-      `#!/usr/bin/env node\nimport fs from "node:fs";let text="";process.stdin.on("data",c=>text+=c);process.stdin.on("end",()=>{fs.writeFileSync(JSON.parse(text).pidFile,String(process.pid));setInterval(()=>{},1000);});`,
+      join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+      "const fs = require(\"node:fs\");\nexports.execute = async (inputSubject, context) => { const text = JSON.stringify(inputSubject); fs.writeFileSync(JSON.parse(text).pidFile, String(process.pid)); setInterval(() => { }, 1000); };\n",
     );
     const commit = await f.commit();
     await withPilot(f.uri, f.directory, commit, async (objective) => {
@@ -117,12 +117,8 @@ test("worker forwards capability requests as events without treating them as new
   const f = await fixture();
   try {
     await writeFile(
-      join(f.repository, "objective", "checks", "ready", "run.js"),
-      `#!/usr/bin/env node
-    import {existsSync} from "node:fs";
-    let text="";process.stdin.on("data",c=>text+=c);process.stdin.on("end",()=>{
-    const ok=existsSync(JSON.parse(text).marker);
-    console.log(JSON.stringify({status:200,message:"",payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]}}));});`,
+      join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+      "const { existsSync } = require(\"node:fs\");\nexports.execute = async (inputSubject, context) => {\n    const text = JSON.stringify(inputSubject);\n    const ok = existsSync(JSON.parse(text).marker);\n    return { status: 200, message: \"\", payload: ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] } };\n};\n",
     );
     const commit = await f.commit();
     const marker = join(f.directory, "ready");

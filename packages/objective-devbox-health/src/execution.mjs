@@ -7,9 +7,10 @@ import { directories, Fault, issue } from "./contract.mjs";
 export function execute(
   command,
   args,
-  { deadline = Date.now() + 24000, cwd, input, timeout = 6000, evidence } = {},
+  { deadline = Date.now() + 24000, cwd, input, timeout = 6000, evidence, signal } = {},
 ) {
   evidence?.fact("command.started", { command });
+  signal?.throwIfAborted();
   return new Promise((resolve, reject) => {
     const remaining = Math.min(timeout, deadline - Date.now());
     if (remaining <= 0) {
@@ -43,6 +44,9 @@ export function execute(
       failure = new Fault(`command-timeout: ${command}`, 504);
       stop();
     }, remaining);
+    const abort = () => { failure = new Fault("command-cancelled", 499); stop(); };
+    signal?.addEventListener("abort", abort, {once:true});
+    if (signal?.aborted) abort();
     for (const [stream, name] of [
       [child.stdout, "stdout"],
       [child.stderr, "stderr"],
@@ -68,6 +72,7 @@ export function execute(
       else reject(new Fault(`command-launch: ${command}: ${error.code}`));
     });
     child.once("close", (code) => {
+      signal?.removeEventListener("abort", abort);
       clearTimeout(timer);
       evidence?.fact("command.finished", { command, code, failed: failure !== undefined });
       if (failure) reject(failure);

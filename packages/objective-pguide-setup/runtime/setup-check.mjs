@@ -15,247 +15,6 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// packages/objective-pguide-setup/runtime/evidence.mjs
-import { randomUUID } from "node:crypto";
-import { appendFileSync, closeSync, constants, lstatSync, mkdirSync, openSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
-function reportArguments(argv) {
-  const args = [];
-  let enabled = true;
-  let directory;
-  for (let index = 0; index < argv.length; index++) {
-    const arg = argv[index];
-    if (arg === "--no-reports")
-      enabled = false;
-    else if (arg === "--report-dir") {
-      const value = argv[++index];
-      if (value === void 0 || value.trim() === "" || value.startsWith("--"))
-        throw new Error("--report-dir requires a directory.");
-      directory = resolve(value);
-    } else if (arg !== void 0)
-      args.push(arg);
-  }
-  return { args, options: { enabled, ...directory === void 0 ? {} : { directory } } };
-}
-function safeValue(value, key = "", depth = 0, secrets = /* @__PURE__ */ new Set()) {
-  if (SECRET.test(key))
-    return "[REDACTED]";
-  if (depth > 20)
-    return "[TRUNCATED]";
-  if (typeof value === "string") {
-    let text = value;
-    for (const secret of secrets)
-      text = text.replaceAll(secret, "[REDACTED]");
-    return text.length > 8192 ? `${text.slice(0, 8192)}[TRUNCATED]` : text;
-  }
-  if (Array.isArray(value))
-    return value.map((entry) => safeValue(entry, "", depth + 1, secrets));
-  if (value !== null && typeof value === "object")
-    return Object.fromEntries(Object.entries(value).map(([name, entry]) => [
-      name,
-      safeValue(entry, name, depth + 1, secrets)
-    ]));
-  return value;
-}
-function defaultReportDirectory() {
-  const state = process.env.PGUIDE_STATE_DIRECTORY ?? (process.platform === "win32" ? join(process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local"), "pguide") : join(process.env.XDG_STATE_HOME ?? join(homedir(), ".local", "state"), "pguide"));
-  return resolve(state, "reports");
-}
-function inheritedContext() {
-  const source = process.env.PGUIDE_EVIDENCE_CONTEXT;
-  if (source === void 0)
-    return void 0;
-  const value = JSON.parse(source);
-  if (value === null || typeof value !== "object" || !("directory" in value) || typeof value.directory !== "string" || !isAbsolute(value.directory) || !("runId" in value) || typeof value.runId !== "string" || !("checkRunId" in value) || typeof value.checkRunId !== "string" || !("attempt" in value) || !Number.isSafeInteger(value.attempt) || Number(value.attempt) < 1)
-    throw new Error("Invalid PGUIDE_EVIDENCE_CONTEXT.");
-  return {
-    directory: value.directory,
-    runId: value.runId,
-    checkRunId: value.checkRunId,
-    attempt: Number(value.attempt)
-  };
-}
-async function withCheckEvidence(identity, invoke, options = {}) {
-  if (options.enabled === false || process.env.PGUIDE_EVIDENCE_DISABLED === "1")
-    return invoke(void 0);
-  const inherited = inheritedContext();
-  const run = inherited === void 0 ? new RunEvidence(options) : void 0;
-  const context = inherited ?? run?.startCheck(identity);
-  if (context === void 0)
-    throw new Error("Missing check evidence context.");
-  const evidence = new CheckEvidence(context);
-  evidence.fact("business.started", { identity });
-  try {
-    const value = await invoke(evidence);
-    evidence.fact("business.finished", { result: value });
-    for (const secret of evidence.stream.secrets)
-      run?.stream.secrets.add(secret);
-    run?.finishCheck(context, value);
-    run?.stream.emit("run.finished", { outcome: "completed" });
-    return value;
-  } catch (error) {
-    evidence.fact("business.failed", { error: error instanceof Error ? error.name : "unknown" });
-    run?.stream.emit("run.failed", { outcome: "execution-error" });
-    throw error;
-  }
-}
-var LIMIT, SECRET, EvidenceStream, RunEvidence, CheckEvidence;
-var init_evidence = __esm({
-  "packages/objective-pguide-setup/runtime/evidence.mjs"() {
-    LIMIT = 1024 * 1024;
-    SECRET = /password|passwd|secret|token|authorization|credential|private.?key|api.?key/i;
-    EvidenceStream = class {
-      context;
-      directory;
-      secrets = /* @__PURE__ */ new Set();
-      seq = 0;
-      bytes = 0;
-      truncated = false;
-      path;
-      constructor(context, directory, filename = "events.jsonl") {
-        this.context = context;
-        this.directory = directory;
-        this.path = join(directory, filename);
-        writeFileSync(this.path, "", { flag: "wx", mode: 384 });
-      }
-      emit(event, data) {
-        if (this.truncated)
-          return;
-        const body = JSON.stringify({
-          schemaVersion: 1,
-          time: (/* @__PURE__ */ new Date()).toISOString(),
-          seq: ++this.seq,
-          ...this.context,
-          event,
-          data: safeValue(data, "", 0, this.secrets)
-        });
-        if (this.bytes + Buffer.byteLength(body) > LIMIT) {
-          this.truncated = true;
-          appendFileSync(this.path, `${JSON.stringify({ schemaVersion: 1, time: (/* @__PURE__ */ new Date()).toISOString(), seq: this.seq, ...this.context, event: "evidence.truncated", data: { limitBytes: LIMIT } })}
-`);
-          process.stderr.write(`pguide evidence truncated: ${this.path}
-`);
-          return;
-        }
-        try {
-          appendFileSync(this.path, `${body}
-`);
-        } catch (error) {
-          process.stderr.write(`pguide evidence write failed: ${this.path}
-`);
-          throw error;
-        }
-        this.bytes += Buffer.byteLength(body) + 1;
-      }
-      protect(value, sensitive = false) {
-        if (typeof value === "string" && sensitive && value !== "")
-          this.secrets.add(value);
-        else if (value !== null && typeof value === "object")
-          for (const [key, entry] of Object.entries(value))
-            this.protect(entry, sensitive || SECRET.test(key));
-      }
-    };
-    RunEvidence = class {
-      runId = randomUUID();
-      directory;
-      stream;
-      attempts = /* @__PURE__ */ new Map();
-      constructor(options = {}) {
-        this.directory = resolve(options.directory ?? defaultReportDirectory(), this.runId);
-        mkdirSync(this.directory, { recursive: true, mode: 448 });
-        this.stream = new EvidenceStream({ runId: this.runId }, this.directory);
-        this.stream.emit("run.started", { node: process.version, platform: process.platform });
-      }
-      startCheck(identity) {
-        const key = JSON.stringify(identity);
-        const attempt = (this.attempts.get(key) ?? 0) + 1;
-        this.attempts.set(key, attempt);
-        const checkRunId = randomUUID();
-        const directory = join(this.directory, "checks", checkRunId);
-        mkdirSync(directory, { recursive: true, mode: 448 });
-        const context = { runId: this.runId, checkRunId, attempt, directory };
-        this.stream.emit("check.started", { ...context, directory: `checks/${checkRunId}`, identity });
-        return context;
-      }
-      finishCheck(context, envelope) {
-        const result = JSON.stringify(safeValue(envelope, "", 0, this.stream.secrets));
-        const truncated = Buffer.byteLength(result) > LIMIT;
-        writeFileSync(join(context.directory, "result.json"), `${truncated ? JSON.stringify({ truncated: true, limitBytes: LIMIT }) : result}
-`, {
-          flag: "wx",
-          mode: 384
-        });
-        this.stream.emit("check.finished", {
-          checkRunId: context.checkRunId,
-          attempt: context.attempt,
-          result: `checks/${context.checkRunId}/result.json`,
-          resultPolicy: "redacted-bounded",
-          truncated,
-          envelope
-        });
-      }
-    };
-    CheckEvidence = class {
-      context;
-      stream;
-      constructor(context) {
-        this.context = context;
-        if (lstatSync(context.directory).isSymbolicLink() || !lstatSync(context.directory).isDirectory())
-          throw new Error("Check evidence directory must be a real directory.");
-        this.stream = new EvidenceStream({ runId: context.runId, checkRunId: context.checkRunId, attempt: context.attempt }, context.directory);
-      }
-      fact(event, data) {
-        this.stream.emit(event, data);
-      }
-      artifact(path, content) {
-        const parts = path.split(/[\\/]/);
-        if (isAbsolute(path) || parts.some((part) => !part || part === "." || part === ".." || part.includes(":")))
-          throw new Error("Artifact path must stay inside the check directory.");
-        const root = join(this.context.directory, "artifacts");
-        try {
-          mkdirSync(root, { mode: 448 });
-        } catch (error) {
-          if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST")
-            throw error;
-        }
-        if (lstatSync(root).isSymbolicLink() || !lstatSync(root).isDirectory())
-          throw new Error("Artifact root must be a real directory.");
-        let parent = root;
-        for (const part of parts.slice(0, -1)) {
-          parent = join(parent, part);
-          try {
-            mkdirSync(parent, { mode: 448 });
-          } catch (error) {
-            if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST")
-              throw error;
-          }
-          if (!lstatSync(parent).isDirectory() || lstatSync(parent).isSymbolicLink())
-            throw new Error("Artifact directories must not be symbolic links.");
-        }
-        const destination = join(root, ...parts);
-        const rel = relative(this.context.directory, destination);
-        if (rel.startsWith(`..${sep}`) || isAbsolute(rel))
-          throw new Error("Artifact path escaped the check directory.");
-        if (Buffer.byteLength(content) > LIMIT) {
-          this.fact("artifact.truncated", { path, limitBytes: LIMIT });
-          throw new Error("Artifact exceeds 1 MiB.");
-        }
-        const fd = openSync(destination, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 384);
-        try {
-          writeFileSync(fd, content);
-        } finally {
-          closeSync(fd);
-        }
-        this.fact("artifact.created", {
-          path: rel.split(sep).join("/"),
-          bytes: Buffer.byteLength(content)
-        });
-      }
-    };
-  }
-});
-
 // packages/objective-pguide-setup/src/contract.mjs
 import { isAbsolute as isAbsolute2, posix } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -298,260 +57,6 @@ var init_contract = __esm({
       payload: { ok: false, problems: [{ kind: "internal", id, parameters }] },
       message: ""
     });
-  }
-});
-
-// packages/objective-pguide-setup/src/installation.mjs
-function jsonOutput(result) {
-  try {
-    const value = JSON.parse(result.stdout);
-    if (!record(value)) throw new Error();
-    return value;
-  } catch {
-    throw new Fault("protocol: CLI output was not a JSON object.");
-  }
-}
-async function installation(subject, context) {
-  const result = await context.execute(subject.pguide.command, [
-    ...subject.pguide.args ?? [],
-    "--version",
-    "--format",
-    "json"
-  ]);
-  if (result.code !== 0) throw new Problem("installation-unusable");
-  const value = jsonOutput(result);
-  context.evidence?.fact("version.observed", {
-    actual: value.version,
-    expected: subject.desiredVersion ?? null,
-    code: result.code
-  });
-  if (value.schemaVersion !== 1 || value.name !== "pguide" || !nonempty(value.version))
-    throw new Fault("protocol: unsupported pguide version response.");
-  if (subject.desiredVersion !== void 0 && value.version !== subject.desiredVersion)
-    throw new Problem("version-mismatch");
-}
-var init_installation = __esm({
-  "packages/objective-pguide-setup/src/installation.mjs"() {
-    init_contract();
-  }
-});
-
-// packages/objective-pguide-setup/src/configuration.mjs
-async function configured(subject, context) {
-  await installation(subject, context);
-  const help = await context.cli(["--help"], subject.workingDirectory);
-  if (help.code !== 0) throw new Problem("configuration-invalid");
-  const capabilities = jsonOutput(help);
-  if (!Array.isArray(capabilities.commands) || !record(capabilities.conflicts))
-    throw new Fault("protocol: unsupported command discovery response.");
-  const requireCommand = (name2) => {
-    if (capabilities.conflicts[name2] !== void 0 || !capabilities.commands.some(
-      (entry) => entry.command === name2 && entry.compatible === true && entry.protocol === "pguide-command-v1"
-    ))
-      throw new Problem("command-unavailable");
-  };
-  requireCommand("config");
-  const result = await context.cli(["config", "show"], subject.workingDirectory);
-  if (result.code !== 0) throw new Problem("configuration-invalid");
-  const value = jsonOutput(result);
-  if (value.schemaVersion !== 1 || !record(value.config) || !Array.isArray(value.files) || !value.files.every(nonempty) || !Array.isArray(value.issues))
-    throw new Fault("protocol: unsupported configuration response.");
-  if (value.files.length === 0) throw new Problem("configuration-missing");
-  for (const name2 of ["agents", "probe", "regulate"]) requireCommand(name2);
-  if (value.issues.some(
-    (issue) => ["agents", "pguide", "cli-core", "pilot", "regulate"].includes(
-      typeof issue?.id === "string" ? issue.id.split(".")[0] : ""
-    )
-  ))
-    throw new Problem("configuration-invalid");
-  const config = value.config;
-  const name = subject.agent ?? config["agents.defaultAgent"];
-  if (!nonempty(name)) throw new Problem("agent-missing");
-  const selected = await context.cli(["agents", "show", name], subject.workingDirectory);
-  if (selected.code !== 0) throw new Problem("agent-missing");
-  const resource = jsonOutput(selected);
-  if (!record(resource.profile)) throw new Fault("protocol: unsupported Agent resource response.");
-  const profile = resource.profile;
-  if (profile.type === "ahp")
-    throw new Problem("acp-unavailable", {
-      reason: "This setup Pilot verifies ACP stdio readiness only. Select an ACP profile; AHP runtime support does not imply ACP compatibility."
-    });
-  if (!(profile.type === "acp" && profile.connection?.type === void 0 || profile.type === void 0 && profile.connection?.type === "acp") || !/^[1-9][0-9]*$/.test(profile.connection.protocolVersion) || typeof profile.connection.protocolVersion !== "string" || !Number.isSafeInteger(Number(profile.connection.protocolVersion)) || profile.transport?.type !== "stdio" || !nonempty(profile.transport.command) || profile.transport.args !== void 0 && (!Array.isArray(profile.transport.args) || !profile.transport.args.every(nonempty)) || profile.transport.env !== void 0 && (!Array.isArray(profile.transport.env) || !profile.transport.env.every((key) => /^[A-Z_][A-Z0-9_]*$/.test(key))))
-    throw new Fault("protocol: invalid Agent profile returned by agents.");
-  if ((profile.transport.env ?? []).some((key) => !nonempty(context.env[key])))
-    throw new Problem("environment-unavailable");
-  return { config, name, profile };
-}
-async function acpReady(profile, context, directory) {
-  const allowed = [
-    "PATH",
-    ...process.platform === "win32" ? ["SystemRoot", "ComSpec"] : [],
-    ...profile.transport.env ?? []
-  ];
-  const env = Object.fromEntries(
-    allowed.flatMap((key) => context.env[key] === void 0 ? [] : [[key, context.env[key]]])
-  );
-  let buffer = "";
-  let phase = 1;
-  let ready = false;
-  const send = (child, id, method, params) => child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}
-`);
-  const result = await context.execute(profile.transport.command, profile.transport.args ?? [], {
-    env,
-    missing: "acp-unavailable",
-    begin: (child) => send(child, 1, "initialize", {
-      protocolVersion: Number(profile.connection.protocolVersion),
-      clientInfo: { name: "pguide-setup", version: "1" },
-      clientCapabilities: {}
-    }),
-    onLine(chunk, child, stop) {
-      buffer += chunk;
-      while (buffer.includes("\n")) {
-        const index = buffer.indexOf("\n");
-        const line = buffer.slice(0, index);
-        buffer = buffer.slice(index + 1);
-        let message;
-        try {
-          message = JSON.parse(line);
-        } catch {
-          stop(new Fault("protocol: malformed ACP JSON."));
-          return;
-        }
-        if (!record(message) || message.jsonrpc !== "2.0") {
-          stop(new Fault("protocol: invalid ACP response."));
-          return;
-        }
-        if (message.id === void 0 && nonempty(message.method)) continue;
-        if (message.id !== phase || message.method !== void 0) {
-          stop(new Fault("protocol: unexpected ACP response."));
-          return;
-        }
-        if (message.error !== void 0) {
-          stop(
-            new Problem("acp-unavailable", {
-              stage: phase === 1 ? "initialize" : "session-new",
-              reason: "agent-rejected"
-            })
-          );
-          return;
-        }
-        if (!record(message.result)) {
-          stop(new Fault("protocol: ACP result must be an object."));
-          return;
-        }
-        if (phase === 1) {
-          if (message.result.protocolVersion !== Number(profile.connection.protocolVersion) || profile.requirements?.sessionResume === true && message.result.agentCapabilities?.loadSession !== true) {
-            stop(
-              new Problem("acp-unavailable", {
-                stage: "initialize",
-                reason: "incompatible-capabilities"
-              })
-            );
-            return;
-          }
-          phase = 2;
-          send(child, 2, "session/new", { cwd: directory, mcpServers: [] });
-        } else {
-          if (!nonempty(message.result.sessionId)) {
-            stop(new Fault("protocol: ACP session/new returned no sessionId."));
-            return;
-          }
-          ready = true;
-          child.stdin.end();
-          stop(void 0);
-        }
-      }
-    }
-  });
-  if (!ready || result.code !== 0 && phase !== 2)
-    throw new Problem("acp-unavailable", {
-      stage: phase === 1 ? "initialize" : "session-new",
-      reason: "agent-exited"
-    });
-}
-var init_configuration = __esm({
-  "packages/objective-pguide-setup/src/configuration.mjs"() {
-    init_contract();
-    init_installation();
-  }
-});
-
-// packages/objective-pguide-setup/src/direct-sanity.mjs
-import { randomBytes } from "node:crypto";
-import { lstat, mkdir, readFile, writeFile } from "node:fs/promises";
-import { join as join2 } from "node:path";
-async function directSanity(context, directory, selected) {
-  const task = join2(directory, "task");
-  await mkdir(task, { mode: 448 });
-  const marker = join2(task, "marker.txt");
-  const expected = `ready-${randomBytes(24).toString("hex")}`;
-  await writeFile(marker, "not-ready", { mode: 384 });
-  if (await readFile(marker, "utf8") === expected)
-    throw new Fault("sanity: initial marker was not independently observed.");
-  const input = join2(directory, "agent-input.json");
-  await writeFile(
-    input,
-    JSON.stringify({
-      cwd: task,
-      expected,
-      profile: selected.profile,
-      timeoutMs: Math.max(
-        1,
-        Math.min(
-          context.remainingMs() - 2500,
-          selected.config["regulate.agentTimeoutMs"] ?? Number.POSITIVE_INFINITY
-        )
-      )
-    }),
-    { mode: 384 }
-  );
-  const result = await context.execute(process.execPath, [join2(here, "direct-agent.mjs"), input]);
-  if (result.code !== 0) throw new Fault("sanity: direct Agent process failed.");
-  const outcome = jsonOutput(result);
-  for (const phase of ["agent.initialize", "agent.session-new", "agent.prompt", "agent.cleanup"]) {
-    const duration = outcome.timings?.[phase];
-    if (Number.isSafeInteger(duration) && duration >= 0) context.timing(phase, duration);
-  }
-  if (outcome.reason === "timeout")
-    throw new Fault("timeout: direct Agent exceeded its deadline.", 504);
-  if (outcome.reason === "startup-failed" && ["initialize", "session-new"].includes(outcome.stage))
-    throw new Problem("acp-unavailable", { stage: outcome.stage, reason: "startup-failed" });
-  if (outcome.status !== "completed")
-    throw new Problem("sanity-failed", {
-      stage: "agent",
-      reason: ["denied", "blocked", "cancelled", "output-limit", "invocation-failed"].includes(
-        outcome.reason
-      ) ? outcome.reason : "invalid-outcome"
-    });
-  let correct = false;
-  let observed = "missing";
-  try {
-    const details = await lstat(marker);
-    if (!details.isFile() || details.isSymbolicLink() || details.nlink !== 1)
-      observed = "not-regular";
-    else if (details.size > Buffer.byteLength(expected) + 8) observed = "oversized";
-    else {
-      const content = await readFile(marker, "utf8");
-      correct = [expected, `${expected}
-`, `${expected}\r
-`].includes(content);
-      observed = content === "not-ready" ? "unchanged" : content.trimEnd() === expected.trimEnd() ? "line-ending" : "different-content";
-    }
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-  }
-  context.evidence?.fact("assertion.result", {
-    assertion: "marker-nonce-match",
-    correct,
-    observed
-  });
-  if (!correct)
-    throw new Problem("sanity-failed", { stage: "recheck", reason: "nonce-mismatch", observed });
-}
-var init_direct_sanity = __esm({
-  "packages/objective-pguide-setup/src/direct-sanity.mjs"() {
-    init_contract();
-    init_installation();
   }
 });
 
@@ -790,137 +295,6 @@ var init_execution = __esm({
   }
 });
 
-// packages/objective-pguide-setup/src/sanity.mjs
-import { randomBytes as randomBytes2 } from "node:crypto";
-import { cp, lstat as lstat2, mkdir as mkdir2, readFile as readFile2, writeFile as writeFile2 } from "node:fs/promises";
-import { join as join4, resolve as resolve2 } from "node:path";
-import { pathToFileURL } from "node:url";
-async function sanity(subject, context, directory, selected) {
-  const repository = join4(directory, "fixture");
-  await cp(join4(here, "sanity-fixture"), repository, { recursive: true });
-  await writeFile2(
-    join4(repository, ".gitignore"),
-    await readFile2(join4(repository, "gitignore"), "utf8")
-  );
-  const marker = join4(repository, "marker.txt");
-  const expected = randomBytes2(24).toString("hex");
-  await writeFile2(marker, "not-repaired");
-  const subjectFile = join4(directory, "sanity-subject.json");
-  await writeFile2(subjectFile, JSON.stringify({ marker, expected }));
-  await mkdir2(join4(repository, ".pguide"), { recursive: true });
-  const configPath = join4(repository, ".pguide", "config.jsonc");
-  const timeoutMs = subject.timeoutMs;
-  const config = {
-    "pguide.commandDirectories": (selected.config["pguide.commandDirectories"] ?? []).map(
-      (path) => resolve2(subject.workingDirectory, path)
-    ),
-    "agents.defaultAgent": selected.name,
-    "cli-core.stateDirectory": join4(directory, "state"),
-    "regulate.agentTimeoutMs": timeoutMs,
-    "regulate.quota": { timeoutMs, maxAgentRuns: 1, maxStallRuns: 1 },
-    "pilot.probe": { timeoutMs: 3e3, retry: { maxRetries: 0, delayMs: 0 } },
-    "pilot.reportsEnabled": false,
-    "pilot.reportDirectory": join4(directory, "reports"),
-    "regulate.permissions": selected.config["regulate.permissions"]
-  };
-  await writeFile2(configPath, JSON.stringify(config), { mode: 384 });
-  await mkdir2(join4(repository, ".pguide"), { recursive: true });
-  await writeFile2(
-    join4(repository, ".pguide", "agents.yaml"),
-    JSON.stringify({
-      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json",
-      agents: { [selected.name]: selected.profile }
-    }),
-    { mode: 384 }
-  );
-  const git = async (...args) => {
-    const result2 = await context.execute("git", ["-C", repository, ...args], {
-      missing: "git-unavailable"
-    });
-    if (result2.code !== 0) throw new Fault("git: isolated fixture preparation failed.");
-    return result2.stdout.trim();
-  };
-  await git("init", "-q");
-  await git("config", "user.name", "pguide setup");
-  await git("config", "user.email", "setup@example.invalid");
-  await git("add", ".");
-  await git("-c", "commit.gpgsign=false", "commit", "-qm", "Bounded setup fixture");
-  const revision = await git("rev-parse", "HEAD");
-  const uri = `git+${pathToFileURL(repository).href}#/`;
-  const common = ["--pilot", uri, "--revision", revision, "--subject-file", subjectFile];
-  const probe = async () => {
-    const result2 = await context.cli(["probe", ...common], repository);
-    const report2 = jsonOutput(result2);
-    if (result2.code !== 0 || report2.status !== 200 || !record(report2.payload)) {
-      const reason = typeof report2.error === "string" && /dirty|uncommitted/.test(report2.error) ? "dirty-source" : typeof report2.error === "string" && /long|ENAMETOOLONG/.test(report2.error) ? "source-path" : "invocation";
-      throw new Fault(
-        `protocol: independent sanity probe failed (${reason}; exit=${Number.isInteger(result2.code) ? result2.code : "unknown"}).`
-      );
-    }
-    return report2.payload;
-  };
-  const initial = await probe();
-  if (initial.current?.levelId !== "initial" || !initial.problems?.some((entry) => entry.ref?.problemId === "marker-incorrect"))
-    throw new Fault("sanity: initial failure was not independently observed.");
-  const result = await context.cli(
-    ["regulate", ...common, "--target", "terminal", "--agent", selected.name],
-    repository
-  );
-  const report = jsonOutput(result);
-  if (result.code !== 0) {
-    if (result.code !== 5 || report.outcome?.stopReason !== "exhausted") {
-      const status = ["acp-error", "regulation-error", "io-error", "internal-error"].includes(
-        report.status
-      ) ? report.status : "unrecognized";
-      const snapshotDiagnostic = typeof report.error === "string" ? /windows-snapshot-command\[kind=(?:timeout|exit|spawn|signal|output-limit|unknown);exit=(?:-?\d{1,10}|none);errno=(?:ENOENT|EACCES|EPERM|EINVAL|E2BIG|ENOMEM|ETIMEDOUT|UNKNOWN|ERR_CHILD_PROCESS_STDIO_MAXBUFFER|none);signal=(?:SIGTERM|SIGKILL|none);killed=(?:true|false);elapsedMs=\d{1,10};reported=(?:true|false);nativeCode=(?:\d{1,10}|none);phase=(?:unreported|started|importing|imported|compiling|compiled|query-started|queried|serialized|exiting);reason=(?:command-not-found|module-autoload|module-not-found|module-load|module-manifest|access-denied|native-snapshot|native-first|native-next|native-close|unclassified)\]/.exec(
-        report.error
-      )?.[0] : void 0;
-      const diagnostic = snapshotDiagnostic ?? [
-        ["PguideWindowsProcessSnapshot", "windows-snapshot-command"],
-        ["Invalid Windows process tree snapshot.", "windows-snapshot-format"],
-        ["Process tree termination and ownership snapshot failed.", "windows-tree-and-snapshot"],
-        ["Could not verify process tree cleanup.", "windows-tree-unobservable"],
-        ["Check timed out after 3000ms.", "inner-probe-deadline"]
-      ].find(
-        ([message]) => typeof report.error === "string" && report.error.includes(message)
-      )?.[1] ?? "unclassified";
-      throw new Fault(
-        `regulate: Agent or probe invocation failed (exit=${result.code ?? "signal"}, status=${status}, diagnostic=${diagnostic}).`
-      );
-    }
-    if (["time", "agent-limit"].includes(report.outcome.exhaustedBy))
-      throw new Fault("timeout: sanity regulation exhausted its time allowance.", 504);
-    if (!["agent-runs", "stall"].includes(report.outcome.exhaustedBy))
-      throw new Fault("protocol: unknown sanity exhaustion reason.");
-    throw new Problem("sanity-failed", {
-      stage: "regulate",
-      reason: "quota-exhausted",
-      exhaustedBy: report.outcome.exhaustedBy
-    });
-  }
-  if (report.outcome?.stopReason !== "target-reached" || report.outcome?.iterations !== 1)
-    throw new Fault("protocol: unexpected sanity regulation outcome.");
-  const final = await probe();
-  let correct = false;
-  try {
-    const details = await lstat2(marker);
-    correct = details.isFile() && details.size === expected.length && await readFile2(marker, "utf8") === expected;
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-  }
-  if (!correct || final.current?.levelId !== "repaired" || final.problems?.length !== 0)
-    throw new Problem("sanity-failed", {
-      stage: "recheck",
-      reason: !correct ? "nonce-mismatch" : "target-not-reached"
-    });
-}
-var init_sanity = __esm({
-  "packages/objective-pguide-setup/src/sanity.mjs"() {
-    init_contract();
-    init_installation();
-  }
-});
-
 // packages/objective-pguide-setup/ssh-target.mjs
 var ssh_target_exports = {};
 __export(ssh_target_exports, {
@@ -1090,14 +464,14 @@ async function checkSsh(stage, subject, execute = runSsh) {
 }
 var here2, limit, fixtures, TargetFault, remoteBootstrap, quote;
 var init_ssh_target = __esm({
-  async "packages/objective-pguide-setup/ssh-target.mjs"() {
-    await init_setup_check();
+  "packages/objective-pguide-setup/ssh-target.mjs"() {
+    init_execution();
     here2 = dirname(fileURLToPath2(import.meta.url));
     limit = 262144;
     fixtures = [
       "gitignore",
       "objective.yaml",
-      "checks/marker/run.cjs",
+      "checks/marker/worker.cjs",
       "references/checks/marker/en-US.md",
       "references/levels/terminal/en-US.md",
       "references/levels/repaired/en-US.md",
@@ -1154,9 +528,632 @@ process.stdout.on("error",()=>{});
   }
 });
 
+// packages/objective-pguide-setup/setup-check.mjs
+import { resolve as resolve3 } from "node:path";
+import { pathToFileURL as pathToFileURL2 } from "node:url";
+
+// packages/objective-pguide-setup/src/cli.mjs
+import { lstat as lstat3, readFile as readFile4 } from "node:fs/promises";
+import { isAbsolute as isAbsolute4 } from "node:path";
+
+// packages/objective-pguide-setup/runtime/evidence.mjs
+import { randomUUID } from "node:crypto";
+import { appendFileSync, closeSync, constants, lstatSync, mkdirSync, openSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
+function reportArguments(argv) {
+  const args = [];
+  let enabled = true;
+  let directory;
+  for (let index = 0; index < argv.length; index++) {
+    const arg = argv[index];
+    if (arg === "--no-reports")
+      enabled = false;
+    else if (arg === "--report-dir") {
+      const value = argv[++index];
+      if (value === void 0 || value.trim() === "" || value.startsWith("--"))
+        throw new Error("--report-dir requires a directory.");
+      directory = resolve(value);
+    } else if (arg !== void 0)
+      args.push(arg);
+  }
+  return { args, options: { enabled, ...directory === void 0 ? {} : { directory } } };
+}
+var LIMIT = 1024 * 1024;
+var SECRET = /password|passwd|secret|token|authorization|credential|private.?key|api.?key/i;
+function safeValue(value, key = "", depth = 0, secrets = /* @__PURE__ */ new Set()) {
+  if (SECRET.test(key))
+    return "[REDACTED]";
+  if (depth > 20)
+    return "[TRUNCATED]";
+  if (typeof value === "string") {
+    let text = value;
+    for (const secret of secrets)
+      text = text.replaceAll(secret, "[REDACTED]");
+    return text.length > 8192 ? `${text.slice(0, 8192)}[TRUNCATED]` : text;
+  }
+  if (Array.isArray(value))
+    return value.map((entry) => safeValue(entry, "", depth + 1, secrets));
+  if (value !== null && typeof value === "object")
+    return Object.fromEntries(Object.entries(value).map(([name, entry]) => [
+      name,
+      safeValue(entry, name, depth + 1, secrets)
+    ]));
+  return value;
+}
+function defaultReportDirectory() {
+  const state = process.env.PGUIDE_STATE_DIRECTORY ?? (process.platform === "win32" ? join(process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local"), "pguide") : join(process.env.XDG_STATE_HOME ?? join(homedir(), ".local", "state"), "pguide"));
+  return resolve(state, "reports");
+}
+var EvidenceStream = class {
+  context;
+  directory;
+  secrets = /* @__PURE__ */ new Set();
+  seq = 0;
+  bytes = 0;
+  truncated = false;
+  path;
+  constructor(context, directory, filename = "events.jsonl") {
+    this.context = context;
+    this.directory = directory;
+    this.path = join(directory, filename);
+    writeFileSync(this.path, "", { flag: "wx", mode: 384 });
+  }
+  emit(event, data) {
+    if (this.truncated)
+      return;
+    const body = JSON.stringify({
+      schemaVersion: 1,
+      time: (/* @__PURE__ */ new Date()).toISOString(),
+      seq: ++this.seq,
+      ...this.context,
+      event,
+      data: safeValue(data, "", 0, this.secrets)
+    });
+    if (this.bytes + Buffer.byteLength(body) > LIMIT) {
+      this.truncated = true;
+      appendFileSync(this.path, `${JSON.stringify({ schemaVersion: 1, time: (/* @__PURE__ */ new Date()).toISOString(), seq: this.seq, ...this.context, event: "evidence.truncated", data: { limitBytes: LIMIT } })}
+`);
+      process.stderr.write(`pguide evidence truncated: ${this.path}
+`);
+      return;
+    }
+    try {
+      appendFileSync(this.path, `${body}
+`);
+    } catch (error) {
+      process.stderr.write(`pguide evidence write failed: ${this.path}
+`);
+      throw error;
+    }
+    this.bytes += Buffer.byteLength(body) + 1;
+  }
+  protect(value, sensitive = false) {
+    if (typeof value === "string" && sensitive && value !== "")
+      this.secrets.add(value);
+    else if (value !== null && typeof value === "object")
+      for (const [key, entry] of Object.entries(value))
+        this.protect(entry, sensitive || SECRET.test(key));
+  }
+};
+var RunEvidence = class {
+  runId = randomUUID();
+  directory;
+  stream;
+  attempts = /* @__PURE__ */ new Map();
+  constructor(options = {}) {
+    this.directory = resolve(options.directory ?? defaultReportDirectory(), this.runId);
+    mkdirSync(this.directory, { recursive: true, mode: 448 });
+    this.stream = new EvidenceStream({ runId: this.runId }, this.directory);
+    this.stream.emit("run.started", { node: process.version, platform: process.platform });
+  }
+  startCheck(identity) {
+    const key = JSON.stringify(identity);
+    const attempt = (this.attempts.get(key) ?? 0) + 1;
+    this.attempts.set(key, attempt);
+    const checkRunId = randomUUID();
+    const directory = join(this.directory, "checks", checkRunId);
+    mkdirSync(directory, { recursive: true, mode: 448 });
+    const context = { runId: this.runId, checkRunId, attempt, directory };
+    this.stream.emit("check.started", { ...context, directory: `checks/${checkRunId}`, identity });
+    return context;
+  }
+  finishCheck(context, envelope) {
+    const result = JSON.stringify(safeValue(envelope, "", 0, this.stream.secrets));
+    const truncated = Buffer.byteLength(result) > LIMIT;
+    writeFileSync(join(context.directory, "result.json"), `${truncated ? JSON.stringify({ truncated: true, limitBytes: LIMIT }) : result}
+`, {
+      flag: "wx",
+      mode: 384
+    });
+    this.stream.emit("check.finished", {
+      checkRunId: context.checkRunId,
+      attempt: context.attempt,
+      result: `checks/${context.checkRunId}/result.json`,
+      resultPolicy: "redacted-bounded",
+      truncated,
+      envelope
+    });
+  }
+};
+function inheritedContext() {
+  const source = process.env.PGUIDE_EVIDENCE_CONTEXT;
+  if (source === void 0)
+    return void 0;
+  const value = JSON.parse(source);
+  if (value === null || typeof value !== "object" || !("directory" in value) || typeof value.directory !== "string" || !isAbsolute(value.directory) || !("runId" in value) || typeof value.runId !== "string" || !("checkRunId" in value) || typeof value.checkRunId !== "string" || !("attempt" in value) || !Number.isSafeInteger(value.attempt) || Number(value.attempt) < 1)
+    throw new Error("Invalid PGUIDE_EVIDENCE_CONTEXT.");
+  return {
+    directory: value.directory,
+    runId: value.runId,
+    checkRunId: value.checkRunId,
+    attempt: Number(value.attempt)
+  };
+}
+var CheckEvidence = class {
+  context;
+  stream;
+  constructor(context) {
+    this.context = context;
+    if (lstatSync(context.directory).isSymbolicLink() || !lstatSync(context.directory).isDirectory())
+      throw new Error("Check evidence directory must be a real directory.");
+    this.stream = new EvidenceStream({ runId: context.runId, checkRunId: context.checkRunId, attempt: context.attempt }, context.directory);
+  }
+  fact(event, data) {
+    this.stream.emit(event, data);
+  }
+  artifact(path, content) {
+    const parts = path.split(/[\\/]/);
+    if (isAbsolute(path) || parts.some((part) => !part || part === "." || part === ".." || part.includes(":")))
+      throw new Error("Artifact path must stay inside the check directory.");
+    const root = join(this.context.directory, "artifacts");
+    try {
+      mkdirSync(root, { mode: 448 });
+    } catch (error) {
+      if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST")
+        throw error;
+    }
+    if (lstatSync(root).isSymbolicLink() || !lstatSync(root).isDirectory())
+      throw new Error("Artifact root must be a real directory.");
+    let parent = root;
+    for (const part of parts.slice(0, -1)) {
+      parent = join(parent, part);
+      try {
+        mkdirSync(parent, { mode: 448 });
+      } catch (error) {
+        if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST")
+          throw error;
+      }
+      if (!lstatSync(parent).isDirectory() || lstatSync(parent).isSymbolicLink())
+        throw new Error("Artifact directories must not be symbolic links.");
+    }
+    const destination = join(root, ...parts);
+    const rel = relative(this.context.directory, destination);
+    if (rel.startsWith(`..${sep}`) || isAbsolute(rel))
+      throw new Error("Artifact path escaped the check directory.");
+    if (Buffer.byteLength(content) > LIMIT) {
+      this.fact("artifact.truncated", { path, limitBytes: LIMIT });
+      throw new Error("Artifact exceeds 1 MiB.");
+    }
+    const fd = openSync(destination, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 384);
+    try {
+      writeFileSync(fd, content);
+    } finally {
+      closeSync(fd);
+    }
+    this.fact("artifact.created", {
+      path: rel.split(sep).join("/"),
+      bytes: Buffer.byteLength(content)
+    });
+  }
+};
+async function withCheckEvidence(identity, invoke, options = {}) {
+  if (options.enabled === false || process.env.PGUIDE_EVIDENCE_DISABLED === "1")
+    return invoke(void 0);
+  const inherited = inheritedContext();
+  const run = inherited === void 0 ? new RunEvidence(options) : void 0;
+  const context = inherited ?? run?.startCheck(identity);
+  if (context === void 0)
+    throw new Error("Missing check evidence context.");
+  const evidence = new CheckEvidence(context);
+  evidence.fact("business.started", { identity });
+  try {
+    const value = await invoke(evidence);
+    evidence.fact("business.finished", { result: value });
+    for (const secret of evidence.stream.secrets)
+      run?.stream.secrets.add(secret);
+    run?.finishCheck(context, value);
+    run?.stream.emit("run.finished", { outcome: "completed" });
+    return value;
+  } catch (error) {
+    evidence.fact("business.failed", { error: error instanceof Error ? error.name : "unknown" });
+    run?.stream.emit("run.failed", { outcome: "execution-error" });
+    throw error;
+  }
+}
+
+// packages/objective-pguide-setup/src/cli.mjs
+init_contract();
+
 // packages/objective-pguide-setup/src/runner.mjs
 import { mkdir as mkdir3, mkdtemp, rm } from "node:fs/promises";
 import { isAbsolute as isAbsolute3, join as join6 } from "node:path";
+
+// packages/objective-pguide-setup/src/configuration.mjs
+init_contract();
+
+// packages/objective-pguide-setup/src/installation.mjs
+init_contract();
+function jsonOutput(result) {
+  try {
+    const value = JSON.parse(result.stdout);
+    if (!record(value)) throw new Error();
+    return value;
+  } catch {
+    throw new Fault("protocol: CLI output was not a JSON object.");
+  }
+}
+async function installation(subject, context) {
+  const result = await context.execute(subject.pguide.command, [
+    ...subject.pguide.args ?? [],
+    "--version",
+    "--format",
+    "json"
+  ]);
+  if (result.code !== 0) throw new Problem("installation-unusable");
+  const value = jsonOutput(result);
+  context.evidence?.fact("version.observed", {
+    actual: value.version,
+    expected: subject.desiredVersion ?? null,
+    code: result.code
+  });
+  if (value.schemaVersion !== 1 || value.name !== "pguide" || !nonempty(value.version))
+    throw new Fault("protocol: unsupported pguide version response.");
+  if (subject.desiredVersion !== void 0 && value.version !== subject.desiredVersion)
+    throw new Problem("version-mismatch");
+}
+
+// packages/objective-pguide-setup/src/configuration.mjs
+async function configured(subject, context) {
+  await installation(subject, context);
+  const help = await context.cli(["--help"], subject.workingDirectory);
+  if (help.code !== 0) throw new Problem("configuration-invalid");
+  const capabilities = jsonOutput(help);
+  if (!Array.isArray(capabilities.commands) || !record(capabilities.conflicts))
+    throw new Fault("protocol: unsupported command discovery response.");
+  const requireCommand = (name2) => {
+    if (capabilities.conflicts[name2] !== void 0 || !capabilities.commands.some(
+      (entry) => entry.command === name2 && entry.compatible === true && entry.protocol === "pguide-command-v1"
+    ))
+      throw new Problem("command-unavailable");
+  };
+  requireCommand("config");
+  const result = await context.cli(["config", "show"], subject.workingDirectory);
+  if (result.code !== 0) throw new Problem("configuration-invalid");
+  const value = jsonOutput(result);
+  if (value.schemaVersion !== 1 || !record(value.config) || !Array.isArray(value.files) || !value.files.every(nonempty) || !Array.isArray(value.issues))
+    throw new Fault("protocol: unsupported configuration response.");
+  if (value.files.length === 0) throw new Problem("configuration-missing");
+  for (const name2 of ["agents", "probe", "regulate"]) requireCommand(name2);
+  if (value.issues.some(
+    (issue) => ["agents", "pguide", "cli-core", "pilot", "regulate"].includes(
+      typeof issue?.id === "string" ? issue.id.split(".")[0] : ""
+    )
+  ))
+    throw new Problem("configuration-invalid");
+  const config = value.config;
+  const name = subject.agent ?? config["agents.defaultAgent"];
+  if (!nonempty(name)) throw new Problem("agent-missing");
+  const selected = await context.cli(["agents", "show", name], subject.workingDirectory);
+  if (selected.code !== 0) throw new Problem("agent-missing");
+  const resource = jsonOutput(selected);
+  if (!record(resource.profile)) throw new Fault("protocol: unsupported Agent resource response.");
+  const profile = resource.profile;
+  if (profile.type === "ahp")
+    throw new Problem("acp-unavailable", {
+      reason: "This setup Pilot verifies ACP stdio readiness only. Select an ACP profile; AHP runtime support does not imply ACP compatibility."
+    });
+  if (!(profile.type === "acp" && profile.connection?.type === void 0 || profile.type === void 0 && profile.connection?.type === "acp") || !/^[1-9][0-9]*$/.test(profile.connection.protocolVersion) || typeof profile.connection.protocolVersion !== "string" || !Number.isSafeInteger(Number(profile.connection.protocolVersion)) || profile.transport?.type !== "stdio" || !nonempty(profile.transport.command) || profile.transport.args !== void 0 && (!Array.isArray(profile.transport.args) || !profile.transport.args.every(nonempty)) || profile.transport.env !== void 0 && (!Array.isArray(profile.transport.env) || !profile.transport.env.every((key) => /^[A-Z_][A-Z0-9_]*$/.test(key))))
+    throw new Fault("protocol: invalid Agent profile returned by agents.");
+  if ((profile.transport.env ?? []).some((key) => !nonempty(context.env[key])))
+    throw new Problem("environment-unavailable");
+  return { config, name, profile };
+}
+async function acpReady(profile, context, directory) {
+  const allowed = [
+    "PATH",
+    ...process.platform === "win32" ? ["SystemRoot", "ComSpec"] : [],
+    ...profile.transport.env ?? []
+  ];
+  const env = Object.fromEntries(
+    allowed.flatMap((key) => context.env[key] === void 0 ? [] : [[key, context.env[key]]])
+  );
+  let buffer = "";
+  let phase = 1;
+  let ready = false;
+  const send = (child, id, method, params) => child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}
+`);
+  const result = await context.execute(profile.transport.command, profile.transport.args ?? [], {
+    env,
+    missing: "acp-unavailable",
+    begin: (child) => send(child, 1, "initialize", {
+      protocolVersion: Number(profile.connection.protocolVersion),
+      clientInfo: { name: "pguide-setup", version: "1" },
+      clientCapabilities: {}
+    }),
+    onLine(chunk, child, stop) {
+      buffer += chunk;
+      while (buffer.includes("\n")) {
+        const index = buffer.indexOf("\n");
+        const line = buffer.slice(0, index);
+        buffer = buffer.slice(index + 1);
+        let message;
+        try {
+          message = JSON.parse(line);
+        } catch {
+          stop(new Fault("protocol: malformed ACP JSON."));
+          return;
+        }
+        if (!record(message) || message.jsonrpc !== "2.0") {
+          stop(new Fault("protocol: invalid ACP response."));
+          return;
+        }
+        if (message.id === void 0 && nonempty(message.method)) continue;
+        if (message.id !== phase || message.method !== void 0) {
+          stop(new Fault("protocol: unexpected ACP response."));
+          return;
+        }
+        if (message.error !== void 0) {
+          stop(
+            new Problem("acp-unavailable", {
+              stage: phase === 1 ? "initialize" : "session-new",
+              reason: "agent-rejected"
+            })
+          );
+          return;
+        }
+        if (!record(message.result)) {
+          stop(new Fault("protocol: ACP result must be an object."));
+          return;
+        }
+        if (phase === 1) {
+          if (message.result.protocolVersion !== Number(profile.connection.protocolVersion) || profile.requirements?.sessionResume === true && message.result.agentCapabilities?.loadSession !== true) {
+            stop(
+              new Problem("acp-unavailable", {
+                stage: "initialize",
+                reason: "incompatible-capabilities"
+              })
+            );
+            return;
+          }
+          phase = 2;
+          send(child, 2, "session/new", { cwd: directory, mcpServers: [] });
+        } else {
+          if (!nonempty(message.result.sessionId)) {
+            stop(new Fault("protocol: ACP session/new returned no sessionId."));
+            return;
+          }
+          ready = true;
+          child.stdin.end();
+          stop(void 0);
+        }
+      }
+    }
+  });
+  if (!ready || result.code !== 0 && phase !== 2)
+    throw new Problem("acp-unavailable", {
+      stage: phase === 1 ? "initialize" : "session-new",
+      reason: "agent-exited"
+    });
+}
+
+// packages/objective-pguide-setup/src/runner.mjs
+init_contract();
+
+// packages/objective-pguide-setup/src/direct-sanity.mjs
+init_contract();
+import { randomBytes } from "node:crypto";
+import { lstat, mkdir, readFile, writeFile } from "node:fs/promises";
+import { join as join2 } from "node:path";
+async function directSanity(context, directory, selected) {
+  const task = join2(directory, "task");
+  await mkdir(task, { mode: 448 });
+  const marker = join2(task, "marker.txt");
+  const expected = `ready-${randomBytes(24).toString("hex")}`;
+  await writeFile(marker, "not-ready", { mode: 384 });
+  if (await readFile(marker, "utf8") === expected)
+    throw new Fault("sanity: initial marker was not independently observed.");
+  const input = join2(directory, "agent-input.json");
+  await writeFile(
+    input,
+    JSON.stringify({
+      cwd: task,
+      expected,
+      profile: selected.profile,
+      timeoutMs: Math.max(
+        1,
+        Math.min(
+          context.remainingMs() - 2500,
+          selected.config["regulate.agentTimeoutMs"] ?? Number.POSITIVE_INFINITY
+        )
+      )
+    }),
+    { mode: 384 }
+  );
+  const result = await context.execute(process.execPath, [join2(here, "direct-agent.mjs"), input]);
+  if (result.code !== 0) throw new Fault("sanity: direct Agent process failed.");
+  const outcome = jsonOutput(result);
+  for (const phase of ["agent.initialize", "agent.session-new", "agent.prompt", "agent.cleanup"]) {
+    const duration = outcome.timings?.[phase];
+    if (Number.isSafeInteger(duration) && duration >= 0) context.timing(phase, duration);
+  }
+  if (outcome.reason === "timeout")
+    throw new Fault("timeout: direct Agent exceeded its deadline.", 504);
+  if (outcome.reason === "startup-failed" && ["initialize", "session-new"].includes(outcome.stage))
+    throw new Problem("acp-unavailable", { stage: outcome.stage, reason: "startup-failed" });
+  if (outcome.status !== "completed")
+    throw new Problem("sanity-failed", {
+      stage: "agent",
+      reason: ["denied", "blocked", "cancelled", "output-limit", "invocation-failed"].includes(
+        outcome.reason
+      ) ? outcome.reason : "invalid-outcome"
+    });
+  let correct = false;
+  let observed = "missing";
+  try {
+    const details = await lstat(marker);
+    if (!details.isFile() || details.isSymbolicLink() || details.nlink !== 1)
+      observed = "not-regular";
+    else if (details.size > Buffer.byteLength(expected) + 8) observed = "oversized";
+    else {
+      const content = await readFile(marker, "utf8");
+      correct = [expected, `${expected}
+`, `${expected}\r
+`].includes(content);
+      observed = content === "not-ready" ? "unchanged" : content.trimEnd() === expected.trimEnd() ? "line-ending" : "different-content";
+    }
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  context.evidence?.fact("assertion.result", {
+    assertion: "marker-nonce-match",
+    correct,
+    observed
+  });
+  if (!correct)
+    throw new Problem("sanity-failed", { stage: "recheck", reason: "nonce-mismatch", observed });
+}
+
+// packages/objective-pguide-setup/src/runner.mjs
+init_execution();
+
+// packages/objective-pguide-setup/src/sanity.mjs
+init_contract();
+import { randomBytes as randomBytes2 } from "node:crypto";
+import { cp, lstat as lstat2, mkdir as mkdir2, readFile as readFile2, writeFile as writeFile2 } from "node:fs/promises";
+import { join as join4, resolve as resolve2 } from "node:path";
+import { pathToFileURL } from "node:url";
+async function sanity(subject, context, directory, selected) {
+  const repository = join4(directory, "fixture");
+  await cp(join4(here, "sanity-fixture"), repository, { recursive: true });
+  await writeFile2(
+    join4(repository, ".gitignore"),
+    await readFile2(join4(repository, "gitignore"), "utf8")
+  );
+  const marker = join4(repository, "marker.txt");
+  const expected = randomBytes2(24).toString("hex");
+  await writeFile2(marker, "not-repaired");
+  const subjectFile = join4(directory, "sanity-subject.json");
+  await writeFile2(subjectFile, JSON.stringify({ marker, expected }));
+  await mkdir2(join4(repository, ".pguide"), { recursive: true });
+  const configPath = join4(repository, ".pguide", "config.jsonc");
+  const timeoutMs = subject.timeoutMs;
+  const config = {
+    "pguide.commandDirectories": (selected.config["pguide.commandDirectories"] ?? []).map(
+      (path) => resolve2(subject.workingDirectory, path)
+    ),
+    "agents.defaultAgent": selected.name,
+    "cli-core.stateDirectory": join4(directory, "state"),
+    "regulate.agentTimeoutMs": timeoutMs,
+    "regulate.quota": { timeoutMs, maxAgentRuns: 1, maxStallRuns: 1 },
+    "pilot.probe": { timeoutMs: 3e3, retry: { maxRetries: 0, delayMs: 0 } },
+    "pilot.reportsEnabled": false,
+    "pilot.reportDirectory": join4(directory, "reports"),
+    "regulate.permissions": selected.config["regulate.permissions"]
+  };
+  await writeFile2(configPath, JSON.stringify(config), { mode: 384 });
+  await mkdir2(join4(repository, ".pguide"), { recursive: true });
+  await writeFile2(
+    join4(repository, ".pguide", "agents.yaml"),
+    JSON.stringify({
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/agents/v1.json",
+      agents: { [selected.name]: selected.profile }
+    }),
+    { mode: 384 }
+  );
+  const git = async (...args) => {
+    const result2 = await context.execute("git", ["-C", repository, ...args], {
+      missing: "git-unavailable"
+    });
+    if (result2.code !== 0) throw new Fault("git: isolated fixture preparation failed.");
+    return result2.stdout.trim();
+  };
+  await git("init", "-q");
+  await git("config", "user.name", "pguide setup");
+  await git("config", "user.email", "setup@example.invalid");
+  await git("add", ".");
+  await git("-c", "commit.gpgsign=false", "commit", "-qm", "Bounded setup fixture");
+  const revision = await git("rev-parse", "HEAD");
+  const uri = `git+${pathToFileURL(repository).href}#/`;
+  const common = ["--pilot", uri, "--revision", revision, "--subject-file", subjectFile];
+  const probe = async () => {
+    const result2 = await context.cli(["probe", ...common], repository);
+    const report2 = jsonOutput(result2);
+    if (result2.code !== 0 || report2.status !== 200 || !record(report2.payload)) {
+      const reason = typeof report2.error === "string" && /dirty|uncommitted/.test(report2.error) ? "dirty-source" : typeof report2.error === "string" && /long|ENAMETOOLONG/.test(report2.error) ? "source-path" : "invocation";
+      throw new Fault(
+        `protocol: independent sanity probe failed (${reason}; exit=${Number.isInteger(result2.code) ? result2.code : "unknown"}).`
+      );
+    }
+    return report2.payload;
+  };
+  const initial = await probe();
+  if (initial.current?.levelId !== "initial" || !initial.problems?.some((entry) => entry.ref?.problemId === "marker-incorrect"))
+    throw new Fault("sanity: initial failure was not independently observed.");
+  const result = await context.cli(
+    ["regulate", ...common, "--target", "terminal", "--agent", selected.name],
+    repository
+  );
+  const report = jsonOutput(result);
+  if (result.code !== 0) {
+    if (result.code !== 5 || report.outcome?.stopReason !== "exhausted") {
+      const status = ["acp-error", "regulation-error", "io-error", "internal-error"].includes(
+        report.status
+      ) ? report.status : "unrecognized";
+      const snapshotDiagnostic = typeof report.error === "string" ? /windows-snapshot-command\[kind=(?:timeout|exit|spawn|signal|output-limit|unknown);exit=(?:-?\d{1,10}|none);errno=(?:ENOENT|EACCES|EPERM|EINVAL|E2BIG|ENOMEM|ETIMEDOUT|UNKNOWN|ERR_CHILD_PROCESS_STDIO_MAXBUFFER|none);signal=(?:SIGTERM|SIGKILL|none);killed=(?:true|false);elapsedMs=\d{1,10};reported=(?:true|false);nativeCode=(?:\d{1,10}|none);phase=(?:unreported|started|importing|imported|compiling|compiled|query-started|queried|serialized|exiting);reason=(?:command-not-found|module-autoload|module-not-found|module-load|module-manifest|access-denied|native-snapshot|native-first|native-next|native-close|unclassified)\]/.exec(
+        report.error
+      )?.[0] : void 0;
+      const diagnostic = snapshotDiagnostic ?? [
+        ["PguideWindowsProcessSnapshot", "windows-snapshot-command"],
+        ["Invalid Windows process tree snapshot.", "windows-snapshot-format"],
+        ["Process tree termination and ownership snapshot failed.", "windows-tree-and-snapshot"],
+        ["Could not verify process tree cleanup.", "windows-tree-unobservable"],
+        ["Check timed out after 3000ms.", "inner-probe-deadline"]
+      ].find(
+        ([message]) => typeof report.error === "string" && report.error.includes(message)
+      )?.[1] ?? "unclassified";
+      throw new Fault(
+        `regulate: Agent or probe invocation failed (exit=${result.code ?? "signal"}, status=${status}, diagnostic=${diagnostic}).`
+      );
+    }
+    if (["time", "agent-limit"].includes(report.outcome.exhaustedBy))
+      throw new Fault("timeout: sanity regulation exhausted its time allowance.", 504);
+    if (!["agent-runs", "stall"].includes(report.outcome.exhaustedBy))
+      throw new Fault("protocol: unknown sanity exhaustion reason.");
+    throw new Problem("sanity-failed", {
+      stage: "regulate",
+      reason: "quota-exhausted",
+      exhaustedBy: report.outcome.exhaustedBy
+    });
+  }
+  if (report.outcome?.stopReason !== "target-reached" || report.outcome?.iterations !== 1)
+    throw new Fault("protocol: unexpected sanity regulation outcome.");
+  const final = await probe();
+  let correct = false;
+  try {
+    const details = await lstat2(marker);
+    correct = details.isFile() && details.size === expected.length && await readFile2(marker, "utf8") === expected;
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  if (!correct || final.current?.levelId !== "repaired" || final.problems?.length !== 0)
+    throw new Problem("sanity-failed", {
+      stage: "recheck",
+      reason: !correct ? "nonce-mismatch" : "target-not-reached"
+    });
+}
+
+// packages/objective-pguide-setup/src/runner.mjs
 async function check(stage, value, options = {}) {
   let directory;
   let timer;
@@ -1167,7 +1164,7 @@ async function check(stage, value, options = {}) {
     const subject = subjectValue(value, options.selfCheck === true);
     const remote = subject.target?.type === "ssh";
     if (remote) {
-      const { validateTarget: validateTarget2 } = await init_ssh_target().then(() => ssh_target_exports);
+      const { validateTarget: validateTarget2 } = await Promise.resolve().then(() => (init_ssh_target(), ssh_target_exports));
       validateTarget2(subject.target);
     }
     if (stage === "sanity" && !options.selfCheck && subject.allowSanity !== true)
@@ -1177,7 +1174,7 @@ async function check(stage, value, options = {}) {
         if (subject.timeoutMs + 1e4 > 24e3)
           throw new Fault("outer-timeout: SSH Pilot checks require a total budget <=24000ms.", 400);
       } else {
-        const metadata = process.env.PGUIDE_PROBE_TIMEOUT_MS;
+        const metadata = options.timeoutMs === void 0 ? process.env.PGUIDE_PROBE_TIMEOUT_MS : String(options.timeoutMs);
         const outerTimeoutMs = metadata === void 0 ? 3e4 : Number(metadata);
         if (metadata !== void 0 && metadata !== String(outerTimeoutMs) || !Number.isSafeInteger(outerTimeoutMs) || outerTimeoutMs < 1 || outerTimeoutMs > 2147483647)
           throw new Fault("outer-timeout: invalid PGUIDE_PROBE_TIMEOUT_MS runtime metadata.", 400);
@@ -1189,7 +1186,7 @@ async function check(stage, value, options = {}) {
       }
     }
     if (remote) {
-      const { checkSsh: checkSsh2 } = await init_ssh_target().then(() => ssh_target_exports);
+      const { checkSsh: checkSsh2 } = await Promise.resolve().then(() => (init_ssh_target(), ssh_target_exports));
       return await checkSsh2(stage, subject);
     }
     const controller = new AbortController();
@@ -1244,20 +1241,8 @@ async function check(stage, value, options = {}) {
       await rm(directory, { recursive: true, force: true, maxRetries: 3 });
   }
 }
-var init_runner = __esm({
-  "packages/objective-pguide-setup/src/runner.mjs"() {
-    init_configuration();
-    init_contract();
-    init_direct_sanity();
-    init_execution();
-    init_installation();
-    init_sanity();
-  }
-});
 
 // packages/objective-pguide-setup/src/cli.mjs
-import { lstat as lstat3, readFile as readFile4 } from "node:fs/promises";
-import { isAbsolute as isAbsolute4 } from "node:path";
 async function main(stage = process.argv[2], options = {}) {
   const parsed = reportArguments(process.argv.slice(options.pilot === true ? 2 : 3));
   const output = await withCheckEvidence(
@@ -1308,28 +1293,11 @@ async function runSetup(stage, options, args) {
     };
   }
 }
-var init_cli = __esm({
-  "packages/objective-pguide-setup/src/cli.mjs"() {
-    init_evidence();
-    init_contract();
-    init_runner();
-  }
-});
 
 // packages/objective-pguide-setup/setup-check.mjs
-import { resolve as resolve3 } from "node:path";
-import { pathToFileURL as pathToFileURL2 } from "node:url";
-var init_setup_check = __esm({
-  async "packages/objective-pguide-setup/setup-check.mjs"() {
-    init_cli();
-    init_cli();
-    init_execution();
-    init_runner();
-    if (process.argv[1] && pathToFileURL2(resolve3(process.argv[1])).href === import.meta.url)
-      await main();
-  }
-});
-await init_setup_check();
+init_execution();
+if (process.argv[1] && pathToFileURL2(resolve3(process.argv[1])).href === import.meta.url)
+  await main();
 export {
   check,
   main,

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { dependencyWorker } from "./worker-fixtures.js";
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -160,8 +161,8 @@ test("supervise plans once without repairs, then continuously observes and execu
     const marker = join(f.directory, "repaired");
     const counts = join(f.directory, "observations.jsonl");
     await writeFile(
-      join(f.repository, "objective", "checks", "ready", "run.js"),
-      `#!/usr/bin/env node\nimport{existsSync,appendFileSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const x=JSON.parse(s);appendFileSync(x.counts,"observed\\n");const ok=existsSync(x.marker);console.log(JSON.stringify({status:200,payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]},message:""}));});`,
+      join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+      "const { existsSync, appendFileSync } = require(\"node:fs\");\nexports.execute = async (inputSubject, context) => { const s = JSON.stringify(inputSubject); const x = JSON.parse(s); appendFileSync(x.counts, \"observed\\n\"); const ok = existsSync(x.marker); return { status: 200, payload: ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] }, message: \"\" }; };\n",
     );
     const revision = await f.commit();
     const stub = join(f.directory, "agent.mjs");
@@ -353,23 +354,12 @@ test("supervise dynamically binds a cross-process dependency, repairs it, then r
   try {
     const marker = join(consumer.directory, "dependency-repaired");
     await writeFile(
-      join(consumer.repository, "objective", "checks", "ready", "run.js"),
-      `#!/usr/bin/env node
-import {createSourceObjectiveDependencyProbe} from "@potential-guide/objective-pilot";
-let source = ""; for await (const chunk of process.stdin) source += chunk;
-const subject = JSON.parse(source);
-const probe = createSourceObjectiveDependencyProbe({objectiveId:${JSON.stringify(provider.uri)},expectedLevelId:"terminal"});
-process.stdout.write(JSON.stringify(await probe({marker:subject.marker}, new AbortController().signal)));
-`,
+      join(consumer.repository, "objective", "checks", "ready", "worker.cjs"),
+      dependencyWorker(provider.uri, "{marker:subject.marker}"),
     );
     await writeFile(
-      join(provider.repository, "objective", "checks", "ready", "run.js"),
-      `#!/usr/bin/env node
-import {existsSync} from "node:fs";
-let source = ""; for await (const chunk of process.stdin) source += chunk;
-const {marker} = JSON.parse(source), ok = existsSync(marker);
-process.stdout.write(JSON.stringify({status:200,message:"",payload:ok?{ok:true,problems:[]}:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]}}));
-`,
+      join(provider.repository, "objective", "checks", "ready", "worker.cjs"),
+      "exports.execute = async (inputSubject, context) => {\n    const { existsSync } = require(\"node:fs\");\n    const source = JSON.stringify(inputSubject);\n    const { marker } = JSON.parse(source), ok = existsSync(marker);\n    return { status: 200, message: \"\", payload: ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] } };\n};\n",
     );
     const consumerRevision = await consumer.commit();
     const providerRevision = await provider.commit();
@@ -488,30 +478,19 @@ test("continuous supervise follows script and dependency source updates without 
     const marker = join(consumer.directory, "source-follow");
     const observations = join(consumer.directory, "observations.jsonl");
     const plannerLog = join(consumer.directory, "planner.jsonl");
-    const consumerScript = join(consumer.repository, "objective", "checks", "ready", "run.js");
-    const providerScript = join(provider.repository, "objective", "checks", "ready", "run.js");
-    const probeSource = (ok: boolean) => `#!/usr/bin/env node
-process.stdout.write(JSON.stringify({status:200,message:"",payload:${JSON.stringify(ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: {} }] })}}));
-`;
+    const consumerScript = join(consumer.repository, "objective", "checks", "ready", "worker.cjs");
+    const providerScript = join(provider.repository, "objective", "checks", "ready", "worker.cjs");
+    const probeSource = (ok: boolean) => `exports.execute=async()=>({status:200,message:"",payload:${JSON.stringify(ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: {} }] })}});`;
     await writeFile(providerScript, probeSource(false));
     const providerCommit = await provider.commit();
     const providerTree = await git(provider.repository, "rev-parse", `${providerCommit}:objective`);
-    const consumerSource = (phase: string, dependency: boolean) => `#!/usr/bin/env node
-void (async () => {
-  const { appendFileSync } = await import("node:fs");
-  let input = ""; for await (const chunk of process.stdin) input += chunk;
-  const subject = JSON.parse(input);
-  appendFileSync(subject.log, ${JSON.stringify(`${phase}\n`)});
-  ${
-    dependency
-      ? `const { createSourceObjectiveDependencyProbe } = await import("@potential-guide/objective-pilot");
-  const probe = createSourceObjectiveDependencyProbe({objectiveId:${JSON.stringify(provider.uri)},expectedLevelId:"terminal"});
-  const result = await probe({}, new AbortController().signal);`
-      : 'const result = {status:200,message:"",payload:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]}};'
-  }
-  process.stdout.write(JSON.stringify(result));
-})().catch(error => { console.error(error); process.exitCode = 1; });
-`;
+    const consumerSource = (phase: string, dependency: boolean) => `
+${dependency ? dependencyWorker(provider.uri, "{}") : probeSource(false)}
+const execute=exports.execute;
+exports.execute=async(subject,context)=>{
+  require("node:fs").appendFileSync(subject.log,${JSON.stringify(`${phase}\n`)});
+  return execute(subject,context);
+};`;
     await writeFile(consumerScript, consumerSource("v1", false));
     const initialCommit = await consumer.commit();
     const initialTree = await git(consumer.repository, "rev-parse", `${initialCommit}:objective`);

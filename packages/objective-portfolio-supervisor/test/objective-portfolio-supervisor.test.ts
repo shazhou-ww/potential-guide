@@ -47,7 +47,7 @@ function objective(id: string): PilotSpec {
     objectiveId: `git+file:///fixture.git#${id}/`,
     version: "1".repeat(40),
     manifest: {
-      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json",
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json",
       subjectSchema: { type: "object" },
       levels: [
         { id: "available", checks: [{ id: "check", problems: ["missing"] }] },

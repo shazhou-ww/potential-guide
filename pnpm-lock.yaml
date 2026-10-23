@@ -78,8 +78,17 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
+  packages/check-host:
+    dependencies:
+      '@potential-guide/effects':
+        specifier: workspace:^
+        version: link:../effects
+
   packages/cli-runtime:
     dependencies:
+      '@potential-guide/check-host':
+        specifier: workspace:^
+        version: link:../check-host
       '@potential-guide/cli-core':
         specifier: workspace:^
         version: link:../pguide-cli-core
@@ -180,6 +189,9 @@ importers:
 
   packages/objective-pilot:
     dependencies:
+      '@potential-guide/check-host':
+        specifier: workspace:^
+        version: link:../check-host
       '@potential-guide/effects':
         specifier: workspace:^
         version: link:../effects

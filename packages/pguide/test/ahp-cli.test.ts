@@ -28,9 +28,8 @@ for (const mode of [
     });
     try {
       await writeFile(
-        join(f.repository, "objective", "checks", "ready", "run.js"),
-        `#!/usr/bin/env node
-import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{kind:"internal",id:"not-ready",parameters:{}}]}}));});`,
+        join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+        "const { existsSync } = require(\"node:fs\");\nexports.execute = async (inputSubject, context) => { const s = JSON.stringify(inputSubject); const ok = existsSync(JSON.parse(s).marker); return { status: 200, message: \"\", payload: { ok, problems: ok ? [] : [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] } }; };\n",
       );
       await writeFile(f.subject, JSON.stringify({ marker }));
       const commit = await f.commit();
@@ -136,9 +135,8 @@ for (const scenario of ["repair", "unchanged", "denied"] as const) {
     });
     try {
       await writeFile(
-        join(f.repository, "objective", "checks", "ready", "run.js"),
-        `#!/usr/bin/env node
-import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{kind:"internal",id:"not-ready",parameters:{}}]}}));});`,
+        join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+        "const { existsSync } = require(\"node:fs\");\nexports.execute = async (inputSubject, context) => { const s = JSON.stringify(inputSubject); const ok = existsSync(JSON.parse(s).marker); return { status: 200, message: \"\", payload: { ok, problems: ok ? [] : [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] } }; };\n",
       );
       await writeFile(f.subject, JSON.stringify({ marker }));
       const commit = await f.commit();
@@ -256,9 +254,8 @@ test("AHP CLI closes the observation loop, pins its recipe, and skips all sessio
       });
       try {
         await writeFile(
-          join(f.repository, "objective", "checks", "ready", "run.js"),
-          `#!/usr/bin/env node
-  import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const ok=existsSync(JSON.parse(s).marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{kind:"internal",id:"not-ready",parameters:{}}]}}));});`,
+          join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+          "const { existsSync } = require(\"node:fs\");\nexports.execute = async (inputSubject, context) => { const s = JSON.stringify(inputSubject); const ok = existsSync(JSON.parse(s).marker); return { status: 200, message: \"\", payload: { ok, problems: ok ? [] : [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] } }; };\n",
         );
         const commit = await f.commit();
         await withPilot(f.uri, f.directory, commit, async (objective) => {
@@ -320,9 +317,8 @@ test("AHP CLI closes the observation loop, pins its recipe, and skips all sessio
   );
   try {
     await writeFile(
-      join(f.repository, "objective", "checks", "ready", "run.js"),
-      `#!/usr/bin/env node
-import{existsSync}from"node:fs";let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const subject=JSON.parse(s);const ok=existsSync(subject.marker);console.log(JSON.stringify({status:200,message:"",payload:{ok,problems:ok?[]:[{kind:"internal",id:"not-ready",parameters:{scope:1}},{kind:"internal",id:"not-ready",parameters:{scope:2}}]}}));});`,
+      join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+      "const { existsSync } = require(\"node:fs\");\nexports.execute = async (inputSubject, context) => { const s = JSON.stringify(inputSubject); const subject = JSON.parse(s); const ok = existsSync(subject.marker); return { status: 200, message: \"\", payload: { ok, problems: ok ? [] : [{ kind: \"internal\", id: \"not-ready\", parameters: { scope: 1 } }, { kind: \"internal\", id: \"not-ready\", parameters: { scope: 2 } }] } }; };\n",
     );
     await writeFile(f.subject, JSON.stringify({ marker }));
     const commit = await f.commit();
@@ -427,8 +423,8 @@ test("AHP Agent self-reported completion cannot satisfy an unchanged target", as
   const host = await ahpHost({ text: "Everything is fixed. Target reached." });
   try {
     await writeFile(
-      join(f.repository, "objective", "checks", "ready", "run.js"),
-      '#!/usr/bin/env node\nconsole.log(JSON.stringify({status:200,message:"",payload:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{}}]}}));',
+      join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+      "exports.execute = async (inputSubject, context) => { return { status: 200, message: \"\", payload: { ok: false, problems: [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] } }; };\n",
     );
     const commit = await f.commit();
     const config = join(f.directory, "config.json");
