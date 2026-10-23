@@ -1,5 +1,48 @@
 # Implementation
 
+## 当前进度（2026-10-23 交接）
+
+当前仍为 `implementing`，未记录 `submitInner` 或实施验收；所有 I-* ledger 项保持未完成。
+实现检查点 `add8c7ea9f4f` 已随合并提交 `ba7e9f82134b` 同步至 primary，
+可从另一台机器接手。详细命令、结果与限制见
+[实施证据的 Checkpoint 5](./Implementation-evidence.md#checkpoint-5可跨机器继续的未完成候选2026-10-23)；
+以下为当前候选摘要，不以此前检查点的通过结果替代最新验证。
+
+### 已实现与已有证据
+
+- I-S01/I-S02：已接通无 HTTP 内核、worker 调度、开始/取消/观察四路由、
+  CLI discovery 和业务依赖结果处理；6 个 Objective、16 个 check 已迁移，
+  无旧协议回退，生成物检查通过。
+- I-AC01/I-AC02：已有真实双 CLI、线程复用、revision 冲突及排空、
+  观察容量回收、退役/预热、取消及清理隔离、六轮启动/崩溃验证。
+  Windows discovery 私有 ACL 已有实际验证；POSIX 互斥已有候选实现，尚缺实机证据。
+- 最新独立 Host suite 为 27 项：26 通过、1 POSIX 跳过。
+  512 次混合任务为 Completed 448 / Failed 32 / Cancelled 32，
+  关闭后 workers/records 为 0；这不是无限期无泄漏证明。
+- 同环境完整 CLI 实测 cold 17.39 s、复用服务 hot median 5.03 s，
+  每次新服务 median 17.08 s；完整服务冷后 RSS 248.08 MiB。
+  该样本证明复用收益，不证明冷启动或绝对内存优于旧架构。
+
+### 未闭合项与接手顺序
+
+1. 定位最新 `pnpm check` 的失败：
+   `packages/objective-pilot/test/dependency.test.ts:349` 的进程退出确认断言
+   预期 ESRCH，但 `process.kill(child.pid, 0)` 未抛异常。根因未知，
+   不预判为 PID 复用、测试噪声或真实清理失败。
+2. 在实际 POSIX 平台验证 private owner/mode、CAS 互斥、
+   discovery 和锁持有者崩溃恢复；Windows 通过与平台 mock 不能替代这些证据。
+3. 修复后对最终候选运行完整 `pnpm check`（含 pack），
+   完成当前版本的 18 包/16 入口隔离消费验证。此前 checkpoint 4 的
+   `pnpm check` 和打包通过仅适用于当时版本；最新候选全量检查 exit 1，
+   后续 root tests/pack:check 未进入。
+4. 证据闭合后再更新 ledger、同步最终候选并提交实施门禁；
+   当前不进入部署或发布。
+
+换机器先刷新 primary 并确认上述检查点可达，再读本文件、实施证据和 accepted Design。
+本机 `.cache` 日志不随 Git 同步，不复制 descriptor/token 或运行状态；
+新验证创建专属私有 Host 根，先审查清理路径及 PID 归属并认证 readiness。
+此前危险清理的历史影响仍未知，用户已明确授权继续实施，不将该授权视为环境完整性结论。
+
 ## Steps
 
 ### I-S01: 收敛协议与所有权
