@@ -4,7 +4,7 @@ packages:
 catalog:
   "@microsoft/agent-host-protocol": 1.0.0
   "@biomejs/biome": 2.5.15
-  "@types/node": 22.20.5
+  "@types/node": 26.6.5
   "@types/cross-spawn": 6.0.6
   ajv: 8.20.0
   cross-spawn: 7.0.6
