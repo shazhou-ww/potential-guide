@@ -31,7 +31,7 @@ Behavior ResourceAllocation ──┘
 - 上游请求意图与下游执行事实共用实体模型，不分设 intention/state 两套实体图。CoordinatorSnapshot 是完整状态在某个 revision 下的一致读取边界，不是新实体或单独的聚合图。请求序号、Coordinator 版本和存储成员键分开，不要求逐版全量复制。实体命名仍以业务含义准确为先。
 - 请求确认、Probe 顺序、证据采用/撤销、依赖安装/撤销必须有基础事实来源；预算、资源确认、可信约束与生命周期是权威控制状态，不能由已裁剪的调用历史猜测。Views.md 将当前尚缺少的来源契约标为待收敛，SQL 不能冒充已经完成的协议设计。
 - Observation 展开 ObjectiveObservation 的属性，观察的是 Objective 在 subject 上的状态而非 Pilot 自身；通过 Run → Request → Target 推导 target，不重复保存 target 关联。每个 Run 必须且只关联一条不可变 Request，requestSeq 必填，target/desiredLevel 由该 Request 推导，不再在 Run 中重复保存。
-- Fault 移除 stage，以 kind 标识故障种类、message 说明具体详情；最终分类集合仍待确定，不从 message 解析策略。统一 faults 集合有意冗余展开 targetKey/requestSeq/runId，支持分层 umbrella 查询；仅允许全 null、仅 target、target+request、完整链四种形状。引用从确定的父关系展开并校验，最深非空字段表示直接归属，不另存 ownerKind。归属与影响范围分离，provider 故障不复制到 consumer 链，kind 不自动决定终结状态。
+- Fault 移除 stage，以 kind 标识种类、message 说明详情；最终分类集合仍待确定，不从 message 解析策略。每条 Fault 必填所属 Coordinator 的 hostId，并冗余展开 targetKey/requestSeq/runId，支持 Host 及下层 umbrella 查询。后三者仅允许全 null、仅 target、target+request、完整链四种形状；引用须从固定父关系展开，并在同一 Host 内校验。最深非空字段表示直接归属，不另存 ownerKind；中央服务自身故障不挂到被观察 Host。归属与影响范围分离，provider 故障不复制到 consumer 链，kind 不自动决定终结状态。
 - 值对象是否展开取决于业务可理解性和过滤、排序、分组、聚合诉求；独立实体另需身份或生命周期理由。Observation 显式表达 current、observedAt、problems、gapSummary 和兼容 provenance，不保留重复 value；problems 可用嵌套集合或子记录。Run 展开 bindingId 和可选 bindingConfiguration 快照，配置保持嵌套且不含明文秘密；后续资源意图不改写旧执行配置。具体索引及物理布局由适配层决定，详见 [Types.md](./Types.md)。
 - Request 是治理要求，不限定为外部输入；外部提出与依赖派生共用实体和 requestSeq 身份空间，采用同一串行化分配路径，不各自维护发号水位。CoordinatorState.requests 保留已纳入状态的不可变请求，最新映射不替代引用记录；启动 Run 前必须存在准确的请求，缺失或冲突显式拒绝。恢复与历史裁剪不能破坏 Run → Request → Target 的可追溯性。
 - 字段进入 current 的依据是当前调度、执行或恢复是否必需，不是 UI 是否可能查看；这项最小化原则不排除完整 CoordinatorState 包含历史。

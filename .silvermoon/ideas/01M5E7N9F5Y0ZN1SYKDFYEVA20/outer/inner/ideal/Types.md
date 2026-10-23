@@ -104,6 +104,7 @@ export type { ObjectiveObservation };
 
 export type Revision = number;
 export type RequestSeq = number;
+export type HostId = string;
 export type ObjectiveSource = string;
 export type ObjectiveKey = string;
 export type ObjectiveRevisionKey = string;
@@ -159,6 +160,7 @@ export interface AllocationAcknowledgement {
 }
 
 export type Fault = {
+  readonly hostId: HostId;
   readonly kind: FaultKind;
   readonly message: string;
 } & (
@@ -341,25 +343,25 @@ export interface CoordinatorCheckpoint {
 
 Fault.kind 表达稳定、机器可识别的故障种类，message 表达本次具体详情；移除 stage，不把发生环节直接改名为故障分类。FaultKind 暂以 string 表达，最终分类集合与标识规范仍待推导，须校验非空合法标识；示例不构成已冻结枚举。程序不解析 message 作策略判断。某类故障以后若需要机器读取参数，应为其定义结构化字段，而不是隐藏在 message 中。
 
-同一 faults 集合保存不同层级的故障。为支持 umbrella 查询，有意展开 targetKey、requestSeq、runId；最深的非空字段表示直接归属，不另存 ownerKind，也不在核心状态增加 coordinatorId。三个字段必须全部出现，null 表示该层不适用，不是未知、尚未解析或可以任意缺省：
+同一 faults 集合保存不同层级的故障。每条 Fault 必须带 hostId，由记录该领域故障的 Coordinator 所属 Host 确定，不是调用方任意选择。为支持 umbrella 查询，有意展开 hostId、targetKey、requestSeq、runId；最深的非空字段表示直接归属，不另存 ownerKind 或 coordinatorId。后三个字段必须全部出现，null 表示该层不适用，不是未知或尚未解析；hostId 永不为 null：
 
-| 直接归属 | targetKey | requestSeq | runId |
-| --- | --- | --- | --- |
-| Coordinator | null | null | null |
-| Target | 有值 | null | null |
-| Request | 有值 | 有值 | null |
-| Run | 有值 | 有值 | 有值 |
+| 直接归属 | hostId | targetKey | requestSeq | runId |
+| --- | --- | --- | --- | --- |
+| Host / Coordinator | 有值 | null | null | null |
+| Target | 有值 | 有值 | null | null |
+| Request | 有值 | 有值 | 有值 | null |
+| Run | 有值 | 有值 | 有值 | 有值 |
 
-TS 联合约束四种空值形状；实际引用一致性仍须运行时校验。记录 Run 故障时，经固定 Run → Request → Target 展开；记录 Request 故障时，从该不可变请求展开 targetKey。不能由调用方自由拼装不相干的引用，不能使用 target 的最新请求补齐，也不能在请求覆盖后改写旧 Fault。缺失父引用、链条断裂或身份冲突须明确拒绝并报告，不能静默降为 Coordinator 故障。
+TS 联合约束四种空值形状及必填 hostId；实际引用一致性仍须运行时校验。记录 Run 故障时，经固定 Run → Request → Target 展开并核对所属 Host；Request 引用使用 (hostId, requestSeq)，Run 引用也保留 Host 作用域。同一 targetKey 可跨 Host 出现，不能因此将不同 Host 的请求/运行拼成链。不能使用 target 的最新请求补齐或在覆盖后改写旧 Fault；缺失 Host、父引用、链条断裂或身份冲突须明确拒绝并报告，不能静默降级。
 
-- 按 targetKey 查询，包含该 Target 直接故障及其 Request、Run 故障。
-- 按 requestSeq 查询，包含该 Request 直接故障及其 Run 故障；按 runId 查询只包含该 Run 故障。
-- 不加上述过滤得到该 Coordinator 的全部故障；三个字段全为 null 才表示 Coordinator 直接故障。跨 Coordinator 存储由宿主作用域隔离。
+- 按 hostId 查询，包含该 Host 下全部层级的领域故障；后三个字段全为 null 才表示 Host/Coordinator 直接故障。
+- 按 (hostId, targetKey) 查询，包含该 Host 上 Target 直接故障及其 Request、Run 故障；跨 Host 的 Target 总览须明确聚合范围。
+- 按 (hostId, requestSeq) 查询，包含该 Request 直接故障及其 Run 故障；按 (hostId, runId) 查询只包含该 Run 故障。不允许仅凭局部序号跨 Host 关联。
 - 直接层级查询可组合过滤：Target 直接故障要求 requestSeq 为 null，Request 直接故障要求 runId 为 null。每条 Fault 只记录一次，不因上卷查询复制多份。
 
 归属不等于影响范围：provider Run 的故障沿 provider 自己的链展开，不挂到 consumer 的请求或 target 下。跨依赖影响由依赖关系与明确转换表达。kind 和最深归属均不自动决定 Run 是否结束、Request 是否终结或 Coordinator 是否 failed；停止失败、恢复未核实等仍须维护真实执行状态。生命周期或 Probe 结果引用故障时也不改变该故障的原归属。
 
-Fault 记录有领域意义的失败，不充当所有日志的集合；未被接受的非法输入可由拒绝回执表达，不能虚构 Request/Run。纯技术诊断留在宿主日志或健康信息中；影响请求进度、调度或恢复的事实不能只写日志。持久化自身失败仍须有宿主侧错误出口，不能假定可以把故障写回不可写的存储。
+Fault 记录有领域意义的失败，不充当所有日志的集合；未被接受的非法输入可由拒绝回执表达，不能虚构 Request/Run。中央观察服务自身故障属于中央诊断，不挂到任意被观察的 Host 上；失联观测也不自动生成本地领域 Fault。纯技术诊断留在宿主日志或健康信息中；影响请求进度、调度或恢复的事实不能只写日志。持久化自身失败仍须有宿主侧错误出口，不能假定可以把故障写回不可写的存储。
 
 ## 查询属性与值对象展开
 

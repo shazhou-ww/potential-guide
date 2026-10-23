@@ -86,7 +86,7 @@ Objective 可以有一个最新上线版本，不再采用“没有最新版本�
 | regulation_request | request_seq、target_key、objective_revision_key、desired_level、priority | 已接受的不可变请求；Revision 与 Target 必须属于同一 Objective，外部与内部请求都固定准确版本 |
 | regulation_run | run_id、request_seq、hostBindingRevisionId、executionLimits | Run 的不可变启动属性；执行阶段、进度、终结由 AO 变化记录推导，具体关系 schema 待 Run 观察模型收敛 |
 | observation | observation_ref、run_id、current、observed_at、problems、gap_summary、versions、sources、recorded_at_revision | 成功观察事实；observation_ref 暂表示准确记录引用，业务记录主键的最终形式未定 |
-| fault | kind、message、target_key、request_seq、run_id | 已校验的完整归属链；故障引用方式仍未定，不为计数虚构业务主键 |
+| fault | host_id、kind、message、target_key、request_seq、run_id | host_id 必填，与所属 Coordinator 一致；下层引用在同一 Host 内校验，记录引用方式仍未定 |
 
 以下来源是为可重算性明确列出的**待收敛基础事实契约**，不声称当前 TS 草案已经全部表达。SQL 在这些契约成立时有效；不能在实现中以时间猜测、静默默认或私有缓存代替：
 
@@ -109,7 +109,7 @@ probe_result 的 observed 分支只引用 observation，error 分支只引用 fa
 | v_target_state | 每个已知 target 一行 / target_key | 最近 Probe 与对象更新时间 |
 | v_current_observations | 每个 target 的当前观察 / target_key | 由观察使用规则推导，不另存证据采纳事件；规则待定 |
 | v_current_dependencies | 每条活跃需求关系一行 / 请求序号对 | 当前依赖，不丢失共享来源 |
-| v_target_fault_counts | 每个 target、kind 一行 / (target_key, kind) | umbrella 聚合查询示例，不强制新增顶层字段 |
+| v_target_fault_counts | 每个 Host、target、kind 一行 / (host_id, target_key, kind) | umbrella 聚合查询示例，不强制新增顶层字段 |
 
 下面每个 SELECT 的输出列就是该视图的属性，不额外保存完整实体副本。引用可在 DTO 装配时按同一快照解析；类型中的嵌套值不要求物理重复存储。
 
@@ -215,18 +215,18 @@ WHERE d.is_active = 1;
 
 | 属性 | 类型 / 可空 | 来源 |
 | --- | --- | --- |
-| target_key、kind | TargetKey、FaultKind / 否 | Fault 的展开归属与分类 |
+| host_id、target_key、kind | HostId、TargetKey、FaultKind / 否 | Fault 的展开归属与分类，不能把各 Host 的同一 target 混为本地统计 |
 | fault_count | 正整数 / 否 | 该 target、kind 下的全部 Fault 行数 |
 
 ```sql
 -- view: v_target_fault_counts
-SELECT target_key, kind, COUNT(*) AS fault_count
+SELECT host_id, target_key, kind, COUNT(*) AS fault_count
 FROM fault
 WHERE target_key IS NOT NULL
-GROUP BY target_key, kind;
+GROUP BY host_id, target_key, kind;
 ```
 
-故障写入影响其 target/kind；合法裁剪也须更新统计。没有匹配故障时没有分组行，不伪造未知分类。此查询包括 target/request/run 故障，排除 Coordinator 直接故障；provider 故障按自己的归属计数。它统计当前保留事实，不冒充裁剪前的全时累计量；若需全时统计，必须另保留充分基线。
+故障写入影响其 host/target/kind；合法裁剪也须更新统计。没有匹配故障时没有分组行，不伪造未知分类。此查询包括 target/request/run 故障，排除 Host/Coordinator 直接故障；provider 故障按自己的归属计数。Host umbrella 查询按 host_id 过滤，可覆盖全部四层，不限于这个 Target 分组视图。中央服务自身诊断不加入被观察 Host 的故障统计。它统计当前保留事实，不冒充裁剪前的全时累计量；若需全时统计，必须另保留充分基线。
 
 ## 9. Coordinator 摘要与快照边界
 

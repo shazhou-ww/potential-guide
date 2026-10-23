@@ -66,6 +66,7 @@ config:
 erDiagram
     direction LR
     HOST ||--o{ REGULATION_RUN : hosts
+    HOST ||--o{ FAULT : host_scope
     HOST ||--o{ HOST_BINDING_REVISION : owns_binding
     HOST ||--o{ HOST_RESOURCE_REVISION : configures
     HOST_RESOURCE_REVISION ||--o{ HOST_RESOURCE_BINDING : contains
@@ -138,6 +139,7 @@ erDiagram
         Record sources "Optional provenance"
     }
     FAULT {
+        string hostId FK "Required owner Host"
         string kind "Fault classification"
         string message "Occurrence details"
         string targetKey FK "Optional"
@@ -152,7 +154,7 @@ erDiagram
 - 最新上线版本由追加的发布/生效事实推导，不在 Objective 上原地改写 latest 指针，不以任意 Git commit 或 Host 到达顺序判断“最新”。新 Request 应采用最新上线版本，旧 Request/Run 保留原引用；离线 Host 如何获知及执行这一规则、旧请求是否被替代仍待定。观察需求见 [Objective 观察需求](./Views.md#objective-观察需求)。
 - requestSeq 单独标识不可变请求。每个 Run 必须且只归属一条 Request；一个 Request 可以尚无调用或涉及多次调用。外部与依赖派生都先形成 Request，不能绕过 Request 直接启动 Run。
 - Observation 是成功观察事实，不把 Probe 失败伪装为成功观察。成功观察以 runId 关联来源 RegulationRun，经 Run → Request → Target 推导 RegulationTarget，不重复保存 targetKey；是否需要其他来源另行讨论。
-- Fault 为 umbrella 查询展开归属链；三条可选关系不是任意组合：Coordinator 层三个引用全 null，Target 层仅 targetKey，Request 层包含 targetKey/requestSeq，Run 层包含全部引用。必须由确定的父关系展开并校验一致，不用最新请求补齐。kind 表达种类，message 表达详情，不再存 stage 或另加 ownerKind；详见 [Fault 查询约束](./Types.md#fault-分类归属链与-umbrella-查询)。
+- Fault 必填 hostId，为 umbrella 查询展开完整归属链；后三条可选关系不是任意组合：Host/Coordinator 层仅 hostId，Target 层另有 targetKey，Request 层再有 requestSeq，Run 层包含全部引用。hostId 由所属 Coordinator 确定，Request、Run 必须在同一 Host 内，Target 归属引用也按该 Host 状态解释；不从最新请求补齐。中央观察服务自身诊断不挂入被观察 Host 的 Fault。kind 表达种类，message 表达详情；详见 [Fault 查询约束](./Types.md#fault-分类归属链与-umbrella-查询)。
 - Observation/Fault 不虚构主键；图中 FK 表达逻辑来源，历史归档须保留足够的引用证据，不强制永久保留全部在线父行。provider 故障不挂入 consumer 的链条，依赖影响另由关系与转换表达。
 - Observation 展开 current、observedAt、problems、gapSummary 以及现有 provenance 字段，不再重复存 value。problems 仍是集合，versions/sources 与新版本模型的适配待定，不为了查询臆造新实体。
 - Run 以 hostBindingRevisionId 引用实际使用的不可变配置，不再重复保存 bindingId/bindingConfiguration 快照；恢复不能换成最新 binding 版本。executionLimits 保存本次 Run 的固定执行限制，具体结构待定；不引入共享总预算或预算预留实体。执行进度与终结通过追加变化事实表达，后续再定义当前状态视图。
