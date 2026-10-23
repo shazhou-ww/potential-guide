@@ -6,11 +6,11 @@ Only their public pure validation/ranking/capability helpers and runner types ar
 reused. There is one internal priority queue and a runtime-discovered dependency
 graph per acquisition; neither is an input snapshot.
 
-## Simplified-design request model (preview)
+## Simplified-design request model
 
 `RequestModel` is an additive, pure foundation for the revised Coordinator design.
-The existing `regulationCoordinator` below is unchanged; it is still the legacy
-five-command scheduler and does not consume this model yet.
+The new `coordinator` consumes this model. The existing `regulationCoordinator`
+remains the legacy five-command scheduler; existing callers are not reconnected.
 
 ```ts
 import { RequestModel } from "@potential-guide/regulation-coordinator";
@@ -59,10 +59,125 @@ New states are cloned and deeply frozen without freezing inputs. Snapshot restor
 rebuilds and checks facts and references instead of trusting serialized keys or
 indexes. Only complete version-1 prefixes are supported; compaction and migration
 are not implied. Restore and replay perform no runner, filesystem, network or
-clock effects. This preview does not yet implement Run facts, projections for all
-five observation levels, resource behavior, scheduling or external recovery.
+clock effects. The Behavior runtime below adds execution and resource facts.
 
-## API
+## Resources-first Behavior runtime
+
+```ts
+import { Effect, SubscriptionRef } from "@potential-guide/effects";
+import {
+  coordinator, CoordinatorModel, RequestModel, openCoordinatorStore,
+  type BehaviorCoordinatorOptions,
+} from "@potential-guide/regulation-coordinator";
+
+export const serveCoordinator = (
+  profileDirectory: string,
+  options: Omit<BehaviorCoordinatorOptions, "store">,
+) => Effect.scoped(Effect.gen(function* () {
+  const resources = yield* SubscriptionRef.make<CoordinatorModel.ResourceAllocation>({
+    kind: "no-resource",
+  });
+  const requests = yield* SubscriptionRef.make(RequestModel.createRegulationRequests());
+  const store = yield* Effect.promise(() => openCoordinatorStore(profileDirectory));
+  const service = yield* coordinator(resources, requests, { ...options, store });
+  // Subscribe to service.changes and publish complete input snapshots in this scope.
+  yield* Effect.never;
+}));
+```
+
+`coordinator(resources, requests, options)` acquires one serialized scheduler.
+`changes` plus `snapshot()` expose its read-only state Behavior; subscribing does
+not create executions. `flush()` waits for submitted mailbox work and surfaces a
+failed service. Request and resource updates are complete snapshots. Request
+facts are retained, not deleted when a later snapshot omits them.
+
+Configured allocation contains `bindings: [{ binding, capacity }]`; capacities
+are nonnegative integers, binding IDs unique within a snapshot. `no-resource` and
+zero capacity start no new work. Shrinking capacity, removing or changing a
+binding drains existing executions naturally; historical Run bindings retain
+their pinned configuration. Pending external requests use ascending priority,
+then local admission order, not a claimed cross-Host global order. A newer
+external request for the same Target supersedes the older **local** demand.
+An `initial` replacement stops old work and never invokes a business check.
+Other replacements drain the old Run before starting the new local request.
+
+The mandatory runner supplies `start(context)` and `recover(context)`. No
+Coordinator grants/ceiling or additional authorization approval is introduced:
+the runner operates under its real delegated resource identity and reports
+resource refusals as results or errors. Binding configuration must contain only
+non-secret data or credential references. The immutable Run references its exact
+Request and actual resource revision.
+
+- `start` returns `{ result, abort, kill }` synchronously. If it throws, it must
+  guarantee no external execution launched. A process-spawn error after returning
+  the handle belongs on `result`. Reports must begin after the handle is returned.
+- `result` settlement, including rejection, confirms actual external exit.
+  An abort request alone never frees capacity; successful `kill()` must confirm
+  termination. Abort grace and the Run's persisted timeout are enforced by the
+  service. A failed kill fails the service while retaining unconfirmed occupancy.
+- `context.report` records validated successful observations; `reportProbeFailure`
+  records a failed Probe with its actual time. Await these callbacks and supply
+  Probe completion facts in their real per-run order. Old/invalid successful
+  evidence is rejected, not used for a new request.
+- A `blocked` result can return dependency commands with explicit consumer origin,
+  or `{ requestRef }` for an existing shared provider. The provider has its own
+  Request before its Run. Terminal result, dependency installation and local
+  demand closure commit atomically. Cycles and per-root `maxDependencyRequests`
+  limits reject the entire dependency installation. `maxAttemptsPerRequest`
+  bounds repeated consumer attempts without resetting on restart.
+- Providers remain while any open local consumer needs them; removing the last
+  demand stops orphaned provider execution. Provider success only permits a new
+  consumer Run to observe reality again, never marks the consumer successful.
+
+The store is exclusively owned by the service. `openCoordinatorStore(directory)`
+uses an OS-backed SQLite exclusive file lock held for the profile lifetime,
+independent of hostId, and atomic flushed snapshot replacement. It does not use
+file existence as a mutex. A missing previously initialized snapshot, malformed
+JSON or inconsistent event prefix fails explicitly. This is a local profile
+adapter, not network storage or a cross-device identity lock. Node's SQLite API
+may emit an experimental warning on supported Node 22 releases.
+
+Every launch intent is persisted **before** invoking the runner. Recovery marks
+previous active executions unverified and calls `recover` with the same stable
+Run identity and pinned binding. The adapter must reconcile external operations
+by that identity, including a crash between durable intent and start. It returns
+an attached handle, a confirmed terminal result, or `unknown`; the latter retains
+capacity and blocks duplicate local work. Recovery does not reset elapsed Run
+timeouts or re-run closed requests. `onError` is mandatory, including for storage
+failures which cannot be reliably written back to that same storage.
+
+Scope exit stops input subscriptions, requests termination, waits for confirmed
+exit/kill, then releases the store. If termination cannot be confirmed, cleanup
+fails rather than releasing the ownership lock with a known live handle; the
+owner must resolve the external execution or let the process exit for OS lock
+release. Pure replay itself performs no external execution.
+
+## Execution facts and observation views
+
+`CoordinatorModel.reduceCoordinatorState(event, state)` is the second pure
+reducer. Events form a contiguous Host-local revision prefix; append-only start,
+resource, phase, observation, fault and closure facts reconstruct the same state.
+`restoreCoordinatorState(unknown)` replays and compares the complete checkpoint,
+including request references. There is no silent empty-state recovery or
+unimplemented log-compaction fallback.
+
+`coordinatorViews(states, contacts?, publications?)` produces Host, Objective,
+Target, Request and Run projections from consistent per-Host snapshots. Views
+are recomputed from facts, not separately writable caches. A shared Request
+appears once with separate Host contributions. Local closure is **not** global
+Request satisfaction; that remains `undetermined` without a distributed decision
+protocol. Target Probe summaries remain per Host; a latest failure is not replaced
+with an older success, and cross-device wall clocks do not decide ordering.
+
+Host contact observations and authoritative latest Objective publication are
+separate optional inputs, not inferred from idle event streams or commit hashes.
+Absent inputs remain unknown. Supplied publications must reference a known
+matching Objective revision. Views preserve source versions, Run timelines and
+Fault provenance, and reject conflicting shared identities across Hosts.
+This package supplies data, not frontend pages, central transport, publication
+authority, global Request coordination or migration of existing services.
+
+## Legacy API
 
 ```ts
 import {

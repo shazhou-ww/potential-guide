@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
 import type { PilotSpec, Subject } from "@potential-guide/objective-pilot";
 import { canonicalJson, levelRank } from "@potential-guide/objective-portfolio-supervisor";
+import { identityKey as key } from "./identity.js";
 import { fields, immutable, priority, validateSpec } from "./validation.js";
 
 export interface Objective {
@@ -54,19 +54,6 @@ export interface RequestCommand {
   readonly desiredLevel: string;
   readonly priority: number;
   readonly origin: RequestOrigin;
-}
-
-function key(kind: string, value: unknown): string {
-  canonicalJson(value);
-  // Identity encoding must not depend on the host's locale collation.
-  const encoded = JSON.stringify(value, (_name, entry: unknown) => {
-    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) return entry;
-    return Object.fromEntries(
-      Object.entries(entry).sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0)),
-    );
-  });
-  if (encoded === undefined) throw new TypeError("Identity must be JSON data.");
-  return `${kind}:${createHash("sha256").update(encoded).digest("hex")}`;
 }
 
 function nonempty(value: unknown, label: string): asserts value is string {
@@ -203,6 +190,19 @@ export function requestDetails(state: RegulationRequests, requestRef: string): R
   )
     throw new TypeError(`Broken request references for ${requestRef}.`);
   return { request, target, objective, objectiveRevision };
+}
+
+export function commandForRequest(state: RegulationRequests, requestRef: string): RequestCommand {
+  const { request, target, objectiveRevision } = requestDetails(state, requestRef);
+  return {
+    type: "request",
+    requestRef,
+    objective: objectiveRevision.spec,
+    subject: target.subject,
+    desiredLevel: request.desiredLevel,
+    priority: request.priority,
+    origin: request.origin,
+  };
 }
 
 /** Restore by rebuilding admitted facts, not by trusting serialized keys or projections. */

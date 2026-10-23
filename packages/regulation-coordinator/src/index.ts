@@ -21,8 +21,20 @@ import type {
 } from "./types.js";
 import { immutable, positive } from "./validation.js";
 
+export {
+  type BehaviorCoordinator,
+  type BehaviorCoordinatorOptions,
+  coordinator,
+  type Recovery,
+  type RunHandle,
+  type RunnerContext,
+  type RunResult,
+} from "./coordinator.js";
 export * as RequestModel from "./requests.js";
+export * as CoordinatorModel from "./state.js";
+export { type CoordinatorStore, openCoordinatorStore } from "./store.js";
 export * from "./types.js";
+export { coordinatorViews, type HostContact, type ObjectivePublication } from "./views.js";
 
 /** Acquisition, not output subscriptions, starts the single scheduler. */
 export function regulationCoordinator<CommandError = never>(

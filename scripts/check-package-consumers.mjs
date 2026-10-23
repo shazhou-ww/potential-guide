@@ -81,7 +81,12 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         join(directory, "api.ts"),
         `
         import { Effect, Stream, SubscriptionRef } from "@potential-guide/effects";
-        import { regulationCoordinator, RequestModel, type AgentResource, type CoordinatorCommand, type CoordinatorOptions } from "@potential-guide/regulation-coordinator";
+        import { regulationCoordinator, coordinator, CoordinatorModel, RequestModel, type BehaviorCoordinatorOptions, type AgentResource, type CoordinatorCommand, type CoordinatorOptions } from "@potential-guide/regulation-coordinator";
+        export const behaviorApi = (
+          resources: SubscriptionRef.SubscriptionRef<CoordinatorModel.ResourceAllocation>,
+          requests: SubscriptionRef.SubscriptionRef<RequestModel.RegulationRequests>,
+          options: BehaviorCoordinatorOptions
+        ) => Effect.scoped(coordinator(resources, requests, options));
         export const reduceRequest = (command: RequestModel.RequestCommand) =>
           RequestModel.reduceRegulationRequests(command, RequestModel.createRegulationRequests());
         export const restoreRequests = (snapshot: unknown) =>
@@ -124,7 +129,29 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         [
           "--input-type=module",
           "-e",
-          'import assert from "node:assert/strict"; import { regulationCoordinator, RequestModel } from "@potential-guide/regulation-coordinator"; if (typeof regulationCoordinator !== "function") throw new Error("Missing coordinator export"); const state = RequestModel.createRegulationRequests(); assert.deepEqual(RequestModel.restoreRegulationRequests(JSON.parse(JSON.stringify(state))), state); assert.ok(Object.isFrozen(state));',
+          `import assert from "node:assert/strict";
+          import { Effect, SubscriptionRef } from "@potential-guide/effects";
+          import { regulationCoordinator, RequestModel, CoordinatorModel, coordinator, coordinatorViews } from "@potential-guide/regulation-coordinator";
+          assert.equal(typeof regulationCoordinator, "function");
+          const state = RequestModel.createRegulationRequests();
+          assert.deepEqual(RequestModel.restoreRegulationRequests(JSON.parse(JSON.stringify(state))), state);
+          assert.ok(Object.isFrozen(state));
+          let closed = false;
+          await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+            const resources = yield* SubscriptionRef.make({ kind: "no-resource" });
+            const requests = yield* SubscriptionRef.make(state);
+            const service = yield* coordinator(resources, requests, {
+              hostId: "packed-host",
+              limits: { timeoutMs: 100, maxAgentRuns: 1, maxStallRuns: 1 },
+              maxAttemptsPerRequest: 1, maxDependencyRequests: 4, abortGraceMs: 10,
+              store: { load: async () => null, save: async () => {}, close: async () => { closed = true; } },
+              runner: { start: () => { throw new Error("Unexpected start"); }, recover: async () => ({ kind: "unknown" }) },
+              onError: (error) => { throw error; }
+            });
+            assert.deepEqual(CoordinatorModel.restoreCoordinatorState(service.snapshot()), service.snapshot());
+            assert.equal(coordinatorViews([service.snapshot()]).hosts[0].occupancy, 0);
+          })));
+          assert.equal(closed, true);`,
         ],
         directory,
       );
