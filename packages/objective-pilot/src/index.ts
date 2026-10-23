@@ -49,7 +49,12 @@ export {
   readPage,
   searchPages,
 } from "./pilot.js";
-export { createHttpCheckProbe, createMemoryCheckProbe, createProcessCheckProbe, createWorkerCheckProbe } from "./probes.js";
+export {
+  createHttpCheckProbe,
+  createMemoryCheckProbe,
+  createProcessCheckProbe,
+  createWorkerCheckProbe,
+} from "./probes.js";
 export {
   compileSubjectProjection,
   SUBJECT_PROJECTION_LIMITS,

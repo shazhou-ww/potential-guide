@@ -5,9 +5,19 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-  "bin": { "pguide-check-host": "./dist/main.js" },
-  "files": ["dist", "README.md"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "pguide-check-host": "./dist/main.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -b",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
@@ -15,9 +25,15 @@
     "test": "tsx --test \"test/*.test.ts\"",
     "typecheck": "tsc -b --pretty false"
   },
-  "engines": { "node": ">=22.13.0" },
-  "dependencies": { "@potential-guide/effects": "workspace:^" },
-  "publishConfig": { "access": "public" },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@potential-guide/effects": "workspace:^"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",

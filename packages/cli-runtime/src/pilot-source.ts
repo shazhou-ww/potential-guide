@@ -14,7 +14,7 @@ import {
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { hostDirectory, publishArtifact } from "@potential-guide/check-host";
+import { hostDirectory, publishArtifact, readArtifact } from "@potential-guide/check-host";
 import { CliError, markdownInlineCode, markdownText } from "@potential-guide/cli-core";
 import { Cause, Effect, Exit, Scope, Stream } from "@potential-guide/effects";
 import { type GitSnapshot, loadGitSnapshot } from "@potential-guide/git-source";
@@ -477,7 +477,7 @@ async function bindPilot<T>(
               try: async (signal) => {
                 const executables = new Map<
                   string,
-                  { directory: string; revision: string }
+                  { directory: string; revision: string; sourceDirectory: string }
                 >();
                 const observationInputs = new Map<string, readonly string[]>();
                 async function prepareChecks(
@@ -541,14 +541,24 @@ async function bindPilot<T>(
                         directory = join(root, "checks", check.id);
                       }
                       const entries = await readdir(directory);
-                      if (entries.some((name) => name === "run" || name.startsWith("run.")) || !entries.includes("worker.cjs"))
-                        throw new PilotSourceError("Legacy run.* checks are unsupported; provide a self-contained worker.cjs artifact.");
+                      if (
+                        entries.some((name) => name === "run" || name.startsWith("run.")) ||
+                        !entries.includes("worker.cjs")
+                      )
+                        throw new PilotSourceError(
+                          "Legacy run.* checks are unsupported; provide a self-contained worker.cjs artifact.",
+                        );
                       const identity = JSON.stringify([objective.objectiveId, level.id, check.id]);
-                      const stable = join(hostDirectory(), "artifacts", createHash("sha256").update(identity).digest("hex"));
-                      const artifactRevision = await publishArtifact(directory, stable);
+                      const stable = join(
+                        hostDirectory(),
+                        "artifacts",
+                        createHash("sha256").update(identity).digest("hex"),
+                      );
+                      const artifactRevision = (await readArtifact(directory)).revision;
                       executables.set(JSON.stringify([objective.objectiveId, level.id, check.id]), {
                         directory: stable,
                         revision: artifactRevision,
+                        sourceDirectory: directory,
                       });
                     }
                   }
@@ -723,9 +733,20 @@ async function bindPilot<T>(
                     return async (subject, signal, resolutions) => {
                       const view = await inputView(ref.objectiveId, subject);
                       signal.throwIfAborted();
+                      const revision = await publishArtifact(
+                        executable.sourceDirectory,
+                        executable.directory,
+                      );
+                      if (revision !== executable.revision)
+                        throw new PilotSourceError(
+                          "Bound worker artifact changed before invocation.",
+                        );
+                      signal.throwIfAborted();
                       const probe = createWorkerCheckProbe({
                         ...executable,
-                        ...(view === undefined ? {} : { inputView: JSON.parse(await readFile(view.path, "utf8")) }),
+                        ...(view === undefined
+                          ? {}
+                          : { inputView: JSON.parse(await readFile(view.path, "utf8")) }),
                         ...(options.probeTimeoutMs === undefined
                           ? {}
                           : { timeoutMs: options.probeTimeoutMs }),

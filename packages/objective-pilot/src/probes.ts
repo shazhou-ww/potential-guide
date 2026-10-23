@@ -1,8 +1,16 @@
 import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { connectHost, type Subject as HostSubject } from "@potential-guide/check-host";
-import { bindDependencyRequest, type ObjectiveDependencySource, withDependencyResolutions } from "./dependency.js";
+import {
+  type CheckState,
+  connectHost,
+  type Subject as HostSubject,
+} from "@potential-guide/check-host";
+import {
+  bindDependencyRequest,
+  type ObjectiveDependencySource,
+  withDependencyResolutions,
+} from "./dependency.js";
 import { type CheckEvidenceContext, RunEvidence } from "./evidence.js";
 import { parseCheckEnvelope } from "./pilot.js";
 import { stopPosixTree } from "./process-tree.js";
@@ -51,7 +59,6 @@ function evidenceProbe(
         });
       throw error;
     }
-
   };
 }
 
@@ -67,21 +74,31 @@ export function createWorkerCheckProbe(options: {
     signal.throwIfAborted();
     const client = await connectHost();
     const timeout = AbortSignal.timeout(options.timeoutMs ?? 30_000);
-    let state;
+    let state: CheckState;
     try {
-      state = await client.execute({
-      directory: options.directory,
-      revision: options.revision,
-      subject: structuredClone(subject) as HostSubject,
-      context: {
-        resolutions: JSON.parse(JSON.stringify(resolutions ?? [])),
-        inputView: options.inputView === undefined ? null : JSON.parse(JSON.stringify(options.inputView)),
-        timeoutMs: options.timeoutMs ?? 30_000,
-      },
-      }, AbortSignal.any([signal, timeout]));
+      state = await client.execute(
+        {
+          directory: options.directory,
+          revision: options.revision,
+          subject: structuredClone(subject) as HostSubject,
+          context: {
+            resolutions: JSON.parse(JSON.stringify(resolutions ?? [])),
+            inputView:
+              options.inputView === undefined
+                ? null
+                : JSON.parse(JSON.stringify(options.inputView)),
+            timeoutMs: options.timeoutMs ?? 30_000,
+          },
+        },
+        AbortSignal.any([signal, timeout]),
+      );
     } catch (error) {
       signal.throwIfAborted();
-      if (timeout.aborted) return failure("check-timeout", `${JSON.stringify(options.identity)}: ${options.timeoutMs ?? 30_000}ms`);
+      if (timeout.aborted)
+        return failure(
+          "check-timeout",
+          `${JSON.stringify(options.identity)}: ${options.timeoutMs ?? 30_000}ms`,
+        );
       throw error;
     }
     if (state.state === "Completed") return parseCheckEnvelope(state.result);
@@ -99,7 +116,9 @@ export function createMemoryCheckProbe(
   return evidenceProbe(async (subject, signal, _context, resolutions) => {
     signal.throwIfAborted();
     try {
-      const result = parseCheckEnvelope(await withDependencyResolutions(resolutions ?? [], () => invoke(subject, signal)));
+      const result = parseCheckEnvelope(
+        await withDependencyResolutions(resolutions ?? [], () => invoke(subject, signal)),
+      );
       signal.throwIfAborted();
       return result;
     } catch (cause) {

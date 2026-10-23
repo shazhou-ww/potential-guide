@@ -22,7 +22,11 @@ export async function invoke(stage, value, evidence, options = {}) {
     if (subject.target.type === "docker") return await remote(stage, subject, options);
     if (process.platform !== "linux")
       throw new Fault("unsupported-platform: local execution requires Linux (Debian/Ubuntu).", 501);
-    const context = { deadline: Math.min(options.deadline ?? Infinity, Date.now() + 24000), evidence, signal: options.signal };
+    const context = {
+      deadline: Math.min(options.deadline ?? Infinity, Date.now() + 24000),
+      evidence,
+      signal: options.signal,
+    };
     evidence?.fact("stage.started", { stage });
     if (stage === "sample")
       return { status: 200, payload: await localSample(subject, context), message: "" };

@@ -21,7 +21,7 @@ async function executionFixture() {
   const f = await fixture(scratch, "execution-output-");
   await writeFile(
     join(f.repository, "objective", "checks", "ready", "worker.cjs"),
-    "exports.execute = async (inputSubject, context) => {\n    const source = JSON.stringify(inputSubject);\n    const subject = JSON.parse(source);\n    const value = subject.mode === \"failure\" ? { status: 502, payload: null, message: \"Synthetic check invocation failed\" } :\n        { status: 200, message: \"\", payload: { ok: subject.mode === \"terminal\", problems: subject.mode === \"terminal\" ? [] : [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] } };\n    return value;\n};\n",
+    'exports.execute = async (inputSubject, context) => {\n    const source = JSON.stringify(inputSubject);\n    const subject = JSON.parse(source);\n    const value = subject.mode === "failure" ? { status: 502, payload: null, message: "Synthetic check invocation failed" } :\n        { status: 200, message: "", payload: { ok: subject.mode === "terminal", problems: subject.mode === "terminal" ? [] : [{ kind: "internal", id: "not-ready", parameters: {} }] } };\n    return value;\n};\n',
   );
   await writeFile(
     join(f.repository, "objective", "references", "levels", "initial", "en-US.md"),

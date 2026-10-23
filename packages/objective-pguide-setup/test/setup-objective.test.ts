@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { cp, lstat, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, delimiter, dirname, join } from "node:path";
@@ -8,9 +7,11 @@ import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import {
   createProcessCheckProbe,
+  createWorkerCheckProbe,
   fileResources,
   loadPilotSpec,
 } from "@potential-guide/objective-pilot";
+import { readArtifact } from "../../check-host/dist/index.js";
 import { bin, fixture, git, root, run, writeConfig } from "../../pguide/test/fixtures.js";
 
 const objective = join(root, "packages", "objective-pguide-setup");
@@ -1011,27 +1012,20 @@ test("Git subdirectory snapshot coordinates long local budgets and existing file
   }
 });
 
-test("check wrapper reads the subject JSON from stdin", async () => {
+test("sanity worker receives the subject through Host execution context", async () => {
   const f = await setup();
   try {
-    const output = await new Promise<string>((done, reject) => {
-      const child = spawn(process.execPath, [join(objective, "checks", "sanity", "run.cjs")], {
-        cwd: root,
-        env: f.env,
-        stdio: ["pipe", "pipe", "pipe"],
-      });
-
-      let stdout = "";
-      child.stdout.on("data", (chunk) => {
-        stdout += chunk;
-      });
-      child.once("error", reject);
-      child.once("close", (code) =>
-        code === 0 ? done(stdout) : reject(new Error(`exit ${code}`)),
-      );
-      child.stdin.end(JSON.stringify(f.subject));
+    const artifact = await readArtifact(join(objective, "checks", "sanity"));
+    const probe = createWorkerCheckProbe({
+      directory: artifact.directory,
+      revision: artifact.revision,
+      evidence: false,
     });
-    isProblem(JSON.parse(output), "sanity-consent-required");
+    const result = await probe(f.subject, new AbortController().signal);
+    assert.equal(result.status, 200);
+    const problem = result.payload?.problems[0];
+    assert.equal(problem?.kind, "internal");
+    if (problem?.kind === "internal") assert.equal(problem.id, "sanity-consent-required");
   } finally {
     await rm(f.directory, { recursive: true, force: true });
   }

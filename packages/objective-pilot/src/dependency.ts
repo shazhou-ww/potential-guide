@@ -85,7 +85,10 @@ interface Scope {
 }
 const scopes = new AsyncLocalStorage<Scope>();
 const workerResolutions = new AsyncLocalStorage<readonly DependencyResolution[]>();
-export function withDependencyResolutions<T>(resolutions: readonly DependencyResolution[], use: () => T): T {
+export function withDependencyResolutions<T>(
+  resolutions: readonly DependencyResolution[],
+  use: () => T,
+): T {
   return workerResolutions.run(resolutions, use);
 }
 function mergeVersion(versions: Record<string, string>, id: string, version: string) {
@@ -452,8 +455,14 @@ export function createSourceObjectiveDependencyProbe(
 ): CheckProbe {
   return async (subject, signal) => {
     signal.throwIfAborted();
-    const requirement = { objectiveId: target.objectiveId, subject, expectedLevelId: target.expectedLevelId };
-    const resolved = workerResolutions.getStore()?.find((entry) => canonical(entry.requirement) === canonical(requirement));
+    const requirement = {
+      objectiveId: target.objectiveId,
+      subject,
+      expectedLevelId: target.expectedLevelId,
+    };
+    const resolved = workerResolutions
+      .getStore()
+      ?.find((entry) => canonical(entry.requirement) === canonical(requirement));
     return {
       status: 200,
       message: "",

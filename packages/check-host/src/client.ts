@@ -2,7 +2,12 @@ import { randomUUID } from "node:crypto";
 import type { CheckState, StartCheck } from "./types.js";
 import { HostError, terminal } from "./types.js";
 
-export interface HostAddress { endpoint: string; token: string; pid: number; instance: string }
+export interface HostAddress {
+  endpoint: string;
+  token: string;
+  pid: number;
+  instance: string;
+}
 export class CheckClient {
   constructor(readonly address: HostAddress) {
     const url = new URL(address.endpoint);
@@ -11,7 +16,8 @@ export class CheckClient {
   }
   private async request(path: string, init: RequestInit = {}) {
     const response = await fetch(`${this.address.endpoint}${path}`, {
-      ...init, headers: { authorization: `Bearer ${this.address.token}`, ...init.headers },
+      ...init,
+      headers: { authorization: `Bearer ${this.address.token}`, ...init.headers },
       signal: init.signal ?? AbortSignal.timeout(10_000),
     });
     if (!response.ok) {
@@ -23,19 +29,31 @@ export class CheckClient {
   async start(request: Omit<StartCheck, "checkId"> & { checkId?: string }): Promise<string> {
     const checkId = request.checkId ?? `${this.address.instance}:${randomUUID()}`;
     try {
-      await this.request("/checks", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...request, checkId }) });
+      await this.request("/checks", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...request, checkId }),
+      });
     } catch (error) {
       // A lost acceptance response is recovered by observation, never by re-execution.
       if (error instanceof HostError) throw error;
-      try { await this.sample(checkId); } catch { throw new Error(`Start outcome unknown for ${checkId}: ${String(error)}`); }
+      try {
+        await this.sample(checkId);
+      } catch {
+        throw new Error(`Start outcome unknown for ${checkId}: ${String(error)}`);
+      }
     }
     return checkId;
   }
   async sample(checkId: string): Promise<CheckState> {
-    return (await this.request(`/checks/${encodeURIComponent(checkId)}`)).json() as Promise<CheckState>;
+    return (
+      await this.request(`/checks/${encodeURIComponent(checkId)}`)
+    ).json() as Promise<CheckState>;
   }
   async cancel(checkId: string): Promise<CheckState> {
-    return (await this.request(`/checks/${encodeURIComponent(checkId)}/cancel`, { method: "POST" })).json() as Promise<CheckState>;
+    return (
+      await this.request(`/checks/${encodeURIComponent(checkId)}/cancel`, { method: "POST" })
+    ).json() as Promise<CheckState>;
   }
   async wait(checkId: string, signal?: AbortSignal): Promise<CheckState> {
     const response = await this.request(`/checks/${encodeURIComponent(checkId)}`, {
@@ -61,12 +79,17 @@ export class CheckClient {
           end = pending.indexOf("\n");
         }
       }
-    } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+    } finally {
+      await reader.cancel().catch(() => {});
+      reader.releaseLock();
+    }
   }
   async execute(request: Omit<StartCheck, "checkId">, signal: AbortSignal) {
     signal.throwIfAborted();
     const id = await this.start(request);
-    const cancel = () => { void this.cancel(id).catch(() => {}); };
+    const cancel = () => {
+      void this.cancel(id).catch(() => {});
+    };
     signal.addEventListener("abort", cancel, { once: true });
     if (signal.aborted) cancel();
     try {
@@ -74,6 +97,8 @@ export class CheckClient {
       const result = await this.wait(id);
       signal.throwIfAborted();
       return result;
-    } finally { signal.removeEventListener("abort", cancel); }
+    } finally {
+      signal.removeEventListener("abort", cancel);
+    }
   }
 }

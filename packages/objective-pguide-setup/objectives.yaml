@@ -9,5 +9,5 @@ objectives:
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["tool"], "runtime": "node",
         "allows": ["@potential-guide/objective-pilot", "@potential-guide/pguide-config", "pguide"],
-        "entries": ["setup-check.mjs"], "generated": [], "joins": [], "deliveries": []
+        "entries": ["setup-check.mjs"], "generated": [{"path":"checks/configuration/resources/runtime/setup-check.mjs","reason":"worker"},{"path":"checks/configuration/resources/sanity-fixture/checks/marker/worker.cjs","reason":"worker"},{"path":"checks/configuration/worker.cjs","reason":"worker"},{"path":"checks/installation/resources/runtime/setup-check.mjs","reason":"worker"},{"path":"checks/installation/resources/sanity-fixture/checks/marker/worker.cjs","reason":"worker"},{"path":"checks/installation/worker.cjs","reason":"worker"},{"path":"checks/sanity/resources/runtime/setup-check.mjs","reason":"worker"},{"path":"checks/sanity/resources/sanity-fixture/checks/marker/worker.cjs","reason":"worker"},{"path":"checks/sanity/worker.cjs","reason":"worker"},{"path":"sanity-fixture/checks/marker/worker.cjs","reason":"worker"}], "joins": [], "deliveries": []
       }

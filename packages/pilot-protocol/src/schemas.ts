@@ -1,5 +1,5 @@
-import { Ajv2020 } from "ajv/dist/2020.js";
 import type { AnySchema, ValidateFunction } from "ajv";
+import { Ajv2020 } from "ajv/dist/2020.js";
 import { objectiveSchema, objectivesSchema } from "./schema-definitions.js";
 
 export { objectiveSchema, objectivesSchema } from "./schema-definitions.js";

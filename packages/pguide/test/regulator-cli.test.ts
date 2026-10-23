@@ -155,7 +155,7 @@ test("explicit continue grants another stall allowance while retaining history",
   try {
     await writeFile(
       join(f.repository, "objective", "checks", "ready", "worker.cjs"),
-      "exports.execute = async (inputSubject, context) => { return { status: 200, message: \"\", payload: { ok: false, problems: [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] } }; };\n",
+      'exports.execute = async (inputSubject, context) => { return { status: 200, message: "", payload: { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: {} }] } }; };\n',
     );
     const commit = await f.commit();
     const agent = join(f.directory, "noop.mjs");
@@ -291,7 +291,7 @@ test("regulate and continue persist pinned Pilot observations and use the JSON c
     const probeCount = join(f.directory, "probe-count");
     await writeFile(
       join(f.repository, "objective", "checks", "ready", "worker.cjs"),
-      "const { existsSync, readFileSync, writeFileSync } = require(\"node:fs\");\nexports.execute = async (inputSubject, context) => { const s = JSON.stringify(inputSubject); const subject = JSON.parse(s); const count = existsSync(subject.probeCount) ? Number(readFileSync(subject.probeCount, \"utf8\")) : 0; writeFileSync(subject.probeCount, String(count + 1)); if (count === 0) {\n    return { status: 503, payload: null, message: \"transient source failure\" };\n    return;\n} const ok = existsSync(subject.marker); return { status: 200, payload: ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: \"internal\", id: \"not-ready\", parameters: { index: 1 } }, { kind: \"internal\", id: \"not-ready\", parameters: { index: 2 } }] }, message: \"\" }; };\n",
+      'const { existsSync, readFileSync, writeFileSync } = require("node:fs");\nexports.execute = async (inputSubject, context) => { const s = JSON.stringify(inputSubject); const subject = JSON.parse(s); const count = existsSync(subject.probeCount) ? Number(readFileSync(subject.probeCount, "utf8")) : 0; writeFileSync(subject.probeCount, String(count + 1)); if (count === 0) {\n    return { status: 503, payload: null, message: "transient source failure" };\n    return;\n} const ok = existsSync(subject.marker); return { status: 200, payload: ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: { index: 1 } }, { kind: "internal", id: "not-ready", parameters: { index: 2 } }] }, message: "" }; };\n',
     );
     await writeFile(f.subject, JSON.stringify({ marker, probeCount }));
     const commit = await f.commit();
@@ -518,7 +518,7 @@ test("per-Agent timeout includes ACP startup and invocation failures never start
     const check = join(f.repository, "objective", "checks", "ready", "worker.cjs");
     await writeFile(
       check,
-      "exports.execute = async (inputSubject, context) => { return { status: 200, payload: { ok: false, problems: [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] }, message: \"\" }; };\n",
+      'exports.execute = async (inputSubject, context) => { return { status: 200, payload: { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: {} }] }, message: "" }; };\n',
     );
     const commit = await f.commit();
     const agent = join(f.directory, "hang.mjs");

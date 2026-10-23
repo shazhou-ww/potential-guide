@@ -123,15 +123,43 @@ test("all private Pilot tarballs include same-version resources and run without 
           value,
         );
       };
-      const invalid = await call(checks[0], {});
-      assert.equal(invalid.payload, null);
-      assert.notEqual(invalid.status, 200);
+      for (const stage of checks) {
+        const invalid = await call(stage, {});
+        assert.equal(invalid.payload, null);
+        assert.notEqual(invalid.status, 200);
+        assert.doesNotMatch(
+          invalid.message,
+          /Cannot find module|must export execute|Artifact dependencies must be bundled/,
+        );
+      }
+      if (directory === "objective-monorepo-standard") {
+        for (const stage of checks) {
+          const invalid = await host.execute(join(packageRoot, "checks", stage), {});
+          assert.equal(invalid.payload, null);
+          assert.notEqual(invalid.status, 200);
+          assert.doesNotMatch(
+            invalid.message,
+            /Cannot find module|must export execute|Artifact dependencies must be bundled/,
+          );
+        }
+      }
       if (directory !== "objective-devbox-health") {
         const result = await call(checks[0], subject);
         assert.equal(result.status, 200, JSON.stringify(result));
         assert.equal(result.payload.ok, true, JSON.stringify(result));
       }
       if (directory === "objective-pguide-setup") {
+        const marker = join(scratch, "owned-marker.txt");
+        await writeFile(marker, "owned");
+        const checked = await host.execute(
+          join(packageRoot, "sanity-fixture", "checks", "marker"),
+          {
+            marker,
+            expected: "owned",
+          },
+        );
+        assert.equal(checked.status, 200);
+        assert.equal(checked.payload.ok, true);
         for (const resource of ["objective.yaml", "gitignore"])
           assert.ok(paths.includes(`sanity-fixture/${resource}`));
         const { sshRequest } = await import(

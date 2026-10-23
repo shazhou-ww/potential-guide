@@ -27,8 +27,9 @@
 | `objectives/pguide-self-check` / `packages/pguide-self-check-pilot` | `packages/objective-pguide-self-check/` |
 | `objectives/development-machine-health` / `packages/development-machine-health-pilot` | `packages/objective-devbox-health/` |
 
-旧 URI 固定到旧 commit 时仍由该历史源码提供；新 commit 不保留第二套旧主体或
-静默重定向。迁移调用方的 URI fragment、脚本路径及版本 pin，然后重新加载 manifest
+旧 URI 和固定 commit 的历史源码不改写；复现旧运行协议须使用兼容的历史运行时，
+当前 v3 Host 不回退执行旧入口。新 commit 不保留第二套旧主体或静默重定向。
+迁移调用方的 URI fragment、脚本路径及版本 pin，然后重新加载 manifest
 和 References。不能只改 fragment 却继续复用旧 commit；缓存、执行配方和 evidence 的
 Objective URI / version 随之改变，旧结果不自动证明新版本。检查 ID、problem ID、
 其他 Pilot subject 的授权/预算/目标约束保持不变；monorepo 的目录声明迁移见下文。
@@ -85,6 +86,15 @@ Pilot 接受包自有 roles/runtime/allows/entries/joins/deliveries 等 subject�
 Turbo 按依赖构建并缓存生成资源；改变源码后必须重新生成并提交对应运行资源。
 全部 16 个 worker 及其显式资源由 `pnpm workers:check` 校验，直接消费测试通过
 目录和完整 revision 调用 Host，不将 `worker.cjs` 当作 stdin/stdout 可执行文件。
+worker 生成器同时维护各包 `generated` 中 reason 为 `worker` 的精确文件清单；
+该标记代表经 `workers:check` 验证的生成产物，不豁免其手写源码或生成新鲜度检查。
+清单使用紧凑字面量，遵守既有 4096-byte 确定性 subject projection 上限，
+不会通过增加预算或启用任意 JSONata 函数绕过边界。
+
+绑定新 Git source 时只验证 artifact，不立刻覆盖正在使用的共享产物；
+实际调用才按不可变 source 校验并发布，避免后台刷新破坏旧观察。
+同一规范目录的并发不同 revision 仍可明确冲突，调用者须排空后切换，
+不能将未知执行结果当作可透明重试的任务。
 
 所有层级的 `dist/` 都是本地构建输出，由根 `.gitignore` 统一忽略，不保留例外。
 Git snapshot 必需的 standalone 生成物放在各包的 `runtime/` 并提交；

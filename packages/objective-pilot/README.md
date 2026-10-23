@@ -178,6 +178,9 @@ budget. See [Check Host](../check-host/README.md) for capacities and retention.
 Legacy process entrypoints and bare-subject HTTP are not Git-loader fallbacks;
 the old bare-subject HTTP factory rejects use explicitly. Standalone business
 CLI helpers remain separate from the committed worker execution protocol.
+Preparing another immutable source binding does not publish over the active
+binding's artifact. Publication occurs immediately before invocation; conflicting
+concurrent directory revisions are still explicit failures, not blind retries.
 
 ## Objective level checks and dependency probes
 

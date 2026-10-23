@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { dependencyWorker } from "./worker-fixtures.js";
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -11,6 +10,7 @@ import { withPilot } from "../../cli-runtime/src/pilot-source.js";
 import { createAcpPlannerPolicy, plannerPrompt } from "../../pguide-supervise/src/acp-planner.js";
 import { parsePortfolioFile } from "../../pguide-supervise/src/commands/supervisor.js";
 import { bin, fixture, git, root, run, scratch, writeConfig } from "./fixtures.js";
+import { dependencyWorker } from "./worker-fixtures.js";
 
 const stubSource = `
 import { createInterface } from "node:readline";
@@ -162,7 +162,7 @@ test("supervise plans once without repairs, then continuously observes and execu
     const counts = join(f.directory, "observations.jsonl");
     await writeFile(
       join(f.repository, "objective", "checks", "ready", "worker.cjs"),
-      "const { existsSync, appendFileSync } = require(\"node:fs\");\nexports.execute = async (inputSubject, context) => { const s = JSON.stringify(inputSubject); const x = JSON.parse(s); appendFileSync(x.counts, \"observed\\n\"); const ok = existsSync(x.marker); return { status: 200, payload: ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] }, message: \"\" }; };\n",
+      'const { existsSync, appendFileSync } = require("node:fs");\nexports.execute = async (inputSubject, context) => { const s = JSON.stringify(inputSubject); const x = JSON.parse(s); appendFileSync(x.counts, "observed\\n"); const ok = existsSync(x.marker); return { status: 200, payload: ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: {} }] }, message: "" }; };\n',
     );
     const revision = await f.commit();
     const stub = join(f.directory, "agent.mjs");
@@ -359,7 +359,7 @@ test("supervise dynamically binds a cross-process dependency, repairs it, then r
     );
     await writeFile(
       join(provider.repository, "objective", "checks", "ready", "worker.cjs"),
-      "exports.execute = async (inputSubject, context) => {\n    const { existsSync } = require(\"node:fs\");\n    const source = JSON.stringify(inputSubject);\n    const { marker } = JSON.parse(source), ok = existsSync(marker);\n    return { status: 200, message: \"\", payload: ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] } };\n};\n",
+      'exports.execute = async (inputSubject, context) => {\n    const { existsSync } = require("node:fs");\n    const source = JSON.stringify(inputSubject);\n    const { marker } = JSON.parse(source), ok = existsSync(marker);\n    return { status: 200, message: "", payload: ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: {} }] } };\n};\n',
     );
     const consumerRevision = await consumer.commit();
     const providerRevision = await provider.commit();
@@ -480,7 +480,8 @@ test("continuous supervise follows script and dependency source updates without 
     const plannerLog = join(consumer.directory, "planner.jsonl");
     const consumerScript = join(consumer.repository, "objective", "checks", "ready", "worker.cjs");
     const providerScript = join(provider.repository, "objective", "checks", "ready", "worker.cjs");
-    const probeSource = (ok: boolean) => `exports.execute=async()=>({status:200,message:"",payload:${JSON.stringify(ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: {} }] })}});`;
+    const probeSource = (ok: boolean) =>
+      `exports.execute=async()=>({status:200,message:"",payload:${JSON.stringify(ok ? { ok: true, problems: [] } : { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: {} }] })}});`;
     await writeFile(providerScript, probeSource(false));
     const providerCommit = await provider.commit();
     const providerTree = await git(provider.repository, "rev-parse", `${providerCommit}:objective`);

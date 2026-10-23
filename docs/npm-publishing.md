@@ -1,9 +1,10 @@
 # npm publishing
 
-Potential Guide publishes seventeen CLI and library packages independently from this monorepo:
+Potential Guide publishes eighteen CLI and library packages independently from this monorepo:
 
 | Package | Release tag |
 | --- | --- |
+| `@potential-guide/check-host` | `check-host-vX.Y.Z` |
 | `@potential-guide/effects` | `effects-vX.Y.Z` |
 | `@potential-guide/git-source` | `git-source-vX.Y.Z` |
 | `@potential-guide/objective-pilot` | `objective-pilot-vX.Y.Z` |
@@ -29,7 +30,8 @@ Command wrapper packages use the `pguide-` prefix, including grouped
 and keep their responsibility names.
 
 Release packages in manifest dependency order. `effects` and `pilot-protocol`
-are protocol; `objective-pilot` consumes both, then `objective-regulator` and
+are protocol; `check-host` follows `effects`, and `objective-pilot` consumes
+Check Host and both protocols, then `objective-regulator` and
 `objective-portfolio-supervisor` build business capabilities. The independent
 `regulation-coordinator` library follows
 `objective-portfolio-supervisor` (public pure helpers and runner types only);
@@ -84,6 +86,7 @@ environment named `npm`, and leave it without npm secrets. Optional required
 reviewers are compatible with the workflow, but any deployment branch or tag
 rules must allow these release tags:
 
+- `check-host-v*`
 - `effects-v*`
 - `git-source-v*`
 - `objective-pilot-v*`
@@ -132,6 +135,8 @@ npm publish .cache/npm-bootstrap/potential-guide-cli-core-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/potential-guide-effects-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
+npm publish .cache/npm-bootstrap/potential-guide-check-host-0.0.0.tgz \
+  --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/potential-guide-git-source-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/potential-guide-objective-pilot-0.0.0.tgz \
@@ -148,7 +153,7 @@ npm publish .cache/npm-bootstrap/pguide-0.0.0.tgz \
 npm logout --registry=https://registry.npmjs.org/
 ```
 
-The `bootstrap:pack` command only creates eight minimal tarballs containing a
+The `bootstrap:pack` command only creates one minimal tarball per release package containing a
 `package.json` and README; it never publishes them. Inspect the printed paths
 before running `npm publish`. Run only the publish lines for missing packages. Do not manually
 publish product candidates.

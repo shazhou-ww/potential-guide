@@ -44,8 +44,11 @@ export function execute(
       failure = new Fault(`command-timeout: ${command}`, 504);
       stop();
     }, remaining);
-    const abort = () => { failure = new Fault("command-cancelled", 499); stop(); };
-    signal?.addEventListener("abort", abort, {once:true});
+    const abort = () => {
+      failure = new Fault("command-cancelled", 499);
+      stop();
+    };
+    signal?.addEventListener("abort", abort, { once: true });
     if (signal?.aborted) abort();
     for (const [stream, name] of [
       [child.stdout, "stdout"],

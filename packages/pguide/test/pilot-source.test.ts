@@ -133,6 +133,39 @@ test("level-scoped repeated check IDs execute their own committed probes", async
   assert.equal(result.payload.current.levelId, "a-next");
 });
 
+test("preparing a refreshed source does not overwrite a still-bound worker revision", async (t) => {
+  const repo = await repository(
+    manifest({
+      levels: [{ id: "ready", checks: [{ id: "ready", problems: ["broken"] }] }],
+    }),
+  );
+  t.after(() => rm(repo.root, { recursive: true, force: true }));
+  const entry = await repo.check("checks/ready/worker.cjs");
+  const first = await repo.commit();
+  await withPilot(repo.path, repo.root, first, async (oldSpec, oldRuntime) => {
+    assert.equal(
+      (await Effect.runPromise(observe({ spec: oldSpec, subject: { name: "old" } }, oldRuntime)))
+        .payload?.current.levelId,
+      "ready",
+    );
+    await writeFile(
+      entry,
+      `exports.execute=async()=>({status:200,message:"",payload:{ok:false,problems:[{kind:"internal",id:"broken",parameters:{}}]}});`,
+    );
+    const second = await repo.commit();
+    await withPilot(repo.path, repo.root, second, async () => {
+      const old = await Effect.runPromise(
+        observe({ spec: oldSpec, subject: { name: "old" } }, oldRuntime),
+      );
+      assert.equal(old.payload?.current.levelId, "ready", old.message);
+    });
+  });
+  const refreshed = await withPilot(repo.path, repo.root, undefined, (spec, runtime) =>
+    Effect.runPromise(observe({ spec, subject: { name: "new" } }, runtime)),
+  );
+  assert.equal(refreshed.payload?.current.levelId, "initial", refreshed.message);
+});
+
 test("folder tree versions cover manifest, scripts, References and resources, not unrelated commits; moves change identity", async (t) => {
   const repo = await repository(
     manifest({

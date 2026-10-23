@@ -10,8 +10,5 @@ objectives:
         "roles": ["tool"], "runtime": "node",
         "allows": ["@potential-guide/effects", "@potential-guide/objective-pilot", "@potential-guide/objective-regulator", "@potential-guide/objective-portfolio-supervisor", "pguide"],
         "entries": ["src/index.ts"], "joins": [], "deliveries": [],
-        "generated": [
-          {"path": "runtime/pilot-checker.cjs", "reason": "Standalone bundle verified by monorepo:check."},
-          {"path": "package-standard/runtime/pilot-checker.cjs", "reason": "Self-contained package Pilot snapshot bundle verified by monorepo:check."}
-        ]
+        "generated": [{"path":"runtime/pilot-checker.cjs","reason":"Standalone bundle verified by monorepo:check."},{"path":"package-standard/runtime/pilot-checker.cjs","reason":"Self-contained package Pilot snapshot bundle verified by monorepo:check."},{"path":"checks/deliveries/worker.cjs","reason":"worker"},{"path":"checks/structure/worker.cjs","reason":"worker"},{"path":"package-standard/checks/deliveries/worker.cjs","reason":"worker"},{"path":"package-standard/checks/structure/worker.cjs","reason":"worker"}]
       }

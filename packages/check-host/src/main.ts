@@ -12,7 +12,11 @@ const token = randomUUID() + randomUUID();
 const host = await serve(kernel, token);
 const instance = randomUUID();
 const prepared = join(directory, `${instance}.json`);
-await writeFile(prepared, JSON.stringify({ endpoint: host.endpoint, token, pid: process.pid, instance }), { flag: "wx", mode: 0o600 });
+await writeFile(
+  prepared,
+  JSON.stringify({ endpoint: host.endpoint, token, pid: process.pid, instance }),
+  { flag: "wx", mode: 0o600 },
+);
 await rename(prepared, join(directory, "host.json"));
 await rm(join(directory, "startup.json"), { force: true });
 let closing = false;
@@ -22,5 +26,9 @@ const close = async () => {
   await host.close();
   await rm(join(directory, "host.json"), { force: true });
 };
-process.once("SIGINT", () => { void close(); });
-process.once("SIGTERM", () => { void close(); });
+process.once("SIGINT", () => {
+  void close();
+});
+process.once("SIGTERM", () => {
+  void close();
+});

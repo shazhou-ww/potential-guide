@@ -10,11 +10,11 @@ and the direct-source `--pilot` CLI option are not renamed.
 
 | Document | Required root `$schema` |
 | --- | --- |
-| `objective.yaml` | `https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json` |
+| `objective.yaml` | `https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json` |
 | `objectives.yaml` | `https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json` |
 
-The active repository sources are `schemas/objective/v2.json` and
-`schemas/objectives/v1.json`; published v1 bytes remain unchanged. `pnpm schemas:build`
+The active repository sources are `schemas/objective/v3.json` and
+`schemas/objectives/v1.json`; historical Objective v1/v2 bytes remain unchanged. `pnpm schemas:build`
 copies them to the matching `@potential-guide/pilot-protocol/schemas/` paths and
 generates embedded definitions; `pnpm schemas:check` checks byte equality and
 the embedded representation. Package exports include both JSON files and
@@ -35,7 +35,7 @@ publication. Pages activation, running the workflow, and externally checking
 published bytes are deployment work, not evidence supplied by a source build.
 
 ```yaml
-$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json
 subjectSchema:
   type: object
   properties:
@@ -60,7 +60,7 @@ and remote references fail rather than being ignored or fetched. The document
 schemas validate structure; parsers additionally enforce identifiers, duplicate
 level/check IDs, canonical languages, and the default-language membership rule.
 
-## Cumulative attainment (Manifest v2)
+## Cumulative attainment (Manifests v2/v3)
 
 `initial` is intrinsic, has no business checks and cannot be declared.
 A manifest declares at least one business level in attainment order. Each
@@ -125,6 +125,25 @@ Windows rules and POSIX uses POSIX rules; `..` is not rejected as a security
 policy. The bounded AST evaluator recognizes only this added function, not
 general JSONata functions, dynamic evaluation, callbacks or host access.
 Existing expression, AST, time and output limits remain in force.
+
+## Worker execution (Manifest v3)
+
+V3 retains v2's cumulative attainment semantics but requires committed,
+self-contained `worker.cjs` artifacts and their explicit resources. Runtime
+validation rejects old manifest URIs and `run.*` entries; it does not silently
+fall back to the old per-check process/IPC protocol.
+
+Workers export `execute(subject, context)` and return an envelope. The business
+layer resolves returned dependency `requirements` against real observations and
+rechecks the original check; the Host does not interpret Objective dependencies.
+See [Check Host](../packages/check-host/README.md) for revision, cleanup and
+observation ownership.
+
+Upgrade a v2 source in a new commit only after migrating its entrypoints,
+resources, dependency handling and fixtures. Changing only `$schema` is not a
+runtime migration. Keep existing v1/v2 schemas and historical pinned source/evidence
+unchanged. The legacy document migration CLI below does not bundle check scripts
+or automatically convert an already schema-identified v2 source to workers.
 
 ## Explicit migration
 

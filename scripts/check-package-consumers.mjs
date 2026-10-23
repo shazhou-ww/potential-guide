@@ -160,11 +160,21 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         const {createRequire} = await import("node:module");
         const require = createRequire(import.meta.url);
         for (const format of ["objective", "objectives"]) {
-          const version = format === "objective" ? "v2" : "v1";
+          const version = format === "objective" ? "v3" : "v1";
           const schema = JSON.parse(readFileSync(require.resolve("@potential-guide/pilot-protocol/schemas/" + format + "/" + version + ".json"), "utf8"));
           assert.equal(schema.$id, "https://shazhou-ww.github.io/potential-guide/schemas/" + format + "/" + version + ".json");
           assert.deepEqual(schema, format === "objective" ? protocol.objectiveSchema : protocol.objectivesSchema);
         }
+        for (const version of ["v1","v2"]) {
+          const historical = JSON.parse(readFileSync(require.resolve("@potential-guide/pilot-protocol/schemas/objective/" + version + ".json"), "utf8"));
+          assert.equal(historical.$id, "https://shazhou-ww.github.io/potential-guide/schemas/objective/" + version + ".json");
+          assert.notDeepEqual(historical,protocol.objectiveSchema);
+        }
+        assert.throws(()=>protocol.parseManifest(JSON.stringify({
+          $schema:"https://shazhou-ww.github.io/potential-guide/schemas/objective/v2.json",
+          subjectSchema:{type:"object"},levels:[{id:"ready",checks:[]}],
+          defaultLanguage:"en-US",languages:["en-US"]
+        })),protocol.ObjectiveConfigurationError);
         assert.equal(protocol.validateObjectivesDocument({$schema: protocol.OBJECTIVES_SCHEMA_URI, objectives: {}}), true);
         assert.equal(protocol.validateObjectivesDocument({schemaVersion: 1, objectives: {}}), false);
         const legacy = JSON.stringify({

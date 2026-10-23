@@ -2,9 +2,9 @@ import { resolve } from "node:path";
 import {
   type CheckProbe,
   type CheckProblem,
-  type DependencyRequirement,
   canonicalObjectiveUri,
   createSourceObjectiveDependencyProbe,
+  type DependencyRequirement,
   type ObjectiveDependencySource,
   parseCheckEnvelope,
   parseObjectives,

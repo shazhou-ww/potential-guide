@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { dependencyWorker } from "./worker-fixtures.js";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
@@ -19,6 +18,7 @@ import {
   validateObjectivesDocument,
 } from "../../pilot-protocol/src/index.js";
 import { bin, fixture, git, run, writeConfig } from "./fixtures.js";
+import { dependencyWorker } from "./worker-fixtures.js";
 
 const unit = { type: "object", additionalProperties: false, maxProperties: 0 } as const;
 const declaration: ObjectiveDeclaration = {
@@ -596,7 +596,7 @@ test("continue restores cross-repository dependency snapshots while a new bindin
   const childScript = join(child.repository, "objective", "checks", "ready", "worker.cjs");
   await writeFile(
     childScript,
-    "exports.execute = async (inputSubject, context) => {\n    return { status: 200, message: \"\", payload: { ok: false, problems: [{ kind: \"internal\", id: \"not-ready\", parameters: {} }] } };\n};\n",
+    'exports.execute = async (inputSubject, context) => {\n    return { status: 200, message: "", payload: { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: {} }] } };\n};\n',
   );
   const childCommit = await child.commit();
   await writeFile(
@@ -641,7 +641,7 @@ test("continue restores cross-repository dependency snapshots while a new bindin
   assert.equal(saved.sourceBindings[child.uri].commit, childCommit);
   await writeFile(
     childScript,
-    "exports.execute = async (inputSubject, context) => {\n    return { status: 200, message: \"\", payload: { ok: true, problems: [] } };\n};\n",
+    'exports.execute = async (inputSubject, context) => {\n    return { status: 200, message: "", payload: { ok: true, problems: [] } };\n};\n',
   );
   const updated = await child.commit();
   assert.notEqual(updated, childCommit);

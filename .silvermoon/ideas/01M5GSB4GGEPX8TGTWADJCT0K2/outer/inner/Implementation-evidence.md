@@ -88,7 +88,7 @@ finally 是否开始调用删除、删除成功/失败的具体路径；测试�
 没有扩大到盘符或其他未授权目录调查，没有重现原危险控制流。
 以下验证只能证明本次受控产品行为，不能排除或恢复历史损失。
 
-## 本次静态安全审查与迁移
+## Checkpoint 2 静态安全审查与迁移
 
 - 审查 source/Host 测试、worker fixture、Git source、CLI adapter、Host artifact/kernel/
   discovery/worker 及直接消费 helper 的递归清理、路径祖先和进程终止。
@@ -117,7 +117,7 @@ finally 是否开始调用删除、删除成功/失败的具体路径；测试�
 - 普通合并整合 primary `4d60ec3ce5ab998f5cc33afafb34c308f259a9ab` 的其他 Idea
   文档；本 Idea accepted Ideal、Implementation contract 和 ledger 未修改。
 
-## 本次验证
+## Checkpoint 2 验证
 
 - 初次联合 compiler 命令退出 2，未计为通过。后续独立
   `pnpm exec tsc -b --pretty false` 通过。
@@ -138,7 +138,7 @@ finally 是否开始调用删除、删除成功/失败的具体路径；测试�
   1/1 通过。上述四个编辑文件的 `pnpm exec biome check` 无修改通过，
   `git diff --check` 通过。本轮没有手改或重新生成 worker bundle。
 
-## 剩余实施工作（仍未完成）
+## Checkpoint 2 剩余实施工作（历史检查点）
 
 本检查点包含未完成的 check-host、v3 schema、worker generator、16 个入口、
 CLI adapter、业务依赖 requirements/实际观察/重查及部分 fixture 迁移。
@@ -148,3 +148,148 @@ CLI adapter、业务依赖 requirements/实际观察/重查及部分 fixture 迁
 完整发布包一致性与其余文档更新尚未完成。
 历史清理影响仍未知，不能以本次 28 个通过用例替代历史完整性结论。
 不能勾选 I-* 或进入实施提交门禁。
+
+## Checkpoint 3：行为边界、测量与全量验证尝试
+
+本节记录当前实施检查点，不构成实施完成或恢复执行的授权。
+旧清理事件的历史影响仍未知；本轮没有盘符扫描、越界删除重现或环境历史完整性验证。
+accepted Ideal、Implementation contract、ledger、events 均未改变。
+
+### 已实施并得到局部证据的行为
+
+- worker 登记 `spawn`、`exec`、`execFile`、其 promisified 形式及 `fork` 的所属子进程；
+  限制正 PID，拒绝把 Host 自身登记为待终止的子进程。
+  CommonJS loader 保留 snapshot 导入边界；worker 不继承调用者 loader/debug flags 或
+  `NODE_OPTIONS`。相关测试只创建/终止其实际持有的进程对象或明确记录的 PID。
+- 单项流发送终态后结束并释放 observer 槽。单个有界大帧可以排空，
+  不允许其后积累无限快照；容量、断线、重订阅、kernel/HTTP 同状态、大结果、
+  lost-start response 恢复均有回归用例。
+- 增加真实双 CLI 并发 discovery/复用测试，只记录这两个 CLI 在本次独有目录内
+  实际启动的 Host PID，认证 readiness 后验证共享、后续线程复用并停止该具体 PID。
+  不使用用户默认 Host。半写 startup record 只重试，不按未知所有权删除。
+- publication 在准备失败时释放所属锁；安装/rollback 同时失败时保留最后良好的
+  previous artifact，不在 finally 删除唯一备份。注入失败测试的 fs mock 在同进程
+  串行用例内安装/恢复，删除目标始终是 fixture 自己创建的根。
+- source preparation 只验证完整 artifact，实际调用才发布，修复后台 refresh
+  提前覆盖旧绑定导致的 revision mismatch；持续 supervise 跟随源码/依赖更新通过。
+- regulation 进程停止先发送显式 abort，等待其 run/finalizer 返回的 outcome/error
+  acknowledgement（最多 10 秒），再终止所属进程树。事件回调自身拒绝不能冒充
+  worker 清理 acknowledgement。强制停止 fixture 改为持有所属子进程，
+  不再把共享 Host 的 `process.pid` 当成逐 check 进程。
+- 旧 HTTP probe 测试改为明确拒绝旧工厂，并验证 worker subject、业务失败、
+  取消、预取消。CLI evidence 检验 caller-owned `result.json`，不要求 worker
+  创建不再承诺的逐 check business events 文件。
+- 私有 tarball 测试实际调用全部 16 个入口；marker 使用本次创建的具体文件。
+  发布清单/工作流静态配置增加 check-host，协议消费使用 v3 并保留 v1/v2 离线导出。
+  没有发布、推送、运行发布 workflow 或添加 token。
+- 仅格式化本次迁移涉及的文件，修复其 Biome/typecheck 失败。bundle 和资源仅通过
+  既有生成器生成；worker 生成器维护包自有 `generated` 文件清单，不扩大扫描豁免。
+  紧凑字面量保留既有确定性 projection profile；self-check 当前表达式 4064 bytes，
+  接近 4096-byte 上限，后续资源增长需要正面处理，不能靠放宽预算或任意函数绕过。
+
+### 验证命令与结果
+
+- `pnpm exec tsc -b --pretty false`、`pnpm exec tsc -p tsconfig.test.json --pretty false`
+  在上述最终运行逻辑修补后通过。所编辑迁移文件的 Biome 检查通过。
+- `pnpm self-check:build`、`pnpm health:build`、`pnpm setup:build`、
+  `pnpm monorepo:build`、`pnpm workers:build` 均通过；
+  最后 `pnpm workers:check` 验证全部 16 个产物通过。
+  monorepo/worker bundling 仍有 CJS `import.meta` warning，未将 warning 当作通过证明。
+- `pnpm exec tsx --test --test-concurrency=1 packages\check-host\test\boundaries.test.ts packages\objective-pilot\test\dependency.test.ts packages\pilot-protocol\test\protocol.test.ts`：
+  当时 17/17 通过；随后增加的 runtime flags、discovery、publication 用例在最新
+  全量尝试中归入 check-host 13/13，通过。
+- 真实双 CLI 单文件验证 1/1 通过；修补后的 probes 单文件 10/10 通过；
+  `node --test --test-concurrency=1 scripts\pilot-packages.test.mjs` 3/3 通过
+  （第三项覆盖全部 16 个 tarball worker 入口）。
+- Objective 三文件串行验证曾为 63 项：61 通过、1 跳过、1 因包声明失败。
+  未记为通过。修补 generated 归属/依赖方向/22 个包计数后，
+  real-repository selector 2/2 通过；后续全量日志中 monorepo 53/53、
+  setup 35/35 均通过。Linux native dispatch 在 Windows 跳过，不算 Linux 证明。
+- 最后针对性命令：
+  `pnpm exec tsx --test --test-concurrency=1 packages\pguide\test\regulation-process.test.ts scripts\release-packages.test.mjs`
+  8/8 通过，包括正常结束、显式停止和事件回调失败后的所属 Agent 退出。
+- `pnpm check` 多次运行：先暴露并修复迁移文件格式、旧 run/HTTP/evidence 假设、
+  source refresh 冲突、发布 inventory 17→18 与缺少 check-host trigger。
+  一次尝试的 44 个 Turbo tasks 全部成功，但随后根 scripts 的两个发布清单测试失败，
+  **不算完整 pnpm check 通过**；相应两个检查后来在上述 targeted 命令中通过。
+- 为避免测试调用 `os.tmpdir()` 写入系统临时目录，全量尝试将 TEMP/TMP 指向本次
+  `.cache\checkpoint3-check-<随机后缀>\scratch`，并设置所属 state directory。
+  用 `createWorkerHost` 提供本次进程内 guard Host，先认证 readiness，正常收尾关闭。
+  一次同时替换 HOME/USERPROFILE 的 runner 配置被 Turbo 以
+  `Global config path not found` 拒绝；恢复工具原有配置环境后继续，仅隔离 scratch/state。
+- **最新尝试已因下述新安全阻断停止，不是通过**。`pnpm check` 已通过 layers、
+  format、lint、typecheck；日志中 check-host 13/13、objective-pilot 61/61、
+  pilot-protocol 14/14、monorepo 53/53、setup 35/35 通过。
+  pguide suite 尚在执行 source 用例，后续根 scripts/完整 pack:check 未完成。
+  没有将停止前零失败的局部输出合并成全量通过。
+
+### 可重复测量与限制
+
+`packages/check-host/test/workload.test.ts` 在同一 Node `v24.11.1`/Windows 上，
+以同一模块、同一 JSON input 比较 fresh Node process 与 kernel worker。
+不执行 target 的 build/check 命令。fixture 输入 66011 bytes；
+worker 上限 2、任务数退役阈值 8、record 上限 128、worker samples 上限 64，
+源于实现中的实际容量机制，以小阈值强制多代替换而非无限运行。
+96 个混合请求要求成功、调用失败、取消均出现，所有计数/资源断言有硬上限；
+没有给 RSS 增长设一个未经论证的“无泄漏”阈值，也没有断言任意噪声下必然更快。
+
+一次独立运行记录：
+
+| 指标 | fresh process | worker |
+| --- | --- | --- |
+| 小 fixture 中位耗时 | 89.31 ms（7 次） | cold 44.93 ms；hot 中位 3.01 ms |
+| 初始化次数（timing 阶段） | 7 | 2（包含一个有余量时的预热线程） |
+| 混合负载 | — | Completed 77 / Failed 7 / Cancelled 12 |
+| 总计 | — | 103 executions / 14 initializations / 12 retirements |
+| 峰值资源 | — | 2 workers；queue 0；ownedProcesses 0；retained records 103 |
+| RSS 样本 | 单个进程约 55.00–55.16 MiB | 142.98→150.93 MiB，range 7.95 MiB |
+| Host heap 样本 | — | 40.60→41.39 MiB，中间有回落 |
+
+另用真实 `package-standard/structure` bundle 和同一个 operation-owned 仓库 fixture：
+一次并发全套环境下 12 次 fresh-process 中位 733.30 ms、总计 8388.08 ms；
+同输入 12 次 Host cold 4262.13 ms、hot 中位 27.54 ms、总计 4577.29 ms，
+只有 1 次 worker initialization。**真实 checker 的首次 snapshot/加载明显更慢**，
+不能宣称冷启动也有收益；warm/多次复用才出现本次测得的收益。
+独立小 fixture 与真实 checker、独立运行与 Turbo 并发样本不能互相替代。
+这些是 kernel API 测量，未包含完整 CLI/Git binding/discovery 的端到端时间。
+Host RSS 包括测试 runtime 与共享线程，baseline RSS 是一个独立 child，
+不能直接宣称绝对内存更低。96 次有界样本不证明长期/无限期无泄漏或跨平台收益。
+
+## 新安全阻断：Windows descriptor ACL 未隔离其他本机用户
+
+只读核查本次 operation-owned 文件：
+
+```powershell
+Get-Acl -LiteralPath .cache\checkpoint3-check-ZghIH4\host\host.json
+```
+
+实际继承的 Allow ACL 包含：
+
+- `NT AUTHORITY\Authenticated Users`: `Modify, Synchronize`
+- `BUILTIN\Users`: `ReadAndExecute, Synchronize`
+- Administrators、SYSTEM: FullControl
+
+该 descriptor 含 bearer token。当前 discovery 只在 `process.platform !== "win32"`
+检查 mode；`mkdir/open/writeFile` 的 POSIX `0o700/0o600` 不能在 Windows 建立
+owner-only NTFS 边界。因而在本轮实际目录上，其他本机账户可读取 token，
+且 authenticated users 有修改权限。这里没有运行其他账户、读取/打印 token、
+发送恶意请求或调查其他目录；这是当前服务隔离缺失，不是历史删除事件的证据。
+
+发现后立即 `stop_powershell` 停止本次完整验证 shell 195 的进程树；
+再以精确 PID 查询确认本次 guard Host `22032` 已不存在。没有按进程名终止、
+没有触碰同机其他用户进程，也没有继续产品 tests/build/pnpm check。
+停止时日志仍在 source tests，尚无本次真实双 CLI 用例的完成记录；
+这不能单独证明该用例未开始，也不能只靠日志排除已脱离进程树的测试 Host。
+这里只确认了工具进程树停止和 guard PID 消失，没有做全机进程扫描，
+不能笼统声称所有可能的 Host 都已排除。后续核对应依赖明确所属的 PID/journal，
+不能按名称、仅凭时间或模糊目录前缀终止进程。
+保留 `.cache\checkpoint3-check-sIdWpm\check.log`（44 tasks 成功后两个根脚本失败）
+和 `.cache\checkpoint3-check-ZghIH4\check.log`（安全停止时的原始进度）供协调者核查；
+仅删除本轮明确创建的运行目录/descriptor，不清理未知 cache 前缀。
+
+恢复条件：先静态修补/审查 Windows 私有 discovery directory 与 descriptor 的
+ACL 创建、校验及 fail-closed 行为，不能只改 mode 或假设项目目录天然私有，
+也不能自动重写未知/用户现有目录的权限。需要在新建且明确拥有的目录上取得
+可靠的 owner-only ACL 验证后，由协调者决定恢复受控验证。
+随后重跑最终完整 pnpm check/pack 消费、补充更长内存和真实启动故障压力证据。
+当前 I-* 仍全部未完成；不 submit、不 accept、不推送、不发布。

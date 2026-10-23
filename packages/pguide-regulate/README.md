@@ -6,6 +6,12 @@ binaries do not require `pguide`; install alongside it to discover `regulate`
 and `continue`. Agent execution and process-worker helpers are public tool APIs
 used by supervision without a reverse dependency.
 
+Stopping a regulation process first requests cooperative abort, allowing it to
+explicitly cancel shared Host checks and acknowledge cleanup. The process runner
+waits up to ten seconds for this acknowledgement before terminating its owned
+process tree. Missing acknowledgement is a cleanup failure, not proof that shared
+work stopped; merely disconnecting an observation does not cancel it.
+
 Use `--help` for options, [command reference](../pguide/README.md) for execution,
 permissions and persistence, and [migration](../../docs/package-layering.md) for
 installation. Existing output envelopes and exit codes are preserved.

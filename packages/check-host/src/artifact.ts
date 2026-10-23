@@ -1,6 +1,16 @@
 import { createHash, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { chmod, lstat, mkdir, open, readdir, realpath, rename, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  lstat,
+  mkdir,
+  open,
+  readdir,
+  realpath,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { HostError } from "./types.js";
 
@@ -20,7 +30,7 @@ export async function readArtifact(directory: string) {
       const details = await lstat(full);
       if (details.isSymbolicLink() || (!details.isFile() && !details.isDirectory()))
         throw new HostError(400, "Artifact links and special files are forbidden.");
-      if (await realpath(full) !== full)
+      if ((await realpath(full)) !== full)
         throw new HostError(400, "Artifact path changed while reading.");
       if (details.isDirectory()) {
         await visit(full);
@@ -36,7 +46,11 @@ export async function readArtifact(directory: string) {
           throw new HostError(409, "Artifact changed while reading.");
         bytes = await handle.readFile();
         const after = await handle.stat();
-        if (after.mtimeMs !== before.mtimeMs || after.ctimeMs !== before.ctimeMs || bytes.length !== before.size)
+        if (
+          after.mtimeMs !== before.mtimeMs ||
+          after.ctimeMs !== before.ctimeMs ||
+          bytes.length !== before.size
+        )
           throw new HostError(409, "Artifact changed while reading.");
       } finally {
         await handle.close();
@@ -47,10 +61,14 @@ export async function readArtifact(directory: string) {
     }
   }
   await visit(canonical);
-  if (!files.has("worker.cjs")) throw new HostError(400, "Expected self-contained worker.cjs; legacy run.* is unsupported.");
+  if (!files.has("worker.cjs"))
+    throw new HostError(400, "Expected self-contained worker.cjs; legacy run.* is unsupported.");
   const hash = createHash("sha256");
   for (const [name, bytes] of [...files].sort(([a], [b]) => a.localeCompare(b, "en"))) {
-    hash.update(JSON.stringify([name, bytes.length])).update("\0").update(bytes);
+    hash
+      .update(JSON.stringify([name, bytes.length]))
+      .update("\0")
+      .update(bytes);
   }
   return { directory: canonical, revision: hash.digest("hex"), files };
 }
@@ -82,34 +100,53 @@ export async function publishArtifact(source: string, destination: string): Prom
   const artifact = await readArtifact(source);
   await mkdir(join(destination, ".."), { recursive: true, mode: 0o700 });
   const lock = `${destination}.lock`;
-  let handle;
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
   for (let attempt = 0; attempt < 100; attempt++) {
-    try { handle = await open(lock, "wx", 0o600); break; }
-    catch (error) {
+    try {
+      handle = await open(lock, "wx", 0o600);
+      break;
+    } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
   }
   if (!handle) throw new HostError(409, "Artifact publication is busy.");
-  await handle.close();
-  const prepared = await snapshotArtifact(artifact, join(destination, ".."));
+  let prepared: string | undefined;
   const previous = `${destination}.${randomUUID()}`;
   let moved = false;
+  let installed = false;
   try {
+    await handle.close();
     try {
-      if ((await readArtifact(destination)).revision === artifact.revision) return artifact.revision;
+      if ((await readArtifact(destination)).revision === artifact.revision)
+        return artifact.revision;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    prepared = await snapshotArtifact(artifact, join(destination, ".."));
+    try {
       await rename(destination, previous);
       moved = true;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     await rename(prepared, destination);
+    installed = true;
   } catch (error) {
-    if (moved) await rename(previous, destination);
+    if (moved && !installed) {
+      try {
+        await rename(previous, destination);
+      } catch (rollback) {
+        throw new AggregateError(
+          [error, rollback],
+          `Artifact rollback failed; previous artifact retained at ${previous}.`,
+        );
+      }
+    }
     throw error;
   } finally {
-    await rm(prepared, { recursive: true, force: true });
-    await rm(previous, { recursive: true, force: true });
+    if (prepared !== undefined) await rm(prepared, { recursive: true, force: true });
+    if (moved && installed) await rm(previous, { recursive: true, force: true });
     await rm(lock, { force: true });
   }
   return artifact.revision;
