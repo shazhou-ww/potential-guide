@@ -6,17 +6,17 @@
 
 ## 结果
 
-check 纳入 probe 协议并形成统一入口，由 CLI 按协议调度每个 Objective Pilot 的 HTTP 检查服务。独立 probe 或 regulation 在执行前启动所需服务，regulation 内反复 probe 复用已有实例。
+check 纳入 probe 协议，由 CLI 调度 HTTP 检查服务；同一 Pilot 实例对应同一服务进程，check 调用是最小并发单元，可由独立线程执行。服务可接收不同 regulation object 和 subject 的请求，不随每次 probe 重启。
 
 ## 边界
 
-- 服务按准确规则来源、版本及兼容执行策略隔离，不按包 subject 或单次 check 启动；Pilot 的观察逻辑无需新增独立进程。
+- 服务按准确规则来源、版本及兼容执行策略隔离，不按 regulation object、subject 或单次 check 启动；各 check 请求的线程、输入和证据独立，Pilot 观察逻辑无需新增进程。
 - 复用进程不等于复用输入、结果或证据；保留层级顺序、依赖来源、每轮视图、截止及取消语义。
 - CLI 是调度器，服务随顶层调用按需启停，不要求跨 CLI 共享。全量迁移至新的 probe 服务契约，不保留旧协议运行时兼容；历史 schema、源码和证据不改写。
 
 ## 验收标准
 
-- 独立 probe 和 regulation 均通过 probe 协议的统一入口调度；同一 regulation 内多次 probe 不重复启动有效服务，业务结果和问题归属不变。
+- 独立 probe 和 regulation 通过统一入口调度，同一调度上下文内相同 Pilot 不重复启动有效进程；不同对象和 subject 的 check 可按并发额度独立执行，结果与问题归属不变。
 - 依赖回调、目标变化、请求混淆、崩溃、取消及回收有明确行为与可验证证据，不以断开 HTTP 连接冒充停止检查。
 - 服务启动、就绪、路由与退出可观测；内置 Objective、脚手架及消费面全量迁移，旧输入明确拒绝，新契约不原地覆盖已发布 schema。
 
