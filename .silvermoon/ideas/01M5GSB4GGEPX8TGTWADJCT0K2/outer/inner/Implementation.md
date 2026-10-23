@@ -2,7 +2,8 @@
 
 ## 当前进度（2026-10-23 交接）
 
-当前仍为 `implementing`，未记录 `submitInner` 或实施验收；所有 I-* ledger 项保持未完成。
+当前仍为 `implementing`，未记录 `submitInner` 或实施验收；ledger 中 I-S01 已完成，
+其余步骤和验收项仍未完成。步骤完成不代表整体实施验收通过。
 实现检查点 `add8c7ea9f4f` 已随合并提交 `ba7e9f82134b` 同步至 primary，
 可从另一台机器接手。详细命令、结果与限制见
 [实施证据的 Checkpoint 5](./Implementation-evidence.md#checkpoint-5可跨机器继续的未完成候选2026-10-23)；
