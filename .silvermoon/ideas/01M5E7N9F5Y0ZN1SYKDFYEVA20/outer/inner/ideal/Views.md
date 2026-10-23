@@ -7,6 +7,7 @@
 - 基础状态包括业务实体、被采纳的关系/决定和 Coordinator 控制状态。决定如果影响查询结果，必须在基础状态中有可追溯的表达，不能只存在于物化视图或私有内存。
 - SELECT 定义视图的完整语义；可以按需执行，也可以物化以加速查询。物化结果不允许绕过基础状态独立编辑。
 - 每份查询输入限定为一个 Coordinator 作用域、一个一致的已应用事件前缀。表名省略宿主作用域键，不意味着多 Coordinator 可以混查，也不将实例 ID 加入领域模型。
+- Host 是逻辑 worker 而非物理设备，一个 Host 对应一个 Coordinator 状态边界，资源配置归属该 Host，ObjectiveRevision 不绑定 Host。下列 SELECT 仍是单 Host 内的 Coordinator 查询，不是中央观察服务的跨 Host 汇总定义；汇总时请求身份使用 (hostId, requestSeq)，状态版本按 (hostId, revision) 解释，所有局部引用保留 Host 作用域。各 Host 的 revision 不构成中央服务的统一时序，同一 targetKey 在不同 Host 的状态不自动合并。ER 新增 Host 的边界见 [Diagrams.md](./Diagrams.md#host-归属)。
 - 同一版本必须满足 `V_n = SELECT(B_n)`，其中 B 是基础状态、V 是视图。事件先确定基础变更，再维护受影响视图；纯回放不重新作业务决定或执行副作用。
 - 原子提交实体与视图，或让异步投影公开 appliedRevision，并只提供同一版本的组合读取。物化可暂时落后，但不能把不同版本拼成一份一致状态，也不能据落后视图重复启动工作。
 - SQL 使用普通 SELECT、JOIN、窗口函数和聚合表达逻辑；JSON 列作为不透明值传递。SQLite 可用于验证这些查询，不表示已选定生产数据库。

@@ -6,6 +6,8 @@
 
 ## 两个意图输入，一个执行状态输出
 
+Host 是逻辑 worker 身份，每个 Host 对应一个 Coordinator 的运行与状态边界，同时至多有一个活动实例，重启不更换逻辑身份。一台物理设备可通过虚拟机、容器或不同用户/profile 承载多个 Host；守护进程应阻止同一系统、同一 profile 内重复启动。资源配置归属 Host，执行 Run 的 Host 由实例归属确定；ObjectiveRevision 不与 Host 绑定。中央观察服务汇集多个 Host 的状态，跨 Host 引用与版本保留 hostId 作用域，不将局部请求序号视为全局身份。本轮不定义同步传输、跨 Host 路由或一致性协议。Host 的 ER 表达与值草案边界见 [Types.md](./Types.md#host-与运行作用域)。
+
 ```text
 Behavior RegulationRequests ───┐
                              ├── Coordinator ── Behavior CoordinatorState

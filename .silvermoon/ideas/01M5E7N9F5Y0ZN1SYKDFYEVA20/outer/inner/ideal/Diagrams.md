@@ -6,7 +6,7 @@
 
 | 类别 | 内容 | 含义 |
 | --- | --- | --- |
-| 业务实体 | ObjectiveRevision、RegulationTarget、RegulationRequest、RegulationRun | 具有独立身份；RegulationRun 是调用，不是请求或 Task |
+| 业务实体 | Host、ObjectiveRevision、RegulationTarget、RegulationRequest、RegulationRun | Host 表达运行归属；RegulationRun 是调用，不是请求或 Task |
 | 事实记录 | Observation、Fault | 具有发生与来源意义，记录主键仍待确定 |
 | 查询视图 | 已确认请求、Target 状态、当前有效观察、活跃集合、实际占用 | 属性来源与 SELECT 明确；可物化，但必须能从基础事实或充分基线重算 |
 | 基础决定与业务关系 | 请求确认、证据选择、Probe 顺序、已采用的依赖 | 安装、采纳、撤销与可靠顺序须明确记录，不能只藏在视图中 |
@@ -25,9 +25,21 @@
 
 [打开实体关系 SVG](./diagrams/regulation-target.svg)
 
-<img src="./diagrams/regulation-target.svg" width="100%" alt="业务实体关系：ObjectiveRevision、Target、Request、Run、Observation 与 Fault">
+<img src="./diagrams/regulation-target.svg" width="100%" alt="业务实体关系：Host、ObjectiveRevision、Target、Request、Run、Observation 与 Fault">
 
 同一张图包含上游的 RegulationRequest 和下游的 RegulationRun、Observation、Fault，展示实体身份、关联及主要查询属性，不画 coordinatorRevision、快照成员表或当前/历史分组。图的既有文件名保留以兼容旧链接，不再表示只画请求意图。嵌套值展开不意味着新增实体或强制数据库平铺。
+
+### Host 归属
+
+Host 是中央观察服务识别的逻辑 worker 身份，对应一个 Coordinator 的运行与状态边界，不等于物理设备、进程、连接或一次启动。同一个 Host 同时至多有一个活动 Coordinator，重启或重连不因此创建新 Host；不为每次进程启动新增 Coordinator 实体。
+
+一台物理设备可以通过虚拟机、容器或不同用户/profile 承载多个 Host，各有独立 Coordinator、状态与资源配置。守护进程应阻止同一系统、同一 profile 内的重复启动；两个独立运行的逻辑 worker 不能因物理设备相同而合并为一个 Host。Host 身份的分配、持久化及克隆环境防冲突协议仍待定义。
+
+- ObjectiveRevision 不归属特定 Host，可被不同 Host 上的治理活动引用；不将 hostId 加入 objectiveKey。
+- Host 关联在其上执行的 RegulationRun。图中 hostId 显式表达跨 Host 查询所需的执行归属，由所属 Coordinator 的 Host 确定，不是每次 Run 任意选择的参数；Observation 经 Run 推导执行 Host。
+- resourceConfiguration 是 Host 的资源配置 JSON 值，表达可选 agent、binding 配置及 capacity；具体 schema 与配置版本协议待定，不为 JSON 内容另造资源实体。配置不含明文凭据，也不等于实际占用；已有 Run 的 binding 快照不随配置变更而改写。
+- 图中 Request、Run、Observation 和 Fault 的局部键及引用均处于所属 Host 的 Coordinator 状态范围；跨 Host 存储或查询必须携带 hostId。例如 Request 的跨 Host 身份是 (hostId, requestSeq)，状态版本也按 (hostId, revision) 解释，不能跨 Host 比大小。Host 的重启不能重置同一请求序列的水位。
+- 本轮只补 Host 层，不改变 targetKey 的定义，也不据此允许同一 Request 在多个 Host 上执行。同一 targetKey 可以出现在不同 Host 的状态中，但各自的请求、Probe 状态和执行事实不自动合并。中央观察服务汇集多个 Host 的状态，不因此成为运行这些 Run 的 Host；连接身份也不是 Host 身份。同步传输、跨 Host 依赖和一致性协议另行收敛。
 
 <details>
 <summary>Mermaid 图源：业务实体关系</summary>
@@ -46,6 +58,7 @@ config:
 ---
 erDiagram
     direction LR
+    HOST ||--o{ REGULATION_RUN : hosts
     OBJECTIVE_REVISION ||--o{ REGULATION_TARGET : defines
     REGULATION_TARGET ||--o{ REGULATION_REQUEST : receives
     REGULATION_REQUEST ||--o{ REGULATION_RUN : executes
@@ -54,6 +67,10 @@ erDiagram
     REGULATION_REQUEST o|--o{ FAULT : request_scope
     REGULATION_RUN o|--o{ FAULT : run_scope
 
+    HOST {
+        string hostId PK "Logical worker identity"
+        JsonObject resourceConfiguration "Agents and capacity"
+    }
     OBJECTIVE_REVISION {
         string objectiveKey PK
         string source
@@ -72,6 +89,7 @@ erDiagram
     }
     REGULATION_RUN {
         string runId PK
+        string hostId FK
         number requestSeq FK
         string bindingId "Actual binding"
         JsonObject bindingConfiguration "Optional snapshot"

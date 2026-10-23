@@ -18,6 +18,16 @@ requestSeq 在同一个请求序列范围内唯一并按逻辑接收顺序递增
 
 ## 统一业务实体模型
 
+### Host 与运行作用域
+
+Host 是中央观察服务所识别的逻辑 worker，对应一个 Coordinator 的运行与状态边界，同一 Host 同时至多有一个活动 Coordinator。Host 不等于物理设备、进程或连接；重启、重连保留逻辑身份和请求序列水位。虚拟机、容器或不同用户/profile 可在同一物理设备承载多个独立 Host；守护进程应阻止同一系统、同一 profile 内重复启动。Host 身份的分配、持久化和克隆环境防冲突协议尚未确定。
+
+ER 增加 Host，资源配置以其 resourceConfiguration JSON 属性表达可选 agent、binding 配置和 capacity，具体 schema 与版本协议待定。每个 Run 的执行 Host 由所属 Coordinator 确定，ER 用 hostId 关联；Observation 沿 Run 推导 Host。中央观察服务汇集多个 Host 的状态，不因汇集而成为这些 Run 的执行 Host。
+
+ObjectiveRevision 不归属 Host，objectiveKey 和 targetKey 的既有计算不因本轮新增 Host 而改变。同一 targetKey 在不同 Host 的请求、Probe 状态和执行事实分别维护。Host 标识 Coordinator 状态所属的逻辑作用域：跨 Host 的请求引用使用 (hostId, requestSeq)，状态版本使用 (hostId, revision)；其他局部键和引用同样保留 Host 作用域，不能只凭数字序号或版本合并。跨 Host 请求路由与依赖协议另定，不从这张 ER 推导跨 Host 执行权限。
+
+本轮先更新 ER 的 Host 归属；下方 TypeScript 仍是单 Coordinator 作用域内的值草案，未补齐 Host 与资源配置的跨设备表示。域内值可以由外层作用域携带 Host，不要求每条记录物理重复存储 hostId；存储适配必须能无歧义地还原归属。完整跨设备 schema 不以当前 TS 草案为完成标志。
+
 ### 实体边界与身份假设
 
 概念上从 Objective source → ObjectiveRevision → RegulationTarget → RegulationRequest 延伸到 RegulationRun 及 Observation、Fault；source 是字符串值，不单独建实体。ObjectiveRevision 表达固定定义版本，RegulationTarget 是该版本在特定 subject 上的投射，不是一次执行；RegulationRequest 是在特定逻辑时序上要求向 desiredLevel 推进的请求，不是 Task。真正有开始与终结的执行叫 RegulationRun，一个请求可能尚未执行，也可能涉及有限依赖编排中的多次调用。命名优先表达单个实体含义，不强制前缀继承父实体名称。
