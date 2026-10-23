@@ -6,7 +6,7 @@
 
 ## 结果
 
-执行内核以目录、revision、Subject 发起一次副作用，返回该次执行的 Behavior CheckState。共享 Node Check Host 负责多执行调度与 HTTP 状态投影，复用 worker、按次数退役及受控预热，不建设可恢复任务平台。
+执行内核以目录、revision、Subject 发起一次副作用，返回 Behavior CheckState。共享 Node Check Host 负责调度和 Web 封装，只提供开始、取消、观察；可观察单项执行及服务当前任务集合，内部复用 worker，不建设任务平台。
 
 ## 边界
 
@@ -16,10 +16,10 @@
 
 ## 验收标准
 
-- 多个 CLI 共用 Host；一次启动对应一个当前状态可读的 Behavior，重复观察不重复执行，终态携带业务结果，包括特定 check 的依赖要求；Host 不解释 Objective 依赖。
+- 多个 CLI 共用 Host；一次开始对应一个 Behavior，重复观察不重复执行，单项和活动集合观察一致且不泄露 Subject；终态携带业务结果，Host 不解释 Objective 依赖。
 - 成功、失败和取消后清理请求资源，持续复用的内存及存活资源有界；竞争启动、版本冲突、依赖和崩溃可诊断，客户端退出不误杀其他任务，断线不冒充停止。
 - 固定输入的真实消费比较报告进程/线程启动、重初始化和冷/热耗时；旧输入明确拒绝，不以跳检查或延长预算冒充收益。
 
 ## 下一步
 
-审阅 [MVP 设计](./Design.md) 的内核、业务依赖结果边界和四个 HTTP 接口；待定业务字段与参数见 [OpenQuestions.md](./OpenQuestions.md)，本次不记录构想验收。
+审阅 [最小设计](./Design.md) 的开始、取消、单项/集合观察及内核边界；具体字段与参数见 [OpenQuestions.md](./OpenQuestions.md)，本次不记录构想验收。

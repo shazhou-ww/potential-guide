@@ -1,68 +1,47 @@
-# Check Host：MVP 设计
+# Check Host：最小设计
 
-**只做一个可靠的本地执行器，不做可恢复任务平台。**
-目标：多个 CLI 共用一个 Node Host，重复执行 check 不反复加载重依赖，
-同时保持业务结果、取消、证据和资源清理正确。以下接口是简化后的审阅建议，尚未实现。
+本文是本 Idea 的唯一设计稿。只做**开始、取消、观察**；观察包括单项 check 和服务当前任务集合。
+不提供 registration、binding、session、业务依赖回调或 Host 管理 HTTP 接口。
+以下路由及数据形状为审阅建议，尚未实现；历史讨论由 Git 保存，不在当前稿维护多套方案。
 
 ## 0. 架构不动点
-
-执行器内核的顶层定义固定为：
 
 ```haskell
 executeCheck :: WorkerDirectory -> Revision -> Subject -> IO (Behavior CheckState)
 ```
 
-- 外层 IO 发起并拥有一次执行，返回该次执行的 Behavior，不等待最终检查结果才返回。
-  同一次执行的采样、订阅或多个观察者不会再次启动 check；再次调用 IO 才是另一次执行。
-- Subject 就是 check 接受的业务对象，不另造任意 input 包装。
-  内核不理解 Objective/level 语义；业务字段由具体 check 校验和使用。
-- Behavior 表达**当前 CheckState 及其后续变化**，不是只有终值的 Promise，
-  也不是必须回放历史才能重建当前值的事件日志。状态订阅须衔接当前快照和后续更新，
-  避免采样与订阅之间遗漏变化；终态在该次执行的观察寿命内保持可读。
-- Check Host 是这个内核的调度与 Web Service 封装，统一管理多次执行、worker 池和资源额度，
-  HTTP 只投影同一 Behavior，不再生成第二套执行状态或第二套 check 队列。
-  内核可在无 HTTP 的运行时作用域中使用；具体取消/资源句柄是执行基础设施，不混入 Subject。
+IO 发起一次执行，Behavior 表达该次执行的**当前状态及后续变化**。
+重复采样、订阅或重新观察同一执行，不再启动 check；终态包含 CheckResult 或执行故障。
+Subject 就是业务输入，不包装为 `{ref, subject}`；运行预算、取消和视图能力属于执行上下文。
 
-状态概念示例为 `Queued -> Running -> Progress ... -> Completed CheckResult`，
-也可进入 `Failed Error` 或 `Cancelled`；进度可选，具体构造名称及字段仍待定。
-Queued 表示已受理但尚在排队/准备代码，不能误称 worker 已运行。
-`Completed` 表示执行成功，CheckResult 可包含业务问题，不等于业务一定达标；
-调用故障进入 Failed，不包装成业务问题。取得 Behavior 前的拒绝可使外层 IO 失败，
-一旦取得 Behavior，执行期间故障由状态表达，不用异常断流冒充正常终态。
-清理未结束前仍是非终态；清理失败或无法确认停止要明确 Failed 并隔离资源，
-不能宣告 Completed/Cancelled 或让 worker 回池。
+Check Host 对内核进行统一调度并封装为 Web Service。内核不依赖 HTTP；
+HTTP 只投影同一状态源，不再维护另一套执行状态或调度队列。
+Host 不理解 Objective/level/业务 check ID，只管理代码、执行及资源。
 
-状态变化只是 Behavior 的一种观察方式；Objective 之间的依赖属于某类内置 check 的
-业务返回值，位于 Completed 的 CheckResult 中，不是执行器的回调或调度指令。
-Host 不编码目标 Objective、subject、level 的依赖协议，也不挂起 worker 等待依赖响应。
-证据事件仍可作为请求级旁路消息；业务结果的解释、依赖处理与事实校验归上层。
-首版不新增历史查询/重连恢复；释放执行作用域后终态对象和订阅引用可回收，
-不因此永久缓存全部执行结果。单个订阅退出不等于结束执行，取消仍是显式生命周期操作。
+```text
+开始(directory, revision, subject) → 一次执行 → checkId + Behavior CheckState
+取消(checkId)                    → 向该执行发出取消请求
+观察(checkId)                    → 当前状态及变化，不执行新工作
+观察服务                         → 当前活动 check 集合，不执行新工作
+```
+
+CheckState 可表达排队、执行中、进度、完成、失败、取消，具体字段后续定稿。
+Completed 的 CheckResult 可表示业务不通过；调用或清理故障属于 Failed。
+请求取消不等于已经停止；清理确认前不能宣告正常完成/取消，也不能把 worker 放回池。
 
 ## 1. 调整范围
 
-```text
-CLI / Pilot：选择检查产物、提供 Subject、维护观察与证据
-                         ↓ 本地 HTTP
-Check Host：校验/调度多次执行、管理统一 worker 资源、投影状态
-                         ↓ 调用内核一次
-executeCheck directory revision subject → IO (Behavior CheckState)
-                         ↕ MessagePort（执行/进度/完成/证据）
-worker：执行检查 → 清理本次资源 → 等待下一项
-```
+只新增 `packages/check-host` 可复用包，不新增应用目录、不拆多个空壳包。
+同一包内区分执行内核、统一资源调度、HTTP adapter；复用既有 CLI 启动装配。
 
-只新增 `packages/check-host` 可复用包，不拆多个新包，不新增应用目录。
-复用现有 CLI 的启动装配；Host 自己管理线程，不把库调用实现为递归调用 CLI。
-内核、调度器和 HTTP adapter 是同一包内职责分离，不为这三个概念再新增三个包。
-
-| 调整面 | MVP 要做的事 |
+| 调整面 | 要做的事 |
 | --- | --- |
-| check-host | 无 HTTP 依赖的执行内核/Behavior，统一调度与池，再由 HTTP adapter 封装当前状态和变化 |
-| pilot-protocol / objective-pilot | worker 契约和 adapter；层级/业务结果校验留在业务层，依赖要求改由特定 check 的结果表达，区分要求与已观测事实 |
-| cli-runtime 与 probe/regulate/supervise | 发现 Host、准备目录/Subject、观察 CheckState；上层读取业务结果决定后续行为，不经 Host 发起依赖回调 |
-| 所有 Objective、生成器、脚手架、消费测试 | 进程入口改为 worker handler，输入/证据/取消改为显式请求上下文 |
+| check-host | 用户级共享 Host、三个操作、活动任务集合、按目录加载和有界 worker 池 |
+| pilot-protocol / objective-pilot | worker 契约与 adapter，Subject/CheckResult 和状态语义；业务层解释依赖结果 |
+| cli-runtime 与 probe/regulate/supervise | 准备准确产物，开始执行、观察状态、取消；保留业务来源和证据归属 |
+| 内置 Objective、生成器、脚手架及消费测试 | 进程入口迁移为 worker handler，不再逐 check 启动重进程 |
 
-**迁移范围不缩减：6 个内置 Objective，16 个 check。**
+迁移仍覆盖 **6 个 Objective、16 个 check**：
 
 | packages 下的 Objective | check IDs |
 | --- | --- |
@@ -73,209 +52,106 @@ worker：执行检查 → 清理本次资源 → 等待下一项
 | objective-pguide-self-check | installation、configuration、sanity |
 | objective-pguide-setup/sanity-fixture | marker |
 
-旧一次性入口和旧裸 subject HTTP 契约明确拒绝；不长期维护双轨，
-不改写已发布 schema 或历史来源证据。业务需要的外部工具仍可调用，但必须受本请求管理；
-不能在 worker 内每次再 spawn 原 check 进程冒充迁移。
+旧运行协议明确拒绝；历史 schema、源码和固定证据不改写。系统工具或 Agent 等业务所需外部
+能力不擅自删除，但其执行权限、子进程和清理责任仍归当前请求。
 
-### 代码身份与依赖
+## 2. 代码加载与 worker 生命周期
 
-业务层负责 Objective/level/check 与准确代码的映射；Host 不判断层级或下载 Git 仓库。
-选定的目录/入口已确定要执行的 check；需要复用同一业务 bundle 的不同 check 可用轻量入口
-分别选择函数，不把 `{ref, subject}` 伪装成新的业务 Subject，也不要求 Host 路由业务 check ID。
-调用者提供已准备好的**自包含 Node 产物目录**，首版以 bundle 加显式资源为主；
-Host 不安装 npm 依赖，也不从调用者的任意 node_modules 向上解析。
-产物 revision 覆盖规范化文件清单、全部代码/资源内容和入口，不只 hash 入口 JS。
-**规范化目录是 key，完整内容 hash 是 revision。** 路径标识这份可更新产物的位置，
-不单独证明代码内容。客户端直接在 execute 中提供 directory 和预期 revision，无需预注册或卸载 API。
-Host 校验并复制到自己管理的不可变目录后才执行，复制后的内容必须匹配预期 hash；
-源目录在采集期间变化或内容不匹配时明确拒绝，不从一边修改一边读取的目录执行。
-目录必须是经授权的绝对本机路径；按文件系统真实路径和大小写/链接规则取得规范身份，
-不能简单把所有平台路径一律小写。目录内入口/资源路径不得通过链接或相对路径越界。
-调用方使用相对稳定的产物目录，不能每次创建新临时路径却期望复用同一个池。
+- **规范化目录是 key，完整产物 hash 是 revision**。开始执行直接给出这两个值，无需预注册。
+  首版采用自包含 Node bundle 加显式资源，不自动安装依赖或向目录外解析任意 node_modules。
+- Host 验证目录权限、入口/资源边界及完整内容，准备不可变执行副本，不能只相信入口 JS 的 hash。
+  同目录同 revision 复用；旧任务排空且旧线程退出后才能加载新 revision；在途版本冲突明确拒绝。
+- 一线程同时执行一项 check，固定线程/队列上限；按任务数退役，异常或清理失败隔离退役。
+  有余量时预热一个同版本替补，预热不执行真实 check，所有线程都计入资源限额。
+- 每次任务结束清理输入/AST/Buffer 引用、监听器、定时器、句柄和外部任务；
+  只保留有界的代码/编译器缓存。GC 和周期退役不能代替每请求清理。
+- 强制终止线程不保证 finally 或外部子进程已结束；未确认清理不能重新使用相关执行资源。
+  Worker Threads 不是恶意代码沙箱。
 
-Host 内部按目录持有池，加载和切换在该 key 下串行仲裁：
-
-| 状态 | execute 的行为 |
-| --- | --- |
-| 未加载目录 | 验证 revision、准备不可变副本、初始化 worker 后执行 |
-| 已加载且 revision 相同 | 验证请求对应的产物身份，复用已有 worker |
-| revision 不同，旧任务已排空 | 停止旧池派发，卸载并确认旧线程退出，再加载请求的新 revision |
-| revision 不同，旧版仍有排队/运行/清理任务 | 返回版本冲突，不并存版本、不抢占旧任务；调用者在旧任务结束后可明确发起新请求 |
-
-不提供复杂版本等待队列；排队任务始终绑定受理时的 revision，不能悄悄转到新版。
-自动更新指下一次符合切换条件的执行请求触发顺序卸旧载新，不是文件 watcher 热替换。
-切换失败明确报错，不执行旧版来冒充新版。预热不得提前加载另一 revision；
-代码相同但 Node/执行配置不兼容也不混用线程。
-Pilot 到目录的业务映射由 adapter 负责；Host 不再维护 Pilot ID 注册表，也不能识别
-两个不同目录是否属于同一 Pilot。业务层仍需维持一致映射，不利用不同目录绕开既有单版本约束。
-来源与业务证据由 adapter 保留，不能因为 Host 只看产物就把准确 commit/tree 丢掉。
-
-## 2. worker 复用与清理
-
-由统一 runner 管 MessagePort；下面是内部 handler 适配建议，不是执行器顶层返回类型：
-
-```ts
-interface WorkerModule {
-  initialize(context: WorkerContext): Promise<void>;
-  execute(subject: Subject, context: RequestContext): Promise<CheckResult>;
-  dispose(): Promise<void>;
-}
-```
-
-Subject/CheckResult 沿用既有业务数据；context 在 worker 本地构建，不是业务输入包装。
-handler 的 Promise 仅表示 worker 内部最终业务结果；runner 报告执行进度与清理结果，
-内核将这些信号转换为同一次执行的 Behavior，不能把 Promise 当作对外接口。
-RequestContext 提供 signal、可选进度报告、输入视图、证据发送及异步清理登记，
-不通过线程直接发送函数、AbortSignal 或任意对象实例。
-不提供 Objective 依赖调用能力；内置依赖 check 将业务要求作为 CheckResult 返回。
-业务故障由 handler/runner 报调用错误并映射 Failed；业务 ok:false 仍是 Completed 的 CheckResult。
-
-MVP 固定总体线程/队列上限，一线程同时一任务，按准确产物及兼容配置复用。
-首版退役只做**任务数上限、异常/清理失败隔离、目录 revision 切换时卸载**；
-动态预热只做**容量允许时，为即将按次数退役的同版本 worker 准备一个替补**。
-预热、运行及退役中线程均计入额度；没有空位就先退出再启动，不执行真实 check 来预热。
-时间、内存压力、自适应扩缩容及特殊一次性策略列为后续能力，不同时实现。
-
-每次请求在成功、失败、取消路径都清理输入引用、AST/Buffer、待决任务引用、监听器、
-定时器、文件/网络句柄和外部任务。只保留有界、明确允许的模块/编译器缓存。
-只有清理成功才回池；失败明确报告并销毁 worker，不能用退役次数掩盖泄漏。
-强制终止不保证 finally 执行，Host 仍需收回自己管理的文件与执行资源。
-Node worker 不是安全沙箱，模块缓存通常按线程独立；内存验收仍覆盖 heap、
-外部内存和 Host RSS，不承诺进程 RSS 每次立即归零。
+业务模块的内部适配建议为 initialize、execute(subject, context)、dispose；
+runner 负责生命周期和消息。execute 可以在 worker 内返回最终业务结果并报告进度，
+内核对外始终提供 Behavior，而不是只返回一个最终 Promise。
+具体函数签名、容量和资源阈值在实施前定稿，不展开为管理平台。
 
 ## 3. worker MessagePort 消息
 
-只保留下面几类，不建设消息重放或持久日志。
-
-| 方向 | 消息 | 内容 |
+| 方向 | 消息 | 最小内容 |
 | --- | --- | --- |
-| Host → runner | initialize | 已验证的不可变产物/入口及 revision、worker 代际和配置 |
-| runner → Host | ready | 初始化完成；才可接收执行 |
-| Host → runner | execute | requestId、worker 代际、subject、剩余预算、受限运行上下文 |
-| runner → Host | started / progress | 关联身份及可选进度；由内核更新同一 Behavior，不另建状态源 |
-| Host → runner | cancel | requestId、原因；runner 触发本地 signal |
-| runner → Host | evidence | requestId、受限且已脱敏的证据数据 |
-| runner → Host | done | requestId、结果/错误/取消、清理是否成功 |
-| Host → runner | dispose | 停止接新任务并卸载；Host 等待真实线程 exit |
+| Host → runner | initialize | 验证后的产物/入口、revision、worker 代际及配置 |
+| runner → Host | ready | 初始化完成 |
+| Host → runner | execute | checkId、Subject、受限执行上下文 |
+| runner → Host | started / progress | checkId 及执行进度，驱动内核当前状态 |
+| Host → runner | cancel | checkId、原因 |
+| runner → Host | done | checkId、结果/错误/取消及清理报告 |
+| Host → runner | dispose | 停止接新任务并卸载，Host 等真实线程退出 |
 
-所有消息包含协议版本，任务消息必须匹配当前 worker 代际和 requestId。
-初始化/协议异常、线程 error/exit 由 runner 或 Host 明确报错，不依赖额外“完成”消息才处理。
-done 在 runner 清理后发送；内核校验后形成 Completed、Failed 或 Cancelled。
-清理失败不能作为普通业务成功。HTTP 不自行推导终态；迟到消息不能完成下一项任务。
-started/progress 是 worker 信号，CheckState 是内核维护的当前状态；证据不是状态快照。
-具体进度字段及是否合并中间更新待定义，必须保留携带完整 CheckResult 的终态，
-包括业务依赖要求，不把进度当审计日志。消息协议中没有 Objective 依赖请求/响应类型。
+消息须匹配协议版本、worker 代际和当前 checkId，迟到消息不得改变另一任务。
+done 清理成功后内核才能形成正常终态；线程异常退出由内核独立处理。
+证据和日志保持请求归属及既有保护边界，不为它们新增公开管理接口。
+这里没有 Objective dependency 请求、响应或递归调度消息。
 
 ## 4. 对外 HTTP RPC
 
-### 四个接口，不提供提前注册或 session/observation/view 的独立资源管理
+**三个操作、四条路由**：开始、取消，以及两个粒度的观察。
 
-| 方法与路径 | 作用 |
-| --- | --- |
-| GET /v1/host | 鉴权后读取协议、Host 代际、基本状态 |
-| POST /v1/execute | 给定 directory、revision 和 subject，发起一次内核执行，投影当前 CheckState 及变化，旁路传递证据 |
-| POST /v1/execute/{requestId}/cancel | 请求取消指定任务；不把受理取消当成停止确认 |
-| POST /v1/shutdown | 管理能力下显式停止；有活动任务时拒绝，不误杀其他客户端 |
+| 操作 | 建议路由 | 行为 |
+| --- | --- | --- |
+| 开始 | POST /checks | directory、revision、subject → 创建一次执行，返回 checkId；不等待业务完成 |
+| 取消 | POST /checks/{checkId}/cancel | 请求取消已存在的执行；最终结果从状态观察确认 |
+| 观察单项 | GET /checks/{checkId} | 读取该执行的当前 CheckState，或订阅当前快照和后续变化 |
+| 观察服务 | GET /checks | 读取当前活动 check 的集合，或订阅集合当前快照和后续变化 |
 
-不返回 202 然后让客户端查询任务库，也不提供断线后领取结果或恢复事件的承诺。
-目录加载/更新在 Host 内与任务受理互斥，不提供显式注册、卸载或版本管理接口。
-directory 通过 JSON body 传递并验证授权与路径边界，不能据此读取或执行任意未授权目录。
-
-### 一次执行的请求与响应
+建议开始请求使用以下形状；checkId 是调用者预先生成的关联 ID，成功响应返回同一 ID：
 
 ```json
 {
-  "requestId": "client-generated-unique-id",
+  "checkId": "client-generated-unique-id",
   "directory": "D:\\workers\\repo-check",
   "revision": "sha256-of-artifact",
-  "timeoutMs": 30000,
   "subject": {}
 }
 ```
 
-`subject` 就是 check 的业务对象；Host 不解释业务字段，handler/adapter 负责业务 schema。
-requestId、鉴权、预算、语言及视图等执行元数据与 Subject 分开传递，
-不为维持最小内核签名而悄悄添加 Subject 字段。内核签名抽象具体运行时作用域和资源能力，
-不表示取消、截止或来源校验被删除。Host 负责协议、大小、目录/revision 和预算校验。
-首次加载及 revision 切换也消耗该请求预算，不在加载后重新起算。
-视图作为可选的受限运行元数据引用传递：仅允许约定的本机私有 staging 根下文件、
-摘要和大小，Host 校验边界/链接并复制至自己持有的请求目录后再使用；
-不能让请求触发任意宿主文件读取。调用者保留 staging 到请求结束确认，
-断线时 Host 依靠自己的副本清理，不依赖客户端还活着。不新增视图上传/查询 API。
-同轮复用仍需原有稳定输入证明；不为了简化把 captured view 改成 live 读取。
+开始成功返回 201 与 checkId；同 ID 不重复创建执行，内容不一致拒绝。
+响应丢失时可按该 ID 观察，不能生成新 ID 盲目重跑；Host 不承诺跨重启恢复任务。
+格式/身份/大小/路径等前置拒绝不创建任务；已创建任务的加载、排队、执行故障由 Failed 表达。
+取消受理可返回 202，已终态返回当前状态；取消请求和实际 Cancelled 状态不是一回事。
+未知或已回收 ID 明确返回不存在，不触发加载或新执行。
 
-响应使用有界 NDJSON，类型为 `state`、`evidence`，均带 requestId。
-state 携带本次执行的完整 CheckState 快照和单调状态序号。
-先发送订阅时的当前快照，再发送后续变化；原子衔接由内核观察机制保证，
-不是通过再次调用 executeCheck 生成快照。即使不产生业务进度，也不能退回只承诺一行最终结果。
-Host HTTP adapter 只序列化内核状态，客户端可投影为远端当前状态及其变化，
-不需要重放全部事件才能理解最新状态。序号用于关联/顺序校验，不新增历史游标或 ack。
+观察建议通过同一路由的 Accept 区分：JSON 返回当前快照，NDJSON 返回初始快照及后续更新。
+单项观察始终来自同一个 Behavior，采样与订阅原子衔接；集合观察从同一活动任务表投影，
+不另建执行器。集合只包含调用者有权查看的排队、运行、取消/清理中的任务摘要
+（checkId、当前状态、必要的产物身份），默认不展示 Subject、结果详情或秘密值。
+任务终结后从活动集合移除；尚在有限保留期的终态可按 ID 单独读取。
+集合流发送有界的完整摘要快照，不引入事件日志、cursor、ack 或历史重放。
 
-执行和清理结束后产生带结果/错误的终态 state；Completed 的 CheckResult 仍沿用原业务语义。
-HTTP 200、开始收流、done 信号或 EOF 都不独立证明检查成功。
-未收到终态前断流，客户端只能报告传输失败/远端状态未知，不伪造远端 Failed 或 Cancelled；
-已收到有效终态则保留该结果，不因随后的正常连接结束再执行。
-证据在同一响应中旁路传递，不合并为可覆盖的状态字段。
-业务依赖要求随终态 CheckResult 返回，不需要反向 HTTP 回调或依赖控制通道。
-这不是事件存储，没有持久任务、cursor、ack 或重连回放；积压超限明确取消/报故障，不无限缓冲。
+**观察断开不取消执行**，再次观察仍是同一个 check；明确取消走取消操作。
+开始请求受理后连接断开也不自动变成取消，避免把交付失败当作执行停止。
+每次执行仍受有界截止约束，不因无观察者无限运行。
+终态在明确的有限保留窗口内可读，期满后释放状态与订阅引用；活动任务不因无人观察被淘汰。
+保留容量不足时背压或拒绝新执行，重复 ID 防护在有效期内不能失效。
+具体期限/容量留待实现前量化，不建设持久结果库；Host 重启后的旧 ID 不能指向新任务。
 
-### 取消、安全与重复请求
+Host 显式监听 loopback，校验调用者及访问能力、负载大小和路径边界；
+checkId 不是权限。取消一项任务不能影响其他调用者，慢观察者只受连接背压/断开处理，
+不能触发业务重跑或取消。Host 发现、启动、就绪和进程回收属于部署/内部生命周期，
+不增加 registration、binding、session、view 或 Host 管理 HTTP API。
 
-Host 显式 loopback，发现记录及访问凭据限制到同用户，校验 Host/Origin，
-不开放任意 CORS；管理操作与执行能力分开。每次 execute 另带不记录日志的请求能力，
-cancel 必须证明持有该能力，不能仅凭猜到 requestId 操作其他任务。
-requestId 绑定 Host 代际和调用者能力；重复 execute 明确拒绝，不重放、不返回旧结果。
-Host 只保留有界已受理 ID 标记和活动执行的 Behavior，不提供历史结果库；
-终态在执行观察作用域释放前可读，随后释放状态、subject、订阅及相关引用。
-容量满时拒绝新任务而不是淘汰仍有效 ID。
-重启更换代际，客户端不能自动把未知任务提交到新 Host。
+## 5. 业务结果与验收
 
-传输不自动重试执行，迟到消息不能改变已完成执行或归属到后续任务。
-客户端取消发 cancel，连接断开也触发 Host 取消；服务端停止仍须单独确认。
-队列和执行共享剩余预算，超时协作取消后有界等待，再终止该线程；
-外部工具回收失败明确报告，不让脏 worker 回池。结果和取消由同一执行控制器串行仲裁，
-HTTP cancel 只调用该执行的取消能力，不直接写 Cancelled。
-MVP 选择响应连接失联触发取消，这是 Host 的连接生命周期策略，不是 Behavior 订阅的普遍语义；
-后续仅断开一个本地观察者不会重新执行或自动取消仍被其他观察者使用的任务。
-取得执行 Behavior 前的拒绝用 400/401/403/409/413/429/503；取得后执行故障由 Failed 状态表达。
+Objective 依赖属于某类内置 check 的返回值：检查执行正常完成，可返回业务不通过，
+并告知目标 Objective、目标 subject 和要求 level。Host 原样承载 CheckResult，
+不解释或递归处理依赖，不让 worker 等待上层处理后才结束。
+依赖要求不等于已观察事实；上层按业务规则取得真实证据、处理目标并必要时重查。
+旧 currentLevelId/同轮证据机制需随业务层迁移，不能捏造状态或跳过依赖验证。
 
-## 5. 业务依赖结果与最小验证链路
+最小验证链路：
 
-```text
-调用者提交 directory/revision/subject → 内核执行 check
-内置依赖 check 返回不通过及目标 Objective、目标 subject、要求 level
-清理完成 → Completed CheckResult → Host 原样投影
-上层业务逻辑解释依赖要求，按其规则观察/推进目标，必要时重新检查原目标
-```
+1. 两个 CLI 开始任务，共用 Host 和可复用 worker，取得不同 checkId。
+2. 多次观察同一任务不重复执行；观察集合能看见并发任务及其离开，不能泄露他人数据。
+3. 取消一项不影响另一项；断开再观察不取消、不重跑；终态/过期 ID 行为明确。
+4. 内置依赖结果由上层处理，业务输出与证据正确；完成全部 16 个入口迁移。
+5. 连续成功/失败/取消负载证明资源有界、线程初始化减少及真实冷/热收益。
 
-这里的依赖是业务关系，不是 worker bundle 的代码依赖；后者仍纳入产物 revision。
-依赖结果表达“该 Objective 在该 subject 上需要达到该 level”，Host 不解释这些字段，
-不递归调用其他 Objective，也不提供等待子 check 的特殊调度槽。
-这种 check 正常执行完且清理成功，状态是 Completed，业务结果可以是 ok:false；
-不能因依赖未满足把执行状态改为 Failed 或让 worker 一直占槽等待上层处理。
-
-依赖要求本身不证明目标当前处于何层，更不证明依赖已经满足。
-上层需要准确来源、实际观察及循环/预算保护才能处理这些要求；缺少观察时不能捏造
-currentLevelId 或把旧证据绑定到新请求。业务依赖产生、消费、再次检查和证据校验
-需随内置 checks 一起调整，不能只删旧 IPC 而让现有根/包链路失效。
-现有 DependencyProblem 包含 currentLevelId 且要求同轮已验证证据，与纯依赖要求不是同一契约；
-新的业务结果结构、已有事实与待满足要求的区别，以及上层处理规则需在业务协议层明确，
-不借通用 Host 协议补入回调。这是此次用户明确的边界调整，不宣称旧回调代码能原样复用。
-
-先验证：两个 CLI → 同一 Host → 根检查返回业务依赖 → 上层处理包级目标 →
-重新检查根目标 → 连续复用/取消/清理。拒绝跳过依赖验证直接判定通过。
-随后完成全部 16 个 check 迁移；验证顺序不缩小最终交付范围。
-
-## 6. 首版不做什么
-
-不做会话租约/续租、自动闲置关闭 Host、任务持久化/恢复、状态查询服务、
-事件 cursor/ack/重放、独立视图存储 API、远程部署、在线热升级或 npm 自动安装。
-Host 按需启动后保持驻留，提供显式停止；启动锁/ready/身份记录与失败清理仍必需。
-worker 的最小预热保留；自适应扩缩容、时间/内存压力退役和特殊一次性模式后续再扩展。
-这些是交付分期，不改变正确清理、有界资源和隔离要求。
-
-本稿保留三个实施前细化点：产物/worker schema、容量和退役数值、
-staging/启动锁及权限的跨平台细节。业务层还需定稿依赖要求结果及其消费方式，
-不得把它再移回 Host 控制协议。设计审阅完成前不创建产品包、不记录生命周期验收。
-Behavior 的具体状态字段及 TypeScript 表达复用现有 Effect/SubscriptionRef 等生命周期原语，
-但需明确实现采样、订阅和资源释放的契约，不照搬“每次订阅重新执行”的冷流语义。
+不做预注册、任务恢复、可靠事件队列、自动依赖安装或远程平台。
+本次仅设计，具体状态字段、路由编码和资源限额后续定稿；不记录生命周期验收。

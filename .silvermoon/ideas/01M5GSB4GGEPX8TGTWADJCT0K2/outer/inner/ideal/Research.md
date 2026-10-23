@@ -29,7 +29,7 @@ CheckResult 表达并交上层解释，不进入 Host 的消息或调度协议�
 
 - [Design.md：调整范围](./Design.md#1-调整范围)：包边界、现有调用链以及全部内置检查器。
 - [Design.md：worker 消息](./Design.md#3-worker-messageport-消息)：执行/进度/完成信号如何形成 Behavior，证据单独关联。
-- [Design.md：HTTP 接口](./Design.md#4-对外-http-rpc)：四个接口，Subject 输入、当前状态快照和变化投影，无业务依赖回调。
+- [Design.md：HTTP 接口](./Design.md#4-对外-http-rpc)：开始、取消、单项观察和活动集合观察，无注册或业务依赖回调。
 
 设计稿还集中定义模块生命周期、退役/预热和端到端时序；本文件不复制另一套接口。
 已确认/待审阅状态统一见 [OpenQuestions.md](./OpenQuestions.md)。
@@ -37,7 +37,9 @@ CheckResult 表达并交上层解释，不进入 Host 的消息或调度协议�
 启动装配复用现有 CLI 工具层，不另增应用目录或预先拆分 runtime 包；
 复用现有协议层，本次只简化设计文档，不创建产品包。
 
-首版不做会话租约、自动闲置关闭 Host、任务查询/恢复、独立视图管理或 cursor/ack 事件平台。
+首版不做会话租约、自动闲置关闭 Host、持久任务恢复、独立视图管理或 cursor/ack 事件平台。
+单项当前状态和活动任务集合观察属于必要能力；观察断开不取消，重复观察不再次执行。
+只在有界内存寿命内保留当前/终态，不提供历史任务库；过期 ID 明确不存在。
 Host 统一管理目录/revision、执行资源与排队，通过内核一次执行得到 Behavior 后再做 HTTP 适配；
 Objective 的版本来源、层级及业务依赖证据仍由现有调用链解释。
 完整 check 迁移包含业务依赖结果的产生和上层消费，不能用“MVP”名义跳过真实根/包依赖验证。
