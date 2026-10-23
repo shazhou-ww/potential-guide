@@ -12,6 +12,8 @@ CoordinatorState 包含基础实体/事实、控制状态及可重算视图。si
 
 ## 候选事实与状态效果
 
+Objective 与 Revision 是不同的不可变事实：Objective 固定来源身份，Revision 固定所属 Objective 与完整 commit。发布/生效须有追加事实以推导最新上线版本，发现 commit 不等于发布；权威来源和可靠顺序协议待定。请求形成必须记录固定 objectiveRevisionKey，并校验其与 Target 属于同一 Objective，目标 level 按该版本校验。发布不改写旧请求或执行，也不自动替代它们；新请求采用最新上线版本的离线边界见 [Objective 观察需求](./Views.md#objective-观察需求)。
+
 | 事实 | 必须明确的内容 | 对 singleton 及 collections 的效果 |
 | --- | --- | --- |
 | 请求形成与确认 | 外部或内部来源、需求归属、准确 target；合法 requestSeq、desiredLevel、priority，以及单独的确认版本或拒绝原因 | 形成并接收合法请求后保存不可变记录，影响最新请求视图；明确确认事实再影响已确认视图；不把接收、确认、完成混为一谈，非法输入不伪造请求 |

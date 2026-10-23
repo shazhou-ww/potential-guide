@@ -6,9 +6,9 @@
 
 观测建模从“用户围绕什么对象想知道什么”出发，不按 ER 的每个实体各建一张视图。观察中心与业务实体是多对多关系，可以直接对应、跨实体组合、向上聚合或向下切片；路由和子页面是识别观察中心的产品参考，不预定 URL 协议或物理表。
 
-当前观察中心为 Host、Objective、Target、Request、Run。Objective 是跨 ObjectiveRevision 的上层观察对象，其跨版本识别规则仍待明确；HostResourceRevision、HostResourceBinding、HostBindingRevision 是支撑事实，不是独立的主观察中心。观察中心可以由多张视图与关联查询组成，不要求一张巨型表。
+当前观察中心为 Host、Objective、Target、Request、Run。Objective 现已是具有稳定来源身份的业务实体，其观察模型仍跨多个 ObjectiveRevision；HostResourceRevision、HostResourceBinding、HostBindingRevision 是支撑事实，不是独立的主观察中心。观察中心可以由多张视图与关联查询组成，不要求一张巨型表。
 
-本节先收敛 Host 的需求；其余四类观察中心仍待逐项讨论。已删除旧的独立请求确认、证据采纳、共享预算预留及直接读取可变 Run 基础行的查询定义；它们不再作为实现依据。剩余关系与 SQL 仅为待复核草案，不定义 Host 观察模型。
+Host 与 Objective 的观察需求见下文；Target、Request、Run 仍待逐项讨论。已删除旧的独立请求确认、证据采纳、共享预算预留及直接读取可变 Run 基础行的查询定义；它们不再作为实现依据。剩余关系与 SQL 仅为待复核草案，不替代观察需求。
 
 ## Host 观察需求
 
@@ -40,6 +40,30 @@ Host 的主视图关注时间，不以“同步到哪个 revision”作为主要
 
 Host 本地状态与中央联系观测分别保留来源和重建输入，不强行归入同一条 Host 业务事件序列。重放 Host 业务事件不能恢复中央曾经的连接事实；若需重建中央联系历史，中央也须保留相应观测记录或充分基线。
 
+## Objective 观察需求
+
+以稳定 objectiveKey 定位一个跨版本 Objective，展示来源及定义，并组合它的 revisions、Targets 和各 Host 的治理活动。Objective、Revision 与 Target 均是 append-only；最新上线版本、采用分布和推进情况是视图，不回写固定实体。
+
+| 信息组 | 观察需求 | 来源与边界 |
+| --- | --- | --- |
+| 身份与定义 | 这是哪个 Objective，来源在哪里，定义了什么目标 | Objective 的固定来源与身份；定义内容须明确所展示的 Revision，不拼接不同版本的 level 或规则 |
+| 版本 | 有哪些已知 revisions，最新上线版本是哪一个，何时上线 | 固定 ObjectiveRevision 与追加的发布/生效事实；仅发现 commit 不代表上线，无发布依据时最新上线值未知 |
+| 采用分布 | 哪些 Host、Targets 的当前请求采用哪个版本，哪些仍有旧版本活动 | 沿 Host → Request → ObjectiveRevision 和 Request → Target 聚合；区分最新请求、活跃执行及历史记录，不用某个旧历史请求把 Host 永久标成落后 |
+| 治理对象 | 应用于哪些 subjects，形成哪些 Targets，分布在哪些 Host | Target 引用稳定 Objective；同一 subject 升级版本不生成新 Target，但各 Host 的状态不自动合并 |
+| 期望与现实 | 各 Target 的期望 level、观察、差距与新鲜度 | 期望及观察按准确的 Request/Revision 解释；旧版本证据能否用于新版本判断须另定规则，不默认等价 |
+| 推进与执行 | 哪些请求正在推进、受阻或满足，关联哪些 Run | 对应观察模型与依赖事实；Run 结束不等于请求已满足，不预设单一“Objective 已达标”总状态 |
+| 异常与变化 | 哪里存在问题，最近有哪些发布、请求和执行变化 | 关联 Fault 与 AO 事实，保留 Host、Target、Request、Run 及版本来源；中央联系时间不冒充业务发生时间 |
+
+### 最新上线版本与旧版本提示
+
+Objective 可以有一个最新上线版本，不再采用“没有最新版本”的旧假设。它由具有明确发布作用域、可靠顺序和生效依据的追加事实推导；不按 commit OID 大小、时间戳或各 Host 的消息到达先后排序。具体发布记录身份、权威来源、并发与撤回协议尚未确定，本轮不编造 SQL。
+
+正常规则是新版本上线后新创建的 Request 采用最新上线版本，内部依赖派生请求同样遵守。Request 一旦形成便固定版本和目标 level；发布不改写旧 Request、Run 或 Observation，不自动创建替代请求或取消执行。中央已知最新版本与 Host 已知版本可能不同，离线或滞后时是拒绝新建、等待同步还是其他策略，须另行收敛，不能静默降级。
+
+旧版本提示至少区分“最新请求仍采用旧版”和“旧版 Run 尚未结束”；历史记录仍按原版本展示，不将历史存在当成当前采用。Host 当前没有相关请求或执行时不据历史推断落后；Host 的本地定义缓存/同步版本若需单独展示，必须有额外事实，不从 Request 猜测。提示是中央已知事实下的比较，不声称已获知离线 Host 此刻的状态。
+
+后续校验应覆盖：同一 source 的两个 commits 保持同一 Objective/Target、形成不同 Revision；新请求采用新版本而旧请求/Run 不变；跨 Objective 的 Revision 引用显式拒绝；同名 level 跨版本不能默认语义相同；已发现但未上线的 commit 不替代最新上线版本；旧事件晚到不回退发布顺序；离线、无当前请求和仅有历史记录时的提示边界。
+
 ## 基础状态、视图与一致版本
 
 - 基础状态包括业务实体、被采纳的关系/决定和 Coordinator 控制状态。决定如果影响查询结果，必须在基础状态中有可追溯的表达，不能只存在于物化视图或私有内存。
@@ -56,8 +80,10 @@ Host 本地状态与中央联系观测分别保留来源和重建输入，不强
 
 | 基础关系 | 查询使用的属性 | 来源与约束 |
 | --- | --- | --- |
+| objective | objective_key、source | 稳定来源身份，不含 commit |
+| objective_revision | objective_revision_key、objective_key、version | 固定完整 commit 与所属 Objective；发布/生效来源协议另定 |
 | regulation_target | target_key、objective_key、subject、introduced_at_revision | Coordinator 已知 target 的登记事实；introduced_at_revision 是首次纳入状态的版本，不是 Objective 固有属性 |
-| regulation_request | request_seq、target_key、desired_level、priority | 已合法形成并接收到该作用域的不可变请求，含外部与内部来源；尚未接收的外部输入不在此快照中 |
+| regulation_request | request_seq、target_key、objective_revision_key、desired_level、priority | 已接受的不可变请求；Revision 与 Target 必须属于同一 Objective，外部与内部请求都固定准确版本 |
 | regulation_run | run_id、request_seq、hostBindingRevisionId、executionLimits | Run 的不可变启动属性；执行阶段、进度、终结由 AO 变化记录推导，具体关系 schema 待 Run 观察模型收敛 |
 | observation | observation_ref、run_id、current、observed_at、problems、gap_summary、versions、sources、recorded_at_revision | 成功观察事实；observation_ref 暂表示准确记录引用，业务记录主键的最终形式未定 |
 | fault | kind、message、target_key、request_seq、run_id | 已校验的完整归属链；故障引用方式仍未定，不为计数虚构业务主键 |
@@ -93,18 +119,18 @@ probe_result 的 observed 分支只引用 observation，error 分支只引用 fa
 | --- | --- | --- |
 | target_key | TargetKey / 否 | 请求的 target |
 | request_seq | RequestSeq / 否 | 该 target 最大请求序号 |
-| desired_level、priority | string、number / 否 | 所选不可变请求 |
+| objective_revision_key、desired_level、priority | ObjectiveRevisionKey、string、number / 否 | 所选不可变请求的准确版本及该版本下的目标 |
 
 ```sql
 -- view: v_latest_requests
 WITH ranked AS (
-    SELECT target_key, request_seq, desired_level, priority,
+    SELECT target_key, request_seq, objective_revision_key, desired_level, priority,
            ROW_NUMBER() OVER (
                PARTITION BY target_key ORDER BY request_seq DESC
            ) AS position
     FROM regulation_request
 )
-SELECT target_key, request_seq, desired_level, priority
+SELECT target_key, request_seq, objective_revision_key, desired_level, priority
 FROM ranked
 WHERE position = 1;
 ```

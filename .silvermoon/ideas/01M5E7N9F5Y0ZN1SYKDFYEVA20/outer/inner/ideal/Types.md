@@ -12,7 +12,7 @@
 
 实体 ER 与状态视图是概念模型，不是物理数据库 schema。RegulationRequest 使用递增 requestSeq 单主键，不为整个请求集合设置快照 revision。CoordinatorSnapshot 表达一个 revision 下完整 CoordinatorState 的一致聚合，包含 current singleton 与 collections，不作为业务实体。快照表及成员复合键是后续存储映射问题，不混入业务实体关系图。ER 中 `||` 表示一个，`o|` 表示零或一个，`o{` 表示零到多个。
 
-PK 表示模型中的逻辑唯一键，多列标为 PK 表示复合主键；FK 表示版本归属或对象引用。图中的 targetKey 是由精确 Objective 版本、来源和 subject 推导的身份，不要求在 TypeScript 值中重复保存。嵌套值可以展开成实体以说明关系，不意味着新增存储集合。尚未确定的记录键不虚构为 PK；可选字段、联合类型和跨记录约束由图后规则补充。
+PK 表示模型中的逻辑唯一键，多列标为 PK 表示复合主键；FK 表示版本归属或对象引用。targetKey 由稳定 Objective 身份与 subject 推导，不含定义版本；Request 另行固定采用的 ObjectiveRevision。不要求在 TypeScript 嵌套值中重复保存所有键；可选字段、联合类型和跨记录约束由图后规则补充。
 
 requestSeq 在同一个请求序列范围内唯一并按逻辑接收顺序递增，可跨 target 比较；它是请求身份与顺序，不是每个 target 的修订号，也不代表实际调用顺序。CoordinatorState.revision 则是该 Coordinator 内的状态逻辑时序，状态更新、确认和执行事实引用此版本空间；两者不可直接比较。同次 Coordinator 转换可改变多个 target，它们共享该版本。存储混合多个请求序列或 Coordinator 时需宿主提供外部作用域，不因此把实例 ID 加回领域状态。
 
@@ -24,29 +24,30 @@ Host 是中央观察服务所识别的逻辑 worker，对应一个 Coordinator �
 
 Host 仅保留固定身份；不可变 HostBindingRevision 保存 binding 配置，HostResourceRevision 与 HostResourceBinding 保存完整生效的资源配置及 capacity，配置变化追加新版本，不更新 Host 上的 resourceConfiguration。Run 固定引用 hostBindingRevisionId，已有执行不随最新配置变化。每个 Run 的执行 Host 由所属 Coordinator 确定；Observation 沿 Run 推导 Host。当前配置、占用及 online/offline 等在视图层推导，需求见 [Host 观察需求](./Views.md#host-观察需求)。中央观察服务汇集多个 Host 的状态，不因汇集而成为这些 Run 的执行 Host。
 
-ObjectiveRevision 不归属 Host，objectiveKey 和 targetKey 的既有计算不因本轮新增 Host 而改变。同一 targetKey 在不同 Host 的请求、Probe 状态和执行事实分别维护。Host 标识 Coordinator 状态所属的逻辑作用域：跨 Host 的请求引用使用 (hostId, requestSeq)，状态版本使用 (hostId, revision)；其他局部键和引用同样保留 Host 作用域，不能只凭数字序号或版本合并。跨 Host 请求路由与依赖协议另定，不从这张 ER 推导跨 Host 执行权限。
+Objective 与 ObjectiveRevision 不归属 Host，身份不包含 hostId。同一 targetKey 在不同 Host 的请求、Probe 状态和执行事实分别维护。Host 标识 Coordinator 状态所属的逻辑作用域：跨 Host 的请求引用使用 (hostId, requestSeq)，状态版本使用 (hostId, revision)；其他局部键和引用同样保留 Host 作用域，不能只凭数字序号或版本合并。跨 Host 请求路由与依赖协议另定，不从这张 ER 推导跨 Host 执行权限。
 
 下方 TypeScript 仍是旧版单 Coordinator 值草案，未按 append-only 事实与动态视图完成拆分，也未同步 HostBindingRevision 引用；不以该草案中的旧 binding 快照、确认包装或预算预留作为最新需求。域内值可以由外层作用域携带 Host，不要求每条记录物理重复存储 hostId；存储适配必须能无歧义地还原归属。完整跨设备 schema 不以当前 TS 草案为完成标志。
 
 ### 实体边界与身份假设
 
-概念上从 Objective source → ObjectiveRevision → RegulationTarget → RegulationRequest 延伸到 RegulationRun 及 Observation、Fault；source 是字符串值，不单独建实体。ObjectiveRevision 表达固定定义版本，RegulationTarget 是该版本在特定 subject 上的投射，不是一次执行；RegulationRequest 是在特定逻辑时序上要求向 desiredLevel 推进的请求，不是 Task。真正有开始与终结的执行叫 RegulationRun，一个请求可能尚未执行，也可能涉及有限依赖编排中的多次调用。命名优先表达单个实体含义，不强制前缀继承父实体名称。
+Objective 是跨版本的稳定业务实体，source 是它的来源值。Objective 分别关联 ObjectiveRevision 与 RegulationTarget；Target 表达该 Objective 在特定 subject 上的持续治理对象。Request 同时固定 Target 和所采用的 ObjectiveRevision，并表达 desiredLevel 与 priority；Run 通过 Request 获得准确版本，不是持续挂起的 Task。定义升级不新增 Target，也不原地改写旧 Request 或 Run。
 
 - **Objective source 标识来源。** source 必须标识 Git 仓库中的位置，表达仓库定位地址与仓库内相对路径；可以访问 HTTPS、SSH 或本地 Git 仓库，不要求整个 repo 就是一个 Objective。Git 语义由类型契约与校验保证，不添加 git+ 前缀，也不接受任意非 Git 文件目录。
-- **ObjectiveRevision 使用单主键。** objectiveKey 是规范化 source 与固定 version 共同编码后的确定性哈希，标识一份精确定义版本，不再标识跨版本来源。version 是解析后的完整 Git commit object ID，同一 source 的不同 version 得到不同 key；保留 source 和 version 用于读取、追溯及校验，不能在原 key 下静默替换它们。
-- **RegulationTarget 绑定精确 definition。** 每个对象只以 objectiveKey 一个外键引用 definition，再结合 subject 身份推导 targetKey，不重复保存 objectiveVersion 外键。同一 subject 使用另一个 definition version 会形成另一个治理对象；一份 definition 可以被多个对象共享。
-- **RegulationRequest 表达历次请求。** requestSeq 是单主键，targetKey 仅是指向 RegulationTarget 的外键；desiredLevel、priority 属于请求，不属于 target 身份。同值新请求也获得新序号，不覆盖或修改旧请求记录。
+- **Objective 使用稳定单主键。** objectiveKey 由规范化 source 确定，不含 commit；source 固定，来源迁移或别名合并须另定协议，不能悄悄改写同一身份。
+- **ObjectiveRevision 使用独立单主键。** objectiveRevisionKey 编码 objectiveKey 与固定 version；version 是解析后的完整 Git commit object ID。不同 commit 形成不同版本记录，不覆盖旧版本，也不在 Objective 上维护可变的 latest 指针。
+- **RegulationTarget 关联 Objective。** 以 objectiveKey 引用稳定 Objective，再结合 subject 身份推导 targetKey；换定义版本不改变 Target。
+- **RegulationRequest 固定版本。** requestSeq 是 Host 内单主键，targetKey 与 objectiveRevisionKey 分别引用对象和采用版本；版本必须属于 Target 的 Objective。desiredLevel 必须按该固定版本解释并校验，不能用当前最新版本解释旧请求。同值新请求也获得新序号。
 - **每个 RegulationRun 必须且只属于一条 RegulationRequest。** Request 可以由外部提出，也可以由 Coordinator 因依赖编排产生；来源不同不形成两套实体。Run 只引用固定 requestSeq，由不可变 Request 推导 target 和 desiredLevel，不引用 target 的“最新请求”来解释旧调用。
 
-这些实体表达业务边界，不强制建立 source 表、独立 Objective 目录服务或新的顶层状态集合。TS 可以嵌套实体值，物理存储也可以用外键；表示方式不能改变上述身份关系。ObjectiveRevision 的 version 是 Git commit 身份，与 CoordinatorState.revision 的数字逻辑时序不是同一个版本空间；objectiveKey 仍标识精确 ObjectiveRevision，本轮不另换主键协议。
+这些实体不强制建立独立目录服务。TS 可嵌套值，物理存储可用外键，但必须校验 Request 的 Target 与 Revision 属于同一 Objective。ObjectiveRevision.version 是 Git commit 身份，不是 CoordinatorState.revision。新请求采用最新上线版本的规则及旧版本提示见 [Objective 观察需求](./Views.md#objective-观察需求)；旧请求不自动迁移。
 
 ### Git 来源与版本的设计不动点
 
 - source 是字符串值，编码“仓库定位地址 + 仓库内相对路径”，不包含版本选择。内部路径相对于 Git 仓库根目录，不能依赖进程当前目录，也不能越出仓库；仓库地址与内部路径的分界必须无歧义，不能从普通 URL 猜测。具体字符串语法仍待确定，不引入 git+https、git+ssh 或 git+local 等前缀。
 - version 是仓库级 commit 身份，不是路径内容哈希。branch、tag、HEAD 等可以作为解析入口，但必须解析成完整 commit ID 后才成为 definition version；读取的是该 commit 下指定路径的内容，路径或定义不存在须明确报错。本地未提交修改不属于此版本，不能用工作区内容冒充固定 commit。
 - 仓库其他路径的变更也可能产生新 commit，因此同一 Objective 内容可能对应不同 definition version；此模型不自动按路径内容去重。
-- objectiveKey = Hash(Encode(Canonicalize(source), resolvedCommitId))，必须同时包含 source 和 version。Encode 必须无歧义，不能简单拼接字符串；规范化、元组编码、哈希算法及输出编码须由统一协议固定，不能由调用方自由选择。具体算法与规则尚未选定，不在本文假定 SHA-1、SHA-256 或某种编码。
-- HTTPS、SSH、本地地址即使访问同一仓库，也不天然是相同 source。没有明确等价/别名规则时不自动合并；不得通过丢弃主机、路径等身份信息制造相同 key。source/version 与 key 必须一致，哈希碰撞不得静默合并定义。查询同一来源的全部版本可按规范化 source 筛选，不另建 sourceKey。
+- objectiveKey = Hash(Encode(Canonicalize(source)))；objectiveRevisionKey = Hash(Encode(objectiveKey, resolvedCommitId))；targetKey = Hash(Encode(objectiveKey, subjectIdentity))。Encode 必须无歧义，不能简单拼接字符串；规范化、元组编码、哈希算法及输出编码须由统一协议固定，不能由调用方自由选择。具体算法仍未选定，不在本文假定 SHA-1 或 SHA-256。此处替代此前将 commit 编入 objectiveKey 和 Target 身份的方案，未来实现必须显式迁移旧身份及引用，不能按新语义静默读取旧 key。
+- HTTPS、SSH、本地地址即使访问同一仓库，也不天然是相同 source。没有明确等价/别名规则时不自动合并；不得丢弃身份信息制造相同 key。须校验 source、Objective 身份、Revision 归属及 commit 一致，哈希碰撞不得静默合并记录。
 - source 不嵌入密码或 token，认证由外部提供；凭据变化不应成为 Objective 身份变化。解析协议与现有 Git 来源结构的适配留待实施，不声称运行时代码已经支持本设计。
 
 实体及其执行事实关系见 [业务实体关系](./Diagrams.md#1-业务实体关系)，请求的最新映射与确认投影见 [视图目录](./Views.md#视图目录)。实体图源维护在 Diagrams.md，视图只以属性、来源、SELECT 和更新依赖表达，不再分别绘图。
@@ -105,24 +106,31 @@ export type Revision = number;
 export type RequestSeq = number;
 export type ObjectiveSource = string;
 export type ObjectiveKey = string;
+export type ObjectiveRevisionKey = string;
 export type TargetKey = string;
 export type RegulationRunId = string;
 export type FaultKind = string;
 export type Collection<T> = readonly T[];
 
-export interface ObjectiveRevision {
+export interface Objective {
   readonly key: ObjectiveKey;
-  readonly version: string;
   readonly source: ObjectiveSource;
 }
 
+export interface ObjectiveRevision {
+  readonly key: ObjectiveRevisionKey;
+  readonly objective: Objective;
+  readonly version: string;
+}
+
 export interface RegulationTarget {
-  readonly objective: ObjectiveRevision;
+  readonly objective: Objective;
   readonly subject: Subject;
 }
 
 export interface RegulationRequest {
   readonly target: RegulationTarget;
+  readonly objectiveRevision: ObjectiveRevision;
   readonly desiredLevel: string;
   readonly priority: number;
   readonly requestSeq: RequestSeq;
@@ -375,9 +383,9 @@ bindingConfiguration 是当次实际使用的配置快照，只含可持久化�
 
 ## 意图身份与确认
 
-ObjectiveKey 是规范化 Git source 与完整 commit ID 的无歧义编码的确定性哈希；TargetKey = Hash(Encode(objectiveKey, subjectIdentity))，不再额外编码 objectiveVersion，具体规范仍待确定。它不是任意 regulation ID，也不能直接依赖普通 JSON 属性顺序。latestByTarget 按 targetKey 索引，value 是包含 target、desiredLevel、priority、requestSeq 的 RegulationRequest。RegulationTarget 不重复存 key；恢复和输入验证须核对 source/version 与 objectiveKey、target 与 targetKey 一致，哈希碰撞不能静默合并不同来源、版本或 subject。
+ObjectiveKey 只标识规范化 Git source，ObjectiveRevisionKey 另编码 ObjectiveKey 与完整 commit；TargetKey 编码 ObjectiveKey 与 subjectIdentity，不含版本。不能依赖普通 JSON 属性顺序。latestByTarget 按 targetKey 索引，Request 固定包含 target、objectiveRevision、desiredLevel、priority、requestSeq。恢复和输入验证须核对各键与来源、版本、subject 及归属一致，哈希碰撞不能静默合并记录。
 
-TS 中的 ObjectiveRevision 独立表达定义实体的身份与来源字段，暂不展开定义正文；RegulationTarget.objective 嵌套此值不表示必须重复存储它。该 source 字符串是本模型的领域来源标识，不照搬现有 GitObjectiveSource 传输结构；未来实现须明确与解析协议的适配。objectiveId 若作为名称保留，不构成另一套身份。
+TS 中 Objective 表达来源与稳定身份，ObjectiveRevision 表达版本身份及 Objective 归属，暂不展开定义正文。Target 嵌套 Objective，Request 嵌套 ObjectiveRevision，不要求物理重复存储；两者归属一致性须运行时验证。source 不照搬现有 GitObjectiveSource 传输结构，未来实现须明确解析适配。
 
 Partial 表达并非每个 TargetKey 都有条目，索引结果为 RegulationRequest | undefined。readonly latestByTarget 限制属性重新赋值，Readonly 限制条目的增删替换；这些是编译期约束，不是运行时冻结或递归不可变保证。只将对象自身属性视为请求条目，查询须区分缺失 key 与原型链属性，构造和恢复不能让特殊 key 改变对象原型。
 

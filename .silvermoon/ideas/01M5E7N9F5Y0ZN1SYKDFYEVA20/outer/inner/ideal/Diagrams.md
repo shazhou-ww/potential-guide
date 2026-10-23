@@ -6,7 +6,7 @@
 
 | 类别 | 内容 | 含义 |
 | --- | --- | --- |
-| 业务实体 | Host、HostBindingRevision、HostResourceRevision、RegulationTarget、ObjectiveRevision、RegulationRequest、RegulationRun | 固定身份与属性只追加；资源版本的成员关系由 HostResourceBinding 表达 |
+| 业务实体 | Host、HostBindingRevision、HostResourceRevision、Objective、ObjectiveRevision、RegulationTarget、RegulationRequest、RegulationRun | 固定身份与属性只追加；资源版本的成员关系由 HostResourceBinding 表达 |
 | 事实记录 | Observation、Fault | 具有发生与来源意义，记录主键仍待确定 |
 | 查询视图 | 最新请求、Target 状态、当前观察、活跃集合、当前资源配置与实际占用 | 可物化，但必须能从不可变事实或充分基线重算；详细定义待统一 |
 | 变化事实与业务关系 | Run 生命周期、依赖发现/解除、Probe 开始/结束、配置生效 | 只追加发生事实；不另设请求 acknowledgement 或证据采纳事件 |
@@ -15,7 +15,7 @@
 
 视图是可重算的查询冗余，不是独立业务事实；选择物化、SQL View 或内存索引是实现问题。查询分页不改变完整逻辑视图。ActiveRegulationRun 与 RegulationRunRecord 是同一 Run 基础状态在不同生命周期的选择，不引入第二套执行身份。当前尚缺少的基础事实契约在 Views.md 单独标注，不将它们伪装成已完成的实体协议。
 
-命名以单个实体的业务含义为准，不强制“父实体 + 子实体”规则：ObjectiveRevision、RegulationTarget、RegulationRequest、RegulationRun、Observation、Fault。ObjectiveRevision 是固定来源与 commit 的定义版本，不是 Coordinator 状态的数字 revision；Observation 展开 ObjectiveObservation 的属性，观察对象不是 Pilot 自身。
+命名以单个实体的业务含义为准，不强制父实体前缀。Objective 是跨版本的稳定身份，ObjectiveRevision 是其固定 commit 的定义版本，不是 Coordinator 状态的数字 revision；Observation 展开 ObjectiveObservation 的属性，观察对象不是 Pilot 自身。
 
 图中英文标签与 TS 字段对应，解释使用中文。图源固定为 22px Arial，SVG 可独立放大查看；修改后须重新生成并验证文字边界。ER 关系使用基数符号，不将快照成员或视图依赖画成业务实体关联。
 
@@ -25,7 +25,7 @@
 
 [打开实体关系 SVG](./diagrams/regulation-target.svg)
 
-<img src="./diagrams/regulation-target.svg" width="100%" alt="业务实体关系：Host、不可变资源与 Binding 版本、ObjectiveRevision、Target、Request、Run、Observation 与 Fault">
+<img src="./diagrams/regulation-target.svg" width="100%" alt="业务实体关系：Host、不可变资源与 Binding 版本、Objective、ObjectiveRevision、Target、Request、Run、Observation 与 Fault">
 
 同一张图包含上游的 RegulationRequest 和下游的 RegulationRun、Observation、Fault，展示实体身份、关联及主要查询属性，不画 coordinatorRevision、快照成员表或当前/历史分组。图的既有文件名保留以兼容旧链接，不再表示只画请求意图。嵌套值展开不意味着新增实体或强制数据库平铺。
 
@@ -40,7 +40,7 @@ Host 是中央观察服务识别的逻辑 worker 身份，对应一个 Coordinat
 - Host 仅保留固定身份，不原地更新 resourceConfiguration。HostBindingRevision 保存不可变 binding 配置；HostResourceRevision 保存一次完整、生效的资源配置版本，HostResourceBinding 表达该版本包含哪些 binding 及各自 capacity。成员条目随版本一并追加，不独立修改或删除；空成员集合表示没有可用 binding。
 - 修改 binding 内容生成新的 HostBindingRevision；仅调整 capacity 则生成新的 HostResourceRevision，复用已有 HostBindingRevision。停用 binding 时，新资源版本不再包含它；旧版本及被 Run 引用的 binding 仍可解析。配置不含明文凭据，实际占用不写入这些记录。
 - 图中 Request、Run、Observation 和 Fault 的局部键及引用均处于所属 Host 的 Coordinator 状态范围；跨 Host 存储或查询必须携带 hostId。例如 Request 的跨 Host 身份是 (hostId, requestSeq)，状态版本也按 (hostId, revision) 解释，不能跨 Host 比大小。Host 的重启不能重置同一请求序列的水位。
-- 本轮只补 Host 层，不改变 targetKey 的定义，也不据此允许同一 Request 在多个 Host 上执行。同一 targetKey 可以出现在不同 Host 的状态中，但各自的请求、Probe 状态和执行事实不自动合并。中央观察服务汇集多个 Host 的状态，不因此成为运行这些 Run 的 Host；连接身份也不是 Host 身份。同步传输、跨 Host 依赖和一致性协议另行收敛。
+- 同一 targetKey 可以出现在不同 Host 的状态中，但各自的请求、Probe 状态和执行事实不自动合并；不据此允许同一 Request 在多个 Host 上执行。中央观察服务汇集多个 Host 的状态，不因此成为运行这些 Run 的 Host；连接身份也不是 Host 身份。同步传输、跨 Host 依赖和一致性协议另行收敛。
 
 ### Append-only 资源模型与视图边界
 
@@ -71,7 +71,9 @@ erDiagram
     HOST_RESOURCE_REVISION ||--o{ HOST_RESOURCE_BINDING : contains
     HOST_BINDING_REVISION ||--o{ HOST_RESOURCE_BINDING : included_in
     HOST_BINDING_REVISION ||--o{ REGULATION_RUN : used_by
-    OBJECTIVE_REVISION ||--o{ REGULATION_TARGET : defines
+    OBJECTIVE ||--o{ OBJECTIVE_REVISION : versions
+    OBJECTIVE ||--o{ REGULATION_TARGET : targets
+    OBJECTIVE_REVISION ||--o{ REGULATION_REQUEST : adopted_by
     REGULATION_TARGET ||--o{ REGULATION_REQUEST : receives
     REGULATION_REQUEST ||--o{ REGULATION_RUN : executes
     REGULATION_RUN ||--o{ OBSERVATION : produces
@@ -98,9 +100,13 @@ erDiagram
         string hostBindingRevisionId PK,FK
         number capacity "Configured concurrency"
     }
-    OBJECTIVE_REVISION {
+    OBJECTIVE {
         string objectiveKey PK
         string source
+    }
+    OBJECTIVE_REVISION {
+        string objectiveRevisionKey PK
+        string objectiveKey FK
         string version "Fixed Git commit"
     }
     REGULATION_TARGET {
@@ -111,6 +117,7 @@ erDiagram
     REGULATION_REQUEST {
         number requestSeq PK
         string targetKey FK
+        string objectiveRevisionKey FK "Fixed adopted revision"
         string desiredLevel
         number priority
     }
@@ -141,7 +148,8 @@ erDiagram
 
 </details>
 
-- ObjectiveRevision 的 source/version 共同决定 objectiveKey；targetKey 由该 key 与 subject 身份决定。
+- Objective 的规范化 source 决定稳定 objectiveKey；objectiveRevisionKey 由 objectiveKey 与完整 commit 决定，targetKey 由 objectiveKey 与 subject 决定。版本升级不产生新 Target；Request 的 objectiveRevisionKey 必须属于其 Target 引用的 Objective，desiredLevel 按该固定版本解释。Run 经 Request 获得版本，不跟随当前最新版本漂移。
+- 最新上线版本由追加的发布/生效事实推导，不在 Objective 上原地改写 latest 指针，不以任意 Git commit 或 Host 到达顺序判断“最新”。新 Request 应采用最新上线版本，旧 Request/Run 保留原引用；离线 Host 如何获知及执行这一规则、旧请求是否被替代仍待定。观察需求见 [Objective 观察需求](./Views.md#objective-观察需求)。
 - requestSeq 单独标识不可变请求。每个 Run 必须且只归属一条 Request；一个 Request 可以尚无调用或涉及多次调用。外部与依赖派生都先形成 Request，不能绕过 Request 直接启动 Run。
 - Observation 是成功观察事实，不把 Probe 失败伪装为成功观察。成功观察以 runId 关联来源 RegulationRun，经 Run → Request → Target 推导 RegulationTarget，不重复保存 targetKey；是否需要其他来源另行讨论。
 - Fault 为 umbrella 查询展开归属链；三条可选关系不是任意组合：Coordinator 层三个引用全 null，Target 层仅 targetKey，Request 层包含 targetKey/requestSeq，Run 层包含全部引用。必须由确定的父关系展开并校验一致，不用最新请求补齐。kind 表达种类，message 表达详情，不再存 stage 或另加 ownerKind；详见 [Fault 查询约束](./Types.md#fault-分类归属链与-umbrella-查询)。
