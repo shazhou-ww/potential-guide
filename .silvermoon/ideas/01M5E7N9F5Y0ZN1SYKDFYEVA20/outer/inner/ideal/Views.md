@@ -6,13 +6,28 @@
 
 观测建模从“用户围绕什么对象想知道什么”出发，不按 ER 的每个实体各建一张视图。观察中心与业务实体是多对多关系，可以直接对应、跨实体组合、向上聚合或向下切片；路由和子页面是识别观察中心的产品参考，不预定 URL 协议或物理表。
 
-当前观察中心为 Host、Objective、Target、Request、Run。Objective 现已是具有稳定来源身份的业务实体，其观察模型仍跨多个 ObjectiveRevision；HostResourceRevision、HostResourceBinding、HostBindingRevision 是支撑事实，不是独立的主观察中心。观察中心可以由多张视图与关联查询组成，不要求一张巨型表。
+主视角只有 Objective 与 Host，交汇点是 Run。Objective 跨定义版本组织治理活动，Host 组织本逻辑 worker 的执行；Target、Request、Run 是下钻子视角，可以有独立详情路由，不因此成为与两者并列的主入口。HostResourceRevision、HostResourceBinding、HostBindingRevision、Observation、Fault 及 AO 事件是支撑信息。每个视角可由多张视图与关联查询组成，不要求一张巨型表。
+
+## 双主视角与下钻层级
+
+| 主视角 | 下钻路径 | 观察重点 |
+| --- | --- | --- |
+| Objective | Objective → Targets → Requests → Runs | 从目标定义到 subject 上的实例、具体治理要求和执行贡献，跨 Host 汇总 |
+| Host | Host → Runs | 直接查看该 Host 正在执行的 Run 及近期结果，再经 Run 追溯 Request、Target、Objective |
+
+- Target 以 Objective 与 subject 决定身份，不附属于 Host。subject 自身可限定设备；不限定设备的 subject 允许多个 Host 共同推进，不能为了隔离执行而把 Host 加进 Target 身份。
+- Request 属于一个 Target，固定采用的 ObjectiveRevision、desiredLevel 和 priority，不归属某个执行 Host。同一个 Request 可以由不同 Host 同时或先后运行各自的 Run；换 Host 不创建新 Request，也不改变该请求采用的版本。
+- 每个 Run 必须且只关联一个 Request 和一个执行 Host。两个主视角展示的是同一 Run，不复制为两套执行事实；Host 上的并发与 binding 占用仍按实际执行 Run 计算。
+- Request 子视角汇总其跨 Host 的 Runs、依赖及满足情况；任一 Run 结束不等于 Request 已满足。Host 子视角仅展示本地执行贡献，不把整个 Request 的满足或阻塞状态直接认作该 Host 的独占状态。
+- 跨 Host 的 Request 必须具有稳定且无歧义的引用，不能用执行 Host 加局部 requestSeq 作为同一请求的身份。具体请求标识、创建来源、共享状态同步和协调协议仍待定；Host 事件序号只排序本 Host 的变更，不构成跨 Host 请求的全局顺序。并行执行的共享资源冲突协议另定，不靠禁止同一 Request 跨 Host 来回避。
+
+本轮更新观测层级，尚未修改 ER 与旧 TypeScript 草案的 Host 内请求引用；它们中“Request 仅属一个 Host”及同 Host 整链校验的假设须在后续业务模型修订时替换。Fault 的 hostId 仍保留发生/记录故障的 Host 来源，但不能因此要求其所指 Request 也只能在该 Host 执行；引用 Run 时仍须校验执行 Host 一致。
 
 Host 与 Objective 的观察需求见下文；Target、Request、Run 仍待逐项讨论。已删除旧的独立请求确认、证据采纳、共享预算预留及直接读取可变 Run 基础行的查询定义；它们不再作为实现依据。剩余关系与 SQL 仅为待复核草案，不替代观察需求。
 
 ## Host 观察需求
 
-每个逻辑 Host 一个观察入口，以 hostId 定位；固定身份来自 Host，资源版本、执行和治理活动按相同 Host 作用域组合。当前可变信息只在可重建视图中体现，不回写不可变实体。这里先记录需求和来源，不为尚未确定的连接、心跳、同步协议编造 SELECT 或表结构。
+每个逻辑 Host 一个主观察入口，以 hostId 定位；固定身份来自 Host，资源版本和本地执行按该 Host 组合，再经 Run 关联跨 Host 的 Request 及治理对象。当前可变信息只在可重建视图中体现，不回写不可变实体。这里先记录需求和来源，不为尚未确定的连接、心跳、同步协议编造 SELECT 或表结构。
 
 | 信息组 | 观察需求 | 来源与边界 |
 | --- | --- | --- |
@@ -20,8 +35,8 @@ Host 与 Objective 的观察需求见下文；Target、Request、Run 仍待逐�
 | 联系状态 | online / offline | 中央服务的连接或心跳观测；不等于 Coordinator 本地是否仍运行，也不等于是否可接收新工作 |
 | 时间与新鲜度 | 最后联系时间、最后收到状态更新时间、最近业务变更发生时间 | 各时间的语义见下文；尚无记录时为空，不伪造当前时间或推断 offline |
 | 资源 | 当前配置、可用 binding 及 capacity、实际占用与剩余容量 | 生效的 HostResourceRevision 及成员关联 HostBindingRevision，再组合活跃 Run；配置 capacity 不等于实际空闲量 |
-| 治理活动 | 本 Host 涉及哪些 Objectives、Targets、Requests，哪些正在推进或受阻 | 同 Host 的事实及后续对应观察模型；不在本轮预定进度状态枚举 |
-| 执行 | 活跃 Run、近期终结 Run 及其结果 | Run 固定属性与生命周期事件；失联不能把 Run 自动结束或释放占用 |
+| 治理活动 | 本 Host 的 Run 正在为哪些 Requests、Targets、Objectives 作贡献 | 经本地 Run 追溯，不假设 Request 归属本 Host；整体请求进度另看 Request 子视角 |
+| 执行 | 直接查看本 Host 的活跃 Run、近期终结 Run 及结果 | Run 是两个主视角交汇点；失联不能把 Run 自动结束或释放占用 |
 | 异常与历史 | 需要关注的问题，以及资源配置、运行和治理活动的变化 | Fault、配置版本及 AO 事件；历史故障不自动等于当前故障，恢复须有依据 |
 
 ### 时间信息与 online / offline
@@ -48,8 +63,8 @@ Host 本地状态与中央联系观测分别保留来源和重建输入，不强
 | --- | --- | --- |
 | 身份与定义 | 这是哪个 Objective，来源在哪里，定义了什么目标 | Objective 的固定来源与身份；定义内容须明确所展示的 Revision，不拼接不同版本的 level 或规则 |
 | 版本 | 有哪些已知 revisions，最新上线版本是哪一个，何时上线 | 固定 ObjectiveRevision 与追加的发布/生效事实；仅发现 commit 不代表上线，无发布依据时最新上线值未知 |
-| 采用分布 | 哪些 Host、Targets 的当前请求采用哪个版本，哪些仍有旧版本活动 | 沿 Host → Request → ObjectiveRevision 和 Request → Target 聚合；区分最新请求、活跃执行及历史记录，不用某个旧历史请求把 Host 永久标成落后 |
-| 治理对象 | 应用于哪些 subjects，形成哪些 Targets，分布在哪些 Host | Target 引用稳定 Objective；同一 subject 升级版本不生成新 Target，但各 Host 的状态不自动合并 |
+| 采用分布 | Targets 下的 Requests 采用哪些版本，各 Host 的 Run 正在执行哪些版本 | 沿 Target → Request → ObjectiveRevision 与 Host → Run → Request 聚合；同一 Request 可由多个 Host 执行，不从历史 Run 推断当前采用 |
+| 治理对象 | 应用于哪些 subjects、形成哪些 Targets，有哪些 Host 的 Run 参与 | Target 独立于 Host；同一 subject 升级版本不生成新 Target，同一 Target 可跨 Host 推进 |
 | 期望与现实 | 各 Target 的期望 level、观察、差距与新鲜度 | 期望及观察按准确的 Request/Revision 解释；旧版本证据能否用于新版本判断须另定规则，不默认等价 |
 | 推进与执行 | 哪些请求正在推进、受阻或满足，关联哪些 Run | 对应观察模型与依赖事实；Run 结束不等于请求已满足，不预设单一“Objective 已达标”总状态 |
 | 异常与变化 | 哪里存在问题，最近有哪些发布、请求和执行变化 | 关联 Fault 与 AO 事实，保留 Host、Target、Request、Run 及版本来源；中央联系时间不冒充业务发生时间 |
@@ -60,7 +75,7 @@ Objective 可以有一个最新上线版本，不再采用“没有最新版本�
 
 正常规则是新版本上线后新创建的 Request 采用最新上线版本，内部依赖派生请求同样遵守。Request 一旦形成便固定版本和目标 level；发布不改写旧 Request、Run 或 Observation，不自动创建替代请求或取消执行。中央已知最新版本与 Host 已知版本可能不同，离线或滞后时是拒绝新建、等待同步还是其他策略，须另行收敛，不能静默降级。
 
-旧版本提示至少区分“最新请求仍采用旧版”和“旧版 Run 尚未结束”；历史记录仍按原版本展示，不将历史存在当成当前采用。Host 当前没有相关请求或执行时不据历史推断落后；Host 的本地定义缓存/同步版本若需单独展示，必须有额外事实，不从 Request 猜测。提示是中央已知事实下的比较，不声称已获知离线 Host 此刻的状态。
+旧版本提示至少区分“Target 下的当前请求仍采用旧版”和“某 Host 的旧版 Run 尚未结束”；当前请求的选取及替代规则待 Request 子视角收敛。历史记录仍按原版本展示，不将历史存在当成当前采用。Host 当前没有相关执行时不据历史推断落后；Host 本地定义缓存/同步版本若需单独展示，必须有额外事实，不从跨 Host 的 Request 猜测。提示是中央已知事实下的比较，不声称已获知离线 Host 此刻的状态。
 
 后续校验应覆盖：同一 source 的两个 commits 保持同一 Objective/Target、形成不同 Revision；新请求采用新版本而旧请求/Run 不变；跨 Objective 的 Revision 引用显式拒绝；同名 level 跨版本不能默认语义相同；已发现但未上线的 commit 不替代最新上线版本；旧事件晚到不回退发布顺序；离线、无当前请求和仅有历史记录时的提示边界。
 
@@ -69,7 +84,7 @@ Objective 可以有一个最新上线版本，不再采用“没有最新版本�
 - 基础状态包括业务实体、被采纳的关系/决定和 Coordinator 控制状态。决定如果影响查询结果，必须在基础状态中有可追溯的表达，不能只存在于物化视图或私有内存。
 - SELECT 定义视图的完整语义；可以按需执行，也可以物化以加速查询。物化结果不允许绕过基础状态独立编辑。
 - 每份查询输入限定为一个 Coordinator 作用域、一个一致的已应用事件前缀。表名省略宿主作用域键，不意味着多 Coordinator 可以混查，也不将实例 ID 加入领域模型。
-- Host 是逻辑 worker 而非物理设备，一个 Host 对应一个 Coordinator 状态边界，资源配置归属该 Host，ObjectiveRevision 不绑定 Host。下列 SELECT 仍是单 Host 内的 Coordinator 查询，不是中央观察服务的跨 Host 汇总定义；汇总时请求身份使用 (hostId, requestSeq)，状态版本按 (hostId, revision) 解释，所有局部引用保留 Host 作用域。各 Host 的 revision 不构成中央服务的统一时序，同一 targetKey 在不同 Host 的状态不自动合并。ER 新增 Host 的边界见 [Diagrams.md](./Diagrams.md#host-归属)。
+- Host 是逻辑 worker 而非物理设备，资源配置与本地执行归属 Host，Objective、Target、Request 不因执行位置而分裂身份。Host 状态版本仍按 (hostId, revision) 解释，不构成中央全局时序；Request 的跨 Host 身份协议另定。下列旧 SELECT 仅是已有单来源草案，request_seq 是旧引用占位，不可直接用于跨 Host JOIN 或推导当前请求选择；待共享请求及下钻需求收敛后替换，不能将本地最新序号误当全局最新请求。
 - 同一版本必须满足 `V_n = SELECT(B_n)`，其中 B 是基础状态、V 是视图。事件先确定基础变更，再维护受影响视图；纯回放不重新作业务决定或执行副作用。
 - 原子提交实体与视图，或让异步投影公开 appliedRevision，并只提供同一版本的组合读取。物化可暂时落后，但不能把不同版本拼成一份一致状态，也不能据落后视图重复启动工作。
 - SQL 使用普通 SELECT、JOIN、窗口函数和聚合表达逻辑；JSON 列作为不透明值传递。SQLite 可用于验证这些查询，不表示已选定生产数据库。
