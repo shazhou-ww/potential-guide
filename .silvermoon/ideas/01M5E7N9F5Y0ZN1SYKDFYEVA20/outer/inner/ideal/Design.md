@@ -46,6 +46,7 @@ CoordinatorStateReducer :: Event -> CoordinatorState -> CoordinatorState
 
 ## 单一治理目标命令与单次调用
 
+- 实体边界分为 source、definition、RegulationObject、TargetIntent 四层。source 是字符串值，不单独建实体；objectiveKey 由 source URL 直接表达或哈希推导，不另设独立身份 ID。ObjectiveDefinition 以 `(objectiveKey, version)` 标识，同一 source 可有多个版本；RegulationObject 固定引用一个 definition version 并结合 subject 确定身份，TargetIntent 再按对象独立版本化。换 definition version 是另一个治理对象，换目标不是；RegulationObject 不与一次 Regulation 调用混淆。精确关系见 [Types.md](./Types.md)。
 - 公共命令只有为特定 Objective/subject 设置目标 level 与 priority，不再分别提供 add、replace、cancel、priority 或 retry。未终结需求可被更新，前次终结后新请求形成新尝试。
 - 覆盖身份须包含明确对象，精确 Objective 版本、来源和实际资源身份不能混淆；不依靠任意 regulation ID 区分同一需求更新。按接受顺序区分新旧，不依赖生产者时钟；commandId 用于关联，不默认是幂等键。
 - 已确认意图按非负整数 priority 升序、acknowledgedAtRevision 升序排序；新意图的确认刷新排序时间，重复确认同一意图不刷新。对象普通状态/观察更新不改变排队顺序，不用对象独立版本跨对象排序；同次确认的并列决胜规则待定。纯 priority 更新可重新排序但不无故重启。意图引用为对象 key 加对象意图 revision，旧反馈不能完成新意图。

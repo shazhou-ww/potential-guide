@@ -18,13 +18,30 @@ PK 表示模型中的逻辑唯一键，多列标为 PK 表示复合主键；FK �
 
 ## Regulation Target ER 模型
 
+### 实体边界与身份假设
+
+概念上有四层：Objective source → Objective definition → RegulationObject → TargetIntent；其中 source 是字符串值，不单独建实体。RegulationObject 表示治理对象，不是一次有开始与终结的 Regulation 调用。
+
+- **Objective source 确定 Objective 身份。** objectiveKey 直接使用规范化 source URL，或由该 source 哈希推导；不是另一个任意分配的 objectiveId。source 标识稳定来源，version 单独表达同一来源的不同定义版本。URL 规范化、版本定位部分的分离及哈希规则仍待确定，不把可变 latest 解析当成固定版本身份。
+- **Objective definition 是版本化实体。** 逻辑主键为 `(objectiveKey, version)`；同一来源可有多个版本，同一精确版本的定义不能在原身份下被静默替换。source 是该实体的来源值，若 key 直接使用 URL 可省去重复存储；若 key 是哈希则保留 source 以便解析、校验与追溯，两者必须一致，不能独立修改。
+- **RegulationObject 绑定精确 definition。** 每个对象引用一个 `(objectiveKey, objectiveVersion)`，再结合 subject 身份确定 objectKey。同一 subject 使用另一个 definition version 会形成另一个治理对象；一份 definition 可以被多个对象共享。
+- **TargetIntent 是对象的历次目标。** 每条目标意图以 `(objectKey, revision)` 唯一标识；targetLevel 与 priority 不属于对象身份，同值新请求也产生新的意图版本。
+
+三个实体表达这些业务边界，不强制建立 source 表、独立 Objective 目录服务或新的顶层状态集合。TS 可以嵌套实体值，物理存储也可以用外键；表示方式不能改变上述身份关系。
+
 [独立 SVG：Regulation Target](./diagrams/regulation-target.svg)。在浏览器单独打开可缩放；使用 22px 基础字号和横向布局。SVG 由本节 Mermaid 源生成，模型变化时须同步重新渲染。
 
 ```mermaid
 erDiagram
     direction LR
+    OBJECTIVE_DEFINITION ||--o{ REGULATION_OBJECT : governs
     REGULATION_OBJECT ||--o{ TARGET_INTENT_VERSION : hasIntents
 
+    OBJECTIVE_DEFINITION {
+        string objectiveKey PK "Source URL or derived hash"
+        string version PK "Definition version within source"
+        string source "Source value; determines objectiveKey"
+    }
     TARGET_INTENT_VERSION {
         string objectKey PK, FK "Canonical object identity"
         number revision PK "Per-object intent version"
@@ -33,9 +50,8 @@ erDiagram
     }
     REGULATION_OBJECT {
         string objectKey PK "Canonical identity"
-        string objectiveId
-        string objectiveVersion
-        GitObjectiveSource source
+        string objectiveKey FK "With objectiveVersion identifies definition"
+        string objectiveVersion FK
         Subject subject
     }
 ```
@@ -52,6 +68,8 @@ erDiagram
 ```mermaid
 erDiagram
     direction LR
+    OBJECTIVE_DEFINITION ||--o{ REGULATION_OBJECT : governs
+    REGULATION_OBJECT ||--o{ TARGET_INTENT_VERSION : hasIntents
     COORDINATOR_SNAPSHOT ||--o{ ACKNOWLEDGED_TARGET : acknowledgedTargets
     TARGET_INTENT_VERSION ||--o{ ACKNOWLEDGED_TARGET : confirms
     COORDINATOR_SNAPSHOT ||--o{ REGULATION_OBJECT_STATE : regulationObjects
@@ -71,8 +89,13 @@ erDiagram
     REGULATION_OBJECT ||--o{ CURRENT_DEPENDENCY : provider
 
     TARGET_INTENT_VERSION {
-        string objectKey PK "Canonical object identity"
+        string objectKey PK, FK "Canonical object identity"
         number revision PK "Per-object intent version"
+    }
+    OBJECTIVE_DEFINITION {
+        string objectiveKey PK "Source URL or derived hash"
+        string version PK "Definition version within source"
+        string source "Source value; determines objectiveKey"
     }
     COORDINATOR_SNAPSHOT {
         number revision PK "One singleton snapshot per revision"
@@ -83,7 +106,9 @@ erDiagram
     }
     REGULATION_OBJECT {
         string objectKey PK "Canonical identity"
-        RegulationObject value
+        string objectiveKey FK "With objectiveVersion identifies definition"
+        string objectiveVersion FK
+        Subject subject
     }
     REGULATION_OBJECT_STATE {
         number coordinatorRevision PK, FK "Snapshot membership"
@@ -182,23 +207,26 @@ Collection<T> 表达领域中的记录集合，选用 Collection 而不是 Table
 
 ```typescript
 import type {
-  GitObjectiveSource,
   PilotObservation,
   Subject,
 } from "@potential-guide/objective-pilot";
 import type { AgentBinding } from "@potential-guide/objective-regulator";
 
 export type Revision = number;
+export type ObjectiveSource = string;
+export type ObjectiveKey = string;
 export type ObjectKey = string;
 export type RegulationId = string;
 export type Collection<T> = readonly T[];
 
+export interface ObjectiveDefinition {
+  readonly key: ObjectiveKey;
+  readonly version: string;
+  readonly source: ObjectiveSource;
+}
+
 export interface RegulationObject {
-  readonly objective: {
-    readonly id: string;
-    readonly version: string;
-    readonly source: GitObjectiveSource;
-  };
+  readonly objective: ObjectiveDefinition;
   readonly subject: Subject;
 }
 
@@ -409,7 +437,9 @@ export interface CoordinatorCheckpoint {
 
 ## 意图身份与确认
 
-ObjectKey 由精确 Objective 身份、版本、来源与 subject 的规范化语义确定，可对规范化值哈希，具体规则待定；不是任意 regulation ID，也不能直接依赖普通 JSON 属性顺序。intents 是按此 key 索引的只读稀疏 Record，value 保留完整 RegulationObject、targetLevel、priority 与对象意图 revision。RegulationObject 不再重复存 key；恢复和输入验证须核对 key 与完整对象一致，并明确哈希碰撞处理，不能静默合并不同对象。
+ObjectiveKey 由 ObjectiveSource 确定；ObjectKey 再由 `(objectiveKey, objectiveVersion, subjectIdentity)` 的规范化语义确定，可对规范化值哈希，具体规则待定；不是任意 regulation ID，也不能直接依赖普通 JSON 属性顺序。intents 是按此 key 索引的只读稀疏 Record，value 保留完整 RegulationObject、targetLevel、priority 与对象意图 revision。RegulationObject 不再重复存 key；恢复和输入验证须核对 source 与 objectiveKey、完整对象与 objectKey 一致，并明确哈希碰撞处理，不能静默合并不同来源、版本或 subject。
+
+TS 中的 ObjectiveDefinition 独立表达定义实体的身份与来源字段，暂不展开定义正文；RegulationObject.objective 嵌套此值不表示必须重复存储它。该 source 字符串是本模型的领域来源标识，不照搬现有 GitObjectiveSource 传输结构；未来实现须明确与解析协议的适配。objectiveId 若作为名称保留，不构成另一套身份。
 
 Partial 表达并非每个 ObjectKey 都有条目，索引结果为 TargetIntent | undefined。readonly intents 限制属性重新赋值，Readonly 限制条目的增删替换；这些是编译期约束，不是运行时冻结或递归不可变保证。只将对象自身属性视为意图条目，查询须区分缺失 key 与原型链属性，构造和恢复不能让特殊 key 改变对象原型。
 
