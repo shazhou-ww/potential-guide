@@ -2,7 +2,8 @@
 
 本文是本 Idea 的唯一设计稿。只做**开始、取消、观察**；观察包括单项 check 和服务当前任务集合。
 不提供 registration、binding、session、业务依赖回调或 Host 管理 HTTP 接口。
-以下路由及数据形状为审阅建议，尚未实现；历史讨论由 Git 保存，不在当前稿维护多套方案。
+2026-10-24 补洞：复用本 Idea，扩充 npm 包身份、固定版本与分发边界；不是新建另一套 Host。
+旧实施已验收，但不能据此声称本次包模型已实现；旧证据保留，新 Ideal revision 需重新审阅。
 
 ## 0. 架构不动点
 
@@ -31,19 +32,21 @@ Completed 的 CheckResult 可表示业务不通过；调用或清理故障属于
 
 ## 1. 调整范围
 
-只新增 `packages/check-host` 可复用包，不新增应用目录、不拆多个空壳包。
+Host 仍只有 `packages/check-host` 一个可复用包，不新增应用目录或空壳 runtime 包。
+业务 Pilot 按一包一个 Objective 拆分，这是明确交付边界，不是把 Host 再拆包。
 同一包内区分执行内核、统一资源调度、HTTP adapter；复用既有 CLI 启动装配。
 
 | 调整面 | 要做的事 |
 | --- | --- |
 | check-host | 用户级共享 Host、三个操作、活动任务集合、按目录加载和有界 worker 池 |
-| pilot-protocol / objective-pilot | worker 契约与 adapter，Subject/CheckResult 和状态语义；业务层解释依赖结果 |
-| cli-runtime 与 probe/regulate/supervise | 准备准确产物，开始执行、观察状态、取消；保留业务来源和证据归属 |
-| 内置 Objective、生成器、脚手架及消费测试 | 进程入口迁移为 worker handler，不再逐 check 启动重进程 |
+| pilot-protocol / objective-pilot | 包名/digest 身份与来源协议、根定义加载及 worker adapter；业务层解释依赖结果 |
+| cli-runtime 与 probe/regulate/supervise | 用包管理器解析 spec，显式准备并固定包；开始/恢复不静默升级，保留证据归属 |
+| regulation-coordinator | Objective 使用包名、ObjectiveRevision 使用该包内容 digest；请求/结果/持久化及重放保持准确绑定 |
+| 内置 Objective、生成器、脚手架及消费测试 | 一包一 Objective、根 objective.yaml、生成物不入库，构建后 pack 与独立消费 |
 
 迁移仍覆盖 **6 个 Objective、16 个 check**：
 
-| packages 下的 Objective | check IDs |
+| 当前 Objective 位置（迁移前） | check IDs |
 | --- | --- |
 | objective-monorepo-standard | structure、deliveries |
 | objective-monorepo-standard/package-standard | structure、deliveries |
@@ -54,6 +57,82 @@ Completed 的 CheckResult 可表示业务不通过；调用或清理故障属于
 
 旧运行协议明确拒绝；历史 schema、源码和固定证据不改写。系统工具或 Agent 等业务所需外部
 能力不擅自删除，但其执行权限、子进程和清理责任仍归当前请求。
+
+### 1.1 npm 包身份与固定绑定
+
+- 一个业务 Objective 唯一对应一个 npm 包，包只包含一个 Objective 定义；名称直接取
+  `package.json.name`，不再使用 repository/directory、包内 export 或 Git fragment 命名。
+  npm alias/注册简称只是引用别名，必须解析并校验实际包名，不成为第二个 Objective 身份。
+- 包根保留唯一 `objective.yaml`，包含 Subject schema、层级、check 及引用关系；
+  不内联到 package.json，不重复写 Objective 名，不保留同步生成的第二份 JSON 定义。
+  References/多语言正文、worker、Wasm 和其他资源独立随包交付。
+- 根 monorepo 与 package-standard 拆为两个业务包；setup 的 marker fixture 也独立成包。
+  setup 可以依赖固定 marker 包，测试可以另建 fixture，但不再在包内嵌入第二个 Objective。
+  现有四个业务包变为六个，16 个 check 的业务范围不变；具体新包名在实施时统一落实。
+- 接受 npm 在 package.json dependencies 中支持的标准 spec：registry 包名/版本范围/
+  tag、npm alias、Git URL/托管 shorthand、远程或本地 tarball、本地目录。
+  交给包管理器解析和获取，不另造近似 npm 的语法、下载器或 resolver；
+  workspace/catalog 等包管理器扩展不是对全部消费者的隐式承诺。
+  Git spec 指向其包根，不追加自创 monorepo 子目录语法；子包可发布或显式构建打包。
+- 同名包来自不同 registry/Git/目录时，保持同一个包名身份，但引用必须记录实际来源，
+  由可信配置限定来源；同一解析上下文的冲突映射明确拒绝，不先到先得或静默切源。
+  digest 证明内容相同，不证明发布者可信；来源权限、认证及安装脚本执行单独受控。
+
+调用方在新建 regulation/独立 observation 的准备边界解析一次 spec，并保存
+声明、实际包名、解析版本/commit/来源、可用的 lock/integrity 与实际包内容 digest。
+依赖首次绑定也须明确准备并固定，其后复用准确绑定。同一任务的多轮 check、continue、
+恢复和证据验证使用原包；准确包缺失时明确报错，不重新解析 latest 或分支替代。
+新任务或显式刷新才重新解析；精确版本仍精确，范围/tag 按其含义解析，不一律取最新。
+Check Host 重启只重载调用者提供的产物，不决定业务使用哪个版本。
+
+取消对 Pilot 源码/registry/本地包更新的持续监听，不取消 Subject、资源分配、
+业务检查结果或 CheckState 的动态观察；Coordinator 的请求和资源 Behavior 仍保留。
+显式重新绑定为新 revision 后须重新取得事实，旧 revision 的证据不能冒充新版本通过。
+
+### 1.2 包 Revision 与 check 产物 Revision
+
+`Objective = package.json.name`；`ObjectiveRevision = (Objective, packageDigest)`。
+内部 key 可编码这对值，不能继续用源码 commit 当内容 revision，也不能拿 Coordinator
+自身的投影计数代替它。semver、Git commit、registry integrity 均是解析/验证来源信息。
+
+包 digest 使用带算法/格式版本的 SHA-256 内容摘要，针对准备后实际交付的完整包树：
+package.json、objective.yaml、References、全部 check、Wasm/二进制和资源均纳入。
+按确定的相对路径顺序编码路径、文件长度、字节及执行所需权限位；
+忽略压缩/tar header、mtime、绝对安装路径与宿主 UID，digest 不写进其自身输入。
+相同逻辑包经 tar 重打包或移动目录得到相同摘要，任一受覆盖内容改变必须改变摘要。
+实施时固定规范编码与跨平台测试向量，防路径穿越、大小写冲突及不可验证链接；
+不把 registry 的压缩包 integrity 直接当跨来源统一的包内容摘要。
+
+首版的 check 运行代码继续自包含；安装时依赖可供构建准备使用，
+但 worker 不向任意 node_modules 解析未固定运行代码。不把未纳入摘要的可变运行依赖
+伪装成包自身全部执行内容；跨 Objective 依赖是另一个固定包绑定。
+外部工具/解释器及环境事实仍独立观察，不宣称包 digest 等于目标环境的版本。
+
+Host 的 `revision` 仍是单个 check 自包含目录的完整 hash，不改成整个包 digest。
+调用方持有包 digest 到各 check 产物 revision 的映射，Coordinator 记录包级版本；
+Host 校验字节、按规范目录及 check revision 复用，HTTP 无需认识 npm 或包名。
+包的 References 变化可更新包 revision，而不必使字节未变的 check 重初始化。
+
+### 1.3 构建、物化与迁移
+
+源码仓库保留定义、源码、原始资源、lockfile 和构建配置，生成 bundle/runtime/resource
+副本输出到忽略的 staging/dist；构建后组装并打包，常规开发不再提交生成产物。
+CI 从干净源码构建并验证实际 pack 内容、来源与隔离消费，而非要求 Git 中已有 bundle。
+发布仍走已有 package-specific tag/授权流程；本次设计不授权 npm publish。
+
+registry/tarball 默认消费已构建包。Git/local 仅有源码时需要显式安装/构建准备，
+允许经授权的生命周期脚本及工具链，失败明确报告；不能既无产物又禁止构建还声称可执行。
+check 期间不隐式安装、编译或升级。准备端将包和 check 物化为私有不可变执行副本，
+解决 pnpm 硬链接/本地 symlink 边界，不通过放宽 Host 单硬链或内容校验来绕过。
+Node 统一入口可调用受管的其他语言子进程或 Wasm；缺少解释器/平台二进制明确报错，
+不自动安装；取消、截止和清理仍覆盖所拥有的子进程。Wasm/worker 均非默认安全沙箱。
+
+迁移必须覆盖声明/CLI/source resolver、协议 schema、包名与来源校验、
+Coordinator 的请求/依赖结果/持久化重放/查询视图，以及所有六个内置包与构建/发布说明。
+旧 Git URI 和 commit/tree 证据不就地解释为 npm 名称/digest；保留历史读取/诊断，
+恢复走原有准确绑定或要求显式迁移，禁止伪造映射或自动换新版。
+先接通新消费及构建，再停止跟踪当前生成物；不删除或重写历史提交和固定证据。
+旧消费暴露的默认冷初始化超时与启动中退出原生断言仍是待闭合项，不能靠包化宣称消失。
 
 ## 2. 代码加载与 worker 生命周期
 
@@ -153,5 +232,5 @@ Objective 依赖属于某类内置 check 的返回值：检查执行正常完成
 4. 内置依赖结果由上层处理，业务输出与证据正确；完成全部 16 个入口迁移。
 5. 连续成功/失败/取消负载证明资源有界、线程初始化减少及真实冷/热收益。
 
-不做预注册、任务恢复、可靠事件队列、自动依赖安装或远程平台。
-本次仅设计，具体状态字段、路由编码和资源限额后续定稿；不记录生命周期验收。
+不做预注册、Host 任务恢复、可靠事件队列、check 内自动依赖安装或远程平台。
+本次修订只更新设计，不声称包化已完成，不记录新 revision 的生命周期验收。

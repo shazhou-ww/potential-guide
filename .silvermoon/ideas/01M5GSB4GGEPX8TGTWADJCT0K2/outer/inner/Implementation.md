@@ -1,10 +1,12 @@
 # Implementation
 
-## 当前进度（2026-10-23 实施候选）
+## 本次修订（2026-10-24 npm 包模型准备）
 
-本轮实施步骤与验收项已有完成证据，ledger 的 I-* 已勾选；这不代表用户已验收。
-候选同步至 primary 后才提交准确 revision 的 `submitInner`，在显式实施验收前不进入部署或发布。
-详细结果和限制见 [实施证据的 Checkpoint 6](./Implementation-evidence.md#checkpoint-6跨平台验证与实施候选2026-10-23)。
+当前按 [新设计](./ideal/Design.md#11-npm-包身份与固定绑定) 重新准备；
+本轮只更新契约，尚未修改产品实现。I-* / D-* 因要求变化全部重置，
+不是撤销旧验收事件，也不把旧通过结果包装成新范围已完成。
+旧版本 `0ae8c1991182` 的实施已由用户接受，以下结果只适用于该基线，
+详见 [Checkpoint 6](./Implementation-evidence.md#checkpoint-6跨平台验证与实施候选2026-10-23)。
 
 - 无 HTTP 内核、worker 调度、四路由、CLI discovery 与业务依赖结果处理均已接通；
   6 个 Objective、16 个入口完成迁移，无旧协议回退。
@@ -32,6 +34,13 @@ POSIX 证据来自实际 Linux/WSL2，不外推到所有 POSIX 系统；512 次�
 
 ### I-S01: 收敛协议与所有权
 
+接通 package.json.name 作为 Objective 身份、完整包内容 digest 作为 ObjectiveRevision，
+保留唯一包根 objective.yaml。复用 npm 标准 dependency spec，准备时解析和固定，
+移除 Pilot 更新监听但保留业务观察。对齐声明、加载器、协议、Coordinator 请求/结果/
+持久化重放的包名与版本，记录来源并明确旧 Git 证据的兼容/显式迁移。
+固定 digest 编码、算法版本及跨平台测试向量；包 digest 与 check hash 分层，
+semver、commit、lock/integrity 不冒充内容身份。
+
 按 [最小设计](./ideal/Design.md) 定稿目录/revision、自包含产物、worker 消息和开始/取消/观察接口，
 以 `executeCheck :: WorkerDirectory -> Revision -> Subject -> IO (Behavior CheckState)` 为不动点，
 明确单项当前状态、终态及活动集合的采样/订阅；HTTP 只做投影，
@@ -42,13 +51,23 @@ POSIX 证据来自实际 Linux/WSL2，不外推到所有 POSIX 系统；512 次�
 
 ### I-S02: 接通共享 Host 与检查器
 
-只新增 packages 下的可复用 Host 包，在包内分离无 HTTP 内核、统一执行调度和 Web adapter，
+沿用 packages 下的可复用 Host 包，在包内分离无 HTTP 内核、统一执行调度和 Web adapter，
 接入现有协议/观察/CLI 链路；业务输入为 Subject，worker runner 把执行信号归入同一 Behavior。
 先跑通双 CLI、monorepo 根到包依赖及连续复用，再完成 6 个 Objective、16 个 check、
 生成器/脚手架/fixture/消费入口的全量迁移，无旧运行协议回退。
+将现有业务 Objective 拆为六个单 Objective npm 包，独立 package-standard 和 marker；
+源码/原始资源入 Git，bundle 与复制资源改为忽略的构建输出，按 pack 交付。
+准备端物化私有不可变包/check 目录，处理 pnpm 硬链接，不向 Host 引入 npm 或隐式安装。
+检查 Node 子进程与 Wasm 的资源交付、平台前提和清理接线，更新直接相关发布说明，
+不执行发布。先验证新消费再移除当前生成物跟踪，不改写历史。
 
 ### I-S03: 验证失败边界与收益
 
+覆盖 registry/version/range/tag/alias、Git、tarball 与 local spec 的真实解析和离线固定恢复，
+冲突来源/包名不匹配/篡改/脚本拒绝均明确失败；验证显式刷新前后绑定与证据隔离，
+同字节重打包摘要相同、内容改变摘要不同，以及六包十六入口的干净构建/pack 消费。
+定位旧消费记录中的默认 5 秒冷初始化超时与启动中 shutdown 原生断言，
+建立不延长预算、不依赖预热成功掩盖冷态失败的回归证据。
 验证并发启动、路径规范化、完整产物校验、按需加载/排空更新及在途版本冲突，
 开始响应丢失、观察断开/重订阅、队列容量、明确取消和清理；
 验证内核无需 HTTP 即可执行、多次采样/订阅不重复启动、当前快照与更新无竞态缺口，
@@ -65,6 +84,11 @@ Windows 用实际 owner SID/受保护 ACL 验证，不依赖 chmod、umask 或�
 
 ### I-AC01: 多请求复用且观察独立
 
+六个 npm 包各有一个根定义，以实际包名唯一标识 Objective；包摘要覆盖完整交付内容，
+固定绑定贯穿声明、依赖、Coordinator、CLI 和恢复。自动更新不改变运行中的判定标准，
+显式更新需要新事实，包 revision 与 Host check revision 可独立变化且可追溯。
+通过协议、digest、加载器和 Coordinator 持久化测试证明，不以 Git commit 代替摘要。
+
 多个 CLI 共用 Host，连续任务复用线程且全部迁移入口执行正确；
 一次 IO 得到一个具有当前值的 Behavior，重复观察不重复执行，终态在观察作用域内可读；
 单项和集合观察与同一执行表一致，断开观察不取消执行或影响其他观察者；
@@ -73,6 +97,10 @@ Windows 用实际 owner SID/受保护 ACL 验证，不依赖 chmod、umask 或�
 无需预注册，同目录同 revision 复用，代码/资源变化更新 revision 后正确顺序切换。
 
 ### I-AC02: 生命周期和失败有界
+
+准备脚本/包来源在授权边界内，check 不隐式安装；独立包/check 物化不绕过权限/链接校验。
+冷态首次初始化和启动中退出回归通过，先前原生断言与超时有定位和修复证据，
+不以热态重跑或放宽预算替代。
 
 队列/线程/消息/观察连接及状态保留容量有界，超时和明确取消不误伤他人；
 清理失败不回池，不透明重试未知任务。任务数退役与预热不突破额度，
@@ -83,5 +111,7 @@ discovery 文件不向普通本机账户授予读写或替换权限；真实 ACL
 
 ### I-AC03: 校验和性能证据完整
 
-相关测试、生成物及 pnpm check 通过，历史契约和固定证据不变，旧输入明确拒绝。
-同环境固定输入比较进程/线程启动、初始化、内存及冷/热耗时，证明实际收益。
+从无入库 bundle 的干净源码构建六包十六入口并独立消费；相关测试、产物校验和
+pnpm check 通过，旧输入/历史来源按明确兼容或迁移规则处理，不改写固定证据。
+真实包来源与 Node/工具链固定，比较进程/线程启动、初始化、内存及冷/热耗时，
+证明复用收益与准确包内容身份；无 npm 发布或生产操作。

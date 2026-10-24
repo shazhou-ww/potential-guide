@@ -1,5 +1,9 @@
 # Check Host：调研依据与阅读入口
 
+2026-10-24：当前方案已补充 [npm 包模型](./Design.md#11-npm-包身份与固定绑定)。
+以下源码清单与性能材料是原设计的调研基线，不是当前产品状态或包化完成证据；
+来源身份改为包名/完整包 digest，原 Git 路径仅保留为历史来源。
+
 ## 收敛结论
 
 用户已选择统一 Node worker、单用户级共享 Check Host、外部本地 HTTP RPC、
@@ -35,7 +39,8 @@ CheckResult 表达并交上层解释，不进入 Host 的消息或调度协议�
 已确认/待审阅状态统一见 [OpenQuestions.md](./OpenQuestions.md)。
 仓库 workspace 仅使用 packages，Host 按独立可复用包规划于 `packages/check-host`，
 启动装配复用现有 CLI 工具层，不另增应用目录或预先拆分 runtime 包；
-复用现有协议层，本次只简化设计文档，不创建产品包。
+复用现有协议层；本轮只更新设计，后续需要将六个业务 Objective 各自独立成包，
+但不为 Host 新增 runtime 空壳包。
 
 首版不做会话租约、自动闲置关闭 Host、持久任务恢复、独立视图管理或 cursor/ack 事件平台。
 单项当前状态和活动任务集合观察属于必要能力；观察断开不取消，重复观察不再次执行。

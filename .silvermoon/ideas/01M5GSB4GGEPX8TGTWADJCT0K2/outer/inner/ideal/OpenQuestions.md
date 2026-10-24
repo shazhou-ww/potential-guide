@@ -19,12 +19,19 @@ Host 负责共享调度和 Web 封装，公开操作只有开始、取消、观�
 | Q10 HTTP | POST /checks、POST /checks/{checkId}/cancel、GET /checks/{checkId}、GET /checks |
 | Q11 内核 | Behavior 有当前值和变化，订阅不重复执行；worker 信号由内核形成状态，HTTP 只投影 |
 | Q12 回收 | 请求级清理、有界缓存、线程退役与预热都受限；失败/取消后的长期复用纳入验证 |
+| Q13 包边界 | 一包一个 Objective；名称取 package.json.name，拆出 package-standard 与 marker 独立包 |
+| Q14 定义 | 唯一包根 objective.yaml，不内联 package.json，不定义包内多 Objective 导出 |
+| Q15 版本 | ObjectiveRevision 使用完整包内容 digest；Host 单 check artifact revision 保持独立 |
+| Q16 来源 | 复用 npm 标准 dependency spec 与包管理器；准备时固定，运行/恢复不静默升级 |
+| Q17 动态性 | 不持续观察 Pilot 更新，保留检查/Subject/资源 Behavior；显式刷新重新取得证据 |
+| Q18 构建 | 源码入 Git，生成物在 staging/dist 构建打包；安装/构建显式授权，check 不隐式准备 |
 
 ## 仍需定稿
 
-1. 目录规范化、完整产物 hash、worker 模块和 CheckState 的具体字段。
-2. 线程/队列/负载/观察连接容量、执行截止、终态保留期和退役数值。
-3. Host 启动/发现、跨平台文件与外部工具清理、调用能力及集合可见范围。
-4. 业务层的依赖要求与已观察事实如何区分、如何消费后重查；不借 Host 控制协议补回调。
+1. 包 digest 的规范编码、格式版本、权限归一化及跨平台固定测试向量；不改变一包一身份原则。
+2. 六个内置包的最终命名、构建/prepare/pack 接线及可信来源冲突报错。
+3. 旧 Git 绑定与持久化证据的显式迁移界面；不重写历史或把旧 commit 当新 digest。
+4. 既有默认冷初始化超时、启动中 shutdown 原生断言的定位与回归证据。
 
-文档达到共识后直接更新，未决建议与正式生命周期验收分开。
+已实现的 Host 字段/额度以当前实现和原证据为基线，不再将它们列为全新待定设计。
+本次补洞改变 Ideal revision，旧验收事件保留但不适用于新范围；重新提交审阅后才继续实施。
