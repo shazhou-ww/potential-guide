@@ -1,37 +1,38 @@
 {
   "name": "@potential-guide/objective-monorepo-standard",
   "version": "0.1.0",
-  "private": true,
   "description": "Read-only, requirements-led pnpm monorepo Objective checks.",
   "type": "module",
   "files": [
-    "dist",
-    "runtime",
     "objective.yaml",
     "observation-inputs.json",
     "checks",
-    "package-standard",
     "references",
-    "check.mjs",
     "THIRD_PARTY_NOTICES.txt"
   ],
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+    "./objective.yaml": "./objective.yaml"
   },
   "scripts": {
-    "build": "tsc -b && node ../../scripts/build-monorepo-runtime.mjs",
+    "build": "tsc -b && node ../../scripts/build-objective-package.mjs objective-monorepo-standard",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "lint": "biome lint .",
     "test": "tsx --test \"test/*.test.ts\" \"test/*.test.mjs\"",
     "typecheck": "tsc -b --pretty false"
   },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist/package"
+  },
+  "license": "MIT",
+  "objectiveDependencies": [
+    "@potential-guide/objective-package-standard"
+  ],
   "engines": {
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@potential-guide/objective-package-standard": "workspace:^",
     "@potential-guide/objective-pilot": "workspace:^",
     "ajv": "catalog:",
     "typescript": "catalog:",

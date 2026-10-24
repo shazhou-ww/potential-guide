@@ -470,7 +470,7 @@ await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
   }
 });
 
-test("continuous supervise follows script and dependency source updates without portfolio edits", async () => {
+test("continuous supervise freezes code and dependencies until an explicit source rebind", async () => {
   const consumer = await fixture();
   const provider = await fixture();
   let running: ReturnType<typeof run> | undefined;
@@ -537,7 +537,7 @@ for await (const line of createInterface({ input: process.stdin })) {
       }),
     );
     const portfolio = join(consumer.directory, "portfolio.json");
-    const content = JSON.stringify({
+    const portfolioValue = {
       schemaVersion: 4,
       goals: [
         {
@@ -550,14 +550,16 @@ for await (const line of createInterface({ input: process.stdin })) {
         },
       ],
       resources: [],
-    });
+    };
+    let content = JSON.stringify(portfolioValue);
     await writeFile(portfolio, content);
     const runner = join(consumer.directory, "until-source-followed.mjs");
     await writeFile(
       runner,
       `import {existsSync} from "node:fs";
+process.env.PGUIDE_TIMINGS="1";
 const timer = setInterval(() => {
-  if (existsSync(${JSON.stringify(`${marker}.terminal`)})) { clearInterval(timer); process.emit("SIGINT"); }
+  if (existsSync(${JSON.stringify(`${marker}.finish`)})) { clearInterval(timer); process.emit("SIGINT"); }
 }, 25); timer.unref();
 await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
 `,
@@ -605,7 +607,10 @@ await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
     ) => {
       while (!predicate(await snapshots())) {
         if (completed !== undefined) assert.fail(completed.stdout + completed.stderr);
-        assert.ok(Date.now() < deadline, "Continuous supervise did not follow source updates.");
+        assert.ok(
+          Date.now() < deadline,
+          "Continuous supervise did not observe the explicit binding.",
+        );
         await new Promise((done) => setTimeout(done, 25));
       }
     };
@@ -618,17 +623,33 @@ await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
       await git(consumer.repository, "rev-parse", `${unrelatedCommit}:objective`),
       initialTree,
     );
-    await waitFor((values) =>
-      values.some(
-        (value) =>
-          value?.sources?.[consumer.uri]?.commit === unrelatedCommit &&
-          value.versions[consumer.uri] === initialTree,
-      ),
+    let before = (await snapshots()).length;
+    await waitFor((values) => values.length >= before + 3);
+    assert.ok(
+      (await snapshots())
+        .slice(-3)
+        .every(
+          (value) =>
+            value?.sources?.[consumer.uri]?.commit === initialCommit &&
+            value.versions[consumer.uri] === initialTree,
+        ),
     );
     await writeFile(consumerScript, consumerSource("v2", true));
     const updatedCommit = await consumer.commit();
     const updatedTree = await git(consumer.repository, "rev-parse", `${updatedCommit}:objective`);
     assert.notEqual(updatedTree, initialTree);
+    before = (await snapshots()).length;
+    await waitFor((values) => values.length >= before + 3);
+    assert.ok(
+      (await snapshots())
+        .slice(-3)
+        .every((value) => value?.versions?.[consumer.uri] === initialTree),
+    );
+    content = JSON.stringify({
+      ...portfolioValue,
+      goals: portfolioValue.goals.map((goal) => ({ ...goal, revision: updatedCommit })),
+    });
+    await writeFile(portfolio, content);
     await waitFor((values) =>
       values.some(
         (value) =>
@@ -644,6 +665,33 @@ await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
       `${dependencyCommit}:objective`,
     );
     assert.notEqual(dependencyTree, providerTree);
+    before = (await snapshots()).length;
+    await waitFor((values) => values.length >= before + 3);
+    assert.ok(
+      (await snapshots())
+        .slice(-3)
+        .every((value) => value?.versions?.[provider.uri] === providerTree),
+    );
+    await writeFile(join(consumer.repository, "explicit-refresh.txt"), "explicit new binding");
+    const refreshCommit = await consumer.commit();
+    content = JSON.stringify({
+      ...portfolioValue,
+      goals: portfolioValue.goals.map((goal) => ({ ...goal, revision: refreshCommit })),
+    });
+    await writeFile(portfolio, content);
+    await waitFor(
+      (values) =>
+        values.slice(-5).length === 5 &&
+        values
+          .slice(-5)
+          .every(
+            (value) =>
+              value?.current.levelId === "ready" &&
+              value?.sources?.[consumer.uri]?.commit === refreshCommit &&
+              value?.sources?.[provider.uri]?.commit === dependencyCommit,
+          ),
+    );
+    await writeFile(`${marker}.finish`, "confirmed explicit binding");
     const result = await running;
     assert.equal(result.code, 0, result.stdout + result.stderr);
     const report = JSON.parse(result.stdout);
@@ -654,7 +702,7 @@ await import(${JSON.stringify(pathToFileURL(bin("supervise")).href)});
     const final = report.observations.fixture.payload;
     assert.equal(final.current.levelId, "ready");
     assert.equal(final.versions[consumer.uri], updatedTree);
-    assert.equal(final.sources[consumer.uri].commit, updatedCommit);
+    assert.equal(final.sources[consumer.uri].commit, refreshCommit);
     assert.equal(final.versions[provider.uri], dependencyTree);
     assert.equal(final.sources[provider.uri].commit, dependencyCommit);
     assert.equal(await readFile(portfolio, "utf8"), content);

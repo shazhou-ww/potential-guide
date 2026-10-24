@@ -1,13 +1,11 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, relative, sep } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const checking = process.argv.includes("--check");
-const emitted = new Set();
 async function emit(path, bytes) {
-  emitted.add(path);
   if (checking) {
     if (!(await readFile(path)).equals(Buffer.from(bytes)))
       throw new Error(`Stale worker artifact: ${path}; run pnpm workers:build.`);
@@ -15,28 +13,6 @@ async function emit(path, bytes) {
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, bytes);
   }
-}
-async function declareGenerated(packageName) {
-  const packageRoot = join(root, "packages", packageName);
-  const owned = [...emitted]
-    .filter((path) => path.startsWith(`${packageRoot}${sep}`) && /\.[cm]?js$/.test(path))
-    .map((path) => relative(packageRoot, path).split(sep).join("/"))
-    .sort();
-  const declaration = join(packageRoot, "objectives.yaml");
-  const content = await readFile(declaration, "utf8");
-  const generated = /"generated":\s*([\s\S]*?)(?=,\s*"(?:joins|deliveries)"|\n {6}\})/;
-  const match = generated.exec(content);
-  if (!match) throw new Error(`Expected an explicit generated-file list: ${declaration}`);
-  const reason = "worker";
-  const previous = JSON.parse(match[1]).filter((entry) => entry.reason !== reason);
-  const paths = new Set(owned);
-  const preserved = previous.filter((entry) => !paths.has(entry.path));
-  // Compact literal data stays inside the existing bounded subject projection profile.
-  const text = JSON.stringify([...preserved, ...owned.map((path) => ({ path, reason }))]);
-  await emit(
-    declaration,
-    content.replace(generated, () => `"generated": ${text}`),
-  );
 }
 async function resources(source, destination) {
   for (const entry of await readdir(source, { withFileTypes: true })) {
@@ -57,8 +33,8 @@ const jobs = [];
 for (const scope of ["", "package-standard/"])
   for (const phase of ["structure", "deliveries"])
     jobs.push({
-      package: "objective-monorepo-standard",
-      directory: `${scope}checks/${phase}`,
+      package: scope ? "objective-package-standard" : "objective-monorepo-standard",
+      directory: `checks/${phase}`,
       source: `
 import { checkRepository, checkPackage, withDependencyResolutions, withInputView } from "./packages/objective-monorepo-standard/src/index.ts";
 ${common}
@@ -89,16 +65,16 @@ for (const name of ["objective-pguide-setup", "objective-pguide-self-check"])
     jobs.push({
       package: name,
       directory: `checks/${stage}`,
-      source: `import { check } from "./packages/${name === "objective-pguide-setup" ? name : `${name}/runtime`}/${name === "objective-pguide-setup" ? "src/runner.mjs" : "src/runner.mjs"}";
+      source: `      import { check } from "./${name === "objective-pguide-setup" ? `packages/${name}` : `.staging/${name}/runtime`}/src/runner.mjs";
 ${common}
 export async function execute(subject, context) {
-  return envelope(await check(${JSON.stringify(stage)},subject,{pilot:true,selfCheck:${name === "objective-pguide-self-check"},signal:context.signal,timeoutMs:context.data.timeoutMs,environment:context.data.environment ?? {}}));
+  return envelope(await check(${JSON.stringify(stage)},subject,{pilot:true,selfCheck:${name === "objective-pguide-self-check"},signal:context.signal,timeoutMs:context.data.timeoutMs,objectivePackages:context.data.objectivePackages ?? {},objectiveSources:context.data.objectiveSources ?? {},objectiveExecutables:context.data.objectiveExecutables ?? {},environment:context.data.environment ?? {}}));
 }`,
-      resourceTree: name === "objective-pguide-setup" ? "sanity-fixture" : "runtime",
+      resourceTree: name === "objective-pguide-setup" ? undefined : "runtime",
     });
 jobs.push({
-  package: "objective-pguide-setup",
-  directory: "sanity-fixture/checks/marker",
+  package: "objective-setup-marker",
+  directory: "checks/marker",
   source: `import {lstat,readFile} from "node:fs/promises";
 export async function execute({marker,expected},context) {
   context.signal.throwIfAborted();
@@ -110,8 +86,11 @@ export async function execute({marker,expected},context) {
 });
 // The marker must be generated before setup copies its immutable fixture resources.
 jobs.unshift(jobs.pop());
-for (const job of jobs) {
-  const packageRoot = join(root, "packages", job.package);
+const selected = process.argv.indexOf("--package");
+for (const job of jobs.filter(
+  (job) => selected === -1 || job.package === process.argv[selected + 1],
+)) {
+  const packageRoot = join(root, ".staging", job.package);
   const directory = join(packageRoot, ...job.directory.split("/"));
   const result = await build({
     absWorkingDir: root,
@@ -148,6 +127,9 @@ for (const job of jobs) {
       {
         name: "artifact-resource-boundaries",
         setup(build) {
+          build.onResolve({ filter: /runtime\/evidence\.mjs$/ }, () => ({
+            path: join(root, ".staging", job.package, "runtime", "evidence.mjs"),
+          }));
           build.onLoad({ filter: /(?:contract|transport|ssh-target)\.mjs$/ }, async ({ path }) => {
             let contents = await readFile(path, "utf8");
             contents = contents.replace(
@@ -155,14 +137,11 @@ for (const job of jobs) {
               'new URL("./resources/", import.meta.url)',
             );
             contents = contents.replace(
-              'new URL("../runtime/health-check.mjs", import.meta.url)',
-              'new URL("./resources/health-check.mjs", import.meta.url)',
+              '"../dist/package/runtime/health-check.mjs"',
+              '"./resources/health-check.mjs"',
             );
             if (path.endsWith("ssh-target.mjs"))
-              contents = contents.replace(
-                "dirname(fileURLToPath(import.meta.url))",
-                'fileURLToPath(new URL("./resources/", import.meta.url))',
-              );
+              contents = contents.replace('"./dist/package/"', '"./resources/"');
             return { contents, loader: "js" };
           });
         },
@@ -177,12 +156,10 @@ for (const job of jobs) {
       join(packageRoot, job.resourceTree),
       join(directory, "resources", ...(job.resourceTree === "runtime" ? [] : ["sanity-fixture"])),
     );
-  if (job.package === "objective-pguide-setup" && job.resourceTree)
+  if (job.package === "objective-pguide-setup")
     await emit(
       join(directory, "resources", "runtime", "setup-check.mjs"),
       await readFile(join(packageRoot, "runtime", "setup-check.mjs")),
     );
 }
-for (const packageName of new Set(jobs.map((job) => job.package)))
-  await declareGenerated(packageName);
 console.log(`Worker artifacts: ${jobs.length} checked/generated.`);

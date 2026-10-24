@@ -5,7 +5,8 @@ import {
   type PilotObservation,
   type PilotSpec,
   parseDependencyProblem,
-  validateGitPilotSource,
+  validatePilotSource,
+  isObjectiveRevision,
   validateSubject,
 } from "@potential-guide/objective-pilot";
 import {
@@ -251,10 +252,10 @@ export async function createPortfolioPlanner(
       throw new ObjectivePortfolioError(`Observation source mismatch for ${goal.id}.`);
     if (goal.objective.source !== undefined) {
       for (const [id, version] of Object.entries(observation.payload.versions))
-        validateGitPilotSource(id, version, observation.payload.sources?.[id]);
+        validatePilotSource(id, version, observation.payload.sources?.[id]);
       if (
-        observation.payload.sources?.[goal.objective.objectiveId]?.commit !==
-        goal.objective.source.commit
+        canonicalJson(observation.payload.sources?.[goal.objective.objectiveId]) !==
+        canonicalJson(goal.objective.source)
       )
         throw new ObjectivePortfolioError(`Observation snapshot mismatch for ${goal.id}.`);
     }
@@ -382,9 +383,10 @@ export async function createPortfolioPlanner(
   const planner: PortfolioPlanner = {
     queue,
     state,
-    updateGoals(entries) {
+    updateGoals(entries, signal) {
       const stable = merge(entries);
       return enqueue(async () => {
+        if (signal?.aborted) return;
         const bindingChanged = [...stable].some(([id, goal]) => {
           const old = roots.get(id);
           return (
@@ -504,10 +506,10 @@ export async function createPortfolioPlanner(
               );
             if (goal.objective.source !== undefined) {
               for (const [id, version] of Object.entries(observation.versions))
-                validateGitPilotSource(id, version, observation.sources?.[id]);
+                validatePilotSource(id, version, observation.sources?.[id]);
               if (
-                observation.sources?.[goal.objective.objectiveId]?.commit !==
-                goal.objective.source.commit
+                canonicalJson(observation.sources?.[goal.objective.objectiveId]) !==
+                canonicalJson(goal.objective.source)
               )
                 throw new ObjectivePortfolioError("Handoff snapshot mismatch.");
             }
@@ -519,10 +521,10 @@ export async function createPortfolioPlanner(
             for (const value of outcome.dependencies) {
               const requirement = parseDependencyProblem(value);
               const version = observation.versions[requirement.objectiveId];
-              if (!version || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(version))
+              if (!version || !isObjectiveRevision(requirement.objectiveId, version))
                 throw new ObjectivePortfolioError("Missing exact dependency version.");
               if (goal.objective.source !== undefined)
-                validateGitPilotSource(
+                validatePilotSource(
                   requirement.objectiveId,
                   version,
                   observation.sources?.[requirement.objectiveId],
@@ -565,10 +567,7 @@ export async function createPortfolioPlanner(
               };
               for (const [id, source] of Object.entries(observation.sources ?? {})) {
                 const prior = sourceBindings[id];
-                if (
-                  prior !== undefined &&
-                  (prior.tree !== source.tree || prior.repositoryTree !== source.repositoryTree)
-                )
+                if (prior !== undefined && canonicalJson(prior) !== canonicalJson(source))
                   throw new ObjectivePortfolioError(
                     `Conflicting dependency source binding for ${id}.`,
                   );

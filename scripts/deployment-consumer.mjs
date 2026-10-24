@@ -55,14 +55,20 @@ export function assertLatestVersion(actual, expected) {
 
 // Resolve from each actual parent, not just a flat top-level node_modules directory:
 // a nested incompatible internal dependency must not be hidden by a correct hoisted copy.
-export async function verifyConsumerGraph(consumer, versions, entries = ["pguide"]) {
+export async function verifyConsumerGraph(
+  consumer,
+  versions,
+  entries = ["pguide"],
+  allDependencies = false,
+) {
   const visited = new Set();
   const reached = new Set();
-  async function visit(name, from) {
+  const inventory = [];
+  async function visit(name, from, optional = false) {
     const require = createRequire(from);
     let path;
     let manifest;
-    for (const directory of require.resolve.paths(name) ?? []) {
+    for (const directory of require.resolve.paths(`${name}/package.json`) ?? []) {
       const candidate = join(directory, ...name.split("/"), "package.json");
       const location = relative(consumer, candidate);
       if (isAbsolute(location) || location === ".." || location.startsWith(`..${sep}`)) continue;
@@ -81,13 +87,28 @@ export async function verifyConsumerGraph(consumer, versions, entries = ["pguide
         if (error.code !== "ENOENT") throw error;
       }
     }
+    if (!path && optional) return;
     assert.ok(path, `Missing transitive package: ${name} from ${from}`);
     if (visited.has(path)) return;
     visited.add(path);
-    assert.equal(manifest.name, name);
-    assert.equal(manifest.version, versions.get(name), `Unexpected transitive version: ${name}`);
-    reached.add(name);
-    for (const [dependency, range] of Object.entries(manifest.dependencies ?? {})) {
+    inventory.push({
+      reference: name,
+      name: manifest.name,
+      version: manifest.version,
+      manifest: relative(consumer, path),
+      from: relative(consumer, from),
+    });
+    if (versions.has(name)) {
+      assert.equal(manifest.name, name);
+      assert.equal(manifest.version, versions.get(name), `Unexpected transitive version: ${name}`);
+      reached.add(name);
+    }
+    const dependencies = {
+      ...(allDependencies ? manifest.peerDependencies : {}),
+      ...manifest.dependencies,
+      ...(allDependencies ? manifest.optionalDependencies : {}),
+    };
+    for (const [dependency, range] of Object.entries(dependencies)) {
       assert.doesNotMatch(range, /^workspace:/u, `${name}: unresolved workspace range`);
       if (versions.has(dependency)) {
         assert.equal(
@@ -95,8 +116,15 @@ export async function verifyConsumerGraph(consumer, versions, entries = ["pguide
           `^${versions.get(dependency)}`,
           `${name}: packed internal range must match the upstream candidate`,
         );
-        await visit(dependency, path);
       }
+      if (allDependencies || versions.has(dependency))
+        await visit(
+          dependency,
+          path,
+          allDependencies &&
+            (manifest.optionalDependencies?.[dependency] !== undefined ||
+              manifest.peerDependenciesMeta?.[dependency]?.optional === true),
+        );
     }
   }
   for (const entry of entries) await visit(entry, join(consumer, "package.json"));
@@ -105,4 +133,5 @@ export async function verifyConsumerGraph(consumer, versions, entries = ["pguide
     [...versions.keys()].sort(),
     "Selected entries must reach every expected internal package",
   );
+  return inventory;
 }

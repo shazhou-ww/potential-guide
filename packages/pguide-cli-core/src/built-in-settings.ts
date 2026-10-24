@@ -108,17 +108,17 @@ export const builtInSettings = [
       "namespace": "objectives",
       "settings": {
         "objectives.aliases": {
-          "description": "Legacy source aliases only; does not replace independent Objective declarations.",
+          "description": "Explicit npm source mappings and reference aliases; does not replace independent Objective declarations.",
           "schema": {
             "type": "object",
             "propertyNames": {
-              "pattern": "^[a-z0-9][a-z0-9-]*$"
+              "pattern": "^(?:[a-z0-9][a-z0-9._-]*|@[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._-]*)$"
             },
             "additionalProperties": {
               "type": "string",
               "pattern": "\\S",
               "not": {
-                "pattern": "^@"
+                "pattern": "^@[^/]+$"
               }
             }
           },
@@ -643,9 +643,9 @@ return errors === 0;
 }
 
 export const setting8 = validate18;
-const schema19 = {"type":"object","propertyNames":{"pattern":"^[a-z0-9][a-z0-9-]*$"},"additionalProperties":{"type":"string","pattern":"\\S","not":{"pattern":"^@"}}};
-const pattern4 = new RegExp("^[a-z0-9][a-z0-9-]*$", "u");
-const pattern5 = new RegExp("^@", "u");
+const schema19 = {"type":"object","propertyNames":{"pattern":"^(?:[a-z0-9][a-z0-9._-]*|@[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._-]*)$"},"additionalProperties":{"type":"string","pattern":"\\S","not":{"pattern":"^@[^/]+$"}}};
+const pattern4 = new RegExp("^(?:[a-z0-9][a-z0-9._-]*|@[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._-]*)$", "u");
+const pattern5 = new RegExp("^@[^/]+$", "u");
 
 function validate18(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
 let vErrors = null;
@@ -655,7 +655,7 @@ for(const key0 in data){
 const _errs1 = errors;
 if(typeof key0 === "string"){
 if(!pattern4.test(key0)){
-const err0 = {instancePath,schemaPath:"#/propertyNames/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9][a-z0-9-]*$"},message:"must match pattern \""+"^[a-z0-9][a-z0-9-]*$"+"\"",propertyName:key0};
+const err0 = {instancePath,schemaPath:"#/propertyNames/pattern",keyword:"pattern",params:{pattern: "^(?:[a-z0-9][a-z0-9._-]*|@[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._-]*)$"},message:"must match pattern \""+"^(?:[a-z0-9][a-z0-9._-]*|@[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._-]*)$"+"\"",propertyName:key0};
 if(vErrors === null){
 vErrors = [err0];
 }

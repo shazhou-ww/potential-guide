@@ -13,6 +13,18 @@ export interface GitObjectiveSource {
   /** Independent evidence for repository-external-to-folder files materialized with this Pilot. */
   readonly repositoryTree: string;
 }
+export interface NpmObjectiveSource {
+  readonly kind: "npm-package";
+  readonly packageName: string;
+  readonly packageDigest: string;
+  readonly spec: string;
+  readonly resolved: string;
+  readonly version?: string;
+  readonly integrity?: string;
+  readonly commit?: string;
+  readonly bindings?: Readonly<Record<string, Omit<NpmObjectiveSource, "bindings">>>;
+}
+export type ObjectiveSource = GitObjectiveSource | NpmObjectiveSource;
 export type LevelId = string;
 export type CheckId = string;
 export type ProblemId = string;
@@ -114,7 +126,7 @@ export interface ReferencePage extends ReferencePageSummary {
 export interface PilotSpec {
   readonly objectiveId: ObjectiveId;
   readonly version: SpecVersion;
-  readonly source?: GitObjectiveSource;
+  readonly source?: ObjectiveSource;
   readonly manifest: ObjectiveManifest;
   readonly locales: Readonly<Record<string, Readonly<Record<string, ReferencePage>>>>;
 }
@@ -131,7 +143,7 @@ export interface PilotObservation {
   readonly gapSummary: string;
   readonly observedAt: string;
   readonly versions: Readonly<Record<ObjectiveId, SpecVersion>>;
-  readonly sources?: Readonly<Record<ObjectiveId, GitObjectiveSource>>;
+  readonly sources?: Readonly<Record<ObjectiveId, ObjectiveSource>>;
 }
 export interface PilotRuntime {
   /** Opt-in for read-only checks: a content revision of every observable input.
@@ -150,7 +162,7 @@ export interface PilotRuntime {
     objectiveId: ObjectiveId,
     version: SpecVersion | undefined,
     signal: AbortSignal,
-    source?: GitObjectiveSource,
+    source?: ObjectiveSource,
   ) => Promise<{ readonly spec: PilotSpec; readonly runtime: PilotRuntime }>;
   readonly observationBudget?: {
     readonly timeoutMs: number;
@@ -165,7 +177,7 @@ export interface PageResource {
 export interface ResourceResolver {
   readonly version: SpecVersion;
   versionFor?(objectiveId: ObjectiveId): Promise<SpecVersion>;
-  sourceFor?(objectiveId: ObjectiveId): Promise<GitObjectiveSource>;
+  sourceFor?(objectiveId: ObjectiveId): Promise<ObjectiveSource>;
   readText(uri: string): Promise<string>;
   readPages(uri: string): Promise<readonly PageResource[]>;
 }

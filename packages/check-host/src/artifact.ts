@@ -19,12 +19,13 @@ export async function readArtifact(directory: string) {
   if (!isAbsolute(directory)) throw new HostError(400, "Worker directory must be absolute.");
   const canonical = await realpath(directory);
   const files = new Map<string, Buffer>();
+  const executables = new Set<string>();
   let size = 0;
   async function visit(path: string) {
     const entries = await readdir(path, { withFileTypes: true });
     entries.sort((a, b) => a.name.localeCompare(b.name, "en"));
     for (const entry of entries) {
-      if (entry.name === "node_modules" || /[:\\]/.test(entry.name))
+      if (entry.name.toLowerCase() === "node_modules" || /[:\\]/.test(entry.name))
         throw new HostError(400, "Artifact contains a forbidden path.");
       const full = join(path, entry.name);
       const details = await lstat(full, { bigint: true });
@@ -71,7 +72,9 @@ export async function readArtifact(directory: string) {
       }
       size += bytes.length;
       if (size > limit || files.size >= 256) throw new HostError(413, "Artifact exceeds bounds.");
-      files.set(relative(canonical, full).split(sep).join("/"), bytes);
+      const name = relative(canonical, full).split(sep).join("/");
+      files.set(name, bytes);
+      if ((Number(details.mode) & 0o111) !== 0) executables.add(name);
     }
   }
   await visit(canonical);
@@ -80,11 +83,13 @@ export async function readArtifact(directory: string) {
   const hash = createHash("sha256");
   for (const [name, bytes] of [...files].sort(([a], [b]) => a.localeCompare(b, "en"))) {
     hash
-      .update(JSON.stringify([name, bytes.length]))
+      .update(
+        JSON.stringify(executables.has(name) ? [name, bytes.length, true] : [name, bytes.length]),
+      )
       .update("\0")
       .update(bytes);
   }
-  return { directory: canonical, revision: hash.digest("hex"), files };
+  return { directory: canonical, revision: hash.digest("hex"), files, executables };
 }
 
 export async function snapshotArtifact(
@@ -99,8 +104,9 @@ export async function snapshotArtifact(
       const parts = name.split("/");
       const path = join(target, ...parts);
       await mkdir(join(target, ...parts.slice(0, -1)), { recursive: true, mode: 0o700 });
-      await writeFile(path, bytes, { flag: "wx", mode: 0o400 });
-      await chmod(path, 0o400);
+      const mode = artifact.executables.has(name) ? 0o500 : 0o400;
+      await writeFile(path, bytes, { flag: "wx", mode });
+      await chmod(path, mode);
     }
     return target;
   } catch (error) {

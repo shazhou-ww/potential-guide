@@ -2,14 +2,14 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { Effect } from "@potential-guide/effects";
 import { attainedLevelRank, levelRank } from "@potential-guide/pilot-protocol";
 import { observe } from "./pilot.js";
-import { validateGitPilotSource } from "./resources.js";
+import { isObjectivePackageName, validatePilotSource } from "./resources.js";
 import type {
   CheckProbe,
   CheckResult,
   DependencyProblem,
   DependencyResolution,
   Envelope,
-  GitObjectiveSource,
+  ObjectiveSource,
   PilotInput,
   PilotObservation,
   PilotRuntime,
@@ -60,7 +60,7 @@ function rank(spec: PilotSpec, level: string): number {
 }
 interface Scope {
   readonly versions: Record<string, string>;
-  readonly sources: Record<string, GitObjectiveSource>;
+  readonly sources: Record<string, ObjectiveSource>;
   readonly bindings: Map<
     string,
     Promise<{ readonly spec: PilotSpec; readonly runtime: PilotRuntime }>
@@ -93,7 +93,7 @@ export function withDependencyResolutions<T>(
 }
 function mergeVersion(versions: Record<string, string>, id: string, version: string) {
   if (
-    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(version) ||
+    !/^(?:[0-9a-f]{40}|[0-9a-f]{64}|sha256-pguide-package-v1:[a-f0-9]{64})$/.test(version) ||
     (versions[id] !== undefined && versions[id] !== version)
   )
     throw new ObjectiveOperationError(
@@ -109,7 +109,7 @@ export async function observationScope<T>(
   use: (
     versions: Record<string, string>,
     signal: AbortSignal,
-    sources: Record<string, GitObjectiveSource>,
+    sources: Record<string, ObjectiveSource>,
   ) => Promise<T>,
   reused = false,
 ): Promise<T> {
@@ -153,8 +153,8 @@ export async function observationScope<T>(
   const versions = parent?.versions ?? {};
   const sources = parent?.sources ?? {};
   mergeVersion(versions, input.spec.objectiveId, input.spec.version);
-  if (input.spec.source !== undefined) {
-    validateGitPilotSource(input.spec.objectiveId, input.spec.version, input.spec.source);
+  if (input.spec.source !== undefined || isObjectivePackageName(input.spec.objectiveId)) {
+    validatePilotSource(input.spec.objectiveId, input.spec.version, input.spec.source);
     sources[input.spec.objectiveId] = input.spec.source;
   }
   const timeout = new AbortController();
@@ -260,19 +260,19 @@ export function recordDependencyObservation(
   attainedLevelRank(input.spec, observation.current.levelId);
   if (input.spec.source !== undefined) {
     for (const [id, version] of Object.entries(observation.versions))
-      validateGitPilotSource(id, version, observation.sources?.[id]);
-    if (observation.sources?.[input.spec.objectiveId]?.commit !== input.spec.source.commit)
+      validatePilotSource(id, version, observation.sources?.[id]);
+    if (
+      JSON.stringify(observation.sources?.[input.spec.objectiveId]) !==
+      JSON.stringify(input.spec.source)
+    )
       throw new ObjectiveOperationError("Dependency observation snapshot mismatch.");
   }
   for (const [id, version] of Object.entries(observation.versions))
     mergeVersion(scope.versions, id, version);
   for (const [id, source] of Object.entries(observation.sources ?? {})) {
-    validateGitPilotSource(id, observation.versions[id] ?? "", source);
+    validatePilotSource(id, observation.versions[id] ?? "", source);
     const prior = scope.sources[id];
-    if (
-      prior !== undefined &&
-      (prior.tree !== source.tree || prior.repositoryTree !== source.repositoryTree)
-    )
+    if (prior !== undefined && JSON.stringify(prior) !== JSON.stringify(source))
       throw new ObjectiveOperationError(`Conflicting source content evidence for ${id}.`);
     scope.sources[id] = source;
   }

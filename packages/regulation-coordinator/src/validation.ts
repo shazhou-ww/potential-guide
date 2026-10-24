@@ -2,11 +2,12 @@ import {
   attainedLevelRank,
   compileDomain,
   type Envelope,
-  type GitObjectiveSource,
+  type ObjectiveSource,
+  objectiveSourceVersion,
   type PilotObservation,
   type PilotSpec,
   parseDependencyProblem,
-  validateGitPilotSource,
+  validatePilotSource,
   validateSubject,
 } from "@potential-guide/objective-pilot";
 import { canonicalJson, validateGoal } from "@potential-guide/objective-portfolio-supervisor";
@@ -60,7 +61,9 @@ export function validateRegulation(regulation: Regulation): void {
   )
     throw new TypeError("Unsupported Regulation language.");
   mergeSources(
-    { [regulation.objective.objectiveId]: regulation.objective.source as GitObjectiveSource },
+    regulation.objective.source === undefined
+      ? {}
+      : { [regulation.objective.objectiveId]: regulation.objective.source },
     regulation.sourceBindings ?? {},
   );
 }
@@ -75,7 +78,7 @@ export function validateSpec(spec: PilotSpec, subject: Regulation["subject"]): v
     },
     { id: "validation" },
   );
-  validateGitPilotSource(spec.objectiveId, spec.version, spec.source);
+  validatePilotSource(spec.objectiveId, spec.version, spec.source);
   if (validateSubject(subject, compileDomain(spec.manifest.subjectSchema)) !== null)
     throw new TypeError("Subject does not satisfy provider schema.");
 }
@@ -91,12 +94,12 @@ export function identity(regulation: Regulation): string {
 }
 
 export function mergeSources(
-  left: Readonly<Record<string, GitObjectiveSource>>,
-  right: Readonly<Record<string, GitObjectiveSource>>,
-): Record<string, GitObjectiveSource> {
+  left: Readonly<Record<string, ObjectiveSource>>,
+  right: Readonly<Record<string, ObjectiveSource>>,
+): Record<string, ObjectiveSource> {
   const merged = { ...left };
   for (const [id, source] of Object.entries(right)) {
-    validateGitPilotSource(id, source.tree, source);
+    validatePilotSource(id, objectiveSourceVersion(source), source);
     if (merged[id] && canonicalJson(merged[id]) !== canonicalJson(source))
       throw new TypeError(`Conflicting exact source for ${id}.`);
     merged[id] = source;
@@ -134,7 +137,7 @@ export function validateObservation(
   for (const problem of value.problems) {
     if (problem.kind === "dependency") {
       const dependency = parseDependencyProblem(problem);
-      validateGitPilotSource(
+      validatePilotSource(
         dependency.objectiveId,
         value.versions[dependency.objectiveId] ?? "",
         value.sources?.[dependency.objectiveId],
@@ -168,9 +171,9 @@ export function validateObservation(
       throw new TypeError("Problem must belong to the next unattained business level.");
   }
   for (const [id, version] of Object.entries(value.versions))
-    validateGitPilotSource(id, version, value.sources?.[id]);
+    validatePilotSource(id, version, value.sources?.[id]);
   for (const [id, source] of Object.entries(value.sources ?? {}))
-    validateGitPilotSource(id, value.versions[id] ?? "", source);
+    validatePilotSource(id, value.versions[id] ?? "", source);
   const sources = mergeSources(regulation.sourceBindings ?? {}, value.sources ?? {});
   if (
     canonicalJson(sources[regulation.objective.objectiveId]) !==

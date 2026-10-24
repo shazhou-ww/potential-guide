@@ -20,7 +20,8 @@ import { pilotSourceBudgets, withPilot } from "@potential-guide/cli-runtime";
 import { Effect, SubscriptionRef, startEffect, watchSnapshot } from "@potential-guide/effects";
 import {
   attainedLevelRank,
-  type GitObjectiveSource,
+  type ObjectiveSource,
+  objectiveSourceVersion,
   levelRank,
   observe,
   type PilotRuntime,
@@ -80,8 +81,13 @@ async function bindGoal(
   cwd: string,
   probeSettings?: NonNullable<RegulationStrategy["probe"]>,
   signal?: AbortSignal,
-  source?: GitObjectiveSource,
+  source?: ObjectiveSource,
+  packageSpecs?: Readonly<Record<string, string>>,
+  frozenSources: Readonly<Record<string, ObjectiveSource>> = {},
 ) {
+  const sources = { ...frozenSources };
+  if (source !== undefined)
+    sources[source.kind === "npm-package" ? source.packageName : entry.objective] = source;
   const preparation = new AbortController();
   const cancel = () => preparation.abort(signal?.reason);
   signal?.addEventListener("abort", cancel, { once: true });
@@ -99,8 +105,11 @@ async function bindGoal(
   const lifetime = withPilot(
     entry.objective,
     cwd,
-    entry.revision,
+    source?.kind === "git-tree" ? source.commit : entry.revision,
     async (objective, runtime) => {
+      const sourceBindings: Record<string, ObjectiveSource> = {};
+      for (const bound of runtime.boundObjectives?.() ?? [objective])
+        if (bound.source !== undefined) sourceBindings[bound.objectiveId] = bound.source;
       if (
         entry.targetLevel !== "initial" &&
         entry.targetLevel !== "terminal" &&
@@ -115,9 +124,7 @@ async function bindGoal(
           targetLevel: entry.targetLevel,
           priority: entry.priority,
           observationIntervalMs: entry.observationIntervalMs,
-          ...(objective.source === undefined
-            ? {}
-            : { sourceBindings: { [objective.objectiveId]: objective.source } }),
+          ...(Object.keys(sourceBindings).length === 0 ? {} : { sourceBindings }),
           ...(entry.requirements === undefined ? {} : { requirements: entry.requirements }),
         },
         runtime,
@@ -127,9 +134,15 @@ async function bindGoal(
     {
       ...pilotSourceBudgets(probeSettings),
       signal: preparation.signal,
-      ...(source === undefined
+      ...(packageSpecs === undefined ? {} : { packageSpecs }),
+      ...(Object.keys(sources).length === 0
         ? {}
-        : { versions: { [entry.objective]: source.tree }, sources: { [entry.objective]: source } }),
+        : {
+            versions: Object.fromEntries(
+              Object.entries(sources).map(([id, value]) => [id, objectiveSourceVersion(value)]),
+            ),
+            sources,
+          }),
     },
   );
   void lifetime.catch(reject);
@@ -288,7 +301,20 @@ export async function supervisePortfolio(
         failure ??= state.error;
         controller.abort();
       };
-      watchers.push(watchSnapshot(planner.state, failed));
+      watchers.push(
+        watchSnapshot(planner.state, (state) => {
+          failed(state);
+          if (process.env.PGUIDE_TIMINGS === "1")
+            process.stderr.write(
+              `${JSON.stringify({
+                type: "pguide-timing",
+                phase: "supervise.state",
+                goals: state.goals.map((goal) => goal.id),
+                observations: Object.keys(state.observations),
+              })}\n`,
+            );
+        }),
+      );
       const pendingRequests: { input: RegulationInput; request: RegulationProcessEvent }[] = [];
       const reportRequest = (input: RegulationInput, request: RegulationProcessEvent) => {
         if (request.type === "authorization-request")
@@ -335,7 +361,19 @@ export async function supervisePortfolio(
             const nextGoalSignature = JSON.stringify(next.goals);
             const nextResourceSignature = JSON.stringify(next.resources);
             if (nextGoalSignature !== goalSignature) {
-              await planner.updateGoals(next.goals);
+              if (process.env.PGUIDE_TIMINGS === "1")
+                process.stderr.write(
+                  `${JSON.stringify({
+                    type: "pguide-timing",
+                    phase: "supervise.rebind",
+                    goals: next.goals.map((goal) => ({
+                      id: goal.id,
+                      version: goal.objective.version,
+                      bindingRevisionBytes: Buffer.byteLength(goal.bindingRevision ?? ""),
+                    })),
+                  })}\n`,
+                );
+              await planner.updateGoals(next.goals, signal);
               goalSignature = nextGoalSignature;
             }
             if (signal.aborted) return;
@@ -373,6 +411,15 @@ export async function supervisePortfolio(
   if (failure !== undefined) throw failure;
   const queue = await Effect.runPromise(SubscriptionRef.get(planner.queue));
   const state = await Effect.runPromise(SubscriptionRef.get(planner.state));
+  if (process.env.PGUIDE_TIMINGS === "1")
+    process.stderr.write(
+      `${JSON.stringify({
+        type: "pguide-timing",
+        phase: "supervise.final-state",
+        goals: state.goals.map((goal) => goal.id),
+        observations: Object.keys(state.observations),
+      })}\n`,
+    );
   return {
     schemaVersion: 4,
     status: options.execute ? "executed" : "planned",
@@ -530,28 +577,74 @@ export async function runSupervise(
   const bindings = new Set<Awaited<ReturnType<typeof bindGoal>>>();
   let activeBindings: Awaited<ReturnType<typeof bindGoal>>[] = [];
   const runtimes = new Map<string, PilotRuntime>();
+  const declarations = new Map<string, string>();
+  const bindingDeclarations = new Map<string, string>();
   let goals: readonly ObjectiveGoal[] = [];
   let boundary = execute
     ? "cancellation requested; active work was stopped"
     : "planning pass finished";
   let failedObservation: { goal: ObjectiveGoal; message: string } | undefined;
+  function stampBinding(binding: Awaited<ReturnType<typeof bindGoal>>) {
+    const specs = [...(binding.runtime.boundObjectives?.() ?? [])].sort((left, right) =>
+      left.objectiveId.localeCompare(right.objectiveId),
+    );
+    const dependencies = specs.filter(
+      (spec) => spec.objectiveId !== binding.goal.objective.objectiveId,
+    );
+    if (dependencies.length === 0) return;
+    const sourceBindings: Record<string, ObjectiveSource> = {};
+    const versions: Record<string, ObjectiveSource> = {};
+    for (const spec of specs) {
+      if (spec.source === undefined)
+        throw new CliError("Missing exact prepared dependency source.");
+      sourceBindings[spec.objectiveId] = spec.source;
+      if (spec.objectiveId !== binding.goal.objective.objectiveId)
+        versions[spec.objectiveId] = spec.source;
+    }
+    binding.goal = { ...binding.goal, sourceBindings, bindingRevision: JSON.stringify(versions) };
+  }
   async function loadGoals(file: PortfolioFile, config = loaded.value) {
     const fresh: Awaited<ReturnType<typeof bindGoal>>[] = [];
     try {
       for (const entry of file.goals) {
         controller.signal.throwIfAborted();
+        const declared = { ...entry, objective: resolveObjective(entry.objective, config) };
+        const sourceDeclaration = JSON.stringify([declared.objective, declared.revision ?? null]);
+        const previous = activeBindings.find(({ goal }) => goal.id === entry.id);
+        const probeSettings = requiredSetting<NonNullable<RegulationStrategy["probe"]>>(
+          config,
+          "pilot.probe",
+        );
+        const bindingDeclaration = JSON.stringify([declared, probeSettings]);
+        if (previous !== undefined && bindingDeclarations.get(entry.id) === bindingDeclaration) {
+          stampBinding(previous);
+          fresh.push(previous);
+          continue;
+        }
+        const frozen =
+          declarations.get(entry.id) === sourceDeclaration
+            ? previous?.goal.objective.source
+            : undefined;
+        const frozenSources: Record<string, ObjectiveSource> = {};
+        if (frozen !== undefined)
+          for (const bound of previous?.runtime.boundObjectives?.() ?? [])
+            if (bound.source !== undefined) frozenSources[bound.objectiveId] = bound.source;
         const binding = await bindGoal(
-          { ...entry, objective: resolveObjective(entry.objective, config) },
+          declared,
           globals.cwd,
-          requiredSetting<NonNullable<RegulationStrategy["probe"]>>(config, "pilot.probe"),
+          probeSettings,
+          controller.signal,
+          frozen,
+          requiredSetting<Record<string, string>>(config, "objectives.aliases"),
+          frozenSources,
         );
         fresh.push(binding);
-        const previous = activeBindings.find(({ goal }) => goal.id === entry.id);
+        declarations.set(entry.id, sourceDeclaration);
+        bindingDeclarations.set(entry.id, bindingDeclaration);
         const dependencies =
-          previous?.runtime
-            .boundObjectives?.()
+          (frozen === undefined ? undefined : previous?.runtime)
+            ?.boundObjectives?.()
             .filter((spec) => spec.objectiveId !== binding.goal.objective.objectiveId) ?? [];
-        const versions: Record<string, unknown> = {};
         for (const dependency of [...dependencies].sort((a, b) =>
           a.objectiveId.localeCompare(b.objectiveId),
         )) {
@@ -559,36 +652,28 @@ export async function runSupervise(
             throw new CliError("Missing dependency source resolver.");
           const next = await binding.runtime.resolveObjective(
             dependency.objectiveId,
-            undefined,
+            dependency.version,
             controller.signal,
+            dependency.source,
           );
           if (next.spec.source === undefined)
             throw new CliError("Missing dependency snapshot evidence.");
-          versions[dependency.objectiveId] = next.spec.source;
         }
-        if (dependencies.length > 0) {
-          const sourceBindings: Record<string, GitObjectiveSource> = {};
-          for (const spec of [...(binding.runtime.boundObjectives?.() ?? [])].sort((a, b) =>
-            a.objectiveId.localeCompare(b.objectiveId),
-          )) {
-            if (spec.source !== undefined) sourceBindings[spec.objectiveId] = spec.source;
-          }
-          binding.goal = {
-            ...binding.goal,
-            bindingRevision: JSON.stringify(versions),
-            sourceBindings,
-          };
-        }
+        stampBinding(binding);
       }
       const next = fresh.map(({ goal }) => goal);
       if (JSON.stringify(next) === JSON.stringify(goals)) {
-        await Promise.all(fresh.map((binding) => binding.close()));
+        await Promise.all(
+          fresh
+            .filter((binding) => !activeBindings.includes(binding))
+            .map((binding) => binding.close()),
+        );
         return { goals };
       }
       for (const { goal, runtime } of fresh) {
         runtimes.set(runtimeKey(goal), runtime);
       }
-      const previous = activeBindings;
+      const previous = activeBindings.filter((binding) => !fresh.includes(binding));
       activeBindings = fresh;
       for (const binding of fresh) bindings.add(binding);
       goals = next;
@@ -610,7 +695,11 @@ export async function runSupervise(
         },
       };
     } catch (error) {
-      await Promise.all(fresh.map((binding) => binding.close()));
+      await Promise.all(
+        fresh
+          .filter((binding) => !activeBindings.includes(binding))
+          .map((binding) => binding.close()),
+      );
       throw error;
     }
   }
@@ -625,13 +714,13 @@ export async function runSupervise(
       goals,
       async resolveObjective(objectiveId, version, signal, source) {
         signal.throwIfAborted();
-        if (source === undefined || source.tree !== version)
+        if (source === undefined || objectiveSourceVersion(source) !== version)
           throw new CliError("Dependency binding requires exact commit/tree source evidence.");
         const binding = await bindGoal(
           {
             id: `binding:${objectiveId}`,
             objective: objectiveId,
-            revision: source.commit,
+            ...(source.kind === "git-tree" ? { revision: source.commit } : {}),
             subject: {},
             targetLevel: "terminal",
             priority: 0,
@@ -676,7 +765,7 @@ export async function runSupervise(
             if (id === goal.objective.objectiveId) continue;
             if (runtime.resolveObjective === undefined)
               throw new CliError("Missing source binding resolver.");
-            await runtime.resolveObjective(id, source.tree, signal, source);
+            await runtime.resolveObjective(id, objectiveSourceVersion(source), signal, source);
           }
           const observation = await startEffect(
             observe(

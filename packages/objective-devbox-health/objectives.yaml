@@ -1,13 +1,14 @@
 $schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
 objectives:
   standardize:
-    description: Standardize the private development health Pilot.
-    objective: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
+    description: Standardize the standalone development health Objective.
+    objective: "@potential-guide/objective-package-standard"
     inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
     subject: |
       {
         "root": context.repo.rootPath, "directory": context.path,
-        "roles": ["tool"], "runtime": "node",
+        "roles": ["npm", "tool"], "runtime": "node",
         "allows": ["@potential-guide/effects", "@potential-guide/objective-pilot"],
-        "entries": ["health-check.mjs"], "generated": [{"path":"checks/identity/resources/health-check.mjs","reason":"worker"},{"path":"checks/identity/worker.cjs","reason":"worker"},{"path":"checks/order/resources/health-check.mjs","reason":"worker"},{"path":"checks/order/worker.cjs","reason":"worker"},{"path":"checks/sustainability/resources/health-check.mjs","reason":"worker"},{"path":"checks/sustainability/worker.cjs","reason":"worker"},{"path":"checks/system/resources/health-check.mjs","reason":"worker"},{"path":"checks/system/worker.cjs","reason":"worker"},{"path":"checks/toolchains/resources/health-check.mjs","reason":"worker"},{"path":"checks/toolchains/worker.cjs","reason":"worker"}], "joins": [], "deliveries": []
+        "entries": ["health-check.mjs"], "generated": [],
+        "joins": [{"id":"public-library-suite","kind":"npm"}], "deliveries": []
       }

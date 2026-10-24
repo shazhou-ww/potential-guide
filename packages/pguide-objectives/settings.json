@@ -3,11 +3,17 @@
   "namespace": "objectives",
   "settings": {
     "objectives.aliases": {
-      "description": "Legacy source aliases only; does not replace independent Objective declarations.",
+      "description": "Explicit npm source mappings and reference aliases; does not replace independent Objective declarations.",
       "schema": {
         "type": "object",
-        "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]*$" },
-        "additionalProperties": { "type": "string", "pattern": "\\S", "not": { "pattern": "^@" } }
+        "propertyNames": {
+          "pattern": "^(?:[a-z0-9][a-z0-9._-]*|@[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._-]*)$"
+        },
+        "additionalProperties": {
+          "type": "string",
+          "pattern": "\\S",
+          "not": { "pattern": "^@[^/]+$" }
+        }
       },
       "default": {}
     }

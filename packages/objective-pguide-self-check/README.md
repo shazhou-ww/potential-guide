@@ -1,8 +1,9 @@
 # pguide 本机自查
 
-本 Pilot 是完整的私有 workspace package；提交的 runtime 从 setup、既有 ACP
-与权限源码生成，snapshot 无需安装依赖。使用 `pnpm self-check:build` 生成，
-`pnpm self-check:check` 验证新鲜度；禁止手改生成文件。
+本 Objective 是独立 npm 包；runtime 从 setup、既有 ACP
+与权限源码生成。`pnpm build` 输出忽略的 staging/dist；
+消费 `dist/package` 或准确 tarball，按实际包名/完整内容 digest 固定，
+不再提交生成副本。`pnpm self-check:check` 验证新鲜度。
 职责与历史 URI 迁移见 [Pilot packages](../../docs/pilot-packages.md)。
 
 独立、只观测的本机 Objective，由被检查设备上**已安装的 pguide** 运行；

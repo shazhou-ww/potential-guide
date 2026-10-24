@@ -1,5 +1,5 @@
 import { readFile, stat } from "node:fs/promises";
-import { reportArguments, withCheckEvidence } from "../runtime/evidence.mjs";
+import { reportArguments, withCheckEvidence } from "../dist/package/runtime/evidence.mjs";
 import { Fault } from "./contract.mjs";
 import { failure, invoke } from "./runner.mjs";
 export async function stdin() {

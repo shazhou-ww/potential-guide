@@ -8,6 +8,11 @@ import { installation } from "./installation.mjs";
 import { sanity } from "./sanity.mjs";
 export async function check(stage, value, options = {}) {
   const environment = options.environment ?? process.env;
+  const objectivePackages =
+    options.objectivePackages ??
+    (options.pilot !== true && typeof environment.PGUIDE_SETUP_MARKER_PACKAGE === "string"
+      ? { "@potential-guide/objective-setup-marker": environment.PGUIDE_SETUP_MARKER_PACKAGE }
+      : {});
   let directory;
   let timer;
   let abort;
@@ -50,7 +55,14 @@ export async function check(stage, value, options = {}) {
     }
     if (remote) {
       const { checkSsh } = await import("../ssh-target.mjs");
-      return await checkSsh(stage, subject);
+      return await checkSsh(
+        stage,
+        subject,
+        undefined,
+        objectivePackages,
+        options.objectiveExecutables,
+        options.objectiveSources?.["@potential-guide/objective-setup-marker"]?.packageDigest,
+      );
     }
     const controller = new AbortController();
     abort = () => controller.abort();
@@ -86,7 +98,15 @@ export async function check(stage, value, options = {}) {
       if (stage === "sanity") {
         if (options.selfCheck)
           await context.measure("sanity", () => directSanity(context, directory, selected));
-        else await sanity(subject, context, directory, selected);
+        else
+          await sanity(
+            subject,
+            context,
+            directory,
+            selected,
+            objectivePackages,
+            options.objectiveSources?.["@potential-guide/objective-setup-marker"]?.packageDigest,
+          );
       }
     }
     return success();

@@ -6,6 +6,7 @@ const excluded = new Set([
   ".git",
   "node_modules",
   ".cache",
+  ".staging",
   ".turbo",
   ".next",
   ".wrangler",

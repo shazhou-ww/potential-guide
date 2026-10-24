@@ -1,16 +1,23 @@
 import { randomBytes } from "node:crypto";
-import { cp, lstat, mkdir, readFile, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
-import { Fault, here, Problem, record } from "./contract.mjs";
+import { Fault, Problem, record } from "./contract.mjs";
 import { jsonOutput } from "./installation.mjs";
-export async function sanity(subject, context, directory, selected) {
+export async function sanity(
+  subject,
+  context,
+  directory,
+  selected,
+  objectivePackages = {},
+  expectedRevision,
+) {
   const repository = join(directory, "fixture");
-  await cp(join(here, "sanity-fixture"), repository, { recursive: true });
-  await writeFile(
-    join(repository, ".gitignore"),
-    await readFile(join(repository, "gitignore"), "utf8"),
-  );
+  await mkdir(repository);
+  const markerPackage = objectivePackages["@potential-guide/objective-setup-marker"];
+  if (typeof markerPackage !== "string")
+    throw new Fault(
+      "protocol: prepare the fixed standalone marker Objective package before sanity.",
+    );
 
   const marker = join(repository, "marker.txt");
   const expected = randomBytes(24).toString("hex");
@@ -45,21 +52,7 @@ export async function sanity(subject, context, directory, selected) {
     }),
     { mode: 0o600 },
   );
-  const git = async (...args) => {
-    const result = await context.execute("git", ["-C", repository, ...args], {
-      missing: "git-unavailable",
-    });
-    if (result.code !== 0) throw new Fault("git: isolated fixture preparation failed.");
-    return result.stdout.trim();
-  };
-  await git("init", "-q");
-  await git("config", "user.name", "pguide setup");
-  await git("config", "user.email", "setup@example.invalid");
-  await git("add", ".");
-  await git("-c", "commit.gpgsign=false", "commit", "-qm", "Bounded setup fixture");
-  const revision = await git("rev-parse", "HEAD");
-  const uri = `git+${pathToFileURL(repository).href}#/`;
-  const common = ["--pilot", uri, "--revision", revision, "--subject-file", subjectFile];
+  const common = ["--pilot", markerPackage, "--subject-file", subjectFile];
   const probe = async () => {
     const result = await context.cli(["probe", ...common], repository);
     const report = jsonOutput(result);
@@ -77,6 +70,14 @@ export async function sanity(subject, context, directory, selected) {
     return report.payload;
   };
   const initial = await probe();
+  const markerId = "@potential-guide/objective-setup-marker";
+  const markerRevision = expectedRevision ?? initial.versions?.[markerId];
+  if (
+    initial.current?.objectiveId !== markerId ||
+    !/^sha256-pguide-package-v1:[a-f0-9]{64}$/.test(markerRevision ?? "") ||
+    initial.versions?.[markerId] !== markerRevision
+  )
+    throw new Fault("protocol: marker package identity or fixed content revision mismatch.");
   if (
     initial.current?.levelId !== "initial" ||
     !initial.problems?.some((entry) => entry.ref?.problemId === "marker-incorrect")
@@ -130,6 +131,8 @@ export async function sanity(subject, context, directory, selected) {
   if (report.outcome?.stopReason !== "target-reached" || report.outcome?.iterations !== 1)
     throw new Fault("protocol: unexpected sanity regulation outcome.");
   const final = await probe();
+  if (final.current?.objectiveId !== markerId || final.versions?.[markerId] !== markerRevision)
+    throw new Fault("protocol: marker package changed during the bounded sanity exercise.");
   let correct = false;
   try {
     const details = await lstat(marker);

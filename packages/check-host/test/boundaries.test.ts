@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { link, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, link, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
@@ -60,9 +60,82 @@ exports.execute=async(subject,context)=>{
   return {calls,value:subject.value??null};
 };`;
 
+test("verified in-memory CommonJS retains module metadata, top-level exports and shebang semantics", async () => {
+  const f = await fixture(
+    "\ufeff#!/usr/bin/env node\nthis.execute=async()=>({same:module.filename===__filename,directory:__dirname,hasRequire:typeof module.require});",
+  );
+  try {
+    await f.start("commonjs");
+    const result = await finished(f.kernel, "commonjs");
+    assert.equal(result.state, "Completed");
+    if (result.state === "Completed") {
+      const value = result.result as { same: boolean; directory: string; hasRequire: string };
+      assert.equal(value.same, true);
+      assert.equal(value.hasRequire, "function");
+      assert.ok(value.directory.startsWith(join(f.root, "snapshots")));
+    }
+  } finally {
+    await f.close();
+  }
+});
+
+test("verified Wasm resources execute while untrackable synchronous subprocess APIs fail closed", async () => {
+  const f = await fixture(`exports.execute=async(subject)=>{
+    if(subject.sync)require("node:child_process").execFileSync(process.execPath,["-e","throw Error('MUST NOT RUN')"]);
+    const bytes=await require("node:fs/promises").readFile(require("node:path").join(__dirname,"resources","value.wasm"));
+    const {instance}=await WebAssembly.instantiate(bytes);
+    return {value:instance.exports.value()};
+  };`);
+  try {
+    await mkdir(join(f.directory, "resources"));
+    await writeFile(
+      join(f.directory, "resources", "value.wasm"),
+      Buffer.from([
+        0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 127, 3, 2, 1, 0, 7, 9, 1, 5, 118, 97, 108,
+        117, 101, 0, 0, 10, 6, 1, 4, 0, 65, 42, 11,
+      ]),
+    );
+    await f.start("wasm");
+    const result = await finished(f.kernel, "wasm");
+    assert.equal(result.state, "Completed");
+    if (result.state === "Completed") assert.deepEqual(result.result, { value: 42 });
+    await f.start("sync", { sync: true });
+    const rejected = await finished(f.kernel, "sync");
+    assert.equal(rejected.state, "Failed");
+    if (rejected.state === "Failed")
+      assert.match(rejected.error, /request-owned asynchronous subprocesses/);
+    assert.equal(f.kernel.diagnostics().ownedProcesses, 0);
+  } finally {
+    await f.close();
+  }
+});
+
+test("POSIX executable resources retain owner-only execution and affect complete artifact identity", {
+  skip: process.platform === "win32" ? "Actual POSIX executable permissions required" : false,
+}, async () => {
+  const f = await fixture(`exports.execute=async()=>({output:await new Promise((done,fail)=>
+    require("node:child_process").execFile(require("node:path").join(__dirname,"resources","tool"),[],
+      (error,stdout)=>error?fail(error):done(stdout)))});`);
+  try {
+    await mkdir(join(f.directory, "resources"));
+    const resource = join(f.directory, "resources", "tool");
+    await writeFile(resource, "#!/bin/sh\nprintf ready\n", { mode: 0o755 });
+    const before = await readArtifact(f.directory);
+    await f.start("executable");
+    const result = await finished(f.kernel, "executable");
+    assert.equal(result.state, "Completed");
+    if (result.state === "Completed") assert.deepEqual(result.result, { output: "ready" });
+    await chmod(resource, 0o600);
+    assert.notEqual((await readArtifact(f.directory)).revision, before.revision);
+  } finally {
+    await f.close();
+  }
+});
+
 test("worker runtime excludes caller loader flags and rejects unbundled dependencies", async () => {
   const f = await fixture(`exports.execute=(subject)=>{
     if(subject.import)require("not-a-bundled-dependency");
+    if(subject.dynamic)return import("@potential-guide/effects");
     return {execArgv:process.execArgv,nodeOptions:process.env.NODE_OPTIONS};
   };`);
   const previous = process.env.NODE_OPTIONS;
@@ -77,6 +150,10 @@ test("worker runtime excludes caller loader flags and rejects unbundled dependen
     const second = await finished(f.kernel, "unbundled");
     assert.equal(second.state, "Failed");
     if (second.state === "Failed") assert.match(second.error, /dependencies must be bundled/);
+    await f.start("dynamic", { dynamic: true });
+    const dynamic = await finished(f.kernel, "dynamic");
+    assert.equal(dynamic.state, "Failed");
+    if (dynamic.state === "Failed") assert.match(dynamic.error, /dynamic import|module/i);
   } finally {
     if (previous === undefined) delete process.env.NODE_OPTIONS;
     else process.env.NODE_OPTIONS = previous;

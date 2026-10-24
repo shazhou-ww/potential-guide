@@ -2,6 +2,7 @@ import { isAbsolute } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type {
   GitObjectiveSource,
+  ObjectiveSource,
   PageResource,
   ObjectiveManifest,
   ReferencePage,
@@ -18,6 +19,104 @@ import {
 
 export interface LoadedLocale {
   pages: ReadonlyMap<string, ReferencePage>;
+}
+
+export function isObjectivePackageName(value: string): boolean {
+  return (
+    /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(value) &&
+    value.length <= 214 &&
+    !["node_modules", "favicon.ico"].includes(value)
+  );
+}
+
+export function objectiveSourceVersion(source: ObjectiveSource): string {
+  return source.kind === "npm-package" ? source.packageDigest : source.tree;
+}
+export function isObjectiveRevision(objectiveId: string, version: string): boolean {
+  if (!isObjectivePackageName(objectiveId) && !objectiveId.startsWith("git+")) return false;
+  return (
+    canonicalObjectiveUri(objectiveId) === objectiveId &&
+    (isObjectivePackageName(objectiveId)
+      ? /^sha256-pguide-package-v1:[a-f0-9]{64}$/.test(version)
+      : objectiveId.startsWith("git+") && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(version))
+  );
+}
+
+export function sameObjectiveSource(
+  left: ObjectiveSource | undefined,
+  right: ObjectiveSource | undefined,
+): boolean {
+  if (left === undefined || right === undefined) return left === right;
+  if (left.kind === "npm-package" && right.kind === "npm-package")
+    return (
+      left.packageName === right.packageName &&
+      left.packageDigest === right.packageDigest &&
+      left.resolved === right.resolved &&
+      left.version === right.version &&
+      left.integrity === right.integrity &&
+      left.commit === right.commit &&
+      Object.keys(left.bindings ?? {}).length === Object.keys(right.bindings ?? {}).length &&
+      Object.entries(left.bindings ?? {}).every(([id, source]) =>
+        sameObjectiveSource(source, right.bindings?.[id]),
+      )
+    );
+  return (
+    left.kind === "git-tree" &&
+    right.kind === "git-tree" &&
+    left.repository === right.repository &&
+    left.directory === right.directory &&
+    left.commit === right.commit &&
+    left.tree === right.tree &&
+    left.repositoryTree === right.repositoryTree
+  );
+}
+
+export function validatePilotSource(
+  objectiveId: string,
+  version: string,
+  source: unknown,
+): asserts source is ObjectiveSource {
+  if (record(source) && source.kind === "npm-package") {
+    fields(
+      source,
+      ["kind", "packageName", "packageDigest", "spec", "resolved"],
+      ["version", "integrity", "commit", "bindings"],
+    );
+    if (
+      !isObjectivePackageName(objectiveId) ||
+      source.packageName !== objectiveId ||
+      source.packageDigest !== version ||
+      !/^sha256-pguide-package-v1:[a-f0-9]{64}$/.test(version) ||
+      !text(source.spec) ||
+      !text(source.resolved) ||
+      (source.version !== undefined && !text(source.version)) ||
+      (source.integrity !== undefined && !text(source.integrity)) ||
+      (source.commit !== undefined &&
+        !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(String(source.commit)))
+    )
+      throw new ObjectiveConfigurationError(
+        `Invalid npm package source evidence for ${objectiveId}.`,
+      );
+    if (source.bindings !== undefined) {
+      if (!record(source.bindings) || Object.keys(source.bindings).length > 128)
+        throw new ObjectiveConfigurationError("Invalid fixed npm dependency bindings.");
+      for (const [id, binding] of Object.entries(source.bindings)) {
+        if (
+          id === objectiveId ||
+          !record(binding) ||
+          binding.kind !== "npm-package" ||
+          Object.hasOwn(binding, "bindings") ||
+          typeof binding.packageDigest !== "string"
+        )
+          throw new ObjectiveConfigurationError(
+            "Dependency bindings must be flat exact npm package sources.",
+          );
+        validatePilotSource(id, binding.packageDigest, binding);
+      }
+    }
+    return;
+  }
+  validateGitPilotSource(objectiveId, version, source);
 }
 
 export function validateGitPilotSource(
@@ -49,6 +148,7 @@ export function validateGitPilotSource(
 
 /** Directory identities are distinct from addresses of resources inside them. */
 export function canonicalObjectiveUri(uri: string): string {
+  if (isObjectivePackageName(uri)) return uri;
   const canonical = canonicalManifestUri(uri);
   const url = new URL(canonical);
   if (canonical.startsWith("git+")) {
@@ -77,7 +177,12 @@ export function pilotResourceUri(objectiveId: string, path: string): string {
     decoded.split("/").some((part) => part === ".." || part === "." || /[\\:]/.test(part))
   )
     throw new ObjectiveConfigurationError("Pilot resources must remain inside their directory.");
-  return canonicalManifestUri(path, directory);
+  return canonicalManifestUri(
+    path,
+    isObjectivePackageName(directory)
+      ? `npm-objective:///${encodeURIComponent(directory)}/`
+      : directory,
+  );
 }
 
 export function canonicalManifestUri(uri: string, base?: string): string {

@@ -21,6 +21,12 @@ on:
       - "pguide-regulate-v*"
       - "pguide-supervise-v*"
       - "pguide-objectives-v*"
+      - "objective-monorepo-standard-v*"
+      - "objective-package-standard-v*"
+      - "objective-devbox-health-v*"
+      - "objective-pguide-setup-v*"
+      - "objective-pguide-self-check-v*"
+      - "objective-setup-marker-v*"
   workflow_dispatch:
     inputs:
       package:
@@ -46,6 +52,12 @@ on:
           - pguide-regulate
           - pguide-supervise
           - pguide-objectives
+          - objective-monorepo-standard
+          - objective-package-standard
+          - objective-devbox-health
+          - objective-pguide-setup
+          - objective-pguide-self-check
+          - objective-setup-marker
       mode:
         description: Dry-run publishing or only verify an already-published version
         type: choice
@@ -225,6 +237,7 @@ jobs:
           packageJson.version = `0.0.0-oidc-dry-run.${process.env.GITHUB_RUN_ID}`;
           writeFileSync(path, `${JSON.stringify(packageJson, null, 2)}\n`);
           NODE
+          pnpm --dir "$PACKAGE_DIRECTORY" run build
 
       - name: Pack package
         if: github.event_name == 'push' || inputs.mode != 'verify-published'

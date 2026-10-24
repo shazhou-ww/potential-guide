@@ -27,7 +27,13 @@ type Slot = {
   owned: Set<number>;
   exited: Promise<void>;
 };
-type Pool = { directory: string; revision: string; snapshot: string; slots: Set<Slot> };
+type Pool = {
+  directory: string;
+  revision: string;
+  snapshot: string;
+  source: string;
+  slots: Set<Slot>;
+};
 type Job = {
   execution: Execution;
   fingerprint: string;
@@ -130,6 +136,8 @@ export class CheckKernel {
         pool = undefined;
       }
       if (!pool) {
+        const source = artifact.files.get("worker.cjs");
+        if (source === undefined) throw new HostError(400, "Missing verified worker source.");
         if (this.pools.size >= this.limits.directories) {
           const unused = [...this.pools.values()].find(
             (candidate) =>
@@ -146,6 +154,7 @@ export class CheckKernel {
           directory: artifact.directory,
           revision: artifact.revision,
           snapshot: await snapshotArtifact(artifact, this.snapshots),
+          source: source.toString("utf8"),
           slots: new Set(),
         };
         this.pools.set(pool.directory, pool);
@@ -245,6 +254,7 @@ export class CheckKernel {
       env: { ...process.env, NODE_OPTIONS: "" },
       workerData: {
         entry: join(pool.snapshot, "worker.cjs"),
+        source: pool.source,
         generation,
         messageBytes: this.limits.messageBytes,
       },

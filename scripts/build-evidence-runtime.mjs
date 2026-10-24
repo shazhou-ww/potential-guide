@@ -14,7 +14,7 @@ export async function buildEvidenceRuntime(packageName) {
     ts.transpileModule(source, {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
     }).outputText;
-  const directory = join(root, "packages", packageName, "runtime");
+  const directory = join(root, ".staging", packageName, "runtime");
   const path = join(directory, "evidence.mjs");
   if (process.argv.includes("--check")) {
     if ((await readFile(path, "utf8")).replaceAll("\r\n", "\n") !== text)

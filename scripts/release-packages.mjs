@@ -1,4 +1,18 @@
 export const releasePackages = [
+  ...[
+    "objective-monorepo-standard",
+    "objective-package-standard",
+    "objective-devbox-health",
+    "objective-pguide-setup",
+    "objective-pguide-self-check",
+    "objective-setup-marker",
+  ].map((directory) => ({
+    id: directory,
+    directory,
+    name: `@potential-guide/${directory}`,
+    bins: [],
+    objective: true,
+  })),
   {
     id: "check-host",
     directory: "check-host",

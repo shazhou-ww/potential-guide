@@ -1,12 +1,13 @@
 import {
   attainedLevelRank,
-  canonicalObjectiveUri,
   isJsonValue,
   levelRank as protocolLevelRank,
   parseManifest,
   type PilotObservation,
   type PilotSpec,
-  validateGitPilotSource,
+  validatePilotSource,
+  objectiveSourceVersion,
+  isObjectiveRevision,
 } from "@potential-guide/objective-pilot";
 import type {
   ActiveRun,
@@ -85,20 +86,12 @@ export function validateGoal(goal: ObjectiveGoal): void {
         goal.requirements.some((value) => typeof value !== "string" || !value.trim())))
   )
     throw new ObjectivePortfolioError("Invalid objective goal.");
-  if (
-    !goal.objective.objectiveId.startsWith("git+") ||
-    canonicalObjectiveUri(goal.objective.objectiveId) !== goal.objective.objectiveId ||
-    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(goal.objective.version)
-  )
+  if (!isObjectiveRevision(goal.objective.objectiveId, goal.objective.version))
     throw new ObjectivePortfolioError(
       "Goal requires a canonical Pilot directory and exact content version.",
     );
-  if (goal.objective.source !== undefined)
-    validateGitPilotSource(
-      goal.objective.objectiveId,
-      goal.objective.version,
-      goal.objective.source,
-    );
+  if (goal.objective.source !== undefined || !goal.objective.objectiveId.startsWith("git+"))
+    validatePilotSource(goal.objective.objectiveId, goal.objective.version, goal.objective.source);
   if (goal.sourceBindings !== undefined) {
     if (
       goal.sourceBindings === null ||
@@ -107,7 +100,7 @@ export function validateGoal(goal: ObjectiveGoal): void {
     )
       throw new ObjectivePortfolioError("Invalid source binding table.");
     for (const [id, source] of Object.entries(goal.sourceBindings))
-      validateGitPilotSource(id, source.tree, source);
+      validatePilotSource(id, objectiveSourceVersion(source), source);
   }
   levelRank(goal.objective, goal.targetLevel);
 }

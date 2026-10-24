@@ -1,20 +1,28 @@
-import type { PilotSpec, Subject } from "@potential-guide/objective-pilot";
+import {
+  type NpmObjectiveSource,
+  type PilotSpec,
+  type Subject,
+  validatePilotSource,
+} from "@potential-guide/objective-pilot";
 import { canonicalJson, levelRank } from "@potential-guide/objective-portfolio-supervisor";
 import { identityKey as key } from "./identity.js";
 import { fields, immutable, priority, validateSpec } from "./validation.js";
 
 export interface Objective {
   readonly key: string;
-  readonly source: {
-    readonly repository: string;
-    readonly directory: string;
-  };
+  readonly source:
+    | {
+        readonly repository: string;
+        readonly directory: string;
+      }
+    | { readonly packageName: string };
 }
 
 export interface ObjectiveRevision {
   readonly key: string;
   readonly objectiveKey: string;
-  readonly commit: string;
+  readonly commit?: string;
+  readonly packageDigest?: string;
   readonly spec: PilotSpec;
 }
 
@@ -35,6 +43,7 @@ export interface RegulationRequest {
   readonly desiredLevel: string;
   readonly priority: number;
   readonly origin: RequestOrigin;
+  readonly source?: NpmObjectiveSource;
 }
 
 export interface RegulationRequests {
@@ -115,17 +124,33 @@ export function reduceRegulationRequests(
   const desiredLevel = rank === 0 ? "initial" : command.objective.manifest.levels[rank - 1]?.id;
   if (desiredLevel === undefined) throw new TypeError("Invalid desired level.");
   const source = command.objective.source;
-  if (source?.kind !== "git-tree") throw new TypeError("An exact Git source is required.");
-  const objectiveSource = { repository: source.repository, directory: source.directory };
+  if (source === undefined) throw new TypeError("An exact Objective source is required.");
+  const objectiveSource =
+    source.kind === "npm-package"
+      ? { packageName: source.packageName }
+      : { repository: source.repository, directory: source.directory };
   const objective: Objective = {
     key: key("objective", objectiveSource),
     source: objectiveSource,
   };
   const revision: ObjectiveRevision = {
-    key: key("objective-revision", [objective.key, source.commit]),
+    key: key("objective-revision", [
+      objective.key,
+      source.kind === "npm-package" ? source.packageDigest : source.commit,
+    ]),
     objectiveKey: objective.key,
-    commit: source.commit,
-    spec: command.objective,
+    ...(source.kind === "npm-package"
+      ? { packageDigest: source.packageDigest }
+      : { commit: source.commit }),
+    spec:
+      source.kind === "npm-package"
+        ? {
+            objectiveId: command.objective.objectiveId,
+            version: command.objective.version,
+            manifest: command.objective.manifest,
+            locales: command.objective.locales,
+          }
+        : command.objective,
   };
   const target: RegulationTarget = {
     key: key("target", [objective.key, command.subject]),
@@ -139,6 +164,7 @@ export function reduceRegulationRequests(
     desiredLevel,
     priority: command.priority,
     origin: command.origin,
+    ...(source.kind === "npm-package" ? { source } : {}),
   };
   const objectives = append(state.objectives, objective);
   const objectiveRevisions = append(state.objectiveRevisions, revision);
@@ -189,6 +215,24 @@ export function requestDetails(state: RegulationRequests, requestRef: string): R
     objectiveRevision.objectiveKey !== objective.key
   )
     throw new TypeError(`Broken request references for ${requestRef}.`);
+  if (objectiveRevision.packageDigest !== undefined) {
+    validatePilotSource(
+      objectiveRevision.spec.objectiveId,
+      objectiveRevision.packageDigest,
+      request.source,
+    );
+    return immutable({
+      request,
+      target,
+      objective,
+      objectiveRevision: {
+        ...objectiveRevision,
+        spec: { ...objectiveRevision.spec, source: request.source },
+      },
+    });
+  }
+  if (request.source !== undefined)
+    throw new TypeError("Legacy requests cannot carry npm package provenance.");
   return { request, target, objective, objectiveRevision };
 }
 
@@ -231,14 +275,11 @@ export function restoreRegulationRequests(value: unknown): RegulationRequests {
     throw new TypeError("Invalid request snapshot.");
   let state = createRegulationRequests();
   for (const request of value.requests) {
-    fields(request, [
-      "ref",
-      "targetKey",
-      "objectiveRevisionKey",
-      "desiredLevel",
-      "priority",
-      "origin",
-    ]);
+    fields(
+      request,
+      ["ref", "targetKey", "objectiveRevisionKey", "desiredLevel", "priority", "origin"],
+      ["source"],
+    );
     const target = value.targets.find(
       (entry) => entry !== null && typeof entry === "object" && entry.key === request.targetKey,
     );
@@ -252,7 +293,10 @@ export function restoreRegulationRequests(value: unknown): RegulationRequests {
       {
         type: "request",
         requestRef: request.ref,
-        objective: revision.spec,
+        objective:
+          request.source === undefined
+            ? revision.spec
+            : { ...revision.spec, source: request.source },
         subject: target.subject,
         desiredLevel: request.desiredLevel,
         priority: request.priority,

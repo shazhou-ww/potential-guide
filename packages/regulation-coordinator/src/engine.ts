@@ -1,6 +1,6 @@
 import {
   type DependencyProblem,
-  type GitObjectiveSource,
+  type ObjectiveSource,
   type PilotObservation,
   parseDependencyProblem,
 } from "@potential-guide/objective-pilot";
@@ -46,7 +46,7 @@ interface Node {
   target: string;
   priority: number;
   requirements: string[];
-  sources: Record<string, GitObjectiveSource>;
+  sources: Record<string, ObjectiveSource>;
   waits: Edge[];
   reached: number;
   evidenceAt?: number;
@@ -270,7 +270,9 @@ export class Engine {
       priority: regulation.priority,
       requirements: [...(regulation.requirements ?? [])],
       sources: mergeSources(
-        { [regulation.objective.objectiveId]: regulation.objective.source as GitObjectiveSource },
+        regulation.objective.source === undefined
+          ? {}
+          : { [regulation.objective.objectiveId]: regulation.objective.source },
         regulation.sourceBindings ?? {},
       ),
       waits: [],
@@ -780,7 +782,7 @@ export class Engine {
     node: Node,
     dependencies: readonly DependencyProblem[],
     versions: Readonly<Record<string, string>>,
-    sources: Readonly<Record<string, GitObjectiveSource>>,
+    sources: Readonly<Record<string, ObjectiveSource>>,
     observedAt: number,
   ): void {
     node.state = "resolving";
@@ -843,7 +845,7 @@ export class Engine {
       if (stale) return;
       if (message.error !== undefined) throw message.error;
       const additions = new Map<string, Node>();
-      const sourceUpdates = new Map<Node, Record<string, GitObjectiveSource>>();
+      const sourceUpdates = new Map<Node, Record<string, ObjectiveSource>>();
       const downgrades = new Map<Node, { readonly level: number; readonly observedAt: number }>();
       const waits: Edge[] = [];
       for (const { requirement, lease, observedAt } of resolutions) {

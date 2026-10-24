@@ -27,8 +27,12 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "npm-package-arg": "catalog:",
     "@potential-guide/cli-core": "workspace:^",
     "@potential-guide/pilot-protocol": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/npm-package-arg": "catalog:"
   },
   "publishConfig": {
     "access": "public"

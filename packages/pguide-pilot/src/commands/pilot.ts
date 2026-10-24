@@ -1,5 +1,6 @@
-import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { basename, dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   atomicWrite,
   CliError,
@@ -24,6 +25,7 @@ import {
   observe,
   type PilotObservation,
   type PilotSpec,
+  isObjectivePackageName,
 } from "@potential-guide/objective-pilot";
 
 export function observationMarkdown(
@@ -90,10 +92,41 @@ export function observationMarkdown(
 async function loadStaticPilot(path: string) {
   try {
     const entry = resolve(path);
-    return await loadPilotSpec(
-      basename(entry) === "objective.yaml" ? dirname(entry) : entry,
-      fileResources,
-    );
+    const directory = basename(entry) === "objective.yaml" ? dirname(entry) : entry;
+    let metadata: unknown;
+    try {
+      metadata = JSON.parse(await readFile(join(directory, "package.json"), "utf8"));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    if (metadata !== undefined) {
+      if (
+        !metadata ||
+        typeof metadata !== "object" ||
+        !("name" in metadata) ||
+        typeof metadata.name !== "string" ||
+        !isObjectivePackageName(metadata.name)
+      )
+        throw new Error("Objective package.json needs a valid actual package name.");
+      const prefix = `npm-objective:///${encodeURIComponent(metadata.name)}/`;
+      const local = (uri: string) => {
+        if (!uri.startsWith(prefix)) throw new Error("Static resource escapes its Objective.");
+        const name = decodeURIComponent(uri.slice(prefix.length));
+        if (name.split("/").some((part) => part === "." || part === ".." || /[\\:]/.test(part)))
+          throw new Error("Unsafe static Objective resource.");
+        return pathToFileURL(join(directory, ...name.split("/"))).href;
+      };
+      return loadPilotSpec(metadata.name, {
+        version: "working-tree",
+        readText: (uri) => fileResources.readText(local(uri)),
+        readPages: async (uri) =>
+          (await fileResources.readPages(local(uri))).map((page) => ({
+            ...page,
+            uri: `${prefix}${relative(directory, fileURLToPath(page.uri)).split("\\").join("/")}`,
+          })),
+      });
+    }
+    return await loadPilotSpec(directory, fileResources);
   } catch (error) {
     throw new CliError(
       error instanceof Error ? error.message : "Pilot could not be loaded.",
@@ -152,6 +185,7 @@ export async function runProbe(
             requiredSetting<Parameters<typeof pilotSourceBudgets>[0]>(loaded.value, "pilot.probe"),
           ),
           signal: controller.signal,
+          packageSpecs: requiredSetting<Record<string, string>>(loaded.value, "objectives.aliases"),
           reports: reportOptions(argv, loaded.value, globals.cwd),
         },
       );
@@ -185,6 +219,9 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
       "Expected scaffold pilot <directory>; legacy Guide scaffolds are incompatible.",
     );
   const root = resolve(globals.cwd, argv[1]);
+  const packageName = basename(root).toLowerCase();
+  if (!isObjectivePackageName(packageName))
+    throw new CliError("Scaffold directory basename must be a valid npm package name.");
   try {
     if ((await stat(root)).isDirectory() && (await readdir(root)).length > 0)
       throw new CliError("Scaffold destination must not exist or must be empty.");
@@ -217,6 +254,40 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
   if ((check === undefined && problems.length > 0) || new Set(problems).size !== problems.length)
     throw new CliError("Problems require one check and must be unique.");
   await mkdir(root, { recursive: true });
+  await writeFile(
+    join(root, "package.json"),
+    `${JSON.stringify(
+      {
+        name: packageName,
+        version: "0.1.0",
+        type: "module",
+        scripts: { build: "node build.mjs" },
+        files: ["objective.yaml", "references", "checks"],
+        engines: { node: ">=22.13.0" },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  await writeFile(join(root, ".gitignore"), "dist/\nnode_modules/\n");
+  await writeFile(
+    join(root, "build.mjs"),
+    `import {cp,mkdir,readFile,writeFile} from "node:fs/promises";
+import {join} from "node:path";
+const output="dist/package";
+await mkdir(output,{recursive:true});
+for(const name of ["objective.yaml","references"])await cp(name,join(output,name),{recursive:true});
+const manifest=JSON.parse(await readFile("package.json","utf8"));
+delete manifest.scripts;
+await writeFile(join(output,"package.json"),JSON.stringify(manifest,null,2)+"\\n");
+${
+  check === undefined
+    ? ""
+    : `await mkdir(join(output,"checks",${JSON.stringify(check)}),{recursive:true});
+await cp(${JSON.stringify(`src/${check}.cjs`)},join(output,"checks",${JSON.stringify(check)},"worker.cjs"));`
+}
+`,
+  );
   await writeFile(
     join(root, "objective.yaml"),
     `$schema: https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json\nsubjectSchema:\n  type: object\nlevels:\n  - id: ${level}\n    checks:${check === undefined ? " []" : `\n      - id: ${check}\n        problems: [${problems.join(", ")}]`}\ndefaultLanguage: ${languages[0]}\nlanguages: [${languages.join(", ")}]\n`,
@@ -253,7 +324,7 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
     }
   }
   if (check !== undefined) {
-    const executable = join(root, "checks", check, "worker.cjs");
+    const executable = join(root, "src", `${check}.cjs`);
     await mkdir(dirname(executable), { recursive: true });
     await writeFile(
       executable,
@@ -277,7 +348,7 @@ export async function runScaffold(argv: string[], globals: GlobalOptions): Promi
       `- Languages: ${languages.map(markdownInlineCode).join(", ")}`,
       `- Business level: ${markdownInlineCode(level)}`,
       `- Check: ${check === undefined ? "none" : markdownInlineCode(check)}`,
-      `- Next action: replace TODO guidance${check === undefined ? "" : " and implement the generated check"}, then run ${markdownInlineCode(`pguide validate pilot "${root}"`)}. Commit the Pilot before probing.`,
+      `- Next action: replace TODO guidance${check === undefined ? "" : " and implement the generated check"}, explicitly run npm run build in the package, then run ${markdownInlineCode(`pguide validate pilot "${join(root, "dist", "package")}"`)} and probe that built package. Commit source, not generated workers.`,
     ].join("\n"),
   );
 }

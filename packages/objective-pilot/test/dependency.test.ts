@@ -137,7 +137,7 @@ test("strict check union rejects removed output and dependency fields without tr
     { ...dependency, ref: {} },
     { ...dependency, id: "missing" },
     { ...dependency, subject: [] },
-    { ...dependency, objectiveId: "alias" },
+    { ...dependency, objectiveId: "alias@npm:actual-objective" },
     { kind: "internal", id: "broken", parameters: {}, objectiveId: externalId },
   ])
     assert.throws(() =>

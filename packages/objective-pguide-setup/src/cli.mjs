@@ -1,6 +1,6 @@
 import { lstat, readFile } from "node:fs/promises";
 import { isAbsolute } from "node:path";
-import { reportArguments, withCheckEvidence } from "../runtime/evidence.mjs";
+import { reportArguments, withCheckEvidence } from "../dist/package/runtime/evidence.mjs";
 import { Fault, outputLimit } from "./contract.mjs";
 import { check } from "./runner.mjs";
 export async function main(stage = process.argv[2], options = {}) {

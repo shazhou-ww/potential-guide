@@ -191,6 +191,13 @@ export async function fixture(baseDirectory = scratch, prefix = "pguide-test-") 
     "json",
   ]);
   if (scaffold.code !== 0) throw new Error(scaffold.stdout + scaffold.stderr);
+  // These existing suites exercise legacy Git evidence, not npm package preparation.
+  await mkdir(join(repository, "objective", "checks", "ready"), { recursive: true });
+  await writeFile(
+    join(repository, "objective", "checks", "ready", "worker.cjs"),
+    await readFile(join(repository, "objective", "src", "ready.cjs")),
+  );
+  await rm(join(repository, "objective", "package.json"));
   const manifest = join(repository, "objective", "objective.yaml");
   const uri = `git+${pathToFileURL(repository).href}#objective/`;
   const subject = join(directory, "subject.json");

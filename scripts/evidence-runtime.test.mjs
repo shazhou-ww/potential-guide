@@ -27,7 +27,9 @@ for (const [packageName, stage] of [
     let host;
     try {
       host = await createWorkerHost(join(directory, "host"));
-      const artifact = await readArtifact(join(root, "packages", packageName, "checks", stage));
+      const artifact = await readArtifact(
+        join(root, "packages", packageName, "dist", "package", "checks", stage),
+      );
       const evidence = new RunEvidence({ directory: join(directory, "reports") });
       const probe = createWorkerCheckProbe({
         directory: artifact.directory,
@@ -69,7 +71,7 @@ for (const [packageName, entry, ...args] of entries) {
     const child = spawn(
       process.execPath,
       [
-        join(root, "packages", packageName, ...entry.split("/")),
+        join(root, ".staging", packageName, ...entry.split("/")),
         ...args,
         "--report-dir",
         directory,

@@ -40,6 +40,11 @@ export async function checkPackagePublication(
       "Declare public publish metadata without publishing.",
     );
     const exports = texts(manifest.exports);
+    const definitionOnly =
+      exports.length === 1 &&
+      exports[0] === "./objective.yaml" &&
+      manifest.main === undefined &&
+      manifest.types === undefined;
     const cliOnly = workspace.roles.includes("cli") && exports.length === 0;
     put(
       cliOnly ? "not-applicable" : exports.length > 0 ? "pass" : "fail",
@@ -120,11 +125,13 @@ export async function checkPackagePublication(
         put("unverified", "npm-artifact", String(error), "Use a safe regular artifact.");
       }
     }
-    if (cliOnly)
+    if (cliOnly || definitionOnly)
       put(
         "not-applicable",
         "npm-types",
-        "Executable-only npm package has no public library typing surface.",
+        definitionOnly
+          ? "Objective-definition-only npm package has no public JavaScript typing surface."
+          : "Executable-only npm package has no public library typing surface.",
       );
     else if (!texts(manifest.types).length && !exports.some((file) => /\.d\.[cm]?ts$/.test(file)))
       put(

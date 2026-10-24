@@ -1,26 +1,29 @@
 {
   "name": "@potential-guide/objective-pguide-self-check",
   "version": "0.1.0",
-  "private": true,
   "description": "Dependency-free snapshot delivery of the local pguide self-check Pilot.",
   "type": "module",
   "files": [
     "objective.yaml",
     "checks",
     "references",
-    "runtime",
-    "self-check.mjs"
+    "README.md"
   ],
   "exports": {
     "./objective.yaml": "./objective.yaml"
   },
   "scripts": {
-    "build": "node ../../scripts/build-self-check-runtime.mjs",
+    "build": "node ../../scripts/build-objective-package.mjs objective-pguide-self-check",
     "clean": "node -e \"\"",
     "lint": "biome lint .",
     "test": "tsx --test \"test/*.test.mjs\"",
     "typecheck": "node ../../scripts/check-pilot-sources.mjs"
   },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist/package"
+  },
+  "license": "MIT",
   "engines": {
     "node": ">=22.13.0"
   },

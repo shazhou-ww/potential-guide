@@ -1,6 +1,6 @@
 # npm publishing
 
-Potential Guide publishes eighteen CLI and library packages independently from this monorepo:
+Potential Guide defines twenty-four independent CLI, library, and Objective releases:
 
 | Package | Release tag |
 | --- | --- |
@@ -22,6 +22,12 @@ Potential Guide publishes eighteen CLI and library packages independently from t
 | `@potential-guide/pguide-regulate` | `pguide-regulate-vX.Y.Z` |
 | `@potential-guide/pguide-supervise` | `pguide-supervise-vX.Y.Z` |
 | `@potential-guide/pguide-objectives` | `pguide-objectives-vX.Y.Z` |
+| `@potential-guide/objective-monorepo-standard` | `objective-monorepo-standard-vX.Y.Z` |
+| `@potential-guide/objective-package-standard` | `objective-package-standard-vX.Y.Z` |
+| `@potential-guide/objective-devbox-health` | `objective-devbox-health-vX.Y.Z` |
+| `@potential-guide/objective-pguide-setup` | `objective-pguide-setup-vX.Y.Z` |
+| `@potential-guide/objective-pguide-self-check` | `objective-pguide-self-check-vX.Y.Z` |
+| `@potential-guide/objective-setup-marker` | `objective-setup-marker-vX.Y.Z` |
 
 Command wrapper packages use the `pguide-` prefix, including grouped
 `pguide-pilot` and `pguide-regulate`. Configuration is now
@@ -44,8 +50,12 @@ installs all four as production dependencies.
 It does not install regulation or supervision. `pguide-regulate`
 must precede `pguide-supervise`. Publish changed transitive dependencies before
 their consumers. See [three-layer boundaries and migration](./package-layering.md).
-Git source and four concrete Objective packages remain deferred externalization;
-this implementation does not migrate them or publish concrete Objectives.
+Git source remains a compatibility/source utility. Six concrete Objective packages
+now have independent release inventory; this migration itself does not publish them.
+Build before packing: Objective packages publish the assembled `dist/package`,
+with exactly one root `objective.yaml` and self-contained check resources.
+Release `objective-package-standard` before `objective-monorepo-standard`, and
+`objective-setup-marker` before `objective-pguide-setup`.
 
 All extension packages use the `@potential-guide` npm scope. Their executable
 and command names remain independent of the package name; for example,
@@ -87,6 +97,12 @@ reviewers are compatible with the workflow, but any deployment branch or tag
 rules must allow these release tags:
 
 - `check-host-v*`
+- `objective-monorepo-standard-v*`
+- `objective-package-standard-v*`
+- `objective-devbox-health-v*`
+- `objective-pguide-setup-v*`
+- `objective-pguide-self-check-v*`
+- `objective-setup-marker-v*`
 - `effects-v*`
 - `git-source-v*`
 - `objective-pilot-v*`

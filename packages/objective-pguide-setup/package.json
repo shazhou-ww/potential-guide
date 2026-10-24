@@ -1,29 +1,34 @@
 {
   "name": "@potential-guide/objective-pguide-setup",
   "version": "0.1.0",
-  "private": true,
   "description": "Complete local and SSH pguide setup Pilot.",
   "type": "module",
   "files": [
     "objective.yaml",
     "checks",
     "references",
-    "src",
-    "runtime",
-    "setup-check.mjs",
-    "ssh-target.mjs",
-    "sanity-fixture"
+    "README.md"
   ],
   "exports": {
-    ".": "./setup-check.mjs",
     "./objective.yaml": "./objective.yaml"
   },
   "scripts": {
-    "build": "node ../../scripts/build-setup-runtime.mjs",
+    "build": "node ../../scripts/build-objective-package.mjs objective-pguide-setup",
     "clean": "node -e \"\"",
     "lint": "biome lint .",
     "test": "tsx --test \"test/*.test.ts\"",
     "typecheck": "node ../../scripts/check-pilot-sources.mjs"
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist/package"
+  },
+  "license": "MIT",
+  "objectiveDependencies": [
+    "@potential-guide/objective-setup-marker"
+  ],
+  "dependencies": {
+    "@potential-guide/objective-setup-marker": "workspace:^"
   },
   "engines": {
     "node": ">=22.13.0"

@@ -5,9 +5,9 @@ import test from "node:test";
 import { parseReleaseTag, releasePackages, releaseVersion } from "./release-packages.mjs";
 
 test("release inventory contains the new packages and excludes the retired Guide", () => {
-  assert.equal(releasePackages.length, 18);
+  assert.equal(releasePackages.length, 24);
   for (const field of ["id", "directory", "name"]) {
-    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 18);
+    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 24);
   }
   for (const name of [
     "@potential-guide/check-host",

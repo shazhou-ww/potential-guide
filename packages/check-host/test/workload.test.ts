@@ -123,8 +123,9 @@ test("same-input process baselines, 96 bounded mixed executions and real package
       import.meta.dirname,
       "..",
       "..",
-      "objective-monorepo-standard",
-      "package-standard",
+      "objective-package-standard",
+      "dist",
+      "package",
       "checks",
       "structure",
     );

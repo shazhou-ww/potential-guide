@@ -4,6 +4,7 @@
     "includes": [
       "**",
       "!**/.cache",
+      "!.staging",
       "!**/.turbo",
       "!**/dist",
       "!**/node_modules",

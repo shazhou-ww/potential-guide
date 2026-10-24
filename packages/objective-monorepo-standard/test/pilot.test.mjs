@@ -24,10 +24,8 @@ import { main } from "../check.mjs";
 import { checkPackage, checkRepository, defaultPolicy } from "../src/index.ts";
 
 const root = fileURLToPath(new URL("../../..", import.meta.url));
-const pilotRoot = join(root, "packages", "objective-monorepo-standard");
-const rootId =
-  "git+https://example.test/monorepo-fixture.git#packages/objective-monorepo-standard/";
-const packageId = `${rootId}package-standard/`;
+const rootId = "@potential-guide/objective-monorepo-standard";
+const packageId = "@potential-guide/objective-package-standard";
 const scratch = join(root, ".cache");
 await mkdir(scratch, { recursive: true });
 const hostRoot = await mkdtemp(join(scratch, "monorepo-worker-host-"));
@@ -60,16 +58,27 @@ function declaration(own, objective = packageId) {
   });
 }
 async function fixtureSpec(objectiveId) {
+  const packageRoot = join(root, "packages", objectiveId.split("/").at(-1), "dist", "package");
+  const prefix = `npm-objective:///${encodeURIComponent(objectiveId)}/`;
   const local = (uri) =>
-    pathToFileURL(join(root, decodeURIComponent(new URL(uri).hash.slice(1)))).href;
+    pathToFileURL(join(packageRoot, decodeURIComponent(uri.slice(prefix.length)))).href;
   return loadPilotSpec(objectiveId, {
-    version: (objectiveId === rootId ? "a" : "b").repeat(40),
+    version: `sha256-pguide-package-v1:${(objectiveId === rootId ? "a" : "b").repeat(64)}`,
+    sourceFor: async () => ({
+      kind: "npm-package",
+      packageName: objectiveId,
+      packageDigest: `sha256-pguide-package-v1:${(objectiveId === rootId ? "a" : "b").repeat(64)}`,
+      spec: objectiveId,
+      resolved: `https://example.test/${objectiveId.split("/").at(-1)}.tgz`,
+      version: "0.1.0",
+    }),
     readText: (uri) => fileResources.readText(local(uri)),
     async readPages(uri) {
       return (await fileResources.readPages(local(uri))).map((page) => {
-        const remote = new URL(objectiveId);
-        remote.hash = relative(root, fileURLToPath(page.uri)).split("\\").join("/");
-        return { ...page, uri: remote.href };
+        return {
+          ...page,
+          uri: `${prefix}${relative(packageRoot, fileURLToPath(page.uri)).split("\\").join("/")}`,
+        };
       });
     },
   });
@@ -80,7 +89,7 @@ async function runtimeFor(id, calls = [], failBinding = false, inputView) {
     artifacts.set(
       check,
       await readArtifact(
-        join(pilotRoot, ...(id === rootId ? [] : ["package-standard"]), "checks", check),
+        join(root, "packages", id.split("/").at(-1), "dist", "package", "checks", check),
       ),
     );
   return {
@@ -227,8 +236,8 @@ test("ordinary independent package and root use distinct source Objectives and r
     assert.equal(result.status, 200, result.message);
     assert.equal(result.payload.current.levelId, "standardized", JSON.stringify(result));
     assert.deepEqual(result.payload.versions, {
-      [rootId]: "a".repeat(40),
-      [packageId]: "b".repeat(40),
+      [rootId]: `sha256-pguide-package-v1:${"a".repeat(64)}`,
+      [packageId]: `sha256-pguide-package-v1:${"b".repeat(64)}`,
     });
     assert.deepEqual(
       calls.map(({ id, check }) => [id === rootId ? "root" : "package", check]),
@@ -508,7 +517,7 @@ test("root retains joint delivery coverage, dependency closure, layout and runti
   });
 });
 
-test("real repository has twenty-two package-owned subjects and no old contract input", async (t) => {
+test("real repository has twenty-four package-owned subjects and no old contract input", async (t) => {
   const entry = parseObjectives(await readFile(join(root, "objectives.yaml"), "utf8")).standardize;
   const subject = projectObjective(entry, context(root), undefined);
   const observed = [];
@@ -623,7 +632,7 @@ test("real repository has twenty-two package-owned subjects and no old contract 
       result.report.findings.filter(({ state }) => state === "fail" || state === "unverified"),
     ),
   );
-  assert.equal(observed.length, 22);
+  assert.equal(observed.length, 24);
   assert.deepEqual(result.problems, []);
   assert.ok(observed.every(({ source }) => source.expectedLevelId === "terminal"));
   assert.throws(() =>

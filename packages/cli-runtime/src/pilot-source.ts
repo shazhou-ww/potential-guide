@@ -30,6 +30,7 @@ import {
   createWorkerCheckProbe,
   type Envelope,
   type GitObjectiveSource,
+  type ObjectiveSource,
   loadPilotSpec,
   observationResource,
   type PageResource,
@@ -40,6 +41,7 @@ import {
   validateGitPilotSource,
 } from "@potential-guide/objective-pilot";
 import { ObjectiveInputError } from "@potential-guide/pilot-protocol";
+import { withNpmPilot, type PackagePreparationOptions } from "./package-source.js";
 
 const execute = promisify(execFile);
 
@@ -174,6 +176,25 @@ async function bindPilot<T>(
   options: PilotSourceOptions,
   evidence: RunEvidence | undefined,
 ): Promise<T> {
+  let legacy = location.startsWith("git+") && location.includes("#") && location.endsWith("/");
+  if (!legacy && (isAbsolute(location) || !/^[a-z][a-z0-9+.-]*:/i.test(location))) {
+    const local = resolve(cwd, location);
+    try {
+      const directory = basename(local) === "objective.yaml" ? dirname(local) : local;
+      await readFile(join(directory, "objective.yaml"));
+      try {
+        await readFile(join(directory, "package.json"));
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        legacy = true;
+      }
+    } catch (error) {
+      if (!["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error;
+    }
+  }
+  if (!legacy) {
+    return withNpmPilot(location, cwd, revision, use, options, evidence);
+  }
   const preparationTimeoutMs = options.preparationTimeoutMs ?? 60_000;
   if (
     !Number.isSafeInteger(preparationTimeoutMs) ||
@@ -309,7 +330,14 @@ async function bindPilot<T>(
               [`${repository}\n${snapshot.commit}`, Promise.resolve(initialSource)],
             ]);
             const requestedVersions = new Map(Object.entries(options.versions ?? {}));
-            const requestedSources = new Map(Object.entries(options.sources ?? {}));
+            const requestedSources = new Map<string, GitObjectiveSource>();
+            for (const [id, source] of Object.entries(options.sources ?? {})) {
+              if (source.kind !== "git-tree")
+                throw new PilotSourceError(
+                  "Legacy Git binding cannot consume npm package evidence.",
+                );
+              requestedSources.set(id, source);
+            }
             const boundSources = new Map<string, Source>([[objectiveUri, initialSource]]);
             const sourceSignals = new Map<string, AbortSignal>();
             function resourceSignal(uri: string): AbortSignal {
@@ -693,8 +721,9 @@ async function bindPilot<T>(
                         if (source !== undefined) {
                           validateGitPilotSource(objectiveId, bound.version, source);
                           if (
-                            source.commit !== bound.source?.commit ||
-                            source.repositoryTree !== bound.source?.repositoryTree
+                            bound.source?.kind !== "git-tree" ||
+                            source.commit !== bound.source.commit ||
+                            source.repositoryTree !== bound.source.repositoryTree
                           )
                             throw new PilotSourceError(
                               `Conflicting bound snapshot evidence for ${objectiveId}.`,
@@ -703,7 +732,10 @@ async function bindPilot<T>(
                         return { spec: bound, runtime };
                       }
                       if (version !== undefined) requestedVersions.set(objectiveId, version);
-                      if (source !== undefined) requestedSources.set(objectiveId, source);
+                      if (source !== undefined) {
+                        validateGitPilotSource(objectiveId, version ?? "", source);
+                        requestedSources.set(objectiveId, source);
+                      }
                       sourceSignals.set(objectiveId, requestSignal);
                       const spec = await loadPilotSpec(objectiveId, resources);
                       requestSignal.throwIfAborted();
@@ -896,7 +928,9 @@ export interface PilotSourceOptions {
   readonly signal?: AbortSignal;
   readonly reports?: { readonly enabled?: boolean; readonly directory?: string } | undefined;
   readonly versions?: Readonly<Record<string, string>>;
-  readonly sources?: Readonly<Record<string, GitObjectiveSource>>;
+  readonly sources?: Readonly<Record<string, ObjectiveSource>>;
+  readonly packagePreparation?: Omit<PackagePreparationOptions, "cacheDirectory" | "signal">;
+  readonly packageSpecs?: Readonly<Record<string, string>>;
   readonly cacheDirectory?: string;
   readonly probeTimeoutMs?: number | undefined;
   readonly preparationTimeoutMs?: number;

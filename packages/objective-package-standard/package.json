@@ -1,0 +1,32 @@
+{
+  "name": "@potential-guide/objective-package-standard",
+  "version": "0.1.0",
+  "description": "Standalone package standard Objective.",
+  "type": "module",
+  "files": [
+    "objective.yaml",
+    "references",
+    "checks",
+    "observation-inputs.json"
+  ],
+  "exports": {
+    "./objective.yaml": "./objective.yaml"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-objective-package.mjs objective-package-standard",
+    "lint": "biome lint .",
+    "test": "node --test",
+    "typecheck": "node ../../scripts/check-pilot-sources.mjs"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist/package"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@potential-guide/objective-pilot": "workspace:^"
+  }
+}

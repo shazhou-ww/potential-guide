@@ -2,7 +2,7 @@ $schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
 objectives:
   standardize:
     description: Standardize the reusable local execution kernel and its shared Host assembly.
-    objective: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
+    objective: "@potential-guide/objective-package-standard"
     inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
     subject: |
       {

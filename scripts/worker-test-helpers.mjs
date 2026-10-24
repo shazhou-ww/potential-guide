@@ -32,6 +32,7 @@ export async function createWorkerHost(directory) {
     const client = await connectHost(discovery);
     return {
       directory: discovery,
+      diagnostics: () => kernel.diagnostics(),
       async execute(artifactDirectory, subject) {
         const artifact = await readArtifact(artifactDirectory);
         const state = await client.execute(

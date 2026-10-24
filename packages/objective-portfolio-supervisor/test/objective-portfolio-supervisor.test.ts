@@ -97,6 +97,53 @@ function observed(spec: PilotSpec, levelId = "initial"): Envelope<PilotObservati
     },
   };
 }
+
+test("a cancelled queued source revision cannot erase the last confirmed observation", async () => {
+  const initial = goal("frozen");
+  const waiting = deferred<{ directives: [] }>();
+  let hold = false,
+    entered = false;
+  const planner = await createPortfolioPlanner({
+    goals: [initial],
+    periodic: false,
+    observe: async (value) => observed(value.objective, "complete"),
+    policy: async () => {
+      if (hold) {
+        entered = true;
+        return waiting.promise;
+      }
+      return { directives: [] };
+    },
+  });
+  try {
+    hold = true;
+    const refresh = planner.refresh();
+    await until(() => entered);
+    const cancellation = new AbortController();
+    const update = planner.updateGoals(
+      [
+        {
+          ...initial,
+          objective: { ...initial.objective, version: "2".repeat(40) },
+        },
+      ],
+      cancellation.signal,
+    );
+    cancellation.abort();
+    waiting.resolve({ directives: [] });
+    await Promise.all([refresh, update]);
+    const state = await read(planner.state);
+    assert.equal(state.goals[0]?.objective.version, initial.objective.version);
+    assert.equal(state.observations.frozen?.payload?.current.levelId, "complete");
+    assert.equal(
+      state.observations.frozen?.payload?.versions[initial.objective.objectiveId],
+      initial.objective.version,
+    );
+  } finally {
+    waiting.resolve({ directives: [] });
+    await planner.close();
+  }
+});
 function dependenciesObserved(
   spec: PilotSpec,
   dependencies: readonly {

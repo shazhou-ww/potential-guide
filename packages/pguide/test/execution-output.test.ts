@@ -137,7 +137,7 @@ test("scaffold receipts and validate scope have default/Markdown parity; --bogus
       "- Languages: `en-US`",
       "- Check: `ready`",
       "pguide validate pilot",
-      "Commit the Pilot",
+      "Commit source, not generated workers",
     ])
       assert.ok(plain.stdout.includes(text), text);
     await rm(target, { recursive: true });

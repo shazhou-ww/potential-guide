@@ -1,22 +1,11 @@
 import { spawn } from "node:child_process";
-import { readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { lstat, readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stopTree } from "./src/execution.mjs";
 
-const here = dirname(fileURLToPath(import.meta.url));
+const here = fileURLToPath(new URL("./dist/package/", import.meta.url));
 const limit = 262144;
-const fixtures = [
-  "gitignore",
-  "objective.yaml",
-  "checks/marker/worker.cjs",
-  "references/checks/marker/en-US.md",
-  "references/levels/terminal/en-US.md",
-  "references/levels/repaired/en-US.md",
-  "references/problems/marker-incorrect/en-US.md",
-  "references/system/404/en-US.md",
-  "references/system/overview/en-US.md",
-];
 
 class TargetFault extends Error {
   constructor(message, status = 502) {
@@ -74,8 +63,16 @@ process.stdout.on("error",()=>{});
     const path=join(directory,name);await mkdir(dirname(path),{recursive:true});
     await writeFile(path,source,{mode:0o600});
   }
+  for(const [name,file] of Object.entries(payload.markerFiles??{})){
+    if(name.startsWith("/")||name.split("/").some(part=>!part||part==="."||part===".."||part.includes("\\\\")))throw Error("invalid-marker-file");
+    const path=join(directory,"marker-package",name);
+    await mkdir(dirname(path),{recursive:true,mode:0o700});
+    await writeFile(path,Buffer.from(file.base64,"base64"),{mode:file.executable?0o500:0o400});
+  }
   const {check}=await import(pathToFileURL(join(directory,"setup-check.mjs")).href);
-  const result=await check(payload.stage,payload.subject,{signal:controller.signal});
+  const objectivePackages=payload.marker?{"@potential-guide/objective-setup-marker":join(directory,"marker-package")}:{};
+  const objectiveSources=payload.markerDigest?{"@potential-guide/objective-setup-marker":{packageDigest:payload.markerDigest}}:{};
+  const result=await check(payload.stage,payload.subject,{signal:controller.signal,objectivePackages,objectiveSources});
   const identity={hostname:hostname(),user:userInfo().username};
   await rm(directory,{recursive:true,force:true,maxRetries:3});directory=undefined;
   process.stdout.write(JSON.stringify({result,identity}));
@@ -87,16 +84,51 @@ process.stdout.on("error",()=>{});
 
 const quote = (value) => `'${value.replaceAll("'", "'\\''")}'`;
 
-export async function sshRequest(stage, subject) {
+export async function sshRequest(
+  stage,
+  subject,
+  objectivePackages = {},
+  objectiveExecutables = {},
+  markerDigest,
+) {
   validateTarget(subject.target);
   const { target, userHome: _userHome, ...remoteSubject } = subject;
   const files = {
     "setup-check.mjs": 'export {check} from "./src/setup-runtime.mjs";\n',
     "src/setup-runtime.mjs": await readFile(join(here, "runtime", "setup-check.mjs"), "utf8"),
   };
-  for (const name of fixtures)
-    files[`sanity-fixture/${name}`] = await readFile(join(here, "sanity-fixture", name), "utf8");
-  const input = JSON.stringify({ stage, subject: remoteSubject, files });
+  const marker = objectivePackages["@potential-guide/objective-setup-marker"];
+  const markerFiles = Object.create(null);
+  if (stage === "sanity") {
+    if (typeof marker !== "string")
+      throw new TargetFault("Prepare the fixed marker Objective before SSH sanity.", 400);
+    const executable = new Set(
+      objectiveExecutables["@potential-guide/objective-setup-marker"] ?? [],
+    );
+    async function collect(directory, prefix = "") {
+      for (const entry of await readdir(directory, { withFileTypes: true })) {
+        const name = `${prefix}${entry.name}`,
+          path = join(directory, entry.name);
+        const info = await lstat(path);
+        if (info.isDirectory() && !info.isSymbolicLink()) await collect(path, `${name}/`);
+        else if (info.isFile() && !info.isSymbolicLink() && info.nlink === 1)
+          markerFiles[name] = {
+            base64: (await readFile(path)).toString("base64"),
+            executable: executable.has(name) || (info.mode & 0o111) !== 0,
+          };
+        else throw new TargetFault("Marker package links and special files are forbidden.", 400);
+      }
+    }
+    await collect(marker);
+  }
+  const input = JSON.stringify({
+    stage,
+    subject: remoteSubject,
+    files,
+    marker: stage === "sanity",
+    markerFiles,
+    markerDigest,
+  });
   if (Buffer.byteLength(input) > limit)
     throw new TargetFault("remote-payload-limit: helper payload exceeded 256 KiB.", 400);
   const node = quote(target.node ?? "node");
@@ -201,8 +233,17 @@ export async function runSsh(request) {
   });
 }
 
-export async function checkSsh(stage, subject, execute = runSsh) {
-  const result = await execute(await sshRequest(stage, subject));
+export async function checkSsh(
+  stage,
+  subject,
+  execute = runSsh,
+  objectivePackages = {},
+  objectiveExecutables = {},
+  markerDigest,
+) {
+  const result = await execute(
+    await sshRequest(stage, subject, objectivePackages, objectiveExecutables, markerDigest),
+  );
   if (result.code === 255)
     throw new TargetFault(
       "ssh-unreachable: target connection/authentication/trust failed; verify existing host trust and noninteractive authorization on A. No local fallback.",

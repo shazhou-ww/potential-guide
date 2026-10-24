@@ -15,6 +15,7 @@ import { type CheckEvidenceContext, RunEvidence } from "./evidence.js";
 import { parseCheckEnvelope } from "./pilot.js";
 import { stopPosixTree } from "./process-tree.js";
 import type { CheckProbe, CheckResult, DependencyResolution, Envelope, Subject } from "./types.js";
+import type { ObjectiveSource } from "./types.js";
 import { fields, json, ObjectiveConfigurationError, record } from "./validation.js";
 
 function failure(kind: string, cause: unknown, status = 502): Envelope<CheckResult> {
@@ -66,6 +67,9 @@ export function createWorkerCheckProbe(options: {
   readonly directory: string;
   readonly revision: string;
   readonly inputView?: unknown;
+  readonly objectivePackages?: Readonly<Record<string, string>>;
+  readonly objectiveSources?: Readonly<Record<string, ObjectiveSource>>;
+  readonly objectiveExecutables?: Readonly<Record<string, readonly string[]>>;
   readonly timeoutMs?: number;
   readonly evidence?: RunEvidence | false;
   readonly identity?: unknown;
@@ -82,6 +86,9 @@ export function createWorkerCheckProbe(options: {
           revision: options.revision,
           subject: structuredClone(subject) as HostSubject,
           context: {
+            objectivePackages: options.objectivePackages ?? {},
+            objectiveSources: JSON.parse(JSON.stringify(options.objectiveSources ?? {})),
+            objectiveExecutables: JSON.parse(JSON.stringify(options.objectiveExecutables ?? {})),
             environment: Object.fromEntries(
               [
                 "PATH",

@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import checker from "../packages/objective-monorepo-standard/runtime/pilot-checker.cjs";
+import checker from "../packages/objective-monorepo-standard/dist/package/runtime/pilot-checker.cjs";
 
 const report = await checker.checkPackageLayers(fileURLToPath(new URL("..", import.meta.url)));
 const failures = report.findings.filter(({ state }) => state === "fail" || state === "unverified");

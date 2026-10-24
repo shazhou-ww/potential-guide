@@ -66,6 +66,11 @@ export {
   fileResources,
   pilotResourceUri,
   validateGitPilotSource,
+  validatePilotSource,
+  objectiveSourceVersion,
+  sameObjectiveSource,
+  isObjectivePackageName,
+  isObjectiveRevision,
 } from "./resources.js";
 export type * from "./types.js";
 export {

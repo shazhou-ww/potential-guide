@@ -324,6 +324,67 @@ test("dual Behaviors wake pending work, persist before start and never repeat co
         const resources = yield* SubscriptionRef.make<M.ResourceAllocation>({
           kind: "no-resource",
         });
+
+        test("npm package bindings cross actual runner, event, replay and query boundaries without a Git commit", async () => {
+          const f = fixture();
+          const original = command("npm-run");
+          const packageDigest = `sha256-pguide-package-v1:${"d".repeat(64)}`;
+          const objective: PilotSpec = {
+            ...original.objective,
+            objectiveId: "@fixture/behavior-objective",
+            version: packageDigest,
+            source: {
+              kind: "npm-package",
+              packageName: "@fixture/behavior-objective",
+              packageDigest,
+              version: "1.0.0",
+              spec: "@fixture/behavior-objective@^1",
+              resolved: "https://registry.example.test/behavior-objective-1.0.0.tgz",
+              integrity: "sha512-fixture",
+            },
+          };
+          await Effect.runPromise(
+            Effect.scoped(
+              Effect.gen(function* () {
+                const resources = yield* SubscriptionRef.make<M.ResourceAllocation>(available);
+                const requests = yield* SubscriptionRef.make(
+                  R.reduceRegulationRequests(
+                    { ...original, objective },
+                    R.createRegulationRequests(),
+                  ),
+                );
+                const service = yield* coordinator(resources, requests, f.options);
+                yield* Effect.promise(async () => {
+                  await until(() => f.starts.length === 1);
+                  const start = present(f.starts[0]);
+                  assert.equal(
+                    start.context.details.objectiveRevision.packageDigest,
+                    packageDigest,
+                  );
+                  assert.equal(start.context.details.objectiveRevision.commit, undefined);
+                  await start.context.report(observation(start.context));
+                  start.end.resolve({ outcome: { kind: "target-reached" } });
+                  await until(() => M.requestClosed(service.snapshot(), "npm-run"));
+                  await service.flush();
+                  const replay = M.restoreCoordinatorState(
+                    JSON.parse(JSON.stringify(present(f.saved()))),
+                  );
+                  const views = coordinatorViews([replay]);
+                  assert.deepEqual(views.objectives[0]?.objective.source, {
+                    packageName: objective.objectiveId,
+                  });
+                  assert.equal(views.objectives[0]?.revisions[0]?.packageDigest, packageDigest);
+                  assert.equal(
+                    views.runs[0]?.observation?.sources?.[objective.objectiveId]?.kind,
+                    "npm-package",
+                  );
+                  assert.deepEqual(coordinatorViews([service.snapshot()]), views);
+                });
+              }),
+            ),
+          );
+          assert.deepEqual(f.errors, []);
+        });
         const input = R.reduceRegulationRequests(command("one"), R.createRegulationRequests());
         const requests = yield* SubscriptionRef.make(input);
         const service = yield* coordinator(resources, requests, f.options);

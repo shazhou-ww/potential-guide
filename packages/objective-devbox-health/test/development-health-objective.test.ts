@@ -502,7 +502,7 @@ test("task boundaries preserve healthy long tasks and never conflate deadline wi
 
 test("helper and all workers report malformed input as explicit invocation faults", async () => {
   for (const stage of health.stages) {
-    const artifact = await readArtifact(join(objective, "checks", stage));
+    const artifact = await readArtifact(join(objective, "dist", "package", "checks", stage));
     const probe = createWorkerCheckProbe({
       directory: artifact.directory,
       revision: artifact.revision,

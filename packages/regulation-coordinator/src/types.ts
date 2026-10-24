@@ -1,7 +1,7 @@
 import type { Stream } from "@potential-guide/effects";
 import type {
   Envelope,
-  GitObjectiveSource,
+  ObjectiveSource,
   PilotObservation,
   PilotSpec,
   Subject,
@@ -42,7 +42,7 @@ export interface Regulation {
   readonly priority: number;
   readonly requirements?: readonly string[];
   readonly language?: string;
-  readonly sourceBindings?: Readonly<Record<string, GitObjectiveSource>>;
+  readonly sourceBindings?: Readonly<Record<string, ObjectiveSource>>;
 }
 
 export type CoordinatorCommand =
@@ -152,7 +152,7 @@ export interface CoordinatorOptions {
   readonly resolveObjective: (
     objectiveId: string,
     version: string,
-    source: GitObjectiveSource,
+    source: ObjectiveSource,
     signal: AbortSignal,
   ) => Promise<ResolvedObjective>;
   readonly permissions: RegulationPermissions;

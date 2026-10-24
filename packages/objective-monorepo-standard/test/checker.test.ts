@@ -679,6 +679,34 @@ test("executable-only npm packages are valid without library exports or type dec
       publishConfig: { access: "public", tag: "next" },
       scripts: { build: "DO_NOT_RUN", test: "DO_NOT_RUN", typecheck: "DO_NOT_RUN" },
     });
+
+    test("definition-only Objective exports do not invent a JavaScript typing surface", async () => {
+      await fixture(async ({ contract, write, check }) => {
+        const shared = contract.workspaces[0];
+        assert.ok(shared);
+        shared.roles = ["npm", "tool"];
+        shared.runtime = "node";
+        contract.deliveries.push({ ...delivery("npm"), runtime: "node" });
+        const manifest = {
+          name: "shared",
+          version: "1.0.0",
+          exports: { "./objective.yaml": "./objective.yaml" },
+          files: ["objective.yaml"],
+          engines: { node: ">=22.13.0" },
+          publishConfig: { access: "public" },
+          scripts: { build: "DO_NOT_RUN", test: "DO_NOT_RUN", typecheck: "DO_NOT_RUN" },
+        };
+        await write("packages/shared/package.json", manifest);
+        await write("packages/shared/objective.yaml", "subjectSchema: {type: object}\n");
+        assert.equal(has(await check(), "npm-types", "not-applicable"), true);
+        await write("packages/shared/package.json", {
+          ...manifest,
+          exports: { ".": "./dist/index.js" },
+          files: ["dist"],
+        });
+        assert.equal(has(await check(), "npm-types", "unverified"), true);
+      });
+    });
     const report = await check();
     assert.equal(has(report, "npm-exports", "not-applicable"), true);
     assert.equal(has(report, "npm-types", "not-applicable"), true);

@@ -3,12 +3,13 @@ import Module, { createRequire, isBuiltin, syncBuiltinESMExports } from "node:mo
 import { dirname, isAbsolute, relative, sep } from "node:path";
 import timers from "node:timers";
 import { promisify } from "node:util";
+import { compileFunction } from "node:vm";
 import { parentPort, workerData } from "node:worker_threads";
 import type { Json, Subject, WorkerModule } from "./types.js";
 
 const port = parentPort;
 if (!port) throw new Error("Worker runner requires a MessagePort.");
-const { generation, entry, messageBytes } = workerData;
+const { generation, entry, source, messageBytes } = workerData;
 const boundary = dirname(entry);
 const resolver = Module as unknown as {
   _resolveFilename: (name: string, parent: unknown, ...rest: unknown[]) => string;
@@ -24,9 +25,11 @@ resolver._resolveFilename = (name, parent, ...rest) => {
     isAbsolute(path) ||
     path === ".." ||
     path.startsWith(`..${sep}`) ||
-    path.split(sep).includes("node_modules")
+    path.split(sep).some((part) => part.toLowerCase() === "node_modules")
   )
     throw new Error("Artifact import escapes its verified snapshot.");
+  if (!target.toLowerCase().endsWith(".json"))
+    throw new Error("Artifact code dependencies must be bundled; resources may be read as data.");
   return target;
 };
 let current: { id: string; controller: AbortController } | undefined;
@@ -102,6 +105,14 @@ childProcess.spawn = tracked(childProcess.spawn);
 childProcess.execFile = tracked(childProcess.execFile);
 childProcess.exec = tracked(childProcess.exec);
 childProcess.fork = tracked(childProcess.fork);
+const synchronousProcess = () => {
+  throw new Error(
+    "Use request-owned asynchronous subprocesses; synchronous process APIs cannot confirm cancellation.",
+  );
+};
+childProcess.spawnSync = synchronousProcess;
+childProcess.execSync = synchronousProcess;
+childProcess.execFileSync = synchronousProcess;
 syncBuiltinESMExports();
 function send(type: string, fields: Record<string, unknown> = {}) {
   const message = { version: 1, generation, checkId: current?.id, type, ...fields };
@@ -111,8 +122,34 @@ function send(type: string, fields: Record<string, unknown> = {}) {
 }
 let module: WorkerModule;
 try {
-  const loadArtifact = createRequire(import.meta.url);
-  module = loadArtifact(entry) as WorkerModule;
+  // Use the already verified bytes, not a second cold filesystem module load.
+  // Resources retain their immutable snapshot paths and the same import boundary.
+  const commonjs = new Module(entry);
+  commonjs.filename = entry;
+  commonjs.paths = [];
+  commonjs.require = createRequire(entry);
+  if (typeof source !== "string") throw new Error("Verified worker source is required.");
+  const text = (source.charCodeAt(0) === 0xfeff ? source.slice(1) : source).replace(
+    /^#![^\r\n]*/,
+    "",
+  );
+  const executeModule = compileFunction(
+    text,
+    ["exports", "require", "module", "__filename", "__dirname"],
+    {
+      filename: entry,
+    },
+  );
+  executeModule.call(
+    commonjs.exports,
+    commonjs.exports,
+    commonjs.require,
+    commonjs,
+    entry,
+    boundary,
+  );
+  commonjs.loaded = true;
+  module = commonjs.exports as WorkerModule;
   if (typeof module.execute !== "function") throw new Error("Worker must export execute.");
   await module.initialize?.();
   send("ready");

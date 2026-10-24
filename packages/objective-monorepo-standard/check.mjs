@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
-import { reportArguments, withCheckEvidence } from "./runtime/evidence.mjs";
-import checker from "./runtime/pilot-checker.cjs";
+import { reportArguments, withCheckEvidence } from "./dist/package/runtime/evidence.mjs";
+import checker from "./dist/package/runtime/pilot-checker.cjs";
 
 export async function main(phase, subject, evidence, scope = "repository", dependencyProbe) {
   if (!["structure", "deliveries"].includes(phase)) {

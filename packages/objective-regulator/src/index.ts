@@ -7,10 +7,11 @@ import {
 } from "@potential-guide/effects";
 import {
   attainedLevelRank,
-  canonicalObjectiveUri,
   type DependencyProblem,
   type Envelope,
-  type GitObjectiveSource,
+  type ObjectiveSource,
+  objectiveSourceVersion,
+  isObjectiveRevision,
   isJsonValue,
   type JsonObject,
   type LevelRef,
@@ -25,7 +26,7 @@ import {
   parseManifest,
   type Subject,
   SubjectProjectionError,
-  validateGitPilotSource,
+  validatePilotSource,
 } from "@potential-guide/objective-pilot";
 
 export type PermissionGrant =
@@ -81,7 +82,7 @@ export interface RegulationInput {
   readonly language?: string;
   readonly history?: { readonly stalledRuns: number };
   readonly permissions?: RegulationPermissions;
-  readonly sourceBindings?: Readonly<Record<string, GitObjectiveSource>>;
+  readonly sourceBindings?: Readonly<Record<string, ObjectiveSource>>;
 }
 export interface AgentInput {
   readonly binding: AgentBinding;
@@ -248,18 +249,16 @@ function validatePilot(value: unknown): asserts value is PilotSpec {
   fields(value, ["objectiveId", "version", "manifest", "locales"], ["source"]);
   if (
     !text(value.objectiveId) ||
-    !value.objectiveId.startsWith("git+") ||
-    canonicalObjectiveUri(value.objectiveId) !== value.objectiveId ||
     typeof value.version !== "string" ||
-    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(value.version)
+    !isObjectiveRevision(value.objectiveId, value.version)
   )
     throw new RegulationError(
       400,
-      "Pilot requires unique stable Git identities and exact versions.",
+      "Pilot requires a stable package name/content digest or exact legacy Git identity/version.",
     );
   const manifest = parseManifest(JSON.stringify(value.manifest));
-  if (value.source !== undefined)
-    validateGitPilotSource(value.objectiveId, value.version, value.source);
+  if (value.source !== undefined || !value.objectiveId.startsWith("git+"))
+    validatePilotSource(value.objectiveId, value.version, value.source);
   if (!record(value.locales))
     throw new RegulationError(400, "Pilot locales must be reference page maps.");
   for (const language of manifest.languages) {
@@ -368,7 +367,7 @@ function snapshotInput(value: RegulationInput): RegulationInput {
       if (!record(value.sourceBindings))
         throw new RegulationError(400, "Invalid source binding table.");
       for (const [id, source] of Object.entries(value.sourceBindings))
-        validateGitPilotSource(id, source.tree, source);
+        validatePilotSource(id, objectiveSourceVersion(source), source);
     }
     if (!record(value.subject) || (value.language !== undefined && !text(value.language)))
       throw new RegulationError(400, "Invalid subject or language.");
@@ -461,8 +460,11 @@ function decide(input: RegulationInput, observation: PilotObservation): Regulati
     throw new RegulationError(500, "Invalid observation evidence or scoped problems.");
   if (objective.source !== undefined) {
     for (const [id, version] of Object.entries(observation.versions))
-      validateGitPilotSource(id, version, observation.sources?.[id]);
-    if (observation.sources?.[objective.objectiveId]?.commit !== objective.source.commit)
+      validatePilotSource(id, version, observation.sources?.[id]);
+    if (
+      JSON.stringify(observation.sources?.[objective.objectiveId]) !==
+      JSON.stringify(objective.source)
+    )
       throw new RegulationError(500, "Observation snapshot mismatch.");
   }
   if (index >= levelRank(objective, input.spec.strategy.targetLevel))
@@ -473,7 +475,10 @@ function decide(input: RegulationInput, observation: PilotObservation): Regulati
     if (
       dependencies.some(
         (problem) =>
-          !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(observation.versions[problem.objectiveId] ?? ""),
+          !isObjectiveRevision(
+            problem.objectiveId,
+            observation.versions[problem.objectiveId] ?? "",
+          ),
       )
     )
       throw new RegulationError(500, "Missing dependency version evidence.");

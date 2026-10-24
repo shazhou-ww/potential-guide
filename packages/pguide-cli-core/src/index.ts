@@ -605,11 +605,11 @@ export function parseLegacyConfig(source: string): LegacyPguideConfig {
   if (raw.objectives !== undefined) {
     if (!record(raw.objectives)) throw new CliError("objectives must be an object.");
     for (const [name, location] of Object.entries(raw.objectives)) {
-      if (!/^[a-z0-9][a-z0-9-]*$/.test(name))
+      if (!/^(?:[a-z0-9][a-z0-9._-]*|@[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*)$/.test(name))
         throw new CliError(`Invalid Objective name: ${name}.`);
-      if (!nonempty(location) || location.startsWith("@"))
+      if (!nonempty(location) || (location.startsWith("@") && !location.includes("/")))
         throw new CliError(
-          `Objective ${name} must reference a path or Git URI, not another registry entry.`,
+          `Objective ${name} must reference an npm spec or path, not another alias.`,
         );
     }
   }
@@ -670,9 +670,12 @@ export async function readStdin(): Promise<string> {
 export function resolveObjective(location: string, config: PguideConfig): string {
   const name = location.startsWith("@") ? location.slice(1) : location;
   const objectives = setting<Record<string, string>>(config, "objectives.aliases");
+  if (objectives !== undefined && Object.hasOwn(objectives, location))
+    return objectives[location] as string;
   if (objectives !== undefined && Object.hasOwn(objectives, name))
     return objectives[name] as string;
-  if (location.startsWith("@")) throw new CliError(`Unknown registered Objective: ${name}.`);
+  if (location.startsWith("@") && !location.includes("/"))
+    throw new CliError(`Unknown registered Objective: ${name}.`);
   return location;
 }
 

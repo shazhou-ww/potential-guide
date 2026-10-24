@@ -1,0 +1,28 @@
+{
+  "name": "@potential-guide/objective-setup-marker",
+  "version": "0.1.0",
+  "description": "Bounded marker repair Objective used by setup sanity.",
+  "type": "module",
+  "files": [
+    "objective.yaml",
+    "references",
+    "checks"
+  ],
+  "exports": {
+    "./objective.yaml": "./objective.yaml"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-objective-package.mjs objective-setup-marker",
+    "lint": "biome lint .",
+    "test": "node --test",
+    "typecheck": "node ../../scripts/check-pilot-sources.mjs"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist/package"
+  },
+  "license": "MIT"
+}

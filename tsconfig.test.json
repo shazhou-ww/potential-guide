@@ -6,5 +6,5 @@
     "noEmit": true,
     "sourceMap": false
   },
-  "include": ["packages/*/test/**/*.ts"]
+  "include": ["packages/*/test/**/*.ts", "packages/*/src/**/*.d.ts"]
 }

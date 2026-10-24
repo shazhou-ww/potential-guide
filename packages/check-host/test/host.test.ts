@@ -93,6 +93,66 @@ test("HTTP-free execution has one Behavior, reused threads, authentic business r
     await f.close();
   }
 });
+test("cold initialization and shutdown during initialization retain bounded, confirmed ownership", async () => {
+  const f = await fixture();
+  try {
+    await writeFile(
+      join(f.directory, "worker.cjs"),
+      `exports.initialize=async()=>new Promise(done=>setTimeout(done,100));
+exports.execute=async()=>({ok:true});`,
+    );
+    const revision = (await readArtifact(f.directory)).revision;
+    await f.kernel.executeCheck({
+      checkId: "starting",
+      directory: f.directory,
+      revision,
+      subject: {},
+    });
+
+    assert.equal(f.kernel.sample("starting").state, "Queued");
+    assert.equal(f.kernel.diagnostics().initializations, 1);
+    await f.kernel.close();
+    assert.equal(f.kernel.diagnostics().workers, 0);
+    assert.equal(f.kernel.diagnostics().queue, 0);
+    assert.equal(f.kernel.diagnostics().ownedProcesses, 0);
+  } finally {
+    await f.close();
+  }
+});
+test("fresh real-package snapshots can shut down during startup without native handle failures", async () => {
+  const artifact = await readArtifact(
+    resolve(
+      import.meta.dirname,
+      "..",
+      "..",
+      "objective-package-standard",
+      "dist",
+      "package",
+      "checks",
+      "structure",
+    ),
+  );
+  for (let index = 0; index < 8; index++) {
+    const f = await fixture();
+    try {
+      const started = performance.now();
+      await f.kernel.executeCheck({
+        checkId: `starting-real-${index}`,
+        directory: artifact.directory,
+        revision: artifact.revision,
+        subject: {},
+      });
+      assert.equal(f.kernel.diagnostics().initializations, 1);
+      await f.kernel.close();
+      assert.equal(f.kernel.diagnostics().workers, 0);
+      assert.equal(f.kernel.diagnostics().queue, 0);
+      assert.equal(f.kernel.diagnostics().ownedProcesses, 0);
+      assert.ok(performance.now() - started < f.kernel.limits.cleanupMs);
+    } finally {
+      await f.close();
+    }
+  }
+});
 test("real four-route HTTP observation disconnect does not cancel; collection omits secrets", async () => {
   const f = await fixture();
   const token = randomUUID();

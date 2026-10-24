@@ -1,7 +1,11 @@
 import type { AgentProfile, AhpSessionIdentity } from "@potential-guide/cli-core";
 import { pilotSourceBudgets, withPilot } from "@potential-guide/cli-runtime";
 import { Effect } from "@potential-guide/effects";
-import type { GitObjectiveSource, PilotSpec } from "@potential-guide/objective-pilot";
+import {
+  type ObjectiveSource,
+  type PilotSpec,
+  objectiveSourceVersion,
+} from "@potential-guide/objective-pilot";
 import {
   type AgentOutcome,
   RegulationError,
@@ -22,9 +26,9 @@ const controller = new AbortController();
 let started = false;
 
 async function run(message: StartMessage) {
-  const sources: Record<string, GitObjectiveSource> = { ...message.input.sourceBindings };
+  const sources: Record<string, ObjectiveSource> = { ...message.input.sourceBindings };
   const versions: Record<string, string> = Object.fromEntries(
-    Object.entries(sources).map(([id, source]) => [id, source.tree]),
+    Object.entries(sources).map(([id, source]) => [id, objectiveSourceVersion(source)]),
   );
   function collect(spec: PilotSpec) {
     versions[spec.objectiveId] = spec.version;
@@ -38,7 +42,9 @@ async function run(message: StartMessage) {
     return await withPilot(
       message.input.spec.objective.objectiveId,
       message.cwd,
-      message.input.spec.objective.source?.commit,
+      message.input.spec.objective.source?.kind === "git-tree"
+        ? message.input.spec.objective.source.commit
+        : undefined,
       async (spec, pilotRuntime) => {
         if (JSON.stringify(spec) !== JSON.stringify(message.input.spec.objective))
           throw new RegulationError(

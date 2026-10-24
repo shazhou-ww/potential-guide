@@ -18,9 +18,11 @@ tools:
   - "@potential-guide/pguide-supervise"
   - "@potential-guide/pguide-objectives"
   - "@potential-guide/objective-declarations"
-deferredExternalization:
-  - "@potential-guide/git-source"
   - "@potential-guide/objective-devbox-health"
   - "@potential-guide/objective-monorepo-standard"
+  - "@potential-guide/objective-package-standard"
   - "@potential-guide/objective-pguide-setup"
   - "@potential-guide/objective-pguide-self-check"
+  - "@potential-guide/objective-setup-marker"
+deferredExternalization:
+  - "@potential-guide/git-source"

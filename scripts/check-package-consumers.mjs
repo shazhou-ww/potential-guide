@@ -14,6 +14,21 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     );
   }
   const scenarios = [
+    [
+      "npm-objectives",
+      [
+        ...definitions.filter((entry) => entry.objective).map((entry) => entry.name),
+        "@potential-guide/check-host",
+        "@potential-guide/cli-runtime",
+        "@potential-guide/objective-pilot",
+        "@potential-guide/effects",
+        "@potential-guide/regulation-coordinator",
+        "pguide",
+        "@potential-guide/pguide-pilot",
+        "@potential-guide/pguide-regulate",
+        "@potential-guide/pguide-supervise",
+      ],
+    ],
     ["protocol", ["@potential-guide/pilot-protocol"]],
     ["main", ["pguide"]],
     ["pilot", ["@potential-guide/pguide-pilot"]],
@@ -75,7 +90,117 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       }
     }
     for (const entry of entries) visit(entry);
-    await verifyConsumerGraph(directory, closure, entries);
+    const graph = await verifyConsumerGraph(
+      directory,
+      closure,
+      entries,
+      label === "npm-objectives",
+    );
+    if (label === "npm-objectives") {
+      const { defaultPolicy } = await import(
+        pathToFileURL(join(root, "packages", "objective-monorepo-standard", "dist", "index.js"))
+          .href
+      );
+      const reportFile = join(root, ".cache", `npm-objectives-installed-${Date.now()}.json`);
+      await writeFile(
+        join(directory, "objective-consumption.mjs"),
+        `
+import assert from "node:assert/strict";
+import {dirname,resolve,join} from "node:path";
+import {createRequire} from "node:module";
+import {mkdir,writeFile} from "node:fs/promises";
+import {randomUUID} from "node:crypto";
+import {prepareObjectivePackage,withPilot} from "@potential-guide/cli-runtime";
+import {CheckKernel,readArtifact,terminal,serve,ensurePrivateDirectory,publishPrivateFile,removePrivateFile} from "@potential-guide/check-host";
+import {observe} from "@potential-guide/objective-pilot";
+import {Effect} from "@potential-guide/effects";
+import {RequestModel as R,CoordinatorModel as M,coordinatorViews} from "@potential-guide/regulation-coordinator";
+const require=createRequire(import.meta.url);
+process.env.PGUIDE_CHECK_HOST_DIRECTORY=resolve(".cache","owned-host");
+const names=${JSON.stringify(definitions.filter((entry) => entry.objective).map((entry) => entry.name))};
+const origins=${JSON.stringify(Object.fromEntries(tarballs))};
+const packageSpecs=Object.fromEntries(names.map(name=>[name,dirname(require.resolve(name+"/objective.yaml"))]));
+const cacheDirectory=resolve(".cache","frozen");
+const kernel=await CheckKernel.create(resolve(".cache","snapshots"));
+await ensurePrivateDirectory(process.env.PGUIDE_CHECK_HOST_DIRECTORY);
+const token=randomUUID(),host=await serve(kernel,token);
+const descriptor=JSON.stringify({endpoint:host.endpoint,token,pid:process.pid,instance:randomUUID()});
+assert.equal(await publishPrivateFile(process.env.PGUIDE_CHECK_HOST_DIRECTORY,"host.json",descriptor,null),true);
+const inventory={node:process.version,platform:process.platform,graph:${JSON.stringify(graph)},packages:[],artifacts:[]};
+let executions=0;
+try{
+ for(const name of names){
+  const prepared=await prepareObjectivePackage(packageSpecs[name],process.cwd(),{cacheDirectory:join(cacheDirectory,"packages")});
+  const original=await prepareObjectivePackage(origins[name],process.cwd(),{cacheDirectory:join(cacheDirectory,"packages")});
+  assert.equal(prepared.source.packageDigest,original.source.packageDigest,"Installed tree differs from the exact delivery tarball.");
+  inventory.packages.push({name,installedSource:prepared.source,tarballSource:original.source});
+  assert.equal(prepared.source.packageName,name);
+  assert.equal(prepared.source.spec,packageSpecs[name]);
+  await withPilot(packageSpecs[name],process.cwd(),undefined,async(spec)=>{
+   assert.equal(spec.objectiveId,name);
+   assert.equal(spec.version,prepared.source.packageDigest);
+   for(const level of spec.manifest.levels)for(const check of level.checks){
+    const artifact=await readArtifact(join(prepared.directory,"checks",check.id));
+    inventory.artifacts.push({objectiveId:name,levelId:level.id,checkId:check.id,revision:artifact.revision});
+    const checkId="installed-"+executions++;
+    await kernel.executeCheck({checkId,directory:artifact.directory,revision:artifact.revision,subject:{}});
+    while(!terminal(kernel.sample(checkId)))await new Promise(done=>setTimeout(done,10));
+    const state=kernel.sample(checkId);
+    assert.equal(state.state,"Failed");
+    assert.doesNotMatch(state.error,/initialization timed out|Cannot find module|dependencies must be bundled|verified worker source/i);
+   }
+  },{cacheDirectory,packageSpecs,reports:{enabled:false}});
+ }
+ assert.equal(executions,16);
+ assert.equal(kernel.diagnostics().executions,16);
+ const target=resolve(".cache","target");
+ const own={root:target,directory:"packages/shared",roles:["internal"],runtime:"universal",allows:[],entries:["src/index.ts"],generated:[],joins:[],deliveries:[]};
+ const files={
+  "package.json":JSON.stringify({name:"independent-target",private:true}),
+  "README.md":"# Independent",
+  "pnpm-workspace.yaml":"packages: [packages/*, apps/*]",
+  "turbo.json":JSON.stringify({tasks:{build:{outputs:["dist/**"],dependsOn:["^build"]},check:{outputs:[]}}}),
+  "packages/shared/package.json":JSON.stringify({name:"shared",private:true,scripts:{build:"MUST_NOT_EXECUTE",check:"MUST_NOT_EXECUTE"}}),
+  "packages/shared/README.md":"# Shared",
+  "packages/shared/src/index.ts":"export const value=1;",
+  "packages/shared/objectives.yaml":JSON.stringify({$schema:"https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",objectives:{standardize:{description:"Package preparation",objective:"@potential-guide/objective-package-standard",inputSchema:{type:"object",additionalProperties:false,maxProperties:0},subject:JSON.stringify(own)}}})
+ };
+ for(const [name,bytes] of Object.entries(files)){const path=join(target,name);await mkdir(dirname(path),{recursive:true});await writeFile(path,bytes);}
+ let rootSpec,rootObservation;
+ const subject={context:{repo:{rootPath:target,origin:null},path:"."},policy:${JSON.stringify(defaultPolicy)},deliveries:[]};
+ await withPilot(packageSpecs["@potential-guide/objective-monorepo-standard"],process.cwd(),undefined,async(spec,runtime)=>{
+  rootSpec=spec;
+  const result=await Effect.runPromise(observe({spec,subject},runtime));
+  assert.equal(result.status,200,result.message);
+  assert.equal(result.payload.current.levelId,"standardized",JSON.stringify(result));
+  assert.equal(Object.keys(result.payload.versions).length,2);
+  assert.ok(Object.values(result.payload.sources).every(source=>source.kind==="npm-package"));
+  rootObservation=result;
+ },{cacheDirectory,packageSpecs,reports:{enabled:false}});
+ let state=M.createCoordinatorState("installed-consumer");
+ const fact=(value)=>{state=M.reduceCoordinatorState({revision:state.revision+1,occurredAt:"2026-10-24T00:00:00Z",fact:value},state);};
+ fact({type:"request",command:{type:"request",requestRef:"installed-npm",objective:rootSpec,subject,desiredLevel:"terminal",priority:0,origin:{kind:"external"}}});
+ const binding={id:"installed-fixture",configuration:{}};
+ fact({type:"resources",allocation:{kind:"configured",bindings:[{binding,capacity:1}]}});
+ const run={id:"installed-consumer:3",requestRef:"installed-npm",resourceRevision:2,hostBindingRevisionId:M.bindingRevisionId("installed-consumer",binding),limits:{timeoutMs:1000,maxAgentRuns:1,maxStallRuns:1}};
+ fact({type:"run-start",run});
+ fact({type:"run-phase",runId:run.id,phase:"running"});
+ fact({type:"observation",runId:run.id,observation:rootObservation});
+ fact({type:"run-end",runId:run.id,outcome:{kind:"target-reached"}});
+ const replay=M.restoreCoordinatorState(JSON.parse(JSON.stringify(state)));
+ assert.deepEqual(coordinatorViews([replay]),coordinatorViews([state]));
+ assert.equal(R.requestDetails(replay.requests,"installed-npm").objectiveRevision.packageDigest,rootSpec.version);
+ assert.equal(R.requestDetails(replay.requests,"installed-npm").objectiveRevision.commit,undefined);
+ inventory.businessObservation=rootObservation;
+ inventory.coordinator={objective:R.requestDetails(replay.requests,"installed-npm").objective,packageDigest:rootSpec.version,events:state.events.length,replay:true,views:true};
+ await writeFile(${JSON.stringify(reportFile)},JSON.stringify(inventory,null,2)+"\\n",{flag:"wx"});
+ console.log(JSON.stringify({packages:names.length,checks:executions,source:"installed-package-directories",runtime:"installed-cli-runtime",workspaceFallback:false,report:${JSON.stringify(reportFile)}}));
+}finally{await host.close();await removePrivateFile(process.env.PGUIDE_CHECK_HOST_DIRECTORY,"host.json",descriptor);}
+`,
+      );
+      await run(process.execPath, [join(directory, "objective-consumption.mjs")], directory);
+      console.log(`Installed Objective evidence: ${reportFile}`);
+    }
     if (label === "coordinator") {
       await writeFile(
         join(directory, "api.ts"),
@@ -272,6 +397,8 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       }
       for (const bin of definition.bins ?? []) {
         const executable = join(binaries, process.platform === "win32" ? `${bin}.cmd` : bin);
+        assert.ok(existsSync(executable), `Missing installed executable: ${bin}`);
+        if (bin === "pguide-check-host") continue;
         const result = JSON.parse(
           await run(executable, ["--help", "--format", "json"], directory, env),
         );

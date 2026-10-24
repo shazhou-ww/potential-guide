@@ -18,7 +18,19 @@ async function visit(path) {
     if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
       const specifier = node.moduleSpecifier?.text;
       if (specifier?.startsWith(".")) {
-        await visit(join(dirname(path), specifier));
+        await visit(
+          specifier.endsWith("/runtime/evidence.mjs")
+            ? join(
+                root,
+                "..",
+                "..",
+                ".staging",
+                "objective-devbox-health",
+                "runtime",
+                "evidence.mjs",
+              )
+            : join(dirname(path), specifier),
+        );
       } else if (ts.isImportDeclaration(node)) {
         const bindings = imports.get(specifier) ?? new Set();
         for (const binding of node.importClause.namedBindings.elements)
@@ -42,7 +54,15 @@ const text = [
   ...declarations,
   "",
 ].join("\n");
-const destination = join(root, "runtime", "health-check.mjs");
+const destination = join(
+  root,
+  "..",
+  "..",
+  ".staging",
+  "objective-devbox-health",
+  "runtime",
+  "health-check.mjs",
+);
 if (process.argv.includes("--check")) {
   if ((await readFile(destination, "utf8")).replaceAll("\r\n", "\n") !== text)
     throw new Error("Stale health transport runtime; run pnpm health:build.");

@@ -6,7 +6,7 @@ export const bootstrap =
   "let text='';for await(const chunk of process.stdin){text+=chunk;if(Buffer.byteLength(text)>2097152)throw Error('transport-input-limit');}const {source,stage,subject}=JSON.parse(text);const m=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));console.log(JSON.stringify(stage==='sample'?await m.sample(subject):await m.check(stage,subject)));";
 export async function remote(stage, subject, options = {}) {
   const source = await readFile(
-    fileURLToPath(new URL("../runtime/health-check.mjs", import.meta.url)),
+    fileURLToPath(new URL("../dist/package/runtime/health-check.mjs", import.meta.url)),
     "utf8",
   );
   const result = await execute(

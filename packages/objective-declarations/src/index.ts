@@ -4,6 +4,7 @@ import { lstat, readFile, realpath } from "node:fs/promises";
 import { delimiter, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import npa from "npm-package-arg";
 import {
   CliError,
   type GlobalOptions,
@@ -335,11 +336,13 @@ export async function selectObjective(
       throw new CliError(`Objective input must be finite JSON: ${String(cause)}`);
     }
   }
+  const reference = resolveObjective(entry.objective, config);
+  const parsed = npa(reference, dirname(entry.file));
   return {
     location:
-      entry.objective.startsWith("git+") || isAbsolute(entry.objective)
-        ? entry.objective
-        : resolve(dirname(entry.file), entry.objective),
+      parsed.type === "directory" || parsed.type === "file"
+        ? (parsed.fetchSpec ?? reference)
+        : reference,
     binding: { entry, context, input: input === undefined ? {} : input },
     subject: async (spec: PilotSpec) => bindObjective(entry, context, input, spec),
   };

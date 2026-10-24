@@ -34,7 +34,7 @@ import { Exit, startEffect } from "@potential-guide/effects";
 import { selectObjective } from "@potential-guide/objective-declarations";
 import type {
   Envelope,
-  GitObjectiveSource,
+  ObjectiveSource,
   PilotObservation,
   PilotRuntime,
   PilotSpec,
@@ -42,7 +42,8 @@ import type {
 } from "@potential-guide/objective-pilot";
 import {
   ObjectiveConfigurationError,
-  validateGitPilotSource,
+  objectiveSourceVersion,
+  validatePilotSource,
 } from "@potential-guide/objective-pilot";
 import {
   type AgentInput,
@@ -82,14 +83,16 @@ interface Attempt {
 }
 
 interface Regulation {
-  schemaVersion: 4;
+  schemaVersion: 4 | 5;
   regulationId: string;
   createdAt: string;
-  objectiveUri: string;
-  objectiveCommit: string;
-  objectiveTree: string;
-  objectiveSource: GitObjectiveSource;
-  sourceBindings: Record<string, GitObjectiveSource>;
+  objectiveUri?: string;
+  objectiveId?: string;
+  objectiveCommit?: string;
+  objectiveTree?: string;
+  objectivePackageDigest?: string;
+  objectiveSource: ObjectiveSource;
+  sourceBindings: Record<string, ObjectiveSource>;
   binding?: Awaited<ReturnType<typeof selectObjective>>["binding"];
   sourcePath?: string;
   subject: Subject;
@@ -106,6 +109,13 @@ interface Regulation {
   expiresAt?: string;
   attempts: Attempt[];
   history?: { stalledRuns: number };
+}
+
+function regulationObjective(regulation: Regulation): string {
+  const id = regulation.schemaVersion === 5 ? regulation.objectiveId : regulation.objectiveUri;
+  if (typeof id !== "string")
+    throw new CliError("Invalid persisted Objective identity.", 6, "io-error");
+  return id;
 }
 
 export function agentPrompt(input: AgentInput): string {
@@ -469,9 +479,9 @@ async function run(
   try {
     const execute = async (objective: PilotSpec, runtime: PilotRuntime) => {
       if (
-        objective.objectiveId !== regulation.objectiveUri ||
-        objective.version !== regulation.objectiveTree ||
-        objective.source?.commit !== regulation.objectiveCommit
+        objective.objectiveId !== regulationObjective(regulation) ||
+        objective.version !== objectiveSourceVersion(regulation.objectiveSource) ||
+        JSON.stringify(objective.source) !== JSON.stringify(regulation.objectiveSource)
       )
         throw new CliError(
           "Recovery source does not match the pinned Pilot identity and commit; no newer version was selected.",
@@ -559,7 +569,7 @@ async function run(
       return Exit.hasInterrupts(exit) ? undefined : operation.await();
     };
     if (prepared === undefined) {
-      let location = regulation.objectiveUri;
+      let location = regulationObjective(regulation);
       if (regulation.sourcePath !== undefined) {
         try {
           await stat(regulation.sourcePath);
@@ -572,12 +582,16 @@ async function run(
         outcome = await withPilot(location, globals.cwd, regulation.objectiveCommit, execute, {
           propagateError: (cause) => cause instanceof RegulationError,
           versions: Object.fromEntries(
-            Object.entries(regulation.sourceBindings).map(([id, source]) => [id, source.tree]),
+            Object.entries(regulation.sourceBindings).map(([id, source]) => [
+              id,
+              objectiveSourceVersion(source),
+            ]),
           ),
           sources: regulation.sourceBindings,
           ...pilotSourceBudgets(regulation.regulationStrategy?.probe),
           signal: controller.signal,
           reports: reportOptions([], config, globals.cwd),
+          packageSpecs: requiredSetting<Record<string, string>>(config, "objectives.aliases"),
         });
       } catch (cause) {
         if (controller.signal.aborted) throw cause;
@@ -606,7 +620,7 @@ async function run(
         "regulation-error",
         undefined,
         safeAgentValue(
-          `Regulation failed for Objective ${markdownInlineCode(regulation.objectiveUri)}, target ${markdownInlineCode(regulation.targetLevel)}: ${markdownText(safeAgentValue(error.message, regulation.agentProfile))} State: ${markdownInlineCode(join(root, "regulation.json"))}.${inputGuidance === undefined ? ` Inspect the failing check/report before running ${markdownInlineCode(`pguide continue ${regulation.regulationId}`)} with the same configuration and working directory.` : `\n\n${safeAgentValue(inputGuidance, regulation.agentProfile)}`}`,
+          `Regulation failed for Objective ${markdownInlineCode(regulationObjective(regulation))}, target ${markdownInlineCode(regulation.targetLevel)}: ${markdownText(safeAgentValue(error.message, regulation.agentProfile))} State: ${markdownInlineCode(join(root, "regulation.json"))}.${inputGuidance === undefined ? ` Inspect the failing check/report before running ${markdownInlineCode(`pguide continue ${regulation.regulationId}`)} with the same configuration and working directory.` : `\n\n${safeAgentValue(inputGuidance, regulation.agentProfile)}`}`,
           regulation.agentProfile,
         ),
       );
@@ -643,7 +657,7 @@ async function run(
           safeAgentValue(
             {
               regulationId: regulation.regulationId,
-              objectiveId: regulation.objectiveUri,
+              objectiveId: regulationObjective(regulation),
               targetLevel: regulation.targetLevel,
               status: attempt.status ?? "failed",
               ...(outcome === undefined ? {} : { outcome }),
@@ -729,17 +743,26 @@ export async function runRegulate(
       const subject = await selected.subject(spec);
       if (spec.source === undefined)
         throw new CliError("Regulation requires Git directory source evidence.");
+      const initialSources: Record<string, ObjectiveSource> = {};
+      for (const bound of runtime.boundObjectives?.() ?? [spec])
+        if (bound.source !== undefined) initialSources[bound.objectiveId] = bound.source;
       const regulation: Regulation = {
-        schemaVersion: 4,
+        schemaVersion: spec.source.kind === "npm-package" ? 5 : 4,
         regulationId: randomUUID(),
         createdAt: new Date().toISOString(),
-        objectiveUri: spec.objectiveId,
-        objectiveCommit: spec.source.commit,
-        objectiveTree: spec.version,
+        ...(spec.source.kind === "npm-package"
+          ? { objectiveId: spec.objectiveId, objectivePackageDigest: spec.version }
+          : {
+              objectiveUri: spec.objectiveId,
+              objectiveCommit: spec.source.commit,
+              objectiveTree: spec.version,
+            }),
         objectiveSource: spec.source,
-        sourceBindings: { [spec.objectiveId]: spec.source },
+        sourceBindings: initialSources,
         ...(selected.binding === undefined ? {} : { binding: selected.binding }),
-        ...(location.startsWith("git+") ? {} : { sourcePath: resolve(globals.cwd, location) }),
+        ...(spec.source.kind === "npm-package" || location.startsWith("git+")
+          ? {}
+          : { sourcePath: resolve(globals.cwd, location) }),
         subject,
         subjectDigest: digest(subject),
         targetLevel,
@@ -775,6 +798,7 @@ export async function runRegulate(
       ),
       propagateError: (cause) => cause instanceof RegulationError,
       reports: reportOptions([], loaded.value, globals.cwd),
+      packageSpecs: requiredSetting<Record<string, string>>(loaded.value, "objectives.aliases"),
     },
   );
 }
@@ -800,7 +824,7 @@ export async function runContinue(
     record === null ||
     typeof record !== "object" ||
     !("schemaVersion" in record) ||
-    record.schemaVersion !== 4
+    (record.schemaVersion !== 4 && record.schemaVersion !== 5)
   )
     throw new CliError(
       "Legacy continue records are incompatible with cumulative attainment or missing directory tree/commit evidence. Review the v2 Objective and target, then start a new regulation with --pilot <directory> or --objective; pinned evidence is not rebound.",
@@ -822,26 +846,35 @@ export async function runContinue(
       6,
       "io-error",
     );
+  const objectiveId =
+    regulation.schemaVersion === 5 ? regulation.objectiveId : regulation.objectiveUri;
   if (
     regulation.regulationId !== id ||
-    typeof regulation.objectiveUri !== "string" ||
-    !regulation.objectiveUri.startsWith("git+") ||
-    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(regulation.objectiveCommit) ||
-    !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(regulation.objectiveTree) ||
-    regulation.objectiveSource?.kind !== "git-tree" ||
-    regulation.objectiveSource.commit !== regulation.objectiveCommit ||
-    regulation.objectiveSource.tree !== regulation.objectiveTree ||
-    regulation.sourceBindings?.[regulation.objectiveUri]?.commit !== regulation.objectiveCommit ||
-    regulation.sourceBindings[regulation.objectiveUri]?.tree !== regulation.objectiveTree ||
+    typeof objectiveId !== "string" ||
+    (regulation.schemaVersion === 4
+      ? regulation.objectiveId !== undefined ||
+        regulation.objectivePackageDigest !== undefined ||
+        !objectiveId.startsWith("git+") ||
+        !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(regulation.objectiveCommit ?? "") ||
+        regulation.objectiveSource?.kind !== "git-tree" ||
+        regulation.objectiveSource.commit !== regulation.objectiveCommit ||
+        regulation.objectiveSource.tree !== regulation.objectiveTree
+      : regulation.objectiveUri !== undefined ||
+        regulation.objectiveSource?.kind !== "npm-package" ||
+        regulation.objectiveSource.packageDigest !== regulation.objectivePackageDigest ||
+        regulation.objectiveCommit !== undefined ||
+        regulation.objectiveTree !== undefined) ||
+    JSON.stringify(regulation.sourceBindings?.[objectiveId]) !==
+      JSON.stringify(regulation.objectiveSource) ||
     !Array.isArray(regulation.attempts) ||
     !Number.isSafeInteger(regulation.agentExecutionLimits?.timeoutMs) ||
     regulation.agentExecutionLimits.timeoutMs < 1
   )
     throw new CliError("Invalid Pilot regulation recovery record.", 6, "io-error");
   try {
-    validateGitPilotSource(
-      regulation.objectiveUri,
-      regulation.objectiveTree,
+    validatePilotSource(
+      objectiveId,
+      objectiveSourceVersion(regulation.objectiveSource),
       regulation.objectiveSource,
     );
     if (
@@ -851,7 +884,7 @@ export async function runContinue(
     )
       throw new Error("Invalid source binding table.");
     for (const [id, source] of Object.entries(regulation.sourceBindings))
-      validateGitPilotSource(id, source.tree, source);
+      validatePilotSource(id, objectiveSourceVersion(source), source);
   } catch {
     throw new CliError(
       "Invalid directory commit/tree recovery evidence. Start a new regulation; no source version was substituted.",

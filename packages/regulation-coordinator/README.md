@@ -32,12 +32,13 @@ const restored = RequestModel.restoreRegulationRequests(
 ```
 
 The reducer admits immutable Objective, ObjectiveRevision, Target and Request
-facts. Objective identity uses the validated Git repository and directory, Target
-adds the subject, and ObjectiveRevision adds the **commit**, not the path tree
-hash. Keys use version-1 SHA-256 identity encoding with locale-independent JSON
-property ordering. Git address aliases are not merged. The existing exact
-`PilotSpec` transport is retained here; the proposed new source-string protocol
-is not implemented.
+facts. New Objective identity is the actual npm package name, Target adds the
+subject, and ObjectiveRevision adds the versioned **package content digest**.
+Resolved versions, Git commits and registry integrity remain provenance, not
+identity. Keys use version-1 SHA-256 identity encoding with locale-independent JSON
+property ordering. Legacy Git records retain repository/directory/commit semantics
+and replay without interpreting a commit as a package digest. The exact PilotSpec
+and source binding are validated at requests, execution events, replay and views.
 
 Request references are supplied, not randomly generated or allocated during
 replay. The same reference and normalized contents are an idempotent redelivery;

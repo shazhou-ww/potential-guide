@@ -11,11 +11,11 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const require = createRequire(
   new URL("../packages/objective-monorepo-standard/package.json", import.meta.url),
 );
-const { stringify } = require("yaml");
+const { parse } = require("yaml");
 const packageRoot = join(root, "packages", "objective-monorepo-standard");
 const destination = join(
   root,
-  "packages",
+  ".staging",
   "objective-monorepo-standard",
   "runtime",
   "pilot-checker.cjs",
@@ -74,7 +74,7 @@ const notices = `${[...licenses]
   .sort(([a], [b]) => a.localeCompare(b))
   .map(([, license]) => license)
   .join("\n\n---\n\n")}\n`;
-const noticePath = join(root, "packages", "objective-monorepo-standard", "THIRD_PARTY_NOTICES.txt");
+const noticePath = join(root, ".staging", "objective-monorepo-standard", "THIRD_PARTY_NOTICES.txt");
 if (process.argv.includes("--check")) {
   if ((await readFile(destination, "utf8")).replaceAll("\r\n", "\n") !== text)
     throw new Error("Stale monorepo standalone runtime; run pnpm monorepo:build.");
@@ -90,7 +90,14 @@ if (process.argv.includes("--check")) {
 }
 const { packageSubjectSchema, repositorySubjectSchema } = require(destination);
 async function generated(path, content) {
-  const destination = join(packageRoot, path);
+  const destination = join(
+    root,
+    ".staging",
+    path.startsWith("package-standard/")
+      ? "objective-package-standard"
+      : "objective-monorepo-standard",
+    path.replace(/^package-standard\//, ""),
+  );
   if (process.argv.includes("--check")) {
     if (
       (await readFile(destination, "utf8")).replaceAll("\r\n", "\n") !==
@@ -106,37 +113,43 @@ for (const [prefix, subjectSchema] of [
   ["", repositorySubjectSchema],
   ["package-standard/", packageSubjectSchema],
 ]) {
+  const definition = await readFile(
+    join(
+      root,
+      "packages",
+      prefix ? "objective-package-standard" : "objective-monorepo-standard",
+      "objective.yaml",
+    ),
+    "utf8",
+  );
+  const canonical = (value) =>
+    value === null || typeof value !== "object"
+      ? value
+      : Array.isArray(value)
+        ? value.map(canonical)
+        : Object.fromEntries(
+            Object.keys(value)
+              .sort()
+              .map((key) => [key, canonical(value[key])]),
+          );
+  if (
+    JSON.stringify(canonical(parse(definition).subjectSchema)) !==
+    JSON.stringify(canonical(subjectSchema))
+  )
+    throw new Error("Root objective.yaml subjectSchema disagrees with the checker input contract.");
   await generated(
     `${prefix}observation-inputs.json`,
     `{\n  "contract": "bounded-readonly-filesystem-v1",\n  "subjectRoot": ${prefix ? '["root"]' : '["context", "repo", "rootPath"]'}\n}\n`,
   );
-  await generated(
-    `${prefix}objective.yaml`,
-    stringify(
-      {
-        $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json",
-        subjectSchema,
-        levels: [
-          {
-            id: "structured",
-            checks: [{ id: "structure", problems: ["structure-incomplete"] }],
-          },
-          {
-            id: "standardized",
-            checks: [{ id: "deliveries", problems: ["delivery-incomplete"] }],
-          },
-        ],
-        defaultLanguage: "zh-CN",
-        languages: ["zh-CN"],
-      },
-      { aliasDuplicateObjects: false },
-    ),
-  );
+  await generated(`${prefix}objective.yaml`, definition);
 }
 await generated("package-standard/runtime/pilot-checker.cjs", text);
 await generated(
   "package-standard/runtime/evidence.mjs",
-  await readFile(join(packageRoot, "runtime", "evidence.mjs"), "utf8"),
+  await readFile(
+    join(root, ".staging", "objective-monorepo-standard", "runtime", "evidence.mjs"),
+    "utf8",
+  ),
 );
 await generated(
   "package-standard/check.mjs",

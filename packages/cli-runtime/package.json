@@ -32,7 +32,19 @@
     "@potential-guide/effects": "workspace:^",
     "@potential-guide/git-source": "workspace:^",
     "@potential-guide/objective-pilot": "workspace:^",
-    "@potential-guide/pilot-protocol": "workspace:^"
+    "@potential-guide/pilot-protocol": "workspace:^",
+    "npm-package-arg": "catalog:",
+    "pacote": "catalog:",
+    "tar": "catalog:",
+    "@npmcli/arborist": "catalog:",
+    "@npmcli/run-script": "catalog:",
+    "npm-packlist": "catalog:"
+  },
+  "devDependencies": {
+    "@types/npm-package-arg": "catalog:",
+    "@types/pacote": "catalog:",
+    "@types/npmcli__arborist": "catalog:",
+    "@types/npm-packlist": "catalog:"
   },
   "publishConfig": {
     "access": "public"

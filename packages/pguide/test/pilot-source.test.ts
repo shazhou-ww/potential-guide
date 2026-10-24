@@ -215,6 +215,10 @@ test("folder tree versions cover manifest, scripts, References and resources, no
   const unchanged = await bind();
   assert.equal(unchanged.version, previous.version);
   assert.notEqual(unchanged.source?.commit, previous.source?.commit);
+  assert.equal(unchanged.source?.kind, "git-tree");
+  assert.equal(previous.source?.kind, "git-tree");
+  if (unchanged.source?.kind !== "git-tree" || previous.source?.kind !== "git-tree")
+    throw new Error("Expected legacy Git evidence.");
   assert.notEqual(unchanged.source?.repositoryTree, previous.source?.repositoryTree);
   await cp(repo.path, join(repo.root, "same-tree"), { recursive: true });
   await repo.commit();
@@ -247,7 +251,9 @@ test("repository-root Pilot has canonical #/ identity and a verified root tree",
   const result = await withPilot(repo.root, repo.root, undefined, async (spec, runtime) => {
     assert.match(spec.objectiveId, /#\/$/);
     assert.equal(spec.version, await git(repo.root, "rev-parse", `${commit}^{tree}`));
-    assert.equal(spec.source?.directory, "");
+    assert.equal(spec.source?.kind, "git-tree");
+    if (spec.source?.kind !== "git-tree") throw new Error("Expected legacy Git evidence.");
+    assert.equal(spec.source.directory, "");
     return Effect.runPromise(observe({ spec, subject: { name: "root" } }, runtime));
   });
   assert.equal(result.payload?.current.levelId, "ready");

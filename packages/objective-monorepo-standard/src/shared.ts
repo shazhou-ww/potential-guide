@@ -43,6 +43,7 @@ export const ignored = new Set([
   ".git",
   "node_modules",
   ".cache",
+  ".staging",
   ".turbo",
   ".next",
   ".wrangler",

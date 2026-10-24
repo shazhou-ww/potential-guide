@@ -143,7 +143,7 @@ syncBuiltinESMExports();`,
   const target = join(root, "target");
   await mkdir(source);
   await cp(
-    join(repository, "packages", "objective-monorepo-standard", "package-standard"),
+    join(repository, "packages", "objective-package-standard", "dist", "package"),
     join(source, "objective"),
     { recursive: true },
   );
@@ -171,14 +171,6 @@ syncBuiltinESMExports();`,
     await mkdir(join(path, ".."), { recursive: true });
     await writeFile(path, text);
   }
-  const git = async (...args) =>
-    (await execute("git", ["-C", source, ...args], { windowsHide: true })).stdout.trim();
-  await git("init", "-q");
-  await git("config", "user.name", "Fixture");
-  await git("config", "user.email", "fixture@example.invalid");
-  await git("add", ".");
-  await git("commit", "-qm", "Fixed real checker measurement input");
-  const revision = await git("rev-parse", "HEAD");
   const subject = {
     root: target,
     directory: "packages/shared",
@@ -242,6 +234,7 @@ await worker.dispose?.();console.log(JSON.stringify({result,rssMiB:process.memor
       if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
     }
   }
+  let objectiveRevision;
   const invoke = async (directory) => {
     const started = performance.now();
     const result = await execute(
@@ -249,9 +242,7 @@ await worker.dispose?.();console.log(JSON.stringify({result,rssMiB:process.memor
       [
         join(repository, "packages", "pguide-pilot", "dist", "bin", "probe.js"),
         "--pilot",
-        `git+${pathToFileURL(source).href}#objective/`,
-        "--revision",
-        revision,
+        join(source, "objective"),
         "--subject-file",
         subjectFile,
         "--cwd",
@@ -277,6 +268,10 @@ await worker.dispose?.();console.log(JSON.stringify({result,rssMiB:process.memor
     const envelope = JSON.parse(result.stdout);
     assert.equal(envelope.status, 200, result.stdout);
     assert.equal(envelope.payload.current.levelId, "standardized", result.stdout);
+    const revision = envelope.payload.versions["@potential-guide/objective-package-standard"];
+    assert.match(revision, /^sha256-pguide-package-v1:[a-f0-9]{64}$/);
+    if (objectiveRevision === undefined) objectiveRevision = revision;
+    else assert.equal(revision, objectiveRevision);
     const client = await connectHost(directory);
     assert.equal(new URL(client.address.endpoint).hostname, "127.0.0.1");
     const owned = (await entries()).filter(
@@ -308,15 +303,17 @@ await worker.dispose?.();console.log(JSON.stringify({result,rssMiB:process.memor
         node: process.version,
         platform: process.platform,
         artifactRevision: artifact.revision,
+        objectiveRevision,
         inputBytes: Buffer.byteLength(JSON.stringify(subject)),
         fixture: "unmodified real package-standard Objective, structure and deliveries",
         baseline: {
-          scope: "fresh Node process + real checker only, no CLI/Git/discovery",
+          scope: "fresh Node process + real checker only, no CLI/package preparation/discovery",
           samples: baseline,
           medianMs: round(median(baseline.map(({ ms }) => ms))),
         },
         endToEnd: {
-          scope: "real probe CLI + Git binding + discovery + authenticated HTTP + real checker",
+          scope:
+            "real probe CLI + fixed npm package preparation + discovery + authenticated HTTP + real checker",
           order: "process baseline, shared cold, three fresh-service CLIs, six shared hot CLIs",
           cold,
           freshService: fresh,

@@ -1,4 +1,9 @@
-import { canonicalObjectiveUri, pilotResourceUri, validateReferences } from "./resources.js";
+import {
+  canonicalObjectiveUri,
+  isObjectivePackageName,
+  pilotResourceUri,
+  validateReferences,
+} from "./resources.js";
 import type {
   CheckResult,
   Envelope,
@@ -159,7 +164,7 @@ export function parseCheckEnvelope(value: unknown): Envelope<CheckResult> {
     fields(entry, ["objectiveId", "subject", "expectedLevelId"]);
     if (
       typeof entry.objectiveId !== "string" ||
-      !entry.objectiveId.startsWith("git+") ||
+      (!entry.objectiveId.startsWith("git+") && !isObjectivePackageName(entry.objectiveId)) ||
       canonicalObjectiveUri(entry.objectiveId) !== entry.objectiveId ||
       !record(entry.subject) ||
       !json(entry.subject) ||
@@ -200,7 +205,7 @@ export function parseDependencyProblem(value: unknown) {
   if (
     value.kind !== "dependency" ||
     typeof value.objectiveId !== "string" ||
-    !value.objectiveId.startsWith("git+") ||
+    (!value.objectiveId.startsWith("git+") && !isObjectivePackageName(value.objectiveId)) ||
     canonicalObjectiveUri(value.objectiveId) !== value.objectiveId ||
     !record(value.subject) ||
     !json(value.subject) ||

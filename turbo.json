@@ -27,32 +27,53 @@
       "dependsOn": ["build"],
       "outputs": []
     },
+    "@potential-guide/check-host#test": {
+      "dependsOn": ["build", "@potential-guide/objective-package-standard#build"],
+      "outputs": []
+    },
+    "@potential-guide/objective-package-standard#build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/objective-monorepo-standard/src/**",
+        "$TURBO_ROOT$/scripts/build-monorepo-runtime.mjs",
+        "$TURBO_ROOT$/scripts/build-evidence-runtime.mjs",
+        "$TURBO_ROOT$/scripts/build-objective-package.mjs",
+        "$TURBO_ROOT$/scripts/build-check-workers.mjs"
+      ],
+      "outputs": ["dist/**"]
+    },
+    "@potential-guide/objective-setup-marker#build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/scripts/build-objective-package.mjs",
+        "$TURBO_ROOT$/scripts/build-check-workers.mjs"
+      ],
+      "outputs": ["dist/**"]
+    },
     "@potential-guide/objective-pguide-self-check#build": {
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/scripts/build-self-check-runtime.mjs",
+        "$TURBO_ROOT$/scripts/build-evidence-runtime.mjs",
+        "$TURBO_ROOT$/scripts/build-objective-package.mjs",
+        "$TURBO_ROOT$/scripts/build-check-workers.mjs",
         "$TURBO_ROOT$/scripts/self-check-agent.mjs"
       ],
-      "outputs": ["runtime/**", "references/**"]
+      "outputs": ["dist/**"]
     },
     "@potential-guide/objective-monorepo-standard#build": {
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/scripts/build-monorepo-runtime.mjs",
+        "$TURBO_ROOT$/scripts/build-objective-package.mjs",
+        "$TURBO_ROOT$/scripts/build-check-workers.mjs",
         "$TURBO_ROOT$/scripts/build-evidence-runtime.mjs"
       ],
-      "outputs": [
-        "dist/**",
-        "runtime/**",
-        "THIRD_PARTY_NOTICES.txt",
-        "objective.yaml",
-        "package-standard/objective.yaml",
-        "package-standard/check.mjs",
-        "package-standard/runtime/**",
-        "package-standard/THIRD_PARTY_NOTICES.txt"
-      ]
+      "outputs": ["dist/**"]
     },
     "@potential-guide/objective-monorepo-standard#test": {
       "dependsOn": ["build"],
@@ -61,13 +82,25 @@
     },
     "@potential-guide/objective-devbox-health#build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/build-health-runtime.mjs"],
-      "outputs": ["runtime/**"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/scripts/build-health-runtime.mjs",
+        "$TURBO_ROOT$/scripts/build-evidence-runtime.mjs",
+        "$TURBO_ROOT$/scripts/build-objective-package.mjs",
+        "$TURBO_ROOT$/scripts/build-check-workers.mjs"
+      ],
+      "outputs": ["dist/**"]
     },
     "@potential-guide/objective-pguide-setup#build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/build-setup-runtime.mjs"],
-      "outputs": ["runtime/**"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/scripts/build-setup-runtime.mjs",
+        "$TURBO_ROOT$/scripts/build-evidence-runtime.mjs",
+        "$TURBO_ROOT$/scripts/build-objective-package.mjs",
+        "$TURBO_ROOT$/scripts/build-check-workers.mjs"
+      ],
+      "outputs": ["dist/**"]
     },
     "pguide#test": {
       "dependsOn": ["build"],

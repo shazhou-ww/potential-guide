@@ -1,8 +1,9 @@
 # Agent 开发机持续健康 Pilot
 
-本 Pilot 是完整的私有 workspace package；五项检查各有独立职责模块，Docker
-传输使用同源生成的单文件 runtime。使用 `pnpm health:build` 生成，
-`pnpm health:check` 验证新鲜度；snapshot 与容器侧无需安装本 package 依赖。
+本 Objective 是独立 npm 包；五项检查各有独立职责模块，Docker
+传输使用同源生成的单文件 runtime。`pnpm build` 生成忽略的 staging/dist；
+消费 `dist/package` 或准确 tarball，按实际包名/内容 digest 固定，
+不提交生成副本。`pnpm health:check` 验证新鲜度；容器侧无需安装包依赖。
 职责与历史 URI 迁移见 [Pilot packages](../../docs/pilot-packages.md)。
 
 这是独立的 repository-owned Pilot，不新增 CLI 子命令，不依赖模型调用，也不取代

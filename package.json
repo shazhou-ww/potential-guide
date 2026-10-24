@@ -20,12 +20,12 @@
     "monorepo:check": "node scripts/build-monorepo-runtime.mjs --check",
     "setup:build": "node scripts/build-setup-runtime.mjs",
     "setup:check": "node scripts/build-setup-runtime.mjs --check",
-    "workers:build": "node scripts/build-check-workers.mjs",
+    "workers:build": "node scripts/build-objective-package.mjs",
     "workers:check": "node scripts/build-check-workers.mjs --check",
     "bootstrap:pack": "node scripts/create-npm-bootstrap-packages.mjs",
     "build": "turbo run build",
     "check": "pnpm run layers:check && pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run pack:check",
-    "layers:check": "node scripts/check-layers.mjs",
+    "layers:check": "pnpm run build && node scripts/check-layers.mjs",
     "clean": "turbo run clean && node -e \"for (const path of ['.cache', '.turbo']) require('node:fs').rmSync(path, { recursive: true, force: true })\"",
     "deployment:verify": "pnpm run build && node scripts/verify-deployment.mjs",
     "health:verify": "pnpm run build && node scripts/verify-development-health.mjs",
@@ -33,7 +33,7 @@
     "format:check": "biome format .",
     "lint": "turbo run lint && biome lint scripts config",
     "pack:check": "pnpm run build && node scripts/check-packages.mjs",
-    "test": "pnpm settings:check && pnpm schemas:check && pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && pnpm workers:check && turbo run test && node --test scripts/*.test.mjs",
+    "test": "pnpm settings:check && pnpm schemas:check && pnpm workers:build && pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && pnpm workers:check && turbo run test && node --test scripts/*.test.mjs",
     "typecheck": "turbo run typecheck && tsc -p tsconfig.test.json --pretty false"
   },
   "devDependencies": {

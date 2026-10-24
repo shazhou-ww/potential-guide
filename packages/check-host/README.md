@@ -94,7 +94,7 @@ not durable exactly-once delivery. Expired observations return 404.
 Each canonical directory contains self-contained `worker.cjs` and optional
 resources (no node_modules, links, special/hardlinked files; 256 files/64 MiB).
 `readArtifact()` computes SHA-256 over ordered relative names, lengths and all
-bytes. The Host independently verifies and copies those bytes into a private
+bytes, including an execution flag for executable resources. The Host independently verifies and copies those bytes into a private
 execution snapshot. Do not use an entry-only hash or a new scratch path per task.
 Changing a busy directory's revision conflicts; switching waits for old workers
 to exit. The module exports `initialize?`, `execute(subject, context)` and
@@ -102,10 +102,17 @@ to exit. The module exports `initialize?`, `execute(subject, context)` and
 are request-owned. Never retain subjects/results or leave timers/handles behind.
 There is no Host installation step or parent node_modules dependency resolution.
 Workers are trusted local code, **not a sandbox**.
-The runner loads the verified CommonJS entry with a boundary-checked require.
+The runner compiles the already-verified CommonJS bytes, avoiding a second cold
+filesystem module load. Snapshot files stay read-only; executable resources keep
+owner-only execute permission. Relative JSON data can be required inside the
+snapshot, but code dependencies must be bundled; VM dynamic imports cannot fall
+back to a parent node_modules.
 Caller loader/debug flags and `NODE_OPTIONS` are not forwarded to worker threads.
 Request-owned `spawn`, `exec`, `execFile` (including its promisified form), and
 `fork` children are tracked; unfinished children prevent a successful terminal state.
+Synchronous process APIs are refused because they cannot confirm request cancellation.
+Node entries may read Wasm resources or invoke other-language programs through the
+owned asynchronous subprocess APIs; missing interpreters/binaries are explicit failures.
 Forced cleanup signals both the owned POSIX process group and its root (including
 non-detached children), then waits for OS exit acknowledgement within the cleanup
 budget before reporting a terminal failure. Signal delivery alone is not cleanup.

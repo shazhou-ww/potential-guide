@@ -177,7 +177,7 @@ test("rejects invalid domain, unsupported language, undeclared problems and nonc
     Effect.runPromise(
       observe({ spec: { ...spec, objectiveId: "file:///tmp/objective.yaml" }, subject }, runtime),
     ),
-    /canonical Git/,
+    /exact package|canonical Git/,
   );
   assert.equal(calls, 0);
   const invalid = await Effect.runPromise(

@@ -127,5 +127,7 @@ try {
   }
   await checkPackageConsumers(root, destination, packages, tarballs, run);
 } finally {
-  await rm(destination, { recursive: true, force: true });
+  if (process.env.PGUIDE_KEEP_PACK_CONSUMERS === "1")
+    console.log(`Owned consumer fixtures retained: ${destination}`);
+  else await rm(destination, { recursive: true, force: true });
 }

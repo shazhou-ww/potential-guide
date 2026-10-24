@@ -6,7 +6,7 @@ import {
   observationScope,
   validateDependencyEvidence,
 } from "./dependency.js";
-import { canonicalObjectiveUri } from "./resources.js";
+import { isObjectiveRevision } from "./resources.js";
 import type {
   CheckResult,
   Envelope,
@@ -66,13 +66,9 @@ export function observe(
         ): () => Promise<Envelope<PilotObservation>> {
           if (!record(spec)) throw new ObjectiveConfigurationError("PilotSpec must be an object.");
           fields(spec, ["objectiveId", "version", "manifest", "locales"], ["source"]);
-          if (
-            !spec.objectiveId.startsWith("git+") ||
-            canonicalObjectiveUri(spec.objectiveId) !== spec.objectiveId ||
-            !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(spec.version)
-          ) {
+          if (!isObjectiveRevision(spec.objectiveId, spec.version)) {
             throw new ObjectiveConfigurationError(
-              "Observation requires a canonical Git Pilot directory and an exact content version; static working-tree specifications cannot be probed.",
+              "Observation requires an exact package name/content digest or legacy Git binding; static working-tree specifications cannot be probed.",
             );
           }
           const manifest = parseManifest(JSON.stringify(spec.manifest));

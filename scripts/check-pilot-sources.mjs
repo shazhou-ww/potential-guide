@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 async function check(directory) {
   for (const item of await readdir(directory, { withFileTypes: true })) {
-    if (["node_modules", ".turbo", "test"].includes(item.name)) continue;
+    if (["node_modules", ".turbo", "test", "dist"].includes(item.name)) continue;
     const path = join(directory, item.name);
     if (item.isDirectory()) await check(path);
     else if (/\.(?:mjs|cjs)$/.test(item.name))

@@ -55,6 +55,51 @@ function command(
   };
 }
 
+test("npm revisions bind package name and content digest through replay without a Git commit", () => {
+  const packageSpec = (digest: string): PilotSpec => ({
+    ...spec(),
+    objectiveId: "@fixture/objective",
+    version: `sha256-pguide-package-v1:${digest.repeat(64)}`,
+    source: {
+      kind: "npm-package",
+      packageName: "@fixture/objective",
+      packageDigest: `sha256-pguide-package-v1:${digest.repeat(64)}`,
+      spec: "alias@npm:@fixture/objective@^1",
+      resolved: "https://registry.example.test/objective-1.0.0.tgz",
+      version: "1.0.0",
+      integrity: "sha512-fixture",
+    },
+  });
+  let state = RequestModel.createRegulationRequests();
+  state = RequestModel.reduceRegulationRequests(
+    command("npm-one", { objective: packageSpec("a") }),
+    state,
+  );
+  state = RequestModel.reduceRegulationRequests(
+    command("npm-two", { objective: packageSpec("b") }),
+    state,
+  );
+  assert.equal(state.objectives.length, 1);
+  assert.equal(state.targets.length, 1);
+  assert.equal(state.objectiveRevisions.length, 2);
+  assert.deepEqual(state.objectives[0]?.source, { packageName: "@fixture/objective" });
+  assert.equal(
+    RequestModel.requestDetails(state, "npm-one").objectiveRevision.packageDigest,
+    packageSpec("a").version,
+  );
+  assert.equal(RequestModel.requestDetails(state, "npm-one").objectiveRevision.commit, undefined);
+  assert.deepEqual(
+    RequestModel.restoreRegulationRequests(JSON.parse(JSON.stringify(state))),
+    state,
+  );
+  const tampered = JSON.parse(JSON.stringify(state));
+  tampered.objectiveRevisions[0].packageDigest = packageSpec("b").version;
+  assert.throws(
+    () => RequestModel.restoreRegulationRequests(tampered),
+    /snapshot|canonical|replay|mismatch|Invalid/i,
+  );
+});
+
 test("definition upgrades preserve Objective and Target but pin distinct immutable revisions", () => {
   const empty = RequestModel.createRegulationRequests();
   const first = RequestModel.reduceRegulationRequests(command("request-1"), empty);
@@ -75,6 +120,51 @@ test("definition upgrades preserve Objective and Target but pin distinct immutab
   assert.equal(
     RequestModel.requestDetails(second, "request-2").objectiveRevision.commit,
     "b".repeat(40),
+  );
+});
+
+test("npm aliases preserve distinct request provenance without inventing another Objective revision", () => {
+  const packageDigest = `sha256-pguide-package-v1:${"c".repeat(64)}`;
+  const source = {
+    kind: "npm-package" as const,
+    packageName: "@fixture/aliased-objective",
+    packageDigest,
+    version: "1.0.0",
+    resolved: "https://registry.example.test/objective-1.0.0.tgz",
+    integrity: "sha512-fixture",
+    spec: "first@npm:@fixture/aliased-objective@^1",
+  };
+  const objective: PilotSpec = {
+    ...spec(),
+    objectiveId: source.packageName,
+    version: packageDigest,
+    source,
+  };
+  let state = RequestModel.reduceRegulationRequests(
+    command("alias-first", { objective }),
+    RequestModel.createRegulationRequests(),
+  );
+  const secondSource = { ...source, spec: "second@npm:@fixture/aliased-objective@1.0.0" };
+  state = RequestModel.reduceRegulationRequests(
+    command("alias-second", {
+      objective: { ...objective, source: secondSource },
+    }),
+    state,
+  );
+  assert.equal(state.objectives.length, 1);
+  assert.equal(state.objectiveRevisions.length, 1);
+  assert.equal(state.requests.length, 2);
+  assert.equal(
+    RequestModel.requestDetails(state, "alias-first").objectiveRevision.spec.source?.kind,
+    "npm-package",
+  );
+  assert.deepEqual(
+    RequestModel.commandForRequest(state, "alias-second").objective.source,
+    secondSource,
+  );
+  assert.deepEqual(
+    RequestModel.restoreRegulationRequests(JSON.parse(JSON.stringify(state))),
+    state,
   );
 });
 

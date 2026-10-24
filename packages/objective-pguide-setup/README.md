@@ -1,8 +1,10 @@
 # 从控制机 A 配置目标机 B 的 pguide setup Objective
 
-本 Pilot 是完整的私有 workspace package。manifest、References、源码、测试、
-内嵌 sanity fixture 和生成的 SSH runtime 同版本交付；
-构建/新鲜度命令为 `pnpm setup:build` / `pnpm setup:check`。
+本 Objective 是独立 npm 包，身份为实际 package.json.name，版本为完整交付内容 digest。
+sanity marker 由另一个固定包 `@potential-guide/objective-setup-marker` 提供，
+不再内嵌第二个定义。源码/原始资源入库；`pnpm build` 把 worker/SSH runtime
+生成到忽略的 staging/dist，消费 `dist/package` 或准确 tarball，不提交生成副本。
+新鲜度命令为 `pnpm setup:check`。
 职责与历史 URI 迁移见 [Pilot packages](../../docs/pilot-packages.md)。
 
 已有本机 pguide 的设备优先运行独立的

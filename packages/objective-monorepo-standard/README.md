@@ -1,14 +1,14 @@
 # 包自有声明与仓库标准化
 
-本私有 workspace 交付两个自包含 Pilot 目录：
+仓库与包标准化分别交付为两个独立 npm Objective：
 
 - `packages/objective-monorepo-standard/`：仓库共通政策、联合交付与包 Objective 依赖协调。
-- `packages/objective-monorepo-standard/package-standard/`：独立观察一个包的静态准备。
+- `packages/objective-package-standard/`：独立观察一个包的静态准备。
 
-第二个目录不是额外 workspace。两个目录均有 manifest、References、checks 和 standalone
-bundle，可以独立从 Git committed snapshot 消费；不需要安装目标依赖。
-源码共享并由 `pnpm monorepo:build` 生成运行资源、严格 subjectSchema 和第三方许可证；
-`pnpm monorepo:check` 校验新鲜度。不得手改生成物。
+两者分别有一个根 objective.yaml，按实际包名和完整包内容 digest 固定版本。
+源码共享，`pnpm build` 将运行资源、严格 subjectSchema 和许可证生成到忽略的
+staging/dist，按 `dist/package` 或准确 tarball 消费，不再提交 bundle。
+`pnpm monorepo:check` 校验新鲜度。完整规范见 [npm Objective 包](../../docs/pilot-packages.md)。
 
 ## 目录声明
 
@@ -19,7 +19,7 @@ $schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
 objectives:
   standardize:
     description: Prepare this internal library.
-    objective: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/package-standard/
+    objective: "@potential-guide/objective-package-standard"
     subject: |
       {
         "root": context.repo.rootPath,
@@ -30,8 +30,8 @@ objectives:
 ```
 
 `subject` 是直接 JSONata，不是模板对象。Unit 允许省略输入。
-声明不含 target、revision 或 manifest 文件名。依赖调用要求可复现的 canonical Git Pilot
-目录 URI；不解析用户配置别名，不把相对文件目录猜成远程来源。
+声明不含 target、revision 或 manifest 文件名。业务依赖使用实际包名，
+调用方在明确准备边界解析 npm 来源并固定完整内容 digest，不把相对目录猜成远程来源。
 `root` 为绝对 checkout 路径，`directory`、入口和配置路径为显式仓库/包相对 POSIX 路径。
 绑定上下文仅包含 `context.repo`（`rootPath`、`origin`）和 `context.path`。
 仓库级 subject 保留该结构；包级 subject 显式投影 root/directory，不把旧的 opaque

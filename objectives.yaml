@@ -2,7 +2,7 @@ $schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
 objectives:
   standardize:
     description: Coordinate package-owned standardization and repository-wide delivery requirements.
-    objective: git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-monorepo-standard/
+    objective: "@potential-guide/objective-monorepo-standard"
     inputSchema:
       type: object
       additionalProperties: false
@@ -28,7 +28,7 @@ objectives:
             "id": "public-library-suite",
             "purpose": "Publish the public packages as consumable npm libraries through package-specific releases.",
             "kind": "npm",
-            "packages": ["@potential-guide/check-host","@potential-guide/effects","@potential-guide/git-source","@potential-guide/objective-pilot","@potential-guide/objective-regulator","@potential-guide/objective-portfolio-supervisor","@potential-guide/regulation-coordinator","@potential-guide/cli-core","@potential-guide/pguide-config","@potential-guide/pguide-agents","pguide","@potential-guide/pilot-protocol","@potential-guide/cli-runtime","@potential-guide/objective-declarations","@potential-guide/pguide-pilot","@potential-guide/pguide-regulate","@potential-guide/pguide-supervise","@potential-guide/pguide-objectives"],
+            "packages": ["@potential-guide/check-host","@potential-guide/effects","@potential-guide/git-source","@potential-guide/objective-pilot","@potential-guide/objective-regulator","@potential-guide/objective-portfolio-supervisor","@potential-guide/regulation-coordinator","@potential-guide/cli-core","@potential-guide/pguide-config","@potential-guide/pguide-agents","pguide","@potential-guide/pilot-protocol","@potential-guide/cli-runtime","@potential-guide/objective-declarations","@potential-guide/pguide-pilot","@potential-guide/pguide-regulate","@potential-guide/pguide-supervise","@potential-guide/pguide-objectives","@potential-guide/objective-monorepo-standard","@potential-guide/objective-package-standard","@potential-guide/objective-devbox-health","@potential-guide/objective-pguide-setup","@potential-guide/objective-pguide-self-check","@potential-guide/objective-setup-marker"],
             "entry": {"package": "@potential-guide/objective-pilot", "path": "src/index.ts"},
             "runtime": "node", "resources": [], "services": [], "capabilities": [], "independent": false
           },
