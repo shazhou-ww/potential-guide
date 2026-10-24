@@ -1,0 +1,365 @@
+{
+  "sourceCommit": "bb8055e0728c8b4b018419c4f65903e8fe94d38b",
+  "sourceArchiveSha256": "30c8cb98c0a7fba83f0325e53fd41d4694a1b1bf364b5451f52789e53a4912b1",
+  "packages": [
+    {
+      "name": "@potential-guide/objective-monorepo-standard",
+      "version": "0.1.0",
+      "sha256": "786882c2889b3a668076fe7401fc6120e356a6a369980d717850431506480e48"
+    },
+    {
+      "name": "@potential-guide/objective-package-standard",
+      "version": "0.1.0",
+      "sha256": "154a218f19de5e683057a2e559e0fec4f1daa8dbf03b806e202de1bdc68f6526"
+    },
+    {
+      "name": "@potential-guide/objective-devbox-health",
+      "version": "0.1.0",
+      "sha256": "ed241b66bbe408d49bdcc0e6c6b5922885ef4f2c79df42e5403775159ad41ba6"
+    },
+    {
+      "name": "@potential-guide/objective-pguide-setup",
+      "version": "0.1.0",
+      "sha256": "501421fe2caa8378f8dfd0f8723408c5e347f677fa50c3df68da526cdebc7183"
+    },
+    {
+      "name": "@potential-guide/objective-pguide-self-check",
+      "version": "0.1.0",
+      "sha256": "029e53a46e818697fadf321dfb8069c35c2820d1ef40b07078ac1d75fde790a1"
+    },
+    {
+      "name": "@potential-guide/objective-setup-marker",
+      "version": "0.1.0",
+      "sha256": "1480fe9ad1a813eec1d8ad43d27ecad60222670ae230c3bd24bcc7012c55d62c"
+    },
+    {
+      "name": "@potential-guide/check-host",
+      "version": "0.1.0",
+      "sha256": "0c95de3071c4176118d601af7b5aa766f65c5d9b20f4dfed80f7e9132da758bb"
+    },
+    {
+      "name": "@potential-guide/effects",
+      "version": "0.1.0-rc.0",
+      "sha256": "0fe03517fa0d74ee2e6f6d45fa1b9716fd3de939c80654ed3283478b5b6c7c00"
+    },
+    {
+      "name": "@potential-guide/git-source",
+      "version": "0.1.0-rc.0",
+      "sha256": "3a4a742d893fda8b32e35b95c9a5b7784450243ad79155437c455f0bf7d7f813"
+    },
+    {
+      "name": "@potential-guide/objective-pilot",
+      "version": "0.2.0-rc.0",
+      "sha256": "98539bd6977e89fd0e5e6801df3f62f38f6d3aff6f171d675266bd45b4df9558"
+    },
+    {
+      "name": "@potential-guide/objective-regulator",
+      "version": "0.4.0-rc.0",
+      "sha256": "6736462b7eaec28be3a4117c9e03fdb75b718db2c23e064a7017ac1776000798"
+    },
+    {
+      "name": "@potential-guide/objective-portfolio-supervisor",
+      "version": "0.4.0-rc.0",
+      "sha256": "870bfd0ebb69b5ffcfff9a466cb99270b3f87adddb2dcc8dd15f2a52854428d6"
+    },
+    {
+      "name": "@potential-guide/regulation-coordinator",
+      "version": "0.1.0-rc.0",
+      "sha256": "56dbcfff6a65794a429b2eb34b78dbc22fd2245db6850ab529165dfd9c737998"
+    },
+    {
+      "name": "@potential-guide/cli-core",
+      "version": "0.3.0-rc.0",
+      "sha256": "e8e895d6774f28b3027da9719a6815a864a9f50010cf15a4d04ec7cc9cd9680e"
+    },
+    {
+      "name": "@potential-guide/pguide-config",
+      "version": "0.3.0-rc.0",
+      "sha256": "91af710aaa1796e0ada376ac693a7d775c29e1598da434a27b36e42dbf91f3a9"
+    },
+    {
+      "name": "@potential-guide/pguide-agents",
+      "version": "0.1.0",
+      "sha256": "436a79cdb6e73f034582a578bbaa168f2134f1cacce2bfc4013728969b059da4"
+    },
+    {
+      "name": "pguide",
+      "version": "0.4.0-rc.0",
+      "sha256": "2824659528851779c71ef8391cfb24d5aa23bbd245197b4ba3de475785ccca13"
+    },
+    {
+      "name": "@potential-guide/pilot-protocol",
+      "version": "0.1.0-rc.0",
+      "sha256": "35b8703b932334b5463ae7f1bb823c00dd636761aa68ac77a9839f580bfa335e"
+    },
+    {
+      "name": "@potential-guide/cli-runtime",
+      "version": "0.1.0-rc.0",
+      "sha256": "ba282a7a79adec2a4b16fa0954226306836b04e0d54c22b3b630b43f7b665901"
+    },
+    {
+      "name": "@potential-guide/objective-declarations",
+      "version": "0.1.0-rc.0",
+      "sha256": "16b5eb785fc463bf8994812c698808bd46845723ca6c69a88b951ebcf3efd17a"
+    },
+    {
+      "name": "@potential-guide/pguide-pilot",
+      "version": "0.4.0-rc.0",
+      "sha256": "6b62fe4665c9c7adbcf7a3e371f521a1048b9f2055331cee64e0690875b91d6e"
+    },
+    {
+      "name": "@potential-guide/pguide-regulate",
+      "version": "0.4.0-rc.0",
+      "sha256": "f7a3a1f6ac9760a03c84d02ef1806341d409886c7904e5860263abda400715cd"
+    },
+    {
+      "name": "@potential-guide/pguide-supervise",
+      "version": "0.4.0-rc.0",
+      "sha256": "56599554d1e9e8101f7787cb3c9efb562c6283a0a183d53ac2b5884ab808fa77"
+    },
+    {
+      "name": "@potential-guide/pguide-objectives",
+      "version": "0.4.0-rc.0",
+      "sha256": "11da63fac7b38c6a17aabf881462972890f2e51ef3acff679d9fd4e5388164b3"
+    }
+  ],
+  "objectives": [
+    {
+      "name": "@potential-guide/objective-monorepo-standard",
+      "installedSource": {
+        "kind": "npm-package",
+        "packageName": "@potential-guide/objective-monorepo-standard",
+        "packageDigest": "sha256-pguide-package-v1:e35bc8ddeb7c16299441ca521e24dd93f17f392526092d66d073dcd48cbaa056",
+        "spec": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\npm-objectives\\node_modules\\.pnpm\\@potential-guide+objective-_29204966f1d8b94e854a215c90e67653\\node_modules\\@potential-guide\\objective-monorepo-standard",
+        "resolved": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\npm-objectives\\node_modules\\.pnpm\\@potential-guide+objective-_29204966f1d8b94e854a215c90e67653\\node_modules\\@potential-guide\\objective-monorepo-standard",
+        "version": "0.1.0",
+        "integrity": "sha512-sP8KMbkCN1nui40kO/Oq1zV0fPFfogTCxM2W5ZNfVA7CNUA8lYHYFNLkiyDVNX4fbOfQz33+k6/8LFlhP+lr/w=="
+      },
+      "tarballSource": {
+        "kind": "npm-package",
+        "packageName": "@potential-guide/objective-monorepo-standard",
+        "packageDigest": "sha256-pguide-package-v1:e35bc8ddeb7c16299441ca521e24dd93f17f392526092d66d073dcd48cbaa056",
+        "spec": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\potential-guide-objective-monorepo-standard-0.1.0.tgz",
+        "resolved": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\potential-guide-objective-monorepo-standard-0.1.0.tgz",
+        "version": "0.1.0",
+        "integrity": "sha512-KFg0kD1ZcwWavhl9Tq5A2yGx6EewiO6PZu2T1idW5S5ppwvachWR4mVt3HiUoYWxE3yG262XvyFDwEln3beDBw=="
+      }
+    },
+    {
+      "name": "@potential-guide/objective-package-standard",
+      "installedSource": {
+        "kind": "npm-package",
+        "packageName": "@potential-guide/objective-package-standard",
+        "packageDigest": "sha256-pguide-package-v1:ceb529b5204b0ff55047973e12d33d48ee75444c94a84c6b64ea775055713d31",
+        "spec": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\npm-objectives\\node_modules\\.pnpm\\@potential-guide+objective-_4b7262d05ad6f620110be8ee4891cce9\\node_modules\\@potential-guide\\objective-package-standard",
+        "resolved": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\npm-objectives\\node_modules\\.pnpm\\@potential-guide+objective-_4b7262d05ad6f620110be8ee4891cce9\\node_modules\\@potential-guide\\objective-package-standard",
+        "version": "0.1.0",
+        "integrity": "sha512-UA1tyEE+ozXbnOwxAC7DMAW4jKrEXx/Bb76ZRNa0lljIJhLI6bDTaQXt1ia45xpKJqOy1viHISc1LRX48M9UBw=="
+      },
+      "tarballSource": {
+        "kind": "npm-package",
+        "packageName": "@potential-guide/objective-package-standard",
+        "packageDigest": "sha256-pguide-package-v1:ceb529b5204b0ff55047973e12d33d48ee75444c94a84c6b64ea775055713d31",
+        "spec": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\potential-guide-objective-package-standard-0.1.0.tgz",
+        "resolved": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\potential-guide-objective-package-standard-0.1.0.tgz",
+        "version": "0.1.0",
+        "integrity": "sha512-zEWzNoxuI52Bhb6B4Yz90MIo+7YzPLnMWsm4wdrCjGSp9rufVOzNHaznCDIkvABbyDRHBJDC48aRSYtj0orovw=="
+      }
+    },
+    {
+      "name": "@potential-guide/objective-devbox-health",
+      "installedSource": {
+        "kind": "npm-package",
+        "packageName": "@potential-guide/objective-devbox-health",
+        "packageDigest": "sha256-pguide-package-v1:927a08ef6f311140caf36a00b5f7ac6aa9ba028045940275c513644a91462025",
+        "spec": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\npm-objectives\\node_modules\\.pnpm\\@potential-guide+objective-_4eba796da259163b4de2d2b8ac65e30e\\node_modules\\@potential-guide\\objective-devbox-health",
+        "resolved": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\npm-objectives\\node_modules\\.pnpm\\@potential-guide+objective-_4eba796da259163b4de2d2b8ac65e30e\\node_modules\\@potential-guide\\objective-devbox-health",
+        "version": "0.1.0",
+        "integrity": "sha512-u9FNhetpLGLUb8FylWqbtCicARaEYe+hl78nfbcJJ6ffKpnMvTJQXVuplxeVEPbOMRxOHQse8QWZsUUYRsJRgA=="
+      },
+      "tarballSource": {
+        "kind": "npm-package",
+        "packageName": "@potential-guide/objective-devbox-health",
+        "packageDigest": "sha256-pguide-package-v1:927a08ef6f311140caf36a00b5f7ac6aa9ba028045940275c513644a91462025",
+        "spec": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\potential-guide-objective-devbox-health-0.1.0.tgz",
+        "resolved": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\potential-guide-objective-devbox-health-0.1.0.tgz",
+        "version": "0.1.0",
+        "integrity": "sha512-RaleFcGBROGsJbO8yMHbtNB4Gg6AsCj5tjWJdV3dbc/9YO5L+P1L1FtAYpDxdzWCIh2lZduQCD+ZLC3VfuiKrQ=="
+      }
+    },
+    {
+      "name": "@potential-guide/objective-pguide-setup",
+      "installedSource": {
+        "kind": "npm-package",
+        "packageName": "@potential-guide/objective-pguide-setup",
+        "packageDigest": "sha256-pguide-package-v1:cae4251127effb1ec96b8383b19d992dd91e51f70a983fbb9ea0a9c233b9636a",
+        "spec": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\npm-objectives\\node_modules\\.pnpm\\@potential-guide+objective-_3578a70b257dc37cc5f4c00266baa5d2\\node_modules\\@potential-guide\\objective-pguide-setup",
+        "resolved": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\npm-objectives\\node_modules\\.pnpm\\@potential-guide+objective-_3578a70b257dc37cc5f4c00266baa5d2\\node_modules\\@potential-guide\\objective-pguide-setup",
+        "version": "0.1.0",
+        "integrity": "sha512-pH6KgVn7nmo8eIbX4ZdgB8JheJG0ey1acRUh9UNffkdedxN7iyn8tjB/JaSiBulxG2IaTgy84e5qsWE+A9dfNg=="
+      },
+      "tarballSource": {
+        "kind": "npm-package",
+        "packageName": "@potential-guide/objective-pguide-setup",
+        "packageDigest": "sha256-pguide-package-v1:cae4251127effb1ec96b8383b19d992dd91e51f70a983fbb9ea0a9c233b9636a",
+        "spec": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\potential-guide-objective-pguide-setup-0.1.0.tgz",
+        "resolved": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\potential-guide-objective-pguide-setup-0.1.0.tgz",
+        "version": "0.1.0",
+        "integrity": "sha512-NeENYHjwkelia2xhqfIwxRvWqodfvgzKHEdWewTp/0Q1McPd6J7qr6cSm+lAq2WRYzHDJN+ZFgkFcQy4oZobMA=="
+      }
+    },
+    {
+      "name": "@potential-guide/objective-pguide-self-check",
+      "installedSource": {
+        "kind": "npm-package",
+        "packageName": "@potential-guide/objective-pguide-self-check",
+        "packageDigest": "sha256-pguide-package-v1:c3c4ad6b1f8da3dc2eea39853bc4d9aaf5b4d8c38ee6fe59922cbe525391591d",
+        "spec": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\npm-objectives\\node_modules\\.pnpm\\@potential-guide+objective-_6e7e0ddee267fb813987ca77decb2e13\\node_modules\\@potential-guide\\objective-pguide-self-check",
+        "resolved": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\npm-objectives\\node_modules\\.pnpm\\@potential-guide+objective-_6e7e0ddee267fb813987ca77decb2e13\\node_modules\\@potential-guide\\objective-pguide-self-check",
+        "version": "0.1.0",
+        "integrity": "sha512-bFepdCAhZgyRHfUQ7A/ZIUyQUfD9mOX+rs35sGde36cBlVhpEr5D6kmeHoJOwNnxtCby8aosUmv9dvXsBHy/wA=="
+      },
+      "tarballSource": {
+        "kind": "npm-package",
+        "packageName": "@potential-guide/objective-pguide-self-check",
+        "packageDigest": "sha256-pguide-package-v1:c3c4ad6b1f8da3dc2eea39853bc4d9aaf5b4d8c38ee6fe59922cbe525391591d",
+        "spec": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\potential-guide-objective-pguide-self-check-0.1.0.tgz",
+        "resolved": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\potential-guide-objective-pguide-self-check-0.1.0.tgz",
+        "version": "0.1.0",
+        "integrity": "sha512-HDFJH7JnlIcI9FWrSwvm430x1Y/35niMTxx+ss9A1E5ESSApba8mbt+zFL5jHK+iN1HUsMEayJ71cyxJGXKe2w=="
+      }
+    },
+    {
+      "name": "@potential-guide/objective-setup-marker",
+      "installedSource": {
+        "kind": "npm-package",
+        "packageName": "@potential-guide/objective-setup-marker",
+        "packageDigest": "sha256-pguide-package-v1:c4cdd02ea8d0d21ec8ecb1a9410a651d7ac223d42f080cd25eb56936b84ed8aa",
+        "spec": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\npm-objectives\\node_modules\\.pnpm\\@potential-guide+objective-_3045f6dca8b08b28acb592b0d1c4b63d\\node_modules\\@potential-guide\\objective-setup-marker",
+        "resolved": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\npm-objectives\\node_modules\\.pnpm\\@potential-guide+objective-_3045f6dca8b08b28acb592b0d1c4b63d\\node_modules\\@potential-guide\\objective-setup-marker",
+        "version": "0.1.0",
+        "integrity": "sha512-TnQ5oAeUnN1QZCg/gXdBms5DyAZkuycMgvuSX8UWDQSkLPFDQQx/3xN3dZ8xonlnwdrNwG82OhEhSKi40SYryg=="
+      },
+      "tarballSource": {
+        "kind": "npm-package",
+        "packageName": "@potential-guide/objective-setup-marker",
+        "packageDigest": "sha256-pguide-package-v1:c4cdd02ea8d0d21ec8ecb1a9410a651d7ac223d42f080cd25eb56936b84ed8aa",
+        "spec": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\potential-guide-objective-setup-marker-0.1.0.tgz",
+        "resolved": "D:\\Code\\npm-pilot-deployment-20261024\\source\\.cache\\potential-guide-packs-zpy0Vl\\potential-guide-objective-setup-marker-0.1.0.tgz",
+        "version": "0.1.0",
+        "integrity": "sha512-D13M3pof1kn+G0rhJqJbe9Z+cK4cJTie+xQ9ZuNgHMFB2SXGiCWDo8dzYCcPFEPMGA2GEbcbmGzAwtp4Rq9Hug=="
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "objectiveId": "@potential-guide/objective-monorepo-standard",
+      "levelId": "structured",
+      "checkId": "structure",
+      "revision": "61e2dfe1214599334c20b65ab0a1ba5e7110a98276a3fa2826bb3f95ef7bf022"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-monorepo-standard",
+      "levelId": "standardized",
+      "checkId": "deliveries",
+      "revision": "0ce9c4e17c046bff1f360d444a9bc7f7524629c810f3d561585419b7c5be6285"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-package-standard",
+      "levelId": "structured",
+      "checkId": "structure",
+      "revision": "6c8f6b949c13935cfcd63d66c0400a24608a2d64b0bf35f76932e82edba05a82"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-package-standard",
+      "levelId": "standardized",
+      "checkId": "deliveries",
+      "revision": "fcf519b1884897c40a0cfbd52a46bece1b7279c578b7331c261e777af0fbbf2c"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-devbox-health",
+      "levelId": "managed",
+      "checkId": "identity",
+      "revision": "38c3cfde559066d4f0b6342411baa53c0b266d6df53083091a5f142b85f4558e"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-devbox-health",
+      "levelId": "system-ready",
+      "checkId": "system",
+      "revision": "93b503f3fd2227140f0dfc966393d9fc8b148adb1251ccec840bff401195d1e8"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-devbox-health",
+      "levelId": "development-ready",
+      "checkId": "toolchains",
+      "revision": "958db7064ae41cc34e1e5d8b44b3eaeddf01cbb2b2fb89723f819ef8bd93cff5"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-devbox-health",
+      "levelId": "orderly",
+      "checkId": "order",
+      "revision": "74b3e3e1aedef931aa31202e25005db030785d151afb099c1a84f1941653bbfa"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-devbox-health",
+      "levelId": "sustainable",
+      "checkId": "sustainability",
+      "revision": "0885ceae065be4861cd448ee5d8b10886224599cfcc4aef2dce79364da884197"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-pguide-setup",
+      "levelId": "installed",
+      "checkId": "installation",
+      "revision": "faa6080ceb1b3bf3713cb45183b4f40f9b978fedc45498a5ab0d28bca7de23d1"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-pguide-setup",
+      "levelId": "configured",
+      "checkId": "configuration",
+      "revision": "d7e511b6869780cc330c20fd3cd583399b0a930a88112d4f6a8c6f2f10682c90"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-pguide-setup",
+      "levelId": "verified",
+      "checkId": "sanity",
+      "revision": "a74423a3ccf51e3c2a9b314a7a36305c5a309ef9ddec65e9e70b13f07e30aed7"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-pguide-self-check",
+      "levelId": "installed",
+      "checkId": "installation",
+      "revision": "7144f680a5e5631a92f639e783500230751d8588222b7b7ea79e0191d106a247"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-pguide-self-check",
+      "levelId": "configured",
+      "checkId": "configuration",
+      "revision": "7e92ce9260015ac421e3d3aab2db0124b7144f7df76493842c458105ffdfff05"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-pguide-self-check",
+      "levelId": "verified",
+      "checkId": "sanity",
+      "revision": "895660a4c964f04f96458c94933288bdaf4741bba6e918bd8850db0524b9f01e"
+    },
+    {
+      "objectiveId": "@potential-guide/objective-setup-marker",
+      "levelId": "repaired",
+      "checkId": "marker",
+      "revision": "6e18d22fbe2b7da7e59ef334b8c309aec58bafd001646164dcde54b071725c79"
+    }
+  ],
+  "coordinator": {
+    "objective": {
+      "key": "objective:2599b12a34487caf9752f3d8cf4a0a413029a06340ec6aabbb93494c7b003cf1",
+      "source": {
+        "packageName": "@potential-guide/objective-monorepo-standard"
+      }
+    },
+    "packageDigest": "sha256-pguide-package-v1:e35bc8ddeb7c16299441ca521e24dd93f17f392526092d66d073dcd48cbaa056",
+    "events": 6,
+    "replay": true,
+    "views": true
+  },
+  "workspaceFallback": false
+}

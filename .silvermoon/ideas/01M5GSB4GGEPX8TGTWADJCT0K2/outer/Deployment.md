@@ -1,8 +1,10 @@
 # Deployment
 
-2026-10-24 按单 Objective npm 包及包 digest 身份重新准备；本轮不执行新部署。
+2026-10-24 已按单 Objective npm 包及包 digest 身份完成固定提交的隔离部署消费，
+见 [Npm-consumption.md](./Npm-consumption.md) 及其准确包/产物 inventory。
 原 [Consumption.md](./Consumption.md) 与 inventory 是旧版本消费证据，仍保留全部失败，
-不证明新包边界或新身份已完成；D-* 因要求变化重置。不把既有实施验收当作新范围或发布授权。
+不以旧证据替代新验证。D-* 根据本轮实际完成结果勾选；
+实施/部署批准按用户对父 Agent 的明确委托执行，不包含 registry 发布或生产变更。
 
 ## Steps
 
