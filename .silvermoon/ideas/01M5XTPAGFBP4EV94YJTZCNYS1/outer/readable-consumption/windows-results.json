@@ -1,0 +1,39 @@
+{
+  "platform": "win32",
+  "node": "v24.12.0",
+  "time": "2026-10-27T13:04:18.089Z",
+  "results": [
+    {
+      "cleaned": true,
+      "branch": "cancel",
+      "hostStopped": true,
+      "directoryRemoved": true,
+      "activeCount": 0,
+      "state": "Cancelled",
+      "directory": "D:\\Code\\potential-guide.worktrees\\test-tree-manual-idea\\.cache\\manual-check-host\\case-01422254-689f-4651-9a2b-0d2347812984",
+      "daemonPid": 54012
+    },
+    {
+      "directoryRemoved": true,
+      "branch": "recovery",
+      "hostStopped": true,
+      "recovery": {
+        "checkId": "recovery",
+        "state": "Completed",
+        "result": {
+          "marker": "tree-manual",
+          "calls": 2
+        }
+      },
+      "activeCount": 0,
+      "sameOriginalFault": true,
+      "directory": "D:\\Code\\potential-guide.worktrees\\test-tree-manual-idea\\.cache\\manual-check-host\\case-945591b7-2492-4efd-bbb5-a5d762a4f47a",
+      "daemonPid": 53960,
+      "fault": {
+        "checkId": "fault",
+        "state": "Failed",
+        "error": "Error: manual injected failure"
+      }
+    }
+  ]
+}

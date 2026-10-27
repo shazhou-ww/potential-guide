@@ -1,0 +1,754 @@
+# Check Host 状态操作手册
+
+Not run — 操作说明，未执行验证。
+
+从初始状态开始，沿状态树执行进入操作并核对观察结果。不同分支从独立环境开始。
+命令由人执行；本页面不会运行命令。资源退出说明只用于结束操作，不是逆向状态转移。
+
+## 状态树
+
+- [独立操作环境已准备](#state-isolated)
+  - [Host 已就绪，尚无任务](#state-ready)
+    - [任务 Running，等待取消](#state-running)
+      - [任务 Cancelling，清理尚未完成](#state-cancelling)
+        - [任务 Cancelled，资源已释放](#state-cancelled)
+    - [任务 Failed，Host 仍可用](#state-faulted)
+      - [新任务 Completed，原失败保持不变](#state-recovered)
+
+<a id="state-isolated"></a>
+## 状态：独立操作环境已准备
+
+到达路径：独立操作环境已准备
+
+### 如何进入
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+Linux/macOS：Bash >=3.2、Node >=22.13、pnpm >=11.22、curl >=7.55、jq >=1.6。
+在仓库根先执行 pnpm build；工作树须支持真实 POSIX 所有者及 0700/0600 权限。
+WSL Windows 挂载若被 SDK 以 EPRIVATE 拒绝，不绕过权限检查，不宣称流程通过。
+在同一个终端依次完成下面四步。这里不启动服务、不执行 JavaScript，也不生成业务源码。
+1. 让新建文件只对当前用户开放，并准备放置临时场景的父目录。
+```bash
+set -e
+set -o pipefail
+umask 077
+mkdir -p ".cache/manual-check-host"
+```
+2. 创建一个不会与其他操作混淆的空目录。mktemp -d 会为它选择唯一名字，并设置私有权限。
+case_dir 只是保存这个目录的位置，后续命令都沿用它。
+```bash
+case_dir=$(mktemp -d "$PWD/.cache/manual-check-host/case-XXXXXXXX")
+printf 'CASE_DIRECTORY=%s\n' "$case_dir"
+```
+预期打印一个以 case- 开头的绝对目录；不要把它替换成用户默认 Host 目录。
+3. 放好现成业务样例，并为它准备一个存放清理标记的空目录。
+```bash
+mkdir "$case_dir/controls"
+cp -R "packages/check-host/examples/cancellable" "$case_dir/artifact"
+```
+4. 查看准备结果。应有 artifact/worker.cjs，controls 此时为空。
+```bash
+ls "$case_dir/artifact"
+ls -A "$case_dir/controls"
+```
+样例代码可直接查看 packages/check-host/examples/cancellable/worker.cjs。
+它是普通业务 artifact，不是测试 fixture 或操作包装器；每条分支准备一个新场景。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+Windows PowerShell >=5.1、Node >=22.13、pnpm >=11.22；不需要 curl/jq。
+所有命令均在仓库根、同一 PowerShell 会话执行；先执行 pnpm build。
+按下面四步操作；准备阶段不调用 Node，不执行 JavaScript，也不要求编写 worker 或服务脚本。
+1. 创建一个新的空目录。GUID 只是给它一个唯一名字，$case 保存本次目录的完整位置。
+```powershell
+$ErrorActionPreference = 'Stop'
+New-Item -ItemType Directory -Force -Path '.cache/manual-check-host' | Out-Null
+$parent = Join-Path (Get-Location).Path '.cache/manual-check-host'
+$case = Join-Path $parent ("case-" + [guid]::NewGuid())
+New-Item -ItemType Directory -Path $case | Out-Null
+Write-Output "CASE_DIRECTORY=$case"
+```
+预期打印一个以 case- 开头的绝对目录。此时目录还是空的，先不要启动 Host。
+2. 限制目录权限，避免随后写入的连接凭据被其他普通用户读取。
+whoami 获取当前登录账号；icacls 关闭继承并授予该账号完全控制及子目录继承权限。
+只对刚刚创建的空目录做这一步，不修改既有目录的权限。
+```powershell
+$me = whoami
+if ($LASTEXITCODE -ne 0) { throw 'Cannot identify current user' }
+icacls "$case" /inheritance:r /grant:r "${me}:(OI)(CI)F"
+if ($LASTEXITCODE -ne 0) { throw 'Directory permission setup failed' }
+icacls "$case"
+if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect directory permissions' }
+```
+预期修改成功，查询结果只列出当前账号的完全控制权限 (F)，并且没有表示继承的 (I)。
+目录和文件继承标记 (OI)、(CI) 表示新建子项也受保护，不等于继承了父目录的权限。
+失败或出现其他普通账号的访问权限时停止，不复制样例、不启动服务。
+3. 复制现成业务样例，并准备存放清理标记的空目录。
+```powershell
+New-Item -ItemType Directory -Path (Join-Path $case 'controls') | Out-Null
+Copy-Item -LiteralPath 'packages/check-host/examples/cancellable' -Destination (Join-Path $case 'artifact') -Recurse
+```
+4. 查看结果。artifact 应有 worker.cjs，controls 应为空。
+```powershell
+Get-ChildItem -LiteralPath (Join-Path $case 'artifact') | Select-Object Name
+Get-ChildItem -LiteralPath (Join-Path $case 'controls') | Select-Object Name
+```
+样例 worker.cjs 是公开普通业务输入，没有测试依赖或操作 CLI，可先直接阅读。
+这里尚未启动 Host 或权限 helper。准备完成后，选择“Host 已就绪”状态继续。
+
+</details>
+
+### 在此状态观察
+
+核对上面的准备结果，再选择下一状态。
+
+### 可以转向的状态
+
+- [Host 已就绪，尚无任务](#state-ready)
+
+### 结束操作时
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+如果尝试过启动，先完成 Host 状态的退出步骤；启动失败且所有权不明时保留目录，不强行清理。
+```bash
+[ "$(dirname "$case_dir")" = "$PWD/.cache/manual-check-host" ]
+case "$(basename "$case_dir")" in case-*) ;; *) printf 'Unknown directory\n'; false ;; esac
+[ ! -d "$case_dir/host" ] || [ "${host_stopped:-no}" = yes ]
+rm -rf -- "$case_dir"
+```
+保持本会话的 set -e；安全检查失败时不能执行删除，不删除其他场景。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+尝试启动后必须先按 Host 状态确认自有 PID 和 helper 退出；失败时保留目录诊断。
+```powershell
+if ([IO.Path]::GetDirectoryName($case) -ne (Join-Path (Get-Location).Path '.cache/manual-check-host')) { throw 'Unknown directory' }
+if ([IO.Path]::GetFileName($case) -notlike 'case-*') { throw 'Unknown scene' }
+if ((Test-Path -LiteralPath (Join-Path $case 'host')) -and ($hostStopped -ne $true)) { throw 'Host exit not confirmed' }
+Remove-Item -LiteralPath $case -Recurse -Force
+Test-Path -LiteralPath $case
+```
+预期 False。没有启动服务时可直接删除自有场景；启动失败且不能确认退出时不删除。
+
+</details>
+
+完成本层资源收尾后，按到达路径向上处理各层拥有的资源；不要把退出当成业务回滚。
+
+<a id="state-ready"></a>
+## 状态：Host 已就绪，尚无任务
+
+到达路径：独立操作环境已准备 → Host 已就绪，尚无任务
+
+### 如何进入
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+目的：在本场景启动一个真实 Host，而不是连接日常使用的默认 Host。
+当前服务没有通用的 start 命令；下面只有启动和计算版本两处必须调用公开 SDK。
+其余状态使用普通 HTTP 和文件操作，不需要阅读服务内部实现。
+1. 指定本次 Host 的位置，再调用 connectHost。它负责启动预约和原始 daemon；
+finally 无论成功失败都关闭这个短命启动器的权限资源，不会关闭刚启动的 Host。
+```bash
+host_directory="$case_dir/host"
+node --input-type=module - "$host_directory" <<'NODE'
+import { connectHost, closePrivateFileBackend } from "./packages/check-host/dist/index.js";
+try {
+  await connectHost(process.argv[2]);
+} finally {
+  await closePrivateFileBackend();
+}
+NODE
+```
+预期命令正常返回，host 子目录出现 host.json。不要直接运行内部 main.js。
+2. 计算本次样例内容的版本，保存到 revision。后续提交用它确认执行的是这份样例。
+```bash
+revision=$(node --input-type=module - "$case_dir/artifact" <<'NODE'
+import { readArtifact } from "./packages/check-host/dist/index.js";
+const artifact = await readArtifact(process.argv[2]);
+console.log(artifact.revision);
+NODE
+)
+```
+3. 读出地址、PID 和鉴权信息。凭据保存在私有文件中，不打印，也不放入 curl 参数。
+```bash
+endpoint=$(jq -er '.endpoint' "$host_directory/host.json")
+owned_pid=$(jq -er '.pid' "$host_directory/host.json")
+auth_file="$case_dir/auth-header"
+jq -er '"Authorization: Bearer " + .token' "$host_directory/host.json" > "$auth_file"
+printf 'Owned daemon PID=%s\n' "$owned_pid"
+```
+使用的是真实 host.json，不生成另一份连接描述。凭据只进入私密 header 文件；
+不打印该文件或 host.json。再用下面的 GET /checks 核对鉴权就绪。
+启动失败时停止并保留 startup.json 等诊断，不启动其他实例或连接默认 Host。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+目的：在独立 host 子目录启动原始 daemon，不连接默认 Host。
+当前没有通用 start 命令，只有启动和计算版本必须调用公开 SDK；不要直接运行内部 main.js。
+1. 先写出启动所需的几行代码，再执行它。代码调用 connectHost；
+finally 关闭短命启动器的权限资源，不会关闭 daemon。$hostDirectory 是唯一传入的路径。
+```powershell
+$hostDirectory = Join-Path $case 'host'
+$startCode = @'
+import { connectHost, closePrivateFileBackend } from "./packages/check-host/dist/index.js";
+try {
+  await connectHost(process.argv[2]);
+} finally {
+  await closePrivateFileBackend();
+}
+'@
+$startCode | node --input-type=module - "$hostDirectory"
+if ($LASTEXITCODE -ne 0) { throw 'Discovery startup failed; preserve this scene' }
+```
+预期命令正常结束，host 子目录出现 host.json。失败时保留该目录的诊断，不继续提交任务。
+2. 计算样例内容的版本。$revision 保存这个结果，用于后续任务提交，不是另一个服务入口。
+```powershell
+$revisionCode = @'
+import { readArtifact } from "./packages/check-host/dist/index.js";
+const artifact = await readArtifact(process.argv[2]);
+console.log(artifact.revision);
+'@
+$revision = $revisionCode | node --input-type=module - (Join-Path $case 'artifact')
+if ($LASTEXITCODE -ne 0) { throw 'Artifact revision failed' }
+```
+3. 读取地址和自有 PID，将鉴权凭据留在内存请求头。不要输出整个 $address 或 $headers。
+```powershell
+$address = Get-Content -LiteralPath (Join-Path $hostDirectory 'host.json') -Raw | ConvertFrom-Json
+$endpoint = $address.endpoint
+$ownedPid = [int]$address.pid
+$headers = @{ Authorization = 'Bearer ' + $address.token }
+Write-Output "Owned daemon PID=$ownedPid"
+```
+不打印 $address、$headers 或 host.json。连接的是显式独立目录，不是默认 Host。
+启动器的 Windows helper 已在 finally 关闭；daemon 的 helper 在退出时另行确认。
+失败时保留该目录和启动记录；不能用未知 PID 或生成另一套服务包装器掩盖问题。
+
+</details>
+
+### 在此状态观察
+
+<a id="ready.idle"></a>
+#### 查看地址和活动任务列表
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+```bash
+curl -fsS --header "@$auth_file" -o "$case_dir/active.json" -w 'HTTP %{http_code}\n' "$endpoint/checks"
+jq . "$case_dir/active.json"
+```
+预期 HTTP 200、[]。curl --fail 使 HTTP 错误明确失败，不自动重试。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+```powershell
+$active = Invoke-RestMethod -Uri "$endpoint/checks" -Headers $headers
+Write-Output "Active count: $($active.Count)"
+```
+预期 Active count: 0；HTTP 错误抛错，不继续。
+
+</details>
+
+### 可以转向的状态
+
+- [任务 Running，等待取消](#state-running)
+- [任务 Failed，Host 仍可用](#state-faulted)
+
+### 结束操作时
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+先确认所有任务已终结，再对本次记录的唯一 PID 发 SIGTERM：
+```bash
+curl -fsS --header "@$auth_file" "$endpoint/checks" | jq -e 'length == 0'
+kill -TERM "$owned_pid"
+attempt=0
+while kill -0 "$owned_pid" 2>/dev/null; do attempt=$((attempt+1)); [ "$attempt" -lt 15 ]; sleep 1; done
+[ ! -f "$host_directory/host.json" ]
+host_stopped=yes
+```
+这是 daemon 的正常信号关闭路径：退出且移除描述文件后才可删场景。
+超时或描述文件仍存在时保留错误，不改用强杀冒充优雅关闭。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+Windows Stop-Process 是强制终止，不能证明 daemon 的优雅退出或 dispose hook 已执行。
+本演示必须先取得任务终态、清理标记和空活动列表；只停止确切记录的自有 PID。
+停止前记录其实际子进程 PID；停止后仅等待这些 helper 自行随父进程管道关闭而退出：
+```powershell
+$active = Invoke-RestMethod -Uri "$endpoint/checks" -Headers $headers
+if ($active.Count -ne 0) { throw 'Finish all tasks before stopping the daemon' }
+if ($ownedPid -eq $PID -or $ownedPid -le 0) { throw 'Invalid owned daemon PID' }
+$ownedProcess = Get-Process -Id $ownedPid -ErrorAction Stop
+$null = $ownedProcess.Handle
+$ownedHelpers = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $ownedPid" | Select-Object -ExpandProperty ProcessId)
+$helperProcesses = @($ownedHelpers | ForEach-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue })
+foreach ($helper in $helperProcesses) { $null = $helper.Handle }
+Stop-Process -Id $ownedPid -ErrorAction Stop
+if (!$ownedProcess.WaitForExit(10000)) { throw 'Owned daemon did not exit' }
+foreach ($helper in $helperProcesses) { if (!$helper.WaitForExit(10000)) { throw 'Owned helper did not exit' }; $helper.Dispose() }
+$ownedProcess.Dispose()
+$hostStopped = $true
+Write-Output 'Owned daemon and recorded helpers exited; Windows forced stop, not graceful shutdown'
+```
+helper 未退出时不继续、不按名称结束其他进程。强制停止后 host.json 可能残留，
+它不是运行证据；只在确认上述进程均退出后按独立环境说明删除本次目录。
+这里不宣称 Windows 优雅关闭；若业务有长期外部资源，不能套用此演示的强制退出。
+
+</details>
+
+完成本层资源收尾后，按到达路径向上处理各层拥有的资源；不要把退出当成业务回滚。
+
+<a id="state-running"></a>
+## 状态：任务 Running，等待取消
+
+到达路径：独立操作环境已准备 → Host 已就绪，尚无任务 → 任务 Running，等待取消
+
+### 如何进入
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+先读完取消、观察和释放命令，再提交一次：
+```bash
+jq -n --arg directory "$case_dir/artifact" --arg revision "$revision" --arg controls "$case_dir/controls" \
+  '{checkId:"held",directory:$directory,revision:$revision,subject:{hold:true,marker:"tree-manual",controls:$controls}}' > "$case_dir/held.json"
+curl -fsS --header "@$auth_file" -H 'Content-Type: application/json' --data-binary "@$case_dir/held.json" "$endpoint/checks" | jq .
+```
+真实 daemon 默认执行期限 30 秒、清理期限 5 秒；不能人为延长。
+进入取消后须在 5 秒内观察并释放屏障，慢操作导致 Failed 不算 Cancelled。
+Queued 或尚无 progress 时只重复查询，不重复 POST。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+先备好随后取消、查询和释放命令。真实 daemon 的执行期限 30 秒、清理期限 5 秒；
+取消后必须在 5 秒内观察并释放，超时 Failed 不是取消成功：
+```powershell
+$body = @{ checkId = 'held'; directory = (Join-Path $case 'artifact'); revision = $revision
+  subject = @{ hold = $true; marker = 'tree-manual'; controls = (Join-Path $case 'controls') } } | ConvertTo-Json -Depth 6
+Invoke-RestMethod -Uri "$endpoint/checks" -Method Post -Headers $headers -ContentType 'application/json' -Body ([Text.Encoding]::UTF8.GetBytes($body)) | ConvertTo-Json -Depth 6
+```
+提交一次后观察，Queued 时仅重复 GET；不要重复创建任务。
+
+</details>
+
+### 在此状态观察
+
+<a id="running.input"></a>
+#### 查看任务状态、输入标记与活动列表
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+```bash
+curl -fsS --header "@$auth_file" "$endpoint/checks/held" | jq .
+curl -fsS --header "@$auth_file" "$endpoint/checks" | jq .
+```
+预期 Running，progress={entered:true,marker:"tree-manual",calls:1}，活动列表恰有一项。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+```powershell
+Invoke-RestMethod -Uri "$endpoint/checks/held" -Headers $headers | ConvertTo-Json -Depth 6
+$active = Invoke-RestMethod -Uri "$endpoint/checks" -Headers $headers
+Write-Output "Active count: $($active.Count)"
+```
+预期 Running、entered=true、marker=tree-manual、calls=1，活动条数 1。
+
+</details>
+
+### 可以转向的状态
+
+- [任务 Cancelling，清理尚未完成](#state-cancelling)
+
+### 结束操作时
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+对已经接受的 held 先释放，再取消并等待终态：
+```bash
+printf 'released\n' > "$case_dir/controls/release"
+curl -fsS -X POST --header "@$auth_file" "$endpoint/checks/held/cancel" | jq .
+curl -fsS --max-time 10 --header "@$auth_file" -H 'Accept: application/x-ndjson' "$endpoint/checks/held" | jq .
+```
+从未接受 held 时不发取消；404 也可能表示过期，须核对活动列表，不能忽略其他错误。
+终态不是 Cancelled 时保留诊断。先完成任务收尾，才能停止 daemon。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+对已经接受的 held 先释放屏障，再取消和查询：
+```powershell
+Set-Content -LiteralPath (Join-Path $case 'controls/release') -Value released -Encoding Ascii
+Invoke-RestMethod -Uri "$endpoint/checks/held/cancel" -Method Post -Headers $headers | ConvertTo-Json -Depth 6
+Invoke-RestMethod -Uri "$endpoint/checks/held" -Headers $headers | ConvertTo-Json -Depth 6
+```
+未终结时只重复 GET；Failed 或 HTTP 错误保留诊断，不能拿停止进程代替任务清理。
+从未接受的任务不发取消，404 须区分过期与未创建。
+
+</details>
+
+完成本层资源收尾后，按到达路径向上处理各层拥有的资源；不要把退出当成业务回滚。
+
+<a id="state-cancelling"></a>
+## 状态：任务 Cancelling，清理尚未完成
+
+到达路径：独立操作环境已准备 → Host 已就绪，尚无任务 → 任务 Running，等待取消 → 任务 Cancelling，清理尚未完成
+
+### 如何进入
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+不提前创建 release；执行后立即观察并在 5 秒期限内进入释放状态：
+```bash
+curl -fsS -X POST --header "@$auth_file" "$endpoint/checks/held/cancel" | jq .
+```
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+不提前释放；取消后立即观察并在 5 秒内释放：
+```powershell
+Invoke-RestMethod -Uri "$endpoint/checks/held/cancel" -Method Post -Headers $headers | ConvertTo-Json -Depth 6
+```
+
+</details>
+
+### 在此状态观察
+
+<a id="cancelling.waiting"></a>
+#### 查看取消快照与清理标记
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+```bash
+curl -fsS --header "@$auth_file" "$endpoint/checks/held" | jq .
+ls "$case_dir/controls"
+```
+预期 Cancelling，存在 cleaning、尚无 cleaned。尚无 cleaning 时只重复观察。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+```powershell
+Invoke-RestMethod -Uri "$endpoint/checks/held" -Headers $headers | ConvertTo-Json -Depth 6
+Get-ChildItem -LiteralPath (Join-Path $case 'controls') | Select-Object Name
+Test-Path -LiteralPath (Join-Path $case 'controls/cleaned')
+```
+预期 Cancelling、cleaning 存在、cleaned=False；不要提前释放掩盖此观察。
+
+</details>
+
+### 可以转向的状态
+
+- [任务 Cancelled，资源已释放](#state-cancelled)
+
+### 结束操作时
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+本层没有新资源；结束时按 Running 说明释放屏障、确认终态，再停止自有 daemon。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+本层没有新资源；结束时按 Running 说明释放屏障、确认终态，再停止自有 daemon。
+
+</details>
+
+完成本层资源收尾后，按到达路径向上处理各层拥有的资源；不要把退出当成业务回滚。
+
+<a id="state-cancelled"></a>
+## 状态：任务 Cancelled，资源已释放
+
+到达路径：独立操作环境已准备 → Host 已就绪，尚无任务 → 任务 Running，等待取消 → 任务 Cancelling，清理尚未完成 → 任务 Cancelled，资源已释放
+
+### 如何进入
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+```bash
+printf 'released\n' > "$case_dir/controls/release"
+curl -fsS --max-time 10 --header "@$auth_file" -H 'Accept: application/x-ndjson' "$endpoint/checks/held" | jq .
+```
+预期 Cancelled；Failed 或超时都不满足该状态。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+```powershell
+Set-Content -LiteralPath (Join-Path $case 'controls/release') -Value released -Encoding Ascii
+Invoke-RestMethod -Uri "$endpoint/checks/held" -Headers $headers | ConvertTo-Json -Depth 6
+```
+预期 Cancelled；若仍 Cancelling 只重复 GET，不以发出释放请求当作已退出。
+
+</details>
+
+### 在此状态观察
+
+<a id="cancelled.released"></a>
+#### 查看终态、清理结果与活动列表
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+```bash
+curl -fsS --header "@$auth_file" "$endpoint/checks/held" | jq .
+ls "$case_dir/controls"
+curl -fsS --header "@$auth_file" "$endpoint/checks" | jq .
+```
+预期 Cancelled、cleaned 存在、活动列表 []。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+```powershell
+Invoke-RestMethod -Uri "$endpoint/checks/held" -Headers $headers | ConvertTo-Json -Depth 6
+Test-Path -LiteralPath (Join-Path $case 'controls/cleaned')
+$active = Invoke-RestMethod -Uri "$endpoint/checks" -Headers $headers
+Write-Output "Active count: $($active.Count)"
+```
+预期 Cancelled、True、Active count: 0。至此才取得任务清理证据。
+
+</details>
+
+### 可以转向的状态
+
+此分支已结束，可按下面的说明退出并释放资源。
+
+
+### 结束操作时
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+本层没有新资源；任务收尾后按 Host 退出说明停止，最后删除场景。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+本层没有新资源；任务收尾后按 Host 退出说明停止，最后删除场景。
+
+</details>
+
+完成本层资源收尾后，按到达路径向上处理各层拥有的资源；不要把退出当成业务回滚。
+
+<a id="state-faulted"></a>
+## 状态：任务 Failed，Host 仍可用
+
+到达路径：独立操作环境已准备 → Host 已就绪，尚无任务 → 任务 Failed，Host 仍可用
+
+### 如何进入
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+全新独立环境和 daemon，不走 Running 分支。只提交一次异常业务输入：
+```bash
+jq -n --arg directory "$case_dir/artifact" --arg revision "$revision" \
+  '{checkId:"fault",directory:$directory,revision:$revision,subject:{fail:true,marker:"tree-manual"}}' > "$case_dir/fault.json"
+curl -fsS --header "@$auth_file" -H 'Content-Type: application/json' --data-binary "@$case_dir/fault.json" "$endpoint/checks" | jq .
+```
+预期 Failed；这是执行异常，不是业务结果不通过。历史只保留默认 60 秒，及时比较恢复结果。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+从全新独立场景开始，正常提交样例的异常输入：
+```powershell
+$body = @{ checkId = 'fault'; directory = (Join-Path $case 'artifact'); revision = $revision
+  subject = @{ fail = $true; marker = 'tree-manual' } } | ConvertTo-Json -Depth 6
+Invoke-RestMethod -Uri "$endpoint/checks" -Method Post -Headers $headers -ContentType 'application/json' -Body ([Text.Encoding]::UTF8.GetBytes($body)) | ConvertTo-Json -Depth 6
+```
+预期 Failed，是执行异常而非业务不通过；历史保留默认 60 秒，须及时完成下面比较。
+
+</details>
+
+### 在此状态观察
+
+<a id="faulted.failure"></a>
+#### 查看原始错误与 Host 活动列表
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+```bash
+curl -fsS --header "@$auth_file" "$endpoint/checks/fault" -o "$case_dir/fault-before.json"
+jq . "$case_dir/fault-before.json"
+curl -fsS --header "@$auth_file" "$endpoint/checks" | jq .
+```
+预期 Failed、Error: manual injected failure、[]；未终结时只重复 GET。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+```powershell
+$originalFault = Invoke-RestMethod -Uri "$endpoint/checks/fault" -Headers $headers
+$originalFault | ConvertTo-Json -Depth 6
+$active = Invoke-RestMethod -Uri "$endpoint/checks" -Headers $headers
+Write-Output "Active count: $($active.Count)"
+```
+预期 Failed、Error: manual injected failure、Active count: 0，保留原始对象用于比较。
+
+</details>
+
+### 可以转向的状态
+
+- [新任务 Completed，原失败保持不变](#state-recovered)
+
+### 结束操作时
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+异常任务已终结，不重放或改写它；按 Host 退出说明停止后再删目录。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+异常任务已终结，不重放或改写它；按 Host 退出说明停止后再删目录。
+
+</details>
+
+完成本层资源收尾后，按到达路径向上处理各层拥有的资源；不要把退出当成业务回滚。
+
+<a id="state-recovered"></a>
+## 状态：新任务 Completed，原失败保持不变
+
+到达路径：独立操作环境已准备 → Host 已就绪，尚无任务 → 任务 Failed，Host 仍可用 → 新任务 Completed，原失败保持不变
+
+### 如何进入
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+```bash
+jq -n --arg directory "$case_dir/artifact" --arg revision "$revision" \
+  '{checkId:"recovery",directory:$directory,revision:$revision,subject:{marker:"tree-manual"}}' > "$case_dir/recovery.json"
+curl -fsS --header "@$auth_file" -H 'Content-Type: application/json' --data-binary "@$case_dir/recovery.json" "$endpoint/checks" | jq .
+```
+同一 Host、同一 artifact，提交新任务；旧任务不再 POST。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+```powershell
+$body = @{ checkId = 'recovery'; directory = (Join-Path $case 'artifact'); revision = $revision
+  subject = @{ marker = 'tree-manual' } } | ConvertTo-Json -Depth 6
+Invoke-RestMethod -Uri "$endpoint/checks" -Method Post -Headers $headers -ContentType 'application/json' -Body ([Text.Encoding]::UTF8.GetBytes($body)) | ConvertTo-Json -Depth 6
+```
+同一 daemon、同一 artifact，提交新任务，不重新提交 fault；未完成时只重复 GET。
+
+</details>
+
+### 在此状态观察
+
+<a id="recovered.result"></a>
+#### 比较新结果和原失败记录
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+```bash
+curl -fsS --header "@$auth_file" "$endpoint/checks/fault" -o "$case_dir/fault-after.json"
+cmp "$case_dir/fault-before.json" "$case_dir/fault-after.json"
+jq . "$case_dir/fault-after.json"
+curl -fsS --header "@$auth_file" "$endpoint/checks/recovery" | jq .
+curl -fsS --header "@$auth_file" "$endpoint/checks" | jq .
+```
+预期原故障无差异且仍 Failed；新 recovery=Completed、marker=tree-manual、calls=2、活动列表 []。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+```powershell
+$remainingFault = Invoke-RestMethod -Uri "$endpoint/checks/fault" -Headers $headers
+($originalFault | ConvertTo-Json -Compress) -ceq ($remainingFault | ConvertTo-Json -Compress)
+$remainingFault | ConvertTo-Json -Depth 6
+Invoke-RestMethod -Uri "$endpoint/checks/recovery" -Headers $headers | ConvertTo-Json -Depth 6
+$active = Invoke-RestMethod -Uri "$endpoint/checks" -Headers $headers
+Write-Output "Active count: $($active.Count)"
+```
+预期比较 True、原故障仍 Failed/原始错误不变；新任务 Completed、
+marker=tree-manual、calls=2、Active count: 0。
+
+</details>
+
+### 可以转向的状态
+
+此分支已结束，可按下面的说明退出并释放资源。
+
+
+### 结束操作时
+
+<details>
+<summary>Linux / macOS shell</summary>
+
+两个任务均终结后停止自有 daemon，再删除场景，不重放旧任务。
+
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+两个任务均终结后停止自有 daemon，再删除场景，不重放旧任务。
+
+</details>
+
+完成本层资源收尾后，按到达路径向上处理各层拥有的资源；不要把退出当成业务回滚。

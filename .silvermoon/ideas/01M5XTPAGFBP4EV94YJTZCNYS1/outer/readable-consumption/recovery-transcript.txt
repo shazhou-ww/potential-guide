@@ -1,0 +1,47 @@
+CASE_DIRECTORY=D:\Code\potential-guide.worktrees\test-tree-manual-idea\.cache\manual-check-host\case-945591b7-2492-4efd-bbb5-a5d762a4f47a
+processed file: D:\Code\potential-guide.worktrees\test-tree-manual-idea\.cache\manual-check-host\case-945591b7-2492-4efd-bbb5-a5d762a4f47a
+Successfully processed 1 files; Failed processing 0 files
+D:\Code\potential-guide.worktrees\test-tree-manual-idea\.cache\manual-check-host\case-945591b7-2492-4efd-bbb5-a5d762a4f47a DESKTOP-GMGK6U1\Wei:(OI)(CI)(F)
+
+Successfully processed 1 files; Failed processing 0 files
+
+Name
+----
+worker.cjs
+Owned daemon PID=53960
+Active count: 0
+{
+    "checkId":  "fault"
+}
+{
+    "checkId":  "fault",
+    "state":  "Failed",
+    "error":  "Error: manual injected failure"
+}
+Active count: 0
+{
+    "checkId":  "recovery"
+}
+True
+{
+    "checkId":  "fault",
+    "state":  "Failed",
+    "error":  "Error: manual injected failure"
+}
+{
+    "checkId":  "recovery",
+    "state":  "Completed",
+    "result":  {
+                   "marker":  "tree-manual",
+                   "calls":  2
+               }
+}
+Active count: 0
+Owned daemon and recorded helpers exited; Windows forced stop, not graceful shutdown
+False
+RESULT_JSON={"directoryRemoved":true,"branch":"recovery","hostStopped":true,"recovery":{"checkId":"recovery","state":"Completed","result":{"marker":"tree-manual","calls":2}},"activeCount":0,"sameOriginalFault":true,"directory":"D:\\Code\\potential-guide.worktrees\\test-tree-manual-idea\\.cache\\manual-check-host\\case-945591b7-2492-4efd-bbb5-a5d762a4f47a","daemonPid":53960,"fault":{"checkId":"fault","state":"Failed","error":"Error: manual injected failure"}}
+
+
+
+#< CLIXML
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04"><Obj S="progress" RefId="0"><TN RefId="0"><T>System.Management.Automation.PSCustomObject</T><T>System.Object</T></TN><MS><I64 N="SourceId">1</I64><PR N="Record"><AV>Preparing modules for first use.</AV><AI>0</AI><Nil /><PI>-1</PI><PC>-1</PC><T>Completed</T><SR>-1</SR><SD> </SD></PR></MS></Obj><Obj S="progress" RefId="1"><TNRef RefId="0" /><MS><I64 N="SourceId">1</I64><PR N="Record"><AV>Preparing modules for first use.</AV><AI>0</AI><Nil /><PI>-1</PI><PC>-1</PC><T>Completed</T><SR>-1</SR><SD> </SD></PR></MS></Obj><Obj S="progress" RefId="2"><TNRef RefId="0" /><MS><I64 N="SourceId">1</I64><PR N="Record"><AV>Preparing modules for first use.</AV><AI>0</AI><Nil /><PI>-1</PI><PC>-1</PC><T>Completed</T><SR>-1</SR><SD> </SD></PR></MS></Obj></Objs>
