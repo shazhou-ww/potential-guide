@@ -3,7 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { platform, release } from "node:os";
 import { createRequire } from "node:module";
-import { dirname, join, relative, sep } from "node:path";
+import { delimiter, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CoordinatorModel as M, RequestModel as R } from "@potential-guide/regulation-coordinator";
 import { alive, command, limits, readJson, writeJson } from "./fixture.mjs";
@@ -126,7 +126,8 @@ try {
   const require = createRequire(import.meta.url);
   const cli = join(dirname(require.resolve("pguide/package.json")), "dist", "bin.js");
   const settings = {
-    ...process.env, PATH: "",
+    ...process.env,
+    PATH: [join(root, "node_modules", ".bin"), dirname(process.execPath)].join(delimiter),
     HOME: join(root, "isolated-home"),
     USERPROFILE: join(root, "isolated-home"),
     APPDATA: join(root, "isolated-config"),
