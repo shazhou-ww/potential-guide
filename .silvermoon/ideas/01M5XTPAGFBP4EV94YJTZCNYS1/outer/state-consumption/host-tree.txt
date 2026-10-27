@@ -1,0 +1,14 @@
+Check Host — Not run — 操作说明，未执行验证。
+状态 isolated: 独立操作环境已准备
+  状态 ready: Host 已就绪，尚无任务
+    观察 ready.idle：查看地址和活动任务列表
+    状态 running: 任务 Running，等待取消
+      观察 running.input：查看任务状态、输入标记与活动列表
+      状态 cancelling: 任务 Cancelling，清理尚未完成
+        观察 cancelling.waiting：查看取消快照与清理标记
+        状态 cancelled: 任务 Cancelled，资源已释放
+          观察 cancelled.released：查看终态、清理结果与活动列表
+    状态 faulted: 任务 Failed，Host 仍可用
+      观察 faulted.failure：查看原始错误与 Host 活动列表
+      状态 recovered: 新任务 Completed，原失败保持不变
+        观察 recovered.result：比较新结果和原失败记录
