@@ -7,25 +7,39 @@
 <h3>如何进入</h3><details class="platform" data-platform="posix"><summary>Linux / macOS shell</summary><p class="prose">Linux/macOS：Bash &gt;=3.2、Node &gt;=22.13、pnpm &gt;=11.22、curl &gt;=7.55、jq &gt;=1.6。
 在仓库根先执行 pnpm build；工作树须支持真实 POSIX 所有者及 0700/0600 权限。
 WSL Windows 挂载若被 SDK 以 EPRIVATE 拒绝，不绕过权限检查，不宣称流程通过。
-准备只创建独立目录并复制一个已提供的普通业务样例；不写 worker 源码或服务脚本。</p><pre><code>set -e
+在同一个终端依次完成下面四步。这里不启动服务、不执行 JavaScript，也不生成业务源码。
+1. 让新建文件只对当前用户开放，并准备放置临时场景的父目录。</p><pre><code>set -e
 set -o pipefail
 umask 077
-mkdir -p &quot;.cache/manual-check-host&quot;
-case_dir=$(printf &#39;%s\n&#39; &#39;const a=await import(&quot;./packages/check-host/dist/index.js&quot;);try{console.log(await a.createPrivateDirectory(process.cwd()+&quot;/.cache/manual-check-host&quot;,&quot;case-&quot;))}finally{await a.closePrivateFileBackend()}&#39; | node --input-type=module)
-printf &#39;CASE_DIRECTORY=%s\n&#39; &quot;$case_dir&quot;
-mkdir &quot;$case_dir/controls&quot;
-cp -R &quot;packages/check-host/examples/cancellable&quot; &quot;$case_dir/artifact&quot;</code></pre><p class="prose">样例代码可直接查看 packages/check-host/examples/cancellable/worker.cjs。
-它是普通业务 artifact，不是测试 fixture 或操作包装器；每条分支准备一个新场景。
-目录创建是唯一必要的安全 SDK 调用，权限 backend 随创建进程关闭。</p></details><details class="platform" data-platform="powershell"><summary>Windows PowerShell</summary><p class="prose">Windows PowerShell &gt;=5.1、Node &gt;=22.13、pnpm &gt;=11.22；不需要 curl/jq。
+mkdir -p &quot;.cache/manual-check-host&quot;</code></pre><p class="prose">2. 创建一个不会与其他操作混淆的空目录。mktemp -d 会为它选择唯一名字，并设置私有权限。
+case_dir 只是保存这个目录的位置，后续命令都沿用它。</p><pre><code>case_dir=$(mktemp -d &quot;$PWD/.cache/manual-check-host/case-XXXXXXXX&quot;)
+printf &#39;CASE_DIRECTORY=%s\n&#39; &quot;$case_dir&quot;</code></pre><p class="prose">预期打印一个以 case- 开头的绝对目录；不要把它替换成用户默认 Host 目录。
+3. 放好现成业务样例，并为它准备一个存放清理标记的空目录。</p><pre><code>mkdir &quot;$case_dir/controls&quot;
+cp -R &quot;packages/check-host/examples/cancellable&quot; &quot;$case_dir/artifact&quot;</code></pre><p class="prose">4. 查看准备结果。应有 artifact/worker.cjs，controls 此时为空。</p><pre><code>ls &quot;$case_dir/artifact&quot;
+ls -A &quot;$case_dir/controls&quot;</code></pre><p class="prose">样例代码可直接查看 packages/check-host/examples/cancellable/worker.cjs。
+它是普通业务 artifact，不是测试 fixture 或操作包装器；每条分支准备一个新场景。</p></details><details class="platform" data-platform="powershell"><summary>Windows PowerShell</summary><p class="prose">Windows PowerShell &gt;=5.1、Node &gt;=22.13、pnpm &gt;=11.22；不需要 curl/jq。
 所有命令均在仓库根、同一 PowerShell 会话执行；先执行 pnpm build。
-只创建自有目录并复制可检查的普通业务样例，不要求手写 worker 或 host.mjs：</p><pre><code>$ErrorActionPreference = &#39;Stop&#39;
+按下面四步操作；准备阶段不调用 Node，不执行 JavaScript，也不要求编写 worker 或服务脚本。
+1. 创建一个新的空目录。GUID 只是给它一个唯一名字，$case 保存本次目录的完整位置。</p><pre><code>$ErrorActionPreference = &#39;Stop&#39;
 New-Item -ItemType Directory -Force -Path &#39;.cache/manual-check-host&#39; | Out-Null
-$case = &#39;const a=await import(&quot;./packages/check-host/dist/index.js&quot;);try{console.log(await a.createPrivateDirectory(process.cwd()+&quot;/.cache/manual-check-host&quot;,&quot;case-&quot;))}finally{await a.closePrivateFileBackend()}&#39; | node --input-type=module
-if ($LASTEXITCODE -ne 0) { throw &#39;Private directory preparation failed&#39; }
-Write-Output &quot;CASE_DIRECTORY=$case&quot;
-New-Item -ItemType Directory -Path (Join-Path $case &#39;controls&#39;) | Out-Null
-Copy-Item -LiteralPath &#39;packages/check-host/examples/cancellable&#39; -Destination (Join-Path $case &#39;artifact&#39;) -Recurse</code></pre><p class="prose">样例 worker.cjs 是公开普通业务输入，没有测试依赖或操作 CLI，可先直接阅读。
-目录创建进程显式关闭其 Windows 权限 helper；任何错误时停止，不继续启动服务。</p></details>
+$parent = Join-Path (Get-Location).Path &#39;.cache/manual-check-host&#39;
+$case = Join-Path $parent (&quot;case-&quot; + [guid]::NewGuid())
+New-Item -ItemType Directory -Path $case | Out-Null
+Write-Output &quot;CASE_DIRECTORY=$case&quot;</code></pre><p class="prose">预期打印一个以 case- 开头的绝对目录。此时目录还是空的，先不要启动 Host。
+2. 限制目录权限，避免随后写入的连接凭据被其他普通用户读取。
+whoami 获取当前登录账号；icacls 关闭继承并授予该账号完全控制及子目录继承权限。
+只对刚刚创建的空目录做这一步，不修改既有目录的权限。</p><pre><code>$me = whoami
+if ($LASTEXITCODE -ne 0) { throw &#39;Cannot identify current user&#39; }
+icacls &quot;$case&quot; /inheritance:r /grant:r &quot;${me}:(OI)(CI)F&quot;
+if ($LASTEXITCODE -ne 0) { throw &#39;Directory permission setup failed&#39; }
+icacls &quot;$case&quot;
+if ($LASTEXITCODE -ne 0) { throw &#39;Cannot inspect directory permissions&#39; }</code></pre><p class="prose">预期修改成功，查询结果只列出当前账号的完全控制权限 (F)，并且没有表示继承的 (I)。
+目录和文件继承标记 (OI)、(CI) 表示新建子项也受保护，不等于继承了父目录的权限。
+失败或出现其他普通账号的访问权限时停止，不复制样例、不启动服务。
+3. 复制现成业务样例，并准备存放清理标记的空目录。</p><pre><code>New-Item -ItemType Directory -Path (Join-Path $case &#39;controls&#39;) | Out-Null
+Copy-Item -LiteralPath &#39;packages/check-host/examples/cancellable&#39; -Destination (Join-Path $case &#39;artifact&#39;) -Recurse</code></pre><p class="prose">4. 查看结果。artifact 应有 worker.cjs，controls 应为空。</p><pre><code>Get-ChildItem -LiteralPath (Join-Path $case &#39;artifact&#39;) | Select-Object Name
+Get-ChildItem -LiteralPath (Join-Path $case &#39;controls&#39;) | Select-Object Name</code></pre><p class="prose">样例 worker.cjs 是公开普通业务输入，没有测试依赖或操作 CLI，可先直接阅读。
+这里尚未启动 Host 或权限 helper。准备完成后，选择“Host 已就绪”状态继续。</p></details>
 <h3>在此状态观察</h3><p>核对上面的准备结果，再选择下一状态。</p>
 <h3>可以转向的状态</h3><ul><li><a href="#state-ready">Host 已就绪，尚无任务</a></li></ul>
 <details><summary>结束操作与资源释放</summary><details class="platform" data-platform="posix"><summary>Linux / macOS shell</summary><p class="prose">如果尝试过启动，先完成 Host 状态的退出步骤；启动失败且所有权不明时保留目录，不强行清理。</p><pre><code>[ &quot;$(dirname &quot;$case_dir&quot;)&quot; = &quot;$PWD/.cache/manual-check-host&quot; ]
@@ -37,24 +51,51 @@ if ((Test-Path -LiteralPath (Join-Path $case &#39;host&#39;)) -and ($hostStopped
 Remove-Item -LiteralPath $case -Recurse -Force
 Test-Path -LiteralPath $case</code></pre><p class="prose">预期 False。没有启动服务时可直接删除自有场景；启动失败且不能确认退出时不删除。</p></details><p>本层收尾后，再处理上层拥有的资源：</p><p>没有上层状态。</p></details></article><article id="state-ready"><h2>状态：Host 已就绪，尚无任务</h2>
 <p>到达路径：<a href="#state-isolated">独立操作环境已准备</a> → <a href="#state-ready">Host 已就绪，尚无任务</a></p><p></p>
-<h3>如何进入</h3><details class="platform" data-platform="posix"><summary>Linux / macOS shell</summary><p class="prose">使用实际 connectHost discovery API，显式传入本场景独立的 host 子目录。
-SDK 自动完成真实 daemon 所需的 startup reservation；不要直接调用 main.js。
-启动器不打印 descriptor/token，finally 关闭启动器自己的权限 backend：</p><pre><code>host_directory=&quot;$case_dir/host&quot;
-printf &#39;%s\n&#39; &#39;const a=await import(&quot;./packages/check-host/dist/index.js&quot;);try{await a.connectHost(process.argv[2])}finally{await a.closePrivateFileBackend()}&#39; | node --input-type=module - &quot;$host_directory&quot;
-revision=$(printf &#39;%s\n&#39; &#39;const a=await import(&quot;./packages/check-host/dist/index.js&quot;);console.log((await a.readArtifact(process.argv[2])).revision)&#39; | node --input-type=module - &quot;$case_dir/artifact&quot;)
-endpoint=$(jq -er &#39;.endpoint&#39; &quot;$host_directory/host.json&quot;)
+<h3>如何进入</h3><details class="platform" data-platform="posix"><summary>Linux / macOS shell</summary><p class="prose">目的：在本场景启动一个真实 Host，而不是连接日常使用的默认 Host。
+当前服务没有通用的 start 命令；下面只有启动和计算版本两处必须调用公开 SDK。
+其余状态使用普通 HTTP 和文件操作，不需要阅读服务内部实现。
+1. 指定本次 Host 的位置，再调用 connectHost。它负责启动预约和原始 daemon；
+finally 无论成功失败都关闭这个短命启动器的权限资源，不会关闭刚启动的 Host。</p><pre><code>host_directory=&quot;$case_dir/host&quot;
+node --input-type=module - &quot;$host_directory&quot; &lt;&lt;&#39;NODE&#39;
+import { connectHost, closePrivateFileBackend } from &quot;./packages/check-host/dist/index.js&quot;;
+try {
+  await connectHost(process.argv[2]);
+} finally {
+  await closePrivateFileBackend();
+}
+NODE</code></pre><p class="prose">预期命令正常返回，host 子目录出现 host.json。不要直接运行内部 main.js。
+2. 计算本次样例内容的版本，保存到 revision。后续提交用它确认执行的是这份样例。</p><pre><code>revision=$(node --input-type=module - &quot;$case_dir/artifact&quot; &lt;&lt;&#39;NODE&#39;
+import { readArtifact } from &quot;./packages/check-host/dist/index.js&quot;;
+const artifact = await readArtifact(process.argv[2]);
+console.log(artifact.revision);
+NODE
+)</code></pre><p class="prose">3. 读出地址、PID 和鉴权信息。凭据保存在私有文件中，不打印，也不放入 curl 参数。</p><pre><code>endpoint=$(jq -er &#39;.endpoint&#39; &quot;$host_directory/host.json&quot;)
 owned_pid=$(jq -er &#39;.pid&#39; &quot;$host_directory/host.json&quot;)
 auth_file=&quot;$case_dir/auth-header&quot;
 jq -er &#39;&quot;Authorization: Bearer &quot; + .token&#39; &quot;$host_directory/host.json&quot; &gt; &quot;$auth_file&quot;
 printf &#39;Owned daemon PID=%s\n&#39; &quot;$owned_pid&quot;</code></pre><p class="prose">使用的是真实 host.json，不生成另一份连接描述。凭据只进入私密 header 文件；
 不打印该文件或 host.json。再用下面的 GET /checks 核对鉴权就绪。
-启动失败时停止并保留 startup.json 等诊断，不启动其他实例或连接默认 Host。</p></details><details class="platform" data-platform="powershell"><summary>Windows PowerShell</summary><p class="prose">启动放在本状态，而不是准备状态。真实 discovery 负责预约并启动原始 daemon，
-host 子目录与 artifact/controls 分开；不调用不存在的 start/run CLI：</p><pre><code>$hostDirectory = Join-Path $case &#39;host&#39;
-&#39;const a=await import(&quot;./packages/check-host/dist/index.js&quot;);try{await a.connectHost(process.argv[2])}finally{await a.closePrivateFileBackend()}&#39; | node --input-type=module - &quot;$hostDirectory&quot;
-if ($LASTEXITCODE -ne 0) { throw &#39;Discovery startup failed; preserve this scene&#39; }
-$revision = &#39;const a=await import(&quot;./packages/check-host/dist/index.js&quot;);console.log((await a.readArtifact(process.argv[2])).revision)&#39; | node --input-type=module - (Join-Path $case &#39;artifact&#39;)
-if ($LASTEXITCODE -ne 0) { throw &#39;Artifact revision failed&#39; }
-$address = Get-Content -LiteralPath (Join-Path $hostDirectory &#39;host.json&#39;) -Raw | ConvertFrom-Json
+启动失败时停止并保留 startup.json 等诊断，不启动其他实例或连接默认 Host。</p></details><details class="platform" data-platform="powershell"><summary>Windows PowerShell</summary><p class="prose">目的：在独立 host 子目录启动原始 daemon，不连接默认 Host。
+当前没有通用 start 命令，只有启动和计算版本必须调用公开 SDK；不要直接运行内部 main.js。
+1. 先写出启动所需的几行代码，再执行它。代码调用 connectHost；
+finally 关闭短命启动器的权限资源，不会关闭 daemon。$hostDirectory 是唯一传入的路径。</p><pre><code>$hostDirectory = Join-Path $case &#39;host&#39;
+$startCode = @&#39;
+import { connectHost, closePrivateFileBackend } from &quot;./packages/check-host/dist/index.js&quot;;
+try {
+  await connectHost(process.argv[2]);
+} finally {
+  await closePrivateFileBackend();
+}
+&#39;@
+$startCode | node --input-type=module - &quot;$hostDirectory&quot;
+if ($LASTEXITCODE -ne 0) { throw &#39;Discovery startup failed; preserve this scene&#39; }</code></pre><p class="prose">预期命令正常结束，host 子目录出现 host.json。失败时保留该目录的诊断，不继续提交任务。
+2. 计算样例内容的版本。$revision 保存这个结果，用于后续任务提交，不是另一个服务入口。</p><pre><code>$revisionCode = @&#39;
+import { readArtifact } from &quot;./packages/check-host/dist/index.js&quot;;
+const artifact = await readArtifact(process.argv[2]);
+console.log(artifact.revision);
+&#39;@
+$revision = $revisionCode | node --input-type=module - (Join-Path $case &#39;artifact&#39;)
+if ($LASTEXITCODE -ne 0) { throw &#39;Artifact revision failed&#39; }</code></pre><p class="prose">3. 读取地址和自有 PID，将鉴权凭据留在内存请求头。不要输出整个 $address 或 $headers。</p><pre><code>$address = Get-Content -LiteralPath (Join-Path $hostDirectory &#39;host.json&#39;) -Raw | ConvertFrom-Json
 $endpoint = $address.endpoint
 $ownedPid = [int]$address.pid
 $headers = @{ Authorization = &#39;Bearer &#39; + $address.token }

@@ -41,26 +41,39 @@ function observation(id: string) {
   assert.ok(check);
   return check.doc;
 }
-test("isolated preparation is at most eight native create/copy/path lines per platform", async () => {
+test("isolated preparation uses explained native steps without JavaScript or line-count compression", async () => {
   for (const platform of ["posix", "powershell"] as const) {
     const code = commands(state("isolated").before, platform);
     assert.ok(
-      code
-        .trim()
-        .split("\n")
-        .filter((line) => line.trim()).length <= 8,
-    );
-    assert.ok(
-      !/host\.mjs|exports\.execute|writeFile|WriteAllText|<<|@'|CheckKernel|connectHost|serve\(/.test(
+      !/\bnode\b|--input-type|await |import\(|host\.mjs|exports\.execute|writeFile|WriteAllText|<<|@'|CheckKernel|connectHost|serve\(/.test(
         code,
       ),
     );
+    const instructions = content(state("isolated").before, platform);
+    for (const step of ["1.", "2.", "3.", "4.", "预期"])
+      assert.ok(instructions.includes(step), `${platform}: missing purpose/result for ${step}`);
+    assert.ok(
+      [
+        ...instructions.matchAll(
+          new RegExp(`^\`\`\`${platform === "posix" ? "bash" : "powershell"}\\n`, "gm"),
+        ),
+      ].length >= 4,
+      `${platform}: keep operations in separate readable blocks`,
+    );
+    if (platform === "posix") assert.match(code, /mktemp -d/);
+    else {
+      assert.match(code, /New-Item/);
+      assert.match(code, /icacls/);
+      assert.ok(code.indexOf("icacls") < code.indexOf("Copy-Item"));
+      assert.match(code, /icacls "\$case"\s*\n/);
+    }
     assert.match(code, /packages\/check-host\/examples\/cancellable/);
     const startup = commands(state("ready").before, platform);
     assert.match(startup, /connectHost\(process\.argv\[2\]\)/);
     assert.match(startup, /closePrivateFileBackend/);
     assert.match(startup, /host\.json/);
     assert.ok(!/CheckKernel|serve\(|connection\.json/.test(startup));
+    assert.ok(!/const a=|try\{await|finally\{await/.test(startup));
   }
   const sample = await readFile(
     resolve(root, "packages/check-host/examples/cancellable/worker.cjs"),

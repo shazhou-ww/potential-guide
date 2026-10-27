@@ -11,6 +11,8 @@
 体验的实现细化，不改变理想世界；证明见 [分平台手册证据](./Platform-manual-evidence.md)。
 后续“准备仍过长”的修正见 [紧凑准备证据](./Compact-preparation-evidence.md)；
 该文取代上一轮自写 host.mjs / 自建 SDK 服务的当前使用说明，历史快照不改写。
+后续“优先让人理解，而不是压缩成一行”的修正见 [可读操作证据](./Readable-operation-evidence.md)；
+新说明取代前文关于准备行数和一行 SDK 调用的当前要求。
 
 ## Steps
 
@@ -44,10 +46,13 @@ HTML 使用原生折叠状态树、稳定锚点、全文转义和 CSP，无脚�
 人工说明保留七个状态的组织，每个进入、观察和结束区域都区分 Linux/macOS shell
 与 Windows PowerShell，使用原生 details 折叠，无脚本或网络资产。
 原生操作分别使用 curl/jq 与 Invoke-RestMethod、平台文件和 JSON 命令；
-准备每个平台不超过八行实际命令，只创建安全独立目录并复制预先提供的透明普通业务样例；
+准备按“目的、操作、预期现象”分四步，不用行数上限诱导压缩命令：
+系统命令创建唯一目录并保护权限、复制公开业务样例、查看文件结果。
+Linux/macOS 使用 mktemp；Windows 使用 New-Item/whoami/icacls，
+新空目录限制权限成功后才允许继续，不执行 Node 或 JavaScript。
 不写 worker 源码、host.mjs 或另一个服务脚本。
-安全目录、显式 connectHost 及关闭启动器 backend、readArtifact revision
-保留必要的一行透明 SDK 调用；其他操作均使用原始 HTTP/文件命令。
+ready 中确实必需的 connectHost 和 readArtifact SDK 调用分开解释并按多行展开，
+使用有意义的函数/变量名，不再压成 const a/try/finally 单行表达式；其他操作均用原始命令。
 明确 Bash 3.2、curl/jq 和 PowerShell 5.1 等依赖；不把 Git Bash 当成 Linux/macOS 原生验证。
 历史消费快照保留，不冒充更新后的页面。
 

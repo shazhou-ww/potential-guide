@@ -118,15 +118,22 @@ See the [Check Host YAML](test/check-host/host.states.yaml),
 [offline HTML](../../docs/check-host-manual.html). Each manual branch starts from a new owned scenario directory. The instructions
 use native Bash/curl/jq or PowerShell/Invoke-RestMethod from the repository root.
 They do not invoke Test Tree, a test binding, `tsx`, a REPL, or a task-command helper.
-Preparation is at most eight native command lines per platform: create an owned
-private directory and copy the inspectable ordinary
+Preparation uses native tools only: `mktemp` on Linux/macOS, and
+`New-Item` plus `icacls` on Windows. It never evaluates JavaScript or starts Node.
+Four explained steps create a private directory, protect it before storing any
+credentials, copy the inspectable ordinary
 [business artifact](../check-host/examples/README.md). No worker source, host.mjs,
 dispatcher or bootstrap script is generated.
-In the ready state, one transparent `connectHost(<scene>/host)` SDK call starts the
+Instructions prioritize a purpose, one readable operation, and its expected result,
+not the fewest possible lines. Run the separate blocks in the same shell session.
+In the ready state, an explained `connectHost(<scene>/host)` SDK call starts the
 **original discovery daemon**, including its real startup reservation; the launcher
-closes its own private backend. Another one-line `readArtifact` call calculates the
+closes its own private backend. A separate `readArtifact` call calculates the
 sample revision. Requests use the actual private `host/host.json` descriptor.
 There is no invented start/run/cancel CLI or custom `CheckKernel`/`serve` substitute.
+The unavoidable SDK calls are displayed as named, multi-line operations, not
+minified JavaScript one-liners. They remain a limitation of the current service
+entrypoints, not a requirement for preparing a directory.
 
 Linux/macOS instructions require Bash 3.2+, curl 7.55+, jq 1.6+, Node 22.13+
 and pnpm 11.22+, on a filesystem that actually preserves POSIX ownership and
