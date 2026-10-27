@@ -1,5 +1,17 @@
 # @potential-guide/check-host
 
+## Executable state paths and manual
+
+The private [`test-tree` workspace](../test-tree/README.md) runs representative
+real HTTP/worker paths from one [YAML state tree](../test-tree/test/check-host/host.states.yaml):
+ready, running, delayed cancellation cleanup, cancelled, expected failure and
+recovery. Each check creates its own isolated Host and replays its own path.
+This supplements, rather than replaces, discovery/CLI-race and kernel coverage.
+The same YAML generates a [Markdown manual](../../docs/check-host-manual.md) and
+[offline HTML](../../docs/check-host-manual.html); documentation rendering never
+imports test bindings or starts a Host. The manuals contain executable
+PowerShell steps and owned-resource cleanup instructions, not proof of test success.
+
 Discovery requires a dedicated private directory. Windows uses protected NTFS
 ACLs, not POSIX `mode` values; existing insecure directories or metadata are refused
 without changing their permissions. Choose a fresh private location rather than

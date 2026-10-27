@@ -1,0 +1,13 @@
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
+objectives:
+  standardize:
+    description: Standardize private YAML test and manual tooling without npm delivery.
+    objective: "@potential-guide/objective-package-standard"
+    inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
+    subject: |
+      {
+        "root": context.repo.rootPath, "directory": context.path,
+        "roles": ["tool"], "runtime": "node", "allows": ["@potential-guide/check-host"],
+        "entries": ["src/cli.ts", "src/model.ts", "src/runner.ts", "src/render.ts"],
+        "generated": [], "deliveries": [], "joins": []
+      }

@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 定义 state/transition 数据与绑定契约
-- [ ] **I-S02:** 从同一 YAML 展开测试并生成文档
-- [ ] **I-S03:** 以 Check Host 接通代表性路径
+- [x] **I-S01:** 定义 state/transition 数据与绑定契约
+- [x] **I-S02:** 从同一 YAML 展开测试并生成文档
+- [x] **I-S03:** 以 Check Host 接通代表性路径
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 转移与释放语义正确
-- [ ] **I-AC02:** 输出同源且文档错误明确可见
-- [ ] **I-AC03:** Check Host 自动化与路径手册一致
+- [x] **I-AC01:** 转移与释放语义正确
+- [x] **I-AC02:** 输出同源且文档错误明确可见
+- [x] **I-AC03:** Check Host 自动化与路径手册一致
 
 ## Deployment
 

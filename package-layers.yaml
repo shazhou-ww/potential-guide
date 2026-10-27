@@ -8,6 +8,7 @@ business:
   - "@potential-guide/objective-portfolio-supervisor"
   - "@potential-guide/regulation-coordinator"
 tools:
+  - "@potential-guide/test-tree"
   - pguide
   - "@potential-guide/cli-core"
   - "@potential-guide/pguide-config"

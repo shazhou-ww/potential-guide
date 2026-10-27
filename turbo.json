@@ -31,6 +31,15 @@
       "dependsOn": ["build", "@potential-guide/objective-package-standard#build"],
       "outputs": []
     },
+    "@potential-guide/test-tree#test": {
+      "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/docs/check-host-manual.md",
+        "$TURBO_ROOT$/docs/check-host-manual.html"
+      ],
+      "outputs": []
+    },
     "@potential-guide/objective-package-standard#build": {
       "dependsOn": ["^build"],
       "inputs": [

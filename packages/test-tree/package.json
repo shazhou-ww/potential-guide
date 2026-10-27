@@ -1,0 +1,24 @@
+{
+  "name": "@potential-guide/test-tree",
+  "version": "0.1.0",
+  "private": true,
+  "description": "YAML state paths for Node tests and offline operation manuals.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "lint": "biome lint .",
+    "test": "tsx --test --test-concurrency=1 \"test/*.test.ts\"",
+    "typecheck": "tsc -b --pretty false",
+    "manual": "tsx src/cli.ts"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "yaml": "catalog:"
+  },
+  "devDependencies": {
+    "@potential-guide/check-host": "workspace:^"
+  }
+}
