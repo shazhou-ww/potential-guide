@@ -1,0 +1,550 @@
+{
+  "verifiedContractCommit": "8622cf5943fd5629e942cc58433d928dab58f15a",
+  "startedAt": "2026-10-27T09:27:23.905Z",
+  "finishedAt": "2026-10-27T09:27:33.121Z",
+  "environment": {
+    "node": "v24.12.0",
+    "platform": "win32",
+    "release": "10.0.26300",
+    "typescript": "5.9.3"
+  },
+  "packages": [
+    {
+      "name": "@potential-guide/check-host",
+      "version": "0.1.0",
+      "filename": "potential-guide-check-host-0.1.0.tgz",
+      "sha256": "284b3d026b928be4f82f4dbf1db355b0b646667d67df8ca7378a8e8e3fa6ecce"
+    },
+    {
+      "name": "@potential-guide/effects",
+      "version": "0.1.0-rc.0",
+      "filename": "potential-guide-effects-0.1.0-rc.0.tgz",
+      "sha256": "0fe03517fa0d74ee2e6f6d45fa1b9716fd3de939c80654ed3283478b5b6c7c00"
+    },
+    {
+      "name": "@potential-guide/objective-pilot",
+      "version": "0.2.0-rc.0",
+      "filename": "potential-guide-objective-pilot-0.2.0-rc.0.tgz",
+      "sha256": "4ca97aa30a009a4c6b0422655de3a56daf3305209b0ac04629c1bc6580ec566f"
+    },
+    {
+      "name": "@potential-guide/objective-portfolio-supervisor",
+      "version": "0.4.0-rc.0",
+      "filename": "potential-guide-objective-portfolio-supervisor-0.4.0-rc.0.tgz",
+      "sha256": "99b48f77eda3d5d09c522ebdea04feb9861d319ef70e35c0c8a8f2c420b7bb16"
+    },
+    {
+      "name": "@potential-guide/objective-regulator",
+      "version": "0.4.0-rc.0",
+      "filename": "potential-guide-objective-regulator-0.4.0-rc.0.tgz",
+      "sha256": "6736462b7eaec28be3a4117c9e03fdb75b718db2c23e064a7017ac1776000798"
+    },
+    {
+      "name": "@potential-guide/pilot-protocol",
+      "version": "0.1.0-rc.0",
+      "filename": "potential-guide-pilot-protocol-0.1.0-rc.0.tgz",
+      "sha256": "35b8703b932334b5463ae7f1bb823c00dd636761aa68ac77a9839f580bfa335e"
+    },
+    {
+      "name": "@potential-guide/regulation-coordinator",
+      "version": "0.1.0-rc.0",
+      "filename": "potential-guide-regulation-coordinator-0.1.0-rc.0.tgz",
+      "sha256": "ae1f0488a36eb646b1f4af334727f8b1627be9da64944e5ef817e041c4f83884"
+    }
+  ],
+  "consumer": {
+    "entries": {
+      "@potential-guide/regulation-coordinator": "node_modules\\.pnpm\\@potential-guide+regulation_a61993f3ec01448b7a06d83d195be7ba\\node_modules\\@potential-guide\\regulation-coordinator\\dist\\index.js",
+      "@potential-guide/effects": "node_modules\\.pnpm\\@potential-guide+effects@fi_c3748d1b47a724fef184ec8e609a1788\\node_modules\\@potential-guide\\effects\\dist\\index.js"
+    },
+    "noSourceAliases": true,
+    "typecheckExit": 0
+  },
+  "hostEpochs": [
+    {
+      "epoch": "initial",
+      "pid": 40216
+    },
+    {
+      "epoch": "recovered",
+      "pid": 27248
+    },
+    {
+      "epoch": "stopped-restart",
+      "pid": 17880
+    }
+  ],
+  "notifications": [
+    {
+      "id": "external-recurrence-host:5",
+      "hostId": "external-recurrence-host",
+      "revision": 5,
+      "occurredAt": "2026-10-27T09:27:26.490Z",
+      "request": {
+        "ref": "periodic-root",
+        "targetKey": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+        "objectiveRevisionKey": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+        "desiredLevel": "ready",
+        "priority": 1,
+        "origin": {
+          "kind": "external"
+        },
+        "eligibleAt": "2026-10-27T09:27:25.855Z",
+        "recurrence": {
+          "intervalMs": 3000
+        },
+        "source": {
+          "integrity": "sha512-fixture",
+          "kind": "npm-package",
+          "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "packageName": "@fixture/recurrence",
+          "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+          "spec": "@fixture/recurrence@1.0.0",
+          "version": "1.0.0"
+        }
+      },
+      "target": {
+        "key": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+        "objectiveKey": "objective:9eab5da4ea733e0eb93ae48a39710691e1fda4aa9932610311b1731f062faf18",
+        "subject": {}
+      },
+      "objectiveRevision": {
+        "key": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+        "objectiveKey": "objective:9eab5da4ea733e0eb93ae48a39710691e1fda4aa9932610311b1731f062faf18",
+        "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "spec": {
+          "objectiveId": "@fixture/recurrence",
+          "version": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "manifest": {
+            "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json",
+            "defaultLanguage": "zh-CN",
+            "languages": [
+              "zh-CN"
+            ],
+            "levels": [
+              {
+                "checks": [],
+                "id": "ready"
+              }
+            ],
+            "subjectSchema": {
+              "additionalProperties": false,
+              "type": "object"
+            }
+          },
+          "locales": {
+            "zh-CN": {
+              "system/404": {
+                "content": "",
+                "description": "",
+                "id": "system/404",
+                "references": [],
+                "title": "缺少指引"
+              }
+            }
+          },
+          "source": {
+            "integrity": "sha512-fixture",
+            "kind": "npm-package",
+            "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "packageName": "@fixture/recurrence",
+            "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+            "spec": "@fixture/recurrence@1.0.0",
+            "version": "1.0.0"
+          }
+        }
+      },
+      "run": {
+        "hostBindingRevisionId": "host-binding:f50dd657c2a5c0f8d9d38aac50930b81b4dc444cc8f0117420db418251879616",
+        "id": "external-recurrence-host:3",
+        "limits": {
+          "maxAgentRuns": 3,
+          "maxStallRuns": 2,
+          "timeoutMs": 20000
+        },
+        "requestRef": "periodic-root",
+        "resourceRevision": 1
+      },
+      "reason": "agent-runs",
+      "usage": {
+        "agentRuns": 3
+      },
+      "message": "本次调用额度耗尽。",
+      "observation": null,
+      "lastProbeFailed": false,
+      "probeFailure": null,
+      "successorRequestRef": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7",
+      "nextEligibleAt": "2026-10-27T09:27:29.347Z"
+    },
+    {
+      "id": "external-recurrence-host:17",
+      "hostId": "external-recurrence-host",
+      "revision": 17,
+      "occurredAt": "2026-10-27T09:27:29.909Z",
+      "request": {
+        "ref": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7",
+        "targetKey": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+        "objectiveRevisionKey": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+        "desiredLevel": "ready",
+        "priority": 1,
+        "origin": {
+          "kind": "recurrence",
+          "predecessorRequestRef": "periodic-root"
+        },
+        "eligibleAt": "2026-10-27T09:27:29.347Z",
+        "recurrence": {
+          "intervalMs": 3000
+        },
+        "source": {
+          "integrity": "sha512-fixture",
+          "kind": "npm-package",
+          "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "packageName": "@fixture/recurrence",
+          "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+          "spec": "@fixture/recurrence@1.0.0",
+          "version": "1.0.0"
+        }
+      },
+      "target": {
+        "key": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+        "objectiveKey": "objective:9eab5da4ea733e0eb93ae48a39710691e1fda4aa9932610311b1731f062faf18",
+        "subject": {}
+      },
+      "objectiveRevision": {
+        "key": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+        "objectiveKey": "objective:9eab5da4ea733e0eb93ae48a39710691e1fda4aa9932610311b1731f062faf18",
+        "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "spec": {
+          "objectiveId": "@fixture/recurrence",
+          "version": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "manifest": {
+            "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json",
+            "defaultLanguage": "zh-CN",
+            "languages": [
+              "zh-CN"
+            ],
+            "levels": [
+              {
+                "checks": [],
+                "id": "ready"
+              }
+            ],
+            "subjectSchema": {
+              "additionalProperties": false,
+              "type": "object"
+            }
+          },
+          "locales": {
+            "zh-CN": {
+              "system/404": {
+                "content": "",
+                "description": "",
+                "id": "system/404",
+                "references": [],
+                "title": "缺少指引"
+              }
+            }
+          },
+          "source": {
+            "integrity": "sha512-fixture",
+            "kind": "npm-package",
+            "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "packageName": "@fixture/recurrence",
+            "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+            "spec": "@fixture/recurrence@1.0.0",
+            "version": "1.0.0"
+          }
+        }
+      },
+      "run": {
+        "hostBindingRevisionId": "host-binding:f50dd657c2a5c0f8d9d38aac50930b81b4dc444cc8f0117420db418251879616",
+        "id": "external-recurrence-host:13",
+        "limits": {
+          "maxAgentRuns": 3,
+          "maxStallRuns": 2,
+          "timeoutMs": 20000
+        },
+        "requestRef": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7",
+        "resourceRevision": 1
+      },
+      "reason": "stall-runs",
+      "usage": {
+        "stallRuns": 2
+      },
+      "message": "本次执行未继续取得进展。",
+      "observation": null,
+      "lastProbeFailed": false,
+      "probeFailure": null,
+      "successorRequestRef": "recurrence-request:2f64d227f81f0a18d37c9c418373e10d263d7288fe85bb666727214c836ffb66",
+      "nextEligibleAt": "2026-10-27T09:27:32.350Z"
+    }
+  ],
+  "replay": {
+    "identicalInitialReads": true,
+    "originalEventVisibleAfterRestart": true,
+    "deduplicatedExtraRequestRef": "extra:external-recurrence-host:5"
+  },
+  "recovery": {
+    "runId": "external-recurrence-host:13",
+    "workerPid": 35264,
+    "startsBeforeCrash": 3,
+    "startsAfterRecovery": 3,
+    "limits": {
+      "timeoutMs": 20000,
+      "maxAgentRuns": 3,
+      "maxStallRuns": 2
+    }
+  },
+  "cancellation": {
+    "observedAfter": "2026-10-27T09:27:33.122Z",
+    "nextEligibleAt": "2026-10-27T09:27:32.350Z",
+    "stoppedRevision": 19,
+    "restartedRevision": 19
+  },
+  "requests": [
+    {
+      "ref": "periodic-root",
+      "targetKey": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+      "objectiveRevisionKey": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+      "desiredLevel": "ready",
+      "priority": 1,
+      "origin": {
+        "kind": "external"
+      },
+      "eligibleAt": "2026-10-27T09:27:25.855Z",
+      "recurrence": {
+        "intervalMs": 3000
+      },
+      "source": {
+        "integrity": "sha512-fixture",
+        "kind": "npm-package",
+        "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "packageName": "@fixture/recurrence",
+        "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+        "spec": "@fixture/recurrence@1.0.0",
+        "version": "1.0.0"
+      },
+      "locallyClosed": true,
+      "cancelled": true
+    },
+    {
+      "ref": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7",
+      "targetKey": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+      "objectiveRevisionKey": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+      "desiredLevel": "ready",
+      "priority": 1,
+      "origin": {
+        "kind": "recurrence",
+        "predecessorRequestRef": "periodic-root"
+      },
+      "eligibleAt": "2026-10-27T09:27:29.347Z",
+      "recurrence": {
+        "intervalMs": 3000
+      },
+      "source": {
+        "integrity": "sha512-fixture",
+        "kind": "npm-package",
+        "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "packageName": "@fixture/recurrence",
+        "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+        "spec": "@fixture/recurrence@1.0.0",
+        "version": "1.0.0"
+      },
+      "locallyClosed": true,
+      "cancelled": true
+    },
+    {
+      "ref": "extra:external-recurrence-host:5",
+      "targetKey": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+      "objectiveRevisionKey": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+      "desiredLevel": "ready",
+      "priority": 1,
+      "origin": {
+        "kind": "external"
+      },
+      "eligibleAt": "2026-10-27T09:27:26.506Z",
+      "source": {
+        "integrity": "sha512-fixture",
+        "kind": "npm-package",
+        "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "packageName": "@fixture/recurrence",
+        "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+        "spec": "@fixture/recurrence@1.0.0",
+        "version": "1.0.0"
+      },
+      "locallyClosed": true,
+      "cancelled": false
+    },
+    {
+      "ref": "recurrence-request:2f64d227f81f0a18d37c9c418373e10d263d7288fe85bb666727214c836ffb66",
+      "targetKey": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+      "objectiveRevisionKey": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+      "desiredLevel": "ready",
+      "priority": 1,
+      "origin": {
+        "kind": "recurrence",
+        "predecessorRequestRef": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7"
+      },
+      "eligibleAt": "2026-10-27T09:27:32.350Z",
+      "recurrence": {
+        "intervalMs": 3000
+      },
+      "source": {
+        "integrity": "sha512-fixture",
+        "kind": "npm-package",
+        "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "packageName": "@fixture/recurrence",
+        "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+        "spec": "@fixture/recurrence@1.0.0",
+        "version": "1.0.0"
+      },
+      "locallyClosed": true,
+      "cancelled": true
+    }
+  ],
+  "runs": [
+    {
+      "run": {
+        "hostBindingRevisionId": "host-binding:f50dd657c2a5c0f8d9d38aac50930b81b4dc444cc8f0117420db418251879616",
+        "id": "external-recurrence-host:3",
+        "limits": {
+          "maxAgentRuns": 3,
+          "maxStallRuns": 2,
+          "timeoutMs": 20000
+        },
+        "requestRef": "periodic-root",
+        "resourceRevision": 1
+      },
+      "phase": "ended",
+      "outcome": {
+        "kind": "exhausted",
+        "message": "本次调用额度耗尽。",
+        "reason": "agent-runs",
+        "usage": {
+          "agentRuns": 3
+        }
+      },
+      "observation": null,
+      "lastProbeFailed": false,
+      "updatedAt": "2026-10-27T09:27:26.490Z"
+    },
+    {
+      "run": {
+        "hostBindingRevisionId": "host-binding:f50dd657c2a5c0f8d9d38aac50930b81b4dc444cc8f0117420db418251879616",
+        "id": "external-recurrence-host:8",
+        "limits": {
+          "maxAgentRuns": 3,
+          "maxStallRuns": 2,
+          "timeoutMs": 20000
+        },
+        "requestRef": "extra:external-recurrence-host:5",
+        "resourceRevision": 1
+      },
+      "phase": "ended",
+      "outcome": {
+        "kind": "target-reached"
+      },
+      "observation": {
+        "current": {
+          "levelId": "ready",
+          "objectiveId": "@fixture/recurrence"
+        },
+        "gapSummary": "",
+        "observedAt": "2026-10-27T09:27:26.613Z",
+        "problems": [],
+        "sources": {
+          "@fixture/recurrence": {
+            "integrity": "sha512-fixture",
+            "kind": "npm-package",
+            "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "packageName": "@fixture/recurrence",
+            "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+            "spec": "@fixture/recurrence@1.0.0",
+            "version": "1.0.0"
+          }
+        },
+        "versions": {
+          "@fixture/recurrence": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        }
+      },
+      "lastProbeFailed": false,
+      "updatedAt": "2026-10-27T09:27:26.615Z"
+    },
+    {
+      "run": {
+        "hostBindingRevisionId": "host-binding:f50dd657c2a5c0f8d9d38aac50930b81b4dc444cc8f0117420db418251879616",
+        "id": "external-recurrence-host:13",
+        "limits": {
+          "maxAgentRuns": 3,
+          "maxStallRuns": 2,
+          "timeoutMs": 20000
+        },
+        "requestRef": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7",
+        "resourceRevision": 1
+      },
+      "phase": "ended",
+      "outcome": {
+        "kind": "exhausted",
+        "message": "本次执行未继续取得进展。",
+        "reason": "stall-runs",
+        "usage": {
+          "stallRuns": 2
+        }
+      },
+      "observation": null,
+      "lastProbeFailed": false,
+      "updatedAt": "2026-10-27T09:27:29.909Z"
+    }
+  ],
+  "operations": [
+    {
+      "type": "start",
+      "runId": "external-recurrence-host:3",
+      "requestRef": "periodic-root",
+      "pid": 47984,
+      "at": "2026-10-27T09:27:26.397Z"
+    },
+    {
+      "type": "end",
+      "runId": "external-recurrence-host:3",
+      "requestRef": "periodic-root",
+      "pid": 47984,
+      "at": "2026-10-27T09:27:26.459Z"
+    },
+    {
+      "type": "start",
+      "runId": "external-recurrence-host:8",
+      "requestRef": "extra:external-recurrence-host:5",
+      "pid": 3488,
+      "at": "2026-10-27T09:27:26.553Z"
+    },
+    {
+      "type": "end",
+      "runId": "external-recurrence-host:8",
+      "requestRef": "extra:external-recurrence-host:5",
+      "pid": 3488,
+      "at": "2026-10-27T09:27:26.583Z"
+    },
+    {
+      "type": "start",
+      "runId": "external-recurrence-host:13",
+      "requestRef": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7",
+      "pid": 35264,
+      "at": "2026-10-27T09:27:29.397Z"
+    },
+    {
+      "type": "end",
+      "runId": "external-recurrence-host:13",
+      "requestRef": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7",
+      "pid": 35264,
+      "at": "2026-10-27T09:27:29.893Z"
+    }
+  ],
+  "assertions": {
+    "workerStarts": 3,
+    "workerEnds": 3,
+    "noTargetOverlap": true,
+    "noRemainingProcesses": true,
+    "noAutomaticQuotaContinuation": true
+  }
+}

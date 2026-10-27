@@ -2,6 +2,8 @@
 
 依据为已接受的[构想](./inner/ideal/Idea.md)及实现。先同步本文及[验证工具](./verification/run.mjs)，再在工作区外执行；结果另记外部证据，不以仓库单元测试替代现实验证。
 
+已执行结果、环境和限制见[部署验证证据](./Deployment-evidence.md)及[结构化记录](./verification/results.json)。
+
 ## Steps
 
 ### D-S01: 准备独立消费者
