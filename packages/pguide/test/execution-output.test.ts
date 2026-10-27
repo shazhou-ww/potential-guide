@@ -4,14 +4,12 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { CliError } from "@potential-guide/cli-core";
 import type { Envelope, PilotObservation, PilotSpec } from "@potential-guide/objective-pilot";
-import type { ObjectiveGoal } from "@potential-guide/objective-portfolio-supervisor";
 import { RegulationError } from "@potential-guide/objective-regulator";
 import { observationMarkdown } from "../../pguide-pilot/src/commands/pilot.js";
 import {
   regulationInputGuidance,
   regulationMarkdown,
 } from "../../pguide-regulate/src/commands/regulator.js";
-import { supervisionMarkdown } from "../../pguide-supervise/src/commands/supervisor.js";
 import { bin, fixture, root, run, scratch, writeConfig } from "./fixtures.js";
 
 const normalize = (value: string) =>
@@ -36,15 +34,7 @@ for await(const line of createInterface({input:process.stdin})){
 const m=JSON.parse(line);if(m.id===undefined)continue;let result={};
 if(m.method==="initialize")result={protocolVersion:1,agentCapabilities:{loadSession:true}};
 if(m.method==="session/new")result={sessionId:"fixture-session"};
-if(m.method==="session/prompt"){
-const prompt=m.params.prompt[0].text;
-if(prompt.startsWith("Potential Guide regulation"))result={stopReason:"end_turn"};
-else{
-const context=JSON.parse(prompt.split("\\n").at(-1));
-const text=JSON.stringify({directives:context.candidates.map(goal=>({goalId:goal.id,priority:goal.priority}))});
-console.log(JSON.stringify({jsonrpc:"2.0",method:"session/update",params:{sessionId:"fixture-session",update:{sessionUpdate:"agent_message_chunk",content:{type:"text",text}}}}));
-result={stopReason:"end_turn"};
-}}
+if(m.method==="session/prompt")result={stopReason:"end_turn"};
 console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
   );
   const config = join(f.directory, "config.json");
@@ -65,27 +55,8 @@ console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
       },
     }),
   );
-  const portfolio = join(f.directory, "portfolio.json");
   async function setSubject(mode: string) {
     await writeFile(f.subject, JSON.stringify({ mode, privateValue: "SUBJECT_MUST_NOT_APPEAR" }));
-    await writeFile(
-      portfolio,
-      JSON.stringify({
-        schemaVersion: 4,
-        goals: [
-          {
-            id: "readiness",
-            objective: f.uri,
-            revision,
-            subject: { mode, privateValue: "SUBJECT_MUST_NOT_APPEAR" },
-            targetLevel: "terminal",
-            priority: 1,
-            observationIntervalMs: 10000,
-          },
-        ],
-        resources: [],
-      }),
-    );
   }
   await setSubject("gap");
   const probeArgs = [
@@ -111,15 +82,7 @@ console.log(JSON.stringify({jsonrpc:"2.0",id:m.id,result}));}`,
     "--fixture-config",
     config,
   ];
-  const supervisionArgs = [
-    "--portfolio-file",
-    portfolio,
-    "--planner",
-    "fixture",
-    "--fixture-config",
-    config,
-  ];
-  return { ...f, config, state, portfolio, setSubject, probeArgs, regulationArgs, supervisionArgs };
+  return { ...f, config, state, setSubject, probeArgs, regulationArgs };
 }
 
 test("scaffold receipts and validate scope have default/Markdown parity; --bogus is rejected", async () => {
@@ -400,82 +363,17 @@ test("regulation quota labels distinguish singular and plural runs", () => {
   assert.match(plural, /1000 ms; 2 Agent runs; 2 additional stalled runs\./u);
 });
 
-test("supervise distinguishes planning, queued work, execution boundary and compatible failed observations", async () => {
+test("retired supervise execution options are rejected without dispatch", async () => {
   const f = await executionFixture();
   try {
-    const plain = await run(bin("supervise"), f.supervisionArgs);
-    assert.equal(plain.code, 0, plain.stdout + plain.stderr);
-    const markdown = await run(bin("supervise"), [...f.supervisionArgs, "--format", "markdown"]);
-    assert.equal(markdown.stdout, plain.stdout);
-    for (const text of [
-      "# Portfolio supervision",
-      "planning only",
-      "1 goal.",
-      "1 demand.",
-      "0 resources",
-      "`readiness`",
-      f.uri,
-      "current: `initial`",
-      "target: `terminal`",
-      "target not reached",
-      "execution was not requested",
-      "planning pass finished",
-      "--execute",
-    ])
-      assert.ok(plain.stdout.includes(text), text);
-    assert.doesNotMatch(plain.stdout, /1 goals|1 demands|SUBJECT_MUST_NOT_APPEAR/u);
-    const json = await run(bin("supervise"), [...f.supervisionArgs, "--format", "json"]);
-    assert.equal(json.code, 0, json.stdout + json.stderr);
-    const plan = JSON.parse(json.stdout);
-    assert.deepEqual(Object.keys(plan).sort(), [
-      "events",
-      "observations",
-      "queue",
-      "schemaVersion",
-      "status",
-    ]);
-    assert.equal(plan.schemaVersion, 4);
-    assert.equal(plan.status, "planned");
-    assert.equal(plan.queue.demands.length, 1);
-    const executionArgs = [...f.supervisionArgs, "--execute", "--duration-ms", "1500"];
-    const executed = await run(bin("supervise"), executionArgs);
-    assert.equal(executed.code, 0, executed.stdout + executed.stderr);
-    assert.match(executed.stdout, /Mode: execution/u);
-    assert.match(executed.stdout, /duration limit reached \(1500 ms\)/u);
-    assert.match(executed.stdout, /no resource matches/u);
-    assert.match(executed.stdout, /does not prove all goals are reached/u);
-    const explicitExecution = await run(bin("supervise"), [
-      ...executionArgs,
-      "--format",
-      "markdown",
-    ]);
-    assert.equal(explicitExecution.stdout, executed.stdout);
-    await f.setSubject("terminal");
-    const complete = await run(bin("supervise"), f.supervisionArgs);
-    assert.equal(complete.code, 0, complete.stdout + complete.stderr);
-    assert.match(complete.stdout, /Remaining demands: 0 demands/u);
-    assert.match(complete.stdout, /status: target reached/u);
-    await f.setSubject("failure");
-    const failure = await run(bin("supervise"), f.supervisionArgs);
-    assert.equal(failure.code, 70, failure.stdout + failure.stderr);
-    assert.equal(failure.stderr, "");
-    assert.match(failure.stdout, /Observation failed for goal `readiness`, Objective/u);
-    assert.ok(failure.stdout.includes(f.uri));
-    assert.match(failure.stdout, /target `terminal`: Synthetic check invocation failed/u);
-    const failedMarkdown = await run(bin("supervise"), [
-      ...f.supervisionArgs,
-      "--format",
-      "markdown",
-    ]);
-    assert.equal(failedMarkdown.stdout, failure.stdout);
-    const failedJson = await run(bin("supervise"), [...f.supervisionArgs, "--format", "json"]);
-    assert.equal(failedJson.code, 70);
-    assert.equal(failedJson.stderr, "");
-    assert.equal(JSON.parse(failedJson.stdout).status, "internal-error");
-    assert.equal(
-      JSON.parse(failedJson.stdout).error,
-      "Observation failed for readiness: Synthetic check invocation failed",
+    const result = await run(
+      join(root, "packages", "pguide", "dist", "bin.js"),
+      ["supervise", "--execute", "--duration-ms", "1500", "--format", "json"],
+      { ...process.env, PATH: "" },
     );
+    assert.notEqual(result.code, 0);
+    assert.match(result.stdout + result.stderr, /Unknown command.*supervise/u);
+    await assert.rejects(readdir(join(f.state, "regulations")), { code: "ENOENT" });
   } finally {
     await rm(f.directory, { recursive: true, force: true });
   }
@@ -517,34 +415,4 @@ test("renderers escape Markdown and never display dependency subjects or transcr
   const probe = observationMarkdown(observation, spec);
   assert.match(probe, /``dependency`name``/u);
   assert.doesNotMatch(probe, /PRIVATE_SUBJECT/u);
-  const goal: ObjectiveGoal = {
-    id: "goal*\n# injected",
-    objective: spec,
-    subject: { secret: "PRIVATE_SUBJECT" },
-    targetLevel: "terminal",
-    priority: 1,
-    observationIntervalMs: 1000,
-  };
-  const supervision = supervisionMarkdown(
-    {
-      schemaVersion: 4,
-      status: "executed",
-      observations: { [goal.id]: observation },
-      queue: { revision: 1, demands: [{ ...goal, revision: 1, requirements: ["repair"] }] },
-      events: [
-        {
-          type: "failed",
-          demand: { ...goal, revision: 1 },
-          error: new Error("Worker unavailable\nTRANSCRIPT_MUST_NOT_APPEAR"),
-        },
-      ],
-    },
-    [goal],
-    [{ id: "worker", binding: { id: "agent" }, capacity: 1, capabilities: ["repair"] }],
-    "cancelled",
-  );
-  assert.match(supervision, /1 resource; total capacity 1/u);
-  assert.match(supervision, /matching capacity does not establish dispatch or completion/u);
-  assert.match(supervision, /failure: Worker unavailable/u);
-  assert.doesNotMatch(supervision, /PRIVATE_SUBJECT|TRANSCRIPT_MUST_NOT_APPEAR|\n# injected/u);
 });

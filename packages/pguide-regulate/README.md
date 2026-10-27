@@ -4,7 +4,7 @@ Optional `pguide-regulate` and `pguide-continue` commands. These cooperate throu
 persisted regulation state and Agent sessions, so ship together. Standalone
 binaries do not require `pguide`; install alongside it to discover `regulate`
 and `continue`. Agent execution and process-worker helpers are public tool APIs
-used by supervision without a reverse dependency.
+available to external callers without a reverse dependency.
 
 Stopping a regulation process first requests cooperative abort, allowing it to
 explicitly cancel shared Host checks and acknowledge cleanup. The process runner

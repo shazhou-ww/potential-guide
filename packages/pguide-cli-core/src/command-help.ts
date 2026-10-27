@@ -15,7 +15,6 @@ type Command =
   | "probe"
   | "regulate"
   | "continue"
-  | "supervise"
   | "scaffold"
   | "validate";
 type Handler = Parameters<typeof commandMain>[1];
@@ -26,7 +25,6 @@ export const commandDescriptions: Record<Command, string> = {
   probe: "Observe an Objective Pilot",
   regulate: "Run Pilot regulation with per-Agent execution limits",
   continue: "Continue a persisted Regulation",
-  supervise: "Supervise an Objective portfolio",
   scaffold: "Create an Objective Pilot skeleton",
   validate: "Validate an Objective Pilot",
 };
@@ -39,7 +37,6 @@ export const commandPackages: Record<Command, string> = {
   validate: "@potential-guide/pguide-pilot",
   regulate: "@potential-guide/pguide-regulate",
   continue: "@potential-guide/pguide-regulate",
-  supervise: "@potential-guide/pguide-supervise",
 };
 
 const help: Record<Command, CommandHelp> = {
@@ -184,40 +181,6 @@ const help: Record<Command, CommandHelp> = {
           "  Restores the saved target, subject, Agent recipe and quotas; does not accept a new --pilot.",
           "  Current permission grants apply. A required Agent session must be resumable.",
           "  Use the same --cwd and user/project config.jsonc context to find the saved state directory.",
-        ],
-      },
-    ],
-  },
-  supervise: {
-    description: "Observe an Objective portfolio and ask a planner to allocate Agent resources.",
-    usage: "pguide supervise --portfolio-file <json> --planner <profile> [options]",
-    sections: [
-      {
-        title: "Required",
-        lines: [
-          "  --portfolio-file <json> Portfolio schemaVersion 4 with reviewed attainment targets",
-          "  --planner <profile>     Existing Agent profile used for planning",
-        ],
-      },
-      {
-        title: "Options",
-        lines: [
-          "  --execute               Run the coordinator and dispatch approved regulations",
-          "  --duration-ms <ms>      Stop after a positive duration; requires --execute",
-        ],
-      },
-      {
-        title: "Examples",
-        lines: [
-          "  pguide supervise --portfolio-file .\\portfolio.json --planner local --format json",
-          "  pguide supervise --portfolio-file .\\portfolio.json --planner local --execute --duration-ms 60000",
-        ],
-      },
-      {
-        title: "Notes",
-        lines: [
-          "  Without --execute, produces a plan without dispatching repairs; planning still uses an Agent.",
-          "  Live execution watches portfolio/config changes. Ctrl+C cancels the coordinator.",
         ],
       },
     ],
@@ -378,14 +341,9 @@ export function getCommandHelp(command: Command, subcommand?: string): CommandHe
               "--input-file cannot combine with --subject-file; --subject-file requires --pilot.",
               ...(command === "regulate" ? ["--target is required."] : []),
             ]
-          : command === "supervise"
-            ? [
-                "--portfolio-file and --planner are required.",
-                "--duration-ms must be positive and requires --execute.",
-              ]
-            : command === "scaffold"
-              ? ["--problem requires --check; destination must be absent or empty."]
-              : [],
+          : command === "scaffold"
+            ? ["--problem requires --check; destination must be absent or empty."]
+            : [],
     };
   const operations = command === "agents" ? agentOperations : objectiveOperations;
   const selected =

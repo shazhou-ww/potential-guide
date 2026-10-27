@@ -10,7 +10,6 @@
   "references": [
     { "path": "../effects" },
     { "path": "../objective-pilot" },
-    { "path": "../objective-regulator" },
-    { "path": "../objective-portfolio-supervisor" }
+    { "path": "../objective-regulator" }
   ]
 }

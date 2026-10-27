@@ -15,7 +15,9 @@ import type {
   PilotSpec,
 } from "@potential-guide/objective-pilot";
 import type { RegulationInput, RegulationOutcome } from "@potential-guide/objective-regulator";
+import { canonicalJson } from "../src/canonical-json.js";
 import { Engine, type Message } from "../src/engine.js";
+import { identityKey } from "../src/identity.js";
 import {
   type AgentResource,
   type CoordinatorCommand,
@@ -25,6 +27,7 @@ import {
   type Regulation,
   regulationCoordinator,
 } from "../src/index.js";
+import { identity, supports, validateRegulation } from "../src/validation.js";
 
 function deferred<A>() {
   let resolve!: (value: A) => void;
@@ -81,6 +84,66 @@ function spec(id: string, version = "1".repeat(40)): PilotSpec {
 function regulation(id: string, overrides: Partial<Regulation> = {}): Regulation {
   return { id, objective: spec(id), subject: {}, targetLevel: "ready", priority: 3, ...overrides };
 }
+
+test("retirement preserves canonical persisted bytes, stable identity keys and JSON rejection", () => {
+  const value = { z: [{ B: 2, a: 1 }], A: 3, a: 4, ä: 5 };
+  assert.equal(canonicalJson(value), '{"a":4,"A":3,"ä":5,"z":[{"a":1,"B":2}]}');
+  assert.equal(
+    identityKey("fixture", value),
+    "fixture:6ca03b8e198fdccbdeb832ecf30da61dcfd7b69b5a139049879b4bb2ffb6632c",
+  );
+  const goal = regulation("legacy", { subject: value });
+  assert.equal(
+    identity(goal),
+    canonicalJson([
+      goal.objective.objectiveId,
+      goal.objective.version,
+      goal.objective.source,
+      value,
+      "en",
+    ]),
+  );
+  const circular: Record<string, unknown> = {};
+  circular.self = circular;
+  for (const invalid of [undefined, NaN, Infinity, { missing: undefined }, circular]) {
+    assert.throws(() => canonicalJson(invalid), {
+      name: "TypeError",
+      message: "Expected finite JSON data.",
+    });
+  }
+});
+
+test("retirement retains strict legacy goal validation and capability matching", () => {
+  validateRegulation(regulation("valid"));
+  for (const changes of [
+    { id: "" },
+    { id: "$dependency:reserved" },
+    { priority: -1 },
+    { priority: 1.5 },
+    { requirements: [""] },
+    { requirements: [1] },
+    { subject: [] },
+    { sourceBindings: null },
+    { sourceBindings: [] },
+    { language: "unknown" },
+    { targetLevel: "unknown" },
+    { extra: true },
+  ]) {
+    assert.throws(
+      () => validateRegulation({ ...regulation("invalid"), ...changes } as Regulation),
+      TypeError,
+    );
+  }
+  const resource: AgentResource = {
+    id: "worker",
+    binding: { id: "agent" },
+    capacity: 1,
+    capabilities: ["repair"],
+  };
+  assert.equal(supports(resource, {}), true);
+  assert.equal(supports(resource, { requirements: ["repair"] }), true);
+  assert.equal(supports(resource, { requirements: ["repair", "network"] }), false);
+});
 function result(
   objective: PilotSpec,
   stopReason: "target-reached" | "authorization-required" | "exhausted" = "target-reached",

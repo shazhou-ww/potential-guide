@@ -8,15 +8,7 @@ const agents = join(root, "packages", "pguide-agents", "dist", "bin.js");
 const top = join(root, "packages", "pguide", "dist", "bin.js");
 
 test("standalone command help JSON preserves existing fields and matches human content", async () => {
-  for (const command of [
-    "probe",
-    "regulate",
-    "continue",
-    "supervise",
-    "scaffold",
-    "validate",
-    "objectives",
-  ]) {
+  for (const command of ["probe", "regulate", "continue", "scaffold", "validate", "objectives"]) {
     const text = await run(bin(command), ["--help"]);
     const json = await run(bin(command), ["--help", "--format", "json"]);
     assert.equal(text.code, 0, text.stdout);

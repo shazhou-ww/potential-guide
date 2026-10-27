@@ -129,7 +129,6 @@ to select a farther new file.
 | `reports.directory` | `pilot.reportDirectory` | none; reports under state root |
 | `retentionDays` | `regulate.retentionDays` | none |
 | `agentExecutionLimits.timeoutMs` | `regulate.agentTimeoutMs` | `1800000` |
-| same explicit timeout | `supervise.agentTimeoutMs` | `30000` |
 | same explicit timeout | `pguide.diagnoseAhpTimeoutMs` | `30000` |
 | `regulationStrategy.quota` | `regulate.quota` | `{"timeoutMs":300000,"maxAgentRuns":10,"maxStallRuns":3}` |
 | `regulationStrategy.probe` | `pilot.probe` | `{"timeoutMs":30000,"retry":{"maxRetries":0,"delayMs":0}}` |
@@ -151,7 +150,9 @@ preferences: CLI option behavior is unchanged. Existing `PGUIDE_FORMAT`,
 `--config` (including `--config=...`) and main-config `--scope explicit` are
 retired with explicit diagnostics; use user/project discovery and `--cwd`.
 
-Quota stays shared between regulate and supervise. `pilot.probe` supports three
+Quota belongs to regulation. The retired `supervise.agentTimeoutMs` setting
+should be removed; it no longer has a built-in descriptor or default.
+`pilot.probe` supports three
 independent runtime budgets:
 
 ```jsonc
@@ -176,8 +177,7 @@ reuse hits still consume the logical count and depth checks. `checkTimeoutMs`
 defaults to `timeoutMs` for backward compatibility and bounds each isolated
 process check. `timeoutMs` retains the Regulation outer probe deadline and retry
 semantics; increasing a check timeout alone never extends the aggregate deadline.
-All three settings reach probe, regulate and supervise observation bindings.
-Supervise workers do not newly inherit the configured probe policy.
+All three settings reach probe and regulate observation bindings.
 Diagnostics distinguish `source-preparation-timeout`, `observation-timeout`,
 `observation-budget` and `check-timeout`, and retain Objective/check identity.
 Continue keeps archived profiles, timeouts, probe/quota and pinned sources,

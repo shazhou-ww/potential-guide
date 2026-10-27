@@ -1,5 +1,5 @@
 import type { PilotObservation } from "@potential-guide/objective-pilot";
-import { canonicalJson } from "@potential-guide/objective-portfolio-supervisor";
+import { canonicalJson } from "./canonical-json.js";
 import { type RegulationRequest, requestDetails } from "./requests.js";
 import {
   bindingForRun,

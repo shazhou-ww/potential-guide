@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { after, before, test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { Effect, SubscriptionRef } from "@potential-guide/effects";
+import { Effect } from "@potential-guide/effects";
 import {
   captureFilesystemObservation,
   createWorkerCheckProbe,
@@ -16,7 +16,6 @@ import {
   parseObjectives,
   projectObjective,
 } from "@potential-guide/objective-pilot";
-import { createPortfolioPlanner } from "@potential-guide/objective-portfolio-supervisor";
 import { makeRegulatorSpec, regulate } from "@potential-guide/objective-regulator";
 import { createWorkerHost } from "../../../scripts/worker-test-helpers.mjs";
 import { readArtifact } from "../../check-host/dist/index.js";
@@ -517,7 +516,7 @@ test("root retains joint delivery coverage, dependency closure, layout and runti
   });
 });
 
-test("real repository has twenty-five package-owned subjects and no old contract input", async (t) => {
+test("real repository has twenty-three package-owned subjects and no old contract input", async (t) => {
   const entry = parseObjectives(await readFile(join(root, "objectives.yaml"), "utf8")).standardize;
   const subject = projectObjective(entry, context(root), undefined);
   const observed = [];
@@ -535,93 +534,61 @@ test("real repository has twenty-five package-owned subjects and no old contract
   });
 
   await t.test(
-    "Supervisor receives a real regulation handoff, repairs the package and re-observes the consumer",
+    "Regulator exposes a real dependency handoff for an external caller to repair and re-observe",
     async () => {
       await fixture(async ({ write, subject }) => {
         await write("packages/shared/src/index.ts", "import './missing.js';");
         const spec = await fixtureSpec(rootId);
-        const observed = [];
-        const planner = await createPortfolioPlanner({
-          goals: [
-            {
-              id: "standardize",
-              objective: spec,
-              subject,
-              targetLevel: "terminal",
-              priority: 3,
-              observationIntervalMs: 60000,
-            },
-          ],
-          periodic: false,
-          resolveObjective: fixtureSpec,
-          observe: async (goal) => {
-            observed.push(goal.objective.objectiveId);
-            return observation(goal.subject, goal.objective.objectiveId);
-          },
-        });
-        const queue = () => Effect.runPromise(SubscriptionRef.get(planner.queue));
         const strategy = {
           targetLevel: "terminal",
           agentExecutionLimits: { timeoutMs: 10000 },
           quota: { timeoutMs: 30000, maxAgentRuns: 1, maxStallRuns: 1 },
         };
-        try {
-          const rootDemand = (await queue()).demands[0];
-          assert.equal(rootDemand.objective.objectiveId, rootId);
-          const handoff = await Effect.runPromise(
-            regulate(
-              {
-                spec: makeRegulatorSpec(spec, strategy, { id: "controlled-local-fixture" }),
-                subject,
+        const handoff = await Effect.runPromise(
+          regulate(
+            {
+              spec: makeRegulatorSpec(spec, strategy, { id: "controlled-local-fixture" }),
+              subject,
+            },
+            {
+              pilot: await runtimeFor(rootId),
+              executeAgent: async () =>
+                assert.fail("The root must hand off, never start a nested Agent."),
+            },
+          ),
+        );
+        assert.equal(handoff.stopReason, "dependency-required");
+        const [dependency] = handoff.dependencies;
+        assert.equal(dependency.objectiveId, packageId);
+        const child = {
+          objective: await fixtureSpec(dependency.objectiveId),
+          subject: dependency.subject,
+        };
+        let runs = 0;
+        const repaired = await Effect.runPromise(
+          regulate(
+            {
+              spec: makeRegulatorSpec(child.objective, strategy, {
+                id: "controlled-local-fixture",
+              }),
+              subject: child.subject,
+            },
+            {
+              pilot: await runtimeFor(packageId),
+              async executeAgent(request) {
+                runs++;
+                assert.deepEqual(request.subject, child.subject);
+                await write("packages/shared/src/missing.ts", "export {};");
+                return { status: "completed", summary: "Controlled fixture source restored." };
               },
-              {
-                pilot: await runtimeFor(rootId),
-                executeAgent: async () =>
-                  assert.fail("The root must hand off, never start a nested Agent."),
-              },
-            ),
-          );
-          assert.equal(handoff.stopReason, "dependency-required");
-          await planner.feedback({ type: "result", demand: rootDemand, outcome: handoff });
-          const child = (await queue()).demands[0];
-          assert.equal(child.objective.objectiveId, packageId);
-          let runs = 0;
-          const repaired = await Effect.runPromise(
-            regulate(
-              {
-                spec: makeRegulatorSpec(child.objective, strategy, {
-                  id: "controlled-local-fixture",
-                }),
-                subject: child.subject,
-              },
-              {
-                pilot: await runtimeFor(packageId),
-                async executeAgent(request) {
-                  runs++;
-                  assert.deepEqual(request.subject, child.subject);
-                  await write("packages/shared/src/missing.ts", "export {};");
-                  return { status: "completed", summary: "Controlled fixture source restored." };
-                },
-              },
-            ),
-          );
-          assert.equal(repaired.stopReason, "target-reached");
-          assert.equal(runs, 1);
-          await planner.feedback({ type: "result", demand: child, outcome: repaired });
-          await planner.refresh();
-          assert.ok(observed.filter((id) => id === rootId).length >= 2);
-          assert.equal((await queue()).demands.length, 0);
-          const state = await Effect.runPromise(SubscriptionRef.get(planner.state));
-          assert.ok(
-            Object.values(state.observations).some(
-              (entry) =>
-                entry.payload?.current.objectiveId === rootId &&
-                entry.payload.current.levelId === "standardized",
-            ),
-          );
-        } finally {
-          await planner.close();
-        }
+            },
+          ),
+        );
+        assert.equal(repaired.stopReason, "target-reached");
+        assert.equal(runs, 1);
+        const consumer = await observation(subject, rootId);
+        assert.equal(consumer.payload.current.objectiveId, rootId);
+        assert.equal(consumer.payload.current.levelId, "standardized");
       });
     },
   );
@@ -632,7 +599,7 @@ test("real repository has twenty-five package-owned subjects and no old contract
       result.report.findings.filter(({ state }) => state === "fail" || state === "unverified"),
     ),
   );
-  assert.equal(observed.length, 25);
+  assert.equal(observed.length, 23);
   assert.deepEqual(result.problems, []);
   assert.ok(observed.every(({ source }) => source.expectedLevelId === "terminal"));
   assert.throws(() =>

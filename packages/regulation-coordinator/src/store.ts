@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { lstat, mkdir, open, readFile, rename, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { canonicalJson } from "@potential-guide/objective-portfolio-supervisor";
+import { canonicalJson } from "./canonical-json.js";
 import { type CoordinatorState, restoreCoordinatorState } from "./state.js";
 
 export interface CoordinatorStore {

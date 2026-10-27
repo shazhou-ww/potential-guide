@@ -23,9 +23,6 @@
       "path": "./packages/objective-regulator"
     },
     {
-      "path": "./packages/objective-portfolio-supervisor"
-    },
-    {
       "path": "./packages/regulation-coordinator"
     },
     {
@@ -45,9 +42,6 @@
     },
     {
       "path": "./packages/pguide-regulate"
-    },
-    {
-      "path": "./packages/pguide-supervise"
     },
     {
       "path": "./packages/pguide-objectives"

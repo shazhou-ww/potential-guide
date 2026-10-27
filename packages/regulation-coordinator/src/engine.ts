@@ -1,16 +1,12 @@
 import {
   type DependencyProblem,
+  levelRank,
   type ObjectiveSource,
   type PilotObservation,
   parseDependencyProblem,
 } from "@potential-guide/objective-pilot";
-import {
-  canonicalJson,
-  levelRank,
-  type RunHandle,
-  supports,
-} from "@potential-guide/objective-portfolio-supervisor";
 import { makeRegulatorSpec, type RegulationOutcome } from "@potential-guide/objective-regulator";
+import { canonicalJson } from "./canonical-json.js";
 import type {
   AgentResource,
   CoordinatorCommand,
@@ -19,6 +15,7 @@ import type {
   CoordinatorOptions,
   Regulation,
   ResolvedObjective,
+  RunHandle,
   WorkRef,
 } from "./types.js";
 import {
@@ -27,6 +24,7 @@ import {
   mergeSources,
   observation,
   priority,
+  supports,
   validateObservation,
   validateRegulation,
   validateResources,

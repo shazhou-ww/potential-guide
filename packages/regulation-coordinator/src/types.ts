@@ -6,8 +6,8 @@ import type {
   PilotSpec,
   Subject,
 } from "@potential-guide/objective-pilot";
-import type { AgentResource, RunHandle } from "@potential-guide/objective-portfolio-supervisor";
 import type {
+  AgentBinding,
   AgentExecutionLimits,
   AuthorizationRequest,
   RegulationInput,
@@ -16,7 +16,19 @@ import type {
   RegulationQuota,
 } from "@potential-guide/objective-regulator";
 
-export type { AgentResource, RunHandle };
+export interface AgentResource {
+  readonly id: string;
+  readonly binding: AgentBinding;
+  readonly capacity: number;
+  readonly capabilities: readonly string[];
+}
+
+export interface RunHandle {
+  readonly result: Promise<RegulationOutcome>;
+  abort(): void;
+  /** Resolves only after the execution has actually terminated. */
+  kill(): Promise<void>;
+}
 
 export type CoordinatorFeedback =
   | { readonly type: "capability-request"; readonly capability: string; readonly reason: string }

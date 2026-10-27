@@ -6,7 +6,6 @@ import { makeRegulatorSpec } from "@potential-guide/objective-regulator";
 import { withPilot } from "../../cli-runtime/src/pilot-source.js";
 import { ahpHost } from "../../pguide-cli-core/test/ahp-fixture.js";
 import { createProcessRegulationRunner } from "../../pguide-regulate/dist/regulation-process.js";
-import { createAgentPlannerPolicy } from "../../pguide-supervise/src/acp-planner.js";
 import { bin, fixture, run, writeConfig } from "./fixtures.js";
 
 for (const mode of [
@@ -240,13 +239,10 @@ test("AHP CLI closes the observation loop, pins its recipe, and skips all sessio
   });
 
   await t.test(
-    "AHP profiles route both supervisor planning and process-worker execution through AHP",
+    "AHP profiles route process-worker execution through AHP without a planner",
     async () => {
       const f = await fixture();
       const marker = join(f.directory, "worker-repaired");
-      const planner = await ahpHost({
-        text: '{"directives":[{"goalId":"registered","priority":2}]}',
-      });
       const worker = await ahpHost({
         onTurn: async () => {
           await writeFile(marker, "repaired");
@@ -264,25 +260,6 @@ test("AHP CLI closes the observation loop, pins its recipe, and skips all sessio
             connection: { protocolVersion: "1.0.0" as const, agent: "generic-provider" },
             transport: { type: "websocket" as const, url },
           });
-          const goal = {
-            id: "registered",
-            objective,
-            subject: { marker },
-            targetLevel: "terminal",
-            priority: 2,
-            observationIntervalMs: 1000,
-          };
-          const plan = await createAgentPlannerPolicy(
-            profile(planner.url),
-            f.directory,
-          )({
-            goals: [goal],
-            candidates: [goal],
-            observations: {},
-            previousQueue: { revision: 0, demands: [] },
-            events: [],
-          });
-          assert.deepEqual(plan, { directives: [{ goalId: "registered", priority: 2 }] });
           const runner = createProcessRegulationRunner(
             { worker: profile(worker.url) },
             f.directory,
@@ -309,7 +286,6 @@ test("AHP CLI closes the observation loop, pins its recipe, and skips all sessio
           );
         });
       } finally {
-        await planner.close();
         await worker.close();
         await rm(f.directory, { recursive: true, force: true });
       }

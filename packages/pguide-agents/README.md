@@ -38,7 +38,7 @@ whole profile. `profile.yaml` contains the profile, not the file wrapper.
 `"agents.defaultAgent": "local"` belongs in the JSONC main config. Existing
 Agent resources do not need migration when only the main config changes.
 See [manual migration](../../docs/package-settings.md). ACP and AHP profiles use
-the same offline validator as regulation and supervision. Unknown schema URIs
+the same offline validator as regulation. Unknown schema URIs
 are rejected without network access. Values must reference credentials through
 environment names, never embed credentials.
 The public schema uses Draft2020-12. New resource files and `set` inputs require

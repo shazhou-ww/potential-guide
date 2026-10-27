@@ -147,7 +147,7 @@ function definition(subcommand?: string): CommandHelp {
         title: "Notes",
         lines: [
           "  regulate.quota and pilot.probe configure finite quotas and check deadlines;",
-          "  portfolio scheduling belongs to supervise. Validation alone does not prove",
+          "  request scheduling uses the Coordinator API. Validation alone does not prove",
           "  Agent authentication or repair readiness. Use pguide diagnose agent <name>.",
           "  Select declarations with --objective; legacy --pilot aliases remain source references.",
           "  Run pguide config <subcommand> --help for operation-specific usage.",

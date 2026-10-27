@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { canonicalJson } from "@potential-guide/objective-portfolio-supervisor";
+import { canonicalJson } from "./canonical-json.js";
 
 export function identityKey(kind: string, value: unknown): string {
   canonicalJson(value);

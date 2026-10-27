@@ -182,10 +182,10 @@ to reviewed replacement expressions, and update the target subject contract
 as needed. The monorepo business Objective explicitly adopts the new repo/path
 contract instead of inventing replacements for old repository/checkout IDs.
 
-Portfolio inputs and Regulation recovery records now use `schemaVersion: 4`.
-All old Portfolio inputs are rejected, including unpinned and `terminal` targets:
-review each target against its newly committed Manifest v2 before creating a
-new v4 input. Merely retaining the spelling `terminal` does not preserve old
+Regulation recovery records use `schemaVersion: 4`. Portfolio Supervisor is
+retired; review old Portfolio targets against their newly committed manifest
+before using the Coordinator Request API.
+Merely retaining the spelling `terminal` does not preserve old
 contract identity. Pinned Portfolio revisions, recovery records, reports
 and queue snapshots cannot be safely rebound just by replacing a string:
 their commit, directory tree and repository-tree evidence identifies old bytes.

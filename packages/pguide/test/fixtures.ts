@@ -49,11 +49,9 @@ after(async () => {
 export const commandPackage = (name: string) =>
   name === "regulate" || name === "continue"
     ? "pguide-regulate"
-    : name === "supervise"
-      ? "pguide-supervise"
-      : name === "objectives"
-        ? "pguide-objectives"
-        : "pguide-pilot";
+    : name === "objectives"
+      ? "pguide-objectives"
+      : "pguide-pilot";
 export const bin = (name: string) =>
   join(root, "packages", commandPackage(name), "dist", "bin", `${name}.js`);
 const execute = promisify(execFile);
@@ -86,11 +84,7 @@ export function settingsFixture(source: string): Record<string, unknown> {
     } else if (key === "agentExecutionLimits") {
       const timeout = (entry as { timeoutMs?: number }).timeoutMs;
       if (timeout !== undefined)
-        for (const id of [
-          "regulate.agentTimeoutMs",
-          "supervise.agentTimeoutMs",
-          "pguide.diagnoseAhpTimeoutMs",
-        ])
+        for (const id of ["regulate.agentTimeoutMs", "pguide.diagnoseAhpTimeoutMs"])
           settings[id] = timeout;
     } else if (key === "regulationStrategy") {
       const strategy = entry as { probe?: unknown; quota?: unknown };

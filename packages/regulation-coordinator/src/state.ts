@@ -1,6 +1,7 @@
 import type { Envelope, PilotObservation } from "@potential-guide/objective-pilot";
-import { canonicalJson, levelRank } from "@potential-guide/objective-portfolio-supervisor";
+import { levelRank } from "@potential-guide/objective-pilot";
 import type { AgentBinding } from "@potential-guide/objective-regulator";
+import { canonicalJson } from "./canonical-json.js";
 import { identityKey } from "./identity.js";
 import {
   createRegulationRequests,

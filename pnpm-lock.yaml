@@ -225,9 +225,6 @@ importers:
       '@potential-guide/effects':
         specifier: workspace:^
         version: link:../effects
-      '@potential-guide/objective-portfolio-supervisor':
-        specifier: workspace:^
-        version: link:../objective-portfolio-supervisor
       '@potential-guide/objective-regulator':
         specifier: workspace:^
         version: link:../objective-regulator
@@ -285,18 +282,6 @@ importers:
         specifier: workspace:^
         version: link:../pilot-protocol
 
-  packages/objective-portfolio-supervisor:
-    dependencies:
-      '@potential-guide/effects':
-        specifier: workspace:^
-        version: link:../effects
-      '@potential-guide/objective-pilot':
-        specifier: workspace:^
-        version: link:../objective-pilot
-      '@potential-guide/objective-regulator':
-        specifier: workspace:^
-        version: link:../objective-regulator
-
   packages/objective-regulator:
     dependencies:
       '@potential-guide/effects':
@@ -345,18 +330,12 @@ importers:
       '@potential-guide/objective-pilot':
         specifier: workspace:^
         version: link:../objective-pilot
-      '@potential-guide/objective-portfolio-supervisor':
-        specifier: workspace:^
-        version: link:../objective-portfolio-supervisor
       '@potential-guide/objective-regulator':
         specifier: workspace:^
         version: link:../objective-regulator
       '@potential-guide/pguide-regulate':
         specifier: workspace:^
         version: link:../pguide-regulate
-      '@potential-guide/pguide-supervise':
-        specifier: workspace:^
-        version: link:../pguide-supervise
       '@types/cross-spawn':
         specifier: 'catalog:'
         version: 6.0.6
@@ -459,30 +438,6 @@ importers:
         specifier: workspace:^
         version: link:../objective-regulator
 
-  packages/pguide-supervise:
-    dependencies:
-      '@potential-guide/cli-core':
-        specifier: workspace:^
-        version: link:../pguide-cli-core
-      '@potential-guide/cli-runtime':
-        specifier: workspace:^
-        version: link:../cli-runtime
-      '@potential-guide/effects':
-        specifier: workspace:^
-        version: link:../effects
-      '@potential-guide/objective-pilot':
-        specifier: workspace:^
-        version: link:../objective-pilot
-      '@potential-guide/objective-portfolio-supervisor':
-        specifier: workspace:^
-        version: link:../objective-portfolio-supervisor
-      '@potential-guide/objective-regulator':
-        specifier: workspace:^
-        version: link:../objective-regulator
-      '@potential-guide/pguide-regulate':
-        specifier: workspace:^
-        version: link:../pguide-regulate
-
   packages/pilot-protocol:
     dependencies:
       ajv:
@@ -506,9 +461,6 @@ importers:
       '@potential-guide/objective-pilot':
         specifier: workspace:^
         version: link:../objective-pilot
-      '@potential-guide/objective-portfolio-supervisor':
-        specifier: workspace:^
-        version: link:../objective-portfolio-supervisor
       '@potential-guide/objective-regulator':
         specifier: workspace:^
         version: link:../objective-regulator

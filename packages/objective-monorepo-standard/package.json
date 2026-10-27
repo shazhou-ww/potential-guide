@@ -41,7 +41,6 @@
   "devDependencies": {
     "@potential-guide/effects": "workspace:^",
     "@potential-guide/objective-regulator": "workspace:^",
-    "@potential-guide/objective-portfolio-supervisor": "workspace:^",
     "pguide": "workspace:^"
   }
 }

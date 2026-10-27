@@ -11,7 +11,6 @@ test("command help shares authoritative options, defaults, constraints and examp
     "probe",
     "regulate",
     "continue",
-    "supervise",
     "scaffold",
     "validate",
   ] as const) {

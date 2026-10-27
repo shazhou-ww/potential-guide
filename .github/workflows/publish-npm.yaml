@@ -8,7 +8,6 @@ on:
       - "git-source-v*"
       - "objective-pilot-v*"
       - "objective-regulator-v*"
-      - "objective-portfolio-supervisor-v*"
       - "regulation-coordinator-v*"
       - "cli-core-v*"
       - "pguide-config-v*"
@@ -19,7 +18,6 @@ on:
       - "objective-declarations-v*"
       - "pguide-pilot-v*"
       - "pguide-regulate-v*"
-      - "pguide-supervise-v*"
       - "pguide-objectives-v*"
       - "objective-monorepo-standard-v*"
       - "objective-package-standard-v*"
@@ -39,7 +37,6 @@ on:
           - git-source
           - objective-pilot
           - objective-regulator
-          - objective-portfolio-supervisor
           - regulation-coordinator
           - cli-core
           - pguide-config
@@ -50,7 +47,6 @@ on:
           - objective-declarations
           - pguide-pilot
           - pguide-regulate
-          - pguide-supervise
           - pguide-objectives
           - objective-monorepo-standard
           - objective-package-standard

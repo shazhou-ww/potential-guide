@@ -3,7 +3,7 @@
 The Potential Guide CLI discovers and dispatches `pguide-<command>` executables.
 It installs Pilot commands (`probe`, `scaffold`, `validate`), `config` and
 `objectives` by default; its built-ins are `diagnose` and `complete`.
-Regulation and supervision remain optional.
+Regulation remains optional.
 
 Install the default CLI and add optional commands as needed (use explicit
 candidate versions when testing RCs):
@@ -11,11 +11,10 @@ candidate versions when testing RCs):
 ```sh
 npm install --global pguide
 npm install --global @potential-guide/pguide-regulate
-# Optional: @potential-guide/pguide-supervise
 ```
 
 `pguide-pilot` owns `probe`, `scaffold`, `validate`; `pguide-regulate` owns
-`regulate`, `continue`; `pguide-supervise` owns `supervise`; `pguide-objectives`
+`regulate`, `continue`; `pguide-objectives`
 owns `objectives`. Existing options, output envelopes and exit codes are
 unchanged. Standalone binaries (for example `pguide-probe`) work without the
 main package. Missing commands name their installation package; duplicate
@@ -209,8 +208,7 @@ The `objectives.aliases` object replaces as a whole, project over user.
 Unset the overriding setting to expose the lower-scope object; remove acts
 only on the selected scope. Listing includes the setting's effective source.
 
-Portfolio goal `pilot` fields accept the same names and `@name` syntax.
-`--revision` and portfolio `revision` retain their normal meaning. Registration does not
+`--revision` retains its normal meaning. Registration does not
 change the clean Git snapshot requirement or Objective identity. Recovery records
 store the resolved URI, exact commit and local source path, so later registry edits
 do not retarget `continue`.
@@ -379,11 +377,10 @@ Agent execution, including connection and session startup. Each regulation is on
 per-observation timeouts and finite retries/delays; its defaults are a 30000 ms
 timeout and zero retries. Probe retries apply to retryable invocation failures,
 not business problems. Remove legacy `mode` and `effectTtlMs`; ongoing scheduling
-belongs to portfolio supervision, not regulation.
+belongs to the Coordinator library, not regulation.
 
 The `timeoutMs` field of `pilot.probe` also configures each Git Pilot check process
-used by `probe`, `regulate`/`continue`, and supervisor observations. Supervise workers
-do not newly inherit this configured policy; continue retains its archived policy.
+used by `probe` and `regulate`/`continue`; continue retains its archived policy.
 The process default remains 30000 ms. During regulation the same setting also bounds
 the whole observation, so all checks in that observation must fit that separate
 budget; a larger process limit does not extend the regulation quota or Agent limit.
@@ -617,7 +614,7 @@ opaque/referenced and file edits are previews, not a complete permission scope.
 The adapter therefore **never guesses** read/edit/execute authority from those
 fields and never treats an ordinary `approve` option as a single-use grant.
 The default (or explicit `confirmations: deny`) remains deny-by-default.
-For supervised runs only, an AHP profile can set `confirmations: external`:
+For human-supervised runs only, an AHP profile can set `confirmations: external`:
 pguide leaves each execution/result confirmation pending for a human using a
 trusted client already connected to the same Host and session. It sends no
 confirmation, chooses no option, and converts no configured grant into approval.
@@ -658,77 +655,17 @@ never use `--replace`/`kill` on shared Hosts. `code agent endpoints` includes
 credentials and must not be printed or committed as evidence. Editor session
 availability alone does not establish an externally usable WebSocket endpoint.
 
-## Portfolio supervision
+## Supervisor retirement
 
-`pguide supervise --portfolio-file portfolio.json --planner strategist` observes
-the portfolio and asks the configured ACP/AHP planning Agent for a priority queue
-once, without executing repairs. Add `--execute` to continuously re-observe each
-goal at its configured interval and coordinate one-shot regulation runs until
-SIGINT/SIGTERM. `--execute --duration-ms 5000` bounds supervision and waits for
-active processes to stop before returning.
-
-Portfolio files require **schema 3**; old schemas and defensive-threshold
-portfolios are rejected:
-
-```json
-{
-  "schemaVersion": 4,
-  "goals": [{
-    "id": "service",
-    "objective": "git+https://github.com/example/service.git#objective/",
-    "subject": {},
-    "targetLevel": "terminal",
-    "priority": 1,
-    "observationIntervalMs": 30000,
-    "requirements": ["typescript"]
-  }],
-  "resources": [{
-    "id": "worker-1",
-    "agent": "implementer",
-    "capacity": 1,
-    "capabilities": ["typescript"]
-  }]
-}
-```
-
-Goals accept an optional pinned `revision`; Pilot sources follow the same
-committed-snapshot rules as `probe`. Both `strategist` and `implementer` refer
-to profiles in configuration `agents`. `--planner` is required and does not
-implicitly register the planner as an execution resource. An empty resource
-array is permitted; unavailable capacity leaves work queued.
-
-While executing, the CLI reloads the portfolio, Agent profiles, and source refs
-between polling cycles (250–1000 ms plus source-loading time). Goal/subject/spec
-changes replace immutable demands; resource changes reach the coordinator
-without restarting. An explicit commit remains pinned, while an unpinned Git
-URI or ref can advance to a new committed snapshot. Old observation scopes are
-released after replacement. Invalid live updates stop supervision rather than
-silently retaining stale inputs. Regulation quotas and execution timeout settings
-are fixed at command startup.
-
-The planner sees goals, observations, derived dependency candidates, previous
-demands, and resource-free execution feedback—never the Agent inventory.
-It must emit a JSON object through ACP `agent_message_chunk` text updates or
-AHP terminal-turn markdown response parts:
-`{"directives":[{"goalId":"service","priority":1}]}`. Optional directive fields
-are `targetLevel` (a known level) and `requirements` (capability names).
-Unknown or duplicate IDs, arbitrary commands, invalid JSON, refusal,
-cancellation, excessive output, and timeout fail closed; there is no fallback
-policy. Planning uses `supervise.agentTimeoutMs`, separately from each
-execution's timeout and regulation quota.
-
-The coordinator alone binds demands to compatible resources, enforces capacity,
-handles P0 preemption, and executes pinned regulations in separate OS processes.
-Executing Agents can request capabilities using ACP notification method
-`pguide/capability-request` with `{ "capability": "tool-name", "reason": "why" }`.
-Requests are associated with the live demand and forwarded to subsequent
-planning; they never provision resources or execute model-provided commands.
-Completed work is not repeated merely because capacity changes; a fresh
-observation can create new demand after regression. JSON output includes the
-final queue, observations, and the latest 1000 coordinator events.
+Portfolio Supervisor and its `supervise` command are no longer shipped.
+Use `@potential-guide/regulation-coordinator` directly for request scheduling;
+there is no automatic portfolio conversion, built-in Planner or replacement CLI.
+`regulate` and `continue` remain available for single-regulation execution.
+Remove old extension installations and `supervise.agentTimeoutMs`; see the
+[migration guide](../../docs/supervisor-retirement.md).
 
 The command packages provide independent `pguide-probe`, `pguide-regulate`,
-`pguide-continue`, `pguide-supervise`, `pguide-scaffold`, and `pguide-validate`
+`pguide-continue`, `pguide-scaffold`, and `pguide-validate`
 executables. Default management dependencies provide `pguide-config`,
 `pguide-agents` and `pguide-objectives`; `diagnose` and `complete` are built in. Executable discovery
 uses `pguide-command-v1` metadata and preserves argument boundaries without

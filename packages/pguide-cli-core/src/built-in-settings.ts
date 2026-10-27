@@ -39,7 +39,7 @@ export const builtInSettings = [
       "namespace": "agents",
       "settings": {
         "agents.defaultAgent": {
-          "description": "Default Agent name for regulate and setup/self-check, not supervise planner or diagnose.",
+          "description": "Default Agent name for regulate and setup/self-check, not diagnose.",
           "schema": {
             "type": "string",
             "pattern": "\\S"
@@ -255,7 +255,7 @@ export const builtInSettings = [
           }
         },
         "regulate.quota": {
-          "description": "Shared regulate and supervise quota, captured at run startup.",
+          "description": "Regulation quota captured at run startup.",
           "schema": {
             "type": "object",
             "additionalProperties": false,
@@ -371,24 +371,6 @@ export const builtInSettings = [
             "ceiling": [],
             "grants": []
           }
-        }
-      }
-    }
-  },
-  {
-    "name": "@potential-guide/pguide-supervise",
-    "description": {
-      "schemaVersion": 1,
-      "namespace": "supervise",
-      "settings": {
-        "supervise.agentTimeoutMs": {
-          "description": "Planner and dispatched Agent execution timeout captured at startup.",
-          "schema": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 2147483647
-          },
-          "default": 30000
         }
       }
     }
@@ -1959,48 +1941,6 @@ validate25.errors = vErrors;
 return errors === 0;
 }
 
-export const setting16 = validate26;
-const schema27 = {"type":"integer","minimum":1,"maximum":2147483647};
-
-function validate26(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
-let vErrors = null;
-let errors = 0;
-if(!(((typeof data == "number") && (!(data % 1) && !isNaN(data))) && (isFinite(data)))){
-const err0 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
-if(vErrors === null){
-vErrors = [err0];
-}
-else {
-vErrors.push(err0);
-}
-errors++;
-}
-if((typeof data == "number") && (isFinite(data))){
-if(data > 2147483647 || isNaN(data)){
-const err1 = {instancePath,schemaPath:"#/maximum",keyword:"maximum",params:{comparison: "<=", limit: 2147483647},message:"must be <= 2147483647"};
-if(vErrors === null){
-vErrors = [err1];
-}
-else {
-vErrors.push(err1);
-}
-errors++;
-}
-if(data < 1 || isNaN(data)){
-const err2 = {instancePath,schemaPath:"#/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"};
-if(vErrors === null){
-vErrors = [err2];
-}
-else {
-vErrors.push(err2);
-}
-errors++;
-}
-}
-validate26.errors = vErrors;
-return errors === 0;
-}
-
 export const builtInValidators = {
   "pguide.commandDirectories": setting0,
   "pguide.diagnoseAhpTimeoutMs": setting1,
@@ -2018,5 +1958,4 @@ export const builtInValidators = {
   "regulate.retentionDays": setting13,
   "regulate.quota": setting14,
   "regulate.permissions": setting15,
-  "supervise.agentTimeoutMs": setting16,
 };

@@ -1,7 +1,7 @@
 import { Effect, type Scope, Stream, SubscriptionRef } from "@potential-guide/effects";
 import type { Envelope, PilotObservation } from "@potential-guide/objective-pilot";
-import { canonicalJson } from "@potential-guide/objective-portfolio-supervisor";
 import type { AgentBinding } from "@potential-guide/objective-regulator";
+import { canonicalJson } from "./canonical-json.js";
 import { identityKey } from "./identity.js";
 import {
   commandForRequest,

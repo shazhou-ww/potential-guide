@@ -2,7 +2,7 @@
   "name": "potential-guide",
   "version": "0.1.0",
   "private": true,
-  "description": "Objective guidance, regulation, and portfolio supervision packages.",
+  "description": "Objective guidance, regulation, and request coordination packages.",
   "type": "module",
   "packageManager": "pnpm@11.22.0",
   "engines": {

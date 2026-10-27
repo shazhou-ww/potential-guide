@@ -45,8 +45,9 @@ no binding is guessed.
 Manifest v3 preserves v2's cumulative attainment checks. `initial` is intrinsic and
 `terminal` is a reserved target alias for the real highest business level.
 Neither can be declared. Old manifests are rejected; migration requires reviewed
-`--attainment-levels`. Old Portfolio targets require explicit review and a new
-v4 input; pinned observations/recovery evidence must be reobserved, never rebound.
+`--attainment-levels`. Portfolio Supervisor is retired; old Portfolio targets
+require explicit review before using the Coordinator Request API.
+Pinned observations/recovery evidence must be reobserved, never rebound.
 
 Canonical Pilot definitions, schema compilation, strict YAML/manifest/reference
 parsing and validation, bounded subject projection and resource capability types.

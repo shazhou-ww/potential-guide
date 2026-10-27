@@ -20,7 +20,6 @@ const bins = {
   probe: bin("probe"),
   regulate: bin("regulate"),
   continue: bin("continue"),
-  supervise: bin("supervise"),
   scaffold: bin("scaffold"),
   validate: bin("validate"),
   objectives: bin("objectives"),
@@ -390,7 +389,6 @@ test("missing optional commands explain installation and conflicting shims fail 
     for (const [command, packageName] of [
       ["regulate", "pguide-regulate"],
       ["continue", "pguide-regulate"],
-      ["supervise", "pguide-supervise"],
     ] as const) {
       const missing = await run(
         top,

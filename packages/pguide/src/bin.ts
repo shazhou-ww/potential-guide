@@ -218,7 +218,7 @@ async function dispatch(
 async function help(globals: GlobalOptions): Promise<void> {
   const found = await discover(globals);
   const helpSpec = {
-    description: `pguide ${VERSION} - Observe Objectives, repair gaps, and supervise portfolios.`,
+    description: `pguide ${VERSION} - Observe Objectives and repair gaps.`,
     usage: "pguide [global options] <command> [arguments]",
     sections: [
       {
@@ -470,11 +470,11 @@ function complete(argv: string[], globals: GlobalOptions): void {
   }
   const shell = (option(argv, "--shell") as string | undefined) ?? "bash";
   const scripts: Record<string, string> = {
-    bash: 'complete -W "probe regulate continue supervise scaffold validate config agents objectives diagnose complete" pguide',
-    zsh: '#compdef pguide\n_arguments "1:command:(probe regulate continue supervise scaffold validate config agents objectives diagnose complete)"',
-    fish: "complete -c pguide -f -a 'probe regulate continue supervise scaffold validate config agents objectives diagnose complete'",
+    bash: 'complete -W "probe regulate continue scaffold validate config agents objectives diagnose complete" pguide',
+    zsh: '#compdef pguide\n_arguments "1:command:(probe regulate continue scaffold validate config agents objectives diagnose complete)"',
+    fish: "complete -c pguide -f -a 'probe regulate continue scaffold validate config agents objectives diagnose complete'",
     powershell:
-      "Register-ArgumentCompleter -Native -CommandName pguide -ScriptBlock { param($wordToComplete) 'probe','regulate','continue','supervise','scaffold','validate','config','agents','objectives','diagnose','complete' | Where-Object { $_ -like \"$wordToComplete*\" } }",
+      "Register-ArgumentCompleter -Native -CommandName pguide -ScriptBlock { param($wordToComplete) 'probe','regulate','continue','scaffold','validate','config','agents','objectives','diagnose','complete' | Where-Object { $_ -like \"$wordToComplete*\" } }",
   };
   const script = scripts[shell];
   if (script === undefined) throw new CliError("Unsupported shell.");

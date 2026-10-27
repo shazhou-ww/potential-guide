@@ -99,7 +99,7 @@ test("whole-value shallow merge, nearest project, static defaults and provenance
   assert.deepEqual(loaded.value["custom.list"], [3]);
   assert.deepEqual(loaded.value["custom.object"], { a: 4 });
   assert.equal(loaded.value["regulate.agentTimeoutMs"], 1800000);
-  assert.equal(loaded.value["supervise.agentTimeoutMs"], 30000);
+  assert.equal(loaded.value["supervise.agentTimeoutMs"], undefined);
   assert.equal(loaded.value["pguide.diagnoseAhpTimeoutMs"], 30000);
   assert.equal(loaded.value["agents.defaultAgent"], undefined);
   assert.equal(loaded.sources["custom.object"], f.project);
@@ -112,10 +112,10 @@ test("whole-value shallow merge, nearest project, static defaults and provenance
 
 test("selected-layer errors cannot hide behind overrides, unrelated semantic errors stay isolated", async (t) => {
   const f = await fixture(t);
-  await writeFile(f.user, '{"supervise.agentTimeoutMs": 0}');
-  await writeFile(f.project, '{"supervise.agentTimeoutMs": 100}');
-  assert.equal((await loadConfig(f.cwd, ["pguide"])).value["supervise.agentTimeoutMs"], 100);
-  await assert.rejects(loadConfig(f.cwd, ["supervise"]), /Invalid configuration/);
+  await writeFile(f.user, '{"regulate.agentTimeoutMs": 0}');
+  await writeFile(f.project, '{"regulate.agentTimeoutMs": 100}');
+  assert.equal((await loadConfig(f.cwd, ["pguide"])).value["regulate.agentTimeoutMs"], 100);
+  await assert.rejects(loadConfig(f.cwd, ["regulate"]), /Invalid configuration/);
   await assert.rejects(loadConfig(f.cwd), /Invalid configuration/);
   await writeFile(f.project, '{"custom.bad": 1, "custom.bad": 2}');
   await assert.rejects(loadConfig(f.cwd, ["pguide"]), /Duplicate/);
@@ -129,7 +129,7 @@ test("explicit objects are never completed by defaults; known unknown keys and p
     { "regulate.quota": { maxAgentRuns: 1 } },
     { "regulate.permissions": { ceiling: [], grants: ["missing"] } },
     { "pilot.notASetting": true },
-    { "supervise.agentTimeoutMs": 2147483648 },
+    { "regulate.agentTimeoutMs": 2147483648 },
     { "objectives.aliases": { "bad/name": "x" } },
   ])
     assert.ok(inspectSettings(value, "fixture", catalog).issues.length);

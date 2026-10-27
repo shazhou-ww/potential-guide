@@ -4,10 +4,10 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { parseReleaseTag, releasePackages, releaseVersion } from "./release-packages.mjs";
 
-test("release inventory contains the new packages and excludes the retired Guide", () => {
-  assert.equal(releasePackages.length, 24);
+test("release inventory contains the new packages and excludes retired Guide and Supervisor", () => {
+  assert.equal(releasePackages.length, 22);
   for (const field of ["id", "directory", "name"]) {
-    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 24);
+    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 22);
   }
   for (const name of [
     "@potential-guide/check-host",
@@ -19,6 +19,10 @@ test("release inventory contains the new packages and excludes the retired Guide
     assert.ok(releasePackages.some((entry) => entry.name === name));
   }
   assert.ok(!releasePackages.some(({ id }) => id === "objective-guide"));
+  for (const id of ["objective-portfolio-supervisor", "pguide-supervise"]) {
+    assert.ok(!releasePackages.some((entry) => entry.id === id));
+    assert.throws(() => parseReleaseTag(`${id}-v0.3.0-rc.0`), /Unsupported package/);
+  }
 });
 
 test("package-specific RC tags preserve package identity and never select latest", () => {
@@ -36,7 +40,6 @@ test("command wrappers use pguide-prefixed names including config", () => {
   for (const id of [
     "pguide-pilot",
     "pguide-regulate",
-    "pguide-supervise",
     "pguide-objectives",
     "pguide-config",
     "pguide-agents",

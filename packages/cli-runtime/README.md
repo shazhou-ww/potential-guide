@@ -3,8 +3,8 @@
 Tool-side source acquisition and runtime assembly (`withPilot`). No executable
 commands; declaration selection/binding is the separate protocol-only
 `objective-declarations` tool service, and mutation belongs to `pguide-objectives`.
-This source service never depends on command packages, regulation or the
-portfolio supervisor. Callers inject any business-error propagation predicate.
+This source service never depends on command packages or regulation.
+Callers inject any business-error propagation predicate.
 Business packages consume injected capabilities, never this tool implementation.
 
 `prepareObjectivePackage` uses npm-package-arg, pacote and Arborist for standard

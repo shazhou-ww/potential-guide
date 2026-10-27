@@ -87,8 +87,8 @@ Probe 必须清理自己创建的临时资源，不负责回滚业务状态。�
 - AgentInput 带完整观测、目标、subject、绑定与单次执行限制，不再仅发送 `problems[0]`。Agent 自己组织修复，不要求消费方为每个 ProblemId 建任务。
 - Agent 单次 timeout 与本次 run 的 quota 分开；quota 包含时长、Agent 调用数和停滞轮次。旧顶层 limits 不再支持。
 - regulator 不携带 mode 或 effectTtlMs，不周期调度。正常结果为 target-reached、exhausted、dependency-required、authorization-required；配置或输入错误归 4xx，执行故障归 5xx，外部终止与正常结果分离。依赖未满足时上抛本次 observation 中全部 dependency problems，不派当前 Agent，也不累计内部 stall。删除静态 prerequisite；current 始终属于当前 Objective。
-- supervisor 的 planner 维护目标组合，周期观测并按需形成优先队列；coordinator 感知 Agent 资源、分配 quota，处理 exhausted 续跑、P0 抢占及 abort/kill 生命周期。普通优先级只排序，完成后不盲目重跑。
-- 本阶段原采用 schemaVersion 2；当前主配置已改用两级 JSONC 和完整 setting ID，三个 Agent 超时独立，见 [主配置手工迁移](package-settings.md)。旧 schemaVersion 1/2 主配置、旧跨轮预算和旧持久化记录不能直接按新类型读取。
+- 旧 supervisor / planner 及 supervise 已退役；当前 Coordinator 处理不可变请求、周期后继、资源仲裁及 abort/kill 生命周期，exhausted 只上报、不自动续跑。参见[退役迁移](supervisor-retirement.md)。
+- 本阶段原采用 schemaVersion 2；当前主配置已改用两级 JSONC 和完整 setting ID，Regulator 与诊断 Agent 超时独立，见 [主配置手工迁移](package-settings.md)。旧 schemaVersion 1/2 主配置、旧跨轮预算和旧持久化记录不能直接按新类型读取。
 - RegulatorOutcome 是完成结果，不能拿它取消已经运行的任务；取消使用外层 RunningEffect。
 
 ## 6. CLI 与恢复记录

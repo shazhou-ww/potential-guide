@@ -30,7 +30,7 @@ through the runtime instead of reparsing error-message text.
 Shell completion scripts, command-discovery metadata, raw `config get` values,
 Objective check/runtime envelopes, and report files remain machine or verbatim
 outputs. Do not wrap them in human headings or infer Objective completion from
-a successful observation or a normally completed supervision interval.
+a successful observation or a scheduler interval.
 
 ## Resources and execution
 
@@ -61,9 +61,9 @@ immutable code and bundled descriptions are reused. Registered descriptions,
 configuration values and Agent resources are still read and validated on each
 explicit load, and existing execution deadlines are unchanged.
 See [package settings](../../docs/package-settings.md) for defaults, registration,
-comment-preserving edits and manual migration. `regulate.quota` remains shared
-with supervise; `pilot.probe` remains separate from the three Agent timeouts.
-Periodic observation and subsequent run scheduling belong to supervisor.
+comment-preserving edits and manual migration. `regulate.quota` remains separate
+from `pilot.probe` and the regulation/diagnostic Agent timeouts.
+Periodic request scheduling belongs to the Coordinator library.
 The generic JSON `digest` utility supports persisted subject integrity;
 production observation identity/version comes from the Git source commit.
 

@@ -568,96 +568,17 @@ async function verifyRegulation(baseEnv) {
   console.log("ACP regulation, persistence, resume, retention, redaction and reports verified");
 }
 
-async function verifySupervisor(baseEnv) {
-  const planner = join(fixture, "planner.mjs");
-  const log = join(fixture, "planner-prompts.jsonl");
-  await writeFile(
-    planner,
-    `
-import { createInterface } from "node:readline";
-import { appendFileSync } from "node:fs";
-for await (const line of createInterface({input:process.stdin})) {
-  const message=JSON.parse(line);
-  if (!message.id) continue;
-  let result={};
-  if (message.method==="initialize") result={protocolVersion:1};
-  if (message.method==="session/new") result={sessionId:"planner"};
-  if (message.method==="session/prompt") {
-    appendFileSync(${JSON.stringify(log)}, JSON.stringify(message.params)+"\\n");
-    console.log(JSON.stringify({jsonrpc:"2.0",method:"session/update",params:{
-      sessionId:"planner",update:{sessionUpdate:"agent_message_chunk",
-        content:{type:"text",text:JSON.stringify({directives:[]})}}}}));
-    result={stopReason:"end_turn"};
-  }
-  console.log(JSON.stringify({jsonrpc:"2.0",id:message.id,result}));
-}
-`,
+async function verifySupervisorRetirement(baseEnv) {
+  const result = await run(executable("pguide"), ["supervise", "--execute", "--format", "json"], {
+    cwd: consumer,
+    env: baseEnv,
+  });
+  assert.equal(result.code, 2);
+  assert.match(result.stdout, /Unknown command.*supervise/u);
+  assert.doesNotMatch(result.stdout, /pguide-supervise|Install/u);
+  console.log(
+    "installed CLI rejects retired Supervisor without replacement or installation advice",
   );
-  const config = join(consumer, ".pguide", "config.jsonc");
-  await writeConfiguration(
-    config,
-    JSON.stringify({
-      agents: {
-        planner: {
-          type: "acp",
-          connection: { protocolVersion: "1" },
-          transport: { type: "stdio", command: process.execPath, args: [planner] },
-        },
-      },
-    }),
-  );
-  const portfolio = join(fixture, "portfolio.json");
-  await writeFile(
-    portfolio,
-    JSON.stringify({
-      schemaVersion: 4,
-      goals: [
-        {
-          id: "maintained",
-          objective: objectiveUri,
-          subject: { marker: join(fixture, "ready") },
-          targetLevel: "terminal",
-          priority: 1,
-          observationIntervalMs: 1000,
-        },
-      ],
-      resources: [],
-    }),
-  );
-  const args = [
-    "supervise",
-    "--portfolio-file",
-    portfolio,
-    "--planner",
-    "planner",
-    "--cwd",
-    consumer,
-    "--format",
-    "json",
-  ];
-  const planned = await successful(executable("pguide"), args, { cwd: consumer, env: baseEnv });
-  const plan = JSON.parse(planned.stdout);
-  assert.equal(plan.schemaVersion, 4);
-  assert.equal(plan.status, "planned");
-  assert.equal(plan.observations.maintained.payload.current.levelId, "ready");
-  assert.deepEqual(plan.queue.demands, []);
-  assert.deepEqual(plan.events, []);
-  assert.match(await readFile(log, "utf8"), /maintained/);
-  const execution = await successful(
-    executable("pguide"),
-    [...args, "--execute", "--duration-ms", "1500"],
-    {
-      cwd: consumer,
-      env: baseEnv,
-    },
-  );
-  const executed = JSON.parse(execution.stdout);
-  assert.equal(executed.schemaVersion, 4);
-  assert.equal(executed.status, "executed");
-  assert.equal(executed.observations.maintained.payload.current.levelId, "ready");
-  assert.deepEqual(executed.queue.demands, []);
-  assert.deepEqual(executed.events, []);
-  console.log("installed ACP planner and bounded supervisor lifecycle verified");
 }
 
 async function verifySetupObjective(baseEnv) {
@@ -885,7 +806,7 @@ try {
   await packAndInstall();
   const env = await verifyCliContract();
   await verifyRegulation(env);
-  await verifySupervisor(env);
+  await verifySupervisorRetirement(env);
   await verifySetupObjective(env);
   await verifyRegulationPermissions(env);
 } catch (error) {

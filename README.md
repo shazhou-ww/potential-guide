@@ -17,9 +17,6 @@ and the extensible `pguide` command line:
 - `@potential-guide/regulation-coordinator` durably schedules immutable timed
   requests and recurring successors, with resource-aware execution, recovery and
   replayable exhaustion facts; it does not require a Planner Agent.
-- `@potential-guide/objective-portfolio-supervisor` coordinates multiple regulators
-  through an injected portfolio policy; this existing API remains separate from
-  the request-driven Coordinator.
 - `@potential-guide/cli-core` provides command protocol and CLI infrastructure
   without depending on Objective logic.
 - `@potential-guide/objective-declarations` shares declaration selection/binding
@@ -29,11 +26,9 @@ and the extensible `pguide` command line:
 - `@potential-guide/pguide-agents` manages independent user/project `agents.yaml`
   resources through `pguide agents`; profiles no longer belong in the main config.
 - `pguide` is a discovery/dispatch entrypoint that installs Pilot commands and
-  configuration and Objective declaration management by default. Regulation and supervision
-  remain optional.
+  configuration and Objective declaration management by default. Regulation remains optional.
   `@potential-guide/pguide-pilot` owns `probe`, `scaffold`, `validate`;
   `@potential-guide/pguide-regulate` owns `regulate`, `continue`;
-  `@potential-guide/pguide-supervise` owns `supervise`; and
   `@potential-guide/pguide-objectives` owns `objectives`.
 
 There are exactly three layers: **tools → business logic → protocol**.
@@ -80,8 +75,11 @@ pguide validate pilot ./my-pilot/objective.yaml
 pguide probe --pilot ./my-pilot/objective.yaml --subject-file ./subject.json
 ```
 
-Add `@potential-guide/pguide-regulate` for regulation, `@potential-guide/pguide-supervise`
-for supervision. Pilot, config and objectives packages are production dependencies of `pguide`; their commands
+Add `@potential-guide/pguide-regulate` for regulation.
+Portfolio Supervisor and `supervise` are retired; use the Coordinator library for
+request scheduling, without a built-in Planner or replacement CLI. See the
+[migration guide](./docs/supervisor-retirement.md).
+Pilot, config and objectives packages are production dependencies of `pguide`; their commands
 work even when a package manager does not expose transitive binaries on PATH.
 Each command package also provides
 standalone `pguide-<command>` binaries; no `pguide` installation is required for

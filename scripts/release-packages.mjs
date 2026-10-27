@@ -78,14 +78,6 @@ export const releasePackages = [
     forbiddenDependencies: ["@potential-guide/cli-core", "@potential-guide/objective-guide"],
   },
   {
-    id: "objective-portfolio-supervisor",
-    directory: "objective-portfolio-supervisor",
-    name: "@potential-guide/objective-portfolio-supervisor",
-    requiredExports: ["createPortfolioPlanner", "createPortfolioCoordinator"],
-    bins: [],
-    forbiddenDependencies: ["@potential-guide/cli-core", "@potential-guide/objective-guide"],
-  },
-  {
     id: "regulation-coordinator",
     directory: "regulation-coordinator",
     name: "@potential-guide/regulation-coordinator",
@@ -98,7 +90,12 @@ export const releasePackages = [
       "openCoordinatorStore",
     ],
     bins: [],
-    forbiddenDependencies: ["@potential-guide/cli-core", "@potential-guide/objective-guide"],
+    forbiddenDependencies: [
+      "@potential-guide/cli-core",
+      "@potential-guide/objective-guide",
+      "@potential-guide/objective-portfolio-supervisor",
+      "@potential-guide/pguide-supervise",
+    ],
   },
   {
     id: "cli-core",
@@ -190,12 +187,6 @@ export const releasePackages = [
     directory: "pguide-regulate",
     name: "@potential-guide/pguide-regulate",
     bins: ["pguide-regulate", "pguide-continue"],
-  },
-  {
-    id: "pguide-supervise",
-    directory: "pguide-supervise",
-    name: "@potential-guide/pguide-supervise",
-    bins: ["pguide-supervise"],
   },
   {
     id: "pguide-objectives",

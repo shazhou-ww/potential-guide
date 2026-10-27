@@ -3,7 +3,7 @@
   "namespace": "agents",
   "settings": {
     "agents.defaultAgent": {
-      "description": "Default Agent name for regulate and setup/self-check, not supervise planner or diagnose.",
+      "description": "Default Agent name for regulate and setup/self-check, not diagnose.",
       "schema": { "type": "string", "pattern": "\\S" }
     }
   }

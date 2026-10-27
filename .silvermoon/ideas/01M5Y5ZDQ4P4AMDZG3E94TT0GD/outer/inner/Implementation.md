@@ -1,6 +1,6 @@
 # 实现统一请求与周期后继
 
-语义依据为[构想及配套原则](./ideal/Idea.md)。周期请求的既有实现证据见[实施说明](./Recurrence-implementation.md)，仅证明追加退役要求之前的范围；新增退役范围等待修订构想验收后实施。本阶段不开展独立外部部署验收。
+语义依据为[构想及配套原则](./ideal/Idea.md)。周期请求的既有实现证据见[实施说明](./Recurrence-implementation.md)，仅证明追加退役要求之前的范围；追加退役实现及本次验证见[退役实现证据](./Supervisor-retirement-implementation.md)。本阶段不开展独立外部部署验收。
 
 ## Steps
 

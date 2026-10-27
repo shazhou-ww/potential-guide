@@ -5,16 +5,17 @@
 | Layer | Packages |
 | --- | --- |
 | Protocol | `@potential-guide/effects`, `@potential-guide/pilot-protocol` |
-| Business logic | `@potential-guide/objective-pilot`, `@potential-guide/objective-regulator`, `@potential-guide/objective-portfolio-supervisor`, `@potential-guide/regulation-coordinator` |
-| Tools | `pguide`, `@potential-guide/cli-core`, `@potential-guide/pguide-config`, `@potential-guide/pguide-agents`, `@potential-guide/cli-runtime`, `@potential-guide/objective-declarations`, `@potential-guide/pguide-pilot`, `@potential-guide/pguide-regulate`, `@potential-guide/pguide-supervise`, `@potential-guide/pguide-objectives` |
+| Business logic | `@potential-guide/objective-pilot`, `@potential-guide/objective-regulator`, `@potential-guide/regulation-coordinator` |
+| Tools | `pguide`, `@potential-guide/cli-core`, `@potential-guide/pguide-config`, `@potential-guide/pguide-agents`, `@potential-guide/cli-runtime`, `@potential-guide/objective-declarations`, `@potential-guide/pguide-pilot`, `@potential-guide/pguide-regulate`, `@potential-guide/pguide-objectives` |
 
 Allowed dependencies point downwards, or stay within a layer. Tools can consume
 protocol directly. Same-layer dependencies are permitted, not special exceptions;
 ordinary workspace/build cycle restrictions still apply.
 
 `regulation-coordinator` is an independent scoped command-to-fact service. Its
-transition dependency on Portfolio is limited to public pure decisions and runner
-types; no existing Planner, Supervisor or command is redirected to the new service.
+helpers and public resource/runner types are owned locally, and ranking comes
+from Pilot. Portfolio Supervisor and its command are [retired](./supervisor-retirement.md),
+not redirected to the new service.
 
 `effects` remains executable protocol primitives, not an empty types package.
 `pilot-protocol` contains the canonical Pilot contract types, manifest and
@@ -29,8 +30,8 @@ its former definition APIs from the protocol package for compatibility.
 declaration selection and subject binding using CLI Core and protocol only,
 without installing execution. Neither service has command bins or depends on
 any command package.
-The regulation tool package owns Agent execution and process workers; supervision
-uses its public API, never the reverse. Declaration mutation stays in
+The regulation tool package owns Agent execution and process workers.
+Declaration mutation stays in
 `pguide-objectives`, not business logic or the shared selection module.
 
 **Deferred externalization, not a fourth layer:** `@potential-guide/git-source`,
@@ -56,20 +57,19 @@ binary and `config` metadata remain unchanged.
 | `pguide` | discovery, dispatch, built-in `diagnose`, `complete`; installs Pilot, config and objectives commands below |
 | `@potential-guide/pguide-pilot` | `probe`, `scaffold`, `validate` / `pguide-probe`, `pguide-scaffold`, `pguide-validate` |
 | `@potential-guide/pguide-regulate` | `regulate`, `continue` / `pguide-regulate`, `pguide-continue` |
-| `@potential-guide/pguide-supervise` | `supervise` / `pguide-supervise` |
 | `@potential-guide/pguide-objectives` | `objectives` / `pguide-objectives` |
 | `@potential-guide/pguide-config` | `config` / `pguide-config` |
 | `@potential-guide/pguide-agents` | `agents` / `pguide-agents` |
 
 Pilot authoring, validation and observation share source/definition conventions.
 Regulation and continuation share persisted state and Agent execution. These
-closely cooperating commands ship together; supervision remains optional.
+closely cooperating commands ship together.
 Declaration management is included by default so aliases can be managed alongside probing.
 
 `pguide` ships only its own entrypoint bin, but installs `pguide-pilot`,
 `pguide-config`, `pguide-agents` and `pguide-objectives` as production dependencies. Its default
 commands are `probe`, `scaffold`, `validate`, `config`, `objectives`, `diagnose`,
-and `complete`. Regulation and supervision still require explicit installation:
+and `complete`. Regulation still requires explicit installation:
 
 ```sh
 npm install --global pguide
@@ -152,21 +152,21 @@ temporary workspace manifests and relative source/type references.
 All scratch data stays under repository `.cache`.
 
 `pnpm pack:check` builds and packs the release inventory, checks exports and bins,
-then installs eight isolated tarball consumers: protocol-only,
+then installs isolated tarball consumers: protocol-only,
 main-only, each standalone command package, and all commands together.
-The default packed `pnpm deployment:verify` runs these same eight combinations
+The default packed `pnpm deployment:verify` runs these same combinations
 before its npm runtime scenarios, so the existing Ubuntu/macOS/Windows deployment
 CI matrix executes them too; published/latest verification remains registry-based.
 Internal transitive versions are resolved from each real installed parent,
 including pnpm's physical symlink layout. Protocol-only consumption installs no
 business packages; main-only consumption installs Pilot, config and objectives but no
-regulation, supervision or declaration-management packages. Its exact six-command
+regulation packages. Its default command
 surface and bundled fallback run without transitive bins on PATH. Combination
 installs verify real generated command shims,
 metadata, discovery and dispatch without ambient global extensions. On POSIX,
 the isolated shim toolchain includes the standard shell utilities pnpm shims need.
 CLI integration tests retain execution, permissions, evidence, persistence,
-source revision and supervisor coverage. See [npm publishing](./npm-publishing.md)
+source revision and Supervisor retirement coverage. See [npm publishing](./npm-publishing.md)
 for package-specific release tags. No package is published by these checks.
 
 Internal packages are always resolved to the current local tarballs. Third-party

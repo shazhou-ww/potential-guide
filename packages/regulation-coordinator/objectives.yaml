@@ -8,7 +8,7 @@ objectives:
       {
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm"], "runtime": "node",
-        "allows": ["@potential-guide/effects", "@potential-guide/objective-pilot", "@potential-guide/objective-regulator", "@potential-guide/objective-portfolio-supervisor"],
+        "allows": ["@potential-guide/effects", "@potential-guide/objective-pilot", "@potential-guide/objective-regulator"],
         "entries": ["src/index.ts"], "generated": [], "deliveries": [],
         "joins": [{"id": "public-library-suite", "kind": "npm"}]
       }

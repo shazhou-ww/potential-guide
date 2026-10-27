@@ -61,13 +61,13 @@ const notes = [
   safety,
   "--format chooses the legacy document kind; --output-format chooses result/help display.",
   "Artifact encoding depends only on the --output extension: .json means JSON, otherwise YAML.",
+  "Portfolio Supervisor is retired; portfolio conversion is refused and requires explicit target review.",
   "Legacy help-only compatibility: --help --format json. For execution use --format manifest|declarations|portfolio --output-format json.",
   "Default failures retain exit 1 and stderr. JSON failures use one stdout object and exit 1.",
 ];
 const examples = [
   "objective-contract-migrate --format manifest --input legacy.json --output objective.yaml --attainment-levels ready",
   "objective-contract-migrate --format declarations --input legacy.yaml --output objectives.json --output-format json",
-  "objective-contract-migrate --format portfolio --input portfolio.yaml --output migrated.yaml",
   "objective-contract-migrate --help --output-format json",
 ];
 

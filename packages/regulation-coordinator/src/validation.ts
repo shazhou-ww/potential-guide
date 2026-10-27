@@ -2,16 +2,19 @@ import {
   attainedLevelRank,
   compileDomain,
   type Envelope,
+  isObjectiveRevision,
+  levelRank,
   type ObjectiveSource,
   objectiveSourceVersion,
   type PilotObservation,
   type PilotSpec,
   parseDependencyProblem,
+  parseManifest,
   validatePilotSource,
   validateSubject,
 } from "@potential-guide/objective-pilot";
-import { canonicalJson, validateGoal } from "@potential-guide/objective-portfolio-supervisor";
 import { makeRegulatorSpec, type RegulationOutcome } from "@potential-guide/objective-regulator";
+import { canonicalJson } from "./canonical-json.js";
 import type { AgentResource, Regulation } from "./types.js";
 
 export function fields(
@@ -62,7 +65,42 @@ export function validateRegulation(regulation: Regulation): void {
   );
   if (typeof regulation.id !== "string" || regulation.id.startsWith("$dependency:"))
     throw new TypeError("Invalid or reserved Regulation ID.");
-  validateGoal({ ...regulation, observationIntervalMs: 1 });
+  canonicalJson(regulation);
+  parseManifest(JSON.stringify(regulation.objective.manifest));
+  if (
+    !regulation.id.trim() ||
+    !regulation.objective?.objectiveId?.trim() ||
+    !regulation.subject ||
+    typeof regulation.subject !== "object" ||
+    Array.isArray(regulation.subject) ||
+    !priority(regulation.priority) ||
+    (regulation.requirements !== undefined &&
+      (!Array.isArray(regulation.requirements) ||
+        regulation.requirements.some((value) => typeof value !== "string" || !value.trim())))
+  )
+    throw new TypeError("Invalid objective goal.");
+  if (!isObjectiveRevision(regulation.objective.objectiveId, regulation.objective.version))
+    throw new TypeError("Goal requires a canonical Pilot directory and exact content version.");
+  if (
+    regulation.objective.source !== undefined ||
+    !regulation.objective.objectiveId.startsWith("git+")
+  )
+    validatePilotSource(
+      regulation.objective.objectiveId,
+      regulation.objective.version,
+      regulation.objective.source,
+    );
+  if (regulation.sourceBindings !== undefined) {
+    if (
+      regulation.sourceBindings === null ||
+      typeof regulation.sourceBindings !== "object" ||
+      Array.isArray(regulation.sourceBindings)
+    )
+      throw new TypeError("Invalid source binding table.");
+    for (const [id, source] of Object.entries(regulation.sourceBindings))
+      validatePilotSource(id, objectiveSourceVersion(source), source);
+  }
+  levelRank(regulation.objective, regulation.targetLevel);
   validateSpec(regulation.objective, regulation.subject);
   if (
     regulation.language !== undefined &&
@@ -74,6 +112,15 @@ export function validateRegulation(regulation: Regulation): void {
       ? {}
       : { [regulation.objective.objectiveId]: regulation.objective.source },
     regulation.sourceBindings ?? {},
+  );
+}
+
+export function supports(
+  resource: AgentResource,
+  demand: Pick<Regulation, "requirements">,
+): boolean {
+  return (demand.requirements ?? []).every((capability) =>
+    resource.capabilities.includes(capability),
   );
 }
 

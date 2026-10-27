@@ -29,8 +29,7 @@
   "dependencies": {
     "@potential-guide/effects": "workspace:^",
     "@potential-guide/objective-pilot": "workspace:^",
-    "@potential-guide/objective-regulator": "workspace:^",
-    "@potential-guide/objective-portfolio-supervisor": "workspace:^"
+    "@potential-guide/objective-regulator": "workspace:^"
   },
   "publishConfig": {
     "access": "public"

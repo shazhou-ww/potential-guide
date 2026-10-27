@@ -68,7 +68,7 @@ An empty registry prints `No registered Objectives.` and explains the effective
 search scope and declaration-management commands. Use `--format json` for
 machine-readable output; each entry now explicitly marks `semantics: legacy-source-alias`.
 
-`probe`, `regulate` and portfolio goal `pilot` fields accept registered names.
+`probe` and `regulate` accept registered names.
 Registration is optional: paths and Git URIs can still be used directly.
 Use `@name` to require a registered Objective or `./name` to force a local path.
 The machine-readable list contains `schemaVersion: 1` and an `objectives` array

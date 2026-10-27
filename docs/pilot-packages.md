@@ -108,8 +108,8 @@ CLI 使用 `objectives.aliases` 中的实际包名映射，简称仍只是引用
 
 ## 执行、证据与历史
 
-`ObjectiveRevision = (packageName, packageDigest)` 贯穿协议、声明、regulation/
-supervision、Coordinator 请求、事件、重放与查询视图。投影计数不是代码 revision。
+`ObjectiveRevision = (packageName, packageDigest)` 贯穿协议、声明、regulation、
+Coordinator 请求、事件、重放与查询视图。投影计数不是代码 revision。
 Host 仍只接收规范 check 目录和该目录全部产物 hash，不理解 npm、Objective 或业务依赖。
 包 References 变化可更新包 digest，但字节相同的单个 check hash 不必变化。
 

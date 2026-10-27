@@ -26,14 +26,12 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         "pguide",
         "@potential-guide/pguide-pilot",
         "@potential-guide/pguide-regulate",
-        "@potential-guide/pguide-supervise",
       ],
     ],
     ["protocol", ["@potential-guide/pilot-protocol"]],
     ["main", ["pguide"]],
     ["pilot", ["@potential-guide/pguide-pilot"]],
     ["regulation", ["@potential-guide/pguide-regulate"]],
-    ["supervision", ["@potential-guide/pguide-supervise"]],
     ["coordinator", ["@potential-guide/effects", "@potential-guide/regulation-coordinator"]],
     ["objectives", ["@potential-guide/pguide-objectives"]],
     ["config", ["@potential-guide/pguide-config"]],
@@ -44,7 +42,6 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         "pguide",
         "@potential-guide/pguide-pilot",
         "@potential-guide/pguide-regulate",
-        "@potential-guide/pguide-supervise",
         "@potential-guide/pguide-objectives",
         "@potential-guide/pguide-config",
         "@potential-guide/pguide-agents",
@@ -202,6 +199,14 @@ try{
       console.log(`Installed Objective evidence: ${reportFile}`);
     }
     if (label === "coordinator") {
+      for (const name of [
+        "@potential-guide/objective-portfolio-supervisor",
+        "@potential-guide/pguide-supervise",
+      ]) {
+        assert.ok(!closure.has(name), `Retired package in Coordinator closure: ${name}`);
+        const installed = await readFile(join(directory, "pnpm-lock.yaml"), "utf8");
+        assert.ok(!installed.includes(name), `Retired package installed: ${name}`);
+      }
       await writeFile(
         join(directory, "api.ts"),
         `
@@ -280,6 +285,11 @@ try{
         ],
         directory,
       );
+      await writeFile(
+        join(directory, "recurrence.mjs"),
+        await readFile(join(root, "scripts", "coordinator-consumer.mjs"), "utf8"),
+      );
+      console.log(await run(process.execPath, [join(directory, "recurrence.mjs")], directory));
     }
     if (label === "protocol") {
       for (const name of closure.keys())
@@ -563,7 +573,6 @@ try{
         for (const [command, packageName] of [
           ["regulate", "pguide-regulate"],
           ["continue", "pguide-regulate"],
-          ["supervise", "pguide-supervise"],
         ]) {
           const missing = JSON.parse(
             await run(executable, [command, "--format", "json"], directory, env, 2),
@@ -591,7 +600,6 @@ try{
         "probe",
         "regulate",
         "continue",
-        "supervise",
         "scaffold",
         "validate",
         "config",

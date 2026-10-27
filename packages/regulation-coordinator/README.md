@@ -1,9 +1,10 @@
 # @potential-guide/regulation-coordinator
 
-An independent, scoped, command-driven Regulation scheduler. It does not call,
-wrap, replace or reconnect the existing Portfolio Planner/Coordinator/Supervisor.
-Only their public pure validation/ranking/capability helpers and runner types are
-reused. There is one internal priority queue and a runtime-discovered dependency
+An independent, scoped, command-driven Regulation scheduler. Portfolio Supervisor
+and its CLI are retired, without an implicit policy replacement.
+Coordinator owns validation, capability matching and public resource/runner types;
+ranking is reused from Pilot. Persisted canonical JSON ordering is unchanged.
+There is one internal priority queue and a runtime-discovered dependency
 graph per acquisition; neither is an input snapshot.
 
 ## Simplified-design request model

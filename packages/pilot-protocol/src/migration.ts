@@ -170,6 +170,6 @@ export function migrateLegacyObjectiveDocument(
     return result;
   }
   return fail(
-    "Portfolio targets require explicit review against each committed v2 Objective. Create a schemaVersion: 4 Portfolio with reviewed targets and new bindings; pinned source evidence must be reobserved, never rewritten or invented.",
+    "Portfolio targets require explicit review; Portfolio Supervisor is retired. Use the Coordinator Request API with reviewed targets and exact source bindings; pinned source evidence must be reobserved, never rewritten or invented.",
   );
 }

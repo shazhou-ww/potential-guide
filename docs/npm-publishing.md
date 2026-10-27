@@ -1,6 +1,6 @@
 # npm publishing
 
-Potential Guide defines twenty-four independent CLI, library, and Objective releases:
+Potential Guide defines twenty-two independent CLI, library, and Objective releases:
 
 | Package | Release tag |
 | --- | --- |
@@ -9,7 +9,6 @@ Potential Guide defines twenty-four independent CLI, library, and Objective rele
 | `@potential-guide/git-source` | `git-source-vX.Y.Z` |
 | `@potential-guide/objective-pilot` | `objective-pilot-vX.Y.Z` |
 | `@potential-guide/objective-regulator` | `objective-regulator-vX.Y.Z` |
-| `@potential-guide/objective-portfolio-supervisor` | `objective-portfolio-supervisor-vX.Y.Z` |
 | `@potential-guide/regulation-coordinator` | `regulation-coordinator-vX.Y.Z` |
 | `@potential-guide/cli-core` | `cli-core-vX.Y.Z` |
 | `@potential-guide/pguide-config` | `pguide-config-vX.Y.Z` |
@@ -20,7 +19,6 @@ Potential Guide defines twenty-four independent CLI, library, and Objective rele
 | `@potential-guide/objective-declarations` | `objective-declarations-vX.Y.Z` |
 | `@potential-guide/pguide-pilot` | `pguide-pilot-vX.Y.Z` |
 | `@potential-guide/pguide-regulate` | `pguide-regulate-vX.Y.Z` |
-| `@potential-guide/pguide-supervise` | `pguide-supervise-vX.Y.Z` |
 | `@potential-guide/pguide-objectives` | `pguide-objectives-vX.Y.Z` |
 | `@potential-guide/objective-monorepo-standard` | `objective-monorepo-standard-vX.Y.Z` |
 | `@potential-guide/objective-package-standard` | `objective-package-standard-vX.Y.Z` |
@@ -37,18 +35,15 @@ and keep their responsibility names.
 
 Release packages in manifest dependency order. `effects` and `pilot-protocol`
 are protocol; `check-host` follows `effects`, and `objective-pilot` consumes
-Check Host and both protocols, then `objective-regulator` and
-`objective-portfolio-supervisor` build business capabilities. The independent
-`regulation-coordinator` library follows
-`objective-portfolio-supervisor` (public pure helpers and runner types only);
-it does not replace or reconnect any existing supervision package. `cli-core` precedes
+Check Host and both protocols, then `objective-regulator` builds regulation capabilities.
+The independent `regulation-coordinator` library follows `objective-regulator`
+and owns its scheduling helpers and runner types. `cli-core` precedes
 `pguide-config`. `objective-declarations` consumes CLI Core and Pilot protocol only;
 `cli-runtime` consumes Pilot and Git source;
 the command packages consume it and CLI Core. Publish `pguide-pilot` and
 `pguide-config`, `pguide-agents` and `pguide-objectives` before `pguide`, which
 installs all four as production dependencies.
-It does not install regulation or supervision. `pguide-regulate`
-must precede `pguide-supervise`. Publish changed transitive dependencies before
+It does not install regulation. Publish changed transitive dependencies before
 their consumers. See [three-layer boundaries and migration](./package-layering.md).
 Git source remains a compatibility/source utility. Six concrete Objective packages
 now have independent release inventory; this migration itself does not publish them.
@@ -107,7 +102,6 @@ rules must allow these release tags:
 - `git-source-v*`
 - `objective-pilot-v*`
 - `objective-regulator-v*`
-- `objective-portfolio-supervisor-v*`
 - `cli-core-v*`
 - `pguide-config-v*`
 - `pguide-agents-v*`
@@ -117,7 +111,6 @@ rules must allow these release tags:
 - `objective-declarations-v*`
 - `pguide-pilot-v*`
 - `pguide-regulate-v*`
-- `pguide-supervise-v*`
 - `pguide-objectives-v*`
 
 ## Publish the bootstrap placeholders
@@ -158,8 +151,6 @@ npm publish .cache/npm-bootstrap/potential-guide-git-source-0.0.0.tgz \
 npm publish .cache/npm-bootstrap/potential-guide-objective-pilot-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/potential-guide-objective-regulator-0.0.0.tgz \
-  --access public --registry=https://registry.npmjs.org/
-npm publish .cache/npm-bootstrap/potential-guide-objective-portfolio-supervisor-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/potential-guide-pguide-config-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/

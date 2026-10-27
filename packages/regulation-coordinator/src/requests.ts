@@ -1,10 +1,11 @@
 import {
+  levelRank,
   type NpmObjectiveSource,
   type PilotSpec,
   type Subject,
   validatePilotSource,
 } from "@potential-guide/objective-pilot";
-import { canonicalJson, levelRank } from "@potential-guide/objective-portfolio-supervisor";
+import { canonicalJson } from "./canonical-json.js";
 import { identityKey as key } from "./identity.js";
 import { fields, immutable, positive, priority, timestamp, validateSpec } from "./validation.js";
 
