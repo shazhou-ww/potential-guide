@@ -26,27 +26,27 @@
 - `node scripts\check-packages.mjs`：22 项实际打包、10 组独立 tarball 安装消费者通过，包括 Coordinator 的类型入口和真实运行入口。独立消费者使用自身 `pnpm-workspace.yaml`（`packages: []`）和 tarball 覆盖，不从源 workspace 导入运行实现；测试目录位于仓库 `.cache`，不冒充现实世界部署。
 - Coordinator 独立安装闭包为 6 个内部包，安装后的 lockfile 与闭包均不含两个退役包。新增 `scripts/coordinator-consumer.mjs` 在安装后的公共入口上验证到期派发、周期唯一后继、耗尽重读、外部追加、文件持久化、离线后重启恢复及取消后再次重启不续跑。
 
-## 仓库总检查的未决问题
+## 父代理复核与仓库总检查
 
 `pnpm check` 已实际执行，但在未修改的 Check Host 测试
 `packages/check-host/test/discovery.test.ts` 的
 `real startup and published Host crashes recover once without replaying old tasks`
 失败：`Shared Check Host readiness timed out; inspect the private startup descriptor.`
 
-使用 `pnpm exec turbo run test --filter=@potential-guide/check-host --concurrency=1`
-单独执行仍复现；临时短盘符别名未改变 Turbo 最终使用的原 worktree 路径，也未解决。
-从仓库根执行同一测试
-`node --import tsx --test --test-name-pattern="real startup and published Host crashes" packages\check-host\test\discovery.test.ts`
-则通过全部六轮崩溃恢复。现有证据只证明 Windows 下调用 cwd 相关，不将路径长度猜测当成已定位根因。
-从仓库根执行完整 `node --import tsx --test packages\check-host\test\*.test.ts`
-亦为 **33 个测试、31 通过、2 个现有平台跳过、0 失败**。
-临时盘符已撤销，没有为获得绿灯修改或跳过该测试。
+父代理复核也在原长路径 worktree 复现超时，并在仓库根观察到该未改测试的一次并发恢复计数波动。没有修改 Check Host 代码、跳过测试或改变其断言；不将路径长度或时序猜测冒充已定位根因。
 
-`silvermoon check --worktree --audience agent` 的候选布局为
-`candidateSnapshotValid: true`，但整体退出 1：本地追踪 primary
-`8f143a5764a2add4e742f6c683dfc9ff53896e96` 包含另一 Idea
-`01M5XTPAGFBP4EV94YJTZCNYS1` 的事件历史，当前候选相对该基线报
-`not-append-only (append)`。本次没有编辑该 Idea 或任何 events.jsonl，
-也未按此观察擅自同步或修订历史；交由父代理保留并整合并发历史。
+为验证确切退役代码，父代理把已提交快照 `36a55f71dfacfefeee5b31f60f2f7a593c0cbffa`
+放到全新的短路径 detached worktree `D:\Code\pg-retire-verify-20261027`，独立恢复依赖后执行：
 
-因此 I-S03 的实现工作已完成，但 I-AC03 中要求的 `pnpm check` 整体绿灯尚未证明，保持未勾选；所有 D-* 保持未勾选。父代理需审查该现有验证问题后决定后续处理，不能将当前候选标记为已经完成实现验收。
+```powershell
+$env:TURBO_CONCURRENCY='2'
+pnpm --dir D:\Code\pg-retire-verify-20261027 check
+```
+
+完整命令退出 **0**：所有 **46/46** workspace 测试任务、根脚本测试、构建、层级、格式、lint、typecheck 和 pack 检查均通过；Coordinator **79/79** 通过，Check Host **33 项中 31 通过、2 项原平台跳过、0 失败**，包含全部六轮真实崩溃恢复。初次未限制并发运行曾出现 Coordinator 测试子进程整体失败，限定并发的最终完整运行未改变任何测试选择或产品代码。23 个构建任务及 22 包、10 组独立安装消费者均通过。
+
+父代理审查了 helper / 类型迁移、CLI 发现和替代退役测试、发布清单与 monorepo 依赖验证，撤回了与退役无关的 Coordinator store 测试临时目录变动。原路径的环境相关失败仍如实保留在这里；短路径最终成功证明提交快照整体可通过，不声称修复了未改动的 Host 测试环境问题。
+
+Silvermoon 的历史校验问题来自候选落后于并发 primary；父代理以普通 fast-forward 合并 `8f143a5764a2add4e742f6c683dfc9ff53896e96` 后 worktree 校验通过，未改写其他 Idea 或事件历史。
+
+I-AC03 的完整验证已满足；实现门禁由父代理按用户明确授权复核。所有 D-* 继续保持未勾选，独立工作区外的真实进程验证属于后续部署阶段。
