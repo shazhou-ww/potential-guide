@@ -41,8 +41,10 @@ await writeFile(join(target, "package.json"), `${JSON.stringify({
     "@potential-guide/effects": overrides["@potential-guide/effects"],
   },
   devDependencies: { typescript: "5.9.3", "@types/node": "22.20.5" },
-  pnpm: { overrides },
 }, null, 2)}\n`);
+await writeFile(join(target, "pnpm-workspace.yaml"), `overrides:\n${Object.entries(overrides)
+  .map(([name, value]) => `  ${JSON.stringify(name)}: ${JSON.stringify(value)}`)
+  .join("\n")}\n`);
 await writeFile(join(target, "tsconfig.json"), `${JSON.stringify({
   compilerOptions: {
     strict: true, exactOptionalPropertyTypes: true, module: "NodeNext",
