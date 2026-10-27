@@ -1,0 +1,74 @@
+[
+  {
+    "observations": [
+      {
+        "checkId": "held",
+        "state": "Running",
+        "progress": {
+          "entered": true,
+          "marker": "tree-manual",
+          "calls": 1
+        }
+      },
+      {
+        "checkId": "held",
+        "state": "Cancelling"
+      },
+      {
+        "checkId": "held",
+        "state": "Cancelled"
+      }
+    ],
+    "helperCount": 1,
+    "forcedWindowsStop": true,
+    "originalEntry": true,
+    "cleaned": true,
+    "branch": "cancel",
+    "activeCount": 0,
+    "descriptor": "host/host.json",
+    "cleaningObserved": true,
+    "directoryRemoved": true,
+    "helperPids": [
+      28016
+    ],
+    "helpersExited": true,
+    "gracefulShutdownClaimed": false,
+    "daemonPid": 49320,
+    "directory": "D:\\Code\\potential-guide.worktrees\\test-tree-manual-idea\\.cache\\manual-check-host\\case-8c2a6842-b384-4956-9638-13a090134231",
+    "cleanedBeforeRelease": false,
+    "staleDescriptorAfterStop": true
+  },
+  {
+    "observations": [
+      {
+        "checkId": "fault",
+        "state": "Failed",
+        "error": "Error: manual injected failure"
+      },
+      {
+        "checkId": "recovery",
+        "state": "Completed",
+        "result": {
+          "marker": "tree-manual",
+          "calls": 2
+        }
+      }
+    ],
+    "sameOriginalFault": true,
+    "helperCount": 1,
+    "gracefulShutdownClaimed": false,
+    "originalEntry": true,
+    "branch": "recovery",
+    "activeCount": 0,
+    "descriptor": "host/host.json",
+    "forcedWindowsStop": true,
+    "directoryRemoved": true,
+    "helperPids": [
+      47588
+    ],
+    "helpersExited": true,
+    "daemonPid": 44976,
+    "directory": "D:\\Code\\potential-guide.worktrees\\test-tree-manual-idea\\.cache\\manual-check-host\\case-971042f9-3d5c-4a28-a96c-750ddc83b25c",
+    "staleDescriptorAfterStop": true
+  }
+]

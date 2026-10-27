@@ -12,6 +12,12 @@ The same YAML generates a [Markdown manual](../../docs/check-host-manual.md) and
 imports test bindings or starts a Host. The manuals contain executable
 PowerShell steps and owned-resource cleanup instructions, not proof of test success.
 
+The [ordinary cancellable sample artifact](examples/README.md) can be copied
+directly; preparation does not require writing a worker or launcher script.
+The current manual uses `connectHost` with an explicit isolated Host subdirectory
+and the original discovery daemon. Windows process termination is documented as
+forced, after task cleanup and idle observation, not as graceful daemon shutdown.
+
 Discovery requires a dedicated private directory. Windows uses protected NTFS
 ACLs, not POSIX `mode` values; existing insecure directories or metadata are refused
 without changing their permissions. Choose a fresh private location rather than

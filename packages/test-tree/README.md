@@ -118,14 +118,15 @@ See the [Check Host YAML](test/check-host/host.states.yaml),
 [offline HTML](../../docs/check-host-manual.html). Each manual branch starts from a new owned scenario directory. The instructions
 use native Bash/curl/jq or PowerShell/Invoke-RestMethod from the repository root.
 They do not invoke Test Tree, a test binding, `tsx`, a REPL, or a task-command helper.
-The transparent demonstration worker is prepared explicitly once per scene,
-not copied from a hidden fixture or repeated for each state.
-Check Host has no general-purpose start/run/cancel CLI: the manual explicitly
-uses a small visible SDK-only bootstrap for private directory creation,
-`CheckKernel`/`serve`, artifact revision, private connection publication and
-owned-resource shutdown. The daemon entry requires a discovery-owned reservation;
-it is not a standalone service CLI. Tasks, cancellation, observation and barriers
-use the actual HTTP and filesystem interfaces, not the bootstrap.
+Preparation is at most eight native command lines per platform: create an owned
+private directory and copy the inspectable ordinary
+[business artifact](../check-host/examples/README.md). No worker source, host.mjs,
+dispatcher or bootstrap script is generated.
+In the ready state, one transparent `connectHost(<scene>/host)` SDK call starts the
+**original discovery daemon**, including its real startup reservation; the launcher
+closes its own private backend. Another one-line `readArtifact` call calculates the
+sample revision. Requests use the actual private `host/host.json` descriptor.
+There is no invented start/run/cancel CLI or custom `CheckKernel`/`serve` substitute.
 
 Linux/macOS instructions require Bash 3.2+, curl 7.55+, jq 1.6+, Node 22.13+
 and pnpm 11.22+, on a filesystem that actually preserves POSIX ownership and
@@ -136,8 +137,12 @@ PowerShell 5.1+ and the same Node/pnpm versions, but not curl or jq. Native
 platform command tests run where prerequisites exist and otherwise explicitly skip;
 Git Bash is not native Linux/macOS verification. Tokens are neither printed nor
 passed as curl arguments; curl reads a header file inside the private directory.
-The manual Host allows five minutes for execution, one minute for cleanup and
-five minutes of history retention. Stop only the owned foreground process and
-confirm shutdown before deleting its directory; the SDK closes its Windows helper.
-The bootstrap writes a shutdown-confirmation marker only after all SDK releases
-succeed. Directory cleanup requires both that marker and the owned PID's exit.
+The actual daemon defaults apply: 30 seconds for execution, 5 seconds for cleanup
+and 60 seconds of history retention. Read and prepare the observation/release
+commands before cancellation; a deadline failure is not successful cancellation.
+Before stopping, all tasks must be terminal and the active list empty.
+POSIX SIGTERM follows the daemon's graceful handler and removes host.json.
+Windows `Stop-Process` is **forced termination**, not evidence of graceful disposal:
+the manual waits on handles captured for the exact owned PID and its recorded
+helpers, checks their exit, and only then deletes its own scene. It does not kill
+helper processes by name or pretend a stale descriptor proves a live service.

@@ -9,6 +9,8 @@
 该文取代前文证据中已过时的手册包装器方案，历史证据仍保留。
 本轮将大段 Node REPL 改为分平台原生 shell/PowerShell 操作，属于已接受原始命令/API
 体验的实现细化，不改变理想世界；证明见 [分平台手册证据](./Platform-manual-evidence.md)。
+后续“准备仍过长”的修正见 [紧凑准备证据](./Compact-preparation-evidence.md)；
+该文取代上一轮自写 host.mjs / 自建 SDK 服务的当前使用说明，历史快照不改写。
 
 ## Steps
 
@@ -42,7 +44,10 @@ HTML 使用原生折叠状态树、稳定锚点、全文转义和 CSP，无脚�
 人工说明保留七个状态的组织，每个进入、观察和结束区域都区分 Linux/macOS shell
 与 Windows PowerShell，使用原生 details 折叠，无脚本或网络资产。
 原生操作分别使用 curl/jq 与 Invoke-RestMethod、平台文件和 JSON 命令；
-仅私有目录、SDK 服务启动、revision 和资源关闭保留透明 Node 片段，不提供任务命令包装器。
+准备每个平台不超过八行实际命令，只创建安全独立目录并复制预先提供的透明普通业务样例；
+不写 worker 源码、host.mjs 或另一个服务脚本。
+安全目录、显式 connectHost 及关闭启动器 backend、readArtifact revision
+保留必要的一行透明 SDK 调用；其他操作均使用原始 HTTP/文件命令。
 明确 Bash 3.2、curl/jq 和 PowerShell 5.1 等依赖；不把 Git Bash 当成 Linux/macOS 原生验证。
 历史消费快照保留，不冒充更新后的页面。
 
@@ -55,9 +60,15 @@ HTML 使用原生折叠状态树、稳定锚点、全文转义和 CSP，无脚�
 CheckKernel、鉴权 HTTP、worker、执行及清理文件屏障，覆盖 ready/running/
 cancelling/cancelled 和独立 faulted/recovered 分支。旧有 CLI 竞争测试保持不变。
 删除容易与原始命令混淆的手册专用 manual.ts 包装器。
-说明直接准备一次透明业务 worker，SDK 只调用公开 CheckKernel/serve 等必要启动 API，
+普通可检查的业务 artifact 位于 packages/check-host/examples/cancellable，随包提供，
+不是 test-tree fixture、CLI 或 helper。准备只复制它；Host 启动属于 ready 状态。
+说明使用公开 connectHost 显式隔离 host 子目录，通过真实 discovery 预约启动原始 daemon，
 演示状态进入、观察、屏障释放及已确认关闭后的目录删除，不导入测试绑定/helper。
-明确该手动路径覆盖内核/HTTP/worker，不声称验证 discovery daemon 启动。
+原始 host.json 是唯一连接描述；不伪造预约、服务命令或另一份 descriptor。
+明确真实 30 秒执行/5 秒清理/60 秒历史期限，不生成可调期限的替代服务。
+POSIX SIGTERM 与 Windows 强制 Stop-Process 分开说明：Windows 先证明任务终态、
+清理标记和空活动列表，仅停止记录的自有 PID，等待其与已记录 helper 的句柄退出，
+不以此宣称优雅关闭或 dispose hook 已执行；失败时保留目录。
 提交同源 Markdown/HTML 派生产物，并用测试验证它们与 YAML 完全一致；
 纳入 pnpm catalog、package-layers、package-owned objectives 和 Turbo 输入。
 
@@ -93,5 +104,6 @@ Markdown 命令块保留格式，HTML 不执行说明中的脚本。
 另外核对输出为状态视图而非测试路径，代码不调用测试工具。
 本轮以实际 Windows PowerShell 完整状态流取代 REPL 证明；有原生 Linux/macOS 环境时
 执行其说明，否则明确报告未原生验证，并对 Bash 兼容性及命令前置条件进行检查。
+测试同时约束准备行数、禁止源码/启动脚本生成，并直接执行当前短命令验证原始 daemon。
 运行包内测试、仓库测试类型检查、相关 package-owned 集成及 `pnpm check`，
 将既有失败或环境诊断与本次引入的问题分开记录，不以重跑掩盖失败。

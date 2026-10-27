@@ -25,182 +25,43 @@ Not run — 操作说明，未执行验证。
 <details>
 <summary>Linux / macOS shell</summary>
 
-适用 Linux / macOS 的 Bash（兼容 macOS 自带 Bash 3.2）。
-需要 Node >=22.13、pnpm >=11.22、curl >=7.55、jq >=1.6；jq 须自行先安装。
-工作树文件系统须支持真实 POSIX 所有者及 0700/0600 权限；WSL 默认 Windows 挂载
-可能被 SDK 以 EPRIVATE 拒绝，不能绕过。应在具备该权限支持的工作树消费。
-所有终端都位于仓库根，先执行 pnpm build；任何命令失败都停止，不继续后续状态。
-在终端 A 准备独立目录、透明业务输入和 SDK 启动片段：
+Linux/macOS：Bash >=3.2、Node >=22.13、pnpm >=11.22、curl >=7.55、jq >=1.6。
+在仓库根先执行 pnpm build；工作树须支持真实 POSIX 所有者及 0700/0600 权限。
+WSL Windows 挂载若被 SDK 以 EPRIVATE 拒绝，不绕过权限检查，不宣称流程通过。
+准备只创建独立目录并复制一个已提供的普通业务样例；不写 worker 源码或服务脚本。
 ```bash
 set -e
 set -o pipefail
 umask 077
 mkdir -p ".cache/manual-check-host"
-case_dir=$(node --input-type=module <<'NODE'
-import { resolve } from "node:path";
-const api = await import("./packages/check-host/dist/index.js");
-try { console.log(await api.createPrivateDirectory(resolve(".cache/manual-check-host"), "case-")); }
-finally { await api.closePrivateFileBackend(); }
-NODE
-)
+case_dir=$(printf '%s\n' 'const a=await import("./packages/check-host/dist/index.js");try{console.log(await a.createPrivateDirectory(process.cwd()+"/.cache/manual-check-host","case-"))}finally{await a.closePrivateFileBackend()}' | node --input-type=module)
 printf 'CASE_DIRECTORY=%s\n' "$case_dir"
-mkdir "$case_dir/artifact" "$case_dir/controls"
-cat > "$case_dir/artifact/worker.cjs" <<'WORKER'
-const fs = require("node:fs/promises");
-const path = require("node:path");
-let calls = 0;
-exports.execute = async (subject, context) => {
-  const count = ++calls;
-  if (subject.fail) throw new Error("manual injected failure");
-  if (subject.hold) {
-    context.defer(async () => {
-      await fs.writeFile(path.join(subject.controls, "cleaning"), "entered");
-      while (true) {
-        try { await fs.access(path.join(subject.controls, "release")); break; }
-        catch (error) {
-          if (error.code !== "ENOENT") throw error;
-          await new Promise(resolve => setTimeout(resolve, 20));
-        }
-      }
-      await fs.writeFile(path.join(subject.controls, "cleaned"), "done");
-    });
-    context.progress({ entered: true, marker: subject.marker, calls: count });
-    await new Promise(resolve => {
-      if (context.signal.aborted) resolve();
-      else context.signal.addEventListener("abort", resolve, { once: true });
-    });
-  }
-  return { marker: subject.marker, calls: count };
-};
-WORKER
-cat > "$case_dir/host.mjs" <<'HOST'
-import { resolve, join } from "node:path";
-import { pathToFileURL } from "node:url";
-import { writeFile } from "node:fs/promises";
-const api = await import(pathToFileURL(resolve("packages/check-host/dist/index.js")));
-const directory = process.argv[2];
-let kernel, host;
-try {
-  kernel = await api.CheckKernel.create(join(directory, "snapshots"),
-    { deadlineMs: 300000, cleanupMs: 60000, retentionMs: 300000 });
-  const token = crypto.randomUUID();
-  host = await api.serve(kernel, token);
-  const { revision } = await api.readArtifact(join(directory, "artifact"));
-  await api.createPrivateFile(directory, "connection.json",
-    JSON.stringify({ endpoint: host.endpoint, token, revision, pid: process.pid }));
-  await api.closePrivateFileBackend();
-  console.log("Ready", host.endpoint, "owned PID", process.pid);
-  await new Promise(done => {
-    process.once("SIGINT", done); process.once("SIGTERM", done);
-    process.stdin.once("data", done);
-  });
-} catch (error) { console.error(error); process.exitCode = 1; }
-finally {
-  process.stdin.pause(); process.stdin.removeAllListeners("data");
-  for (const close of [() => host?.close(), () => kernel?.close(), () => api.closePrivateFileBackend()]) {
-    try { await close(); } catch (error) { console.error(error); process.exitCode = 1; }
-  }
-}
-if (!process.exitCode) {
-  await writeFile(join(directory, "closed"), "confirmed");
-  console.log("Host and workers stopped");
-}
-HOST
+mkdir "$case_dir/controls"
+cp -R "packages/check-host/examples/cancellable" "$case_dir/artifact"
 ```
-每条分支准备一次新的目录，不重用旧场景。业务 worker 仅在这里准备一次，不是测试 fixture。
-host.mjs 只桥接必须使用 SDK 的内核启动、artifact revision、私密连接信息及自有资源关闭；
-它没有 start/run/cancel 子命令，不执行检查或任务。后续业务操作全部用 curl/文件命令。
-实际 daemon 入口要求 discovery-owned startup reservation，不能把 main.js 当作通用服务 CLI；
-此手册不声称验证 discovery，不连接用户默认 Host。
+样例代码可直接查看 packages/check-host/examples/cancellable/worker.cjs。
+它是普通业务 artifact，不是测试 fixture 或操作包装器；每条分支准备一个新场景。
+目录创建是唯一必要的安全 SDK 调用，权限 backend 随创建进程关闭。
 
 </details>
 
 <details>
 <summary>Windows PowerShell</summary>
 
-适用 Windows PowerShell >=5.1（或 PowerShell 7），需要 Node >=22.13、pnpm >=11.22。
-不需要 curl、jq。所有终端都位于仓库根，先执行 pnpm build；错误时停止，不继续下一状态。
-在终端 A 创建本次目录；以下业务代码只在准备时写入一次。UTF-8 无 BOM 避免污染 worker。
+Windows PowerShell >=5.1、Node >=22.13、pnpm >=11.22；不需要 curl/jq。
+所有命令均在仓库根、同一 PowerShell 会话执行；先执行 pnpm build。
+只创建自有目录并复制可检查的普通业务样例，不要求手写 worker 或 host.mjs：
 ```powershell
 $ErrorActionPreference = 'Stop'
 New-Item -ItemType Directory -Force -Path '.cache/manual-check-host' | Out-Null
-$case = @'
-import { resolve } from "node:path";
-const api = await import("./packages/check-host/dist/index.js");
-try { console.log(await api.createPrivateDirectory(resolve(".cache/manual-check-host"), "case-")); }
-finally { await api.closePrivateFileBackend(); }
-'@ | node --input-type=module
+$case = 'const a=await import("./packages/check-host/dist/index.js");try{console.log(await a.createPrivateDirectory(process.cwd()+"/.cache/manual-check-host","case-"))}finally{await a.closePrivateFileBackend()}' | node --input-type=module
 if ($LASTEXITCODE -ne 0) { throw 'Private directory preparation failed' }
 Write-Output "CASE_DIRECTORY=$case"
-New-Item -ItemType Directory -Path (Join-Path $case 'artifact'), (Join-Path $case 'controls') | Out-Null
-$worker = @'
-const fs = require("node:fs/promises");
-const path = require("node:path");
-let calls = 0;
-exports.execute = async (subject, context) => {
-  const count = ++calls;
-  if (subject.fail) throw new Error("manual injected failure");
-  if (subject.hold) {
-    context.defer(async () => {
-      await fs.writeFile(path.join(subject.controls, "cleaning"), "entered");
-      while (true) {
-        try { await fs.access(path.join(subject.controls, "release")); break; }
-        catch (error) {
-          if (error.code !== "ENOENT") throw error;
-          await new Promise(resolve => setTimeout(resolve, 20));
-        }
-      }
-      await fs.writeFile(path.join(subject.controls, "cleaned"), "done");
-    });
-    context.progress({ entered: true, marker: subject.marker, calls: count });
-    await new Promise(resolve => {
-      if (context.signal.aborted) resolve();
-      else context.signal.addEventListener("abort", resolve, { once: true });
-    });
-  }
-  return { marker: subject.marker, calls: count };
-};
-'@
-[IO.File]::WriteAllText((Join-Path $case 'artifact/worker.cjs'), $worker, [Text.UTF8Encoding]::new($false))
-$bootstrap = @'
-import { resolve, join } from "node:path";
-import { pathToFileURL } from "node:url";
-import { writeFile } from "node:fs/promises";
-const api = await import(pathToFileURL(resolve("packages/check-host/dist/index.js")));
-const directory = process.argv[2];
-let kernel, host;
-try {
-  kernel = await api.CheckKernel.create(join(directory, "snapshots"),
-    { deadlineMs: 300000, cleanupMs: 60000, retentionMs: 300000 });
-  const token = crypto.randomUUID();
-  host = await api.serve(kernel, token);
-  const { revision } = await api.readArtifact(join(directory, "artifact"));
-  await api.createPrivateFile(directory, "connection.json",
-    JSON.stringify({ endpoint: host.endpoint, token, revision, pid: process.pid }));
-  await api.closePrivateFileBackend();
-  console.log("Ready", host.endpoint, "owned PID", process.pid);
-  await new Promise(done => {
-    process.once("SIGINT", done); process.once("SIGTERM", done);
-    process.stdin.once("data", done);
-  });
-} catch (error) { console.error(error); process.exitCode = 1; }
-finally {
-  process.stdin.pause(); process.stdin.removeAllListeners("data");
-  for (const close of [() => host?.close(), () => kernel?.close(), () => api.closePrivateFileBackend()]) {
-    try { await close(); } catch (error) { console.error(error); process.exitCode = 1; }
-  }
-}
-if (!process.exitCode) {
-  await writeFile(join(directory, "closed"), "confirmed");
-  console.log("Host and workers stopped");
-}
-'@
-[IO.File]::WriteAllText((Join-Path $case 'host.mjs'), $bootstrap, [Text.UTF8Encoding]::new($false))
+New-Item -ItemType Directory -Path (Join-Path $case 'controls') | Out-Null
+Copy-Item -LiteralPath 'packages/check-host/examples/cancellable' -Destination (Join-Path $case 'artifact') -Recurse
 ```
-记录输出的绝对目录；不要打印连接文件或凭据。部分准备失败时，只处理已经创建的自有目录。
-host.mjs 只完成必要的 SDK 启动/revision/凭据发布及关闭，不提供业务命令包装器。
-daemon 的 main.js 要求 discovery 启动预约，并不是可独立调用的 start CLI。
-后面使用真实 HTTP 接口；此路径不覆盖 discovery，也不访问用户默认 Host。
+样例 worker.cjs 是公开普通业务输入，没有测试依赖或操作 CLI，可先直接阅读。
+目录创建进程显式关闭其 Windows 权限 helper；任何错误时停止，不继续启动服务。
 
 </details>
 
@@ -217,39 +78,29 @@ daemon 的 main.js 要求 discovery 启动预约，并不是可独立调用的 s
 <details>
 <summary>Linux / macOS shell</summary>
 
-已启动服务时，先按 Host 状态的退出说明停止 A；确认其成功退出后才删除本次目录。
-若未启动过服务，则没有 connection.json，可以直接做目录所有权检查和删除。
+如果尝试过启动，先完成 Host 状态的退出步骤；启动失败且所有权不明时保留目录，不强行清理。
 ```bash
 [ "$(dirname "$case_dir")" = "$PWD/.cache/manual-check-host" ]
-case "$(basename "$case_dir")" in case-*) ;; *) printf 'Refusing unknown directory\n'; false ;; esac
-if [ -f "$case_dir/connection.json" ]; then
-  [ -f "$case_dir/closed" ]
-  owned_pid=$(jq -er '.pid' "$case_dir/connection.json")
-  if kill -0 "$owned_pid" 2>/dev/null; then printf 'Host still alive: do not delete\n'; false; fi
-fi
+case "$(basename "$case_dir")" in case-*) ;; *) printf 'Unknown directory\n'; false ;; esac
+[ ! -d "$case_dir/host" ] || [ "${host_stopped:-no}" = yes ]
 rm -rf -- "$case_dir"
 ```
-上面的安全检查必须成功才可执行 rm；绝不删除其他目录或按名称终止进程。
+保持本会话的 set -e；安全检查失败时不能执行删除，不删除其他场景。
 
 </details>
 
 <details>
 <summary>Windows PowerShell</summary>
 
-服务已启动时，先在 A 输入 stop 并回车，等待成功退出和关闭消息。
-B 只删除本次 prepare 得到的目录；从未启动时没有 connection.json 也可以收尾。
+尝试启动后必须先按 Host 状态确认自有 PID 和 helper 退出；失败时保留目录诊断。
 ```powershell
 if ([IO.Path]::GetDirectoryName($case) -ne (Join-Path (Get-Location).Path '.cache/manual-check-host')) { throw 'Unknown directory' }
 if ([IO.Path]::GetFileName($case) -notlike 'case-*') { throw 'Unknown scene' }
-if (Test-Path -LiteralPath (Join-Path $case 'connection.json')) {
-  if (!(Test-Path -LiteralPath (Join-Path $case 'closed'))) { throw 'SDK shutdown not confirmed' }
-  $ownedPid = (Get-Content -LiteralPath (Join-Path $case 'connection.json') -Raw | ConvertFrom-Json).pid
-  if (Get-Process -Id $ownedPid -ErrorAction SilentlyContinue) { throw 'Host still alive: do not delete' }
-}
+if ((Test-Path -LiteralPath (Join-Path $case 'host')) -and ($hostStopped -ne $true)) { throw 'Host exit not confirmed' }
 Remove-Item -LiteralPath $case -Recurse -Force
 Test-Path -LiteralPath $case
 ```
-预期 False。SDK 准备进程和服务都显式关闭其 Windows 权限 helper；不要结束其他 helper 进程。
+预期 False。没有启动服务时可直接删除自有场景；启动失败且不能确认退出时不删除。
 
 </details>
 
@@ -265,42 +116,45 @@ Test-Path -LiteralPath $case
 <details>
 <summary>Linux / macOS shell</summary>
 
-终端 A 启动已完整展示的 SDK 片段，保持前台；输入 stop 回车或 Ctrl+C 会关闭它：
-```bash host
-node "$case_dir/host.mjs" "$case_dir"
-```
-等待 Ready 消息。另开仓库根的终端 B，粘贴 A 的 CASE_DIRECTORY 值（仅路径，不含标签）：
+使用实际 connectHost discovery API，显式传入本场景独立的 host 子目录。
+SDK 自动完成真实 daemon 所需的 startup reservation；不要直接调用 main.js。
+启动器不打印 descriptor/token，finally 关闭启动器自己的权限 backend：
 ```bash
-set -e
-set -o pipefail
-umask 077
-IFS= read -r -p 'CASE_DIRECTORY: ' case_dir
-endpoint=$(jq -er '.endpoint' "$case_dir/connection.json")
-revision=$(jq -er '.revision' "$case_dir/connection.json")
+host_directory="$case_dir/host"
+printf '%s\n' 'const a=await import("./packages/check-host/dist/index.js");try{await a.connectHost(process.argv[2])}finally{await a.closePrivateFileBackend()}' | node --input-type=module - "$host_directory"
+revision=$(printf '%s\n' 'const a=await import("./packages/check-host/dist/index.js");console.log((await a.readArtifact(process.argv[2])).revision)' | node --input-type=module - "$case_dir/artifact")
+endpoint=$(jq -er '.endpoint' "$host_directory/host.json")
+owned_pid=$(jq -er '.pid' "$host_directory/host.json")
 auth_file="$case_dir/auth-header"
-jq -er '"Authorization: Bearer " + .token' "$case_dir/connection.json" > "$auth_file"
+jq -er '"Authorization: Bearer " + .token' "$host_directory/host.json" > "$auth_file"
+printf 'Owned daemon PID=%s\n' "$owned_pid"
 ```
-不打印连接文件或 auth-header；凭据不进入 curl 参数或终端输出。
-用下面的 GET /checks 确认鉴权 HTTP 就绪，而非仅凭 PID 存在。失败不继续。
+使用的是真实 host.json，不生成另一份连接描述。凭据只进入私密 header 文件；
+不打印该文件或 host.json。再用下面的 GET /checks 核对鉴权就绪。
+启动失败时停止并保留 startup.json 等诊断，不启动其他实例或连接默认 Host。
 
 </details>
 
 <details>
 <summary>Windows PowerShell</summary>
 
-终端 A 启动必要的 SDK 片段并保持前台。等待 Ready，再打开仓库根的终端 B：
-```powershell host
-node (Join-Path $case 'host.mjs') "$case"
-```
-B 粘贴 A 输出的 CASE_DIRECTORY 值（仅路径），凭据只留在内存请求头：
+启动放在本状态，而不是准备状态。真实 discovery 负责预约并启动原始 daemon，
+host 子目录与 artifact/controls 分开；不调用不存在的 start/run CLI：
 ```powershell
-$ErrorActionPreference = 'Stop'
-$case = Read-Host 'CASE_DIRECTORY'
-$connection = Get-Content -LiteralPath (Join-Path $case 'connection.json') -Raw | ConvertFrom-Json
-$endpoint = $connection.endpoint
-$headers = @{ Authorization = 'Bearer ' + $connection.token }
+$hostDirectory = Join-Path $case 'host'
+'const a=await import("./packages/check-host/dist/index.js");try{await a.connectHost(process.argv[2])}finally{await a.closePrivateFileBackend()}' | node --input-type=module - "$hostDirectory"
+if ($LASTEXITCODE -ne 0) { throw 'Discovery startup failed; preserve this scene' }
+$revision = 'const a=await import("./packages/check-host/dist/index.js");console.log((await a.readArtifact(process.argv[2])).revision)' | node --input-type=module - (Join-Path $case 'artifact')
+if ($LASTEXITCODE -ne 0) { throw 'Artifact revision failed' }
+$address = Get-Content -LiteralPath (Join-Path $hostDirectory 'host.json') -Raw | ConvertFrom-Json
+$endpoint = $address.endpoint
+$ownedPid = [int]$address.pid
+$headers = @{ Authorization = 'Bearer ' + $address.token }
+Write-Output "Owned daemon PID=$ownedPid"
 ```
-不打印 $connection 或 $headers。下面的 GET 成功才证明鉴权服务可用。
+不打印 $address、$headers 或 host.json。连接的是显式独立目录，不是默认 Host。
+启动器的 Windows helper 已在 finally 关闭；daemon 的 helper 在退出时另行确认。
+失败时保留该目录和启动记录；不能用未知 PID 或生成另一套服务包装器掩盖问题。
 
 </details>
 
@@ -316,7 +170,7 @@ $headers = @{ Authorization = 'Bearer ' + $connection.token }
 curl -fsS --header "@$auth_file" -o "$case_dir/active.json" -w 'HTTP %{http_code}\n' "$endpoint/checks"
 jq . "$case_dir/active.json"
 ```
-预期 HTTP 200、[]。curl --fail 使 HTTP 错误明确失败，不使用自动重试。
+预期 HTTP 200、[]。curl --fail 使 HTTP 错误明确失败，不自动重试。
 
 </details>
 
@@ -327,7 +181,7 @@ jq . "$case_dir/active.json"
 $active = Invoke-RestMethod -Uri "$endpoint/checks" -Headers $headers
 Write-Output "Active count: $($active.Count)"
 ```
-预期 Active count: 0（空列表，GET /checks 成功为 HTTP 200）；HTTP 错误会抛错，不继续。
+预期 Active count: 0；HTTP 错误抛错，不继续。
 
 </details>
 
@@ -341,27 +195,45 @@ Write-Output "Active count: $($active.Count)"
 <details>
 <summary>Linux / macOS shell</summary>
 
-有 held 时先到 Running 的退出说明释放屏障并等终态。
-在 A 输入 stop 并回车，等待 Host and workers stopped 和进程成功退出；
-再在 B 查看本次 PID（这里只查询，不终止）：
+先确认所有任务已终结，再对本次记录的唯一 PID 发 SIGTERM：
 ```bash
-owned_pid=$(jq -er '.pid' "$case_dir/connection.json")
-if kill -0 "$owned_pid" 2>/dev/null; then printf 'Host still alive\n'; else printf 'Owned Host exited\n'; fi
+curl -fsS --header "@$auth_file" "$endpoint/checks" | jq -e 'length == 0'
+kill -TERM "$owned_pid"
+attempt=0
+while kill -0 "$owned_pid" 2>/dev/null; do attempt=$((attempt+1)); [ "$attempt" -lt 15 ]; sleep 1; done
+[ ! -f "$host_directory/host.json" ]
+host_stopped=yes
 ```
-只在确实退出后进入初始状态的目录删除。任何 SDK 关闭错误均保留诊断，不能删目录。
+这是 daemon 的正常信号关闭路径：退出且移除描述文件后才可删场景。
+超时或描述文件仍存在时保留错误，不改用强杀冒充优雅关闭。
 
 </details>
 
 <details>
 <summary>Windows PowerShell</summary>
 
-若有 held，先按 Running 退出说明释放屏障、取消并确认终态。
-A 输入 stop 回车，等待 Host and workers stopped 及 Node 成功退出，再在 B 查询：
+Windows Stop-Process 是强制终止，不能证明 daemon 的优雅退出或 dispose hook 已执行。
+本演示必须先取得任务终态、清理标记和空活动列表；只停止确切记录的自有 PID。
+停止前记录其实际子进程 PID；停止后仅等待这些 helper 自行随父进程管道关闭而退出：
 ```powershell
-$ownedPid = $connection.pid
-Get-Process -Id $ownedPid -ErrorAction SilentlyContinue | Select-Object Id
+$active = Invoke-RestMethod -Uri "$endpoint/checks" -Headers $headers
+if ($active.Count -ne 0) { throw 'Finish all tasks before stopping the daemon' }
+if ($ownedPid -eq $PID -or $ownedPid -le 0) { throw 'Invalid owned daemon PID' }
+$ownedProcess = Get-Process -Id $ownedPid -ErrorAction Stop
+$null = $ownedProcess.Handle
+$ownedHelpers = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $ownedPid" | Select-Object -ExpandProperty ProcessId)
+$helperProcesses = @($ownedHelpers | ForEach-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue })
+foreach ($helper in $helperProcesses) { $null = $helper.Handle }
+Stop-Process -Id $ownedPid -ErrorAction Stop
+if (!$ownedProcess.WaitForExit(10000)) { throw 'Owned daemon did not exit' }
+foreach ($helper in $helperProcesses) { if (!$helper.WaitForExit(10000)) { throw 'Owned helper did not exit' }; $helper.Dispose() }
+$ownedProcess.Dispose()
+$hostStopped = $true
+Write-Output 'Owned daemon and recorded helpers exited; Windows forced stop, not graceful shutdown'
 ```
-预期无进程。错误时不删除目录；正常关闭包括 kernel、worker 和 Windows 权限 helper。
+helper 未退出时不继续、不按名称结束其他进程。强制停止后 host.json 可能残留，
+它不是运行证据；只在确认上述进程均退出后按独立环境说明删除本次目录。
+这里不宣称 Windows 优雅关闭；若业务有长期外部资源，不能套用此演示的强制退出。
 
 </details>
 
@@ -377,28 +249,29 @@ Get-Process -Id $ownedPid -ErrorAction SilentlyContinue | Select-Object Id
 <details>
 <summary>Linux / macOS shell</summary>
 
-jq 负责正确引用路径和 JSON 字符，不拼接未经转义的 JSON：
+先读完取消、观察和释放命令，再提交一次：
 ```bash
 jq -n --arg directory "$case_dir/artifact" --arg revision "$revision" --arg controls "$case_dir/controls" \
   '{checkId:"held",directory:$directory,revision:$revision,subject:{hold:true,marker:"tree-manual",controls:$controls}}' > "$case_dir/held.json"
-curl -fsS --header "@$auth_file" -H 'Content-Type: application/json' \
-  --data-binary "@$case_dir/held.json" "$endpoint/checks" | jq .
+curl -fsS --header "@$auth_file" -H 'Content-Type: application/json' --data-binary "@$case_dir/held.json" "$endpoint/checks" | jq .
 ```
-提交一次后观察，Queued 或尚无 progress 时只重复查询，不重复提交。
-人工服务执行期限五分钟、清理期限一分钟；超时请退出后新建场景。
+真实 daemon 默认执行期限 30 秒、清理期限 5 秒；不能人为延长。
+进入取消后须在 5 秒内观察并释放屏障，慢操作导致 Failed 不算 Cancelled。
+Queued 或尚无 progress 时只重复查询，不重复 POST。
 
 </details>
 
 <details>
 <summary>Windows PowerShell</summary>
 
+先备好随后取消、查询和释放命令。真实 daemon 的执行期限 30 秒、清理期限 5 秒；
+取消后必须在 5 秒内观察并释放，超时 Failed 不是取消成功：
 ```powershell
-$body = @{ checkId = 'held'; directory = (Join-Path $case 'artifact'); revision = $connection.revision
+$body = @{ checkId = 'held'; directory = (Join-Path $case 'artifact'); revision = $revision
   subject = @{ hold = $true; marker = 'tree-manual'; controls = (Join-Path $case 'controls') } } | ConvertTo-Json -Depth 6
 Invoke-RestMethod -Uri "$endpoint/checks" -Method Post -Headers $headers -ContentType 'application/json' -Body ([Text.Encoding]::UTF8.GetBytes($body)) | ConvertTo-Json -Depth 6
 ```
-只提交一次。观察到 Running 和 progress 才成立；Queued 时再次查询，不再次执行 POST。
-执行期限五分钟、清理期限一分钟，超时不是成功，须收尾并重建场景。
+提交一次后观察，Queued 时仅重复 GET；不要重复创建任务。
 
 </details>
 
@@ -426,7 +299,7 @@ Invoke-RestMethod -Uri "$endpoint/checks/held" -Headers $headers | ConvertTo-Jso
 $active = Invoke-RestMethod -Uri "$endpoint/checks" -Headers $headers
 Write-Output "Active count: $($active.Count)"
 ```
-预期 Running，progress 的 entered=true、marker=tree-manual、calls=1，活动列表恰有一项。
+预期 Running、entered=true、marker=tree-manual、calls=1，活动条数 1。
 
 </details>
 
@@ -439,29 +312,28 @@ Write-Output "Active count: $($active.Count)"
 <details>
 <summary>Linux / macOS shell</summary>
 
-若 held 曾成功接受，先释放屏障，再取消并通过观察流确认终态：
+对已经接受的 held 先释放，再取消并等待终态：
 ```bash
 printf 'released\n' > "$case_dir/controls/release"
 curl -fsS -X POST --header "@$auth_file" "$endpoint/checks/held/cancel" | jq .
-curl -fsS --max-time 15 --header "@$auth_file" -H 'Accept: application/x-ndjson' "$endpoint/checks/held" | jq .
+curl -fsS --max-time 10 --header "@$auth_file" -H 'Accept: application/x-ndjson' "$endpoint/checks/held" | jq .
 ```
-已终结的 held 仍可查询。若从未接受 held 则不发送上述请求；
-404 也可能表示保留期已过，需核对活动列表为空，不能忽略其他 HTTP/清理错误。
-等终态后才能停止 A；退出不是回滚到父状态。
+从未接受 held 时不发取消；404 也可能表示过期，须核对活动列表，不能忽略其他错误。
+终态不是 Cancelled 时保留诊断。先完成任务收尾，才能停止 daemon。
 
 </details>
 
 <details>
 <summary>Windows PowerShell</summary>
 
-对已经接受的 held（从未接受时不发送取消请求）：
+对已经接受的 held 先释放屏障，再取消和查询：
 ```powershell
 Set-Content -LiteralPath (Join-Path $case 'controls/release') -Value released -Encoding Ascii
 Invoke-RestMethod -Uri "$endpoint/checks/held/cancel" -Method Post -Headers $headers | ConvertTo-Json -Depth 6
 Invoke-RestMethod -Uri "$endpoint/checks/held" -Headers $headers | ConvertTo-Json -Depth 6
 ```
-若还不是终态，仅重复最后一条 GET，确认终态后再停止 A。
-HTTP 错误或 Failed 必须保留诊断；404 需区分从未接受与过期，并核对活动列表。
+未终结时只重复 GET；Failed 或 HTTP 错误保留诊断，不能拿停止进程代替任务清理。
+从未接受的任务不发取消，404 须区分过期与未创建。
 
 </details>
 
@@ -477,22 +349,20 @@ HTTP 错误或 Failed 必须保留诊断；404 需区分从未接受与过期，
 <details>
 <summary>Linux / macOS shell</summary>
 
-不创建 release 文件，直接请求取消：
+不提前创建 release；执行后立即观察并在 5 秒期限内进入释放状态：
 ```bash
 curl -fsS -X POST --header "@$auth_file" "$endpoint/checks/held/cancel" | jq .
 ```
-取消响应不等于已清理，下面观察 cleaning 出现后才继续。
 
 </details>
 
 <details>
 <summary>Windows PowerShell</summary>
 
-不提前释放屏障：
+不提前释放；取消后立即观察并在 5 秒内释放：
 ```powershell
 Invoke-RestMethod -Uri "$endpoint/checks/held/cancel" -Method Post -Headers $headers | ConvertTo-Json -Depth 6
 ```
-请求后继续观察；若提前 Failed 或一直未出现 cleaning，保留诊断，不算取消成功。
 
 </details>
 
@@ -508,7 +378,7 @@ Invoke-RestMethod -Uri "$endpoint/checks/held/cancel" -Method Post -Headers $hea
 curl -fsS --header "@$auth_file" "$endpoint/checks/held" | jq .
 ls "$case_dir/controls"
 ```
-预期 Cancelling，目录有 cleaning、没有 cleaned。尚无 cleaning 时重复观察，不提前释放。
+预期 Cancelling，存在 cleaning、尚无 cleaned。尚无 cleaning 时只重复观察。
 
 </details>
 
@@ -520,7 +390,7 @@ Invoke-RestMethod -Uri "$endpoint/checks/held" -Headers $headers | ConvertTo-Jso
 Get-ChildItem -LiteralPath (Join-Path $case 'controls') | Select-Object Name
 Test-Path -LiteralPath (Join-Path $case 'controls/cleaned')
 ```
-预期 Cancelling，有 cleaning、cleaned 为 False；尚无 cleaning 时只重复观察。
+预期 Cancelling、cleaning 存在、cleaned=False；不要提前释放掩盖此观察。
 
 </details>
 
@@ -533,14 +403,14 @@ Test-Path -LiteralPath (Join-Path $case 'controls/cleaned')
 <details>
 <summary>Linux / macOS shell</summary>
 
-本层没有新资源；结束时按 Running 的退出说明释放屏障、等待终态，再关闭 A。
+本层没有新资源；结束时按 Running 说明释放屏障、确认终态，再停止自有 daemon。
 
 </details>
 
 <details>
 <summary>Windows PowerShell</summary>
 
-本层没有新资源；结束时按 Running 的退出说明释放屏障、等待终态，再关闭 A。
+本层没有新资源；结束时按 Running 说明释放屏障、确认终态，再停止自有 daemon。
 
 </details>
 
@@ -556,12 +426,11 @@ Test-Path -LiteralPath (Join-Path $case 'controls/cleaned')
 <details>
 <summary>Linux / macOS shell</summary>
 
-现在才释放屏障并读到终态：
 ```bash
 printf 'released\n' > "$case_dir/controls/release"
-curl -fsS --max-time 15 --header "@$auth_file" -H 'Accept: application/x-ndjson' "$endpoint/checks/held" | jq .
+curl -fsS --max-time 10 --header "@$auth_file" -H 'Accept: application/x-ndjson' "$endpoint/checks/held" | jq .
 ```
-最后应为 Cancelled；超时或 Failed 不是成功。
+预期 Cancelled；Failed 或超时都不满足该状态。
 
 </details>
 
@@ -572,7 +441,7 @@ curl -fsS --max-time 15 --header "@$auth_file" -H 'Accept: application/x-ndjson'
 Set-Content -LiteralPath (Join-Path $case 'controls/release') -Value released -Encoding Ascii
 Invoke-RestMethod -Uri "$endpoint/checks/held" -Headers $headers | ConvertTo-Json -Depth 6
 ```
-预期 Cancelled，若仍为 Cancelling 只重复 GET，不能把发出释放请求当作资源已退出。
+预期 Cancelled；若仍 Cancelling 只重复 GET，不以发出释放请求当作已退出。
 
 </details>
 
@@ -589,7 +458,7 @@ curl -fsS --header "@$auth_file" "$endpoint/checks/held" | jq .
 ls "$case_dir/controls"
 curl -fsS --header "@$auth_file" "$endpoint/checks" | jq .
 ```
-预期 Cancelled，存在 cleaned，活动列表 []。
+预期 Cancelled、cleaned 存在、活动列表 []。
 
 </details>
 
@@ -602,7 +471,7 @@ Test-Path -LiteralPath (Join-Path $case 'controls/cleaned')
 $active = Invoke-RestMethod -Uri "$endpoint/checks" -Headers $headers
 Write-Output "Active count: $($active.Count)"
 ```
-预期 Cancelled、True、Active count: 0。终止请求本身不是退出证据。
+预期 Cancelled、True、Active count: 0。至此才取得任务清理证据。
 
 </details>
 
@@ -616,14 +485,14 @@ Write-Output "Active count: $($active.Count)"
 <details>
 <summary>Linux / macOS shell</summary>
 
-本层无新资源；按 Running 收尾，再关闭 A，最后按独立环境说明删除目录。
+本层没有新资源；任务收尾后按 Host 退出说明停止，最后删除场景。
 
 </details>
 
 <details>
 <summary>Windows PowerShell</summary>
 
-本层无新资源；按 Running 收尾，再关闭 A，最后按独立环境说明删除目录。
+本层没有新资源；任务收尾后按 Host 退出说明停止，最后删除场景。
 
 </details>
 
@@ -639,26 +508,26 @@ Write-Output "Active count: $($active.Count)"
 <details>
 <summary>Linux / macOS shell</summary>
 
-从全新独立环境 → Host 开始，不走 Running 分支。输入要求演示业务抛出执行异常：
+全新独立环境和 daemon，不走 Running 分支。只提交一次异常业务输入：
 ```bash
 jq -n --arg directory "$case_dir/artifact" --arg revision "$revision" \
   '{checkId:"fault",directory:$directory,revision:$revision,subject:{fail:true,marker:"tree-manual"}}' > "$case_dir/fault.json"
 curl -fsS --header "@$auth_file" -H 'Content-Type: application/json' --data-binary "@$case_dir/fault.json" "$endpoint/checks" | jq .
 ```
-预期随后进入 Failed，不是业务结果不通过。只提交一次，继续查询而非重放。
+预期 Failed；这是执行异常，不是业务结果不通过。历史只保留默认 60 秒，及时比较恢复结果。
 
 </details>
 
 <details>
 <summary>Windows PowerShell</summary>
 
-该分支使用全新的独立环境和 Host，不走 Running 分支：
+从全新独立场景开始，正常提交样例的异常输入：
 ```powershell
-$body = @{ checkId = 'fault'; directory = (Join-Path $case 'artifact'); revision = $connection.revision
+$body = @{ checkId = 'fault'; directory = (Join-Path $case 'artifact'); revision = $revision
   subject = @{ fail = $true; marker = 'tree-manual' } } | ConvertTo-Json -Depth 6
 Invoke-RestMethod -Uri "$endpoint/checks" -Method Post -Headers $headers -ContentType 'application/json' -Body ([Text.Encoding]::UTF8.GetBytes($body)) | ConvertTo-Json -Depth 6
 ```
-正常业务输入要求抛错，预期 Failed；这是执行异常，不是业务结果不通过。
+预期 Failed，是执行异常而非业务不通过；历史保留默认 60 秒，须及时完成下面比较。
 
 </details>
 
@@ -675,8 +544,7 @@ curl -fsS --header "@$auth_file" "$endpoint/checks/fault" -o "$case_dir/fault-be
 jq . "$case_dir/fault-before.json"
 curl -fsS --header "@$auth_file" "$endpoint/checks" | jq .
 ```
-预期 Failed，error 为 Error: manual injected failure，活动列表 []。
-尚未终结时只重复 GET，确认原始失败后才进入恢复状态。
+预期 Failed、Error: manual injected failure、[]；未终结时只重复 GET。
 
 </details>
 
@@ -689,7 +557,7 @@ $originalFault | ConvertTo-Json -Depth 6
 $active = Invoke-RestMethod -Uri "$endpoint/checks" -Headers $headers
 Write-Output "Active count: $($active.Count)"
 ```
-预期 Failed、Error: manual injected failure、Active count: 0。保留 $originalFault 用于之后比较。
+预期 Failed、Error: manual injected failure、Active count: 0，保留原始对象用于比较。
 
 </details>
 
@@ -702,14 +570,14 @@ Write-Output "Active count: $($active.Count)"
 <details>
 <summary>Linux / macOS shell</summary>
 
-异常任务已终结；不改写或重放它。结束时关闭 A，再删除本次目录。
+异常任务已终结，不重放或改写它；按 Host 退出说明停止后再删目录。
 
 </details>
 
 <details>
 <summary>Windows PowerShell</summary>
 
-异常任务已终结；不改写或重放它。结束时关闭 A，再删除本次目录。
+异常任务已终结，不重放或改写它；按 Host 退出说明停止后再删目录。
 
 </details>
 
@@ -725,26 +593,24 @@ Write-Output "Active count: $($active.Count)"
 <details>
 <summary>Linux / macOS shell</summary>
 
-同一 Host、同一 artifact，只提交一个正常的新任务：
 ```bash
 jq -n --arg directory "$case_dir/artifact" --arg revision "$revision" \
   '{checkId:"recovery",directory:$directory,revision:$revision,subject:{marker:"tree-manual"}}' > "$case_dir/recovery.json"
 curl -fsS --header "@$auth_file" -H 'Content-Type: application/json' --data-binary "@$case_dir/recovery.json" "$endpoint/checks" | jq .
 ```
-随后查看实际 Completed 结果，不以端口可连接当作恢复成功。
+同一 Host、同一 artifact，提交新任务；旧任务不再 POST。
 
 </details>
 
 <details>
 <summary>Windows PowerShell</summary>
 
-同一 Host、同一 artifact，正常提交新任务，不重新提交 fault：
 ```powershell
-$body = @{ checkId = 'recovery'; directory = (Join-Path $case 'artifact'); revision = $connection.revision
+$body = @{ checkId = 'recovery'; directory = (Join-Path $case 'artifact'); revision = $revision
   subject = @{ marker = 'tree-manual' } } | ConvertTo-Json -Depth 6
 Invoke-RestMethod -Uri "$endpoint/checks" -Method Post -Headers $headers -ContentType 'application/json' -Body ([Text.Encoding]::UTF8.GetBytes($body)) | ConvertTo-Json -Depth 6
 ```
-若仍在运行只重复观察，等待 Completed，不重复 POST。
+同一 daemon、同一 artifact，提交新任务，不重新提交 fault；未完成时只重复 GET。
 
 </details>
 
@@ -763,8 +629,7 @@ jq . "$case_dir/fault-after.json"
 curl -fsS --header "@$auth_file" "$endpoint/checks/recovery" | jq .
 curl -fsS --header "@$auth_file" "$endpoint/checks" | jq .
 ```
-cmp 应无差异且退出 0；原 fault 仍为 Failed 且原始错误不变，
-recovery 为 Completed、result={marker:"tree-manual",calls:2}，活动列表 []。
+预期原故障无差异且仍 Failed；新 recovery=Completed、marker=tree-manual、calls=2、活动列表 []。
 
 </details>
 
@@ -779,9 +644,8 @@ Invoke-RestMethod -Uri "$endpoint/checks/recovery" -Headers $headers | ConvertTo
 $active = Invoke-RestMethod -Uri "$endpoint/checks" -Headers $headers
 Write-Output "Active count: $($active.Count)"
 ```
-预期比较 True、原 fault 仍为 Failed 且错误不变；
-recovery 为 Completed、result={marker:"tree-manual",calls:2}，Active count: 0。
-calls=2 与旧失败记录不变共同证明旧任务没有被重放。
+预期比较 True、原故障仍 Failed/原始错误不变；新任务 Completed、
+marker=tree-manual、calls=2、Active count: 0。
 
 </details>
 
@@ -795,14 +659,14 @@ calls=2 与旧失败记录不变共同证明旧任务没有被重放。
 <details>
 <summary>Linux / macOS shell</summary>
 
-新旧任务均已终结；关闭 A 后再删目录，保留原失败历史，不重放它。
+两个任务均终结后停止自有 daemon，再删除场景，不重放旧任务。
 
 </details>
 
 <details>
 <summary>Windows PowerShell</summary>
 
-新旧任务均已终结；关闭 A 后再删目录，保留原失败历史，不重放它。
+两个任务均终结后停止自有 daemon，再删除场景，不重放旧任务。
 
 </details>
 
