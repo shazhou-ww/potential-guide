@@ -6,11 +6,15 @@ import {
   type CoordinatorState,
   currentResources,
   dependencies,
+  exhaustionEvents,
+  requestCancelled,
   requestClosed,
+  requestEmission,
+  requestSchedule,
   resourceFacts,
   runViews,
 } from "./state.js";
-import { immutable } from "./validation.js";
+import { immutable, timestamp } from "./validation.js";
 
 export interface HostContact {
   readonly hostId: string;
@@ -30,7 +34,9 @@ export function coordinatorViews(
   states: readonly CoordinatorState[],
   contacts: readonly HostContact[] = [],
   publications: readonly ObjectivePublication[] = [],
+  now?: string,
 ) {
+  if (now !== undefined) timestamp(now);
   if (new Set(states.map(({ hostId }) => hostId)).size !== states.length)
     throw new TypeError("Supply one consistent snapshot per Host.");
   if (new Set(contacts.map(({ hostId }) => hostId)).size !== contacts.length)
@@ -111,6 +117,7 @@ export function coordinatorViews(
             })
           : [],
       runs: localRuns,
+      exhaustionEvents: exhaustionEvents(state),
       faults: state.events.flatMap((event) =>
         event.fact.type === "fault"
           ? [{ revision: event.revision, occurredAt: event.occurredAt, ...event.fact.fault }]
@@ -126,6 +133,23 @@ export function coordinatorViews(
       .map((state) => ({
         hostId: state.hostId,
         closed: requestClosed(state, request.ref),
+        cancelled: requestCancelled(state, request.ref),
+        schedule:
+          requestEmission(state, request.ref) !== undefined
+            ? "emitted"
+            : request.eligibleAt === undefined
+              ? "eligible"
+              : now === undefined
+                ? "undetermined"
+                : requestSchedule(state, request.ref, now),
+        emittedAt: requestEmission(state, request.ref)?.occurredAt ?? null,
+        successors: state.requests.requests
+          .filter(
+            (entry) =>
+              entry.origin.kind === "recurrence" &&
+              entry.origin.predecessorRequestRef === request.ref,
+          )
+          .map(({ ref }) => ref),
         dependencies: dependencies(state, request.ref),
       })),
     // Local execution evidence does not decide a distributed request's satisfaction.

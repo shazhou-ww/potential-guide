@@ -92,13 +92,98 @@ not create executions. `flush()` waits for submitted mailbox work and surfaces a
 failed service. Request and resource updates are complete snapshots. Request
 facts are retained, not deleted when a later snapshot omits them.
 
+### Immutable timed requests and recurrence
+
+New callers should supply `eligibleAt`, a fixed RFC 3339 timestamp:
+
+```ts
+const requests = RequestModel.reduceRegulationRequests({
+  type: "request",
+  requestRef: "health-every-minute",
+  objective: exactPilotSpec,
+  subject: {},
+  desiredLevel: "terminal",
+  priority: 1,
+  origin: { kind: "external" },
+  eligibleAt: new Date().toISOString(),
+  recurrence: { intervalMs: 60_000 },
+}, RequestModel.createRegulationRequests());
+```
+
+Omit `recurrence` for a one-shot request. There are no separate achieve/maintain
+types. `intervalMs` is a positive safe integer at most 2,147,483,647. `initial`
+and derived dependency requests cannot recur. Each request remains immutable;
+changing its time or rule under the same reference is a conflict.
+
+Time eligibility is `now >= eligibleAt`, not a promise of immediate execution.
+`CoordinatorModel.requestSchedule(state, ref, now)` returns `ineligible`,
+`eligible` or `emitted` using an explicit clock input. Initial dispatch persists
+one `run-start` fact containing both the Run and its complete successor command,
+before calling the runner. A successor has a new stable reference, a recurrence
+origin naming its predecessor, the same pinned Objective revision and rule, and
+`eligibleAt = actual persisted dispatch time + intervalMs`. It does not replace
+its predecessor. Recovery never reallocates that reference or regenerates the
+successor. Only the Coordinator admits recurrence-origin requests into its state.
+
+Only actual dispatch produces the next occurrence: overdue work coalesces into
+one pending successor, not a backlog of missed intervals. Capacity and Target
+serialization still apply. A live or unverified Run, or a request still advancing
+through dependencies, prevents another request from advancing the same Target.
+Dependency continuation records `continuedFromRunId`, does not emit again or
+create another successor, and remains bounded by `maxAttemptsPerRequest`.
+Each periodic occurrence has its own request and attempt history.
+
+Timed external requests coexist even on the same Target; ordinary FIFO ties use
+admission order, so successors join the tail. To replace a particular request
+and its recurring chain, supply `replacesRequestRef` on a new timed external
+request for the same Target. Replacement revokes the old chain at admission,
+not at the new request's eligibility time. `service.cancel(ref)` likewise
+stops that recurrence chain, including its pending successors, and requests
+termination of its active Runs. `service.cancel(ref, "request")` cancels only
+that occurrence. Actual occupancy remains until confirmed exit. Cancellation
+persists even if the caller later redelivers the original request snapshot.
+
+For compatibility, requests without `eligibleAt` retain immediate eligibility
+and the previous latest-local-legacy-request supersession rule. They never
+implicitly replace timed requests. Existing version-1 snapshots replay without
+inventing timing or structured quota evidence; older readers reject the new
+fields rather than silently reinterpret them. The legacy API below is unchanged.
+
+### Exhaustion and external additional effort
+
+A Run does not branch on recurrence. Timed requests require exhausted outcomes
+to include `reason: "timeout" | "agent-runs" | "stall-runs"`; optional `usage`
+contains measured `durationMs`, `agentRuns` and/or `stallRuns`. Unknown measures
+are omitted, not synthesized. Host-enforced execution timeouts are recorded as
+structured exhaustion after confirmed termination. Other errors and resource
+refusals remain distinct.
+
+Every `run-end` exhausted fact is durable. `service.eventsSince(afterRevision)`
+supports Host-local, validated replay cursors; use `changes` for live wakeups and
+read the facts again after reconnecting. `CoordinatorModel.exhaustionEvents`
+projects stable `hostId:revision` IDs, exact Request/Target/version, Run limits,
+reason, available usage and observation/failure evidence, and the original
+successor reference/time. Historical unstructured reasons remain `null`.
+`coordinatorViews(states, contacts, publications, now?)` exposes these events and
+per-Host request schedule, emission, cancellation and successor projections.
+Without an explicit `now`, an un-emitted timed request's eligibility is
+`undetermined`; views and replay do not consult the wall clock.
+
+Exhaustion never automatically retries the same request or moves its already
+scheduled successor. A listener may submit a new one-shot timed request with a
+stable reference derived from the event ID, retaining idempotency on redelivery.
+It coexists with the recurring chain and uses trusted Host execution limits:
+neither a request, recurrence, resource release nor restart can inject quota,
+raise authority or replenish a cumulative budget. This runtime does not add a
+shared-budget system, Planner Agent, MCP server or cross-Host dispatch protocol.
+
 Configured allocation contains `bindings: [{ binding, capacity }]`; capacities
 are nonnegative integers, binding IDs unique within a snapshot. `no-resource` and
 zero capacity start no new work. Shrinking capacity, removing or changing a
 binding drains existing executions naturally; historical Run bindings retain
-their pinned configuration. Pending external requests use ascending priority,
+their pinned configuration. Pending requests use ascending priority,
 then local admission order, not a claimed cross-Host global order. A newer
-external request for the same Target supersedes the older **local** demand.
+legacy external request for the same Target supersedes the older **local legacy** demand.
 An `initial` replacement stops old work and never invokes a business check.
 Other replacements drain the old Run before starting the new local request.
 

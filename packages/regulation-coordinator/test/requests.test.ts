@@ -55,6 +55,75 @@ function command(
   };
 }
 
+test("timing, recurrence lineage and explicit replacement remain immutable through replay", () => {
+  const first = command("root", {
+    eligibleAt: "2026-10-27T00:00:00Z",
+    recurrence: { intervalMs: 100 },
+  });
+  let state = RequestModel.reduceRegulationRequests(first, RequestModel.createRegulationRequests());
+  const successor = command("successor", {
+    eligibleAt: "2026-10-27T00:00:00.100Z",
+    recurrence: { intervalMs: 100 },
+    origin: { kind: "recurrence", predecessorRequestRef: "root" },
+  });
+  state = RequestModel.reduceRegulationRequests(successor, state);
+  assert.equal(RequestModel.recurrenceRoot(state, "successor"), "root");
+  assert.equal(RequestModel.reduceRegulationRequests(successor, state), state);
+  assert.deepEqual(RequestModel.commandForRequest(state, "root"), first);
+  assert.deepEqual(
+    RequestModel.restoreRegulationRequests(JSON.parse(JSON.stringify(state))),
+    state,
+  );
+  assert.throws(
+    () => RequestModel.reduceRegulationRequests({ ...successor, requestRef: "duplicate" }, state),
+    /duplicate/,
+  );
+  assert.throws(
+    () =>
+      RequestModel.reduceRegulationRequests(
+        { ...first, eligibleAt: "2026-10-27T00:00:00.100Z" },
+        state,
+      ),
+    /Conflicting/,
+  );
+  assert.throws(
+    () =>
+      RequestModel.reduceRegulationRequests(
+        command("other-target", {
+          subject: { other: true },
+          eligibleAt: "2026-10-27T00:00:00Z",
+          replacesRequestRef: "root",
+        }),
+        state,
+      ),
+    /same Target/,
+  );
+});
+
+test("invalid schedules cannot create recurring initial or dependency obligations", () => {
+  const state = RequestModel.reduceRegulationRequests(
+    command("consumer"),
+    RequestModel.createRegulationRequests(),
+  );
+  for (const changes of [
+    { eligibleAt: "tomorrow" },
+    { recurrence: { intervalMs: 10 } },
+    { eligibleAt: "2026-10-27T00:00:00Z", recurrence: { intervalMs: 0 } },
+    {
+      eligibleAt: "2026-10-27T00:00:00Z",
+      recurrence: { intervalMs: 10 },
+      desiredLevel: "initial",
+    },
+    {
+      eligibleAt: "2026-10-27T00:00:00Z",
+      recurrence: { intervalMs: 10 },
+      origin: { kind: "dependency" as const, consumerRequestRef: "consumer" },
+    },
+    { replacesRequestRef: "consumer" },
+  ])
+    assert.throws(() => RequestModel.reduceRegulationRequests(command("bad", changes), state));
+});
+
 test("npm revisions bind package name and content digest through replay without a Git commit", () => {
   const packageSpec = (digest: string): PilotSpec => ({
     ...spec(),

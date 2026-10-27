@@ -6,10 +6,11 @@ import {
   createRegulationRequests,
   type RegulationRequests,
   type RequestCommand,
+  recurrenceRoot,
   reduceRegulationRequests,
   requestDetails,
 } from "./requests.js";
-import { fields, immutable, positive, validateObservation } from "./validation.js";
+import { fields, immutable, positive, timestamp, validateObservation } from "./validation.js";
 
 export type ResourceAllocation =
   | { readonly kind: "no-resource" }
@@ -33,12 +34,26 @@ export interface Run {
   readonly resourceRevision: number;
   readonly hostBindingRevisionId: string;
   readonly limits: ExecutionLimits;
+  readonly continuedFromRunId?: string;
+}
+
+export type ExhaustionReason = "timeout" | "agent-runs" | "stall-runs";
+export interface RunUsage {
+  readonly durationMs?: number;
+  readonly agentRuns?: number;
+  readonly stallRuns?: number;
 }
 
 export type RunPhase = "starting" | "running" | "stopping" | "unverified" | "ended";
 export type RunOutcome =
   | { readonly kind: "target-reached" }
-  | { readonly kind: "blocked" | "exhausted" | "cancelled" | "error"; readonly message: string };
+  | {
+      readonly kind: "exhausted";
+      readonly message: string;
+      readonly reason?: ExhaustionReason;
+      readonly usage?: RunUsage;
+    }
+  | { readonly kind: "blocked" | "cancelled" | "error"; readonly message: string };
 
 export interface Fault {
   readonly kind: string;
@@ -51,11 +66,21 @@ export interface Fault {
 export type CoordinatorFact =
   | { readonly type: "request"; readonly command: RequestCommand }
   | { readonly type: "resources"; readonly allocation: ResourceAllocation }
-  | { readonly type: "run-start"; readonly run: Run }
+  | {
+      readonly type: "run-start";
+      readonly run: Run;
+      readonly successor?: RequestCommand;
+    }
+  | {
+      readonly type: "request-cancel";
+      readonly requestRef: string;
+      readonly scope: "request" | "recurrence";
+    }
   | {
       readonly type: "run-phase";
       readonly runId: string;
       readonly phase: Exclude<RunPhase, "starting" | "ended">;
+      readonly reason?: "timeout";
     }
   | {
       readonly type: "observation";
@@ -167,8 +192,88 @@ export function currentResources(state: CoordinatorState): {
 }
 
 export function requestClosed(state: CoordinatorState, requestRef: string): boolean {
+  return (
+    requestCancelled(state, requestRef) ||
+    state.events.some(({ fact }) => fact.type === "request-close" && fact.requestRef === requestRef)
+  );
+}
+
+export function requestCancelled(state: CoordinatorState, requestRef: string): boolean {
+  const root = recurrenceRoot(state.requests, requestRef);
   return state.events.some(
-    ({ fact }) => fact.type === "request-close" && fact.requestRef === requestRef,
+    ({ fact }) =>
+      fact.type === "request-cancel" &&
+      (fact.scope === "request"
+        ? fact.requestRef === requestRef
+        : recurrenceRoot(state.requests, fact.requestRef) === root),
+  );
+}
+
+export function requestEmission(state: CoordinatorState, requestRef: string) {
+  return state.events.find(
+    ({ fact }) => fact.type === "run-start" && fact.run.requestRef === requestRef,
+  );
+}
+
+export function requestSchedule(state: CoordinatorState, requestRef: string, now: string) {
+  timestamp(now);
+  const request = requestDetails(state.requests, requestRef).request;
+  if (requestEmission(state, requestRef) !== undefined) return "emitted" as const;
+  return request.eligibleAt === undefined || Date.parse(now) >= Date.parse(request.eligibleAt)
+    ? ("eligible" as const)
+    : ("ineligible" as const);
+}
+
+export function eventsSince(
+  state: CoordinatorState,
+  afterRevision = 0,
+): readonly CoordinatorEvent[] {
+  if (!Number.isSafeInteger(afterRevision) || afterRevision < 0 || afterRevision > state.revision)
+    throw new TypeError("Invalid Host-local event cursor.");
+  return state.events.filter(({ revision }) => revision > afterRevision);
+}
+
+export function exhaustionEvents(state: CoordinatorState, afterRevision = 0) {
+  const snapshot = structuredClone(state);
+  const runs = runViews(snapshot);
+  return immutable(
+    eventsSince(snapshot, afterRevision).flatMap((event) => {
+      const fact = event.fact;
+      if (fact.type !== "run-end" || fact.outcome.kind !== "exhausted") return [];
+      const view = runs.find(({ run }) => run.id === fact.runId);
+      if (view === undefined) throw new TypeError("Exhaustion has no matching Run.");
+      const details = requestDetails(snapshot.requests, view.run.requestRef);
+      const emission = requestEmission(snapshot, view.run.requestRef);
+      const successor = emission?.fact.type === "run-start" ? emission.fact.successor : undefined;
+      const failure = view.lastProbeFailed
+        ? snapshot.events.findLast(
+            ({ fact }) => fact.type === "probe-error" && fact.runId === view.run.id,
+          )?.fact
+        : undefined;
+      return [
+        {
+          id: `${snapshot.hostId}:${event.revision}`,
+          hostId: snapshot.hostId,
+          revision: event.revision,
+          occurredAt: event.occurredAt,
+          request: details.request,
+          target: details.target,
+          objectiveRevision: details.objectiveRevision,
+          run: view.run,
+          reason: fact.outcome.reason ?? null,
+          usage: fact.outcome.usage ?? null,
+          message: fact.outcome.message,
+          observation: view.observation,
+          lastProbeFailed: view.lastProbeFailed,
+          probeFailure:
+            failure?.type === "probe-error"
+              ? { probedAt: failure.probedAt, message: failure.message }
+              : null,
+          successorRequestRef: successor?.requestRef ?? null,
+          nextEligibleAt: successor?.eligibleAt ?? null,
+        },
+      ];
+    }),
   );
 }
 
@@ -233,16 +338,28 @@ export function reduceCoordinatorState(
   switch (fact.type) {
     case "request":
       fields(fact, ["type", "command"]);
+      if (fact.command.origin.kind === "recurrence")
+        throw new TypeError("A recurrence successor is admitted only by its initial dispatch.");
       requests = reduceRegulationRequests(fact.command, requests);
       if (requests === state.requests) throw new TypeError("Request was already admitted.");
+      break;
+    case "request-cancel":
+      fields(fact, ["type", "requestRef", "scope"]);
+      requestDetails(requests, fact.requestRef);
+      if (!["request", "recurrence"].includes(fact.scope))
+        throw new TypeError("Invalid cancellation scope.");
       break;
     case "resources":
       fields(fact, ["type", "allocation"]);
       allocationValid(fact.allocation);
       break;
     case "run-start": {
-      fields(fact, ["type", "run"]);
-      fields(fact.run, ["id", "requestRef", "resourceRevision", "hostBindingRevisionId", "limits"]);
+      fields(fact, ["type", "run"], ["successor"]);
+      fields(
+        fact.run,
+        ["id", "requestRef", "resourceRevision", "hostBindingRevisionId", "limits"],
+        ["continuedFromRunId"],
+      );
       fields(fact.run.limits, ["timeoutMs", "maxAgentRuns", "maxStallRuns"]);
       text(fact.run.id);
       if (!Object.values(fact.run.limits).every(positive))
@@ -251,9 +368,51 @@ export function reduceCoordinatorState(
       if (details.request.desiredLevel === "initial" || requestClosed(state, fact.run.requestRef))
         throw new TypeError("Cannot start an initial or closed request.");
       const runs = runViews(state);
+      const attempts = runs.filter(({ run }) => run.requestRef === fact.run.requestRef);
+      const previous = attempts.at(-1);
+      const providers = dependencies(state, fact.run.requestRef);
+      const timed = details.request.eligibleAt !== undefined;
+      if (
+        timed &&
+        (Date.parse(event.occurredAt) < Date.parse(details.request.eligibleAt ?? "") ||
+          (previous === undefined
+            ? fact.run.continuedFromRunId !== undefined
+            : previous.outcome?.kind !== "blocked" ||
+              fact.run.continuedFromRunId !== previous.run.id ||
+              providers.length === 0 ||
+              providers.some(
+                (provider) =>
+                  !requestClosed(state, provider) ||
+                  (requestDetails(requests, provider).request.desiredLevel !== "initial" &&
+                    !runs.some(
+                      ({ run, outcome }) =>
+                        run.requestRef === provider && outcome?.kind === "target-reached",
+                    )),
+              )) ||
+          state.requests.requests.some(
+            (request) =>
+              request.ref !== fact.run.requestRef &&
+              request.targetKey === details.request.targetKey &&
+              !requestClosed(state, request.ref) &&
+              requestEmission(state, request.ref) !== undefined,
+          ))
+      )
+        throw new TypeError(
+          "Request is not eligible for initial dispatch or dependency continuation.",
+        );
+      if (
+        fact.run.continuedFromRunId !== undefined &&
+        (previous?.run.id !== fact.run.continuedFromRunId || previous.outcome?.kind !== "blocked")
+      )
+        throw new TypeError("Continuation must reference the previous blocked Run.");
       if (
         runs.some(({ run }) => run.id === fact.run.id) ||
-        runs.some(({ run, phase }) => run.requestRef === fact.run.requestRef && phase !== "ended")
+        runs.some(
+          ({ run, phase }) =>
+            phase !== "ended" &&
+            requestDetails(requests, run.requestRef).request.targetKey ===
+              details.request.targetKey,
+        )
       )
         throw new TypeError("Duplicate Run or overlapping local execution of a request.");
       const resources = currentResources(state);
@@ -273,6 +432,24 @@ export function reduceCoordinatorState(
         ).length >= binding.capacity
       )
         throw new TypeError("Run does not have current available resource capacity.");
+      if (previous === undefined && details.request.recurrence !== undefined) {
+        const successor = fact.successor;
+        const expectedTime = new Date(
+          Date.parse(event.occurredAt) + details.request.recurrence.intervalMs,
+        ).toISOString();
+        if (
+          successor?.origin.kind !== "recurrence" ||
+          successor.origin.predecessorRequestRef !== details.request.ref ||
+          successor.eligibleAt !== expectedTime ||
+          requestCancelled(state, details.request.ref)
+        )
+          throw new TypeError("Initial recurring dispatch requires its exact successor.");
+        requests = reduceRegulationRequests(successor, requests);
+        if (requests === state.requests)
+          throw new TypeError("Dispatch cannot reuse an admitted successor.");
+      } else if (fact.successor !== undefined) {
+        throw new TypeError("Only an initial recurring dispatch can generate a successor.");
+      }
       break;
     }
     case "run-phase":
@@ -283,11 +460,12 @@ export function reduceCoordinatorState(
       if (view === undefined || view.phase === "ended")
         throw new TypeError("Run feedback must belong to an active run.");
       if (fact.type === "run-phase") {
-        fields(fact, ["type", "runId", "phase"]);
+        fields(fact, ["type", "runId", "phase"], ["reason"]);
         if (
           !["running", "stopping", "unverified"].includes(fact.phase) ||
           (view.phase === "stopping" && fact.phase === "running") ||
-          view.phase === fact.phase
+          view.phase === fact.phase ||
+          (fact.reason !== undefined && (fact.phase !== "stopping" || fact.reason !== "timeout"))
         )
           throw new TypeError("Invalid execution phase transition.");
       } else if (fact.type === "probe-error") {
@@ -333,10 +511,33 @@ export function reduceCoordinatorState(
           )
             throw new TypeError("Reached outcome requires valid evidence for the pinned request.");
         } else {
-          fields(fact.outcome, ["kind", "message"]);
+          fields(
+            fact.outcome,
+            ["kind", "message"],
+            fact.outcome.kind === "exhausted" ? ["reason", "usage"] : [],
+          );
           if (!["blocked", "exhausted", "cancelled", "error"].includes(fact.outcome.kind))
             throw new TypeError("Invalid run outcome.");
           text(fact.outcome.message);
+          if (fact.outcome.kind === "exhausted") {
+            const timed =
+              requestDetails(requests, view.run.requestRef).request.eligibleAt !== undefined;
+            if (
+              (timed && fact.outcome.reason === undefined) ||
+              (fact.outcome.reason !== undefined &&
+                !["timeout", "agent-runs", "stall-runs"].includes(fact.outcome.reason))
+            )
+              throw new TypeError("Exhausted Run requires a structured quota reason.");
+            if (fact.outcome.usage !== undefined) {
+              fields(fact.outcome.usage, [], ["durationMs", "agentRuns", "stallRuns"]);
+              if (
+                !Object.values(fact.outcome.usage).every(
+                  (value) => Number.isSafeInteger(value) && value >= 0,
+                )
+              )
+                throw new TypeError("Invalid measured Run usage.");
+            }
+          }
         }
       }
       break;

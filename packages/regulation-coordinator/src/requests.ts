@@ -6,7 +6,7 @@ import {
 } from "@potential-guide/objective-pilot";
 import { canonicalJson, levelRank } from "@potential-guide/objective-portfolio-supervisor";
 import { identityKey as key } from "./identity.js";
-import { fields, immutable, priority, validateSpec } from "./validation.js";
+import { fields, immutable, positive, priority, timestamp, validateSpec } from "./validation.js";
 
 export interface Objective {
   readonly key: string;
@@ -34,9 +34,17 @@ export interface RegulationTarget {
 
 export type RequestOrigin =
   | { readonly kind: "external" }
-  | { readonly kind: "dependency"; readonly consumerRequestRef: string };
+  | { readonly kind: "dependency"; readonly consumerRequestRef: string }
+  | { readonly kind: "recurrence"; readonly predecessorRequestRef: string };
 
-export interface RegulationRequest {
+export interface RequestSchedule {
+  /** Omitted only by legacy requests, which retain their original admission semantics. */
+  readonly eligibleAt?: string;
+  readonly recurrence?: { readonly intervalMs: number };
+  readonly replacesRequestRef?: string;
+}
+
+export interface RegulationRequest extends RequestSchedule {
   readonly ref: string;
   readonly targetKey: string;
   readonly objectiveRevisionKey: string;
@@ -55,7 +63,7 @@ export interface RegulationRequests {
   readonly requests: readonly RegulationRequest[];
 }
 
-export interface RequestCommand {
+export interface RequestCommand extends RequestSchedule {
   readonly type: "request";
   readonly requestRef: string;
   readonly objective: PilotSpec;
@@ -94,20 +102,27 @@ export function reduceRegulationRequests(
   command: RequestCommand,
   state: RegulationRequests,
 ): RegulationRequests {
-  fields(command, [
-    "type",
-    "requestRef",
-    "objective",
-    "subject",
-    "desiredLevel",
-    "priority",
-    "origin",
-  ]);
+  fields(
+    command,
+    ["type", "requestRef", "objective", "subject", "desiredLevel", "priority", "origin"],
+    ["eligibleAt", "recurrence", "replacesRequestRef"],
+  );
   canonicalJson(command);
   if (command.type !== "request") throw new TypeError("Unsupported request command.");
   nonempty(command.requestRef, "requestRef");
   nonempty(command.desiredLevel, "desiredLevel");
   if (!priority(command.priority)) throw new TypeError("Invalid request priority.");
+  if (command.eligibleAt !== undefined) timestamp(command.eligibleAt);
+  if (command.recurrence !== undefined) {
+    fields(command.recurrence, ["intervalMs"]);
+    if (command.eligibleAt === undefined || !positive(command.recurrence.intervalMs))
+      throw new TypeError("Recurrence requires eligibleAt and a positive bounded interval.");
+  }
+  if (command.replacesRequestRef !== undefined) {
+    nonempty(command.replacesRequestRef, "replacesRequestRef");
+    if (command.eligibleAt === undefined || command.origin.kind !== "external")
+      throw new TypeError("Only timed external requests can explicitly replace a request.");
+  }
   if (command.origin?.kind === "external") {
     fields(command.origin, ["kind"]);
   } else if (command.origin?.kind === "dependency") {
@@ -116,6 +131,15 @@ export function reduceRegulationRequests(
     const consumerRequestRef = command.origin.consumerRequestRef;
     if (!state.requests.some((request) => request.ref === consumerRequestRef))
       throw new TypeError("Dependency request must reference an existing consumer request.");
+  } else if (command.origin?.kind === "recurrence") {
+    fields(command.origin, ["kind", "predecessorRequestRef"]);
+    nonempty(command.origin.predecessorRequestRef, "predecessorRequestRef");
+    if (
+      command.eligibleAt === undefined ||
+      command.recurrence === undefined ||
+      command.replacesRequestRef !== undefined
+    )
+      throw new TypeError("A recurrence successor requires its own fixed schedule.");
   } else {
     throw new TypeError("Unsupported request origin.");
   }
@@ -123,6 +147,10 @@ export function reduceRegulationRequests(
   const rank = levelRank(command.objective, command.desiredLevel);
   const desiredLevel = rank === 0 ? "initial" : command.objective.manifest.levels[rank - 1]?.id;
   if (desiredLevel === undefined) throw new TypeError("Invalid desired level.");
+  if (desiredLevel === "initial" && command.recurrence !== undefined)
+    throw new TypeError("An initial request cannot recur without an execution.");
+  if (command.origin.kind === "dependency" && command.recurrence !== undefined)
+    throw new TypeError("Derived dependency requests cannot create recurring obligations.");
   const source = command.objective.source;
   if (source === undefined) throw new TypeError("An exact Objective source is required.");
   const objectiveSource =
@@ -164,6 +192,7 @@ export function reduceRegulationRequests(
     desiredLevel,
     priority: command.priority,
     origin: command.origin,
+    ...scheduleFields(command),
     ...(source.kind === "npm-package" ? { source } : {}),
   };
   const objectives = append(state.objectives, objective);
@@ -175,6 +204,30 @@ export function reduceRegulationRequests(
       throw new TypeError(`Conflicting immutable request ${request.ref}.`);
     return state;
   }
+  if (request.origin.kind === "recurrence") {
+    const predecessor = requestDetails(state, request.origin.predecessorRequestRef).request;
+    if (
+      predecessor.recurrence === undefined ||
+      predecessor.targetKey !== request.targetKey ||
+      predecessor.objectiveRevisionKey !== request.objectiveRevisionKey ||
+      predecessor.desiredLevel !== request.desiredLevel ||
+      predecessor.priority !== request.priority ||
+      canonicalJson(predecessor.source ?? null) !== canonicalJson(request.source ?? null) ||
+      canonicalJson(predecessor.recurrence) !== canonicalJson(request.recurrence) ||
+      Date.parse(request.eligibleAt ?? "") <= Date.parse(predecessor.eligibleAt ?? "") ||
+      state.requests.some(
+        (entry) =>
+          entry.origin.kind === "recurrence" &&
+          entry.origin.predecessorRequestRef === predecessor.ref,
+      )
+    )
+      throw new TypeError("Invalid or duplicate recurrence successor.");
+  }
+  if (
+    request.replacesRequestRef !== undefined &&
+    requestDetails(state, request.replacesRequestRef).request.targetKey !== request.targetKey
+  )
+    throw new TypeError("Replacement must identify the same Target.");
   if (
     !Number.isSafeInteger(state.revision) ||
     state.revision < 0 ||
@@ -191,6 +244,23 @@ export function reduceRegulationRequests(
       requests: [...state.requests, request],
     }),
   );
+}
+
+function scheduleFields(value: RequestSchedule): RequestSchedule {
+  return {
+    ...(value.eligibleAt === undefined ? {} : { eligibleAt: value.eligibleAt }),
+    ...(value.recurrence === undefined ? {} : { recurrence: value.recurrence }),
+    ...(value.replacesRequestRef === undefined
+      ? {}
+      : { replacesRequestRef: value.replacesRequestRef }),
+  };
+}
+
+export function recurrenceRoot(state: RegulationRequests, requestRef: string): string {
+  let request = requestDetails(state, requestRef).request;
+  while (request.origin.kind === "recurrence")
+    request = requestDetails(state, request.origin.predecessorRequestRef).request;
+  return request.ref;
 }
 
 export interface RequestDetails {
@@ -246,6 +316,7 @@ export function commandForRequest(state: RegulationRequests, requestRef: string)
     desiredLevel: request.desiredLevel,
     priority: request.priority,
     origin: request.origin,
+    ...scheduleFields(request),
   };
 }
 
@@ -278,7 +349,7 @@ export function restoreRegulationRequests(value: unknown): RegulationRequests {
     fields(
       request,
       ["ref", "targetKey", "objectiveRevisionKey", "desiredLevel", "priority", "origin"],
-      ["source"],
+      ["source", "eligibleAt", "recurrence", "replacesRequestRef"],
     );
     const target = value.targets.find(
       (entry) => entry !== null && typeof entry === "object" && entry.key === request.targetKey,
@@ -301,6 +372,7 @@ export function restoreRegulationRequests(value: unknown): RegulationRequests {
         desiredLevel: request.desiredLevel,
         priority: request.priority,
         origin: request.origin,
+        ...scheduleFields(request),
       },
       state,
     );

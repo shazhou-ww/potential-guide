@@ -14,8 +14,12 @@ and the extensible `pguide` command line:
   guidance. A Pilot observes; it never invokes an Agent.
 - `@potential-guide/objective-regulator` combines a serializable regulation recipe
   with a separate subject and runs the observe, Agent, and re-observe process.
+- `@potential-guide/regulation-coordinator` durably schedules immutable timed
+  requests and recurring successors, with resource-aware execution, recovery and
+  replayable exhaustion facts; it does not require a Planner Agent.
 - `@potential-guide/objective-portfolio-supervisor` coordinates multiple regulators
-  through an injected portfolio policy.
+  through an injected portfolio policy; this existing API remains separate from
+  the request-driven Coordinator.
 - `@potential-guide/cli-core` provides command protocol and CLI infrastructure
   without depending on Objective logic.
 - `@potential-guide/objective-declarations` shares declaration selection/binding

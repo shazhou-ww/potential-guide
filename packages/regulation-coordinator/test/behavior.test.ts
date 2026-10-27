@@ -7,6 +7,7 @@ import { test } from "node:test";
 import { Effect, Exit, SubscriptionRef } from "@potential-guide/effects";
 import type { Envelope, PilotObservation, PilotSpec } from "@potential-guide/objective-pilot";
 import {
+  type BehaviorCoordinator,
   type BehaviorCoordinatorOptions,
   type CoordinatorStore,
   coordinator,
@@ -194,6 +195,518 @@ function activeState(hostId = "host-a") {
   });
   return add(state, { type: "run-phase", runId: `${hostId}:3`, phase: "running" });
 }
+
+async function drain(service: BehaviorCoordinator) {
+  for (let index = 0; index < 6; index++) {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    await service.flush();
+  }
+}
+
+test("timed dispatch atomically creates a successor; exhaustion and extra work do not replace it", async (t) => {
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: new Date("2026-10-27T00:00:00Z") });
+  const f = fixture();
+  await Effect.runPromise(
+    Effect.scoped(
+      Effect.gen(function* () {
+        const root: R.RequestCommand = {
+          ...command("root"),
+          eligibleAt: new Date(Date.now() + 100).toISOString(),
+          recurrence: { intervalMs: 100 },
+        };
+        let input = R.reduceRegulationRequests(root, R.createRegulationRequests());
+        const requests = yield* SubscriptionRef.make(input);
+        const resources = yield* SubscriptionRef.make<M.ResourceAllocation>(available);
+        const service = yield* coordinator(resources, requests, {
+          ...f.options,
+          runner: {
+            ...f.options.runner,
+            start: (context) => {
+              const saved = f.saved();
+              assert.ok(saved);
+              const emission = M.requestEmission(saved, context.run.requestRef);
+              assert.equal(emission?.fact.type, "run-start");
+              if (context.details.request.recurrence !== undefined)
+                assert.ok(
+                  saved.requests.requests.some(
+                    (request) =>
+                      request.origin.kind === "recurrence" &&
+                      request.origin.predecessorRequestRef === context.run.requestRef,
+                  ),
+                );
+              return f.options.runner.start(context);
+            },
+          },
+        });
+        yield* Effect.promise(async () => {
+          try {
+            assert.equal(f.starts.length, 0);
+            assert.equal(
+              M.requestSchedule(service.snapshot(), "root", new Date().toISOString()),
+              "ineligible",
+            );
+            t.mock.timers.tick(100);
+            await drain(service);
+            assert.equal(f.starts.length, 1);
+            const first = present(f.starts[0]);
+            const successor = present(
+              service.snapshot().requests.requests.find((r) => r.origin.kind === "recurrence"),
+            );
+            assert.equal(successor.eligibleAt, new Date(Date.now() + 100).toISOString());
+            assert.equal(
+              M.requestSchedule(service.snapshot(), "root", new Date().toISOString()),
+              "emitted",
+            );
+            first.end.resolve({
+              outcome: {
+                kind: "exhausted",
+                reason: "agent-runs",
+                message: "Quota used.",
+                usage: { agentRuns: 3 },
+              },
+            });
+            await drain(service);
+            assert.equal(f.starts.length, 1);
+            const exhausted = present(M.exhaustionEvents(service.snapshot())[0]);
+            const unfrozen = structuredClone(service.snapshot());
+            M.exhaustionEvents(unfrozen);
+            assert.equal(Object.isFrozen(unfrozen.requests.requests[0]), false);
+            assert.equal(Object.isFrozen(unfrozen.events), false);
+            assert.equal(exhausted.reason, "agent-runs");
+            assert.equal(exhausted.nextEligibleAt, successor.eligibleAt);
+            assert.equal(exhausted.observation, null);
+            assert.equal(exhausted.usage?.durationMs, undefined);
+            assert.deepEqual(M.exhaustionEvents(M.restoreCoordinatorState(service.snapshot())), [
+              exhausted,
+            ]);
+            assert.equal(
+              service.eventsSince(exhausted.revision).some(({ fact }) => fact.type === "run-end"),
+              false,
+            );
+            assert.throws(() => service.eventsSince(service.snapshot().revision + 1), /cursor/);
+
+            input = R.reduceRegulationRequests(
+              {
+                ...command(`extra:${exhausted.id}`),
+                eligibleAt: new Date().toISOString(),
+              },
+              input,
+            );
+            await Effect.runPromise(SubscriptionRef.set(requests, input));
+            await drain(service);
+            assert.equal(f.starts.length, 2);
+            const extra = present(f.starts[1]);
+            assert.equal(extra.context.run.requestRef, `extra:${exhausted.id}`);
+            assert.equal(M.requestClosed(service.snapshot(), successor.ref), false);
+            extra.end.resolve({
+              outcome: { kind: "target-reached" },
+              observation: observation(extra.context),
+            });
+            await drain(service);
+            await Effect.runPromise(SubscriptionRef.set(requests, input));
+            t.mock.timers.tick(100);
+            await drain(service);
+            assert.equal(f.starts.length, 3);
+            assert.equal(f.starts[2]?.context.run.requestRef, successor.ref);
+            present(f.starts[2]).end.resolve({
+              outcome: { kind: "exhausted", reason: "stall-runs", message: "No further progress." },
+            });
+            await drain(service);
+            await service.cancel("root");
+            t.mock.timers.tick(1000);
+            await drain(service);
+            assert.equal(f.starts.length, 3);
+            assert.equal(M.exhaustionEvents(service.snapshot()).length, 2);
+            const view = coordinatorViews([service.snapshot()], [], [], new Date().toISOString());
+            assert.equal(view.hosts[0]?.exhaustionEvents.length, 2);
+            assert.equal(
+              view.requests.find(({ request }) => request.ref === successor.ref)
+                ?.localContributions[0]?.schedule,
+              "emitted",
+            );
+            assert.deepEqual(f.errors, []);
+          } finally {
+            t.mock.timers.reset();
+          }
+        });
+      }),
+    ),
+  );
+});
+
+test("long runs and dependency continuation never multiply recurring successors", async (t) => {
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: new Date("2026-10-27T00:00:00Z") });
+  const f = fixture();
+  await Effect.runPromise(
+    Effect.scoped(
+      Effect.gen(function* () {
+        const resources = yield* SubscriptionRef.make<M.ResourceAllocation>(available);
+        const requests = yield* SubscriptionRef.make(
+          R.reduceRegulationRequests(
+            {
+              ...command("root"),
+              eligibleAt: new Date().toISOString(),
+              recurrence: { intervalMs: 100 },
+            },
+            R.createRegulationRequests(),
+          ),
+        );
+        const service = yield* coordinator(resources, requests, f.options);
+        yield* Effect.promise(async () => {
+          try {
+            const first = present(f.starts[0]);
+            t.mock.timers.tick(200);
+            await drain(service);
+            assert.equal(f.starts.length, 1);
+            assert.equal(service.snapshot().requests.requests.length, 2);
+            first.end.resolve({
+              outcome: { kind: "blocked", message: "Needs provider." },
+              dependencies: [
+                {
+                  ...command("provider", "provider"),
+                  origin: { kind: "dependency", consumerRequestRef: "root" },
+                },
+              ],
+            });
+            await drain(service);
+            assert.equal(f.starts.length, 2);
+            const provider = present(f.starts[1]);
+            assert.equal(provider.context.run.requestRef, "provider");
+            provider.end.resolve({
+              outcome: { kind: "target-reached" },
+              observation: observation(provider.context),
+            });
+            await drain(service);
+            const continuation = present(f.starts[2]);
+            assert.equal(continuation.context.run.requestRef, "root");
+            assert.equal(continuation.context.run.continuedFromRunId, first.context.run.id);
+            assert.equal(
+              service.snapshot().requests.requests.filter((r) => r.origin.kind === "recurrence")
+                .length,
+              1,
+            );
+            continuation.end.resolve({
+              outcome: { kind: "exhausted", reason: "agent-runs", message: "Quota used." },
+            });
+            await drain(service);
+            const next = present(f.starts[3]);
+            assert.notEqual(next.context.run.requestRef, "root");
+            assert.equal(next.context.run.continuedFromRunId, undefined);
+            next.end.resolve({
+              outcome: { kind: "target-reached" },
+              observation: observation(next.context),
+            });
+            await drain(service);
+            await service.cancel("root");
+            assert.deepEqual(f.errors, []);
+          } finally {
+            t.mock.timers.reset();
+          }
+        });
+      }),
+    ),
+  );
+});
+
+test("restart dispatches one overdue successor and preserves cancellation across redelivery", async (t) => {
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: new Date("2026-10-27T00:00:00Z") });
+  const root = {
+    ...command("root"),
+    eligibleAt: new Date().toISOString(),
+    recurrence: { intervalMs: 100 },
+  };
+  const input = R.reduceRegulationRequests(root, R.createRegulationRequests());
+  const first = fixture();
+  try {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const resources = yield* SubscriptionRef.make<M.ResourceAllocation>(available);
+          const requests = yield* SubscriptionRef.make(input);
+          const service = yield* coordinator(resources, requests, first.options);
+          yield* Effect.promise(async () => {
+            const run = present(first.starts[0]);
+            run.end.resolve({
+              outcome: { kind: "target-reached" },
+              observation: observation(run.context),
+            });
+            await drain(service);
+          });
+        }),
+      ),
+    );
+    t.mock.timers.tick(10000);
+    const restarted = fixture(present(first.saved()));
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const resources = yield* SubscriptionRef.make<M.ResourceAllocation>(available);
+          const requests = yield* SubscriptionRef.make(input);
+          const service = yield* coordinator(resources, requests, restarted.options);
+          yield* Effect.promise(async () => {
+            try {
+              assert.equal(restarted.starts.length, 1);
+              assert.equal(service.snapshot().requests.requests.length, 3);
+              const run = present(restarted.starts[0]);
+              assert.notEqual(run.context.run.requestRef, "root");
+              assert.equal(run.context.run.limits.maxAgentRuns, limits.maxAgentRuns);
+              run.end.resolve({
+                outcome: { kind: "exhausted", reason: "timeout", message: "Runner timeout." },
+              });
+              await drain(service);
+              await service.cancel("root");
+              await Effect.runPromise(SubscriptionRef.set(requests, input));
+              t.mock.timers.tick(10000);
+              await drain(service);
+              assert.equal(restarted.starts.length, 1);
+              assert.ok(
+                service
+                  .snapshot()
+                  .requests.requests.every((r) => M.requestCancelled(service.snapshot(), r.ref)),
+              );
+            } finally {
+              t.mock.timers.reset();
+            }
+          });
+        }),
+      ),
+    );
+    const stopped = fixture(present(restarted.saved()));
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const resources = yield* SubscriptionRef.make<M.ResourceAllocation>(available);
+          const requests = yield* SubscriptionRef.make(input);
+          const service = yield* coordinator(resources, requests, stopped.options);
+          yield* Effect.promise(() => service.flush());
+          assert.equal(stopped.starts.length, 0);
+        }),
+      ),
+    );
+  } finally {
+    t.mock.timers.reset();
+  }
+});
+
+test("explicit replacement stops a recurring chain without implicit same-Target supersession", async () => {
+  const f = fixture();
+  await Effect.runPromise(
+    Effect.scoped(
+      Effect.gen(function* () {
+        const resources = yield* SubscriptionRef.make<M.ResourceAllocation>(available);
+        let input = R.reduceRegulationRequests(
+          {
+            ...command("root"),
+            eligibleAt: new Date().toISOString(),
+            recurrence: { intervalMs: 60000 },
+          },
+          R.createRegulationRequests(),
+        );
+        const requests = yield* SubscriptionRef.make(input);
+        const service = yield* coordinator(resources, requests, f.options);
+        input = R.reduceRegulationRequests(
+          {
+            ...command("replacement"),
+            eligibleAt: new Date().toISOString(),
+            replacesRequestRef: "root",
+          },
+          input,
+        );
+        yield* SubscriptionRef.set(requests, input);
+        yield* Effect.promise(async () => {
+          await until(() => f.starts.length === 2);
+          assert.equal(f.starts[0]?.kills, 1);
+          assert.ok(M.requestCancelled(service.snapshot(), "root"));
+          assert.equal(f.starts[1]?.context.run.requestRef, "replacement");
+          const run = present(f.starts[1]);
+          run.end.resolve({
+            outcome: { kind: "target-reached" },
+            observation: observation(run.context),
+          });
+          await drain(service);
+          assert.equal(coordinatorViews([service.snapshot()]).hosts[0]?.occupancy, 0);
+          assert.deepEqual(f.errors, []);
+        });
+      }),
+    ),
+  );
+});
+
+test("due requests wait for resources and recurring successors join the FIFO tail", async (t) => {
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: new Date("2026-10-27T00:00:00Z") });
+  const f = fixture();
+  await Effect.runPromise(
+    Effect.scoped(
+      Effect.gen(function* () {
+        let input = R.reduceRegulationRequests(
+          {
+            ...command("root"),
+            eligibleAt: new Date().toISOString(),
+            recurrence: { intervalMs: 100 },
+          },
+          R.createRegulationRequests(),
+        );
+        input = R.reduceRegulationRequests(
+          {
+            ...command("ordinary"),
+            eligibleAt: new Date().toISOString(),
+          },
+          input,
+        );
+        const requests = yield* SubscriptionRef.make(input);
+        const resources = yield* SubscriptionRef.make<M.ResourceAllocation>({
+          kind: "no-resource",
+        });
+        const service = yield* coordinator(resources, requests, f.options);
+        yield* Effect.promise(async () => {
+          try {
+            t.mock.timers.tick(1000);
+            await drain(service);
+            assert.equal(f.starts.length, 0);
+            assert.equal(service.snapshot().requests.requests.length, 2);
+            await Effect.runPromise(SubscriptionRef.set(resources, available));
+            await drain(service);
+            const first = present(f.starts[0]);
+            const successor = present(
+              service.snapshot().requests.requests.find((r) => r.origin.kind === "recurrence"),
+            );
+            assert.equal(successor.eligibleAt, new Date(Date.now() + 100).toISOString());
+            t.mock.timers.tick(100);
+            first.end.resolve({
+              outcome: { kind: "target-reached" },
+              observation: observation(first.context),
+            });
+            await drain(service);
+            const ordinary = present(f.starts[1]);
+            assert.equal(ordinary.context.run.requestRef, "ordinary");
+            ordinary.end.resolve({
+              outcome: { kind: "target-reached" },
+              observation: observation(ordinary.context),
+            });
+            await drain(service);
+            assert.equal(f.starts[2]?.context.run.requestRef, successor.ref);
+            const next = present(f.starts[2]);
+            next.end.resolve({
+              outcome: { kind: "target-reached" },
+              observation: observation(next.context),
+            });
+            await drain(service);
+            await service.cancel("root");
+            assert.deepEqual(f.errors, []);
+          } finally {
+            t.mock.timers.reset();
+          }
+        });
+      }),
+    ),
+  );
+});
+
+test("recovery of an unverified initial launch retains exactly one successor and Target occupancy", async () => {
+  const first = fixture();
+  await Effect.runPromise(
+    Effect.scoped(
+      Effect.gen(function* () {
+        const resources = yield* SubscriptionRef.make<M.ResourceAllocation>(available);
+        const requests = yield* SubscriptionRef.make(
+          R.reduceRegulationRequests(
+            {
+              ...command("root"),
+              eligibleAt: new Date().toISOString(),
+              recurrence: { intervalMs: 1 },
+            },
+            R.createRegulationRequests(),
+          ),
+        );
+        yield* coordinator(resources, requests, first.options);
+      }),
+    ),
+  );
+  const launch = present(
+    first.writes.find((state) => state.events.at(-1)?.fact.type === "run-start"),
+  );
+  const restored = fixture(launch);
+  await Effect.runPromise(
+    Effect.scoped(
+      Effect.gen(function* () {
+        const resources = yield* SubscriptionRef.make<M.ResourceAllocation>(available);
+        const requests = yield* SubscriptionRef.make(launch.requests);
+        const service = yield* coordinator(resources, requests, restored.options);
+        yield* Effect.promise(async () => {
+          await tick();
+          await service.flush();
+          assert.equal(restored.starts.length, 0);
+          assert.equal(service.snapshot().requests.requests.length, 2);
+          assert.equal(coordinatorViews([service.snapshot()]).hosts[0]?.occupancy, 1);
+          assert.equal(M.runViews(service.snapshot())[0]?.phase, "unverified");
+          assert.equal(restored.errors.length, 1);
+        });
+      }),
+    ),
+  );
+  const run = present(M.runViews(launch)[0]).run;
+  assert.throws(
+    () =>
+      M.reduceCoordinatorState(
+        {
+          revision: launch.revision + 1,
+          occurredAt: new Date().toISOString(),
+          fact: { type: "run-start", run: { ...run, id: "duplicate" } },
+        },
+        launch,
+      ),
+    /eligible|overlapping/,
+  );
+  const damaged = structuredClone(launch);
+  const event = damaged.events.find(({ fact }) => fact.type === "run-start");
+  assert.ok(event?.fact.type === "run-start");
+  const withoutSuccessor = {
+    ...damaged,
+    events: damaged.events.map((entry) =>
+      entry === event
+        ? {
+            ...entry,
+            fact: {
+              type: "run-start" as const,
+              run: event.fact.type === "run-start" ? event.fact.run : run,
+            },
+          }
+        : entry,
+    ),
+  };
+  assert.throws(() => M.restoreCoordinatorState(withoutSuccessor), /successor/);
+});
+
+test("modern timeout produces structured exhaustion without automatically retrying", async () => {
+  const f = fixture();
+  await Effect.runPromise(
+    Effect.scoped(
+      Effect.gen(function* () {
+        const resources = yield* SubscriptionRef.make<M.ResourceAllocation>(available);
+        const requests = yield* SubscriptionRef.make(
+          R.reduceRegulationRequests(
+            {
+              ...command("one"),
+              eligibleAt: new Date().toISOString(),
+            },
+            R.createRegulationRequests(),
+          ),
+        );
+        const service = yield* coordinator(resources, requests, {
+          ...f.options,
+          limits: { ...limits, timeoutMs: 20 },
+        });
+        yield* Effect.promise(async () => {
+          await until(() => M.requestClosed(service.snapshot(), "one"));
+          assert.equal(f.starts.length, 1);
+          assert.equal(M.exhaustionEvents(service.snapshot())[0]?.reason, "timeout");
+          assert.equal(f.starts[0]?.kills, 1);
+          assert.deepEqual(f.errors, []);
+        });
+      }),
+    ),
+  );
+});
 
 test("pure state replay preserves run identity, resource history and unverified occupancy", () => {
   const running = activeState();

@@ -1,20 +1,20 @@
 # 实现统一请求与周期后继
 
-本文为准备阶段的实施初版，构想验收不表示已实施或接受最终 API。语义依据为[构想及配套原则](./ideal/Idea.md)。
+语义依据为已接受的[构想及配套原则](./ideal/Idea.md)。实现边界、兼容选择及验证证据见[实施说明](./Recurrence-implementation.md)；本阶段不开展独立外部部署验收。
 
 ## Steps
 
 ### I-S01: 调整请求事实与生命周期
 
-盘点当前新版及 legacy 边界，定义固定 eligibleAt、可选 recurrence、后继来源、派发与显式撤销事实；更新输入校验、纯重放及必要的版本兼容规则，不悄悄重解释旧记录。
+扩展 RequestModel 的 eligibleAt、recurrence、recurrence origin 及 replacesRequestRef；让 run-start 原子包含唯一后继，新增可重放的 request-cancel。未带 eligibleAt 的旧记录保留既有 admission 语义，不补造历史时间。
 
 ### I-S02: 接入可恢复调度与统一事件
 
-让初始派发与后继生成共同持久化，接入到期唤醒、恢复、同 Target 仲裁、依赖续接及周期停止；结构化记录耗尽并提供可去重的外部观察路径，不自动追加投入。
+接入到期唤醒、实际派发时间、恢复、同 Target 仲裁、continuedFromRunId 及周期停止；通过已有 run-end 事实及稳定 Host 游标暴露结构化耗尽，不新增结果驱动的自动续跑。
 
 ### I-S03: 更新关联视图与验证
 
-更新直接关联的公共类型、视图、文档和测试，明确旧入口迁移及 Supervisor helper 依赖边界；不顺带实现上层 Agent、MCP server 或跨 Host 一致性。
+更新公共类型、Host / Request 视图、包文档、包出口消费者和受控时钟测试。旧 legacy API 与纯 helper 依赖保留，不删除仍有消费者的 Supervisor 包，不实现上层 Agent、MCP server 或跨 Host 一致性。
 
 ## Acceptance criteria
 

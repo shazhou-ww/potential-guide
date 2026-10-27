@@ -33,6 +33,15 @@ export function positive(value: number): boolean {
   return Number.isSafeInteger(value) && value > 0 && value <= 2_147_483_647;
 }
 
+export function timestamp(value: unknown): asserts value is string {
+  if (
+    typeof value !== "string" ||
+    !/^\d{4}-\d\d-\d\dT.*(?:Z|[+-]\d\d:\d\d)$/.test(value) ||
+    !Number.isFinite(Date.parse(value))
+  )
+    throw new TypeError("Expected a finite RFC 3339 timestamp.");
+}
+
 export function immutable<A>(value: A): A {
   if (value !== null && typeof value === "object") {
     for (const child of Object.values(value)) immutable(child);
