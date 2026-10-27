@@ -6,6 +6,8 @@
 
 本次新增验证工具会同时安装 Coordinator、pguide 与 pguide-regulate 的生产闭包，检查独立 lockfile 不含两个退役包；从安装包执行 unknown supervise、根 help、补全和保留的 regulate / continue / probe help。周期恢复试验继续使用三个实际 Host 生命周期，不改变已有业务源码。
 
+本次退役后的实际结果见[追加部署证据](./Supervisor-retirement-deployment.md)及[新的原始记录](./verification/retirement-results.json)，与此前包含旧包依赖的历史记录分开保存。
+
 ## Steps
 
 ### D-S01: 准备独立消费者

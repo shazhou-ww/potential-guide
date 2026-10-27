@@ -1,0 +1,670 @@
+{
+  "verifiedContractCommit": "13c6baa50ce85c33622ca6108412bdeec6052f25",
+  "startedAt": "2026-10-27T12:40:24.745Z",
+  "finishedAt": "2026-10-27T12:40:34.871Z",
+  "environment": {
+    "node": "v24.12.0",
+    "platform": "win32",
+    "release": "10.0.26300",
+    "typescript": "5.9.3"
+  },
+  "packages": [
+    {
+      "name": "@potential-guide/check-host",
+      "version": "0.1.0",
+      "filename": "potential-guide-check-host-0.1.0.tgz",
+      "sha256": "d67ac91d4683964b83ce54b8778211dd42c597df683b9a1584b6a51bdc0d91d6"
+    },
+    {
+      "name": "@potential-guide/cli-core",
+      "version": "0.3.0-rc.0",
+      "filename": "potential-guide-cli-core-0.3.0-rc.0.tgz",
+      "sha256": "9f8a044de5adf8155c6fde885a1bd6791e710c3e8c1d641e05283c12172e41c7"
+    },
+    {
+      "name": "@potential-guide/cli-runtime",
+      "version": "0.1.0-rc.0",
+      "filename": "potential-guide-cli-runtime-0.1.0-rc.0.tgz",
+      "sha256": "bea7dc2a3da53867a4d4880a642c4809afd51554a502bb694154b58db51db0e0"
+    },
+    {
+      "name": "@potential-guide/effects",
+      "version": "0.1.0-rc.0",
+      "filename": "potential-guide-effects-0.1.0-rc.0.tgz",
+      "sha256": "0fe03517fa0d74ee2e6f6d45fa1b9716fd3de939c80654ed3283478b5b6c7c00"
+    },
+    {
+      "name": "@potential-guide/git-source",
+      "version": "0.1.0-rc.0",
+      "filename": "potential-guide-git-source-0.1.0-rc.0.tgz",
+      "sha256": "3a4a742d893fda8b32e35b95c9a5b7784450243ad79155437c455f0bf7d7f813"
+    },
+    {
+      "name": "@potential-guide/objective-declarations",
+      "version": "0.1.0-rc.0",
+      "filename": "potential-guide-objective-declarations-0.1.0-rc.0.tgz",
+      "sha256": "16b5eb785fc463bf8994812c698808bd46845723ca6c69a88b951ebcf3efd17a"
+    },
+    {
+      "name": "@potential-guide/objective-pilot",
+      "version": "0.2.0-rc.0",
+      "filename": "potential-guide-objective-pilot-0.2.0-rc.0.tgz",
+      "sha256": "4ca97aa30a009a4c6b0422655de3a56daf3305209b0ac04629c1bc6580ec566f"
+    },
+    {
+      "name": "@potential-guide/objective-regulator",
+      "version": "0.4.0-rc.0",
+      "filename": "potential-guide-objective-regulator-0.4.0-rc.0.tgz",
+      "sha256": "6736462b7eaec28be3a4117c9e03fdb75b718db2c23e064a7017ac1776000798"
+    },
+    {
+      "name": "@potential-guide/pguide-agents",
+      "version": "0.1.0",
+      "filename": "potential-guide-pguide-agents-0.1.0.tgz",
+      "sha256": "20b847199687e03085679f55a3cac61cd628f1725d271d4adfd95d1107825804"
+    },
+    {
+      "name": "@potential-guide/pguide-config",
+      "version": "0.3.0-rc.0",
+      "filename": "potential-guide-pguide-config-0.3.0-rc.0.tgz",
+      "sha256": "575b11b6eb5ce84e8576119e1e53bc7140deb2eb295dc045b8f6bf6a363ee3b3"
+    },
+    {
+      "name": "@potential-guide/pguide-objectives",
+      "version": "0.4.0-rc.0",
+      "filename": "potential-guide-pguide-objectives-0.4.0-rc.0.tgz",
+      "sha256": "11da63fac7b38c6a17aabf881462972890f2e51ef3acff679d9fd4e5388164b3"
+    },
+    {
+      "name": "@potential-guide/pguide-pilot",
+      "version": "0.4.0-rc.0",
+      "filename": "potential-guide-pguide-pilot-0.4.0-rc.0.tgz",
+      "sha256": "44558433bc64b1f63bd29fd70e1db4edc50b25dccadbc3ba2f417c37af65a3ea"
+    },
+    {
+      "name": "@potential-guide/pguide-regulate",
+      "version": "0.4.0-rc.0",
+      "filename": "potential-guide-pguide-regulate-0.4.0-rc.0.tgz",
+      "sha256": "313570a53e35a33173fecb06056d76f1fe91ae317a514ebe7b32281019f4857e"
+    },
+    {
+      "name": "@potential-guide/pilot-protocol",
+      "version": "0.1.0-rc.0",
+      "filename": "potential-guide-pilot-protocol-0.1.0-rc.0.tgz",
+      "sha256": "9796d8ea9bf560135f15fd012e94845a9c3be38542972d95573e3ca8650546f1"
+    },
+    {
+      "name": "@potential-guide/regulation-coordinator",
+      "version": "0.1.0-rc.0",
+      "filename": "potential-guide-regulation-coordinator-0.1.0-rc.0.tgz",
+      "sha256": "f0dd66f51b5cd87f15051584ec920829de72296a991db3f996e1dad187704315"
+    },
+    {
+      "name": "pguide",
+      "version": "0.4.0-rc.0",
+      "filename": "pguide-0.4.0-rc.0.tgz",
+      "sha256": "05517dcf42e11ee796c1ea2d6c49688919a312f5d32b5639ef4b36ff93d6533e"
+    }
+  ],
+  "consumer": {
+    "entries": {
+      "@potential-guide/regulation-coordinator": "node_modules\\.pnpm\\@potential-guide+regulation_a61993f3ec01448b7a06d83d195be7ba\\node_modules\\@potential-guide\\regulation-coordinator\\dist\\index.js",
+      "@potential-guide/effects": "node_modules\\.pnpm\\@potential-guide+effects@fi_c3748d1b47a724fef184ec8e609a1788\\node_modules\\@potential-guide\\effects\\dist\\index.js"
+    },
+    "noSourceAliases": true,
+    "typecheckExit": 0,
+    "coordinatorClosure": [
+      "@potential-guide/check-host",
+      "@potential-guide/effects",
+      "@potential-guide/objective-pilot",
+      "@potential-guide/objective-regulator",
+      "@potential-guide/pilot-protocol",
+      "@potential-guide/regulation-coordinator"
+    ],
+    "retiredPackagesAbsent": true,
+    "cliResults": [
+      {
+        "args": [
+          "supervise",
+          "--format",
+          "json"
+        ],
+        "exit": 2,
+        "output": "{\n  \"schemaVersion\": 1,\n  \"status\": \"invalid\",\n  \"error\": \"Unknown command: supervise.\"\n}\n",
+        "stderr": ""
+      },
+      {
+        "args": [
+          "--help"
+        ],
+        "exit": 0,
+        "output": "pguide 0.4.0-rc.0 - Observe Objectives and repair gaps.\n\nUsage: pguide [global options] <command> [arguments]\n\nCommands:\n  complete     Generate shell completion\n  diagnose     Diagnose configuration and commands\n  agents     Manage independent user and project Agent resources\n  config     External command\n  continue     Continue a persisted Regulation\n  objectives     Discover and manage user and directory Objective declarations\n  probe     Observe an Objective Pilot\n  regulate     Run Pilot regulation with per-Agent execution limits\n  scaffold     Create an Objective Pilot skeleton\n  validate     Validate an Objective Pilot\n\nExamples:\n  pguide config path\n  pguide validate pilot .\\objective\\objective.yaml\n  pguide probe --pilot .\\objective --subject-file .\\subject.json --format json\n\nHelp:\n  pguide <command> --help     Detailed command usage and examples\n  pguide --help --format json  Verify discovered command compatibility\n  Text help lists commands without starting them.\n\nGlobal options:\n  --cwd <directory>        Configuration and relative-path context (default: current directory)\n  --format <format>        markdown | json (default: markdown)\n  --color <mode>           auto | always | never (default: auto)\n  --log-level <level>      error | warn | info | debug (default: warn)\n  --help                   Show help without executing the command\n  --version                Show command version\n",
+        "stderr": ""
+      },
+      {
+        "args": [
+          "complete",
+          "--shell",
+          "powershell"
+        ],
+        "exit": 0,
+        "output": "Register-ArgumentCompleter -Native -CommandName pguide -ScriptBlock { param($wordToComplete) 'probe','regulate','continue','scaffold','validate','config','agents','objectives','diagnose','complete' | Where-Object { $_ -like \"$wordToComplete*\" } }\n",
+        "stderr": ""
+      },
+      {
+        "args": [
+          "regulate",
+          "--help"
+        ],
+        "exit": 0,
+        "output": "Observe, run an Agent when needed, and re-observe until a target or finite quota is reached.\n\nUsage: pguide regulate (--objective <name> | --pilot <directory|Git URI|legacy-alias>) --target <level> [options]\n\nRequired:\n  Choose exactly one: --objective <name> OR --pilot <source> (never both).\n  --target <level>        initial, business level ID, or terminal (highest-level alias)\n\nOptions:\n  --objective <name>      Select a declaration instead of --pilot\n  --pilot <source>        Committed path, Git URI, or legacy source alias\n  --scope <scope>         user | directory; disambiguate declaration scope\n  --input-file <path|->   Declaration input; only Unit may omit it\n  --subject-file <path|-> JSON subject (default: stdin); use - explicitly for stdin\n  --agent <profile>       Existing Agent profile (default: agents.defaultAgent)\n  --agent-timeout-ms <ms> Per-Agent deadline; includes connection and session startup\n  --revision <ref|commit> Pin Pilot version\n  --language <tag>        Select localized references\n  --report <path>         Also save the JSON result\n\nExamples:\n  pguide regulate --pilot .\\objective --subject-file .\\subject.json --target terminal\n  pguide regulate --pilot .\\objective --subject-file .\\subject.json --target terminal --agent local --agent-timeout-ms 60000\n  Get-Content -Raw .\\subject.json | pguide regulate --pilot health --target terminal\n\nNotes:\n  May invoke a real Agent and consume tokens. Repair tool requests require configured grants.\n  regulate.quota bounds the run; pilot.probe controls checks.\n  The saved regulation ID can be resumed with pguide continue <regulation-id>.\n  Recovery retains the resolved source and commit, even if a registered name changes.\n\nConstraints:\n  --objective and --pilot are mutually exclusive; exactly one is required.\n  --scope and --input-file require --objective.\n  --input-file cannot combine with --subject-file; --subject-file requires --pilot.\n  --target is required.\n\nGlobal options:\n  --cwd <directory>        Configuration and relative-path context (default: current directory)\n  --format <format>        markdown | json (default: markdown)\n  --color <mode>           auto | always | never (default: auto)\n  --log-level <level>      error | warn | info | debug (default: warn)\n  --help                   Show help without executing the command\n  --version                Show command version\n",
+        "stderr": ""
+      },
+      {
+        "args": [
+          "continue",
+          "--help"
+        ],
+        "exit": 0,
+        "output": "Start another bounded attempt using a persisted regulation's pinned Pilot and subject.\n\nUsage: pguide continue <regulation-id> [--report <path>]\n\nArguments:\n  <regulation-id>         UUID returned by a previous regulate or continue run\n\nOptions:\n  --report <path>         Also save the JSON result\n\nExamples:\n  pguide continue 01234567-89ab-4cde-8fab-0123456789ab --format json\n\nNotes:\n  Restores the saved target, subject, Agent recipe and quotas; does not accept a new --pilot.\n  Current permission grants apply. A required Agent session must be resumable.\n  Use the same --cwd and user/project config.jsonc context to find the saved state directory.\n\nGlobal options:\n  --cwd <directory>        Configuration and relative-path context (default: current directory)\n  --format <format>        markdown | json (default: markdown)\n  --color <mode>           auto | always | never (default: auto)\n  --log-level <level>      error | warn | info | debug (default: warn)\n  --help                   Show help without executing the command\n  --version                Show command version\n",
+        "stderr": ""
+      },
+      {
+        "args": [
+          "probe",
+          "--help"
+        ],
+        "exit": 0,
+        "output": "Observe the current Objective level and all blocking problems. Does not run regulation.\n\nUsage: pguide probe (--objective <name> | --pilot <directory|Git URI|legacy-alias>) [options]\n\nRequired:\n  Choose exactly one: --objective <name> OR --pilot <source> (never both).\n\nOptions:\n  --objective <name>     Select a declaration instead of --pilot\n  --pilot <source>        Committed path, Git URI, or legacy source alias\n  --scope <scope>        user | directory; disambiguate declaration scope\n  --input-file <path|->  Declaration input; only Unit may omit it\n  --subject-file <path|-> JSON subject (default: stdin); use - explicitly for stdin\n  --revision <ref|commit> Pin source version; local paths require a full commit hash\n  --language <tag>        Select localized references (default: Pilot language)\n  --report <path>         Also save the complete JSON observation\n  --report-dir <path>     Override the default local JSONL evidence directory\n  --no-reports            Disable local evidence (does not disable --report)\n\nExamples:\n  pguide probe --pilot .\\objective --subject-file .\\subject.json\n  pguide probe --pilot .\\objective --subject-file - --format json\n  Get-Content -Raw .\\subject.json | pguide probe --pilot health --format json\n\nNotes:\n  Local Pilot repositories must be clean and committed. Checks may execute tools;\n  a self-check Pilot includes one Agent sanity task. Read the Pilot before running.\n  Exit 0 means observation succeeded, not that the Objective reached terminal.\n  Manage declarations with pguide objectives; config aliases are legacy sources only.\n  Use @name to require a registered Objective; bare names resolve when registered.\n  Next: pguide regulate --help\n\nConstraints:\n  --objective and --pilot are mutually exclusive; exactly one is required.\n  --scope and --input-file require --objective.\n  --input-file cannot combine with --subject-file; --subject-file requires --pilot.\n\nGlobal options:\n  --cwd <directory>        Configuration and relative-path context (default: current directory)\n  --format <format>        markdown | json (default: markdown)\n  --color <mode>           auto | always | never (default: auto)\n  --log-level <level>      error | warn | info | debug (default: warn)\n  --help                   Show help without executing the command\n  --version                Show command version\n",
+        "stderr": ""
+      }
+    ]
+  },
+  "hostEpochs": [
+    {
+      "epoch": "initial",
+      "pid": 58348
+    },
+    {
+      "epoch": "recovered",
+      "pid": 57904
+    },
+    {
+      "epoch": "stopped-restart",
+      "pid": 11128
+    }
+  ],
+  "notifications": [
+    {
+      "id": "external-recurrence-host:5",
+      "hostId": "external-recurrence-host",
+      "revision": 5,
+      "occurredAt": "2026-10-27T12:40:28.204Z",
+      "request": {
+        "ref": "periodic-root",
+        "targetKey": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+        "objectiveRevisionKey": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+        "desiredLevel": "ready",
+        "priority": 1,
+        "origin": {
+          "kind": "external"
+        },
+        "eligibleAt": "2026-10-27T12:40:27.616Z",
+        "recurrence": {
+          "intervalMs": 3000
+        },
+        "source": {
+          "integrity": "sha512-fixture",
+          "kind": "npm-package",
+          "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "packageName": "@fixture/recurrence",
+          "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+          "spec": "@fixture/recurrence@1.0.0",
+          "version": "1.0.0"
+        }
+      },
+      "target": {
+        "key": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+        "objectiveKey": "objective:9eab5da4ea733e0eb93ae48a39710691e1fda4aa9932610311b1731f062faf18",
+        "subject": {}
+      },
+      "objectiveRevision": {
+        "key": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+        "objectiveKey": "objective:9eab5da4ea733e0eb93ae48a39710691e1fda4aa9932610311b1731f062faf18",
+        "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "spec": {
+          "objectiveId": "@fixture/recurrence",
+          "version": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "manifest": {
+            "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json",
+            "defaultLanguage": "zh-CN",
+            "languages": [
+              "zh-CN"
+            ],
+            "levels": [
+              {
+                "checks": [],
+                "id": "ready"
+              }
+            ],
+            "subjectSchema": {
+              "additionalProperties": false,
+              "type": "object"
+            }
+          },
+          "locales": {
+            "zh-CN": {
+              "system/404": {
+                "content": "",
+                "description": "",
+                "id": "system/404",
+                "references": [],
+                "title": "缺少指引"
+              }
+            }
+          },
+          "source": {
+            "integrity": "sha512-fixture",
+            "kind": "npm-package",
+            "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "packageName": "@fixture/recurrence",
+            "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+            "spec": "@fixture/recurrence@1.0.0",
+            "version": "1.0.0"
+          }
+        }
+      },
+      "run": {
+        "hostBindingRevisionId": "host-binding:f50dd657c2a5c0f8d9d38aac50930b81b4dc444cc8f0117420db418251879616",
+        "id": "external-recurrence-host:3",
+        "limits": {
+          "maxAgentRuns": 3,
+          "maxStallRuns": 2,
+          "timeoutMs": 20000
+        },
+        "requestRef": "periodic-root",
+        "resourceRevision": 1
+      },
+      "reason": "agent-runs",
+      "usage": {
+        "agentRuns": 3
+      },
+      "message": "本次调用额度耗尽。",
+      "observation": null,
+      "lastProbeFailed": false,
+      "probeFailure": null,
+      "successorRequestRef": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7",
+      "nextEligibleAt": "2026-10-27T12:40:31.095Z"
+    },
+    {
+      "id": "external-recurrence-host:17",
+      "hostId": "external-recurrence-host",
+      "revision": 17,
+      "occurredAt": "2026-10-27T12:40:31.631Z",
+      "request": {
+        "ref": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7",
+        "targetKey": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+        "objectiveRevisionKey": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+        "desiredLevel": "ready",
+        "priority": 1,
+        "origin": {
+          "kind": "recurrence",
+          "predecessorRequestRef": "periodic-root"
+        },
+        "eligibleAt": "2026-10-27T12:40:31.095Z",
+        "recurrence": {
+          "intervalMs": 3000
+        },
+        "source": {
+          "integrity": "sha512-fixture",
+          "kind": "npm-package",
+          "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "packageName": "@fixture/recurrence",
+          "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+          "spec": "@fixture/recurrence@1.0.0",
+          "version": "1.0.0"
+        }
+      },
+      "target": {
+        "key": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+        "objectiveKey": "objective:9eab5da4ea733e0eb93ae48a39710691e1fda4aa9932610311b1731f062faf18",
+        "subject": {}
+      },
+      "objectiveRevision": {
+        "key": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+        "objectiveKey": "objective:9eab5da4ea733e0eb93ae48a39710691e1fda4aa9932610311b1731f062faf18",
+        "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "spec": {
+          "objectiveId": "@fixture/recurrence",
+          "version": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "manifest": {
+            "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json",
+            "defaultLanguage": "zh-CN",
+            "languages": [
+              "zh-CN"
+            ],
+            "levels": [
+              {
+                "checks": [],
+                "id": "ready"
+              }
+            ],
+            "subjectSchema": {
+              "additionalProperties": false,
+              "type": "object"
+            }
+          },
+          "locales": {
+            "zh-CN": {
+              "system/404": {
+                "content": "",
+                "description": "",
+                "id": "system/404",
+                "references": [],
+                "title": "缺少指引"
+              }
+            }
+          },
+          "source": {
+            "integrity": "sha512-fixture",
+            "kind": "npm-package",
+            "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "packageName": "@fixture/recurrence",
+            "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+            "spec": "@fixture/recurrence@1.0.0",
+            "version": "1.0.0"
+          }
+        }
+      },
+      "run": {
+        "hostBindingRevisionId": "host-binding:f50dd657c2a5c0f8d9d38aac50930b81b4dc444cc8f0117420db418251879616",
+        "id": "external-recurrence-host:13",
+        "limits": {
+          "maxAgentRuns": 3,
+          "maxStallRuns": 2,
+          "timeoutMs": 20000
+        },
+        "requestRef": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7",
+        "resourceRevision": 1
+      },
+      "reason": "stall-runs",
+      "usage": {
+        "stallRuns": 2
+      },
+      "message": "本次执行未继续取得进展。",
+      "observation": null,
+      "lastProbeFailed": false,
+      "probeFailure": null,
+      "successorRequestRef": "recurrence-request:2f64d227f81f0a18d37c9c418373e10d263d7288fe85bb666727214c836ffb66",
+      "nextEligibleAt": "2026-10-27T12:40:34.106Z"
+    }
+  ],
+  "replay": {
+    "identicalInitialReads": true,
+    "originalEventVisibleAfterRestart": true,
+    "deduplicatedExtraRequestRef": "extra:external-recurrence-host:5"
+  },
+  "recovery": {
+    "runId": "external-recurrence-host:13",
+    "workerPid": 59792,
+    "startsBeforeCrash": 3,
+    "startsAfterRecovery": 3,
+    "limits": {
+      "timeoutMs": 20000,
+      "maxAgentRuns": 3,
+      "maxStallRuns": 2
+    }
+  },
+  "cancellation": {
+    "observedAfter": "2026-10-27T12:40:34.871Z",
+    "nextEligibleAt": "2026-10-27T12:40:34.106Z",
+    "stoppedRevision": 19,
+    "restartedRevision": 19
+  },
+  "requests": [
+    {
+      "ref": "periodic-root",
+      "targetKey": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+      "objectiveRevisionKey": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+      "desiredLevel": "ready",
+      "priority": 1,
+      "origin": {
+        "kind": "external"
+      },
+      "eligibleAt": "2026-10-27T12:40:27.616Z",
+      "recurrence": {
+        "intervalMs": 3000
+      },
+      "source": {
+        "integrity": "sha512-fixture",
+        "kind": "npm-package",
+        "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "packageName": "@fixture/recurrence",
+        "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+        "spec": "@fixture/recurrence@1.0.0",
+        "version": "1.0.0"
+      },
+      "locallyClosed": true,
+      "cancelled": true
+    },
+    {
+      "ref": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7",
+      "targetKey": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+      "objectiveRevisionKey": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+      "desiredLevel": "ready",
+      "priority": 1,
+      "origin": {
+        "kind": "recurrence",
+        "predecessorRequestRef": "periodic-root"
+      },
+      "eligibleAt": "2026-10-27T12:40:31.095Z",
+      "recurrence": {
+        "intervalMs": 3000
+      },
+      "source": {
+        "integrity": "sha512-fixture",
+        "kind": "npm-package",
+        "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "packageName": "@fixture/recurrence",
+        "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+        "spec": "@fixture/recurrence@1.0.0",
+        "version": "1.0.0"
+      },
+      "locallyClosed": true,
+      "cancelled": true
+    },
+    {
+      "ref": "extra:external-recurrence-host:5",
+      "targetKey": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+      "objectiveRevisionKey": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+      "desiredLevel": "ready",
+      "priority": 1,
+      "origin": {
+        "kind": "external"
+      },
+      "eligibleAt": "2026-10-27T12:40:28.209Z",
+      "source": {
+        "integrity": "sha512-fixture",
+        "kind": "npm-package",
+        "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "packageName": "@fixture/recurrence",
+        "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+        "spec": "@fixture/recurrence@1.0.0",
+        "version": "1.0.0"
+      },
+      "locallyClosed": true,
+      "cancelled": false
+    },
+    {
+      "ref": "recurrence-request:2f64d227f81f0a18d37c9c418373e10d263d7288fe85bb666727214c836ffb66",
+      "targetKey": "target:7583c62e1cdf7ab75e7e852c58119fc2d57d913b790bce8c3f659072bbbb1464",
+      "objectiveRevisionKey": "objective-revision:929c11459cd248f696279efe05a7cdde8140b7f8afb7d05555385cc088d4c1ae",
+      "desiredLevel": "ready",
+      "priority": 1,
+      "origin": {
+        "kind": "recurrence",
+        "predecessorRequestRef": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7"
+      },
+      "eligibleAt": "2026-10-27T12:40:34.106Z",
+      "recurrence": {
+        "intervalMs": 3000
+      },
+      "source": {
+        "integrity": "sha512-fixture",
+        "kind": "npm-package",
+        "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "packageName": "@fixture/recurrence",
+        "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+        "spec": "@fixture/recurrence@1.0.0",
+        "version": "1.0.0"
+      },
+      "locallyClosed": true,
+      "cancelled": true
+    }
+  ],
+  "runs": [
+    {
+      "run": {
+        "hostBindingRevisionId": "host-binding:f50dd657c2a5c0f8d9d38aac50930b81b4dc444cc8f0117420db418251879616",
+        "id": "external-recurrence-host:3",
+        "limits": {
+          "maxAgentRuns": 3,
+          "maxStallRuns": 2,
+          "timeoutMs": 20000
+        },
+        "requestRef": "periodic-root",
+        "resourceRevision": 1
+      },
+      "phase": "ended",
+      "outcome": {
+        "kind": "exhausted",
+        "message": "本次调用额度耗尽。",
+        "reason": "agent-runs",
+        "usage": {
+          "agentRuns": 3
+        }
+      },
+      "observation": null,
+      "lastProbeFailed": false,
+      "updatedAt": "2026-10-27T12:40:28.204Z"
+    },
+    {
+      "run": {
+        "hostBindingRevisionId": "host-binding:f50dd657c2a5c0f8d9d38aac50930b81b4dc444cc8f0117420db418251879616",
+        "id": "external-recurrence-host:8",
+        "limits": {
+          "maxAgentRuns": 3,
+          "maxStallRuns": 2,
+          "timeoutMs": 20000
+        },
+        "requestRef": "extra:external-recurrence-host:5",
+        "resourceRevision": 1
+      },
+      "phase": "ended",
+      "outcome": {
+        "kind": "target-reached"
+      },
+      "observation": {
+        "current": {
+          "levelId": "ready",
+          "objectiveId": "@fixture/recurrence"
+        },
+        "gapSummary": "",
+        "observedAt": "2026-10-27T12:40:28.298Z",
+        "problems": [],
+        "sources": {
+          "@fixture/recurrence": {
+            "integrity": "sha512-fixture",
+            "kind": "npm-package",
+            "packageDigest": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "packageName": "@fixture/recurrence",
+            "resolved": "https://registry.example.test/recurrence-1.0.0.tgz",
+            "spec": "@fixture/recurrence@1.0.0",
+            "version": "1.0.0"
+          }
+        },
+        "versions": {
+          "@fixture/recurrence": "sha256-pguide-package-v1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        }
+      },
+      "lastProbeFailed": false,
+      "updatedAt": "2026-10-27T12:40:28.299Z"
+    },
+    {
+      "run": {
+        "hostBindingRevisionId": "host-binding:f50dd657c2a5c0f8d9d38aac50930b81b4dc444cc8f0117420db418251879616",
+        "id": "external-recurrence-host:13",
+        "limits": {
+          "maxAgentRuns": 3,
+          "maxStallRuns": 2,
+          "timeoutMs": 20000
+        },
+        "requestRef": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7",
+        "resourceRevision": 1
+      },
+      "phase": "ended",
+      "outcome": {
+        "kind": "exhausted",
+        "message": "本次执行未继续取得进展。",
+        "reason": "stall-runs",
+        "usage": {
+          "stallRuns": 2
+        }
+      },
+      "observation": null,
+      "lastProbeFailed": false,
+      "updatedAt": "2026-10-27T12:40:31.631Z"
+    }
+  ],
+  "operations": [
+    {
+      "type": "start",
+      "runId": "external-recurrence-host:3",
+      "requestRef": "periodic-root",
+      "pid": 59876,
+      "at": "2026-10-27T12:40:28.143Z"
+    },
+    {
+      "type": "end",
+      "runId": "external-recurrence-host:3",
+      "requestRef": "periodic-root",
+      "pid": 59876,
+      "at": "2026-10-27T12:40:28.174Z"
+    },
+    {
+      "type": "start",
+      "runId": "external-recurrence-host:8",
+      "requestRef": "extra:external-recurrence-host:5",
+      "pid": 56240,
+      "at": "2026-10-27T12:40:28.255Z"
+    },
+    {
+      "type": "end",
+      "runId": "external-recurrence-host:8",
+      "requestRef": "extra:external-recurrence-host:5",
+      "pid": 56240,
+      "at": "2026-10-27T12:40:28.283Z"
+    },
+    {
+      "type": "start",
+      "runId": "external-recurrence-host:13",
+      "requestRef": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7",
+      "pid": 59792,
+      "at": "2026-10-27T12:40:31.147Z"
+    },
+    {
+      "type": "end",
+      "runId": "external-recurrence-host:13",
+      "requestRef": "recurrence-request:1a577caec16cb81c6bf2d7d4d77654a1d1640274400027560ba354fb649867c7",
+      "pid": 59792,
+      "at": "2026-10-27T12:40:31.617Z"
+    }
+  ],
+  "assertions": {
+    "workerStarts": 3,
+    "workerEnds": 3,
+    "noTargetOverlap": true,
+    "noRemainingProcesses": true,
+    "noAutomaticQuotaContinuation": true
+  }
+}
