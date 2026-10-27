@@ -4,6 +4,8 @@
 
 此前周期请求范围的已执行结果见[部署验证证据](./Deployment-evidence.md)及[结构化记录](./verification/results.json)；这些记录包含 Supervisor 传递依赖，不证明新增退役要求已经满足。退役后须用新的独立安装和执行证据重新验证。
 
+本次新增验证工具会同时安装 Coordinator、pguide 与 pguide-regulate 的生产闭包，检查独立 lockfile 不含两个退役包；从安装包执行 unknown supervise、根 help、补全和保留的 regulate / continue / probe help。周期恢复试验继续使用三个实际 Host 生命周期，不改变已有业务源码。
+
 ## Steps
 
 ### D-S01: 准备独立消费者

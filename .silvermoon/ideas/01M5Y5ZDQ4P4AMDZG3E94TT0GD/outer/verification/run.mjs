@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { platform, release } from "node:os";
-import { join, relative, sep } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CoordinatorModel as M, RequestModel as R } from "@potential-guide/regulation-coordinator";
 import { alive, command, limits, readJson, writeJson } from "./fixture.mjs";
@@ -116,6 +117,39 @@ try {
   assert.equal(compiler.status, 0, compiler.stdout + compiler.stderr);
   const config = readJson(join(root, "tsconfig.json"));
   assert.equal(config.compilerOptions.paths, undefined);
+  const inventory = readJson(join(root, "package-inventory.json"));
+  const lockfile = readFileSync(join(root, "pnpm-lock.yaml"), "utf8");
+  for (const name of ["@potential-guide/objective-portfolio-supervisor", "@potential-guide/pguide-supervise"]) {
+    assert.ok(!inventory.some((entry) => entry.name === name));
+    assert.ok(!lockfile.includes(name), `安装 lockfile 中仍有退役包：${name}`);
+  }
+  const require = createRequire(import.meta.url);
+  const cli = join(dirname(require.resolve("pguide/package.json")), "dist", "bin.js");
+  const settings = { ...process.env, PATH: "" };
+  const cliResults = [];
+  for (const args of [
+    ["supervise", "--format", "json"],
+    ["--help"],
+    ["complete", "--shell", "powershell"],
+    ["regulate", "--help"],
+    ["continue", "--help"],
+    ["probe", "--help"],
+  ]) {
+    const execution = spawnSync(process.execPath, [cli, ...args], {
+      cwd: root, env: settings, encoding: "utf8", windowsHide: true,
+    });
+    const text = execution.stdout + execution.stderr;
+    if (args[0] === "supervise") {
+      assert.equal(execution.status, 2, text);
+      assert.match(text, /Unknown command.*supervise/u);
+      assert.doesNotMatch(text, /pguide-supervise|npm install|pnpm add/u);
+    } else {
+      assert.equal(execution.status, 0, text);
+      assert.doesNotMatch(text, /pguide-supervise|supervise\.agentTimeoutMs/u);
+      if (args[0] === "--help" || args[0] === "complete") assert.doesNotMatch(text, /\bsupervise\b/u);
+    }
+    cliResults.push({ args, exit: execution.status, output: execution.stdout, stderr: execution.stderr });
+  }
   mkdirSync(profile);
   let input = R.reduceRegulationRequests(command("periodic-root", true), R.createRegulationRequests());
   writeJson(join(profile, "input.json"), input);
@@ -219,8 +253,12 @@ try {
     verifiedContractCommit: process.argv[2],
     startedAt, finishedAt: new Date().toISOString(),
     environment: { node: process.version, platform: platform(), release: release(), typescript: readJson(join(root, "node_modules", "typescript", "package.json")).version },
-    packages: readJson(join(root, "package-inventory.json")),
-    consumer: { entries, noSourceAliases: true, typecheckExit: compiler.status },
+    packages: inventory,
+    consumer: {
+      entries, noSourceAliases: true, typecheckExit: compiler.status,
+      coordinatorClosure: readJson(join(root, "coordinator-closure.json")),
+      retiredPackagesAbsent: true, cliResults,
+    },
     hostEpochs: hosts.map(({ epoch, child }) => ({ epoch, pid: child.pid })),
     notifications: final.exhaustion,
     replay: { identicalInitialReads: true, originalEventVisibleAfterRestart: true, deduplicatedExtraRequestRef: extraRef },
