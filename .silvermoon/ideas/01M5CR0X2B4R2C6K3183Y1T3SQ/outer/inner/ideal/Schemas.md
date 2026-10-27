@@ -2,7 +2,15 @@
 
 本文保存规范讨论及逐项评审意见，不是已批准的完整格式设计。局部明确的修改方向与待讨论建议分别记录，不因排列顺序或候选建议而自动定案。
 
-可使用离线 [HTML 评审文档](./Review.html) 逐页阅读用途、用例、示例、TypeScript 类型和 YAML 表达的 JSON Schema，共 12 页。2026-10-21 已将各页更新为源码 `fd591b9ddc2af389151cfdd7bebb0ec5cfd4d0a7` 的当前实现，而非继续展示最初评审快照：Objective Manifest、声明和 Agent 页展示与三份已发布 Schema 相同的定义；Portfolio 与恢复记录同步 objective 字段。未发布格式仍标注解释用草案及简化范围，JSONC 单独标注未实施提案。下方历次评审文字保留讨论过程，当前实现以 HTML、公开 Schema 和三个已完成子 IDEA 的交付证据为准。
+可使用离线 [HTML 评审文档](./Review.html) 阅读当前用途、用例、示例、TypeScript 类型及 YAML 表达的 Schema。2026-10-27 已按提交 `fc47e63bf4eb92953b8bd1d178cd0f1df6ead0b9` 刷新为 18 页：Manifest v3（累计达成与 worker）、已实现 JSONC settings、Portfolio v4、Git v4/npm v5 恢复，以及新增 ObjectiveSource、CheckResult/依赖请求、包级设置描述与注册、Check Host、Coordinator 请求/恢复快照和 YAML 状态测试树。Objective v3、声明和 Agent 三份正式定义与仓库 Schema 一致；其他页标注解释用草案及切片范围，不冒充已发布完整格式。下方历史评审保留原始讨论过程，不再作为当前实现状态；报告以该精确源码为依据，不把旧交付证据自动套用到新版本。
+
+### 本轮相较 2026-10-21 的报告更新
+
+- Objective v1/v2 历史定义保持不可变，当前 active URI 为 v3；initial 内置，terminal 仅为目标别名，check 条件表达达成当前等级而非退出当前等级。
+- JSONC 已实现，不再标为提案：完整 ID、用户/项目浅覆盖、静态默认值、package descriptor、显式注册及 unverified 规则均以当前配置模块为准；值 schema 的当前方言为 Draft 7，与 Objective Draft 2020-12 分开。
+- npm 身份采用实际包名与内容 digest；版本、resolved、integrity、commit 为 provenance。恢复记录按 Git v4/npm v5 分支，不把 Git tree 或 semver 冒充包摘要。
+- Check Host 负责本地有界 worker 执行与状态；CheckResult.requirements 由业务层做真实依赖观察。新 resources-first Coordinator 的请求事实与本机执行事实/持久化分开，不替换既有 Portfolio 服务。
+- 同步期间新增的 test-tree 私有工具以单一 YAML 驱动状态检查与手册；输入字段、binding 与逆序 After 生命周期单列评审，不把手册的 Not run 状态误解为执行证据。
 
 ## 讨论起点
 
