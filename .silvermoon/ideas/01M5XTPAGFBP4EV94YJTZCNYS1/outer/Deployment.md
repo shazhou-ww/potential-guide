@@ -1,6 +1,6 @@
 # Deployment
 
-本阶段验证已接受实施 `9ad453ef66a639deae85a515266671da12a2cd31`
+本阶段验证已接受实施 `8e9b4671cf4f07d31c7a12edddecd27e3793b7ac`
 在真实消费场景中的效果，不发布 npm、不启动公共站点，也不修改已接受的理想世界、
 主体世界或仓库交付物。先将本契约同步到 primary 并记录稳定修订，再开始外部验证。
 
@@ -11,12 +11,13 @@
 从同步后的候选使用同一份 YAML 生成三种输出，在浏览器离线打开 HTML，
 确认树的展开、节点定位和完整路径可读，不依赖开发服务或隐含环境状态。
 从 `packages/test-tree/test/check-host/host.states.yaml` 实际生成终端树、
-Markdown 和 HTML，产物放在本世界新的 `compact-consumption` 目录，保留所有旧快照。
+Markdown 和 HTML，产物放在本世界新的 `readable-consumption` 目录，保留所有旧快照。
 通过真实浏览器工具打开 `file:` HTML，验证原生树折叠/展开，
 选择 cancelled/recovered 状态锚点，阅读进入操作、状态观察、后继状态及退出说明；
 页面按状态呈现，不以 before/after/it 或绑定函数名组织。
-实际展开 Linux/macOS shell 与 Windows PowerShell 原生平台面板，确认准备分别为
-八行/七行创建及复制命令，不要求手写 worker 或 host.mjs。
+实际展开 Linux/macOS shell 与 Windows PowerShell 原生平台面板，
+确认准备有四步目的/操作/结果说明、不执行 Node/JS；
+目录与权限均用系统命令，样例只复制，不要求手写 worker 或 host.mjs。
 记录浏览器实际观察，不以源码字符串断言或测试用例代替；不为展示启动 HTTP 服务。
 
 ### D-S02: 按手册完成真实人工复验
@@ -24,7 +25,8 @@ Markdown 和 HTML，产物放在本世界新的 `compact-consumption` 目录，�
 在隔离目录依手册走通启动、执行、取消清理及一条故障恢复路径，
 不以运行对应自动化测试代替人工操作。保留必要的消费证据，
 隐藏凭据并确认清理只影响本次拥有的资源。
-依生成手册用两个全新 PowerShell 场景复制普通业务样例；在 ready 状态用短
+依生成手册用两个全新 PowerShell 场景建立目录、限制 ACL、检查权限、复制普通业务样例；
+准备不调用 SDK，当前空目录权限成功后才能继续。ready 状态用解释清楚的多行
 connectHost 调用显式隔离 host 子目录，通过真实 discovery 预约启动原始 daemon，
 关闭启动器自己的私有 backend，随后只用真实 host.json、Invoke-RestMethod 和文件命令。
 不使用 REPL、自建 CheckKernel/serve、host.mjs、Test Tree、绑定或手册包装器。
