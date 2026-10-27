@@ -1,0 +1,39 @@
+{
+  "observations": [
+    {
+      "checkId": "held",
+      "state": "Running",
+      "progress": {
+        "entered": true,
+        "marker": "tree-manual",
+        "calls": 1
+      }
+    },
+    {
+      "checkId": "held",
+      "state": "Cancelling"
+    },
+    {
+      "checkId": "held",
+      "state": "Cancelled"
+    }
+  ],
+  "helperCount": 1,
+  "forcedWindowsStop": true,
+  "originalEntry": true,
+  "cleaned": true,
+  "branch": "cancel",
+  "activeCount": 0,
+  "descriptor": "host/host.json",
+  "cleaningObserved": true,
+  "directoryRemoved": true,
+  "helperPids": [
+    43504
+  ],
+  "helpersExited": true,
+  "gracefulShutdownClaimed": false,
+  "daemonPid": 48140,
+  "directory": "D:\\Code\\potential-guide.worktrees\\test-tree-manual-idea\\.cache\\manual-check-host\\case-d907a405-b22c-4af1-9ac9-b51058e44100",
+  "cleanedBeforeRelease": false,
+  "staleDescriptorAfterStop": true
+}

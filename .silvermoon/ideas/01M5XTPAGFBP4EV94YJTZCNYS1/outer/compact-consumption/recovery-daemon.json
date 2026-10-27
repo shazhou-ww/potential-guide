@@ -1,0 +1,33 @@
+{
+  "observations": [
+    {
+      "checkId": "fault",
+      "state": "Failed",
+      "error": "Error: manual injected failure"
+    },
+    {
+      "checkId": "recovery",
+      "state": "Completed",
+      "result": {
+        "marker": "tree-manual",
+        "calls": 2
+      }
+    }
+  ],
+  "sameOriginalFault": true,
+  "helperCount": 1,
+  "forcedWindowsStop": true,
+  "originalEntry": true,
+  "branch": "recovery",
+  "activeCount": 0,
+  "descriptor": "host/host.json",
+  "directoryRemoved": true,
+  "helperPids": [
+    55644
+  ],
+  "helpersExited": true,
+  "gracefulShutdownClaimed": false,
+  "daemonPid": 45724,
+  "directory": "D:\\Code\\potential-guide.worktrees\\test-tree-manual-idea\\.cache\\manual-check-host\\case-fa5d26e8-d870-48ea-adb9-ff22da42cd91",
+  "staleDescriptorAfterStop": true
+}
