@@ -1,0 +1,8 @@
+{
+  "checkId": "recovery",
+  "state": "Completed",
+  "result": {
+    "marker": "tree-manual",
+    "calls": 2
+  }
+}

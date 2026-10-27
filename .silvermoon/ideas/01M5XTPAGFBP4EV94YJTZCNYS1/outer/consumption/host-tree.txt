@@ -1,0 +1,21 @@
+Check Host — Not run — documentation only; bindings and test results are not validated.
+state isolated: 独立场景目录
+  transition_isolated → after
+  state ready: 鉴权 HTTP Host 已就绪
+    transition_ready → after
+    check ready.idle: 活动列表为空
+    state running: 可取消任务已进入执行
+      transition_running → after
+      check running.input: 输入标记、调用次数及活动列表正确
+      state cancelling: 取消已请求、清理仍被屏障保持
+        transition_cancelling → after
+        check cancelling.waiting: 清理完成前没有终态
+        state cancelled: 已取消且资源已释放
+          transition_cancelled → after
+          check cancelled.released: 终态、清理标记与空活动列表一致
+    state faulted: 注入执行异常的预期故障状态
+      transition_faulted → after
+      check faulted.failure: 故障原因可见、活动列表已释放
+      state recovered: 同一 Host 可再次正常执行
+        transition_recovered → after
+        check recovered.result: 真实业务结果与 worker 复用正确

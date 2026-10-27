@@ -1,0 +1,5 @@
+{
+  "checkId": "fault",
+  "state": "Failed",
+  "error": "Error: manual injected failure"
+}
