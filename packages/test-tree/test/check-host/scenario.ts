@@ -209,6 +209,9 @@ export async function inspect(context: Context, name: string) {
       assert.deepEqual(await active(context.client), []);
       break;
     case "recovered":
+      state = await context.client.sample("fault");
+      assert.equal(state.state, "Failed");
+      if (state.state === "Failed") assert.equal(state.error, "Error: manual injected failure");
       state = await context.client.sample("recovery");
       assert.equal(state.state, "Completed");
       if (state.state === "Completed")

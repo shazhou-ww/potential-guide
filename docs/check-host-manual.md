@@ -399,13 +399,14 @@ $case = '替换成 prepare 输出的绝对目录'
 若启动在返回 Ready 前失败，serve 会关闭部分创建的 Host/kernel；失败时保留诊断。
 
 
-#### transition_faulted: 注入业务失败的预期故障状态
+#### transition_faulted: 注入执行异常的预期故障状态
 
 从全新 isolated → ready 路径开始，不执行 running 分支。
 ```powershell
 pnpm exec tsx test\check-host\manual.ts fault "$case"
 ```
-提交 checkId=fault、fail=true；等待 Failed。这是成功进入故障状态，不是框架执行失败。
+提交 checkId=fault、fail=true；等待 Failed。这是执行异常，不是业务结果不通过。
+成功进入预期故障状态不等于测试框架执行失败。
 
 
 ### Check faulted.failure
@@ -475,13 +476,14 @@ $case = '替换成 prepare 输出的绝对目录'
 若启动在返回 Ready 前失败，serve 会关闭部分创建的 Host/kernel；失败时保留诊断。
 
 
-#### transition_faulted: 注入业务失败的预期故障状态
+#### transition_faulted: 注入执行异常的预期故障状态
 
 从全新 isolated → ready 路径开始，不执行 running 分支。
 ```powershell
 pnpm exec tsx test\check-host\manual.ts fault "$case"
 ```
-提交 checkId=fault、fail=true；等待 Failed。这是成功进入故障状态，不是框架执行失败。
+提交 checkId=fault、fail=true；等待 Failed。这是执行异常，不是业务结果不通过。
+成功进入预期故障状态不等于测试框架执行失败。
 
 
 #### transition_recovered: 同一 Host 可再次正常执行
@@ -497,7 +499,9 @@ pnpm exec tsx test\check-host\manual.ts recover "$case"
 ```powershell
 pnpm exec tsx test\check-host\manual.ts inspect "$case" recovered
 ```
-预期 Completed，result={marker:"tree-manual",calls:2}，活动列表 []。
+预期原 checkId=fault 仍为 Failed，error 仍为 Error: manual injected failure，
+没有被重放或改写；新 checkId=recovery 为 Completed，
+result={marker:"tree-manual",calls:2}，活动列表 []。
 
 
 ### Cleanup (reverse order)

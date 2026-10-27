@@ -115,13 +115,14 @@ state:
                         ```
                         预期 Cancelled、controls\cleaned 已存在、GET /checks 返回 []。
         - id: faulted
-          title: 注入业务失败的预期故障状态
+          title: 注入执行异常的预期故障状态
           before: |
             从全新 isolated → ready 路径开始，不执行 running 分支。
             ```powershell
             pnpm exec tsx test\check-host\manual.ts fault "$case"
             ```
-            提交 checkId=fault、fail=true；等待 Failed。这是成功进入故障状态，不是框架执行失败。
+            提交 checkId=fault、fail=true；等待 Failed。这是执行异常，不是业务结果不通过。
+            成功进入预期故障状态不等于测试框架执行失败。
           after: 本步没有新增资源，任务已终结；显式空收尾，Host 资源仍由 ready 负责。
           checks:
             - id: failure
@@ -147,4 +148,6 @@ state:
                     ```powershell
                     pnpm exec tsx test\check-host\manual.ts inspect "$case" recovered
                     ```
-                    预期 Completed，result={marker:"tree-manual",calls:2}，活动列表 []。
+                    预期原 checkId=fault 仍为 Failed，error 仍为 Error: manual injected failure，
+                    没有被重放或改写；新 checkId=recovery 为 Completed，
+                    result={marker:"tree-manual",calls:2}，活动列表 []。

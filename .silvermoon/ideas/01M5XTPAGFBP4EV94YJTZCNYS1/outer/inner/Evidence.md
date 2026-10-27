@@ -43,8 +43,8 @@ pnpm check
 最终结果：
 
 - 工具包及依赖构建通过。
-- 包内 **17/17** 测试通过：六个 YAML 注册的真实 Host 检查、一个独立进程手册命令回归、
-  十个数据/执行/输出/Node 适配测试。整仓并行执行时同样为 17/17，通过时间约 22.5 秒。
+- 首轮包内 **17/17** 测试通过：六个 YAML 注册的真实 Host 检查、一个独立进程手册命令回归、
+  十个数据/执行/输出/Node 适配测试。首轮整仓并行执行时同样为 17/17，通过时间约 22.5 秒。
 - 全仓测试 TypeScript 检查通过；最终 Biome 精确检查 15 个相关文件通过。
 - 真实 package-owned 仓库集成 **2/2** 通过（包括 regulation handoff 子用例）。
 - **`pnpm check` 退出码 0**：层级检查、格式、lint、typecheck、测试及打包消费全链通过；
@@ -62,8 +62,10 @@ esbuild 对既有 CJS 构建中的 `import.meta` 发出警告；根 lint 的 `bi
 - 六个真实路径为 `ready.idle`、`running.input`、`cancelling.waiting`、
   `cancelled.released`、`faulted.failure`、`recovered.result`。
   每个检查独立建立 fixture/Host；祖先探针不被当作后代准入。
-- 业务失败转移成功进入 `Failed`；后续同一 Host 真实执行得到 `Completed`、
-  原输入标记与 `calls=2`，不是只检查端口。
+- 注入执行异常后，转移成功进入预期故障状态 `Failed`；这不是业务结果不通过。
+  后续同一 Host 真实执行得到 `Completed`、原输入标记与 `calls=2`，不是只检查端口；
+  恢复探针同时验证原 `fault` 仍为 `Failed`，原始 `Error: manual injected failure`
+  未被改写，证明旧任务未重放。增加负向回归，拒绝旧任务被写成 Completed 或错误被替换。
 - 取消路径等待 `Cancelling` 与 cleaning 标记；屏障保持时没有 cleaned 标记，
   释放后才得到 `Cancelled`、cleaned 及空活动列表。
 - 部分初始化抛错由转移/helper 自行清理；执行器释放已登记祖先。
@@ -81,3 +83,15 @@ esbuild 对既有 CJS 构建中的 `import.meta` 发出警告；根 lint 的 `bi
 - 一次完整测试因上述自检失败而中断时，Turbo 终止了正在执行的手册子进程；
   仅在确认所记录 PID 已退出后，通过手册 clean 命令删除本次自有场景目录。
 - 上述均为本次接入问题，已修正后再验证；不列为既有问题或静默降级。
+
+## 复审修订验证
+
+- 恢复探针新增对原 `fault` 快照的严格检查：仍为 `Failed`，且原始错误字符串仍为
+  `Error: manual injected failure`。负向用例分别模拟旧任务被写成 Completed、原始错误被替换，
+  即使新任务结果和调用次数正确也必须失败。
+- 修正执行异常与业务结果不通过的术语；YAML 手册同步写明原任务历史不变的观察结果，
+  并重新生成 Markdown/HTML，派生产物一致性验证通过。已接受的理想世界未修改。
+- 复审修订后包内 **18/18** 通过；最终相关 Host 用例 **7/7**、全仓测试类型检查、
+  Biome 检查和 `git diff --check` 通过。
+- 重新运行 **`pnpm check`，退出码 0**，包括全部测试与隔离打包消费；
+  没有新增 flaky 失败，也未执行任何 gate acceptance 或 npm 发布。

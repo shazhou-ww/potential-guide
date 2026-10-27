@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <title>Check Host</title><style>body{font:16px system-ui;max-width:72rem;margin:auto;padding:2rem}details{margin-left:1rem}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#eee;color:#111;padding:1rem;user-select:text}article{border-top:1px solid #888;margin-top:2rem}a{color:#246}</style></head>
-<body><h1>Check Host</h1><p>Not run — documentation only; bindings and test results are not validated.</p><p>Commands are selectable text. This offline page never executes them. Copy into a terminal only after reviewing ownership and cleanup.</p><nav aria-label="State tree"><details open id="state-isolated"><summary>isolated: 独立场景目录</summary><ul></ul><details open id="state-ready"><summary>ready: 鉴权 HTTP Host 已就绪</summary><ul><li><a href="#ready.idle">活动列表为空</a></li></ul><details open id="state-running"><summary>running: 可取消任务已进入执行</summary><ul><li><a href="#running.input">输入标记、调用次数及活动列表正确</a></li></ul><details open id="state-cancelling"><summary>cancelling: 取消已请求、清理仍被屏障保持</summary><ul><li><a href="#cancelling.waiting">清理完成前没有终态</a></li></ul><details open id="state-cancelled"><summary>cancelled: 已取消且资源已释放</summary><ul><li><a href="#cancelled.released">终态、清理标记与空活动列表一致</a></li></ul></details></details></details><details open id="state-faulted"><summary>faulted: 注入业务失败的预期故障状态</summary><ul><li><a href="#faulted.failure">故障原因可见、活动列表已释放</a></li></ul><details open id="state-recovered"><summary>recovered: 同一 Host 可再次正常执行</summary><ul><li><a href="#recovered.result">真实业务结果与 worker 复用正确</a></li></ul></details></details></details></details></nav><article id="ready.idle"><h2>ready.idle: 活动列表为空</h2><p></p><h3>Enter (root → state)</h3><h4>transition_isolated: 独立场景目录</h4><pre>所有命令均在仓库 packages\test-tree 目录执行，先在仓库根执行 pnpm build。
+<body><h1>Check Host</h1><p>Not run — documentation only; bindings and test results are not validated.</p><p>Commands are selectable text. This offline page never executes them. Copy into a terminal only after reviewing ownership and cleanup.</p><nav aria-label="State tree"><details open id="state-isolated"><summary>isolated: 独立场景目录</summary><ul></ul><details open id="state-ready"><summary>ready: 鉴权 HTTP Host 已就绪</summary><ul><li><a href="#ready.idle">活动列表为空</a></li></ul><details open id="state-running"><summary>running: 可取消任务已进入执行</summary><ul><li><a href="#running.input">输入标记、调用次数及活动列表正确</a></li></ul><details open id="state-cancelling"><summary>cancelling: 取消已请求、清理仍被屏障保持</summary><ul><li><a href="#cancelling.waiting">清理完成前没有终态</a></li></ul><details open id="state-cancelled"><summary>cancelled: 已取消且资源已释放</summary><ul><li><a href="#cancelled.released">终态、清理标记与空活动列表一致</a></li></ul></details></details></details><details open id="state-faulted"><summary>faulted: 注入执行异常的预期故障状态</summary><ul><li><a href="#faulted.failure">故障原因可见、活动列表已释放</a></li></ul><details open id="state-recovered"><summary>recovered: 同一 Host 可再次正常执行</summary><ul><li><a href="#recovered.result">真实业务结果与 worker 复用正确</a></li></ul></details></details></details></details></nav><article id="ready.idle"><h2>ready.idle: 活动列表为空</h2><p></p><h3>Enter (root → state)</h3><h4>transition_isolated: 独立场景目录</h4><pre>所有命令均在仓库 packages\test-tree 目录执行，先在仓库根执行 pnpm build。
 使用 Node &gt;=22.13 和 pnpm &gt;=11.22；不要使用用户默认 Host。
 打开 PowerShell A，执行：
 ```powershell
@@ -228,11 +228,12 @@ $case = &#39;替换成 prepare 输出的绝对目录&#39;
 ```
 后续命令在 B 执行。凭据保存在受保护的 manual-host.json；不要打印或复制其内容。
 若启动在返回 Ready 前失败，serve 会关闭部分创建的 Host/kernel；失败时保留诊断。
-</pre><h4>transition_faulted: 注入业务失败的预期故障状态</h4><pre>从全新 isolated → ready 路径开始，不执行 running 分支。
+</pre><h4>transition_faulted: 注入执行异常的预期故障状态</h4><pre>从全新 isolated → ready 路径开始，不执行 running 分支。
 ```powershell
 pnpm exec tsx test\check-host\manual.ts fault &quot;$case&quot;
 ```
-提交 checkId=fault、fail=true；等待 Failed。这是成功进入故障状态，不是框架执行失败。
+提交 checkId=fault、fail=true；等待 Failed。这是执行异常，不是业务结果不通过。
+成功进入预期故障状态不等于测试框架执行失败。
 </pre><h3>Check faulted.failure</h3><pre>```powershell
 pnpm exec tsx test\check-host\manual.ts inspect &quot;$case&quot; faulted
 ```
@@ -269,11 +270,12 @@ $case = &#39;替换成 prepare 输出的绝对目录&#39;
 ```
 后续命令在 B 执行。凭据保存在受保护的 manual-host.json；不要打印或复制其内容。
 若启动在返回 Ready 前失败，serve 会关闭部分创建的 Host/kernel；失败时保留诊断。
-</pre><h4>transition_faulted: 注入业务失败的预期故障状态</h4><pre>从全新 isolated → ready 路径开始，不执行 running 分支。
+</pre><h4>transition_faulted: 注入执行异常的预期故障状态</h4><pre>从全新 isolated → ready 路径开始，不执行 running 分支。
 ```powershell
 pnpm exec tsx test\check-host\manual.ts fault &quot;$case&quot;
 ```
-提交 checkId=fault、fail=true；等待 Failed。这是成功进入故障状态，不是框架执行失败。
+提交 checkId=fault、fail=true；等待 Failed。这是执行异常，不是业务结果不通过。
+成功进入预期故障状态不等于测试框架执行失败。
 </pre><h4>transition_recovered: 同一 Host 可再次正常执行</h4><pre>```powershell
 pnpm exec tsx test\check-host\manual.ts recover &quot;$case&quot;
 ```
@@ -281,7 +283,9 @@ pnpm exec tsx test\check-host\manual.ts recover &quot;$case&quot;
 </pre><h3>Check recovered.result</h3><pre>```powershell
 pnpm exec tsx test\check-host\manual.ts inspect &quot;$case&quot; recovered
 ```
-预期 Completed，result={marker:&quot;tree-manual&quot;,calls:2}，活动列表 []。
+预期原 checkId=fault 仍为 Failed，error 仍为 Error: manual injected failure，
+没有被重放或改写；新 checkId=recovery 为 Completed，
+result={marker:&quot;tree-manual&quot;,calls:2}，活动列表 []。
 </pre><h3>Cleanup (reverse order)</h3><h4>after recovered</h4><pre>本步没有新增资源，显式空收尾；不会把故障历史改写为成功。</pre><h4>after faulted</h4><pre>本步没有新增资源，任务已终结；显式空收尾，Host 资源仍由 ready 负责。</pre><h4>after ready</h4><pre>若启动过 held 任务，先按 running 的 after 释放屏障。
 然后在 A 按 Ctrl+C（或输入 stop 并回车），等待 “Owned Host and workers stopped.”。
 server 停止接收请求，kernel 确认 worker 退出；不使用按名称结束进程。
