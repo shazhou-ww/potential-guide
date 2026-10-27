@@ -47,6 +47,10 @@ No `use`, expressions, embedded executable declarations or implicit name
 conversion. All unknown fields, duplicate YAML keys, duplicate state IDs,
 duplicate per-state check IDs, missing text and YAML aliases are rejected.
 Unsupported YAML tags/warnings are errors rather than silently coerced values.
+`before`, `after` and each check's `doc` accept either text or a complete
+`{ posix: "...", powershell: "..." }` object. Both platform texts must be nonempty;
+unknown keys and incomplete platform objects fail validation. This changes only
+human instructions, not automatic test applicability (`platforms`) or bindings.
 `checks` and `states` may be omitted; at least one check must exist in the tree.
 `platforms` lists Node platform names and restricts all descendant paths.
 Docs retain these nodes and explain the skip; the Node adapter skips them.
@@ -104,15 +108,36 @@ network assets or active Markdown links; all source text is HTML-escaped and a
 restrictive CSP is included. Rendering cannot execute commands. In HTML, fenced code is formatted; all content is escaped, not interpreted as
 trusted HTML. Internal hook and binding names are not used as human-facing headings.
 
+Platform instructions appear in separate native collapsibles labelled
+**Linux / macOS shell** and **Windows PowerShell**, inside each state's enter,
+observation and resource-release areas. They are static HTML, not JavaScript tabs.
+The seven human state articles and stable IDs are unchanged.
+
 See the [Check Host YAML](test/check-host/host.states.yaml),
 [Markdown manual](../../docs/check-host-manual.md) and
 [offline HTML](../../docs/check-host-manual.html). Each manual branch starts from a new owned scenario directory. The instructions
-use a plain Node console from the repository root to call public Check Host APIs
-and raw authenticated HTTP. They do not invoke Test Tree, a test binding, `tsx`,
-or a manual helper. The transparent demonstration worker is created inline,
-not copied from a test fixture. It supplies input for cancellation/fault examples.
+use native Bash/curl/jq or PowerShell/Invoke-RestMethod from the repository root.
+They do not invoke Test Tree, a test binding, `tsx`, a REPL, or a task-command helper.
+The transparent demonstration worker is prepared explicitly once per scene,
+not copied from a hidden fixture or repeated for each state.
 Check Host has no general-purpose start/run/cancel CLI: the manual explicitly
-uses `CheckKernel`, `serve`, `CheckClient` and `fetch`, and does not claim
-to exercise discovery. Tokens never appear in output. The real Host
-has a two-minute execution deadline and a 30-second cleanup deadline; perform
-interactive steps promptly or recreate the scenario after a timeout.
+uses a small visible SDK-only bootstrap for private directory creation,
+`CheckKernel`/`serve`, artifact revision, private connection publication and
+owned-resource shutdown. The daemon entry requires a discovery-owned reservation;
+it is not a standalone service CLI. Tasks, cancellation, observation and barriers
+use the actual HTTP and filesystem interfaces, not the bootstrap.
+
+Linux/macOS instructions require Bash 3.2+, curl 7.55+, jq 1.6+, Node 22.13+
+and pnpm 11.22+, on a filesystem that actually preserves POSIX ownership and
+0700/0600 permissions. WSL's default Windows-drive mounts may be rejected with
+`EPRIVATE`; do not weaken privacy checks or claim a native flow passed there.
+No GNU-only filesystem options are assumed. Windows requires
+PowerShell 5.1+ and the same Node/pnpm versions, but not curl or jq. Native
+platform command tests run where prerequisites exist and otherwise explicitly skip;
+Git Bash is not native Linux/macOS verification. Tokens are neither printed nor
+passed as curl arguments; curl reads a header file inside the private directory.
+The manual Host allows five minutes for execution, one minute for cleanup and
+five minutes of history retention. Stop only the owned foreground process and
+confirm shutdown before deleting its directory; the SDK closes its Windows helper.
+The bootstrap writes a shutdown-confirmation marker only after all SDK releases
+succeed. Directory cleanup requires both that marker and the owned PID's exit.

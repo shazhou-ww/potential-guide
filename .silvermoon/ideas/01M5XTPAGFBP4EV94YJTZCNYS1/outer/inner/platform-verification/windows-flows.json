@@ -1,0 +1,39 @@
+[
+  {
+    "platform": "powershell",
+    "node": "v24.12.0",
+    "branch": "cancel",
+    "pid": 46604,
+    "directory": "D:\\Code\\potential-guide.worktrees\\test-tree-manual-idea\\.cache\\manual-check-host\\case-bc778808-9aed-4896-b34e-c794560884b6",
+    "snapshots": [
+      {
+        "checkId": "held",
+        "state": "Cancelled"
+      }
+    ],
+    "active": []
+  },
+  {
+    "platform": "powershell",
+    "node": "v24.12.0",
+    "branch": "recovery",
+    "pid": 31088,
+    "directory": "D:\\Code\\potential-guide.worktrees\\test-tree-manual-idea\\.cache\\manual-check-host\\case-9ba6d4d3-999b-4a2e-869b-46b0365c47e3",
+    "snapshots": [
+      {
+        "checkId": "fault",
+        "state": "Failed",
+        "error": "Error: manual injected failure"
+      },
+      {
+        "checkId": "recovery",
+        "state": "Completed",
+        "result": {
+          "marker": "tree-manual",
+          "calls": 2
+        }
+      }
+    ],
+    "active": []
+  }
+]

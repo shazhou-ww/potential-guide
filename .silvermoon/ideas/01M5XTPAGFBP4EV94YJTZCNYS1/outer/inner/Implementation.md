@@ -1,12 +1,14 @@
 # Implementation
 
 实现采用私有 workspace `packages/test-tree`，不发布 npm 包。保持已接受的
-`idealRevision=3f01c34df2dd0473a2bb4e500ca9f56e5756c3ce` 及其理想世界文件不变。
+`idealRevision=ba57abb7cb73af0f88665c4e889dbd18e7ad64d9` 及其理想世界文件不变。
 接口、使用方式见 [工具说明](../../../../../packages/test-tree/README.md)，
 验证结果见 [实施证据](./Evidence.md)。
 后续 HTML 命令可移植性反馈及验证见 [命令修订证据](./Portable-manual-evidence.md)。
 后续“人工操作不依赖测试框架、页面按状态展示”的纠偏见 [状态手册修正](./State-manual-evidence.md)；
 该文取代前文证据中已过时的手册包装器方案，历史证据仍保留。
+本轮将大段 Node REPL 改为分平台原生 shell/PowerShell 操作，属于已接受原始命令/API
+体验的实现细化，不改变理想世界；证明见 [分平台手册证据](./Platform-manual-evidence.md)。
 
 ## Steps
 
@@ -19,6 +21,8 @@ transition 调用完成进入操作并返回 after；约定部分初始化由该
 执行入口按约定加载函数导出，不从 YAML 求值代码；after 由 transition 返回而非单独导出绑定。
 `src/model.ts` 严格校验 YAML（包括重复键、非法字段、说明、ID、平台及单个相对 TS 路径），
 `src/runner.ts` 提供每检查独立 context 的路径执行与 Node Test 注册。
+说明字段兼容原有文本，并支持严格的 `posix` / `powershell` 双平台说明对象；
+缺少任一平台、未知平台键或空说明均明确失败，不影响自动化绑定规则。
 测试入口显式提供模块加载器，只接收 YAML 解析出的 Binding TS 绝对文件名，
 使动态测试导入留在测试边界而非生产静态依赖边界；不引入第二份路径或导出注册表。
 
@@ -35,8 +39,11 @@ transition 调用完成进入操作并返回 after；约定部分初始化由该
 HTML 使用原生折叠状态树、稳定锚点、全文转义和 CSP，无脚本或网络资源。
 代码围栏显示为可复制的代码块；页面不展示绑定函数名或 before/after/it 标题。
 所有输出明确标记 Not run；文档结构有效不等于导出有效或自动测试通过。
-人工命令采用独立 Node 控制台中的原始公开 API 与 HTTP，不依赖 shell 专属语法。
-明确 Node .editor 整块执行及等待提示符的用法；不将含 await 的行一次送入 node -i。
+人工说明保留七个状态的组织，每个进入、观察和结束区域都区分 Linux/macOS shell
+与 Windows PowerShell，使用原生 details 折叠，无脚本或网络资产。
+原生操作分别使用 curl/jq 与 Invoke-RestMethod、平台文件和 JSON 命令；
+仅私有目录、SDK 服务启动、revision 和资源关闭保留透明 Node 片段，不提供任务命令包装器。
+明确 Bash 3.2、curl/jq 和 PowerShell 5.1 等依赖；不把 Git Bash 当成 Linux/macOS 原生验证。
 历史消费快照保留，不冒充更新后的页面。
 
 ### I-S03: 以 Check Host 接通代表性路径
@@ -48,7 +55,7 @@ HTML 使用原生折叠状态树、稳定锚点、全文转义和 CSP，无脚�
 CheckKernel、鉴权 HTTP、worker、执行及清理文件屏障，覆盖 ready/running/
 cancelling/cancelled 和独立 faulted/recovered 分支。旧有 CLI 竞争测试保持不变。
 删除容易与原始命令混淆的手册专用 manual.ts 包装器。
-说明直接准备透明的业务 worker，调用公开 CheckKernel/serve/CheckClient/fetch，
+说明直接准备一次透明业务 worker，SDK 只调用公开 CheckKernel/serve 等必要启动 API，
 演示状态进入、观察、屏障释放及已确认关闭后的目录删除，不导入测试绑定/helper。
 明确该手动路径覆盖内核/HTTP/worker，不声称验证 discovery daemon 启动。
 提交同源 Markdown/HTML 派生产物，并用测试验证它们与 YAML 完全一致；
@@ -83,6 +90,8 @@ Markdown 命令块保留格式，HTML 不执行说明中的脚本。
 不得将执行异常混称为业务结果不通过，也不得重放或改写旧任务。
 证明方式：六个 YAML 注册的真实 Host 检查和独立 Node 进程直接执行的文档代码块，
 不导入测试绑定/helper；验证各状态快照、清理标记、故障恢复及目录释放。
-另外核对输出为状态视图而非测试路径、代码不调用测试工具，实际验证 Node REPL 分块执行。
+另外核对输出为状态视图而非测试路径，代码不调用测试工具。
+本轮以实际 Windows PowerShell 完整状态流取代 REPL 证明；有原生 Linux/macOS 环境时
+执行其说明，否则明确报告未原生验证，并对 Bash 兼容性及命令前置条件进行检查。
 运行包内测试、仓库测试类型检查、相关 package-owned 集成及 `pnpm check`，
 将既有失败或环境诊断与本次引入的问题分开记录，不以重跑掩盖失败。

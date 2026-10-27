@@ -1,4 +1,4 @@
-import type { LoadedTree, State } from "./model.js";
+import type { Instructions, LoadedTree, State } from "./model.js";
 
 const status = "Not run — 操作说明，未执行验证。";
 interface StatePath {
@@ -19,6 +19,19 @@ function limitation(path: State[]): string {
     .filter((state) => state.platforms)
     .map((state) => `${state.title}：仅适用于 ${state.platforms?.join(", ")}`)
     .join("；");
+}
+const environments = [
+  ["posix", "Linux / macOS shell"],
+  ["powershell", "Windows PowerShell"],
+] as const;
+function markdownInstructions(value: Instructions): string {
+  if (typeof value === "string") return value;
+  return environments
+    .map(
+      ([key, title]) =>
+        `<details>\n<summary>${title}</summary>\n\n${value[key].trim()}\n\n</details>`,
+    )
+    .join("\n\n");
 }
 export function renderTerminal({ tree }: LoadedTree): string {
   const lines = [`${tree.namespace} — ${status}`];
@@ -57,10 +70,16 @@ export function renderMarkdown({ tree }: LoadedTree): string {
       "",
     );
     if (limitation([...ancestors, state])) lines.push(limitation([...ancestors, state]), "");
-    lines.push("### 如何进入", "", state.before, "", "### 在此状态观察", "");
+    lines.push("### 如何进入", "", markdownInstructions(state.before), "", "### 在此状态观察", "");
     if (!state.checks.length) lines.push("核对上面的准备结果，再选择下一状态。", "");
     for (const check of state.checks)
-      lines.push(`<a id="${state.id}.${check.id}"></a>`, `#### ${check.title}`, "", check.doc, "");
+      lines.push(
+        `<a id="${state.id}.${check.id}"></a>`,
+        `#### ${check.title}`,
+        "",
+        markdownInstructions(check.doc),
+        "",
+      );
     lines.push("### 可以转向的状态", "");
     if (!state.states.length) lines.push("此分支已结束，可按下面的说明退出并释放资源。", "");
     for (const child of state.states) lines.push(`- [${child.title}](#state-${child.id})`);
@@ -68,7 +87,7 @@ export function renderMarkdown({ tree }: LoadedTree): string {
       "",
       "### 结束操作时",
       "",
-      state.after,
+      markdownInstructions(state.after),
       "",
       "完成本层资源收尾后，按到达路径向上处理各层拥有的资源；不要把退出当成业务回滚。",
     );
@@ -82,7 +101,14 @@ function escapeHtml(value: string): string {
   );
 }
 // Only fenced commands are formatted; all content is escaped, never evaluated as HTML.
-function prose(value: string): string {
+function prose(value: Instructions): string {
+  if (typeof value !== "string")
+    return environments
+      .map(
+        ([key, title]) =>
+          `<details class="platform" data-platform="${key}"><summary>${title}</summary>${prose(value[key])}</details>`,
+      )
+      .join("");
   return value
     .split(/(```[^\n]*\n[\s\S]*?```)/g)
     .filter(Boolean)

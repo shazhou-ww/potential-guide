@@ -318,6 +318,46 @@ test("committed Host manuals are exact derivatives of the sole YAML", async () =
     renderHtml(tree),
   );
 });
+test("platform instructions are strict, escaped collapsibles within human state articles", () => {
+  const tree = parseTree(source);
+  tree.state.before = {
+    posix: "```bash\ncurl --fail 'http://127.0.0.1'\n```\n<script>unsafe</script>",
+    powershell: "```powershell\nInvoke-RestMethod 'http://127.0.0.1'\n```",
+  };
+  const parsed = { ...loaded(), tree: parseTree(JSON.stringify(tree)) };
+  const html = renderHtml(parsed);
+  const markdown = renderMarkdown(parsed);
+  for (const output of [html, markdown]) {
+    assert.ok(output.includes("Linux / macOS shell"));
+    assert.ok(output.includes("Windows PowerShell"));
+    assert.ok(output.includes("<details"));
+    assert.ok(!/transition_|before|after/.test(output));
+  }
+  assert.ok(html.includes('data-platform="posix"'));
+  assert.ok(html.includes('data-platform="powershell"'));
+  assert.ok(html.includes("&lt;script&gt;"));
+  assert.ok(!html.includes("<script>"));
+  assert.ok(markdown.includes("```bash\ncurl"));
+  assert.equal((html.match(/<article /g) ?? []).length, 2);
+  for (const before of [
+    { posix: "only" },
+    { posix: "x", powershell: "" },
+    { posix: "x", powershell: "y", linux: "unknown" },
+    [],
+    null,
+  ]) {
+    assert.throws(
+      () =>
+        parseTree(
+          JSON.stringify({
+            ...tree,
+            state: { ...tree.state, before },
+          }),
+        ),
+      /state.before/,
+    );
+  }
+});
 test("documentation CLI never imports exploding binding or overwrites input; bad data fails visibly", async () => {
   const f = await fixture();
   try {

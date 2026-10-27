@@ -2,16 +2,17 @@ import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { parseDocument } from "yaml";
 
+export type Instructions = string | { posix: string; powershell: string };
 export interface Check {
   id: string;
   title: string;
-  doc: string;
+  doc: Instructions;
 }
 export interface State {
   id: string;
   title: string;
-  before: string;
-  after: string;
+  before: Instructions;
+  after: Instructions;
   platforms?: string[];
   checks: Check[];
   states: State[];
@@ -56,6 +57,14 @@ function text(value: unknown, path: string): string {
     throw new Error(`${path}: expected non-empty text`);
   return value;
 }
+function instructions(value: unknown, path: string): Instructions {
+  if (typeof value === "string") return text(value, path);
+  const record = object(value, path, ["posix", "powershell"]);
+  return {
+    posix: text(record.posix, `${path}.posix`),
+    powershell: text(record.powershell, `${path}.powershell`),
+  };
+}
 function id(value: unknown, path: string): string {
   const result = text(value, path);
   if (!identifier.test(result))
@@ -94,8 +103,8 @@ export function parseTree(source: string): Tree {
     const result: State = {
       id: name,
       title: text(r.title, `${path}.title`),
-      before: text(r.before, `${path}.before`),
-      after: text(r.after, `${path}.after`),
+      before: instructions(r.before, `${path}.before`),
+      after: instructions(r.after, `${path}.after`),
       checks: list(r.checks, `${path}.checks`).map((value, index) => {
         const p = `${path}.checks[${index}]`;
         const check = object(value, p, ["id", "title", "doc"]);
@@ -105,7 +114,7 @@ export function parseTree(source: string): Tree {
         return {
           id: name,
           title: text(check.title, `${p}.title`),
-          doc: text(check.doc, `${p}.doc`),
+          doc: instructions(check.doc, `${p}.doc`),
         };
       }),
       states: list(r.states, `${path}.states`).map((v, i) => state(v, `${path}.states[${i}]`)),
