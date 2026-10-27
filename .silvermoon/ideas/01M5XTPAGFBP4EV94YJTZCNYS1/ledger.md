@@ -4,13 +4,13 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 建立双模式 BDD 封装
-- [ ] **I-S02:** 关联 YAML 说明并生成多种视图
+- [ ] **I-S01:** 定义 state/transition 数据与绑定契约
+- [ ] **I-S02:** 从同一 YAML 展开测试并生成文档
 - [ ] **I-S03:** 以 Check Host 接通代表性路径
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 执行语义保持且收集模式无测试副作用
+- [ ] **I-AC01:** 转移与释放语义正确
 - [ ] **I-AC02:** 输出同源且文档错误明确可见
 - [ ] **I-AC03:** Check Host 自动化与路径手册一致
 

@@ -1,269 +1,281 @@
-# 用例与输出示例
+# 用例示例：state、transition 与返回的 after
 
 本文支持 [构想契约](./Idea.md) 和 [预期行为](./Expected-behavior.md)。
-所有文件名、API 与文档命令均为设计示意，尚未实现或确定为最终接口。
-示例只展开取消清理与故障恢复两条路径，不是完整 Check Host 测试清单。
+所有文件名、字段、类型与入口均为设计示意，不是已实现或已确定的最终 API。
+这一版替代“手写 BDD 树加外置说明”的旧示例。
 
-## 1. 内容怎样并列组织
+## 1. 最小文件关系
 
 ```text
-测试区域
-├── host.tree.test.ts       BDD 结构与真实函数绑定
-├── host.manual.yaml        标题、人工操作及检查说明
-└── helpers
-    ├── environment.ts      隔离环境和自有资源收尾
-    ├── transitions.ts      状态转移及必要的准入确认
-    └── checks.ts           只读探针
+host.states.yaml       唯一的状态树、绑定 ID 与人工说明
+bindings.ts            ID 到真实 transition/检查函数的映射
+transitions.ts         调用时进入状态，返回各自的 after
+checks.ts              state 上的只读探针
 ```
 
-封装及渲染工具的包归属留待实施阶段决定，不在本例约定。
-实现模块导入时不能创建 fixture 或启动服务。
+测试适配读取 YAML 和注册表；HTML/Markdown/终端输出器只读取 YAML。
+不再维护手写 describe/it 树。测试源码可按需生成，也可以在运行时展开。
 
-## 2. 树文件示意
+## 2. 一份 YAML 同时描述结构和说明
+
+下面只展开启动和取消清理路径；其余故障路径按相同结构添加。
+before/after 字段是 Markdown 人工说明，不是独立的可执行 hook。
+
+```yaml
+namespace: check-host
+state:
+  id: initial
+  title: 尚未建立测试环境
+  transitions:
+    - id: prepare
+      use: environment.prepare
+      before: |
+        准备独立的 Host 目录、演示 Objective 和控制文件目录。
+        记录本次目录及资源所有权；不连接用户默认 Host。
+      after: |
+        无论检查成功或失败，都先释放遗留的控制屏障。
+        确认自有进程退出后删除本场景目录，保留必要的失败诊断。
+      state:
+        id: isolated
+        title: 隔离环境已准备，Host 尚未启动
+        transitions:
+          - id: connect
+            use: host.start
+            before: |
+              设置本场景的 PGUIDE_CHECK_HOST_DIRECTORY。
+              通过 CLI 启动 Host，并通过鉴权 GET /checks 确认就绪。
+              仅 PID 存在不表示已经就绪。
+            after: |
+              停止本次启动并记录的 Host，等待确认退出。
+              不停止其他实例，不把描述文件中的 token 写入报告。
+            state:
+              id: ready
+              title: Host 可用
+              checks:
+                - id: idle
+                  use: host.checkIdle
+                  title: 活动任务为空
+                  doc: 查询 GET /checks，预期 HTTP 200、JSON 空数组。
+              transitions:
+                - id: start-task
+                  use: task.startHeld
+                  before: |
+                    提交可取消的演示任务，保持执行和清理屏障。
+                    记录 checkId，等待已进入执行的进度及 Running 快照。
+                  after: |
+                    释放本任务可能阻塞的屏障。
+                    若任务仍活跃则请求取消，并确认任务资源已收尾。
+                  state:
+                    id: running
+                    title: 任务 Running
+                    checks:
+                      - id: input
+                        use: task.checkInput
+                        title: 输入正确且只执行一次
+                        doc: 核对当前快照的输入标记、调用计数及活动列表。
+                    transitions:
+                      - id: cancel
+                        use: task.cancel
+                        before: |
+                          对本次 checkId 发送 POST /checks/{checkId}/cancel。
+                          等待 worker 进入延迟清理，保持清理屏障。
+                        after: 本步未获得新资源，无额外清理；任务资源由 start-task 收尾。
+                        state:
+                          id: cancelling
+                          title: 任务 Cancelling
+                          checks:
+                            - id: not-terminal
+                              use: task.checkCancelling
+                              title: 清理完成前没有终态
+                              doc: 确认 Cancelling，清理完成标记尚不存在。
+                          transitions:
+                            - id: release-cleanup
+                              use: task.releaseCleanup
+                              before: 释放本次清理屏障，等待任务终态及清理完成标记。
+                              after: 本步未获得新资源，无额外清理。
+                              state:
+                                id: cancelled
+                                title: 任务 Cancelled
+                                checks:
+                                  - id: released
+                                    use: task.checkReleased
+                                    title: 已取消且资源已释放
+                                    doc: |
+                                      确认 Cancelled、清理完成标记及活动列表不含该任务。
+                                      发出终止请求本身不等于资源已经退出。
+```
+
+YAML 中节点 id 与 use 分别表达“这次出现在哪里”和“调用哪个实现”。
+最终稳定定位可结合 namespace 与出现路径，不依赖展示标题。
+fixture 准备、提交及屏障控制的具体命令在实施阶段补齐，示例不是完整可运行手册。
+
+## 3. 函数注册表示意
 
 ```ts
-import { afterEach, beforeEach, describe, it, loadManual } from "./tree-bdd.js";
-import { createEnvironment, disposeEnvironment } from "./helpers/environment.js";
-import {
-  connectThroughCli,
-  startHeldTask,
-  cancelTask,
-  releaseCleanup,
-  crashWorker,
-  executeRecoveryTask,
-} from "./helpers/transitions.js";
-import {
-  checkReady,
-  checkRunning,
-  checkCancelling,
-  checkResourcesReleased,
-  checkWorkerFailed,
-  checkRecoveryCompleted,
-} from "./helpers/checks.js";
+export const transitions = {
+  "environment.prepare": prepareEnvironment,
+  "host.start": startHost,
+  "task.startHeld": startHeldTask,
+  "task.cancel": cancelTask,
+  "task.releaseCleanup": releaseCleanup,
+};
 
-const m = loadManual(new URL("./host.manual.yaml", import.meta.url));
-
-describe(m.environment, () => {
-  beforeEach(createEnvironment, m.prepare);
-  afterEach(disposeEnvironment, m.dispose);
-
-  describe(m.ready, () => {
-    beforeEach(connectThroughCli, m.connect);
-    it(m.readyProbe, checkReady);
-
-    describe(m.running, () => {
-      beforeEach(startHeldTask, m.start);
-      it(m.runningProbe, checkRunning);
-
-      describe(m.cancelling, () => {
-        beforeEach(cancelTask, m.cancel);
-        it(m.cancellingProbe, checkCancelling);
-
-        describe(m.cancelled, () => {
-          beforeEach(releaseCleanup, m.release);
-          it(m.cleanupProbe, checkResourcesReleased);
-        });
-      });
-
-      describe(m.workerFailed, () => {
-        beforeEach(crashWorker, m.crash);
-        it(m.failureProbe, checkWorkerFailed);
-
-        describe(m.recovered, () => {
-          beforeEach(executeRecoveryTask, m.recover);
-          it(m.recoveryProbe, checkRecoveryCompleted);
-        });
-      });
-    });
-  });
-});
+export const checks = {
+  "host.checkIdle": checkIdle,
+  "task.checkInput": checkInput,
+  "task.checkCancelling": checkCancelling,
+  "task.checkReleased": checkReleased,
+};
 ```
 
-树里没有 HTTP、轮询、断言或文件操作的实现。
-hook 实现包含进入目标状态所需的确认；it 只做探针。
-包装器原生 options 的重载形式、类型推导和 YAML 校验方式留待实施阶段确定。
+注册表只是绑定，不再描述树，也不在导入时启动服务。
+自动测试入口在执行前验证全部 use 的存在与角色；文档入口完全不导入该注册表。
 
-## 3. 对应 YAML 示意
+## 4. 一个 transition 的形态
 
-以下命名空间与 entries 的布局只是示意；重点是稳定键和长说明不占据树文件。
-步骤中出现的变量属于本次人工场景，不是从自动化内存中隐式取得的值。
+```ts
+type After = () => void | Promise<void>;
+type Transition<C> = (context: C) => After | Promise<After>;
 
-````yaml
-namespace: check-host
-entries:
-  environment:
-    title: 独立环境，Host 尚未启动
-    doc: 每条路径从新的隔离环境开始，不连接用户默认 Host。
-  prepare:
-    doc: |
-      准备独立的 Host 目录、演示 Objective、Subject 和控制文件目录。
-      记录仓库、固定 commit、CLI 入口及各目录的绝对路径。
-      控制文件不得混放进 Host 的私有元数据目录。
-      演示 fixture 的确切准备命令在实施阶段补齐。
-  dispose:
-    doc: |
-      无论检查成功还是失败，都先释放本场景可能阻塞的执行及清理屏障。
-      仅停止本场景记录且确认属于自己的 Host/辅助进程。
-      确认退出后删除本场景目录，保留失败诊断但隐藏凭据。
-  ready:
-    title: 经 CLI 连接，Host 可用
-  connect:
-    doc: |
-      设置 PGUIDE_CHECK_HOST_DIRECTORY 为本场景的 Host 目录。
-      使用固定 commit 的演示 Objective 执行 probe。
-      等待 CLI 完成，再读取 host.json 并通过鉴权 GET /checks 确认可用。
-      不能仅凭 PID 存在就认为 Host 已就绪。
-  readyProbe:
-    title: Host 就绪且活动任务为空
-    doc: |
-      查询 GET /checks，预期 HTTP 200、JSON 数组为空。
-      描述文件中的地址必须为本机回环地址；不要把 token 打印到报告。
-  running:
-    title: 提交受控任务，任务 Running
-  start:
-    doc: |
-      提交可取消的演示 worker，保持执行屏障未释放。
-      worker 的延迟清理由另一屏障控制，不能与执行屏障合并。
-      记录本次 checkId，等待 worker 的已进入执行进度，再确认 Running。
-      fixture 的可执行提交命令和屏障路径在实施阶段补齐。
-  runningProbe:
-    title: 输入正确且只执行一次
-    doc: |
-      查询当前 checkId 的快照，确认 Running 和约定的输入标记。
-      核对调用计数及活动列表；不要通过再提交任务来完成这个检查。
-  cancelling:
-    title: 请求取消，任务 Cancelling
-  cancel:
-    doc: |
-      对本次 checkId 发送 POST /checks/{checkId}/cancel。
-      等待 worker 确认进入延迟清理；保持清理屏障未释放。
-  cancellingProbe:
-    title: 清理完成前没有终态
-    doc: |
-      查询任务快照，预期仍为 Cancelling。
-      清理完成标记尚不存在，不能提前报告 Cancelled 或 Completed。
-  cancelled:
-    title: 释放清理，任务 Cancelled
-  release:
-    doc: |
-      只释放本次任务的清理屏障，等待任务进入终态。
-      记录清理完成标记，并确认 worker 已完成约定的资源收尾。
-  cleanupProbe:
-    title: 任务取消且资源已释放
-    doc: |
-      查询任务，预期 Cancelled；检查清理完成标记。
-      活动列表不含该任务，任务拥有的资源已经释放。
-      “发出了终止请求”本身不是资源退出的证据。
-  workerFailed:
-    title: 注入 worker 退出，任务 Failed
-  crash:
-    doc: |
-      通过演示 fixture 的受控故障入口使目标 worker 退出。
-      不使用仅凭 Host PID 的终止命令，以免误杀整个服务。
-      等待目标任务 Failed，并保留原 checkId。
-  failureProbe:
-    title: 执行故障明确可见
-    doc: |
-      确认任务为 Failed，而不是 Completed 或永久 Running。
-      确认 Host 仍可响应查询。
-  recovered:
-    title: 同一 artifact 再次执行，新任务 Completed
-  recover:
-    doc: |
-      使用相同的 artifact 目录与 revision，提交正常任务，使用新 checkId。
-      等待新任务终态；不能仅换到另一份从未故障的 artifact 证明恢复。
-  recoveryProbe:
-    title: 新任务成功，旧任务未重放
-    doc: |
-      新任务为 Completed 且结果正确；原任务仍为原来的 Failed。
-      通过约定的线程与调用记录确认使用了健康执行环境，没有重放旧任务。
-````
+const startHost: Transition<Context> = async (context) => {
+  const host = await launchOwnedHost(context);
+  try {
+    await waitForAuthenticatedReadiness(host);
+    context.host = host;
+  } catch (error) {
+    try {
+      await stopOwnedHost(host);
+    } catch (cleanupError) {
+      throw new AggregateError([error, cleanupError], "进入失败且清理失败");
+    }
+    throw error;
+  }
 
-缺少 doc 的状态标题可以作为分组说明；实际操作、探针和清理的人工说明不能缺失。
-这个区分需在实施时明确校验，不把有标题误认为有完整操作文档。
-
-## 4. 总览输出示意
-
-- 独立环境，Host 尚未启动
-  - 经 CLI 连接，Host 可用
-    - 检查：Host 就绪且活动任务为空
-    - 提交受控任务，任务 Running
-      - 检查：输入正确且只执行一次
-      - 请求取消，任务 Cancelling
-        - 检查：清理完成前没有终态
-        - 释放清理，任务 Cancelled
-          - 检查：任务取消且资源已释放
-      - 注入 worker 退出，任务 Failed
-        - 检查：执行故障明确可见
-        - 同一 artifact 再次执行，新任务 Completed
-          - 检查：新任务成功，旧任务未重放
-
-终端和 Markdown 可直接显示这棵树；HTML 将同一结构作为可折叠导航。
-节点标识来自稳定键及出现路径，不依赖这些展示标题。
-
-## 5. 选中“任务取消且资源已释放”后的手册
-
-页面应自动组合以下内容，而不是让使用者自己打开各层说明拼接：
-
-1. **准备独立环境**：展示 prepare，列出本次需要填写的输入及 fixture 准备方法。
-2. **经 CLI 启动 Host**：展示 connect，包含鉴权就绪的准入确认。
-3. **提交受控任务**：展示 start，记录 checkId，确认 Running 且屏障仍保持。
-4. **请求取消**：展示 cancel，确认进入延迟清理，不释放清理屏障。
-5. **释放清理**：展示 release，等待确认终态。
-6. **当前探针**：展示 cleanupProbe，检查 Cancelled、清理标记及活动列表。
-7. **无论成功或失败均执行的收尾**：展示 dispose。
-
-readyProbe、runningProbe、cancellingProbe 是其他 it，不自动加入这份路径。
-必要的状态确认已经由 connect、start、cancel 的准入说明明确提供。
-
-故障恢复路径同理：prepare → connect → start → crash → recover →
-recoveryProbe → dispose。成功进入 Failed 状态不是阻断后续恢复步骤的理由。
-
-## 6. 人工命令块的展示形式
-
-例如已经完成准备且拥有本场景地址之后，鉴权查询可以展示为：
-
-```powershell
-$address = Get-Content -Raw -LiteralPath (Join-Path $hostDirectory 'host.json') |
-  ConvertFrom-Json
-$headers = @{ Authorization = "Bearer $($address.token)" }
-Invoke-RestMethod -Uri "$($address.endpoint)/checks" -Headers $headers
+  return async () => {
+    await stopOwnedHost(host);
+  };
+};
 ```
 
-取消指定任务可以展示为：
+这段代码仅示意资源责任，helper 和 Context 不在此定义。
+launchOwnedHost 自身若在返回前失败，也必须负责它已获取的部分资源。
+返回 after 的闭包持有确切实例，不在收尾时从可变 context 猜测要停止哪个进程。
 
-```powershell
-Invoke-RestMethod -Method Post `
-  -Uri "$($address.endpoint)/checks/$checkId/cancel" -Headers $headers
+取消任务本身不新增资源时，可以返回空操作：
+
+```ts
+const cancelTask: Transition<Context> = async (context) => {
+  await requestCancellationAndConfirmCleanupEntered(context);
+  return () => {};
+};
 ```
 
-这些片段对应现有 HTTP 操作，但不是可直接从零执行的完整手册：
-`$hostDirectory`、`$checkId`、fixture 与 artifact 身份必须先由前置步骤取得。
-最终生成页面应明确列出所需变量、准备命令、预期响应和等待条件，
-不能隐藏在“请阅读 helper”里。
+这里的空操作是明确的“本步无额外释放责任”，不是清理错误的吞错 fallback。
+startHeldTask 仍负责它获得的任务和屏障。
 
-## 7. HTML 页面阅读示意
+## 5. 自动测试怎样执行一条路径
 
-- 页面左侧：上面的状态树，可折叠、查找和直接定位。
-- 页面右侧：
-  - 当前节点标题、稳定引用和平台要求。
-  - 当前节点的 Markdown 说明。
-  - 可切换到完整操作路径，包含命令块、检查点与最终清理。
-- 不适用分支仍可见并说明原因；例如 Windows 强制结束进程不能冒充 POSIX 优雅信号关闭。
-- 没有执行测试时显示“文档视图”，不显示虚假的通过标记。
-- 页面不启动服务、不提交任务；说明中的命令只能由人明确执行。
+选择 cancelled state 上的 released 检查，每次运行都重新建立 context：
 
-## 8. 建议验证这些定义行为
+```text
+environment.prepare()    → 保存 after prepare
+host.start()             → 保存 after connect
+task.startHeld()         → 保存 after start-task
+task.cancel()            → 保存 after cancel
+task.releaseCleanup()    → 保存 after release-cleanup
+task.checkReleased()
+
+after release-cleanup
+after cancel
+after start-task
+after connect
+after prepare
+```
+
+生成/展开的 Node Test 可以将每层 transition 注册到 beforeEach，
+并在对应层收尾时调用这次返回的 after；YAML 不需要出现这些底层 hook 名称。
+after 的登记、错误聚合及其他实现细节留待实施阶段确定。
+
+若 host.start 返回前失败：它清理自己的部分初始化，然后执行已登记的 after prepare。
+若 task.checkReleased 失败：仍执行全部已登记 after。
+若 after start-task 失败：继续 after connect 和 after prepare，并保留所有错误。
+
+ready/idle、running/input、cancelling/not-terminal 是独立测试，
+不会自动串到这条路径中；必要前置确认已经由相应 transition 提供。
+
+## 6. 同一 YAML 的人工输出
+
+- state：尚未建立测试环境
+  - transition：准备隔离环境
+    - state：隔离环境已准备，Host 尚未启动
+      - transition：启动并确认 Host
+        - state：Host 可用
+          - 检查：活动任务为空
+          - transition：提交受控任务
+            - state：任务 Running
+              - 检查：输入正确且只执行一次
+              - transition：请求取消
+                - state：任务 Cancelling
+                  - 检查：清理完成前没有终态
+                  - transition：释放清理
+                    - state：任务 Cancelled
+                      - 检查：已取消且资源已释放
+
+HTML 中选择最后一个检查，展示：
+
+1. prepare、connect、start-task、cancel、release-cleanup 的 before，按进入顺序排列。
+2. released 的检查说明。
+3. release-cleanup、cancel、start-task、connect、prepare 的 after，按逆序排列。
+
+没有额外清理的步骤明确标注即可，不伪造业务状态回滚。
+人工说明必须给出命令、变量来源、完成条件和失败收尾，不能只列函数名。
+
+## 7. 故障与恢复怎么写
+
+在 running state 的 transitions 中再放一个同级分支：
+
+```yaml
+- id: crash-worker
+  use: task.crashWorker
+  before: 通过受控演示入口使目标 worker 退出，确认目标任务 Failed。
+  after: 本步无新增资源；保留原任务 ID，任务资源仍由上层转移收尾。
+  state:
+    id: failed
+    title: 任务 Failed，Host 仍可用
+    checks:
+      - id: explicit-failure
+        use: task.checkWorkerFailed
+        title: 执行故障明确可见
+        doc: 确认任务 Failed，不是业务不通过或永久 Running，Host 仍可响应查询。
+    transitions:
+      - id: recover
+        use: task.executeRecovery
+        before: 使用同一 artifact 目录及 revision、新 checkId 执行正常任务。
+        after: 清理本次恢复任务可能留下的自有资源。
+        state:
+          id: recovered
+          title: 新任务 Completed
+          checks:
+            - id: no-replay
+              use: task.checkRecovery
+              title: 恢复成功且旧任务未重放
+              doc: 确认新结果正确、原任务仍为原 Failed，且使用健康执行环境。
+```
+
+这是 YAML 数据片段，不是宣称对应函数已经存在。
+进入 Failed 是预期的服务状态，不能据此自动阻断恢复分支。
+
+## 8. 之后应证明的行为
 
 | 场景 | 预期 |
 | --- | --- |
-| 文档模式加载本例 | 有完整树，所有转移及探针调用次数为零，没有 fixture |
-| 自动模式执行最深路径 | 每个 it 重新准备环境，父到子 setup、子到父清理 |
-| runningProbe 失败 | 不自动阻断后面的取消测试；后者重新建立自己的 Running 状态 |
-| start 无法建立 Running | 本次依赖它的子层操作不执行，按实际资源状态清理 |
-| cancel 条目不存在 | 明确报告 YAML 引用缺失，不输出一份看似完整的手册 |
-| 准入说明与单独 it 同时存在 | 路径只组合 hook 的准入说明和当前 it，不串入其他探针 |
-| 注入 worker 故障 | Failed 节点可被检查，恢复节点仍能进入 |
-| 修改 ready 的 title | 展示文字改变，文档关联与稳定定位保持不变 |
+| HTML 消费同一 YAML | 有完整树与人工路径，不导入注册表，不调用 transition、检查或 after |
+| 自动测试消费同一 YAML | 每个检查重新进入路径，正序 transition、逆序 after |
+| transition 部分失败 | 本步收尾部分资源，祖先 after 仍执行 |
+| 探针失败或某个 after 失败 | 其余清理继续，原始错误与清理错误均可见 |
+| 未知 use 或角色不匹配 | 测试入口在业务副作用发生前报错 |
+| 重复 YAML 键或歧义节点身份 | 数据校验报错，不少生成一个分支充当成功 |
+| 同一 transition 绑定用于多个分支 | 各自持有返回的 after，不共享另一条路径的资源 |
+| 修改标题 | 展示文字改变，节点身份及绑定保持稳定 |
 
-这里列的是之后应证明的结果，不是本轮已经通过的自动化或人工验证记录。
+以上是预期用例形态，不是本轮已完成的实现或验证记录。
