@@ -1,14 +1,14 @@
 # 验证外部消费者的周期请求闭环
 
-依据为已接受的[构想](./inner/ideal/Idea.md)及实现。先同步本文及[验证工具](./verification/run.mjs)，再在工作区外执行；结果另记外部证据，不以仓库单元测试替代现实验证。
+依据为[构想](./inner/ideal/Idea.md)及对应实现。先同步本文及[验证工具](./verification/run.mjs)，再在工作区外执行；结果另记外部证据，不以仓库单元测试替代现实验证。
 
-已执行结果、环境和限制见[部署验证证据](./Deployment-evidence.md)及[结构化记录](./verification/results.json)。
+此前周期请求范围的已执行结果见[部署验证证据](./Deployment-evidence.md)及[结构化记录](./verification/results.json)；这些记录包含 Supervisor 传递依赖，不证明新增退役要求已经满足。退役后须用新的独立安装和执行证据重新验证。
 
 ## Steps
 
 ### D-S01: 准备独立消费者
 
-使用 pnpm pack 打包 Coordinator 及其内部生产依赖，在会话目录的新消费者中通过本地 tarball override 安装，固定 TypeScript 5.9.3 与 Node 类型 22.20.5。执行无 paths 的 NodeNext 严格类型检查，核实运行时入口位于独立安装目录，记录 tarball SHA-256、实际版本与环境。不得发布 npm、改设备配置或调用付费 Agent。
+使用 pnpm pack 打包退役完成后的 Coordinator 及内部生产依赖，在工作区外的新消费者中通过本地 tarball override 安装。严格检查安装闭包无两个退役包、类型与实际入口可用，并验证当前 CLI 分发与发现不再交付 supervise。固定编译器及实际版本，记录 tarball SHA-256 与环境；不得发布 npm、改设备配置或调用付费 Agent。
 
 ### D-S02: 演练追加投入与恢复
 
@@ -18,7 +18,7 @@
 
 ### D-AC01: 外部可用且无需内置规划者
 
-由独立安装清单、包入口路径检查及编译器退出 0 证明，通过公共 API 可提交普通与周期请求、读取后继及耗尽事实，不实例化 Portfolio Planner 或内置上层 Agent。既有纯 helper 的传递包依赖不冒充已移除。
+由全新独立安装清单、包入口路径检查及编译器退出 0，证明 Coordinator 闭包不再包含 objective-portfolio-supervisor 或 pguide-supervise；普通与周期请求、后继及耗尽能力可用，无内置 Planner。当前 CLI 发现和指引明确反映 supervise 已退役，既有单次治理能力可用。
 
 ### D-AC02: 追加决策与恢复有真实证据
 

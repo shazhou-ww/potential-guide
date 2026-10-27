@@ -1,6 +1,6 @@
 # 实现统一请求与周期后继
 
-语义依据为已接受的[构想及配套原则](./ideal/Idea.md)。实现边界、兼容选择及验证证据见[实施说明](./Recurrence-implementation.md)；本阶段不开展独立外部部署验收。
+语义依据为[构想及配套原则](./ideal/Idea.md)。周期请求的既有实现证据见[实施说明](./Recurrence-implementation.md)，仅证明追加退役要求之前的范围；新增退役范围等待修订构想验收后实施。本阶段不开展独立外部部署验收。
 
 ## Steps
 
@@ -14,7 +14,7 @@
 
 ### I-S03: 更新关联视图与验证
 
-更新公共类型、Host / Request 视图、包文档、包出口消费者和受控时钟测试。旧 legacy API 与纯 helper 依赖保留，不删除仍有消费者的 Supervisor 包，不实现上层 Agent、MCP server 或跨 Host 一致性。
+更新公共类型、Host / Request 视图、包文档、包出口消费者和受控时钟测试。新增范围迁出 Supervisor 中必要的 helper / 类型后删除 objective-portfolio-supervisor、pguide-supervise 两包；处理 CLI 发现、settings、依赖、lockfile、项目引用、发布清单、workflow 及当前文档。保留 Coordinator legacy API，不实现替代 Planner、MCP server 或跨 Host 一致性。
 
 ## Acceptance criteria
 
@@ -28,4 +28,4 @@
 
 ### I-AC03: 公共接口与仓库行为一致
 
-通过类型消费者及相关视图测试、文档示例和 pnpm check 证明公共行为与约定一致，既有一次性能力及明确保留的兼容入口未被意外改变。
+通过类型消费者、视图及相关 CLI 测试、活跃依赖和发布面检查、文档示例和 pnpm check，证明两包及旧 supervise 入口已退役，Coordinator 无旧包依赖且历史键与回放兼容，保留的 Pilot / Regulator / Coordinator 能力未被意外改变。旧证据不作为退役完成证明。

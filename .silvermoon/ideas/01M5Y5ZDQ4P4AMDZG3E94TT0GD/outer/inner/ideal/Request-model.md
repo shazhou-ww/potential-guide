@@ -9,7 +9,7 @@
 - Regulator 在单次执行限制内观察、改善并重新验证；Pilot 提供真实观察。
 - MCP 可以是 Coordinator 的外部适配入口，但不是领域模型或调度器生命周期；本 Idea 不交付 MCP server。
 
-现有 Supervisor 中仍被复用的 helper、类型和兼容入口须在实施时盘点。职责收敛不等于立即删除旧包或把所有旧接口接到新服务。
+新增范围要求迁出仍被复用的 helper 和类型，随后删除旧 Supervisor 及 supervise 包；不把旧 Planner 接到新服务，也不以空兼容壳保留被退役包。具体边界见[Supervisor 退役](./Supervisor-retirement.md)。
 
 ## 请求是一份不可变的派发意图
 
