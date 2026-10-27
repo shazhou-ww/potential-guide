@@ -263,7 +263,7 @@ test("missing and non-function exports are diagnosed before transitions; invalid
   );
   assert.deepEqual(log, ["ancestor clean"]);
 });
-test("three outputs preserve path identity and prose; HTML is literal, escaped and offline", () => {
+test("three outputs show states and observations rather than per-test setup/teardown paths", () => {
   const tree = loaded();
   const terminal = renderTerminal(tree);
   const markdown = renderMarkdown(tree);
@@ -271,15 +271,23 @@ test("three outputs preserve path identity and prose; HTML is literal, escaped a
   for (const path of paths(tree.tree)) {
     for (const output of [terminal, markdown, html]) assert.ok(output.includes(path.id));
   }
-  const child = markdown.slice(markdown.indexOf("## child.probe"));
-  assert.ok(child.indexOf("enter root") < child.indexOf("enter child"));
-  assert.ok(child.indexOf("leave child") < child.indexOf("leave root"));
+  const child = markdown.slice(markdown.indexOf("## 状态：Child"));
+  assert.ok(child.includes("enter child"));
+  assert.ok(child.includes("leave child"));
+  assert.ok(!child.includes("enter root"));
   assert.ok(!child.includes("parent-only probe"));
+  assert.equal((html.match(/<article /g) ?? []).length, 2);
+  assert.ok(html.includes('id="state-root"'));
+  assert.ok(html.includes('id="state-child"'));
+  assert.ok(html.includes('id="child.probe"'));
+  assert.ok(html.includes("在此状态观察"));
+  assert.ok(html.includes("可以转向的状态"));
+  assert.ok(!/Enter \(root|Cleanup \(reverse|transition_|<h4>after /.test(html));
   assert.ok(markdown.includes("```powershell\nWrite-Output '<script>alert(\"x\")</script>'\n```"));
   assert.ok(!html.includes("<script>"));
   assert.ok(html.includes("&lt;script&gt;"));
   assert.ok(html.includes("<details"));
-  assert.ok(html.includes('href="#child.probe"'));
+  assert.ok(html.includes('href="#state-child"'));
   assert.ok(html.includes("default-src 'none'"));
   assert.ok(html.includes("Not run"));
   assert.ok(!/https?:\/\//.test(html));

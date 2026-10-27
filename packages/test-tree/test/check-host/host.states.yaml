@@ -2,153 +2,231 @@ namespace: Check Host
 binding: ./host.binding.ts
 state:
   id: isolated
-  title: 独立场景目录
+  title: 独立操作环境已准备
   before: |
-    所有命令均在仓库根目录执行，先执行 pnpm build。
-    使用 Node >=22.13 和 pnpm >=11.22；不要使用用户默认 Host。
-    以下单行命令不依赖 shell 变量、管道、重定向或续行，可用于 PowerShell、cmd、bash 和 zsh。
-    打开终端 A，执行：
-    ```text
-    pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts prepare
+    本手册使用 Check Host 包的公开 API 与 HTTP 接口，不运行 Test Tree、测试绑定或测试 helper。
+    Check Host 守护进程入口需要 discovery 的启动预约，并没有通用的 start/run/cancel 命令；
+    这里直接用公开的 CheckKernel、serve、CheckClient 建立同等真实服务，明确不覆盖 discovery。
+    准备 Node >=22.13、pnpm >=11.22，在仓库根执行 pnpm build，再执行 node 打开交互控制台。
+    后面的 JavaScript 块都在这个 Node 控制台中执行，不使用 shell 变量：
+    每块先输入 .editor 并回车，粘贴代码（不含代码块围栏），按 Ctrl+D 执行，
+    等待它完成并重新出现 > 提示符后再进行下一块。不要把全部含 await 的行一次管道送进 node -i。
+    每条分支从新的 node 控制台和新的场景开始；按块执行，不要重复声明同名 const。
+    以下操作创建独立目录及一段透明的演示 worker；worker 只是业务输入，不含测试框架。
+    ```js
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const api = await import("./packages/check-host/dist/index.js");
+    const scratch = path.resolve(".cache", "manual-check-host");
+    await fs.mkdir(scratch, { recursive: true });
+    const directory = await api.createPrivateDirectory(scratch, "case-");
+    const artifactDirectory = path.join(directory, "artifact");
+    const controls = path.join(directory, "controls");
+    await fs.mkdir(artifactDirectory);
+    await fs.mkdir(controls);
+    let kernel;
+    let host;
+    let client;
+    let headers;
+    let closed = false;
+    await fs.writeFile(path.join(artifactDirectory, "worker.cjs"), String.raw`
+    const fs = require("node:fs/promises");
+    const path = require("node:path");
+    let calls = 0;
+    exports.execute = async (subject, context) => {
+      const count = ++calls;
+      if (subject.fail) throw new Error("manual injected failure");
+      if (subject.hold) {
+        context.defer(async () => {
+          await fs.writeFile(path.join(subject.controls, "cleaning"), "entered");
+          for (;;) {
+            try { await fs.access(path.join(subject.controls, "release")); break; }
+            catch (error) {
+              if (error.code !== "ENOENT") throw error;
+              await new Promise(resolve => setTimeout(resolve, 20));
+            }
+          }
+          await fs.writeFile(path.join(subject.controls, "cleaned"), "done");
+        });
+        context.progress({ entered: true, marker: subject.marker, calls: count });
+        await new Promise(resolve => {
+          if (context.signal.aborted) resolve();
+          else context.signal.addEventListener("abort", resolve, { once: true });
+        });
+      }
+      return { marker: subject.marker, calls: count };
+    };
+    `);
+    console.log("准备目录", directory, await fs.readdir(artifactDirectory));
     ```
-    记录输出的绝对目录；后续每条命令中的 SCENARIO_DIRECTORY 都必须手动替换为这个完整目录，
-    保留外层双引号，不要原样输入占位符。它位于仓库缓存的 tree-host 子目录。
-    命令中的脚本相对路径由 Node 在各平台解析，无需按操作系统改写分隔符。
-    文档命令采用 shell 中立写法；实际已验证平台以消费证据为准，不等于已经在所有平台实跑。
-    prepare 复制真正的 worker.cjs，建立 artifact 与 controls 子目录并记录所有权。
-    若准备失败，它删除自己部分创建的目录并明确报错，不进入下一步。
+    应看到唯一的 case 目录和 worker.cjs。记录 directory；不要使用用户默认 Host 目录。
+    若准备阶段报错，先看错误，确认 directory 已获得后再按本状态的退出说明删除自有目录。
   after: |
-    在 A 中停止本场景 Host，看到 “Owned Host and workers stopped.” 后才删除目录：
-    ```text
-    pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts clean "SCENARIO_DIRECTORY"
+    若服务已经启动，先按“Host 已就绪”的退出说明确认关闭；不要在运行时删除目录。
+    在同一个 Node 控制台执行以下命令，之后输入 .exit 退出控制台。
+    ```js
+    if (host && !closed) throw new Error("先关闭本次 Host，再删除目录");
+    if (path.dirname(directory) !== scratch || !path.basename(directory).startsWith("case-")) throw new Error("不是本次自有场景目录");
+    await fs.rm(directory, { recursive: true, force: true });
+    await api.closePrivateFileBackend();
+    console.log("场景目录已删除");
     ```
-    若尚未启动 Host，也可以直接 clean。若停止失败，保留目录及错误供诊断，不删除资源。
-    clean 只接受 prepare 创建的目录，拒绝删除仍有活动 Host PID 的目录；不停止其他进程。
+    只删除本次创建的 directory；任何关闭或删除错误都应保留诊断，不能清理未知目录。
   states:
     - id: ready
-      title: 鉴权 HTTP Host 已就绪
+      title: Host 已就绪，尚无任务
       before: |
-        在终端 A 保持前台运行：
-        ```text
-        pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts serve "SCENARIO_DIRECTORY"
+        在已准备的 Node 控制台启动真实内核与鉴权 HTTP 服务：
+        ```js
+        kernel = await api.CheckKernel.create(path.join(directory, "snapshots"), { deadlineMs: 120000, cleanupMs: 30000 });
+        const token = (await import("node:crypto")).randomUUID();
+        host = await api.serve(kernel, token);
+        void (client = new api.CheckClient({ endpoint: host.endpoint, token, pid: process.pid, instance: (await import("node:crypto")).randomUUID() }));
+        const artifact = await api.readArtifact(artifactDirectory);
+        void (headers = { authorization: `Bearer ${token}` });
+        console.log("HTTP 地址", host.endpoint);
         ```
-        等待 Ready 消息；该消息只在鉴权 GET /checks 返回 200 后出现。
-        这是独立真实 CheckKernel、HTTP server 和 worker，不连接默认 discovery。
-        打开仓库根目录的终端 B，继续把每条命令中的 SCENARIO_DIRECTORY 替换为 prepare 输出的绝对目录。
-        后续命令在 B 执行。凭据保存在受保护的 manual-host.json；不要打印或复制其内容。
-        若启动在返回 Ready 前失败，serve 会关闭部分创建的 Host/kernel；失败时保留诊断。
+        应得到 127.0.0.1 的随机端口。不要打印 token、headers 或完整 client。
+        这是本控制台拥有的服务，不启动第二个 daemon，也不会连接默认 discovery。
+        若 serve 在返回 host 前失败，执行 await kernel.close() 释放已创建的内核，再处理场景目录。
       after: |
-        若启动过 held 任务，先按 running 的 after 释放屏障。
-        然后在 A 输入 stop 并回车，等待 “Owned Host and workers stopped.”。
-        stop 是运行中的 serve 接受的输入，不是另开 shell 执行的命令，也不依赖平台特有的进程信号。
-        server 停止接收请求，kernel 确认 worker 退出；不使用按名称结束进程。
-        若启动失败且清理未确认，不执行目录删除，保留错误。
+        有 held 任务时，先按“任务 Running”的退出说明释放屏障并等待任务结束。
+        再关闭本次服务；只收到关闭请求不等于已确认 worker 退出。
+        ```js
+        await host.close();
+        await kernel.close();
+        closed = true;
+        console.log("Host 与 worker 已关闭");
+        ```
+        任一步报错时不继续删除目录。正常关闭后再回到“独立操作环境”的目录删除步骤。
       checks:
         - id: idle
-          title: 活动列表为空
+          title: 查看地址和活动任务列表
           doc: |
-            ```text
-            pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts inspect "SCENARIO_DIRECTORY" idle
+            直接查询原始 GET /checks，而不是调用测试断言：
+            ```js
+            const idleResponse = await fetch(`${host.endpoint}/checks`, { headers });
+            console.log("HTTP", idleResponse.status, "活动任务", await idleResponse.json());
             ```
-            读取鉴权 GET /checks，预期 200 与 []，输出 OK；非 200 或非空则命令失败。
+            预期 HTTP 200、活动任务 []。非 200 或非空时不能认为本状态已成立。
       states:
         - id: running
-          title: 可取消任务已进入执行
+          title: 任务 Running，等待取消
           before: |
-            ```text
-            pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts run "SCENARIO_DIRECTORY"
+            提交本次演示 worker。只发送请求不代表已经开始执行，必须继续观察快照：
+            ```js
+            const heldId = await client.start({ checkId: "held", directory: artifact.directory, revision: artifact.revision, subject: { hold: true, marker: "tree-manual", controls } });
             ```
-            POST /checks 提交 checkId=held，输入 marker=tree-manual、hold=true。
-            run 等待 GET /checks/held 返回 Running 且含 entered 进度；不能仅凭提交成功继续。
-            worker 等待取消；其 defer 在场景的 controls 子目录中出现 release 文件前保持清理屏障。
-            准备/等待失败时自动测试转移自行释放和取消部分任务；人工执行失败也应执行下述 finish。
-            本次人工路径应在两分钟执行期限内推进；若超时，重新建立独立场景，不把超时视为成功。
+            进入本状态后在下面的观察区查询。若仍是 Queued 或尚无 progress，重复快照查询，
+            不要重复提交。worker 将等待取消，并在清理时等待 controls 内的 release 文件。
+            为方便手动操作，本次 Host 的执行期限为两分钟、清理期限为三十秒；超时请退出并重新开始。
           after: |
-            无论进入 run 或后续检查是否成功，在 B 执行：
-            ```text
-            pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts finish "SCENARIO_DIRECTORY"
+            无论提交或观察是否成功，先释放本次清理屏障，再取消仍活动的 held 并等待终态：
+            ```js
+            await fs.writeFile(path.join(controls, "release"), "released");
+            const heldResponse = await fetch(`${host.endpoint}/checks/held`, { headers });
+            if (heldResponse.status === 200) {
+              const remaining = await heldResponse.json();
+              if (!api.terminal(remaining)) await client.cancel("held");
+              console.log("任务收尾", await client.wait("held", AbortSignal.timeout(10000)));
+            } else if (heldResponse.status !== 404) throw new Error(`查询失败 HTTP ${heldResponse.status}`);
             ```
-            写 controls 子目录的 release 文件释放自有屏障；任务仍活跃时发送 cancel 并等待终态。
-            尚未创建 held 时无需取消；其他错误明确失败。完成后才能停止 Host。
-            这是释放任务资源，不是恢复父状态；不要复用该目录重新跑另一条路径。
+            404 表示没有接受此任务；其他错误不能忽略。任务确认结束后才能关闭 Host。
           checks:
             - id: input
-              title: 输入标记、调用次数及活动列表正确
+              title: 查看任务状态、输入标记与活动列表
               doc: |
-                ```text
-                pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts inspect "SCENARIO_DIRECTORY" running
+                ```js
+                console.log("任务快照", await client.sample("held"));
+                console.log("活动列表", await (await fetch(`${host.endpoint}/checks`, { headers })).json());
                 ```
-                预期 Running，progress={entered:true,marker:"tree-manual",calls:1}，
-                活动列表恰有一项。inspect 只读取 HTTP/文件，不建立状态。
+                预期 state=Running，progress={entered:true,marker:"tree-manual",calls:1}，
+                活动列表恰有 held 一项。Queued 或 progress 尚未到达时再次观察，不凭固定等待判定成功。
           states:
             - id: cancelling
-              title: 取消已请求、清理仍被屏障保持
+              title: 任务 Cancelling，清理尚未完成
               before: |
-                ```text
-                pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts cancel "SCENARIO_DIRECTORY"
+                直接调用取消接口；不要提前创建 release 文件：
+                ```js
+                console.log("取消响应", await client.cancel("held"));
                 ```
-                发送 POST /checks/held/cancel，等待 Cancelling 及 controls 子目录的 cleaning 文件。
-                不创建 release 文件，保持清理屏障。取消请求不等于任务资源已经退出。
-              after: 本步没有新增资源，显式空收尾；held 的清理由 running 的 after 负责。
+                取消响应可能先于 worker 清理动作，按下面的观察区确认 cleaning 文件已出现。
+                若一直未出现或任务提前 Failed，保留错误，不将其当成成功取消。
+              after: 本操作没有创建新的资源；结束时按“任务 Running”的退出说明释放屏障并收尾 held。
               checks:
                 - id: waiting
-                  title: 清理完成前没有终态
+                  title: 查看取消快照与清理标记
                   doc: |
-                    ```text
-                    pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts inspect "SCENARIO_DIRECTORY" cancelling
+                    ```js
+                    console.log("取消快照", await client.sample("held"));
+                    console.log("清理文件", await fs.readdir(controls));
                     ```
-                    预期 HTTP 快照为 Cancelling，controls 子目录中 cleaning 已存在、cleaned 尚不存在。
+                    预期仍为 Cancelling，文件列表中有 cleaning、没有 cleaned。
+                    尚无 cleaning 时重复观察；不要创建 release 来“修好”这个观察状态。
               states:
                 - id: cancelled
-                  title: 已取消且资源已释放
+                  title: 任务 Cancelled，资源已释放
                   before: |
-                    ```text
-                    pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts release "SCENARIO_DIRECTORY"
+                    人工创建本次清理屏障的释放文件，再观察服务的终态：
+                    ```js
+                    await fs.writeFile(path.join(controls, "release"), "released");
+                    console.log("释放后终态", await client.wait("held", AbortSignal.timeout(10000)));
                     ```
-                    创建 controls 子目录的 release 文件，等待 HTTP 观察流终态 Cancelled；命令超时或其他终态都失败。
-                  after: 本步没有新增资源，显式空收尾；不虚构反向恢复操作。
+                    预期 Cancelled。超时、Failed 或其他终态都不满足本状态。
+                  after: 本操作未获得新资源。结束时收尾 held、关闭本次 Host，最后删除独立场景目录。
                   checks:
                     - id: released
-                      title: 终态、清理标记与空活动列表一致
+                      title: 查看终态、清理结果与活动列表
                       doc: |
-                        ```text
-                        pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts inspect "SCENARIO_DIRECTORY" cancelled
+                        ```js
+                        console.log("最终快照", await client.sample("held"));
+                        console.log("最终清理文件", await fs.readdir(controls));
+                        console.log("最终活动列表", await (await fetch(`${host.endpoint}/checks`, { headers })).json());
                         ```
-                        预期 Cancelled、controls 子目录的 cleaned 已存在、GET /checks 返回 []。
+                        预期 Cancelled，controls 中存在 cleaned，GET /checks 返回 []。
+                        发出终止请求本身不是资源退出的证据。
         - id: faulted
-          title: 注入执行异常的预期故障状态
+          title: 任务 Failed，Host 仍可用
           before: |
-            从全新 isolated → ready 路径开始，不执行 running 分支。
-            ```text
-            pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts fault "SCENARIO_DIRECTORY"
+            此分支从全新的“独立操作环境 → Host 已就绪”开始，不执行 Running 分支。
+            通过正常任务输入要求演示业务抛错，不通过测试故障注入函数：
+            ```js
+            await client.start({ checkId: "fault", directory: artifact.directory, revision: artifact.revision, subject: { fail: true, marker: "tree-manual" } });
+            console.log("异常任务终态", await client.wait("fault", AbortSignal.timeout(10000)));
             ```
-            提交 checkId=fault、fail=true；等待 Failed。这是执行异常，不是业务结果不通过。
-            成功进入预期故障状态不等于测试框架执行失败。
-          after: 本步没有新增资源，任务已终结；显式空收尾，Host 资源仍由 ready 负责。
+            预期任务 Failed，原因 manual injected failure。这是执行异常，不是业务结果不通过。
+          after: 异常任务已终结，没有新增资源。结束时关闭本次 Host，再删除场景目录，不改写失败历史。
           checks:
             - id: failure
-              title: 故障原因可见、活动列表已释放
+              title: 查看原始错误与 Host 活动列表
               doc: |
-                ```text
-                pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts inspect "SCENARIO_DIRECTORY" faulted
+                ```js
+                const originalFault = await client.sample("fault");
+                console.log("原始故障", originalFault);
+                console.log("故障后活动列表", await (await fetch(`${host.endpoint}/checks`, { headers })).json());
                 ```
-                预期 Failed，error 包含 manual injected failure，GET /checks 返回 []。
+                预期 Failed，error 为 Error: manual injected failure，活动列表为空。
+                记录错误用于之后比较；错误状态不是阻止下一步恢复的理由。
           states:
             - id: recovered
-              title: 同一 Host 可再次正常执行
+              title: 新任务 Completed，原失败保持不变
               before: |
-                ```text
-                pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts recover "SCENARIO_DIRECTORY"
+                使用同一 Host、同一 artifact，正常提交一个新任务：
+                ```js
+                await client.start({ checkId: "recovery", directory: artifact.directory, revision: artifact.revision, subject: { marker: "tree-manual" } });
+                console.log("恢复任务终态", await client.wait("recovery", AbortSignal.timeout(10000)));
                 ```
-                提交同一 artifact 的 checkId=recovery，等待 Completed，确认不是仅 HTTP 可连接。
-              after: 本步没有新增资源，显式空收尾；不会把故障历史改写为成功。
+                预期 Completed，不把端口可连接当成恢复成功。
+              after: 新旧任务均已终结；结束时关闭 Host，再删除场景目录，不重放原失败任务。
               checks:
                 - id: result
-                  title: 真实业务结果与 worker 复用正确
+                  title: 比较新结果和原失败记录
                   doc: |
-                    ```text
-                    pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts inspect "SCENARIO_DIRECTORY" recovered
+                    ```js
+                    console.log("原故障仍在", await client.sample("fault"));
+                    console.log("新任务结果", await client.sample("recovery"));
+                    console.log("恢复后活动列表", await (await fetch(`${host.endpoint}/checks`, { headers })).json());
                     ```
-                    预期原 checkId=fault 仍为 Failed，error 仍为 Error: manual injected failure，
-                    没有被重放或改写；新 checkId=recovery 为 Completed，
-                    result={marker:"tree-manual",calls:2}，活动列表 []。
+                    预期 fault 仍为 Failed 且原始错误不变；recovery 为 Completed，
+                    result={marker:"tree-manual",calls:2}，活动列表为空。
+                    calls=2 表明处理过原请求的业务模块仍可处理新请求；没有重放旧任务。

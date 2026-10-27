@@ -93,26 +93,26 @@ errors. Other independent Node tests still run.
 
 `src/cli.ts` imports only YAML loading and rendering, never `runner.ts`, bindings,
 fixtures or test code. It validates documentation structure only, **not** export
-existence or passing tests. All outputs say **Not run**. Terminal output shows
-the tree; Markdown/HTML expand each selected check's complete path, its probe,
-and reverse cleanup. Markdown command fences remain intact.
+existence or passing tests. All outputs say **Not run**. Human outputs show the state tree, not the
+test execution tree. Each state explains how to reach it, what to observe,
+possible next states, and how to end the operation safely. Parent operations
+are linked rather than repeated per probe. Markdown command fences remain intact.
 
 Offline HTML has a native collapsible tree, stable `state-<id>` and
-`<stateId>.<checkId>` anchors and selectable command text. It has no JavaScript,
+`<stateId>.<checkId>` observation anchors and selectable command text. It has no JavaScript,
 network assets or active Markdown links; all source text is HTML-escaped and a
-restrictive CSP is included. Rendering cannot execute commands. In HTML,
-Markdown is deliberately shown literally rather than interpreted as trusted HTML.
+restrictive CSP is included. Rendering cannot execute commands. In HTML, fenced code is formatted; all content is escaped, not interpreted as
+trusted HTML. Internal hook and binding names are not used as human-facing headings.
 
 See the [Check Host YAML](test/check-host/host.states.yaml),
 [Markdown manual](../../docs/check-host-manual.md) and
-[offline HTML](../../docs/check-host-manual.html). Each manual path starts from a
-new owned scenario directory. Instructions use shell-neutral single-line commands
-from the repository root, without shell variables, pipelines or continuation syntax.
-Replace the quoted `SCENARIO_DIRECTORY` in each command with the absolute directory
-printed by `prepare`, keeping the quotes. No new command alias is required.
-Instructions include
-authenticated readiness, explicit execution/cleanup barriers and a fault/recovery
-branch. The helper is an explicit manual operator, not another state-tree
-definition or a docs dependency. Tokens never appear in output. The real Host
+[offline HTML](../../docs/check-host-manual.html). Each manual branch starts from a new owned scenario directory. The instructions
+use a plain Node console from the repository root to call public Check Host APIs
+and raw authenticated HTTP. They do not invoke Test Tree, a test binding, `tsx`,
+or a manual helper. The transparent demonstration worker is created inline,
+not copied from a test fixture. It supplies input for cancellation/fault examples.
+Check Host has no general-purpose start/run/cancel CLI: the manual explicitly
+uses `CheckKernel`, `serve`, `CheckClient` and `fetch`, and does not claim
+to exercise discovery. Tokens never appear in output. The real Host
 has a two-minute execution deadline and a 30-second cleanup deadline; perform
 interactive steps promptly or recreate the scenario after a timeout.

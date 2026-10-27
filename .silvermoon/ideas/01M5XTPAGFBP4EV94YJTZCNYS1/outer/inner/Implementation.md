@@ -5,6 +5,8 @@
 接口、使用方式见 [工具说明](../../../../../packages/test-tree/README.md)，
 验证结果见 [实施证据](./Evidence.md)。
 后续 HTML 命令可移植性反馈及验证见 [命令修订证据](./Portable-manual-evidence.md)。
+后续“人工操作不依赖测试框架、页面按状态展示”的纠偏见 [状态手册修正](./State-manual-evidence.md)；
+该文取代前文证据中已过时的手册包装器方案，历史证据仍保留。
 
 ## Steps
 
@@ -26,14 +28,16 @@ transition 调用完成进入操作并返回 after；约定部分初始化由该
 测试可运行时展开或生成只读代码，不另维护手写 BDD 树。
 文档消费者只读取数据，不导入 Binding TS 或业务实现。
 区分结构/说明校验与执行绑定校验，明确报告无效字段、重复身份和缺失约定函数导出。
-完整路径组合进入操作、当前探针与逆序收尾，不串入父状态其他检查。
+自动化仍按路径执行；人工输出按 state 分组，不按每个检查重复整条测试路径。
+每个状态展示如何进入、在此状态观察、可以转向的状态和实际结束操作。
 采用运行时展开而非生成测试源码。`src/cli.ts` 只依赖 model/render，
 提供 tree/markdown/html 三种输出；写文件要求目标尚不存在，拒绝覆盖 YAML 或绑定。
-HTML 使用原生折叠树、稳定锚点、全文转义、纯文本说明和 CSP，无脚本或网络资源。
+HTML 使用原生折叠状态树、稳定锚点、全文转义和 CSP，无脚本或网络资源。
+代码围栏显示为可复制的代码块；页面不展示绑定函数名或 before/after/it 标题。
 所有输出明确标记 Not run；文档结构有效不等于导出有效或自动测试通过。
-按后续手册反馈，命令从仓库根执行并采用 shell 中立的单行形式，
-不依赖 PowerShell 变量、管道、反斜线脚本路径或续行；场景目录明确要求替换且保留双引号。
-停止前台 Host 统一输入 stop，不依赖平台特有信号。历史消费快照保留，不冒充更新后的页面。
+人工命令采用独立 Node 控制台中的原始公开 API 与 HTTP，不依赖 shell 专属语法。
+明确 Node .editor 整块执行及等待提示符的用法；不将含 await 的行一次送入 node -i。
+历史消费快照保留，不冒充更新后的页面。
 
 ### I-S03: 以 Check Host 接通代表性路径
 
@@ -43,8 +47,10 @@ HTML 使用原生折叠树、稳定锚点、全文转义、纯文本说明和 CS
 新增一份 `test/check-host/host.states.yaml` 及一个 `host.binding.ts`，接入真实
 CheckKernel、鉴权 HTTP、worker、执行及清理文件屏障，覆盖 ready/running/
 cancelling/cancelled 和独立 faulted/recovered 分支。旧有 CLI 竞争测试保持不变。
-人工命令工具只提供显式资源操作，不另建状态树；说明记录 PowerShell A/B、
-fixture 建立、准入、探针、部分失败、屏障释放及已确认停止后的目录删除。
+删除容易与原始命令混淆的手册专用 manual.ts 包装器。
+说明直接准备透明的业务 worker，调用公开 CheckKernel/serve/CheckClient/fetch，
+演示状态进入、观察、屏障释放及已确认关闭后的目录删除，不导入测试绑定/helper。
+明确该手动路径覆盖内核/HTTP/worker，不声称验证 discovery daemon 启动。
 提交同源 Markdown/HTML 派生产物，并用测试验证它们与 YAML 完全一致；
 纳入 pnpm catalog、package-layers、package-owned objectives 和 Turbo 输入。
 
@@ -75,8 +81,8 @@ Markdown 命令块保留格式，HTML 不执行说明中的脚本。
 故障注入后的预期故障状态不被写成测试失败，平台不适用项明确标注。
 恢复探针验证新任务成功的同时，确认原故障任务仍为 Failed 且保留原始执行异常，
 不得将执行异常混称为业务结果不通过，也不得重放或改写旧任务。
-证明方式：六个 YAML 注册的真实 Host 检查和独立进程执行的手册命令回归；
-命令回归核对 YAML 中的确切命令形式，再从仓库根运行相同 pnpm filter/exec 入口，
-覆盖取消、释放、故障恢复及 stop/清理；另验证说明中不存在 shell 专属语法。
+证明方式：六个 YAML 注册的真实 Host 检查和独立 Node 进程直接执行的文档代码块，
+不导入测试绑定/helper；验证各状态快照、清理标记、故障恢复及目录释放。
+另外核对输出为状态视图而非测试路径、代码不调用测试工具，实际验证 Node REPL 分块执行。
 运行包内测试、仓库测试类型检查、相关 package-owned 集成及 `pnpm check`，
 将既有失败或环境诊断与本次引入的问题分开记录，不以重跑掩盖失败。

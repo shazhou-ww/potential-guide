@@ -1,115 +1,117 @@
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
-import { once } from "node:events";
+import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { test } from "node:test";
-import { setTimeout as pause } from "node:timers/promises";
 import { loadTree, paths } from "../src/model.js";
 
 const root = resolve("..", "..");
 const loaded = await loadTree(resolve("test", "check-host", "host.states.yaml"));
-const prose = paths(loaded.tree).flatMap((path) => [
-  ...path.states.flatMap((state) => [state.before, state.after]),
-  path.check.doc,
-]);
-const documented = new Set(
-  prose.flatMap((text) => text.split("\n").filter((line) => line.startsWith("pnpm --filter "))),
-);
-function argumentsFor(...args: string[]): string[] {
-  const pnpm = process.env.npm_execpath;
-  assert.ok(pnpm, "Run this test through pnpm test so the documented pnpm entry is available");
-  const template = args.map((arg, index) => (index === 1 ? '"SCENARIO_DIRECTORY"' : arg)).join(" ");
-  assert.ok(
-    documented.has(
-      `pnpm --filter @potential-guide/test-tree exec tsx test/check-host/manual.ts ${template}`,
-    ),
-    `Missing manual command: ${template}`,
-  );
-  return [
-    pnpm,
-    "--filter",
-    "@potential-guide/test-tree",
-    "exec",
-    "tsx",
-    "test/check-host/manual.ts",
-    ...args,
-  ];
+function commands(text: string): string {
+  return [...text.matchAll(/^```js\n([\s\S]*?)^```/gm)].map((match) => match[1]).join("\n");
 }
-function command(...args: string[]) {
-  const result = spawnSync(process.execPath, argumentsFor(...args), {
-    cwd: root,
-    encoding: "utf8",
-    timeout: 20_000,
-  });
-  assert.equal(result.status, 0, `${args[0]}: ${result.stdout}${result.stderr}`);
-  return result.stdout.trim();
-}
-test("manual command blocks are shell-neutral and use one explicit scenario placeholder", () => {
-  assert.equal(documented.size, 15);
-  for (const text of prose) {
+test("human instructions use only public Check Host APIs and transparent business input", () => {
+  for (const path of paths(loaded.tree)) {
+    const text = [
+      ...path.states.flatMap((state) => [state.before, state.after]),
+      path.check.doc,
+    ].join("\n");
+    const code = commands(text);
+    assert.ok(!/manual\.ts|host\.binding|test-tree|tsx|SCENARIO_DIRECTORY|\$case/.test(code));
     assert.ok(!text.includes("```powershell"));
-    assert.ok(!text.includes("$case"));
-    assert.ok(!text.includes("PowerShell A"));
-    assert.ok(!text.includes("\\"));
+    assert.ok(code.includes('import("./packages/check-host/dist/index.js")'));
   }
-  for (const line of documented) {
-    assert.ok(!/[|&;$`\\]/.test(line), line);
-    if (!line.endsWith(" prepare")) assert.ok(line.includes('"SCENARIO_DIRECTORY"'), line);
-  }
-  assert.ok(loaded.tree.state.before.includes("手动替换"));
 });
-
-test("documented manual commands prepare, serve, inspect, cancel, release, fail, recover and clean real resources", async () => {
-  for (const branch of ["cancel", "fault"]) {
-    const directory = command("prepare");
-    const server = spawn(process.execPath, argumentsFor("serve", directory), {
-      cwd: root,
-      stdio: ["pipe", "pipe", "pipe"],
+test("raw documented Node commands reproduce each state without test bindings or manual helpers", () => {
+  for (const path of paths(loaded.tree)) {
+    const enter = path.states.map((state) => {
+      const code = commands(state.before);
+      if (state.id === "running")
+        return `${code}
+          for (let attempt = 0;; attempt++) {
+            const snapshot = await client.sample("held");
+            if (snapshot.state === "Running" && snapshot.progress) break;
+            if (attempt > 500) throw new Error("Running observation never arrived");
+            await new Promise(resolve => setTimeout(resolve, 20));
+          }`;
+      if (state.id === "cancelling")
+        return `${code}
+          for (let attempt = 0;; attempt++) {
+            if ((await fs.readdir(controls)).includes("cleaning")) break;
+            if (attempt > 500) throw new Error("Cleaning observation never arrived");
+            await new Promise(resolve => setTimeout(resolve, 20));
+          }`;
+      return code;
     });
-
-    const exited = once(server, "exit");
-    let output = "";
-    server.stdout.on("data", (chunk) => {
-      output += String(chunk);
-    });
-    server.stderr.on("data", (chunk) => {
-      output += String(chunk);
-    });
-    try {
-      const deadline = Date.now() + 10_000;
-      while (!output.includes("Ready:")) {
-        assert.equal(server.exitCode, null, output);
-        assert.ok(Date.now() < deadline, output);
-        await pause(20);
-      }
-      command("inspect", directory, "idle");
-      if (branch === "cancel") {
-        command("run", directory);
-        command("inspect", directory, "running");
-        command("cancel", directory);
-        command("inspect", directory, "cancelling");
-        command("release", directory);
-        command("inspect", directory, "cancelled");
-        command("finish", directory);
-      } else {
-        command("fault", directory);
-        command("inspect", directory, "faulted");
-        command("recover", directory);
-        command("inspect", directory, "recovered");
-      }
-    } finally {
-      server.stdin.end("stop\n");
-      const deadline = setTimeout(() => {
-        server.kill();
-      }, 15_000);
+    const cleanup = [...path.states]
+      .reverse()
+      .map((state) => commands(state.after))
+      .filter(Boolean)
+      .map((code) => `try { ${code} } catch (error) { cleanupErrors.push(error); }`)
+      .join("\n");
+    const script = `
+      ${enter[0]}
+      const cleanupErrors = [];
       try {
-        const [code] = await exited;
-        assert.equal(code, 0, output);
-        assert.match(output, /Owned Host and workers stopped/);
+        ${enter.slice(1).join("\n")}
+        ${commands(path.check.doc)}
+        console.log("__OBSERVED__", JSON.stringify({
+          states: await Promise.all(["held","fault","recovery"].map(async id => {
+            try { return await client.sample(id); }
+            catch (error) { if (error.status === 404) return null; throw error; }
+          })),
+          files: await fs.readdir(controls),
+          active: await (await fetch(host.endpoint + "/checks", { headers })).json()
+        }));
       } finally {
-        clearTimeout(deadline);
+        ${cleanup}
+        if (cleanupErrors.length) throw new AggregateError(cleanupErrors, "Manual cleanup failed");
       }
-      command("clean", directory);
+    `;
+    const result = spawnSync(process.execPath, ["--input-type=module"], {
+      cwd: root,
+      input: script,
+      encoding: "utf8",
+      timeout: 30_000,
+    });
+    assert.equal(result.status, 0, `${path.id}: ${result.stdout}\n${result.stderr}`);
+    const output = result.stdout.split("\n").find((line) => line.startsWith("__OBSERVED__ "));
+    assert.ok(output, result.stdout);
+    const observed = JSON.parse(output.slice("__OBSERVED__ ".length)) as {
+      states: ({ state: string; error?: string; progress?: unknown; result?: unknown } | null)[];
+      files: string[];
+      active: unknown[];
+    };
+    const [held, fault, recovered] = observed.states;
+    switch (path.states.at(-1)?.id) {
+      case "ready":
+        assert.deepEqual(observed.active, []);
+        break;
+      case "running":
+        assert.ok(held && held.state === "Running");
+        assert.deepEqual(held.progress, { entered: true, marker: "tree-manual", calls: 1 });
+        assert.equal(observed.active.length, 1);
+        break;
+      case "cancelling":
+        assert.equal(held?.state, "Cancelling");
+        assert.ok(observed.files.includes("cleaning") && !observed.files.includes("cleaned"));
+        break;
+      case "cancelled":
+        assert.equal(held?.state, "Cancelled");
+        assert.ok(observed.files.includes("cleaned"));
+        assert.deepEqual(observed.active, []);
+        break;
+      case "faulted":
+      case "recovered":
+        assert.ok(fault && fault.state === "Failed");
+        assert.equal(fault.error, "Error: manual injected failure");
+        assert.deepEqual(observed.active, []);
+        if (path.states.at(-1)?.id === "recovered") {
+          assert.ok(recovered && recovered.state === "Completed");
+          assert.deepEqual(recovered.result, { marker: "tree-manual", calls: 2 });
+        }
+        break;
+      default:
+        assert.fail(`Unverified manual state ${path.id}`);
     }
   }
 });

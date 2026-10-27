@@ -1,45 +1,77 @@
-import { type CheckPath, type LoadedTree, paths, type State } from "./model.js";
+import type { LoadedTree, State } from "./model.js";
 
-const status = "Not run — documentation only; bindings and test results are not validated.";
-function limitation(path: CheckPath): string {
-  return path.states
+const status = "Not run — 操作说明，未执行验证。";
+interface StatePath {
+  state: State;
+  ancestors: State[];
+}
+function states(root: State): StatePath[] {
+  const result: StatePath[] = [];
+  const visit = (state: State, ancestors: State[]) => {
+    result.push({ state, ancestors });
+    for (const child of state.states) visit(child, [...ancestors, state]);
+  };
+  visit(root, []);
+  return result;
+}
+function limitation(path: State[]): string {
+  return path
     .filter((state) => state.platforms)
-    .map((state) => `${state.id}: only ${state.platforms?.join(", ")} (other platforms: skipped)`)
-    .join("; ");
+    .map((state) => `${state.title}：仅适用于 ${state.platforms?.join(", ")}`)
+    .join("；");
 }
 export function renderTerminal({ tree }: LoadedTree): string {
   const lines = [`${tree.namespace} — ${status}`];
   const visit = (state: State, indent: string) => {
     lines.push(
-      `${indent}state ${state.id}: ${state.title}${state.platforms ? ` [${state.platforms.join(", ")} only]` : ""}`,
+      `${indent}状态 ${state.id}: ${state.title}${state.platforms ? ` [${state.platforms.join(", ")}]` : ""}`,
     );
-    lines.push(`${indent}  transition_${state.id} → after`);
     for (const check of state.checks)
-      lines.push(`${indent}  check ${state.id}.${check.id}: ${check.title}`);
+      lines.push(`${indent}  观察 ${state.id}.${check.id}：${check.title}`);
     for (const child of state.states) visit(child, `${indent}  `);
   };
   visit(tree.state, "");
-  return `${lines.join("\n").trimEnd()}\n`;
+  return `${lines.join("\n")}\n`;
 }
-export function renderMarkdown(loaded: LoadedTree): string {
-  const { tree } = loaded;
+export function renderMarkdown({ tree }: LoadedTree): string {
   const lines = [
-    `# ${tree.namespace}`,
+    `# ${tree.namespace} 状态操作手册`,
     "",
     status,
     "",
-    "Generated from YAML. Commands are text, never executed by the renderer.",
+    "从初始状态开始，沿状态树执行进入操作并核对观察结果。不同分支从独立环境开始。",
+    "命令由人执行；本页面不会运行命令。资源退出说明只用于结束操作，不是逆向状态转移。",
+    "",
+    "## 状态树",
     "",
   ];
-  for (const path of paths(tree)) {
-    lines.push(`<a id="${path.id}"></a>`, `## ${path.id}: ${path.check.title}`, "");
-    if (limitation(path)) lines.push(limitation(path), "");
-    lines.push("### Enter (root → state)", "");
-    for (const state of path.states)
-      lines.push(`#### transition_${state.id}: ${state.title}`, "", state.before, "");
-    lines.push(`### Check ${path.id}`, "", path.check.doc, "", "### Cleanup (reverse order)", "");
-    for (const state of [...path.states].reverse())
-      lines.push(`#### after ${state.id}`, "", state.after, "");
+  for (const { state, ancestors } of states(tree.state))
+    lines.push(`${"  ".repeat(ancestors.length)}- [${state.title}](#state-${state.id})`);
+  for (const { state, ancestors } of states(tree.state)) {
+    lines.push(
+      "",
+      `<a id="state-${state.id}"></a>`,
+      `## 状态：${state.title}`,
+      "",
+      `到达路径：${[...ancestors, state].map((s) => s.title).join(" → ")}`,
+      "",
+    );
+    if (limitation([...ancestors, state])) lines.push(limitation([...ancestors, state]), "");
+    lines.push("### 如何进入", "", state.before, "", "### 在此状态观察", "");
+    if (!state.checks.length) lines.push("核对上面的准备结果，再选择下一状态。", "");
+    for (const check of state.checks)
+      lines.push(`<a id="${state.id}.${check.id}"></a>`, `#### ${check.title}`, "", check.doc, "");
+    lines.push("### 可以转向的状态", "");
+    if (!state.states.length) lines.push("此分支已结束，可按下面的说明退出并释放资源。", "");
+    for (const child of state.states) lines.push(`- [${child.title}](#state-${child.id})`);
+    lines.push(
+      "",
+      "### 结束操作时",
+      "",
+      state.after,
+      "",
+      "完成本层资源收尾后，按到达路径向上处理各层拥有的资源；不要把退出当成业务回滚。",
+    );
   }
   return `${lines.join("\n").trimEnd()}\n`;
 }
@@ -49,28 +81,45 @@ function escapeHtml(value: string): string {
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c,
   );
 }
-// Descriptions stay literal, including Markdown command fences: no raw HTML, scripts or links.
+// Only fenced commands are formatted; all content is escaped, never evaluated as HTML.
 function prose(value: string): string {
-  return `<pre>${escapeHtml(value)}</pre>`;
+  return value
+    .split(/(```[^\n]*\n[\s\S]*?```)/g)
+    .filter(Boolean)
+    .map((part) => {
+      if (part.startsWith("```")) {
+        const code = part.slice(part.indexOf("\n") + 1, -3).trimEnd();
+        return `<pre><code>${escapeHtml(code)}</code></pre>`;
+      }
+      return `<p class="prose">${escapeHtml(part.trim())}</p>`;
+    })
+    .join("");
 }
-export function renderHtml(loaded: LoadedTree): string {
-  const { tree } = loaded;
+export function renderHtml({ tree }: LoadedTree): string {
+  const link = (state: State) => `<a href="#state-${state.id}">${escapeHtml(state.title)}</a>`;
   const navigation = (state: State): string =>
-    `<details open id="state-${state.id}"><summary>${escapeHtml(state.id)}: ${escapeHtml(state.title)}</summary><ul>${state.checks.map((c) => `<li><a href="#${state.id}.${c.id}">${escapeHtml(c.title)}</a></li>`).join("")}</ul>${state.states.map(navigation).join("")}</details>`;
-  const articles = paths(tree)
-    .map(
-      (path) =>
-        `<article id="${path.id}"><h2>${escapeHtml(path.id)}: ${escapeHtml(path.check.title)}</h2><p>${escapeHtml(limitation(path))}</p><h3>Enter (root → state)</h3>${path.states.map((s) => `<h4>transition_${s.id}: ${escapeHtml(s.title)}</h4>${prose(s.before)}`).join("")}<h3>Check ${path.id}</h3>${prose(path.check.doc)}<h3>Cleanup (reverse order)</h3>${[
-          ...path.states,
-        ]
-          .reverse()
-          .map((s) => `<h4>after ${s.id}</h4>${prose(s.after)}`)
-          .join("")}</article>`,
-    )
+    `<details open id="nav-${state.id}"><summary>${link(state)}</summary>${state.states.map(navigation).join("")}</details>`;
+  const articles = states(tree.state)
+    .map(({ state, ancestors }) => {
+      const path = [...ancestors, state];
+      return `<article id="state-${state.id}"><h2>状态：${escapeHtml(state.title)}</h2>
+<p>到达路径：${path.map(link).join(" → ")}</p><p>${escapeHtml(limitation(path))}</p>
+<h3>如何进入</h3>${prose(state.before)}
+<h3>在此状态观察</h3>${state.checks.length ? state.checks.map((c) => `<section id="${state.id}.${c.id}"><h4>${escapeHtml(c.title)}</h4>${prose(c.doc)}</section>`).join("") : "<p>核对上面的准备结果，再选择下一状态。</p>"}
+<h3>可以转向的状态</h3>${state.states.length ? `<ul>${state.states.map((s) => `<li>${link(s)}</li>`).join("")}</ul>` : "<p>此分支已结束，可按下面的说明退出并释放资源。</p>"}
+<details><summary>结束操作与资源释放</summary>${prose(state.after)}<p>本层收尾后，再处理上层拥有的资源：</p>${
+        ancestors.length
+          ? `<ol>${[...ancestors]
+              .reverse()
+              .map((s) => `<li>${link(s)} — 查看其“结束操作与资源释放”</li>`)
+              .join("")}</ol>`
+          : "<p>没有上层状态。</p>"
+      }</details></article>`;
+    })
     .join("");
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
-<title>${escapeHtml(tree.namespace)}</title><style>body{font:16px system-ui;max-width:72rem;margin:auto;padding:2rem}details{margin-left:1rem}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#eee;color:#111;padding:1rem;user-select:text}article{border-top:1px solid #888;margin-top:2rem}a{color:#246}</style></head>
-<body><h1>${escapeHtml(tree.namespace)}</h1><p>${escapeHtml(status)}</p><p>Commands are selectable text. This offline page never executes them. Copy into a terminal only after reviewing ownership and cleanup.</p><nav aria-label="State tree">${navigation(tree.state)}</nav>${articles}</body></html>\n`;
+<title>${escapeHtml(tree.namespace)}</title><style>body{font:16px system-ui;max-width:90rem;margin:auto;padding:2rem;color:#222}header{margin-bottom:2rem}.layout{display:grid;grid-template-columns:20rem minmax(0,1fr);gap:2rem}nav{position:sticky;top:1rem;align-self:start;max-height:90vh;overflow:auto}details{margin:.5rem 0 .5rem 1rem}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#eee;color:#111;padding:1rem;user-select:text}.prose{white-space:pre-wrap;overflow-wrap:anywhere}article{border-top:1px solid #888;padding-top:1rem;margin-bottom:3rem;scroll-margin-top:1rem}section{scroll-margin-top:1rem}a{color:#246}@media(max-width:850px){.layout{display:block}nav{position:static;max-height:none}}</style></head>
+<body><header><h1>${escapeHtml(tree.namespace)} 状态操作手册</h1><p>${escapeHtml(status)}</p><p>从初始状态开始，沿状态树执行进入操作并核对观察结果。不同分支从独立环境开始。</p><p>命令由人执行；本页面不会运行命令。退出说明用于资源释放，不是逆向状态转移。</p></header><div class="layout"><nav aria-label="State tree"><h2>状态树</h2>${navigation(tree.state)}</nav><main>${articles}</main></div></body></html>\n`;
 }

@@ -188,14 +188,20 @@ after ready
 after isolated
 ```
 
-HTML 或 Markdown 的人工手册展示同一顺序：
+上面只是自动化执行顺序，不是人工页面的结构。
+HTML/Markdown 以 isolated、ready、running、cancelling、cancelled 为状态节点，
+各状态展示“如何进入”“在此状态观察”“可以转向的状态”和“结束操作与资源释放”。
+到达路径提供上层链接，不为每个检查重复整条 setup/teardown。
 
-1. isolated、ready、running、cancelling、cancelled 的 before 说明。
-2. released 的检查说明。
-3. cancelled、cancelling、running、ready、isolated 的 after 说明。
+例如 ready 展示直接调用 Check Host 的 CheckKernel.create/serve 建立服务，
+用原始 fetch GET /checks 观察；running 展示 CheckClient.start/sample；
+cancelling 展示 CheckClient.cancel 与清理标记，cancelled 展示释放文件和终态。
+不要求用户调用 Test Tree 命令、测试绑定或手册包装器。
+Check Host 目前没有通用 start/run/cancel CLI，因此不能把演示包装器伪称为原始命令。
 
-ready/idle、running/input、cancelling/waiting 是其他独立检查，
-不自动加入这份路径；必要准入确认在 transition 及对应 before 说明中完成。
+自动化中的 ready/idle、running/input、cancelling/waiting 是独立测试，
+不会成为其他测试的依赖；人工视图则将这些内容作为各状态的观察说明，
+由人确认现状后再选择下一状态。
 清理不是业务状态回滚，没有新增资源的步骤明确标注即可。
 
 ## 7. 故障恢复分支也不需要 use
