@@ -106,7 +106,11 @@ Markdown is deliberately shown literally rather than interpreted as trusted HTML
 See the [Check Host YAML](test/check-host/host.states.yaml),
 [Markdown manual](../../docs/check-host-manual.md) and
 [offline HTML](../../docs/check-host-manual.html). Each manual path starts from a
-new owned scenario directory. Instructions include real PowerShell commands,
+new owned scenario directory. Instructions use shell-neutral single-line commands
+from the repository root, without shell variables, pipelines or continuation syntax.
+Replace the quoted `SCENARIO_DIRECTORY` in each command with the absolute directory
+printed by `prepare`, keeping the quotes. No new command alias is required.
+Instructions include
 authenticated readiness, explicit execution/cleanup barriers and a fault/recovery
 branch. The helper is an explicit manual operator, not another state-tree
 definition or a docs dependency. Tokens never appear in output. The real Host
