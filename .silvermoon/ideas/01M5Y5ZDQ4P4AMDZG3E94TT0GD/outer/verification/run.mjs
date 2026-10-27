@@ -125,7 +125,13 @@ try {
   }
   const require = createRequire(import.meta.url);
   const cli = join(dirname(require.resolve("pguide/package.json")), "dist", "bin.js");
-  const settings = { ...process.env, PATH: "" };
+  const settings = {
+    ...process.env, PATH: "",
+    HOME: join(root, "isolated-home"),
+    USERPROFILE: join(root, "isolated-home"),
+    APPDATA: join(root, "isolated-config"),
+    XDG_CONFIG_HOME: join(root, "isolated-config"),
+  };
   const cliResults = [];
   for (const args of [
     ["supervise", "--format", "json"],
