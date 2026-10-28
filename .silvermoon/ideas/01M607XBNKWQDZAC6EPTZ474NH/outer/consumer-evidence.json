@@ -1,0 +1,1332 @@
+{
+  "baseline": {
+    "primaryCommit": "b469ff3171b9d766db6d0ce4390ce2abde9a7ae3",
+    "deploymentRevision": "6108ab27b39be51ddea0ae985e75c9327e0561d2",
+    "contractBlob": "19a32300bd5f002ac86a0e3ac06d1a2e8fa26ae0"
+  },
+  "invocation": "662fab48-f748-4f50-9ab2-3e0f4704a51a",
+  "externalDirectory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a",
+  "tools": [
+    {
+      "name": "@potential-guide/effects",
+      "version": "0.1.0-rc.0",
+      "filename": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\tools\\potential-guide-effects-0.1.0-rc.0.tgz",
+      "sha256": "0fe03517fa0d74ee2e6f6d45fa1b9716fd3de939c80654ed3283478b5b6c7c00",
+      "files": 7
+    },
+    {
+      "name": "@potential-guide/check-host",
+      "version": "0.1.0",
+      "filename": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\tools\\potential-guide-check-host-0.1.0.tgz",
+      "sha256": "508cda4a3951c190c526e9741a37d41d1199fcff499be28a7923c6bba7722232",
+      "files": 49
+    },
+    {
+      "name": "@potential-guide/check-artifacts",
+      "version": "0.1.0",
+      "filename": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\tools\\potential-guide-check-artifacts-0.1.0.tgz",
+      "sha256": "5a61461f148e81fcdd0140f0693084fde1b3623086639919871dab4f8e595f61",
+      "files": 25
+    },
+    {
+      "name": "@potential-guide/git-source",
+      "version": "0.1.0-rc.0",
+      "filename": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\tools\\potential-guide-git-source-0.1.0-rc.0.tgz",
+      "sha256": "3a4a742d893fda8b32e35b95c9a5b7784450243ad79155437c455f0bf7d7f813",
+      "files": 7
+    },
+    {
+      "name": "@potential-guide/pilot-protocol",
+      "version": "0.1.0-rc.0",
+      "filename": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\tools\\potential-guide-pilot-protocol-0.1.0-rc.0.tgz",
+      "sha256": "ffa3d12843fe7b3b80e6d509fb4198fdb95f33cc0a037e0fb46eae7a571cf7b7",
+      "files": 52
+    },
+    {
+      "name": "@potential-guide/objective-pilot",
+      "version": "0.2.0-rc.0",
+      "filename": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\tools\\potential-guide-objective-pilot-0.2.0-rc.0.tgz",
+      "sha256": "77f20705ce43d7bd6c331872e8a26239d0fb2f21ba0d5426ab96ec3939e8ddd7",
+      "files": 59
+    },
+    {
+      "name": "@potential-guide/objective-regulator",
+      "version": "0.4.0-rc.0",
+      "filename": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\tools\\potential-guide-objective-regulator-0.4.0-rc.0.tgz",
+      "sha256": "9b2595d05df02a15d443878c9d4ead642ca7a18fdc3b041ef801bbfa08bf6ccd",
+      "files": 7
+    },
+    {
+      "name": "@potential-guide/regulation-coordinator",
+      "version": "0.1.0-rc.0",
+      "filename": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\tools\\potential-guide-regulation-coordinator-0.1.0-rc.0.tgz",
+      "sha256": "c341ff872e725488f58497eb17b17ea2b1232f25f077de3acb1f4b2c332e9e77",
+      "files": 47
+    },
+    {
+      "name": "@potential-guide/cli-core",
+      "version": "0.3.0-rc.0",
+      "filename": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\tools\\potential-guide-cli-core-0.3.0-rc.0.tgz",
+      "sha256": "aca5da44da8ac39383d440e439bb927803ad984f76c36d90d673a95b4e252646",
+      "files": 49
+    },
+    {
+      "name": "@potential-guide/objective-declarations",
+      "version": "0.1.0-rc.0",
+      "filename": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\tools\\potential-guide-objective-declarations-0.1.0-rc.0.tgz",
+      "sha256": "21d8400d9289c31a247ce0e4bbaf3853b59a528a4c8b5bacedab126944210f99",
+      "files": 7
+    },
+    {
+      "name": "@potential-guide/cli-runtime",
+      "version": "0.1.0-rc.0",
+      "filename": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\tools\\potential-guide-cli-runtime-0.1.0-rc.0.tgz",
+      "sha256": "37cf59fb87527726a4bbfdde13a68522f11c2a9c0e4e5b497d33b3969fa21444",
+      "files": 30
+    },
+    {
+      "name": "@potential-guide/pguide-pilot",
+      "version": "0.4.0-rc.0",
+      "filename": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\tools\\potential-guide-pguide-pilot-0.4.0-rc.0.tgz",
+      "sha256": "93b930b1a7ccd8d107978a575089ff1d1ac1bc638d037eb3db08d3f2b00acbd3",
+      "files": 24
+    },
+    {
+      "name": "@potential-guide/pguide-regulate",
+      "version": "0.4.0-rc.0",
+      "filename": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\tools\\potential-guide-pguide-regulate-0.4.0-rc.0.tgz",
+      "sha256": "ab760b728ba92f1906e2347768615c8dad0552d41ca36095177750dddc6d183b",
+      "files": 32
+    }
+  ],
+  "delivery": {
+    "digest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+    "location": "artifact+file:///D:/Code/potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a/delivery/objective?digest=sha256-pguide-objective-v1%3Adcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f"
+  },
+  "install": {
+    "stdout": "Progress: resolved 0, reused 1, downloaded 0, added 0\nProgress: resolved 175, reused 74, downloaded 10, added 0\nPackages: +188\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\nPackages are hard linked from the content-addressable store to the virtual store.\n  Content-addressable store is at: D:\\.pnpm-store\\v11\n  Virtual store is at:             node_modules/.pnpm\nProgress: resolved 213, reused 178, downloaded 10, added 14\nProgress: resolved 213, reused 178, downloaded 10, added 30\nProgress: resolved 213, reused 178, downloaded 10, added 68\nProgress: resolved 213, reused 178, downloaded 10, added 111\nProgress: resolved 213, reused 178, downloaded 10, added 153\nProgress: resolved 213, reused 178, downloaded 10, added 187\nProgress: resolved 213, reused 178, downloaded 10, added 188, done\n\ndependencies:\n+ @potential-guide/check-artifacts 0.1.0\n+ @potential-guide/check-host 0.1.0\n+ @potential-guide/cli-core 0.3.0-rc.0\n+ @potential-guide/cli-runtime 0.1.0-rc.0\n+ @potential-guide/effects 0.1.0-rc.0\n+ @potential-guide/git-source 0.1.0-rc.0\n+ @potential-guide/objective-declarations 0.1.0-rc.0\n+ @potential-guide/objective-pilot 0.2.0-rc.0\n+ @potential-guide/objective-regulator 0.4.0-rc.0\n+ @potential-guide/pguide-pilot 0.4.0-rc.0\n+ @potential-guide/pguide-regulate 0.4.0-rc.0\n+ @potential-guide/pilot-protocol 0.1.0-rc.0\n+ @potential-guide/regulation-coordinator 0.1.0-rc.0\n\nDone in 8.4s using pnpm v11.22.0\n",
+    "stderr": ""
+  },
+  "consumerCommand": {
+    "command": "node consumer.mjs",
+    "cwd": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a",
+    "stdout": "{\"passed\":true,\"scenarios\":15,\"executions\":36,\"cleanup\":{\"serverClosed\":true,\"kernelClosed\":true,\"permissionHelperClosed\":true}}\n",
+    "stderr": ""
+  },
+  "result": {
+    "environment": {
+      "node": "v24.11.1",
+      "platform": "win32"
+    },
+    "root": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a",
+    "modules": [
+      {
+        "name": "@potential-guide/effects",
+        "path": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\node_modules\\.pnpm\\@potential-guide+effects@fi_d4bef360c2413a991e2cd148f5ec08ed\\node_modules\\@potential-guide\\effects\\dist\\index.js"
+      },
+      {
+        "name": "@potential-guide/check-host",
+        "path": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\node_modules\\.pnpm\\@potential-guide+check-host_3639670d365b01f09bffb3fc273e5dd6\\node_modules\\@potential-guide\\check-host\\dist\\index.js"
+      },
+      {
+        "name": "@potential-guide/check-artifacts",
+        "path": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\node_modules\\.pnpm\\@potential-guide+check-arti_111c5ce03cf9cd8fef9a3d2ae20823ab\\node_modules\\@potential-guide\\check-artifacts\\dist\\index.js"
+      },
+      {
+        "name": "@potential-guide/git-source",
+        "path": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\node_modules\\.pnpm\\@potential-guide+git-source_2107bfad6b87e29e15bff41f4569a7eb\\node_modules\\@potential-guide\\git-source\\dist\\index.js"
+      },
+      {
+        "name": "@potential-guide/pilot-protocol",
+        "path": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\node_modules\\.pnpm\\@potential-guide+pilot-prot_649b43335d342271f667a87e02f9e413\\node_modules\\@potential-guide\\pilot-protocol\\dist\\index.js"
+      },
+      {
+        "name": "@potential-guide/objective-pilot",
+        "path": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\node_modules\\.pnpm\\@potential-guide+objective-_d052ccce45e9d367a49d6e6cea2da52f\\node_modules\\@potential-guide\\objective-pilot\\dist\\index.js"
+      },
+      {
+        "name": "@potential-guide/objective-regulator",
+        "path": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\node_modules\\.pnpm\\@potential-guide+objective-_547e8cde015878f40b854bda89c4e648\\node_modules\\@potential-guide\\objective-regulator\\dist\\index.js"
+      },
+      {
+        "name": "@potential-guide/regulation-coordinator",
+        "path": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\node_modules\\.pnpm\\@potential-guide+regulation_f4ef39a87ec410b2567d10ee6e0545ae\\node_modules\\@potential-guide\\regulation-coordinator\\dist\\index.js"
+      },
+      {
+        "name": "@potential-guide/cli-core",
+        "path": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\node_modules\\.pnpm\\@potential-guide+cli-core@f_9d3b84d601562b75fd8feb06b5f20bc6\\node_modules\\@potential-guide\\cli-core\\dist\\index.js"
+      },
+      {
+        "name": "@potential-guide/objective-declarations",
+        "path": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\node_modules\\.pnpm\\@potential-guide+objective-_7d584eac972d84b5ca693e7f0b945143\\node_modules\\@potential-guide\\objective-declarations\\dist\\index.js"
+      },
+      {
+        "name": "@potential-guide/cli-runtime",
+        "path": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\node_modules\\.pnpm\\@potential-guide+cli-runtim_8a6bf92916920a89da996a2cbad20132\\node_modules\\@potential-guide\\cli-runtime\\dist\\index.js"
+      },
+      {
+        "name": "@potential-guide/pguide-pilot",
+        "path": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\node_modules\\.pnpm\\@potential-guide+pguide-pil_c171e9fd883a9612e528d4610bdeb907\\node_modules\\@potential-guide\\pguide-pilot\\dist\\index.js"
+      },
+      {
+        "name": "@potential-guide/pguide-regulate",
+        "path": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\node_modules\\.pnpm\\@potential-guide+pguide-reg_110c7817e5e1b3c9964baccbcd37598c\\node_modules\\@potential-guide\\pguide-regulate\\dist\\index.js"
+      }
+    ],
+    "scenarios": [
+      {
+        "label": "api-initial-internal",
+        "subject": {
+          "first": false,
+          "second": true,
+          "dependencyReady": true
+        },
+        "observed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "objective:composition",
+              "levelId": "initial"
+            },
+            "problems": [
+              {
+                "kind": "internal",
+                "ref": {
+                  "objectiveId": "objective:composition",
+                  "levelId": "ready",
+                  "checkId": "first",
+                  "problemId": "not-ready"
+                },
+                "parameters": {}
+              }
+            ],
+            "gapSummary": "not-ready",
+            "observedAt": "2026-10-28T07:19:15.597Z",
+            "versions": {
+              "objective:composition": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f"
+            },
+            "sources": {
+              "objective:composition": {
+                "kind": "objective-artifact",
+                "objectiveId": "objective:composition",
+                "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\objective",
+                "checks": {
+                  "first": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  },
+                  "second": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  },
+                  "prerequisite": {
+                    "digest": "sha256-pguide-check-v1:79bbdffbaf63ca60f930c2418452dc85941d569a7aa79f48d8aa68393fa6a998",
+                    "revision": "26bdd0327c2b72fb74b0cdbc7bd0d93b7978e43e9255e8fa920eb3bae91b9635"
+                  }
+                },
+                "bindings": {
+                  "objective:composition-prerequisite": {
+                    "kind": "objective-artifact",
+                    "objectiveId": "objective:composition-prerequisite",
+                    "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                    "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                    "checks": {
+                      "value": {
+                        "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                        "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "label": "api-ready-internal",
+        "subject": {
+          "first": true,
+          "second": false,
+          "dependencyReady": true
+        },
+        "observed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "objective:composition",
+              "levelId": "ready"
+            },
+            "problems": [
+              {
+                "kind": "internal",
+                "ref": {
+                  "objectiveId": "objective:composition",
+                  "levelId": "complete",
+                  "checkId": "second",
+                  "problemId": "not-ready"
+                },
+                "parameters": {}
+              }
+            ],
+            "gapSummary": "第二输入场景",
+            "observedAt": "2026-10-28T07:19:15.794Z",
+            "versions": {
+              "objective:composition": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+              "objective:composition-prerequisite": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943"
+            },
+            "sources": {
+              "objective:composition": {
+                "kind": "objective-artifact",
+                "objectiveId": "objective:composition",
+                "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\objective",
+                "checks": {
+                  "first": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  },
+                  "second": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  },
+                  "prerequisite": {
+                    "digest": "sha256-pguide-check-v1:79bbdffbaf63ca60f930c2418452dc85941d569a7aa79f48d8aa68393fa6a998",
+                    "revision": "26bdd0327c2b72fb74b0cdbc7bd0d93b7978e43e9255e8fa920eb3bae91b9635"
+                  }
+                },
+                "bindings": {
+                  "objective:composition-prerequisite": {
+                    "kind": "objective-artifact",
+                    "objectiveId": "objective:composition-prerequisite",
+                    "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                    "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                    "checks": {
+                      "value": {
+                        "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                        "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                      }
+                    }
+                  }
+                }
+              },
+              "objective:composition-prerequisite": {
+                "kind": "objective-artifact",
+                "objectiveId": "objective:composition-prerequisite",
+                "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                "checks": {
+                  "value": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "label": "api-ready-dependency",
+        "subject": {
+          "first": true,
+          "second": true,
+          "dependencyReady": false
+        },
+        "observed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "objective:composition",
+              "levelId": "ready"
+            },
+            "problems": [
+              {
+                "kind": "dependency",
+                "objectiveId": "objective:composition-prerequisite",
+                "subject": {
+                  "ready": false
+                },
+                "expectedLevelId": "done",
+                "currentLevelId": "initial"
+              }
+            ],
+            "gapSummary": "依赖 objective:composition-prerequisite {\"ready\":false}：需要 done，当前 initial。",
+            "observedAt": "2026-10-28T07:19:15.925Z",
+            "versions": {
+              "objective:composition": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+              "objective:composition-prerequisite": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943"
+            },
+            "sources": {
+              "objective:composition": {
+                "kind": "objective-artifact",
+                "objectiveId": "objective:composition",
+                "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\objective",
+                "checks": {
+                  "first": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  },
+                  "second": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  },
+                  "prerequisite": {
+                    "digest": "sha256-pguide-check-v1:79bbdffbaf63ca60f930c2418452dc85941d569a7aa79f48d8aa68393fa6a998",
+                    "revision": "26bdd0327c2b72fb74b0cdbc7bd0d93b7978e43e9255e8fa920eb3bae91b9635"
+                  }
+                },
+                "bindings": {
+                  "objective:composition-prerequisite": {
+                    "kind": "objective-artifact",
+                    "objectiveId": "objective:composition-prerequisite",
+                    "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                    "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                    "checks": {
+                      "value": {
+                        "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                        "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                      }
+                    }
+                  }
+                }
+              },
+              "objective:composition-prerequisite": {
+                "kind": "objective-artifact",
+                "objectiveId": "objective:composition-prerequisite",
+                "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                "checks": {
+                  "value": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "label": "api-complete-passed",
+        "subject": {
+          "first": true,
+          "second": true,
+          "dependencyReady": true
+        },
+        "observed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "objective:composition",
+              "levelId": "complete"
+            },
+            "problems": [],
+            "gapSummary": "",
+            "observedAt": "2026-10-28T07:19:16.044Z",
+            "versions": {
+              "objective:composition": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+              "objective:composition-prerequisite": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943"
+            },
+            "sources": {
+              "objective:composition": {
+                "kind": "objective-artifact",
+                "objectiveId": "objective:composition",
+                "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\objective",
+                "checks": {
+                  "first": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  },
+                  "second": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  },
+                  "prerequisite": {
+                    "digest": "sha256-pguide-check-v1:79bbdffbaf63ca60f930c2418452dc85941d569a7aa79f48d8aa68393fa6a998",
+                    "revision": "26bdd0327c2b72fb74b0cdbc7bd0d93b7978e43e9255e8fa920eb3bae91b9635"
+                  }
+                },
+                "bindings": {
+                  "objective:composition-prerequisite": {
+                    "kind": "objective-artifact",
+                    "objectiveId": "objective:composition-prerequisite",
+                    "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                    "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                    "checks": {
+                      "value": {
+                        "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                        "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                      }
+                    }
+                  }
+                }
+              },
+              "objective:composition-prerequisite": {
+                "kind": "objective-artifact",
+                "objectiveId": "objective:composition-prerequisite",
+                "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                "checks": {
+                  "value": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "label": "initial-target-no-execution",
+        "executions": 16
+      },
+      {
+        "label": "scoped-references",
+        "inherited": {
+          "id": "checks/first/problems/not-ready",
+          "title": "not-ready",
+          "description": "not-ready",
+          "content": "# Not ready\r\n\r\nSet the selected input to true. Uncovered references inherit this explanation.\r\n",
+          "references": [],
+          "origin": {
+            "artifactDigest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+            "path": "references/problem.md"
+          },
+          "resourceBase": "file:///D:/Code/potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a/private-host/objective-artifacts/checks/7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47/artifact/references/"
+        },
+        "overridden": {
+          "id": "levels/complete/checks/second/problems/not-ready",
+          "title": "第二输入场景",
+          "description": "第二输入场景",
+          "content": "# Second input in this scenario\r\n\r\nOnly the second reference is customized. Read [[pages/base-second-not-ready]] for the generic explanation.\r\n",
+          "references": [
+            "pages/base-second-not-ready"
+          ],
+          "origin": {
+            "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+            "path": "references/scenario.md"
+          },
+          "resourceBase": "file:///D:/Code/potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a/private-host/objective-artifacts/objectives/dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f/references/"
+        },
+        "base": {
+          "id": "pages/base-second-not-ready",
+          "title": "not-ready",
+          "description": "not-ready",
+          "content": "# Not ready\r\n\r\nSet the selected input to true. Uncovered references inherit this explanation.\r\n",
+          "references": [],
+          "origin": {
+            "artifactDigest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+            "path": "references/problem.md"
+          },
+          "resourceBase": "file:///D:/Code/potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a/private-host/objective-artifacts/checks/7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47/artifact/references/"
+        }
+      },
+      {
+        "label": "cli-validate",
+        "validated": {
+          "schemaVersion": 1,
+          "status": "valid",
+          "objectiveId": "objective:composition",
+          "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f"
+        }
+      },
+      {
+        "label": "cli-declaration",
+        "observed": {
+          "status": 200,
+          "message": "",
+          "payload": {
+            "current": {
+              "objectiveId": "objective:composition",
+              "levelId": "ready"
+            },
+            "problems": [
+              {
+                "kind": "internal",
+                "ref": {
+                  "objectiveId": "objective:composition",
+                  "levelId": "complete",
+                  "checkId": "second",
+                  "problemId": "not-ready"
+                },
+                "parameters": {}
+              }
+            ],
+            "gapSummary": "Second scenario",
+            "observedAt": "2026-10-28T07:19:20.823Z",
+            "versions": {
+              "objective:composition": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+              "objective:composition-prerequisite": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943"
+            },
+            "sources": {
+              "objective:composition": {
+                "kind": "objective-artifact",
+                "objectiveId": "objective:composition",
+                "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\objective",
+                "checks": {
+                  "first": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  },
+                  "second": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  },
+                  "prerequisite": {
+                    "digest": "sha256-pguide-check-v1:79bbdffbaf63ca60f930c2418452dc85941d569a7aa79f48d8aa68393fa6a998",
+                    "revision": "26bdd0327c2b72fb74b0cdbc7bd0d93b7978e43e9255e8fa920eb3bae91b9635"
+                  }
+                },
+                "bindings": {
+                  "objective:composition-prerequisite": {
+                    "kind": "objective-artifact",
+                    "objectiveId": "objective:composition-prerequisite",
+                    "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                    "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                    "checks": {
+                      "value": {
+                        "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                        "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                      }
+                    }
+                  }
+                }
+              },
+              "objective:composition-prerequisite": {
+                "kind": "objective-artifact",
+                "objectiveId": "objective:composition-prerequisite",
+                "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                "checks": {
+                  "value": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "label": "cli-guidance",
+        "guidance": "# Observation\n\n- Objective: `objective:composition`\n- Status: observed - Objective not yet complete.\n- Current level: `ready`\n- Problems: 1\n\n## Problems\n\n- Problem: `not-ready`; check: `second`; level: `complete` - 第二输入场景\n\n## References\n\n- Reference: `levels/ready`; language: `zh-CN`.\n- Reference: `levels/complete/checks/second/problems/not-ready`; language: `zh-CN`.\n\n## Guidance\n\n\\# Composition Two independently delivered Checks, with two distinct references to the value Check. \n\n- Next action: review the listed Pilot references, address the problems, then rerun this probe with the same Objective and input.\n"
+      },
+      {
+        "label": "cli-regulate-no-agent",
+        "regulated": {
+          "schemaVersion": 2,
+          "regulationId": "acbea765-2891-4eca-86bb-957231827daa",
+          "status": "target-reached",
+          "outcome": {
+            "stopReason": "target-reached",
+            "iterations": 0,
+            "latestObservation": {
+              "status": 200,
+              "message": "",
+              "payload": {
+                "current": {
+                  "objectiveId": "objective:composition",
+                  "levelId": "complete"
+                },
+                "problems": [],
+                "gapSummary": "",
+                "observedAt": "2026-10-28T07:19:25.159Z",
+                "versions": {
+                  "objective:composition": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                  "objective:composition-prerequisite": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943"
+                },
+                "sources": {
+                  "objective:composition": {
+                    "kind": "objective-artifact",
+                    "objectiveId": "objective:composition",
+                    "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                    "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\objective",
+                    "checks": {
+                      "first": {
+                        "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                        "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                      },
+                      "second": {
+                        "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                        "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                      },
+                      "prerequisite": {
+                        "digest": "sha256-pguide-check-v1:79bbdffbaf63ca60f930c2418452dc85941d569a7aa79f48d8aa68393fa6a998",
+                        "revision": "26bdd0327c2b72fb74b0cdbc7bd0d93b7978e43e9255e8fa920eb3bae91b9635"
+                      }
+                    },
+                    "bindings": {
+                      "objective:composition-prerequisite": {
+                        "kind": "objective-artifact",
+                        "objectiveId": "objective:composition-prerequisite",
+                        "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                        "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                        "checks": {
+                          "value": {
+                            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "objective:composition-prerequisite": {
+                    "kind": "objective-artifact",
+                    "objectiveId": "objective:composition-prerequisite",
+                    "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                    "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                    "checks": {
+                      "value": {
+                        "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                        "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "stalledRuns": 0
+          },
+          "attempts": [
+            {
+              "id": "9375a3b9-43cb-4b1d-a781-3c669d0c7927",
+              "startedAt": "2026-10-28T07:19:25.000Z",
+              "observations": [
+                {
+                  "status": 200,
+                  "message": "",
+                  "payload": {
+                    "current": {
+                      "objectiveId": "objective:composition",
+                      "levelId": "complete"
+                    },
+                    "problems": [],
+                    "gapSummary": "",
+                    "observedAt": "2026-10-28T07:19:25.159Z",
+                    "versions": {
+                      "objective:composition": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                      "objective:composition-prerequisite": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943"
+                    },
+                    "sources": {
+                      "objective:composition": {
+                        "kind": "objective-artifact",
+                        "objectiveId": "objective:composition",
+                        "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                        "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\objective",
+                        "checks": {
+                          "first": {
+                            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                          },
+                          "second": {
+                            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                          },
+                          "prerequisite": {
+                            "digest": "sha256-pguide-check-v1:79bbdffbaf63ca60f930c2418452dc85941d569a7aa79f48d8aa68393fa6a998",
+                            "revision": "26bdd0327c2b72fb74b0cdbc7bd0d93b7978e43e9255e8fa920eb3bae91b9635"
+                          }
+                        },
+                        "bindings": {
+                          "objective:composition-prerequisite": {
+                            "kind": "objective-artifact",
+                            "objectiveId": "objective:composition-prerequisite",
+                            "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                            "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                            "checks": {
+                              "value": {
+                                "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                                "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "objective:composition-prerequisite": {
+                        "kind": "objective-artifact",
+                        "objectiveId": "objective:composition-prerequisite",
+                        "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                        "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                        "checks": {
+                          "value": {
+                            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "actions": [],
+              "resumeMode": "not-needed",
+              "permissions": {
+                "ceiling": [],
+                "grants": []
+              },
+              "status": "target-reached",
+              "completedAt": "2026-10-28T07:19:25.166Z"
+            }
+          ],
+          "recovery": {
+            "command": "pguide continue acbea765-2891-4eca-86bb-957231827daa"
+          }
+        },
+        "persisted": {
+          "schemaVersion": 6,
+          "regulationId": "acbea765-2891-4eca-86bb-957231827daa",
+          "createdAt": "2026-10-28T07:19:24.995Z",
+          "objectiveId": "objective:composition",
+          "objectiveArtifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+          "objectiveSource": {
+            "kind": "objective-artifact",
+            "objectiveId": "objective:composition",
+            "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+            "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\objective",
+            "checks": {
+              "first": {
+                "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+              },
+              "second": {
+                "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+              },
+              "prerequisite": {
+                "digest": "sha256-pguide-check-v1:79bbdffbaf63ca60f930c2418452dc85941d569a7aa79f48d8aa68393fa6a998",
+                "revision": "26bdd0327c2b72fb74b0cdbc7bd0d93b7978e43e9255e8fa920eb3bae91b9635"
+              }
+            },
+            "bindings": {
+              "objective:composition-prerequisite": {
+                "kind": "objective-artifact",
+                "objectiveId": "objective:composition-prerequisite",
+                "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                "checks": {
+                  "value": {
+                    "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                    "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                  }
+                }
+              }
+            }
+          },
+          "sourceBindings": {
+            "objective:composition-prerequisite": {
+              "kind": "objective-artifact",
+              "objectiveId": "objective:composition-prerequisite",
+              "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+              "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+              "checks": {
+                "value": {
+                  "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                  "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                }
+              }
+            },
+            "objective:composition": {
+              "kind": "objective-artifact",
+              "objectiveId": "objective:composition",
+              "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+              "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\objective",
+              "checks": {
+                "first": {
+                  "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                  "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                },
+                "second": {
+                  "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                  "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                },
+                "prerequisite": {
+                  "digest": "sha256-pguide-check-v1:79bbdffbaf63ca60f930c2418452dc85941d569a7aa79f48d8aa68393fa6a998",
+                  "revision": "26bdd0327c2b72fb74b0cdbc7bd0d93b7978e43e9255e8fa920eb3bae91b9635"
+                }
+              },
+              "bindings": {
+                "objective:composition-prerequisite": {
+                  "kind": "objective-artifact",
+                  "objectiveId": "objective:composition-prerequisite",
+                  "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                  "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                  "checks": {
+                    "value": {
+                      "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                      "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "subject": {
+            "first": true,
+            "second": true,
+            "dependencyReady": true
+          },
+          "subjectDigest": "5d6e5e948b7a61a2503e6c0a7adf85c2fece019067717eac2baab778582ace98",
+          "targetLevel": "terminal",
+          "agentName": "never",
+          "agentProfile": {
+            "type": "acp",
+            "connection": {
+              "protocolVersion": "1"
+            },
+            "transport": {
+              "type": "stdio",
+              "command": "C:\\nvm4w\\nodejs\\node.exe",
+              "args": [
+                "-e",
+                "throw Error('An already-satisfied target must not call an Agent')"
+              ]
+            }
+          },
+          "agentExecutionLimits": {
+            "timeoutMs": 1800000
+          },
+          "regulationStrategy": {
+            "probe": {
+              "timeoutMs": 30000,
+              "retry": {
+                "maxRetries": 0,
+                "delayMs": 0
+              }
+            },
+            "quota": {
+              "timeoutMs": 300000,
+              "maxAgentRuns": 10,
+              "maxStallRuns": 3
+            }
+          },
+          "attempts": [
+            {
+              "id": "9375a3b9-43cb-4b1d-a781-3c669d0c7927",
+              "startedAt": "2026-10-28T07:19:25.000Z",
+              "observations": [
+                {
+                  "status": 200,
+                  "message": "",
+                  "payload": {
+                    "current": {
+                      "objectiveId": "objective:composition",
+                      "levelId": "complete"
+                    },
+                    "problems": [],
+                    "gapSummary": "",
+                    "observedAt": "2026-10-28T07:19:25.159Z",
+                    "versions": {
+                      "objective:composition": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                      "objective:composition-prerequisite": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943"
+                    },
+                    "sources": {
+                      "objective:composition": {
+                        "kind": "objective-artifact",
+                        "objectiveId": "objective:composition",
+                        "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                        "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\objective",
+                        "checks": {
+                          "first": {
+                            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                          },
+                          "second": {
+                            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                          },
+                          "prerequisite": {
+                            "digest": "sha256-pguide-check-v1:79bbdffbaf63ca60f930c2418452dc85941d569a7aa79f48d8aa68393fa6a998",
+                            "revision": "26bdd0327c2b72fb74b0cdbc7bd0d93b7978e43e9255e8fa920eb3bae91b9635"
+                          }
+                        },
+                        "bindings": {
+                          "objective:composition-prerequisite": {
+                            "kind": "objective-artifact",
+                            "objectiveId": "objective:composition-prerequisite",
+                            "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                            "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                            "checks": {
+                              "value": {
+                                "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                                "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "objective:composition-prerequisite": {
+                        "kind": "objective-artifact",
+                        "objectiveId": "objective:composition-prerequisite",
+                        "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                        "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                        "checks": {
+                          "value": {
+                            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "actions": [],
+              "resumeMode": "not-needed",
+              "permissions": {
+                "ceiling": [],
+                "grants": []
+              },
+              "status": "target-reached",
+              "completedAt": "2026-10-28T07:19:25.166Z"
+            }
+          ],
+          "permissions": {
+            "ceiling": [],
+            "grants": []
+          },
+          "history": {
+            "stalledRuns": 0
+          }
+        }
+      },
+      {
+        "label": "continue-after-source-removal",
+        "resumed": {
+          "schemaVersion": 2,
+          "regulationId": "acbea765-2891-4eca-86bb-957231827daa",
+          "status": "target-reached",
+          "outcome": {
+            "stopReason": "target-reached",
+            "iterations": 0,
+            "latestObservation": {
+              "status": 200,
+              "message": "",
+              "payload": {
+                "current": {
+                  "objectiveId": "objective:composition",
+                  "levelId": "complete"
+                },
+                "problems": [],
+                "gapSummary": "",
+                "observedAt": "2026-10-28T07:19:27.319Z",
+                "versions": {
+                  "objective:composition": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                  "objective:composition-prerequisite": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943"
+                },
+                "sources": {
+                  "objective:composition": {
+                    "kind": "objective-artifact",
+                    "objectiveId": "objective:composition",
+                    "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                    "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\objective",
+                    "checks": {
+                      "first": {
+                        "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                        "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                      },
+                      "second": {
+                        "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                        "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                      },
+                      "prerequisite": {
+                        "digest": "sha256-pguide-check-v1:79bbdffbaf63ca60f930c2418452dc85941d569a7aa79f48d8aa68393fa6a998",
+                        "revision": "26bdd0327c2b72fb74b0cdbc7bd0d93b7978e43e9255e8fa920eb3bae91b9635"
+                      }
+                    },
+                    "bindings": {
+                      "objective:composition-prerequisite": {
+                        "kind": "objective-artifact",
+                        "objectiveId": "objective:composition-prerequisite",
+                        "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                        "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                        "checks": {
+                          "value": {
+                            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "objective:composition-prerequisite": {
+                    "kind": "objective-artifact",
+                    "objectiveId": "objective:composition-prerequisite",
+                    "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                    "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                    "checks": {
+                      "value": {
+                        "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                        "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "stalledRuns": 0
+          },
+          "attempts": [
+            {
+              "id": "9375a3b9-43cb-4b1d-a781-3c669d0c7927",
+              "startedAt": "2026-10-28T07:19:25.000Z",
+              "observations": [
+                {
+                  "status": 200,
+                  "message": "",
+                  "payload": {
+                    "current": {
+                      "objectiveId": "objective:composition",
+                      "levelId": "complete"
+                    },
+                    "problems": [],
+                    "gapSummary": "",
+                    "observedAt": "2026-10-28T07:19:25.159Z",
+                    "versions": {
+                      "objective:composition": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                      "objective:composition-prerequisite": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943"
+                    },
+                    "sources": {
+                      "objective:composition": {
+                        "kind": "objective-artifact",
+                        "objectiveId": "objective:composition",
+                        "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                        "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\objective",
+                        "checks": {
+                          "first": {
+                            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                          },
+                          "second": {
+                            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                          },
+                          "prerequisite": {
+                            "digest": "sha256-pguide-check-v1:79bbdffbaf63ca60f930c2418452dc85941d569a7aa79f48d8aa68393fa6a998",
+                            "revision": "26bdd0327c2b72fb74b0cdbc7bd0d93b7978e43e9255e8fa920eb3bae91b9635"
+                          }
+                        },
+                        "bindings": {
+                          "objective:composition-prerequisite": {
+                            "kind": "objective-artifact",
+                            "objectiveId": "objective:composition-prerequisite",
+                            "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                            "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                            "checks": {
+                              "value": {
+                                "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                                "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "objective:composition-prerequisite": {
+                        "kind": "objective-artifact",
+                        "objectiveId": "objective:composition-prerequisite",
+                        "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                        "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                        "checks": {
+                          "value": {
+                            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "actions": [],
+              "resumeMode": "not-needed",
+              "permissions": {
+                "ceiling": [],
+                "grants": []
+              },
+              "status": "target-reached",
+              "completedAt": "2026-10-28T07:19:25.166Z"
+            },
+            {
+              "id": "52e98651-1308-483c-ac3e-ca443e080715",
+              "startedAt": "2026-10-28T07:19:26.117Z",
+              "observations": [
+                {
+                  "status": 200,
+                  "message": "",
+                  "payload": {
+                    "current": {
+                      "objectiveId": "objective:composition",
+                      "levelId": "complete"
+                    },
+                    "problems": [],
+                    "gapSummary": "",
+                    "observedAt": "2026-10-28T07:19:27.319Z",
+                    "versions": {
+                      "objective:composition": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                      "objective:composition-prerequisite": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943"
+                    },
+                    "sources": {
+                      "objective:composition": {
+                        "kind": "objective-artifact",
+                        "objectiveId": "objective:composition",
+                        "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+                        "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\objective",
+                        "checks": {
+                          "first": {
+                            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                          },
+                          "second": {
+                            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                          },
+                          "prerequisite": {
+                            "digest": "sha256-pguide-check-v1:79bbdffbaf63ca60f930c2418452dc85941d569a7aa79f48d8aa68393fa6a998",
+                            "revision": "26bdd0327c2b72fb74b0cdbc7bd0d93b7978e43e9255e8fa920eb3bae91b9635"
+                          }
+                        },
+                        "bindings": {
+                          "objective:composition-prerequisite": {
+                            "kind": "objective-artifact",
+                            "objectiveId": "objective:composition-prerequisite",
+                            "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                            "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                            "checks": {
+                              "value": {
+                                "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                                "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "objective:composition-prerequisite": {
+                        "kind": "objective-artifact",
+                        "objectiveId": "objective:composition-prerequisite",
+                        "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+                        "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+                        "checks": {
+                          "value": {
+                            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "actions": [],
+              "resumeMode": "not-needed",
+              "permissions": {
+                "ceiling": [],
+                "grants": []
+              },
+              "status": "target-reached",
+              "completedAt": "2026-10-28T07:19:27.326Z"
+            }
+          ],
+          "recovery": {
+            "command": "pguide continue acbea765-2891-4eca-86bb-957231827daa"
+          }
+        }
+      },
+      {
+        "label": "api-offline-recovery",
+        "sameSource": true
+      },
+      {
+        "label": "missing-source-fails",
+        "executions": 36
+      },
+      {
+        "label": "missing-check-fails",
+        "executions": 36
+      },
+      {
+        "label": "tampered-reference-fails",
+        "executions": 36
+      }
+    ],
+    "sources": {
+      "objective:composition-prerequisite": {
+        "kind": "objective-artifact",
+        "objectiveId": "objective:composition-prerequisite",
+        "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+        "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+        "checks": {
+          "value": {
+            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+          }
+        }
+      },
+      "objective:composition": {
+        "kind": "objective-artifact",
+        "objectiveId": "objective:composition",
+        "artifactDigest": "sha256-pguide-objective-v1:dcb55ca8ea54eaec63d9b018f2f9e9199fce75025018846b2041b270c91e707f",
+        "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\objective",
+        "checks": {
+          "first": {
+            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+          },
+          "second": {
+            "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+            "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+          },
+          "prerequisite": {
+            "digest": "sha256-pguide-check-v1:79bbdffbaf63ca60f930c2418452dc85941d569a7aa79f48d8aa68393fa6a998",
+            "revision": "26bdd0327c2b72fb74b0cdbc7bd0d93b7978e43e9255e8fa920eb3bae91b9635"
+          }
+        },
+        "bindings": {
+          "objective:composition-prerequisite": {
+            "kind": "objective-artifact",
+            "objectiveId": "objective:composition-prerequisite",
+            "artifactDigest": "sha256-pguide-objective-v1:c7085eddbfa538525160d165786848e0fd96e6a696014a3a3a3923e7ea18d943",
+            "directory": "D:\\Code\\potential-guide-objective-consumer-662fab48-f748-4f50-9ab2-3e0f4704a51a\\delivery\\prerequisite",
+            "checks": {
+              "value": {
+                "digest": "sha256-pguide-check-v1:7260a798dfebe395ffb8e5a738c9582b7142d2e00937f9fd51b03979352c0a47",
+                "revision": "37ee73244f1dc7490b583ec4fb50f636795df08f0ae76fbee4b9a0b331d9a5de"
+              }
+            }
+          }
+        }
+      }
+    },
+    "diagnostics": {
+      "initializations": 2,
+      "executions": 36,
+      "peakWorkers": 2,
+      "retirements": 0,
+      "workers": 2,
+      "queue": 0,
+      "records": 36,
+      "ownedProcesses": 0
+    },
+    "cleanup": {
+      "serverClosed": true,
+      "kernelClosed": true,
+      "permissionHelperClosed": true
+    }
+  },
+  "cleanup": {
+    "serverClosed": true,
+    "kernelClosed": true,
+    "permissionHelperClosed": true,
+    "externalDirectoryRemoved": true,
+    "authorOutputRemoved": true
+  }
+}
