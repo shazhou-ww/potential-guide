@@ -15,7 +15,11 @@
   和 CheckTaskClient 不因制品名改变而机械改名。旧协议名、schema 和历史证据保持原义；
   旧包/命令是否提供兼容入口及退出方式在实施契约明确，不通过本项擅自发布或废弃 npm 包。
 - 新入口分别为 checker.yaml、objective.yaml。一个制品只有一个规范入口，不保留 YAML/JSON 双份真相。
-- $schema 使用不可变的公开 schema URI；具体 URI 在实施时分配并测试，本文占位不是有效发布地址。
+- $schema 使用不可变的公开 schema URI；本套新制品均从 v1 开始，采用独立命名空间：
+  Checker 为 https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json，
+  Objective 为 https://shazhou-ww.github.io/potential-guide/schemas/artifacts/objective/v1.json。
+  这是本构想确定的契约地址，不表示已发布；实现与发布可用性仍需验证。
+  既有 schemas/objective-artifact/v1.json 和其他历史 schema 原样保留，不覆盖或重新解释。
 - 无制品内 id、version、format、defaultLanguage；来源引用在外部，准确内容由 digest 固定。
 - Checker 无 protocol 或 resultSchema。一个 Checker schema 同时固定 worker 导出/调用生命周期、
   输入上下文、统一结果及错误契约；不能只固定结果形状而留下 worker ABI 未定义。
@@ -39,7 +43,7 @@ checker/
 ```
 
 ```yaml
-$schema: "<待分配的 Checker schema URI>"
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json
 worker: worker.cjs
 subjectSchema:
   type: object
@@ -81,7 +85,7 @@ objective/
 ```
 
 ```yaml
-$schema: "<待分配的 Objective schema URI>"
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/artifacts/objective/v1.json
 subjectSchema:
   type: object
   additionalProperties: false
