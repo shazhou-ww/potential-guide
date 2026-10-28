@@ -85,7 +85,10 @@ if(!$actual.AreAccessRulesProtected-or$actual.GetOwner([Security.Principal.Secur
   await mkdir(join(external, "tarballs"));
   const available = new Map();
   for (const directory of await readdir(join(repository, "packages"))) {
-    const manifest = JSON.parse(await readFile(join(repository, "packages", directory, "package.json"), "utf8"));
+    let text;
+    try { text = await readFile(join(repository, "packages", directory, "package.json"), "utf8"); }
+    catch (error) { if (error.code === "ENOENT") continue; throw error; }
+    const manifest = JSON.parse(text);
     available.set(manifest.name, { directory, manifest });
   }
   const closure = new Map();
