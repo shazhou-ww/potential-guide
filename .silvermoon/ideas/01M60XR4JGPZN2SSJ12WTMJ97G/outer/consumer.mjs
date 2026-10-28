@@ -172,6 +172,11 @@ try {
   assert.equal(ra.result.ok, false); assert.equal(rc.result.ok, false);
   assert.equal(ra.result.version, "V2"); assert.equal(rc.result.version, "V3");
   const baselineExecutions = kernel.diagnostics().executions;
+  for await (const event of a.events()) {
+    assert.equal(event.taskId, a.taskId);
+    assert.equal(event.snapshot.state, "completed");
+    break;
+  }
   const reconnect1 = await rawSnapshots([a, b]), reconnect2 = await rawSnapshots([a, b]);
   assert.ok([...reconnect1, ...reconnect2].every(snapshot => snapshot.state === "completed"));
   assert.deepEqual(reconnect1.map(item => [item.taskId, item.revision]), reconnect2.map(item => [item.taskId, item.revision]));
