@@ -11,7 +11,7 @@
 ## 边界
 
 - 演进已完成的 Check Host v2，不重做其调度；不恢复静态 prerequisite，不改写历史契约或证据。
-- 服务核心与 Router 分离，可同进程挂载；本项不实现 Regulation 服务或替代 Coordinator。
+- 服务核心与 Router 分离，可同进程挂载；v1 仅交付 Node Checker，Objective 不限制引用使用同一 runtime；不实现其他运行时或 Regulation 服务。
 - 新制品不支持额外资源或 raw resource API；不承担正式发布、内置全量迁移或跨重启透明执行恢复。
 
 ## 验收标准

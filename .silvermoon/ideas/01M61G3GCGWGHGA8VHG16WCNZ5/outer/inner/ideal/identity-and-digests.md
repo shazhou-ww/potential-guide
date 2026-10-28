@@ -8,8 +8,21 @@
 - 实际 worker 执行 revision 仍独立，不拿内容摘要替换历史执行证据。
 
 两类制品均不把自身 URL、digest、transportDigest 或凭据写进 YAML。Objective 内
-Checker 引用的预期 digest 必填；用户创建 Task 时 URL 必填，digest 可选。
+Checker 引用必须为固定版本 URL 加必填预期 digest；用户创建 Task 时 URL 必填，
+digest 可选，仍允许浮动来源作为外部入口。
 下载后计算摘要只说明取得的内容，不证明发布者身份；可信预期值、TLS、来源授权各司其职。
+
+## 定义的 Merkle DAG
+
+制品内部文件以 Git blob/tree 形成内容树；Objective 声明中的准确 Checker digest
+形成制品间的内容寻址边，因此定义之间是 Merkle DAG。依赖内容不必复制进父制品，
+多个 Objective 可共享同一 Checker。Checker 的代码、契约或文档变化产生新 digest；
+Objective 更新引用后自身 digest 也变化，旧 Objective 仍指向旧 Checker。
+
+固定 URL 负责可重新获取性，digest 负责内容一致性，两者不互相替代。发布地址即使
+带版本也可能被覆盖，Host 始终校验 digest；缓存缺失且来源内容不匹配时明确失败。
+固定 URL 是作者与发布渠道的不可变寻址契约，不靠 URL 中含版本数字就自动证明。
+本节只描述定义关系，不对运行时图作 DAG 假设，也不新增静态 prerequisite。
 
 ## Git 算法选择
 
@@ -27,7 +40,7 @@ SHA-1 tree、压缩归档哈希，也不是文件哈希的简单拼接。不要�
 5. 根 tree 的 64 位十六进制输出加 sha256:。schema 文件名和内容自然参与树身份，
    不额外加入应用自创的 hash 前缀，否则不再与 Git tree OID 相等。
 
-制品 profile 固定所有常规文件为 100644，包括 worker.cjs；Node 加载 worker
+制品 profile 固定所有常规文件为 100644，包括 entry 指定的 checker.cjs；Node 加载入口
 无需宿主可执行位。目录仅为树节点，不采纳 NTFS/POSIX 模式差异。拒绝 symlink、
 submodule、特殊文件、空目录和路径冲突；沿用 NFC、跨平台大小写及安全路径验证，
 拒绝不规范输入而非重命名。原始 UTF-8 文件字节参与摘要，不经过 autocrlf、Git

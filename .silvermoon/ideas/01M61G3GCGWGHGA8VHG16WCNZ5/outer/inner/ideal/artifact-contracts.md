@@ -21,8 +21,10 @@
   这是本构想确定的契约地址，不表示已发布；实现与发布可用性仍需验证。
   既有 schemas/objective-artifact/v1.json 和其他历史 schema 原样保留，不覆盖或重新解释。
 - 无制品内 id、version、format、defaultLanguage；来源引用在外部，准确内容由 digest 固定。
-- Checker 无 protocol 或 resultSchema。一个 Checker schema 同时固定 worker 导出/调用生命周期、
-  输入上下文、统一结果及错误契约；不能只固定结果形状而留下 worker ABI 未定义。
+- Checker 无 protocol 或 resultSchema。一个 Checker schema 同时固定其支持的 runtime
+  加载/调用约定、生命周期、输入上下文、统一结果及错误契约。
+- Checker 顶层声明 entry 与 runtime:{type,minVersion}；entry 是制品内相对入口，
+  不再使用 worker 字段。worker、线程或子进程属于 Host 实现，不是制品身份。
 - 两类制品均声明 languages；不声明 resources 或 references 索引。
 
 ## Checker 示例
@@ -30,7 +32,7 @@
 ```text
 checker/
 ├── checker.yaml
-├── worker.cjs
+├── checker.cjs
 └── references/
     ├── zh-CN/
     │   ├── checker.md
@@ -44,7 +46,10 @@ checker/
 
 ```yaml
 $schema: https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json
-worker: worker.cjs
+runtime:
+  type: node
+  minVersion: "22.13.0"
+entry: checker.cjs
 subjectSchema:
   type: object
   additionalProperties: false
@@ -62,8 +67,33 @@ problems 是可报告的局部业务问题词汇，不是执行故障列表。�
 CheckResult 的 ok/problems 和运行时依赖需求语义，不接受每个作者定义任意输出 schema。
 ok:true 无问题和未解决需求；未知业务问题、无效参数形状或协议 envelope 明确失败。
 依赖问题/requirements 为协议类型，不列进本地 problems。异常、超时、取消不包装成
-业务不达标。worker envelope 到 HTTP Task result 的映射必须统一，实施时明确一次，
+业务不达标。入口调用 envelope 到 HTTP Task result 的映射必须统一，实施时明确一次，
 不可有的消费者拿 envelope、有的消费者拿 payload。
+
+## Runtime 与跨语言边界
+
+v1 的 runtime.type 仅接受 node，entry 是制品内安全相对路径，指向自包含的 CommonJS
+入口；示例 checker.cjs 是文件名，不是 Host worker 管理接口。minVersion 必填，使用
+明确的 major.minor.patch 稳定版本号，按数值版本比较，不接受范围、预发布或 build 后缀。
+示例最低版本为 22.13.0；作者按实际要求声明，Host 同时遵守自己的支持及安全策略。
+版本满足下界只是必要条件，不绕过运行时类型、平台、加载契约或授权检查。
+
+Host 不具备声明的 runtime 或实际版本低于 minVersion 时明确失败，不自动安装、
+降级或换用其他 runtime。声明的要求与实际执行环境分开；实际类型、版本及影响执行的
+平台/adapter 配置进入证据和执行兼容判定，不能仅凭相同制品 digest 跨环境复用。
+恢复仍需匹配原有准确执行证据，不能把“也满足最低版本”当作同一执行环境。
+
+Objective 自身无 runtime，也不要求引用的 Checker 使用同一种 runtime。未来扩展
+Python 等 Checker 时，各自通过对应 adapter 执行，Objective 只依赖统一输入、结果、
+问题和文档契约。当前 v1 仍只支持 Node，其他类型明确拒绝；未来采用新 schema 扩展，
+不修改已发布 v1 或声称已经交付 Python。Python 的依赖打包和隔离另行定义，
+不能仅换入口扩展名便视为可运行。
+
+Host 实现语言不等于 Checker runtime。HTTP/JSON/SSE、schema、摘要及业务生命周期是
+语言无关协议；Node 的 AbortSignal、Promise、Worker 等是 adapter 内部实现。
+跨语言实现须遵守同一 YAML/JSON Schema 方言、数值与 JSON 规范化、UTF-8 路径和
+排序规则。subjectMapping 的受限 JSONata profile 须以可移植语义及测试向量定义，
+不能依赖 JS AST 形状、缺失值或路径函数的隐式行为来定义协议。
 
 ## Objective 示例
 
@@ -103,11 +133,11 @@ levels:
     checks: [tests]
 checkers:
   layout:
-    url: https://example.com/checkers/layout.tgz
+    url: https://example.com/checkers/layout/1.0.0/checker.tgz
     digest: "sha256:<64 hex>"
     subjectMapping: '{"root": root}'
   tests:
-    url: https://example.com/checkers/tests.tgz
+    url: https://example.com/checkers/tests/1.0.0/checker.tgz
     digest: "sha256:<64 hex>"
     subjectMapping: '$'
 ```
@@ -115,6 +145,12 @@ checkers:
 示例 URL 和摘要仅作格式说明，不是可用发布制品。局部名字 layout/tests 不是全局身份。
 levels 保序且累积，initial/terminal 沿用既有内建语义。等级只列局部 Checker 名称，
 不重复筛选 problems；每个 Checker 的完整通过条件均须满足。
+
+Objective 内每个 Checker 引用必须同时提供固定版本 URL 和预期 digest。它固定的不仅是
+执行代码，还有 subjectMapping 所需输入契约、problem 词汇及 References override
+目标。升级 Checker 必须显式更新引用并重新校验 Objective，从而产生新的 Objective
+digest；不允许 manifest 内的 Checker 在运行时追 latest。用户直接调用 Host 时仍可
+提交浮动 URL、不提供 digest，这是外部选版入口而非制品内部组合。
 
 subjectMapping 明确是从 Objective subject 到 Checker subject 的受限 JSONata。
 显式 $ 表示传递全部 subject；无隐式缺省映射。禁止文件/网络/环境读取和未授权扩展，
@@ -163,7 +199,7 @@ languages 表示完整支持的有效文档语言。Objective 可通过本地覆
 
 ## 无额外资源
 
-新 Checker 仅包含 checker.yaml、worker.cjs 和规范 Markdown；Objective 仅包含
+新 Checker 仅包含 checker.yaml、entry 指定的单个自包含 CommonJS 文件和规范 Markdown；Objective 仅包含
 objective.yaml 和规范 Markdown。其他文件、链接、特殊文件和歧义路径明确拒绝，
 不忽略或自动打包。无 raw resource API，也不承诺 Markdown 附件能下载。
 保留页面 API；继承页面的来源仍准确，不能制造不可用的资源地址。

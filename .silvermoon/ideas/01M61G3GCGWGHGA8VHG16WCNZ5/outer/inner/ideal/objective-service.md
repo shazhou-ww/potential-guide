@@ -11,6 +11,10 @@ Objective 服务管理制品、解释 Pilot、处理动态依赖及 References�
 Coordinator 的治理调度不搬入这里；本项只为后续 Regulation 服务保留可组合接口。
 已完成的 Check Host 调度不重做，只适配新 Checker 契约及可挂载入口。
 
+Objective 不声明统一 runtime；Checker Host 按各制品 runtime.type/minVersion 和
+entry 选择受支持 adapter。本轮只交付 Node，不因当前实现语言相同而在 Objective
+协议中加入同 runtime 限制。实际执行环境不满足声明时在调用前明确失败。
+
 ## 路由与数据形状
 
 以 /objectives/v1 为示例挂载点，模块自身不创建 listener 或固定公共前缀。
@@ -57,6 +61,8 @@ preparing、waiting、running、completed、failed、cancelled，可跳中间态
 artifact 返回准确 digest、来源确认时间、manifest 和可用传输摘要；Objective 不伪造
 worker revision。result 为演进后的 PilotObservation，current/problems/gapSummary/
 observedAt 和准确来源绑定保持业务含义；移除全局 id 后引用使用带类型准确地址。
+叶子执行证据同时记录实际 runtime 类型、版本和影响执行的配置；不以 manifest 的
+最低版本代替实际环境，也不把 Host 服务自身的实现语言当作 Checker runtime。
 
 completed 表示有有效观察，不表示已达 Regulation 目标。失败使用
 error:{code,stage,message}，区分 resolve/download/verify/validate/schedule/observe/
@@ -76,7 +82,7 @@ Task 是独立需求，Observation Execution 是一次实际组合观察，不�
 - completed-after-request：c > a，允许加入已运行且兼容的整个观察。
 
 兼容键至少包含准确根 digest、固定依赖绑定约束、规范化 subject/context、有效语言、
-授权与资源作用域、执行策略。freshness 为逐 Task 条件，不必放进兼容键。准确绑定
+授权与资源作用域、实际 runtime/adapter 环境及执行策略。freshness 为逐 Task 条件，不必放进兼容键。准确绑定
 冲突不得共享；晚解析请求在原子仲裁中匹配保留结果/运行执行/预约新执行，不能因网络
 完成顺序不同丢失可用结果。只有在前一执行封口前才能关联。
 
@@ -109,6 +115,9 @@ Task 自身 revision 同时覆盖进展与终态；共享执行的变化投影�
 属于 evidence；动态依赖不假装固定总量或百分比。限制深度、invocation、快照和队列。
 
 ## SDK 对称
+
+本节为当前 TypeScript SDK 的实现约定，不是跨语言协议。其他语言分别实现自己的
+SDK，无需模仿 JS 类、Promise 或 AsyncIterable；须遵守相同 HTTP 数据与生命周期语义。
 
 ```typescript
 const client = new ObjectiveTaskClient(address);

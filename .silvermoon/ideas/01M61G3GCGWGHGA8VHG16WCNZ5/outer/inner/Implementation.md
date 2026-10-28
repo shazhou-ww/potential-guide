@@ -5,6 +5,8 @@
 ### I-S01: 演进制品契约与工具链
 
 实现 YAML、统一结果、目录 References、语言选择、Git SHA-256 树摘要和准确引用；适配作者工具、Check 消费者及历史格式边界。
+落实 entry 和 runtime.type/minVersion，v1 仅支持 Node；Objective 的内部引用固定版本
+URL 与 digest，不引入同 runtime 限制。
 
 ### I-S02: 服务化 Objective 观察
 
@@ -19,6 +21,8 @@
 ### I-AC01: 内容与协议准确
 
 固定向量与 Git SHA-256 oracle 一致；schema、未知问题、目录语言、旧格式与篡改反例证明无静默转换或内容替换。
+覆盖未知 runtime、低于最低版本、非法入口、准确来源不匹配和实际运行环境证据，
+以可移植向量约束 JSONata 与 JSON 规范化，不把 SDK 实现当成协议定义。
 
 ### I-AC02: 任务时序与进展可靠
 
