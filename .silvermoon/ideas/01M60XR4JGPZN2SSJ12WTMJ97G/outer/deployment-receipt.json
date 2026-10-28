@@ -1,0 +1,1336 @@
+{
+  "invocation": "0c9194dc-f434-4050-88f4-499be358f6d8",
+  "environment": {
+    "node": "v24.11.1",
+    "platform": "win32"
+  },
+  "installation": {
+    "command": "pnpm install --offline --ignore-scripts --no-frozen-lockfile --store-dir <existing-store-parent> --reporter=append-only",
+    "exitCode": 0,
+    "stdoutSha256": "8d9d8e4c2bded5d7d13f3d6e7837e2e6ddfe5ddf3c29728d6ab858932e134e6a",
+    "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "offline": true,
+    "scriptsIgnored": true
+  },
+  "tools": [
+    {
+      "name": "@potential-guide/check-host",
+      "version": "0.1.0",
+      "filename": "tarballs/potential-guide-check-host-0.1.0.tgz",
+      "sha256": "25bd753b6d88d1c61f5a8b50a916ceaaaec3769c747647eae249279d90cfdbbe",
+      "bytes": 60985,
+      "files": 73
+    },
+    {
+      "name": "@potential-guide/check-runtime-files",
+      "version": "0.1.0",
+      "filename": "tarballs/potential-guide-check-runtime-files-0.1.0.tgz",
+      "sha256": "470d68d9dcdf48579b527aeb5636138cee0545bd022fab582824d3ebe8131c0b",
+      "bytes": 18093,
+      "files": 23
+    },
+    {
+      "name": "@potential-guide/check-artifacts",
+      "version": "0.1.0",
+      "filename": "tarballs/potential-guide-check-artifacts-0.1.0.tgz",
+      "sha256": "e7bc6f6adc5787695cc77659c4413f2f8873bb4235dbf4d0efb58c3e1d2d6e89",
+      "bytes": 22967,
+      "files": 25
+    },
+    {
+      "name": "@potential-guide/effects",
+      "version": "0.1.0-rc.0",
+      "filename": "tarballs/potential-guide-effects-0.1.0-rc.0.tgz",
+      "sha256": "0fe03517fa0d74ee2e6f6d45fa1b9716fd3de939c80654ed3283478b5b6c7c00",
+      "bytes": 5813,
+      "files": 7
+    },
+    {
+      "name": "@potential-guide/cli-runtime",
+      "version": "0.1.0-rc.0",
+      "filename": "tarballs/potential-guide-cli-runtime-0.1.0-rc.0.tgz",
+      "sha256": "797f778675a0eb2c79e355b1625f63194936f503870392cd550eb6c9c29812e7",
+      "bytes": 51542,
+      "files": 30
+    },
+    {
+      "name": "@potential-guide/cli-core",
+      "version": "0.3.0-rc.0",
+      "filename": "tarballs/potential-guide-cli-core-0.3.0-rc.0.tgz",
+      "sha256": "aca5da44da8ac39383d440e439bb927803ad984f76c36d90d673a95b4e252646",
+      "bytes": 91142,
+      "files": 49
+    },
+    {
+      "name": "@potential-guide/git-source",
+      "version": "0.1.0-rc.0",
+      "filename": "tarballs/potential-guide-git-source-0.1.0-rc.0.tgz",
+      "sha256": "3a4a742d893fda8b32e35b95c9a5b7784450243ad79155437c455f0bf7d7f813",
+      "bytes": 15294,
+      "files": 7
+    },
+    {
+      "name": "@potential-guide/objective-pilot",
+      "version": "0.2.0-rc.0",
+      "filename": "tarballs/potential-guide-objective-pilot-0.2.0-rc.0.tgz",
+      "sha256": "d923066f0238795f60af8247155a94dbf3e223fd94378702864558e5aea6a040",
+      "bytes": 43490,
+      "files": 59
+    },
+    {
+      "name": "@potential-guide/pilot-protocol",
+      "version": "0.1.0-rc.0",
+      "filename": "tarballs/potential-guide-pilot-protocol-0.1.0-rc.0.tgz",
+      "sha256": "ffa3d12843fe7b3b80e6d509fb4198fdb95f33cc0a037e0fb46eae7a571cf7b7",
+      "bytes": 43955,
+      "files": 52
+    },
+    {
+      "name": "@potential-guide/objective-regulator",
+      "version": "0.4.0-rc.0",
+      "filename": "tarballs/potential-guide-objective-regulator-0.4.0-rc.0.tgz",
+      "sha256": "5c2c0f20c56583b29c44edcdb323f15ab154e8c983c16c71cd17f2930c65055f",
+      "bytes": 19793,
+      "files": 7
+    }
+  ],
+  "scripts": [
+    {
+      "name": "verify-deployment.mjs",
+      "sha256": "7630c9a8594f35ef864ee8caee9717449d9537e5edfb2d10e019a7937ea61afc"
+    },
+    {
+      "name": "author.mjs",
+      "sha256": "6cba9f12830ece7ba253769c8fb1d8535554b374c9e9c6d070e85f79c4710489"
+    },
+    {
+      "name": "consumer.mjs",
+      "sha256": "2a19e4e3fc9e253c9daa88821349b18920470b4590363bcfb154921bcf4ecc67"
+    },
+    {
+      "name": "controlled-worker.cjs",
+      "sha256": "19e6451555406560bb9d682d5516bd2f08b2bb64de1c9a623f2558fcbb43f19d"
+    },
+    {
+      "name": "business-worker.cjs",
+      "sha256": "348cfec4543ca0dfa9f9f3bbc1ee327c692330b65665feb674f725f505814374"
+    }
+  ],
+  "cleanup": {
+    "externalDirectoryRemoved": true,
+    "noPersistentService": true
+  },
+  "status": "passed",
+  "baseline": {
+    "primaryCommit": "6c0b8bb81fff1b2392ab95412a80874999cab480",
+    "implementationRevision": "d1d690f76c5516b961f6247c08473699a08cdc4a",
+    "deploymentRevision": "39c87f0d1c77be53050fadfcc1c400c40fbde83d",
+    "contractBlob": "bae4eb4f47bda7fecd69f374c9b744e4df9fb2de"
+  },
+  "consumer": {
+    "environment": {
+      "node": "v24.11.1",
+      "platform": "win32"
+    },
+    "modules": [
+      {
+        "name": "@potential-guide/check-host",
+        "relativePath": "node_modules/.pnpm/@potential-guide+check-host_38a6b5e303bc7e57567a6e5ef2a95ecd/node_modules/@potential-guide/check-host/dist/index.js"
+      },
+      {
+        "name": "@potential-guide/check-runtime-files",
+        "relativePath": "node_modules/.pnpm/@potential-guide+check-runt_c258a95f23a5488fcec930563febb369/node_modules/@potential-guide/check-runtime-files/dist/index.js"
+      },
+      {
+        "name": "@potential-guide/check-artifacts",
+        "relativePath": "node_modules/.pnpm/@potential-guide+check-arti_2326919399c5b76cb419a6adf4e62522/node_modules/@potential-guide/check-artifacts/dist/index.js"
+      },
+      {
+        "name": "@potential-guide/effects",
+        "relativePath": "node_modules/.pnpm/@potential-guide+effects@fi_b52c6a5707c36764478f8d40ffd45d66/node_modules/@potential-guide/effects/dist/index.js"
+      },
+      {
+        "name": "@potential-guide/cli-runtime",
+        "relativePath": "node_modules/.pnpm/@potential-guide+cli-runtim_70c4b2fcd6effc715e662e3e98adccb3/node_modules/@potential-guide/cli-runtime/dist/index.js"
+      },
+      {
+        "name": "@potential-guide/cli-core",
+        "relativePath": "node_modules/.pnpm/@potential-guide+cli-core@f_fa40238824c34b3aab0dcc8c454eee31/node_modules/@potential-guide/cli-core/dist/index.js"
+      },
+      {
+        "name": "@potential-guide/git-source",
+        "relativePath": "node_modules/.pnpm/@potential-guide+git-source_c253af13980c5e1c724152c0f7be64ad/node_modules/@potential-guide/git-source/dist/index.js"
+      },
+      {
+        "name": "@potential-guide/objective-pilot",
+        "relativePath": "node_modules/.pnpm/@potential-guide+objective-_b3656f6a63863fcce376e8a000144013/node_modules/@potential-guide/objective-pilot/dist/index.js"
+      },
+      {
+        "name": "@potential-guide/pilot-protocol",
+        "relativePath": "node_modules/.pnpm/@potential-guide+pilot-prot_fe0e6f43a3527a461a39200487f8cbbc/node_modules/@potential-guide/pilot-protocol/dist/index.js"
+      },
+      {
+        "name": "@potential-guide/objective-regulator",
+        "relativePath": "node_modules/.pnpm/@potential-guide+objective-_c6dd64f1805ce3ac2ab7097d62137546/node_modules/@potential-guide/objective-regulator/dist/index.js"
+      }
+    ],
+    "scenarios": [
+      {
+        "name": "real-authenticated-v2-ready",
+        "ready": true
+      },
+      {
+        "name": "sdk-invalid-json-zero-http",
+        "requests": 0,
+        "hooks": 0
+      },
+      {
+        "name": "queued-strong-sharing-version-coexistence-and-events",
+        "snapshots": [
+          {
+            "taskId": "964e350b-9a44-498a-b37a-2a3bd1302046",
+            "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+            "revision": 5,
+            "acceptedAt": "2026-10-28T13:23:22.061Z",
+            "freshness": "started-after-request",
+            "state": "completed",
+            "artifact": {
+              "digest": "sha256-pguide-check-v1:70f4883017d6f4ff8934edd5b2679b4cc8a053e5a78a4c3d2524502675c6889f",
+              "revision": "7befe4c2068128d37b8208451fb7e42e1ae1b11c082b0cb15a7ffbb665c29701",
+              "source": "https://127.0.0.1:58059",
+              "checkedAt": "2026-10-28T13:23:22.721Z",
+              "manifest": {
+                "format": "pguide-check-v1",
+                "id": "deployment-controlled",
+                "version": "V2",
+                "worker": "worker.cjs",
+                "protocol": "pguide-check-host-v1",
+                "subjectSchema": {
+                  "type": "object",
+                  "required": [
+                    "name"
+                  ]
+                },
+                "resultSchema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "version",
+                    "worker",
+                    "invocation"
+                  ]
+                },
+                "resources": [
+                  {
+                    "path": "resources/control.json",
+                    "executable": false
+                  }
+                ],
+                "references": {
+                  "check": "references/check.md",
+                  "problems": {}
+                }
+              },
+              "transportDigest": "sha256:02078b89d5fb24f5a30cfb1ebc3324981b8b1665f05daa918fa0d2dbb89ac716"
+            },
+            "executionId": "58a81f50-9af5-4ecc-82fa-3aaf354d61fe",
+            "executionStartedAt": "2026-10-28T13:23:22.893Z",
+            "executionCompletedAt": "2026-10-28T13:23:23.234Z",
+            "result": {
+              "ok": false,
+              "version": "V2",
+              "worker": 1,
+              "invocation": 1
+            }
+          },
+          {
+            "taskId": "8e0e700e-1cf3-4bea-8111-e490996db3c3",
+            "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+            "revision": 5,
+            "acceptedAt": "2026-10-28T13:23:22.086Z",
+            "freshness": "started-after-request",
+            "state": "completed",
+            "artifact": {
+              "digest": "sha256-pguide-check-v1:70f4883017d6f4ff8934edd5b2679b4cc8a053e5a78a4c3d2524502675c6889f",
+              "revision": "7befe4c2068128d37b8208451fb7e42e1ae1b11c082b0cb15a7ffbb665c29701",
+              "source": "https://127.0.0.1:58059",
+              "checkedAt": "2026-10-28T13:23:22.796Z",
+              "manifest": {
+                "format": "pguide-check-v1",
+                "id": "deployment-controlled",
+                "version": "V2",
+                "worker": "worker.cjs",
+                "protocol": "pguide-check-host-v1",
+                "subjectSchema": {
+                  "type": "object",
+                  "required": [
+                    "name"
+                  ]
+                },
+                "resultSchema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "version",
+                    "worker",
+                    "invocation"
+                  ]
+                },
+                "resources": [
+                  {
+                    "path": "resources/control.json",
+                    "executable": false
+                  }
+                ],
+                "references": {
+                  "check": "references/check.md",
+                  "problems": {}
+                }
+              },
+              "transportDigest": "sha256:02078b89d5fb24f5a30cfb1ebc3324981b8b1665f05daa918fa0d2dbb89ac716"
+            },
+            "executionId": "58a81f50-9af5-4ecc-82fa-3aaf354d61fe",
+            "executionStartedAt": "2026-10-28T13:23:22.893Z",
+            "executionCompletedAt": "2026-10-28T13:23:23.234Z",
+            "result": {
+              "ok": false,
+              "version": "V2",
+              "worker": 1,
+              "invocation": 1
+            }
+          },
+          {
+            "taskId": "f5b325eb-6855-4198-9bd0-484f226a7762",
+            "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+            "revision": 5,
+            "acceptedAt": "2026-10-28T13:23:22.945Z",
+            "freshness": "started-after-request",
+            "state": "completed",
+            "artifact": {
+              "digest": "sha256-pguide-check-v1:2a047d5cabf5e31c2951c113f53a4b957bf4886a6660f327ac87ea60d30dc5c5",
+              "revision": "c1230e204973526759c6c4fb4fa90678928358eed8148270bcb4a6ba22eb3795",
+              "source": "https://127.0.0.1:58059",
+              "checkedAt": "2026-10-28T13:23:23.087Z",
+              "manifest": {
+                "format": "pguide-check-v1",
+                "id": "deployment-controlled",
+                "version": "V3",
+                "worker": "worker.cjs",
+                "protocol": "pguide-check-host-v1",
+                "subjectSchema": {
+                  "type": "object",
+                  "required": [
+                    "name"
+                  ]
+                },
+                "resultSchema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "version",
+                    "worker",
+                    "invocation"
+                  ]
+                },
+                "resources": [
+                  {
+                    "path": "resources/control.json",
+                    "executable": false
+                  }
+                ],
+                "references": {
+                  "check": "references/check.md",
+                  "problems": {}
+                }
+              },
+              "transportDigest": "sha256:80f1442e2c406ddf772351818435436e5c835564d08d71147ef397672ae5bb90"
+            },
+            "executionId": "bc08a887-ae62-45bf-9011-493a20a37888",
+            "executionStartedAt": "2026-10-28T13:23:23.167Z",
+            "executionCompletedAt": "2026-10-28T13:23:23.241Z",
+            "result": {
+              "ok": false,
+              "version": "V3",
+              "worker": 2,
+              "invocation": 1
+            }
+          }
+        ],
+        "initialStates": [
+          {
+            "taskId": "964e350b-9a44-498a-b37a-2a3bd1302046",
+            "states": [
+              "waiting",
+              "running",
+              "completed"
+            ],
+            "revisions": [
+              3,
+              4,
+              5
+            ]
+          },
+          {
+            "taskId": "8e0e700e-1cf3-4bea-8111-e490996db3c3",
+            "states": [
+              "waiting",
+              "running",
+              "completed"
+            ],
+            "revisions": [
+              3,
+              4,
+              5
+            ]
+          }
+        ],
+        "reconnectStable": true,
+        "noReadExecution": true
+      },
+      {
+        "name": "fixed-old-content-after-floating-update",
+        "snapshot": {
+          "taskId": "23558685-70e5-403e-9084-60030a3ecf90",
+          "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+          "revision": 5,
+          "acceptedAt": "2026-10-28T13:23:23.341Z",
+          "freshness": "started-after-request",
+          "state": "completed",
+          "artifact": {
+            "digest": "sha256-pguide-check-v1:70f4883017d6f4ff8934edd5b2679b4cc8a053e5a78a4c3d2524502675c6889f",
+            "revision": "7befe4c2068128d37b8208451fb7e42e1ae1b11c082b0cb15a7ffbb665c29701",
+            "source": "https://127.0.0.1:58059",
+            "checkedAt": "2026-10-28T13:23:22.796Z",
+            "manifest": {
+              "format": "pguide-check-v1",
+              "id": "deployment-controlled",
+              "version": "V2",
+              "worker": "worker.cjs",
+              "protocol": "pguide-check-host-v1",
+              "subjectSchema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ]
+              },
+              "resultSchema": {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "version",
+                  "worker",
+                  "invocation"
+                ]
+              },
+              "resources": [
+                {
+                  "path": "resources/control.json",
+                  "executable": false
+                }
+              ],
+              "references": {
+                "check": "references/check.md",
+                "problems": {}
+              }
+            },
+            "transportDigest": "sha256:02078b89d5fb24f5a30cfb1ebc3324981b8b1665f05daa918fa0d2dbb89ac716"
+          },
+          "executionId": "bdf24cf2-421f-42b0-aae2-6aa1e594bb8f",
+          "executionStartedAt": "2026-10-28T13:23:23.402Z",
+          "executionCompletedAt": "2026-10-28T13:23:23.413Z",
+          "result": {
+            "ok": true,
+            "version": "V2",
+            "worker": 1,
+            "invocation": 2
+          }
+        }
+      },
+      {
+        "name": "running-weak-strong-and-independent-deadline-cancel",
+        "cancelled": {
+          "taskId": "4103dfc1-9bb6-4355-a163-f5471ccea3f7",
+          "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+          "revision": 5,
+          "acceptedAt": "2026-10-28T13:23:23.516Z",
+          "freshness": "started-after-request",
+          "state": "cancelled",
+          "artifact": {
+            "digest": "sha256-pguide-check-v1:70f4883017d6f4ff8934edd5b2679b4cc8a053e5a78a4c3d2524502675c6889f",
+            "revision": "7befe4c2068128d37b8208451fb7e42e1ae1b11c082b0cb15a7ffbb665c29701",
+            "source": "https://127.0.0.1:58059",
+            "checkedAt": "2026-10-28T13:23:22.796Z",
+            "manifest": {
+              "format": "pguide-check-v1",
+              "id": "deployment-controlled",
+              "version": "V2",
+              "worker": "worker.cjs",
+              "protocol": "pguide-check-host-v1",
+              "subjectSchema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ]
+              },
+              "resultSchema": {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "version",
+                  "worker",
+                  "invocation"
+                ]
+              },
+              "resources": [
+                {
+                  "path": "resources/control.json",
+                  "executable": false
+                }
+              ],
+              "references": {
+                "check": "references/check.md",
+                "problems": {}
+              }
+            },
+            "transportDigest": "sha256:02078b89d5fb24f5a30cfb1ebc3324981b8b1665f05daa918fa0d2dbb89ac716"
+          },
+          "executionId": "34e88edf-a5fa-40dd-b403-7389adc928ae",
+          "executionStartedAt": "2026-10-28T13:23:23.571Z",
+          "error": {
+            "code": "task_cancelled",
+            "stage": "schedule",
+            "message": "Task cancelled."
+          }
+        },
+        "expired": {
+          "taskId": "49dc4ff9-1709-4eb0-bd1a-c0c8e07c8849",
+          "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+          "revision": 4,
+          "acceptedAt": "2026-10-28T13:23:23.800Z",
+          "freshness": "completed-after-request",
+          "state": "failed",
+          "artifact": {
+            "digest": "sha256-pguide-check-v1:70f4883017d6f4ff8934edd5b2679b4cc8a053e5a78a4c3d2524502675c6889f",
+            "revision": "7befe4c2068128d37b8208451fb7e42e1ae1b11c082b0cb15a7ffbb665c29701",
+            "source": "https://127.0.0.1:58059",
+            "checkedAt": "2026-10-28T13:23:22.796Z",
+            "manifest": {
+              "format": "pguide-check-v1",
+              "id": "deployment-controlled",
+              "version": "V2",
+              "worker": "worker.cjs",
+              "protocol": "pguide-check-host-v1",
+              "subjectSchema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ]
+              },
+              "resultSchema": {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "version",
+                  "worker",
+                  "invocation"
+                ]
+              },
+              "resources": [
+                {
+                  "path": "resources/control.json",
+                  "executable": false
+                }
+              ],
+              "references": {
+                "check": "references/check.md",
+                "problems": {}
+              }
+            },
+            "transportDigest": "sha256:02078b89d5fb24f5a30cfb1ebc3324981b8b1665f05daa918fa0d2dbb89ac716"
+          },
+          "executionId": "34e88edf-a5fa-40dd-b403-7389adc928ae",
+          "executionStartedAt": "2026-10-28T13:23:23.571Z",
+          "error": {
+            "code": "task_timeout",
+            "stage": "schedule",
+            "message": "Task delivery deadline expired."
+          }
+        },
+        "weak": {
+          "taskId": "bd46c746-8f09-4334-9994-6bdcf756f648",
+          "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+          "revision": 4,
+          "acceptedAt": "2026-10-28T13:23:23.594Z",
+          "freshness": "completed-after-request",
+          "state": "completed",
+          "artifact": {
+            "digest": "sha256-pguide-check-v1:70f4883017d6f4ff8934edd5b2679b4cc8a053e5a78a4c3d2524502675c6889f",
+            "revision": "7befe4c2068128d37b8208451fb7e42e1ae1b11c082b0cb15a7ffbb665c29701",
+            "source": "https://127.0.0.1:58059",
+            "checkedAt": "2026-10-28T13:23:22.796Z",
+            "manifest": {
+              "format": "pguide-check-v1",
+              "id": "deployment-controlled",
+              "version": "V2",
+              "worker": "worker.cjs",
+              "protocol": "pguide-check-host-v1",
+              "subjectSchema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ]
+              },
+              "resultSchema": {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "version",
+                  "worker",
+                  "invocation"
+                ]
+              },
+              "resources": [
+                {
+                  "path": "resources/control.json",
+                  "executable": false
+                }
+              ],
+              "references": {
+                "check": "references/check.md",
+                "problems": {}
+              }
+            },
+            "transportDigest": "sha256:02078b89d5fb24f5a30cfb1ebc3324981b8b1665f05daa918fa0d2dbb89ac716"
+          },
+          "executionId": "34e88edf-a5fa-40dd-b403-7389adc928ae",
+          "executionStartedAt": "2026-10-28T13:23:23.571Z",
+          "executionCompletedAt": "2026-10-28T13:23:24.383Z",
+          "result": {
+            "ok": true,
+            "version": "V2",
+            "worker": 1,
+            "invocation": 3
+          }
+        },
+        "strong": {
+          "taskId": "2604c268-5f41-4490-80ba-e483396a20f9",
+          "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+          "revision": 5,
+          "acceptedAt": "2026-10-28T13:23:23.646Z",
+          "freshness": "started-after-request",
+          "state": "completed",
+          "artifact": {
+            "digest": "sha256-pguide-check-v1:70f4883017d6f4ff8934edd5b2679b4cc8a053e5a78a4c3d2524502675c6889f",
+            "revision": "7befe4c2068128d37b8208451fb7e42e1ae1b11c082b0cb15a7ffbb665c29701",
+            "source": "https://127.0.0.1:58059",
+            "checkedAt": "2026-10-28T13:23:22.796Z",
+            "manifest": {
+              "format": "pguide-check-v1",
+              "id": "deployment-controlled",
+              "version": "V2",
+              "worker": "worker.cjs",
+              "protocol": "pguide-check-host-v1",
+              "subjectSchema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ]
+              },
+              "resultSchema": {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "version",
+                  "worker",
+                  "invocation"
+                ]
+              },
+              "resources": [
+                {
+                  "path": "resources/control.json",
+                  "executable": false
+                }
+              ],
+              "references": {
+                "check": "references/check.md",
+                "problems": {}
+              }
+            },
+            "transportDigest": "sha256:02078b89d5fb24f5a30cfb1ebc3324981b8b1665f05daa918fa0d2dbb89ac716"
+          },
+          "executionId": "686cd982-d166-4991-bf61-de1bac3258d5",
+          "executionStartedAt": "2026-10-28T13:23:23.766Z",
+          "executionCompletedAt": "2026-10-28T13:23:24.390Z",
+          "result": {
+            "ok": true,
+            "version": "V2",
+            "worker": 3,
+            "invocation": 1
+          }
+        }
+      },
+      {
+        "name": "last-demand-cooperative-cleanup",
+        "task": {
+          "taskId": "2c836366-d6b6-47fb-bb56-ad416de5815f",
+          "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+          "revision": 5,
+          "acceptedAt": "2026-10-28T13:23:24.449Z",
+          "freshness": "started-after-request",
+          "state": "cancelled",
+          "artifact": {
+            "digest": "sha256-pguide-check-v1:70f4883017d6f4ff8934edd5b2679b4cc8a053e5a78a4c3d2524502675c6889f",
+            "revision": "7befe4c2068128d37b8208451fb7e42e1ae1b11c082b0cb15a7ffbb665c29701",
+            "source": "https://127.0.0.1:58059",
+            "checkedAt": "2026-10-28T13:23:22.796Z",
+            "manifest": {
+              "format": "pguide-check-v1",
+              "id": "deployment-controlled",
+              "version": "V2",
+              "worker": "worker.cjs",
+              "protocol": "pguide-check-host-v1",
+              "subjectSchema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ]
+              },
+              "resultSchema": {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "version",
+                  "worker",
+                  "invocation"
+                ]
+              },
+              "resources": [
+                {
+                  "path": "resources/control.json",
+                  "executable": false
+                }
+              ],
+              "references": {
+                "check": "references/check.md",
+                "problems": {}
+              }
+            },
+            "transportDigest": "sha256:02078b89d5fb24f5a30cfb1ebc3324981b8b1665f05daa918fa0d2dbb89ac716"
+          },
+          "executionId": "40ec9a2c-f06c-43f3-a616-9e1412f44560",
+          "executionStartedAt": "2026-10-28T13:23:24.504Z",
+          "error": {
+            "code": "task_cancelled",
+            "stage": "schedule",
+            "message": "Task cancelled."
+          }
+        },
+        "acknowledged": true
+      },
+      {
+        "name": "execution-wall-seal-force-and-cross-worker-isolation",
+        "failure": {
+          "taskId": "c4d224cb-e002-4814-9234-812f38d6176e",
+          "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+          "revision": 5,
+          "acceptedAt": "2026-10-28T13:23:24.555Z",
+          "freshness": "started-after-request",
+          "state": "failed",
+          "artifact": {
+            "digest": "sha256-pguide-check-v1:70f4883017d6f4ff8934edd5b2679b4cc8a053e5a78a4c3d2524502675c6889f",
+            "revision": "7befe4c2068128d37b8208451fb7e42e1ae1b11c082b0cb15a7ffbb665c29701",
+            "source": "https://127.0.0.1:58059",
+            "checkedAt": "2026-10-28T13:23:22.796Z",
+            "manifest": {
+              "format": "pguide-check-v1",
+              "id": "deployment-controlled",
+              "version": "V2",
+              "worker": "worker.cjs",
+              "protocol": "pguide-check-host-v1",
+              "subjectSchema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ]
+              },
+              "resultSchema": {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "version",
+                  "worker",
+                  "invocation"
+                ]
+              },
+              "resources": [
+                {
+                  "path": "resources/control.json",
+                  "executable": false
+                }
+              ],
+              "references": {
+                "check": "references/check.md",
+                "problems": {}
+              }
+            },
+            "transportDigest": "sha256:02078b89d5fb24f5a30cfb1ebc3324981b8b1665f05daa918fa0d2dbb89ac716"
+          },
+          "executionId": "1cf56f21-6c58-4067-a522-da56a18b432b",
+          "executionStartedAt": "2026-10-28T13:23:24.609Z",
+          "error": {
+            "code": "execution_timeout",
+            "stage": "execute",
+            "message": "Execution wall-clock expired."
+          }
+        },
+        "healthy": {
+          "taskId": "4feb8fc9-f014-4a9b-89b2-1f6b14ae1abf",
+          "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+          "revision": 5,
+          "acceptedAt": "2026-10-28T13:23:24.645Z",
+          "freshness": "started-after-request",
+          "state": "completed",
+          "artifact": {
+            "digest": "sha256-pguide-check-v1:70f4883017d6f4ff8934edd5b2679b4cc8a053e5a78a4c3d2524502675c6889f",
+            "revision": "7befe4c2068128d37b8208451fb7e42e1ae1b11c082b0cb15a7ffbb665c29701",
+            "source": "https://127.0.0.1:58059",
+            "checkedAt": "2026-10-28T13:23:22.796Z",
+            "manifest": {
+              "format": "pguide-check-v1",
+              "id": "deployment-controlled",
+              "version": "V2",
+              "worker": "worker.cjs",
+              "protocol": "pguide-check-host-v1",
+              "subjectSchema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ]
+              },
+              "resultSchema": {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "version",
+                  "worker",
+                  "invocation"
+                ]
+              },
+              "resources": [
+                {
+                  "path": "resources/control.json",
+                  "executable": false
+                }
+              ],
+              "references": {
+                "check": "references/check.md",
+                "problems": {}
+              }
+            },
+            "transportDigest": "sha256:02078b89d5fb24f5a30cfb1ebc3324981b8b1665f05daa918fa0d2dbb89ac716"
+          },
+          "executionId": "91176b4f-cee5-4944-b2aa-feadda85bf42",
+          "executionStartedAt": "2026-10-28T13:23:24.707Z",
+          "executionCompletedAt": "2026-10-28T13:23:24.722Z",
+          "result": {
+            "ok": true,
+            "version": "V2",
+            "worker": 3,
+            "invocation": 2
+          }
+        },
+        "successor": {
+          "taskId": "fdd4e795-4676-4136-afce-354b5ce15285",
+          "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+          "revision": 5,
+          "acceptedAt": "2026-10-28T13:23:30.978Z",
+          "freshness": "started-after-request",
+          "state": "completed",
+          "artifact": {
+            "digest": "sha256-pguide-check-v1:70f4883017d6f4ff8934edd5b2679b4cc8a053e5a78a4c3d2524502675c6889f",
+            "revision": "7befe4c2068128d37b8208451fb7e42e1ae1b11c082b0cb15a7ffbb665c29701",
+            "source": "https://127.0.0.1:58059",
+            "checkedAt": "2026-10-28T13:23:22.796Z",
+            "manifest": {
+              "format": "pguide-check-v1",
+              "id": "deployment-controlled",
+              "version": "V2",
+              "worker": "worker.cjs",
+              "protocol": "pguide-check-host-v1",
+              "subjectSchema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ]
+              },
+              "resultSchema": {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "version",
+                  "worker",
+                  "invocation"
+                ]
+              },
+              "resources": [
+                {
+                  "path": "resources/control.json",
+                  "executable": false
+                }
+              ],
+              "references": {
+                "check": "references/check.md",
+                "problems": {}
+              }
+            },
+            "transportDigest": "sha256:02078b89d5fb24f5a30cfb1ebc3324981b8b1665f05daa918fa0d2dbb89ac716"
+          },
+          "executionId": "1b13ae1e-9b25-4e86-8dfa-f04c2570fa5a",
+          "executionStartedAt": "2026-10-28T13:23:31.034Z",
+          "executionCompletedAt": "2026-10-28T13:23:31.049Z",
+          "result": {
+            "ok": true,
+            "version": "V2",
+            "worker": 3,
+            "invocation": 3
+          }
+        },
+        "childExitConfirmed": true
+      },
+      {
+        "name": "real-pilot-regulator-fixed-https-references",
+        "objectiveDigest": "sha256-pguide-objective-v1:69b90e4164b0ec3593481bb52609d187abec100b9a4a2315b266fb4489d92f19",
+        "checkDigest": "sha256-pguide-check-v1:ea34f1d8a24859a479fbe34f48d791f5b332cb47e430e5ad174d44db4dd5bb4c",
+        "revision": "96652a2f8721daf22b26606680879319461a46bce66d0c646be8e8b53f5226cc",
+        "current": "ready",
+        "owningReference": {
+          "artifactDigest": "sha256-pguide-check-v1:ea34f1d8a24859a479fbe34f48d791f5b332cb47e430e5ad174d44db4dd5bb4c",
+          "path": "references/not-ready.md"
+        }
+      },
+      {
+        "name": "accurate-fixed-recovery-after-source-update-and-author-removal",
+        "objectiveDigest": "sha256-pguide-objective-v1:69b90e4164b0ec3593481bb52609d187abec100b9a4a2315b266fb4489d92f19",
+        "checkDigest": "sha256-pguide-check-v1:ea34f1d8a24859a479fbe34f48d791f5b332cb47e430e5ad174d44db4dd5bb4c",
+        "revision": "96652a2f8721daf22b26606680879319461a46bce66d0c646be8e8b53f5226cc"
+      },
+      {
+        "name": "normal-tls-requires-explicit-trust-root",
+        "rejectedWithoutCA": true
+      }
+    ],
+    "timings": {
+      "cooperativeCleanupMs": 13.730199999999968,
+      "wallSealMs": 3029.512599999999,
+      "physicalCleanupMs": 6331.498999999999
+    },
+    "cleanup": {
+      "serverClosed": true,
+      "workers": 0,
+      "ownedProcesses": 0,
+      "permissionHelperClosed": true
+    },
+    "businessObservations": [
+      {
+        "checkRunId": "290a894d-476f-440e-9571-560b08c4052d",
+        "taskId": "e508fe11-c7e3-4279-9a04-37617193a635",
+        "executionId": "3d47eee5-2bf4-46c4-85ef-05dfd86287ed",
+        "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+        "artifact": {
+          "digest": "sha256-pguide-check-v1:ea34f1d8a24859a479fbe34f48d791f5b332cb47e430e5ad174d44db4dd5bb4c",
+          "revision": "96652a2f8721daf22b26606680879319461a46bce66d0c646be8e8b53f5226cc",
+          "source": "https://127.0.0.1:58059",
+          "checkedAt": "2026-10-28T13:23:31.356Z",
+          "manifest": {
+            "format": "pguide-check-v1",
+            "id": "deployment-business",
+            "version": "business",
+            "worker": "worker.cjs",
+            "protocol": "pguide-check-host-v1",
+            "subjectSchema": {
+              "type": "object",
+              "required": [
+                "ready"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "ready": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "resultSchema": {
+              "type": "object",
+              "required": [
+                "status",
+                "payload",
+                "message"
+              ],
+              "properties": {
+                "status": {
+                  "const": 200
+                },
+                "payload": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            },
+            "resources": [],
+            "references": {
+              "check": "references/check.md",
+              "problems": {
+                "not-ready": "references/not-ready.md"
+              }
+            }
+          },
+          "transportDigest": "sha256:3886f370f38a8b380a8a25d0dbe6fa9e4624747327efe27d7cfc1eaac3dfc780"
+        },
+        "acceptedAt": "2026-10-28T13:23:31.549Z",
+        "executionStartedAt": "2026-10-28T13:23:31.648Z",
+        "executionCompletedAt": "2026-10-28T13:23:31.660Z"
+      },
+      {
+        "checkRunId": "a241155d-6b23-4c2b-836d-ac9d074454f7",
+        "taskId": "174626b6-56ce-4b22-8a3d-673b1d4fe5bd",
+        "executionId": "a9af3ced-e996-4f38-a64b-23eaa0023a3d",
+        "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+        "artifact": {
+          "digest": "sha256-pguide-check-v1:ea34f1d8a24859a479fbe34f48d791f5b332cb47e430e5ad174d44db4dd5bb4c",
+          "revision": "96652a2f8721daf22b26606680879319461a46bce66d0c646be8e8b53f5226cc",
+          "source": "https://127.0.0.1:58059",
+          "checkedAt": "2026-10-28T13:23:31.356Z",
+          "manifest": {
+            "format": "pguide-check-v1",
+            "id": "deployment-business",
+            "version": "business",
+            "worker": "worker.cjs",
+            "protocol": "pguide-check-host-v1",
+            "subjectSchema": {
+              "type": "object",
+              "required": [
+                "ready"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "ready": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "resultSchema": {
+              "type": "object",
+              "required": [
+                "status",
+                "payload",
+                "message"
+              ],
+              "properties": {
+                "status": {
+                  "const": 200
+                },
+                "payload": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            },
+            "resources": [],
+            "references": {
+              "check": "references/check.md",
+              "problems": {
+                "not-ready": "references/not-ready.md"
+              }
+            }
+          },
+          "transportDigest": "sha256:3886f370f38a8b380a8a25d0dbe6fa9e4624747327efe27d7cfc1eaac3dfc780"
+        },
+        "acceptedAt": "2026-10-28T13:23:31.712Z",
+        "executionStartedAt": "2026-10-28T13:23:31.767Z",
+        "executionCompletedAt": "2026-10-28T13:23:31.768Z"
+      },
+      {
+        "checkRunId": "cdbd439d-e56c-4725-96a6-535450d8613a",
+        "taskId": "dfaa45cf-c370-4a9a-a6d9-52f179a0fc56",
+        "executionId": "706658a5-d4fa-4eaa-aebf-f1692cb5dd34",
+        "hostInstance": "356ee23a-8efe-4108-928c-b7a0bfd67647",
+        "artifact": {
+          "digest": "sha256-pguide-check-v1:ea34f1d8a24859a479fbe34f48d791f5b332cb47e430e5ad174d44db4dd5bb4c",
+          "revision": "96652a2f8721daf22b26606680879319461a46bce66d0c646be8e8b53f5226cc",
+          "source": "https://127.0.0.1:58059",
+          "checkedAt": "2026-10-28T13:23:31.356Z",
+          "manifest": {
+            "format": "pguide-check-v1",
+            "id": "deployment-business",
+            "version": "business",
+            "worker": "worker.cjs",
+            "protocol": "pguide-check-host-v1",
+            "subjectSchema": {
+              "type": "object",
+              "required": [
+                "ready"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "ready": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "resultSchema": {
+              "type": "object",
+              "required": [
+                "status",
+                "payload",
+                "message"
+              ],
+              "properties": {
+                "status": {
+                  "const": 200
+                },
+                "payload": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            },
+            "resources": [],
+            "references": {
+              "check": "references/check.md",
+              "problems": {
+                "not-ready": "references/not-ready.md"
+              }
+            }
+          },
+          "transportDigest": "sha256:3886f370f38a8b380a8a25d0dbe6fa9e4624747327efe27d7cfc1eaac3dfc780"
+        },
+        "acceptedAt": "2026-10-28T13:23:32.283Z",
+        "executionStartedAt": "2026-10-28T13:23:32.331Z",
+        "executionCompletedAt": "2026-10-28T13:23:32.332Z"
+      }
+    ],
+    "streamConnections": 20,
+    "diagnostics": {
+      "initializations": 4,
+      "executions": 12,
+      "peakWorkers": 2,
+      "retirements": 1,
+      "workers": 2,
+      "queue": 0,
+      "records": 12,
+      "ownedProcesses": 0
+    },
+    "workerRecords": [
+      {
+        "version": "V2",
+        "worker": 1,
+        "at": 1793193802825,
+        "type": "initialize"
+      },
+      {
+        "version": "V2",
+        "worker": 1,
+        "at": 1793193802894,
+        "type": "entered",
+        "name": "queued",
+        "invocation": 1
+      },
+      {
+        "version": "V3",
+        "worker": 2,
+        "at": 1793193803165,
+        "type": "initialize"
+      },
+      {
+        "version": "V3",
+        "worker": 2,
+        "at": 1793193803167,
+        "type": "entered",
+        "name": "queued",
+        "invocation": 1
+      },
+      {
+        "version": "V3",
+        "worker": 2,
+        "at": 1793193803205,
+        "type": "cleaned",
+        "name": "queued",
+        "invocation": 1,
+        "aborted": false
+      },
+      {
+        "version": "V2",
+        "worker": 1,
+        "at": 1793193803205,
+        "type": "cleaned",
+        "name": "queued",
+        "invocation": 1,
+        "aborted": false
+      },
+      {
+        "version": "V2",
+        "worker": 1,
+        "at": 1793193803403,
+        "type": "entered",
+        "name": "fixed",
+        "invocation": 2
+      },
+      {
+        "version": "V2",
+        "worker": 1,
+        "at": 1793193803403,
+        "type": "cleaned",
+        "name": "fixed",
+        "invocation": 2,
+        "aborted": false
+      },
+      {
+        "version": "V2",
+        "worker": 1,
+        "at": 1793193803572,
+        "type": "entered",
+        "name": "freshness",
+        "invocation": 3
+      },
+      {
+        "version": "V2",
+        "worker": 3,
+        "at": 1793193803757,
+        "type": "initialize"
+      },
+      {
+        "version": "V2",
+        "worker": 3,
+        "at": 1793193803767,
+        "type": "entered",
+        "name": "freshness",
+        "invocation": 1
+      },
+      {
+        "version": "V2",
+        "worker": 1,
+        "at": 1793193804357,
+        "type": "cleaned",
+        "name": "freshness",
+        "invocation": 3,
+        "aborted": false
+      },
+      {
+        "version": "V2",
+        "worker": 3,
+        "at": 1793193804358,
+        "type": "cleaned",
+        "name": "freshness",
+        "invocation": 1,
+        "aborted": false
+      },
+      {
+        "version": "V2",
+        "worker": 1,
+        "at": 1793193804504,
+        "type": "entered",
+        "name": "cooperative",
+        "invocation": 4
+      },
+      {
+        "version": "V2",
+        "worker": 1,
+        "at": 1793193804530,
+        "type": "cleaned",
+        "name": "cooperative",
+        "invocation": 4,
+        "aborted": true
+      },
+      {
+        "version": "V2",
+        "worker": 1,
+        "at": 1793193804625,
+        "type": "entered",
+        "name": "wall",
+        "invocation": 5,
+        "child": 20448
+      },
+      {
+        "version": "V2",
+        "worker": 3,
+        "at": 1793193804708,
+        "type": "entered",
+        "name": "healthy",
+        "invocation": 2
+      },
+      {
+        "version": "V2",
+        "worker": 3,
+        "at": 1793193804708,
+        "type": "cleaned",
+        "name": "healthy",
+        "invocation": 2,
+        "aborted": false
+      },
+      {
+        "version": "V2",
+        "worker": 3,
+        "at": 1793193811035,
+        "type": "entered",
+        "name": "after-force",
+        "invocation": 3
+      },
+      {
+        "version": "V2",
+        "worker": 3,
+        "at": 1793193811035,
+        "type": "cleaned",
+        "name": "after-force",
+        "invocation": 3,
+        "aborted": false
+      }
+    ]
+  },
+  "consumerCommand": {
+    "command": "node consumer.mjs",
+    "exitCode": 0,
+    "stdout": "{\"passed\":10,\"cleanup\":{\"serverClosed\":true,\"workers\":0,\"ownedProcesses\":0,\"permissionHelperClosed\":true}}"
+  },
+  "delivery": {
+    "origin": "https://127.0.0.1:58059",
+    "objectiveDigest": "sha256-pguide-objective-v1:69b90e4164b0ec3593481bb52609d187abec100b9a4a2315b266fb4489d92f19",
+    "certificateSha256": "316668f41b5eda16ed9debec04df0d4e6b7d9a1717b6e99b384ec450b9a1c755",
+    "checks": {
+      "V2": {
+        "digest": "sha256-pguide-check-v1:70f4883017d6f4ff8934edd5b2679b4cc8a053e5a78a4c3d2524502675c6889f",
+        "transportDigest": "sha256:02078b89d5fb24f5a30cfb1ebc3324981b8b1665f05daa918fa0d2dbb89ac716",
+        "archiveSha256": "02078b89d5fb24f5a30cfb1ebc3324981b8b1665f05daa918fa0d2dbb89ac716"
+      },
+      "V3": {
+        "digest": "sha256-pguide-check-v1:2a047d5cabf5e31c2951c113f53a4b957bf4886a6660f327ac87ea60d30dc5c5",
+        "transportDigest": "sha256:80f1442e2c406ddf772351818435436e5c835564d08d71147ef397672ae5bb90",
+        "archiveSha256": "80f1442e2c406ddf772351818435436e5c835564d08d71147ef397672ae5bb90"
+      },
+      "business": {
+        "digest": "sha256-pguide-check-v1:ea34f1d8a24859a479fbe34f48d791f5b332cb47e430e5ad174d44db4dd5bb4c",
+        "transportDigest": "sha256:3886f370f38a8b380a8a25d0dbe6fa9e4624747327efe27d7cfc1eaac3dfc780",
+        "archiveSha256": "3886f370f38a8b380a8a25d0dbe6fa9e4624747327efe27d7cfc1eaac3dfc780"
+      },
+      "business-next": {
+        "digest": "sha256-pguide-check-v1:dda3781f2e546498814f7912adee0a57bc50fa159bde34e3f75cc0e560d7df25",
+        "transportDigest": "sha256:9e45589970f6fc54c122a3054cc97e54e53b644433cc62c5ec921a552f9cb361",
+        "archiveSha256": "9e45589970f6fc54c122a3054cc97e54e53b644433cc62c5ec921a552f9cb361"
+      }
+    }
+  },
+  "author": {
+    "downloads": {
+      "V2": 2,
+      "V3": 1,
+      "business": 1,
+      "business-next": 1
+    },
+    "serverClosed": true
+  }
+}
