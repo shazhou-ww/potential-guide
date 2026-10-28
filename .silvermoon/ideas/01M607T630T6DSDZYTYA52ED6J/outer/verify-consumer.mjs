@@ -27,7 +27,7 @@ async function command(command, args, cwd, environment = {}) {
 }
 async function pnpm(args, cwd = repository) {
   // Use the exact pnpm installation exposed to the author; data is passed over stdin.
-  const script = `$ErrorActionPreference='Stop'; $r=[Console]::In.ReadToEnd()|ConvertFrom-Json; Set-Location -LiteralPath $r.cwd; & pnpm @($r.args); exit $LASTEXITCODE`;
+  const script = `$ErrorActionPreference='Stop'; $r=[Console]::In.ReadToEnd()|ConvertFrom-Json; Set-Location -LiteralPath $r.cwd; $parameters=@($r.args | ForEach-Object { [string]$_ }); & pnpm @parameters; exit $LASTEXITCODE`;
   const child = execFile(join(process.env.SystemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), [
     "-NoProfile", "-NonInteractive", "-Command", script,
   ], {
