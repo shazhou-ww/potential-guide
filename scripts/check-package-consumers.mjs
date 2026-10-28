@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { delimiter, isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { verifyConsumerGraph } from "./deployment-consumer.mjs";
+import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 
 export async function checkPackageConsumers(root, scratch, definitions, tarballs, run) {
   const manifests = new Map();
@@ -77,16 +77,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       ],
       directory,
     );
-    const closure = new Map();
-    function visit(name) {
-      if (closure.has(name)) return;
-      const manifest = manifests.get(name);
-      closure.set(name, manifest.version);
-      for (const dependency of Object.keys(manifest.dependencies ?? {})) {
-        if (manifests.has(dependency)) visit(dependency);
-      }
-    }
-    for (const entry of entries) visit(entry);
+    const closure = consumerVersions(manifests, entries);
     const graph = await verifyConsumerGraph(
       directory,
       closure,

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
@@ -7,10 +7,52 @@ import {
   assertLatestVersion,
   consumerManifest,
   consumerMode,
+  consumerVersions,
   verifyConsumerGraph,
 } from "./deployment-consumer.mjs";
 import { releasePackages } from "./release-packages.mjs";
 import { createDeploymentWorkspace } from "./verify-deployment-helpers.mjs";
+
+test("deployment fixture uses the worker contract and observes marker changes", async () => {
+  const check = new URL("./fixtures/deployment-acp/guide/checks/ready/", import.meta.url);
+  await assert.rejects(access(new URL("run.js", check)), { code: "ENOENT" });
+  const { execute } = await import(new URL("worker.cjs", check).href);
+  const workspace = await createDeploymentWorkspace();
+  const subject = { marker: join(workspace.path, "ready") };
+  try {
+    const missing = await execute(subject);
+    assert.equal(missing.status, 200);
+    assert.deepEqual(missing.payload, {
+      ok: false,
+      problems: [{ kind: "internal", id: "not-ready", parameters: {} }],
+    });
+    await writeFile(subject.marker, "ready");
+    assert.deepEqual((await execute(subject)).payload, { ok: true, problems: [] });
+  } finally {
+    await workspace.cleanup();
+  }
+});
+
+test("consumer versions follow only the selected entry closure and reject missing workspace packs", () => {
+  const manifests = new Map([
+    ["pguide", { version: "0.4.0", dependencies: { support: "workspace:^" } }],
+    ["support", { version: "0.1.0", dependencies: { pguide: "workspace:^" } }],
+    ["unselected-objective", { version: "0.2.0" }],
+  ]);
+  assert.deepEqual(
+    [...consumerVersions(manifests, ["pguide"])],
+    [
+      ["pguide", "0.4.0"],
+      ["support", "0.1.0"],
+    ],
+  );
+  assert.throws(() => consumerVersions(manifests, ["missing"]), /Missing consumer manifest/);
+  manifests.delete("support");
+  assert.throws(
+    () => consumerVersions(manifests, ["pguide"]),
+    /Missing internal consumer manifest/,
+  );
+});
 
 test("entry-only consumers accept shared stable/RC rules and select exact, latest or local overrides", () => {
   for (const version of ["0.4.0", "0.4.1", "0.4.0-rc.0", "0.4.0-rc.12"]) {

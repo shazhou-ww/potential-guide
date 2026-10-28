@@ -314,11 +314,20 @@ test("resource bytes, links, canonical paths and drain-before-revision-switch ar
   }
 });
 
-test("deadline cancellation and retirement/prewarm remain bounded across mixed outcomes", async () => {
-  const f = await fixture(basic, { workers: 2, retireAfter: 3, deadlineMs: 250, cleanupMs: 1000 });
+test("deadline cancellation remains bounded", async () => {
+  const f = await fixture(basic, { deadlineMs: 250, cleanupMs: 1000 });
   try {
     await f.start("deadline", { wait: 5000 });
     assert.equal((await finished(f.kernel, "deadline")).state, "Cancelled");
+    assert.equal(f.kernel.diagnostics().ownedProcesses, 0);
+  } finally {
+    await f.close();
+  }
+});
+
+test("retirement/prewarm remain bounded across repeated successful executions", async () => {
+  const f = await fixture(basic, { workers: 2, retireAfter: 3 });
+  try {
     for (let n = 0; n < 12; n++) {
       await f.start(`mixed-${n}`, { value: n });
       assert.equal((await finished(f.kernel, `mixed-${n}`)).state, "Completed");

@@ -196,6 +196,25 @@ export const releasePackages = [
   },
 ];
 
+// Local verification includes support packages without authorizing their publication.
+export const verificationPackages = [
+  ...releasePackages,
+  {
+    id: "check-runtime-files",
+    directory: "check-runtime-files",
+    name: "@potential-guide/check-runtime-files",
+    bins: [],
+    requiredExports: ["readArtifact", "ensurePrivateDirectory", "closePrivateFileBackend"],
+  },
+  {
+    id: "check-artifacts",
+    directory: "check-artifacts",
+    name: "@potential-guide/check-artifacts",
+    bins: [],
+    requiredExports: ["prepareCheckArtifact", "inspectCheckArtifact", "readArtifactFiles"],
+  },
+];
+
 const component = "(?:0|[1-9]\\d*)";
 export const releaseVersion = new RegExp(
   `^0\\.${component}\\.${component}(?:-rc\\.${component})?$`,

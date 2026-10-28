@@ -53,6 +53,23 @@ export function assertLatestVersion(actual, expected) {
   assert.equal(actual, expected, "Registry pguide@latest must match the candidate manifest");
 }
 
+export function consumerVersions(manifests, entries) {
+  const versions = new Map();
+  function visit(name) {
+    if (versions.has(name)) return;
+    const manifest = manifests.get(name);
+    assert.ok(manifest, `Missing consumer manifest: ${name}`);
+    versions.set(name, manifest.version);
+    for (const [dependency, range] of Object.entries(manifest.dependencies ?? {})) {
+      if (range.startsWith("workspace:"))
+        assert.ok(manifests.has(dependency), `Missing internal consumer manifest: ${dependency}`);
+      if (manifests.has(dependency)) visit(dependency);
+    }
+  }
+  for (const entry of entries) visit(entry);
+  return versions;
+}
+
 // Resolve from each actual parent, not just a flat top-level node_modules directory:
 // a nested incompatible internal dependency must not be hidden by a correct hoisted copy.
 export async function verifyConsumerGraph(

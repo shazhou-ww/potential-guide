@@ -323,8 +323,19 @@ async function harness(
   const add = async (value: Regulation) =>
     send({ type: "add", commandId: `add:${value.id}`, regulation: value });
   const setResources = async (value: readonly AgentResource[]) => {
+    const before = events.length;
     await Effect.runPromise(SubscriptionRef.set(resources, value));
-    await delay(12);
+    await until(
+      () =>
+        events
+          .slice(before)
+          .some(
+            (event) =>
+              event.type === "resources-accepted" ||
+              (event.type === "failure" && event.stage === "resources"),
+          ),
+      "resource snapshot acknowledgement",
+    );
   };
   let closed = false;
   const close = async () => {

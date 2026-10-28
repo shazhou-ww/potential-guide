@@ -22,6 +22,8 @@ const fail = {
 } as const;
 const subject = { name: "consumer" };
 const externalId = "git+https://external.test/objectives.git#environment/";
+// Cold subprocess module graphs are setup, not the dependency/cancellation behavior under test.
+const startupAllowanceMs = 15_000;
 async function specs() {
   const data = fixture({ [objectiveId]: manifest(), [externalId]: manifest() });
   return { consumer: await data.load(), external: await data.load(externalId) };
@@ -271,7 +273,7 @@ function processDependency(
   return createProcessCheckProbe({
     command: process.execPath,
     evidence: false,
-    timeoutMs: options.timeoutMs ?? 5_000,
+    timeoutMs: options.timeoutMs ?? startupAllowanceMs,
     ...(options.log === undefined ? {} : { log: options.log }),
     args: [
       "-e",
@@ -297,8 +299,6 @@ test("real process dependency requests share recursion, depth and total observat
   const data = fixture({ [objectiveId]: definition, [externalId]: definition });
   const consumer = await data.load();
   const external = await data.load(externalId);
-  // Two cold Node module graphs are setup, not the recursion/count/depth behavior under test.
-  const startupAllowanceMs = 15_000;
   for (const mode of ["recursive", "depth", "count"] as const) {
     const requested: string[] = [];
     let rootLog = "";
@@ -362,7 +362,7 @@ test("cancelling a source-bound process waits for its external process cleanup",
   const externalProbe = createProcessCheckProbe({
     command: process.execPath,
     evidence: false,
-    timeoutMs: 5_000,
+    timeoutMs: startupAllowanceMs,
     args: [
       "-e",
       "process.stderr.write(process.env.PGUIDE_PROBE_TEMP_DIR);setInterval(()=>{},1000);",
@@ -386,11 +386,23 @@ test("cancelling a source-bound process waits for its external process cleanup",
     ),
     controller.signal,
   );
-  await ready;
-  controller.abort(new Error("source process cancellation"));
-  await assert.rejects(handle.await());
-  assert.ok(directory);
-  await assert.rejects(stat(directory), { code: "ENOENT" });
+  try {
+    await Promise.race([
+      ready,
+      handle.await().then((result) => {
+        assert.fail(
+          `Observation finished before the external process was ready: ${JSON.stringify(result)}`,
+        );
+      }),
+    ]);
+    controller.abort(new Error("source process cancellation"));
+    await assert.rejects(handle.await());
+    assert.ok(directory);
+    await assert.rejects(stat(directory), { code: "ENOENT" });
+  } finally {
+    controller.abort(new Error("test cleanup"));
+    await handle.exit();
+  }
 });
 
 test("ordinary process probes can retain the three-pipe protocol without Node IPC metadata", async () => {

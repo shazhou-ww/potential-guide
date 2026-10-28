@@ -2,7 +2,30 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { parseReleaseTag, releasePackages, releaseVersion } from "./release-packages.mjs";
+import {
+  parseReleaseTag,
+  releasePackages,
+  releaseVersion,
+  verificationPackages,
+} from "./release-packages.mjs";
+
+test("local verification covers the internal runtime dependency closure without expanding release tags", async () => {
+  const names = new Set(verificationPackages.map(({ name }) => name));
+  assert.equal(names.size, verificationPackages.length);
+  for (const { directory } of verificationPackages) {
+    const manifest = JSON.parse(
+      await readFile(new URL(`../packages/${directory}/package.json`, import.meta.url), "utf8"),
+    );
+    for (const [name, range] of Object.entries(manifest.dependencies ?? {})) {
+      if (range.startsWith("workspace:"))
+        assert.ok(names.has(name), `${manifest.name} needs a local verification pack for ${name}`);
+    }
+  }
+  for (const id of ["check-runtime-files", "check-artifacts"]) {
+    assert.ok(verificationPackages.some((entry) => entry.id === id));
+    assert.throws(() => parseReleaseTag(`${id}-v0.1.0`), /Unsupported package/);
+  }
+});
 
 test("release inventory contains the new packages and excludes retired Guide and Supervisor", () => {
   assert.equal(releasePackages.length, 22);

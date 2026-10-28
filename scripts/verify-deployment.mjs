@@ -1,16 +1,18 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { access, chmod, cp, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
-import { basename, delimiter, dirname, join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { checkPackageConsumers } from "./check-package-consumers.mjs";
 import {
   assertLatestVersion,
   consumerManifest,
   consumerMode,
+  consumerVersions,
   verifyConsumerGraph,
 } from "./deployment-consumer.mjs";
-import { releasePackages } from "./release-packages.mjs";
+import { verificationPackages } from "./release-packages.mjs";
 import { createDeploymentWorkspace, execute } from "./verify-deployment-helpers.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -25,12 +27,13 @@ const objectiveUri = `git+${pathToFileURL(fixture).href}#guide/`;
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const binExtension = process.platform === "win32" ? ".cmd" : "";
-const packageDefinitions = releasePackages;
+const packageDefinitions = verificationPackages;
 const installPublished = mode !== "packed";
 const expectedVersions = new Map();
 const consumerEntries = packageDefinitions
   .filter(({ bins }) => bins.length > 0)
   .map(({ name }) => name);
+let closeHost;
 
 async function successful(command, args, options) {
   const result = await execute(command, args, { cwd: root, ...options });
@@ -45,10 +48,12 @@ function executable(name) {
 async function packAndInstall() {
   await mkdir(packs, { recursive: true });
   const tarballs = new Map();
+  const manifests = new Map();
   for (const definition of packageDefinitions) {
     const packageRoot = join(root, "packages", definition.directory);
     const packageManifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
     assert.equal(packageManifest.name, definition.name);
+    manifests.set(definition.name, packageManifest);
     expectedVersions.set(definition.name, packageManifest.version);
     if (installPublished) {
       continue;
@@ -129,8 +134,10 @@ async function packAndInstall() {
     ["install", "--ignore-scripts", "--no-audit", "--no-fund", "--no-package-lock"],
     { cwd: consumer },
   );
-  await verifyConsumerGraph(consumer, expectedVersions, consumerEntries);
-  for (const definition of packageDefinitions) {
+  const selectedVersions = consumerVersions(manifests, consumerEntries);
+  const selectedDefinitions = packageDefinitions.filter(({ name }) => selectedVersions.has(name));
+  await verifyConsumerGraph(consumer, selectedVersions, consumerEntries);
+  for (const definition of selectedDefinitions) {
     const installedManifest = JSON.parse(
       await readFile(join(consumer, "node_modules", ...definition.name.split("/"), "package.json")),
     );
@@ -154,7 +161,7 @@ async function packAndInstall() {
   }
   const moduleSource = [
     'import assert from "node:assert/strict";',
-    ...packageDefinitions
+    ...selectedDefinitions
       .filter(({ requiredExports }) => requiredExports !== undefined)
       .flatMap(({ name, requiredExports }, index) => [
         `import * as library${index} from ${JSON.stringify(name)};`,
@@ -223,10 +230,56 @@ async function verifyCliContract() {
     LOCALAPPDATA: join(home, "AppData", "Local"),
     XDG_CONFIG_HOME: join(home, ".config"),
   };
+  const {
+    CheckKernel,
+    ArtifactManager,
+    TaskScheduler,
+    serve,
+    ensurePrivateDirectory,
+    publishPrivateFile,
+    removePrivateFile,
+    closePrivateFileBackend,
+  } = await import(
+    pathToFileURL(
+      join(consumer, "node_modules", "@potential-guide", "check-host", "dist", "index.js"),
+    ).href
+  );
+  const hostDirectory = join(home, "check-host");
+  await ensurePrivateDirectory(hostDirectory);
+  const kernel = await CheckKernel.create(join(hostDirectory, "snapshots"));
+  closeHost = async () => {
+    try {
+      await kernel.close();
+    } finally {
+      await closePrivateFileBackend();
+    }
+  };
+  const scheduler = new TaskScheduler(
+    new ArtifactManager(join(hostDirectory, "artifacts")),
+    kernel,
+  );
+  const token = randomUUID();
+  const host = await serve(kernel, token, scheduler);
+  const descriptor = JSON.stringify({
+    endpoint: host.endpoint,
+    token,
+    pid: process.pid,
+    instance: scheduler.instance,
+  });
+  closeHost = async () => {
+    try {
+      await host.close();
+      await removePrivateFile(hostDirectory, "host.json", descriptor);
+    } finally {
+      await closePrivateFileBackend();
+    }
+  };
+  assert.ok(await publishPrivateFile(hostDirectory, "host.json", descriptor, null));
+  env.PGUIDE_CHECK_HOST_DIRECTORY = hostDirectory;
 
   const allBins = packageDefinitions.flatMap(({ bins }) => bins);
   for (const bin of allBins) {
-    if (bin === "objective-contract-migrate") {
+    if (bin === "objective-contract-migrate" || bin === "pguide-check-host") {
       await access(executable(bin));
       continue;
     }
@@ -272,9 +325,6 @@ async function verifyCliContract() {
   assert.deepEqual(JSON.parse(before.stdout), JSON.parse(after.stdout));
 
   await cp(fixtureSource, fixture, { recursive: true });
-  if (process.platform !== "win32") {
-    await chmod(join(fixture, "guide", "checks", "ready", "run.js"), 0o755);
-  }
   const subject = join(fixture, "subject.json");
   await writeFile(subject, JSON.stringify({ marker: join(fixture, "ready") }));
   for (const args of [
@@ -569,10 +619,14 @@ async function verifyRegulation(baseEnv) {
 }
 
 async function verifySupervisorRetirement(baseEnv) {
-  const result = await run(executable("pguide"), ["supervise", "--execute", "--format", "json"], {
-    cwd: consumer,
-    env: baseEnv,
-  });
+  const result = await execute(
+    executable("pguide"),
+    ["supervise", "--execute", "--format", "json"],
+    {
+      cwd: consumer,
+      env: baseEnv,
+    },
+  );
   assert.equal(result.code, 2);
   assert.match(result.stdout, /Unknown command.*supervise/u);
   assert.doesNotMatch(result.stdout, /pguide-supervise|Install/u);
@@ -585,28 +639,24 @@ async function verifySetupObjective(baseEnv) {
   const setupRoot = join(consumer, "setup-objective");
   const setup = join(setupRoot, "packages", "objective-pguide-setup");
   await mkdir(setupRoot, { recursive: true });
-  const pilotCopy = {
-    recursive: true,
-    filter: (source) => !["node_modules", ".turbo", "test"].includes(basename(source)),
-  };
-  await cp(join(root, "packages", "objective-pguide-setup"), setup, pilotCopy);
-  await cp(
-    join(root, "packages", "objective-pguide-self-check"),
-    join(setupRoot, "packages", "objective-pguide-self-check"),
-    pilotCopy,
+  const packageSpecs = {};
+  for (const name of [
+    "objective-pguide-setup",
+    "objective-pguide-self-check",
+    "objective-setup-marker",
+  ]) {
+    const destination = join(setupRoot, "packages", name);
+    await cp(join(root, "packages", name, "dist", "package"), destination, { recursive: true });
+    packageSpecs[`@potential-guide/${name}`] = destination;
+  }
+  const { prepareObjectivePackage } = await import(
+    pathToFileURL(
+      join(consumer, "node_modules", "@potential-guide", "cli-runtime", "dist", "index.js"),
+    ).href
   );
-  await successful("git", ["init", "-q"], { cwd: setupRoot });
-  await successful("git", ["config", "user.name", "Deployment Fixture"], { cwd: setupRoot });
-  await successful("git", ["config", "user.email", "fixture@example.invalid"], { cwd: setupRoot });
-  await successful("git", ["remote", "add", "origin", pathToFileURL(setupRoot).href], {
-    cwd: setupRoot,
-  });
-  await successful("git", ["add", "."], { cwd: setupRoot });
-  await successful("git", ["commit", "-qm", "Committed setup Objective"], { cwd: setupRoot });
-  const revision = (
-    await successful("git", ["rev-parse", "HEAD"], { cwd: setupRoot })
-  ).stdout.trim();
-  const setupUri = `git+${pathToFileURL(setupRoot).href}#packages/objective-pguide-setup/`;
+  const preparation = { cacheDirectory: join(scratch, "prepared-objectives") };
+  const preparedSetup = await prepareObjectivePackage(setup, consumer, preparation);
+  const setupUri = preparedSetup.source.packageName;
   const agent = join(consumer, "setup-agent.mjs");
   await writeFile(
     agent,
@@ -640,7 +690,8 @@ for await (const line of createInterface({input:process.stdin})) {
     JSON.stringify({
       "pguide.commandDirectories": [join(consumer, "node_modules", ".bin")],
       "agents.defaultAgent": "setup",
-      // Opt in both budgets for the real installed Git Pilot; defaults remain unchanged.
+      "objectives.aliases": packageSpecs,
+      // Opt in both budgets for the real installed Pilot; defaults remain unchanged.
       "pilot.probe": { timeoutMs: 75000, retry: { maxRetries: 0, delayMs: 0 } },
       agents: {
         setup: {
@@ -651,7 +702,6 @@ for await (const line of createInterface({input:process.stdin})) {
       },
     }),
   );
-  // Nested Git snapshots need path headroom on Windows even with core.longpaths.
   const scratchDirectory = join(scratch, "s");
   const subject = join(consumer, "setup-subject.json");
   await writeFile(
@@ -672,19 +722,7 @@ for await (const line of createInterface({input:process.stdin})) {
   );
   const result = await successful(
     executable("pguide"),
-    [
-      "probe",
-      "--pilot",
-      setupUri,
-      "--revision",
-      revision,
-      "--cwd",
-      consumer,
-      "--subject-file",
-      subject,
-      "--format",
-      "json",
-    ],
+    ["probe", "--pilot", setup, "--cwd", consumer, "--subject-file", subject, "--format", "json"],
     // Only the runtime cache cwd is shorter; all installed/subject/config paths remain absolute.
     { cwd: process.platform === "win32" ? root : consumer, env: baseEnv },
   );
@@ -692,47 +730,35 @@ for await (const line of createInterface({input:process.stdin})) {
   assert.equal(observation.status, 200, result.stdout);
   assert.equal(observation.payload.current.objectiveId, setupUri);
   assert.equal(observation.payload.current.levelId, "verified", result.stdout);
-  const setupTree = await successful(
-    "git",
-    ["rev-parse", `${revision}:packages/objective-pguide-setup`],
-    { cwd: setupRoot },
+  assert.equal(observation.payload.versions[setupUri], preparedSetup.source.packageDigest);
+  assert.equal(observation.payload.sources[setupUri].kind, "npm-package");
+  assert.equal(
+    observation.payload.sources[setupUri].packageDigest,
+    preparedSetup.source.packageDigest,
   );
-  assert.equal(observation.payload.versions[setupUri], setupTree.stdout.trim());
-  assert.equal(observation.payload.sources[setupUri].commit, revision);
   assert.deepEqual(observation.payload.problems, []);
-  console.log("installed pguide loads committed setup subdirectory and verifies real nonce repair");
+  console.log("installed pguide loads the built setup package and verifies real nonce repair");
   const selfSubject = JSON.parse(await readFile(subject, "utf8"));
   delete selfSubject.allowSanity;
   selfSubject.timeoutMs = 24000;
   await writeFile(subject, JSON.stringify(selfSubject));
-  const selfUri = setupUri.replace("/objective-pguide-setup/", "/objective-pguide-self-check/");
+  const self = packageSpecs["@potential-guide/objective-pguide-self-check"];
+  const preparedSelf = await prepareObjectivePackage(self, consumer, preparation);
+  const selfUri = preparedSelf.source.packageName;
   const selfResult = await successful(
     executable("pguide"),
-    [
-      "probe",
-      "--pilot",
-      selfUri,
-      "--revision",
-      revision,
-      "--cwd",
-      consumer,
-      "--subject-file",
-      subject,
-      "--format",
-      "json",
-    ],
+    ["probe", "--pilot", self, "--cwd", consumer, "--subject-file", subject, "--format", "json"],
     { cwd: consumer, env: baseEnv },
   );
   const selfObservation = JSON.parse(selfResult.stdout);
   assert.equal(selfObservation.status, 200, selfResult.stdout);
   assert.equal(selfObservation.payload.current.levelId, "verified", selfResult.stdout);
-  const selfTree = await successful(
-    "git",
-    ["rev-parse", `${revision}:packages/objective-pguide-self-check`],
-    { cwd: setupRoot },
+  assert.equal(selfObservation.payload.versions[selfUri], preparedSelf.source.packageDigest);
+  assert.equal(selfObservation.payload.sources[selfUri].kind, "npm-package");
+  assert.equal(
+    selfObservation.payload.sources[selfUri].packageDigest,
+    preparedSelf.source.packageDigest,
   );
-  assert.equal(selfObservation.payload.versions[selfUri], selfTree.stdout.trim());
-  assert.equal(selfObservation.payload.sources[selfUri].commit, revision);
   assert.deepEqual(selfObservation.payload.problems, []);
   assert.deepEqual(
     (await readFile(join(consumer, "setup-prompts.jsonl"), "utf8"))
@@ -809,6 +835,11 @@ try {
   await verifySupervisorRetirement(env);
   await verifySetupObjective(env);
   await verifyRegulationPermissions(env);
+} catch (error) {
+  failures.push(error);
+}
+try {
+  await closeHost?.();
 } catch (error) {
   failures.push(error);
 }

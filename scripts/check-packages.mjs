@@ -4,28 +4,11 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import spawn from "cross-spawn";
 import { checkPackageConsumers } from "./check-package-consumers.mjs";
-import { releasePackages } from "./release-packages.mjs";
+import { verificationPackages } from "./release-packages.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const pnpmCommand = "pnpm";
-const packages = [
-  ...releasePackages,
-  // Verify new runtime support locally without expanding the release authorization.
-  {
-    id: "check-runtime-files",
-    directory: "check-runtime-files",
-    name: "@potential-guide/check-runtime-files",
-    bins: [],
-    requiredExports: ["readArtifact", "ensurePrivateDirectory", "closePrivateFileBackend"],
-  },
-  {
-    id: "check-artifacts",
-    directory: "check-artifacts",
-    name: "@potential-guide/check-artifacts",
-    bins: [],
-    requiredExports: ["prepareCheckArtifact", "inspectCheckArtifact", "readArtifactFiles"],
-  },
-];
+const packages = verificationPackages;
 
 function run(command, args, cwd = root, env = process.env, expectedCode = 0) {
   return new Promise((resolve, reject) => {

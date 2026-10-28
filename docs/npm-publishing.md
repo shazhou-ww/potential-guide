@@ -298,7 +298,8 @@ gh workflow run ci.yaml --ref main -f published=true
 ```
 
 The default local `pnpm deployment:verify` path installs those explicitly selected
-CLI tarballs. It packs all fifteen packages, checks their contents, and uses npm
+CLI tarballs. It packs the release inventory plus the local runtime support
+packages (`check-runtime-files` and `check-artifacts`), checks their contents, and uses npm
 `overrides` pointing to the internal tarballs. This isolated consumer makes
 unpublished RC dependencies available without requiring the main package to
 depend on optional commands. `pnpm pack:check` additionally checks main-only
@@ -307,7 +308,20 @@ transitive PATH bins, and installation hints for missing optional commands.
 It also checks protocol-only consumption without business logic and combined
 explicit installation without synthetic conflicts. These prove local composition, not real registry
 dependency resolution, publication, provenance, or the `latest` dist-tag.
+The local support inventory is shared with `pack:check`; it does not add release
+tags or authorize publishing those support packages.
+Each selected-command consumer verifies only its actual transitive closure;
+independent Objective and Coordinator consumers are checked separately rather
+than being required as accidental CLI dependencies. Registry modes also check
+the manifest versions of any runtime support packages in that closure.
 Tarball overrides are never used in either registry mode.
+Deployment fixtures use the `worker.cjs` contract, not retired `run.*` checks.
+The verifier owns a Host loaded from the installed package and closes it before
+removing the consumer workspace.
+Setup and self-check fixtures use the built Objective packages and an explicit
+standalone marker package mapping, including generated workers and exact package
+digest assertions, rather than the obsolete source-only Git setup fixture.
+Git source consumption remains covered by the worker-based regulation fixture.
 
 For a separately authorized stable release, update manifests to the reviewed stable
 versions and publish in dependency order first. Then verify the default consumer:
