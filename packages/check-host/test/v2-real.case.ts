@@ -39,7 +39,7 @@ exports.execute=async(subject,context)=>{
   if(subject.cleanup)context.defer(()=>fs.writeFileSync(subject.cleanup,"clean"));
   if(subject.dirty)context.defer(()=>{throw Error("dirty")});
   if(subject.throw)throw Error("private diagnostic secret");
-  return {ok:!subject.fail,version:${JSON.stringify(version)},count};
+  return {ok:!subject.fail,version:${JSON.stringify(version)},count,...(subject.bytes?{blob:"x".repeat(subject.bytes)}:{})};
 }`;
 async function build(version: string) {
   const root = join(directory ?? "", version);
@@ -264,6 +264,25 @@ test("HTTPS source versions and evidence, HTTP boundary, SDK observers and worke
     );
     assert.ok(seen.every((state) => state.state === "completed"));
     assert.equal(kernel.diagnostics().executions, executions);
+
+    const largeA = await task({ bytes: 100_000 }, { digest: v3.digest });
+    const largeB = await task({ bytes: 100_001 }, { digest: v3.digest });
+    const large = await largeA.result();
+    await largeB.result();
+    assert.ok(large.result && typeof large.result === "object" && !Array.isArray(large.result));
+    assert.equal(typeof large.result.blob, "string");
+    assert.equal(large.result.blob?.toString().length, 100_000);
+    const initialLarge: string[] = [];
+    for await (const event of client.watchTasks([largeA, largeB])) {
+      assert.equal(event.snapshot.state, "completed");
+      initialLarge.push(event.taskId);
+      if (initialLarge.length === 2) break;
+    }
+    assert.equal(
+      new Set(initialLarge).size,
+      2,
+      "large initial frames must drain instead of disconnecting every reconnect",
+    );
 
     const shared = await task({ wait: 450 }, { digest: v3.digest });
     await waitState(shared, "running");

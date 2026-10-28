@@ -9,6 +9,15 @@ Business packages consume injected capabilities, never this tool implementation.
 
 ## Declarative Objective artifacts
 
+HTTPS Check references use the same local Host's v2 metadata/References/Task
+APIs; this client does not materialize their Check capsules. Existing inline
+digests remain mandatory and exact recovery compares recorded execution revisions.
+Retained exact Host metadata is preferred; a miss may confirm the URL, but a
+different digest is an error, never an upgrade. Check References retain their
+owning artifact/path and credential-free authenticated-loopback resource addresses.
+Local-directory author fixtures continue through explicit v1 compatibility.
+See [Host v2](../check-host/README.md).
+
 `inspectObjectiveArtifact(directory)` verifies a data-only `objective.json` plus
 References and returns its exact digest. `objectiveArtifactLocation(directory,
 digest)` creates an `artifact+file:` address suitable for declarations or CLI

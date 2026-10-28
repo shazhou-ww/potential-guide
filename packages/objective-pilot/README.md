@@ -1,5 +1,18 @@
 # Objective Pilot
 
+## Host v2 artifact probes
+
+`createArtifactCheckProbe({check:{url,digest}, client?, timeoutMs?, evidence?})`
+uses the Host's independent observation Tasks with default
+`started-after-request` freshness. The Host, not the Pilot caller, prepares the
+Check and validates its manifest. Evidence records `check.host-observation` with
+taskId, executionId, actual digest/revision and observation times. Business
+envelopes retain the existing result contract; invocation/timeout/cancellation
+reject rather than pretending the business failed. Signal cancellation withdraws
+that Task only. `createWorkerCheckProbe` remains the explicit v1 compatibility
+adapter for existing directory/revision sources. HTTPS Objective artifacts use
+v2; fixed Objective digests never become implicit latest.
+
 Pilot definitions, schema compilation, strict parsing, reference validation and
 subject projection now have an independently installable canonical home:
 [`@potential-guide/pilot-protocol`](../pilot-protocol/README.md). This execution

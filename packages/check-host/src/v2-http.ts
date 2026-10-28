@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { TaskScheduler } from "./scheduler.js";
 import type { Json, Subject } from "./types.js";
-import { type CheckRequest, TaskProtocolError } from "./v2-types.js";
+import { type CheckRequest, type TaskEvent, TaskProtocolError } from "./v2-types.js";
 
 function fail(status: number, code: string, message: string): never {
   throw new TaskProtocolError(status, { code, stage: "schedule", message });
@@ -95,32 +95,50 @@ export async function routeV2(
     if ((ids.length && all.length) || (!ids.length && (all.length !== 1 || all[0] !== "all")))
       fail(400, "invalid_filter", "Provide taskId list or explicit scope=all.");
     let blocked = false;
+    const pending: TaskEvent[] = [];
+    let scheduled = false;
+    const flush = () => {
+      scheduled = false;
+      if (response.destroyed || blocked) return;
+      let event = pending.shift();
+      while (event) {
+        blocked = !response.write(
+          `id: ${event.taskId}:${event.snapshot.revision}\nevent: task.updated\ndata: ${JSON.stringify(event)}\n\n`,
+        );
+        if (blocked) {
+          response.once("drain", () => {
+            blocked = false;
+            flush();
+          });
+          return;
+        }
+        event = pending.shift();
+      }
+    };
     // Validation/registration and initial snapshots share one synchronous arbitration boundary.
     const release = scheduler.subscribe(ids.length ? ids : undefined, scope, (event) => {
-      if (blocked) {
+      if (pending.length >= scheduler.limits.filterTasks) {
         response.destroy();
         return;
       }
-      if (!response.headersSent)
-        response.writeHead(200, {
-          "content-type": "text/event-stream",
-          "cache-control": "no-store",
-          connection: "keep-alive",
-        });
-      blocked = !response.write(
-        `id: ${event.taskId}:${event.snapshot.revision}\nevent: task.updated\ndata: ${JSON.stringify(event)}\n\n`,
-      );
-      if (blocked)
-        response.once("drain", () => {
-          blocked = false;
-        });
+      pending.push(event);
+      if (!scheduled) {
+        scheduled = true;
+        setImmediate(flush);
+      }
     });
     if (!response.headersSent)
       response.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-store" });
     response.flushHeaders();
     const heartbeat = setInterval(() => {
-      if (blocked) response.destroy();
-      else blocked = !response.write(": heartbeat\n\n");
+      if (!blocked && !pending.length) {
+        blocked = !response.write(": heartbeat\n\n");
+        if (blocked)
+          response.once("drain", () => {
+            blocked = false;
+            flush();
+          });
+      }
     }, 10_000);
     const lifetime = setTimeout(() => response.end(), scheduler.limits.retentionMs);
     response.once("close", () => {

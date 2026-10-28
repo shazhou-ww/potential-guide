@@ -12,6 +12,13 @@ const packages = [
   ...releasePackages,
   // Verify new runtime support locally without expanding the release authorization.
   {
+    id: "check-runtime-files",
+    directory: "check-runtime-files",
+    name: "@potential-guide/check-runtime-files",
+    bins: [],
+    requiredExports: ["readArtifact", "ensurePrivateDirectory", "closePrivateFileBackend"],
+  },
+  {
     id: "check-artifacts",
     directory: "check-artifacts",
     name: "@potential-guide/check-artifacts",

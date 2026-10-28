@@ -1,5 +1,13 @@
 # @potential-guide/check-artifacts
 
+For ordinary network consumption prefer [Check Host v2](../check-host/README.md):
+the same Host owns source confirmation, exact cache, References and Task
+execution. This package remains the reusable explicit build/validation/preparation
+foundation. Private filesystem primitives live in `check-runtime-files`, so
+artifacts do not depend on the Host scheduler. Existing pinned HTTPS preparation
+continues to reject redirects; the Host's separate controlled-origin acquisition
+adds bounded, reauthorized HTTPS redirects without weakening that legacy API.
+
 Standalone Check delivery, independent of npm Objective packages. This workspace
 library provides author-triggered build/pack and consumer-triggered preparation.
 Neither preparation nor Check Host installs Check dependencies, builds source,

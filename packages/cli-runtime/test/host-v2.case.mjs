@@ -14,8 +14,9 @@ import { buildExample } from "../examples/objective-artifact/build.mjs";
 import { inspectObjectiveArtifact, objectiveArtifactLocation, withPilot } from "../dist/index.js";
 
 const directory = process.env.V2_BUSINESS_DIRECTORY;
-if (!directory) throw new Error("Run host-v2.test.mjs to establish TLS trust.");
-test("real HTTP fixed Objective source, inherited References, evidence, regulator and offline-source recovery", async () => {
+test("real HTTP fixed Objective source, inherited References, evidence, regulator and offline-source recovery", {
+  skip: !directory,
+}, async () => {
   const built = await buildExample(join(directory, "delivery"));
   const archives = new Map(),
     bindings = new Map();

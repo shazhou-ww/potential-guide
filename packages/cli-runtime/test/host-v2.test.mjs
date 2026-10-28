@@ -39,7 +39,7 @@ test("HTTPS Objective Pilot/regulator uses Host v2 with fixed recovery and Refer
       ],
       { cwd: directory },
     );
-    const result = await exec(process.execPath, ["--test", "test/host-v2.case.mjs"], {
+    const result = await exec(process.execPath, ["--test", join("test", "host-v2.case.mjs")], {
       cwd: resolve("."),
       timeout: 110_000,
       maxBuffer: 8 * 1024 * 1024,
@@ -51,6 +51,8 @@ test("HTTPS Objective Pilot/regulator uses Host v2 with fixed recovery and Refer
       },
     });
     assert.match(result.stdout, /fail 0/);
+    assert.match(result.stdout, /pass 1/);
+    assert.match(result.stdout, /skipped 0/);
     console.log(result.stdout.trim());
   } finally {
     await rm(directory, { recursive: true, force: true });

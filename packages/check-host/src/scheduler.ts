@@ -394,6 +394,8 @@ export class TaskScheduler {
     const tasks = selected
       ? selected.map((id) => this.lookup(id, scope))
       : [...this.tasks.values()].filter((task) => task.scope === scope);
+    if (tasks.length > this.limits.filterTasks)
+      this.error(429, "observer_scope_capacity", "Visible scope exceeds subscription capacity.");
     const listener: Listener = { scope, send, ...(selected ? { ids: new Set(selected) } : {}) };
     this.listeners.add(listener);
     for (const task of tasks)

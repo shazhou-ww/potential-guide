@@ -7,7 +7,7 @@ objectives:
     subject: |
       {
         "root": context.repo.rootPath, "directory": context.path,
-        "roles": ["npm"], "runtime": "node", "allows": ["@potential-guide/effects"],
+        "roles": ["npm"], "runtime": "node", "allows": ["@potential-guide/effects", "@potential-guide/check-artifacts", "@potential-guide/check-runtime-files"],
         "entries": ["src/index.ts", "src/main.ts"], "generated": [], "deliveries": [],
         "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "developer-commands", "kind": "cli"}]
       }

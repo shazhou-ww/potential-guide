@@ -62,7 +62,17 @@ event digest `2b215b58e537d2aec51888d07707f55bd5c74535`。
 4. `check-third.log`：新增两项状态机回归尚未格式化，format 检查明确失败；已格式化。
 5. `check-fourth.log`：layers/format 通过，lint 指出消费者 `let metadata` 缺显式类型；
    添加 `ArtifactMetadata` 类型，没有使用 any/cast 掩盖；同时完善关闭时中止和等待准备 IO。
-6. `check-fifth.log`：完整复验进行中，最终结果在提交 gate 前补齐。
+6. `check-fifth.log`：关闭方法插入到了 acquire 方法内，编译明确失败；
+   将方法移到类边界后先单独 build 成功，再进行完整复验，没有跳过检查。
+7. `check-sixth.log`：layers/format/lint/typecheck 与多数相关测试通过，发现两项接线：
+   Node 默认 `--test` 会执行 test 目录中的 TLS-only case；共享包需要自己的 objectives/test task，
+   并进入根交付依赖闭包，补全声明、真实 primitives 测试和本地 pack 验证（不扩大发布授权）。
+   单独仓库义务测试须用既有 tsx loader；直接 node 启动曾因 TS 源码导入失败，已按仓库工具重试。
+8. targeted 仓库义务检查最终 2/2 通过，新增共享包及交付闭包准确接线。
+   将 TLS-only helper 放在 test-support 曾触发生产入口跨包边界检查，未绕过：
+   helper 留在 test 目录，无测试根时显式 skip，由真正建立 CA 的 driver 独立运行，
+   driver 强制断言子进程 `pass 1/fail 0/skipped 0`。
+9. `check-seventh.log`：完整复验进行中，最终结果在提交 gate 前补齐。
 
 扩展后的 targeted v2 命令 11/11 通过（`v2-final-targeted.log`）：
 额外验证终态保留过期通知不反转 completed、迟到执行墙钟 timer 不允许新需求关联旧执行、
@@ -70,5 +80,18 @@ event digest `2b215b58e537d2aec51888d07707f55bd5c74535`。
 释放后真实回收、篡改 capsule fail closed 且不联网兜底，以及 HTTP 幂等在来源切换后
 仍返回原 Task/版本/受理点。扩展实测 7 次传输、13 个 Execution、3 次初始化，
 强杀测试实际墙钟约 975.7ms，清理后的 ownedProcesses 为零。
+
+业务入口复验通过（`business-discovery.log`）：真实 Pilot/regulator 六条 Host 观察与固定版本恢复继续成功。
+测试证据中的 Objective digest 含受控制品服务器的随机端口，因此不同运行允许改变，
+这不是同一固定内容被静默升级。
+
+最后补强了真实大快照的初始订阅：状态机只登记有界通知，实际 SSE 写在异步批次；
+两个 100000/100001 字符业务结果的初始终态快照都能经过 drain 交付，不会在每次
+重连时重复断开。`v2-bounded-stream.log` 的 11/11 通过，真实 worker 15 次执行、
+3 次初始化、7 次来源传输，强杀墙钟约 995.8ms。
+对应新版测试制品 V2 `sha256-pguide-check-v1:b8eec981ed87520b1f317e8f2d978407832d22ea3d3574b9909a2ddb53e93cee`，
+V3 `sha256-pguide-check-v1:41a4cfee778d8cd096bec67890adb7efe03b7b1bc2f792103eab863280491503`；
+与前面原始测试源的摘要不同是显式增加 blob 测试字段所致，不是来源缓存漂移。
+固定缓存/共享准确下载保留真正原始 acquisition origin，不将后来调用的 URL 冒充为已确认来源。
 
 以上全部为源码工作树内的自包含实施验证，不宣称 npm、Release 或独立用户部署成功。

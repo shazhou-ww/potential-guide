@@ -183,7 +183,11 @@ export class ArtifactManager {
   }
   async resolve(source: string, digest?: string): Promise<ManagedArtifact> {
     if (this.closing.signal.aborted)
-      throw new TaskProtocolError(503, { code: "host_closing", stage: "resolve", message: "Artifact Manager is closing." });
+      throw new TaskProtocolError(503, {
+        code: "host_closing",
+        stage: "resolve",
+        message: "Artifact Manager is closing.",
+      });
     const url = this.authorize(source);
     if (digest && !new RegExp(`^${artifactDigestPrefix}[a-f0-9]{64}$`).test(digest))
       throw new TaskProtocolError(400, {
@@ -193,7 +197,7 @@ export class ArtifactManager {
       });
     if (digest) {
       const pending = this.pinned.get(digest);
-      if (pending) return this.borrow(await pending, url);
+      if (pending) return this.borrow(await pending);
     }
     if (this.active >= this.limits.preparations)
       throw new TaskProtocolError(429, {
@@ -211,7 +215,7 @@ export class ArtifactManager {
     this.operations.add(operation);
     if (digest) this.pinned.set(digest, operation);
     try {
-      return this.borrow(await operation, url);
+      return this.borrow(await operation);
     } finally {
       this.active--;
       this.operations.delete(operation);
@@ -223,12 +227,9 @@ export class ArtifactManager {
     // Keep an IO-to-arbitration handoff alive until callers have synchronously bound their refs.
     setImmediate(() => this.release(entry.metadata.digest));
   }
-  private borrow(entry: ManagedArtifact, url: URL) {
+  private borrow(entry: ManagedArtifact) {
     this.protect(entry);
-    return {
-      prepared: entry.prepared,
-      metadata: { ...structuredClone(entry.metadata), source: url.origin },
-    };
+    return { prepared: entry.prepared, metadata: structuredClone(entry.metadata) };
   }
   private async verify(cached: ManagedArtifact) {
     const digest = cached.metadata.digest;
@@ -245,7 +246,10 @@ export class ArtifactManager {
     }
   }
   private async acquire(url: URL, digest?: string): Promise<ManagedArtifact> {
-    const signal = AbortSignal.any([AbortSignal.timeout(this.limits.preparationMs), this.closing.signal]);
+    const signal = AbortSignal.any([
+      AbortSignal.timeout(this.limits.preparationMs),
+      this.closing.signal,
+    ]);
     let stage = "download";
     try {
       const bytes = await fetchCheckArchive(url.href, {
@@ -300,9 +304,9 @@ export class ArtifactManager {
         message: "Check source preparation failed.",
       });
     }
-    async close() {
-      this.closing.abort();
-      await Promise.allSettled([...this.operations]);
-    }
+  }
+  async close() {
+    this.closing.abort();
+    await Promise.allSettled([...this.operations]);
   }
 }
