@@ -95,6 +95,7 @@ async function rawSnapshots(tasks) {
   assert.match(response.headers.get("content-type"), /text\/event-stream/);
   const reader = response.body.getReader(), decoder = new TextDecoder(), snapshots = [];
   let text = "";
+  let failure;
   try {
     while (snapshots.length < tasks.length) {
       const read = await reader.read();
@@ -254,7 +255,7 @@ try {
     assert.equal(reference.origin.artifactDigest, delivery.products.business.digest);
     assert.match(reference.resourceBase, /\/v2\/artifacts\/.+\/references\//);
     const notReady = await Effect.runPromise(observe({ spec, subject: { ready: false } }, runtime));
-    assert.equal(notReady.status, 200); assert.equal(notReady.payload.current.levelId, "initial");
+    assert.equal(notReady.status, 200, JSON.stringify(notReady)); assert.equal(notReady.payload.current.levelId, "initial");
     const outcome = await Effect.runPromise(regulate({
       spec: makeRegulatorSpec(spec, { targetLevel: "ready",
         agentExecutionLimits: { timeoutMs: 1000 }, quota: { timeoutMs: 20_000, maxAgentRuns: 1, maxStallRuns: 1 } }, { id: "unused" }),
@@ -297,6 +298,9 @@ try {
   result.streamConnections = streamConnections;
   result.diagnostics = kernel.diagnostics();
   result.workerRecords = await records();
+} catch (error) {
+  failure = error;
+  result.error = String(error);
 } finally {
   client.close();
   await host.close();
@@ -309,4 +313,5 @@ assert.equal(result.cleanup.serverClosed, true);
 assert.equal(result.cleanup.workers, 0);
 assert.equal(result.cleanup.ownedProcesses, 0);
 await writeFile("consumer-results.json", `${JSON.stringify(result, null, 2)}\n`);
+if (failure) throw failure;
 console.log(JSON.stringify({ passed: result.scenarios.length, cleanup: result.cleanup }));

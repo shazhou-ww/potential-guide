@@ -172,6 +172,10 @@ if(!$actual.AreAccessRulesProtected-or$actual.GetOwner([Security.Principal.Secur
 } catch (error) {
   receipt.status = "failed";
   receipt.error = String(error).replaceAll(external, "<external>").replaceAll(repository, "<repository>");
+  if (owned) {
+    try { receipt.consumer = JSON.parse(await readFile(join(external, "consumer-results.json"), "utf8")); }
+    catch (readError) { if (readError.code !== "ENOENT") receipt.partialReadError = String(readError); }
+  }
 } finally {
   if (author && author.exitCode === null) {
     author.stdin.end("stop\n");
