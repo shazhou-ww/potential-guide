@@ -282,15 +282,24 @@ function validatePilot(value: unknown): asserts value is PilotSpec {
             .split("/")
             .some((part) => !part || part === "." || part === ".." || /[\\:]/.test(part)) ||
           (page.resourceBase !== undefined &&
-            (typeof page.resourceBase !== "string" ||
-              !page.resourceBase.startsWith("file:") ||
-              !page.resourceBase.endsWith("/")))
+            (typeof page.resourceBase !== "string" || !page.resourceBase.endsWith("/")))
         )
           throw new RegulationError(400, "Invalid artifact Reference ownership.");
         if (typeof page.resourceBase === "string") {
           const base = new URL(page.resourceBase);
           if (base.username || base.password || base.search || base.hash)
             throw new RegulationError(400, "Invalid artifact Reference resource base.");
+          if (
+            base.protocol !== "file:" &&
+            !(
+              base.protocol === "http:" &&
+              base.hostname === "127.0.0.1" &&
+              base.pathname.startsWith(
+                `/v2/artifacts/${encodeURIComponent(page.origin.artifactDigest)}/references/`,
+              )
+            )
+          )
+            throw new RegulationError(400, "Unsupported artifact Reference resource service.");
         }
       }
       if (

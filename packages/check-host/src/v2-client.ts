@@ -261,6 +261,11 @@ export class CheckTaskClient {
   }
   private broadcast(event: TaskEvent) {
     for (const sub of this.subscribers) {
+      if (sub.ids.has(event.taskId) && event.unavailable) {
+        sub.error = new TaskProtocolError(404, event.unavailable);
+        sub.wake?.();
+        continue;
+      }
       if (
         !sub.ids.has(event.taskId) ||
         (sub.revisions.get(event.taskId) ?? -1) >= event.snapshot.revision
@@ -273,6 +278,7 @@ export class CheckTaskClient {
     }
   }
   private async pump() {
+    let failures = 0;
     while (this.subscribers.size && !this.closed) {
       const version = this.changed;
       const ids = new Set([...this.subscribers].flatMap((sub) => [...sub.ids]));
@@ -304,7 +310,22 @@ export class CheckTaskClient {
                 const raw: unknown = JSON.parse(data.slice(6));
                 if (!object(raw) || typeof raw.taskId !== "string")
                   throw new Error("Invalid task event.");
-                const event: TaskEvent = { taskId: raw.taskId, snapshot: snapshot(raw.snapshot) };
+                const event: TaskEvent = {
+                  taskId: raw.taskId,
+                  snapshot: snapshot(raw.snapshot),
+                  ...(object(raw.unavailable) &&
+                  typeof raw.unavailable.code === "string" &&
+                  typeof raw.unavailable.stage === "string" &&
+                  typeof raw.unavailable.message === "string"
+                    ? {
+                        unavailable: {
+                          code: raw.unavailable.code,
+                          stage: raw.unavailable.stage,
+                          message: raw.unavailable.message,
+                        },
+                      }
+                    : {}),
+                };
                 if (
                   !ids.has(event.taskId) ||
                   event.snapshot.taskId !== event.taskId ||
@@ -312,6 +333,7 @@ export class CheckTaskClient {
                 )
                   throw new Error("Invalid task event.");
                 this.broadcast(event);
+                failures = 0;
               }
               end = buffer.indexOf("\n\n");
             }
@@ -329,7 +351,16 @@ export class CheckTaskClient {
           return;
         }
       }
-      if (version === this.changed && !this.closed) await delay(50);
+      if (version === this.changed && !this.closed) {
+        if (++failures >= 5) {
+          for (const sub of this.subscribers) {
+            sub.error = new Error("Task stream unavailable after bounded reconnect attempts.");
+            sub.wake?.();
+          }
+          return;
+        }
+        await delay(50);
+      }
     }
   }
   close() {

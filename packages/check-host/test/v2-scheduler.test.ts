@@ -53,8 +53,9 @@ async function fixture() {
     resolve: () => new Promise((resolve) => pending.push(resolve)),
     retain() {},
     release() {},
-    metadata: () => artifact().metadata,
+    metadata: async () => artifact().metadata,
     reference: async () => Buffer.from("reference"),
+    close: async () => {},
   };
   const kernel: SchedulerKernel = {
     limits: defaults,
@@ -300,6 +301,48 @@ test("atomic event subscription initial/finish/reconnect includes terminal and m
     assert.throws(() => f.scheduler.subscribe(["missing"], "owner", () => {}), { status: 404 });
     assert.throws(() => f.scheduler.subscribe([task.taskId], "other", () => {}), { status: 403 });
     assert.throws(() => f.scheduler.subscribe([], "owner", () => {}), { status: 400 });
+  } finally {
+    await f.scheduler.close();
+  }
+});
+
+test("expired subscriptions report unavailability without reversing a completed Task", async () => {
+  const f = await fixture();
+  try {
+    const task = f.accept();
+    await f.settle();
+    await f.resolve();
+    f.start();
+    f.finish();
+    const events: TaskEvent[] = [];
+    const release = f.scheduler.subscribe([task.taskId], "owner", (event) => events.push(event));
+    f.advance(1001);
+    assert.throws(() => f.scheduler.snapshot(task.taskId, "owner"), { status: 404 });
+    assert.equal(events.at(-1)?.unavailable?.code, "task_expired");
+    assert.equal(events.at(-1)?.snapshot.state, "completed");
+    release();
+  } finally {
+    await f.scheduler.close();
+  }
+});
+
+test("a late wall timer cannot attach new demand to a logically expired Execution", async () => {
+  const f = await fixture();
+  try {
+    const first = f.accept({ timeoutMs: 120_000 });
+    await f.settle();
+    await f.resolve();
+    f.start();
+    f.advance(defaults.deadlineMs + 1);
+    const second = f.accept({ freshness: "completed-after-request", timeoutMs: 120_000 });
+    await f.settle();
+    await f.resolve();
+    assert.equal(f.scheduler.snapshot(first.taskId, "owner").error?.code, "execution_timeout");
+    assert.equal(f.runs.length, 2);
+    assert.notEqual(
+      f.scheduler.snapshot(first.taskId, "owner").executionId,
+      f.scheduler.snapshot(second.taskId, "owner").executionId,
+    );
   } finally {
     await f.scheduler.close();
   }

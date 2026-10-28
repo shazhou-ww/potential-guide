@@ -51,6 +51,10 @@ for (const input of Object.keys(result.metafile.inputs)) {
   while (directory !== dirname(directory)) {
     try {
       const manifest = JSON.parse(await readFile(join(directory, "package.json"), "utf8"));
+      if (typeof manifest.name !== "string") {
+        directory = dirname(directory);
+        continue;
+      }
       if (licenses.has(manifest.name)) break;
       let license;
       for (const name of ["LICENSE", "LICENSE.txt", "LICENSE.md", "license", "license.txt"]) {

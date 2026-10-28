@@ -16,11 +16,16 @@ import {
   createPrivateFile,
   ensurePrivateDirectory,
   hostDirectory,
+  connectHost,
+  type CheckClient,
+  type ArtifactMetadata,
+  TaskProtocolError,
 } from "@potential-guide/check-host";
 import {
   type ArtifactObjectiveSource,
   compileSubjectProjection,
   createWorkerCheckProbe,
+  createArtifactCheckProbe,
   type PilotRuntime,
   type PilotSpec,
   type ReferencePage,
@@ -232,7 +237,7 @@ export function parseObjectiveArtifactLocation(location: string): {
 }
 function referenceLocales(
   artifact: Inspected & { directory: string },
-  checks: ReadonlyMap<string, PreparedCheckArtifact>,
+  checks: ReadonlyMap<string, BoundCheck>,
   checkContents: CheckContents,
 ) {
   const { manifest, digest } = artifact;
@@ -262,7 +267,24 @@ function referenceLocales(
         const inherited = (id: string, path: string, title: string) => {
           const content = checkContents.get(check)?.get(path);
           if (!content) throw new Error("Missing prepared Check Reference.");
-          return owned(id, title, path, check.digest, check.artifactDirectory, decode(content));
+          if (check.kind === "local")
+            return owned(
+              id,
+              title,
+              path,
+              check.digest,
+              check.prepared.artifactDirectory,
+              decode(content),
+            );
+          return {
+            id,
+            title,
+            description: title,
+            content: decode(content),
+            references: [],
+            origin: { artifactDigest: check.digest, path },
+            resourceBase: `${check.client.address.endpoint}/v2/artifacts/${encodeURIComponent(check.digest)}/references/${path.split("/").slice(0, -1).join("/")}/`,
+          };
         };
         const base = `pages/base-${ref}`;
         if (pages[base]) throw new Error("Ambiguous base Reference identity.");
@@ -366,7 +388,12 @@ function referenceLocales(
   );
 }
 // Scope-local verified bytes are passed explicitly; no mutable global cache.
-type CheckContents = ReadonlyMap<PreparedCheckArtifact, ReadonlyMap<string, Buffer>>;
+type BoundCheck = Pick<PreparedCheckArtifact, "digest" | "revision" | "manifest"> &
+  (
+    | { kind: "local"; prepared: PreparedCheckArtifact }
+    | { kind: "remote"; url: string; client: CheckClient }
+  );
+type CheckContents = ReadonlyMap<BoundCheck, ReadonlyMap<string, Buffer>>;
 
 export async function withObjectiveArtifact<T>(
   directory: string,
@@ -381,9 +408,9 @@ export async function withObjectiveArtifact<T>(
   await ensurePrivateDirectory(cache);
   const specs = new Map<string, PilotSpec>();
   const manifests = new Map<string, ObjectiveArtifactManifest>();
-  const preparedChecks = new Map<string, PreparedCheckArtifact>();
+  const preparedChecks = new Map<string, BoundCheck>();
   const active = new Set<string>();
-  const contents = new Map<PreparedCheckArtifact, ReadonlyMap<string, Buffer>>();
+  const contents = new Map<BoundCheck, ReadonlyMap<string, Buffer>>();
   const lifecycle = new AbortController();
   const pending = new Set<Promise<unknown>>();
   async function bind(directory: string, digest: string, expectedId?: string): Promise<PilotSpec> {
@@ -406,17 +433,54 @@ export async function withObjectiveArtifact<T>(
       throw new Error("Conflicting Objective identity/content.");
     if (prior) return prior;
     active.add(digest);
-    const checks = new Map<string, PreparedCheckArtifact>();
+    const checks = new Map<string, BoundCheck>();
     for (const [id, reference] of Object.entries(manifest.checks)) {
       const source =
         reference.source.kind === "directory"
           ? { ...reference.source, directory: resolve(directory, reference.source.directory) }
           : reference.source;
-      const check = await prepareCheckArtifact(source, {
-        cacheDirectory: join(cache, "checks"),
-        ...(options.signal ? { signal: options.signal } : {}),
-        ...(options.preparationTimeoutMs ? { timeoutMs: options.preparationTimeoutMs } : {}),
-      });
+      let check: BoundCheck;
+      if (source.kind === "https") {
+        const client = await connectHost();
+        // Prefer accurate retained metadata. A miss may confirm the source, never upgrade the binding.
+        let metadata: ArtifactMetadata;
+        try {
+          metadata = await client.artifact(source.digest);
+        } catch (error) {
+          if (!(error instanceof TaskProtocolError && error.status === 404)) throw error;
+          metadata = await client.resolveArtifact(source.url);
+        }
+        if (metadata.digest !== source.digest)
+          throw new Error("Objective's fixed Check digest differs from its source.");
+        check = {
+          kind: "remote",
+          url: source.url,
+          client,
+          digest: metadata.digest,
+          revision: metadata.revision,
+          manifest: metadata.manifest,
+        };
+        const files = new Map<string, Buffer>();
+        files.set(
+          check.manifest.references.check,
+          Buffer.from(await client.reference(check.digest, "check")),
+        );
+        for (const [problem, path] of Object.entries(check.manifest.references.problems))
+          files.set(path, Buffer.from(await client.reference(check.digest, `problems/${problem}`)));
+        for (const path of check.manifest.references.supporting ?? [])
+          files.set(path, Buffer.from(await client.reference(check.digest, path)));
+        contents.set(check, files);
+      } else {
+        const prepared = await prepareCheckArtifact(source, {
+          cacheDirectory: join(cache, "checks"),
+          ...(options.signal ? { signal: options.signal } : {}),
+          ...(options.preparationTimeoutMs ? { timeoutMs: options.preparationTimeoutMs } : {}),
+        });
+        check = { ...prepared, kind: "local", prepared };
+        const verified = await inspectCheckArtifact(prepared.artifactDirectory);
+        if (verified.digest !== check.digest) throw new Error("Prepared Check References changed.");
+        contents.set(check, verified.files);
+      }
       if (
         Object.keys(check.manifest.references.problems).some(
           (problem) => !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(problem),
@@ -433,9 +497,6 @@ export async function withObjectiveArtifact<T>(
             throw new Error("Objective declares a problem not reported by its Check.");
       checks.set(id, check);
       preparedChecks.set(JSON.stringify([manifest.id, id]), check);
-      const verified = await inspectCheckArtifact(check.artifactDirectory);
-      if (verified.digest !== check.digest) throw new Error("Prepared Check References changed.");
-      contents.set(check, verified.files);
     }
     const bindings: Record<string, Omit<ArtifactObjectiveSource, "bindings">> = {};
     for (const [id, dependency] of Object.entries(manifest.dependencies)) {
@@ -524,13 +585,23 @@ export async function withObjectiveArtifact<T>(
         const resultValidator = new Ajv({ strict: false, validateFormats: false }).compile(
           check.manifest.resultSchema,
         );
-        const probe = createWorkerCheckProbe({
-          directory: check.directory,
-          revision: check.revision,
+        const probeOptions = {
           ...(options.probeTimeoutMs ? { timeoutMs: options.probeTimeoutMs } : {}),
-          evidence: evidence ?? false,
+          evidence: evidence ?? (false as const),
           identity: { ...ref, artifactDigest: check.digest, revision: check.revision },
-        });
+        };
+        const probe =
+          check.kind === "remote"
+            ? createArtifactCheckProbe({
+                ...probeOptions,
+                check: { url: check.url, digest: check.digest },
+                client: check.client,
+              })
+            : createWorkerCheckProbe({
+                ...probeOptions,
+                directory: check.prepared.directory,
+                revision: check.revision,
+              });
         return async (subject, signal, resolutions) => {
           const mapped = project(subject);
           if (!record(mapped) || !isJsonValue(mapped) || !subjectValidator(mapped))

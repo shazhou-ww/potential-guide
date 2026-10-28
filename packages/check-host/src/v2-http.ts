@@ -167,7 +167,7 @@ export async function routeV2(
         "cache-control": "no-store",
       });
       response.end(bytes);
-    } else reply(scheduler.artifacts.metadata(digest));
+    } else reply(await scheduler.artifacts.metadata(digest));
     return;
   }
   fail(404, "route_unavailable", "Unknown v2 route.");

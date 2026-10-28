@@ -38,6 +38,7 @@ type Run = {
   completedAt?: string;
   result?: CheckState & { state: "Completed" };
   expires?: number;
+  deadline?: number;
 };
 type Listener = { scope: string; ids?: Set<string>; send(event: TaskEvent): void };
 export interface SchedulerClock {
@@ -46,7 +47,7 @@ export interface SchedulerClock {
 }
 export type SchedulerArtifacts = Pick<
   ArtifactManager,
-  "authorize" | "resolve" | "retain" | "release" | "metadata" | "reference"
+  "authorize" | "resolve" | "retain" | "release" | "metadata" | "reference" | "close"
 >;
 export type SchedulerKernel = Pick<CheckKernel, "executeCheck" | "cancel" | "close" | "limits">;
 const clock: SchedulerClock = {
@@ -181,6 +182,14 @@ export class TaskScheduler {
   private match(task: Task) {
     const key = this.compatible(task);
     for (const run of this.runs.values()) {
+      if (
+        run.state === "running" &&
+        run.deadline !== undefined &&
+        this.time.now() >= run.deadline
+      ) {
+        this.finishRun(run, { checkId: run.id, state: "Failed", error: "execution_timeout" });
+        this.kernel.cancel(run.id);
+      }
       if (run.key !== key || !this.qualifies(task, run)) continue;
       if (run.state === "completed" && run.result) {
         this.deliver(task, run);
@@ -249,6 +258,7 @@ export class TaskScheduler {
     run.started = ++this.sequence;
     run.startedAt = this.time.date();
     run.state = "running";
+    run.deadline = this.time.now() + this.kernel.limits.deadlineMs;
     for (const task of [...run.tasks]) {
       if (this.alive(task))
         this.update(task, { state: "running", executionStartedAt: run.startedAt });
@@ -390,13 +400,17 @@ export class TaskScheduler {
       send({ taskId: task.snapshot.taskId, snapshot: structuredClone(task.snapshot) });
     return () => this.listeners.delete(listener);
   }
-  private emit(task: Task) {
+  private emit(task: Task, unavailable?: TaskEvent["unavailable"]) {
     for (const listener of this.listeners)
       if (
         listener.scope === task.scope &&
         (!listener.ids || listener.ids.has(task.snapshot.taskId))
       )
-        listener.send({ taskId: task.snapshot.taskId, snapshot: structuredClone(task.snapshot) });
+        listener.send({
+          taskId: task.snapshot.taskId,
+          snapshot: structuredClone(task.snapshot),
+          ...(unavailable ? { unavailable } : {}),
+        });
   }
   private expire() {
     const now = this.time.now();
@@ -406,9 +420,10 @@ export class TaskScheduler {
         if (task.key) this.keys.delete(task.key);
         if (task.artifact) this.artifacts.release(task.artifact.metadata.digest);
         // Expiration is explicit on already-open subscriptions.
-        this.update(task, {
-          state: "failed",
-          error: { code: "task_expired", stage: "schedule", message: "Task retention expired." },
+        this.emit(task, {
+          code: "task_expired",
+          stage: "schedule",
+          message: "Task retention expired.",
         });
       }
     }
@@ -424,6 +439,7 @@ export class TaskScheduler {
     for (const task of this.tasks.values())
       if (!taskTerminal(task.snapshot)) this.cancel(task.snapshot.taskId, task.scope);
     this.listeners.clear();
+    await this.artifacts.close();
     await this.kernel.close();
   }
 }

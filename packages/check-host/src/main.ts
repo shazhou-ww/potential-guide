@@ -34,14 +34,18 @@ if (
   throw new Error("Host startup reservation was superseded.");
 const kernel = await CheckKernel.create(join(directory, "snapshots"));
 const token = randomUUID() + randomUUID();
-const instance = randomUUID();
 const configuredOrigins = process.env.PGUIDE_CHECK_SOURCE_ORIGINS?.split(",").filter(Boolean);
 const scheduler = new TaskScheduler(
   new ArtifactManager(join(directory, "artifacts"), configuredOrigins),
   kernel,
 );
 const host = await serve(kernel, token, scheduler);
-const descriptor = JSON.stringify({ endpoint: host.endpoint, token, pid: process.pid, instance });
+const descriptor = JSON.stringify({
+  endpoint: host.endpoint,
+  token,
+  pid: process.pid,
+  instance: scheduler.instance,
+});
 try {
   if (
     (await readPrivateFile(directory, "startup.json")) !== claimed ||

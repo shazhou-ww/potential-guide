@@ -9,20 +9,28 @@ import {
   readArtifact,
   removePrivateFile,
   serve,
+  ArtifactManager,
+  TaskScheduler,
 } from "../packages/check-host/dist/index.js";
 
-export async function createWorkerHost(directory) {
+export async function createWorkerHost(directory, options = {}) {
   await mkdir(directory, { recursive: true });
   const discovery = join(directory, "discovery");
   await ensurePrivateDirectory(discovery);
   const kernel = await CheckKernel.create(join(discovery, "snapshots"));
   const token = randomUUID();
-  const host = await serve(kernel, token);
+  const scheduler = options.allowedOrigins
+    ? new TaskScheduler(
+        new ArtifactManager(join(discovery, "artifacts"), options.allowedOrigins),
+        kernel,
+      )
+    : undefined;
+  const host = await serve(kernel, token, scheduler);
   const descriptor = JSON.stringify({
     endpoint: host.endpoint,
     token,
     pid: process.pid,
-    instance: randomUUID(),
+    instance: scheduler?.instance ?? randomUUID(),
   });
   const previous = process.env.PGUIDE_CHECK_HOST_DIRECTORY;
   try {

@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   type CheckState,
+  type CheckClient,
   connectHost,
   type Subject as HostSubject,
 } from "@potential-guide/check-host";
@@ -61,6 +62,49 @@ function evidenceProbe(
       throw error;
     }
   };
+}
+
+export function createArtifactCheckProbe(options: {
+  readonly check: { readonly url: string; readonly digest: string };
+  readonly client?: CheckClient;
+  readonly timeoutMs?: number;
+  readonly evidence?: RunEvidence | false;
+  readonly identity?: unknown;
+}): CheckProbe {
+  return evidenceProbe(async (subject, signal, context, resolutions) => {
+    signal.throwIfAborted();
+    const client = options.client ?? (await connectHost());
+    const task = await client.check({
+      check: options.check,
+      subject: structuredClone(subject) as HostSubject,
+      context: { resolutions: JSON.parse(JSON.stringify(resolutions ?? [])) },
+      freshness: "started-after-request",
+      timeoutMs: options.timeoutMs ?? 30_000,
+    });
+    const cancel = () => {
+      void task.cancel().catch(() => {});
+    };
+    signal.addEventListener("abort", cancel, { once: true });
+    if (signal.aborted) cancel();
+    try {
+      const observation = await task.result();
+      signal.throwIfAborted();
+      if (options.evidence)
+        options.evidence.stream.emit("check.host-observation", {
+          checkRunId: context?.checkRunId,
+          taskId: observation.taskId,
+          executionId: observation.executionId,
+          hostInstance: observation.hostInstance,
+          artifact: observation.artifact,
+          acceptedAt: observation.acceptedAt,
+          executionStartedAt: observation.executionStartedAt,
+          executionCompletedAt: observation.executionCompletedAt,
+        });
+      return parseCheckEnvelope(observation.result);
+    } finally {
+      signal.removeEventListener("abort", cancel);
+    }
+  }, options);
 }
 
 export function createWorkerCheckProbe(options: {

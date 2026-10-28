@@ -1,5 +1,7 @@
 protocol:
   - "@potential-guide/check-host"
+  - "@potential-guide/check-artifacts"
+  - "@potential-guide/check-runtime-files"
   - "@potential-guide/effects"
   - "@potential-guide/pilot-protocol"
 business:
@@ -7,7 +9,6 @@ business:
   - "@potential-guide/objective-regulator"
   - "@potential-guide/regulation-coordinator"
 tools:
-  - "@potential-guide/check-artifacts"
   - "@potential-guide/test-tree"
   - pguide
   - "@potential-guide/cli-core"

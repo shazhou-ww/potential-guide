@@ -35,6 +35,12 @@ Task/Execution 各保留最多 256 条，终态保留 60 秒；超限拒绝，�
 普通 provenance 不保存 query、fragment、userinfo 和远端错误正文。
 digest 是内容一致性，不代表发行者签名。
 
+provenance 进一步收紧为 origin-only，避免敏感值藏在 URL pathname。
+Host 重启后先按准确 digest 验证保留的 capsule；只从内容恢复的元数据使用
+`retained-cache` 来源标记，不编造历史网络确认。Task/Execution 仍不恢复或透明重跑。
+缓存发布按完整 digest 串行化，网络来源确认仍独立；原始 Reference 返回同一次完整树
+验摘要得到的字节。准备/引用/结果持有引用与微任务交接保护，容量满时仅回收无引用内容。
+
 ## 检查与证据
 
 [执行记录](./verification.md)记录实际命令与结果；完成之前不得勾选对应 ledger。

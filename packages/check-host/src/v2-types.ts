@@ -47,6 +47,7 @@ export interface CheckTaskSnapshot {
 export interface TaskEvent {
   taskId: string;
   snapshot: CheckTaskSnapshot;
+  unavailable?: TaskError;
 }
 export const taskTerminal = (state: CheckTaskSnapshot) =>
   state.state === "completed" || state.state === "failed" || state.state === "cancelled";

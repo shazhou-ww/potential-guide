@@ -1,5 +1,104 @@
 # @potential-guide/check-host
 
+## Host v2: observation Tasks
+
+The same authenticated loopback Host now assembles an Artifact Manager, a
+Task Scheduler and the execution Kernel. Ordinary v2 callers never supply a
+server directory/revision or install/build Check dependencies:
+
+```ts
+const client = await connectHost();
+const task = await client.check({
+  check: { url: "https://github.com/owner/repo/releases/download/v1/check.tgz" },
+  subject: { root: "D:\\project" },
+  timeoutMs: 30_000,
+});
+const observation = await task.result();
+// observation.result is business data: completed does not mean business passed.
+// observation.artifact.digest/revision and executionId identify the actual content/run.
+```
+
+`check.url` is required. Optional `check.digest` pins the logical artifact;
+without it **each new Task** confirms its source. Fixed cache hits reverify all
+bytes, including after a Host restart; floating requests never fall back to an
+old URL mapping. A digest establishes content identity, not publisher authentication.
+Sources require normal TLS and an explicit HTTPS-origin policy. Defaults allow
+`github.com`, `release-assets.githubusercontent.com` and
+`objects.githubusercontent.com`. Host owners may replace this list with
+comma-separated `PGUIDE_CHECK_SOURCE_ORIGINS` at startup. Every redirect is
+reauthorized (maximum four); embedded credentials, fragments and protocol
+downgrades are rejected. No credentials/cookies are forwarded.
+
+| Method | v2 route |
+| --- | --- |
+| POST | `/v2/check-tasks` |
+| GET | `/v2/check-tasks/{taskId}` |
+| POST | `/v2/check-tasks/{taskId}/cancel` |
+| GET | `/v2/events?taskId=a&taskId=b` (SSE) |
+| GET | `/v2/events?scope=all` (authenticated owner's Tasks) |
+| POST | `/v2/artifacts/resolve` with `{url}` |
+| GET | `/v2/artifacts/{digest}` |
+| GET | `/v2/artifacts/{digest}/references/{referenceId}` |
+
+Reference IDs include `check`, `problems/<problemId>`, and exact declared
+Reference paths. Results/provenance expose no cache paths, URL query or
+userinfo; source evidence is origin-only. After restarting, metadata recovered
+solely from verified content reports `retained-cache`, not invented source history.
+There is no per-Task event route. Filters are deduplicated and validated as a
+whole; missing/expired records are 404, forbidden scopes 403. Empty filters are
+400 unless explicitly `scope=all`. Every subscription/reconnection starts with
+current snapshots, including terminal states. Revision markers permit deduplication.
+An open subscription reports `unavailable.code=task_expired` without changing the
+last terminal snapshot. Slow consumers are disconnected rather than queued without bound.
+
+`task.snapshot()`, `task.events({signal})`, `task.cancel()` and
+`client.watchTasks([taskA, taskB], {signal})` observe the same independent Task.
+Each Client multiplexes its watchers over one filtered SSE stream.
+`task.result()` returns the completed snapshot and accurate evidence, even for
+business failure; invocation/cleanup failures, timeout and cancellation reject.
+Reading, disconnecting, cancelling a subscription or `client.close()` does not
+cancel remote Tasks. Only `task.cancel()` withdraws that Task's demand.
+
+Default freshness is `started-after-request`; `completed-after-request` explicitly
+accepts a compatible run already in progress. Compatibility includes logical
+digest, canonical subject/context, authenticated scope and execution policy.
+Task IDs never merge. Strong requests queued before start may share a run;
+late strong requests cannot join it. Weak requests can use retained completion
+records even when version resolution finishes later.
+
+`timeoutMs` covers acceptance through delivery (default 30s, maximum 120s).
+Execution wall-clock is independently bounded (default 30s); cleanup/initialization
+each have a 5s bound. One Task ending does not stop other waiters. Last-demand
+cancellation seals the run, cooperatively aborts, and force-retires only its
+exclusive worker if necessary, with confirmed subprocess cleanup.
+
+States: `accepted/preparing/waiting/running/completed/failed/cancelled`.
+Errors use `{error:{code,stage,message}}`, with sanitized diagnostics.
+Admission/filters use 400, token failure 401, source/scope denial 403, unavailable
+records 404, idempotency conflict 409, capacity 429, and unavailable Host/cache 503.
+Source preparation failures use 502. Task timeout is `failed/task_timeout`;
+execution wall-clock is `failed/execution_timeout`.
+
+`Idempotency-Key` is evaluated before floating resolution; same key/request
+returns the original Task/version/acceptance, changed content conflicts.
+SDK creates/reuses that key for its one bounded admission retry.
+Task and Execution records are capped at 256 each and retained 60s after terminal;
+there is no cross-restart exactly-once or transparent replay promise.
+Other defaults: 64 artifacts, 4 source preparations (30s each), 64 streams,
+64 filtered Tasks per stream. SDK subscriber queues hold at most 64 frames.
+
+### Compatibility and consumer migration
+
+v1 remains a **short-term explicit dual stack**, documented below: existing
+npm/Git builtin worker adapters use directory/revision and `/checks`.
+HTTPS Check references inside fixed Objective artifacts now obtain metadata,
+raw References and executions from Host v2; Pilot/regulator retain inline digests,
+owning-artifact evidence and exact recovery. Local-directory Objective author
+flows remain explicit v1 compatibility. Historical schemas/evidence are unchanged.
+Full builtin migration, v1 removal and formal releases belong to the subsequent
+release work, not this implementation. Restart an owned old Host when upgrading;
+a v1-only daemon is not silently treated as a v2 service.
+
 ## Executable state paths and manual
 
 The private [`test-tree` workspace](../test-tree/README.md) runs representative
@@ -29,7 +128,7 @@ is the IO boundary. Reading/subscribing does not execute code. The kernel does n
 import HTTP or understand Objectives. `Completed.result` is the worker's business
 result; a not-passed result is not an invocation failure.
 
-## Local API
+## Legacy v1 local API
 
 `connectHost()` locates/starts the package's `pguide-check-host` assembly in the
 user-private `~/.potential-guide/check-host` directory. Multiple CLI processes
@@ -111,8 +210,9 @@ not durable exactly-once delivery. Expired observations return 404.
 
 For author-triggered bundling/packing and digest-pinned local/HTTPS delivery of
 standalone Checks, use [`check-artifacts`](../check-artifacts/README.md). Its
-preparation layer passes only the verified execution directory and Host revision
-to this API; the Host does not understand manifests, References or download channels.
+legacy preparation layer passes only the verified execution directory and Host revision
+to v1. In v2 the service assembly owns manifests/References/downloads; the Kernel
+still consumes only verified execution content.
 
 Each canonical directory contains self-contained `worker.cjs` and optional
 resources (no node_modules, links, special/hardlinked files; 256 files/64 MiB).

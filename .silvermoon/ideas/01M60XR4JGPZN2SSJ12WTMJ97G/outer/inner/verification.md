@@ -14,3 +14,61 @@ event digest `2b215b58e537d2aec51888d07707f55bd5c74535`。
   改为边界解析器而非断言类型。
 
 这些是实施中间结果，不是完整通过、submitInner 或外部部署证据。
+
+## 已执行的完整切片
+
+首个可恢复提交：`8544049`（制品分层、v2 状态机/API/SDK 和八个确定性测试）。
+该提交前 `silvermoon check --worktree` 与 `--staged` 均成功；未提前提交 gate。
+
+- `pnpm --filter @potential-guide/check-host build` + 指定 `v2-scheduler.test.ts`：
+  八个测试全部通过，覆盖排队强语义共享、运行中强/弱分流、late-resolution、
+  新版本不匹配旧执行、独立期限/取消、迟到 timer、幂等/权限/context、订阅竞态。
+- `pnpm typecheck`：25 个 workspace 成功（9 个缓存），根测试 TypeScript 检查成功。
+- 后续消费者迁移编译先发现 probe 尚未从公共入口导出和 evidence 的布尔字面量拓宽；
+  修复导出和类型后，`cli-runtime`、`objective-regulator` build 和根测试类型检查成功。
+- 真实 TLS 测试初次子进程继承 `NODE_TEST_CONTEXT`，未实际执行内部测试；删除该继承后
+  强制断言子进程报告 `fail 0`，不是把空输出当通过。
+- `pnpm --filter @potential-guide/check-host exec tsx --test test\v2-scheduler.test.ts test\v2-real.test.ts`：
+  9/9 通过。内部真实 HTTPS/HTTP/worker 测试通过，运行约 5.8 秒。
+  浮动 V2 digest 为 `sha256-pguide-check-v1:2403e32a51c44d04288e3cffa327293f00b5a1ddfc6532c40cf83c5dee4327e2`；
+  V3 为 `sha256-pguide-check-v1:3a34d4a7728eb24457f3833dc830f67e7a0a844ea49eeb7c6f24f9294c9c97b6`。
+  两份同时执行，业务 `ok:false` 仍 completed；固定 V2 不增加来源请求。
+  记录 3 次实际来源传输、12 个 Execution、3 次 worker 初始化，失控执行墙钟断言
+  `800 <= elapsed < 3500ms`，实测约 987.5ms。失控 worker 拥有真实子进程，
+  邻 worker 正常完成；等待 `ownedProcesses === 0` 后再验后继执行。
+  协作取消实际写清理标记，错误/脏清理均 reject，诊断不泄露 worker 私有消息。
+  HTTPS 证书通过独立测试根受信，移除根的独立 Node 请求实际失败；未关闭 TLS 验证。
+  重定向循环、HTTP 降级、超大响应、坏归档和未授权 origin 全部明确失败。
+- 真实 Objective 流先暴露 regulator 仅接受 file resourceBase；
+  将新增服务地址限制为携带准确 owning digest 的认证 loopback v2 Reference 路径后重测成功。
+- `pnpm --filter @potential-guide/cli-runtime exec node --test test\host-v2.test.mjs`：
+  通过。真实 TLS→同进程 Host→SDK→Pilot→regulator，六条
+  `check.host-observation` 证据均含 Task/Execution/digest/实际 revision，11 次实际执行。
+  Objective digest `sha256-pguide-objective-v1:5a245467a4a0403b2b4672dc15e4be0d2f8263a66fbe259bc7d72fa9ebe1affa`，
+  固定 Check `sha256-pguide-check-v1:0519d4256ec62cb2f936311eff8bd86cf84cb8a8cf33e8b297076f6136b72d1a`。
+  断言客户端缓存只有 Objective 数据、无 Check 物化；来源切换 V3 后准确恢复仍运行固定旧版，
+  继承 Reference 的 owning artifact 与服务地址保留。
+
+## 完整检查的发现与修复
+
+操作日志位于仓库忽略目录 `.cache\check-host-v2`，不是交付或部署证据：
+
+1. `check-first.log`：完整 `pnpm check` 的 build 在 license 收集器遇到依赖内部
+   仅声明 `type`、没有 `name` 的 package.json 时失败。新 Host 制品依赖使该真实路径出现；
+   收集器改为继续向上找到有名的真实包，仍要求完整许可证，不跳过许可验证。
+2. `check-second.log`：build 成功，分层检查拒绝未分类的共享底层及 protocol→tools。
+   将纯制品基础库与 private files 分类为 protocol；它们不依赖业务层，仍禁止环。
+3. Windows Biome 不展开传入字面通配符，改用明确目录；格式检查不被跳过。
+4. `check-third.log`：新增两项状态机回归尚未格式化，format 检查明确失败；已格式化。
+5. `check-fourth.log`：layers/format 通过，lint 指出消费者 `let metadata` 缺显式类型；
+   添加 `ArtifactMetadata` 类型，没有使用 any/cast 掩盖；同时完善关闭时中止和等待准备 IO。
+6. `check-fifth.log`：完整复验进行中，最终结果在提交 gate 前补齐。
+
+扩展后的 targeted v2 命令 11/11 通过（`v2-final-targeted.log`）：
+额外验证终态保留过期通知不反转 completed、迟到执行墙钟 timer 不允许新需求关联旧执行、
+新 ArtifactManager 直接复验磁盘固定 digest 而不请求 latest、引用保护导致容量拒绝、
+释放后真实回收、篡改 capsule fail closed 且不联网兜底，以及 HTTP 幂等在来源切换后
+仍返回原 Task/版本/受理点。扩展实测 7 次传输、13 个 Execution、3 次初始化，
+强杀测试实际墙钟约 975.7ms，清理后的 ownedProcesses 为零。
+
+以上全部为源码工作树内的自包含实施验证，不宣称 npm、Release 或独立用户部署成功。

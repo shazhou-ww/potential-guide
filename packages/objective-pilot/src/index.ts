@@ -54,6 +54,7 @@ export {
   createMemoryCheckProbe,
   createProcessCheckProbe,
   createWorkerCheckProbe,
+  createArtifactCheckProbe,
 } from "./probes.js";
 export {
   compileSubjectProjection,
