@@ -34,6 +34,10 @@ entry 选择受支持 adapter。本轮只交付 Node，不因当前实现语言�
 Reference ID 作为一个编码路径参数；保留全页元数据、正文与 owning digest/path。
 Objective 需多语言与组合；Checker 页面 API 应协调结构，不以 raw 文件接口替代语义页面。
 无 resources API。有效语言按请求/Host 策略选择，返回实际语言。所有缓存读取仍需授权。
+Objective 总览页面 ID 为 objective，来自所选语言目录的 objective.md；不提供
+system/overview 或 system/404 的新格式别名。准确制品的有效页面集合中不存在所请求
+ID 时，返回 HTTP 404 和结构化 reference_not_found 错误，不返回 fallback 正文或成功
+快照。不支持的语言仍是明确的语言错误，不通过缺页逻辑静默换语言。
 
 创建请求示例：
 

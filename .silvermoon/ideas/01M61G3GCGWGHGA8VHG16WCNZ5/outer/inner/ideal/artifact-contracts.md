@@ -102,9 +102,7 @@ objective/
 ├── objective.yaml
 └── references/
     └── zh-CN/
-        ├── system/
-        │   ├── overview.md
-        │   └── 404.md
+        ├── objective.md
         ├── levels/
         │   ├── structured.md
         │   └── verified.md
@@ -159,7 +157,16 @@ subjectMapping 明确是从 Objective subject 到 Checker subject 的受限 JSON
 ## References 与语言
 
 目录决定页面 ID 和语言；frontmatter 只保存 title、description 和可选 references，
-不重复语言或 ID。示例问题页面：
+不重复语言或 ID。每种语言的 Objective 总览直接位于
+references/<language>/objective.md，对应页面 ID objective，与 Checker 顶层
+checker.md 对应页面 ID checker 对称。新 Objective 不含 system/ 目录，
+不声明 system/overview、system/404、404.md 或任何缺页 fallback。
+每种声明语言都必须有有效总览；缺少必需页属于制品校验错误，不以 fallback 补齐。
+未知页面请求由 Host 明确返回 not-found，不把总览或其他页面冒充所请求页面。
+Checker 原页继承与局部 override 属于确定的页面组合，不是缺页 fallback。
+历史格式的页面与 fallback 按原契约处理，不静默映射到新页面 ID。
+
+示例问题页面：
 
 ```markdown
 ---
