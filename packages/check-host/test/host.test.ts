@@ -93,6 +93,27 @@ test("HTTP-free execution has one Behavior, reused threads, authentic business r
     await f.close();
   }
 });
+test("worker initialization has its own budget independent of execution cleanup", async () => {
+  const f = await fixture({ cleanupMs: 50, initializationMs: 5000 });
+  try {
+    await writeFile(
+      join(f.directory, "worker.cjs"),
+      `exports.initialize=async()=>new Promise(done=>setTimeout(done,150));
+exports.execute=async()=>({ok:true});`,
+    );
+    const revision = (await readArtifact(f.directory)).revision;
+    await f.kernel.executeCheck({
+      checkId: "slow-initialize",
+      directory: f.directory,
+      revision,
+      subject: {},
+    });
+    assert.equal((await completed(f.kernel, "slow-initialize")).state, "Completed");
+    assert.equal(f.kernel.diagnostics().initializations, 1);
+  } finally {
+    await f.close();
+  }
+});
 test("cold initialization and shutdown during initialization retain bounded, confirmed ownership", async () => {
   const f = await fixture();
   try {
