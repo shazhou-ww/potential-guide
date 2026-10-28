@@ -10,7 +10,7 @@
 
 ## 边界
 
-- 依赖 [Check 制品](../../../../01M607T630T6DSDZYTYA52ED6J/outer/inner/ideal/Idea.md)及 [Objective 组合](../../../../01M607XBNKWQDZAC6EPTZ474NH/outer/inner/ideal/Idea.md)，不重新设计它们的协议。
+- 依赖 [Check 制品](../../../../01M607T630T6DSDZYTYA52ED6J/outer/inner/ideal/Idea.md)、[Objective 组合](../../../../01M607XBNKWQDZAC6EPTZ474NH/outer/inner/ideal/Idea.md)及 [Check Host v2](../../../../01M60XR4JGPZN2SSJ12WTMJ97G/outer/inner/ideal/Idea.md)；在 v2 就绪后按其制品管理与观察任务入口交付，不重新设计这些协议。
 - CLI、Pilot 引擎和 Host 等工具可继续通过 npm 发布；退出的是业务 Check/Objective 的 npm 发布要求。
 - 提供旧来源的兼容或明确退出说明，不改写历史证据；不建设 registry、镜像或签名平台。
 

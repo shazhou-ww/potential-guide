@@ -4,7 +4,9 @@
 
 [Check 制品](../../../../01M607T630T6DSDZYTYA52ED6J/outer/inner/ideal/Idea.md)解决独立执行内容如何交付，[Objective 组合](../../../../01M607XBNKWQDZAC6EPTZ474NH/outer/inner/ideal/Idea.md)解决如何固定组合和提供场景化 References。本项解决这些能力是否真正成为内置内容和用户工作流的默认交付方式。
 
-三项依次推进，但不把“所有内容迁移完毕”作为底层能力的首个验收条件，也不以新 API 存在来代替实际发布。
+推进顺序调整为两项制品能力、[Check Host v2](../../../../01M60XR4JGPZN2SSJ12WTMJ97G/outer/inner/ideal/Idea.md)、最后本项交付。v2 将制品管理收进 Host，并以独立观察 Task 使用共享 Execution；本项应基于它完成内置内容和消费入口迁移，避免先按旧目录调用方式迁移再迁移一次。固定 Objective 仍以内联 URL/来源与 digest 表达准确 Check 内容，不因 v2 支持浮动来源而默默改成 latest。
+
+不把“所有内容迁移完毕”作为底层能力的首个验收条件，也不以新 API 存在来代替实际发布。前两项已完成的历史契约与证据不修改；本页只是待实施交付项的前置依赖更新，不宣称 Host v2 已实现或本项已验收。
 
 ## 发布的是制品，不是源码生成物
 
