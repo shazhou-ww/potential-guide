@@ -3,8 +3,11 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { Effect, SubscriptionRef, watchSnapshot } from "@potential-guide/effects";
 import type { CheckKernel } from "./kernel.js";
 import { HostError, type StartCheck, terminal } from "./types.js";
+import type { TaskScheduler } from "./scheduler.js";
+import { routeV2 } from "./v2-http.js";
+import { TaskProtocolError } from "./v2-types.js";
 
-export async function serve(kernel: CheckKernel, token: string) {
+export async function serve(kernel: CheckKernel, token: string, scheduler?: TaskScheduler) {
   let observers = 0;
   const server = createServer((request, response) => {
     void route(request, response).catch((error) => {
@@ -12,11 +15,27 @@ export async function serve(kernel: CheckKernel, token: string) {
         response.destroy();
         return;
       }
-      response.writeHead(error instanceof HostError ? error.status : 500, {
-        "content-type": "application/json",
-      });
+      response.writeHead(
+        error instanceof HostError || error instanceof TaskProtocolError ? error.status : 500,
+        {
+          "content-type": "application/json",
+        },
+      );
       response.end(
-        JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
+        JSON.stringify({
+          error:
+            error instanceof TaskProtocolError
+              ? error.detail
+              : request.url?.startsWith("/v2/")
+                ? {
+                    code: error instanceof HostError ? `http_${error.status}` : "internal_error",
+                    stage: "schedule",
+                    message: error instanceof HostError ? error.message : "Host request failed.",
+                  }
+                : error instanceof Error
+                  ? error.message
+                  : String(error),
+        }),
       );
     });
   });
@@ -83,6 +102,10 @@ export async function serve(kernel: CheckKernel, token: string) {
     if (request.headers.origin !== undefined)
       throw new HostError(403, "Browser origins are unsupported.");
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    if (url.pathname.startsWith("/v2/") && scheduler) {
+      await routeV2(scheduler, request, response, url);
+      return;
+    }
     if (url.search) throw new HostError(400, "Query parameters are unsupported.");
     if (request.method === "GET" && url.pathname === "/checks") {
       await observe(kernel.active, request, response);
@@ -149,7 +172,8 @@ export async function serve(kernel: CheckKernel, token: string) {
       await new Promise<void>((resolve, reject) =>
         server.close((error) => (error ? reject(error) : resolve())),
       );
-      await kernel.close();
+      if (scheduler) await scheduler.close();
+      else await kernel.close();
     },
   };
 }

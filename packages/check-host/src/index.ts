@@ -5,3 +5,7 @@ export * from "./http.js";
 export * from "./kernel.js";
 export * from "./private-files.js";
 export * from "./types.js";
+export * from "./v2-types.js";
+export * from "./artifact-manager.js";
+export * from "./scheduler.js";
+export * from "./v2-client.js";

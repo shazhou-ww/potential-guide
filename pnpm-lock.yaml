@@ -110,9 +110,9 @@ importers:
 
   packages/check-artifacts:
     dependencies:
-      '@potential-guide/check-host':
+      '@potential-guide/check-runtime-files':
         specifier: workspace:^
-        version: link:../check-host
+        version: link:../check-runtime-files
       ajv:
         specifier: 'catalog:'
         version: 8.20.0
@@ -129,9 +129,17 @@ importers:
 
   packages/check-host:
     dependencies:
+      '@potential-guide/check-artifacts':
+        specifier: workspace:^
+        version: link:../check-artifacts
+      '@potential-guide/check-runtime-files':
+        specifier: workspace:^
+        version: link:../check-runtime-files
       '@potential-guide/effects':
         specifier: workspace:^
         version: link:../effects
+
+  packages/check-runtime-files: {}
 
   packages/cli-runtime:
     dependencies:

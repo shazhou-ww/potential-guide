@@ -32,14 +32,7 @@ export interface WorkerModule {
 }
 export const terminal = (state: CheckState): boolean =>
   ["Completed", "Failed", "Cancelled"].includes(state.state);
-export class HostError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+export { HostError } from "@potential-guide/check-runtime-files";
 export const defaults = {
   workers: 4,
   queue: 64,

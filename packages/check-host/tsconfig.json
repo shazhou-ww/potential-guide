@@ -7,5 +7,9 @@
     "tsBuildInfoFile": "../../.cache/tsbuildinfo/check-host.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../effects" }]
+  "references": [
+    { "path": "../effects" },
+    { "path": "../check-runtime-files" },
+    { "path": "../check-artifacts" }
+  ]
 }

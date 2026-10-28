@@ -43,7 +43,13 @@ type Job = {
   cancellation?: NodeJS.Timeout;
   expires?: number;
   finishing: boolean;
+  lifecycle?: ExecutionLifecycle;
+  wallDeadline?: number;
 };
+export interface ExecutionLifecycle {
+  started(): void;
+  finished(state: CheckState): void;
+}
 export type ActiveCheck = {
   checkId: string;
   state: CheckState["state"];
@@ -96,7 +102,7 @@ export class CheckKernel {
     return result;
   }
   /** This IO creates one execution. Reading its SubscriptionRef never executes user code. */
-  executeCheck(request: StartCheck): Promise<Execution> {
+  executeCheck(request: StartCheck, lifecycle?: ExecutionLifecycle): Promise<Execution> {
     return this.exclusive(async () => {
       if (this.closed) throw new HostError(503, "Host is closing.");
       if (
@@ -171,10 +177,12 @@ export class CheckKernel {
         request: structuredClone(request),
         pool,
         finishing: false,
+        ...(lifecycle ? { lifecycle } : {}),
       };
       this.jobs.set(request.checkId, job);
       this.queue.push(job);
-      job.timer = setTimeout(() => this.cancel(request.checkId), this.limits.deadlineMs);
+      if (!lifecycle)
+        job.timer = setTimeout(() => this.cancel(request.checkId), this.limits.deadlineMs);
       this.publish();
       this.schedule();
       return execution;
@@ -216,11 +224,15 @@ export class CheckKernel {
     this.publish();
   }
   private finish(job: Job, state: CheckState) {
+    if (terminal(get(job.execution.state))) return;
+    if (job.wallDeadline !== undefined && performance.now() >= job.wallDeadline)
+      state = { checkId: job.execution.checkId, state: "Failed", error: "execution_timeout" };
     clearTimeout(job.timer);
     clearTimeout(job.cancellation);
     delete job.request;
     job.expires = Date.now() + this.limits.retentionMs;
     this.transition(job, state);
+    job.lifecycle?.finished(state);
   }
   private publish() {
     set(
@@ -398,6 +410,26 @@ export class CheckKernel {
       slot.job = job;
       this.metrics.executions++;
       this.transition(job, { checkId: job.execution.checkId, state: "Running" });
+      if (job.lifecycle) {
+        job.wallDeadline = performance.now() + this.limits.deadlineMs;
+        job.timer = setTimeout(() => {
+          if (job.lifecycle && !terminal(get(job.execution.state))) {
+            job.lifecycle.finished({
+              checkId: job.execution.checkId,
+              state: "Failed",
+              error: "execution_timeout",
+            });
+            this.cancel(job.execution.checkId);
+          }
+        }, this.limits.deadlineMs);
+        job.lifecycle.started();
+        if (get(job.execution.state).state === "Cancelling") {
+          this.finish(job, { checkId: job.execution.checkId, state: "Cancelled" });
+          delete slot.job;
+          this.schedule();
+          continue;
+        }
+      }
       this.send(slot, "execute", {
         checkId: job.execution.checkId,
         subject: job.request?.subject,

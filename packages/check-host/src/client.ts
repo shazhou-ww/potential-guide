@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { CheckState, StartCheck } from "./types.js";
 import { HostError, terminal } from "./types.js";
+import { CheckTaskClient } from "./v2-client.js";
 
 export interface HostAddress {
   endpoint: string;
@@ -8,8 +9,9 @@ export interface HostAddress {
   pid: number;
   instance: string;
 }
-export class CheckClient {
-  constructor(readonly address: HostAddress) {
+export class CheckClient extends CheckTaskClient {
+  constructor(address: HostAddress) {
+    super(address);
     const url = new URL(address.endpoint);
     if (url.protocol !== "http:" || url.hostname !== "127.0.0.1" || url.username || url.password)
       throw new Error("Check Host must be authenticated loopback HTTP.");

@@ -31,7 +31,7 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
-    "@potential-guide/check-host": "workspace:^",
+    "@potential-guide/check-runtime-files": "workspace:^",
     "ajv": "catalog:",
     "esbuild": "catalog:",
     "tar": "catalog:"

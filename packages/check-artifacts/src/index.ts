@@ -1,12 +1,13 @@
 import { chmod, lstat, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { Ajv } from "ajv";
 import {
   createPrivateDirectory,
   createPrivateFile,
   ensurePrivateDirectory,
   readArtifact,
-} from "@potential-guide/check-host";
+} from "@potential-guide/check-runtime-files";
 import { transportDigest, unpackCheckArchive } from "./archive.js";
 import {
   artifactDigestPrefix,
@@ -15,6 +16,7 @@ import {
   type CheckManifest,
 } from "./manifest.js";
 export { readArtifactFiles, safePath } from "./manifest.js";
+export { parseManifest as parseCheckManifest } from "./manifest.js";
 
 export {
   artifactDigestPrefix,
@@ -23,8 +25,20 @@ export {
   type CheckManifest,
 } from "./manifest.js";
 export { transportDigest } from "./archive.js";
+export function validateCheckValue(
+  manifest: CheckManifest,
+  kind: "subject" | "result",
+  value: unknown,
+): boolean {
+  return (
+    new Ajv({ strict: false, validateFormats: false }).compile(
+      manifest[kind === "subject" ? "subjectSchema" : "resultSchema"],
+    )(value) === true
+  );
+}
 export type CheckArtifactSource =
   | { kind: "directory"; directory: string; digest: string }
+  | { kind: "archive"; bytes: Buffer; digest: string }
   | { kind: "https"; url: string; digest: string; transportDigest: string };
 export interface PrepareCheckOptions {
   cacheDirectory: string;
@@ -37,6 +51,74 @@ export interface PreparedCheckArtifact {
   artifactDirectory: string;
   directory: string;
   revision: string;
+}
+export interface FetchCheckOptions {
+  signal: AbortSignal;
+  allowedOrigins: readonly string[];
+  maxRedirects?: number;
+}
+export async function fetchCheckArchive(source: string, options: FetchCheckOptions) {
+  let url: URL;
+  try {
+    url = new URL(source);
+  } catch {
+    throw new Error("Check source requires a valid HTTPS URL.");
+  }
+  const maximum = options.maxRedirects ?? 4;
+  if (!Number.isSafeInteger(maximum) || maximum < 0 || maximum > 8)
+    throw new Error("Invalid redirect bound.");
+  for (let hop = 0; ; hop++) {
+    if (
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      url.hash ||
+      !options.allowedOrigins.includes(url.origin)
+    )
+      throw new Error("Check source is not authorized by HTTPS origin policy.");
+    const response = await fetch(url, {
+      signal: options.signal,
+      redirect: "manual",
+      credentials: "omit",
+      headers: { "accept-encoding": "identity" },
+    }).catch(() => {
+      throw new Error("Check archive HTTPS request failed.");
+    });
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      await response.body?.cancel();
+      const location = response.headers.get("location");
+      if (!location || hop >= maximum) throw new Error("Check redirect limit or location invalid.");
+      try {
+        url = new URL(location, url);
+      } catch {
+        throw new Error("Check redirect location invalid.");
+      }
+      continue;
+    }
+    try {
+      if (!response.ok || !response.body) throw new Error("Download unavailable.");
+      const length = response.headers.get("content-length");
+      if (length && (!/^\d+$/.test(length) || Number(length) > artifactLimits.archiveBytes))
+        throw new Error("Download too large.");
+      const encoding = response.headers.get("content-encoding");
+      if (encoding && encoding !== "identity") throw new Error("Unsupported encoding.");
+      const chunks: Buffer[] = [];
+      let size = 0;
+      for await (const chunk of response.body) {
+        options.signal.throwIfAborted();
+        size += chunk.length;
+        if (size > artifactLimits.archiveBytes) throw new Error("Download too large.");
+        chunks.push(Buffer.from(chunk));
+      }
+      return Buffer.concat(chunks);
+    } catch {
+      await response.body?.cancel().catch(() => {});
+      throw new Error("Check archive download failed.");
+    }
+  }
+}
+export async function inspectCheckArchive(bytes: Buffer, signal?: AbortSignal) {
+  return unpackCheckArchive(bytes, signal);
 }
 async function download(
   source: Extract<CheckArtifactSource, { kind: "https" }>,
@@ -197,7 +279,10 @@ export async function prepareCheckArtifact(
     const artifact =
       source.kind === "directory"
         ? await inspectCheckArtifact(resolve(source.directory))
-        : await unpackCheckArchive(await download(source, signal), signal);
+        : await unpackCheckArchive(
+            source.kind === "archive" ? source.bytes : await download(source, signal),
+            signal,
+          );
     signal.throwIfAborted();
     if (artifact.digest !== source.digest)
       throw new Error("Check artifact content digest mismatch.");

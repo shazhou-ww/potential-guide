@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { hostDirectory, optionalPrivateFile, parseHostAddress, processAlive } from "./discovery.js";
 import { serve } from "./http.js";
 import { CheckKernel } from "./kernel.js";
+import { ArtifactManager } from "./artifact-manager.js";
+import { TaskScheduler } from "./scheduler.js";
 import {
   closePrivateFileBackend,
   ensurePrivateDirectory,
@@ -33,7 +35,12 @@ if (
 const kernel = await CheckKernel.create(join(directory, "snapshots"));
 const token = randomUUID() + randomUUID();
 const instance = randomUUID();
-const host = await serve(kernel, token);
+const configuredOrigins = process.env.PGUIDE_CHECK_SOURCE_ORIGINS?.split(",").filter(Boolean);
+const scheduler = new TaskScheduler(
+  new ArtifactManager(join(directory, "artifacts"), configuredOrigins),
+  kernel,
+);
+const host = await serve(kernel, token, scheduler);
 const descriptor = JSON.stringify({ endpoint: host.endpoint, token, pid: process.pid, instance });
 try {
   if (

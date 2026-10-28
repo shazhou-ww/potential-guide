@@ -7,5 +7,5 @@
     "tsBuildInfoFile": "../../.cache/tsbuildinfo/check-artifacts.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../check-host" }]
+  "references": [{ "path": "../check-runtime-files" }]
 }

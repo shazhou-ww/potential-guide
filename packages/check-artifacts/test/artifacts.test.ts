@@ -27,7 +27,7 @@ import {
   closePrivateFileBackend,
   type CheckState,
   terminal,
-} from "@potential-guide/check-host";
+} from "../../check-host/dist/index.js";
 import { watchSnapshot } from "@potential-guide/effects";
 import * as tar from "tar";
 import { buildCheckArtifact, packCheckArtifact } from "../dist/build.js";

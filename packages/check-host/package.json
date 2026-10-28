@@ -30,6 +30,8 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@potential-guide/check-runtime-files": "workspace:^",
+    "@potential-guide/check-artifacts": "workspace:^",
     "@potential-guide/effects": "workspace:^"
   },
   "publishConfig": {

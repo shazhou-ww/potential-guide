@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { lstat, readdir, realpath } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { readArtifactTree } from "@potential-guide/check-host";
+import { readArtifactTree } from "@potential-guide/check-runtime-files";
 import { Ajv, type AnySchema } from "ajv";
 
 export const artifactDigestPrefix = "sha256-pguide-check-v1:";
