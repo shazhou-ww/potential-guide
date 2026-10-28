@@ -30,6 +30,7 @@ assert.notEqual(process.env.NODE_TLS_REJECT_UNAUTHORIZED, "0");
 assert.deepEqual(process.execArgv, []);
 const result = { environment: { node: process.version, platform: process.platform },
   modules: [], scenarios: [], timings: {}, cleanup: {} };
+let failure;
 for (const name of preparation.names) {
   const path = await realpath(fileURLToPath(import.meta.resolve(name)));
   assert.ok(inside(root, path) && !inside(preparation.repository, path));
@@ -95,7 +96,6 @@ async function rawSnapshots(tasks) {
   assert.match(response.headers.get("content-type"), /text\/event-stream/);
   const reader = response.body.getReader(), decoder = new TextDecoder(), snapshots = [];
   let text = "";
-  let failure;
   try {
     while (snapshots.length < tasks.length) {
       const read = await reader.read();

@@ -25,3 +25,8 @@ outer `c3cdc4d1e7914884bb5af55375b08b9cf94b8764` 上运行。
 按公开 Check 契约补齐该字段，未修改 inner 或实现源码。
 操作目录、HTTPS 作者服务、Host/kernel/helper 均经 finally 清理；此失败不计 D 完成。
 验证器同时补保存脱敏 partial consumer receipt，以便失败也能定位已执行场景。
+
+第三次在已同步 baseline `4b5cb9738c436d13d28c266eaf11ab3965d4c85e` 上，外部 consumer
+已完成全部 10 个场景且保存结果、清理服务，但新增失败包装器的变量被误置于 SSE helper
+局部作用域，最终以 ReferenceError 退出 1。此为 outer 验证脚本错误；将失败变量移至
+模块作用域，保持所有断言与清理不变。此轮退出不为 0，仍不勾选 D，继续完整外部复验。
