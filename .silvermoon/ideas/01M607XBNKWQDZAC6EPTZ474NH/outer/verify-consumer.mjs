@@ -87,8 +87,9 @@ try {
     name: "independent-objective-consumer", private: true, type: "module", dependencies,
   }));
   await writeFile(join(external, "pnpm-workspace.yaml"), `packages: []\noverrides: ${JSON.stringify(dependencies)}\n`);
-  const store = (await pnpm(["config", "get", "store-dir"])).stdout.trim();
-  assert.ok(isAbsolute(store), "Expected an explicit existing author store for offline installation.");
+  const storePath = (await pnpm(["store", "path"])).stdout.trim();
+  assert.ok(isAbsolute(storePath), "Expected the resolved existing author store path.");
+  const store = dirname(storePath);
   const install = await pnpm(["install", "--offline", "--ignore-scripts", "--store-dir", store,
     "--reporter=append-only"], external);
   await cp(join(outer, "consumer.mjs"), join(external, "consumer.mjs"));
