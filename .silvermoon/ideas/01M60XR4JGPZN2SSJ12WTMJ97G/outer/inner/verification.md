@@ -154,4 +154,34 @@ realpath 场景不适用而被既有条件跳过；Windows ACL/native helper 与
 TLS-only helper 在无 CA 的默认发现中显式 skip，真正 driver 另起受信进程并强制
 `pass 1/fail 0/skipped 0`；本项 targeted 13 项无跳过。不能把这些条件跳过表述为跨平台实测。
 
+## 最终提交依据
+
+冻结并验证的源码提交为
+`a683368c852a065973ca5793ddc15574eebe3e5a`。其后只补本证据与 ledger，
+不修改源码、配置、package 文档或已接受的 Ideal。
+
+- 完整 `pnpm check`：`check-submit-ready.log`，退出 **0**。
+  build/lint/typecheck 各 **25/25**；workspace test 图 **50/50**；
+  Host **47 pass / 0 fail / 2 个既有 POSIX skip**，shared-files **2/2**；
+  根 scripts **36/36**；十组隔离 tarball 安装消费全部通过。
+  最后的 build 阶段使用有效 Turbo 缓存，安装/消费验证仍实际运行；没有跳过完整命令。
+- 完整日志 SHA-256：
+  `e4b3d969dc1acca0e26b8c1950e975c8470828e64539a7d82be88e67be308869`。
+- 最终定向 `v2-final-races.log`：**16/16，无跳过**，内部真实 HTTPS 测试 **1/1**；
+  日志 SHA-256：
+  `1fab14a112051ce6e2ddd9f3ff881a6a78cdd67c72cf7f67d073ac7abc017c86`。
+  真实版本 V2 `sha256-pguide-check-v1:98800e5af2429e9ecd316af03efbf35fcccc04006e2a5e97338509e28038cd57`，
+  V3 `sha256-pguide-check-v1:dab1c1e0f5ef0b884081a0424a7dee6bf9892644e208a043d21008bd9a23cb1c`；
+  7 次来源传输、16 次物理执行、3 次初始化；墙钟实测约 **979.5ms**
+  （断言 800–3500ms），强杀后子进程为零且只剩健康 worker。
+- 环境为 Windows、Node **24.11.1**、pnpm **11.22.0**。只报告实际平台证据；
+  未宣称 Linux/POSIX 或 Node 22 的独立实测。
+- Git 校验 accepted Ideal 仍为
+  `ca68f6b3f4aa24dae6bb82ad410059aa6185653b`；前两项 idea、release idea、
+  `Deployment.md` 均未改写。Deployment 所有条目保持未勾选。
+
+这些结果满足 I-S01–I-S03 与 I-AC01–I-AC03，不代表上游接受；
+源码外独立 v2 部署、正式 Release/npm 发布均未执行。阶段提交只请求准确
+implementationRevision 的审查，不记录 acceptInner/acceptOuter。
+
 以上全部为源码工作树内的自包含实施验证，不宣称 npm、Release 或独立用户部署成功。
