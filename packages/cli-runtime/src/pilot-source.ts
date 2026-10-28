@@ -15,12 +15,14 @@ import {
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { parseArtifactReference } from "@potential-guide/check-artifacts";
+import { createUnifiedServices } from "@potential-guide/objective-host";
 import {
   ensurePrivateDirectory,
   hostDirectory,
   publishArtifact,
   readArtifact,
-} from "@potential-guide/check-host";
+} from "@potential-guide/checker-host";
 import { CliError, markdownInlineCode, markdownText } from "@potential-guide/cli-core";
 import { Cause, Effect, Exit, Scope, Stream } from "@potential-guide/effects";
 import { type GitSnapshot, loadGitSnapshot } from "@potential-guide/git-source";
@@ -40,6 +42,7 @@ import {
   type ResourceResolver,
   RunEvidence,
   validateGitPilotSource,
+  bindObjectiveService,
 } from "@potential-guide/objective-pilot";
 import { ObjectiveInputError } from "@potential-guide/pilot-protocol";
 import { withNpmPilot, type PackagePreparationOptions } from "./package-source.js";
@@ -179,6 +182,66 @@ async function bindPilot<T>(
   evidence: RunEvidence | undefined,
 ): Promise<T> {
   const pinnedArtifact = options.sources?.[location];
+  if (location.startsWith("objective:https://")) {
+    const reference = parseArtifactReference(location);
+    if (reference.kind !== "objective") throw new PilotSourceError("Expected Objective source.");
+    const id = `objective:${reference.url}`;
+    const expected = options.sources?.[id];
+    if (expected !== undefined && expected.kind !== "artifact-service-v1")
+      throw new PilotSourceError("Legacy source cannot stand in for Git SHA-256 evidence.");
+    const digest = revision ?? reference.digest ?? expected?.digest;
+    if (
+      (reference.digest && digest !== reference.digest) ||
+      (expected && digest !== expected.digest)
+    )
+      throw new PilotSourceError("Conflicting Objective recovery digest.");
+    const services = await createUnifiedServices({
+      directory: join(resolve(options.cacheDirectory ?? hostDirectory()), "contract-services"),
+      allowedOrigins: (
+        process.env.PGUIDE_CHECKER_SOURCE_ORIGINS ?? process.env.PGUIDE_CHECK_SOURCE_ORIGINS
+      )
+        ?.split(",")
+        .filter(Boolean) ?? [
+        "https://github.com",
+        "https://release-assets.githubusercontent.com",
+        "https://objects.githubusercontent.com",
+      ],
+      languages: ["en", "zh-CN"],
+    });
+    try {
+      const { spec, runtime } = await bindObjectiveService(
+        services.objective,
+        { url: reference.url, ...(digest ? { digest } : {}) },
+        {
+          scope: "local-owner",
+          ...(options.signal ? { signal: options.signal } : {}),
+          ...(expected ? { source: expected } : {}),
+          ...(options.probeTimeoutMs ? { timeoutMs: options.probeTimeoutMs } : {}),
+        },
+      );
+      for (const [sourceId, source] of Object.entries(options.sources ?? {})) {
+        if (sourceId === id) continue;
+        if (source.kind !== "artifact-service-v1")
+          throw new PilotSourceError("Mixed legacy/service dependency recovery is unsupported.");
+        await runtime.resolveObjective?.(
+          sourceId,
+          source.digest,
+          options.signal ?? new AbortController().signal,
+          source,
+        );
+      }
+      const onObservation = runtime.onObservation;
+      return await use(spec, {
+        ...runtime,
+        onObservation(value) {
+          evidence?.stream.emit("objective.observed", value);
+          onObservation?.(value);
+        },
+      });
+    } finally {
+      await services.close();
+    }
+  }
   if (pinnedArtifact?.kind === "objective-artifact") {
     if (revision !== undefined && revision !== pinnedArtifact.artifactDigest)
       throw new PilotSourceError("Conflicting Objective artifact recovery digest.");

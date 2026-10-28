@@ -9,3 +9,8 @@ export * from "./v2-types.js";
 export * from "./artifact-manager.js";
 export * from "./scheduler.js";
 export * from "./v2-client.js";
+export * from "./contract-store.js";
+export * from "./task-service.js";
+export * from "./checker-service.js";
+export * from "./service-http.js";
+export * from "./service-client.js";

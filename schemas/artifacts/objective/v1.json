@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/objective/v1.json",
+  "$comment": "Git SHA-256 root tree digest with raw bytes and fixed 100644/40000 modes. Checker URL immutability is an author contract; every edge has a required exact digest. subjectMapping uses the bounded JSONata selection profile documented in docs/artifact-contracts.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "subjectSchema", "languages", "levels", "checkers"],
+  "properties": {
+    "$schema": {
+      "const": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/objective/v1.json"
+    },
+    "subjectSchema": {
+      "type": "object",
+      "required": ["type"],
+      "properties": { "type": { "const": "object" } }
+    },
+    "languages": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 128,
+      "items": { "type": "string", "pattern": "^[a-zA-Z]{2,8}(?:-[a-zA-Z0-9]{1,8})*$" },
+      "minItems": 1
+    },
+    "levels": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "checks"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+            "not": { "enum": ["initial", "terminal"] }
+          },
+          "checks": {
+            "type": "array",
+            "uniqueItems": true,
+            "maxItems": 128,
+            "items": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "checkers": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 128,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["url", "digest", "subjectMapping"],
+        "properties": {
+          "url": { "type": "string", "minLength": 1, "maxLength": 4096 },
+          "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "subjectMapping": { "type": "string", "minLength": 1, "maxLength": 4096 }
+        }
+      }
+    }
+  }
+}

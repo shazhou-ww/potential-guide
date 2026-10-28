@@ -121,7 +121,7 @@ for (const job of jobs.filter(
         "packages/pilot-protocol/src/resources.ts",
       ),
       "@potential-guide/pilot-protocol": join(root, "packages/pilot-protocol/src/index.ts"),
-      "@potential-guide/check-host": join(root, "packages/check-host/src/index.ts"),
+      "@potential-guide/checker-host": join(root, "packages/check-host/src/index.ts"),
     },
     plugins: [
       {

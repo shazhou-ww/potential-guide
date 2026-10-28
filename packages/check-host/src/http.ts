@@ -6,8 +6,14 @@ import { HostError, type StartCheck, terminal } from "./types.js";
 import type { TaskScheduler } from "./scheduler.js";
 import { routeV2 } from "./v2-http.js";
 import { TaskProtocolError } from "./v2-types.js";
+import type { ServiceRouter } from "./service-http.js";
 
-export async function serve(kernel: CheckKernel, token: string, scheduler?: TaskScheduler) {
+export async function serve(
+  kernel: CheckKernel,
+  token: string,
+  scheduler?: TaskScheduler,
+  modules?: { routers: readonly ServiceRouter[]; close(): Promise<void> },
+) {
   let observers = 0;
   const server = createServer((request, response) => {
     void route(request, response).catch((error) => {
@@ -102,6 +108,8 @@ export async function serve(kernel: CheckKernel, token: string, scheduler?: Task
     if (request.headers.origin !== undefined)
       throw new HostError(403, "Browser origins are unsupported.");
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    for (const router of modules?.routers ?? [])
+      if (await router(request, response, "local-owner")) return;
     if (url.pathname.startsWith("/v2/") && scheduler) {
       await routeV2(scheduler, request, response, url);
       return;
@@ -174,6 +182,7 @@ export async function serve(kernel: CheckKernel, token: string, scheduler?: Task
       await new Promise<void>((resolve, reject) =>
         server.close((error) => (error ? reject(error) : resolve())),
       );
+      await modules?.close();
       if (scheduler) await scheduler.close();
       else await kernel.close();
     },

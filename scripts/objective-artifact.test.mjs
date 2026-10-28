@@ -23,6 +23,12 @@ test("public declaration, probe, guidance, regulation/continue and durable Coord
   await mkdir(scratch, { recursive: true });
   const directory = await mkdtemp(join(scratch, "case-"));
   const host = await createWorkerHost(join(directory, "host"));
+  const cliEnvironment = {
+    ...process.env,
+    APPDATA: join(directory, "user-config"),
+    XDG_CONFIG_HOME: join(directory, "user-config"),
+    HOME: join(directory, "user-home"),
+  };
   try {
     const artifact = await buildExample(join(directory, "delivery"));
     const stateDirectory = join(directory, "state");
@@ -85,12 +91,7 @@ test("public declaration, probe, guidance, regulation/continue and durable Coord
           cwd: root,
           windowsHide: true,
           timeout: 30_000,
-          env: {
-            ...process.env,
-            APPDATA: join(directory, "user-config"),
-            XDG_CONFIG_HOME: join(directory, "user-config"),
-            HOME: join(directory, "user-home"),
-          },
+          env: cliEnvironment,
         },
       );
       return JSON.parse(stdout);
@@ -128,7 +129,7 @@ test("public declaration, probe, guidance, regulation/continue and durable Coord
         "--format",
         "markdown",
       ],
-      { cwd: root, env: process.env, timeout: 30_000, windowsHide: true },
+      { cwd: root, env: cliEnvironment, timeout: 30_000, windowsHide: true },
     );
     assert.match(markdown.stdout, /第二输入场景/);
     assert.match(markdown.stdout, /levels\/complete\/checks\/second\/problems\/not-ready/);

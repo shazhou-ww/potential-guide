@@ -8,6 +8,7 @@
   },
   "include": ["src/**/*.ts"],
   "references": [
+    { "path": "../objective-host" },
     { "path": "../check-artifacts" },
     { "path": "../check-host" },
     {

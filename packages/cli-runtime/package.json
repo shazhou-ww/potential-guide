@@ -28,9 +28,10 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@potential-guide/objective-host": "workspace:^",
     "@potential-guide/check-artifacts": "workspace:^",
     "ajv": "catalog:",
-    "@potential-guide/check-host": "workspace:^",
+    "@potential-guide/checker-host": "workspace:^",
     "@potential-guide/cli-core": "workspace:^",
     "@potential-guide/effects": "workspace:^",
     "@potential-guide/git-source": "workspace:^",

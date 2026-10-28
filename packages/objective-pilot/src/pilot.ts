@@ -46,6 +46,19 @@ export function observe(
   input: PilotInput,
   runtime: PilotRuntime,
 ): Effect.Effect<Envelope<PilotObservation>, Error> {
+  if (runtime.observeObjective) {
+    const operation = runtime.observeObjective;
+    return Effect.callback((resume, signal) => {
+      const pending = operation(input, signal).then(
+        (result) => {
+          runtime.onObservation?.(result);
+          resume(Effect.succeed(result));
+        },
+        (error) => resume(Effect.fail(error instanceof Error ? error : new Error(String(error)))),
+      );
+      return Effect.promise(() => pending);
+    });
+  }
   return Effect.callback<Envelope<PilotObservation>, Error>((resume, signal) => {
     const pending = observationScope(
       input,

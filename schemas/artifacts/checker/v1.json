@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json",
+  "$comment": "Git SHA-256 root tree OID; raw UTF-8 bytes; 100644 files, 40000 trees, Git directory sorting. Node CommonJS initialize/execute/dispose lifecycle; execute returns checkerEnvelope and Task result is its validated payload.",
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "objectiveReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "url"],
+      "properties": {
+        "kind": { "const": "objective" },
+        "url": { "type": "string", "maxLength": 4096 },
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["objective", "subject", "expectedLevelId"],
+      "properties": {
+        "objective": { "$ref": "#/$defs/objectiveReference" },
+        "subject": { "type": "object" },
+        "expectedLevelId": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" }
+      }
+    },
+    "problem": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "id", "parameters"],
+          "properties": {
+            "kind": { "const": "internal" },
+            "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+            "parameters": { "type": "object" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "objective", "subject", "expectedLevelId", "currentLevelId"],
+          "properties": {
+            "kind": { "const": "dependency" },
+            "objective": { "$ref": "#/$defs/objectiveReference" },
+            "subject": { "type": "object" },
+            "expectedLevelId": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+            "currentLevelId": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+              "not": { "const": "terminal" }
+            }
+          }
+        }
+      ]
+    },
+    "checkerResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "problems"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "problems": { "type": "array", "items": { "$ref": "#/$defs/problem" } },
+        "requirements": { "type": "array", "items": { "$ref": "#/$defs/requirement" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "ok": { "const": true } } },
+          "then": {
+            "properties": { "problems": { "maxItems": 0 }, "requirements": { "maxItems": 0 } }
+          },
+          "else": {
+            "anyOf": [
+              { "properties": { "problems": { "minItems": 1 } } },
+              { "required": ["requirements"], "properties": { "requirements": { "minItems": 1 } } }
+            ]
+          }
+        }
+      ]
+    },
+    "checkerEnvelope": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "message", "payload"],
+          "properties": {
+            "status": { "const": 200 },
+            "message": { "type": "string" },
+            "payload": { "$ref": "#/$defs/checkerResult" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "message", "payload"],
+          "properties": {
+            "status": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 599,
+              "not": { "const": 200 }
+            },
+            "message": { "type": "string", "minLength": 1 },
+            "payload": { "type": "null" }
+          }
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "runtime", "entry", "subjectSchema", "problems", "languages"],
+  "properties": {
+    "$schema": {
+      "const": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json"
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "minVersion"],
+      "properties": {
+        "type": { "const": "node" },
+        "minVersion": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        }
+      }
+    },
+    "entry": { "type": "string", "pattern": "\\.cjs$", "maxLength": 1024 },
+    "subjectSchema": {
+      "type": "object",
+      "required": ["type"],
+      "properties": { "type": { "const": "object" } }
+    },
+    "problems": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 128,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" }
+    },
+    "languages": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 128,
+      "items": { "type": "string", "pattern": "^[a-zA-Z]{2,8}(?:-[a-zA-Z0-9]{1,8})*$" },
+      "minItems": 1
+    }
+  }
+}

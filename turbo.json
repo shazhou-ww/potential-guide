@@ -27,7 +27,7 @@
       "dependsOn": ["build"],
       "outputs": []
     },
-    "@potential-guide/check-host#test": {
+    "@potential-guide/checker-host#test": {
       "dependsOn": ["build", "@potential-guide/objective-package-standard#build"],
       "outputs": []
     },

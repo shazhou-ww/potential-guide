@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { CheckClient, type CheckState } from "@potential-guide/check-host";
+import { CheckClient, type CheckState } from "@potential-guide/checker-host";
 import { loadTree } from "../src/model.js";
 import { registerTests } from "../src/runner.js";
 import { Context, inspect } from "./check-host/scenario.js";

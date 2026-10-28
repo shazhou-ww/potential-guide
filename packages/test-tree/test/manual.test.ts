@@ -10,7 +10,7 @@ import {
   HostError,
   processAlive,
   terminal,
-} from "@potential-guide/check-host";
+} from "@potential-guide/checker-host";
 import { type Instructions, loadTree, paths } from "../src/model.js";
 
 const root = resolve("..", "..");

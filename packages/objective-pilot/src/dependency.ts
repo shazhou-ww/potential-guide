@@ -93,7 +93,7 @@ export function withDependencyResolutions<T>(
 }
 function mergeVersion(versions: Record<string, string>, id: string, version: string) {
   if (
-    !/^(?:[0-9a-f]{40}|[0-9a-f]{64}|sha256-pguide-(?:package|objective)-v1:[a-f0-9]{64})$/.test(
+    !/^(?:[0-9a-f]{40}|[0-9a-f]{64}|sha256:[a-f0-9]{64}|sha256-pguide-(?:package|objective)-v1:[a-f0-9]{64})$/.test(
       version,
     ) ||
     (versions[id] !== undefined && versions[id] !== version)

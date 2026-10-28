@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { inspectCheckArtifact } from "@potential-guide/check-artifacts";
 import { packCheckArtifact } from "@potential-guide/check-artifacts/build";
-import { closePrivateFileBackend } from "@potential-guide/check-host";
+import { closePrivateFileBackend } from "@potential-guide/checker-host";
 import { Effect } from "@potential-guide/effects";
 import { observe, readPage } from "@potential-guide/objective-pilot";
 import { makeRegulatorSpec, regulate } from "../../objective-regulator/dist/index.js";

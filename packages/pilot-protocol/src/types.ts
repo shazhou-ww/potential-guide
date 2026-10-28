@@ -42,7 +42,19 @@ export interface ArtifactObjectiveSource {
   >;
   readonly bindings?: Readonly<Record<string, Omit<ArtifactObjectiveSource, "bindings">>>;
 }
-export type ObjectiveSource = GitObjectiveSource | NpmObjectiveSource | ArtifactObjectiveSource;
+export interface ServiceObjectiveSource {
+  readonly kind: "artifact-service-v1";
+  readonly commit?: never;
+  readonly url: string;
+  readonly digest: string;
+  readonly environment: Readonly<Record<string, string>>;
+  readonly bindings: Readonly<Record<string, string>>;
+}
+export type ObjectiveSource =
+  | GitObjectiveSource
+  | NpmObjectiveSource
+  | ArtifactObjectiveSource
+  | ServiceObjectiveSource;
 export type LevelId = string;
 export type CheckId = string;
 export type ProblemId = string;
@@ -165,8 +177,14 @@ export interface PilotObservation {
   readonly observedAt: string;
   readonly versions: Readonly<Record<ObjectiveId, SpecVersion>>;
   readonly sources?: Readonly<Record<ObjectiveId, ObjectiveSource>>;
+  /** New service execution evidence is never synthesized from legacy revisions. */
+  readonly executionEvidence?: JsonObject;
 }
 export interface PilotRuntime {
+  readonly observeObjective?: (
+    input: PilotInput,
+    signal: AbortSignal,
+  ) => Promise<Envelope<PilotObservation>>;
   /** Opt-in for read-only checks: a content revision of every observable input.
    * Return undefined when stability cannot be established. Called before and after
    * execution, and before every reuse; never infer stability from a source version.

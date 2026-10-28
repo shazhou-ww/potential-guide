@@ -1,5 +1,5 @@
 {
-  "name": "@potential-guide/check-host",
+  "name": "@potential-guide/checker-host",
   "version": "0.1.0",
   "description": "Shared local Node check execution kernel and HTTP adapter.",
   "type": "module",
@@ -9,9 +9,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./v3": {
+      "types": "./dist/v3.d.ts",
+      "import": "./dist/v3.js"
     }
   },
   "bin": {
+    "pguide-checker-host": "./dist/main.js",
     "pguide-check-host": "./dist/main.js"
   },
   "files": [

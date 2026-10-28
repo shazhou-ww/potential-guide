@@ -1,4 +1,5 @@
 import { isBuiltin } from "node:module";
+export * from "./contract-build.js";
 import { chmod, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";

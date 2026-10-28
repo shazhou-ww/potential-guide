@@ -7,7 +7,7 @@ objectives:
     subject: |
       {
         "root": context.repo.rootPath, "directory": context.path,
-        "roles": ["npm"], "runtime": "node", "allows": ["@potential-guide/check-host","@potential-guide/effects","@potential-guide/pilot-protocol"],
+        "roles": ["npm"], "runtime": "node", "allows": ["@potential-guide/objective-host","@potential-guide/checker-host","@potential-guide/effects","@potential-guide/pilot-protocol"],
         "entries": ["src/index.ts"], "generated": [], "deliveries": [],
         "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "developer-commands", "kind": "cli"}]
       }

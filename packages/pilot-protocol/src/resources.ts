@@ -30,16 +30,38 @@ export function isObjectivePackageName(value: string): boolean {
 }
 
 export function objectiveSourceVersion(source: ObjectiveSource): string {
-  return source.kind === "objective-artifact"
-    ? source.artifactDigest
-    : source.kind === "npm-package"
-      ? source.packageDigest
-      : source.tree;
+  return source.kind === "artifact-service-v1"
+    ? source.digest
+    : source.kind === "objective-artifact"
+      ? source.artifactDigest
+      : source.kind === "npm-package"
+        ? source.packageDigest
+        : source.tree;
 }
 export function isArtifactObjectiveId(value: string): boolean {
-  return /^objective:[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(value);
+  return isServiceObjectiveId(value) || /^objective:[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(value);
+}
+export function isServiceObjectiveId(value: string): boolean {
+  if (!value.startsWith("objective:https://") || value.length > 4106 || value.includes("#"))
+    return false;
+  try {
+    const url = new URL(value.slice(10));
+    return (
+      url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      !url.hash &&
+      ![...url.searchParams.keys()].some((key) =>
+        /(?:token|secret|password|credential|signature|api.?key|^sig$)/i.test(key),
+      ) &&
+      `objective:${url.href}` === value
+    );
+  } catch {
+    return false;
+  }
 }
 export function isObjectiveRevision(objectiveId: string, version: string): boolean {
+  if (isServiceObjectiveId(objectiveId)) return /^sha256:[a-f0-9]{64}$/.test(version);
   if (isArtifactObjectiveId(objectiveId))
     return /^sha256-pguide-objective-v1:[a-f0-9]{64}$/.test(version);
   if (!isObjectivePackageName(objectiveId) && !objectiveId.startsWith("git+")) return false;
@@ -56,6 +78,16 @@ export function sameObjectiveSource(
   right: ObjectiveSource | undefined,
 ): boolean {
   if (left === undefined || right === undefined) return left === right;
+  if (left.kind === "artifact-service-v1" && right.kind === "artifact-service-v1") {
+    const ordered = (value: Readonly<Record<string, string>>) =>
+      JSON.stringify(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)));
+    return (
+      left.url === right.url &&
+      left.digest === right.digest &&
+      ordered(left.environment) === ordered(right.environment) &&
+      ordered(left.bindings) === ordered(right.bindings)
+    );
+  }
   if (left.kind === "objective-artifact" && right.kind === "objective-artifact") {
     const normalize = (value: unknown): string => {
       if (Array.isArray(value)) return JSON.stringify(value.map(normalize));
@@ -98,6 +130,29 @@ export function validatePilotSource(
   version: string,
   source: unknown,
 ): asserts source is ObjectiveSource {
+  if (record(source) && source.kind === "artifact-service-v1") {
+    fields(source, ["kind", "url", "digest", "environment", "bindings"]);
+    if (
+      !isServiceObjectiveId(objectiveId) ||
+      source.url !== objectiveId.slice(10) ||
+      source.digest !== version ||
+      !isObjectiveRevision(objectiveId, version) ||
+      !record(source.environment) ||
+      !record(source.bindings) ||
+      Object.keys(source.bindings).length > 128 ||
+      !Object.keys(source.environment).length ||
+      Object.values(source.environment).some((value) => typeof value !== "string" || !value)
+    )
+      throw new ObjectiveConfigurationError("Invalid Objective service source.");
+    for (const [url, digest] of Object.entries(source.bindings))
+      if (
+        !isServiceObjectiveId(`objective:${url}`) ||
+        typeof digest !== "string" ||
+        !/^sha256:[a-f0-9]{64}$/.test(digest)
+      )
+        throw new ObjectiveConfigurationError("Invalid exact service binding.");
+    return;
+  }
   if (record(source) && source.kind === "objective-artifact") {
     fields(source, ["kind", "objectiveId", "artifactDigest", "directory", "checks"], ["bindings"]);
     if (

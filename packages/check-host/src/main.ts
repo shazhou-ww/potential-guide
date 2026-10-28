@@ -6,6 +6,9 @@ import { serve } from "./http.js";
 import { CheckKernel } from "./kernel.js";
 import { ArtifactManager } from "./artifact-manager.js";
 import { TaskScheduler } from "./scheduler.js";
+import { CheckerService } from "./checker-service.js";
+import { CheckerMaterializer, ContractStore } from "./contract-store.js";
+import { createServiceRouter } from "./service-http.js";
 import {
   closePrivateFileBackend,
   ensurePrivateDirectory,
@@ -34,12 +37,34 @@ if (
   throw new Error("Host startup reservation was superseded.");
 const kernel = await CheckKernel.create(join(directory, "snapshots"));
 const token = randomUUID() + randomUUID();
-const configuredOrigins = process.env.PGUIDE_CHECK_SOURCE_ORIGINS?.split(",").filter(Boolean);
+const configuredOrigins = (
+  process.env.PGUIDE_CHECKER_SOURCE_ORIGINS ?? process.env.PGUIDE_CHECK_SOURCE_ORIGINS
+)
+  ?.split(",")
+  .filter(Boolean);
 const scheduler = new TaskScheduler(
   new ArtifactManager(join(directory, "artifacts"), configuredOrigins),
   kernel,
 );
-const host = await serve(kernel, token, scheduler);
+const contracts = new ContractStore(
+  configuredOrigins ?? [
+    "https://github.com",
+    "https://release-assets.githubusercontent.com",
+    "https://objects.githubusercontent.com",
+  ],
+);
+const checker = new CheckerService(
+  contracts,
+  new CheckerMaterializer(join(directory, "checker-capsules")),
+  kernel,
+);
+const host = await serve(kernel, token, scheduler, {
+  routers: [createServiceRouter(checker, "/checkers/v3", "checker")],
+  async close() {
+    await checker.close();
+    contracts.close();
+  },
+});
 const descriptor = JSON.stringify({
   endpoint: host.endpoint,
   token,

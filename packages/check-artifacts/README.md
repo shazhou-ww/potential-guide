@@ -46,7 +46,7 @@ can be read relative to it.
 
 ```js
 import { prepareCheckArtifact } from "@potential-guide/check-artifacts";
-import { CheckKernel } from "@potential-guide/check-host";
+import { CheckKernel } from "@potential-guide/checker-host";
 
 const prepared = await prepareCheckArtifact({
   kind: "directory",
@@ -176,3 +176,12 @@ Tests use Node's test runner through tsx. The real local HTTPS test generates a
 one-day localhost certificate/key in its owned project-local scratch directory,
 trusts it only in a child process with `NODE_EXTRA_CA_CERTS`, and removes it.
 It requires `openssl` (Git for Windows' bundled executable on Windows).
+# YAML v1 artifacts
+
+New authors should use the independent
+[Checker/Objective artifact contracts](../../docs/artifact-contracts.md).
+`inspectContractFiles`, `gitTreeDigest`, typed references and directory pages
+are exported from the root; explicit `buildCheckerArtifact`,
+`writeContractArtifact` and `packContractArtifact` are exported from `/build`.
+The JSON APIs documented below remain legacy-compatible; they do not
+silently convert old bytes or digest prefixes into the new format.

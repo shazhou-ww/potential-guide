@@ -8,7 +8,7 @@ import { artifactLimits, inspectFiles, safePath } from "./manifest.js";
 export function transportDigest(bytes: Uint8Array): string {
   return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
 }
-export async function unpackCheckArchive(bytes: Buffer, signal?: AbortSignal) {
+export async function unpackArtifactFiles(bytes: Buffer, signal?: AbortSignal) {
   if (bytes.length > artifactLimits.archiveBytes) throw new Error("Check archive exceeds bounds.");
   const files = new Map<string, Buffer>();
   const seen = new Set<string>();
@@ -131,5 +131,8 @@ export async function unpackCheckArchive(bytes: Buffer, signal?: AbortSignal) {
     )
   )
     throw new Error("Check archive contains an undeclared directory.");
-  return inspectFiles(files);
+  return files;
+}
+export async function unpackCheckArchive(bytes: Buffer, signal?: AbortSignal) {
+  return inspectFiles(await unpackArtifactFiles(bytes, signal));
 }

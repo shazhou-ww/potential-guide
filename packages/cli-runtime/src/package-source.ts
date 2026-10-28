@@ -21,7 +21,7 @@ import {
   readArtifact,
   readPrivateFile,
   createPrivateFile,
-} from "@potential-guide/check-host";
+} from "@potential-guide/checker-host";
 import {
   createWorkerCheckProbe,
   captureFilesystemObservation,

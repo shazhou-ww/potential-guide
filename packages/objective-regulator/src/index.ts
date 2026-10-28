@@ -263,7 +263,13 @@ function validatePilot(value: unknown): asserts value is PilotSpec {
     throw new RegulationError(400, "Pilot locales must be reference page maps.");
   for (const language of manifest.languages) {
     const pages = value.locales[language];
-    if (!record(pages) || !Object.hasOwn(pages, "system/404"))
+    if (
+      !record(pages) ||
+      !Object.hasOwn(
+        pages,
+        value.source?.kind === "artifact-service-v1" ? "objective" : "system/404",
+      )
+    )
       throw new RegulationError(400, `Missing reference pages for ${language}.`);
     for (const page of Object.values(pages)) {
       fields(
@@ -275,7 +281,12 @@ function validatePilot(value: unknown): asserts value is PilotSpec {
         fields(page.origin, ["artifactDigest", "path"]);
         if (
           typeof page.origin.artifactDigest !== "string" ||
-          !/^sha256-pguide-(?:check|objective)-v1:[a-f0-9]{64}$/.test(page.origin.artifactDigest) ||
+          !(value.source?.kind === "artifact-service-v1"
+            ? /^sha256:[a-f0-9]{64}$/.test(page.origin.artifactDigest) &&
+              page.resourceBase === undefined
+            : /^sha256-pguide-(?:check|objective)-v1:[a-f0-9]{64}$/.test(
+                page.origin.artifactDigest,
+              )) ||
           typeof page.origin.path !== "string" ||
           !page.origin.path.startsWith("references/") ||
           page.origin.path

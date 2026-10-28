@@ -271,7 +271,7 @@ new `checkRunId`. Without a shared run, each adapter call owns a separate run.
 Do not store subject data in `identity`.
 
 ```ts
-import { readArtifact } from "@potential-guide/check-host";
+import { readArtifact } from "@potential-guide/checker-host";
 import { RunEvidence, createWorkerCheckProbe } from "@potential-guide/objective-pilot";
 
 const evidence = new RunEvidence({ directory: "/safe/local/reports" });

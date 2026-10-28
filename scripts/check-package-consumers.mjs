@@ -18,7 +18,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       "npm-objectives",
       [
         ...definitions.filter((entry) => entry.objective).map((entry) => entry.name),
-        "@potential-guide/check-host",
+        "@potential-guide/checker-host",
         "@potential-guide/cli-runtime",
         "@potential-guide/objective-pilot",
         "@potential-guide/effects",
@@ -99,7 +99,7 @@ import {createRequire} from "node:module";
 import {mkdir,writeFile} from "node:fs/promises";
 import {randomUUID} from "node:crypto";
 import {prepareObjectivePackage,withPilot} from "@potential-guide/cli-runtime";
-import {CheckKernel,readArtifact,terminal,serve,ensurePrivateDirectory,publishPrivateFile,removePrivateFile} from "@potential-guide/check-host";
+import {CheckKernel,readArtifact,terminal,serve,ensurePrivateDirectory,publishPrivateFile,removePrivateFile} from "@potential-guide/checker-host";
 import {observe} from "@potential-guide/objective-pilot";
 import {Effect} from "@potential-guide/effects";
 import {RequestModel as R,CoordinatorModel as M,coordinatorViews} from "@potential-guide/regulation-coordinator";
@@ -399,7 +399,7 @@ try{
       for (const bin of definition.bins ?? []) {
         const executable = join(binaries, process.platform === "win32" ? `${bin}.cmd` : bin);
         assert.ok(existsSync(executable), `Missing installed executable: ${bin}`);
-        if (bin === "pguide-check-host") continue;
+        if (bin === "pguide-check-host" || bin === "pguide-checker-host") continue;
         const result = JSON.parse(
           await run(executable, ["--help", "--format", "json"], directory, env),
         );

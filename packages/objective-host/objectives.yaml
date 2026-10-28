@@ -1,0 +1,14 @@
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
+objectives:
+  standardize:
+    description: Standardize the composable Objective service and SDK.
+    objective: "@potential-guide/objective-package-standard"
+    inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
+    subject: |
+      {
+        "root": context.repo.rootPath, "directory": context.path,
+        "roles": ["npm"], "runtime": "node",
+        "allows": ["@potential-guide/checker-host", "@potential-guide/check-artifacts"],
+        "entries": ["src/index.ts"], "generated": [], "deliveries": [],
+        "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "developer-commands", "kind": "cli"}]
+      }

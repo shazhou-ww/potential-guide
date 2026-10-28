@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CheckClient, type HostAddress } from "./client.js";
+import { CheckTaskClient } from "./v3.js";
 import {
   createPrivateFile,
   ensurePrivateDirectory,
@@ -13,7 +14,15 @@ import {
 } from "./private-files.js";
 
 export const hostDirectory = () =>
-  process.env.PGUIDE_CHECK_HOST_DIRECTORY ?? join(homedir(), ".potential-guide", "check-host");
+  process.env.PGUIDE_CHECKER_HOST_DIRECTORY ??
+  process.env.PGUIDE_CHECK_HOST_DIRECTORY ??
+  join(homedir(), ".potential-guide", "check-host");
+export async function connectCheckerHost(directory = hostDirectory()) {
+  const legacy = await connectHost(directory);
+  const client = new CheckTaskClient(legacy.address);
+  legacy.close();
+  return client;
+}
 export const processAlive = (pid: number) => {
   try {
     process.kill(pid, 0);

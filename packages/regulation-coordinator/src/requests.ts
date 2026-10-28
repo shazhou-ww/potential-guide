@@ -2,6 +2,7 @@ import {
   levelRank,
   type NpmObjectiveSource,
   type ArtifactObjectiveSource,
+  type ServiceObjectiveSource,
   type PilotSpec,
   type ReferencePage,
   type Subject,
@@ -19,7 +20,8 @@ export interface Objective {
         readonly directory: string;
       }
     | { readonly packageName: string }
-    | { readonly objectiveId: string };
+    | { readonly objectiveId: string }
+    | { readonly url: string };
 }
 
 export interface ObjectiveRevision {
@@ -56,11 +58,11 @@ export interface RegulationRequest extends RequestSchedule {
   readonly desiredLevel: string;
   readonly priority: number;
   readonly origin: RequestOrigin;
-  readonly source?: NpmObjectiveSource | ArtifactObjectiveSource;
+  readonly source?: NpmObjectiveSource | ArtifactObjectiveSource | ServiceObjectiveSource;
 }
 
 export interface RegulationRequests {
-  readonly schemaVersion: 1 | 2;
+  readonly schemaVersion: 1 | 2 | 3;
   readonly revision: number;
   readonly objectives: readonly Objective[];
   readonly objectiveRevisions: readonly ObjectiveRevision[];
@@ -173,11 +175,13 @@ export function reduceRegulationRequests(
   const source = command.objective.source;
   if (source === undefined) throw new TypeError("An exact Objective source is required.");
   const objectiveSource =
-    source.kind === "objective-artifact"
-      ? { objectiveId: source.objectiveId }
-      : source.kind === "npm-package"
-        ? { packageName: source.packageName }
-        : { repository: source.repository, directory: source.directory };
+    source.kind === "artifact-service-v1"
+      ? { url: source.url }
+      : source.kind === "objective-artifact"
+        ? { objectiveId: source.objectiveId }
+        : source.kind === "npm-package"
+          ? { packageName: source.packageName }
+          : { repository: source.repository, directory: source.directory };
   const objective: Objective = {
     key: key("objective", objectiveSource),
     source: objectiveSource,
@@ -185,18 +189,22 @@ export function reduceRegulationRequests(
   const revision: ObjectiveRevision = {
     key: key("objective-revision", [
       objective.key,
-      source.kind === "objective-artifact"
-        ? source.artifactDigest
-        : source.kind === "npm-package"
-          ? source.packageDigest
-          : source.commit,
+      source.kind === "artifact-service-v1"
+        ? source.digest
+        : source.kind === "objective-artifact"
+          ? source.artifactDigest
+          : source.kind === "npm-package"
+            ? source.packageDigest
+            : source.commit,
     ]),
     objectiveKey: objective.key,
-    ...(source.kind === "objective-artifact"
-      ? { artifactDigest: source.artifactDigest }
-      : source.kind === "npm-package"
-        ? { packageDigest: source.packageDigest }
-        : { commit: source.commit }),
+    ...(source.kind === "artifact-service-v1"
+      ? { artifactDigest: source.digest }
+      : source.kind === "objective-artifact"
+        ? { artifactDigest: source.artifactDigest }
+        : source.kind === "npm-package"
+          ? { packageDigest: source.packageDigest }
+          : { commit: source.commit }),
     spec:
       source.kind !== "git-tree"
         ? {
@@ -204,7 +212,7 @@ export function reduceRegulationRequests(
             version: command.objective.version,
             manifest: command.objective.manifest,
             locales:
-              source.kind === "objective-artifact"
+              source.kind === "objective-artifact" || source.kind === "artifact-service-v1"
                 ? artifactLocales(command.objective.locales)
                 : command.objective.locales,
           }
@@ -266,7 +274,12 @@ export function reduceRegulationRequests(
     throw new TypeError("Invalid or exhausted request projection revision.");
   return immutable(
     structuredClone({
-      schemaVersion: source.kind === "objective-artifact" ? (2 as const) : state.schemaVersion,
+      schemaVersion:
+        source.kind === "artifact-service-v1"
+          ? (3 as const)
+          : source.kind === "objective-artifact" && state.schemaVersion === 1
+            ? (2 as const)
+            : state.schemaVersion,
       revision: state.revision + 1,
       objectives,
       objectiveRevisions,
@@ -371,7 +384,7 @@ export function restoreRegulationRequests(value: unknown): RegulationRequests {
     value === null ||
     typeof value !== "object" ||
     !("schemaVersion" in value) ||
-    (value.schemaVersion !== 1 && value.schemaVersion !== 2) ||
+    (value.schemaVersion !== 1 && value.schemaVersion !== 2 && value.schemaVersion !== 3) ||
     !("requests" in value) ||
     !Array.isArray(value.requests) ||
     !("targets" in value) ||

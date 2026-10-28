@@ -20,7 +20,7 @@ import {
   type CheckClient,
   type ArtifactMetadata,
   TaskProtocolError,
-} from "@potential-guide/check-host";
+} from "@potential-guide/checker-host";
 import {
   type ArtifactObjectiveSource,
   compileSubjectProjection,

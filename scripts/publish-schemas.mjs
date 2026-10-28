@@ -6,14 +6,19 @@ import { pathToFileURL } from "node:url";
 export const schemaBase = "https://shazhou-ww.github.io/potential-guide/";
 export async function collectSchemas(root) {
   const schemas = new Map();
-  for (const format of await readdir(join(root, "schemas"), { withFileTypes: true })) {
-    if (!format.isDirectory()) continue;
-    for (const entry of await readdir(join(root, "schemas", format.name), {
-      withFileTypes: true,
-    })) {
-      if (!entry.isFile() || !/^[a-zA-Z0-9._-]+\.json$/.test(entry.name))
-        throw new Error(`Unexpected schema source: ${format.name}/${entry.name}`);
-      const path = `schemas/${format.name}/${entry.name}`;
+  async function visit(parts) {
+    for (const entry of await readdir(join(root, "schemas", ...parts), { withFileTypes: true })) {
+      if (
+        entry.isDirectory() &&
+        /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(entry.name) &&
+        parts.length < 4
+      ) {
+        await visit([...parts, entry.name]);
+        continue;
+      }
+      if (!entry.isFile() || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*\.json$/.test(entry.name))
+        throw new Error(`Unexpected schema source: ${[...parts, entry.name].join("/")}`);
+      const path = ["schemas", ...parts, entry.name].join("/");
       const bytes = await readFile(join(root, ...path.split("/")));
       const schema = JSON.parse(bytes);
       if (
@@ -24,6 +29,7 @@ export async function collectSchemas(root) {
       schemas.set(path, bytes);
     }
   }
+  await visit([]);
   return schemas;
 }
 
@@ -47,7 +53,9 @@ export async function assertImmutableSchemas(schemas, request = fetch) {
       !index.every(
         (path) =>
           typeof path === "string" &&
-          /^schemas\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+\.json$/.test(path),
+          /^schemas\/(?:[a-zA-Z0-9][a-zA-Z0-9._-]*\/){1,4}[a-zA-Z0-9][a-zA-Z0-9._-]*\.json$/.test(
+            path,
+          ),
       )
     )
       throw new Error("Invalid published schema index; refusing deployment.");

@@ -177,7 +177,11 @@ export function validateObservation(
     value.versions[regulation.objective.objectiveId] !== regulation.objective.version
   )
     throw new TypeError("Invalid observation envelope, objective or exact version.");
-  fields(value, ["current", "problems", "gapSummary", "observedAt", "versions"], ["sources"]);
+  fields(
+    value,
+    ["current", "problems", "gapSummary", "observedAt", "versions"],
+    ["sources", "executionEvidence"],
+  );
   fields(value.current, ["objectiveId", "levelId"]);
   if (
     typeof envelope.message !== "string" ||

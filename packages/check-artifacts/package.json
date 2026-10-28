@@ -34,9 +34,11 @@
     "@potential-guide/check-runtime-files": "workspace:^",
     "ajv": "catalog:",
     "esbuild": "catalog:",
-    "tar": "catalog:"
+    "tar": "catalog:",
+    "yaml": "catalog:"
   },
   "devDependencies": {
+    "jsonata": "catalog:",
     "@potential-guide/effects": "workspace:^"
   },
   "publishConfig": {

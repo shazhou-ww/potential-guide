@@ -19,6 +19,6 @@
     "yaml": "catalog:"
   },
   "devDependencies": {
-    "@potential-guide/check-host": "workspace:^"
+    "@potential-guide/checker-host": "workspace:^"
   }
 }

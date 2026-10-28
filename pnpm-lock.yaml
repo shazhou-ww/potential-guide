@@ -122,10 +122,16 @@ importers:
       tar:
         specifier: 'catalog:'
         version: 7.5.22
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.1
     devDependencies:
       '@potential-guide/effects':
         specifier: workspace:^
         version: link:../effects
+      jsonata:
+        specifier: 'catalog:'
+        version: 2.1.0
 
   packages/check-host:
     dependencies:
@@ -152,7 +158,7 @@ importers:
       '@potential-guide/check-artifacts':
         specifier: workspace:^
         version: link:../check-artifacts
-      '@potential-guide/check-host':
+      '@potential-guide/checker-host':
         specifier: workspace:^
         version: link:../check-host
       '@potential-guide/cli-core':
@@ -164,6 +170,9 @@ importers:
       '@potential-guide/git-source':
         specifier: workspace:^
         version: link:../git-source
+      '@potential-guide/objective-host':
+        specifier: workspace:^
+        version: link:../objective-host
       '@potential-guide/objective-pilot':
         specifier: workspace:^
         version: link:../objective-pilot
@@ -237,6 +246,15 @@ importers:
         version: link:../objective-pilot
     publishDirectory: dist/package
 
+  packages/objective-host:
+    dependencies:
+      '@potential-guide/check-artifacts':
+        specifier: workspace:^
+        version: link:../check-artifacts
+      '@potential-guide/checker-host':
+        specifier: workspace:^
+        version: link:../check-host
+
   packages/objective-monorepo-standard:
     dependencies:
       '@potential-guide/objective-package-standard':
@@ -305,12 +323,15 @@ importers:
 
   packages/objective-pilot:
     dependencies:
-      '@potential-guide/check-host':
+      '@potential-guide/checker-host':
         specifier: workspace:^
         version: link:../check-host
       '@potential-guide/effects':
         specifier: workspace:^
         version: link:../effects
+      '@potential-guide/objective-host':
+        specifier: workspace:^
+        version: link:../objective-host
       '@potential-guide/pilot-protocol':
         specifier: workspace:^
         version: link:../pilot-protocol
@@ -504,7 +525,7 @@ importers:
         specifier: 'catalog:'
         version: 2.9.1
     devDependencies:
-      '@potential-guide/check-host':
+      '@potential-guide/checker-host':
         specifier: workspace:^
         version: link:../check-host
 

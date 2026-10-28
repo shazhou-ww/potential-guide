@@ -1,5 +1,6 @@
 protocol:
-  - "@potential-guide/check-host"
+  - "@potential-guide/checker-host"
+  - "@potential-guide/objective-host"
   - "@potential-guide/check-artifacts"
   - "@potential-guide/check-runtime-files"
   - "@potential-guide/effects"

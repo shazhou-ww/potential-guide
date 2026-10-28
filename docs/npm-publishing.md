@@ -4,7 +4,8 @@ Potential Guide defines twenty-two independent CLI, library, and Objective relea
 
 | Package | Release tag |
 | --- | --- |
-| `@potential-guide/check-host` | `check-host-vX.Y.Z` |
+| `@potential-guide/checker-host` | `checker-host-vX.Y.Z` |
+| `@potential-guide/objective-host` | `objective-host-vX.Y.Z` |
 | `@potential-guide/effects` | `effects-vX.Y.Z` |
 | `@potential-guide/git-source` | `git-source-vX.Y.Z` |
 | `@potential-guide/objective-pilot` | `objective-pilot-vX.Y.Z` |
@@ -91,7 +92,8 @@ environment named `npm`, and leave it without npm secrets. Optional required
 reviewers are compatible with the workflow, but any deployment branch or tag
 rules must allow these release tags:
 
-- `check-host-v*`
+- `checker-host-v*`
+- `objective-host-v*`
 - `objective-monorepo-standard-v*`
 - `objective-package-standard-v*`
 - `objective-devbox-health-v*`

@@ -241,7 +241,7 @@ async function verifyCliContract() {
     closePrivateFileBackend,
   } = await import(
     pathToFileURL(
-      join(consumer, "node_modules", "@potential-guide", "check-host", "dist", "index.js"),
+      join(consumer, "node_modules", "@potential-guide", "checker-host", "dist", "index.js"),
     ).href
   );
   const hostDirectory = join(home, "check-host");

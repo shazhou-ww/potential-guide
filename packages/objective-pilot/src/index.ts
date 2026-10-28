@@ -84,3 +84,4 @@ export {
   parseStrictYaml,
   validateSubject,
 } from "./validation.js";
+export * from "./service.js";

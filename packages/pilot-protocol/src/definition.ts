@@ -106,7 +106,11 @@ export function readPage(
   const pages = spec.locales[language];
   if (pages === undefined)
     throw new ObjectiveConfigurationError(`Unsupported language: ${language}.`);
-  const page = pages[pageId] ?? pages["system/404"];
+  const page =
+    pages[pageId] ??
+    (spec.source?.kind === "artifact-service-v1" ? undefined : pages["system/404"]);
+  if (page === undefined && spec.source?.kind === "artifact-service-v1")
+    throw new ObjectiveConfigurationError("reference_not_found");
   if (page === undefined) throw new ObjectiveConfigurationError("Missing 404 reference page.");
   return page;
 }

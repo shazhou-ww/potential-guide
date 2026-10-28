@@ -7,7 +7,7 @@ objectives:
     subject: |
       {
         "root": context.repo.rootPath, "directory": context.path,
-        "roles": ["tool"], "runtime": "node", "allows": ["@potential-guide/check-host"],
+        "roles": ["tool"], "runtime": "node", "allows": ["@potential-guide/checker-host"],
         "entries": ["src/cli.ts", "src/model.ts", "src/runner.ts", "src/render.ts"],
         "generated": [], "deliveries": [], "joins": []
       }

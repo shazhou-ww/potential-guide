@@ -13,7 +13,7 @@ import {
   readArtifact,
   serve,
   terminal,
-} from "@potential-guide/check-host";
+} from "@potential-guide/checker-host";
 
 export const scratch = resolve(import.meta.dirname, "..", "..", "..", "..", ".cache", "tree-host");
 export const marker = "test-tree-owned-v1";

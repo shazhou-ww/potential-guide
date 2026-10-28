@@ -6,7 +6,7 @@ import {
   type CheckClient,
   connectHost,
   type Subject as HostSubject,
-} from "@potential-guide/check-host";
+} from "@potential-guide/checker-host";
 import {
   bindDependencyRequest,
   type ObjectiveDependencySource,

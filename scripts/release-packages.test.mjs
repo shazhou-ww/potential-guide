@@ -28,12 +28,12 @@ test("local verification covers the internal runtime dependency closure without 
 });
 
 test("release inventory contains the new packages and excludes retired Guide and Supervisor", () => {
-  assert.equal(releasePackages.length, 22);
+  assert.equal(releasePackages.length, 23);
   for (const field of ["id", "directory", "name"]) {
-    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 22);
+    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 23);
   }
   for (const name of [
-    "@potential-guide/check-host",
+    "@potential-guide/checker-host",
     "@potential-guide/effects",
     "@potential-guide/git-source",
     "@potential-guide/objective-pilot",

@@ -2,6 +2,10 @@ import { chmod, lstat, mkdir, readdir, rename, rm, writeFile } from "node:fs/pro
 import { dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { Ajv } from "ajv";
+export * from "./contracts.js";
+export * from "./contract-result.js";
+export * from "./mapping.js";
+export { unpackArtifactFiles } from "./archive.js";
 import {
   createPrivateDirectory,
   createPrivateFile,
