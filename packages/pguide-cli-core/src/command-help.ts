@@ -82,11 +82,11 @@ const help: Record<Command, CommandHelp> = {
         title: "Options",
         lines: [
           "  --objective <name>     Select a declaration instead of --pilot",
-          "  --pilot <source>        Committed path, Git URI, or legacy source alias",
+          "  --pilot <source>        Artifact directory/address, npm package, Git URI, or alias",
           "  --scope <scope>        user | directory; disambiguate declaration scope",
           "  --input-file <path|->  Declaration input; only Unit may omit it",
           "  --subject-file <path|-> JSON subject (default: stdin); use - explicitly for stdin",
-          "  --revision <ref|commit> Pin source version; local paths require a full commit hash",
+          "  --revision <digest|ref> Exact artifact digest; legacy Git paths require a full commit",
           "  --language <tag>        Select localized references (default: Pilot language)",
           "  --report <path>         Also save the complete JSON observation",
           "  --report-dir <path>     Override the default local JSONL evidence directory",
@@ -104,7 +104,8 @@ const help: Record<Command, CommandHelp> = {
       {
         title: "Notes",
         lines: [
-          "  Local Pilot repositories must be clean and committed. Checks may execute tools;",
+          "  objective.json artifacts require an exact digest; no npm identity/build is needed.",
+          "  Legacy Git Pilot repositories must be clean and committed. Checks may execute tools;",
           "  a self-check Pilot includes one Agent sanity task. Read the Pilot before running.",
           "  Exit 0 means observation succeeded, not that the Objective reached terminal.",
           "  Manage declarations with pguide objectives; config aliases are legacy sources only.",
@@ -137,7 +138,7 @@ const help: Record<Command, CommandHelp> = {
           "  --subject-file <path|-> JSON subject (default: stdin); use - explicitly for stdin",
           "  --agent <profile>       Existing Agent profile (default: agents.defaultAgent)",
           "  --agent-timeout-ms <ms> Per-Agent deadline; includes connection and session startup",
-          "  --revision <ref|commit> Pin Pilot version",
+          "  --revision <digest|ref> Pin exact artifact content or legacy Pilot version",
           "  --language <tag>        Select localized references",
           "  --report <path>         Also save the JSON result",
         ],
@@ -225,7 +226,7 @@ const help: Record<Command, CommandHelp> = {
   validate: {
     description:
       "Validate a Pilot manifest and its localized reference graph without executing checks.",
-    usage: "pguide validate pilot <objective.yaml>",
+    usage: "pguide validate pilot <objective.yaml> | artifact <directory>",
     sections: [
       {
         title: "Arguments",
@@ -239,6 +240,7 @@ const help: Record<Command, CommandHelp> = {
         lines: [
           "  pguide validate pilot .\\objective\\objective.yaml",
           "  pguide validate pilot .\\objective\\objective.yaml --format json",
+          "  pguide validate artifact .\\objective-artifact --format json",
         ],
       },
       {

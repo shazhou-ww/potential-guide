@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 明确组合与 References 契约
-- [ ] **I-S02:** 打通业务消费链路
-- [ ] **I-S03:** 验证组合与恢复
+- [x] **I-S01:** 明确组合与 References 契约
+- [x] **I-S02:** 打通业务消费链路
+- [x] **I-S03:** 验证组合与恢复
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 声明即准确依赖
-- [ ] **I-AC02:** 组合与指导一致
-- [ ] **I-AC03:** 准确恢复且保留旧证据
+- [x] **I-AC01:** 声明即准确依赖
+- [x] **I-AC02:** 组合与指导一致
+- [x] **I-AC03:** 准确恢复且保留旧证据
 
 ## Deployment
 

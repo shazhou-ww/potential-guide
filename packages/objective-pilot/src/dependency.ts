@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { Effect } from "@potential-guide/effects";
 import { attainedLevelRank, levelRank } from "@potential-guide/pilot-protocol";
 import { observe } from "./pilot.js";
-import { isObjectivePackageName, validatePilotSource } from "./resources.js";
+import { isObjectivePackageName, isArtifactObjectiveId, validatePilotSource } from "./resources.js";
 import type {
   CheckProbe,
   CheckResult,
@@ -93,7 +93,9 @@ export function withDependencyResolutions<T>(
 }
 function mergeVersion(versions: Record<string, string>, id: string, version: string) {
   if (
-    !/^(?:[0-9a-f]{40}|[0-9a-f]{64}|sha256-pguide-package-v1:[a-f0-9]{64})$/.test(version) ||
+    !/^(?:[0-9a-f]{40}|[0-9a-f]{64}|sha256-pguide-(?:package|objective)-v1:[a-f0-9]{64})$/.test(
+      version,
+    ) ||
     (versions[id] !== undefined && versions[id] !== version)
   )
     throw new ObjectiveOperationError(
@@ -153,7 +155,11 @@ export async function observationScope<T>(
   const versions = parent?.versions ?? {};
   const sources = parent?.sources ?? {};
   mergeVersion(versions, input.spec.objectiveId, input.spec.version);
-  if (input.spec.source !== undefined || isObjectivePackageName(input.spec.objectiveId)) {
+  if (
+    input.spec.source !== undefined ||
+    isObjectivePackageName(input.spec.objectiveId) ||
+    isArtifactObjectiveId(input.spec.objectiveId)
+  ) {
     validatePilotSource(input.spec.objectiveId, input.spec.version, input.spec.source);
     sources[input.spec.objectiveId] = input.spec.source;
   }

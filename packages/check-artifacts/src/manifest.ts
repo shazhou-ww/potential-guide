@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { lstat, readdir, realpath } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { readArtifact } from "@potential-guide/check-host";
+import { readArtifactTree } from "@potential-guide/check-host";
 import { Ajv, type AnySchema } from "ajv";
 
 export const artifactDigestPrefix = "sha256-pguide-check-v1:";
@@ -145,7 +145,7 @@ export function inspectFiles(files: ReadonlyMap<string, Buffer>) {
       .update(bytes);
   return { manifest, digest: `${artifactDigestPrefix}${hash.digest("hex")}`, files };
 }
-export async function inspectCheckArtifact(directory: string) {
+async function readPortableTree(directory: string) {
   const root = resolve(directory);
   const info = await lstat(root);
   if (!info.isDirectory() || info.isSymbolicLink() || (await realpath(root)) !== root)
@@ -167,13 +167,25 @@ export async function inspectCheckArtifact(directory: string) {
     }
   }
   await visit(root, "");
-  const artifact = await readArtifact(root);
-  const inspected = inspectFiles(artifact.files);
-  if (
-    directories.some(
-      (name) => ![...artifact.files.keys()].some((file) => file.startsWith(`${name}/`)),
-    )
-  )
+  const artifact = await readArtifactTree(root);
+  return { files: artifact.files, directories };
+}
+function rejectEmptyDirectories(
+  files: ReadonlyMap<string, Buffer>,
+  directories: readonly string[],
+) {
+  if (directories.some((name) => ![...files.keys()].some((file) => file.startsWith(`${name}/`))))
     throw new Error("Check artifact contains an undeclared empty directory.");
+}
+/** Bounded, no-link portable tree reader shared by declarative artifact consumers. */
+export async function readArtifactFiles(directory: string): Promise<ReadonlyMap<string, Buffer>> {
+  const { files, directories } = await readPortableTree(directory);
+  rejectEmptyDirectories(files, directories);
+  return files;
+}
+export async function inspectCheckArtifact(directory: string) {
+  const { files, directories } = await readPortableTree(directory);
+  const inspected = inspectFiles(files);
+  rejectEmptyDirectories(files, directories);
   return inspected;
 }

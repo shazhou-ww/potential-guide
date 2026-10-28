@@ -8,7 +8,17 @@ import { releasePackages } from "./release-packages.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const pnpmCommand = "pnpm";
-const packages = releasePackages;
+const packages = [
+  ...releasePackages,
+  // Verify new runtime support locally without expanding the release authorization.
+  {
+    id: "check-artifacts",
+    directory: "check-artifacts",
+    name: "@potential-guide/check-artifacts",
+    bins: [],
+    requiredExports: ["prepareCheckArtifact", "inspectCheckArtifact", "readArtifactFiles"],
+  },
+];
 
 function run(command, args, cwd = root, env = process.env, expectedCode = 0) {
   return new Promise((resolve, reject) => {

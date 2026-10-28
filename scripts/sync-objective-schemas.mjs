@@ -10,6 +10,7 @@ for (const [format, version] of [
   ["objective", "v2"],
   ["objective", "v3"],
   ["objectives", "v1"],
+  ["objective-artifact", "v1"],
 ]) {
   const source = new URL(`../schemas/${format}/${version}.json`, import.meta.url);
   const destination = new URL(
@@ -18,7 +19,7 @@ for (const [format, version] of [
   );
   const bytes = await readFile(source);
   if (!(format === "objective" && version !== "v3"))
-    embedded += `export const ${format}Schema = ${bytes.toString().trim()};\n`;
+    embedded += `export const ${format.replace("-artifact", "Artifact")}Schema = ${bytes.toString().trim()};\n`;
   if (check) {
     if (!bytes.equals(await readFile(destination)))
       throw new Error(`Offline schema differs from canonical source: ${format}/${version}.json`);

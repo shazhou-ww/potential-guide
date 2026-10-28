@@ -10,5 +10,5 @@ objectives:
         "roles": ["npm"], "runtime": "node",
         "allows": ["@potential-guide/check-host", "@potential-guide/effects"],
         "entries": ["src/index.ts", "src/build.ts"], "generated": [], "deliveries": [],
-        "joins": [{"id": "public-library-suite", "kind": "npm"}]
+        "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "developer-commands", "kind": "cli"}]
       }

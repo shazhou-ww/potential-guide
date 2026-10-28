@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
   mkdir,
+  lstat,
   mkdtemp,
   open,
   readdir,
@@ -42,6 +43,7 @@ import {
 } from "@potential-guide/objective-pilot";
 import { ObjectiveInputError } from "@potential-guide/pilot-protocol";
 import { withNpmPilot, type PackagePreparationOptions } from "./package-source.js";
+import { parseObjectiveArtifactLocation, withObjectiveArtifact } from "./objective-artifact.js";
 
 const execute = promisify(execFile);
 
@@ -176,6 +178,39 @@ async function bindPilot<T>(
   options: PilotSourceOptions,
   evidence: RunEvidence | undefined,
 ): Promise<T> {
+  const pinnedArtifact = options.sources?.[location];
+  if (pinnedArtifact?.kind === "objective-artifact") {
+    if (revision !== undefined && revision !== pinnedArtifact.artifactDigest)
+      throw new PilotSourceError("Conflicting Objective artifact recovery digest.");
+    return withObjectiveArtifact(
+      pinnedArtifact.directory,
+      pinnedArtifact.artifactDigest,
+      use,
+      options,
+      evidence,
+    );
+  }
+  if (location.startsWith("artifact+file:")) {
+    const source = parseObjectiveArtifactLocation(location);
+    if (revision !== undefined && revision !== source.digest)
+      throw new PilotSourceError("Conflicting Objective artifact digest.");
+    return withObjectiveArtifact(source.directory, source.digest, use, options, evidence);
+  }
+  if (revision?.startsWith("sha256-pguide-objective-v1:"))
+    return withObjectiveArtifact(resolve(cwd, location), revision, use, options, evidence);
+  if (
+    !location.startsWith("git+") &&
+    (isAbsolute(location) || !/^[a-z][a-z0-9+.-]*:/i.test(location))
+  ) {
+    try {
+      await lstat(join(resolve(cwd, location), "objective.json"));
+      throw new PilotSourceError(
+        "Objective artifacts require --revision <exact digest> or an artifact+file location.",
+      );
+    } catch (error) {
+      if (!["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error;
+    }
+  }
   let legacy = location.startsWith("git+") && location.includes("#") && location.endsWith("/");
   if (!legacy && (isAbsolute(location) || !/^[a-z][a-z0-9+.-]*:/i.test(location))) {
     const local = resolve(cwd, location);

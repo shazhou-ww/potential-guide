@@ -266,7 +266,33 @@ function validatePilot(value: unknown): asserts value is PilotSpec {
     if (!record(pages) || !Object.hasOwn(pages, "system/404"))
       throw new RegulationError(400, `Missing reference pages for ${language}.`);
     for (const page of Object.values(pages)) {
-      fields(page, ["id", "title", "description", "references", "content"]);
+      fields(
+        page,
+        ["id", "title", "description", "references", "content"],
+        ["origin", "resourceBase"],
+      );
+      if (page.origin !== undefined || page.resourceBase !== undefined) {
+        fields(page.origin, ["artifactDigest", "path"]);
+        if (
+          typeof page.origin.artifactDigest !== "string" ||
+          !/^sha256-pguide-(?:check|objective)-v1:[a-f0-9]{64}$/.test(page.origin.artifactDigest) ||
+          typeof page.origin.path !== "string" ||
+          !page.origin.path.startsWith("references/") ||
+          page.origin.path
+            .split("/")
+            .some((part) => !part || part === "." || part === ".." || /[\\:]/.test(part)) ||
+          (page.resourceBase !== undefined &&
+            (typeof page.resourceBase !== "string" ||
+              !page.resourceBase.startsWith("file:") ||
+              !page.resourceBase.endsWith("/")))
+        )
+          throw new RegulationError(400, "Invalid artifact Reference ownership.");
+        if (typeof page.resourceBase === "string") {
+          const base = new URL(page.resourceBase);
+          if (base.username || base.password || base.search || base.hash)
+            throw new RegulationError(400, "Invalid artifact Reference resource base.");
+        }
+      }
       if (
         !text(page.id) ||
         typeof page.title !== "string" ||

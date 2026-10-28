@@ -1,6 +1,7 @@
 import {
   canonicalObjectiveUri,
   isObjectivePackageName,
+  isArtifactObjectiveId,
   pilotResourceUri,
   validateReferences,
 } from "./resources.js";
@@ -164,7 +165,9 @@ export function parseCheckEnvelope(value: unknown): Envelope<CheckResult> {
     fields(entry, ["objectiveId", "subject", "expectedLevelId"]);
     if (
       typeof entry.objectiveId !== "string" ||
-      (!entry.objectiveId.startsWith("git+") && !isObjectivePackageName(entry.objectiveId)) ||
+      (!entry.objectiveId.startsWith("git+") &&
+        !isObjectivePackageName(entry.objectiveId) &&
+        !isArtifactObjectiveId(entry.objectiveId)) ||
       canonicalObjectiveUri(entry.objectiveId) !== entry.objectiveId ||
       !record(entry.subject) ||
       !json(entry.subject) ||
@@ -205,7 +208,9 @@ export function parseDependencyProblem(value: unknown) {
   if (
     value.kind !== "dependency" ||
     typeof value.objectiveId !== "string" ||
-    (!value.objectiveId.startsWith("git+") && !isObjectivePackageName(value.objectiveId)) ||
+    (!value.objectiveId.startsWith("git+") &&
+      !isObjectivePackageName(value.objectiveId) &&
+      !isArtifactObjectiveId(value.objectiveId)) ||
     canonicalObjectiveUri(value.objectiveId) !== value.objectiveId ||
     !record(value.subject) ||
     !json(value.subject) ||

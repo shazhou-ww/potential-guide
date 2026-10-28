@@ -24,7 +24,25 @@ export interface NpmObjectiveSource {
   readonly commit?: string;
   readonly bindings?: Readonly<Record<string, Omit<NpmObjectiveSource, "bindings">>>;
 }
-export type ObjectiveSource = GitObjectiveSource | NpmObjectiveSource;
+export interface ArtifactObjectiveSource {
+  readonly kind: "objective-artifact";
+  /** Preserve optional legacy provenance reads without allowing a fabricated Git commit. */
+  readonly commit?: never;
+  readonly objectiveId: string;
+  readonly artifactDigest: string;
+  readonly directory: string;
+  readonly checks: Readonly<
+    Record<
+      string,
+      {
+        readonly digest: string;
+        readonly revision: string;
+      }
+    >
+  >;
+  readonly bindings?: Readonly<Record<string, Omit<ArtifactObjectiveSource, "bindings">>>;
+}
+export type ObjectiveSource = GitObjectiveSource | NpmObjectiveSource | ArtifactObjectiveSource;
 export type LevelId = string;
 export type CheckId = string;
 export type ProblemId = string;
@@ -122,6 +140,9 @@ export interface ReferencePage extends ReferencePageSummary {
   readonly description: string;
   readonly references: readonly string[];
   readonly content: string;
+  /** Exact owning artifact and file; relative resources resolve against resourceBase. */
+  readonly origin?: { readonly artifactDigest: string; readonly path: string };
+  readonly resourceBase?: string;
 }
 export interface PilotSpec {
   readonly objectiveId: ObjectiveId;

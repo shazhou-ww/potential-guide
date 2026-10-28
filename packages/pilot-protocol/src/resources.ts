@@ -30,9 +30,18 @@ export function isObjectivePackageName(value: string): boolean {
 }
 
 export function objectiveSourceVersion(source: ObjectiveSource): string {
-  return source.kind === "npm-package" ? source.packageDigest : source.tree;
+  return source.kind === "objective-artifact"
+    ? source.artifactDigest
+    : source.kind === "npm-package"
+      ? source.packageDigest
+      : source.tree;
+}
+export function isArtifactObjectiveId(value: string): boolean {
+  return /^objective:[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(value);
 }
 export function isObjectiveRevision(objectiveId: string, version: string): boolean {
+  if (isArtifactObjectiveId(objectiveId))
+    return /^sha256-pguide-objective-v1:[a-f0-9]{64}$/.test(version);
   if (!isObjectivePackageName(objectiveId) && !objectiveId.startsWith("git+")) return false;
   return (
     canonicalObjectiveUri(objectiveId) === objectiveId &&
@@ -47,6 +56,19 @@ export function sameObjectiveSource(
   right: ObjectiveSource | undefined,
 ): boolean {
   if (left === undefined || right === undefined) return left === right;
+  if (left.kind === "objective-artifact" && right.kind === "objective-artifact") {
+    const normalize = (value: unknown): string => {
+      if (Array.isArray(value)) return JSON.stringify(value.map(normalize));
+      if (value !== null && typeof value === "object")
+        return JSON.stringify(
+          Object.entries(value)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([key, child]) => [key, normalize(child)]),
+        );
+      return JSON.stringify(value);
+    };
+    return normalize(left) === normalize(right);
+  }
   if (left.kind === "npm-package" && right.kind === "npm-package")
     return (
       left.packageName === right.packageName &&
@@ -76,6 +98,48 @@ export function validatePilotSource(
   version: string,
   source: unknown,
 ): asserts source is ObjectiveSource {
+  if (record(source) && source.kind === "objective-artifact") {
+    fields(source, ["kind", "objectiveId", "artifactDigest", "directory", "checks"], ["bindings"]);
+    if (
+      !isArtifactObjectiveId(objectiveId) ||
+      source.objectiveId !== objectiveId ||
+      source.artifactDigest !== version ||
+      !isObjectiveRevision(objectiveId, version) ||
+      typeof source.directory !== "string" ||
+      !isAbsolute(source.directory) ||
+      !record(source.checks) ||
+      Object.keys(source.checks).length > 128
+    )
+      throw new ObjectiveConfigurationError("Invalid Objective artifact evidence.");
+    for (const [id, check] of Object.entries(source.checks)) {
+      if (!identifier(id) || !record(check))
+        throw new ObjectiveConfigurationError("Invalid Check artifact evidence.");
+      fields(check, ["digest", "revision"]);
+      if (
+        typeof check.digest !== "string" ||
+        !/^sha256-pguide-check-v1:[a-f0-9]{64}$/.test(check.digest) ||
+        typeof check.revision !== "string" ||
+        !/^[a-f0-9]{64}$/.test(check.revision)
+      )
+        throw new ObjectiveConfigurationError("Invalid Check digest/Host revision evidence.");
+    }
+    if (source.bindings !== undefined) {
+      if (!record(source.bindings) || Object.keys(source.bindings).length > 128)
+        throw new ObjectiveConfigurationError("Invalid fixed artifact dependency bindings.");
+      for (const [id, binding] of Object.entries(source.bindings)) {
+        if (
+          id === objectiveId ||
+          !record(binding) ||
+          binding.kind !== "objective-artifact" ||
+          Object.hasOwn(binding, "bindings") ||
+          typeof binding.artifactDigest !== "string"
+        )
+          throw new ObjectiveConfigurationError("Artifact bindings must be flat exact sources.");
+        validatePilotSource(id, binding.artifactDigest, binding);
+      }
+    }
+    return;
+  }
   if (record(source) && source.kind === "npm-package") {
     fields(
       source,
@@ -148,6 +212,7 @@ export function validateGitPilotSource(
 
 /** Directory identities are distinct from addresses of resources inside them. */
 export function canonicalObjectiveUri(uri: string): string {
+  if (isArtifactObjectiveId(uri)) return uri;
   if (isObjectivePackageName(uri)) return uri;
   const canonical = canonicalManifestUri(uri);
   const url = new URL(canonical);
@@ -169,6 +234,10 @@ export function canonicalObjectiveUri(uri: string): string {
 }
 
 export function pilotResourceUri(objectiveId: string, path: string): string {
+  if (isArtifactObjectiveId(objectiveId))
+    throw new ObjectiveConfigurationError(
+      "Artifact Reference resources require their page origin/resourceBase, not the Objective identity.",
+    );
   const directory = canonicalObjectiveUri(objectiveId);
   const decoded = decodeURIComponent(path);
   if (

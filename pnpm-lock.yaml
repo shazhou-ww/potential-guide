@@ -141,6 +141,9 @@ importers:
       '@npmcli/run-script':
         specifier: 'catalog:'
         version: 10.0.4
+      '@potential-guide/check-artifacts':
+        specifier: workspace:^
+        version: link:../check-artifacts
       '@potential-guide/check-host':
         specifier: workspace:^
         version: link:../check-host
@@ -159,6 +162,9 @@ importers:
       '@potential-guide/pilot-protocol':
         specifier: workspace:^
         version: link:../pilot-protocol
+      ajv:
+        specifier: 'catalog:'
+        version: 8.20.0
       npm-package-arg:
         specifier: 'catalog:'
         version: 13.0.2

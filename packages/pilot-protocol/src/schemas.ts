@@ -1,8 +1,16 @@
 import type { AnySchema, ValidateFunction } from "ajv";
 import { Ajv2020 } from "ajv/dist/2020.js";
-import { objectiveSchema, objectivesSchema } from "./schema-definitions.js";
+import {
+  objectiveSchema,
+  objectivesSchema,
+  objectiveArtifactSchema,
+} from "./schema-definitions.js";
 
-export { objectiveSchema, objectivesSchema } from "./schema-definitions.js";
+export {
+  objectiveSchema,
+  objectivesSchema,
+  objectiveArtifactSchema,
+} from "./schema-definitions.js";
 
 export const OBJECTIVE_SCHEMA_URI =
   "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json" as const;
@@ -30,3 +38,4 @@ function offlineValidator(schema: AnySchema): DocumentValidator {
 
 export const validateObjectiveDocument = offlineValidator(objectiveSchema);
 export const validateObjectivesDocument = offlineValidator(objectivesSchema);
+export const validateObjectiveArtifactDocument = offlineValidator(objectiveArtifactSchema);

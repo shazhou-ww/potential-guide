@@ -15,7 +15,8 @@ import { isAbsolute, join, relative, sep } from "node:path";
 import { HostError } from "./types.js";
 
 const limit = 64 * 1024 * 1024;
-export async function readArtifact(directory: string) {
+/** Generic bounded no-follow tree reader; execution eligibility is checked by readArtifact. */
+export async function readArtifactTree(directory: string) {
   if (!isAbsolute(directory)) throw new HostError(400, "Worker directory must be absolute.");
   const canonical = await realpath(directory);
   const files = new Map<string, Buffer>();
@@ -78,6 +79,10 @@ export async function readArtifact(directory: string) {
     }
   }
   await visit(canonical);
+  return { directory: canonical, files, executables };
+}
+export async function readArtifact(directory: string) {
+  const { directory: canonical, files, executables } = await readArtifactTree(directory);
   if (!files.has("worker.cjs"))
     throw new HostError(400, "Expected self-contained worker.cjs; legacy run.* is unsupported.");
   const hash = createHash("sha256");

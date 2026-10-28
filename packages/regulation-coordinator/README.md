@@ -33,13 +33,21 @@ const restored = RequestModel.restoreRegulationRequests(
 ```
 
 The reducer admits immutable Objective, ObjectiveRevision, Target and Request
-facts. New Objective identity is the actual npm package name, Target adds the
-subject, and ObjectiveRevision adds the versioned **package content digest**.
+facts. Declarative artifact Objective identity is its stable `objective:<id>`;
+ObjectiveRevision adds the distinct **artifact content digest**, and Target adds
+the subject. Artifact requests retain exact Check digests, Host revisions and the
+dependency closure in their source binding. Their request projection uses schema
+version 2; v1 npm/Git prefixes remain readable and are not rewritten.
+For legacy npm Objectives, identity is the actual npm package name and
+ObjectiveRevision adds the versioned **package content digest**.
 Resolved versions, Git commits and registry integrity remain provenance, not
 identity. Keys use version-1 SHA-256 identity encoding with locale-independent JSON
 property ordering. Legacy Git records retain repository/directory/commit semantics
 and replay without interpreting a commit as a package digest. The exact PilotSpec
 and source binding are validated at requests, execution events, replay and views.
+Artifact Reference origins remain durable content; cache-local resource URLs are
+omitted from stored definitions and recovered from a prepared runtime. Moving an
+identical artifact to another private cache does not create a new revision.
 
 Request references are supplied, not randomly generated or allocated during
 replay. The same reference and normalized contents are an idempotent redelivery;
@@ -59,7 +67,7 @@ current requests remain outside this first increment.
 
 New states are cloned and deeply frozen without freezing inputs. Snapshot restore
 rebuilds and checks facts and references instead of trusting serialized keys or
-indexes. Only complete version-1 prefixes are supported; compaction and migration
+indexes. Only complete version-1/2 prefixes are supported; compaction and migration
 are not implied. Restore and replay perform no runner, filesystem, network or
 clock effects. The Behavior runtime below adds execution and resource facts.
 

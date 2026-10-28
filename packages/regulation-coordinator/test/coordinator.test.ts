@@ -1592,7 +1592,7 @@ test("invalid progress envelopes, sources, versions, levels and timestamps never
   try {
     const valid = atLevel(result(p), "l1").latestObservation;
     assert.ok(valid.payload);
-    assert.ok(p.source);
+    assert.ok(p.source?.kind === "git-tree");
     const invalid = [
       { status: 500, payload: null, message: "unavailable" },
       { ...valid, payload: { ...valid.payload, sources: {} } },

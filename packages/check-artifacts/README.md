@@ -76,6 +76,9 @@ the execution tree contains only worker and resources. Consumers can validate
 subjects/results against the manifest schemas and resolve problem IDs through
 `manifest.references.problems`; this layer does not change Host's opaque JSON API.
 There is no Objective lookup, inheritance, override or built-in migration here.
+The exported `readArtifactFiles` portable bounded reader and `safePath` validator
+are also used by the tool-side declarative Objective assembler; existing Check
+digests, archive format and preparation semantics are unchanged.
 
 ## Manifest v1
 

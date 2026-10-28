@@ -14,6 +14,7 @@ import {
   inspectCheckArtifact,
   type CheckManifest,
 } from "./manifest.js";
+export { readArtifactFiles, safePath } from "./manifest.js";
 
 export {
   artifactDigestPrefix,

@@ -337,10 +337,12 @@ export async function selectObjective(
     }
   }
   const reference = resolveObjective(entry.objective, config);
-  const parsed = npa(reference, dirname(entry.file));
+  const parsed = reference.startsWith("artifact+file:")
+    ? undefined
+    : npa(reference, dirname(entry.file));
   return {
     location:
-      parsed.type === "directory" || parsed.type === "file"
+      parsed !== undefined && (parsed.type === "directory" || parsed.type === "file")
         ? (parsed.fetchSpec ?? reference)
         : reference,
     binding: { entry, context, input: input === undefined ? {} : input },

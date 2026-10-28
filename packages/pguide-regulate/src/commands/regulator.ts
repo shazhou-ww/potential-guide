@@ -83,7 +83,7 @@ interface Attempt {
 }
 
 interface Regulation {
-  schemaVersion: 4 | 5;
+  schemaVersion: 4 | 5 | 6;
   regulationId: string;
   createdAt: string;
   objectiveUri?: string;
@@ -91,6 +91,7 @@ interface Regulation {
   objectiveCommit?: string;
   objectiveTree?: string;
   objectivePackageDigest?: string;
+  objectiveArtifactDigest?: string;
   objectiveSource: ObjectiveSource;
   sourceBindings: Record<string, ObjectiveSource>;
   binding?: Awaited<ReturnType<typeof selectObjective>>["binding"];
@@ -112,7 +113,7 @@ interface Regulation {
 }
 
 function regulationObjective(regulation: Regulation): string {
-  const id = regulation.schemaVersion === 5 ? regulation.objectiveId : regulation.objectiveUri;
+  const id = regulation.schemaVersion !== 4 ? regulation.objectiveId : regulation.objectiveUri;
   if (typeof id !== "string")
     throw new CliError("Invalid persisted Objective identity.", 6, "io-error");
   return id;
@@ -747,20 +748,27 @@ export async function runRegulate(
       for (const bound of runtime.boundObjectives?.() ?? [spec])
         if (bound.source !== undefined) initialSources[bound.objectiveId] = bound.source;
       const regulation: Regulation = {
-        schemaVersion: spec.source.kind === "npm-package" ? 5 : 4,
+        schemaVersion:
+          spec.source.kind === "objective-artifact"
+            ? 6
+            : spec.source.kind === "npm-package"
+              ? 5
+              : 4,
         regulationId: randomUUID(),
         createdAt: new Date().toISOString(),
-        ...(spec.source.kind === "npm-package"
-          ? { objectiveId: spec.objectiveId, objectivePackageDigest: spec.version }
-          : {
-              objectiveUri: spec.objectiveId,
-              objectiveCommit: spec.source.commit,
-              objectiveTree: spec.version,
-            }),
+        ...(spec.source.kind === "objective-artifact"
+          ? { objectiveId: spec.objectiveId, objectiveArtifactDigest: spec.version }
+          : spec.source.kind === "npm-package"
+            ? { objectiveId: spec.objectiveId, objectivePackageDigest: spec.version }
+            : {
+                objectiveUri: spec.objectiveId,
+                objectiveCommit: spec.source.commit,
+                objectiveTree: spec.version,
+              }),
         objectiveSource: spec.source,
         sourceBindings: initialSources,
         ...(selected.binding === undefined ? {} : { binding: selected.binding }),
-        ...(spec.source.kind === "npm-package" || location.startsWith("git+")
+        ...(spec.source.kind !== "git-tree" || location.startsWith("git+")
           ? {}
           : { sourcePath: resolve(globals.cwd, location) }),
         subject,
@@ -824,7 +832,7 @@ export async function runContinue(
     record === null ||
     typeof record !== "object" ||
     !("schemaVersion" in record) ||
-    (record.schemaVersion !== 4 && record.schemaVersion !== 5)
+    (record.schemaVersion !== 4 && record.schemaVersion !== 5 && record.schemaVersion !== 6)
   )
     throw new CliError(
       "Legacy continue records are incompatible with cumulative attainment or missing directory tree/commit evidence. Review the v2 Objective and target, then start a new regulation with --pilot <directory> or --objective; pinned evidence is not rebound.",
@@ -847,23 +855,31 @@ export async function runContinue(
       "io-error",
     );
   const objectiveId =
-    regulation.schemaVersion === 5 ? regulation.objectiveId : regulation.objectiveUri;
+    regulation.schemaVersion !== 4 ? regulation.objectiveId : regulation.objectiveUri;
   if (
     regulation.regulationId !== id ||
     typeof objectiveId !== "string" ||
-    (regulation.schemaVersion === 4
-      ? regulation.objectiveId !== undefined ||
+    (regulation.schemaVersion === 6
+      ? regulation.objectiveUri !== undefined ||
+        regulation.objectiveSource?.kind !== "objective-artifact" ||
+        regulation.objectiveSource.artifactDigest !== regulation.objectiveArtifactDigest ||
         regulation.objectivePackageDigest !== undefined ||
-        !objectiveId.startsWith("git+") ||
-        !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(regulation.objectiveCommit ?? "") ||
-        regulation.objectiveSource?.kind !== "git-tree" ||
-        regulation.objectiveSource.commit !== regulation.objectiveCommit ||
-        regulation.objectiveSource.tree !== regulation.objectiveTree
-      : regulation.objectiveUri !== undefined ||
-        regulation.objectiveSource?.kind !== "npm-package" ||
-        regulation.objectiveSource.packageDigest !== regulation.objectivePackageDigest ||
         regulation.objectiveCommit !== undefined ||
-        regulation.objectiveTree !== undefined) ||
+        regulation.objectiveTree !== undefined
+      : regulation.objectiveArtifactDigest !== undefined ||
+        (regulation.schemaVersion === 4
+          ? regulation.objectiveId !== undefined ||
+            regulation.objectivePackageDigest !== undefined ||
+            !objectiveId.startsWith("git+") ||
+            !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(regulation.objectiveCommit ?? "") ||
+            regulation.objectiveSource?.kind !== "git-tree" ||
+            regulation.objectiveSource.commit !== regulation.objectiveCommit ||
+            regulation.objectiveSource.tree !== regulation.objectiveTree
+          : regulation.objectiveUri !== undefined ||
+            regulation.objectiveSource?.kind !== "npm-package" ||
+            regulation.objectiveSource.packageDigest !== regulation.objectivePackageDigest ||
+            regulation.objectiveCommit !== undefined ||
+            regulation.objectiveTree !== undefined)) ||
     JSON.stringify(regulation.sourceBindings?.[objectiveId]) !==
       JSON.stringify(regulation.objectiveSource) ||
     !Array.isArray(regulation.attempts) ||

@@ -87,3 +87,144 @@ export const objectivesSchema = {
     },
   },
 };
+export const objectiveArtifactSchema = {
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  $id: "https://shazhou-ww.github.io/potential-guide/schemas/objective-artifact/v1.json",
+  title: "Declarative Objective artifact v1",
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "$schema",
+    "id",
+    "subjectSchema",
+    "levels",
+    "defaultLanguage",
+    "languages",
+    "checks",
+    "dependencies",
+    "references",
+    "resources",
+  ],
+  properties: {
+    $schema: {
+      const: "https://shazhou-ww.github.io/potential-guide/schemas/objective-artifact/v1.json",
+    },
+    id: { type: "string", pattern: "^objective:[a-z0-9]+(?:[.-][a-z0-9]+)*$" },
+    subjectSchema: { type: "object" },
+    defaultLanguage: { type: "string", minLength: 1 },
+    languages: {
+      type: "array",
+      minItems: 1,
+      uniqueItems: true,
+      items: { type: "string", minLength: 1 },
+    },
+    levels: {
+      type: "array",
+      minItems: 1,
+      maxItems: 128,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "checks"],
+        properties: {
+          id: { $ref: "#/$defs/id" },
+          checks: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["id", "problems"],
+              properties: {
+                id: { $ref: "#/$defs/id" },
+                problems: {
+                  type: "array",
+                  uniqueItems: true,
+                  items: { $ref: "#/$defs/id" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    checks: {
+      type: "object",
+      maxProperties: 128,
+      propertyNames: { $ref: "#/$defs/id" },
+      additionalProperties: {
+        type: "object",
+        additionalProperties: false,
+        required: ["source", "subject"],
+        properties: {
+          subject: { type: "string", minLength: 1 },
+          source: {
+            oneOf: [
+              {
+                type: "object",
+                additionalProperties: false,
+                required: ["kind", "directory", "digest"],
+                properties: {
+                  kind: { const: "directory" },
+                  directory: { type: "string", minLength: 1 },
+                  digest: { $ref: "#/$defs/checkDigest" },
+                },
+              },
+              {
+                type: "object",
+                additionalProperties: false,
+                required: ["kind", "url", "digest", "transportDigest"],
+                properties: {
+                  kind: { const: "https" },
+                  url: { type: "string", pattern: "^https://" },
+                  digest: { $ref: "#/$defs/checkDigest" },
+                  transportDigest: { type: "string", pattern: "^sha256:[a-f0-9]{64}$" },
+                },
+              },
+            ],
+          },
+        },
+      },
+    },
+    dependencies: {
+      type: "object",
+      maxProperties: 128,
+      propertyNames: { pattern: "^objective:[a-z0-9]+(?:[.-][a-z0-9]+)*$" },
+      additionalProperties: {
+        type: "object",
+        additionalProperties: false,
+        required: ["directory", "digest"],
+        properties: {
+          directory: { type: "string", minLength: 1 },
+          digest: { type: "string", pattern: "^sha256-pguide-objective-v1:[a-f0-9]{64}$" },
+        },
+      },
+    },
+    references: {
+      type: "object",
+      additionalProperties: {
+        type: "object",
+        minProperties: 1,
+        additionalProperties: {
+          type: "object",
+          additionalProperties: false,
+          required: ["path", "title", "description"],
+          properties: {
+            path: { type: "string", pattern: "^references/" },
+            title: { type: "string", minLength: 1 },
+            description: { type: "string", minLength: 1, maxLength: 200 },
+            references: { type: "array", uniqueItems: true, items: { type: "string" } },
+          },
+        },
+      },
+    },
+    resources: {
+      type: "array",
+      uniqueItems: true,
+      items: { type: "string", pattern: "^references/" },
+    },
+  },
+  $defs: {
+    id: { type: "string", pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    checkDigest: { type: "string", pattern: "^sha256-pguide-check-v1:[a-f0-9]{64}$" },
+  },
+};

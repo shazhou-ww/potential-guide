@@ -16,6 +16,15 @@ Use `--help` for options, [command reference](../pguide/README.md) for execution
 permissions and persistence, and [migration](../../docs/package-layering.md) for
 installation. Existing output envelopes and exit codes are preserved.
 
+Declarative Objectives can be selected by an exact `artifact+file:` address,
+or a directory plus `--revision sha256-pguide-objective-v1:<hex>`.
+Their version-6 regulation records retain Objective/Check artifact digests,
+actual Host revisions and the dependency closure. `continue` verifies that exact
+content even if the original source directory changes or is unavailable; a
+missing/corrupt cache and unavailable exact source fail closed. Legacy v4 Git
+and v5 npm recovery retain their original semantics. See
+[Objective artifacts and migration](../../docs/objective-artifacts.md).
+
 Default output and `--format markdown` report the run ID, Objective, target and
 latest observed level, stop reason (including exhaustion cause), iterations,
 stalled-run history, per-attempt quota, persisted state path and continue command.

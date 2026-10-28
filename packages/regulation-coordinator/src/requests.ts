@@ -1,7 +1,9 @@
 import {
   levelRank,
   type NpmObjectiveSource,
+  type ArtifactObjectiveSource,
   type PilotSpec,
+  type ReferencePage,
   type Subject,
   validatePilotSource,
 } from "@potential-guide/objective-pilot";
@@ -16,7 +18,8 @@ export interface Objective {
         readonly repository: string;
         readonly directory: string;
       }
-    | { readonly packageName: string };
+    | { readonly packageName: string }
+    | { readonly objectiveId: string };
 }
 
 export interface ObjectiveRevision {
@@ -24,6 +27,7 @@ export interface ObjectiveRevision {
   readonly objectiveKey: string;
   readonly commit?: string;
   readonly packageDigest?: string;
+  readonly artifactDigest?: string;
   readonly spec: PilotSpec;
 }
 
@@ -52,11 +56,11 @@ export interface RegulationRequest extends RequestSchedule {
   readonly desiredLevel: string;
   readonly priority: number;
   readonly origin: RequestOrigin;
-  readonly source?: NpmObjectiveSource;
+  readonly source?: NpmObjectiveSource | ArtifactObjectiveSource;
 }
 
 export interface RegulationRequests {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 1 | 2;
   readonly revision: number;
   readonly objectives: readonly Objective[];
   readonly objectiveRevisions: readonly ObjectiveRevision[];
@@ -85,6 +89,20 @@ function append<A extends { readonly key: string }>(records: readonly A[], value
   if (canonicalJson(existing) !== canonicalJson(value))
     throw new TypeError(`Conflicting immutable record ${value.key}.`);
   return records;
+}
+function artifactLocales(locales: PilotSpec["locales"]): PilotSpec["locales"] {
+  return Object.fromEntries(
+    Object.entries(locales).map(([language, pages]) => [
+      language,
+      Object.fromEntries(
+        Object.entries(pages).map(([id, page]) => {
+          // Cache URLs are runtime capabilities, not immutable Objective content.
+          const { resourceBase: _resourceBase, ...content } = page;
+          return [id, content satisfies ReferencePage];
+        }),
+      ),
+    ]),
+  );
 }
 
 export function createRegulationRequests(): RegulationRequests {
@@ -155,9 +173,11 @@ export function reduceRegulationRequests(
   const source = command.objective.source;
   if (source === undefined) throw new TypeError("An exact Objective source is required.");
   const objectiveSource =
-    source.kind === "npm-package"
-      ? { packageName: source.packageName }
-      : { repository: source.repository, directory: source.directory };
+    source.kind === "objective-artifact"
+      ? { objectiveId: source.objectiveId }
+      : source.kind === "npm-package"
+        ? { packageName: source.packageName }
+        : { repository: source.repository, directory: source.directory };
   const objective: Objective = {
     key: key("objective", objectiveSource),
     source: objectiveSource,
@@ -165,19 +185,28 @@ export function reduceRegulationRequests(
   const revision: ObjectiveRevision = {
     key: key("objective-revision", [
       objective.key,
-      source.kind === "npm-package" ? source.packageDigest : source.commit,
+      source.kind === "objective-artifact"
+        ? source.artifactDigest
+        : source.kind === "npm-package"
+          ? source.packageDigest
+          : source.commit,
     ]),
     objectiveKey: objective.key,
-    ...(source.kind === "npm-package"
-      ? { packageDigest: source.packageDigest }
-      : { commit: source.commit }),
+    ...(source.kind === "objective-artifact"
+      ? { artifactDigest: source.artifactDigest }
+      : source.kind === "npm-package"
+        ? { packageDigest: source.packageDigest }
+        : { commit: source.commit }),
     spec:
-      source.kind === "npm-package"
+      source.kind !== "git-tree"
         ? {
             objectiveId: command.objective.objectiveId,
             version: command.objective.version,
             manifest: command.objective.manifest,
-            locales: command.objective.locales,
+            locales:
+              source.kind === "objective-artifact"
+                ? artifactLocales(command.objective.locales)
+                : command.objective.locales,
           }
         : command.objective,
   };
@@ -194,7 +223,7 @@ export function reduceRegulationRequests(
     priority: command.priority,
     origin: command.origin,
     ...scheduleFields(command),
-    ...(source.kind === "npm-package" ? { source } : {}),
+    ...(source.kind !== "git-tree" ? { source } : {}),
   };
   const objectives = append(state.objectives, objective);
   const objectiveRevisions = append(state.objectiveRevisions, revision);
@@ -237,7 +266,7 @@ export function reduceRegulationRequests(
     throw new TypeError("Invalid or exhausted request projection revision.");
   return immutable(
     structuredClone({
-      schemaVersion: 1 as const,
+      schemaVersion: source.kind === "objective-artifact" ? (2 as const) : state.schemaVersion,
       revision: state.revision + 1,
       objectives,
       objectiveRevisions,
@@ -286,12 +315,18 @@ export function requestDetails(state: RegulationRequests, requestRef: string): R
     objectiveRevision.objectiveKey !== objective.key
   )
     throw new TypeError(`Broken request references for ${requestRef}.`);
-  if (objectiveRevision.packageDigest !== undefined) {
-    validatePilotSource(
-      objectiveRevision.spec.objectiveId,
-      objectiveRevision.packageDigest,
-      request.source,
-    );
+  if (
+    objectiveRevision.packageDigest !== undefined ||
+    objectiveRevision.artifactDigest !== undefined
+  ) {
+    const digest = objectiveRevision.artifactDigest ?? objectiveRevision.packageDigest;
+    if (digest === undefined) throw new TypeError("Missing exact Objective digest.");
+    if (
+      objectiveRevision.packageDigest !== undefined &&
+      objectiveRevision.artifactDigest !== undefined
+    )
+      throw new TypeError("Revision cannot conflate package and artifact digests.");
+    validatePilotSource(objectiveRevision.spec.objectiveId, digest, request.source);
     return immutable({
       request,
       target,
@@ -336,7 +371,7 @@ export function restoreRegulationRequests(value: unknown): RegulationRequests {
     value === null ||
     typeof value !== "object" ||
     !("schemaVersion" in value) ||
-    value.schemaVersion !== 1 ||
+    (value.schemaVersion !== 1 && value.schemaVersion !== 2) ||
     !("requests" in value) ||
     !Array.isArray(value.requests) ||
     !("targets" in value) ||

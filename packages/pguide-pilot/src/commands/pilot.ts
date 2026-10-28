@@ -15,7 +15,11 @@ import {
   showCommandHelp,
   writeResult,
 } from "@potential-guide/cli-core";
-import { pilotSourceBudgets, withPilot } from "@potential-guide/cli-runtime";
+import {
+  inspectObjectiveArtifact,
+  pilotSourceBudgets,
+  withPilot,
+} from "@potential-guide/cli-runtime";
 import { startEffect } from "@potential-guide/effects";
 import { selectObjective } from "@potential-guide/objective-declarations";
 import {
@@ -359,6 +363,29 @@ export async function runValidate(argv: string[], globals: GlobalOptions): Promi
     return;
   }
   rejectUnknownOptions(argv, {}, 2);
+  if (argv[0] === "artifact" && argv[1] !== undefined) {
+    const directory = resolve(globals.cwd, argv[1]);
+    const artifact = await inspectObjectiveArtifact(directory);
+    await withPilot(
+      directory,
+      globals.cwd,
+      artifact.digest,
+      async (spec) => {
+        writeResult(
+          {
+            schemaVersion: 1,
+            status: "valid",
+            objectiveId: spec.objectiveId,
+            artifactDigest: spec.version,
+          },
+          globals.format,
+          `# Objective artifact validation\n\n- Objective: ${markdownInlineCode(spec.objectiveId)}\n- Digest: ${markdownInlineCode(spec.version)}\n- Scope: fixed closure and References verified; no Check executed.`,
+        );
+      },
+      { reports: { enabled: false } },
+    );
+    return;
+  }
   if (argv[0] !== "pilot" || argv[1] === undefined)
     throw new CliError(
       "Expected validate pilot <manifest>; legacy Guide manifests are incompatible.",

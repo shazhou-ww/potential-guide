@@ -12,6 +12,15 @@ self-contained worker artifacts; the legacy document migration command does not
 bundle entrypoints or provide an old process-protocol fallback.
 The package also supplies the non-overwriting `objective-contract-migrate` command.
 
+The separate immutable `schemas/objective-artifact/v1.json` describes data-only
+Objective delivery. `validateObjectiveArtifactDocument` validates its structure.
+Stable `objective:<id>` identities and `ArtifactObjectiveSource` evidence are
+distinct from npm package identities and Git sources. Tool-side assembly projects
+the artifact's business fields into the unchanged v3 cumulative Pilot contract;
+`loadPilotSpec` remains the legacy resource loader, not an artifact downloader.
+Reference pages can carry exact owning `origin` and `resourceBase` provenance.
+See [Objective artifacts](../../docs/objective-artifacts.md).
+
 ## Migration CLI
 
 `--format manifest|declarations|portfolio` selects the legacy document kind.

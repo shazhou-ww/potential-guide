@@ -13,6 +13,14 @@ pguide-validate pilot ./objective
 pguide-probe --help
 ```
 
+Data-only Objective artifacts use `pguide-validate artifact <directory>` and
+`pguide-probe --pilot <directory> --revision <exact-artifact-digest>`.
+An exact `artifact+file:` address also works with `--pilot` or declarations.
+Artifact validation verifies the declared Check/dependency closure and composed
+References without running Checks. See [authoring and consumption](../../docs/objective-artifacts.md).
+Legacy scaffold/package/Git behavior remains available; this command does not
+silently convert existing sources.
+
 Default output and `--format markdown` share the same human-readable receipts.
 Scaffolding reports the destination, manifest, languages and next validation
 step. Validation identifies the Objective and explicitly checks only the manifest
