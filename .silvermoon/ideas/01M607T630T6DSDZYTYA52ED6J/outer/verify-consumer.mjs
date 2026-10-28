@@ -263,7 +263,12 @@ assert.ok(output, "external verification did not finish");
 await assert.rejects(lstat(external), { code: "ENOENT" });
 output.cleanup.externalDirectoryRemoved = true;
 output.cleanup.certificateAndKeyRemoved = true;
-const destination = join(outer, "consumer-evidence.json");
+const destination = process.argv[2]
+  ? resolve(repository, process.argv[2])
+  : join(repository, ".cache", `check-artifacts-consumer-${invocation}.json`);
+assert.ok(inside(join(repository, ".cache"), destination) ||
+  (inside(outer, destination) && !inside(join(outer, "inner"), destination)));
+assert.ok(destination.endsWith(".json"), "Evidence output must be JSON in the owned report scope.");
 await writeFile(destination, `${JSON.stringify(output, null, 2)}\n`, { flag: "wx" });
 console.log(JSON.stringify({ evidence: destination, deploymentRevision: output.baseline.deploymentRevision,
   digest: output.delivery.digest, scenarios: output.result.scenarios.length, executions: output.result.diagnostics.executions,

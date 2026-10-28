@@ -1,0 +1,388 @@
+{
+  "baseline": {
+    "primaryCommit": "dc44d5019710214e6f77f612eed257ae3e2d7ff2",
+    "deploymentRevision": "ea2333647896cffc2911a64c36679410bcee9b7f",
+    "contractBlob": "7f830c1ac166bf2c5f5f3ca80667a3fc418fe82c"
+  },
+  "invocation": "0d6a3832-9b70-4319-bfba-1058942eb0f7",
+  "externalDirectory": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7",
+  "operationOwnerVerified": true,
+  "environment": {
+    "node": "v24.11.1",
+    "platform": "win32",
+    "pnpm": "11.22.0"
+  },
+  "tools": [
+    {
+      "name": "@potential-guide/effects",
+      "version": "0.1.0-rc.0",
+      "filename": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\delivery\\tools\\potential-guide-effects-0.1.0-rc.0.tgz",
+      "sha256": "0fe03517fa0d74ee2e6f6d45fa1b9716fd3de939c80654ed3283478b5b6c7c00",
+      "files": 7
+    },
+    {
+      "name": "@potential-guide/check-host",
+      "version": "0.1.0",
+      "filename": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\delivery\\tools\\potential-guide-check-host-0.1.0.tgz",
+      "sha256": "6184a13b7447b1535d16c9f49f4773e6d22ef8d4657c7dcadb1ce94df8d1c2f9",
+      "files": 49
+    },
+    {
+      "name": "@potential-guide/check-artifacts",
+      "version": "0.1.0",
+      "filename": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\delivery\\tools\\potential-guide-check-artifacts-0.1.0.tgz",
+      "sha256": "3aa6237ca9fb6d3de8f054e573b11a04420bfa0f216b125c6b7454aea6f870e9",
+      "files": 25
+    }
+  ],
+  "delivery": {
+    "repository": "D:\\Code\\potential-guide",
+    "digest": "sha256-pguide-check-v1:3d0dddd74456804b7ab70ce04309081577c86b685bf938f66591b3995611bcb5",
+    "transportDigest": "sha256:764ea01511fd2e37cc75fbb0a6237f3b7b2de34d69e9b91c560f9e4b73c4329c",
+    "url": "https://127.0.0.1:49477/check.tgz",
+    "tamperedURL": "https://127.0.0.1:49477/tampered.tgz",
+    "missingURL": "https://127.0.0.1:49477/missing.tgz",
+    "stopURL": "https://127.0.0.1:49477/stop/<operation-token>",
+    "checkReference": "references/check.md",
+    "expected": "c3RhbmRhbG9uZSBDaGVjayBhcnRpZmFjdA0K",
+    "files": {
+      "check.json": {
+        "bytes": 1136,
+        "sha256": "5bb0333865b840c38b2049177427387863ad1a0ea5e8da82f5e404cd72d9863b"
+      },
+      "references/check.md": {
+        "bytes": 519,
+        "sha256": "f4e2110784ac332506cc5e0c572e87ba15fe6e27894f0e272b5df790d0540fca"
+      },
+      "references/content-mismatch.md": {
+        "bytes": 438,
+        "sha256": "e38dc4d39da9adf69ae986ea2f5251ca1c50b3f84cf62962ed13822fbdf0ae8b"
+      },
+      "resources/expected.txt": {
+        "bytes": 27,
+        "sha256": "f085ce97e6292f28406e0441ed0a3c3819951eeb18ea00b22c750201941a7283"
+      },
+      "worker.cjs": {
+        "bytes": 268736,
+        "sha256": "d81c40df0cdcb6dff8b10e15fe79f8f0f45e60f15495123a2c22839d7a0bed73"
+      }
+    }
+  },
+  "install": {
+    "command": "pnpm install --offline --ignore-scripts --reporter=append-only",
+    "stdout": "Progress: resolved 0, reused 0, downloaded 1, added 0\nPackages: +17\n+++++++++++++++++\nPackages are hard linked from the content-addressable store to the virtual store.\n  Content-addressable store is at: D:\\.pnpm-store\\v11\n  Virtual store is at:             node_modules/.pnpm\nProgress: resolved 42, reused 14, downloaded 3, added 7\nProgress: resolved 42, reused 14, downloaded 3, added 16\nProgress: resolved 42, reused 14, downloaded 3, added 17\nProgress: resolved 42, reused 14, downloaded 3, added 17, done\n\ndependencies:\n+ @potential-guide/check-artifacts 0.1.0\n+ @potential-guide/check-host 0.1.0\n+ @potential-guide/effects 0.1.0-rc.0\n\nDone in 4.7s using pnpm v11.22.0\n",
+    "stderr": ""
+  },
+  "consumerCommand": {
+    "command": "node consumer.mjs",
+    "cwd": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7",
+    "NODE_PATH": "",
+    "NODE_OPTIONS": "",
+    "NODE_EXTRA_CA_CERTS": "<owned tls/cert.pem>",
+    "NODE_TLS_REJECT_UNAUTHORIZED": "1",
+    "stdout": "{\"scenarios\":13,\"executions\":5,\"passed\":true}\n",
+    "stderr": ""
+  },
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/check.tgz"
+    },
+    {
+      "method": "GET",
+      "path": "/check.tgz"
+    },
+    {
+      "method": "GET",
+      "path": "/check.tgz"
+    },
+    {
+      "method": "GET",
+      "path": "/tampered.tgz"
+    },
+    {
+      "method": "GET",
+      "path": "/missing.tgz"
+    },
+    {
+      "method": "GET",
+      "path": "/stop/<operation-token>"
+    }
+  ],
+  "result": {
+    "root": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7",
+    "sourceRepository": "D:\\Code\\potential-guide",
+    "node": "v24.11.1",
+    "platform": "win32",
+    "nodePath": "",
+    "nodeOptions": "",
+    "tlsVerificationDisabled": false,
+    "modules": [
+      {
+        "name": "@potential-guide/check-artifacts",
+        "module": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\node_modules\\.pnpm\\@potential-guide+check-arti_5b5f871a1eb0b9371bde7b82674af570\\node_modules\\@potential-guide\\check-artifacts\\dist\\index.js"
+      },
+      {
+        "name": "@potential-guide/check-host",
+        "module": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\node_modules\\.pnpm\\@potential-guide+check-host_05b0e5e9ed1bd5820502d09f28b5a7bc\\node_modules\\@potential-guide\\check-host\\dist\\index.js"
+      },
+      {
+        "name": "@potential-guide/effects",
+        "module": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\node_modules\\.pnpm\\@potential-guide+effects@fi_d474c23b2b88782686d0874635bdbb8e\\node_modules\\@potential-guide\\effects\\dist\\index.js"
+      }
+    ],
+    "scenarios": [
+      {
+        "label": "local-positive",
+        "outcome": "executed",
+        "source": {
+          "kind": "directory",
+          "directory": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\delivery\\local-check",
+          "digest": "sha256-pguide-check-v1:3d0dddd74456804b7ab70ce04309081577c86b685bf938f66591b3995611bcb5"
+        },
+        "digest": "sha256-pguide-check-v1:3d0dddd74456804b7ab70ce04309081577c86b685bf938f66591b3995611bcb5",
+        "revision": "52649b7eec962a60c2fd5564afdcea741fca7589df528a8f4798a832c0f08119",
+        "artifactDirectory": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\cache-local\\3d0dddd74456804b7ab70ce04309081577c86b685bf938f66591b3995611bcb5\\artifact",
+        "directory": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\cache-local\\3d0dddd74456804b7ab70ce04309081577c86b685bf938f66591b3995611bcb5\\execution",
+        "executionEntries": [
+          "resources",
+          "worker.cjs"
+        ],
+        "references": [
+          {
+            "name": "references/check.md",
+            "bytes": 519,
+            "sha256": "f4e2110784ac332506cc5e0c572e87ba15fe6e27894f0e272b5df790d0540fca"
+          },
+          {
+            "name": "references/content-mismatch.md",
+            "bytes": 438,
+            "sha256": "e38dc4d39da9adf69ae986ea2f5251ca1c50b3f84cf62962ed13822fbdf0ae8b"
+          }
+        ],
+        "state": {
+          "checkId": "local-positive-1",
+          "state": "Completed",
+          "result": {
+            "status": 200,
+            "message": "File content matches.",
+            "payload": {
+              "ok": true,
+              "problems": []
+            }
+          }
+        }
+      },
+      {
+        "label": "local-negative-business",
+        "outcome": "executed",
+        "state": {
+          "checkId": "local-negative-2",
+          "state": "Completed",
+          "result": {
+            "status": 200,
+            "message": "File content does not match.",
+            "payload": {
+              "ok": false,
+              "problems": [
+                {
+                  "kind": "internal",
+                  "id": "content-mismatch",
+                  "parameters": {
+                    "file": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\local-negative-target.txt"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "label": "https-positive",
+        "outcome": "executed",
+        "source": {
+          "kind": "https",
+          "url": "https://127.0.0.1:49477/check.tgz",
+          "digest": "sha256-pguide-check-v1:3d0dddd74456804b7ab70ce04309081577c86b685bf938f66591b3995611bcb5",
+          "transportDigest": "sha256:764ea01511fd2e37cc75fbb0a6237f3b7b2de34d69e9b91c560f9e4b73c4329c"
+        },
+        "digest": "sha256-pguide-check-v1:3d0dddd74456804b7ab70ce04309081577c86b685bf938f66591b3995611bcb5",
+        "revision": "52649b7eec962a60c2fd5564afdcea741fca7589df528a8f4798a832c0f08119",
+        "artifactDirectory": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\cache-https\\3d0dddd74456804b7ab70ce04309081577c86b685bf938f66591b3995611bcb5\\artifact",
+        "directory": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\cache-https\\3d0dddd74456804b7ab70ce04309081577c86b685bf938f66591b3995611bcb5\\execution",
+        "executionEntries": [
+          "resources",
+          "worker.cjs"
+        ],
+        "references": [
+          {
+            "name": "references/check.md",
+            "bytes": 519,
+            "sha256": "f4e2110784ac332506cc5e0c572e87ba15fe6e27894f0e272b5df790d0540fca"
+          },
+          {
+            "name": "references/content-mismatch.md",
+            "bytes": 438,
+            "sha256": "e38dc4d39da9adf69ae986ea2f5251ca1c50b3f84cf62962ed13822fbdf0ae8b"
+          }
+        ],
+        "state": {
+          "checkId": "https-positive-3",
+          "state": "Completed",
+          "result": {
+            "status": 200,
+            "message": "File content matches.",
+            "payload": {
+              "ok": true,
+              "problems": []
+            }
+          }
+        }
+      },
+      {
+        "label": "https-negative-business",
+        "outcome": "executed",
+        "state": {
+          "checkId": "https-negative-4",
+          "state": "Completed",
+          "result": {
+            "status": 200,
+            "message": "File content does not match.",
+            "payload": {
+              "ok": false,
+              "problems": [
+                {
+                  "kind": "internal",
+                  "id": "content-mismatch",
+                  "parameters": {
+                    "file": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\https-negative-target.txt"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "label": "wrong-logical-digest",
+        "outcome": "rejected",
+        "diagnostic": "Check artifact content digest mismatch.",
+        "executionsBefore": 4,
+        "executionsAfter": 4,
+        "cacheEntries": []
+      },
+      {
+        "label": "wrong-transfer-digest",
+        "outcome": "rejected",
+        "diagnostic": "Check archive download or transport verification failed.",
+        "executionsBefore": 4,
+        "executionsAfter": 4,
+        "cacheEntries": []
+      },
+      {
+        "label": "tampered-https-content",
+        "outcome": "rejected",
+        "diagnostic": "Check archive download or transport verification failed.",
+        "executionsBefore": 4,
+        "executionsAfter": 4,
+        "cacheEntries": []
+      },
+      {
+        "label": "missing-https-source",
+        "outcome": "rejected",
+        "diagnostic": "Check archive download or transport verification failed.",
+        "executionsBefore": 4,
+        "executionsAfter": 4,
+        "cacheEntries": []
+      },
+      {
+        "label": "missing-local-source",
+        "outcome": "rejected",
+        "diagnostic": "ENOENT: no such file or directory, lstat 'D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\delivery\\missing'",
+        "executionsBefore": 4,
+        "executionsAfter": 4,
+        "cacheEntries": []
+      },
+      {
+        "label": "tampered-cached-reference",
+        "outcome": "rejected",
+        "executionsBefore": 4,
+        "executionsAfter": 4,
+        "notRepaired": true
+      },
+      {
+        "label": "missing-cached-worker",
+        "outcome": "rejected",
+        "executionsBefore": 4,
+        "executionsAfter": 4,
+        "notRepaired": true
+      },
+      {
+        "label": "unreachable-https-source",
+        "outcome": "rejected",
+        "diagnostic": "Check archive HTTPS request failed.",
+        "executionsBefore": 4,
+        "executionsAfter": 4,
+        "cacheEntries": []
+      },
+      {
+        "label": "offline-https-cache",
+        "outcome": "executed",
+        "serverUnavailable": true,
+        "digest": "sha256-pguide-check-v1:3d0dddd74456804b7ab70ce04309081577c86b685bf938f66591b3995611bcb5",
+        "revision": "52649b7eec962a60c2fd5564afdcea741fca7589df528a8f4798a832c0f08119",
+        "artifactDirectory": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\cache-https\\3d0dddd74456804b7ab70ce04309081577c86b685bf938f66591b3995611bcb5\\artifact",
+        "directory": "D:\\Code\\potential-guide-check-consumer-0d6a3832-9b70-4319-bfba-1058942eb0f7\\cache-https\\3d0dddd74456804b7ab70ce04309081577c86b685bf938f66591b3995611bcb5\\execution",
+        "executionEntries": [
+          "resources",
+          "worker.cjs"
+        ],
+        "references": [
+          {
+            "name": "references/check.md",
+            "bytes": 519,
+            "sha256": "f4e2110784ac332506cc5e0c572e87ba15fe6e27894f0e272b5df790d0540fca"
+          },
+          {
+            "name": "references/content-mismatch.md",
+            "bytes": 438,
+            "sha256": "e38dc4d39da9adf69ae986ea2f5251ca1c50b3f84cf62962ed13822fbdf0ae8b"
+          }
+        ],
+        "state": {
+          "checkId": "offline-5",
+          "state": "Completed",
+          "result": {
+            "status": 200,
+            "message": "File content matches.",
+            "payload": {
+              "ok": true,
+              "problems": []
+            }
+          }
+        }
+      }
+    ],
+    "diagnostics": {
+      "initializations": 2,
+      "executions": 5,
+      "peakWorkers": 2,
+      "retirements": 0,
+      "workers": 2,
+      "queue": 0,
+      "records": 5,
+      "ownedProcesses": 0
+    },
+    "cleanup": {
+      "kernelClosed": true,
+      "permissionBackendClosed": true
+    }
+  },
+  "cleanup": {
+    "serverClosed": true,
+    "kernelClosed": true,
+    "permissionBackendClosed": true,
+    "externalDirectoryRemoved": true,
+    "certificateAndKeyRemoved": true
+  }
+}
