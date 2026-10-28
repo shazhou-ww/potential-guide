@@ -78,8 +78,9 @@ objective/
         ├── levels/
         │   ├── structured.md
         │   └── verified.md
-        └── checks/
+        └── checkers/
             └── layout/
+                ├── checker.md
                 └── problems/
                     └── invalid-layout.md
 ```
@@ -138,6 +139,21 @@ references:
 Objective 默认继承 Checker 页面，局部覆盖整页而非拼接或字段混合；保留显式 base
 页面访问原始指导以及 owning artifact/path 证据。校验无效覆盖、悬空链接、冲突、
 循环和每个有效语言下的必需页面。目录索引由工具产生，不保存第二份手写索引。
+
+Objective 的 references/<language>/checkers/<local-ref>/ 是所引用 Checker 文档的
+局部 override，不是新增 Checker 或修改原制品：
+
+- checker.md 覆盖该引用的 Checker 总览，对应有效页面 ID checkers/<local-ref>。
+- problems/<problem-id>.md 覆盖该引用的问题页面，对应
+  checkers/<local-ref>/problems/<problem-id>。
+- 文件可省略；省略时继承原页，存在时替换该语言的整页（正文与 frontmatter）。
+- 覆盖只影响当前 Objective 的该局部引用；同一 Checker 的其他引用或其他 Objective
+  不受影响。同一引用在多个 level 出现时使用同一份覆盖。
+- 不得借文档覆盖改变 subject/result 契约或增加未声明的 problem；原始页面仍可通过
+  base 页面访问，覆盖页与原页分别保留各自 owning digest/path。
+
+目录和有效页面命名空间统一为 checkers，不再使用旧 checks 命名空间；旧格式按原规则
+读取，不静默重解释。YAML 的 levels[].checks 仍表示等级的检查条件，保留该字段名。
 
 languages 表示完整支持的有效文档语言。Objective 可通过本地覆盖补齐 Checker
 缺失的语言；无继承内容且未补齐时不得声明支持。Host 配置有序语言偏好：
