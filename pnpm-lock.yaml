@@ -108,6 +108,25 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
+  packages/check-artifacts:
+    dependencies:
+      '@potential-guide/check-host':
+        specifier: workspace:^
+        version: link:../check-host
+      ajv:
+        specifier: 'catalog:'
+        version: 8.20.0
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.2
+      tar:
+        specifier: 'catalog:'
+        version: 7.5.22
+    devDependencies:
+      '@potential-guide/effects':
+        specifier: workspace:^
+        version: link:../effects
+
   packages/check-host:
     dependencies:
       '@potential-guide/effects':

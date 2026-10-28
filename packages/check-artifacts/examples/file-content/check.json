@@ -1,0 +1,31 @@
+{
+  "format": "pguide-check-v1",
+  "id": "file-content",
+  "version": "1.0.0",
+  "worker": "worker.cjs",
+  "protocol": "pguide-check-host-v1",
+  "subjectSchema": {
+    "type": "object",
+    "required": ["file"],
+    "additionalProperties": false,
+    "properties": { "file": { "type": "string", "minLength": 1 } }
+  },
+  "resultSchema": {
+    "type": "object",
+    "required": ["status", "message", "payload"],
+    "properties": {
+      "status": { "const": 200 },
+      "message": { "type": "string" },
+      "payload": {
+        "type": "object",
+        "required": ["ok", "problems"],
+        "properties": { "ok": { "type": "boolean" }, "problems": { "type": "array" } }
+      }
+    }
+  },
+  "resources": [{ "path": "resources/expected.txt", "executable": false }],
+  "references": {
+    "check": "references/check.md",
+    "problems": { "content-mismatch": "references/content-mismatch.md" }
+  }
+}

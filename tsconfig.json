@@ -1,6 +1,7 @@
 {
   "files": [],
   "references": [
+    { "path": "./packages/check-artifacts" },
     { "path": "./packages/test-tree" },
     { "path": "./packages/check-host" },
     { "path": "./packages/pguide-agents" },

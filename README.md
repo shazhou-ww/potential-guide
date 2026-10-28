@@ -7,6 +7,9 @@ and the extensible `pguide` command line:
   handles, current-value observations, and dependency-scoped replacement.
 - `@potential-guide/git-source` observes Git refs and provides immutable,
   commit-bound repository snapshots without depending on Objective concepts.
+- [`@potential-guide/check-artifacts`](./packages/check-artifacts/README.md) explicitly
+  builds/packs standalone Checks and prepares digest-pinned local/HTTPS artifacts
+  for Check Host, without consumer-side Check installation or builds.
 - `@potential-guide/pilot-protocol` independently provides Pilot definitions,
   schema compilation, strict parsing, reference validation and subject projection.
 - `@potential-guide/objective-pilot` consumes those definitions,

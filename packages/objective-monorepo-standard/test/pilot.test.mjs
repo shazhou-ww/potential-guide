@@ -516,7 +516,7 @@ test("root retains joint delivery coverage, dependency closure, layout and runti
   });
 });
 
-test("real repository has twenty-three package-owned subjects and no old contract input", async (t) => {
+test("real repository has twenty-four package-owned subjects and no old contract input", async (t) => {
   const entry = parseObjectives(await readFile(join(root, "objectives.yaml"), "utf8")).standardize;
   const subject = projectObjective(entry, context(root), undefined);
   const observed = [];
@@ -599,7 +599,7 @@ test("real repository has twenty-three package-owned subjects and no old contrac
       result.report.findings.filter(({ state }) => state === "fail" || state === "unverified"),
     ),
   );
-  assert.equal(observed.length, 23);
+  assert.equal(observed.length, 24);
   assert.deepEqual(result.problems, []);
   assert.ok(observed.every(({ source }) => source.expectedLevelId === "terminal"));
   assert.throws(() =>

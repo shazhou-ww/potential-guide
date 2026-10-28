@@ -1,5 +1,11 @@
 # npm Objective 包与固定消费
 
+独立 Check 的新增交付入口见
+[`@potential-guide/check-artifacts`](../packages/check-artifacts/README.md)：
+显式构建、独立 manifest/resources/References、本地或 HTTPS 准备、准确 digest
+与不可变缓存，不要求 Check 发布 npm 包。本文的 npm Objective 格式仍保留现有语义；
+Objective 组合和内置制品迁移不在该入口中隐式进行。
+
 一个 Objective 对应一个独立 npm 包。身份直接取实际 `package.json.name`；
 npm alias、CLI 注册简称、版本和来源地址都不是第二个 Objective 身份。
 定义只保留包根 `objective.yaml`，不内联到 package.json，不重复写 Objective 名。
@@ -97,6 +103,8 @@ CLI 使用 `objectives.aliases` 中的实际包名映射，简称仍只是引用
 定义、package.json、References、所有 check 与资源都在覆盖范围内。
 拒绝路径穿越、非 NFC 名、大小写冲突、Windows 歧义路径、链接/硬链接、
 特殊文件、运行 node_modules，以及第二个 Objective 定义。
+读取使用与 Host 一致的 no-follow、单硬链接文件 handle 身份与读前/读后内容元数据校验；
+Windows 首次读取归档恢复时间戳的文件时不把路径 ChangeTime 的延迟刷新误判为内容变化。
 单包准备限制为 256 MiB / 16384 个文件，路径项最多为文件上限的两倍；
 越界在提取/执行前明确拒绝，不截断摘要。
 

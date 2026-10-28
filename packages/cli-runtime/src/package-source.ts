@@ -1,7 +1,17 @@
 import { createHash, randomUUID } from "node:crypto";
 import { fork } from "node:child_process";
-import { createReadStream } from "node:fs";
-import { chmod, lstat, readdir, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
+import { constants, createReadStream } from "node:fs";
+import {
+  chmod,
+  lstat,
+  open,
+  readdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import {
@@ -96,16 +106,35 @@ export async function digestObjectivePackage(directory: string, modes?: Modes): 
           before.size > BigInt(maximumPackageBytes - total)
         )
           throw new Error("Objective package exceeds its delivered-tree bounds.");
-        const bytes = await readFile(path);
-        const after = await lstat(path, { bigint: true });
-        if (
-          before.ino !== after.ino ||
-          before.mtimeNs !== after.mtimeNs ||
-          before.ctimeNs !== after.ctimeNs ||
-          BigInt(bytes.length) !== before.size
-        )
-          throw new Error("Package changed while calculating its digest.");
-        const mode = modes && Object.hasOwn(modes, name) ? (modes[name] ?? 0) : Number(before.mode);
+        const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+        let bytes: Buffer;
+        let observedMode: number;
+        try {
+          // Match Check Host's handle-bound read: NTFS can update path ChangeTime on first read.
+          const stable = await handle.stat({ bigint: true });
+          const missingDevice = process.platform === "win32" && before.dev === 0n;
+          if (
+            stable.ino !== before.ino ||
+            (!missingDevice && stable.dev !== before.dev) ||
+            !stable.isFile() ||
+            stable.nlink !== 1n ||
+            stable.size > BigInt(maximumPackageBytes - total)
+          )
+            throw new Error("Package changed while calculating its digest.");
+          bytes = await handle.readFile();
+          const after = await handle.stat({ bigint: true });
+          if (
+            stable.mtimeNs !== after.mtimeNs ||
+            stable.ctimeNs !== after.ctimeNs ||
+            after.nlink !== 1n ||
+            BigInt(bytes.length) !== stable.size
+          )
+            throw new Error("Package changed while calculating its digest.");
+          observedMode = Number(stable.mode);
+        } finally {
+          await handle.close();
+        }
+        const mode = modes && Object.hasOwn(modes, name) ? (modes[name] ?? 0) : observedMode;
         total += bytes.length;
         files.push({ name, bytes, executable: (mode & 0o111) !== 0 });
       }

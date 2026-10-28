@@ -109,6 +109,11 @@ not durable exactly-once delivery. Expired observations return 404.
 
 ## Workers and artifacts
 
+For author-triggered bundling/packing and digest-pinned local/HTTPS delivery of
+standalone Checks, use [`check-artifacts`](../check-artifacts/README.md). Its
+preparation layer passes only the verified execution directory and Host revision
+to this API; the Host does not understand manifests, References or download channels.
+
 Each canonical directory contains self-contained `worker.cjs` and optional
 resources (no node_modules, links, special/hardlinked files; 256 files/64 MiB).
 `readArtifact()` computes SHA-256 over ordered relative names, lengths and all
