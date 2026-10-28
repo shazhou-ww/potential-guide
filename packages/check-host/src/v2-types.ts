@@ -72,7 +72,7 @@ export function canonicalJson(value: Json): string {
 export const v2Limits = {
   records: 256,
   executions: 256,
-  artifacts: 64,
+  artifacts: 32,
   preparations: 4,
   observers: 64,
   filterTasks: 64,

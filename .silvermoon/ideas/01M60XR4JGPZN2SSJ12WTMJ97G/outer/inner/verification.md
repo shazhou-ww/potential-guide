@@ -97,6 +97,18 @@ event digest `2b215b58e537d2aec51888d07707f55bd5c74535`。
     不变，释放读者后准确 expected-content 发布成功。完整 Host 回归连续三次退出 0
     （`host-fixed-repeat-1..3.log`，每次 44 pass/2 个既有 POSIX skip）。
     最终完整检查改为 `check-gate-fixed.log`，提交 gate 前核实其退出结果。
+12. 最终兼容检查进一步封闭 legacy 控制面：真实 HTTP 证明 v1 的集合不暴露 managed
+    Execution，拿 v2 executionId 去 v1 GET/cancel 均明确 404，原 Task 仍正常完成。
+    `v2-legacy-boundary.log` 13/13 通过。制品上限确定为 32，而非临时设计的 64：
+    为既有 private-directory 64 项安全扫描保留 mutex/暂存余量，配置 >32 明确拒绝，
+    不放松已接受的 ACL/no-follow 原语或修改 Ideal。损坏缓存统一 503/cache_invalid/verify，
+    无网络兜底。以上最后边界均在最终稳定完整检查前重跑 targeted 验证。
+13. `check-gate-fixed.log` 完整 `pnpm check` 退出 0，原生发布修复在完整并发压力下通过：
+    shared-files 2/2，Host 44 pass/2 个既有 POSIX skip，根 scripts 36/36，
+    十组打包安装图通过。随后最后的 legacy/32 制品上限/cache_invalid 边界
+    `v2-complete-targeted.log` 13/13，无跳过。对全部冻结源码正式复验
+    `check-gate-final.log`；该命令开始后不再修改源码、配置或 package 文档，
+    只在它完成后填写本证据与 ledger。
 
 扩展后的 targeted v2 命令 11/11 通过（`v2-final-targeted.log`）：
 额外验证终态保留过期通知不反转 completed、迟到执行墙钟 timer 不允许新需求关联旧执行、

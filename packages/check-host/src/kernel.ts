@@ -198,6 +198,9 @@ export class CheckKernel {
   sample(checkId: string): CheckState {
     return get(this.observe(checkId).state);
   }
+  isManaged(checkId: string): boolean {
+    return this.jobs.get(checkId)?.lifecycle !== undefined;
+  }
   cancel(checkId: string): CheckState {
     const job = this.jobs.get(checkId);
     if (!job) throw new HostError(404, "Unknown or expired checkId.");
@@ -240,7 +243,7 @@ export class CheckKernel {
       this.active,
       [...this.jobs.values()].flatMap((job) => {
         const state = get(job.execution.state);
-        return terminal(state)
+        return terminal(state) || job.lifecycle
           ? []
           : [
               {

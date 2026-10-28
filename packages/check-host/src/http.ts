@@ -114,6 +114,8 @@ export async function serve(kernel: CheckKernel, token: string, scheduler?: Task
     const match = /^\/checks\/([A-Za-z0-9:_-]{1,128})(\/cancel)?$/.exec(
       decodeURIComponent(url.pathname),
     );
+    if (match?.[1] && kernel.isManaged(match[1]))
+      throw new HostError(404, "Unknown or expired checkId.");
     if (request.method === "GET" && match?.[1] && !match[2]) {
       await observe(kernel.observe(match[1]).state, request, response, terminal);
       return;

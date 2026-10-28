@@ -84,13 +84,16 @@ returns the original Task/version/acceptance, changed content conflicts.
 SDK creates/reuses that key for its one bounded admission retry.
 Task and Execution records are capped at 256 each and retained 60s after terminal;
 there is no cross-restart exactly-once or transparent replay promise.
-Other defaults: 64 artifacts, 4 source preparations (30s each), 64 streams,
+Other defaults: 32 artifacts, 4 source preparations (30s each), 64 streams,
 64 filtered Tasks per stream. SDK subscriber queues hold at most 64 frames.
 
 ### Compatibility and consumer migration
 
 v1 remains a **short-term explicit dual stack**, documented below: existing
 npm/Git builtin worker adapters use directory/revision and `/checks`.
+Managed v2 Executions are excluded from v1 collection/observation/cancellation;
+an executionId cannot be used to cancel shared Tasks through the legacy adapter.
+The v1 collection is therefore not a global Host-idleness/drain signal for v2.
 HTTPS Check references inside fixed Objective artifacts now obtain metadata,
 raw References and executions from Host v2; Pilot/regulator retain inline digests,
 owning-artifact evidence and exact recovery. Local-directory Objective author

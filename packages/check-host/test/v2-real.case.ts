@@ -121,6 +121,14 @@ test("HTTPS source versions and evidence, HTTP boundary, SDK observers and worke
   const origin = `https://127.0.0.1:${addr.port}`;
   const limits = { ...v2Limits, timeoutMs: 5000, maxTimeoutMs: 10_000 };
   const manager = new ArtifactManager(join(directory, "cache"), [origin], limits);
+  assert.throws(
+    () =>
+      new ArtifactManager(join(directory, "invalid-capacity"), [origin], {
+        ...limits,
+        artifacts: 64,
+      }),
+    /1\.\.32/,
+  );
   const kernel = await CheckKernel.create(join(directory, "snapshots"), {
     deadlineMs: 1000,
     cleanupMs: 300,
@@ -157,6 +165,11 @@ test("HTTPS source versions and evidence, HTTP boundary, SDK observers and worke
   try {
     const first = await task({ wait: 450, fail: true });
     await waitState(first, "running");
+    const managedId = (await first.snapshot()).executionId;
+    assert.ok(managedId);
+    assert.equal((await raw(`/checks/${managedId}`)).status, 404);
+    assert.equal((await raw(`/checks/${managedId}/cancel`, "POST")).status, 404);
+    assert.ok(!JSON.stringify(await (await raw("/checks")).json()).includes(managedId));
     current = v3.bytes;
     const second = await task({ fail: true });
     const [old, latest] = await Promise.all([first.result(), second.result()]);
@@ -203,7 +216,13 @@ test("HTTPS source versions and evidence, HTTP boundary, SDK observers and worke
     await chmod(join(reclaimed.prepared.artifactDirectory, "worker.cjs"), 0o600);
     await writeFile(join(reclaimed.prepared.artifactDirectory, "worker.cjs"), "tampered");
     const beforeCorruption = downloads;
-    await assert.rejects(limited.resolve(`${origin}/latest`, v3.digest));
+    await assert.rejects(
+      limited.resolve(`${origin}/latest`, v3.digest),
+      (error) =>
+        error instanceof TaskProtocolError &&
+        error.detail.code === "cache_invalid" &&
+        error.detail.stage === "verify",
+    );
     assert.equal(downloads, beforeCorruption, "corruption fails closed without network fallback");
 
     const idempotentRequest = { check: { url: `${origin}/latest` }, subject: { fail: true } };

@@ -34,7 +34,10 @@ export class ArtifactManager {
       "https://objects.githubusercontent.com",
     ],
     readonly limits = v2Limits,
-  ) {}
+  ) {
+    if (!Number.isSafeInteger(limits.artifacts) || limits.artifacts < 1 || limits.artifacts > 32)
+      throw new Error("Artifact capacity must be 1..32 to preserve private-directory headroom.");
+  }
   authorize(source: string) {
     let url: URL;
     try {
@@ -177,6 +180,13 @@ export class ArtifactManager {
         { cacheDirectory: this.directory },
       );
       return bytes;
+    } catch (error) {
+      if (error instanceof TaskProtocolError) throw error;
+      throw new TaskProtocolError(503, {
+        code: "cache_invalid",
+        stage: "verify",
+        message: "Reference capsule failed verification.",
+      });
     } finally {
       this.release(digest);
     }
@@ -241,6 +251,12 @@ export class ArtifactManager {
       );
       this.protect(cached);
       return { metadata: cached.metadata, prepared };
+    } catch {
+      throw new TaskProtocolError(503, {
+        code: "cache_invalid",
+        stage: "verify",
+        message: "Exact cached capsule failed verification.",
+      });
     } finally {
       this.release(digest);
     }
