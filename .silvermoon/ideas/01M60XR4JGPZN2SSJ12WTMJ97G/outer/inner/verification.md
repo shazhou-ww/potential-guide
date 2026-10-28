@@ -184,4 +184,44 @@ TLS-only helper 在无 CA 的默认发现中显式 skip，真正 driver 另起�
 源码外独立 v2 部署、正式 Release/npm 发布均未执行。阶段提交只请求准确
 implementationRevision 的审查，不记录 acceptInner/acceptOuter。
 
+## 上游审阅修正：SDK 入参序列化边界
+
+主会话在真实 HTTP 接收器确认旧 SDK 会先 stringify 再由服务验证，导致 subject 的
+NaN 被改成 null，Date/toJSON 或 undefined 成员也可能改变原始业务输入。
+这是客户端边界缺口，先前输出端有限 JSON 验证不能替代此项；旧 submitInner 不再作为
+本轮准确候选。accepted Ideal、其他 idea 和 D 条目不变。
+
+本轮仅复用已有 `isJson` 与属性 descriptor 检查 subject、已提供的 context：
+拒绝非法值和 accessor，不执行其 getter/toJSON；合法可选字段的 undefined/省略保持原有
+序列化语义。JSON body 在 HTTP 和重试之前只生成一次，重试复用同一 body/幂等键。
+I-S03/I-AC03 在完整复验前重新置为未完成；实际结果在通过后填写。
+
+### 本轮修正的最终依据
+
+- `pnpm --filter @potential-guide/check-host build` 成功；
+  指定 JSON/SDK 单元组合 **3/3**，随后完整 v2 指定组合
+  `test\json.test.ts test\v2-client.test.ts test\v2-scheduler.test.ts test\v2-real.test.ts`
+  **17/17、无跳过**，内部真实 HTTPS 子测试 **1/1**。
+- 接收器对 22 个非法 subject/context/accessor 输入观测到 **0 HTTP 请求**，
+  getter/toJSON 调用计数 **0**；三个合法创建实际收到准确原值，
+  包括成员 null、普通嵌套对象/数组，以及顶层可选字段 undefined 的省略。
+- `pnpm --filter @potential-guide/cli-runtime exec node --test test\host-v2.test.mjs`
+  **1/1**，真实 HTTPS→Host→SDK→Pilot/regulator 继续通过。
+- 冻结源码完整 `pnpm check`（`sdk-input-full.log`）退出 **0**：
+  build/lint/typecheck 各 **25/25**，workspace 任务图 **50/50**，
+  Host **48 pass/0 fail/2 个既有 POSIX skip**，根 scripts **36/36**，
+  十组隔离 tarball 安装消费全部通过。沿用合法 Turbo 缓存，没有跳过完整命令。
+- 完整检查期间 SDK 源码、测试及 package 文档未再改变；
+  SDK 源码 Git blob 为 `91c091b5899616bca07b164f167048d01da9ffd5`。
+  检查后只填写本证据与 ledger，不再修改源码。
+- 日志 SHA-256：
+  - full：`f8081519fee98699176b4f6cf7c39fc5db4d34f576248a0bc10662123d3c64cc`
+  - v2：`168bb3282fe196240c4fe60933d7d8ee2940d3d374680dcd9cdd791a6baaedfa`
+  - business：`fb7a9b6657fe01ecef3b6101215ffaa5773206c0923178f8fb71894982b5f542`
+
+I-S03/I-AC03 的修正与复验完成。accepted Ideal 仍为
+`ca68f6b3f4aa24dae6bb82ad410059aa6185653b`；其他 idea、D 条目、历史事件不改写。
+旧 submitInner 保留为历史 stale 提交；本轮只重新 submitInner，不记录 acceptance，
+不开始部署或发布。
+
 以上全部为源码工作树内的自包含实施验证，不宣称 npm、Release 或独立用户部署成功。

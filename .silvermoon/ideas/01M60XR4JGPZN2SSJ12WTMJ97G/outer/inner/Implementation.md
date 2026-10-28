@@ -16,6 +16,9 @@
 
 提供统一事件过滤和 CheckTask 对象，迁移 Pilot/regulator 等调用面并保留准确来源证据；明确 v1 兼容/退出和 schema 策略，更新直接相关文档。
 
+SDK 在任何请求序列化前验证 subject 与已提供的 context 为有限 plain JSON，
+不得调用其中 accessor/toJSON 或静默转换无效业务值；合法可选字段仍可省略。
+
 ## Acceptance criteria
 
 ### I-AC01: 来源与准确内容不混淆

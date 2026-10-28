@@ -60,6 +60,10 @@ Its `CheckObservation` type guarantees result, digest/revision, executionId and
 execution timestamps; incomplete completed evidence is rejected. Worker results
 and progress must be finite, plain JSON (maximum depth 64); values such as NaN,
 cycles, getters, sparse arrays or Dates cannot silently become null/strings.
+Before serializing admission, the SDK also validates subject and provided
+context as finite plain JSON objects without invoking their getters/toJSON.
+Invalid business values send no HTTP request; omitted or undefined optional
+top-level fields retain their normal omission semantics.
 Reading, disconnecting, cancelling a subscription or `client.close()` does not
 cancel remote Tasks. Only `task.cancel()` withdraws that Task's demand.
 

@@ -179,12 +179,23 @@ export class CheckTaskClient {
   }
   async check(request: CheckRequest, options: { idempotencyKey?: string } = {}) {
     if (this.closed) throw new Error("Client is closed.");
+    const subject = Object.getOwnPropertyDescriptor(request, "subject");
+    const context = Object.getOwnPropertyDescriptor(request, "context");
+    if (!subject || !("value" in subject) || !object(subject.value) || !isJson(subject.value))
+      throw new TypeError("Subject must be a finite plain JSON object.");
+    if (
+      context &&
+      (!("value" in context) ||
+        (context.value !== undefined && (!object(context.value) || !isJson(context.value))))
+    )
+      throw new TypeError("Context must be a finite plain JSON object when provided.");
+    const body = JSON.stringify(request);
     const key = options.idempotencyKey ?? randomUUID();
     const send = () =>
       this.rpc("/v2/check-tasks", {
         method: "POST",
         headers: { "content-type": "application/json", "idempotency-key": key },
-        body: JSON.stringify(request),
+        body,
       });
     let response: Response;
     try {
