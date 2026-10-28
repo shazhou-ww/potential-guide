@@ -343,6 +343,7 @@ test("HTTPS source versions and evidence, HTTP boundary, SDK observers and worke
     assert.ok(elapsed >= 800 && elapsed < 3500, `wall timeout bound ${elapsed}ms`);
     await waitUntil(() => kernel.diagnostics().retirements >= 1);
     await waitUntil(() => kernel.diagnostics().ownedProcesses === 0);
+    await waitUntil(() => kernel.diagnostics().workers === 1);
     const afterKill = await task({ fail: true }, { digest: v3.digest });
     assert.equal((await afterKill.result()).state, "completed");
     assert.equal((await spin.snapshot()).state, "failed");
@@ -357,7 +358,10 @@ test("HTTPS source versions and evidence, HTTP boundary, SDK observers and worke
     const dirty = await task({ dirty: true }, { digest: v3.digest });
     await assert.rejects(
       dirty.result(),
-      (error) => error instanceof TaskProtocolError && error.detail.code === "execution_failed",
+      (error) =>
+        error instanceof TaskProtocolError &&
+        error.detail.code === "cleanup_failed" &&
+        error.detail.stage === "cleanup",
     );
 
     // Normal TLS must reject the same endpoint without the explicit test trust root.

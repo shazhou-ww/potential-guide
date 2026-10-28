@@ -81,6 +81,7 @@ test("real startup and published Host crashes recover once without replaying old
   const pauseEarly = join(root, "pause-before-main");
   const originalSpawn = cp.spawn;
   const hosts = new Map<ChildProcess, Promise<void>>();
+  const errors = new Map<ChildProcess, string>();
   const helpers = new Set<number>();
   const claimed = new Set<ChildProcess>();
   const early = new Set<ChildProcess>();
@@ -118,8 +119,11 @@ if(existsSync(${JSON.stringify(pauseEarly)})){
       if (options.detached) assert.equal(options.cwd, args[1]);
       const child = originalSpawn(command, ["--import", pathToFileURL(preload).href, ...args], {
         ...options,
-        stdio: ["ignore", "ignore", "ignore", "ipc"],
+        stdio: ["ignore", "ignore", "pipe", "ipc"],
       });
+      child.stderr?.on("data", (bytes: Buffer) =>
+        errors.set(child, `${errors.get(child) ?? ""}${bytes.toString("utf8")}`.slice(-8192)),
+      );
       appendFileSync(
         journal,
         `${JSON.stringify({ kind: "host", pid: child.pid, directory: args[1], main, preload, startedAt: new Date().toISOString() })}\n`,
@@ -207,11 +211,25 @@ context.defer(()=>clearTimeout(timer));
         });
       }
       first.ref();
+      const before = hosts.size;
       first.kill("SIGKILL");
       await hosts.get(first);
-      const before = hosts.size;
       const clients = await (recovering ??
         Promise.all(Array.from({ length: 4 }, () => connect(directory))));
+      if (hosts.size !== before + 1)
+        t.diagnostic(
+          JSON.stringify({
+            phase,
+            before,
+            journal: await readFile(journal, "utf8"),
+            processes: [...hosts.keys()].map((child) => ({
+              pid: child.pid,
+              exitCode: child.exitCode,
+              signalCode: child.signalCode,
+              error: errors.get(child),
+            })),
+          }),
+        );
       assert.equal(hosts.size, before + 1, "Concurrent recovery must launch exactly one Host.");
       const replacement = [...hosts.keys()].at(-1);
       assert.ok(replacement);

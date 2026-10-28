@@ -45,10 +45,11 @@ type Job = {
   finishing: boolean;
   lifecycle?: ExecutionLifecycle;
   wallDeadline?: number;
+  failureStage?: "cleanup";
 };
 export interface ExecutionLifecycle {
   started(): void;
-  finished(state: CheckState): void;
+  finished(state: CheckState, stage?: "cleanup"): void;
 }
 export type ActiveCheck = {
   checkId: string;
@@ -232,7 +233,7 @@ export class CheckKernel {
     delete job.request;
     job.expires = Date.now() + this.limits.retentionMs;
     this.transition(job, state);
-    job.lifecycle?.finished(state);
+    job.lifecycle?.finished(state, job.failureStage);
   }
   private publish() {
     set(
@@ -343,6 +344,7 @@ export class CheckKernel {
         if (this.workerSamples.length > 64) this.workerSamples.shift();
         job.finishing = true;
         if (!message.clean || slot.owned.size) {
+          job.failureStage = "cleanup";
           void this.breakSlot(slot, message.error ?? "Worker cleanup failed.");
           return;
         }

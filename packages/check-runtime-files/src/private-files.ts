@@ -61,7 +61,9 @@ using Microsoft.Win32.SafeHandles;
 
 public sealed class PrivatePathException : Exception {
   public string Code;
-  public PrivatePathException(string code) : base(code) { Code=code; }
+  public int NativeCode;
+  public string Context;
+  public PrivatePathException(string code,int nativeCode=0,string context=null) : base(code) { Code=code;NativeCode=nativeCode;Context=context; }
 }
 public static class PrivateHostFiles {
   [StructLayout(LayoutKind.Sequential)]
@@ -107,11 +109,11 @@ public static class PrivateHostFiles {
     public bool protectedAcl;
     public string[] allowed;
   }
-  static void NativeError(int code) {
+  static void NativeError(int code,[System.Runtime.CompilerServices.CallerMemberName] string context=null) {
     if(code==2 || code==3)throw new PrivatePathException("ENOENT");
     if(code==80 || code==183)throw new PrivatePathException("EEXIST");
     if(code==32 || code==33)throw new PrivatePathException("EBUSY");
-    throw new PrivatePathException("EPRIVATE");
+    throw new PrivatePathException("EPRIVATE",code,context);
   }
   static void CheckHandle(SafeFileHandle handle) {
     if(handle.IsInvalid)NativeError(Marshal.GetLastWin32Error());
@@ -304,7 +306,9 @@ public static class PrivateHostFiles {
         for(int n=0;;n++) {
           if(MoveFileExW(Child(root,temporary),Child(root,name),9))break;
           int error=Marshal.GetLastWin32Error();
-          if((error!=32 && error!=33)||n>=99)NativeError(error);
+          // A reader without delete sharing can report access denied instead of a sharing violation.
+          // Retry only this same verified rename; persistent denial still fails closed.
+          if((error!=5 && error!=32 && error!=33)||n>=99)NativeError(error);
           System.Threading.Thread.Sleep(10);
         }
         using(var published=FileHandle(Child(root,name),false)){}
@@ -340,8 +344,10 @@ while($null -ne $line) {
     $error_=$_.Exception
     while($null -ne $error_.InnerException){$error_=$error_.InnerException}
     $code='EPRIVATE'
-    if($error_.GetType().FullName -eq 'PrivatePathException'){$code=$error_.Code}
-    $response=@{id=$request.id;ok=$false;code=$code}
+    $nativeCode=0
+    $context=$null
+    if($error_.GetType().FullName -eq 'PrivatePathException'){$code=$error_.Code;$nativeCode=$error_.NativeCode;$context=$error_.Context}
+    $response=@{id=$request.id;ok=$false;code=$code;nativeCode=$nativeCode;context=$context}
   }
   [Console]::Out.WriteLine((Microsoft.PowerShell.Utility\ConvertTo-Json -Compress -Depth 8 -InputObject $response))
   $response=$null;$value=$null;$request=$null;$expected=$null
@@ -356,9 +362,11 @@ let serial: Promise<unknown> = Promise.resolve();
 let buffered = "";
 let reply: ((line: string) => void) | undefined;
 let failed: ((error: Error) => void) | undefined;
-function privacyError(code = "EPRIVATE") {
+function privacyError(code = "EPRIVATE", nativeCode?: number, operation?: string) {
   return Object.assign(
-    new Error(`Private Host file operation failed (${code}); no insecure fallback is permitted.`),
+    new Error(
+      `Private Host file operation failed (${code}${nativeCode ? `, native ${nativeCode}` : ""}${operation ? `, ${operation}` : ""}); no insecure fallback is permitted.`,
+    ),
     { code },
   );
 }
@@ -462,9 +470,18 @@ function windows<T>(request: Record<string, unknown>): Promise<T> {
               ok: boolean;
               value: T;
               code?: string;
+              nativeCode?: number;
+              context?: string;
             };
             if (response.id !== id) throw privacyError();
-            if (!response.ok) finish(privacyError(response.code));
+            if (!response.ok)
+              finish(
+                privacyError(
+                  response.code,
+                  response.nativeCode,
+                  `${String(request.op)}/${response.context ?? ""}`,
+                ),
+              );
             else finish(undefined, response.value);
           } catch {
             stop();

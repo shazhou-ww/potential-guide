@@ -227,7 +227,7 @@ export class TaskScheduler {
         },
         {
           started: () => this.start(run),
-          finished: (state) => this.finishRun(run, state),
+          finished: (state, stage) => this.finishRun(run, state, stage),
         },
       )
       .then(() => {
@@ -276,7 +276,7 @@ export class TaskScheduler {
         this.attach(task, run);
     }
   }
-  private finishRun(run: Run, result: CheckState) {
+  private finishRun(run: Run, result: CheckState, stage?: "cleanup") {
     if (run.state === "completed" || run.state === "failed") return;
     const stopped = run.state === "stopping";
     run.completed = ++this.sequence;
@@ -298,8 +298,24 @@ export class TaskScheduler {
           this.finishTask(task, {
             state: "failed",
             error: {
-              code: timeout ? "execution_timeout" : "execution_failed",
-              stage: "execute",
+              code: timeout
+                ? "execution_timeout"
+                : result.state === "Completed"
+                  ? "invalid_result"
+                  : stage === "cleanup"
+                    ? "cleanup_failed"
+                    : run.started === undefined
+                      ? "execution_admission_failed"
+                      : "execution_failed",
+              stage: timeout
+                ? "execute"
+                : result.state === "Completed"
+                  ? "verify"
+                  : stage === "cleanup"
+                    ? "cleanup"
+                    : run.started === undefined
+                      ? "schedule"
+                      : "execute",
               message: timeout ? "Execution wall-clock expired." : "Execution or cleanup failed.",
             },
           });
@@ -396,6 +412,7 @@ export class TaskScheduler {
       : [...this.tasks.values()].filter((task) => task.scope === scope);
     if (tasks.length > this.limits.filterTasks)
       this.error(429, "observer_scope_capacity", "Visible scope exceeds subscription capacity.");
+    for (const task of tasks) this.alive(task);
     const listener: Listener = { scope, send, ...(selected ? { ids: new Set(selected) } : {}) };
     this.listeners.add(listener);
     for (const task of tasks)

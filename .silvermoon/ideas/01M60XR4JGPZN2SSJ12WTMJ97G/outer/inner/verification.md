@@ -72,7 +72,31 @@ event digest `2b215b58e537d2aec51888d07707f55bd5c74535`。
    将 TLS-only helper 放在 test-support 曾触发生产入口跨包边界检查，未绕过：
    helper 留在 test 目录，无测试根时显式 skip，由真正建立 CA 的 driver 独立运行，
    driver 强制断言子进程 `pass 1/fail 0/skipped 0`。
-9. `check-seventh.log`：完整复验进行中，最终结果在提交 gate 前补齐。
+9. `check-seventh.log`：完整 `pnpm check` 成功，退出 0。build/lint/typecheck 各
+   25/25，workspace test 图 50/50，根 scripts 36/36；24 个内部包的本地 tarball
+   消费及 npm-objectives/protocol/main/pilot/regulation/coordinator/objectives/config/agents/combined
+   十组独立安装图通过，没有 npm/Release 发布。
+10. 完整检查期间进一步明确 cleanup/verify/schedule 错误阶段，并补初始订阅实际 deadline。
+    冻结源码复验 `check-final.log` 暴露 discovery 旧测试计数锚点的真实竞争：
+    四个 early 恢复调用会在被杀 Host 的 close 通知被观察前启动替代 Host，测试却在
+    await close 后才取 before，实际仅两次 spawn 反被期待为三次。将基线严格移到 kill
+    之前，仍断言恰好一次替代，不放宽条件、不修改生产恢复算法。
+    此后一次 targeted 另见末轮 published 的 `13 != 12` 启动计数波动；
+    增加仅失败时的受控进程 journal 诊断，不放宽断言。紧接的一次及三次连续完整
+    六阶段 crash 重试全部成功（`discovery-race-detail.log`、`discovery-repeat-1..3.log`）。
+    当时没有据重复成功宣称已定位根因，继续完整验证。
+11. `check-gate.log` 再次复现额外启动。受控 journal 证明一个替代进程先 exit 1，而非
+    两个已发布 Host；进一步捕获该进程 stderr，在完整 Host 压力下稳定复现
+    `EPRIVATE, native 5, publish/Publish`（`host-context-repeat-1.log`）。
+    根因为 Windows MoveFileEx 对未开放 delete-sharing 的安全读者可返回 access-denied 5，
+    既有代码只重试 32/33，导致仍满足 owner/ACL 的原子发布被当作永久安全失败。
+    仅对已验证、已加互斥的同一次 rename 增加 bounded 5 重试，仍最多 100 次/每次 10ms；
+    不改 ACL、不降低 no-follow、不把通用 EPRIVATE 当成功。附加诊断只含原生数值和操作名，
+    没有 token、内容或路径。
+    真实 PowerShell FileShare.Read 持有受保护目标文件的回归证明：持续占用时有界失败且旧内容
+    不变，释放读者后准确 expected-content 发布成功。完整 Host 回归连续三次退出 0
+    （`host-fixed-repeat-1..3.log`，每次 44 pass/2 个既有 POSIX skip）。
+    最终完整检查改为 `check-gate-fixed.log`，提交 gate 前核实其退出结果。
 
 扩展后的 targeted v2 命令 11/11 通过（`v2-final-targeted.log`）：
 额外验证终态保留过期通知不反转 completed、迟到执行墙钟 timer 不允许新需求关联旧执行、
@@ -93,5 +117,16 @@ event digest `2b215b58e537d2aec51888d07707f55bd5c74535`。
 V3 `sha256-pguide-check-v1:41a4cfee778d8cd096bec67890adb7efe03b7b1bc2f792103eab863280491503`；
 与前面原始测试源的摘要不同是显式增加 blob 测试字段所致，不是来源缓存漂移。
 固定缓存/共享准确下载保留真正原始 acquisition origin，不将后来调用的 URL 冒充为已确认来源。
+
+最终 targeted `v2-gate-targeted.log` 为 13/13：12 项纯状态机测试，以及真实 TLS/HTTP/
+SDK/多 worker driver（其内部独立子测试 1/1）。新增断言原始不合 schema 的正常输出为
+`invalid_result/verify`，脏清理为 `cleanup_failed/cleanup`，入场失败为 schedule，
+订阅初始快照也实际检查 deadline，不依赖 timer 恰好先运行。强杀不仅确认子进程消失，
+还等待物理 worker 数从两条降到一条，再验证健康 worker 的后继执行。
+
+Windows 平台限制：既有 POSIX executable/SQLite lock、原生 Linux dispatch、区分大小写
+realpath 场景不适用而被既有条件跳过；Windows ACL/native helper 与本项真实清理路径实际执行。
+TLS-only helper 在无 CA 的默认发现中显式 skip，真正 driver 另起受信进程并强制
+`pass 1/fail 0/skipped 0`；本项 targeted 13 项无跳过。不能把这些条件跳过表述为跨平台实测。
 
 以上全部为源码工作树内的自包含实施验证，不宣称 npm、Release 或独立用户部署成功。

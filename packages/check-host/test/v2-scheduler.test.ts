@@ -347,3 +347,39 @@ test("a late wall timer cannot attach new demand to a logically expired Executio
     await f.scheduler.close();
   }
 });
+
+test("invalid normal output is a verification failure, never a business completion", async () => {
+  const f = await fixture();
+  try {
+    const task = f.accept();
+    await f.settle();
+    await f.resolve();
+    f.start();
+    const run = f.runs[0];
+    assert.ok(run);
+    run.lifecycle.finished({ checkId: run.request.checkId, state: "Completed", result: {} });
+    const failed = f.scheduler.snapshot(task.taskId, "owner");
+    assert.equal(failed.state, "failed");
+    assert.equal(failed.error?.code, "invalid_result");
+    assert.equal(failed.error?.stage, "verify");
+  } finally {
+    await f.scheduler.close();
+  }
+});
+
+test("initial event snapshots enforce the actual Task deadline even before its timer runs", async () => {
+  const f = await fixture();
+  try {
+    const task = f.accept({ timeoutMs: 10 });
+    await f.settle();
+    await f.resolve();
+    f.start();
+    f.advance(11);
+    const events: TaskEvent[] = [];
+    f.scheduler.subscribe([task.taskId], "owner", (event) => events.push(event))();
+    assert.equal(events.length, 1);
+    assert.equal(events[0]?.snapshot.error?.code, "task_timeout");
+  } finally {
+    await f.scheduler.close();
+  }
+});
