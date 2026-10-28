@@ -49,6 +49,14 @@ export interface TaskEvent {
   snapshot: CheckTaskSnapshot;
   unavailable?: TaskError;
 }
+export interface CheckObservation extends CheckTaskSnapshot {
+  state: "completed";
+  artifact: ArtifactMetadata;
+  executionId: string;
+  executionStartedAt: string;
+  executionCompletedAt: string;
+  result: Json;
+}
 export const taskTerminal = (state: CheckTaskSnapshot) =>
   state.state === "completed" || state.state === "failed" || state.state === "cancelled";
 export class TaskProtocolError extends Error {

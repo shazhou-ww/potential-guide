@@ -383,3 +383,26 @@ test("initial event snapshots enforce the actual Task deadline even before its t
     await f.scheduler.close();
   }
 });
+
+test("a new weak Task cannot resurrect an execution whose last demand expired before timer dispatch", async () => {
+  const f = await fixture();
+  try {
+    const first = f.accept({ timeoutMs: 10_000 });
+    await f.settle();
+    await f.resolve();
+    f.start();
+    f.advance(10_001);
+    const next = f.accept({ freshness: "completed-after-request", timeoutMs: 10_000 });
+    await f.settle();
+    await f.resolve();
+    assert.equal(f.scheduler.snapshot(first.taskId, "owner").error?.code, "task_timeout");
+    assert.equal(f.cancelled.length, 1);
+    assert.equal(f.runs.length, 2);
+    assert.notEqual(
+      f.scheduler.snapshot(next.taskId, "owner").executionId,
+      f.runs[0]?.request.checkId,
+    );
+  } finally {
+    await f.scheduler.close();
+  }
+});

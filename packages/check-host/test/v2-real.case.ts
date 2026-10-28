@@ -39,6 +39,7 @@ exports.execute=async(subject,context)=>{
   if(subject.cleanup)context.defer(()=>fs.writeFileSync(subject.cleanup,"clean"));
   if(subject.dirty)context.defer(()=>{throw Error("dirty")});
   if(subject.throw)throw Error("private diagnostic secret");
+  if(subject.nonFinite)return {ok:false,version:${JSON.stringify(version)},count,measurement:NaN};
   return {ok:!subject.fail,version:${JSON.stringify(version)},count,...(subject.bytes?{blob:"x".repeat(subject.bytes)}:{})};
 }`;
 async function build(version: string) {
@@ -374,6 +375,12 @@ test("HTTPS source versions and evidence, HTTP boundary, SDK observers and worke
       (error) => error instanceof TaskProtocolError && error.detail.code === "execution_failed",
     );
     assert.ok(!JSON.stringify(await failed.snapshot()).includes("private diagnostic"));
+    const nonFinite = await task({ nonFinite: true }, { digest: v3.digest });
+    await assert.rejects(
+      nonFinite.result(),
+      (error) => error instanceof TaskProtocolError && error.detail.code === "execution_failed",
+    );
+    assert.equal((await nonFinite.snapshot()).state, "failed");
     const dirty = await task({ dirty: true }, { digest: v3.digest });
     await assert.rejects(
       dirty.result(),

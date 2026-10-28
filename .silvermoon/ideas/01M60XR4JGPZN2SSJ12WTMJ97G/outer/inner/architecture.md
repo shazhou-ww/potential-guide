@@ -11,6 +11,10 @@ Scheduler 的受理、版本绑定、匹配、开始、结束、取消、期限�
 来源、文件和 worker IO 在事务之外，只通过身份关联的完成回调进入状态机。
 Kernel 在发送 execute 消息之前回调逻辑开始，不采用 worker 的 started 通知。
 Worker 仍独占一次 Execution；旧代次消息继续由 Kernel 的 generation/checkId 检查过滤。
+受理前将 subject/context/scope/固定观察策略的 canonical JSON 生成兼容 seed；
+版本固定后只以准确 digest + seed 匹配，避免在匹配临界区重复排序/序列化大 subject。
+匹配前也按实际单调时点撤销旧等待者：最后需求已经超期但 timer 尚未派发时，新弱需求
+不能复活本应封口的旧执行，只能预约新执行。
 
 v1 暂时双栈：目录/revision、旧 NDJSON 与内置 npm/Git worker 调用继续明确走 `/checks`。
 新 HTTPS 制品 Objective 与普通新客户端改用 v2；不把旧参数静默解释为 URL。
@@ -33,6 +37,10 @@ SSE 每连接最多 64 条待发送通知及一个待 drain 帧，超限断开�
 避免初始多个大快照在第一次 drain 前必然断连。all 初始可见范围超过 64 条时明确 429。
 连接最多 60 秒，
 重连补当前快照，不承诺事件日志重放。SDK 每 Client 共享一个过滤流，各订阅队列 64 帧。
+Worker 结果/进度只接受有限 plain JSON，最大深度 64，拒绝 NaN、循环、accessor、
+稀疏数组及 Date 等会被传输静默转换的值；清理后再次检查结果。
+SDK `result()` 返回完整 `CheckObservation`，要求准确制品、物理执行身份、时刻与 result
+齐全，缺项明确失败，不使用类型断言或宽泛 JSON 转换伪装证据完整。
 不存在或已过期 Task 返回 404/task_unavailable；打开订阅收到 task_expired 后明确失败。
 
 默认 HTTPS 来源 allowlist 为 GitHub 与 Release assets origins；

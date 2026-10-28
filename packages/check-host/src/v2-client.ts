@@ -2,9 +2,11 @@ import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { parseCheckManifest } from "@potential-guide/check-artifacts";
 import type { HostAddress } from "./client.js";
+import { isJson } from "./json.js";
 import {
   type ArtifactMetadata,
   type CheckRequest,
+  type CheckObservation,
   type CheckTaskSnapshot,
   type TaskEvent,
   TaskProtocolError,
@@ -60,7 +62,8 @@ function snapshot(value: unknown): CheckTaskSnapshot {
       value.state !== "cancelled")
   )
     throw new Error("Invalid task snapshot.");
-  const result = value.result === undefined ? undefined : JSON.parse(JSON.stringify(value.result));
+  const result = value.result;
+  if (result !== undefined && !isJson(result)) throw new Error("Invalid JSON task result.");
   const error = value.error;
   return {
     taskId: value.taskId,
@@ -77,7 +80,7 @@ function snapshot(value: unknown): CheckTaskSnapshot {
     ...(typeof value.executionCompletedAt === "string"
       ? { executionCompletedAt: value.executionCompletedAt }
       : {}),
-    ...(result !== undefined ? { result } : {}),
+    ...(result !== undefined ? { result: structuredClone(result) } : {}),
     ...(object(error) &&
     typeof error.code === "string" &&
     typeof error.stage === "string" &&
@@ -85,6 +88,16 @@ function snapshot(value: unknown): CheckTaskSnapshot {
       ? { error: { code: error.code, stage: error.stage, message: error.message } }
       : {}),
   };
+}
+function complete(state: CheckTaskSnapshot): state is CheckObservation {
+  return (
+    state.state === "completed" &&
+    state.artifact !== undefined &&
+    typeof state.executionId === "string" &&
+    typeof state.executionStartedAt === "string" &&
+    typeof state.executionCompletedAt === "string" &&
+    state.result !== undefined
+  );
 }
 export class CheckTask {
   constructor(
@@ -100,10 +113,13 @@ export class CheckTask {
   cancel() {
     return this.client.cancelTask(this.taskId);
   }
-  async result() {
+  async result(): Promise<CheckObservation> {
     for await (const event of this.events()) {
       const state = event.snapshot;
-      if (state.state === "completed") return state;
+      if (state.state === "completed") {
+        if (!complete(state)) throw new Error("Completed Task evidence is incomplete.");
+        return state;
+      }
       if (taskTerminal(state))
         throw new TaskProtocolError(
           409,
@@ -206,11 +222,10 @@ export class CheckTaskClient {
     return metadata(await (await this.rpc(`/v2/artifacts/${encodeURIComponent(digest)}`)).json());
   }
   async reference(digest: string, id: string) {
-    return (
-      await this.rpc(
-        `/v2/artifacts/${encodeURIComponent(digest)}/references/${encodeURIComponent(id)}`,
-      )
-    ).text();
+    const response = await this.rpc(
+      `/v2/artifacts/${encodeURIComponent(digest)}/references/${encodeURIComponent(id)}`,
+    );
+    return new TextDecoder("utf-8", { fatal: true }).decode(await response.arrayBuffer());
   }
   async *watchTasks(
     tasks: readonly (CheckTask | string)[],

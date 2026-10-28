@@ -56,6 +56,10 @@ last terminal snapshot. Slow consumers are disconnected rather than queued witho
 Each Client multiplexes its watchers over one filtered SSE stream.
 `task.result()` returns the completed snapshot and accurate evidence, even for
 business failure; invocation/cleanup failures, timeout and cancellation reject.
+Its `CheckObservation` type guarantees result, digest/revision, executionId and
+execution timestamps; incomplete completed evidence is rejected. Worker results
+and progress must be finite, plain JSON (maximum depth 64); values such as NaN,
+cycles, getters, sparse arrays or Dates cannot silently become null/strings.
 Reading, disconnecting, cancelling a subscription or `client.close()` does not
 cancel remote Tasks. Only `task.cancel()` withdraws that Task's demand.
 

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { validateCheckValue } from "@potential-guide/check-artifacts";
 import type { ArtifactManager, ManagedArtifact } from "./artifact-manager.js";
 import type { CheckKernel } from "./kernel.js";
@@ -17,6 +17,7 @@ type Task = {
   request: CheckRequest;
   scope: string;
   fingerprint: string;
+  compatibility: string;
   accepted: number;
   deadline: number;
   snapshot: CheckTaskSnapshot;
@@ -108,6 +109,16 @@ export class TaskScheduler {
     }
     if (this.tasks.size >= this.limits.records)
       this.error(429, "task_capacity", "Task capacity exhausted.");
+    const compatibility = createHash("sha256")
+      .update(
+        canonicalJson({
+          subject: normalized.subject,
+          context: normalized.context ?? {},
+          scope,
+          policy: "shared-observation-v2",
+        }),
+      )
+      .digest("hex");
     const accepted = ++this.sequence;
     const now = this.time.now();
     const taskId = randomUUID();
@@ -115,6 +126,7 @@ export class TaskScheduler {
       request: structuredClone(normalized),
       scope,
       fingerprint,
+      compatibility,
       accepted,
       deadline: now + duration,
       snapshot: {
@@ -166,13 +178,7 @@ export class TaskScheduler {
     }
   }
   private compatible(task: Task) {
-    return canonicalJson({
-      digest: task.artifact?.metadata.digest ?? "",
-      subject: task.request.subject,
-      context: task.request.context ?? {},
-      scope: task.scope,
-      policy: "shared-observation-v2",
-    });
+    return `${task.artifact?.metadata.digest ?? ""}:${task.compatibility}`;
   }
   private qualifies(task: Task, run: Run) {
     return task.snapshot.freshness === "started-after-request"
@@ -180,8 +186,11 @@ export class TaskScheduler {
       : (run.completed ?? this.sequence + 1) > task.accepted;
   }
   private match(task: Task) {
+    if (!this.alive(task)) return;
     const key = this.compatible(task);
     for (const run of this.runs.values()) {
+      for (const waiter of [...run.tasks]) this.alive(waiter);
+      if (!this.alive(task)) return;
       if (
         run.state === "running" &&
         run.deadline !== undefined &&
@@ -203,6 +212,7 @@ export class TaskScheduler {
     const reserved = [...this.runs.values()].find(
       (run) => run.key === key && run.state === "reserved",
     );
+    if (!this.alive(task)) return;
     if (reserved) {
       this.attach(task, reserved);
       return;

@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import { compileFunction } from "node:vm";
 import { parentPort, workerData } from "node:worker_threads";
 import type { Json, Subject, WorkerModule } from "./types.js";
+import { isJson } from "./json.js";
 
 const port = parentPort;
 if (!port) throw new Error("Worker runner requires a MessagePort.");
@@ -183,13 +184,17 @@ port.on("message", async (message) => {
       signal: controller.signal,
       data: message.context ?? {},
       deadline: message.deadline,
-      progress: (value) => send("progress", { value }),
+      progress: (value) => {
+        if (!isJson(value)) throw new Error("Progress must be finite JSON.");
+        send("progress", { value });
+      },
       defer: (cleanup) => cleanups.push(cleanup),
     });
-    if (result === undefined) throw new Error("Worker returned no JSON result.");
+    if (!isJson(result)) throw new Error("Worker must return bounded finite JSON.");
     if (Buffer.byteLength(JSON.stringify(result)) > messageBytes)
       throw new Error("Result exceeds limit.");
   } catch (cause) {
+    result = undefined;
     error = String(cause);
   } finally {
     for (const cleanup of cleanups.reverse()) {
@@ -211,6 +216,10 @@ port.on("message", async (message) => {
       for (const timer of pendingTimers) clearTimeoutOriginal(timer);
       pendingTimers.clear();
     }
+  }
+  if (result !== undefined && !isJson(result)) {
+    result = undefined;
+    error = "Worker cleanup changed its result to invalid JSON.";
   }
   send("done", {
     result,

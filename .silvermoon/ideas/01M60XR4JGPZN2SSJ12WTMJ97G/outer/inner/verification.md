@@ -107,8 +107,21 @@ event digest `2b215b58e537d2aec51888d07707f55bd5c74535`。
     shared-files 2/2，Host 44 pass/2 个既有 POSIX skip，根 scripts 36/36，
     十组打包安装图通过。随后最后的 legacy/32 制品上限/cache_invalid 边界
     `v2-complete-targeted.log` 13/13，无跳过。对全部冻结源码正式复验
-    `check-gate-final.log`；该命令开始后不再修改源码、配置或 package 文档，
-    只在它完成后填写本证据与 ledger。
+    `check-gate-final.log`；此轮之后补齐下面的有限 JSON/完整观察结果边界，故还需对
+    最终稳定快照重跑完整检查，不把中间通过当作最终 gate。
+14. SDK `result()` 进一步使用明确的 `CheckObservation` 保证准确证据字段，拒绝缺项的
+    completed。Worker/SDK 不再用 JSON stringify/parse 的隐式转换掩盖无效业务值；
+    真实 worker 在允许任意附加属性的 resultSchema 下返回 NaN，现明确 failed/reject，
+    不再可能被传成 completed/null。纯 guard 回归覆盖 Date、循环、getter（不会被调用）、
+    symbol、稀疏数组及深度边界，正常共享子对象与 null-prototype JSON 可通过。
+    `v2-json-complete.log` 14/14、独立真实 HTTPS 子测试 1/1 通过，cli-runtime build 成功。
+    完整 Host `host-json-regression.log` 为 45 pass/2 个既有 POSIX skip，真实业务消费者
+    `business-json-regression.log` 通过，说明没有靠只测替身跳过实际旧调用链。
+15. SDK 文本 Reference 改为 fatal UTF-8 解码，不能把损坏字节替换为看似原始内容；
+    额外 HTTP 边界单元测试证明缺项 completed 与坏 UTF-8 均 reject，且只发送 GET，
+    不新建或取消 Task。补上“旧 Task 真正超期但 timer 未派发，新弱 Task 先解析”的
+    确定性竞争，证明旧 Execution 不被新需求复活；兼容 key 的 canonical seed 预先计算。
+    最终相关组合 `v2-final-races.log` 16/16 无跳过（含真实 HTTPS 子进程 1/1）。
 
 扩展后的 targeted v2 命令 11/11 通过（`v2-final-targeted.log`）：
 额外验证终态保留过期通知不反转 completed、迟到执行墙钟 timer 不允许新需求关联旧执行、
