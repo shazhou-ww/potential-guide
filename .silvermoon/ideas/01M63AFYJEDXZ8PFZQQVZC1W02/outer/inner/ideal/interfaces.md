@@ -70,6 +70,7 @@ pending 和超时为派生判断，不属于 stage；完成与超时可同时成
   "requestId": "01M64000000000000000000001",
   "taskId": "01M64000000000000000000002",
   "seriesId": "01M64000000000000000000002",
+  "stage": "initial",
   "receivedAt": "2026-10-29T08:00:00.000Z",
   "eligibleAt": "2026-10-29T08:00:10.000Z",
   "deadlineAt": "2026-10-29T08:00:40.000Z",
@@ -77,9 +78,9 @@ pending 和超时为派生判断，不属于 stage；完成与超时可同时成
 }
 ```
 
-此例尚无内驱过程，暂以省略 stage 表达，初始位置最终编码待确认。
+此例尚无内驱过程，显式使用 stage:initial；stage 不省略。
 在 08:00:00 可计算为时间等待；到 08:00:10 时间条件满足，但没有引擎推进事实时，
-不能只因到点补造 preparing 或 preparation.startedAt。
+仍为 initial，不能只因到点补造 preparing 或 preparation.startedAt。
 
 ### 3.2 实际执行中
 

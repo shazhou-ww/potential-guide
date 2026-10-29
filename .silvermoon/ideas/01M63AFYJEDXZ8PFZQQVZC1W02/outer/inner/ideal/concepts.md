@@ -92,21 +92,23 @@ preparation
 条件 false 是等待，不是求值故障；正常业务结果“不满足”仍是 completed。
 类型适配器的临时失败是否重试由明确政策决定，不能直接把所有异常转成最终失败。
 空条件集合直接满足，不强造 readiness.satisfiedAt。
-尚未进入内驱过程时没有进行中的 stage；本轮示例省略 stage 表示这一点，最终初始位置
-的编码仍待确认。到 eligibleAt 不自动写出 preparing，只有引擎推进事实支持时才进入。
+尚未进入内驱过程时显式为 stage:initial，不省略 stage。initial 只表示引擎尚未推进，
+与是否到达 eligibleAt 无关；到点后若仍未推进就仍为 initial，不能自动写出 preparing。
+initial 是非终结内驱位置，可与时间等待、超时或 canceledAt 分别组合；初始取消后
+冻结为 initial，不伪造准备事实。引擎实际推进后才进入由事实支持的后续位置。
 
 ### stage 与多维投影
 
 Snapshot 不输出独立 state；内驱位置、外部取消及时间边界分别保留：
 
 ```text
-内驱位置 = 引擎事实所支持的 stage（尚未开始时的编码待定）
+内驱位置 = 引擎事实所支持的 stage（尚未开始时为 initial）
 外部取消 = canceledAt 所记录的事实
 时间等待 = 观察时间尚未到 eligibleAt
 期限判定 = 有效完成时间（未完成时为观察时间）与 deadlineAt 的比较
 ```
 
-preparing/blocked/queued/running 是非终结内驱位置，completed 和四种过程失败表示内驱结局。
+initial/preparing/blocked/queued/running 是非终结内驱位置，completed 和四种过程失败表示内驱结局。
 pending、cancelled、timed_out 都不是 stage。未知 stage 或非法组合明确报错。
 超时不产生互斥内驱结局、不自动设置 canceledAt 或 timedOutAt；允许 running 且超时，
 随后 completed 且超时。按时完成的 Task 在未来查询仍是按时完成。
@@ -212,8 +214,8 @@ stage 是内驱事实的投影，canceledAt 是固定事实；时间条件用同
 ### 实施前决策
 
 1. **三维边界：** 恰好等于 deadlineAt 的期限判定、完成/取消同刻仲裁、失败/取消的时间
-   投影、初始内驱位置编码，以及替代单一 deriveState/isFailed/isTerminated 的查询接口。
-   pending/timed_out 不属于 stage、超时可完成已确定，不重新开放。
+   投影，以及替代单一 deriveState/isFailed/isTerminated 的查询接口。
+   初始位置为 initial、pending/timed_out 不属于 stage、超时可完成已确定，不重新开放。
 2. **条件有效性：** 采用证据的有效期、重查、失效、重试边界，以及递归条件继承。
 3. **执行恢复：** 崩溃时 running 如何处置、幂等副作用和外部执行引用的责任；不默认自动重跑。
 4. **存储与流：** 本地持久实现的介质/事务、跨 Task/Execution 读取边界、保留、分页水位与 SSE 续读。
