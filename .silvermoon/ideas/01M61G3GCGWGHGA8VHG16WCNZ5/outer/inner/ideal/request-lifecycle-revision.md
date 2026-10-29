@@ -11,6 +11,8 @@ Execution → 持久化恢复 → Events/SDK 的修改对象顺序组织。
 字段使用讨论中的概念名，不提前承诺新 wire schema 的版本、大小写或 SDK 签名。
 各节区分已确认方向与待确认建议；本文件为 [Idea.md](./Idea.md) 的 supporting document，
 不是第四份契约。[objective-service.md](./objective-service.md) 保留组合观察的其余设计。
+请求、响应、事件及恢复记录的完整 JSON 对照见
+[关键数据结构 Before / After](./request-data-examples.md)，其中 After 的具体字段名均为草案。
 
 ## 1. Request：统一资格时间与系列身份
 
