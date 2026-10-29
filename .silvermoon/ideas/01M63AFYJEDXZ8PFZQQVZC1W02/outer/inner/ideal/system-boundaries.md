@@ -177,7 +177,8 @@ task-engine 不导入 HTTP/存储包；task-protocol 不导入其他三个包。
 第一版本地持久参考实现采用 SQLite，由 task-engine-storage 实现 Store 端口；
 task-engine/task-protocol 不直接依赖 SQLite 或其驱动。事件追加、请求幂等索引和
 Series 后继关联在要求原子性的操作中使用同一数据库事务，避免成功记录与索引分裂。
-具体驱动、表结构、事务隔离及耐久配置在实施契约落实，不因选择 SQLite 就宣称已满足
+本地文件采用 WAL、foreign_keys=ON、synchronous=FULL 和单主动 Engine 所有者；
+具体驱动、表结构、事务及所有权实现在实施契约落实，不因选择 SQLite 就宣称已满足
 恢复保证。文件日志不作为本轮另一个持久后端，不扩展分布式部署。
 内存参考 Store 和虚拟时钟可从 task-engine 的独立 testing 入口提供，明确无跨进程持久性，
 不为两种测试类型或每个 Store 端口新增包。持久适配使用同一端口一致性测试。

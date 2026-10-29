@@ -10,7 +10,8 @@
 ## 1. 通用 Request 与具体类型
 
 通用部分包含 requestId、type、executionMatch、可选 eligibleAt/seriesId/recurrence
-及本请求 timeoutMs；示例显式给出 executionMatch，不借示例决定其省略/默认值。
+及本请求 timeoutMs；executionMatch 默认 started-after-eligible，示例显式给出。
+默认值在受理的契约绑定中固定，原始 Request 查询不反写省略字段。
 type 是判别字段，应用将已注册类型组合为 discriminated union；
 引擎内置支持 check，其他类型包括 probe/regulate 通过宿主注册扩展，不固定全集，
 也不接受任意未注册字符串；每种类型统一注入 TaskType，包含 validate、可选 prepare、
@@ -67,7 +68,7 @@ TaskType.equals 比较完整类型业务 Input，而非完整 Request；此例�
 顶层身份和时间由核心定义，过程对象只放已成立的有界事实。
 stage 仅是内驱位置，外界信号 canceledAt 与时间约束平行表达，不重复 state/type/Request。
 pending 和超时为派生判断，不属于 stage；完成与超时可同时成立。公共分类函数应分别
-回答各维度的问题，不用单个互斥状态值掩盖迟到完成；函数形状仍待收敛。
+回答各维度的问题，不用单个互斥状态值掩盖迟到完成；采用 concepts 中的独立纯查询函数。
 结果保持类型的业务形状，通用接口不能将所有 result 强制转换成 CheckResult。
 
 ### 3.1 已受理，时间尚未到
@@ -188,8 +189,8 @@ echo 没有额外条件，不伪造 readiness 通过时间。
 
 该 Task 已取消、其需求已撤销，并未因此产生执行失败事实。
 这里 cancelled 只描述第二推动力，不是 stage，也不是三维统一枚举的定义。
-之前的 deriveState/isTerminated/isFailed 签名须按新维度重新收敛，不能用其判断超时
-等于过程失败或实际结束。
+之前的 deriveState/isTerminated/isFailed 统一分类不再作为本设计接口，改用 concepts
+定义的独立查询，不能用超时判断代替过程失败或实际结束。
 取消未消费的规划权，但本例采用 eligible 锚点，如果已创建下一轮则不能回溯取消它。
 
 ### 3.5 超时后正常完成
@@ -270,7 +271,7 @@ Checkpoint 可引用它，但不能只保留进程内 closure 而声称可恢复
 ## 5. 事件载荷
 
 下面每个 JSON 都是一条完整示例事件，不声称这些片段包含一个任务的完整历史。
-cursor 仅为不透明位置示意，事件身份、跨流读取水位与传输续读协议仍需收敛。
+cursor 仅为不透明位置示意；正式分页和续读使用本节末尾定义的同一事实位置语义。
 
 ### 5.1 业务进展
 
@@ -385,7 +386,7 @@ JSON 字段。接口必须可验证当前 Request/Task、具体条件、Check Ta
 | cancelTask | POST /tasks/{taskId}/cancel | 显式取消需求，不代替断开 SSE |
 | getRequest | GET /requests/{requestId} | 原始意图或明确的审计/不可用响应 |
 | readHistory | GET /event-history?taskId=... | 有界分页，不等于实时连接 |
-| subscribe | GET /events?taskId=... | 观察流，精确初始水位与续读语义须在实现前定义 |
+| subscribe | GET /events?taskId=... | 观察流，按下文的初始水位与事实位置续读 |
 
 HTTP body 保留 type，只有 requestId 移入 header；这与核心 submit 输入完全等价。
 executionMatch 同样保留在 body，类型提供的 equals 不将其纳入业务输入比较。
@@ -417,4 +418,25 @@ body 解析失败仍用合法 header 身份审计，不伪造完整 Request 或�
 
 HTTP 重连、分页面和实时流交接必须来自同一事实边界；
 不能用 snapshot.timestamp 作为严格游标，也不能把 task.updated 回灌 reducer。
-身份授权、速率/字节限制和历史保留应明确，具体协议收敛前不宣称具备无限历史或无缝续读能力。
+身份授权、速率/字节限制和历史保留应明确，不宣称无限历史。
+
+### 分页、SSE 与保留规则
+
+历史查询首轮捕获一致水位 W，分页只读取该过滤条件下不超过 W 的事件，按提交序号排序；
+续页游标绑定存储域、过滤条件、水位及已读位置，不使用 occurredAt/timestamp 排序去重。
+cursor 对外不透明，每次读取重新授权，游标不是访问凭据。数据库替换或过滤条件变化
+不得无声复用旧游标；无效游标返回明确错误。
+
+新订阅先在一致边界捕获 snapshot 与水位 W，再接续 W 后的事实；两步之间的事件必须
+保留/补读，不能依赖无锁的“先查询后注册”。续订从最后确认的位置补读，允许重复投递，
+按事件位置去重；不承诺 exactly-once 传输，也不通过重连新建 Task。
+Last-Event-ID/续读令牌使用此事实位置，不使用快照生成时间。
+
+task.updated 和时间经过产生的快照通知不是持久事实，不能推进事实位置或回灌 reducer；
+重连时可重新投影当前时间状态，不承诺重放每次纯时间通知。若未来增加帧序号，
+必须与持久事实 cursor 区分。慢消费者的缓存必须有界，超限断流并允许按游标补读。
+
+保留策略由宿主显式配置并持久记录清理水位；超出保留范围的游标返回 410/history_expired，
+不伪装为空页或从当前头静默继续。仍被未完成任务、未处理后继、有效幂等窗口或恢复所需
+的事实不得删去。活跃/恢复所需记录不能为了满足容量上限被驱逐；容量不足应背压或拒绝
+新准入。内存缓存和持久历史的保留不混为一谈；准确窗口数值在实施验证中固定。
