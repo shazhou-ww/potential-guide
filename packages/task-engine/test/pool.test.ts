@@ -53,6 +53,64 @@ function controllable() {
   return { work, result, exited, cleanup: () => cleanup };
 }
 
+for (const allowB of [true, false]) {
+  test(`Pool preserves replacement wakeups during another reclaim (authorize B=${allowB})`, async () => {
+    const cleanupA = deferred<void>();
+    const cleaningA = deferred<void>();
+    const starts: string[] = [];
+    let authorizationsB = 0;
+    const pool = createExecutorPool<string>({
+      resources: ["a", "b"],
+      resourceKey: (input) => input,
+      run(input) {
+        const firstA = input === "a" && !starts.includes("a");
+        starts.push(input);
+        const work = controllable();
+        if (firstA)
+          work.work.cleanup = async () => {
+            cleaningA.resolve();
+            await cleanupA.promise;
+          };
+        return work.work;
+      },
+    });
+    const a = await pool.execute("a", permitOptions().options);
+    const b = await pool.execute("b", permitOptions().options);
+    const replacingA = pool.execute("a", permitOptions(a.executionId).options);
+    await cleaningA.promise;
+    const replacingB = pool.execute(
+      "b",
+      permitOptions(b.executionId, () => {
+        authorizationsB++;
+        return allowB;
+      }).options,
+    );
+    void replacingB.catch(() => {});
+    try {
+      assert.equal(authorizationsB, 0);
+      cleanupA.resolve();
+      await replacingA;
+      await flush();
+      assert.equal(authorizationsB, 1, "new replacement must be reconsidered without an idle slot");
+      if (allowB) {
+        await replacingB;
+        assert.deepEqual(starts, ["a", "b", "a", "b"]);
+        assert.equal(pool.stats.queued, 0);
+      } else {
+        await flush();
+        assert.equal(authorizationsB, 1, "denied work must not hot-spin");
+        assert.deepEqual(starts, ["a", "b", "a"]);
+        assert.equal(pool.stats.queued, 1);
+      }
+      assert.equal(pool.stats.idle, 0);
+    } finally {
+      cleanupA.resolve();
+      await pool.close();
+      await Promise.allSettled([replacingA, replacingB]);
+    }
+  });
+}
+
 test("Pool uses compatible free capacity before a supplied replacement candidate", async () => {
   let authorizations = 0;
   const works: ReturnType<typeof controllable>[] = [];

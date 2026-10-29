@@ -168,6 +168,18 @@ export function project(facts: Facts, taskId: string, now: number): TaskSnapshot
   )
     fail("invalid_fact", "Illegal stage/fact combination.");
   snapshot.timestamp = at(now);
+  if (!snapshot.canceledAt && !snapshot.termination && snapshot.execution) {
+    const execution = facts.executions[snapshot.execution.executionId];
+    if (!execution) fail("history_gap", "Missing bound Execution.");
+    if (execution.failedAt) snapshot.execution.failedAt = execution.failedAt;
+    if (
+      execution.completedAt &&
+      (task.binding.executionMatch === "started-after-eligible"
+        ? execution.startedAt > snapshot.eligibleAt
+        : execution.completedAt > snapshot.eligibleAt)
+    )
+      snapshot.execution.completedAt = execution.completedAt;
+  }
   if (snapshot.stage === "completed" && !snapshot.canceledAt && snapshot.execution) {
     const execution = facts.executions[snapshot.execution.executionId];
     if (!execution || execution.result === undefined) fail("history_gap", "Missing result.");

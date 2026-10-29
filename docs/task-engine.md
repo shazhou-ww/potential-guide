@@ -66,6 +66,8 @@ can provide the needed key, revalidates generation/owners with Engine, seals the
 old execution, and confirms exit/cleanup before a fresh identity can start.
 Task timeout alone does not stop running work. Independent execution wall limits,
 last-owner cancellation and host close retain reclamation control.
+Pool wakeups arriving during reclamation are replayed even when no slot is idle;
+denied replacements wait for another real wakeup rather than busy-looping.
 Wall limits use relative Clock scheduling, independently of business UTC clock
 adjustments. A tracking identity or start time cannot be supplied by a Request.
 
@@ -76,6 +78,11 @@ Preparation and resource waiting consume the same eligible-anchored budget.
 Expiration retracts unstarted work; running work may complete late. Cancellation
 freezes the Task, not another owner's Execution. A durable eligible final fact
 wins over a later cancel even if Task processing is delayed.
+For an uncanceled, bound Task, time projection immediately uses the durable
+Execution finish/failure timestamp. Until Task adjudication is committed, its
+stage remains unchanged and no Task result or termination is fabricated. Thus
+late observation followed by settlement cannot turn an on-time finish into a
+temporary timeout and then revoke it.
 
 Recurrence requires explicit `eligible` or `terminated` anchor and positive
 periodMs. Select the strictly future point on the original lattice and skip

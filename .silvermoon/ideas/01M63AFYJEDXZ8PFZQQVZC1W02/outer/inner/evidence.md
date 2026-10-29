@@ -25,7 +25,7 @@ pnpm exec tsx --test packages\task-protocol\test\*.test.ts packages\task-engine\
 ```
 
 2026-10-29，Windows、Node `v24.12.0`、pnpm `11.22.0`：
-上述编译退出 0；四包 **55 tests / 55 pass / 0 fail / 0 cancelled / 0 skipped**。
+上述编译退出 0；评审修复后的四包 **63 tests / 63 pass / 0 fail / 0 cancelled / 0 skipped**。
 SQLite 的 ExperimentalWarning 如实保留，不是跳过条件。
 
 | 证明点 | 输入与断言 |
@@ -80,3 +80,25 @@ SQLite 的 ExperimentalWarning 如实保留，不是跳过条件。
 保留采用整个不活跃引用闭包清理，持续活跃 Series 可触发背压；不承诺无限历史或 SLA。
 Series 帧快照有 pageSize 上限，事实仍逐页完整续读。详细数值与端口见 design.md。
 本轮未运行独立生产监听器、Outer 消费者部署或任何发布动作。
+
+## 父代理门禁回归修复
+
+父代理独立验证原候选 `d0aef76083675f87b063b4d6169af0906be30fea` 的 55 条目标测试及
+完整 `pnpm check` 通过，但拒绝 acceptInner：覆盖不足不能证明以下两个竞态正确。
+本轮未改 Ideal、未代验收或开展 Outer。
+
+1. **Pool 丢失替换唤醒。** A/B 两个资源都被占用，A 替换等待 cleanup 时排入 B 替换；
+   原 pump 的 finally 只检查 idle，因此 B 不能自行开始授权。现用一次性 pumpRequested
+   标记保留活动扫描期间的实际唤醒，退出后再扫描一次；没有新唤醒/可用槽位不持续调度。
+   `pool.test.ts` 分别验证 B 授权成功和拒绝：只释放 A 的 cleanup 后 B 授权恰好一次，
+   成功路径两个替换均启动且 idle=0，拒绝路径保持 queued=1、不热自旋。
+2. **可靠结束后短暂误判超时。** `projection-races.test.ts` 在 .001 提交 Execution 最终事实，
+   Task deadline=.100，在 .102 查询且未运行 coordinator，覆盖成功和失败；
+   同时覆盖 .101 真迟到、正常完成匹配边界、未绑定结果及共享执行取消先行。
+   project 只对未取消已绑定 Task 加入适用的可靠结束时间，不写事件、不伪造
+   Task termination/result/stage。原 Request.executionMatch 仍控制正常结果的适用性，
+   取消边界不推进。cancel 对先已可靠结束者仍返回 task_finished；裁决前后期限结论相同。
+
+先添加回归、未修代码时，两个目标文件共 **19 tests / 13 pass / 6 fail**，准确复现问题；
+修复后四包 **63/63** 通过、无跳过。最终候选须再次完整执行 `pnpm check` 退出 0 才同步并
+重新 submitInner；验收仍由父代理负责。原提交事件保留，新提交绑定更新后的准确 Inner tree。

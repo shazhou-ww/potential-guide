@@ -60,6 +60,7 @@ export class ExecutorPool<Prepared> {
   private slots: Slot[];
   private waiting: Waiting<Prepared>[] = [];
   private pumping = false;
+  private pumpRequested = false;
   private closed = false;
   private readonly maxQueue: number;
   private readonly graceMs: number;
@@ -116,8 +117,13 @@ export class ExecutorPool<Prepared> {
     this.options.onError?.(error);
   }
   private async pump(): Promise<void> {
-    if (this.pumping || this.closed) return;
+    if (this.closed) return;
+    if (this.pumping) {
+      this.pumpRequested = true;
+      return;
+    }
     this.pumping = true;
+    this.pumpRequested = false;
     try {
       for (const waiting of [...this.waiting]) {
         try {
@@ -172,9 +178,10 @@ export class ExecutorPool<Prepared> {
       this.pumping = false;
       if (
         !this.closed &&
-        this.waiting.some((waiting) =>
-          this.slots.some((slot) => slot.state === "idle" && slot.key === waiting.key),
-        )
+        (this.pumpRequested ||
+          this.waiting.some((waiting) =>
+            this.slots.some((slot) => slot.state === "idle" && slot.key === waiting.key),
+          ))
       )
         queueMicrotask(() => {
           void this.pump();
