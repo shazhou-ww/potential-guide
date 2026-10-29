@@ -37,6 +37,8 @@ snapshot 不内嵌完整 Artifact，外部消费者按准确 artifactRef 查询�
 
 真实系列事件和故障重启实验表明 eligible/freshness/timeout 一致，
 重复规划不会多留 pending，取消计划不会复活，恢复不重复生后继或悄悄换版；
+错过多个周期后 eligible 后继仍落在原节拍的下一个严格未来点，
+不从恢复/处理时刻重新加周期；已有后继不因旧 Task 超时被重复创建或改期。
 语言与进展一致，退出后无操作遗留进程，不宣称正式发布。
 Regulation 制品就绪但条件未通过为 blocked，治理结束后仍须通过重查才推进，等待不改写 eligible/deadline；
 未授权治理不能由条件检查结果自动获得许可。

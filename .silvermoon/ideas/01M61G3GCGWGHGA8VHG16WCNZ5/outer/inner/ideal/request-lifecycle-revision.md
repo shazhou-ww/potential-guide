@@ -385,7 +385,7 @@ Before 保留旧形状以便对照；新设计虽然沿用 recurrence 命名，
 
 | 候选参数值 | 规划触发 | 下一轮 eligible | 主要效果 |
 |---|---|---|---|
-| `eligible`（推荐默认） | 本轮到达时间资格边界、离开 pending 时原子消费规划权，不等待制品/条件就绪 | 本轮 `eligible_at + period`，错过周期另按未来后继规则 | 固定周期；可有重叠需求，再按 freshness 共享 Execution。 |
+| `eligible`（推荐默认） | 本轮到达时间资格边界、离开 pending 时原子消费规划权，不等待制品/条件就绪 | 保持原节拍，取严格晚于本次规划时刻的第一个周期点；准时处理即 `eligible_at + period` | 固定周期；可有重叠需求，再按 freshness 共享 Execution。 |
 | `terminated` | 本轮 Task 正常完成、失败或超时终结 | 本轮 Task `terminated_at + period` | 本轮结束后间隔；失败不切断系列，自身递归轮次不重叠。 |
 
 两种模式每轮都只采用一个锚点，不能 eligible 触发一次、终结再触发一次。
@@ -412,7 +412,27 @@ eligible 模式应按资格节拍推进，不随实际 worker 开始时间漂移
 不按错过的周期批量补建，也不反复生成过去 eligible 的后继变相追赶。
 处理一次后仅安排一个未来后继。原 `eligible_at + timeout` 已过时该轮超时终结，
 不重置预算来强行执行；系列继续安排未来轮次。
-后继保持原节拍的下一个未来点，还是从本次处理时刻加周期，稍后细化。
+eligible 锚点的后继保持原节拍，选择严格晚于本次规划时刻的第一个周期点，
+不从处理时刻重新加周期而使节拍漂移；恰好落在周期点时选择下一个点，不生成即时追赶轮次。
+
+设本轮资格时间为 e，周期为 P（P > 0），实际规划裁决使用的服务端时间为 t（t >= e）：
+
+```text
+k = floor((t - e) / P) + 1
+nextEligibleAt = e + k * P
+```
+
+这些是计算变量，不是新增 Request 或 snapshot 字段。nextEligibleAt > t，
+且它前一个原节拍点不晚于 t；即一次跳过所有已错过的点，不创建被跳过的 Task。
+例如 e=03:20:00、P=60 秒，t=03:25:20 时下一轮为 03:26:00，
+不是 03:26:20；t 恰好为 03:26:00 时下一轮为 03:27:00。
+新 Task 有自己的 eligibleAt + timeout；原 Task 的 eligibleAt/deadlineAt 不重置。
+
+此规则仅在本轮仍拥有且尚未消费后继规划权时计算新的候选。
+若已经规划后继，不因本轮稍后超时或重复处理而再生成、重新选点或修改既有 eligibleAt；
+已有 pending 的冲突仍按唯一 pending 仲裁保留原项，不借跳过周期绕开幂等与系列约束。
+实际 worker 启动、条件就绪或容量可用时间不成为新的周期锚点；
+容量不足如何处置仍是独立策略，不把“下一个时间点”解释为预测资源可用时间。
 
 **条件阻塞不再占 pending：** 有条件的 Task 本轮可在 preparing/blocked/queued，下一轮仍可占
 唯一 pending 槽位。因此旧草案的“条件等待与后继争夺 pending 槽位”冲突已消除。
@@ -578,11 +598,12 @@ executionId 查询读取授权的执行事实；seriesId 查询追踪系列内�
 可选选版 fallback、全部未完成 Task 恢复和动态 series events。
 
 本轮已确认 Request ID 与幂等 ID 同义、Task ID 独立、默认 series 为 Task ID、
-eligible 后才正式 PREPARING、terminated 包含失败/超时续作，以及错过周期只处理一次。
+eligible 后才正式 PREPARING、terminated 包含失败/超时续作，
+以及错过周期只处理一次并按原节拍选择下一个严格未来点。
 剩余前序问题：
 
 1. 默认递归锚点，以及 terminated 模式无 pending 时是否需要可停止的预留计划。
-2. 错过周期后下一个未来点的选法、服务预优化限额、旧版选择与陈旧上限。
+2. 服务预优化限额、旧版选择与陈旧上限。
 3. series 跨模块作用域，是否需要独立的调用方动态依赖固定能力。
 4. 条件证据 freshness/有效期、首次检查与重查策略、后继条件继承及积压容量策略。
 5. 是否扩展 preparing/blocked/queued 的取消权限；当前仍为 pending-only。

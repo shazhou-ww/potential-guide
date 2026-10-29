@@ -22,6 +22,8 @@
 恢复所有未完成 Task，保持独立需求、共享执行及资源清理边界。
 落实幂等 Request/独立 Task 身份、eligible 后 PREPARING、eligible/terminated 递归、
 失败超时续作及错过周期不补齐；恢复细节后续讨论，不以实现细节代替设计决定。
+eligible 后继保持原节拍，取严格晚于本次规划时刻的第一个周期点，
+不以处理/执行时间重置节拍；已规划后继不因旧轮超时重复生成或改期。
 任意抽象 Task 的 prerequisites 用独立子 Check 求值，时间与条件分别仲裁；结构化治理需求交由
 Coordinator 按授权处理，完成治理后重查，服务保留 origin 因果审计。
 按时间、artifacts、prerequisites、执行资源优先级投影
@@ -74,6 +76,8 @@ updated 不要求 digest 改变，后继快照和选版历史事件使用同一�
 
 确定性时间与竞争测试证明 eligible、递归锚点、唯一 pending、取消/激活竞态及
 freshness 归并成立；故障恢复测试证明不重复规划、不刷新期限、不复活终态。
+覆盖 eligible 准时、跨多个周期延迟及恰好到点的选点，
+验证原节拍对齐、严格未来、跳过历史轮次，且与 terminatedAt + period 的模式明确区分。
 条件等待测试证明父 Regulation blocked 不阻塞条件子 Check、eligible 后等待消耗预算，
 检查故障不冒充不通过、治理结束不冒充条件通过，取消清理不伤共享 owner。
 

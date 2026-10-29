@@ -1251,8 +1251,8 @@ After 预优化可以很早开始；本 Check 请求未带 prerequisites，Task 
 
 Before 的 Check/Probe 无未来 pending 调度与递归，超时只返回单轮 failed。
 After 示例中 Task 于 03:19:00Z 接收，eligible 为 03:20:00Z，
-deadline 为 03:20:30Z，但直到 03:25:00Z 才处理；它只代表一个过期 Task，
-不能补建 03:21/22/23/24Z 四个历史 Task，也不能重置该轮 timeout。
+deadline 为 03:20:30Z，但直到 03:25:20Z 才处理；它只代表一个过期 Task，
+不能补建 03:21/22/23/24/25Z 五个历史 Task，也不能重置该轮 timeout。
 
 **Before：** 30 秒受理期限已过后的单轮失败。
 
@@ -1283,7 +1283,7 @@ termination.lastState=pending 只说明此前位置，不是失败过程分类�
   "seriesId": "01M60000000000000000000013",
   "state": "timed_out",
   "termination": {
-    "terminatedAt": "2026-10-29T03:25:00.000Z",
+    "terminatedAt": "2026-10-29T03:25:20.000Z",
     "error": {
       "code": "task_timeout",
       "stage": "schedule",
@@ -1294,14 +1294,16 @@ termination.lastState=pending 只说明此前位置，不是失败过程分类�
   "receivedAt": "2026-10-29T03:19:00.000Z",
   "eligibleAt": "2026-10-29T03:20:00.000Z",
   "deadlineAt": "2026-10-29T03:20:30.000Z",
-  "timestamp": "2026-10-29T03:25:00.000Z"
+  "timestamp": "2026-10-29T03:25:20.000Z"
 }
 ```
 
-此失败不停止系列。仅生成以下一个未来后继创建 Request，
-使用新的幂等 ID `01M60000000000000000000012`，成功后分配新的 Task ID并继承 `01M60000000000000000000013` 系列。
-本例采用 terminated 锚点，03:25:00Z 加 60 秒得到 03:26:00Z；
-eligible 锚点错过周期后如何选择未来点，仍留待下一轮讨论。
+此失败不停止系列。下面是同一时间线采用两种锚点的**互斥配置场景**，
+每轮只生成所选模式的一个后继，不同时发出两条 Request。
+成功后都分配新的 Task ID，继承 `01M60000000000000000000013` 系列，不修改旧 Task 的期限。
+
+**After / terminated：** 实际终结 03:25:20Z 加 60 秒，下一轮为 03:26:20Z。
+使用新的幂等 ID `01M60000000000000000000012`：
 
 ```json
 {
@@ -1312,7 +1314,7 @@ eligible 锚点错过周期后如何选择未来点，仍留待下一轮讨论�
   "subject": {},
   "freshness": "completed-after-eligible",
   "timeoutMs": 30000,
-  "eligibleAt": "2026-10-29T03:26:00.000Z",
+  "eligibleAt": "2026-10-29T03:26:20.000Z",
   "seriesId": "01M60000000000000000000013",
   "recurrence": {
     "periodMs": 60000,
@@ -1320,6 +1322,41 @@ eligible 锚点错过周期后如何选择未来点，仍留待下一轮讨论�
   }
 }
 ```
+
+**After / eligible：** 假定该轮尚未规划后继，本次在 03:25:20Z 处理其逾期资格。
+原节拍为 03:20:00Z 起每 60 秒一次，选择严格晚于规划时刻的第一个原节拍点
+03:26:00Z，不改为 03:26:20Z。使用新的幂等 ID `01M60000000000000000000081`：
+
+```json
+{
+  "requestId": "01M60000000000000000000081",
+  "checker": {
+    "url": "https://example.test/checker/latest.tgz"
+  },
+  "subject": {},
+  "freshness": "completed-after-eligible",
+  "timeoutMs": 30000,
+  "eligibleAt": "2026-10-29T03:26:00.000Z",
+  "seriesId": "01M60000000000000000000013",
+  "recurrence": {
+    "periodMs": 60000,
+    "anchor": "eligible"
+  }
+}
+```
+
+eligible 边界对照（e=03:20:00Z，P=60 秒）：
+
+| 实际规划时间 t | 新后继 eligibleAt |
+|---|---|
+| 03:20:00.000Z | 03:21:00.000Z |
+| 03:25:00.000Z | 03:26:00.000Z |
+| 03:25:20.000Z | 03:26:00.000Z |
+| 03:25:59.999Z | 03:26:00.000Z |
+| 03:26:00.000Z | 03:27:00.000Z |
+
+若旧轮已在到达资格时规划后继，后来超时不再生成第二个，也不把已有后继重新挪到上述时间。
+本节只确定错过节拍时的选点，不把容量或条件就绪时间当成新的锚点。
 
 ## 5. 后继 Task 的创建 Request 与系列规划记录
 
@@ -2077,7 +2114,8 @@ deadlineAt 仍锚定原 eligibleAt，重复读取不会延长任务期限。
 
 Request ID 为幂等 ID、Task ID 独立、series 默认取首个 Task ID、
 eligible 后进入正式 PREPARING、terminated 包括失败/超时、
-取消 pending 不生后继以及错过周期不补齐，均已确认，不再列为未决项。
+取消 pending 不生后继、错过周期不补齐且 eligible 后继按原节拍取下一个严格未来点，
+均已确认，不再列为未决项。
 preparation policy 属于服务配置、默认不预取不回退，以及普通 Probe 不重复传根/静态
 Checker bindings，同样已确认；Before 中的旧字段和服务输出的记录不因此删掉。
 
