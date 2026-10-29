@@ -38,3 +38,5 @@ snapshot 不内嵌完整 Artifact，外部消费者按准确 artifactRef 查询�
 未授权治理不能由条件检查结果自动获得许可。
 Task/Execution/Series 历史查询有独立游标，分页及实时通知来自同一事实，
 共享执行不复制或泄露其他 owner 的任务数据。
+验证 Task 终结事件引用执行结果，completed snapshot 的业务结果由同一事实投影；
+结果不重复根 Objective 身份，问题若指向其他 Objective 则仍保留准确业务引用。

@@ -38,6 +38,8 @@ preparation 仅用于准备阶段，终态保留必要时间戳、结果和小�
 不得用 latest 替代原内容或用 manifest 代替实际执行证据。
 结构化历史事件作为证据事实源，增加 taskId/executionId/seriesId 过滤和游标分页读取；
 与 SSE/快照同源，共享 Execution 证据不按 Task 重复存储或展开。
+去掉 result 中的重复根引用、bindings 汇总和机械 gapSummary；
+快照事件身份只保留一处，Task 终结引用 Execution 结果事实，缓存投影不独立维护真相。
 
 ## Acceptance criteria
 
@@ -64,3 +66,5 @@ Router、SDK、Pilot/regulator 与 Coordinator 的 series 订阅和持久恢复�
 通过准确引用查询原制品；事件中的 snapshot 不携带 manifest 或完整 evidence。
 验证未订阅 SSE 也可查询准确 runtime、选版错误与子任务关联，
 并覆盖独立历史游标、分页边界及共享执行的授权隔离。
+验证快照结果可由执行事实投影，动态依赖的业务引用不会被误删，
+Before 对照与新设计的派生缓存职责明确，避免身份和调度参数多份可变真相。

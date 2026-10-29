@@ -189,6 +189,29 @@ blocked/queued/running/completed 等已就绪分支必须带准确引用。
 父 Task 不再嵌入子 Task 快照；调用方沿 taskId/executionId 的关联查询。
 snapshot、SSE 内的 snapshot 及独立查询到的子 Task 都遵守同一轻量状态联合。
 
+**同一事实不在一个响应内重复表达：**
+
+| 修改点 | Before | After |
+|---|---|---|
+| Probe 结果身份 | result.current.objective 与根 bindings 重复根 Objective 版本。 | 根身份由外层 artifactRef 表达；result.current 只保留 levelId，动态解析详情从历史事件查。 |
+| 机械结果摘要 | gapSummary 仅由 problems 数量派生，空结果为空字符串。 | 从新结果契约移除，展示层按 problems 生成；不据此删除有独立业务含义的问题信息。 |
+| 快照通知 | task.updated 外围与 snapshot 内各自重复 taskId/requestId/seriesId。 | 完整快照通知只需事件 type 和 snapshot，身份在 snapshot 保留一处，游标等事件属性另属 envelope。 |
+| 结果事实 | 早期新草案例子同时在 task.terminated 与 execution.completed 保存相同 result。 | 结果事实由 Execution 保存；Task 终结引用该执行，读取快照时投影 result。 |
+
+业务 result 是相对于所属 Task/Execution 上下文的结果；不能再重复根制品定义。
+但问题或依赖需求若指向其他 Objective，仍须保留那个目标的准确引用，
+不能为了去重丢失业务指向。observedAt、executionCompletedAt、terminatedAt
+分别是观察、执行完成、需求终结时间，不因为接近就机械合并。
+requestId 与 taskId 不同，默认 seriesId 与首轮 taskId 相同也不意味着可以删除 series。
+Check 的 ok 与 problems 是结果契约，不把其一致性约束当成无意义的重复字段。
+
+输入与读取投影可在不同接口重复返回同一个值，但必须明确唯一事实源。
+Series 的 pendingRequestId 可由 pendingTaskId 对应的 Task 取得；
+latestSuccessor/generation 如保留，只是规划事实的可重建索引。
+恢复例子中的 Request 是不可变输入，cachedSnapshot 是派生缓存，
+外层不再重复三个身份；缓存不得作为可独立修改的第二份调度事实。
+这些只收敛逻辑职责，不在此提前决定持久化事务、物理索引或缓存布局。
+
 ### 2.2 Task prerequisites：以 Check 表达动态条件
 
 | 修改点 | Before | After |
@@ -419,6 +442,10 @@ series 订阅不能只在订阅时展开为现存 task IDs；首次快照与后�
 受理、需求取消、制品选择及关联属于 Task 事实；实际运行环境、worker revision 与执行结果
 属于 Execution 事实。共享执行只记录一份，通过 executionId 关联，
 不因多个 Task/series 使用它而复制多份执行历史。
+正常 Task 终结事件引用 executionId，不重复记录相同执行结果；
+Task snapshot.result 由该执行事实投影。Task 特有的结果转换如果未来引入，
+须作为独立业务语义定义，不默认所有结果都能无损删除。
+没有执行的失败/取消 Task 则记录自己的 error/原因，不虚构 executionId。
 
 未订阅或错过 SSE 的调用方仍能查询历史。SSE 断流或中间快照合并不能被当成
 “历史事实没有发生”；快照轻量化也不能删除原本必须保存的执行证据。

@@ -910,9 +910,11 @@ After 保留本 Task 的业务结果，不再内嵌完整观察进展或子 Task
 子 Check 是本次组合观察的一次性需求，不自动继承根 Probe 的递归策略或 series；
 其归属通过历史事件中的 invocation、父观察、childTaskId/childExecutionId 关联，
 调用方按需读取子 Task 和执行记录，不必在每个根快照中再次接收。
-结果中的 bindings 仍是服务生成的准确业务观察记录，不是额外的 evidence 树，
-也不是要求普通 Probe Request 重复输入。动态依赖详情由历史事实承载，
-其公开输入能力与恢复时是否传回绑定另议。
+After 的 result 只表达相对于外层 artifactRef 的业务结果：
+删除 current.objective、根 bindings 和仅由问题数量生成的 gapSummary。
+动态依赖解析记录由历史事实提供，不能再包装成 result.bindings 整表回传。
+若某个业务问题明确指向另一个依赖 Objective，其准确引用仍有意义，不能机械删除。
+observedAt 是实际观察时间，不等于 Execution 完成或 Task 终结时间，本次保留。
 
 **Before：**
 
@@ -1096,19 +1098,10 @@ After 保留本 Task 的业务结果，不再内嵌完整观察进展或子 Task
   "executionCompletedAt": "2026-10-29T03:20:01.100Z",
   "result": {
     "current": {
-      "objective": {
-        "kind": "objective",
-        "url": "https://example.test/objective/v1.tgz",
-        "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-      },
       "levelId": "ready"
     },
     "problems": [],
-    "gapSummary": "",
-    "observedAt": "2026-10-29T03:20:01.090Z",
-    "bindings": {
-      "https://example.test/objective/v1.tgz": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-    }
+    "observedAt": "2026-10-29T03:20:01.090Z"
   },
   "preparationStartedAt": "2026-10-29T03:20:00.010Z",
   "preparationCompletedAt": "2026-10-29T03:20:00.180Z",
@@ -1317,10 +1310,12 @@ series 仍是首个 Task 的 `01M6000000000000000000001A`。
 
 **Before：** Check/Probe 无此记录。Coordinator 的 predecessor 链不是同形 series 记录。
 
-**After：** 为展示唯一 pending 和一次后继生成，暂给出一种最小逻辑记录。
+**After：** 为展示唯一 pending 和一次后继生成，暂给出一种可重建的 Series 索引投影。
 `scope` 是服务端授权上下文，不能由 Request 任意自授；
 `generation`、前驱及 successor 记录是实现建议，不是已决定的数据库 schema。
-只保存 latestSuccessor 的示例不等于可丢弃历史去重事实，实际持久层须能重放。
+pendingRequestId 从 pendingTaskId 对应的 Task 取得，不再重复保存。
+latestSuccessor 和 generation 来自规划事实，是查询/仲裁索引，不是另一份可独立修改的真相。
+只缓存 latestSuccessor 不等于可以丢弃历史去重事实；事务和重放细节仍待讨论。
 
 ```json
 {
@@ -1328,7 +1323,6 @@ series 仍是首个 Task 的 `01M6000000000000000000001A`。
   "service": "checker",
   "seriesId": "01M6000000000000000000001D",
   "pendingTaskId": "01M60000000000000000000007",
-  "pendingRequestId": "01M60000000000000000000003",
   "generation": 2,
   "latestSuccessor": {
     "predecessorTaskId": "01M60000000000000000000006",
@@ -1463,13 +1457,13 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
 
 **After：** 建议 `GET /events?seriesId=01M6000000000000000000001D`；
 即使订阅早于第二轮创建，也能收到第二轮的这一条完整 data payload。
-事件名暂保留 task.updated，新查询的版本/过滤组合及游标协议待定。
+事件名暂保留 task.updated，data envelope 只包含 type 和 snapshot；
+身份从 snapshot 取得，不在外围再重复三个 ID。游标如需携带属于事件层，
+不能用这些重复 ID 或 Task revision 替代历史位置。
 
 ```json
 {
-  "seriesId": "01M6000000000000000000001D",
-  "requestId": "01M60000000000000000000003",
-  "taskId": "01M60000000000000000000007",
+  "type": "task.updated",
   "snapshot": {
     "taskId": "01M60000000000000000000007",
     "requestId": "01M60000000000000000000003",
@@ -1498,24 +1492,24 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
 本节保留先前占位设计，崩溃恢复细节按用户要求暂缓讨论。
 本轮仅同步已确认身份、series 默认值和预优化术语，不把记录布局视作新决定。
 
-### 8.1 未完成 Task 的逻辑持久记录
+### 8.1 未完成 Task 的恢复视图：事实与缓存分开
 
 **Before：** Check/Probe 的 Task/Run 是含 Map、Promise、AbortController、timer
 和服务内序号的内存对象，没有公开或持久化 JSON 记录。不能捏造一份旧存储格式来对照。
 Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/Probe 存储。
 
-**After：** 以下展示一个尚未开始预优化的 pending Check 的完整逻辑恢复单元，
-含原 Request、服务端身份、期限、准备时间及前驱。字段布局只是建议，
-不把授权 scope 或幂等信息作为公开 SSE 数据。
-已选版/运行中的记录还需持久准确版本、执行环境及尝试证据，不在本例凭空填充。
+**After：** 以下只展示一个逻辑恢复读取视图，不声明实际存储行布局。
+request 是原始不可变输入；cachedSnapshot 是按受理/执行事实派生、可重建的缓存，
+不是另一份能独立修改的身份和调度配置。外层不再重复 requestId/taskId/seriesId。
+两者重复出现的字段是输入与投影关系，缓存必须校验一致性，不能各自作为事实源。
+predecessorTaskId、generation 和 successorPlanning 同样属于规划事实的投影。
+此处不决定具体日志/索引事务，授权 scope 也不是公开 SSE 数据。
+已选版/运行中 Task 的准确版本、执行环境和尝试信息从对应历史事件恢复。
 
 ```json
 {
-  "kind": "check-task",
+  "kind": "check-task-recovery-view",
   "scope": "local-owner",
-  "requestId": "01M60000000000000000000003",
-  "taskId": "01M60000000000000000000007",
-  "seriesId": "01M6000000000000000000001D",
   "predecessorTaskId": "01M60000000000000000000006",
   "generation": 2,
   "request": {
@@ -1537,7 +1531,7 @@ Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/P
       "anchor": "eligible"
     }
   },
-  "snapshot": {
+  "cachedSnapshot": {
     "taskId": "01M60000000000000000000007",
     "requestId": "01M60000000000000000000003",
     "seriesId": "01M6000000000000000000001D",
@@ -1558,7 +1552,7 @@ Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/P
 }
 ```
 
-恢复必须同时校验这个 Task 与 series pending 槽位、后继去重事实的一致性。
+恢复必须同时校验缓存投影与原始 Request、Task 事实、series pending 槽位及后继去重事实的一致性。
 此处不承诺“一行 JSON”即可实现原子性，也不定义 durable schema 版本号。
 
 ### 8.2 重启后查询原 Task
@@ -1955,10 +1949,7 @@ Accept: application/json
       "data": {
         "state": "completed",
         "taskRevision": 8,
-        "result": {
-          "ok": true,
-          "problems": []
-        }
+        "executionId": "01M60000000000000000000001"
       }
     }
   ],
@@ -2026,8 +2017,11 @@ Accept: application/json
 }
 ```
 
-Task.terminated 中的结果是需求完成投影，Execution.completed 是实际执行事实，
-两者须一致但时间不必相同；不能由每个共享 Task 独立编造一份执行结果记录。
+Execution.completed 是实际结果的唯一事实来源；Task.terminated 只记录该需求的
+状态/终结时间并引用 executionId，不重复存储同一个业务 result。
+查询 completed Task snapshot 时可以从关联执行投影 result，避免额外请求，
+但不能独立维护第二份结果。若未来有 Task 特有的结果转换，需明确记录其独立语义，
+不能直接套用“与执行结果相同”的去重规则。
 
 ### 10.3 子 Task 与 series 查询：关联，不递归展开整树
 
