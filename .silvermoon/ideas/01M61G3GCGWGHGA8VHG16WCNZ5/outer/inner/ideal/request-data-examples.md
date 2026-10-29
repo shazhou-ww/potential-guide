@@ -14,9 +14,9 @@
 - 字段暂沿用现有 camelCase，概念 `eligible_at/received_at/series_id`
   分别写成 `eligibleAt/receivedAt/seriesId`。PENDING 暂序列化为 `pending`。
   `acceptedAt → receivedAt` 是草案命名建议，不暗示旧字段已改名。
-- 顶层字段已确认由 `recurrence` 统一改为 `recursive`；所有 After 使用新名称，
-  Before 的现有 Coordinator 字段保留 `recurrence`，不是新方案同时接受两个名称。
-  `recursive` 的子结构暂用 `{periodMs, anchor}`；服务配置中的准备策略暂用
+- 周期任务的顶层字段统一为 `recurrence`，与现有 Coordinator 命名一致。
+  Before 保留现有子结构，After 展示双锚点扩展；同名不表示新旧协议语义完全相同。
+  `recurrence` 的子结构暂用 `{periodMs, anchor}`；服务配置中的准备策略暂用
   `preparationPolicy: {leadMs, fallback}`，fallback 候选值为
   `none | previous-usable`。具体字段名仍待评审，默认不预取、不回退已确认；
   Request 不再携带 preparationPolicy。
@@ -31,7 +31,7 @@
   与建议的统一 Regulation admission 输入对照，未规定新的 HTTP endpoint。
   内部持久记录不是调用方 Request，也不是公开 HTTP response。
 - eligible 前的提前下载用 `prefetch` 展示，Task 仍 pending；正式 `preparation`
-  必须在 eligible 后。`recursive.anchor` 使用 eligible/terminated；
+  必须在 eligible 后。`recurrence.anchor` 使用 eligible/terminated；
   Task 终结时间写 `terminatedAt`，保留 completed/failed/cancelled 状态及错误原因。
 
 ## 0. 服务配置：preparation policy 不属于 Request
@@ -72,7 +72,7 @@ Task 在 eligible 后才正式开始选版、下载和验证。只配置预取�
 
 ### 1.1 Check：浮动来源、未来 eligible、按 eligible 递归
 
-**Before：** 当前 Checker v3 创建请求。它没有 eligible、series、recursive 或准备策略。
+**Before：** 当前 Checker v3 创建请求。它没有 eligible、series、recurrence 或准备策略。
 
 ```json
 {
@@ -106,7 +106,7 @@ Task 在 eligible 后才正式开始选版、下载和验证。只配置预取�
   "timeoutMs": 30000,
   "eligibleAt": "2026-10-29T03:21:00.000Z",
   "seriesId": "workspace-checks",
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
   }
@@ -141,7 +141,7 @@ Task 在 eligible 后才正式开始选版、下载和验证。只配置预取�
 显式 digest 不允许换成另一旧版，即使服务启用 fallback 也不能替换。
 普通 Probe 删除重复根绑定，静态 Checker 版本已由 Objective 的 Merkle DAG 固定。
 每个后继仍继承此准确引用，
-不是所有 recursive 请求都会升级制品；只有浮动来源才重新选版。
+不是所有 recurrence 请求都会升级制品；只有浮动来源才重新选版。
 
 ```json
 {
@@ -156,7 +156,7 @@ Task 在 eligible 后才正式开始选版、下载和验证。只配置预取�
   "language": "en",
   "freshness": "started-after-eligible",
   "timeoutMs": 60000,
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "terminated"
   }
@@ -164,7 +164,7 @@ Task 在 eligible 后才正式开始选版、下载和验证。只配置预取�
 ```
 
 `targetLevel: "initial"` 仍是可选的单次输入验证能力；本例执行完整观察所以不传，
-不以 recursive 模式改变其业务含义。
+不以 recurrence 模式改变其业务含义。
 运行时提出的其他 Objective 不一定属于上述静态 DAG，服务仍须记录其实际 digest；
 普通请求不必重复提供它们。是否提供独立 `dependencyBindings` 输入尚待讨论，
 本例不把旧 bindings 机械改名为新的必填参数。
@@ -186,7 +186,7 @@ Task 在 eligible 后才正式开始选版、下载和验证。只配置预取�
 ```
 
 **After：** 若 03:20:00Z 收到，只剩 20 秒预算；可匹配符合 03:19:50Z 边界的保留结果。
-recursive 未提供，任务不会自动产生后继。
+recurrence 未提供，任务不会自动产生后继。
 
 ```json
 {
@@ -370,7 +370,7 @@ Before 已返回结构化错误；After 建议同时返回幂等 Request ID，�
   "eligibleAt": "2026-10-29T03:21:00.000Z",
   "freshness": "completed-after-eligible",
   "timeoutMs": 300000,
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
   }
@@ -424,7 +424,7 @@ scheduledAt 为 eligible 减去准备提前量，而不是 received。
   "eligibleAt": "2026-10-29T03:21:00.000Z",
   "deadlineAt": "2026-10-29T03:21:30.000Z",
   "freshness": "completed-after-eligible",
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
   },
@@ -466,7 +466,7 @@ series 等于独立分配的 Task ID，eligible 等于 received。
   "eligibleAt": "2026-10-29T03:20:00.000Z",
   "deadlineAt": "2026-10-29T03:21:00.000Z",
   "freshness": "started-after-eligible",
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "terminated"
   },
@@ -519,7 +519,7 @@ selectedCandidate 是预优化候选，尚未完成正式 PREPARING 准入；
   "eligibleAt": "2026-10-29T03:21:00.000Z",
   "deadlineAt": "2026-10-29T03:21:30.000Z",
   "freshness": "completed-after-eligible",
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
   },
@@ -617,7 +617,7 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
   "deadlineAt": "2026-10-29T03:21:30.000Z",
   "terminatedAt": "2026-10-29T03:21:04.010Z",
   "freshness": "completed-after-eligible",
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
   },
@@ -866,7 +866,7 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
   "deadlineAt": "2026-10-29T03:21:00.000Z",
   "terminatedAt": "2026-10-29T03:20:01.110Z",
   "freshness": "started-after-eligible",
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "terminated"
   },
@@ -1069,7 +1069,7 @@ After 预优化可以很早开始，但 Task 到 03:21:00Z 才正式 preparing�
   "eligibleAt": "2026-10-29T03:21:00.000Z",
   "deadlineAt": "2026-10-29T03:21:30.000Z",
   "freshness": "completed-after-eligible",
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
   },
@@ -1132,7 +1132,7 @@ deadline 为 03:20:30Z，但直到 03:25:00Z 才处理；它只代表一个过�
   "deadlineAt": "2026-10-29T03:20:30.000Z",
   "terminatedAt": "2026-10-29T03:25:00.000Z",
   "freshness": "completed-after-eligible",
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "terminated"
   },
@@ -1159,7 +1159,7 @@ eligible 锚点错过周期后如何选择未来点，仍留待下一轮讨论�
   "timeoutMs": 30000,
   "eligibleAt": "2026-10-29T03:26:00.000Z",
   "seriesId": "late-task-1",
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "terminated"
   }
@@ -1192,7 +1192,7 @@ Coordinator 的旧 recurrence 已在第 2 节展示，不以 `{}` 冒充统一�
   "timeoutMs": 30000,
   "eligibleAt": "2026-10-29T03:22:00.000Z",
   "seriesId": "workspace-checks",
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
   }
@@ -1219,7 +1219,7 @@ series 仍是首个 Task 的 `probe-task-1`。
   "timeoutMs": 60000,
   "eligibleAt": "2026-10-29T03:21:25.000Z",
   "seriesId": "probe-task-1",
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "terminated"
   }
@@ -1295,7 +1295,7 @@ After 仅允许 pending；以下是取消操作返回的完整快照。
   "eligibleAt": "2026-10-29T03:22:00.000Z",
   "deadlineAt": "2026-10-29T03:22:30.000Z",
   "freshness": "completed-after-eligible",
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
   },
@@ -1346,7 +1346,7 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
   "eligibleAt": "2026-10-29T03:22:00.000Z",
   "deadlineAt": "2026-10-29T03:22:30.000Z",
   "freshness": "completed-after-eligible",
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
   },
@@ -1400,7 +1400,7 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
     "eligibleAt": "2026-10-29T03:22:00.000Z",
     "deadlineAt": "2026-10-29T03:22:30.000Z",
     "freshness": "completed-after-eligible",
-    "recursive": {
+    "recurrence": {
       "periodMs": 60000,
       "anchor": "eligible"
     },
@@ -1453,7 +1453,7 @@ Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/P
     "timeoutMs": 30000,
     "eligibleAt": "2026-10-29T03:22:00.000Z",
     "seriesId": "workspace-checks",
-    "recursive": {
+    "recurrence": {
       "periodMs": 60000,
       "anchor": "eligible"
     }
@@ -1469,7 +1469,7 @@ Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/P
     "eligibleAt": "2026-10-29T03:22:00.000Z",
     "deadlineAt": "2026-10-29T03:22:30.000Z",
     "freshness": "completed-after-eligible",
-    "recursive": {
+    "recurrence": {
       "periodMs": 60000,
       "anchor": "eligible"
     },
@@ -1519,7 +1519,7 @@ recovery 字段是新建议，不意味着允许自动恢复任意已经运行�
   "eligibleAt": "2026-10-29T03:22:00.000Z",
   "deadlineAt": "2026-10-29T03:22:30.000Z",
   "freshness": "completed-after-eligible",
-  "recursive": {
+  "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
   },
@@ -1539,7 +1539,7 @@ recovery 字段是新建议，不意味着允许自动恢复任意已经运行�
 这些完整对象用于看清字段之间的关系，不是绕过待决项的定稿：
 
 - 旧 acceptedAt 的命名迁移及 wire 版本；
-- recursive 双 anchor 的最终默认值、terminated 模式无 pending 时如何停止；
+- recurrence 双 anchor 的最终默认值、terminated 模式无 pending 时如何停止；
 - 服务预优化的具体配置字段、限额及正式 preparing 的进展字段；
 - fallback 旧版选择、最大陈旧度及 scope；
 - 同 series 跨模块作用域、公共错误码/状态码及 HTTP/SDK 版本；

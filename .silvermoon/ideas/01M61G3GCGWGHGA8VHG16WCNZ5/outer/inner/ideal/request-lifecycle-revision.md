@@ -16,7 +16,7 @@ Execution → 持久化恢复 → Events/SDK 的修改对象顺序组织。
 
 ## 1. Request：统一资格时间与系列身份
 
-Request 携带 `eligible_at`、`recursive` 和可选 `series_id`，成功受理后形成 Task 的
+Request 携带 `eligible_at`、`recurrence` 和可选 `series_id`，成功受理后形成 Task 的
 调度属性；生命周期、pending 位置及系列归属属于 Task，不属于 Artifact。
 
 | 修改点 | Before | After |
@@ -68,7 +68,7 @@ pending 中保存的是 Task，事件按 series 串联的是 Task；Request ID�
 |---|---|---|
 | 生命周期 | Check/Probe 为 accepted/preparing/waiting/running 等状态，无 PENDING。 | 所有 Task 增加 PENDING，表达已受理、尚未激活的计划需求。 |
 | 准备进展 | 受理后即可进入 preparing。 | 正式 PREPARING 只能在 eligible 后；提前下载/更新检查仅是 PENDING 中可观察的预优化。 |
-| 取消 | Check/Probe 可撤销非终态需求；Coordinator 有 request/recurrence scope。 | 新统一交互只取消 pending Task，不提供“取消 recursive Task”或另一个系列取消语义。 |
+| 取消 | Check/Probe 可撤销非终态需求；Coordinator 有 request/recurrence scope。 | 新统一交互只取消 pending Task，不提供“取消 recurrence Task”或另一个系列取消语义。 |
 | 重复规划 | 没有跨 Check/Probe 的统一系列去重。 | 冗余新 pending Task 被取消，已有 pending Task 保留；记录明确原因。 |
 
 **已确认：** 用户取消的是被保留的 pending Task；它不能再触发后继，递归链由此停止。
@@ -97,15 +97,14 @@ PENDING → 到达 eligible → PREPARING → 等待/执行 → 终态
 Request 自身解析失败没有 Task，与 Task 正式准备失败分开。
 已过 deadline 的 Task 直接以超时终结，不为了经过 PREPARING 而执行无效工作。
 
-## 3. Series 与 recursive：一个 pending Task，两个锚点
+## 3. Series 与 recurrence：一个 pending Task，两个锚点
 
 | 修改点 | Before | After |
 |---|---|---|
 | 适用面 | Coordinator 有 recurrence；Check/Probe 没有。 | Check、Probe、Regulation 都可表达递归请求，调节职责仍归 Coordinator。 |
-| 字段命名 | Coordinator 使用 `recurrence`。 | 新方案统一为 `recursive`，覆盖 Check、Probe、Regulation 的输入、快照和后继规划。 |
 | 现有周期 | Coordinator 首次 dispatch 时生成后继，eligible 为实际 dispatch 时间加 interval。 | 新模型明确 eligible/terminated 锚点，不把 dispatch、资格和终结混为一谈。 |
 | pending 约束 | 没有统一 series pending 唯一约束。 | 同一系列同时最多保留一个 pending 计划；重复新计划取消，原计划不被替换。 |
-| 触发配置 | 不支持统一的双锚点选择。 | `recursive.anchor` 区分 eligible 与 terminated；本轮失败/超时不停止递归。 |
+| 触发配置 | 不支持统一的双锚点选择。 | `recurrence.anchor` 区分 eligible 与 terminated；本轮失败/超时不停止递归。 |
 
 ### 3.1 已确认的规划不变量
 
@@ -119,20 +118,20 @@ Request 自身解析失败没有 Task，与 Task 正式准备失败分开。
 - series ID 不进入执行兼容键。不同 series 仍可共享执行；
   相同 series 的不同准确版本或输入也不能强制合并。
 
-### 3.2 已收敛的锚点：`recursive.anchor`
+### 3.2 已收敛的锚点：`recurrence.anchor`
 
 用户确认本轮结束必须涵盖 failed/timeout，因此以 terminated 取代原草案的
-completed 锚点；顶层名称已明确由 `recurrence` 改为 `recursive`，
+completed 锚点；周期任务顶层名称统一为 `recurrence`，与动态依赖递归区分，
 period 单位、其他字段拼写及默认锚点仍属于 wire 设计：
 
 ```text
-recursive:
+recurrence:
   period: 正的有限时长
   anchor: eligible | terminated
 ```
 
-Before 的旧字段及历史 schema 保留原义；不提供未声明的双名称默认兼容，
-也不通过更改历史 JSON 把旧 `recurrence` 冒充已经支持新锚点的 `recursive`。
+Before 的旧字段及历史 schema 保留原义；命名沿用不等于旧协议已经支持新的双锚点，
+不能通过更改历史 JSON 冒充已实现的新语义。
 
 | 候选参数值 | 规划触发 | 下一轮 eligible | 主要效果 |
 |---|---|---|---|
@@ -180,7 +179,7 @@ terminated 模式运行期间可能没有 pending Task，届时没有可取消�
 **已确认方向：** 提前下载是预优化，递归下一轮可以重新确认浮动来源。
 预优化可提前报告来源错误，不必等 eligible 才开始昂贵下载；
 它不推进 Task 的 PREPARING 状态，也不赋予执行资格。
-Request 只表达 eligible、timeout、freshness、recursive、series 等需求，
+Request 只表达 eligible、timeout、freshness、recurrence、series 等需求，
 不携带 `preparationPolicy`；Response/Events 仍记录服务实际执行的预优化与准备过程。
 
 **配置预取时的概念名及公式：**
@@ -226,7 +225,7 @@ formal_preparing_at >= eligible_at
 旧协议使用 started-after-request/completed-after-request 字面值；
 新 eligible 语义是否采用新值/新版本必须显式迁移，不能按同一历史字段偷偷换含义。
 
-外层 recursive 不自动使内部每个 Checker 或依赖观察永久递归；
+外层 recurrence 不自动使内部每个 Checker 或依赖观察永久递归；
 显式子需求的调度仍由拥有它的父执行约束，避免无限扩张工作树。
 
 ## 6. 持久化与重启：恢复需求，而非伪造执行连续性
@@ -236,7 +235,7 @@ formal_preparing_at >= eligible_at
 
 | 修改点 | Before | After |
 |---|---|---|
-| Check/Probe | 进程内有界保留，重启使 Task 不可用，无透明重跑。 | 所有已受理未完成 Task 都需持久恢复，不限 recursive。 |
+| Check/Probe | 进程内有界保留，重启使 Task 不可用，无透明重跑。 | 所有已受理未完成 Task 都需持久恢复，不限 recurrence。 |
 | Regulation | Coordinator 已有持久事件/恢复，不是从零建设。 | 增加统一系列、时间和规划证据的持久化与恢复。 |
 | 恢复身份 | Host instance 用于识别服务重启。 | 保留 Request/Task/series 身份，另记录新的 Host/执行尝试身份。 |
 | 恢复期限/版本 | 原格式准确恢复与服务内快照分开。 | 原 eligible、deadline、固定版本及 bindings 不变；不得重置 timeout 或追 latest。 |

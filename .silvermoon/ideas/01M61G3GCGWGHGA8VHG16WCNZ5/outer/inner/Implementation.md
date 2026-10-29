@@ -24,7 +24,7 @@
 ### I-S03: 对齐 SDK 与现有业务入口
 
 对齐 Check/Probe HTTP、进程内接口、SDK 及现有 Regulation/Coordinator 的请求语义，
-新协议统一用 `recursive` 取代旧 `recurrence`，保留历史字段的原解释；
+周期任务配置统一使用 `recurrence`，双锚点等扩展不改变历史协议的原解释；
 Regulation 调用方改用与 Probe 相同的 Objective URL/digest 引用，由服务构造内部 PilotSpec；
 提供 series 动态事件和可恢复身份，明确旧协议/持久 schema 兼容与升级，不静默换义。
 

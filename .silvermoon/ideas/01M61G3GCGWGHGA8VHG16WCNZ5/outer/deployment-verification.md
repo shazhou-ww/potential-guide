@@ -1,7 +1,7 @@
 # 仓库外本地部署候选验证
 
 > 本页保留 `127666e4ec04` 之前取得的真实部署证据。
-> 后续 Request 生命周期 Ideal 修订新增 eligible、recursive、PENDING、fallback、
+> 后续 Request 生命周期 Ideal 修订新增 eligible、recurrence、PENDING、fallback、
 > series events 和未完成 Task 恢复；本页不覆盖这些新要求，当前 D-* 已重置，
 > 不能因历史成功把新部署种子视作完成。以下“父 agent 勾选”描述属于旧候选时间点。
 
