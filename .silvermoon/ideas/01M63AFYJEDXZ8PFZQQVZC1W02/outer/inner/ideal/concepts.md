@@ -130,6 +130,28 @@ Task、不轮询或重试检查、不派发治理；业务提交 Check Request �
 顺序判定与权限仍需收敛；执行能力注入和 allocation 见
 [执行与宿主组装](./execution-and-host-composition.md)。
 
+### executionMatch 与输入分组
+
+Request 使用 executionMatch 表达“哪次 Execution 可以满足这个 Task”，取代本设计
+此前的 freshness 名称；不采用讨论中的 executionPolicy、fulfillmentPolicy 或
+resolutionPolicy。它是请求策略，不复制到事实型 Task snapshot。
+
+| executionMatch | 时间匹配要求 |
+|---|---|
+| started-after-eligible | 兼容 Execution 的开始时间晚于该 Task 的 eligibleAt |
+| completed-after-eligible | 兼容 Execution 的正常完成时间晚于该 Task 的 eligibleAt |
+
+这些条件不改变原时间匹配语义，也不要求新建或复用某个 Execution。多个独立 Task
+可由同一满足各自要求的 Execution 响应，不合并身份、取消权或期限；候选解析晚于执行
+结束时仍应按同一条件匹配有界保留结果。不得把 executionMatch 改成请求受理时间锚点。
+
+TaskType.equals(a,b) 决定完整业务 Input 是否等价；不包含请求身份和调度字段。
+Engine 仍独立保证类型、权限、准确准备内容及实际执行环境兼容，再检查 executionMatch。
+相同 URL 解析成不同版本不共享；不同 executionMatch 的 Task 可能匹配同一执行。
+本轮不额外引入“默认禁止共享、显式开关开启”的第二套策略；也不因为任意两个业务
+输入相同就跳过其他兼容/时间约束。类型定义须明确一次执行可代表同一份工作，
+不能将副作用调用的不同业务意图错误等同。
+
 ## 4. 取消与实际执行
 
 全部非终态 Task 可取消，不限于 pending 或 eligibleAt 之前。
@@ -252,7 +274,8 @@ execution_interrupted 记录不可恢复故障，并让其尚未终结或取消�
 
 同进程身份也必须经核心授权，不以“内部调用”为理由绕过访问边界。
 共享兼容至少受类型、执行版本、业务输入/上下文与权限域约束；
-未声明支持共享的类型不能仅因相同输入复用带副作用的执行。
+完整业务输入由 TaskType.equals 比较，兼容执行以 Request.executionMatch 判定时间资格；
+不通过新增类型级共享开关替代这套机制。
 大载荷、错误详情、关联 Task 查询都遵守来源作用域，业务 ID 不是访问凭据。
 
 ### 实施前决策

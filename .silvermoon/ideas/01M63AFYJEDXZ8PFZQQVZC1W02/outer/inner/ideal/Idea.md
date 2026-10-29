@@ -17,7 +17,7 @@
 
 ## 边界
 
-- 引擎内置 Check 任务支持并可扩展其他类型，不依赖具体 Checker/Objective/Coordinator 实现；宿主按类型注入 ExecutorPool、权限与存储。
+- 引擎内置 Check 任务支持并可扩展其他类型，不依赖具体 Checker/Objective/Coordinator 实现；宿主注入封装 Pool 的 TaskType、权限与存储。
 - HTTP 适配与核心分离，不自行监听端口；持久恢复不等于任意副作用 exactly-once。
 - 本 idea 拥有通用契约，来源 idea 拥有业务适配；不包含独立服务器产品、分布式集群、制品业务迁移或正式发布。
 

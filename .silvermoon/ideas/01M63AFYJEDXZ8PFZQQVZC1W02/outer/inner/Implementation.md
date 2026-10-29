@@ -10,6 +10,10 @@
 
 定义 Request 类型组合、任务事实、内驱 stage/外界信号/时间条件三维投影、错误与服务 API，
 以虚拟时钟和非制品测试类型验证纯归约、输入校验及权限边界。
+类型注入统一为 TaskType，提供 validate(unknown)、可选 prepare、allocate 与 equals；
+Engine 申请 Executor 前完成预检及必要的准备后校验，无准备时直接使用 Input。
+将本设计的 freshness 名称改为 Request.executionMatch，保留两种 eligible 锚点的
+时间匹配语义，不复制策略到 snapshot。equals 只比较完整业务输入，不代替请求幂等。
 按[包级边界建议](./ideal/system-boundaries.md#7-package-划分与依赖建议)落实经评审的
 task-protocol/task-engine 分层，纯协议入口不加载主动运行或业务实现。
 
@@ -90,3 +94,6 @@ schema/类型测试拒绝未知类型、非法载荷、跨类型幂等复用和�
 | I-AC02 | 同一租约重复归还、旧代次回报、清理失败 | 不增加重复容量、不污染新租约；异常实例淘汰/隔离而非直接重新出借 |
 | I-AC02 | 同引擎父编排等待子 Check、多个 Task 共享执行 | 子任务能获得所需资源，共享 Execution 不重复预留；单 owner 取消不影响其他 owner |
 | I-AC01 | 脱离 Engine 直接调用测试 Executor | 只需执行/资源端口，无 Engine 实现或 HTTP 自调用依赖 |
+| I-AC01 | 输入预检失败、准备后 subject 校验失败、无 prepare 类型 | 前两者均不调用 allocate；无 prepare 时执行输入类型一致，无伪造准备事件 |
+| I-AC02 | equals 相等但策略/身份不同、相同浮动引用选出不同版本 | 相等业务输入仍分别按 executionMatch 匹配，版本/权限/环境冲突不共享，Task 身份不合并 |
+| I-AC01 | 同 requestId 改 executionMatch、错误的等价关系或抛错比较器 | 幂等仍比较完整意图；等价关系向量覆盖自反/对称/传递，比较故障显式报告 |

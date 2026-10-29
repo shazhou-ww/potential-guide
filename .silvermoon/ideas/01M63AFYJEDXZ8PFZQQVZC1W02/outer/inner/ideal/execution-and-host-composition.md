@@ -13,8 +13,9 @@
 | Executor | 在租约内使用准备输入执行一次 Execution，报告进展/结果/故障，响应 Execution 停止信号并完成清理 | Request 准入、Task 状态修改、Series、内部等待同一执行配额或重复调度自身请求 |
 | HTTP Server / 宿主 | 装配 Engine、类型及其 ExecutorPool、Store、Clock；认证、TLS、监听、挂载与进程生命周期 | 复制一套调度器、通过 HTTP 断连隐式取消 Task |
 
-原“资源适配器”的能力收进 ExecutorPool 内部。宿主按类型注入 Pool，不再要求分别
-注入裸 Executor 和独立资源适配器；职责收敛不意味着每个 Pool 都要单独建包或进程。
+原“资源适配器”的能力收进 ExecutorPool 内部。宿主按类型注入统一的 TaskType，
+由它封装校验、可选准备、输入等价判断及 Pool 分配能力，不再分别拼接 Type 和 Pool，
+也不注入裸 Executor 和独立资源适配器；不要求每个角色单独建包或进程。
 
 HTTP Router 是 Server 与 Engine 之间的传输适配，不是第五个调度者。它输出基于
 Web Request/Response 的 handler，调用同一 Engine 服务接口；Node HTTP 或框架
@@ -35,7 +36,7 @@ Web Request/Response 的 handler，调用同一 Engine 服务接口；Node HTTP 
              Node Executor 租约（本轮）
 ```
 
-Engine 支持注册多种任务类型及对应 ExecutorPool；同一实例可以承载 check/probe/regulate，
+Engine 支持注册封装对应 ExecutorPool 的 TaskType；同一实例可以承载 check/probe/regulate，
 不要求每种业务启动一套引擎。类型注册还包括输入/结果/进展校验、准备与兼容政策，
 不能只注入一个执行函数而省略这些约束。未知类型或缺少所需执行能力须明确拒绝。
 
@@ -162,23 +163,55 @@ Check completed 不等于检查通过；正常不通过与执行故障分开处�
 以下为伪代码，不定义已存在的 TypeScript API：
 
 ```typescript
-const checkPool = createCheckExecutorPool({ runtimes: { node: nodeRuntime } });
 const engine = createTaskEngine({
   store,
   clock,
   types: {
-    check: { ...checkType, pool: checkPool },
-    probe: { ...probeType, pool: probePool },
-    regulate: { ...regulateType, pool: regulatePool },
+    check: checkTaskType,
+    probe: probeTaskType,
+    regulate: regulateTaskType,
   },
 });
 const handler = createTaskHandler({ service: engine, resolveCaller });
 // 宿主通过 Node/框架连接器挂载 handler，并自行监听。
 ```
 
-类型条目的 pool 统一提供可申请的 Executor 租约及回收能力；类型校验/准备/共享策略
-仍由对应类型契约提供。runtimes 为 Check Pool 内部的运行时适配配置，具体签名留给实施定义。
+TaskType 统一提供类型契约与分配入口，内部 Pool 仍负责实例容量、租约及回收；
+运行时选择为 Check TaskType/Pool 内部的适配配置，不成为所有任务的通用输入。
 探测/调节需要子任务端口时由宿主显式装配；通用包不自动导入生产业务类型。
+
+### TaskType 的职责
+
+以下为逻辑签名，结果校验、可信上下文与租约释放细节仍按完整端口契约落实，
+不把这组简写误当成已发布 TypeScript API：
+
+```text
+TaskType<Input, Prepared>
+  validate(input: unknown) → Input
+  prepare?(input: Input, context) → Promise<Prepared>
+  allocate(prepared: Prepared, signal) → Promise<ExecutorLease<Prepared>>
+  equals(a: Input, b: Input) → boolean
+```
+
+- validate 在申请 Executor 之前预检业务输入，成功得到可信 Input，失败明确拒绝；
+  通用 Request 字段及权限由 Engine 校验。预检本身仍有载荷/深度限制。
+- prepare 可选，负责准确配置/内容与执行输入的准备，不要求所有任务都是 artifact +
+  subject。无准备需求时 Prepared=Input，直接使用已校验输入，不伪造准备过程事实。
+  有 prepare 时须成功后再 allocate；例如取得准确 Checker 定义后按 subjectSchema
+  校验 subject，失败也不占 Executor 槽位。下载和准备不能藏在 allocation 等待中。
+- allocate 通过内部 Pool 申请与 Prepared 兼容的 Executor 使用租约，可撤销等待；
+  不改变已有授予、复核、归还和异常淘汰规则。不准备的类型不能省略 prepare 却假定
+  Prepared 是另一种尚未构造的类型；实际类型定义需保证此关联。
+- equals 定义完整业务 Input 的等价关系，不比较 requestId、eligibleAt、timeoutMs、
+  recurrence、executionMatch 等请求身份或调度策略。确定、无副作用、满足自反/
+  对称/传递，不忽略影响执行的业务字段。
+
+分组仍须结合准备后的准确内容、类型、权限及执行环境。原始浮动 URL 相等不证明
+两次 prepare 选中同一版本；具体类型须提供可比较、可恢复的准备身份，不能让 equals
+绕过这些约束。如何编码准备身份按各类型契约落实，不由 Engine 猜业务对象字段。
+请求自己的 executionMatch 再决定兼容执行的时间资格，匹配与结果采用仍由 Engine
+协调，Pool 不另做一套 Task 合并。equals 不能替代 Request 幂等比较：同 requestId
+改变调度策略仍需按完整请求意图判冲突。
 
 验证应覆盖：Executor 脱离 Engine 可运行；同引擎类型分派与授权；暂无资源不进入
 running；共享执行不重复申请租约；撤销/授予竞争、绑定写入失败有回收；

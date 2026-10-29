@@ -53,10 +53,10 @@ deadline 失约允许与真实完成并存；停止逾期工作的政策与时�
 
 | 扩展角色 | 提供什么 | 引擎要求 |
 |---|---|---|
-| 任务类型适配器 | type、输入/progress/result 校验、准备逻辑、执行配置、业务权限条件 | 类型显式注册，协议稳定可识别，错误有分类，不可直接写 Task 状态 |
+| TaskType | 输入/progress/result 契约、validate、可选 prepare、equals、封装 Pool 的 allocate 及业务权限条件 | 统一注入而非手工拼接 Type/Pool；不可直接写 Task 状态 |
 | 准备实现 | 得到可执行的准确内容/参数，提供可恢复的准备结果 | 完成事实有依据；候选不等于正式采用；失败不可伪装就绪 |
 | 前置 Check 关联 | 业务方触发 Check Task，引擎执行并采用其可追溯结果 | 不接受任意 passed 写入，不自动派发、轮询、重试或治理 |
-| 兼容策略 | 是否允许共享、准确输入/版本/上下文的兼容标识 | 不跨任务类型或权限域共享，未声明共享能力默认独立执行 |
+| 输入等价与执行匹配 | TaskType.equals 比较业务 Input，Engine 校验准确准备身份及 executionMatch | 不跨任务类型/权限域/不兼容版本共享，不将 equals 当作请求幂等规则 |
 | 执行器 | 执行工作、报告 progress/result/故障、接收停止信号 | 不保证停止即无副作用；报告须经校验，不可覆盖事件外壳 |
 | ExecutorPool | 按类型提供兼容 Executor 使用租约，管理容量、等待、复用、回收与淘汰 | 不裁决 Task 或复写调度；Engine 协调 allocation 和正式绑定 |
 | 存储实现 | 明确的原子性、稳定顺序、持久性与恢复保证 | 内存实现不能冒充可重启恢复；缺失事实不可成功形回退 |
@@ -79,10 +79,11 @@ deadline 失约允许与真实完成并存；停止逾期工作的政策与时�
 | preparation 的 up-to-date/fallback/updated 选择方式 | 制品准备契约，不是所有类型都必须有的引擎字段 |
 | language、subject/context 的业务含义、desiredLevel、治理预算 | 各任务类型协议；通用内核只按其 schema 校验并正确保留 |
 | Check 的 ok/problems/requirements、Probe 的观察结果 | 对应结果协议，不是通用 completed 判据 |
-| started-after-eligible/completed-after-eligible 的具体复用政策 | 支持观察共享的类型能力；时间比较可复用，不能默认适用于有副作用的任务 |
+| started-after-eligible/completed-after-eligible | Request.executionMatch 的时间条件，由 Engine 在类型/输入/版本/权限兼容后判定 |
 | 对依赖目标创建新治理请求、治理后重查 | Coordinator 的业务编排 |
 
-preparation 的通用事实是工作何时开始、何时正式可用；它不强制要求下载一个 Artifact。
+preparation 的通用事实是工作何时开始、何时正式可用；TaskType.prepare 可选，
+不强制要求 Artifact。未提供时已校验 Input 直接用于后续过程，不伪造准备开始/完成事实。
 readiness 采用关联 Check Task 的有效结果；业务方触发和重试，引擎自己负责执行。
 条件只减少无效尝试，不保证执行期间仍成立；引擎不设 TTL 或执行前强制重查。
 allocation 由 Engine 协调执行匹配和正式绑定，等待对应 Pool 的 Executor 租约即等待 allocation。
@@ -204,7 +205,8 @@ task-engine 没有导入 checker-host，须以导入/依赖检查单独验证上
 
 ### 7.3 宿主组装与可验证边界
 
-宿主创建 Store、Clock、类型适配器及每种类型的 ExecutorPool，注入 engine，再按需挂载 HTTP handler。
+宿主创建 Store、Clock 及封装各类型 ExecutorPool 的 TaskType，统一注入 engine，
+再按需挂载 HTTP handler；不再用 { ...checkType, pool: checkPool } 分别拼装。
 Pool 与 Executor 依赖协议端口，不依赖 Engine 实现；无需新增独立资源适配器包或 Pool 包。
 业务方触发前置 Check 并建立合法关联，引擎执行后从自身事实采用结果；派发和重试仍在业务侧。
 宿主先打开存储、再启动引擎；关闭时停止准入并按契约收束引擎与观察连接，最后关闭存储，

@@ -9,10 +9,12 @@
 
 ## 1. 通用 Request 与具体类型
 
-通用部分包含 requestId、type、可选 eligibleAt/seriesId/recurrence 及本请求 timeoutMs。
+通用部分包含 requestId、type、executionMatch、可选 eligibleAt/seriesId/recurrence
+及本请求 timeoutMs；示例显式给出 executionMatch，不借示例决定其省略/默认值。
 type 是判别字段，应用将已注册类型组合为 discriminated union；
 引擎内置支持 check，其他类型包括 probe/regulate 通过宿主注册扩展，不固定全集，
-也不接受任意未注册字符串；每种类型注入 ExecutorPool，统一提供 Executor 使用租约及资源管理。
+也不接受任意未注册字符串；每种类型统一注入 TaskType，包含 validate、可选 prepare、
+equals 及封装 ExecutorPool 的 allocate，不再分别注入 Type 与 Pool。
 类型的具体输入可以与公共字段同层组合，但其 schema 不能重新定义或覆盖公共字段。
 不要求现在把所有输入迁到 input/payload，也不新增 metadata。
 
@@ -21,6 +23,7 @@ type 是判别字段，应用将已注册类型组合为 discriminated union；
   "requestId": "01M64000000000000000000001",
   "type": "echo",
   "text": "hello",
+  "executionMatch": "started-after-eligible",
   "eligibleAt": "2026-10-29T08:00:10.000Z",
   "timeoutMs": 30000,
   "recurrence": {
@@ -36,6 +39,9 @@ text 属于 echo 输入协议。Check 的 checker/subject、Probe 的 objective 
 此例在 08:00:00 接收，默认 seriesId 为独立分配的首个 taskId。
 同一幂等身份重发同一意图返回原受理结果，换类型/输入则明确冲突。
 受理重试时返回的快照可有较新 timestamp，不要求字节级重复第一次 HTTP 响应。
+TaskType.equals 比较完整类型业务 Input，而非完整 Request；此例业务 Input 包含 text，
+不包含身份/时间/递归/executionMatch 策略。请求幂等仍比较完整意图，不复用 equals
+来忽略同一 requestId 上的策略变化。executionMatch 不复制到下方 snapshot。
 
 ## 2. 核心进程内 API
 
@@ -233,14 +239,15 @@ echo 没有额外条件，不伪造 readiness 通过时间。
 
 | 角色 | 输入 | 返回 / 报告 |
 |---|---|---|
-| 输入校验与业务授权 | 公共字段已校验的完整 Request、可信 caller | 类型化意图或明确错误，不静默删改字段 |
-| prepare | 意图、预算、取消信号、适配器依赖 | 正式 prepared 结果或有分类的故障；过程事实由核心记录 |
+| validate 与业务授权 | 未信任业务 Input、可信 caller；通用字段由 Engine 校验 | 可信 Input 或明确错误，申请 Executor 前完成，不静默删改输入 |
+| prepare（可选） | Input、预算、取消信号、适配器依赖 | 正式 Prepared 或有分类的故障；无此步骤时 Prepared=Input，不伪造过程 |
 | readiness 检查关联 | 业务方关联的 Check Task、条件归属与可信时间/顺序 | 核心采用真实检查结果解锁；不自动触发检查或重试，不接受任意布尔值 |
-| compatibility | 已准备的准确身份、输入、权限域 | 独立执行或可复核的兼容标识，不能绕过核心类型/作用域隔离 |
+| equals | 同类型的两个完整业务 Input | 确定、无副作用的等价关系；Engine 另验准确准备内容、权限、环境和 executionMatch |
 | execute | 不可变 prepared、执行上下文、停止信号 | 校验后的 progress、一个正常 result 或执行故障 |
-| Pool 申请/归还 | 准备结果、执行约束、可信作用域及可撤销申请 | 等待或授予兼容 Executor 使用租约；Engine 复核绑定，一次 Execution 结束并清理后归还 |
+| allocate / 租约归还 | Prepared、执行约束、可信作用域及可撤销申请 | TaskType 通过 Pool 提供 Executor 使用租约；Engine 复核绑定，执行和清理后归还 |
 
-echo 的正式准备返回示例：
+echo 通常可以省略 prepare。前述有 preparation 事实的示例特指配置了处理器版本
+准备的 echo 变体，不强迫所有简单计算都经过该步骤，其正式准备返回例如：
 
 ```json
 {
@@ -379,6 +386,7 @@ JSON 字段。接口必须可验证当前 Request/Task、具体条件、Check Ta
 | subscribe | GET /events?taskId=... | 观察流，精确初始水位与续读语义须在实现前定义 |
 
 HTTP body 保留 type，只有 requestId 移入 header；这与核心 submit 输入完全等价。
+executionMatch 同样保留在 body，类型提供的 equals 不将其纳入业务输入比较。
 
 ```http
 POST /tasks HTTP/1.1
@@ -389,6 +397,7 @@ Idempotency-Key: 01M64000000000000000000001
 {
   "type": "echo",
   "text": "hello",
+  "executionMatch": "started-after-eligible",
   "eligibleAt": "2026-10-29T08:00:10.000Z",
   "timeoutMs": 30000,
   "recurrence": {
