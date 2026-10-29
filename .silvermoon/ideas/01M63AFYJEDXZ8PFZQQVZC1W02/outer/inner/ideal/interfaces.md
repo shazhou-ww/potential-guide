@@ -58,7 +58,9 @@ text 属于 echo 输入协议。Check 的 checker/subject、Probe 的 objective 
 ## 3. Task snapshot
 
 顶层身份和时间由核心定义，过程对象只放已成立的有界事实。
-stage 是内驱位置；实际状态由 stage/canceledAt 派生，不重复 state/type/Request。
+stage 仅是内驱位置，外界信号 canceledAt 与时间约束平行表达，不重复 state/type/Request。
+pending 和超时为派生判断，不属于 stage；完成与超时可同时成立。公共分类函数应分别
+回答各维度的问题，不用单个互斥状态值掩盖迟到完成；函数形状仍待收敛。
 结果保持类型的业务形状，通用接口不能将所有 result 强制转换成 CheckResult。
 
 ### 3.1 已受理，时间尚未到
@@ -68,7 +70,6 @@ stage 是内驱位置；实际状态由 stage/canceledAt 派生，不重复 stat
   "requestId": "01M64000000000000000000001",
   "taskId": "01M64000000000000000000002",
   "seriesId": "01M64000000000000000000002",
-  "stage": "pending",
   "receivedAt": "2026-10-29T08:00:00.000Z",
   "eligibleAt": "2026-10-29T08:00:10.000Z",
   "deadlineAt": "2026-10-29T08:00:40.000Z",
@@ -76,7 +77,9 @@ stage 是内驱位置；实际状态由 stage/canceledAt 派生，不重复 stat
 }
 ```
 
-到 08:00:10 而实际准备未开始时，stage 可为 preparing，但不能补造 preparation.startedAt。
+此例尚无内驱过程，暂以省略 stage 表达，初始位置最终编码待确认。
+在 08:00:00 可计算为时间等待；到 08:00:10 时间条件满足，但没有引擎推进事实时，
+不能只因到点补造 preparing 或 preparation.startedAt。
 
 ### 3.2 实际执行中
 
@@ -141,6 +144,8 @@ echo 没有额外条件，不伪造 readiness 通过时间。
 ```
 
 结果来自 Execution 正常完成事实；Task 的成功终结单独引用它，不再复制一份持久结果。
+期限比较使用适用于本 Task 的有效完成事实时间，而不是稍后的终结记录处理或读取时间。
+因此该例在 deadlineAt 之后再次读取，仍应被解释为按时完成。
 
 ### 3.4 运行中取消的互斥分支
 
@@ -173,8 +178,52 @@ echo 没有额外条件，不伪造 readiness 通过时间。
 }
 ```
 
-deriveState 为 cancelled，isTerminated 为 true，isFailed 为 false。
+该 Task 已取消、其需求已撤销，并未因此产生执行失败事实。
+这里 cancelled 只描述第二推动力，不是 stage，也不是三维统一枚举的定义。
+之前的 deriveState/isTerminated/isFailed 签名须按新维度重新收敛，不能用其判断超时
+等于过程失败或实际结束。
 取消未消费的规划权，但本例采用 eligible 锚点，如果已创建下一轮则不能回溯取消它。
+
+### 3.5 超时后正常完成
+
+这是从 3.2 继续的另一分支，不与取消分支混合。deadlineAt 仍为 08:00:40：
+在 08:00:41 读取，stage 可以仍为 running，时间维度已超时；调用方可以放弃等待。
+若随后记录有效完成，快照仍如实返回结果：
+
+```json
+{
+  "requestId": "01M64000000000000000000001",
+  "taskId": "01M64000000000000000000002",
+  "seriesId": "01M64000000000000000000002",
+  "stage": "completed",
+  "receivedAt": "2026-10-29T08:00:00.000Z",
+  "eligibleAt": "2026-10-29T08:00:10.000Z",
+  "deadlineAt": "2026-10-29T08:00:40.000Z",
+  "preparation": {
+    "startedAt": "2026-10-29T08:00:10.001Z",
+    "completedAt": "2026-10-29T08:00:10.002Z"
+  },
+  "allocation": {
+    "boundAt": "2026-10-29T08:00:10.003Z"
+  },
+  "execution": {
+    "executionId": "01M64000000000000000000003",
+    "startedAt": "2026-10-29T08:00:10.004Z",
+    "completedAt": "2026-10-29T08:00:42.000Z"
+  },
+  "termination": {
+    "terminatedAt": "2026-10-29T08:00:42.010Z"
+  },
+  "result": {
+    "text": "hello"
+  },
+  "timestamp": "2026-10-29T08:00:43.000Z"
+}
+```
+
+该 Task 同时已完成且超时；不额外持久化 timed_out stage 或重复布尔值。
+引擎发出迟到完成通知，不撤销超时、不保证任何超时任务一定最终完成。
+调用方是否接受结果是业务决定；时间经过、停止请求与实际停止分别表达。
 
 ## 4. 类型适配与内部准备结果
 
@@ -249,6 +298,8 @@ Probe 可以在自己的 progress 协议中表达 Check 调用关联，而不增
 
 对于其他类型，正常 result 可以表达业务目标尚未达成；这不自动变成 execution.failed。
 Task 终结时间与该执行结束时间分别记录。
+完成事件可以晚于某个 owner Task 的 deadline；该 Task 的超时判断不会禁止记录
+正常 Execution 结果或未取消 Task 的迟到完成通知。不同 owner 使用各自时间约束。
 
 ### 5.3 外部取消
 

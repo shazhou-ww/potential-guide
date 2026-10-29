@@ -21,7 +21,31 @@ HTTP 的 Idempotency-Key 表达 requestId；进程内 API 直接接收完整实�
 幂等比较包含 type 和实际意图；同一幂等身份换 type 是冲突，不新建另一类 Task。
 类型、调用作用域及原始省略语义应可恢复；请求查询不把默认值反写到原始输入。
 
-## 2. 时间约束与内驱推进
+## 2. 三个推动力：设计原则
+
+Task 的变化由三个相互独立的推动力解释，不把它们压成一个互斥状态枚举：
+
+| 推动力 | 来源 | 表达方式 |
+|---|---|---|
+| 第一推动力 | 引擎自身推进 | preparation、readiness、allocation、execution 的过程事实与内驱 stage |
+| 第二推动力 | 外界信号 | 例如取消生效事实 canceledAt；不作为内驱 stage |
+| 第三推动力 | 时间流逝 | eligibleAt、deadlineAt 与观察/有效完成时间的比较；不是到点事件或内驱 stage |
+
+第一推动力的状态树只描述引擎过程，不包含 pending、cancelled 或 timed_out。
+三个维度平行记录、组合解释：时间条件可以约束引擎动作，外界信号可以停止推进，
+但到点本身不是引擎已经开始或结束工作的证据。对时间/信号采取清理等动作要另有事实，
+不能把“应该停止”“已发送停止信号”或“已过期限”当成实际停止。
+
+超时仅表示引擎不再承诺按期限满足需求，不代表必然没有结果。允许超时后继续观察到
+正常完成；completed 与 timedOut 可以同时成立。调用方到期可以放弃等待并按超时处理，
+也可以继续接收迟到完成通知；如何接受或忽略迟到结果由调用方决定。引擎不能保证会有
+迟到结果，但不能仅因超时丢弃真实完成事实或把它冒充按时完成。
+
+UI 状态标签和公共查询辅助函数应基于这些维度投影，不反过来定义持久事实。
+不能用一个 isFailed/isTerminated 或优先级枚举混淆执行失败、期限失约与实际结束。
+具体函数形状仍需收敛；本原则不意味着新增重复持久化的 pending/timedOut 布尔值。
+
+## 3. 时间约束与内驱推进
 
 Task 受理时形成 receivedAt、有效 eligibleAt、deadlineAt。
 eligibleAt 默认等于 receivedAt，也允许早于或晚于它；timeoutMs 的锚点是 eligibleAt：
@@ -33,29 +57,34 @@ deadlineAt = eligibleAt + timeoutMs
 
 到点不要求单独的 eligibility 过程或事件。时间可改变投影，不可伪造工作开始事实。
 时长必须有限且满足协议约束，时间运算溢出须显式拒绝，不能退回无限预算。
-等待准备、条件和资源都消耗同一预算；超时重试、恢复或取消不能刷新旧 Task 期限。
+等待准备、条件和资源都消耗同一预算；重试、恢复或取消不能刷新旧 Task 期限。
+pending 是时间上的派生值，而非 stage：观察时刻尚未到 eligibleAt。调度槽位还须
+排除已取消或实际结束的需求，不能只比较时间就认定它仍需要推进。
+
+尚无有效完成事实时，以服务端观察时间判断是否超期；已有有效完成事实时，以完成时间
+和 deadlineAt 比较，后续查询时间不能把按时完成变成超时。完成晚于 deadlineAt 可同时
+被认为已完成且超时。有效时间来自引擎可靠记录、经校验且适用于本 Task 的结果事实，
+不是执行器任意回填的时间，也不是内部稍后处理到该结果或返回 HTTP 的时刻。
+其他实际结束原因及取消的时间组合、恰好等于 deadlineAt 的边界仍列入实施前决策。
 
 ### 内驱判定树
 
 ```text
-时间条件
-├─ 未到 → pending
-└─ 已到
-   └─ preparation
-      ├─ 未准备好 → preparing
-      ├─ 最终失败 → preparation_failed
-      └─ 可用
-         └─ readiness
-            ├─ 未满足/求值中 → blocked
-            ├─ 最终失败 → readiness_failed
-            └─ 满足
-               └─ allocation
-                  ├─ 等待资源或执行机会 → queued
-                  ├─ 最终失败 → allocation_failed
-                  └─ 实际执行
-                     ├─ 进行中 → running
-                     ├─ 执行故障 → execution_failed
-                     └─ 正常完成 → completed
+preparation
+├─ 未准备好 → preparing
+├─ 最终失败 → preparation_failed
+└─ 可用
+   └─ readiness
+      ├─ 未满足/求值中 → blocked
+      ├─ 最终失败 → readiness_failed
+      └─ 满足
+         └─ allocation
+            ├─ 等待资源或执行机会 → queued
+            ├─ 最终失败 → allocation_failed
+            └─ 实际执行
+               ├─ 进行中 → running
+               ├─ 执行故障 → execution_failed
+               └─ 正常完成 → completed
 ```
 
 树只解释无外部控制时的内驱位置 stage，不是所有实际转移组成的严格树。
@@ -63,34 +92,33 @@ deadlineAt = eligibleAt + timeoutMs
 条件 false 是等待，不是求值故障；正常业务结果“不满足”仍是 completed。
 类型适配器的临时失败是否重试由明确政策决定，不能直接把所有异常转成最终失败。
 空条件集合直接满足，不强造 readiness.satisfiedAt。
+尚未进入内驱过程时没有进行中的 stage；本轮示例省略 stage 表示这一点，最终初始位置
+的编码仍待确认。到 eligibleAt 不自动写出 preparing，只有引擎推进事实支持时才进入。
 
-### stage 与实际状态
+### stage 与多维投影
 
-Snapshot 不输出独立 state；提供 stage 和可选 canceledAt：
+Snapshot 不输出独立 state；内驱位置、外部取消及时间边界分别保留：
 
 ```text
-deriveState(snapshot) = canceledAt 存在 ? cancelled : stage
-isFailed(snapshot) = 派生状态属于协议失败集合
-isTerminated(snapshot) = 派生状态属于协议终结集合
+内驱位置 = 引擎事实所支持的 stage（尚未开始时的编码待定）
+外部取消 = canceledAt 所记录的事实
+时间等待 = 观察时间尚未到 eligibleAt
+期限判定 = 有效完成时间（未完成时为观察时间）与 deadlineAt 的比较
 ```
 
-| 派生状态 | failed | terminated |
-|---|---|---|
-| pending / preparing / blocked / queued / running | false | false |
-| completed | false | true |
-| preparation_failed / readiness_failed / allocation_failed / execution_failed | true | true |
-| timed_out（暂定保留在 stage） | true | true |
-| cancelled（仅由 canceledAt 派生） | false | true |
+preparing/blocked/queued/running 是非终结内驱位置，completed 和四种过程失败表示内驱结局。
+pending、cancelled、timed_out 都不是 stage。未知 stage 或非法组合明确报错。
+超时不产生互斥内驱结局、不自动设置 canceledAt 或 timedOutAt；允许 running 且超时，
+随后 completed 且超时。按时完成的 Task 在未来查询仍是按时完成。
+是否停止逾期工作、如何释放执行需求及结果保留窗口是独立政策，未在本轮定案；
+任何政策都不能将已产生的迟到结果虚构为未发生或按时发生。
 
-未知 stage 或非法组合必须报错，不靠字符串后缀分类。
-取消只能与五个非终结 stage 组合，不能给 completed/failed/timed_out 追加 canceledAt。
-超时最终如何挂接内驱树尚待决策；暂不新增 timedOutAt，也不把到 deadline 等同于已发生的终结裁决。
-
-## 3. 取消与实际执行
+## 4. 取消与实际执行
 
 全部非终态 Task 可取消，不限于 pending 或 eligibleAt 之前。
 取消请求到达不等于取消生效：核心以一致事实边界原子裁决，成功后记录 task.canceled。
-canceledAt 是生效时间；stage 按当时的事实及时间计算并冻结，不沿用客户端旧快照。
+canceledAt 是生效时间；stage 按当时的内驱事实计算并冻结，不沿用客户端旧快照。
+未到 eligibleAt 也能取消，此时不能为了记录取消而补造 pending 或准备过程。
 
 取消后：
 
@@ -101,18 +129,19 @@ canceledAt 是生效时间；stage 按当时的事实及时间计算并冻结，
 - 迟到的执行完成只进入 Execution 历史，不让取消 Task 得到成功 result。
 - 重复取消返回原事实；已由其他原因终结则明确冲突，不覆盖结局。
 
-完成、失败、超时与取消必须产生唯一终结裁决。具体同刻优先级在实施前确定，
+完成、过程失败与取消的互斥裁决仍需一致的事实边界。超时从这一互斥集合中移除：
+它本身不是 task.terminated，不禁止后来完成。完成/取消同刻如何仲裁仍待确认，
 不能仅按客户端时间或事件名称排序。外部控制在判定树之外，但在事实模型之内。
 Task 取消不是取消整个 Series；治理依赖的取消传播由业务所有权规则决定，不靠进展字段自动推导。
 
-## 4. 递归系列
+## 5. 递归系列
 
 recurrence 使用正周期 periodMs 及显式 anchor；本草案示例不依赖尚未决定的默认锚点。
 
 | anchor | 规划时机 | 后继 eligibleAt |
 |---|---|---|
 | eligible | 本轮资格被处理时消费一次规划权，不等准备或业务成功 | 原节拍上严格晚于本次规划时刻的第一个点 |
-| terminated | 本轮正常、失败或超时终结 | terminatedAt + periodMs |
+| terminated | 本轮正常或过程失败的实际终结；超时触发如何处理待决 | 实际 terminatedAt + periodMs；超时不伪造 terminatedAt |
 
 eligible 模式设本轮 e、周期 P、规划时刻 t >= e：
 
@@ -124,13 +153,16 @@ nextEligibleAt = e + (floor((t - e) / P) + 1) * P
 恰好在 10:06 规划则取 10:07。已规划过后继不因旧轮后来超时重新选点。
 后继是新 Request/taskId，继承类型与系列；条件和业务输入如何继承必须遵守类型及准入政策。
 
-同系列最多一个派生 state=pending 的 Task。已有 pending 时保留旧项，
+同系列最多一个尚未到 eligibleAt、未取消且未实际结束的 Task，即有效时间等待槽位。
+此条件按同一事实边界和观察时刻计算，不再检查 stage 或互斥 state=pending。已有该项时保留旧项，
 冗余新项记录取消事实。原子规划不能先覆盖旧项再回滚。
 唯一 pending 不等于最多一个未完成 Task：blocked/running 等仍受容量预算约束。
 取消撤销尚未消费的规划权，不因取消再生后继，也不回溯取消已建立的后继。
 读取/reduce 重放不执行规划副作用，命令重试与恢复不能重复生成同一轮。
+此前“超时即 terminated 并续作”的规则不能直接沿用。是否到期规划后继、采用什么锚点，
+以及迟到完成如何避免第二次规划，须单独决定；本轮保留 eligible 节拍规则，不暗中选择新策略。
 
-## 5. 事件、投影与所有权
+## 6. 事件、投影与所有权
 
 ```text
 F(W) = reduce(一致边界 W 内的必要事件)
@@ -140,7 +172,8 @@ Snapshot(W, t) = project(F(W), t)
 W 包括目标 Task 和它引用的必要 Execution 事实，不是按 occurredAt <= t 随意拼装。
 同一前缀、投影规则及 t 产生相同结果；允许 checkpoint 加后缀替代全量重放。
 reducer 不运行任务、不访问网络、不读取当前可变配置、不创建新 Request。
-stage 是投影，canceledAt 是固定事实；取消时使用当时边界而非最新共享执行结果。
+stage 是内驱事实的投影，canceledAt 是固定事实；时间条件用同一 W 与 t 派生。
+纯时间流逝不产生 stage 转移或伪造终结事件；取消时使用当时边界而非最新共享执行结果。
 
 通用事件目录：
 
@@ -151,7 +184,7 @@ stage 是投影，canceledAt 是固定事实；取消时使用当时边界而非
 | task.readiness.evaluated / satisfied / failed | 条件求值、正式采用证据或最终故障，不复制业务结果树 |
 | task.allocation.bound / failed | 正式绑定执行或最终分配故障 |
 | execution.started / progress / completed / failed | 实际执行生命周期及业务载荷 |
-| task.terminated | 非取消终结裁决，成功引用 Execution 结果 |
+| task.terminated | 非取消的实际终结裁决，成功引用 Execution 结果；不代表 deadline 到点 |
 | task.canceled | 外部取消生效及冻结位置 |
 | task.updated | 派生快照通知，不是 reducer 输入事实 |
 
@@ -160,8 +193,11 @@ stage 是投影，canceledAt 是固定事实；取消时使用当时边界而非
 共享执行结果只存一份；Task 的 result 由执行事实与本 Task 的成功终结裁决投影。
 事件身份/位置用于重复投递处理，不按相同时间戳或相同 payload 去重。
 分页、订阅交接和历史保留必须显式定义；历史缺失不得伪装为空结果。
+迟到完成仍进入 Execution 事实，并可投影为未取消 Task 的超时完成及通知。
+时间到点的派生通知也不是 reducer 事实；若已实际采取停止/清理动作，须记录该动作
+而非把时间条件冒充执行故障。先前查询的超时不被后来的正常完成“撤销”。
 
-## 6. 一致性、权限与恢复
+## 7. 一致性、权限与恢复
 
 准入幂等、终结裁决、系列占槽和规划权消费需要存储端口提供明确的原子边界。
 类型代码只能报告事实/结果，不能直接修改 snapshot 或任意提交终结事件。
@@ -175,12 +211,15 @@ stage 是投影，canceledAt 是固定事实；取消时使用当时边界而非
 
 ### 实施前决策
 
-1. **终结仲裁：** deadline 与完成/取消同刻如何决定，timed_out 如何挂接内驱模型。
+1. **三维边界：** 恰好等于 deadlineAt 的期限判定、完成/取消同刻仲裁、失败/取消的时间
+   投影、初始内驱位置编码，以及替代单一 deriveState/isFailed/isTerminated 的查询接口。
+   pending/timed_out 不属于 stage、超时可完成已确定，不重新开放。
 2. **条件有效性：** 采用证据的有效期、重查、失效、重试边界，以及递归条件继承。
 3. **执行恢复：** 崩溃时 running 如何处置、幂等副作用和外部执行引用的责任；不默认自动重跑。
 4. **存储与流：** 本地持久实现的介质/事务、跨 Task/Execution 读取边界、保留、分页水位与 SSE 续读。
 5. **类型演进与资源：** 类型契约版本、准备结果保留、共享兼容标识、容量满时的明确处置。
-6. **递归默认值：** 默认锚点及长期积压限制；原节拍选点和取消不续作已经定义，不重新开放。
+6. **递归与超期政策：** 默认锚点、长期积压、到期后工作/清理/通知保留，以及是否到期
+   规划后继、与迟到完成的去重。原节拍选点和取消不续作已经定义，不重新开放。
 
 这些决策不能用静默默认值掩盖；它们不阻止先评审分层与接口方向，
 但相关正确性未收敛前不得将该能力标为已实现或已验收。
