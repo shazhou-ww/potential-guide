@@ -13,19 +13,22 @@
 | Execution | 实际执行，可被多个兼容 Task 共享 |
 | 解锁条件（gate） | 需求继续推进所必须成立的一层谓词 |
 | 解锁过程（enabling process） | 产生该层条件所需事实的工作，可以与其他过程重叠 |
-| 判定树（decision tree） | 按优先级逐层增加条件，叶子代表原子 state |
-| 原子状态（state） | 判定树选中的具体情况，决定快照的约束 |
+| 判定树（decision tree） | 无外部控制干预时，按优先级逐层增加条件，叶子代表内驱位置 stage |
+| 内驱位置（stage） | 内驱判定所选的具体情况，不是四个过程名，也不单独代表实际终态 |
+| 实际状态（state） | 由 stage 与已生效的 canceledAt 纯函数派生，不作为 snapshot 的独立字段 |
 | 状态转移（transition） | 新事实或裁决使 Task 从一个原子状态变为另一个 |
 | 语义分类（state category） | failed、terminated 等状态集合，可包含或交叉，不要求构成单一树 |
 | Snapshot | 一致事件前缀经 reducer 归约，再按服务端时间投影出的有界视图，不是逐次编号的持久化实体 |
 
-不把 transition 命名为 phase，也不强制二级事实对象与 state 同名。
+不把 transition 命名为 phase，也不强制二级事实对象与 stage 同名。
 “解锁”是补齐条件合取的一层，不保证下一次对外快照恰好落在相邻叶子。
 例如制品已经提前就绪，时间资格到达后可以不出现 preparing 快照。
 
 ## 2. 判定树：沿根到叶的路径做条件合取
 
-下面是正常推进与过程最终失败的判定骨架，控制终结另见第 7 节。
+下面是内驱推进与过程最终失败的判定骨架，外部取消不在树内，控制终结另见第 8 节。
+“内驱”指按既定 Task 契约推进，不是说准备或检查不依赖外部资源。
+完整生命周期还包含外部控制转移；不要求所有实际转移组成严格的树。
 prerequisites 是任意抽象 Task 的统一能力，不为 Check/Probe 定义特殊状态机。
 当前 Check/Probe Request 准入不支持该字段（包括空数组），因此这些入口暂不生成
 带前置条件的任务；无条件任务在这一层直接满足，而不是从全局模型删除该层。
@@ -63,7 +66,7 @@ prerequisites 是任意抽象 Task 的统一能力，不为 Check/Probe 定义�
 临时缺资源是 queued；可重试的获取错误或可采用的 fallback 也不立即终结 Task。
 最终失败必须由明确策略裁决，保留过程原因，不能从一个异常字符串猜测状态。
 
-## 3. 解锁过程可以重叠，state 是优先级投影
+## 3. 解锁过程可以重叠，stage 是优先级投影
 
 | 过程/约束 | 作用 | 事实分组 |
 |---|---|---|
@@ -100,13 +103,25 @@ Task 进入 preparing 可以只由时间推进推导，不要求另写状态转�
 执行前必须原子确认用于解锁的证据仍有效；证据有效期、重试及条件变化策略仍待细化。
 不因为过程可以重叠，就允许绕过权限或为治理自动启动未经授权的 Agent。
 
-## 4. 单一 state 与协议定义的语义集合
+## 4. stage、canceledAt 与派生 state
 
-快照不加入 substate、isFailed 或 isTerminated。原子 state 已唯一表达具体情况；
-语义分类由协议中的显式集合定义，SDK 提供公共判定方法。
-不能按字符串后缀猜测，也不能只在某个语言 SDK 中私自定义。
+Snapshot 输出 stage 和可选 canceledAt，不再输出 state，也不加入 cancelled 布尔值、
+substate、isFailed 或 isTerminated。公共字段统一拼写为 canceledAt；
+既有派生取消状态值暂保留 cancelled，不建立 canceled/cancelled 两套字段别名。
 
-| 原子 state | 支持的 Task | isFailed | isTerminated |
+```text
+deriveState(snapshot) =
+  canceledAt 存在 ? cancelled : stage
+isFailed(snapshot) = classify(deriveState(snapshot)).failed
+isTerminated(snapshot) = classify(deriveState(snapshot)).terminated
+```
+
+输入先按协议校验。stage 不能取 cancelled；canceledAt 只能与取消时的非终结 stage 组合，
+不能给已 completed、过程 failed 或 timed_out 的 Task 追加取消字段。
+未知 stage、无效时间或不合法组合须显式报告，不默认为成功。
+表中的分类作用于派生 state，不能只看 stage 决定整个 Task 是否仍活跃：
+
+| 派生 state | 支持的 Task | isFailed | isTerminated |
 |---|---|---|---|
 | pending | 全部 | false | false |
 | preparing | 全部 | false | false |
@@ -119,19 +134,19 @@ Task 进入 preparing 可以只由时间推进推导，不要求另写状态转�
 | allocation_failed | 全部 | true | true |
 | execution_failed | 全部 | true | true |
 | timed_out（控制终结暂定命名） | 全部 | true | true |
-| cancelled（控制终结暂定命名） | 全部 | false | true |
+| cancelled（由 canceledAt 派生，不是 stage） | 全部 | false | true |
 
 上表为本轮协议草案的完整分类映射；四个过程失败替代宽泛 failed。
 所有 Task 共用这张表与状态约束。当前 Check/Probe 创建入口的字段限制
 只是 admission 策略，不用于从 Task schema 或 SDK 分类中移除 blocked/readiness_failed。
-超时、取消的既有行为用暂定原子值表达，不宣称它们在正常判定树中的最终挂接方式已确定。
-新增状态必须更新协议分类，遇到未知状态须显式报告，不默认为成功或非终态。
-`isFailed(state)`、`isTerminated(state)` 是方便消费的纯判定，
-并不把允许交叉/包含的语义集合重新编码为 state/substate 二维字段。
+timed_out 暂保留为 stage 的控制终结值，超时在内驱树的最终挂接方式另议；
+不因取消拆成独立事实就新增 timedOutAt。取消属于外部控制维度，不进入内驱树。
+新增派生状态必须更新协议分类；SDK 的上述纯函数接收 snapshot，而非只接收 stage。
 
-## 5. Snapshot：过程分组事实 + 单一状态 + 技术时间
+## 5. Snapshot：过程分组事实 + 内驱位置与取消事实 + 技术时间
 
-快照顶层保留身份、timestamp、state、receivedAt/eligibleAt/deadlineAt，不再包含 revision。
+快照顶层保留身份、timestamp、stage、可选 canceledAt、receivedAt/eligibleAt/deadlineAt，
+不再包含 state 或 revision。canceledAt 是取消生效的业务事实，timestamp 是本次投影时间。
 不嵌入 Request，也不重复 freshness、recurrence 等请求策略；它们通过 requestId 查询。
 二级事实分组如下，
 只输出已发生的字段，不为路径整齐伪造空过程或缺省时间。
@@ -142,7 +157,7 @@ Task 进入 preparing 可以只由时间推进推导，不要求另写状态转�
 | readiness | satisfiedAt | prerequisites 已被采用的通过事实，不是当前所有 Check 状态 |
 | allocation | boundAt | 正式绑定某次执行的时间；仅资源预约不等于绑定 |
 | execution | executionId、startedAt、completedAt | 实际执行事实，不是 Task 阶段时刻 |
-| termination | terminatedAt、error、lastState、planningConflict | 需求终结原因及必要诊断 |
+| termination | terminatedAt、error、lastStage、planningConflict | 非取消终结时间及终结诊断；取消时间只在 canceledAt，不重复 terminatedAt 或 lastStage |
 
 顶层三个时间字段属于整个 Task，不强塞进 preparation/allocation/execution。
 deadlineAt 也适用于尚未开始执行的任务；它是根据有效 eligibleAt 与 Request.timeoutMs
@@ -185,7 +200,7 @@ resolution；业务检查不通过不触发重新选版。检查时间、失败�
 snapshot 只保存成功选择的有界事实。
 
 snapshot 不包含通用 progress 或 progress.process，也不在每个过程里复制一套
-status/reason/currentStep 来替代它。整体状态只由 state 表达；
+status/reason/currentStep 来替代它。实际 state 只由 stage 与 canceledAt 派生；
 过程对象仅放已成立的有界事实。每次 fetch 尝试、未满足条件列表、临时预约和业务进展
 通过 SSE/历史事件观察，不随着每个 snapshot 重复传输。
 只有已被采用的就绪、准确选版和正式执行关联等事实才进入相应二级分组。
@@ -208,7 +223,7 @@ timestamp 可以随重新读取变化，其他业务时间和已经成立的过�
 例如相同事实包含 eligibleAt=15:00:00，14:59:59 的投影可为 pending，
 15:00:01 的投影可为 preparing；不必为了越过时间边界制造一次持久化写入。
 但时间可推算状态，不可推算实际工作：若准备尚未真正开始，
-即使 state=preparing 也不能凭空记录 preparation.startedAt。
+即使 stage=preparing 也不能凭空记录 preparation.startedAt。
 实际定时调度和 SSE 通知仍需按服务语义推进，只是不为维护 snapshot revision 而强制写入。
 
 timestamp 必须与求值所使用的一致事实视图相对应，不能读完旧事实后在发送时补一个新时间。
@@ -222,9 +237,10 @@ timestamp 必须与求值所使用的一致事实视图相对应，不能读完�
 
 对同一 Task 的前序快照 A 和后继 B：
 
-1. taskId/requestId/seriesId 不变；timestamp/state 为本次读取元数据，不要求原值继承。
+1. taskId/requestId/seriesId 不变；timestamp 可变化；未终结时 stage 可重新投影，
+   取消生效后 stage 冻结且 canceledAt 原值继承，不能继续按当前时间推进。
 2. A 已成立的事实叶子路径，在 B 中必须仍存在且值相等；过程对象可增加新事实。
-3. 不因 state 切换把 preparation.startedAt 改成 preparationStartedAt，
+3. 不因 stage 切换把 preparation.startedAt 改成 preparationStartedAt，
    也不把 execution.startedAt 改成 Task 进入 running 的时间。
 4. snapshot 没有 progress；过程事实对象不得用可变的当前进展覆盖旧事实。
 5. 跳过阶段不等于缺少该路径要求的就绪事实；未发生过程也不凭空填时间。
@@ -239,7 +255,7 @@ timestamp 必须与求值所使用的一致事实视图相对应，不能读完�
 | 原子状态 | 必须满足的主要数据约束 |
 |---|---|
 | pending | 时间资格未到；可保留已经产生的 preparation 事实，但不能伪造实际执行 |
-| preparing | 时间层已到、制品未就绪；尚未实际工作时可无 preparation，不能从 state 推造 startedAt |
+| preparing | 时间层已到、制品未就绪；尚未实际工作时可无 preparation，不能从 stage 推造 startedAt |
 | preparation_failed | 时间层已通过且准备最终失败，有真实准备事实和终结原因，不要求 Execution |
 | blocked / readiness_failed | 任意有前置条件的抽象 Task；制品正式就绪，有准确引用；条件求值失败不是业务不通过 |
 | queued / allocation_failed | 制品已就绪且所声明前置条件通过；尚无实际开始也可有正式绑定事实 |
@@ -251,10 +267,11 @@ timestamp 必须与求值所使用的一致事实视图相对应，不能读完�
 只对一个 snapshot 校验形状不够，还需对服务端有序生成的事实视图验证单调扩展，
 不要按网络响应到达顺序或相同 timestamp 擅自认定前后关系；
 并拒绝缺少所需条件通过证据的任务调度、无执行关联的 execution_failed 等反例。
-过程失败不能用 lastState 代替原因：状态为 pending 时也可能发生提前获取错误；
-lastState 仅说明终结前观察到的位置，不是失败过程的另一个判别字段。
+过程失败不能用 lastStage 代替原因：stage 为 pending 时也可能发生提前获取错误；
+lastStage 仅用于非取消终结前的诊断位置，不是失败过程的另一个判别字段。
+取消时 stage 本身已经冻结，不再重复 lastStage。
 
-## 7. 完整快照例子：同一事实不随当前 state 移位
+## 7. 完整快照例子：同一事实不随当前 stage 移位
 
 以下两个对象是同一 Task 的连续快照。时间未到时，准备过程已经开始，
 所以 pending 可以带 preparation.startedAt；它不是 preparing 的当前进展。
@@ -264,14 +281,14 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
   "requestId": "01M60000000000000000000060",
   "taskId": "01M60000000000000000000061",
   "seriesId": "01M60000000000000000000061",
-  "state": "pending",
   "preparation": {
     "startedAt": "2026-10-29T06:00:50.000Z"
   },
   "receivedAt": "2026-10-29T06:00:00.000Z",
   "eligibleAt": "2026-10-29T06:01:00.000Z",
   "deadlineAt": "2026-10-29T06:01:30.000Z",
-  "timestamp": "2026-10-29T06:00:50.000Z"
+  "timestamp": "2026-10-29T06:00:50.000Z",
+  "stage": "pending"
 }
 ```
 
@@ -284,23 +301,23 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
   "requestId": "01M60000000000000000000060",
   "taskId": "01M60000000000000000000061",
   "seriesId": "01M60000000000000000000061",
-  "state": "preparation_failed",
   "preparation": {
     "startedAt": "2026-10-29T06:00:50.000Z"
   },
   "termination": {
     "terminatedAt": "2026-10-29T06:01:00.010Z",
-    "lastState": "preparing",
     "error": {
       "code": "digest_mismatch",
       "stage": "verify",
       "message": "Artifact digest does not match the requested digest."
-    }
+    },
+    "lastStage": "preparing"
   },
   "receivedAt": "2026-10-29T06:00:00.000Z",
   "eligibleAt": "2026-10-29T06:01:00.000Z",
   "deadlineAt": "2026-10-29T06:01:30.000Z",
-  "timestamp": "2026-10-29T06:01:00.010Z"
+  "timestamp": "2026-10-29T06:01:00.010Z",
+  "stage": "preparation_failed"
 }
 ```
 
@@ -317,7 +334,6 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
   "requestId": "01M60000000000000000000062",
   "taskId": "01M60000000000000000000063",
   "seriesId": "01M60000000000000000000063",
-  "state": "execution_failed",
   "preparation": {
     "startedAt": "2026-10-29T06:02:00.010Z",
     "completedAt": "2026-10-29T06:02:00.100Z",
@@ -338,17 +354,18 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
   },
   "termination": {
     "terminatedAt": "2026-10-29T06:02:00.500Z",
-    "lastState": "running",
     "error": {
       "code": "execution_failed",
       "stage": "observe",
       "message": "Checker execution failed."
-    }
+    },
+    "lastStage": "running"
   },
   "receivedAt": "2026-10-29T06:02:00.000Z",
   "eligibleAt": "2026-10-29T06:02:00.000Z",
   "deadlineAt": "2026-10-29T06:02:30.000Z",
-  "timestamp": "2026-10-29T06:02:00.500Z"
+  "timestamp": "2026-10-29T06:02:00.500Z",
+  "stage": "execution_failed"
 }
 ```
 
@@ -360,19 +377,37 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
 
 Task 超时不必由 Execution 引起；Task 已终结时，共享 Execution 仍可能服务其他需求。
 因此 Task 的 termination 与 execution.completedAt 分开，所有失败不统一塞进 execution。
-控制终结在异常/时间竞争下的具体优先级、deadline 同刻裁决及判定树挂接位置仍待收敛。
+取消开放到 pending/preparing/blocked/queued/running 等全部非终态，
+不以 eligibleAt 或是否已经运行划定取消窗口。取消请求与取消生效是不同的事实；
+在原子裁决确认该 Task 尚未终结后，记录取消事件、canceledAt 和当时的 stage。
+stage 必须按该裁决边界的事实及时间得到，不使用客户端缓存或上次读取的位置。
+取消后冻结 Task 的 stage 与该边界已知的执行事实；snapshot.timestamp 仍为本次读取时间。
+例如 pending 被取消后即使跨过 eligibleAt 也仍为 stage=pending，
+running 被取消后即使共享 Execution 完成也不变为 completed，不补成功 result。
+后续 Execution 事实仍独立记入其历史，不抹掉取消前已成立的准备、绑定和执行事实。
+
+取消撤销该 Task 的需求，尽力释放其拥有的资源；不保证底层执行立即停止或副作用撤销。
+共享 Execution 还有其他 owner 时不得一起终止；即使没有其他 owner，也可能无法中断。
+取消与完成、失败、超时须原子仲裁，已成立的终态不可被取消覆盖。
+重复取消已取消 Task 返回原取消事实，不改 canceledAt；
+已由其他原因终结时返回明确冲突，不成功取消其他轮次。
+deadline 同刻与裁决优先级仍待收敛，单有取消请求不等于 canceledAt 已成立。
 已提交终态不可被迟到结果反转；此原则不取决于最终选择哪个控制终结原子名。
 
 `isTerminated` 不等于“应生成后继”。recurrence.anchor=terminated
-处理正常完成及失败/超时续作；取消 pending 则撤销后继规划权。
-isFailed(cancelled)=false 不表示它会继续周期；控制策略与分类判定不能混为一谈。
-当前公开取消仍限 pending，是否扩展 queued/blocked 等不由本文暗中决定。
+处理正常完成及失败/超时续作；任意阶段取消都撤销该 Task 尚未消费的后继规划权。
+isFailed(snapshot)=false 不表示被取消的需求会继续周期。
+取消不是 cancel-series：已经独立建立的后继和其他 Task 不回溯取消；
+eligible 模式已有后继仍继续，terminated 模式取消运行中 Task 不产生后继。
+槽位与活跃需求统计使用派生 state；被冻结的 stage=pending 不保留 pending 槽位，
+被冻结的 stage=running 不表示仍持有 Execution 的活跃需求。
+冗余规划取消也属于外部控制事实，相对于 Task 内驱树在树外，不要求由人手工触发。
 
 ### 本次收敛与尚未定稿
 
-已确立：路径条件合取、可重叠解锁过程、单一原子 state、协议级语义分类、
+已确立：内驱路径条件合取、可重叠解锁过程、stage 与外部取消事实复合派生 state、协议级语义分类、
 过程分组的有界事实、固定路径继承、snapshot 无 revision/progress、
 技术时间 timestamp 与业务时间分开、详细历史按事件查询。
 本文暂定术语与字段名供评审；不新增独立的 phase/substate 状态机。
-具体控制终结分支、过程最终失败策略、证据有效期和崩溃重试机制仍需单独讨论。
+超时挂接与同刻终结仲裁、过程最终失败策略、证据有效期和崩溃重试机制仍需单独讨论。
 不以这些待决项否定已明确的抽象，也不把文档示例当作完成实现或验收。

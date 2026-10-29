@@ -38,15 +38,21 @@ Coordinator 按授权处理，完成治理后重查，服务保留 origin 因果
 Regulation 调用方改用与 Probe 相同的 Objective URL/digest 引用，由服务构造内部 PilotSpec；
 实体必含 requestId，HTTP 从 header 还原并先于 body 解析识别；生成型身份采用 ULID。
 提供 series 动态事件和可恢复身份，不以旧协议兼容要求约束新结构。
-Task snapshot 在 HTTP/SDK/事件中统一为单一原子 state 判别联合，移除公共 hostInstance；
+Task snapshot 在 HTTP/SDK/事件中统一为 stage 与可选 canceledAt 的合法组合，
+移除独立 state 与公共 hostInstance；
 按[任务状态模型](./ideal/task-state-model.md)落实条件判定树与协议语义分类，
-提供 isFailed/isTerminated 等公共判定，不新增 substate 或重复布尔字段。
+提供 deriveState(snapshot)、isFailed(snapshot)/isTerminated(snapshot) 等公共纯函数，
+不新增 substate 或重复布尔字段，未知 stage 与不合法取消组合显式失败。
 核心过程事实按 preparation/readiness/allocation/execution 分组，终结用 termination；
 receivedAt/eligibleAt/deadlineAt 放顶层，不用 schedule 包装。快照不复制请求体、
 freshness 或 recurrence；按 requestId 查询原始 Request，保留失败请求的审计能力。
 Request.prerequisites 保留声明语义，失败原子同步采用 readiness_failed/allocation_failed。
 过程可重叠，开始时间不冒充阶段转移时间；删除 snapshot 的 progress 与数字 revision，
-只使用 state 和本次服务端技术时间 timestamp。详细进展通过事件查询，不在过程里另建同义状态字段。
+使用 stage、canceledAt 和本次服务端技术时间 timestamp。详细进展通过事件查询，不在过程里另建同义状态字段。
+内驱树只覆盖无外部控制的推进；全部非终态支持取消，裁决记录 task.canceled，
+在取消生效边界冻结 stage 与已有事实，时间推进和迟到执行结果不复活该 Task。
+取消尽力释放该需求资源，不保证停止实际执行，不伤其他共享 owner；
+撤销未消费的后继规划权，不撤回已建立的后继，不因取消再规划下一轮。
 所有有序事实视图的后继（含终结/恢复）继承既有事实，timestamp 不属于原值继承的业务字段。
 根及独立查询的子 Task snapshot 都仅携带准确 artifactRef，完整 Artifact 按 digest 单独查询，
 不得用 latest 替代原内容或用 manifest 代替实际执行证据。
@@ -85,9 +91,9 @@ freshness 归并成立；故障恢复测试证明不重复规划、不刷新期�
 
 Router、SDK、Pilot/regulator 与 Coordinator 的 series 订阅和持久恢复测试通过，
 覆盖新轮次动态加入及授权边界；最终执行 pnpm check，不以旧 gate 或类型检查替代运行证据。
-状态联合的 schema/运行校验证明 completed 必有结果、pending 不带父 Execution，
+组合 schema/运行校验证明派生 completed 必有结果、未取消 pending 不带父 Execution，
 各失败叶子继承其路径要求的事实；提前获取不伪造状态转移时间。
-覆盖统一 Task 原子状态和 failed/terminated 分类，另测各 Request 入口的准入边界，
+覆盖统一 Task 的 stage/canceledAt 组合、派生状态和 failed/terminated 分类，另测各 Request 入口的准入边界，
 拒绝当前探测请求的 prerequisites（含空集合），但统一 Task schema 允许有条件任务，
 不能按 checker/objective 类型拒绝 blocked；同时保留业务动态 requirements；
 初始已 eligible 不返回 pending，元数据从快照移除后仍能
@@ -104,10 +110,15 @@ Router、SDK、Pilot/regulator 与 Coordinator 的 series 订阅和持久恢复�
 Before 对照与新设计的派生缓存职责明确，避免身份和调度参数多份可变真相。
 增加跨快照校验：事实叶子路径不丢失、值不变、无 progress/revision；
 覆盖无写入跨 eligible 的不同读取状态、同刻时间不能直接去重及技术时间不伪造工作事实；
-时间资格仅为 t >= eligibleAt，覆盖边界前、恰好到点和边界后，
+未取消 Task 的时间资格仅为 t >= eligibleAt，覆盖边界前、恰好到点和边界后，
 不依赖调度确认或资格通过事件，所有快照（含失败分支）不含 eligibility 分组；
 用删除已知事实、改名、改值和失败分支丢失执行身份的反例验证，而非只测单个状态 shape。
 验证所有 After snapshot（含事件和缓存视图）不含 schedule 或请求策略，
 Request 查询保留原始省略语义，Task 有效期限不被默认值回写污染。
 明确区分 execution.startedAt、Task 正式绑定时间和 termination.terminatedAt；
 不得靠状态名后缀推断语义分类，未知原子状态显式失败。
+取消测试覆盖五个非终态、pending 取消后跨 eligible、running 取消后共享执行完成、
+重复取消保留原 canceledAt、终态取消冲突及原子竞争；冻结位置不得取过时缓存。
+取消后的 stage 不再用于活跃计数或占槽：验证 pending 槽位及该 Task 的执行需求正确释放。
+取消快照不输出 state、重复 terminatedAt 或 lastStage；非取消诊断位置由 lastState 改为 lastStage。
+完整归约与增量恢复必须重建相同取消边界，不以取消请求收到时间代替生效事实。

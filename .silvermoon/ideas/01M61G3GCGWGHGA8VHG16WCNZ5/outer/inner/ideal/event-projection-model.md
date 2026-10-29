@@ -19,14 +19,15 @@ t 是与该读取边界配套取得的服务端技术时间，不是响应发送
 分页中的一页通常不够，Task 历史中的 executionId 也只是引用，不能假装已经读到了执行结果。
 
 这里不是把 events、当前时间和 reducer 结果拼成三个快照字段。
-reducer 得到内部事实状态，project 选择对外的有界字段并计算单一 state；
+reducer 得到内部事实状态，project 选择对外的有界字段并计算 stage 与 canceledAt；
+实际 state=deriveState(snapshot)，不在 snapshot 另存一份。
 原始 events、请求策略、完整执行环境和诊断树不因此进入 snapshot。
 reducer 与 project 可以在实现中组合，但输入事实与投影时间必须显式区分。
 
 | 修改点 | 之前的草案 | 本次原则 |
 |---|---|---|
 | 事实来源 | 要求快照与历史同源，尚未明确如何重建 | 每个快照业务事实都能由事件或其固定引用的事实重建 |
-| 状态来源 | 依时间与事实判定，但仍有“每次转移应写事件”的表述 | state 是 project 的结果；不为纯时间推进强制新增事件 |
+| 状态来源 | 依时间与事实判定，但仍有“每次转移应写事件”的表述 | stage 是内驱投影，结合 canceledAt 派生实际 state；不为纯时间推进强制新增事件 |
 | 当前时间 | timestamp 表示本次读取时间 | 同时是投影的显式输入；不是 reducer 内部读取墙钟 |
 | task.updated | 快照通知容易与事实事件混称 | 只输出投影，不能作为 reducer 的事实输入 |
 | 持久缓存 | cachedSnapshot 为派生视图 | 可用增量归约或带边界的 checkpoint 加速，但不能成为独立真相 |
@@ -86,7 +87,8 @@ Task 的过程事实用 `task.<process>.<fact>`，对象级事实用 `task.<fact
 | 执行故障未独立列出 | execution.failed | 实际执行失败；影响哪些 Task 仍依各 Task 的绑定与终结裁决 |
 | execution.child-task-linked | execution.progress | 调用关联作为 data.progress 中的业务进展，不再是通用引擎的专用关系类型 |
 | 故障详情未定义业务扩展位 | 失败事件的 data.error.details（可选） | 业务诊断对象；通用错误分类不由该对象决定 |
-| task.terminated | 保留 | Task 终结裁决 → termination 与终态；成功时引用执行结果，不复制 result |
+| task.terminated | 非取消终结使用 | data.stage 记录终结位置；成功时引用执行结果，不复制 result |
+| 取消混在 task.terminated | task.canceled | 外部取消生效事实，occurredAt → canceledAt，data.stage 冻结内驱位置；不新增 stage=cancelled |
 | task.updated | 保留为投影通知 | 不属于上述事实集合，不参与 reduce |
 
 当前 preparation.completedAt 的定义就是“已形成正式、可使用的准确制品选择”，
@@ -170,7 +172,7 @@ prerequisites 或自动治理授权。Coordinator 自己理解 Regulation 的业
 | execution.startedAt/completedAt | 被引用 Execution 的开始/完成事实，不冒充 Task 加入时间 |
 | completed 的 result | 被引用 Execution 的业务结果及该 Task 的成功终结裁决；引擎不读取业务 ok/requirements 来改写终态 |
 | termination | Task 自己的终结裁决；不能用共享 Execution 的终结替代 |
-| state、timestamp | 对上述一致事实按 t 投影；state 规则见任务状态模型 |
+| stage、canceledAt、timestamp | 未取消时内驱位置按 t 投影；取消后冻结裁决位置与事实边界，timestamp 仍为读取时间 |
 
 示例中业务阶段时间使用对应事实的 occurredAt；接收时间等可能早于事件创建的值须显式保存。
 occurredAt 是业务时间，不作为日志顺序。绑定一个正在运行的共享 Execution 时，
@@ -180,8 +182,34 @@ occurredAt 是业务时间，不作为日志顺序。绑定一个正在运行的
 Snapshot 只提取累积的有界事实，而不是把 reducer 内部状态全部序列化。
 先前公开的正式选版、绑定及过程时间继续按原路径继承；各轮尝试或条件重查保留在历史。
 条件通过证据的有效期/撤销与重新绑定策略尚未定义，不用“覆盖旧字段”暗中破坏继承规则。
-终结后执行仍继续时，Task 终态不可反转；是否补充后续执行诊断事实须另行明确，
-不能默认给 timed_out/cancelled 添加成功 result。
+终结后执行仍继续时，Task 结局不可反转；取消按下一节固定其已知事实边界。
+timed_out 是否补充后续执行诊断事实仍待明确，不能默认给超时或取消需求添加成功 result。
+
+### 3.1 外部取消与内驱投影复合
+
+判定树只覆盖无外部控制时的内驱推进，取消不硬塞到树根或树叶；
+但取消仍是归约输入，与同一事实视图共同决定实际状态：
+
+```text
+未取消：stage = 内驱判定(事实边界, t)
+已取消：stage = task.canceled.data.stage
+        canceledAt = task.canceled.occurredAt
+实际状态 = deriveState(stage, canceledAt)
+```
+
+task.canceled 必须由服务端原子裁决产生，data.stage 是该边界的真实投影，
+不是调用方指定值或旧快照；只能是 pending/preparing/blocked/queued/running。
+对应已知过程/执行事实也固定在取消边界，晚到的共享执行结果仍保存在 Execution 历史，
+不推进该 Task 的 stage、不添加成功 result。timestamp 随读取更新而不改变冻结边界。
+取消前即使已经跨过 eligibleAt，也不能照抄上次 pending；取消后跨时间边界则不能再推进。
+重复取消不新增不同的取消事实，已非取消终结则明确冲突；同刻仲裁优先级仍待收敛。
+取消与完成等终结互斥，同一 Task 不同时记录生效的 task.canceled 和另一个终结裁决。
+task.canceled 保存的 stage 必须可由其因果前缀和 occurredAt 复核；
+恢复时不得丢失这个边界后拿最新 Execution 状态覆盖它。
+取消时间只由 canceledAt 表达，不重复 termination.terminatedAt 或 lastStage；
+termination 可保留 error/planningConflict 诊断。非取消场景的诊断位置统一称 lastStage。
+取消撤销尚未消费的规划权，不产生后继，也不撤销已存在的后继；
+这是需求撤销，不保证物理停止，更不影响其他 owner 的共享执行。
 
 execution.progress 是可查询的事实事件，不是 task.updated 快照通知，
 也不是重新引入 snapshot.progress。通用 reducer 识别该事件，保留其历史，
@@ -212,7 +240,7 @@ error.details 留在所属故障事实中；Task 终结通过已知 Execution �
 ## 5. 验证原则
 
 - 同一前缀与 t 重放结果一致；完整归约与 checkpoint 加后缀一致。
-- 无写入跨 eligible（含恰好到点）只改变 timestamp/state，不产生 eligibility 对象、
+- 未取消时无写入跨 eligible（含恰好到点）只改变 timestamp/stage，不产生 eligibility 对象、
   资格通过事件、准备开始或终结事实，也不等待调度器确认。
 - 对照完整事件链重建已展示的 Task 快照，而非只验证 JSON 字段合法。
 - 同刻的 preparation.completed 与 allocation.bound 按事件边界区分；
@@ -221,6 +249,8 @@ error.details 留在所属故障事实中；Task 终结通过已知 Execution �
 - fallback 保留更新错误，三种 resolution 及既有事实不会因重放或失败分支丢失。
 - 乱序/重复传输由读取与归约边界处理；未知事实、缺失引用不能静默降级。
 - task.updated 不可回灌 reducer；重放不能触发执行、外部检查或递归后继创建。
+- 任意非终态取消后 stage 冻结，canceledAt 原值保留；跨 eligible 或迟到执行结果不复活。
+  测试重复取消、与终结竞争、保留执行关联及后继规划权，Task 取消不假装停止共享 Execution。
 - execution.progress 的业务关联可以完整重放/查询，但不修改通用 snapshot 或触发依赖治理；
   载荷中的同名字段不能覆盖外壳，不新增 snapshot.progress/custom/metadata。
 - 正常业务不通过仍为 execution.completed，结果按业务协议校验并原样投影；
@@ -364,8 +394,8 @@ Accept: application/json
       "taskId": "01M60000000000000000000006",
       "seriesId": "01M6000000000000000000001D",
       "data": {
-        "state": "completed",
-        "executionId": "01M60000000000000000000001"
+        "executionId": "01M60000000000000000000001",
+        "stage": "completed"
       }
     }
   ],
@@ -560,3 +590,32 @@ Execution `01M60000000000000000000064`。这里只展示一条完整失败事件
 Task 快照保留原通用错误摘要，通过执行引用读取详细故障事实，不增加自定义诊断树。
 业务适配器判断此次是执行故障，不能由通用 reducer 看见 details.exitCode 就自行推断；
 同样，业务结果中的 ok=false 或 requirements 不是此类错误详情。
+
+### 6.7 取消生效：内驱树之外的控制事实
+
+对应[请求数据示例](./request-data-examples.md)第 6.1 节 running 取消分支，
+与第 6.2 节所展示的主 Check 正常终结历史互斥，不可拼接为同一条实际历史。
+此处的 stage 是取消裁决时已确认的内驱位置，不是把 running 标记为执行停止。
+
+```json
+{
+  "cursor": "task6-canceled",
+  "type": "task.canceled",
+  "occurredAt": "2026-10-29T03:21:02.000Z",
+  "requestId": "01M60000000000000000000002",
+  "taskId": "01M60000000000000000000006",
+  "seriesId": "01M6000000000000000000001D",
+  "data": {
+    "stage": "running",
+    "error": {
+      "code": "task_cancelled",
+      "stage": "observe",
+      "message": "Task demand cancelled; execution may continue."
+    }
+  }
+}
+```
+
+occurredAt 投影为 canceledAt，data.error 投影为 termination.error；
+已有准备、绑定和执行开始事实照常继承，03:21:05Z 读取仍为 stage=running。
+task.canceled 的单 l 拼写与 canceledAt 一致；派生状态 cancelled 保留既有拼写。

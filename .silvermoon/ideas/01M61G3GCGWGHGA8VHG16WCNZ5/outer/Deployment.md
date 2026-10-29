@@ -52,7 +52,10 @@ Task/Execution/Series 历史查询有独立游标，分页及实时通知来自�
 真实失败终态也保留既有准确引用、时间与执行关联，且不残留旧阶段进展。
 验证原子失败状态与协议 isFailed/isTerminated 分类一致，准备与其他过程重叠时
 仍按判定树投影，不用 Task 状态转移时间替代实际执行或过程时间。
-验证无写入跨 eligible 的两份快照仅 timestamp/state 改变而不伪造准备事实；
+验证未取消时无写入跨 eligible 的两份快照仅 timestamp/stage 改变而不伪造准备事实；
+公开快照无独立 state，由 stage/canceledAt 通过公共纯函数派生实际状态和终结分类。
+取消任意非终态后 stage 冻结，晚到执行结果不改写结局；执行可能继续但不伤其他 owner。
+重复取消保留原时间，其他终态返回冲突；取消不触发新后继或撤回已建立的后继。
 公共快照无 revision/progress，详细进展由历史事件查，不能用同刻 timestamp 直接去重。
 按[事件与快照投影](./inner/ideal/event-projection-model.md)对照公开历史及固定投影时间重建快照，
 包含共享 Execution 的必要事实；验证查询/重放不会再次执行或创建递归后继。

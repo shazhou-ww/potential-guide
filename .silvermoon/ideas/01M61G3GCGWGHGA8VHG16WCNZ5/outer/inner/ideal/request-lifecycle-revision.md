@@ -94,34 +94,36 @@ series 默认复用首个 Task ID 是明确例外。ULID 时间部分不用于 f
 作者定义的 levelId、problemId、局部 Checker 名称保留可读语义；
 内容摘要与执行版本明确叫 digest、revision，不叫 ID，也不改成 ULID。
 
-## 2. Task：增加 PENDING，取消只作用于 PENDING
+## 2. Task：内驱 stage 与所有非终态的取消
 
 | 修改点 | Before | After |
 |---|---|---|
 | 生命周期 | Check/Probe 为 accepted/preparing/waiting/running 等状态，无统一资格条件分层。 | 所有 Task 共用时间、制品、前置条件、资源与执行判定树；当前探测入口不带条件，跳过已满足的条件层。 |
 | 准备进展 | 受理后即可进入 preparing。 | 正式 PREPARING 只能在 eligible 后；提前下载/更新检查仅是 PENDING 中可观察的预优化。 |
-| 取消 | Check/Probe 可撤销非终态需求；Coordinator 有 request/recurrence scope。 | 新统一交互只取消 pending Task，不提供“取消 recurrence Task”或另一个系列取消语义。 |
+| 取消 | Check/Probe 可撤销非终态需求；Coordinator 有 request/recurrence scope。 | 任意非终态 Task 可取消，不限时间或运行阶段；不等于取消系列，也不保证停止实际执行。 |
 | 重复规划 | 没有跨 Check/Probe 的统一系列去重。 | 冗余新 pending Task 被取消，已有 pending Task 保留；记录明确原因。 |
-| 快照类型 | ServiceSnapshot 由 state 加大量可选字段组成。 | 单一原子 state 与累积过程事实，不引入通用 progress；详细变化通过 SSE/历史事实查询。 |
+| 快照类型 | ServiceSnapshot 由 state 加大量可选字段组成。 | stage、可选 canceledAt 与累积过程事实；实际 state 由纯函数派生，不输出重复 state 或通用 progress。 |
 | 快照时序 | snapshot.revision 按更新递增，用于客户端去重。 | 删除快照 revision，以服务端 timestamp 标明一致事实视图的投影时点；可由时间推导状态，无需制造更新写入。 |
 | Host 实例 | Task 快照携带 hostInstance，SDK 以变化判断重启。 | Task 公共契约不携带 hostInstance；路由需要时在外围 envelope 表达，内部实例世代/所有权不暴露为 Task 字段。 |
 | 制品数据 | snapshot 内重复完整 artifact/manifest，子 Task 和 SSE 更新也携带。 | 只保留实际选择的 artifactRef（kind、url、digest）；完整定义按准确 digest 单独查询。 |
 | 完整证据 | snapshot.evidence 包含运行环境、子 Task 快照和观察过程，与进展事件重复。 | 从 snapshot 移除完整 evidence；通过历史事件 API 查询结构化事实，不维护第二套独立证据模型。 |
 | 请求策略 | 旧快照含 freshness，早期新草案还复制 recurrence 和 schedule 包装。 | snapshot 不含请求体/freshness/recurrence；时间约束在顶层，原始 Request 按 requestId 独立查询。 |
 
-**已确认：** 用户取消的是被保留的 pending Task；它不能再触发后继，递归链由此停止。
-取消冗余 pending Task 不影响原计划。已经运行的 Task 不被该操作取消，
-也不能因一个需求被撤销而终止仍服务其他需求的共享 Execution。
+**已确认：** 用户可取消目标 Task 的任意非终态；取消撤销它尚未消费的后继规划权，
+不因取消本身产生下一轮。已存在的独立后继不回溯取消，取消冗余 pending 不影响原计划。
+运行中的 Task 也可终结为取消，但不能因此终止仍服务其他需求的共享 Execution，
+也不保证底层工作可中断或既有副作用能撤销。
 
 PENDING 仅表示时间尚未到；因此没有额外 reason，也没有专属 pending 进展对象。
 接收时已经 eligible，初始响应就是 preparing 或已满足条件后的更后阶段，
 不能为内部调度间隙制造 reason=activation 的 pending。
-取消与激活/规划必须原子裁决；如果目标已经离开 PENDING，不能成功返回却实际取消另一轮。
+取消与完成/失败/超时及后继规划必须原子裁决，不能成功返回却实际取消另一轮。
+取消生效记录 canceledAt 并冻结当时的 stage，迟到执行结果不改写取消结局。
 
 **设计边界：** 这是全新的统一生命周期，不承诺兼容旧 Check/Probe 或 Coordinator。
-旧取消行为只留在 Before 中，旧入口兼容与数据迁移不属于本次设计要求。
+旧协议只留在 Before 中，旧入口兼容与数据迁移不属于本次设计要求。
 内部超时、服务关闭、父观察失去 owner 时的资源清理仍需保留，
-它们不是公开的“单轮运行中取消”能力。
+它们与公开的 Task 取消共同遵守 owner 隔离，不等同于保证执行停止。
 
 **已确认状态顺序：** 下列条件层适用于所有抽象 Task。
 没有 prerequisites 的任务可跳过条件等待，不伪造一次检查；
@@ -156,32 +158,37 @@ Request 自身解析失败没有 Task，与 Task 正式准备失败分开。
 blocked 只表示 prerequisite 未满足或尚无有效通过证据，不是下载错误或资源不足的泛称。
 检查故障必须在条件进展中显式区分，不能伪装成一次业务不通过。
 
-**取消边界：** 目前仍只允许取消 pending，故 preparing/blocked/queued 也不接受
-该取消操作。扩展这些阶段的取消权限是另一个待决问题，本次不暗改。
-有未来 pending 后继时可以取消它以停止链条，当前轮则继续至自身终态。
+**取消边界：** 判定树只描述无外部控制时的内驱推进，取消是树外控制转移，
+但仍属于同一事件事实模型。已终结 Task 不被取消覆盖；重复取消返回原事实。
+没有已存在后继时，取消也停止该轮继续规划；已有后继需独立处理，不隐式取消整个 series。
+pending 槽位、活跃 Task 计数及调度均按派生 state 判断；
+stage=pending 且 canceledAt 已存在的 Task 已终结，不再占用 pending 槽位，
+stage=running 且已取消也不再作为 Execution 的活跃需求 owner。
 
-### 2.1 Snapshot：原子状态与累积过程事实
+### 2.1 Snapshot：内驱位置、取消事实与累积过程事实
 
-公共基底是 requestId、taskId、seriesId、timestamp、state，
+公共基底是 requestId、taskId、seriesId、timestamp、stage，以及可选 canceledAt，
 以及顶层 receivedAt、eligibleAt、deadlineAt。不再有 schedule 包装，
 不复制 Request 的 freshness/recurrence 或完整请求体。
-状态专属信息随当前 state 切换，不因为未来可能用到就定义成一组全局可选属性。
-Snapshot 只包含按解锁过程组织的累积事实及整体 state/技术 timestamp；
+内驱位置专属信息随当前 stage 切换，不因为未来可能用到就定义成一组全局可选属性。
+Snapshot 包含过程事实、stage、canceledAt 与技术 timestamp；不再输出 state。
+deriveState(snapshot) 在 canceledAt 存在时得到 cancelled，否则按 stage 得到实际状态；
+isFailed/isTerminated 接收完整 snapshot，不能只凭冻结的 stage 判断需求是否仍活跃。
 不增加 substate、isFailed 或 isTerminated 等重复语义字段。
 记录性字段一旦出现，所有后继快照都必须以相同字段名、路径和值继承，
-不能仅因切换 state 而删除、移位或改值。未发生的事实不补造，不要求所有任务走过全部阶段。
+不能仅因切换 stage 而删除、移位或改值。未发生的事实不补造，不要求所有任务走过全部阶段。
 
 | 类别 | 字段或内容 | 后继快照规则 |
 |---|---|---|
 | 受理事实与有效时间约束 | requestId、taskId、seriesId、receivedAt、eligibleAt、deadlineAt | 受理后继承，不重新默认或重置；请求策略另查 Request |
 | 已成立的过程事实 | preparation.startedAt/completedAt、readiness.satisfiedAt（实际有条件求值时） | 真实发生时增加，之后原名原值保留 |
 | 已确认的选择/执行事实 | preparation.artifactRef/language/resolution、allocation.boundAt、execution.executionId/startedAt/completedAt | 一经正式确认就保留，不等到 completed 才重新出现 |
-| 终结事实 | termination.terminatedAt/error/lastState/取消诊断、result | 随终结成立，终态不反转且不改写结果 |
+| 终结事实 | canceledAt、termination 的非取消 terminatedAt/lastStage、error/取消诊断、result | 取消冻结 stage，不重复终结时间；非取消终结依其事实投影，结局不反转 |
 | 详细过程变化 | 准备步骤、条件求值、临时预约或业务进展 | 在 SSE/历史事件读取，不增加 snapshot.progress 或分散的同义状态容器 |
-| 投影元数据 | state、timestamp | 根据一致事实视图与服务端时间生成；不是固定事实，不强制递增 revision 或持久化写入 |
+| 投影元数据 | stage、timestamp | 未终结时根据事实与时间生成；取消时 stage 冻结，timestamp 仍可更新，不强制递增 revision |
 
 准备过程第一次开始即记录 preparation.startedAt，后续始终使用同一路径；
-它不是进入 preparing 状态的时间。preparation 是事实对象，不随 state 消失。
+它不是进入 preparing 位置的时间。preparation 是事实对象，不随 stage 消失。
 成功选版时记录 preparation.resolution，后续各状态必须继承；
 未确定时不提前填写，避免随后把“已知事实”改成其他选择方式。
 
@@ -206,7 +213,8 @@ Snapshot 只包含按解锁过程组织的累积事实及整体 state/技术 tim
 具体原子分类与路径约束见[任务状态模型](./task-state-model.md)。
 所有抽象 Task 都支持 blocked/readiness_failed 与 readiness 过程，
 当前 Check/Probe Request 不携带条件不意味着应从 Task 协议中删掉这些类型。
-termination.lastState 如出现只说明终结前观察位置，不用它替代失败过程分类。
+termination.lastStage 仅用于非取消终结前的诊断位置，不用它替代失败过程分类；
+取消场景的 stage 已冻结，不再重复该字段。
 尚未执行不能出现虚构 Execution；执行后的任何终结必须保留真实关联和所有已有事实。
 Check 的 running 可以没有自定义 progress；Objective 的最终观察进展如需保留，
 作为结构化历史事件按需查询，不塞进快照 evidence 或 progress。
@@ -221,7 +229,7 @@ prefetch 只表示提前执行 fetch 的优化，
 但不携带 preparing 的当前进展；提前获取的变化可通过
 单独的优化事件/诊断证据观察，其具体 envelope 尚待定义。
 提前获取的详细变化通过事件报告；preparation.startedAt 是实际过程开始时间，
-允许早于 eligible。state 由事实与时间投影，不强制为纯时间推进写 transition 事件，
+允许早于 eligible。未取消的 stage 由事实与时间投影，不强制为纯时间推进写 transition 事件，
 也不把过程时间当作状态切换时间。
 
 终态保留从前序继承的全部记录性事实，增加终结结果，移除当前阶段进展。
@@ -229,7 +237,7 @@ preparation.resolution=fallback 让调用方立即知道发生了回退，
 所选版本在 preparation.artifactRef；完整采用原因、旧版来源和更新错误进入历史事件，
 不能为了删除 evidence 而隐去回退错误。详细变化不整份复制到 completed。
 若 Task 最后记录为 pending，重新观察时已过 deadline，示例暂用 timed_out，
-termination.lastState=pending 不表示现在仍是 pending，也不伪造执行。
+非取消终结的 termination.lastStage=pending 不表示现在仍是 pending，也不伪造执行。
 termination.terminatedAt 不证明曾经 running，控制终结不得全部塞进 execution。
 
 移除 hostInstance 不等于删除内部安全仲裁。服务内部仍需防止旧实例迟到写入，
@@ -238,7 +246,8 @@ termination.terminatedAt 不证明曾经 running，控制终结不得全部塞�
 JSON Schema 必须使用互斥分支校验必需/禁止字段，与 SDK 的 discriminated union 一致；
 仅提供 TypeScript union 而 HTTP 仍接受跨状态混搭，不算满足该设计。
 还须校验相邻快照：前序事实叶子路径集合必须包含于后继，叶子值相等且路径一致，
-timestamp/state 不作为不变事实；snapshot 不存在 progress。单个 snapshot 通过 schema
+timestamp 可更新，stage 仅在未终结时继续投影；canceledAt 与取消时 stage 必须继承。
+snapshot 不存在 progress 或独立 state。单个 snapshot 通过 schema
 不等于转移合法；SSE 跳过中间状态时，后到完整快照仍须继承此前已知事实。
 测试覆盖成功、失败、超时、取消及恢复查询，独立假设分支不得拼接成一条时间线。
 timestamp 对应实际投影时间和一致事实视图，不是旧内容的发送时间；
@@ -394,7 +403,7 @@ terminated 锚点是 **Task 的终结时间**，不是共享 Execution 的完成
 terminated 是语义集合，不是 snapshot 的第二个 state/substate；
 isTerminated 与 isFailed 的成员关系由协议表定义，保留各过程失败与超时原因。
 正常 completed 不等于业务通过；有效“不达标”观察也属于 completed。
-**取消 pending 例外：** 用户取消和冗余规划取消都会撤销该 Task 的后继规划权，
+**取消例外：** 任意非终态的用户取消和冗余规划取消都会撤销该 Task 尚未消费的后继规划权，
 不能因 cancelled 也是终态就生成下一轮；它们不影响原有其他 Task。
 
 例如周期 10 秒、首轮 eligible 为 0 秒、Task 在第 25 秒完成：
@@ -439,8 +448,9 @@ nextEligibleAt = e + k * P
 同系列可能同时有多个未完成轮次；deadline 和容量限制必须约束长期阻塞的积压，
 不能把唯一 pending 当成未完成 Task 总数上限。后继条件继承与容量满时的处置仍待收敛。
 
-terminated 模式运行期间可能没有 pending Task，届时没有可取消的 pending 对象；
-本草案不暗中增设 cancel-series 接口，是否需要提前保留未定 eligible 的后继仍待讨论。
+terminated 模式运行期间可能没有 pending Task，但可以直接取消尚未终结的当前 Task，
+从而撤销其后继规划权；不必为可取消性提前保留未定 eligible 的后继。
+本草案不新增 cancel-series 接口，也不把取消当前轮解释为取消已经建立的其他轮次。
 
 ## 4. 服务配置与制品准备：提前量及可观察的版本回退
 
@@ -537,7 +547,7 @@ Before 使用 started-after-request/completed-after-request 字面值；
 |---|---|---|
 | 过滤 | Check/Probe SSE 按 taskId 或显式 scope=all 过滤。 | 增加按 series ID 过滤，包含订阅之后新产生的该系列 Task。 |
 | 身份 | task.updated 关联 Task 与 Execution，缺少独立系列。 | 请求、快照、日志及事件携带 series，必要时保留前驱/轮次。 |
-| 进展 | 快照含 level/invocation 等进展集合。 | snapshot 只保存有界过程事实与 state，详细进展由结构化 SSE/历史事件读取。 |
+| 进展 | 快照含 level/invocation 等进展集合。 | snapshot 只保存有界过程事实、stage 和可选 canceledAt，详细进展由结构化 SSE/历史事件读取。 |
 | 重连 | 当前有界快照，不重建 Task、不重放全部中间事件。 | 动态系列快照与后续轮次连续可观察；不能把增加过滤宣称为无限历史回放。 |
 | 证据查询 | Task 快照内嵌完整 evidence，没有统一可分页的证据事件读取面。 | 增加按 taskId/executionId/seriesId 过滤的历史事件查询和稳定游标分页，证据来自事件事实而非独立 evidence 数据模型。 |
 
@@ -594,7 +604,7 @@ executionId 查询读取授权的执行事实；seriesId 查询追踪系列内�
 ## 当前评审焦点
 
 已确认方向包括 Request 字段归属、可前后调整的 eligible、统一时间锚点、
-默认 series 身份、唯一 pending 计划、pending-only 取消、提前准备、
+默认 series 身份、唯一 pending 计划、全部非终态可取消与 stage/canceledAt 投影、提前准备、
 可选选版 fallback、全部未完成 Task 恢复和动态 series events。
 
 本轮已确认 Request ID 与幂等 ID 同义、Task ID 独立、默认 series 为 Task ID、
@@ -602,11 +612,11 @@ eligible 后才正式 PREPARING、terminated 包含失败/超时续作，
 以及错过周期只处理一次并按原节拍选择下一个严格未来点。
 剩余前序问题：
 
-1. 默认递归锚点，以及 terminated 模式无 pending 时是否需要可停止的预留计划。
+1. 默认递归锚点；terminated 模式可通过取消当前非终态 Task 停止其后继规划，不再需要为此预留 pending。
 2. 服务预优化限额、旧版选择与陈旧上限。
 3. series 跨模块作用域，是否需要独立的调用方动态依赖固定能力。
 4. 条件证据 freshness/有效期、首次检查与重查策略、后继条件继承及积压容量策略。
-5. 是否扩展 preparing/blocked/queued 的取消权限；当前仍为 pending-only。
+5. 取消与完成/失败/超时的同刻原子仲裁，以及超时在内驱模型中的最终挂接方式。
 
 中断 Execution 与持久化恢复细节待上述问题解决后再讨论。
 历史事件 API 的具体路径/游标协议、保留期限及 SSE 续读也在该阶段收敛；
