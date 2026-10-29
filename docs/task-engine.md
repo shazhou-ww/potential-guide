@@ -83,6 +83,12 @@ Execution finish/failure timestamp. Until Task adjudication is committed, its
 stage remains unchanged and no Task result or termination is fabricated. Thus
 late observation followed by settlement cannot turn an on-time finish into a
 temporary timeout and then revoke it.
+Candidate matching, projection and bound completion settlement share the pure
+`matchesExecutionTime` predicate. A binding does not bypass executionMatch if
+the business clock moves backward. Inapplicable completion does not prohibit
+cancellation or erase a timeout; execution faults remain distinct from normal
+result applicability. Sealing forbids new owners, not a valid result for an
+existing owner.
 
 Recurrence requires explicit `eligible` or `terminated` anchor and positive
 periodMs. Select the strictly future point on the original lattice and skip

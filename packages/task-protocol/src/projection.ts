@@ -1,5 +1,20 @@
 import { at, fail, timestamp } from "./json.js";
-import type { FactEvent, Facts, TaskSnapshot } from "./types.js";
+import type { ExecutionMatch, ExecutionRecord, FactEvent, Facts, TaskSnapshot } from "./types.js";
+
+export function matchesExecutionTime(
+  policy: ExecutionMatch,
+  eligibleAt: string,
+  execution: Pick<ExecutionRecord, "startedAt" | "completedAt">,
+): boolean {
+  switch (policy) {
+    case "started-after-eligible":
+      return execution.startedAt > eligibleAt;
+    case "completed-after-eligible":
+      return execution.completedAt !== undefined && execution.completedAt > eligibleAt;
+    default:
+      return fail("invalid_request", "Unsupported executionMatch.");
+  }
+}
 
 export function emptyFacts(): Facts {
   return { projectionVersion: 1, watermark: 0, tasks: {}, executions: {} };
@@ -174,9 +189,7 @@ export function project(facts: Facts, taskId: string, now: number): TaskSnapshot
     if (execution.failedAt) snapshot.execution.failedAt = execution.failedAt;
     if (
       execution.completedAt &&
-      (task.binding.executionMatch === "started-after-eligible"
-        ? execution.startedAt > snapshot.eligibleAt
-        : execution.completedAt > snapshot.eligibleAt)
+      matchesExecutionTime(task.binding.executionMatch, snapshot.eligibleAt, execution)
     )
       snapshot.execution.completedAt = execution.completedAt;
   }

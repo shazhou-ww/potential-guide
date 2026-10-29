@@ -17,6 +17,7 @@ import {
   isPending,
   type Json,
   json,
+  matchesExecutionTime,
   type NewEvent,
   type Observation,
   type Operation,
@@ -460,9 +461,7 @@ export class TaskEngine implements TaskService {
   }
   private matches(task: TaskRecord, execution: ExecutionRecord): boolean {
     if (execution.sealed || !this.compatible(task, execution)) return false;
-    if (task.binding.executionMatch === "started-after-eligible")
-      return execution.startedAt > task.snapshot.eligibleAt;
-    return execution.completedAt !== undefined && execution.completedAt > task.snapshot.eligibleAt;
+    return matchesExecutionTime(task.binding.executionMatch, task.snapshot.eligibleAt, execution);
   }
   private settle(task: TaskRecord): void {
     if (task.snapshot.canceledAt || task.snapshot.termination) return;
@@ -473,6 +472,11 @@ export class TaskEngine implements TaskService {
           (candidate) => candidate.completedAt !== undefined && this.matches(task, candidate),
         );
     if (!execution || (!execution.completedAt && !execution.failedAt)) return;
+    if (
+      execution.completedAt &&
+      !matchesExecutionTime(task.binding.executionMatch, task.snapshot.eligibleAt, execution)
+    )
+      return;
     const events: NewEvent[] = [];
     if (!boundId)
       events.push(

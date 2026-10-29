@@ -25,7 +25,7 @@ pnpm exec tsx --test packages\task-protocol\test\*.test.ts packages\task-engine\
 ```
 
 2026-10-29，Windows、Node `v24.12.0`、pnpm `11.22.0`：
-上述编译退出 0；评审修复后的四包 **63 tests / 63 pass / 0 fail / 0 cancelled / 0 skipped**。
+上述编译退出 0；第二轮评审修复后的四包 **76 tests / 76 pass / 0 fail / 0 cancelled / 0 skipped**。
 SQLite 的 ExperimentalWarning 如实保留，不是跳过条件。
 
 | 证明点 | 输入与断言 |
@@ -100,5 +100,31 @@ Series 帧快照有 pageSize 上限，事实仍逐页完整续读。详细数值
    取消边界不推进。cancel 对先已可靠结束者仍返回 task_finished；裁决前后期限结论相同。
 
 先添加回归、未修代码时，两个目标文件共 **19 tests / 13 pass / 6 fail**，准确复现问题；
-修复后四包 **63/63** 通过、无跳过。最终候选须再次完整执行 `pnpm check` 退出 0 才同步并
-重新 submitInner；验收仍由父代理负责。原提交事件保留，新提交绑定更新后的准确 Inner tree。
+修复后四包 **63/63** 通过、无跳过。本实施者对该轮候选执行的完整 `pnpm check` 已退出 0
+（`.cache/generic-review-full-check.log`，全部独立 tarball 消费者通过），之后同步并重新
+submitInner；验收仍由父代理负责。原提交事件保留，新提交绑定更新后的准确 Inner tree。
+
+## 第二轮评审：结算与投影适用性一致
+
+父代理重新执行 63/63 通过，但发现已绑定 settle 分支未检查时间适用性；
+其对 `d0d8f0a2b415518a03d3297d4cc0d8557eb07e58` 的完整检查 shell206 被主动停止，
+没有完成结果，本轮不把该中断运行算作通过。
+
+协议层纯函数 matchesExecutionTime 现在由候选匹配、project 和 settle 共用。
+已绑定身份不免除正常完成的 executionMatch 检查；真正执行失败仍独立处理，
+sealed 只排斥新 owner，不抹掉原 owner 的适用结果。
+
+`projection-races.test.ts` 用真实两个 Task 共享运行中 Execution，绑定后调整 Clock，
+在 eligible-1 / eligible / eligible+1 分别提交成功或失败；再到 deadline+1，
+分别直接 cancel 或先 tick 再 cancel。12 个端到端向量不修改存储事实：
+不适用成功保持超时、允许取消且无成功结果；适用成功及执行故障先结算后拒绝取消。
+另验证压力封口与真实迟到完成竞争，原 owner 的适用结果仍被保留。
+
+先只添加回归时该文件 **19 tests / 15 pass / 4 fail**，四个失败均为不适用完成的
+真实结算/取消路径；统一判定后四包 **76/76**，无失败、取消或跳过。
+
+**实际完整验证结果：** 本实施者于 `2026-10-29T23:03:53+08:00` 完成该修复候选的
+`pnpm check`，进程退出码 **0**；记录为 `.cache/generic-consistency-full-check.log`。
+build、分层、格式、lint、typecheck、全部仓库测试及 pack:check 均完成；
+task-protocol、task-engine、task-adapters 和所有既有隔离消费者均报告
+`packed consumption passed`。这是本轮独立完成的验证，不是父代理中断运行的推断。

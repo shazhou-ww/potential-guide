@@ -82,6 +82,11 @@ caller.scope 是可信参数，HTTP 必须用 resolveCaller 而不是 body 建�
 正常完成仍检查本 Task 的 executionMatch；不能借用未绑定的结果。Task 裁决尚未持久化时
 不伪造 task.terminated、不发布 Task result，仍保留原 stage，但期限判定不再使用读取时间。
 取消已生效则整个 Task 事实边界保持冻结；先有可靠结束再取消仍由核心先补齐裁决并拒绝取消。
+第二轮评审将时间适用性收敛到协议层纯函数 matchesExecutionTime：候选匹配、纯投影、
+已绑定与未绑定的正常完成结算调用同一函数。绑定不是绕过 executionMatch 的许可。
+已绑定执行失败仍是独立故障，不要求正常完成匹配；sealed 只阻止新 owner，不抹除原
+owner 的适用迟到结果。时钟回拨造成 completed-after 的最终时间不晚于 eligible 时，
+不得成功结算或拒绝合法取消；不伪造失败，也不隐式重跑。
 
 当前回收采用整个不活跃引用闭包到期后统一压缩。持续活动 Series 可能先触发准入背压，
 不会为腾空间丢失未处理后继或恢复引用。该选择牺牲细粒度回收率，不扩展无限保留承诺。
