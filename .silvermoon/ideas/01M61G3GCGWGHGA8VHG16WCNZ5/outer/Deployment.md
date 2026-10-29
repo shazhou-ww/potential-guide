@@ -1,7 +1,8 @@
 # Deployment
 
-本地候选的仓库外验证见[deployment-verification.md](./deployment-verification.md)；
-该证据未通过 Inner 生命周期门限，不代表验收或正式发布。
+旧候选的仓库外验证见[deployment-verification.md](./deployment-verification.md)；
+该证据不覆盖新增 Request 生命周期，亦不代表验收或正式发布。
+以下为本次 Ideal 修订后的部署种子，设计确认与新实施 gate 前不启动部署。
 
 ## Steps
 
@@ -11,14 +12,19 @@
 
 ### D-S02: 验证观察与固定恢复
 
-使用公开 SDK 验证浮动和固定来源、进展、多任务共享、取消与期限，以及新版本出现后的原绑定恢复，记录脱敏证据并清理操作拥有的资源。
+使用公开 SDK 验证资格时间、递归锚点、系列事件、唯一 pending 及取消，
+覆盖提前选版/fallback、准确绑定和未完成 Task 的真实进程重启恢复；
+记录脱敏证据并清理操作拥有的资源。
 
 ## Acceptance criteria
 
 ### D-AC01: 独立消费无需客户端物化
 
-外部消费者只提供 URL、subject 和观察条件，实际获得等级与 References；记录工具来源、模块定位和准确制品摘要，不依赖作者目录。
+外部消费者只提供 URL、subject 和请求调度条件，实际获得等级与 References；
+记录工具来源、模块定位、准确摘要及选版/回退证据，不依赖作者目录。
 
 ### D-AC02: 生命周期与证据可复核
 
-真实事件及最终快照证明双 freshness、共享执行与独立任务成立，语言与进展一致；固定恢复不追新版，退出后无操作遗留进程，不宣称正式发布。
+真实系列事件和故障重启实验表明 eligible/freshness/timeout 一致，
+重复规划不会多留 pending，取消计划不会复活，恢复不重复生后继或悄悄换版；
+语言与进展一致，退出后无操作遗留进程，不宣称正式发布。

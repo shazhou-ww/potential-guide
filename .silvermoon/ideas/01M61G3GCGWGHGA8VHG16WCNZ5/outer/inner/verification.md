@@ -1,5 +1,13 @@
 # 实现验证
 
+## 新 Ideal 修订的证据边界
+
+2026-10-29 用户要求整理统一 Request 生命周期的新设计；本次只修改文档。
+下文完整 gate 与针对性结果均属于 `127666e4ec04` 及其先前候选，
+不能证明新增 eligible、递归锚点、PENDING、fallback、series events 或未完成 Task
+持久恢复已实现。Implementation 的要求已变化，当前 I-* 已重置为未完成；
+原成功记录保留，不把历史通过改写为失败，也不将其沿用为新修订验收。
+
 ## 已执行的针对性证据
 
 - `pnpm --filter @potential-guide/check-artifacts exec tsx --test test\contracts.test.ts`：

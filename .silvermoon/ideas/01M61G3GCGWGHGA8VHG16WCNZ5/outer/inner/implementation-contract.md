@@ -1,5 +1,13 @@
 # 实施契约与兼容边界
 
+## 当前修订状态
+
+以下保留 `127666e4ec04` 旧候选的实施记录，不是新增请求生命周期的实现声明。
+2026-10-29 新 Ideal 草案见 [Request 生命周期修订](./ideal/request-lifecycle-revision.md)，
+其实施种子由 [Implementation.md](./Implementation.md) 承载。
+本文下述受理时序、取消、保留和不透明恢复边界属于 Before；
+设计确认前不把新的 eligible/recursive/series 参数或 PENDING 语义补写成已实现。
+
 ## 制品与作者工具
 
 `check-artifacts` 新增独立 Checker/Objective YAML v1 解析、目录页组合、统一结果、

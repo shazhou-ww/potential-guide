@@ -1,5 +1,15 @@
 # 可挂载的 Objective 服务、HTTP 与 SDK
 
+## 修订阅读说明
+
+本文保留 `127666e4ec04` 候选之前的服务设计，作为 Before 基线。
+2026-10-29 新增的 [Request 生命周期修订](./request-lifecycle-revision.md)
+按对象定义本次 After：eligible 时间锚点、PENDING、递归系列、提前准备/fallback、
+pending-only 取消、未完成 Task 持久恢复以及 series events。
+下文原受理时间、任意非终态取消、仅内存 Task 和 taskId 过滤的描述是旧版语义，
+不是新草案的另一套选择；其余组合观察、准确制品与权限边界继续保留。
+新参数、状态与版本迁移仍需评审，不表示当前代码已实现。
+
 ## 组装边界
 
 服务核心拥有状态机与业务规则，Router 仅适配 HTTP/SSE，统一 Host 管理监听、认证、
