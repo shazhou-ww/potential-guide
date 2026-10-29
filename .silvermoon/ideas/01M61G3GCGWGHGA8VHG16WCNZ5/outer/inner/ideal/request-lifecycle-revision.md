@@ -102,6 +102,7 @@ Request 自身解析失败没有 Task，与 Task 正式准备失败分开。
 | 修改点 | Before | After |
 |---|---|---|
 | 适用面 | Coordinator 有 recurrence；Check/Probe 没有。 | Check、Probe、Regulation 都可表达递归请求，调节职责仍归 Coordinator。 |
+| 字段命名 | Coordinator 使用 `recurrence`。 | 新方案统一为 `recursive`，覆盖 Check、Probe、Regulation 的输入、快照和后继规划。 |
 | 现有周期 | Coordinator 首次 dispatch 时生成后继，eligible 为实际 dispatch 时间加 interval。 | 新模型明确 eligible/terminated 锚点，不把 dispatch、资格和终结混为一谈。 |
 | pending 约束 | 没有统一 series pending 唯一约束。 | 同一系列同时最多保留一个 pending 计划；重复新计划取消，原计划不被替换。 |
 | 触发配置 | 不支持统一的双锚点选择。 | `recursive.anchor` 区分 eligible 与 terminated；本轮失败/超时不停止递归。 |
@@ -121,13 +122,17 @@ Request 自身解析失败没有 Task，与 Task 正式准备失败分开。
 ### 3.2 已收敛的锚点：`recursive.anchor`
 
 用户确认本轮结束必须涵盖 failed/timeout，因此以 terminated 取代原草案的
-completed 锚点；字段拼写、period 单位及默认锚点仍属于 wire 设计：
+completed 锚点；顶层名称已明确由 `recurrence` 改为 `recursive`，
+period 单位、其他字段拼写及默认锚点仍属于 wire 设计：
 
 ```text
 recursive:
   period: 正的有限时长
   anchor: eligible | terminated
 ```
+
+Before 的旧字段及历史 schema 保留原义；不提供未声明的双名称默认兼容，
+也不通过更改历史 JSON 把旧 `recurrence` 冒充已经支持新锚点的 `recursive`。
 
 | 候选参数值 | 规划触发 | 下一轮 eligible | 主要效果 |
 |---|---|---|---|

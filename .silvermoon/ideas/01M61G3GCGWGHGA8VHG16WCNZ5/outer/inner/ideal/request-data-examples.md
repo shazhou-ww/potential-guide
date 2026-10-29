@@ -14,7 +14,9 @@
 - 字段暂沿用现有 camelCase，概念 `eligible_at/received_at/series_id`
   分别写成 `eligibleAt/receivedAt/seriesId`。PENDING 暂序列化为 `pending`。
   `acceptedAt → receivedAt` 是草案命名建议，不暗示旧字段已改名。
-- `recursive` 暂用 `{periodMs, anchor}`；服务配置中的准备策略暂用
+- 顶层字段已确认由 `recurrence` 统一改为 `recursive`；所有 After 使用新名称，
+  Before 的现有 Coordinator 字段保留 `recurrence`，不是新方案同时接受两个名称。
+  `recursive` 的子结构暂用 `{periodMs, anchor}`；服务配置中的准备策略暂用
   `preparationPolicy: {leadMs, fallback}`，fallback 候选值为
   `none | previous-usable`。具体字段名仍待评审，默认不预取、不回退已确认；
   Request 不再携带 preparationPolicy。
