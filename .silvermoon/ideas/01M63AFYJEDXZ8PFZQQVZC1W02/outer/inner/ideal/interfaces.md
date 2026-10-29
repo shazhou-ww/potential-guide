@@ -11,7 +11,8 @@
 
 通用部分包含 requestId、type、可选 eligibleAt/seriesId/recurrence 及本请求 timeoutMs。
 type 是判别字段，应用将已注册类型组合为 discriminated union；
-引擎不固定 check/probe/regulate 的全集，也不接受任意未注册字符串。
+引擎内置支持 check，其他类型包括 probe/regulate 通过宿主注册扩展，不固定全集，
+也不接受任意未注册字符串；具体 Executor 和资源适配器通过端口注入。
 类型的具体输入可以与公共字段同层组合，但其 schema 不能重新定义或覆盖公共字段。
 不要求现在把所有输入迁到 input/payload，也不新增 metadata。
 
@@ -234,9 +235,10 @@ echo 没有额外条件，不伪造 readiness 通过时间。
 |---|---|---|
 | 输入校验与业务授权 | 公共字段已校验的完整 Request、可信 caller | 类型化意图或明确错误，不静默删改字段 |
 | prepare | 意图、预算、取消信号、适配器依赖 | 正式 prepared 结果或有分类的故障；过程事实由核心记录 |
-| readiness 证据接入 | 业务方提供的检查结果、条件归属与可信时间/顺序 | 核心校验证据并判定解锁；不派发检查或重试 |
+| readiness 检查关联 | 业务方关联的 Check Task、条件归属与可信时间/顺序 | 核心采用真实检查结果解锁；不自动触发检查或重试，不接受任意布尔值 |
 | compatibility | 已准备的准确身份、输入、权限域 | 独立执行或可复核的兼容标识，不能绕过核心类型/作用域隔离 |
 | execute | 不可变 prepared、执行上下文、停止信号 | 校验后的 progress、一个正常 result 或执行故障 |
+| 资源预留/回收 | 准备结果、执行策略、可信作用域 | 暂无容量、已预留资源句柄或明确故障；Engine 复核绑定，Executor 使用资源 |
 
 echo 的正式准备返回示例：
 
@@ -350,33 +352,18 @@ code/message 是固定错误契约，details 是可选的类型诊断对象；�
 
 ## 6. 条件输入
 
-内核不要求每个条件都以 Checker 制品实现。条件声明应有可识别的求值契约，
-本例候选形状由业务侧 signal-ready 检查实现解释，检查由业务方自行派发：
+前置条件通过内置 Check Task 的检查结果验证。业务方决定何时提交 Check Request
+及重试，引擎调度其注入的 Executor，保存结果并按合法关联解锁父 Task。
+此前独立 signal-ready 条件求值器示例撤回，避免维护一条绕过 Check 的任意证据写入路径。
 
-```json
-{
-  "requestId": "01M64000000000000000000004",
-  "type": "echo",
-  "text": "ready",
-  "timeoutMs": 30000,
-  "prerequisites": [
-    {
-      "type": "signal-ready",
-      "signal": "workspace-ready"
-    }
-  ]
-}
-```
+条件声明、Check 请求输入、关联命令及 HTTP 映射尚待统一定型；本节不虚构已经确定的
+JSON 字段。接口必须可验证当前 Request/Task、具体条件、Check Task/Execution 身份、
+检查时间/顺序和作用域。只给一个 Task ID 或 passed=true 不足以证明条件成立。
+具体入口可以限制能否接受 prerequisites，不支持时明确拒绝。
 
-echo 测试适配器在此声明支持该条件；具体应用可以限制某任务入口能否接受 prerequisites。
-内核收到已声明的不支持条件时必须拒绝，不能忽略后制造“已受理”的假象。
-该条件的 signal 与 Check 条件的 subject 均由具体业务契约校验，
-不允许仅凭一个任务 ID 就认定目标条件通过。
-业务提供当前 Request/Task eligible 后的证据，最新合格检查通过可解锁；
-不满足保持等待，引擎不自动派发或重试，也不设 TTL/启动前强制重查。
-证据接入的核心命令及 HTTP 映射尚待收敛，须携带条件归属、可信检查时间/顺序、
-结果和证据引用并授权校验；不得允许调用方直接设置 stage 或 satisfiedAt。
-后继 Request/Task 需重新满足自身时间条件。此例不新增生产 signal 服务。
+一次合格的 eligible 后通过可解锁，不满足继续等待；引擎不自动派发或重试，也不设 TTL
+或启动前强制重查。已解锁 stage 不因后续检查失败回退；后继需满足自身时间约束。
+执行/资源/服务接口关系见[执行与宿主组装](./execution-and-host-composition.md)。
 
 ## 7. HTTP 映射
 
