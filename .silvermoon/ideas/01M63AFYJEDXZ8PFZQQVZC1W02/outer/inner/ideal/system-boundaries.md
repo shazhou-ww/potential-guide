@@ -3,7 +3,7 @@
 本文定义[通用任务引擎 idea](./Idea.md)的逻辑边界。
 这是规划草案，不是已实现 API；逻辑模块与建议的 Package 边界分别定义。
 第 7 节为本轮新增的包拆分建议，供评审，不代表包已存在或拆分已经验收。
-Executor、资源适配器、allocation 与统一 HTTP 宿主的详细关系见
+ExecutorPool、Executor、allocation 与统一 HTTP 宿主的详细关系见
 [执行与宿主组装](./execution-and-host-composition.md)。
 
 ## 1. 交付边界
@@ -21,7 +21,7 @@ Executor、资源适配器、allocation 与统一 HTTP 宿主的详细关系见
         +--- 纯协议与事实投影
         +--- 调度 / 递归 / 取消 / 所有权协调
         +--- 存储端口
-        +--- 已注册任务类型 / 外部条件证据校验 / 执行器
+        +--- 已注册任务类型 / 前置 Check 关联 / ExecutorPool
 
 宿主装配上述依赖，独立拥有 HTTP listener 和业务编排策略。
 ```
@@ -58,7 +58,7 @@ deadline 失约允许与真实完成并存；停止逾期工作的政策与时�
 | 前置 Check 关联 | 业务方触发 Check Task，引擎执行并采用其可追溯结果 | 不接受任意 passed 写入，不自动派发、轮询、重试或治理 |
 | 兼容策略 | 是否允许共享、准确输入/版本/上下文的兼容标识 | 不跨任务类型或权限域共享，未声明共享能力默认独立执行 |
 | 执行器 | 执行工作、报告 progress/result/故障、接收停止信号 | 不保证停止即无副作用；报告须经校验，不可覆盖事件外壳 |
-| 资源适配器 | 原子预留具体执行资源，提供句柄并负责清理/释放/隔离 | 不裁决 Task 或复写调度；Engine 协调 allocation 和正式绑定 |
+| ExecutorPool | 按类型提供兼容 Executor 使用租约，管理容量、等待、复用、回收与淘汰 | 不裁决 Task 或复写调度；Engine 协调 allocation 和正式绑定 |
 | 存储实现 | 明确的原子性、稳定顺序、持久性与恢复保证 | 内存实现不能冒充可重启恢复；缺失事实不可成功形回退 |
 | 宿主安全策略 | 已认证调用身份、允许的操作与可见范围 | 内核执行授权检查，进程内调用同样适用；身份不来自任意业务载荷 |
 | 时钟与唤醒 | 服务端时间、可控定时器及停止能力 | 单调等待与业务时间分开；测试可注入虚拟时间，不按客户端时间仲裁 |
@@ -85,8 +85,9 @@ deadline 失约允许与真实完成并存；停止逾期工作的政策与时�
 preparation 的通用事实是工作何时开始、何时正式可用；它不强制要求下载一个 Artifact。
 readiness 采用关联 Check Task 的有效结果；业务方触发和重试，引擎自己负责执行。
 条件只减少无效尝试，不保证执行期间仍成立；引擎不设 TTL 或执行前强制重查。
-allocation 由 Engine 协调执行匹配和正式绑定，具体资源预留/回收由注入的资源适配器完成。
-Executor 使用资源运行，不通过内部无限排队伪装为 running；不要求所有类型新建 worker。
+allocation 由 Engine 协调执行匹配和正式绑定，等待对应 Pool 的 Executor 租约即等待 allocation。
+原资源适配能力封装到 Pool 内部，不要求宿主单独注入；Executor 在租约内运行一次 Execution，
+不接管 Task，也不通过内部无限排队伪装为 running；Pool 可复用实例，无需每次新建 worker。
 execution 的通用职责是实际执行及其证据，进展和正常结果的内部字段由业务协议拥有。
 
 通用 snapshot 保留有界过程事实，不铺设各阶段的任意 custom 对象。
@@ -156,7 +157,7 @@ task-engine-storage ──→ task-protocol
 宿主组装 ──→ task-engine
          ├─→ task-engine-http       （按需）
          ├─→ task-engine-storage    （持久模式）
-         └─→ 业务类型/执行器/条件适配器
+         └─→ 业务类型/ExecutorPool/条件关联适配器
 ```
 
 HTTP 和存储包通过协议包定义的端口工作，不需要运行时依赖 task-engine 的具体类。
@@ -203,7 +204,8 @@ task-engine 没有导入 checker-host，须以导入/依赖检查单独验证上
 
 ### 7.3 宿主组装与可验证边界
 
-宿主创建 Store、Clock 和类型适配器，注入 engine，再按需把 HTTP handler 挂到已有服务。
+宿主创建 Store、Clock、类型适配器及每种类型的 ExecutorPool，注入 engine，再按需挂载 HTTP handler。
+Pool 与 Executor 依赖协议端口，不依赖 Engine 实现；无需新增独立资源适配器包或 Pool 包。
 业务方触发前置 Check 并建立合法关联，引擎执行后从自身事实采用结果；派发和重试仍在业务侧。
 宿主先打开存储、再启动引擎；关闭时停止准入并按契约收束引擎与观察连接，最后关闭存储，
 不把 close 变成批量用户取消。具体运行中恢复与停止政策仍按概念文档待决项收敛。

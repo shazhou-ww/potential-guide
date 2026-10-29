@@ -12,7 +12,7 @@
 通用部分包含 requestId、type、可选 eligibleAt/seriesId/recurrence 及本请求 timeoutMs。
 type 是判别字段，应用将已注册类型组合为 discriminated union；
 引擎内置支持 check，其他类型包括 probe/regulate 通过宿主注册扩展，不固定全集，
-也不接受任意未注册字符串；具体 Executor 和资源适配器通过端口注入。
+也不接受任意未注册字符串；每种类型注入 ExecutorPool，统一提供 Executor 使用租约及资源管理。
 类型的具体输入可以与公共字段同层组合，但其 schema 不能重新定义或覆盖公共字段。
 不要求现在把所有输入迁到 input/payload，也不新增 metadata。
 
@@ -238,7 +238,7 @@ echo 没有额外条件，不伪造 readiness 通过时间。
 | readiness 检查关联 | 业务方关联的 Check Task、条件归属与可信时间/顺序 | 核心采用真实检查结果解锁；不自动触发检查或重试，不接受任意布尔值 |
 | compatibility | 已准备的准确身份、输入、权限域 | 独立执行或可复核的兼容标识，不能绕过核心类型/作用域隔离 |
 | execute | 不可变 prepared、执行上下文、停止信号 | 校验后的 progress、一个正常 result 或执行故障 |
-| 资源预留/回收 | 准备结果、执行策略、可信作用域 | 暂无容量、已预留资源句柄或明确故障；Engine 复核绑定，Executor 使用资源 |
+| Pool 申请/归还 | 准备结果、执行约束、可信作用域及可撤销申请 | 等待或授予兼容 Executor 使用租约；Engine 复核绑定，一次 Execution 结束并清理后归还 |
 
 echo 的正式准备返回示例：
 
@@ -353,7 +353,7 @@ code/message 是固定错误契约，details 是可选的类型诊断对象；�
 ## 6. 条件输入
 
 前置条件通过内置 Check Task 的检查结果验证。业务方决定何时提交 Check Request
-及重试，引擎调度其注入的 Executor，保存结果并按合法关联解锁父 Task。
+及重试，引擎从注入的 Check Pool 取得 Executor 租约执行，保存结果并按合法关联解锁父 Task。
 此前独立 signal-ready 条件求值器示例撤回，避免维护一条绕过 Check 的任意证据写入路径。
 
 条件声明、Check 请求输入、关联命令及 HTTP 映射尚待统一定型；本节不虚构已经确定的
