@@ -16,6 +16,10 @@ Regulation 的统一资格时间、递归系列与未完成任务恢复，持续
 抽象建模原则见[任务判定树与解锁过程](./task-state-model.md)。
 事件定义与快照归约原则见[事件与快照投影](./event-projection-model.md)。
 执行引擎固定生命周期外壳，业务协议定义输入、进展、结果与故障详情；暂不增加 metadata。
+通用引擎已派生为独立前置 [generic-task-engine](../../../../01M63AFYJEDXZ8PFZQQVZC1W02/outer/inner/ideal/Idea.md)：
+该 idea 拥有通用契约、核心库与可挂载 HTTP 适配；本 idea 保留制品、Check/Probe/Regulate
+业务适配及端到端集成。当前支持文档作为来源依据，通用定义由新 idea 收敛后引用，
+不并行维护两份规范，也不表示任何实施或构想已验收。
 
 ## 边界
 

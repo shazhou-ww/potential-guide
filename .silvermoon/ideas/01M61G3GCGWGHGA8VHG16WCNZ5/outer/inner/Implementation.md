@@ -4,6 +4,10 @@
 旧候选运行证据见[verification.md](./verification.md)。
 本次按用户要求修订 Ideal，以下为准备阶段的实施种子，不授权开始代码修改；
 旧证据不证明[Request 生命周期修订](./ideal/request-lifecycle-revision.md)已实现。
+通用调度、事件投影与 HTTP 适配内核现归独立前置
+[generic-task-engine](../../../01M63AFYJEDXZ8PFZQQVZC1W02/outer/inner/ideal/Idea.md)。
+本合同中的相应步骤保留为业务适配与集成验证要求，不再另行实现第二套引擎；
+具体接入方案待前置契约收敛后细化，当前条目仍未完成。
 
 ## Steps
 
