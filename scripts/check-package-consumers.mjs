@@ -15,6 +15,16 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     );
   }
   const scenarios = [
+    ["task-protocol", ["@potential-guide/task-protocol"]],
+    ["task-engine", ["@potential-guide/task-engine"]],
+    [
+      "task-adapters",
+      [
+        "@potential-guide/task-engine",
+        "@potential-guide/task-engine-http",
+        "@potential-guide/task-engine-storage",
+      ],
+    ],
     [
       "npm-objectives",
       [
@@ -93,6 +103,59 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       entries,
       label === "npm-objectives",
     );
+    if (label.startsWith("task-")) {
+      const script = join(directory, "generic-task.mjs");
+      await writeFile(
+        script,
+        `
+import assert from "node:assert/strict";
+${
+  label === "task-protocol"
+    ? `
+import {emptyFacts,json} from "@potential-guide/task-protocol";
+assert.equal(emptyFacts().watermark,0);
+assert.deepEqual(json({value:2}),{value:2});
+`
+    : `
+const json=value=>value;
+import {createTaskEngine,newId} from "@potential-guide/task-engine";
+import {MemoryStore} from "@potential-guide/task-engine/testing";
+import {createExecutorPool} from "@potential-guide/task-engine/pool";
+const pool=createExecutorPool({resources:["js"],resourceKey:()=>"js",run(input){
+ const result=Promise.resolve(input);return {result,exited:result.then(()=>{}),cooperate(){},async force(){throw Error("not isolated");},async cleanup(){}};
+}});
+const type={type:"echo",version:"1",environment:"node",validate:json,equals:(a,b)=>JSON.stringify(a)===JSON.stringify(b),prepare:async x=>x,validatePrepared:json,validateResult:json,validateProgress:json,execute:(x,o)=>pool.execute(x,o)};
+${
+  label === "task-adapters"
+    ? `
+import {openSqliteStore} from "@potential-guide/task-engine-storage";
+import {createTaskHandler} from "@potential-guide/task-engine-http";
+const store=openSqliteStore("consumer.sqlite");
+`
+    : "const store=new MemoryStore();"
+}
+const engine=createTaskEngine({store,types:[type],currentVersions:{echo:"1"},authorize:()=>true});
+engine.start();
+const caller={scope:"consumer",subject:"fixture"};
+const task=engine.submit({requestId:newId(),type:"echo",text:"packed",timeoutMs:10000},caller);
+let result;
+for(let i=0;i<200;i++){await new Promise(r=>setTimeout(r,10));result=engine.getTask(task.taskId,caller);if(result.stage==="completed")break;}
+assert.equal(result.stage,"completed");assert.deepEqual(result.result,{text:"packed"});
+${
+  label === "task-adapters"
+    ? `
+const handler=createTaskHandler({service:engine,resolveCaller:()=>caller});
+assert.equal((await handler(new Request("http://fixture/tasks/"+task.taskId))).status,200);
+`
+    : ""
+}
+await engine.close();await pool.close();store.close();
+`
+}
+`,
+      );
+      await run(process.execPath, [script], directory);
+    }
     if (label === "artifact-hosts") {
       const script = join(directory, "artifact-hosts.mjs");
       await writeFile(

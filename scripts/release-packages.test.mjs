@@ -39,11 +39,15 @@ test("local verification covers the internal runtime dependency closure without 
 });
 
 test("release inventory contains the new packages and excludes retired Guide and Supervisor", () => {
-  assert.equal(releasePackages.length, 23);
+  assert.equal(releasePackages.length, 27);
   for (const field of ["id", "directory", "name"]) {
-    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 23);
+    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 27);
   }
   for (const name of [
+    "@potential-guide/task-protocol",
+    "@potential-guide/task-engine",
+    "@potential-guide/task-engine-http",
+    "@potential-guide/task-engine-storage",
     "@potential-guide/checker-host",
     "@potential-guide/effects",
     "@potential-guide/git-source",

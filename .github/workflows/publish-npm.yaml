@@ -3,6 +3,10 @@ name: Publish package to npm
 on:
   push:
     tags:
+      - "task-protocol-v*"
+      - "task-engine-v*"
+      - "task-engine-http-v*"
+      - "task-engine-storage-v*"
       - "checker-host-v*"
       - "objective-host-v*"
       - "effects-v*"
@@ -33,6 +37,10 @@ on:
         required: true
         type: choice
         options:
+          - task-protocol
+          - task-engine
+          - task-engine-http
+          - task-engine-storage
           - checker-host
           - objective-host
           - effects

@@ -1,9 +1,13 @@
 # npm publishing
 
-Potential Guide defines twenty-two independent CLI, library, and Objective releases:
+Potential Guide defines independent CLI, library, and Objective releases:
 
 | Package | Release tag |
 | --- | --- |
+| `@potential-guide/task-protocol` | `task-protocol-vX.Y.Z` |
+| `@potential-guide/task-engine` | `task-engine-vX.Y.Z` |
+| `@potential-guide/task-engine-http` | `task-engine-http-vX.Y.Z` |
+| `@potential-guide/task-engine-storage` | `task-engine-storage-vX.Y.Z` |
 | `@potential-guide/checker-host` | `checker-host-vX.Y.Z` |
 | `@potential-guide/objective-host` | `objective-host-vX.Y.Z` |
 | `@potential-guide/effects` | `effects-vX.Y.Z` |
@@ -37,6 +41,9 @@ and keep their responsibility names.
 Release packages in manifest dependency order. `effects` and `pilot-protocol`
 are protocol; `check-host` follows `effects`, and `objective-pilot` consumes
 Check Host and both protocols, then `objective-regulator` builds regulation capabilities.
+The generic task packages are independent of those business hosts: release
+`task-protocol` before `task-engine`, `task-engine-http`, and `task-engine-storage`.
+Adding their packaging checks does not publish or deploy them.
 The independent `regulation-coordinator` library follows `objective-regulator`
 and owns its scheduling helpers and runner types. `cli-core` precedes
 `pguide-config`. `objective-declarations` consumes CLI Core and Pilot protocol only;
@@ -92,6 +99,10 @@ environment named `npm`, and leave it without npm secrets. Optional required
 reviewers are compatible with the workflow, but any deployment branch or tag
 rules must allow these release tags:
 
+- `task-protocol-v*`
+- `task-engine-v*`
+- `task-engine-http-v*`
+- `task-engine-storage-v*`
 - `checker-host-v*`
 - `objective-host-v*`
 - `objective-monorepo-standard-v*`

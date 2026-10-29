@@ -1,4 +1,8 @@
 protocol:
+  - "@potential-guide/task-protocol"
+  - "@potential-guide/task-engine"
+  - "@potential-guide/task-engine-http"
+  - "@potential-guide/task-engine-storage"
   - "@potential-guide/checker-host"
   - "@potential-guide/objective-host"
   - "@potential-guide/check-artifacts"

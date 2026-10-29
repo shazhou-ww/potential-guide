@@ -2,6 +2,18 @@ export const discoveryHostBins = ["pguide-checker-host", "pguide-check-host"];
 
 export const releasePackages = [
   ...[
+    ["task-protocol", ["reduce", "project", "isTimedOut", "json"]],
+    ["task-engine", ["createTaskEngine", "newId"]],
+    ["task-engine-http", ["createTaskHandler"]],
+    ["task-engine-storage", ["openSqliteStore"]],
+  ].map(([directory, requiredExports]) => ({
+    id: directory,
+    directory,
+    name: `@potential-guide/${directory}`,
+    requiredExports,
+    bins: [],
+  })),
+  ...[
     "objective-monorepo-standard",
     "objective-package-standard",
     "objective-devbox-health",

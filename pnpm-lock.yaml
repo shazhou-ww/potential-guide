@@ -519,6 +519,34 @@ importers:
         specifier: workspace:^
         version: link:../objective-regulator
 
+  packages/task-engine:
+    dependencies:
+      '@potential-guide/task-protocol':
+        specifier: workspace:^
+        version: link:../task-protocol
+
+  packages/task-engine-http:
+    dependencies:
+      '@potential-guide/task-protocol':
+        specifier: workspace:^
+        version: link:../task-protocol
+    devDependencies:
+      '@potential-guide/task-engine':
+        specifier: workspace:^
+        version: link:../task-engine
+
+  packages/task-engine-storage:
+    dependencies:
+      '@potential-guide/task-protocol':
+        specifier: workspace:^
+        version: link:../task-protocol
+    devDependencies:
+      '@potential-guide/task-engine':
+        specifier: workspace:^
+        version: link:../task-engine
+
+  packages/task-protocol: {}
+
   packages/test-tree:
     dependencies:
       yaml:
