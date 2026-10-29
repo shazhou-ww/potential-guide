@@ -4,6 +4,8 @@
 只列发生变化的数据结构，不重复未修改的 Artifact、业务结果或 Reference 契约。
 抽象规则和原子状态分类见[任务判定树与解锁过程](./task-state-model.md)。
 事件类型变化、历史查询及 reducer 投影原则另见[事件与快照投影](./event-projection-model.md)。
+该文也统一定义业务输入、execution.progress、result 与 error.details 的载荷边界；
+本文保留具体业务协议的完整对象，不增加 metadata 或 snapshot.progress。
 
 ## 阅读约定
 

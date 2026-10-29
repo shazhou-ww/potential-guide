@@ -53,6 +53,10 @@ Request.prerequisites 保留声明语义，失败原子同步采用 readiness_fa
 按[事件与快照投影](./ideal/event-projection-model.md)对齐过程事件，
 snapshot 由一致事件前缀归约并按显式服务端时间投影；
 task.updated 不作为事实输入，重放不触发执行、外部检查或后继规划。
+业务输入沿用 subject/context，prerequisite 输入遵守各 Check 契约；
+execution.progress.data.progress 取代引擎专用的子 Task 关联事件，
+execution.completed.data.result 与失败事件 data.error.details 由业务协议校验，
+引擎负责通用载荷限制与隔离，不解释业务依赖或自动治理；暂不新增 metadata。
 去掉 result 中的重复根引用、bindings 汇总和机械 gapSummary；
 快照事件身份只保留一处，Task 终结引用 Execution 结果事实，缓存投影不独立维护真相。
 
@@ -88,6 +92,10 @@ Router、SDK、Pilot/regulator 与 Coordinator 的 series 订阅和持久恢复�
 并覆盖独立历史游标、分页边界及共享执行的授权隔离。
 用事件重建快照验证同一前缀/时间的确定性、checkpoint 加后缀与完整归约等价，
 同刻事实按读取边界区分；重复投递不重复生效，未知类型或必要事实缺失须显式失败。
+验证业务 progress 可通过历史读取而不改变通用快照，载荷同名字段不覆盖外壳；
+正常业务不通过仍为 completed，失败详情可查询且不伪造结果，非法/超限载荷显式报错。
+验证 Check 统一输出协议未被任意作者 schema 替代，subject/context 的行为差异影响兼容匹配，
+共享历史不泄露其他 owner 的业务输入或详情；业务关联不自动建立调度依赖。
 验证快照结果可由执行事实投影，动态依赖的业务引用不会被误删，
 Before 对照与新设计的派生缓存职责明确，避免身份和调度参数多份可变真相。
 增加跨快照校验：事实叶子路径不丢失、值不变、无 progress/revision；

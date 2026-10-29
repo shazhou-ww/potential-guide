@@ -162,6 +162,8 @@ Task 加入已有运行执行时，execution.startedAt 可以早于 allocation.b
 started-after-eligible 对这个已有执行是否合格仍需各自判断。
 
 `result` 保留在 completed 顶层作为业务读取投影，不重复根 Objective 身份。
+它由对应业务协议定义并校验，通用引擎不因 ok=false 或 requirements 改写执行终态；
+业务层拥有协议不等于每个 Checker 作者都能任意改写统一输出形状。
 详细证据通过历史事件查询，不在过程对象中内嵌全部尝试、worker 日志或子 Task 树。
 成功选定准确版本时同时记录 preparation.artifactRef 与 preparation.resolution，
 后继沿固定路径继承；预优化找到候选不等于已正式采用。resolution 替代旧草案的
@@ -187,6 +189,9 @@ status/reason/currentStep 来替代它。整体状态只由 state 表达；
 过程对象仅放已成立的有界事实。每次 fetch 尝试、未满足条件列表、临时预约和业务进展
 通过 SSE/历史事件观察，不随着每个 snapshot 重复传输。
 只有已被采用的就绪、准确选版和正式执行关联等事实才进入相应二级分组。
+execution.progress 的业务对象保留在事件历史，不新增 snapshot.progress/custom/metadata；
+失败事件的可选 error.details 也不展开成快照诊断树，详见
+[事件与快照投影](./event-projection-model.md)。
 
 ### 5.1 timestamp 与读取投影
 

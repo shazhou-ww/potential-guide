@@ -15,6 +15,7 @@ Regulation 的统一资格时间、递归系列与未完成任务恢复，持续
 [制品契约](./artifact-contracts.md)、[摘要与引用](./identity-and-digests.md)及[服务设计](./objective-service.md)。
 抽象建模原则见[任务判定树与解锁过程](./task-state-model.md)。
 事件定义与快照归约原则见[事件与快照投影](./event-projection-model.md)。
+执行引擎固定生命周期外壳，业务协议定义输入、进展、结果与故障详情；暂不增加 metadata。
 
 ## 边界
 

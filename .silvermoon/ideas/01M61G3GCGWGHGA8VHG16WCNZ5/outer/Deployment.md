@@ -20,6 +20,7 @@
 仅 Check/Probe 创建请求暂不允许携带，不因此维护两套状态机；
 区分 pending 时间等待、preparing 制品准备、blocked 条件阻塞和 queued 资源排队；
 通过历史事件查询验证错过 SSE 后仍可追溯执行、选版和子 Task 关联，
+其中 Probe 调用关联由业务层解释 execution.progress 载荷，不建立引擎依赖图；
 不依赖终态快照中的完整 evidence；
 记录脱敏证据并清理操作拥有的资源。
 
@@ -42,6 +43,8 @@ Regulation 制品就绪但条件未通过为 blocked，治理结束后仍须通�
 Task/Execution/Series 历史查询有独立游标，分页及实时通知来自同一事实，
 共享执行不复制或泄露其他 owner 的任务数据。
 验证 Task 终结事件引用执行结果，completed snapshot 的业务结果由同一事实投影；
+业务 progress、result 与可选错误 details 能按授权读取，载荷不能改变事件外壳，
+正常业务不通过不被误报为执行故障，也不因读取关联自动启动治理；不新增 metadata。
 结果不重复根 Objective 身份，问题若指向其他 Objective 则仍保留准确业务引用。
 服务端有序生成及 SSE 交接确认后的快照保留此前已知过程事实，叶子路径/值不变；
 真实失败终态也保留既有准确引用、时间与执行关联，且不残留旧阶段进展。

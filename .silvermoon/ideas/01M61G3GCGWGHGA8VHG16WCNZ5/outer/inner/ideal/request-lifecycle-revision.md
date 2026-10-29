@@ -55,6 +55,13 @@ desiredLevel、priority 等治理特有需求保留，内部 Coordinator 表示�
 这属于既有治理入口的 admission 演进，不扩展为新 Regulation HTTP 服务，
 也不因引用同形就假定 Agent 执行可以按 Check 的规则共享。
 
+**业务输入边界：** 沿用 subject 与已有的可选 context，不另加重复 input 或 metadata。
+subject 和各 prerequisite 的 subject 按对应业务/Checker 契约校验；
+context 是有限 JSON 执行上下文，不是权限授予或任意审计信息容器。
+影响执行的业务参数须参与相应的兼容/共享判定，不因字段可扩展就忽略其行为影响。
+引擎不根据这些对象的字段名推导业务治理关系，载荷边界统一见
+[事件与快照投影](./event-projection-model.md)。
+
 **已确认绑定边界：** Objective 的准确 digest 已固定其声明的 Checker URL/digest，
 这部分 Merkle DAG 不需要调用方再传一份绑定。运行时 Checker 提出的其他 Objective
 需求不属于根定义中的静态边，因此根 digest 不一定固定这些动态 Objective 的版本。
@@ -315,6 +322,13 @@ timeout 是时长，deadlineAt 是 Task 截止时间，不是 Request 或结果�
 - 依赖 Regulation 结束后必须重新执行条件 Check；治理结束、甚至目标曾经达标，
   都不能直接替代整个条件 Check 的有效通过结果。
 
+业务依赖的解释与治理编排属于 Coordinator，不通过通用 Execution 的子 Task 关系建模。
+Probe 的调用关联是 execution.progress 中的业务事实，不能自动成为 prerequisites 或调度指令。
+已终结的 Regulation 若返回未满足的 requirements，Coordinator 可创建新的带条件 Request；
+仍在 readiness.blocked 的原 Task 则待条件通过后继续，不复活终态或制造重复需求。
+readiness 的通用判定/检查引用与 Check 自己的业务输入、progress/result 分开，
+不在 readiness 再复制一份自定义业务结果。
+
 **子任务与所有权：** prerequisite 检查拥有独立 Check Task；父 Task 尚在 blocked
 不能阻止这些 Check 自己进入准备/执行。当前子 Check 创建请求不带 prerequisites，
 不会自动继承父条件，避免把前提循环施加到探测本身而自锁；
@@ -524,10 +538,15 @@ series 订阅不能只在订阅时展开为现存 task IDs；首次快照与后�
 
 历史必须保存足以追溯的结构化事实，而非只存“正在运行”文字通知：
 准确制品选择、fallback 和更新失败、实际 runtime/worker revision、Execution 开始/结束、
-结果、Task 与 Execution 关联、子 Task/依赖关系和观察进展。
+结果、Task 与 Execution 关联，以及业务层报告的调用关联和观察进展。
 受理、需求取消、制品选择及关联属于 Task 事实；实际运行环境、worker revision 与执行结果
 属于 Execution 事实。共享执行只记录一份，通过 executionId 关联，
 不因多个 Task/series 使用它而复制多份执行历史。
+execution.progress.data.progress、execution.completed.data.result 和失败事件的
+data.error.details 是明确的业务载荷位置；引擎固定外壳与生命周期，
+各业务协议校验并解释内容，Check 的统一结果约束不因此放开。
+progress 不重新进入 snapshot，不构成通用依赖图；
+正常返回未满足需求不等于执行故障，自定义详情也不能覆盖外层身份或状态。
 正常 Task 终结事件引用 executionId，不重复记录相同执行结果；
 Task snapshot.result 由该执行事实投影。Task 特有的结果转换如果未来引入，
 须作为独立业务语义定义，不默认所有结果都能无损删除。

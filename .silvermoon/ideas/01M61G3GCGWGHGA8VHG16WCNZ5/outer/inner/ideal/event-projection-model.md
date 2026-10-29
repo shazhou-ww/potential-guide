@@ -82,9 +82,10 @@ Task 的过程事实用 `task.<process>.<fact>`，对象级事实用 `task.<fact
 | task.execution-linked | task.allocation.bound | 正式绑定 Execution → allocation.boundAt、execution.executionId；包括共享已有执行 |
 | 分配最终失败未独立列出 | task.allocation.failed | 分配过程最终失败，不把临时资源不足当成终结 |
 | execution.started | 保留 | 实际 runtime/workerRevision 及开始事实 → execution.startedAt |
-| execution.completed | 保留 | 正常业务结果，包括 Check 的 ok=false；不是执行故障 |
+| execution.completed | 保留，明确业务载荷边界 | data.result 由对应业务协议定义；正常返回不代表业务目标达成 |
 | 执行故障未独立列出 | execution.failed | 实际执行失败；影响哪些 Task 仍依各 Task 的绑定与终结裁决 |
-| execution.child-task-linked | 保留 | 执行调用子 Task 的因果关系，不能复制子快照树 |
+| execution.child-task-linked | execution.progress | 调用关联作为 data.progress 中的业务进展，不再是通用引擎的专用关系类型 |
+| 故障详情未定义业务扩展位 | 失败事件的 data.error.details（可选） | 业务诊断对象；通用错误分类不由该对象决定 |
 | task.terminated | 保留 | Task 终结裁决 → termination 与终态；成功时引用执行结果，不复制 result |
 | task.updated | 保留为投影通知 | 不属于上述事实集合，不参与 reduce |
 
@@ -105,6 +106,59 @@ resolution=up-to-date/fallback/updated 是同一种成功事实的三种方式�
 详细 observation/invocation、预约释放、取消需求与后继规划的事件载荷仍需继续定义，
 上表是此次讨论的核心类型，不宣称它已覆盖所有可恢复业务动作。
 
+### 2.1 固定外壳与业务载荷
+
+通用引擎定义生命周期，Check、Probe、Regulation 的业务协议分别定义输入、进展和结果。
+业务层可嵌入内容，但不向每个过程增加一个无边界的 custom 对象。
+本轮明确四类边界，**暂不新增 metadata 字段**，也不增加与 subject 重复的 input。
+
+| 边界 | 承载位置 | 谁定义语义 |
+|---|---|---|
+| 业务输入 | Request.subject 及已有的可选 context | subject 是业务目标/输入；context 是执行上下文，不是权限授予或审计杂项容器 |
+| 业务进展 | execution.progress.data.progress | 对应业务协议定义的有限 JSON 对象，描述本次执行已经报告的进展 |
+| 正常结果 | execution.completed.data.result | 对应业务协议定义并校验的结果，继续遵守该协议已有形状 |
+| 故障详情 | 失败事件的 data.error.details | 可选的有限 JSON 业务诊断对象，不改变通用故障分类 |
+
+type、occurredAt、executionId、游标，以及通用 error.code/stage/message 等外壳字段
+由引擎/适配器契约确定。progress/result/details 不展开合并进外壳；
+即使载荷中有名为 state、executionId 或 type 的字段，也只是业务数据，
+不能覆盖身份、改变生命周期、授予权限或建立引擎内的依赖/绑定关系。
+data.progress 与 data.result 分别为命名的业务载荷槽，不把 data 整体定义为任意扩展集合。
+
+业务层自定义不等于任意制品作者都可改写协议。
+例如[Checker 契约](./artifact-contracts.md)仍统一规定 ok/problems/requirements，
+没有开放每个 Checker 自定义输出 schema；引擎不必理解这些字段，
+但 Check 适配器必须按其业务协议校验。Probe 与 Regulation 同样遵守各自协议。
+正常返回 ok=false 或未满足的 requirements 仍可产生 execution.completed；
+真正执行故障才使用 execution.failed，不能把业务不通过包装成引擎错误。
+
+引擎负责通用载荷的有限 JSON、序列化字节数和资源限制、身份/访问隔离；
+业务适配器负责具体 schema、字段词汇和协议约束，非法载荷必须显式报告，
+不能静默丢弃或变成成功。业务类型的识别和演进由所属协议管理，
+不是靠引擎猜测某个字段名，也不因此新增全局 metadata 或任意制品输出 schema。
+errors 的 details 要脱敏，不自动包含原始请求、凭据、堆栈或其他 owner 的上下文。
+
+prerequisites 的 Check 输入仍使用各自 subject；readiness 只消费适配器提供的有效通过判定
+及检查引用。业务 requirements/诊断详情从相应 Check 的 progress/result 查询，
+不在 readiness 另存一份 custom 或条件业务结果。
+影响执行行为的 subject/context 必须进入相应的兼容/共享判定，
+不能把有影响的参数当成不参与匹配的附注，也不因加入扩展位就开放 Regulation 执行共享。
+
+### 2.2 业务关联不等于通用调度依赖
+
+Probe 发起 Check 的调用关联通过 execution.progress 记录，业务载荷可以包含
+observationId、invocationId 和 childTaskId；引擎保留它，但不解释为依赖图、
+prerequisites 或自动治理授权。Coordinator 自己理解 Regulation 的业务结果，
+按授权、预算和策略创建依赖治理 Request，并记录自己的编排因果。
+通用 Task 层仍负责执行已声明的 prerequisites，不负责推导“应创建哪个治理任务”。
+
+依赖 Regulation 完成只能作为重新检查的信号；若要求某 Objective 达到某 level，
+必须检查目标条件，不能以该 Task 已结束代替条件成立。
+原 Regulation Task 若已终结并报告未满足的需求，后续创建新的 Request/Task，
+可以声明相应 prerequisites，不复活旧终态；
+若原 Task 尚未执行、仍在 readiness 的 blocked 状态，则条件通过后继续原 Task，
+不因一次依赖完成通知额外创建重复任务。
+
 ## 3. 归约结果与事实所有权
 
 | 快照内容 | 来源 |
@@ -114,7 +168,7 @@ resolution=up-to-date/fallback/updated 是同一种成功事实的三种方式�
 | readiness.satisfiedAt | 正式采用条件通过证据的事实，不是看到任一子 Check completed 就通过 |
 | allocation.boundAt、execution.executionId | task.allocation.bound |
 | execution.startedAt/completedAt | 被引用 Execution 的开始/完成事实，不冒充 Task 加入时间 |
-| completed 的 result | 被引用 Execution 的正常结果及该 Task 的成功终结裁决 |
+| completed 的 result | 被引用 Execution 的业务结果及该 Task 的成功终结裁决；引擎不读取业务 ok/requirements 来改写终态 |
 | termination | Task 自己的终结裁决；不能用共享 Execution 的终结替代 |
 | state、timestamp | 对上述一致事实按 t 投影；state 规则见任务状态模型 |
 
@@ -128,6 +182,15 @@ Snapshot 只提取累积的有界事实，而不是把 reducer 内部状态全�
 条件通过证据的有效期/撤销与重新绑定策略尚未定义，不用“覆盖旧字段”暗中破坏继承规则。
 终结后执行仍继续时，Task 终态不可反转；是否补充后续执行诊断事实须另行明确，
 不能默认给 timed_out/cancelled 添加成功 result。
+
+execution.progress 是可查询的事实事件，不是 task.updated 快照通知，
+也不是重新引入 snapshot.progress。通用 reducer 识别该事件，保留其历史，
+但不按业务字段修改 state、readiness 或绑定关系；业务层可以归约出自己的观察视图。
+属于审计/关联证据的 progress 必须随事实历史可追溯，不能只通过可丢失的 SSE 发送。
+“识别 execution.progress 但不解释业务载荷”与“静默忽略未知事件类型”不同。
+完成时 result 原样作为业务结果投影，不变成另一份可修改的执行结果。
+error.details 留在所属故障事实中；Task 终结通过已知 Execution 关联查询详情，
+不为可扩展性再复制一份业务错误对象。Task 自身的准入/准备等错误仍由自身事实提供。
 
 ## 4. 读取边界、恢复与讨论边界
 
@@ -158,6 +221,10 @@ Snapshot 只提取累积的有界事实，而不是把 reducer 内部状态全�
 - fallback 保留更新错误，三种 resolution 及既有事实不会因重放或失败分支丢失。
 - 乱序/重复传输由读取与归约边界处理；未知事实、缺失引用不能静默降级。
 - task.updated 不可回灌 reducer；重放不能触发执行、外部检查或递归后继创建。
+- execution.progress 的业务关联可以完整重放/查询，但不修改通用 snapshot 或触发依赖治理；
+  载荷中的同名字段不能覆盖外壳，不新增 snapshot.progress/custom/metadata。
+- 正常业务不通过仍为 execution.completed，结果按业务协议校验并原样投影；
+  执行故障的 details 可追溯且不改变通用分类。输入匹配与共享隔离不能忽略有效 context。
 
 ## 6. 历史查询与完整事件示例
 
@@ -368,34 +435,42 @@ Accept: application/json
 
 execution.completed 是实际结果的唯一事实来源；task.terminated 只记录该需求的
 状态/终结时间并引用 executionId，不重复存储同一个业务 result。
+此处的 ok/problems 属于 Check 结果协议，不是所有 Execution 的必填业务字段。
+业务不通过的完整 Check 结果见[请求数据示例](./request-data-examples.md)第 9.3 节，
+它也是正常完成的结果，不因 ok=false 改成 execution.failed。
 查询 completed Task snapshot 时可以从关联执行投影 result，避免额外请求，
 但不能独立维护第二份结果。若未来有 Task 特有的结果转换，需明确记录其独立语义，
 不能直接套用“与执行结果相同”的去重规则。
 
-### 6.4 子 Task 与 series 查询：关联，不递归展开整树
+### 6.4 业务进展与 series 查询：调用关联，不是通用依赖
 
 [请求数据示例](./request-data-examples.md)第 4.3 节的 Probe 原先内嵌一个子 Task snapshot；
-After 可通过下面的完整关联事件追溯。
-这是 Observation Execution 拥有的调用关系，执行事实使用 executionId 归属，
+After 可通过下面的完整 execution.progress 事件追溯。
+这是 Probe 业务协议定义的调用关系，kind=check-linked 只是其业务词汇，
+不是引擎的事件类型或调度指令。执行事实使用外层 executionId 归属，
 共享该 Probe 执行的多个父 Task 沿自己的 task.allocation.bound 事件读取同一份记录。
 
 ```json
 {
   "cursor": "probe-execution17-child-linked",
-  "type": "execution.child-task-linked",
+  "type": "execution.progress",
   "occurredAt": "2026-10-29T03:20:00.210Z",
   "executionId": "01M60000000000000000000017",
   "data": {
-    "observationId": "01M60000000000000000000015",
-    "invocationId": "01M60000000000000000000010",
-    "checker": "pass",
-    "levelId": "ready",
-    "childTaskId": "01M6000000000000000000000C"
+    "progress": {
+      "kind": "check-linked",
+      "observationId": "01M60000000000000000000015",
+      "invocationId": "01M60000000000000000000010",
+      "checker": "pass",
+      "levelId": "ready",
+      "childTaskId": "01M6000000000000000000000C"
+    }
   }
 }
 ```
 
-查询 childTaskId 的 Task 历史可找到它与 `01M6000000000000000000000A` 的执行关联，
+理解该业务协议的消费方查询 childTaskId 的 Task 历史，
+可找到它与 `01M6000000000000000000000A` 的执行关联，
 再读该 Execution 的实际 runtime/result；不用把子快照复制进父 snapshot。
 observation/level/invocation 进展同样记录为结构化事实，不维护第二份完整 evidence 树。
 
@@ -453,3 +528,35 @@ Task/Series 历史返回自己的事实和执行引用，不默认递归展开�
 
 事件的 occurredAt 是业务事实发生时间，snapshot.timestamp 是读取投影时间；
 数值可以恰好相同，但不能因此把它们定义成同一个字段或排序游标。
+
+### 6.6 故障详情：通用错误与业务诊断分开
+
+下例对应[任务状态模型](./task-state-model.md)第 7 节 execution_failed 场景的
+Execution `01M60000000000000000000064`。这里只展示一条完整失败事件，
+不是它的全部历史；实际执行先失败，Task 在 06:02:00.500Z 作出终结裁决。
+诊断字段由该 Check 业务适配器定义，不是所有失败都必须包含 operation/exitCode。
+
+```json
+{
+  "cursor": "execution64-failed",
+  "type": "execution.failed",
+  "occurredAt": "2026-10-29T06:02:00.490Z",
+  "executionId": "01M60000000000000000000064",
+  "data": {
+    "error": {
+      "code": "execution_failed",
+      "stage": "observe",
+      "message": "Checker execution failed.",
+      "details": {
+        "operation": "inspect-workspace",
+        "component": "layout",
+        "exitCode": 2
+      }
+    }
+  }
+}
+```
+
+Task 快照保留原通用错误摘要，通过执行引用读取详细故障事实，不增加自定义诊断树。
+业务适配器判断此次是执行故障，不能由通用 reducer 看见 details.exitCode 就自行推断；
+同样，业务结果中的 ok=false 或 requirements 不是此类错误详情。
