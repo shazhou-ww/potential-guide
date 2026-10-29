@@ -97,6 +97,7 @@ series 默认复用首个 Task ID 是明确例外。ULID 时间部分不用于 f
 | Host 实例 | Task 快照携带 hostInstance，SDK 以变化判断重启。 | Task 公共契约不携带 hostInstance；路由需要时在外围 envelope 表达，内部实例世代/所有权不暴露为 Task 字段。 |
 | 制品数据 | snapshot 内重复完整 artifact/manifest，子 Task 和 SSE 更新也携带。 | 只保留实际选择的 artifactRef（kind、url、digest）；完整定义按准确 digest 单独查询。 |
 | 完整证据 | snapshot.evidence 包含运行环境、子 Task 快照和观察过程，与进展事件重复。 | 从 snapshot 移除完整 evidence；通过历史事件 API 查询结构化事实，不维护第二套独立证据模型。 |
+| 请求策略 | 旧快照含 freshness，早期新草案还复制 recurrence 和 schedule 包装。 | snapshot 不含请求体/freshness/recurrence；时间约束在顶层，原始 Request 按 requestId 独立查询。 |
 
 **已确认：** 用户取消的是被保留的 pending Task；它不能再触发后继，递归链由此停止。
 取消冗余 pending Task 不影响原计划。已经运行的 Task 不被该操作取消，
@@ -151,8 +152,9 @@ blocked 只表示 prerequisite 未满足或尚无有效通过证据，不是下�
 
 ### 2.1 Snapshot：原子状态与累积过程事实
 
-公共基底是 requestId、taskId、seriesId、revision、state、schedule，
-以及本任务的 freshness/可选 recurrence。schedule 包含 receivedAt、eligibleAt、deadlineAt。
+公共基底是 requestId、taskId、seriesId、revision、state，
+以及顶层 receivedAt、eligibleAt、deadlineAt。不再有 schedule 包装，
+不复制 Request 的 freshness/recurrence 或完整请求体。
 状态专属信息随当前 state 切换，不因为未来可能用到就定义成一组全局可选属性。
 Snapshot 分为按解锁过程组织的累积事实与统一 progress 中的当前状态数据；
 不增加 substate、isFailed 或 isTerminated 等重复语义字段。
@@ -161,7 +163,7 @@ Snapshot 分为按解锁过程组织的累积事实与统一 progress 中的当�
 
 | 类别 | 字段或内容 | 后继快照规则 |
 |---|---|---|
-| 受理事实与固定输入 | requestId、taskId、seriesId、schedule、freshness、recurrence | 受理后继承，不重新默认或重置 |
+| 受理事实与有效时间约束 | requestId、taskId、seriesId、receivedAt、eligibleAt、deadlineAt | 受理后继承，不重新默认或重置；请求策略另查 Request |
 | 已成立的过程事实 | preparation.startedAt/completedAt、readiness.satisfiedAt（实际有条件求值时） | 真实发生时增加，之后原名原值保留 |
 | 已确认的选择/执行事实 | preparation.artifactRef/language/fallbackUsed、allocation.boundAt、execution.executionId/startedAt/completedAt | 一经正式确认就保留，不等到 completed 才重新出现 |
 | 终结事实 | termination.terminatedAt/error/lastState/取消诊断、result | 随终结成立，终态不反转且不改写结果 |
@@ -183,7 +185,7 @@ progress.reservation.executionId 是临时预约目标，不等于正式绑定�
 
 | 状态 | 必需的状态信息 | 不允许作为当前信息出现 |
 |---|---|---|
-| pending | schedule 与任务属性，可有提前产生的准备事实 | reason/pending 状态对象、实际业务执行或结果 |
+| pending | 身份与整体时间约束，可有提前产生的准备事实 | reason/pending 状态对象、请求策略、实际业务执行或结果 |
 | preparing | preparation 事实、准备过程的 progress | 其他过程的当前 progress、最终 result |
 | blocked | 制品准备事实、readiness 过程的 progress | 父实际执行或最终 result |
 | queued | 已就绪事实，可有调度 progress/预约 | 虚构实际执行开始或结果 |
@@ -203,7 +205,7 @@ Check 的 running 可以没有自定义 progress；Objective 的最终观察进�
 核心过程和二级事实字段统一为 preparation/readiness/allocation/execution。
 preparation 专指 artifacts 准备，fetch 只是其子步骤；readiness 求值 prerequisites，
 未就绪时状态为 blocked；allocation 分配执行机会（含共享执行匹配），等待时为 queued。
-Request 的 prerequisites 声明不改名；schedule、eligibility、termination 仍承担其他职责。
+Request 的 prerequisites 声明不改名；顶层时间约束、eligibility、termination 仍承担其他职责。
 prefetch 只表示提前执行 fetch 的优化，
 不再是顶层公共快照对象。pending 可以携带已经成立的 preparation 事实，
 但不携带 preparing 的当前进展；提前获取的变化可通过
@@ -258,6 +260,11 @@ requestId 与 taskId 不同，默认 seriesId 与首轮 taskId 相同也不意�
 Check 的 ok 与 problems 是结果契约，不把其一致性约束当成无意义的重复字段。
 
 输入与读取投影可在不同接口重复返回同一个值，但必须明确唯一事实源。
+snapshot 不嵌入 Request，原始 requestId 实体通过独立授权查询取得；
+freshness/recurrence 留在 Request，seriesId 作为实际关联事实保留在 Task。
+时间输入省略时，Task 中的有效值可以由服务计算，但不将默认值反写到原始 Request。
+解析失败可能没有 Task 或完整业务实体，仍应保留合法 Request ID 及可审计的错误，
+不能依赖 Task snapshot 才能追溯这个请求。查询形状与保留期不在此预先定死。
 Series 的 pendingRequestId 可由 pendingTaskId 对应的 Task 取得；
 latestSuccessor/generation 如保留，只是规划事实的可重建索引。
 恢复例子中的 Request 是不可变输入，cachedSnapshot 是派生缓存，

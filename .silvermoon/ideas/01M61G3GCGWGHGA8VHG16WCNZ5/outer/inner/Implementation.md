@@ -37,7 +37,9 @@ Regulation 调用方改用与 Probe 相同的 Objective URL/digest 引用，由�
 Task snapshot 在 HTTP/SDK/事件中统一为单一原子 state 判别联合，移除公共 hostInstance；
 按[任务状态模型](./ideal/task-state-model.md)落实条件判定树与协议语义分类，
 提供 isFailed/isTerminated 等公共判定，不新增 substate 或重复布尔字段。
-核心过程事实按 preparation/readiness/allocation/execution 分组，计划与终结分别用 schedule/termination；
+核心过程事实按 preparation/readiness/allocation/execution 分组，终结用 termination；
+receivedAt/eligibleAt/deadlineAt 放顶层，不用 schedule 包装。快照不复制请求体、
+freshness 或 recurrence；按 requestId 查询原始 Request，保留失败请求的审计能力。
 Request.prerequisites 保留声明语义，progress.process 与过程名一致，失败原子同步采用 readiness_failed/allocation_failed。
 过程可重叠，开始时间不冒充阶段转移时间；progress 独立承载当前进展。
 所有后继（含过程失败/控制终结/恢复）继承既有事实，不携带完整 evidence。
@@ -80,5 +82,7 @@ Router、SDK、Pilot/regulator 与 Coordinator 的 series 订阅和持久恢复�
 Before 对照与新设计的派生缓存职责明确，避免身份和调度参数多份可变真相。
 增加跨快照转移校验：事实叶子路径不丢失、值不变、revision 递增且旧 progress 清理；
 用删除已知事实、改名、改值和失败分支丢失执行身份的反例验证，而非只测单个状态 shape。
+验证所有 After snapshot（含事件和缓存视图）不含 schedule 或请求策略，
+Request 查询保留原始省略语义，Task 有效期限不被默认值回写污染。
 明确区分 execution.startedAt、Task 正式绑定时间和 termination.terminatedAt；
 不得靠状态名后缀推断语义分类，未知原子状态显式失败。

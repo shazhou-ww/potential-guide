@@ -67,7 +67,7 @@ prerequisites 是任意抽象 Task 的统一能力，不为 Check/Probe 定义�
 
 | 过程/约束 | 作用 | 事实分组 |
 |---|---|---|
-| 时间计划 | 定义何时可用及何时超时，不是一次下载操作 | schedule |
+| 整体时间约束 | 受理、时间资格边界与 Task 总期限，不属于某个执行过程 | 顶层 receivedAt/eligibleAt/deadlineAt |
 | eligibility | 服务端确认时间资格已到；不等于立即运行 | eligibility（有需要时记录实际判定时间） |
 | preparation | 获取、验证和选择准确制品，提供制品就绪事实 | preparation |
 | readiness | 求值 prerequisites、等待依赖就绪并确认可继续 | readiness |
@@ -82,7 +82,8 @@ prerequisites 是任意抽象 Task 的统一能力，不为 Check/Probe 定义�
 readiness 不是时间资格、制品或资源全部就绪的泛称。
 allocation 不限定为新建 worker：接入已有兼容执行同样属于为 Task 分配执行机会。
 过程名称调整不改变状态名 blocked/queued，也不把声明字段 prerequisites 改名。
-schedule/eligibility 是计划与时间资格，termination 是结束裁决，仍保留各自职责。
+整体计划时间放在顶层，不再增加 schedule 对象；eligibility 是时间资格的实际判定事实，
+termination 是结束裁决，仍保留各自职责。
 时间未到时可能已经获取或验证内容，但 Task 仍是 pending。
 准备工作开始于 eligible 前，不等于 Task 提前进入 preparing 或运行。
 
@@ -128,18 +129,30 @@ schedule/eligibility 是计划与时间资格，termination 是结束裁决，�
 
 ## 5. Snapshot：过程分组事实 + 当前进展
 
-快照顶层保留身份、revision、state 及需求属性。二级事实分组如下，
+快照顶层保留身份、revision、state、receivedAt/eligibleAt/deadlineAt。
+不嵌入 Request，也不重复 freshness、recurrence 等请求策略；它们通过 requestId 查询。
+二级事实分组如下，
 只输出已发生的字段，不为路径整齐伪造空过程或缺省时间。
 
 | 分组 | 有界记录性字段示例 | 含义 |
 |---|---|---|
-| schedule | receivedAt、eligibleAt、deadlineAt | 受理与计划约束；deadlineAt=eligibleAt+timeout |
 | eligibility | satisfiedAt | 实际资格判定时间，不修改计划 eligibleAt |
 | preparation | startedAt、completedAt、artifactRef、language、fallbackUsed | 准备过程及正式选版，定义不内嵌 |
 | readiness | satisfiedAt | prerequisites 已被采用的通过事实，不是当前所有 Check 状态 |
 | allocation | boundAt | 正式绑定某次执行的时间；仅资源预约不等于绑定 |
 | execution | executionId、startedAt、completedAt | 实际执行事实，不是 Task 阶段时刻 |
 | termination | terminatedAt、error、lastState、planningConflict | 需求终结原因及必要诊断 |
+
+顶层三个时间字段属于整个 Task，不强塞进 preparation/allocation/execution。
+deadlineAt 也适用于尚未开始执行的任务；它是根据有效 eligibleAt 与 Request.timeoutMs
+计算的 Task 约束，而不是要求客户端在 Request 中重复声明。
+
+Request 查询保存原始调用实体（包括 requestId 和被省略字段的原貌），
+Task 快照只公开其执行需要的有效事实。默认 eligibleAt/seriesId 属于 Task 的受理结果，
+不能为了查询方便反写 Request，或把两者变成分别可修改的两份配置。
+读取 freshness/recurrence/subject/prerequisites 等请求意图使用独立的授权 Request 查询；
+失败 Request 即使没有 Task 也可按合法 requestId 审计，body 无法解析时不得伪造完整实体。
+Request 查询的保留期限/错误协议与持久化细节后续收敛，不以快照完整性代替查询授权。
 
 实际已知的执行 ID 应在绑定时进入 execution.executionId 并一直继承，
 即使该执行尚未开始；当前临时预约则属于 progress，不能冒充已确认绑定。
@@ -204,21 +217,18 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
   "seriesId": "01M60000000000000000000061",
   "revision": 2,
   "state": "pending",
-  "freshness": "started-after-eligible",
-  "schedule": {
-    "receivedAt": "2026-10-29T06:00:00.000Z",
-    "eligibleAt": "2026-10-29T06:01:00.000Z",
-    "deadlineAt": "2026-10-29T06:01:30.000Z"
-  },
   "preparation": {
     "startedAt": "2026-10-29T06:00:50.000Z"
-  }
+  },
+  "receivedAt": "2026-10-29T06:00:00.000Z",
+  "eligibleAt": "2026-10-29T06:01:00.000Z",
+  "deadlineAt": "2026-10-29T06:01:30.000Z"
 }
 ```
 
 到达时间资格后，准备裁定摘要不匹配且无合法回退，选择 preparation_failed。
 准备没有成功完成，所以没有 preparation.completedAt，也没有 execution；
-原 schedule 和 preparation.startedAt 全部保留。不通过 error 文本决定分类。
+原 receivedAt/eligibleAt/deadlineAt 和 preparation.startedAt 全部保留。不通过 error 文本决定分类。
 
 ```json
 {
@@ -227,12 +237,6 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
   "seriesId": "01M60000000000000000000061",
   "revision": 4,
   "state": "preparation_failed",
-  "freshness": "started-after-eligible",
-  "schedule": {
-    "receivedAt": "2026-10-29T06:00:00.000Z",
-    "eligibleAt": "2026-10-29T06:01:00.000Z",
-    "deadlineAt": "2026-10-29T06:01:30.000Z"
-  },
   "eligibility": {
     "satisfiedAt": "2026-10-29T06:01:00.000Z"
   },
@@ -247,7 +251,10 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
       "stage": "verify",
       "message": "Artifact digest does not match the requested digest."
     }
-  }
+  },
+  "receivedAt": "2026-10-29T06:00:00.000Z",
+  "eligibleAt": "2026-10-29T06:01:00.000Z",
+  "deadlineAt": "2026-10-29T06:01:30.000Z"
 }
 ```
 
@@ -264,12 +271,6 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
   "seriesId": "01M60000000000000000000063",
   "revision": 7,
   "state": "execution_failed",
-  "freshness": "started-after-eligible",
-  "schedule": {
-    "receivedAt": "2026-10-29T06:02:00.000Z",
-    "eligibleAt": "2026-10-29T06:02:00.000Z",
-    "deadlineAt": "2026-10-29T06:02:30.000Z"
-  },
   "preparation": {
     "startedAt": "2026-10-29T06:02:00.010Z",
     "completedAt": "2026-10-29T06:02:00.100Z",
@@ -295,7 +296,10 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
       "stage": "observe",
       "message": "Checker execution failed."
     }
-  }
+  },
+  "receivedAt": "2026-10-29T06:02:00.000Z",
+  "eligibleAt": "2026-10-29T06:02:00.000Z",
+  "deadlineAt": "2026-10-29T06:02:30.000Z"
 }
 ```
 
