@@ -19,7 +19,7 @@ Regulation 的统一资格时间、递归系列与未完成任务恢复，持续
 
 ## 边界
 
-- Request 实体必含幂等 requestId，HTTP 通过 header 传递；Task 身份独立、series 默认取首个 Task ID，生成型身份用 ULID，作者语义名称和 digest/revision 不机械改名。
+- Request 实体必含幂等 requestId 与 type=check/probe/regulate，HTTP 仅将 requestId 放入 header，type 留在 body；Task 身份独立、series 默认取首个 Task ID，生成型身份用 ULID，作者语义名称和 digest/revision 不机械改名。
 - 全新不兼容设计，Before 仅作对照；任意抽象 Task 支持 prerequisites，当前仅 Regulation Request 接受；保留探测的动态 requirements，仅 Node Checker，不新增 Regulation 服务或搬移 Coordinator 职责。
 - 恢复所有未完成 Task，不承诺 Execution exactly-once 或跨重启透明延续；不增加 raw resources，不承担正式发布或内置全量迁移。
 

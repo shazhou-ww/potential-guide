@@ -22,7 +22,7 @@ Execution → 持久化恢复 → Events/SDK 的修改对象顺序组织。
 
 ## 1. Request：统一资格时间与系列身份
 
-Request 携带 `eligible_at`、`recurrence` 和可选 `series_id`，成功受理后形成 Task 的
+Request 必含 requestId 与操作 type，并可携带 `eligible_at`、`recurrence` 和 `series_id`，成功受理后形成 Task 的
 调度属性；生命周期、pending 位置及系列归属属于 Task，不属于 Artifact。
 
 | 修改点 | Before | After |
@@ -32,13 +32,41 @@ Request 携带 `eligible_at`、`recurrence` 和可选 `series_id`，成功受理
 | timeout | Check/Probe 总期限从受理起计。 | `deadline_at = eligible_at + timeout`，准备/排队晚于 eligible 的部分也消耗预算。 |
 | freshness | Check/Probe 以受理序号作为强/弱新鲜度边界。 | 强条件为 `started_at > eligible_at`，弱条件为 `completed_at > eligible_at`。 |
 | 身份边界 | Check/Probe 使用幂等键识别重复创建调用，另有 Task ID；旧讨论曾将二者混用。 | Request ID 就是幂等 ID，Task ID 独立分配；Request 解析/准入失败可以不产生 Task。 |
-| 实体与传输 | HTTP 幂等键与 Task 跟踪分开，示例未明确完整 Request 实体。 | Request 实体必含 requestId；HTTP 从 header 还原同一个值，解析错误也按它审计。 |
+| 实体与传输 | HTTP 幂等键与 Task 跟踪分开，示例未明确完整 Request 实体。 | Request 实体必含 requestId 与 type；HTTP 从 header 还原 requestId，type 留在 body，解析错误仍按合法身份审计。 |
+| 操作类型 | 草案依赖入口或 checker/objective 字段形状区分请求。 | type=check/probe/regulate 为必填协议判别字段，脱离入口仍能识别请求；不属于业务自定义载荷。 |
 | ID 格式 | 现有生成型身份包含 UUID/任意幂等字符串。 | 新 Request、Task、Series、Execution、Observation、Invocation 等生成型身份统一用规范 ULID；公共 Task 不暴露 Host instance。 |
 | series | Check/Probe 没有独立系列属性；Coordinator 用 predecessor 链表示 recurrence。 | 输入 `series_id` 可选，首个 Task 默认以自身 Task ID 为 series ID；后继 Task 继承同一 series。 |
 | 后继身份 | Coordinator 已有确定性后继引用，Check/Probe 没有递归需求生成。 | 每轮新 Request/Task 身份，继承 series ID；重试和恢复不重复分配同一轮。 |
 | Probe bindings | 当前输入 bindings 同时可固定根 Objective 与运行时依赖，旧示例重复传入根 digest。 | 普通 Probe 只提供根引用，不再重复传根或静态 Checker bindings；动态依赖选择由服务记录。 |
 | Regulation Objective | 当前 Coordinator 调用输入需要完整 PilotSpec；其存储元素另用 targetKey/objectiveRevisionKey。 | 调用方输入改为与 Probe 一致的 `objective: {url, digest?}` 加 subject；服务解析后再构造内部定义与存储引用。 |
 | 任务前置条件 | 现有 Coordinator 没有这里定义的 prerequisites Check 集合。 | 任意抽象 Task 统一支持 prerequisites；当前仅 Regulation Request 接受，Check/Probe Request 暂不接受，不写入 Objective 制品。 |
+
+**Request 操作判别：**
+
+| type | 操作 | 制品引用与入口校验 |
+|---|---|---|
+| check | 执行检查 | checker 引用，不接受 objective 或治理专属字段 |
+| probe | 观察目标现状 | objective 引用，不接受 checker 或治理专属字段 |
+| regulate | 治理目标 | objective 引用，按治理契约处理 desiredLevel/priority 等字段 |
+
+type 统一使用动词；不接受 checker/objective/regulation 等替代字面值。
+它选择对应的输入 schema、执行适配器与权限校验，不是调用方自授治理权限。
+缺失、未知类型及不匹配的引用/字段须显式拒绝，不能通过字段存在性推断或静默改写。
+若有专用路由或 SDK 方法，其操作与实体 type 必须一致；进程内调用也使用完整实体。
+本次不因此新增统一 dispatch endpoint 或 Regulation HTTP 服务。
+
+原始 Request 查询和恢复输入保留 type；幂等请求比较包含 type，
+同一幂等身份换 type 是冲突，不能以 type 分区绕过冲突创建另一类 Task。
+递归后继继承原 type；前置检查产生的独立 Request 明确为 check，
+Coordinator 为治理依赖另建的 Request 则为 regulate。
+prerequisites 的 Checker/subject 条件声明本身不是完整 Request，不给它机械补 requestId/type。
+
+执行兼容/共享判定必须区分操作类型，probe 与 regulate 即使引用相同 Objective、
+输入和时间约束也不得因此混用 Execution；同类型仍须满足原有全部兼容和权限约束，
+不因增加 type 而开放有副作用的治理执行共享。
+Snapshot 本轮不重复增加 type，按 requestId 查询原始请求；
+Request.type 与事件 envelope.type 分别表示操作意图和已发生事实，不相互替代。
+body 解析失败时不伪造类型；合法 header 中的 requestId 仍先行用于错误审计。
 
 **模型与入口分开：** 撤回“prerequisites 仅属于 Regulation Task”的模型限制，
 所有 Task 使用相同的条件层与原子状态，包括 blocked 和 readiness_failed。

@@ -37,6 +37,10 @@ Coordinator 按授权处理，完成治理后重查，服务保留 origin 因果
 周期任务配置统一使用 `recurrence`，建立全新、不兼容的请求与任务协议；
 Regulation 调用方改用与 Probe 相同的 Objective URL/digest 引用，由服务构造内部 PilotSpec；
 实体必含 requestId，HTTP 从 header 还原并先于 body 解析识别；生成型身份采用 ULID。
+实体同时必含 type=check/probe/regulate，HTTP body 保留该字段；
+SDK/路由与 type 一致，内部后继继承类型，前置 Check 显式为 check，查询和恢复保留原类型。
+按 type 选择契约和权限校验，幂等比较包含 type，执行共享不可跨操作类型；
+不为此给 snapshot 增加 type，也不新增治理 HTTP 服务。
 提供 series 动态事件和可恢复身份，不以旧协议兼容要求约束新结构。
 Task snapshot 在 HTTP/SDK/事件中统一为 stage 与可选 canceledAt 的合法组合，
 移除独立 state 与公共 hostInstance；
@@ -89,6 +93,10 @@ freshness 归并成立；故障恢复测试证明不重复规划、不刷新期�
 
 ### I-AC03: 调用面一致
 
+覆盖 Request type 缺失/未知、引用或治理字段不匹配、专用入口与 type 冲突的拒绝，
+同 requestId 换 type 不新建 Task；普通重试、后继、条件子请求及恢复/查询保留准确操作类型。
+同一 Objective 的 probe/regulate 不共享执行；HTTP header + body 可无损还原完整实体，
+无效 JSON 仍按合法 requestId 审计，不补造类型。前置条件声明不误当成完整 Request。
 Router、SDK、Pilot/regulator 与 Coordinator 的 series 订阅和持久恢复测试通过，
 覆盖新轮次动态加入及授权边界；最终执行 pnpm check，不以旧 gate 或类型检查替代运行证据。
 组合 schema/运行校验证明派生 completed 必有结果、未取消 pending 不带父 Execution，

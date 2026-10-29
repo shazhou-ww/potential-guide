@@ -35,6 +35,9 @@ snapshot 不内嵌完整 Artifact，外部消费者按准确 artifactRef 查询�
 
 ### D-AC02: 生命周期与证据可复核
 
+独立消费者验证 Request.type 在 HTTP/SDK、后继及恢复读取中一致，
+错误类型与路由冲突不被静默改写，同幂等身份换类型不新建任务，
+相同 Objective 的 probe/regulate 不混用执行；公开 snapshot 不重复携带请求类型。
 真实系列事件和故障重启实验表明 eligible/freshness/timeout 一致，
 重复规划不会多留 pending，取消计划不会复活，恢复不重复生后继或悄悄换版；
 错过多个周期后 eligible 后继仍落在原节拍的下一个严格未来点，

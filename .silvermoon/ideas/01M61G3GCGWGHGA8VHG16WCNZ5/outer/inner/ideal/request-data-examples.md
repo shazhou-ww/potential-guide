@@ -29,7 +29,8 @@
   准确表达 eligible 边界；不要求兼容旧 `*-after-request` 字面值。
 - Request ID 已确认为幂等 ID，Task ID 由服务端独立分配；
   解析/准入失败可能不产生 Task。示例的 requestId 对应 `Idempotency-Key`，
-  **所有 After 创建输入 JSON 均为完整 Request 实体，必须包含 requestId。**
+  **所有 After 创建输入 JSON 均为完整 Request 实体，必须包含 requestId 与 type。**
+  type 为 check/probe/regulate，分别表示检查、探测和治理；不能仅靠 checker/objective 引用推断操作。
   HTTP 序列化时把该字段放入 header，其余字段构成 body；收到后还原同一个实体。
   首个 Task 的默认 seriesId 为 taskId，后继继承 series。
   Request/Task/Series/Execution/Observation/Invocation 等公共生成型身份
@@ -78,7 +79,8 @@
 ## Request 实体与 HTTP 传输的对应
 
 第 1、2、5 节及超时后继例中的 After JSON 都是 Request 实体；
-其中 requestId 不是可选日志标签，而是实体必需的幂等身份。
+其中 requestId 是实体必需的幂等身份，type 是必需的操作判别字段。
+type 留在 HTTP body；只有 requestId 移入 Idempotency-Key header。
 审计可在 Task 产生之前记录这个身份；业务 JSON 解析失败也用它返回错误。
 下面列出各调用的 header 值，与相应实体/响应中的 requestId 一致：
 
@@ -96,6 +98,7 @@
 Before 的 HTTP body 本来不包含 requestId，header 也使用表中相应合成值；
 Coordinator Before 使用自身 requestRef，并不是一条 HTTP 调用。
 后继由服务内部生成时也必须创建完整 Request 实体；不要求先绕 HTTP 才有身份。
+递归后继继承原 type，前置 Check Request 显式使用 check；type 不进入 snapshot。
 
 以下完整 HTTP 例对应第 1.1 的同一个 Request。`/checks` 只是示例挂载点，
 省略与此设计无关的鉴权凭据；实体序列化时仅取出 requestId 放入 header，
@@ -108,6 +111,7 @@ Content-Type: application/json
 Idempotency-Key: 01M60000000000000000000002
 
 {
+  "type": "check",
   "checker": {
     "url": "https://example.test/checker/latest.tgz"
   },
@@ -126,6 +130,11 @@ Idempotency-Key: 01M60000000000000000000002
   }
 }
 ```
+
+解析成功后 type 缺失、未知或与专用路由冲突都明确拒绝，不从路由或字段形状静默补值。
+相同 requestId 携带不同 type 属于幂等冲突，不建立另一类 Task；
+body 无法解析时只关联可确认的 requestId 和错误，不伪造类型或完整实体。
+本节不新增通用 dispatch endpoint，具体错误码及 HTTP 状态仍随 API 契约收敛。
 
 服务先识别合法 ULID header，再尝试解析 body 并还原实体。即使 body 是无效 JSON，
 也可返回下面的关联错误，不需要生成 Task 或默认 series：
@@ -213,6 +222,7 @@ Task 在 eligible 后才正式开始选版、下载和验证。只配置预取�
 ```json
 {
   "requestId": "01M60000000000000000000002",
+  "type": "check",
   "checker": {
     "url": "https://example.test/checker/latest.tgz"
   },
@@ -265,6 +275,7 @@ Task 在 eligible 后才正式开始选版、下载和验证。只配置预取�
 ```json
 {
   "requestId": "01M60000000000000000000018",
+  "type": "probe",
   "objective": {
     "url": "https://example.test/objective/v1.tgz",
     "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -311,6 +322,7 @@ recurrence 未提供，任务不会自动产生后继。
 ```json
 {
   "requestId": "01M60000000000000000000016",
+  "type": "check",
   "checker": {
     "url": "https://example.test/checker/v1.tgz",
     "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -375,6 +387,7 @@ Accept: application/json
 ```json
 {
   "requestId": "01M60000000000000000000018",
+  "type": "probe",
   "objective": {
     "url": "https://example.test/objective/v1.tgz",
     "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -394,7 +407,7 @@ Accept: application/json
 ```
 
 Task 的有效 eligibleAt、deadlineAt 和 seriesId 仍在 Task snapshot，
-调用方想看原来的 freshness/recurrence/subject 则从此处读取。
+调用方想看原来的 type/freshness/recurrence/subject 则从此处读取。
 查询不会重新受理、触发选版、延长 timeout 或生成后继。
 
 解析错误的 Request 也必须能按合法 requestId 审计，无需 Task ID。
@@ -520,7 +533,7 @@ Task 的有效 eligibleAt、deadlineAt 和 seriesId 仍在 Task snapshot，
 }
 ```
 
-**After：** 与 Probe 使用相同的 `objective: {url, digest?}`，与 Check 的
+**After：** type=regulate，与 type=probe 使用相同的 `objective: {url, digest?}`，与 Check 的
 `checker: {url, digest?}` 对称。subject 直接表达治理对象，desiredLevel 与 priority
 保留治理需求的差异。默认 series/eligible 与其他 Task 一致，例中显式给出以便对照。
 幂等 Request ID `01M6000000000000000000001C` 是实体的 requestId，与 Check/Probe 的 request ID 同义。
@@ -530,6 +543,7 @@ Task 的有效 eligibleAt、deadlineAt 和 seriesId 仍在 Task snapshot，
 ```json
 {
   "requestId": "01M6000000000000000000001C",
+  "type": "regulate",
   "objective": {
     "url": "https://example.test/objective/v1.tgz",
     "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -1311,6 +1325,7 @@ termination.lastStage=pending 只说明此前位置，不是失败过程分类�
 ```json
 {
   "requestId": "01M60000000000000000000012",
+  "type": "check",
   "checker": {
     "url": "https://example.test/checker/latest.tgz"
   },
@@ -1333,6 +1348,7 @@ termination.lastStage=pending 只说明此前位置，不是失败过程分类�
 ```json
 {
   "requestId": "01M60000000000000000000081",
+  "type": "check",
   "checker": {
     "url": "https://example.test/checker/latest.tgz"
   },
@@ -1376,6 +1392,7 @@ Coordinator 的旧 recurrence 已在第 2 节展示，不以 `{}` 冒充统一�
 ```json
 {
   "requestId": "01M60000000000000000000003",
+  "type": "check",
   "checker": {
     "url": "https://example.test/checker/latest.tgz"
   },
@@ -1403,6 +1420,7 @@ series 仍是首个 Task 的 `01M6000000000000000000001A`。
 ```json
 {
   "requestId": "01M60000000000000000000019",
+  "type": "probe",
   "objective": {
     "url": "https://example.test/objective/v1.tgz",
     "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -1656,7 +1674,7 @@ snapshot 无 revision；timestamp 不能用作整个 series 的全局游标，�
 Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/Probe 存储。
 
 **After：** 以下只展示一个逻辑恢复读取视图，不声明实际存储行布局。
-request 是原始不可变输入；cachedSnapshot 是按受理/执行事实派生、可重建的缓存，
+request 是含 type 的原始不可变输入；cachedSnapshot 是按受理/执行事实派生、可重建的缓存，
 不是另一份能独立修改的身份和调度配置。外层不再重复 requestId/taskId/seriesId。
 两者重复出现的字段是输入与投影关系，缓存必须校验一致性，不能各自作为事实源。
 这是内部恢复读取视图，不是 Task snapshot 的公共外层 envelope；
@@ -1673,6 +1691,7 @@ predecessorTaskId、generation 和 successorPlanning 同样属于规划事实的
   "generation": 2,
   "request": {
     "requestId": "01M60000000000000000000003",
+    "type": "check",
     "checker": {
       "url": "https://example.test/checker/latest.tgz"
     },
@@ -1770,6 +1789,7 @@ prerequisites 是 Check 声明数组，
 ```json
 {
   "requestId": "01M60000000000000000000030",
+  "type": "regulate",
   "objective": {
     "url": "https://example.test/objective/app-v1.tgz",
     "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -1862,6 +1882,7 @@ prerequisites 是 Check 声明数组，
 已有 CheckerResult 支持动态 requirements，本次复用它，不重复发明一种自由文本协议。
 
 **After：** 从条件 0 生成的完整 Check Request。当前这个创建入口不支持 prerequisites，
+type=check；上面的 prerequisites 条件项仅是声明，不是完整 Request，不需要重复 type/requestId。
 不会继承父 Regulation 的治理启动前提，
 也不使用父 series；自己 eligible 后可以准备和执行，避免父子互等。
 本例在父 eligible 时受理子检查，30 秒预算不超过父剩余 60 秒；
@@ -1870,6 +1891,7 @@ prerequisites 是 Check 声明数组，
 ```json
 {
   "requestId": "01M60000000000000000000033",
+  "type": "check",
   "checker": {
     "url": "https://example.test/builtin/objective-level-v1.tgz",
     "digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"

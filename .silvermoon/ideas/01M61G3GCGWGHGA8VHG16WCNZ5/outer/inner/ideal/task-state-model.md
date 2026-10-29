@@ -8,7 +8,7 @@
 
 | 术语 | 定义 |
 |---|---|
-| Request | 带幂等 requestId 的调用实体，解析/准入失败可不产生 Task |
+| Request | 必含幂等 requestId 与操作 type（check/probe/regulate）的调用实体，解析/准入失败可不产生 Task |
 | Task | 已建立的需求，拥有独立 taskId、时间约束和状态 |
 | Execution | 实际执行，可被多个兼容 Task 共享 |
 | 解锁条件（gate） | 需求继续推进所必须成立的一层谓词 |

@@ -111,6 +111,9 @@ resolution=up-to-date/fallback/updated 是同一种成功事实的三种方式�
 ### 2.1 固定外壳与业务载荷
 
 通用引擎定义生命周期，Check、Probe、Regulation 的业务协议分别定义输入、进展和结果。
+Request.type=check/probe/regulate 是固定操作判别字段，不属于业务载荷；
+它用于选择相应适配器/校验及隔离执行共享。事件外层 type 仍表示事实类型，不被请求 type 替换。
+原始 Request 的固定类型可由 requestId 引用读取，不重复加入通用 snapshot。
 业务层可嵌入内容，但不向每个过程增加一个无边界的 custom 对象。
 本轮明确四类边界，**暂不新增 metadata 字段**，也不增加与 subject 重复的 input。
 
