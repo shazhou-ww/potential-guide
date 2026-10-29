@@ -68,7 +68,6 @@ prerequisites 是任意抽象 Task 的统一能力，不为 Check/Probe 定义�
 | 过程/约束 | 作用 | 事实分组 |
 |---|---|---|
 | 整体时间约束 | 受理、时间资格边界与 Task 总期限，不属于某个执行过程 | 顶层 receivedAt/eligibleAt/deadlineAt |
-| eligibility | 服务端确认时间资格已到；不等于立即运行 | eligibility（有需要时记录实际判定时间） |
 | preparation | 获取、验证和选择准确制品，提供制品就绪事实 | preparation |
 | readiness | 求值 prerequisites、等待依赖就绪并确认可继续 | readiness |
 | allocation | 为 Task 分配执行机会，包括可用资源或已有共享 Execution 的匹配/绑定 | allocation |
@@ -82,8 +81,10 @@ prerequisites 是任意抽象 Task 的统一能力，不为 Check/Probe 定义�
 readiness 不是时间资格、制品或资源全部就绪的泛称。
 allocation 不限定为新建 worker：接入已有兼容执行同样属于为 Task 分配执行机会。
 过程名称调整不改变状态名 blocked/queued，也不把声明字段 prerequisites 改名。
-整体计划时间放在顶层，不再增加 schedule 对象；eligibility 是时间资格的实际判定事实，
-termination 是结束裁决，仍保留各自职责。
+整体计划时间放在顶层，不再增加 schedule 或 eligibility 对象；
+时间资格只是 `t >= eligibleAt` 的谓词，不存在主动的 eligibility 过程或额外通过事实。
+其中 t 为 snapshot.timestamp 所用的服务端投影时间；到点即满足该时间条件，
+不等待调度器另行确认，也不意味着已开始准备或执行。termination 仍表示结束裁决。
 时间未到时可能已经获取或验证内容，但 Task 仍是 pending。
 准备工作开始于 eligible 前，不等于 Task 提前进入 preparing 或运行。
 
@@ -137,7 +138,6 @@ Task 进入 preparing 可以只由时间推进推导，不要求另写状态转�
 
 | 分组 | 有界记录性字段示例 | 含义 |
 |---|---|---|
-| eligibility | satisfiedAt | 实际资格判定时间，不修改计划 eligibleAt |
 | preparation | startedAt、completedAt、artifactRef、language、resolution | 准备过程及正式选版方式，定义不内嵌 |
 | readiness | satisfiedAt | prerequisites 已被采用的通过事实，不是当前所有 Check 状态 |
 | allocation | boundAt | 正式绑定某次执行的时间；仅资源预约不等于绑定 |
@@ -280,9 +280,6 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
   "taskId": "01M60000000000000000000061",
   "seriesId": "01M60000000000000000000061",
   "state": "preparation_failed",
-  "eligibility": {
-    "satisfiedAt": "2026-10-29T06:01:00.000Z"
-  },
   "preparation": {
     "startedAt": "2026-10-29T06:00:50.000Z"
   },

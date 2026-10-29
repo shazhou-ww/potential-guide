@@ -49,10 +49,12 @@ reducer 与 project 可以在实现中组合，但输入事实与投影时间必
 
 ### 1.2 时间改变状态，不创造已发生的工作
 
+时间资格仅由 `t >= eligibleAt` 判断，恰好到点就满足，不存在主动 eligibility 过程。
 相同事件前缀在 eligibleAt 前后可分别投影为 pending、preparing。
 若没有 preparation.started 事实，跨过时间边界不能生成 preparation.startedAt；
-也不需要为此写一条 task.preparing 或 task.eligible。
-资格确实被服务观察/裁决时可以记录 task.eligibility.satisfied，不能由一次 GET 自动追加。
+也不定义 task.preparing、task.eligible 或 task.eligibility.satisfied 这样的到点事实事件。
+删除先前草案的可选 eligibility.satisfiedAt，不再保留“实际观察资格已到”的快照事实。
+调度器可以设置定时唤醒来推进工作或通知，但唤醒不是时间条件成立的额外前提。
 task.updated 可以因为投影变化而通知，但通知本身不成为归约输入。
 
 同理，“到了 deadline”与“何时、为何完成终结裁决”不是同一个事实。
@@ -70,7 +72,6 @@ Task 的过程事实用 `task.<process>.<fact>`，对象级事实用 `task.<fact
 | 之前 | 本次建议 | 语义及 snapshot 映射 |
 |---|---|---|
 | 受理事实未独立列出 | task.created | 独立 Task 身份与已确定的有效时间约束；默认值不在重放时重新求值 |
-| 资格观察未独立列出 | task.eligibility.satisfied | 可选的实际观察事实 → eligibility.satisfiedAt；不代表每次越过时间边界都写入 |
 | 准备开始未独立列出 | task.preparation.started | 实际开始 → preparation.startedAt，允许早于 eligible |
 | task.artifact-selected | task.preparation.completed | 正式可用的准确版本已确定 → completedAt、artifactRef、language、resolution |
 | 获取尝试/更新失败未独立列出 | task.preparation.attempted | 一次已结束尝试及结果；暂定诊断类型，不据此直接终结 Task |
@@ -148,7 +149,8 @@ Snapshot 只提取累积的有界事实，而不是把 reducer 内部状态全�
 ## 5. 验证原则
 
 - 同一前缀与 t 重放结果一致；完整归约与 checkpoint 加后缀一致。
-- 无写入跨 eligible 只改变 timestamp/state，不产生准备开始或终结事实。
+- 无写入跨 eligible（含恰好到点）只改变 timestamp/state，不产生 eligibility 对象、
+  资格通过事件、准备开始或终结事实，也不等待调度器确认。
 - 对照完整事件链重建已展示的 Task 快照，而非只验证 JSON 字段合法。
 - 同刻的 preparation.completed 与 allocation.bound 按事件边界区分；
   queued 视图可以在绑定之前，不能只按 timestamp 去重或合并。

@@ -92,6 +92,8 @@ Router、SDK、Pilot/regulator 与 Coordinator 的 series 订阅和持久恢复�
 Before 对照与新设计的派生缓存职责明确，避免身份和调度参数多份可变真相。
 增加跨快照校验：事实叶子路径不丢失、值不变、无 progress/revision；
 覆盖无写入跨 eligible 的不同读取状态、同刻时间不能直接去重及技术时间不伪造工作事实；
+时间资格仅为 t >= eligibleAt，覆盖边界前、恰好到点和边界后，
+不依赖调度确认或资格通过事件，所有快照（含失败分支）不含 eligibility 分组；
 用删除已知事实、改名、改值和失败分支丢失执行身份的反例验证，而非只测单个状态 shape。
 验证所有 After snapshot（含事件和缓存视图）不含 schedule 或请求策略，
 Request 查询保留原始省略语义，Task 有效期限不被默认值回写污染。

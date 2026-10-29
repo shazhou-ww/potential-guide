@@ -207,7 +207,8 @@ Check 的 running 可以没有自定义 progress；Objective 的最终观察进�
 核心过程和二级事实字段统一为 preparation/readiness/allocation/execution。
 preparation 专指 artifacts 准备，fetch 只是其子步骤；readiness 求值 prerequisites，
 未就绪时状态为 blocked；allocation 分配执行机会（含共享执行匹配），等待时为 queued。
-Request 的 prerequisites 声明不改名；顶层时间约束、eligibility、termination 仍承担其他职责。
+Request 的 prerequisites 声明不改名；顶层时间约束和 termination 仍承担其他职责。
+时间资格只由投影时间与 eligibleAt 比较，不定义 eligibility 过程、快照分组或资格通过事件。
 prefetch 只表示提前执行 fetch 的优化，
 不再是顶层公共快照对象。pending 可以携带已经成立的 preparation 事实，
 但不携带 preparing 的当前进展；提前获取的变化可通过
