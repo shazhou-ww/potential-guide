@@ -29,6 +29,14 @@ Request 携带 `eligible_at`、`recursive` 和可选 `series_id`，成功受理�
 | series | Check/Probe 没有独立系列属性；Coordinator 用 predecessor 链表示 recurrence。 | 输入 `series_id` 可选，首个 Task 默认以自身 Task ID 为 series ID；后继 Task 继承同一 series。 |
 | 后继身份 | Coordinator 已有确定性后继引用，Check/Probe 没有递归需求生成。 | 每轮新 Request/Task 身份，继承 series ID；重试和恢复不重复分配同一轮。 |
 | Probe bindings | 当前输入 bindings 同时可固定根 Objective 与运行时依赖，旧示例重复传入根 digest。 | 普通 Probe 只提供根引用，不再重复传根或静态 Checker bindings；动态依赖选择由服务记录。 |
+| Regulation Objective | 当前 Coordinator 调用输入需要完整 PilotSpec；其存储元素另用 targetKey/objectiveRevisionKey。 | 调用方输入改为与 Probe 一致的 `objective: {url, digest?}` 加 subject；服务解析后再构造内部定义与存储引用。 |
+
+**调用输入对称：** Check 用 `checker: {url, digest?}`，Probe 与 Regulation
+都用 `objective: {url, digest?}`。不让 Regulation 调用方提前物化 Objective、
+填数据库 key 或重复提供 manifest/locales/runtime evidence。
+desiredLevel、priority 等治理特有需求保留，内部 Coordinator 表示不必与公开输入同形。
+这属于既有治理入口的 admission 演进，不扩展为新 Regulation HTTP 服务，
+也不因引用同形就假定 Agent 执行可以按 Check 的规则共享。
 
 **已确认绑定边界：** Objective 的准确 digest 已固定其声明的 Checker URL/digest，
 这部分 Merkle DAG 不需要调用方再传一份绑定。运行时 Checker 提出的其他 Objective

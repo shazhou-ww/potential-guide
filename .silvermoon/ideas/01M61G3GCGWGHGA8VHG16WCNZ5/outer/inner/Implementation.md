@@ -24,7 +24,8 @@
 ### I-S03: 对齐 SDK 与现有业务入口
 
 对齐 Check/Probe HTTP、进程内接口、SDK 及现有 Regulation/Coordinator 的请求语义，
-提供 series 动态事件和可恢复身份；明确旧协议/持久 schema 兼容与升级，不静默换义。
+Regulation 调用方改用与 Probe 相同的 Objective URL/digest 引用，由服务构造内部 PilotSpec；
+提供 series 动态事件和可恢复身份，明确旧协议/持久 schema 兼容与升级，不静默换义。
 
 ## Acceptance criteria
 

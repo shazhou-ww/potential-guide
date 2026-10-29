@@ -25,8 +25,9 @@
   不再额外创建第三个调用身份。首个 Task 的默认 seriesId 为 taskId，后继继承 series。
   ID、URL、摘要和时间均为合成数据，
   摘要满足格式但不表示存在可下载的真实制品。
-- 本文不发明 Regulation HTTP 服务：第 2 节展示 Coordinator 的请求记录，
-  不是新的 HTTP POST body。后续持久记录也不是公开 HTTP response。
+- 本文不发明 Regulation HTTP 服务：第 2 节将现有 Coordinator 调用输入
+  与建议的统一 Regulation admission 输入对照，未规定新的 HTTP endpoint。
+  内部持久记录不是调用方 Request，也不是公开 HTTP response。
 - eligible 前的提前下载用 `prefetch` 展示，Task 仍 pending；正式 `preparation`
   必须在 eligible 后。`recursive.anchor` 使用 eligible/terminated；
   Task 终结时间写 `terminatedAt`，保留 completed/failed/cancelled 状态及错误原因。
@@ -230,21 +231,108 @@ Before 已返回结构化错误；After 建议同时返回幂等 Request ID，�
 }
 ```
 
-## 2. Regulation：Coordinator 请求记录
+## 2. Regulation：与 Check / Probe 同层次的调用 Request
 
-Before 对应现有 `RegulationRequest` 元素，而不是整个 `RegulationRequests` 存储聚合。
-targetKey 与 objectiveRevisionKey 引用聚合内其他记录；本节完整展示这个元素，
-不把引用背后的 Subject/PilotSpec 假装内联到此类型中。
-示例使用既有 Git 来源的 revision 引用，因此没有可选的非 Git `source` 字段。
+此前这里展示的是 `RegulationRequest` 内部存储元素，与第 1 节的创建输入层次不同。
+现改为实际 `RequestCommand` 的完整 Before，再展示新的调用方 admission 形状；
+不再把 targetKey、objectiveRevisionKey 误当作用户应提交的 Objective 描述。
 
-**Before：** Coordinator 已有 eligibleAt、recurrence.intervalMs；
-还没有统一的 series、received、deadline、freshness 或双锚点。
+**Before：** 当前 Coordinator `RequestCommand` 要求调用方先构造完整 PilotSpec。
+以下给出整个输入，包含已解析的 Objective 定义、页面及准确来源，
+不是用空对象或数据库 key 代替原先必需的内容。
 
 ```json
 {
-  "ref": "reg-request-1",
-  "targetKey": "target-1",
-  "objectiveRevisionKey": "objective-revision-1",
+  "type": "request",
+  "requestRef": "reg-request-1",
+  "objective": {
+    "objectiveId": "objective:https://example.test/objective/v1.tgz",
+    "version": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "source": {
+      "kind": "artifact-service-v1",
+      "url": "https://example.test/objective/v1.tgz",
+      "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "environment": {
+        "type": "node",
+        "version": "24.11.1",
+        "platform": "win32",
+        "architecture": "x64",
+        "adapter": "node-commonjs-v1",
+        "configuration": "{\"cleanupMs\":5000,\"deadlineMs\":30000,\"directories\":64,\"messageBytes\":8388608,\"observers\":64,\"queue\":64,\"records\":256,\"retentionMs\":60000,\"retireAfter\":100,\"workers\":4}"
+      },
+      "bindings": {}
+    },
+    "manifest": {
+      "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json",
+      "subjectSchema": {
+        "type": "object"
+      },
+      "levels": [
+        {
+          "id": "ready",
+          "checks": [
+            {
+              "id": "pass",
+              "problems": []
+            }
+          ]
+        }
+      ],
+      "defaultLanguage": "en",
+      "languages": ["en"]
+    },
+    "locales": {
+      "en": {
+        "objective": {
+          "id": "objective",
+          "title": "Objective",
+          "description": "Synthetic Objective guidance.",
+          "references": [],
+          "content": "Observe the workspace.",
+          "origin": {
+            "artifactDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "path": "references/en/objective.md"
+          }
+        },
+        "levels/ready": {
+          "id": "levels/ready",
+          "title": "Ready",
+          "description": "Synthetic level guidance.",
+          "references": [],
+          "content": "The workspace passes its check.",
+          "origin": {
+            "artifactDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "path": "references/en/levels/ready.md"
+          }
+        },
+        "checkers/pass": {
+          "id": "checkers/pass",
+          "title": "Checker",
+          "description": "Synthetic Checker guidance.",
+          "references": [],
+          "content": "Check the workspace.",
+          "origin": {
+            "artifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "path": "references/en/checker.md"
+          }
+        },
+        "pages/base-pass": {
+          "id": "pages/base-pass",
+          "title": "Checker",
+          "description": "Synthetic Checker guidance.",
+          "references": [],
+          "content": "Check the workspace.",
+          "origin": {
+            "artifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "path": "references/en/checker.md"
+          }
+        }
+      }
+    }
+  },
+  "subject": {
+    "root": "D:\\project"
+  },
   "desiredLevel": "terminal",
   "priority": 1,
   "origin": {
@@ -257,27 +345,29 @@ targetKey 与 objectiveRevisionKey 引用聚合内其他记录；本节完整展
 }
 ```
 
-**After：** 请求记录承载统一时间和递归属性。这里的 timeout 是 Task 期限，
-不是现有 Agent execution limit 或单轮治理 quota 的静默重命名。
-准确 objectiveRevisionKey 已绑定时，准备策略不能使其换成别的 revision。
+**After：** 与 Probe 使用相同的 `objective: {url, digest?}`，与 Check 的
+`checker: {url, digest?}` 对称。subject 直接表达治理对象，desiredLevel 与 priority
+保留治理需求的差异。默认 series/eligible 与其他 Task 一致，例中显式给出以便对照。
+幂等 Request ID `reg-request-1` 由调用元数据提供，与 Check/Probe 的 request ID 同义。
+它不是 body 中的内部 requestRef、Task ID 或运行时 evidence。
 
 ```json
 {
-  "ref": "reg-request-1",
-  "targetKey": "target-1",
-  "objectiveRevisionKey": "objective-revision-1",
+  "objective": {
+    "url": "https://example.test/objective/v1.tgz",
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "subject": {
+    "root": "D:\\project"
+  },
+  "context": {},
+  "language": "en",
   "desiredLevel": "terminal",
   "priority": 1,
-  "origin": {
-    "kind": "external"
-  },
-  "taskId": "reg-task-1",
-  "seriesId": "reg-task-1",
-  "receivedAt": "2026-10-29T03:20:00.000Z",
+  "seriesId": "workspace-regulation",
   "eligibleAt": "2026-10-29T03:21:00.000Z",
   "freshness": "completed-after-eligible",
   "timeoutMs": 300000,
-  "deadlineAt": "2026-10-29T03:26:00.000Z",
   "recursive": {
     "periodMs": 60000,
     "anchor": "eligible"
@@ -285,11 +375,16 @@ targetKey 与 objectiveRevisionKey 引用聚合内其他记录；本节完整展
 }
 ```
 
-这是新记录形状的建议，不能直接加入历史 schema 1/2/3。
-其中 ref 继续标识幂等 Request，taskId 仅在成功建立 Task 后分配；
-该例是已建立 Task 的请求记录，不代表每次调用都有 Task。
-Regulation admission 如何统一接收浮动 URL、以及任务 timeout 与治理 quota 的优先级，
-仍需在接口设计中明确，本例不假装这些接口已经存在。
+未提供 digest 时，由服务按准备配置选择浮动来源；提供 digest 时必须准确匹配。
+没有要求调用方重复传 manifest、locales、静态 Checker bindings 或 runtime 证据。
+服务解析出准确内容后，才在内部构造 PilotSpec、targetKey、objectiveRevisionKey
+以及 Coordinator 的 request fact；这些存储表示不必机械改为公开 Request 的形状。
+外部 origin 由受理入口标识，内部依赖/周期产生的 origin 由服务记录，不让外部伪造。
+
+这里的 timeout 是 Task 期限，不是 Agent execution limit 或治理 quota 的静默重命名；
+freshness 也不意味着可随意共享有副作用的 Agent 执行。新统一字段向 Coordinator 的
+预算与调度映射仍须专门设计，不以 Objective 引用对称推定执行策略也完全相同。
+本次不新增 Regulation HTTP listener，不覆盖现有 RequestCommand 或持久 schema 1/2/3。
 
 ## 3. 创建 Response：完整初始 Task 快照
 
