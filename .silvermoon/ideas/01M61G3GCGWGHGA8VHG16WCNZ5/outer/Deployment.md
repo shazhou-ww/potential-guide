@@ -43,7 +43,9 @@ Task/Execution/Series 历史查询有独立游标，分页及实时通知来自�
 共享执行不复制或泄露其他 owner 的任务数据。
 验证 Task 终结事件引用执行结果，completed snapshot 的业务结果由同一事实投影；
 结果不重复根 Objective 身份，问题若指向其他 Objective 则仍保留准确业务引用。
-连续快照及 SSE 重连后快照保留此前已知的过程事实，叶子字段名/路径/值不变；
+服务端有序生成及 SSE 交接确认后的快照保留此前已知过程事实，叶子路径/值不变；
 真实失败终态也保留既有准确引用、时间与执行关联，且不残留旧阶段进展。
 验证原子失败状态与协议 isFailed/isTerminated 分类一致，准备与其他过程重叠时
 仍按判定树投影，不用 Task 状态转移时间替代实际执行或过程时间。
+验证无写入跨 eligible 的两份快照仅 timestamp/state 改变而不伪造准备事实；
+公共快照无 revision/progress，详细进展由历史事件查，不能用同刻 timestamp 直接去重。

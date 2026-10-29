@@ -40,9 +40,10 @@ Task snapshot 在 HTTP/SDK/事件中统一为单一原子 state 判别联合，�
 核心过程事实按 preparation/readiness/allocation/execution 分组，终结用 termination；
 receivedAt/eligibleAt/deadlineAt 放顶层，不用 schedule 包装。快照不复制请求体、
 freshness 或 recurrence；按 requestId 查询原始 Request，保留失败请求的审计能力。
-Request.prerequisites 保留声明语义，progress.process 与过程名一致，失败原子同步采用 readiness_failed/allocation_failed。
-过程可重叠，开始时间不冒充阶段转移时间；progress 独立承载当前进展。
-所有后继（含过程失败/控制终结/恢复）继承既有事实，不携带完整 evidence。
+Request.prerequisites 保留声明语义，失败原子同步采用 readiness_failed/allocation_failed。
+过程可重叠，开始时间不冒充阶段转移时间；删除 snapshot 的 progress 与数字 revision，
+只使用 state 和本次服务端技术时间 timestamp。详细进展通过事件查询，不在过程里另建同义状态字段。
+所有有序事实视图的后继（含终结/恢复）继承既有事实，timestamp 不属于原值继承的业务字段。
 根及独立查询的子 Task snapshot 都仅携带准确 artifactRef，完整 Artifact 按 digest 单独查询，
 不得用 latest 替代原内容或用 manifest 代替实际执行证据。
 结构化历史事件作为证据事实源，增加 taskId/executionId/seriesId 过滤和游标分页读取；
@@ -80,7 +81,8 @@ Router、SDK、Pilot/regulator 与 Coordinator 的 series 订阅和持久恢复�
 并覆盖独立历史游标、分页边界及共享执行的授权隔离。
 验证快照结果可由执行事实投影，动态依赖的业务引用不会被误删，
 Before 对照与新设计的派生缓存职责明确，避免身份和调度参数多份可变真相。
-增加跨快照转移校验：事实叶子路径不丢失、值不变、revision 递增且旧 progress 清理；
+增加跨快照校验：事实叶子路径不丢失、值不变、无 progress/revision；
+覆盖无写入跨 eligible 的不同读取状态、同刻时间不能直接去重及技术时间不伪造工作事实；
 用删除已知事实、改名、改值和失败分支丢失执行身份的反例验证，而非只测单个状态 shape。
 验证所有 After snapshot（含事件和缓存视图）不含 schedule 或请求策略，
 Request 查询保留原始省略语义，Task 有效期限不被默认值回写污染。

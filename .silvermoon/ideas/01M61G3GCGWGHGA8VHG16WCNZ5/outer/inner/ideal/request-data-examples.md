@@ -45,12 +45,16 @@
   Before 保留旧 hostInstance 和可选字段形状，仅用于对照。
 - 顶层 receivedAt/eligibleAt/deadlineAt 保存整体时间事实与约束，
   不再使用 schedule 包装；preparation/execution 等二级对象保存累积过程事实，
-  progress 仅描述当前工作。preparation.startedAt 可早于 eligible，因为过程可能 overlap；
+  整体状态只由 state 表达，没有通用 progress 或各过程的平行当前状态。
+  preparation.startedAt 可早于 eligible，因为过程可能 overlap；
   它不等于 Task 进入 preparing 状态的时间。Task 终结记录在 termination，
   不把所有失败都当成 execution 失败。`recurrence.anchor` 仍为 eligible/terminated。
 - 核心过程及 snapshot 的二级字段统一为 preparation/readiness/allocation/execution。
   Request.prerequisites 仍是声明；readiness.satisfiedAt 才是条件就绪事实。
-  progress.process 使用相同过程名，blocked/queued 状态名不因本次命名调整改变。
+  详细过程进展由 SSE/历史事件查询，不使用 progress.process 来重复 state。
+- After snapshot 删除数字 revision，新增服务端技术时间 timestamp；
+  它表示本次一致事实视图的投影时点，不是业务事件时间或发送时间，不保证严格全序。
+  timestamp/state 不作为不变事实继承；Request 的 requestId 仍是创建调用的身份。
 - pending 仅表示时间未到，无 reason 或专属 pending 对象。时间已到、制品未就绪为
   preparing；有前置条件的抽象 Task 在时间与制品就绪、条件未满足时为 blocked。
   第 9 节使用当前接受 prerequisites 的 Regulation 入口；Check/Probe 仅在 Request 准入层不支持此字段。
@@ -557,20 +561,20 @@ freshness 也不意味着可随意共享有副作用的 Agent 执行。新统一
 After snapshot 共用身份/时间基底，按任务类型定义 state 判别联合；
 失败原子与语义归类以[协议分类表](./task-state-model.md#4-单一-state-与协议定义的语义集合)为准。
 SSE 及查询结果使用所属任务的同一类型，不能仅因 preparation.artifactRef.kind 都是 objective 就把 Probe 当作 Regulation。
-公共字段为 requestId/taskId/seriesId/revision/state 和顶层 receivedAt/eligibleAt/deadlineAt。
+公共字段为 requestId/taskId/seriesId/timestamp/state 和顶层 receivedAt/eligibleAt/deadlineAt。
 freshness/recurrence 是原始 Request 的策略，不再在每份快照中重复。
 历史过程时间戳只在真实发生时提供。
-每个快照逻辑上由已成立的记录性事实与当前状态数据组成。事实成立后，
-后继必须原字段名、原路径、原值继承；未发生不填充，状态 payload 离开阶段后删除。
+每个快照由已成立事实、整体 state 和技术 timestamp 组成。事实成立后，
+后继必须原字段名、原路径、原值继承；未发生不填充，也不另附当前进展对象。
 过程对象可增加新事实，但既有叶子路径不变。不存在 facts 大包装，也不存在按 state 切换的字段别名。
 
 | state | 当前状态的数据 | 必须避免的混搭 |
 |---|---|---|
 | pending | 身份、整体时间约束及提前成立的过程事实 | 无请求体/策略、reason/pending 对象、实际业务执行或结果 |
-| preparing | preparation 事实、progress.process=preparation | 无其他过程的当前 progress 或最终 result |
-| blocked | 制品准备事实、progress.process=readiness | 无父实际执行或最终 result |
-| queued | 已就绪事实，可有 allocation 进展/预约 | 无虚构的实际执行开始或结果 |
-| running | 准备/就绪事实、execution.executionId/startedAt，可有业务 progress | 无最终 result 或 termination |
+| preparing | 已发生的 preparation 事实；未实际开始时可无该分组 | 无虚构过程开始、当前进展或最终 result |
+| blocked | 制品准备事实，详细条件判断另查事件 | 无父实际执行或最终 result |
+| queued | 已就绪事实，已正式绑定时可有 allocation/execution 事实 | 无临时预约详情、虚构的实际执行开始或结果 |
+| running | 准备/就绪事实、execution.executionId/startedAt | 无当前进展、最终 result 或 termination |
 | completed | 所有既有事实、result、execution 完成和 termination | 无完整 evidence 或活跃 progress |
 | 各过程失败原子 | 路径要求的既有事实和 termination 原因 | 无活跃 progress、成功 result 或虚构过程 |
 | timed_out/cancelled（暂定控制终结） | 所有实际已有事实和 termination | 不补造未发生的过程 |
@@ -580,8 +584,9 @@ freshness/recurrence 是原始 Request 的策略，不再在每份快照中重�
 下面的对象是各状态各自的数据类型，不是一个所有属性均可选的宽泛类型。
 JSON Schema 的互斥分支与 SDK 类型必须同时验证必需字段和禁止字段。
 跨状态还需检查事实继承；仅让单个对象通过 schema 不能证明它没有丢掉前序记录。
-revision/state 是投影元数据；progress 中的 fetch 尝试、最近条件求值与 reservation
-是状态数据，其详细历史在事件中，不因含有时间戳或子任务 ID 就无限累积到快照。
+timestamp/state 是投影元数据，不能作为不变事实原值继承；不再要求 revision 增长。
+fetch 尝试、最近条件求值与临时 reservation 的详细历史在事件中，
+不因它们含有时间戳或子任务 ID 就把集合累积到快照。
 当前 Check/Probe Request 禁止 prerequisites，即使空数组也不能静默接受；
 抽象 Task 快照仍支持统一的 blocked/readiness_failed 和 readiness 过程，
 不可把入口的字段限制扩大为 Task 类型限制。
@@ -627,11 +632,11 @@ state 已表示时间未到，不再增加 reason 或 pending 对象。预取安
   "taskId": "01M60000000000000000000006",
   "requestId": "01M60000000000000000000002",
   "seriesId": "01M6000000000000000000001D",
-  "revision": 1,
   "state": "pending",
   "receivedAt": "2026-10-29T03:20:00.000Z",
   "eligibleAt": "2026-10-29T03:21:00.000Z",
-  "deadlineAt": "2026-10-29T03:21:30.000Z"
+  "deadlineAt": "2026-10-29T03:21:30.000Z",
+  "timestamp": "2026-10-29T03:20:00.000Z"
 }
 ```
 
@@ -660,18 +665,14 @@ series 等于独立分配的 Task ID，eligible 等于 received。
   "taskId": "01M6000000000000000000001A",
   "requestId": "01M60000000000000000000018",
   "seriesId": "01M6000000000000000000001A",
-  "revision": 1,
   "state": "preparing",
-  "progress": {
-    "process": "preparation",
-    "stage": "fetch"
-  },
   "preparation": {
     "startedAt": "2026-10-29T03:20:00.010Z"
   },
   "receivedAt": "2026-10-29T03:20:00.000Z",
   "eligibleAt": "2026-10-29T03:20:00.000Z",
-  "deadlineAt": "2026-10-29T03:21:00.000Z"
+  "deadlineAt": "2026-10-29T03:21:00.000Z",
+  "timestamp": "2026-10-29T03:20:00.010Z"
 }
 ```
 
@@ -727,7 +728,6 @@ After 统一叫 queued，示例尚无执行 ID，因此不添加排队 reason �
   "taskId": "01M60000000000000000000006",
   "requestId": "01M60000000000000000000002",
   "seriesId": "01M6000000000000000000001D",
-  "revision": 5,
   "state": "queued",
   "preparation": {
     "startedAt": "2026-10-29T03:20:50.000Z",
@@ -742,7 +742,8 @@ After 统一叫 queued，示例尚无执行 ID，因此不添加排队 reason �
   },
   "receivedAt": "2026-10-29T03:20:00.000Z",
   "eligibleAt": "2026-10-29T03:21:00.000Z",
-  "deadlineAt": "2026-10-29T03:21:30.000Z"
+  "deadlineAt": "2026-10-29T03:21:30.000Z",
+  "timestamp": "2026-10-29T03:21:00.009Z"
 }
 ```
 
@@ -786,7 +787,7 @@ After 统一叫 queued，示例尚无执行 ID，因此不添加排队 reason �
 ```
 
 **After：** 准备已结束，保留其时间戳，不复制 preparation 对象。
-Check 没有任意内部日志进展，本例不添加空的 progress；执行结果尚不存在。
+当前详细进展由事件查询，不添加 progress 容器；执行结果尚不存在。
 artifactRef、language、fallbackUsed 继续继承排队阶段，新增实际执行身份和开始时间。
 
 ```json
@@ -794,7 +795,6 @@ artifactRef、language、fallbackUsed 继续继承排队阶段，新增实际执
   "taskId": "01M60000000000000000000006",
   "requestId": "01M60000000000000000000002",
   "seriesId": "01M6000000000000000000001D",
-  "revision": 6,
   "state": "running",
   "preparation": {
     "startedAt": "2026-10-29T03:20:50.000Z",
@@ -813,7 +813,8 @@ artifactRef、language、fallbackUsed 继续继承排队阶段，新增实际执
   },
   "receivedAt": "2026-10-29T03:20:00.000Z",
   "eligibleAt": "2026-10-29T03:21:00.000Z",
-  "deadlineAt": "2026-10-29T03:21:30.000Z"
+  "deadlineAt": "2026-10-29T03:21:30.000Z",
+  "timestamp": "2026-10-29T03:21:00.010Z"
 }
 ```
 
@@ -854,14 +855,14 @@ Task 已积累 preparation.startedAt 的过程事实，但没有正式选择的 
   "taskId": "01M60000000000000000000006",
   "requestId": "01M60000000000000000000002",
   "seriesId": "01M6000000000000000000001D",
-  "revision": 3,
   "state": "pending",
   "preparation": {
     "startedAt": "2026-10-29T03:20:50.000Z"
   },
   "receivedAt": "2026-10-29T03:20:00.000Z",
   "eligibleAt": "2026-10-29T03:21:00.000Z",
-  "deadlineAt": "2026-10-29T03:21:30.000Z"
+  "deadlineAt": "2026-10-29T03:21:30.000Z",
+  "timestamp": "2026-10-29T03:20:52.000Z"
 }
 ```
 
@@ -936,7 +937,6 @@ preparation.fallbackUsed=true 表示采用旧版回退；准确版本在 prepara
   "taskId": "01M60000000000000000000006",
   "requestId": "01M60000000000000000000002",
   "seriesId": "01M6000000000000000000001D",
-  "revision": 8,
   "state": "completed",
   "result": {
     "ok": true,
@@ -963,7 +963,8 @@ preparation.fallbackUsed=true 表示采用旧版回退；准确版本在 prepara
   },
   "receivedAt": "2026-10-29T03:20:00.000Z",
   "eligibleAt": "2026-10-29T03:21:00.000Z",
-  "deadlineAt": "2026-10-29T03:21:30.000Z"
+  "deadlineAt": "2026-10-29T03:21:30.000Z",
+  "timestamp": "2026-10-29T03:21:04.010Z"
 }
 ```
 
@@ -1146,7 +1147,6 @@ observedAt 是实际观察时间，不等于 Execution 完成或 Task 终结时�
   "taskId": "01M6000000000000000000001A",
   "requestId": "01M60000000000000000000018",
   "seriesId": "01M6000000000000000000001A",
-  "revision": 18,
   "state": "completed",
   "result": {
     "current": {
@@ -1175,7 +1175,8 @@ observedAt 是实际观察时间，不等于 Execution 完成或 Task 终结时�
   },
   "receivedAt": "2026-10-29T03:20:00.000Z",
   "eligibleAt": "2026-10-29T03:20:00.000Z",
-  "deadlineAt": "2026-10-29T03:21:00.000Z"
+  "deadlineAt": "2026-10-29T03:21:00.000Z",
+  "timestamp": "2026-10-29T03:20:01.110Z"
 }
 ```
 
@@ -1185,7 +1186,7 @@ observedAt 是实际观察时间，不等于 Execution 完成或 Task 终结时�
 After 预优化可以很早开始；本 Check 请求未带 prerequisites，Task 到 03:21:00Z 才投影为 preparing。
 过程开始事实使用 preparation.startedAt，与后续 queued/running/completed 同名同值，
 本例始于 03:20:50Z。Task 到 03:21:00Z 后才投影为 preparing；
-progress.fetch.startedAt 是具体尝试时间，不用它替代状态转移时间。
+具体尝试的 startedAt 由历史事件记录，不用它替代状态转移或 Task 过程事实时间。
 以下展示提前 fetch 未成功、当前进入 select 步骤判断候选/回退的分支，
 不假装已经有正式选中的 artifactRef 或 execution。
 
@@ -1209,29 +1210,14 @@ progress.fetch.startedAt 是具体尝试时间，不用它替代状态转移时�
   "taskId": "01M60000000000000000000006",
   "requestId": "01M60000000000000000000002",
   "seriesId": "01M6000000000000000000001D",
-  "revision": 4,
   "state": "preparing",
-  "progress": {
-    "process": "preparation",
-    "stage": "select",
-    "fetch": {
-      "state": "failed",
-      "scheduledAt": "2026-10-29T03:20:50.000Z",
-      "startedAt": "2026-10-29T03:20:50.000Z",
-      "completedAt": "2026-10-29T03:20:52.000Z",
-      "error": {
-        "code": "download_failed",
-        "stage": "download",
-        "message": "Artifact download failed."
-      }
-    }
-  },
   "preparation": {
     "startedAt": "2026-10-29T03:20:50.000Z"
   },
   "receivedAt": "2026-10-29T03:20:00.000Z",
   "eligibleAt": "2026-10-29T03:21:00.000Z",
-  "deadlineAt": "2026-10-29T03:21:30.000Z"
+  "deadlineAt": "2026-10-29T03:21:30.000Z",
+  "timestamp": "2026-10-29T03:21:00.001Z"
 }
 ```
 
@@ -1269,7 +1255,6 @@ termination.lastState=pending 只说明此前位置，不是失败过程分类�
   "taskId": "01M60000000000000000000013",
   "requestId": "01M60000000000000000000011",
   "seriesId": "01M60000000000000000000013",
-  "revision": 2,
   "state": "timed_out",
   "termination": {
     "terminatedAt": "2026-10-29T03:25:00.000Z",
@@ -1282,7 +1267,8 @@ termination.lastState=pending 只说明此前位置，不是失败过程分类�
   },
   "receivedAt": "2026-10-29T03:19:00.000Z",
   "eligibleAt": "2026-10-29T03:20:00.000Z",
-  "deadlineAt": "2026-10-29T03:20:30.000Z"
+  "deadlineAt": "2026-10-29T03:20:30.000Z",
+  "timestamp": "2026-10-29T03:25:00.000Z"
 }
 ```
 
@@ -1433,7 +1419,6 @@ After 仅允许 pending；以下是取消操作返回的完整快照。
   "taskId": "01M60000000000000000000007",
   "requestId": "01M60000000000000000000003",
   "seriesId": "01M6000000000000000000001D",
-  "revision": 2,
   "state": "cancelled",
   "termination": {
     "terminatedAt": "2026-10-29T03:21:10.000Z",
@@ -1445,7 +1430,8 @@ After 仅允许 pending；以下是取消操作返回的完整快照。
   },
   "receivedAt": "2026-10-29T03:21:00.000Z",
   "eligibleAt": "2026-10-29T03:22:00.000Z",
-  "deadlineAt": "2026-10-29T03:22:30.000Z"
+  "deadlineAt": "2026-10-29T03:22:30.000Z",
+  "timestamp": "2026-10-29T03:21:10.000Z"
 }
 ```
 
@@ -1476,7 +1462,6 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
   "taskId": "01M60000000000000000000008",
   "requestId": "01M60000000000000000000004",
   "seriesId": "01M6000000000000000000001D",
-  "revision": 2,
   "state": "cancelled",
   "termination": {
     "terminatedAt": "2026-10-29T03:21:00.101Z",
@@ -1491,7 +1476,8 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
   },
   "receivedAt": "2026-10-29T03:21:00.100Z",
   "eligibleAt": "2026-10-29T03:22:00.000Z",
-  "deadlineAt": "2026-10-29T03:22:30.000Z"
+  "deadlineAt": "2026-10-29T03:22:30.000Z",
+  "timestamp": "2026-10-29T03:21:00.101Z"
 }
 ```
 
@@ -1527,11 +1513,11 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
     "taskId": "01M60000000000000000000007",
     "requestId": "01M60000000000000000000003",
     "seriesId": "01M6000000000000000000001D",
-    "revision": 1,
     "state": "pending",
     "receivedAt": "2026-10-29T03:21:00.000Z",
     "eligibleAt": "2026-10-29T03:22:00.000Z",
-    "deadlineAt": "2026-10-29T03:22:30.000Z"
+    "deadlineAt": "2026-10-29T03:22:30.000Z",
+    "timestamp": "2026-10-29T03:21:00.000Z"
   }
 }
 ```
@@ -1539,7 +1525,7 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
 本节 task.updated 是当前快照投影通知，不是保存全部证据的唯一记录格式。
 准备更新、fallback、执行和关联事实通过第 10 节的结构化历史事件追溯；
 实时通知必须与这些事实同源，不依赖客户端恰好收全 SSE。
-单轮 revision 不能用作整个 series 的全局游标；历史采用独立稳定游标。
+snapshot 无 revision；timestamp 不能用作整个 series 的全局游标，历史采用独立稳定游标。
 
 ## 8. 持久记录与恢复 Response
 
@@ -1591,11 +1577,11 @@ predecessorTaskId、generation 和 successorPlanning 同样属于规划事实的
     "taskId": "01M60000000000000000000007",
     "requestId": "01M60000000000000000000003",
     "seriesId": "01M6000000000000000000001D",
-    "revision": 1,
     "state": "pending",
     "receivedAt": "2026-10-29T03:21:00.000Z",
     "eligibleAt": "2026-10-29T03:22:00.000Z",
-    "deadlineAt": "2026-10-29T03:22:30.000Z"
+    "deadlineAt": "2026-10-29T03:22:30.000Z",
+    "timestamp": "2026-10-29T03:21:00.000Z"
   },
   "successorPlanning": {
     "state": "not-triggered"
@@ -1622,7 +1608,7 @@ predecessorTaskId、generation 和 successorPlanning 同样属于规划事实的
 }
 ```
 
-**After：** HTTP 200 返回原 Task，身份/eligible/deadline 不变，revision 继续递增。
+**After：** HTTP 200 返回原 Task，身份/eligible/deadline 不变，timestamp 标记本次读取时点。
 公共快照不包含 hostInstance 或 previousHostInstance，也不新增依赖实例切换的
 recovery 对象。内部仍须防止旧实例迟到写入；此处不定义持久机制或运行中执行重试。
 
@@ -1631,11 +1617,11 @@ recovery 对象。内部仍须防止旧实例迟到写入；此处不定义持�
   "taskId": "01M60000000000000000000007",
   "requestId": "01M60000000000000000000003",
   "seriesId": "01M6000000000000000000001D",
-  "revision": 2,
   "state": "pending",
   "receivedAt": "2026-10-29T03:21:00.000Z",
   "eligibleAt": "2026-10-29T03:22:00.000Z",
-  "deadlineAt": "2026-10-29T03:22:30.000Z"
+  "deadlineAt": "2026-10-29T03:22:30.000Z",
+  "timestamp": "2026-10-29T03:21:20.000Z"
 }
 ```
 
@@ -1723,35 +1709,16 @@ prerequisites 是 Check 声明数组，
 **After：** 服务在 04:20:02Z 记录条件求值。时间和 artifacts 均已就绪，
 但条件 0 未通过，因此父 Regulation Task 为 blocked；条件 1 通过不能使其推进。
 正式准备已经完成，只保留其时间戳；没有父 Execution 或当前 preparation 对象。
-progress.process=readiness 是 blocked 的条件状态投影，不是子 Task 的完整 snapshot；
-子执行的原始证据可由关联 taskId/executionId 查询，不能伪装成父业务结果。
+父 snapshot 不再重复未通过条件列表或 progress；该次条件求值的历史事件
+记录 index、子 taskId/executionId 和各结果，关联查询可以解释为什么 blocked。
+被采用的通过事实才进入 readiness，不能把子执行证据伪装成父业务结果。
 
 ```json
 {
   "taskId": "01M60000000000000000000031",
   "requestId": "01M60000000000000000000030",
   "seriesId": "01M60000000000000000000031",
-  "revision": 5,
   "state": "blocked",
-  "progress": {
-    "process": "readiness",
-    "state": "not-met",
-    "evaluatedAt": "2026-10-29T04:20:02.000Z",
-    "checks": [
-      {
-        "index": 0,
-        "taskId": "01M60000000000000000000034",
-        "executionId": "01M60000000000000000000035",
-        "state": "not-met"
-      },
-      {
-        "index": 1,
-        "taskId": "01M60000000000000000000037",
-        "executionId": "01M60000000000000000000038",
-        "state": "passed"
-      }
-    ]
-  },
   "preparation": {
     "startedAt": "2026-10-29T04:20:00.000Z",
     "completedAt": "2026-10-29T04:20:00.001Z",
@@ -1764,7 +1731,8 @@ progress.process=readiness 是 blocked 的条件状态投影，不是子 Task �
   },
   "receivedAt": "2026-10-29T04:19:30.000Z",
   "eligibleAt": "2026-10-29T04:20:00.000Z",
-  "deadlineAt": "2026-10-29T04:21:00.000Z"
+  "deadlineAt": "2026-10-29T04:21:00.000Z",
+  "timestamp": "2026-10-29T04:20:02.000Z"
 }
 ```
 
@@ -1874,7 +1842,6 @@ Check 自身 completed 不等于其父 Regulation 的条件已通过；不能让
   "taskId": "01M60000000000000000000031",
   "requestId": "01M60000000000000000000030",
   "seriesId": "01M60000000000000000000031",
-  "revision": 10,
   "state": "queued",
   "preparation": {
     "startedAt": "2026-10-29T04:20:00.000Z",
@@ -1891,7 +1858,8 @@ Check 自身 completed 不等于其父 Regulation 的条件已通过；不能让
   },
   "receivedAt": "2026-10-29T04:19:30.000Z",
   "eligibleAt": "2026-10-29T04:20:00.000Z",
-  "deadlineAt": "2026-10-29T04:21:00.000Z"
+  "deadlineAt": "2026-10-29T04:21:00.000Z",
+  "timestamp": "2026-10-29T04:20:10.000Z"
 }
 ```
 
@@ -1908,7 +1876,7 @@ Check 自身 completed 不等于其父 Regulation 的条件已通过；不能让
 **After：** 4.2/4.3 的新快照已移除 evidence，以已有身份查询结构化事实。
 以下 `/event-history`、事件类型及分页字段是完整示例用的草案，不是现有可调用接口，
 不新增 evidenceId 或独立 `/evidence` 数据模型。cursor 为不透明分页位置，
-不是 ULID 业务身份、Task revision 或客户端时间；不得由客户端解析或据此授予权限。
+不是 ULID 业务身份、snapshot.timestamp 或客户端时间；不得由客户端解析或据此授予权限。
 
 ### 10.1 Task 历史：选版和 Execution 关联
 
@@ -1964,7 +1932,7 @@ Accept: application/json
 }
 ```
 
-下一页使用原过滤条件和 nextCursor，不拿 Task revision=8 当作位置：
+下一页使用原过滤条件和 nextCursor，不拿 snapshot.timestamp 当作位置：
 
 ```http
 GET /event-history?taskId=01M60000000000000000000006&after=task6-execution-linked&limit=2 HTTP/1.1
@@ -1987,7 +1955,6 @@ Accept: application/json
       "seriesId": "01M6000000000000000000001D",
       "data": {
         "state": "completed",
-        "taskRevision": 8,
         "executionId": "01M60000000000000000000001"
       }
     }
@@ -2011,7 +1978,7 @@ Accept: application/json
 ```
 
 完整两条执行事实如下；workerRevision 对应原 evidence.revision，
-不是 artifactRef 的内容 digest，也不是 Task 的数字 revision。
+不是 artifactRef 的内容 digest，与已移除的 Task 数字 revision 也不是一回事。
 示例刻意把 actual runtime 和 workerRevision 留在事件中，证明精简 snapshot 不等于丢弃证据。
 
 ```json
@@ -2102,31 +2069,70 @@ Task/Series 历史返回自己的事实和执行引用，不默认递归展开�
 历史缺失、清理或游标过期必须明确返回不可用，不能把空列表冒充没有发生过工作。
 保留期限、SSE 游标续读和具体存储事务规则仍留到持久化讨论。
 
-## 11. 连续快照：事实继承，当前状态信息不继承
+### 10.4 条件检查的详细进展：事件，不是 snapshot.progress
+
+第 9.2 的父 Task 为 blocked；其具体哪个条件尚未满足，由下列完整历史事件表达，
+不在 snapshot 的 readiness 分组内加一套可变 conditions/status。
+这条事实与之前的 blocked 快照使用同一个父 Task、子任务和时间，
+去掉 progress 不等于丢弃诊断证据。通过后的条件重查同样记录事件，
+最终采用的就绪时间才作为 readiness.satisfiedAt 加入 Task 事实。
+
+```json
+{
+  "cursor": "task31-readiness-evaluated",
+  "type": "task.readiness-evaluated",
+  "occurredAt": "2026-10-29T04:20:02.000Z",
+  "requestId": "01M60000000000000000000030",
+  "taskId": "01M60000000000000000000031",
+  "seriesId": "01M60000000000000000000031",
+  "data": {
+    "satisfied": false,
+    "checks": [
+      {
+        "index": 0,
+        "taskId": "01M60000000000000000000034",
+        "executionId": "01M60000000000000000000035",
+        "state": "not-met"
+      },
+      {
+        "index": 1,
+        "taskId": "01M60000000000000000000037",
+        "executionId": "01M60000000000000000000038",
+        "state": "passed"
+      }
+    ]
+  }
+}
+```
+
+事件的 occurredAt 是业务事实发生时间，snapshot.timestamp 是读取投影时间；
+数值可以恰好相同，但不能因此把它们定义成同一个字段或排序游标。
+
+## 11. 连续快照：事实继承，技术时间与状态可变化
 
 这些示例不是只有单对象 shape 正确即可；同一场景的后继快照还必须满足：
 
 ```text
 previous.taskId = next.taskId
-previous.revision < next.revision
 previous 的每个已知记录性字段在 next 中仍存在，字段名/路径/值均相同
-next 增加新成立的事实；离开的状态 payload 不残留
+timestamp/state 是读取元数据，不参加不变事实检查
+允许事实完全相同，仅因投影时点变化而出现不同 state
 ```
 
 ### 11.1 现有完整例子的连续路径
 
 | 场景 | 顺序 | 继承检查 |
 |---|---|---|
-| 主 Check | 3.1 pending r1 → 4.1 pending r3 → 4.4 preparing r4 → 3.3 queued r5 → 3.4 running r6 → 4.2 completed r8 | 受理身份/时间固定；准备开始时间路径固定；正式选择后的 artifactRef/language/fallbackUsed 一直保留 |
-| Probe | 3.2 preparing r1 → 4.3 completed r18 | preparation.startedAt 始终为 03:20:00.010Z；允许跳过未展示的中间 revision，但不丢已知事实 |
-| Regulation | 9.2 blocked r5 → 9.5 queued r10 | 保留 preparation 事实，移除条件 progress，增加 readiness.satisfiedAt |
-| 后继取消 | 7 的 pending snapshot r1 → 6.1 cancelled r2 | 受理事实不变，增加取消事实；不伪造准备或执行 |
-| 恢复分支 | 8.1 cachedSnapshot r1 → 8.2 pending r2 | 身份/时间原值保留；这是未发生 6.1 取消的替代场景，不把两个 r2 拼接成终态反转 |
+| 主 Check | 3.1 pending → 4.1 pending → 4.4 preparing → 3.3 queued → 3.4 running → 4.2 completed | 受理身份/时间固定；准备开始时间路径固定；正式选择后的 artifactRef/language/fallbackUsed 一直保留 |
+| Probe | 3.2 preparing → 4.3 completed | preparation.startedAt 始终为 03:20:00.010Z；允许未展示中间读取，不丢已知事实 |
+| Regulation | 9.2 blocked → 9.5 queued | 保留 preparation 事实，增加 readiness.satisfiedAt，不在快照包含条件进展 |
+| 后继取消 | 7 的 pending → 6.1 cancelled | 受理事实不变，增加取消事实；不伪造准备或执行 |
+| 恢复分支 | 8.1 cachedSnapshot → 8.2 pending | 身份/时间原值保留；这是未发生 6.1 取消的替代场景，不拼接成终态反转 |
 
 Task 级事实包括身份、顶层整体时间约束、preparation 中的正式选择、过程开始/完成、
 execution 与 termination；没有发生的事实保持缺失。
-progress 中的 fetch 尝试时间、条件 evaluatedAt 和预约目标属于当前状态投影，
-它们不是 Task 的固定阶段事实；详细变化通过事件查询。
+各次 fetch 尝试时间、条件 evaluatedAt 和临时预约目标不是 Task 的固定阶段事实，
+详细变化通过事件查询，不在 snapshot 引入同义的 progress 或过程 status 对象。
 已确定回退不能从 true 变 false；正式开始时间不能在切换字段路径时丢掉或改值。
 
 ### 11.2 独立超时场景：running → timed_out 仍继承已知事实
@@ -2139,7 +2145,6 @@ progress 中的 fetch 尝试时间、条件 evaluatedAt 和预约目标属于当
   "taskId": "01M60000000000000000000051",
   "requestId": "01M60000000000000000000050",
   "seriesId": "01M60000000000000000000051",
-  "revision": 6,
   "state": "running",
   "preparation": {
     "startedAt": "2026-10-29T04:30:00.010Z",
@@ -2158,7 +2163,8 @@ progress 中的 fetch 尝试时间、条件 evaluatedAt 和预约目标属于当
   },
   "receivedAt": "2026-10-29T04:30:00.000Z",
   "eligibleAt": "2026-10-29T04:30:00.000Z",
-  "deadlineAt": "2026-10-29T04:30:30.000Z"
+  "deadlineAt": "2026-10-29T04:30:30.000Z",
+  "timestamp": "2026-10-29T04:30:00.110Z"
 }
 ```
 
@@ -2171,7 +2177,6 @@ progress 中的 fetch 尝试时间、条件 evaluatedAt 和预约目标属于当
   "taskId": "01M60000000000000000000051",
   "requestId": "01M60000000000000000000050",
   "seriesId": "01M60000000000000000000051",
-  "revision": 7,
   "state": "timed_out",
   "preparation": {
     "startedAt": "2026-10-29T04:30:00.010Z",
@@ -2199,7 +2204,8 @@ progress 中的 fetch 尝试时间、条件 evaluatedAt 和预约目标属于当
   },
   "receivedAt": "2026-10-29T04:30:00.000Z",
   "eligibleAt": "2026-10-29T04:30:00.000Z",
-  "deadlineAt": "2026-10-29T04:30:30.000Z"
+  "deadlineAt": "2026-10-29T04:30:30.000Z",
+  "timestamp": "2026-10-29T04:30:30.001Z"
 }
 ```
 
@@ -2209,11 +2215,50 @@ progress 中的 fetch 尝试时间、条件 evaluatedAt 和预约目标属于当
 - preparing → queued 时将同一开始事实从 preparation.startedAt 改到别的路径。
 - 后继改写已有 receivedAt/eligibleAt/deadlineAt 或 preparation.startedAt。
 - running → execution_failed/timed_out 时丢失 execution.executionId、preparation.language 或 fallbackUsed。
-- blocked → queued 仍残留条件 progress，或 preparing → running 仍残留准备 progress；
+- 任一 After snapshot 混入 revision、progress 或过程下的当前 status/reason；
   preparation 事实对象本身必须保留，不能误删。
 
-单个后继 shape 有时仍能合法，故必须同时验证前序和后继。
+单个后继 shape 有时仍能合法，故必须同时验证服务端事实视图的前序和后继，
+不是根据网络到达顺序或相同 timestamp 擅自排序。
 这些检查不要求重放完整 evidence 树，也不提前决定持久化布局。
+
+### 11.4 没有事实写入也能产生不同状态的快照
+
+独立 Check Task，未配置提前准备。以下两次读取基于相同的受理事实，
+只是服务端投影时间跨过 eligibleAt；第二次没有实际开始任何准备工作。
+timestamp/state 改变无需创建一次 revision 更新，不能补造 preparation.startedAt。
+
+```json
+{
+  "requestId": "01M60000000000000000000070",
+  "taskId": "01M60000000000000000000071",
+  "seriesId": "01M60000000000000000000071",
+  "state": "pending",
+  "timestamp": "2026-10-29T07:00:59.000Z",
+  "receivedAt": "2026-10-29T07:00:00.000Z",
+  "eligibleAt": "2026-10-29T07:01:00.000Z",
+  "deadlineAt": "2026-10-29T07:01:30.000Z"
+}
+```
+
+```json
+{
+  "requestId": "01M60000000000000000000070",
+  "taskId": "01M60000000000000000000071",
+  "seriesId": "01M60000000000000000000071",
+  "state": "preparing",
+  "timestamp": "2026-10-29T07:01:00.000Z",
+  "receivedAt": "2026-10-29T07:00:00.000Z",
+  "eligibleAt": "2026-10-29T07:01:00.000Z",
+  "deadlineAt": "2026-10-29T07:01:30.000Z"
+}
+```
+
+这是读取模型的例子，不意味着服务可以永远不启动实际准备或不发送必要通知。
+后续工作实际开始才增加过程事实。timestamp 不用于计算 timeout；
+deadlineAt 仍锚定原 eligibleAt，重复读取不会延长任务期限。
+同刻 timestamp 可能对应不同事实视图，不能仅按时间相同去重；
+查询与 SSE 的交接、水位和乱序响应策略仍需在接口协议中明确。
 
 ## 评审时不要由示例推定的事项
 
@@ -2231,6 +2276,8 @@ progress 中的 fetch 尝试时间、条件 evaluatedAt 和预约目标属于当
 - 条件 freshness/有效期、首次与重查时机、后继 prerequisites 继承、
   未完成轮次积压限额及依赖治理策略的具体配置。
 - 是否扩展 preparing/blocked/queued 取消权限；当前仍仅取消 pending。
+- timestamp 的服务时间域保证、校时/重启、HTTP 与 SSE 交接和同刻/乱序观察处理；
+  历史 cursor 仍独立，不引入隐式 snapshot revision。
 
 Request ID 为幂等 ID、Task ID 独立、series 默认取首个 Task ID、
 eligible 后进入正式 PREPARING、terminated 包括失败/超时、

@@ -93,7 +93,8 @@ series 默认复用首个 Task ID 是明确例外。ULID 时间部分不用于 f
 | 准备进展 | 受理后即可进入 preparing。 | 正式 PREPARING 只能在 eligible 后；提前下载/更新检查仅是 PENDING 中可观察的预优化。 |
 | 取消 | Check/Probe 可撤销非终态需求；Coordinator 有 request/recurrence scope。 | 新统一交互只取消 pending Task，不提供“取消 recurrence Task”或另一个系列取消语义。 |
 | 重复规划 | 没有跨 Check/Probe 的统一系列去重。 | 冗余新 pending Task 被取消，已有 pending Task 保留；记录明确原因。 |
-| 快照类型 | ServiceSnapshot 由 state 加大量可选字段组成。 | 以 state 为判别字段，公共基底加各状态独立数据结构；HTTP、SDK 与事件 snapshot 使用同一联合类型。 |
+| 快照类型 | ServiceSnapshot 由 state 加大量可选字段组成。 | 单一原子 state 与累积过程事实，不引入通用 progress；详细变化通过 SSE/历史事实查询。 |
+| 快照时序 | snapshot.revision 按更新递增，用于客户端去重。 | 删除快照 revision，以服务端 timestamp 标明一致事实视图的投影时点；可由时间推导状态，无需制造更新写入。 |
 | Host 实例 | Task 快照携带 hostInstance，SDK 以变化判断重启。 | Task 公共契约不携带 hostInstance；路由需要时在外围 envelope 表达，内部实例世代/所有权不暴露为 Task 字段。 |
 | 制品数据 | snapshot 内重复完整 artifact/manifest，子 Task 和 SSE 更新也携带。 | 只保留实际选择的 artifactRef（kind、url、digest）；完整定义按准确 digest 单独查询。 |
 | 完整证据 | snapshot.evidence 包含运行环境、子 Task 快照和观察过程，与进展事件重复。 | 从 snapshot 移除完整 evidence；通过历史事件 API 查询结构化事实，不维护第二套独立证据模型。 |
@@ -152,11 +153,11 @@ blocked 只表示 prerequisite 未满足或尚无有效通过证据，不是下�
 
 ### 2.1 Snapshot：原子状态与累积过程事实
 
-公共基底是 requestId、taskId、seriesId、revision、state，
+公共基底是 requestId、taskId、seriesId、timestamp、state，
 以及顶层 receivedAt、eligibleAt、deadlineAt。不再有 schedule 包装，
 不复制 Request 的 freshness/recurrence 或完整请求体。
 状态专属信息随当前 state 切换，不因为未来可能用到就定义成一组全局可选属性。
-Snapshot 分为按解锁过程组织的累积事实与统一 progress 中的当前状态数据；
+Snapshot 只包含按解锁过程组织的累积事实及整体 state/技术 timestamp；
 不增加 substate、isFailed 或 isTerminated 等重复语义字段。
 记录性字段一旦出现，所有后继快照都必须以相同字段名、路径和值继承，
 不能仅因切换 state 而删除、移位或改值。未发生的事实不补造，不要求所有任务走过全部阶段。
@@ -167,8 +168,8 @@ Snapshot 分为按解锁过程组织的累积事实与统一 progress 中的当�
 | 已成立的过程事实 | preparation.startedAt/completedAt、readiness.satisfiedAt（实际有条件求值时） | 真实发生时增加，之后原名原值保留 |
 | 已确认的选择/执行事实 | preparation.artifactRef/language/fallbackUsed、allocation.boundAt、execution.executionId/startedAt/completedAt | 一经正式确认就保留，不等到 completed 才重新出现 |
 | 终结事实 | termination.terminatedAt/error/lastState/取消诊断、result | 随终结成立，终态不反转且不改写结果 |
-| 当前状态数据 | progress 的准备步骤、条件求值、临时预约或业务进展 | 只在当前状态出现，离开后移除或替换，不整份继承 |
-| 投影元数据 | state、revision | state 表达当前阶段，revision 单调递增，不属于“值永不变”的事实字段 |
+| 详细过程变化 | 准备步骤、条件求值、临时预约或业务进展 | 在 SSE/历史事件读取，不增加 snapshot.progress 或分散的同义状态容器 |
+| 投影元数据 | state、timestamp | 根据一致事实视图与服务端时间生成；不是固定事实，不强制递增 revision 或持久化写入 |
 
 准备过程第一次开始即记录 preparation.startedAt，后续始终使用同一路径；
 它不是进入 preparing 状态的时间。preparation 是事实对象，不随 state 消失。
@@ -176,9 +177,8 @@ Snapshot 分为按解锁过程组织的累积事实与统一 progress 中的当�
 未确定时不提前填 false，避免随后把“已知事实”改成相反值。
 
 此规则针对 Task 的有界事实摘要，不是把所有过程事件复制进快照。
-progress.fetch.startedAt、progress.evaluatedAt 和每次子 Check ID 是当前进展的一部分；
-各次获取/求值的历史事实仍保存在事件中，状态切换后不要求把这些集合堆进 snapshot。
-progress.reservation.executionId 是临时预约目标，不等于正式绑定的 execution.executionId；
+每次获取/求值的时间、子 Check ID 和未满足条件列表保存在事件中，
+不要求把这些集合堆进 snapshot。临时预约目标不等于正式绑定的 execution.executionId；
 预约变动要有历史事实，不能把临时目标误当成永久执行身份。
 同一 Task 向前推进时，已经确认的 artifactRef 和实际执行关联不得静默换版/换执行。
 未来若设计重试或重新绑定，须另有显式模型，不借状态更新覆盖旧事实。
@@ -186,10 +186,10 @@ progress.reservation.executionId 是临时预约目标，不等于正式绑定�
 | 状态 | 必需的状态信息 | 不允许作为当前信息出现 |
 |---|---|---|
 | pending | 身份与整体时间约束，可有提前产生的准备事实 | reason/pending 状态对象、请求策略、实际业务执行或结果 |
-| preparing | preparation 事实、准备过程的 progress | 其他过程的当前 progress、最终 result |
-| blocked | 制品准备事实、readiness 过程的 progress | 父实际执行或最终 result |
-| queued | 已就绪事实，可有调度 progress/预约 | 虚构实际执行开始或结果 |
-| running | 准备/就绪事实、execution.executionId/startedAt，可有业务 progress | result、termination |
+| preparing | 已发生的 preparation 事实；尚未实际开始时可无该分组 | 虚构准备开始、当前进展、最终 result |
+| blocked | 制品准备事实；详细条件判断另查事件 | 父实际执行或最终 result |
+| queued | 已就绪事实，已正式绑定时可有 allocation/execution 事实 | 临时预约详情、虚构实际执行开始或结果 |
+| running | 准备/就绪事实、execution.executionId/startedAt | 当前进展、result、termination |
 | completed | 所有既有事实、execution 完成、result、termination | 活跃 progress、完整 evidence |
 | preparation_failed / readiness_failed / allocation_failed / execution_failed | 路径要求的既有事实与 termination 原因 | 活跃 progress、成功 result 或虚构过程 |
 | timed_out / cancelled（控制终结暂定命名） | 所有实际已有事实和 termination | 活跃 progress、未发生的过程 |
@@ -200,7 +200,7 @@ progress.reservation.executionId 是临时预约目标，不等于正式绑定�
 termination.lastState 如出现只说明终结前观察位置，不用它替代失败过程分类。
 尚未执行不能出现虚构 Execution；执行后的任何终结必须保留真实关联和所有已有事实。
 Check 的 running 可以没有自定义 progress；Objective 的最终观察进展如需保留，
-作为结构化历史事件按需查询，不塞进终态 evidence 或伪装成活跃 progress。
+作为结构化历史事件按需查询，不塞进快照 evidence 或 progress。
 
 核心过程和二级事实字段统一为 preparation/readiness/allocation/execution。
 preparation 专指 artifacts 准备，fetch 只是其子步骤；readiness 求值 prerequisites，
@@ -210,7 +210,7 @@ prefetch 只表示提前执行 fetch 的优化，
 不再是顶层公共快照对象。pending 可以携带已经成立的 preparation 事实，
 但不携带 preparing 的当前进展；提前获取的变化可通过
 单独的优化事件/诊断证据观察，其具体 envelope 尚待定义。
-preparing 时可在 progress.fetch 中报告提前获取；preparation.startedAt 是过程开始时间，
+提前获取的详细变化通过事件报告；preparation.startedAt 是实际过程开始时间，
 允许早于 eligible。进入 state 的实际时间由 transition 事件表达，不混用过程时间。
 
 终态保留从前序继承的全部记录性事实，增加终结结果，移除当前阶段进展。
@@ -222,14 +222,17 @@ termination.lastState=pending 不表示现在仍是 pending，也不伪造执行
 termination.terminatedAt 不证明曾经 running，控制终结不得全部塞进 execution。
 
 移除 hostInstance 不等于删除内部安全仲裁。服务内部仍需防止旧实例迟到写入，
-确保恢复后同一 Task 身份与 revision 连续；不靠客户端看到 hostInstance 变化保证正确性。
+确保恢复后同一 Task 身份和已成立事实连续；不靠 hostInstance 或快照 revision 判断业务连续性。
 本次不定义新的路由 envelope 或持久化机制，恢复细节继续暂缓。
 JSON Schema 必须使用互斥分支校验必需/禁止字段，与 SDK 的 discriminated union 一致；
 仅提供 TypeScript union 而 HTTP 仍接受跨状态混搭，不算满足该设计。
 还须校验相邻快照：前序事实叶子路径集合必须包含于后继，叶子值相等且路径一致，
-revision 递增，离开的状态 payload 不残留。单个 snapshot 通过 schema
+timestamp/state 不作为不变事实；snapshot 不存在 progress。单个 snapshot 通过 schema
 不等于转移合法；SSE 跳过中间状态时，后到完整快照仍须继承此前已知事实。
 测试覆盖成功、失败、超时、取消及恢复查询，独立假设分支不得拼接成一条时间线。
+timestamp 对应实际投影时间和一致事实视图，不是旧内容的发送时间；
+相同 timestamp 不能视为重复，跨服务墙钟不能提供严格全序。
+异步读取与 SSE 交接需要明确协议，不以响应到达顺序当成事实先后。
 
 **轻量制品引用：** After snapshot 不再内嵌完整 artifact 或 artifacts，
 不重复 manifest、subjectSchema、文档索引等大对象；preparation.artifactRef 暂定为
@@ -472,7 +475,7 @@ Before 使用 started-after-request/completed-after-request 字面值；
 |---|---|---|
 | Check/Probe | 进程内有界保留，重启使 Task 不可用，无透明重跑。 | 所有已受理未完成 Task 都需持久恢复，不限 recurrence。 |
 | Regulation | Coordinator 已有持久事件/恢复，不是从零建设。 | 增加统一系列、时间和规划证据的持久化与恢复。 |
-| 恢复身份 | 公共 hostInstance 用于识别服务重启。 | 保留 Request/Task/series 身份及 revision 连续性；内部记录实例/执行尝试，不在 Task 快照暴露 hostInstance。 |
+| 恢复身份 | 公共 hostInstance 用于识别服务重启。 | 保留 Request/Task/series 身份及事实连续性；新读取生成 timestamp，不在 Task 快照暴露 hostInstance 或 revision。 |
 | 恢复期限/版本 | 原格式准确恢复与服务内快照分开。 | 原 eligible、deadline、固定版本及 bindings 不变；不得重置 timeout 或追 latest。 |
 
 **已确认：** 所有未完成 Task 的恢复都是范围内需求；跨重启透明执行本身不是承诺。
@@ -490,7 +493,7 @@ Before 使用 started-after-request/completed-after-request 字面值；
 |---|---|---|
 | 过滤 | Check/Probe SSE 按 taskId 或显式 scope=all 过滤。 | 增加按 series ID 过滤，包含订阅之后新产生的该系列 Task。 |
 | 身份 | task.updated 关联 Task 与 Execution，缺少独立系列。 | 请求、快照、日志及事件携带 series，必要时保留前驱/轮次。 |
-| 进展 | level、invocation、依赖关系及子 Task/Execution。 | 按 state 投影等待、条件、preparation、执行与终态证据，不保留跨状态混搭的进展对象。 |
+| 进展 | 快照含 level/invocation 等进展集合。 | snapshot 只保存有界过程事实与 state，详细进展由结构化 SSE/历史事件读取。 |
 | 重连 | 当前有界快照，不重建 Task、不重放全部中间事件。 | 动态系列快照与后续轮次连续可观察；不能把增加过滤宣称为无限历史回放。 |
 | 证据查询 | Task 快照内嵌完整 evidence，没有统一可分页的证据事件读取面。 | 增加按 taskId/executionId/seriesId 过滤的历史事件查询和稳定游标分页，证据来自事件事实而非独立 evidence 数据模型。 |
 
@@ -500,7 +503,7 @@ series 订阅不能只在订阅时展开为现存 task IDs；首次快照与后�
 单轮 result 仍返回该 Task 的结果；系列持续观察不应伪装成一个永不结束的单轮 result。
 ### 7.1 Snapshot、SSE、历史查询：同一事实的三种读取方式
 
-- snapshot 是当前权威状态投影，包含实际结果和有界当前进展，不是过程历史。
+- snapshot 是一致事实视图与 timestamp 上的状态投影，包含适用时的业务结果，没有 progress。
 - SSE 是实时状态/进展通知，可输出轻量 snapshot 或结构化事实；
   快照投影通知与事实事件格式可不同，但不能分别维护互相矛盾的真相。
 - 历史事件 API 按已有 taskId、executionId、seriesId 过滤，以稳定游标分页。
@@ -523,8 +526,8 @@ Task snapshot.result 由该执行事实投影。Task 特有的结果转换如果
 
 ### 7.2 游标、关联与权限
 
-历史事件有独立的稳定位置/游标，不使用 Task revision、ULID 时间部分或客户端时间代替。
-游标是分页位置，不是新业务 ID；Task revision 仍只对自己的状态投影排序。
+历史事件有独立的稳定位置/游标，不使用 snapshot.timestamp、ULID 时间部分或客户端时间代替。
+游标是分页位置，不是新业务 ID；snapshot 已无 revision，历史位置也不是快照版本。
 分页必须具有明确边界，避免新事件写入时重复、遗漏或无限追赶；
 历史接实时的交接点需可表达，具体快照水位、保留期及 SSE 游标续读协议在持久化讨论中确定。
 
