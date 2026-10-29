@@ -3,6 +3,7 @@
 本文是 [Request 生命周期修订](./request-lifecycle-revision.md) 的配套示例，
 只列发生变化的数据结构，不重复未修改的 Artifact、业务结果或 Reference 契约。
 抽象规则和原子状态分类见[任务判定树与解锁过程](./task-state-model.md)。
+事件类型变化、历史查询及 reducer 投影原则另见[事件与快照投影](./event-projection-model.md)。
 
 ## 阅读约定
 
@@ -63,7 +64,7 @@
   Before 的完整 artifact 对象保留作对照；执行 runtime/revision 等证据不能由制品查询代替。
 - After snapshot 不再携带完整 evidence、嵌套子 Task 快照或最终 observationProgress。
   详细证据通过 taskId/executionId/seriesId 查询历史事件；SSE 和历史读取来自同一事实。
-  第 10 节提供完整查询与事件例子，具体路径/游标拼写为草案。
+  [事件与快照投影](./event-projection-model.md)提供完整查询与事件例子，具体路径/游标拼写为草案。
 - 成功选版用 preparation.resolution 表达 up-to-date/fallback/updated，替代早期草案的
   fallbackUsed；它与准确 artifactRef 同时确定并持续继承，未成功选定时不填写。
 - After snapshot 不嵌入 request，不携带 freshness/recurrence 等请求策略。
@@ -809,6 +810,9 @@ artifactRef、language、resolution 继续继承排队阶段，新增实际执�
     "language": "en",
     "resolution": "fallback"
   },
+  "allocation": {
+    "boundAt": "2026-10-29T03:21:00.009Z"
+  },
   "execution": {
     "executionId": "01M60000000000000000000001",
     "startedAt": "2026-10-29T03:21:00.010Z"
@@ -861,7 +865,7 @@ Request 明确固定 digest 时不能 fallback 换成另一个版本；业务不
 Task 已积累 preparation.startedAt 的过程事实，但没有正式选择的 artifactRef 或业务结果。
 不携带 preparing 的活跃 progress，也不用顶层 error
 把优化失败冒充 Task 失败。更新错误由服务诊断/优化事件记录；
-正式准备再做准入决定，最终回退摘要见 4.2，完整历史决策见第 10 节，
+正式准备再做准入决定，最终回退摘要见 4.2，完整历史决策见[事件与快照投影](./event-projection-model.md)，
 不能因精简快照而静默吞掉更新错误。
 
 ```json
@@ -883,7 +887,7 @@ Task 已积累 preparation.startedAt 的过程事实，但没有正式选择的 
 ### 4.2 Completed Check：结果与小摘要保留，完整证据移出
 
 Before 给出完整 manifest、业务 payload 和执行环境；After 只保留准确 artifactRef、
-业务结果和小摘要，运行环境/选版详情按第 10 节的历史事件查询。
+业务结果和小摘要，运行环境/选版详情按[事件与快照投影](./event-projection-model.md)的历史事件查询。
 两侧为各自协议下的合成成功执行；Before 不是 4.1 那个失败 Task 的后续状态。
 runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对象。
 
@@ -966,6 +970,9 @@ preparation.resolution=fallback 表示采用旧版回退；准确版本在 prepa
     },
     "language": "en",
     "resolution": "fallback"
+  },
+  "allocation": {
+    "boundAt": "2026-10-29T03:21:00.009Z"
   },
   "execution": {
     "executionId": "01M60000000000000000000001",
@@ -1498,7 +1505,7 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
 }
 ```
 
-## 7. Events：过滤请求与完整事件 payload
+## 7. 快照通知：订阅过滤与完整 payload
 
 **Before：** `GET /events?taskId=01M60000000000000000000006`，事件名 `task.updated`，
 以下为一条完整 data payload；没有 series 过滤参数。
@@ -1540,8 +1547,9 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
 ```
 
 本节 task.updated 是当前快照投影通知，不是保存全部证据的唯一记录格式。
-准备更新、fallback、执行和关联事实通过第 10 节的结构化历史事件追溯；
+准备更新、fallback、执行和关联事实通过[事件与快照投影](./event-projection-model.md)的结构化历史事件追溯；
 实时通知必须与这些事实同源，不依赖客户端恰好收全 SSE。
+task.updated 不作为 reducer 输入，不反过来维护一套可修改状态。
 snapshot 无 revision；timestamp 不能用作整个 series 的全局游标，历史采用独立稳定游标。
 
 ## 8. 持久记录与恢复 Response
@@ -1888,246 +1896,11 @@ Check 自身 completed 不等于其父 Regulation 的条件已通过；不能让
 条件证据有效期、重查频率、后继条件继承和未完成轮次积压限额仍须收敛；
 不能用唯一 pending 约束代替整个系列的容量管理。
 
-## 10. 历史事件查询：evidence 不再内嵌 snapshot
+## 10. 历史事件（已独立成文）
 
-**Before：** 4.2/4.3 的完整旧快照携带 evidence（含 runtime、worker revision、
-子 Task 快照和观察进展等），没有对应的统一历史分页查询 API。
-现有 SSE 主要输出 task.updated，不把它的实时连接冒充历史查询。
-
-**After：** 4.2/4.3 的新快照已移除 evidence，以已有身份查询结构化事实。
-以下 `/event-history`、事件类型及分页字段是完整示例用的草案，不是现有可调用接口，
-不新增 evidenceId 或独立 `/evidence` 数据模型。cursor 为不透明分页位置，
-不是 ULID 业务身份、snapshot.timestamp 或客户端时间；不得由客户端解析或据此授予权限。
-
-### 10.1 Task 历史：选版和 Execution 关联
-
-查询第 4.2 节同一个 Task。本例从服务返回的既有位置继续，展示选版后的两条事实，
-不是声称完整历史只有这两条：
-
-```http
-GET /event-history?taskId=01M60000000000000000000006&after=task6-before-selection&limit=2 HTTP/1.1
-Host: 127.0.0.1:8080
-Accept: application/json
-```
-
-完整分页响应：
-
-```json
-{
-  "events": [
-    {
-      "cursor": "task6-selection",
-      "type": "task.artifact-selected",
-      "occurredAt": "2026-10-29T03:21:00.009Z",
-      "requestId": "01M60000000000000000000002",
-      "taskId": "01M60000000000000000000006",
-      "seriesId": "01M6000000000000000000001D",
-      "data": {
-        "artifactRef": {
-          "kind": "checker",
-          "url": "https://example.test/checker/latest.tgz",
-          "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        },
-        "fallbackFromTaskId": "01M60000000000000000000005",
-        "updateError": {
-          "code": "download_failed",
-          "stage": "download",
-          "message": "Artifact download failed."
-        },
-        "resolution": "fallback"
-      }
-    },
-    {
-      "cursor": "task6-execution-linked",
-      "type": "task.execution-linked",
-      "occurredAt": "2026-10-29T03:21:00.009Z",
-      "requestId": "01M60000000000000000000002",
-      "taskId": "01M60000000000000000000006",
-      "seriesId": "01M6000000000000000000001D",
-      "data": {
-        "executionId": "01M60000000000000000000001"
-      }
-    }
-  ],
-  "nextCursor": "task6-execution-linked"
-}
-```
-
-下一页使用原过滤条件和 nextCursor，不拿 snapshot.timestamp 当作位置：
-
-```http
-GET /event-history?taskId=01M60000000000000000000006&after=task6-execution-linked&limit=2 HTTP/1.1
-Host: 127.0.0.1:8080
-Accept: application/json
-```
-
-下例表示当前查询边界内的最后一页。真实实现可能还有其他阶段事件，
-事件分类、快照水位与分页边界需要在持久化设计中固定。
-
-```json
-{
-  "events": [
-    {
-      "cursor": "task6-terminated",
-      "type": "task.terminated",
-      "occurredAt": "2026-10-29T03:21:04.010Z",
-      "requestId": "01M60000000000000000000002",
-      "taskId": "01M60000000000000000000006",
-      "seriesId": "01M6000000000000000000001D",
-      "data": {
-        "state": "completed",
-        "executionId": "01M60000000000000000000001"
-      }
-    }
-  ],
-  "nextCursor": null
-}
-```
-
-nextCursor=null 只表示此查询边界没有下一页，不承诺未来不再产生事件；
-历史接实时需要独立的交接水位，不能用 null 自动推导为可以无缝订阅。
-
-### 10.2 Execution 历史：实际执行证据只记录一次
-
-使用上一页关联到的 executionId 查询。该执行可以服务多个 Task，
-事件不复制各 Task 的完整输入，也不公开全部 owner 列表：
-
-```http
-GET /event-history?executionId=01M60000000000000000000001&limit=2 HTTP/1.1
-Host: 127.0.0.1:8080
-Accept: application/json
-```
-
-完整两条执行事实如下；workerRevision 对应原 evidence.revision，
-不是 artifactRef 的内容 digest，与已移除的 Task 数字 revision 也不是一回事。
-示例刻意把 actual runtime 和 workerRevision 留在事件中，证明精简 snapshot 不等于丢弃证据。
-
-```json
-{
-  "events": [
-    {
-      "cursor": "execution1-started",
-      "type": "execution.started",
-      "occurredAt": "2026-10-29T03:21:00.010Z",
-      "executionId": "01M60000000000000000000001",
-      "data": {
-        "artifactRef": {
-          "kind": "checker",
-          "url": "https://example.test/checker/latest.tgz",
-          "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        },
-        "runtime": {
-          "type": "node",
-          "version": "24.11.1",
-          "platform": "win32",
-          "architecture": "x64",
-          "adapter": "node-commonjs-v1",
-          "configuration": "{\"cleanupMs\":5000,\"deadlineMs\":30000,\"directories\":64,\"messageBytes\":8388608,\"observers\":64,\"queue\":64,\"records\":256,\"retentionMs\":60000,\"retireAfter\":100,\"workers\":4}"
-        },
-        "workerRevision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
-      }
-    },
-    {
-      "cursor": "execution1-completed",
-      "type": "execution.completed",
-      "occurredAt": "2026-10-29T03:21:04.000Z",
-      "executionId": "01M60000000000000000000001",
-      "data": {
-        "result": {
-          "ok": true,
-          "problems": []
-        }
-      }
-    }
-  ],
-  "nextCursor": null
-}
-```
-
-Execution.completed 是实际结果的唯一事实来源；Task.terminated 只记录该需求的
-状态/终结时间并引用 executionId，不重复存储同一个业务 result。
-查询 completed Task snapshot 时可以从关联执行投影 result，避免额外请求，
-但不能独立维护第二份结果。若未来有 Task 特有的结果转换，需明确记录其独立语义，
-不能直接套用“与执行结果相同”的去重规则。
-
-### 10.3 子 Task 与 series 查询：关联，不递归展开整树
-
-第 4.3 的 Probe 原先内嵌一个子 Task snapshot；After 可通过下面的完整关联事件追溯。
-这是 Observation Execution 拥有的调用关系，执行事实使用 executionId 归属，
-共享该 Probe 执行的多个父 Task 沿自己的 execution-linked 事件读取同一份记录。
-
-```json
-{
-  "cursor": "probe-execution17-child-linked",
-  "type": "execution.child-task-linked",
-  "occurredAt": "2026-10-29T03:20:00.210Z",
-  "executionId": "01M60000000000000000000017",
-  "data": {
-    "observationId": "01M60000000000000000000015",
-    "invocationId": "01M60000000000000000000010",
-    "checker": "pass",
-    "levelId": "ready",
-    "childTaskId": "01M6000000000000000000000C"
-  }
-}
-```
-
-查询 childTaskId 的 Task 历史可找到它与 `01M6000000000000000000000A` 的执行关联，
-再读该 Execution 的实际 runtime/result；不用把子快照复制进父 snapshot。
-observation/level/invocation 进展同样记录为结构化事实，不维护第二份完整 evidence 树。
-
-系列历史读取使用同一分页模型，过滤将来加入的各轮 Task，具体查询边界仍以服务游标为准：
-
-```http
-GET /event-history?seriesId=01M6000000000000000000001D&limit=20 HTTP/1.1
-Host: 127.0.0.1:8080
-Accept: application/json
-```
-
-本例每次只选一个过滤维度；多维过滤的交并规则未定，不在示例里隐式猜测。
-Task/Series 历史返回自己的事实和执行引用，不默认递归展开所有共享执行或其他 owner。
-所有查询均需鉴权（示例省略凭据）；关联与游标不能绕过来源/作用域隔离。
-历史缺失、清理或游标过期必须明确返回不可用，不能把空列表冒充没有发生过工作。
-保留期限、SSE 游标续读和具体存储事务规则仍留到持久化讨论。
-
-### 10.4 条件检查的详细进展：事件，不是 snapshot.progress
-
-第 9.2 的父 Task 为 blocked；其具体哪个条件尚未满足，由下列完整历史事件表达，
-不在 snapshot 的 readiness 分组内加一套可变 conditions/status。
-这条事实与之前的 blocked 快照使用同一个父 Task、子任务和时间，
-去掉 progress 不等于丢弃诊断证据。通过后的条件重查同样记录事件，
-最终采用的就绪时间才作为 readiness.satisfiedAt 加入 Task 事实。
-
-```json
-{
-  "cursor": "task31-readiness-evaluated",
-  "type": "task.readiness-evaluated",
-  "occurredAt": "2026-10-29T04:20:02.000Z",
-  "requestId": "01M60000000000000000000030",
-  "taskId": "01M60000000000000000000031",
-  "seriesId": "01M60000000000000000000031",
-  "data": {
-    "satisfied": false,
-    "checks": [
-      {
-        "index": 0,
-        "taskId": "01M60000000000000000000034",
-        "executionId": "01M60000000000000000000035",
-        "state": "not-met"
-      },
-      {
-        "index": 1,
-        "taskId": "01M60000000000000000000037",
-        "executionId": "01M60000000000000000000038",
-        "state": "passed"
-      }
-    ]
-  }
-}
-```
-
-事件的 occurredAt 是业务事实发生时间，snapshot.timestamp 是读取投影时间；
-数值可以恰好相同，但不能因此把它们定义成同一个字段或排序游标。
+事件定义、Before / After、reducer 原则及原本在此的完整历史查询示例，
+统一移至[事件与快照投影](./event-projection-model.md)。
+本节只保留导航，后续章节编号不变。
 
 ## 11. 连续快照：事实继承，技术时间与状态可变化
 

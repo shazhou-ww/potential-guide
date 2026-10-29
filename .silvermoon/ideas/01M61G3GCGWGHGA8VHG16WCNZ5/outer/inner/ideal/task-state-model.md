@@ -17,7 +17,7 @@
 | 原子状态（state） | 判定树选中的具体情况，决定快照的约束 |
 | 状态转移（transition） | 新事实或裁决使 Task 从一个原子状态变为另一个 |
 | 语义分类（state category） | failed、terminated 等状态集合，可包含或交叉，不要求构成单一树 |
-| Snapshot | 已知有界事实与服务端当前时间推导出的状态投影，不是逐次编号的持久化实体 |
+| Snapshot | 一致事件前缀经 reducer 归约，再按服务端时间投影出的有界视图，不是逐次编号的持久化实体 |
 
 不把 transition 命名为 phase，也不强制二级事实对象与 state 同名。
 “解锁”是补齐条件合取的一层，不保证下一次对外快照恰好落在相邻叶子。
@@ -90,7 +90,8 @@ termination 是结束裁决，仍保留各自职责。
 `preparation.startedAt` 表示为该 Task 开始准备工作的实际时间，允许早于 eligible；
 `preparation.completedAt` 表示已形成正式、可使用的准确制品选择。
 仅下载完成还不是整个准备过程完成。重用缓存不伪造一次下载；
-需要表达 Task 进入 preparing 的时刻时，使用状态转移事件，不借用过程时间。
+Task 进入 preparing 可以只由时间推进推导，不要求另写状态转移事件，
+也不能借用过程开始时间冒充状态切换时间。
 这取代旧草案“preparationStartedAt 必须晚于 eligible”的阶段时间约定。
 
 过程事实可提前出现，但失败叶子的裁决仍遵守判定路径。
@@ -188,6 +189,11 @@ status/reason/currentStep 来替代它。整体状态只由 state 表达；
 只有已被采用的就绪、准确选版和正式执行关联等事实才进入相应二级分组。
 
 ### 5.1 timestamp 与读取投影
+
+统一原则为 `Snapshot(W, t) = project(reduce(E(W)), t)`；
+事件边界、共享 Execution 事实归属与类型变化集中见
+[事件与快照投影](./event-projection-model.md)。task.updated 只是投影通知，不回灌 reducer。
+归约和投影不执行副作用；读取时间不是伪造工作事实的依据。
 
 timestamp 是服务端生成这份 snapshot 所依据的技术时间，不叫 evaluatedAt，
 不是业务修改时间、Task 生命周期事实、发送时间或快照更新序号。

@@ -14,6 +14,7 @@ Regulation 的统一资格时间、递归系列与未完成任务恢复，持续
 [数据结构 Before / After](./request-data-examples.md)；制品细节仍见
 [制品契约](./artifact-contracts.md)、[摘要与引用](./identity-and-digests.md)及[服务设计](./objective-service.md)。
 抽象建模原则见[任务判定树与解锁过程](./task-state-model.md)。
+事件定义与快照归约原则见[事件与快照投影](./event-projection-model.md)。
 
 ## 边界
 
@@ -25,7 +26,7 @@ Regulation 的统一资格时间、递归系列与未完成任务恢复，持续
 
 - 两类制品、目录文档与准确摘要保持可验证；准备选版/回退显式固定版本并保留失败证据，不掩盖业务不通过。
 - 所有 Task 共用时间、制品、前置 Check、资源的合取判定树，无条件任务跳过条件等待；入口限制不改变统一模型，等待不重置 timeout，系列唯一 pending 且失败/超时续作。
-- HTTP/SDK/事件使用单一 state、技术 timestamp 与累积过程事实，不含快照 revision/progress 或 Request 策略；原始请求/制品/历史按需查询，语义分类与事实继承一致。
+- HTTP/SDK/事件的 snapshot 由一致事件前缀归约并按服务端时间投影，使用单一 state、技术 timestamp 与累积过程事实，不含 revision/progress 或 Request 策略；原始请求/制品/历史按需查询，语义分类与事实继承一致。
 
 ## 当前准备步骤
 

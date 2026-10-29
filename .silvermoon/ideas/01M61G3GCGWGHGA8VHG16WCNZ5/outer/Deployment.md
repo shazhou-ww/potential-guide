@@ -49,3 +49,5 @@ Task/Execution/Series 历史查询有独立游标，分页及实时通知来自�
 仍按判定树投影，不用 Task 状态转移时间替代实际执行或过程时间。
 验证无写入跨 eligible 的两份快照仅 timestamp/state 改变而不伪造准备事实；
 公共快照无 revision/progress，详细进展由历史事件查，不能用同刻 timestamp 直接去重。
+按[事件与快照投影](./inner/ideal/event-projection-model.md)对照公开历史及固定投影时间重建快照，
+包含共享 Execution 的必要事实；验证查询/重放不会再次执行或创建递归后继。

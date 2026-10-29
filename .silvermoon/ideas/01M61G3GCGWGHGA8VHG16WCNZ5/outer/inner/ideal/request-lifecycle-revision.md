@@ -13,8 +13,10 @@ Execution → 持久化恢复 → Events/SDK 的修改对象顺序组织。
 字段使用讨论中的概念名，不提前承诺新 wire schema 的版本、大小写或 SDK 签名。
 各节区分已确认方向与待确认建议；本文件为 [Idea.md](./Idea.md) 的 supporting document，
 不是第四份契约。[objective-service.md](./objective-service.md) 保留组合观察的其余设计。
-请求、响应、事件及恢复记录的完整 JSON 对照见
+请求、响应、快照通知及恢复记录的完整 JSON 对照见
 [关键数据结构 Before / After](./request-data-examples.md)，其中 After 的具体字段名均为草案。
+事件定义、命名变化、归约原则及历史事件示例独立见
+[事件与快照投影](./event-projection-model.md)。
 判定树、重叠解锁过程、语义分类与事实继承的独立说明见
 [任务状态模型](./task-state-model.md)。本次过程分组和原子失败分类以该文为准。
 
@@ -211,7 +213,8 @@ prefetch 只表示提前执行 fetch 的优化，
 但不携带 preparing 的当前进展；提前获取的变化可通过
 单独的优化事件/诊断证据观察，其具体 envelope 尚待定义。
 提前获取的详细变化通过事件报告；preparation.startedAt 是实际过程开始时间，
-允许早于 eligible。进入 state 的实际时间由 transition 事件表达，不混用过程时间。
+允许早于 eligible。state 由事实与时间投影，不强制为纯时间推进写 transition 事件，
+也不把过程时间当作状态切换时间。
 
 终态保留从前序继承的全部记录性事实，增加终结结果，移除当前阶段进展。
 preparation.resolution=fallback 让调用方立即知道发生了回退，
@@ -509,11 +512,14 @@ series 订阅不能只在订阅时展开为现存 task IDs；首次快照与后�
 单轮 result 仍返回该 Task 的结果；系列持续观察不应伪装成一个永不结束的单轮 result。
 ### 7.1 Snapshot、SSE、历史查询：同一事实的三种读取方式
 
-- snapshot 是一致事实视图与 timestamp 上的状态投影，包含适用时的业务结果，没有 progress。
+- snapshot = project(reduce(一致事件前缀), timestamp)，包含适用时的业务结果，没有 progress。
 - SSE 是实时状态/进展通知，可输出轻量 snapshot 或结构化事实；
-  快照投影通知与事实事件格式可不同，但不能分别维护互相矛盾的真相。
+  task.updated 是投影通知，不是 reducer 输入，不能分别维护互相矛盾的真相。
 - 历史事件 API 按已有 taskId、executionId、seriesId 过滤，以稳定游标分页。
   不再新增专门的 `/evidence` 模型或 evidenceId；汇总如有需要也从事件投影。
+
+类型变化、纯归约边界、读取一致性和完整事件例子集中于
+[事件与快照投影](./event-projection-model.md)，本节不再维护第二份事件目录。
 
 历史必须保存足以追溯的结构化事实，而非只存“正在运行”文字通知：
 准确制品选择、fallback 和更新失败、实际 runtime/worker revision、Execution 开始/结束、
