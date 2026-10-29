@@ -10,7 +10,9 @@
 ### I-S01: 演进制品契约与工具链
 
 保留 YAML、统一结果、References、语言、runtime 与准确摘要契约；
-在 Task 准备路径演进提前选版预优化和显式 fallback，不把调度属性写入制品或改变历史摘要。
+由服务配置 Task 准备路径的提前选版预优化和显式 fallback，默认无预取/回退；
+普通 Probe 不重复传根/静态 Checker bindings，服务记录动态依赖的准确选择，
+不把调度属性写入制品或改变历史摘要。
 
 ### I-S02: 服务化 Objective 观察
 

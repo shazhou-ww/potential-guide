@@ -28,6 +28,14 @@ Request 携带 `eligible_at`、`recursive` 和可选 `series_id`，成功受理�
 | 身份边界 | Check/Probe 使用幂等键识别重复创建调用，另有 Task ID；旧讨论曾将二者混用。 | Request ID 就是幂等 ID，Task ID 独立分配；Request 解析/准入失败可以不产生 Task。 |
 | series | Check/Probe 没有独立系列属性；Coordinator 用 predecessor 链表示 recurrence。 | 输入 `series_id` 可选，首个 Task 默认以自身 Task ID 为 series ID；后继 Task 继承同一 series。 |
 | 后继身份 | Coordinator 已有确定性后继引用，Check/Probe 没有递归需求生成。 | 每轮新 Request/Task 身份，继承 series ID；重试和恢复不重复分配同一轮。 |
+| Probe bindings | 当前输入 bindings 同时可固定根 Objective 与运行时依赖，旧示例重复传入根 digest。 | 普通 Probe 只提供根引用，不再重复传根或静态 Checker bindings；动态依赖选择由服务记录。 |
+
+**已确认绑定边界：** Objective 的准确 digest 已固定其声明的 Checker URL/digest，
+这部分 Merkle DAG 不需要调用方再传一份绑定。运行时 Checker 提出的其他 Objective
+需求不属于根定义中的静态边，因此根 digest 不一定固定这些动态 Objective 的版本。
+服务须记录实际解析的准确动态依赖；是否允许调用方显式固定它们另议，
+若提供独立能力可称 `dependencyBindings`，本次不将它直接加入普通 Probe Request。
+恢复时是否需要由调用方传回动态绑定，留到持久化讨论，不凭当前实现认定必需。
 
 **已确认：** 所有时间按服务端时间域解释，客户端时钟不能裁定 freshness。
 向未来调整只延迟执行资格；eligible 前的等待不消耗 Task timeout。
@@ -146,11 +154,12 @@ eligible 模式应按资格节拍推进，不随实际 worker 开始时间漂移
 terminated 模式运行期间可能没有 pending Task，届时没有可取消的 pending 对象；
 本草案不暗中增设 cancel-series 接口，是否需要提前保留未定 eligible 的后继仍待讨论。
 
-## 4. 制品准备：提前量与可观察的版本回退
+## 4. 服务配置与制品准备：提前量及可观察的版本回退
 
 | 修改点 | Before | After |
 |---|---|---|
-| 启动时机 | 接收 Check/Probe 后立即开始来源确认。 | 预优化按 eligible 减提前量安排；正式 PREPARING 固定在 eligible 后。 |
+| 配置归属 | 当前服务没有统一提前量/fallback 配置，先前草案例子误放在 Request。 | preparation policy 属于服务配置，不是调用方请求参数。 |
+| 启动时机 | 接收 Check/Probe 后立即开始来源确认。 | 默认不预取，到 eligible 后正式准备；服务配置了预取才按 eligible 减提前量安排优化。 |
 | 提前收益 | 立即确认准确内容，但未来任务可能很早固定旧版。 | 既提前发现错误、下载预热，又避免必然提前整个递归周期固定版本。 |
 | 新版失败 | 来源/下载/验证失败使准备失败，没有选版 fallback。 | 可配置选版 fallback：更新失败或新候选不可用时使用仍可用的准确旧版。 |
 | 证据 | 准确 digest、来源确认时间、runtime 等。 | 额外记录更新尝试、失败原因、回退决定和实际选择；不能把回退冒充更新成功。 |
@@ -158,8 +167,10 @@ terminated 模式运行期间可能没有 pending Task，届时没有可取消�
 **已确认方向：** 提前下载是预优化，递归下一轮可以重新确认浮动来源。
 预优化可提前报告来源错误，不必等 eligible 才开始昂贵下载；
 它不推进 Task 的 PREPARING 状态，也不赋予执行资格。
+Request 只表达 eligible、timeout、freshness、recursive、series 等需求，
+不携带 `preparationPolicy`；Response/Events 仍记录服务实际执行的预优化与准备过程。
 
-**建议概念名及公式：**
+**配置预取时的概念名及公式：**
 
 ```text
 preparation_lead >= 0
@@ -170,14 +181,14 @@ formal_preparing_at >= eligible_at
 
 提前量不是轮询周期，也不是保证下载完成的时限。周期 10 分钟、提前量 30 秒时，
 可以到 eligible 前 30 秒才准备；若请求更晚收到，则尽快开始。
-省略提前量时建议保留接收后立即准备；零提前量表示到 eligible 才开始。
-默认值与限额是待确认策略，不能作为已实现 API。
+未配置预取时，不在接收时提前选版，到 eligible 后才开始正式准备。
+零提前量也不提供提前预取；具体配置字段与限额仍为草案，不是已实现 API。
 网络确认是一个过程，不能宣称取得 received 或 prefetch_at 那一瞬间的远端快照。
 
 **fallback 建议边界：**
 
-- 策略显式开启；建议默认失败即失败，避免隐式掩盖更新问题。
-- 仅浮动选版可退回旧候选；显式 digest 或传入准确 bindings 不能被替换。
+- fallback 同样由服务配置显式开启，默认不回退；它影响执行内容，不能仅当作无语义的预优化。
+- 仅浮动选版可退回旧候选；显式 digest、制品内静态绑定及已固定动态依赖不能被替换。
 - 旧版必须具有同来源/授权范围的可信准确记录，重新满足 runtime、输入及组合契约。
   “上一版”候选的选择范围、缓存失效/撤销与最大陈旧度还需确定。
 - 可处理更新检查、下载、格式/契约验证及执行前准入失败。
@@ -252,8 +263,8 @@ eligible 后才正式 PREPARING、terminated 包含失败/超时续作，以及�
 剩余前序问题：
 
 1. 默认递归锚点，以及 terminated 模式无 pending 时是否需要可停止的预留计划。
-2. 错过周期后下一个未来点的选法、预优化提前量默认值、旧版选择与陈旧上限。
-3. series 跨模块作用域与旧协议迁移。
+2. 错过周期后下一个未来点的选法、服务预优化限额、旧版选择与陈旧上限。
+3. series 跨模块作用域与旧协议迁移，是否需要独立的调用方动态依赖固定能力。
 
 中断 Execution 与持久化恢复细节待上述问题解决后再讨论。
 

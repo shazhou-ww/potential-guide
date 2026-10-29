@@ -8,7 +8,7 @@ Regulation 的统一资格时间、递归系列与未完成任务恢复，持续
 ## 结果
 
 保留简洁 YAML、准确摘要及可挂载服务，以幂等 Request 建立独立 Task，
-统一 eligible、递归系列及准备/回退策略，使任务可持续观察和恢复。新增设计按对象的 Before / After 见
+统一 eligible 与递归系列，由服务配置准备/回退策略，使任务可持续观察和恢复。新增设计按对象的 Before / After 见
 [请求生命周期修订](./request-lifecycle-revision.md)，完整结构示例见
 [数据结构 Before / After](./request-data-examples.md)；制品细节仍见
 [制品契约](./artifact-contracts.md)、[摘要与引用](./identity-and-digests.md)及[服务设计](./objective-service.md)。

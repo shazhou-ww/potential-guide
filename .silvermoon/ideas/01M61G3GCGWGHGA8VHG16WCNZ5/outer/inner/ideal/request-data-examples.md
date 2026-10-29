@@ -14,9 +14,10 @@
 - 字段暂沿用现有 camelCase，概念 `eligible_at/received_at/series_id`
   分别写成 `eligibleAt/receivedAt/seriesId`。PENDING 暂序列化为 `pending`。
   `acceptedAt → receivedAt` 是草案命名建议，不暗示旧字段已改名。
-- `recursive` 暂用 `{periodMs, anchor}`；准备策略暂用
+- `recursive` 暂用 `{periodMs, anchor}`；服务配置中的准备策略暂用
   `preparationPolicy: {leadMs, fallback}`，fallback 候选值为
-  `none | previous-usable`。这些字段名与默认值仍待评审。
+  `none | previous-usable`。具体字段名仍待评审，默认不预取、不回退已确认；
+  Request 不再携带 preparationPolicy。
 - After 的 freshness 暂用 `started-after-eligible | completed-after-eligible`，
   以免在旧 `*-after-request` 字面值上偷偷换义。实际协议升级方式尚未确定。
 - Request ID 已确认为幂等 ID，Task ID 由服务端独立分配；
@@ -29,6 +30,40 @@
 - eligible 前的提前下载用 `prefetch` 展示，Task 仍 pending；正式 `preparation`
   必须在 eligible 后。`recursive.anchor` 使用 eligible/terminated；
   Task 终结时间写 `terminatedAt`，保留 completed/failed/cancelled 状态及错误原因。
+
+## 0. 服务配置：preparation policy 不属于 Request
+
+**Before：** 当前 `createUnifiedServices` 的完整配置对象。
+服务现在接收 Task 后立即准备，没有独立 eligible 预取策略。
+
+```json
+{
+  "directory": "D:\\service-cache",
+  "allowedOrigins": ["https://example.test"],
+  "languages": ["en"]
+}
+```
+
+**After：** 服务显式启用提前 10 秒预取及浮动来源的旧版回退；
+以下需要预取/fallback 的 Task 示例均在此服务配置下发生，不是请求自带这些参数。
+字段布局是草案，不能直接传给当前 API。
+
+```json
+{
+  "directory": "D:\\service-cache",
+  "allowedOrigins": ["https://example.test"],
+  "languages": ["en"],
+  "preparationPolicy": {
+    "leadMs": 10000,
+    "fallback": "previous-usable"
+  }
+}
+```
+
+新模型未提供 preparationPolicy 时，不预取也不回退：
+Task 在 eligible 后才正式开始选版、下载和验证。只配置预取不代表开启 fallback。
+服务即使允许 previous-usable，也不能替换请求的显式 digest 或制品内固定的 Checker，
+不能用另一版本掩盖业务不通过；实际回退仍须记录准确版本和更新错误。
 
 ## 1. Check / Probe 创建 Request
 
@@ -52,7 +87,7 @@
 ```
 
 **After：** 接收于 03:20:00Z，03:21:00Z 才 eligible，提前 10 秒准备。
-周期与准备提前量相互独立；输入 series 由调用方显式指定。
+周期与服务准备提前量相互独立；输入 series 由调用方显式指定。
 
 ```json
 {
@@ -71,10 +106,6 @@
   "recursive": {
     "periodMs": 60000,
     "anchor": "eligible"
-  },
-  "preparationPolicy": {
-    "leadMs": 10000,
-    "fallback": "previous-usable"
   }
 }
 ```
@@ -104,7 +135,9 @@
 
 **After：** 省略 eligible 和 series，服务端默认补齐；本轮正常完成、失败或超时后
 再等待 60 秒。取消 pending 不产生后继。
-显式 digest 不允许换成另一旧版，因此关闭 fallback。每个后继仍继承此准确引用，
+显式 digest 不允许换成另一旧版，即使服务启用 fallback 也不能替换。
+普通 Probe 删除重复根绑定，静态 Checker 版本已由 Objective 的 Merkle DAG 固定。
+每个后继仍继承此准确引用，
 不是所有 recursive 请求都会升级制品；只有浮动来源才重新选版。
 
 ```json
@@ -118,24 +151,20 @@
   },
   "context": {},
   "language": "en",
-  "bindings": {
-    "https://example.test/objective/v1.tgz": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-  },
   "freshness": "started-after-eligible",
   "timeoutMs": 60000,
   "recursive": {
     "periodMs": 60000,
     "anchor": "terminated"
-  },
-  "preparationPolicy": {
-    "leadMs": 10000,
-    "fallback": "none"
   }
 }
 ```
 
 `targetLevel: "initial"` 仍是可选的单次输入验证能力；本例执行完整观察所以不传，
 不以 recursive 模式改变其业务含义。
+运行时提出的其他 Objective 不一定属于上述静态 DAG，服务仍须记录其实际 digest；
+普通请求不必重复提供它们。是否提供独立 `dependencyBindings` 输入尚待讨论，
+本例不把旧 bindings 机械改名为新的必填参数。
 
 ### 1.3 非递归 Request：eligible 可以早于接收
 
@@ -252,10 +281,6 @@ targetKey 与 objectiveRevisionKey 引用聚合内其他记录；本节完整展
   "recursive": {
     "periodMs": 60000,
     "anchor": "eligible"
-  },
-  "preparationPolicy": {
-    "leadMs": 10000,
-    "fallback": "none"
   }
 }
 ```
@@ -360,7 +385,7 @@ series 等于独立分配的 Task ID，eligible 等于 received。
 ### 4.1 更新失败：正式准备失败与提前预优化失败
 
 同一浮动来源更新下载失败，Before 没有 fallback；After 假定此前已有符合授权的准确旧版，
-本轮明确允许回退。若旧版不存在或不再可用，After 也必须 failed。
+服务明确允许回退。若旧版不存在或不再可用，正式准备仍必须失败。
 
 **Before：**
 
@@ -573,6 +598,9 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
 result、progress、evidence.checks[].snapshot，展示公共快照改动也进入嵌套证据。
 子 Check 是本次组合观察的一次性需求，不自动继承根 Probe 的递归策略或 series；
 其归属通过 invocation 和父观察关系表达。
+结果和 evidence 中的 bindings 是服务生成的准确观察记录，保留现有结果形状，
+不是要求调用方在普通 Probe Request 中再提供一份输入。动态依赖的记录仍然必要，
+而其公开输入能力与恢复时是否传回绑定另议。
 
 **Before：**
 
@@ -1037,10 +1065,6 @@ eligible 锚点错过周期后如何选择未来点，仍留待下一轮讨论�
   "recursive": {
     "periodMs": 60000,
     "anchor": "terminated"
-  },
-  "preparationPolicy": {
-    "leadMs": 10000,
-    "fallback": "previous-usable"
   }
 }
 ```
@@ -1074,10 +1098,6 @@ Coordinator 的旧 recurrence 已在第 2 节展示，不以 `{}` 冒充统一�
   "recursive": {
     "periodMs": 60000,
     "anchor": "eligible"
-  },
-  "preparationPolicy": {
-    "leadMs": 10000,
-    "fallback": "previous-usable"
   }
 }
 ```
@@ -1098,9 +1118,6 @@ series 仍是首个 Task 的 `probe-task-1`。
   },
   "context": {},
   "language": "en",
-  "bindings": {
-    "https://example.test/objective/v1.tgz": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-  },
   "freshness": "started-after-eligible",
   "timeoutMs": 60000,
   "eligibleAt": "2026-10-29T03:21:25.000Z",
@@ -1108,10 +1125,6 @@ series 仍是首个 Task 的 `probe-task-1`。
   "recursive": {
     "periodMs": 60000,
     "anchor": "terminated"
-  },
-  "preparationPolicy": {
-    "leadMs": 10000,
-    "fallback": "none"
   }
 }
 ```
@@ -1346,10 +1359,6 @@ Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/P
     "recursive": {
       "periodMs": 60000,
       "anchor": "eligible"
-    },
-    "preparationPolicy": {
-      "leadMs": 10000,
-      "fallback": "previous-usable"
     }
   },
   "snapshot": {
@@ -1434,13 +1443,17 @@ recovery 字段是新建议，不意味着允许自动恢复任意已经运行�
 
 - 旧 acceptedAt 的命名迁移及 wire 版本；
 - recursive 双 anchor 的最终默认值、terminated 模式无 pending 时如何停止；
-- 预优化提前量默认值及正式 preparing 的具体进展字段；
+- 服务预优化的具体配置字段、限额及正式 preparing 的进展字段；
 - fallback 旧版选择、最大陈旧度及 scope；
 - 同 series 跨模块作用域、公共错误码/状态码及 HTTP/SDK 版本；
 - durable schema、历史游标和运行中 Execution 的崩溃重试策略（暂缓讨论）。
+- 是否需要独立的调用方动态依赖固定能力；若需要可称 dependencyBindings，
+  不以根 Objective 的静态 Checker 绑定作为保留重复输入的理由。
 
 Request ID 为幂等 ID、Task ID 独立、series 默认取首个 Task ID、
 eligible 后进入正式 PREPARING、terminated 包括失败/超时、
 取消 pending 不生后继以及错过周期不补齐，均已确认，不再列为未决项。
+preparation policy 属于服务配置、默认不预取不回退，以及普通 Probe 不重复传根/静态
+Checker bindings，同样已确认；Before 中的旧字段和服务输出的记录不因此删掉。
 
 本次只新增文档示例，不提交生命周期接受事件，也不把这些 JSON 发给现有接口执行。
