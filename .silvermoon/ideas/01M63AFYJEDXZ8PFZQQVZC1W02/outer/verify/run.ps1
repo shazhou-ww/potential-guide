@@ -1,3 +1,4 @@
+#requires -Version 7.5
 param(
   [Parameter(Mandatory = $true)][ValidatePattern('^[a-f0-9]{40}$')][string]$PlanRevision
 )
@@ -34,6 +35,7 @@ $report = [ordered]@{
   planCommit = $planCommit
   acceptedInner = $acceptedInner
   acceptedIdeal = $acceptedIdeal
+  powerShell = $PSVersionTable.PSVersion.ToString()
   operationId = $operation
   consumerRoot = $consumer
   startedAt = [DateTimeOffset]::UtcNow.ToString("o")
@@ -78,7 +80,7 @@ try {
   & node "suite.mjs" $repository $PlanRevision *> "verification.log"
   $suiteCode = $LASTEXITCODE
   if (Test-Path "consumer-result.json") {
-    $report.consumer = Get-Content "consumer-result.json" -Raw | ConvertFrom-Json
+    $report.consumer = Get-Content "consumer-result.json" -Raw | ConvertFrom-Json -DateKind String
   }
   $report.commandExitCode = $suiteCode
   if ($suiteCode -ne 0 -or -not $report.consumer.passed) {

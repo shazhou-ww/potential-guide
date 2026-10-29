@@ -36,6 +36,8 @@ deploymentRevision，再运行该版本的证明；结果保存到本世界的 v
 脚本保存断言结果、子进程退出、Worker 物理退出和端口不可再连接的证明。
 finally 只删除 marker 与本次随机 identity 一致的明确消费者目录，不扫描/清理其他目录，
 不修改全局配置。发现生产缺陷立即保留脱敏失败证据并向父代理报告，不自行改 Inner。
+Windows 引导脚本使用 PowerShell 7.5+ 的 DateKind=String 读取消费者 JSON，保留原始
+规范 UTC 毫秒字符串，不把证据时间反序列化后重新格式化。
 
 ## Acceptance criteria
 
