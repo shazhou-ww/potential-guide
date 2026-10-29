@@ -51,6 +51,9 @@
 - 所有 After snapshot 只用 artifactRef `{kind, url, digest}` 标识实际制品，
   不内嵌完整 manifest/schema。完整内容按准确 digest 单独查询，不能重新解析 latest。
   Before 的完整 artifact 对象保留作对照；执行 runtime/revision 等证据不能由制品查询代替。
+- After snapshot 不再携带完整 evidence、嵌套子 Task 快照或最终 observationProgress。
+  详细证据通过 taskId/executionId/seriesId 查询历史事件；SSE 和历史读取来自同一事实。
+  第 10 节提供完整查询与事件例子，具体路径/游标拼写为草案。
 
 ## Request 实体与 HTTP 传输的对应
 
@@ -492,7 +495,7 @@ freshness 也不意味着可随意共享有副作用的 Agent 执行。新统一
 
 ## 3. 创建 Response：完整初始 Task 快照
 
-所有 After snapshot 均使用同一个 state 判别联合，事件和嵌套子 Task 证据也不例外。
+所有 After snapshot 均使用同一个 state 判别联合，SSE 内的 snapshot 及独立查询的子 Task 也不例外。
 公共字段为 requestId/taskId/seriesId/revision/state、receivedAt/eligibleAt/deadlineAt、
 freshness 和可选 recurrence。历史阶段时间戳只在真实发生时提供。
 
@@ -503,8 +506,8 @@ freshness 和可选 recurrence。历史阶段时间戳只在真实发生时提�
 | blocked | 准确 artifactRef/language、conditions 的求值与依赖治理进展 | 无当前 preparation、父 Execution 或 result |
 | queued | 准确 artifactRef/language；已预约时可带 reservation.executionId | 无 preparation/conditions、实际执行开始时间或 result |
 | running | artifactRef/language、executionId、executionStartedAt，可选 progress | 无 result、preparation、terminatedAt |
-| completed | artifactRef/language、执行关联/时间、result、evidence、terminatedAt | 无活跃 progress/preparation/conditions 或顶层 error |
-| failed | failedFrom、error、terminatedAt；按失败阶段保留真实证据 | 不得返回成功 result，pending 失败不伪造执行关联 |
+| completed | artifactRef/language、执行关联/时间、result、terminatedAt，可选 fallbackUsed 摘要 | 无完整 evidence、活跃 progress/preparation/conditions 或顶层 error |
+| failed | failedFrom、error、terminatedAt；按失败阶段保留实际关联 | 无完整 evidence 或成功 result，pending 失败不伪造执行关联 |
 | cancelled | error 原因、terminatedAt，可选 planningConflict | 无父 Execution、准备进展或 result |
 
 `hostInstance` 不属于公共基底或任何 After 分支。路由如需实例信息应置于外围，
@@ -777,7 +780,8 @@ Check 没有任意内部日志进展，本例不添加空的 progress；执行�
 **After：** 03:20:52Z 预优化找到回退候选，尚未 eligible，因此仍 pending。
 Task 快照只说明当前等待，不包含 prefetch 或 preparing 对象，不用顶层 error
 把优化失败冒充 Task 失败。更新错误由服务诊断/优化事件记录；
-正式准备再做准入决定，最终采用回退的决策证据见 4.2，不能静默吞掉更新错误。
+正式准备再做准入决定，最终回退摘要见 4.2，完整历史决策见第 10 节，
+不能因精简快照而静默吞掉更新错误。
 
 ```json
 {
@@ -797,10 +801,10 @@ Task 快照只说明当前等待，不包含 prefetch 或 preparing 对象，不
 }
 ```
 
-### 4.2 Completed Check：时间、身份与选版证据随最终结果保留
+### 4.2 Completed Check：结果与小摘要保留，完整证据移出
 
-Before 给出完整 manifest、业务 payload 和执行环境；After 用准确 artifactRef 替代
-完整制品，业务结果与实际执行环境证据仍完整展示。
+Before 给出完整 manifest、业务 payload 和执行环境；After 只保留准确 artifactRef、
+业务结果和小摘要，运行环境/选版详情按第 10 节的历史事件查询。
 两侧为各自协议下的合成成功执行；Before 不是 4.1 那个失败 Task 的后续状态。
 runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对象。
 
@@ -859,8 +863,9 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
 
 **After：** Task 的 terminatedAt 与 Execution 完成时间分开。
 checkedAt、transportDigest 和 manifest 从准确制品查询获取，不逐快照重复传输。
-终态没有 preparation/prefetch 活跃进展；仅保留实际准备时间戳及
-evidence.selection 中的准确选择、回退来源和更新错误。
+终态没有 preparation/prefetch 活跃进展或完整 evidence。
+fallbackUsed=true 表示采用了旧版回退，不是普通最新选版成功；
+准确版本在 artifactRef，旧版来源和更新错误在 Task 历史事件，实际 runtime/revision 在 Execution 事件。
 
 ```json
 {
@@ -886,51 +891,28 @@ evidence.selection 中的准确选择、回退来源和更新错误。
     "ok": true,
     "problems": []
   },
-  "evidence": {
-    "runtime": {
-      "type": "node",
-      "version": "24.11.1",
-      "platform": "win32",
-      "architecture": "x64",
-      "adapter": "node-commonjs-v1",
-      "configuration": "{\"cleanupMs\":5000,\"deadlineMs\":30000,\"directories\":64,\"messageBytes\":8388608,\"observers\":64,\"queue\":64,\"records\":256,\"retentionMs\":60000,\"retireAfter\":100,\"workers\":4}"
-    },
-    "revision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-    "selection": {
-      "mode": "fallback",
-      "selected": {
-        "kind": "checker",
-        "url": "https://example.test/checker/latest.tgz",
-        "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-      },
-      "fallbackFromTaskId": "01M60000000000000000000005",
-      "updateError": {
-        "code": "download_failed",
-        "stage": "download",
-        "message": "Artifact download failed."
-      }
-    }
-  },
   "preparationStartedAt": "2026-10-29T03:21:00.001Z",
   "preparationCompletedAt": "2026-10-29T03:21:00.009Z",
   "artifactRef": {
     "kind": "checker",
     "url": "https://example.test/checker/latest.tgz",
     "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-  }
+  },
+  "fallbackUsed": true
 }
 ```
 
-### 4.3 Completed Probe：完整组合结果与嵌套子 Task
+### 4.3 Completed Probe：组合结果与子 Task 历史关联
 
-独立场景：一个 Objective 调用一个 Checker，全部通过。两侧完整展开
-result、观察进展、evidence.checks[].snapshot，展示状态联合也应用于嵌套证据。
-After 的最终观察进展归入 evidence.observationProgress，不再作为当前 progress。
+独立场景：一个 Objective 调用一个 Checker，全部通过。
+Before 展开 result、观察进展及 evidence.checks[].snapshot；
+After 保留本 Task 的业务结果，不再内嵌完整观察进展或子 Task 树。
 子 Check 是本次组合观察的一次性需求，不自动继承根 Probe 的递归策略或 series；
-其归属通过 invocation 和父观察关系表达，嵌套 snapshot 同样只携带 artifactRef。
-结果和 evidence 中的 bindings 是服务生成的准确观察记录，保留现有结果形状，
-不是要求调用方在普通 Probe Request 中再提供一份输入。动态依赖的记录仍然必要，
-而其公开输入能力与恢复时是否传回绑定另议。
+其归属通过历史事件中的 invocation、父观察、childTaskId/childExecutionId 关联，
+调用方按需读取子 Task 和执行记录，不必在每个根快照中再次接收。
+结果中的 bindings 仍是服务生成的准确业务观察记录，不是额外的 evidence 树，
+也不是要求普通 Probe Request 重复输入。动态依赖详情由历史事实承载，
+其公开输入能力与恢复时是否传回绑定另议。
 
 **Before：**
 
@@ -1126,106 +1108,6 @@ After 的最终观察进展归入 evidence.observationProgress，不再作为当
     "observedAt": "2026-10-29T03:20:01.090Z",
     "bindings": {
       "https://example.test/objective/v1.tgz": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-    }
-  },
-  "evidence": {
-    "bindings": {
-      "https://example.test/objective/v1.tgz": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-    },
-    "checks": [
-      {
-        "invocationId": "01M60000000000000000000010",
-        "snapshot": {
-          "taskId": "01M6000000000000000000000C",
-          "requestId": "01M6000000000000000000000B",
-          "seriesId": "01M6000000000000000000000C",
-          "revision": 8,
-          "state": "completed",
-          "receivedAt": "2026-10-29T03:20:00.210Z",
-          "eligibleAt": "2026-10-29T03:20:00.210Z",
-          "deadlineAt": "2026-10-29T03:22:00.210Z",
-          "terminatedAt": "2026-10-29T03:20:01.010Z",
-          "freshness": "started-after-eligible",
-          "language": "en",
-          "executionId": "01M6000000000000000000000A",
-          "executionStartedAt": "2026-10-29T03:20:00.300Z",
-          "executionCompletedAt": "2026-10-29T03:20:01.000Z",
-          "result": {
-            "ok": true,
-            "problems": []
-          },
-          "evidence": {
-            "runtime": {
-              "type": "node",
-              "version": "24.11.1",
-              "platform": "win32",
-              "architecture": "x64",
-              "adapter": "node-commonjs-v1",
-              "configuration": "{\"cleanupMs\":5000,\"deadlineMs\":30000,\"directories\":64,\"messageBytes\":8388608,\"observers\":64,\"queue\":64,\"records\":256,\"retentionMs\":60000,\"retireAfter\":100,\"workers\":4}"
-            },
-            "revision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-            "selection": {
-              "mode": "resolved",
-              "selected": {
-                "kind": "checker",
-                "url": "https://example.test/checker/v1.tgz",
-                "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-              }
-            }
-          },
-          "preparationStartedAt": "2026-10-29T03:20:00.220Z",
-          "preparationCompletedAt": "2026-10-29T03:20:00.250Z",
-          "artifactRef": {
-            "kind": "checker",
-            "url": "https://example.test/checker/v1.tgz",
-            "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-          }
-        }
-      }
-    ],
-    "selection": {
-      "mode": "resolved",
-      "selected": {
-        "kind": "objective",
-        "url": "https://example.test/objective/v1.tgz",
-        "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-      }
-    },
-    "observationProgress": {
-      "observations": [
-        {
-          "id": "01M60000000000000000000015",
-          "objective": {
-            "kind": "objective",
-            "url": "https://example.test/objective/v1.tgz",
-            "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-          },
-          "currentLevel": "ready",
-          "attainedLevel": "ready",
-          "levels": [
-            {
-              "id": "ready",
-              "state": "passed"
-            }
-          ]
-        }
-      ],
-      "invocations": [
-        {
-          "id": "01M60000000000000000000010",
-          "observationId": "01M60000000000000000000015",
-          "objective": {
-            "kind": "objective",
-            "url": "https://example.test/objective/v1.tgz",
-            "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-          },
-          "level": "ready",
-          "checker": "pass",
-          "taskId": "01M6000000000000000000000C",
-          "executionId": "01M6000000000000000000000A",
-          "state": "completed"
-        }
-      ]
     }
   },
   "preparationStartedAt": "2026-10-29T03:20:00.010Z",
@@ -1606,8 +1488,10 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
 }
 ```
 
-相同事件 envelope 可承载准备更新、fallback、终态与恢复快照。
-单轮 revision 不能用作整个 series 的全局游标；系列保留/分页设计仍需独立确定。
+本节 task.updated 是当前快照投影通知，不是保存全部证据的唯一记录格式。
+准备更新、fallback、执行和关联事实通过第 10 节的结构化历史事件追溯；
+实时通知必须与这些事实同源，不依赖客户端恰好收全 SSE。
+单轮 revision 不能用作整个 series 的全局游标；历史采用独立稳定游标。
 
 ## 8. 持久记录与恢复 Response
 
@@ -1982,6 +1866,209 @@ Coordinator 根据服务治理策略决定是否创建 Regulation；目标可以
 条件证据有效期、重查频率、后继条件继承和未完成轮次积压限额仍须收敛；
 不能用唯一 pending 约束代替整个系列的容量管理。
 
+## 10. 历史事件查询：evidence 不再内嵌 snapshot
+
+**Before：** 4.2/4.3 的完整旧快照携带 evidence（含 runtime、worker revision、
+子 Task 快照和观察进展等），没有对应的统一历史分页查询 API。
+现有 SSE 主要输出 task.updated，不把它的实时连接冒充历史查询。
+
+**After：** 4.2/4.3 的新快照已移除 evidence，以已有身份查询结构化事实。
+以下 `/event-history`、事件类型及分页字段是完整示例用的草案，不是现有可调用接口，
+不新增 evidenceId 或独立 `/evidence` 数据模型。cursor 为不透明分页位置，
+不是 ULID 业务身份、Task revision 或客户端时间；不得由客户端解析或据此授予权限。
+
+### 10.1 Task 历史：选版和 Execution 关联
+
+查询第 4.2 节同一个 Task。本例从服务返回的既有位置继续，展示选版后的两条事实，
+不是声称完整历史只有这两条：
+
+```http
+GET /event-history?taskId=01M60000000000000000000006&after=task6-before-selection&limit=2 HTTP/1.1
+Host: 127.0.0.1:8080
+Accept: application/json
+```
+
+完整分页响应：
+
+```json
+{
+  "events": [
+    {
+      "cursor": "task6-selection",
+      "type": "task.artifact-selected",
+      "occurredAt": "2026-10-29T03:21:00.009Z",
+      "requestId": "01M60000000000000000000002",
+      "taskId": "01M60000000000000000000006",
+      "seriesId": "01M6000000000000000000001D",
+      "data": {
+        "artifactRef": {
+          "kind": "checker",
+          "url": "https://example.test/checker/latest.tgz",
+          "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "mode": "fallback",
+        "fallbackFromTaskId": "01M60000000000000000000005",
+        "updateError": {
+          "code": "download_failed",
+          "stage": "download",
+          "message": "Artifact download failed."
+        }
+      }
+    },
+    {
+      "cursor": "task6-execution-linked",
+      "type": "task.execution-linked",
+      "occurredAt": "2026-10-29T03:21:00.009Z",
+      "requestId": "01M60000000000000000000002",
+      "taskId": "01M60000000000000000000006",
+      "seriesId": "01M6000000000000000000001D",
+      "data": {
+        "executionId": "01M60000000000000000000001"
+      }
+    }
+  ],
+  "nextCursor": "task6-execution-linked"
+}
+```
+
+下一页使用原过滤条件和 nextCursor，不拿 Task revision=8 当作位置：
+
+```http
+GET /event-history?taskId=01M60000000000000000000006&after=task6-execution-linked&limit=2 HTTP/1.1
+Host: 127.0.0.1:8080
+Accept: application/json
+```
+
+下例表示当前查询边界内的最后一页。真实实现可能还有其他阶段事件，
+事件分类、快照水位与分页边界需要在持久化设计中固定。
+
+```json
+{
+  "events": [
+    {
+      "cursor": "task6-terminated",
+      "type": "task.terminated",
+      "occurredAt": "2026-10-29T03:21:04.010Z",
+      "requestId": "01M60000000000000000000002",
+      "taskId": "01M60000000000000000000006",
+      "seriesId": "01M6000000000000000000001D",
+      "data": {
+        "state": "completed",
+        "taskRevision": 8,
+        "result": {
+          "ok": true,
+          "problems": []
+        }
+      }
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+nextCursor=null 只表示此查询边界没有下一页，不承诺未来不再产生事件；
+历史接实时需要独立的交接水位，不能用 null 自动推导为可以无缝订阅。
+
+### 10.2 Execution 历史：实际执行证据只记录一次
+
+使用上一页关联到的 executionId 查询。该执行可以服务多个 Task，
+事件不复制各 Task 的完整输入，也不公开全部 owner 列表：
+
+```http
+GET /event-history?executionId=01M60000000000000000000001&limit=2 HTTP/1.1
+Host: 127.0.0.1:8080
+Accept: application/json
+```
+
+完整两条执行事实如下；workerRevision 对应原 evidence.revision，
+不是 artifactRef 的内容 digest，也不是 Task 的数字 revision。
+示例刻意把 actual runtime 和 workerRevision 留在事件中，证明精简 snapshot 不等于丢弃证据。
+
+```json
+{
+  "events": [
+    {
+      "cursor": "execution1-started",
+      "type": "execution.started",
+      "occurredAt": "2026-10-29T03:21:00.010Z",
+      "executionId": "01M60000000000000000000001",
+      "data": {
+        "artifactRef": {
+          "kind": "checker",
+          "url": "https://example.test/checker/latest.tgz",
+          "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "runtime": {
+          "type": "node",
+          "version": "24.11.1",
+          "platform": "win32",
+          "architecture": "x64",
+          "adapter": "node-commonjs-v1",
+          "configuration": "{\"cleanupMs\":5000,\"deadlineMs\":30000,\"directories\":64,\"messageBytes\":8388608,\"observers\":64,\"queue\":64,\"records\":256,\"retentionMs\":60000,\"retireAfter\":100,\"workers\":4}"
+        },
+        "workerRevision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "cursor": "execution1-completed",
+      "type": "execution.completed",
+      "occurredAt": "2026-10-29T03:21:04.000Z",
+      "executionId": "01M60000000000000000000001",
+      "data": {
+        "result": {
+          "ok": true,
+          "problems": []
+        }
+      }
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+Task.terminated 中的结果是需求完成投影，Execution.completed 是实际执行事实，
+两者须一致但时间不必相同；不能由每个共享 Task 独立编造一份执行结果记录。
+
+### 10.3 子 Task 与 series 查询：关联，不递归展开整树
+
+第 4.3 的 Probe 原先内嵌一个子 Task snapshot；After 可通过下面的完整关联事件追溯。
+这是 Observation Execution 拥有的调用关系，执行事实使用 executionId 归属，
+共享该 Probe 执行的多个父 Task 沿自己的 execution-linked 事件读取同一份记录。
+
+```json
+{
+  "cursor": "probe-execution17-child-linked",
+  "type": "execution.child-task-linked",
+  "occurredAt": "2026-10-29T03:20:00.210Z",
+  "executionId": "01M60000000000000000000017",
+  "data": {
+    "observationId": "01M60000000000000000000015",
+    "invocationId": "01M60000000000000000000010",
+    "checker": "pass",
+    "levelId": "ready",
+    "childTaskId": "01M6000000000000000000000C"
+  }
+}
+```
+
+查询 childTaskId 的 Task 历史可找到它与 `01M6000000000000000000000A` 的执行关联，
+再读该 Execution 的实际 runtime/result；不用把子快照复制进父 snapshot。
+observation/level/invocation 进展同样记录为结构化事实，不维护第二份完整 evidence 树。
+
+系列历史读取使用同一分页模型，过滤将来加入的各轮 Task，具体查询边界仍以服务游标为准：
+
+```http
+GET /event-history?seriesId=01M6000000000000000000001D&limit=20 HTTP/1.1
+Host: 127.0.0.1:8080
+Accept: application/json
+```
+
+本例每次只选一个过滤维度；多维过滤的交并规则未定，不在示例里隐式猜测。
+Task/Series 历史返回自己的事实和执行引用，不默认递归展开所有共享执行或其他 owner。
+所有查询均需鉴权（示例省略凭据）；关联与游标不能绕过来源/作用域隔离。
+历史缺失、清理或游标过期必须明确返回不可用，不能把空列表冒充没有发生过工作。
+保留期限、SSE 游标续读和具体存储事务规则仍留到持久化讨论。
+
 ## 评审时不要由示例推定的事项
 
 这些完整对象用于看清字段之间的关系，不是绕过待决项的定稿：
@@ -1991,7 +2078,8 @@ Coordinator 根据服务治理策略决定是否创建 Regulation；目标可以
 - 服务预优化的具体配置字段、限额、独立优化事件及 preparation 子步骤形状；
 - fallback 旧版选择、最大陈旧度及 scope；
 - 同 series 跨模块作用域、公共错误码/状态码及新 HTTP/SDK 定义；
-- durable schema、历史游标和运行中 Execution 的崩溃重试策略（暂缓讨论）。
+- 历史事件 API 具体路径、游标/水位协议、保留期限、SSE 续读，
+  以及 durable schema 和运行中 Execution 的崩溃重试策略（暂缓细节讨论）。
 - 是否需要独立的调用方动态依赖固定能力；若需要可称 dependencyBindings，
   不以根 Objective 的静态 Checker 绑定作为保留重复输入的理由。
 - 条件 freshness/有效期、首次与重查时机、后继 prerequisites 继承、

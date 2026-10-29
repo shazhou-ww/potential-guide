@@ -86,6 +86,7 @@ series 默认复用首个 Task ID 是明确例外。ULID 时间部分不用于 f
 | 快照类型 | ServiceSnapshot 由 state 加大量可选字段组成。 | 以 state 为判别字段，公共基底加各状态独立数据结构；HTTP、SDK 与事件 snapshot 使用同一联合类型。 |
 | Host 实例 | Task 快照携带 hostInstance，SDK 以变化判断重启。 | Task 公共契约不携带 hostInstance；路由需要时在外围 envelope 表达，内部实例世代/所有权不暴露为 Task 字段。 |
 | 制品数据 | snapshot 内重复完整 artifact/manifest，子 Task 和 SSE 更新也携带。 | 只保留实际选择的 artifactRef（kind、url、digest）；完整定义按准确 digest 单独查询。 |
+| 完整证据 | snapshot.evidence 包含运行环境、子 Task 快照和观察过程，与进展事件重复。 | 从 snapshot 移除完整 evidence；通过历史事件 API 查询结构化事实，不维护第二套独立证据模型。 |
 
 **已确认：** 用户取消的是被保留的 pending Task；它不能再触发后继，递归链由此停止。
 取消冗余 pending Task 不影响原计划。已经运行的 Task 不被该操作取消，
@@ -143,15 +144,15 @@ receivedAt、eligibleAt、deadlineAt，以及本任务的 freshness/可选 recur
 | blocked | 准确 artifactRef/语言及 conditions 求值、依赖治理与重查进展 | 当前 preparation、父 Execution、最终 result |
 | queued | 准确 artifactRef/语言；已预约时可含 reservation.executionId | 当前 preparation/conditions、业务 result、虚构的 executionStartedAt |
 | running | 准确 artifactRef/语言、executionId、executionStartedAt；按需提供业务 progress | 当前 preparation/conditions、最终 result、终结时间 |
-| completed | artifactRef、实际执行关联与时间、result、evidence、terminatedAt | 实时 preparation/conditions/progress、顶层 error |
-| failed | failedFrom、error、terminatedAt；按失败前阶段保留真实证据 | success result、与失败阶段不相容的执行关联或活跃进展 |
+| completed | artifactRef、实际执行关联与时间、result、terminatedAt；必要时有小量决策摘要 | 实时 preparation/conditions/progress、完整 evidence、顶层 error |
+| failed | failedFrom、error、terminatedAt；按失败前阶段保留实际关联 | success result、完整 evidence、与失败阶段不相容的执行关联或活跃进展 |
 | cancelled | pending 取消原因和 terminatedAt；按需给出重复规划冲突信息 | 正式 preparation、父 Execution、result |
 
 字段布局是示例约定，类型边界已确认：queued 无排队细节时无需额外 reason，
 只有已预约才带 reservation.executionId；failedFrom 为 pending/preparing/blocked/queued/running，
 在 pending 失败就不能出现父 Execution，在 running 失败则保留真实执行关联。
 Check 的 running 可以没有自定义 progress；Objective 的最终观察进展如需保留，
-放入 evidence 的最终观察记录，不继续伪装成活跃 progress。
+作为结构化历史事件按需查询，不塞进终态 evidence 或伪装成活跃 progress。
 
 preparation 专指 artifacts 准备，fetch 只是其子步骤；prerequisites 等待归 blocked。
 prefetch 只表示提前执行 fetch 的优化，
@@ -161,9 +162,10 @@ prefetch 只表示提前执行 fetch 的优化，
 但 preparation.startedAt 仍不得早于 eligible；它可以早于 prerequisites 满足时刻。
 fetch 子步骤用其实际时间，不伪造为正式阶段开始时间。
 
-终态仅保留实际阶段时间戳、业务结果及必要决策证据。
-fallback 的所选准确版本、采用原因与更新失败必须保留在 evidence.selection 等决策证据中，
-不能为了删除旧阶段进展而隐去回退错误。每次下载变化属于详细事件，不整份复制到 completed。
+终态仅保留实际阶段时间戳、业务结果及必要的小量决策摘要。
+fallback 可以用 fallbackUsed 摘要让调用方立即知道发生了回退，
+所选版本仍在 artifactRef；完整采用原因、旧版来源和更新错误进入历史事件，
+不能为了删除 evidence 而隐去回退错误。详细变化不整份复制到 completed。
 若 Task 最后记录为 pending，重新观察时已过 deadline，直接记录 failed，
 failedFrom=pending 只说明实际从未进入后续阶段，不表示过期后还处于 pending；
 不添加虚构的 preparation/execution 时间戳。
@@ -183,8 +185,9 @@ blocked/queued/running/completed 等已就绪分支必须带准确引用。
 不能重新解析浮动 URL 的 latest 来替代 Task 的准确版本。准确内容已不可查询时
 应明确报告不可用，不回退返回其他版本。
 实际 runtime、worker revision、依赖执行和 fallback 决策仍属于执行证据，
-不能通过重新查询 Artifact 定义替代。根 snapshot、事件内 snapshot 及嵌套子 Task
-统一轻量化；本次不因此重设计整个结果或证据协议。
+不能通过重新查询 Artifact 定义替代。它们由结构化历史事件提供，
+父 Task 不再嵌入子 Task 快照；调用方沿 taskId/executionId 的关联查询。
+snapshot、SSE 内的 snapshot 及独立查询到的子 Task 都遵守同一轻量状态联合。
 
 ### 2.2 Task prerequisites：以 Check 表达动态条件
 
@@ -396,12 +399,45 @@ Before 使用 started-after-request/completed-after-request 字面值；
 | 身份 | task.updated 关联 Task 与 Execution，缺少独立系列。 | 请求、快照、日志及事件携带 series，必要时保留前驱/轮次。 |
 | 进展 | level、invocation、依赖关系及子 Task/Execution。 | 按 state 投影等待、条件、preparation、执行与终态证据，不保留跨状态混搭的进展对象。 |
 | 重连 | 当前有界快照，不重建 Task、不重放全部中间事件。 | 动态系列快照与后续轮次连续可观察；不能把增加过滤宣称为无限历史回放。 |
+| 证据查询 | Task 快照内嵌完整 evidence，没有统一可分页的证据事件读取面。 | 增加按 taskId/executionId/seriesId 过滤的历史事件查询和稳定游标分页，证据来自事件事实而非独立 evidence 数据模型。 |
 
 series 订阅不能只在订阅时展开为现存 task IDs；首次快照与后续创建之间不能漏事件。
 授权仍按拥有者/作用域校验，不能因猜到 series ID 跨权限读日志。
 同一 Execution 可服务多个 series，事件投影不得泄露其他系列的 subject/context。
 单轮 result 仍返回该 Task 的结果；系列持续观察不应伪装成一个永不结束的单轮 result。
-过滤组合、保留游标、历史分页和容量限制在实施契约明确。
+### 7.1 Snapshot、SSE、历史查询：同一事实的三种读取方式
+
+- snapshot 是当前权威状态投影，包含实际结果和有界当前进展，不是过程历史。
+- SSE 是实时状态/进展通知，可输出轻量 snapshot 或结构化事实；
+  快照投影通知与事实事件格式可不同，但不能分别维护互相矛盾的真相。
+- 历史事件 API 按已有 taskId、executionId、seriesId 过滤，以稳定游标分页。
+  不再新增专门的 `/evidence` 模型或 evidenceId；汇总如有需要也从事件投影。
+
+历史必须保存足以追溯的结构化事实，而非只存“正在运行”文字通知：
+准确制品选择、fallback 和更新失败、实际 runtime/worker revision、Execution 开始/结束、
+结果、Task 与 Execution 关联、子 Task/依赖关系和观察进展。
+受理、需求取消、制品选择及关联属于 Task 事实；实际运行环境、worker revision 与执行结果
+属于 Execution 事实。共享执行只记录一份，通过 executionId 关联，
+不因多个 Task/series 使用它而复制多份执行历史。
+
+未订阅或错过 SSE 的调用方仍能查询历史。SSE 断流或中间快照合并不能被当成
+“历史事实没有发生”；快照轻量化也不能删除原本必须保存的执行证据。
+历史查询要与实时流明确区分，不把一次历史 GET 误解释为无限 SSE 连接。
+
+### 7.2 游标、关联与权限
+
+历史事件有独立的稳定位置/游标，不使用 Task revision、ULID 时间部分或客户端时间代替。
+游标是分页位置，不是新业务 ID；Task revision 仍只对自己的状态投影排序。
+分页必须具有明确边界，避免新事件写入时重复、遗漏或无限追赶；
+历史接实时的交接点需可表达，具体快照水位、保留期及 SSE 游标续读协议在持久化讨论中确定。
+
+taskId 查询获取该 Task 的事实及相关 execution/child 引用；
+executionId 查询读取授权的执行事实；seriesId 查询追踪系列内各 Task 的事实。
+过滤组合、是否提供一跳关联展开仍需明确，默认不递归复制整个执行树。
+共享 Execution 的可见性必须依据关联授权，不能泄露其他 owner 的 subject/context、
+来源能力或全部 Task 成员。分页游标同样绑定查询与授权范围，不作为访问凭据。
+已清理、过期游标、找不到对象或无权限必须明确响应，不能返回空历史冒充“从未发生”；
+具体错误码、保留期限及存储事务机制留待后续讨论。
 
 ## 当前评审焦点
 
@@ -420,5 +456,7 @@ eligible 后才正式 PREPARING、terminated 包含失败/超时续作，以及�
 5. 是否扩展 preparing/blocked/queued 的取消权限；当前仍为 pending-only。
 
 中断 Execution 与持久化恢复细节待上述问题解决后再讨论。
+历史事件 API 的具体路径/游标协议、保留期限及 SSE 续读也在该阶段收敛；
+当前已确认需要独立历史读取能力，不能因未定持久化细节而退回只靠 SSE 保存证据。
 
 这些是显式待决项，不从此前的聊天建议、旧测试成功或 Agent 勾选推断为已接受。

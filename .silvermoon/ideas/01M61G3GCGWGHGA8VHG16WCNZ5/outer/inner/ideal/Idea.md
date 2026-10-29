@@ -23,7 +23,7 @@ Regulation 的统一资格时间、递归系列与未完成任务恢复，持续
 
 - 两类制品、目录文档与准确摘要保持可验证；准备选版/回退显式固定版本并保留失败证据，不掩盖业务不通过。
 - 时间、制品、前置 Check、执行资源按优先级合取，分别投影 pending/preparing/blocked/queued/running；等待不重置 timeout，治理后重查，系列唯一 pending 且失败/超时续作。
-- HTTP/SDK/事件采用按 state 区分的轻量快照，无 hostInstance 或完整 Artifact，准确内容按 digest 查询；审计/恢复身份一致，重启不重置期限、不重复规划、不悄悄换版。
+- HTTP/SDK/事件采用按 state 区分的轻量快照，无 hostInstance、完整 Artifact 或 evidence；制品按 digest 查，证据按稳定游标查历史事件；审计/恢复身份一致且不悄悄换版。
 
 ## 当前准备步骤
 

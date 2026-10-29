@@ -33,9 +33,11 @@ Regulation 调用方改用与 Probe 相同的 Objective URL/digest 引用，由�
 实体必含 requestId，HTTP 从 header 还原并先于 body 解析识别；生成型身份采用 ULID。
 提供 series 动态事件和可恢复身份，不以旧协议兼容要求约束新结构。
 Task snapshot 在 HTTP/SDK/事件中统一为 state 判别联合，移除公共 hostInstance；
-preparation 仅用于准备阶段，终态保留必要时间戳和决策证据，不携带活跃阶段进展。
-根及嵌套 snapshot 都仅携带准确 artifactRef，完整 Artifact 按 digest 单独查询，
+preparation 仅用于准备阶段，终态保留必要时间戳、结果和小摘要，不携带完整 evidence。
+根及独立查询的子 Task snapshot 都仅携带准确 artifactRef，完整 Artifact 按 digest 单独查询，
 不得用 latest 替代原内容或用 manifest 代替实际执行证据。
+结构化历史事件作为证据事实源，增加 taskId/executionId/seriesId 过滤和游标分页读取；
+与 SSE/快照同源，共享 Execution 证据不按 Task 重复存储或展开。
 
 ## Acceptance criteria
 
@@ -59,4 +61,6 @@ Router、SDK、Pilot/regulator 与 Coordinator 的 series 订阅和持久恢复�
 状态联合的 schema/运行校验证明 completed 必有结果、pending 不带父 Execution，
 各失败阶段不虚构未发生的步骤；准备前的 fetch 优化不伪造正式准备时间。
 覆盖八种 state 分支、初始已 eligible 不返回 pending、元数据从快照移除后仍能
-通过准确引用查询原制品；事件与嵌套证据不重复携带 manifest。
+通过准确引用查询原制品；事件中的 snapshot 不携带 manifest 或完整 evidence。
+验证未订阅 SSE 也可查询准确 runtime、选版错误与子任务关联，
+并覆盖独立历史游标、分页边界及共享执行的授权隔离。
