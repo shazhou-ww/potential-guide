@@ -64,6 +64,8 @@
 - After snapshot 不再携带完整 evidence、嵌套子 Task 快照或最终 observationProgress。
   详细证据通过 taskId/executionId/seriesId 查询历史事件；SSE 和历史读取来自同一事实。
   第 10 节提供完整查询与事件例子，具体路径/游标拼写为草案。
+- 成功选版用 preparation.resolution 表达 up-to-date/fallback/updated，替代早期草案的
+  fallbackUsed；它与准确 artifactRef 同时确定并持续继承，未成功选定时不填写。
 - After snapshot 不嵌入 request，不携带 freshness/recurrence 等请求策略。
   Request 实体和 HTTP body 中仍保留这些配置；通过 snapshot.requestId 独立授权查询原始请求，
   请求体解析失败时也应能按合法 requestId 查询审计错误，不伪造不存在的 Task。
@@ -682,7 +684,7 @@ series 等于独立分配的 Task ID，eligible 等于 received。
 After 统一叫 queued，示例尚无执行 ID，因此不添加排队 reason 或空预约对象。
 已预约而尚未开始时仍为 queued，可带 reservation.executionId，
 不能仅因获得预约就报告 running。
-提前获取、校验和回退已结束，快照保留真实准备时间、准确选择和已成立的 fallbackUsed；
+提前获取、校验和回退已结束，快照保留真实准备时间、准确选择和已成立的 resolution；
 完整决定证据仍保存在事件中，不能把这个已知回退事实拖到 completed 才输出。
 
 **Before：**
@@ -738,7 +740,7 @@ After 统一叫 queued，示例尚无执行 ID，因此不添加排队 reason �
       "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
     "language": "en",
-    "fallbackUsed": true
+    "resolution": "fallback"
   },
   "receivedAt": "2026-10-29T03:20:00.000Z",
   "eligibleAt": "2026-10-29T03:21:00.000Z",
@@ -788,7 +790,7 @@ After 统一叫 queued，示例尚无执行 ID，因此不添加排队 reason �
 
 **After：** 准备已结束，保留其时间戳，不复制 preparation 对象。
 当前详细进展由事件查询，不添加 progress 容器；执行结果尚不存在。
-artifactRef、language、fallbackUsed 继续继承排队阶段，新增实际执行身份和开始时间。
+artifactRef、language、resolution 继续继承排队阶段，新增实际执行身份和开始时间。
 
 ```json
 {
@@ -805,7 +807,7 @@ artifactRef、language、fallbackUsed 继续继承排队阶段，新增实际执
       "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
     "language": "en",
-    "fallbackUsed": true
+    "resolution": "fallback"
   },
   "execution": {
     "executionId": "01M60000000000000000000001",
@@ -819,6 +821,18 @@ artifactRef、language、fallbackUsed 继续继承排队阶段，新增实际执
 ```
 
 ## 4. 准备/回退及完成 Response
+
+成功版本仲裁统一使用 preparation.resolution，三个完整快照场景分别是：
+
+| 方式 | 场景 | 必须保留的含义 |
+|---|---|---|
+| up-to-date | 9.2 的已就绪父 Task | 已确认既有内容满足指定版本，不只是“缓存存在” |
+| fallback | 4.2 的 Completed Check | 更新失败后按策略使用既有可用版本，错误详情保留在历史事件 |
+| updated | 4.3 的 Completed Probe | 本次获取并验证的版本，不保证相对上次 digest 变化 |
+
+未成功选定版本时不出现 resolution，原子状态和 timestamp 也不能用于猜测它。
+Request 明确固定 digest 时不能 fallback 换成另一个版本；业务不通过不触发重新选版。
+早期草案的 fallbackUsed 已删除，不与 resolution 并存。
 
 ### 4.1 更新失败：正式准备失败与提前预优化失败
 
@@ -929,7 +943,7 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
 **After：** Task 的 terminatedAt 与 Execution 完成时间分开。
 checkedAt、transportDigest 和 manifest 从准确制品查询获取，不逐快照重复传输。
 终态没有 preparation/prefetch 活跃进展或完整 evidence。
-preparation.fallbackUsed=true 表示采用旧版回退；准确版本在 preparation.artifactRef，
+preparation.resolution=fallback 表示采用旧版回退；准确版本在 preparation.artifactRef，
 旧版来源和更新错误在 Task 历史事件，实际 runtime/revision 在 Execution 事件。
 
 ```json
@@ -951,7 +965,7 @@ preparation.fallbackUsed=true 表示采用旧版回退；准确版本在 prepara
       "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
     "language": "en",
-    "fallbackUsed": true
+    "resolution": "fallback"
   },
   "execution": {
     "executionId": "01M60000000000000000000001",
@@ -1141,6 +1155,8 @@ observedAt 是实际观察时间，不等于 Execution 完成或 Task 终结时�
 比 Execution.completedAt 晚 10ms，下一轮锚定前者；子 series 默认等于子 Task ID。
 该例的 child 在父执行开始之后才受理，其 eligible 默认等于自身 received。
 这里展示两个逻辑服务同机装配的时间，不用客户端时间跨远端服务仲裁。
+本例 Objective 从本次获取并验证的内容选定，因此 preparation.resolution=updated；
+并非仅因 completed 就自动归类 updated，也不宣称它比之前的 digest 更新。
 
 ```json
 {
@@ -1163,7 +1179,8 @@ observedAt 是实际观察时间，不等于 Execution 完成或 Task 终结时�
       "url": "https://example.test/objective/v1.tgz",
       "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     },
-    "language": "en"
+    "language": "en",
+    "resolution": "updated"
   },
   "execution": {
     "executionId": "01M60000000000000000000017",
@@ -1708,7 +1725,9 @@ prerequisites 是 Check 声明数组，
 
 **After：** 服务在 04:20:02Z 记录条件求值。时间和 artifacts 均已就绪，
 但条件 0 未通过，因此父 Regulation Task 为 blocked；条件 1 通过不能使其推进。
-正式准备已经完成，只保留其时间戳；没有父 Execution 或当前 preparation 对象。
+正式准备已经完成，保留其过程事实；没有父 Execution 或当前进展对象。
+本例准确 Objective 已在授权缓存中，并已确认满足指定 digest，
+所以 preparation.resolution=up-to-date；不是未经确认就把缓存当作最新。
 父 snapshot 不再重复未通过条件列表或 progress；该次条件求值的历史事件
 记录 index、子 taskId/executionId 和各结果，关联查询可以解释为什么 blocked。
 被采用的通过事实才进入 readiness，不能把子执行证据伪装成父业务结果。
@@ -1727,7 +1746,8 @@ prerequisites 是 Check 声明数组，
       "url": "https://example.test/objective/app-v1.tgz",
       "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     },
-    "language": "en"
+    "language": "en",
+    "resolution": "up-to-date"
   },
   "receivedAt": "2026-10-29T04:19:30.000Z",
   "eligibleAt": "2026-10-29T04:20:00.000Z",
@@ -1851,7 +1871,8 @@ Check 自身 completed 不等于其父 Regulation 的条件已通过；不能让
       "url": "https://example.test/objective/app-v1.tgz",
       "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     },
-    "language": "en"
+    "language": "en",
+    "resolution": "up-to-date"
   },
   "readiness": {
     "satisfiedAt": "2026-10-29T04:20:10.000Z"
@@ -1907,13 +1928,13 @@ Accept: application/json
           "url": "https://example.test/checker/latest.tgz",
           "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         },
-        "mode": "fallback",
         "fallbackFromTaskId": "01M60000000000000000000005",
         "updateError": {
           "code": "download_failed",
           "stage": "download",
           "message": "Artifact download failed."
-        }
+        },
+        "resolution": "fallback"
       }
     },
     {
@@ -2123,7 +2144,7 @@ timestamp/state 是读取元数据，不参加不变事实检查
 
 | 场景 | 顺序 | 继承检查 |
 |---|---|---|
-| 主 Check | 3.1 pending → 4.1 pending → 4.4 preparing → 3.3 queued → 3.4 running → 4.2 completed | 受理身份/时间固定；准备开始时间路径固定；正式选择后的 artifactRef/language/fallbackUsed 一直保留 |
+| 主 Check | 3.1 pending → 4.1 pending → 4.4 preparing → 3.3 queued → 3.4 running → 4.2 completed | 受理身份/时间固定；准备开始时间路径固定；正式选择后的 artifactRef/language/resolution 一直保留 |
 | Probe | 3.2 preparing → 4.3 completed | preparation.startedAt 始终为 03:20:00.010Z；允许未展示中间读取，不丢已知事实 |
 | Regulation | 9.2 blocked → 9.5 queued | 保留 preparation 事实，增加 readiness.satisfiedAt，不在快照包含条件进展 |
 | 后继取消 | 7 的 pending → 6.1 cancelled | 受理事实不变，增加取消事实；不伪造准备或执行 |
@@ -2133,7 +2154,7 @@ Task 级事实包括身份、顶层整体时间约束、preparation 中的正式
 execution 与 termination；没有发生的事实保持缺失。
 各次 fetch 尝试时间、条件 evaluatedAt 和临时预约目标不是 Task 的固定阶段事实，
 详细变化通过事件查询，不在 snapshot 引入同义的 progress 或过程 status 对象。
-已确定回退不能从 true 变 false；正式开始时间不能在切换字段路径时丢掉或改值。
+已确定的 resolution 不能改成另一方式或丢失；正式开始时间不能在切换字段路径时丢掉或改值。
 
 ### 11.2 独立超时场景：running → timed_out 仍继承已知事实
 
@@ -2155,7 +2176,7 @@ execution 与 termination；没有发生的事实保持缺失。
       "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
     "language": "en",
-    "fallbackUsed": true
+    "resolution": "fallback"
   },
   "execution": {
     "executionId": "01M60000000000000000000052",
@@ -2187,7 +2208,7 @@ execution 与 termination；没有发生的事实保持缺失。
       "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
     "language": "en",
-    "fallbackUsed": true
+    "resolution": "fallback"
   },
   "execution": {
     "executionId": "01M60000000000000000000052",
@@ -2214,7 +2235,7 @@ execution 与 termination；没有发生的事实保持缺失。
 - queued → running 时删除 preparation.startedAt 或正式 artifactRef。
 - preparing → queued 时将同一开始事实从 preparation.startedAt 改到别的路径。
 - 后继改写已有 receivedAt/eligibleAt/deadlineAt 或 preparation.startedAt。
-- running → execution_failed/timed_out 时丢失 execution.executionId、preparation.language 或 fallbackUsed。
+- running → execution_failed/timed_out 时丢失 execution.executionId、preparation.language 或 resolution。
 - 任一 After snapshot 混入 revision、progress 或过程下的当前 status/reason；
   preparation 事实对象本身必须保留，不能误删。
 

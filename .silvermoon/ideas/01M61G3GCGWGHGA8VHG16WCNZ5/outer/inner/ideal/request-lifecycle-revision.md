@@ -166,15 +166,15 @@ Snapshot 只包含按解锁过程组织的累积事实及整体 state/技术 tim
 |---|---|---|
 | 受理事实与有效时间约束 | requestId、taskId、seriesId、receivedAt、eligibleAt、deadlineAt | 受理后继承，不重新默认或重置；请求策略另查 Request |
 | 已成立的过程事实 | preparation.startedAt/completedAt、readiness.satisfiedAt（实际有条件求值时） | 真实发生时增加，之后原名原值保留 |
-| 已确认的选择/执行事实 | preparation.artifactRef/language/fallbackUsed、allocation.boundAt、execution.executionId/startedAt/completedAt | 一经正式确认就保留，不等到 completed 才重新出现 |
+| 已确认的选择/执行事实 | preparation.artifactRef/language/resolution、allocation.boundAt、execution.executionId/startedAt/completedAt | 一经正式确认就保留，不等到 completed 才重新出现 |
 | 终结事实 | termination.terminatedAt/error/lastState/取消诊断、result | 随终结成立，终态不反转且不改写结果 |
 | 详细过程变化 | 准备步骤、条件求值、临时预约或业务进展 | 在 SSE/历史事件读取，不增加 snapshot.progress 或分散的同义状态容器 |
 | 投影元数据 | state、timestamp | 根据一致事实视图与服务端时间生成；不是固定事实，不强制递增 revision 或持久化写入 |
 
 准备过程第一次开始即记录 preparation.startedAt，后续始终使用同一路径；
 它不是进入 preparing 状态的时间。preparation 是事实对象，不随 state 消失。
-正式确定回退时记录 preparation.fallbackUsed=true，后续各状态必须继承；
-未确定时不提前填 false，避免随后把“已知事实”改成相反值。
+成功选版时记录 preparation.resolution，后续各状态必须继承；
+未确定时不提前填写，避免随后把“已知事实”改成其他选择方式。
 
 此规则针对 Task 的有界事实摘要，不是把所有过程事件复制进快照。
 每次获取/求值的时间、子 Check ID 和未满足条件列表保存在事件中，
@@ -214,7 +214,7 @@ prefetch 只表示提前执行 fetch 的优化，
 允许早于 eligible。进入 state 的实际时间由 transition 事件表达，不混用过程时间。
 
 终态保留从前序继承的全部记录性事实，增加终结结果，移除当前阶段进展。
-fallback 可以用 preparation.fallbackUsed 摘要让调用方立即知道发生了回退，
+preparation.resolution=fallback 让调用方立即知道发生了回退，
 所选版本在 preparation.artifactRef；完整采用原因、旧版来源和更新错误进入历史事件，
 不能为了删除 evidence 而隐去回退错误。详细变化不整份复制到 completed。
 若 Task 最后记录为 pending，重新观察时已过 deadline，示例暂用 timed_out，
@@ -412,6 +412,7 @@ terminated 模式运行期间可能没有 pending Task，届时没有可取消�
 | 启动时机 | 接收 Check/Probe 后立即开始来源确认。 | 默认不预取，到 eligible 后正式准备；服务配置了预取才按 eligible 减提前量安排优化。 |
 | 提前收益 | 立即确认准确内容，但未来任务可能很早固定旧版。 | 既提前发现错误、下载预热，又避免必然提前整个递归周期固定版本。 |
 | 新版失败 | 来源/下载/验证失败使准备失败，没有选版 fallback。 | 可配置选版 fallback：更新失败或新候选不可用时使用仍可用的准确旧版。 |
+| 成功选版方式 | 旧快照没有方式枚举，早期新草案仅有 fallbackUsed 布尔值。 | preparation.resolution 统一为 up-to-date/fallback/updated，成功确定后继承，不与布尔值并存。 |
 | 证据 | 准确 digest、来源确认时间、runtime 等。 | 额外记录更新尝试、失败原因、回退决定和实际选择；不能把回退冒充更新成功。 |
 
 **已确认方向：** 提前下载是预优化，递归下一轮可以重新确认浮动来源。
@@ -436,6 +437,11 @@ formal_preparing_at >= eligible_at
 网络确认是一个过程，不能宣称取得 received 或 prefetch_at 那一瞬间的远端快照。
 
 **fallback 建议边界：**
+
+resolution 的三种成功方式及准确语义见[任务状态模型](./task-state-model.md)：
+既有且经确认满足要求为 up-to-date，更新失败后使用旧版为 fallback，
+本次获取并验证后使用为 updated。有缓存不等于已确认新鲜；updated 不保证内容摘要变化。
+最终选版失败没有 resolution，确认时间和尝试错误仍通过历史事件追溯。
 
 - fallback 同样由服务配置显式开启，默认不回退；它影响执行内容，不能仅当作无语义的预优化。
 - 仅浮动选版可退回旧候选；显式 digest、制品内静态绑定及已固定动态依赖不能被替换。

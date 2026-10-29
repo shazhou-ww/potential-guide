@@ -13,6 +13,8 @@
 由服务配置 Task 准备路径的提前选版预优化和显式 fallback，默认无预取/回退；
 普通 Probe 不重复传根/静态 Checker bindings，服务记录动态依赖的准确选择，
 不把调度属性写入制品或改变历史摘要。
+成功选版记录 preparation.resolution=up-to-date/fallback/updated，取代 fallbackUsed；
+准确 artifactRef 与选择方式同时确定，未成功时不伪造默认方式。
 
 ### I-S02: 服务化 Objective 观察
 
@@ -58,6 +60,8 @@ Request.prerequisites 保留声明语义，失败原子同步采用 readiness_fa
 固定向量与 Git SHA-256 oracle 一致；schema、未知问题、目录语言与篡改反例证明无静默转换或内容替换。
 通过准备/fallback 反例证明选中的是仍可用的准确版本，更新错误可观察，
 显式 digest 不被替换，业务失败不触发回退。
+覆盖既有版本经确认、本次获取及回退三种 resolution，验证有缓存不等于已确认新鲜、
+updated 不要求 digest 改变，后继快照和选版历史事件使用同一选定方式。
 
 ### I-AC02: 任务时序与进展可靠
 

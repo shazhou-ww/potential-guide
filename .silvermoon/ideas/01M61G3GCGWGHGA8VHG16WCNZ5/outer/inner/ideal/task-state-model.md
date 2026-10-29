@@ -137,7 +137,7 @@ termination 是结束裁决，仍保留各自职责。
 | 分组 | 有界记录性字段示例 | 含义 |
 |---|---|---|
 | eligibility | satisfiedAt | 实际资格判定时间，不修改计划 eligibleAt |
-| preparation | startedAt、completedAt、artifactRef、language、fallbackUsed | 准备过程及正式选版，定义不内嵌 |
+| preparation | startedAt、completedAt、artifactRef、language、resolution | 准备过程及正式选版方式，定义不内嵌 |
 | readiness | satisfiedAt | prerequisites 已被采用的通过事实，不是当前所有 Check 状态 |
 | allocation | boundAt | 正式绑定某次执行的时间；仅资源预约不等于绑定 |
 | execution | executionId、startedAt、completedAt | 实际执行事实，不是 Task 阶段时刻 |
@@ -162,8 +162,24 @@ started-after-eligible 对这个已有执行是否合格仍需各自判断。
 
 `result` 保留在 completed 顶层作为业务读取投影，不重复根 Objective 身份。
 详细证据通过历史事件查询，不在过程对象中内嵌全部尝试、worker 日志或子 Task 树。
-正式采用的旧版回退从确认时就记录 preparation.fallbackUsed=true，之后不得丢失；
-预优化找到候选不等于已正式采用。
+成功选定准确版本时同时记录 preparation.artifactRef 与 preparation.resolution，
+后继沿固定路径继承；预优化找到候选不等于已正式采用。resolution 替代旧草案的
+fallbackUsed，不同时保留两份可能矛盾的选版方式。
+
+| preparation.resolution | 成功选版的含义 |
+|---|---|
+| up-to-date | 已确认既有可用版本满足本次选版要求，直接使用 |
+| fallback | 更新检查或新候选准备失败，按服务策略退回既有可用版本 |
+| updated | 本次获取并验证制品，使用这次准备得到的版本 |
+
+artifactRef 回答“用了哪个准确内容”，resolution 回答“经哪种路径选定”。
+仅有缓存不能声称 up-to-date；没有成功确认但仍按策略使用旧版必须如实记为 fallback。
+updated 不保证 digest 与之前不同，首次获取或重新获取同内容也属于该获取路径。
+显式 digest 请求中的 up-to-date 指准确满足指定版本，不是全局最新；
+fallback 不允许换成另一个 digest，也不能绕过授权、runtime 或输入契约。
+尚未成功选定时不填 resolution，不用一个默认值伪造结果。最终选择失败也不产生
+resolution；业务检查不通过不触发重新选版。检查时间、失败原因和候选尝试在历史事件中，
+snapshot 只保存成功选择的有界事实。
 
 snapshot 不包含通用 progress 或 progress.process，也不在每个过程里复制一套
 status/reason/currentStep 来替代它。整体状态只由 state 表达；
@@ -282,6 +298,8 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
 
 下面是另一个 Check 的 execution_failed；其创建入口没有接受前置条件，
 无须补造 readiness 求值过程。并非抽象 Check Task 被禁止有此能力。
+本例制品从已确认满足指定 digest 的既有内容中选定，所以 resolution=up-to-date；
+随后的执行故障不改变该选版事实。
 这是实际执行失败而非单个 Task 超时：执行已结束但未正常完成，
 因此记录 termination 原因，不伪造 execution.completedAt 或成功 result。
 详细 execution 结束错误仍可从历史事件查询。
@@ -300,7 +318,8 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
       "url": "https://example.test/checker/v1.tgz",
       "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
-    "language": "en"
+    "language": "en",
+    "resolution": "up-to-date"
   },
   "allocation": {
     "boundAt": "2026-10-29T06:02:00.110Z"
