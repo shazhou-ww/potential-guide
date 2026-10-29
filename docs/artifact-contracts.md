@@ -54,14 +54,18 @@ paths (`root`, `$.nested.value`), JSON literals, object constructors and array
 constructors. Object keys are quoted and unique; missing paths are errors.
 No functions, implicit array traversal, evaluation, extensions or IO are
 available. Bounds are 4096 expression characters, 256 tokens, 16 expression
-levels and 1 MiB result. The result is a finite JSON object validated against
+levels and 1 MiB UTF-8 JSON result (including JSON framing). The result is a finite JSON object validated against
 the Checker subject schema. This intentionally small profile permits portable
 implementations without JavaScript AST semantics.
+
+Task progress is bounded to 1 MiB and combined final result/evidence to 4 MiB,
+also measured as serialized UTF-8 JSON bytes rather than string code units.
 
 Canonical request JSON uses finite IEEE-754 numbers (`-0` serializes as `0`),
 ECMAScript JSON number/string encoding and UTF-16 code-unit ordering of object
 keys; array order is significant. Input accessors, custom prototypes, toJSON,
-cycles, sparse arrays and non-finite numbers are rejected before serialization.
+cycles, sparse arrays, named array properties and non-finite numbers are rejected
+before serialization. Arrays must use the ordinary Array prototype.
 These normalization rules affect sharing/idempotency, never artifact bytes.
 
 CommonJS exports optional `initialize()`, required `execute(subject, context)`,
@@ -132,3 +136,10 @@ New execution evidence is explicit. Coordinator request schema 3 and CLI
 Regulation recovery schema 7 distinguish these sources; older schema 1/2
 and 4/5/6 replay paths remain unchanged. The public `withPilot` entry accepts
 typed Objective HTTPS references and preserves exact dependency bindings.
+
+## Repository verification
+
+`pnpm check` includes an isolated `artifact-hosts` packed consumer. It installs
+the actual tarballs, uses the public author/build APIs, mounts both services,
+and executes real workers through the Checker v3 and Objective SDKs. This is
+local implementation evidence, not publication or external deployment acceptance.

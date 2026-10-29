@@ -28,6 +28,14 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         "@potential-guide/pguide-regulate",
       ],
     ],
+    [
+      "artifact-hosts",
+      [
+        "@potential-guide/check-artifacts",
+        "@potential-guide/checker-host",
+        "@potential-guide/objective-host",
+      ],
+    ],
     ["protocol", ["@potential-guide/pilot-protocol"]],
     ["main", ["pguide"]],
     ["pilot", ["@potential-guide/pguide-pilot"]],
@@ -84,6 +92,75 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       entries,
       label === "npm-objectives",
     );
+    if (label === "artifact-hosts") {
+      const script = join(directory, "artifact-hosts.mjs");
+      await writeFile(
+        script,
+        `
+import assert from "node:assert/strict";
+import {randomUUID} from "node:crypto";
+import {mkdir,readFile,writeFile} from "node:fs/promises";
+import {resolve,join} from "node:path";
+import {checkerSchemaUri,objectiveSchemaUri} from "@potential-guide/check-artifacts";
+import {buildCheckerArtifact,writeContractArtifact,packContractArtifact} from "@potential-guide/check-artifacts/build";
+import {ContractStore,CheckKernel,CheckerService,CheckerMaterializer,createServiceRouter,serveServices,closePrivateFileBackend} from "@potential-guide/checker-host";
+import {CheckTaskClient} from "@potential-guide/checker-host/v3";
+import {ObjectiveService,ObjectiveTaskClient,createObjectiveRouter} from "@potential-guide/objective-host";
+const root=resolve("fixture");
+await mkdir(root);
+const page=Buffer.from("---\\ntitle: Packed\\ndescription: Independent consumer\\n---\\nBody\\n");
+await writeFile(join(root,"entry.cjs"),"exports.execute=async()=>({status:200,message:'',payload:{ok:true,problems:[]}});");
+await writeFile(join(root,"checker.md"),page);
+const built=await buildCheckerArtifact({
+  manifest:Buffer.from(JSON.stringify({$schema:checkerSchemaUri,runtime:{type:"node",minVersion:"22.13.0"},entry:"checker.cjs",subjectSchema:{type:"object"},languages:["en"],problems:[]})),
+  entry:join(root,"entry.cjs"),references:{"references/en/checker.md":join(root,"checker.md")},
+  outDirectory:join(root,"checker")
+});
+const packedCheck=await packContractArtifact(built.directory,join(root,"checker.tgz"));
+const checkUrl="https://example.test/checker/1.tgz";
+const objective=await writeContractArtifact(new Map([
+  ["objective.yaml",Buffer.from(JSON.stringify({
+    $schema:objectiveSchemaUri,subjectSchema:{type:"object"},languages:["en"],
+    levels:[{id:"ready",checks:["pass"]}],
+    checkers:{pass:{url:checkUrl,digest:built.digest,subjectMapping:"$"}}
+  }))],
+  ["references/en/objective.md",page],["references/en/levels/ready.md",page]
+]),join(root,"objective"));
+const packedObjective=await packContractArtifact(objective.directory,join(root,"objective.tgz"));
+const objectiveUrl="https://example.test/objective/1.tgz";
+const archives=new Map([[checkUrl,await readFile(packedCheck.archive)],[objectiveUrl,await readFile(packedObjective.archive)]]);
+const repository=new ContractStore(["https://example.test"],undefined,async(url)=>{
+  const bytes=archives.get(url);assert.ok(bytes,"Unexpected artifact source");return bytes;
+});
+const kernel=await CheckKernel.create(join(root,"snapshots"));
+const checks=new CheckerService(repository,new CheckerMaterializer(join(root,"execution")),kernel,["en"]);
+const objectives=new ObjectiveService(repository,checks,["en"]);
+const token=randomUUID();
+const host=await serveServices([createServiceRouter(checks,"/checks","checker"),createObjectiveRouter(objectives,"/probes")],token,async()=>{
+  await objectives.close();await checks.close();repository.close();await closePrivateFileBackend();
+});
+const address={endpoint:host.endpoint,token};
+const checkerClient=new CheckTaskClient(address,"/checks");
+const client=new ObjectiveTaskClient(address,"/probes");
+try{
+  assert.equal((await client.resolveArtifact(objectiveUrl)).digest,objective.digest);
+  const task=await client.probe({objective:{url:objectiveUrl,digest:objective.digest},subject:{}});
+  const observed=await task.result();
+  assert.equal(observed.result.current.levelId,"ready");
+  assert.equal(observed.evidence.checks[0].snapshot.evidence.runtime.version,process.versions.node);
+  assert.equal(observed.evidence.checks[0].snapshot.freshness,"started-after-request");
+  assert.match(observed.evidence.checks[0].snapshot.evidence.revision,/^[a-f0-9]{64}$/);
+  const checked=await checkerClient.check({checker:{url:checkUrl,digest:built.digest},subject:{}});
+  assert.deepEqual((await checked.result()).result,{ok:true,problems:[]});
+  assert.equal((await client.reference(objective.digest,"checkers/pass")).origin.artifactDigest,built.digest);
+  await assert.rejects(()=>client.reference(objective.digest,"system/404"),/not found/);
+}finally{
+  client.close();checkerClient.close();await host.close();
+}
+`,
+      );
+      await run(process.execPath, [script], directory);
+    }
     if (label === "npm-objectives") {
       const { defaultPolicy } = await import(
         pathToFileURL(join(root, "packages", "objective-monorepo-standard", "dist", "index.js"))

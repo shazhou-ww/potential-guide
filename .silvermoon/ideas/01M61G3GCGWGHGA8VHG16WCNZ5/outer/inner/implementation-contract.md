@@ -12,7 +12,9 @@ manifest.minVersion 仅为准入下界。没有 Python adapter 或 Objective 同
 
 JSONata 实施为可移植、有界的 selection profile：`$`、必须存在的对象路径、JSON
 字面量、对象/数组构造。无函数、隐式数组路径遍历、扩展、IO 或无限计算。
-限制为 4096 字符、256 token、16 层表达式和 1 MiB 对象结果；缺失路径明确失败。
+限制为 4096 字符、256 token、16 层表达式和 1 MiB UTF-8 JSON 对象结果
+（含 JSON 结构字节）；缺失路径明确失败。数组只接受普通原型、连续索引且无命名属性，
+不因校验后序列化而执行继承的 toJSON 或把稀疏项静默变为 null。
 详细作者契约与入口调用/Task payload 映射在 `docs/artifact-contracts.md`。
 
 目录页完整替换，base 页面保留原始 owning digest/path；frontmatter 与 wiki
@@ -34,7 +36,8 @@ JSONata 实施为可移植、有界的 selection profile：`$`、必须存在的
 Probe 默认 60 秒、最大 600 秒；执行墙钟固定 600 秒，不被后来 Task 延长。
 Check 默认 30 秒、最大 120 秒；Objective 子 Task 使用剩余执行预算并受 Check 上限约束。
 依赖深度 8、观察数 64、调用数 128；Task/Execution 保留各 256，
-监听者 64、单流最多 64 Task。进展 1 MiB、最终结果及证据合计 4 MiB。
+监听者 64、单流最多 64 Task。进展 1 MiB、最终结果及证据合计 4 MiB，
+均按序列化 UTF-8 JSON 字节计量；进展与结果在序列化前校验有限 JSON。
 快照保留 60 秒，不承诺中间状态回放或跨重启透明执行恢复。
 
 新 Observation Execution 的 start 先于任何业务观察，之后才创建强语义叶子。

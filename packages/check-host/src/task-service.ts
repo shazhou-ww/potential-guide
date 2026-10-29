@@ -320,7 +320,11 @@ export class TaskService<Q extends TaskOptions, A extends PreparedTask, R, P = J
         },
         progress: (progress, evidence) => {
           if (run.state !== "running") return;
-          if (JSON.stringify({ progress, evidence }).length > 1024 * 1024)
+          if (
+            !finiteJson(progress) ||
+            (evidence !== undefined && !finiteJson(evidence)) ||
+            Buffer.byteLength(JSON.stringify({ progress, evidence }), "utf8") > 1024 * 1024
+          )
             throw new Error("Progress exceeds bounds.");
           run.progress = structuredClone(progress);
           if (evidence !== undefined) run.evidence = structuredClone(evidence);
@@ -335,7 +339,10 @@ export class TaskService<Q extends TaskOptions, A extends PreparedTask, R, P = J
       run.controller.signal.throwIfAborted();
       if (run.started === undefined || performance.now() >= deadline)
         throw new Error("Invalid observation start or deadline.");
-      if (!finiteJson(output) || JSON.stringify(output).length > 4 * 1024 * 1024)
+      if (
+        !finiteJson(output) ||
+        Buffer.byteLength(JSON.stringify(output), "utf8") > 4 * 1024 * 1024
+      )
         throw new Error("Observation result/evidence exceeds finite JSON bounds.");
       run.completed = ++this.sequence;
       run.completedAt = new Date().toISOString();

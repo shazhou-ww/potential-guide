@@ -1,5 +1,8 @@
 # Deployment
 
+本地候选的仓库外验证见[deployment-verification.md](./deployment-verification.md)；
+该证据未通过 Inner 生命周期门限，不代表验收或正式发布。
+
 ## Steps
 
 ### D-S01: 准备独立消费者

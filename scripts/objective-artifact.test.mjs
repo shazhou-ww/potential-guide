@@ -19,7 +19,7 @@ import { createWorkerHost } from "./worker-test-helpers.mjs";
 const root = resolve(import.meta.dirname, "..");
 const execute = promisify(execFile);
 test("public declaration, probe, guidance, regulation/continue and durable Coordinator replay consume the same Objective closure", async () => {
-  const scratch = join(root, ".cache", "objective-public-tests");
+  const scratch = join(root, ".cache", "public");
   await mkdir(scratch, { recursive: true });
   const directory = await mkdtemp(join(scratch, "case-"));
   const host = await createWorkerHost(join(directory, "host"));

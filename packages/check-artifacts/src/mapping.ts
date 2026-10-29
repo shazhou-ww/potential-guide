@@ -13,7 +13,7 @@ function evaluateMapping(
 ): JsonObject {
   if (
     !finiteJson(subject) ||
-    JSON.stringify(subject).length > 1024 * 1024 ||
+    Buffer.byteLength(JSON.stringify(subject), "utf8") > 1024 * 1024 ||
     expression.length > 4096
   )
     throw new Error("Mapping exceeds bounds.");
@@ -105,7 +105,7 @@ function evaluateMapping(
   if (
     cursor !== tokens.length ||
     !jsonObject(result) ||
-    JSON.stringify(result).length > 1024 * 1024
+    Buffer.byteLength(JSON.stringify(result), "utf8") > 1024 * 1024
   )
     throw new Error("Mapping must yield a bounded JSON object.");
   return result;

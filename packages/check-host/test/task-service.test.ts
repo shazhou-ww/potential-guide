@@ -176,3 +176,55 @@ test("weak late resolution, idempotency, deadlines and sealed execution ownershi
     await service.close();
   }
 });
+test("progress and combined result/evidence bounds count UTF-8 bytes", async () => {
+  const { service, runs } = fixture();
+  try {
+    const task = service.accept({ value: "progress" }, "scope");
+    await tick();
+    const run = runs[0];
+    assert.ok(run);
+    run.context.start();
+    const limit = 1024 * 1024;
+    const framing = Buffer.byteLength(JSON.stringify({ progress: "" }));
+    run.context.progress("a".repeat(limit - framing));
+    assert.equal(service.snapshot(task.taskId, "scope").state, "running");
+    assert.throws(() => run.context.progress("a".repeat(limit - framing + 1)), /bounds/);
+    assert.throws(() => run.context.progress("界".repeat(Math.ceil(limit / 3))), /bounds/);
+    let invoked = false;
+    assert.throws(
+      () =>
+        run.context.progress({
+          get value() {
+            invoked = true;
+            return "not plain JSON";
+          },
+        }),
+      /bounds/,
+    );
+    assert.equal(invoked, false);
+    const output = {
+      result: "界".repeat(limit),
+      evidence: "界".repeat(limit / 2),
+    };
+    assert.ok(JSON.stringify(output).length < 4 * limit);
+    assert.ok(Buffer.byteLength(JSON.stringify(output)) > 4 * limit);
+    run.done.resolve(output);
+    await tick();
+    assert.equal(service.snapshot(task.taskId, "scope").state, "failed");
+    assert.equal(service.snapshot(task.taskId, "scope").error?.code, "observation_failed");
+    const bounded = service.accept({ value: "bounded-result" }, "scope");
+    await tick();
+    const boundedRun = runs[1];
+    assert.ok(boundedRun);
+    boundedRun.context.start();
+    const resultFraming = Buffer.byteLength(JSON.stringify({ result: "", evidence: {} }));
+    boundedRun.done.resolve({
+      result: "a".repeat(4 * limit - resultFraming),
+      evidence: {},
+    });
+    await tick();
+    assert.equal(service.snapshot(bounded.taskId, "scope").state, "completed");
+  } finally {
+    await service.close();
+  }
+});

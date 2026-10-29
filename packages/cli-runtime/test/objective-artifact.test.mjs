@@ -202,6 +202,7 @@ test("manifest and References reject floating sources, unknown problems, danglin
   const f = await fixture(t);
   const file = join(f.directory, "objective.json");
   const original = JSON.parse(await readFile(file, "utf8"));
+  let invalidCase = 0;
   async function reject(change, expression) {
     const manifest = structuredClone(original);
     change(manifest);
@@ -210,7 +211,7 @@ test("manifest and References reject floating sources, unknown problems, danglin
     await assert.rejects(
       withPilot(f.directory, f.root, inspected.digest, async () => {}, {
         ...f.options,
-        cacheDirectory: join(f.root, `invalid-${crypto.randomUUID()}`),
+        cacheDirectory: join(f.root, `invalid-${invalidCase++}`),
       }),
       expression,
     );

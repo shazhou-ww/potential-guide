@@ -314,3 +314,31 @@ test("fixed result payload, typed references, finite JSON and bounded mapping ve
   ])
     assert.throws(() => mapSubject(expression, {}));
 });
+test("finite JSON rejects array prototypes and sparse arrays with named properties without conversion", () => {
+  let invoked = false;
+  const inherited = Object.setPrototypeOf([], {
+    toJSON() {
+      invoked = true;
+      return [];
+    },
+  });
+  const sparse = Object.assign(new Array(1), { named: "not an index" });
+  assert.equal(finiteJson(inherited), false);
+  assert.equal(finiteJson(sparse), false);
+  assert.equal(finiteJson(Object.assign([], { named: "extra" })), false);
+  assert.equal(finiteJson([null, { value: "plain" }]), true);
+  assert.equal(invoked, false);
+});
+test("mapping limits count UTF-8 bytes and include JSON framing", () => {
+  const limit = 1024 * 1024;
+  const framing = Buffer.byteLength(JSON.stringify({ value: "" }));
+  const ascii = { value: "a".repeat(limit - framing) };
+  assert.deepEqual(mapSubject("$", ascii), ascii);
+  assert.throws(() => mapSubject("$", { value: `${ascii.value}a` }), /bounds/);
+  const unicode = { value: "界".repeat(Math.ceil(limit / 3)) };
+  assert.ok(JSON.stringify(unicode).length < limit);
+  assert.throws(() => mapSubject("$", unicode), /bounds/);
+  const subject = { value: "界".repeat(Math.floor(limit / 6)) };
+  assert.ok(Buffer.byteLength(JSON.stringify(subject)) < limit);
+  assert.throws(() => mapSubject('{"a":value,"b":value,"c":value}', subject), /bounded/);
+});

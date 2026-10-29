@@ -240,9 +240,9 @@ export function finiteJson(value: unknown, depth = 0, seen = new Set<object>()):
   if (typeof value !== "object" || seen.has(value)) return false;
   const array = Array.isArray(value);
   if (
-    !array &&
-    Object.getPrototypeOf(value) !== Object.prototype &&
-    Object.getPrototypeOf(value) !== null
+    array
+      ? Object.getPrototypeOf(value) !== Array.prototype
+      : Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null
   )
     return false;
   if (Object.getOwnPropertySymbols(value).length) return false;
@@ -252,7 +252,8 @@ export function finiteJson(value: unknown, depth = 0, seen = new Set<object>()):
   const valid = Object.entries(descriptors).every(
     ([key, descriptor]) =>
       (array && key === "length") ||
-      (descriptor.enumerable &&
+      ((!array || (/^(0|[1-9][0-9]*)$/.test(key) && Number(key) < value.length)) &&
+        descriptor.enumerable &&
         "value" in descriptor &&
         finiteJson(descriptor.value, depth + 1, seen)),
   );

@@ -35,7 +35,7 @@ function alive(pid: number) {
 }
 
 test("discovery tolerates an in-progress startup record without deleting unknown ownership", async () => {
-  const parent = resolve(".cache", "check-host-tests");
+  const parent = resolve(import.meta.dirname, "..", "..", "..", ".cache", "host-tests");
   await mkdir(parent, { recursive: true });
   const root = await createPrivateDirectory(parent, "discovery-");
   const kernel = await CheckKernel.create(join(root, "snapshots"));
@@ -71,9 +71,9 @@ test("discovery tolerates an in-progress startup record without deleting unknown
 });
 
 test("real startup and published Host crashes recover once without replaying old tasks", async (t) => {
-  const parent = resolve(".cache", "check-host-tests");
+  const parent = resolve(import.meta.dirname, "..", "..", "..", ".cache", "host-tests");
   await mkdir(parent, { recursive: true });
-  const root = await createPrivateDirectory(parent, "crash-recovery-");
+  const root = await createPrivateDirectory(parent, "crash-");
   const main = fileURLToPath(new URL("../dist/main.js", import.meta.url));
   const preload = join(root, "owned-processes.mjs");
   const journal = join(root, "owned-processes.jsonl");

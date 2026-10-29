@@ -320,3 +320,56 @@ test("real Observation Executions share weak demand while new strong demand owns
     await f.close();
   }
 });
+test("Objective language overrides do not invent Checker languages or attainment", async () => {
+  const f = await fixture();
+  try {
+    const check = f.repository.register(
+      "https://example.test/english/1.tgz",
+      checker(
+        'exports.execute=async(_,context)=>({status:200,message:"",payload:{ok:false,problems:[{kind:"internal",id:"not-ready",parameters:{language:context.data.language}}]}});',
+        ["not-ready"],
+      ),
+    );
+    const files = new Map(objective(check.metadata.source, check.digest).files);
+    const manifest = JSON.parse(files.get("objective.yaml")?.toString() ?? "");
+    manifest.languages = ["en", "zh-CN"];
+    files.set("objective.yaml", Buffer.from(JSON.stringify(manifest)));
+    files.set("references/zh-CN/objective.md", page("Localized Objective"));
+    files.set("references/zh-CN/levels/ready.md", page("Localized level"));
+    files.set("references/zh-CN/checkers/check/checker.md", page("Localized Checker"));
+    files.set("references/zh-CN/checkers/check/problems/not-ready.md", page("Localized problem"));
+    const root = f.repository.register(
+      "https://example.test/localized/1.tgz",
+      inspectContractFiles(files),
+    );
+    const task = await f.client.probe({
+      objective: { url: root.metadata.source },
+      subject: {},
+      language: "zh-CN",
+    });
+    const completed = await task.result();
+    assert.equal(completed.language, "zh-CN");
+    assert.equal(completed.evidence.checks[0]?.snapshot.language, "en");
+    assert.equal(completed.result.current.levelId, "initial");
+    assert.deepEqual(completed.result.problems[0]?.problem, {
+      kind: "internal",
+      id: "not-ready",
+      parameters: { language: "en" },
+    });
+    assert.equal(completed.progress?.observations[0]?.levels[0]?.state, "blocked");
+    const translated = await f.client.reference(root.digest, "checkers/check/problems/not-ready", {
+      language: "zh-CN",
+    });
+    assert.equal(translated.title, "Localized problem");
+    assert.equal(translated.origin.artifactDigest, root.digest);
+    const base = await f.client.reference(root.digest, "pages/base-check-not-ready", {
+      language: "en",
+    });
+    assert.equal(base.origin.artifactDigest, check.digest);
+    await assert.rejects(() =>
+      f.client.reference(root.digest, "pages/base-check-not-ready", { language: "zh-CN" }),
+    );
+  } finally {
+    await f.close();
+  }
+});
