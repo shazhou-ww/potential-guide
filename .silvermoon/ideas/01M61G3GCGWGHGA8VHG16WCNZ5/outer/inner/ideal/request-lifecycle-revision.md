@@ -6,23 +6,15 @@
 Before 以本地候选提交 `127666e4ec04` 为基线；该提交通过的实现和部署实验
 不证明本次新增需求已实现。本次只修订设计，不改变代码、历史 schema 或生命周期事件。
 
-按 Artifact → Request → Task → Series/递归规划 → 制品准备 →
+仅列实际变化，按 Request → Task → Series/递归规划 → 制品准备 →
 Execution → 持久化恢复 → Events/SDK 的修改对象顺序组织。
 字段使用讨论中的概念名，不提前承诺新 wire schema 的版本、大小写或 SDK 签名。
 各节区分已确认方向与待确认建议；本文件为 [Idea.md](./Idea.md) 的 supporting document，
 不是第四份契约。[objective-service.md](./objective-service.md) 保留组合观察的其余设计。
 
-## 1. Artifact：定义不承担调度
+## 1. Request：统一资格时间与系列身份
 
-| 修改点 | Before | After |
-|---|---|---|
-| 定义身份 | YAML、入口和文档决定准确内容树 digest。 | 不变；不把 eligible、recursive、series 放进制品。 |
-| 可执行条件 | runtime、subject、来源、digest 等用于准入。 | 不变；选择旧版本也不能绕过这些条件。 |
-
-**已确认：** `eligible_at` 和 `recursive` 属于 Request，不属于 Artifact。
-调整某个需求的时间或周期不应产生新的制品 digest。
-
-## 2. Request：统一资格时间与系列身份
+新增的 `eligible_at`、`recursive` 和 `series_id` 均属于 Request。
 
 | 修改点 | Before | After |
 |---|---|---|
@@ -47,7 +39,7 @@ Execution → 持久化恢复 → Events/SDK 的修改对象顺序组织。
 是否让新协议 request ID 与 task ID 共用值，尚未确定；不为满足 series 默认值
 擅自要求所有调用方额外提交一个 ID。series 不是授权凭据，也不是执行兼容键。
 
-## 3. Task：增加 PENDING，取消只作用于 PENDING
+## 2. Task：增加 PENDING，取消只作用于 PENDING
 
 | 修改点 | Before | After |
 |---|---|---|
@@ -62,7 +54,6 @@ Execution → 持久化恢复 → Events/SDK 的修改对象顺序组织。
 
 默认 eligible 等于 received 时 PENDING 可以短暂，但不能在持久化、幂等或订阅时丢失。
 取消与激活/规划必须原子裁决；如果目标已经离开 PENDING，不能成功返回却实际取消另一轮。
-SDK 本地关闭或监听 abort 仍不等于取消服务端 Task。
 
 **兼容边界：** 这是对新统一生命周期的设计，不能默默修改旧 Check v2、
 现有 Checker v3 / Objective v1 或 Coordinator 历史取消行为。
@@ -73,17 +64,16 @@ SDK 本地关闭或监听 abort 仍不等于取消服务端 Task。
 **待收敛：** 到 eligible 但准备尚未完成时，是离开 PENDING 进入准备/调度等待，
 还是继续占有 pending 槽位？该决定必须与下一节递归触发一致，不能由 enum 名称隐式决定。
 
-## 4. Series 与 recursive：一个待规划位置，两个候选锚点
+## 3. Series 与 recursive：一个待规划位置，两个候选锚点
 
 | 修改点 | Before | After |
 |---|---|---|
 | 适用面 | Coordinator 有 recurrence；Check/Probe 没有。 | Check、Probe、Regulation 都可表达递归请求，调节职责仍归 Coordinator。 |
 | 现有周期 | Coordinator 首次 dispatch 时生成后继，eligible 为实际 dispatch 时间加 interval。 | 新模型明确锚点，不把 dispatch、eligible、completed 混为一谈。 |
 | pending 约束 | 没有统一 series pending 唯一约束。 | 同一系列同时最多保留一个 pending 计划；重复新计划取消，原计划不被替换。 |
-| 执行归并 | 准确兼容键与逐 Task freshness 仲裁共享执行。 | 保留；series pending 去重与 Execution 共享是两层独立机制。 |
 | 触发配置 | 不支持统一的 eligible/completed 选择。 | 建议增加 `recursive.anchor`，让固定周期与完成后间隔显式可选。 |
 
-### 4.1 已确认的规划不变量
+### 3.1 已确认的规划不变量
 
 - “一个 pending”不等于“一个未完成 Task”。旧轮可以执行中，下一轮可以 pending。
 - 原子保留已有计划，冗余新计划以独立 Task 终态记录取消；不能先覆盖旧计划再回滚。
@@ -95,7 +85,7 @@ SDK 本地关闭或监听 abort 仍不等于取消服务端 Task。
 - series ID 不进入执行兼容键。不同 series 仍可共享执行；
   相同 series 的不同准确版本或输入也不能强制合并。
 
-### 4.2 新建议：`recursive.anchor`
+### 3.2 新建议：`recursive.anchor`
 
 用户最后提出同时支持两种触发点。本草案建议如下，**尚未当作最终确认**：
 
@@ -132,7 +122,7 @@ eligible 模式应按资格节拍推进，不随实际 worker 开始时间漂移
 completed 模式运行期间可能没有 pending Task，届时没有可取消的 pending 对象；
 本草案不暗中增设 cancel-series 接口，是否需要提前保留未定 eligible 的后继仍待讨论。
 
-## 5. 制品准备：提前量与可观察的版本回退
+## 4. 制品准备：提前量与可观察的版本回退
 
 | 修改点 | Before | After |
 |---|---|---|
@@ -173,30 +163,28 @@ earliest_preparation_at = max(received_at, planned_preparation_at)
 准备有独立有限预算，不能因 eligible 很远而无限占资源。
 准备早完不得早执行；准备超过 eligible 则继续消耗 Task 剩余预算。
 
-## 6. Execution：新的时间边界，不改变需求与执行分离
+## 5. Execution：新的时间边界
 
 | 修改点 | Before | After |
 |---|---|---|
 | 新鲜度仲裁 | 服务内受理序号 a，与开始 s/完成 c 比较。 | 相对于 eligible 时间边界，并保留服务端因果排序以处理同刻事件。 |
 | 旧结果 | 必须满足受理后的 start/completion 条件。 | eligible 设在过去时，接收前完成的保留结果也可能符合要求。 |
 | 调度 | 准备后匹配保留、运行或预约执行。 | 额外受 eligible 资格限制，不因提前准备而提前执行。 |
-| 运行保护 | Execution 独立墙钟、最后 owner 清理、迟到结果不复活终态。 | 不变；recursive/fallback/恢复不能延长已有执行或伤害其他 owner。 |
 
 对于未来 eligible 的 completed_after 需求，不能在 eligible 前交付完成结果。
 到达资格时可加入兼容运行执行；started_after 仍要求执行开始严格晚于边界。
 旧协议使用 started-after-request/completed-after-request 字面值；
 新 eligible 语义是否采用新值/新版本必须显式迁移，不能按同一历史字段偷偷换含义。
 
-Objective 新建组合观察后才创建强语义叶子的因果约束保留。
 外层 recursive 不自动使内部每个 Checker 或依赖观察永久递归；
 显式子需求的调度仍由拥有它的父执行约束，避免无限扩张工作树。
 
-## 7. 持久化与重启：恢复需求，而非伪造执行连续性
+## 6. 持久化与重启：恢复需求，而非伪造执行连续性
 
 | 修改点 | Before | After |
 |---|---|---|
 | Check/Probe | 进程内有界保留，重启使 Task 不可用，无透明重跑。 | 所有已受理未完成 Task 都需持久恢复，不限 recursive。 |
-| Regulation | Coordinator 已有持久事件/恢复，不是从零建设。 | 保留并对齐统一系列、时间和规划证据，不重写历史事实。 |
+| Regulation | Coordinator 已有持久事件/恢复，不是从零建设。 | 增加统一系列、时间和规划证据的持久化与恢复。 |
 | 恢复身份 | Host instance 用于识别服务重启。 | 保留 Request/Task/series 身份，另记录新的 Host/执行尝试身份。 |
 | 恢复期限/版本 | 原格式准确恢复与服务内快照分开。 | 原 eligible、deadline、固定版本及 bindings 不变；不得重置 timeout 或追 latest。 |
 
@@ -209,19 +197,18 @@ Objective 新建组合观察后才创建强语义叶子的因果约束保留。
 这些尤其影响可能运行 Agent 的 Regulation，不能默认它们都可无副作用重跑。
 不承诺 Execution exactly-once、无限历史或跨服务比较客户端时间。
 
-## 8. Events、日志、HTTP 与 SDK：动态追踪整个系列
+## 7. Events、日志、HTTP 与 SDK：动态追踪整个系列
 
 | 修改点 | Before | After |
 |---|---|---|
 | 过滤 | Check/Probe SSE 按 taskId 或显式 scope=all 过滤。 | 增加按 series ID 过滤，包含订阅之后新产生的该系列 Task。 |
 | 身份 | task.updated 关联 Task 与 Execution，缺少独立系列。 | 请求、快照、日志及事件携带 series，必要时保留前驱/轮次。 |
-| 进展 | level、invocation、依赖关系及子 Task/Execution。 | 保留，并呈现 PENDING、准备/回退、重复规划取消与恢复信息。 |
+| 进展 | level、invocation、依赖关系及子 Task/Execution。 | 增加 PENDING、准备/回退、重复规划取消与恢复信息。 |
 | 重连 | 当前有界快照，不重建 Task、不重放全部中间事件。 | 动态系列快照与后续轮次连续可观察；不能把增加过滤宣称为无限历史回放。 |
 
 series 订阅不能只在订阅时展开为现存 task IDs；首次快照与后续创建之间不能漏事件。
 授权仍按拥有者/作用域校验，不能因猜到 series ID 跨权限读日志。
 同一 Execution 可服务多个 series，事件投影不得泄露其他系列的 subject/context。
-HTTP、进程内接口、SDK 共享语义，监听断开/本地 close 不取消远端需求。
 单轮 result 仍返回该 Task 的结果；系列持续观察不应伪装成一个永不结束的单轮 result。
 过滤组合、保留游标、历史分页和容量限制在实施契约明确。
 
