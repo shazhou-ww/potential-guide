@@ -219,8 +219,9 @@ objective.yaml 和规范 Markdown。其他文件、链接、特殊文件和歧�
 
 ## 动态依赖与迁移
 
-不恢复 Objective 制品内的静态 prerequisite；当前修订仅在 Regulation Task 调度层增加
-prerequisites Check 集合。Check/Probe 没有业务启动前提，但仍可报告动态 requirements；
+不恢复 Objective 制品内的静态 prerequisite；任意抽象 Task 调度层支持
+prerequisites Check 集合。当前 Check/Probe Request 暂不接受此字段，
+不意味着其 Task 状态类型有特例；仍可报告动态 requirements；
 不写回制品或要求作者维护依赖 Objective 清单。运行时需求带可解析的
 带类型来源引用；首次解析受来源/执行授权约束，并在本次观察内固定 digest。Regulation
 传入/保存准确绑定以支持连续重查和恢复；既有绑定不匹配时失败，不悄悄升级。

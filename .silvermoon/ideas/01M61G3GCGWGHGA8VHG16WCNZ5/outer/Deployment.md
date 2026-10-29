@@ -16,6 +16,8 @@
 覆盖提前选版/fallback、准确绑定和未完成 Task 的真实进程重启恢复；
 验证 Regulation 前置 Check 独立运行、结构化依赖治理与治理后重新判断，
 以及外部条件不满足时 Check/Probe 仍执行并报告动态业务需求，而非被前置条件阻塞；
+区分当前 Request 入口限制与全局 Task 模型：抽象 Task 都支持前置条件，
+仅 Check/Probe 创建请求暂不允许携带，不因此维护两套状态机；
 区分 pending 时间等待、preparing 制品准备、blocked 条件阻塞和 queued 资源排队；
 通过历史事件查询验证错过 SSE 后仍可追溯执行、选版和子 Task 关联，
 不依赖终态快照中的完整 evidence；
@@ -41,3 +43,7 @@ Task/Execution/Series 历史查询有独立游标，分页及实时通知来自�
 共享执行不复制或泄露其他 owner 的任务数据。
 验证 Task 终结事件引用执行结果，completed snapshot 的业务结果由同一事实投影；
 结果不重复根 Objective 身份，问题若指向其他 Objective 则仍保留准确业务引用。
+连续快照及 SSE 重连后快照保留此前已知的过程事实，叶子字段名/路径/值不变；
+真实失败终态也保留既有准确引用、时间与执行关联，且不残留旧阶段进展。
+验证原子失败状态与协议 isFailed/isTerminated 分类一致，准备与其他过程重叠时
+仍按判定树投影，不用 Task 状态转移时间替代实际执行或过程时间。

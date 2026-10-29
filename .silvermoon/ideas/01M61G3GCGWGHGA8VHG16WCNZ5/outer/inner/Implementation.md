@@ -20,11 +20,12 @@
 恢复所有未完成 Task，保持独立需求、共享执行及资源清理边界。
 落实幂等 Request/独立 Task 身份、eligible 后 PREPARING、eligible/terminated 递归、
 失败超时续作及错过周期不补齐；恢复细节后续讨论，不以实现细节代替设计决定。
-仅 Regulation prerequisites 用独立子 Check 求值，时间与条件分别仲裁；结构化治理需求交由
+任意抽象 Task 的 prerequisites 用独立子 Check 求值，时间与条件分别仲裁；结构化治理需求交由
 Coordinator 按授权处理，完成治理后重查，服务保留 origin 因果审计。
 按时间、artifacts、prerequisites、执行资源优先级投影
-Regulation 的 pending/preparing/blocked/queued/running；Check/Probe 不接受 prerequisites，
-不进入 blocked，仍保留探测结果的动态 requirements。pending 无专属 reason。
+所有 Task 的 pending/preparing/blocked/queued/running；当前 Check/Probe Request
+不接受 prerequisites，因此不从这些入口创建带条件任务，但不裁剪 Task 状态模型。
+仍保留探测结果的动态 requirements。pending 无专属 reason。
 
 ### I-S03: 对齐 SDK 与现有业务入口
 
@@ -33,8 +34,12 @@ Regulation 的 pending/preparing/blocked/queued/running；Check/Probe 不接受 
 Regulation 调用方改用与 Probe 相同的 Objective URL/digest 引用，由服务构造内部 PilotSpec；
 实体必含 requestId，HTTP 从 header 还原并先于 body 解析识别；生成型身份采用 ULID。
 提供 series 动态事件和可恢复身份，不以旧协议兼容要求约束新结构。
-Task snapshot 在 HTTP/SDK/事件中统一为 state 判别联合，移除公共 hostInstance；
-preparation 仅用于准备阶段，终态保留必要时间戳、结果和小摘要，不携带完整 evidence。
+Task snapshot 在 HTTP/SDK/事件中统一为单一原子 state 判别联合，移除公共 hostInstance；
+按[任务状态模型](./ideal/task-state-model.md)落实条件判定树与协议语义分类，
+提供 isFailed/isTerminated 等公共判定，不新增 substate 或重复布尔字段。
+事实按 schedule/preparation/prerequisites/scheduling/execution/termination 等过程分组，
+过程可重叠，开始时间不冒充阶段转移时间；progress 独立承载当前进展。
+所有后继（含过程失败/控制终结/恢复）继承既有事实，不携带完整 evidence。
 根及独立查询的子 Task snapshot 都仅携带准确 artifactRef，完整 Artifact 按 digest 单独查询，
 不得用 latest 替代原内容或用 manifest 代替实际执行证据。
 结构化历史事件作为证据事实源，增加 taskId/executionId/seriesId 过滤和游标分页读取；
@@ -62,12 +67,17 @@ freshness 归并成立；故障恢复测试证明不重复规划、不刷新期�
 Router、SDK、Pilot/regulator 与 Coordinator 的 series 订阅和持久恢复测试通过，
 覆盖新轮次动态加入及授权边界；最终执行 pnpm check，不以旧 gate 或类型检查替代运行证据。
 状态联合的 schema/运行校验证明 completed 必有结果、pending 不带父 Execution，
-各失败阶段不虚构未发生的步骤；准备前的 fetch 优化不伪造正式准备时间。
-分别覆盖 Check/Probe 七种、Regulation 八种 state 分支，
-拒绝探测请求的 prerequisites（含空集合），同时保留其业务动态 requirements；
+各失败叶子继承其路径要求的事实；提前获取不伪造状态转移时间。
+覆盖统一 Task 原子状态和 failed/terminated 分类，另测各 Request 入口的准入边界，
+拒绝当前探测请求的 prerequisites（含空集合），但统一 Task schema 允许有条件任务，
+不能按 checker/objective 类型拒绝 blocked；同时保留业务动态 requirements；
 初始已 eligible 不返回 pending，元数据从快照移除后仍能
 通过准确引用查询原制品；事件中的 snapshot 不携带 manifest 或完整 evidence。
 验证未订阅 SSE 也可查询准确 runtime、选版错误与子任务关联，
 并覆盖独立历史游标、分页边界及共享执行的授权隔离。
 验证快照结果可由执行事实投影，动态依赖的业务引用不会被误删，
 Before 对照与新设计的派生缓存职责明确，避免身份和调度参数多份可变真相。
+增加跨快照转移校验：事实叶子路径不丢失、值不变、revision 递增且旧 progress 清理；
+用删除已知事实、改名、改值和失败分支丢失执行身份的反例验证，而非只测单个状态 shape。
+明确区分 execution.startedAt、Task 正式绑定时间和 termination.terminatedAt；
+不得靠状态名后缀推断语义分类，未知原子状态显式失败。
