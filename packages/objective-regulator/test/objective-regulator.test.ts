@@ -518,28 +518,51 @@ test("time quota aborts an uncooperative first probe with an explicit null obser
   assert.equal(result.latestObservation.payload, null);
 });
 
-test("time quota includes Agent execution and preserves the latest observation", async () => {
+test("time quota includes Agent execution and preserves the latest observation", {
+  timeout: 10_000,
+}, async (t) => {
   let aborted = false;
+  let started!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  let observed: AgentInput["observation"] | undefined;
   let release: (() => void) | undefined;
-  const result = await Effect.runPromise(
-    regulate(await input({ quota: { ...quota, timeoutMs: 50 } }), {
+  const value = await input({ quota: { ...quota, timeoutMs: 50 } });
+  t.mock.method(performance, "now", () => 0);
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const pending = Effect.runPromise(
+    regulate(value, {
       pilot: { resolveCheck: () => async () => fail },
-      executeAgent: async (_request, signal) => {
+      executeAgent: async (request, signal) => {
+        observed = request.observation;
         signal.addEventListener("abort", () => {
           aborted = true;
         });
         await new Promise<void>((resolve) => {
           release = resolve;
+          started();
         });
         return completed;
       },
     }),
   );
-  assert.equal(result.exhaustedBy, "time");
-  assert.equal(result.iterations, 1);
-  assert.equal(result.latestObservation.status, 200);
-  assert.equal(aborted, true);
-  release?.();
+  try {
+    await Promise.race([
+      ready,
+      pending.then(() => assert.fail("Regulation finished before Agent execution.")),
+    ]);
+    t.mock.timers.tick(50);
+    const result = await pending;
+    assert.equal(result.exhaustedBy, "time");
+    assert.equal(result.iterations, 1);
+    assert.equal(result.latestObservation.status, 200);
+    assert.ok(observed);
+    assert.deepEqual(result.latestObservation.payload, observed);
+    assert.equal(aborted, true);
+  } finally {
+    release?.();
+  }
 });
 
 test("per-Agent timeout and explicit limit are agent-limit exhaustion, not stalls", async () => {
