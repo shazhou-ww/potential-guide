@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { checkerSchemaUri, type Json } from "@potential-guide/check-artifacts";
 import {
-  TaskService,
-  serviceLimits,
-  type TaskOptions,
   type ExecutionContext,
   type PreparedTask,
+  serviceLimits,
+  type TaskOptions,
+  TaskService,
 } from "../src/task-service.js";
+
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -106,16 +107,15 @@ test("causal freshness, shared reservations, late resolution and independent can
     await service.close();
   }
 });
-test("late wall-clock callbacks cannot attach demand to an expired execution", async () => {
+test("late wall-clock callbacks cannot attach demand to an expired execution", async (t) => {
+  let now = 0;
+  t.mock.method(performance, "now", () => now);
   const { service, runs } = fixture({ executionMs: 20 });
   try {
     const first = service.accept({ value: "x", timeoutMs: 1000 }, "scope");
     await tick();
     runs[0]?.context.start();
-    const until = performance.now() + 30;
-    while (performance.now() < until) {
-      /* Hold timers while the wall-clock expires. */
-    }
+    now = 30;
     const next = service.accept(
       { value: "x", freshness: "completed-after-request", timeoutMs: 1000 },
       "scope",
@@ -131,7 +131,9 @@ test("late wall-clock callbacks cannot attach demand to an expired execution", a
     await service.close();
   }
 });
-test("weak late resolution, idempotency, deadlines and sealed execution ownership", async () => {
+test("weak late resolution, idempotency, deadlines and sealed execution ownership", async (t) => {
+  let now = 0;
+  t.mock.method(performance, "now", () => now);
   const { service, runs, preparation } = fixture();
   try {
     const first = service.accept({ value: "x", timeoutMs: 20 }, "scope", "original");
@@ -151,7 +153,7 @@ test("weak late resolution, idempotency, deadlines and sealed execution ownershi
     );
     const survivor = service.accept({ value: "x", freshness: "completed-after-request" }, "scope");
     await tick();
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    now = 30;
     assert.equal(service.snapshot(first.taskId, "scope").error?.code, "task_timeout");
     assert.equal(runs[0]?.context.signal.aborted, false);
     runs[0]?.done.resolve({ result: true, evidence: {} });
