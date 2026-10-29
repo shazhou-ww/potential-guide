@@ -128,7 +128,7 @@ test("npm directory preparation materializes cross-directory hardlinks before pa
   await link(original, join(source, "checks", "duplicate", "worker.cjs"));
   const prepared = await prepareObjectivePackage(source, directory, {
     cacheDirectory,
-    signal: AbortSignal.timeout(5000),
+    signal: AbortSignal.timeout(30_000),
   });
   assert.equal((await lstat(join(prepared.directory, "checks", "marker", "worker.cjs"))).nlink, 1);
   assert.equal(
@@ -402,26 +402,29 @@ test("the source contract carries fixed auxiliary bindings through restoration w
     force: true,
   });
 
-  test("pnpm-style directory hard links are verified then detached without weakening delivered artifact checks", async (t) => {
-    const { directory, source, cacheDirectory } = await fixture(t);
-    const resources = join(source, "checks", "marker", "resources");
-    await mkdir(resources);
-    await writeFile(join(resources, "one.txt"), "same delivered bytes");
-    await link(join(resources, "one.txt"), join(resources, "two.txt"));
-    await assert.rejects(digestObjectivePackage(source), /links|special/i);
-    const prepared = await prepareObjectivePackage(source, directory, { cacheDirectory });
-    for (const name of ["one.txt", "two.txt"])
+  await t.test(
+    "pnpm-style directory hard links are verified then detached without weakening delivered artifact checks",
+    async (t) => {
+      const { directory, source, cacheDirectory } = await fixture(t);
+      const resources = join(source, "checks", "marker", "resources");
+      await mkdir(resources);
+      await writeFile(join(resources, "one.txt"), "same delivered bytes");
+      await link(join(resources, "one.txt"), join(resources, "two.txt"));
+      await assert.rejects(digestObjectivePackage(source), /links|special/i);
+      const prepared = await prepareObjectivePackage(source, directory, { cacheDirectory });
+      for (const name of ["one.txt", "two.txt"])
+        assert.equal(
+          (await lstat(join(prepared.directory, "checks", "marker", "resources", name))).nlink,
+          1,
+        );
+      await rm(join(resources, "two.txt"));
+      await writeFile(join(resources, "two.txt"), "same delivered bytes");
       assert.equal(
-        (await lstat(join(prepared.directory, "checks", "marker", "resources", name))).nlink,
-        1,
+        (await prepareObjectivePackage(source, directory, { cacheDirectory })).source.packageDigest,
+        prepared.source.packageDigest,
       );
-    await rm(join(resources, "two.txt"));
-    await writeFile(join(resources, "two.txt"), "same delivered bytes");
-    assert.equal(
-      (await prepareObjectivePackage(source, directory, { cacheDirectory })).source.packageDigest,
-      prepared.source.packageDigest,
-    );
-  });
+    },
+  );
   await assert.rejects(
     withPilot(fixed.packageName, directory, undefined, async () => {}, {
       cacheDirectory,

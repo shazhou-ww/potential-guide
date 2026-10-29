@@ -1,7 +1,7 @@
 import type { Delivery, Workspace } from "./contract.js";
 import { sourceImports } from "./imports.js";
 import type { ReportPut } from "./shared.js";
-import { nodeImports, resolveSource, type Snapshot, under } from "./shared.js";
+import { isNodeImport, resolveSource, type Snapshot, under } from "./shared.js";
 
 export async function checkDeliveryEntry(
   snapshot: Snapshot,
@@ -50,7 +50,7 @@ export async function checkDeliveryEntry(
           );
           continue;
         }
-        if (nodeImports.has(specifier) || /(?:server-only|secrets?)(?:\/|$)/.test(specifier)) {
+        if (isNodeImport(specifier) || /(?:server-only|secrets?)(?:\/|$)/.test(specifier)) {
           put(
             delivery.runtime === "browser" ? "fail" : "unverified",
             "entry-runtime",

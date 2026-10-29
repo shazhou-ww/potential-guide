@@ -2,8 +2,8 @@ import { dirname, relative, resolve, sep } from "node:path";
 import type { Contract, Workspace } from "./contract.js";
 import type { Dependency, ReportPut } from "./shared.js";
 import {
+  isNodeImport,
   matches,
-  nodeImports,
   type RecordValue,
   record,
   resolveSource,
@@ -43,7 +43,7 @@ export async function checkSourceImport(
     !typeOnly &&
     workspace.sources.some((path) => source === `${workspace.path}/${path}`) &&
     ["browser", "worker"].includes(workspace.runtime) &&
-    (nodeImports.has(specifier) || /(?:server-only|secrets?)(?:\/|$)/.test(specifier))
+    (isNodeImport(specifier) || /(?:server-only|secrets?)(?:\/|$)/.test(specifier))
   )
     put(
       workspace.runtime === "worker" ? "unverified" : "fail",
@@ -83,7 +83,7 @@ export async function checkSourceImport(
     );
     if (
       !target &&
-      !nodeImports.has(specifier) &&
+      !isNodeImport(specifier) &&
       !dependencies.some(
         (dependency) =>
           specifier === dependency.name || specifier.startsWith(`${dependency.name}/`),

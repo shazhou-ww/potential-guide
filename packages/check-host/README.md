@@ -89,8 +89,10 @@ late strong requests cannot join it. Weak requests can use retained completion
 records even when version resolution finishes later.
 
 `timeoutMs` covers acceptance through delivery (default 30s, maximum 120s).
-Execution wall-clock is independently bounded (default 30s); cleanup/initialization
-each have a 5s bound. One Task ending does not stop other waiters. Last-demand
+Execution wall-clock is independently bounded (default 30s); cleanup and worker
+initialization each default to 5s, configured separately through `cleanupMs` and
+`initializationMs`. Reducing cleanup grace does not reduce cold-start allowance.
+One Task ending does not stop other waiters. Last-demand
 cancellation seals the run, cooperatively aborts, and force-retires only its
 exclusive worker if necessary, with confirmed subprocess cleanup.
 

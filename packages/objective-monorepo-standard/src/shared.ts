@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash } from "node:crypto";
 import { lstat, readdir, readFile, realpath } from "node:fs/promises";
-import { builtinModules } from "node:module";
+import { isBuiltin } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { FilesystemObservationView } from "@potential-guide/objective-pilot";
 import { Ajv } from "ajv";
@@ -275,7 +275,7 @@ export class Snapshot {
   }
 }
 export const ajv = new Ajv({ allErrors: true, strict: true });
-export const nodeImports = new Set(builtinModules.flatMap((name) => [name, `node:${name}`]));
+export const isNodeImport = isBuiltin;
 export const packageValidator = ajv.compile({
   type: "object",
   required: ["name"],

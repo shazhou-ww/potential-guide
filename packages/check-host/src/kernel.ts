@@ -300,7 +300,7 @@ export class CheckKernel {
     this.metrics.peakWorkers = Math.max(this.metrics.peakWorkers, this.slots.size);
     const startup = setTimeout(() => {
       void this.breakSlot(slot, "Worker initialization timed out.");
-    }, this.limits.cleanupMs);
+    }, this.limits.initializationMs);
     worker.on("message", (message) => {
       if (message.version !== 1 || message.generation !== generation) return;
       if (Buffer.byteLength(JSON.stringify(message)) > this.limits.messageBytes) {

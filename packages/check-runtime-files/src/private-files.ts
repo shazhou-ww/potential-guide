@@ -323,6 +323,7 @@ public static class PrivateHostFiles {
 } finally {
   if($compilerOwned -and [IO.Directory]::Exists($compileDirectory)){[IO.Directory]::Delete($compileDirectory,$true)}
 }
+[Console]::Out.WriteLine('{"ready":true}')
 $line=$first
 $first=$null
 $initial=$null
@@ -404,11 +405,12 @@ function startHelper() {
       child.kill();
       return;
     }
-    const end = buffered.indexOf("\n");
-    if (end >= 0) {
+    let end = buffered.indexOf("\n");
+    while (end >= 0) {
       const line = buffered.slice(0, end).trim();
       buffered = buffered.slice(end + 1);
       reply?.(line);
+      end = buffered.indexOf("\n");
     }
   });
   child.stderr.resume();
@@ -439,6 +441,7 @@ function windows<T>(request: Record<string, unknown>): Promise<T> {
   const task = serial.then(
     () =>
       new Promise<T>((resolveReply, reject) => {
+        let initializing = helper === undefined;
         const child = startHelper();
         const id = randomUUID();
         let settled = false;
@@ -459,9 +462,16 @@ function windows<T>(request: Record<string, unknown>): Promise<T> {
             buffered = "";
           }
           child.kill();
-          finish(privacyError());
+          finish(
+            privacyError(
+              "EPRIVATE",
+              undefined,
+              initializing ? "helper-startup" : String(request.op),
+            ),
+          );
         };
-        const timer = setTimeout(stop, 15_000);
+        // Cold PowerShell startup and native compilation have a separate bounded budget.
+        let timer = setTimeout(stop, initializing ? 60_000 : 15_000);
         failed = (error) => finish(error);
         reply = (line) => {
           try {
@@ -472,7 +482,14 @@ function windows<T>(request: Record<string, unknown>): Promise<T> {
               code?: string;
               nativeCode?: number;
               context?: string;
+              ready?: boolean;
             };
+            if (initializing && response.ready === true) {
+              initializing = false;
+              clearTimeout(timer);
+              timer = setTimeout(stop, 15_000);
+              return;
+            }
             if (response.id !== id) throw privacyError();
             if (!response.ok)
               finish(
@@ -619,28 +636,32 @@ async function posixMutation<T>(directory: string, operation: () => Promise<T>):
 }
 async function posixFile(directory: string, name: string, create = false) {
   if (name === "private-store.lock") throw privacyError();
-  await ensurePrivateDirectory(directory);
-  const handle = await open(
-    childPath(directory, name),
-    constants.O_NOFOLLOW |
-      (create ? constants.O_CREAT | constants.O_EXCL | constants.O_RDWR : constants.O_RDONLY),
-    0o600,
-  );
-  try {
-    const stat = await handle.stat();
-    if (
-      !stat.isFile() ||
-      stat.nlink !== 1 ||
-      stat.uid !== process.getuid?.() ||
-      stat.mode & 0o077 ||
-      stat.size > 16384
-    )
-      throw privacyError();
-    return handle;
-  } catch (error) {
-    await handle.close();
-    throw error;
-  }
+  return retryBusy(async () => {
+    await ensurePrivateDirectory(directory);
+    const handle = await open(
+      childPath(directory, name),
+      constants.O_NOFOLLOW |
+        (create ? constants.O_CREAT | constants.O_EXCL | constants.O_RDWR : constants.O_RDONLY),
+      0o600,
+    );
+    try {
+      const stat = await handle.stat();
+      // An atomic replacement can unlink the opened inode before fstat.
+      if (!create && stat.nlink === 0) throw privacyError("EBUSY");
+      if (
+        !stat.isFile() ||
+        stat.nlink !== 1 ||
+        stat.uid !== process.getuid?.() ||
+        stat.mode & 0o077 ||
+        stat.size > 16384
+      )
+        throw privacyError();
+      return handle;
+    } catch (error) {
+      await handle.close();
+      throw error;
+    }
+  });
 }
 export async function readPrivateFile(directory: string, name: string): Promise<string> {
   childPath(directory, name);

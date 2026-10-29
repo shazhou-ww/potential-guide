@@ -40,6 +40,7 @@ export const defaults = {
   directories: 64,
   retireAfter: 100,
   deadlineMs: 30_000,
+  initializationMs: 5_000,
   cleanupMs: 5_000,
   retentionMs: 60_000,
   messageBytes: 8 * 1024 * 1024,
