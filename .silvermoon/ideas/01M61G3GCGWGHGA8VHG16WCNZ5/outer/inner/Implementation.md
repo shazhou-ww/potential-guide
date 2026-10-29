@@ -20,10 +20,11 @@
 恢复所有未完成 Task，保持独立需求、共享执行及资源清理边界。
 落实幂等 Request/独立 Task 身份、eligible 后 PREPARING、eligible/terminated 递归、
 失败超时续作及错过周期不补齐；恢复细节后续讨论，不以实现细节代替设计决定。
-Task prerequisites 用独立子 Check 求值，时间与条件分别仲裁；结构化治理需求交由
+仅 Regulation prerequisites 用独立子 Check 求值，时间与条件分别仲裁；结构化治理需求交由
 Coordinator 按授权处理，完成治理后重查，服务保留 origin 因果审计。
 按时间、artifacts、prerequisites、执行资源优先级投影
-pending/preparing/blocked/queued/running，pending 无专属 reason。
+Regulation 的 pending/preparing/blocked/queued/running；Check/Probe 不接受 prerequisites，
+不进入 blocked，仍保留探测结果的动态 requirements。pending 无专属 reason。
 
 ### I-S03: 对齐 SDK 与现有业务入口
 
@@ -53,7 +54,7 @@ preparation 仅用于准备阶段，终态保留必要时间戳、结果和小�
 
 确定性时间与竞争测试证明 eligible、递归锚点、唯一 pending、取消/激活竞态及
 freshness 归并成立；故障恢复测试证明不重复规划、不刷新期限、不复活终态。
-条件等待测试证明父 blocked 不阻塞条件子 Check、eligible 后等待消耗预算，
+条件等待测试证明父 Regulation blocked 不阻塞条件子 Check、eligible 后等待消耗预算，
 检查故障不冒充不通过、治理结束不冒充条件通过，取消清理不伤共享 owner。
 
 ### I-AC03: 调用面一致
@@ -62,7 +63,9 @@ Router、SDK、Pilot/regulator 与 Coordinator 的 series 订阅和持久恢复�
 覆盖新轮次动态加入及授权边界；最终执行 pnpm check，不以旧 gate 或类型检查替代运行证据。
 状态联合的 schema/运行校验证明 completed 必有结果、pending 不带父 Execution，
 各失败阶段不虚构未发生的步骤；准备前的 fetch 优化不伪造正式准备时间。
-覆盖八种 state 分支、初始已 eligible 不返回 pending、元数据从快照移除后仍能
+分别覆盖 Check/Probe 七种、Regulation 八种 state 分支，
+拒绝探测请求的 prerequisites（含空集合），同时保留其业务动态 requirements；
+初始已 eligible 不返回 pending，元数据从快照移除后仍能
 通过准确引用查询原制品；事件中的 snapshot 不携带 manifest 或完整 evidence。
 验证未订阅 SSE 也可查询准确 runtime、选版错误与子任务关联，
 并覆盖独立历史游标、分页边界及共享执行的授权隔离。

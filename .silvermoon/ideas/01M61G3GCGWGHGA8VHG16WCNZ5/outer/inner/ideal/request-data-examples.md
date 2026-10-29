@@ -38,7 +38,8 @@
   与建议的统一 Regulation admission 输入对照，未规定新的 HTTP endpoint。
   内部持久记录不是调用方 Request，也不是公开 HTTP response。
 - Task snapshot 以 state 为判别联合，不包含 hostInstance。公共身份/时间基底相同，
-  pending/preparing/blocked/queued/running/completed/failed/cancelled 的专属数据互不混搭。
+  Check/Probe 使用 pending/preparing/queued/running/completed/failed/cancelled，
+  Regulation 额外支持 blocked；状态专属数据互不混搭。
   Before 保留旧 hostInstance 和可选字段形状，仅用于对照。
 - preparing 的整体进展叫 `preparation`，获取是其中的 `fetch` 子步骤。
   eligible 前的提前下载是服务优化，不在 pending 中暴露顶层 prefetch/preparation；
@@ -46,8 +47,8 @@
   必须在 eligible 后，制品准备优先于 prerequisite 阻塞。`recurrence.anchor` 使用 eligible/terminated；
   Task 终结时间写 `terminatedAt`，保留 completed/failed/cancelled 状态及错误原因。
 - pending 仅表示时间未到，无 reason 或专属 pending 对象。时间已到、制品未就绪为
-  preparing；时间与制品就绪、prerequisites 未满足为 blocked；前三项满足后排队为 queued。
-  第 9 节展示条件阻塞；不能把资源等待或 prerequisite 等待再次叫作 pending。
+  preparing；仅 Regulation 在时间与制品就绪、prerequisites 未满足时为 blocked。
+  第 9 节展示治理前置条件；Check/Probe 不接受 prerequisites，也不因业务条件未满足而阻止探测。
 - 所有 After snapshot 只用 artifactRef `{kind, url, digest}` 标识实际制品，
   不内嵌完整 manifest/schema。完整内容按准确 digest 单独查询，不能重新解析 latest。
   Before 的完整 artifact 对象保留作对照；执行 runtime/revision 等证据不能由制品查询代替。
@@ -495,7 +496,9 @@ freshness 也不意味着可随意共享有副作用的 Agent 执行。新统一
 
 ## 3. 创建 Response：完整初始 Task 快照
 
-所有 After snapshot 均使用同一个 state 判别联合，SSE 内的 snapshot 及独立查询的子 Task 也不例外。
+After snapshot 共用身份/时间基底，按任务类型定义 state 判别联合；
+Check/Probe 为七种状态，Regulation 为八种。SSE 及查询结果使用所属任务的同一类型，
+不能仅因 artifactRef.kind 都是 objective 就把 Probe 当作 Regulation。
 公共字段为 requestId/taskId/seriesId/revision/state、receivedAt/eligibleAt/deadlineAt、
 freshness 和可选 recurrence。历史阶段时间戳只在真实发生时提供。
 
@@ -503,7 +506,7 @@ freshness 和可选 recurrence。历史阶段时间戳只在真实发生时提�
 |---|---|---|
 | pending | 仅公共字段与任务属性 | 无 reason/pending 对象、preparation、父 executionId、result、顶层 error |
 | preparing | preparation.startedAt、artifacts 准备步骤，可选 fetch/selection 子步骤 | 无 conditions、父 executionId、最终 result |
-| blocked | 准确 artifactRef/language、conditions 的求值与依赖治理进展 | 无当前 preparation、父 Execution 或 result |
+| blocked（仅 Regulation） | 准确 artifactRef/language、conditions 的求值与依赖治理进展 | 无当前 preparation、父 Execution 或 result |
 | queued | 准确 artifactRef/language；已预约时可带 reservation.executionId | 无 preparation/conditions、实际执行开始时间或 result |
 | running | artifactRef/language、executionId、executionStartedAt，可选 progress | 无 result、preparation、terminatedAt |
 | completed | artifactRef/language、执行关联/时间、result、terminatedAt，可选 fallbackUsed 摘要 | 无完整 evidence、活跃 progress/preparation/conditions 或顶层 error |
@@ -514,6 +517,9 @@ freshness 和可选 recurrence。历史阶段时间戳只在真实发生时提�
 内部实例世代仍可用于所有权与迟到写入仲裁；此处不定义额外路由 envelope。
 下面的对象是各状态各自的数据类型，不是一个所有属性均可选的宽泛类型。
 JSON Schema 的互斥分支与 SDK 类型必须同时验证必需字段和禁止字段。
+Check/Probe Request 禁止 prerequisites，即使空数组也不能静默接受；
+它们的快照禁止 blocked、conditions、prerequisitesSatisfiedAt 以及 failedFrom=blocked。
+这些限制不影响 Checker 结果中的动态 requirements，也不禁止 Probe 解释动态依赖。
 
 artifactRef 在已选定分支中仅有 kind、url、digest。比如收到 Checker 的准确 digest 后，
 可在该服务挂载点下查询下面的路径（示例省略鉴权凭据）：
@@ -1116,7 +1122,7 @@ observedAt 是实际观察时间，不等于 Execution 完成或 Task 终结时�
 ### 4.4 正式 PREPARING：一定在 eligible 后
 
 独立场景展示状态顺序：Before 接收后立即 preparing；
-After 预优化可以很早开始；本例没有 prerequisites，Task 到 03:21:00Z 才正式 preparing。
+After 预优化可以很早开始；Check 不支持 prerequisites，Task 到 03:21:00Z 才正式 preparing。
 以下展示提前 fetch 未成功、当前进入 select 步骤判断候选/回退的分支，
 不假装已经有正式选中的 artifactRef 或 execution。
 
@@ -1593,37 +1599,28 @@ recovery 对象。内部仍须防止旧实例迟到写入；此处不定义持�
 }
 ```
 
-## 9. Task prerequisites：Check 条件与动态治理
+## 9. Regulation prerequisites：Check 条件与动态治理
 
-以下实体字段布局和进展名称为新设计草案。prerequisites 是 Check 声明数组，
+以下实体字段布局和进展名称为新设计草案。prerequisites 只属于 Regulation Request/Task，
+不是所有 Task 的公共字段。Check/Probe 是探测动作，外部条件不满足是应观察的事实，
+不是其业务启动前提；它们仍受 eligible、授权、制品准入和执行资源约束。
+prerequisites 是 Check 声明数组，
 全部通过才能激活父 Task；每个元素不是已经受理的 Request，因此不预先塞入 requestId。
 实际求值时由服务生成独立 Request/Task 身份。这里选择两个条件展示集合，
 不需要将一个条件再包装成 Objective；built-in Objective 达标 Checker 是普通 Checker
 契约的一种实现，URL 为合成例子，不声明已发布该内置制品。
 
-### 9.1 创建 Probe：完整 Before / After
+### 9.1 创建 Regulation：完整 After 与准确 Before 入口
 
-**Before：** 旧 Probe body，没有 prerequisites；用于这个对照调用的幂等 header 为
-`Idempotency-Key: 01M60000000000000000000030`。
+**Before：** 旧 Coordinator 使用第 2 节完整展示的 RequestCommand/PilotSpec，
+没有本节的 prerequisites 输入与统一 Regulation Task 状态模型。
+不再拿旧 Probe body 冒充治理请求的 Before，也不捏造不存在的旧 Regulation HTTP 接口。
 
-```json
-{
-  "objective": {
-    "url": "https://example.test/objective/app-v1.tgz",
-    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-  },
-  "subject": {
-    "root": "D:\\project"
-  },
-  "language": "en",
-  "freshness": "started-after-request",
-  "timeoutMs": 60000
-}
-```
-
-**After：** 完整 Request 实体，HTTP 仍把 requestId 放在同值 header。
+**After：** 完整 Regulation Request 实体，幂等 ID 为
+`01M60000000000000000000030`。若映射为 HTTP，requestId 仍走同值 header；
+这里不新增 Regulation HTTP listener。
 条件 0 等待依赖 Objective 的 subject 达到 ready，条件 1 检查本地许可文件。
-它们属于这次 Task，不是 app Objective 的静态依赖，不改变该 Objective 的 digest。
+它们属于这次治理 Task，不是 app Objective 的静态依赖，不改变该 Objective 的 digest。
 未指定 recurrence，避免用这个例子擅自决定条件阻塞时如何周期规划。
 
 ```json
@@ -1636,6 +1633,8 @@ recovery 对象。内部仍须防止旧实例迟到写入；此处不定义持�
   "subject": {
     "root": "D:\\project"
   },
+  "desiredLevel": "terminal",
+  "priority": 1,
   "language": "en",
   "eligibleAt": "2026-10-29T04:20:00.000Z",
   "freshness": "started-after-eligible",
@@ -1675,23 +1674,13 @@ recovery 对象。内部仍须防止旧实例迟到写入；此处不定义持�
 也可用于 prerequisites。检查的 freshness/有效期与重查策略仍待收敛，
 不能仅因没有在此例增加字段就认定历史结果永久可用。
 
-### 9.2 父 Task：时间与制品已就绪，但条件未通过
+### 9.2 父 Regulation Task：时间与制品已就绪，但条件未通过
 
-**Before：** 旧模型受理后即可准备，没有统一条件等待状态。
-
-```json
-{
-  "taskId": "01M60000000000000000000031",
-  "hostInstance": "01M60000000000000000000032",
-  "revision": 2,
-  "state": "preparing",
-  "acceptedAt": "2026-10-29T04:19:30.000Z",
-  "freshness": "started-after-request"
-}
-```
+**Before：** 没有同形的 Regulation blocked 快照；旧 Coordinator 的调度记录
+不冒充这里的新 Task snapshot，也不再用旧 Probe 的 preparing 快照作为治理任务对照。
 
 **After：** 服务在 04:20:02Z 记录条件求值。时间和 artifacts 均已就绪，
-但条件 0 未通过，因此父 Task 为 blocked；条件 1 通过不能使其推进。
+但条件 0 未通过，因此父 Regulation Task 为 blocked；条件 1 通过不能使其推进。
 正式准备已经完成，只保留其时间戳；没有父 Execution 或当前 preparation 对象。
 conditions 是 blocked 的完整条件状态投影，不是子 Task 的完整 snapshot；
 子执行的原始证据可由关联 taskId/executionId 查询，不能伪装成父业务结果。
@@ -1738,10 +1727,11 @@ conditions 是 blocked 的完整条件状态投影，不是子 Task 的完整 sn
 
 ### 9.3 条件子 Check：可执行的完整 Request 及依赖需求
 
-**Before：** 没有由统一 Task prerequisites 产生的子 Request；不能用空对象冒充。
+**Before：** 没有由本次 Regulation prerequisites 产生的子 Request；不能用空对象冒充。
 已有 CheckerResult 支持动态 requirements，本次复用它，不重复发明一种自由文本协议。
 
-**After：** 从条件 0 生成的完整 Check Request。它不继承父 prerequisites，
+**After：** 从条件 0 生成的完整 Check Request。它本身不支持 prerequisites，
+不会继承父 Regulation 的治理启动前提，
 也不使用父 series；自己 eligible 后可以准备和执行，避免父子互等。
 本例在父 eligible 时受理子检查，30 秒预算不超过父剩余 60 秒；
 是否支持更早检查以及通用预算分配策略不由这个示例定稿。
@@ -1798,8 +1788,11 @@ Check Task 本身是 completed，而不是执行 failed。这里不是完整 Tas
 
 Coordinator 根据服务治理策略决定是否创建 Regulation；目标可以由需求推导，
 权限、Agent 配置与预算不能由这个结果自行授予。若未授权则不启动治理，
-父任务继续等待或最终按原期限终结。若 Check 执行失败，则显式展示故障，
+父 Regulation 继续等待或最终按原期限终结。若 Check 执行失败，则显式展示故障，
 不能捏造上述不通过 payload 或以故障授予治理权限。
+这个正常 `ok:false + requirements` 也允许由普通 Check 返回，Probe 仍可解释这些动态需求。
+Check 自身 completed 不等于其父 Regulation 的条件已通过；不能让子 Check 进入 blocked
+来代替返回业务结果。外部条件不满足不阻止它执行，这正是探测与治理的区别。
 
 ### 9.4 Origin：因果审计不等于激活条件
 
@@ -1813,7 +1806,7 @@ Coordinator 根据服务治理策略决定是否创建 Regulation；目标可以
 }
 ```
 
-**After：** 服务端为条件 Check Task 记录来源，关联父 Task 与条件项。
+**After：** 服务端为条件 Check Task 记录来源，关联父 Regulation Task 与条件项。
 `prerequisite` kind 与 index 命名为草案；不是外部 Request 可任意声明的治理权限。
 依赖 Regulation 还应能追溯产生需求的 Check Task，具体审计形状以后确定。
 
@@ -1825,7 +1818,7 @@ Coordinator 根据服务治理策略决定是否创建 Regulation；目标可以
 }
 ```
 
-### 9.5 治理后重新检查：全部通过后才进入资源调度
+### 9.5 父 Regulation 重查通过：进入治理资源调度
 
 **Before：** 9.2 的父 blocked 快照代表此前未满足条件的状态。
 **After：** 重查通过后制品不需要重新准备，若暂未获得资源则进入 queued。
@@ -1856,7 +1849,7 @@ Coordinator 根据服务治理策略决定是否创建 Regulation；目标可以
 }
 ```
 
-到 eligible 已释放 pending 槽位，blocked 不与未来 pending 后继竞争。
+父 Regulation 到 eligible 已释放 pending 槽位，blocked 不与未来 pending 后继竞争。
 条件证据有效期、重查频率、后继条件继承和未完成轮次积压限额仍须收敛；
 不能用唯一 pending 约束代替整个系列的容量管理。
 

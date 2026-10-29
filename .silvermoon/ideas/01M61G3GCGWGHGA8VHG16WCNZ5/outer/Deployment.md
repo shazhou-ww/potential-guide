@@ -14,7 +14,8 @@
 
 使用公开 SDK 验证资格时间、递归锚点、系列事件、唯一 pending 及取消，
 覆盖提前选版/fallback、准确绑定和未完成 Task 的真实进程重启恢复；
-验证 Task 前置 Check 独立运行、结构化依赖治理与治理后重新判断，
+验证 Regulation 前置 Check 独立运行、结构化依赖治理与治理后重新判断，
+以及外部条件不满足时 Check/Probe 仍执行并报告动态业务需求，而非被前置条件阻塞；
 区分 pending 时间等待、preparing 制品准备、blocked 条件阻塞和 queued 资源排队；
 通过历史事件查询验证错过 SSE 后仍可追溯执行、选版和子 Task 关联，
 不依赖终态快照中的完整 evidence；
@@ -34,7 +35,7 @@ snapshot 不内嵌完整 Artifact，外部消费者按准确 artifactRef 查询�
 真实系列事件和故障重启实验表明 eligible/freshness/timeout 一致，
 重复规划不会多留 pending，取消计划不会复活，恢复不重复生后继或悄悄换版；
 语言与进展一致，退出后无操作遗留进程，不宣称正式发布。
-制品就绪但条件未通过为 blocked，治理结束后仍须通过重查才推进，等待不改写 eligible/deadline；
+Regulation 制品就绪但条件未通过为 blocked，治理结束后仍须通过重查才推进，等待不改写 eligible/deadline；
 未授权治理不能由条件检查结果自动获得许可。
 Task/Execution/Series 历史查询有独立游标，分页及实时通知来自同一事实，
 共享执行不复制或泄露其他 owner 的任务数据。

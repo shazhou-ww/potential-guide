@@ -34,7 +34,14 @@ Request 携带 `eligible_at`、`recurrence` 和可选 `series_id`，成功受理
 | 后继身份 | Coordinator 已有确定性后继引用，Check/Probe 没有递归需求生成。 | 每轮新 Request/Task 身份，继承 series ID；重试和恢复不重复分配同一轮。 |
 | Probe bindings | 当前输入 bindings 同时可固定根 Objective 与运行时依赖，旧示例重复传入根 digest。 | 普通 Probe 只提供根引用，不再重复传根或静态 Checker bindings；动态依赖选择由服务记录。 |
 | Regulation Objective | 当前 Coordinator 调用输入需要完整 PilotSpec；其存储元素另用 targetKey/objectiveRevisionKey。 | 调用方输入改为与 Probe 一致的 `objective: {url, digest?}` 加 subject；服务解析后再构造内部定义与存储引用。 |
-| 前置条件 | Check/Probe 创建输入没有统一的 Task 前置 Check 集合。 | Request 可携带 prerequisites，Task 保存每个条件的 Check 定义、实际判断及依赖关系；不写入 Objective 制品。 |
+| 治理前置条件 | 现有 Coordinator 没有这里定义的 prerequisites Check 集合。 | 仅 Regulation Request/Task 可声明 prerequisites；Check/Probe 不接受该字段，不写入 Objective 制品。 |
+
+**探测与治理边界：** Check/Probe 是探测动作，外部条件不满足应被观察并报告，
+不能作为启动探测的业务前提；因此它们没有 prerequisites 或 prerequisite 意义的 blocked。
+Regulation 会改变环境，才需要“先满足这些条件再治理”的能力。
+这里“任何时候可以探测”不取消显式 eligible、准确制品准入、授权和资源约束。
+Check 的结构化动态 requirements 及 Probe 的动态依赖观察仍保留，
+它们是探测发现的业务需求，不是探测自身的启动条件。
 
 **调用输入对称：** Check 用 `checker: {url, digest?}`，Probe 与 Regulation
 都用 `objective: {url, digest?}`。不让 Regulation 调用方提前物化 Objective、
@@ -79,7 +86,7 @@ series 默认复用首个 Task ID 是明确例外。ULID 时间部分不用于 f
 
 | 修改点 | Before | After |
 |---|---|---|
-| 生命周期 | Check/Probe 为 accepted/preparing/waiting/running 等状态，无统一资格条件分层。 | 非终态按时间、制品、前置条件、资源的优先级投影为 pending/preparing/blocked/queued/running。 |
+| 生命周期 | Check/Probe 为 accepted/preparing/waiting/running 等状态，无统一资格条件分层。 | Check/Probe 按时间、制品、资源投影；Regulation 在资源前增加前置条件阶段 blocked。 |
 | 准备进展 | 受理后即可进入 preparing。 | 正式 PREPARING 只能在 eligible 后；提前下载/更新检查仅是 PENDING 中可观察的预优化。 |
 | 取消 | Check/Probe 可撤销非终态需求；Coordinator 有 request/recurrence scope。 | 新统一交互只取消 pending Task，不提供“取消 recurrence Task”或另一个系列取消语义。 |
 | 重复规划 | 没有跨 Check/Probe 的统一系列去重。 | 冗余新 pending Task 被取消，已有 pending Task 保留；记录明确原因。 |
@@ -102,7 +109,8 @@ PENDING 仅表示时间尚未到；因此没有额外 reason，也没有专属 p
 内部超时、服务关闭、父观察失去 owner 时的资源清理仍需保留，
 它们不是公开的“单轮运行中取消”能力。
 
-**已确认状态顺序：**
+**已确认状态顺序：** 下列条件优先级用于 Regulation；Check/Probe 跳过业务前置条件判定，
+不是“隐式带一个永远通过的 prerequisites”，而是其输入和状态类型根本没有这项能力。
 
 ```text
 时间未到                                   → pending
@@ -112,10 +120,17 @@ PENDING 仅表示时间尚未到；因此没有额外 reason，也没有专属 p
 全部条件满足并已关联实际运行的 Execution      → running
 ```
 
+```text
+Check / Probe: pending → preparing → queued → running
+Regulation:   pending → preparing → blocked → queued → running
+```
+
 这是条件合取的优先级投影，不是强制串行工作流。优先报告第一个未满足的条件，
 已满足的阶段可跳过；提前获取制品或独立条件检查不改变父 Task 的优先级。
 到 eligible 即释放 pending 槽位；制品未就绪进入 preparing，
-制品已就绪但条件未通过进入 blocked，不能因为外部条件未满足继续占 pending。
+Regulation 制品已就绪但条件未通过进入 blocked，不能因为外部条件未满足继续占 pending。
+Check/Probe 制品就绪后可直接进入资源调度，即使业务外部条件并不满足，
+也由执行结果报告，而不是停在 blocked。
 准备、条件阻塞和排队都消耗同一个 eligible 锚定预算。
 预下载/更新失败可提前报告，但优化失败不直接把 pending Task 终结，
 正式 PREPARING 再依据成果及 fallback 策略判定准入。
@@ -141,7 +156,7 @@ receivedAt、eligibleAt、deadlineAt，以及本任务的 freshness/可选 recur
 |---|---|---|
 | pending | 仅公共字段与任务属性，时间未到 | reason/pending 对象、正式 preparation、父 executionId、业务 result/error |
 | preparing | preparation.startedAt 与 artifacts 获取/验证/选择进展 | 当前条件阻塞进展、已运行父 Execution、最终 result |
-| blocked | 准确 artifactRef/语言及 conditions 求值、依赖治理与重查进展 | 当前 preparation、父 Execution、最终 result |
+| blocked（仅 Regulation） | 准确 artifactRef/语言及 conditions 求值、依赖治理与重查进展 | 当前 preparation、父 Execution、最终 result |
 | queued | 准确 artifactRef/语言；已预约时可含 reservation.executionId | 当前 preparation/conditions、业务 result、虚构的 executionStartedAt |
 | running | 准确 artifactRef/语言、executionId、executionStartedAt；按需提供业务 progress | 当前 preparation/conditions、最终 result、终结时间 |
 | completed | artifactRef、实际执行关联与时间、result、terminatedAt；必要时有小量决策摘要 | 实时 preparation/conditions/progress、完整 evidence、顶层 error |
@@ -149,7 +164,8 @@ receivedAt、eligibleAt、deadlineAt，以及本任务的 freshness/可选 recur
 | cancelled | pending 取消原因和 terminatedAt；按需给出重复规划冲突信息 | 正式 preparation、父 Execution、result |
 
 字段布局是示例约定，类型边界已确认：queued 无排队细节时无需额外 reason，
-只有已预约才带 reservation.executionId；failedFrom 为 pending/preparing/blocked/queued/running，
+只有已预约才带 reservation.executionId；Regulation 的 failedFrom 可为 pending/preparing/blocked/queued/running，
+Check/Probe 的 failedFrom 不包含 blocked，也不返回 conditions 或 prerequisitesSatisfiedAt。
 在 pending 失败就不能出现父 Execution，在 running 失败则保留真实执行关联。
 Check 的 running 可以没有自定义 progress；Objective 的最终观察进展如需保留，
 作为结构化历史事件按需查询，不塞进终态 evidence 或伪装成活跃 progress。
@@ -212,17 +228,17 @@ latestSuccessor/generation 如保留，只是规划事实的可重建索引。
 外层不再重复三个身份；缓存不得作为可独立修改的第二份调度事实。
 这些只收敛逻辑职责，不在此提前决定持久化事务、物理索引或缓存布局。
 
-### 2.2 Task prerequisites：以 Check 表达动态条件
+### 2.2 Regulation prerequisites：以 Check 表达治理前置条件
 
 | 修改点 | Before | After |
 |---|---|---|
-| 声明位置 | 早期曾将静态 prerequisite 放在 Objective；当前候选已移除，仍有业务运行时依赖需求。 | 给具体 Task 增加 prerequisites Check 集合，同一 Objective 的不同 Task 可以等待不同条件，不改变制品 digest。 |
+| 声明位置 | 早期曾将静态 prerequisite 放在 Objective；当前候选已移除，仍有业务运行时依赖需求。 | 给具体 Regulation Task 增加 prerequisites Check 集合，同一 Objective 的不同治理任务可以等待不同条件，不改变制品 digest。 |
 | 条件表达 | 旧 origin 的 dependency 只说明需求产生原因，不是完整条件谓词。 | 用 Checker 引用与 subject 表达条件，初版采用所有 Check 通过；Objective 达到某 level 是一种 built-in Checker。 |
 | 不满足 | 原候选未提供统一的 Task 条件阶段。 | 时间与制品就绪后保持 blocked 并记录检查结果；Checker 可返回结构化 Objective/subject/expectedLevelId 需求，不能靠自由文本猜治理规则。 |
 | 唤醒 | Coordinator 已有依赖记录，但没有通用前置 Check 条件模型。 | 调度层维护等待方引用和反向索引，相关事件仅触发重新求值，不直接把等待方改为可运行。 |
 | 来源审计 | origin 包括 external、dependency、recurrence。 | 服务继续记录创建因果，按独立 Task 身份关联父/前驱；不把 origin 等同于 prerequisites，也不要求外部伪造内部来源。 |
 
-**条件求值：**
+**条件求值（仅 Regulation）：**
 
 ```text
 可离开 PENDING = now >= eligible_at（超时/终态另先行处理）
@@ -233,6 +249,10 @@ deadline_at = eligible_at + timeout
 ```
 
 省略或空集合没有额外条件。condition 不写回 eligible_at，也不推迟或刷新 deadline。
+Check/Probe 不允许传入 prerequisites，即使空数组也不作为扩展接受，
+应报告不支持字段，不能忽略后制造“条件已受理”的假象。
+通用 Task 状态词汇不等于每种 Task 都接受所有字段或状态：
+Check/Probe 的判别联合为七种，Regulation 加 blocked 为八种。
 eligible 后等条件、检查以及依赖治理所花的时间消耗该 Task 的剩余预算。
 timeout 是时长，deadlineAt 是 Task 截止时间，不是 Request 或结果记录的失效日期。
 
@@ -244,8 +264,9 @@ timeout 是时长，deadlineAt 是 Task 截止时间，不是 Request 或结果�
 - 依赖 Regulation 结束后必须重新执行条件 Check；治理结束、甚至目标曾经达标，
   都不能直接替代整个条件 Check 的有效通过结果。
 
-**子任务与所有权：** prerequisite 检查拥有独立 Check Task；父 Task 尚在 blocked
-不能阻止这些 Check 自己进入准备/执行，也不能机械继承父 prerequisites 造成自锁。
+**子任务与所有权：** prerequisite 检查拥有独立 Check Task；父 Regulation Task 尚在 blocked
+不能阻止这些 Check 自己进入准备/执行。子 Check 不支持 prerequisites，
+不是仅靠调用方自觉不继承，避免把治理前提递归施加到探测本身而自锁。
 子 Task 的 requestId/taskId 独立分配，默认 series 为自身 Task ID，
 通过服务端的父 Task/条件项关系关联，不占用父 series 的 pending 槽位。
 父 Task 取消/超时后应释放自己拥有的检查、订阅和依赖需求；
@@ -256,6 +277,9 @@ freshness、通过证据有效期、多个条件是否需在同一窗口有效�
 仍须明确，不把一次历史通过当作永久许可。首次检查是否可早于父 eligible 也待确定；
 无论何时检查，父 Task 不得早于自己的 eligible 激活。
 本次不实现任意条件表达式语言或 all/any 嵌套树，也不恢复 Artifact 静态 prerequisite。
+收窄 prerequisites 不删除 CheckerResult.requirements。条件 Check 可以返回正常不通过
+及结构化目标，普通 Check/Probe 也可以发现动态依赖；这些执行中的业务语义不被
+重解释为其 Task 必须先进入 blocked 才能执行。
 
 ## 3. Series 与 recurrence：一个 pending Task，两个锚点
 
@@ -323,7 +347,7 @@ eligible 模式应按资格节拍推进，不随实际 worker 开始时间漂移
 不重置预算来强行执行；系列继续安排未来轮次。
 后继保持原节拍的下一个未来点，还是从本次处理时刻加周期，稍后细化。
 
-**条件阻塞不再占 pending：** 本轮可在 preparing/blocked/queued，下一轮仍可占
+**治理条件阻塞不再占 pending：** Regulation 本轮可在 preparing/blocked/queued，下一轮仍可占
 唯一 pending 槽位。因此旧草案的“条件等待与后继争夺 pending 槽位”冲突已消除。
 同系列可能同时有多个未完成轮次；deadline 和容量限制必须约束长期阻塞的积压，
 不能把唯一 pending 当成未完成 Task 总数上限。后继条件继承与容量满时的处置仍待收敛。
