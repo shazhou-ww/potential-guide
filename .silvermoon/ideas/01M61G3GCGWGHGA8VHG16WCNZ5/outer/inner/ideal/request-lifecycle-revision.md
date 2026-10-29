@@ -29,7 +29,7 @@ Request 携带 `eligible_at`、`recurrence` 和可选 `series_id`，成功受理
 | freshness | Check/Probe 以受理序号作为强/弱新鲜度边界。 | 强条件为 `started_at > eligible_at`，弱条件为 `completed_at > eligible_at`。 |
 | 身份边界 | Check/Probe 使用幂等键识别重复创建调用，另有 Task ID；旧讨论曾将二者混用。 | Request ID 就是幂等 ID，Task ID 独立分配；Request 解析/准入失败可以不产生 Task。 |
 | 实体与传输 | HTTP 幂等键与 Task 跟踪分开，示例未明确完整 Request 实体。 | Request 实体必含 requestId；HTTP 从 header 还原同一个值，解析错误也按它审计。 |
-| ID 格式 | 现有生成型身份包含 UUID/任意幂等字符串。 | 新 Request、Task、Series、Execution、Observation、Invocation、Host instance 身份统一用规范 ULID。 |
+| ID 格式 | 现有生成型身份包含 UUID/任意幂等字符串。 | 新 Request、Task、Series、Execution、Observation、Invocation 等生成型身份统一用规范 ULID；公共 Task 不暴露 Host instance。 |
 | series | Check/Probe 没有独立系列属性；Coordinator 用 predecessor 链表示 recurrence。 | 输入 `series_id` 可选，首个 Task 默认以自身 Task ID 为 series ID；后继 Task 继承同一 series。 |
 | 后继身份 | Coordinator 已有确定性后继引用，Check/Probe 没有递归需求生成。 | 每轮新 Request/Task 身份，继承 series ID；重试和恢复不重复分配同一轮。 |
 | Probe bindings | 当前输入 bindings 同时可固定根 Objective 与运行时依赖，旧示例重复传入根 digest。 | 普通 Probe 只提供根引用，不再重复传根或静态 Checker bindings；动态依赖选择由服务记录。 |
@@ -83,6 +83,8 @@ series 默认复用首个 Task ID 是明确例外。ULID 时间部分不用于 f
 | 准备进展 | 受理后即可进入 preparing。 | 正式 PREPARING 只能在 eligible 后；提前下载/更新检查仅是 PENDING 中可观察的预优化。 |
 | 取消 | Check/Probe 可撤销非终态需求；Coordinator 有 request/recurrence scope。 | 新统一交互只取消 pending Task，不提供“取消 recurrence Task”或另一个系列取消语义。 |
 | 重复规划 | 没有跨 Check/Probe 的统一系列去重。 | 冗余新 pending Task 被取消，已有 pending Task 保留；记录明确原因。 |
+| 快照类型 | ServiceSnapshot 由 state 加大量可选字段组成。 | 以 state 为判别字段，公共基底加各状态独立数据结构；HTTP、SDK 与事件 snapshot 使用同一联合类型。 |
+| Host 实例 | Task 快照携带 hostInstance，SDK 以变化判断重启。 | Task 公共契约不携带 hostInstance；路由需要时在外围 envelope 表达，内部实例世代/所有权不暴露为 Task 字段。 |
 
 **已确认：** 用户取消的是被保留的 pending Task；它不能再触发后继，递归链由此停止。
 取消冗余 pending Task 不影响原计划。已经运行的 Task 不被该操作取消，
@@ -111,7 +113,49 @@ PENDING → 时间达到 eligible 且 prerequisites 全部通过 → PREPARING �
 Request 自身解析失败没有 Task，与 Task 正式准备失败分开。
 已过 deadline 的 Task 直接以超时终结，不为了经过 PREPARING 而执行无效工作。
 
-### 2.1 Task prerequisites：以 Check 表达动态条件
+### 2.1 Snapshot：按状态区分类型，不堆叠所有阶段对象
+
+公共基底是 requestId、taskId、seriesId、revision、state、
+receivedAt、eligibleAt、deadlineAt，以及本任务的 freshness/可选 recurrence。
+状态专属信息随当前 state 切换，不因为未来可能用到就定义成一组全局可选属性。
+既往时间戳可以保留，但必须代表真实发生的阶段，不要求所有任务走过全部阶段。
+
+| 状态 | 必需的状态信息 | 不允许作为当前信息出现 |
+|---|---|---|
+| pending | 等待原因；按需包含前置 Check 的求值状态 | 正式 preparation、父 executionId、业务 result/error |
+| preparing | preparation.startedAt 与当前步骤，fetch/验证/选择进展 | 已运行父 Execution、最终 result、pending 等待对象 |
+| waiting | 准确 artifact/语言及 scheduling；queued 或 reserved 分支 | 当前 preparation 进展、业务 result、虚构的 executionStartedAt |
+| running | 准确 artifact/语言、executionId、executionStartedAt；按需提供业务 progress | 当前 preparation、最终 result、终结时间 |
+| completed | artifact、实际执行关联与时间、result、evidence、terminatedAt | 实时 preparation/pending/progress、顶层 error |
+| failed | failedFrom、error、terminatedAt；按失败前阶段保留真实证据 | success result、与失败阶段不相容的执行关联或活跃进展 |
+| cancelled | pending 取消原因和 terminatedAt；按需给出重复规划冲突信息 | 正式 preparation、父 Execution、result |
+
+字段布局是示例约定，类型边界已确认：如 waiting 的 scheduling 再分 queued/reserved，
+只有 reserved 才带预约执行 ID；failedFrom 为 pending/preparing/waiting/running，
+在 pending 失败就不能出现父 Execution，在 running 失败则保留真实执行关联。
+Check 的 running 可以没有自定义 progress；Objective 的最终观察进展如需保留，
+放入 evidence 的最终观察记录，不继续伪装成活跃 progress。
+
+preparation 是准备整体，fetch 只是其子步骤。prefetch 只表示提前执行 fetch 的优化，
+不再是顶层公共快照对象。PENDING 不携带整份 preparing 数据；提前获取的变化可通过
+单独的优化事件/诊断证据观察，其具体 envelope 尚待定义。
+进入 preparing 后可在 preparation.fetch 中报告已发生的提前获取，
+但 preparation.startedAt 仍不得早于 eligible 和条件满足时刻。
+fetch 子步骤用其实际时间，不伪造为正式阶段开始时间。
+
+终态仅保留实际阶段时间戳、业务结果及必要决策证据。
+fallback 的所选准确版本、采用原因与更新失败必须保留在 evidence.selection 等决策证据中，
+不能为了删除旧阶段进展而隐去回退错误。每次下载变化属于详细事件，不整份复制到 completed。
+若 Task 在 pending 就超时，不添加 preparation/execution 时间戳；
+terminatedAt 也不证明 Task 曾经 running。
+
+移除 hostInstance 不等于删除内部安全仲裁。服务内部仍需防止旧实例迟到写入，
+确保恢复后同一 Task 身份与 revision 连续；不靠客户端看到 hostInstance 变化保证正确性。
+本次不定义新的路由 envelope 或持久化机制，恢复细节继续暂缓。
+JSON Schema 必须使用互斥分支校验必需/禁止字段，与 SDK 的 discriminated union 一致；
+仅提供 TypeScript union 而 HTTP 仍接受跨状态混搭，不算满足该设计。
+
+### 2.2 Task prerequisites：以 Check 表达动态条件
 
 | 修改点 | Before | After |
 |---|---|---|
@@ -300,7 +344,7 @@ Before 使用 started-after-request/completed-after-request 字面值；
 |---|---|---|
 | Check/Probe | 进程内有界保留，重启使 Task 不可用，无透明重跑。 | 所有已受理未完成 Task 都需持久恢复，不限 recurrence。 |
 | Regulation | Coordinator 已有持久事件/恢复，不是从零建设。 | 增加统一系列、时间和规划证据的持久化与恢复。 |
-| 恢复身份 | Host instance 用于识别服务重启。 | 保留 Request/Task/series 身份，另记录新的 Host/执行尝试身份。 |
+| 恢复身份 | 公共 hostInstance 用于识别服务重启。 | 保留 Request/Task/series 身份及 revision 连续性；内部记录实例/执行尝试，不在 Task 快照暴露 hostInstance。 |
 | 恢复期限/版本 | 原格式准确恢复与服务内快照分开。 | 原 eligible、deadline、固定版本及 bindings 不变；不得重置 timeout 或追 latest。 |
 
 **已确认：** 所有未完成 Task 的恢复都是范围内需求；跨重启透明执行本身不是承诺。
@@ -318,7 +362,7 @@ Before 使用 started-after-request/completed-after-request 字面值；
 |---|---|---|
 | 过滤 | Check/Probe SSE 按 taskId 或显式 scope=all 过滤。 | 增加按 series ID 过滤，包含订阅之后新产生的该系列 Task。 |
 | 身份 | task.updated 关联 Task 与 Execution，缺少独立系列。 | 请求、快照、日志及事件携带 series，必要时保留前驱/轮次。 |
-| 进展 | level、invocation、依赖关系及子 Task/Execution。 | 增加 PENDING 原因、前置 Check/依赖治理、准备/回退、重复规划取消与恢复信息。 |
+| 进展 | level、invocation、依赖关系及子 Task/Execution。 | 按 state 投影等待、条件、preparation、执行与终态证据，不保留跨状态混搭的进展对象。 |
 | 重连 | 当前有界快照，不重建 Task、不重放全部中间事件。 | 动态系列快照与后续轮次连续可观察；不能把增加过滤宣称为无限历史回放。 |
 
 series 订阅不能只在订阅时展开为现存 task IDs；首次快照与后续创建之间不能漏事件。

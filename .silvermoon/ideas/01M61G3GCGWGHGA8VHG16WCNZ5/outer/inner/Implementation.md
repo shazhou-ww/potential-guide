@@ -30,6 +30,8 @@ Coordinator 按授权处理，完成治理后重查，服务保留 origin 因果
 Regulation 调用方改用与 Probe 相同的 Objective URL/digest 引用，由服务构造内部 PilotSpec；
 实体必含 requestId，HTTP 从 header 还原并先于 body 解析识别；生成型身份采用 ULID。
 提供 series 动态事件和可恢复身份，不以旧协议兼容要求约束新结构。
+Task snapshot 在 HTTP/SDK/事件中统一为 state 判别联合，移除公共 hostInstance；
+preparation 仅用于准备阶段，终态保留必要时间戳和决策证据，不携带活跃阶段进展。
 
 ## Acceptance criteria
 
@@ -50,3 +52,5 @@ freshness 归并成立；故障恢复测试证明不重复规划、不刷新期�
 
 Router、SDK、Pilot/regulator 与 Coordinator 的 series 订阅和持久恢复测试通过，
 覆盖新轮次动态加入及授权边界；最终执行 pnpm check，不以旧 gate 或类型检查替代运行证据。
+状态联合的 schema/运行校验证明 completed 必有结果、pending 不带父 Execution，
+各失败阶段不虚构未发生的步骤；准备前的 fetch 优化不伪造正式准备时间。

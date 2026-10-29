@@ -28,7 +28,7 @@
   **所有 After 创建输入 JSON 均为完整 Request 实体，必须包含 requestId。**
   HTTP 序列化时把该字段放入 header，其余字段构成 body；收到后还原同一个实体。
   首个 Task 的默认 seriesId 为 taskId，后继继承 series。
-  Request/Task/Series/Execution/Observation/Invocation/Host instance 等生成型身份
+  Request/Task/Series/Execution/Observation/Invocation 等公共生成型身份
   统一为规范大写 ULID。作者定义的 levelId、problemId、局部 Checker 名称保留可读值；
   digest 和 revision 不叫 ID，也不使用 ULID。ULID 时间部分不裁定调度或授权。
   Before 的合成 ID 值也采用 ULID 方便对照，但不据此改变旧结构的字段。
@@ -37,8 +37,13 @@
 - 本文不发明 Regulation HTTP 服务：第 2 节将现有 Coordinator 调用输入
   与建议的统一 Regulation admission 输入对照，未规定新的 HTTP endpoint。
   内部持久记录不是调用方 Request，也不是公开 HTTP response。
-- eligible 前的提前下载用 `prefetch` 展示，Task 仍 pending；正式 `preparation`
-  必须在 eligible 后。`recurrence.anchor` 使用 eligible/terminated；
+- Task snapshot 以 state 为判别联合，不包含 hostInstance。公共身份/时间基底相同，
+  pending/preparing/waiting/running/completed/failed/cancelled 的专属数据互不混搭。
+  Before 保留旧 hostInstance 和可选字段形状，仅用于对照。
+- preparing 的整体进展叫 `preparation`，获取是其中的 `fetch` 子步骤。
+  eligible 前的提前下载是服务优化，不在 pending 中暴露顶层 prefetch/preparation；
+  优化事件的具体 envelope 尚待设计。正式 `preparation.startedAt`
+  必须在 eligible 与条件满足后。`recurrence.anchor` 使用 eligible/terminated；
   Task 终结时间写 `terminatedAt`，保留 completed/failed/cancelled 状态及错误原因。
 - 未列 prerequisites 的已有例子表示无额外前置条件，不表示所有 Task 到 eligible
   必然激活。有条件时见第 9 节：时间与条件独立，条件未通过仍为 pending。
@@ -483,6 +488,25 @@ freshness 也不意味着可随意共享有副作用的 Agent 执行。新统一
 
 ## 3. 创建 Response：完整初始 Task 快照
 
+所有 After snapshot 均使用同一个 state 判别联合，事件和嵌套子 Task 证据也不例外。
+公共字段为 requestId/taskId/seriesId/revision/state、receivedAt/eligibleAt/deadlineAt、
+freshness 和可选 recurrence。历史阶段时间戳只在真实发生时提供。
+
+| state | 当前状态的数据 | 必须避免的混搭 |
+|---|---|---|
+| pending | pending.reason（time/prerequisites/activation），可选 pending.conditions | 无 preparation、父 executionId、result、顶层 error |
+| preparing | preparation.startedAt、stage，可选 fetch/selection 子步骤 | 无 pending、父 executionId、最终 result |
+| waiting | 准确 artifact/language，scheduling.state（queued/reserved） | 无 preparation；queued 无执行 ID，reserved 的执行 ID 在 scheduling 内 |
+| running | artifact/language、executionId、executionStartedAt，可选 progress | 无 result、preparation、terminatedAt |
+| completed | artifact/language、执行关联/时间、result、evidence、terminatedAt | 无活跃 progress/preparation/pending 或顶层 error |
+| failed | failedFrom、error、terminatedAt；按失败阶段保留真实证据 | 不得返回成功 result，pending 失败不伪造执行关联 |
+| cancelled | error 原因、terminatedAt，可选 planningConflict | 无父 Execution、准备进展或 result |
+
+`hostInstance` 不属于公共基底或任何 After 分支。路由如需实例信息应置于外围，
+内部实例世代仍可用于所有权与迟到写入仲裁；此处不定义额外路由 envelope。
+下面的对象是各状态各自的数据类型，不是一个所有属性均可选的宽泛类型。
+JSON Schema 的互斥分支与 SDK 类型必须同时验证必需字段和禁止字段。
+
 ### 3.1 Check 创建响应：accepted → pending
 
 Before 的 POST 成功返回 HTTP 201、Location 和快照本身，没有额外 `{task: ...}` 包装。
@@ -503,14 +527,13 @@ After 采用快照响应；新路由独立设计，不承担旧 endpoint 的兼�
 ```
 
 **After：** 对应 1.1 的 Request。pending 时没有 Execution；
-scheduledAt 为 eligible 减去准备提前量，而不是 received。
+pending.reason 为 time，只展示当前等待。预取安排属于服务优化，不把它当作正式阶段。
 
 ```json
 {
   "taskId": "01M60000000000000000000006",
   "requestId": "01M60000000000000000000002",
   "seriesId": "01M6000000000000000000001D",
-  "hostInstance": "01M6000000000000000000000D",
   "revision": 1,
   "state": "pending",
   "receivedAt": "2026-10-29T03:20:00.000Z",
@@ -521,9 +544,8 @@ scheduledAt 为 eligible 减去准备提前量，而不是 received。
     "periodMs": 60000,
     "anchor": "eligible"
   },
-  "prefetch": {
-    "state": "scheduled",
-    "scheduledAt": "2026-10-29T03:20:50.000Z"
+  "pending": {
+    "reason": "time"
   }
 }
 ```
@@ -545,14 +567,13 @@ scheduledAt 为 eligible 减去准备提前量，而不是 received。
 
 **After：** 对应 1.2，调用使用 `Idempotency-Key: 01M60000000000000000000018`；
 series 等于独立分配的 Task ID，eligible 等于 received。
-计算出的准备时间早于接收，只能接收后立即安排，不伪造提前发生的下载。
+初始快照尚未激活，pending.reason 为 activation；不伪造已进入准备阶段。
 
 ```json
 {
   "taskId": "01M6000000000000000000001A",
   "requestId": "01M60000000000000000000018",
   "seriesId": "01M6000000000000000000001A",
-  "hostInstance": "01M6000000000000000000000D",
   "revision": 1,
   "state": "pending",
   "receivedAt": "2026-10-29T03:20:00.000Z",
@@ -563,10 +584,185 @@ series 等于独立分配的 Task ID，eligible 等于 received。
     "periodMs": 60000,
     "anchor": "terminated"
   },
-  "prefetch": {
-    "state": "scheduled",
-    "scheduledAt": "2026-10-29T03:20:00.000Z"
+  "pending": {
+    "reason": "activation"
   }
+}
+```
+
+### 3.3 Waiting：只展示调度等待，不保留 preparation 进展
+
+下面是独立的队列等待场景。Before 已预约一个执行；After 示例仍在 queued，
+没有可报告的执行 ID。若 After 为 reserved，scheduling 必须改用
+包含 executionId 的 reserved 分支，不在 queued 中填写空值或虚构身份。
+提前获取、校验和回退已结束，快照只保留真实准备时间；决定证据仍保存在服务记录中。
+
+**Before：**
+
+```json
+{
+  "taskId": "01M60000000000000000000006",
+  "hostInstance": "01M6000000000000000000000D",
+  "revision": 4,
+  "state": "waiting",
+  "acceptedAt": "2026-10-29T03:20:00.000Z",
+  "freshness": "completed-after-request",
+  "artifact": {
+    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source": "https://example.test/checker/latest.tgz",
+    "checkedAt": "2026-10-29T03:20:01.000Z",
+    "transportDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "manifest": {
+      "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json",
+      "runtime": {
+        "type": "node",
+        "minVersion": "22.13.0"
+      },
+      "entry": "checker.cjs",
+      "subjectSchema": {
+        "type": "object"
+      },
+      "problems": [],
+      "languages": [
+        "en"
+      ]
+    }
+  },
+  "language": "en",
+  "executionId": "01M60000000000000000000001"
+}
+```
+
+**After：**
+
+```json
+{
+  "taskId": "01M60000000000000000000006",
+  "requestId": "01M60000000000000000000002",
+  "seriesId": "01M6000000000000000000001D",
+  "revision": 5,
+  "state": "waiting",
+  "receivedAt": "2026-10-29T03:20:00.000Z",
+  "eligibleAt": "2026-10-29T03:21:00.000Z",
+  "deadlineAt": "2026-10-29T03:21:30.000Z",
+  "freshness": "completed-after-eligible",
+  "recurrence": {
+    "periodMs": 60000,
+    "anchor": "eligible"
+  },
+  "artifact": {
+    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source": "https://example.test/checker/latest.tgz",
+    "checkedAt": "2026-10-29T03:19:00.000Z",
+    "transportDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "manifest": {
+      "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json",
+      "runtime": {
+        "type": "node",
+        "minVersion": "22.13.0"
+      },
+      "entry": "checker.cjs",
+      "subjectSchema": {
+        "type": "object"
+      },
+      "problems": [],
+      "languages": [
+        "en"
+      ]
+    }
+  },
+  "language": "en",
+  "preparationStartedAt": "2026-10-29T03:21:00.001Z",
+  "preparationCompletedAt": "2026-10-29T03:21:00.009Z",
+  "scheduling": {
+    "state": "queued"
+  }
+}
+```
+
+### 3.4 Running：必有实际执行关联，没有完成结果
+
+**Before：**
+
+```json
+{
+  "taskId": "01M60000000000000000000006",
+  "hostInstance": "01M6000000000000000000000D",
+  "revision": 5,
+  "state": "running",
+  "acceptedAt": "2026-10-29T03:20:00.000Z",
+  "freshness": "completed-after-request",
+  "artifact": {
+    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source": "https://example.test/checker/latest.tgz",
+    "checkedAt": "2026-10-29T03:20:01.000Z",
+    "transportDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "manifest": {
+      "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json",
+      "runtime": {
+        "type": "node",
+        "minVersion": "22.13.0"
+      },
+      "entry": "checker.cjs",
+      "subjectSchema": {
+        "type": "object"
+      },
+      "problems": [],
+      "languages": [
+        "en"
+      ]
+    }
+  },
+  "language": "en",
+  "executionId": "01M60000000000000000000001",
+  "executionStartedAt": "2026-10-29T03:20:02.000Z"
+}
+```
+
+**After：** 准备已结束，保留其时间戳，不复制 preparation 对象。
+Check 没有任意内部日志进展，本例不添加空的 progress；执行结果尚不存在。
+
+```json
+{
+  "taskId": "01M60000000000000000000006",
+  "requestId": "01M60000000000000000000002",
+  "seriesId": "01M6000000000000000000001D",
+  "revision": 6,
+  "state": "running",
+  "receivedAt": "2026-10-29T03:20:00.000Z",
+  "eligibleAt": "2026-10-29T03:21:00.000Z",
+  "deadlineAt": "2026-10-29T03:21:30.000Z",
+  "freshness": "completed-after-eligible",
+  "recurrence": {
+    "periodMs": 60000,
+    "anchor": "eligible"
+  },
+  "artifact": {
+    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source": "https://example.test/checker/latest.tgz",
+    "checkedAt": "2026-10-29T03:19:00.000Z",
+    "transportDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "manifest": {
+      "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json",
+      "runtime": {
+        "type": "node",
+        "minVersion": "22.13.0"
+      },
+      "entry": "checker.cjs",
+      "subjectSchema": {
+        "type": "object"
+      },
+      "problems": [],
+      "languages": [
+        "en"
+      ]
+    }
+  },
+  "language": "en",
+  "executionId": "01M60000000000000000000001",
+  "executionStartedAt": "2026-10-29T03:21:00.010Z",
+  "preparationStartedAt": "2026-10-29T03:21:00.001Z",
+  "preparationCompletedAt": "2026-10-29T03:21:00.009Z"
 }
 ```
 
@@ -595,17 +791,16 @@ series 等于独立分配的 Task ID，eligible 等于 received。
 }
 ```
 
-**After：** 03:20:52Z 预优化找到回退候选，尚未 eligible，因此仍 pending；
-准确旧版的选择来源与更新失败均可观察，没有顶层 failed error 冒充运行失败。
-selectedCandidate 是预优化候选，尚未完成正式 PREPARING 准入；
-该阶段失败不直接终结 Task，eligible 后正式准备再做准入决定。
+**After：** 03:20:52Z 预优化找到回退候选，尚未 eligible，因此仍 pending。
+Task 快照只说明当前等待，不包含 prefetch 或 preparing 对象，不用顶层 error
+把优化失败冒充 Task 失败。更新错误由服务诊断/优化事件记录；
+正式准备再做准入决定，最终采用回退的决策证据见 4.2，不能静默吞掉更新错误。
 
 ```json
 {
   "taskId": "01M60000000000000000000006",
   "requestId": "01M60000000000000000000002",
   "seriesId": "01M6000000000000000000001D",
-  "hostInstance": "01M6000000000000000000000D",
   "revision": 3,
   "state": "pending",
   "receivedAt": "2026-10-29T03:20:00.000Z",
@@ -616,22 +811,8 @@ selectedCandidate 是预优化候选，尚未完成正式 PREPARING 准入；
     "periodMs": 60000,
     "anchor": "eligible"
   },
-  "prefetch": {
-    "state": "fallback",
-    "scheduledAt": "2026-10-29T03:20:50.000Z",
-    "startedAt": "2026-10-29T03:20:50.000Z",
-    "completedAt": "2026-10-29T03:20:52.000Z",
-    "selectedCandidate": {
-      "kind": "checker",
-      "url": "https://example.test/checker/latest.tgz",
-      "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-    },
-    "fallbackFromTaskId": "01M60000000000000000000005",
-    "updateError": {
-      "code": "download_failed",
-      "stage": "download",
-      "message": "Artifact download failed."
-    }
+  "pending": {
+    "reason": "time"
   }
 }
 ```
@@ -695,16 +876,15 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
 }
 ```
 
-**After：** Task 的 terminatedAt 与 Execution 完成时间分开；
-旧内容的 checkedAt 保留原值，本次更新尝试保存在 prefetch 中，不冒充成功更新。
-正式 preparation 在 eligible 后验证并采用旧候选。
+**After：** Task 的 terminatedAt 与 Execution 完成时间分开，旧 checkedAt 保留原值。
+终态没有 preparation/prefetch 活跃进展；仅保留实际准备时间戳及
+evidence.selection 中的准确选择、回退来源和更新错误。
 
 ```json
 {
   "taskId": "01M60000000000000000000006",
   "requestId": "01M60000000000000000000002",
   "seriesId": "01M6000000000000000000001D",
-  "hostInstance": "01M6000000000000000000000D",
   "revision": 8,
   "state": "completed",
   "receivedAt": "2026-10-29T03:20:00.000Z",
@@ -715,33 +895,6 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
   "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
-  },
-  "prefetch": {
-    "state": "fallback",
-    "scheduledAt": "2026-10-29T03:20:50.000Z",
-    "startedAt": "2026-10-29T03:20:50.000Z",
-    "completedAt": "2026-10-29T03:20:52.000Z",
-    "selectedCandidate": {
-      "kind": "checker",
-      "url": "https://example.test/checker/latest.tgz",
-      "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-    },
-    "fallbackFromTaskId": "01M60000000000000000000005",
-    "updateError": {
-      "code": "download_failed",
-      "stage": "download",
-      "message": "Artifact download failed."
-    }
-  },
-  "preparation": {
-    "state": "ready",
-    "startedAt": "2026-10-29T03:21:00.001Z",
-    "completedAt": "2026-10-29T03:21:00.009Z",
-    "selected": {
-      "kind": "checker",
-      "url": "https://example.test/checker/latest.tgz",
-      "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-    }
   },
   "artifact": {
     "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -781,15 +934,32 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
       "adapter": "node-commonjs-v1",
       "configuration": "{\"cleanupMs\":5000,\"deadlineMs\":30000,\"directories\":64,\"messageBytes\":8388608,\"observers\":64,\"queue\":64,\"records\":256,\"retentionMs\":60000,\"retireAfter\":100,\"workers\":4}"
     },
-    "revision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
-  }
+    "revision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "selection": {
+      "mode": "fallback",
+      "selected": {
+        "kind": "checker",
+        "url": "https://example.test/checker/latest.tgz",
+        "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "fallbackFromTaskId": "01M60000000000000000000005",
+      "updateError": {
+        "code": "download_failed",
+        "stage": "download",
+        "message": "Artifact download failed."
+      }
+    }
+  },
+  "preparationStartedAt": "2026-10-29T03:21:00.001Z",
+  "preparationCompletedAt": "2026-10-29T03:21:00.009Z"
 }
 ```
 
 ### 4.3 Completed Probe：完整组合结果与嵌套子 Task
 
 独立场景：一个 Objective 调用一个 Checker，全部通过。两侧完整展开
-result、progress、evidence.checks[].snapshot，展示公共快照改动也进入嵌套证据。
+result、观察进展、evidence.checks[].snapshot，展示状态联合也应用于嵌套证据。
+After 的最终观察进展归入 evidence.observationProgress，不再作为当前 progress。
 子 Check 是本次组合观察的一次性需求，不自动继承根 Probe 的递归策略或 series；
 其归属通过 invocation 和父观察关系表达。
 结果和 evidence 中的 bindings 是服务生成的准确观察记录，保留现有结果形状，
@@ -961,7 +1131,6 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
   "taskId": "01M6000000000000000000001A",
   "requestId": "01M60000000000000000000018",
   "seriesId": "01M6000000000000000000001A",
-  "hostInstance": "01M60000000000000000000014",
   "revision": 18,
   "state": "completed",
   "receivedAt": "2026-10-29T03:20:00.000Z",
@@ -972,17 +1141,6 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
   "recurrence": {
     "periodMs": 60000,
     "anchor": "terminated"
-  },
-  "preparation": {
-    "state": "ready",
-    "scheduledAt": "2026-10-29T03:20:00.000Z",
-    "startedAt": "2026-10-29T03:20:00.010Z",
-    "completedAt": "2026-10-29T03:20:00.180Z",
-    "selected": {
-      "kind": "objective",
-      "url": "https://example.test/objective/v1.tgz",
-      "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-    }
   },
   "artifact": {
     "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -1033,42 +1191,6 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
       "https://example.test/objective/v1.tgz": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     }
   },
-  "progress": {
-    "observations": [
-      {
-        "id": "01M60000000000000000000015",
-        "objective": {
-          "kind": "objective",
-          "url": "https://example.test/objective/v1.tgz",
-          "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-        },
-        "currentLevel": "ready",
-        "attainedLevel": "ready",
-        "levels": [
-          {
-            "id": "ready",
-            "state": "passed"
-          }
-        ]
-      }
-    ],
-    "invocations": [
-      {
-        "id": "01M60000000000000000000010",
-        "observationId": "01M60000000000000000000015",
-        "objective": {
-          "kind": "objective",
-          "url": "https://example.test/objective/v1.tgz",
-          "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-        },
-        "level": "ready",
-        "checker": "pass",
-        "taskId": "01M6000000000000000000000C",
-        "executionId": "01M6000000000000000000000A",
-        "state": "completed"
-      }
-    ]
-  },
   "evidence": {
     "bindings": {
       "https://example.test/objective/v1.tgz": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -1080,7 +1202,6 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
           "taskId": "01M6000000000000000000000C",
           "requestId": "01M6000000000000000000000B",
           "seriesId": "01M6000000000000000000000C",
-          "hostInstance": "01M60000000000000000000009",
           "revision": 8,
           "state": "completed",
           "receivedAt": "2026-10-29T03:20:00.210Z",
@@ -1088,17 +1209,6 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
           "deadlineAt": "2026-10-29T03:22:00.210Z",
           "terminatedAt": "2026-10-29T03:20:01.010Z",
           "freshness": "started-after-eligible",
-          "preparation": {
-            "state": "ready",
-            "scheduledAt": "2026-10-29T03:20:00.210Z",
-            "startedAt": "2026-10-29T03:20:00.220Z",
-            "completedAt": "2026-10-29T03:20:00.250Z",
-            "selected": {
-              "kind": "checker",
-              "url": "https://example.test/checker/v1.tgz",
-              "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-            }
-          },
           "artifact": {
             "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "source": "https://example.test/checker/v1.tgz",
@@ -1136,12 +1246,68 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
               "adapter": "node-commonjs-v1",
               "configuration": "{\"cleanupMs\":5000,\"deadlineMs\":30000,\"directories\":64,\"messageBytes\":8388608,\"observers\":64,\"queue\":64,\"records\":256,\"retentionMs\":60000,\"retireAfter\":100,\"workers\":4}"
             },
-            "revision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
-          }
+            "revision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "selection": {
+              "mode": "resolved",
+              "selected": {
+                "kind": "checker",
+                "url": "https://example.test/checker/v1.tgz",
+                "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              }
+            }
+          },
+          "preparationStartedAt": "2026-10-29T03:20:00.220Z",
+          "preparationCompletedAt": "2026-10-29T03:20:00.250Z"
         }
       }
-    ]
-  }
+    ],
+    "selection": {
+      "mode": "resolved",
+      "selected": {
+        "kind": "objective",
+        "url": "https://example.test/objective/v1.tgz",
+        "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    "observationProgress": {
+      "observations": [
+        {
+          "id": "01M60000000000000000000015",
+          "objective": {
+            "kind": "objective",
+            "url": "https://example.test/objective/v1.tgz",
+            "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          },
+          "currentLevel": "ready",
+          "attainedLevel": "ready",
+          "levels": [
+            {
+              "id": "ready",
+              "state": "passed"
+            }
+          ]
+        }
+      ],
+      "invocations": [
+        {
+          "id": "01M60000000000000000000010",
+          "observationId": "01M60000000000000000000015",
+          "objective": {
+            "kind": "objective",
+            "url": "https://example.test/objective/v1.tgz",
+            "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          },
+          "level": "ready",
+          "checker": "pass",
+          "taskId": "01M6000000000000000000000C",
+          "executionId": "01M6000000000000000000000A",
+          "state": "completed"
+        }
+      ]
+    }
+  },
+  "preparationStartedAt": "2026-10-29T03:20:00.010Z",
+  "preparationCompletedAt": "2026-10-29T03:20:00.180Z"
 }
 ```
 
@@ -1149,7 +1315,8 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
 
 独立场景展示状态顺序：Before 接收后立即 preparing；
 After 预优化可以很早开始；本例没有 prerequisites，Task 到 03:21:00Z 才正式 preparing。
-以下展示预优化未成功的分支，不假装已经有 artifact 或 execution。
+以下展示提前 fetch 未成功、当前进入 select 步骤判断候选/回退的分支，
+不假装已经有正式选中的 artifact 或 execution。
 
 **Before：**
 
@@ -1171,7 +1338,6 @@ After 预优化可以很早开始；本例没有 prerequisites，Task 到 03:21:
   "taskId": "01M60000000000000000000006",
   "requestId": "01M60000000000000000000002",
   "seriesId": "01M6000000000000000000001D",
-  "hostInstance": "01M6000000000000000000000D",
   "revision": 4,
   "state": "preparing",
   "receivedAt": "2026-10-29T03:20:00.000Z",
@@ -1182,20 +1348,20 @@ After 预优化可以很早开始；本例没有 prerequisites，Task 到 03:21:
     "periodMs": 60000,
     "anchor": "eligible"
   },
-  "prefetch": {
-    "state": "failed",
-    "scheduledAt": "2026-10-29T03:20:50.000Z",
-    "startedAt": "2026-10-29T03:20:50.000Z",
-    "completedAt": "2026-10-29T03:20:52.000Z",
-    "error": {
-      "code": "download_failed",
-      "stage": "download",
-      "message": "Artifact download failed."
-    }
-  },
   "preparation": {
-    "state": "running",
-    "startedAt": "2026-10-29T03:21:00.001Z"
+    "startedAt": "2026-10-29T03:21:00.001Z",
+    "stage": "select",
+    "fetch": {
+      "state": "failed",
+      "scheduledAt": "2026-10-29T03:20:50.000Z",
+      "startedAt": "2026-10-29T03:20:50.000Z",
+      "completedAt": "2026-10-29T03:20:52.000Z",
+      "error": {
+        "code": "download_failed",
+        "stage": "download",
+        "message": "Artifact download failed."
+      }
+    }
   }
 }
 ```
@@ -1233,7 +1399,6 @@ deadline 为 03:20:30Z，但直到 03:25:00Z 才处理；它只代表一个过�
   "taskId": "01M60000000000000000000013",
   "requestId": "01M60000000000000000000011",
   "seriesId": "01M60000000000000000000013",
-  "hostInstance": "01M6000000000000000000000D",
   "revision": 2,
   "state": "failed",
   "receivedAt": "2026-10-29T03:19:00.000Z",
@@ -1249,7 +1414,8 @@ deadline 为 03:20:30Z，但直到 03:25:00Z 才处理；它只代表一个过�
     "code": "task_timeout",
     "stage": "schedule",
     "message": "Task deadline expired."
-  }
+  },
+  "failedFrom": "pending"
 }
 ```
 
@@ -1391,7 +1557,7 @@ After 仅允许 pending；以下是取消操作返回的完整快照。
 ```
 
 **After：** 删除该轮继续规划的资格，不回溯取消已执行的第一轮。
-终态保留 scheduled prefetch 信息不代表预优化仍会启动。
+取消终态不再保留 scheduled prefetch 等活跃进展。
 取消记录终结时间，但已撤销后继规划权，不按 terminated 生成下一轮。
 
 ```json
@@ -1399,7 +1565,6 @@ After 仅允许 pending；以下是取消操作返回的完整快照。
   "taskId": "01M60000000000000000000007",
   "requestId": "01M60000000000000000000003",
   "seriesId": "01M6000000000000000000001D",
-  "hostInstance": "01M6000000000000000000000D",
   "revision": 2,
   "state": "cancelled",
   "terminatedAt": "2026-10-29T03:21:10.000Z",
@@ -1410,10 +1575,6 @@ After 仅允许 pending；以下是取消操作返回的完整快照。
   "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
-  },
-  "prefetch": {
-    "state": "scheduled",
-    "scheduledAt": "2026-10-29T03:21:50.000Z"
   },
   "error": {
     "code": "task_cancelled",
@@ -1450,7 +1611,6 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
   "taskId": "01M60000000000000000000008",
   "requestId": "01M60000000000000000000004",
   "seriesId": "01M6000000000000000000001D",
-  "hostInstance": "01M6000000000000000000000D",
   "revision": 2,
   "state": "cancelled",
   "terminatedAt": "2026-10-29T03:21:00.101Z",
@@ -1505,7 +1665,6 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
     "taskId": "01M60000000000000000000007",
     "requestId": "01M60000000000000000000003",
     "seriesId": "01M6000000000000000000001D",
-    "hostInstance": "01M6000000000000000000000D",
     "revision": 1,
     "state": "pending",
     "receivedAt": "2026-10-29T03:21:00.000Z",
@@ -1516,9 +1675,8 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
       "periodMs": 60000,
       "anchor": "eligible"
     },
-    "prefetch": {
-      "state": "scheduled",
-      "scheduledAt": "2026-10-29T03:21:50.000Z"
+    "pending": {
+      "reason": "time"
     }
   }
 }
@@ -1575,7 +1733,6 @@ Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/P
     "taskId": "01M60000000000000000000007",
     "requestId": "01M60000000000000000000003",
     "seriesId": "01M6000000000000000000001D",
-    "hostInstance": "01M6000000000000000000000D",
     "revision": 1,
     "state": "pending",
     "receivedAt": "2026-10-29T03:21:00.000Z",
@@ -1586,9 +1743,8 @@ Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/P
       "periodMs": 60000,
       "anchor": "eligible"
     },
-    "prefetch": {
-      "state": "scheduled",
-      "scheduledAt": "2026-10-29T03:21:50.000Z"
+    "pending": {
+      "reason": "time"
     }
   },
   "successorPlanning": {
@@ -1616,16 +1772,15 @@ Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/P
 }
 ```
 
-**After：** HTTP 200 返回原 Task，身份/eligible/deadline 不变。
-hostInstance 更新不是伪装成原进程；SDK 需认得明确的恢复证据，不能一律 host_restarted。
-recovery 字段是新建议，不意味着允许自动恢复任意已经运行的 Execution。
+**After：** HTTP 200 返回原 Task，身份/eligible/deadline 不变，revision 继续递增。
+公共快照不包含 hostInstance 或 previousHostInstance，也不新增依赖实例切换的
+recovery 对象。内部仍须防止旧实例迟到写入；此处不定义持久机制或运行中执行重试。
 
 ```json
 {
   "taskId": "01M60000000000000000000007",
   "requestId": "01M60000000000000000000003",
   "seriesId": "01M6000000000000000000001D",
-  "hostInstance": "01M6000000000000000000000E",
   "revision": 2,
   "state": "pending",
   "receivedAt": "2026-10-29T03:21:00.000Z",
@@ -1636,13 +1791,8 @@ recovery 字段是新建议，不意味着允许自动恢复任意已经运行�
     "periodMs": 60000,
     "anchor": "eligible"
   },
-  "prefetch": {
-    "state": "scheduled",
-    "scheduledAt": "2026-10-29T03:21:50.000Z"
-  },
-  "recovery": {
-    "previousHostInstance": "01M6000000000000000000000D",
-    "recoveredAt": "2026-10-29T03:21:20.000Z"
+  "pending": {
+    "reason": "time"
   }
 }
 ```
@@ -1746,7 +1896,7 @@ recovery 字段是新建议，不意味着允许自动恢复任意已经运行�
 
 **After：** 服务在 04:20:02Z 记录条件求值。父 Task 已达到时间资格，但条件 0 未通过；
 条件 1 通过也不能使父任务推进。没有父 Execution、没有正式 preparation。
-conditionStatus 是完整的条件状态投影，不是子 Task 的完整 snapshot；
+pending.conditions 是完整的条件状态投影，不是子 Task 的完整 snapshot；
 子执行的原始证据可由关联 taskId/executionId 查询，不能伪装成父业务结果。
 
 ```json
@@ -1754,30 +1904,32 @@ conditionStatus 是完整的条件状态投影，不是子 Task 的完整 snapsh
   "taskId": "01M60000000000000000000031",
   "requestId": "01M60000000000000000000030",
   "seriesId": "01M60000000000000000000031",
-  "hostInstance": "01M60000000000000000000032",
   "revision": 5,
   "state": "pending",
   "receivedAt": "2026-10-29T04:19:30.000Z",
   "eligibleAt": "2026-10-29T04:20:00.000Z",
   "deadlineAt": "2026-10-29T04:21:00.000Z",
   "freshness": "started-after-eligible",
-  "conditionStatus": {
-    "state": "not-met",
-    "evaluatedAt": "2026-10-29T04:20:02.000Z",
-    "checks": [
-      {
-        "index": 0,
-        "taskId": "01M60000000000000000000034",
-        "executionId": "01M60000000000000000000035",
-        "state": "not-met"
-      },
-      {
-        "index": 1,
-        "taskId": "01M60000000000000000000037",
-        "executionId": "01M60000000000000000000038",
-        "state": "passed"
-      }
-    ]
+  "pending": {
+    "reason": "prerequisites",
+    "conditions": {
+      "state": "not-met",
+      "evaluatedAt": "2026-10-29T04:20:02.000Z",
+      "checks": [
+        {
+          "index": 0,
+          "taskId": "01M60000000000000000000034",
+          "executionId": "01M60000000000000000000035",
+          "state": "not-met"
+        },
+        {
+          "index": 1,
+          "taskId": "01M60000000000000000000037",
+          "executionId": "01M60000000000000000000038",
+          "state": "passed"
+        }
+      ]
+    }
   }
 }
 ```
@@ -1874,44 +2026,27 @@ Coordinator 根据服务治理策略决定是否创建 Regulation；目标可以
 ### 9.5 治理后重新检查：只有全部通过才准备
 
 **Before：** 9.2 的父 pending 快照代表此前未满足条件的状态。
-**After：** 下面完整快照在重新检查后进入 preparing。新 Check Task ID 表示新的求值，
-不能直接把旧不通过结果或“Regulation 已结束”改写成 passed。
-两个条件均获得本轮有效通过结果；eligible/deadline 没有因等待而顺延。
+**After：** 下面完整快照在重新检查后进入 preparing。两个条件的重新求值应在
+先前 pending 事件中记录，不能把旧不通过结果或“Regulation 已结束”改写成 passed。
+当前快照不再携带 pending.conditions，只保留 prerequisitesSatisfiedAt 时间戳，
+并展示 preparation 当前步骤；eligible/deadline 没有因等待而顺延。
 
 ```json
 {
   "taskId": "01M60000000000000000000031",
   "requestId": "01M60000000000000000000030",
   "seriesId": "01M60000000000000000000031",
-  "hostInstance": "01M60000000000000000000032",
   "revision": 10,
   "state": "preparing",
   "receivedAt": "2026-10-29T04:19:30.000Z",
   "eligibleAt": "2026-10-29T04:20:00.000Z",
   "deadlineAt": "2026-10-29T04:21:00.000Z",
   "freshness": "started-after-eligible",
-  "conditionStatus": {
-    "state": "passed",
-    "evaluatedAt": "2026-10-29T04:20:10.000Z",
-    "checks": [
-      {
-        "index": 0,
-        "taskId": "01M6000000000000000000003A",
-        "executionId": "01M6000000000000000000003B",
-        "state": "passed"
-      },
-      {
-        "index": 1,
-        "taskId": "01M6000000000000000000003D",
-        "executionId": "01M6000000000000000000003E",
-        "state": "passed"
-      }
-    ]
-  },
   "preparation": {
-    "state": "running",
-    "startedAt": "2026-10-29T04:20:10.001Z"
-  }
+    "startedAt": "2026-10-29T04:20:10.001Z",
+    "stage": "validate"
+  },
+  "prerequisitesSatisfiedAt": "2026-10-29T04:20:10.000Z"
 }
 ```
 
@@ -1924,7 +2059,7 @@ Coordinator 根据服务治理策略决定是否创建 Regulation；目标可以
 
 - 新 wire schema 与具体路由形态；
 - recurrence 双 anchor 的最终默认值、terminated 模式无 pending 时如何停止；
-- 服务预优化的具体配置字段、限额及正式 preparing 的进展字段；
+- 服务预优化的具体配置字段、限额、独立优化事件及 preparation 子步骤形状；
 - fallback 旧版选择、最大陈旧度及 scope；
 - 同 series 跨模块作用域、公共错误码/状态码及新 HTTP/SDK 定义；
 - durable schema、历史游标和运行中 Execution 的崩溃重试策略（暂缓讨论）。
