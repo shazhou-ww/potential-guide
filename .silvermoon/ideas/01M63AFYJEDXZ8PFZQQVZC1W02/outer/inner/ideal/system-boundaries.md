@@ -1,7 +1,8 @@
 # 系统边界与模块职责
 
 本文定义[通用任务引擎 idea](./Idea.md)的逻辑边界。
-这是规划草案，不是已实现 API；模块不等同于必须拆成同名 npm 包。
+这是规划草案，不是已实现 API；逻辑模块与建议的 Package 边界分别定义。
+第 7 节为本轮新增的包拆分建议，供评审，不代表包已存在或拆分已经验收。
 
 ## 1. 交付边界
 
@@ -110,4 +111,93 @@ HTTP handler 可以有框架连接器，但不能要求核心导入 Web 框架�
 
 初期用 echo 与另一个纯计算测试类型证明可扩展性，避免必须先实现所有制品业务。
 测试类型不是生产内置操作，也不扩张来源 idea 的业务范围。
-不先决定包名或包数量；执行应用留在 apps，可复用实现留在 packages，保持仓库规范。
+包级职责、依赖和组装方式见下节；执行应用留在 apps，可复用实现留在 packages。
+
+## 7. Package 划分与依赖（建议）
+
+以四个包隔离纯契约、主动运行、HTTP 和持久化依赖，不把第 2 节每个逻辑模块都拆包。
+以下名称均使用 @potential-guide/ 前缀，新增目录置于 packages/；本节只记录计划，
+不在准备阶段创建 package.json、修改工作区依赖或发布配置。
+
+| Package / 计划目录 | 拥有的职责与公共入口 | 不承担什么 |
+|---|---|---|
+| task-protocol / packages/task-protocol | 通用 Request/Task/Execution/事件数据、错误契约、核心服务与扩展端口的类型、纯 reducer/projector、多维分类及载荷校验 | 主动调度、IO、当前时钟读取、具体业务类型或框架 |
+| task-engine / packages/task-engine | submit/query/cancel/subscribe、start/close、类型准入、四过程协调、系列规划、执行共享与需求所有权；通过注入端口访问存储、时钟和类型实现 | HTTP 编码、数据库驱动、Checker 下载、Objective 语义或治理策略 |
+| task-engine-http / packages/task-engine-http | 将 header/body、路由、错误码、分页/SSE 映射到注入的核心服务接口 | 创建引擎、选择存储、注册业务类型、监听端口、TLS 或认证凭据管理 |
+| task-engine-storage / packages/task-engine-storage | 存储端口的本地持久参考实现、事务/索引/一致读取/checkpoint/恢复读取；显式 open/close 与迁移 | 调度、业务重放副作用、自动选版、HTTP、决定任务结局 |
+
+端口定义与实现分离：服务接口、Store/Clock/类型适配器的抽象契约归 task-protocol，
+task-engine 使用它们，外围实现遵守它们。端口类型不泄露数据库连接、HTTP Request、
+Effect Fiber、worker 句柄等实现对象；纯投影接收显式事实和时间。
+task-protocol 是当前语言中的协议承载包，不意味着其他语言必须依赖 TypeScript 包。
+协议文档/schema 和跨实现测试向量才是互操作依据，SDK 不是协议。
+
+### 7.1 编译依赖方向
+
+箭头 A -> B 表示 A 导入/依赖 B，不是一次任务调用或事件传播方向。
+
+```text
+task-engine         ──→ task-protocol
+task-engine-http    ──→ task-protocol
+task-engine-storage ──→ task-protocol
+
+宿主组装 ──→ task-engine
+         ├─→ task-engine-http       （按需）
+         ├─→ task-engine-storage    （持久模式）
+         └─→ 业务类型/执行器/条件适配器
+```
+
+HTTP 和存储包通过协议包定义的端口工作，不需要运行时依赖 task-engine 的具体类。
+它们的集成测试可以 devDependency 引用 task-engine，但不能把测试组装变成生产反向依赖。
+task-engine 不导入 HTTP/存储包；task-protocol 不导入其他三个包。禁止循环依赖，
+也禁止通过根入口 re-export 把可选数据库或 Web 依赖重新带进纯核心。
+
+第三方依赖按实际需要使用 pnpm catalog，内部用 workspace: 范围：
+
+- task-protocol 可以使用无 IO 的 schema 校验工具，但不能依赖引擎或业务协议包。
+- task-engine 可复用现有 effects 包协调异步过程；Effect 是实现选择，不进入线协议。
+- 数据库驱动归 task-engine-storage，Web 框架连接器归 HTTP 适配侧，不强加给核心。
+
+本地持久介质和事务能力仍属实施前决策；包名不预先承诺 SQLite、文件日志或某种驱动。
+内存参考 Store 和虚拟时钟可从 task-engine 的独立 testing 入口提供，明确无跨进程持久性，
+不为两种测试类型或每个 Store 端口新增包。持久适配使用同一端口一致性测试。
+
+### 7.2 与现有业务 Package 的关系
+
+现有 checker-host、objective-host、check-artifacts 及业务执行包并不等于通用引擎。
+以下是后续接入的目标方向，不是当前 package.json 的依赖图；业务迁移由来源 idea 承担。
+
+| 现有 Package | 后续职责 | 与通用引擎的关系 |
+|---|---|---|
+| checker-host | Checker 准备/检查类型适配、runtime/kernel、特有元数据与 References API | 使用 task-protocol 的类型/端口，服务组装可依赖 task-engine；通用内核不得反向导入它 |
+| objective-host | Probe 类型适配、等级与动态依赖观察、组合 References | 注入 Check 服务并接入通用引擎；不另复制一套 Task/Series 调度器 |
+| check-artifacts | 制品解析、校验、打包及摘要等能力 | 供业务准备适配器使用，不作为通用引擎前提 |
+| objective-pilot / objective-regulator | 观察和单次调节的业务算法 | 保持业务层职责，通过适配接口消费引擎能力，不把算法塞进通用任务状态机 |
+| regulation-coordinator | 治理请求、业务依赖与策略编排 | 后续适配通用请求/系列能力，不以通用条件求值代替治理授权 |
+
+具体业务包若提供组合便捷入口，可以依赖 task-engine-http；仅需要进程内业务算法的
+入口不应加载 HTTP 或存储。现有所有依赖不要求在本 idea 中一次性搬迁，
+但新增通用包不得依赖 pilot-protocol、Checker/Objective 包或 Coordinator。
+
+仓库现有 package-layers.yaml 的 protocol/business/tools 是粗分层；计划将上述通用包
+列入基础 protocol 层，并增加同层的包级依赖约束。仅列同一层不能证明
+task-engine 没有导入 checker-host，须以导入/依赖检查单独验证上述方向。
+
+### 7.3 宿主组装与可验证边界
+
+宿主创建 Store、Clock 和类型适配器，注入 engine，再按需把 HTTP handler 挂到已有服务。
+宿主先打开存储、再启动引擎；关闭时停止准入并按契约收束引擎与观察连接，最后关闭存储，
+不把 close 变成批量用户取消。具体运行中恢复与停止政策仍按概念文档待决项收敛。
+
+通用引擎本轮不新增独立服务器产品或必须安装的总包。统一进程/CLI 属宿主组装，
+测试宿主可放测试夹具；需要交付可执行应用时放 apps/，不要求每个适配包自带 listener。
+
+包级验证应证明：
+
+- 只安装 task-protocol 可以运行纯投影，不启动 IO 或读取当前时间。
+- 只安装 task-engine 及其必要依赖、注入内存 Store 即可运行非制品任务，不需 HTTP/数据库。
+- HTTP/持久存储分别可选组装，进程内和 HTTP 场景共享同一引擎与事实源。
+- 独立 tarball 消费者能解析公开 exports，无源码/workspace 链接依赖或循环。
+
+构建、lint、test、typecheck、exports 和工作区依赖在实施阶段与 turbo.json 对齐；
+发布仍遵守既有包级标签规则，本次文档规划不授权 npm 或 Release。
