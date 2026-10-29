@@ -10,13 +10,14 @@
 ### I-S01: 演进制品契约与工具链
 
 保留 YAML、统一结果、References、语言、runtime 与准确摘要契约；
-在 Request 准备层演进提前选版和显式 fallback，不把调度属性写入制品或改变历史摘要。
+在 Task 准备路径演进提前选版预优化和显式 fallback，不把调度属性写入制品或改变历史摘要。
 
 ### I-S02: 服务化 Objective 观察
 
 在可挂载服务中落实统一 eligible、PENDING、递归规划与唯一 pending 仲裁，
 恢复所有未完成 Task，保持独立需求、共享执行及资源清理边界。
-先收敛 anchor、准备/激活、失败及恢复策略，不以实现细节代替设计决定。
+落实幂等 Request/独立 Task 身份、eligible 后 PREPARING、eligible/terminated 递归、
+失败超时续作及错过周期不补齐；恢复细节后续讨论，不以实现细节代替设计决定。
 
 ### I-S03: 对齐 SDK 与现有业务入口
 

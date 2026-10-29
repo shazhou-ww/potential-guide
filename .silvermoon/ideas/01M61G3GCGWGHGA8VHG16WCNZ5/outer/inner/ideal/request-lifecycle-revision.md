@@ -16,7 +16,8 @@ Execution → 持久化恢复 → Events/SDK 的修改对象顺序组织。
 
 ## 1. Request：统一资格时间与系列身份
 
-新增的 `eligible_at`、`recursive` 和 `series_id` 均属于 Request。
+Request 携带 `eligible_at`、`recursive` 和可选 `series_id`，成功受理后形成 Task 的
+调度属性；生命周期、pending 位置及系列归属属于 Task，不属于 Artifact。
 
 | 修改点 | Before | After |
 |---|---|---|
@@ -24,7 +25,8 @@ Execution → 持久化恢复 → Events/SDK 的修改对象顺序组织。
 | eligible | Check/Probe 无独立资格时间；Coordinator 已有可选 `eligibleAt`。 | 所有任务请求可指定 `eligible_at`，省略时等于服务端 `received_at`；可早可晚。 |
 | timeout | Check/Probe 总期限从受理起计。 | `deadline_at = eligible_at + timeout`，准备/排队晚于 eligible 的部分也消耗预算。 |
 | freshness | Check/Probe 以受理序号作为强/弱新鲜度边界。 | 强条件为 `started_at > eligible_at`，弱条件为 `completed_at > eligible_at`。 |
-| series | Check/Probe 没有独立系列属性；Coordinator 用 predecessor 链表示 recurrence。 | 输入 `series_id` 可选，每个 Task 必有 series ID；默认等于该 Request 的 ID。 |
+| 身份边界 | Check/Probe 使用幂等键识别重复创建调用，另有 Task ID；旧讨论曾将二者混用。 | Request ID 就是幂等 ID，Task ID 独立分配；Request 解析/准入失败可以不产生 Task。 |
+| series | Check/Probe 没有独立系列属性；Coordinator 用 predecessor 链表示 recurrence。 | 输入 `series_id` 可选，首个 Task 默认以自身 Task ID 为 series ID；后继 Task 继承同一 series。 |
 | 后继身份 | Coordinator 已有确定性后继引用，Check/Probe 没有递归需求生成。 | 每轮新 Request/Task 身份，继承 series ID；重试和恢复不重复分配同一轮。 |
 
 **已确认：** 所有时间按服务端时间域解释，客户端时钟不能裁定 freshness。
@@ -37,16 +39,19 @@ Execution → 持久化恢复 → Events/SDK 的修改对象顺序组织。
 持久化绝对时间，进程内等待使用单调时钟；校时、精度相等和跨重启换算必须有测试，
 不能仅用毫秒时间戳替换旧序号而丢失默认受理因果关系。
 
-**身份边界：** Request 是一次需求，Task 是服务端对需求的跟踪，Execution 是实际工作。
-是否让新协议 request ID 与 task ID 共用值，尚未确定；不为满足 series 默认值
-擅自要求所有调用方额外提交一个 ID。series 不是授权凭据，也不是执行兼容键。
+**已确认身份边界：** Request 是一次幂等调用意图，Task 是成功建立的需求实体，
+Execution 是实际工作。Request ID 沿用幂等 ID，Task ID 独立分配；
+不要求额外再造一个与幂等 ID 不同的 Request ID，也不为失败的 Request 伪造 Task。
+相同 Request ID 的重试不能重复创建 Task；同 ID 不同输入仍须报告幂等冲突。
+后继有新的 Request/Task ID，但不能以新 Task ID 覆盖继承的 series ID。
+pending 中保存的是 Task，事件按 series 串联的是 Task；Request ID用于关联原始调用。
 
 ## 2. Task：增加 PENDING，取消只作用于 PENDING
 
 | 修改点 | Before | After |
 |---|---|---|
 | 生命周期 | Check/Probe 为 accepted/preparing/waiting/running 等状态，无 PENDING。 | 所有 Task 增加 PENDING，表达已受理、尚未激活的计划需求。 |
-| 准备进展 | preparing 是主状态之一。 | 准备可提前发生，不应仅因开始下载就失去 pending 规划身份；准备进展需可单独观察。 |
+| 准备进展 | 受理后即可进入 preparing。 | 正式 PREPARING 只能在 eligible 后；提前下载/更新检查仅是 PENDING 中可观察的预优化。 |
 | 取消 | Check/Probe 可撤销非终态需求；Coordinator 有 request/recurrence scope。 | 新统一交互只取消 pending Task，不提供“取消 recursive Task”或另一个系列取消语义。 |
 | 重复规划 | 没有跨 Check/Probe 的统一系列去重。 | 冗余新 pending Task 被取消，已有 pending Task 保留；记录明确原因。 |
 
@@ -63,17 +68,27 @@ Execution → 持久化恢复 → Events/SDK 的修改对象顺序组织。
 内部超时、服务关闭、父观察失去 owner 时的资源清理仍需保留，
 它们不是公开的“单轮运行中取消”能力。
 
-**待收敛：** 到 eligible 但准备尚未完成时，是离开 PENDING 进入准备/调度等待，
-还是继续占有 pending 槽位？该决定必须与下一节递归触发一致，不能由 enum 名称隐式决定。
+**已确认状态顺序：**
 
-## 3. Series 与 recursive：一个待规划位置，两个候选锚点
+```text
+PENDING → 到达 eligible → PREPARING → 等待/执行 → 终态
+```
+
+到 eligible 即可原子激活 Task 并释放 pending 槽位，不需要预优化先完成；
+正式准备未完成则在 PREPARING 继续，消耗原 eligible 锚定的预算。
+预下载/更新失败可提前报告，但优化失败不直接把 pending Task 终结，
+正式 PREPARING 再依据成果及 fallback 策略判定准入。
+Request 自身解析失败没有 Task，与 Task 正式准备失败分开。
+已过 deadline 的 Task 直接以超时终结，不为了经过 PREPARING 而执行无效工作。
+
+## 3. Series 与 recursive：一个 pending Task，两个锚点
 
 | 修改点 | Before | After |
 |---|---|---|
 | 适用面 | Coordinator 有 recurrence；Check/Probe 没有。 | Check、Probe、Regulation 都可表达递归请求，调节职责仍归 Coordinator。 |
-| 现有周期 | Coordinator 首次 dispatch 时生成后继，eligible 为实际 dispatch 时间加 interval。 | 新模型明确锚点，不把 dispatch、eligible、completed 混为一谈。 |
+| 现有周期 | Coordinator 首次 dispatch 时生成后继，eligible 为实际 dispatch 时间加 interval。 | 新模型明确 eligible/terminated 锚点，不把 dispatch、资格和终结混为一谈。 |
 | pending 约束 | 没有统一 series pending 唯一约束。 | 同一系列同时最多保留一个 pending 计划；重复新计划取消，原计划不被替换。 |
-| 触发配置 | 不支持统一的 eligible/completed 选择。 | 建议增加 `recursive.anchor`，让固定周期与完成后间隔显式可选。 |
+| 触发配置 | 不支持统一的双锚点选择。 | `recursive.anchor` 区分 eligible 与 terminated；本轮失败/超时不停止递归。 |
 
 ### 3.1 已确认的规划不变量
 
@@ -87,68 +102,77 @@ Execution → 持久化恢复 → Events/SDK 的修改对象顺序组织。
 - series ID 不进入执行兼容键。不同 series 仍可共享执行；
   相同 series 的不同准确版本或输入也不能强制合并。
 
-### 3.2 新建议：`recursive.anchor`
+### 3.2 已收敛的锚点：`recursive.anchor`
 
-用户最后提出同时支持两种触发点。本草案建议如下，**尚未当作最终确认**：
+用户确认本轮结束必须涵盖 failed/timeout，因此以 terminated 取代原草案的
+completed 锚点；字段拼写、period 单位及默认锚点仍属于 wire 设计：
 
 ```text
 recursive:
   period: 正的有限时长
-  anchor: eligible | completed
+  anchor: eligible | terminated
 ```
 
 | 候选参数值 | 规划触发 | 下一轮 eligible | 主要效果 |
 |---|---|---|---|
 | `eligible`（推荐默认） | 本轮资格边界到达并原子消费该轮规划权 | 本轮 `eligible_at + period` | 固定周期；可有重叠需求，再按 freshness 共享 Execution。 |
-| `completed` | 本轮 Task 正常 completed | 本轮 Task `completed_at + period` | 完成后间隔；由自身递归产生的轮次不重叠。 |
+| `terminated` | 本轮 Task 正常完成、失败或超时终结 | 本轮 Task `terminated_at + period` | 本轮结束后间隔；失败不切断系列，自身递归轮次不重叠。 |
 
-两种模式每轮都只采用一个锚点，不能 eligible 触发一次、完成再触发一次。
-completed 锚点是 **Task 的完成时间**，不是共享 Execution 的完成时间；
+两种模式每轮都只采用一个锚点，不能 eligible 触发一次、终结再触发一次。
+terminated 锚点是 **Task 的终结时间**，不是共享 Execution 的完成时间；
 一个 Execution 可供多个系列使用，不能据此额外生成请求。
+terminated 是终结范畴，不抹去 completed、failed 和超时原因的区别。
 正常 completed 不等于业务通过；有效“不达标”观察也属于 completed。
+**取消 pending 例外：** 用户取消和冗余规划取消都会撤销该 Task 的后继规划权，
+不能因 cancelled 也是终态就生成下一轮；它们不影响原有其他 Task。
 
 例如周期 10 秒、首轮 eligible 为 0 秒、Task 在第 25 秒完成：
-eligible 模式的后继资格为 10、20、30 秒；completed 模式下一轮为 35 秒。
+eligible 模式的后继资格为 10、20、30 秒；terminated 模式下一轮为 35 秒，
+无论第 25 秒本轮是正常完成还是失败终结。
 eligible 模式中，第 10、20 秒的需求在版本/输入等兼容时可用 completed_after
 加入同一执行，不能据此承诺所有轮次必然合并或每个叶子都新。
 
-**待确认的建议：**
-completed 模式默认仅正常 completed 续作，failed/timeout 不等于 completed；
-如需失败后继续，应另定义终态策略，不能隐式重试。
 eligible 模式应按资格节拍推进，不随实际 worker 开始时间漂移；
-但准备失败早于 eligible、准备跨越 eligible 时如何保存规划权，
-须与 PENDING 状态定义一起确认。
+它在本轮激活时规划后继，不能等正式 PREPARING 成功才续作。
+后续失败/超时不再重复触发同一后继。过期 Task 未实际进入 PREPARING 时，
+仍需一次性处理该轮资格和后继规划，不以超时停止系列或生成两次。
 
-停机错过多个 eligible 周期时，“补齐全部、跳到下一未来周期、合并错过轮次”
-尚未选择。pending 唯一约束不能代替错过周期策略；不得用循环立即重放制造无限积压。
-completed 模式运行期间可能没有 pending Task，届时没有可取消的 pending 对象；
+**已确认错过周期规则：** 一个早已 eligible、尚未处理的 Task 仍只代表一次资格；
+不按错过的周期批量补建，也不反复生成过去 eligible 的后继变相追赶。
+处理一次后仅安排一个未来后继。原 `eligible_at + timeout` 已过时该轮超时终结，
+不重置预算来强行执行；系列继续安排未来轮次。
+后继保持原节拍的下一个未来点，还是从本次处理时刻加周期，稍后细化。
+
+terminated 模式运行期间可能没有 pending Task，届时没有可取消的 pending 对象；
 本草案不暗中增设 cancel-series 接口，是否需要提前保留未定 eligible 的后继仍待讨论。
 
 ## 4. 制品准备：提前量与可观察的版本回退
 
 | 修改点 | Before | After |
 |---|---|---|
-| 启动时机 | 接收 Check/Probe 后立即开始来源确认。 | 支持相对于 eligible 的准备提前量；不一定以 received 为准备起点。 |
+| 启动时机 | 接收 Check/Probe 后立即开始来源确认。 | 预优化按 eligible 减提前量安排；正式 PREPARING 固定在 eligible 后。 |
 | 提前收益 | 立即确认准确内容，但未来任务可能很早固定旧版。 | 既提前发现错误、下载预热，又避免必然提前整个递归周期固定版本。 |
 | 新版失败 | 来源/下载/验证失败使准备失败，没有选版 fallback。 | 可配置选版 fallback：更新失败或新候选不可用时使用仍可用的准确旧版。 |
 | 证据 | 准确 digest、来源确认时间、runtime 等。 | 额外记录更新尝试、失败原因、回退决定和实际选择；不能把回退冒充更新成功。 |
 
-**已确认方向：** 提前准备与执行资格分离，递归下一轮可以重新确认浮动来源。
-提前准备可以提前报告来源错误，不必等 eligible 才开始昂贵下载。
+**已确认方向：** 提前下载是预优化，递归下一轮可以重新确认浮动来源。
+预优化可提前报告来源错误，不必等 eligible 才开始昂贵下载；
+它不推进 Task 的 PREPARING 状态，也不赋予执行资格。
 
 **建议概念名及公式：**
 
 ```text
 preparation_lead >= 0
-planned_preparation_at = eligible_at - preparation_lead
-earliest_preparation_at = max(received_at, planned_preparation_at)
+planned_prefetch_at = eligible_at - preparation_lead
+earliest_prefetch_at = max(received_at, planned_prefetch_at)
+formal_preparing_at >= eligible_at
 ```
 
 提前量不是轮询周期，也不是保证下载完成的时限。周期 10 分钟、提前量 30 秒时，
 可以到 eligible 前 30 秒才准备；若请求更晚收到，则尽快开始。
 省略提前量时建议保留接收后立即准备；零提前量表示到 eligible 才开始。
 默认值与限额是待确认策略，不能作为已实现 API。
-网络确认是一个过程，不能宣称取得 received 或 preparation_at 那一瞬间的远端快照。
+网络确认是一个过程，不能宣称取得 received 或 prefetch_at 那一瞬间的远端快照。
 
 **fallback 建议边界：**
 
@@ -162,8 +186,8 @@ earliest_preparation_at = max(received_at, planned_preparation_at)
   动态依赖仍遵守准确绑定，不能用 fallback 绕过冲突或来源授权。
 - 无可用旧版时明确失败；fallback 不刷新 eligible/timeout，也不扩张权限。
 
-准备有独立有限预算，不能因 eligible 很远而无限占资源。
-准备早完不得早执行；准备超过 eligible 则继续消耗 Task 剩余预算。
+预优化有独立有限预算，不能因 eligible 很远而无限占资源。
+预优化早完不得早执行；到 eligible 仍需正式准备时，继续消耗 Task 剩余预算。
 
 ## 5. Execution：新的时间边界
 
@@ -182,6 +206,9 @@ earliest_preparation_at = max(received_at, planned_preparation_at)
 显式子需求的调度仍由拥有它的父执行约束，避免无限扩张工作树。
 
 ## 6. 持久化与重启：恢复需求，而非伪造执行连续性
+
+本节保留先前方向，用户要求先收敛身份/状态/递归，崩溃恢复细节暂缓讨论。
+本轮仅同步已确认的 Task 身份与状态术语，不新增持久布局或执行重试决定。
 
 | 修改点 | Before | After |
 |---|---|---|
@@ -220,11 +247,14 @@ series 订阅不能只在订阅时展开为现存 task IDs；首次快照与后�
 默认 series 身份、唯一 pending 计划、pending-only 取消、提前准备、
 可选选版 fallback、全部未完成 Task 恢复和动态 series events。
 
-优先讨论新增的 anchor 参数及默认值，然后联动确定：
+本轮已确认 Request ID 与幂等 ID 同义、Task ID 独立、默认 series 为 Task ID、
+eligible 后才正式 PREPARING、terminated 包含失败/超时续作，以及错过周期只处理一次。
+剩余前序问题：
 
-1. 到 eligible 但准备未完成/已失败时，pending 槽位与后继规划如何推进。
-2. completed 模式的失败/超时续作和无 pending 时的停止方式。
-3. 错过周期策略、准备提前量默认值、可用旧版的选择与陈旧上限。
-4. series 跨模块作用域、旧协议迁移及中断 Execution 的恢复策略。
+1. 默认递归锚点，以及 terminated 模式无 pending 时是否需要可停止的预留计划。
+2. 错过周期后下一个未来点的选法、预优化提前量默认值、旧版选择与陈旧上限。
+3. series 跨模块作用域与旧协议迁移。
+
+中断 Execution 与持久化恢复细节待上述问题解决后再讨论。
 
 这些是显式待决项，不从此前的聊天建议、旧测试成功或 Agent 勾选推断为已接受。

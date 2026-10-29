@@ -19,11 +19,16 @@
   `none | previous-usable`。这些字段名与默认值仍待评审。
 - After 的 freshness 暂用 `started-after-eligible | completed-after-eligible`，
   以免在旧 `*-after-request` 字面值上偷偷换义。实际协议升级方式尚未确定。
-- request ID 与 task ID 是否同值尚未确定。示例用不同值展示角色，
-  不要求客户端额外生成 request ID。ID、URL、摘要和时间均为合成数据，
+- Request ID 已确认为幂等 ID，Task ID 由服务端独立分配；
+  解析/准入失败可能不产生 Task。示例的 requestId 对应 `Idempotency-Key`，
+  不再额外创建第三个调用身份。首个 Task 的默认 seriesId 为 taskId，后继继承 series。
+  ID、URL、摘要和时间均为合成数据，
   摘要满足格式但不表示存在可下载的真实制品。
 - 本文不发明 Regulation HTTP 服务：第 2 节展示 Coordinator 的请求记录，
   不是新的 HTTP POST body。后续持久记录也不是公开 HTTP response。
+- eligible 前的提前下载用 `prefetch` 展示，Task 仍 pending；正式 `preparation`
+  必须在 eligible 后。`recursive.anchor` 使用 eligible/terminated；
+  Task 终结时间写 `terminatedAt`，保留 completed/failed/cancelled 状态及错误原因。
 
 ## 1. Check / Probe 创建 Request
 
@@ -74,7 +79,7 @@
 }
 ```
 
-### 1.2 Probe：准确来源、按 completed 递归
+### 1.2 Probe：准确来源、按 terminated 递归
 
 **Before：** 当前 Objective v1 请求，bindings 显式固定根版本。
 
@@ -97,7 +102,8 @@
 }
 ```
 
-**After：** 省略 eligible 和 series，服务端默认补齐；完成后再等待 60 秒。
+**After：** 省略 eligible 和 series，服务端默认补齐；本轮正常完成、失败或超时后
+再等待 60 秒。取消 pending 不产生后继。
 显式 digest 不允许换成另一旧版，因此关闭 fallback。每个后继仍继承此准确引用，
 不是所有 recursive 请求都会升级制品；只有浮动来源才重新选版。
 
@@ -119,7 +125,7 @@
   "timeoutMs": 60000,
   "recursive": {
     "periodMs": 60000,
-    "anchor": "completed"
+    "anchor": "terminated"
   },
   "preparationPolicy": {
     "leadMs": 10000,
@@ -160,6 +166,38 @@ recursive 未提供，任务不会自动产生后继。
   "freshness": "completed-after-eligible",
   "timeoutMs": 30000,
   "eligibleAt": "2026-10-29T03:19:50.000Z"
+}
+```
+
+### 1.4 Request 解析失败：没有 Task
+
+此场景调用带 `Idempotency-Key: invalid-request-1`，来源不是允许的 HTTPS 地址。
+Before 已返回结构化错误；After 建议同时返回幂等 Request ID，便于关联失败调用。
+两侧均为 HTTP 400，After 不分配 taskId，也不能用 requestId 伪造默认 seriesId。
+失败 Request 的保留期限和重试细节尚未在本例中规定。
+
+**Before：**
+
+```json
+{
+  "error": {
+    "code": "invalid_source",
+    "stage": "resolve",
+    "message": "Expected authorized HTTPS source and optional Git SHA-256 digest."
+  }
+}
+```
+
+**After：**
+
+```json
+{
+  "requestId": "invalid-request-1",
+  "error": {
+    "code": "invalid_source",
+    "stage": "resolve",
+    "message": "Expected authorized HTTPS source and optional Git SHA-256 digest."
+  }
 }
 ```
 
@@ -204,7 +242,8 @@ targetKey 与 objectiveRevisionKey 引用聚合内其他记录；本节完整展
   "origin": {
     "kind": "external"
   },
-  "seriesId": "reg-request-1",
+  "taskId": "reg-task-1",
+  "seriesId": "reg-task-1",
   "receivedAt": "2026-10-29T03:20:00.000Z",
   "eligibleAt": "2026-10-29T03:21:00.000Z",
   "freshness": "completed-after-eligible",
@@ -222,6 +261,8 @@ targetKey 与 objectiveRevisionKey 引用聚合内其他记录；本节完整展
 ```
 
 这是新记录形状的建议，不能直接加入历史 schema 1/2/3。
+其中 ref 继续标识幂等 Request，taskId 仅在成功建立 Task 后分配；
+该例是已建立 Task 的请求记录，不代表每次调用都有 Task。
 Regulation admission 如何统一接收浮动 URL、以及任务 timeout 与治理 quota 的优先级，
 仍需在接口设计中明确，本例不假装这些接口已经存在。
 
@@ -231,6 +272,7 @@ Regulation admission 如何统一接收浮动 URL、以及任务 timeout 与治�
 
 Before 的 POST 成功返回 HTTP 201、Location 和快照本身，没有额外 `{task: ...}` 包装。
 After 建议保留这种响应方式；路由版本号另定，不在旧 endpoint 偷换语义。
+本例调用的 `Idempotency-Key: check-request-1` 就是响应中的 requestId。
 
 **Before：**
 
@@ -264,7 +306,7 @@ scheduledAt 为 eligible 减去准备提前量，而不是 received。
     "periodMs": 60000,
     "anchor": "eligible"
   },
-  "preparation": {
+  "prefetch": {
     "state": "scheduled",
     "scheduledAt": "2026-10-29T03:20:50.000Z"
   }
@@ -286,14 +328,15 @@ scheduledAt 为 eligible 减去准备提前量，而不是 received。
 }
 ```
 
-**After：** 对应 1.2；series 等于 request ID，eligible 等于 received。
+**After：** 对应 1.2，调用使用 `Idempotency-Key: probe-request-1`；
+series 等于独立分配的 Task ID，eligible 等于 received。
 计算出的准备时间早于接收，只能接收后立即安排，不伪造提前发生的下载。
 
 ```json
 {
   "taskId": "probe-task-1",
   "requestId": "probe-request-1",
-  "seriesId": "probe-request-1",
+  "seriesId": "probe-task-1",
   "hostInstance": "host-a",
   "revision": 1,
   "state": "pending",
@@ -303,9 +346,9 @@ scheduledAt 为 eligible 减去准备提前量，而不是 received。
   "freshness": "started-after-eligible",
   "recursive": {
     "periodMs": 60000,
-    "anchor": "completed"
+    "anchor": "terminated"
   },
-  "preparation": {
+  "prefetch": {
     "state": "scheduled",
     "scheduledAt": "2026-10-29T03:20:00.000Z"
   }
@@ -314,7 +357,7 @@ scheduledAt 为 eligible 减去准备提前量，而不是 received。
 
 ## 4. 准备/回退及完成 Response
 
-### 4.1 准备失败：failed → pending + 明确 fallback 证据
+### 4.1 更新失败：正式准备失败与提前预优化失败
 
 同一浮动来源更新下载失败，Before 没有 fallback；After 假定此前已有符合授权的准确旧版，
 本轮明确允许回退。若旧版不存在或不再可用，After 也必须 failed。
@@ -337,9 +380,10 @@ scheduledAt 为 eligible 减去准备提前量，而不是 received。
 }
 ```
 
-**After：** 03:20:52Z 完成回退，尚未 eligible，因此仍 pending；
+**After：** 03:20:52Z 预优化找到回退候选，尚未 eligible，因此仍 pending；
 准确旧版的选择来源与更新失败均可观察，没有顶层 failed error 冒充运行失败。
-selected 是候选准确引用；artifact 元数据可在最终准入时出现，见下一例。
+selectedCandidate 是预优化候选，尚未完成正式 PREPARING 准入；
+该阶段失败不直接终结 Task，eligible 后正式准备再做准入决定。
 
 ```json
 {
@@ -357,17 +401,17 @@ selected 是候选准确引用；artifact 元数据可在最终准入时出现�
     "periodMs": 60000,
     "anchor": "eligible"
   },
-  "preparation": {
+  "prefetch": {
     "state": "fallback",
     "scheduledAt": "2026-10-29T03:20:50.000Z",
     "startedAt": "2026-10-29T03:20:50.000Z",
     "completedAt": "2026-10-29T03:20:52.000Z",
-    "selected": {
+    "selectedCandidate": {
       "kind": "checker",
       "url": "https://example.test/checker/latest.tgz",
       "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
-    "fallbackFromRequestId": "check-request-0",
+    "fallbackFromTaskId": "check-task-0",
     "updateError": {
       "code": "download_failed",
       "stage": "download",
@@ -434,8 +478,9 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
 }
 ```
 
-**After：** Task 完成时间与 Execution 完成时间分开；旧内容的 checkedAt 保留原值，
-本次更新尝试发生在 preparation 中，不把复用旧缓存记成成功更新。
+**After：** Task 的 terminatedAt 与 Execution 完成时间分开；
+旧内容的 checkedAt 保留原值，本次更新尝试保存在 prefetch 中，不冒充成功更新。
+正式 preparation 在 eligible 后验证并采用旧候选。
 
 ```json
 {
@@ -448,27 +493,37 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
   "receivedAt": "2026-10-29T03:20:00.000Z",
   "eligibleAt": "2026-10-29T03:21:00.000Z",
   "deadlineAt": "2026-10-29T03:21:30.000Z",
-  "completedAt": "2026-10-29T03:21:04.010Z",
+  "terminatedAt": "2026-10-29T03:21:04.010Z",
   "freshness": "completed-after-eligible",
   "recursive": {
     "periodMs": 60000,
     "anchor": "eligible"
   },
-  "preparation": {
+  "prefetch": {
     "state": "fallback",
     "scheduledAt": "2026-10-29T03:20:50.000Z",
     "startedAt": "2026-10-29T03:20:50.000Z",
     "completedAt": "2026-10-29T03:20:52.000Z",
-    "selected": {
+    "selectedCandidate": {
       "kind": "checker",
       "url": "https://example.test/checker/latest.tgz",
       "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
-    "fallbackFromRequestId": "check-request-0",
+    "fallbackFromTaskId": "check-task-0",
     "updateError": {
       "code": "download_failed",
       "stage": "download",
       "message": "Artifact download failed."
+    }
+  },
+  "preparation": {
+    "state": "ready",
+    "startedAt": "2026-10-29T03:21:00.001Z",
+    "completedAt": "2026-10-29T03:21:00.009Z",
+    "selected": {
+      "kind": "checker",
+      "url": "https://example.test/checker/latest.tgz",
+      "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     }
   },
   "artifact": {
@@ -668,8 +723,8 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
 }
 ```
 
-**After：** 根是 completed 锚点递归，child 不递归。根 Task.completedAt
-比 Execution.completedAt 晚 10ms，下一轮锚定前者。
+**After：** 根是 terminated 锚点递归，child 不递归。根 Task.terminatedAt
+比 Execution.completedAt 晚 10ms，下一轮锚定前者；子 series 默认等于子 Task ID。
 该例的 child 在父执行开始之后才受理，其 eligible 默认等于自身 received。
 这里展示两个逻辑服务同机装配的时间，不用客户端时间跨远端服务仲裁。
 
@@ -677,18 +732,18 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
 {
   "taskId": "probe-task-1",
   "requestId": "probe-request-1",
-  "seriesId": "probe-request-1",
+  "seriesId": "probe-task-1",
   "hostInstance": "objective-host-a",
   "revision": 18,
   "state": "completed",
   "receivedAt": "2026-10-29T03:20:00.000Z",
   "eligibleAt": "2026-10-29T03:20:00.000Z",
   "deadlineAt": "2026-10-29T03:21:00.000Z",
-  "completedAt": "2026-10-29T03:20:01.110Z",
+  "terminatedAt": "2026-10-29T03:20:01.110Z",
   "freshness": "started-after-eligible",
   "recursive": {
     "periodMs": 60000,
-    "anchor": "completed"
+    "anchor": "terminated"
   },
   "preparation": {
     "state": "ready",
@@ -792,14 +847,14 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
         "snapshot": {
           "taskId": "child-task-1",
           "requestId": "child-request-1",
-          "seriesId": "child-request-1",
+          "seriesId": "child-task-1",
           "hostInstance": "checker-host-a",
           "revision": 8,
           "state": "completed",
           "receivedAt": "2026-10-29T03:20:00.210Z",
           "eligibleAt": "2026-10-29T03:20:00.210Z",
           "deadlineAt": "2026-10-29T03:22:00.210Z",
-          "completedAt": "2026-10-29T03:20:01.010Z",
+          "terminatedAt": "2026-10-29T03:20:01.010Z",
           "freshness": "started-after-eligible",
           "preparation": {
             "state": "ready",
@@ -856,16 +911,151 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
 }
 ```
 
-## 5. 后继 Request 与系列规划记录
+### 4.4 正式 PREPARING：一定在 eligible 后
 
-### 5.1 后继 Request：eligible 与 completed 两种完整例子
+独立场景展示状态顺序：Before 接收后立即 preparing；
+After 预优化可以很早开始，但 Task 到 03:21:00Z 才正式 preparing。
+以下展示预优化未成功的分支，不假装已经有 artifact 或 execution。
+
+**Before：**
+
+```json
+{
+  "taskId": "check-task-1",
+  "hostInstance": "host-a",
+  "revision": 2,
+  "state": "preparing",
+  "acceptedAt": "2026-10-29T03:20:00.000Z",
+  "freshness": "completed-after-request"
+}
+```
+
+**After：**
+
+```json
+{
+  "taskId": "check-task-1",
+  "requestId": "check-request-1",
+  "seriesId": "workspace-checks",
+  "hostInstance": "host-a",
+  "revision": 4,
+  "state": "preparing",
+  "receivedAt": "2026-10-29T03:20:00.000Z",
+  "eligibleAt": "2026-10-29T03:21:00.000Z",
+  "deadlineAt": "2026-10-29T03:21:30.000Z",
+  "freshness": "completed-after-eligible",
+  "recursive": {
+    "periodMs": 60000,
+    "anchor": "eligible"
+  },
+  "prefetch": {
+    "state": "failed",
+    "scheduledAt": "2026-10-29T03:20:50.000Z",
+    "startedAt": "2026-10-29T03:20:50.000Z",
+    "completedAt": "2026-10-29T03:20:52.000Z",
+    "error": {
+      "code": "download_failed",
+      "stage": "download",
+      "message": "Artifact download failed."
+    }
+  },
+  "preparation": {
+    "state": "running",
+    "startedAt": "2026-10-29T03:21:00.001Z"
+  }
+}
+```
+
+### 4.5 错过周期且已超时：只终结一个 Task，系列继续
+
+Before 的 Check/Probe 无未来 pending 调度与递归，超时只返回单轮 failed。
+After 示例中 Task 于 03:19:00Z 接收，eligible 为 03:20:00Z，
+deadline 为 03:20:30Z，但直到 03:25:00Z 才处理；它只代表一个过期 Task，
+不能补建 03:21/22/23/24Z 四个历史 Task，也不能重置该轮 timeout。
+
+**Before：** 30 秒受理期限已过后的单轮失败。
+
+```json
+{
+  "taskId": "late-task-1",
+  "hostInstance": "host-a",
+  "revision": 3,
+  "state": "failed",
+  "acceptedAt": "2026-10-29T03:19:00.000Z",
+  "freshness": "completed-after-request",
+  "error": {
+    "code": "task_timeout",
+    "stage": "schedule",
+    "message": "Task deadline expired."
+  }
+}
+```
+
+**After：** 没有开始执行，terminatedAt 是实际裁定终结的服务端时间，
+不是把 deadline 伪造为已发生的结束事件。Task 保留 failed/timeout 原因。
+
+```json
+{
+  "taskId": "late-task-1",
+  "requestId": "late-request-1",
+  "seriesId": "late-task-1",
+  "hostInstance": "host-a",
+  "revision": 2,
+  "state": "failed",
+  "receivedAt": "2026-10-29T03:19:00.000Z",
+  "eligibleAt": "2026-10-29T03:20:00.000Z",
+  "deadlineAt": "2026-10-29T03:20:30.000Z",
+  "terminatedAt": "2026-10-29T03:25:00.000Z",
+  "freshness": "completed-after-eligible",
+  "recursive": {
+    "periodMs": 60000,
+    "anchor": "terminated"
+  },
+  "error": {
+    "code": "task_timeout",
+    "stage": "schedule",
+    "message": "Task deadline expired."
+  }
+}
+```
+
+此失败不停止系列。仅生成以下一个未来后继创建 Request，
+使用新的幂等 ID `late-request-2`，成功后分配新的 Task ID并继承 `late-task-1` 系列。
+本例采用 terminated 锚点，03:25:00Z 加 60 秒得到 03:26:00Z；
+eligible 锚点错过周期后如何选择未来点，仍留待下一轮讨论。
+
+```json
+{
+  "checker": {
+    "url": "https://example.test/checker/latest.tgz"
+  },
+  "subject": {},
+  "freshness": "completed-after-eligible",
+  "timeoutMs": 30000,
+  "eligibleAt": "2026-10-29T03:26:00.000Z",
+  "seriesId": "late-task-1",
+  "recursive": {
+    "periodMs": 60000,
+    "anchor": "terminated"
+  },
+  "preparationPolicy": {
+    "leadMs": 10000,
+    "fallback": "previous-usable"
+  }
+}
+```
+
+## 5. 后继 Task 的创建 Request 与系列规划记录
+
+### 5.1 创建后继 Task：eligible 与 terminated 两种完整 Request
 
 **Before：** Check/Probe 不自动生成后继，没有对应 Request 对象；
 Coordinator 的旧 recurrence 已在第 2 节展示，不以 `{}` 冒充统一旧协议。
 
 **After / eligible：** 第 1.1 轮的后继为 03:22:00Z，
 仍用浮动来源并继承 series；不是拿最终旧 digest 替换后继的选版意图。
-该请求由服务端生成，不能依赖客户端定时重发。
+该请求由服务端以新的幂等 Request ID `check-request-2` 生成，
+成功建立后独立分配 `check-task-2`；pending 位置保存的是这个 Task。
 
 ```json
 {
@@ -892,8 +1082,10 @@ Coordinator 的旧 recurrence 已在第 2 节展示，不以 `{}` 冒充统一�
 }
 ```
 
-**After / completed：** 假定第 1.2 轮 Task 在 03:20:25Z completed，
+**After / terminated：** 假定第 1.2 轮 Task 在 03:20:25Z 正常或失败终结，
 其后继 eligible 为 03:21:25Z，不是旧 eligible 加一分钟。
+新 Request ID 为 `probe-request-2`，新 Task ID 为 `probe-task-2`，
+series 仍是首个 Task 的 `probe-task-1`。
 
 ```json
 {
@@ -912,10 +1104,10 @@ Coordinator 的旧 recurrence 已在第 2 节展示，不以 `{}` 冒充统一�
   "freshness": "started-after-eligible",
   "timeoutMs": 60000,
   "eligibleAt": "2026-10-29T03:21:25.000Z",
-  "seriesId": "probe-request-1",
+  "seriesId": "probe-task-1",
   "recursive": {
     "periodMs": 60000,
-    "anchor": "completed"
+    "anchor": "terminated"
   },
   "preparationPolicy": {
     "leadMs": 10000,
@@ -942,8 +1134,8 @@ Coordinator 的旧 recurrence 已在第 2 节展示，不以 `{}` 冒充统一�
   "pendingRequestId": "check-request-2",
   "generation": 2,
   "latestSuccessor": {
-    "predecessorRequestId": "check-request-1",
-    "successorRequestId": "check-request-2",
+    "predecessorTaskId": "check-task-1",
+    "successorTaskId": "check-task-2",
     "anchor": "eligible",
     "anchorAt": "2026-10-29T03:21:00.000Z",
     "eligibleAt": "2026-10-29T03:22:00.000Z"
@@ -977,7 +1169,8 @@ After 仅允许 pending；以下是取消操作返回的完整快照。
 ```
 
 **After：** 删除该轮继续规划的资格，不回溯取消已执行的第一轮。
-终态保留 scheduled preparation 信息不代表准备仍会启动。
+终态保留 scheduled prefetch 信息不代表预优化仍会启动。
+取消记录终结时间，但已撤销后继规划权，不按 terminated 生成下一轮。
 
 ```json
 {
@@ -987,6 +1180,7 @@ After 仅允许 pending；以下是取消操作返回的完整快照。
   "hostInstance": "host-a",
   "revision": 2,
   "state": "cancelled",
+  "terminatedAt": "2026-10-29T03:21:10.000Z",
   "receivedAt": "2026-10-29T03:21:00.000Z",
   "eligibleAt": "2026-10-29T03:22:00.000Z",
   "deadlineAt": "2026-10-29T03:22:30.000Z",
@@ -995,7 +1189,7 @@ After 仅允许 pending；以下是取消操作返回的完整快照。
     "periodMs": 60000,
     "anchor": "eligible"
   },
-  "preparation": {
+  "prefetch": {
     "state": "scheduled",
     "scheduledAt": "2026-10-29T03:21:50.000Z"
   },
@@ -1037,6 +1231,7 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
   "hostInstance": "host-a",
   "revision": 2,
   "state": "cancelled",
+  "terminatedAt": "2026-10-29T03:21:00.101Z",
   "receivedAt": "2026-10-29T03:21:00.100Z",
   "eligibleAt": "2026-10-29T03:22:00.000Z",
   "deadlineAt": "2026-10-29T03:22:30.000Z",
@@ -1099,7 +1294,7 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
       "periodMs": 60000,
       "anchor": "eligible"
     },
-    "preparation": {
+    "prefetch": {
       "state": "scheduled",
       "scheduledAt": "2026-10-29T03:21:50.000Z"
     }
@@ -1112,13 +1307,16 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
 
 ## 8. 持久记录与恢复 Response
 
+本节保留先前占位设计，崩溃恢复细节按用户要求暂缓讨论。
+本轮仅同步已确认身份、series 默认值和预优化术语，不把记录布局视作新决定。
+
 ### 8.1 未完成 Task 的逻辑持久记录
 
 **Before：** Check/Probe 的 Task/Run 是含 Map、Promise、AbortController、timer
 和服务内序号的内存对象，没有公开或持久化 JSON 记录。不能捏造一份旧存储格式来对照。
 Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/Probe 存储。
 
-**After：** 以下展示一个尚未开始准备的 pending Check 的完整逻辑恢复单元，
+**After：** 以下展示一个尚未开始预优化的 pending Check 的完整逻辑恢复单元，
 含原 Request、服务端身份、期限、准备时间及前驱。字段布局只是建议，
 不把授权 scope 或幂等信息作为公开 SSE 数据。
 已选版/运行中的记录还需持久准确版本、执行环境及尝试证据，不在本例凭空填充。
@@ -1130,7 +1328,7 @@ Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/P
   "requestId": "check-request-2",
   "taskId": "check-task-2",
   "seriesId": "workspace-checks",
-  "predecessorRequestId": "check-request-1",
+  "predecessorTaskId": "check-task-1",
   "generation": 2,
   "request": {
     "checker": {
@@ -1169,7 +1367,7 @@ Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/P
       "periodMs": 60000,
       "anchor": "eligible"
     },
-    "preparation": {
+    "prefetch": {
       "state": "scheduled",
       "scheduledAt": "2026-10-29T03:21:50.000Z"
     }
@@ -1219,7 +1417,7 @@ recovery 字段是新建议，不意味着允许自动恢复任意已经运行�
     "periodMs": 60000,
     "anchor": "eligible"
   },
-  "preparation": {
+  "prefetch": {
     "state": "scheduled",
     "scheduledAt": "2026-10-29T03:21:50.000Z"
   },
@@ -1234,11 +1432,15 @@ recovery 字段是新建议，不意味着允许自动恢复任意已经运行�
 
 这些完整对象用于看清字段之间的关系，不是绕过待决项的定稿：
 
-- `requestId` 是否独立于 `taskId`、旧 acceptedAt 如何迁移；
-- recursive 双 anchor 的最终默认值、completed 模式无 pending 时如何停止；
-- preparation 状态与到 eligible 尚未准备好的激活规则；
+- 旧 acceptedAt 的命名迁移及 wire 版本；
+- recursive 双 anchor 的最终默认值、terminated 模式无 pending 时如何停止；
+- 预优化提前量默认值及正式 preparing 的具体进展字段；
 - fallback 旧版选择、最大陈旧度及 scope；
 - 同 series 跨模块作用域、公共错误码/状态码及 HTTP/SDK 版本；
-- durable schema、历史游标和运行中 Execution 的崩溃重试策略。
+- durable schema、历史游标和运行中 Execution 的崩溃重试策略（暂缓讨论）。
+
+Request ID 为幂等 ID、Task ID 独立、series 默认取首个 Task ID、
+eligible 后进入正式 PREPARING、terminated 包括失败/超时、
+取消 pending 不生后继以及错过周期不补齐，均已确认，不再列为未决项。
 
 本次只新增文档示例，不提交生命周期接受事件，也不把这些 JSON 发给现有接口执行。
