@@ -47,6 +47,9 @@
   progress 仅描述当前工作。preparation.startedAt 可早于 eligible，因为过程可能 overlap；
   它不等于 Task 进入 preparing 状态的时间。Task 终结记录在 termination，
   不把所有失败都当成 execution 失败。`recurrence.anchor` 仍为 eligible/terminated。
+- 核心过程及 snapshot 的二级字段统一为 preparation/readiness/allocation/execution。
+  Request.prerequisites 仍是声明；readiness.satisfiedAt 才是条件就绪事实。
+  progress.process 使用相同过程名，blocked/queued 状态名不因本次命名调整改变。
 - pending 仅表示时间未到，无 reason 或专属 pending 对象。时间已到、制品未就绪为
   preparing；有前置条件的抽象 Task 在时间与制品就绪、条件未满足时为 blocked。
   第 9 节使用当前接受 prerequisites 的 Regulation 入口；Check/Probe 仅在 Request 准入层不支持此字段。
@@ -510,8 +513,8 @@ SSE 及查询结果使用所属任务的同一类型，不能仅因 preparation.
 |---|---|---|
 | pending | schedule、任务属性及提前成立的过程事实 | 无 reason/pending 对象、实际业务执行或结果 |
 | preparing | preparation 事实、progress.process=preparation | 无其他过程的当前 progress 或最终 result |
-| blocked | 制品准备事实、progress.process=prerequisites | 无父实际执行或最终 result |
-| queued | 已就绪事实，可有 scheduling 进展/预约 | 无虚构的实际执行开始或结果 |
+| blocked | 制品准备事实、progress.process=readiness | 无父实际执行或最终 result |
+| queued | 已就绪事实，可有 allocation 进展/预约 | 无虚构的实际执行开始或结果 |
 | running | 准备/就绪事实、execution.executionId/startedAt，可有业务 progress | 无最终 result 或 termination |
 | completed | 所有既有事实、result、execution 完成和 termination | 无完整 evidence 或活跃 progress |
 | 各过程失败原子 | 路径要求的既有事实和 termination 原因 | 无活跃 progress、成功 result 或虚构过程 |
@@ -525,7 +528,7 @@ JSON Schema 的互斥分支与 SDK 类型必须同时验证必需字段和禁止
 revision/state 是投影元数据；progress 中的 fetch 尝试、最近条件求值与 reservation
 是状态数据，其详细历史在事件中，不因含有时间戳或子任务 ID 就无限累积到快照。
 当前 Check/Probe Request 禁止 prerequisites，即使空数组也不能静默接受；
-抽象 Task 快照仍支持统一的 blocked/prerequisite_failed 和 prerequisites 过程，
+抽象 Task 快照仍支持统一的 blocked/readiness_failed 和 readiness 过程，
 不可把入口的字段限制扩大为 Task 类型限制。
 这些限制不影响 Checker 结果中的动态 requirements，也不禁止 Probe 解释动态依赖。
 
@@ -1761,7 +1764,7 @@ prerequisites 是 Check 声明数组，
 **After：** 服务在 04:20:02Z 记录条件求值。时间和 artifacts 均已就绪，
 但条件 0 未通过，因此父 Regulation Task 为 blocked；条件 1 通过不能使其推进。
 正式准备已经完成，只保留其时间戳；没有父 Execution 或当前 preparation 对象。
-progress.process=prerequisites 是 blocked 的条件状态投影，不是子 Task 的完整 snapshot；
+progress.process=readiness 是 blocked 的条件状态投影，不是子 Task 的完整 snapshot；
 子执行的原始证据可由关联 taskId/executionId 查询，不能伪装成父业务结果。
 
 ```json
@@ -1773,7 +1776,7 @@ progress.process=prerequisites 是 blocked 的条件状态投影，不是子 Tas
   "state": "blocked",
   "freshness": "started-after-eligible",
   "progress": {
-    "process": "prerequisites",
+    "process": "readiness",
     "state": "not-met",
     "evaluatedAt": "2026-10-29T04:20:02.000Z",
     "checks": [
@@ -1908,7 +1911,7 @@ Check 自身 completed 不等于其父 Regulation 的条件已通过；不能让
 **After：** 重查通过后制品不需要重新准备，若暂未获得资源则进入 queued。
 两个条件的重新求值应在条件事件/证据中记录，不能把旧不通过结果或
 “Regulation 已结束”改写成 passed。当前快照不再携带条件 progress，
-累积 prerequisites.satisfiedAt 和准备过程事实；schedule 的 eligibleAt/deadlineAt 不顺延。
+累积 readiness.satisfiedAt 和准备过程事实；schedule 的 eligibleAt/deadlineAt 不顺延。
 
 ```json
 {
@@ -1933,7 +1936,7 @@ Check 自身 completed 不等于其父 Regulation 的条件已通过；不能让
     },
     "language": "en"
   },
-  "prerequisites": {
+  "readiness": {
     "satisfiedAt": "2026-10-29T04:20:10.000Z"
   }
 }
@@ -2163,7 +2166,7 @@ next 增加新成立的事实；离开的状态 payload 不残留
 |---|---|---|
 | 主 Check | 3.1 pending r1 → 4.1 pending r3 → 4.4 preparing r4 → 3.3 queued r5 → 3.4 running r6 → 4.2 completed r8 | 受理身份/时间固定；准备开始时间路径固定；正式选择后的 artifactRef/language/fallbackUsed 一直保留 |
 | Probe | 3.2 preparing r1 → 4.3 completed r18 | preparation.startedAt 始终为 03:20:00.010Z；允许跳过未展示的中间 revision，但不丢已知事实 |
-| Regulation | 9.2 blocked r5 → 9.5 queued r10 | 保留 preparation 事实，移除条件 progress，增加 prerequisites.satisfiedAt |
+| Regulation | 9.2 blocked r5 → 9.5 queued r10 | 保留 preparation 事实，移除条件 progress，增加 readiness.satisfiedAt |
 | 后继取消 | 7 的 pending snapshot r1 → 6.1 cancelled r2 | 受理事实不变，增加取消事实；不伪造准备或执行 |
 | 恢复分支 | 8.1 cachedSnapshot r1 → 8.2 pending r2 | 身份/时间原值保留；这是未发生 6.1 取消的替代场景，不把两个 r2 拼接成终态反转 |
 

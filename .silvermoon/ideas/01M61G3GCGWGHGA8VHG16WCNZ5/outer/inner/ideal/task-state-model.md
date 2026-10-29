@@ -38,13 +38,13 @@ prerequisites 是任意抽象 Task 的统一能力，不为 Check/Probe 定义�
       ├─ 尚未就绪 → preparing
       ├─ 最终失败 → preparation_failed
       └─ 就绪
-         └─ prerequisites：任务前置条件
+         └─ readiness：前置条件就绪
             ├─ 未满足/求值中 → blocked
-            ├─ 求值最终失败 → prerequisite_failed
+            ├─ 求值最终失败 → readiness_failed
             └─ 满足
-               └─ scheduling：资源与执行匹配
+               └─ allocation：资源与执行匹配
                   ├─ 等待/预约后尚未开始 → queued
-                  ├─ 调度最终失败 → scheduling_failed
+                  ├─ 调度最终失败 → allocation_failed
                   └─ 已进入实际执行
                      └─ execution
                         ├─ 尚未结束 → running
@@ -59,7 +59,7 @@ prerequisites 是任意抽象 Task 的统一能力，不为 Check/Probe 定义�
 统一条件层可以空集合成立，记录必须与实际发生的过程一致。
 
 “不满足”与“最终失败”不同：Check 的业务不通过仍是有效结果，
-前置条件不通过可使父 Regulation blocked，但不把子 Check 变成 prerequisite_failed。
+前置条件不通过可使父 Regulation blocked，但不把子 Check 变成 readiness_failed。
 临时缺资源是 queued；可重试的获取错误或可采用的 fallback 也不立即终结 Task。
 最终失败必须由明确策略裁决，保留过程原因，不能从一个异常字符串猜测状态。
 
@@ -70,12 +70,19 @@ prerequisites 是任意抽象 Task 的统一能力，不为 Check/Probe 定义�
 | 时间计划 | 定义何时可用及何时超时，不是一次下载操作 | schedule |
 | eligibility | 服务端确认时间资格已到；不等于立即运行 | eligibility（有需要时记录实际判定时间） |
 | preparation | 获取、验证和选择准确制品，提供制品就绪事实 | preparation |
-| prerequisites | 为具体 Task 求值外部前置条件 | prerequisites |
-| scheduling | 获得资源、确认执行匹配/绑定 | scheduling |
+| readiness | 求值 prerequisites、等待依赖就绪并确认可继续 | readiness |
+| allocation | 为 Task 分配执行机会，包括可用资源或已有共享 Execution 的匹配/绑定 | allocation |
 | execution | 实际工作及其结果 | execution |
 | termination | 需求结束的裁决；可发生在执行之前 | termination |
 
 这些是过程名，而非 pending/preparing/blocked 等阶段名的机械改写。
+核心过程及 snapshot 的二级事实字段统一为
+`preparation / readiness / allocation / execution`。
+`prerequisites` 只命名前置条件声明，不再用来命名 snapshot 的就绪过程；
+readiness 不是时间资格、制品或资源全部就绪的泛称。
+allocation 不限定为新建 worker：接入已有兼容执行同样属于为 Task 分配执行机会。
+过程名称调整不改变状态名 blocked/queued，也不把声明字段 prerequisites 改名。
+schedule/eligibility 是计划与时间资格，termination 是结束裁决，仍保留各自职责。
 时间未到时可能已经获取或验证内容，但 Task 仍是 pending。
 准备工作开始于 eligible 前，不等于 Task 提前进入 preparing 或运行。
 
@@ -105,15 +112,15 @@ prerequisites 是任意抽象 Task 的统一能力，不为 Check/Probe 定义�
 | running | 全部 | false | false |
 | completed | 全部 | false | true |
 | preparation_failed | 全部 | true | true |
-| prerequisite_failed | 全部抽象 Task | true | true |
-| scheduling_failed | 全部 | true | true |
+| readiness_failed | 全部抽象 Task | true | true |
+| allocation_failed | 全部 | true | true |
 | execution_failed | 全部 | true | true |
 | timed_out（控制终结暂定命名） | 全部 | true | true |
 | cancelled（控制终结暂定命名） | 全部 | false | true |
 
 上表为本轮协议草案的完整分类映射；四个过程失败替代宽泛 failed。
 所有 Task 共用这张表与状态约束。当前 Check/Probe 创建入口的字段限制
-只是 admission 策略，不用于从 Task schema 或 SDK 分类中移除 blocked/prerequisite_failed。
+只是 admission 策略，不用于从 Task schema 或 SDK 分类中移除 blocked/readiness_failed。
 超时、取消的既有行为用暂定原子值表达，不宣称它们在正常判定树中的最终挂接方式已确定。
 新增状态必须更新协议分类，遇到未知状态须显式报告，不默认为成功或非终态。
 `isFailed(state)`、`isTerminated(state)` 是方便消费的纯判定，
@@ -129,14 +136,14 @@ prerequisites 是任意抽象 Task 的统一能力，不为 Check/Probe 定义�
 | schedule | receivedAt、eligibleAt、deadlineAt | 受理与计划约束；deadlineAt=eligibleAt+timeout |
 | eligibility | satisfiedAt | 实际资格判定时间，不修改计划 eligibleAt |
 | preparation | startedAt、completedAt、artifactRef、language、fallbackUsed | 准备过程及正式选版，定义不内嵌 |
-| prerequisites | satisfiedAt | 前置条件已被采用的通过事实，不是当前所有 Check 状态 |
-| scheduling | boundAt | 正式绑定某次执行的时间；仅资源预约不等于绑定 |
+| readiness | satisfiedAt | prerequisites 已被采用的通过事实，不是当前所有 Check 状态 |
+| allocation | boundAt | 正式绑定某次执行的时间；仅资源预约不等于绑定 |
 | execution | executionId、startedAt、completedAt | 实际执行事实，不是 Task 阶段时刻 |
 | termination | terminatedAt、error、lastState、planningConflict | 需求终结原因及必要诊断 |
 
 实际已知的执行 ID 应在绑定时进入 execution.executionId 并一直继承，
 即使该执行尚未开始；当前临时预约则属于 progress，不能冒充已确认绑定。
-Task 加入已有运行执行时，execution.startedAt 可以早于 scheduling.boundAt；
+Task 加入已有运行执行时，execution.startedAt 可以早于 allocation.boundAt；
 不得把共享执行开始时间写成加入时间。completed-after-eligible 与
 started-after-eligible 对这个已有执行是否合格仍需各自判断。
 
@@ -146,7 +153,7 @@ started-after-eligible 对这个已有执行是否合格仍需各自判断。
 预优化找到候选不等于已正式采用。
 
 当前进展统一放在 `progress`：例如 process=preparation 的 fetch/校验进展，
-process=prerequisites 的条件检查进展，process=scheduling 的当前预约，
+process=readiness 的条件检查进展，process=allocation 的当前预约，
 process=execution 的业务进展。process 是工作对象分类，不是快照的第二套语义 substate。
 progress 由当前原子 state 限定；过程提前运行的详细变化通过事件观察。
 进入终态移除 progress，但保留之前所有过程事实。
@@ -173,8 +180,8 @@ progress 由当前原子 state 限定；过程提前运行的详细变化通过�
 |---|---|
 | pending | 时间资格未到；可保留已经产生的 preparation 事实，但不能伪造实际执行 |
 | preparing / preparation_failed | 时间层已通过，有真实准备过程记录；失败需要终结原因，不要求 Execution |
-| blocked / prerequisite_failed | 任意有前置条件的抽象 Task；制品正式就绪，有准确引用；条件求值失败不是业务不通过 |
-| queued / scheduling_failed | 制品已就绪且所声明前置条件通过；尚无实际开始也可有正式绑定事实 |
+| blocked / readiness_failed | 任意有前置条件的抽象 Task；制品正式就绪，有准确引用；条件求值失败不是业务不通过 |
+| queued / allocation_failed | 制品已就绪且所声明前置条件通过；尚无实际开始也可有正式绑定事实 |
 | running / execution_failed | 存在真实 executionId/startedAt，并继承此前各层已知事实 |
 | completed | 有完整执行结果及正常执行完成事实，Task 终结时间独立记录 |
 | timed_out / cancelled | 控制终结；继承实际已有事实，不根据错误类别补造任何过程 |
@@ -245,7 +252,7 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
 ```
 
 下面是另一个 Check 的 execution_failed；其创建入口没有接受前置条件，
-无须补造 prerequisites 过程。并非抽象 Check Task 被禁止有此能力。
+无须补造 readiness 求值过程。并非抽象 Check Task 被禁止有此能力。
 这是实际执行失败而非单个 Task 超时：执行已结束但未正常完成，
 因此记录 termination 原因，不伪造 execution.completedAt 或成功 result。
 详细 execution 结束错误仍可从历史事件查询。
@@ -273,7 +280,7 @@ lastState 仅说明终结前观察到的位置，不是失败过程的另一个�
     },
     "language": "en"
   },
-  "scheduling": {
+  "allocation": {
     "boundAt": "2026-10-29T06:02:00.110Z"
   },
   "execution": {

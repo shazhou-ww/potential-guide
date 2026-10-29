@@ -37,7 +37,8 @@ Regulation 调用方改用与 Probe 相同的 Objective URL/digest 引用，由�
 Task snapshot 在 HTTP/SDK/事件中统一为单一原子 state 判别联合，移除公共 hostInstance；
 按[任务状态模型](./ideal/task-state-model.md)落实条件判定树与协议语义分类，
 提供 isFailed/isTerminated 等公共判定，不新增 substate 或重复布尔字段。
-事实按 schedule/preparation/prerequisites/scheduling/execution/termination 等过程分组，
+核心过程事实按 preparation/readiness/allocation/execution 分组，计划与终结分别用 schedule/termination；
+Request.prerequisites 保留声明语义，progress.process 与过程名一致，失败原子同步采用 readiness_failed/allocation_failed。
 过程可重叠，开始时间不冒充阶段转移时间；progress 独立承载当前进展。
 所有后继（含过程失败/控制终结/恢复）继承既有事实，不携带完整 evidence。
 根及独立查询的子 Task snapshot 都仅携带准确 artifactRef，完整 Artifact 按 digest 单独查询，

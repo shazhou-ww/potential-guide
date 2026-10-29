@@ -39,7 +39,7 @@ Request 携带 `eligible_at`、`recurrence` 和可选 `series_id`，成功受理
 | 任务前置条件 | 现有 Coordinator 没有这里定义的 prerequisites Check 集合。 | 任意抽象 Task 统一支持 prerequisites；当前仅 Regulation Request 接受，Check/Probe Request 暂不接受，不写入 Objective 制品。 |
 
 **模型与入口分开：** 撤回“prerequisites 仅属于 Regulation Task”的模型限制，
-所有 Task 使用相同的条件层与原子状态，包括 blocked 和 prerequisite_failed。
+所有 Task 使用相同的条件层与原子状态，包括 blocked 和 readiness_failed。
 当前 Check/Probe Request 不支持携带 prerequisites，因此这些入口不会生成带条件任务；
 这是暂时的 admission 策略，而不是探测类 Task 的结构特例。Regulation Request 可声明条件。
 这里“任何时候可以探测”不取消显式 eligible、准确制品准入、授权和资源约束。
@@ -162,8 +162,8 @@ Snapshot 分为按解锁过程组织的累积事实与统一 progress 中的当�
 | 类别 | 字段或内容 | 后继快照规则 |
 |---|---|---|
 | 受理事实与固定输入 | requestId、taskId、seriesId、schedule、freshness、recurrence | 受理后继承，不重新默认或重置 |
-| 已成立的过程事实 | preparation.startedAt/completedAt、prerequisites.satisfiedAt（实际有条件求值时） | 真实发生时增加，之后原名原值保留 |
-| 已确认的选择/执行事实 | preparation.artifactRef/language/fallbackUsed、scheduling.boundAt、execution.executionId/startedAt/completedAt | 一经正式确认就保留，不等到 completed 才重新出现 |
+| 已成立的过程事实 | preparation.startedAt/completedAt、readiness.satisfiedAt（实际有条件求值时） | 真实发生时增加，之后原名原值保留 |
+| 已确认的选择/执行事实 | preparation.artifactRef/language/fallbackUsed、allocation.boundAt、execution.executionId/startedAt/completedAt | 一经正式确认就保留，不等到 completed 才重新出现 |
 | 终结事实 | termination.terminatedAt/error/lastState/取消诊断、result | 随终结成立，终态不反转且不改写结果 |
 | 当前状态数据 | progress 的准备步骤、条件求值、临时预约或业务进展 | 只在当前状态出现，离开后移除或替换，不整份继承 |
 | 投影元数据 | state、revision | state 表达当前阶段，revision 单调递增，不属于“值永不变”的事实字段 |
@@ -185,22 +185,25 @@ progress.reservation.executionId 是临时预约目标，不等于正式绑定�
 |---|---|---|
 | pending | schedule 与任务属性，可有提前产生的准备事实 | reason/pending 状态对象、实际业务执行或结果 |
 | preparing | preparation 事实、准备过程的 progress | 其他过程的当前 progress、最终 result |
-| blocked | 制品准备事实、prerequisites 过程的 progress | 父实际执行或最终 result |
+| blocked | 制品准备事实、readiness 过程的 progress | 父实际执行或最终 result |
 | queued | 已就绪事实，可有调度 progress/预约 | 虚构实际执行开始或结果 |
 | running | 准备/就绪事实、execution.executionId/startedAt，可有业务 progress | result、termination |
 | completed | 所有既有事实、execution 完成、result、termination | 活跃 progress、完整 evidence |
-| preparation_failed / prerequisite_failed / scheduling_failed / execution_failed | 路径要求的既有事实与 termination 原因 | 活跃 progress、成功 result 或虚构过程 |
+| preparation_failed / readiness_failed / allocation_failed / execution_failed | 路径要求的既有事实与 termination 原因 | 活跃 progress、成功 result 或虚构过程 |
 | timed_out / cancelled（控制终结暂定命名） | 所有实际已有事实和 termination | 活跃 progress、未发生的过程 |
 
 具体原子分类与路径约束见[任务状态模型](./task-state-model.md)。
-所有抽象 Task 都支持 blocked/prerequisite_failed 与 prerequisites 过程，
+所有抽象 Task 都支持 blocked/readiness_failed 与 readiness 过程，
 当前 Check/Probe Request 不携带条件不意味着应从 Task 协议中删掉这些类型。
 termination.lastState 如出现只说明终结前观察位置，不用它替代失败过程分类。
 尚未执行不能出现虚构 Execution；执行后的任何终结必须保留真实关联和所有已有事实。
 Check 的 running 可以没有自定义 progress；Objective 的最终观察进展如需保留，
 作为结构化历史事件按需查询，不塞进终态 evidence 或伪装成活跃 progress。
 
-preparation 专指 artifacts 准备，fetch 只是其子步骤；prerequisites 等待归 blocked。
+核心过程和二级事实字段统一为 preparation/readiness/allocation/execution。
+preparation 专指 artifacts 准备，fetch 只是其子步骤；readiness 求值 prerequisites，
+未就绪时状态为 blocked；allocation 分配执行机会（含共享执行匹配），等待时为 queued。
+Request 的 prerequisites 声明不改名；schedule、eligibility、termination 仍承担其他职责。
 prefetch 只表示提前执行 fetch 的优化，
 不再是顶层公共快照对象。pending 可以携带已经成立的 preparation 事实，
 但不携带 preparing 的当前进展；提前获取的变化可通过
@@ -285,7 +288,7 @@ deadline_at = eligible_at + timeout
 当前 Check/Probe Request 不允许传入 prerequisites，即使空数组也不作为扩展接受，
 应报告不支持字段，不能忽略后制造“条件已受理”的假象。
 Request 准入能力与 Task 状态模型分别校验：所有 Task 共用完整判别联合和语义分类，
-不能按 checker/objective 类型拒绝抽象模型合法的 blocked/prerequisite_failed。
+不能按 checker/objective 类型拒绝抽象模型合法的 blocked/readiness_failed。
 不新增绕过准入限制的外部接口；内部若建立有条件任务，也须经授权并遵守统一模型。
 eligible 后等条件、检查以及依赖治理所花的时间消耗该 Task 的剩余预算。
 timeout 是时长，deadlineAt 是 Task 截止时间，不是 Request 或结果记录的失效日期。
