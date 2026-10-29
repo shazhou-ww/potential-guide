@@ -21,7 +21,7 @@ ExecutorPool、Executor、allocation 与统一 HTTP 宿主的详细关系见
         +--- 纯协议与事实投影
         +--- 调度 / 递归 / 取消 / 所有权协调
         +--- 存储端口
-        +--- 已注册任务类型 / 前置 Check 关联 / ExecutorPool
+        +--- TaskType 纯判定 / 准备 / ExecutorPool
 
 宿主装配上述依赖，独立拥有 HTTP listener 和业务编排策略。
 ```
@@ -36,8 +36,8 @@ ExecutorPool、Executor、allocation 与统一 HTTP 宿主的详细关系见
 | 模块 | 拥有的职责 | 不应知道的内容 |
 |---|---|---|
 | 协议与投影 | 通用身份、事件外壳、内驱 stage、外界信号、独立时间条件及纯投影 | Checker manifest、Objective level、治理目标 |
-| 类型目录与准入 | 内置 Check 支持及宿主扩展类型、校验器和能力，验证输入/权限与幂等请求 | 固定不可扩展的业务类型全集、从字段名猜任务类型 |
-| 任务协调 | 按四个过程推进，处理 deadline、取消、终结及资源清理 | 业务不满足时应采取哪种治理 |
+| 类型目录与准入 | 宿主注册 TaskType、Validator/Equals 和执行能力，验证输入/权限与幂等请求 | 内置业务类型全集、从字段名猜任务类型、强制输入 Schema 依赖 |
+| 任务协调 | 按准备、分配、执行三个过程推进，处理 deadline、取消、终结及资源清理 | 业务前置条件是否满足、不满足时应采取哪种治理 |
 | 系列规划 | recurrence 锚点、原节拍选点、后继幂等、唯一有效时间等待槽位 | 业务 requirements 产生的依赖图 |
 | 执行与需求所有权 | 执行绑定、容量准入、共享需求计数、合作式停止 | 仅凭相同 subject 就认定所有任务可共享 |
 | 事实存储与读取 | 原子追加、幂等索引、因果读取边界、checkpoint、分页和恢复 | 用日志打印替代持久事实、把 snapshot 缓存作为第二真相 |
@@ -53,10 +53,9 @@ deadline 失约允许与真实完成并存；停止逾期工作的政策与时�
 
 | 扩展角色 | 提供什么 | 引擎要求 |
 |---|---|---|
-| TaskType | 输入/progress/result 契约、validate、可选 prepare、equals、封装 Pool 的 allocate 及业务权限条件 | 统一注入而非手工拼接 Type/Pool；不可直接写 Task 状态 |
+| TaskType | 纯 validate/equals、必需 prepare、封装 Pool 的 allocate 及业务载荷契约 | 统一注入而非手工拼接 Type/Pool；不可直接写 Task 状态，不强制输入 Schema |
 | 准备实现 | 得到可执行的准确内容/参数，提供可恢复的准备结果 | 完成事实有依据；候选不等于正式采用；失败不可伪装就绪 |
-| 前置 Check 关联 | 业务方触发 Check Task，引擎执行并采用其可追溯结果 | 不接受任意 passed 写入，不自动派发、轮询、重试或治理 |
-| 输入等价与执行匹配 | TaskType.equals 比较业务 Input，Engine 校验准确准备身份及 executionMatch | 不跨任务类型/权限域/不兼容版本共享，不将 equals 当作请求幂等规则 |
+| 输入等价与执行匹配 | 纯 equals(Input, unknown) 比较业务输入，Engine 校验准确准备身份及 executionMatch | 不跨任务类型/权限域/不兼容版本共享，不将 equals 当作请求幂等规则 |
 | 执行器 | 执行工作、报告 progress/result/故障、接收停止信号 | 不保证停止即无副作用；报告须经校验，不可覆盖事件外壳 |
 | ExecutorPool | 按类型提供兼容 Executor 使用租约，管理容量、等待、复用、回收与淘汰 | 不裁决 Task 或复写调度；Engine 协调 allocation 和正式绑定 |
 | 存储实现 | 明确的原子性、稳定顺序、持久性与恢复保证 | 内存实现不能冒充可重启恢复；缺失事实不可成功形回退 |
@@ -66,8 +65,8 @@ deadline 失约允许与真实完成并存；停止逾期工作的政策与时�
 执行器的停止信号归 Execution 所有，不能直接使用第一个 Task 的取消信号或 deadline；
 单个需求结束只释放它的 owner，其他需求仍有效时执行继续，执行级限额另行明确。
 类型目录是宿主在启动时装配的代码和校验器集合，不接受 Request 指定任意模块路径或远程代码。
-内置 check 的执行能力由宿主注入；probe/regulate 等其他类型在组合层扩展注册，
-不要求新增类型都修改内核。内置支持不等于内核导入具体 Checker runtime 或制品实现。
+check/probe/regulate 均由宿主按需注册，与其他 TaskType 同等；核心没有必须注入的
+Check 或条件判定适配器，新增类型不修改内核。仅注册非制品测试类型也能独立运行。
 同一 type 的历史按原契约版本解释，类型目录须支持依据已记录的版本选择对应解释器；
 不将“当前注册的最新版”当作历史默认值。具体版本编码和注册接口在实施时落实，
 缺少原版支持须明确失败，不通过隐式迁移改变旧输入/结果含义。
@@ -76,25 +75,26 @@ deadline 失约允许与真实完成并存；停止逾期工作的政策与时�
 
 | 具体内容 | 归属 |
 |---|---|
-| check 内置支持及扩展类型输入联合 | 引擎保证 Check 能力，宿主注入执行实现并注册 probe/regulate 等类型 |
+| check/probe/regulate 等类型输入联合 | 宿主按需注册的业务 TaskType，无引擎内置保留类型 |
 | checker/objective 引用、下载、digest、artifactRef | 制品准备适配器 |
 | preparation 的 up-to-date/fallback/updated 选择方式 | 制品准备契约，不是所有类型都必须有的引擎字段 |
-| language、subject/context 的业务含义、desiredLevel、治理预算 | 各任务类型协议；通用内核只按其 schema 校验并正确保留 |
+| language、subject/context 的业务含义、desiredLevel、治理预算 | 各任务类型协议；通用内核调用对应纯 Validator 并正确保留 |
 | Check 的 ok/problems/requirements、Probe 的观察结果 | 对应结果协议，不是通用 completed 判据 |
 | started-after-eligible/completed-after-eligible | Request.executionMatch 的时间条件，由 Engine 在类型/输入/版本/权限兼容后判定 |
 | 对依赖目标创建新治理请求、治理后重查 | Coordinator 的业务编排 |
 
-preparation 的通用事实是工作何时开始、何时正式可用；TaskType.prepare 可选，
-不强制要求 Artifact。未提供时已校验 Input 直接用于后续过程，不伪造准备开始/完成事实。
-readiness 采用关联 Check Task 的有效结果；业务方触发和重试，引擎自己负责执行。
-条件只减少无效尝试，不保证执行期间仍成立；引擎不设 TTL 或执行前强制重查。
+preparation 的通用事实是 prepare 调用何时开始、何时完成；TaskType.prepare 必需，
+不强制要求 Artifact。无需准备时提供 async input => input；即时完成仍是真实调用，
+可以记录开始/完成，但不能伪造下载等业务动作。
+Executor 在执行开始后自行判断业务前提，不满足时按类型协议快速返回；
+Engine 不提供条件等待/解锁机制，也不保证重业务已执行或目标达成。
 allocation 由 Engine 协调执行匹配和正式绑定，等待对应 Pool 的 Executor 租约即等待 allocation。
 原资源适配能力封装到 Pool 内部，不要求宿主单独注入；Executor 在租约内运行一次 Execution，
 不接管 Task，也不通过内部无限排队伪装为 running；Pool 可复用实例，无需每次新建 worker。
 execution 的通用职责是实际执行及其证据，进展和正常结果的内部字段由业务协议拥有。
 
 通用 snapshot 保留有界过程事实，不铺设各阶段的任意 custom 对象。
-准备适配器的持久结果可由其 schema 定义，核心保存其不可变记录以供恢复/匹配；
+准备适配器的持久结果由其类型契约定义，不强制 Schema 库，核心保存不可变记录以供恢复/匹配；
 该结果不是公开 snapshot 的必填业务字段。载荷示意见[接口定义](./interfaces.md)。
 
 ## 5. HTTP 适配与宿主
@@ -138,7 +138,7 @@ Node HTTP 或特定框架通过连接器桥接，正确处理挂载前缀、响�
 | Package / 计划目录 | 拥有的职责与公共入口 | 不承担什么 |
 |---|---|---|
 | task-protocol / packages/task-protocol | 通用 Request/Task/Execution/事件数据、错误契约、核心服务与扩展端口的类型、纯 reducer/projector、多维分类及载荷校验 | 主动调度、IO、当前时钟读取、具体业务类型或框架 |
-| task-engine / packages/task-engine | submit/query/cancel/subscribe、start/close、类型准入、四过程协调、系列规划、执行共享与需求所有权；通过注入端口访问存储、时钟和类型实现 | HTTP 编码、数据库驱动、Checker 下载、Objective 语义或治理策略 |
+| task-engine / packages/task-engine | submit/query/cancel/subscribe、start/close、类型准入、准备/分配/执行协调、系列规划、执行共享与需求所有权；通过端口访问存储、时钟和类型实现 | HTTP 编码、数据库驱动、业务条件判定、Checker 下载或治理策略 |
 | task-engine-http / packages/task-engine-http | 将 header/body、路由、错误码、分页/SSE 映射到注入的核心服务接口 | 创建引擎、选择存储、注册业务类型、监听端口、TLS 或认证凭据管理 |
 | task-engine-storage / packages/task-engine-storage | 存储端口的本地持久参考实现、事务/索引/一致读取/checkpoint/恢复读取；显式 open/close 与迁移 | 调度、业务重放副作用、自动选版、HTTP、决定任务结局 |
 
@@ -160,7 +160,7 @@ task-engine-storage ──→ task-protocol
 宿主组装 ──→ task-engine
          ├─→ task-engine-http       （按需）
          ├─→ task-engine-storage    （持久模式）
-         └─→ 业务类型/ExecutorPool/条件关联适配器
+         └─→ 业务 TaskType（纯判定、prepare、ExecutorPool）
 ```
 
 HTTP 和存储包通过协议包定义的端口工作，不需要运行时依赖 task-engine 的具体类。
@@ -170,7 +170,8 @@ task-engine 不导入 HTTP/存储包；task-protocol 不导入其他三个包。
 
 第三方依赖按实际需要使用 pnpm catalog，内部用 workspace: 范围：
 
-- task-protocol 可以使用无 IO 的 schema 校验工具，但不能依赖引擎或业务协议包。
+- task-protocol 定义通用 Validator/Equals 函数端口，不因业务输入校验强制引入 Schema
+  库；具体 TaskType 可自行选择手写校验或使用 Schema 工具，纯协议不依赖业务实现。
 - task-engine 可复用现有 effects 包协调异步过程；Effect 是实现选择，不进入线协议。
 - 数据库驱动归 task-engine-storage，Web 框架连接器归 HTTP 适配侧，不强加给核心。
 
@@ -194,13 +195,13 @@ Series 后继关联在要求原子性的操作中使用同一数据库事务，�
 | objective-host | Probe 类型适配、等级与动态依赖观察、组合 References | 注入 Check 服务并接入通用引擎；不另复制一套 Task/Series 调度器 |
 | check-artifacts | 制品解析、校验、打包及摘要等能力 | 供业务准备适配器使用，不作为通用引擎前提 |
 | objective-pilot / objective-regulator | 观察和单次调节的业务算法 | 保持业务层职责，通过适配接口消费引擎能力，不把算法塞进通用任务状态机 |
-| regulation-coordinator | 治理请求、业务依赖与策略编排 | 后续适配通用请求/系列能力，不以通用条件求值代替治理授权 |
+| regulation-coordinator | 治理请求、业务依赖与策略编排 | 后续适配通用请求/系列能力，业务条件及治理授权不进入核心 |
 
 具体业务包若提供组合便捷入口，可以依赖 task-engine-http；仅需要进程内业务算法的
 入口不应加载 HTTP 或存储。现有所有依赖不要求在本 idea 中一次性搬迁，
 但新增通用包不得反向依赖具体 Checker/Objective Host、runtime 或 Coordinator 实现。
-内置 Check 的抽象输入/结果与关联契约需在协议侧收敛，不能以“完全无 Check 语义”
-为理由省略前置检查能力，也不能通过引入高层生产包制造循环依赖。
+具体 Check 输入/结果契约归业务层；无需为前置条件往协议层加入 Check 分支或关联
+接口，也不能通过引入高层生产包制造循环依赖。
 
 仓库现有 package-layers.yaml 的 protocol/business/tools 是粗分层；计划将上述通用包
 列入基础 protocol 层，并增加同层的包级依赖约束。仅列同一层不能证明
@@ -211,7 +212,7 @@ task-engine 没有导入 checker-host，须以导入/依赖检查单独验证上
 宿主创建 Store、Clock 及封装各类型 ExecutorPool 的 TaskType，统一注入 engine，
 再按需挂载 HTTP handler；不再用 { ...checkType, pool: checkPool } 分别拼装。
 Pool 与 Executor 依赖协议端口，不依赖 Engine 实现；无需新增独立资源适配器包或 Pool 包。
-业务方触发前置 Check 并建立合法关联，引擎执行后从自身事实采用结果；派发和重试仍在业务侧。
+Executor 可在执行时做业务前置判断并快速返回；宿主无需装配额外的条件证据服务。
 宿主先打开存储、再启动引擎；关闭时停止准入并按契约收束引擎与观察连接，最后关闭存储，
 不把 close 变成批量用户取消。具体运行中恢复与停止政策仍按概念文档待决项收敛。
 

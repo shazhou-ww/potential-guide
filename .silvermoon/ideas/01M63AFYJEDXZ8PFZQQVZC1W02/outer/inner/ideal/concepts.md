@@ -12,7 +12,7 @@
 | Execution | 实际工作及其结果，一个执行可服务多个被允许共享的 Task |
 | Series | 递归需求的关联身份；默认首个 Task ID，后继继承；不是一个永不终结的 Task |
 | 任务类型 | 宿主注册的具体输入和行为契约；type 字段是通用的，字面值集合属于应用组合层 |
-| 条件 | 调用方声明的启动前提；被求值的业务谓词，不是某个 Task 结束的默认别名 |
+| 业务前置判断 | Executor 开始执行后判断是否值得继续重任务；结果属于类型业务协议，不是引擎调度门限 |
 | 事件事实 | 已发生且可审计的事实，有固定归属与稳定读取位置 |
 | Snapshot | 事件事实的一致视图按技术时间投影出的有界读取结果，不是可独立修改的存储真相 |
 
@@ -27,7 +27,7 @@ Task 的变化由三个相互独立的推动力解释，不把它们压成一个
 
 | 推动力 | 来源 | 表达方式 |
 |---|---|---|
-| 第一推动力 | 引擎自身推进 | preparation、readiness、allocation、execution 的过程事实与内驱 stage |
+| 第一推动力 | 引擎自身推进 | preparation、allocation、execution 的过程事实与内驱 stage |
 | 第二推动力 | 外界信号 | 例如取消生效事实 canceledAt；不作为内驱 stage |
 | 第三推动力 | 时间流逝 | eligibleAt、deadlineAt 与观察/有效完成时间的比较；不是到点事件或内驱 stage |
 
@@ -43,7 +43,7 @@ Task 的变化由三个相互独立的推动力解释，不把它们压成一个
 
 UI 状态标签和公共查询辅助函数应基于这些维度投影，不反过来定义持久事实。
 不能用一个 isFailed/isTerminated 或优先级枚举混淆执行失败、期限失约与实际结束。
-具体函数形状仍需收敛；本原则不意味着新增重复持久化的 pending/timedOut 布尔值。
+独立查询函数见本篇末尾；本原则不意味着新增重复持久化的 pending/timedOut 布尔值。
 
 ## 3. 时间约束与内驱推进
 
@@ -57,7 +57,7 @@ deadlineAt = eligibleAt + timeoutMs
 
 到点不要求单独的 eligibility 过程或事件。时间可改变投影，不可伪造工作开始事实。
 时长必须有限且满足协议约束，时间运算溢出须显式拒绝，不能退回无限预算。
-等待准备、条件和资源都消耗同一预算；重试、恢复或取消不能刷新旧 Task 期限。
+准备、资源等待及执行都消耗同一预算；重试、恢复或取消不能刷新旧 Task 期限。
 pending 是时间上的派生值，而非 stage：观察时刻尚未到 eligibleAt。调度槽位还须
 排除已取消或实际结束的需求，不能只比较时间就认定它仍需要推进。
 
@@ -76,24 +76,20 @@ preparation
 ├─ 未准备好 → preparing
 ├─ 最终失败 → preparation_failed
 └─ 可用
-   └─ readiness
-      ├─ 未满足/求值中 → blocked
-      ├─ 最终失败 → readiness_failed
-      └─ 满足
-         └─ allocation
-            ├─ 等待资源或执行机会 → queued
-            ├─ 最终失败 → allocation_failed
-            └─ 实际执行
-               ├─ 进行中 → running
-               ├─ 执行故障 → execution_failed
-               └─ 正常完成 → completed
+   └─ allocation
+      ├─ 等待资源或执行机会 → queued
+      ├─ 最终失败 → allocation_failed
+      └─ 实际执行
+         ├─ 进行中 → running
+         ├─ 执行故障 → execution_failed
+         └─ 正常完成 → completed
 ```
 
 树只解释无外部控制时的内驱位置 stage，不是所有实际转移组成的严格树。
-各过程允许重叠；已满足的门限可跳过，不伪造过程开始/通过事件。
-条件 false 是等待，不是求值故障；正常业务结果“不满足”仍是 completed。
+prepare 必须实际调用并产生对应开始/完成或失败事实；恒等实现可以立即完成，
+不将这次真实调用伪装成下载等业务工作。运行准备、分配和执行仍分别记录各自事实。
+正常业务结果“不满足”仍是 completed，不代表重业务已经执行或目标已经达成。
 类型适配器的临时失败是否重试由明确政策决定，不能直接把所有异常转成最终失败。
-空条件集合直接满足，不强造 readiness.satisfiedAt。
 尚未进入内驱过程时显式为 stage:initial，不省略 stage。initial 只表示引擎尚未推进，
 与是否到达 eligibleAt 无关；到点后若仍未推进就仍为 initial，不能自动写出 preparing。
 initial 是非终结内驱位置，可与时间等待、超时或 canceledAt 分别组合；初始取消后
@@ -110,26 +106,31 @@ Snapshot 不输出独立 state；内驱位置、外部取消及时间边界分�
 期限判定 = 有效完成时间（未完成时为观察时间）与 deadlineAt 的比较
 ```
 
-initial/preparing/blocked/queued/running 是非终结内驱位置，completed 和四种过程失败表示内驱结局。
+initial/preparing/queued/running 是非终结内驱位置，completed 和三种过程失败表示内驱结局。
 pending、cancelled、timed_out 都不是 stage。未知 stage 或非法组合明确报错。
 超时不产生互斥内驱结局、不自动设置 canceledAt 或 timedOutAt；允许 running 且超时，
 随后 completed 且超时。按时完成的 Task 在未来查询仍是按时完成。
 是否停止逾期工作、如何释放执行需求及结果保留窗口是独立政策，未在本轮定案；
 任何政策都不能将已产生的迟到结果虚构为未发生或按时发生。
 
-### 前置条件是减少无效尝试的门槛
+### 业务前置判断由 Executor 承担
 
-前置检查由业务方派发，重试及何时重查也由业务方负责。引擎不自动创建条件 Check
-Task、不轮询或重试检查、不派发治理；业务提交 Check Request 后由引擎内置 Check
-支持执行，从可追溯 Task/Execution 结果中校验并采用证据，不接受任意 passed 写入。
-证据须对应当前 Request/Task 的条件，并来自本 Task eligibleAt 之后发生的检查；
-不能直接沿用前一递归轮次的通过结果。采用一次符合约束的检查通过即可解锁。
+通用引擎不定义 prerequisite/readiness、blocked/readiness_failed stage、条件证据写入/
+关联接口或等待解锁过程；也不需要预先注册 Check Executor。check/probe/regulate
+与其他类型一样按需注册，不是核心保留类型。这些旧设计只保留在 Git 历史中，
+不得由当前 Request、事件、快照或实现清单隐式恢复。
 
-不定义 TTL、排队失效或执行前强制重查；时间流逝本身不撤销通过证据。条件不成立
-时保持等待，检查故障不得冒充通过，业务方可自行决定再检查。Executor 不得假设
-执行时条件仍成立；条件不是锁、租约或资源保证。空条件直接满足，不生成虚假的通过事实。
-已解锁后不回退 stage，后续检查不通过不撤销已采用的通过事实。检查关联接口、
-顺序判定与权限仍需收敛；执行能力注入和 allocation 见
+取得租约并进入 execution 后，Executor 可先做轻量业务判断：满足则执行后续重工作，
+不满足则正常返回类型定义的“不执行/未满足”结果。这次尝试完成，引擎不保留原 Task
+等待将来解锁，也不自动重试；再次尝试由业务方的新请求或显式 recurrence 触发。
+判断本身抛错与正常不满足区分，前者为执行故障，不能都映射成正常返回。
+
+前置判断已占用 Executor 槽位，不能省掉申请/初始化成本，只能减少后续无效重工作。
+不把长期轮询藏进这个快速返回路径，不额外设计跨请求熔断状态机。实际操作必须自己
+处理条件变化，用业务事务/锁/幂等保障必要原子性，提前判断不构成持续有效的承诺。
+引擎按执行开始/完成/失败推进 stage，不根据结果或进展中的业务字段另造状态；
+依赖观察或子任务只是业务编排，
+不会被通用引擎解释成待解锁条件。执行与资源边界见
 [执行与宿主组装](./execution-and-host-composition.md)。
 
 ### executionMatch 与输入分组
@@ -147,7 +148,9 @@ resolutionPolicy。它是请求策略，不复制到事实型 Task snapshot。
 可由同一满足各自要求的 Execution 响应，不合并身份、取消权或期限；候选解析晚于执行
 结束时仍应按同一条件匹配有界保留结果。不得把 executionMatch 改成请求受理时间锚点。
 
-TaskType.equals(a,b) 决定完整业务 Input 是否等价；不包含请求身份和调度字段。
+TaskType.equals(input: Input, other: unknown) 是纯判定，域外 other 返回 false；
+合法输入域中满足自反/对称/传递，不修改输入或做 IO。它比较完整业务 Input，
+不包含请求身份和调度字段，也不替代 validate(unknown) 的准入校验。
 Engine 仍独立保证类型、权限、准确准备内容及实际执行环境兼容，再检查 executionMatch。
 相同 URL 解析成不同版本不共享；不同 executionMatch 的 Task 可能匹配同一执行。
 本轮不额外引入“默认禁止共享、显式开关开启”的第二套策略；也不因为任意两个业务
@@ -203,14 +206,14 @@ terminated 模式以按时有效终结时间为锚点；若此前已超时则锚
 错过多轮不补历史 Task、不重置旧轮预算；e=10:00、P=60 秒、t=10:05:20 时取 10:06，
 恰好在 10:06 规划则取 10:07。已规划过后继不因旧轮后来超时重新选点。
 后继是新的 Request，经正常准入产生独立的新 Task；二者分别有新 requestId/taskId，
-继承类型、seriesId、合法业务输入及递归策略，不修改旧 Request。条件声明可继承，
-通过证据必须重新满足后继自己的 eligibleAt 约束。
+继承类型、seriesId、合法业务输入及递归策略，不修改旧 Request。每轮执行自己的
+业务逻辑；引擎不继承或重新验证任何前置通过证据。
 
 同系列最多一个尚未到 eligibleAt、未取消且未实际结束的 Task，即有效时间等待槽位。
 此条件按同一事实边界和观察时刻计算，不再检查 stage 或互斥 state=pending。已有该项时保留旧项，
 冗余新项记录取消事实。原子规划不能先覆盖旧项再回滚。
 Pending 仅指上述派生时间等待概念，不是 stage，也不是 Active 的同义词。
-到 eligibleAt 后退出该槽位，即使 Task 仍在 initial、preparing、blocked、queued 或 running。
+到 eligibleAt 后退出该槽位，即使 Task 仍在 initial、preparing、queued 或 running。
 因此同 Series 可有多个已 eligible 的未完成 Task；不采用“同 Series 最多一个 Active”
 约束。并发执行和已 eligible 积压由独立容量政策控制。
 eligible 锚点仍可在本轮到点被处理时安排后继，不等待当前轮退出 Active 或实际完成。
@@ -246,7 +249,6 @@ stage 是内驱事实的投影，canceledAt 是固定事实；时间条件用同
 |---|---|
 | task.created | 有效身份、时间与必要的不可变请求引用 |
 | task.preparation.started / completed / failed | 准备过程事实；完成记录可包含类型定义的内部准备结果 |
-| task.readiness.evaluated / satisfied / failed | 外部条件证据的校验/采用或最终故障，不表示引擎派发了检查 |
 | task.allocation.bound / failed | 正式绑定执行或最终分配故障 |
 | execution.started / progress / completed / failed | 实际执行生命周期及业务载荷 |
 | task.terminated | 非取消的实际终结裁决，成功引用 Execution 结果；不代表 deadline 到点 |
@@ -313,7 +315,7 @@ TaskType 升级后，历史 Request、准备结果及事件业务载荷仍按其
 - 提供独立纯查询：isPending(snapshot)、isTimedOut(snapshot)、
   isCanceled(snapshot)、isCompleted(snapshot)、isExecutionFailed(snapshot)。
   Pending 还排除取消或实际结束；超时按本节时间规则；Execution failed 只回答实际
-  执行故障，不包含 preparation/readiness/allocation 失败。其余过程按 stage 查询。
+  执行故障，不包含 preparation/allocation 失败。其余过程按 stage 查询。
   不再提供暗示多维互斥的统一 deriveState；查询只用 snapshot 自带 timestamp/事实，
   不在纯函数内读取系统当前时间。
 - SQLite 参考实现采用本地文件、WAL、foreign_keys=ON、synchronous=FULL，
@@ -331,10 +333,10 @@ TaskType 升级后，历史 Request、准备结果及事件业务载荷仍按其
 
 1. **超时后的推进：** 已确认等待 allocation 期间超时的 Task 撤销等待，不再为它
    启动新执行；迟到租约须回收，不能把超时写成取消或 allocation_failed。
-   initial/prepare/readiness 中超时后的具体收束及已运行执行的停止/清理政策仍待细化；
+   initial/prepare 中超时后的具体收束及已运行执行的停止/清理政策仍待细化；
    允许已开始的执行迟到完成不变。
-2. **前置 Check 接入：** 内置检查契约、条件与 Check Task 的可信关联、顺序/时间边界。
-   业务触发和重试、引擎执行、eligible 后通过解锁、不回退 stage、不设 TTL 已确定。
+2. **TaskType 端口细节：** 纯 validate/equals 与必需 prepare/allocate 的版本绑定、
+   准备结果持久化及类型关联需落实；无引擎级前置条件或内置 Check 要求，不重新开放。
 3. **恢复实现边界：** 未知执行以 execution_interrupted 失败、不自动重跑已确定；
    开始调用与持久事实的崩溃窗口、未开始过程的恢复和清理/资源隔离仍需落实。
 4. **存储实现：** SQLite 驱动、原子所有权/恢复 fencing、表结构与迁移实现仍需落实；

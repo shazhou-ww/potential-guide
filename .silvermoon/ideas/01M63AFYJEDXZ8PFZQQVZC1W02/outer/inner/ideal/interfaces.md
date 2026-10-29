@@ -13,10 +13,10 @@
 及本请求 timeoutMs；executionMatch 默认 started-after-eligible，示例显式给出。
 默认值在受理的契约绑定中固定，原始 Request 查询不反写省略字段。
 type 是判别字段，应用将已注册类型组合为 discriminated union；
-引擎内置支持 check，其他类型包括 probe/regulate 通过宿主注册扩展，不固定全集，
-也不接受任意未注册字符串；每种类型统一注入 TaskType，包含 validate、可选 prepare、
-equals 及封装 ExecutorPool 的 allocate，不再分别注入 Type 与 Pool。
-类型的具体输入可以与公共字段同层组合，但其 schema 不能重新定义或覆盖公共字段。
+所有业务类型（包括 check/probe/regulate）均通过宿主注册，无内置必需业务类型，
+也不接受任意未注册字符串；每种类型统一注入 TaskType，包含纯 validate/equals、
+必需 prepare 及封装 ExecutorPool 的 allocate，不再分别注入 Type 与 Pool。
+类型的具体输入可以与公共字段同层组合，但其 Validator 不能重新定义或覆盖公共字段。
 不要求现在把所有输入迁到 input/payload，也不新增 metadata。
 
 ```json
@@ -116,7 +116,7 @@ pending 和超时为派生判断，不属于 stage；完成与超时可同时成
 }
 ```
 
-echo 没有额外条件，不伪造 readiness 通过时间。
+echo 的 prepare 已实际执行并记录；准备后直接等待分配，不存在额外条件解锁过程。
 准备内部结果可以是经校验的文本与处理器版本，不要求 artifactRef 或 resolution。
 
 ### 3.3 正常完成
@@ -240,32 +240,28 @@ echo 没有额外条件，不伪造 readiness 通过时间。
 
 | 角色 | 输入 | 返回 / 报告 |
 |---|---|---|
-| validate 与业务授权 | 未信任业务 Input、可信 caller；通用字段由 Engine 校验 | 可信 Input 或明确错误，申请 Executor 前完成，不静默删改输入 |
-| prepare（可选） | Input、预算、取消信号、适配器依赖 | 正式 Prepared 或有分类的故障；无此步骤时 Prepared=Input，不伪造过程 |
-| readiness 检查关联 | 业务方关联的 Check Task、条件归属与可信时间/顺序 | 核心采用真实检查结果解锁；不自动触发检查或重试，不接受任意布尔值 |
-| equals | 同类型的两个完整业务 Input | 确定、无副作用的等价关系；Engine 另验准确准备内容、权限、环境和 executionMatch |
+| validate | unknown 业务输入；通用字段与授权由 Engine 另验 | 纯函数得到合法 Input 或明确校验错误，无 IO/修改/隐式转换，申请 Executor 前完成 |
+| equals | 合法 input:Input 与 other:unknown | 纯函数，域外 other 返回 false；合法输入域上为等价关系，不替代 validate 或幂等比较 |
+| prepare（必需） | Input、预算、取消信号、适配器依赖 | 正式 Prepared 或有分类的故障；无额外工作时以恒等实现返回 Input，记录真实调用 |
 | execute | 不可变 prepared、执行上下文、停止信号 | 校验后的 progress、一个正常 result 或执行故障 |
 | allocate / 租约归还 | Prepared、执行约束、可信作用域及可撤销申请 | TaskType 通过 Pool 提供 Executor 使用租约；Engine 复核绑定，执行和清理后归还 |
 
-echo 通常可以省略 prepare。前述有 preparation 事实的示例特指配置了处理器版本
-准备的 echo 变体，不强迫所有简单计算都经过该步骤，其正式准备返回例如：
+echo 也必须提供 prepare；不需要额外工作时实现为 async input => input，
+直接返回类型定义的 Prepared，不引入引擎级 outcome:ready 包装。此例返回：
 
 ```json
 {
-  "outcome": "ready",
-  "prepared": {
-    "handlerRevision": "echo-v1",
-    "text": "hello"
-  }
+  "text": "hello"
 }
 ```
 
-outcome 的协议意义由核心定义，prepared 内容由 echo 适配器 schema 定义。
+Prepared 内容由 TaskType 契约定义，成功返回就是准备完成，异常为准备失败。
+需要固定处理器或制品版本的类型可以在其 Prepared 中包含准确身份，但不是所有类型必填。
 它作为准备完成的内部不可变事实保留，用于恢复和确定执行输入，不自动摊入 snapshot。
 公开历史是否披露该内部对象须经过授权/投影策略；不能把恢复数据默认全量暴露给调用者。
 业务版本是可恢复事实，不在重放时重新选 latest；历史按原契约版本解释。
 Request、准备结果和事件须能追溯准确类型版本；版本标识的字段及位置仍待接口细化，
-不得用示例的 handlerRevision 自动充当所有类型的统一版本字段。
+不得用某个类型的业务版本字段自动充当所有类型的统一契约版本字段。
 Checkpoint 可引用它，但不能只保留进程内 closure 而声称可恢复。
 
 ## 5. 事件载荷
@@ -360,20 +356,30 @@ code/message 是固定错误契约，details 是可选的类型诊断对象；�
 错误位置枚举、HTTP 错误码映射在实施契约中统一，不把来源业务的错误 stage 枚举强加给所有类型。
 非法或超限业务载荷须明确报告，不允许截断后假装是完整结果。
 
-## 6. 条件输入
+## 6. 业务前置判断的结果
 
-前置条件通过内置 Check Task 的检查结果验证。业务方决定何时提交 Check Request
-及重试，引擎从注入的 Check Pool 取得 Executor 租约执行，保存结果并按合法关联解锁父 Task。
-此前独立 signal-ready 条件求值器示例撤回，避免维护一条绕过 Check 的任意证据写入路径。
+通用 Request 不声明 prerequisites，API 不接受前置证据提交/解锁命令，snapshot
+不包含 readiness 对象或 blocked stage。业务校验拒绝不属于其输入的旧字段，
+不能忽略旧条件并以为用户已获得相同的等待保证。
 
-条件声明、Check 请求输入、关联命令及 HTTP 映射尚待统一定型；本节不虚构已经确定的
-JSON 字段。接口必须可验证当前 Request/Task、具体条件、Check Task/Execution 身份、
-检查时间/顺序和作用域。只给一个 Task ID 或 passed=true 不足以证明条件成立。
-具体入口可以限制能否接受 prerequisites，不支持时明确拒绝。
+Executor 已取得租约并进入 execution 后可做轻量前置判断，不满足则返回业务结果，
+例如某个业务 TaskType 定义如下结果；字段不是通用引擎结果结构：
 
-一次合格的 eligible 后通过可解锁，不满足继续等待；引擎不自动派发或重试，也不设 TTL
-或启动前强制重查。已解锁 stage 不因后续检查失败回退；后继需满足自身时间约束。
-执行/资源/服务接口关系见[执行与宿主组装](./execution-and-host-composition.md)。
+```json
+{
+  "performed": false,
+  "reason": "target-unavailable"
+}
+```
+
+该结果走 execution.completed 及 Task completed 正常路径，不表示重工作执行成功。
+判断故障抛错走 execution.failed，不通过专用通用 stage 表达业务“不满足”。
+再次尝试使用新业务请求或显式 recurrence；引擎不保留当前 Task 等待将来解锁，
+不新增 waitUntilReady、条件 TTL 或隐式重试。具体业务可报告子任务引用作为
+进展/结果，引擎只验证契约和可见性，不据此增加条件调度。
+
+运行能力见[执行与宿主组装](./execution-and-host-composition.md)；
+所有类型使用纯 Validator/Equals 与必需 Prepare/Allocate，不要求 inputSchema。
 
 ## 7. HTTP 映射
 

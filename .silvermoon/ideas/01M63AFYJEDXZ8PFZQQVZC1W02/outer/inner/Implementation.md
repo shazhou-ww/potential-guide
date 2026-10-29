@@ -10,8 +10,10 @@
 
 定义 Request 类型组合、任务事实、内驱 stage/外界信号/时间条件三维投影、错误与服务 API，
 以虚拟时钟和非制品测试类型验证纯归约、输入校验及权限边界。
-类型注入统一为 TaskType，提供 validate(unknown)、可选 prepare、allocate 与 equals；
-Engine 申请 Executor 前完成预检及必要的准备后校验，无准备时直接使用 Input。
+类型注入统一为 TaskType，纯 validate(unknown) 与 equals(Input, unknown) 分开于
+具备副作用的必需 prepare/allocate；不强制业务提供 inputSchema 或依赖 Schema 库。
+Engine 申请 Executor 前完成预检及必要的准备后校验；恒等 prepare 也必须实际调用，
+返回 Input 并记录准备事实，不使用可选分支或返回 undefined 的空实现。
 将本设计的 freshness 名称改为 Request.executionMatch，保留两种 eligible 锚点的
 时间匹配语义，不复制策略到 snapshot。equals 只比较完整业务输入，不代替请求幂等。
 按[包级边界建议](./ideal/system-boundaries.md#7-package-划分与依赖建议)落实经评审的
@@ -19,12 +21,13 @@ task-protocol/task-engine 分层，纯协议入口不加载主动运行或业务
 
 ### I-S02: 落实调度与可恢复执行
 
-实现四个过程协调、原节拍递归、原子取消/终结、Execution 需求所有权，
+实现准备、分配、执行三个过程协调、原节拍递归、原子取消/终结、Execution 需求所有权，
 不以 pending/timed_out 作为内驱 stage；保留超时后的完成事实和通知，时间到期不伪造取消。
 建立存储端口及本地持久参考实现；重启时 started 但无可靠结束事实的执行以
 execution_interrupted 失败，已记录结果先补齐，尚未开始任务继续调度，不自动重跑未知执行。
-业务负责前置检查触发/重试，引擎内置支持 Check 并从注入的 ExecutorPool 申请执行实例，
-采用关联 Task 的 eligible 后通过结果解锁，不设 TTL、强制重查或解锁后 stage 回退。
+引擎无前置条件声明、readiness/blocked 或内置 Check；所有业务类型按需注册。
+Executor 自行做轻量前置判断，不满足就正常快速返回业务结果，不保留 Task 等待解锁。
+执行故障与业务不满足分开，重试由业务新请求或已声明 recurrence 驱动。
 按[执行与宿主组装](./ideal/execution-and-host-composition.md)划分 allocation：
 Engine 协调共享匹配与正式绑定，按类型注入的 Pool 原子授予/回收 Executor 使用租约，
 Executor 在租约内运行一次 Execution；共享执行不重复申请租约；
@@ -47,9 +50,9 @@ HTTP 包通过注入的服务接口工作，不反向依赖引擎具体实现；
 
 ### I-AC01: 抽象边界与类型安全成立
 
-静态依赖检查和两种非制品测试任务证明内置 Check 支持不绑定具体 Checker runtime，
-其他任务类型无需改内核即可注册；
-schema/类型测试拒绝未知类型、非法载荷、跨类型幂等复用和跨作用域访问，
+静态依赖检查和两种非制品测试任务证明没有注册 Check 也能运行，
+新增任务类型无需改内核即可注册；
+Validator/类型测试拒绝未知类型、非法载荷、跨类型幂等复用和跨作用域访问，
 业务 progress 不改变生命周期，普通业务不满足不冒充执行失败。
 包级导入检查证明 protocol 不依赖核心/适配器，engine 不依赖 HTTP/存储驱动/业务包；
 不能仅凭 package-layers.yaml 的同层分类声称满足依赖边界。
@@ -77,11 +80,11 @@ schema/类型测试拒绝未知类型、非法载荷、跨类型幂等复用和�
 
 | 归属 | 场景与方法 | 应观察到的结果 |
 |---|---|---|
-| I-AC01 | 内置 Check 测试 Pool、两种非制品类型、包依赖检查及非法载荷 | 各类型 Pool 可注入，扩展类型无硬编码，无反向依赖；权限/类型/载荷错误明确拒绝 |
+| I-AC01 | 仅注册两种非制品 TaskType、包依赖检查及非法载荷 | 不要求 Check 或条件服务，各类型 Pool 可注入，无反向依赖；错误明确拒绝 |
 | I-AC02 | 固定事实前缀与虚拟时钟跨 eligible/deadline | initial 不因到点推进，Pending/超时独立派生；按时完成不因晚查询超时 |
 | I-AC02 | 超时后正常完成/失败及同一事件重复投递 | 保留迟到事实和通知，时间失约不消失，不复活取消任务 |
-| I-AC02 | 错 Task/条件、eligible 前及乱序的前置证据 | 不错误解锁；有效通过可解锁，无引擎自发检查/重试/TTL |
-| I-AC02 | 前置检查通过后排队较久，执行时环境已变化 | 无定时失效或强制重查；Executor 独立处理业务结果 |
+| I-AC02 | Executor 前置判断不满足、满足及判断抛错三条路径 | 不满足时不做重工作但正常 completed；满足继续；故障为 execution_failed，无 blocked 或等待解锁 |
+| I-AC02 | 前置判断后环境变化，业务选择新请求或周期再试 | Executor 按业务契约处理，不承诺持续满足，不隐藏自动重试或条件事件 |
 | I-AC02 | 同 Series 两轮均已 eligible，另有未来轮次 | 可同时存在已 eligible 任务，但最多一项有效 Pending；不套唯一 Active 约束 |
 | I-AC02 | eligible 节拍被延迟多个周期及恰好到点 | 严格未来原节拍选点，不补历史；当前执行未结束不阻止规划 |
 | I-AC02 | A 超时规划 B，B 已到点后 A 迟到终结 | 仍只关联 B，不因 Pending 已空生成 C；取消不自动续作 |
@@ -94,9 +97,11 @@ schema/类型测试拒绝未知类型、非法载荷、跨类型幂等复用和�
 | I-AC02 | 同一租约重复归还、旧代次回报、清理失败 | 不增加重复容量、不污染新租约；异常实例淘汰/隔离而非直接重新出借 |
 | I-AC02 | 同引擎父编排等待子 Check、多个 Task 共享执行 | 子任务能获得所需资源，共享 Execution 不重复预留；单 owner 取消不影响其他 owner |
 | I-AC01 | 脱离 Engine 直接调用测试 Executor | 只需执行/资源端口，无 Engine 实现或 HTTP 自调用依赖 |
-| I-AC01 | 输入预检失败、准备后 subject 校验失败、无 prepare 类型 | 前两者均不调用 allocate；无 prepare 时执行输入类型一致，无伪造准备事件 |
+| I-AC01 | 输入预检失败、准备后业务校验失败、恒等 prepare | 前两者均不调用 allocate；恒等 prepare 确实调用并返回 Input，有真实开始/完成而无虚构 IO |
 | I-AC02 | equals 相等但策略/身份不同、相同浮动引用选出不同版本 | 相等业务输入仍分别按 executionMatch 匹配，版本/权限/环境冲突不共享，Task 身份不合并 |
 | I-AC01 | 同 requestId 改 executionMatch、错误的等价关系或抛错比较器 | 幂等仍比较完整意图；等价关系向量覆盖自反/对称/传递，比较故障显式报告 |
+| I-AC01 | equals 合法 Input 对比域外 unknown、不同有效输入、对称交换合法参数 | 域外 false，无修改或转换；合法域等价关系成立，不将异常宽泛吞成 false |
+| I-AC01 | 纯 Validator/Equals 的输入冻结、IO 监控及无 Schema 库测试类型 | 两个纯函数不做 IO/读可变环境/改输入；不用 inputSchema 也能正常准入及分组 |
 | I-AC01 | 同类型两版输入/结果契约及旧版解释器缺失 | 历史按记录的原版校验，缺失明确失败，不回退最新版或改写旧载荷 |
 | I-AC02 | 升级后重放 checkpoint、重发旧 requestId 和恢复未执行任务 | 原绑定/语义保持；幂等不创建新版请求，缺少兼容执行能力不自动换 Executor |
 | I-AC02 | 完成时间等于 deadline、可靠完成先于取消但处理较晚 | 等于截止按时；按可靠事实顺序裁决，不按客户端时间或队列延迟覆写结果 |
