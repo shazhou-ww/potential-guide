@@ -15,15 +15,15 @@ Regulation 的统一资格时间、递归系列与未完成任务恢复，持续
 
 ## 边界
 
-- Request 输入调度条件，Task 承载生命周期；Request ID 为幂等 ID，Task ID 独立，series 默认取首个 Task ID；不向 Artifact 写入调度字段或重解释历史协议。
-- 服务核心与 Router 分离；仅 Node Checker，Objective 不限制同 runtime；统一 Regulation 请求语义但不新建 Regulation 服务，不搬移 Coordinator 治理职责。
+- Request 实体必含幂等 requestId，HTTP 通过 header 传递；Task 身份独立、series 默认取首个 Task ID，生成型身份用 ULID，作者语义名称和 digest/revision 不机械改名。
+- 全新不兼容设计，Before 仅作对照；服务核心与 Router 分离，仅 Node Checker；统一 Regulation 请求语义但不新建 Regulation 服务，不搬移 Coordinator 治理职责。
 - 恢复所有未完成 Task，不承诺 Execution exactly-once 或跨重启透明延续；不增加 raw resources，不承担正式发布或内置全量迁移。
 
 ## 验收标准
 
 - 两类制品、目录文档与准确摘要保持可验证；准备选版/回退显式固定版本并保留失败证据，不掩盖业务不通过。
 - eligible 锚定正式准备、执行资格、freshness 与 timeout；系列唯一 pending、eligible/terminated 递归及取消在竞争下成立，失败/超时续作且错过周期不补齐。
-- HTTP/SDK/Coordinator 的系列事件和未完成 Task 恢复一致，独立消费者证明重启不重置期限、不重复规划、不悄悄换版；旧协议显式兼容。
+- HTTP/SDK/Coordinator 的 Request 身份审计、系列事件和未完成 Task 恢复一致，解析失败可关联 requestId，独立消费者证明重启不重置期限、不重复规划、不悄悄换版。
 
 ## 当前准备步骤
 

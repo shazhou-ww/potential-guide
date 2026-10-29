@@ -6,6 +6,7 @@
 ## 阅读约定
 
 - **Before** 对照 `127666e4ec04` 的实际类型，不把新字段塞进旧协议。
+- 新方案是全新、不兼容设计；Before 仅解释变化，不构成兼容、迁移或旧别名承诺。
 - **After 全部是待评审草案，不是当前接口或已发布 schema。** 为便于读完整对象，
   本文暂选具体字段名、状态值和错误码；这些选择不代表已确认。
 - 每个 JSON 块都是该场景的完整对象，无省略号、伪注释、变量替换或“同上”对象。
@@ -21,10 +22,16 @@
   `none | previous-usable`。具体字段名仍待评审，默认不预取、不回退已确认；
   Request 不再携带 preparationPolicy。
 - After 的 freshness 暂用 `started-after-eligible | completed-after-eligible`，
-  以免在旧 `*-after-request` 字面值上偷偷换义。实际协议升级方式尚未确定。
+  准确表达 eligible 边界；不要求兼容旧 `*-after-request` 字面值。
 - Request ID 已确认为幂等 ID，Task ID 由服务端独立分配；
   解析/准入失败可能不产生 Task。示例的 requestId 对应 `Idempotency-Key`，
-  不再额外创建第三个调用身份。首个 Task 的默认 seriesId 为 taskId，后继继承 series。
+  **所有 After 创建输入 JSON 均为完整 Request 实体，必须包含 requestId。**
+  HTTP 序列化时把该字段放入 header，其余字段构成 body；收到后还原同一个实体。
+  首个 Task 的默认 seriesId 为 taskId，后继继承 series。
+  Request/Task/Series/Execution/Observation/Invocation/Host instance 等生成型身份
+  统一为规范大写 ULID。作者定义的 levelId、problemId、局部 Checker 名称保留可读值；
+  digest 和 revision 不叫 ID，也不使用 ULID。ULID 时间部分不裁定调度或授权。
+  Before 的合成 ID 值也采用 ULID 方便对照，但不据此改变旧结构的字段。
   ID、URL、摘要和时间均为合成数据，
   摘要满足格式但不表示存在可下载的真实制品。
 - 本文不发明 Regulation HTTP 服务：第 2 节将现有 Coordinator 调用输入
@@ -34,6 +41,75 @@
   必须在 eligible 后。`recurrence.anchor` 使用 eligible/terminated；
   Task 终结时间写 `terminatedAt`，保留 completed/failed/cancelled 状态及错误原因。
 
+## Request 实体与 HTTP 传输的对应
+
+第 1、2、5 节及超时后继例中的 After JSON 都是 Request 实体；
+其中 requestId 不是可选日志标签，而是实体必需的幂等身份。
+审计可在 Task 产生之前记录这个身份；业务 JSON 解析失败也用它返回错误。
+下面列出各调用的 header 值，与相应实体/响应中的 requestId 一致：
+
+| 场景 | HTTP `Idempotency-Key` |
+|---|---|
+| 1.1 Check 首轮 | `01M60000000000000000000002` |
+| 1.2 Probe 首轮 | `01M60000000000000000000018` |
+| 1.3 过去 eligible 的单次 Check | `01M60000000000000000000016` |
+| 1.4 解析/准入错误 | `01M6000000000000000000000F` |
+| 2 Regulation 调用身份（进程内使用同一 requestId） | `01M6000000000000000000001C` |
+| 4.5 超时后继 | `01M60000000000000000000012` |
+| 5.1 Check 后继 | `01M60000000000000000000003` |
+| 5.1 Probe 后继 | `01M60000000000000000000019` |
+
+Before 的 HTTP body 本来不包含 requestId，header 也使用表中相应合成值；
+Coordinator Before 使用自身 requestRef，并不是一条 HTTP 调用。
+后继由服务内部生成时也必须创建完整 Request 实体；不要求先绕 HTTP 才有身份。
+
+以下完整 HTTP 例对应第 1.1 的同一个 Request。`/checks` 只是示例挂载点，
+省略与此设计无关的鉴权凭据；实体序列化时仅取出 requestId 放入 header，
+body 保留其他字段，不同时提供第二份 requestId：
+
+```http
+POST /checks/check-tasks HTTP/1.1
+Host: 127.0.0.1:8080
+Content-Type: application/json
+Idempotency-Key: 01M60000000000000000000002
+
+{
+  "checker": {
+    "url": "https://example.test/checker/latest.tgz"
+  },
+  "subject": {
+    "root": "D:\\project"
+  },
+  "context": {},
+  "language": "en",
+  "freshness": "completed-after-eligible",
+  "timeoutMs": 30000,
+  "eligibleAt": "2026-10-29T03:21:00.000Z",
+  "seriesId": "01M6000000000000000000001D",
+  "recurrence": {
+    "periodMs": 60000,
+    "anchor": "eligible"
+  }
+}
+```
+
+服务先识别合法 ULID header，再尝试解析 body 并还原实体。即使 body 是无效 JSON，
+也可返回下面的关联错误，不需要生成 Task 或默认 series：
+
+```json
+{
+  "requestId": "01M6000000000000000000000F",
+  "error": {
+    "code": "invalid_json",
+    "stage": "validate",
+    "message": "Invalid JSON body."
+  }
+}
+```
+
+缺失或非法 header 是请求身份错误，不假造一个合法 requestId 冒充客户端原请求。
+所有生成型身份都是示例 ULID，不用其编码时间推断收到请求、eligible 或实际执行时间。
+
 ## 0. 服务配置：preparation policy 不属于 Request
 
 **Before：** 当前 `createUnifiedServices` 的完整配置对象。
@@ -42,8 +118,12 @@
 ```json
 {
   "directory": "D:\\service-cache",
-  "allowedOrigins": ["https://example.test"],
-  "languages": ["en"]
+  "allowedOrigins": [
+    "https://example.test"
+  ],
+  "languages": [
+    "en"
+  ]
 }
 ```
 
@@ -54,8 +134,12 @@
 ```json
 {
   "directory": "D:\\service-cache",
-  "allowedOrigins": ["https://example.test"],
-  "languages": ["en"],
+  "allowedOrigins": [
+    "https://example.test"
+  ],
+  "languages": [
+    "en"
+  ],
   "preparationPolicy": {
     "leadMs": 10000,
     "fallback": "previous-usable"
@@ -94,6 +178,7 @@ Task 在 eligible 后才正式开始选版、下载和验证。只配置预取�
 
 ```json
 {
+  "requestId": "01M60000000000000000000002",
   "checker": {
     "url": "https://example.test/checker/latest.tgz"
   },
@@ -105,7 +190,7 @@ Task 在 eligible 后才正式开始选版、下载和验证。只配置预取�
   "freshness": "completed-after-eligible",
   "timeoutMs": 30000,
   "eligibleAt": "2026-10-29T03:21:00.000Z",
-  "seriesId": "workspace-checks",
+  "seriesId": "01M6000000000000000000001D",
   "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
@@ -145,6 +230,7 @@ Task 在 eligible 后才正式开始选版、下载和验证。只配置预取�
 
 ```json
 {
+  "requestId": "01M60000000000000000000018",
   "objective": {
     "url": "https://example.test/objective/v1.tgz",
     "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -190,6 +276,7 @@ recurrence 未提供，任务不会自动产生后继。
 
 ```json
 {
+  "requestId": "01M60000000000000000000016",
   "checker": {
     "url": "https://example.test/checker/v1.tgz",
     "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -203,7 +290,7 @@ recurrence 未提供，任务不会自动产生后继。
 
 ### 1.4 Request 解析失败：没有 Task
 
-此场景调用带 `Idempotency-Key: invalid-request-1`，来源不是允许的 HTTPS 地址。
+此场景调用带 `Idempotency-Key: 01M6000000000000000000000F`，来源不是允许的 HTTPS 地址。
 Before 已返回结构化错误；After 建议同时返回幂等 Request ID，便于关联失败调用。
 两侧均为 HTTP 400，After 不分配 taskId，也不能用 requestId 伪造默认 seriesId。
 失败 Request 的保留期限和重试细节尚未在本例中规定。
@@ -224,7 +311,7 @@ Before 已返回结构化错误；After 建议同时返回幂等 Request ID，�
 
 ```json
 {
-  "requestId": "invalid-request-1",
+  "requestId": "01M6000000000000000000000F",
   "error": {
     "code": "invalid_source",
     "stage": "resolve",
@@ -246,7 +333,7 @@ Before 已返回结构化错误；After 建议同时返回幂等 Request ID，�
 ```json
 {
   "type": "request",
-  "requestRef": "reg-request-1",
+  "requestRef": "01M6000000000000000000001C",
   "objective": {
     "objectiveId": "objective:https://example.test/objective/v1.tgz",
     "version": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -281,7 +368,9 @@ Before 已返回结构化错误；After 建议同时返回幂等 Request ID，�
         }
       ],
       "defaultLanguage": "en",
-      "languages": ["en"]
+      "languages": [
+        "en"
+      ]
     },
     "locales": {
       "en": {
@@ -350,11 +439,13 @@ Before 已返回结构化错误；After 建议同时返回幂等 Request ID，�
 **After：** 与 Probe 使用相同的 `objective: {url, digest?}`，与 Check 的
 `checker: {url, digest?}` 对称。subject 直接表达治理对象，desiredLevel 与 priority
 保留治理需求的差异。默认 series/eligible 与其他 Task 一致，例中显式给出以便对照。
-幂等 Request ID `reg-request-1` 由调用元数据提供，与 Check/Probe 的 request ID 同义。
-它不是 body 中的内部 requestRef、Task ID 或运行时 evidence。
+幂等 Request ID `01M6000000000000000000001C` 是实体的 requestId，与 Check/Probe 的 request ID 同义。
+若通过 HTTP 传输，它进入 header 而不重复写入 body；进程内接口直接接收完整实体。
+它不是内部 requestRef、Task ID 或运行时 evidence。
 
 ```json
 {
+  "requestId": "01M6000000000000000000001C",
   "objective": {
     "url": "https://example.test/objective/v1.tgz",
     "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -366,7 +457,7 @@ Before 已返回结构化错误；After 建议同时返回幂等 Request ID，�
   "language": "en",
   "desiredLevel": "terminal",
   "priority": 1,
-  "seriesId": "workspace-regulation",
+  "seriesId": "01M6000000000000000000001E",
   "eligibleAt": "2026-10-29T03:21:00.000Z",
   "freshness": "completed-after-eligible",
   "timeoutMs": 300000,
@@ -386,22 +477,22 @@ Before 已返回结构化错误；After 建议同时返回幂等 Request ID，�
 这里的 timeout 是 Task 期限，不是 Agent execution limit 或治理 quota 的静默重命名；
 freshness 也不意味着可随意共享有副作用的 Agent 执行。新统一字段向 Coordinator 的
 预算与调度映射仍须专门设计，不以 Objective 引用对称推定执行策略也完全相同。
-本次不新增 Regulation HTTP listener，不覆盖现有 RequestCommand 或持久 schema 1/2/3。
+本次不新增 Regulation HTTP listener；新设计不需要兼容现有 RequestCommand 或旧持久 schema。
 
 ## 3. 创建 Response：完整初始 Task 快照
 
 ### 3.1 Check 创建响应：accepted → pending
 
 Before 的 POST 成功返回 HTTP 201、Location 和快照本身，没有额外 `{task: ...}` 包装。
-After 建议保留这种响应方式；路由版本号另定，不在旧 endpoint 偷换语义。
-本例调用的 `Idempotency-Key: check-request-1` 就是响应中的 requestId。
+After 采用快照响应；新路由独立设计，不承担旧 endpoint 的兼容义务。
+本例调用的 `Idempotency-Key: 01M60000000000000000000002` 就是响应中的 requestId。
 
 **Before：**
 
 ```json
 {
-  "taskId": "check-task-1",
-  "hostInstance": "host-a",
+  "taskId": "01M60000000000000000000006",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 1,
   "state": "accepted",
   "acceptedAt": "2026-10-29T03:20:00.000Z",
@@ -414,10 +505,10 @@ scheduledAt 为 eligible 减去准备提前量，而不是 received。
 
 ```json
 {
-  "taskId": "check-task-1",
-  "requestId": "check-request-1",
-  "seriesId": "workspace-checks",
-  "hostInstance": "host-a",
+  "taskId": "01M60000000000000000000006",
+  "requestId": "01M60000000000000000000002",
+  "seriesId": "01M6000000000000000000001D",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 1,
   "state": "pending",
   "receivedAt": "2026-10-29T03:20:00.000Z",
@@ -441,8 +532,8 @@ scheduledAt 为 eligible 减去准备提前量，而不是 received。
 
 ```json
 {
-  "taskId": "probe-task-1",
-  "hostInstance": "host-a",
+  "taskId": "01M6000000000000000000001A",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 1,
   "state": "accepted",
   "acceptedAt": "2026-10-29T03:20:00.000Z",
@@ -450,16 +541,16 @@ scheduledAt 为 eligible 减去准备提前量，而不是 received。
 }
 ```
 
-**After：** 对应 1.2，调用使用 `Idempotency-Key: probe-request-1`；
+**After：** 对应 1.2，调用使用 `Idempotency-Key: 01M60000000000000000000018`；
 series 等于独立分配的 Task ID，eligible 等于 received。
 计算出的准备时间早于接收，只能接收后立即安排，不伪造提前发生的下载。
 
 ```json
 {
-  "taskId": "probe-task-1",
-  "requestId": "probe-request-1",
-  "seriesId": "probe-task-1",
-  "hostInstance": "host-a",
+  "taskId": "01M6000000000000000000001A",
+  "requestId": "01M60000000000000000000018",
+  "seriesId": "01M6000000000000000000001A",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 1,
   "state": "pending",
   "receivedAt": "2026-10-29T03:20:00.000Z",
@@ -488,8 +579,8 @@ series 等于独立分配的 Task ID，eligible 等于 received。
 
 ```json
 {
-  "taskId": "check-task-1",
-  "hostInstance": "host-a",
+  "taskId": "01M60000000000000000000006",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 3,
   "state": "failed",
   "acceptedAt": "2026-10-29T03:20:00.000Z",
@@ -509,10 +600,10 @@ selectedCandidate 是预优化候选，尚未完成正式 PREPARING 准入；
 
 ```json
 {
-  "taskId": "check-task-1",
-  "requestId": "check-request-1",
-  "seriesId": "workspace-checks",
-  "hostInstance": "host-a",
+  "taskId": "01M60000000000000000000006",
+  "requestId": "01M60000000000000000000002",
+  "seriesId": "01M6000000000000000000001D",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 3,
   "state": "pending",
   "receivedAt": "2026-10-29T03:20:00.000Z",
@@ -533,7 +624,7 @@ selectedCandidate 是预优化候选，尚未完成正式 PREPARING 准入；
       "url": "https://example.test/checker/latest.tgz",
       "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
-    "fallbackFromTaskId": "check-task-0",
+    "fallbackFromTaskId": "01M60000000000000000000005",
     "updateError": {
       "code": "download_failed",
       "stage": "download",
@@ -553,8 +644,8 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
 
 ```json
 {
-  "taskId": "check-task-1",
-  "hostInstance": "host-a",
+  "taskId": "01M60000000000000000000006",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 7,
   "state": "completed",
   "acceptedAt": "2026-10-29T03:20:00.000Z",
@@ -575,11 +666,13 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
         "type": "object"
       },
       "problems": [],
-      "languages": ["en"]
+      "languages": [
+        "en"
+      ]
     }
   },
   "language": "en",
-  "executionId": "check-execution-1",
+  "executionId": "01M60000000000000000000001",
   "executionStartedAt": "2026-10-29T03:20:02.000Z",
   "executionCompletedAt": "2026-10-29T03:20:03.000Z",
   "result": {
@@ -606,10 +699,10 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
 
 ```json
 {
-  "taskId": "check-task-1",
-  "requestId": "check-request-1",
-  "seriesId": "workspace-checks",
-  "hostInstance": "host-a",
+  "taskId": "01M60000000000000000000006",
+  "requestId": "01M60000000000000000000002",
+  "seriesId": "01M6000000000000000000001D",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 8,
   "state": "completed",
   "receivedAt": "2026-10-29T03:20:00.000Z",
@@ -631,7 +724,7 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
       "url": "https://example.test/checker/latest.tgz",
       "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
-    "fallbackFromTaskId": "check-task-0",
+    "fallbackFromTaskId": "01M60000000000000000000005",
     "updateError": {
       "code": "download_failed",
       "stage": "download",
@@ -664,11 +757,13 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
         "type": "object"
       },
       "problems": [],
-      "languages": ["en"]
+      "languages": [
+        "en"
+      ]
     }
   },
   "language": "en",
-  "executionId": "check-execution-1",
+  "executionId": "01M60000000000000000000001",
   "executionStartedAt": "2026-10-29T03:21:00.010Z",
   "executionCompletedAt": "2026-10-29T03:21:04.000Z",
   "result": {
@@ -703,8 +798,8 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
 
 ```json
 {
-  "taskId": "probe-task-1",
-  "hostInstance": "objective-host-a",
+  "taskId": "01M6000000000000000000001A",
+  "hostInstance": "01M60000000000000000000014",
   "revision": 16,
   "state": "completed",
   "acceptedAt": "2026-10-29T03:20:00.000Z",
@@ -718,11 +813,15 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
       "subjectSchema": {
         "type": "object"
       },
-      "languages": ["en"],
+      "languages": [
+        "en"
+      ],
       "levels": [
         {
           "id": "ready",
-          "checks": ["pass"]
+          "checks": [
+            "pass"
+          ]
         }
       ],
       "checkers": {
@@ -735,7 +834,7 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
     }
   },
   "language": "en",
-  "executionId": "probe-execution-1",
+  "executionId": "01M60000000000000000000017",
   "executionStartedAt": "2026-10-29T03:20:00.200Z",
   "executionCompletedAt": "2026-10-29T03:20:01.100Z",
   "result": {
@@ -757,7 +856,7 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
   "progress": {
     "observations": [
       {
-        "id": "observation-1",
+        "id": "01M60000000000000000000015",
         "objective": {
           "kind": "objective",
           "url": "https://example.test/objective/v1.tgz",
@@ -775,8 +874,8 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
     ],
     "invocations": [
       {
-        "id": "invocation-1",
-        "observationId": "observation-1",
+        "id": "01M60000000000000000000010",
+        "observationId": "01M60000000000000000000015",
         "objective": {
           "kind": "objective",
           "url": "https://example.test/objective/v1.tgz",
@@ -784,8 +883,8 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
         },
         "level": "ready",
         "checker": "pass",
-        "taskId": "child-task-1",
-        "executionId": "child-execution-1",
+        "taskId": "01M6000000000000000000000C",
+        "executionId": "01M6000000000000000000000A",
         "state": "completed"
       }
     ]
@@ -796,10 +895,10 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
     },
     "checks": [
       {
-        "invocationId": "invocation-1",
+        "invocationId": "01M60000000000000000000010",
         "snapshot": {
-          "taskId": "child-task-1",
-          "hostInstance": "checker-host-a",
+          "taskId": "01M6000000000000000000000C",
+          "hostInstance": "01M60000000000000000000009",
           "revision": 7,
           "state": "completed",
           "acceptedAt": "2026-10-29T03:20:00.210Z",
@@ -819,11 +918,13 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
                 "type": "object"
               },
               "problems": [],
-              "languages": ["en"]
+              "languages": [
+                "en"
+              ]
             }
           },
           "language": "en",
-          "executionId": "child-execution-1",
+          "executionId": "01M6000000000000000000000A",
           "executionStartedAt": "2026-10-29T03:20:00.300Z",
           "executionCompletedAt": "2026-10-29T03:20:01.000Z",
           "result": {
@@ -855,10 +956,10 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
 
 ```json
 {
-  "taskId": "probe-task-1",
-  "requestId": "probe-request-1",
-  "seriesId": "probe-task-1",
-  "hostInstance": "objective-host-a",
+  "taskId": "01M6000000000000000000001A",
+  "requestId": "01M60000000000000000000018",
+  "seriesId": "01M6000000000000000000001A",
+  "hostInstance": "01M60000000000000000000014",
   "revision": 18,
   "state": "completed",
   "receivedAt": "2026-10-29T03:20:00.000Z",
@@ -890,11 +991,15 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
       "subjectSchema": {
         "type": "object"
       },
-      "languages": ["en"],
+      "languages": [
+        "en"
+      ],
       "levels": [
         {
           "id": "ready",
-          "checks": ["pass"]
+          "checks": [
+            "pass"
+          ]
         }
       ],
       "checkers": {
@@ -907,7 +1012,7 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
     }
   },
   "language": "en",
-  "executionId": "probe-execution-1",
+  "executionId": "01M60000000000000000000017",
   "executionStartedAt": "2026-10-29T03:20:00.200Z",
   "executionCompletedAt": "2026-10-29T03:20:01.100Z",
   "result": {
@@ -929,7 +1034,7 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
   "progress": {
     "observations": [
       {
-        "id": "observation-1",
+        "id": "01M60000000000000000000015",
         "objective": {
           "kind": "objective",
           "url": "https://example.test/objective/v1.tgz",
@@ -947,8 +1052,8 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
     ],
     "invocations": [
       {
-        "id": "invocation-1",
-        "observationId": "observation-1",
+        "id": "01M60000000000000000000010",
+        "observationId": "01M60000000000000000000015",
         "objective": {
           "kind": "objective",
           "url": "https://example.test/objective/v1.tgz",
@@ -956,8 +1061,8 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
         },
         "level": "ready",
         "checker": "pass",
-        "taskId": "child-task-1",
-        "executionId": "child-execution-1",
+        "taskId": "01M6000000000000000000000C",
+        "executionId": "01M6000000000000000000000A",
         "state": "completed"
       }
     ]
@@ -968,12 +1073,12 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
     },
     "checks": [
       {
-        "invocationId": "invocation-1",
+        "invocationId": "01M60000000000000000000010",
         "snapshot": {
-          "taskId": "child-task-1",
-          "requestId": "child-request-1",
-          "seriesId": "child-task-1",
-          "hostInstance": "checker-host-a",
+          "taskId": "01M6000000000000000000000C",
+          "requestId": "01M6000000000000000000000B",
+          "seriesId": "01M6000000000000000000000C",
+          "hostInstance": "01M60000000000000000000009",
           "revision": 8,
           "state": "completed",
           "receivedAt": "2026-10-29T03:20:00.210Z",
@@ -1007,11 +1112,13 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
                 "type": "object"
               },
               "problems": [],
-              "languages": ["en"]
+              "languages": [
+                "en"
+              ]
             }
           },
           "language": "en",
-          "executionId": "child-execution-1",
+          "executionId": "01M6000000000000000000000A",
           "executionStartedAt": "2026-10-29T03:20:00.300Z",
           "executionCompletedAt": "2026-10-29T03:20:01.000Z",
           "result": {
@@ -1046,8 +1153,8 @@ After 预优化可以很早开始，但 Task 到 03:21:00Z 才正式 preparing�
 
 ```json
 {
-  "taskId": "check-task-1",
-  "hostInstance": "host-a",
+  "taskId": "01M60000000000000000000006",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 2,
   "state": "preparing",
   "acceptedAt": "2026-10-29T03:20:00.000Z",
@@ -1059,10 +1166,10 @@ After 预优化可以很早开始，但 Task 到 03:21:00Z 才正式 preparing�
 
 ```json
 {
-  "taskId": "check-task-1",
-  "requestId": "check-request-1",
-  "seriesId": "workspace-checks",
-  "hostInstance": "host-a",
+  "taskId": "01M60000000000000000000006",
+  "requestId": "01M60000000000000000000002",
+  "seriesId": "01M6000000000000000000001D",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 4,
   "state": "preparing",
   "receivedAt": "2026-10-29T03:20:00.000Z",
@@ -1102,8 +1209,8 @@ deadline 为 03:20:30Z，但直到 03:25:00Z 才处理；它只代表一个过�
 
 ```json
 {
-  "taskId": "late-task-1",
-  "hostInstance": "host-a",
+  "taskId": "01M60000000000000000000013",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 3,
   "state": "failed",
   "acceptedAt": "2026-10-29T03:19:00.000Z",
@@ -1121,10 +1228,10 @@ deadline 为 03:20:30Z，但直到 03:25:00Z 才处理；它只代表一个过�
 
 ```json
 {
-  "taskId": "late-task-1",
-  "requestId": "late-request-1",
-  "seriesId": "late-task-1",
-  "hostInstance": "host-a",
+  "taskId": "01M60000000000000000000013",
+  "requestId": "01M60000000000000000000011",
+  "seriesId": "01M60000000000000000000013",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 2,
   "state": "failed",
   "receivedAt": "2026-10-29T03:19:00.000Z",
@@ -1145,12 +1252,13 @@ deadline 为 03:20:30Z，但直到 03:25:00Z 才处理；它只代表一个过�
 ```
 
 此失败不停止系列。仅生成以下一个未来后继创建 Request，
-使用新的幂等 ID `late-request-2`，成功后分配新的 Task ID并继承 `late-task-1` 系列。
+使用新的幂等 ID `01M60000000000000000000012`，成功后分配新的 Task ID并继承 `01M60000000000000000000013` 系列。
 本例采用 terminated 锚点，03:25:00Z 加 60 秒得到 03:26:00Z；
 eligible 锚点错过周期后如何选择未来点，仍留待下一轮讨论。
 
 ```json
 {
+  "requestId": "01M60000000000000000000012",
   "checker": {
     "url": "https://example.test/checker/latest.tgz"
   },
@@ -1158,7 +1266,7 @@ eligible 锚点错过周期后如何选择未来点，仍留待下一轮讨论�
   "freshness": "completed-after-eligible",
   "timeoutMs": 30000,
   "eligibleAt": "2026-10-29T03:26:00.000Z",
-  "seriesId": "late-task-1",
+  "seriesId": "01M60000000000000000000013",
   "recurrence": {
     "periodMs": 60000,
     "anchor": "terminated"
@@ -1175,11 +1283,12 @@ Coordinator 的旧 recurrence 已在第 2 节展示，不以 `{}` 冒充统一�
 
 **After / eligible：** 第 1.1 轮的后继为 03:22:00Z，
 仍用浮动来源并继承 series；不是拿最终旧 digest 替换后继的选版意图。
-该请求由服务端以新的幂等 Request ID `check-request-2` 生成，
-成功建立后独立分配 `check-task-2`；pending 位置保存的是这个 Task。
+该请求由服务端以新的幂等 Request ID `01M60000000000000000000003` 生成，
+成功建立后独立分配 `01M60000000000000000000007`；pending 位置保存的是这个 Task。
 
 ```json
 {
+  "requestId": "01M60000000000000000000003",
   "checker": {
     "url": "https://example.test/checker/latest.tgz"
   },
@@ -1191,7 +1300,7 @@ Coordinator 的旧 recurrence 已在第 2 节展示，不以 `{}` 冒充统一�
   "freshness": "completed-after-eligible",
   "timeoutMs": 30000,
   "eligibleAt": "2026-10-29T03:22:00.000Z",
-  "seriesId": "workspace-checks",
+  "seriesId": "01M6000000000000000000001D",
   "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
@@ -1201,11 +1310,12 @@ Coordinator 的旧 recurrence 已在第 2 节展示，不以 `{}` 冒充统一�
 
 **After / terminated：** 假定第 1.2 轮 Task 在 03:20:25Z 正常或失败终结，
 其后继 eligible 为 03:21:25Z，不是旧 eligible 加一分钟。
-新 Request ID 为 `probe-request-2`，新 Task ID 为 `probe-task-2`，
-series 仍是首个 Task 的 `probe-task-1`。
+新 Request ID 为 `01M60000000000000000000019`，新 Task ID 为 `01M6000000000000000000001B`，
+series 仍是首个 Task 的 `01M6000000000000000000001A`。
 
 ```json
 {
+  "requestId": "01M60000000000000000000019",
   "objective": {
     "url": "https://example.test/objective/v1.tgz",
     "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -1218,7 +1328,7 @@ series 仍是首个 Task 的 `probe-task-1`。
   "freshness": "started-after-eligible",
   "timeoutMs": 60000,
   "eligibleAt": "2026-10-29T03:21:25.000Z",
-  "seriesId": "probe-task-1",
+  "seriesId": "01M6000000000000000000001A",
   "recurrence": {
     "periodMs": 60000,
     "anchor": "terminated"
@@ -1239,13 +1349,13 @@ series 仍是首个 Task 的 `probe-task-1`。
 {
   "scope": "local-owner",
   "service": "checker",
-  "seriesId": "workspace-checks",
-  "pendingTaskId": "check-task-2",
-  "pendingRequestId": "check-request-2",
+  "seriesId": "01M6000000000000000000001D",
+  "pendingTaskId": "01M60000000000000000000007",
+  "pendingRequestId": "01M60000000000000000000003",
   "generation": 2,
   "latestSuccessor": {
-    "predecessorTaskId": "check-task-1",
-    "successorTaskId": "check-task-2",
+    "predecessorTaskId": "01M60000000000000000000006",
+    "successorTaskId": "01M60000000000000000000007",
     "anchor": "eligible",
     "anchorAt": "2026-10-29T03:21:00.000Z",
     "eligibleAt": "2026-10-29T03:22:00.000Z"
@@ -1264,8 +1374,8 @@ After 仅允许 pending；以下是取消操作返回的完整快照。
 
 ```json
 {
-  "taskId": "check-task-2",
-  "hostInstance": "host-a",
+  "taskId": "01M60000000000000000000007",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 3,
   "state": "cancelled",
   "acceptedAt": "2026-10-29T03:21:00.000Z",
@@ -1284,10 +1394,10 @@ After 仅允许 pending；以下是取消操作返回的完整快照。
 
 ```json
 {
-  "taskId": "check-task-2",
-  "requestId": "check-request-2",
-  "seriesId": "workspace-checks",
-  "hostInstance": "host-a",
+  "taskId": "01M60000000000000000000007",
+  "requestId": "01M60000000000000000000003",
+  "seriesId": "01M6000000000000000000001D",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 2,
   "state": "cancelled",
   "terminatedAt": "2026-10-29T03:21:10.000Z",
@@ -1329,16 +1439,16 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
 **Before：** 当前 Check/Probe 没有 series 唯一 pending 规则，因此无法输入 series
 来复现此场景；没有 `duplicate_planning` 响应。幂等键重试是另一机制，不冒充此 Before。
 
-**After：** 已有 `check-task-2` 的情况下产生 `check-task-duplicate`；
+**After：** 已有 `01M60000000000000000000007` 的情况下产生 `01M60000000000000000000008`；
 保留原任务，新任务记录 cancelled。下面是第 6.1 用户取消之前的另一个分支场景。
 `planningConflict` 是建议的诊断字段，保留任务必须与当前授权范围一致。
 
 ```json
 {
-  "taskId": "check-task-duplicate",
-  "requestId": "check-request-duplicate",
-  "seriesId": "workspace-checks",
-  "hostInstance": "host-a",
+  "taskId": "01M60000000000000000000008",
+  "requestId": "01M60000000000000000000004",
+  "seriesId": "01M6000000000000000000001D",
+  "hostInstance": "01M6000000000000000000000D",
   "revision": 2,
   "state": "cancelled",
   "terminatedAt": "2026-10-29T03:21:00.101Z",
@@ -1356,22 +1466,22 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
     "message": "An existing pending task retains the series planning slot."
   },
   "planningConflict": {
-    "retainedTaskId": "check-task-2"
+    "retainedTaskId": "01M60000000000000000000007"
   }
 }
 ```
 
 ## 7. Events：过滤请求与完整事件 payload
 
-**Before：** `GET /events?taskId=check-task-1`，事件名 `task.updated`，
+**Before：** `GET /events?taskId=01M60000000000000000000006`，事件名 `task.updated`，
 以下为一条完整 data payload；没有 series 过滤参数。
 
 ```json
 {
-  "taskId": "check-task-1",
+  "taskId": "01M60000000000000000000006",
   "snapshot": {
-    "taskId": "check-task-1",
-    "hostInstance": "host-a",
+    "taskId": "01M60000000000000000000006",
+    "hostInstance": "01M6000000000000000000000D",
     "revision": 1,
     "state": "accepted",
     "acceptedAt": "2026-10-29T03:20:00.000Z",
@@ -1380,20 +1490,20 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
 }
 ```
 
-**After：** 建议 `GET /events?seriesId=workspace-checks`；
+**After：** 建议 `GET /events?seriesId=01M6000000000000000000001D`；
 即使订阅早于第二轮创建，也能收到第二轮的这一条完整 data payload。
 事件名暂保留 task.updated，新查询的版本/过滤组合及游标协议待定。
 
 ```json
 {
-  "seriesId": "workspace-checks",
-  "requestId": "check-request-2",
-  "taskId": "check-task-2",
+  "seriesId": "01M6000000000000000000001D",
+  "requestId": "01M60000000000000000000003",
+  "taskId": "01M60000000000000000000007",
   "snapshot": {
-    "taskId": "check-task-2",
-    "requestId": "check-request-2",
-    "seriesId": "workspace-checks",
-    "hostInstance": "host-a",
+    "taskId": "01M60000000000000000000007",
+    "requestId": "01M60000000000000000000003",
+    "seriesId": "01M6000000000000000000001D",
+    "hostInstance": "01M6000000000000000000000D",
     "revision": 1,
     "state": "pending",
     "receivedAt": "2026-10-29T03:21:00.000Z",
@@ -1435,12 +1545,13 @@ Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/P
 {
   "kind": "check-task",
   "scope": "local-owner",
-  "requestId": "check-request-2",
-  "taskId": "check-task-2",
-  "seriesId": "workspace-checks",
-  "predecessorTaskId": "check-task-1",
+  "requestId": "01M60000000000000000000003",
+  "taskId": "01M60000000000000000000007",
+  "seriesId": "01M6000000000000000000001D",
+  "predecessorTaskId": "01M60000000000000000000006",
   "generation": 2,
   "request": {
+    "requestId": "01M60000000000000000000003",
     "checker": {
       "url": "https://example.test/checker/latest.tgz"
     },
@@ -1452,17 +1563,17 @@ Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/P
     "freshness": "completed-after-eligible",
     "timeoutMs": 30000,
     "eligibleAt": "2026-10-29T03:22:00.000Z",
-    "seriesId": "workspace-checks",
+    "seriesId": "01M6000000000000000000001D",
     "recurrence": {
       "periodMs": 60000,
       "anchor": "eligible"
     }
   },
   "snapshot": {
-    "taskId": "check-task-2",
-    "requestId": "check-request-2",
-    "seriesId": "workspace-checks",
-    "hostInstance": "host-a",
+    "taskId": "01M60000000000000000000007",
+    "requestId": "01M60000000000000000000003",
+    "seriesId": "01M6000000000000000000001D",
+    "hostInstance": "01M6000000000000000000000D",
     "revision": 1,
     "state": "pending",
     "receivedAt": "2026-10-29T03:21:00.000Z",
@@ -1509,10 +1620,10 @@ recovery 字段是新建议，不意味着允许自动恢复任意已经运行�
 
 ```json
 {
-  "taskId": "check-task-2",
-  "requestId": "check-request-2",
-  "seriesId": "workspace-checks",
-  "hostInstance": "host-b",
+  "taskId": "01M60000000000000000000007",
+  "requestId": "01M60000000000000000000003",
+  "seriesId": "01M6000000000000000000001D",
+  "hostInstance": "01M6000000000000000000000E",
   "revision": 2,
   "state": "pending",
   "receivedAt": "2026-10-29T03:21:00.000Z",
@@ -1528,7 +1639,7 @@ recovery 字段是新建议，不意味着允许自动恢复任意已经运行�
     "scheduledAt": "2026-10-29T03:21:50.000Z"
   },
   "recovery": {
-    "previousHostInstance": "host-a",
+    "previousHostInstance": "01M6000000000000000000000D",
     "recoveredAt": "2026-10-29T03:21:20.000Z"
   }
 }
@@ -1538,11 +1649,11 @@ recovery 字段是新建议，不意味着允许自动恢复任意已经运行�
 
 这些完整对象用于看清字段之间的关系，不是绕过待决项的定稿：
 
-- 旧 acceptedAt 的命名迁移及 wire 版本；
+- 新 wire schema 与具体路由形态；
 - recurrence 双 anchor 的最终默认值、terminated 模式无 pending 时如何停止；
 - 服务预优化的具体配置字段、限额及正式 preparing 的进展字段；
 - fallback 旧版选择、最大陈旧度及 scope；
-- 同 series 跨模块作用域、公共错误码/状态码及 HTTP/SDK 版本；
+- 同 series 跨模块作用域、公共错误码/状态码及新 HTTP/SDK 定义；
 - durable schema、历史游标和运行中 Execution 的崩溃重试策略（暂缓讨论）。
 - 是否需要独立的调用方动态依赖固定能力；若需要可称 dependencyBindings，
   不以根 Objective 的静态 Checker 绑定作为保留重复输入的理由。

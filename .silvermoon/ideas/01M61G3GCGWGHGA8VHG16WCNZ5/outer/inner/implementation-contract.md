@@ -6,6 +6,7 @@
 2026-10-29 新 Ideal 草案见 [Request 生命周期修订](./ideal/request-lifecycle-revision.md)，
 其实施种子由 [Implementation.md](./Implementation.md) 承载。
 本文下述受理时序、取消、保留和不透明恢复边界属于 Before；
+其中旧协议兼容策略也仅描述旧候选，不是当前全新、不兼容设计的实施要求。
 设计确认前不把新的 eligible/recurrence/series 参数或 PENDING 语义补写成已实现。
 
 ## 制品与作者工具

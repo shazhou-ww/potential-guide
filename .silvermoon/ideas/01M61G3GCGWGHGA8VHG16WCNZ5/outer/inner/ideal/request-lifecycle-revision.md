@@ -5,6 +5,8 @@
 这是 2026-10-29 对当前 idea 的新 Ideal 草案，不是另建一个已批准的 idea。
 Before 以本地候选提交 `127666e4ec04` 为基线；该提交通过的实现和部署实验
 不证明本次新增需求已实现。本次只修订设计，不改变代码、历史 schema 或生命周期事件。
+本次是一套全新、不兼容的设计，不提供旧协议兼容层或别名；
+Before 仅作变化对照，不构成新设计对旧输入、旧存储或旧 SDK 的兼容承诺。
 
 仅列实际变化，按 Request → Task → Series/递归规划 → 制品准备 →
 Execution → 持久化恢复 → Events/SDK 的修改对象顺序组织。
@@ -21,11 +23,13 @@ Request 携带 `eligible_at`、`recurrence` 和可选 `series_id`，成功受理
 
 | 修改点 | Before | After |
 |---|---|---|
-| 接收时间 | Check/Probe 快照提供 `acceptedAt`，受理时即启动准备。 | 服务端记录 `received_at`；与旧 accepted 字段的协议映射显式定义。 |
+| 接收时间 | Check/Probe 快照提供 `acceptedAt`，受理时即启动准备。 | 新设计由服务端记录 `received_at`，无需保留旧字段别名。 |
 | eligible | Check/Probe 无独立资格时间；Coordinator 已有可选 `eligibleAt`。 | 所有任务请求可指定 `eligible_at`，省略时等于服务端 `received_at`；可早可晚。 |
 | timeout | Check/Probe 总期限从受理起计。 | `deadline_at = eligible_at + timeout`，准备/排队晚于 eligible 的部分也消耗预算。 |
 | freshness | Check/Probe 以受理序号作为强/弱新鲜度边界。 | 强条件为 `started_at > eligible_at`，弱条件为 `completed_at > eligible_at`。 |
 | 身份边界 | Check/Probe 使用幂等键识别重复创建调用，另有 Task ID；旧讨论曾将二者混用。 | Request ID 就是幂等 ID，Task ID 独立分配；Request 解析/准入失败可以不产生 Task。 |
+| 实体与传输 | HTTP 幂等键与 Task 跟踪分开，示例未明确完整 Request 实体。 | Request 实体必含 requestId；HTTP 从 header 还原同一个值，解析错误也按它审计。 |
+| ID 格式 | 现有生成型身份包含 UUID/任意幂等字符串。 | 新 Request、Task、Series、Execution、Observation、Invocation、Host instance 身份统一用规范 ULID。 |
 | series | Check/Probe 没有独立系列属性；Coordinator 用 predecessor 链表示 recurrence。 | 输入 `series_id` 可选，首个 Task 默认以自身 Task ID 为 series ID；后继 Task 继承同一 series。 |
 | 后继身份 | Coordinator 已有确定性后继引用，Check/Probe 没有递归需求生成。 | 每轮新 Request/Task 身份，继承 series ID；重试和恢复不重复分配同一轮。 |
 | Probe bindings | 当前输入 bindings 同时可固定根 Objective 与运行时依赖，旧示例重复传入根 digest。 | 普通 Probe 只提供根引用，不再重复传根或静态 Checker bindings；动态依赖选择由服务记录。 |
@@ -61,6 +65,14 @@ Execution 是实际工作。Request ID 沿用幂等 ID，Task ID 独立分配；
 相同 Request ID 的重试不能重复创建 Task；同 ID 不同输入仍须报告幂等冲突。
 后继有新的 Request/Task ID，但不能以新 Task ID 覆盖继承的 series ID。
 pending 中保存的是 Task，事件按 series 串联的是 Task；Request ID用于关联原始调用。
+HTTP 的 `Idempotency-Key` 承载 Request 实体的 requestId；body 不重复传这个字段，
+但服务端实体、审计记录和关联错误响应必须保留它。先校验 header 身份，再解析业务 body；
+body 解析失败仍能关联 Request，缺失或非法 header 则不能伪造有效 Request ID。
+SDK 在首次发送前生成 ID，网络重试复用同一个值；进程内直接传入含 requestId 的实体。
+ULID 使用 26 位规范大写 Crockford Base32，生成型实体之间独立分配；
+series 默认复用首个 Task ID 是明确例外。ULID 时间部分不用于 freshness、timeout 或权限裁决。
+作者定义的 levelId、problemId、局部 Checker 名称保留可读语义；
+内容摘要与执行版本明确叫 digest、revision，不叫 ID，也不改成 ULID。
 
 ## 2. Task：增加 PENDING，取消只作用于 PENDING
 
@@ -78,9 +90,8 @@ pending 中保存的是 Task，事件按 series 串联的是 Task；Request ID�
 默认 eligible 等于 received 时 PENDING 可以短暂，但不能在持久化、幂等或订阅时丢失。
 取消与激活/规划必须原子裁决；如果目标已经离开 PENDING，不能成功返回却实际取消另一轮。
 
-**兼容边界：** 这是对新统一生命周期的设计，不能默默修改旧 Check v2、
-现有 Checker v3 / Objective v1 或 Coordinator 历史取消行为。
-已发布协议如何升级、旧入口保留多久，实施前明确。
+**设计边界：** 这是全新的统一生命周期，不承诺兼容旧 Check/Probe 或 Coordinator。
+旧取消行为只留在 Before 中，旧入口兼容与数据迁移不属于本次设计要求。
 内部超时、服务关闭、父观察失去 owner 时的资源清理仍需保留，
 它们不是公开的“单轮运行中取消”能力。
 
@@ -130,8 +141,8 @@ recurrence:
   anchor: eligible | terminated
 ```
 
-Before 的旧字段及历史 schema 保留原义；命名沿用不等于旧协议已经支持新的双锚点，
-不能通过更改历史 JSON 冒充已实现的新语义。
+Before 保留旧形状以便对照；新设计虽然沿用 recurrence 命名，
+不承诺旧子结构兼容，不需要为旧协议限制新双锚点的设计。
 
 | 候选参数值 | 规划触发 | 下一轮 eligible | 主要效果 |
 |---|---|---|---|
@@ -222,8 +233,8 @@ formal_preparing_at >= eligible_at
 
 对于未来 eligible 的 completed_after 需求，不能在 eligible 前交付完成结果。
 到达资格时可加入兼容运行执行；started_after 仍要求执行开始严格晚于边界。
-旧协议使用 started-after-request/completed-after-request 字面值；
-新 eligible 语义是否采用新值/新版本必须显式迁移，不能按同一历史字段偷偷换含义。
+Before 使用 started-after-request/completed-after-request 字面值；
+新设计按 eligible 定义 freshness，独立确定协议字段，不要求兼容别名或历史迁移。
 
 外层 recurrence 不自动使内部每个 Checker 或依赖观察永久递归；
 显式子需求的调度仍由拥有它的父执行约束，避免无限扩张工作树。
@@ -276,7 +287,7 @@ eligible 后才正式 PREPARING、terminated 包含失败/超时续作，以及�
 
 1. 默认递归锚点，以及 terminated 模式无 pending 时是否需要可停止的预留计划。
 2. 错过周期后下一个未来点的选法、服务预优化限额、旧版选择与陈旧上限。
-3. series 跨模块作用域与旧协议迁移，是否需要独立的调用方动态依赖固定能力。
+3. series 跨模块作用域，是否需要独立的调用方动态依赖固定能力。
 
 中断 Execution 与持久化恢复细节待上述问题解决后再讨论。
 

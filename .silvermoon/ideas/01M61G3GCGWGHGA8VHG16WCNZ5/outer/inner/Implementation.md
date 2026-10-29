@@ -24,15 +24,16 @@
 ### I-S03: 对齐 SDK 与现有业务入口
 
 对齐 Check/Probe HTTP、进程内接口、SDK 及现有 Regulation/Coordinator 的请求语义，
-周期任务配置统一使用 `recurrence`，双锚点等扩展不改变历史协议的原解释；
+周期任务配置统一使用 `recurrence`，建立全新、不兼容的请求与任务协议；
 Regulation 调用方改用与 Probe 相同的 Objective URL/digest 引用，由服务构造内部 PilotSpec；
-提供 series 动态事件和可恢复身份，明确旧协议/持久 schema 兼容与升级，不静默换义。
+实体必含 requestId，HTTP 从 header 还原并先于 body 解析识别；生成型身份采用 ULID。
+提供 series 动态事件和可恢复身份，不以旧协议兼容要求约束新结构。
 
 ## Acceptance criteria
 
 ### I-AC01: 内容与协议准确
 
-固定向量与 Git SHA-256 oracle 一致；schema、未知问题、目录语言、旧格式与篡改反例证明无静默转换或内容替换。
+固定向量与 Git SHA-256 oracle 一致；schema、未知问题、目录语言与篡改反例证明无静默转换或内容替换。
 通过准备/fallback 反例证明选中的是仍可用的准确版本，更新错误可观察，
 显式 digest 不被替换，业务失败不触发回退。
 
