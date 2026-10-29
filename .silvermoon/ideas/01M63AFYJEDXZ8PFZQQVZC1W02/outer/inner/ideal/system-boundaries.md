@@ -3,7 +3,7 @@
 本文定义[通用任务引擎 idea](./Idea.md)的逻辑边界。
 这是规划草案，不是已实现 API；逻辑模块与建议的 Package 边界分别定义。
 第 7 节为本轮新增的包拆分建议，供评审，不代表包已存在或拆分已经验收。
-ExecutorPool、Executor、allocation 与统一 HTTP 宿主的详细关系见
+TaskType、ExecutionTracking、allocation 与统一 HTTP 宿主的详细关系见
 [执行与宿主组装](./execution-and-host-composition.md)。
 
 ## 1. 交付边界
@@ -53,11 +53,11 @@ deadline 失约允许与真实完成并存；停止逾期工作的政策与时�
 
 | 扩展角色 | 提供什么 | 引擎要求 |
 |---|---|---|
-| TaskType | 纯 validate/equals、必需 prepare、封装 Pool 的 allocate 及业务载荷契约 | 统一注入而非手工拼接 Type/Pool；不可直接写 Task 状态，不强制输入 Schema |
+| TaskType | 纯 validate/equals、必需 prepare、execute 排队启动并返回 tracking、业务载荷契约 | 统一注入而非手工拼接 Type/Pool；不提供引擎级 allocate，不直接写 Task 状态 |
 | 准备实现 | 得到可执行的准确内容/参数，提供可恢复的准备结果 | 完成事实有依据；候选不等于正式采用；失败不可伪装就绪 |
 | 输入等价与执行匹配 | 纯 equals(Input, unknown) 比较业务输入，Engine 校验准确准备身份及 executionMatch | 不跨任务类型/权限域/不兼容版本共享，不将 equals 当作请求幂等规则 |
 | 执行器 | 执行工作、报告 progress/result/故障、接收停止信号 | 不保证停止即无副作用；报告须经校验，不可覆盖事件外壳 |
-| ExecutorPool | 按类型提供兼容 Executor 使用租约，管理容量、等待、复用、回收与淘汰 | 不裁决 Task 或复写调度；Engine 协调 allocation 和正式绑定 |
+| 内部 ExecutorPool | 为 TaskType.execute 管理容量、等待、启动、复用、回收与淘汰 | 不暴露 Engine 必须归还的租约，不裁决 Task；Engine 协调匹配、正式绑定和替换授权 |
 | 存储实现 | 明确的原子性、稳定顺序、持久性与恢复保证 | 内存实现不能冒充可重启恢复；缺失事实不可成功形回退 |
 | 宿主安全策略 | 已认证调用身份、允许的操作与可见范围 | 内核执行授权检查，进程内调用同样适用；身份不来自任意业务载荷 |
 | 时钟与唤醒 | 服务端时间、可控定时器及停止能力 | 单调等待与业务时间分开；测试可注入虚拟时间，不按客户端时间仲裁 |
@@ -88,9 +88,10 @@ preparation 的通用事实是 prepare 调用何时开始、何时完成；TaskT
 可以记录开始/完成，但不能伪造下载等业务动作。
 Executor 在执行开始后自行判断业务前提，不满足时按类型协议快速返回；
 Engine 不提供条件等待/解锁机制，也不保证重业务已执行或目标达成。
-allocation 由 Engine 协调执行匹配和正式绑定，等待对应 Pool 的 Executor 租约即等待 allocation。
-原资源适配能力封装到 Pool 内部，不要求宿主单独注入；Executor 在租约内运行一次 Execution，
-不接管 Task，也不通过内部无限排队伪装为 running；Pool 可复用实例，无需每次新建 worker。
+allocation 由 Engine 协调匹配，TaskType.execute 内部等待可用实例期间体现为 queued；
+实际开始后立即返回 ExecutionTracking，最终结果另行观察，不以 tracking 接收时间冒充开始。
+Pool 管理资源，不要求 Engine 显式 allocate/归还租约；可替换 executionId 由 Engine
+授权，Pool 确认回收有效并实际释放后才启动新执行，详见执行关系文档。
 execution 的通用职责是实际执行及其证据，进展和正常结果的内部字段由业务协议拥有。
 
 通用 snapshot 保留有界过程事实，不铺设各阶段的任意 custom 对象。
@@ -211,7 +212,7 @@ task-engine 没有导入 checker-host，须以导入/依赖检查单独验证上
 
 宿主创建 Store、Clock 及封装各类型 ExecutorPool 的 TaskType，统一注入 engine，
 再按需挂载 HTTP handler；不再用 { ...checkType, pool: checkPool } 分别拼装。
-Pool 与 Executor 依赖协议端口，不依赖 Engine 实现；无需新增独立资源适配器包或 Pool 包。
+TaskType、tracking 和 Pool 依赖协议端口，不依赖 Engine 实现；无需新增独立资源适配器包或 Pool 包。
 Executor 可在执行时做业务前置判断并快速返回；宿主无需装配额外的条件证据服务。
 宿主先打开存储、再启动引擎；关闭时停止准入并按契约收束引擎与观察连接，最后关闭存储，
 不把 close 变成批量用户取消。具体运行中恢复与停止政策仍按概念文档待决项收敛。

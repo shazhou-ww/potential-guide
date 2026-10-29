@@ -1,165 +1,167 @@
-# ExecutorPool、Executor、Engine 与 HTTP Server
+# TaskType、ExecutionTracking、Engine 与 HTTP Server
 
-本文支撑[通用任务引擎构想](./Idea.md)，记录 2026-10-29 的职责收敛。
-这是设计定义，不表示接口已经实现；函数名称仅作示意。包划分见
-[系统边界](./system-boundaries.md)，任务时间、取消和递归语义见[概念](./concepts.md)。
+本文支撑[通用任务引擎构想](./Idea.md)，定义最新的排队启动与资源替换边界。
+包职责见[系统边界](./system-boundaries.md)，生命周期见[概念](./concepts.md)。
+这里定义待实现的行为，不表示代码或验证已交付。
 
-## 1. 四个角色
+## 1. 角色与依赖
 
-| 角色 | 拥有的职责 | 不承担什么 |
+| 角色 | 职责 | 不承担什么 |
 |---|---|---|
-| Task Engine | Request 准入/幂等、Task/Series 调度、prepare/allocation 协调、Execution 共享与需求所有权、事实记录及恢复 | 业务前置条件判定、具体运行时加载、数据库驱动或 HTTP listener |
-| ExecutorPool | 管理容量与申请等待，创建/复用 Executor，原子授予使用租约，确认回收或淘汰异常实例 | 决定 Task 结局、系列递归、共享 Execution 匹配或绕过权限政策 |
-| Executor | 在租约内使用准备输入执行一次 Execution，报告进展/结果/故障，响应 Execution 停止信号并完成清理 | Request 准入、Task 状态修改、Series、内部等待同一执行配额或重复调度自身请求 |
-| HTTP Server / 宿主 | 装配 Engine、类型及其 ExecutorPool、Store、Clock；认证、TLS、监听、挂载与进程生命周期 | 复制一套调度器、通过 HTTP 断连隐式取消 Task |
+| Task Engine | Request 准入/幂等、Task/Series、时间投影、共享匹配、执行绑定、替换授权、事实记录及恢复 | 具体 worker/runtime、业务前置判断、HTTP listener |
+| TaskType | 纯 validate/equals、必需 prepare、execute 排队启动并返回 tracking；封装类型及 Pool 能力 | 直接写 Task 状态、另做一套 Request/Series 调度 |
+| 内部 ExecutorPool | 容量、兼容实例选择、排队、实际启动、协作及强制停止、清理/复用/淘汰 | 决定哪些 Task 共享或授权回收仍有受保护需求的 Execution |
+| Executor | 执行一次准确工作并报告进展/结果/故障，完成必要清理 | Request 幂等、Task/Series、把自身重新提交到 Engine |
+| HTTP Server / 宿主 | 装配 Engine、TaskType、Store、Clock、运行配置，认证/TLS/监听和挂载 | 复制核心调度，因断流自动取消 Task |
 
-原“资源适配器”的能力收进 ExecutorPool 内部。宿主按类型注入统一的 TaskType，
-由它封装纯校验/输入等价判断、必需准备及 Pool 分配能力，不再分别拼接 Type 和 Pool，
-也不注入裸 Executor 和独立资源适配器；不要求每个角色单独建包或进程。
-
-HTTP Router 是 Server 与 Engine 之间的传输适配，不是第五个调度者。它输出基于
-Web Request/Response 的 handler，调用同一 Engine 服务接口；Node HTTP 或框架
-连接器负责流、背压和断连桥接。业务授权仍在 Engine 中执行，进程内调用不绕过授权。
-
-## 2. 按任务类型注入执行能力
+引擎不再显式申请 ExecutorLease 或调用 TaskType.allocate；资源所有权由 TaskType
+及内部 Pool 管理，Engine 通过 ExecutionTracking 管理一次执行。allocation 阶段仍在：
+它是提交排队启动请求后、实际执行开始前的等待，不因方法名 execute 就提前标 running。
+Pool 可内部使用租约，但不是宿主或 Engine 必须注入/归还的公共对象。
 
 ```text
-同一个宿主进程
-  HTTP listener → Router → Task Engine ← 进程内业务调用方
-                              |
-                     按 Request.type 分派
-                  ┌───────────┼───────────┐
-             Check Pool     Probe Pool     Regulate Pool
-                  |
-             按 Checker runtime/版本选择兼容资源
-                  |
-             Node Executor 租约（本轮）
+Engine ───────────→ TaskType / ExecutionTracking / 服务端口（task-protocol）
+具体 TaskType ───→ 类型契约 + 内部 Pool / Executor
+HTTP adapter ───→ Engine 服务端口
+宿主 ───────────→ Engine + 各 TaskType + HTTP adapter + Store
 ```
 
-Engine 支持注册封装对应 ExecutorPool 的 TaskType；同一实例可以承载 check/probe/regulate，
-不要求每种业务启动一套引擎。类型注册还包括输入/结果/进展校验、准备与兼容政策，
-不能只注入一个执行函数而省略这些约束。未知类型或缺少所需执行能力须明确拒绝。
+TaskType、Pool 和 Executor 不依赖 Engine 具体实现。回报接口属于协议端口，不是包环。
+check/probe/regulate 都是宿主按需注册类型，无内置必需业务类型；仅 echo 等测试类型
+也可以使用引擎。runtime 分派属于 Check TaskType 内部，不强加给所有输入。
+本地 Pool 直接调用执行 kernel，禁止向同一 Engine 的任务创建 HTTP 入口递归重提自身。
+远程 adapter 不是本轮交付要求。
 
-check/probe/regulate 都是宿主可选择注册的业务类型，没有一种是 Engine 的必需
-内置类型；前面的三类型图是宿主组装示例，不是核心依赖。具体 runtime、Checker
-下载器和业务检查由对应 TaskType 提供。生产业务接入仍归来源 idea，
-本引擎先用两个非制品测试类型验证扩展性，不要求有 Check Pool 才能启动。
+## 2. 统一注入与纯/副作用边界
 
-Task type 决定执行哪种业务；runtime 分派属于 Check 执行适配侧，不是所有任务共有
-的字段。Check Pool 内部可提供 runtime 到子 Pool/具体执行能力的映射，本地实现直接调用
-kernel/pool，不通过同一 Engine 的 Check HTTP 准入接口再提交自身任务。
-未来远程 adapter 可以携带 Host 地址，但地址、发现和远程恢复不是 Engine 必需概念，
-本轮不据此扩张分布式执行能力。
-
-## 3. 依赖关系，而非互相持有具体实现
+以下为逻辑签名；实际泛型、结果验证及可信上下文在实施契约中落实：
 
 ```text
-task-engine ───────────→ Pool/租约/执行/服务端口（task-protocol）
-具体 ExecutorPool ────→ Pool/租约/执行端口
-具体 Executor ─────────→ 执行端口
-task-engine-http ──────→ Engine 服务端口
-宿主组装 ──────────────→ Engine + 各类型 ExecutorPool + HTTP + Store
+TaskType<Input, Prepared = Input>
+  validate(input: unknown) → Input
+  equals(input: Input, other: unknown) → boolean
+  prepare(input: Input, signal) → Promise<Prepared>
+  execute(prepared: Prepared, options) → Promise<ExecutionTracking>
+
+ExecuteOptions
+  signal
+  replaceExecutionId?
+  执行开始回报/替换授权的可信端口
+
+ExecutionTracking
+  executionId
+  startedAt
+  进展与最终结果/故障观察
+  协作停止、强制回收及清理确认
 ```
 
-Executor 不导入 Task Engine 的实现，不要求持有 Engine 实例；它可独立测试或被其他
-调度器调用。执行上下文中的进展回调、结果返回、执行身份和停止信号是端口契约，
-不是反向包依赖。Pool 同样不改写 Task snapshot 或持久事实。
+validate/equals 为纯函数，不做 IO、不读可变外部状态、不修改或隐式转换输入。
+validate 在受理前验证业务输入，失败明确拒绝；Engine 另验通用字段和权限。
+equals 对域外 unknown 返回 false；合法域上自反、对称、传递，真实程序错误不宽泛吞掉。
+业务输入包含所有影响执行的类型字段，不含 requestId、时间、recurrence 或 executionMatch；
+equals 不替代完整请求幂等，也不绕过类型版本、权限、准确准备身份及运行环境匹配。
+具体 Validator 可手写或内部使用 Schema，接口不强制 inputSchema/Schema 库。
 
-Pool 可封装现有 Node kernel/worker pool，将实例管理与资源预留统一在一次租约中。
-Executor 是 Pool 管理的执行实例，不要求每次申请都新建线程或进程。具体实现放在适配层，
-不能为了共用当前包而让 task-engine 反向导入 checker-host 组装入口。
+prepare 必需；无额外准备工作时使用 async input => input，Prepared=Input，
+不是返回 undefined 的空函数。每次真实调用均记录准备过程，可立即完成但不伪造下载。
+准备准确内容、语义校验在排队启动前完成，失败不占执行实例；不要求所有类型使用 Artifact。
+输入已是相同浮动 URL，不代表两次准备得到相同版本，准确准备身份还须匹配。
 
-Probe/Regulate 若需编排子任务，可额外依赖宿主注入的窄化任务提交/观察端口；
-它不是 Executor 基础接口的强制依赖，更不是对 Engine 具体实现的导入。
-子请求有独立身份、明确因果关联和权限/预算，不能递归重提当前 Execution 的自身请求。
+execute 是具备副作用的排队启动调用，不是返回最终业务结果的 Promise。
+等待时可以获取/初始化兼容实例，但实际业务未开始；开始后立即提供 tracking，
+后续结果通过 tracking 读取。具体方法名可细化，不得把排队和运行压成同一个开始事实。
+新执行必须有新 executionId；取消排队不得隐式重试成另一个执行。
 
-## 4. allocation 的责任
-
-allocation 的协调、匹配及正式绑定属于 Engine；取得可用 Executor 及资源回收属于 Pool。
-从 Pool 等待 Executor 使用租约就是等待 allocation。Executor 接到 execute 时应已有
-启动所需资源，不在内部无限排队等待同一执行配额。交给它的是一次 Execution 的输入，
-不是把 Task 调度权交给它；多个 Task 可以共享一个 Execution 和一份租约。
+## 3. 排队、绑定与开始边界
 
 ```text
-Task 已到可调度时间且 prepare 已完成
-  → Engine 判断是否可关联兼容 Execution
-      → 若可关联：增加需求 owner，不重复申请该执行已经占用的资源
-      → 否则：向对应类型 Pool 申请兼容 Executor 的使用租约
-          → 暂无可用 Executor：等待 allocation / queued，不能标记 running
-          → 最终申请失败：明确 allocation_failed
-          → 获得租约：Engine 复核有效需求并提交绑定
-              → 启动 Executor，记录准确执行开始事实
-              → 校验并记录进展、结果或故障
-              → 清理确认后归还租约；Pool 复用健康实例或淘汰异常实例
+validate → 受理/等待 eligible → prepare
+  → Engine 尝试匹配兼容 Execution 与 executionMatch
+      → 可共享：关联已有 tracking/执行事实，不再次调用 TaskType.execute
+      → 需要新执行：调用 TaskType.execute
+          → 等实例：allocation / queued
+          → 启动失败：明确故障，未开始时为 allocation_failed
+          → 实际开始：记录 execution.started，得到 tracking，进入 running
+          → 进展/正常结果/故障
+          → Pool 确认清理后复用资源或淘汰实例
 ```
 
-### 使用租约与申请生命周期
+Engine 仍是 Task/Execution 匹配与绑定的裁决者。多个等价等待需求应共享一次拟启动
+请求，不是每个 Task 各排队一次。TaskType 不自行合并 Task，内部队列只解决容量。
 
-Pool 申请必须包含足以选择兼容 Executor 的准备结果、运行环境及执行约束，不仅是
-Task type。授予是原子的独占使用权，一份有效租约一次只承载一个 Execution；
-共享的是该 Execution 的结果，不是让多个执行同时使用同一份租约。
-资源可用性查询不等于租约授予，不能先观察“还有一个空位”再重复占用。
-租约表示资源所有权，不是前置条件 TTL，也不隐含自动过期或丢失所有权。
+startedAt 是可信实际启动边界，不是 Promise.then 或 HTTP 回包收到时刻。
+开始回报须能让 Engine 在业务代码运行前建立可恢复的启动意图/身份和准确时间边界；
+实现采用启动握手或等价机制，不能仅靠执行已开始后返回 tracking 才补事实。
+执行身份、回报与持久关联不能丢失，开始记录与 Task.allocation.bound 有一致因果关系。
+开始记录已建立但进程在真正调用前崩溃时，按不确定执行处理，不假定可以安全重跑。
 
-等待申请可撤销；其生命周期属于拟创建的 Execution 的需求集合，不能直接绑定
-第一个 Task 的 signal。所有需求消失时撤销申请；如果撤销与授予竞争，Engine 必须
-复核需求，未采用的迟到租约立即归还，不启动无主执行。等待期间若转而采用兼容的
-共享 Execution，同样撤销多余申请并回收竞态取得的租约。
-申请等待和初始化有明确限额，Pool 的等待队列不能演变成另一套 Task/Series 调度器。
+排队调用的取消信号属于其需求集合，不直接绑定第一个 Task 的取消或 deadline。
+所有待启动需求消失/过期则撤销等待；其他有效需求存在时继续。排队和启动交接必须
+复核需求及时间，timer 延迟不能导致过期请求启动。取消恰逢开始时，必须仍能追踪已开始
+执行并收束，而不是丢弃 tracking 后留下未知工作。仅过期 Task 不得因重启重新排队。
+Pool 与 SQLite 不天然原子，持久记录失败、启动失败、取消竞争均需明确补偿/清理证据。
+耗时操作不得放入长数据库事务，回报携带准确执行身份/代次防止污染后继。
 
-Engine 负责确保租约在绑定/启动失败及正常收束路径上归还。归还必须防重复和旧代次：
-重复归还不能增加容量，旧 Executor 回报不能归还或污染其后续新租约。
-只有已退出执行并完成必要清理的实例才可再次出借；清理失败或状态不明由 Pool 淘汰/
-隔离，不因结果已返回或停止信号已发送就入池。具体端口签名在实施阶段确定。
+## 4. replaceExecutionId 是有边界的回收授权
 
-租约句柄可为进程内对象，不进入公共 JSON；持久记录只保留可验证身份与必要恢复事实。
-Pool 授予与数据库事务不天然原子：若取得租约后取消、绑定写入失败或启动失败，
-必须有可核实的回收/补偿路径，不能漏资源或伪造已启动。耗时外部操作不放进
-SQLite 长事务；具体执行开始与持久事实的崩溃窗口在实施契约中验证。
-
-同一 Execution 的全部需求结束时，引擎按执行政策请求停止。单个 Task 取消不能杀死
-仍服务其他需求的执行；Task deadline 也不能直接替代共享 Execution 的墙钟上限。
-时间失约与实际执行停止分别记录，仍允许超时完成。发出停止信号不等于已清理，
-未经确认的资源不得返还可用池。重启的未知执行按既定 execution_interrupted 规则处理，
-不把失败记录当成外部进程已经消失的证明。
-
-## 5. Executor 的业务前置逻辑与快速返回
+Engine 可在 execute 时提供一个可替换的旧 executionId，候选属于同一可管理 Pool/
+资源域且没有仍需保护的需求（未取消、未结束、未超时的 Task）。指定 ID 不是任意强杀
+命令，也不表示立刻回收。用户不能通过业务 Input 伪造此权限。
 
 ```text
-Engine：validate → 受理/等待 eligible → prepare → allocate → execute
-Executor：                                               轻量业务判断
-                                                       ├─ 不满足 → 正常返回
-                                                       └─ 满足 → 重业务工作
+有兼容空闲资源 → 不替换，直接启动
+无空闲资源且提供候选
+  → Pool 判断回收该执行后是否能满足本次资源/runtime/容量要求
+  → 不能满足：不杀旧执行，继续有界等待或明确拒绝
+  → 能满足：回到 Engine 的原子授权边界复核 owner/代次并封闭旧执行的新关联
+      → 协作停止
+      → 宽限后必要时强制终止
+      → 确认旧实例退出、资源清理
+      → 启动全新 executionId，返回新 tracking
 ```
 
-Engine 不再提供 prerequisite/readiness、条件证据关联或 blocked 状态，也不新增
-waitUntilReady 之类的替代等待端口。Executor 在已持有租约、execution 已开始时判断
-前提，不满足就按类型契约返回，例如报告未执行和业务原因；Engine 记录 completed，
-不声称重业务已经执行。检查本身发生异常则为 execution_failed，而不是正常不满足。
+检查有效性不能只在 execute 入队时做一次。候选可能已结束、增加新有效 owner、
+被其他请求回收或属于旧代次；必须重新裁决，不能仅凭旧 ID 杀执行。
+回收授权、封口和新 Task 关联由同一 Engine 仲裁，封口后不得再向旧执行新增需求。
+同一候选不能同时为多次新启动重复计算容量，空闲判断和实际占用也必须原子。
 
-该方案节省的是重工作，不是 allocation 和实例初始化成本。快速返回后本次尝试结束，
-不会留住同一个 Task 等待未来条件变好；重试由新业务请求或明确 recurrence 驱动。
-不在执行器内部长期轮询等待“解锁”，不另造跨请求熔断状态机。业务可在进展/结果
-中记录检查依据，但引擎不解释或据此调度条件任务。
+释放一个 Executor 不一定满足另一个 runtime/资源规格；Pool 必须确认回收有用，
+不能杀掉不相关工作仍然占不到资源。取得空闲资源时不为“已给了 ID”而额外强杀。
+回收失败明确报告并隔离不确定资源，不能只改计数器宣布空闲；新工作不能在同一份
+尚未确认释放的容量上启动。旧回报不能影响新 executionId。
 
-前提即便刚检查通过，实际操作仍可能失效；必要保证由业务事务、锁、条件写入或
-幂等提供。若 Executor 编排子任务，仍按下一节的资源约束处理，不能重新制造互锁。
+## 5. Task 超时、强制回收与独立执行限额
 
-## 6. 编排与执行资源避免互锁
+Task 超时不自动取消或立即停止已经运行的 Execution；允许迟到正常结果。
+这不等于无限占用资源：Engine 保留通过 tracking/Pool 发起回收的能力，
+资源紧张时可按上一节替换无受保护需求的旧执行；独立执行墙钟上限和宿主关闭也可
+触发受控停止。独立上限不随新 Task 关联延长，不用某个 Task 的 deadline 代替。
 
-同 Engine 中，Probe 可能等待 Check，Regulate 可能等待 Probe 或 Agent。
-若父任务占满统一执行槽位且等待子任务，而子任务也必须取得同一批槽位，就会死锁。
+回收以 Execution 为单位，不以单一 Task 为单位。受保护需求不能被资源替换误伤；
+执行自身触及上限则按执行级故障处理，相关 Task 仍保持各自时间/取消事实。
+只发停止信号不算回收完成。协作停止/强制终止/隔离能力必须在所选 runtime 下有
+真实证据；不能对不可终止的同线程 JS Promise 宣称能够安全强杀。具体策略数值
+由实施测试确定，协议显式报告不支持或清理失败，不以假成功替代。
 
-因此区分编排需求容量与实际运行资源；父任务不能持有子任务必需且不可获得的独占配额。
-例如 Probe 使用有界编排槽位，Node Checker 使用独立 worker pool，Agent 使用自己的
-执行额度。只是把配额按类型改名还不够：嵌套同类型任务也必须有明确的资源策略。
-具体预算由宿主/Pool 配置，引擎管理等待和 owner；不通过无限并发绕过死锁。
-按类型注入 Pool 不自动解决互锁；不同 Pool 若底层共享同一个耗尽的容量限制，也必须
-证明父等待子时仍有可用执行路径。
+业务结束/故障和物理回收是不同事实。已经可靠记录的正常结果不被之后清理动作抹掉；
+停止竞态中出现的真实结果按记录边界处理，不覆写已有失败或取消。
+未知已启动执行重启后以 execution_interrupted 失败，不透明重跑；其外部残留
+资源仍须隔离/清理，失败记录不证明实际进程已经退出。
 
-## 7. 组装示意与验证重点
+## 6. 业务前置逻辑与嵌套执行
 
-以下为伪代码，不定义已存在的 TypeScript API：
+Executor 开始后可以先做轻量业务判断，不满足即返回类型定义的“不执行”结果，
+引擎正常 completed；判断抛错则 execution_failed。不保留原 Task 等待以后解锁，
+不提供 prerequisite/readiness/blocked 或 waitUntilReady，也无内置 Check 要求。
+新尝试由业务新请求或明确 recurrence 触发，不隐式重试或引入跨请求熔断状态机。
+前置判断已占实例，只减少后续重业务成本，不提供条件持续有效保证。
+
+Probe/Regulate 可使用宿主注入的窄化子任务端口编排；这不是所有 Executor 的必需
+接口，更不是依赖 Engine 具体类。父子有明确身份、权限与预算，禁止递归提交自身。
+编排 Pool 与实际运行资源必须避免互锁；只按类型改名仍不够，共享底层容量或嵌套同
+类型也需要证明子任务有可用执行路径。不能用无限并发规避死锁。
+
+## 7. 宿主组装与验证
 
 ```typescript
 const engine = createTaskEngine({
@@ -172,55 +174,13 @@ const engine = createTaskEngine({
   },
 });
 const handler = createTaskHandler({ service: engine, resolveCaller });
-// 宿主通过 Node/框架连接器挂载 handler，并自行监听。
 ```
 
-TaskType 统一提供类型契约与分配入口，内部 Pool 仍负责实例容量、租约及回收；
-运行时选择为 Check TaskType/Pool 内部的适配配置，不成为所有任务的通用输入。
-探测/调节需要子任务端口时由宿主显式装配；通用包不自动导入生产业务类型。
+这是组装示意，不是已交付 API。宿主选择注册哪些类型、HTTP 挂载、监听与安全策略；
+TaskType 通过 execute 提供 tracking，内部 Pool 如何管理 Executor 不泄露成引擎级租约。
+SDK 是各语言实现，不是协议；Web Request/Response handler 不强制具体 HTTP 框架。
 
-### TaskType 的职责
-
-以下为逻辑签名，结果校验、可信上下文与租约释放细节仍按完整端口契约落实，
-不把这组简写误当成已发布 TypeScript API：
-
-```text
-TaskType<Input, Prepared = Input>
-  validate(input: unknown) → Input
-  equals(input: Input, other: unknown) → boolean
-  prepare(input: Input, signal) → Promise<Prepared>
-  allocate(prepared: Prepared, signal) → Promise<ExecutorLease<Prepared>>
-```
-
-- validate 是纯 Validator，在受理/申请 Executor 之前预检业务输入，成功得到可信 Input，
-  失败明确拒绝；不做 IO、读取可变配置、隐式转换或修改输入。Engine 另验通用字段和
-  权限，计算本身仍有载荷/深度限制。不要求 TaskType 提供 inputSchema 或使用特定
-  Schema 库，具体类型可以自行选择校验实现。
-- prepare 必需，负责准确配置/内容与执行输入的准备，不要求所有任务都是 artifact +
-  subject。无准备需求时提供 async input => input，且 Prepared=Input；不得以返回
-  undefined 的空函数冒充已准备输入。Engine 始终调用并记录真实的准备开始/完成或失败，
-  即时恒等返回不伪造下载动作；可以提供恒等 helper，但不形成可选分支。
-  prepare 成功后才 allocate；例如取得准确 Checker 定义后按 subjectSchema
-  校验 subject，失败也不占 Executor 槽位。下载和准备不能藏在 allocation 等待中。
-- allocate 通过内部 Pool 申请与 Prepared 兼容的 Executor 使用租约，可撤销等待；
-  不改变已有授予、复核、归还和异常淘汰规则。prepare/allocate 是具备副作用的能力边界，
-  有独立的取消、失败及资源生命周期；不能因恒等 prepare 没有 IO 就把所有实现视为纯函数。
-- equals 是纯函数，以合法 Input 为基准比较 unknown；other 不属于合法输入域时返回
-  false，不抛业务校验错误、不隐式转换。双方均属合法 Input 时须满足自反/对称/传递；
-  正常 Engine 分组的输入都已校验，此放宽不替代准入 validate。真正的实现故障仍
-  明确报告，不能宽泛 catch 后伪装“不相等”。不比较 requestId、eligibleAt、timeoutMs、
-  recurrence、executionMatch 等身份/调度字段，不忽略影响执行的业务输入。
-
-分组仍须结合准备后的准确内容、类型、权限及执行环境。原始浮动 URL 相等不证明
-两次 prepare 选中同一版本；具体类型须提供可比较、可恢复的准备身份，不能让 equals
-绕过这些约束。如何编码准备身份按各类型契约落实，不由 Engine 猜业务对象字段。
-请求自己的 executionMatch 再决定兼容执行的时间资格，匹配与结果采用仍由 Engine
-协调，Pool 不另做一套 Task 合并。equals 不能替代 Request 幂等比较：同 requestId
-改变调度策略仍需按完整请求意图判冲突。
-
-验证应覆盖：Executor 脱离 Engine 可运行；同引擎类型分派与授权；暂无资源不进入
-running；共享执行不重复申请租约；撤销/授予竞争、绑定写入失败有回收；
-重复归还不增加容量、旧代次不污染新租约、清理失败不返池；
-Executor 前置不满足快速返回、不进入引擎等待；纯校验与等价判断不触发 IO；
-必需 prepare 的恒等实现真实调用，unknown 输入等价反例成立；父等待子任务可获得资源；
-HTTP 与进程内调用同源，挂载不自行监听或通过自己的 HTTP 入口递归调度。
+验证重点：排队不伪造 running、共享不重复启动、开始记录早于业务且时间准确、
+取消启动竞争不漏 tracking、可替换候选二次核实、回收能提供匹配资源才替换、
+新 owner 与封口互斥、真实强制终止确认、清理失败不超售资源、旧回报不污染新执行；
+以及必需恒等 prepare、纯 Validator/Equals、Executor 快速返回和父子资源隔离。

@@ -1,8 +1,8 @@
 # Implementation
 
-这是准备阶段的轻量实施种子，不表示已实现或授权开始实现。
+这是实施合同初版，不表示功能已实现；按准确构想验收后的阶段推进。
 以[系统边界](./ideal/system-boundaries.md)、[概念](./ideal/concepts.md)和
-[接口示例](./ideal/interfaces.md)为输入，先收敛阻塞正确性的决策再编写运行时代码。
+[接口示例](./ideal/interfaces.md)为输入，具体工程选择由实施者记录并验证。
 
 ## Steps
 
@@ -11,8 +11,8 @@
 定义 Request 类型组合、任务事实、内驱 stage/外界信号/时间条件三维投影、错误与服务 API，
 以虚拟时钟和非制品测试类型验证纯归约、输入校验及权限边界。
 类型注入统一为 TaskType，纯 validate(unknown) 与 equals(Input, unknown) 分开于
-具备副作用的必需 prepare/allocate；不强制业务提供 inputSchema 或依赖 Schema 库。
-Engine 申请 Executor 前完成预检及必要的准备后校验；恒等 prepare 也必须实际调用，
+具备副作用的必需 prepare/execute；不强制业务提供 inputSchema 或依赖 Schema 库。
+Engine 排队启动前完成预检及必要的准备后校验；恒等 prepare 也必须实际调用，
 返回 Input 并记录准备事实，不使用可选分支或返回 undefined 的空实现。
 将本设计的 freshness 名称改为 Request.executionMatch，保留两种 eligible 锚点的
 时间匹配语义，不复制策略到 snapshot。equals 只比较完整业务输入，不代替请求幂等。
@@ -29,9 +29,11 @@ execution_interrupted 失败，已记录结果先补齐，尚未开始任务继�
 Executor 自行做轻量前置判断，不满足就正常快速返回业务结果，不保留 Task 等待解锁。
 执行故障与业务不满足分开，重试由业务新请求或已声明 recurrence 驱动。
 按[执行与宿主组装](./ideal/execution-and-host-composition.md)划分 allocation：
-Engine 协调共享匹配与正式绑定，按类型注入的 Pool 原子授予/回收 Executor 使用租约，
-Executor 在租约内运行一次 Execution；共享执行不重复申请租约；
-验证无资源时不伪造 running、预留失败补偿及父子编排不互锁。
+Engine 协调共享匹配与正式绑定，TaskType.execute 封装内部 Pool 的排队启动，
+实际开始返回 ExecutionTracking；共享执行不重复启动。显式 allocate/ExecutorLease
+不属于 Engine 公共调用面。Engine 提供 replaceExecutionId 授权候选，Pool 判断回收
+有用后复核并封口，实际退出/清理确认后启动新 ID。验证取消启动不漏 tracking、
+新 owner 与替换互斥、无资源时不伪造 running，以及父子编排不互锁。
 递归后继为新 Request 经准入产生新 Task；唯一派生 Pending 控制等待积压，
 持久化前后继规划关联防止超时、迟到终结、命令重试或崩溃恢复重复续作。
 内核不导入具体业务类型，类型行为通过宿主装配的适配器调用。
@@ -93,11 +95,11 @@ Validator/类型测试拒绝未知类型、非法载荷、跨类型幂等复用�
 | I-AC02 | 重启时分组注入有结果/无结果/未开始/已取消任务 | 有结果补齐，无结束记录的已开始执行标 execution_interrupted；其余保留正确调度与结局 |
 | I-AC03 | Web handler 与进程内 API 同场景，Node bridge 断连/背压 | 核心语义一致，无自动 listener，断连不取消 Task，流资源有界释放 |
 | I-AC03 | 历史分页、订阅交接和存储 checkpoint | 按最终确定的边界无丢失或重复处理，不用 timestamp 作严格游标 |
-| I-AC02 | Pool 无容量、并发申请、撤销/授予竞争及绑定写入失败 | 等租约仍 queued，原子授予不超配，无 Executor 内部隐蔽排队，迟到未采用租约可核实回收 |
-| I-AC02 | 同一租约重复归还、旧代次回报、清理失败 | 不增加重复容量、不污染新租约；异常实例淘汰/隔离而非直接重新出借 |
-| I-AC02 | 同引擎父编排等待子 Check、多个 Task 共享执行 | 子任务能获得所需资源，共享 Execution 不重复预留；单 owner 取消不影响其他 owner |
+| I-AC02 | execute 排队、撤销/启动竞争及持久绑定失败 | 未启动仍 queued，开始有准确身份/时间；不丢 tracking 或留下无主执行 |
+| I-AC02 | 重复回收、旧执行回报、清理失败 | 不重复恢复容量、不污染新 ID；异常实例淘汰/隔离，实际确认前不复用资源 |
+| I-AC02 | 同引擎父编排等待子任务、多个 Task 共享执行 | 子任务可运行，共享不重复调用 execute；单 owner 取消不伤其他 owner |
 | I-AC01 | 脱离 Engine 直接调用测试 Executor | 只需执行/资源端口，无 Engine 实现或 HTTP 自调用依赖 |
-| I-AC01 | 输入预检失败、准备后业务校验失败、恒等 prepare | 前两者均不调用 allocate；恒等 prepare 确实调用并返回 Input，有真实开始/完成而无虚构 IO |
+| I-AC01 | 输入预检失败、准备后业务校验失败、恒等 prepare | 前两者均不调用 execute；恒等 prepare 确实调用并返回 Input，有真实开始/完成而无虚构 IO |
 | I-AC02 | equals 相等但策略/身份不同、相同浮动引用选出不同版本 | 相等业务输入仍分别按 executionMatch 匹配，版本/权限/环境冲突不共享，Task 身份不合并 |
 | I-AC01 | 同 requestId 改 executionMatch、错误的等价关系或抛错比较器 | 幂等仍比较完整意图；等价关系向量覆盖自反/对称/传递，比较故障显式报告 |
 | I-AC01 | equals 合法 Input 对比域外 unknown、不同有效输入、对称交换合法参数 | 域外 false，无修改或转换；合法域等价关系成立，不将异常宽泛吞成 false |
@@ -108,4 +110,7 @@ Validator/类型测试拒绝未知类型、非法载荷、跨类型幂等复用�
 | I-AC02 | terminated 超时规划延迟多个周期、重复恢复 | 以 deadline 为锚点取严格未来周期点，不造终结事实，不补历史轮次 |
 | I-AC03 | 同水位分页中新增事件、订阅交接间写入、重复续订与过期游标 | 固定页集、交接不丢事件、位置去重；过期明确 410，不以快照时间作为游标 |
 | I-AC02 | 同 SQLite 库重复启动主动引擎、事务锁超限或容量耗尽 | 不出现双重调度或静默存储降级，关键恢复记录不被驱逐 |
-| I-AC02 | allocation 等待超时与 Pool 授予竞争、timer 延迟及重启 | 过期 Task 不新启动，未使用迟到租约回收；其他有效需求可继续，不伪造取消或分配失败 |
+| I-AC02 | allocation 等待超时与启动竞争、timer 延迟及重启 | 过期 Task 不新启动，已开始的 tracking 不丢失；其他有效需求可继续，不伪造取消或分配失败 |
+| I-AC02 | 所有 owner 超时后仍运行、新任务要求替换 | 不因 Task 超时立即停止；有空闲不替换，无空闲仅回收可满足新需求且无受保护 owner 的候选 |
+| I-AC02 | 候选新增有效 owner、两次替换竞争、runtime 不兼容 | 原子复核/封口，受保护执行不被替换，不杀无法提供所需资源的旧执行，不重复计算容量 |
+| I-AC02 | 真实失控执行协作停止无效、强制终止及独立墙钟上限 | 能确认物理退出/清理；新 ID 仅在资源可用后启动，失败明确隔离，不能仅改计数器 |

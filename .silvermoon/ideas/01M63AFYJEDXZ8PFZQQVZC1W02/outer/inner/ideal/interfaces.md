@@ -15,7 +15,7 @@
 type 是判别字段，应用将已注册类型组合为 discriminated union；
 所有业务类型（包括 check/probe/regulate）均通过宿主注册，无内置必需业务类型，
 也不接受任意未注册字符串；每种类型统一注入 TaskType，包含纯 validate/equals、
-必需 prepare 及封装 ExecutorPool 的 allocate，不再分别注入 Type 与 Pool。
+必需 prepare 及返回 ExecutionTracking 的 execute，不再分别注入 Type 与 Pool。
 类型的具体输入可以与公共字段同层组合，但其 Validator 不能重新定义或覆盖公共字段。
 不要求现在把所有输入迁到 input/payload，也不新增 metadata。
 
@@ -243,8 +243,14 @@ echo 的 prepare 已实际执行并记录；准备后直接等待分配，不存
 | validate | unknown 业务输入；通用字段与授权由 Engine 另验 | 纯函数得到合法 Input 或明确校验错误，无 IO/修改/隐式转换，申请 Executor 前完成 |
 | equals | 合法 input:Input 与 other:unknown | 纯函数，域外 other 返回 false；合法输入域上为等价关系，不替代 validate 或幂等比较 |
 | prepare（必需） | Input、预算、取消信号、适配器依赖 | 正式 Prepared 或有分类的故障；无额外工作时以恒等实现返回 Input，记录真实调用 |
-| execute | 不可变 prepared、执行上下文、停止信号 | 校验后的 progress、一个正常 result 或执行故障 |
-| allocate / 租约归还 | Prepared、执行约束、可信作用域及可撤销申请 | TaskType 通过 Pool 提供 Executor 使用租约；Engine 复核绑定，执行和清理后归还 |
+| TaskType.execute | Prepared、可信上下文、signal、可选 replaceExecutionId 与授权端口 | 排队 Promise；实际启动后返回 ExecutionTracking，不等待最终结果 |
+| ExecutionTracking | 新 executionId、可信 startedAt、观察及停止/回收能力 | 跟踪进展、正常结果/故障和清理；Engine 据此关联 Task，不以接收 tracking 时刻定义执行开始 |
+
+TaskType 不再提供显式 allocate 或 ExecutorLease。execute 排队期间仍是 allocation，
+不是 running；底层排队可撤销，实际开始边界须与引擎的持久身份/启动回报协调。
+replaceExecutionId 仅是 Engine 提供的可替换候选，不是业务任意强杀参数。Pool 有空闲
+时直接运行，无资源时先确认回收候选能满足需求，再经 Engine 复核并封口，停止/回收
+确认后启动新 ID；候选重新获得有效需求则不能替换。
 
 echo 也必须提供 prepare；不需要额外工作时实现为 async input => input，
 直接返回类型定义的 Prepared，不引入引擎级 outcome:ready 包装。此例返回：
@@ -362,7 +368,7 @@ code/message 是固定错误契约，details 是可选的类型诊断对象；�
 不包含 readiness 对象或 blocked stage。业务校验拒绝不属于其输入的旧字段，
 不能忽略旧条件并以为用户已获得相同的等待保证。
 
-Executor 已取得租约并进入 execution 后可做轻量前置判断，不满足则返回业务结果，
+Executor 已由内部 Pool 启动并进入 execution 后可做轻量前置判断，不满足则返回业务结果，
 例如某个业务 TaskType 定义如下结果；字段不是通用引擎结果结构：
 
 ```json
@@ -379,7 +385,7 @@ Executor 已取得租约并进入 execution 后可做轻量前置判断，不满
 进展/结果，引擎只验证契约和可见性，不据此增加条件调度。
 
 运行能力见[执行与宿主组装](./execution-and-host-composition.md)；
-所有类型使用纯 Validator/Equals 与必需 Prepare/Allocate，不要求 inputSchema。
+所有类型使用纯 Validator/Equals 与必需 prepare/execute，不要求 inputSchema。
 
 ## 7. HTTP 映射
 
