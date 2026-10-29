@@ -4,6 +4,7 @@ import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { delimiter, isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
+import { discoveryHostBins } from "./release-packages.mjs";
 
 export async function checkPackageConsumers(root, scratch, definitions, tarballs, run) {
   const manifests = new Map();
@@ -476,7 +477,7 @@ try{
       for (const bin of definition.bins ?? []) {
         const executable = join(binaries, process.platform === "win32" ? `${bin}.cmd` : bin);
         assert.ok(existsSync(executable), `Missing installed executable: ${bin}`);
-        if (bin === "pguide-check-host" || bin === "pguide-checker-host") continue;
+        if (discoveryHostBins.includes(bin)) continue;
         const result = JSON.parse(
           await run(executable, ["--help", "--format", "json"], directory, env),
         );

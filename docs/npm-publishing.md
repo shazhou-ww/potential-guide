@@ -318,6 +318,10 @@ than being required as accidental CLI dependencies. Registry modes also check
 the manifest versions of any runtime support packages in that closure.
 Tarball overrides are never used in either registry mode.
 Deployment fixtures use the `worker.cjs` contract, not retired `run.*` checks.
+The installed `pguide-checker-host` launcher and compatibility alias
+`pguide-check-host` require discovery-owned reservations, not user-command
+metadata or help flags. Both verifiers use the shared discovery launcher
+inventory and check their installed executable paths instead.
 The verifier owns a Host loaded from the installed package and closes it before
 removing the consumer workspace.
 Setup and self-check fixtures use the built Objective packages and an explicit

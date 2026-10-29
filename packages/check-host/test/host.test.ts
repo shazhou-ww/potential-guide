@@ -156,7 +156,6 @@ test("fresh real-package snapshots can shut down during startup without native h
   for (let index = 0; index < 8; index++) {
     const f = await fixture();
     try {
-      const started = performance.now();
       await f.kernel.executeCheck({
         checkId: `starting-real-${index}`,
         directory: artifact.directory,
@@ -164,11 +163,16 @@ test("fresh real-package snapshots can shut down during startup without native h
         subject: {},
       });
       assert.equal(f.kernel.diagnostics().initializations, 1);
+      const started = performance.now();
       await f.kernel.close();
       assert.equal(f.kernel.diagnostics().workers, 0);
       assert.equal(f.kernel.diagnostics().queue, 0);
       assert.equal(f.kernel.diagnostics().ownedProcesses, 0);
-      assert.ok(performance.now() - started < f.kernel.limits.cleanupMs);
+      const shutdownMs = performance.now() - started;
+      assert.ok(
+        shutdownMs < f.kernel.limits.cleanupMs,
+        `Shutdown exceeded cleanup budget: ${shutdownMs}ms`,
+      );
     } finally {
       await f.close();
     }

@@ -3,11 +3,22 @@ import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
+  discoveryHostBins,
   parseReleaseTag,
   releasePackages,
   releaseVersion,
   verificationPackages,
 } from "./release-packages.mjs";
+
+test("discovery-owned startup bins cover the installed Checker Host and compatibility alias", async () => {
+  const manifest = JSON.parse(
+    await readFile(new URL("../packages/check-host/package.json", import.meta.url), "utf8"),
+  );
+  assert.deepEqual([...discoveryHostBins].sort(), Object.keys(manifest.bin).sort());
+  assert.ok(discoveryHostBins.includes("pguide-checker-host"));
+  assert.ok(discoveryHostBins.includes("pguide-check-host"));
+  assert.ok(!discoveryHostBins.includes("pguide"));
+});
 
 test("local verification covers the internal runtime dependency closure without expanding release tags", async () => {
   const names = new Set(verificationPackages.map(({ name }) => name));

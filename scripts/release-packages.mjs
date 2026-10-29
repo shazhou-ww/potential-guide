@@ -1,3 +1,5 @@
+export const discoveryHostBins = ["pguide-checker-host", "pguide-check-host"];
+
 export const releasePackages = [
   ...[
     "objective-monorepo-standard",
@@ -27,7 +29,7 @@ export const releasePackages = [
       "CheckerService",
       "createServiceRouter",
     ],
-    bins: ["pguide-checker-host", "pguide-check-host"],
+    bins: discoveryHostBins,
     forbiddenDependencies: ["@potential-guide/objective-pilot", "@potential-guide/cli-core"],
   },
   {

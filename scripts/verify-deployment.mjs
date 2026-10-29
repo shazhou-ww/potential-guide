@@ -12,7 +12,7 @@ import {
   consumerVersions,
   verifyConsumerGraph,
 } from "./deployment-consumer.mjs";
-import { verificationPackages } from "./release-packages.mjs";
+import { discoveryHostBins, verificationPackages } from "./release-packages.mjs";
 import { createDeploymentWorkspace, execute } from "./verify-deployment-helpers.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -279,7 +279,7 @@ async function verifyCliContract() {
 
   const allBins = packageDefinitions.flatMap(({ bins }) => bins);
   for (const bin of allBins) {
-    if (bin === "objective-contract-migrate" || bin === "pguide-check-host") {
+    if (bin === "objective-contract-migrate" || discoveryHostBins.includes(bin)) {
       await access(executable(bin));
       continue;
     }
