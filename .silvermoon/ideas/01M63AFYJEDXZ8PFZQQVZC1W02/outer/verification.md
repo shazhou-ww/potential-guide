@@ -1,6 +1,6 @@
 # 独立交付验证结果
 
-## 准确对象与执行结果
+## 首轮准确对象与执行结果
 
 - 已验收 Inner：`51adbc160975b8287373ddc8eca0e27abb74a95a`。
 - 已验收 Ideal：`23bf1b89e48571b18d746dc4184ef448209b9ac3`。
@@ -9,7 +9,8 @@
 - 实际运行：`2026-10-29T15:27:12.0239968+00:00` 至
   `2026-10-29T15:27:14.2086860+00:00`，Windows / Node `v24.12.0` / PowerShell `7.6.9`。
 - 引导命令退出 **0**，消费者退出 **0**，**23 个断言组全部通过**。
-- 完整机器证据：[verification-result.json](./verification-result.json)。
+- 首轮机器证据：[准确提交中的原报告](https://github.com/shazhou-ww/potential-guide/blob/b9985f0122f22ddb98677e2bc545c66bf6c3c673/.silvermoon/ideas/01M63AFYJEDXZ8PFZQQVZC1W02/outer/verification-result.json)。
+  当前 [verification-result.json](./verification-result.json) 保存下文父代理独立复跑结果。
   该结果与本文是运行后新增的证据，不改变执行前合同的测试行为。
 
 实际命令：
@@ -116,3 +117,28 @@ SQLite commit 前后故障注入的全部排列、Pool 清理失败隔离、不�
 
 所有 D-S01—D-S03 与 D-AC01—D-AC03 的独立交付结果均已取得；这仍是 Agent 的
 submitOuter 候选证明，最终 acceptOuter 由父代理决定。
+
+## 父代理独立复核与复跑
+
+父代理读取部署合同、引导器、宿主/消费者/Pool 证明脚本及机器报告，确认测试确实
+使用仓库外本地 tarball 安装、真实 HTTP/SSE、跨进程 SQLite 和失控 Worker，
+没有以源码导入或只读复述替代运行。所述平台限制与未重复的完整竞态矩阵保持不变。
+
+于 `2026-10-29T15:34:06.7721038+00:00` 至 `2026-10-29T15:34:09.9740514+00:00`
+对已同步 primary `b9985f0122f22ddb98677e2bc545c66bf6c3c673`、部署树
+`d7dfcef3ec301b4aad7d5af5fb427066452e2a47` 独立执行：
+
+```powershell
+& .\.silvermoon\ideas\01M63AFYJEDXZ8PFZQQVZC1W02\outer\verify\run.ps1 `
+  -PlanRevision d7dfcef3ec301b4aad7d5af5fb427066452e2a47
+```
+
+结果退出 **0**，**23/23 断言组通过**；四包 SHA-256 与首轮表格全部一致。
+独立消费者为 `D:\Code\potential-guide-consumer-869ab0df9dd0462ab38a62d0bcd65a39`；
+marker 校验成功且目录已删除。5 个子进程退出已观察：50984 为预期 SIGTERM，
+4172、40936、7200、50264 均 exit 0；63863、63871、63877 三个端口已验证拒绝连接，
+SSE 全部关闭，强杀 Worker 的退出和清理在新执行开始前成立。
+
+复跑只生成本 Outer 的机器报告；已验收 Ideal/Inner 和生产源码未改变。
+本节与新机器报告记录实际复核结果，不改变验证脚本或部署合同的行为。
+更新的 Outer 须再次校验、同步和 submitOuter 后，由父代理记录准确 revision 的验收。

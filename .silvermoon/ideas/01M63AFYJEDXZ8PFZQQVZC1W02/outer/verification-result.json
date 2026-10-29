@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "planRevision": "20b9ba7b309c030e1abc0b68e1dc60398f0b2f06",
-  "planCommit": "76ede756189d37779a4cf230f6d901baf9c4efe0",
+  "planRevision": "d7dfcef3ec301b4aad7d5af5fb427066452e2a47",
+  "planCommit": "b9985f0122f22ddb98677e2bc545c66bf6c3c673",
   "acceptedInner": "51adbc160975b8287373ddc8eca0e27abb74a95a",
   "acceptedIdeal": "23bf1b89e48571b18d746dc4184ef448209b9ac3",
   "powerShell": "7.6.9",
-  "operationId": "f1b4433c9d184a709a7d845e3fcd490b",
-  "consumerRoot": "D:\\Code\\potential-guide-consumer-f1b4433c9d184a709a7d845e3fcd490b",
-  "startedAt": "2026-10-29T15:27:12.0239968+00:00",
+  "operationId": "869ab0df9dd0462ab38a62d0bcd65a39",
+  "consumerRoot": "D:\\Code\\potential-guide-consumer-869ab0df9dd0462ab38a62d0bcd65a39",
+  "startedAt": "2026-10-29T15:34:06.7721038+00:00",
   "packages": [
     {
       "name": "@potential-guide/task-protocol",
@@ -41,10 +41,10 @@
   },
   "consumer": {
     "schemaVersion": 1,
-    "planRevision": "20b9ba7b309c030e1abc0b68e1dc60398f0b2f06",
+    "planRevision": "d7dfcef3ec301b4aad7d5af5fb427066452e2a47",
     "node": "v24.12.0",
     "platform": "win32",
-    "operationRoot": "D:\\Code\\potential-guide-consumer-f1b4433c9d184a709a7d845e3fcd490b",
+    "operationRoot": "D:\\Code\\potential-guide-consumer-869ab0df9dd0462ab38a62d0bcd65a39",
     "checks": [
       {
         "name": "installation:external-realpaths",
@@ -172,8 +172,8 @@
         "name": "http:ready",
         "passed": true,
         "facts": {
-          "pid": 44380,
-          "port": 59534,
+          "pid": 50984,
+          "port": 63863,
           "unauthenticated": 401,
           "currentVersion": "1"
         }
@@ -209,8 +209,8 @@
         "name": "http:ready",
         "passed": true,
         "facts": {
-          "pid": 18584,
-          "port": 59540,
+          "pid": 40936,
+          "port": 63871,
           "unauthenticated": 401,
           "currentVersion": "2"
         }
@@ -219,8 +219,8 @@
         "name": "sqlite:kill-restart-original-version",
         "passed": true,
         "facts": {
-          "oldPid": 44380,
-          "newPid": 18584,
+          "oldPid": 50984,
+          "newPid": 40936,
           "durableFinalAdopted": true,
           "unknownCode": "execution_interrupted",
           "rerunUnknown": false,
@@ -241,8 +241,8 @@
         "name": "http:ready",
         "passed": true,
         "facts": {
-          "pid": 41200,
-          "port": 59544,
+          "pid": 50264,
+          "port": 63877,
           "unauthenticated": 401,
           "currentVersion": "2"
         }
@@ -259,66 +259,66 @@
     "modules": [
       {
         "name": "@potential-guide/task-protocol",
-        "realpath": "D:\\Code\\potential-guide-consumer-f1b4433c9d184a709a7d845e3fcd490b\\node_modules\\.pnpm\\@potential-guide+task-proto_1c5507031c2e61273c107e393b239492\\node_modules\\@potential-guide\\task-protocol\\dist\\index.js"
+        "realpath": "D:\\Code\\potential-guide-consumer-869ab0df9dd0462ab38a62d0bcd65a39\\node_modules\\.pnpm\\@potential-guide+task-proto_1c5507031c2e61273c107e393b239492\\node_modules\\@potential-guide\\task-protocol\\dist\\index.js"
       },
       {
         "name": "@potential-guide/task-engine",
-        "realpath": "D:\\Code\\potential-guide-consumer-f1b4433c9d184a709a7d845e3fcd490b\\node_modules\\.pnpm\\@potential-guide+task-engin_c50426b2b70142bf14d034a5eac246e3\\node_modules\\@potential-guide\\task-engine\\dist\\index.js"
+        "realpath": "D:\\Code\\potential-guide-consumer-869ab0df9dd0462ab38a62d0bcd65a39\\node_modules\\.pnpm\\@potential-guide+task-engin_c50426b2b70142bf14d034a5eac246e3\\node_modules\\@potential-guide\\task-engine\\dist\\index.js"
       },
       {
         "name": "@potential-guide/task-engine/pool",
-        "realpath": "D:\\Code\\potential-guide-consumer-f1b4433c9d184a709a7d845e3fcd490b\\node_modules\\.pnpm\\@potential-guide+task-engin_c50426b2b70142bf14d034a5eac246e3\\node_modules\\@potential-guide\\task-engine\\dist\\pool.js"
+        "realpath": "D:\\Code\\potential-guide-consumer-869ab0df9dd0462ab38a62d0bcd65a39\\node_modules\\.pnpm\\@potential-guide+task-engin_c50426b2b70142bf14d034a5eac246e3\\node_modules\\@potential-guide\\task-engine\\dist\\pool.js"
       },
       {
         "name": "@potential-guide/task-engine/testing",
-        "realpath": "D:\\Code\\potential-guide-consumer-f1b4433c9d184a709a7d845e3fcd490b\\node_modules\\.pnpm\\@potential-guide+task-engin_c50426b2b70142bf14d034a5eac246e3\\node_modules\\@potential-guide\\task-engine\\dist\\testing.js"
+        "realpath": "D:\\Code\\potential-guide-consumer-869ab0df9dd0462ab38a62d0bcd65a39\\node_modules\\.pnpm\\@potential-guide+task-engin_c50426b2b70142bf14d034a5eac246e3\\node_modules\\@potential-guide\\task-engine\\dist\\testing.js"
       },
       {
         "name": "@potential-guide/task-engine-http",
-        "realpath": "D:\\Code\\potential-guide-consumer-f1b4433c9d184a709a7d845e3fcd490b\\node_modules\\.pnpm\\@potential-guide+task-engin_6fc3f05a29b7dbf427469e4fbc7c0b6a\\node_modules\\@potential-guide\\task-engine-http\\dist\\index.js"
+        "realpath": "D:\\Code\\potential-guide-consumer-869ab0df9dd0462ab38a62d0bcd65a39\\node_modules\\.pnpm\\@potential-guide+task-engin_6fc3f05a29b7dbf427469e4fbc7c0b6a\\node_modules\\@potential-guide\\task-engine-http\\dist\\index.js"
       },
       {
         "name": "@potential-guide/task-engine-storage",
-        "realpath": "D:\\Code\\potential-guide-consumer-f1b4433c9d184a709a7d845e3fcd490b\\node_modules\\.pnpm\\@potential-guide+task-engin_78c3e80729c29066e442903bac41dd40\\node_modules\\@potential-guide\\task-engine-storage\\dist\\index.js"
+        "realpath": "D:\\Code\\potential-guide-consumer-869ab0df9dd0462ab38a62d0bcd65a39\\node_modules\\.pnpm\\@potential-guide+task-engin_78c3e80729c29066e442903bac41dd40\\node_modules\\@potential-guide\\task-engine-storage\\dist\\index.js"
       }
     ],
     "cleanup": {
       "children": [
         {
-          "pid": 44380,
+          "pid": 50984,
           "code": null,
           "signal": "SIGTERM"
         },
         {
-          "pid": 27848,
+          "pid": 4172,
           "code": 0,
           "signal": null
         },
         {
-          "pid": 18584,
+          "pid": 40936,
           "code": 0,
           "signal": null
         },
         {
-          "pid": 45172,
+          "pid": 7200,
           "code": 0,
           "signal": null
         },
         {
-          "pid": 41200,
+          "pid": 50264,
           "code": 0,
           "signal": null
         }
       ],
       "portsClosed": [
-        59534,
-        59540,
-        59544
+        63863,
+        63871,
+        63877
       ],
       "streamsClosed": true
     },
     "passed": true
   },
   "commandExitCode": 0,
-  "completedAt": "2026-10-29T15:27:14.2086860+00:00"
+  "completedAt": "2026-10-29T15:34:09.9740514+00:00"
 }
