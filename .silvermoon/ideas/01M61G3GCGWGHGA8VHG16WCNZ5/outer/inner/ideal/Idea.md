@@ -22,11 +22,11 @@ Regulation 的统一资格时间、递归系列与未完成任务恢复，持续
 ## 验收标准
 
 - 两类制品、目录文档与准确摘要保持可验证；准备选版/回退显式固定版本并保留失败证据，不掩盖业务不通过。
-- eligible 与前置 Check 条件独立判断，条件等待不重置 timeout；治理后重查且有授权边界；系列唯一 pending、递归及取消在竞争下成立，失败/超时续作且错过周期不补齐。
-- HTTP/SDK/事件采用按 state 区分的快照，不暴露 hostInstance；Request 审计与 Task 恢复一致，解析失败可关联 requestId，独立消费者证明重启不重置期限、不重复规划、不悄悄换版。
+- 时间、制品、前置 Check、执行资源按优先级合取，分别投影 pending/preparing/blocked/queued/running；等待不重置 timeout，治理后重查，系列唯一 pending 且失败/超时续作。
+- HTTP/SDK/事件采用按 state 区分的轻量快照，无 hostInstance 或完整 Artifact，准确内容按 digest 查询；审计/恢复身份一致，重启不重置期限、不重复规划、不悄悄换版。
 
 ## 当前准备步骤
 
 确认[修订稿的评审焦点](./request-lifecycle-revision.md#当前评审焦点)，继续收敛递归默认值、
-未来后继的时间选法、条件等待与 recurrence 的组合及条件重查策略；崩溃恢复细节暂缓。本次为未提交验收的新 Ideal 修订；
+未来后继的时间选法、条件重查及积压/取消策略；崩溃恢复细节暂缓。本次为未提交验收的新 Ideal 修订；
 原候选通过的测试不构成本修订的实现或部署证据。

@@ -10,7 +10,7 @@
 - **After 全部是待评审草案，不是当前接口或已发布 schema。** 为便于读完整对象，
   本文暂选具体字段名、状态值和错误码；这些选择不代表已确认。
 - 每个 JSON 块都是该场景的完整对象，无省略号、伪注释、变量替换或“同上”对象。
-  可选且该状态尚不存在的字段不输出，例如初始响应没有 artifact/result/execution。
+  可选且该状态尚不存在的字段不输出，例如尚未选版的初始响应没有 artifactRef/result/execution。
   “完整例子”不表示把所有互斥状态的字段同时塞入一个对象。
 - 字段暂沿用现有 camelCase，概念 `eligible_at/received_at/series_id`
   分别写成 `eligibleAt/receivedAt/seriesId`。PENDING 暂序列化为 `pending`。
@@ -38,15 +38,19 @@
   与建议的统一 Regulation admission 输入对照，未规定新的 HTTP endpoint。
   内部持久记录不是调用方 Request，也不是公开 HTTP response。
 - Task snapshot 以 state 为判别联合，不包含 hostInstance。公共身份/时间基底相同，
-  pending/preparing/waiting/running/completed/failed/cancelled 的专属数据互不混搭。
+  pending/preparing/blocked/queued/running/completed/failed/cancelled 的专属数据互不混搭。
   Before 保留旧 hostInstance 和可选字段形状，仅用于对照。
 - preparing 的整体进展叫 `preparation`，获取是其中的 `fetch` 子步骤。
   eligible 前的提前下载是服务优化，不在 pending 中暴露顶层 prefetch/preparation；
   优化事件的具体 envelope 尚待设计。正式 `preparation.startedAt`
-  必须在 eligible 与条件满足后。`recurrence.anchor` 使用 eligible/terminated；
+  必须在 eligible 后，制品准备优先于 prerequisite 阻塞。`recurrence.anchor` 使用 eligible/terminated；
   Task 终结时间写 `terminatedAt`，保留 completed/failed/cancelled 状态及错误原因。
-- 未列 prerequisites 的已有例子表示无额外前置条件，不表示所有 Task 到 eligible
-  必然激活。有条件时见第 9 节：时间与条件独立，条件未通过仍为 pending。
+- pending 仅表示时间未到，无 reason 或专属 pending 对象。时间已到、制品未就绪为
+  preparing；时间与制品就绪、prerequisites 未满足为 blocked；前三项满足后排队为 queued。
+  第 9 节展示条件阻塞；不能把资源等待或 prerequisite 等待再次叫作 pending。
+- 所有 After snapshot 只用 artifactRef `{kind, url, digest}` 标识实际制品，
+  不内嵌完整 manifest/schema。完整内容按准确 digest 单独查询，不能重新解析 latest。
+  Before 的完整 artifact 对象保留作对照；执行 runtime/revision 等证据不能由制品查询代替。
 
 ## Request 实体与 HTTP 传输的对应
 
@@ -494,11 +498,12 @@ freshness 和可选 recurrence。历史阶段时间戳只在真实发生时提�
 
 | state | 当前状态的数据 | 必须避免的混搭 |
 |---|---|---|
-| pending | pending.reason（time/prerequisites/activation），可选 pending.conditions | 无 preparation、父 executionId、result、顶层 error |
-| preparing | preparation.startedAt、stage，可选 fetch/selection 子步骤 | 无 pending、父 executionId、最终 result |
-| waiting | 准确 artifact/language，scheduling.state（queued/reserved） | 无 preparation；queued 无执行 ID，reserved 的执行 ID 在 scheduling 内 |
-| running | artifact/language、executionId、executionStartedAt，可选 progress | 无 result、preparation、terminatedAt |
-| completed | artifact/language、执行关联/时间、result、evidence、terminatedAt | 无活跃 progress/preparation/pending 或顶层 error |
+| pending | 仅公共字段与任务属性 | 无 reason/pending 对象、preparation、父 executionId、result、顶层 error |
+| preparing | preparation.startedAt、artifacts 准备步骤，可选 fetch/selection 子步骤 | 无 conditions、父 executionId、最终 result |
+| blocked | 准确 artifactRef/language、conditions 的求值与依赖治理进展 | 无当前 preparation、父 Execution 或 result |
+| queued | 准确 artifactRef/language；已预约时可带 reservation.executionId | 无 preparation/conditions、实际执行开始时间或 result |
+| running | artifactRef/language、executionId、executionStartedAt，可选 progress | 无 result、preparation、terminatedAt |
+| completed | artifactRef/language、执行关联/时间、result、evidence、terminatedAt | 无活跃 progress/preparation/conditions 或顶层 error |
 | failed | failedFrom、error、terminatedAt；按失败阶段保留真实证据 | 不得返回成功 result，pending 失败不伪造执行关联 |
 | cancelled | error 原因、terminatedAt，可选 planningConflict | 无父 Execution、准备进展或 result |
 
@@ -506,6 +511,19 @@ freshness 和可选 recurrence。历史阶段时间戳只在真实发生时提�
 内部实例世代仍可用于所有权与迟到写入仲裁；此处不定义额外路由 envelope。
 下面的对象是各状态各自的数据类型，不是一个所有属性均可选的宽泛类型。
 JSON Schema 的互斥分支与 SDK 类型必须同时验证必需字段和禁止字段。
+
+artifactRef 在已选定分支中仅有 kind、url、digest。比如收到 Checker 的准确 digest 后，
+可在该服务挂载点下查询下面的路径（示例省略鉴权凭据）：
+
+```http
+GET /artifacts/sha256%3Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa HTTP/1.1
+Host: 127.0.0.1:8080
+```
+
+完整 manifest、runtime 声明和文档等由准确制品查询/API 提供；
+任务 snapshot 本身不内嵌这些定义。查询仍需来源授权；内容不可用时显式失败，
+不能改为 resolve `latest.tgz` 并把新内容冒充原 digest。
+这是制品定义查询，不重算或替代该 Task 的实际运行环境、worker revision 和选版证据。
 
 ### 3.1 Check 创建响应：accepted → pending
 
@@ -527,7 +545,7 @@ After 采用快照响应；新路由独立设计，不承担旧 endpoint 的兼�
 ```
 
 **After：** 对应 1.1 的 Request。pending 时没有 Execution；
-pending.reason 为 time，只展示当前等待。预取安排属于服务优化，不把它当作正式阶段。
+state 已表示时间未到，不再增加 reason 或 pending 对象。预取安排属于服务优化。
 
 ```json
 {
@@ -543,9 +561,6 @@ pending.reason 为 time，只展示当前等待。预取安排属于服务优化
   "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
-  },
-  "pending": {
-    "reason": "time"
   }
 }
 ```
@@ -567,7 +582,8 @@ pending.reason 为 time，只展示当前等待。预取安排属于服务优化
 
 **After：** 对应 1.2，调用使用 `Idempotency-Key: 01M60000000000000000000018`；
 series 等于独立分配的 Task ID，eligible 等于 received。
-初始快照尚未激活，pending.reason 为 activation；不伪造已进入准备阶段。
+收到时已经 eligible，所以初始快照直接为 preparing，不返回 reason=activation 的 pending。
+本例制品尚未正式选定，没有 artifactRef；不是要求所有创建响应都从 preparing 开始。
 
 ```json
 {
@@ -575,7 +591,7 @@ series 等于独立分配的 Task ID，eligible 等于 received。
   "requestId": "01M60000000000000000000018",
   "seriesId": "01M6000000000000000000001A",
   "revision": 1,
-  "state": "pending",
+  "state": "preparing",
   "receivedAt": "2026-10-29T03:20:00.000Z",
   "eligibleAt": "2026-10-29T03:20:00.000Z",
   "deadlineAt": "2026-10-29T03:21:00.000Z",
@@ -584,17 +600,19 @@ series 等于独立分配的 Task ID，eligible 等于 received。
     "periodMs": 60000,
     "anchor": "terminated"
   },
-  "pending": {
-    "reason": "activation"
+  "preparation": {
+    "startedAt": "2026-10-29T03:20:00.000Z",
+    "stage": "fetch"
   }
 }
 ```
 
-### 3.3 Waiting：只展示调度等待，不保留 preparation 进展
+### 3.3 Queued：只展示资源排队，不保留 preparation 进展
 
-下面是独立的队列等待场景。Before 已预约一个执行；After 示例仍在 queued，
-没有可报告的执行 ID。若 After 为 reserved，scheduling 必须改用
-包含 executionId 的 reserved 分支，不在 queued 中填写空值或虚构身份。
+下面是独立的队列等待场景。Before 的 waiting 已预约一个执行；
+After 统一叫 queued，示例尚无执行 ID，因此不添加排队 reason 或空预约对象。
+已预约而尚未开始时仍为 queued，可带 reservation.executionId，
+不能仅因获得预约就报告 running。
 提前获取、校验和回退已结束，快照只保留真实准备时间；决定证据仍保存在服务记录中。
 
 **Before：**
@@ -641,7 +659,7 @@ series 等于独立分配的 Task ID，eligible 等于 received。
   "requestId": "01M60000000000000000000002",
   "seriesId": "01M6000000000000000000001D",
   "revision": 5,
-  "state": "waiting",
+  "state": "queued",
   "receivedAt": "2026-10-29T03:20:00.000Z",
   "eligibleAt": "2026-10-29T03:21:00.000Z",
   "deadlineAt": "2026-10-29T03:21:30.000Z",
@@ -650,32 +668,13 @@ series 等于独立分配的 Task ID，eligible 等于 received。
     "periodMs": 60000,
     "anchor": "eligible"
   },
-  "artifact": {
-    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "source": "https://example.test/checker/latest.tgz",
-    "checkedAt": "2026-10-29T03:19:00.000Z",
-    "transportDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "manifest": {
-      "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json",
-      "runtime": {
-        "type": "node",
-        "minVersion": "22.13.0"
-      },
-      "entry": "checker.cjs",
-      "subjectSchema": {
-        "type": "object"
-      },
-      "problems": [],
-      "languages": [
-        "en"
-      ]
-    }
-  },
   "language": "en",
   "preparationStartedAt": "2026-10-29T03:21:00.001Z",
   "preparationCompletedAt": "2026-10-29T03:21:00.009Z",
-  "scheduling": {
-    "state": "queued"
+  "artifactRef": {
+    "kind": "checker",
+    "url": "https://example.test/checker/latest.tgz",
+    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }
 ```
@@ -737,32 +736,16 @@ Check 没有任意内部日志进展，本例不添加空的 progress；执行�
     "periodMs": 60000,
     "anchor": "eligible"
   },
-  "artifact": {
-    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "source": "https://example.test/checker/latest.tgz",
-    "checkedAt": "2026-10-29T03:19:00.000Z",
-    "transportDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "manifest": {
-      "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json",
-      "runtime": {
-        "type": "node",
-        "minVersion": "22.13.0"
-      },
-      "entry": "checker.cjs",
-      "subjectSchema": {
-        "type": "object"
-      },
-      "problems": [],
-      "languages": [
-        "en"
-      ]
-    }
-  },
   "language": "en",
   "executionId": "01M60000000000000000000001",
   "executionStartedAt": "2026-10-29T03:21:00.010Z",
   "preparationStartedAt": "2026-10-29T03:21:00.001Z",
-  "preparationCompletedAt": "2026-10-29T03:21:00.009Z"
+  "preparationCompletedAt": "2026-10-29T03:21:00.009Z",
+  "artifactRef": {
+    "kind": "checker",
+    "url": "https://example.test/checker/latest.tgz",
+    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
 }
 ```
 
@@ -810,16 +793,14 @@ Task 快照只说明当前等待，不包含 prefetch 或 preparing 对象，不
   "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
-  },
-  "pending": {
-    "reason": "time"
   }
 }
 ```
 
 ### 4.2 Completed Check：时间、身份与选版证据随最终结果保留
 
-本例给出完整 manifest、业务 payload 和执行环境，不用占位对象替代它们。
+Before 给出完整 manifest、业务 payload 和执行环境；After 用准确 artifactRef 替代
+完整制品，业务结果与实际执行环境证据仍完整展示。
 两侧为各自协议下的合成成功执行；Before 不是 4.1 那个失败 Task 的后续状态。
 runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对象。
 
@@ -876,7 +857,8 @@ runtime.configuration 是现有协议中的规范 JSON 字符串，不改为对�
 }
 ```
 
-**After：** Task 的 terminatedAt 与 Execution 完成时间分开，旧 checkedAt 保留原值。
+**After：** Task 的 terminatedAt 与 Execution 完成时间分开。
+checkedAt、transportDigest 和 manifest 从准确制品查询获取，不逐快照重复传输。
 终态没有 preparation/prefetch 活跃进展；仅保留实际准备时间戳及
 evidence.selection 中的准确选择、回退来源和更新错误。
 
@@ -895,27 +877,6 @@ evidence.selection 中的准确选择、回退来源和更新错误。
   "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
-  },
-  "artifact": {
-    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "source": "https://example.test/checker/latest.tgz",
-    "checkedAt": "2026-10-29T03:19:00.000Z",
-    "transportDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "manifest": {
-      "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json",
-      "runtime": {
-        "type": "node",
-        "minVersion": "22.13.0"
-      },
-      "entry": "checker.cjs",
-      "subjectSchema": {
-        "type": "object"
-      },
-      "problems": [],
-      "languages": [
-        "en"
-      ]
-    }
   },
   "language": "en",
   "executionId": "01M60000000000000000000001",
@@ -951,7 +912,12 @@ evidence.selection 中的准确选择、回退来源和更新错误。
     }
   },
   "preparationStartedAt": "2026-10-29T03:21:00.001Z",
-  "preparationCompletedAt": "2026-10-29T03:21:00.009Z"
+  "preparationCompletedAt": "2026-10-29T03:21:00.009Z",
+  "artifactRef": {
+    "kind": "checker",
+    "url": "https://example.test/checker/latest.tgz",
+    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
 }
 ```
 
@@ -961,7 +927,7 @@ evidence.selection 中的准确选择、回退来源和更新错误。
 result、观察进展、evidence.checks[].snapshot，展示状态联合也应用于嵌套证据。
 After 的最终观察进展归入 evidence.observationProgress，不再作为当前 progress。
 子 Check 是本次组合观察的一次性需求，不自动继承根 Probe 的递归策略或 series；
-其归属通过 invocation 和父观察关系表达。
+其归属通过 invocation 和父观察关系表达，嵌套 snapshot 同样只携带 artifactRef。
 结果和 evidence 中的 bindings 是服务生成的准确观察记录，保留现有结果形状，
 不是要求调用方在普通 Probe Request 中再提供一份输入。动态依赖的记录仍然必要，
 而其公开输入能力与恢复时是否传回绑定另议。
@@ -1142,35 +1108,6 @@ After 的最终观察进展归入 evidence.observationProgress，不再作为当
     "periodMs": 60000,
     "anchor": "terminated"
   },
-  "artifact": {
-    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    "source": "https://example.test/objective/v1.tgz",
-    "checkedAt": "2026-10-29T03:20:00.100Z",
-    "manifest": {
-      "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/objective/v1.json",
-      "subjectSchema": {
-        "type": "object"
-      },
-      "languages": [
-        "en"
-      ],
-      "levels": [
-        {
-          "id": "ready",
-          "checks": [
-            "pass"
-          ]
-        }
-      ],
-      "checkers": {
-        "pass": {
-          "url": "https://example.test/checker/v1.tgz",
-          "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "subjectMapping": "$"
-        }
-      }
-    }
-  },
   "language": "en",
   "executionId": "01M60000000000000000000017",
   "executionStartedAt": "2026-10-29T03:20:00.200Z",
@@ -1209,26 +1146,6 @@ After 的最终观察进展归入 evidence.observationProgress，不再作为当
           "deadlineAt": "2026-10-29T03:22:00.210Z",
           "terminatedAt": "2026-10-29T03:20:01.010Z",
           "freshness": "started-after-eligible",
-          "artifact": {
-            "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            "source": "https://example.test/checker/v1.tgz",
-            "checkedAt": "2026-10-29T03:20:00.150Z",
-            "manifest": {
-              "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json",
-              "runtime": {
-                "type": "node",
-                "minVersion": "22.13.0"
-              },
-              "entry": "checker.cjs",
-              "subjectSchema": {
-                "type": "object"
-              },
-              "problems": [],
-              "languages": [
-                "en"
-              ]
-            }
-          },
           "language": "en",
           "executionId": "01M6000000000000000000000A",
           "executionStartedAt": "2026-10-29T03:20:00.300Z",
@@ -1257,7 +1174,12 @@ After 的最终观察进展归入 evidence.observationProgress，不再作为当
             }
           },
           "preparationStartedAt": "2026-10-29T03:20:00.220Z",
-          "preparationCompletedAt": "2026-10-29T03:20:00.250Z"
+          "preparationCompletedAt": "2026-10-29T03:20:00.250Z",
+          "artifactRef": {
+            "kind": "checker",
+            "url": "https://example.test/checker/v1.tgz",
+            "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
         }
       }
     ],
@@ -1307,7 +1229,12 @@ After 的最终观察进展归入 evidence.observationProgress，不再作为当
     }
   },
   "preparationStartedAt": "2026-10-29T03:20:00.010Z",
-  "preparationCompletedAt": "2026-10-29T03:20:00.180Z"
+  "preparationCompletedAt": "2026-10-29T03:20:00.180Z",
+  "artifactRef": {
+    "kind": "objective",
+    "url": "https://example.test/objective/v1.tgz",
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  }
 }
 ```
 
@@ -1316,7 +1243,7 @@ After 的最终观察进展归入 evidence.observationProgress，不再作为当
 独立场景展示状态顺序：Before 接收后立即 preparing；
 After 预优化可以很早开始；本例没有 prerequisites，Task 到 03:21:00Z 才正式 preparing。
 以下展示提前 fetch 未成功、当前进入 select 步骤判断候选/回退的分支，
-不假装已经有正式选中的 artifact 或 execution。
+不假装已经有正式选中的 artifactRef 或 execution。
 
 **Before：**
 
@@ -1674,9 +1601,6 @@ After 建议 HTTP 409，明确拒绝，不转而取消另一个 pending Task：
     "recurrence": {
       "periodMs": 60000,
       "anchor": "eligible"
-    },
-    "pending": {
-      "reason": "time"
     }
   }
 }
@@ -1742,9 +1666,6 @@ Coordinator 的持久事件已存在，不因此被删除或当作同形 Check/P
     "recurrence": {
       "periodMs": 60000,
       "anchor": "eligible"
-    },
-    "pending": {
-      "reason": "time"
     }
   },
   "successorPlanning": {
@@ -1790,9 +1711,6 @@ recovery 对象。内部仍须防止旧实例迟到写入；此处不定义持�
   "recurrence": {
     "periodMs": 60000,
     "anchor": "eligible"
-  },
-  "pending": {
-    "reason": "time"
   }
 }
 ```
@@ -1879,7 +1797,7 @@ recovery 对象。内部仍须防止旧实例迟到写入；此处不定义持�
 也可用于 prerequisites。检查的 freshness/有效期与重查策略仍待收敛，
 不能仅因没有在此例增加字段就认定历史结果永久可用。
 
-### 9.2 父 Task：时间已到，但条件未通过
+### 9.2 父 Task：时间与制品已就绪，但条件未通过
 
 **Before：** 旧模型受理后即可准备，没有统一条件等待状态。
 
@@ -1894,9 +1812,10 @@ recovery 对象。内部仍须防止旧实例迟到写入；此处不定义持�
 }
 ```
 
-**After：** 服务在 04:20:02Z 记录条件求值。父 Task 已达到时间资格，但条件 0 未通过；
-条件 1 通过也不能使父任务推进。没有父 Execution、没有正式 preparation。
-pending.conditions 是完整的条件状态投影，不是子 Task 的完整 snapshot；
+**After：** 服务在 04:20:02Z 记录条件求值。时间和 artifacts 均已就绪，
+但条件 0 未通过，因此父 Task 为 blocked；条件 1 通过不能使其推进。
+正式准备已经完成，只保留其时间戳；没有父 Execution 或当前 preparation 对象。
+conditions 是 blocked 的完整条件状态投影，不是子 Task 的完整 snapshot；
 子执行的原始证据可由关联 taskId/executionId 查询，不能伪装成父业务结果。
 
 ```json
@@ -1905,32 +1824,37 @@ pending.conditions 是完整的条件状态投影，不是子 Task 的完整 sna
   "requestId": "01M60000000000000000000030",
   "seriesId": "01M60000000000000000000031",
   "revision": 5,
-  "state": "pending",
+  "state": "blocked",
   "receivedAt": "2026-10-29T04:19:30.000Z",
   "eligibleAt": "2026-10-29T04:20:00.000Z",
   "deadlineAt": "2026-10-29T04:21:00.000Z",
   "freshness": "started-after-eligible",
-  "pending": {
-    "reason": "prerequisites",
-    "conditions": {
-      "state": "not-met",
-      "evaluatedAt": "2026-10-29T04:20:02.000Z",
-      "checks": [
-        {
-          "index": 0,
-          "taskId": "01M60000000000000000000034",
-          "executionId": "01M60000000000000000000035",
-          "state": "not-met"
-        },
-        {
-          "index": 1,
-          "taskId": "01M60000000000000000000037",
-          "executionId": "01M60000000000000000000038",
-          "state": "passed"
-        }
-      ]
-    }
-  }
+  "conditions": {
+    "state": "not-met",
+    "evaluatedAt": "2026-10-29T04:20:02.000Z",
+    "checks": [
+      {
+        "index": 0,
+        "taskId": "01M60000000000000000000034",
+        "executionId": "01M60000000000000000000035",
+        "state": "not-met"
+      },
+      {
+        "index": 1,
+        "taskId": "01M60000000000000000000037",
+        "executionId": "01M60000000000000000000038",
+        "state": "passed"
+      }
+    ]
+  },
+  "artifactRef": {
+    "kind": "objective",
+    "url": "https://example.test/objective/app-v1.tgz",
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "language": "en",
+  "preparationStartedAt": "2026-10-29T04:20:00.000Z",
+  "preparationCompletedAt": "2026-10-29T04:20:00.001Z"
 }
 ```
 
@@ -2023,13 +1947,13 @@ Coordinator 根据服务治理策略决定是否创建 Regulation；目标可以
 }
 ```
 
-### 9.5 治理后重新检查：只有全部通过才准备
+### 9.5 治理后重新检查：全部通过后才进入资源调度
 
-**Before：** 9.2 的父 pending 快照代表此前未满足条件的状态。
-**After：** 下面完整快照在重新检查后进入 preparing。两个条件的重新求值应在
-先前 pending 事件中记录，不能把旧不通过结果或“Regulation 已结束”改写成 passed。
-当前快照不再携带 pending.conditions，只保留 prerequisitesSatisfiedAt 时间戳，
-并展示 preparation 当前步骤；eligible/deadline 没有因等待而顺延。
+**Before：** 9.2 的父 blocked 快照代表此前未满足条件的状态。
+**After：** 重查通过后制品不需要重新准备，若暂未获得资源则进入 queued。
+两个条件的重新求值应在条件事件/证据中记录，不能把旧不通过结果或
+“Regulation 已结束”改写成 passed。当前快照不再携带 conditions，
+只保留 prerequisitesSatisfiedAt 和实际准备时间戳；eligible/deadline 不顺延。
 
 ```json
 {
@@ -2037,21 +1961,26 @@ Coordinator 根据服务治理策略决定是否创建 Regulation；目标可以
   "requestId": "01M60000000000000000000030",
   "seriesId": "01M60000000000000000000031",
   "revision": 10,
-  "state": "preparing",
+  "state": "queued",
   "receivedAt": "2026-10-29T04:19:30.000Z",
   "eligibleAt": "2026-10-29T04:20:00.000Z",
   "deadlineAt": "2026-10-29T04:21:00.000Z",
   "freshness": "started-after-eligible",
-  "preparation": {
-    "startedAt": "2026-10-29T04:20:10.001Z",
-    "stage": "validate"
+  "prerequisitesSatisfiedAt": "2026-10-29T04:20:10.000Z",
+  "artifactRef": {
+    "kind": "objective",
+    "url": "https://example.test/objective/app-v1.tgz",
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
-  "prerequisitesSatisfiedAt": "2026-10-29T04:20:10.000Z"
+  "language": "en",
+  "preparationStartedAt": "2026-10-29T04:20:00.000Z",
+  "preparationCompletedAt": "2026-10-29T04:20:00.001Z"
 }
 ```
 
-本例没有自行决定条件证据的永久有效性、条件失败的重查频率或 recurrence
-在条件阻塞期间的后继规划规则；这些仍须收敛，不能用示例绕过唯一 pending 约束。
+到 eligible 已释放 pending 槽位，blocked 不与未来 pending 后继竞争。
+条件证据有效期、重查频率、后继条件继承和未完成轮次积压限额仍须收敛；
+不能用唯一 pending 约束代替整个系列的容量管理。
 
 ## 评审时不要由示例推定的事项
 
@@ -2065,8 +1994,9 @@ Coordinator 根据服务治理策略决定是否创建 Regulation；目标可以
 - durable schema、历史游标和运行中 Execution 的崩溃重试策略（暂缓讨论）。
 - 是否需要独立的调用方动态依赖固定能力；若需要可称 dependencyBindings，
   不以根 Objective 的静态 Checker 绑定作为保留重复输入的理由。
-- 条件等待与 eligible recurrence/唯一 pending 的组合、条件 freshness/有效期、
-  首次与重查时机、后继 prerequisites 继承及依赖治理策略的具体配置。
+- 条件 freshness/有效期、首次与重查时机、后继 prerequisites 继承、
+  未完成轮次积压限额及依赖治理策略的具体配置。
+- 是否扩展 preparing/blocked/queued 取消权限；当前仍仅取消 pending。
 
 Request ID 为幂等 ID、Task ID 独立、series 默认取首个 Task ID、
 eligible 后进入正式 PREPARING、terminated 包括失败/超时、

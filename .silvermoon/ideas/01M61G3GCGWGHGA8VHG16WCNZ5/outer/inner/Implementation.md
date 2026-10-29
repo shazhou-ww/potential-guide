@@ -22,6 +22,8 @@
 失败超时续作及错过周期不补齐；恢复细节后续讨论，不以实现细节代替设计决定。
 Task prerequisites 用独立子 Check 求值，时间与条件分别仲裁；结构化治理需求交由
 Coordinator 按授权处理，完成治理后重查，服务保留 origin 因果审计。
+按时间、artifacts、prerequisites、执行资源优先级投影
+pending/preparing/blocked/queued/running，pending 无专属 reason。
 
 ### I-S03: 对齐 SDK 与现有业务入口
 
@@ -32,6 +34,8 @@ Regulation 调用方改用与 Probe 相同的 Objective URL/digest 引用，由�
 提供 series 动态事件和可恢复身份，不以旧协议兼容要求约束新结构。
 Task snapshot 在 HTTP/SDK/事件中统一为 state 判别联合，移除公共 hostInstance；
 preparation 仅用于准备阶段，终态保留必要时间戳和决策证据，不携带活跃阶段进展。
+根及嵌套 snapshot 都仅携带准确 artifactRef，完整 Artifact 按 digest 单独查询，
+不得用 latest 替代原内容或用 manifest 代替实际执行证据。
 
 ## Acceptance criteria
 
@@ -45,7 +49,7 @@ preparation 仅用于准备阶段，终态保留必要时间戳和决策证据�
 
 确定性时间与竞争测试证明 eligible、递归锚点、唯一 pending、取消/激活竞态及
 freshness 归并成立；故障恢复测试证明不重复规划、不刷新期限、不复活终态。
-条件等待测试证明父 pending 不阻塞条件子 Check、eligible 后等待消耗预算，
+条件等待测试证明父 blocked 不阻塞条件子 Check、eligible 后等待消耗预算，
 检查故障不冒充不通过、治理结束不冒充条件通过，取消清理不伤共享 owner。
 
 ### I-AC03: 调用面一致
@@ -54,3 +58,5 @@ Router、SDK、Pilot/regulator 与 Coordinator 的 series 订阅和持久恢复�
 覆盖新轮次动态加入及授权边界；最终执行 pnpm check，不以旧 gate 或类型检查替代运行证据。
 状态联合的 schema/运行校验证明 completed 必有结果、pending 不带父 Execution，
 各失败阶段不虚构未发生的步骤；准备前的 fetch 优化不伪造正式准备时间。
+覆盖八种 state 分支、初始已 eligible 不返回 pending、元数据从快照移除后仍能
+通过准确引用查询原制品；事件与嵌套证据不重复携带 manifest。
