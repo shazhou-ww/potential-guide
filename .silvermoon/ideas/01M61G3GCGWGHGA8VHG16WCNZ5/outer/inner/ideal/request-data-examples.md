@@ -40,6 +40,8 @@
 - eligible 前的提前下载用 `prefetch` 展示，Task 仍 pending；正式 `preparation`
   必须在 eligible 后。`recurrence.anchor` 使用 eligible/terminated；
   Task 终结时间写 `terminatedAt`，保留 completed/failed/cancelled 状态及错误原因。
+- 未列 prerequisites 的已有例子表示无额外前置条件，不表示所有 Task 到 eligible
+  必然激活。有条件时见第 9 节：时间与条件独立，条件未通过仍为 pending。
 
 ## Request 实体与 HTTP 传输的对应
 
@@ -1146,7 +1148,7 @@ result、progress、evidence.checks[].snapshot，展示公共快照改动也进�
 ### 4.4 正式 PREPARING：一定在 eligible 后
 
 独立场景展示状态顺序：Before 接收后立即 preparing；
-After 预优化可以很早开始，但 Task 到 03:21:00Z 才正式 preparing。
+After 预优化可以很早开始；本例没有 prerequisites，Task 到 03:21:00Z 才正式 preparing。
 以下展示预优化未成功的分支，不假装已经有 artifact 或 execution。
 
 **Before：**
@@ -1645,6 +1647,277 @@ recovery 字段是新建议，不意味着允许自动恢复任意已经运行�
 }
 ```
 
+## 9. Task prerequisites：Check 条件与动态治理
+
+以下实体字段布局和进展名称为新设计草案。prerequisites 是 Check 声明数组，
+全部通过才能激活父 Task；每个元素不是已经受理的 Request，因此不预先塞入 requestId。
+实际求值时由服务生成独立 Request/Task 身份。这里选择两个条件展示集合，
+不需要将一个条件再包装成 Objective；built-in Objective 达标 Checker 是普通 Checker
+契约的一种实现，URL 为合成例子，不声明已发布该内置制品。
+
+### 9.1 创建 Probe：完整 Before / After
+
+**Before：** 旧 Probe body，没有 prerequisites；用于这个对照调用的幂等 header 为
+`Idempotency-Key: 01M60000000000000000000030`。
+
+```json
+{
+  "objective": {
+    "url": "https://example.test/objective/app-v1.tgz",
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "subject": {
+    "root": "D:\\project"
+  },
+  "language": "en",
+  "freshness": "started-after-request",
+  "timeoutMs": 60000
+}
+```
+
+**After：** 完整 Request 实体，HTTP 仍把 requestId 放在同值 header。
+条件 0 等待依赖 Objective 的 subject 达到 ready，条件 1 检查本地许可文件。
+它们属于这次 Task，不是 app Objective 的静态依赖，不改变该 Objective 的 digest。
+未指定 recurrence，避免用这个例子擅自决定条件阻塞时如何周期规划。
+
+```json
+{
+  "requestId": "01M60000000000000000000030",
+  "objective": {
+    "url": "https://example.test/objective/app-v1.tgz",
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "subject": {
+    "root": "D:\\project"
+  },
+  "language": "en",
+  "eligibleAt": "2026-10-29T04:20:00.000Z",
+  "freshness": "started-after-eligible",
+  "timeoutMs": 60000,
+  "prerequisites": [
+    {
+      "checker": {
+        "url": "https://example.test/builtin/objective-level-v1.tgz",
+        "digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      "subject": {
+        "objective": {
+          "url": "https://example.test/objective/database-v1.tgz",
+          "digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        },
+        "subject": {
+          "database": "development"
+        },
+        "expectedLevelId": "ready"
+      }
+    },
+    {
+      "checker": {
+        "url": "https://example.test/checker/file-ready-v1.tgz",
+        "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "subject": {
+        "path": "D:\\project\\ready.flag"
+      }
+    }
+  ]
+}
+```
+
+`expectedLevelId`、文件 path 等是这些 Checker 自己的 subject schema，
+不是通用调度器根据 subject 字段名猜出来的特殊语法。其他自定义 Checker
+也可用于 prerequisites。检查的 freshness/有效期与重查策略仍待收敛，
+不能仅因没有在此例增加字段就认定历史结果永久可用。
+
+### 9.2 父 Task：时间已到，但条件未通过
+
+**Before：** 旧模型受理后即可准备，没有统一条件等待状态。
+
+```json
+{
+  "taskId": "01M60000000000000000000031",
+  "hostInstance": "01M60000000000000000000032",
+  "revision": 2,
+  "state": "preparing",
+  "acceptedAt": "2026-10-29T04:19:30.000Z",
+  "freshness": "started-after-request"
+}
+```
+
+**After：** 服务在 04:20:02Z 记录条件求值。父 Task 已达到时间资格，但条件 0 未通过；
+条件 1 通过也不能使父任务推进。没有父 Execution、没有正式 preparation。
+conditionStatus 是完整的条件状态投影，不是子 Task 的完整 snapshot；
+子执行的原始证据可由关联 taskId/executionId 查询，不能伪装成父业务结果。
+
+```json
+{
+  "taskId": "01M60000000000000000000031",
+  "requestId": "01M60000000000000000000030",
+  "seriesId": "01M60000000000000000000031",
+  "hostInstance": "01M60000000000000000000032",
+  "revision": 5,
+  "state": "pending",
+  "receivedAt": "2026-10-29T04:19:30.000Z",
+  "eligibleAt": "2026-10-29T04:20:00.000Z",
+  "deadlineAt": "2026-10-29T04:21:00.000Z",
+  "freshness": "started-after-eligible",
+  "conditionStatus": {
+    "state": "not-met",
+    "evaluatedAt": "2026-10-29T04:20:02.000Z",
+    "checks": [
+      {
+        "index": 0,
+        "taskId": "01M60000000000000000000034",
+        "executionId": "01M60000000000000000000035",
+        "state": "not-met"
+      },
+      {
+        "index": 1,
+        "taskId": "01M60000000000000000000037",
+        "executionId": "01M60000000000000000000038",
+        "state": "passed"
+      }
+    ]
+  }
+}
+```
+
+### 9.3 条件子 Check：可执行的完整 Request 及依赖需求
+
+**Before：** 没有由统一 Task prerequisites 产生的子 Request；不能用空对象冒充。
+已有 CheckerResult 支持动态 requirements，本次复用它，不重复发明一种自由文本协议。
+
+**After：** 从条件 0 生成的完整 Check Request。它不继承父 prerequisites，
+也不使用父 series；自己 eligible 后可以准备和执行，避免父子互等。
+本例在父 eligible 时受理子检查，30 秒预算不超过父剩余 60 秒；
+是否支持更早检查以及通用预算分配策略不由这个示例定稿。
+
+```json
+{
+  "requestId": "01M60000000000000000000033",
+  "checker": {
+    "url": "https://example.test/builtin/objective-level-v1.tgz",
+    "digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  },
+  "subject": {
+    "objective": {
+      "url": "https://example.test/objective/database-v1.tgz",
+      "digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    },
+    "subject": {
+      "database": "development"
+    },
+    "expectedLevelId": "ready"
+  },
+  "language": "en",
+  "eligibleAt": "2026-10-29T04:20:00.000Z",
+  "freshness": "started-after-eligible",
+  "timeoutMs": 30000
+}
+```
+
+HTTP 的 `Idempotency-Key: 01M60000000000000000000033` 与实体一致；
+服务独立分配 Task `01M60000000000000000000034`，默认 series 为同一个 Task ID。
+下面是该 Check 的完整结果 payload：有效不通过且提供结构化治理目标，
+Check Task 本身是 completed，而不是执行 failed。这里不是完整 Task Response，
+也没有混入 execute 的 status/message envelope。
+
+```json
+{
+  "ok": false,
+  "problems": [],
+  "requirements": [
+    {
+      "objective": {
+        "kind": "objective",
+        "url": "https://example.test/objective/database-v1.tgz",
+        "digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "subject": {
+        "database": "development"
+      },
+      "expectedLevelId": "ready"
+    }
+  ]
+}
+```
+
+Coordinator 根据服务治理策略决定是否创建 Regulation；目标可以由需求推导，
+权限、Agent 配置与预算不能由这个结果自行授予。若未授权则不启动治理，
+父任务继续等待或最终按原期限终结。若 Check 执行失败，则显式展示故障，
+不能捏造上述不通过 payload 或以故障授予治理权限。
+
+### 9.4 Origin：因果审计不等于激活条件
+
+只比较完整的 origin 对象，不把它当作 Request body。
+**Before：** Coordinator 表示依赖产生原因时引用上游 Request：
+
+```json
+{
+  "kind": "dependency",
+  "consumerRequestRef": "01M60000000000000000000030"
+}
+```
+
+**After：** 服务端为条件 Check Task 记录来源，关联父 Task 与条件项。
+`prerequisite` kind 与 index 命名为草案；不是外部 Request 可任意声明的治理权限。
+依赖 Regulation 还应能追溯产生需求的 Check Task，具体审计形状以后确定。
+
+```json
+{
+  "kind": "prerequisite",
+  "parentTaskId": "01M60000000000000000000031",
+  "prerequisiteIndex": 0
+}
+```
+
+### 9.5 治理后重新检查：只有全部通过才准备
+
+**Before：** 9.2 的父 pending 快照代表此前未满足条件的状态。
+**After：** 下面完整快照在重新检查后进入 preparing。新 Check Task ID 表示新的求值，
+不能直接把旧不通过结果或“Regulation 已结束”改写成 passed。
+两个条件均获得本轮有效通过结果；eligible/deadline 没有因等待而顺延。
+
+```json
+{
+  "taskId": "01M60000000000000000000031",
+  "requestId": "01M60000000000000000000030",
+  "seriesId": "01M60000000000000000000031",
+  "hostInstance": "01M60000000000000000000032",
+  "revision": 10,
+  "state": "preparing",
+  "receivedAt": "2026-10-29T04:19:30.000Z",
+  "eligibleAt": "2026-10-29T04:20:00.000Z",
+  "deadlineAt": "2026-10-29T04:21:00.000Z",
+  "freshness": "started-after-eligible",
+  "conditionStatus": {
+    "state": "passed",
+    "evaluatedAt": "2026-10-29T04:20:10.000Z",
+    "checks": [
+      {
+        "index": 0,
+        "taskId": "01M6000000000000000000003A",
+        "executionId": "01M6000000000000000000003B",
+        "state": "passed"
+      },
+      {
+        "index": 1,
+        "taskId": "01M6000000000000000000003D",
+        "executionId": "01M6000000000000000000003E",
+        "state": "passed"
+      }
+    ]
+  },
+  "preparation": {
+    "state": "running",
+    "startedAt": "2026-10-29T04:20:10.001Z"
+  }
+}
+```
+
+本例没有自行决定条件证据的永久有效性、条件失败的重查频率或 recurrence
+在条件阻塞期间的后继规划规则；这些仍须收敛，不能用示例绕过唯一 pending 约束。
+
 ## 评审时不要由示例推定的事项
 
 这些完整对象用于看清字段之间的关系，不是绕过待决项的定稿：
@@ -1657,6 +1930,8 @@ recovery 字段是新建议，不意味着允许自动恢复任意已经运行�
 - durable schema、历史游标和运行中 Execution 的崩溃重试策略（暂缓讨论）。
 - 是否需要独立的调用方动态依赖固定能力；若需要可称 dependencyBindings，
   不以根 Objective 的静态 Checker 绑定作为保留重复输入的理由。
+- 条件等待与 eligible recurrence/唯一 pending 的组合、条件 freshness/有效期、
+  首次与重查时机、后继 prerequisites 继承及依赖治理策略的具体配置。
 
 Request ID 为幂等 ID、Task ID 独立、series 默认取首个 Task ID、
 eligible 后进入正式 PREPARING、terminated 包括失败/超时、

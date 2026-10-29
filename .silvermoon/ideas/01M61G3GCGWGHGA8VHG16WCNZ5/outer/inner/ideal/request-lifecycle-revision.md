@@ -34,6 +34,7 @@ Request 携带 `eligible_at`、`recurrence` 和可选 `series_id`，成功受理
 | 后继身份 | Coordinator 已有确定性后继引用，Check/Probe 没有递归需求生成。 | 每轮新 Request/Task 身份，继承 series ID；重试和恢复不重复分配同一轮。 |
 | Probe bindings | 当前输入 bindings 同时可固定根 Objective 与运行时依赖，旧示例重复传入根 digest。 | 普通 Probe 只提供根引用，不再重复传根或静态 Checker bindings；动态依赖选择由服务记录。 |
 | Regulation Objective | 当前 Coordinator 调用输入需要完整 PilotSpec；其存储元素另用 targetKey/objectiveRevisionKey。 | 调用方输入改为与 Probe 一致的 `objective: {url, digest?}` 加 subject；服务解析后再构造内部定义与存储引用。 |
+| 前置条件 | Check/Probe 创建输入没有统一的 Task 前置 Check 集合。 | Request 可携带 prerequisites，Task 保存每个条件的 Check 定义、实际判断及依赖关系；不写入 Objective 制品。 |
 
 **调用输入对称：** Check 用 `checker: {url, digest?}`，Probe 与 Regulation
 都用 `objective: {url, digest?}`。不让 Regulation 调用方提前物化 Objective、
@@ -98,15 +99,61 @@ series 默认复用首个 Task ID 是明确例外。ULID 时间部分不用于 f
 **已确认状态顺序：**
 
 ```text
-PENDING → 到达 eligible → PREPARING → 等待/执行 → 终态
+PENDING → 时间达到 eligible 且 prerequisites 全部通过 → PREPARING → 等待/执行 → 终态
 ```
 
-到 eligible 即可原子激活 Task 并释放 pending 槽位，不需要预优化先完成；
+没有 prerequisites 时，到 eligible 即可原子激活 Task 并释放 pending 槽位；
+有条件时，时间与条件独立判断，时间已到但条件不满足仍为 PENDING。
+满足全部条件并且尚未超时时才原子激活，不需要预优化先完成；
 正式准备未完成则在 PREPARING 继续，消耗原 eligible 锚定的预算。
 预下载/更新失败可提前报告，但优化失败不直接把 pending Task 终结，
 正式 PREPARING 再依据成果及 fallback 策略判定准入。
 Request 自身解析失败没有 Task，与 Task 正式准备失败分开。
 已过 deadline 的 Task 直接以超时终结，不为了经过 PREPARING 而执行无效工作。
+
+### 2.1 Task prerequisites：以 Check 表达动态条件
+
+| 修改点 | Before | After |
+|---|---|---|
+| 声明位置 | 早期曾将静态 prerequisite 放在 Objective；当前候选已移除，仍有业务运行时依赖需求。 | 给具体 Task 增加 prerequisites Check 集合，同一 Objective 的不同 Task 可以等待不同条件，不改变制品 digest。 |
+| 条件表达 | 旧 origin 的 dependency 只说明需求产生原因，不是完整条件谓词。 | 用 Checker 引用与 subject 表达条件，初版采用所有 Check 通过；Objective 达到某 level 是一种 built-in Checker。 |
+| 不满足 | 原候选未提供统一的条件 PENDING 跟踪。 | 保持 PENDING，记录检查结果；Checker 可返回结构化 Objective/subject/expectedLevelId 需求，不能靠自由文本猜治理规则。 |
+| 唤醒 | Coordinator 已有依赖记录，但没有通用前置 Check 条件模型。 | 调度层维护等待方引用和反向索引，相关事件仅触发重新求值，不直接把等待方改为可运行。 |
+| 来源审计 | origin 包括 external、dependency、recurrence。 | 服务继续记录创建因果，按独立 Task 身份关联父/前驱；不把 origin 等同于 prerequisites，也不要求外部伪造内部来源。 |
+
+**条件求值：**
+
+```text
+可离开 PENDING = now >= eligible_at
+             且 prerequisites 中所有 Check 得到有效通过结果
+             且 now < deadline_at
+deadline_at = eligible_at + timeout
+```
+
+省略或空集合没有额外条件。condition 不写回 eligible_at，也不推迟或刷新 deadline。
+eligible 后等条件、检查以及依赖治理所花的时间消耗该 Task 的剩余预算。
+timeout 是时长，deadlineAt 是 Task 截止时间，不是 Request 或结果记录的失效日期。
+
+- Check 有效 `ok: true` 表示该条件通过，不等于其他条件都通过。
+- 有效不通过并带 requirements，提供可治理目标；不带 requirements，则只说明条件未满足。
+- Check 执行失败是无法判断的故障，必须显式记录，不得冒充业务不满足或条件通过。
+- 治理是否启动由 Coordinator 按权限、预算和策略决定；Checker 返回需求不是授予权限，
+  不把 Agent 调度职责搬进 Checker/Objective Host。
+- 依赖 Regulation 结束后必须重新执行条件 Check；治理结束、甚至目标曾经达标，
+  都不能直接替代整个条件 Check 的有效通过结果。
+
+**子任务与所有权：** prerequisite 检查拥有独立 Check Task；父 Task 尚在 PENDING
+不能阻止这些 Check 自己进入准备/执行，也不能机械继承父 prerequisites 造成自锁。
+子 Task 的 requestId/taskId 独立分配，默认 series 为自身 Task ID，
+通过服务端的父 Task/条件项关系关联，不占用父 series 的 pending 槽位。
+父 Task 取消/超时后应释放自己拥有的检查、订阅和依赖需求；
+共享执行仍有其他 owner 时不得一起终止。等待关系需要循环检查和有界资源预算。
+
+**证据与待定策略：** 记录条件项、Check Task/Execution、准确来源、结果与求值时间。
+freshness、通过证据有效期、多个条件是否需在同一窗口有效，以及无依赖事件时如何重查
+仍须明确，不把一次历史通过当作永久许可。首次检查是否可早于父 eligible 也待确定；
+无论何时检查，父 Task 不得早于自己的 eligible 激活。
+本次不实现任意条件表达式语言或 all/any 嵌套树，也不恢复 Artifact 静态 prerequisite。
 
 ## 3. Series 与 recurrence：一个 pending Task，两个锚点
 
@@ -146,7 +193,7 @@ Before 保留旧形状以便对照；新设计虽然沿用 recurrence 命名，
 
 | 候选参数值 | 规划触发 | 下一轮 eligible | 主要效果 |
 |---|---|---|---|
-| `eligible`（推荐默认） | 本轮资格边界到达并原子消费该轮规划权 | 本轮 `eligible_at + period` | 固定周期；可有重叠需求，再按 freshness 共享 Execution。 |
+| `eligible`（推荐默认） | 无条件等待时在本轮资格边界原子消费规划权；条件阻塞时的组合规则待收敛 | 本轮 `eligible_at + period`，错过周期另按未来后继规则 | 固定周期；可有重叠需求，再按 freshness 共享 Execution。 |
 | `terminated` | 本轮 Task 正常完成、失败或超时终结 | 本轮 Task `terminated_at + period` | 本轮结束后间隔；失败不切断系列，自身递归轮次不重叠。 |
 
 两种模式每轮都只采用一个锚点，不能 eligible 触发一次、终结再触发一次。
@@ -164,7 +211,7 @@ eligible 模式中，第 10、20 秒的需求在版本/输入等兼容时可用 
 加入同一执行，不能据此承诺所有轮次必然合并或每个叶子都新。
 
 eligible 模式应按资格节拍推进，不随实际 worker 开始时间漂移；
-它在本轮激活时规划后继，不能等正式 PREPARING 成功才续作。
+在无条件阻塞的情形，它在本轮激活时规划后继，不能等正式 PREPARING 成功才续作。
 后续失败/超时不再重复触发同一后继。过期 Task 未实际进入 PREPARING 时，
 仍需一次性处理该轮资格和后继规划，不以超时停止系列或生成两次。
 
@@ -173,6 +220,11 @@ eligible 模式应按资格节拍推进，不随实际 worker 开始时间漂移
 处理一次后仅安排一个未来后继。原 `eligible_at + timeout` 已过时该轮超时终结，
 不重置预算来强行执行；系列继续安排未来轮次。
 后继保持原节拍的下一个未来点，还是从本次处理时刻加周期，稍后细化。
+
+**新增待决边界：** 时间已 eligible、prerequisites 仍未通过时，父 Task 继续占 pending
+槽位。此时生成后继会与唯一 pending 约束冲突；不能取消冗余后继后又永久丢失续作机会。
+是否延后消费规划权、何时重试后继规划及后继条件是否继承，需单独收敛；
+本次不把条件满足时间写回 eligible，也不虚构已决定的合并/补齐机制。
 
 terminated 模式运行期间可能没有 pending Task，届时没有可取消的 pending 对象；
 本草案不暗中增设 cancel-series 接口，是否需要提前保留未定 eligible 的后继仍待讨论。
@@ -266,7 +318,7 @@ Before 使用 started-after-request/completed-after-request 字面值；
 |---|---|---|
 | 过滤 | Check/Probe SSE 按 taskId 或显式 scope=all 过滤。 | 增加按 series ID 过滤，包含订阅之后新产生的该系列 Task。 |
 | 身份 | task.updated 关联 Task 与 Execution，缺少独立系列。 | 请求、快照、日志及事件携带 series，必要时保留前驱/轮次。 |
-| 进展 | level、invocation、依赖关系及子 Task/Execution。 | 增加 PENDING、准备/回退、重复规划取消与恢复信息。 |
+| 进展 | level、invocation、依赖关系及子 Task/Execution。 | 增加 PENDING 原因、前置 Check/依赖治理、准备/回退、重复规划取消与恢复信息。 |
 | 重连 | 当前有界快照，不重建 Task、不重放全部中间事件。 | 动态系列快照与后续轮次连续可观察；不能把增加过滤宣称为无限历史回放。 |
 
 series 订阅不能只在订阅时展开为现存 task IDs；首次快照与后续创建之间不能漏事件。
@@ -288,6 +340,8 @@ eligible 后才正式 PREPARING、terminated 包含失败/超时续作，以及�
 1. 默认递归锚点，以及 terminated 模式无 pending 时是否需要可停止的预留计划。
 2. 错过周期后下一个未来点的选法、服务预优化限额、旧版选择与陈旧上限。
 3. series 跨模块作用域，是否需要独立的调用方动态依赖固定能力。
+4. prerequisites 阻塞与 eligible 锚点 recurrence/唯一 pending 的组合，
+   条件证据 freshness/有效期、首次检查与重查策略及后继条件继承。
 
 中断 Execution 与持久化恢复细节待上述问题解决后再讨论。
 

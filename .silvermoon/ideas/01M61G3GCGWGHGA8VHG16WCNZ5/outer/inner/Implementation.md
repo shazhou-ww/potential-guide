@@ -20,6 +20,8 @@
 恢复所有未完成 Task，保持独立需求、共享执行及资源清理边界。
 落实幂等 Request/独立 Task 身份、eligible 后 PREPARING、eligible/terminated 递归、
 失败超时续作及错过周期不补齐；恢复细节后续讨论，不以实现细节代替设计决定。
+Task prerequisites 用独立子 Check 求值，时间与条件分别仲裁；结构化治理需求交由
+Coordinator 按授权处理，完成治理后重查，服务保留 origin 因果审计。
 
 ### I-S03: 对齐 SDK 与现有业务入口
 
@@ -41,6 +43,8 @@ Regulation 调用方改用与 Probe 相同的 Objective URL/digest 引用，由�
 
 确定性时间与竞争测试证明 eligible、递归锚点、唯一 pending、取消/激活竞态及
 freshness 归并成立；故障恢复测试证明不重复规划、不刷新期限、不复活终态。
+条件等待测试证明父 pending 不阻塞条件子 Check、eligible 后等待消耗预算，
+检查故障不冒充不通过、治理结束不冒充条件通过，取消清理不伤共享 owner。
 
 ### I-AC03: 调用面一致
 

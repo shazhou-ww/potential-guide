@@ -219,7 +219,8 @@ objective.yaml 和规范 Markdown。其他文件、链接、特殊文件和歧�
 
 ## 动态依赖与迁移
 
-不恢复静态 prerequisite，也不要求作者维护依赖 Objective 清单。运行时需求带可解析的
+不恢复 Objective 制品内的静态 prerequisite；当前修订另在 Task 调度层增加
+prerequisites Check 集合，不写回制品或要求作者维护依赖 Objective 清单。运行时需求带可解析的
 带类型来源引用；首次解析受来源/执行授权约束，并在本次观察内固定 digest。Regulation
 传入/保存准确绑定以支持连续重查和恢复；既有绑定不匹配时失败，不悄悄升级。
 依赖循环、深度、总预算与绑定冲突仍有界检查。多来源同内容不能越过权限边界共享。
