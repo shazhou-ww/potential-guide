@@ -1,5 +1,14 @@
 # Implementation
 
+## 本地文件传输扩展
+
+在同一 Check + Server 方向中增加直接 Checker `file:///` archive 来源。
+Ideal World 不变；既有 [Evidence.md](Evidence.md) 是已验收 revision
+`4db53c32aa9765262fd0a67626eba114e5e08ae7` 的历史证据，不证明本次扩展。
+本次证据单独记录于 [LocalFileEvidence.md](LocalFileEvidence.md)。
+浏览器选择的文件由会话级组装上传到 endpoint 主机的受控 imports 目录；
+本仓库只提供真实 file URL 与受信任来源权限，不增加通用 Server 文件读取/上传路由。
+
 本项同时交付 Check 业务包和通用 Server，以一个可运行 MVP 验收。
 实现保持既有 Engine 的生命周期所有权；不以旧证据代替新验收。
 结构、依赖决策及可复现验证见 [Evidence.md](Evidence.md)，使用说明见
@@ -60,6 +69,15 @@ HTTP 输入不可指定模块或授予权限；Server 不依赖 Check、Probe、
 通用 Server 另用无业务依赖的测试类型验证。补齐包导出、打包、分层检查和启动文档，
 固定新旧入口边界，保持既有调用方行为，不承担全量迁移或制品查询路由。
 
+### I-S04: 接入受限本地主机 archive 来源
+
+`createArtifactSource` 增加 `allowedFileRoots?: readonly string[]`，配置为原生绝对目录，
+缺省或空数组拒绝文件访问。直接 Checker reference 支持规范的 `file:///` URL；
+Objective 内嵌 Checker 和 Objective dependency reference 仍只允许可移植 HTTPS。
+下载 hook 仅用于 HTTPS。显式 prepare 使用有界、无链接、路径受限的文件读取，
+不得以字符串前缀或先检查后普通 open 的方式声称防止路径替换。
+保留现有 Engine/Worker 生命周期、不可变 Prepared、缓存 scope 授权与恢复语义。
+
 ## Acceptance criteria
 
 ### I-AC01: 制品分层与 Check 资源可靠
@@ -86,3 +104,13 @@ SQLite 进程重启测试证明原身份与期限保留、未启动工作可恢�
 独立安装并仅导入契约入口，记录导入图与实际安装依赖图（包括作者构建工具是否仍被安装），
 证明文档中的分层和依赖声明与交付物一致，保留既有制品入口兼容性。
 运行相关回归及 `pnpm check`，证明提取复用没有破坏仍保留的旧入口。
+
+### I-AC04: 本地 archive 来源安全且可恢复
+
+真实 file URL 经直接 Check、Typed reference codec、prepare 和 worker 执行；
+同样验证完整制品、准确 digest、References、subject 和 runtime。
+测试无授权根、越界、链接/junction/reparse、路径替换、缺失、非普通文件、超限、
+损坏与非法 URL，确认网络 download hook 不接收 file URL。
+新 unpinned Task 读取当前来源；Prepared 和恢复只使用已存储原字节，
+即使原文件删除亦可在当前根授权与 scope 权限仍有效时执行。
+提供打包消费者、平台实际能力/skip、完整 pnpm check 证据，不复用旧验收代替新证明。

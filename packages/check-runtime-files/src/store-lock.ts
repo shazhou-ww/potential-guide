@@ -1,10 +1,15 @@
+import type { DatabaseSync } from "node:sqlite";
+
 let mutations: Promise<unknown> = Promise.resolve();
+// A pending Promise alone does not keep its awaited continuation/native handle alive under GC.
+const activeGuards = new Set<DatabaseSync>();
 
 /** The caller supplies an already-created, validated private file that is never unlinked. */
 export function withFileMutex<T>(path: string, operation: () => Promise<T>): Promise<T> {
   const task = mutations.then(async () => {
     const { DatabaseSync } = await import("node:sqlite");
     const guard = new DatabaseSync(path);
+    activeGuards.add(guard);
     try {
       for (let attempt = 0; ; attempt++) {
         try {
@@ -25,6 +30,7 @@ export function withFileMutex<T>(path: string, operation: () => Promise<T>): Pro
       }
     } finally {
       guard.close();
+      activeGuards.delete(guard);
     }
   });
   mutations = task.catch(() => {});

@@ -60,6 +60,8 @@ export async function checkMvpConsumer(root, directory, label, graph, run) {
       `
 import assert from "node:assert/strict";
 import {createRequire,syncBuiltinESMExports} from "node:module";
+import {resolve} from "node:path";
+import {pathToFileURL} from "node:url";
 const require=createRequire(import.meta.url);
 const denied=()=>{throw Error("forbidden contract side effect")};
 for(const [module,names] of [
@@ -72,6 +74,10 @@ for(const [module,names] of [
 }
 globalThis.fetch=denied;syncBuiltinESMExports();
 const c=await import("@potential-guide/check-artifacts/contracts");
+const local={kind:"checker",url:pathToFileURL(resolve("not-required-to-exist.tgz")).href};
+assert.deepEqual(c.parseArtifactReference(c.formatArtifactReference(local)),local);
+assert.equal(c.parseFileArtifactUrl(local.url),resolve("not-required-to-exist.tgz"));
+assert.throws(()=>c.validateArtifactReference({...local,kind:"objective"}));
 const page=Buffer.from("---\\ntitle: Packed\\ndescription: Packed\\n---\\nBody\\n");
 const manifest={$schema:c.checkerSchemaUri,runtime:{type:"node",minVersion:"22.13.0"},entry:"checker.cjs",subjectSchema:{type:"object"},languages:["en"],problems:[]};
 const bytes=Buffer.from(JSON.stringify(manifest));
@@ -99,10 +105,11 @@ console.log("pure-packed: checker/objective manifests, full files, References, d
         join(directory, "check-config.mjs"),
         `
 import {readFile} from "node:fs/promises";
+import {resolve} from "node:path";
 import {createArtifactSource,createCheckTaskType} from "@potential-guide/check-task";
 import {TaskError} from "@potential-guide/task-protocol";
 export default function configure(){
- const source=createArtifactSource({allowedOrigins:["https://example.test"],authorize(_r,scope){if(scope!=="example")throw Error("denied")},download:()=>readFile("checker.tgz")});
+ const source=createArtifactSource({allowedOrigins:["https://example.test"],allowedFileRoots:[resolve("imports")],authorize(_r,scope){if(scope!=="example")throw Error("denied")},download:()=>readFile("checker.tgz")});
  const check=createCheckTaskType({source,directory:".workers",workers:1});
  return {port:0,database:process.env.TASK_SERVER_DATABASE??"check.sqlite",types:[check],currentVersions:{check:"1"},
  authorize:(caller,_op,scope)=>caller.scope===scope,
@@ -117,8 +124,9 @@ export default function configure(){
       `
 import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
-import {writeFile,readdir} from "node:fs/promises";
-import {fileURLToPath} from "node:url";
+import {writeFile,readdir,mkdir,copyFile} from "node:fs/promises";
+import {fileURLToPath,pathToFileURL} from "node:url";
+import {resolve} from "node:path";
 import {startTaskServer} from "@potential-guide/task-engine-server";
 import {newId} from "@potential-guide/task-engine";
 ${
@@ -133,16 +141,18 @@ const built=await writeContractArtifact(new Map([
  ["references/en/checker.md",page],["references/en/problems/bad.md",page]
 ]),"artifact");
 await packContractArtifact(built.directory,"checker.tgz");
+await mkdir("imports");await copyFile("checker.tgz",resolve("imports","checker.tgz"));
 const body={type:"check",checker:{kind:"checker",url:"https://example.test/checker.tgz",digest:built.digest},subject:{},timeoutMs:10000};
+const fileBody={...body,checker:{...body.checker,url:pathToFileURL(resolve("imports","checker.tgz")).href}};
 `
     : `const body={type:"echo",text:"packed",timeoutMs:10000};`
 }
 process.env.TASK_SERVER_TOKEN="fixture";process.env.TASK_SERVER_PORT="0";
 const configure=(await import("./${label === "mvp-check" ? "check" : "echo"}-config.mjs")).default;
 const headers={authorization:"Bearer fixture","content-type":"application/json"};
-async function exercise(url){
+async function exercise(url,requestBody=body){
  assert.equal((await fetch(url+"/tasks/"+newId())).status,401);
- const response=await fetch(url+"/tasks",{method:"POST",headers:{...headers,"Idempotency-Key":newId()},body:JSON.stringify(body)});
+ const response=await fetch(url+"/tasks",{method:"POST",headers:{...headers,"Idempotency-Key":newId()},body:JSON.stringify(requestBody)});
  assert.equal(response.status,202);const initial=await response.json();
  const stream=await fetch(url+"/events?taskId="+initial.taskId,{headers});
  assert.equal(stream.status,200);const reader=stream.body.getReader();
@@ -157,11 +167,12 @@ async function exercise(url){
  let next;let events=0;
  do {const url_=new URL(url+"/event-history?taskId="+initial.taskId+"&limit=1");if(next)url_.searchParams.set("cursor",next);const page=await(await fetch(url_,{headers})).json();events+=page.events.length;next=page.next}while(next);
  assert.ok(events>=5);
+ if(requestBody.checker?.url.startsWith("file:"))console.log(JSON.stringify({case:"packed-real-file-check",url:requestBody.checker.url,digest:requestBody.checker.digest,taskId:final.taskId,executionId:final.execution.executionId,result:final.result}));
 }
 const signals=process.listenerCount("SIGINT");
 const server=await startTaskServer(configure());
 assert.equal(process.listenerCount("SIGINT"),signals);
-try{await exercise(server.url)}finally{await server.close()}
+try{await exercise(server.url);${label === "mvp-check" ? "await exercise(server.url,fileBody);" : ""}}finally{await server.close()}
 const cli=fileURLToPath(new URL("./main.js",import.meta.resolve("@potential-guide/task-engine-server")));
 const child=spawn(process.execPath,[cli,"--config","./${label === "mvp-check" ? "check" : "echo"}-config.mjs"],{env:{...process.env,TASK_SERVER_DATABASE:"cli.sqlite"},stdio:["ignore","pipe","pipe"],windowsHide:true});
 let stderr="";child.stderr.on("data",chunk=>stderr+=chunk);
@@ -174,6 +185,7 @@ try{
   child.once("exit",()=>{clearTimeout(timer);reject(Error(stderr))});
  });
  await exercise(url);
+ ${label === "mvp-check" ? "await exercise(url,fileBody);" : ""}
  child.kill("SIGTERM");const result=await exited;
  if(process.platform!=="win32")assert.equal(result.code,0);
  await assert.rejects(fetch(url));

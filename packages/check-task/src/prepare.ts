@@ -8,7 +8,15 @@ import {
   type ContractArtifact,
   inspectContractFiles,
   validateArtifactReference,
+  parseFileArtifactUrl,
+  artifactLimits,
 } from "@potential-guide/check-artifacts/contracts";
+import {
+  readConfinedFile,
+  normalizeFileRoots,
+  filePathAllowed,
+  ConfinedFileError,
+} from "@potential-guide/check-runtime-files";
 import { positive, TaskError } from "@potential-guide/task-protocol";
 
 export interface ArtifactSource {
@@ -21,6 +29,8 @@ export interface ArtifactSource {
 }
 export interface ArtifactSourceOptions {
   allowedOrigins: readonly string[];
+  /** Native absolute directories on the endpoint host; empty/absent denies all file access. */
+  allowedFileRoots?: readonly string[];
   authorize(reference: ArtifactReference, scope: string): void | Promise<void>;
   maxArtifacts?: number;
   maxDownloads?: number;
@@ -35,13 +45,19 @@ export function createArtifactSource(
   const maximum = positive(options.maxArtifacts ?? 32, "maxArtifacts");
   const downloads = positive(options.maxDownloads ?? 4, "maxDownloads");
   const timeout = positive(options.timeoutMs ?? 30_000, "timeoutMs");
+  const fileRoots = normalizeFileRoots(options.allowedFileRoots ?? []);
   const controller = new AbortController();
   const cache = new Map<string, ContractArtifact>();
   const active = new Set<Promise<ContractArtifact>>();
   const authorize = async (reference: ArtifactReference, scope: string) => {
-    validateArtifactReference(reference);
-    if (!options.allowedOrigins.includes(new URL(reference.url).origin))
+    reference = Object.freeze(validateArtifactReference(reference));
+    const url = new URL(reference.url);
+    if (url.protocol === "file:") {
+      if (!filePathAllowed(parseFileArtifactUrl(reference.url), fileRoots))
+        throw new TaskError("artifact_source_denied", "File archive is outside configured roots.");
+    } else if (!options.allowedOrigins.includes(url.origin)) {
       throw new TaskError("artifact_source_denied", "Artifact origin is not authorized.");
+    }
     await options.authorize(reference, scope);
     controller.signal.throwIfAborted();
   };
@@ -52,6 +68,7 @@ export function createArtifactSource(
   return {
     authorize,
     async resolve(reference, scope, signal) {
+      reference = Object.freeze(validateArtifactReference(reference));
       await authorize(reference, scope);
       signal.throwIfAborted();
       const key = `${scope}\0${reference.kind}\0${reference.url}\0${reference.digest ?? ""}`;
@@ -62,13 +79,29 @@ export function createArtifactSource(
       const operation = (async () => {
         const bounded = AbortSignal.any([signal, controller.signal, AbortSignal.timeout(timeout)]);
         let bytes: Buffer;
-        try {
-          bytes = await (options.download ?? fetchCheckArchive)(reference.url, {
-            signal: bounded,
-            allowedOrigins: options.allowedOrigins,
-          });
-        } catch {
-          throw new TaskError("artifact_download_failed", "Artifact download failed.");
+        if (new URL(reference.url).protocol === "file:") {
+          try {
+            bytes = await readConfinedFile(
+              parseFileArtifactUrl(reference.url),
+              fileRoots,
+              artifactLimits.archiveBytes,
+              bounded,
+            );
+          } catch (error) {
+            bounded.throwIfAborted();
+            if (error instanceof ConfinedFileError)
+              throw new TaskError(`artifact_${error.code}`, error.message);
+            throw error;
+          }
+        } else {
+          try {
+            bytes = await (options.download ?? fetchCheckArchive)(reference.url, {
+              signal: bounded,
+              allowedOrigins: options.allowedOrigins,
+            });
+          } catch {
+            throw new TaskError("artifact_download_failed", "Artifact download failed.");
+          }
         }
         bounded.throwIfAborted();
         let artifact: ContractArtifact;

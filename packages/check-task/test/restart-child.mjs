@@ -1,9 +1,14 @@
-import { createCheckTaskType } from "@potential-guide/check-task";
+import { createCheckTaskType, createArtifactSource } from "@potential-guide/check-task";
+import { dirname, join } from "node:path";
+import {
+  writeContractArtifact,
+  packContractArtifact,
+} from "@potential-guide/check-artifacts/build";
 import { checkerSchemaUri, inspectContractFiles } from "@potential-guide/check-artifacts/contracts";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { TaskError } from "@potential-guide/task-protocol";
 
-const [database, directory, restarting] = process.argv.slice(2);
+const [database, directory, restarting, archive] = process.argv.slice(2);
 const page = Buffer.from("---\ntitle: Restart\ndescription: Restart\n---\nBody\n");
 const artifact = inspectContractFiles(
   new Map([
@@ -29,11 +34,25 @@ const artifact = inspectContractFiles(
     ["references/en/checker.md", page],
   ]),
 );
+if (archive && restarting !== "restart") {
+  const built = await writeContractArtifact(artifact.files, join(dirname(archive), "fixture"));
+  await packContractArtifact(built.directory, archive);
+}
+const files = archive
+  ? createArtifactSource({
+      allowedOrigins: [],
+      allowedFileRoots: [dirname(archive)],
+      authorize() {},
+      async download() {
+        throw Error("File source must never reach HTTPS download.");
+      },
+    })
+  : undefined;
 const type = createCheckTaskType({
   workers: 1,
   directory,
   wallMs: 30000,
-  source: {
+  source: files ?? {
     authorize() {},
     async resolve() {
       if (restarting === "restart") throw Error("Restore may not fetch newer content.");
@@ -52,7 +71,10 @@ const server = await startTaskServer({
       throw new TaskError("unauthenticated", "Authentication required.");
     return { scope: "restart", subject: "test" };
   },
-  closeResources: () => type.close(),
+  async closeResources() {
+    await type.close();
+    await files?.close();
+  },
 });
 process.send({ url: server.url });
 process.on("message", async (message) => {

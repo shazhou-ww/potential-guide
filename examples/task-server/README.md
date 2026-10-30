@@ -8,8 +8,15 @@ consumer; copy these files there. They import package exports, never source path
 - `node check-in-process.mjs https://trusted.example/checker.tgz sha256:…`: no Server.
 
 Set `TASK_SERVER_TOKEN`, optionally `TASK_SERVER_PORT` / `TASK_SERVER_DATABASE`.
-Check Server also requires `CHECK_ORIGIN`; `CHECK_WORKERS` selects its owned
+Check Server also requires `CHECK_ORIGIN` and/or `CHECK_FILE_ROOT` (an explicitly
+trusted absolute directory on the endpoint host); `CHECK_WORKERS` selects its owned
 snapshot directory. The examples intentionally do not inherit worker credentials.
+
+For regular local archives, use a real `file:///` URL produced by `pathToFileURL`.
+Both Check examples require `CHECK_FILE_ROOT` to authorize it; input URLs never
+grant their own directory. A browser file picker must first upload through a
+trusted local composition into that directory. The generic Server has no upload
+or raw filesystem route, and a remote endpoint cannot read a browser-local path.
 
 POST `/tasks` with JSON, bearer token and a fresh ULID `Idempotency-Key`:
 

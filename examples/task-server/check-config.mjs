@@ -4,9 +4,12 @@ import { TaskError } from "@potential-guide/task-protocol";
 export default function configure() {
   const token = process.env.TASK_SERVER_TOKEN;
   const origin = process.env.CHECK_ORIGIN;
-  if (!token || !origin) throw new Error("Set TASK_SERVER_TOKEN and CHECK_ORIGIN.");
+  const fileRoot = process.env.CHECK_FILE_ROOT;
+  if (!token || (!origin && !fileRoot))
+    throw new Error("Set TASK_SERVER_TOKEN and CHECK_ORIGIN or CHECK_FILE_ROOT.");
   const source = createArtifactSource({
-    allowedOrigins: [origin],
+    allowedOrigins: origin ? [origin] : [],
+    allowedFileRoots: fileRoot ? [fileRoot] : [],
     authorize(_reference, scope) {
       if (scope !== "example") throw new TaskError("forbidden", "Source scope denied.");
     },

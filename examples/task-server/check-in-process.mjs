@@ -4,9 +4,13 @@ import { createArtifactSource, createCheckTaskType } from "@potential-guide/chec
 
 const [url, digest] = process.argv.slice(2);
 if (!url || !digest)
-  throw new Error("Usage: node check-in-process.mjs <trusted-https-url> <exact-digest>");
+  throw new Error("Usage: node check-in-process.mjs <trusted-https-or-file-url> <exact-digest>");
 const caller = { scope: "example", subject: "example" };
-const source = createArtifactSource({ allowedOrigins: [new URL(url).origin], authorize() {} });
+const source = createArtifactSource({
+  allowedOrigins: new URL(url).protocol === "https:" ? [new URL(url).origin] : [],
+  allowedFileRoots: process.env.CHECK_FILE_ROOT ? [process.env.CHECK_FILE_ROOT] : [],
+  authorize() {},
+});
 const check = createCheckTaskType({ source, directory: ".check-workers", workers: 1 });
 const store = new MemoryStore();
 const engine = createTaskEngine({

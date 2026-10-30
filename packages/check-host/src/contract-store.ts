@@ -90,6 +90,8 @@ export class ContractStore implements ContractRepository {
   authorize(reference: ArtifactReference, _scope: string) {
     try {
       validateArtifactReference(reference);
+      if (new URL(reference.url).protocol !== "https:")
+        throw new Error("Legacy Host sources remain HTTPS-only.");
     } catch {
       throw new TaskProtocolError(400, {
         code: "invalid_source",

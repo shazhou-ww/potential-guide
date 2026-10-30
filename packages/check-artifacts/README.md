@@ -9,6 +9,12 @@ build modules. Existing root and `/build` APIs below remain compatible.
 The installed package still includes production `esbuild` and archive
 dependencies; subpath import isolation does **not** remove installation costs.
 
+The pure reference codec also accepts direct `checker:file:///...` archive
+references and exports `parseFileArtifactUrl` (syntax only, no IO).
+Actual file acquisition requires explicit `allowedFileRoots` in
+`@potential-guide/check-task`'s `createArtifactSource`. The legacy prepare/Host
+APIs and portable Objective embedded/dependency references do not gain file access.
+
 For ordinary network consumption prefer [Check Host v2](../check-host/README.md):
 the same Host owns source confirmation, exact cache, References and Task
 execution. This package remains the reusable explicit build/validation/preparation

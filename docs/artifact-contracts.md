@@ -54,6 +54,16 @@ credential resolver is provided, rather than exported in recoverable evidence.
 Sources require explicit allowed-origin authorization, including redirects.
 Cache grants bind source and authorization scope, not merely content.
 
+Direct generic Check admission also supports `checker:file:///…#sha256:…`.
+`parseFileArtifactUrl` and the existing reference codec validate canonical local
+file URL syntax without IO; only the prepare layer can authorize/read it.
+File URLs forbid query/fragment/credentials, UNC/network hosts, encoded separators,
+ambiguous or unsafe native paths and non-NFC path spelling. The endpoint host interprets the native path.
+This does not extend Objective embedded Checker URLs or Objective dependency
+references: those remain portable HTTPS. Manifest schema namespaces and
+worker/Engine protocols are unchanged; file transport is a direct source-reference
+extension, not a second artifact schema or a legacy Host migration.
+
 ## Mapping and entry lifecycle
 
 The portable bounded JSONata selection profile supports `$`, required object

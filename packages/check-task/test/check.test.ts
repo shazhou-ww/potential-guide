@@ -340,8 +340,13 @@ test("deterministic deadline projection records late worker completion without c
     for (let index = 0; index < 60; index++) await Promise.resolve();
     assert.equal(h.read(task).stage, "running");
     clock.advance(20);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    h.engine.tick();
+    await wait(
+      () => {
+        h.engine.tick();
+        return h.read(task);
+      },
+      (item) => item.stage === "completed",
+    );
     assert.equal(h.read(task).stage, "completed");
     assert.ok(h.read(task).execution!.completedAt! > h.read(task).deadlineAt);
     assert.equal(h.read(task).deadlineAt, task.deadlineAt);

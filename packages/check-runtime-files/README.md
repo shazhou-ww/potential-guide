@@ -3,6 +3,15 @@
 Shared private owner/ACL, no-follow tree verification, immutable snapshot and
 file-mutex primitives. Check Host re-exports these APIs for v1 compatibility.
 This layer has no scheduler, download, or Objective dependencies.
+Native mutex guards remain strongly owned until confirmed close; an unresolved
+callback's Promise becoming garbage-collectable must not release a live owner's lock.
+
+`readConfinedFile` supplies bounded regular-file reads beneath explicitly allowed
+native directory roots. Windows uses per-operation no-reparse native handles
+without write/delete sharing and a private owned compiler scratch directory;
+POSIX uses pinned descriptor-relative opens with no-follow flags. Unsupported
+host facilities fail closed. It does not interpret artifact schemas or URLs.
+See the exact [file-source boundaries](../../docs/task-server.md#local-file-source-boundaries).
 
 The `/worker` entry is the extracted Node CommonJS worker runner shared by the
 legacy Host shim and the generic `check-task` adapter. It is an executable worker

@@ -4,6 +4,8 @@ import { Ajv2020 } from "ajv/dist/2020.js";
 import { isAlias, isMap, isScalar, isSeq, parseDocument } from "yaml";
 import { artifactLimits, safePath } from "./paths.js";
 import { validateSubjectMapping } from "./mapping.js";
+import { parseFileArtifactUrl } from "./file-url.js";
+export { parseFileArtifactUrl } from "./file-url.js";
 
 export const checkerSchemaUri =
   "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json";
@@ -335,6 +337,8 @@ export function parseObjectiveArtifactManifest(bytes: Uint8Array): ObjectiveArti
   if (used.size !== Object.keys(value.checkers).length)
     throw new Error("Unused Checker reference.");
   for (const checker of Object.values(value.checkers)) {
+    if (new URL(checker.url).protocol !== "https:")
+      throw new Error("Embedded Objective Checkers require portable HTTPS sources.");
     validateArtifactReference({ kind: "checker", ...checker });
     validateSubjectMapping(checker.subjectMapping);
   }
@@ -348,6 +352,19 @@ export function validateArtifactReference(reference: ArtifactReference): Artifac
   )
     throw new Error("Invalid artifact reference.");
   const url = new URL(reference.url);
+  if (url.protocol === "file:" && reference.kind === "checker") {
+    parseFileArtifactUrl(reference.url);
+    if (
+      reference.digest !== undefined &&
+      (typeof reference.digest !== "string" || !new RegExp(digestPattern).test(reference.digest))
+    )
+      throw new Error("Invalid content digest.");
+    return {
+      kind: reference.kind,
+      url: reference.url,
+      ...(reference.digest ? { digest: reference.digest } : {}),
+    };
+  }
   if (
     url.protocol !== "https:" ||
     url.username ||
@@ -378,7 +395,9 @@ export function formatArtifactReference(reference: ArtifactReference): string {
 }
 export function parseArtifactReference(text: string): ArtifactReference {
   if (typeof text !== "string" || text.length > 4200) throw new Error("Invalid typed reference.");
-  const match = /^(checker|objective):(https:[^#]+)(?:#(sha256:[a-f0-9]{64}))?$/.exec(text);
+  const match = /^(checker|objective):((?:https:|file:)[^#]+)(?:#(sha256:[a-f0-9]{64}))?$/.exec(
+    text,
+  );
   if (!match?.[1] || !match[2]) throw new Error("Invalid typed reference.");
   return validateArtifactReference({
     kind: match[1] as ArtifactReference["kind"],
