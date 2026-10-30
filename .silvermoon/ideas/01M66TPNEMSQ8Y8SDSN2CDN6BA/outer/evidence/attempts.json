@@ -1,0 +1,25 @@
+[
+  {
+    "attempt": 1,
+    "stage": "consumer-install",
+    "classification": "harness",
+    "failure": "pnpm 11 不再读取 package.json 的 pnpm.overrides，导致内部传递依赖尝试从 registry 获取并返回 ERR_PNPM_FETCH_404。",
+    "correction": "将所有 tarball overrides 写入 consumer 自有 pnpm-workspace.yaml；不修改生产 manifests。",
+    "serviceStarted": false,
+    "directory": ".cache\\task-history-query-proof-46b60fe8-300a-44a4-b4a6-29b334b688f8",
+    "directoryRemoved": true
+  },
+  {
+    "attempt": 2,
+    "stage": "shared-execution-fixture",
+    "classification": "harness",
+    "failure": "先等第一个 Task running，再在较晚 receivedAt 提交第二个；默认 started-after-eligible 契约不允许第二个绑定较早 Execution，实际 executionId 不同，断言失败。",
+    "correction": "两个客户端在不同 receivedAt 提交同一未来 eligibleAt；两者均已保留后推进可信墙钟启动共享 Execution。保持原生产语义及创建时间边界。",
+    "servicePid": 20892,
+    "serviceUrl": "http://127.0.0.1:62562",
+    "serviceExitCode": 0,
+    "portClosed": true,
+    "directory": ".cache\\task-history-query-proof-163b76b1-5dd8-4841-a97e-a9b9f0f3f69e",
+    "directoryRemoved": true
+  }
+]

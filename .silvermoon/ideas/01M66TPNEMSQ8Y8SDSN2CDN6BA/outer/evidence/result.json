@@ -1,0 +1,719 @@
+{
+  "candidate": "8ebcaa9a22d95553aa479a315c4ed88e11740f8b",
+  "source": "533f88485acfa75fc00b5e349ff88b7cb2e18f26",
+  "acceptedInnerRevision": "33a3627d9baf20f0741c0908e0a559d6c1426862",
+  "deploymentRevision": "23986aa273d235c16c4109a9edbf0e279bd5933d",
+  "eventsDigest": "f9fc88a169fa6b1501162541114dd9de53356482",
+  "node": "v24.12.0",
+  "startedAt": "2026-10-30T17:54:25.299Z",
+  "directory": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\.cache\\task-history-query-proof-380a54dd-dddd-45ad-b78a-ddeb0be0ef0b",
+  "consumer": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\.cache\\task-history-query-proof-380a54dd-dddd-45ad-b78a-ddeb0be0ef0b\\consumer",
+  "commands": [
+    {
+      "command": "pnpm --dir D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\packages\\task-engine pack --out D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\.cache\\task-history-query-proof-380a54dd-dddd-45ad-b78a-ddeb0be0ef0b\\tarballs\\task-engine.tgz",
+      "cwd": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm --dir D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\packages\\task-engine-http pack --out D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\.cache\\task-history-query-proof-380a54dd-dddd-45ad-b78a-ddeb0be0ef0b\\tarballs\\task-engine-http.tgz",
+      "cwd": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm --dir D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\packages\\task-engine-server pack --out D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\.cache\\task-history-query-proof-380a54dd-dddd-45ad-b78a-ddeb0be0ef0b\\tarballs\\task-engine-server.tgz",
+      "cwd": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm --dir D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\packages\\task-engine-storage pack --out D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\.cache\\task-history-query-proof-380a54dd-dddd-45ad-b78a-ddeb0be0ef0b\\tarballs\\task-engine-storage.tgz",
+      "cwd": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm --dir D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\packages\\task-protocol pack --out D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\.cache\\task-history-query-proof-380a54dd-dddd-45ad-b78a-ddeb0be0ef0b\\tarballs\\task-protocol.tgz",
+      "cwd": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm install --ignore-scripts --store-dir D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\.cache\\task-history-query-proof-380a54dd-dddd-45ad-b78a-ddeb0be0ef0b\\pnpm-store --cache-dir D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\.cache\\task-history-query-proof-380a54dd-dddd-45ad-b78a-ddeb0be0ef0b\\pnpm-cache",
+      "cwd": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\.cache\\task-history-query-proof-380a54dd-dddd-45ad-b78a-ddeb0be0ef0b\\consumer",
+      "exitCode": 0
+    }
+  ],
+  "packages": {
+    "@potential-guide/task-engine": {
+      "version": "0.1.0-rc.0",
+      "sha256": "9b847a47295ef0b0dfafc2f402adf8d9b858564dc63ee15214be1ddfa80bddce",
+      "bytes": 38235,
+      "sourceTree": "af6ed080c15b4d632bcf5dc512d159274df52ed5"
+    },
+    "@potential-guide/task-engine-http": {
+      "version": "0.1.0-rc.0",
+      "sha256": "014d1019e008d63d253f7e95a7f57f9d365d715967e97e53c4c4bab0cc6da48d",
+      "bytes": 7465,
+      "sourceTree": "b362b1fc77189972522fc0bfbdd838809e87076d"
+    },
+    "@potential-guide/task-engine-server": {
+      "version": "0.1.0-rc.0",
+      "sha256": "d035a0b6a53686f0e1eded6029fed04560ce089f49e53d3a42590524a409a9c0",
+      "bytes": 8945,
+      "sourceTree": "3254c3f1bf084ed3aa693fc90e4d7cdadad2a86b"
+    },
+    "@potential-guide/task-engine-storage": {
+      "version": "0.1.0-rc.0",
+      "sha256": "e5b9276d928ffda3437c6a4db0c5ca789e6c92ac7107d2e5591034941653181c",
+      "bytes": 9122,
+      "sourceTree": "8da57ab3d24d4a552d9dca3c2dcc6107b76aaf09"
+    },
+    "@potential-guide/task-protocol": {
+      "version": "0.1.0-rc.0",
+      "sha256": "2fe69d93ba811d44f0e85f193c68807591aebf9aed03708d770e736f80d8406b",
+      "bytes": 22991,
+      "sourceTree": "9119e31a549aee26fcdb242982aee086afcc177d"
+    }
+  },
+  "lockSha256": "298f87bcf0d96397a694f11bb310db039d8fb49fb026ddbb7a6a8466a6df58fe",
+  "verificationExitCode": 0,
+  "proof": {
+    "controllerPid": 3488,
+    "consumer": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-history-query\\.cache\\task-history-query-proof-380a54dd-dddd-45ad-b78a-ddeb0be0ef0b\\consumer",
+    "checks": [
+      {
+        "id": "跨进程客户端共享 scope；异 scope 不可见",
+        "evidence": {
+          "alphaPid": 3488,
+          "betaPid": 42600,
+          "betaExitCode": 0,
+          "sharedTaskIds": [
+            "01M651PC68R4DQXNMF90M02C7X",
+            "01M651PC340XKTKT2GTHVSFC4N",
+            "01M651PC003140DG4JZZ2G5C60"
+          ],
+          "otherTaskId": "01M651PC9C8H5QNZNZW9XZ363W",
+          "executionId": "01M651PC4PVMBSCGFV57W386NS"
+        }
+      },
+      {
+        "id": "type/created/updated AND、双时间左闭右开、时区和自身新进度",
+        "evidence": {
+          "intersection": {
+            "type": "echo",
+            "createdFrom": "2026-10-30T00:00:00.000Z",
+            "createdBefore": "2026-10-30T00:00:00.200Z",
+            "updatedFrom": "2026-10-30T00:00:00.400Z",
+            "updatedBefore": "2026-10-30T00:00:00.401Z"
+          },
+          "shared": [
+            {
+              "taskId": "01M651PC340XKTKT2GTHVSFC4N",
+              "requestId": "01M66Z5WAQPH7WHVK066JH1SK7",
+              "seriesId": "01M651PC340XKTKT2GTHVSFC4N",
+              "type": "echo",
+              "version": "1",
+              "receivedAt": "2026-10-30T00:00:00.100Z",
+              "updatedAt": "2026-10-30T00:00:00.400Z",
+              "state": {
+                "stage": "running",
+                "pending": false,
+                "timedOut": false,
+                "canceled": false,
+                "completed": false,
+                "executionFailed": false
+              }
+            },
+            {
+              "taskId": "01M651PC003140DG4JZZ2G5C60",
+              "requestId": "01M66Z5WACY8FAGVS7TDXAK732",
+              "seriesId": "01M651PC003140DG4JZZ2G5C60",
+              "type": "echo",
+              "version": "1",
+              "receivedAt": "2026-10-30T00:00:00.000Z",
+              "updatedAt": "2026-10-30T00:00:00.400Z",
+              "state": {
+                "stage": "running",
+                "pending": false,
+                "timedOut": false,
+                "canceled": false,
+                "completed": false,
+                "executionFailed": false
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "本轮成员/顺序/完整摘要固定；重查纳入新增与更新；取消不跟随共享进度",
+        "evidence": {
+          "frozen": [
+            {
+              "taskId": "01M651PC003140DG4JZZ2G5C60",
+              "requestId": "01M66Z5WACY8FAGVS7TDXAK732",
+              "seriesId": "01M651PC003140DG4JZZ2G5C60",
+              "type": "echo",
+              "version": "1",
+              "receivedAt": "2026-10-30T00:00:00.000Z",
+              "updatedAt": "2026-10-30T00:00:00.400Z",
+              "state": {
+                "stage": "running",
+                "pending": false,
+                "timedOut": false,
+                "canceled": false,
+                "completed": false,
+                "executionFailed": false
+              }
+            },
+            {
+              "taskId": "01M651PC340XKTKT2GTHVSFC4N",
+              "requestId": "01M66Z5WAQPH7WHVK066JH1SK7",
+              "seriesId": "01M651PC340XKTKT2GTHVSFC4N",
+              "type": "echo",
+              "version": "1",
+              "receivedAt": "2026-10-30T00:00:00.100Z",
+              "updatedAt": "2026-10-30T00:00:00.400Z",
+              "state": {
+                "stage": "running",
+                "pending": false,
+                "timedOut": false,
+                "canceled": false,
+                "completed": false,
+                "executionFailed": false
+              }
+            },
+            {
+              "taskId": "01M651PC68R4DQXNMF90M02C7X",
+              "requestId": "01M66Z5WE2JJSENDMJ0PAPF8NX",
+              "seriesId": "01M651PC68R4DQXNMF90M02C7X",
+              "type": "alternate",
+              "version": "1",
+              "receivedAt": "2026-10-30T00:00:00.200Z",
+              "updatedAt": "2026-10-30T00:00:00.200Z",
+              "state": {
+                "stage": "running",
+                "pending": false,
+                "timedOut": false,
+                "canceled": false,
+                "completed": false,
+                "executionFailed": false
+              }
+            }
+          ],
+          "fresh": [
+            {
+              "taskId": "01M651PCNW4DH5AKWMCP21AWEV",
+              "requestId": "01M66Z5WJ41D3VFZ986GZ4F9GC",
+              "seriesId": "01M651PCNW4DH5AKWMCP21AWEV",
+              "type": "echo",
+              "version": "1",
+              "receivedAt": "2026-10-30T00:00:00.700Z",
+              "updatedAt": "2026-10-30T00:00:00.700Z",
+              "state": {
+                "stage": "running",
+                "pending": false,
+                "timedOut": false,
+                "canceled": false,
+                "completed": false,
+                "executionFailed": false
+              }
+            },
+            {
+              "taskId": "01M651PC340XKTKT2GTHVSFC4N",
+              "requestId": "01M66Z5WAQPH7WHVK066JH1SK7",
+              "seriesId": "01M651PC340XKTKT2GTHVSFC4N",
+              "type": "echo",
+              "version": "1",
+              "receivedAt": "2026-10-30T00:00:00.100Z",
+              "updatedAt": "2026-10-30T00:00:00.600Z",
+              "state": {
+                "stage": "running",
+                "pending": false,
+                "timedOut": false,
+                "canceled": false,
+                "completed": false,
+                "executionFailed": false
+              }
+            },
+            {
+              "taskId": "01M651PC003140DG4JZZ2G5C60",
+              "requestId": "01M66Z5WACY8FAGVS7TDXAK732",
+              "seriesId": "01M651PC003140DG4JZZ2G5C60",
+              "type": "echo",
+              "version": "1",
+              "receivedAt": "2026-10-30T00:00:00.000Z",
+              "updatedAt": "2026-10-30T00:00:00.500Z",
+              "state": {
+                "stage": "running",
+                "pending": false,
+                "timedOut": false,
+                "canceled": true,
+                "completed": false,
+                "executionFailed": false
+              }
+            },
+            {
+              "taskId": "01M651PC68R4DQXNMF90M02C7X",
+              "requestId": "01M66Z5WE2JJSENDMJ0PAPF8NX",
+              "seriesId": "01M651PC68R4DQXNMF90M02C7X",
+              "type": "alternate",
+              "version": "1",
+              "receivedAt": "2026-10-30T00:00:00.200Z",
+              "updatedAt": "2026-10-30T00:00:00.200Z",
+              "state": {
+                "stage": "running",
+                "pending": false,
+                "timedOut": false,
+                "canceled": false,
+                "completed": false,
+                "executionFailed": false
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "目录进入详情/原请求；原始输入和无版本保留；新身份重做及 Schema 共存",
+        "evidence": {
+          "original": {
+            "type": "echo",
+            "text": "shared",
+            "amount": 7,
+            "metadata": {
+              "literal": "007",
+              "nested": {
+                "untouched": true
+              },
+              "array": [1, "1", null]
+            },
+            "timeoutMs": 600000,
+            "eligibleAt": "2026-10-30T00:00:00.150Z",
+            "requestId": "01M66Z5WACY8FAGVS7TDXAK732"
+          },
+          "detail": {
+            "requestId": "01M66Z5WACY8FAGVS7TDXAK732",
+            "taskId": "01M651PC003140DG4JZZ2G5C60",
+            "seriesId": "01M651PC003140DG4JZZ2G5C60",
+            "stage": "running",
+            "receivedAt": "2026-10-30T00:00:00.000Z",
+            "eligibleAt": "2026-10-30T00:00:00.150Z",
+            "deadlineAt": "2026-10-30T00:10:00.150Z",
+            "timestamp": "2026-10-30T00:00:00.700Z",
+            "preparation": {
+              "startedAt": "2026-10-30T00:00:00.150Z",
+              "completedAt": "2026-10-30T00:00:00.150Z"
+            },
+            "allocation": {
+              "boundAt": "2026-10-30T00:00:00.150Z"
+            },
+            "execution": {
+              "executionId": "01M651PC4PVMBSCGFV57W386NS",
+              "startedAt": "2026-10-30T00:00:00.150Z"
+            },
+            "canceledAt": "2026-10-30T00:00:00.500Z"
+          },
+          "redo": {
+            "taskId": "01M651PCNWRAR68BX738PVQ43Q",
+            "requestId": "01M66Z5WM9C0JVGTJ4WE8SGSCR"
+          },
+          "invalidInput": {
+            "status": 400,
+            "code": "invalid_input"
+          }
+        }
+      },
+      {
+        "id": "独立 list/request/discovery 权限；每次续页撤权均拒绝",
+        "evidence": {
+          "auth": [
+            {
+              "status": 401,
+              "code": "unauthenticated"
+            },
+            {
+              "status": 403,
+              "code": "forbidden"
+            },
+            {
+              "status": 403,
+              "code": "forbidden"
+            },
+            {
+              "status": 403,
+              "code": "forbidden"
+            },
+            {
+              "status": 403,
+              "code": "forbidden"
+            },
+            {
+              "status": 403,
+              "code": "forbidden"
+            },
+            {
+              "status": 403,
+              "code": "forbidden"
+            },
+            {
+              "status": 403,
+              "code": "forbidden"
+            }
+          ],
+          "deniedPages": 4
+        }
+      },
+      {
+        "id": "非法/篡改/混合查询/跨 caller/scope/事件游标拒绝",
+        "evidence": [
+          {
+            "status": 400,
+            "code": "invalid_cursor"
+          },
+          {
+            "status": 400,
+            "code": "invalid_cursor"
+          },
+          {
+            "status": 400,
+            "code": "invalid_cursor"
+          },
+          {
+            "status": 400,
+            "code": "invalid_cursor"
+          },
+          {
+            "status": 400,
+            "code": "invalid_cursor"
+          },
+          {
+            "status": 400,
+            "code": "invalid_cursor"
+          }
+        ]
+      },
+      {
+        "id": "读取不产生执行/写入/清理或 updatedAt",
+        "evidence": {
+          "stats": {
+            "prepares": 6,
+            "executions": 5,
+            "collects": 0,
+            "appends": 36,
+            "compacts": 0,
+            "active": 0
+          },
+          "watermark": 47
+        }
+      },
+      {
+        "id": "SQLite 跨服务进程恢复；旧游标失效；旧绑定不被当前发现重解释",
+        "evidence": {
+          "retained": [
+            {
+              "taskId": "01M651PCNW4DH5AKWMCP21AWEV",
+              "requestId": "01M66Z5WJ41D3VFZ986GZ4F9GC",
+              "seriesId": "01M651PCNW4DH5AKWMCP21AWEV",
+              "type": "echo",
+              "version": "1",
+              "receivedAt": "2026-10-30T00:00:00.700Z",
+              "updatedAt": "2026-10-30T00:00:00.800Z",
+              "state": {
+                "stage": "completed",
+                "pending": false,
+                "timedOut": false,
+                "canceled": false,
+                "completed": true,
+                "executionFailed": false
+              }
+            },
+            {
+              "taskId": "01M651PCNWRAR68BX738PVQ43Q",
+              "requestId": "01M66Z5WM9C0JVGTJ4WE8SGSCR",
+              "seriesId": "01M651PCNWRAR68BX738PVQ43Q",
+              "type": "echo",
+              "version": "1",
+              "receivedAt": "2026-10-30T00:00:00.700Z",
+              "updatedAt": "2026-10-30T00:00:00.800Z",
+              "state": {
+                "stage": "completed",
+                "pending": false,
+                "timedOut": false,
+                "canceled": false,
+                "completed": true,
+                "executionFailed": false
+              }
+            },
+            {
+              "taskId": "01M651PC68R4DQXNMF90M02C7X",
+              "requestId": "01M66Z5WE2JJSENDMJ0PAPF8NX",
+              "seriesId": "01M651PC68R4DQXNMF90M02C7X",
+              "type": "alternate",
+              "version": "1",
+              "receivedAt": "2026-10-30T00:00:00.200Z",
+              "updatedAt": "2026-10-30T00:00:00.800Z",
+              "state": {
+                "stage": "completed",
+                "pending": false,
+                "timedOut": false,
+                "canceled": false,
+                "completed": true,
+                "executionFailed": false
+              }
+            },
+            {
+              "taskId": "01M651PC340XKTKT2GTHVSFC4N",
+              "requestId": "01M66Z5WAQPH7WHVK066JH1SK7",
+              "seriesId": "01M651PC340XKTKT2GTHVSFC4N",
+              "type": "echo",
+              "version": "1",
+              "receivedAt": "2026-10-30T00:00:00.100Z",
+              "updatedAt": "2026-10-30T00:00:00.800Z",
+              "state": {
+                "stage": "completed",
+                "pending": false,
+                "timedOut": false,
+                "canceled": false,
+                "completed": true,
+                "executionFailed": false
+              }
+            },
+            {
+              "taskId": "01M651PC003140DG4JZZ2G5C60",
+              "requestId": "01M66Z5WACY8FAGVS7TDXAK732",
+              "seriesId": "01M651PC003140DG4JZZ2G5C60",
+              "type": "echo",
+              "version": "1",
+              "receivedAt": "2026-10-30T00:00:00.000Z",
+              "updatedAt": "2026-10-30T00:00:00.500Z",
+              "state": {
+                "stage": "running",
+                "pending": false,
+                "timedOut": false,
+                "canceled": true,
+                "completed": false,
+                "executionFailed": false
+              }
+            }
+          ],
+          "expiredRestart": {
+            "status": 410,
+            "code": "query_expired"
+          },
+          "currentVersionRedo": {
+            "taskId": "01M651PCW4GN3K8G4KPNZWF4YF",
+            "version": "2",
+            "revision": "7f43ed4ac0861c50d64f497c4ac4abd589a9bfcf8a3223d61d5d9d1ab9034e2f"
+          }
+        }
+      },
+      {
+        "id": "受控时钟超过 lifetime；过期明确 410；过 retention 读取仍不 collect",
+        "evidence": {
+          "expired": {
+            "status": 410,
+            "code": "query_expired"
+          },
+          "retainedTaskIds": [
+            "01M651PCW4GN3K8G4KPNZWF4YF",
+            "01M651PCNW4DH5AKWMCP21AWEV",
+            "01M651PCNWRAR68BX738PVQ43Q",
+            "01M651PC68R4DQXNMF90M02C7X",
+            "01M651PC340XKTKT2GTHVSFC4N",
+            "01M651PC003140DG4JZZ2G5C60"
+          ],
+          "beforeExpiryStats": {
+            "prepares": 1,
+            "executions": 1,
+            "collects": 0,
+            "appends": 6,
+            "compacts": 0,
+            "active": 0
+          },
+          "watermark": 55
+        }
+      },
+      {
+        "id": "显式 collect 专属 Store 后本轮失效而非静默漏项",
+        "evidence": {
+          "collectStats": {
+            "prepares": 1,
+            "executions": 1,
+            "collects": 1,
+            "appends": 7,
+            "compacts": 1
+          },
+          "invalidated": {
+            "status": 410,
+            "code": "query_expired"
+          },
+          "newQuery": []
+        }
+      }
+    ],
+    "services": [
+      {
+        "ready": true,
+        "pid": 47644,
+        "url": "http://127.0.0.1:64052",
+        "entries": {
+          "task-protocol": {
+            "path": "node_modules\\.pnpm\\@potential-guide+task-proto_264366fffa682536dbb92165ae126fbd\\node_modules\\@potential-guide\\task-protocol\\dist\\index.js",
+            "sha256": "e538db92f24744c2967a0af25a8cedf0244339667cbeb13d7cee842748ea6af1"
+          },
+          "task-engine": {
+            "path": "node_modules\\.pnpm\\@potential-guide+task-engin_790fbe22d5433b8e7eb8b48d1994a811\\node_modules\\@potential-guide\\task-engine\\dist\\index.js",
+            "sha256": "cd50485772db48aab3de1620a3f9101bba825837ffb5e21c17134a967ee40dfe"
+          },
+          "task-engine-http": {
+            "path": "node_modules\\.pnpm\\@potential-guide+task-engin_cefb19a9336866708ef0997386a6e88c\\node_modules\\@potential-guide\\task-engine-http\\dist\\index.js",
+            "sha256": "69f383ab92956a20aeeadc3937431f344ea20b73d594ab7f8b7e0f1da2577495"
+          },
+          "task-engine-storage": {
+            "path": "node_modules\\.pnpm\\@potential-guide+task-engin_b2a36922020a408dc6ff9ade6d485854\\node_modules\\@potential-guide\\task-engine-storage\\dist\\index.js",
+            "sha256": "13771e2a53ccc8fbba6fcc34b8984992bffc6928d04b5c20fecc5614f659a873"
+          },
+          "task-engine-server": {
+            "path": "node_modules\\.pnpm\\@potential-guide+task-engin_95d504f3b2b5bbe742347ac7cbe817e8\\node_modules\\@potential-guide\\task-engine-server\\dist\\index.js",
+            "sha256": "9918c262fa20d25f62ec0abaeb1ba9a11cc38e60a58851d0d5636d0aa7ba741a"
+          }
+        },
+        "version": "1",
+        "httpReadyStatus": 200,
+        "discovery": [
+          {
+            "type": "alternate",
+            "version": "1",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "metadata": {
+                  "type": "object"
+                }
+              },
+              "required": ["text", "amount", "metadata"],
+              "additionalProperties": false
+            },
+            "revision": "c6745d2a672e2a1ef172c4b7df66a1f997831348dfbd9441d80808123030832a"
+          },
+          {
+            "type": "echo",
+            "version": "1",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "metadata": {
+                  "type": "object"
+                }
+              },
+              "required": ["text", "amount", "metadata"],
+              "additionalProperties": false
+            },
+            "revision": "82dd4c88b694e630e9d687acd00cf20f9e5227ac6421f20f56fe9b144ab89acf"
+          }
+        ]
+      },
+      {
+        "ready": true,
+        "pid": 42396,
+        "url": "http://127.0.0.1:64236",
+        "entries": {
+          "task-protocol": {
+            "path": "node_modules\\.pnpm\\@potential-guide+task-proto_264366fffa682536dbb92165ae126fbd\\node_modules\\@potential-guide\\task-protocol\\dist\\index.js",
+            "sha256": "e538db92f24744c2967a0af25a8cedf0244339667cbeb13d7cee842748ea6af1"
+          },
+          "task-engine": {
+            "path": "node_modules\\.pnpm\\@potential-guide+task-engin_790fbe22d5433b8e7eb8b48d1994a811\\node_modules\\@potential-guide\\task-engine\\dist\\index.js",
+            "sha256": "cd50485772db48aab3de1620a3f9101bba825837ffb5e21c17134a967ee40dfe"
+          },
+          "task-engine-http": {
+            "path": "node_modules\\.pnpm\\@potential-guide+task-engin_cefb19a9336866708ef0997386a6e88c\\node_modules\\@potential-guide\\task-engine-http\\dist\\index.js",
+            "sha256": "69f383ab92956a20aeeadc3937431f344ea20b73d594ab7f8b7e0f1da2577495"
+          },
+          "task-engine-storage": {
+            "path": "node_modules\\.pnpm\\@potential-guide+task-engin_b2a36922020a408dc6ff9ade6d485854\\node_modules\\@potential-guide\\task-engine-storage\\dist\\index.js",
+            "sha256": "13771e2a53ccc8fbba6fcc34b8984992bffc6928d04b5c20fecc5614f659a873"
+          },
+          "task-engine-server": {
+            "path": "node_modules\\.pnpm\\@potential-guide+task-engin_95d504f3b2b5bbe742347ac7cbe817e8\\node_modules\\@potential-guide\\task-engine-server\\dist\\index.js",
+            "sha256": "9918c262fa20d25f62ec0abaeb1ba9a11cc38e60a58851d0d5636d0aa7ba741a"
+          }
+        },
+        "version": "2",
+        "httpReadyStatus": 200,
+        "discovery": [
+          {
+            "type": "alternate",
+            "version": "1",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "metadata": {
+                  "type": "object"
+                }
+              },
+              "required": ["text", "amount", "metadata"],
+              "additionalProperties": false
+            },
+            "revision": "c6745d2a672e2a1ef172c4b7df66a1f997831348dfbd9441d80808123030832a"
+          },
+          {
+            "type": "echo",
+            "version": "2",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "metadata": {
+                  "type": "object"
+                }
+              },
+              "required": ["text", "amount", "metadata"],
+              "additionalProperties": false
+            },
+            "revision": "7f43ed4ac0861c50d64f497c4ac4abd589a9bfcf8a3223d61d5d9d1ab9034e2f"
+          }
+        ]
+      }
+    ],
+    "cleanup": [
+      {
+        "pid": 47644,
+        "code": 0,
+        "signal": null,
+        "url": "http://127.0.0.1:64052",
+        "portClosed": true
+      },
+      {
+        "pid": 42396,
+        "code": 0,
+        "signal": null,
+        "url": "http://127.0.0.1:64236",
+        "portClosed": true
+      }
+    ],
+    "success": true
+  },
+  "success": true,
+  "directoryRemoved": true,
+  "finishedAt": "2026-10-30T17:54:32.332Z"
+}
