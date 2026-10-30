@@ -46,7 +46,9 @@
 
 此前 Agent 建议“两侧先满足同版本契约，再比较完整 canonical JSON”，现已撤回，不能作为已确认规则。Agent 提出的“只有承诺额外字段不影响任务行为才允许忽略”也不是用户确认的判等前提，不应并入 Equals 的职责。
 
-JSON Schema 标准本身没有定义 Equals；本项目需明确结构到比较逻辑的映射。缺失字段与显式值、类型不匹配输入、数组、数值以及组合/条件/引用和 additionalProperties、patternProperties 等结构的比较规则仍待收敛。不能把简单 properties 示例直接当作所有 Schema 的完整算法，也不能偷偷用 Validate 决定对象是否有资格参与比较。
+用户进一步确认：Equals 可以通过判别字段或局部类型判断选择比较结构；识别比较结构与 Validate 的合法性校验是两回事。例如 Schema 以 kind 区分 file/path 和 url/url 两种结构时，可以按 kind 选择对应字段比较，但不执行完整校验，也不以字段满足长度等合法性约束作为比较前提。该决定仅允许结构选择，不代表复杂组合的完整算法已确认。
+
+JSON Schema 标准本身没有定义 Equals；本项目需明确结构到比较逻辑的映射。缺失字段与显式值、类型不匹配输入、数组、数值以及组合/条件/引用和 additionalProperties、patternProperties 等结构的比较规则仍待收敛，尤其需要说明无法唯一选择结构时的确定行为。不能把简单 properties 示例直接当作所有 Schema 的完整算法，也不能偷偷用 Validate 决定对象是否有资格参与比较。
 
 当前 Check/Probe 已采用 canonical 输入比较，见 [canonical](../../../../../../packages/task-protocol/src/json.ts) 及[契约文档](../../../../../../docs/artifact-contracts.md)。这只是迁移基线，不是本次生成式判等的目标规则；仍需核查全部类型和外部消费者，明确原自定义行为的迁移或拒绝策略。
 
