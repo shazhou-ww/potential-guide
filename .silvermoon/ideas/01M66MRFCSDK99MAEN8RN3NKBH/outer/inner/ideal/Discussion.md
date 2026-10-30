@@ -10,7 +10,7 @@
 
 用户期望可自动生成 Validate、Equals，并支持类型发现、自动表单及后续消费者；同时询问采用 JSON Schema 还是必要子集，要求参考现有 Subject Schema。
 
-2026-10-30，在本 idea 的独立 session 中，用户确认采用 JSON Schema Draft 2020-12 标准语义，另行明确运行限制；表单支持子集与任务契约分开。该决定仅确认标准范围，不确认下面的具体运行限制或判等规则，也不构成实施授权、submit 或 accept。
+2026-10-30，在本 idea 的独立 session 中，用户确认采用 JSON Schema Draft 2020-12 标准语义，另行明确运行限制；表单支持子集与任务契约分开。随后明确 Validate 与 Equals 的职责分离，见下文；具体运行限制与完整比较规则仍待收敛。这些讨论决定不构成实施授权、submit 或 accept。
 
 本次替换指 Task 输入的 validate、equals，不自动扩展为删除 validatePrepared、validateResult、validateExecutionResult、validateProgress 或 prepare。
 
@@ -38,13 +38,17 @@
 
 这样既利用现有标准和 Ajv，也避免永久把引擎限制在首版表单能画出的字段集合。具体关键字、引用/递归限制与表单交互不在准备阶段预先穷举。
 
-## 判等不能单靠 Schema 推导
+## 已确认：按 Schema 结构生成判等，与校验分离
 
-Schema 回答“数据是否合法”，不回答“这两个合法输入在业务上是否等价”。例如大小写不同的路径、顺序不同的数组或省略字段与显式默认值，不会因为通过同一 Schema 就相等。
+用户明确要求由 Schema 定义的结构衍生 Equals 比较逻辑，作者不再提供任意 equals 函数。Equals 按既定逻辑判定两个对象是否相等，不判断对象是否符合 Schema，也不负责推导任意业务等价关系。
 
-建议生成的 Equals 采用：**两侧都满足同版本输入契约后，按已有 canonical JSON 结构判等**。对象键顺序无关、数组顺序有关；缺省字段与显式值不同，不自动忽略字段、补默认值或做路径/大小写归一化。有限 JSON 数字与 `-0` 等细节沿用现有 canonical 契约。证据见 [canonical](../../../../../../packages/task-protocol/src/json.ts)，L74–82，及[契约文档](../../../../../../docs/artifact-contracts.md)的 canonical request JSON 说明。
+对于只定义一个 property 的结构比较示例，两个对象该字段相同，即使还包含值不同的额外字段，比较也忽略那些额外字段。Schema 若禁止额外字段，由 Validate 判定输入非法，而不是 Equals 的职责。Equals 不要求先通过 Validate，也不以校验结果替代比较结果；这不取消任务接收路径本身的校验。
 
-这是提议的统一规则，不是假称 Schema 能生成原来任意 equals 函数的全部语义。当前 Check/Probe 已采用 canonical 输入比较；仍需核查全部类型和外部消费者，明确原自定义行为的迁移或拒绝策略。
+此前 Agent 建议“两侧先满足同版本契约，再比较完整 canonical JSON”，现已撤回，不能作为已确认规则。Agent 提出的“只有承诺额外字段不影响任务行为才允许忽略”也不是用户确认的判等前提，不应并入 Equals 的职责。
+
+JSON Schema 标准本身没有定义 Equals；本项目需明确结构到比较逻辑的映射。缺失字段与显式值、类型不匹配输入、数组、数值以及组合/条件/引用和 additionalProperties、patternProperties 等结构的比较规则仍待收敛。不能把简单 properties 示例直接当作所有 Schema 的完整算法，也不能偷偷用 Validate 决定对象是否有资格参与比较。
+
+当前 Check/Probe 已采用 canonical 输入比较，见 [canonical](../../../../../../packages/task-protocol/src/json.ts) 及[契约文档](../../../../../../docs/artifact-contracts.md)。这只是迁移基线，不是本次生成式判等的目标规则；仍需核查全部类型和外部消费者，明确原自定义行为的迁移或拒绝策略。
 
 输入相等也不等于必然共享执行：[Engine compatible](../../../../../../packages/task-engine/src/engine.ts)，L494–520，还要求类型/版本、环境、scope 和 Prepared 相等；时间匹配与执行所有权规则继续有效。幂等则保持同一 requestId 的完整原始请求比较，不能替换为忽略通用字段的输入比较。
 
