@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  type Authorize,
   type Caller,
   compileInputSchema,
   type Json,
@@ -41,6 +42,7 @@ export function harness(
     prepare?: TaskType<JsonObject>["prepare"];
     validateResult?: TaskType<JsonObject>["validateResult"];
     inputSchema?: TaskType<JsonObject>["inputSchema"];
+    authorize?: Authorize;
   } = {},
 ) {
   const clock = new VirtualClock();
@@ -125,7 +127,7 @@ export function harness(
       sum,
     ],
     currentVersions: { echo: "1", sum: "1" },
-    authorize: (who) => who.subject === "tester",
+    authorize: options.authorize ?? ((who) => who.subject === "tester"),
     ...(options.limits ? { limits: options.limits } : {}),
   });
   engine.start();

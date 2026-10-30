@@ -7,6 +7,7 @@ import {
   positive,
   type Subscription,
   TaskError,
+  type TaskQuery,
   type TaskService,
   ulid,
 } from "@potential-guide/task-protocol";
@@ -25,7 +26,7 @@ function status(code: string): number {
   if (code === "forbidden") return 403;
   if (code === "contract_revision_mismatch") return 412;
   if (code === "not_found") return 404;
-  if (code === "history_expired") return 410;
+  if (code === "history_expired" || code === "query_expired") return 410;
   if (code === "idempotency_conflict" || code === "task_finished") return 409;
   if (code === "payload_too_large") return 413;
   if (code === "capacity_exceeded") return 429;
@@ -173,6 +174,37 @@ export function createTaskHandler(
       const path = url.pathname.slice(prefix.length);
       if (request.method === "GET" && path === "/task-types")
         return response(options.service.discoverTypes(caller));
+      if (request.method === "GET" && path === "/tasks") {
+        const query: Record<string, string> = {};
+        const allowed = new Set([
+          "type",
+          "createdFrom",
+          "createdBefore",
+          "updatedFrom",
+          "updatedBefore",
+          "sort",
+          "cursor",
+          "limit",
+        ]);
+        for (const [key, value] of url.searchParams) {
+          if (!allowed.has(key) || key in query)
+            fail("invalid_request", "Unknown or duplicate Task query parameter.");
+          query[key] = value;
+        }
+        const { cursor, limit, ...filters } = query;
+        if (limit !== undefined && !/^[1-9][0-9]*$/.test(limit))
+          fail("invalid_request", "limit must be a positive integer.");
+        return response(
+          options.service.listTasks(
+            filters as TaskQuery,
+            {
+              ...(cursor !== undefined ? { cursor } : {}),
+              ...(limit !== undefined ? { limit: Number(limit) } : {}),
+            },
+            caller,
+          ),
+        );
+      }
       if (request.method === "POST" && path === "/tasks") {
         identity = ulid(request.headers.get("Idempotency-Key"));
         const raw = object(await body(request, maxBody));

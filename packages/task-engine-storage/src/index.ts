@@ -20,6 +20,7 @@ import {
   fail,
   type NewEvent,
   reduce,
+  restoreTaskUpdates,
   type Store,
   type StoreView,
   TaskError,
@@ -245,7 +246,12 @@ export class SqliteStore implements Store {
     );
     if (facts.watermark !== metadata.watermark)
       fail("storage_corrupt", "Missing committed event suffix.");
-    return { storeId: String(metadata.store_id), floor: Number(metadata.floor), facts, events };
+    return restoreTaskUpdates({
+      storeId: String(metadata.store_id),
+      floor: Number(metadata.floor),
+      facts,
+      events,
+    });
   }
   read(): StoreView {
     if (this.closed) fail("storage_failure", "Store closed.");

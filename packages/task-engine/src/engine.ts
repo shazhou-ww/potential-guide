@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   type Authorize,
   assertFactsVersion,
@@ -8,9 +9,6 @@ import {
   type Clock,
   canonical,
   compileInputSchema,
-  type InputContract,
-  type TaskTypeDiscovery,
-  type SubmitOptions,
   type ErrorFact,
   type ExecutionRecord,
   type ExecutionTracking,
@@ -20,6 +18,7 @@ import {
   freeze,
   type HistoryFilter,
   type HistoryPage,
+  type InputContract,
   isPending,
   type Json,
   json,
@@ -32,24 +31,29 @@ import {
   positive,
   project,
   type RegisteredType,
+  restoreTaskUpdates,
   type StartPermit,
   type Store,
   type StoreView,
+  type SubmitOptions,
   type Subscription,
   TaskError,
+  type TaskPage,
+  type TaskQuery,
   type TaskRecord,
   type TaskRequest,
   type TaskService,
   type TaskSnapshot,
+  type TaskTypeDiscovery,
   timestamp,
   ulid,
 } from "@potential-guide/task-protocol";
+import { type CatalogLimits, TaskCatalog } from "./catalog.js";
 import { newId } from "./identity.js";
-import { createHash } from "node:crypto";
 
 type CompiledType = RegisteredType & InputContract;
 
-export interface EngineLimits {
+export interface EngineLimits extends CatalogLimits {
   maxTasks: number;
   maxEvents: number;
   maxPayloadBytes: number;
@@ -94,6 +98,11 @@ const defaults: EngineLimits = {
   executionWallMs: 60_000,
   tickMs: 10,
   retentionMs: 86_400_000,
+  queryScanLimit: 10_000,
+  queryPageBytes: 65_536,
+  maxQueryViews: 64,
+  maxQueryBytes: 8_388_608,
+  queryLifetimeMs: 60_000,
 };
 const common = new Set([
   "requestId",
@@ -141,12 +150,14 @@ export class TaskEngine implements TaskService {
   private subscriptions = new Set<Subscription>();
   private allocations = new Set<Promise<void>>();
   private closeAttempt: Promise<void> | undefined;
+  private readonly catalog: TaskCatalog;
   readonly errors: ErrorFact[] = [];
 
   constructor(private readonly options: EngineOptions) {
     this.clock = options.clock ?? systemClock;
     this.limits = { ...defaults, ...options.limits };
     for (const [key, value] of Object.entries(this.limits)) positive(value, key);
+    this.catalog = new TaskCatalog(this.limits);
     if (this.limits.maxEvents < 32) fail("invalid_request", "maxEvents must be at least 32.");
     for (const type of options.types) {
       if (!type.type || !type.version || !type.environment)
@@ -185,7 +196,7 @@ export class TaskEngine implements TaskService {
           return { type: name, version, inputSchema: type.inputSchema, revision: type.revision };
         }),
     );
-    this.view = options.store.read();
+    this.view = restoreTaskUpdates(options.store.read());
     assertFactsVersion(this.view.facts);
   }
   private diagnostic(error: unknown, code = "engine_failure"): void {
@@ -284,9 +295,11 @@ export class TaskEngine implements TaskService {
   private commit(events: NewEvent[]): void {
     if (!events.length) return;
     try {
-      this.view = this.options.store.append(this.owner, this.view.facts.watermark, events);
+      this.view = restoreTaskUpdates(
+        this.options.store.append(this.owner, this.view.facts.watermark, events),
+      );
     } catch (error) {
-      this.view = this.options.store.read();
+      this.view = restoreTaskUpdates(this.options.store.read());
       if (error instanceof TaskError) throw error;
       throw new TaskError(
         "storage_failure",
@@ -430,6 +443,14 @@ export class TaskEngine implements TaskService {
     this.task(taskId, caller, "task");
     return project(this.view.facts, taskId, this.clock.now());
   }
+  listTasks(query: TaskQuery, page: { cursor?: string; limit?: number }, caller: Caller): TaskPage {
+    this.assertRunning();
+    this.authorized(caller, "list", caller?.scope);
+    return this.catalog.read(query, page, caller, this.view.facts, this.clock.now(), (task) => {
+      this.authorized(caller, "list", task.binding.scope);
+      this.checkHistory(task);
+    });
+  }
   getRequest(requestId: string, caller: Caller): TaskRequest {
     this.authorized(caller, "request", caller?.scope);
     ulid(requestId);
@@ -515,7 +536,7 @@ export class TaskEngine implements TaskService {
     if (this.started || this.closing) fail("engine_started", "Engine already started.");
     this.options.store.claim(this.owner);
     try {
-      this.view = this.options.store.read();
+      this.view = restoreTaskUpdates(this.options.store.read());
       assertFactsVersion(this.view.facts);
       for (const task of Object.values(this.view.facts.tasks)) this.checkHistory(task);
       for (const execution of Object.values(this.view.facts.executions))
@@ -1405,6 +1426,7 @@ export class TaskEngine implements TaskService {
   private async closeInner(): Promise<void> {
     if (!this.started || this.closing) return;
     this.closing = true;
+    this.catalog.clear();
     this.timer?.();
     for (const stopTimer of this.wallTimers.values()) stopTimer();
     this.wallTimers.clear();

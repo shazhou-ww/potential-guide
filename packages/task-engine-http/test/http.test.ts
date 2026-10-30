@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { newId } from "@potential-guide/task-engine";
-import { TaskError, type TaskSnapshot } from "@potential-guide/task-protocol";
+import { TaskError, type TaskPage, type TaskSnapshot } from "@potential-guide/task-protocol";
 import { caller, flush, harness } from "../../task-engine/test/fixtures.js";
 import { createTaskHandler } from "../src/index.js";
 
@@ -138,6 +138,76 @@ test("Web adapter and core preserve body/header identity, auth and errors withou
     );
   } finally {
     await h.close();
+  }
+});
+
+test("GET task directory strictly parses bounded filters and preserves query error statuses", async () => {
+  let allowed = true;
+  const h = harness({
+    limits: { pageSize: 1, queryLifetimeMs: 100 },
+    authorize: (_who, operation) => operation !== "list" || allowed,
+  });
+  const handler = createTaskHandler({ service: h.engine, resolveCaller: () => caller });
+  const request = (query = "") => handler(new Request(`http://host/tasks${query}`));
+  try {
+    const task = h.submit();
+    h.submit();
+    const first = await request("?type=echo&limit=1&sort=updated-desc");
+    assert.equal(first.status, 200);
+    assert.equal(first.headers.get("cache-control"), "no-store");
+    const page = (await first.json()) as {
+      tasks: { taskId: string }[];
+      next: string;
+      expiresAt: string;
+    };
+    assert.equal(page.tasks.length, 1);
+    assert.ok(page.expiresAt);
+    assert.equal((await request(`?type=echo&sort=updated-desc&cursor=${page.next}`)).status, 200);
+    assert.equal((await request(`?cursor=${page.next}`)).status, 400);
+    for (const query of [
+      "?type=echo&type=sum",
+      "?scope=a",
+      "?from=2026-01-01",
+      "?limit=",
+      "?limit=1.5",
+      "?limit=2",
+      "?cursor=",
+      "?createdFrom=2026-01-01",
+      "?sort=oldest",
+    ])
+      assert.equal((await request(query)).status, 400, query);
+    const encoded = encodeURIComponent(task.receivedAt.replace("Z", "+00:00"));
+    assert.equal((await request(`?createdFrom=${encoded}`)).status, 200);
+    allowed = false;
+    assert.equal((await handler(new Request("http://host/task-types"))).status, 200);
+    assert.equal((await request(`?type=echo&sort=updated-desc&cursor=${page.next}`)).status, 403);
+    allowed = true;
+    h.clock.setTime(h.clock.now() + 100);
+    assert.equal((await request(`?type=echo&sort=updated-desc&cursor=${page.next}`)).status, 410);
+    const empty = await request("?type=unknown");
+    assert.equal(empty.status, 200);
+    assert.deepEqual(((await empty.json()) as TaskPage).tasks, []);
+  } finally {
+    await h.close();
+  }
+});
+
+test("directory capacity and byte failures are not successful empty HTTP pages", async () => {
+  for (const [limits, expected] of [
+    [{ queryScanLimit: 1 }, 429],
+    [{ queryPageBytes: 100 }, 413],
+  ] as const) {
+    const h = harness({ limits });
+    try {
+      h.submit();
+      h.submit();
+      const handler = createTaskHandler({ service: h.engine, resolveCaller: () => caller });
+      const response = await handler(new Request("http://host/tasks"));
+      assert.equal(response.status, expected);
+      assert.equal("tasks" in ((await response.json()) as object), false);
+    } finally {
+      await h.close();
+    }
   }
 });
 

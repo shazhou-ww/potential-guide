@@ -27,4 +27,15 @@ independently: cancellation freezes process facts; late completion can also be
 timed out. A finish exactly at the deadline is on time. Results are stored once
 on Execution and projected through Task's completion association.
 
+`TaskService.listTasks(TaskQuery, page, caller)` exposes a bounded, stable
+directory of retained Task summaries, separate from event history. `TaskPage`
+contains observation/expiry times and an optional opaque continuation cursor.
+Authorization uses the distinct `list` operation. Summary `updatedAt` follows
+accepted Task changes and bound live Execution progress, not read time.
+The optional stored `TaskRecord.updatedAt` preserves supported v2 checkpoints
+with their original `contractRevision` but without update metadata;
+`restoreTaskUpdates(StoreView)` reconstructs absent values from protected retained
+events, failing on missing history rather than guessing a timestamp.
+It does not invent a missing contract identity or bypass original-schema checks.
+
 See [the engine guide](../../docs/task-engine.md) for ports and composition.

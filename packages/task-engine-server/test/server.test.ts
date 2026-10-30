@@ -1,15 +1,21 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { createServer } from "node:http";
 import { mkdir, rm } from "node:fs/promises";
+import { createServer } from "node:http";
 import { resolve } from "node:path";
 import test from "node:test";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import { openSqliteStore } from "@potential-guide/task-engine-storage";
-import { json, TaskError, type Json, type TaskType } from "@potential-guide/task-protocol";
-import { startTaskServer, type ServerOptions } from "../src/index.js";
+import {
+  type Json,
+  json,
+  TaskError,
+  type TaskPage,
+  type TaskType,
+} from "@potential-guide/task-protocol";
+import { type ServerOptions, startTaskServer } from "../src/index.js";
 
 function type(): TaskType<Json> {
   return {
@@ -98,6 +104,10 @@ test("import has no signals; real HTTP auth, permission, bounded body, history a
     });
     assert.equal(submitted.status, 202);
     const task = (await submitted.json()) as { taskId: string };
+    const directory = await fetch(`${server.url}/tasks?type=echo`, { headers });
+    assert.equal(directory.status, 200);
+    assert.equal(((await directory.json()) as TaskPage).tasks[0]?.taskId, task.taskId);
+    assert.equal((await fetch(`${server.url}/tasks`)).status, 401);
     assert.equal((await fetch(`${server.url}/events?taskId=${task.taskId}`)).status, 401);
     assert.equal(
       (

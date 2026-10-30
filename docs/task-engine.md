@@ -244,6 +244,113 @@ external processes exited. Hosts using external processes must isolate/clean
 prior resources before reusing them. Store ownership is retained if close cannot
 confirm resource cleanup.
 
+## Task directory
+
+`engine.listTasks(query, {cursor?, limit?}, caller)` and HTTP `GET /tasks`
+discover all still-retained, authorized Tasks in the trusted caller's scope,
+including submissions from other subjects/clients, pending work and failures.
+The new `list` authorization operation is separate from `task`, `request`,
+`history` and `subscribe`; update explicit operation allowlists deliberately.
+It is also independent of `discoverTypes`/`GET /task-types`, which retain their
+existing `submit` authorization. Listing neither implies nor requires discovery.
+Listing never grants permission to fetch original requests or current details.
+No query parameter can override caller scope.
+
+Query fields (all optional, combined with AND):
+
+| Field | Meaning |
+| --- | --- |
+| `type` | Exact registered type name, 1–256 characters |
+| `createdFrom`, `createdBefore` | Inclusive/exclusive service `receivedAt` bounds |
+| `updatedFrom`, `updatedBefore` | Inclusive/exclusive **latest** `updatedAt` bounds |
+| `sort` | `created-desc` (default) or `updated-desc`; ties use ascending taskId |
+
+Time values are RFC 3339 timestamps with an explicit `Z` or numeric offset,
+seconds and optional 1–3 fractional digits. They are normalized to millisecond
+UTC; invalid dates, reversed/empty ranges and unknown fields fail. Convert local
+calendar days to timezone-aware boundaries in the client. Eligibility, execution
+start and snapshot observation time are not creation times.
+
+```ts
+const query = {
+  type: "echo",
+  createdFrom: "2026-10-01T00:00:00+08:00",
+  createdBefore: "2026-11-01T00:00:00+08:00",
+  sort: "updated-desc" as const,
+};
+const page = engine.listTasks(query, { limit: 25 }, caller);
+// Repeat the same query when following next; percent-encode HTTP query values.
+const next = page.next
+  ? engine.listTasks(query, { cursor: page.next, limit: 25 }, caller)
+  : undefined;
+```
+
+Each `TaskPage` has `tasks`, `observedAt`, `expiresAt`, and optional `next`.
+Each summary contains `taskId`, `requestId`, `seriesId`, `type`, bound `version`,
+`receivedAt`, `updatedAt`, and `state` (`stage`, `pending`, `timedOut`, `canceled`,
+`completed`, `executionFailed`). These independent state flags use the existing
+Task projection; success/failure, cancellation and timeout are not collapsed.
+No input, Prepared, result, error message, progress payload or submitting subject
+is included. Follow IDs through existing detail/request/history APIs. Redo is a
+new submission with a new requestId and original user parameters; the summary's
+bound version must not be injected into the original request.
+The current discovered revision is separate from a retained Task's original
+schema binding. Timestamp recovery does not invent `contractRevision`: the
+existing `unsupported_contract` checks for absent historical identities or changed
+same-version schemas still apply. A client may explicitly use the current
+discovery/If-Match flow for a new submission; listing never pins redo to an old
+version or automatically adds a revision precondition.
+
+Creation initializes `updatedAt` to `receivedAt`. Accepted Task fact changes,
+and new progress/final facts of its bound live Execution, update it to that
+event's time. Canceled/final Tasks do not follow later shared Execution progress.
+Unbound demand does not inherit progress. Reads, time passing, timeout projection
+and loading a checkpoint do not update it. An actual recovery interruption
+failure is still a new fact. Event sequence defines "latest"; a clock rollback
+can make updatedAt earlier than its previous value or receivedAt.
+
+The first page freezes **membership, order and summaries** for the entire query.
+Concurrent submissions/updates appear only in a new query; details remain live.
+Every continuation reauthorizes the complete membership. A removed member,
+including one on an already delivered page, invalidates the query. Permission
+revocation fails rather than returning stale data. No missing member is skipped
+or replaced. Already delivered responses cannot be recalled.
+
+Directory cursors are opaque, authenticated, process-local and bound to the
+caller (scope and subject), normalized query and fixed view. They are not event
+cursors or authorization tokens. Page size can change within its configured
+bound. Retry of an issued cursor returns the same page for the same page size,
+until invalidation; finishing a query does not extend its lifetime. Restart,
+expiry or missing context returns `query_expired` (HTTP 410); malformed, modified,
+mixed-query/caller or event cursors return `invalid_cursor` (400). Start a new
+query after 410. Authorization errors remain 401/403; invalid query/payload
+is 400, an oversized page/summary is 413, exhausted capacity is 429, and an empty
+successful query is 200 with `tasks: []`.
+
+Directory-specific `EngineLimits`:
+
+| Limit | Default | Bound |
+| --- | ---: | --- |
+| `pageSize` | 100 | Maximum requested entries (also existing event page limit) |
+| `queryPageBytes` | 65,536 | Serialized UTF-8 bytes of the complete success body, including cursor/envelope |
+| `queryScanLimit` | 10,000 | Total retained Task records inspected in the initial query, including other scopes/nonmatches |
+| `maxQueryViews` | 64 | Retained multipage views per Engine |
+| `maxQueryBytes` | 8,388,608 | Aggregate conservative view accounting, including the candidate being constructed |
+| `queryLifetimeMs` | 60,000 | Maximum continuation lifetime |
+
+The implementation scans at most queryScanLimit records, then sorts the bounded
+matches; no unbounded result is hidden behind a small page limit. It charges
+twice each summary's serialized bytes plus 256 bytes per member and fixed/query/
+caller overhead. This is a conservative accounting budget, not a V8 heap
+measurement; record/view counts additionally bound object overhead. All views
+share the byte/count budgets; capacity failure never silently truncates or
+evicts another active query. Page bytes can produce fewer entries than requested,
+with `next` preserving the remainder. Even one summary that cannot fit fails.
+Expiry is checked against both wall and monotonic clocks, so clock rollback
+cannot indefinitely prolong a view. Expired contexts are reclaimed lazily on
+directory calls; close releases all views. Configure these budgets for retained
+volume; a valid query can fail capacity even when submission capacity remains.
+
 ## History, limits and retention
 
 History pages bind a store identity, filter and fixed committed watermark.

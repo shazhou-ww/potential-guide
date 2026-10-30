@@ -56,6 +56,8 @@ export interface Binding {
 }
 export interface TaskRecord {
   receivedSequence: number;
+  /** Absent only in historical v2 checkpoints; recover from retained events, never guess. */
+  updatedAt?: string;
   request: TaskRequest;
   binding: Binding;
   input: Json;
@@ -145,7 +147,7 @@ export interface Caller {
   scope: string;
   subject: string;
 }
-export type Operation = "submit" | "request" | "task" | "cancel" | "history" | "subscribe";
+export type Operation = "submit" | "request" | "task" | "cancel" | "history" | "subscribe" | "list";
 export type Authorize = (caller: Caller, operation: Operation, scope: string) => boolean;
 export interface PreparationOptions {
   signal: AbortSignal;
@@ -223,12 +225,45 @@ export interface Subscription {
   pull(): Observation;
   close(): void;
 }
+export interface TaskQuery {
+  type?: string;
+  createdFrom?: string;
+  createdBefore?: string;
+  updatedFrom?: string;
+  updatedBefore?: string;
+  sort?: "created-desc" | "updated-desc";
+}
+export interface TaskSummary {
+  taskId: string;
+  requestId: string;
+  seriesId: string;
+  type: string;
+  version: string;
+  receivedAt: string;
+  updatedAt: string;
+  state: {
+    stage: Stage;
+    pending: boolean;
+    timedOut: boolean;
+    canceled: boolean;
+    completed: boolean;
+    executionFailed: boolean;
+  };
+}
+export interface TaskPage {
+  tasks: TaskSummary[];
+  /** Fixed observation time for this query's summaries, not a Task update. */
+  observedAt: string;
+  expiresAt: string;
+  next?: string;
+}
 export interface TaskService {
   discoverTypes(caller: Caller): readonly TaskTypeDiscovery[];
   submit(request: unknown, caller: Caller, options?: SubmitOptions): TaskSnapshot;
   getRequest(requestId: string, caller: Caller): TaskRequest;
   getTask(taskId: string, caller: Caller): TaskSnapshot;
   cancelTask(taskId: string, caller: Caller): TaskSnapshot;
+  listTasks(query: TaskQuery, page: { cursor?: string; limit?: number }, caller: Caller): TaskPage;
   readHistory(
     filter: HistoryFilter,
     page: { cursor?: string; limit?: number },

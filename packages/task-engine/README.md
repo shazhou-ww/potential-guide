@@ -14,5 +14,11 @@ Exports `createTaskEngine`, `TaskEngine`, `newId`; `/pool` exports the bounded
 `ExecutorPool`; `/testing` exports explicitly non-durable `MemoryStore` and
 `VirtualClock`. No import starts a listener or timer.
 
+`engine.listTasks(query, page, caller)` discovers retained Tasks across clients
+within the caller's authorized scope. It uses bounded, expiring, stable views,
+with independent created/updated time filters and payload-free summaries. The
+`list` permission does not grant request/detail permissions; pagination never
+executes Tasks or triggers cleanup.
+
 See [the engine guide](../../docs/task-engine.md) for startup handshakes, ownership,
 recurrence, authorization, retention and resource-control requirements.

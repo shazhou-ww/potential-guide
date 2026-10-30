@@ -1,5 +1,12 @@
 import { at, fail, timestamp } from "./json.js";
-import type { ExecutionMatch, ExecutionRecord, FactEvent, Facts, TaskSnapshot } from "./types.js";
+import type {
+  ExecutionMatch,
+  ExecutionRecord,
+  FactEvent,
+  Facts,
+  StoreView,
+  TaskSnapshot,
+} from "./types.js";
 
 export function matchesExecutionTime(
   policy: ExecutionMatch,
@@ -41,6 +48,26 @@ export function assertFactsVersion(facts: Facts): void {
       task.request.executionMatch !== "terminated-after-eligible"
     )
       fail("unsupported_version", "Unsupported stored request executionMatch. Use new storage.");
+  for (const task of Object.values(facts.tasks))
+    if (task.updatedAt !== undefined) timestamp(task.updatedAt);
+}
+
+/** v2 stores protect all events while any recovery references remain. */
+export function restoreTaskUpdates(view: StoreView): StoreView {
+  if (!Object.values(view.facts.tasks).some((task) => task.updatedAt === undefined)) return view;
+  const prefix = emptyFacts();
+  prefix.watermark = view.floor;
+  const recovered = reduce(prefix, view.events);
+  if (recovered.watermark !== view.facts.watermark)
+    fail("history_gap", "Cannot recover Task update times from incomplete v2 history.");
+  for (const [id, task] of Object.entries(view.facts.tasks)) {
+    if (task.updatedAt !== undefined) continue;
+    const updatedAt = recovered.tasks[id]?.updatedAt;
+    if (updatedAt === undefined)
+      fail("history_gap", "Missing creation/update history for retained Task.");
+    task.updatedAt = updatedAt;
+  }
+  return view;
 }
 
 export function authorizeSync(authorize: () => unknown): void {
@@ -63,6 +90,7 @@ export function reduce(prefix: Facts, events: readonly FactEvent[]): Facts {
     const task = event.taskId ? facts.tasks[event.taskId] : undefined;
     const execution = event.executionId ? facts.executions[event.executionId] : undefined;
     const snapshot = task?.snapshot;
+    const previousSnapshot = snapshot ? JSON.stringify(snapshot) : undefined;
     const frozen = snapshot?.canceledAt !== undefined;
     if (event.type.startsWith("task.") && event.type !== "task.created" && !task)
       fail("invalid_fact", "Task fact references a missing Task.");
@@ -85,7 +113,10 @@ export function reduce(prefix: Facts, events: readonly FactEvent[]): Facts {
         matchesExecutionTime(event.data.task.binding.executionMatch, event.occurredAt, {
           startedAt: event.occurredAt,
         });
-        facts.tasks[event.data.task.snapshot.taskId] = structuredClone(event.data.task);
+        facts.tasks[event.data.task.snapshot.taskId] = {
+          ...structuredClone(event.data.task),
+          updatedAt: event.data.task.snapshot.receivedAt,
+        };
         break;
       case "task.preparation.started":
         if (snapshot && !frozen) {
@@ -236,13 +267,32 @@ export function reduce(prefix: Facts, events: readonly FactEvent[]): Facts {
       default:
         fail("invalid_fact", "Unknown event type.");
     }
+    if (task && (JSON.stringify(snapshot) !== previousSnapshot || event.type === "task.successor"))
+      task.updatedAt = event.occurredAt;
+    if (
+      event.type === "execution.progress" ||
+      event.type === "execution.completed" ||
+      event.type === "execution.failed"
+    )
+      for (const affected of Object.values(facts.tasks))
+        if (
+          affected.snapshot.execution?.executionId === event.executionId &&
+          !affected.snapshot.canceledAt &&
+          !affected.snapshot.termination
+        )
+          affected.updatedAt = event.occurredAt;
     facts.watermark = event.sequence;
   }
   assertFactsVersion(facts);
   return facts;
 }
 
-export function project(facts: Facts, taskId: string, now: number): TaskSnapshot {
+export function project(
+  facts: Facts,
+  taskId: string,
+  now: number,
+  includeResult = true,
+): TaskSnapshot {
   assertFactsVersion(facts);
   const task = facts.tasks[taskId];
   if (!task) fail("not_found", "Task not found.");
@@ -274,7 +324,7 @@ export function project(facts: Facts, taskId: string, now: number): TaskSnapshot
   if (snapshot.stage === "completed" && !snapshot.canceledAt && snapshot.execution) {
     const execution = facts.executions[snapshot.execution.executionId];
     if (!execution || execution.result === undefined) fail("history_gap", "Missing result.");
-    snapshot.result = structuredClone(execution.result);
+    if (includeResult) snapshot.result = structuredClone(execution.result);
   }
   return snapshot;
 }
