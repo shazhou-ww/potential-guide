@@ -8,7 +8,7 @@ catalog:
   "@types/cross-spawn": 6.0.6
   ajv: 8.20.0
   cross-spawn: 7.0.6
-  effect: 4.0.2
+  effect: 4.0.6
   esbuild: 0.28.2
   jsonata: 2.1.0
   jsonc-parser: 3.3.1
