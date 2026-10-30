@@ -51,6 +51,10 @@
   start 时匹配可绑定的 `started-after-eligible` Task；
   terminate 时匹配可绑定的 `terminated-after-eligible` Task，成功和失败都参与该规则。
   前者在绑定之后接收执行失败；后者的失败终结与绑定属于同一逻辑处理。
+- 生效时间下界包含等号：对应的 start 或 terminate 事件时间满足
+  `eventTime >= effectiveEligibleAt` 即通过下界判定，不再使用当前实现的严格 `>`。
+  Task 仍须在该事件发生时已接收且有效；
+  后接收的 Task 不能仅凭相同时间戳倒查绑定，时间戳相等不替代事件先后关系。
 - 此前“Task 已生效，但尚未准备好，因而等到执行失败后才可判定兼容”的例子撤回：
   它错误地把当前 Prepared 兼容限制作为目标语义前提。
   按上述规则，该 Task 不需要等准备完成，可在 Execution terminate 时参与匹配，
@@ -58,7 +62,7 @@
 
 ## Open questions
 
-- 边界采用何种时间关系，如何处理 eligible 恰好等于 start 或 terminate 时间？
+- 截止时间是否包含等号，恰好在 deadline 发生的结果是否仍然有效？
 - Task 超时与执行结果同时被观察到时，如何按事实时间判定是否已有期限内结果？
   超时后到达的结果如何保留历史而不重新参与该 Task 的结果匹配？
 - 终结时才绑定结果的 Task，在执行运行期间的需求与 owner 保护如何表达？
