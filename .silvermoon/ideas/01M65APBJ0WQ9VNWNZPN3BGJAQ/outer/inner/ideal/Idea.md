@@ -10,6 +10,9 @@
 [Probe](../../../../01M65AH22HXJXNC7BQNVD0ZTHB/outer/inner/ideal/Idea.md) 完成后交付 `@potential-guide/regulate-task`，
 注册 `type=regulate`，经同一服务运行有界的观察、修复和再观察，明确报告目标达成、耗尽或需外部处理。
 
+准备期已明确需求、并发治理与 execution join 讨论及未决问题见
+[Discussion.md](Discussion.md)；其中候选方案尚未定稿，不代表验收或实施授权。
+
 ## 边界
 
 - 通用幂等、调度、递归、取消及恢复复用[任务引擎](../../../../../../docs/task-engine.md)；业务保留目标等级、修复配额和明确授权，不新增 Regulation Host 或第二套任务状态机。
