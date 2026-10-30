@@ -175,7 +175,7 @@ import {createExecutorPool} from "@potential-guide/task-engine/pool";
 const pool=createExecutorPool({resources:["js"],resourceKey:()=>"js",run(input){
  const result=Promise.resolve(input);return {result,exited:result.then(()=>{}),cooperate(){},async force(){throw Error("not isolated");},async cleanup(){}};
 }});
-const type={type:"echo",version:"1",environment:"node",validate:json,equals:(a,b)=>JSON.stringify(a)===JSON.stringify(b),prepare:async x=>x,validatePrepared:json,validateResult:json,validateProgress:json,execute:(x,o)=>pool.execute(x,o)};
+const type={type:"echo",version:"1",environment:"node",inputSchema:{type:"object"},prepare:async x=>x,validatePrepared:json,validateResult:json,validateProgress:json,execute:(x,o)=>pool.execute(x,o)};
 ${
   label === "task-adapters"
     ? `

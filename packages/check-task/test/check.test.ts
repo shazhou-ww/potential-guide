@@ -78,7 +78,7 @@ async function harness(
   const engine = createTaskEngine({
     store,
     types: [type],
-    currentVersions: { check: "1" },
+    currentVersions: { check: "2" },
     authorize: (who, _operation, scope) => who.scope === scope,
     ...extra,
   });
@@ -145,7 +145,7 @@ test("real worker reports normal business failure and provenance; strict input/r
   );
   try {
     const task = h.submit();
-    assert.throws(() => h.submit({ prerequisites: [] }), /fields/);
+    assert.throws(() => h.submit({ prerequisites: [] }), { code: "invalid_input" });
     const final = await wait(
       () => h.read(task),
       (value) => value.stage === "completed",
@@ -402,7 +402,7 @@ test("Check real HTTP/SSE authorization, shared cancellation, pagination and rec
   const store = new MemoryStore();
   const server = await startTaskServer({
     types: [type],
-    currentVersions: { check: "1" },
+    currentVersions: { check: "2" },
     store,
     port: 0,
     authorize: (who, _operation, scope) => who.scope === scope,

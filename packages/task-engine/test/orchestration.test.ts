@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Worker } from "node:worker_threads";
-import { canonical, type JsonObject, json, type TaskType } from "@potential-guide/task-protocol";
+import { type JsonObject, json, type TaskType } from "@potential-guide/task-protocol";
 import { createTaskEngine, newId } from "../src/index.js";
 import { createExecutorPool } from "../src/pool.js";
 import { MemoryStore, VirtualClock } from "../src/testing.js";
@@ -50,8 +50,7 @@ test("isolated admission lets executing and queued parents advance with one chil
     allocationLimit: 1,
     version: "1",
     environment: "js",
-    validate: json as (input: unknown) => JsonObject,
-    equals: (a, b) => canonical(a) === canonical(json(b)),
+    inputSchema: { type: "object" },
     prepare: async (input) => ({ ...input, kind: "parent" }),
     validatePrepared: json as (input: unknown) => JsonObject,
     validateResult: json,
@@ -148,8 +147,7 @@ test("independent execution wall limit force-terminates a real uncooperative wor
     type: "loop",
     version: "1",
     environment: "worker",
-    validate: json as (input: unknown) => JsonObject,
-    equals: (a, b) => canonical(a) === canonical(json(b)),
+    inputSchema: { type: "object" },
     prepare: async (input) => input,
     validatePrepared: json as (input: unknown) => JsonObject,
     validateResult: json,

@@ -9,7 +9,6 @@ import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { VirtualClock } from "@potential-guide/task-engine/testing";
 import {
   at,
-  canonical,
   emptyFacts,
   type Json,
   json,
@@ -30,8 +29,7 @@ function type(): TaskType<Json> {
     type: "echo",
     version: "1",
     environment: "test",
-    validate: json,
-    equals: (a, b) => canonical(a) === canonical(json(b)),
+    inputSchema: { type: "object" },
     prepare: async (input) => input,
     validatePrepared: json,
     validateResult: json,

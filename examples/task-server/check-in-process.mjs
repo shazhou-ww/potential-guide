@@ -16,7 +16,7 @@ const store = new MemoryStore();
 const engine = createTaskEngine({
   store,
   types: [check],
-  currentVersions: { check: "1" },
+  currentVersions: { check: "2" },
   authorize: (who, _operation, scope) => who.scope === scope && who.subject === "example",
   limits: { maxPayloadBytes: 8 * 1024 * 1024 },
 });

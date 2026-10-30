@@ -23,15 +23,20 @@ export interface HandlerOptions {
 function status(code: string): number {
   if (code === "unauthenticated") return 401;
   if (code === "forbidden") return 403;
+  if (code === "contract_revision_mismatch") return 412;
   if (code === "not_found") return 404;
   if (code === "history_expired") return 410;
   if (code === "idempotency_conflict" || code === "task_finished") return 409;
   if (code === "payload_too_large") return 413;
   if (code === "capacity_exceeded") return 429;
   if (
-    ["engine_closed", "store_owned", "unsupported_version", "unsupported_environment"].includes(
-      code,
-    )
+    [
+      "engine_closed",
+      "store_owned",
+      "unsupported_version",
+      "unsupported_contract",
+      "unsupported_environment",
+    ].includes(code)
   )
     return 503;
   if (code.startsWith("invalid_") || code === "unknown_type") return 400;
@@ -166,11 +171,23 @@ export function createTaskHandler(
       const url = new URL(request.url);
       if (prefix && !url.pathname.startsWith(`${prefix}/`)) fail("not_found", "Route not found.");
       const path = url.pathname.slice(prefix.length);
+      if (request.method === "GET" && path === "/task-types")
+        return response(options.service.discoverTypes(caller));
       if (request.method === "POST" && path === "/tasks") {
         identity = ulid(request.headers.get("Idempotency-Key"));
         const raw = object(await body(request, maxBody));
         if ("requestId" in raw) fail("invalid_request", "requestId belongs in Idempotency-Key.");
-        return response(options.service.submit({ ...raw, requestId: identity }, caller), 202);
+        const match = request.headers.get("If-Match");
+        if (match !== null && !/^"[a-f0-9]{64}"$/.test(match))
+          fail("invalid_request", "If-Match must contain one quoted contract revision.");
+        return response(
+          options.service.submit(
+            { ...raw, requestId: identity },
+            caller,
+            match === null ? {} : { expectedRevision: match.slice(1, -1) },
+          ),
+          202,
+        );
       }
       const task = /^\/tasks\/([0-9A-Z]+)(\/cancel)?$/.exec(path);
       if (task?.[1] && request.method === "GET" && !task[2])

@@ -273,7 +273,7 @@ test("mutable reference preparation versions and scope prevent sharing", async (
   }
 });
 
-test("prepare validation fails before resource allocation; comparator defects are observable", async () => {
+test("prepare validation fails before allocation; registered contracts are immutable", async () => {
   const h = harness({ prepare: async () => ({ bad: Infinity }) });
   try {
     const task = h.submit();
@@ -285,14 +285,12 @@ test("prepare validation fails before resource allocation; comparator defects ar
   }
   const broken = harness();
   try {
-    broken.submit();
+    broken.submit({ executionMatch: "completed-after-eligible" });
     await broken.turn();
-    broken.type.equals = () => {
-      throw new Error("comparator defect");
-    };
-    broken.submit();
+    broken.type.inputSchema = { type: "object", properties: { other: { type: "number" } } };
+    broken.submit({ executionMatch: "completed-after-eligible" });
     await broken.turn();
-    assert.ok(broken.engine.errors.some((error) => error.message === "comparator defect"));
+    assert.equal(broken.engine.errors.length, 0);
     assert.equal(broken.work.length, 1);
   } finally {
     await broken.close();
@@ -420,8 +418,12 @@ test("version-bound history and idempotency never silently use current validator
     type: "echo",
     version: "1",
     environment: "one",
-    validate: validateEcho,
-    equals: echoEquals,
+    inputSchema: {
+      type: "object",
+      properties: { text: { type: "string" } },
+      required: ["text"],
+      additionalProperties: false,
+    },
     prepare: async (input) => input,
     validatePrepared: validateEcho,
     validateResult: json,
@@ -451,8 +453,10 @@ test("version-bound history and idempotency never silently use current validator
   const newer = {
     ...old,
     version: "2",
-    validate() {
-      throw new Error("new validator must not interpret history");
+    inputSchema: {
+      type: "object",
+      properties: { different: { type: "number" } },
+      required: ["different"],
     },
   };
   const restored = createTaskEngine({
@@ -474,11 +478,12 @@ test("version-bound history and idempotency never silently use current validator
 });
 
 test("invalid business result becomes explicit execution failure, never a stranded running task", async () => {
-  const h = harness();
-  try {
-    h.type.validateResult = () => {
+  const h = harness({
+    validateResult() {
       throw new Error("result schema defect");
-    };
+    },
+  });
+  try {
     const task = h.submit();
     await h.turn();
     await h.finish();

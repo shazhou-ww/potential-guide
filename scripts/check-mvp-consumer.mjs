@@ -111,7 +111,7 @@ import {TaskError} from "@potential-guide/task-protocol";
 export default function configure(){
  const source=createArtifactSource({allowedOrigins:["https://example.test"],allowedFileRoots:[resolve("imports")],authorize(_r,scope){if(scope!=="example")throw Error("denied")},download:()=>readFile("checker.tgz")});
  const check=createCheckTaskType({source,directory:".workers",workers:1});
- return {port:0,database:process.env.TASK_SERVER_DATABASE??"check.sqlite",types:[check],currentVersions:{check:"1"},
+ return {port:0,database:process.env.TASK_SERVER_DATABASE??"check.sqlite",types:[check],currentVersions:{check:"2"},
  authorize:(caller,_op,scope)=>caller.scope===scope,
  resolveCaller(request){if(request.headers.get("authorization")!=="Bearer fixture")throw new TaskError("unauthenticated","Authentication required.");return {scope:"example",subject:"example"}},
  async closeResources(){await check.close();await source.close()}};

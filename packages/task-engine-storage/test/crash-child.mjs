@@ -1,6 +1,6 @@
 import { createTaskEngine } from "@potential-guide/task-engine";
 import { VirtualClock } from "@potential-guide/task-engine/testing";
-import { at, canonical, json } from "@potential-guide/task-protocol";
+import { at, json } from "@potential-guide/task-protocol";
 import { openSqliteStore } from "../dist/index.js";
 
 const [filename, mode, requestId] = process.argv.slice(2);
@@ -21,8 +21,7 @@ const type = {
   type: "echo",
   version: "1",
   environment: "test",
-  validate: json,
-  equals: (a, b) => canonical(a) === canonical(json(b)),
+  inputSchema: { type: "object" },
   prepare: async (input) => input,
   validatePrepared: json,
   validateResult: json,
@@ -45,7 +44,8 @@ const engine = createTaskEngine({
 engine.start();
 if (mode === "owner") {
   process.send?.({ owned: true });
-  setInterval(() => {}, 1000);
+  // Keep the virtual-clock Engine reachable while this process owns its lease.
+  setInterval(() => engine.tick(), 1000);
 } else {
   armed = mode.startsWith("submit-");
   const raw = {

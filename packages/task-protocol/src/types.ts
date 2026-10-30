@@ -1,4 +1,5 @@
 import type { Json, JsonObject } from "./json.js";
+import type { InputSchema } from "./schema.js";
 
 export type Stage =
   | "initial"
@@ -47,6 +48,7 @@ export interface TaskSnapshot {
 export interface Binding {
   type: string;
   version: string;
+  contractRevision: string;
   environment: string;
   scope: string;
   subject: string;
@@ -174,8 +176,7 @@ export interface TaskType<Input = Json, Prepared = Input> {
   allocationLimit?: number;
   version: string;
   environment: string;
-  validate(input: unknown): Input;
-  equals(input: Input, other: unknown): boolean;
+  inputSchema: InputSchema;
   prepare(input: Input, options: PreparationOptions): Promise<Prepared>;
   validatePrepared(prepared: unknown): Prepared;
   validateResult(result: unknown): Json;
@@ -188,8 +189,7 @@ export interface RegisteredType {
   allocationLimit?: number;
   version: string;
   environment: string;
-  validate(input: unknown): unknown;
-  equals(input: never, other: unknown): boolean;
+  inputSchema: InputSchema;
   prepare(input: never, options: PreparationOptions): Promise<unknown>;
   validatePrepared(prepared: unknown): unknown;
   validateResult(result: unknown): Json;
@@ -216,7 +216,8 @@ export interface Subscription {
   close(): void;
 }
 export interface TaskService {
-  submit(request: unknown, caller: Caller): TaskSnapshot;
+  discoverTypes(caller: Caller): readonly TaskTypeDiscovery[];
+  submit(request: unknown, caller: Caller, options?: SubmitOptions): TaskSnapshot;
   getRequest(requestId: string, caller: Caller): TaskRequest;
   getTask(taskId: string, caller: Caller): TaskSnapshot;
   cancelTask(taskId: string, caller: Caller): TaskSnapshot;
@@ -228,4 +229,13 @@ export interface TaskService {
   subscribe(filter: HistoryFilter, resume: string | undefined, caller: Caller): Subscription;
   start(): void;
   close(): Promise<void>;
+}
+export interface TaskTypeDiscovery {
+  readonly type: string;
+  readonly version: string;
+  readonly inputSchema: InputSchema;
+  readonly revision: string;
+}
+export interface SubmitOptions {
+  expectedRevision?: string;
 }

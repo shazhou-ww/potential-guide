@@ -5,6 +5,62 @@ import { TaskError, type TaskSnapshot } from "@potential-guide/task-protocol";
 import { caller, flush, harness } from "../../task-engine/test/fixtures.js";
 import { createTaskHandler } from "../src/index.js";
 
+test("discovery uses submit authority and optional quoted If-Match guards raw idempotency", async () => {
+  const h = harness();
+  const handler = createTaskHandler({
+    service: h.engine,
+    resolveCaller: (request) => ({
+      ...caller,
+      subject: request.headers.get("authorization") ?? "",
+    }),
+  });
+  try {
+    assert.equal((await handler(new Request("http://host/task-types"))).status, 401);
+    assert.equal(
+      (
+        await handler(
+          new Request("http://host/task-types", { headers: { authorization: "denied" } }),
+        )
+      ).status,
+      403,
+    );
+    const discovery = await handler(
+      new Request("http://host/task-types", { headers: { authorization: "tester" } }),
+    );
+    assert.equal(discovery.status, 200);
+    const found = (await discovery.json()) as {
+      type: string;
+      version: string;
+      revision: string;
+      inputSchema: unknown;
+    }[];
+    const echo = found.find((entry) => entry.type === "echo")!;
+    const id = newId();
+    const submit = (match?: string, text = "hello") =>
+      handler(
+        new Request("http://host/tasks", {
+          method: "POST",
+          headers: {
+            authorization: "tester",
+            "Content-Type": "application/json",
+            "Idempotency-Key": id,
+            ...(match === undefined ? {} : { "If-Match": match }),
+          },
+          body: JSON.stringify({ type: "echo", text, timeoutMs: 100 }),
+        }),
+      );
+    assert.equal((await submit(`"${"0".repeat(64)}"`)).status, 412);
+    assert.equal(h.store.read().facts.watermark, 0);
+    assert.equal((await submit(echo.revision)).status, 400);
+    assert.equal((await submit(`"${echo.revision}"`)).status, 202);
+    assert.equal((await submit()).status, 202);
+    assert.equal((await submit(`"${echo.revision}"`, "changed")).status, 409);
+    assert.ok(!JSON.stringify(h.engine.getRequest(id, caller)).includes("Revision"));
+  } finally {
+    await h.close();
+  }
+});
+
 test("Web adapter and core preserve body/header identity, auth and errors without listener", async () => {
   const h = harness();
   const audit: { requestId?: string; code: string }[] = [];

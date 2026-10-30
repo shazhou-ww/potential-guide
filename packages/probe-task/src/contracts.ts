@@ -20,6 +20,8 @@ import {
 } from "@potential-guide/check-artifacts/observation";
 import {
   json,
+  compileInputSchema,
+  freeze,
   matchesExecutionTime,
   TaskError,
   timestamp,
@@ -27,6 +29,11 @@ import {
   type Json,
   type TaskSnapshot,
 } from "@potential-guide/task-protocol";
+import {
+  artifactReferenceSchema,
+  artifactHttpsUrlSchema,
+  artifactDigestSchema,
+} from "@potential-guide/check-task";
 
 export interface ProbeInput extends ObservationInput {
   objective: ArtifactReference & { kind: "objective" };
@@ -73,36 +80,34 @@ export function exact(value: unknown, required: string[], optional: string[] = [
     throw new TaskError("invalid_probe", "Invalid Probe fields.");
   return value;
 }
-export function validateProbeInput(value: unknown): ProbeInput {
-  const record = exact(
-    value,
-    ["objective", "subject"],
-    ["context", "bindings", "targetLevel", "language"],
-  );
-  const ref = exact(record.objective, ["kind", "url"], ["digest"]);
-  validateArtifactReference(ref as unknown as ArtifactReference);
-  if (
-    ref.kind !== "objective" ||
-    !jsonObject(record.subject) ||
-    (record.context !== undefined &&
-      (!jsonObject(record.context) || Object.hasOwn(record.context, "resolutions"))) ||
-    (record.targetLevel !== undefined && record.targetLevel !== "initial") ||
-    (record.language !== undefined && typeof record.language !== "string")
-  )
-    throw new TaskError("invalid_probe", "Invalid Objective observation input.");
-  if (record.bindings !== undefined) {
-    if (!jsonObject(record.bindings) || Object.keys(record.bindings).length > 128)
-      throw new TaskError("invalid_probe", "Invalid binding budget.");
-    for (const [url, digest] of Object.entries(record.bindings)) {
-      if (typeof digest !== "string") throw new TaskError("invalid_probe", "Invalid digest.");
-      validateArtifactReference({ kind: "objective", url, digest });
-    }
-  }
-  const input = value as ProbeInput;
+export const probeInputSchema = freeze({
+  type: "object",
+  properties: {
+    objective: artifactReferenceSchema("objective"),
+    subject: { type: "object" },
+    context: { type: "object", propertyNames: { not: { const: "resolutions" } } },
+    bindings: {
+      type: "object",
+      maxProperties: 128,
+      propertyNames: artifactHttpsUrlSchema,
+      additionalProperties: artifactDigestSchema,
+    },
+    targetLevel: { const: "initial" },
+    language: { type: "string" },
+  },
+  required: ["objective", "subject"],
+  additionalProperties: false,
+});
+export const validateProbeInput = compileInputSchema<ProbeInput>(probeInputSchema, {
+  maxInputBytes: 96 * 1024 * 1024,
+}).validate;
+export function validateProbeConsistency(input: ProbeInput): void {
+  validateArtifactReference(input.objective);
+  for (const [url, digest] of Object.entries(input.bindings ?? {}))
+    validateArtifactReference({ kind: "objective", url, digest });
   const pinned = input.bindings?.[input.objective.url];
   if (pinned && input.objective.digest && pinned !== input.objective.digest)
     throw new TaskError("invalid_probe", "Root binding conflict.");
-  return input;
 }
 export function encodeFiles(artifact: ContractArtifact): Record<string, string> {
   return Object.fromEntries(
@@ -173,6 +178,7 @@ export function decodePrepared(
 ): PreparedObjective {
   exact(value, ["input", "root", "environment"]);
   validateProbeInput(value.input);
+  validateProbeConsistency(value.input);
   if (value.environment !== environment)
     throw new TaskError("unsupported_environment", "Prepared Probe environment differs.");
   const pinned = value.input.bindings?.[value.input.objective.url];

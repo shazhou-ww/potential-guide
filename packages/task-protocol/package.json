@@ -30,6 +30,9 @@
     "access": "public"
   },
   "license": "MIT",
+  "dependencies": {
+    "ajv": "catalog:"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/shazhou-ww/potential-guide.git",

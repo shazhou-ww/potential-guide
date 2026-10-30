@@ -5,6 +5,10 @@ import {
   type Caller,
   type Clock,
   canonical,
+  compileInputSchema,
+  type InputContract,
+  type TaskTypeDiscovery,
+  type SubmitOptions,
   type ErrorFact,
   type ExecutionRecord,
   type ExecutionTracking,
@@ -39,6 +43,9 @@ import {
   ulid,
 } from "@potential-guide/task-protocol";
 import { newId } from "./identity.js";
+import { createHash } from "node:crypto";
+
+type CompiledType = RegisteredType & InputContract;
 
 export interface EngineLimits {
   maxTasks: number;
@@ -114,7 +121,9 @@ export class TaskEngine implements TaskService {
   private readonly owner = newId();
   private readonly clock: Clock;
   readonly limits: EngineLimits;
-  private readonly types = new Map<string, RegisteredType>();
+  private readonly types = new Map<string, CompiledType>();
+  private readonly currentVersions: Readonly<Record<string, string>>;
+  private readonly discovery: readonly TaskTypeDiscovery[];
   private readonly allocationLimits = new Map<string, number>();
   private view: StoreView;
   private started = false;
@@ -140,9 +149,21 @@ export class TaskEngine implements TaskService {
     for (const type of options.types) {
       if (!type.type || !type.version || !type.environment)
         fail("invalid_type", "Type binding is incomplete.");
+      if (
+        !["prepare", "validatePrepared", "validateResult", "validateProgress", "execute"].every(
+          (key) => typeof (type as unknown as Record<string, unknown>)[key] === "function",
+        )
+      )
+        fail("invalid_type", "Type lifecycle functions are incomplete.");
       const key = `${type.type}\0${type.version}`;
       if (this.types.has(key)) fail("invalid_type", "Duplicate type version.");
-      this.types.set(key, type);
+      const contract = compileInputSchema(type.inputSchema, {
+        maxInputBytes: this.limits.maxPayloadBytes,
+      });
+      const revision = createHash("sha256")
+        .update(canonical({ type: type.type, version: type.version, schema: contract.revision }))
+        .digest("hex");
+      this.types.set(key, Object.freeze({ ...type, ...contract, revision }));
       if (type.allocationLimit !== undefined) {
         const capacity = positive(type.allocationLimit, "allocationLimit");
         const previous = this.allocationLimits.get(type.type);
@@ -153,6 +174,15 @@ export class TaskEngine implements TaskService {
     }
     for (const [key, value] of Object.entries(options.allocationLimits ?? {}))
       this.allocationLimits.set(key, positive(value, `allocationLimits.${key}`));
+    this.currentVersions = Object.freeze({ ...options.currentVersions });
+    this.discovery = freeze(
+      Object.entries(this.currentVersions)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([name, version]) => {
+          const type = this.type({ type: name, version });
+          return { type: name, version, inputSchema: type.inputSchema, revision: type.revision };
+        }),
+    );
     this.view = options.store.read();
   }
   private diagnostic(error: unknown, code = "engine_failure"): void {
@@ -161,20 +191,46 @@ export class TaskEngine implements TaskService {
     if (this.errors.length > 100) this.errors.shift();
     this.options.onError?.(fact);
   }
-  private type(binding: Pick<Binding, "type" | "version">): RegisteredType {
+  private type(
+    binding: Pick<Binding, "type" | "version"> & Partial<Pick<Binding, "contractRevision">>,
+  ): CompiledType {
     const type = this.types.get(`${binding.type}\0${binding.version}`);
     if (!type)
       fail("unsupported_version", `Missing original contract ${binding.type}@${binding.version}.`);
+    if ("contractRevision" in binding && binding.contractRevision !== type.revision)
+      fail("unsupported_contract", "Original input contract is unavailable.");
     return type;
   }
+  private historicalType(binding: Binding): CompiledType {
+    if (!binding.contractRevision)
+      fail("unsupported_contract", "Historical record has no input contract identity.");
+    return this.type(binding);
+  }
   private checkHistory(task: TaskRecord): void {
-    const type = this.type(task.binding);
+    const type = this.historicalType(task.binding);
     this.validated(task.input, type.validate.bind(type));
     if (task.prepared !== undefined)
       this.validated(task.prepared, type.validatePrepared.bind(type));
     const id = task.snapshot.execution?.executionId;
     const execution = id ? this.view.facts.executions[id] : undefined;
-    if (execution?.result !== undefined)
+    if (execution) {
+      if (
+        ["type", "version", "contractRevision", "environment", "scope"].some(
+          (key) => execution.binding[key as keyof Binding] !== task.binding[key as keyof Binding],
+        )
+      )
+        fail(
+          "unsupported_contract",
+          "Associated execution binding differs from the original Task.",
+        );
+      this.checkExecutionHistory(execution);
+    }
+  }
+  private checkExecutionHistory(execution: ExecutionRecord): void {
+    const type = this.historicalType(execution.binding);
+    this.validated(execution.input, type.validate.bind(type));
+    this.validated(execution.prepared, type.validatePrepared.bind(type));
+    if (execution.result !== undefined)
       this.validateResult(type, execution.result, execution.prepared);
   }
   private validateResult(type: RegisteredType, value: unknown, prepared: Json): Json {
@@ -261,9 +317,7 @@ export class TaskEngine implements TaskService {
     if (typeof raw.type !== "string") fail("invalid_request", "type is required.");
     const selected =
       version ??
-      (Object.hasOwn(this.options.currentVersions, raw.type)
-        ? this.options.currentVersions[raw.type]
-        : undefined);
+      (Object.hasOwn(this.currentVersions, raw.type) ? this.currentVersions[raw.type] : undefined);
     if (!selected) fail("unknown_type", "Unregistered task type.");
     const type = this.type({ type: raw.type, version: selected });
     const input = Object.fromEntries(Object.entries(raw).filter(([key]) => !common.has(key)));
@@ -300,6 +354,7 @@ export class TaskEngine implements TaskService {
       binding: {
         type: raw.type,
         version: selected,
+        contractRevision: type.revision,
         environment: type.environment,
         scope: caller.scope,
         subject: caller.subject,
@@ -317,11 +372,24 @@ export class TaskEngine implements TaskService {
       },
     };
   }
-  submit(request: unknown, caller: Caller): TaskSnapshot {
+  discoverTypes(caller: Caller): readonly TaskTypeDiscovery[] {
+    this.assertRunning();
+    this.authorized(caller, "submit", caller?.scope);
+    return this.discovery;
+  }
+  submit(request: unknown, caller: Caller, options: SubmitOptions = {}): TaskSnapshot {
     this.assertRunning();
     this.authorized(caller, "submit", caller?.scope);
     const raw = object(json(request, this.limits.maxPayloadBytes));
     ulid(raw.requestId);
+    if (options.expectedRevision !== undefined) {
+      const current = this.discovery.find((entry) => entry.type === raw.type);
+      if (!current || current.revision !== options.expectedRevision)
+        fail(
+          "contract_revision_mismatch",
+          "Current input contract differs from expected revision.",
+        );
+    }
     const existing = Object.values(this.view.facts.tasks).find(
       (task) => task.request.requestId === raw.requestId,
     );
@@ -416,6 +484,8 @@ export class TaskEngine implements TaskService {
     try {
       this.view = this.options.store.read();
       for (const task of Object.values(this.view.facts.tasks)) this.checkHistory(task);
+      for (const execution of Object.values(this.view.facts.executions))
+        this.checkExecutionHistory(execution);
       for (const execution of Object.values(this.view.facts.executions)) {
         if (!execution.completedAt && !execution.failedAt) {
           this.commit([
@@ -501,6 +571,7 @@ export class TaskEngine implements TaskService {
     if (
       task.binding.type !== candidate.binding.type ||
       task.binding.version !== candidate.binding.version ||
+      task.binding.contractRevision !== candidate.binding.contractRevision ||
       task.binding.environment !== candidate.binding.environment ||
       task.binding.scope !== candidate.binding.scope ||
       task.prepared === undefined ||
@@ -508,7 +579,7 @@ export class TaskEngine implements TaskService {
       canonical(task.prepared) !== canonical(candidate.prepared)
     )
       return false;
-    return this.type(task.binding).equals(
+    return this.historicalType(task.binding).equals(
       freeze(structuredClone(task.input)) as never,
       freeze(structuredClone(candidate.input)),
     );
@@ -540,7 +611,7 @@ export class TaskEngine implements TaskService {
     this.commit(events);
   }
   private prepare(task: TaskRecord): void {
-    const type = this.type(task.binding);
+    const type = this.historicalType(task.binding);
     if (type.environment !== task.binding.environment) {
       this.processFailure(
         task,
@@ -611,7 +682,7 @@ export class TaskEngine implements TaskService {
   }
   private allocate(task: TaskRecord): void {
     if (task.snapshot.execution) return;
-    if (this.type(task.binding).environment !== task.binding.environment) {
+    if (this.historicalType(task.binding).environment !== task.binding.environment) {
       this.processFailure(
         task,
         "allocation",
@@ -707,7 +778,10 @@ export class TaskEngine implements TaskService {
     };
     const allocation = Promise.resolve()
       .then(() =>
-        this.type(task.binding).execute(freeze(structuredClone(task.prepared)) as never, options),
+        this.historicalType(task.binding).execute(
+          freeze(structuredClone(task.prepared)) as never,
+          options,
+        ),
       )
       .then((tracking) => {
         if (tracking.executionId !== group.executionId)
@@ -830,7 +904,7 @@ export class TaskEngine implements TaskService {
       current.failedAt
     )
       return;
-    const type = this.type(current.binding);
+    const type = this.historicalType(current.binding);
     let payload: Json;
     try {
       payload =
@@ -987,7 +1061,7 @@ export class TaskEngine implements TaskService {
       const execution = this.view.facts.executions[id];
       if (!execution) fail("not_found", "Execution not found.");
       this.authorized(caller, operation, execution.binding.scope);
-      const type = this.type(execution.binding);
+      const type = this.historicalType(execution.binding);
       this.validated(execution.input, type.validate.bind(type));
       this.validated(execution.prepared, type.validatePrepared.bind(type));
       if (execution.result !== undefined)
@@ -1034,7 +1108,7 @@ export class TaskEngine implements TaskService {
     if (event.executionId) {
       const execution = this.view.facts.executions[event.executionId];
       if (execution) {
-        const type = this.type(execution.binding);
+        const type = this.historicalType(execution.binding);
         if (event.type === "execution.progress")
           this.validated(event.data.progress, type.validateProgress.bind(type));
         if (event.type === "execution.completed")

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canonical, json, type Json, type TaskType } from "@potential-guide/task-protocol";
+import { json, type Json, type TaskType } from "@potential-guide/task-protocol";
 import { createTaskEngine, newId } from "../src/index.js";
 import { MemoryStore, VirtualClock } from "../src/testing.js";
 
@@ -12,8 +12,7 @@ test("optional execution result validator receives original frozen Prepared at r
     type: "bound",
     version: "1",
     environment: "test",
-    validate: json,
-    equals: (a, b) => canonical(a) === canonical(json(b)),
+    inputSchema: { type: "object" },
     prepare: async (value) => ({ original: value }),
     validatePrepared: json,
     validateResult: json,

@@ -1,14 +1,11 @@
 import assert from "node:assert/strict";
 import {
   type Caller,
-  canonical,
-  fail,
+  compileInputSchema,
   type Json,
   type JsonObject,
   json,
-  object,
   type StartPermit,
-  TaskError,
   type TaskType,
 } from "@potential-guide/task-protocol";
 import { createTaskEngine, type EngineLimits, newId } from "../src/index.js";
@@ -28,26 +25,21 @@ export function deferred<T>() {
 export async function flush(): Promise<void> {
   for (let index = 0; index < 30; index++) await Promise.resolve();
 }
-export function validateEcho(value: unknown): JsonObject {
-  const input = object(value);
-  if (Object.keys(input).sort().join(",") !== "text" || typeof input.text !== "string")
-    fail("invalid_request", "echo requires only text.");
-  return input;
-}
-export function echoEquals(input: JsonObject, other: unknown): boolean {
-  try {
-    return canonical(input) === canonical(validateEcho(other));
-  } catch (error) {
-    if (error instanceof TaskError && ["invalid_request", "invalid_payload"].includes(error.code))
-      return false;
-    throw error;
-  }
-}
+export const echoSchema = {
+  type: "object",
+  properties: { text: { type: "string" } },
+  required: ["text"],
+  additionalProperties: false,
+};
+const echoContract = compileInputSchema<JsonObject>(echoSchema);
+export const validateEcho = echoContract.validate;
+export const echoEquals = echoContract.equals;
 export function harness(
   options: {
     limits?: Partial<EngineLimits>;
     resources?: string[];
     prepare?: TaskType<JsonObject>["prepare"];
+    validateResult?: TaskType<JsonObject>["validateResult"];
   } = {},
 ) {
   const clock = new VirtualClock();
@@ -93,31 +85,25 @@ export function harness(
     type: "echo",
     version: "1",
     environment: "js-v1",
-    validate: validateEcho,
-    equals: echoEquals,
+    inputSchema: echoSchema,
     prepare: async (input, options_) => {
       prepares++;
       return options.prepare ? options.prepare(input, options_) : input;
     },
     validatePrepared: json as (value: unknown) => JsonObject,
-    validateResult: json,
+    validateResult: options.validateResult ?? json,
     validateProgress: json,
     execute: (input, executeOptions) => pool.execute(input, executeOptions),
   };
   const sum: TaskType<JsonObject> = {
     ...type,
     type: "sum",
-    validate(value) {
-      const input = object(value);
-      if (
-        Object.keys(input).join(",") !== "values" ||
-        !Array.isArray(input.values) ||
-        !input.values.every((item) => typeof item === "number")
-      )
-        fail("invalid_request", "sum requires numeric values.");
-      return input;
+    inputSchema: {
+      type: "object",
+      properties: { values: { type: "array", items: { type: "number" } } },
+      required: ["values"],
+      additionalProperties: false,
     },
-    equals: (a, b) => canonical(a) === canonical(json(b)),
     async execute(input, options_) {
       return pool.execute(
         { text: String((input.values as number[]).reduce((a, b) => a + b, 0)) },
@@ -128,7 +114,7 @@ export function harness(
   const engine = createTaskEngine({
     store,
     clock,
-    types: [type, sum],
+    types: [{ ...type, execute: (input, options) => type.execute(input, options) }, sum],
     currentVersions: { echo: "1", sum: "1" },
     authorize: (who) => who.subject === "tester",
     ...(options.limits ? { limits: options.limits } : {}),

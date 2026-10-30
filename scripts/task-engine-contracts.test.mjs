@@ -25,7 +25,7 @@ test("generic task production dependency graph is acyclic and business/adapter i
             "@potential-guide/task-engine-storage",
           ]
         : name === "task-protocol"
-          ? []
+          ? ["ajv"]
           : ["@potential-guide/task-protocol"];
     assert.deepEqual(Object.keys(manifest.dependencies ?? {}), dependencies);
     const files = await readdir(join(directory, "src"), { recursive: true });
@@ -62,6 +62,8 @@ test("generic task production dependency graph is acyclic and business/adapter i
           else
             assert.ok(
               dependencies.includes(specifier) ||
+                (name === "task-protocol" &&
+                  ["node:crypto", "ajv/dist/2020.js"].includes(specifier)) ||
                 (name !== "task-protocol" && specifier.startsWith("node:")),
               `${path}: ${specifier}`,
             );

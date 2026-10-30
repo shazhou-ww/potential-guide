@@ -75,7 +75,7 @@ const server = await startTaskServer({
   database,
   port: 0,
   types: [checkType, probeType],
-  currentVersions: { check: "1", probe: "1" },
+  currentVersions: { check: "2", probe: "2" },
   limits: { maxConcurrent: 1, maxPayloadBytes: 8 * 1024 * 1024 },
   authorize: () => true,
   resolveCaller: () => ({ scope: "a", subject: "tester" }),

@@ -7,6 +7,10 @@ and the extensible `pguide` command line:
   handles, current-value observations, and dependency-scoped replacement.
 - `@potential-guide/git-source` observes Git refs and provides immutable,
   commit-bound repository snapshots without depending on Objective concepts.
+- The [generic Task engine](./docs/task-engine.md) accepts declarative input
+  Schemas, derives validation/structural equality, and exposes authorized current
+  type discovery with optional submission revision guards. Check/Probe use type
+  version 2; historical contracts are never silently reinterpreted.
 - [`@potential-guide/check-artifacts`](./packages/check-artifacts/README.md) explicitly
   builds/packs standalone Checks and prepares digest-pinned local/HTTPS artifacts
   for Check Host, without consumer-side Check installation or builds.

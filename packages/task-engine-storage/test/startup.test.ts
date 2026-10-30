@@ -6,7 +6,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { VirtualClock } from "@potential-guide/task-engine/testing";
-import { canonical, type Json, json, type TaskType } from "@potential-guide/task-protocol";
+import { type Json, json, type TaskType } from "@potential-guide/task-protocol";
 import { openSqliteStore } from "../src/index.js";
 
 for (const boundary of ["before", "after"]) {
@@ -40,8 +40,7 @@ for (const boundary of ["before", "after"]) {
       type: "echo",
       version: "1",
       environment: "test",
-      validate: json,
-      equals: (a, b) => canonical(a) === canonical(json(b)),
+      inputSchema: { type: "object" },
       prepare: async (input) => input,
       validatePrepared: json,
       validateResult: json,

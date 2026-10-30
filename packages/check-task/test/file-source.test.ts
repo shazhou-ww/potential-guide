@@ -16,7 +16,7 @@ import {
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import type { TaskSnapshot } from "@potential-guide/task-protocol";
-import { createArtifactSource, createCheckTaskType } from "../src/index.js";
+import { createArtifactSource, createCheckTaskType, validateCheckInput } from "../src/index.js";
 
 async function fixture() {
   const root = resolve(".cache", `local-source-${randomUUID()}`);
@@ -111,7 +111,7 @@ test("real file archive -> prepare -> actual worker; HTTPS hook unchanged and ne
   const engine = createTaskEngine({
     store,
     types: [type],
-    currentVersions: { check: "1" },
+    currentVersions: { check: "2" },
     authorize: () => true,
   });
   engine.start();
@@ -154,8 +154,9 @@ test("real file archive -> prepare -> actual worker; HTTPS hook unchanged and ne
     });
     assert.notEqual(next.execution?.executionId, result.execution?.executionId);
     assert.throws(
-      () => type.validate({ checker: f.reference, subject: {}, allowedFileRoots: [f.imports] }),
-      /fields/,
+      () =>
+        validateCheckInput({ checker: f.reference, subject: {}, allowedFileRoots: [f.imports] }),
+      { code: "invalid_input" },
     );
     const outside = join(f.root, "outside-context.tgz");
     await writeFile(outside, f.first.bytes);
@@ -202,7 +203,7 @@ test("file Tasks retain subject validation and separate actual runtime availabil
   const engine = createTaskEngine({
     store,
     types: [type],
-    currentVersions: { check: "1" },
+    currentVersions: { check: "2" },
     authorize: () => true,
   });
   engine.start();

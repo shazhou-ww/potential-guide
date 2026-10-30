@@ -22,7 +22,7 @@ export function composeProbeServer({ source, directory, database, token, port = 
     port,
     database,
     types: [check, probe],
-    currentVersions: { check: "1", probe: "1" },
+    currentVersions: { check: "2", probe: "2" },
     limits: { maxConcurrent: 1, maxPayloadBytes: 16 * 1024 * 1024 },
     bindService(service) {
       engine = service;

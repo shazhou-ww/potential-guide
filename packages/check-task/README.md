@@ -1,6 +1,20 @@
 # Check TaskType
 
 `createCheckTaskType` registers `type: "check"` in the generic Engine.
+The default type version is **2**; use `currentVersions: {check:"2"}`.
+`checkInputSchema` is the single public input contract; `validateCheckInput` is
+its generated wrapper. Old records without contract identity are unsupported,
+not silently migrated.
+
+Version 2 source URLs use conservative standard-Schema safety patterns before
+raw request persistence: no userinfo, fragments, whitespace or backslashes;
+HTTPS authorities cannot contain percent escapes. Query names are ASCII letters,
+digits, underscore or hyphen, start with a letter, require `=`, and cannot contain
+case-insensitive token/secret/password/credential/sig/api-key-like substrings.
+Encoded names, plus signs and semicolon separators are rejected. Values may be
+percent-encoded. Local Checker `file:///` references remain supported without
+query/fragment/authority. Canonicalization and source authorization still run in
+prepare; discovery never resolves URLs or fetches artifact subject schemas.
 `createArtifactSource` is explicit authorized preparation IO. Neither nests the
 legacy Host/scheduler nor starts listeners. See [server guide](../../docs/task-server.md).
 

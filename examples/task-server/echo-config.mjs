@@ -1,5 +1,5 @@
 import { createExecutorPool } from "@potential-guide/task-engine/pool";
-import { canonical, json, TaskError } from "@potential-guide/task-protocol";
+import { json, TaskError } from "@potential-guide/task-protocol";
 
 export default function configure() {
   const token = process.env.TASK_SERVER_TOKEN;
@@ -28,8 +28,7 @@ export default function configure() {
         type: "echo",
         version: "1",
         environment: "echo-v1",
-        validate: json,
-        equals: (a, b) => canonical(a) === canonical(json(b)),
+        inputSchema: { type: "object" },
         prepare: async (value) => value,
         validatePrepared: json,
         validateResult: json,

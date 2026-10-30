@@ -8,13 +8,7 @@ import test from "node:test";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import { openSqliteStore } from "@potential-guide/task-engine-storage";
-import {
-  canonical,
-  json,
-  TaskError,
-  type Json,
-  type TaskType,
-} from "@potential-guide/task-protocol";
+import { json, TaskError, type Json, type TaskType } from "@potential-guide/task-protocol";
 import { startTaskServer, type ServerOptions } from "../src/index.js";
 
 function type(): TaskType<Json> {
@@ -22,8 +16,7 @@ function type(): TaskType<Json> {
     type: "echo",
     version: "1",
     environment: "test",
-    validate: json,
-    equals: (a, b) => canonical(a) === canonical(json(b)),
+    inputSchema: { type: "object" },
     prepare: async (value) => value,
     validatePrepared: json,
     validateResult: json,

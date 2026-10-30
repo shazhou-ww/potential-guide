@@ -64,7 +64,7 @@ const server = await startTaskServer({
   database,
   port: 0,
   types: [type],
-  currentVersions: { check: "1" },
+  currentVersions: { check: "2" },
   authorize: (caller, _operation, scope) => caller.scope === scope,
   resolveCaller(request) {
     if (request.headers.get("authorization") !== "Bearer test")

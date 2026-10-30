@@ -16,16 +16,22 @@ import {
 } from "@potential-guide/check-artifacts/contracts";
 import { createExecutorPool } from "@potential-guide/task-engine/pool";
 import {
-  canonical,
   json,
   positive,
   TaskError,
-  type Json,
   type JsonObject,
   type TaskType,
 } from "@potential-guide/task-protocol";
-import { type ArtifactSource } from "./prepare.js";
+import type { ArtifactSource } from "./prepare.js";
 import { runChecker } from "./worker.js";
+import { checkInputSchema, validateCheckInput } from "./input.js";
+export {
+  checkInputSchema,
+  validateCheckInput,
+  artifactReferenceSchema,
+  artifactHttpsUrlSchema,
+  artifactDigestSchema,
+} from "./input.js";
 export {
   createArtifactSource,
   type ArtifactSource,
@@ -73,24 +79,6 @@ function boundedObject(value: unknown, maxBytes = 96 * 1024 * 1024): JsonObject 
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
     throw new TaskError("invalid_check", "Expected a finite JSON object.");
   return parsed;
-}
-export function validateCheckInput(value: unknown): CheckInput {
-  const input = exact(value, ["checker", "subject"], ["language", "context"]);
-  const reference = exact(input.checker, ["kind", "url"], ["digest"]);
-  if (
-    reference.kind !== "checker" ||
-    typeof reference.url !== "string" ||
-    !jsonObject(input.subject) ||
-    (input.context !== undefined && !jsonObject(input.context)) ||
-    (input.language !== undefined && typeof input.language !== "string")
-  )
-    throw new TaskError("invalid_check", "Expected Checker reference and finite object subject.");
-  try {
-    validateArtifactReference(reference as unknown as ArtifactReference);
-  } catch {
-    throw new TaskError("invalid_check", "Invalid Checker reference.");
-  }
-  return value as CheckInput;
 }
 function inspect(prepared: CheckPrepared): ContractArtifact<CheckerManifest> {
   const files = new Map<string, Buffer>();
@@ -216,20 +204,12 @@ export function createCheckTaskType(options: CheckTaskOptions): TaskType<
   });
   return {
     type: "check",
-    version: options.version ?? "1",
+    version: options.version ?? "2",
     environment,
-    validate: validateCheckInput,
-    equals(input, other) {
-      try {
-        return (
-          canonical(input as unknown as Json) ===
-          canonical(validateCheckInput(other) as unknown as Json)
-        );
-      } catch {
-        return false;
-      }
-    },
+    inputSchema: checkInputSchema,
     async prepare(input, context) {
+      validateCheckInput(input);
+      validateArtifactReference(input.checker);
       if (!context.context)
         throw new TaskError("invalid_config", "Trusted preparation context is required.");
       await options.source.authorize(input.checker, context.context.scope);

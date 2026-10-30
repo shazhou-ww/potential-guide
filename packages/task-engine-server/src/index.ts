@@ -115,15 +115,9 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
         !type.version ||
         typeof type.environment !== "string" ||
         !type.environment ||
-        ![
-          "validate",
-          "equals",
-          "prepare",
-          "validatePrepared",
-          "validateResult",
-          "validateProgress",
-          "execute",
-        ].every((key) => typeof (type as unknown as Record<string, unknown>)[key] === "function")
+        !["prepare", "validatePrepared", "validateResult", "validateProgress", "execute"].every(
+          (key) => typeof (type as unknown as Record<string, unknown>)[key] === "function",
+        )
       )
         throw new TaskError("invalid_config", "Invalid trusted TaskType.");
     for (const [type, version] of Object.entries(options.currentVersions))

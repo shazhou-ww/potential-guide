@@ -20,7 +20,13 @@ requests an ephemeral port. The returned URL means Store recovery and listening
 have succeeded. HTTP request/body/parser/subscription limits and socket/request
 timeouts are bounded. Put TLS and rate quotas at the deployment boundary.
 
-The HTTP protocol is unchanged: POST `/tasks` with `Idempotency-Key`, GET
+GET `/task-types` discovers current `{type,version,inputSchema,revision}` entries
+using submit authorization. POST `/tasks` optionally accepts
+`If-Match: "<revision>"`; stale contracts return 412 before persistence. Discovery
+never fetches artifacts or their subject schemas. Check/Probe examples register
+type version 2; retain original identity-bearing contracts for historical recovery.
+
+The HTTP protocol includes POST `/tasks` with `Idempotency-Key`, GET
 `/tasks/:id`, POST `/tasks/:id/cancel`, GET `/event-history?taskId=...`, GET
 `/events?taskId=...` with `Last-Event-ID`. Creation returns 202. Cursor pagination
 and SSE use the same durable history; deduplicate events by sequence. Disconnect

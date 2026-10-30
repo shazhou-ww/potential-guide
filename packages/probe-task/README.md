@@ -17,7 +17,7 @@ const probe = createProbeTaskType({
     };
   },
 });
-// Register [check, probe], currentVersions: {check: "1", probe: "1"}.
+// Register [check, probe], currentVersions: {check: "2", probe: "2"}.
 // The Server's bindService callback supplies engine before startup.
 ```
 
@@ -26,6 +26,15 @@ Submit the common request fields plus `objective: {kind:"objective",url,digest?}
 `targetLevel:"initial"` (otherwise cumulative observation). `context.resolutions`
 is reserved. Child callers are injected trusted authority, never request fields.
 Use the same explicit authorization policy for child history and parent history.
+
+The default type version is **2**. `probeInputSchema` is the public input contract;
+`validateProbeInput` is its generated wrapper. Objective URLs and binding keys
+use the conservative HTTPS query/credential restrictions documented by
+[`check-task`](../check-task/README.md), before raw persistence. Root digest versus
+`bindings[objective.url]` conflicts are now accepted structurally and then produce
+`preparation_failed` (`invalid_probe`) **before any source calls**. The same
+consistency checks remain in Prepared/recovery validation. Historical versions
+are not upgraded automatically; records without contract identities fail explicitly.
 
 Preparation persists the entire exact root/static Checker file sets, language,
 and actual Node/adapter/policy/Check environment. Execution starts durably before

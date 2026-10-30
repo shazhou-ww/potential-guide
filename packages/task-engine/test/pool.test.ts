@@ -11,7 +11,7 @@ import {
 import { createTaskEngine, newId } from "../src/index.js";
 import { createExecutorPool, type RunningWork } from "../src/pool.js";
 import { MemoryStore, VirtualClock } from "../src/testing.js";
-import { caller, deferred, echoEquals, flush, harness, validateEcho } from "./fixtures.js";
+import { caller, deferred, flush, harness, validateEcho } from "./fixtures.js";
 
 function permitOptions(replaceExecutionId?: string, authorize = () => true) {
   const controller = new AbortController();
@@ -262,8 +262,12 @@ test("real isolated runaway worker is physically terminated before pressure repl
     type: "echo",
     version: "1",
     environment: "worker",
-    validate: validateEcho,
-    equals: echoEquals,
+    inputSchema: {
+      type: "object",
+      properties: { text: { type: "string" } },
+      required: ["text"],
+      additionalProperties: false,
+    },
     prepare: async (input) => input,
     validatePrepared: validateEcho,
     validateResult: json,

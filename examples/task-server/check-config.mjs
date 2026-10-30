@@ -25,7 +25,7 @@ export default function configure() {
     port: Number(process.env.TASK_SERVER_PORT ?? 3000),
     database: process.env.TASK_SERVER_DATABASE ?? "tasks.sqlite",
     types: [check],
-    currentVersions: { check: "1" },
+    currentVersions: { check: "2" },
     limits: { maxPayloadBytes: 8 * 1024 * 1024 },
     authorize: (caller, _operation, scope) =>
       caller.scope === scope && caller.subject === "example",

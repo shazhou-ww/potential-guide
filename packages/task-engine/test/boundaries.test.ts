@@ -4,7 +4,7 @@ import { type JsonObject, json, type TaskType } from "@potential-guide/task-prot
 import { createTaskEngine, newId } from "../src/index.js";
 import { createExecutorPool } from "../src/pool.js";
 import { MemoryStore } from "../src/testing.js";
-import { caller, echoEquals, flush, harness, validateEcho } from "./fixtures.js";
+import { caller, flush, harness, validateEcho } from "./fixtures.js";
 
 test("startup captures one trusted timestamp even if time advances on every clock read", async () => {
   const store = new MemoryStore();
@@ -30,8 +30,12 @@ test("startup captures one trusted timestamp even if time advances on every cloc
     type: "echo",
     version: "1",
     environment: "js",
-    validate: validateEcho,
-    equals: echoEquals,
+    inputSchema: {
+      type: "object",
+      properties: { text: { type: "string" } },
+      required: ["text"],
+      additionalProperties: false,
+    },
     prepare: async (input) => input,
     validatePrepared: validateEcho,
     validateResult: json,
@@ -92,7 +96,7 @@ test("failed durable startup prevents business invocation and releases reserved 
   }
 });
 
-test("prepared input cannot silently execute in a changed runtime environment", async () => {
+test("registered environment is detached from subsequent author object mutation", async () => {
   const h = harness();
   try {
     const task = h.submit();
@@ -102,8 +106,9 @@ test("prepared input cannot silently execute in a changed runtime environment", 
     h.type.environment = "different-runtime";
     h.engine.tick();
     await flush();
-    assert.equal(h.work.length, 0);
-    assert.equal(h.engine.getTask(task.taskId, caller).error?.code, "unsupported_environment");
+    assert.equal(h.work.length, 1);
+    assert.equal(h.engine.getTask(task.taskId, caller).stage, "running");
+    assert.equal(h.store.read().facts.tasks[task.taskId]?.binding.environment, "js-v1");
   } finally {
     await h.close();
   }

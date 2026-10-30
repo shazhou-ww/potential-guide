@@ -28,13 +28,13 @@ const handler = createTaskHandler({ service: engine, resolveCaller });
 ## Type and execution contract
 
 `TaskType<Input, Prepared=Input>` has `type`, immutable `version`, immutable
-`environment`, pure `validate(unknown)` and `equals(Input, unknown)`, required
+`environment`, declarative `inputSchema`, required
 `prepare(Input, {signal, deadlineAt, context})`, `validatePrepared`, `validateResult`,
 `validateProgress`, and `execute(Prepared, ExecuteOptions)`.
 Validators return the original semantic value without coercion. All stored
 values must be finite JSON: no getters, custom prototypes, sparse arrays,
 toJSON conversion, cycles or undefined. Values passed into type code are frozen.
-Business fields stay beside the Request envelope; validators should reject
+Business fields stay beside the Request envelope; schemas should reject
 unknown fields, including obsolete prerequisites. Identity prepare is valid.
 Preparation `context` is the frozen Engine-bound type/version/environment/scope,
 so source authorization never relies on body-supplied permissions. It is optional
@@ -67,6 +67,92 @@ share. Omitted executionMatch binds to `started-after-eligible`, but the raw
 Request remains unchanged. Both “after” policies use strict greater-than.
 Full Request idempotency does not use business equality. Retain original version
 interpreters when upgrading; missing historical versions fail explicitly.
+Task and Execution bindings include `contractRevision`; missing legacy identities
+or a same-version Schema change fail as `unsupported_contract`, never automatically
+migrate. Registering a new version cannot reinterpret old records. Original
+versions may remain registered for recovery without being advertised as current.
+
+### Input Schema and generated equality
+
+The engine clones, compiles and freezes registration contracts and copies
+`currentVersions` at construction. Changing the author's objects afterwards has
+no effect. `compileInputSchema<Input>(schema, limits?)` is exported by
+`@potential-guide/task-protocol` and returns
+`{inputSchema, revision, validate(value), equals(left,right)}`.
+The helper revision identifies Schema/projection semantics; discovery revisions
+add type and version identity. Authors maintain no arbitrary validate/equals hook.
+Prepared, progress and result validators remain separate.
+
+Validation uses Ajv2020 with `strict:true`, `allowUnionTypes:true`,
+`validateFormats:false`, `ownProperties:true`. Required and declared fields use
+own JSON properties, never Object.prototype members. Ajv's skipped `__proto__`
+declarations are compiled through an equivalent exact-name standard pattern
+after strict checking of the authored contract; this does not change the public
+Schema or its structural projection. Formats are annotations, not URL security checks.
+Standard keywords (including tuples, conditionals, dependencies and unevaluated
+constraints) are not restricted to a form-rendering subset. No coercion, defaults,
+field removal, network loading or custom keywords run. Trusted registration
+requires a finite JSON Schema declaring root `type:"object"`. Only local JSON
+Pointer `$ref` values are supported; URI-encoded pointers, nested `$id` resources,
+external/dynamic/recursive references, asynchronous and cyclic contracts fail
+explicitly. Schema traversal visits schema locations, not const/default/examples
+data, and includes `$ref` siblings.
+
+Default compiler limits are 262,144 Schema bytes, 4,096 Schema nodes, 16,384
+reference expansions, 64 levels, 262,144 projection operations and 1,048,576
+serialized projection bytes per operand.
+All configurable limits must be positive safe integers. Input finite-JSON limits
+default to 65,536 bytes; Engine compilation uses `limits.maxPayloadBytes`.
+Violations throw, including during equality; they never imply equality.
+
+Equality is **not validation** and accepts any finite JSON within those budgets:
+
+- Named properties compare presence and selected values; unselected fields are
+  ignored even when `additionalProperties:false` would reject the input.
+- Missing differs from null and explicit defaults. JSON types differ; object key
+  order does not matter and `-0` equals `0`.
+- Free JSON/object nodes with no field declarations compare complete content
+  (including empty `properties:{}`). Boolean additionalProperties alone does not
+  change comparison fields. Schema-valued additionalProperties is a dictionary:
+  dynamic keys and selected value shapes participate.
+- patternProperties compares matching keys and values. Schema-valued
+  unevaluatedProperties conservatively contributes unmatched local keys.
+- Arrays preserve length, order and prefixItems/items boundaries. Positions
+  forbidden by boolean schemas still compare their raw finite JSON.
+  Schema-valued unevaluatedItems supplies a local tail shape only when items is
+  absent: prefixItems wins at tuple positions, then explicit items (including
+  true/false), then schema-valued unevaluatedItems. Boolean unevaluatedItems alone
+  is validation-only. These are structural rules, **not** JSON Schema evaluated
+  annotations: separate composition branches contribute independent shapes, and
+  contains/conditions never select evaluated positions for equality.
+- allOf/anyOf/oneOf contribute all structural shapes, never OR equality booleans.
+  Local JSON type selects object/array shapes; this implementation does not
+  otherwise choose branches by discriminator values.
+  then/else and dependentSchemas contribute structural unions without executing
+  conditions. Validation-only clauses do not introduce a full-object projection
+  that overrides named-field selection.
+- Wrong shapes use type-tagged raw JSON fallback. Each operand's projection is
+  independent, preserving reflexivity, symmetry and transitivity.
+
+### Authorized type discovery and revision guards
+
+`engine.discoverTypes(caller)` / `TaskService.discoverTypes(caller)` returns a deeply
+frozen array of `{type,version,inputSchema,revision}` for exactly `currentVersions`.
+It reuses the caller/scope **submit** authorization, with no new per-type ACL.
+Only public contracts are returned, never environment/configuration/functions.
+Schemas are trusted public metadata: do not put credentials in their annotations.
+Discovery does not resolve business URLs, download artifacts or query subjectSchema.
+Ordinary object subjects need no asset catalog or additional schema lookup.
+
+HTTP GET `/task-types` exposes the same array under the configured prefix.
+Clients may call `submit(request, caller, {expectedRevision: revision})` or send
+POST `/tasks` with `If-Match: "<revision>"` (one quoted lowercase SHA-256 revision).
+Malformed headers return 400; stale revisions return
+412/`contract_revision_mismatch` before persistence, including retries carrying a
+stale precondition. Without a precondition, existing requestId retries continue to
+use their original contract. The precondition is transport metadata, not business
+input or stored raw intent: it does not change requestId equality. New versions
+require new discovery; old recovery-only versions are never advertised.
 
 The optional `/pool` helper implements `execute`. Provide resource keys and
 `run(prepared, permit, context) -> RunningWork`. The read-only context carries

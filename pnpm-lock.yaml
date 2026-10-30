@@ -604,7 +604,11 @@ importers:
         specifier: workspace:^
         version: link:../task-engine
 
-  packages/task-protocol: {}
+  packages/task-protocol:
+    dependencies:
+      ajv:
+        specifier: 'catalog:'
+        version: 8.20.0
 
   packages/test-tree:
     dependencies:

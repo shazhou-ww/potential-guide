@@ -12,13 +12,11 @@ import type { ArtifactSource } from "@potential-guide/check-task";
 import { newId } from "@potential-guide/task-engine";
 import { createExecutorPool, type RunningWork } from "@potential-guide/task-engine/pool";
 import {
-  canonical,
   isTimedOut,
   json,
   positive,
   TaskError,
   type Caller,
-  type Json,
   type TaskService,
   type TaskType,
   type StartPermit,
@@ -30,6 +28,8 @@ import {
   encodeObjective,
   replayResult,
   validateProbeInput,
+  validateProbeConsistency,
+  probeInputSchema,
   validateProbeResult,
   type ProbeInput,
   type ProbePrepared,
@@ -37,7 +37,7 @@ import {
   type ProbeEffectEvidence,
 } from "./contracts.js";
 export type { ProbeInput, ProbePrepared, ProbeResult, ProbeEffectEvidence } from "./contracts.js";
-export { validateProbeInput } from "./contracts.js";
+export { validateProbeInput, probeInputSchema } from "./contracts.js";
 
 export interface ChildTaskPort {
   service: Pick<TaskService, "submit" | "getTask" | "cancelTask" | "readHistory">;
@@ -352,20 +352,12 @@ export function createProbeTaskType(options: ProbeTaskOptions): TaskType<
   return {
     type: "probe",
     allocationLimit: parents,
-    version: options.version ?? "1",
+    version: options.version ?? "2",
     environment,
-    validate: validateProbeInput,
-    equals(input, other) {
-      try {
-        return (
-          canonical(input as unknown as Json) ===
-          canonical(validateProbeInput(other) as unknown as Json)
-        );
-      } catch {
-        return false;
-      }
-    },
+    inputSchema: probeInputSchema,
     async prepare(input, context) {
+      validateProbeInput(input);
+      validateProbeConsistency(input);
       if (!context.context)
         throw new TaskError("invalid_config", "Trusted preparation context required.");
       const scope = context.context.scope;

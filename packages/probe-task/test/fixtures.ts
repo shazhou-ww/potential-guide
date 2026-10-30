@@ -122,7 +122,7 @@ export async function harness(
   engine = createTaskEngine({
     store,
     types: [check, probe],
-    currentVersions: { check: "1", probe: "1" },
+    currentVersions: { check: "2", probe: "2" },
     authorize: (who, _operation, scope) => who.scope === scope,
     limits: { maxConcurrent: 1, maxPayloadBytes: 8 * 1024 * 1024, ...limits },
     ...(clock ? { clock } : {}),
