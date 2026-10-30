@@ -3,7 +3,11 @@ import { createRequire, registerHooks, syncBuiltinESMExports } from "node:module
 import { relative, isAbsolute, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 const require = createRequire(import.meta.url);
-const denied = () => { throw Error("Contract entry attempted forbidden IO."); };
+let forbiddenIoCalls = 0;
+const denied = () => {
+  forbiddenIoCalls++;
+  throw Error("Contract entry attempted forbidden IO.");
+};
 for (const [module, names] of [
   ["node:fs", ["writeFile", "writeFileSync", "appendFile", "appendFileSync", "mkdir", "mkdirSync", "createWriteStream", "rename", "renameSync", "unlink", "unlinkSync", "rm", "rmSync", "chmod", "chmodSync"]],
   ["node:fs/promises", ["writeFile", "appendFile", "mkdir", "rename", "unlink", "rm", "chmod"]],
@@ -69,9 +73,10 @@ const imports = [...resolved].map((url) => {
 });
 assert.ok(!imports.some((path) => /^node:(?:fs|net|https?|tls|dgram|child_process|worker_threads)(?:\/|$)/.test(path)));
 assert.ok(!imports.some((path) => /check-artifacts[\\/]dist[\\/](?:index|archive|build|manifest)\.js$/.test(path)));
+assert.equal(forbiddenIoCalls, 0);
 console.log(JSON.stringify({
   status: "passed", checkerDigest: artifact.digest, objectiveDigest: objectiveArtifact.digest,
-  forbiddenIoCalls: 0, manifests: ["checker", "objective"], subjectAndResult: true,
+  forbiddenIoCalls, manifests: ["checker", "objective"], subjectAndResult: true,
   missingFilesRejected: true, unknownFieldsRejected: true, changedDigestDetected: true,
   missingReferencesRejected: true, actualRuntimeCheckedSeparately: true,
   importedFrom: import.meta.resolve("@potential-guide/check-artifacts/contracts"),

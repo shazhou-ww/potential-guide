@@ -10,7 +10,11 @@ deploymentRevision，执行真实安装及 HTTP/SSE/进程测试。
 结果将由 [verification/results.json](verification/results.json) 保存实际 tarball 身份、
 安装图、命令、API 观测、Worker exit/PID 记录和唯一标记目录清理证明。
 
-尚未执行外部验证，D 项保持未完成；本准备文档不宣称部署成功或获得验收。
+首个完整仓库外验证已在 `e2d01ad120120f9a578cf323443cc634b8411160` 通过，
+三个消费者分别实际安装 16、5、22 个包，目录 a2 已按唯一标记清理。
+当前进一步强化 harness：纯契约所有禁止 IO 调用计数必须为零，避免负例中的
+`assert.throws` 掩盖调用；已确认消失的 owned PID 不再作为后续兜底 kill 的候选，
+避免 PID 复用风险。同步修订并重复全部检查之前 D 项仍未勾选。
 
 首次执行在打包首包前发现 harness 的 Windows cmd 参数转义问题，pnpm 收到了带字面引号的
 `--dir`。此为验证工具问题，未触及产品实现；已确认 `windowsVerbatimArguments` 的实际

@@ -140,6 +140,7 @@ try {
   const subsequent = await submit(server.url, body("after-child"));
   await waitTask(server.url, subsequent.task.taskId, "completed");
   assert.equal(alive(childPid), false);
+  ownedPids.delete(childPid);
   proof.cases.push({ case: "owned-child-physical-cleanup-before-reuse", childPid, aliveAfterReuse: false, nextTaskId: subsequent.task.taskId });
   const active = await submit(server.url, body("shutdown-active", "spin"));
   await waitTask(server.url, active.task.taskId, "running");
