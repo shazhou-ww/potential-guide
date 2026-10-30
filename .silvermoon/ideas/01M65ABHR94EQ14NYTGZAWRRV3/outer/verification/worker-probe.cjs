@@ -10,7 +10,19 @@ threads.Worker = class ObservedWorker extends Original {
     const report = (event, extra = {}) => fs.appendFileSync(path, `${JSON.stringify({
       event, pid: process.pid, threadId, ...extra,
     })}\n`);
-    report("worker-start");
+    const previous = process.env.OWNED_CHILD_PROOF;
+    let child = {};
+    if (previous && fs.existsSync(previous)) {
+      const { pid } = JSON.parse(fs.readFileSync(previous, "utf8"));
+      let exists = true;
+      try { process.kill(pid, 0); }
+      catch (error) {
+        if (error.code !== "ESRCH") throw error;
+        exists = false;
+      }
+      child = { previousOwnedPid: pid, previousOwnedAlive: exists };
+    }
+    report("worker-start", child);
     this.once("exit", (code) => report("worker-exit", { code }));
   }
 };

@@ -15,6 +15,10 @@ deploymentRevision，执行真实安装及 HTTP/SSE/进程测试。
 当前进一步强化 harness：纯契约所有禁止 IO 调用计数必须为零，避免负例中的
 `assert.throws` 掩盖调用；已确认消失的 owned PID 不再作为后续兜底 kill 的候选，
 避免 PID 复用风险。同步修订并重复全部检查之前 D 项仍未勾选。
+上述强化在 `274a46bfa7dcca4157a10568e90e5a1d87edcf7e` 的 a3 独立运行中全部通过。
+最终再将 owned child 的 OS 存活检查移到“下一次真实 Worker 创建”的观察点，
+并断言单槽所有 worker-start/worker-exit 的严格先后关系，以直接证明物理退出先于复用，
+不只在后续任务完成时检查。此项仅增加外部观察，不修改已验收实现。
 
 首次执行在打包首包前发现 harness 的 Windows cmd 参数转义问题，pnpm 收到了带字面引号的
 `--dir`。此为验证工具问题，未触及产品实现；已确认 `windowsVerbatimArguments` 的实际

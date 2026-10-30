@@ -35,6 +35,7 @@ const body = (name, mode = "business", fields = {}) => ({
 const environment = (label, mode = "normal") => ({
   DATABASE: resolve(`${label}.sqlite`), WORKERS: resolve(`workers-${label}`),
   WORKER_PROOF: workerProof, MODE: mode, observeWorkers: true,
+  OWNED_CHILD_PROOF: resolve("owned-child.json"),
 });
 async function workerStarted(name) {
   for (let attempt = 0; attempt < 500; attempt++) {
@@ -48,6 +49,17 @@ async function physicalProof(pid, directory) {
   const events = (await rows(workerProof)).filter((row) => row.pid === pid);
   const started = events.filter((row) => row.event === "worker-start");
   assert.ok(started.length);
+  let active;
+  for (const event of events) {
+    if (event.event === "worker-start") {
+      assert.equal(active, undefined, "Capacity reused before prior physical worker exit.");
+      active = event.threadId;
+    } else {
+      assert.equal(active, event.threadId);
+      active = undefined;
+    }
+  }
+  assert.equal(active, undefined);
   for (const row of started)
     assert.ok(events.some((event) => event.event === "worker-exit" && event.threadId === row.threadId),
       `No physical exit for ${pid}/${row.threadId}`);
@@ -141,7 +153,15 @@ try {
   await waitTask(server.url, subsequent.task.taskId, "completed");
   assert.equal(alive(childPid), false);
   ownedPids.delete(childPid);
-  proof.cases.push({ case: "owned-child-physical-cleanup-before-reuse", childPid, aliveAfterReuse: false, nextTaskId: subsequent.task.taskId });
+  const nextWorker = await workerStarted("after-child");
+  const reuseObservation = (await rows(workerProof)).find((event) =>
+    event.event === "worker-start" && event.pid === nextWorker.pid && event.threadId === nextWorker.threadId);
+  assert.equal(reuseObservation.previousOwnedPid, childPid);
+  assert.equal(reuseObservation.previousOwnedAlive, false);
+  proof.cases.push({
+    case: "owned-child-physical-cleanup-before-reuse", childPid, aliveAfterReuse: false,
+    nextTaskId: subsequent.task.taskId, reuseObservation,
+  });
   const active = await submit(server.url, body("shutdown-active", "spin"));
   await waitTask(server.url, active.task.taskId, "running");
   await workerStarted("shutdown-active");
