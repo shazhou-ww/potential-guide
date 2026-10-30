@@ -1,12 +1,21 @@
 # Endpoint 任务历史查询：能力缺口与最小范围
 
-日期：2026-10-31。本文支撑 [Idea.md](Idea.md)，不是另一份契约或已确认的接口设计。用户已明确同意建立 `task-history-query`，仅保存调研与轻量计划，保持 preparing、不开始实现。
+日期：2026-10-31。本文支撑 [Idea.md](Idea.md)，不是另一份契约或已确认的接口设计。用户授权在项目级独立 session 与独立 worktree 中跟进 `task-history-query` 的准备研究和讨论，保持 preparing；不开始实现、验收、部署或发布，不记录 submit/accept。
 
 来源需求为 [task-engine-web-ui 的 US-11](../../../../01M663BC641JV531CXWN5WD2AG/outer/inner/ideal/Requirements.md)：查询 Endpoint 上所有可访问的历史任务，基础筛选按类型和时间；保留与清理由 Service 配置治理，重做只套用原用户参数。Input 内部参数筛选属于后续高级候选。
 
 ## 1. 证据基线与结论
 
 源码与探针基线为 [`248f8ee116abcae18c7e6ad19a044540c4d77706`](https://github.com/shazhou-ww/potential-guide/tree/248f8ee116abcae18c7e6ad19a044540c4d77706)。建档前已整合 primary `fc853bd81016988a7ebd74c52980424285fce5c7`；中间变更仅涉及 idea 文档/事件，未改变本次调查的生产代码。以下行号对应源码基线，不代表客户部署或最新发布包已核验。
+
+### 最新契约复核
+
+独立跟进时已刷新 primary，当前 worktree 与 [`0d54f74a0efc7a0432b6efb49d487dc2c467db6e`](https://github.com/shazhou-ww/potential-guide/tree/0d54f74a0efc7a0432b6efb49d487dc2c467db6e) 一致。相对探针基线，终结语义已有生产代码变更；以下为源码复核，不是重新运行探针或外部验收：
+
+- [当前 Task 协议](../../../../../../packages/task-protocol/src/types.ts)新增 `TaskRecord.receivedSequence`，Facts 使用 `projectionVersion: 2`；TaskSnapshot 仍无 type，TaskService 和 Operation 仍无目录查询。序号来自创建事件，[投影](../../../../../../packages/task-protocol/src/projection.ts)检查其与事件 sequence 一致。这为限定首次查询前已接收任务提供了可复用事实，但不等于已实现列表游标、权限绑定或清理后的一致性保证。
+- [存储契约](../../../../../../packages/task-engine-storage/README.md)已明确 SQLite `user_version`、checkpoint 与 Facts 为 v2；旧或未知格式被拒绝，旧数据不迁移、不覆盖、不删除。目录只能面向服务当前能合法加载且仍保留的记录，不承担跨格式历史迁移；“所有历史”不能解释为绕过这一边界读取旧数据库。
+- [当前 Engine](../../../../../../packages/task-engine/src/engine.ts)仍保存原请求与 binding，`checkHistory` 使用原绑定版本；服务接收时间仍由服务时钟生成。有效资格时间现在不早于接收时间，但可晚于接收时间，仍不能替代历史筛选的时间口径。
+- [终结语义构想](../../../../01M66MH9YKNJ406ESX7J1HTY7J/outer/inner/ideal/Idea.md)区分 Execution 成功/失败终结、取消与超时；目录复用既有投影，不压成互斥状态或重写规则。[Task Schema 构想](../../../../01M66MRFCSDK99MAEN8RN3NKBH/outer/inner/ideal/Idea.md)约定声明式输入和发现能力，但本次所读生产协议仍是 validate/equals。不得把另一 idea 的目标或授权当成本条已实现的前提。
 
 **缺的是公开的任务目录查询，不是任务数据，也不是单任务事件历史。** 可以独立于 Web UI 和 Task Schema 的实现推进契约收敛；不必为了目录先建设另一套存储、通用搜索引擎或治理平台。
 
@@ -86,7 +95,7 @@ getTask/getRequest 会经 checkHistory 使用原绑定版本验证 input、Prepa
 2. **与已有详情衔接**：摘要至少能识别 Task、Request、类型与列表时间；通过现有入口打开快照/输入/事件，再走原参数新提交，不新增“服务器替你重跑”操作。
 3. **有限且明确的查询契约**：时间口径、稳定排序、翻页一致性、参数校验、响应上限和失效行为有文档及测试；HTTP 路径和方法名在该契约收敛时确定。
 
-时间口径建议先采用 **receivedAt（服务接收/提交时间）**，它涵盖未开始和已完成任务，也不受用户指定的 eligibleAt 影响。用户此前只确定了“时间筛选”，没有选择该字段；建议尚待收敛，不能把草图标签当作已确认决定。
+时间口径已由用户确认采用 **receivedAt（服务接收时间）**：周一提交、预约周二运行、周三结束的任务，按周一查询应能找到。未开始或最终失败不改变时间归属，不以客户端本地发起时间、资格时间、实际开始或结束时间代替。时间范围端点等接口规则仍待收敛，不由此推定。
 
 | 归属 | 本条可能涉及的工作 | 不应顺带扩展 |
 | --- | --- | --- |
@@ -107,7 +116,7 @@ getTask/getRequest 会经 checkHistory 使用原绑定版本验证 input、Prepa
 - 重启后目录与现有详情/原请求一致；原版本绑定不被当前类型/Schema 静默替代；查询不执行任务、不清理数据。
 - 缺少旧版本导致启动失败等既有行为要明确记录，不将新增列表宣称为历史迁移方案。
 
-创建本 idea 不代表立即实施或提交构想验收。先收敛最小摘要、receivedAt 建议和分页一致性，再由本 idea 的正常生命周期推进；没有创建新 session，也不等待或重复通知资产管理会话。
+本 idea 的当前授权仅为准备与讨论，不代表立即实施或提交构想验收。服务接收时间口径已确认，继续收敛最小摘要和分页一致性；本项目级独立 session 自行推进，不向来源会话汇报或等待其协调，不创建子 agent/session 代替跟进。
 
 ## 证据索引
 
