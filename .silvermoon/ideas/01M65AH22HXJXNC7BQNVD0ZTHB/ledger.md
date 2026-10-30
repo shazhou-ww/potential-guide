@@ -18,10 +18,10 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 运行独立 Objective 观察
-- [ ] **D-S02:** 验证嵌套任务边界
+- [x] **D-S01:** 运行独立 Objective 观察
+- [x] **D-S02:** 验证嵌套任务边界
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 外部观察可复核
-- [ ] **D-AC02:** 受限容量下安全结束
+- [x] **D-AC01:** 外部观察可复核
+- [x] **D-AC02:** 受限容量下安全结束
