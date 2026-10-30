@@ -16,6 +16,17 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     );
   }
   const scenarios = [
+    [
+      "probe-task",
+      [
+        "@potential-guide/probe-task",
+        "@potential-guide/check-task",
+        "@potential-guide/check-artifacts",
+        "@potential-guide/task-engine",
+        "@potential-guide/task-engine-server",
+        "@potential-guide/task-protocol",
+      ],
+    ],
     ["artifact-contracts", ["@potential-guide/check-artifacts"]],
     [
       "mvp-server",
@@ -121,8 +132,26 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       directory,
       closure,
       entries,
-      label === "npm-objectives" || label === "artifact-contracts" || label.startsWith("mvp-"),
+      label === "probe-task" ||
+        label === "npm-objectives" ||
+        label === "artifact-contracts" ||
+        label.startsWith("mvp-"),
     );
+    if (label === "probe-task") {
+      const names = new Set(graph.map((entry) => entry.name));
+      for (const forbidden of [
+        "@potential-guide/checker-host",
+        "@potential-guide/objective-host",
+        "@potential-guide/objective-pilot",
+      ])
+        assert.ok(!names.has(forbidden));
+      for (const filename of ["probe-config.mjs", "probe-integration.mjs"])
+        await writeFile(
+          join(directory, filename),
+          await readFile(join(root, "examples", "task-server", filename)),
+        );
+      console.log(await run(process.execPath, ["probe-integration.mjs"], directory));
+    }
     if (label === "artifact-contracts" || label.startsWith("mvp-"))
       await checkMvpConsumer(root, directory, label, graph, run);
     if (label.startsWith("task-")) {

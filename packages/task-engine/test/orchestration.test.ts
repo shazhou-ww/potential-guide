@@ -7,7 +7,7 @@ import { createExecutorPool } from "../src/pool.js";
 import { MemoryStore, VirtualClock } from "../src/testing.js";
 import { caller, deferred, flush } from "./fixtures.js";
 
-test("an executing parent can await a child on a separate bounded resource domain", async () => {
+test("isolated admission lets executing and queued parents advance with one child slot", async () => {
   const store = new MemoryStore();
   const clock = new VirtualClock();
   const pool = createExecutorPool<JsonObject>({
@@ -18,7 +18,7 @@ test("an executing parent can await a child on a separate bounded resource domai
       const result = (async () => {
         if (input.kind === "child") return { value: 6 };
         const child = engine.submit(
-          { requestId: newId(), type: "child", value: 3, timeoutMs: 100 },
+          { requestId: newId(), type: "child", value: input.value!, timeoutMs: 1000 },
           caller,
         );
         while (!controller.signal.aborted) {
@@ -47,6 +47,7 @@ test("an executing parent can await a child on a separate bounded resource domai
   });
   const type: TaskType<JsonObject> = {
     type: "parent",
+    allocationLimit: 1,
     version: "1",
     environment: "js",
     validate: json as (input: unknown) => JsonObject,
@@ -57,8 +58,9 @@ test("an executing parent can await a child on a separate bounded resource domai
     validateProgress: json,
     execute: (input, options) => pool.execute(input, options),
   };
+  const { allocationLimit: _allocationLimit, ...shared } = type;
   const childType = {
-    ...type,
+    ...shared,
     type: "child",
     prepare: async (input: JsonObject) => ({ ...input, kind: "child" }),
   };
@@ -68,23 +70,30 @@ test("an executing parent can await a child on a separate bounded resource domai
     types: [type, childType],
     currentVersions: { parent: "1", child: "1" },
     authorize: () => true,
+    limits: { maxConcurrent: 1 },
   });
   engine.start();
   try {
-    const parent = engine.submit({ requestId: newId(), type: "parent", timeoutMs: 100 }, caller);
-    for (let i = 0; i < 20; i++) {
+    const parents = [1, 2, 3].map((value) =>
+      engine.submit({ requestId: newId(), type: "parent", value, timeoutMs: 1000 }, caller),
+    );
+    for (let i = 0; i < 100; i++) {
       clock.advance(1);
       engine.tick();
       await flush();
       engine.tick();
       await new Promise<void>((resolve) => setImmediate(resolve));
-      if (engine.getTask(parent.taskId, caller).stage === "completed") break;
+      if (parents.every((parent) => engine.getTask(parent.taskId, caller).stage === "completed"))
+        break;
     }
-    const result = engine.getTask(parent.taskId, caller);
-    assert.equal(result.stage, "completed");
-    assert.equal(Object.keys(store.read().facts.tasks).length, 2);
-    assert.equal(Object.keys(store.read().facts.executions).length, 2);
-    assert.deepEqual((result.result as JsonObject).result, { value: 6 });
+    for (const parent of parents) {
+      const result = engine.getTask(parent.taskId, caller);
+      assert.equal(result.stage, "completed");
+      assert.deepEqual((result.result as JsonObject).result, { value: 6 });
+      await engine.waitForTaskRelease(parent.taskId, caller);
+    }
+    assert.equal(Object.keys(store.read().facts.tasks).length, 6);
+    assert.equal(Object.keys(store.read().facts.executions).length, 6);
   } finally {
     await engine.close();
     await pool.close();

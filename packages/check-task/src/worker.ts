@@ -105,7 +105,7 @@ export function runChecker(
         }
         send("execute", {
           subject: prepared.input.subject,
-          context: { language: prepared.language },
+          context: { ...prepared.input.context, language: prepared.language },
           deadline,
         });
       } else if (message.type === "initialization-failed") {

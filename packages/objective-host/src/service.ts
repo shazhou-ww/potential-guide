@@ -1,22 +1,18 @@
 import { randomUUID } from "node:crypto";
 import {
   type ArtifactReference,
-  type CheckerManifest,
   type CheckerResult,
-  type ContractArtifact,
-  type DependencyRequirement,
-  type Json,
-  type JsonObject,
-  type ObjectiveArtifactManifest,
   canonicalJson,
-  composeObjectivePages,
-  digestPattern,
   jsonObject,
-  mapSubject,
-  selectLanguage,
   validateArtifactReference,
   validateArtifactSubject,
 } from "@potential-guide/check-artifacts";
+import {
+  observeObjective,
+  prepareObjective,
+  type PreparedObjective as ObservationPrepared,
+  type CheckObservationResult,
+} from "@potential-guide/check-artifacts/observation";
 import {
   type CheckerRequest,
   type CheckerSnapshot,
@@ -29,18 +25,10 @@ import {
   type TaskAdapter,
   TaskProtocolError,
   TaskService,
-  selectServiceLanguage,
   serviceTerminal,
+  selectServiceLanguage,
 } from "@potential-guide/checker-host";
-import type {
-  ExactObjective,
-  InvocationProgress,
-  ObjectiveObservation,
-  ObservationProgress,
-  ProbeEvidence,
-  ProbeProgress,
-  ProbeRequest,
-} from "./types.js";
+import type { ObjectiveObservation, ProbeEvidence, ProbeProgress, ProbeRequest } from "./types.js";
 
 export interface CheckServicePort {
   readonly environment: Readonly<Record<string, string>>;
@@ -54,9 +42,9 @@ export interface CheckServicePort {
   ): () => unknown;
 }
 interface PreparedObjective extends PreparedTask {
-  resolved: ResolvedContract & { manifest: ObjectiveArtifactManifest };
-  checkers: Record<string, ContractArtifact<CheckerManifest>>;
-  pages: ContractArtifact["pages"];
+  resolved: ResolvedContract & { manifest: ObservationPrepared["artifact"]["manifest"] };
+  checkers: ObservationPrepared["checkers"];
+  pages: ObservationPrepared["pages"];
 }
 function normalize(request: ProbeRequest): ProbeRequest {
   if (
@@ -127,31 +115,29 @@ export class ObjectiveService extends TaskService<
       signal: AbortSignal,
       requested?: string,
     ): Promise<PreparedObjective> => {
-      const resolved = await repository.resolve(reference, scope, signal);
-      if (!("checkers" in resolved.manifest)) throw new Error("Expected Objective.");
-      const language = selectServiceLanguage(resolved.manifest.languages, languages, requested);
-      const checkers: Record<string, ContractArtifact<CheckerManifest>> = {};
-      for (const [ref, binding] of Object.entries(resolved.manifest.checkers)) {
-        const checker = await repository.resolve(
-          { kind: "checker", url: binding.url, digest: binding.digest },
-          scope,
-          signal,
-        );
-        if (!("entry" in checker.manifest) || checker.digest !== binding.digest)
-          throw new Error("Invalid Checker binding.");
-        checkers[ref] = checker as ContractArtifact<CheckerManifest>;
-      }
-      const objective = resolved as PreparedObjective["resolved"];
-      const pages = composeObjectivePages(objective, checkers);
+      const prepared = await prepareObjective(
+        reference,
+        (reference) => repository.resolve(reference, scope, signal),
+        languages,
+        requested,
+        selectServiceLanguage,
+      );
+      const resolved = prepared.artifact as PreparedObjective["resolved"];
       return {
-        resolved: objective,
+        resolved,
         artifact: resolved.metadata,
-        checkers,
-        pages,
-        language,
+        checkers: prepared.checkers,
+        pages: prepared.pages,
+        language: prepared.language,
         compatibility: "",
       };
     };
+    const shared = (value: PreparedObjective): ObservationPrepared => ({
+      artifact: value.resolved,
+      checkers: value.checkers,
+      pages: value.pages,
+      language: value.language,
+    });
     const adapter: TaskAdapter<
       ProbeRequest,
       PreparedObjective,
@@ -192,235 +178,75 @@ export class ObjectiveService extends TaskService<
       },
       async execute(root, request, execution) {
         execution.start();
-        const bindings = { ...request.bindings };
-        bindings[request.objective.url] = root.resolved.digest;
-        const evidence: ProbeEvidence = { bindings, checks: [] };
-        const progress: ProbeProgress = { observations: [], invocations: [] };
-        const active = new Set<string>();
+        const evidence: ProbeEvidence = { bindings: {}, checks: [] };
         const owned = new Set<string>();
-        const emit = () => execution.progress(progress);
+        let progress: ProbeProgress = { observations: [], invocations: [] };
         const cancel = () => {
           for (const id of owned) checks.cancel(id, execution.scope);
         };
         execution.signal.addEventListener("abort", cancel, { once: true });
-        const cache = new Map<string, PreparedObjective>([
-          [`${request.objective.url}\0${root.resolved.digest}`, root],
-        ]);
-        async function resolve(reference: ArtifactReference) {
-          const pinned = bindings[reference.url];
-          if (pinned && reference.digest && pinned !== reference.digest)
-            throw new Error("Dependency binding conflict.");
-          const digest = pinned ?? reference.digest;
-          if (digest && !new RegExp(digestPattern).test(digest))
-            throw new Error("Invalid dependency digest.");
-          const previous = digest ? cache.get(`${reference.url}\0${digest}`) : undefined;
-          if (previous) return previous;
-          const prepared = await prepare(
-            { ...reference, ...(digest ? { digest } : {}) },
-            execution.scope,
-            execution.signal,
-            root.language,
-          );
-          if (digest && prepared.resolved.digest !== digest) throw new Error("Dependency changed.");
-          bindings[reference.url] = prepared.resolved.digest;
-          cache.set(`${reference.url}\0${prepared.resolved.digest}`, prepared);
-          return prepared;
-        }
-        async function leaf(
-          prepared: PreparedObjective,
-          subject: JsonObject,
-          level: string,
-          ref: string,
-          observation: ObservationProgress,
-          resolutions?: Json[],
-        ) {
-          execution.signal.throwIfAborted();
-          if (progress.invocations.length >= 128) throw new Error("Invocation budget exhausted.");
-          const binding = prepared.resolved.manifest.checkers[ref];
-          const checker = prepared.checkers[ref];
-          if (!binding || !checker) throw new Error("Missing Checker binding.");
-          const invocation: InvocationProgress = {
-            id: randomUUID(),
-            observationId: observation.id,
-            objective: observation.objective,
-            level,
-            checker: ref,
-            state: "mapping",
-          };
-          progress.invocations.push(invocation);
-          emit();
-          const mapped = mapSubject(binding.subjectMapping, subject);
-          if (!validateArtifactSubject(checker.manifest, mapped))
-            throw new Error("Mapped subject violates Checker schema.");
-          const remaining = Math.floor(execution.deadline - performance.now());
-          if (remaining < 1) throw new Error("Observation deadline expired.");
-          // Each child is accepted only after the parent Execution's start boundary.
-          const accepted = checks.accept(
-            {
-              checker: { url: binding.url, digest: binding.digest },
-              subject: mapped,
-              language: selectLanguage(checker.manifest.languages, [
-                root.language,
-                ...languages,
-                ...checker.manifest.languages,
-              ]),
-              context: { ...request.context, ...(resolutions ? { resolutions } : {}) },
-              freshness: "started-after-request",
-              timeoutMs: Math.min(120_000, remaining),
-            },
-            execution.scope,
-          );
-          owned.add(accepted.taskId);
-          invocation.taskId = accepted.taskId;
-          try {
-            const snapshot = await waitForCheck(checks, accepted.taskId, execution, (state) => {
-              invocation.state = state.state;
-              if (state.executionId) invocation.executionId = state.executionId;
-              emit();
-            });
-            evidence.checks.push({ invocationId: invocation.id, snapshot });
-            if (!snapshot.result || !snapshot.evidence)
-              throw new Error("Missing child execution evidence.");
-            return { result: snapshot.result, invocation };
-          } finally {
-            owned.delete(accepted.taskId);
-          }
-        }
-        async function observe(
-          prepared: PreparedObjective,
-          url: string,
-          subject: JsonObject,
-          depth: number,
-          parentInvocation?: string,
-        ): Promise<ObjectiveObservation> {
-          execution.signal.throwIfAborted();
-          if (depth > 8 || progress.observations.length >= 64)
-            throw new Error("Dependency observation budget exhausted.");
-          if (!validateArtifactSubject(prepared.resolved.manifest, subject))
-            throw new Error("Invalid dependency subject.");
-          const key = canonicalJson({ url, digest: prepared.resolved.digest, subject });
-          if (active.has(key)) throw new Error("Dependency observation cycle.");
-          active.add(key);
-          const objective: ExactObjective = {
-            kind: "objective",
-            url,
-            digest: prepared.resolved.digest,
-          };
-          const observation: ObservationProgress = {
-            id: randomUUID(),
-            ...(parentInvocation ? { parentInvocation } : {}),
-            objective,
-            currentLevel: "initial",
-            attainedLevel: "initial",
-            levels: prepared.resolved.manifest.levels.map((level) => ({
-              id: level.id,
-              state: "pending",
-            })),
-          };
-          progress.observations.push(observation);
-          emit();
-          try {
-            const problems: ObjectiveObservation["problems"] = [];
-            for (const level of request.targetLevel === "initial" && depth === 0
-              ? []
-              : prepared.resolved.manifest.levels) {
-              observation.currentLevel = level.id;
-              const status = observation.levels.find((item) => item.id === level.id);
-              if (!status) throw new Error("Missing level progress.");
-              status.state = "running";
-              emit();
-              for (const ref of level.checks) {
-                let check = await leaf(prepared, subject, level.id, ref, observation);
-                const resolutions: { requirement: DependencyRequirement; result: CheckerResult }[] =
-                  [];
-                for (const requirement of check.result.requirements ?? []) {
-                  const dependency = await resolve(requirement.objective);
-                  const rank = (id: string) =>
-                    id === "initial"
-                      ? 0
-                      : id === "terminal"
-                        ? dependency.resolved.manifest.levels.length
-                        : dependency.resolved.manifest.levels.findIndex(
-                            (level) => level.id === id,
-                          ) + 1;
-                  if (
-                    requirement.expectedLevelId !== "initial" &&
-                    rank(requirement.expectedLevelId) === 0
-                  )
-                    throw new Error("Unknown dependency target.");
-                  const observed = await observe(
-                    dependency,
-                    requirement.objective.url,
-                    requirement.subject,
-                    depth + 1,
-                    check.invocation.id,
-                  );
-                  const ok = rank(observed.current.levelId) >= rank(requirement.expectedLevelId);
-                  resolutions.push({
-                    requirement,
-                    result: {
-                      ok,
-                      problems: ok
-                        ? []
-                        : [
-                            {
-                              kind: "dependency",
-                              ...requirement,
-                              objective: observed.current.objective,
-                              currentLevelId: observed.current.levelId,
-                            },
-                          ],
-                    },
-                  });
-                }
-                if (resolutions.length) {
-                  check = await leaf(
-                    prepared,
-                    subject,
-                    level.id,
-                    ref,
-                    observation,
-                    resolutions as unknown as Json[],
-                  );
-                  if (check.result.requirements?.length)
-                    throw new Error("Unresolved dependency requirements after recheck.");
-                }
-                for (const problem of check.result.problems) {
-                  if (
-                    problem.kind === "dependency" &&
-                    !resolutions.some((resolution) =>
-                      resolution.result.problems.some(
-                        (candidate) =>
-                          candidate.kind === "dependency" &&
-                          canonicalJson(candidate as unknown as Json) ===
-                            canonicalJson(problem as unknown as Json),
-                      ),
-                    )
-                  )
-                    throw new Error("Dependency evidence does not match this observation.");
-                  problems.push({ objective, levelId: level.id, checker: ref, problem });
-                }
-              }
-              status.state = problems.length ? "blocked" : "passed";
-              if (!problems.length) observation.attainedLevel = level.id;
-              emit();
-              if (problems.length) break;
-            }
-            return {
-              current: { objective, levelId: observation.attainedLevel },
-              problems,
-              gapSummary: problems.length ? `${problems.length} problem(s)` : "",
-              observedAt: new Date().toISOString(),
-              bindings: { ...bindings },
-            };
-          } finally {
-            active.delete(key);
-          }
-        }
+        const iterator = observeObjective(shared(root), request, {
+          languages,
+          observedAt: new Date().toISOString(),
+          id: randomUUID,
+          progress(value) {
+            progress = value as ProbeProgress;
+            execution.progress(progress);
+          },
+        });
         try {
-          const result = await observe(root, request.objective.url, request.subject, 0);
-          result.bindings = { ...bindings };
-          return { result, evidence };
+          let next = iterator.next();
+          while (!next.done) {
+            execution.signal.throwIfAborted();
+            const effect = next.value;
+            if (effect.kind === "resolve") {
+              next = iterator.next(
+                shared(
+                  await prepare(effect.reference, execution.scope, execution.signal, root.language),
+                ),
+              );
+              continue;
+            }
+            const remaining = Math.floor(execution.deadline - performance.now());
+            if (remaining < 1) throw new Error("Observation deadline expired.");
+            const accepted = checks.accept(
+              {
+                checker: { url: effect.reference.url, digest: effect.reference.digest },
+                subject: effect.subject,
+                language: effect.language,
+                context: effect.context,
+                freshness: "started-after-request",
+                timeoutMs: Math.min(120_000, remaining),
+              },
+              execution.scope,
+            );
+            owned.add(accepted.taskId);
+            try {
+              const invocation = progress.invocations.find(
+                (item) => item.id === effect.invocationId,
+              )!;
+              invocation.taskId = accepted.taskId;
+              const snapshot = await waitForCheck(checks, accepted.taskId, execution, (state) => {
+                invocation.state = state.state;
+                if (state.executionId) invocation.executionId = state.executionId;
+                execution.progress(progress);
+              });
+              evidence.checks.push({ invocationId: effect.invocationId, snapshot });
+              if (!snapshot.result || !snapshot.evidence)
+                throw new Error("Missing child execution evidence.");
+              const response: CheckObservationResult = {
+                result: snapshot.result,
+                taskId: snapshot.taskId,
+                ...(snapshot.executionId ? { executionId: snapshot.executionId } : {}),
+              };
+              next = iterator.next(response);
+            } finally {
+              owned.delete(accepted.taskId);
+            }
+          }
+          evidence.bindings = { ...next.value.bindings };
+          next.value.observedAt = new Date().toISOString();
+          return { result: next.value, evidence };
         } finally {
           execution.signal.removeEventListener("abort", cancel);
           cancel();
@@ -443,23 +269,17 @@ export class ObjectiveService extends TaskService<
   }
   async reference(digest: string, id: string, scope: string, requested?: string) {
     const artifact = await this.repository.artifact(digest, scope);
-    if (!("checkers" in artifact.manifest)) throw new Error("Expected Objective.");
-    const language = selectServiceLanguage(artifact.manifest.languages, this.languages, requested);
-    const checkers: Record<string, ContractArtifact<CheckerManifest>> = {};
-    for (const [ref, binding] of Object.entries(artifact.manifest.checkers)) {
-      const checker = await this.repository.resolve(
-        { kind: "checker", url: binding.url, digest: binding.digest },
-        scope,
-        AbortSignal.timeout(30_000),
-      );
-      if (!("entry" in checker.manifest)) throw new Error("Expected Checker.");
-      checkers[ref] = checker as ContractArtifact<CheckerManifest>;
-    }
-    const pages = composeObjectivePages(
-      artifact as ContractArtifact<ObjectiveArtifactManifest>,
-      checkers,
+    const prepared = await prepareObjective(
+      { kind: "objective", url: artifact.metadata.source, digest },
+      async (reference) =>
+        reference.kind === "objective"
+          ? artifact
+          : repositoryResolve(this.repository, reference, scope),
+      this.languages,
+      requested,
+      selectServiceLanguage,
     );
-    const page = pages[language]?.[id];
+    const page = prepared.pages[prepared.language]?.[id];
     if (!page)
       throw new TaskProtocolError(404, {
         code: "reference_not_found",
@@ -468,6 +288,13 @@ export class ObjectiveService extends TaskService<
       });
     return structuredClone(page);
   }
+}
+function repositoryResolve(
+  repository: ContractRepository,
+  reference: ArtifactReference,
+  scope: string,
+) {
+  return repository.resolve(reference, scope, AbortSignal.timeout(30_000));
 }
 function waitForCheck(
   checks: CheckServicePort,

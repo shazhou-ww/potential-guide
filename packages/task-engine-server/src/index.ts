@@ -18,12 +18,15 @@ export interface ServerOptions {
   host?: string;
   port?: number;
   limits?: EngineOptions["limits"];
+  allocationLimits?: EngineOptions["allocationLimits"];
   http?: Omit<HandlerOptions, "service" | "resolveCaller">;
   shutdownMs?: number;
   requestTimeoutMs?: number;
   maxConnections?: number;
   /** Called on rollback and shutdown, before releasing the Store lease. */
   closeResources?: () => void | Promise<void>;
+  /** Bind trusted in-process adapters before recovery and listener startup. */
+  bindService?: (engine: ReturnType<typeof createTaskEngine>) => void;
 }
 export interface TaskServer {
   url: string;
@@ -153,6 +156,7 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
       currentVersions: options.currentVersions,
       authorize: options.authorize,
       ...(options.limits ? { limits: options.limits } : {}),
+      ...(options.allocationLimits ? { allocationLimits: options.allocationLimits } : {}),
     });
     const handler = createTaskHandler({
       ...options.http,
@@ -220,6 +224,7 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
       void operation.finally(() => operations.delete(operation));
     });
     server.on("clientError", (_error, socket) => socket.destroy());
+    options.bindService?.(engine);
     engine.start();
     await new Promise<void>((resolve, reject) => {
       const failed = (error: Error) => {

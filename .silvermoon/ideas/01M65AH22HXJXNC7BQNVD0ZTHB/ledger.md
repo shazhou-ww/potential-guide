@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 定义 Probe 类型与准确观察
-- [ ] **I-S02:** 组合子 Check 与资源生命周期
-- [ ] **I-S03:** 接入 Server 并验证包边界
+- [x] **I-S01:** 定义 Probe 类型与准确观察
+- [x] **I-S02:** 组合子 Check 与资源生命周期
+- [x] **I-S03:** 接入 Server 并验证包边界
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 观察结果与证据准确
-- [ ] **I-AC02:** 父子推进与取消可靠
-- [ ] **I-AC03:** 公共入口与交付一致
+- [x] **I-AC01:** 观察结果与证据准确
+- [x] **I-AC02:** 父子推进与取消可靠
+- [x] **I-AC03:** 公共入口与交付一致
 
 ## Deployment
 

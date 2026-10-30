@@ -170,6 +170,8 @@ export interface ExecutionTracking {
 }
 export interface TaskType<Input = Json, Prepared = Input> {
   type: string;
+  /** Trusted isolated allocation capacity; omitted types share the Engine default lane. */
+  allocationLimit?: number;
   version: string;
   environment: string;
   validate(input: unknown): Input;
@@ -183,6 +185,7 @@ export interface TaskType<Input = Json, Prepared = Input> {
 }
 export interface RegisteredType {
   type: string;
+  allocationLimit?: number;
   version: string;
   environment: string;
   validate(input: unknown): unknown;
