@@ -9,7 +9,7 @@ export type Stage =
   | "preparation_failed"
   | "allocation_failed"
   | "execution_failed";
-export type ExecutionMatch = "started-after-eligible" | "completed-after-eligible";
+export type ExecutionMatch = "started-after-eligible" | "terminated-after-eligible";
 export interface Recurrence {
   periodMs: number;
   anchor: "eligible" | "terminated";
@@ -53,10 +53,12 @@ export interface Binding {
   executionMatch: ExecutionMatch;
 }
 export interface TaskRecord {
+  receivedSequence: number;
   request: TaskRequest;
   binding: Binding;
   input: Json;
   prepared?: Json;
+  releaseExecutionIds?: string[];
   snapshot: TaskSnapshot;
   successor?: { requestId: string; taskId: string };
 }
@@ -67,7 +69,10 @@ export interface ExecutionRecord {
   input: Json;
   prepared: Json;
   startedAt: string;
+  startedSequence: number;
+  terminatedSequence?: number;
   sealed?: boolean;
+  sealedTaskIds?: string[];
   completedAt?: string;
   failedAt?: string;
   result?: Json;
@@ -75,7 +80,7 @@ export interface ExecutionRecord {
   reclaimedAt?: string;
 }
 export interface Facts {
-  projectionVersion: 1;
+  projectionVersion: 2;
   watermark: number;
   tasks: Record<string, TaskRecord>;
   executions: Record<string, ExecutionRecord>;
@@ -88,13 +93,13 @@ export interface EventData {
   "task.allocation.bound": { executionId: string };
   "task.allocation.failed": { error: ErrorFact };
   "task.terminated": { executionId?: string; error?: ErrorFact };
-  "task.canceled": Record<string, never>;
+  "task.canceled": { executionIds?: string[] };
   "task.successor": { requestId: string; taskId: string };
   "execution.started": { execution: ExecutionRecord };
   "execution.progress": { progress: Json };
   "execution.completed": { result: Json };
   "execution.failed": { error: ErrorFact };
-  "execution.sealed": Record<string, never>;
+  "execution.sealed": { taskIds: string[] };
   "execution.reclaimed": Record<string, never>;
   "records.forgotten": { taskIds: string[]; executionIds: string[] };
 }
@@ -176,6 +181,8 @@ export interface TaskType<Input = Json, Prepared = Input> {
   environment: string;
   validate(input: unknown): Input;
   equals(input: Input, other: unknown): boolean;
+  /** Synchronous authorization, independent of preparation; Prepared belongs to the candidate Execution. */
+  authorize?(input: Input, context: Readonly<Binding>, prepared?: Prepared, result?: Json): void;
   prepare(input: Input, options: PreparationOptions): Promise<Prepared>;
   validatePrepared(prepared: unknown): Prepared;
   validateResult(result: unknown): Json;
@@ -190,6 +197,7 @@ export interface RegisteredType {
   environment: string;
   validate(input: unknown): unknown;
   equals(input: never, other: unknown): boolean;
+  authorize?(input: never, context: Readonly<Binding>, prepared?: never, result?: Json): void;
   prepare(input: never, options: PreparationOptions): Promise<unknown>;
   validatePrepared(prepared: unknown): unknown;
   validateResult(result: unknown): Json;

@@ -4,25 +4,58 @@ import type { ExecutionMatch, ExecutionRecord, FactEvent, Facts, TaskSnapshot } 
 export function matchesExecutionTime(
   policy: ExecutionMatch,
   eligibleAt: string,
-  execution: Pick<ExecutionRecord, "startedAt" | "completedAt">,
+  execution: Pick<ExecutionRecord, "startedAt" | "completedAt" | "failedAt">,
 ): boolean {
   switch (policy) {
     case "started-after-eligible":
-      return execution.startedAt > eligibleAt;
-    case "completed-after-eligible":
-      return execution.completedAt !== undefined && execution.completedAt > eligibleAt;
+      return execution.startedAt >= eligibleAt;
+    case "terminated-after-eligible": {
+      const end = execution.completedAt ?? execution.failedAt;
+      return end !== undefined && end >= eligibleAt;
+    }
     default:
       return fail("invalid_request", "Unsupported executionMatch.");
   }
 }
 
 export function emptyFacts(): Facts {
-  return { projectionVersion: 1, watermark: 0, tasks: {}, executions: {} };
+  return { projectionVersion: 2, watermark: 0, tasks: {}, executions: {} };
+}
+
+export function assertFactsVersion(facts: Facts): void {
+  if (facts?.projectionVersion !== 2)
+    fail(
+      "unsupported_version",
+      "Unsupported Task facts. Use new storage; old data is not migrated.",
+    );
+  for (const record of [...Object.values(facts.tasks), ...Object.values(facts.executions)])
+    if (
+      record.binding.executionMatch !== "started-after-eligible" &&
+      record.binding.executionMatch !== "terminated-after-eligible"
+    )
+      fail("unsupported_version", "Unsupported stored executionMatch. Use new storage.");
+  for (const task of Object.values(facts.tasks))
+    if (
+      task.request.executionMatch !== undefined &&
+      task.request.executionMatch !== "started-after-eligible" &&
+      task.request.executionMatch !== "terminated-after-eligible"
+    )
+      fail("unsupported_version", "Unsupported stored request executionMatch. Use new storage.");
+}
+
+export function authorizeSync(authorize: () => unknown): void {
+  const result = authorize();
+  if (result !== undefined) {
+    // Drain rejected async callbacks without treating an unresolved grant as authorization.
+    if (result && typeof (result as PromiseLike<unknown>).then === "function")
+      void Promise.resolve(result).catch(() => {});
+    fail("invalid_type", "Authorization must return synchronously without a value.");
+  }
 }
 
 export function reduce(prefix: Facts, events: readonly FactEvent[]): Facts {
+  assertFactsVersion(prefix);
   const facts = structuredClone(prefix);
-  if (facts.projectionVersion !== 1) fail("unsupported_version", "Unknown projection version.");
   for (const event of events) {
     if (event.sequence <= facts.watermark) continue;
     if (event.sequence !== facts.watermark + 1) fail("history_gap", "Non-contiguous event prefix.");
@@ -43,11 +76,15 @@ export function reduce(prefix: Facts, events: readonly FactEvent[]): Facts {
       case "task.created":
         if (
           event.data.task.snapshot.stage !== "initial" ||
+          event.data.task.receivedSequence !== event.sequence ||
           event.taskId !== event.data.task.snapshot.taskId ||
           event.scope !== event.data.task.binding.scope
         )
           fail("invalid_fact", "Invalid Task creation fact.");
         if (facts.tasks[event.data.task.snapshot.taskId]) fail("invalid_fact", "Duplicate Task.");
+        matchesExecutionTime(event.data.task.binding.executionMatch, event.occurredAt, {
+          startedAt: event.occurredAt,
+        });
         facts.tasks[event.data.task.snapshot.taskId] = structuredClone(event.data.task);
         break;
       case "task.preparation.started":
@@ -84,7 +121,30 @@ export function reduce(prefix: Facts, events: readonly FactEvent[]): Facts {
         const target = facts.executions[event.data.executionId];
         if (!target) fail("invalid_fact", "Binding references missing Execution.");
         if (snapshot && !frozen) {
-          if (snapshot.stage !== "queued" || target.binding.scope !== event.scope || target.sealed)
+          const boundary =
+            task?.binding.executionMatch === "started-after-eligible"
+              ? target.startedSequence
+              : target.terminatedSequence;
+          const time =
+            task?.binding.executionMatch === "started-after-eligible"
+              ? target.startedAt
+              : (target.completedAt ?? target.failedAt);
+          if (
+            !task ||
+            snapshot.execution ||
+            snapshot.termination ||
+            !["initial", "preparing", "queued"].includes(snapshot.stage) ||
+            target.binding.scope !== event.scope ||
+            target.binding.type !== task.binding.type ||
+            target.binding.version !== task.binding.version ||
+            target.binding.environment !== task.binding.environment ||
+            (target.sealed && !target.sealedTaskIds?.includes(snapshot.taskId)) ||
+            boundary === undefined ||
+            boundary <= prefix.watermark ||
+            task.receivedSequence >= boundary ||
+            time !== event.occurredAt ||
+            !matchesExecutionTime(task.binding.executionMatch, snapshot.eligibleAt, target)
+          )
             fail("invalid_fact", "Illegal execution binding.");
           snapshot.stage = "running";
           snapshot.allocation = { boundAt: event.occurredAt };
@@ -96,26 +156,36 @@ export function reduce(prefix: Facts, events: readonly FactEvent[]): Facts {
         if (
           event.executionId !== event.data.execution.executionId ||
           event.scope !== event.data.execution.binding.scope ||
+          event.sequence !== event.data.execution.startedSequence ||
           event.occurredAt !== event.data.execution.startedAt
         )
           fail("invalid_fact", "Invalid execution startup identity/time.");
         if (execution) fail("invalid_fact", "Duplicate Execution.");
+        matchesExecutionTime(event.data.execution.binding.executionMatch, event.occurredAt, {
+          startedAt: event.occurredAt,
+        });
         facts.executions[event.data.execution.executionId] = structuredClone(event.data.execution);
         break;
       case "execution.completed":
         if (!execution || execution.completedAt || execution.failedAt)
           fail("invalid_fact", "Execution already ended or missing.");
         execution.completedAt = event.occurredAt;
+        execution.terminatedSequence = event.sequence;
         execution.result = event.data.result;
         break;
       case "execution.failed":
         if (!execution || execution.completedAt || execution.failedAt)
           fail("invalid_fact", "Execution already ended or missing.");
         execution.failedAt = event.occurredAt;
+        execution.terminatedSequence = event.sequence;
         execution.error = event.data.error;
         break;
       case "execution.sealed":
-        if (execution) execution.sealed = true;
+        if (execution) {
+          if (execution.sealed) fail("invalid_fact", "Execution already sealed.");
+          execution.sealed = true;
+          execution.sealedTaskIds = [...event.data.taskIds];
+        }
         break;
       case "execution.reclaimed":
         if (execution) execution.reclaimedAt = event.occurredAt;
@@ -145,7 +215,13 @@ export function reduce(prefix: Facts, events: readonly FactEvent[]): Facts {
         }
         break;
       case "task.canceled":
-        if (snapshot && !snapshot.termination && !frozen) snapshot.canceledAt = event.occurredAt;
+        if (task && snapshot && !snapshot.termination && !frozen) {
+          const ids = event.data.executionIds ?? [];
+          if (ids.some((id) => facts.executions[id]?.binding.scope !== event.scope))
+            fail("invalid_fact", "Cancellation release references an unauthorized Execution.");
+          snapshot.canceledAt = event.occurredAt;
+          task.releaseExecutionIds = [...ids];
+        }
         break;
       case "task.successor":
         if (task) {
@@ -162,10 +238,12 @@ export function reduce(prefix: Facts, events: readonly FactEvent[]): Facts {
     }
     facts.watermark = event.sequence;
   }
+  assertFactsVersion(facts);
   return facts;
 }
 
 export function project(facts: Facts, taskId: string, now: number): TaskSnapshot {
+  assertFactsVersion(facts);
   const task = facts.tasks[taskId];
   if (!task) fail("not_found", "Task not found.");
   const snapshot = structuredClone(task.snapshot);

@@ -38,6 +38,13 @@ test("Web adapter and core preserve body/header identity, auth and errors withou
     const task = (await response.json()) as TaskSnapshot;
     assert.equal(task.requestId, id);
     assert.equal(task.stage, "initial");
+    const obsolete = await request("/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": newId() },
+      body: JSON.stringify({ ...body, executionMatch: "completed-after-eligible" }),
+    });
+    assert.equal(obsolete.status, 400);
+    assert.equal(Object.keys(h.store.read().facts.tasks).length, 1);
     assert.deepEqual(await (await request(`/requests/${id}`)).json(), { ...body, requestId: id });
     await h.turn();
     await h.finish();

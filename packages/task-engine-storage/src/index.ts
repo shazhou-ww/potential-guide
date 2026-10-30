@@ -1,8 +1,19 @@
 import { createHash, randomUUID } from "node:crypto";
-import { realpathSync } from "node:fs";
+import {
+  closeSync,
+  copyFileSync,
+  existsSync,
+  openSync,
+  readSync,
+  realpathSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { pathToFileURL } from "node:url";
 import {
+  assertFactsVersion,
   emptyFacts,
   type FactEvent,
   type Facts,
@@ -20,6 +31,80 @@ export interface SqliteOptions {
 }
 function checksum(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+function unsupported(): never {
+  return fail(
+    "unsupported_version",
+    "Unsupported Task storage format. Use a new database path; old data is not migrated or deleted.",
+  );
+}
+
+function inspectFormat(db: DatabaseSync): boolean {
+  const version = db.prepare("PRAGMA user_version").get()?.user_version;
+  if (version === 0) {
+    if (db.prepare("SELECT name FROM sqlite_schema LIMIT 1").get()) unsupported();
+    return false;
+  }
+  if (version !== 2) unsupported();
+  const checkpoint = db
+    .prepare("SELECT projection_version, payload FROM checkpoint WHERE singleton=1")
+    .get();
+  if (checkpoint?.projection_version !== 2 || typeof checkpoint.payload !== "string") unsupported();
+  assertFactsVersion(JSON.parse(checkpoint.payload) as Facts);
+  return true;
+}
+
+function preflight(filename: string): void {
+  if (!existsSync(filename) || statSync(filename).size === 0) return;
+  const descriptor = openSync(filename, "r");
+  const header = Buffer.alloc(100);
+  let length: number;
+  try {
+    length = readSync(descriptor, header, 0, header.length, 0);
+  } finally {
+    closeSync(descriptor);
+  }
+  if (length >= 64 && header.subarray(0, 16).toString() === "SQLite format 3\0") {
+    const version = header.readUInt32BE(60);
+    if (version !== 0 && version !== 2) unsupported();
+  }
+  const wal = `${filename}-wal`;
+  if (existsSync(wal) && statSync(wal).size > 0) {
+    // Even SQLite's read-only WAL reader writes SHM read marks. Inspect an owned
+    // sibling snapshot instead, never recovering/checkpointing the original.
+    const snapshot = `${filename}.inspect-${randomUUID()}`;
+    const stamp = () =>
+      [filename, wal]
+        .map((path) => {
+          const stat = statSync(path, { bigint: true });
+          return `${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
+        })
+        .join("|");
+    const before = stamp();
+    try {
+      copyFileSync(filename, snapshot);
+      copyFileSync(wal, `${snapshot}-wal`);
+      if (stamp() !== before)
+        fail("storage_conflict", "Storage changed during read-only format inspection; retry.");
+      const db = new DatabaseSync(snapshot, { readOnly: true });
+      try {
+        inspectFormat(db);
+      } finally {
+        db.close();
+      }
+    } finally {
+      for (const suffix of ["", "-wal", "-shm"]) rmSync(`${snapshot}${suffix}`, { force: true });
+    }
+  } else {
+    const uri = pathToFileURL(filename);
+    uri.searchParams.set("immutable", "1");
+    const db = new DatabaseSync(uri.href, { readOnly: true });
+    try {
+      inspectFormat(db);
+    } finally {
+      db.close();
+    }
+  }
 }
 
 export class SqliteStore implements Store {
@@ -43,14 +128,15 @@ export class SqliteStore implements Store {
     if (!Number.isSafeInteger(timeout) || timeout < 0 || timeout > 5_000)
       fail("invalid_request", "SQLite busy timeout must be between 0 and 5000 ms.");
     this.filename = resolve(filename);
+    preflight(this.filename);
     this.db = new DatabaseSync(this.filename);
     this.filename = realpathSync.native(this.filename);
     try {
+      const initialized = inspectFormat(this.db);
       this.db.exec(
         `PRAGMA busy_timeout=${timeout}; PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;`,
       );
-      const version = this.db.prepare("PRAGMA user_version").get()?.user_version;
-      if (version !== 0 && version !== 1) fail("unsupported_version", "Unsupported SQLite schema.");
+      if (initialized) return;
       this.db.exec(`
         BEGIN IMMEDIATE;
         CREATE TABLE IF NOT EXISTS metadata (
@@ -74,7 +160,7 @@ export class SqliteStore implements Store {
           watermark INTEGER NOT NULL, projection_version INTEGER NOT NULL,
           payload TEXT NOT NULL, checksum TEXT NOT NULL
         );
-        PRAGMA user_version=1;
+        PRAGMA user_version=2;
         COMMIT;
       `);
       this.db
@@ -82,8 +168,9 @@ export class SqliteStore implements Store {
         .run(randomUUID(), `${this.filename}.owner`);
       const initial = JSON.stringify(emptyFacts());
       this.db
-        .prepare("INSERT OR IGNORE INTO checkpoint VALUES (1, 0, 1, ?, ?)")
+        .prepare("INSERT OR IGNORE INTO checkpoint VALUES (1, 0, 2, ?, ?)")
         .run(initial, checksum(initial));
+      this.db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
     } catch (error) {
       this.db.close();
       throw error;
@@ -128,7 +215,7 @@ export class SqliteStore implements Store {
     if (
       !metadata ||
       !checkpoint ||
-      checkpoint.projection_version !== 1 ||
+      checkpoint.projection_version !== 2 ||
       typeof checkpoint.payload !== "string" ||
       checksum(checkpoint.payload) !== checkpoint.checksum
     )
@@ -137,6 +224,7 @@ export class SqliteStore implements Store {
     let events: FactEvent[];
     try {
       facts = JSON.parse(checkpoint.payload) as Facts;
+      assertFactsVersion(facts);
       events = this.db
         .prepare("SELECT sequence, payload FROM events ORDER BY sequence")
         .all()

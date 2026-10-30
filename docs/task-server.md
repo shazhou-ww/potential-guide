@@ -71,8 +71,11 @@ Prepared `workerRevision` is SHA-256 of the exact CommonJS entry bytes, distinct
 from the complete artifact Git-tree digest and from legacy capsule revisions.
 Neither identifier is renamed or used as a substitute for the other.
 An exact supplied digest must match. Source authorization runs before preparation
-and again before allocation, including restored work. Full Prepared equality
-prevents different content/environment sharing; Engine owns idempotency, sharing,
+and again before allocation, including restored work. Synchronous source grants
+also run at Task admission and result-event matching; Promise grants are rejected.
+Input equality determines sharing within type/version/environment/scope, not
+Prepared equality. Pin content in Input when different resolutions must not share.
+Engine owns idempotency, sharing,
 independent cancellation, late results and unknown execution interruption.
 
 The extracted checked CommonJS worker remains shared with the legacy Host through

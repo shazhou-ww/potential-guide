@@ -1,8 +1,10 @@
 # 事件时点绑定与破坏升级准备说明
 
 服务于 [Implementation.md](Implementation.md)，不是第四份契约。
-本轮仅检查 `6ffc3cb959ac58d355856fbbc210bf50758b3150` 的源码与测试，未运行实现测试。
-以下是供父代理审查的准备方案，不代表实现、submit 或 accept 已发生。
+准备期以 `6ffc3cb959ac58d355856fbbc210bf50758b3150` 的源码与测试形成以下方案；
+实施期从父代理已同步并接受 Ideal 的 `8b10945d7600b25529d7b21e63a43c6810c03f2a`
+开始。本文保留方案与实施约束，实际验证见 [实施验证](Verification.md)，
+不替代精确 revision 的 submitInner/acceptInner 或外部验收。
 
 ## 实际入口与必须改变的旧行为
 
@@ -63,6 +65,8 @@ start/terminate 事件与该事件选中的 binding 在同一原子提交内持�
 沿用 sealed 禁止新增需求的边界：seal 时记录当时已有需求集合，使这些需求（包括尚未绑定的
 terminated Task）仍可接收随后适用的终结；seal 后不得借历史查询加入。
 这只是持久化回收边界，不是提前结果绑定。物理 release 等待也要采用同一需求口径。
+取消时以取消事件保存释放关联，重启也不能丢失未绑定需求的物理退出证据要求；
+该关联不是结果 binding，不让取消 Task 接收后续结果。
 
 ## 最小版本边界
 
@@ -78,6 +82,11 @@ version 1、未知版本、旧 checkpoint/Facts 明确报错，提示指定新�
 验证需比较旧数据与数据库文件，
 不能只断言异常抛出。默认路径存在旧库也失败，不暗中选备用库。
 
+实施发现：SQLite 的普通 read-only WAL 连接仍会写原 SHM read marks。
+无 WAL 时使用 immutable 只读检查；有 WAL 时复制到操作自有的同目录检查副本，
+校验源文件复制期间未变化，只在副本上打开 SQLite，最终清除副本及其 sidecar。
+此副本只用于读取格式，不是迁移、旧数据重写或新运行库；原文件与 sidecar 字节对比覆盖该边界。
+
 新格式的事件顺序、seal 需求与绑定必须足以从 checkpoint/事件后缀恢复；
 事件边界前后故障测试验证整个提交有或没有，不留下“结果已提交、候选集合丢失”的半状态。
 
@@ -86,10 +95,12 @@ version 1、未知版本、旧 checkpoint/Facts 明确报错，提示指定新�
 1. **权限原先藏在准备阶段。** check/probe 的 `ArtifactSource.authorize` 当前允许异步，
    新规则不能在其尚未授权时直接复用结果，也不能把完整 Prepared 偷换成授权门槛。
    准备候选选择独立于 prepare 的授权边界：对已知 Input 引用及共享执行所携带的资源引用，
-   在接收/事件匹配路径执行可信、同步、无解析下载的授权判定；必要时以小型类型钩子承载。
+   在接收/事件匹配路径执行可信、同步、无下载的授权判定；由可选
+   `TaskType.authorize(input, binding, executionPrepared?, result?)` 承载。
    对内部 source 的异步授权契约一并做破坏升级，显式拒绝返回 Promise 的旧实现，
    不假装已经授权；保留 prepare/execute 的资源访问检查。
-   probe 的执行资源引用可取执行自身已固定的上下文，不要求接收 Task 重新 prepare。
+   probe 的执行资源引用取执行自身已固定的上下文，终结时额外检查结果中的动态引用，
+   不要求接收 Task 重新 prepare。对固定字节的校验不执行网络或文件下载。
    授权拒绝不得产生 binding；权限变化与来源拒绝需要专门回归。这是待父代理重点审查的
    实现约束，不是允许删掉授权；若同步授权不能覆盖实际消费者，先向父代理报告阻塞，
    不以延期补绑或放宽权限绕过。
@@ -113,7 +124,8 @@ storage `startup.test.ts`/`storage.test.ts` 的真实故障原子性、历史固
 
 ## 后续最小验证入口
 
-本轮文档只运行 `git diff --check`。实施后先使用现有包脚本：
+准备期文档只运行 `git diff --check`；实施期的实际结果见 Verification。
+现有包脚本入口：
 
 ```powershell
 pnpm exec turbo run build test --filter=@potential-guide/task-protocol --filter=@potential-guide/task-engine --filter=@potential-guide/task-engine-storage --filter=@potential-guide/task-engine-http --filter=@potential-guide/task-engine-server

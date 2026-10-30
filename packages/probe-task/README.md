@@ -26,6 +26,11 @@ Submit the common request fields plus `objective: {kind:"objective",url,digest?}
 `targetLevel:"initial"` (otherwise cumulative observation). `context.resolutions`
 is reserved. Child callers are injected trusted authority, never request fields.
 Use the same explicit authorization policy for child history and parent history.
+Source authorization is synchronous and independent of preparation. Input,
+candidate root/static resources and final dynamic transcript references are
+reauthorized before event-time sharing; asynchronous grants are rejected.
+Equal Inputs may share without equal Prepared; pin Objective bindings in Input
+when immutable selection is required.
 
 Preparation persists the entire exact root/static Checker file sets, language,
 and actual Node/adapter/policy/Check environment. Execution starts durably before
@@ -48,8 +53,10 @@ capacity rather than claiming success. No in-process Promise is force-killed.
 Cancellation withdraws only tasks created by this parent execution. A shared
 Check's other owner survives. `waitForTaskRelease` is an engine-owned physical
 ownership barrier: cancellation of a shared owner need not wait for other owners.
-Task deadline expiry is **not** execution cancellation: late observations remain
-execution history without retroactively completing the timed-out task. Unknown
+Task deadline expiry is **not** execution cancellation: an applicable late
+observation completes the Task while retaining its timeout. Failure can likewise
+coexist with timeout. Unbound terminated-policy demand also protects shared
+Checks before their final event. Unknown
 started observations recover as interrupted, never automatically rerun.
 
 See `examples/task-server/probe-config.mjs` for CLI/in-process composition and

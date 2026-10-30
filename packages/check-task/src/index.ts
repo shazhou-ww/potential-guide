@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import {
-  assertRuntime,
-  canonicalJson,
   type ArtifactReference,
+  assertRuntime,
   type CheckerManifest,
   type ContractArtifact,
+  canonicalJson,
   finiteJson,
   inspectContractFiles,
   jsonObject,
@@ -16,20 +16,22 @@ import {
 } from "@potential-guide/check-artifacts/contracts";
 import { createExecutorPool } from "@potential-guide/task-engine/pool";
 import {
+  authorizeSync,
   canonical,
+  type Json,
+  type JsonObject,
   json,
   positive,
   TaskError,
-  type Json,
-  type JsonObject,
   type TaskType,
 } from "@potential-guide/task-protocol";
-import { type ArtifactSource } from "./prepare.js";
+import type { ArtifactSource } from "./prepare.js";
 import { runChecker } from "./worker.js";
+
 export {
-  createArtifactSource,
   type ArtifactSource,
   type ArtifactSourceOptions,
+  createArtifactSource,
 } from "./prepare.js";
 
 export interface CheckInput {
@@ -229,10 +231,14 @@ export function createCheckTaskType(options: CheckTaskOptions): TaskType<
         return false;
       }
     },
+    authorize(input, context, prepared) {
+      authorizeSync(() => options.source.authorize(input.checker, context.scope));
+      if (prepared) authorizeSync(() => options.source.authorize(prepared.checker, context.scope));
+    },
     async prepare(input, context) {
       if (!context.context)
         throw new TaskError("invalid_config", "Trusted preparation context is required.");
-      await options.source.authorize(input.checker, context.context.scope);
+      authorizeSync(() => options.source.authorize(input.checker, context.context!.scope));
       const artifact = await options.source.resolve(
         input.checker,
         context.context.scope,
@@ -283,7 +289,7 @@ export function createCheckTaskType(options: CheckTaskOptions): TaskType<
     },
     async execute(prepared, context) {
       validatePrepared(prepared);
-      await options.source.authorize(prepared.checker, context.context.scope);
+      authorizeSync(() => options.source.authorize(prepared.checker, context.context.scope));
       context.signal.throwIfAborted();
       return pool.execute(prepared, context);
     },

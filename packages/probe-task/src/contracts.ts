@@ -204,6 +204,46 @@ export function validateProbeResult(value: unknown): Json {
     throw new TaskError("invalid_probe", "Invalid observation evidence.");
   return json(value, 96 * 1024 * 1024);
 }
+
+export function probeResultReferences(value: unknown): ArtifactReference[] {
+  const result = validateProbeResult(value);
+  if (
+    !jsonObject(result) ||
+    !jsonObject(result.evidence) ||
+    !Array.isArray(result.evidence.operations)
+  )
+    throw new TaskError("invalid_probe", "Invalid observation evidence.");
+  const reference = (value: unknown): ArtifactReference => {
+    const ref = exact(value, ["kind", "url"], ["digest"]);
+    if (
+      (ref.kind !== "checker" && ref.kind !== "objective") ||
+      typeof ref.url !== "string" ||
+      (ref.digest !== undefined && typeof ref.digest !== "string")
+    )
+      throw new TaskError("invalid_probe", "Invalid observation resource reference.");
+    return validateArtifactReference({
+      kind: ref.kind,
+      url: ref.url,
+      ...(ref.digest === undefined ? {} : { digest: ref.digest }),
+    });
+  };
+  const references: ArtifactReference[] = [];
+  for (const value of result.evidence.operations) {
+    if (!jsonObject(value) || !jsonObject(value.request))
+      throw new TaskError("invalid_probe", "Invalid observation operation.");
+    if (value.request.kind === "resolve") {
+      exact(value, ["request", "content"]);
+      if (!jsonObject(value.content))
+        throw new TaskError("invalid_probe", "Missing selection evidence.");
+      references.push(reference(value.request.reference), reference(value.content.reference));
+    } else if (value.request.kind === "check") {
+      exact(value, ["request", "snapshot", "environment"]);
+      references.push(reference(value.request.reference));
+    } else throw new TaskError("invalid_probe", "Invalid observation operation.");
+  }
+  return references;
+}
+
 /** Replay consumes no IO; every result is checked against the exact captured manifests. */
 export function replayResult(
   value: unknown,

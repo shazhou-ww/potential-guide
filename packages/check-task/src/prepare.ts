@@ -1,26 +1,26 @@
 import {
+  type FetchCheckOptions,
   fetchCheckArchive,
   unpackArtifactFiles,
-  type FetchCheckOptions,
 } from "@potential-guide/check-artifacts";
 import {
   type ArtifactReference,
+  artifactLimits,
   type ContractArtifact,
   inspectContractFiles,
-  validateArtifactReference,
   parseFileArtifactUrl,
-  artifactLimits,
+  validateArtifactReference,
 } from "@potential-guide/check-artifacts/contracts";
 import {
-  readConfinedFile,
-  normalizeFileRoots,
-  filePathAllowed,
   ConfinedFileError,
+  filePathAllowed,
+  normalizeFileRoots,
+  readConfinedFile,
 } from "@potential-guide/check-runtime-files";
-import { positive, TaskError } from "@potential-guide/task-protocol";
+import { authorizeSync, positive, TaskError } from "@potential-guide/task-protocol";
 
 export interface ArtifactSource {
-  authorize(reference: ArtifactReference, scope: string): void | Promise<void>;
+  authorize(reference: ArtifactReference, scope: string): void;
   resolve(
     reference: ArtifactReference,
     scope: string,
@@ -31,7 +31,7 @@ export interface ArtifactSourceOptions {
   allowedOrigins: readonly string[];
   /** Native absolute directories on the endpoint host; empty/absent denies all file access. */
   allowedFileRoots?: readonly string[];
-  authorize(reference: ArtifactReference, scope: string): void | Promise<void>;
+  authorize(reference: ArtifactReference, scope: string): void;
   maxArtifacts?: number;
   maxDownloads?: number;
   timeoutMs?: number;
@@ -49,7 +49,7 @@ export function createArtifactSource(
   const controller = new AbortController();
   const cache = new Map<string, ContractArtifact>();
   const active = new Set<Promise<ContractArtifact>>();
-  const authorize = async (reference: ArtifactReference, scope: string) => {
+  const authorize = (reference: ArtifactReference, scope: string) => {
     reference = Object.freeze(validateArtifactReference(reference));
     const url = new URL(reference.url);
     if (url.protocol === "file:") {
@@ -58,7 +58,7 @@ export function createArtifactSource(
     } else if (!options.allowedOrigins.includes(url.origin)) {
       throw new TaskError("artifact_source_denied", "Artifact origin is not authorized.");
     }
-    await options.authorize(reference, scope);
+    authorizeSync(() => options.authorize(reference, scope));
     controller.signal.throwIfAborted();
   };
   const clone = (value: ContractArtifact) => ({

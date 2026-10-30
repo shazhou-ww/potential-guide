@@ -7,6 +7,15 @@ No scheduler, database, HTTP listener or built-in business task.
 `validatePrepared`, result/progress validators and queued `execute`. Validators
 must not coerce values. Invalid `other` inputs return false from `equals`; actual
 programming defects must propagate. Inputs need no schema-library dependency.
+Optional `authorize(input, binding, executionPrepared?, result?)` is synchronous;
+Promise grants are rejected rather than awaited or treated as permission.
+
+The only match policies are `started-after-eligible` (default) and
+`terminated-after-eligible`. They bind only at their corresponding Execution
+event, with an inclusive effective-eligibility lower bound. Termination means
+success or failure, not physical cleanup. Prepared does not gate matching.
+Facts use projection version 2; old formats and `completed-after-eligible`
+are rejected, not silently reinterpreted.
 
 `reduce(prefix, events)` and `project(facts, taskId, explicitTime)` are pure.
 Use `isPending`, `isTimedOut`, `isCanceled`, `isCompleted` and `isExecutionFailed`

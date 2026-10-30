@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { newId } from "@potential-guide/task-engine";
+import { isTimedOut } from "@potential-guide/task-protocol";
+import { probeResultReferences } from "../src/contracts.js";
 import type { ProbePrepared, ProbeResult } from "../src/index.js";
 import {
   binding,
@@ -52,7 +54,7 @@ test("backward business clock between parent start and child submission preserve
     const child = result.evidence.operations.find((entry) => "snapshot" in entry)!;
     assert.ok("snapshot" in child);
     assert.ok(child.snapshot.execution!.startedAt < result.evidence.startedAt);
-    assert.ok(child.snapshot.execution!.startedAt > child.snapshot.eligibleAt);
+    assert.ok(child.snapshot.execution!.startedAt >= child.snapshot.eligibleAt);
     assert.ok(child.snapshot.execution!.completedAt! <= child.snapshot.deadlineAt);
     const events = h.store.read().events;
     const parentStart = events.find(
@@ -69,7 +71,8 @@ test("backward business clock between parent start and child submission preserve
       const entry = forged.evidence.operations.find((entry) => "snapshot" in entry)!;
       assert.ok("snapshot" in entry);
       const snapshot = entry.snapshot;
-      if (boundary === "eligible") snapshot.eligibleAt = snapshot.execution!.startedAt;
+      if (boundary === "eligible")
+        snapshot.eligibleAt = new Date(Date.parse(snapshot.execution!.startedAt) + 1).toISOString();
       if (boundary === "deadline")
         snapshot.deadlineAt = new Date(
           Date.parse(snapshot.execution!.completedAt!) - 1,
@@ -239,6 +242,10 @@ test("dynamic requirements resolve once, retain exact selection, recheck with ge
       result.evidence.operations.map((entry) => entry.request.kind),
       ["check", "resolve", "check", "check"],
     );
+    assert.deepEqual(
+      probeResultReferences(final.result).map((reference) => reference.url),
+      [checkUrl, dependencyUrl, dependencyUrl, depCheckUrl, checkUrl],
+    );
     const history = h.engine.readHistory({ taskId: task.taskId }, { limit: 100 }, caller);
     for (const kind of ["selection", "child.started"])
       assert.ok(
@@ -253,8 +260,46 @@ test("dynamic requirements resolve once, retain exact selection, recheck with ge
     assert.throws(() => h.probe.validateExecutionResult!(forged, prepared));
     assert.throws(() => h.submit({ context: { resolutions: [] } }));
     assert.throws(() => h.submit({ children: { subject: "admin" } }));
+    const record = h.store.read().facts.tasks[task.taskId]!;
+    h.source.authorize = (reference) => {
+      if (reference.url === depCheckUrl) throw new Error("dynamic resource revoked");
+    };
+    h.probe.authorize!(prepared.input, record.binding, prepared);
+    assert.throws(
+      () => h.probe.authorize!(prepared.input, record.binding, prepared, final.result),
+      /dynamic resource revoked/,
+    );
   } finally {
     await h.close();
+  }
+});
+
+test("authorization reference access rejects malformed operations instead of asserting result types", () => {
+  for (const operation of [
+    { request: {} },
+    { request: { kind: "resolve", reference: { kind: "objective", url: rootUrl } } },
+    {
+      request: { kind: "check", reference: { kind: "checker", url: 42 } },
+      snapshot: {},
+      environment: "test",
+    },
+    {
+      request: { kind: "resolve", reference: { kind: "objective", url: rootUrl } },
+      content: { reference: { kind: "objective", url: rootUrl, digest: false } },
+    },
+  ]) {
+    assert.throws(() =>
+      probeResultReferences({
+        observation: {},
+        references: {},
+        evidence: {
+          parentExecutionId: newId(),
+          startedAt: new Date().toISOString(),
+          environment: "test",
+          operations: [operation],
+        },
+      }),
+    );
   }
 });
 
@@ -323,18 +368,15 @@ test("cancel parent detaches only its child Task; shared Check's independent own
         ...request,
         requestId: newId(),
         eligibleAt: child.eligibleAt,
-        executionMatch: "started-after-eligible",
+        executionMatch: "terminated-after-eligible",
       },
       { scope: caller.scope, subject: "trusted-probe" },
     );
-    const shared = await wait(
-      () => h.read(independent),
-      (snapshot) => !!snapshot.execution,
-    );
-    assert.equal(shared.execution?.executionId, child.execution?.executionId);
+    assert.equal(h.read(independent).execution, undefined);
     h.engine.cancelTask(parent.taskId, caller);
     const completed = await wait(() => h.read(independent));
     assert.equal(completed.stage, "completed");
+    assert.equal(completed.execution?.executionId, child.execution?.executionId);
     assert.equal(h.engine.getTask(childId, caller).canceledAt !== undefined, true);
     assert.equal(completed.canceledAt, undefined);
   } finally {
@@ -342,7 +384,7 @@ test("cancel parent detaches only its child Task; shared Check's independent own
   }
 });
 
-test("Task deadline is not execution cancellation; late parent work is not projected as completion", async () => {
+test("Task deadline is not execution cancellation; late parent success remains timed out", async () => {
   let offset = 0;
   const h = await harness(
     entries(
@@ -367,12 +409,13 @@ test("Task deadline is not execution cancellation; late parent work is not proje
     assert.ok(snapshot.execution);
     offset = 20000;
     const expired = await wait(() => h.read(task));
-    assert.equal(expired.stage, "running");
+    assert.ok(isTimedOut(expired));
     for (let count = 0; count < 1000; count++) {
       if (h.store.read().facts.executions[snapshot.execution.executionId]?.completedAt) break;
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
-    assert.equal(h.read(task).stage, "running");
+    assert.equal(h.read(task).stage, "completed");
+    assert.ok(isTimedOut(h.read(task)));
     const execution = h.store.read().facts.executions[snapshot.execution.executionId]!;
     assert.ok(execution.completedAt);
     assert.equal(execution.error, undefined);

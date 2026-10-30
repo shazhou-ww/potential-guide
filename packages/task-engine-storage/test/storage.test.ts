@@ -185,6 +185,54 @@ for (const mode of ["started", "completed", "future"]) {
 }
 
 for (const moment of ["before", "after"]) {
+  for (const outcome of ["completed", "failed"]) {
+    test(`real crash ${moment} ${outcome} atomically preserves termination bindings`, async () => {
+      const root = await directory();
+      const filename = join(root, "tasks.sqlite");
+      await crash(filename, `terminate-${outcome}-${moment}`, newId());
+      const store = openSqliteStore(filename);
+      const before = store.read();
+      const tasks = Object.values(before.facts.tasks);
+      assert.equal(tasks.length, 2);
+      const demand = tasks.find(
+        (task) => task.binding.executionMatch === "terminated-after-eligible",
+      )!;
+      assert.equal(demand.snapshot.execution !== undefined, moment === "after");
+      const clock = new VirtualClock();
+      clock.advance(10);
+      const engine = createTaskEngine({
+        store,
+        clock,
+        types: [type()],
+        currentVersions: { echo: "1" },
+        authorize: () => true,
+      });
+      try {
+        engine.start();
+        const expected =
+          moment === "after" && outcome === "completed" ? "completed" : "execution_failed";
+        for (const task of tasks) {
+          const final = engine.getTask(task.snapshot.taskId, caller);
+          assert.equal(final.stage, expected);
+          assert.equal(final.eligibleAt, task.snapshot.eligibleAt);
+          assert.equal(final.deadlineAt, task.snapshot.deadlineAt);
+          assert.equal(
+            final.error?.code,
+            moment === "before"
+              ? "execution_interrupted"
+              : outcome === "failed"
+                ? "business"
+                : undefined,
+          );
+        }
+        assert.deepEqual(store.read().facts, reduce(emptyFacts(), store.read().events));
+      } finally {
+        await engine.close();
+        store.close();
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+  }
   test(`crash ${moment} commit keeps request/event/index atomic`, async () => {
     const root = await directory();
     const filename = join(root, "tasks.sqlite");
