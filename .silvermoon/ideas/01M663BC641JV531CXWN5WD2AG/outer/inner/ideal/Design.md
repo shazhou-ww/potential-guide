@@ -125,7 +125,7 @@
 | 能力 | 当前证据/归属 | 对设计的约束 |
 | --- | --- | --- |
 | 提交、已知任务/请求查询、取消、历史事件及 SSE | [源码调研](Research.md) E1–E5：现有公开协议；客户实际 Endpoint 版本仍需核对 | 可设计闭环，不改内核调度或取消语义 |
-| Task 类型及输入契约发现 | 独立 [task-type-schema-discovery](../../../../01M66MRFCSDK99MAEN8RN3NKBH/outer/inner/ideal/Idea.md)负责契约与迁移，进度以其日志为准 | 类型列表和表单受该契约支撑；草图不是接口已存在的证明，不继承其 gate 授权 |
+| Task 类型及输入契约发现 | 独立 [task-type-schema-discovery](../../../../01M66MRFCSDK99MAEN8RN3NKBH/outer/inner/ideal/Idea.md)负责契约与迁移，进度以其日志为准 | 用户已要求该 idea 完成后再考虑本 UI 开工；不能仅凭契约稳定提前实现，不继承其 gate 授权 |
 | Endpoint 全量历史与类型/时间查询 | 已建立独立 [task-history-query](../../../../01M66TPNEMSQ8Y8SDSN2CDN6BA/outer/inner/ideal/Idea.md)，[专门调研](../../../../01M66TPNEMSQ8Y8SDSN2CDN6BA/outer/inner/ideal/Research.md)确认持久数据已有、公开列表缺失，时间已确定为 receivedAt | 必要依赖，不能退回本机列表；范围端点、分页和可见范围由该条收敛，不预先编造路由或等待 Schema 实现完才讨论 |
 | 本机收藏、草稿、观察集合与页面交互 | 本 UI 的职责；收藏须记住 Endpoint，持久化细节待定 | 不读 Task Server 内部数据库；不存后端凭据；不因 Service 历史清理删收藏 |
 | 全池/worker 拓扑、全局实时统计 | 尚非已确认需求，缺公开观测能力 | 草图不提供装饰性统计卡或假资源图；如将来确需，另行明确证据与归属 |
