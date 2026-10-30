@@ -1,8 +1,22 @@
 const fs = require("node:fs");
 const { syncBuiltinESMExports } = require("node:module");
 const threads = require("node:worker_threads");
+const cp = require("node:child_process");
+const { basename } = require("node:path");
 const Original = threads.Worker;
 const path = process.env.WORKER_PROOF;
+const spawn = cp.spawn;
+cp.spawn = function (...args) {
+  const child = Reflect.apply(spawn, this, args);
+  if (basename(String(args[0])).toLowerCase() === "powershell.exe") {
+    const report = (event, extra = {}) => fs.appendFileSync(path, `${JSON.stringify({
+      event, pid: process.pid, helperPid: child.pid, ...extra,
+    })}\n`);
+    report("file-helper-start");
+    child.once("close", (code, signal) => report("file-helper-exit", { code, signal }));
+  }
+  return child;
+};
 threads.Worker = class ObservedWorker extends Original {
   constructor(...args) {
     super(...args);

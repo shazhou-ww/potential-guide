@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { createRequire, registerHooks, syncBuiltinESMExports } from "node:module";
 import { relative, isAbsolute, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { pathToFileURL } from "node:url";
+import { resolve } from "node:path";
 const require = createRequire(import.meta.url);
 let forbiddenIoCalls = 0;
 const denied = () => {
@@ -28,6 +30,11 @@ const hooks = registerHooks({
   },
 });
 const c = await import("@potential-guide/check-artifacts/contracts");
+const local = { kind: "checker", url: pathToFileURL(resolve("not-required-to-exist.tgz")).href, digest: `sha256:${"a".repeat(64)}` };
+assert.deepEqual(c.parseArtifactReference(c.formatArtifactReference(local)), local);
+assert.equal(c.parseFileArtifactUrl(local.url), resolve("not-required-to-exist.tgz"));
+assert.throws(() => c.validateArtifactReference({ ...local, kind: "objective" }));
+assert.throws(() => c.validateArtifactReference({ ...local, url: `${local.url}?query=denied` }));
 const page = Buffer.from("---\ntitle: Independent\ndescription: Independent\n---\nBody\n");
 const value = {
   $schema: c.checkerSchemaUri, runtime: { type: "node", minVersion: "22.13.0" },
@@ -80,5 +87,6 @@ console.log(JSON.stringify({
   missingFilesRejected: true, unknownFieldsRejected: true, changedDigestDetected: true,
   missingReferencesRejected: true, actualRuntimeCheckedSeparately: true,
   importedFrom: import.meta.resolve("@potential-guide/check-artifacts/contracts"),
+  fileReferenceRoundtrip: local,
   actualImportGraph: imports,
 }));

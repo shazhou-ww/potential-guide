@@ -5,10 +5,12 @@ import { TaskError } from "@potential-guide/task-protocol";
 export default function configure() {
   const source = createArtifactSource({
     allowedOrigins: ["https://deployment.invalid"],
+    allowedFileRoots: process.env.FILE_ROOTS === "deny" ? [] : [resolve("imports")],
     authorize(_reference, scope) {
       if (scope !== "one") throw new TaskError("artifact_source_denied", "Source scope denied.");
     },
     async download(url) {
+      if (!url.startsWith("https:")) throw Error("File URL reached the HTTPS-only hook.");
       await appendFile("downloads.jsonl", `${JSON.stringify({ url, pid: process.pid, mode: process.env.MODE })}\n`);
       if (process.env.MODE === "restart") throw Error("Restoration may not fetch replacement content.");
       const path = new URL(url).pathname;

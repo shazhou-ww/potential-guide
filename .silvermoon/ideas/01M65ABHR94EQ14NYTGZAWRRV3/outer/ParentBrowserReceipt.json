@@ -1,0 +1,85 @@
+{
+  "receiptVersion": 1,
+  "observer": "parent",
+  "rerunByImplementationAgent": false,
+  "initialReportedAt": "2026-10-30T19:05:38.010+08:00",
+  "acceptedImplementationRevision": "5bea45766484d599e0a2bab86b25da05ec2447de",
+  "acceptanceCommit": "6bfdf90a7282e63df429745daaba865ea93035d8",
+  "scriptSha256": {
+    "server.mjs": "EF8FDDCBA50904F634E09CB70FFDD324BBC7680AD0858DD7CB3FEF92F3535AD6",
+    "app.js": "13C35233E5CE734C81CE747AC7068ED35BC141B1EE455EA69E0372267DA34B1E",
+    "index.html": "C2ADB8ED3AAC8F8984C876E6940F83DD19C44F465E9B6DD28DB18211F01E8DAC",
+    "playground.test.mjs": "CCDF79F157CE7A1C6C2322B63013028890B36036AC0387ACCD034EEA151FBE59"
+  },
+  "independentRepositoryChecks": {
+    "checkTask": { "passed": 19, "failed": 0 },
+    "confinedFileAndMutexGc": { "passed": 6, "failed": 0, "skipped": 2 },
+    "skips": ["POSIX-only descriptor case", "case-sensitive-directory capability unavailable"]
+  },
+  "sessionApiSuite": {
+    "script": "playground.test.mjs",
+    "status": "passed",
+    "testScriptHashProvided": true,
+    "reportedFixtureCorrection": "realpath OS temporary directory spelling before canonical author-directory validation",
+    "secondEndpointPrefix": "/gateway/v1",
+    "prefixCredentialIsolation": true,
+    "httpSseCancelHistory": true,
+    "oversizedUploadStatus": 413,
+    "corruptUploadStatus": 400,
+    "corruptUploadCreatedFile": false,
+    "maliciousDisplayName": "../../escape.tgz",
+    "displayNameUsedAsDiskPath": false,
+    "outsideRootTaskStage": "preparation_failed"
+  },
+  "browser": {
+    "initialRunAppSha256": "217A7FAA57DC172982D9DDC1AA9D1DFE67DAA9B090C08B4B25C614C626F2820C",
+    "actualFileInputSelection": true,
+    "archiveBytes": 654,
+    "storedFilenamePolicy": "opaque filename in persistent endpoint state/imports",
+    "returnedSourceScheme": "file:",
+    "usedFakeHttpsMapping": false,
+    "digest": "sha256:dff35cd157480f29aa4b0f7e158b52e515c76675e17dca955d452675dc720566",
+    "subjectSchemaSummary": {
+      "type": "object",
+      "required": ["value"],
+      "properties": { "value": { "type": "number" }, "delayMs": { "type": "integer" } }
+    },
+    "submittedSubject": { "value": 12, "delayMs": 300 },
+    "taskId": "01M667KDS5FX9FBZD5GNWGN4W4",
+    "executionId": "01M667KEGNSG8W4P9PVAKEQC0A",
+    "stage": "completed",
+    "result": { "ok": true, "problems": [] },
+    "rawProgress": { "phase": "finished", "processed": 2, "total": 2 },
+    "assumedPercentageBar": false,
+    "historyGroups": ["creation", "preparation", "execution", "progress", "completion", "reclaimed"],
+    "invalidSelection": { "filename": "checker.cjs", "httpStatus": 400, "priorArtifactUrlPreserved": true },
+    "externalEndpointPickerDisabled": true,
+    "localEndpointPickerReenabled": true,
+    "credentialsOrUploadsSentToExternalEndpoint": false,
+    "latestRun": {
+      "appSha256": "13C35233E5CE734C81CE747AC7068ED35BC141B1EE455EA69E0372267DA34B1E",
+      "changeScope": "import-status-copy-only",
+      "actualFileInputSelectionUploadAndSubmitAfterReload": true,
+      "digest": "sha256:dff35cd157480f29aa4b0f7e158b52e515c76675e17dca955d452675dc720566",
+      "submittedSubject": { "value": 12 },
+      "taskId": "01M667SXD1MCF3V4MAJZGE1PN8",
+      "executionId": "01M667SY5W6SQVWYNB3VZD19PX",
+      "stage": "completed",
+      "result": { "ok": true, "problems": [] },
+      "browserErrors": false,
+      "mobileViewportWidth": 390,
+      "mobileContentWidth": 375,
+      "horizontalOverflow": false
+    }
+  },
+  "sessionOwnership": {
+    "serviceUrl": "http://127.0.0.1:58865",
+    "backendPort": 58864,
+    "lifecycleOwner": "parent",
+    "implementationAgentMustNotStopOrUseState": true,
+    "oldDatabasePreserved": true,
+    "databasePolicy": "tasks-<exact-environment-hash>.sqlite",
+    "automaticMigrationOrFallback": false,
+    "productCodeChangedForDatabasePolicy": false
+  }
+}

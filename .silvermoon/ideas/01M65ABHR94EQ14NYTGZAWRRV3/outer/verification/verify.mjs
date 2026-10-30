@@ -67,11 +67,11 @@ const git = (...args) => run("git", ["--no-pager", ...args], root);
 const sourceCommit = await git("rev-parse", "HEAD");
 assert.equal(await git("status", "--porcelain"), "", "Synchronize the harness before checks.");
 assert.equal(await git("rev-parse", "HEAD:.silvermoon/ideas/01M65ABHR94EQ14NYTGZAWRRV3/outer"), revision);
-assert.equal(await git("rev-parse", "HEAD:packages"), "b7b9ad4ff41ef3421676cfe8cd61b658f0a1c977");
-assert.equal(await git("rev-parse", "HEAD:.silvermoon/ideas/01M65ABHR94EQ14NYTGZAWRRV3/outer/inner"), "4db53c32aa9765262fd0a67626eba114e5e08ae7");
+assert.equal(await git("rev-parse", "HEAD:packages"), "fb74721446963a327991a621d88e1ff14a8adc39");
+assert.equal(await git("rev-parse", "HEAD:.silvermoon/ideas/01M65ABHR94EQ14NYTGZAWRRV3/outer/inner"), "5bea45766484d599e0a2bab86b25da05ec2447de");
 result.sourceCommit = sourceCommit;
-result.implementationRevision = "4db53c32aa9765262fd0a67626eba114e5e08ae7";
-result.sourcePackagesTree = "b7b9ad4ff41ef3421676cfe8cd61b658f0a1c977";
+result.implementationRevision = "5bea45766484d599e0a2bab86b25da05ec2447de";
+result.sourcePackagesTree = "fb74721446963a327991a621d88e1ff14a8adc39";
 const ownedMarker = randomUUID();
 await mkdir(external);
 await writeFile(join(external, ".deployment-owner.json"), JSON.stringify({ ownedMarker, sourceCommit }));
@@ -137,7 +137,7 @@ try {
     ["generic", ["@potential-guide/task-engine-server", "@potential-guide/task-engine", "@potential-guide/task-protocol"],
       ["generic-scenario.mjs", "generic-config.mjs", "fatal-config.mjs", "server-child.mjs", "helpers.mjs"], "generic-scenario.mjs"],
     ["check", ["@potential-guide/check-task", "@potential-guide/task-engine-server", "@potential-guide/task-engine", "@potential-guide/task-protocol", "@potential-guide/check-artifacts"],
-      ["check-scenario.mjs", "check-config.mjs", "server-child.mjs", "helpers.mjs", "worker-probe.cjs", "checker.cjs"], "check-scenario.mjs"],
+      ["check-scenario.mjs", "file-scenario.mjs", "check-config.mjs", "server-child.mjs", "helpers.mjs", "worker-probe.cjs", "checker.cjs"], "check-scenario.mjs"],
   ]) {
     const directory = join(external, label);
     await mkdir(directory);
@@ -165,6 +165,11 @@ try {
     const stdout = await run(process.execPath, [scenario], directory, 120000);
     consumer.proof = label === "contracts" ? JSON.parse(stdout) : JSON.parse(await readFile(join(directory, "result.json"), "utf8"));
     assert.equal(consumer.proof.status, "passed");
+    if (label === "check") {
+      await run(process.execPath, ["file-scenario.mjs"], directory, 180000);
+      consumer.fileProof = JSON.parse(await readFile(join(directory, "file-result.json"), "utf8"));
+      assert.equal(consumer.fileProof.status, "passed");
+    }
     console.log(JSON.stringify({ consumer: label, status: "passed", installedPackages: inventory.length }));
   }
   result.status = "passed";
@@ -174,6 +179,8 @@ try {
   for (const consumer of result.consumers) {
     if (!consumer.proof && existsSync(join(consumer.directory, "result.json")))
       consumer.proof = JSON.parse(await readFile(join(consumer.directory, "result.json"), "utf8"));
+    if (existsSync(join(consumer.directory, "file-result.json")))
+      consumer.fileProof = JSON.parse(await readFile(join(consumer.directory, "file-result.json"), "utf8"));
   }
   process.exitCode = 1;
 } finally {
@@ -183,6 +190,6 @@ try {
   result.cleanup = { markerMatched: true, externalRootRemoved: !existsSync(external) };
   assert.equal(result.cleanup.externalRootRemoved, true);
   result.finishedAt = new Date().toISOString();
-  await writeFile(join(here, "results.json"), `${JSON.stringify(result, null, 2)}\n`);
+  await writeFile(join(here, "local-file-results.json"), `${JSON.stringify(result, null, 2)}\n`);
   console.log(JSON.stringify({ status: result.status, cleanup: result.cleanup }));
 }

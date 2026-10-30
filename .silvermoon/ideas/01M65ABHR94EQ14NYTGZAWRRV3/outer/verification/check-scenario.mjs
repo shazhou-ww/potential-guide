@@ -46,7 +46,7 @@ async function workerStarted(name) {
   throw Error(`Worker never started ${name}.`);
 }
 async function physicalProof(pid, directory) {
-  const events = (await rows(workerProof)).filter((row) => row.pid === pid);
+  const events = (await rows(workerProof)).filter((row) => row.pid === pid && row.event.startsWith("worker-"));
   const started = events.filter((row) => row.event === "worker-start");
   assert.ok(started.length);
   let active;
