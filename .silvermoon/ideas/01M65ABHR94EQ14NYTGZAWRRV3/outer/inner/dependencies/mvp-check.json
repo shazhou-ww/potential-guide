@@ -1,0 +1,155 @@
+{
+  "consumer": "mvp-check",
+  "source": "packed-production-install-traversal-v1",
+  "entries": [
+    "@potential-guide/check-task",
+    "@potential-guide/task-engine-server",
+    "@potential-guide/task-engine",
+    "@potential-guide/task-protocol",
+    "@potential-guide/check-artifacts"
+  ],
+  "install": [
+    "pnpm",
+    "install",
+    "--prefer-offline",
+    "--ignore-scripts",
+    "--no-frozen-lockfile"
+  ],
+  "platform": "win32",
+  "architecture": "x64",
+  "node": "24.11.1",
+  "packages": [
+    {
+      "reference": "@potential-guide/check-task",
+      "name": "@potential-guide/check-task",
+      "version": "0.1.0-rc.0",
+      "firstReachedFrom": "consumer"
+    },
+    {
+      "reference": "@potential-guide/task-engine",
+      "name": "@potential-guide/task-engine",
+      "version": "0.1.0-rc.0",
+      "firstReachedFrom": "@potential-guide/check-task@0.1.0-rc.0"
+    },
+    {
+      "reference": "@potential-guide/task-protocol",
+      "name": "@potential-guide/task-protocol",
+      "version": "0.1.0-rc.0",
+      "firstReachedFrom": "@potential-guide/task-engine@0.1.0-rc.0"
+    },
+    {
+      "reference": "@potential-guide/check-artifacts",
+      "name": "@potential-guide/check-artifacts",
+      "version": "0.1.0",
+      "firstReachedFrom": "@potential-guide/check-task@0.1.0-rc.0"
+    },
+    {
+      "reference": "ajv",
+      "name": "ajv",
+      "version": "8.20.0",
+      "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0"
+    },
+    {
+      "reference": "fast-deep-equal",
+      "name": "fast-deep-equal",
+      "version": "3.1.3",
+      "firstReachedFrom": "ajv@8.20.0"
+    },
+    {
+      "reference": "fast-uri",
+      "name": "fast-uri",
+      "version": "3.1.9",
+      "firstReachedFrom": "ajv@8.20.0"
+    },
+    {
+      "reference": "json-schema-traverse",
+      "name": "json-schema-traverse",
+      "version": "1.0.0",
+      "firstReachedFrom": "ajv@8.20.0"
+    },
+    {
+      "reference": "require-from-string",
+      "name": "require-from-string",
+      "version": "2.0.2",
+      "firstReachedFrom": "ajv@8.20.0"
+    },
+    {
+      "reference": "esbuild",
+      "name": "esbuild",
+      "version": "0.28.2",
+      "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0"
+    },
+    {
+      "reference": "@esbuild/win32-x64",
+      "name": "@esbuild/win32-x64",
+      "version": "0.28.2",
+      "firstReachedFrom": "esbuild@0.28.2"
+    },
+    {
+      "reference": "tar",
+      "name": "tar",
+      "version": "7.5.22",
+      "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0"
+    },
+    {
+      "reference": "@isaacs/fs-minipass",
+      "name": "@isaacs/fs-minipass",
+      "version": "4.0.1",
+      "firstReachedFrom": "tar@7.5.22"
+    },
+    {
+      "reference": "minipass",
+      "name": "minipass",
+      "version": "7.1.3",
+      "firstReachedFrom": "@isaacs/fs-minipass@4.0.1"
+    },
+    {
+      "reference": "chownr",
+      "name": "chownr",
+      "version": "3.0.0",
+      "firstReachedFrom": "tar@7.5.22"
+    },
+    {
+      "reference": "minizlib",
+      "name": "minizlib",
+      "version": "3.1.0",
+      "firstReachedFrom": "tar@7.5.22"
+    },
+    {
+      "reference": "yallist",
+      "name": "yallist",
+      "version": "5.0.0",
+      "firstReachedFrom": "tar@7.5.22"
+    },
+    {
+      "reference": "yaml",
+      "name": "yaml",
+      "version": "2.9.1",
+      "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0"
+    },
+    {
+      "reference": "@potential-guide/check-runtime-files",
+      "name": "@potential-guide/check-runtime-files",
+      "version": "0.1.0",
+      "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0"
+    },
+    {
+      "reference": "@potential-guide/task-engine-server",
+      "name": "@potential-guide/task-engine-server",
+      "version": "0.1.0-rc.0",
+      "firstReachedFrom": "consumer"
+    },
+    {
+      "reference": "@potential-guide/task-engine-storage",
+      "name": "@potential-guide/task-engine-storage",
+      "version": "0.1.0-rc.0",
+      "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0"
+    },
+    {
+      "reference": "@potential-guide/task-engine-http",
+      "name": "@potential-guide/task-engine-http",
+      "version": "0.1.0-rc.0",
+      "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0"
+    }
+  ]
+}

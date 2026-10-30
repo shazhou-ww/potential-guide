@@ -12,6 +12,13 @@ file extension, or schema URI is not migration.
 
 ## Authoring
 
+Pure consumer validation is available from `@potential-guide/check-artifacts/contracts`.
+It reexports the same manifest, file-set/digest/References, mapping, subject and
+result rules without preparation IO. The legacy root and `/build` remain
+compatible. This is import isolation, not installation isolation: production
+`esbuild` and archive dependencies remain installed. See the
+[MVP dependency decision](task-server.md#installation-versus-imports).
+
 Checker roots contain `checker.yaml`, one self-contained CommonJS entry, and
 Markdown under `references/<language>/`. Objective roots contain
 `objective.yaml` and Markdown only. `writeContractArtifact`,

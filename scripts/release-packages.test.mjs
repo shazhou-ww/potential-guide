@@ -32,7 +32,7 @@ test("local verification covers the internal runtime dependency closure without 
         assert.ok(names.has(name), `${manifest.name} needs a local verification pack for ${name}`);
     }
   }
-  for (const id of ["check-runtime-files", "check-artifacts"]) {
+  for (const id of ["check-runtime-files", "check-artifacts", "check-task", "task-engine-server"]) {
     assert.ok(verificationPackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.1.0`), /Unsupported package/);
   }

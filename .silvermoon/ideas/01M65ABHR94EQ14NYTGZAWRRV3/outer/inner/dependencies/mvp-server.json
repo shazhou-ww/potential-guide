@@ -1,0 +1,51 @@
+{
+  "consumer": "mvp-server",
+  "source": "packed-production-install-traversal-v1",
+  "entries": [
+    "@potential-guide/task-engine-server",
+    "@potential-guide/task-engine",
+    "@potential-guide/task-protocol"
+  ],
+  "install": [
+    "pnpm",
+    "install",
+    "--prefer-offline",
+    "--ignore-scripts",
+    "--no-frozen-lockfile"
+  ],
+  "platform": "win32",
+  "architecture": "x64",
+  "node": "24.11.1",
+  "packages": [
+    {
+      "reference": "@potential-guide/task-engine-server",
+      "name": "@potential-guide/task-engine-server",
+      "version": "0.1.0-rc.0",
+      "firstReachedFrom": "consumer"
+    },
+    {
+      "reference": "@potential-guide/task-protocol",
+      "name": "@potential-guide/task-protocol",
+      "version": "0.1.0-rc.0",
+      "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0"
+    },
+    {
+      "reference": "@potential-guide/task-engine",
+      "name": "@potential-guide/task-engine",
+      "version": "0.1.0-rc.0",
+      "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0"
+    },
+    {
+      "reference": "@potential-guide/task-engine-storage",
+      "name": "@potential-guide/task-engine-storage",
+      "version": "0.1.0-rc.0",
+      "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0"
+    },
+    {
+      "reference": "@potential-guide/task-engine-http",
+      "name": "@potential-guide/task-engine-http",
+      "version": "0.1.0-rc.0",
+      "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0"
+    }
+  ]
+}

@@ -163,7 +163,16 @@ export class TaskEngine implements TaskService {
     const id = task.snapshot.execution?.executionId;
     const execution = id ? this.view.facts.executions[id] : undefined;
     if (execution?.result !== undefined)
-      this.validated(execution.result, type.validateResult.bind(type));
+      this.validateResult(type, execution.result, execution.prepared);
+  }
+  private validateResult(type: RegisteredType, value: unknown, prepared: Json): Json {
+    const result = this.validated(value, type.validateResult.bind(type));
+    const validate = type.validateExecutionResult;
+    if (validate)
+      this.validated(result, (value) =>
+        validate.call(type, value, freeze(structuredClone(prepared)) as never),
+      );
+    return result;
   }
   private validated(value: unknown, validator: (value: unknown) => unknown): Json {
     const input = freeze(json(value, this.limits.maxPayloadBytes));
@@ -513,6 +522,12 @@ export class TaskEngine implements TaskService {
         return type.prepare(freeze(structuredClone(task.input)) as never, {
           signal: controller.signal,
           deadlineAt: task.snapshot.deadlineAt,
+          context: Object.freeze({
+            type: task.binding.type,
+            version: task.binding.version,
+            environment: task.binding.environment,
+            scope: task.binding.scope,
+          }),
         });
       })
       .then((value) => {
@@ -763,10 +778,10 @@ export class TaskEngine implements TaskService {
     const type = this.type(current.binding);
     let payload: Json;
     try {
-      payload = this.validated(
-        value,
-        kind === "complete" ? type.validateResult.bind(type) : type.validateProgress.bind(type),
-      );
+      payload =
+        kind === "complete"
+          ? this.validateResult(type, value, current.prepared)
+          : this.validated(value, type.validateProgress.bind(type));
     } catch (error) {
       this.reportFailure(current, errorFact(error, "invalid_payload"));
       return;
@@ -921,7 +936,7 @@ export class TaskEngine implements TaskService {
       this.validated(execution.input, type.validate.bind(type));
       this.validated(execution.prepared, type.validatePrepared.bind(type));
       if (execution.result !== undefined)
-        this.validated(execution.result, type.validateResult.bind(type));
+        this.validateResult(type, execution.result, execution.prepared);
       executions.add(id);
       tasks = [];
     } else fail("invalid_request", "Unknown history filter.");
@@ -968,7 +983,7 @@ export class TaskEngine implements TaskService {
         if (event.type === "execution.progress")
           this.validated(event.data.progress, type.validateProgress.bind(type));
         if (event.type === "execution.completed")
-          this.validated(event.data.result, type.validateResult.bind(type));
+          this.validateResult(type, event.data.result, execution.prepared);
       }
     }
     if (event.type === "task.preparation.completed") return { ...event, data: {} };

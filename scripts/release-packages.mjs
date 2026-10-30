@@ -238,6 +238,27 @@ export const releasePackages = [
 export const verificationPackages = [
   ...releasePackages,
   {
+    id: "check-task",
+    directory: "check-task",
+    name: "@potential-guide/check-task",
+    requiredExports: ["createCheckTaskType", "createArtifactSource", "validateCheckInput"],
+    bins: [],
+    forbiddenDependencies: ["@potential-guide/checker-host", "@potential-guide/objective-host"],
+  },
+  {
+    id: "task-engine-server",
+    directory: "task-engine-server",
+    name: "@potential-guide/task-engine-server",
+    requiredExports: ["startTaskServer"],
+    bins: ["task-engine-server"],
+    forbiddenDependencies: [
+      "@potential-guide/check-task",
+      "@potential-guide/check-artifacts",
+      "@potential-guide/checker-host",
+      "@potential-guide/objective-host",
+    ],
+  },
+  {
     id: "check-runtime-files",
     directory: "check-runtime-files",
     name: "@potential-guide/check-runtime-files",

@@ -294,7 +294,20 @@ export async function checkPackage(value: unknown, maxLayer: 1 | 2 = 2) {
   await checkPackagePublication(snapshot, workspace, actual.manifest, facts.inventory, put);
   await checkCliPackage(snapshot, workspace, actual.manifest, put);
   await checkSourceBoundaries(
-    { snapshot, contract: model, workspace, manifests: facts.manifests, dependencies, put },
+    {
+      snapshot,
+      contract: model,
+      workspace,
+      manifests: facts.manifests,
+      dependencies,
+      put,
+      localConfigurationImports: new Map(
+        (subject.localConfigurationImports ?? []).map(({ path, reason }) => [
+          `${subject.directory}/${path}`,
+          reason,
+        ]),
+      ),
+    },
     facts.inventory,
   );
   for (const delivery of subject.deliveries)

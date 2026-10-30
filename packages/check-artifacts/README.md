@@ -1,5 +1,14 @@
 # @potential-guide/check-artifacts
 
+For generic Engine consumers use `@potential-guide/check-task`; its Server
+composition is documented in [task-server.md](../../docs/task-server.md).
+`@potential-guide/check-artifacts/contracts` is a pure validation entry for
+Checker/Objective manifests, complete supplied files/digests/References,
+mapping, subjects and results. It does not import network, filesystem, worker or
+build modules. Existing root and `/build` APIs below remain compatible.
+The installed package still includes production `esbuild` and archive
+dependencies; subpath import isolation does **not** remove installation costs.
+
 For ordinary network consumption prefer [Check Host v2](../check-host/README.md):
 the same Host owns source confirmation, exact cache, References and Task
 execution. This package remains the reusable explicit build/validation/preparation

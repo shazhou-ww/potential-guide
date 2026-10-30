@@ -18,17 +18,35 @@ export interface SourceBoundaryContext {
   manifests: Map<string, RecordValue>;
   dependencies: Dependency[];
   put: ReportPut;
+  localConfigurationImports?: ReadonlyMap<string, string>;
 }
 
 export async function checkSourceImport(
   context: SourceBoundaryContext,
   source: string,
-  observed: { specifier: string | null; typeOnly: boolean },
+  observed: { specifier: string | null; typeOnly: boolean; localConfiguration?: true },
 ) {
   const { snapshot, contract, workspace, manifests, dependencies, put } = context;
   const { specifier, typeOnly } = observed;
 
   if (specifier === null) {
+    const reason = context.localConfigurationImports?.get(source);
+    if (
+      reason &&
+      observed.localConfiguration &&
+      workspace.runtime === "node" &&
+      workspace.roles.includes("cli") &&
+      workspace.entries.some((entry) => source === `${workspace.path}/${entry}`)
+    ) {
+      put(
+        "pass",
+        "local-configuration-import",
+        `Declared Node CLI file-URL configuration boundary: ${reason}. External configuration contents are not part of this package's static dependency graph.`,
+        "",
+        source,
+      );
+      return;
+    }
     put(
       "unverified",
       "computed-import",

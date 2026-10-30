@@ -7,13 +7,27 @@ import ts from "typescript";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 test("generic task production dependency graph is acyclic and business/adapter independent", async () => {
-  for (const name of ["task-protocol", "task-engine", "task-engine-http", "task-engine-storage"]) {
+  for (const name of [
+    "task-protocol",
+    "task-engine",
+    "task-engine-http",
+    "task-engine-storage",
+    "task-engine-server",
+  ]) {
     const directory = join(root, "packages", name);
     const manifest = JSON.parse(await readFile(join(directory, "package.json"), "utf8"));
-    assert.deepEqual(
-      Object.keys(manifest.dependencies ?? {}),
-      name === "task-protocol" ? [] : ["@potential-guide/task-protocol"],
-    );
+    const dependencies =
+      name === "task-engine-server"
+        ? [
+            "@potential-guide/task-protocol",
+            "@potential-guide/task-engine",
+            "@potential-guide/task-engine-http",
+            "@potential-guide/task-engine-storage",
+          ]
+        : name === "task-protocol"
+          ? []
+          : ["@potential-guide/task-protocol"];
+    assert.deepEqual(Object.keys(manifest.dependencies ?? {}), dependencies);
     const files = await readdir(join(directory, "src"), { recursive: true });
     for (const file of files.filter((entry) => entry.endsWith(".ts"))) {
       const path = join(directory, "src", file);
@@ -47,7 +61,7 @@ test("generic task production dependency graph is acyclic and business/adapter i
             );
           else
             assert.ok(
-              specifier === "@potential-guide/task-protocol" ||
+              dependencies.includes(specifier) ||
                 (name !== "task-protocol" && specifier.startsWith("node:")),
               `${path}: ${specifier}`,
             );

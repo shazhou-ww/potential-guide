@@ -24,6 +24,7 @@ export interface PackageSubject {
   allows: string[];
   entries: string[];
   generated: { path: string; reason: string }[];
+  localConfigurationImports?: { path: string; reason: string }[];
   joins: { id: string; kind: string }[];
   deliveries: Delivery[];
 }
@@ -49,6 +50,10 @@ export const packageSubjectSchema = object(
     allows: strings,
     entries: paths,
     generated: { type: "array", items: object({ path, reason: text }, ["path", "reason"]) },
+    localConfigurationImports: {
+      type: "array",
+      items: object({ path, reason: text }, ["path", "reason"]),
+    },
     joins: { type: "array", items: object({ id: text, kind: text }, ["id", "kind"]) },
     deliveries: deliverySchema,
   },
@@ -89,6 +94,16 @@ export function parsePackageSubject(value: unknown): PackageSubject {
   if (!packageValidator(value))
     throw new Error(`Invalid package subject: ${ajv.errorsText(packageValidator.errors)}`);
   if (!isAbsolute(value.root)) throw new Error("Package root must be absolute.");
+  if (value.localConfigurationImports?.length) {
+    const declared = value.localConfigurationImports.map((entry) => entry.path);
+    if (
+      value.runtime !== "node" ||
+      !value.roles.includes("cli") ||
+      new Set(declared).size !== declared.length ||
+      declared.some((path) => !value.entries.includes(path))
+    )
+      throw new Error("Local configuration imports require unique declared Node CLI entries.");
+  }
   return value;
 }
 export function parseRepositorySubject(value: unknown): RepositorySubject {

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { AnySchema } from "ajv";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { isAlias, isMap, isScalar, isSeq, parseDocument } from "yaml";
-import { artifactLimits, safePath } from "./manifest.js";
+import { artifactLimits, safePath } from "./paths.js";
 import { validateSubjectMapping } from "./mapping.js";
 
 export const checkerSchemaUri =

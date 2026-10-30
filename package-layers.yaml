@@ -3,6 +3,7 @@ protocol:
   - "@potential-guide/task-engine"
   - "@potential-guide/task-engine-http"
   - "@potential-guide/task-engine-storage"
+  - "@potential-guide/task-engine-server"
   - "@potential-guide/checker-host"
   - "@potential-guide/objective-host"
   - "@potential-guide/check-artifacts"
@@ -10,6 +11,7 @@ protocol:
   - "@potential-guide/effects"
   - "@potential-guide/pilot-protocol"
 business:
+  - "@potential-guide/check-task"
   - "@potential-guide/objective-pilot"
   - "@potential-guide/objective-regulator"
   - "@potential-guide/regulation-coordinator"

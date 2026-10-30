@@ -3,15 +3,10 @@ import { lstat, readdir, realpath } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { readArtifactTree } from "@potential-guide/check-runtime-files";
 import { Ajv, type AnySchema } from "ajv";
+import { artifactLimits, safePath } from "./paths.js";
+export { artifactLimits, safeComponent, safePath } from "./paths.js";
 
 export const artifactDigestPrefix = "sha256-pguide-check-v1:";
-export const artifactLimits = Object.freeze({
-  bytes: 64 * 1024 * 1024,
-  files: 256,
-  paths: 512,
-  archiveBytes: 72 * 1024 * 1024,
-  expandedTarBytes: 66 * 1024 * 1024,
-});
 export interface CheckManifest {
   format: "pguide-check-v1";
   id: string;
@@ -71,25 +66,6 @@ const validate = ajv.compile<CheckManifest>({
     },
   },
 });
-export function safeComponent(name: string): boolean {
-  return (
-    !!name &&
-    name !== "." &&
-    name !== ".." &&
-    name === name.normalize("NFC") &&
-    Buffer.byteLength(name) <= 255 &&
-    name.toLowerCase() !== "node_modules" &&
-    !/[\\:<>"|?*]/.test(name) &&
-    ![...name].some(
-      (character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
-    ) &&
-    !/[. ]$/.test(name) &&
-    !/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)
-  );
-}
-export function safePath(path: string): boolean {
-  return Buffer.byteLength(path) <= 1024 && path.split("/").every(safeComponent);
-}
 export function parseManifest(bytes: Buffer): CheckManifest {
   if (bytes.length > 16 * 1024) throw new Error("Check manifest exceeds its size limit.");
   const value: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));

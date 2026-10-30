@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "../../.cache/tsbuildinfo/check-task.tsbuildinfo"
+  },
+  "references": [
+    { "path": "../task-protocol" },
+    { "path": "../task-engine" },
+    { "path": "../check-artifacts" },
+    { "path": "../check-runtime-files" }
+  ],
+  "include": ["src/**/*.ts"]
+}

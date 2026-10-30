@@ -10,5 +10,5 @@ objectives:
         "roles": ["npm"], "runtime": "node",
         "allows": ["@potential-guide/task-protocol"],
         "entries": ["src/index.ts", "src/pool.ts", "src/testing.ts"], "generated": [], "deliveries": [],
-        "joins": [{"id": "public-library-suite", "kind": "npm"}]
+        "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "generic-task-server", "kind": "cli"}]
       }

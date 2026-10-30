@@ -1,0 +1,15 @@
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
+objectives:
+  standardize:
+    description: Standardize the generic programmatic and standalone task Server without business dependencies.
+    objective: "@potential-guide/objective-package-standard"
+    inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
+    subject: |
+      {
+        "root": context.repo.rootPath, "directory": context.path,
+        "roles": ["npm", "cli"], "runtime": "node",
+        "allows": ["@potential-guide/task-protocol", "@potential-guide/task-engine", "@potential-guide/task-engine-http", "@potential-guide/task-engine-storage"],
+        "entries": ["src/index.ts", "src/main.ts"], "generated": [], "deliveries": [],
+        "localConfigurationImports": [{"path": "src/main.ts", "reason": "The standalone CLI explicitly loads an operator-selected local configuration via pathToFileURL(resolve(...)); HTTP cannot select this module."}],
+        "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "generic-task-server", "kind": "cli"}]
+      }

@@ -9,5 +9,5 @@ objectives:
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm"], "runtime": "node", "allows": [],
         "entries": ["src/index.ts"], "generated": [], "deliveries": [],
-        "joins": [{"id": "public-library-suite", "kind": "npm"}]
+        "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "generic-task-server", "kind": "cli"}]
       }

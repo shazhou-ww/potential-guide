@@ -1,8 +1,41 @@
 import ts from "typescript";
 
 export function sourceImports(path: string, content: string) {
-  const imports: { specifier: string | null; typeOnly: boolean }[] = [];
+  const imports: { specifier: string | null; typeOnly: boolean; localConfiguration?: true }[] = [];
   const file = ts.createSourceFile(path, content, ts.ScriptTarget.Latest, true);
+  const imported = (name: string, from: string, symbol: string) =>
+    file.statements.some(
+      (statement) =>
+        ts.isImportDeclaration(statement) &&
+        ts.isStringLiteral(statement.moduleSpecifier) &&
+        statement.moduleSpecifier.text === from &&
+        statement.importClause?.namedBindings &&
+        ts.isNamedImports(statement.importClause.namedBindings) &&
+        statement.importClause.namedBindings.elements.some(
+          (entry) =>
+            entry.name.text === name && (entry.propertyName?.text ?? entry.name.text) === symbol,
+        ),
+    );
+  const localConfiguration = (argument: ts.Expression | undefined) => {
+    if (
+      !argument ||
+      !ts.isPropertyAccessExpression(argument) ||
+      argument.name.text !== "href" ||
+      !ts.isCallExpression(argument.expression) ||
+      argument.expression.arguments.length !== 1 ||
+      !ts.isIdentifier(argument.expression.expression) ||
+      !imported(argument.expression.expression.text, "node:url", "pathToFileURL")
+    )
+      return false;
+    const path = argument.expression.arguments[0];
+    return (
+      !!path &&
+      ts.isCallExpression(path) &&
+      ts.isIdentifier(path.expression) &&
+      imported(path.expression.text, "node:path", "resolve") &&
+      path.arguments.length > 0
+    );
+  };
   function visit(node: ts.Node) {
     if (
       (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
@@ -36,7 +69,14 @@ export function sourceImports(path: string, content: string) {
       const argument = node.arguments[0];
       if (argument && ts.isStringLiteralLike(argument))
         imports.push({ specifier: argument.text, typeOnly: false });
-      else imports.push({ specifier: null, typeOnly: false });
+      else
+        imports.push({
+          specifier: null,
+          typeOnly: false,
+          ...(node.expression.kind === ts.SyntaxKind.ImportKeyword && localConfiguration(argument)
+            ? { localConfiguration: true as const }
+            : {}),
+        });
     }
     ts.forEachChild(node, visit);
   }

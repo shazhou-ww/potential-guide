@@ -1,7 +1,28 @@
 # Implementation
 
 本项同时交付 Check 业务包和通用 Server，以一个可运行 MVP 验收。
-先接入 Check，再完成 Server 与组合验证；以下为可细化的实施种子，不以旧证据代替新验收。
+实现保持既有 Engine 的生命周期所有权；不以旧证据代替新验收。
+结构、依赖决策及可复现验证见 [Evidence.md](Evidence.md)，使用说明见
+[task-server.md](../../../../../docs/task-server.md)。
+
+## 实现结构
+
+- `check-artifacts/contracts` 仅重导出既有契约、结果及 mapping 规则；
+  将共享路径规则从含文件 IO 的 legacy manifest 模块提取为纯模块。
+  根入口与 `/build` 保留。明确选择兼容优先，不拆作者构建包，不宣称安装隔离。
+- `check-task` 的显式 source 层负责授权、下载、解包和有界缓存；
+  Prepared 保存经过验证的完整 bytes、准确摘要、选定语言及实际环境。
+  恢复不通过可变 URL 换取新的执行内容，通用 Pool 负责共享执行和物理容量。
+- 将真实 CommonJS worker 移至 `check-runtime-files`，旧 Host 通过 shim 继续使用同一实现。
+  Check 使用此 worker 的 initialize/execute/defer/dispose 协议，不调用旧 Kernel、
+  TaskService、scheduler 或旧 HTTP 协议。
+- Engine 增补受信任 preparation context 与可选 `validateExecutionResult`：
+  前者传递不可由请求授予的 scope，后者在报告、恢复及历史读取时根据原始 Prepared
+  复核结果。既有 `validateResult` 调用签名不变，避免把既有可选第二参数误作上下文。
+- `task-engine-server` 仅组合通用四包；监听、HTTP/SSE 桥接、默认 SQLite、
+  认证和可信配置均在显式启动中完成。CLI 单独拥有进程信号。
+  Server 延迟实际 Store lease release，直到 Engine 和 composition 资源都确认关闭。
+  关闭或回滚失败不会假装成功。
 
 ## Steps
 

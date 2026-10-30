@@ -147,6 +147,28 @@ importers:
 
   packages/check-runtime-files: {}
 
+  packages/check-task:
+    dependencies:
+      '@potential-guide/check-artifacts':
+        specifier: workspace:^
+        version: link:../check-artifacts
+      '@potential-guide/check-runtime-files':
+        specifier: workspace:^
+        version: link:../check-runtime-files
+      '@potential-guide/task-engine':
+        specifier: workspace:^
+        version: link:../task-engine
+      '@potential-guide/task-protocol':
+        specifier: workspace:^
+        version: link:../task-protocol
+    devDependencies:
+      '@potential-guide/task-engine-server':
+        specifier: workspace:^
+        version: link:../task-engine-server
+      '@potential-guide/task-engine-storage':
+        specifier: workspace:^
+        version: link:../task-engine-storage
+
   packages/cli-runtime:
     dependencies:
       '@npmcli/arborist':
@@ -534,6 +556,21 @@ importers:
       '@potential-guide/task-engine':
         specifier: workspace:^
         version: link:../task-engine
+
+  packages/task-engine-server:
+    dependencies:
+      '@potential-guide/task-engine':
+        specifier: workspace:^
+        version: link:../task-engine
+      '@potential-guide/task-engine-http':
+        specifier: workspace:^
+        version: link:../task-engine-http
+      '@potential-guide/task-engine-storage':
+        specifier: workspace:^
+        version: link:../task-engine-storage
+      '@potential-guide/task-protocol':
+        specifier: workspace:^
+        version: link:../task-protocol
 
   packages/task-engine-storage:
     dependencies:

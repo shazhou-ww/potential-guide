@@ -1,8 +1,12 @@
 # Generic task engine
 
-The four `task-*` packages are a new generic engine, not a migration of the
+The core `task-*` packages are a new generic engine, not a migration of the
 existing checker/objective hosts. Register your own types; no business type,
 schema library, HTTP server or artifact package is required.
+
+For an explicitly started Node listener and CLI, use
+[`@potential-guide/task-engine-server`](task-server.md); `check-task` separately
+registers Check using this same Engine protocol. Neither migrates the old Hosts.
 
 ```ts
 import { createTaskEngine } from "@potential-guide/task-engine";
@@ -25,13 +29,21 @@ const handler = createTaskHandler({ service: engine, resolveCaller });
 
 `TaskType<Input, Prepared=Input>` has `type`, immutable `version`, immutable
 `environment`, pure `validate(unknown)` and `equals(Input, unknown)`, required
-`prepare(Input, {signal, deadlineAt})`, `validatePrepared`, `validateResult`,
+`prepare(Input, {signal, deadlineAt, context})`, `validatePrepared`, `validateResult`,
 `validateProgress`, and `execute(Prepared, ExecuteOptions)`.
 Validators return the original semantic value without coercion. All stored
 values must be finite JSON: no getters, custom prototypes, sparse arrays,
 toJSON conversion, cycles or undefined. Values passed into type code are frozen.
 Business fields stay beside the Request envelope; validators should reject
 unknown fields, including obsolete prerequisites. Identity prepare is valid.
+Preparation `context` is the frozen Engine-bound type/version/environment/scope,
+so source authorization never relies on body-supplied permissions. It is optional
+in the public options type for older direct adapters; Engine always supplies it.
+The optional `validateExecutionResult(result, prepared)` hook additionally validates
+results against immutable execution content, including recovery/history reads.
+Existing `validateResult` signatures remain unchanged; Check uses the new hook to
+validate declared problems against the original verified Checker manifest rather
+than a process-local cache.
 
 Prepared must identify **actual immutable execution content**, not merely a
 mutable URL. The engine compares complete Prepared canonical JSON alongside

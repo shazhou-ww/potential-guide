@@ -5,6 +5,7 @@ import { delimiter, isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 import { discoveryHostBins } from "./release-packages.mjs";
+import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
 
 export async function checkPackageConsumers(root, scratch, definitions, tarballs, run) {
   const manifests = new Map();
@@ -15,6 +16,25 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     );
   }
   const scenarios = [
+    ["artifact-contracts", ["@potential-guide/check-artifacts"]],
+    [
+      "mvp-server",
+      [
+        "@potential-guide/task-engine-server",
+        "@potential-guide/task-engine",
+        "@potential-guide/task-protocol",
+      ],
+    ],
+    [
+      "mvp-check",
+      [
+        "@potential-guide/check-task",
+        "@potential-guide/task-engine-server",
+        "@potential-guide/task-engine",
+        "@potential-guide/task-protocol",
+        "@potential-guide/check-artifacts",
+      ],
+    ],
     ["task-protocol", ["@potential-guide/task-protocol"]],
     ["task-engine", ["@potential-guide/task-engine"]],
     [
@@ -101,8 +121,10 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       directory,
       closure,
       entries,
-      label === "npm-objectives",
+      label === "npm-objectives" || label === "artifact-contracts" || label.startsWith("mvp-"),
     );
+    if (label === "artifact-contracts" || label.startsWith("mvp-"))
+      await checkMvpConsumer(root, directory, label, graph, run);
     if (label.startsWith("task-")) {
       const script = join(directory, "generic-task.mjs");
       await writeFile(

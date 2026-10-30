@@ -8,6 +8,6 @@ objectives:
       {
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm"], "runtime": "node", "allows": [],
-        "entries": ["src/index.ts"], "generated": [], "deliveries": [],
+        "entries": ["src/index.ts", "src/worker.ts", "src/worker-json.ts"], "generated": [], "deliveries": [],
         "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "developer-commands", "kind": "cli"}]
       }

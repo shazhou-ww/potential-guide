@@ -44,6 +44,11 @@ Check Host and both protocols, then `objective-regulator` builds regulation capa
 The generic task packages are independent of those business hosts: release
 `task-protocol` before `task-engine`, `task-engine-http`, and `task-engine-storage`.
 Adding their packaging checks does not publish or deploy them.
+`check-task` and `task-engine-server` currently belong only to the local
+verification inventory, alongside the artifact support packages. Their MVP
+checks pack/install real consumers, but do not add release tags, bootstrap
+publication, or workflow authorization. A later release requires an explicit
+publication scope and package-specific tag configuration.
 The independent `regulation-coordinator` library follows `objective-regulator`
 and owns its scheduling helpers and runner types. `cli-core` precedes
 `pguide-config`. `objective-declarations` consumes CLI Core and Pilot protocol only;

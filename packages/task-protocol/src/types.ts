@@ -143,6 +143,8 @@ export type Authorize = (caller: Caller, operation: Operation, scope: string) =>
 export interface PreparationOptions {
   signal: AbortSignal;
   deadlineAt: string;
+  /** Trusted Engine binding; absent only for older direct adapters. */
+  context?: Readonly<Pick<Binding, "type" | "version" | "environment" | "scope">>;
 }
 export interface StartPermit {
   executionId: string;
@@ -175,6 +177,7 @@ export interface TaskType<Input = Json, Prepared = Input> {
   prepare(input: Input, options: PreparationOptions): Promise<Prepared>;
   validatePrepared(prepared: unknown): Prepared;
   validateResult(result: unknown): Json;
+  validateExecutionResult?(result: unknown, prepared: Prepared): Json;
   validateProgress(progress: unknown): Json;
   execute(prepared: Prepared, options: ExecuteOptions): Promise<ExecutionTracking>;
 }
@@ -187,6 +190,7 @@ export interface RegisteredType {
   prepare(input: never, options: PreparationOptions): Promise<unknown>;
   validatePrepared(prepared: unknown): unknown;
   validateResult(result: unknown): Json;
+  validateExecutionResult?(result: unknown, prepared: never): Json;
   validateProgress(progress: unknown): Json;
   execute(prepared: never, options: ExecuteOptions): Promise<ExecutionTracking>;
 }
