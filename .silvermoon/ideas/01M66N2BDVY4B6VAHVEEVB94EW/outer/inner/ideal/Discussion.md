@@ -2,16 +2,32 @@
 
 本文支撑 [Idea.md](Idea.md)。来源为 [task-engine-web-ui](../../../../01M663BC641JV531CXWN5WD2AG/outer/inner/ideal/Idea.md) 的 US-07 至 US-11 及[能力调研](../../../../01M663BC641JV531CXWN5WD2AG/outer/inner/ideal/Research.md) E6–E9。2026-10-30 用户要求将已明确的后端修改拆为独立 ideas，交给后续 session 跟进；本条承接类型资产侧缺口，并非通用 Engine 内核功能。
 
+## 当前范围决定：暂停推进
+
+2026-10-31，用户在本会话指出资产不一定由某个 Task 独占，Probe 与 Regulator 可以共用 Objective；Prepare 准备任务依赖，不意味着资产管理属于 Task Type。此前提出的可选 TaskType.assets 及 list、describe、resolve、evict 通用接口只是会话讨论建议，现已撤回，未实现，也不是已确认契约。
+
+随后收到用户转达的 Web UI 独立会话范围决定：
+
+> 想清楚之前，我们第一版可以先不做资产管理，先把这块需求跳过去。
+>
+> 如果后续要做，很可能也可以给特定的Task类型增加一些独立的工具型UX
+>
+> 资产管理这件事情不应该属于我们的Engine，以及它的WebUI应该考虑的问题。
+
+据此暂停将通用资产管理接口或 UI 前置依赖当作当前必需工作推进，不预先建设通用插件体系。Web UI 首版移出资产浏览、版本选择器、清理及自动资产元数据依赖；对应 UI 文档由其独立会话维护，本条不代为编辑。
+
+以下具体缓存需求、源码事实、未决问题和下游种子予以保留，但不构成当前实施范围。未来若继续，须由用户在本会话明确具体类型或共享资产场景及独立工具边界，再重审契约；不自动恢复原方案。当前仍为 preparing、unsubmitted，三个 gate 保持 explicit；本次不是 abandon、accept 或 submit 决定，不授权开工、真实资源清理或删除历史。
+
 ## 已有事实
 
 - 现有 ArtifactSource 公开 authorize、resolve；其默认缓存是进程内 Map，按 scope/kind/URL/digest 绑定，没有查询或选择性清理接口。
 - 任务 Prepared 保存精确文件内容；Check worker 的逐执行目录另有生命周期；旧 prepareCheckArtifact 又有不同的磁盘缓存。不能把这些对象混成一个可任意删除的“本地缓存”。
-- Checker/Objective manifest 已携带 subjectSchema；UI 按类型表单还需要所选制品的这层元数据。
+- Checker/Objective manifest 已携带 subjectSchema；原自动资产表单设想需要这层元数据，但它已不再是 Web UI 首版的前置依赖。
 - digest 精确校验已有，但版本目录和持久可用性没有保证；Check 的原始未固定版本请求不等于公开可回读的实际解析版本。
 
 源码与测试路径、行号集中在来源调研，不复制实现设计或把这些缺口宣称已解决。
 
-## 已确认的准备要求
+## 保留的具体缓存需求
 
 2026-10-30，用户明确要求缓存是本地磁盘上的持久化制品缓存，而不只是内存缓存：下载过的 Checker bundle 或 Objective bundle 应保存在本地，服务重启不应使已缓存的精确内容失效，也不应因原来源已覆盖或删除旧内容而必须改用其他版本。
 
@@ -21,15 +37,15 @@
 
 ## 本条与其他 idea 的分工
 
-- [task-type-schema-discovery](../../../../01M66MRFCSDK99MAEN8RN3NKBH/outer/inner/ideal/Idea.md) 拥有通用 Task 输入契约及类型发现；本条拥有类型资产元数据与管理边界。Task 输入 Schema 与具体制品 subjectSchema 不互相替代。
+- [task-type-schema-discovery](../../../../01M66MRFCSDK99MAEN8RN3NKBH/outer/inner/ideal/Idea.md) 拥有通用 Task 输入契约及类型发现；本条仅保留资产元数据与管理边界的讨论，不向通用 TaskType 注入资产管理要求。Task 输入 Schema 与具体制品 subjectSchema 不互相替代。
 - UI idea 保留使用流程、同机收藏/Endpoint 绑定、历史重做的产品语义。此处不替 UI 决定默认使用旧版或当前版，也不先实现账号/同步或任务全量列表。
-- [artifact-host-contracts](../../../../01M61G3GCGWGHGA8VHG16WCNZ5/outer/inner/ideal/Idea.md) 是已有制品与服务化方向来源；本条聚焦缺失的管理面，不重新定义制品格式、摘要或业务执行器。
+- [artifact-host-contracts](../../../../01M61G3GCGWGHGA8VHG16WCNZ5/outer/inner/ideal/Idea.md) 是已有制品与服务化方向来源；本条不接管其工作，不重新定义制品格式、摘要或业务执行器。
 
-## 需要在准备阶段收敛
+## 保留的未决问题：待明确恢复范围后重审
 
 1. 已确认需要本地磁盘持久化的精确制品内容，版本列表只覆盖本地已缓存版本；尚需确认容量与保留规则。仅知道旧 digest 不能承诺可下载任意历史版本。
 2. 如何受控取得所选制品 subjectSchema；若首次取元数据需要下载/解析，应明确副作用、授权与资源边界，不执行制品。
 3. 清理与并发 resolve、动态 Probe 解析及在用内容的保护关系。建议以受控资产标识执行，由所有者判断并逐项返回成功/保护/失败；不接受任意文件路径。
-4. 按 UI 最终确认的复用规则决定需要公开哪些解析版本证据，以及原内容不可得时如何说明；不暴露完整 Prepared 或后端内部数据库。
+4. 原先提出按 UI 复用规则确定解析版本证据；现在不再将其作为 UI 前置工作。若未来具体独立工具确需证据，再明确公开范围及原内容不可得时的说明，不暴露完整 Prepared 或后端内部数据库。
 
-除上述已确认要求外，其余方案仍待本独立 session 逐项讨论。当前只维护方向卡、讨论依据和下游种子，所有执行条目保持未勾选；未授权实施、验收、真实清理或发布，不记录 submit 或 accept。
+所有执行条目保持未勾选；按上述当前范围决定等待用户明确后续场景，不继续逐项推进原通用方案，不记录 submit 或 accept。
