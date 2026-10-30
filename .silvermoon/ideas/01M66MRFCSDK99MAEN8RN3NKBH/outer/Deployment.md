@@ -1,6 +1,6 @@
 # Deployment
 
-准备阶段的可调整种子；尚未实施或部署，不构成验收或发布授权。
+独立消费验证计划；在实施门限通过后执行，门限由主 Agent 按[本 session 授权](inner/ideal/Discussion.md)审批。不代表已经部署，不发布 npm 包或修改无关生产服务。
 
 ## Steps
 

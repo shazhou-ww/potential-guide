@@ -1,6 +1,12 @@
 # Task 输入 Schema 与发现能力：讨论依据
 
-本文支撑 [Idea.md](Idea.md)，不是第二份契约。来源是 [task-engine-web-ui](../../../../01M663BC641JV531CXWN5WD2AG/outer/inner/ideal/Idea.md) 的[源码调研](../../../../01M663BC641JV531CXWN5WD2AG/outer/inner/ideal/Research.md)。创建本 idea 是为了交给后续独立 session 继续讨论，不代表开工、验收或发布。
+本文支撑 [Idea.md](Idea.md)，不是第二份契约。来源是 [task-engine-web-ui](../../../../01M663BC641JV531CXWN5WD2AG/outer/inner/ideal/Idea.md) 的[源码调研](../../../../01M663BC641JV531CXWN5WD2AG/outer/inner/ideal/Research.md)。创建时仅授权独立准备；后续授权变化见下节，不能将此前讨论视为已经验收。
+
+## 本 session 的后续授权
+
+2026-10-31 00:23，用户明确授权本 session 再做调研并完善计划；没有 blocking issue 后，派一个 sub agent 实施，由本 session 负责所有 Silvermoon 门限审批，只有 blocking issue 才再请求用户决定。
+
+该授权仅适用于本 idea；由主 Agent 对同步后的准确修订、测试及独立消费证据逐阶段审查，再记录对应 submit/accept，不等于预先通过尚未完成的工作。不改变 explicit 门限，不继承其他 session 授权，不授权 npm 发布或无关生产环境变更。子代理负责实现，不负责生命周期事件或向来源会话汇报。
 
 ## 已确认的用户方向
 
