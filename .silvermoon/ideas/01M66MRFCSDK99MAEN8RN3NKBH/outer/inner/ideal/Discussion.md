@@ -50,6 +50,6 @@ Schema 回答“数据是否合法”，不回答“这两个合法输入在业�
 
 通用发现面向服务实际注册且可提交的类型、对应契约版本和输入 Schema；契约与注册版本的绑定、鉴权范围、旧版查询和兼容策略由本 idea 收敛，路由名称尚未决定。
 
-Task 类型 Schema 描述输入外形；Check/Probe 中具体 subject 的字段仍取决于所选制品的 subjectSchema。类型资产元数据应由资产所有者提供，不在通用发现中下载或执行任意制品，也不将所有业务字段硬编码到 UI。
+Task 类型 Schema 描述输入外形；Check/Probe 中具体 subject 的字段仍取决于所选制品的 subjectSchema。类型资产元数据由独立 [task-type-artifact-management](../../../../01M66N2BDVY4B6VAHVEEVB94EW/outer/inner/ideal/Idea.md) 收敛，不在通用发现中下载或执行任意制品，也不将所有业务字段硬编码到 UI。
 
 与 [schema-contracts](../../../../01M5CR0X2B4R2C6K3183Y1T3SQ/outer/inner/ideal/Idea.md) 保持公共契约归属一致；本 idea 不替该总讨论决定其他格式。它是现有通用任务契约的后续演进，不撤销或伪造既有 idea 的生命周期事实。

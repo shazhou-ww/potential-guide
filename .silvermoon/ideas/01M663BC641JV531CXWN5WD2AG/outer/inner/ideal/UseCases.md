@@ -263,6 +263,20 @@ Agent 候选方向：界面可以区分通用任务操作与按类型提供的�
 
 建议下一轮只讨论收藏/历史重做的版本复用语义；具体方案仍需用户选择，不能把报告建议当作已确认需求。
 
+### 第十三轮：声明式 Task Schema 与独立能力 ideas
+
+客户回顾曾采用 validate、equals 的行为判别模式，明确调整方向：
+
+> 我同意，我们还是把这两个函数替换为Schema，放在Task的定义层面上。
+
+客户期望 Schema 支持生成校验与判等、自动表单及后续消费者，询问 JSON Schema 与必要子集的选择，并要求参考 Subject Schema；同时要求先建立独立 ideas，稍后由其他 session 跟进，本会话继续 UI 细节。
+
+已建立 [task-type-schema-discovery](../../../../01M66MRFCSDK99MAEN8RN3NKBH/outer/inner/ideal/Idea.md) 与 [task-type-artifact-management](../../../../01M66N2BDVY4B6VAHVEEVB94EW/outer/inner/ideal/Idea.md)。前者承接 Task 定义与发现，后者承接此前确认的资产使用需求及管理面缺口，不归通用内核硬编码业务资产。
+
+Agent 核实当前制品 Subject Schema 使用 Ajv 的 Draft 2020-12 校验并覆盖元组约束，建议标准 Schema 加运行约束、表单 renderer 单独支持必要子集。Schema 不能推导任意业务等价关系，建议以两侧校验通过后的 canonical JSON 结构相等替代自定义 equals，保持 Prepared/环境/scope/时间等执行共享边界。这些具体建议仍待确认，不当作客户已经选定的规则。
+
+创建只授权记录和拆分；不自动创建 session，不开始实现，不记录 submit/accept 或继承 gate 授权。本 UI idea 的需求范围不变，后续继续一次一个产品问题。
+
 ## 后续访谈方法
 
 - 每轮只围绕一个主题，用一至两个开放问题追问具体经历，不让客户先选择预设功能。

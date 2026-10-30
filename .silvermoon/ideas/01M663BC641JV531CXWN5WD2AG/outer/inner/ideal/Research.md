@@ -112,6 +112,15 @@ Engine 默认 retentionMs 为一天，但 collect 是整组不活跃引用关系
 
 技术侧已有足够证据列出三项待定归属：通用类型发现、类型资产管理/subject 元数据、必要的解析版本证据。先约定由谁提供及其可观察契约，再形成可实施的短方案。不为解决缺口擅自修改 Check/Probe/Regulate 的其他 idea，不把已缺失的能力从需求中删掉。
 
+## 后续独立追踪
+
+2026-10-30 用户同意在 Task 定义层用 Schema 替代作者提供的 validate、equals，并要求先拆分独立 ideas。已建立：
+
+- [task-type-schema-discovery](../../../../01M66MRFCSDK99MAEN8RN3NKBH/outer/inner/ideal/Idea.md)：Task 输入声明、生成校验/判等与受控类型发现。建议沿用 JSON Schema Draft 2020-12 的标准语义并明确运行约束，表单能力单独分层；判等建议沿用 canonical JSON，但这些细则尚待确认。
+- [task-type-artifact-management](../../../../01M66N2BDVY4B6VAHVEEVB94EW/outer/inner/ideal/Idea.md)：类型资产查询、精确版本、subject 元数据与受限清理；不是通用内核的业务资产管理器。
+
+两个 idea 均只记录准备材料，未实现或验收；上文基线中的缺口仍然存在。UI 的收藏、历史重做和 Endpoint 体验继续在本 idea 讨论，不因拆分而删减故事或继承开工授权。
+
 ## 证据索引
 
 | 编号 | 本地源码或现有测试，行号对应调研基线 | 支撑内容 |
