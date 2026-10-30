@@ -71,6 +71,8 @@ Engine 默认 retentionMs 为一天，但 collect 是整组不活跃引用关系
 
 因此服务端公开历史列表/检索是必要依赖，不仅是 UI 增加本机存储。用户进一步明确基础查找按任务类型和时间；按 Input 参数筛选仅是后续高级候选。时间口径及具体协议仍待收敛，不能把对局部已加载页的筛选当作全范围查询；不预设新增通用查询语言、全局事件订阅或绕过 scope 授权，也不默认增加 UI 治理控制台。
 
+2026-10-31 已完成[历史查询专项调研](../../../../01M66TPNEMSQ8Y8SDSN2CDN6BA/outer/inner/ideal/Research.md)，以真实 handler 的内存探针确认：已有两项任务时 GET `/tasks` 仍为 404，按已知 ID 查询则可成功。用户同意建立独立 [task-history-query](../../../../01M66TPNEMSQ8Y8SDSN2CDN6BA/outer/inner/ideal/Idea.md)，仅保存准备材料。该调研还区分了现有 retentionMs/collect 原语与尚未由标准服务安排的定期清理，后者不并入目录查询范围。
+
 ### 4. 资产缓存调查（历史材料，不属于首版）
 
 以下保留原基线调查，仅供将来具体业务工具参考；不作为通用 Engine/Web UI 的管理接口设计。原基线至少有四种不同对象（E6–E8）：

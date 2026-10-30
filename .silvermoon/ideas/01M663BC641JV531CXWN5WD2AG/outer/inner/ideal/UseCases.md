@@ -401,6 +401,16 @@ Agent 核实当前制品 Subject Schema 使用 Ajv 的 Draft 2020-12 校验并�
 
 本次是用户明确收敛范围，不是 Agent 因技术缺口删功能，也不是实施或发布授权。
 
+### 第二十一轮：历史查询专项调研与独立 idea
+
+2026-10-31，用户要求调研历史查询缺口，并提出可能建立新 idea。Agent 核对公开协议、Engine、SQLite、权限、分页、旧契约及清理路径，并用真实 handler 的内存探针验证任务数据存在但无目录查询。
+
+在明确建议范围为“授权任务列表、类型/时间筛选、分页、衔接现有详情及原参数查询”，排除高级 Input 搜索、自动清理治理和 UI 实现，并明确只建立 preparing 材料、不开始实现后，用户确认建立。
+
+已创建 [task-history-query](../../../../01M66TPNEMSQ8Y8SDSN2CDN6BA/outer/inner/ideal/Idea.md)，源码证据、探针结果与未决契约集中在其[调研](../../../../01M66TPNEMSQ8Y8SDSN2CDN6BA/outer/inner/ideal/Research.md)。receivedAt 建议、摘要形状及分页一致性仍待该 idea 收敛；没有将这些技术建议当作用户已选择。
+
+本会话仅记录 UI 依赖，不创建新 session、不重复通知资产管理会话，不继承 Task Schema 的生命周期授权，也不进入本 UI 或新 idea 的验收/实施。
+
 ## 后续访谈方法
 
 - 每轮只围绕一个主题，用一至两个开放问题追问具体经历，不让客户先选择预设功能。
