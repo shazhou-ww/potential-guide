@@ -1,0 +1,3772 @@
+{
+  "status": "passed",
+  "startedAt": "2026-10-30T11:13:35.569Z",
+  "testedDeploymentRevision": "30e50af123a3047c06e4c35364d2ae5dce99695e",
+  "sourceRoot": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+  "externalRoot": "D:\\Code\\check-server-file-deployment-20261030-a1",
+  "runtime": {
+    "node": "24.11.1",
+    "platform": "win32",
+    "architecture": "x64"
+  },
+  "commands": [
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 20384,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 96,
+      "stdoutSha256": "17434a1a696b860b912c8c560b75e2030c5be72e7a40f6f1b1500ad807fa0b7a",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "status",
+        "--porcelain"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 34028,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 108,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "HEAD:.silvermoon/ideas/01M65ABHR94EQ14NYTGZAWRRV3/outer"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 40876,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 91,
+      "stdoutSha256": "4c3361a338fbca47235810e73e1754a0d99dadc23dca36726dd8dae7d8755e12",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "HEAD:packages"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 29524,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 88,
+      "stdoutSha256": "c3ab97b093e589ac846d8fd32206e803e694d3e84f912ce95a5a409132f8f994",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "HEAD:.silvermoon/ideas/01M65ABHR94EQ14NYTGZAWRRV3/outer/inner"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 25208,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 87,
+      "stdoutSha256": "dc54f53428f92d494c3746168709481711a1503927b8ea9683193cf857daaba2",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "pnpm",
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation\\packages\\task-protocol",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\check-server-file-deployment-20261030-a1\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 43780,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 1605,
+      "stdoutSha256": "8e66aecef9cddd860e93e09779e21099f38827b726bc664a68b1d3849bd68e8b",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "cec86bd0130be3b769351d1046a981f640b8b083:packages/task-protocol"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 45184,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 88,
+      "stdoutSha256": "144e98aac7aca3b3053a2516499e1ac67b798f3fbecd11203b2737e48dbc4a27",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "pnpm",
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation\\packages\\task-engine",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\check-server-file-deployment-20261030-a1\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 7032,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 1049,
+      "stdoutSha256": "e1da1450a7e57a070c91246dfda4e264eaeb763bc6870f483d1a6f5adf041025",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "cec86bd0130be3b769351d1046a981f640b8b083:packages/task-engine"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 13332,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 87,
+      "stdoutSha256": "cc31202802229898c34661c6ce9a792b342b0baa703404ccf9d67e13353a619a",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "pnpm",
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation\\packages\\task-engine-http",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\check-server-file-deployment-20261030-a1\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 22456,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 875,
+      "stdoutSha256": "79e76e6ada8e59225d6de3b27d4878e78d3e8bfc350c25c3f6c55e7faf6bd949",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "cec86bd0130be3b769351d1046a981f640b8b083:packages/task-engine-http"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 33464,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 89,
+      "stdoutSha256": "d7cf61b82a16352c34103e3cf41da32e7e475cd8c37c06e3a07bb6cef8e0d878",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "pnpm",
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation\\packages\\task-engine-storage",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\check-server-file-deployment-20261030-a1\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 17772,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 872,
+      "stdoutSha256": "1e0a8a292df9612c2ab9e1434e37b87d50d3bd61593824deb1d61276bd723666",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "cec86bd0130be3b769351d1046a981f640b8b083:packages/task-engine-storage"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 26948,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 89,
+      "stdoutSha256": "aa06cf037f4269eb19642690717f24a0ab6c594a79f6f1cb2e23462847f1bdae",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "pnpm",
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation\\packages\\task-engine-server",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\check-server-file-deployment-20261030-a1\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 20056,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 917,
+      "stdoutSha256": "e4ee019a4866243bdda28f9cb771b43ce0558a74c5e0a61a7968d2939ad472cc",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "cec86bd0130be3b769351d1046a981f640b8b083:packages/task-engine-server"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 40380,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 88,
+      "stdoutSha256": "b6badea73d4852870279dfcbc8cc845b54ab8964b33aec67b5f55f682535684a",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "pnpm",
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation\\packages\\check-runtime-files",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\check-server-file-deployment-20261030-a1\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 34512,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 1291,
+      "stdoutSha256": "a6b96cce4a5761d892877876b260a1190b1e231914b77370b4b6437a4f44ddfe",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "cec86bd0130be3b769351d1046a981f640b8b083:packages/check-runtime-files"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 37792,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 89,
+      "stdoutSha256": "da583ad4a24b0690531d8df377b3c98d88436a240d4f9beba1be9439a233b0a4",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "pnpm",
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation\\packages\\check-artifacts",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\check-server-file-deployment-20261030-a1\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 22396,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 1472,
+      "stdoutSha256": "bf6ce955ddec99e2dc16f0e9224e6b7b3d84098aeb608a61c84d899fc2dc6528",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "cec86bd0130be3b769351d1046a981f640b8b083:packages/check-artifacts"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 26616,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 88,
+      "stdoutSha256": "107a9b2ff7ce08af22d9fcdd8a611ac34745aefcd9b3d7877fe0e092cead06d4",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "pnpm",
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation\\packages\\check-task",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\check-server-file-deployment-20261030-a1\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 28040,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 993,
+      "stdoutSha256": "868996d10765bf7da0d8933bf65d5755568ab517ded332020677f9a82c2cd371",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "cec86bd0130be3b769351d1046a981f640b8b083:packages/check-task"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 26904,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 100,
+      "stdoutSha256": "2312ad1d2b55baed1c0668708f837ee3ec25eb64cb30d8e21db613c961680233",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "pnpm",
+        "install",
+        "--ignore-scripts",
+        "--prefer-offline",
+        "--no-frozen-lockfile",
+        "--reporter=append-only"
+      ],
+      "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\contracts",
+      "pid": 37540,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 2590,
+      "stdoutSha256": "8a4748f03018b433cb145d347977b76faddf2f7643f6d3e9990da4293f596f9f",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "pure-scenario.mjs"
+      ],
+      "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\contracts",
+      "pid": 42824,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 1085,
+      "stdoutSha256": "802d03b86e763e4708f5d95f71d182bb4b4b51fe14c1a4245c40ebcd409c28bc",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "pnpm",
+        "install",
+        "--ignore-scripts",
+        "--prefer-offline",
+        "--no-frozen-lockfile",
+        "--reporter=append-only"
+      ],
+      "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\generic",
+      "pid": 28880,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 1214,
+      "stdoutSha256": "13418f745cc4d206a8bbcd3eca19c00c5f191bcbd172561a6ea947f96b74f52b",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "pnpm",
+        "exec",
+        "task-engine-server",
+        "--help",
+        "--format",
+        "json"
+      ],
+      "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\generic",
+      "pid": 11860,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 938,
+      "stdoutSha256": "580222a1649781704eeeca80ad17ce5f5b6ed70a724d2dbcf7437cfac65b4086",
+      "stderrSha256": "f53094333c5c97a1189c7396509384e2a5ba2d84cbad8452ee2b88c1a3743b28"
+    },
+    {
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "generic-scenario.mjs"
+      ],
+      "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\generic",
+      "pid": 7764,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 1114,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "pnpm",
+        "install",
+        "--ignore-scripts",
+        "--prefer-offline",
+        "--no-frozen-lockfile",
+        "--reporter=append-only"
+      ],
+      "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\check",
+      "pid": 28516,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 1932,
+      "stdoutSha256": "b621b708a761538e1d31d00cc4964cda2e67fa980bd0c3289882d25b88065212",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "pnpm",
+        "exec",
+        "task-engine-server",
+        "--help",
+        "--format",
+        "json"
+      ],
+      "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\check",
+      "pid": 41424,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 860,
+      "stdoutSha256": "580222a1649781704eeeca80ad17ce5f5b6ed70a724d2dbcf7437cfac65b4086",
+      "stderrSha256": "b59da163e6f1145e3bca4ca8a34d25cc87cee1016e89f69bfa64020bce62daa5"
+    },
+    {
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "check-scenario.mjs"
+      ],
+      "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\check",
+      "pid": 28720,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 10497,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "file-scenario.mjs"
+      ],
+      "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\check",
+      "pid": 2936,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 15287,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "packages": [
+    {
+      "name": "@potential-guide/task-protocol",
+      "version": "0.1.0-rc.0",
+      "archive": "D:\\Code\\check-server-file-deployment-20261030-a1\\packs\\potential-guide-task-protocol-0.1.0-rc.0.tgz",
+      "sha256": "b805530c745263e9afc09fe20360463233fc442f09c434908c7627066229875e",
+      "sourceTree": "de0c24e9ed6e78962b1cba9e25897ec855f84914"
+    },
+    {
+      "name": "@potential-guide/task-engine",
+      "version": "0.1.0-rc.0",
+      "archive": "D:\\Code\\check-server-file-deployment-20261030-a1\\packs\\potential-guide-task-engine-0.1.0-rc.0.tgz",
+      "sha256": "4736c560456467bf5732e60cc7259e80a1c90810ac5b290137836b4bec26c9af",
+      "sourceTree": "a7436bbc8a9cd127bbe3dd17cc98f1b33220b10f"
+    },
+    {
+      "name": "@potential-guide/task-engine-http",
+      "version": "0.1.0-rc.0",
+      "archive": "D:\\Code\\check-server-file-deployment-20261030-a1\\packs\\potential-guide-task-engine-http-0.1.0-rc.0.tgz",
+      "sha256": "f5c97c6fca97eb5dc31a11cc9b6cdc5117a1bf29313ed32a13b5dd0eb5587fe5",
+      "sourceTree": "56a0ca8535f0988829b16df3dfa9d3d46e4a5116"
+    },
+    {
+      "name": "@potential-guide/task-engine-storage",
+      "version": "0.1.0-rc.0",
+      "archive": "D:\\Code\\check-server-file-deployment-20261030-a1\\packs\\potential-guide-task-engine-storage-0.1.0-rc.0.tgz",
+      "sha256": "bbe65d282c1595c5a2a8a7cc2fa9231b865100bfb773b71575fd0cb3019d7d88",
+      "sourceTree": "ccd4f2e77acab1dad4c20a2bb41150668aedc03a"
+    },
+    {
+      "name": "@potential-guide/task-engine-server",
+      "version": "0.1.0-rc.0",
+      "archive": "D:\\Code\\check-server-file-deployment-20261030-a1\\packs\\potential-guide-task-engine-server-0.1.0-rc.0.tgz",
+      "sha256": "afc0864be946ffffb67780d862e3b24f8888daf31bb4eae766cedbede639414c",
+      "sourceTree": "56834a8e27779b575d20796c0c27276e8454eaac"
+    },
+    {
+      "name": "@potential-guide/check-runtime-files",
+      "version": "0.1.0",
+      "archive": "D:\\Code\\check-server-file-deployment-20261030-a1\\packs\\potential-guide-check-runtime-files-0.1.0.tgz",
+      "sha256": "89ec7ad05f53972f8624b15586251016c9a78bf14ac0574283e59b1be2c4a32a",
+      "sourceTree": "b33b27e194d25a84740fda28a513f201ef5465ac"
+    },
+    {
+      "name": "@potential-guide/check-artifacts",
+      "version": "0.1.0",
+      "archive": "D:\\Code\\check-server-file-deployment-20261030-a1\\packs\\potential-guide-check-artifacts-0.1.0.tgz",
+      "sha256": "4f0f80ea782e0707486f1411eea1c446b5b4ce9fd163b9bab87e1e54f4afe58a",
+      "sourceTree": "04a95f2015890f14dc021215dab244ef1f86adbe"
+    },
+    {
+      "name": "@potential-guide/check-task",
+      "version": "0.1.0-rc.0",
+      "archive": "D:\\Code\\check-server-file-deployment-20261030-a1\\packs\\potential-guide-check-task-0.1.0-rc.0.tgz",
+      "sha256": "cca26787d5960a45049aeaf0862aa450d34b471c2283ee554df172b82532ab05",
+      "sourceTree": "d090b484baa556e8767d4fe7c60798ed501488b1"
+    }
+  ],
+  "consumers": [
+    {
+      "label": "contracts",
+      "directory": "D:\\Code\\check-server-file-deployment-20261030-a1\\contracts",
+      "entries": [
+        "@potential-guide/check-artifacts"
+      ],
+      "inventory": [
+        {
+          "name": "@potential-guide/check-artifacts",
+          "version": "0.1.0",
+          "firstReachedFrom": "consumer",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+check-arti_3fd0819ad6eebbad41d667ef912ceee4\\node_modules\\@potential-guide\\check-artifacts\\package.json"
+        },
+        {
+          "name": "ajv",
+          "version": "8.20.0",
+          "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0",
+          "installedManifest": "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\package.json"
+        },
+        {
+          "name": "fast-deep-equal",
+          "version": "3.1.3",
+          "firstReachedFrom": "ajv@8.20.0",
+          "installedManifest": "node_modules\\.pnpm\\fast-deep-equal@3.1.3\\node_modules\\fast-deep-equal\\package.json"
+        },
+        {
+          "name": "fast-uri",
+          "version": "3.1.9",
+          "firstReachedFrom": "ajv@8.20.0",
+          "installedManifest": "node_modules\\.pnpm\\fast-uri@3.1.9\\node_modules\\fast-uri\\package.json"
+        },
+        {
+          "name": "json-schema-traverse",
+          "version": "1.0.0",
+          "firstReachedFrom": "ajv@8.20.0",
+          "installedManifest": "node_modules\\.pnpm\\json-schema-traverse@1.0.0\\node_modules\\json-schema-traverse\\package.json"
+        },
+        {
+          "name": "require-from-string",
+          "version": "2.0.2",
+          "firstReachedFrom": "ajv@8.20.0",
+          "installedManifest": "node_modules\\.pnpm\\require-from-string@2.0.2\\node_modules\\require-from-string\\package.json"
+        },
+        {
+          "name": "esbuild",
+          "version": "0.28.2",
+          "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0",
+          "installedManifest": "node_modules\\.pnpm\\esbuild@0.28.2\\node_modules\\esbuild\\package.json"
+        },
+        {
+          "name": "@esbuild/win32-x64",
+          "version": "0.28.2",
+          "firstReachedFrom": "esbuild@0.28.2",
+          "installedManifest": "node_modules\\.pnpm\\@esbuild+win32-x64@0.28.2\\node_modules\\@esbuild\\win32-x64\\package.json"
+        },
+        {
+          "name": "tar",
+          "version": "7.5.22",
+          "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0",
+          "installedManifest": "node_modules\\.pnpm\\tar@7.5.22\\node_modules\\tar\\package.json"
+        },
+        {
+          "name": "@isaacs/fs-minipass",
+          "version": "4.0.1",
+          "firstReachedFrom": "tar@7.5.22",
+          "installedManifest": "node_modules\\.pnpm\\@isaacs+fs-minipass@4.0.1\\node_modules\\@isaacs\\fs-minipass\\package.json"
+        },
+        {
+          "name": "minipass",
+          "version": "7.1.3",
+          "firstReachedFrom": "@isaacs/fs-minipass@4.0.1",
+          "installedManifest": "node_modules\\.pnpm\\minipass@7.1.3\\node_modules\\minipass\\package.json"
+        },
+        {
+          "name": "chownr",
+          "version": "3.0.0",
+          "firstReachedFrom": "tar@7.5.22",
+          "installedManifest": "node_modules\\.pnpm\\chownr@3.0.0\\node_modules\\chownr\\package.json"
+        },
+        {
+          "name": "minizlib",
+          "version": "3.1.0",
+          "firstReachedFrom": "tar@7.5.22",
+          "installedManifest": "node_modules\\.pnpm\\minizlib@3.1.0\\node_modules\\minizlib\\package.json"
+        },
+        {
+          "name": "yallist",
+          "version": "5.0.0",
+          "firstReachedFrom": "tar@7.5.22",
+          "installedManifest": "node_modules\\.pnpm\\yallist@5.0.0\\node_modules\\yallist\\package.json"
+        },
+        {
+          "name": "yaml",
+          "version": "2.9.1",
+          "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0",
+          "installedManifest": "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\package.json"
+        },
+        {
+          "name": "@potential-guide/check-runtime-files",
+          "version": "0.1.0",
+          "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+check-runt_ffc02a5e6b03d25064f9308270d9c34a\\node_modules\\@potential-guide\\check-runtime-files\\package.json"
+        }
+      ],
+      "proof": {
+        "status": "passed",
+        "checkerDigest": "sha256:290dcfba0689e20b451bb079a49e1c3dd1bd01252a35b97a9b926174f450a374",
+        "objectiveDigest": "sha256:ed07e4448485c8b95a7029428d465ebfcd9426b008b59ce3f73096221afbe1d6",
+        "forbiddenIoCalls": 0,
+        "manifests": [
+          "checker",
+          "objective"
+        ],
+        "subjectAndResult": true,
+        "missingFilesRejected": true,
+        "unknownFieldsRejected": true,
+        "changedDigestDetected": true,
+        "missingReferencesRejected": true,
+        "actualRuntimeCheckedSeparately": true,
+        "importedFrom": "file:///D:/Code/check-server-file-deployment-20261030-a1/contracts/node_modules/.pnpm/@potential-guide+check-arti_3fd0819ad6eebbad41d667ef912ceee4/node_modules/@potential-guide/check-artifacts/dist/pure.js",
+        "fileReferenceRoundtrip": {
+          "kind": "checker",
+          "url": "file:///D:/Code/check-server-file-deployment-20261030-a1/contracts/not-required-to-exist.tgz",
+          "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "actualImportGraph": [
+          "node_modules\\.pnpm\\@potential-guide+check-arti_3fd0819ad6eebbad41d667ef912ceee4\\node_modules\\@potential-guide\\check-artifacts\\dist\\pure.js",
+          "node_modules\\.pnpm\\@potential-guide+check-arti_3fd0819ad6eebbad41d667ef912ceee4\\node_modules\\@potential-guide\\check-artifacts\\dist\\contracts.js",
+          "node_modules\\.pnpm\\@potential-guide+check-arti_3fd0819ad6eebbad41d667ef912ceee4\\node_modules\\@potential-guide\\check-artifacts\\dist\\contract-result.js",
+          "node_modules\\.pnpm\\@potential-guide+check-arti_3fd0819ad6eebbad41d667ef912ceee4\\node_modules\\@potential-guide\\check-artifacts\\dist\\mapping.js",
+          "node_modules\\.pnpm\\@potential-guide+check-arti_3fd0819ad6eebbad41d667ef912ceee4\\node_modules\\@potential-guide\\check-artifacts\\dist\\paths.js",
+          "node:crypto",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\2020.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\index.js",
+          "node_modules\\.pnpm\\@potential-guide+check-arti_3fd0819ad6eebbad41d667ef912ceee4\\node_modules\\@potential-guide\\check-artifacts\\dist\\file-url.js",
+          "node:path",
+          "node:url",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\core.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\validate\\index.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\validate\\boolSchema.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\errors.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\codegen\\index.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\codegen\\code.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\codegen\\scope.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\util.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\names.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\validate\\dataType.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\rules.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\validate\\applicability.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\validate\\defaults.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\validate\\keyword.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\code.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\validate\\subschema.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\resolve.js",
+          "node_modules\\.pnpm\\fast-deep-equal@3.1.3\\node_modules\\fast-deep-equal\\index.js",
+          "node_modules\\.pnpm\\json-schema-traverse@1.0.0\\node_modules\\json-schema-traverse\\index.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\runtime\\validation_error.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\ref_error.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\compile\\index.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\data.json",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\runtime\\uri.js",
+          "node_modules\\.pnpm\\fast-uri@3.1.9\\node_modules\\fast-uri\\index.js",
+          "node_modules\\.pnpm\\fast-uri@3.1.9\\node_modules\\fast-uri\\lib\\utils.js",
+          "node_modules\\.pnpm\\fast-uri@3.1.9\\node_modules\\fast-uri\\lib\\schemes.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\draft2020.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\core\\index.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\core\\id.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\core\\ref.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\index.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\limitNumber.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\multipleOf.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\limitLength.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\runtime\\ucs2length.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\pattern.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\limitProperties.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\required.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\limitItems.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\uniqueItems.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\runtime\\equal.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\const.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\enum.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\index.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\additionalItems.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\prefixItems.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\items.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\items2020.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\contains.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\dependencies.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\propertyNames.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\additionalProperties.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\properties.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\patternProperties.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\not.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\anyOf.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\oneOf.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\allOf.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\if.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\thenElse.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\dynamic\\index.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\dynamic\\dynamicAnchor.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\dynamic\\dynamicRef.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\dynamic\\recursiveAnchor.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\dynamic\\recursiveRef.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\next.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\dependentRequired.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\applicator\\dependentSchemas.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\validation\\limitContains.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\unevaluated\\index.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\unevaluated\\unevaluatedProperties.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\unevaluated\\unevaluatedItems.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\format\\index.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\format\\format.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\metadata.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\discriminator\\index.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\vocabularies\\discriminator\\types.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\index.js",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\schema.json",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\meta\\applicator.json",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\meta\\unevaluated.json",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\meta\\content.json",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\meta\\core.json",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\meta\\format-annotation.json",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\meta\\meta-data.json",
+          "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\dist\\refs\\json-schema-2020-12\\meta\\validation.json",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\composer.js",
+          "node:process",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\doc\\directives.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\identity.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\visit.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\doc\\Document.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\Alias.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\doc\\anchors.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\Node.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\doc\\applyReviver.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\toJS.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\Collection.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\doc\\createNode.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\Scalar.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\Pair.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\stringifyPair.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\stringify.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\stringifyComment.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\stringifyString.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\foldFlowLines.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\addPairToJSMap.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\log.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\merge.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\Schema.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\common\\map.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\YAMLMap.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\stringifyCollection.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\common\\seq.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\nodes\\YAMLSeq.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\common\\string.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\tags.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\common\\null.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\core\\bool.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\core\\float.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\stringifyNumber.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\core\\int.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\core\\schema.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\json\\schema.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\binary.js",
+          "node:buffer",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\omap.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\pairs.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\schema.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\bool.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\float.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\int.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\set.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\schema\\yaml-1.1\\timestamp.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\stringify\\stringifyDocument.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\errors.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\compose-doc.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\compose-node.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\compose-collection.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\resolve-block-map.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\resolve-props.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\util-contains-newline.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\util-flow-indent-check.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\util-map-includes.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\resolve-block-seq.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\resolve-flow-collection.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\resolve-end.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\compose-scalar.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\resolve-block-scalar.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\resolve-flow-scalar.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\compose\\util-empty-scalar-position.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\parse\\cst.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\parse\\cst-scalar.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\parse\\cst-stringify.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\parse\\cst-visit.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\parse\\lexer.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\parse\\line-counter.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\parse\\parser.js",
+          "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\dist\\public-api.js"
+        ]
+      }
+    },
+    {
+      "label": "generic",
+      "directory": "D:\\Code\\check-server-file-deployment-20261030-a1\\generic",
+      "entries": [
+        "@potential-guide/task-engine-server",
+        "@potential-guide/task-engine",
+        "@potential-guide/task-protocol"
+      ],
+      "inventory": [
+        {
+          "name": "@potential-guide/task-engine-server",
+          "version": "0.1.0-rc.0",
+          "firstReachedFrom": "consumer",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+task-engin_4d6fd50f629b1a733752921881e343a7\\node_modules\\@potential-guide\\task-engine-server\\package.json"
+        },
+        {
+          "name": "@potential-guide/task-protocol",
+          "version": "0.1.0-rc.0",
+          "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+task-proto_a8a097b617aa948a432ad938b7cd099a\\node_modules\\@potential-guide\\task-protocol\\package.json"
+        },
+        {
+          "name": "@potential-guide/task-engine-http",
+          "version": "0.1.0-rc.0",
+          "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+task-engin_2d7a2cc7a25642bf5630f0005fa47f24\\node_modules\\@potential-guide\\task-engine-http\\package.json"
+        },
+        {
+          "name": "@potential-guide/task-engine",
+          "version": "0.1.0-rc.0",
+          "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+task-engin_4aa45acf5b3fae1981d7eee66d8fb385\\node_modules\\@potential-guide\\task-engine\\package.json"
+        },
+        {
+          "name": "@potential-guide/task-engine-storage",
+          "version": "0.1.0-rc.0",
+          "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+task-engin_d5f2fec7e02203a4c78522797dc5e395\\node_modules\\@potential-guide\\task-engine-storage\\package.json"
+        }
+      ],
+      "executableHelp": {
+        "schemaVersion": 1,
+        "command": "task-engine-server",
+        "usage": "task-engine-server --config <trusted-local-module.mjs>",
+        "configuration": "trusted-local-module"
+      },
+      "proof": {
+        "cases": [
+          {
+            "case": "generic-programmatic",
+            "task": {
+              "requestId": "01M66888TQQPHY4GNHTR5GSNP1",
+              "taskId": "01M66888V0R00YZ0HB20RQ9JB9",
+              "seriesId": "01M66888V0R00YZ0HB20RQ9JB9",
+              "stage": "completed",
+              "receivedAt": "2026-10-30T11:13:52.480Z",
+              "eligibleAt": "2026-10-30T11:13:52.480Z",
+              "deadlineAt": "2026-10-30T11:14:22.480Z",
+              "timestamp": "2026-10-30T11:13:52.567Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:13:52.503Z",
+                "completedAt": "2026-10-30T11:13:52.510Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:13:52.521Z"
+              },
+              "execution": {
+                "executionId": "01M66888W95CCD5VMH0H9S10S0",
+                "startedAt": "2026-10-30T11:13:52.521Z",
+                "completedAt": "2026-10-30T11:13:52.527Z"
+              },
+              "termination": {
+                "terminatedAt": "2026-10-30T11:13:52.545Z"
+              },
+              "result": {
+                "text": "independent"
+              }
+            },
+            "sequences": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "resumedCursor": "eyJzdG9yZUlkIjoiNTRhMWQ3MTItNmIyYi00MmJkLTg0MWMtNDI3ZDRhOGU0M2Y1IiwiZmlsdGVyIjoie1widGFza0lkXCI6XCIwMU02Njg4OFYwUjAwWVowSEIyMFJROUpCOVwifSIsIndhdGVybWFyayI6OCwicG9zaXRpb24iOjgsIm1vZGUiOiJzdHJlYW0ifQ"
+          },
+          {
+            "case": "generic-cli",
+            "task": {
+              "requestId": "01M6688978W3NKQ47DX8HWDPK7",
+              "taskId": "01M668897E0SF4SRM8N5D9QKJC",
+              "seriesId": "01M668897E0SF4SRM8N5D9QKJC",
+              "stage": "completed",
+              "receivedAt": "2026-10-30T11:13:52.878Z",
+              "eligibleAt": "2026-10-30T11:13:52.878Z",
+              "deadlineAt": "2026-10-30T11:14:22.878Z",
+              "timestamp": "2026-10-30T11:13:52.957Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:13:52.887Z",
+                "completedAt": "2026-10-30T11:13:52.895Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:13:52.911Z"
+              },
+              "execution": {
+                "executionId": "01M668898F7VANYA9BWCA9PNW2",
+                "startedAt": "2026-10-30T11:13:52.911Z",
+                "completedAt": "2026-10-30T11:13:52.920Z"
+              },
+              "termination": {
+                "terminatedAt": "2026-10-30T11:13:52.938Z"
+              },
+              "result": {
+                "text": "independent"
+              }
+            },
+            "sequences": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "resumedCursor": "eyJzdG9yZUlkIjoiM2UyOWZlNTktNzc4ZC00OGU3LWE1YzctYTMxNjFmYjg1NTlkIiwiZmlsdGVyIjoie1widGFza0lkXCI6XCIwMU02Njg4OTdFMFNGNFNSTThONUQ5UUtKQ1wifSIsIndhdGVybWFyayI6OCwicG9zaXRpb24iOjgsIm1vZGUiOiJzdHJlYW0ifQ"
+          },
+          {
+            "case": "cli-fatal-startup",
+            "elapsedMs": 168.89390000000003,
+            "code": 1,
+            "signal": null,
+            "ready": false,
+            "closed": false,
+            "harnessKill": false,
+            "stderr": "(node:29972) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nStartup failed; physical cleanup unconfirmed. AggregateError: Server startup and rollback failed; cleanup is unconfirmed.\n    at startTaskServer (file:///D:/Code/check-server-file-deployment-20261030-a1/generic/node_modules/.pnpm/@potential-guide+task-engin_4d6fd50f629b1a733752921881e343a7/node_modules/@potential-guide/task-engine-server/dist/index.js:224:19)\n    at async main (file:///D:/Code/check-server-file-deployment-20261030-a1/generic/node_modules/.pnpm/@potential-guide+task-engin_4d6fd50f629b1a733752921881e343a7/node_modules/@potential-guide/task-engine-server/dist/main.js:24:20) {\n  [errors]: [\n    TaskError: Current TaskType version is not registered.\n        at startTaskServer (file:///D:/Code/check-server-file-deployment-20261030-a1/generic/node_modules/.pnpm/@potential-guide+task-engin_4d6fd50f629b1a733752921881e343a7/node_modules/@potential-guide/task-engine-server/dist/index.js:91:23)\n        at main (file:///D:/Code/check-server-file-deployment-20261030-a1/generic/node_modules/.pnpm/@potential-guide+task-engin_4d6fd50f629b1a733752921881e343a7/node_modules/@potential-guide/task-engine-server/dist/main.js:24:26) {\n      code: 'invalid_config'\n    },\n    TaskError: Resource cleanup was not confirmed in time.\n        at Timeout._onTimeout (file:///D:/Code/check-server-file-deployment-20261030-a1/generic/node_modules/.pnpm/@potential-guide+task-engin_4d6fd50f629b1a733752921881e343a7/node_modules/@potential-guide/task-engine-server/dist/index.js:10:47)\n        at listOnTimeout (node:internal/timers:605:17)\n        at process.processTimers (node:internal/timers:541:7) {\n      code: 'shutdown_failed'\n    }\n  ]\n}\n"
+          }
+        ],
+        "processes": [
+          {
+            "pid": 22732,
+            "kind": "ipc-graceful",
+            "code": 0,
+            "signal": null,
+            "aliveAfter": false
+          },
+          {
+            "pid": 30952,
+            "kind": "cli-sigterm",
+            "code": null,
+            "signal": "SIGTERM",
+            "aliveAfter": false,
+            "gracefulSignalProven": false
+          }
+        ],
+        "launches": [
+          {
+            "pid": 22732,
+            "command": [
+              "C:\\nvm4w\\nodejs\\node.exe",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\generic\\server-child.mjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\generic\\generic-config.mjs"
+            ],
+            "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\generic",
+            "configuration": "D:\\Code\\check-server-file-deployment-20261030-a1\\generic\\generic-config.mjs",
+            "cli": false
+          },
+          {
+            "pid": 30952,
+            "command": [
+              "C:\\nvm4w\\nodejs\\node.exe",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\generic\\node_modules\\.pnpm\\@potential-guide+task-engin_4d6fd50f629b1a733752921881e343a7\\node_modules\\@potential-guide\\task-engine-server\\dist\\main.js",
+              "--config",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\generic\\generic-config.mjs"
+            ],
+            "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\generic",
+            "configuration": "D:\\Code\\check-server-file-deployment-20261030-a1\\generic\\generic-config.mjs",
+            "cli": true
+          },
+          {
+            "pid": 29972,
+            "command": [
+              "C:\\nvm4w\\nodejs\\node.exe",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\generic\\node_modules\\.pnpm\\@potential-guide+task-engin_4d6fd50f629b1a733752921881e343a7\\node_modules\\@potential-guide\\task-engine-server\\dist\\main.js",
+              "--config",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\generic\\fatal-config.mjs"
+            ],
+            "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\generic",
+            "configuration": "D:\\Code\\check-server-file-deployment-20261030-a1\\generic\\fatal-config.mjs",
+            "cli": true
+          }
+        ],
+        "status": "passed",
+        "cleanup": {
+          "serverPids": [
+            22732,
+            30952,
+            29972
+          ],
+          "childPids": [],
+          "allAbsent": true
+        }
+      }
+    },
+    {
+      "label": "check",
+      "directory": "D:\\Code\\check-server-file-deployment-20261030-a1\\check",
+      "entries": [
+        "@potential-guide/check-task",
+        "@potential-guide/task-engine-server",
+        "@potential-guide/task-engine",
+        "@potential-guide/task-protocol",
+        "@potential-guide/check-artifacts"
+      ],
+      "inventory": [
+        {
+          "name": "@potential-guide/check-task",
+          "version": "0.1.0-rc.0",
+          "firstReachedFrom": "consumer",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+check-task_b844cc8245ce335bd2e9521be8074890\\node_modules\\@potential-guide\\check-task\\package.json"
+        },
+        {
+          "name": "@potential-guide/check-artifacts",
+          "version": "0.1.0",
+          "firstReachedFrom": "@potential-guide/check-task@0.1.0-rc.0",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+check-arti_3fd0819ad6eebbad41d667ef912ceee4\\node_modules\\@potential-guide\\check-artifacts\\package.json"
+        },
+        {
+          "name": "ajv",
+          "version": "8.20.0",
+          "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0",
+          "installedManifest": "node_modules\\.pnpm\\ajv@8.20.0\\node_modules\\ajv\\package.json"
+        },
+        {
+          "name": "fast-deep-equal",
+          "version": "3.1.3",
+          "firstReachedFrom": "ajv@8.20.0",
+          "installedManifest": "node_modules\\.pnpm\\fast-deep-equal@3.1.3\\node_modules\\fast-deep-equal\\package.json"
+        },
+        {
+          "name": "fast-uri",
+          "version": "3.1.9",
+          "firstReachedFrom": "ajv@8.20.0",
+          "installedManifest": "node_modules\\.pnpm\\fast-uri@3.1.9\\node_modules\\fast-uri\\package.json"
+        },
+        {
+          "name": "json-schema-traverse",
+          "version": "1.0.0",
+          "firstReachedFrom": "ajv@8.20.0",
+          "installedManifest": "node_modules\\.pnpm\\json-schema-traverse@1.0.0\\node_modules\\json-schema-traverse\\package.json"
+        },
+        {
+          "name": "require-from-string",
+          "version": "2.0.2",
+          "firstReachedFrom": "ajv@8.20.0",
+          "installedManifest": "node_modules\\.pnpm\\require-from-string@2.0.2\\node_modules\\require-from-string\\package.json"
+        },
+        {
+          "name": "esbuild",
+          "version": "0.28.2",
+          "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0",
+          "installedManifest": "node_modules\\.pnpm\\esbuild@0.28.2\\node_modules\\esbuild\\package.json"
+        },
+        {
+          "name": "@esbuild/win32-x64",
+          "version": "0.28.2",
+          "firstReachedFrom": "esbuild@0.28.2",
+          "installedManifest": "node_modules\\.pnpm\\@esbuild+win32-x64@0.28.2\\node_modules\\@esbuild\\win32-x64\\package.json"
+        },
+        {
+          "name": "tar",
+          "version": "7.5.22",
+          "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0",
+          "installedManifest": "node_modules\\.pnpm\\tar@7.5.22\\node_modules\\tar\\package.json"
+        },
+        {
+          "name": "@isaacs/fs-minipass",
+          "version": "4.0.1",
+          "firstReachedFrom": "tar@7.5.22",
+          "installedManifest": "node_modules\\.pnpm\\@isaacs+fs-minipass@4.0.1\\node_modules\\@isaacs\\fs-minipass\\package.json"
+        },
+        {
+          "name": "minipass",
+          "version": "7.1.3",
+          "firstReachedFrom": "@isaacs/fs-minipass@4.0.1",
+          "installedManifest": "node_modules\\.pnpm\\minipass@7.1.3\\node_modules\\minipass\\package.json"
+        },
+        {
+          "name": "chownr",
+          "version": "3.0.0",
+          "firstReachedFrom": "tar@7.5.22",
+          "installedManifest": "node_modules\\.pnpm\\chownr@3.0.0\\node_modules\\chownr\\package.json"
+        },
+        {
+          "name": "minizlib",
+          "version": "3.1.0",
+          "firstReachedFrom": "tar@7.5.22",
+          "installedManifest": "node_modules\\.pnpm\\minizlib@3.1.0\\node_modules\\minizlib\\package.json"
+        },
+        {
+          "name": "yallist",
+          "version": "5.0.0",
+          "firstReachedFrom": "tar@7.5.22",
+          "installedManifest": "node_modules\\.pnpm\\yallist@5.0.0\\node_modules\\yallist\\package.json"
+        },
+        {
+          "name": "yaml",
+          "version": "2.9.1",
+          "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0",
+          "installedManifest": "node_modules\\.pnpm\\yaml@2.9.1\\node_modules\\yaml\\package.json"
+        },
+        {
+          "name": "@potential-guide/check-runtime-files",
+          "version": "0.1.0",
+          "firstReachedFrom": "@potential-guide/check-artifacts@0.1.0",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+check-runt_ffc02a5e6b03d25064f9308270d9c34a\\node_modules\\@potential-guide\\check-runtime-files\\package.json"
+        },
+        {
+          "name": "@potential-guide/task-engine",
+          "version": "0.1.0-rc.0",
+          "firstReachedFrom": "@potential-guide/check-task@0.1.0-rc.0",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+task-engin_4aa45acf5b3fae1981d7eee66d8fb385\\node_modules\\@potential-guide\\task-engine\\package.json"
+        },
+        {
+          "name": "@potential-guide/task-protocol",
+          "version": "0.1.0-rc.0",
+          "firstReachedFrom": "@potential-guide/task-engine@0.1.0-rc.0",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+task-proto_a8a097b617aa948a432ad938b7cd099a\\node_modules\\@potential-guide\\task-protocol\\package.json"
+        },
+        {
+          "name": "@potential-guide/task-engine-server",
+          "version": "0.1.0-rc.0",
+          "firstReachedFrom": "consumer",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+task-engin_4d6fd50f629b1a733752921881e343a7\\node_modules\\@potential-guide\\task-engine-server\\package.json"
+        },
+        {
+          "name": "@potential-guide/task-engine-http",
+          "version": "0.1.0-rc.0",
+          "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+task-engin_2d7a2cc7a25642bf5630f0005fa47f24\\node_modules\\@potential-guide\\task-engine-http\\package.json"
+        },
+        {
+          "name": "@potential-guide/task-engine-storage",
+          "version": "0.1.0-rc.0",
+          "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0",
+          "installedManifest": "node_modules\\.pnpm\\@potential-guide+task-engin_d5f2fec7e02203a4c78522797dc5e395\\node_modules\\@potential-guide\\task-engine-storage\\package.json"
+        }
+      ],
+      "executableHelp": {
+        "schemaVersion": 1,
+        "command": "task-engine-server",
+        "usage": "task-engine-server --config <trusted-local-module.mjs>",
+        "configuration": "trusted-local-module"
+      },
+      "proof": {
+        "cases": [
+          {
+            "case": "check-http-sse-shared-cancel",
+            "refusals": {
+              "unauthenticated": 401,
+              "wrongScope": 403,
+              "unauthorizedSse": 401,
+              "wrongScopeSse": 403,
+              "readOnlyCancel": 403,
+              "readOnlySubmit": 403,
+              "requestCannotSelectModule": 400
+            },
+            "canceled": {
+              "requestId": "01M6688DME8JN6SM104E8DKS4D",
+              "taskId": "01M6688DNEPNWVT6TD90NPXKZQ",
+              "seriesId": "01M6688DNEPNWVT6TD90NPXKZQ",
+              "stage": "running",
+              "receivedAt": "2026-10-30T11:13:57.421Z",
+              "eligibleAt": "2026-10-30T11:13:57.421Z",
+              "deadlineAt": "2026-10-30T11:14:57.421Z",
+              "timestamp": "2026-10-30T11:13:58.171Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:13:57.433Z",
+                "completedAt": "2026-10-30T11:13:57.538Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:13:57.572Z"
+              },
+              "execution": {
+                "executionId": "01M6688DT4BKGHWPF9AWM49J8H",
+                "startedAt": "2026-10-30T11:13:57.572Z"
+              },
+              "canceledAt": "2026-10-30T11:13:57.944Z"
+            },
+            "surviving": {
+              "requestId": "01M6688DXECGAA301N53ZCQM90",
+              "taskId": "01M6688DXHR9758C3CMT80BWMV",
+              "seriesId": "01M6688DXHR9758C3CMT80BWMV",
+              "stage": "completed",
+              "receivedAt": "2026-10-30T11:13:57.681Z",
+              "eligibleAt": "2026-10-30T11:13:57.681Z",
+              "deadlineAt": "2026-10-30T11:14:57.681Z",
+              "timestamp": "2026-10-30T11:13:58.114Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:13:57.713Z",
+                "completedAt": "2026-10-30T11:13:57.766Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:13:57.795Z"
+              },
+              "execution": {
+                "executionId": "01M6688DT4BKGHWPF9AWM49J8H",
+                "startedAt": "2026-10-30T11:13:57.572Z",
+                "completedAt": "2026-10-30T11:13:58.025Z"
+              },
+              "termination": {
+                "terminatedAt": "2026-10-30T11:13:58.049Z"
+              },
+              "result": {
+                "ok": false,
+                "problems": [
+                  {
+                    "kind": "internal",
+                    "id": "bad",
+                    "parameters": {
+                      "revision": "original"
+                    }
+                  }
+                ]
+              }
+            },
+            "frames": [
+              {
+                "cursor": "eyJzdG9yZUlkIjoiMGY2MGUyZTYtODJhMS00ZDVkLTg4MmMtMjc2MWM4YjE2NmEyIiwiZmlsdGVyIjoie1widGFza0lkXCI6XCIwMU02Njg4RFhIUjk3NThDM0NNVDgwQldNVlwifSIsIndhdGVybWFyayI6MTAsInBvc2l0aW9uIjoxMCwibW9kZSI6InN0cmVhbSJ9",
+                "data": {
+                  "snapshots": [
+                    {
+                      "requestId": "01M6688DXECGAA301N53ZCQM90",
+                      "taskId": "01M6688DXHR9758C3CMT80BWMV",
+                      "seriesId": "01M6688DXHR9758C3CMT80BWMV",
+                      "stage": "running",
+                      "receivedAt": "2026-10-30T11:13:57.681Z",
+                      "eligibleAt": "2026-10-30T11:13:57.681Z",
+                      "deadlineAt": "2026-10-30T11:14:57.681Z",
+                      "timestamp": "2026-10-30T11:13:57.920Z",
+                      "preparation": {
+                        "startedAt": "2026-10-30T11:13:57.713Z",
+                        "completedAt": "2026-10-30T11:13:57.766Z"
+                      },
+                      "allocation": {
+                        "boundAt": "2026-10-30T11:13:57.795Z"
+                      },
+                      "execution": {
+                        "executionId": "01M6688DT4BKGHWPF9AWM49J8H",
+                        "startedAt": "2026-10-30T11:13:57.572Z"
+                      }
+                    }
+                  ],
+                  "events": [],
+                  "watermark": 10,
+                  "cursor": "eyJzdG9yZUlkIjoiMGY2MGUyZTYtODJhMS00ZDVkLTg4MmMtMjc2MWM4YjE2NmEyIiwiZmlsdGVyIjoie1widGFza0lkXCI6XCIwMU02Njg4RFhIUjk3NThDM0NNVDgwQldNVlwifSIsIndhdGVybWFyayI6MTAsInBvc2l0aW9uIjoxMCwibW9kZSI6InN0cmVhbSJ9"
+                }
+              },
+              {
+                "cursor": "eyJzdG9yZUlkIjoiMGY2MGUyZTYtODJhMS00ZDVkLTg4MmMtMjc2MWM4YjE2NmEyIiwiZmlsdGVyIjoie1widGFza0lkXCI6XCIwMU02Njg4RFhIUjk3NThDM0NNVDgwQldNVlwifSIsIndhdGVybWFyayI6MTQsInBvc2l0aW9uIjoxNCwibW9kZSI6InN0cmVhbSJ9",
+                "data": {
+                  "snapshots": [
+                    {
+                      "requestId": "01M6688DXECGAA301N53ZCQM90",
+                      "taskId": "01M6688DXHR9758C3CMT80BWMV",
+                      "seriesId": "01M6688DXHR9758C3CMT80BWMV",
+                      "stage": "completed",
+                      "receivedAt": "2026-10-30T11:13:57.681Z",
+                      "eligibleAt": "2026-10-30T11:13:57.681Z",
+                      "deadlineAt": "2026-10-30T11:14:57.681Z",
+                      "timestamp": "2026-10-30T11:13:58.392Z",
+                      "preparation": {
+                        "startedAt": "2026-10-30T11:13:57.713Z",
+                        "completedAt": "2026-10-30T11:13:57.766Z"
+                      },
+                      "allocation": {
+                        "boundAt": "2026-10-30T11:13:57.795Z"
+                      },
+                      "execution": {
+                        "executionId": "01M6688DT4BKGHWPF9AWM49J8H",
+                        "startedAt": "2026-10-30T11:13:57.572Z",
+                        "completedAt": "2026-10-30T11:13:58.025Z"
+                      },
+                      "termination": {
+                        "terminatedAt": "2026-10-30T11:13:58.049Z"
+                      },
+                      "result": {
+                        "ok": false,
+                        "problems": [
+                          {
+                            "kind": "internal",
+                            "id": "bad",
+                            "parameters": {
+                              "revision": "original"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "events": [
+                    {
+                      "type": "execution.completed",
+                      "scope": "one",
+                      "executionId": "01M6688DT4BKGHWPF9AWM49J8H",
+                      "occurredAt": "2026-10-30T11:13:58.025Z",
+                      "data": {
+                        "result": {
+                          "ok": false,
+                          "problems": [
+                            {
+                              "kind": "internal",
+                              "id": "bad",
+                              "parameters": {
+                                "revision": "original"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      "sequence": 12
+                    },
+                    {
+                      "type": "execution.reclaimed",
+                      "scope": "one",
+                      "executionId": "01M6688DT4BKGHWPF9AWM49J8H",
+                      "occurredAt": "2026-10-30T11:13:58.043Z",
+                      "data": {},
+                      "sequence": 13
+                    },
+                    {
+                      "type": "task.terminated",
+                      "scope": "one",
+                      "taskId": "01M6688DXHR9758C3CMT80BWMV",
+                      "occurredAt": "2026-10-30T11:13:58.049Z",
+                      "data": {
+                        "executionId": "01M6688DT4BKGHWPF9AWM49J8H"
+                      },
+                      "sequence": 14
+                    }
+                  ],
+                  "watermark": 14,
+                  "cursor": "eyJzdG9yZUlkIjoiMGY2MGUyZTYtODJhMS00ZDVkLTg4MmMtMjc2MWM4YjE2NmEyIiwiZmlsdGVyIjoie1widGFza0lkXCI6XCIwMU02Njg4RFhIUjk3NThDM0NNVDgwQldNVlwifSIsIndhdGVybWFyayI6MTQsInBvc2l0aW9uIjoxNCwibW9kZSI6InN0cmVhbSJ9"
+                }
+              },
+              {
+                "cursor": "eyJzdG9yZUlkIjoiMGY2MGUyZTYtODJhMS00ZDVkLTg4MmMtMjc2MWM4YjE2NmEyIiwiZmlsdGVyIjoie1widGFza0lkXCI6XCIwMU02Njg4RFhIUjk3NThDM0NNVDgwQldNVlwifSIsIndhdGVybWFyayI6MTQsInBvc2l0aW9uIjoxNCwibW9kZSI6InN0cmVhbSJ9",
+                "data": {
+                  "snapshots": [
+                    {
+                      "requestId": "01M6688DXECGAA301N53ZCQM90",
+                      "taskId": "01M6688DXHR9758C3CMT80BWMV",
+                      "seriesId": "01M6688DXHR9758C3CMT80BWMV",
+                      "stage": "completed",
+                      "receivedAt": "2026-10-30T11:13:57.681Z",
+                      "eligibleAt": "2026-10-30T11:13:57.681Z",
+                      "deadlineAt": "2026-10-30T11:14:57.681Z",
+                      "timestamp": "2026-10-30T11:13:58.643Z",
+                      "preparation": {
+                        "startedAt": "2026-10-30T11:13:57.713Z",
+                        "completedAt": "2026-10-30T11:13:57.766Z"
+                      },
+                      "allocation": {
+                        "boundAt": "2026-10-30T11:13:57.795Z"
+                      },
+                      "execution": {
+                        "executionId": "01M6688DT4BKGHWPF9AWM49J8H",
+                        "startedAt": "2026-10-30T11:13:57.572Z",
+                        "completedAt": "2026-10-30T11:13:58.025Z"
+                      },
+                      "termination": {
+                        "terminatedAt": "2026-10-30T11:13:58.049Z"
+                      },
+                      "result": {
+                        "ok": false,
+                        "problems": [
+                          {
+                            "kind": "internal",
+                            "id": "bad",
+                            "parameters": {
+                              "revision": "original"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "events": [],
+                  "watermark": 14,
+                  "cursor": "eyJzdG9yZUlkIjoiMGY2MGUyZTYtODJhMS00ZDVkLTg4MmMtMjc2MWM4YjE2NmEyIiwiZmlsdGVyIjoie1widGFza0lkXCI6XCIwMU02Njg4RFhIUjk3NThDM0NNVDgwQldNVlwifSIsIndhdGVybWFyayI6MTQsInBvc2l0aW9uIjoxNCwibW9kZSI6InN0cmVhbSJ9"
+                }
+              },
+              {
+                "cursor": "eyJzdG9yZUlkIjoiMGY2MGUyZTYtODJhMS00ZDVkLTg4MmMtMjc2MWM4YjE2NmEyIiwiZmlsdGVyIjoie1widGFza0lkXCI6XCIwMU02Njg4RFhIUjk3NThDM0NNVDgwQldNVlwifSIsIndhdGVybWFyayI6MTQsInBvc2l0aW9uIjoxNCwibW9kZSI6InN0cmVhbSJ9",
+                "data": {
+                  "snapshots": [
+                    {
+                      "requestId": "01M6688DXECGAA301N53ZCQM90",
+                      "taskId": "01M6688DXHR9758C3CMT80BWMV",
+                      "seriesId": "01M6688DXHR9758C3CMT80BWMV",
+                      "stage": "completed",
+                      "receivedAt": "2026-10-30T11:13:57.681Z",
+                      "eligibleAt": "2026-10-30T11:13:57.681Z",
+                      "deadlineAt": "2026-10-30T11:14:57.681Z",
+                      "timestamp": "2026-10-30T11:13:58.855Z",
+                      "preparation": {
+                        "startedAt": "2026-10-30T11:13:57.713Z",
+                        "completedAt": "2026-10-30T11:13:57.766Z"
+                      },
+                      "allocation": {
+                        "boundAt": "2026-10-30T11:13:57.795Z"
+                      },
+                      "execution": {
+                        "executionId": "01M6688DT4BKGHWPF9AWM49J8H",
+                        "startedAt": "2026-10-30T11:13:57.572Z",
+                        "completedAt": "2026-10-30T11:13:58.025Z"
+                      },
+                      "termination": {
+                        "terminatedAt": "2026-10-30T11:13:58.049Z"
+                      },
+                      "result": {
+                        "ok": false,
+                        "problems": [
+                          {
+                            "kind": "internal",
+                            "id": "bad",
+                            "parameters": {
+                              "revision": "original"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "events": [],
+                  "watermark": 14,
+                  "cursor": "eyJzdG9yZUlkIjoiMGY2MGUyZTYtODJhMS00ZDVkLTg4MmMtMjc2MWM4YjE2NmEyIiwiZmlsdGVyIjoie1widGFza0lkXCI6XCIwMU02Njg4RFhIUjk3NThDM0NNVDgwQldNVlwifSIsIndhdGVybWFyayI6MTQsInBvc2l0aW9uIjoxNCwibW9kZSI6InN0cmVhbSJ9"
+                }
+              }
+            ],
+            "historySequences": [
+              4,
+              6,
+              7,
+              8,
+              9,
+              10,
+              12,
+              13,
+              14
+            ],
+            "invocationCountAfterReconnectAndIdempotency": 1
+          },
+          {
+            "case": "explicit-artifact-runtime-execution-failures",
+            "failures": [
+              {
+                "name": "digest",
+                "final": {
+                  "requestId": "01M6688G50FW7QMHN0SCSJPCW5",
+                  "taskId": "01M6688G521128TFTNBQPB6PZ2",
+                  "seriesId": "01M6688G521128TFTNBQPB6PZ2",
+                  "stage": "preparation_failed",
+                  "receivedAt": "2026-10-30T11:13:59.970Z",
+                  "eligibleAt": "2026-10-30T11:13:59.970Z",
+                  "deadlineAt": "2026-10-30T11:14:59.970Z",
+                  "timestamp": "2026-10-30T11:14:00.018Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:13:59.984Z",
+                    "failedAt": "2026-10-30T11:14:00.009Z"
+                  },
+                  "error": {
+                    "code": "artifact_digest_mismatch",
+                    "message": "Selected artifact kind or exact digest differs."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:00.009Z"
+                  }
+                }
+              },
+              {
+                "name": "archive",
+                "final": {
+                  "requestId": "01M6688G6KG4HN9SDA3DYEN8TY",
+                  "taskId": "01M6688G6MS5X8XNSCJYJVM99F",
+                  "seriesId": "01M6688G6MS5X8XNSCJYJVM99F",
+                  "stage": "preparation_failed",
+                  "receivedAt": "2026-10-30T11:14:00.020Z",
+                  "eligibleAt": "2026-10-30T11:14:00.020Z",
+                  "deadlineAt": "2026-10-30T11:15:00.020Z",
+                  "timestamp": "2026-10-30T11:14:00.052Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:14:00.027Z",
+                    "failedAt": "2026-10-30T11:14:00.037Z"
+                  },
+                  "error": {
+                    "code": "artifact_invalid",
+                    "message": "Artifact file set or contract is invalid."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:00.037Z"
+                  }
+                }
+              },
+              {
+                "name": "runtime",
+                "final": {
+                  "requestId": "01M6688G7NHGYZG9JJTAK0ZH1H",
+                  "taskId": "01M6688G7PADVJ81354F724A6Z",
+                  "seriesId": "01M6688G7PADVJ81354F724A6Z",
+                  "stage": "preparation_failed",
+                  "receivedAt": "2026-10-30T11:14:00.054Z",
+                  "eligibleAt": "2026-10-30T11:14:00.054Z",
+                  "deadlineAt": "2026-10-30T11:15:00.054Z",
+                  "timestamp": "2026-10-30T11:14:00.127Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:14:00.062Z",
+                    "failedAt": "2026-10-30T11:14:00.116Z"
+                  },
+                  "error": {
+                    "code": "unsupported_runtime",
+                    "message": "Checker runtime is unavailable."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:00.116Z"
+                  }
+                }
+              },
+              {
+                "name": "scope",
+                "final": {
+                  "requestId": "01M6688GA1G7VR0PY473CCF2CN",
+                  "taskId": "01M6688GA2BYJ6Q9H8DCTMKGYF",
+                  "seriesId": "01M6688GA2BYJ6Q9H8DCTMKGYF",
+                  "stage": "preparation_failed",
+                  "receivedAt": "2026-10-30T11:14:00.130Z",
+                  "eligibleAt": "2026-10-30T11:14:00.130Z",
+                  "deadlineAt": "2026-10-30T11:15:00.130Z",
+                  "timestamp": "2026-10-30T11:14:00.161Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:14:00.137Z",
+                    "failedAt": "2026-10-30T11:14:00.144Z"
+                  },
+                  "error": {
+                    "code": "artifact_source_denied",
+                    "message": "Source scope denied."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:00.144Z"
+                  }
+                }
+              },
+              {
+                "name": "execution",
+                "final": {
+                  "requestId": "01M6688GB3D86PXTQVPBY2B8T2",
+                  "taskId": "01M6688GB3KPETPC08D09N0EKH",
+                  "seriesId": "01M6688GB3KPETPC08D09N0EKH",
+                  "stage": "execution_failed",
+                  "receivedAt": "2026-10-30T11:14:00.163Z",
+                  "eligibleAt": "2026-10-30T11:14:00.163Z",
+                  "deadlineAt": "2026-10-30T11:15:00.163Z",
+                  "timestamp": "2026-10-30T11:14:00.456Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:14:00.170Z",
+                    "completedAt": "2026-10-30T11:14:00.214Z"
+                  },
+                  "allocation": {
+                    "boundAt": "2026-10-30T11:14:00.258Z"
+                  },
+                  "execution": {
+                    "executionId": "01M6688GE2CZQTX59TGZAZPG8P",
+                    "startedAt": "2026-10-30T11:14:00.258Z",
+                    "failedAt": "2026-10-30T11:14:00.401Z"
+                  },
+                  "error": {
+                    "code": "execution_failed",
+                    "message": "Checker execution failed."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:00.421Z"
+                  }
+                }
+              },
+              {
+                "name": "result",
+                "final": {
+                  "requestId": "01M6688GMA21YWT36SWWD5YH0J",
+                  "taskId": "01M6688GMBC7B2GRN1MK6Z3FX8",
+                  "seriesId": "01M6688GMBC7B2GRN1MK6Z3FX8",
+                  "stage": "execution_failed",
+                  "receivedAt": "2026-10-30T11:14:00.459Z",
+                  "eligibleAt": "2026-10-30T11:14:00.459Z",
+                  "deadlineAt": "2026-10-30T11:15:00.459Z",
+                  "timestamp": "2026-10-30T11:14:00.782Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:14:00.476Z",
+                    "completedAt": "2026-10-30T11:14:00.516Z"
+                  },
+                  "allocation": {
+                    "boundAt": "2026-10-30T11:14:00.570Z"
+                  },
+                  "execution": {
+                    "executionId": "01M6688GQTZD21WZP2RQRDZD9D",
+                    "startedAt": "2026-10-30T11:14:00.570Z",
+                    "failedAt": "2026-10-30T11:14:00.728Z"
+                  },
+                  "error": {
+                    "code": "execution_failed",
+                    "message": "Undeclared Checker problem."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:00.748Z"
+                  }
+                }
+              },
+              {
+                "name": "cleanup",
+                "final": {
+                  "requestId": "01M6688GYFKV3E1VZTJSPASQEG",
+                  "taskId": "01M6688GYGKEVKV85AQT65BHA4",
+                  "seriesId": "01M6688GYGKEVKV85AQT65BHA4",
+                  "stage": "execution_failed",
+                  "receivedAt": "2026-10-30T11:14:00.784Z",
+                  "eligibleAt": "2026-10-30T11:14:00.784Z",
+                  "deadlineAt": "2026-10-30T11:15:00.784Z",
+                  "timestamp": "2026-10-30T11:14:01.104Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:14:00.792Z",
+                    "completedAt": "2026-10-30T11:14:00.856Z"
+                  },
+                  "allocation": {
+                    "boundAt": "2026-10-30T11:14:00.919Z"
+                  },
+                  "execution": {
+                    "executionId": "01M6688H2Q38DW4YB1WG3ERNMY",
+                    "startedAt": "2026-10-30T11:14:00.919Z",
+                    "failedAt": "2026-10-30T11:14:01.053Z"
+                  },
+                  "error": {
+                    "code": "execution_failed",
+                    "message": "Checker cleanup failed."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:01.068Z"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "case": "owned-child-physical-cleanup-before-reuse",
+            "childPid": 27984,
+            "aliveAfterReuse": false,
+            "nextTaskId": "01M6688HMEPKAPFD2G6D3MMDJM",
+            "reuseObservation": {
+              "event": "worker-start",
+              "pid": 10860,
+              "threadId": 6,
+              "previousOwnedPid": 27984,
+              "previousOwnedAlive": false
+            }
+          },
+          {
+            "case": "active-sse-graceful-shutdown",
+            "activeTask": {
+              "requestId": "01M6688J3ZS5Y87R6TRCEBQG93",
+              "taskId": "01M6688J40DFGNHVG5FFAJG8KF",
+              "seriesId": "01M6688J40DFGNHVG5FFAJG8KF",
+              "stage": "initial",
+              "receivedAt": "2026-10-30T11:14:01.984Z",
+              "eligibleAt": "2026-10-30T11:14:01.984Z",
+              "deadlineAt": "2026-10-30T11:15:01.984Z",
+              "timestamp": "2026-10-30T11:14:02.001Z"
+            },
+            "physicalWorkerEvents": [
+              {
+                "event": "worker-start",
+                "pid": 10860,
+                "threadId": 1
+              },
+              {
+                "event": "worker-exit",
+                "pid": 10860,
+                "threadId": 1,
+                "code": 0
+              },
+              {
+                "event": "worker-start",
+                "pid": 10860,
+                "threadId": 2
+              },
+              {
+                "event": "worker-exit",
+                "pid": 10860,
+                "threadId": 2,
+                "code": 1
+              },
+              {
+                "event": "worker-start",
+                "pid": 10860,
+                "threadId": 3
+              },
+              {
+                "event": "worker-exit",
+                "pid": 10860,
+                "threadId": 3,
+                "code": 1
+              },
+              {
+                "event": "worker-start",
+                "pid": 10860,
+                "threadId": 4
+              },
+              {
+                "event": "worker-exit",
+                "pid": 10860,
+                "threadId": 4,
+                "code": 1
+              },
+              {
+                "event": "worker-start",
+                "pid": 10860,
+                "threadId": 5
+              },
+              {
+                "event": "worker-exit",
+                "pid": 10860,
+                "threadId": 5,
+                "code": 1
+              },
+              {
+                "event": "worker-start",
+                "pid": 10860,
+                "threadId": 6,
+                "previousOwnedPid": 27984,
+                "previousOwnedAlive": false
+              },
+              {
+                "event": "worker-exit",
+                "pid": 10860,
+                "threadId": 6,
+                "code": 0
+              },
+              {
+                "event": "worker-start",
+                "pid": 10860,
+                "threadId": 7,
+                "previousOwnedPid": 27984,
+                "previousOwnedAlive": false
+              },
+              {
+                "event": "worker-exit",
+                "pid": 10860,
+                "threadId": 7,
+                "code": 1
+              }
+            ]
+          },
+          {
+            "case": "actual-check-cli",
+            "final": {
+              "requestId": "01M6688K1ZNHGWQNEEZB63TWJT",
+              "taskId": "01M6688K2B7EGQ9G5WZAVDDNZS",
+              "seriesId": "01M6688K2B7EGQ9G5WZAVDDNZS",
+              "stage": "completed",
+              "receivedAt": "2026-10-30T11:14:02.954Z",
+              "eligibleAt": "2026-10-30T11:14:02.954Z",
+              "deadlineAt": "2026-10-30T11:15:02.954Z",
+              "timestamp": "2026-10-30T11:14:03.389Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:14:02.970Z",
+                "completedAt": "2026-10-30T11:14:03.075Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:14:03.117Z"
+              },
+              "execution": {
+                "executionId": "01M6688K7D803GRM5DTR9G28AS",
+                "startedAt": "2026-10-30T11:14:03.117Z",
+                "completedAt": "2026-10-30T11:14:03.292Z"
+              },
+              "termination": {
+                "terminatedAt": "2026-10-30T11:14:03.317Z"
+              },
+              "result": {
+                "ok": false,
+                "problems": [
+                  {
+                    "kind": "internal",
+                    "id": "bad",
+                    "parameters": {
+                      "revision": "original"
+                    }
+                  }
+                ]
+              }
+            },
+            "physicalWorkerEvents": [
+              {
+                "event": "worker-start",
+                "pid": 19664,
+                "threadId": 1,
+                "previousOwnedPid": 27984,
+                "previousOwnedAlive": false
+              },
+              {
+                "event": "worker-exit",
+                "pid": 19664,
+                "threadId": 1,
+                "code": 0
+              }
+            ]
+          },
+          {
+            "case": "sqlite-crash-restart",
+            "originalBinding": {
+              "requestId": "01M6688NDV1JAM4CGJAES7R9JW",
+              "taskId": "01M6688NE6Y277Q163P2AA96NY",
+              "seriesId": "01M6688NE6Y277Q163P2AA96NY",
+              "stage": "running",
+              "receivedAt": "2026-10-30T11:14:05.381Z",
+              "eligibleAt": "2026-10-30T11:14:05.381Z",
+              "deadlineAt": "2026-10-30T11:15:05.381Z",
+              "timestamp": "2026-10-30T11:14:05.618Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:14:05.397Z",
+                "completedAt": "2026-10-30T11:14:05.499Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:14:05.536Z"
+              },
+              "execution": {
+                "executionId": "01M6688NK0SHF48CP87R0V22N5",
+                "startedAt": "2026-10-30T11:14:05.536Z"
+              }
+            },
+            "queuedBefore": {
+              "requestId": "01M6688NPAZ5S9T9K7MW8DB42C",
+              "taskId": "01M6688NPD7N6ER5BNH745S5WY",
+              "seriesId": "01M6688NPD7N6ER5BNH745S5WY",
+              "stage": "queued",
+              "receivedAt": "2026-10-30T11:14:05.645Z",
+              "eligibleAt": "2026-10-30T11:14:05.645Z",
+              "deadlineAt": "2026-10-30T11:15:05.645Z",
+              "timestamp": "2026-10-30T11:14:05.734Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:14:05.655Z",
+                "completedAt": "2026-10-30T11:14:05.705Z"
+              }
+            },
+            "interrupted": {
+              "requestId": "01M6688NDV1JAM4CGJAES7R9JW",
+              "taskId": "01M6688NE6Y277Q163P2AA96NY",
+              "seriesId": "01M6688NE6Y277Q163P2AA96NY",
+              "stage": "execution_failed",
+              "receivedAt": "2026-10-30T11:14:05.381Z",
+              "eligibleAt": "2026-10-30T11:14:05.381Z",
+              "deadlineAt": "2026-10-30T11:15:05.381Z",
+              "timestamp": "2026-10-30T11:14:06.402Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:14:05.397Z",
+                "completedAt": "2026-10-30T11:14:05.499Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:14:05.536Z"
+              },
+              "execution": {
+                "executionId": "01M6688NK0SHF48CP87R0V22N5",
+                "startedAt": "2026-10-30T11:14:05.536Z",
+                "failedAt": "2026-10-30T11:14:06.248Z"
+              },
+              "error": {
+                "code": "execution_interrupted",
+                "message": "No reliable final fact survived restart; work is not rerun."
+              },
+              "termination": {
+                "terminatedAt": "2026-10-30T11:14:06.262Z"
+              }
+            },
+            "resumed": {
+              "requestId": "01M6688NPAZ5S9T9K7MW8DB42C",
+              "taskId": "01M6688NPD7N6ER5BNH745S5WY",
+              "seriesId": "01M6688NPD7N6ER5BNH745S5WY",
+              "stage": "completed",
+              "receivedAt": "2026-10-30T11:14:05.645Z",
+              "eligibleAt": "2026-10-30T11:14:05.645Z",
+              "deadlineAt": "2026-10-30T11:15:05.645Z",
+              "timestamp": "2026-10-30T11:14:06.574Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:14:05.655Z",
+                "completedAt": "2026-10-30T11:14:05.705Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:14:06.315Z"
+              },
+              "execution": {
+                "executionId": "01M6688PBBJ29FGKR9CNCXAJFP",
+                "startedAt": "2026-10-30T11:14:06.315Z",
+                "completedAt": "2026-10-30T11:14:06.491Z"
+              },
+              "termination": {
+                "terminatedAt": "2026-10-30T11:14:06.505Z"
+              },
+              "result": {
+                "ok": false,
+                "problems": [
+                  {
+                    "kind": "internal",
+                    "id": "bad",
+                    "parameters": {
+                      "revision": "original"
+                    }
+                  }
+                ]
+              }
+            },
+            "originalDigest": "sha256:52c61c02c83b019d0437e4a8fff3c69bf9a8aa50c8584ac0b7234733cae78242",
+            "replacedSourceDigest": "sha256:8a2d7e42de7443e09a4e795afeaf2882ae02394f0afca78619355ab87c7720d3",
+            "downloadsBefore": 6,
+            "downloadsAfter": 6,
+            "invocations": [
+              {
+                "event": "execute",
+                "name": "unknown",
+                "pid": 46616,
+                "threadId": 1,
+                "revision": "original"
+              },
+              {
+                "event": "execute",
+                "name": "queued",
+                "pid": 28980,
+                "threadId": 1,
+                "revision": "original"
+              }
+            ],
+            "crashedProcessAbsent": true,
+            "crashedSnapshotDirectories": [
+              "0c714ff3-fe4e-449c-8721-e6ed5f7cc083"
+            ],
+            "restoredPhysicalWorkerEvents": [
+              {
+                "event": "worker-start",
+                "pid": 28980,
+                "threadId": 1,
+                "previousOwnedPid": 27984,
+                "previousOwnedAlive": false
+              },
+              {
+                "event": "worker-exit",
+                "pid": 28980,
+                "threadId": 1,
+                "code": 0
+              }
+            ]
+          }
+        ],
+        "processes": [
+          {
+            "pid": 10860,
+            "kind": "ipc-graceful",
+            "code": 0,
+            "signal": null,
+            "aliveAfter": false
+          },
+          {
+            "pid": 19664,
+            "kind": "cli-sigterm",
+            "code": null,
+            "signal": "SIGTERM",
+            "aliveAfter": false,
+            "gracefulSignalProven": false
+          },
+          {
+            "pid": 46616,
+            "kind": "crash-recovery",
+            "code": null,
+            "signal": "SIGKILL",
+            "aliveAfter": false
+          },
+          {
+            "pid": 28980,
+            "kind": "ipc-graceful",
+            "code": 0,
+            "signal": null,
+            "aliveAfter": false
+          }
+        ],
+        "artifacts": {
+          "original": {
+            "digest": "sha256:52c61c02c83b019d0437e4a8fff3c69bf9a8aa50c8584ac0b7234733cae78242",
+            "transportDigest": "sha256:012c98faac2dbd5610e8ecb73546b2b06204fbb287346f7e63c9d9eceebe39b8",
+            "archive": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\checker.tgz"
+          },
+          "unavailable": {
+            "digest": "sha256:760234d242c05a478d17b283a4bcfc7c3a4d843c3fd3612add67b82a2377d474",
+            "transportDigest": "sha256:e0f3cf25785d412ea782bdf77db0061a8699f508c4dd394ab6008a59699a0aaa",
+            "archive": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\runtime.tgz"
+          },
+          "replacement": {
+            "digest": "sha256:8a2d7e42de7443e09a4e795afeaf2882ae02394f0afca78619355ab87c7720d3",
+            "transportDigest": "sha256:aef4fa7c10eaa4a31299ed636ce81fc845755952ae59e3e97fc07d0a8f3161db",
+            "archive": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\replacement.tgz"
+          },
+          "sourceMode": "trusted-local-archive-resolver"
+        },
+        "launches": [
+          {
+            "pid": 10860,
+            "command": [
+              "C:\\nvm4w\\nodejs\\node.exe",
+              "--require",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\worker-probe.cjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\server-child.mjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs"
+            ],
+            "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\check",
+            "configuration": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs",
+            "cli": false
+          },
+          {
+            "pid": 19664,
+            "command": [
+              "C:\\nvm4w\\nodejs\\node.exe",
+              "--require",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\worker-probe.cjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\node_modules\\.pnpm\\@potential-guide+task-engin_4d6fd50f629b1a733752921881e343a7\\node_modules\\@potential-guide\\task-engine-server\\dist\\main.js",
+              "--config",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs"
+            ],
+            "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\check",
+            "configuration": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs",
+            "cli": true
+          },
+          {
+            "pid": 46616,
+            "command": [
+              "C:\\nvm4w\\nodejs\\node.exe",
+              "--require",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\worker-probe.cjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\server-child.mjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs"
+            ],
+            "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\check",
+            "configuration": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs",
+            "cli": false
+          },
+          {
+            "pid": 28980,
+            "command": [
+              "C:\\nvm4w\\nodejs\\node.exe",
+              "--require",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\worker-probe.cjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\server-child.mjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs"
+            ],
+            "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\check",
+            "configuration": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs",
+            "cli": false
+          }
+        ],
+        "workerEvents": [
+          {
+            "event": "worker-start",
+            "pid": 10860,
+            "threadId": 1
+          },
+          {
+            "event": "worker-exit",
+            "pid": 10860,
+            "threadId": 1,
+            "code": 0
+          },
+          {
+            "event": "worker-start",
+            "pid": 10860,
+            "threadId": 2
+          },
+          {
+            "event": "worker-exit",
+            "pid": 10860,
+            "threadId": 2,
+            "code": 1
+          },
+          {
+            "event": "worker-start",
+            "pid": 10860,
+            "threadId": 3
+          },
+          {
+            "event": "worker-exit",
+            "pid": 10860,
+            "threadId": 3,
+            "code": 1
+          },
+          {
+            "event": "worker-start",
+            "pid": 10860,
+            "threadId": 4
+          },
+          {
+            "event": "worker-exit",
+            "pid": 10860,
+            "threadId": 4,
+            "code": 1
+          },
+          {
+            "event": "worker-start",
+            "pid": 10860,
+            "threadId": 5
+          },
+          {
+            "event": "worker-exit",
+            "pid": 10860,
+            "threadId": 5,
+            "code": 1
+          },
+          {
+            "event": "worker-start",
+            "pid": 10860,
+            "threadId": 6,
+            "previousOwnedPid": 27984,
+            "previousOwnedAlive": false
+          },
+          {
+            "event": "worker-exit",
+            "pid": 10860,
+            "threadId": 6,
+            "code": 0
+          },
+          {
+            "event": "worker-start",
+            "pid": 10860,
+            "threadId": 7,
+            "previousOwnedPid": 27984,
+            "previousOwnedAlive": false
+          },
+          {
+            "event": "worker-exit",
+            "pid": 10860,
+            "threadId": 7,
+            "code": 1
+          },
+          {
+            "event": "worker-start",
+            "pid": 19664,
+            "threadId": 1,
+            "previousOwnedPid": 27984,
+            "previousOwnedAlive": false
+          },
+          {
+            "event": "worker-exit",
+            "pid": 19664,
+            "threadId": 1,
+            "code": 0
+          },
+          {
+            "event": "worker-start",
+            "pid": 46616,
+            "threadId": 1,
+            "previousOwnedPid": 27984,
+            "previousOwnedAlive": false
+          },
+          {
+            "event": "worker-start",
+            "pid": 28980,
+            "threadId": 1,
+            "previousOwnedPid": 27984,
+            "previousOwnedAlive": false
+          },
+          {
+            "event": "worker-exit",
+            "pid": 28980,
+            "threadId": 1,
+            "code": 0
+          }
+        ],
+        "executionJournal": [
+          {
+            "event": "execute",
+            "name": "shared",
+            "pid": 10860,
+            "threadId": 1,
+            "revision": "original"
+          },
+          {
+            "event": "dispose",
+            "name": "shared",
+            "pid": 10860,
+            "threadId": 1
+          },
+          {
+            "event": "execute",
+            "name": "execution",
+            "pid": 10860,
+            "threadId": 2,
+            "revision": "original"
+          },
+          {
+            "event": "execute",
+            "name": "result",
+            "pid": 10860,
+            "threadId": 3,
+            "revision": "original"
+          },
+          {
+            "event": "execute",
+            "name": "cleanup",
+            "pid": 10860,
+            "threadId": 4,
+            "revision": "original"
+          },
+          {
+            "event": "execute",
+            "name": "child",
+            "pid": 10860,
+            "threadId": 5,
+            "revision": "original"
+          },
+          {
+            "event": "execute",
+            "name": "after-child",
+            "pid": 10860,
+            "threadId": 6,
+            "revision": "original"
+          },
+          {
+            "event": "dispose",
+            "name": "after-child",
+            "pid": 10860,
+            "threadId": 6
+          },
+          {
+            "event": "execute",
+            "name": "shutdown-active",
+            "pid": 10860,
+            "threadId": 7,
+            "revision": "original"
+          },
+          {
+            "event": "execute",
+            "name": "actual-cli",
+            "pid": 19664,
+            "threadId": 1,
+            "revision": "original"
+          },
+          {
+            "event": "dispose",
+            "name": "actual-cli",
+            "pid": 19664,
+            "threadId": 1
+          },
+          {
+            "event": "execute",
+            "name": "unknown",
+            "pid": 46616,
+            "threadId": 1,
+            "revision": "original"
+          },
+          {
+            "event": "execute",
+            "name": "queued",
+            "pid": 28980,
+            "threadId": 1,
+            "revision": "original"
+          },
+          {
+            "event": "dispose",
+            "name": "queued",
+            "pid": 28980,
+            "threadId": 1
+          }
+        ],
+        "downloads": [
+          {
+            "url": "https://deployment.invalid/checker.tgz",
+            "pid": 10860,
+            "mode": "normal"
+          },
+          {
+            "url": "https://deployment.invalid/checker.tgz",
+            "pid": 10860,
+            "mode": "normal"
+          },
+          {
+            "url": "https://deployment.invalid/invalid.tgz",
+            "pid": 10860,
+            "mode": "normal"
+          },
+          {
+            "url": "https://deployment.invalid/runtime.tgz",
+            "pid": 10860,
+            "mode": "normal"
+          },
+          {
+            "url": "https://deployment.invalid/checker.tgz",
+            "pid": 19664,
+            "mode": "normal"
+          },
+          {
+            "url": "https://deployment.invalid/checker.tgz",
+            "pid": 46616,
+            "mode": "initial"
+          }
+        ],
+        "status": "passed",
+        "cleanup": {
+          "serverPids": [
+            10860,
+            19664,
+            46616,
+            28980
+          ],
+          "childPids": [],
+          "allAbsent": true
+        }
+      },
+      "fileProof": {
+        "cases": [
+          {
+            "case": "file-mutable-and-authorized-exact-cache",
+            "first": {
+              "requestId": "01M6688QNX24H26KHGA515E28C",
+              "taskId": "01M6688QQ0EWKEKSXSHPC8MXJ6",
+              "seriesId": "01M6688QQ0EWKEKSXSHPC8MXJ6",
+              "stage": "completed",
+              "receivedAt": "2026-10-30T11:14:07.711Z",
+              "eligibleAt": "2026-10-30T11:14:06.676Z",
+              "deadlineAt": "2026-10-30T11:15:06.676Z",
+              "timestamp": "2026-10-30T11:14:09.627Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:14:07.719Z",
+                "completedAt": "2026-10-30T11:14:09.322Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:14:09.369Z"
+              },
+              "execution": {
+                "executionId": "01M6688SARR2A838TTD3C0WBQW",
+                "startedAt": "2026-10-30T11:14:09.368Z",
+                "completedAt": "2026-10-30T11:14:09.544Z"
+              },
+              "termination": {
+                "terminatedAt": "2026-10-30T11:14:09.560Z"
+              },
+              "result": {
+                "ok": false,
+                "problems": [
+                  {
+                    "kind": "internal",
+                    "id": "bad",
+                    "parameters": {
+                      "revision": "original"
+                    }
+                  }
+                ]
+              }
+            },
+            "second": {
+              "requestId": "01M6688SJYJPHFB55TX4YSJACZ",
+              "taskId": "01M6688SJZMSNPVKC3T6VB5HWY",
+              "seriesId": "01M6688SJZMSNPVKC3T6VB5HWY",
+              "stage": "completed",
+              "receivedAt": "2026-10-30T11:14:09.631Z",
+              "eligibleAt": "2026-10-30T11:14:06.676Z",
+              "deadlineAt": "2026-10-30T11:15:06.676Z",
+              "timestamp": "2026-10-30T11:14:10.742Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:14:09.653Z",
+                "completedAt": "2026-10-30T11:14:10.388Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:14:10.428Z"
+              },
+              "execution": {
+                "executionId": "01M6688TBWB0RRQ5DDJ1VJ32AC",
+                "startedAt": "2026-10-30T11:14:10.428Z",
+                "completedAt": "2026-10-30T11:14:10.649Z"
+              },
+              "termination": {
+                "terminatedAt": "2026-10-30T11:14:10.670Z"
+              },
+              "result": {
+                "ok": false,
+                "problems": [
+                  {
+                    "kind": "internal",
+                    "id": "bad",
+                    "parameters": {
+                      "revision": "replacement"
+                    }
+                  }
+                ]
+              }
+            },
+            "deletedSourceExactCache": {
+              "requestId": "01M6688TNSNBZA8D2SBH7J56TJ",
+              "taskId": "01M6688TNTSTFBCESTZ6WDAHSX",
+              "seriesId": "01M6688TNTSTFBCESTZ6WDAHSX",
+              "stage": "completed",
+              "receivedAt": "2026-10-30T11:14:10.746Z",
+              "eligibleAt": "2026-10-30T11:14:10.746Z",
+              "deadlineAt": "2026-10-30T11:15:10.746Z",
+              "timestamp": "2026-10-30T11:14:11.256Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:14:10.764Z",
+                "completedAt": "2026-10-30T11:14:10.827Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:14:10.897Z"
+              },
+              "execution": {
+                "executionId": "01M6688TTH5ZFGY6ZACS2G416P",
+                "startedAt": "2026-10-30T11:14:10.897Z",
+                "completedAt": "2026-10-30T11:14:11.153Z"
+              },
+              "termination": {
+                "terminatedAt": "2026-10-30T11:14:11.181Z"
+              },
+              "result": {
+                "ok": false,
+                "problems": [
+                  {
+                    "kind": "internal",
+                    "id": "bad",
+                    "parameters": {
+                      "revision": "original"
+                    }
+                  }
+                ]
+              }
+            },
+            "sourceRemoved": true,
+            "httpsHookCalls": 0
+          },
+          {
+            "case": "file-root-scope-and-source-refusals",
+            "refusals": [
+              {
+                "name": "outside-root",
+                "final": {
+                  "requestId": "01M6688V5Z6CV7XY6Z348R7B66",
+                  "taskId": "01M6688V60KM73160VQ3TGSN0G",
+                  "seriesId": "01M6688V60KM73160VQ3TGSN0G",
+                  "stage": "preparation_failed",
+                  "receivedAt": "2026-10-30T11:14:11.264Z",
+                  "eligibleAt": "2026-10-30T11:14:11.264Z",
+                  "deadlineAt": "2026-10-30T11:15:11.264Z",
+                  "timestamp": "2026-10-30T11:14:11.291Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:14:11.274Z",
+                    "failedAt": "2026-10-30T11:14:11.282Z"
+                  },
+                  "error": {
+                    "code": "artifact_source_denied",
+                    "message": "File archive is outside configured roots."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:11.282Z"
+                  }
+                }
+              },
+              {
+                "name": "scope",
+                "final": {
+                  "requestId": "01M6688V6WGYN24AVYDR0T3HA0",
+                  "taskId": "01M6688V6X4A6MP0E8S5VVJQJC",
+                  "seriesId": "01M6688V6X4A6MP0E8S5VVJQJC",
+                  "stage": "preparation_failed",
+                  "receivedAt": "2026-10-30T11:14:11.293Z",
+                  "eligibleAt": "2026-10-30T11:14:11.293Z",
+                  "deadlineAt": "2026-10-30T11:15:11.293Z",
+                  "timestamp": "2026-10-30T11:14:11.316Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:14:11.299Z",
+                    "failedAt": "2026-10-30T11:14:11.308Z"
+                  },
+                  "error": {
+                    "code": "artifact_source_denied",
+                    "message": "Source scope denied."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:11.308Z"
+                  }
+                }
+              },
+              {
+                "name": "missing",
+                "final": {
+                  "requestId": "01M6688V7PVKWYS9WD78MTAT7F",
+                  "taskId": "01M6688V7QS6M1B7Y6YZFR1M7B",
+                  "seriesId": "01M6688V7QS6M1B7Y6YZFR1M7B",
+                  "stage": "preparation_failed",
+                  "receivedAt": "2026-10-30T11:14:11.319Z",
+                  "eligibleAt": "2026-10-30T11:14:11.319Z",
+                  "deadlineAt": "2026-10-30T11:15:11.319Z",
+                  "timestamp": "2026-10-30T11:14:11.993Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:14:11.325Z",
+                    "failedAt": "2026-10-30T11:14:11.980Z"
+                  },
+                  "error": {
+                    "code": "artifact_file_missing",
+                    "message": "Confined archive read failed (file_missing)."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:11.980Z"
+                  }
+                }
+              },
+              {
+                "name": "directory",
+                "final": {
+                  "requestId": "01M6688VWTT5CT1AEFWGF86X1K",
+                  "taskId": "01M6688VWVR1MMF4TGFK9ZTP76",
+                  "seriesId": "01M6688VWVR1MMF4TGFK9ZTP76",
+                  "stage": "preparation_failed",
+                  "receivedAt": "2026-10-30T11:14:11.995Z",
+                  "eligibleAt": "2026-10-30T11:14:11.995Z",
+                  "deadlineAt": "2026-10-30T11:15:11.995Z",
+                  "timestamp": "2026-10-30T11:14:12.670Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:14:12.003Z",
+                    "failedAt": "2026-10-30T11:14:12.647Z"
+                  },
+                  "error": {
+                    "code": "artifact_file_not_regular",
+                    "message": "Confined archive read failed (file_not_regular)."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:12.647Z"
+                  }
+                }
+              },
+              {
+                "name": "oversize",
+                "final": {
+                  "requestId": "01M6688WHZ60V815ZRTANRT0RR",
+                  "taskId": "01M6688WJ0STYXZBK8ANY1Y0FK",
+                  "seriesId": "01M6688WJ0STYXZBK8ANY1Y0FK",
+                  "stage": "preparation_failed",
+                  "receivedAt": "2026-10-30T11:14:12.672Z",
+                  "eligibleAt": "2026-10-30T11:14:12.672Z",
+                  "deadlineAt": "2026-10-30T11:15:12.672Z",
+                  "timestamp": "2026-10-30T11:14:13.347Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:14:12.687Z",
+                    "failedAt": "2026-10-30T11:14:13.325Z"
+                  },
+                  "error": {
+                    "code": "artifact_file_too_large",
+                    "message": "Confined archive read failed (file_too_large)."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:13.325Z"
+                  }
+                }
+              },
+              {
+                "name": "corrupt",
+                "final": {
+                  "requestId": "01M6688X741655QGEG6V9CXGHC",
+                  "taskId": "01M6688X752Z1NZSK0TF0V3DV7",
+                  "seriesId": "01M6688X752Z1NZSK0TF0V3DV7",
+                  "stage": "preparation_failed",
+                  "receivedAt": "2026-10-30T11:14:13.349Z",
+                  "eligibleAt": "2026-10-30T11:14:13.349Z",
+                  "deadlineAt": "2026-10-30T11:15:13.349Z",
+                  "timestamp": "2026-10-30T11:14:14.006Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:14:13.356Z",
+                    "failedAt": "2026-10-30T11:14:13.996Z"
+                  },
+                  "error": {
+                    "code": "artifact_invalid",
+                    "message": "Artifact file set or contract is invalid."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:13.996Z"
+                  }
+                }
+              },
+              {
+                "name": "digest",
+                "final": {
+                  "requestId": "01M6688XVQVG0AJJHP2TMNJ60D",
+                  "taskId": "01M6688XVRK8Q6VKR3TWKAMN68",
+                  "seriesId": "01M6688XVRK8Q6VKR3TWKAMN68",
+                  "stage": "preparation_failed",
+                  "receivedAt": "2026-10-30T11:14:14.008Z",
+                  "eligibleAt": "2026-10-30T11:14:14.008Z",
+                  "deadlineAt": "2026-10-30T11:15:14.008Z",
+                  "timestamp": "2026-10-30T11:14:14.674Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:14:14.015Z",
+                    "failedAt": "2026-10-30T11:14:14.661Z"
+                  },
+                  "error": {
+                    "code": "artifact_digest_mismatch",
+                    "message": "Selected artifact kind or exact digest differs."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:14.661Z"
+                  }
+                }
+              },
+              {
+                "name": "junction",
+                "final": {
+                  "requestId": "01M6688YGKXDJV5CPFVQZN6MGC",
+                  "taskId": "01M6688YGM9N84AKRCMKTVD31C",
+                  "seriesId": "01M6688YGM9N84AKRCMKTVD31C",
+                  "stage": "preparation_failed",
+                  "receivedAt": "2026-10-30T11:14:14.676Z",
+                  "eligibleAt": "2026-10-30T11:14:14.676Z",
+                  "deadlineAt": "2026-10-30T11:15:14.676Z",
+                  "timestamp": "2026-10-30T11:14:15.350Z",
+                  "preparation": {
+                    "startedAt": "2026-10-30T11:14:14.683Z",
+                    "failedAt": "2026-10-30T11:14:15.336Z"
+                  },
+                  "error": {
+                    "code": "artifact_file_denied",
+                    "message": "Confined archive read failed (file_denied)."
+                  },
+                  "termination": {
+                    "terminatedAt": "2026-10-30T11:14:15.336Z"
+                  }
+                }
+              }
+            ],
+            "malformedUrlStatus": 400
+          },
+          {
+            "case": "file-history-sse-and-orderly-cleanup",
+            "events": [
+              {
+                "type": "task.created",
+                "scope": "one",
+                "taskId": "01M6688TNTSTFBCESTZ6WDAHSX",
+                "occurredAt": "2026-10-30T11:14:10.746Z",
+                "data": {
+                  "task": {
+                    "request": {
+                      "type": "check",
+                      "checker": {
+                        "kind": "checker",
+                        "url": "file:///D:/Code/check-server-file-deployment-20261030-a1/check/imports/local%20archive%20%231.tgz",
+                        "digest": "sha256:0e8e06bffe3032f0f9c4e29d45381e3d65f698ff4a37f7b37be67e653435863b"
+                      },
+                      "subject": {
+                        "journal": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\file-execution.jsonl",
+                        "name": "cached-original",
+                        "mode": "business"
+                      },
+                      "timeoutMs": 60000,
+                      "requestId": "01M6688TNSNBZA8D2SBH7J56TJ"
+                    },
+                    "input": {
+                      "checker": {
+                        "kind": "checker",
+                        "url": "file:///D:/Code/check-server-file-deployment-20261030-a1/check/imports/local%20archive%20%231.tgz",
+                        "digest": "sha256:0e8e06bffe3032f0f9c4e29d45381e3d65f698ff4a37f7b37be67e653435863b"
+                      },
+                      "subject": {
+                        "journal": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\file-execution.jsonl",
+                        "name": "cached-original",
+                        "mode": "business"
+                      }
+                    },
+                    "binding": {
+                      "type": "check",
+                      "version": "1",
+                      "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"1a12ea30ebca0437f99cf0a388a198918ece5984340df51b49840758b99044c5\",\"architecture\":\"x64\",\"configuration\":\"{\\\"memoryMb\\\":256,\\\"variables\\\":{},\\\"wallMs\\\":60000}\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.11.1\"}",
+                      "scope": "one",
+                      "subject": "operator",
+                      "executionMatch": "started-after-eligible"
+                    },
+                    "snapshot": {
+                      "requestId": "01M6688TNSNBZA8D2SBH7J56TJ",
+                      "taskId": "01M6688TNTSTFBCESTZ6WDAHSX",
+                      "seriesId": "01M6688TNTSTFBCESTZ6WDAHSX",
+                      "stage": "initial",
+                      "receivedAt": "2026-10-30T11:14:10.746Z",
+                      "eligibleAt": "2026-10-30T11:14:10.746Z",
+                      "deadlineAt": "2026-10-30T11:15:10.746Z",
+                      "timestamp": "2026-10-30T11:14:10.746Z"
+                    }
+                  }
+                },
+                "sequence": 19
+              },
+              {
+                "type": "task.preparation.started",
+                "scope": "one",
+                "taskId": "01M6688TNTSTFBCESTZ6WDAHSX",
+                "occurredAt": "2026-10-30T11:14:10.764Z",
+                "data": {},
+                "sequence": 20
+              },
+              {
+                "type": "task.preparation.completed",
+                "scope": "one",
+                "taskId": "01M6688TNTSTFBCESTZ6WDAHSX",
+                "occurredAt": "2026-10-30T11:14:10.827Z",
+                "data": {},
+                "sequence": 21
+              },
+              {
+                "type": "execution.started",
+                "scope": "one",
+                "executionId": "01M6688TTH5ZFGY6ZACS2G416P",
+                "occurredAt": "2026-10-30T11:14:10.897Z",
+                "data": {
+                  "execution": {
+                    "executionId": "01M6688TTH5ZFGY6ZACS2G416P",
+                    "generation": "01M6688TTHE79HJER6AQYCFNC6",
+                    "binding": {
+                      "type": "check",
+                      "version": "1",
+                      "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"1a12ea30ebca0437f99cf0a388a198918ece5984340df51b49840758b99044c5\",\"architecture\":\"x64\",\"configuration\":\"{\\\"memoryMb\\\":256,\\\"variables\\\":{},\\\"wallMs\\\":60000}\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.11.1\"}",
+                      "scope": "one",
+                      "subject": "operator",
+                      "executionMatch": "started-after-eligible"
+                    },
+                    "input": {
+                      "checker": {
+                        "kind": "checker",
+                        "url": "file:///D:/Code/check-server-file-deployment-20261030-a1/check/imports/local%20archive%20%231.tgz",
+                        "digest": "sha256:0e8e06bffe3032f0f9c4e29d45381e3d65f698ff4a37f7b37be67e653435863b"
+                      },
+                      "subject": {
+                        "journal": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\file-execution.jsonl",
+                        "name": "cached-original",
+                        "mode": "business"
+                      }
+                    },
+                    "startedAt": "2026-10-30T11:14:10.897Z"
+                  }
+                },
+                "sequence": 22
+              },
+              {
+                "type": "task.allocation.bound",
+                "scope": "one",
+                "taskId": "01M6688TNTSTFBCESTZ6WDAHSX",
+                "occurredAt": "2026-10-30T11:14:10.897Z",
+                "data": {
+                  "executionId": "01M6688TTH5ZFGY6ZACS2G416P"
+                },
+                "sequence": 23
+              },
+              {
+                "type": "execution.progress",
+                "scope": "one",
+                "executionId": "01M6688TTH5ZFGY6ZACS2G416P",
+                "occurredAt": "2026-10-30T11:14:11.036Z",
+                "data": {
+                  "progress": {
+                    "pid": 36328,
+                    "threadId": 3
+                  }
+                },
+                "sequence": 24
+              },
+              {
+                "type": "execution.completed",
+                "scope": "one",
+                "executionId": "01M6688TTH5ZFGY6ZACS2G416P",
+                "occurredAt": "2026-10-30T11:14:11.153Z",
+                "data": {
+                  "result": {
+                    "ok": false,
+                    "problems": [
+                      {
+                        "kind": "internal",
+                        "id": "bad",
+                        "parameters": {
+                          "revision": "original"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "sequence": 25
+              },
+              {
+                "type": "execution.reclaimed",
+                "scope": "one",
+                "executionId": "01M6688TTH5ZFGY6ZACS2G416P",
+                "occurredAt": "2026-10-30T11:14:11.175Z",
+                "data": {},
+                "sequence": 26
+              },
+              {
+                "type": "task.terminated",
+                "scope": "one",
+                "taskId": "01M6688TNTSTFBCESTZ6WDAHSX",
+                "occurredAt": "2026-10-30T11:14:11.181Z",
+                "data": {
+                  "executionId": "01M6688TTH5ZFGY6ZACS2G416P"
+                },
+                "sequence": 27
+              }
+            ],
+            "firstFrame": {
+              "cursor": "eyJzdG9yZUlkIjoiM2E1NDEwZGQtY2MxYi00NzhhLTg2YTItMDFiYWJmMDliZDE3IiwiZmlsdGVyIjoie1widGFza0lkXCI6XCIwMU02Njg4VE5UU1RGQkNFU1RaNldEQUhTWFwifSIsIndhdGVybWFyayI6NTksInBvc2l0aW9uIjo1OSwibW9kZSI6InN0cmVhbSJ9",
+              "data": {
+                "snapshots": [
+                  {
+                    "requestId": "01M6688TNSNBZA8D2SBH7J56TJ",
+                    "taskId": "01M6688TNTSTFBCESTZ6WDAHSX",
+                    "seriesId": "01M6688TNTSTFBCESTZ6WDAHSX",
+                    "stage": "completed",
+                    "receivedAt": "2026-10-30T11:14:10.746Z",
+                    "eligibleAt": "2026-10-30T11:14:10.746Z",
+                    "deadlineAt": "2026-10-30T11:15:10.746Z",
+                    "timestamp": "2026-10-30T11:14:16.915Z",
+                    "preparation": {
+                      "startedAt": "2026-10-30T11:14:10.764Z",
+                      "completedAt": "2026-10-30T11:14:10.827Z"
+                    },
+                    "allocation": {
+                      "boundAt": "2026-10-30T11:14:10.897Z"
+                    },
+                    "execution": {
+                      "executionId": "01M6688TTH5ZFGY6ZACS2G416P",
+                      "startedAt": "2026-10-30T11:14:10.897Z",
+                      "completedAt": "2026-10-30T11:14:11.153Z"
+                    },
+                    "termination": {
+                      "terminatedAt": "2026-10-30T11:14:11.181Z"
+                    },
+                    "result": {
+                      "ok": false,
+                      "problems": [
+                        {
+                          "kind": "internal",
+                          "id": "bad",
+                          "parameters": {
+                            "revision": "original"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "events": [],
+                "watermark": 59,
+                "cursor": "eyJzdG9yZUlkIjoiM2E1NDEwZGQtY2MxYi00NzhhLTg2YTItMDFiYWJmMDliZDE3IiwiZmlsdGVyIjoie1widGFza0lkXCI6XCIwMU02Njg4VE5UU1RGQkNFU1RaNldEQUhTWFwifSIsIndhdGVybWFyayI6NTksInBvc2l0aW9uIjo1OSwibW9kZSI6InN0cmVhbSJ9"
+              }
+            },
+            "lastFrame": {
+              "cursor": "eyJzdG9yZUlkIjoiM2E1NDEwZGQtY2MxYi00NzhhLTg2YTItMDFiYWJmMDliZDE3IiwiZmlsdGVyIjoie1widGFza0lkXCI6XCIwMU02Njg4VE5UU1RGQkNFU1RaNldEQUhTWFwifSIsIndhdGVybWFyayI6NTksInBvc2l0aW9uIjo1OSwibW9kZSI6InN0cmVhbSJ9",
+              "data": {
+                "snapshots": [
+                  {
+                    "requestId": "01M6688TNSNBZA8D2SBH7J56TJ",
+                    "taskId": "01M6688TNTSTFBCESTZ6WDAHSX",
+                    "seriesId": "01M6688TNTSTFBCESTZ6WDAHSX",
+                    "stage": "completed",
+                    "receivedAt": "2026-10-30T11:14:10.746Z",
+                    "eligibleAt": "2026-10-30T11:14:10.746Z",
+                    "deadlineAt": "2026-10-30T11:15:10.746Z",
+                    "timestamp": "2026-10-30T11:14:17.175Z",
+                    "preparation": {
+                      "startedAt": "2026-10-30T11:14:10.764Z",
+                      "completedAt": "2026-10-30T11:14:10.827Z"
+                    },
+                    "allocation": {
+                      "boundAt": "2026-10-30T11:14:10.897Z"
+                    },
+                    "execution": {
+                      "executionId": "01M6688TTH5ZFGY6ZACS2G416P",
+                      "startedAt": "2026-10-30T11:14:10.897Z",
+                      "completedAt": "2026-10-30T11:14:11.153Z"
+                    },
+                    "termination": {
+                      "terminatedAt": "2026-10-30T11:14:11.181Z"
+                    },
+                    "result": {
+                      "ok": false,
+                      "problems": [
+                        {
+                          "kind": "internal",
+                          "id": "bad",
+                          "parameters": {
+                            "revision": "original"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "events": [],
+                "watermark": 59,
+                "cursor": "eyJzdG9yZUlkIjoiM2E1NDEwZGQtY2MxYi00NzhhLTg2YTItMDFiYWJmMDliZDE3IiwiZmlsdGVyIjoie1widGFza0lkXCI6XCIwMU02Njg4VE5UU1RGQkNFU1RaNldEQUhTWFwifSIsIndhdGVybWFyayI6NTksInBvc2l0aW9uIjo1OSwibW9kZSI6InN0cmVhbSJ9"
+              }
+            },
+            "physical": {
+              "workers": [
+                {
+                  "event": "worker-start",
+                  "pid": 36328,
+                  "threadId": 1
+                },
+                {
+                  "event": "worker-exit",
+                  "pid": 36328,
+                  "threadId": 1,
+                  "code": 0
+                },
+                {
+                  "event": "worker-start",
+                  "pid": 36328,
+                  "threadId": 2
+                },
+                {
+                  "event": "worker-exit",
+                  "pid": 36328,
+                  "threadId": 2,
+                  "code": 0
+                },
+                {
+                  "event": "worker-start",
+                  "pid": 36328,
+                  "threadId": 3
+                },
+                {
+                  "event": "worker-exit",
+                  "pid": 36328,
+                  "threadId": 3,
+                  "code": 0
+                }
+              ],
+              "helpers": [
+                {
+                  "event": "file-helper-start",
+                  "pid": 36328,
+                  "helperPid": 33280
+                },
+                {
+                  "event": "file-helper-exit",
+                  "pid": 36328,
+                  "helperPid": 33280,
+                  "code": 0,
+                  "signal": null
+                },
+                {
+                  "event": "file-helper-start",
+                  "pid": 36328,
+                  "helperPid": 40144
+                },
+                {
+                  "event": "file-helper-exit",
+                  "pid": 36328,
+                  "helperPid": 40144,
+                  "code": 0,
+                  "signal": null
+                },
+                {
+                  "event": "file-helper-start",
+                  "pid": 36328,
+                  "helperPid": 19344
+                },
+                {
+                  "event": "file-helper-exit",
+                  "pid": 36328,
+                  "helperPid": 19344,
+                  "code": 1,
+                  "signal": null
+                },
+                {
+                  "event": "file-helper-start",
+                  "pid": 36328,
+                  "helperPid": 17544
+                },
+                {
+                  "event": "file-helper-exit",
+                  "pid": 36328,
+                  "helperPid": 17544,
+                  "code": 1,
+                  "signal": null
+                },
+                {
+                  "event": "file-helper-start",
+                  "pid": 36328,
+                  "helperPid": 9264
+                },
+                {
+                  "event": "file-helper-exit",
+                  "pid": 36328,
+                  "helperPid": 9264,
+                  "code": 1,
+                  "signal": null
+                },
+                {
+                  "event": "file-helper-start",
+                  "pid": 36328,
+                  "helperPid": 47016
+                },
+                {
+                  "event": "file-helper-exit",
+                  "pid": 36328,
+                  "helperPid": 47016,
+                  "code": 0,
+                  "signal": null
+                },
+                {
+                  "event": "file-helper-start",
+                  "pid": 36328,
+                  "helperPid": 41776
+                },
+                {
+                  "event": "file-helper-exit",
+                  "pid": 36328,
+                  "helperPid": 41776,
+                  "code": 0,
+                  "signal": null
+                },
+                {
+                  "event": "file-helper-start",
+                  "pid": 36328,
+                  "helperPid": 44380
+                },
+                {
+                  "event": "file-helper-exit",
+                  "pid": 36328,
+                  "helperPid": 44380,
+                  "code": 1,
+                  "signal": null
+                }
+              ],
+              "allHelpersExited": true,
+              "ownedCompilerScratchAbsent": true
+            }
+          },
+          {
+            "case": "absent-file-roots-and-body-context-cannot-grant",
+            "final": {
+              "requestId": "01M66891H3TQQK59DYCTF3Q20A",
+              "taskId": "01M66891HFJ0E5CN68MT2KJN8D",
+              "seriesId": "01M66891HFJ0E5CN68MT2KJN8D",
+              "stage": "preparation_failed",
+              "receivedAt": "2026-10-30T11:14:17.774Z",
+              "eligibleAt": "2026-10-30T11:14:17.774Z",
+              "deadlineAt": "2026-10-30T11:15:17.774Z",
+              "timestamp": "2026-10-30T11:14:17.805Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:14:17.789Z",
+                "failedAt": "2026-10-30T11:14:17.794Z"
+              },
+              "error": {
+                "code": "artifact_source_denied",
+                "message": "File archive is outside configured roots."
+              },
+              "termination": {
+                "terminatedAt": "2026-10-30T11:14:17.794Z"
+              }
+            },
+            "physical": {
+              "workers": [],
+              "helpers": [],
+              "allHelpersExited": true,
+              "ownedCompilerScratchAbsent": true
+            }
+          },
+          {
+            "case": "actual-cli-real-file-source",
+            "final": {
+              "requestId": "01M6689232FQJ5YXGXWEGZD081",
+              "taskId": "01M668923EM7HMRXDFATHX5JP8",
+              "seriesId": "01M668923EM7HMRXDFATHX5JP8",
+              "stage": "completed",
+              "receivedAt": "2026-10-30T11:14:18.349Z",
+              "eligibleAt": "2026-10-30T11:14:18.349Z",
+              "deadlineAt": "2026-10-30T11:15:18.349Z",
+              "timestamp": "2026-10-30T11:14:19.475Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:14:18.366Z",
+                "completedAt": "2026-10-30T11:14:19.133Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:14:19.174Z"
+              },
+              "execution": {
+                "executionId": "01M66892X6EP89FNB7WRFTBAQP",
+                "startedAt": "2026-10-30T11:14:19.174Z",
+                "completedAt": "2026-10-30T11:14:19.381Z"
+              },
+              "termination": {
+                "terminatedAt": "2026-10-30T11:14:19.405Z"
+              },
+              "result": {
+                "ok": false,
+                "problems": [
+                  {
+                    "kind": "internal",
+                    "id": "bad",
+                    "parameters": {
+                      "revision": "original"
+                    }
+                  }
+                ]
+              }
+            },
+            "physical": {
+              "workers": [
+                {
+                  "event": "worker-start",
+                  "pid": 25656,
+                  "threadId": 1
+                },
+                {
+                  "event": "worker-exit",
+                  "pid": 25656,
+                  "threadId": 1,
+                  "code": 0
+                }
+              ],
+              "helpers": [
+                {
+                  "event": "file-helper-start",
+                  "pid": 25656,
+                  "helperPid": 25124
+                },
+                {
+                  "event": "file-helper-exit",
+                  "pid": 25656,
+                  "helperPid": 25124,
+                  "code": 0,
+                  "signal": null
+                }
+              ],
+              "allHelpersExited": true,
+              "ownedCompilerScratchAbsent": true
+            }
+          },
+          {
+            "case": "real-file-sqlite-restart-with-removed-replaced-source",
+            "bound": {
+              "requestId": "01M66893PFAXMW3NWQCC7KKVDF",
+              "taskId": "01M66893PW4NSPJ89XSFKH3S4E",
+              "seriesId": "01M66893PW4NSPJ89XSFKH3S4E",
+              "stage": "running",
+              "receivedAt": "2026-10-30T11:14:19.995Z",
+              "eligibleAt": "2026-10-30T11:14:19.995Z",
+              "deadlineAt": "2026-10-30T11:15:19.995Z",
+              "timestamp": "2026-10-30T11:14:20.881Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:14:20.014Z",
+                "completedAt": "2026-10-30T11:14:20.767Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:14:20.801Z"
+              },
+              "execution": {
+                "executionId": "01M66894G1Z0Z8712V1E0XQE46",
+                "startedAt": "2026-10-30T11:14:20.801Z"
+              }
+            },
+            "queuedBefore": {
+              "requestId": "01M66894KA16C45GTKMWGW0J7J",
+              "taskId": "01M66894KCNTTJB3XGJM29A8EC",
+              "seriesId": "01M66894KCNTTJB3XGJM29A8EC",
+              "stage": "queued",
+              "receivedAt": "2026-10-30T11:14:20.908Z",
+              "eligibleAt": "2026-10-30T11:14:20.908Z",
+              "deadlineAt": "2026-10-30T11:15:20.908Z",
+              "timestamp": "2026-10-30T11:14:20.996Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:14:20.917Z",
+                "completedAt": "2026-10-30T11:14:20.970Z"
+              }
+            },
+            "interrupted": {
+              "requestId": "01M66893PFAXMW3NWQCC7KKVDF",
+              "taskId": "01M66893PW4NSPJ89XSFKH3S4E",
+              "seriesId": "01M66893PW4NSPJ89XSFKH3S4E",
+              "stage": "execution_failed",
+              "receivedAt": "2026-10-30T11:14:19.995Z",
+              "eligibleAt": "2026-10-30T11:14:19.995Z",
+              "deadlineAt": "2026-10-30T11:15:19.995Z",
+              "timestamp": "2026-10-30T11:14:21.667Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:14:20.014Z",
+                "completedAt": "2026-10-30T11:14:20.767Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:14:20.801Z"
+              },
+              "execution": {
+                "executionId": "01M66894G1Z0Z8712V1E0XQE46",
+                "startedAt": "2026-10-30T11:14:20.801Z",
+                "failedAt": "2026-10-30T11:14:21.512Z"
+              },
+              "error": {
+                "code": "execution_interrupted",
+                "message": "No reliable final fact survived restart; work is not rerun."
+              },
+              "termination": {
+                "terminatedAt": "2026-10-30T11:14:21.525Z"
+              }
+            },
+            "recovered": {
+              "requestId": "01M66894KA16C45GTKMWGW0J7J",
+              "taskId": "01M66894KCNTTJB3XGJM29A8EC",
+              "seriesId": "01M66894KCNTTJB3XGJM29A8EC",
+              "stage": "completed",
+              "receivedAt": "2026-10-30T11:14:20.908Z",
+              "eligibleAt": "2026-10-30T11:14:20.908Z",
+              "deadlineAt": "2026-10-30T11:15:20.908Z",
+              "timestamp": "2026-10-30T11:14:21.870Z",
+              "preparation": {
+                "startedAt": "2026-10-30T11:14:20.917Z",
+                "completedAt": "2026-10-30T11:14:20.970Z"
+              },
+              "allocation": {
+                "boundAt": "2026-10-30T11:14:21.579Z"
+              },
+              "execution": {
+                "executionId": "01M668958BYVP8EV19BWRPAVZD",
+                "startedAt": "2026-10-30T11:14:21.579Z",
+                "completedAt": "2026-10-30T11:14:21.783Z"
+              },
+              "termination": {
+                "terminatedAt": "2026-10-30T11:14:21.801Z"
+              },
+              "result": {
+                "ok": false,
+                "problems": [
+                  {
+                    "kind": "internal",
+                    "id": "bad",
+                    "parameters": {
+                      "revision": "original"
+                    }
+                  }
+                ]
+              }
+            },
+            "invocations": [
+              {
+                "event": "execute",
+                "name": "file-unknown",
+                "pid": 37208,
+                "threadId": 1,
+                "revision": "original"
+              },
+              {
+                "event": "execute",
+                "name": "file-queued",
+                "pid": 20924,
+                "threadId": 1,
+                "revision": "original"
+              }
+            ],
+            "originalDigest": "sha256:0e8e06bffe3032f0f9c4e29d45381e3d65f698ff4a37f7b37be67e653435863b",
+            "replacedDigest": "sha256:c47fba94fabe2160dd2d69733d5f3061fcebf14b9ac3a3eebcf5a40fcbdba6e0",
+            "fileRemovedBeforeRestart": true,
+            "httpsDownloadsBefore": 6,
+            "httpsDownloadsAfter": 6,
+            "crashedProcessAbsent": true,
+            "restored": {
+              "workers": [
+                {
+                  "event": "worker-start",
+                  "pid": 20924,
+                  "threadId": 1
+                },
+                {
+                  "event": "worker-exit",
+                  "pid": 20924,
+                  "threadId": 1,
+                  "code": 0
+                }
+              ],
+              "helpers": [],
+              "allHelpersExited": true,
+              "ownedCompilerScratchAbsent": true
+            }
+          }
+        ],
+        "processes": [
+          {
+            "pid": 36328,
+            "kind": "ipc-graceful",
+            "code": 0,
+            "signal": null,
+            "aliveAfter": false
+          },
+          {
+            "pid": 15328,
+            "kind": "ipc-graceful",
+            "code": 0,
+            "signal": null,
+            "aliveAfter": false
+          },
+          {
+            "pid": 25656,
+            "kind": "cli-sigterm",
+            "code": null,
+            "signal": "SIGTERM",
+            "aliveAfter": false,
+            "gracefulSignalProven": false
+          },
+          {
+            "pid": 37208,
+            "kind": "file-sqlite-crash",
+            "code": null,
+            "signal": "SIGKILL",
+            "aliveAfter": false
+          },
+          {
+            "pid": 20924,
+            "kind": "ipc-graceful",
+            "code": 0,
+            "signal": null,
+            "aliveAfter": false
+          }
+        ],
+        "artifacts": {
+          "original": {
+            "digest": "sha256:0e8e06bffe3032f0f9c4e29d45381e3d65f698ff4a37f7b37be67e653435863b",
+            "transportDigest": "sha256:f5492211f44a8fd4f54a935cf999b576e5b1631bcebb69437dd10d477046423e",
+            "archive": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\file-checker.tgz"
+          },
+          "replacement": {
+            "digest": "sha256:c47fba94fabe2160dd2d69733d5f3061fcebf14b9ac3a3eebcf5a40fcbdba6e0",
+            "transportDigest": "sha256:3b41a4196886868bc4abd2d142061c55afe617da6c5594f525e995584bacffe9",
+            "archive": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\file-replacement.tgz"
+          },
+          "exactReference": {
+            "kind": "checker",
+            "url": "file:///D:/Code/check-server-file-deployment-20261030-a1/check/imports/local%20archive%20%231.tgz",
+            "digest": "sha256:0e8e06bffe3032f0f9c4e29d45381e3d65f698ff4a37f7b37be67e653435863b"
+          },
+          "sourceMode": "real-confined-file"
+        },
+        "launches": [
+          {
+            "pid": 36328,
+            "command": [
+              "C:\\nvm4w\\nodejs\\node.exe",
+              "--require",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\worker-probe.cjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\server-child.mjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs"
+            ],
+            "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\check",
+            "configuration": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs",
+            "cli": false
+          },
+          {
+            "pid": 15328,
+            "command": [
+              "C:\\nvm4w\\nodejs\\node.exe",
+              "--require",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\worker-probe.cjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\server-child.mjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs"
+            ],
+            "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\check",
+            "configuration": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs",
+            "cli": false
+          },
+          {
+            "pid": 25656,
+            "command": [
+              "C:\\nvm4w\\nodejs\\node.exe",
+              "--require",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\worker-probe.cjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\node_modules\\.pnpm\\@potential-guide+task-engin_4d6fd50f629b1a733752921881e343a7\\node_modules\\@potential-guide\\task-engine-server\\dist\\main.js",
+              "--config",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs"
+            ],
+            "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\check",
+            "configuration": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs",
+            "cli": true
+          },
+          {
+            "pid": 37208,
+            "command": [
+              "C:\\nvm4w\\nodejs\\node.exe",
+              "--require",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\worker-probe.cjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\server-child.mjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs"
+            ],
+            "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\check",
+            "configuration": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs",
+            "cli": false
+          },
+          {
+            "pid": 20924,
+            "command": [
+              "C:\\nvm4w\\nodejs\\node.exe",
+              "--require",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\worker-probe.cjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\server-child.mjs",
+              "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs"
+            ],
+            "cwd": "D:\\Code\\check-server-file-deployment-20261030-a1\\check",
+            "configuration": "D:\\Code\\check-server-file-deployment-20261030-a1\\check\\check-config.mjs",
+            "cli": false
+          }
+        ],
+        "httpsHookCallsForAllFileCases": 0,
+        "workerAndHelperEvents": [
+          {
+            "event": "file-helper-start",
+            "pid": 36328,
+            "helperPid": 33280
+          },
+          {
+            "event": "file-helper-exit",
+            "pid": 36328,
+            "helperPid": 33280,
+            "code": 0,
+            "signal": null
+          },
+          {
+            "event": "worker-start",
+            "pid": 36328,
+            "threadId": 1
+          },
+          {
+            "event": "worker-exit",
+            "pid": 36328,
+            "threadId": 1,
+            "code": 0
+          },
+          {
+            "event": "file-helper-start",
+            "pid": 36328,
+            "helperPid": 40144
+          },
+          {
+            "event": "file-helper-exit",
+            "pid": 36328,
+            "helperPid": 40144,
+            "code": 0,
+            "signal": null
+          },
+          {
+            "event": "worker-start",
+            "pid": 36328,
+            "threadId": 2
+          },
+          {
+            "event": "worker-exit",
+            "pid": 36328,
+            "threadId": 2,
+            "code": 0
+          },
+          {
+            "event": "worker-start",
+            "pid": 36328,
+            "threadId": 3
+          },
+          {
+            "event": "worker-exit",
+            "pid": 36328,
+            "threadId": 3,
+            "code": 0
+          },
+          {
+            "event": "file-helper-start",
+            "pid": 36328,
+            "helperPid": 19344
+          },
+          {
+            "event": "file-helper-exit",
+            "pid": 36328,
+            "helperPid": 19344,
+            "code": 1,
+            "signal": null
+          },
+          {
+            "event": "file-helper-start",
+            "pid": 36328,
+            "helperPid": 17544
+          },
+          {
+            "event": "file-helper-exit",
+            "pid": 36328,
+            "helperPid": 17544,
+            "code": 1,
+            "signal": null
+          },
+          {
+            "event": "file-helper-start",
+            "pid": 36328,
+            "helperPid": 9264
+          },
+          {
+            "event": "file-helper-exit",
+            "pid": 36328,
+            "helperPid": 9264,
+            "code": 1,
+            "signal": null
+          },
+          {
+            "event": "file-helper-start",
+            "pid": 36328,
+            "helperPid": 47016
+          },
+          {
+            "event": "file-helper-exit",
+            "pid": 36328,
+            "helperPid": 47016,
+            "code": 0,
+            "signal": null
+          },
+          {
+            "event": "file-helper-start",
+            "pid": 36328,
+            "helperPid": 41776
+          },
+          {
+            "event": "file-helper-exit",
+            "pid": 36328,
+            "helperPid": 41776,
+            "code": 0,
+            "signal": null
+          },
+          {
+            "event": "file-helper-start",
+            "pid": 36328,
+            "helperPid": 44380
+          },
+          {
+            "event": "file-helper-exit",
+            "pid": 36328,
+            "helperPid": 44380,
+            "code": 1,
+            "signal": null
+          },
+          {
+            "event": "file-helper-start",
+            "pid": 25656,
+            "helperPid": 25124
+          },
+          {
+            "event": "file-helper-exit",
+            "pid": 25656,
+            "helperPid": 25124,
+            "code": 0,
+            "signal": null
+          },
+          {
+            "event": "worker-start",
+            "pid": 25656,
+            "threadId": 1
+          },
+          {
+            "event": "worker-exit",
+            "pid": 25656,
+            "threadId": 1,
+            "code": 0
+          },
+          {
+            "event": "file-helper-start",
+            "pid": 37208,
+            "helperPid": 41892
+          },
+          {
+            "event": "file-helper-exit",
+            "pid": 37208,
+            "helperPid": 41892,
+            "code": 0,
+            "signal": null
+          },
+          {
+            "event": "worker-start",
+            "pid": 37208,
+            "threadId": 1
+          },
+          {
+            "event": "worker-start",
+            "pid": 20924,
+            "threadId": 1
+          },
+          {
+            "event": "worker-exit",
+            "pid": 20924,
+            "threadId": 1,
+            "code": 0
+          }
+        ],
+        "executionJournal": [
+          {
+            "event": "execute",
+            "name": "file-mutable",
+            "pid": 36328,
+            "threadId": 1,
+            "revision": "original"
+          },
+          {
+            "event": "dispose",
+            "name": "file-mutable",
+            "pid": 36328,
+            "threadId": 1
+          },
+          {
+            "event": "execute",
+            "name": "file-mutable",
+            "pid": 36328,
+            "threadId": 2,
+            "revision": "replacement"
+          },
+          {
+            "event": "dispose",
+            "name": "file-mutable",
+            "pid": 36328,
+            "threadId": 2
+          },
+          {
+            "event": "execute",
+            "name": "cached-original",
+            "pid": 36328,
+            "threadId": 3,
+            "revision": "original"
+          },
+          {
+            "event": "dispose",
+            "name": "cached-original",
+            "pid": 36328,
+            "threadId": 3
+          },
+          {
+            "event": "execute",
+            "name": "real-file-cli",
+            "pid": 25656,
+            "threadId": 1,
+            "revision": "original"
+          },
+          {
+            "event": "dispose",
+            "name": "real-file-cli",
+            "pid": 25656,
+            "threadId": 1
+          },
+          {
+            "event": "execute",
+            "name": "file-unknown",
+            "pid": 37208,
+            "threadId": 1,
+            "revision": "original"
+          },
+          {
+            "event": "execute",
+            "name": "file-queued",
+            "pid": 20924,
+            "threadId": 1,
+            "revision": "original"
+          },
+          {
+            "event": "dispose",
+            "name": "file-queued",
+            "pid": 20924,
+            "threadId": 1
+          }
+        ],
+        "status": "passed",
+        "cleanup": {
+          "serverPids": [
+            36328,
+            15328,
+            25656,
+            37208,
+            20924
+          ],
+          "childPids": [],
+          "allAbsent": true
+        }
+      }
+    }
+  ],
+  "sourceCommit": "cec86bd0130be3b769351d1046a981f640b8b083",
+  "implementationRevision": "5bea45766484d599e0a2bab86b25da05ec2447de",
+  "sourcePackagesTree": "fb74721446963a327991a621d88e1ff14a8adc39",
+  "cleanup": {
+    "markerMatched": true,
+    "externalRootRemoved": true
+  },
+  "finishedAt": "2026-10-30T11:14:22.506Z"
+}
