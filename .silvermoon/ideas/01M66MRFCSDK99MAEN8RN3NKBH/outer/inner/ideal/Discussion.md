@@ -64,6 +64,10 @@ JSON Schema 标准本身没有定义 Equals；本项目需明确结构到比较�
 
 通用发现面向服务实际注册且可提交的类型、对应契约版本和输入 Schema；契约与注册版本的绑定、鉴权范围、旧版查询和兼容策略由本 idea 收敛，路由名称尚未决定。
 
-Task 类型 Schema 描述输入外形；Check/Probe 中具体 subject 的字段仍取决于所选制品的 subjectSchema。类型资产元数据由独立 [task-type-artifact-management](../../../../01M66N2BDVY4B6VAHVEEVB94EW/outer/inner/ideal/Idea.md) 收敛，不在通用发现中下载或执行任意制品，也不将所有业务字段硬编码到 UI。
+2026-10-31，用户通知新增的消费者边界：首版通用 Web UI 撤出资产管理；不是所有 Task 都有资产，Probe/Regulator 也可能共享资产，通用 TaskType 资产管理不应成为 Engine 或通用 UI 的职责。未来至多按具体类型考虑独立工具 UX，尚未选择架构。本 idea 独立继续，不依赖资产管理 idea 的推进，也不把资产管理或制品 subjectSchema 查询接口作为类型发现或通用 UI 的前置条件。
+
+通用 UI 只消费 Task 公开输入 Schema，不从业务 URL 自动解析或下载制品。若某类型只把 subject 声明为普通 object，消费者可提供对象输入，不臆造具体字段，也无需先查找制品 subjectSchema。URL、digest 等仍可作为普通任务参数填写和原样复用，不意味着消费者管理它们指向的资产。
+
+Task 类型 Schema 描述输入外形；具体制品 subject 校验、业务检查及运行时约束仍由原所属边界负责。此消费者范围更新不改变已确认的 Equals/Validate 职责，不决定自由 JSON 节点等 Schema 未决项，不构成生命周期决定或实施授权。
 
 与 [schema-contracts](../../../../01M5CR0X2B4R2C6K3183Y1T3SQ/outer/inner/ideal/Idea.md) 保持公共契约归属一致；本 idea 不替该总讨论决定其他格式。它是现有通用任务契约的后续演进，不撤销或伪造既有 idea 的生命周期事实。
