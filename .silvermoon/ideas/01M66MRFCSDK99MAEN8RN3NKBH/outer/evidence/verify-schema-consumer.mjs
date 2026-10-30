@@ -62,7 +62,7 @@ let release;
 const gate = new Promise((resolve) => { release = resolve; });
 let executionCount = 0;
 const pool = createExecutorPool({
-  resources: ["worker-a", "worker-b"],
+  resources: ["isolated-schema-proof", "isolated-schema-proof"],
   resourceKey: () => "isolated-schema-proof",
   run(input) {
     executionCount++;

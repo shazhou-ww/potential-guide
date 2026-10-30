@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import spawn from "cross-spawn";
 import { copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,7 +33,7 @@ function visit(name) {
 for (const name of ["task-engine-server", "check-task", "probe-task"]) visit(`@potential-guide/${name}`);
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 function run(args, cwd = root, extra = {}) {
-  const result = spawnSync(pnpm, args, { cwd, encoding: "utf8", shell: process.platform === "win32", ...extra });
+  const result = spawn.sync(pnpm, args, { cwd, encoding: "utf8", ...extra });
   if (result.status !== 0) throw new Error(`${pnpm} ${args.join(" ")} failed:\n${result.stdout}\n${result.stderr}`);
 }
 const dependencies = {};
