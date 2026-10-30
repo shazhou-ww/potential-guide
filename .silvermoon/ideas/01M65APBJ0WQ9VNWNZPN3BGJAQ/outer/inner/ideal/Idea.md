@@ -9,16 +9,17 @@
 在 [Check + Server MVP](../../../../01M65ABHR94EQ14NYTGZAWRRV3/outer/inner/ideal/Idea.md) 和
 [Probe](../../../../01M65AH22HXJXNC7BQNVD0ZTHB/outer/inner/ideal/Idea.md) 完成后交付 `@potential-guide/regulate-task`，
 注册 `type=regulate`，经同一服务运行观察、修复和再观察，支持资源接续与成果共享，
-以正常业务结果分别报告目标达成、耗尽或无法自行解决的阻碍。
+复用 ACP/AHP 并以 VS Code Copilot AHP 验证真实闭环，
+正常返回目标达成、耗尽或无法自行解决的阻碍。
 
 准备期已明确需求、并发治理与 execution join 讨论及未决问题见
 [Discussion.md](Discussion.md)；其中候选方案尚未定稿，不代表验收或实施授权。
 
 ## 边界
 
-- 通用生命周期复用[任务引擎](../../../../../../docs/task-engine.md)，不新增 Regulation Host 或第二套状态机；同目标兼容需求可接续投入、共享成果并分别完成，执行结束后可用新身份继续，不改写旧结果。
-- 请求与资源投入受限，所有已启用资源预算均未耗尽才能支持后续修复；共享 execution 不另设固定总上限，移除连续停滞限制，Token 不强制首版统计。操作权限属于 Agent 执行环境，不属于任务或出资方。
-- 聚焦治理任务接入与明确的旧职责交接，不全量迁移旧入口或正式发布；动态请求不自授权，不自动共享有副作用的修复，取消不承诺回滚，未知修复不自动重放，不承诺 exactly-once。
+- 通用生命周期复用[任务引擎](../../../../../../docs/task-engine.md)，不新增 Regulation Host 或第二套状态机；同 Digest/Revision、同 subject 且执行条件兼容者可接续投入、共享成果并分别完成，不以 URI 判合流，不改写旧结果。
+- 等待期限只用 Task Deadline，移除独立治理时间配额和连续停滞限制；已启用资源额度合取，Token 不强制首版统计，共享 execution 无固定总上限。权限与业务资源竞争属于 Agent 执行环境，不另建全局资源锁。
+- 不全量迁移旧入口或正式发布；引擎仍管理 Worker 与退出清理证明，未知修复不自动重放，有可靠证明即可自动释放相应隔离，否则报告阻碍。动态请求不自授权，取消不承诺回滚，不承诺 exactly-once。
 
 ## 验收标准
 
