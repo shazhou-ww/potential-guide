@@ -58,11 +58,13 @@ JSON Schema 标准本身没有定义 Equals；本项目需明确结构到比较�
 
 当前 Check/Probe 已采用 canonical 输入比较，见 [canonical](../../../../../../packages/task-protocol/src/json.ts) 及[契约文档](../../../../../../docs/artifact-contracts.md)。这只是迁移基线，不是本次生成式判等的目标规则；仍需核查全部类型和外部消费者，明确原自定义行为的迁移或拒绝策略。
 
-输入相等也不等于必然共享执行：[Engine compatible](../../../../../../packages/task-engine/src/engine.ts)，L494–520，还要求类型/版本、环境、scope 和 Prepared 相等；时间匹配与执行所有权规则继续有效。幂等则保持同一 requestId 的完整原始请求比较，不能替换为忽略通用字段的输入比较。
+输入相等也不等于必然共享执行。早期调研基线的 Engine compatible 还要求 Prepared 相等；这条历史事实已被后续 primary 的[事件时点绑定契约](../../../../01M66MH9YKNJ406ESX7J1HTY7J/outer/inner/ideal/Idea.md)取代：匹配不依赖 Prepared，而保留类型/版本、环境、scope、同步授权和事件时间/接收顺序边界。Prepared 仍用于实际执行与结果验证，本 idea 不恢复旧匹配前提。幂等保持同一 requestId 的完整原始请求比较，不能替换为忽略通用字段的输入比较。
+
+本次整合遵循 primary `55b02178670b6c6f03ab7dc6359b9d48bfdfb926` 已验收的实现：仅支持 started-after-eligible 与 terminated-after-eligible，新事实/存储格式为 2。Schema 契约身份叠加于这些边界，不增加旧枚举兼容或绕过同步 authorize。此并发变化使本 idea 的旧 Ideal 引用需重新提交及审批；由主 Agent 按既有委托处理，而不是复用过期批准。
 
 ## 已确认：无法由 Schema 表达的业务一致性检查进入 prepare
 
-2026-10-31，用户确认允许将 Schema 无法表达的业务一致性检查移到 prepare，并接受从提交拒绝变为准备失败的明确行为变化。具体例子是 Probe 的 objective.digest 与 bindings[objective.url] 一致性；检查不能删除，也不能把冲突默默解释为某一字段优先。
+2026-10-31，用户确认允许将 Schema 无法表达的业务一致性检查移到 prepare，并接受从提交拒绝变为准备失败的明确行为变化。具体例子是 Probe 的 objective.digest 与 bindings[objective.url] 一致性；检查不能删除，也不能把冲突默默解释为某一字段优先。新 primary 的同步授权可在接收时发生；一致性检查仍在下载、解析制品内容或执行前完成，不把它重新塞入 authorize 来恢复提交拒绝。
 
 这不改变 Equals 的职责，也不授权实现。它不涵盖把提交前防止敏感数据持久化的边界一并延后。现有调用点、比较反例和剩余风险见[生成能力与迁移调研](Research.md)；其中建议与未决项不代表用户已经同意。
 

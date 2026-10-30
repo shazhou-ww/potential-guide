@@ -1,6 +1,8 @@
 import {
   type Authorize,
+  assertFactsVersion,
   at,
+  authorizeSync,
   type Binding,
   type Caller,
   type Clock,
@@ -184,6 +186,7 @@ export class TaskEngine implements TaskService {
         }),
     );
     this.view = options.store.read();
+    assertFactsVersion(this.view.facts);
   }
   private diagnostic(error: unknown, code = "engine_failure"): void {
     const fact = errorFact(error, code);
@@ -268,12 +271,13 @@ export class TaskEngine implements TaskService {
     type: K,
     task: TaskRecord,
     data: Extract<NewEvent, { type: K }>["data"],
+    occurredAt = at(this.clock.now()),
   ): NewEvent {
     return {
       type,
       scope: task.binding.scope,
       taskId: task.snapshot.taskId,
-      occurredAt: at(this.clock.now()),
+      occurredAt,
       data,
     } as NewEvent;
   }
@@ -294,14 +298,14 @@ export class TaskEngine implements TaskService {
     type: K,
     execution: ExecutionRecord,
     data: Extract<NewEvent, { type: K }>["data"],
-  ): NewEvent {
+  ): Extract<NewEvent, { type: K }> {
     return {
       type,
       scope: execution.binding.scope,
       executionId: execution.executionId,
       occurredAt: type === "execution.started" ? execution.startedAt : at(this.clock.now()),
       data,
-    } as NewEvent;
+    } as Extract<NewEvent, { type: K }>;
   }
   private admittedCapacity(extra = 1): boolean {
     const tasks = Object.values(this.view.facts.tasks);
@@ -324,12 +328,14 @@ export class TaskEngine implements TaskService {
     const validated = this.validated(input, type.validate.bind(type));
     const timeoutMs = positive(raw.timeoutMs, "timeoutMs");
     const receivedAt = at(this.clock.now());
-    const eligibleAt = raw.eligibleAt === undefined ? receivedAt : timestamp(raw.eligibleAt);
+    const requestedEligibleAt =
+      raw.eligibleAt === undefined ? receivedAt : timestamp(raw.eligibleAt);
+    const eligibleAt = at(Math.max(Date.parse(receivedAt), Date.parse(requestedEligibleAt)));
     const deadlineAt = at(Date.parse(eligibleAt) + timeoutMs);
     const executionMatch = raw.executionMatch ?? "started-after-eligible";
     if (
       executionMatch !== "started-after-eligible" &&
-      executionMatch !== "completed-after-eligible"
+      executionMatch !== "terminated-after-eligible"
     )
       fail("invalid_request", "Unsupported executionMatch.");
     if (raw.recurrence !== undefined) {
@@ -348,7 +354,8 @@ export class TaskEngine implements TaskService {
       if (previous.snapshot.seriesId === seriesId && previous.binding.scope !== caller.scope)
         fail("forbidden", "Series belongs to another scope.");
     }
-    return {
+    const task: TaskRecord = {
+      receivedSequence: this.view.facts.watermark + 1,
       request: raw as TaskRequest,
       input: validated,
       binding: {
@@ -371,6 +378,8 @@ export class TaskEngine implements TaskService {
         timestamp: receivedAt,
       },
     };
+    this.authorizeTask(task);
+    return task;
   }
   discoverTypes(caller: Caller): readonly TaskTypeDiscovery[] {
     this.assertRunning();
@@ -439,7 +448,10 @@ export class TaskEngine implements TaskService {
     task = this.view.facts.tasks[taskId] ?? task;
     if (task.snapshot.canceledAt) return project(this.view.facts, taskId, this.clock.now());
     if (task.snapshot.termination) fail("task_finished", "Task already finished.");
-    this.commit([this.event("task.canceled", task, {})]);
+    const releases = Object.values(this.view.facts.executions)
+      .filter((execution) => this.demand(task, execution))
+      .map((execution) => execution.executionId);
+    this.commit([this.event("task.canceled", task, { executionIds: releases })]);
     this.preparations.get(taskId)?.abort();
     this.reconcileGroups();
     this.reclaimUnowned();
@@ -451,14 +463,35 @@ export class TaskEngine implements TaskService {
     for (;;) {
       const task = this.view.facts.tasks[taskId];
       if (!task) return;
-      const id = task.snapshot.execution?.executionId;
+      if (task.snapshot.canceledAt) {
+        const ids = task.releaseExecutionIds ?? [];
+        for (const id of ids) {
+          if (this.hasUncanceledOwners(id)) continue;
+          const tracking = this.tracking.get(id);
+          if (tracking) await tracking.finished;
+          else if (
+            !this.view.facts.executions[id]?.reclaimedAt &&
+            [...this.groups].some((group) => group.executionId === id)
+          ) {
+            await new Promise<void>((resolve) => setTimeout(resolve, 5));
+            return this.waitForTaskRelease(taskId, caller);
+          } else if (!this.view.facts.executions[id]?.reclaimedAt)
+            fail("reclamation_unconfirmed", "Execution has no confirmed physical tracking.");
+        }
+        if (
+          !this.preparations.has(taskId) &&
+          ![...this.groups].some((group) => !group.executionId && group.owners.has(taskId))
+        )
+          return;
+      }
+      const id =
+        task.snapshot.execution?.executionId ??
+        Object.values(this.view.facts.executions).find((execution) => this.demand(task, execution))
+          ?.executionId;
       if (id) {
         const shared = Object.values(this.view.facts.tasks).some(
           (other) =>
-            other.snapshot.taskId !== taskId &&
-            other.snapshot.execution?.executionId === id &&
-            !other.snapshot.canceledAt &&
-            !other.snapshot.termination,
+            other.snapshot.taskId !== taskId && this.demand(other, this.view.facts.executions[id]!),
         );
         if (task.snapshot.canceledAt && shared) return;
         const tracking = this.tracking.get(id);
@@ -483,19 +516,21 @@ export class TaskEngine implements TaskService {
     this.options.store.claim(this.owner);
     try {
       this.view = this.options.store.read();
+      assertFactsVersion(this.view.facts);
       for (const task of Object.values(this.view.facts.tasks)) this.checkHistory(task);
       for (const execution of Object.values(this.view.facts.executions))
         this.checkExecutionHistory(execution);
       for (const execution of Object.values(this.view.facts.executions)) {
         if (!execution.completedAt && !execution.failedAt) {
-          this.commit([
+          this.finishExecution(
+            execution,
             this.executionEvent("execution.failed", execution, {
               error: {
                 code: "execution_interrupted",
                 message: "No reliable final fact survived restart; work is not rerun.",
               },
             }),
-          ]);
+          );
         }
       }
       this.started = true;
@@ -532,7 +567,7 @@ export class TaskEngine implements TaskService {
           if (!task || task.snapshot.canceledAt) continue;
           this.plan(task, now);
           task = this.view.facts.tasks[original.snapshot.taskId];
-          if (!task || effectiveEnd(task.snapshot)) continue;
+          if (!task || effectiveEnd(task.snapshot) || task.snapshot.execution) continue;
           if (now < Date.parse(task.snapshot.eligibleAt)) continue;
           if (now > Date.parse(task.snapshot.deadlineAt)) {
             this.preparations.get(task.snapshot.taskId)?.abort();
@@ -573,10 +608,7 @@ export class TaskEngine implements TaskService {
       task.binding.version !== candidate.binding.version ||
       task.binding.contractRevision !== candidate.binding.contractRevision ||
       task.binding.environment !== candidate.binding.environment ||
-      task.binding.scope !== candidate.binding.scope ||
-      task.prepared === undefined ||
-      candidate.prepared === undefined ||
-      canonical(task.prepared) !== canonical(candidate.prepared)
+      task.binding.scope !== candidate.binding.scope
     )
       return false;
     return this.historicalType(task.binding).equals(
@@ -584,31 +616,117 @@ export class TaskEngine implements TaskService {
       freeze(structuredClone(candidate.input)),
     );
   }
-  private matches(task: TaskRecord, execution: ExecutionRecord): boolean {
-    if (execution.sealed || !this.compatible(task, execution)) return false;
-    return matchesExecutionTime(task.binding.executionMatch, task.snapshot.eligibleAt, execution);
+  private authorizeTask(task: TaskRecord, execution?: ExecutionRecord): void {
+    this.authorized(task.binding, "submit", task.binding.scope);
+    const type = this.type(task.binding);
+    if (type.authorize)
+      authorizeSync(() =>
+        type.authorize!(
+          freeze(structuredClone(task.input)) as never,
+          freeze(structuredClone(task.binding)),
+          execution ? (freeze(structuredClone(execution.prepared)) as never) : undefined,
+          execution?.result === undefined ? undefined : freeze(structuredClone(execution.result)),
+        ),
+      );
+  }
+  private demand(task: TaskRecord, execution: ExecutionRecord): boolean {
+    if (task.snapshot.canceledAt || task.snapshot.termination) return false;
+    if (task.snapshot.execution)
+      return task.snapshot.execution.executionId === execution.executionId;
+    if (execution.completedAt || execution.failedAt) return false;
+    if (
+      task.binding.executionMatch !== "terminated-after-eligible" ||
+      (execution.sealed && !execution.sealedTaskIds?.includes(task.snapshot.taskId))
+    )
+      return false;
+    try {
+      if (!this.compatible(task, execution)) return false;
+      this.authorizeTask(task, execution);
+      return true;
+    } catch (error) {
+      this.diagnostic(error);
+      return false;
+    }
+  }
+  private bindings(
+    execution: ExecutionRecord,
+    policy: Binding["executionMatch"],
+    time: string,
+  ): NewEvent[] {
+    const events: NewEvent[] = [];
+    for (const task of Object.values(this.view.facts.tasks)) {
+      if (
+        task.snapshot.canceledAt ||
+        task.snapshot.termination ||
+        task.snapshot.execution ||
+        task.binding.executionMatch !== policy ||
+        (execution.sealed && !execution.sealedTaskIds?.includes(task.snapshot.taskId)) ||
+        !matchesExecutionTime(policy, task.snapshot.eligibleAt, execution)
+      )
+        continue;
+      try {
+        if (!this.compatible(task, execution)) continue;
+        this.authorizeTask(task, execution);
+        events.push(
+          this.event("task.allocation.bound", task, { executionId: execution.executionId }, time),
+        );
+      } catch (error) {
+        this.diagnostic(error);
+      }
+    }
+    return events;
+  }
+  private withdrawBoundWork(): void {
+    for (const [id, controller] of this.preparations) {
+      const task = this.view.facts.tasks[id];
+      if (task?.snapshot.execution || task?.snapshot.termination) controller.abort();
+    }
+    this.reconcileGroups();
+  }
+  private finishExecution(
+    execution: ExecutionRecord,
+    event: Extract<NewEvent, { type: "execution.completed" | "execution.failed" }>,
+  ): void {
+    const final: ExecutionRecord = {
+      ...execution,
+      ...(event.type === "execution.completed"
+        ? { completedAt: event.occurredAt, result: event.data.result }
+        : { failedAt: event.occurredAt }),
+    };
+    const bindings = this.bindings(final, "terminated-after-eligible", event.occurredAt);
+    const ids = new Set(bindings.map((binding) => binding.taskId));
+    const events: NewEvent[] = [event, ...bindings];
+    for (const task of Object.values(this.view.facts.tasks))
+      if (
+        !task.snapshot.canceledAt &&
+        !task.snapshot.termination &&
+        (task.snapshot.execution?.executionId === execution.executionId ||
+          ids.has(task.snapshot.taskId))
+      )
+        events.push(
+          this.event(
+            "task.terminated",
+            task,
+            { executionId: execution.executionId },
+            event.occurredAt,
+          ),
+        );
+    this.commit(events);
+    this.withdrawBoundWork();
   }
   private settle(task: TaskRecord): void {
     if (task.snapshot.canceledAt || task.snapshot.termination) return;
     const boundId = task.snapshot.execution?.executionId;
-    const execution = boundId
-      ? this.view.facts.executions[boundId]
-      : Object.values(this.view.facts.executions).find(
-          (candidate) => candidate.completedAt !== undefined && this.matches(task, candidate),
-        );
+    const execution = boundId ? this.view.facts.executions[boundId] : undefined;
     if (!execution || (!execution.completedAt && !execution.failedAt)) return;
-    if (
-      execution.completedAt &&
-      !matchesExecutionTime(task.binding.executionMatch, task.snapshot.eligibleAt, execution)
-    )
-      return;
-    const events: NewEvent[] = [];
-    if (!boundId)
-      events.push(
-        this.event("task.allocation.bound", task, { executionId: execution.executionId }),
-      );
-    events.push(this.event("task.terminated", task, { executionId: execution.executionId }));
-    this.commit(events);
+    this.commit([
+      this.event(
+        "task.terminated",
+        task,
+        { executionId: execution.executionId },
+        execution.completedAt ?? execution.failedAt,
+      ),
+    ]);
   }
   private prepare(task: TaskRecord): void {
     const type = this.historicalType(task.binding);
@@ -650,14 +768,22 @@ export class TaskEngine implements TaskService {
         if (!this.started || this.closing) return;
         const prepared = this.validated(value, type.validatePrepared.bind(type));
         const current = this.view.facts.tasks[task.snapshot.taskId];
-        if (!current || current.snapshot.canceledAt) return;
+        if (
+          !current ||
+          controller.signal.aborted ||
+          current.snapshot.canceledAt ||
+          current.snapshot.execution ||
+          current.snapshot.termination
+        )
+          return;
         this.commit([this.event("task.preparation.completed", current, { prepared })]);
         this.settle(this.view.facts.tasks[task.snapshot.taskId] ?? current);
       })
       .catch((error) => {
         if (!this.started || this.closing || controller.signal.aborted) return;
         const current = this.view.facts.tasks[task.snapshot.taskId];
-        if (current) this.processFailure(current, "preparation", error);
+        if (current && !current.snapshot.execution)
+          this.processFailure(current, "preparation", error);
       })
       .catch((error) => this.diagnostic(error))
       .finally(() => {
@@ -693,23 +819,12 @@ export class TaskEngine implements TaskService {
       );
       return;
     }
-    if (this.clock.now() <= Date.parse(task.snapshot.eligibleAt)) return;
+    if (this.clock.now() < Date.parse(task.snapshot.eligibleAt)) return;
     for (const group of this.groups) if (group.owners.has(task.snapshot.taskId)) return;
     const existing = Object.values(this.view.facts.executions).find(
-      (execution) =>
-        !execution.failedAt &&
-        !execution.sealed &&
-        this.compatible(task, execution) &&
-        (this.matches(task, execution) ||
-          (!execution.completedAt && task.binding.executionMatch === "completed-after-eligible")),
+      (execution) => !execution.failedAt && !execution.completedAt && this.demand(task, execution),
     );
-    if (existing) {
-      this.commit([
-        this.event("task.allocation.bound", task, { executionId: existing.executionId }),
-      ]);
-      this.settle(this.view.facts.tasks[task.snapshot.taskId] ?? task);
-      return;
-    }
+    if (existing) return;
     for (const group of this.groups) {
       if (
         !group.executionId &&
@@ -772,7 +887,10 @@ export class TaskEngine implements TaskService {
           group.controller.signal.aborted
         )
           return false;
-        this.commit([this.executionEvent("execution.sealed", execution, {})]);
+        const taskIds = Object.values(this.view.facts.tasks)
+          .filter((task) => this.demand(task, execution))
+          .map((task) => task.snapshot.taskId);
+        this.commit([this.executionEvent("execution.sealed", execution, { taskIds })]);
         return true;
       },
     };
@@ -846,9 +964,7 @@ export class TaskEngine implements TaskService {
       .map((id) => this.view.facts.tasks[id])
       .filter(
         (task): task is TaskRecord =>
-          task !== undefined &&
-          this.active(task, now) &&
-          now > Date.parse(task.snapshot.eligibleAt),
+          task !== undefined && !task.snapshot.execution && this.active(task, now),
       );
     if (!owners.length) fail("allocation_canceled", "No eligible, unexpired startup owner.");
     const execution: ExecutionRecord = {
@@ -858,18 +974,31 @@ export class TaskEngine implements TaskService {
       input: group.exemplar.input,
       prepared: group.exemplar.prepared as Json,
       startedAt: at(now),
+      startedSequence: this.view.facts.watermark + 1,
     };
+    if (
+      !owners.some((task) => {
+        try {
+          if (!this.compatible(task, execution)) return false;
+          this.authorizeTask(task, execution);
+          return true;
+        } catch (error) {
+          this.diagnostic(error);
+          return false;
+        }
+      })
+    )
+      fail("allocation_canceled", "No authorized startup owner.");
     const events = [
       this.executionEvent("execution.started", execution, { execution }),
-      ...owners.map((task) =>
-        this.event("task.allocation.bound", task, { executionId: execution.executionId }),
-      ),
+      ...this.bindings(execution, "started-after-eligible", execution.startedAt),
     ];
     try {
       this.commit(events);
     } catch (error) {
       if (this.view.facts.executions[execution.executionId]) {
         group.executionId = execution.executionId;
+        this.withdrawBoundWork();
         this.reportFailure(execution, {
           code: "execution_interrupted",
           message: "Durable startup committed but delivery failed.",
@@ -924,7 +1053,10 @@ export class TaskEngine implements TaskService {
           fail("capacity_exceeded", "Progress retention capacity exhausted.");
         this.commit([this.executionEvent("execution.progress", current, { progress: payload })]);
       } else
-        this.commit([this.executionEvent("execution.completed", current, { result: payload })]);
+        this.finishExecution(
+          current,
+          this.executionEvent("execution.completed", current, { result: payload }),
+        );
     } catch (error) {
       if (
         error instanceof TaskError &&
@@ -942,23 +1074,27 @@ export class TaskEngine implements TaskService {
     const parsed = object(error);
     if (typeof parsed.code !== "string" || typeof parsed.message !== "string")
       fail("invalid_payload", "Invalid error fact.");
-    this.commit([
+    this.finishExecution(
+      current,
       this.executionEvent("execution.failed", current, {
         error: { code: parsed.code.slice(0, 128), message: parsed.message.slice(0, 512) },
       }),
-    ]);
+    );
   }
   private protectedOwners(id: string): boolean {
-    return Object.values(this.view.facts.tasks).some(
-      (task) => task.snapshot.execution?.executionId === id && this.active(task),
+    const execution = this.view.facts.executions[id];
+    return (
+      execution !== undefined &&
+      Object.values(this.view.facts.tasks).some(
+        (task) => this.active(task) && this.demand(task, execution),
+      )
     );
   }
   private hasUncanceledOwners(id: string): boolean {
-    return Object.values(this.view.facts.tasks).some(
-      (task) =>
-        task.snapshot.execution?.executionId === id &&
-        !task.snapshot.canceledAt &&
-        !task.snapshot.termination,
+    const execution = this.view.facts.executions[id];
+    return (
+      execution !== undefined &&
+      Object.values(this.view.facts.tasks).some((task) => this.demand(task, execution))
     );
   }
   private reconcileGroups(): void {
@@ -966,7 +1102,7 @@ export class TaskEngine implements TaskService {
       if (group.executionId) continue;
       for (const id of group.owners) {
         const task = this.view.facts.tasks[id];
-        if (!task || !this.active(task)) group.owners.delete(id);
+        if (!task || task.snapshot.execution || !this.active(task)) group.owners.delete(id);
       }
       if (!group.owners.size) group.controller.abort();
     }

@@ -13,4 +13,15 @@ Open Store, start Engine, close Engine, then close Store. Unknown started work
 is interrupted on restart, never automatically rerun. A checkpoint checksum
 detects accidental corruption; it is not an authenticity signature.
 
+SQLite `user_version`, checkpoint `projection_version` and Facts
+`projectionVersion` are version 2. Existing files are checked read-only before
+WAL configuration, initialization or owner locking. Old/unknown formats and
+nonempty version-zero databases are rejected with a new-storage instruction.
+Choose a new database path; no migration, overwrite, automatic deletion or
+memory fallback is performed.
+For an existing WAL, inspection uses an operation-owned sibling snapshot because
+SQLite read-only WAL connections can still update the original SHM read marks.
+The snapshot is removed before return; source changes during copying fail with
+`storage_conflict` for retry, never with a silently repaired source database.
+
 See [the engine guide](../../docs/task-engine.md).

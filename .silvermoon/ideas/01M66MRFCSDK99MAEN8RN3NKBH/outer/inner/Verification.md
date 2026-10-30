@@ -31,8 +31,8 @@
 
 | 场景 | 必须观察到的行为 |
 | --- | --- |
-| 共享边界 | 输入相等不越过版本、环境、scope、Prepared 和时间边界；取消及执行所有权回归仍成立 |
-| 摘要冲突 | 结构合法的新 Probe 请求可接收，但在下载前准备失败；不能默默选择一个摘要继续执行 |
+| 共享边界 | 输入相等不越过版本、环境、scope、同步授权和事件时点边界；不恢复 Prepared 匹配前提，Prepared 执行/结果校验及取消/执行所有权回归仍成立 |
+| 摘要冲突 | 结构合法且同步授权通过的新 Probe 请求可接收，但在下载前准备失败；不能默默选择一个摘要继续执行 |
 | 敏感输入 | known artifact URL 中 userinfo、片段、大小写/编码绕过的凭据查询键在持久化前拒绝 |
 | 历史 | 正确契约身份可恢复；缺失/不同契约身份或原版本明确失败，不重写既有输入事实 |
 | 直接调用 | 内置公开校验辅助函数由唯一 Schema 生成；prepare、Prepared 与结果校验仍保留业务边界 |
@@ -44,7 +44,7 @@
 
 ## 执行结果
 
-2026-10-31，子代理完成实现及一次修正，主 Agent 完成源码审查和独立复测：
+2026-10-31，子代理完成初版及一次修正，主 Agent 完成源码审查和独立复测（以下为整合并发 primary 之前的证据）：
 
 - `pnpm check` 通过，包含构建、格式、lint、类型检查、测试和独立打包消费者。准备阶段首次基线运行曾有无代码变更的 objective-monorepo-standard 子进程测试失败；该包单独复测及完整基线重试均通过。实现修正后的全量检查通过。
 - 主 Agent 执行 `pnpm --filter @potential-guide/task-protocol --filter @potential-guide/task-engine --filter @potential-guide/task-engine-http --filter @potential-guide/probe-task test`：11 + 61 + 5 + 16 = 93 项通过，0 失败。
@@ -53,4 +53,15 @@
 - [Schema 测试](../../../../../packages/task-protocol/test/schema.test.ts)覆盖独立判等、自由对象/字典/模式、等价关系、引用兄弟关键字、元组、非法输入、预算和注册不可变性；[发现测试](../../../../../packages/task-engine/test/discovery.test.ts)覆盖权限、版本前置条件、原请求幂等、历史和执行契约身份；[Probe 测试](../../../../../packages/probe-task/test/input-schema.test.ts)覆盖敏感 URL 提交前拒绝及摘要冲突在零来源调用下准备失败。
 - 既有引擎、HTTP、存储、真实 worker 取消/回收和重启测试均由完整检查执行；旧 validator/equals 夹具迁移到 Schema，未保留作者双轨入口。注册对象现在被隔离冻结，原先通过运行中修改作者对象模拟环境变化的测试改为验证隔离，不取消恢复时的环境绑定检查。
 
-实施结论：当前矩阵无已知阻塞，满足提交实施门限的条件。独立真实 HTTP 的新功能部署验证尚未执行，不以本节替代 Outer World 验收。
+随后刷新发现 primary 已加入事件时点绑定、同步授权及存储格式 2。当前正在保留两侧历史的普通 merge 中整合这些变化；前述 93 项结果不能替代整合后的复测，I-S02/I-S03/I-AC02/I-AC03 重新置为未完成。旧 Ideal 对 Prepared 匹配的描述同步修正后将重新提交/审批，不能使用过期批准。独立真实 HTTP 的新功能部署验证尚未执行，不以本节替代 Outer World 验收。
+
+### 并发整合复测
+
+已解决四处源码/README 冲突，保留两侧实现：输入仍由 Schema 生成，原作者 validate/equals 不恢复；保留同步 authorize、started/terminated 事件绑定、存储/投影版本 2，以及 Prepared 不作为匹配前提。
+
+- 子代理：162 项定向测试、`pnpm check`、42 项脚本测试及全部独立打包消费者通过。
+- 主 Agent：`pnpm --filter @potential-guide/task-protocol --filter @potential-guide/task-engine --filter @potential-guide/task-engine-http --filter @potential-guide/probe-task --filter @potential-guide/task-engine-storage test`，11 + 75 + 5 + 17 + 24 = 132 项通过，0 失败。
+- 新回归证明生成式输入相等不能绕过事件时点同步授权；无对应 Task 的执行事实仍检查契约身份。Probe 摘要冲突允许同步授权，但 prepare 在任何 resolve/download 前失败。
+- Silvermoon 候选检查曾因共享 origin/main 跟踪引用已包含其他 idea 的更新事件而拒绝旧候选前缀；未删除或重写事件，已将确认没有本地修改的其他 idea 原样整合到最新 primary 文档/事件后，完整 worktree 检查通过。后续所有检查均等进程结束后读取日志和真实退出码，不截断命令输出。
+
+当前等待同步整合后的候选并重新批准准确 Ideal 修订；没有需要用户介入的已知阻塞。

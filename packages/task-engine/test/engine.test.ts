@@ -68,7 +68,7 @@ test("admission validates full intent, strict JSON, original omissions, authoriz
     assert.equal(h.engine.submit(raw, caller).taskId, task.taskId);
     for (const patch of [
       { type: "sum", values: [1] },
-      { executionMatch: "completed-after-eligible" },
+      { executionMatch: "terminated-after-eligible" },
       { timeoutMs: 101 },
     ])
       assert.throws(() => h.engine.submit({ ...raw, ...patch }, caller), {
@@ -101,7 +101,7 @@ test("admission validates full intent, strict JSON, original omissions, authoriz
   }
 });
 
-test("sharing uses prepared content, scope and eligibility; Task cancellation freezes independently", async () => {
+test("sharing uses input, scope and eligibility; Task cancellation freezes independently", async () => {
   const h = harness();
   try {
     const a = h.submit();
@@ -228,12 +228,12 @@ test("allocation waits without running; expired queued owner retracts, not runni
   }
 });
 
-test("future matching completion adopted after deadline; completed-after may share older running work", async () => {
+test("termination binds at the event and keeps its time across late observation", async () => {
   const h = harness();
   try {
     const a = h.submit({ eligibleAt: at(h.clock.now() - 10) });
     await h.turn();
-    const b = h.submit({ executionMatch: "completed-after-eligible" });
+    const b = h.submit({ executionMatch: "terminated-after-eligible" });
     await h.turn();
     assert.equal(h.work.length, 1);
     await h.finish();
@@ -247,15 +247,14 @@ test("future matching completion adopted after deadline; completed-after may sha
   }
 });
 
-test("mutable reference preparation versions and scope prevent sharing", async () => {
+test("prepared differences do not prevent input sharing, but scope still isolates", async () => {
   let version = 0;
   const h = harness({ prepare: async (input) => ({ ...input, contentVersion: ++version }) });
   try {
     h.submit();
     h.submit();
     await h.turn();
-    assert.equal(h.work.length, 2);
-    assert.notEqual(h.work[0]?.permit.executionId, h.work[1]?.permit.executionId);
+    assert.equal(h.work.length, 1);
   } finally {
     await h.close();
   }
@@ -285,10 +284,10 @@ test("prepare validation fails before allocation; registered contracts are immut
   }
   const broken = harness();
   try {
-    broken.submit({ executionMatch: "completed-after-eligible" });
+    broken.submit({ executionMatch: "terminated-after-eligible" });
     await broken.turn();
     broken.type.inputSchema = { type: "object", properties: { other: { type: "number" } } };
-    broken.submit({ executionMatch: "completed-after-eligible" });
+    broken.submit({ executionMatch: "terminated-after-eligible" });
     await broken.turn();
     assert.equal(broken.engine.errors.length, 0);
     assert.equal(broken.work.length, 1);
@@ -495,21 +494,22 @@ test("invalid business result becomes explicit execution failure, never a strand
   }
 });
 
-test("completed-after cannot adopt a completion equal to eligible; no premature running association", async () => {
+test("terminated-after adopts a completion equal to eligible without premature association", async () => {
   const h = harness();
   try {
     h.submit();
     await h.turn();
-    const task = h.submit({ executionMatch: "completed-after-eligible" });
+    const task = h.submit({ executionMatch: "terminated-after-eligible" });
     h.engine.tick();
     await flush();
     h.engine.tick();
     assert.equal(h.engine.getTask(task.taskId, caller).stage, "queued");
+    assert.equal(h.engine.getTask(task.taskId, caller).execution, undefined);
     await h.finish();
     h.engine.tick();
-    assert.equal(h.engine.getTask(task.taskId, caller).stage, "queued");
+    assert.equal(h.engine.getTask(task.taskId, caller).stage, "completed");
     await h.turn();
-    assert.equal(h.work.length, 2);
+    assert.equal(h.work.length, 1);
   } finally {
     await h.close();
   }
@@ -520,7 +520,7 @@ test("fixed history page cannot retroactively gain an older Execution through a 
   try {
     h.submit();
     await h.turn();
-    const task = h.submit({ executionMatch: "completed-after-eligible" });
+    const task = h.submit({ executionMatch: "terminated-after-eligible" });
     h.engine.tick();
     await flush();
     const page = h.engine.readHistory({ taskId: task.taskId }, { limit: 1 }, caller);

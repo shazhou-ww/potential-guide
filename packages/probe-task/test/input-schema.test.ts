@@ -69,16 +69,16 @@ test("known URL paths reject credential-bearing and normalization-bypass inputs 
   }
 });
 
-test("Probe digest conflicts become preparation_failed before any external source call", async () => {
-  let calls = 0;
+test("Probe digest conflicts become preparation_failed after authorization but before resolution", async () => {
+  let authorizations = 0;
+  let resolutions = 0;
   const h = await harness(undefined, {
     source: {
       authorize() {
-        calls++;
-        throw new Error("unexpected authorization IO");
+        authorizations++;
       },
       async resolve() {
-        calls++;
+        resolutions++;
         throw new Error("unexpected download");
       },
     },
@@ -97,7 +97,9 @@ test("Probe digest conflicts become preparation_failed before any external sourc
     );
     assert.equal(final.error?.code, "invalid_probe");
     assert.match(final.error!.message, /Root binding conflict/);
-    assert.equal(calls, 0);
+    assert.ok(authorizations > 0);
+    assert.equal(resolutions, 0);
+    assert.equal(Object.keys(h.store.read().facts.executions).length, 0);
     assert.equal(Object.keys(h.store.read().facts.tasks).length, 1);
     assert.throws(
       () =>

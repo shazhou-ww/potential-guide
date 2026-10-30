@@ -11,6 +11,15 @@ validators and queued `execute`. Authors no longer supply input validate/equals.
 coerces, fills defaults or removes fields. Equality compares independent structural
 projections, including invalid finite-JSON operands; it never invokes validation.
 Resource failures throw instead of returning an equality result.
+Optional `authorize(input, binding, executionPrepared?, result?)` is synchronous;
+Promise grants are rejected rather than awaited or treated as permission.
+
+The only match policies are `started-after-eligible` (default) and
+`terminated-after-eligible`. They bind only at their corresponding Execution
+event, with an inclusive effective-eligibility lower bound. Termination means
+success or failure, not physical cleanup. Prepared does not gate matching.
+Facts use projection version 2; old formats and `completed-after-eligible`
+are rejected, not silently reinterpreted.
 
 `reduce(prefix, events)` and `project(facts, taskId, explicitTime)` are pure.
 Use `isPending`, `isTimedOut`, `isCanceled`, `isCompleted` and `isExecutionFailed`

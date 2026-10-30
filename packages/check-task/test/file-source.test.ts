@@ -1,18 +1,18 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rm, writeFile, truncate, symlink, link, rename } from "node:fs/promises";
+import { link, mkdir, readFile, rename, rm, symlink, truncate, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 import {
+  packContractArtifact,
+  writeContractArtifact,
+} from "@potential-guide/check-artifacts/build";
+import {
+  artifactLimits,
   checkerSchemaUri,
   inspectContractFiles,
-  artifactLimits,
 } from "@potential-guide/check-artifacts/contracts";
-import {
-  writeContractArtifact,
-  packContractArtifact,
-} from "@potential-guide/check-artifacts/build";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import type { TaskSnapshot } from "@potential-guide/task-protocol";
@@ -160,18 +160,21 @@ test("real file archive -> prepare -> actual worker; HTTPS hook unchanged and ne
     );
     const outside = join(f.root, "outside-context.tgz");
     await writeFile(outside, f.first.bytes);
-    const spoofed = engine.submit(
-      {
-        requestId: newId(),
-        type: "check",
-        checker: { kind: "checker", url: pathToFileURL(outside).href },
-        subject: {},
-        context: { allowedFileRoots: [f.root], scope: "one" },
-        timeoutMs: 20000,
-      },
-      { scope: "one", subject: "test" },
+    assert.throws(
+      () =>
+        engine.submit(
+          {
+            requestId: newId(),
+            type: "check",
+            checker: { kind: "checker", url: pathToFileURL(outside).href },
+            subject: {},
+            context: { allowedFileRoots: [f.root], scope: "one" },
+            timeoutMs: 20000,
+          },
+          { scope: "one", subject: "test" },
+        ),
+      { code: "artifact_source_denied" },
     );
-    assert.equal((await final(engine, spoofed)).error?.code, "artifact_source_denied");
     assert.equal(
       (
         await f.source.resolve(
@@ -239,37 +242,52 @@ test("file Tasks retain subject validation and separate actual runtime availabil
     await f.close();
   }
 });
-test("asynchronous authorization binds the same immutable reference that is read", async () => {
+test("synchronous authorization binds the same immutable reference that is read", async () => {
   const f = await fixture();
-  let release = () => {};
-  let entered = () => {};
-  const gate = new Promise<void>((done) => {
-    release = done;
-  });
-  const ready = new Promise<void>((done) => {
-    entered = done;
-  });
   const source = createArtifactSource({
     allowedOrigins: [],
     allowedFileRoots: [f.imports],
     authorize(reference) {
-      entered();
       assert.equal(Object.isFrozen(reference), true);
       assert.equal(reference.url, f.reference.url);
-      return gate;
     },
   });
   try {
     const reference = { ...f.reference };
     const pending = source.resolve(reference, "one", new AbortController().signal);
-    await ready;
     reference.url = pathToFileURL(f.second.archive).href;
-    release();
     assert.equal((await pending).digest, f.first.digest);
   } finally {
-    release();
     await source.close();
     await f.close();
+  }
+});
+test("asynchronous authorization is explicitly rejected before source IO", async () => {
+  for (const rejects of [false, true]) {
+    let downloads = 0;
+    const source = createArtifactSource({
+      allowedOrigins: ["https://example.test"],
+      authorize: async () => {
+        if (rejects) throw new Error("async denial");
+      },
+      async download() {
+        downloads++;
+        throw new Error("Must not download");
+      },
+    });
+    try {
+      await assert.rejects(
+        source.resolve(
+          { kind: "checker", url: "https://example.test/a.tgz" },
+          "one",
+          new AbortController().signal,
+        ),
+        { code: "invalid_type" },
+      );
+      assert.equal(downloads, 0);
+    } finally {
+      await source.close();
+    }
   }
 });
 test("unpinned file resolutions select current bytes; exact cached snapshots reauthorize and survive deletion", async () => {

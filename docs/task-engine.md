@@ -13,7 +13,7 @@ import { createTaskEngine } from "@potential-guide/task-engine";
 import { openSqliteStore } from "@potential-guide/task-engine-storage";
 import { createTaskHandler } from "@potential-guide/task-engine-http";
 
-const store = openSqliteStore("tasks.sqlite");
+const store = openSqliteStore("tasks-v2.sqlite");
 const engine = createTaskEngine({
   store,
   types: [echoType],
@@ -39,6 +39,13 @@ unknown fields, including obsolete prerequisites. Identity prepare is valid.
 Preparation `context` is the frozen Engine-bound type/version/environment/scope,
 so source authorization never relies on body-supplied permissions. It is optional
 in the public options type for older direct adapters; Engine always supplies it.
+An optional synchronous `authorize(input, binding, executionPrepared?, result?)`
+hook checks input/source permissions at admission and again at event matching.
+It must return `undefined`, never a Promise; exceptions or asynchronous grants
+deny admission/matching. Execution context/result arguments belong to the
+candidate execution, not a prerequisite preparation by the receiving Task.
+Authorization must not perform asynchronous downloads. Keep resource checks in
+prepare/execute too; input equality never grants permissions.
 The optional `validateExecutionResult(result, prepared)` hook additionally validates
 results against immutable execution content, including recovery/history reads.
 Existing `validateResult` signatures remain unchanged; Check uses the new hook to
@@ -60,11 +67,17 @@ an execution may detach while another live owner retains it. Composition cancels
 only its own child Task IDs, then uses this barrier before resource reuse. An
 unconfirmed exit remains unconfirmed, subject to the owning pool's cleanup budget.
 
-Prepared must identify **actual immutable execution content**, not merely a
-mutable URL. The engine compares complete Prepared canonical JSON alongside
-type/version/environment/scope and `equals`; different resolved content cannot
-share. Omitted executionMatch binds to `started-after-eligible`, but the raw
-Request remains unchanged. Both “after” policies use strict greater-than.
+Prepared identifies **actual immutable execution content**, not merely a mutable
+URL, but it does not determine sharing. Matching uses type/version/environment/
+scope, contract revision, authorization and generated Input equality, even if a receiving
+Task has not prepared. For mutable references, pin a digest in Input when content
+identity is required; equal unpinned Inputs may share the selected execution.
+Omitted executionMatch means `started-after-eligible`; the raw Request stays
+unchanged. Only `started-after-eligible` and `terminated-after-eligible` are
+accepted. The former binds at start, the latter at logical success **or failure**.
+Both use event time `>= effectiveEligibleAt`. No running-time attachment or
+historical search binds a new Task, even when timestamps are equal: reception
+must precede the matching event in durable order. Failures are not successes.
 Full Request idempotency does not use business equality. Retain original version
 interpreters when upgrading; missing historical versions fail explicitly.
 Task and Execution bindings include `contractRevision`; missing legacy identities
@@ -159,7 +172,7 @@ The optional `/pool` helper implements `execute`. Provide resource keys and
 Engine-bound type/version/environment/scope, never body-supplied credentials.
 Pool obtains `options.start()` before
 calling run: this synchronous handshake commits a fresh identity, trusted
-startedAt and owner bindings before any business operation. execute returns
+startedAt and started-policy bindings before any business operation. execute returns
 tracking at actual startup, not a final result. Never use the return receipt
 time as startedAt. Report progress/completion via the permit; executors do not
 write Task events or choose fact times.
@@ -179,6 +192,10 @@ can provide the needed key, revalidates generation/owners with Engine, seals the
 old execution, and confirms exit/cleanup before a fresh identity can start.
 Task timeout alone does not stop running work. Independent execution wall limits,
 last-owner cancellation and host close retain reclamation control.
+Unbound terminated-policy demand also protects shared work. Timeout retracts
+unstarted work and replacement protection, not late-result eligibility. Sealing
+freezes existing demand IDs: they may still accept the final event, but new
+demand cannot join a sealed execution.
 Pool wakeups arriving during reclamation are replayed even when no slot is idle;
 denied replacements wait for another real wakeup rather than busy-looping.
 Wall limits use relative Clock scheduling, independently of business UTC clock
@@ -187,21 +204,22 @@ adjustments. A tracking identity or start time cannot be supplied by a Request.
 ## Lifecycle and durability
 
 Submit preserves raw Request, original contract binding, IDs and deadlines.
+`snapshot.eligibleAt` is the effective anchor:
+`max(request.eligibleAt ?? receivedAt, receivedAt)`. The deadline is that anchor
+plus timeoutMs. Idempotent retries and restart never reanchor accepted requests.
 Preparation and resource waiting consume the same eligible-anchored budget.
 Expiration retracts unstarted work; running work may complete late. Cancellation
 freezes the Task, not another owner's Execution. A durable eligible final fact
 wins over a later cancel even if Task processing is delayed.
-For an uncanceled, bound Task, time projection immediately uses the durable
-Execution finish/failure timestamp. Until Task adjudication is committed, its
-stage remains unchanged and no Task result or termination is fabricated. Thus
-late observation followed by settlement cannot turn an on-time finish into a
-temporary timeout and then revoke it.
-Candidate matching, projection and bound completion settlement share the pure
-`matchesExecutionTime` predicate. A binding does not bypass executionMatch if
-the business clock moves backward. Inapplicable completion does not prohibit
-cancellation or erase a timeout; execution faults remain distinct from normal
-result applicability. Sealing forbids new owners, not a valid result for an
-existing owner.
+Start/final events and their bindings are committed atomically; final events
+also commit Task settlement. Projection never invents historical matches.
+Preparation callbacks cannot overwrite a binding or terminal result.
+Timeout is independent of success/failure: effective end (or observation time
+while unfinished) must be strictly greater than deadlineAt. Equality is on time;
+deadlineAt is not an acceptance upper bound. An expired Task can accept an
+applicable event driven by another active Task, but cannot independently schedule
+new work. Started bindings retain their result when clocks later move backward;
+terminated bindings must satisfy the termination event's inclusive time bound.
 
 Recurrence requires explicit `eligible` or `terminated` anchor and positive
 periodMs. Select the strictly future point on the original lattice and skip
@@ -212,9 +230,16 @@ Capacity pressure leaves planning unconsumed. Cancellation creates no successor
 and does not undo an already planned one.
 
 SQLite uses WAL/FK/FULL, atomic events/idempotency/successors/checkpoint and one
-active owner per local store. Startup projects existing finals before resuming
+active owner per local store. SQLite user_version, checkpoint projection_version
+and Facts projectionVersion are all 2. Old formats and the old
+`completed-after-eligible` enum are explicitly rejected, not migrated or aliased.
+Use a new database path; rejection preserves old data. Version-zero databases
+containing application tables are not treated as empty.
+Startup projects existing finals before resuming
 unstarted work. Started work without a reliable final gets execution_interrupted;
-it is not rerun. This does not prove external side effects never happened or
+it is not rerun. The new recovery failure event may bind eligible terminated
+demand already received; it does not reconstruct a fictitious past finish.
+This does not prove external side effects never happened or
 external processes exited. Hosts using external processes must isolate/clean
 prior resources before reusing them. Store ownership is retained if close cannot
 confirm resource cleanup.

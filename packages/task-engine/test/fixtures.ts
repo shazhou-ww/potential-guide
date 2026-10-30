@@ -40,6 +40,7 @@ export function harness(
     resources?: string[];
     prepare?: TaskType<JsonObject>["prepare"];
     validateResult?: TaskType<JsonObject>["validateResult"];
+    inputSchema?: TaskType<JsonObject>["inputSchema"];
   } = {},
 ) {
   const clock = new VirtualClock();
@@ -85,7 +86,7 @@ export function harness(
     type: "echo",
     version: "1",
     environment: "js-v1",
-    inputSchema: echoSchema,
+    inputSchema: options.inputSchema ?? echoSchema,
     prepare: async (input, options_) => {
       prepares++;
       return options.prepare ? options.prepare(input, options_) : input;
@@ -114,7 +115,15 @@ export function harness(
   const engine = createTaskEngine({
     store,
     clock,
-    types: [{ ...type, execute: (input, options) => type.execute(input, options) }, sum],
+    types: [
+      {
+        ...type,
+        execute: (input, options) => type.execute(input, options),
+        authorize: (input, binding, prepared, result) =>
+          type.authorize?.(input, binding, prepared, result),
+      },
+      sum,
+    ],
     currentVersions: { echo: "1", sum: "1" },
     authorize: (who) => who.subject === "tester",
     ...(options.limits ? { limits: options.limits } : {}),

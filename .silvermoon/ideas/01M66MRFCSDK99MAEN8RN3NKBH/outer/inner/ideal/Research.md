@@ -1,6 +1,6 @@
 # Schema 生成能力与迁移边界调研
 
-本文支撑 [Idea.md](Idea.md) 和[讨论依据](Discussion.md)，不是第二份契约或实现设计。源码基线为 `6ffc3cb959ac58d355856fbbc210bf50758b3150`；本次仅做源码核对和反例推演，没有实现新 Schema 或 Equals。
+本文支撑 [Idea.md](Idea.md) 和[讨论依据](Discussion.md)，不是第二份契约。早期源码调研基线为 `6ffc3cb959ac58d355856fbbc210bf50758b3150`；下方早期事实及反例不冒充最新实现。后续实施整合 primary `55b02178670b6c6f03ab7dc6359b9d48bfdfb926` 的事件时点绑定、同步授权和存储格式 2，以文末约束及讨论中的并发整合说明为准。
 
 ## 已核实的接入点
 
@@ -79,6 +79,7 @@
 5. **敏感数据拒绝不后移。** 内置制品 URL 的提交前安全形状用可公开的标准 Schema 限制：禁止 userinfo、片段、可疑凭据查询键及可绕过这些限制的编码形式；必要时采用保守的查询键语法，并在新版迁移文档列明比旧规则更严格的输入。URL 规范化及业务引用解析留在 prepare，先做本地检查再访问来源。禁止为迁移重新引入作者 validate/equals 或私有校验关键字；标准 Schema 无法可靠保护该边界时为阻塞。
 6. **公开发现与契约漂移。** 发现仅暴露当前可提交的类型、版本、输入 Schema 及稳定契约修订，不包含执行环境/函数/凭据，不加载资产。复用 caller/scope 和现有 submit 授权判断，明确没有新增逐类型 ACL。客户端可携带公开的契约修订前置条件；服务端在持久化前拒绝陈旧修订，不默默按另一版解释。前置条件是传输/提交元数据，不落入业务输入 Equals，也不得污染既有 requestId 幂等语义。
 7. **不静默迁移历史。** 内置 Check/Probe 新语义使用新类型版本；恢复依赖原绑定，不自动升级历史记录。对已存记录缺失契约身份或缺少原类型时明确报告不支持，不能把同名版本换成新 Schema 后继续共享。外部消费者要迁移声明；不添加永久双轨作者 validate/equals 兼容接口。Prepared、结果和运行时校验保留，Probe 摘要冲突按已批准方向在 prepare 检查。
+8. **整合最新 primary 而不回退其契约。** started/terminated 策略在对应 Execution 事件绑定，不依赖 Prepared；新格式拒绝旧 completed-after-eligible 与旧存储。保留同步 authorize(input,binding,executionPrepared?,result?)，输入相等不授予权限；不能将该授权 hook 误删为旧输入 validate。冲突请求允许经过同步接收授权，但在 prepare 中、任何制品 resolve/download 前失败。新 contractRevision 同样约束事件匹配、孤立执行恢复和取消/释放关联。
 
 ## 当前准备结论
 

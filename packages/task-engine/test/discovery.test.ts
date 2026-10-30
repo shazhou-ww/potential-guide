@@ -162,32 +162,63 @@ test("execution records independently require the original contract identity", a
     await h.finish();
     h.engine.tick();
     await h.engine.close();
-    for (const revision of [undefined, "different"]) {
-      const store: Store = {
-        claim: (owner) => h.store.claim(owner),
-        release: (owner) => h.store.release(owner),
-        append: (...args) => h.store.append(...args),
-        compact: (...args) => h.store.compact(...args),
-        close: () => h.store.close(),
-        read() {
-          const view = h.store.read();
-          for (const execution of Object.values(view.facts.executions)) {
-            if (revision === undefined)
-              Reflect.deleteProperty(execution.binding, "contractRevision");
-            else execution.binding.contractRevision = revision;
-          }
-          return view;
-        },
-      };
-      const restored = createTaskEngine({
-        store,
-        clock: h.clock,
-        types: [h.type],
-        currentVersions: { echo: "1" },
-        authorize: () => true,
-      });
-      assert.throws(() => restored.start(), { code: "unsupported_contract" });
-    }
+    for (const revision of [undefined, "different"])
+      for (const orphan of [false, true]) {
+        const store: Store = {
+          claim: (owner) => h.store.claim(owner),
+          release: (owner) => h.store.release(owner),
+          append: (...args) => h.store.append(...args),
+          compact: (...args) => h.store.compact(...args),
+          close: () => h.store.close(),
+          read() {
+            const view = h.store.read();
+            if (orphan) view.facts.tasks = {};
+            for (const execution of Object.values(view.facts.executions)) {
+              if (revision === undefined)
+                Reflect.deleteProperty(execution.binding, "contractRevision");
+              else execution.binding.contractRevision = revision;
+            }
+            return view;
+          },
+        };
+        const restored = createTaskEngine({
+          store,
+          clock: h.clock,
+          types: [h.type],
+          currentVersions: { echo: "1" },
+          authorize: () => true,
+        });
+        assert.throws(() => restored.start(), { code: "unsupported_contract" });
+      }
+  } finally {
+    await h.close();
+  }
+});
+
+test("generated structural equality never bypasses synchronous event-time authorization", async () => {
+  const h = harness({
+    inputSchema: { type: "object", properties: { text: { type: "string" } }, required: ["text"] },
+  });
+  let revoked = false;
+  h.type.authorize = (input) => {
+    if (revoked && input.source === "blocked") throw new Error("source permission revoked");
+  };
+  try {
+    const owner = h.submit({ source: "owner" });
+    await h.turn();
+    const blocked = h.submit({ source: "blocked", executionMatch: "terminated-after-eligible" });
+    const allowed = h.submit({ source: "allowed", executionMatch: "terminated-after-eligible" });
+    assert.equal(h.engine.getTask(allowed.taskId, caller).execution, undefined);
+    assert.equal(h.store.read().facts.tasks[allowed.taskId]?.prepared, undefined);
+    revoked = true;
+    await h.finish();
+    assert.equal(
+      h.engine.getTask(allowed.taskId, caller).execution?.executionId,
+      h.engine.getTask(owner.taskId, caller).execution?.executionId,
+    );
+    assert.equal(h.engine.getTask(blocked.taskId, caller).execution, undefined);
+    assert.ok(h.engine.errors.some((error) => error.message === "source permission revoked"));
+    assert.equal(h.work.length, 1);
   } finally {
     await h.close();
   }

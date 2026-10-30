@@ -12,13 +12,10 @@ for (const outcome of ["completed", "failed"] as const) {
           const original = h.submit({ timeoutMs: 1000 });
           await h.turn();
           await h.turn(10);
-          const task = h.submit({ executionMatch: "completed-after-eligible" });
+          const task = h.submit({ executionMatch: "terminated-after-eligible" });
           await h.turn();
           assert.equal(h.work.length, 1);
-          assert.equal(
-            h.engine.getTask(task.taskId, caller).execution?.executionId,
-            h.engine.getTask(original.taskId, caller).execution?.executionId,
-          );
+          assert.equal(h.engine.getTask(task.taskId, caller).execution, undefined);
           h.clock.setTime(Date.parse(task.eligibleAt) + offset);
           if (outcome === "completed") await h.finish();
           else {
@@ -27,7 +24,7 @@ for (const outcome of ["completed", "failed"] as const) {
             await flush();
           }
           h.clock.setTime(Date.parse(task.deadlineAt) + 1);
-          const inapplicable = outcome === "completed" && offset <= 0;
+          const inapplicable = offset < 0;
           assert.equal(isTimedOut(h.engine.getTask(task.taskId, caller)), inapplicable);
           if (tickFirst) {
             h.engine.tick();
@@ -36,12 +33,16 @@ for (const outcome of ["completed", "failed"] as const) {
           if (inapplicable) {
             const canceled = h.engine.cancelTask(task.taskId, caller);
             assert.ok(canceled.canceledAt);
-            assert.equal(canceled.stage, "running");
+            assert.equal(canceled.stage, "queued");
             assert.equal(canceled.termination, undefined);
             assert.equal(canceled.result, undefined);
             assert.equal(canceled.execution?.completedAt, undefined);
             assert.ok(isTimedOut(canceled));
           } else {
+            assert.equal(
+              h.engine.getTask(task.taskId, caller).execution?.executionId,
+              h.engine.getTask(original.taskId, caller).execution?.executionId,
+            );
             assert.throws(() => h.engine.cancelTask(task.taskId, caller), {
               code: "task_finished",
             });
@@ -105,7 +106,7 @@ for (const outcome of ["completed", "failed"] as const) {
           await flush();
         }
         const prefix = h.store.read().facts;
-        assert.equal(prefix.tasks[task.taskId]?.snapshot.termination, undefined);
+        assert.ok(prefix.tasks[task.taskId]?.snapshot.termination);
         h.clock.setTime(Date.parse(task.deadlineAt) + 2);
         const saved = JSON.stringify(prefix);
         const before = project(prefix, task.taskId, h.clock.now());
@@ -116,13 +117,10 @@ for (const outcome of ["completed", "failed"] as const) {
           outcome === "completed" ? before.execution?.completedAt : before.execution?.failedAt,
           endedAt,
         );
-        assert.equal(before.stage, "running", "projection does not invent a Task judgment");
-        assert.equal(before.termination, undefined);
-        assert.equal(
-          before.result,
-          undefined,
-          "result still requires the Task's successful judgment",
-        );
+        assert.equal(before.stage, outcome === "completed" ? "completed" : "execution_failed");
+        assert.ok(before.termination);
+        if (outcome === "completed") assert.deepEqual(before.result, { text: "hello" });
+        else assert.equal(before.result, undefined);
         assert.throws(() => h.engine.cancelTask(task.taskId, caller), { code: "task_finished" });
         h.engine.tick();
         const after = h.engine.getTask(task.taskId, caller);
@@ -151,10 +149,16 @@ test("projection does not borrow an unbound or time-ineligible completion", asyn
     const execution = prefix.executions[record.snapshot.execution.executionId];
     assert.ok(execution?.completedAt);
     const time = Date.parse(task.deadlineAt) + 1;
-    for (const match of ["started-after-eligible", "completed-after-eligible"] as const) {
+    for (const match of ["started-after-eligible", "terminated-after-eligible"] as const) {
       record.binding.executionMatch = match;
-      record.snapshot.eligibleAt =
-        match === "started-after-eligible" ? execution.startedAt : execution.completedAt;
+      record.snapshot.stage = "running";
+      delete record.snapshot.termination;
+      delete record.snapshot.execution.completedAt;
+      record.snapshot.eligibleAt = at(
+        Date.parse(
+          match === "started-after-eligible" ? execution.startedAt : execution.completedAt,
+        ) + 1,
+      );
       assert.equal(project(prefix, task.taskId, time).execution?.completedAt, undefined);
       assert.ok(isTimedOut(project(prefix, task.taskId, time)));
     }

@@ -2,39 +2,41 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 import { Worker } from "node:worker_threads";
-import { canonicalJson, type ArtifactReference } from "@potential-guide/check-artifacts/contracts";
+import { type ArtifactReference, canonicalJson } from "@potential-guide/check-artifacts/contracts";
 import {
-  prepareObjective,
-  observationDefaults,
   type ObservationEffect,
+  observationDefaults,
+  prepareObjective,
 } from "@potential-guide/check-artifacts/observation";
 import type { ArtifactSource } from "@potential-guide/check-task";
 import { newId } from "@potential-guide/task-engine";
 import { createExecutorPool, type RunningWork } from "@potential-guide/task-engine/pool";
 import {
+  authorizeSync,
+  type Caller,
+  type ExecuteOptions,
   isTimedOut,
   json,
   positive,
-  TaskError,
-  type Caller,
-  type TaskService,
-  type TaskType,
   type StartPermit,
-  type ExecuteOptions,
+  TaskError,
+  type TaskService,
   type TaskSnapshot,
+  type TaskType,
 } from "@potential-guide/task-protocol";
 import {
   decodePrepared,
   encodeObjective,
+  type ProbeEffectEvidence,
+  type ProbeInput,
+  type ProbePolicy,
+  type ProbePrepared,
+  probeResultReferences,
   replayResult,
   validateProbeInput,
   validateProbeConsistency,
   probeInputSchema,
   validateProbeResult,
-  type ProbeInput,
-  type ProbePrepared,
-  type ProbePolicy,
-  type ProbeEffectEvidence,
 } from "./contracts.js";
 export type { ProbeInput, ProbePrepared, ProbeResult, ProbeEffectEvidence } from "./contracts.js";
 export { validateProbeInput, probeInputSchema } from "./contracts.js";
@@ -122,7 +124,7 @@ export function createProbeTaskType(options: ProbeTaskOptions): TaskType<
       reference,
       async (ref) => {
         signal.throwIfAborted();
-        await options.source.authorize(ref, scope);
+        authorizeSync(() => options.source.authorize(ref, scope));
         const artifact = await options.source.resolve(ref, scope, signal);
         signal.throwIfAborted();
         return artifact;
@@ -355,6 +357,21 @@ export function createProbeTaskType(options: ProbeTaskOptions): TaskType<
     version: options.version ?? "2",
     environment,
     inputSchema: probeInputSchema,
+    authorize(input, context, prepared, result) {
+      const authorize = (reference: ArtifactReference) =>
+        authorizeSync(() => options.source.authorize(reference, context.scope));
+      authorize(input.objective);
+      for (const [url, digest] of Object.entries(input.bindings ?? {}))
+        authorize({ kind: "objective", url, digest });
+      if (prepared) {
+        const root = decodePrepared(prepared, environment, policy);
+        authorize(prepared.root.reference);
+        for (const binding of Object.values(root.artifact.manifest.checkers))
+          authorize({ kind: "checker", url: binding.url, digest: binding.digest });
+      }
+      if (result !== undefined)
+        for (const reference of probeResultReferences(result)) authorize(reference);
+    },
     async prepare(input, context) {
       validateProbeInput(input);
       validateProbeConsistency(input);
@@ -362,7 +379,7 @@ export function createProbeTaskType(options: ProbeTaskOptions): TaskType<
         throw new TaskError("invalid_config", "Trusted preparation context required.");
       const scope = context.context.scope;
       for (const [url, digest] of Object.entries(input.bindings ?? {}))
-        await options.source.authorize({ kind: "objective", url, digest }, scope);
+        authorizeSync(() => options.source.authorize({ kind: "objective", url, digest }, scope));
       const digest = input.bindings?.[input.objective.url] ?? input.objective.digest;
       const root = await prepare(
         { ...input.objective, ...(digest ? { digest } : {}) },
@@ -383,11 +400,13 @@ export function createProbeTaskType(options: ProbeTaskOptions): TaskType<
     validateProgress: (value) => json(value, 96 * 1024 * 1024),
     async execute(prepared, context) {
       const root = decodePrepared(prepared, environment, policy);
-      await options.source.authorize(prepared.root.reference, context.context.scope);
+      authorizeSync(() => options.source.authorize(prepared.root.reference, context.context.scope));
       for (const binding of Object.values(root.artifact.manifest.checkers))
-        await options.source.authorize(
-          { kind: "checker", url: binding.url, digest: binding.digest },
-          context.context.scope,
+        authorizeSync(() =>
+          options.source.authorize(
+            { kind: "checker", url: binding.url, digest: binding.digest },
+            context.context.scope,
+          ),
         );
       context.signal.throwIfAborted();
       return pool.execute(prepared, context);

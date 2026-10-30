@@ -29,6 +29,21 @@ const type = {
   async execute(_input, options) {
     armed = mode.startsWith("startup-");
     const permit = options.start();
+    if (mode.startsWith("terminate-")) {
+      engine.submit(
+        {
+          requestId: requestId.slice(0, -1) + (requestId.endsWith("0") ? "1" : "0"),
+          type: "echo",
+          text: "crash",
+          timeoutMs: 1000,
+          executionMatch: "terminated-after-eligible",
+        },
+        { scope: "a", subject: "tester" },
+      );
+      armed = true;
+      if (mode.includes("-failed-")) permit.fail({ code: "business", message: "Durable failure" });
+      else permit.complete({ text: "durable final" });
+    }
     if (mode === "completed") permit.complete({ text: "durable final" });
     process.send?.({ taskId, executionId: permit.executionId });
     process.exit(17);

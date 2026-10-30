@@ -4,16 +4,16 @@ import { mkdir, readdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import test from "node:test";
 import {
+  type ContractArtifact,
   checkerSchemaUri,
   inspectContractFiles,
-  type ContractArtifact,
 } from "@potential-guide/check-artifacts/contracts";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
-import { TaskError } from "@potential-guide/task-protocol";
 import type { TaskSnapshot } from "@potential-guide/task-protocol";
-import { createCheckTaskType, type ArtifactSource } from "../src/index.js";
+import { TaskError } from "@potential-guide/task-protocol";
+import { type ArtifactSource, createCheckTaskType } from "../src/index.js";
 
 const caller = { scope: "a", subject: "tester" };
 const reference = { kind: "checker" as const, url: "https://example.test/checker.tgz" };
@@ -282,17 +282,17 @@ test("shared real execution has independent cancellation, idempotency and physic
     ),
   );
   try {
-    const a = h.submit({ executionMatch: "completed-after-eligible" });
+    const a = h.submit();
     await wait(
       () => h.read(a),
       (item) => item.stage === "running",
     );
-    const b = h.submit({ executionMatch: "completed-after-eligible" });
+    const b = h.submit({ executionMatch: "terminated-after-eligible" });
     await wait(
       () => h.read(b),
-      (item) => item.stage === "running",
+      (item) => item.stage === "queued",
     );
-    assert.equal(h.read(a).execution?.executionId, h.read(b).execution?.executionId);
+    assert.equal(h.read(b).execution, undefined);
     const original = h.engine.getRequest(b.requestId, caller);
     assert.equal(h.engine.submit(original, caller).taskId, b.taskId);
     h.engine.cancelTask(a.taskId, caller);
@@ -306,6 +306,7 @@ test("shared real execution has independent cancellation, idempotency and physic
       ).result !== undefined,
       true,
     );
+    assert.equal(h.read(a).execution?.executionId, h.read(b).execution?.executionId);
     const stuck = h.submit({ subject: { spin: true } });
     await wait(
       () => h.read(stuck),
@@ -354,32 +355,29 @@ test("deterministic deadline projection records late worker completion without c
     await h.close();
   }
 });
-test("changed content cannot share and cached completion cannot bypass new source authorization", async () => {
+test("input-equivalent mutable sources share the selected execution, never bypass source authorization", async () => {
   const h = await harness(
     artifact(
       "exports.execute=async()=>{await new Promise(r=>setTimeout(r,200));return {status:200,message:'',payload:{ok:true,problems:[]}}}",
     ),
   );
   try {
-    const a = h.submit({ executionMatch: "completed-after-eligible" });
+    const a = h.submit();
     await wait(
       () => h.read(a),
       (item) => item.stage === "running",
     );
     h.replace(artifact());
-    const b = h.submit({ executionMatch: "completed-after-eligible" });
+    const b = h.submit({ executionMatch: "terminated-after-eligible" });
     await wait(
       () => h.read(b),
       (item) => item.stage === "completed",
     );
-    assert.notEqual(h.read(a).execution?.executionId, h.read(b).execution?.executionId);
+    assert.equal(h.read(a).execution?.executionId, h.read(b).execution?.executionId);
     h.deny();
-    const denied = h.submit({ executionMatch: "completed-after-eligible" });
-    await wait(
-      () => h.read(denied),
-      (item) => item.stage === "preparation_failed",
-    );
-    assert.equal(h.read(denied).execution, undefined);
+    const count = Object.keys(h.store.read().facts.tasks).length;
+    assert.throws(() => h.submit({ executionMatch: "terminated-after-eligible" }), /denied/);
+    assert.equal(Object.keys(h.store.read().facts.tasks).length, count);
   } finally {
     await h.close();
   }
@@ -428,7 +426,7 @@ test("Check real HTTP/SSE authorization, shared cancellation, pagination and rec
     }
     throw new Error(`Missing ${stage}`);
   };
-  const submit = async () => {
+  const submit = async (executionMatch = "started-after-eligible") => {
     const response = await fetch(`${server.url}/tasks`, {
       method: "POST",
       headers: { ...headers, "Idempotency-Key": newId() },
@@ -437,7 +435,7 @@ test("Check real HTTP/SSE authorization, shared cancellation, pagination and rec
         checker: reference,
         subject: {},
         timeoutMs: 10000,
-        executionMatch: "completed-after-eligible",
+        executionMatch,
       }),
     });
     assert.equal(response.status, 202);
@@ -446,12 +444,9 @@ test("Check real HTTP/SSE authorization, shared cancellation, pagination and rec
   try {
     const a = await submit();
     await until(a.taskId, "running");
-    const b = await submit();
-    await until(b.taskId, "running");
-    assert.equal(
-      (await get(a.taskId)).execution?.executionId,
-      (await get(b.taskId)).execution?.executionId,
-    );
+    const b = await submit("terminated-after-eligible");
+    await until(b.taskId, "queued");
+    assert.equal((await get(b.taskId)).execution, undefined);
     assert.equal((await fetch(`${server.url}/tasks/${a.taskId}`)).status, 401);
     const canceled = await fetch(`${server.url}/tasks/${a.taskId}/cancel`, {
       method: "POST",

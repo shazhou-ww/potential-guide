@@ -425,17 +425,18 @@ test("Engine denies stale pressure authorization after a new protected owner att
     await h.turn(10);
     h.submit({ text: "replacement" });
     await h.turn();
-    const protectedTask = h.submit({ executionMatch: "completed-after-eligible" });
+    const protectedTask = h.submit({ executionMatch: "terminated-after-eligible" });
     await h.turn();
-    assert.equal(
-      h.engine.getTask(protectedTask.taskId, caller).execution?.executionId,
-      h.work[0]?.permit.executionId,
-    );
+    assert.equal(h.engine.getTask(protectedTask.taskId, caller).execution, undefined);
     release.resolve();
     await flush();
     assert.equal(h.work[0]?.stops.length, 0);
     assert.equal(h.pool.stats.queued, 1);
     await h.finish();
+    assert.equal(
+      h.engine.getTask(protectedTask.taskId, caller).execution?.executionId,
+      h.work[0]?.permit.executionId,
+    );
     await flush();
     assert.equal(h.work.length, 2);
   } finally {

@@ -26,13 +26,19 @@ Submit the common request fields plus `objective: {kind:"objective",url,digest?}
 `targetLevel:"initial"` (otherwise cumulative observation). `context.resolutions`
 is reserved. Child callers are injected trusted authority, never request fields.
 Use the same explicit authorization policy for child history and parent history.
+Source authorization is synchronous and independent of preparation. Input,
+candidate root/static resources and final dynamic transcript references are
+reauthorized before event-time sharing; asynchronous grants are rejected.
+Equal Inputs may share without equal Prepared; pin Objective bindings in Input
+when immutable selection is required.
 
 The default type version is **2**. `probeInputSchema` is the public input contract;
 `validateProbeInput` is its generated wrapper. Objective URLs and binding keys
 use the conservative HTTPS query/credential restrictions documented by
 [`check-task`](../check-task/README.md), before raw persistence. Root digest versus
 `bindings[objective.url]` conflicts are now accepted structurally and then produce
-`preparation_failed` (`invalid_probe`) **before any source calls**. The same
+`preparation_failed` (`invalid_probe`) **before artifact resolution/download or
+execution**; synchronous admission authorization still runs first. The same
 consistency checks remain in Prepared/recovery validation. Historical versions
 are not upgraded automatically; records without contract identities fail explicitly.
 
@@ -57,8 +63,10 @@ capacity rather than claiming success. No in-process Promise is force-killed.
 Cancellation withdraws only tasks created by this parent execution. A shared
 Check's other owner survives. `waitForTaskRelease` is an engine-owned physical
 ownership barrier: cancellation of a shared owner need not wait for other owners.
-Task deadline expiry is **not** execution cancellation: late observations remain
-execution history without retroactively completing the timed-out task. Unknown
+Task deadline expiry is **not** execution cancellation: an applicable late
+observation completes the Task while retaining its timeout. Failure can likewise
+coexist with timeout. Unbound terminated-policy demand also protects shared
+Checks before their final event. Unknown
 started observations recover as interrupted, never automatically rerun.
 
 See `examples/task-server/probe-config.mjs` for CLI/in-process composition and
