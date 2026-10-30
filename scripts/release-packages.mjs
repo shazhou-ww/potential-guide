@@ -238,6 +238,18 @@ export const releasePackages = [
 export const verificationPackages = [
   ...releasePackages,
   {
+    id: "probe-task",
+    directory: "probe-task",
+    name: "@potential-guide/probe-task",
+    requiredExports: ["createProbeTaskType", "validateProbeInput"],
+    bins: [],
+    forbiddenDependencies: [
+      "@potential-guide/checker-host",
+      "@potential-guide/objective-host",
+      "@potential-guide/objective-pilot",
+    ],
+  },
+  {
     id: "check-task",
     directory: "check-task",
     name: "@potential-guide/check-task",
@@ -253,6 +265,7 @@ export const verificationPackages = [
     bins: ["task-engine-server"],
     forbiddenDependencies: [
       "@potential-guide/check-task",
+      "@potential-guide/probe-task",
       "@potential-guide/check-artifacts",
       "@potential-guide/checker-host",
       "@potential-guide/objective-host",

@@ -1,4 +1,4 @@
-# Check + generic Server MVP
+# Check, Probe and generic Server
 
 The generic Server composes Engine, HTTP adapter and SQLite. It neither understands
 artifacts nor grants permissions based on Request fields. The standalone command
@@ -92,7 +92,25 @@ consumer contract or leave a compatibility dependency and would not deliver
 installation isolation without migration. Packed-consumer evidence records the
 actual installed graph rather than claiming a subpath makes dependencies vanish.
 
+## Probe composition
+
+`@potential-guide/probe-task` registers Objective observation on the same Engine.
+The `probe-config.mjs` example uses trusted `bindService(engine)` to inject a
+scoped child caller before recovery/listener startup. Probe automatically declares
+an isolated bounded allocation lane, separate from the Check worker pool.
+`allocationLimits` is an optional generic trusted override, not an HTTP option.
+
+Probe pins exact root/static Checker bytes and the actual environment during
+preparation. Dynamic Objective selection evidence and child identities appear in
+the result transcript; validation replays the same interpreter used by the legacy
+ObjectiveService. References are composed from exact artifacts. Dependency
+requirements only cause observation and rechecking, never Agent/regulation.
+Task deadlines retain generic projection semantics; independent execution wall
+limits and cancellation reclaim the physical root worker and exclusively owned
+children. Shared child owners survive independently.
+
 Examples live under `examples/task-server`; none import repository source files
-or legacy Host packages. No artifact-query routes, Probe/Regulate types,
-automatic retries of unknown work, package publication or full legacy migration
-are included.
+or legacy Host packages. `probe-integration.mjs` exercises real HTTP/SSE reconnect
+and in-process usage against installed production packages. No artifact-query
+routes, Regulate type, automatic retries of unknown work, package publication or
+full legacy migration are included.

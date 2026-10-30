@@ -45,6 +45,21 @@ Existing `validateResult` signatures remain unchanged; Check uses the new hook t
 validate declared problems against the original verified Checker manifest rather
 than a process-local cache.
 
+A trusted TaskType may declare positive `allocationLimit` to select an isolated
+admission lane for its type (all versions agree). Unlisted types share
+`limits.maxConcurrent`; `EngineOptions.allocationLimits` can explicitly override
+lanes. This bounds allocation requests, not physical workers: executors still
+own their bounded pools. Orchestration waiting for child types must use separate
+lanes/pools. Probe declares its lane automatically so even queued parents cannot
+exhaust a single Check admission slot. Request fields cannot choose capacities.
+
+`engine.waitForTaskRelease(taskId, caller)` is an authorized in-process physical
+ownership barrier, not a cancellation command or a new Task stage. It waits for
+startup/preparation withdrawal and tracking cleanup; a canceled owner sharing
+an execution may detach while another live owner retains it. Composition cancels
+only its own child Task IDs, then uses this barrier before resource reuse. An
+unconfirmed exit remains unconfirmed, subject to the owning pool's cleanup budget.
+
 Prepared must identify **actual immutable execution content**, not merely a
 mutable URL. The engine compares complete Prepared canonical JSON alongside
 type/version/environment/scope and `equals`; different resolved content cannot

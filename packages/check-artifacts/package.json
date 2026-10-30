@@ -6,6 +6,10 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
+    "./observation": {
+      "types": "./dist/observation.d.ts",
+      "import": "./dist/observation.js"
+    },
     "./contracts": {
       "types": "./dist/pure.d.ts",
       "import": "./dist/pure.js"

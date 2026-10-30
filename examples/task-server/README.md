@@ -31,3 +31,21 @@ Reconnect SSE with the last acknowledged `Last-Event-ID`; deduplicate by event
 sequence. CLI readiness is a JSON `ready` line. SIGINT/SIGTERM cleanly close it
 where the OS delivers catchable signals; Windows forced process termination is
 crash recovery, not graceful shutdown.
+# Probe composition
+
+`probe-config.mjs` registers Check and Probe with the same generic Server and a
+trusted scoped in-process child caller. Start it with the existing CLI:
+
+```sh
+task-engine-server --config ./probe-config.mjs
+```
+
+Set `TASK_SERVER_TOKEN`, `CHECK_ORIGIN`, and optionally `TASK_SERVER_DATABASE`,
+`TASK_SERVER_PORT`, `CHECK_WORKERS`. Sources are authorized HTTPS archives.
+The Check worker count is deliberately one; Probe has two separate parent slots.
+
+With the required packages installed beside both files, run
+`node probe-integration.mjs` for a disposable, repository-relative fixture:
+real worker artifacts, in-process/HTTP comparison, SSE reconnect, scoped child
+history, SQLite reopen, and physical cleanup. It does not publish or deploy.
+`pnpm pack:check` runs this exact runner against installed production tarballs.

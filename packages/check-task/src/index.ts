@@ -35,6 +35,7 @@ export {
 export interface CheckInput {
   checker: ArtifactReference & { kind: "checker" };
   subject: JsonObject;
+  context?: JsonObject;
   language?: string;
 }
 export interface CheckPrepared {
@@ -74,12 +75,13 @@ function boundedObject(value: unknown, maxBytes = 96 * 1024 * 1024): JsonObject 
   return parsed;
 }
 export function validateCheckInput(value: unknown): CheckInput {
-  const input = exact(value, ["checker", "subject"], ["language"]);
+  const input = exact(value, ["checker", "subject"], ["language", "context"]);
   const reference = exact(input.checker, ["kind", "url"], ["digest"]);
   if (
     reference.kind !== "checker" ||
     typeof reference.url !== "string" ||
     !jsonObject(input.subject) ||
+    (input.context !== undefined && !jsonObject(input.context)) ||
     (input.language !== undefined && typeof input.language !== "string")
   )
     throw new TaskError("invalid_check", "Expected Checker reference and finite object subject.");

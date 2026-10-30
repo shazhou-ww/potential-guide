@@ -5,7 +5,10 @@
 legacy Host/scheduler nor starts listeners. See [server guide](../../docs/task-server.md).
 
 Inputs beside the generic Request envelope are `checker` (typed HTTPS reference,
-optional exact digest), `subject` (finite JSON object), and optional `language`.
+optional exact digest), `subject` (finite JSON object), optional `context` (finite
+JSON data exposed as the Checker's `context.data`), and optional `language`.
+The negotiated language overrides a same-named context field. Context contributes
+to immutable input equality; Probe uses it for exact dependency resolutions.
 Prepared persists exact verified bytes and actual runtime binding, not a mutable
 cache path. Configure Engine payload/storage budgets for your maximum artifact.
 The default 64 KiB Engine budget is suitable only for small Checkers.

@@ -12,6 +12,7 @@ protocol:
   - "@potential-guide/pilot-protocol"
 business:
   - "@potential-guide/check-task"
+  - "@potential-guide/probe-task"
   - "@potential-guide/objective-pilot"
   - "@potential-guide/objective-regulator"
   - "@potential-guide/regulation-coordinator"

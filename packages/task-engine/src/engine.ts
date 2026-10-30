@@ -58,6 +58,8 @@ export interface EngineOptions {
   authorize: Authorize;
   clock?: Clock;
   limits?: Partial<EngineLimits>;
+  /** Trusted isolated allocation lanes; unlisted types share maxConcurrent. */
+  allocationLimits?: Readonly<Record<string, number>>;
   onError?: (error: ErrorFact) => void;
 }
 interface Group {
@@ -113,6 +115,7 @@ export class TaskEngine implements TaskService {
   private readonly clock: Clock;
   readonly limits: EngineLimits;
   private readonly types = new Map<string, RegisteredType>();
+  private readonly allocationLimits = new Map<string, number>();
   private view: StoreView;
   private started = false;
   private closing = false;
@@ -140,7 +143,16 @@ export class TaskEngine implements TaskService {
       const key = `${type.type}\0${type.version}`;
       if (this.types.has(key)) fail("invalid_type", "Duplicate type version.");
       this.types.set(key, type);
+      if (type.allocationLimit !== undefined) {
+        const capacity = positive(type.allocationLimit, "allocationLimit");
+        const previous = this.allocationLimits.get(type.type);
+        if (previous !== undefined && previous !== capacity)
+          fail("invalid_type", "Type versions must share one allocation capacity.");
+        this.allocationLimits.set(type.type, capacity);
+      }
     }
+    for (const [key, value] of Object.entries(options.allocationLimits ?? {}))
+      this.allocationLimits.set(key, positive(value, `allocationLimits.${key}`));
     this.view = options.store.read();
   }
   private diagnostic(error: unknown, code = "engine_failure"): void {
@@ -364,6 +376,39 @@ export class TaskEngine implements TaskService {
     this.reconcileGroups();
     this.reclaimUnowned();
     return project(this.view.facts, taskId, this.clock.now());
+  }
+  /** Physical ownership barrier for trusted in-process composition, not cancellation. */
+  async waitForTaskRelease(taskId: string, caller: Caller): Promise<void> {
+    this.task(taskId, caller, "task");
+    for (;;) {
+      const task = this.view.facts.tasks[taskId];
+      if (!task) return;
+      const id = task.snapshot.execution?.executionId;
+      if (id) {
+        const shared = Object.values(this.view.facts.tasks).some(
+          (other) =>
+            other.snapshot.taskId !== taskId &&
+            other.snapshot.execution?.executionId === id &&
+            !other.snapshot.canceledAt &&
+            !other.snapshot.termination,
+        );
+        if (task.snapshot.canceledAt && shared) return;
+        const tracking = this.tracking.get(id);
+        if (tracking) {
+          await tracking.finished;
+          return;
+        }
+        if (this.view.facts.executions[id]?.reclaimedAt) return;
+        if (![...this.groups].some((group) => group.executionId === id))
+          fail("reclamation_unconfirmed", "Execution has no confirmed physical tracking.");
+      } else if (
+        !this.preparations.has(taskId) &&
+        ![...this.groups].some((group) => group.owners.has(taskId))
+      ) {
+        if (task.snapshot.canceledAt || task.snapshot.termination || this.closing) return;
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, 5));
+    }
   }
   start(): void {
     if (this.started || this.closing) fail("engine_started", "Engine already started.");
@@ -604,7 +649,17 @@ export class TaskEngine implements TaskService {
         return;
       }
     }
-    if (this.groups.size >= this.limits.maxConcurrent) return;
+    const isolated = this.allocationLimits.has(task.binding.type);
+    const allocationCount = [...this.groups].filter((group) =>
+      isolated
+        ? group.exemplar.binding.type === task.binding.type
+        : !this.allocationLimits.has(group.exemplar.binding.type),
+    ).length;
+    if (
+      allocationCount >=
+      (isolated ? this.allocationLimits.get(task.binding.type)! : this.limits.maxConcurrent)
+    )
+      return;
     const group: Group = {
       exemplar: task,
       owners: new Set([task.snapshot.taskId]),
