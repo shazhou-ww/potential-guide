@@ -24,26 +24,26 @@
       "firstReachedFrom": "consumer"
     },
     {
-      "reference": "@potential-guide/task-protocol",
-      "name": "@potential-guide/task-protocol",
-      "version": "0.1.0-rc.0",
-      "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0"
-    },
-    {
       "reference": "@potential-guide/task-engine",
       "name": "@potential-guide/task-engine",
       "version": "0.1.0-rc.0",
       "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0"
     },
     {
-      "reference": "@potential-guide/task-engine-storage",
-      "name": "@potential-guide/task-engine-storage",
+      "reference": "@potential-guide/task-protocol",
+      "name": "@potential-guide/task-protocol",
       "version": "0.1.0-rc.0",
-      "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0"
+      "firstReachedFrom": "@potential-guide/task-engine@0.1.0-rc.0"
     },
     {
       "reference": "@potential-guide/task-engine-http",
       "name": "@potential-guide/task-engine-http",
+      "version": "0.1.0-rc.0",
+      "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0"
+    },
+    {
+      "reference": "@potential-guide/task-engine-storage",
+      "name": "@potential-guide/task-engine-storage",
       "version": "0.1.0-rc.0",
       "firstReachedFrom": "@potential-guide/task-engine-server@0.1.0-rc.0"
     }

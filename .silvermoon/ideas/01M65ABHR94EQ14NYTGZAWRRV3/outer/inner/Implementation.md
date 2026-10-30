@@ -23,6 +23,8 @@
   认证和可信配置均在显式启动中完成。CLI 单独拥有进程信号。
   Server 延迟实际 Store lease release，直到 Engine 和 composition 资源都确认关闭。
   关闭或回滚失败不会假装成功。
+  CLI 的配置导入、工厂或启动失败即使留下活动句柄也会带未确认清理的诊断非零终止，
+  不仅设置 exitCode；程序化借用资源的关闭所有权不受影响。
 
 ## Steps
 

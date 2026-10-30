@@ -3,15 +3,44 @@
 本文件仅服务 Inner World 实现门禁，不是独立契约或部署验收。
 Ideal World 未修改；Probe、Regulate、旧重构 idea 生命周期及 npm 发布均不在本次范围。
 
+## 实现门禁反馈修订
+
+父代理审阅复现了 CLI 启动回滚超时后仍被配置保留的 interval 阻止退出：
+顶层 catch 仅设置 exitCode，不等于有界进程退出。现已将该 CLI fatal startup
+路径改为明确输出 `Startup failed; physical cleanup unconfirmed.` 并 `process.exit(1)`。
+既有 shutdown failure 分支已使用非零终止，不需改变。程序化 `startTaskServer`、
+借用资源与 Store ownership 语义保持完全不变，不将终止进程误称为清理成功。
+
+新增 `packages/task-engine-server/test/cli.test.ts` 与独立本地配置 fixture，
+实际启动构建后的 `dist/main.js`，覆盖四种保留 interval 的故障：
+25 ms rollback 超时、rollback 抛错、配置 import 抛错、异步配置 factory 拒绝。
+每项都断言退出码 1、没有信号终止、明确失败诊断、没有 `ready` / `closed` 成功记录，
+并断言测试保护计时器**没有**执行 kill。保护计时器为 3 秒，只用于在回归失败时清理
+测试拥有的子进程，不作为成功退出的手段。
+
+修复前用以下命令真实复现 **4 项失败**，全部需要测试保护终止：
+
+```powershell
+pnpm --filter @potential-guide/task-engine-server exec tsx --test test\cli.test.ts
+```
+
+修复后 `pnpm --filter @potential-guide/task-engine-server build`、
+`pnpm --filter @potential-guide/task-engine-server test` 和
+`pnpm exec tsc -p tsconfig.test.json --pretty false` 均通过。
+Server **10/10**（含原有程序化语义 6 项）通过，无 skip；
+四个新增真实进程测试分别约 **183 / 138 / 137 / 133 ms**，均无需保护 kill。
+随后再次完整执行下文 `pnpm check`，退出码 **0**，包括全部独立 packed consumer，
+并重新保存实际安装图。相关 I 项据此恢复完成；仍需父代理对新 revision 作实现门禁决定。
+
 ## 已验证交付物指纹
 
 完整检查通过后由待提交 Git index 提取，后续仅补充本 Inner World 证据及事件：
 
 | Git tree | 完整 OID |
 | --- | --- |
-| `packages` | `9b9f5c4e14239a5546d56806615b117d58d9fc6a` |
+| `packages` | `b7b9ad4ff41ef3421676cfe8cd61b658f0a1c977` |
 | `scripts` | `729d96eee1632f9c58f7df38e50fdc4a8fb0d23a` |
-| `docs` | `73cc00ef5b1f6b5aa99aca5a1fd5234de1eca324` |
+| `docs` | `b7b5f26bc25a207decf44978df0d2a2681c985cd` |
 | `examples` | `8c73f786d29beece7f0101e1514f91bca4fbefb5` |
 
 可用 `git rev-parse <实现提交>:packages`（及其余目录）复核。
@@ -61,7 +90,7 @@ pnpm --filter @potential-guide/task-engine --filter @potential-guide/task-engine
 pnpm --filter @potential-guide/check-artifacts test
 ```
 
-新增 Check 测试 11 项、Server 测试 6 项均通过；制品测试 22 项通过。
+新增 Check 测试 11 项、Server 测试 10 项均通过；制品测试 22 项通过。
 Check 还实际验证超过默认 64 KiB 的制品与结果：显式 Engine payload 预算生效，
 不因内部便利 object helper 的默认值而错误限制完整 Prepared，也不移除配置上限。
 纯契约规则测试包括旧格式回归，非只测试新增入口。
@@ -119,7 +148,7 @@ Checker/Objective 全量校验且禁用写盘、网络、worker/process API 后�
 Windows `ChildProcess.kill("SIGTERM")` 是强制进程终止，不会声称验证了可捕获 POSIX
 SIGTERM 回调；真实 CLI readiness/业务调用/进程退出仍测试，POSIX 上另断言退出码 0。
 Node SQLite 的 experimental warning 不等于测试跳过。
-新增 Check 11 项、Server 6 项均无 skip。完整仓库保留 6 个已有条件 skip：
+新增 Check 11 项、Server 10 项均无 skip。完整仓库保留 6 个已有条件 skip：
 POSIX private-file reopen、POSIX executable permissions、POSIX mutation lock、
 平台大小写敏感 real-path、native Linux dispatch，以及直接发现时未设置
 `V2_BUSINESS_DIRECTORY` 的旧 CLI-runtime 独立 case。没有取消这些条件或宣称在 Windows

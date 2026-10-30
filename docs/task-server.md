@@ -40,6 +40,9 @@ Shutdown closes admission/listeners and active streams, then reclaims Engine
 resources, composition resources, Store lease and owned Store. Failure/time
 budget exhaustion rejects rather than claiming success; unconfirmed cleanup
 retains the Store lease. CLI reports failure and exits nonzero, never `closed`.
+This includes rejected configuration imports/factories and startup rollback
+failures: the CLI explicitly terminates rather than only setting `exitCode`,
+which cannot stop a process held open by configuration-owned resources.
 Programmatic callers must handle failure and may not reuse unconfirmed resources.
 No global signal hooks are installed by the library.
 

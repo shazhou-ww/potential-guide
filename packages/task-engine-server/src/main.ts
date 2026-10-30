@@ -51,6 +51,7 @@ async function main() {
   process.on("SIGTERM", shutdown);
 }
 void main().catch((error: unknown) => {
-  console.error(error);
-  process.exitCode = 1;
+  console.error("Startup failed; physical cleanup unconfirmed.", error);
+  // Configuration and failed rollback can retain handles even after main rejects.
+  process.exit(1);
 });

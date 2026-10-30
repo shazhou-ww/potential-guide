@@ -13,5 +13,8 @@ await server.close(); // rejects when physical cleanup cannot be confirmed
 `task-engine-server --config ./trusted-config.mjs` accepts a default exported
 options object or async factory. The CLI alone owns SIGINT/SIGTERM handlers.
 Use `--help` for text or `--help --format json` for machine-readable usage.
+Fatal configuration/import/startup failures terminate the standalone process
+nonzero even when configuration or failed rollback retains handles; the diagnostic
+explicitly states that physical cleanup is unconfirmed, never `ready` or `closed`.
 SQLite is the default; programmatic Store injection is supported. Injection
 does not transfer Store ownership unless `ownStore: true`.
