@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+    <title>任务操作面板 · 候选交互草图</title>
+    <style>
+      :root { color-scheme: light; font-family: system-ui, "Microsoft YaHei", sans-serif; color: #24292e; background: #f3f4f5; line-height: 1.6; }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      a { color: #174e76; text-underline-offset: 3px; }
+      a:focus-visible, summary:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid #174e76; outline-offset: 3px; }
+      .skip { position: absolute; left: 12px; top: -80px; background: white; padding: 8px; z-index: 3; }
+      .skip:focus { top: 8px; }
+      header, main, footer { max-width: 1240px; margin: auto; padding: 20px 24px; }
+      header { padding-bottom: 12px; }
+      h1 { font-size: 1.65rem; margin: 6px 0; }
+      h2 { font-size: 1.3rem; margin: 0 0 10px; }
+      h3 { font-size: 1.05rem; margin: 0 0 10px; }
+      p { margin: 8px 0; }
+      .eyebrow, .muted { color: #555e68; }
+      .eyebrow { font-size: .85rem; letter-spacing: .04em; }
+      .notice { padding: 12px 16px; background: #fff7df; border: 1px solid #a68b49; }
+      nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+      nav a, .link-button { display: inline-block; padding: 7px 12px; border: 1px solid #a3acb5; border-radius: 4px; background: white; }
+      .screen { scroll-margin-top: 16px; margin: 0 0 28px; border: 1px solid #aab3bc; background: white; }
+      .screen-heading { padding: 16px 20px; border-bottom: 1px solid #cbd1d7; background: #e9edf0; }
+      .screen-heading p { font-size: .9rem; }
+      .toolbar, .content { padding: 16px 20px; }
+      .toolbar { border-bottom: 1px solid #d6dbe0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+      .split { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; }
+      .split > *, .fields > *, .card { min-width: 0; }
+      .card { border: 1px solid #c4cbd2; padding: 16px; margin-bottom: 14px; }
+      .selected { border-left: 4px solid #35566d; }
+      .badge { display: inline-block; padding: 1px 6px; border: 1px solid #8e99a5; border-radius: 3px; font-size: .82rem; margin: 2px 3px 2px 0; background: #f4f6f7; }
+      .warning { background: #fff7df; border-color: #9c803a; }
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+      th, td { padding: 10px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid #d8dde2; }
+      th { background: #f3f5f7; font-weight: 600; }
+      caption { text-align: left; font-weight: 600; margin-bottom: 8px; }
+      .facts { display: grid; grid-template-columns: minmax(100px, .7fr) minmax(0, 1.4fr); margin: 0; font-size: .9rem; }
+      dt, dd { padding: 6px 0; margin: 0; border-bottom: 1px solid #e1e5e9; }
+      dt { color: #555e68; }
+      dd, code, td, p { overflow-wrap: anywhere; }
+      pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f4f6f7; padding: 12px; border: 1px solid #d6dbe0; font-size: .83rem; }
+      summary { cursor: pointer; padding: 7px 0; font-weight: 600; }
+      details { border-top: 1px solid #d6dbe0; margin-top: 12px; }
+      .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+      .field { display: block; font-size: .9rem; margin-bottom: 12px; }
+      input, select, textarea { display: block; width: 100%; margin-top: 5px; padding: 9px; font: inherit; color: #24292e; border: 1px solid #a3acb5; border-radius: 3px; background: #fafbfc; }
+      textarea { min-height: 92px; resize: vertical; }
+      button { padding: 8px 12px; border: 1px solid #73808d; border-radius: 4px; font: inherit; background: #eef1f3; color: #4a535d; }
+      button:disabled, select:disabled { opacity: 1; cursor: not-allowed; }
+      button.primary { background: #e1e9ef; border-width: 2px; color: #294b63; }
+      .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0 4px; }
+      .timeline { margin: 0; padding-left: 22px; font-size: .9rem; }
+      .timeline li { margin: 10px 0; }
+      .note { border-left: 3px solid #8796a3; padding: 8px 12px; background: #f4f6f7; font-size: .9rem; }
+      .question { border: 2px dashed #7b8b99; padding: 14px 18px; margin-top: 12px; }
+      footer { color: #555e68; font-size: .9rem; padding-bottom: 36px; }
+      @media (max-width: 760px) {
+        header, main, footer { padding: 14px 12px; }
+        .split, .fields { grid-template-columns: minmax(0, 1fr); }
+        .toolbar, .content, .screen-heading { padding: 14px; }
+        h1 { font-size: 1.35rem; }
+        .facts { grid-template-columns: minmax(80px, .7fr) minmax(0, 1.3fr); }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip" href="#workspace">跳到工作台草图</a>
+    <header>
+      <div class="eyebrow">TASK ENGINE WEB UI · 候选 v0.1</div>
+      <h1>任务操作面板：六个场景草图</h1>
+      <p>一个 Endpoint 下，创建、观察、复用。先看操作是否顺手，不评审配色或技术栈。</p>
+      <p class="notice"><strong>离线设计样本，不是可用产品。</strong>所有任务、地址、时间和事件均为虚构示例；没有连接后端。操作按钮禁用，导航与详情展开仅用于审阅，不提交、取消或删除任何内容。</p>
+      <nav aria-label="草图场景导航">
+        <a href="#workspace">01 工作台</a>
+        <a href="#create">02 创建任务</a>
+        <a href="#basket">03 任务篮</a>
+        <a href="#history">04 Endpoint 历史</a>
+        <a href="#favorites">05 收藏</a>
+        <a href="#assets">06 类型资产</a>
+      </nav>
+    </header>
+    <main>
+      <section id="workspace" class="screen" aria-labelledby="workspace-title">
+        <div class="screen-heading">
+          <h2 id="workspace-title">01 / 工作台：对照列表与选中任务详情</h2>
+          <p>候选 C-01：提交后留在工作台，不为每一个 Task 强制跳转独立页面。</p>
+        </div>
+        <div class="toolbar">
+          <strong>Endpoint：本机开发 A（示例）</strong>
+          <span>目标：http://127.0.0.1:3100（仅文字）</span>
+          <a class="link-button" href="#create">查看新建任务草图</a>
+          <a class="link-button" href="#basket">查看任务篮草图</a>
+        </div>
+        <div class="content split">
+          <div>
+            <h3>本次观察 · 3 个任务</h3>
+            <p class="muted">仅是正在看的集合，不是全量历史；最后事实时间（示例）10:00:06。</p>
+            <div class="table-wrap">
+              <table>
+                <caption>虚构调度实验 · 标识为可读简称</caption>
+                <thead><tr><th scope="col">任务</th><th scope="col">阶段</th><th scope="col">独立事实</th><th scope="col">执行关联</th></tr></thead>
+                <tbody>
+                  <tr><td>A · check</td><td>running</td><td>未见取消或超时</td><td>E1</td></tr>
+                  <tr><td><strong>B · check（选中）</strong></td><td>running<br>取消时冻结</td><td><span class="badge">已取消 10:00:02</span></td><td>E1 · 与 A 共享</td></tr>
+                  <tr><td>C · check</td><td>queued</td><td><span class="badge warning">已超 deadline</span><br>不可视为仍有效等待</td><td>尚未绑定</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card" style="margin-top: 16px">
+              <h3>执行 E1</h3>
+              <p>已观察关联：A、B。依据两项任务的 <code>task.allocation.bound</code> 与相同 <code>executionId</code>。</p>
+              <p><span class="badge">最后观察：执行已开始</span><span class="badge">回收尚未确认</span></p>
+              <p class="muted">B 已取消不代表 E1 已停止。没有全池容量、worker 数量或所有 owners 的推测图。</p>
+            </div>
+            <p class="note">断线示例：保留最后快照并显示“观察连接中断，最后更新 10:00:06”。不自动重提任务，不把旧数据标为实时。</p>
+          </div>
+          <aside class="card selected" aria-label="选中任务 B 的示例详情">
+            <h3>B · 任务详情</h3>
+            <dl class="facts">
+              <dt>Task / Request</dt><dd>B / RB（示例简称）</dd>
+              <dt>Endpoint</dt><dd>本机开发 A</dd>
+              <dt>stage</dt><dd>running · 取消时冻结</dd>
+              <dt>取消时间</dt><dd>10:00:02</dd>
+              <dt>准备过程</dt><dd>09:59:59 → 10:00:00</dd>
+              <dt>绑定 / 执行开始</dt><dd>E1 / 10:00:01</dd>
+              <dt>deadline</dt><dd>10:00:30</dd>
+              <dt>任务结果</dt><dd>无完成结果；不借用 A 后来的结果</dd>
+            </dl>
+            <div class="actions">
+              <button type="button" disabled>取消任务 · 示例已取消</button>
+              <button type="button" disabled>收藏原参数 · 草图</button>
+            </div>
+            <details open>
+              <summary>事件与过程 · 公开事实示例</summary>
+              <ol class="timeline">
+                <li>09:59:59 · task.preparation.started</li>
+                <li>10:00:00 · task.preparation.completed</li>
+                <li>10:00:01 · task.allocation.bound → E1</li>
+                <li>10:00:02 · task.canceled</li>
+              </ol>
+              <details>
+                <summary>展开一条事件的完整公开字段示例</summary>
+                <pre>{
+  "sequence": 108,
+  "type": "task.canceled",
+  "occurredAt": "2026-10-30T10:00:02.000Z",
+  "scope": "demo",
+  "taskId": "01M66000000000000000000002",
+  "data": {}
+}</pre>
+              </details>
+            </details>
+            <p class="muted">任务快照与 Execution 事实分开查看。事件只代表指定范围中仍可取得的公开历史。</p>
+          </aside>
+        </div>
+      </section>
+
+      <section id="create" class="screen" aria-labelledby="create-title">
+        <div class="screen-heading">
+          <h2 id="create-title">02 / 创建任务：单条直接提交</h2>
+          <p>面板草图以 Check 及虚构 subject schema 举例；实际字段来自发现契约，不能硬编码本例。</p>
+        </div>
+        <div class="toolbar"><strong>发送目标：本机开发 A</strong><span>输入来源：新建 / 收藏模板 / 历史模板</span></div>
+        <div class="content split">
+          <div>
+            <div class="fields">
+              <label class="field" for="task-type">任务类型（发现结果示例）
+                <select id="task-type" disabled><option>check · 输入契约版本示例 1</option></select>
+              </label>
+              <label class="field" for="timeout">timeoutMs
+                <input id="timeout" value="30000" readonly>
+              </label>
+            </div>
+            <label class="field" for="artifact-url">checker.url
+              <input id="artifact-url" value="https://artifacts.example.test/checker/current.tgz" readonly>
+            </label>
+            <label class="field" for="digest">checker.digest · 可选锁定
+              <input id="digest" value="" placeholder="未锁定；不会按上次解析结果自动补锁" readonly>
+            </label>
+            <div class="card">
+              <h3>subject · 来自所选制品 Schema</h3>
+              <label class="field" for="subject-root">root（虚构 Schema 字段）
+                <input id="subject-root" value="D:\demo\project" readonly>
+              </label>
+              <p class="muted">类型 Schema 描述输入外形；具体制品提供 subject 的字段约束。这里的路径只是参数文本，不是文件选择或导入。</p>
+            </div>
+            <div class="actions">
+              <button type="button" class="primary" disabled>提交任务 · 静态草图</button>
+              <button type="button" disabled>加入任务篮 · 静态草图</button>
+              <a href="#workspace">查看提交后的观察布局</a>
+            </div>
+          </div>
+          <div>
+            <h3>提交前可见的上下文</h3>
+            <p>目标与类型保持可见。草稿不等于 Task；收到成功回执后才显示真实任务身份。</p>
+            <details open>
+              <summary>只读请求预览示例</summary>
+              <pre>{
+  "type": "check",
+  "timeoutMs": 30000,
+  "checker": {
+    "kind": "checker",
+    "url": "https://artifacts.example.test/checker/current.tgz"
+  },
+  "subject": { "root": "D:\\demo\\project" }
+}</pre>
+            </details>
+            <p class="note">Idempotency-Key 属于这一次提交，不从历史 requestId 复制。网络响应丢失时保留同一次提交身份。</p>
+            <h3 style="margin-top: 18px">阻塞示例，不编造可提交表单</h3>
+            <ul>
+              <li>无法发现类型 / Schema：显示原因并提供重试入口。</li>
+              <li>无法取得 subject Schema：保留输入，说明缺少哪项信息。</li>
+              <li>高级 Schema 尚不能渲染：明确提示，不静默忽略约束。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="basket" class="screen" aria-labelledby="basket-title">
+        <div class="screen-heading">
+          <h2 id="basket-title">03 / 任务篮：发送前与发送后</h2>
+          <p>两个阶段并列示意，不是实际批量操作。候选 C-02：每个 Endpoint 独立一篮。</p>
+        </div>
+        <div class="toolbar"><strong>发送目标：本机开发 A</strong><span>顺序只约束提交，不保证执行先后</span></div>
+        <div class="content split">
+          <div class="card">
+            <h3>发送前：3 份草稿，尚未创建任务</h3>
+            <ol>
+              <li>check · 项目甲 <button type="button" disabled>下移</button></li>
+              <li>check · 项目乙 <button type="button" disabled>上移</button></li>
+              <li>probe · 目标丙 <button type="button" disabled>上移</button></li>
+            </ol>
+            <button type="button" class="primary" disabled>按此顺序提交 3 条 · 草图</button>
+            <p class="muted">不会等待第一个任务完成才提交第二个。</p>
+          </div>
+          <div class="card">
+            <h3>发送后：逐条回执示例</h3>
+            <ol>
+              <li><strong>已创建</strong> · 已获得任务标识，可加入观察。</li>
+              <li><strong>确定失败</strong> · 服务拒绝输入；显示该条错误，后项仍继续。</li>
+              <li><strong>结果未知</strong> · 响应中断，保留原提交身份供查询/重试。</li>
+            </ol>
+            <p class="note">没有“整篮再发”把成功项和未知项一起复制成新任务。失败修改再发与未知原请求重试不能混在一个动作里。</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="history" class="screen" aria-labelledby="history-title">
+        <div class="screen-heading">
+          <h2 id="history-title">04 / Endpoint 历史：服务端查询，不是本机记录</h2>
+          <p>覆盖当前权限与 Service 保留策略下的所有任务。此能力仍需服务端补充；下面只展示预期交互。</p>
+        </div>
+        <div class="toolbar"><strong>Endpoint：本机开发 A</strong><span>历史保留及清理由 Service 配置治理，本页没有治理开关</span></div>
+        <div class="content">
+          <div class="fields">
+            <label class="field" for="history-type">任务类型
+              <select id="history-type" disabled><option>check（示例）</option></select>
+            </label>
+            <label class="field" for="history-time">提交时间范围（候选 C-04，尚待确认）
+              <input id="history-time" value="2026-10-30 09:00 — 2026-10-30 11:00" readonly>
+            </label>
+          </div>
+          <button type="button" disabled>查询服务端历史 · 草图</button>
+          <div class="table-wrap" style="margin-top: 16px">
+            <table>
+              <caption>虚构查询结果 · 不伪造服务端总数或实时状态</caption>
+              <thead><tr><th scope="col">任务</th><th scope="col">类型</th><th scope="col">提交时间（候选）</th><th scope="col">阶段与独立事实</th><th scope="col">业务结果</th></tr></thead>
+              <tbody>
+                <tr><td>T-106</td><td>check</td><td>10:20</td><td>completed</td><td>ok: false · 业务不满足，不是系统故障</td></tr>
+                <tr><td>T-100</td><td>check</td><td>09:10</td><td>completed</td><td>ok: true</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="muted">样例背景：T-100 来自另一客户端提交，也应被查询到；“提交客户端”不被假定为现有协议返回字段。</p>
+          <div class="actions"><button type="button" disabled>继续读取下一页 · 草图</button><span>类型/时间条件作用于服务端范围，不只过滤当前页</span></div>
+          <details open>
+            <summary>T-100 · 原参数复用示例</summary>
+            <p>原引用是浮动 URL，未锁版本。重做时仍不锁；不自动使用上次实际运行的 digest。</p>
+            <div class="actions">
+              <button type="button" disabled>直接重做 · 新提交</button>
+              <a href="#create">查看编辑后重做的面板</a>
+              <a href="#workspace">查看加入观察后的布局</a>
+            </div>
+          </details>
+          <p class="note">服务未提供列表能力时明确显示“历史查询能力尚不可用”；已清理、未授权、查询失败分别说明。不用本次观察集合冒充历史，不以空参数冒充可重做。</p>
+          <p class="muted">Input 内部参数筛选：后续高级候选，不属于这版基础筛选。</p>
+        </div>
+      </section>
+
+      <section id="favorites" class="screen" aria-labelledby="favorites-title">
+        <div class="screen-heading">
+          <h2 id="favorites-title">05 / 收藏：保存配方与 Endpoint</h2>
+          <p>同机使用，无账号同步。候选 C-03：按 Endpoint 分组，原目标不可用时不自动换目标。</p>
+        </div>
+        <div class="content split">
+          <div class="card">
+            <h3>常用项目检查（示例名称）</h3>
+            <p><span class="badge">Endpoint：本机开发 A</span><span class="badge">check</span><span class="badge">未锁版本</span></p>
+            <dl class="facts">
+              <dt>制品 URL</dt><dd>https://artifacts.example.test/checker/current.tgz</dd>
+              <dt>subject</dt><dd>root = D:\demo\project</dd>
+            </dl>
+            <div class="actions"><button type="button" disabled>直接再发 · 草图</button><a href="#create">查看编辑后再发</a></div>
+            <p class="muted">保留完整类型输入。派生新草稿不自动修改这份收藏。</p>
+          </div>
+          <div class="card">
+            <h3>另一环境的收藏（示例）</h3>
+            <p><span class="badge">Endpoint：测试 B</span><span class="badge">check</span><span class="badge">已锁精确版本</span></p>
+            <p class="notice">当前正在查看本机开发 A；这份收藏仍指向测试 B。不能静默发送到 A。</p>
+            <button type="button" disabled>先切换到收藏目标 · 候选交互</button>
+            <p class="muted">名称只是展示；稳定目标标识与配置失效规则仍待确认。收藏不保存后端凭据。</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="assets" class="screen" aria-labelledby="assets-title">
+        <div class="screen-heading">
+          <h2 id="assets-title">06 / 类型资产：明确范围后选版或清理</h2>
+          <p>资产归类型所有者；磁盘持久缓存目标在独立 idea 中跟进，下面不是现有管理接口的执行结果。</p>
+        </div>
+        <div class="toolbar"><strong>Endpoint：本机开发 A</strong><span>类型：check · 范围：该服务授权的制品缓存（示例）</span></div>
+        <div class="content split">
+          <div>
+            <div class="table-wrap">
+              <table>
+                <caption>示例缓存条目 · 精确摘要仅用短名演示</caption>
+                <thead><tr><th scope="col">资产</th><th scope="col">精确内容</th><th scope="col">使用/保护信息</th></tr></thead>
+                <tbody>
+                  <tr><td>Checker X</td><td>digest-A</td><td>资产侧报告：可用</td></tr>
+                  <tr><td>Checker X</td><td>digest-B</td><td>资产侧报告：正在使用，受保护</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="muted">实际标识是完整 digest，不由人类短名代替；不承诺缓存中包含所有已发布版本。</p>
+            <div class="actions"><a href="#create">查看带精确引用创建任务的入口</a><button type="button" disabled>选择条目并申请清理 · 草图</button></div>
+          </div>
+          <div class="card">
+            <h3>清理意图核对与结果示例</h3>
+            <p>确认范围：本机开发 A 的类型资产缓存。不是浏览器电脑文件，不是远程制品，不包含 Task Prepared 或 worker 临时目录。</p>
+            <button type="button" disabled>确认清理所选标识 · 静态草图</button>
+            <ul>
+              <li>digest-A：已清理（虚构结果）。</li>
+              <li>digest-B：未清理，资产所有者报告受保护（虚构结果）。</li>
+            </ul>
+            <p class="note">具体在用保护规则尚未定案。UI 的确认不是并发安全保证；最终由资产所有者判断并逐项报告，不能将失败包装成成功。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="question" aria-labelledby="review-focus">
+        <h2 id="review-focus">本轮先看这一处</h2>
+        <p>工作台让“新建入口、多任务对照、选中任务详情”靠近。这个组织方式是否适合日常提交一个任务，以及偶尔同时观察多个任务的习惯，是本轮首要审阅点。</p>
+        <p>页面组织、Endpoint 分区和提交时间口径均为候选；没有因展示草图而确认这些选择。</p>
+      </section>
+    </main>
+    <footer>离线设计附件 · 无脚本、无外部资源、无实际网络请求 · 仅允许页面内导航和原生详情展开 · 不是实现、验收或发布证据</footer>
+  </body>
+</html>
