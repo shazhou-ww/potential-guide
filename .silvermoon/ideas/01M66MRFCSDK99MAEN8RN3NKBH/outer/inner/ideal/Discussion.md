@@ -8,7 +8,9 @@
 
 > 我同意，我们还是把这两个函数替换为Schema，放在Task的定义层面上。
 
-用户期望可自动生成 Validate、Equals，并支持类型发现、自动表单及后续消费者；同时询问采用 JSON Schema 还是必要子集，要求参考现有 Subject Schema。语言标准、约束细目与判等语义尚未最终选择。
+用户期望可自动生成 Validate、Equals，并支持类型发现、自动表单及后续消费者；同时询问采用 JSON Schema 还是必要子集，要求参考现有 Subject Schema。
+
+2026-10-30，在本 idea 的独立 session 中，用户确认采用 JSON Schema Draft 2020-12 标准语义，另行明确运行限制；表单支持子集与任务契约分开。该决定仅确认标准范围，不确认下面的具体运行限制或判等规则，也不构成实施授权、submit 或 accept。
 
 本次替换指 Task 输入的 validate、equals，不自动扩展为删除 validatePrepared、validateResult、validateExecutionResult、validateProgress 或 prepare。
 
@@ -23,9 +25,9 @@
 
 以上是当前制品 Subject Schema 的事实，不宣称仓库所有历史 schema 都使用完全相同的策略。
 
-## 建议：标准 Schema 与表单支持范围分开
+## 已确认的标准范围与待确认的运行约束
 
-建议使用 **JSON Schema Draft 2020-12 的标准语义，加显式运行约束**，而不是为首版表单另造任务专用方言或任意裁剪验证关键字。以下均为待确认建议：
+采用 **JSON Schema Draft 2020-12 的标准语义，加显式运行约束**，不为首版表单另造任务专用方言或任意裁剪验证关键字。标准范围及表单与任务契约的分离已确认，以下具体规则仍为待确认建议：
 
 - 根输入为有限 JSON object，与当前通用请求剥离保留字段后的输入一致。
 - 契约自包含；可复用本地 `$defs`/`$ref`，不允许验证期间自动联网取 schema 或执行自定义关键字代码。
