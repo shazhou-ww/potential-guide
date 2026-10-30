@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
-    <title>任务操作面板 · 候选交互草图</title>
+    <title>任务操作面板 · 分区与统一提交草图</title>
     <style>
       :root { color-scheme: light; font-family: system-ui, "Microsoft YaHei", sans-serif; color: #24292e; background: #f3f4f5; line-height: 1.6; }
       * { box-sizing: border-box; }
@@ -18,13 +18,19 @@
       h1 { font-size: 1.65rem; margin: 6px 0; }
       h2 { font-size: 1.3rem; margin: 0 0 10px; }
       h3 { font-size: 1.05rem; margin: 0 0 10px; }
+      h4 { font-size: 1rem; margin: 0 0 10px; }
       p { margin: 8px 0; }
       .eyebrow, .muted { color: #555e68; }
       .eyebrow { font-size: .85rem; letter-spacing: .04em; }
       .notice { padding: 12px 16px; background: #fff7df; border: 1px solid #a68b49; }
       nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
       nav a, .link-button { display: inline-block; padding: 7px 12px; border: 1px solid #a3acb5; border-radius: 4px; background: white; }
-      .screen { scroll-margin-top: 16px; margin: 0 0 28px; border: 1px solid #aab3bc; background: white; }
+      .screen { scroll-margin-top: 160px; margin: 0 0 28px; border: 1px solid #aab3bc; background: white; }
+      .submission-bar { position: sticky; top: 0; z-index: 2; width: calc(100% - 48px); max-width: 1192px; margin: 0 auto; padding: 10px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; border: 2px solid #35566d; background: #e8eef3; font-size: .88rem; }
+      .submission-bar h2 { font-size: 1rem; margin: 0; }
+      .entity-block { scroll-margin-top: 160px; border: 2px solid #8494a2; margin-bottom: 20px; }
+      .entity-heading { padding: 14px 18px; background: #f0f3f5; border-bottom: 1px solid #c4cbd2; }
+      .entity-heading p { font-size: .9rem; margin-bottom: 0; }
       .screen-heading { padding: 16px 20px; border-bottom: 1px solid #cbd1d7; background: #e9edf0; }
       .screen-heading p { font-size: .9rem; }
       .toolbar, .content { padding: 16px 20px; }
@@ -58,10 +64,11 @@
       .timeline { margin: 0; padding-left: 22px; font-size: .9rem; }
       .timeline li { margin: 10px 0; }
       .note { border-left: 3px solid #8796a3; padding: 8px 12px; background: #f4f6f7; font-size: .9rem; }
-      .question { border: 2px dashed #7b8b99; padding: 14px 18px; margin-top: 12px; }
+      .design-note { border: 1px solid #7b8b99; padding: 14px 18px; margin-top: 12px; }
       footer { color: #555e68; font-size: .9rem; padding-bottom: 36px; }
       @media (max-width: 760px) {
         header, main, footer { padding: 14px 12px; }
+        .submission-bar { width: calc(100% - 24px); padding: 8px 12px; gap: 4px 10px; }
         .split, .fields { grid-template-columns: minmax(0, 1fr); }
         .toolbar, .content, .screen-heading { padding: 14px; }
         h1 { font-size: 1.35rem; }
@@ -72,81 +79,89 @@
   <body>
     <a class="skip" href="#workspace">跳到工作台草图</a>
     <header>
-      <div class="eyebrow">TASK ENGINE WEB UI · 候选 v0.1</div>
+      <div class="eyebrow">TASK ENGINE WEB UI · 反馈修订 v0.2</div>
       <h1>任务操作面板：六个场景草图</h1>
-      <p>一个 Endpoint 下，创建、观察、复用。先看操作是否顺手，不评审配色或技术栈。</p>
+      <p>一个 Endpoint 下，提交任务栏、Task、Execution 分区关联；UX 细节自行收敛，真实产品阶段再评估使用体验。</p>
       <p class="notice"><strong>离线设计样本，不是可用产品。</strong>所有任务、地址、时间和事件均为虚构示例；没有连接后端。操作按钮禁用，导航与详情展开仅用于审阅，不提交、取消或删除任何内容。</p>
       <nav aria-label="草图场景导航">
         <a href="#workspace">01 工作台</a>
         <a href="#create">02 创建任务</a>
-        <a href="#basket">03 任务篮</a>
+        <a href="#basket">03 提交任务栏</a>
         <a href="#history">04 Endpoint 历史</a>
         <a href="#favorites">05 收藏</a>
         <a href="#assets">06 类型资产</a>
       </nav>
     </header>
+    <aside id="submission-bar" class="submission-bar" aria-labelledby="submission-title">
+      <h2 id="submission-title">01 · 常驻提交任务栏</h2>
+      <span>本机开发 A · 示例</span>
+      <span>手动待发批次：3 条</span>
+      <span>单条快捷：独立建栏并发送</span>
+      <a href="#basket">展开草稿与回执</a>
+    </aside>
     <main>
       <section id="workspace" class="screen" aria-labelledby="workspace-title">
         <div class="screen-heading">
-          <h2 id="workspace-title">01 / 工作台：对照列表与选中任务详情</h2>
-          <p>候选 C-01：提交后留在工作台，不为每一个 Task 强制跳转独立页面。</p>
+          <h2 id="workspace-title">01 / 工作台：Task 与 Execution 独立分区</h2>
+          <p>顶部任务栏只处理草稿和回执；下面分别查看任务事实与实际执行。关联标识用于跳转，不把两者混成一个状态。</p>
         </div>
         <div class="toolbar">
           <strong>Endpoint：本机开发 A（示例）</strong>
           <span>目标：http://127.0.0.1:3100（仅文字）</span>
           <a class="link-button" href="#create">查看新建任务草图</a>
-          <a class="link-button" href="#basket">查看任务篮草图</a>
+          <a class="link-button" href="#task-block">Task 区</a>
+          <a class="link-button" href="#execution-block">Execution 区</a>
         </div>
-        <div class="content split">
-          <div>
-            <h3>本次观察 · 3 个任务</h3>
-            <p class="muted">仅是正在看的集合，不是全量历史；最后事实时间（示例）10:00:06。</p>
-            <div class="table-wrap">
-              <table>
-                <caption>虚构调度实验 · 标识为可读简称</caption>
-                <thead><tr><th scope="col">任务</th><th scope="col">阶段</th><th scope="col">独立事实</th><th scope="col">执行关联</th></tr></thead>
-                <tbody>
-                  <tr><td>A · check</td><td>running</td><td>未见取消或超时</td><td>E1</td></tr>
-                  <tr><td><strong>B · check（选中）</strong></td><td>running<br>取消时冻结</td><td><span class="badge">已取消 10:00:02</span></td><td>E1 · 与 A 共享</td></tr>
-                  <tr><td>C · check</td><td>queued</td><td><span class="badge warning">已超 deadline</span><br>不可视为仍有效等待</td><td>尚未绑定</td></tr>
-                </tbody>
-              </table>
+        <div class="content">
+          <section id="task-block" class="entity-block" aria-labelledby="task-block-title">
+            <div class="entity-heading">
+              <h3 id="task-block-title">02 · Task 区：任务怎样了</h3>
+              <p>任务阶段、取消、超时、输入和结果。取消只作用于明确选中的 Task；执行生命周期在下方独立区块查看。</p>
             </div>
-            <div class="card" style="margin-top: 16px">
-              <h3>执行 E1</h3>
-              <p>已观察关联：A、B。依据两项任务的 <code>task.allocation.bound</code> 与相同 <code>executionId</code>。</p>
-              <p><span class="badge">最后观察：执行已开始</span><span class="badge">回收尚未确认</span></p>
-              <p class="muted">B 已取消不代表 E1 已停止。没有全池容量、worker 数量或所有 owners 的推测图。</p>
-            </div>
-            <p class="note">断线示例：保留最后快照并显示“观察连接中断，最后更新 10:00:06”。不自动重提任务，不把旧数据标为实时。</p>
-          </div>
-          <aside class="card selected" aria-label="选中任务 B 的示例详情">
-            <h3>B · 任务详情</h3>
-            <dl class="facts">
-              <dt>Task / Request</dt><dd>B / RB（示例简称）</dd>
-              <dt>Endpoint</dt><dd>本机开发 A</dd>
-              <dt>stage</dt><dd>running · 取消时冻结</dd>
-              <dt>取消时间</dt><dd>10:00:02</dd>
-              <dt>准备过程</dt><dd>09:59:59 → 10:00:00</dd>
-              <dt>绑定 / 执行开始</dt><dd>E1 / 10:00:01</dd>
-              <dt>deadline</dt><dd>10:00:30</dd>
-              <dt>任务结果</dt><dd>无完成结果；不借用 A 后来的结果</dd>
-            </dl>
-            <div class="actions">
-              <button type="button" disabled>取消任务 · 示例已取消</button>
-              <button type="button" disabled>收藏原参数 · 草图</button>
-            </div>
-            <details open>
-              <summary>事件与过程 · 公开事实示例</summary>
-              <ol class="timeline">
-                <li>09:59:59 · task.preparation.started</li>
-                <li>10:00:00 · task.preparation.completed</li>
-                <li>10:00:01 · task.allocation.bound → E1</li>
-                <li>10:00:02 · task.canceled</li>
-              </ol>
-              <details>
-                <summary>展开一条事件的完整公开字段示例</summary>
-                <pre>{
+            <div class="content split">
+              <div>
+                <h4>本次观察 · 3 个 Task</h4>
+                <p class="muted">不是全量历史。最后事实时间（示例）：10:00:06。</p>
+                <div class="table-wrap">
+                  <table>
+                    <caption>任务列表 · 标识为示例简称</caption>
+                    <thead><tr><th scope="col">Task</th><th scope="col">stage</th><th scope="col">任务事实</th><th scope="col">关联入口</th></tr></thead>
+                    <tbody>
+                      <tr><td>A · check</td><td>running</td><td>未见取消或超时</td><td><a href="#execution-block">E1</a></td></tr>
+                      <tr><td><strong>B · check（选中）</strong></td><td>running<br>取消时冻结</td><td><span class="badge">已取消 10:00:02</span></td><td><a href="#execution-block">E1</a></td></tr>
+                      <tr><td>C · check</td><td>queued</td><td><span class="badge warning">已超 deadline</span><br>不可视为仍有效等待</td><td>尚未绑定</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p class="note">此处不嵌入 Execution 状态卡。相同 E1 是关联证据入口，不因 B 取消就改变执行事实。</p>
+              </div>
+              <aside class="card selected" aria-label="选中 Task B 的示例详情">
+                <h4>B · Task 详情</h4>
+                <dl class="facts">
+                  <dt>Task / Request</dt><dd>B / RB（示例简称）</dd>
+                  <dt>Endpoint</dt><dd>本机开发 A</dd>
+                  <dt>stage</dt><dd>running · 取消时冻结</dd>
+                  <dt>取消时间</dt><dd>10:00:02</dd>
+                  <dt>准备过程</dt><dd>09:59:59 → 10:00:00</dd>
+                  <dt>关联执行</dt><dd><a href="#execution-block">在 Execution 区查看 E1</a></dd>
+                  <dt>deadline</dt><dd>10:00:30</dd>
+                  <dt>任务结果</dt><dd>无完成结果；不借用 A 后来的结果</dd>
+                </dl>
+                <div class="actions">
+                  <button type="button" disabled>取消 Task B · 示例已取消</button>
+                  <button type="button" disabled>收藏原参数 · 草图</button>
+                </div>
+                <details open>
+                  <summary>Task 事件与过程 · 示例</summary>
+                  <ol class="timeline">
+                    <li>09:59:59 · task.preparation.started</li>
+                    <li>10:00:00 · task.preparation.completed</li>
+                    <li>10:00:01 · task.allocation.bound → E1</li>
+                    <li>10:00:02 · task.canceled</li>
+                  </ol>
+                  <details>
+                    <summary>展开 Task 事件的完整公开字段</summary>
+                    <pre>{
   "sequence": 108,
   "type": "task.canceled",
   "occurredAt": "2026-10-30T10:00:02.000Z",
@@ -154,16 +169,58 @@
   "taskId": "01M66000000000000000000002",
   "data": {}
 }</pre>
-              </details>
-            </details>
-            <p class="muted">任务快照与 Execution 事实分开查看。事件只代表指定范围中仍可取得的公开历史。</p>
-          </aside>
+                  </details>
+                </details>
+              </aside>
+            </div>
+          </section>
+          <section id="execution-block" class="entity-block" aria-labelledby="execution-block-title">
+            <div class="entity-heading">
+              <h3 id="execution-block-title">03 · Execution 区：实际执行发生了什么</h3>
+              <p>独立查看执行生命周期、progress 和回收事实。多个 Task 可关联同一 Execution，不提供执行取消按钮。</p>
+            </div>
+            <div class="content split">
+              <div>
+                <h4>已观察的执行</h4>
+                <div class="table-wrap">
+                  <table>
+                    <caption>执行列表 · 不是全服务器资源目录</caption>
+                    <thead><tr><th scope="col">Execution</th><th scope="col">开始</th><th scope="col">结束 / 回收</th><th scope="col">已观察 Task</th></tr></thead>
+                    <tbody><tr><td><strong>E1（选中）</strong></td><td>10:00:01</td><td>均未确认</td><td>A、B · <a href="#task-block">回到 Task 区</a></td></tr></tbody>
+                  </table>
+                </div>
+                <p class="note">关联依据是 task.allocation.bound 和相同 executionId。这里只列出已观察的 A、B，不声称拥有所有 owners 或全池容量。</p>
+              </div>
+              <aside class="card selected" aria-label="选中 Execution E1 的示例详情">
+                <h4>E1 · Execution 详情</h4>
+                <dl class="facts">
+                  <dt>开始事实</dt><dd>execution.started · 10:00:01</dd>
+                  <dt>最近进展</dt><dd>execution.progress · 10:00:04</dd>
+                  <dt>结束事实</dt><dd>尚未观察到 completed / failed</dd>
+                  <dt>物理回收</dt><dd>尚未观察到 reclaimed，不代表一定仍占用</dd>
+                </dl>
+                <details>
+                  <summary>Execution 事件详情 · 示例</summary>
+                  <pre>{
+  "sequence": 112,
+  "type": "execution.progress",
+  "occurredAt": "2026-10-30T10:00:04.000Z",
+  "scope": "demo",
+  "executionId": "01M66000000000000000000011",
+  "data": { "progress": { "step": 1 } }
+}</pre>
+                </details>
+                <p class="muted">B 的取消不等于 E1 停止；完成与回收也分别由服务事实证明。</p>
+              </aside>
+            </div>
+          </section>
+          <p class="note">连接状态独立于两类实体。断线保留最后快照并标记旧数据，不自动重提任务，也不把旧数据标为实时。</p>
         </div>
       </section>
 
       <section id="create" class="screen" aria-labelledby="create-title">
         <div class="screen-heading">
-          <h2 id="create-title">02 / 创建任务：单条直接提交</h2>
+          <h2 id="create-title">02 / 创建任务：单条快捷走统一任务栏</h2>
           <p>面板草图以 Check 及虚构 subject schema 举例；实际字段来自发现契约，不能硬编码本例。</p>
         </div>
         <div class="toolbar"><strong>发送目标：本机开发 A</strong><span>输入来源：新建 / 收藏模板 / 历史模板</span></div>
@@ -191,14 +248,14 @@
               <p class="muted">类型 Schema 描述输入外形；具体制品提供 subject 的字段约束。这里的路径只是参数文本，不是文件选择或导入。</p>
             </div>
             <div class="actions">
-              <button type="button" class="primary" disabled>提交任务 · 静态草图</button>
-              <button type="button" disabled>加入任务篮 · 静态草图</button>
+              <button type="button" class="primary" disabled>提交任务 · 单条快捷</button>
+              <button type="button" disabled>加入多条任务栏 · 草图</button>
               <a href="#workspace">查看提交后的观察布局</a>
             </div>
           </div>
           <div>
             <h3>提交前可见的上下文</h3>
-            <p>目标与类型保持可见。草稿不等于 Task；收到成功回执后才显示真实任务身份。</p>
+            <p>点击提交：当前输入 → 创建独立单条任务栏批次 → 统一发送 → 在常驻任务栏显示回执 → 链接 Task。无需手动多走一步，也不清空或发送已有多条草稿。</p>
             <details open>
               <summary>只读请求预览示例</summary>
               <pre>{
@@ -211,7 +268,7 @@
   "subject": { "root": "D:\\demo\\project" }
 }</pre>
             </details>
-            <p class="note">Idempotency-Key 属于这一次提交，不从历史 requestId 复制。网络响应丢失时保留同一次提交身份。</p>
+            <p class="note">单条快捷、多条发送、收藏再发和历史重做复用同一提交机制。Idempotency-Key 属于这次提交，不从历史复制；结果未知时重试原请求，不再次快捷新建批次。</p>
             <h3 style="margin-top: 18px">阻塞示例，不编造可提交表单</h3>
             <ul>
               <li>无法发现类型 / Schema：显示原因并提供重试入口。</li>
@@ -224,10 +281,13 @@
 
       <section id="basket" class="screen" aria-labelledby="basket-title">
         <div class="screen-heading">
-          <h2 id="basket-title">03 / 任务篮：发送前与发送后</h2>
-          <p>两个阶段并列示意，不是实际批量操作。候选 C-02：每个 Endpoint 独立一篮。</p>
+          <h2 id="basket-title">03 / 提交任务栏：统一单条与多条流程</h2>
+          <p>任务栏始终存在，顶部保留紧凑入口；此处展开草稿与回执。单条快捷只是自动创建并发送一个单元素批次，不新增后端 Batch 实体。</p>
         </div>
         <div class="toolbar"><strong>发送目标：本机开发 A</strong><span>顺序只约束提交，不保证执行先后</span></div>
+        <div class="content">
+          <p class="note"><strong>单条快捷：</strong>输入 → 独立单条批次 → 立即发送 → 1 条回执。<strong>手动多条：</strong>累积草稿 → 调整顺序 → 发送 → 逐条回执。两者共用发送逻辑，快捷单条不改变下面示例中的 3 条待发草稿。</p>
+        </div>
         <div class="content split">
           <div class="card">
             <h3>发送前：3 份草稿，尚未创建任务</h3>
@@ -246,7 +306,7 @@
               <li><strong>确定失败</strong> · 服务拒绝输入；显示该条错误，后项仍继续。</li>
               <li><strong>结果未知</strong> · 响应中断，保留原提交身份供查询/重试。</li>
             </ol>
-            <p class="note">没有“整篮再发”把成功项和未知项一起复制成新任务。失败修改再发与未知原请求重试不能混在一个动作里。</p>
+            <p class="note">没有“整批再发”把成功项和未知项一起复制成新任务。失败修改再发与未知原请求重试不能混在一个动作里。</p>
           </div>
         </div>
       </section>
@@ -283,7 +343,7 @@
             <summary>T-100 · 原参数复用示例</summary>
             <p>原引用是浮动 URL，未锁版本。重做时仍不锁；不自动使用上次实际运行的 digest。</p>
             <div class="actions">
-              <button type="button" disabled>直接重做 · 新提交</button>
+              <button type="button" disabled>直接重做 · 新单条批次</button>
               <a href="#create">查看编辑后重做的面板</a>
               <a href="#workspace">查看加入观察后的布局</a>
             </div>
@@ -306,7 +366,7 @@
               <dt>制品 URL</dt><dd>https://artifacts.example.test/checker/current.tgz</dd>
               <dt>subject</dt><dd>root = D:\demo\project</dd>
             </dl>
-            <div class="actions"><button type="button" disabled>直接再发 · 草图</button><a href="#create">查看编辑后再发</a></div>
+            <div class="actions"><button type="button" disabled>直接再发 · 新单条批次</button><a href="#create">查看编辑后再发</a></div>
             <p class="muted">保留完整类型输入。派生新草稿不自动修改这份收藏。</p>
           </div>
           <div class="card">
@@ -353,10 +413,10 @@
         </div>
       </section>
 
-      <section class="question" aria-labelledby="review-focus">
-        <h2 id="review-focus">本轮先看这一处</h2>
-        <p>工作台让“新建入口、多任务对照、选中任务详情”靠近。这个组织方式是否适合日常提交一个任务，以及偶尔同时观察多个任务的习惯，是本轮首要审阅点。</p>
-        <p>页面组织、Endpoint 分区和提交时间口径均为候选；没有因展示草图而确认这些选择。</p>
+      <section class="design-note" aria-labelledby="design-boundary">
+        <h2 id="design-boundary">本轮调整后的边界</h2>
+        <p>已按反馈分离提交任务栏、Task 与 Execution，并统一单条快捷和多条提交。其余 UX 以逻辑清楚为准收敛，不再逐项请求草图选择。</p>
+        <p>真实产品可用后再采集使用体验。本页仍是离线设计，不代表功能已经实现或生命周期已验收。</p>
       </section>
     </main>
     <footer>离线设计附件 · 无脚本、无外部资源、无实际网络请求 · 仅允许页面内导航和原生详情展开 · 不是实现、验收或发布证据</footer>
