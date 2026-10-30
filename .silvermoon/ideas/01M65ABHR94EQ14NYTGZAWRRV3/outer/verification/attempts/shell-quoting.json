@@ -1,0 +1,124 @@
+{
+  "status": "failed",
+  "startedAt": "2026-10-30T07:13:17.022Z",
+  "testedDeploymentRevision": "156c644df71c39f480ba88a0003a0ee52633473f",
+  "sourceRoot": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+  "externalRoot": "D:\\Code\\check-server-mvp-deployment-20261030-a1",
+  "runtime": {
+    "node": "24.11.1",
+    "platform": "win32",
+    "architecture": "x64"
+  },
+  "commands": [
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 46096,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 99,
+      "stdoutSha256": "d0d582fcd4d453182dce44a5b4322098a9e38ba4823241a21adce74c0becb013",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "status",
+        "--porcelain"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 32016,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 113,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "HEAD:.silvermoon/ideas/01M65ABHR94EQ14NYTGZAWRRV3/outer"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 30328,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 93,
+      "stdoutSha256": "6cc996b77d07d4b283f6d6c558c9dbcff39b69b70a76491807309bbde46b708b",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "HEAD:packages"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 11912,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 90,
+      "stdoutSha256": "04236fcc38714329d689b8eee214de21ed1221c371d25f780565d3353625aa40",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-pager",
+        "rev-parse",
+        "HEAD:.silvermoon/ideas/01M65ABHR94EQ14NYTGZAWRRV3/outer/inner"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 29232,
+      "code": 0,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 89,
+      "stdoutSha256": "1ed66251a6b09d7245db34c247ce363c22773c998a0ee9377b091ab42a353c61",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "pnpm",
+        "--dir",
+        "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation\\packages\\task-protocol",
+        "pack",
+        "--pack-destination",
+        "D:\\Code\\check-server-mvp-deployment-20261030-a1\\packs",
+        "--json"
+      ],
+      "cwd": "D:\\Code\\potential-guide.worktrees\\check-server-mvp-implementation",
+      "pid": 33972,
+      "code": 1,
+      "signal": null,
+      "timedOut": false,
+      "elapsedMs": 984,
+      "stdoutSha256": "ef96955ee9ab7275d4366207d3af81f0277ee537bfed17243236567cb7bc0e02",
+      "stderrSha256": "f4f8aef292f2742da7c27130d41d2fdab1501b1a3e6b5e4da83bfd4b90ed6435"
+    }
+  ],
+  "packages": [],
+  "consumers": [],
+  "sourceCommit": "da7cf4517eef417c42d3746d96bce4aca7caf5e2",
+  "implementationRevision": "4db53c32aa9765262fd0a67626eba114e5e08ae7",
+  "sourcePackagesTree": "b7b9ad4ff41ef3421676cfe8cd61b658f0a1c977",
+  "error": "AssertionError [ERR_ASSERTION]: pnpm failed:\n'\"--dir\"' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n\nundefined\n[ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL] Command \"\"--dir\"\" not found\n\n\n1 !== 0\n\n    at run (file:///D:/Code/potential-guide.worktrees/check-server-mvp-implementation/.silvermoon/ideas/01M65ABHR94EQ14NYTGZAWRRV3/outer/verification/verify.mjs:62:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async file:///D:/Code/potential-guide.worktrees/check-server-mvp-implementation/.silvermoon/ideas/01M65ABHR94EQ14NYTGZAWRRV3/outer/verification/verify.mjs:122:31",
+  "cleanup": {
+    "markerMatched": true,
+    "externalRootRemoved": true
+  },
+  "finishedAt": "2026-10-30T07:13:18.501Z"
+}

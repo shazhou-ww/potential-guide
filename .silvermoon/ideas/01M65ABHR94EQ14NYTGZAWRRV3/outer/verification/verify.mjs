@@ -39,6 +39,7 @@ async function run(command, args, cwd, timeoutMs = 600000) {
   const started = performance.now();
   const child = spawn(executable, argv, {
     cwd, windowsHide: true, detached: process.platform !== "win32",
+    windowsVerbatimArguments: command === "pnpm" && process.platform === "win32",
     stdio: ["ignore", "pipe", "pipe"],
   });
   let stdout = "", stderr = "", timedOut = false;

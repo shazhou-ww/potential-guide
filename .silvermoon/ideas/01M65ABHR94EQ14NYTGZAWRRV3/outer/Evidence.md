@@ -11,3 +11,9 @@ deploymentRevision，执行真实安装及 HTTP/SSE/进程测试。
 安装图、命令、API 观测、Worker exit/PID 记录和唯一标记目录清理证明。
 
 尚未执行外部验证，D 项保持未完成；本准备文档不宣称部署成功或获得验收。
+
+首次执行在打包首包前发现 harness 的 Windows cmd 参数转义问题，pnpm 收到了带字面引号的
+`--dir`。此为验证工具问题，未触及产品实现；已确认 `windowsVerbatimArguments` 的实际
+转发行为并修正。原始失败及唯一目录清理记录保留在
+[attempts/shell-quoting.json](verification/attempts/shell-quoting.json)。
+修订 harness 将重新同步并绑定新的准确 deploymentRevision 后重跑。
