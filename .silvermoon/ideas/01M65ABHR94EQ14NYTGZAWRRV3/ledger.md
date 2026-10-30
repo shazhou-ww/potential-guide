@@ -4,13 +4,13 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 接入 Check 类型与受控执行
+- [ ] **I-S01:** 分层制品校验并接入 Check 受控执行
 - [ ] **I-S02:** 提供通用服务与 CLI
 - [ ] **I-S03:** 打通 MVP 与交付边界
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** Check 契约与资源可靠
+- [ ] **I-AC01:** 制品分层与 Check 资源可靠
 - [ ] **I-AC02:** Server 通用且退出可信
 - [ ] **I-AC03:** MVP 闭环与既有行为兼容
 
