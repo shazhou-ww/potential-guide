@@ -1,0 +1,14 @@
+{
+  "candidate": "dce0ffca8f89748adea3ed4e83e3b42a3b22fba8",
+  "packages": {
+    "@potential-guide/check-artifacts": "4f0f80ea782e0707486f1411eea1c446b5b4ce9fd163b9bab87e1e54f4afe58a",
+    "@potential-guide/check-runtime-files": "89ec7ad05f53972f8624b15586251016c9a78bf14ac0574283e59b1be2c4a32a",
+    "@potential-guide/check-task": "0fbc94456e2d126ddc838efd14840342c1d75f7d39e1b6e837a380873f1d4f3d",
+    "@potential-guide/probe-task": "7a36ad681fe4f4b452c38e0a2efb547d13a2029a5c04369aff72efd971ee4fa0",
+    "@potential-guide/task-engine": "368c795442946bd6f6bf9502489af1a9b2984ede3fce3b20c1ba7f299d55f7e3",
+    "@potential-guide/task-engine-http": "0b352ab2213c54dbee86951eaf3857ac7164468a44cb3316ef47157d8d194458",
+    "@potential-guide/task-engine-server": "5df9552e2a8c00069aa8d4880bdbf7cd1f532da8fc7af659408b30cdd59797cf",
+    "@potential-guide/task-engine-storage": "fcd0278f1208ed43a02988c39510508c702871e9dbe9e6d151e971140efb717a",
+    "@potential-guide/task-protocol": "f9fb7f000edd52b43ee755d6c759a7f248a71dd516558f47f4371600af77fbb8"
+  }
+}

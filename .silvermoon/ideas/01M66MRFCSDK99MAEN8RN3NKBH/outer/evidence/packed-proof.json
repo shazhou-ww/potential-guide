@@ -1,0 +1,55 @@
+{
+  "commit": "dce0ffca8f89748adea3ed4e83e3b42a3b22fba8",
+  "entries": {
+    "task-protocol": {
+      "path": "node_modules\\.pnpm\\@potential-guide+task-proto_edf0a2b1bb4aa933ecd69a8f1ab8883b\\node_modules\\@potential-guide\\task-protocol\\dist\\index.js",
+      "sha256": "e538db92f24744c2967a0af25a8cedf0244339667cbeb13d7cee842748ea6af1"
+    },
+    "task-engine": {
+      "path": "node_modules\\.pnpm\\@potential-guide+task-engine@file+tarballs+task-engine.tgz\\node_modules\\@potential-guide\\task-engine\\dist\\index.js",
+      "sha256": "cd50485772db48aab3de1620a3f9101bba825837ffb5e21c17134a967ee40dfe"
+    },
+    "task-engine-http": {
+      "path": "node_modules\\.pnpm\\@potential-guide+task-engin_bb865fa9008fdd57ffbd5edb2b8c1043\\node_modules\\@potential-guide\\task-engine-http\\dist\\index.js",
+      "sha256": "24ae85179398c6c40b7f99d3d1bcbdcf9107eb120a487c68fdcf7581e07a6850"
+    },
+    "task-engine-server": {
+      "path": "node_modules\\.pnpm\\@potential-guide+task-engin_966a99ebba768862ae0f56ad34ec08d8\\node_modules\\@potential-guide\\task-engine-server\\dist\\index.js",
+      "sha256": "9918c262fa20d25f62ec0abaeb1ba9a11cc38e60a58851d0d5636d0aa7ba741a"
+    },
+    "task-engine-storage": {
+      "path": "node_modules\\.pnpm\\@potential-guide+task-engin_1de65b3814f13eac3997a7cb1045cd14\\node_modules\\@potential-guide\\task-engine-storage\\dist\\index.js",
+      "sha256": "d33aaa138e08b7ec5fed7ec7fb801dd75d17f1a2dd50718c48f7ca9bd1122dd3"
+    },
+    "probe-task": {
+      "path": "node_modules\\.pnpm\\@potential-guide+probe-task@file+tarballs+probe-task.tgz\\node_modules\\@potential-guide\\probe-task\\dist\\index.js",
+      "sha256": "71c3bad0b6959b49cdc8c90e1b4226d6cac2b026abc821072cff46b2269d2cc7"
+    },
+    "check-task": {
+      "path": "node_modules\\.pnpm\\@potential-guide+check-task@file+tarballs+check-task.tgz\\node_modules\\@potential-guide\\check-task\\dist\\index.js",
+      "sha256": "5aeccdb12bf6fb1c52540b3f4397253d0fda03e4df815934e6200fc881cea81d"
+    }
+  },
+  "assertions": [
+    "schema-derived equality is independent; free objects and JSON own properties are respected",
+    "union equality laws and schema-valued unevaluated array items hold",
+    "real HTTP discovery is authenticated, current-only and free of private runtime data or asset resolution",
+    "revision guards and validation reject before persistence; idempotency remains raw-request based; structural input equality shares one eligible execution",
+    "Probe cross-field failure is accepted then fails preparation without external calls; credential-shaped URL input never persists",
+    "owned real HTTP server closed and port is no longer responsive",
+    "closed and reopened owned SQLite history restores; changed same-version Schema refuses reinterpretation"
+  ],
+  "discovery": [
+    {
+      "type": "echo",
+      "version": "2",
+      "revision": "15f971bc54b7097f838e83ef4e3db021572e66e2ad7938a55931b73a07f8bf0b"
+    },
+    {
+      "type": "probe",
+      "version": "2",
+      "revision": "5b95ad1ab46fb2570a52649e516d3cb0a0983737d383fff0a070e4be01704c7b"
+    }
+  ],
+  "completedAt": "2026-10-30T17:23:06.014Z"
+}
