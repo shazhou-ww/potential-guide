@@ -79,8 +79,8 @@
   <body>
     <a class="skip" href="#workspace">跳到工作台草图</a>
     <header>
-      <div class="eyebrow">TASK ENGINE WEB UI · 反馈修订 v0.2</div>
-      <h1>任务操作面板：六个场景草图</h1>
+      <div class="eyebrow">TASK ENGINE WEB UI · 范围收敛 v0.3</div>
+      <h1>任务操作面板：五个首版场景</h1>
       <p>一个 Endpoint 下，提交任务栏、Task、Execution 分区关联；UX 细节自行收敛，真实产品阶段再评估使用体验。</p>
       <p class="notice"><strong>离线设计样本，不是可用产品。</strong>所有任务、地址、时间和事件均为虚构示例；没有连接后端。操作按钮禁用，导航与详情展开仅用于审阅，不提交、取消或删除任何内容。</p>
       <nav aria-label="草图场景导航">
@@ -89,7 +89,6 @@
         <a href="#basket">03 提交任务栏</a>
         <a href="#history">04 Endpoint 历史</a>
         <a href="#favorites">05 收藏</a>
-        <a href="#assets">06 类型资产</a>
       </nav>
     </header>
     <aside id="submission-bar" class="submission-bar" aria-labelledby="submission-title">
@@ -221,7 +220,7 @@
       <section id="create" class="screen" aria-labelledby="create-title">
         <div class="screen-heading">
           <h2 id="create-title">02 / 创建任务：单条快捷走统一任务栏</h2>
-          <p>面板草图以 Check 及虚构 subject schema 举例；实际字段来自发现契约，不能硬编码本例。</p>
+          <p>面板以 Task 输入 Schema 为唯一表单来源。Check 仅作示例；URL、digest 是普通参数，不触发资产下载或管理。</p>
         </div>
         <div class="toolbar"><strong>发送目标：本机开发 A</strong><span>输入来源：新建 / 收藏模板 / 历史模板</span></div>
         <div class="content split">
@@ -241,11 +240,11 @@
               <input id="digest" value="" placeholder="未锁定；不会按上次解析结果自动补锁" readonly>
             </label>
             <div class="card">
-              <h3>subject · 来自所选制品 Schema</h3>
-              <label class="field" for="subject-root">root（虚构 Schema 字段）
-                <input id="subject-root" value="D:\demo\project" readonly>
+              <h3>subject · Task Schema 声明为 object 的示例</h3>
+              <label class="field" for="subject-json">通用对象输入（局部 JSON 示例）
+                <textarea id="subject-json" readonly>{ "root": "D:\\demo\\project" }</textarea>
               </label>
-              <p class="muted">类型 Schema 描述输入外形；具体制品提供 subject 的字段约束。这里的路径只是参数文本，不是文件选择或导入。</p>
+              <p class="muted">Task Schema 未描述内部属性时，不猜业务字段，也不读取制品 manifest。若 Task Schema 本身描述了属性，则生成对应字段；这里的路径只是输入文本，不是文件选择或导入。</p>
             </div>
             <div class="actions">
               <button type="button" class="primary" disabled>提交任务 · 单条快捷</button>
@@ -272,7 +271,7 @@
             <h3 style="margin-top: 18px">阻塞示例，不编造可提交表单</h3>
             <ul>
               <li>无法发现类型 / Schema：显示原因并提供重试入口。</li>
-              <li>无法取得 subject Schema：保留输入，说明缺少哪项信息。</li>
+              <li>只声明为 object：提供通用对象编辑，不要求资产元数据作为提交前置。</li>
               <li>高级 Schema 尚不能渲染：明确提示，不静默忽略约束。</li>
             </ul>
           </div>
@@ -379,43 +378,10 @@
         </div>
       </section>
 
-      <section id="assets" class="screen" aria-labelledby="assets-title">
-        <div class="screen-heading">
-          <h2 id="assets-title">06 / 类型资产：明确范围后选版或清理</h2>
-          <p>资产归类型所有者；磁盘持久缓存目标在独立 idea 中跟进，下面不是现有管理接口的执行结果。</p>
-        </div>
-        <div class="toolbar"><strong>Endpoint：本机开发 A</strong><span>类型：check · 范围：该服务授权的制品缓存（示例）</span></div>
-        <div class="content split">
-          <div>
-            <div class="table-wrap">
-              <table>
-                <caption>示例缓存条目 · 精确摘要仅用短名演示</caption>
-                <thead><tr><th scope="col">资产</th><th scope="col">精确内容</th><th scope="col">使用/保护信息</th></tr></thead>
-                <tbody>
-                  <tr><td>Checker X</td><td>digest-A</td><td>资产侧报告：可用</td></tr>
-                  <tr><td>Checker X</td><td>digest-B</td><td>资产侧报告：正在使用，受保护</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <p class="muted">实际标识是完整 digest，不由人类短名代替；不承诺缓存中包含所有已发布版本。</p>
-            <div class="actions"><a href="#create">查看带精确引用创建任务的入口</a><button type="button" disabled>选择条目并申请清理 · 草图</button></div>
-          </div>
-          <div class="card">
-            <h3>清理意图核对与结果示例</h3>
-            <p>确认范围：本机开发 A 的类型资产缓存。不是浏览器电脑文件，不是远程制品，不包含 Task Prepared 或 worker 临时目录。</p>
-            <button type="button" disabled>确认清理所选标识 · 静态草图</button>
-            <ul>
-              <li>digest-A：已清理（虚构结果）。</li>
-              <li>digest-B：未清理，资产所有者报告受保护（虚构结果）。</li>
-            </ul>
-            <p class="note">具体在用保护规则尚未定案。UI 的确认不是并发安全保证；最终由资产所有者判断并逐项报告，不能将失败包装成成功。</p>
-          </div>
-        </div>
-      </section>
-
       <section class="design-note" aria-labelledby="design-boundary">
         <h2 id="design-boundary">本轮调整后的边界</h2>
         <p>已按反馈分离提交任务栏、Task 与 Execution，并统一单条快捷和多条提交。其余 UX 以逻辑清楚为准收敛，不再逐项请求草图选择。</p>
+        <p>首版没有资产浏览、版本目录或清理入口，也不预建通用工具插件。普通任务参数中的 URL 与锁版本信息仍可填写、收藏和原样重做。</p>
         <p>真实产品可用后再采集使用体验。本页仍是离线设计，不代表功能已经实现或生命周期已验收。</p>
       </section>
     </main>
