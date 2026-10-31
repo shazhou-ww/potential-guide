@@ -1,9 +1,9 @@
 import type {
-  RunPage,
-  RunSummary,
   HistoryPage,
   Observation,
   PublicEvent,
+  RunPage,
+  RunSummary,
   TaskSnapshot,
   TaskSummary,
   TaskTypeDiscovery,
@@ -26,7 +26,12 @@ import {
   TaskSnapshots,
   validSnapshot,
 } from "./model.js";
-import { describeAction, type InlineAction, WorkbenchView } from "./presentation.tsx";
+import {
+  describeAction,
+  describeRowAction,
+  type InlineAction,
+  WorkbenchView,
+} from "./presentation.tsx";
 import type { Endpoint, Favorite } from "./server.js";
 
 const view = new WorkbenchView(document.getElementById("app")!);
@@ -1019,17 +1024,24 @@ function renderDirectory(): void {
   for (const task of directory.page.tasks) {
     const row = node("tr");
     row.dataset.key = `task:${state.endpoint.binding}:${task.taskId}`;
+    describeRowAction(row, {
+      kind: "task",
+      id: task.taskId,
+      label: `查看任务 ${task.type} · ${task.taskId.slice(-8)} 的详情`,
+      run: () => openTask(task.taskId),
+      error: notify,
+    });
     const star = node("td");
+    star.dataset.rowControls = "";
     star.append(starButton(state.endpoint, task.taskId));
     const title = node("td");
-    title.append(
-      button(task.type, () => openTask(task.taskId)),
-      node("small", task.taskId.slice(-8)),
-    );
+    const type = node("span", task.type);
+    type.className = "entity-type";
+    title.append(type, node("small", task.taskId.slice(-8)));
     row.append(star, title);
     const status = node("td", summaryStatus(task));
     const actions = node("td");
-    actions.append(inlineButton("详情", () => openTask(task.taskId)));
+    actions.dataset.rowControls = "";
     const redo = async (direct: boolean) => {
       const endpoint = state.endpoint;
       const original = await api.request<Record<string, unknown>>(
@@ -1145,10 +1157,16 @@ function renderExecutions(): void {
       const row = node("tr"),
         title = node("td");
       row.dataset.key = `run:${execution.runId}`;
-      title.append(
-        button(execution.type, () => openRun(execution.runId)),
-        node("small", execution.runId.slice(-8)),
-      );
+      describeRowAction(row, {
+        kind: "run",
+        id: execution.runId,
+        label: `查看 Run ${execution.type} · ${execution.runId.slice(-8)} 的详情`,
+        run: () => openRun(execution.runId),
+        error: notify,
+      });
+      const type = node("span", execution.type);
+      type.className = "entity-type";
+      title.append(type, node("small", execution.runId.slice(-8)));
       row.append(
         title,
         node(

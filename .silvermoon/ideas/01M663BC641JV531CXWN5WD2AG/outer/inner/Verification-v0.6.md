@@ -122,3 +122,44 @@ inline script/style 负向探针仍被拒绝。
 另存悬停提示、队列、详情与窄屏截图。仅使用自有 fixture/profile/随机端口，
 均已关闭并清理；未连接用户 Chrome9223 或改动用户服务/星标文件。
 Silvermoon worktree/staged 检查均通过（exit 0）；本记录不代表独立审阅或接受。
+
+## v0.6.2：Task / Run 数据行导航（2026-10-31）
+
+已从干净 worktree FF 到 `913b3a3ef3b18b3d6e2b0ebbb9bab881035bacf3`，
+完整保留主线 Run 升级。没有修改后端、协议、Run 生命周期模型、依赖或迁移旧数据。
+基线仅有测试脚本变化、没有依赖变化或缺失，未重新安装依赖；以
+`pnpm exec turbo run build --filter=@potential-guide/task-engine-web-ui...` 构建当前依赖链，
+不是沿用旧 Execution dist。现有 `execution-*` DOM ID 保持稳定，实际协议为 `/runs`、`runId`。
+最终快照检查发现并发 primary 新增另一个 idea，仅有不重叠文档；已安全 FF 至
+`dda0ac60caf3ad8029d796f0e9c50a18d49d46a7` 原样保留。代码没有额外变化，
+未编辑该 idea 的内容或修写事件历史，重新 worktree 检查通过。
+
+类型显示为普通 span，Task 重复的详情按钮移除。独立 row-action WeakMap 只记录行为，
+由 React 原生 tr 承载，不绑定描述 DOM 事件、不借用 ActionButton 或改成 role=button。
+星标/重做/编辑整个操作单元格、禁用 Tooltip wrapper 及 Portal 事件均隔离；
+行只响应自身 Enter/Space，忽略修饰键、非主键、文字选择、拖选和重复按键。
+焦点在打开前定位原行；关闭和再次打开不被旧历史请求锁住。
+
+检查结果：Turbo build（含依赖）、typecheck、UI **53/53**、`pnpm check` 完整通过。
+新增 5 项行组件父子测试覆盖原生语义、稳定 DOM、控件空白区与禁用区域、
+文字选择/拖动/修饰键、Task/Run 键盘、关闭焦点及在途历史时重开。
+actual browser entry 增加 Task 行、独立星标和 Run Space 导航；原 Run 完成/回收、
+停止流后历史分页、未知提交、收藏竞态、权限/范围等断言继续通过。
+
+Chrome 156 独立原生验证全部通过，证据为 [checks.json](evidence/v062/checks.json)
+与同目录截图，保留所测 JS/CSS SHA-256。Accessibility 树实际确认 table、row、
+cell 和可聚焦数据行；真实拖选、修饰点击、空操作区均不导航。
+使用 CDP 暂停真实编辑 GET 响应，点击忙/禁用 wrapper 没有另开详情或发出第二个读取；
+子按钮 Enter 编辑、Space 取消星标也不触发行。两种行均打开对应 Sheet，
+Task Enter/Space、Run Space、关闭焦点、14 条冻结分页/筛选/100px 滚动均保持。
+原 Run 关联跳转、终结收尾、CSP 正反向探针及 390 CSS px 继续通过。
+同时修正旧浏览器脚本残留的关联 Execution 文案 selector，使用主线的完整 Run 标识入口，
+没有把 UI 改回旧协议以适配测试。
+
+Selectors：`#directory tr[data-row-action="task"]`、
+`#execution-directory tr[data-row-action="run"]`；`data-entity-id` 是完整对象 ID，
+`.entity-type` 为普通数据文字，`td[data-row-controls]` 是独立操作区。
+仅操作自有 fixture、随机端口和新 Chrome profile，结束后均关闭；
+用户旧服务和 Chrome9223 未连接或修改。正式切换由父 Agent 执行；
+需要匹配当前 Run 协议的新 Backend，不提供旧协议或演示数据迁移。
+Silvermoon worktree/staged 检查均通过（exit 0）；本轮仍待父 Agent 独立审阅。

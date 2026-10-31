@@ -13,6 +13,7 @@ import {
   type ComponentProps,
   createElement,
   type ElementType,
+  type PointerEvent,
   type ReactNode,
   useLayoutEffect,
   useRef,
@@ -63,7 +64,138 @@ interface Action {
 }
 const actions = new WeakMap<HTMLElement, Action>();
 export function describeAction(element: HTMLButtonElement, action: Action): void {
+  if (element.tagName !== "BUTTON") throw new Error("ActionButton requires a button description.");
   actions.set(element, action);
+}
+interface RowAction {
+  kind: "task" | "run";
+  id: string;
+  label: string;
+  run(): void | Promise<void>;
+  error(error: unknown): void;
+}
+const rowActions = new WeakMap<HTMLTableRowElement, RowAction>();
+export function describeRowAction(row: HTMLTableRowElement, action: RowAction): void {
+  if (row.tagName !== "TR" || row.isConnected)
+    throw new Error("Row navigation requires a detached table row.");
+  rowActions.set(row, action);
+  row.dataset.rowAction = action.kind;
+  row.dataset.entityId = action.id;
+}
+function selectedText(row: HTMLTableRowElement): boolean {
+  const selection = row.ownerDocument.getSelection();
+  if (!selection || selection.isCollapsed) return false;
+  for (let index = 0; index < selection.rangeCount; index++)
+    if (selection.getRangeAt(index).intersectsNode(row)) return true;
+  return false;
+}
+function rowControl(row: HTMLTableRowElement, target: EventTarget): boolean {
+  if (!(target instanceof Element) || !row.contains(target)) return true;
+  const control = target.closest(
+    "[data-row-controls],[data-row-control],button,a,input,select,textarea,summary,label,[role=button],[role=link],[contenteditable]:not([contenteditable=false]),[tabindex]",
+  );
+  return !!control && control !== row;
+}
+function modified(event: {
+  altKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  shiftKey: boolean;
+}): boolean {
+  return event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
+}
+function NavigableRow({
+  action,
+  ...props
+}: ComponentProps<typeof TableRow> & { action: RowAction }) {
+  const pending = useRef(false);
+  const gesture = useRef<{ id: number; x: number; y: number; blocked: boolean } | undefined>(
+    undefined,
+  );
+  const track = (event: PointerEvent<HTMLTableRowElement>) => {
+    const start = gesture.current;
+    if (
+      start &&
+      start.id === event.pointerId &&
+      Math.hypot(event.clientX - start.x, event.clientY - start.y) > 5
+    )
+      start.blocked = true;
+  };
+  const activate = (row: HTMLTableRowElement) => {
+    if (pending.current) return;
+    pending.current = true;
+    row.focus({ preventScroll: true });
+    void Promise.resolve()
+      .then(() => {
+        try {
+          return action.run();
+        } finally {
+          // Navigation opens synchronously; an in-flight history read must not lock a closed row.
+          pending.current = false;
+        }
+      })
+      .catch(action.error);
+  };
+  return (
+    <TableRow
+      {...props}
+      tabIndex={0}
+      aria-label={action.label}
+      aria-haspopup="dialog"
+      aria-keyshortcuts="Enter Space"
+      aria-describedby="directory-row-hint"
+      onPointerDownCapture={(event) => {
+        gesture.current = {
+          id: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+          blocked:
+            event.button !== 0 ||
+            event.isPrimary === false ||
+            modified(event) ||
+            rowControl(event.currentTarget, event.target) ||
+            selectedText(event.currentTarget),
+        };
+      }}
+      onPointerMoveCapture={track}
+      onPointerUpCapture={track}
+      onPointerCancel={() => {
+        if (gesture.current) gesture.current.blocked = true;
+      }}
+      onDragStartCapture={() => {
+        if (gesture.current) gesture.current.blocked = true;
+      }}
+      onClick={(event) => {
+        const start = gesture.current;
+        gesture.current = undefined;
+        if (
+          event.defaultPrevented ||
+          event.button !== 0 ||
+          event.detail > 1 ||
+          modified(event) ||
+          rowControl(event.currentTarget, event.target) ||
+          selectedText(event.currentTarget) ||
+          (event.detail > 0 && start?.blocked)
+        )
+          return;
+        activate(event.currentTarget);
+      }}
+      onKeyDown={(event) => {
+        if (
+          event.defaultPrevented ||
+          event.target !== event.currentTarget ||
+          modified(event) ||
+          !["Enter", " "].includes(event.key)
+        )
+          return;
+        event.preventDefault();
+        if (!event.repeat && !selectedText(event.currentTarget)) {
+          gesture.current = undefined;
+          activate(event.currentTarget);
+        }
+      }}
+    />
+  );
 }
 function ActionButton({
   action,
@@ -109,7 +241,11 @@ function ActionButton({
   if (!glyph) return control;
   return (
     <Tooltip>
-      <span className="inline-flex" title={disabled || busy ? glyph.label : undefined}>
+      <span
+        data-row-control
+        className="inline-flex"
+        title={disabled || busy ? glyph.label : undefined}
+      >
         <TooltipTrigger asChild>{control}</TooltipTrigger>
       </span>
       <TooltipContent sideOffset={6}>{glyph.label}</TooltipContent>
@@ -152,7 +288,9 @@ function describe(node: Node, index: number): ReactNode {
       ? true
       : attribute.value;
   }
+  const rowAction = rowActions.get(node as HTMLTableRowElement);
   const action = actions.get(node);
+  if (rowAction) props.action = rowAction;
   if (action) {
     props.action = action;
     props.variant =
@@ -163,7 +301,11 @@ function describe(node: Node, index: number): ReactNode {
           : "outline";
     props.size = "sm";
   }
-  const component = action ? ActionButton : (components[node.localName] ?? node.localName);
+  const component = rowAction
+    ? NavigableRow
+    : action
+      ? ActionButton
+      : (components[node.localName] ?? node.localName);
   return createElement(component, props, ...[...node.childNodes].map(describe));
 }
 interface Events {
@@ -317,6 +459,9 @@ function Workbench({ view }: { view: WorkbenchView }) {
         </header>
         <Port view={view} id="notice" role="status" aria-live="polite" />
         <main id="workspace">
+          <p id="directory-row-hint" className="sr-only">
+            聚焦数据行后按 Enter 或空格查看详情；星标和操作列是独立操作。
+          </p>
           <TabsContent
             value="tasks"
             id="tasks"
