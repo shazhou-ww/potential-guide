@@ -28,6 +28,9 @@ Objective 输入及内嵌 Checker 遵循既有 HTTPS 约束；不把 source 支�
 | 宿主资源 | 未 await 的已启动动作与仍存活句柄各有门闩；动作/证明完成前无 reclaimed/waitRelease 成功 |
 | SQLite 真实重启 | 独立 Node 进程使用同一自有数据库/同一 installed 制品，原 Check/Probe 结果和历史可复验，不重跑旧业务 |
 
+消息观察先确认类型入口已投递并进入业务消息等待；Run.started 本身不证明当前消息路由就绪。
+未投递时的 no_run_route 属于明确协议拒绝，不以重试创造绑定或修改 Task deadline。
+
 驱动、类型模块与实际观察结果作为本 Outer 的支持物同步；先同步此标准再运行。
 失败与重试分开保留，不删除不利证据或通过改变已接受代码取得通过。
 故障消费者允许按自己的 child handle 结束整个自有进程，但不把该清理称为旧 Run 已回收。

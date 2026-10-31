@@ -161,13 +161,14 @@ try {
     return { message, canceled, survivor, deniedResult };
   });
   await scenario("业务消息幂等、目标拒绝、共享投入撤回及 deadline 不续期", async () => {
-    const x = submit({ type: "control", label: "共同需求", timeoutMs: 300 });
-    const y = submit({ type: "control", label: "共同需求", timeoutMs: 5000 });
-    await until(() => read(y).run, Boolean);
+    const x = submit({ type: "control", label: "共同需求", timeoutMs: 1200 });
+    const y = submit({ type: "control", label: "共同需求", timeoutMs: 6000 });
+    await until(() => a.store.read().events,
+      (events) => events.some((event) => event.type === "run.progress" && event.runId === read(y).run?.runId));
     assert.equal(read(x).run.runId, read(y).run.runId);
     const id = newId(), target = newId();
     const added = await http(a.server.url, `/tasks/${x.taskId}/messages/${id}`, { payload: { kind: "add", amount: 3 } });
-    assert.equal(added.status, 202);
+    assert.equal(added.status, 202, JSON.stringify(added));
     await until(async () => (await http(a.server.url, `/tasks/${x.taskId}/messages/${id}`)).body.state, (value) => value === "accepted");
     const duplicate = await http(a.server.url, `/tasks/${x.taskId}/messages/${id}`, { payload: { kind: "add", amount: 3 } });
     assert.equal(duplicate.body.state, "accepted");
