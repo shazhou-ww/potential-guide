@@ -22,8 +22,8 @@ catalogs:
       specifier: 6.0.6
       version: 6.0.6
     '@types/node':
-      specifier: 22.20.5
-      version: 22.20.5
+      specifier: 26.6.5
+      version: 26.6.5
     '@types/npm-package-arg':
       specifier: 6.1.4
       version: 6.1.4
@@ -94,7 +94,7 @@ importers:
         version: 2.5.15
       '@types/node':
         specifier: 'catalog:'
-        version: 22.20.5
+        version: 26.6.5
       cross-spawn:
         specifier: 'catalog:'
         version: 7.0.6
@@ -1079,6 +1079,9 @@ packages:
   '@types/node@22.20.5':
     resolution: {integrity: sha512-U2+DNr+wSjpsTS/wZGYHq7GcwfuSmKiKvoPvK22zwTlRhU91yOniN4qRR5KhIjvif7ysw/dz/hKmfDH0Ris4aA==}
 
+  '@types/node@26.6.5':
+    resolution: {integrity: sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg==}
+
   '@types/npm-package-arg@6.1.4':
     resolution: {integrity: sha512-vDgdbMy2QXHnAruzlv68pUtXCjmqUk3WrBAsRboRovsOmxbfn/WiYCjmecyKjGztnMps5dWp4Uq2prp+Ilo17Q==}
 
@@ -1764,6 +1767,9 @@ packages:
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
+  undici-types@8.9.0:
+    resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
+
   undici@6.29.1:
     resolution: {integrity: sha512-EvRlUt/QqAEvXdQeRMYUfwOQsfzpDztykrG2owGEE/rBOBoYv9uF39ZzsNDh4lTFHhTr2XOZjKkYgueD12ZmGA==}
     engines: {node: '>=18.17'}
@@ -2238,6 +2244,10 @@ snapshots:
   '@types/node@22.20.5':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/node@26.6.5':
+    dependencies:
+      undici-types: 8.9.0
 
   '@types/npm-package-arg@6.1.4': {}
 
@@ -3066,6 +3076,8 @@ snapshots:
   uhyphen@0.2.0: {}
 
   undici-types@6.21.0: {}
+
+  undici-types@8.9.0: {}
 
   undici@6.29.1: {}
 
