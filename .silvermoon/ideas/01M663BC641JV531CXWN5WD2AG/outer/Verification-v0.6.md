@@ -39,3 +39,18 @@ Windows Chrome for Testing，保留用户浏览器设置。以新建的自有测
 ## 受托结论
 
 重新执行的 D-S02 / D-AC02 及数据保留检查通过，其余未变更的后端和服务独立性证据继续有效。没有剩余 blocking issue；主 Agent 按明确受托授权接受随后提交的准确 Outer revision，完成事实仍由同步的 CLI 事件记录。此结论不是用户已经认可新版视觉，用户可继续实际试用反馈。
+
+## v0.6.1：单 Glyph 行内动作
+
+代码 `5383e841998346041c8987b5d29d4732c3c59b03`，acceptInner#22 对应 `8413a9b325bcd076d81ac7b66e39f50911bc1715`。本轮契约先同步于 primary `316fd6a9e37b3cdee86ef7e1c83dc54dc2b26d99`，执行时 Outer revision `3d63862d28c5a871779742c7f6e0b28902050d4e`，再仅替换 UI64319并执行正式浏览器检查。
+
+- 详情/重做/编辑等 13 类明确次级动作采用单个 Lucide Glyph；实体名称、主要新建/提交及高风险动作仍有文字。
+- 主 Agent 在最终64319地址实际测量表格三个动作各一个 SVG、31.5×31.5px点击区域，原中文名称保留为 sr-only，aria-label 分别清楚说明查看、创建新任务及编辑后重做。
+- 原生鼠标悬停和键盘 Tab 均显示中文 Tooltip；Enter 打开对应详情，编辑图标打开原参数弹窗。主要提交和新建按钮仍有可见文字。
+- 390px视口 clientWidth=scrollWidth=375，正常交互零 CSP violation，全程无后端 POST。
+- UI-only 更新前后原收藏文件字节一致，Backend61123及其任务未停止/重启；最终进程句柄为 `ui-icons-user-frontend`。临时 UI/收藏副本/测试页已关闭清理，原用户服务保留。
+- 父 Agent 独立48/48 UI测试、build/typecheck和完整 `pnpm check` 通过；实现复核见 [Review](inner/Review.md)。
+
+最终截图：[行内图标与提示](evidence/v061/tooltip.png)、[详情抽屉图标](evidence/v061/drawer.png)。自动测试只使用自己的新 Chrome 页；另为用户打开了同一64319地址，没有关闭原页面。
+
+本轮 D-S02/D-AC02 通过，无剩余 blocking issue。主 Agent 按既定委托接受随后提交的准确 Outer revision，仍由同步 CLI 事件记录，不代替用户后续视觉反馈。
