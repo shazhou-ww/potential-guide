@@ -1,5 +1,15 @@
 import { setNonce } from "get-nonce";
 import {
+  ArrowDown,
+  ArrowUp,
+  Eye,
+  History,
+  Pause,
+  RefreshCw,
+  RotateCcw,
+  SquarePen,
+} from "lucide-react";
+import {
   type ComponentProps,
   createElement,
   type ElementType,
@@ -26,11 +36,30 @@ import { Input } from "./ui/input.tsx";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "./ui/sheet.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs.tsx";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip.tsx";
+
+const inlineActions = {
+  详情: { Icon: Eye, label: "查看详情" },
+  重做: { Icon: RotateCcw, label: "重做（创建新任务）" },
+  编辑重做: { Icon: SquarePen, label: "编辑参数后重做" },
+  重新观察: { Icon: RefreshCw, label: "重新观察" },
+  暂停观察: { Icon: Pause, label: "暂停观察（不会取消任务）" },
+  "原参数直接重做（新身份）": { Icon: RotateCcw, label: "按原参数重做（创建新任务）" },
+  编辑后重做: { Icon: SquarePen, label: "编辑参数后重做" },
+  重新读取事件历史: { Icon: History, label: "重新读取事件历史" },
+  上移: { Icon: ArrowUp, label: "上移此草稿" },
+  下移: { Icon: ArrowDown, label: "下移此草稿" },
+  编辑保存参数: { Icon: SquarePen, label: "编辑保存参数后新建" },
+  编辑后新建: { Icon: SquarePen, label: "编辑保存参数后新建" },
+  "查看来源 / 模板": { Icon: Eye, label: "查看来源或保存模板" },
+} as const;
+export type InlineAction = keyof typeof inlineActions;
 
 interface Action {
   run(): void | Promise<void>;
   error(error: unknown): void;
   minimumInterval: number;
+  glyph?: InlineAction;
 }
 const actions = new WeakMap<HTMLElement, Action>();
 export function describeAction(element: HTMLButtonElement, action: Action): void {
@@ -43,9 +72,14 @@ function ActionButton({
 }: ComponentProps<typeof Button> & { action: Action }) {
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
-  return (
+  const glyph = action.glyph ? inlineActions[action.glyph] : undefined;
+  const control = (
     <Button
       {...props}
+      variant={glyph ? "ghost" : props.variant}
+      size={glyph ? "icon" : props.size}
+      aria-label={glyph?.label ?? props["aria-label"]}
+      data-glyph-action={action.glyph}
       disabled={disabled || busy}
       data-busy={busy || undefined}
       onClick={(event) => {
@@ -61,7 +95,25 @@ function ActionButton({
             setBusy(false);
           });
       }}
-    />
+    >
+      {glyph ? (
+        <>
+          <glyph.Icon aria-hidden="true" focusable="false" className="size-4" />
+          <span className="sr-only">{props.children}</span>
+        </>
+      ) : (
+        props.children
+      )}
+    </Button>
+  );
+  if (!glyph) return control;
+  return (
+    <Tooltip>
+      <span className="inline-flex" title={disabled || busy ? glyph.label : undefined}>
+        <TooltipTrigger asChild>{control}</TooltipTrigger>
+      </span>
+      <TooltipContent sideOffset={6}>{glyph.label}</TooltipContent>
+    </Tooltip>
   );
 }
 const components: Record<string, ElementType> = {
@@ -220,7 +272,7 @@ function Workbench({ view }: { view: WorkbenchView }) {
     <Port view={view} id={id} className={className} />
   );
   return (
-    <>
+    <TooltipProvider delayDuration={350}>
       <a className="skip" href="#workspace">
         跳到工作区
       </a>
@@ -349,7 +401,7 @@ function Workbench({ view }: { view: WorkbenchView }) {
       </Tabs>
       {overlay && <OverlayPanel key={overlay.epoch} view={view} />}
       <footer>关闭详情或暂停观察都不会取消任务。时间筛选使用明确时区，列表是固定查询快照。</footer>
-    </>
+    </TooltipProvider>
   );
 }
 function OverlayPanel({ view }: { view: WorkbenchView }) {

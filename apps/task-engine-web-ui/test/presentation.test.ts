@@ -139,7 +139,79 @@ test("React/shadcn owns rendering and isolates the persistent schema editor", as
     );
 
     await t.test(
-      "shadcn action keeps its busy and rapid-click guard through keyed updates",
+      "inline glyphs retain labels, identity and callbacks without changing primary or entity buttons",
+      async () => {
+        const names = [
+          "详情",
+          "重做",
+          "编辑重做",
+          "重新观察",
+          "暂停观察",
+          "原参数直接重做（新身份）",
+          "编辑后重做",
+          "重新读取事件历史",
+          "上移",
+          "下移",
+          "编辑保存参数",
+          "编辑后新建",
+          "查看来源 / 模板",
+        ] as const;
+        const called: string[] = [];
+        const buttons = names.map((name) => {
+          const button = document.createElement("button");
+          button.textContent = name;
+          button.dataset.key = `original:${name}`;
+          button.dataset.action = name === "重新观察" ? "refresh" : name;
+          describeAction(button, {
+            run: () => {
+              called.push(name);
+            },
+            error: assert.fail,
+            minimumInterval: 0,
+            glyph: name,
+          });
+          return button;
+        });
+        for (const [index, name] of [
+          "提交任务",
+          "取消选中的 Task",
+          "原身份重试（保留 guard）",
+          "重做",
+        ].entries()) {
+          const button = document.createElement("button");
+          button.textContent = name;
+          button.dataset.key = `text:${index}`;
+          describeAction(button, { run: () => {}, error: assert.fail, minimumInterval: 0 });
+          buttons.push(button);
+        }
+        view.render("history-actions", buttons);
+        for (const name of names) {
+          const button = element<HTMLButtonElement>(`[data-key="original:${name}"]`);
+          assert.equal(button.querySelectorAll("svg").length, 1);
+          assert.equal(button.querySelector("svg")?.getAttribute("aria-hidden"), "true");
+          assert.equal(button.querySelector("svg")?.getAttribute("focusable"), "false");
+          assert.equal(button.querySelector(".sr-only")?.textContent, name);
+          assert.ok(button.getAttribute("aria-label"));
+          assert.equal(button.dataset.variant, "ghost");
+          assert.equal(button.dataset.size, "icon");
+          assert.equal(button.dataset.action, name === "重新观察" ? "refresh" : name);
+          button.click();
+        }
+        await delay(10);
+        assert.deepEqual(called, names);
+        for (let index = 0; index < 4; index++) {
+          const button = element(`[data-key="text:${index}"]`);
+          assert.equal(button.querySelector("svg"), null);
+          assert.equal(button.querySelector(".sr-only"), null);
+          assert.ok(button.textContent);
+        }
+        assert.match(element("#new-task").textContent!, /新建任务/);
+        view.render("history-actions", []);
+      },
+    );
+
+    await t.test(
+      "glyph action keeps its busy and rapid-click guard through keyed updates",
       async () => {
         let count = 0;
         let release = () => {};
@@ -151,6 +223,7 @@ test("React/shadcn owns rendering and isolates the persistent schema editor", as
           button.textContent = "submit";
           button.dataset.key = "guarded";
           describeAction(button, {
+            glyph: "重做",
             run: async () => {
               count++;
               await pending;

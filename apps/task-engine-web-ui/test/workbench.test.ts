@@ -323,6 +323,13 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     assert.equal(calls.filter((call) => call === "POST /api/endpoints/demo/tasks").length, 1);
     assert.match(element("#bar-count").textContent!, /1 项/);
     const id = created!.taskId;
+    assert.equal(named("#task-detail", "暂停观察").dataset.glyphAction, "暂停观察");
+    assert.equal(named("#task-detail", "暂停观察").querySelectorAll("svg").length, 1);
+    assert.equal(
+      document.querySelector('#task-detail [data-action="refresh"]')?.getAttribute("aria-label"),
+      "重新观察",
+    );
+    assert.equal(document.querySelector('#task-detail [data-action="cancel"] svg'), null);
     named("#task-detail", "暂停观察").click();
     await until(() => streams.get(id)!.closed, "manual pause must release SSE");
     assert.equal(

@@ -114,6 +114,7 @@ async function pressKey(key: string, windowsVirtualKeyCode: number, modifiers = 
       code: key,
       windowsVirtualKeyCode,
       modifiers,
+      ...(key === "Enter" && type === "keyDown" ? { text: "\r", unmodifiedText: "\r" } : {}),
     });
 }
 async function closeOverlay() {
@@ -280,6 +281,56 @@ try {
   await pressKey("ArrowLeft", 37);
   await wait("document.querySelector('#tab-tasks').getAttribute('aria-selected')==='true'");
   checks.keyboardTabs = true;
+  checks.inlineGlyphs = await evaluate(`(() => {
+    const buttons=[...document.querySelectorAll('#directory button[data-glyph-action]')];
+    return buttons.length===3 && buttons.every(button=>{
+      const rect=button.getBoundingClientRect();
+      return button.querySelectorAll('svg').length===1 && button.querySelector('svg').getAttribute('aria-hidden')==='true'
+        && button.querySelector('.sr-only') && getComputedStyle(button.querySelector('.sr-only')).width==='1px'
+        && button.getAttribute('aria-label') && rect.width>=28 && rect.width<=36 && rect.height>=28;
+    }) && document.querySelector('#directory tbody td:nth-child(2) button').textContent==='survey'
+      && !document.querySelector('#directory tbody td:nth-child(2) button svg')
+      && document.querySelector('#new-task').textContent.includes('新建任务');
+  })()`);
+  assert.equal(checks.inlineGlyphs, true);
+  const hover = await evaluate<{ x: number; y: number }>(`(() => {
+    const rect=document.querySelector('#directory [data-action="详情"]').getBoundingClientRect();
+    return {x:rect.x+rect.width/2,y:rect.y+rect.height/2};
+  })()`);
+  await call("Input.dispatchMouseEvent", { type: "mouseMoved", ...hover });
+  await wait("document.querySelector('[role=tooltip]')?.textContent==='查看详情'");
+  checks.glyphHoverHint = true;
+  await wait(
+    "!document.querySelector('[data-slot=tooltip-content]').getAnimations().some(animation=>animation.playState==='running')",
+  );
+  await screenshot("glyph-tooltip.png");
+  await call("Input.dispatchMouseEvent", { type: "mouseMoved", x: 0, y: 0 });
+  await delay(50);
+  await call("Input.dispatchMouseEvent", { type: "mouseMoved", x: 0, y: 700 });
+  await wait("!document.querySelector('[role=tooltip]')");
+  await evaluate("document.querySelector('#directory tbody td:nth-child(2) button').focus();true");
+  await pressKey("Tab", 9);
+  await wait("document.querySelector('[role=tooltip]')?.textContent==='查看详情'");
+  checks.glyphKeyboardHint = await evaluate(`(() => {
+    const button=document.activeElement, tip=document.getElementById(button.getAttribute('aria-describedby'));
+    return button.dataset.action==='详情' && button.getAttribute('aria-label')==='查看详情'
+      && tip?.getAttribute('role')==='tooltip';
+  })()`);
+  assert.equal(checks.glyphKeyboardHint, true);
+  await pressKey("Escape", 27);
+  await wait("!document.querySelector('[role=tooltip]')");
+  await pressKey("Enter", 13);
+  await wait("document.querySelector('#task-detail [data-key=task-snapshot]')");
+  checks.glyphDetailAction = await evaluate(
+    `JSON.parse(document.querySelector('#task-detail [data-key=task-snapshot] pre').textContent).taskId===${JSON.stringify(external.taskId)}`,
+  );
+  assert.equal(checks.glyphDetailAction, true);
+  await closeOverlay();
+  await click('#directory [data-action="编辑重做"]');
+  await wait("document.querySelector('#create-title')?.textContent==='编辑参数并新建任务'");
+  checks.glyphEditAction = await evaluate("document.querySelector('#type').value==='survey'");
+  assert.equal(checks.glyphEditAction, true);
+  await closeOverlay();
   await click("#new-task");
   await wait("document.querySelector('#create-dialog[data-state=open]')");
   await wait("document.querySelector('#discovery-status')?.textContent.includes('已发现 2')");
@@ -309,6 +360,36 @@ try {
     globalThis.smokeDraft=[...document.querySelectorAll('#form-fields input')].find(item=>item.value==='独立浏览器验证');
     return true;
   })()`);
+  await click('#create-actions [data-action="加入多条草稿"]');
+  await evaluate("smokeDraft.value='第二条草稿';true");
+  await click('#create-actions [data-action="加入多条草稿"]');
+  await click('#create-actions [data-action="查看任务栏"]');
+  await wait("document.querySelectorAll('#batches .receipt').length===2");
+  const queue = await evaluate<string[]>(
+    "[...document.querySelectorAll('#batches .receipt')].map(row=>row.dataset.key)",
+  );
+  assert.equal(
+    await evaluate("document.querySelector('#batches .receipt [data-action=\"上移\"]').disabled"),
+    true,
+  );
+  assert.equal(
+    await evaluate(
+      "document.querySelector('#batches .receipt [data-action=\"下移\"]').querySelectorAll('svg').length",
+    ),
+    1,
+  );
+  await click('#batches .receipt [data-action="下移"]');
+  await wait(
+    `document.querySelector('#batches .receipt').dataset.key===${JSON.stringify(queue[1])}`,
+  );
+  checks.glyphQueueSort = await evaluate(
+    `JSON.stringify([...document.querySelectorAll('#batches .receipt')].map(row=>row.dataset.key))===${JSON.stringify(JSON.stringify([...queue].reverse()))}`,
+  );
+  assert.equal(checks.glyphQueueSort, true);
+  await screenshot("queue-glyphs.png");
+  await closeOverlay();
+  await click("#new-task");
+  await evaluate("smokeDraft.value='独立浏览器验证';true");
   await screenshot("popup.png");
   await closeOverlay();
   await wait("document.activeElement.id==='new-task'");
@@ -499,6 +580,20 @@ try {
   })()`);
   assert.equal(checks.narrowDrawerFits, true);
   await screenshot("narrow-sheet.png");
+  await closeOverlay();
+  const redoSource = await evaluate<string>(
+    "document.querySelector('#directory tbody tr:nth-child(4)').dataset.key.split(':').at(-1)",
+  );
+  await click('#directory tbody tr:nth-child(4) [data-action="重做"]');
+  await wait("document.querySelector('#task-detail [data-key=task-snapshot]')");
+  const redone = await evaluate<string>(
+    "JSON.parse(document.querySelector('#task-detail [data-key=task-snapshot] pre').textContent).taskId",
+  );
+  checks.glyphRedoAction =
+    redone !== redoSource &&
+    backend.engine.getTask(redone, { scope: "fixture", subject: "ui" }).requestId !==
+      backend.engine.getTask(redoSource, { scope: "fixture", subject: "ui" }).requestId;
+  assert.equal(checks.glyphRedoAction, true);
   await closeOverlay();
   checks.cspViolations = await evaluate("smokeCsp");
   assert.deepEqual(checks.cspViolations, []);

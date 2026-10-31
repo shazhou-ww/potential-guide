@@ -2,7 +2,7 @@
 
 Source: [shadcn-ui/ui, tag `shadcn@4.23.0`](https://github.com/shadcn-ui/ui/tree/96da9cc7f1aa10580a3741664e2a77c721206c00),
 immutable commit `96da9cc7f1aa10580a3741664e2a77c721206c00` (2026-10-27 release).
-`button.tsx`, `dialog.tsx`, `input.tsx`, `sheet.tsx`, `table.tsx`, and `tabs.tsx`
+`button.tsx`, `dialog.tsx`, `input.tsx`, `sheet.tsx`, `table.tsx`, `tabs.tsx`, and `tooltip.tsx`
 are adapted from `apps/v4/registry/new-york-v4/ui/` at that commit.
 The upstream MIT license is retained verbatim in `LICENSE` and appended to the
 built browser bundle. These are actual React components backed by Radix, not
@@ -21,6 +21,9 @@ Manual integration adaptations:
   in this browser-only build. Close labels are Chinese, with stable `data-close`.
 - App sizing, neutral tokens, and overflow rules are local CSS overrides.
   Radix owns dialog focus, dismissal, tabs, and scroll locks.
+  v0.6.1 also uses the same pinned upstream Tooltip with the already installed
+  Radix package; inline glyphs use the existing Lucide dependency. No dependency
+  or CSP policy change is required.
 - Runtime dependencies are catalog-pinned: React/React DOM 19.3.1, radix-ui
   1.8.1, lucide-react 0.474.0 (the upstream app's exact icon version),
   class-variance-authority 0.7.1, clsx 2.1.1, tailwind-merge 3.7.0.

@@ -4,13 +4,13 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 双 Tab 与弹窗提交闭环
+- [x] **I-S01:** 双 Tab 与弹窗提交闭环
 - [x] **I-S02:** 执行目录与观察收尾
 - [x] **I-S03:** 任务星标与历史复用
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 单任务可试用且边界可靠
+- [x] **I-AC01:** 单任务可试用且边界可靠
 - [x] **I-AC02:** 多任务实验可观察且不误提交
 - [x] **I-AC03:** 历史与原参数复用完整
 

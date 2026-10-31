@@ -94,3 +94,31 @@ pnpm --filter @potential-guide/task-engine-web-ui exec tsx fixture\browser-smoke
 仅验证本机安装的 Chrome 与 390 CSS px，不声称已覆盖其他浏览器、辅助技术，
 或用户现有 profile 的缩放设置。父 Agent 独立 review/acceptance 仍待进行；
 不改 Review、Ideal、events、Outer 或 D-*，不推送 primary，不发布 npm。
+
+## v0.6.1：行内单 Glyph（2026-10-31）
+
+基线 `535aadc6af78838d5debbe3f16fb19881579c6e7`，Ideal 未改。
+仅在 `inlineButton` 与 `presentation.tsx` 集中标记/映射 13 类次级动作：
+详情、重做、编辑重做、重新观察、暂停观察、原参数直接重做、编辑后重做、
+重新读取事件历史、上移、下移、编辑保存参数、编辑后新建、查看来源/模板。
+主要新建/提交、实体名称、取消和未知身份重试保持文字；实体名字恰好叫“重做”
+也不会被错误图标化。原 `data-action`、稳定 key、回调、禁用/忙状态和 300ms 防重复保留。
+
+使用既有 Lucide 和 shadcn Button ghost/icon。每个按钮只有一个装饰性 SVG，
+原文字保留在 sr-only，另有准确中文 aria-label。启用的按钮由同版本官方
+shadcn Tooltip 提供悬停/键盘提示和 aria-describedby；禁用时仍有名称及鼠标 title。
+Tooltip 源码同样固定到 `96da9cc7f1aa10580a3741664e2a77c721206c00` 并沿用 MIT 许可。
+没有修改依赖版本、业务模型、API、后端或 CSP。
+
+实际检查：UI build/typecheck 通过，UI **48/48** 通过，`pnpm check` 完整通过。
+新增单 Glyph/名称/稳定 key/原回调、主要与高风险文字不消失、实体名碰撞回归；
+已有忙状态与快速双击测试同时覆盖 glyph 包装，真实入口仍验证暂停/重新观察。
+Chrome 156 独立 profile 验证悬停提示、Tab 聚焦及描述关联、Esc 提示关闭、
+Enter 原详情动作、原参数编辑/新身份重做、两条草稿图标排序及快捷提交不发送草稿。
+全部既有抽屉/SSE/390 CSS px 检查继续通过；正常操作零 CSP violation，
+inline script/style 负向探针仍被拒绝。
+
+通过证据与所测 JS/CSS SHA-256 见 [checks.json](evidence/v061/checks.json)，
+另存悬停提示、队列、详情与窄屏截图。仅使用自有 fixture/profile/随机端口，
+均已关闭并清理；未连接用户 Chrome9223 或改动用户服务/星标文件。
+Silvermoon worktree/staged 检查均通过（exit 0）；本记录不代表独立审阅或接受。

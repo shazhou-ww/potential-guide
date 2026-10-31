@@ -26,7 +26,7 @@ import {
   TaskSnapshots,
   validSnapshot,
 } from "./model.js";
-import { describeAction, WorkbenchView } from "./presentation.tsx";
+import { describeAction, type InlineAction, WorkbenchView } from "./presentation.tsx";
 import type { Endpoint, Favorite } from "./server.js";
 
 const view = new WorkbenchView(document.getElementById("app")!);
@@ -53,6 +53,7 @@ function button(
   action: () => void | Promise<void>,
   disabled = false,
   minimumInterval = 0,
+  glyph?: InlineAction,
 ): HTMLButtonElement {
   const result = node("button", text);
   result.type = "button";
@@ -60,8 +61,20 @@ function button(
   result.dataset.disabled = String(disabled);
   result.dataset.action = text;
   result.dataset.key = `action:${text}`;
-  describeAction(result, { run: action, error: notify, minimumInterval });
+  describeAction(result, {
+    run: action,
+    error: notify,
+    minimumInterval,
+    ...(glyph ? { glyph } : {}),
+  });
   return result;
+}
+function inlineButton(
+  text: InlineAction,
+  action: () => void | Promise<void>,
+  disabled = false,
+): HTMLButtonElement {
+  return button(text, action, disabled, 0, text);
 }
 function details(title: string, value: unknown, key = title): HTMLDetailsElement {
   const result = node("details");
@@ -316,9 +329,11 @@ function renderBar(): void {
         }),
       );
       if (entry.state === "draft") {
-        row.append(button("上移", () => bar.move(batch, index, -1), index === 0 || batch.sending));
         row.append(
-          button(
+          inlineButton("上移", () => bar.move(batch, index, -1), index === 0 || batch.sending),
+        );
+        row.append(
+          inlineButton(
             "下移",
             () => bar.move(batch, index, 1),
             index === batch.entries.length - 1 || batch.sending,
@@ -691,13 +706,13 @@ function renderObserver(observer: Observer): void {
   );
   observationState.className = "observation-state";
   box.append(observationState);
-  const refresh = button("重新观察", () =>
+  const refresh = inlineButton("重新观察", () =>
     observer.kind === "taskId" ? openTask(observer.id) : openExecution(observer.id),
   );
   refresh.dataset.action = "refresh";
   box.append(
     refresh,
-    button(
+    inlineButton(
       "暂停观察",
       () => {
         stopStream(observer, "paused");
@@ -724,7 +739,7 @@ function renderObserver(observer: Observer): void {
         button("用保存参数直接新建", () =>
           reuse(observer.endpoint, observer.template!.parameters as Parameters, true),
         ),
-        button("编辑保存参数", () =>
+        inlineButton("编辑保存参数", () =>
           reuse(observer.endpoint, observer.template!.parameters as Parameters, false),
         ),
         starButton(observer.endpoint, observer.id),
@@ -795,12 +810,12 @@ function renderObserver(observer: Observer): void {
       if (observer.request) {
         box.append(details("原始请求（GET /requests）", observer.request));
         box.append(
-          button("原参数直接重做（新身份）", () =>
+          inlineButton("原参数直接重做（新身份）", () =>
             reuse(observer.endpoint, originalParameters(observer.request!), true),
           ),
         );
         box.append(
-          button("编辑后重做", () =>
+          inlineButton("编辑后重做", () =>
             reuse(observer.endpoint, originalParameters(observer.request!), false),
           ),
         );
@@ -870,7 +885,7 @@ function renderObserver(observer: Observer): void {
     eventList("all-events", "全部公开事件 · 最近窗口（含关联对象）", observer.window.events),
   );
   box.append(eventList("history-events", "当前历史页 · 全部公开载荷", observer.historyEvents));
-  box.append(button("重新读取事件历史", () => history(observer), observer.loading));
+  box.append(inlineButton("重新读取事件历史", () => history(observer), observer.loading));
   const more = button(
     "下一页事件历史",
     () => history(observer, true),
@@ -1025,7 +1040,7 @@ function renderDirectory(): void {
     row.append(star, title);
     const status = node("td", summaryStatus(task));
     const actions = node("td");
-    actions.append(button("详情", () => openTask(task.taskId)));
+    actions.append(inlineButton("详情", () => openTask(task.taskId)));
     const redo = async (direct: boolean) => {
       const endpoint = state.endpoint;
       const original = await api.request<Record<string, unknown>>(
@@ -1036,8 +1051,8 @@ function renderDirectory(): void {
       await reuse(endpoint, originalParameters(original), direct);
     };
     actions.append(
-      button("重做", () => redo(true)),
-      button("编辑重做", () => redo(false)),
+      inlineButton("重做", () => redo(true)),
+      inlineButton("编辑重做", () => redo(false)),
     );
     row.append(status, node("td", new Date(task.receivedAt).toLocaleString()), actions);
     body.append(row);
@@ -1259,14 +1274,16 @@ function renderStars(box: HTMLElement): void {
       node("p", `${status} · ${favorite.endpoint.label}`),
       node("small", `来源 ${favorite.source!.taskId.slice(-8)}`),
     );
-    article.append(button("查看来源 / 模板", () => openTask(favorite.source!.taskId), !available));
+    article.append(
+      inlineButton("查看来源 / 模板", () => openTask(favorite.source!.taskId), !available),
+    );
     article.append(
       button(
         "用保存参数新建",
         () => reuse(favorite.endpoint, favorite.parameters as Parameters, true),
         !available,
       ),
-      button(
+      inlineButton(
         "编辑后新建",
         () => reuse(favorite.endpoint, favorite.parameters as Parameters, false),
         !available,
