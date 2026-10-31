@@ -115,9 +115,11 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
         !type.version ||
         typeof type.environment !== "string" ||
         !type.environment ||
-        !["prepare", "validatePrepared", "validateResult", "validateProgress", "execute"].every(
-          (key) => typeof (type as unknown as Record<string, unknown>)[key] === "function",
-        )
+        typeof type.module !== "string" ||
+        !Object.hasOwn(type, "resultSchema") ||
+        !Object.hasOwn(type, "messageSchema") ||
+        type.resultSchema === undefined ||
+        type.messageSchema === undefined
       )
         throw new TaskError("invalid_config", "Invalid trusted TaskType.");
     for (const [type, version] of Object.entries(options.currentVersions))
@@ -219,7 +221,7 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
     });
     server.on("clientError", (_error, socket) => socket.destroy());
     options.bindService?.(engine);
-    engine.start();
+    await engine.start();
     await new Promise<void>((resolve, reject) => {
       const failed = (error: Error) => {
         server.removeListener("listening", ready);

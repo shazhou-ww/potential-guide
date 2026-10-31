@@ -534,7 +534,7 @@ try {
   const externalExecution = backend.engine.getTask(external.taskId, {
     scope: "fixture",
     subject: "ui",
-  }).execution!.executionId;
+  }).run!.runId;
   checks.externalExecutionListed = await evaluate(
     `document.querySelector('#execution-directory').textContent.includes(${JSON.stringify(externalExecution.slice(-8))})`,
   );

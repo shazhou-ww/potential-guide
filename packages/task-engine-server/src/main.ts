@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { startTaskServer, type ServerOptions } from "./index.js";
+import { type ServerOptions, startTaskServer } from "./index.js";
 
 async function main() {
   const args = process.argv.slice(2);

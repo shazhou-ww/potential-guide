@@ -7,8 +7,8 @@ import {
   type JsonObject,
   reduce,
 } from "@potential-guide/task-protocol";
-import { createTaskEngine } from "../src/index.js";
 import { MemoryStore } from "../src/testing.js";
+import { createFixtureEngine as createTaskEngine } from "./driver.js";
 import { caller, deferred, flush, harness } from "./fixtures.js";
 
 for (const outcome of ["completed", "failed"] as const) {
@@ -21,24 +21,21 @@ for (const outcome of ["completed", "failed"] as const) {
     try {
       const owner = h.submit();
       await h.turn();
-      const follower = h.submit({ executionMatch: "terminated-after-eligible" });
+      const follower = h.submit({ matchPolicy: "terminated-after-eligible" });
       h.engine.tick();
       await flush();
-      assert.equal(h.engine.getTask(follower.taskId, caller).stage, "preparing");
-      assert.equal(h.engine.getTask(follower.taskId, caller).execution, undefined);
+      assert.equal(h.engine.getTask(follower.taskId, caller).stage, "initial");
+      assert.equal(h.engine.getTask(follower.taskId, caller).run, undefined);
       h.clock.setTime(Date.parse(follower.eligibleAt));
       if (outcome === "completed") h.work[0]!.permit.complete({ text: "shared" });
       else h.work[0]!.permit.fail({ code: "business", message: "Failed" });
       const final = h.engine.getTask(follower.taskId, caller);
-      assert.equal(final.stage, outcome === "completed" ? "completed" : "execution_failed");
-      assert.equal(
-        final.execution?.executionId,
-        h.engine.getTask(owner.taskId, caller).execution?.executionId,
-      );
+      assert.equal(final.stage, outcome === "completed" ? "completed" : "run_failed");
+      assert.equal(final.run?.runId, h.engine.getTask(owner.taskId, caller).run?.runId);
       const view = h.store.read();
-      const terminal = view.events.find((event) => event.type === `execution.${outcome}`)!;
+      const terminal = view.events.find((event) => event.type === `run.${outcome}`)!;
       const bound = view.events.find(
-        (event) => event.taskId === follower.taskId && event.type === "task.allocation.bound",
+        (event) => event.taskId === follower.taskId && event.type === "task.run.bound",
       )!;
       assert.ok(bound.sequence > terminal.sequence);
       assert.equal(bound.occurredAt, terminal.occurredAt);
@@ -48,10 +45,10 @@ for (const outcome of ["completed", "failed"] as const) {
       assert.deepEqual(h.engine.getTask(follower.taskId, caller), final);
       assert.equal(h.work.length, 1);
       assert.throws(() => h.engine.cancelTask(follower.taskId, caller), { code: "task_finished" });
-      const later = h.submit({ executionMatch: "terminated-after-eligible" });
+      const later = h.submit({ matchPolicy: "terminated-after-eligible" });
       assert.equal(later.receivedAt, terminal.occurredAt);
       h.engine.tick();
-      assert.equal(h.engine.getTask(later.taskId, caller).execution, undefined);
+      assert.equal(h.engine.getTask(later.taskId, caller).run, undefined);
     } finally {
       waiting.resolve({ text: "late" });
       await h.close();
@@ -78,18 +75,15 @@ test("start binds all received input-equivalent tasks, not later same-millisecon
     assert.equal(h.work.length, 1);
     const a = h.engine.getTask(first.taskId, caller);
     const b = h.engine.getTask(second.taskId, caller);
-    assert.equal(a.execution?.startedAt, a.eligibleAt);
-    assert.equal(b.execution?.executionId, a.execution?.executionId);
+    assert.equal(a.run?.startedAt, a.eligibleAt);
+    assert.equal(b.run?.runId, a.run?.runId);
     const late = h.submit();
-    assert.equal(late.receivedAt, a.execution?.startedAt);
+    assert.equal(late.receivedAt, a.run?.startedAt);
     secondPrepare.resolve({ text: "prepared-b" });
     await flush();
     h.engine.tick();
     await flush();
-    assert.notEqual(
-      h.engine.getTask(late.taskId, caller).execution?.executionId,
-      a.execution?.executionId,
-    );
+    assert.notEqual(h.engine.getTask(late.taskId, caller).run?.runId, a.run?.runId);
     assert.equal(h.engine.getTask(second.taskId, caller).stage, "running");
   } finally {
     firstPrepare.resolve({ text: "hello" });
@@ -114,7 +108,7 @@ test("requested eligibility is preserved while effective anchors clamp once", as
     assert.equal(retried.deadlineAt, task.deadlineAt);
     const future = h.submit({ eligibleAt: at(h.clock.now() + 100) });
     assert.equal(Date.parse(future.eligibleAt), h.clock.now() + 100);
-    assert.throws(() => h.submit({ executionMatch: "completed-after-eligible" }), {
+    assert.throws(() => h.submit({ matchPolicy: "completed-after-eligible" }), {
       code: "invalid_request",
     });
   } finally {
@@ -127,9 +121,9 @@ test("unbound terminated demand protects shared work; cancellation does not fake
   try {
     const first = h.submit({ timeoutMs: 5 });
     await h.turn();
-    const demand = h.submit({ executionMatch: "terminated-after-eligible", timeoutMs: 100 });
+    const demand = h.submit({ matchPolicy: "terminated-after-eligible", timeoutMs: 100 });
     h.engine.cancelTask(first.taskId, caller);
-    assert.equal(h.engine.getTask(demand.taskId, caller).execution, undefined);
+    assert.equal(h.engine.getTask(demand.taskId, caller).run, undefined);
     assert.equal(h.work[0]!.stops.length, 0);
     await h.finish();
     assert.equal(h.engine.getTask(demand.taskId, caller).stage, "completed");
@@ -145,15 +139,15 @@ for (const outcome of ["completed", "failed"] as const) {
     try {
       h.submit({ timeoutMs: 1000 });
       await h.turn();
-      const task = h.submit({ executionMatch: "terminated-after-eligible", timeoutMs: 2 });
+      const task = h.submit({ matchPolicy: "terminated-after-eligible", timeoutMs: 2 });
       await h.turn(3);
       assert.equal(h.work.length, 1);
-      assert.equal(h.engine.getTask(task.taskId, caller).execution, undefined);
+      assert.equal(h.engine.getTask(task.taskId, caller).run, undefined);
       assert.ok(isTimedOut(h.engine.getTask(task.taskId, caller)));
       if (outcome === "completed") h.work[0]!.permit.complete({ text: "late" });
       else h.work[0]!.permit.fail({ code: "late", message: "Late failure" });
       const result = h.engine.getTask(task.taskId, caller);
-      assert.equal(result.stage, outcome === "completed" ? "completed" : "execution_failed");
+      assert.equal(result.stage, outcome === "completed" ? "completed" : "run_failed");
       assert.ok(isTimedOut(result));
     } finally {
       await h.close();
@@ -161,27 +155,20 @@ for (const outcome of ["completed", "failed"] as const) {
   });
 }
 
-test("authorization rejects async grants and rechecks before event matching", async () => {
-  const h = harness();
+test("服务授权拒绝异步授予；类型不再具有逐需求授权 hook", async () => {
+  let denied = false;
+  const h = harness({ authorize: () => !denied });
   try {
     h.type.authorize = async () => {};
-    assert.throws(() => h.submit(), { code: "invalid_type" });
-    h.type.authorize = async () => {
-      throw new Error("denied asynchronously");
-    };
-    assert.throws(() => h.submit(), { code: "invalid_type" });
-    await flush();
-    let denied = false;
-    h.type.authorize = () => {
-      if (denied) throw new Error("denied");
-    };
     h.submit();
     await h.turn();
-    const task = h.submit({ executionMatch: "terminated-after-eligible" });
+    const task = h.submit({ matchPolicy: "terminated-after-eligible" });
     denied = true;
+    assert.throws(() => h.submit(), { code: "forbidden" });
+    denied = false;
     await h.finish();
-    assert.equal(h.engine.getTask(task.taskId, caller).execution, undefined);
-    assert.ok(h.engine.errors.some((error) => error.message === "denied"));
+    assert.ok(h.engine.getTask(task.taskId, caller).run);
+    assert.equal(h.engine.errors.length, 0);
   } finally {
     await h.close();
   }
@@ -197,8 +184,8 @@ test("expired start-policy demand may bind another task's start, but cannot sche
     await h.turn();
     assert.equal(h.work.length, 1);
     assert.equal(
-      h.engine.getTask(expired.taskId, caller).execution?.executionId,
-      h.engine.getTask(driver.taskId, caller).execution?.executionId,
+      h.engine.getTask(expired.taskId, caller).run?.runId,
+      h.engine.getTask(driver.taskId, caller).run?.runId,
     );
     await h.finish();
     assert.equal(h.engine.getTask(expired.taskId, caller).stage, "completed");
@@ -211,16 +198,16 @@ test("expired start-policy demand may bind another task's start, but cannot sche
 test("last unbound terminated owner cancellation waits for physical release", async () => {
   const h = harness();
   try {
-    const task = h.submit({ executionMatch: "terminated-after-eligible" });
+    const task = h.submit({ matchPolicy: "terminated-after-eligible" });
     await h.turn();
-    assert.equal(h.engine.getTask(task.taskId, caller).execution, undefined);
+    assert.equal(h.engine.getTask(task.taskId, caller).run, undefined);
     assert.equal(h.work.length, 1);
     h.engine.cancelTask(task.taskId, caller);
     await h.engine.waitForTaskRelease(task.taskId, caller);
     assert.equal(h.work[0]!.stops.length, 1);
     assert.ok(h.engine.getTask(task.taskId, caller).canceledAt);
-    assert.equal(h.engine.getTask(task.taskId, caller).execution, undefined);
-    assert.ok(h.store.read().facts.executions[h.work[0]!.permit.executionId]!.reclaimedAt);
+    assert.equal(h.engine.getTask(task.taskId, caller).run, undefined);
+    assert.ok(h.store.read().facts.runs[h.work[0]!.permit.runId]!.reclaimedAt);
   } finally {
     await h.close();
   }
@@ -229,7 +216,7 @@ test("last unbound terminated owner cancellation waits for physical release", as
 test("sealing preserves existing terminated demand but refuses post-seal arrivals", async () => {
   const h = harness({ resources: ["js"] });
   try {
-    const task = h.submit({ executionMatch: "terminated-after-eligible", timeoutMs: 2 });
+    const task = h.submit({ matchPolicy: "terminated-after-eligible", timeoutMs: 2 });
     await h.turn();
     await h.turn(3);
     assert.equal(h.work[0]!.stops.length, 0);
@@ -241,7 +228,7 @@ test("sealing preserves existing terminated demand but refuses post-seal arrival
         authorizeReplacement(id, generation) {
           const authorized = options.authorizeReplacement(id, generation);
           if (authorized) {
-            laterId = h.submit({ executionMatch: "terminated-after-eligible" }).taskId;
+            laterId = h.submit({ matchPolicy: "terminated-after-eligible" }).taskId;
             h.work[0]!.permit.complete({ text: "late sealed result" });
           }
           return authorized;
@@ -253,11 +240,9 @@ test("sealing preserves existing terminated demand but refuses post-seal arrival
     assert.ok(laterId);
     assert.equal(h.engine.getTask(task.taskId, caller).stage, "completed");
     assert.ok(isTimedOut(h.engine.getTask(task.taskId, caller)));
-    assert.equal(h.engine.getTask(laterId, caller).execution, undefined);
+    assert.equal(h.engine.getTask(laterId, caller).run, undefined);
     const view = h.store.read();
-    assert.deepEqual(view.facts.executions[h.work[0]!.permit.executionId]!.sealedTaskIds, [
-      task.taskId,
-    ]);
+    assert.deepEqual(view.facts.runs[h.work[0]!.permit.runId]!.sealedTaskIds, [task.taskId]);
     assert.deepEqual(reduce(emptyFacts(), view.events), view.facts);
   } finally {
     await h.close();
@@ -289,25 +274,25 @@ test("injected legacy facts and historical rebinding are rejected", async () => 
     h.submit();
     await h.turn();
     await h.finish();
-    const later = h.submit({ executionMatch: "terminated-after-eligible" });
+    const later = h.submit({ matchPolicy: "terminated-after-eligible" });
     const facts = h.store.read().facts;
-    const execution = Object.values(facts.executions)[0]!;
+    const run = Object.values(facts.runs)[0]!;
     assert.throws(
       () =>
         reduce(facts, [
           {
             sequence: facts.watermark + 1,
-            type: "task.allocation.bound",
+            type: "task.run.bound",
             taskId: later.taskId,
             scope: caller.scope,
-            occurredAt: execution.completedAt!,
-            data: { executionId: execution.executionId },
+            occurredAt: run.completedAt!,
+            data: { runId: run.runId },
           },
         ]),
       { code: "invalid_fact" },
     );
     const bad = structuredClone(facts);
-    bad.tasks[later.taskId]!.request.executionMatch = "completed-after-eligible" as never;
+    bad.tasks[later.taskId]!.request.matchPolicy = "completed-after-eligible" as never;
     assert.throws(() => reduce(bad, []), { code: "unsupported_version" });
   } finally {
     await h.close();
@@ -319,13 +304,11 @@ test("canceled unbound demand retains physical release references across recover
   const restoredStore = new MemoryStore();
   let restored: ReturnType<typeof createTaskEngine> | undefined;
   try {
-    const task = h.submit({ executionMatch: "terminated-after-eligible" });
+    const task = h.submit({ matchPolicy: "terminated-after-eligible" });
     await h.turn();
     h.engine.cancelTask(task.taskId, caller);
     const view = h.store.read();
-    assert.deepEqual(view.facts.tasks[task.taskId]!.releaseExecutionIds, [
-      h.work[0]!.permit.executionId,
-    ]);
+    assert.deepEqual(view.facts.tasks[task.taskId]!.releaseRunIds, [h.work[0]!.permit.runId]);
     restoredStore.claim("copy");
     restoredStore.append(
       "copy",
@@ -340,8 +323,8 @@ test("canceled unbound demand retains physical release references across recover
       clock: h.clock,
       authorize: () => true,
     });
-    restored.start();
-    assert.equal(restored.getTask(task.taskId, caller).execution, undefined);
+    await restored.start();
+    assert.equal(restored.getTask(task.taskId, caller).run, undefined);
     await assert.rejects(restored.waitForTaskRelease(task.taskId, caller), {
       code: "reclamation_unconfirmed",
     });

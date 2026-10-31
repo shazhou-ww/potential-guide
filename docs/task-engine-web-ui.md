@@ -52,8 +52,8 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
 本机其他用户或恶意本机程序的隔离边界。同一收藏文件只由一个 UI 实例使用。
 
 首次连接需后端具备当前 `GET /task-types`、quoted `If-Match`、`GET /tasks`、
-`GET /executions` 及请求/任务/事件接口；旧服务缺执行目录时明确报错，不用本机已见
-执行代替。`list-executions` 是独立新增授权操作；它与 Task 的 `list`、`submit`、
+`GET /runs` 及请求/任务/事件接口；旧服务缺 Run 目录时明确报错，不用本机已见
+Run 代替。`list-runs` 是独立授权操作；它与 Task 的 `list`、`submit`、
 `request`、`task`、`history`、`subscribe` 均不互相授予权限。发现失败不关闭目录入口。
 任务星标需要 `task` 和 `request`：UI Server 经这两个公开接口核对来源并保存原参数。
 
@@ -125,10 +125,10 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   这只是交互防重，不取代服务 Idempotency-Key。
 - **契约变化**：412 留下原参数及身份。重新发现不会自动重发；变化后需明确
   “按当前契约重新编辑”。原请求重试不换 guard；业务 digest 与 guard 无关。
-- **Task / Execution**：独立 Tab，以服务提供的 executionId 关联。完整请求
-  单独读 `/requests/:requestId`，Task 快照显示准备/分配/取消/阶段/结果/错误；
-  Execution 查看开始、progress、逻辑完成、失败、封存和回收事件。未观察到回收
-  不表示仍占资源。执行详情通过 `GET /tasks?executionId=…` 取得独立授权的已绑定
+- **Task / Run**：独立 Tab，以服务提供的 runId 关联。完整请求
+  单独读 `/requests/:requestId`，Task 快照显示取消/阶段/结果/错误与关联 Run；
+  Run 查看准备前开始、progress、逻辑完成、失败、封存和回收事件。未观察到回收
+  不表示仍占资源。Run 详情通过 `GET /tasks?runId=…` 取得独立授权的已绑定
   关联任务，不扫描事件来拼执行目录，也不推测所有 owners/worker 统计。`ok:false`
   结果不会被标为系统执行错误。
 - **事件**：首次历史页的 stream cursor 接续 SSE，历史 next 独立分页。按
@@ -138,7 +138,7 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   来源保护：watermark 只用于 SSE 之间的排序，普通 GET 使用本地读世代；
   HTTP 回执没有可比较的水位，不从 lastSeen 推测其位置。已确认取消依据公开契约
   冻结完整 Task 事实，旧 GET/SSE 不能撤回，独立取消回执不会被在途观察丢弃；
-  后续同一取消快照只更新观察时间，Execution 事件仍继续接收。
+  后续同一取消快照只更新观察时间，Run 事件仍继续接收。
   timestamp 仅为观察时间，不用于版本排序。
 - **观察收尾**：任务终结与关联执行逻辑终结/回收证据齐备后停止对应 SSE，显示
   “观察已结束”。执行自身要同时有逻辑终结和 reclaimed 事实；执行目录的终结/回收
@@ -150,8 +150,8 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   expiresAt / 摘要不被 SSE 改写，翻页使用原过滤条件。410/query_expired 后明确
   重新查询，旧视图仅供参考。详情可能比摘要更新，摘要不含业务结果。
   页和错误状态绑定同一查询世代，旧查询的成功/失败不能覆盖新的结果或错误。
-- **执行目录**：直接 `GET /executions`，按 type / startedAt 的含下界、不含上界
-  筛选，started-desc 排序，同刻 executionId 升序。摘要不含输入、Prepared、结果、
+- **Run 目录**：直接 `GET /runs`，按 type / startedAt 的含下界、不含上界
+  筛选，started-desc 排序，同刻 runId 升序。摘要不含输入、准备证据、结果、
   scope 或 Task 身份；共享执行只出现一次。执行目录游标与任务/事件游标分开，
   同样冻结 observedAt/expiresAt/成员/摘要，410 要明确重查。
 - **星标/重做**：在任务行或详情标星，服务端成功取到完整原请求后才保存成功；
@@ -202,8 +202,8 @@ pnpm --filter @potential-guide/task-engine-web-ui start (Join-Path $demo 'ui.jso
    Schema 的值，观察拒绝后仍提交后项。执行顺序由服务决定，不由 UI 保证。
 3. 要演示共享，准备两个相同 echo 输入（含相同 durationMs），
    eligibleAt 设为同一未来时刻，第三项 text 不同；在资格时间前按序发送。
-   两个同输入 Task 可在开始事件绑定同一 Execution，另一项等待单资源。
-   取消其中一个，另一 Task 不被取消；取消与 Execution 回收分开观察。
+   两个同输入 Task 可在开始事件绑定同一完整 Run，另一项等待单资源。
+   取消其中一个，另一 Task 不被取消；取消与 Run 回收分开观察。
 4. durationMs 大于 timeoutMs 可观察运行超时后迟到结果；正常 `ok:false`
    是 fixture 的业务结果。关闭浏览器或只关闭终端 B，终端 A 继续执行。
 5. 在任务页查询目录并打开原请求重做；切换执行页直接查询其他客户端执行，不需要先打开任务。
@@ -253,7 +253,7 @@ pnpm --filter @potential-guide/task-engine-web-ui exec tsx fixture\browser-smoke
 
 `test/integration.test.ts` 使用真实独立 HTTP listener 和现有 Task Server，
 覆盖权限/作用域、两种 Schema、guard/身份、批次、目录快照/失效、
-Task/Execution、取消/超时/断流、收藏重启与重做。`test/model.test.ts`
+Task/Run、取消/超时/断流、收藏重启与重做。`test/model.test.ts`
 补充丢回执后 412、迟到响应、游标/去重、DOM 表单和参数保持。
 `test/presentation.test.ts` 与实际 browser entry 测试使用 jsdom 26.1.0，
 覆盖 React/Radix 所有权、键控焦点、单层切换、原字段节点保留、忙状态与快速双击；

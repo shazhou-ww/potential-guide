@@ -1,8 +1,8 @@
 import {
   type ExecuteOptions,
-  type ExecutionTracking,
   fail,
   positive,
+  type RunTracking,
   type StartPermit,
   TaskError,
 } from "@potential-guide/task-protocol";
@@ -26,13 +26,13 @@ export interface PoolOptions<Prepared> {
 interface Slot {
   key: string;
   state: "idle" | "reserved" | "running" | "quarantined";
-  tracking?: ExecutionTracking;
+  tracking?: RunTracking;
 }
 interface Waiting<Prepared> {
   prepared: Prepared;
   key: string;
   options: ExecuteOptions;
-  resolve(value: ExecutionTracking): void;
+  resolve(value: RunTracking): void;
   reject(error: unknown): void;
   detach(): void;
 }
@@ -82,7 +82,7 @@ export class ExecutorPool<Prepared> {
       quarantined: this.slots.filter((slot) => slot.state === "quarantined").length,
     };
   }
-  execute(prepared: Prepared, options: ExecuteOptions): Promise<ExecutionTracking> {
+  execute(prepared: Prepared, options: ExecuteOptions): Promise<RunTracking> {
     if (this.closed || options.signal.aborted)
       return Promise.reject(new TaskError("allocation_canceled", "Pool request withdrawn."));
     if (this.waiting.length >= this.maxQueue)
@@ -131,19 +131,19 @@ export class ExecutorPool<Prepared> {
           let slot = this.slots.find(
             (candidate) => candidate.key === waiting.key && candidate.state === "idle",
           );
-          if (!slot && waiting.options.replaceExecutionId) {
+          if (!slot && waiting.options.replaceRunId) {
             const candidate = this.slots.find(
               (item) =>
                 item.key === waiting.key &&
                 item.state === "running" &&
-                item.tracking?.executionId === waiting.options.replaceExecutionId,
+                item.tracking?.runId === waiting.options.replaceRunId,
             );
             if (
               candidate?.tracking &&
-              waiting.options.authorizeReplacement(
-                candidate.tracking.executionId,
+              (await waiting.options.authorizeReplacement(
+                candidate.tracking.runId,
                 candidate.tracking.generation,
-              )
+              ))
             ) {
               candidate.state = "reserved";
               try {
@@ -208,7 +208,7 @@ export class ExecutorPool<Prepared> {
     } catch (error) {
       try {
         permit.fail({
-          code: "execution_failed",
+          code: "run_failed",
           message: error instanceof Error ? error.message : "Startup failed.",
         });
       } catch (reportError) {
@@ -249,8 +249,8 @@ export class ExecutorPool<Prepared> {
         });
       return cleanup;
     };
-    const tracking: ExecutionTracking = {
-      executionId: permit.executionId,
+    const tracking: RunTracking = {
+      runId: permit.runId,
       generation: permit.generation,
       startedAt: permit.startedAt,
       finished,
@@ -287,7 +287,7 @@ export class ExecutorPool<Prepared> {
         (result) => permit.complete(result),
         (error) =>
           permit.fail({
-            code: "execution_failed",
+            code: "run_failed",
             message: error instanceof Error ? error.message : "Execution failed.",
           }),
       )

@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { fork, type ChildProcess } from "node:child_process";
+import { type ChildProcess, fork } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { newId } from "@potential-guide/task-engine";
 import type { TaskSnapshot } from "@potential-guide/task-protocol";
 
@@ -84,13 +84,13 @@ test("real process restart interrupts started Probe and children without observi
     first.child.kill("SIGKILL");
     await exits.get(first.child);
     const second = await launch("second");
-    const interrupted = await wait(second.url, running.taskId, "execution_failed");
+    const interrupted = await wait(second.url, running.taskId, "run_failed");
     assert.equal(interrupted.error?.code, "execution_interrupted");
-    assert.equal(interrupted.execution?.executionId, bound.execution?.executionId);
+    assert.equal(interrupted.run?.runId, bound.run?.runId);
     assert.equal(interrupted.deadlineAt, running.deadlineAt);
     const restored = await read(second.url, completed.taskId);
     assert.deepEqual(restored.result, done.result);
-    assert.equal(restored.execution?.executionId, done.execution?.executionId);
+    assert.equal(restored.run?.runId, done.run?.runId);
     assert.deepEqual((await readFile(marker, "utf8")).trim().split(/\r?\n/), [
       "completed",
       "running",

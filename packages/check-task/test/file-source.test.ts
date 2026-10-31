@@ -13,10 +13,12 @@ import {
   checkerSchemaUri,
   inspectContractFiles,
 } from "@potential-guide/check-artifacts/contracts";
-import { createTaskEngine, newId } from "@potential-guide/task-engine";
+import { newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import type { TaskSnapshot } from "@potential-guide/task-protocol";
-import { createArtifactSource, createCheckTaskType, validateCheckInput } from "../src/index.js";
+import { createFixtureEngine as createTaskEngine } from "../../task-engine/test/driver.js";
+import { createArtifactSource, validateCheckInput } from "../src/index.js";
+import { createCheckFixture as createCheckTaskType } from "./type-fixture.js";
 
 async function fixture() {
   const root = resolve(".cache", `local-source-${randomUUID()}`);
@@ -130,7 +132,7 @@ test("real file archive -> prepare -> actual worker; HTTPS hook unchanged and ne
     );
     const result = await final(engine, task);
     assert.equal(result.stage, "completed");
-    assert.deepEqual(result.result, {
+    assert.deepEqual((result.result as { result: unknown }).result, {
       ok: false,
       problems: [{ kind: "internal", id: "bad", parameters: { name: "first" } }],
     });
@@ -148,11 +150,11 @@ test("real file archive -> prepare -> actual worker; HTTPS hook unchanged and ne
       { scope: "one", subject: "test" },
     );
     const next = await final(engine, changed);
-    assert.deepEqual(next.result, {
+    assert.deepEqual((next.result as { result: unknown }).result, {
       ok: false,
       problems: [{ kind: "internal", id: "bad", parameters: { name: "second" } }],
     });
-    assert.notEqual(next.execution?.executionId, result.execution?.executionId);
+    assert.notEqual(next.run?.runId, result.run?.runId);
     assert.throws(
       () =>
         validateCheckInput({ checker: f.reference, subject: {}, allowedFileRoots: [f.imports] }),
@@ -160,21 +162,18 @@ test("real file archive -> prepare -> actual worker; HTTPS hook unchanged and ne
     );
     const outside = join(f.root, "outside-context.tgz");
     await writeFile(outside, f.first.bytes);
-    assert.throws(
-      () =>
-        engine.submit(
-          {
-            requestId: newId(),
-            type: "check",
-            checker: { kind: "checker", url: pathToFileURL(outside).href },
-            subject: {},
-            context: { allowedFileRoots: [f.root], scope: "one" },
-            timeoutMs: 20000,
-          },
-          { scope: "one", subject: "test" },
-        ),
-      { code: "artifact_source_denied" },
+    const deniedTask = engine.submit(
+      {
+        requestId: newId(),
+        type: "check",
+        checker: { kind: "checker", url: pathToFileURL(outside).href },
+        subject: {},
+        context: { allowedFileRoots: [f.root], scope: "one" },
+        timeoutMs: 20000,
+      },
+      { scope: "one", subject: "test" },
     );
+    assert.equal((await final(engine, deniedTask)).error?.code, "artifact_source_denied");
     assert.equal(
       (
         await f.source.resolve(
@@ -230,10 +229,10 @@ test("file Tasks retain subject validation and separate actual runtime availabil
         { scope: "one", subject: "test" },
       );
       const failed = await final(engine, task);
-      assert.equal(failed.stage, "preparation_failed");
+      assert.equal(failed.stage, "run_failed");
       assert.equal(failed.error?.code, code);
     }
-    assert.equal(Object.keys(store.read().facts.executions).length, 0);
+    assert.equal(Object.keys(store.read().facts.runs).length, 2);
     assert.equal(f.counts().downloads, 0);
   } finally {
     await engine.close();
@@ -430,7 +429,7 @@ test("persisted Prepared executes the original file bytes after replacement/remo
       context,
       authorizeReplacement: () => false,
       start: () => ({
-        executionId: newId(),
+        runId: newId(),
         generation: newId(),
         startedAt: new Date().toISOString(),
         progress() {},

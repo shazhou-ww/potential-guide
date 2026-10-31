@@ -5,16 +5,11 @@ import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createTaskEngine, newId } from "@potential-guide/task-engine";
+import { newId } from "@potential-guide/task-engine";
 import { VirtualClock } from "@potential-guide/task-engine/testing";
-import {
-  at,
-  emptyFacts,
-  type Json,
-  json,
-  reduce,
-  type TaskType,
-} from "@potential-guide/task-protocol";
+import type { RegisteredType } from "@potential-guide/task-protocol";
+import { at, emptyFacts, reduce } from "@potential-guide/task-protocol";
+import { createFixtureEngine as createTaskEngine } from "../../task-engine/test/driver.js";
 import { openSqliteStore } from "../src/index.js";
 
 const caller = { scope: "a", subject: "tester" };
@@ -24,18 +19,21 @@ async function directory() {
   await mkdir(root, { recursive: true });
   return mkdtemp(join(root, "task-sqlite-"));
 }
-function type(): TaskType<Json> {
+function type(): RegisteredType {
   return {
     type: "echo",
     version: "1",
     environment: "test",
     inputSchema: { type: "object" },
-    prepare: async (input) => input,
-    validatePrepared: json,
-    validateResult: json,
-    validateProgress: json,
-    async execute() {
-      throw new Error("Recovered started work must not rerun.");
+    resultSchema: true,
+    messageSchema: false,
+    module: new URL("./crash-worker.mjs", import.meta.url).href,
+    exportName: "createType",
+    configuration: {},
+    resources: {
+      async effect() {
+        throw new Error("Recovered started work must not rerun.");
+      },
     },
   };
 }
@@ -71,7 +69,7 @@ test("SQLite WAL/FK/FULL, atomic indexes, checkpoint and duplicate owners", asyn
     currentVersions: { echo: "1" },
     authorize: () => true,
   });
-  engine.start();
+  await engine.start();
   try {
     const raw = {
       requestId: newId(),
@@ -144,13 +142,13 @@ for (const mode of ["started", "completed", "future"]) {
     try {
       const before = Object.values(store.read().facts.tasks)[0];
       assert.ok(before);
-      engine.start();
+      await engine.start();
       const snapshot = engine.getTask(before.snapshot.taskId, caller);
       assert.equal(snapshot.requestId, requestId);
       assert.equal(snapshot.deadlineAt, before.snapshot.deadlineAt);
       assert.equal(
         snapshot.stage,
-        mode === "completed" ? "completed" : mode === "started" ? "execution_failed" : "initial",
+        mode === "completed" ? "completed" : mode === "started" ? "run_failed" : "initial",
       );
       if (mode === "completed") assert.deepEqual(snapshot.result, { text: "durable final" });
       if (mode === "started") assert.equal(snapshot.error?.code, "execution_interrupted");
@@ -167,7 +165,7 @@ for (const mode of ["started", "completed", "future"]) {
         currentVersions: { echo: "1" },
         authorize: () => true,
       });
-      again.start();
+      await again.start();
       assert.equal(
         store.read().facts.watermark,
         watermark,
@@ -193,9 +191,9 @@ for (const moment of ["before", "after"]) {
       const tasks = Object.values(before.facts.tasks);
       assert.equal(tasks.length, 2);
       const demand = tasks.find(
-        (task) => task.binding.executionMatch === "terminated-after-eligible",
+        (task) => task.binding.matchPolicy === "terminated-after-eligible",
       )!;
-      assert.equal(demand.snapshot.execution !== undefined, moment === "after");
+      assert.equal(demand.snapshot.run !== undefined, moment === "after");
       const clock = new VirtualClock();
       clock.advance(10);
       const engine = createTaskEngine({
@@ -206,9 +204,8 @@ for (const moment of ["before", "after"]) {
         authorize: () => true,
       });
       try {
-        engine.start();
-        const expected =
-          moment === "after" && outcome === "completed" ? "completed" : "execution_failed";
+        await engine.start();
+        const expected = moment === "after" && outcome === "completed" ? "completed" : "run_failed";
         for (const task of tasks) {
           const final = engine.getTask(task.snapshot.taskId, caller);
           assert.equal(final.stage, expected);
@@ -247,7 +244,7 @@ for (const moment of ["before", "after"]) {
     });
     try {
       assert.equal(Object.keys(store.read().facts.tasks).length, moment === "before" ? 0 : 1);
-      engine.start();
+      await engine.start();
       const raw = { requestId, type: "echo", text: "crash", timeoutMs: 1000 };
       const task = engine.submit(raw, caller);
       assert.equal(engine.submit(raw, caller).taskId, task.taskId);
@@ -279,7 +276,7 @@ for (const moment of ["before", "after"]) {
       assert.ok(prior);
       const saved = prior.successor;
       assert.equal(Object.keys(store.read().facts.tasks).length, moment === "before" ? 1 : 2);
-      engine.start();
+      await engine.start();
       clock.advance(1);
       engine.tick();
       const restored = store.read().facts.tasks[prior.snapshot.taskId];
@@ -308,7 +305,7 @@ test("transaction fault rejects acceptance without partial state or silent memor
     currentVersions: { echo: "1" },
     authorize: () => true,
   });
-  engine.start();
+  await engine.start();
   try {
     const raw = { requestId: newId(), type: "echo", text: "fail", timeoutMs: 1000 };
     assert.throws(() => engine.submit(raw, caller), /injected/);

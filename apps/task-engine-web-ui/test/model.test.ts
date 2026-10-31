@@ -120,7 +120,7 @@ test("events deduplicate by sequence, do not infer gaps and independently bound 
     (_, index) =>
       ({
         sequence: index * 3,
-        type: "execution.progress",
+        type: "run.progress",
         occurredAt: "now",
         scope: "one",
         data: { index },

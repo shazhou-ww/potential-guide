@@ -157,17 +157,15 @@ try {
   );
   await replay.cancel();
   const child = remote.result.evidence.operations.find((entry) => entry.request.kind === "check");
-  assert.ok(child.snapshot.execution.executionId);
+  assert.ok(child.snapshot.run.runId);
   assert.equal(child.request.reference.digest, checker.digest);
   const history = server.engine.readHistory({ taskId: child.snapshot.taskId }, {}, caller);
-  assert.ok(history.events.some((event) => event.type === "execution.completed"));
+  assert.ok(history.events.some((event) => event.type === "run.completed"));
   const publicHistory = await fetch(`${server.url}/event-history?taskId=${child.snapshot.taskId}`, {
     headers,
   });
   assert.equal(publicHistory.status, 200);
-  assert.ok(
-    (await publicHistory.json()).events.some((event) => event.type === "execution.completed"),
-  );
+  assert.ok((await publicHistory.json()).events.some((event) => event.type === "run.completed"));
   assert.equal((await fetch(`${server.url}/tasks/${accepted.taskId}`)).status, 401);
   await server.close();
   server = await startTaskServer(configure());

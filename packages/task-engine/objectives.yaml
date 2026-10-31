@@ -9,6 +9,7 @@ objectives:
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm"], "runtime": "node",
         "allows": ["@potential-guide/task-protocol"],
-        "entries": ["src/index.ts", "src/pool.ts", "src/testing.ts"], "generated": [], "deliveries": [],
+        "entries": ["src/index.ts", "src/pool.ts", "src/testing.ts", "src/type-worker.ts"], "generated": [], "deliveries": [],
+        "nodeWorkerImports": [{"path": "src/type-worker.ts", "reason": "宿主注册的 Node 类型守护仅加载经 fileURLToPath、realpathSync 与 pathToFileURL 确认的本地模块；外部插件内容不由包内静态图枚举。"}],
         "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "generic-task-server", "kind": "cli"}]
       }

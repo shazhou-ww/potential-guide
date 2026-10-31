@@ -54,3 +54,31 @@ const contract = compileInputSchema<CheckInput>(checkInputSchema, {
   maxInputBytes: 96 * 1024 * 1024,
 });
 export const validateCheckInput = contract.validate;
+export const checkResultSchema = {
+  oneOf: [
+    {
+      type: "object",
+      properties: { kind: { const: "check-prepared" }, prepared: { type: "object" } },
+      required: ["kind", "prepared"],
+      additionalProperties: false,
+    },
+    {
+      type: "object",
+      properties: { kind: { const: "check-progress" }, progress: {} },
+      required: ["kind", "progress"],
+      additionalProperties: false,
+    },
+    {
+      type: "object",
+      properties: { result: { type: "object" }, evidence: { type: "object" } },
+      required: ["result", "evidence"],
+      additionalProperties: false,
+    },
+    {
+      type: "object",
+      properties: { failure: { type: "object" }, evidence: { type: "object" } },
+      required: ["failure", "evidence"],
+      additionalProperties: false,
+    },
+  ],
+};

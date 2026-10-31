@@ -33,9 +33,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     eligibleAt: "2026-10-31T00:00:00.000Z",
     deadlineAt: "2026-10-31T00:00:01.000Z",
     timestamp: "2026-10-31T00:00:00.000Z",
-    preparation: { startedAt: "2026-10-31T00:00:00.000Z", completedAt: "2026-10-31T00:00:00.000Z" },
-    allocation: { boundAt: "2026-10-31T00:00:00.000Z" },
-    execution: { executionId: newIdentity(), startedAt: "2026-10-31T00:00:00.000Z" },
+    run: { runId: newIdentity(), startedAt: "2026-10-31T00:00:00.000Z" },
   });
   const source = makeTask(),
     remote = makeTask();
@@ -95,7 +93,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
       timedOut: false,
       canceled: !!task.canceledAt,
       completed: task.stage === "completed",
-      executionFailed: false,
+      runFailed: false,
     },
   });
   const mockFetch: typeof fetch = async (input, options) => {
@@ -147,12 +145,12 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
       records.set(created.taskId, created);
       return json(created, 202);
     }
-    if (path === "/executions")
+    if (path === "/runs")
       return json({
         ...envelope,
-        executions: [
+        runs: [
           {
-            executionId: remote.execution!.executionId,
+            runId: remote.run!.runId,
             type: "remote-execution",
             version: "1",
             startedAt: remote.receivedAt,
@@ -178,7 +176,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     }
     if (path.startsWith("/requests/"))
       return json({ requestId: path.split("/").at(-1), ...parameters });
-    const id = url.searchParams.get("taskId") ?? url.searchParams.get("executionId")!;
+    const id = url.searchParams.get("taskId") ?? url.searchParams.get("runId")!;
     if (path === "/event-history") {
       if (options?.signal) historySignals.push(options.signal);
       if (url.searchParams.has("cursor")) {
@@ -282,7 +280,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
       calls.some((call) => call.includes("/event-history")),
       false,
     );
-    assert.ok(calls.some((call) => call.includes("/executions?")));
+    assert.ok(calls.some((call) => call.includes("/runs?")));
     click("#tab-tasks");
     element<HTMLInputElement>("#history-type").value = "echo";
     click("#new-task");
@@ -347,24 +345,20 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
       stage: "completed",
       result: { ok: false },
       timestamp: finishedAt,
-      execution: { ...created!.execution!, completedAt: finishedAt },
+      run: { ...created!.run!, completedAt: finishedAt },
       termination: { terminatedAt: finishedAt },
     };
-    const event = (
-      type: PublicEvent["type"],
-      sequence: number,
-      executionId: string,
-    ): PublicEvent => ({
+    const event = (type: PublicEvent["type"], sequence: number, runId: string): PublicEvent => ({
       type,
       sequence,
-      executionId,
+      runId,
       scope: "scope",
       occurredAt: finishedAt,
-      data: type === "execution.completed" ? { result: { ok: false } } : {},
+      data: type === "run.completed" ? { result: { ok: false } } : {},
     });
     streams.get(id)!.emit({
       snapshots: [completed],
-      events: [event("execution.completed", 20, completed.execution!.executionId)],
+      events: [event("run.completed", 20, completed.run!.runId)],
       watermark: 20,
       cursor: "complete",
     });
@@ -375,7 +369,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     assert.equal(streams.get(id)!.closed, false, "logical completion is not reclamation");
     streams.get(id)!.emit({
       snapshots: [completed],
-      events: [event("execution.reclaimed", 21, completed.execution!.executionId)],
+      events: [event("run.reclaimed", 21, completed.run!.runId)],
       watermark: 21,
       cursor: "reclaimed",
     });
@@ -390,24 +384,21 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     assert.equal(streamStarts, starts);
     click("#tab-executions");
     named("#execution-directory", "remote-execution").click();
-    const executionId = remote.execution!.executionId;
-    await until(() => streams.has(executionId), "independent Execution can open");
-    streams.get(executionId)!.emit({
+    const runId = remote.run!.runId;
+    await until(() => streams.has(runId), "independent Run can open");
+    streams.get(runId)!.emit({
       snapshots: [],
-      events: [
-        event("execution.completed", 30, executionId),
-        event("execution.reclaimed", 31, executionId),
-      ],
+      events: [event("run.completed", 30, runId), event("run.reclaimed", 31, runId)],
       watermark: 31,
       cursor: "exec-end",
     });
     await until(
       () =>
-        streams.get(executionId)!.closed &&
+        streams.get(runId)!.closed &&
         element("#execution-detail").textContent!.includes("观察已结束"),
       "Execution end must handle observations with no Task snapshots",
     );
-    assert.ok(calls.some((call) => call.includes(`/tasks?executionId=${executionId}`)));
+    assert.ok(calls.some((call) => call.includes(`/tasks?runId=${runId}`)));
     click("#tab-tasks");
     const only = element<HTMLInputElement>("#only-favorites");
     only.click();

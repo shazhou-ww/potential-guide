@@ -8,30 +8,20 @@ import test from "node:test";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import { openSqliteStore } from "@potential-guide/task-engine-storage";
-import {
-  type Json,
-  json,
-  TaskError,
-  type TaskPage,
-  type TaskType,
-} from "@potential-guide/task-protocol";
+import { type RegisteredType, TaskError, type TaskPage } from "@potential-guide/task-protocol";
 import { type ServerOptions, startTaskServer } from "../src/index.js";
 
-function type(): TaskType<Json> {
+function type(): RegisteredType {
   return {
     type: "echo",
     version: "1",
     environment: "test",
     inputSchema: { type: "object" },
-    prepare: async (value) => value,
-    validatePrepared: json,
-    validateResult: json,
-    validateProgress: json,
-    async execute(value, options) {
-      const permit = options.start();
-      permit.complete(value);
-      return { ...permit, finished: Promise.resolve(), async reclaim() {} };
-    },
+    resultSchema: true,
+    messageSchema: false,
+    module: new URL("./echo-worker.mjs", import.meta.url).href,
+    exportName: "createEcho",
+    configuration: {},
   };
 }
 function config(): ServerOptions {
@@ -201,7 +191,7 @@ test("occupied port and invalid config roll back resources and release the Store
     await assert.rejects(
       startTaskServer({
         ...options,
-        types: [{ ...type(), execute: undefined } as unknown as TaskType<Json>],
+        types: [{ ...type(), messageSchema: undefined } as unknown as RegisteredType],
       }),
       /TaskType/,
     );

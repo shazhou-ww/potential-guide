@@ -8,7 +8,8 @@ import {
   type TaskPage,
 } from "@potential-guide/task-protocol";
 import { TaskCatalog } from "../src/catalog.js";
-import { createTaskEngine, newId } from "../src/index.js";
+import { newId } from "../src/index.js";
+import { createFixtureEngine as createTaskEngine } from "./driver.js";
 import { caller, harness } from "./fixtures.js";
 
 function code(expected: string) {
@@ -117,7 +118,7 @@ test("new shared progress updates bound live Tasks but never a canceled Task", a
     await h.turn();
     assert.equal(h.work.length, 1);
     h.clock.setTime(h.clock.now() + 10);
-    h.work[0]?.permit.progress({ percent: 1 });
+    h.work[0]?.permit.progress({ stage: "execution", percent: 1, message: "" });
     const updates = h.engine.listTasks({}, {}, caller).tasks;
     assert.ok(updates.every((task) => task.updatedAt === at(h.clock.now())));
     assert.ok(updates.every((task) => task.state.stage === "running"));
@@ -125,7 +126,7 @@ test("new shared progress updates bound live Tasks but never a canceled Task", a
     h.engine.cancelTask(one.taskId, caller);
     const canceledAt = at(h.clock.now());
     h.clock.setTime(h.clock.now() + 10);
-    h.work[0]?.permit.progress({ percent: 2 });
+    h.work[0]?.permit.progress({ stage: "execution", percent: 2, message: "" });
     const after = h.engine.listTasks({ sort: "updated-desc" }, {}, caller);
     assert.equal(after.tasks[0]?.taskId, two.taskId);
     assert.equal(after.tasks[0]?.updatedAt, at(h.clock.now()));
@@ -139,11 +140,11 @@ test("new shared progress updates bound live Tasks but never a canceled Task", a
       canceledAt,
     );
     const broken = h.store.read().facts;
-    const executionId = h.work[0]?.permit.executionId;
-    assert.ok(executionId);
-    const execution = broken.executions[executionId];
-    assert.ok(execution);
-    delete execution.result;
+    const runId = h.work[0]?.permit.runId;
+    assert.ok(runId);
+    const run = broken.runs[runId];
+    assert.ok(run);
+    delete run.result;
     assert.throws(
       () => new TaskCatalog(h.engine.limits).read({}, {}, caller, broken, h.clock.now(), () => {}),
       code("history_gap"),
@@ -194,9 +195,9 @@ test("unbound terminated-policy demand ignores progress; failed and not-yet-run 
   try {
     h.submit();
     await h.turn();
-    const waiting = h.submit({ executionMatch: "terminated-after-eligible" });
+    const waiting = h.submit({ matchPolicy: "terminated-after-eligible" });
     h.clock.setTime(h.clock.now() + 10);
-    h.work[0]?.permit.progress({ ratio: 0.1 });
+    h.work[0]?.permit.progress({ stage: "execution", percent: 10, message: "" });
     assert.equal(
       h.engine.listTasks({}, {}, caller).tasks.find((task) => task.taskId === waiting.taskId)
         ?.updatedAt,
@@ -204,7 +205,7 @@ test("unbound terminated-policy demand ignores progress; failed and not-yet-run 
     );
     h.work[0]?.permit.fail({ code: "test_failure", message: "private details" });
     const listed = h.engine.listTasks({}, {}, caller);
-    assert.ok(listed.tasks.every((task) => task.state.executionFailed));
+    assert.ok(listed.tasks.every((task) => task.state.runFailed));
     assert.ok(listed.tasks.every((task) => task.updatedAt === at(h.clock.now())));
     assert.equal(JSON.stringify(listed).includes("private details"), false);
   } finally {
@@ -221,7 +222,7 @@ test("unbound terminated-policy demand ignores progress; failed and not-yet-run 
     await failing.turn();
     const listed = failing.engine.listTasks({}, {}, caller).tasks[0];
     assert.equal(listed?.taskId, task.taskId);
-    assert.equal(listed?.state.stage, "preparation_failed");
+    assert.equal(listed?.state.stage, "run_failed");
   } finally {
     await failing.close();
   }
@@ -283,7 +284,7 @@ test("catalog keeps historical schema binding while redo uses the current discov
       authorize: () => true,
     });
     try {
-      latest.start();
+      await latest.start();
       assert.equal(latest.discoverTypes(caller)[0]?.version, "2");
       assert.equal(latest.listTasks({}, {}, caller).tasks[0]?.version, "1");
       assert.deepEqual(latest.getRequest(original.requestId, caller), raw);
@@ -324,8 +325,8 @@ test("catalog keeps historical schema binding while redo uses the current discov
       currentVersions: { echo: "2" },
       authorize: () => true,
     });
-    assert.throws(
-      () => missingIdentity.start(),
+    await assert.rejects(
+      missingIdentity.start(),
       code("unsupported_contract"),
       "timestamp recovery must never invent a missing schema contract identity",
     );
@@ -387,7 +388,7 @@ test("invalid inputs, cursor domains, expiry, tampering and restart fail explici
       authorize: () => true,
     });
     try {
-      restarted.start();
+      await restarted.start();
       assert.throws(
         () => restarted.listTasks({}, { cursor: continuation(active) }, caller),
         code("query_expired"),
@@ -474,7 +475,7 @@ test("explicit collection invalidates pages and memory restart recovers after co
       authorize: () => true,
     });
     try {
-      restart.start();
+      await restart.start();
       assert.equal(restart.listTasks({}, {}, caller).tasks[0]?.updatedAt, fresh.receivedAt);
     } finally {
       await restart.close();
@@ -574,9 +575,9 @@ test("legal v2 checkpoints recover missing update metadata from exact retained p
     const task = h.submit();
     await h.turn();
     h.clock.setTime(h.clock.now() + 10);
-    h.work[0]?.permit.progress({ n: 1 });
+    h.work[0]?.permit.progress({ stage: "execution", percent: 1, message: "" });
     h.clock.setTime(h.clock.now() - 20);
-    h.work[0]?.permit.progress({ n: 2 });
+    h.work[0]?.permit.progress({ stage: "execution", percent: 2, message: "" });
     const view = h.store.read();
     delete view.facts.tasks[task.taskId]?.updatedAt;
     for (const event of view.events)

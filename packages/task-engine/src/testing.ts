@@ -41,7 +41,7 @@ export class MemoryStore implements Store {
   }
   compact(owner: string, through: number): void {
     if (this.owner !== owner) fail("store_owned", "Owner mismatch.");
-    if (Object.keys(this.view.facts.tasks).length || Object.keys(this.view.facts.executions).length)
+    if (Object.keys(this.view.facts.tasks).length || Object.keys(this.view.facts.runs).length)
       fail("protected_history", "Recovery references still protect history.");
     if (through < this.view.floor || through > this.view.facts.watermark)
       fail("invalid_cursor", "Invalid compaction boundary.");

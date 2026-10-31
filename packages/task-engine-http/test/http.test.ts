@@ -97,7 +97,7 @@ test("Web adapter and core preserve body/header identity, auth and errors withou
     const obsolete = await request("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Idempotency-Key": newId() },
-      body: JSON.stringify({ ...body, executionMatch: "completed-after-eligible" }),
+      body: JSON.stringify({ ...body, matchPolicy: "completed-after-eligible" }),
     });
     assert.equal(obsolete.status, 400);
     assert.equal(Object.keys(h.store.read().facts.tasks).length, 1);
@@ -224,7 +224,7 @@ test("SSE handoff and Last-Event-ID use durable facts; disconnect never cancels"
     const cursor = /^id: (.+)$/m.exec(first)?.[1];
     assert.ok(cursor);
     await h.turn();
-    h.work[0]?.permit.progress({ detail: "after initial watermark" });
+    h.work[0]?.permit.progress({ stage: "execution", message: "after initial watermark" });
     await reader.cancel();
     assert.equal(h.engine.getTask(task.taskId, caller).canceledAt, undefined);
     const resumed = await handler(
@@ -235,7 +235,7 @@ test("SSE handoff and Last-Event-ID use durable facts; disconnect never cancels"
     const resumedReader = resumed.body?.getReader();
     assert.ok(resumedReader);
     const frame = new TextDecoder().decode((await resumedReader.read()).value);
-    assert.match(frame, /execution.progress/);
+    assert.match(frame, /run.progress/);
     assert.match(frame, /after initial watermark/);
     await resumedReader.cancel();
     await h.finish();
@@ -298,7 +298,8 @@ test("core reauthorizes each subscription pull; slow clients have bounded pull p
       code: "capacity_exceeded",
     });
     await h.turn();
-    for (let i = 0; i < 10; i++) h.work[0]?.permit.progress({ i });
+    for (let i = 0; i < 10; i++)
+      h.work[0]?.permit.progress({ stage: "execution", message: String(i) });
     assert.equal(subscription.pull().events.length, 2);
     const saved = caller.subject;
     caller.subject = "revoked";

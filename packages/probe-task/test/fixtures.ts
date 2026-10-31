@@ -3,16 +3,19 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
-  checkerSchemaUri,
-  objectiveSchemaUri,
-  inspectContractFiles,
   type ContractArtifact,
+  checkerSchemaUri,
+  inspectContractFiles,
+  objectiveSchemaUri,
 } from "@potential-guide/check-artifacts/contracts";
-import { createCheckTaskType, type ArtifactSource } from "@potential-guide/check-task";
-import { createTaskEngine, newId } from "@potential-guide/task-engine";
+import type { ArtifactSource } from "@potential-guide/check-task";
+import { newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
-import { isTimedOut, type Clock, type TaskSnapshot } from "@potential-guide/task-protocol";
-import { createProbeTaskType, type ProbeTaskOptions } from "../src/index.js";
+import { type Clock, isTimedOut, type TaskSnapshot } from "@potential-guide/task-protocol";
+import { createCheckFixture as createCheckTaskType } from "../../check-task/test/type-fixture.js";
+import { createFixtureEngine as createTaskEngine } from "../../task-engine/test/driver.js";
+import type { ProbeTaskOptions } from "../src/index.js";
+import { createProbeFixture as createProbeTaskType } from "./type-fixture.js";
 export const caller = { scope: "a", subject: "tester" };
 export const rootUrl = "https://example.test/root.tgz";
 export const checkUrl = "https://example.test/check.tgz";

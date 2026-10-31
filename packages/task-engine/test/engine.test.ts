@@ -6,17 +6,18 @@ import {
   emptyFacts,
   isCanceled,
   isCompleted,
-  isExecutionFailed,
   isPending,
+  isRunFailed,
   isTimedOut,
   type JsonObject,
   json,
   project,
   reduce,
-  type TaskType,
 } from "@potential-guide/task-protocol";
-import { createTaskEngine, newId } from "../src/index.js";
+import { newId } from "../src/index.js";
 import { MemoryStore, VirtualClock } from "../src/testing.js";
+import type { LifecycleFixture } from "./driver.js";
+import { createFixtureEngine as createTaskEngine } from "./driver.js";
 import { caller, deferred, echoEquals, flush, harness, validateEcho } from "./fixtures.js";
 
 test("initial is fact-based; identity prepare, two generic types and independent time dimensions", async () => {
@@ -39,7 +40,7 @@ test("initial is fact-based; identity prepare, two generic types and independent
     assert.ok(isCompleted(finished));
     assert.equal(isTimedOut(finished), false);
     assert.deepEqual(finished.result, { text: "hello" });
-    for (const key of ["type", "request", "state", "revision", "progress", "executionMatch"])
+    for (const key of ["type", "request", "state", "revision", "progress", "matchPolicy"])
       assert.equal(key in finished, false);
     assert.throws(() => h.submit({ type: "sum", text: undefined } as never), {
       code: "invalid_payload",
@@ -64,11 +65,11 @@ test("admission validates full intent, strict JSON, original omissions, authoriz
     const task = h.submit();
     const raw = h.engine.getRequest(task.requestId, caller);
     assert.equal("eligibleAt" in raw, false);
-    assert.equal("executionMatch" in raw, false);
+    assert.equal("matchPolicy" in raw, false);
     assert.equal(h.engine.submit(raw, caller).taskId, task.taskId);
     for (const patch of [
       { type: "sum", values: [1] },
-      { executionMatch: "terminated-after-eligible" },
+      { matchPolicy: "terminated-after-eligible" },
       { timeoutMs: 101 },
     ])
       assert.throws(() => h.engine.submit({ ...raw, ...patch }, caller), {
@@ -109,8 +110,8 @@ test("sharing uses input, scope and eligibility; Task cancellation freezes indep
     await h.turn();
     assert.equal(h.work.length, 1);
     assert.equal(
-      h.engine.getTask(a.taskId, caller).execution?.executionId,
-      h.engine.getTask(b.taskId, caller).execution?.executionId,
+      h.engine.getTask(a.taskId, caller).run?.runId,
+      h.engine.getTask(b.taskId, caller).run?.runId,
     );
     const frozen = h.engine.cancelTask(a.taskId, caller);
     assert.equal(frozen.stage, "running");
@@ -121,7 +122,7 @@ test("sharing uses input, scope and eligibility; Task cancellation freezes indep
     assert.ok(isCanceled(after));
     assert.equal(after.stage, "running");
     assert.equal(after.result, undefined);
-    assert.equal(after.execution?.completedAt, undefined);
+    assert.equal(after.run?.completedAt, undefined);
     assert.ok(isCompleted(h.engine.getTask(b.taskId, caller)));
     assert.equal(h.engine.cancelTask(a.taskId, caller).canceledAt, frozen.canceledAt);
     assert.throws(() => h.engine.cancelTask(b.taskId, caller), { code: "task_finished" });
@@ -130,7 +131,7 @@ test("sharing uses input, scope and eligibility; Task cancellation freezes indep
   }
 });
 
-test("normal not-performed business results complete; business exceptions fail only execution", async () => {
+test("normal not-performed business results complete; business exceptions fail only run", async () => {
   const h = harness();
   try {
     const a = h.submit();
@@ -146,7 +147,7 @@ test("normal not-performed business results complete; business exceptions fail o
     h.work[1]?.exit.resolve();
     await flush();
     h.engine.tick();
-    assert.ok(isExecutionFailed(h.engine.getTask(b.taskId, caller)));
+    assert.ok(isRunFailed(h.engine.getTask(b.taskId, caller)));
   } finally {
     await h.close();
   }
@@ -188,9 +189,10 @@ test("expired preparation retracts; late prepare cannot launch and initial/prepa
     assert.equal(h.engine.cancelTask(a.taskId, caller).stage, "initial");
     const b = h.submit();
     await h.turn();
-    assert.equal(h.engine.getTask(b.taskId, caller).stage, "preparing");
+    assert.equal(h.engine.getTask(b.taskId, caller).stage, "running");
     await h.turn(101);
-    assert.equal(aborted, true);
+    assert.equal(aborted, false);
+    h.engine.cancelTask(b.taskId, caller);
     preparation.resolve({ text: "hello" });
     await flush();
     await h.turn();
@@ -198,9 +200,9 @@ test("expired preparation retracts; late prepare cannot launch and initial/prepa
     assert.ok(isTimedOut(h.engine.getTask(b.taskId, caller)));
     const c = h.submit();
     h.engine.tick();
-    assert.equal(h.engine.cancelTask(c.taskId, caller).stage, "preparing");
+    assert.equal(h.engine.cancelTask(c.taskId, caller).stage, "running");
     await flush();
-    assert.equal(h.engine.getTask(c.taskId, caller).stage, "preparing");
+    assert.equal(h.engine.getTask(c.taskId, caller).stage, "running");
   } finally {
     await h.close();
   }
@@ -213,16 +215,18 @@ test("allocation waits without running; expired queued owner retracts, not runni
     await h.turn();
     const b = h.submit({ text: "queued", timeoutMs: 10 });
     await h.turn();
-    assert.equal(h.engine.getTask(b.taskId, caller).stage, "queued");
+    assert.equal(h.engine.getTask(b.taskId, caller).stage, "running");
     await h.turn(20);
     assert.equal(h.work[0]?.stops.length, 0);
-    assert.equal(h.pool.stats.queued, 0);
+    assert.equal(h.pool.stats.queued, 1);
     await h.finish();
     await h.turn();
-    assert.equal(h.work.length, 1);
+    assert.equal(h.work.length, 2);
     assert.equal(h.engine.getTask(a.taskId, caller).stage, "completed");
     assert.ok(isTimedOut(h.engine.getTask(a.taskId, caller)));
-    assert.equal(h.engine.getTask(b.taskId, caller).stage, "queued");
+    assert.equal(h.engine.getTask(b.taskId, caller).stage, "running");
+    await h.finish(1, { text: "queued" });
+    assert.equal(h.engine.getTask(b.taskId, caller).stage, "completed");
   } finally {
     await h.close();
   }
@@ -233,7 +237,7 @@ test("termination binds at the event and keeps its time across late observation"
   try {
     const a = h.submit({ eligibleAt: at(h.clock.now() - 10) });
     await h.turn();
-    const b = h.submit({ executionMatch: "terminated-after-eligible" });
+    const b = h.submit({ matchPolicy: "terminated-after-eligible" });
     await h.turn();
     assert.equal(h.work.length, 1);
     await h.finish();
@@ -277,17 +281,17 @@ test("prepare validation fails before allocation; registered contracts are immut
   try {
     const task = h.submit();
     await h.turn();
-    assert.equal(h.engine.getTask(task.taskId, caller).stage, "preparation_failed");
+    assert.equal(h.engine.getTask(task.taskId, caller).stage, "run_failed");
     assert.equal(h.work.length, 0);
   } finally {
     await h.close();
   }
   const broken = harness();
   try {
-    broken.submit({ executionMatch: "terminated-after-eligible" });
+    broken.submit({ matchPolicy: "terminated-after-eligible" });
     await broken.turn();
     broken.type.inputSchema = { type: "object", properties: { other: { type: "number" } } };
-    broken.submit({ executionMatch: "terminated-after-eligible" });
+    broken.submit({ matchPolicy: "terminated-after-eligible" });
     await broken.turn();
     assert.equal(broken.engine.errors.length, 0);
     assert.equal(broken.work.length, 1);
@@ -378,9 +382,9 @@ test("history fixed watermarks, repeatable stream resumes, pure checkpoint equiv
   try {
     const task = h.submit();
     await h.turn();
-    h.work[0]?.permit.progress({ percent: 1 });
+    h.work[0]?.permit.progress({ stage: "execution", percent: 1, message: "" });
     const page = h.engine.readHistory({ taskId: task.taskId }, { limit: 2 }, caller);
-    h.work[0]?.permit.progress({ percent: 2 });
+    h.work[0]?.permit.progress({ stage: "execution", percent: 2, message: "" });
     assert.ok(page.next);
     const nextCursor = page.next;
     const second = h.engine.readHistory({ taskId: task.taskId }, { cursor: page.next }, caller);
@@ -413,7 +417,7 @@ test("history fixed watermarks, repeatable stream resumes, pure checkpoint equiv
 test("version-bound history and idempotency never silently use current validators", async () => {
   const store = new MemoryStore();
   const clock = new VirtualClock();
-  const old: TaskType<JsonObject> = {
+  const old: LifecycleFixture<JsonObject> = {
     type: "echo",
     version: "1",
     environment: "one",
@@ -439,7 +443,7 @@ test("version-bound history and idempotency never silently use current validator
     authorize: () => true,
   };
   const engine = createTaskEngine(options);
-  engine.start();
+  await engine.start();
   const raw = {
     requestId: newId(),
     type: "echo",
@@ -463,7 +467,7 @@ test("version-bound history and idempotency never silently use current validator
     types: [old, newer],
     currentVersions: { echo: "2" },
   });
-  restored.start();
+  await restored.start();
   assert.equal(restored.submit(raw, caller).taskId, task.taskId);
   assert.deepEqual(restored.getRequest(raw.requestId, caller), raw);
   await restored.close();
@@ -472,11 +476,11 @@ test("version-bound history and idempotency never silently use current validator
     types: [newer],
     currentVersions: { echo: "2" },
   });
-  assert.throws(() => unsupported.start(), { code: "unsupported_version" });
+  await assert.rejects(unsupported.start(), { code: "unsupported_version" });
   store.close();
 });
 
-test("invalid business result becomes explicit execution failure, never a stranded running task", async () => {
+test("invalid business result becomes explicit run failure, never a stranded running task", async () => {
   const h = harness({
     validateResult() {
       throw new Error("result schema defect");
@@ -487,7 +491,7 @@ test("invalid business result becomes explicit execution failure, never a strand
     await h.turn();
     await h.finish();
     h.engine.tick();
-    assert.equal(h.engine.getTask(task.taskId, caller).stage, "execution_failed");
+    assert.equal(h.engine.getTask(task.taskId, caller).stage, "run_failed");
     assert.equal(h.engine.getTask(task.taskId, caller).error?.code, "invalid_payload");
   } finally {
     await h.close();
@@ -499,12 +503,12 @@ test("terminated-after adopts a completion equal to eligible without premature a
   try {
     h.submit();
     await h.turn();
-    const task = h.submit({ executionMatch: "terminated-after-eligible" });
+    const task = h.submit({ matchPolicy: "terminated-after-eligible" });
     h.engine.tick();
     await flush();
     h.engine.tick();
-    assert.equal(h.engine.getTask(task.taskId, caller).stage, "queued");
-    assert.equal(h.engine.getTask(task.taskId, caller).execution, undefined);
+    assert.equal(h.engine.getTask(task.taskId, caller).stage, "initial");
+    assert.equal(h.engine.getTask(task.taskId, caller).run, undefined);
     await h.finish();
     h.engine.tick();
     assert.equal(h.engine.getTask(task.taskId, caller).stage, "completed");
@@ -520,15 +524,19 @@ test("fixed history page cannot retroactively gain an older Execution through a 
   try {
     h.submit();
     await h.turn();
-    const task = h.submit({ executionMatch: "terminated-after-eligible" });
+    const task = h.submit({
+      matchPolicy: "terminated-after-eligible",
+      recurrence: { anchor: "eligible", periodMs: 1 },
+    });
     h.engine.tick();
     await flush();
+    await h.turn();
     const page = h.engine.readHistory({ taskId: task.taskId }, { limit: 1 }, caller);
     assert.ok(page.next);
     await h.turn();
     const rest = h.engine.readHistory({ taskId: task.taskId }, { cursor: page.next }, caller);
     assert.equal(
-      rest.events.some((event) => event.executionId !== undefined),
+      rest.events.some((event) => event.runId !== undefined),
       false,
     );
   } finally {

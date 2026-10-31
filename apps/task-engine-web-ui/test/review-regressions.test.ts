@@ -139,7 +139,7 @@ test("causally newer snapshots survive clock rollback and receipt replay", () =>
     ...initial,
     stage: "running",
     timestamp: "2026-10-31T01:00:00.000Z",
-    execution: { executionId: newIdentity(), startedAt: "2026-10-31T01:00:00.000Z" },
+    run: { runId: newIdentity(), startedAt: "2026-10-31T01:00:00.000Z" },
   };
   assert.equal(tasks.observe(running, 12), true);
   tasks.seed(initial);

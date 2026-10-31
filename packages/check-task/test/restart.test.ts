@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
-import { fork, type ChildProcess } from "node:child_process";
+import { type ChildProcess, fork } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { newId } from "@potential-guide/task-engine";
 import type { TaskSnapshot } from "@potential-guide/task-protocol";
 
 for (const transport of ["https", "file"])
-  test(`real ${transport} SQLite/Node-worker restart preserves identity/deadline, original bytes and never reruns unknown execution`, async () => {
+  test(`real ${transport} SQLite/Node-worker restart preserves identity/deadline, original bytes and never reruns unknown run`, async () => {
     const root = resolve(".cache", `check-restart-${randomUUID()}`);
     await mkdir(root, { recursive: true });
     const database = resolve(root, "tasks.sqlite");
@@ -89,8 +89,30 @@ for (const transport of ["https", "file"])
       const first = await launch("initial");
       const running = await submit(first.url, "running", true);
       const bound = await wait(first.url, running.taskId, "running");
+      for (let attempt = 0; ; attempt++) {
+        if ((await readFile(marker, "utf8").catch(() => "")).includes("running")) break;
+        assert.ok(attempt < 500);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
       const queued = await submit(first.url, "queued", false);
-      await wait(first.url, queued.taskId, "queued");
+      await wait(first.url, queued.taskId, "running");
+      let prepared: { checker: { digest: string } } | undefined;
+      for (let attempt = 0; attempt < 500 && !prepared; attempt++) {
+        const history = (await (
+          await fetch(`${first.url}/event-history?taskId=${queued.taskId}&limit=100`, { headers })
+        ).json()) as {
+          events: {
+            type: string;
+            data: { value?: { kind?: string; prepared?: { checker: { digest: string } } } };
+          }[];
+        };
+        prepared = history.events.find(
+          (event: { type: string; data: { value?: { kind?: string; prepared?: unknown } } }) =>
+            event.type === "run.evidence" && event.data.value?.kind === "check-prepared",
+        )?.data.value?.prepared;
+        if (!prepared) await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      assert.ok(prepared, "分配前固定内容必须已通过独立证据通道持久化。");
       for (let attempt = 0; ; attempt++) {
         if ((await readFile(marker, "utf8").catch(() => "")).includes("running")) break;
         assert.ok(attempt < 500);
@@ -100,18 +122,16 @@ for (const transport of ["https", "file"])
       await exits.get(first.child);
       if (transport === "file") await rm(archive);
       const restarted = await launch("restart");
-      const interrupted = await wait(restarted.url, running.taskId, "execution_failed");
+      const interrupted = await wait(restarted.url, running.taskId, "run_failed");
       assert.equal(interrupted.error?.code, "execution_interrupted");
       assert.equal(interrupted.requestId, running.requestId);
-      assert.equal(interrupted.execution?.executionId, bound.execution?.executionId);
+      assert.equal(interrupted.run?.runId, bound.run?.runId);
       assert.equal(interrupted.deadlineAt, running.deadlineAt);
-      const restored = await wait(restarted.url, queued.taskId, "completed");
+      const restored = await wait(restarted.url, queued.taskId, "run_failed");
       assert.equal(restored.requestId, queued.requestId);
       assert.equal(restored.deadlineAt, queued.deadlineAt);
-      assert.deepEqual((await readFile(marker, "utf8")).trim().split(/\r?\n/), [
-        "running",
-        "queued",
-      ]);
+      assert.equal(restored.error?.code, "execution_interrupted");
+      assert.deepEqual((await readFile(marker, "utf8")).trim().split(/\r?\n/), ["running"]);
       restarted.child.send("close");
       await exits.get(restarted.child);
     } finally {

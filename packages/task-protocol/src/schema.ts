@@ -1,8 +1,37 @@
 import { createHash } from "node:crypto";
 import { Ajv2020 } from "ajv/dist/2020.js";
-import { canonical, fail, freeze, json, type Json, type JsonObject } from "./json.js";
+import { canonical, fail, freeze, type Json, type JsonObject, json } from "./json.js";
 
 export type InputSchema = JsonObject;
+export type JsonSchema = boolean | JsonObject;
+export interface JsonContract {
+  readonly schema: JsonSchema;
+  readonly revision: string;
+  validate(value: unknown): Json;
+}
+
+/** Result 与消息契约支持 boolean 根；false 表示 Never。 */
+export function compileJsonSchema(
+  value: unknown,
+  options: Partial<SchemaLimits> = {},
+): JsonContract {
+  const schema = json(value, options.maxSchemaBytes ?? 262_144);
+  if (
+    typeof schema !== "boolean" &&
+    (schema === null || typeof schema !== "object" || Array.isArray(schema))
+  )
+    fail("invalid_schema", "JSON Schema must be a boolean or object.");
+  const contract = compileContract(schema, options);
+  return Object.freeze({
+    schema: freeze(schema) as JsonSchema,
+    revision: createHash("sha256").update(canonical(schema)).digest("hex"),
+    validate(input: unknown) {
+      const parsed = json(input, options.maxInputBytes ?? 65_536);
+      contract.validate(parsed);
+      return parsed;
+    },
+  });
+}
 export interface SchemaLimits {
   maxSchemaBytes: number;
   maxSchemaNodes: number;
@@ -60,13 +89,21 @@ export function compileInputSchema<Input = Json>(
   value: unknown,
   options: Partial<SchemaLimits> = {},
 ): InputContract<Input> {
+  const schema = json(value, options.maxSchemaBytes ?? 262_144);
+  if (!record(schema) || schema.type !== "object")
+    fail("invalid_schema", "Input Schema must declare root type object.");
+  return compileContract(schema, options) as InputContract<Input>;
+}
+function compileContract<Input = Json>(
+  value: JsonSchema,
+  options: Partial<SchemaLimits>,
+): InputContract<Input> {
   const limits = { ...defaults, ...options };
   for (const [key, limit] of Object.entries(limits))
     if (!Number.isSafeInteger(limit) || limit <= 0)
       fail("invalid_schema", `${key} must be a positive safe integer.`);
   const schema = json(value, limits.maxSchemaBytes);
-  if (!record(schema) || schema.type !== "object")
-    fail("invalid_schema", "Input Schema must declare root type object.");
+  if (!isSchema(schema)) fail("invalid_schema", "JSON Schema must be a boolean or object.");
   const nodes = new Set<Schema>();
   const locations = new Set<string>();
   const children = new Map<Schema, Schema[]>();
@@ -347,7 +384,7 @@ export function compileInputSchema<Input = Json>(
     return chunks.join("");
   }
   return Object.freeze({
-    inputSchema: schema,
+    inputSchema: schema as InputSchema,
     revision: createHash("sha256")
       .update(`task-input-projection-v2\n${canonical(schema)}`)
       .digest("hex"),

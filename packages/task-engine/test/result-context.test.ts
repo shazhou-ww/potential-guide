@@ -1,62 +1,63 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { json, type Json, type TaskType } from "@potential-guide/task-protocol";
+import type { RegisteredType, Store } from "@potential-guide/task-protocol";
 import { createTaskEngine, newId } from "../src/index.js";
-import { MemoryStore, VirtualClock } from "../src/testing.js";
+import { MemoryStore } from "../src/testing.js";
 
-test("optional execution result validator receives original frozen Prepared at report and history without changing legacy validators", async () => {
+test("最终结果与恢复复验留在原类型 Worker，损坏业务证据不能得到成功形状", async () => {
   const store = new MemoryStore();
-  const clock = new VirtualClock();
-  let validations = 0;
-  const type: TaskType<Json> = {
-    type: "bound",
+  const type: RegisteredType = {
+    type: "proof",
     version: "1",
     environment: "test",
     inputSchema: { type: "object" },
-    prepare: async (value) => ({ original: value }),
-    validatePrepared: json,
-    validateResult: json,
-    validateProgress: json,
-    validateExecutionResult(value, prepared) {
-      assert.deepEqual(prepared, { original: { text: "bound" } });
-      assert.ok(Object.isFrozen(prepared));
-      validations++;
-      return json(value);
-    },
-    async execute(_prepared, options) {
-      const permit = options.start();
-      permit.complete({ ok: true });
-      return { ...permit, finished: Promise.resolve(), async reclaim() {} };
-    },
+    resultSchema: { type: "object" },
+    messageSchema: false,
+    module: new URL("./result-type.mjs", import.meta.url).href,
+    exportName: "createType",
+    verifyExportName: "verify",
+    configuration: {},
   };
-  const engine = createTaskEngine({
-    store,
-    clock,
-    types: [type],
-    currentVersions: { bound: "1" },
-    authorize: () => true,
-  });
-  engine.start();
+  const options = { types: [type], currentVersions: { proof: "1" }, authorize: () => true };
+  const engine = createTaskEngine({ store, ...options });
+  await engine.start();
+  const caller = { scope: "a", subject: "test" };
+  const task = engine.submit(
+    { requestId: newId(), type: "proof", text: "bound", timeoutMs: 5000 },
+    caller,
+  );
   try {
-    const caller = { scope: "a", subject: "test" };
-    const task = engine.submit(
-      { requestId: newId(), type: "bound", text: "bound", timeoutMs: 100 },
-      caller,
+    for (let turn = 0; turn < 1000 && !engine.getTask(task.taskId, caller).termination; turn++)
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    const final = engine.getTask(task.taskId, caller);
+    assert.equal(final.stage, "completed");
+    assert.deepEqual(final.result, {
+      prepared: { original: { text: "bound" } },
+      value: { ok: true },
+    });
+    assert.equal(
+      store.read().events.filter((event) => event.type === "run.progress").length,
+      1,
+      "结构化证据复验不能借用活动 Run 追加进度",
     );
-    clock.advance(1);
-    for (let turn = 0; turn < 3; turn++) {
-      engine.tick();
-      for (let index = 0; index < 30; index++) await Promise.resolve();
-    }
-    assert.equal(engine.getTask(task.taskId, caller).stage, "completed");
-    const before = validations;
-    engine.readHistory({ taskId: task.taskId }, {}, caller);
-    engine.readHistory(
-      { executionId: engine.getTask(task.taskId, caller).execution!.executionId },
-      {},
-      caller,
-    );
-    assert.ok(validations > before);
+    await engine.close();
+    const corrupt: Store = {
+      claim: (owner) => store.claim(owner),
+      release: (owner) => store.release(owner),
+      append: (...args) => store.append(...args),
+      compact: (...args) => store.compact(...args),
+      close: () => store.close(),
+      read() {
+        const view = store.read();
+        view.facts.runs[final.run!.runId]!.result = {
+          prepared: { original: { text: "forged" } },
+          value: { ok: true },
+        };
+        return view;
+      },
+    };
+    const restored = createTaskEngine({ ...options, store: corrupt });
+    await assert.rejects(restored.start(), /业务证据/);
   } finally {
     await engine.close();
     store.close();

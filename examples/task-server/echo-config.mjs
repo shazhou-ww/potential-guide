@@ -1,25 +1,8 @@
-import { createExecutorPool } from "@potential-guide/task-engine/pool";
-import { json, TaskError } from "@potential-guide/task-protocol";
+import { TaskError } from "@potential-guide/task-protocol";
 
 export default function configure() {
   const token = process.env.TASK_SERVER_TOKEN;
   if (!token) throw new Error("Set TASK_SERVER_TOKEN.");
-  const pool = createExecutorPool({
-    resources: ["echo"],
-    resourceKey: () => "echo",
-    run(input) {
-      const result = Promise.resolve(input);
-      return {
-        result,
-        exited: result.then(() => {}),
-        cooperate() {},
-        async force() {
-          throw new Error("Same-thread example cannot force.");
-        },
-        async cleanup() {},
-      };
-    },
-  });
   return {
     port: Number(process.env.TASK_SERVER_PORT ?? 3000),
     database: process.env.TASK_SERVER_DATABASE ?? "tasks.sqlite",
@@ -29,11 +12,11 @@ export default function configure() {
         version: "1",
         environment: "echo-v1",
         inputSchema: { type: "object" },
-        prepare: async (value) => value,
-        validatePrepared: json,
-        validateResult: json,
-        validateProgress: json,
-        execute: (value, options) => pool.execute(value, options),
+        resultSchema: true,
+        messageSchema: false,
+        module: new URL("./echo-type.mjs", import.meta.url).href,
+        exportName: "createEcho",
+        configuration: {},
       },
     ],
     currentVersions: { echo: "1" },
@@ -44,6 +27,5 @@ export default function configure() {
         throw new TaskError("unauthenticated", "Authentication required.");
       return { scope: "example", subject: "example" };
     },
-    closeResources: () => pool.close(),
   };
 }

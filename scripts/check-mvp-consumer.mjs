@@ -100,6 +100,10 @@ console.log("pure-packed: checker/objective manifests, full files, References, d
       join(directory, "echo-config.mjs"),
       await readFile(join(root, "examples", "task-server", "echo-config.mjs")),
     );
+    await writeFile(
+      join(directory, "echo-type.mjs"),
+      await readFile(join(root, "examples", "task-server", "echo-type.mjs")),
+    );
     if (label === "mvp-check") {
       await writeFile(
         join(directory, "check-config.mjs"),
@@ -163,11 +167,11 @@ async function exercise(url,requestBody=body){
  let final;
  for(let i=0;i<500;i++){final=await (await fetch(url+"/tasks/"+initial.taskId,{headers})).json();if(final.stage==="completed")break;await new Promise(r=>setTimeout(r,10))}
  assert.equal(final.stage,"completed");
- ${label === "mvp-check" ? `assert.equal(final.result.ok,false);` : `assert.deepEqual(final.result,{text:"packed"});`}
+ ${label === "mvp-check" ? `assert.equal(final.result.result.ok,false);assert.ok(final.result.evidence.prepared.checker.digest);` : `assert.deepEqual(final.result,{text:"packed"});`}
  let next;let events=0;
  do {const url_=new URL(url+"/event-history?taskId="+initial.taskId+"&limit=1");if(next)url_.searchParams.set("cursor",next);const page=await(await fetch(url_,{headers})).json();events+=page.events.length;next=page.next}while(next);
  assert.ok(events>=5);
- if(requestBody.checker?.url.startsWith("file:"))console.log(JSON.stringify({case:"packed-real-file-check",url:requestBody.checker.url,digest:requestBody.checker.digest,taskId:final.taskId,executionId:final.execution.executionId,result:final.result}));
+ if(requestBody.checker?.url.startsWith("file:"))console.log(JSON.stringify({case:"packed-real-file-check",url:requestBody.checker.url,digest:requestBody.checker.digest,taskId:final.taskId,runId:final.run.runId,result:final.result}));
 }
 const signals=process.listenerCount("SIGINT");
 const server=await startTaskServer(configure());

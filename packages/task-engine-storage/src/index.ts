@@ -46,11 +46,11 @@ function inspectFormat(db: DatabaseSync): boolean {
     if (db.prepare("SELECT name FROM sqlite_schema LIMIT 1").get()) unsupported();
     return false;
   }
-  if (version !== 2) unsupported();
+  if (version !== 3) unsupported();
   const checkpoint = db
     .prepare("SELECT projection_version, payload FROM checkpoint WHERE singleton=1")
     .get();
-  if (checkpoint?.projection_version !== 2 || typeof checkpoint.payload !== "string") unsupported();
+  if (checkpoint?.projection_version !== 3 || typeof checkpoint.payload !== "string") unsupported();
   assertFactsVersion(JSON.parse(checkpoint.payload) as Facts);
   return true;
 }
@@ -67,7 +67,7 @@ function preflight(filename: string): void {
   }
   if (length >= 64 && header.subarray(0, 16).toString() === "SQLite format 3\0") {
     const version = header.readUInt32BE(60);
-    if (version !== 0 && version !== 2) unsupported();
+    if (version !== 0 && version !== 3) unsupported();
   }
   const wal = `${filename}-wal`;
   if (existsSync(wal) && statSync(wal).size > 0) {
@@ -161,7 +161,7 @@ export class SqliteStore implements Store {
           watermark INTEGER NOT NULL, projection_version INTEGER NOT NULL,
           payload TEXT NOT NULL, checksum TEXT NOT NULL
         );
-        PRAGMA user_version=2;
+        PRAGMA user_version=3;
         COMMIT;
       `);
       this.db
@@ -169,7 +169,7 @@ export class SqliteStore implements Store {
         .run(randomUUID(), `${this.filename}.owner`);
       const initial = JSON.stringify(emptyFacts());
       this.db
-        .prepare("INSERT OR IGNORE INTO checkpoint VALUES (1, 0, 2, ?, ?)")
+        .prepare("INSERT OR IGNORE INTO checkpoint VALUES (1, 0, 3, ?, ?)")
         .run(initial, checksum(initial));
       this.db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
     } catch (error) {
@@ -216,7 +216,7 @@ export class SqliteStore implements Store {
     if (
       !metadata ||
       !checkpoint ||
-      checkpoint.projection_version !== 2 ||
+      checkpoint.projection_version !== 3 ||
       typeof checkpoint.payload !== "string" ||
       checksum(checkpoint.payload) !== checkpoint.checksum
     )
@@ -318,7 +318,7 @@ export class SqliteStore implements Store {
     this.db.exec("BEGIN IMMEDIATE");
     try {
       const view = this.readInside();
-      if (Object.keys(view.facts.tasks).length || Object.keys(view.facts.executions).length)
+      if (Object.keys(view.facts.tasks).length || Object.keys(view.facts.runs).length)
         fail("protected_history", "Recovery references still protect history.");
       if (through < view.floor || through > view.facts.watermark)
         fail("invalid_cursor", "Invalid history compaction boundary.");

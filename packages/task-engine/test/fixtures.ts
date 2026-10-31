@@ -7,11 +7,12 @@ import {
   type JsonObject,
   json,
   type StartPermit,
-  type TaskType,
 } from "@potential-guide/task-protocol";
-import { createTaskEngine, type EngineLimits, newId } from "../src/index.js";
+import { type EngineLimits, newId } from "../src/index.js";
 import { createExecutorPool } from "../src/pool.js";
 import { MemoryStore, VirtualClock } from "../src/testing.js";
+import type { LifecycleFixture } from "./driver.js";
+import { createFixtureEngine as createTaskEngine } from "./driver.js";
 
 export const caller: Caller = { scope: "a", subject: "tester" };
 export function deferred<T>() {
@@ -24,7 +25,8 @@ export function deferred<T>() {
   return { promise, resolve, reject };
 }
 export async function flush(): Promise<void> {
-  for (let index = 0; index < 30; index++) await Promise.resolve();
+  for (let index = 0; index < 30; index++)
+    await new Promise<void>((resolve) => setTimeout(resolve, 5));
 }
 export const echoSchema = {
   type: "object",
@@ -39,9 +41,9 @@ export function harness(
   options: {
     limits?: Partial<EngineLimits>;
     resources?: string[];
-    prepare?: TaskType<JsonObject>["prepare"];
-    validateResult?: TaskType<JsonObject>["validateResult"];
-    inputSchema?: TaskType<JsonObject>["inputSchema"];
+    prepare?: LifecycleFixture<JsonObject>["prepare"];
+    validateResult?: LifecycleFixture<JsonObject>["validateResult"];
+    inputSchema?: LifecycleFixture<JsonObject>["inputSchema"];
     authorize?: Authorize;
   } = {},
 ) {
@@ -59,11 +61,8 @@ export function harness(
     resources: options.resources ?? ["js", "js"],
     resourceKey: () => "js",
     run(input, permit, context) {
-      assert.ok(
-        store.read().facts.executions[permit.executionId],
-        "startup is durable before business code",
-      );
-      assert.equal(context.scope, store.read().facts.executions[permit.executionId]?.binding.scope);
+      assert.ok(store.read().facts.runs[permit.runId], "startup is durable before business code");
+      assert.equal(context.scope, store.read().facts.runs[permit.runId]?.binding.scope);
       assert.ok(Object.isFrozen(context));
       const done = deferred<unknown>();
       const exit = deferred<void>();
@@ -84,7 +83,7 @@ export function harness(
       };
     },
   });
-  const type: TaskType<JsonObject> = {
+  const type: LifecycleFixture<JsonObject> = {
     type: "echo",
     version: "1",
     environment: "js-v1",
@@ -98,7 +97,7 @@ export function harness(
     validateProgress: json,
     execute: (input, executeOptions) => pool.execute(input, executeOptions),
   };
-  const sum: TaskType<JsonObject> = {
+  const sum: LifecycleFixture<JsonObject> = {
     ...type,
     type: "sum",
     inputSchema: {
@@ -117,15 +116,7 @@ export function harness(
   const engine = createTaskEngine({
     store,
     clock,
-    types: [
-      {
-        ...type,
-        execute: (input, options) => type.execute(input, options),
-        authorize: (input, binding, prepared, result) =>
-          type.authorize?.(input, binding, prepared, result),
-      },
-      sum,
-    ],
+    types: [type, sum],
     currentVersions: { echo: "1", sum: "1" },
     authorize: options.authorize ?? ((who) => who.subject === "tester"),
     ...(options.limits ? { limits: options.limits } : {}),

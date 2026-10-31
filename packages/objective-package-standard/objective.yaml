@@ -55,6 +55,21 @@ subjectSchema:
         required:
           - path
           - reason
+    nodeWorkerImports:
+      type: array
+      items:
+        type: object
+        additionalProperties: false
+        properties:
+          path:
+            type: string
+            pattern: ^(?!/|[A-Za-z]:)(?!.*(?:^|/)\.{1,2}(?:/|$))(?!.*//)(?!.*\\)(?!.*\/$).+
+          reason:
+            type: string
+            minLength: 1
+        required:
+          - path
+          - reason
     localConfigurationImports:
       type: array
       items:

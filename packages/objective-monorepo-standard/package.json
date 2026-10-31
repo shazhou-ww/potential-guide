@@ -17,7 +17,7 @@
     "build": "tsc -b && node ../../scripts/build-objective-package.mjs objective-monorepo-standard",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "lint": "biome lint .",
-    "test": "tsx --test \"test/*.test.ts\" \"test/*.test.mjs\"",
+    "test": "tsx --test --test-concurrency=1 \"test/*.test.ts\" \"test/*.test.mjs\"",
     "typecheck": "tsc -b --pretty false"
   },
   "publishConfig": {

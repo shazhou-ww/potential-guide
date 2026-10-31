@@ -1,10 +1,10 @@
-import { createCheckTaskType, createArtifactSource } from "@potential-guide/check-task";
 import { dirname, join } from "node:path";
 import {
-  writeContractArtifact,
   packContractArtifact,
+  writeContractArtifact,
 } from "@potential-guide/check-artifacts/build";
 import { checkerSchemaUri, inspectContractFiles } from "@potential-guide/check-artifacts/contracts";
+import { createArtifactSource, createCheckTaskType } from "@potential-guide/check-task";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { TaskError } from "@potential-guide/task-protocol";
 

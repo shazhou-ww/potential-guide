@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Worker } from "node:worker_threads";
-import { type JsonObject, json, type TaskType } from "@potential-guide/task-protocol";
-import { createTaskEngine, newId } from "../src/index.js";
+import { type JsonObject, json } from "@potential-guide/task-protocol";
+import { newId } from "../src/index.js";
 import { createExecutorPool } from "../src/pool.js";
 import { MemoryStore, VirtualClock } from "../src/testing.js";
+import type { LifecycleFixture } from "./driver.js";
+import { createFixtureEngine as createTaskEngine } from "./driver.js";
 import { caller, deferred, flush } from "./fixtures.js";
 
 test("isolated admission lets executing and queued parents advance with one child slot", async () => {
@@ -45,7 +47,7 @@ test("isolated admission lets executing and queued parents advance with one chil
       };
     },
   });
-  const type: TaskType<JsonObject> = {
+  const type: LifecycleFixture<JsonObject> = {
     type: "parent",
     allocationLimit: 1,
     version: "1",
@@ -71,7 +73,7 @@ test("isolated admission lets executing and queued parents advance with one chil
     authorize: () => true,
     limits: { maxConcurrent: 1 },
   });
-  engine.start();
+  await engine.start();
   try {
     const parents = [1, 2, 3].map((value) =>
       engine.submit({ requestId: newId(), type: "parent", value, timeoutMs: 1000 }, caller),
@@ -92,7 +94,7 @@ test("isolated admission lets executing and queued parents advance with one chil
       await engine.waitForTaskRelease(parent.taskId, caller);
     }
     assert.equal(Object.keys(store.read().facts.tasks).length, 6);
-    assert.equal(Object.keys(store.read().facts.executions).length, 6);
+    assert.equal(Object.keys(store.read().facts.runs).length, 6);
   } finally {
     await engine.close();
     await pool.close();
@@ -100,7 +102,7 @@ test("isolated admission lets executing and queued parents advance with one chil
   }
 });
 
-test("independent execution wall limit force-terminates a real uncooperative worker", async () => {
+test("independent run wall limit force-terminates a real uncooperative worker", async () => {
   const store = new MemoryStore();
   const clock = new VirtualClock();
   const ready = deferred<void>();
@@ -143,7 +145,7 @@ test("independent execution wall limit force-terminates a real uncooperative wor
       };
     },
   });
-  const type: TaskType<JsonObject> = {
+  const type: LifecycleFixture<JsonObject> = {
     type: "loop",
     version: "1",
     environment: "worker",
@@ -162,7 +164,7 @@ test("independent execution wall limit force-terminates a real uncooperative wor
     authorize: () => true,
     limits: { executionWallMs: 5 },
   });
-  engine.start();
+  await engine.start();
   try {
     const task = engine.submit({ requestId: newId(), type: "loop", timeoutMs: 1000 }, caller);
     clock.advance(1);
@@ -180,7 +182,7 @@ test("independent execution wall limit force-terminates a real uncooperative wor
     assert.equal(forceCount, 1);
     assert.equal(cleanCount, 1);
     assert.equal(pool.stats.idle, 1);
-    assert.equal(engine.getTask(task.taskId, caller).stage, "execution_failed");
+    assert.equal(engine.getTask(task.taskId, caller).stage, "run_failed");
     assert.equal(engine.getTask(task.taskId, caller).canceledAt, undefined);
   } finally {
     await worker?.terminate();

@@ -4,13 +4,14 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createTaskEngine, newId } from "@potential-guide/task-engine";
+import { newId } from "@potential-guide/task-engine";
 import { VirtualClock } from "@potential-guide/task-engine/testing";
-import { type Json, json, type TaskType } from "@potential-guide/task-protocol";
+import type { RegisteredType } from "@potential-guide/task-protocol";
+import { createFixtureEngine as createTaskEngine } from "../../task-engine/test/driver.js";
 import { openSqliteStore } from "../src/index.js";
 
 for (const boundary of ["before", "after"]) {
-  test(`crash ${boundary} startup commit distinguishes resumable queued from uncertain execution`, async () => {
+  test(`crash ${boundary} startup commit distinguishes resumable queued from uncertain run`, async () => {
     await mkdir(resolve(".cache"), { recursive: true });
     const root = await mkdtemp(join(resolve(".cache"), "task-startup-"));
     const filename = join(root, "tasks.sqlite");
@@ -34,22 +35,23 @@ for (const boundary of ["before", "after"]) {
     const store = openSqliteStore(filename);
     const before = Object.values(store.read().facts.tasks)[0];
     assert.ok(before);
-    assert.equal(before.snapshot.stage, boundary === "before" ? "queued" : "running");
+    assert.equal(before.snapshot.stage, boundary === "before" ? "initial" : "running");
     let starts = 0;
-    const type: TaskType<Json> = {
+    const type: RegisteredType = {
       type: "echo",
       version: "1",
       environment: "test",
       inputSchema: { type: "object" },
-      prepare: async (input) => input,
-      validatePrepared: json,
-      validateResult: json,
-      validateProgress: json,
-      async execute(input, options) {
-        starts++;
-        const permit = options.start();
-        permit.complete(input);
-        return { ...permit, finished: Promise.resolve(), async reclaim() {} };
+      resultSchema: true,
+      messageSchema: false,
+      module: new URL("./crash-worker.mjs", import.meta.url).href,
+      exportName: "createType",
+      configuration: {},
+      resources: {
+        async effect() {
+          starts++;
+          return { text: "crash" };
+        },
       },
     };
     const clock = new VirtualClock();
@@ -62,15 +64,21 @@ for (const boundary of ["before", "after"]) {
       authorize: () => true,
     });
     try {
-      engine.start();
+      await engine.start();
       engine.tick();
-      for (let index = 0; index < 30; index++) await Promise.resolve();
+      for (
+        let index = 0;
+        index < 200 &&
+        !engine.getTask(before.snapshot.taskId, { scope: "a", subject: "tester" }).termination;
+        index++
+      )
+        await new Promise((resolve) => setTimeout(resolve, 5));
       engine.tick();
       const task = engine.getTask(before.snapshot.taskId, { scope: "a", subject: "tester" });
       assert.equal(task.requestId, before.request.requestId);
       assert.equal(task.deadlineAt, before.snapshot.deadlineAt);
       assert.equal(starts, boundary === "before" ? 1 : 0);
-      assert.equal(task.stage, boundary === "before" ? "completed" : "execution_failed");
+      assert.equal(task.stage, boundary === "before" ? "completed" : "run_failed");
       if (boundary === "after") assert.equal(task.error?.code, "execution_interrupted");
     } finally {
       await engine.close();

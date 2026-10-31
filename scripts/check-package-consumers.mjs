@@ -3,9 +3,9 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { delimiter, isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
 import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 import { discoveryHostBins } from "./release-packages.mjs";
-import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
 
 export async function checkPackageConsumers(root, scratch, definitions, tarballs, run) {
   const manifests = new Map();
@@ -157,6 +157,10 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     if (label.startsWith("task-")) {
       const script = join(directory, "generic-task.mjs");
       await writeFile(
+        join(directory, "type-worker.mjs"),
+        `export function createEcho(){return {type:"echo",version:"1",inputSchema:{type:"object"},resultSchema:true,messageSchema:false,async run(input,context){await context.progress({stage:"execution",message:"返回输入"});return input}}}`,
+      );
+      await writeFile(
         script,
         `
 import assert from "node:assert/strict";
@@ -168,14 +172,9 @@ assert.equal(emptyFacts().watermark,0);
 assert.deepEqual(json({value:2}),{value:2});
 `
     : `
-const json=value=>value;
 import {createTaskEngine,newId} from "@potential-guide/task-engine";
 import {MemoryStore} from "@potential-guide/task-engine/testing";
-import {createExecutorPool} from "@potential-guide/task-engine/pool";
-const pool=createExecutorPool({resources:["js"],resourceKey:()=>"js",run(input){
- const result=Promise.resolve(input);return {result,exited:result.then(()=>{}),cooperate(){},async force(){throw Error("not isolated");},async cleanup(){}};
-}});
-const type={type:"echo",version:"1",environment:"node",inputSchema:{type:"object"},prepare:async x=>x,validatePrepared:json,validateResult:json,validateProgress:json,execute:(x,o)=>pool.execute(x,o)};
+const type={type:"echo",version:"1",environment:"node",inputSchema:{type:"object"},resultSchema:true,messageSchema:false,module:new URL("./type-worker.mjs",import.meta.url).href,exportName:"createEcho",configuration:{}};
 ${
   label === "task-adapters"
     ? `
@@ -186,7 +185,7 @@ const store=openSqliteStore("consumer.sqlite");
     : "const store=new MemoryStore();"
 }
 const engine=createTaskEngine({store,types:[type],currentVersions:{echo:"1"},authorize:()=>true});
-engine.start();
+await engine.start();
 const caller={scope:"consumer",subject:"fixture"};
 const task=engine.submit({requestId:newId(),type:"echo",text:"packed",timeoutMs:10000},caller);
 let result;
@@ -200,7 +199,7 @@ assert.equal((await handler(new Request("http://fixture/tasks/"+task.taskId))).s
 `
     : ""
 }
-await engine.close();await pool.close();store.close();
+await engine.close();store.close();
 `
 }
 `,
@@ -248,7 +247,7 @@ const repository=new ContractStore(["https://example.test"],undefined,async(url)
   const bytes=archives.get(url);assert.ok(bytes,"Unexpected artifact source");return bytes;
 });
 const kernel=await CheckKernel.create(join(root,"snapshots"));
-const checks=new CheckerService(repository,new CheckerMaterializer(join(root,"execution")),kernel,["en"]);
+const checks=new CheckerService(repository,new CheckerMaterializer(join(root,"run")),kernel,["en"]);
 const objectives=new ObjectiveService(repository,checks,["en"]);
 const token=randomUUID();
 const host=await serveServices([createServiceRouter(checks,"/checks","checker"),createObjectiveRouter(objectives,"/probes")],token,async()=>{
@@ -307,7 +306,7 @@ const token=randomUUID(),host=await serve(kernel,token);
 const descriptor=JSON.stringify({endpoint:host.endpoint,token,pid:process.pid,instance:randomUUID()});
 assert.equal(await publishPrivateFile(process.env.PGUIDE_CHECK_HOST_DIRECTORY,"host.json",descriptor,null),true);
 const inventory={node:process.version,platform:process.platform,graph:${JSON.stringify(graph)},packages:[],artifacts:[]};
-let executions=0;
+let runs=0;
 try{
  for(const name of names){
   const prepared=await prepareObjectivePackage(packageSpecs[name],process.cwd(),{cacheDirectory:join(cacheDirectory,"packages")});
@@ -322,7 +321,7 @@ try{
    for(const level of spec.manifest.levels)for(const check of level.checks){
     const artifact=await readArtifact(join(prepared.directory,"checks",check.id));
     inventory.artifacts.push({objectiveId:name,levelId:level.id,checkId:check.id,revision:artifact.revision});
-    const checkId="installed-"+executions++;
+    const checkId="installed-"+runs++;
     await kernel.executeCheck({checkId,directory:artifact.directory,revision:artifact.revision,subject:{}});
     while(!terminal(kernel.sample(checkId)))await new Promise(done=>setTimeout(done,10));
     const state=kernel.sample(checkId);
@@ -331,7 +330,7 @@ try{
    }
   },{cacheDirectory,packageSpecs,reports:{enabled:false}});
  }
- assert.equal(executions,16);
+ assert.equal(runs,16);
  assert.equal(kernel.diagnostics().executions,16);
  const target=resolve(".cache","target");
  const own={root:target,directory:"packages/shared",roles:["internal"],runtime:"universal",allows:[],entries:["src/index.ts"],generated:[],joins:[],deliveries:[]};
@@ -374,7 +373,7 @@ try{
  inventory.businessObservation=rootObservation;
  inventory.coordinator={objective:R.requestDetails(replay.requests,"installed-npm").objective,packageDigest:rootSpec.version,events:state.events.length,replay:true,views:true};
  await writeFile(${JSON.stringify(reportFile)},JSON.stringify(inventory,null,2)+"\\n",{flag:"wx"});
- console.log(JSON.stringify({packages:names.length,checks:executions,source:"installed-package-directories",runtime:"installed-cli-runtime",workspaceFallback:false,report:${JSON.stringify(reportFile)}}));
+ console.log(JSON.stringify({packages:names.length,checks:runs,source:"installed-package-directories",runtime:"installed-cli-runtime",workspaceFallback:false,report:${JSON.stringify(reportFile)}}));
 }finally{await host.close();await removePrivateFile(process.env.PGUIDE_CHECK_HOST_DIRECTORY,"host.json",descriptor);}
 `,
       );

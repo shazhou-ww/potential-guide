@@ -1,6 +1,6 @@
 import type {
-  ExecutionPage,
-  ExecutionSummary,
+  RunPage,
+  RunSummary,
   HistoryPage,
   Observation,
   PublicEvent,
@@ -120,7 +120,7 @@ interface Workspace {
   discoveryError: string;
   tasks: TaskSnapshots;
   directory: Directory;
-  executionDirectory: Directory<ExecutionPage>;
+  executionDirectory: Directory<RunPage>;
   associatedExecutionId: string;
 }
 function workspace(endpoint = selection.endpoint): Workspace {
@@ -133,7 +133,7 @@ function workspace(endpoint = selection.endpoint): Workspace {
       discoveryError: "",
       tasks: new TaskSnapshots(),
       directory: new Directory(),
-      executionDirectory: new Directory<ExecutionPage>("executions"),
+      executionDirectory: new Directory<RunPage>("runs"),
       associatedExecutionId: "",
     };
     states.set(endpoint.binding, state);
@@ -407,19 +407,15 @@ function renderTasks(): void {
         `stage=${task.stage}${task.canceledAt ? " · 已取消" : ""} · 快照 ${task.timestamp}`,
       ),
     );
-    if (task.execution)
-      row.append(
-        button(`Execution ${task.execution.executionId.slice(-8)}`, () =>
-          openExecution(task.execution!.executionId),
-        ),
-      );
+    if (task.run)
+      row.append(button(`Run ${task.run.runId.slice(-8)}`, () => openRun(task.run!.runId)));
     rows.push(row);
   }
   view.recent = rows.length > 0;
   reconcile(container, rows);
 }
 interface Observer {
-  kind: "taskId" | "executionId";
+  kind: "taskId" | "runId";
   id: string;
   endpoint: Endpoint;
   window: EventWindow;
@@ -430,7 +426,7 @@ interface Observer {
   end: ObservationEnd;
   executionState: "unknown" | "running" | "completed" | "failed";
   reclaimed: boolean;
-  executionSummary?: ExecutionSummary;
+  executionSummary?: RunSummary;
   associated: Directory;
   template?: Favorite;
   snapshot?: TaskSnapshot;
@@ -457,7 +453,7 @@ function closeObservers(): void {
   taskObserver = undefined;
   executionObserver = undefined;
   view.text("task-detail", "选择一个 Task 查看详情。");
-  view.text("execution-detail", "选择关联 Execution 查看真实执行事实。");
+  view.text("execution-detail", "选择关联 Run 查看完整尝试事实。");
 }
 async function history(observer: Observer, next = false): Promise<void> {
   if (observer.loading) return;
@@ -566,12 +562,12 @@ function stopStream(observer: Observer, state: "paused" | "ended"): void {
 function updateFacts(observer: Observer, events: PublicEvent[]): void {
   observer.end.feed(events, observer.snapshot);
   for (const event of events)
-    if (observer.kind === "executionId" && event.executionId === observer.id) {
-      if (event.type === "execution.started" && observer.executionState === "unknown")
+    if (observer.kind === "runId" && event.runId === observer.id) {
+      if (event.type === "run.started" && observer.executionState === "unknown")
         observer.executionState = "running";
-      if (event.type === "execution.completed") observer.executionState = "completed";
-      if (event.type === "execution.failed") observer.executionState = "failed";
-      if (event.type === "execution.reclaimed") observer.reclaimed = true;
+      if (event.type === "run.completed") observer.executionState = "completed";
+      if (event.type === "run.failed") observer.executionState = "failed";
+      if (event.type === "run.reclaimed") observer.reclaimed = true;
     }
   if (observer.end.ended) stopStream(observer, "ended");
 }
@@ -654,14 +650,12 @@ async function openTask(id: string): Promise<void> {
   await history(observer);
   if (current(observer)) void live(observer);
 }
-async function openExecution(id: string): Promise<void> {
+async function openRun(id: string): Promise<void> {
   navigation.show("executions", false);
   if (!workspace().executionDirectory.page) void queryExecutions();
-  const observer = newObserver("executionId", id);
+  const observer = newObserver("runId", id);
   executionObserver = observer;
-  const summary = workspace().executionDirectory.page?.executions.find(
-    (item) => item.executionId === id,
-  );
+  const summary = workspace().executionDirectory.page?.runs.find((item) => item.runId === id);
   if (summary) {
     observer.executionSummary = summary;
     observer.end.summary(summary);
@@ -707,7 +701,7 @@ function renderObserver(observer: Observer): void {
   observationState.className = "observation-state";
   box.append(observationState);
   const refresh = inlineButton("重新观察", () =>
-    observer.kind === "taskId" ? openTask(observer.id) : openExecution(observer.id),
+    observer.kind === "taskId" ? openTask(observer.id) : openRun(observer.id),
   );
   refresh.dataset.action = "refresh";
   box.append(
@@ -749,10 +743,8 @@ function renderObserver(observer: Observer): void {
     if (task) {
       const effectiveEnd =
         task.canceledAt ??
-        task.execution?.completedAt ??
-        task.execution?.failedAt ??
-        task.preparation?.failedAt ??
-        task.allocation?.failedAt ??
+        task.run?.completedAt ??
+        task.run?.failedAt ??
         task.termination?.terminatedAt;
       const timeout = (effectiveEnd ?? task.timestamp) > task.deadlineAt;
       const state = node("p", taskStatus(task));
@@ -766,20 +758,19 @@ function renderObserver(observer: Observer): void {
       );
       if ((task.canceledAt || task.termination) && !observer.end.ended)
         box.append(
-          node("p", "任务已终结；关联执行的终结 / 回收尚未全部确认，可继续观察或手动暂停。"),
+          node("p", "Task 已终结；关联 Run 的终结 / 回收尚未全部确认，可继续观察或手动暂停。"),
         );
       box.append(starButton(observer.endpoint, task.taskId));
       box.append(
-        details("标识与准备 / 分配时间", {
+        details("Task 与完整 Run 标识", {
           taskId: task.taskId,
           requestId: task.requestId,
           receivedAt: task.receivedAt,
-          preparation: task.preparation,
-          allocation: task.allocation,
+          run: task.run,
         }),
       );
-      if (task.execution)
-        box.append(button("查看关联执行 →", () => openExecution(task.execution!.executionId)));
+      if (task.run)
+        box.append(button(`关联 Run ${task.run.runId}`, () => openRun(task.run!.runId)));
       const cancel = button(
         "取消选中的 Task",
         async () => {
@@ -791,12 +782,12 @@ function renderObserver(observer: Observer): void {
             { method: "POST" },
           );
           if (!validSnapshot(snapshot) || snapshot.taskId !== observer.id)
-            throw new Error("取消回执无效；结果未知，请刷新原 Task 核对，不代表已回收 Execution。");
+            throw new Error("取消回执无效；结果未知，请刷新原 Task 核对，不代表已回收 Run。");
           if (!current(observer)) return;
           accept(snapshot);
           observer.snapshot =
             workspace(observer.endpoint).tasks.values.get(observer.id) ?? snapshot;
-          notify("取消回执已收到；关联 Execution 是否回收请看其事件。");
+          notify("取消回执已收到；关联 Run 是否回收请看其事件。");
           updateFacts(observer, []);
           renderTasks();
           renderObserver(observer);
@@ -825,10 +816,10 @@ function renderObserver(observer: Observer): void {
     const events = observer.window.events;
     const state = node(
       "p",
-      `${({ unknown: "执行状态尚未取得", running: "执行中", completed: "已完成", failed: "执行失败" } as const)[observer.executionState]}${observer.reclaimed ? " · 已回收" : " · 回收未确认"}`,
+      `${({ unknown: "Run 状态尚未取得", running: "尝试中", completed: "已完成", failed: "Run 失败" } as const)[observer.executionState]}${observer.reclaimed ? " · 已回收" : " · 回收未确认"}`,
     );
     state.className = "status";
-    box.append(state, details("执行标识", { executionId: observer.id }));
+    box.append(state, details("Run 标识", { runId: observer.id }));
     if (observer.associated.error)
       box.append(node("p", `关联任务不可读：${observer.associated.error}`));
     if (observer.associated.page)
@@ -853,17 +844,17 @@ function renderObserver(observer: Observer): void {
       }),
     );
     const dates: Record<string, string | undefined> = {
-      "execution.started": observer.executionSummary?.startedAt,
-      "execution.completed": observer.executionSummary?.completedAt,
-      "execution.failed": observer.executionSummary?.failedAt,
-      "execution.reclaimed": observer.executionSummary?.reclaimedAt,
+      "run.started": observer.executionSummary?.startedAt,
+      "run.completed": observer.executionSummary?.completedAt,
+      "run.failed": observer.executionSummary?.failedAt,
+      "run.reclaimed": observer.executionSummary?.reclaimedAt,
     };
     for (const [kind, label] of [
-      ["execution.started", "开始"],
-      ["execution.completed", "逻辑完成"],
-      ["execution.failed", "执行故障"],
-      ["execution.sealed", "封存"],
-      ["execution.reclaimed", "回收"],
+      ["run.started", "开始"],
+      ["run.completed", "逻辑完成"],
+      ["run.failed", "执行故障"],
+      ["run.sealed", "封存"],
+      ["run.reclaimed", "回收"],
     ] as const) {
       const event = events.find((item) => item.type === kind);
       const fromSummary = dates[kind];
@@ -876,9 +867,7 @@ function renderObserver(observer: Observer): void {
     }
   }
   const ownEvents = observer.window.events.filter((event) =>
-    observer.kind === "taskId"
-      ? !event.type.startsWith("execution.")
-      : event.type.startsWith("execution."),
+    observer.kind === "taskId" ? !event.type.startsWith("run.") : event.type.startsWith("run."),
   );
   box.append(eventList("own-events", "对象事件 · 最近窗口", ownEvents));
   box.append(
@@ -901,7 +890,7 @@ function directoryQuery(): string {
   if (type.length > 256) throw new Error("类型筛选最多 256 字符。");
   if (type) query.set("type", type);
   if (selection.endpoint && workspace().associatedExecutionId)
-    query.set("executionId", workspace().associatedExecutionId);
+    query.set("runId", workspace().associatedExecutionId);
   for (const [id, key] of [
     ["created-from", "createdFrom"],
     ["created-before", "createdBefore"],
@@ -1077,7 +1066,7 @@ async function associatedTasks(observer: Observer, append = false): Promise<void
     await observer.associated.load(
       (query) =>
         api.request(observer.endpoint, `/tasks?${query}`, { signal: observer.controller.signal }),
-      new URLSearchParams({ executionId: observer.id, sort: "created-desc" }).toString(),
+      new URLSearchParams({ runId: observer.id, sort: "created-desc" }).toString(),
       append,
       () => current(observer),
     );
@@ -1112,7 +1101,7 @@ async function queryExecutions(append = false): Promise<void> {
     }
     started = true;
     const accepted = await state.executionDirectory.load(
-      (query) => api.request(state.endpoint, `/executions?${query}`, { signal: lease.signal }),
+      (query) => api.request(state.endpoint, `/runs?${query}`, { signal: lease.signal }),
       query,
       append,
       lease.current,
@@ -1140,7 +1129,7 @@ function renderExecutions(): void {
     box.append(
       node(
         "p",
-        `已加载 ${directory.page.executions.length} 个执行 · 查询快照 ${directory.page.observedAt} · 有效至 ${directory.page.expiresAt}`,
+        `已加载 ${directory.page.runs.length} 个 Run · 查询快照 ${directory.page.observedAt} · 有效至 ${directory.page.expiresAt}`,
       ),
     );
     if (directory.dropped)
@@ -1152,13 +1141,13 @@ function renderExecutions(): void {
     const thead = node("thead");
     thead.append(head);
     table.append(thead);
-    for (const execution of directory.page.executions) {
+    for (const execution of directory.page.runs) {
       const row = node("tr"),
         title = node("td");
-      row.dataset.key = `execution:${execution.executionId}`;
+      row.dataset.key = `run:${execution.runId}`;
       title.append(
-        button(execution.type, () => openExecution(execution.executionId)),
-        node("small", execution.executionId.slice(-8)),
+        button(execution.type, () => openRun(execution.runId)),
+        node("small", execution.runId.slice(-8)),
       );
       row.append(
         title,
@@ -1172,7 +1161,7 @@ function renderExecutions(): void {
     }
     table.append(tbody);
     box.append(table);
-    if (!directory.page.executions.length) box.append(node("p", "没有符合筛选的执行记录。"));
+    if (!directory.page.runs.length) box.append(node("p", "没有符合筛选的 Run 记录。"));
     box.append(
       button(
         "执行目录下一页",
@@ -1551,13 +1540,11 @@ async function start(): Promise<void> {
     taskId.label,
     button("打开 Task", () => openTask((get("task-id-input") as HTMLInputElement).value.trim())),
   ]);
-  const executionId = input("按 Execution ID 打开");
+  const executionId = input("按 Run ID 打开");
   executionId.input.id = "execution-id-input";
   view.render("execution-lookup", [
     executionId.label,
-    button("打开 Execution", () =>
-      openExecution((get("execution-id-input") as HTMLInputElement).value.trim()),
-    ),
+    button("打开 Run", () => openRun((get("execution-id-input") as HTMLInputElement).value.trim())),
   ]);
   window.addEventListener("pagehide", () => {
     closeObservers();

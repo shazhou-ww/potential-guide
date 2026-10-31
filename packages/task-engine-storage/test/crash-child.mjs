@@ -1,12 +1,11 @@
 import { createTaskEngine } from "@potential-guide/task-engine";
 import { VirtualClock } from "@potential-guide/task-engine/testing";
-import { at, json } from "@potential-guide/task-protocol";
+import { at, TaskError } from "@potential-guide/task-protocol";
 import { openSqliteStore } from "../dist/index.js";
 
 const [filename, mode, requestId] = process.argv.slice(2);
 const clock = new VirtualClock();
 let armed = false;
-let taskId;
 const store = openSqliteStore(filename, {
   fault(point) {
     if (
@@ -22,31 +21,29 @@ const type = {
   version: "1",
   environment: "test",
   inputSchema: { type: "object" },
-  prepare: async (input) => input,
-  validatePrepared: json,
-  validateResult: json,
-  validateProgress: json,
-  async execute(_input, options) {
-    armed = mode.startsWith("startup-");
-    const permit = options.start();
-    if (mode.startsWith("terminate-")) {
-      engine.submit(
-        {
-          requestId: requestId.slice(0, -1) + (requestId.endsWith("0") ? "1" : "0"),
-          type: "echo",
-          text: "crash",
-          timeoutMs: 1000,
-          executionMatch: "terminated-after-eligible",
-        },
-        { scope: "a", subject: "tester" },
-      );
-      armed = true;
-      if (mode.includes("-failed-")) permit.fail({ code: "business", message: "Durable failure" });
-      else permit.complete({ text: "durable final" });
-    }
-    if (mode === "completed") permit.complete({ text: "durable final" });
-    process.send?.({ taskId, executionId: permit.executionId });
-    process.exit(17);
+  resultSchema: true,
+  messageSchema: false,
+  module: new URL("./crash-worker.mjs", import.meta.url).href,
+  exportName: "createType",
+  configuration: {},
+  resources: {
+    async effect() {
+      if (mode.startsWith("terminate-")) {
+        engine.submit(
+          {
+            requestId: requestId.slice(0, -1) + (requestId.endsWith("0") ? "1" : "0"),
+            type: "echo",
+            text: "crash",
+            timeoutMs: 1000,
+            matchPolicy: "terminated-after-eligible",
+          },
+          { scope: "a", subject: "tester" },
+        );
+        armed = true;
+        if (mode.includes("-failed-")) throw new TaskError("business", "Durable failure");
+      }
+      return { text: "durable final" };
+    },
   },
 };
 const engine = createTaskEngine({
@@ -56,30 +53,45 @@ const engine = createTaskEngine({
   currentVersions: { echo: "1" },
   authorize: () => true,
 });
-engine.start();
+await engine.start();
 if (mode === "owner") {
   process.send?.({ owned: true });
-  // Keep the virtual-clock Engine reachable while this process owns its lease.
   setInterval(() => engine.tick(), 1000);
 } else {
   armed = mode.startsWith("submit-");
-  const raw = {
-    requestId,
-    type: "echo",
-    text: "crash",
-    timeoutMs: 1000,
-    ...(mode === "future" ? { eligibleAt: at(clock.now() + 100) } : {}),
-    ...(mode.startsWith("successor-") ? { recurrence: { anchor: "eligible", periodMs: 100 } } : {}),
-  };
-  const task = engine.submit(raw, { scope: "a", subject: "tester" });
-  taskId = task.taskId;
+  const task = engine.submit(
+    {
+      requestId,
+      type: "echo",
+      text: "crash",
+      timeoutMs: 1000,
+      ...(mode === "future" ? { eligibleAt: at(clock.now() + 100) } : {}),
+      ...(mode.startsWith("successor-")
+        ? { recurrence: { anchor: "eligible", periodMs: 100 } }
+        : {}),
+    },
+    { scope: "a", subject: "tester" },
+  );
   if (mode === "future") {
-    process.send?.({ taskId });
+    process.send?.({ taskId: task.taskId });
     process.exit(17);
   }
-  armed = mode.startsWith("successor-");
+  armed = mode.startsWith("successor-") || mode.startsWith("startup-");
   clock.advance(1);
   engine.tick();
-  for (let index = 0; index < 30; index++) await Promise.resolve();
-  engine.tick();
+  if (!mode.startsWith("terminate-") && mode !== "completed") {
+    process.send?.({
+      taskId: task.taskId,
+      runId: engine.getTask(task.taskId, { scope: "a", subject: "tester" }).run?.runId,
+    });
+    process.exit(17);
+  }
+  for (let count = 0; count < 1000; count++) {
+    if (engine.getTask(task.taskId, { scope: "a", subject: "tester" }).termination) {
+      process.send?.({ taskId: task.taskId });
+      process.exit(17);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  throw new Error("终结未到达。");
 }

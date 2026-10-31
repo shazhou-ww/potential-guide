@@ -1,16 +1,9 @@
 import type { Json, JsonObject } from "./json.js";
+import type { TypeWorkerRegistration } from "./run.js";
 import type { InputSchema } from "./schema.js";
 
-export type Stage =
-  | "initial"
-  | "preparing"
-  | "queued"
-  | "running"
-  | "completed"
-  | "preparation_failed"
-  | "allocation_failed"
-  | "execution_failed";
-export type ExecutionMatch = "started-after-eligible" | "terminated-after-eligible";
+export type Stage = "initial" | "running" | "completed" | "run_failed";
+export type MatchPolicy = "started-after-eligible" | "terminated-after-eligible";
 export interface Recurrence {
   periodMs: number;
   anchor: "eligible" | "terminated";
@@ -21,7 +14,7 @@ export type TaskRequest = JsonObject & {
   timeoutMs: number;
   eligibleAt?: string;
   seriesId?: string;
-  executionMatch?: ExecutionMatch;
+  matchPolicy?: MatchPolicy;
   recurrence?: Recurrence & JsonObject;
 };
 export interface ErrorFact {
@@ -38,9 +31,13 @@ export interface TaskSnapshot {
   deadlineAt: string;
   timestamp: string;
   canceledAt?: string;
-  preparation?: { startedAt: string; completedAt?: string; failedAt?: string };
-  allocation?: { boundAt?: string; failedAt?: string };
-  execution?: { executionId: string; startedAt: string; completedAt?: string; failedAt?: string };
+  run?: {
+    runId: string;
+    startedAt: string;
+    matchedAt?: string;
+    completedAt?: string;
+    failedAt?: string;
+  };
   termination?: { terminatedAt: string };
   error?: ErrorFact;
   result?: Json;
@@ -52,7 +49,7 @@ export interface Binding {
   environment: string;
   scope: string;
   subject: string;
-  executionMatch: ExecutionMatch;
+  matchPolicy: MatchPolicy;
 }
 export interface TaskRecord {
   receivedSequence: number;
@@ -61,17 +58,15 @@ export interface TaskRecord {
   request: TaskRequest;
   binding: Binding;
   input: Json;
-  prepared?: Json;
-  releaseExecutionIds?: string[];
+  releaseRunIds?: string[];
   snapshot: TaskSnapshot;
   successor?: { requestId: string; taskId: string };
 }
-export interface ExecutionRecord {
-  executionId: string;
+export interface RunRecord {
+  runId: string;
   generation: string;
   binding: Binding;
   input: Json;
-  prepared: Json;
   startedAt: string;
   startedSequence: number;
   terminatedSequence?: number;
@@ -82,30 +77,51 @@ export interface ExecutionRecord {
   result?: Json;
   error?: ErrorFact;
   reclaimedAt?: string;
+  workerGeneration?: string;
+  evidence?: { kind: "checkpoint" | "late-completed" | "late-failed"; value: Json }[];
+  cleanupUnknown?: { reason: string; observedAt: string };
 }
 export interface Facts {
-  projectionVersion: 2;
+  projectionVersion: 3;
   watermark: number;
   tasks: Record<string, TaskRecord>;
-  executions: Record<string, ExecutionRecord>;
+  runs: Record<string, RunRecord>;
+  messages: Record<string, TaskMessageRecord>;
+}
+export interface TaskMessageRecord {
+  taskId: string;
+  messageId: string;
+  runId: string;
+  generation: string;
+  caller: Caller;
+  payload: Json;
+  receivedAt: string;
+  state: "queued" | "accepted" | "rejected" | "unknown";
+  resolvedAt?: string;
+  reason?: string;
 }
 export interface EventData {
   "task.created": { task: TaskRecord };
-  "task.preparation.started": Record<string, never>;
-  "task.preparation.completed": { prepared: Json };
-  "task.preparation.failed": { error: ErrorFact };
-  "task.allocation.bound": { executionId: string };
-  "task.allocation.failed": { error: ErrorFact };
-  "task.terminated": { executionId?: string; error?: ErrorFact };
-  "task.canceled": { executionIds?: string[] };
+  "task.run.bound": { runId: string };
+  "task.terminated": { runId?: string; error?: ErrorFact };
+  "task.canceled": { runIds?: string[] };
   "task.successor": { requestId: string; taskId: string };
-  "execution.started": { execution: ExecutionRecord };
-  "execution.progress": { progress: Json };
-  "execution.completed": { result: Json };
-  "execution.failed": { error: ErrorFact };
-  "execution.sealed": { taskIds: string[] };
-  "execution.reclaimed": Record<string, never>;
-  "records.forgotten": { taskIds: string[]; executionIds: string[] };
+  "run.started": { run: RunRecord };
+  "run.dispatched": { workerGeneration: string };
+  "run.evidence": { kind: "checkpoint" | "late-completed" | "late-failed"; value: Json };
+  "run.progress": { progress: Json };
+  "run.completed": { result: Json };
+  "run.failed": { error: ErrorFact; result?: Json };
+  "run.sealed": { taskIds: string[] };
+  "run.reclaimed": Record<string, never>;
+  "run.cleanup.unknown": { reason: string };
+  "message.received": { message: TaskMessageRecord };
+  "message.resolved": {
+    messageId: string;
+    state: "accepted" | "rejected" | "unknown";
+    reason?: string;
+  };
+  "records.forgotten": { taskIds: string[]; runIds: string[] };
 }
 export type EventKind = keyof EventData;
 export type FactEvent = {
@@ -115,7 +131,7 @@ export type FactEvent = {
     occurredAt: string;
     scope: string;
     taskId?: string;
-    executionId?: string;
+    runId?: string;
     data: EventData[K];
   };
 }[EventKind];
@@ -155,7 +171,8 @@ export type Operation =
   | "history"
   | "subscribe"
   | "list"
-  | "list-executions";
+  | "list-runs"
+  | "message";
 export type Authorize = (caller: Caller, operation: Operation, scope: string) => boolean;
 export interface PreparationOptions {
   signal: AbortSignal;
@@ -164,7 +181,7 @@ export interface PreparationOptions {
   context?: Readonly<Pick<Binding, "type" | "version" | "environment" | "scope">>;
 }
 export interface StartPermit {
-  executionId: string;
+  runId: string;
   generation: string;
   startedAt: string;
   progress(value: unknown): void;
@@ -174,48 +191,19 @@ export interface StartPermit {
 export interface ExecuteOptions {
   context: Readonly<Pick<Binding, "type" | "version" | "environment" | "scope">>;
   signal: AbortSignal;
-  replaceExecutionId?: string;
+  replaceRunId?: string;
   start(): StartPermit;
-  authorizeReplacement(executionId: string, generation: string): boolean;
+  authorizeReplacement(runId: string, generation: string): boolean | Promise<boolean>;
 }
-export interface ExecutionTracking {
-  executionId: string;
+export interface RunTracking {
+  runId: string;
   generation: string;
   startedAt: string;
   finished: Promise<void>;
   reclaim(reason: string): Promise<void>;
 }
-export interface TaskType<Input = Json, Prepared = Input> {
-  type: string;
-  /** Trusted isolated allocation capacity; omitted types share the Engine default lane. */
-  allocationLimit?: number;
-  version: string;
-  environment: string;
-  inputSchema: InputSchema;
-  /** Synchronous authorization, independent of preparation; Prepared belongs to the candidate Execution. */
-  authorize?(input: Input, context: Readonly<Binding>, prepared?: Prepared, result?: Json): void;
-  prepare(input: Input, options: PreparationOptions): Promise<Prepared>;
-  validatePrepared(prepared: unknown): Prepared;
-  validateResult(result: unknown): Json;
-  validateExecutionResult?(result: unknown, prepared: Prepared): Json;
-  validateProgress(progress: unknown): Json;
-  execute(prepared: Prepared, options: ExecuteOptions): Promise<ExecutionTracking>;
-}
-export interface RegisteredType {
-  type: string;
-  allocationLimit?: number;
-  version: string;
-  environment: string;
-  inputSchema: InputSchema;
-  authorize?(input: never, context: Readonly<Binding>, prepared?: never, result?: Json): void;
-  prepare(input: never, options: PreparationOptions): Promise<unknown>;
-  validatePrepared(prepared: unknown): unknown;
-  validateResult(result: unknown): Json;
-  validateExecutionResult?(result: unknown, prepared: never): Json;
-  validateProgress(progress: unknown): Json;
-  execute(prepared: never, options: ExecuteOptions): Promise<ExecutionTracking>;
-}
-export type HistoryFilter = { taskId: string } | { executionId: string } | { seriesId: string };
+export interface RegisteredType extends TypeWorkerRegistration {}
+export type HistoryFilter = { taskId: string } | { runId: string } | { seriesId: string };
 export interface HistoryPage {
   events: PublicEvent[];
   watermark: number;
@@ -235,7 +223,7 @@ export interface Subscription {
 }
 export interface TaskQuery {
   type?: string;
-  executionId?: string;
+  runId?: string;
   createdFrom?: string;
   createdBefore?: string;
   updatedFrom?: string;
@@ -256,7 +244,7 @@ export interface TaskSummary {
     timedOut: boolean;
     canceled: boolean;
     completed: boolean;
-    executionFailed: boolean;
+    runFailed: boolean;
   };
 }
 export interface TaskPage {
@@ -266,14 +254,14 @@ export interface TaskPage {
   expiresAt: string;
   next?: string;
 }
-export interface ExecutionQuery {
+export interface RunQuery {
   type?: string;
   startedFrom?: string;
   startedBefore?: string;
   sort?: "started-desc";
 }
-export interface ExecutionSummary {
-  executionId: string;
+export interface RunSummary {
+  runId: string;
   type: string;
   version: string;
   startedAt: string;
@@ -288,31 +276,34 @@ export interface ExecutionSummary {
     sealed: boolean;
   };
 }
-export interface ExecutionPage {
-  executions: ExecutionSummary[];
+export interface RunPage {
+  runs: RunSummary[];
   observedAt: string;
   expiresAt: string;
   next?: string;
 }
 export interface TaskService {
+  sendTaskMessage(
+    taskId: string,
+    messageId: string,
+    payload: unknown,
+    caller: Caller,
+  ): TaskMessageRecord;
+  getTaskMessage(taskId: string, messageId: string, caller: Caller): TaskMessageRecord;
   discoverTypes(caller: Caller): readonly TaskTypeDiscovery[];
   submit(request: unknown, caller: Caller, options?: SubmitOptions): TaskSnapshot;
   getRequest(requestId: string, caller: Caller): TaskRequest;
   getTask(taskId: string, caller: Caller): TaskSnapshot;
   cancelTask(taskId: string, caller: Caller): TaskSnapshot;
   listTasks(query: TaskQuery, page: { cursor?: string; limit?: number }, caller: Caller): TaskPage;
-  listExecutions(
-    query: ExecutionQuery,
-    page: { cursor?: string; limit?: number },
-    caller: Caller,
-  ): ExecutionPage;
+  listRuns(query: RunQuery, page: { cursor?: string; limit?: number }, caller: Caller): RunPage;
   readHistory(
     filter: HistoryFilter,
     page: { cursor?: string; limit?: number },
     caller: Caller,
   ): HistoryPage;
   subscribe(filter: HistoryFilter, resume: string | undefined, caller: Caller): Subscription;
-  start(): void;
+  start(): Promise<void>;
   close(): Promise<void>;
 }
 export interface TaskTypeDiscovery {

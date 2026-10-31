@@ -1,41 +1,16 @@
 # @potential-guide/task-protocol
 
-Pure generic Task DTOs, finite-JSON validation, extension ports and event projection.
-No scheduler, database, HTTP listener or built-in business task.
+通用 Task/完整 Run 的 JSON、schema、请求、事件、Store 与服务边界。
+TaskType 仅声明 type/version/inputSchema/resultSchema/messageSchema 和完整 run 入口；
+Host 用 RegisteredType 本地模块描述注册，不传动态函数对象给 Engine。
 
-`TaskType<Input, Prepared = Input>` declares one public `inputSchema` (JSON Schema
-Draft 2020-12, root object), plus `prepare`, `validatePrepared`, result/progress
-validators and queued `execute`. Authors no longer supply input validate/equals.
-`compileInputSchema<Input>(schema, limits?)` returns frozen
-`{inputSchema, revision, validate, equals}` for direct consumers. Validation never
-coerces, fills defaults or removes fields. Equality compares independent structural
-projections, including invalid finite-JSON operands; it never invokes validation.
-Resource failures throw instead of returning an equality result.
-Optional `authorize(input, binding, executionPrepared?, result?)` is synchronous;
-Promise grants are rejected rather than awaited or treated as permission.
+matchPolicy / MatchPolicy 保持 started-after-eligible、terminated-after-eligible 两值，
+时间对应 Run 开始/逻辑终结，不对应业务 Execution。Stage 为 initial/running/completed/run_failed；
+Progress 另用 preparation/allocation/execution、可选有限 0–100 percent 与展示字符串。
 
-The only match policies are `started-after-eligible` (default) and
-`terminated-after-eligible`. They bind only at their corresponding Execution
-event, with an inclusive effective-eligibility lower bound. Termination means
-success or failure, not physical cleanup. Prepared does not gate matching.
-Facts use projection version 2; old formats and `completed-after-eligible`
-are rejected, not silently reinterpreted.
+messageSchema 支持 boolean，false 是 Never，{} / true 不是 Never。
+messages 必选、Task 归属及确认与生命周期控制分离；checkpoint 是独立、按 resultSchema 验证的机器证据。
+公共服务消息操作使用 taskId/messageId、可信 Caller、持久化状态，不改 Input/deadline。
 
-`reduce(prefix, events)` and `project(facts, taskId, explicitTime)` are pure.
-Use `isPending`, `isTimedOut`, `isCanceled`, `isCompleted` and `isExecutionFailed`
-independently: cancellation freezes process facts; late completion can also be
-timed out. A finish exactly at the deadline is on time. Results are stored once
-on Execution and projected through Task's completion association.
-
-`TaskService.listTasks(TaskQuery, page, caller)` exposes a bounded, stable
-directory of retained Task summaries, separate from event history. `TaskPage`
-contains observation/expiry times and an optional opaque continuation cursor.
-Authorization uses the distinct `list` operation. Summary `updatedAt` follows
-accepted Task changes and bound live Execution progress, not read time.
-The optional stored `TaskRecord.updatedAt` preserves supported v2 checkpoints
-with their original `contractRevision` but without update metadata;
-`restoreTaskUpdates(StoreView)` reconstructs absent values from protected retained
-events, failing on missing history rather than guessing a timestamp.
-It does not invent a missing contract identity or bypass original-schema checks.
-
-See [the engine guide](../../docs/task-engine.md) for ports and composition.
+Facts projection v3；旧版本明确拒绝，无隐式数据迁移。
+完整协议与历史/取消/资源边界见 [Task Engine](../../docs/task-engine.md)。

@@ -1,5 +1,4 @@
 import { MemoryStore } from "@potential-guide/task-engine/testing";
-import { json } from "@potential-guide/task-protocol";
 
 const mode = process.env.STARTUP_FAILURE_MODE;
 setInterval(() => {}, 1000);
@@ -16,13 +15,11 @@ export default async function configure() {
         version: "1",
         environment: "test",
         inputSchema: { type: "object" },
-        prepare: async (value) => value,
-        validatePrepared: json,
-        validateResult: json,
-        validateProgress: json,
-        execute: async () => {
-          throw new Error("Invalid configuration must not execute work.");
-        },
+        resultSchema: true,
+        messageSchema: false,
+        module: new URL("./echo-worker.mjs", import.meta.url).href,
+        exportName: "createEcho",
+        configuration: {},
       },
     ],
     currentVersions: { missing: "1" },

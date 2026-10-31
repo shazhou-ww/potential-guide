@@ -6,9 +6,9 @@ import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 import { Worker } from "node:worker_threads";
 import {
-  parseCheckerResult,
   type CheckerManifest,
   type ContractArtifact,
+  parseCheckerResult,
 } from "@potential-guide/check-artifacts/contracts";
 import type { RunningWork } from "@potential-guide/task-engine/pool";
 import type { StartPermit } from "@potential-guide/task-protocol";
@@ -20,9 +20,10 @@ export interface WorkerOptions {
   cleanupMs: number;
   memoryMb: number;
   environment: Readonly<Record<string, string>>;
+  onStart?: () => void;
 }
 
-/** One physical worker per execution; all scheduling and ownership stay in Engine/Pool. */
+/** One physical worker per run; all scheduling and ownership stay in Engine/Pool. */
 export function runChecker(
   prepared: CheckPrepared,
   artifact: ContractArtifact<CheckerManifest>,
@@ -79,7 +80,7 @@ export function runChecker(
     worker.postMessage({
       version: 1,
       generation: permit.generation,
-      checkId: permit.executionId,
+      checkId: permit.runId,
       type,
       ...fields,
     });
@@ -92,7 +93,7 @@ export function runChecker(
     })());
   const deadline = Date.now() + options.wallMs;
   const timer = setTimeout(() => {
-    failure ??= new Error("Checker execution or disposal deadline exceeded.");
+    failure ??= new Error("Checker run or disposal deadline exceeded.");
     void force();
   }, options.wallMs);
   worker.on("message", (message) => {
@@ -103,6 +104,7 @@ export function runChecker(
           send("dispose");
           return;
         }
+        options.onStart?.();
         send("execute", {
           subject: prepared.input.subject,
           context: { ...prepared.input.context, language: prepared.language },
@@ -111,7 +113,7 @@ export function runChecker(
       } else if (message.type === "initialization-failed") {
         failure = new Error("Checker initialization failed.");
         void force();
-      } else if (message.checkId === permit.executionId) {
+      } else if (message.checkId === permit.runId) {
         if (message.type === "owned") {
           if (!Number.isSafeInteger(message.pid) || message.pid <= 0 || message.pid === process.pid)
             throw new Error("Invalid owned child identity.");
@@ -122,9 +124,7 @@ export function runChecker(
         if (message.type === "done") {
           done = true;
           if (!message.clean || message.error || owned.size || message.cancelled)
-            throw new Error(
-              message.clean ? "Checker execution failed." : "Checker cleanup failed.",
-            );
+            throw new Error(message.clean ? "Checker run failed." : "Checker cleanup failed.");
           value = parseCheckerResult(message.result, artifact.manifest);
           send("dispose");
         }
@@ -153,7 +153,7 @@ export function runChecker(
     },
     force,
     async cleanup() {
-      // Only process IDs reported by this execution are candidates for reclamation.
+      // Only process IDs reported by this run are candidates for reclamation.
       for (const pid of owned) {
         if (process.platform === "win32") {
           try {

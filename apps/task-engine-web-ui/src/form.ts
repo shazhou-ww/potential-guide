@@ -6,7 +6,7 @@ export const envelopeKeys = [
   "timeoutMs",
   "eligibleAt",
   "seriesId",
-  "executionMatch",
+  "matchPolicy",
   "recurrence",
 ];
 export const envelopeSchema: Schema = {
@@ -17,7 +17,7 @@ export const envelopeSchema: Schema = {
     timeoutMs: { type: "integer", title: "超时预算 timeoutMs（毫秒）", minimum: 1 },
     eligibleAt: { type: "string", title: "资格时间 eligibleAt（带时区 ISO 时间）" },
     seriesId: { type: "string", title: "seriesId（可选原样保留）" },
-    executionMatch: {
+    matchPolicy: {
       type: "string",
       enum: ["started-after-eligible", "terminated-after-eligible"],
     },

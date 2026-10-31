@@ -30,12 +30,13 @@ using submit authorization. POST `/tasks` optionally accepts
 never fetches artifacts or their subject schemas. Check/Probe examples register
 type version 2; retain original identity-bearing contracts for historical recovery.
 
-GET `/executions` lists frozen, scope-authorized Execution summaries using the
-independent `list-executions` operation. Update explicit operation allowlists.
-It does not expose inputs/results or Task associations. The latter are queried
-through GET `/tasks?executionId=...` with separate Task `list` authority.
-Both directory cursor domains are independent and expire on restart/retention;
-see [directory contracts](task-engine.md#execution-directory).
+GET `/runs` 通过独立 `list-runs` 权限返回按 scope 授权的冻结完整 Run 摘要；
+明确更新允许列表，不从 Task 权限推导 Run 目录权限。摘要不含 Input/Result/owner。
+已绑定关联需求通过 GET `/tasks?runId=...` 及独立 Task `list` 权限查询。
+两种目录的游标域独立，重启/历史清理后失效；见
+[目录契约](task-engine.md#授权目录与查询)。旧目录与查询字段不提供兼容别名。
+类型必须提供静态 RegisteredType，动态模块只在类型守护 Worker 导入。
+Facts/SQLite v3 拒绝旧数据库；新部署须选择新路径，不能覆盖现有用户数据。
 
 The HTTP protocol includes POST `/tasks` with `Idempotency-Key`, GET
 `/tasks/:id`, POST `/tasks/:id/cancel`, GET `/event-history?taskId=...`, GET

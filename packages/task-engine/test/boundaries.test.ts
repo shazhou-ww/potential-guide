@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { type JsonObject, json, type TaskType } from "@potential-guide/task-protocol";
-import { createTaskEngine, newId } from "../src/index.js";
+import { type JsonObject, json } from "@potential-guide/task-protocol";
+import { newId } from "../src/index.js";
 import { createExecutorPool } from "../src/pool.js";
 import { MemoryStore } from "../src/testing.js";
+import type { LifecycleFixture } from "./driver.js";
+import { createFixtureEngine as createTaskEngine } from "./driver.js";
 import { caller, flush, harness, validateEcho } from "./fixtures.js";
 
 test("startup captures one trusted timestamp even if time advances on every clock read", async () => {
@@ -15,7 +17,7 @@ test("startup captures one trusted timestamp even if time advances on every cloc
     resourceKey: () => "js",
     run(input, permit) {
       starts++;
-      const event = store.read().events.find((event) => event.type === "execution.started");
+      const event = store.read().events.find((event) => event.type === "run.started");
       assert.equal(event?.occurredAt, permit.startedAt);
       return {
         result: Promise.resolve(input),
@@ -26,7 +28,7 @@ test("startup captures one trusted timestamp even if time advances on every cloc
       };
     },
   });
-  const type: TaskType<JsonObject> = {
+  const type: LifecycleFixture<JsonObject> = {
     type: "echo",
     version: "1",
     environment: "js",
@@ -49,7 +51,7 @@ test("startup captures one trusted timestamp even if time advances on every cloc
     currentVersions: { echo: "1" },
     authorize: () => true,
   });
-  engine.start();
+  await engine.start();
   try {
     const task = engine.submit(
       { requestId: newId(), type: "echo", text: "time", timeoutMs: 10000 },
@@ -62,7 +64,7 @@ test("startup captures one trusted timestamp even if time advances on every cloc
     engine.tick();
     assert.equal(starts, 1);
     assert.equal(engine.getTask(task.taskId, caller).stage, "completed");
-    assert.ok(Object.values(store.read().facts.executions)[0]?.reclaimedAt);
+    assert.ok(Object.values(store.read().facts.runs)[0]?.reclaimedAt);
   } finally {
     await engine.close();
     await pool.close();
@@ -75,8 +77,6 @@ test("failed durable startup prevents business invocation and releases reserved 
   try {
     const task = h.submit();
     h.clock.advance(1);
-    h.engine.tick();
-    await flush();
     let armed = true;
     h.store.beforeCommit = () => {
       if (armed) {
@@ -88,9 +88,9 @@ test("failed durable startup prevents business invocation and releases reserved 
     await flush();
     assert.equal(h.work.length, 0);
     assert.equal(h.pool.stats.idle, 2);
-    assert.equal(h.engine.getTask(task.taskId, caller).stage, "allocation_failed");
-    assert.equal(h.engine.getTask(task.taskId, caller).error?.code, "storage_failure");
-    assert.equal(Object.keys(h.store.read().facts.executions).length, 0);
+    assert.equal(h.engine.getTask(task.taskId, caller).stage, "initial");
+    assert.ok(h.engine.errors.some((error) => error.code === "storage_failure"));
+    assert.equal(Object.keys(h.store.read().facts.runs).length, 0);
   } finally {
     await h.close();
   }
@@ -119,11 +119,17 @@ test("Task and event backpressure preserve final facts and expose payload failur
   try {
     const task = h.submit();
     await h.turn();
-    for (let index = 0; index < 100; index++) h.work[0]?.permit.progress({ index });
+    assert.throws(
+      () => {
+        for (let index = 0; index < 100; index++)
+          h.work[0]?.permit.progress({ stage: "execution", message: String(index) });
+      },
+      { code: "capacity_exceeded" },
+    );
     await flush();
     h.engine.tick();
     await flush();
-    assert.equal(h.engine.getTask(task.taskId, caller).stage, "execution_failed");
+    assert.equal(h.engine.getTask(task.taskId, caller).stage, "run_failed");
     assert.equal(h.engine.getTask(task.taskId, caller).error?.code, "capacity_exceeded");
     assert.ok(h.store.read().events.length <= 64);
     assert.equal(h.pool.stats.idle, 2);
@@ -132,7 +138,7 @@ test("Task and event backpressure preserve final facts and expose payload failur
   }
 });
 
-test("execution wall timer survives business-clock rollback independently of Task deadline", async () => {
+test("run wall timer survives business-clock rollback independently of Task deadline", async () => {
   const h = harness({ limits: { executionWallMs: 5 } });
   try {
     const task = h.submit({ timeoutMs: 1000 });
@@ -141,7 +147,7 @@ test("execution wall timer survives business-clock rollback independently of Tas
     await h.turn(5);
     await flush();
     h.engine.tick();
-    assert.equal(h.engine.getTask(task.taskId, caller).stage, "execution_failed");
+    assert.equal(h.engine.getTask(task.taskId, caller).stage, "run_failed");
     assert.equal(h.work[0]?.stops.length, 1);
     assert.equal(h.pool.stats.idle, 2);
   } finally {

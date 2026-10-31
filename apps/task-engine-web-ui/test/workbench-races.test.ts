@@ -311,11 +311,11 @@ test("actual browser entry ignores delayed real favorites responses and paginate
 
     for (let index = 0; index < 11; index++) await create(`execution-${index}`);
     await until(async () => {
-      const page = backend.engine.listExecutions({}, {}, { scope: "one", subject: "ui" });
+      const page = backend.engine.listRuns({}, {}, { scope: "one", subject: "ui" });
       return (
         !!page.next &&
-        backend.engine.listExecutions({}, { cursor: page.next }, { scope: "one", subject: "ui" })
-          .executions.length === 4
+        backend.engine.listRuns({}, { cursor: page.next }, { scope: "one", subject: "ui" }).runs
+          .length === 4
       );
     }, "fixture should expose 14 executions");
     const from = new Date(Date.now() - 60000).toISOString(),
@@ -338,7 +338,7 @@ test("actual browser entry ignores delayed real favorites responses and paginate
       () => document.querySelectorAll("#execution-directory tbody tr").length === 14,
       "continuation must ignore unapplied invalid filters",
     );
-    const reads = browserRequests.filter((url) => url.pathname.endsWith("/executions"));
+    const reads = browserRequests.filter((url) => url.pathname.endsWith("/runs"));
     assert.equal(reads.length, 2);
     assert.equal(reads[1]!.searchParams.get("type"), "echo");
     assert.equal(reads[1]!.searchParams.get("startedFrom"), from);
@@ -351,7 +351,7 @@ test("actual browser entry ignores delayed real favorites responses and paginate
       () => element("#execution-directory").textContent!.includes("真实日期"),
       "new queries must still validate new filters",
     );
-    assert.equal(browserRequests.filter((url) => url.pathname.endsWith("/executions")).length, 2);
+    assert.equal(browserRequests.filter((url) => url.pathname.endsWith("/runs")).length, 2);
     assert.equal(document.querySelectorAll("#execution-directory tbody tr").length, 14);
   } finally {
     holdNext = false;

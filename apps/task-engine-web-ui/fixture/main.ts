@@ -18,7 +18,7 @@ const server = await startTaskServer({
   currentVersions: { echo: "1", survey: "1" },
   authorize: (caller, operation, scope) =>
     caller.scope === scope &&
-    (caller.subject !== "directory" || ["list", "list-executions"].includes(operation)),
+    (caller.subject !== "directory" || ["list", "list-runs"].includes(operation)),
   resolveCaller(request) {
     const bearer = request.headers.get("authorization");
     if (bearer === `Bearer ${token}`) return { scope: "demo", subject: "full" };

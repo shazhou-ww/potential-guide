@@ -4,8 +4,9 @@ import { mkdir, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
-import { createTaskEngine, newId } from "@potential-guide/task-engine";
+import { createTaskEngine as createProductionEngine, newId } from "@potential-guide/task-engine";
 import { at, type FactEvent, type Facts, type NewEvent } from "@potential-guide/task-protocol";
+import { createFixtureEngine as createTaskEngine } from "../../task-engine/test/driver.js";
 import { caller, harness } from "../../task-engine/test/fixtures.js";
 import { openSqliteStore } from "../src/index.js";
 
@@ -48,7 +49,7 @@ test("SQLite v2 exact progress backfill, original validators, restart and protec
     h.engine.cancelTask(canceled.taskId, caller);
     const canceledAt = at(h.clock.now());
     h.clock.setTime(h.clock.now() + 10);
-    h.work[0]?.permit.progress({ ratio: 0.5 });
+    h.work[0]?.permit.progress({ stage: "execution", percent: 50, message: "" });
     const progressAt = at(h.clock.now());
     const history = h.store.read();
     const seed = openSqliteStore(filename);
@@ -76,7 +77,7 @@ test("SQLite v2 exact progress backfill, original validators, restart and protec
         currentVersions: { echo: "2" },
         authorize: () => true,
       });
-      assert.throws(() => unsupported.start(), { code: "unsupported_version" });
+      await assert.rejects(unsupported.start(), { code: "unsupported_version" });
       const changedSchema = createTaskEngine({
         store,
         clock: h.clock,
@@ -84,15 +85,18 @@ test("SQLite v2 exact progress backfill, original validators, restart and protec
         currentVersions: { echo: "1" },
         authorize: () => true,
       });
-      assert.throws(() => changedSchema.start(), { code: "unsupported_contract" });
-      const coercing = createTaskEngine({
-        store,
-        clock: h.clock,
-        types: [{ ...h.type, validatePrepared: () => ({ text: "reinterpretation" }) }],
-        currentVersions: { echo: "1" },
-        authorize: () => true,
-      });
-      assert.throws(() => coercing.start(), { code: "invalid_type" });
+      await assert.rejects(changedSchema.start(), { code: "unsupported_contract" });
+      assert.throws(
+        () =>
+          createProductionEngine({
+            store,
+            clock: h.clock,
+            types: [h.type as unknown as import("@potential-guide/task-protocol").RegisteredType],
+            currentVersions: { echo: "1" },
+            authorize: () => true,
+          }),
+        { code: "invalid_type" },
+      );
       assert.deepEqual(store.read().facts, recovered.facts);
       h.clock.setTime(h.clock.now() + 100);
       const engine = createTaskEngine({
@@ -102,7 +106,7 @@ test("SQLite v2 exact progress backfill, original validators, restart and protec
         currentVersions: { echo: "1" },
         authorize: () => true,
       });
-      engine.start();
+      await engine.start();
       const page = engine.listTasks({}, {}, caller);
       assert.equal(
         page.tasks.find((item) => item.taskId === canceled.taskId)?.updatedAt,
@@ -111,7 +115,7 @@ test("SQLite v2 exact progress backfill, original validators, restart and protec
       assert.equal(
         page.tasks.find((item) => item.taskId === live.taskId)?.updatedAt,
         at(h.clock.now()),
-        "interrupted execution is a genuine new failure fact, not a read-time refresh",
+        "interrupted run is a genuine new failure fact, not a read-time refresh",
       );
       assert.equal(engine.getRequest(live.requestId, caller).text, "hello");
       assert.equal(engine.getRequest(live.requestId, caller).version, undefined);
@@ -128,7 +132,7 @@ test("SQLite v2 exact progress backfill, original validators, restart and protec
           currentVersions: { echo: "1" },
           authorize: () => true,
         });
-        second.start();
+        await second.start();
         assert.deepEqual(second.listTasks({}, {}, caller).tasks, page.tasks);
         await second.close();
         reopened.claim("compact");
@@ -140,7 +144,7 @@ test("SQLite v2 exact progress backfill, original validators, restart and protec
             occurredAt: at(h.clock.now()),
             data: {
               taskIds: Object.keys(view.facts.tasks),
-              executionIds: Object.keys(view.facts.executions),
+              runIds: Object.keys(view.facts.runs),
             },
           },
         ]);
@@ -154,7 +158,7 @@ test("SQLite v2 exact progress backfill, original validators, restart and protec
           currentVersions: { echo: "1" },
           authorize: () => true,
         });
-        afterCompact.start();
+        await afterCompact.start();
         assert.equal(afterCompact.listTasks({}, {}, caller).tasks.length, 0);
         const fresh = afterCompact.submit(
           {

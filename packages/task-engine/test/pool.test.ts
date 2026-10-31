@@ -1,28 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Worker } from "node:worker_threads";
-import {
-  at,
-  type ExecuteOptions,
-  type JsonObject,
-  json,
-  type TaskType,
-} from "@potential-guide/task-protocol";
-import { createTaskEngine, newId } from "../src/index.js";
+import { at, type ExecuteOptions, type JsonObject, json } from "@potential-guide/task-protocol";
+import { newId } from "../src/index.js";
 import { createExecutorPool, type RunningWork } from "../src/pool.js";
 import { MemoryStore, VirtualClock } from "../src/testing.js";
+import type { LifecycleFixture } from "./driver.js";
+import { createFixtureEngine as createTaskEngine } from "./driver.js";
 import { caller, deferred, flush, harness, validateEcho } from "./fixtures.js";
 
-function permitOptions(replaceExecutionId?: string, authorize = () => true) {
+function permitOptions(replaceRunId?: string, authorize = () => true) {
   const controller = new AbortController();
   const reports: unknown[] = [];
   const options: ExecuteOptions = {
     context: { type: "test", version: "1", environment: "test", scope: "test" },
     signal: controller.signal,
-    ...(replaceExecutionId ? { replaceExecutionId } : {}),
+    ...(replaceRunId ? { replaceRunId } : {}),
     authorizeReplacement: authorize,
     start: () => ({
-      executionId: newId(),
+      runId: newId(),
       generation: newId(),
       startedAt: at(Date.now()),
       progress: (value) => reports.push(value),
@@ -76,11 +72,11 @@ for (const allowB of [true, false]) {
     });
     const a = await pool.execute("a", permitOptions().options);
     const b = await pool.execute("b", permitOptions().options);
-    const replacingA = pool.execute("a", permitOptions(a.executionId).options);
+    const replacingA = pool.execute("a", permitOptions(a.runId).options);
     await cleaningA.promise;
     const replacingB = pool.execute(
       "b",
-      permitOptions(b.executionId, () => {
+      permitOptions(b.runId, () => {
         authorizationsB++;
         return allowB;
       }).options,
@@ -126,7 +122,7 @@ test("Pool uses compatible free capacity before a supplied replacement candidate
   const first = await pool.execute(1, permitOptions().options);
   await pool.execute(
     2,
-    permitOptions(first.executionId, () => {
+    permitOptions(first.runId, () => {
       authorizations++;
       return true;
     }).options,
@@ -145,7 +141,7 @@ test("Pool does not kill ineffective candidate; queued cancellation frees only i
   });
   const a = await pool.execute("a", permitOptions().options);
   await pool.execute("b", permitOptions().options);
-  const queued = permitOptions(a.executionId, () => {
+  const queued = permitOptions(a.runId, () => {
     authorizations++;
     return true;
   });
@@ -166,7 +162,7 @@ test("candidate generation/owner revalidation denial preserves old work", async 
     run: () => controllable().work,
   });
   const old = await pool.execute(1, permitOptions().options);
-  const request = permitOptions(old.executionId, () => {
+  const request = permitOptions(old.runId, () => {
     checks++;
     return false;
   });
@@ -192,7 +188,7 @@ test("cleanup failure quarantines physical capacity; it is never counter-only re
   await assert.rejects(tracking.reclaim("test"), /cleanup failed/);
   assert.equal(pool.stats.idle, 0);
   assert.equal(pool.stats.quarantined, 1);
-  const request = permitOptions(tracking.executionId);
+  const request = permitOptions(tracking.runId);
   const pending = pool.execute(2, request.options);
   assert.equal(pool.stats.queued, 1);
   request.controller.abort();
@@ -216,7 +212,7 @@ test("real isolated runaway worker is physically terminated before pressure repl
     reclaimMs: 3000,
     run(input, permit) {
       starts++;
-      assert.ok(store.read().facts.executions[permit.executionId]);
+      assert.ok(store.read().facts.runs[permit.runId]);
       if (input.text === "next") {
         assert.equal(exited, true);
         assert.equal(cleaned, true);
@@ -258,7 +254,7 @@ test("real isolated runaway worker is physically terminated before pressure repl
       };
     },
   });
-  const type: TaskType<JsonObject> = {
+  const type: LifecycleFixture<JsonObject> = {
     type: "echo",
     version: "1",
     environment: "worker",
@@ -281,7 +277,7 @@ test("real isolated runaway worker is physically terminated before pressure repl
     currentVersions: { echo: "1" },
     authorize: () => true,
   });
-  engine.start();
+  await engine.start();
   try {
     const old = engine.submit(
       { requestId: newId(), type: "echo", text: "runaway", timeoutMs: 5 },
@@ -295,7 +291,7 @@ test("real isolated runaway worker is physically terminated before pressure repl
     await ready.promise;
     clock.advance(10);
     engine.tick();
-    assert.equal(exited, false, "Task timeout does not stop running execution");
+    assert.equal(exited, false, "Task timeout does not stop running run");
     const next = engine.submit(
       { requestId: newId(), type: "echo", text: "next", timeoutMs: 100 },
       caller,
@@ -312,12 +308,12 @@ test("real isolated runaway worker is physically terminated before pressure repl
     assert.equal(forced, 1);
     assert.equal(starts, 2);
     assert.equal(engine.getTask(next.taskId, caller).stage, "completed");
-    assert.equal(engine.getTask(old.taskId, caller).stage, "execution_failed");
+    assert.equal(engine.getTask(old.taskId, caller).stage, "run_failed");
     assert.notEqual(
-      engine.getTask(old.taskId, caller).execution?.executionId,
-      engine.getTask(next.taskId, caller).execution?.executionId,
+      engine.getTask(old.taskId, caller).run?.runId,
+      engine.getTask(next.taskId, caller).run?.runId,
     );
-    assert.ok(Object.values(store.read().facts.executions).some((execution) => execution.sealed));
+    assert.ok(Object.values(store.read().facts.runs).some((run) => run.sealed));
   } finally {
     await worker?.terminate();
     await engine.close();
@@ -335,7 +331,7 @@ test("independent wall cap and last-owner cancellation reclaim without fabricati
     await flush();
     h.engine.tick();
     const snapshot = h.engine.getTask(task.taskId, caller);
-    assert.equal(snapshot.stage, "execution_failed");
+    assert.equal(snapshot.stage, "run_failed");
     assert.equal(snapshot.canceledAt, undefined);
     assert.equal(h.pool.stats.idle, 2);
   } finally {
@@ -343,7 +339,7 @@ test("independent wall cap and last-owner cancellation reclaim without fabricati
   }
 });
 
-test("cancel at durable start and delayed tracking return cannot orphan the execution", async () => {
+test("cancel at durable start and delayed tracking return cannot orphan the run", async () => {
   const h = harness();
   try {
     const originalExecute = h.type.execute;
@@ -425,17 +421,17 @@ test("Engine denies stale pressure authorization after a new protected owner att
     await h.turn(10);
     h.submit({ text: "replacement" });
     await h.turn();
-    const protectedTask = h.submit({ executionMatch: "terminated-after-eligible" });
+    const protectedTask = h.submit({ matchPolicy: "terminated-after-eligible" });
     await h.turn();
-    assert.equal(h.engine.getTask(protectedTask.taskId, caller).execution, undefined);
+    assert.equal(h.engine.getTask(protectedTask.taskId, caller).run, undefined);
     release.resolve();
     await flush();
     assert.equal(h.work[0]?.stops.length, 0);
     assert.equal(h.pool.stats.queued, 1);
     await h.finish();
     assert.equal(
-      h.engine.getTask(protectedTask.taskId, caller).execution?.executionId,
-      h.work[0]?.permit.executionId,
+      h.engine.getTask(protectedTask.taskId, caller).run?.runId,
+      h.work[0]?.permit.runId,
     );
     await flush();
     assert.equal(h.work.length, 2);
@@ -459,14 +455,16 @@ test("two pressure replacements cannot double-count one resource; stale callback
     assert.equal(h.work[0]?.stops.length, 1);
     assert.equal(h.pool.stats.queued, 1);
     h.work[0]?.permit.complete({ stale: true });
-    h.work[0]?.permit.progress({ stale: true });
+    assert.throws(() => h.work[0]?.permit.progress({ stage: "execution", message: "迟到进度" }), {
+      code: "run_finished",
+    });
     assert.equal(h.engine.getTask(b.taskId, caller).result, undefined);
     await h.finish(1, { text: "b" });
     await flush();
     assert.equal(h.work.length, 3);
     assert.notEqual(
-      h.engine.getTask(b.taskId, caller).execution?.executionId,
-      h.engine.getTask(c.taskId, caller).execution?.executionId,
+      h.engine.getTask(b.taskId, caller).run?.runId,
+      h.engine.getTask(c.taskId, caller).run?.runId,
     );
   } finally {
     await h.close();

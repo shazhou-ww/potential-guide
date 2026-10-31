@@ -93,13 +93,13 @@ test("Probe digest conflicts become preparation_failed after authorization but b
     const task = h.submit(input);
     const final = await wait(
       () => h.read(task),
-      (snapshot) => snapshot.stage === "preparation_failed",
+      (snapshot) => snapshot.stage === "run_failed",
     );
     assert.equal(final.error?.code, "invalid_probe");
     assert.match(final.error!.message, /Root binding conflict/);
-    assert.ok(authorizations > 0);
+    assert.equal(authorizations, 0, "输入自身冲突在实际资源动作前拒绝，不再逐 Task 授权。");
     assert.equal(resolutions, 0);
-    assert.equal(Object.keys(h.store.read().facts.executions).length, 0);
+    assert.equal(Object.keys(h.store.read().facts.runs).length, 1);
     assert.equal(Object.keys(h.store.read().facts.tasks).length, 1);
     assert.throws(
       () =>

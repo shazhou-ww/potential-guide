@@ -1,5 +1,5 @@
 import type {
-  ExecutionPage,
+  RunPage,
   HistoryPage,
   Observation,
   PublicEvent,
@@ -28,7 +28,7 @@ export function validSnapshot(value: unknown): value is TaskSnapshot {
       "completed",
       "preparation_failed",
       "allocation_failed",
-      "execution_failed",
+      "run_failed",
     ].includes(String(task.stage))
   );
 }
@@ -227,7 +227,7 @@ export class Selection {
     return { signal: this.controller.signal, current: () => generation === this.generation };
   }
 }
-function validDirectoryRow(value: unknown, field: "tasks" | "executions"): boolean {
+function validDirectoryRow(value: unknown, field: "tasks" | "runs"): boolean {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const row = value as Record<string, unknown>,
     state = row.state as Record<string, unknown> | undefined;
@@ -238,7 +238,7 @@ function validDirectoryRow(value: unknown, field: "tasks" | "executions"): boole
     typeof row.version !== "string"
   )
     return false;
-  const ids = field === "tasks" ? ["taskId", "requestId", "seriesId"] : ["executionId"];
+  const ids = field === "tasks" ? ["taskId", "requestId", "seriesId"] : ["runId"];
   if (ids.some((key) => !/^[0-9A-HJKMNP-TV-Z]{26}$/.test(String(row[key] ?? "")))) return false;
   const times = field === "tasks" ? ["receivedAt", "updatedAt"] : ["startedAt"];
   if (
@@ -249,7 +249,7 @@ function validDirectoryRow(value: unknown, field: "tasks" | "executions"): boole
     return false;
   const flags =
     field === "tasks"
-      ? ["pending", "timedOut", "canceled", "completed", "executionFailed"]
+      ? ["pending", "timedOut", "canceled", "completed", "runFailed"]
       : ["running", "completed", "failed", "reclaimed", "sealed"];
   if (flags.some((key) => typeof state[key] !== "boolean")) return false;
   if (field === "tasks") return typeof state.stage === "string";
@@ -267,8 +267,8 @@ function validDirectoryRow(value: unknown, field: "tasks" | "executions"): boole
   }
   return state.running === (!state.completed && !state.failed && !state.reclaimed);
 }
-export class Directory<P extends TaskPage | ExecutionPage = TaskPage> {
-  constructor(readonly field: "tasks" | "executions" = "tasks") {}
+export class Directory<P extends TaskPage | RunPage = TaskPage> {
+  constructor(readonly field: "tasks" | "runs" = "tasks") {}
   query = "";
   page: P | undefined;
   expired = false;
@@ -373,7 +373,7 @@ export class TaskSnapshots {
     if (previous?.canceledAt !== undefined && previous.canceledAt !== snapshot.canceledAt)
       throw new Error("取消事实冲突；保留已确认快照，不猜测事实顺序。");
     this.version(id).generation++;
-    // Public cancellation freezes the Task, not its Execution. Only observation time varies.
+    // Public cancellation freezes the Task, not its Run. Only observation time varies.
     this.store(
       previous?.canceledAt !== undefined
         ? { ...previous, timestamp: snapshot.timestamp }

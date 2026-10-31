@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { at, type ExecutionPage, TaskError } from "@potential-guide/task-protocol";
-import { ExecutionCatalog } from "../src/catalog.js";
-import { createTaskEngine, newId } from "../src/index.js";
+import { at, type RunPage, TaskError } from "@potential-guide/task-protocol";
+import { RunCatalog } from "../src/catalog.js";
+import { newId } from "../src/index.js";
+import { createFixtureEngine } from "./driver.js";
 import { caller, harness } from "./fixtures.js";
 
 const code = (expected: string) => (error: unknown) =>
   error instanceof TaskError && error.code === expected;
-function next(page: ExecutionPage): string {
+function next(page: RunPage): string {
   assert.ok(page.next);
   return page.next;
 }
@@ -28,17 +29,14 @@ test("Execution directory is authoritative, scope-isolated, shared once and payl
       { scope: "other", subject: "external" },
     );
     await h.turn();
-    const page = h.engine.listExecutions({}, {}, caller);
-    assert.equal(page.executions.length, 2);
-    const shared = h.engine.getTask(a.taskId, caller).execution!.executionId;
-    assert.equal(h.engine.getTask(b.taskId, caller).execution!.executionId, shared);
-    assert.equal(page.executions.filter((item) => item.executionId === shared).length, 1);
-    assert.equal(
-      page.executions[0]!.executionId,
-      h.engine.getTask(external.taskId, caller).execution!.executionId,
-    );
-    assert.deepEqual(Object.keys(page.executions[0]!).sort(), [
-      "executionId",
+    const page = h.engine.listRuns({}, {}, caller);
+    assert.equal(page.runs.length, 2);
+    const shared = h.engine.getTask(a.taskId, caller).run!.runId;
+    assert.equal(h.engine.getTask(b.taskId, caller).run!.runId, shared);
+    assert.equal(page.runs.filter((item) => item.runId === shared).length, 1);
+    assert.equal(page.runs[0]!.runId, h.engine.getTask(external.taskId, caller).run!.runId);
+    assert.deepEqual(Object.keys(page.runs[0]!).sort(), [
+      "runId",
       "startedAt",
       "state",
       "type",
@@ -46,37 +44,30 @@ test("Execution directory is authoritative, scope-isolated, shared once and payl
     ]);
     assert.equal(JSON.stringify(page).includes("secret"), false);
     assert.equal(JSON.stringify(page).includes("taskId"), false);
-    const older = page.executions[1]!,
-      newer = page.executions[0]!;
+    const older = page.runs[1]!,
+      newer = page.runs[0]!;
     assert.deepEqual(
       h.engine
-        .listExecutions(
-          { startedFrom: older.startedAt, startedBefore: newer.startedAt },
-          {},
-          caller,
-        )
-        .executions.map((item) => item.executionId),
+        .listRuns({ startedFrom: older.startedAt, startedBefore: newer.startedAt }, {}, caller)
+        .runs.map((item) => item.runId),
       [shared],
     );
     assert.equal(
-      h.engine.listExecutions({ startedFrom: older.startedAt.replace("Z", "+00:00") }, {}, caller)
-        .executions.length,
+      h.engine.listRuns({ startedFrom: older.startedAt.replace("Z", "+00:00") }, {}, caller).runs
+        .length,
       2,
     );
-    assert.equal(h.engine.listExecutions({ type: "absent" }, {}, caller).executions.length, 0);
-    assert.equal(
-      h.engine.listExecutions({}, {}, { ...caller, scope: "other" }).executions.length,
-      1,
-    );
+    assert.equal(h.engine.listRuns({ type: "absent" }, {}, caller).runs.length, 0);
+    assert.equal(h.engine.listRuns({}, {}, { ...caller, scope: "other" }).runs.length, 1);
     assert.deepEqual(
       h.engine
-        .listTasks({ executionId: shared }, {}, caller)
+        .listTasks({ runId: shared }, {}, caller)
         .tasks.map((item) => item.taskId)
         .sort(),
       [a.taskId, b.taskId].sort(),
     );
     assert.equal(
-      h.engine.listTasks({ executionId: shared }, {}, { ...caller, scope: "other" }).tasks.length,
+      h.engine.listTasks({ runId: shared }, {}, { ...caller, scope: "other" }).tasks.length,
       0,
     );
   } finally {
@@ -89,34 +80,32 @@ test("Execution list permission is independent and is rechecked on every frozen 
   const h = harness({
     authorize: (who, operation, scope) =>
       who.scope === scope &&
-      (who.subject === "reader"
-        ? allowed && operation === "list-executions"
-        : who.subject === "tester"),
+      (who.subject === "reader" ? allowed && operation === "list-runs" : who.subject === "tester"),
   });
   try {
     h.submit({ text: "one" });
     h.submit({ text: "two" });
     await h.turn();
     const reader = { ...caller, subject: "reader" };
-    const page = h.engine.listExecutions({}, { limit: 1 }, reader);
+    const page = h.engine.listRuns({}, { limit: 1 }, reader);
     assert.throws(() => h.engine.listTasks({}, {}, reader), code("forbidden"));
     assert.throws(() => h.engine.discoverTypes(reader), code("forbidden"));
     assert.throws(
-      () => h.engine.readHistory({ executionId: page.executions[0]!.executionId }, {}, reader),
+      () => h.engine.readHistory({ runId: page.runs[0]!.runId }, {}, reader),
       code("forbidden"),
     );
     allowed = false;
     assert.throws(
-      () => h.engine.listExecutions({}, { cursor: next(page), limit: 1 }, reader),
+      () => h.engine.listRuns({}, { cursor: next(page), limit: 1 }, reader),
       code("forbidden"),
     );
     allowed = true;
     assert.equal(
-      h.engine.listExecutions({}, { cursor: next(page), limit: 1 }, reader).observedAt,
+      h.engine.listRuns({}, { cursor: next(page), limit: 1 }, reader).observedAt,
       page.observedAt,
     );
     assert.throws(
-      () => h.engine.listExecutions({}, { cursor: next(page) }, caller),
+      () => h.engine.listRuns({}, { cursor: next(page) }, caller),
       code("invalid_cursor"),
     );
   } finally {
@@ -130,24 +119,20 @@ test("Execution snapshots freeze state and membership, use independent cursors a
     h.submit({ text: "one" });
     h.submit({ text: "two" });
     await h.turn();
-    const page = h.engine.listExecutions({}, {}, caller);
+    const page = h.engine.listRuns({}, {}, caller);
     const old = structuredClone(page);
     const tasks = h.engine.listTasks({}, {}, caller);
     assert.throws(
-      () => h.engine.listExecutions({}, { cursor: tasks.next! }, caller),
+      () => h.engine.listRuns({}, { cursor: tasks.next! }, caller),
       code("invalid_cursor"),
     );
     assert.throws(
       () => h.engine.listTasks({}, { cursor: next(page) }, caller),
       code("invalid_cursor"),
     );
-    const eventCursor = h.engine.readHistory(
-      { executionId: page.executions[0]!.executionId },
-      {},
-      caller,
-    ).cursor;
+    const eventCursor = h.engine.readHistory({ runId: page.runs[0]!.runId }, {}, caller).cursor;
     assert.throws(
-      () => h.engine.listExecutions({}, { cursor: eventCursor }, caller),
+      () => h.engine.listRuns({}, { cursor: eventCursor }, caller),
       code("invalid_cursor"),
     );
     h.submit({ text: "later" });
@@ -156,31 +141,31 @@ test("Execution snapshots freeze state and membership, use independent cursors a
     await h.finish(1);
     await h.finish(2);
     await h.turn();
-    const second = h.engine.listExecutions({}, { cursor: next(page) }, caller);
+    const second = h.engine.listRuns({}, { cursor: next(page) }, caller);
     assert.equal(second.observedAt, page.observedAt);
-    assert.equal(second.executions[0]!.state.running, true);
+    assert.equal(second.runs[0]!.state.running, true);
     assert.deepEqual(page, old);
-    const fresh = h.engine.listExecutions({}, {}, caller);
-    assert.equal(fresh.executions[0]!.state.completed, true);
-    assert.equal(fresh.executions[0]!.state.reclaimed, true);
+    const fresh = h.engine.listRuns({}, {}, caller);
+    assert.equal(fresh.runs[0]!.state.completed, true);
+    assert.equal(fresh.runs[0]!.state.reclaimed, true);
     h.clock.advance(20);
     h.engine.collect();
     assert.throws(
-      () => h.engine.listExecutions({}, { cursor: next(page) }, caller),
+      () => h.engine.listRuns({}, { cursor: next(page) }, caller),
       code("query_expired"),
     );
-    assert.equal(h.engine.listExecutions({}, {}, caller).executions.length, 0);
+    assert.equal(h.engine.listRuns({}, {}, caller).runs.length, 0);
     await h.engine.close();
-    const reopened = createTaskEngine({
+    const reopened = createFixtureEngine({
       store: h.store,
       clock: h.clock,
       types: [h.type, h.sum],
       currentVersions: { echo: "1", sum: "1" },
       authorize: () => true,
     });
-    reopened.start();
+    await reopened.start();
     assert.throws(
-      () => reopened.listExecutions({}, { cursor: next(page) }, caller),
+      () => reopened.listRuns({}, { cursor: next(page) }, caller),
       code("query_expired"),
     );
     await reopened.close();
@@ -202,15 +187,9 @@ test("Execution query input, time, scan, view and byte budgets fail explicitly",
       { sort: "created-desc" },
       { input: "secret" },
     ])
-      assert.throws(
-        () => h.engine.listExecutions(query as never, {}, caller),
-        code("invalid_request"),
-      );
-    const first = h.engine.listExecutions({}, {}, caller);
-    assert.throws(
-      () => h.engine.listExecutions({ type: "echo" }, {}, caller),
-      code("capacity_exceeded"),
-    );
+      assert.throws(() => h.engine.listRuns(query as never, {}, caller), code("invalid_request"));
+    const first = h.engine.listRuns({}, {}, caller);
+    assert.throws(() => h.engine.listRuns({ type: "echo" }, {}, caller), code("capacity_exceeded"));
     assert.ok(
       h.engine.listTasks({}, {}, caller).next,
       "Task and Execution view budgets are independently bounded",
@@ -218,7 +197,7 @@ test("Execution query input, time, scan, view and byte budgets fail explicitly",
     const facts = h.store.read().facts;
     assert.throws(
       () =>
-        new ExecutionCatalog({ ...h.engine.limits, queryScanLimit: 1 }).read(
+        new RunCatalog({ ...h.engine.limits, queryScanLimit: 1 }).read(
           {},
           {},
           caller,
@@ -230,7 +209,7 @@ test("Execution query input, time, scan, view and byte budgets fail explicitly",
     );
     assert.throws(
       () =>
-        new ExecutionCatalog({ ...h.engine.limits, queryPageBytes: 1 }).read(
+        new RunCatalog({ ...h.engine.limits, queryPageBytes: 1 }).read(
           {},
           {},
           caller,
@@ -242,7 +221,7 @@ test("Execution query input, time, scan, view and byte budgets fail explicitly",
     );
     assert.throws(
       () =>
-        new ExecutionCatalog({ ...h.engine.limits, maxQueryBytes: 1 }).read(
+        new RunCatalog({ ...h.engine.limits, maxQueryBytes: 1 }).read(
           {},
           {},
           caller,
@@ -254,7 +233,7 @@ test("Execution query input, time, scan, view and byte budgets fail explicitly",
     );
     h.clock.advance(21);
     assert.throws(
-      () => h.engine.listExecutions({}, { cursor: next(first) }, caller),
+      () => h.engine.listRuns({}, { cursor: next(first) }, caller),
       code("query_expired"),
     );
   } finally {

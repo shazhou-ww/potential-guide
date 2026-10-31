@@ -27,7 +27,7 @@ interface QueryView<S> {
   bytes: number;
 }
 interface Definition<R, S, Q> {
-  namespace: "tasks" | "executions";
+  namespace: "tasks" | "runs";
   normalize(raw: Q): Q;
   records(facts: Facts): Record<string, R>;
   matches(record: R, query: Q): boolean;

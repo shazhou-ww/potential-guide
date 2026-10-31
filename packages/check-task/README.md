@@ -1,60 +1,21 @@
-# Check TaskType
+# @potential-guide/check-task
 
-`createCheckTaskType` registers `type: "check"` in the generic Engine.
-The default type version is **2**; use `currentVersions: {check:"2"}`.
-`checkInputSchema` is the single public input contract; `validateCheckInput` is
-its generated wrapper. Old records without contract identity are unsupported,
-not silently migrated.
+`createCheckTaskType(options)` 返回可信 Host 的静态 RegisteredType，不在 Host 创建业务执行池或调用类型代码。
+完整 run、准备和资源调度在类型守护；Checker Bundle 在独立业务 Worker。
 
-Version 2 source URLs use conservative standard-Schema safety patterns before
-raw request persistence: no userinfo, fragments, whitespace or backslashes;
-HTTPS authorities cannot contain percent escapes. Query names are ASCII letters,
-digits, underscore or hyphen, start with a letter, require `=`, and cannot contain
-case-insensitive token/secret/password/credential/sig/api-key-like substrings.
-Encoded names, plus signs and semicolon separators are rejected. Values may be
-percent-encoded. Local Checker `file:///` references remain supported without
-query/fragment/authority. Canonicalization and source authorization still run in
-prepare; discovery never resolves URLs or fetches artifact subject schemas.
-`createArtifactSource` is explicit authorized preparation IO. Neither nests the
-legacy Host/scheduler nor starts listeners. See [server guide](../../docs/task-server.md).
+Input 保持 checker reference、subject、context?、language?，Input Schema 为 object。
+浮动 URL 的内容在 Run 内固定，可被兼容需求共享；精确版本用 digest。接收方不再次准备或资源授权。
+实际 resolve / Checker 使用仍经 Source 资源动作授权；权限不来自 Task 或运行消息。
 
-Inputs beside the generic Request envelope are `checker` (typed HTTPS or local file reference,
-optional exact digest), `subject` (finite JSON object), optional `context` (finite
-JSON data exposed as the Checker's `context.data`), and optional `language`.
-The negotiated language overrides a same-named context field. Context contributes
-to immutable input equality; Probe uses it for exact dependency resolutions.
-Prepared persists exact verified bytes and actual runtime binding, not a mutable
-cache path. Configure Engine payload/storage budgets for your maximum artifact.
-The default 64 KiB Engine budget is suitable only for small Checkers.
-Sharing uses the original Input `equals`, not Prepared equality. Equal unpinned
-references can share the content selected by an existing execution; pin a digest
-in Input when content identity matters. `terminated-after-eligible` exposes no
-execution binding until the success/failure event actually occurs.
+messageSchema 为 false（Never），统一 messages 通道存在，但任何业务消息都拒绝；取消走独立控制通道。
+Progress 使用统一展示结构，不能读取 message 中的机器 JSON。
+准备内容通过 `check-prepared` checkpoint 持久化，业务进度通过 `check-progress` 保留机器证据。
+最终结果为 `{result, evidence:{prepared, execution, businessProgress}}`；
+失败为 `{failure,evidence}`，没有成功形状 fallback。
+execution 中的 executionId/startedAt/completedAt 仅是实际 Checker 子阶段，不是 Run。
 
-The worker receives only explicitly injected environment variables. Do not put
-secrets in this configuration: the canonical environment identity is durable.
-Worker threads are resource isolation, **not an untrusted-code security sandbox**.
-Authorize only trusted artifacts. `close()` closes the owned pool, not the
-injected source; the composition owns its source and directory.
+历史 Bundle、digest、subject/result 和环境一致性在原类型 Worker 纯复验，不下载、不执行旧 Checker。
+环境身份只含指纹，展示/证据不携带环境变量值；scratch directory 不定义执行环境身份。
+当前每次业务执行仍创建新 Checker Worker，不宣称已实现 Bundle 热 Worker 复用。
 
-## Local archives
-
-`createArtifactSource({allowedOrigins, allowedFileRoots: [absoluteImportsDirectory], authorize})`
-allows regular archive files strictly below those endpoint-host directories.
-Absent/empty roots deny file access. Use `pathToFileURL(absoluteArchivePath).href`;
-the URL must be canonical, hostless `file:///`, without credentials, query or fragment.
-The HTTPS-only `download` hook is never called for file URLs.
-
-Authorization is synchronous and runs at admission, event matching, before IO
-and on cache reuse/restored allocation. Promise-returning grants explicitly fail;
-they never authorize a cached/shared result. Unpinned preparations read current
-bytes; exact digest mismatch fails. Already Prepared
-content (or an exact authorized cache entry) does not reread its original file.
-Removing the original file does not prevent execution while the trusted root
-configuration and scope policy still grant the reference.
-
-Only direct Check references gain file transport: Objective embedded Checker
-references and dependency Objective references remain HTTPS-only. A browser file
-picker must upload to a trusted endpoint-local importer first; browser `blob:` URLs
-and browser filesystem paths do not identify files on a remote Server.
-See [file-source boundaries](../../docs/task-server.md#local-file-source-boundaries).
+完整共享、消息及 SQLite v3 边界见 [Task Engine](../../docs/task-engine.md)。

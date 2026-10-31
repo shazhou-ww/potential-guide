@@ -1,76 +1,22 @@
 # @potential-guide/probe-task
 
-`createProbeTaskType` registers `type=probe` with the generic task engine. It
-observes an Objective by creating independent `type=check` tasks. It never runs
-an Agent or authorizes regulation. No legacy Host is installed.
+`createProbeTaskType(options)` 是静态 Host 注册工厂。类型守护负责完整 Run；
+观察业务 Worker 保持独立，Child Task 通过最小、可信、按 Run 所有权限制的资源桥访问服务。
+Caller/scope、Check 环境、容量及 Source 权限来自 Host，不从 Input 或消息拼接。
 
-```ts
-const probe = createProbeTaskType({
-  source,
-  checkEnvironment: check.environment,
-  parents: 2,
-  children(scope) {
-    return {
-      service: engine,
-      caller: { scope, subject: "trusted-probe" },
-      waitForTaskRelease: (id, caller) => engine.waitForTaskRelease(id, caller),
-    };
-  },
-});
-// Register [check, probe], currentVersions: {check: "2", probe: "2"}.
-// The Server's bindService callback supplies engine before startup.
-```
+Input 保持 objective、subject、context?、bindings?、language?、targetLevel?。
+父 Run 从准备前开始，兼容需求无需再次准备。Child 使用自己的 Task/Run identity，
+独立等待预算和物理所有权 barrier；取消一个共享需求不误杀其他需求。
 
-Submit the common request fields plus `objective: {kind:"objective",url,digest?}`,
-`subject`, optional `context`, `language`, exact Objective `bindings`, and
-`targetLevel:"initial"` (otherwise cumulative observation). `context.resolutions`
-is reserved. Child callers are injected trusted authority, never request fields.
-Use the same explicit authorization policy for child history and parent history.
-Source authorization is synchronous and independent of preparation. Input,
-candidate root/static resources and final dynamic transcript references are
-reauthorized before event-time sharing; asynchronous grants are rejected.
-Equal Inputs may share without equal Prepared; pin Objective bindings in Input
-when immutable selection is required.
+messageSchema 为 false，业务消息均拒绝；取消不受 Never schema 限制。
+标准 Progress 只展示 stage/percent?/message。
+`probe-prepared` 和 `probe-progress` checkpoint 保留固定 Bundle 与因果机器证据。
+成功 Result 保持 observation、references、evidence.operations，
+evidence 另含 prepared、parentRunId 和完整 Run 的 startedAt；失败是明确 failure/evidence 分支。
+Check 子阶段 executionId 来自 Check Result 业务证据，不把它当成父 Run 标识。
 
-The default type version is **2**. `probeInputSchema` is the public input contract;
-`validateProbeInput` is its generated wrapper. Objective URLs and binding keys
-use the conservative HTTPS query/credential restrictions documented by
-[`check-task`](../check-task/README.md), before raw persistence. Root digest versus
-`bindings[objective.url]` conflicts are now accepted structurally and then produce
-`preparation_failed` (`invalid_probe`) **before artifact resolution/download or
-execution**; synchronous admission authorization still runs first. The same
-consistency checks remain in Prepared/recovery validation. Historical versions
-are not upgraded automatically; records without contract identities fail explicitly.
+历史复验在原类型守护中读取已固定 bytes/digest 和 Child 事实重放纯观察，不下载、不创建 Child、
+不运行旧业务副作用。跨实体墙钟回退依赖持久化事件顺序，不伪造统一的物理时钟。
+本包不注册通用 Regulator、不实现新的治理记账。
 
-Preparation persists the entire exact root/static Checker file sets, language,
-and actual Node/adapter/policy/Check environment. Execution starts durably before
-effects. Dynamic selections persist exact file sets; results contain the
-observation, composed References, and a causal effect transcript linking parent
-execution, child tasks/executions, artifacts, and environment. Validation replays
-the shared artifact observation iterator against those exact bytes with no IO.
-Public selection progress and result evidence include dynamic artifact bytes;
-scope authorization applies, including interrupted observation history.
-Set the engine's payload budget explicitly (the example uses 16 MiB).
-
-Each Probe has a physical Worker and its own bounded pool. Its trusted
-`allocationLimit` reserves a separate generic admission lane, including when
-`maxConcurrent=1`; waiting parents cannot fill Check admission. Limits default to
-4 parents, depth 8, 64 observations, 128 Checks, 60s execution wall time, and 5s
-cleanup confirmation. Engine execution wall time can impose a shorter bound.
-Root exit and owned child cleanup precede reuse. Unconfirmed cleanup quarantines
-capacity rather than claiming success. No in-process Promise is force-killed.
-
-Cancellation withdraws only tasks created by this parent execution. A shared
-Check's other owner survives. `waitForTaskRelease` is an engine-owned physical
-ownership barrier: cancellation of a shared owner need not wait for other owners.
-Task deadline expiry is **not** execution cancellation: an applicable late
-observation completes the Task while retaining its timeout. Failure can likewise
-coexist with timeout. Unbound terminated-policy demand also protects shared
-Checks before their final event. Unknown
-started observations recover as interrupted, never automatically rerun.
-
-See `examples/task-server/probe-config.mjs` for CLI/in-process composition and
-`probe-integration.mjs` for a reproducible packed-consumer HTTP/SSE/recovery proof.
-The source implementation currently supports authorized HTTPS archives; the
-integration fixture injects a controlled test downloader, not a local-file API.
-`pnpm pack:check` installs production tarballs and runs this consumer.
+完整协议及新数据库边界见 [Task Engine](../../docs/task-engine.md)。

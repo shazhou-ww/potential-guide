@@ -29,6 +29,48 @@ test("syntax-aware imports ignore comments and ordinary strings, preserve type-o
     ],
   );
 });
+test("Node Worker 本地模块边界需要入口声明与真实 builtin 加载链", async () => {
+  const prefix =
+    'import {parentPort,workerData} from "node:worker_threads";import {realpathSync} from "node:fs";import {fileURLToPath,pathToFileURL} from "node:url";';
+  const valid = "import(pathToFileURL(realpathSync(fileURLToPath(workerData.module))).href)";
+  const observation = sourceImports("worker.ts", prefix + valid).at(-1)!;
+  assert.deepEqual(observation, { specifier: null, typeOnly: false, nodeWorkerModule: true });
+  for (const expression of [
+    "import(workerData.module)",
+    "import(new URL(workerData.module).href)",
+    "import(pathToFileURL(workerData.module).href)",
+    "import(pathToFileURL(realpathSync(fileURLToPath(input))).href)",
+    "require(pathToFileURL(realpathSync(fileURLToPath(workerData.module))).href)",
+  ])
+    assert.deepEqual(sourceImports("worker.ts", prefix + expression).at(-1), {
+      specifier: null,
+      typeOnly: false,
+    });
+  assert.deepEqual(sourceImports("worker.ts", valid).at(-1), { specifier: null, typeOnly: false });
+  const findings: string[] = [];
+  const context = {
+    workspace: {
+      path: "packages/types",
+      runtime: "node",
+      roles: ["npm"],
+      entries: ["src/worker.ts"],
+    },
+    nodeWorkerImports: new Map([["packages/types/src/worker.ts", "类型加载边界"]]),
+    put(state: string) {
+      findings.push(state);
+    },
+  } as unknown as SourceBoundaryContext;
+  await checkSourceImport(context, "packages/types/src/worker.ts", observation);
+  assert.equal(findings.pop(), "pass");
+  for (const bad of [
+    { ...context, nodeWorkerImports: new Map() },
+    { ...context, workspace: { ...context.workspace, runtime: "browser" as const } },
+    { ...context, workspace: { ...context.workspace, entries: [] } },
+  ]) {
+    await checkSourceImport(bad, "packages/types/src/worker.ts", observation);
+    assert.equal(findings.pop(), "unverified");
+  }
+});
 test("computed imports remain unverified without an explicit Node CLI entry and local file-URL shape", async () => {
   const findings: { state: string; rule: string }[] = [];
   const declarations = new Map([["packages/server/src/main.ts", "Operator-owned configuration"]]);

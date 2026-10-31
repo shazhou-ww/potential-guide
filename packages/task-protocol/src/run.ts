@@ -1,0 +1,82 @@
+import { fail, type Json, type JsonObject, json, TaskError } from "./json.js";
+import type { InputSchema, JsonSchema } from "./schema.js";
+import type { Caller } from "./types.js";
+
+export interface RunProgress {
+  stage: "preparation" | "allocation" | "execution";
+  percent?: number;
+  message: string;
+}
+export interface RunMessage<Message extends Json = never> {
+  readonly messageId: string;
+  readonly taskId: string;
+  readonly caller: Readonly<Caller>;
+  readonly payload: Message;
+  readonly signal: AbortSignal;
+  accept(): Promise<void>;
+  reject(reason: string): Promise<void>;
+}
+export class RunFailure extends TaskError {
+  constructor(
+    code: string,
+    message: string,
+    readonly result: Json,
+  ) {
+    super(code, message);
+  }
+}
+export interface RunContext<Message extends Json = never> {
+  readonly runId: string;
+  readonly scope: string;
+  readonly signal: AbortSignal;
+  readonly messages: AsyncIterable<RunMessage<Message>>;
+  progress(value: RunProgress): Promise<void>;
+  checkpoint(value: Json): Promise<void>;
+}
+export interface TaskType<Input = Json, Result = Json, Message extends Json = never> {
+  type: string;
+  version: string;
+  inputSchema: InputSchema;
+  resultSchema: JsonSchema;
+  messageSchema: JsonSchema;
+  run(input: Input, context: RunContext<Message>): Promise<Result>;
+}
+export interface TypeWorkerRegistration {
+  type: string;
+  version: string;
+  environment: string;
+  inputSchema: InputSchema;
+  resultSchema: JsonSchema;
+  messageSchema: JsonSchema;
+  module: string;
+  moduleDigest?: string;
+  exportName: string;
+  configuration: Json;
+  verifyExportName?: string;
+  allocationLimit?: number;
+  /** 宿主实际资源动作，不是插件生命周期 hook；不会序列化进 Worker。 */
+  resources?: Readonly<
+    Record<
+      string,
+      (value: Json, context: { runId: string; scope: string; signal: AbortSignal }) => Promise<Json>
+    >
+  >;
+  cleanupActions?: readonly string[];
+}
+export function validateRunProgress(value: unknown, maxBytes = 65_536): RunProgress & JsonObject {
+  const parsed = json(value, maxBytes);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+    fail("invalid_progress", "RunProgress 必须是对象。");
+  if (
+    Object.keys(parsed).some((key) => !["stage", "percent", "message"].includes(key)) ||
+    !["preparation", "allocation", "execution"].includes(parsed.stage as string) ||
+    typeof parsed.message !== "string" ||
+    (Object.hasOwn(parsed, "percent") &&
+      (typeof parsed.percent !== "number" ||
+        !Number.isFinite(parsed.percent) ||
+        parsed.percent < 0 ||
+        parsed.percent > 100))
+  )
+    fail("invalid_progress", "RunProgress 字段无效。");
+  return parsed as RunProgress & JsonObject;
+}

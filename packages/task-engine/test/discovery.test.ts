@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { at, json, type Json, type Store, type TaskType } from "@potential-guide/task-protocol";
-import { createTaskEngine, newId } from "../src/index.js";
+import { at, type Json, json, type Store } from "@potential-guide/task-protocol";
+import { newId } from "../src/index.js";
 import { MemoryStore, VirtualClock } from "../src/testing.js";
+import type { LifecycleFixture } from "./driver.js";
+import { createFixtureEngine as createTaskEngine } from "./driver.js";
 import { caller, harness } from "./fixtures.js";
 
-const type = (version: string): TaskType<Json> => ({
+const type = (version: string): LifecycleFixture<Json> => ({
   type: "example",
   version,
   environment: "private-runtime-secret",
@@ -31,7 +33,7 @@ test("discovery is immutable, current-only, submit-authorized and detached from 
     currentVersions,
     authorize: (who, operation) => who.subject === "tester" && operation === "submit",
   });
-  engine.start();
+  await engine.start();
   try {
     const found = engine.discoverTypes(caller);
     assert.equal(found.length, 1);
@@ -89,7 +91,7 @@ test("revision races fail before persistence; history never silently changes Sch
     types: [original],
     currentVersions: { example: "1" },
   });
-  first.start();
+  await first.start();
   const oldRevision = first.discoverTypes(caller)[0]!.revision;
   const raw = {
     requestId: newId(),
@@ -106,7 +108,7 @@ test("revision races fail before persistence; history never silently changes Sch
     types: [original, newer],
     currentVersions: { example: "2" },
   });
-  second.start();
+  await second.start();
   assert.throws(
     () => second.submit({ ...raw, requestId: newId() }, caller, { expectedRevision: oldRevision }),
     { code: "contract_revision_mismatch" },
@@ -124,13 +126,13 @@ test("revision races fail before persistence; history never silently changes Sch
     types: [mutated],
     currentVersions: { example: "1" },
   });
-  assert.throws(() => replaced.start(), { code: "unsupported_contract" });
+  await assert.rejects(replaced.start(), { code: "unsupported_contract" });
   const missing = createTaskEngine({
     ...options,
     types: [newer],
     currentVersions: { example: "2" },
   });
-  assert.throws(() => missing.start(), { code: "unsupported_version" });
+  await assert.rejects(missing.start(), { code: "unsupported_version" });
   const legacy: Store = {
     claim: (owner) => store.claim(owner),
     release: (owner) => store.release(owner),
@@ -150,11 +152,11 @@ test("revision races fail before persistence; history never silently changes Sch
     types: [original],
     currentVersions: { example: "1" },
   });
-  assert.throws(() => historical.start(), { code: "unsupported_contract" });
+  await assert.rejects(historical.start(), { code: "unsupported_contract" });
   store.close();
 });
 
-test("execution records independently require the original contract identity", async () => {
+test("run records independently require the original contract identity", async () => {
   const h = harness();
   try {
     h.submit();
@@ -173,10 +175,9 @@ test("execution records independently require the original contract identity", a
           read() {
             const view = h.store.read();
             if (orphan) view.facts.tasks = {};
-            for (const execution of Object.values(view.facts.executions)) {
-              if (revision === undefined)
-                Reflect.deleteProperty(execution.binding, "contractRevision");
-              else execution.binding.contractRevision = revision;
+            for (const run of Object.values(view.facts.runs)) {
+              if (revision === undefined) Reflect.deleteProperty(run.binding, "contractRevision");
+              else run.binding.contractRevision = revision;
             }
             return view;
           },
@@ -188,7 +189,7 @@ test("execution records independently require the original contract identity", a
           currentVersions: { echo: "1" },
           authorize: () => true,
         });
-        assert.throws(() => restored.start(), { code: "unsupported_contract" });
+        await assert.rejects(restored.start(), { code: "unsupported_contract" });
       }
   } finally {
     await h.close();
@@ -206,18 +207,24 @@ test("generated structural equality never bypasses synchronous event-time author
   try {
     const owner = h.submit({ source: "owner" });
     await h.turn();
-    const blocked = h.submit({ source: "blocked", executionMatch: "terminated-after-eligible" });
-    const allowed = h.submit({ source: "allowed", executionMatch: "terminated-after-eligible" });
-    assert.equal(h.engine.getTask(allowed.taskId, caller).execution, undefined);
-    assert.equal(h.store.read().facts.tasks[allowed.taskId]?.prepared, undefined);
+    const blocked = h.submit({ source: "blocked", matchPolicy: "terminated-after-eligible" });
+    const allowed = h.submit({ source: "allowed", matchPolicy: "terminated-after-eligible" });
+    assert.equal(h.engine.getTask(allowed.taskId, caller).run, undefined);
+    assert.equal(Object.hasOwn(h.store.read().facts.tasks[allowed.taskId]!, "prepared"), false);
     revoked = true;
     await h.finish();
     assert.equal(
-      h.engine.getTask(allowed.taskId, caller).execution?.executionId,
-      h.engine.getTask(owner.taskId, caller).execution?.executionId,
+      h.engine.getTask(allowed.taskId, caller).run?.runId,
+      h.engine.getTask(owner.taskId, caller).run?.runId,
     );
-    assert.equal(h.engine.getTask(blocked.taskId, caller).execution, undefined);
-    assert.ok(h.engine.errors.some((error) => error.message === "source permission revoked"));
+    assert.equal(
+      h.engine.getTask(blocked.taskId, caller).run?.runId,
+      h.engine.getTask(owner.taskId, caller).run?.runId,
+    );
+    assert.equal(
+      h.engine.errors.some((error) => error.message === "source permission revoked"),
+      false,
+    );
     assert.equal(h.work.length, 1);
   } finally {
     await h.close();

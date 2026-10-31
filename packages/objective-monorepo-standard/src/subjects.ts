@@ -25,6 +25,7 @@ export interface PackageSubject {
   entries: string[];
   generated: { path: string; reason: string }[];
   localConfigurationImports?: { path: string; reason: string }[];
+  nodeWorkerImports?: { path: string; reason: string }[];
   joins: { id: string; kind: string }[];
   deliveries: Delivery[];
 }
@@ -51,6 +52,10 @@ export const packageSubjectSchema = object(
     entries: paths,
     generated: { type: "array", items: object({ path, reason: text }, ["path", "reason"]) },
     localConfigurationImports: {
+      type: "array",
+      items: object({ path, reason: text }, ["path", "reason"]),
+    },
+    nodeWorkerImports: {
       type: "array",
       items: object({ path, reason: text }, ["path", "reason"]),
     },
@@ -103,6 +108,15 @@ export function parsePackageSubject(value: unknown): PackageSubject {
       declared.some((path) => !value.entries.includes(path))
     )
       throw new Error("Local configuration imports require unique declared Node CLI entries.");
+  }
+  if (value.nodeWorkerImports?.length) {
+    const declared = value.nodeWorkerImports.map((entry) => entry.path);
+    if (
+      value.runtime !== "node" ||
+      new Set(declared).size !== declared.length ||
+      declared.some((path) => !value.entries.includes(path))
+    )
+      throw new Error("Node Worker 动态模块必须对应唯一声明的 Node Worker 入口。");
   }
   return value;
 }

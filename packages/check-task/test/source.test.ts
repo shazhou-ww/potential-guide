@@ -3,11 +3,11 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
-import { checkerSchemaUri, inspectContractFiles } from "@potential-guide/check-artifacts/contracts";
 import {
   packContractArtifact,
   writeContractArtifact,
 } from "@potential-guide/check-artifacts/build";
+import { checkerSchemaUri, inspectContractFiles } from "@potential-guide/check-artifacts/contracts";
 import { createArtifactSource } from "../src/index.js";
 
 test("exact cache hits reauthorize source/scope; mismatch, corruption and denied origins remain explicit", async () => {

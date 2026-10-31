@@ -1,11 +1,12 @@
 import {
   checkerSchemaUri,
-  objectiveSchemaUri,
   inspectContractFiles,
+  objectiveSchemaUri,
 } from "@potential-guide/check-artifacts/contracts";
 import { createCheckTaskType } from "@potential-guide/check-task";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { createProbeTaskType } from "../dist/index.js";
+
 const [database, directory] = process.argv.slice(2);
 const page = Buffer.from("---\ntitle: Test\ndescription: Test\n---\nBody\n");
 const check = inspectContractFiles(

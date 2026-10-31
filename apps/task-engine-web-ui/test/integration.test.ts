@@ -7,7 +7,7 @@ import test, { type TestContext } from "node:test";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import {
-  type ExecutionPage,
+  type RunPage,
   type HistoryPage,
   isTimedOut,
   type Observation,
@@ -364,7 +364,7 @@ test("directory expiration preserves stale view and requires an explicit new que
   assert.equal(directory.expired, false);
 });
 
-test("shared Execution, queued Task, cancellation, timeout, history/SSE and disconnect independence", async (t) => {
+test("shared Run, queued Task, cancellation, timeout, history/SSE and disconnect independence", async (t) => {
   const h = await setup(t);
   const eligibleAt = new Date(Date.now() + 200).toISOString();
   const a = await h.submit("shared", { eligibleAt, durationMs: 600 });
@@ -379,26 +379,26 @@ test("shared Execution, queued Task, cancellation, timeout, history/SSE and disc
     () => snapshot(b),
     (value) => value.stage === "running",
   );
-  assert.equal(runningA.execution!.executionId, runningB.execution!.executionId);
-  assert.equal((await snapshot(waiting)).stage, "queued");
+  assert.equal(runningA.run!.runId, runningB.run!.runId);
+  assert.equal((await snapshot(waiting)).stage, "running");
   const canceled = await h.request<TaskSnapshot>(`/tasks/${a.snapshot!.taskId}/cancel`, {
     method: "POST",
   });
   assert.ok(canceled.canceledAt);
   assert.equal((await snapshot(b)).canceledAt, undefined);
   const eventWindow = new EventWindow();
-  let query = `/event-history?executionId=${runningA.execution!.executionId}&limit=2`;
+  let query = `/event-history?runId=${runningA.run!.runId}&limit=2`;
   do {
     const page = await h.request<HistoryPage>(query);
     eventWindow.history(page);
     if (!eventWindow.streamCursor) eventWindow.streamCursor = page.cursor;
     query = page.next
-      ? `/event-history?executionId=${runningA.execution!.executionId}&cursor=${encodeURIComponent(page.next)}&limit=2`
+      ? `/event-history?runId=${runningA.run!.runId}&cursor=${encodeURIComponent(page.next)}&limit=2`
       : "";
   } while (query);
-  assert.ok(eventWindow.events.some((event) => event.type === "execution.started"));
+  assert.ok(eventWindow.events.some((event) => event.type === "run.started"));
   assert.equal(
-    eventWindow.events.some((event) => event.type === "execution.reclaimed"),
+    eventWindow.events.some((event) => event.type === "run.reclaimed"),
     false,
   );
   const abort = new AbortController();
@@ -839,30 +839,28 @@ test("UI execution proxy lists other-client records with independent permissions
   assert.equal(external.status, 202);
   const other = (await external.json()) as TaskSnapshot;
   await until(
-    () => h.request<ExecutionPage>("/executions"),
-    (page) => page.executions.length === 2,
+    () => h.request<RunPage>("/runs"),
+    (page) => page.runs.length === 2,
   );
-  const page = await h.request<ExecutionPage>("/executions?limit=1&sort=started-desc");
+  const page = await h.request<RunPage>("/runs?limit=1&sort=started-desc");
   assert.ok(page.next);
-  const continuation = await h.request<ExecutionPage>(
-    `/executions?limit=1&sort=started-desc&cursor=${encodeURIComponent(page.next)}`,
+  const continuation = await h.request<RunPage>(
+    `/runs?limit=1&sort=started-desc&cursor=${encodeURIComponent(page.next)}`,
   );
   assert.equal(continuation.observedAt, page.observedAt);
   assert.equal(continuation.expiresAt, page.expiresAt);
   assert.equal(JSON.stringify(page).includes("external client"), false);
-  await assert.rejects(() => h.request("/executions", { id: "list" }), /403/);
-  assert.deepEqual((await h.request<ExecutionPage>("/executions", { id: "other" })).executions, []);
+  await assert.rejects(() => h.request("/runs", { id: "list" }), /403/);
+  assert.deepEqual((await h.request<RunPage>("/runs", { id: "other" })).runs, []);
   const externalTask = await h.request<TaskSnapshot>(`/tasks/${other.taskId}`);
-  const associated = await h.request<TaskPage>(
-    `/tasks?executionId=${externalTask.execution!.executionId}`,
-  );
+  const associated = await h.request<TaskPage>(`/tasks?runId=${externalTask.run!.runId}`);
   assert.deepEqual(
     associated.tasks.map((task) => task.taskId),
     [other.taskId],
   );
   assert.equal(
     (
-      await h.request<TaskPage>(`/tasks?executionId=${externalTask.execution!.executionId}`, {
+      await h.request<TaskPage>(`/tasks?runId=${externalTask.run!.runId}`, {
         id: "other",
       })
     ).tasks.length,
@@ -870,13 +868,13 @@ test("UI execution proxy lists other-client records with independent permissions
   );
   const history = await h.request<HistoryPage>(`/event-history?taskId=${one.snapshot!.taskId}`);
   await assert.rejects(
-    () => h.request(`/executions?cursor=${encodeURIComponent(history.cursor)}`),
+    () => h.request(`/runs?cursor=${encodeURIComponent(history.cursor)}`),
     /400/,
   );
   assert.equal(
     (
       await h.local(
-        "/api/endpoints/full/executions",
+        "/api/endpoints/full/runs",
         "POST",
         {},
         { "X-Endpoint-Binding": h.endpoint().binding },

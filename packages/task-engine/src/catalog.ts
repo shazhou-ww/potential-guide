@@ -1,10 +1,10 @@
 import {
   at,
   type Caller,
-  type ExecutionPage,
-  type ExecutionQuery,
-  type ExecutionRecord,
-  type ExecutionSummary,
+  type RunPage,
+  type RunQuery,
+  type RunRecord,
+  type RunSummary,
   type Facts,
   fail,
   isPending,
@@ -58,7 +58,7 @@ function normalize(query: TaskQuery): TaskQuery {
       (key) =>
         ![
           "type",
-          "executionId",
+          "runId",
           "createdFrom",
           "createdBefore",
           "updatedFrom",
@@ -71,7 +71,7 @@ function normalize(query: TaskQuery): TaskQuery {
   const result: TaskQuery = { sort: "created-desc" };
   const type = typeFilter(raw);
   if (type !== undefined) result.type = type;
-  if (raw.executionId !== undefined) result.executionId = ulid(raw.executionId);
+  if (raw.runId !== undefined) result.runId = ulid(raw.runId);
   if (raw.sort !== undefined) {
     if (raw.sort !== "created-desc" && raw.sort !== "updated-desc")
       fail("invalid_request", "Unknown Task query order.");
@@ -85,15 +85,15 @@ function normalize(query: TaskQuery): TaskQuery {
 }
 function summary(task: TaskRecord, facts: Facts, now: number): TaskSummary {
   const id = task.snapshot.taskId;
-  const execution = task.snapshot.execution
-    ? facts.executions[task.snapshot.execution.executionId]
-    : undefined;
+  const runId = task.snapshot.run?.runId;
+  const run = runId ? facts.runs[runId] : undefined;
   const snapshot = project(
     {
-      projectionVersion: 2,
+      projectionVersion: 3,
+      messages: {},
       watermark: facts.watermark,
       tasks: { [id]: task },
-      executions: execution ? { [execution.executionId]: execution } : {},
+      runs: run ? { [run.runId]: run } : {},
     },
     id,
     now,
@@ -114,7 +114,7 @@ function summary(task: TaskRecord, facts: Facts, now: number): TaskSummary {
       timedOut: isTimedOut(snapshot),
       canceled: snapshot.canceledAt !== undefined,
       completed: snapshot.stage === "completed",
-      executionFailed: snapshot.stage === "execution_failed",
+      runFailed: snapshot.stage === "run_failed",
     },
   };
 }
@@ -136,8 +136,7 @@ export class TaskCatalog {
         if (updated === undefined) fail("history_gap", "Task update history is unavailable.");
         return !(
           (query.type !== undefined && task.binding.type !== query.type) ||
-          (query.executionId !== undefined &&
-            task.snapshot.execution?.executionId !== query.executionId) ||
+          (query.runId !== undefined && task.snapshot.run?.runId !== query.runId) ||
           (query.createdFrom && created < query.createdFrom) ||
           (query.createdBefore && created >= query.createdBefore) ||
           (query.updatedFrom && updated < query.updatedFrom) ||
@@ -165,39 +164,39 @@ export class TaskCatalog {
     return { tasks: items, ...metadata };
   }
 }
-function executionQuery(query: ExecutionQuery): ExecutionQuery {
+function runQuery(query: RunQuery): RunQuery {
   const raw = object(query);
   if (
     Object.keys(raw).some((key) => !["type", "startedFrom", "startedBefore", "sort"].includes(key))
   )
-    fail("invalid_request", "Unknown Execution query field.");
-  const result: ExecutionQuery = { sort: "started-desc" };
+    fail("invalid_request", "Unknown Run query field.");
+  const result: RunQuery = { sort: "started-desc" };
   const type = typeFilter(raw);
   if (type !== undefined) result.type = type;
   if (raw.sort !== undefined && raw.sort !== "started-desc")
-    fail("invalid_request", "Unknown Execution query order.");
+    fail("invalid_request", "Unknown Run query order.");
   for (const field of ["startedFrom", "startedBefore"] as const)
     if (raw[field] !== undefined) result[field] = queryTime(raw[field]);
   range(result.startedFrom, result.startedBefore);
   return result;
 }
-export class ExecutionCatalog {
-  private readonly catalog: FrozenCatalog<ExecutionRecord, ExecutionSummary, ExecutionQuery>;
+export class RunCatalog {
+  private readonly catalog: FrozenCatalog<RunRecord, RunSummary, RunQuery>;
   constructor(limits: CatalogLimits) {
     this.catalog = new FrozenCatalog(limits, {
-      namespace: "executions",
-      normalize: executionQuery,
-      records: (facts) => facts.executions,
-      id: (item) => item.executionId,
+      namespace: "runs",
+      normalize: runQuery,
+      records: (facts) => facts.runs,
+      id: (item) => item.runId,
       matches: (record, query) =>
         !(
           (query.type !== undefined && record.binding.type !== query.type) ||
           (query.startedFrom && record.startedAt < query.startedFrom) ||
           (query.startedBefore && record.startedAt >= query.startedBefore)
         ),
-      compare: (a, b) => descending(a.startedAt, b.startedAt, a.executionId, b.executionId),
+      compare: (a, b) => descending(a.startedAt, b.startedAt, a.runId, b.runId),
       summary: (record) => ({
-        executionId: record.executionId,
+        runId: record.runId,
         type: record.binding.type,
         version: record.binding.version,
         startedAt: record.startedAt,
@@ -218,14 +217,14 @@ export class ExecutionCatalog {
     this.catalog.clear();
   }
   read(
-    raw: ExecutionQuery,
+    raw: RunQuery,
     page: { cursor?: string; limit?: number },
     caller: Caller,
     facts: Facts,
     now: number,
-    authorize: (execution: ExecutionRecord) => void,
-  ): ExecutionPage {
+    authorize: (run: RunRecord) => void,
+  ): RunPage {
     const { items, ...metadata } = this.catalog.read(raw, page, caller, facts, now, authorize);
-    return { executions: items, ...metadata };
+    return { runs: items, ...metadata };
   }
 }

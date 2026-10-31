@@ -289,7 +289,7 @@ function Workbench({ view }: { view: WorkbenchView }) {
               value="executions"
               data-tab="executions"
             >
-              执行
+              Run
             </TabsTrigger>
           </TabsList>
           <label className="endpoint-label" htmlFor="endpoint">
@@ -373,10 +373,10 @@ function Workbench({ view }: { view: WorkbenchView }) {
             hidden={nav.tab !== "executions"}
           >
             <div className="page-heading">
-              <p>服务中的真实执行记录，包括其他客户端触发的执行；共享执行只列一次。</p>
+              <p>服务中的完整 Run 记录，包括其他客户端触发的尝试；共享 Run 只列一次。</p>
             </div>
             <div className="filters">
-              <Field id="execution-type" label="执行类型" placeholder="全部类型" />
+              <Field id="execution-type" label="Run 类型" placeholder="全部类型" />
               <Field
                 id="started-from"
                 label="开始时间 · 起（包含）"

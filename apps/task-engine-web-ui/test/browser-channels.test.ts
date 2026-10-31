@@ -134,7 +134,7 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
     eligibleAt: "2026-10-31T02:00:00.000Z",
     deadlineAt: "2026-10-31T03:00:00.000Z",
     timestamp: "2026-10-31T02:00:00.000Z",
-    execution: { executionId: newIdentity(), startedAt: "2026-10-31T02:00:00.000Z" },
+    run: { runId: newIdentity(), startedAt: "2026-10-31T02:00:00.000Z" },
   });
   const readDetail = () => {
     const text = document.querySelector('#task-detail [data-key="task-snapshot"] pre')?.textContent;
@@ -167,9 +167,9 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
       events: [
         {
           sequence: watermark,
-          type: "execution.progress",
+          type: "run.progress",
           scope: "fixture",
-          executionId: task.execution!.executionId,
+          runId: task.run!.runId,
           occurredAt: task.timestamp,
           data: { step: watermark },
         },

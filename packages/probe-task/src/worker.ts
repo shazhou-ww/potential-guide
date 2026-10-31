@@ -12,7 +12,7 @@ const port = parentPort!;
 const data = workerData as {
   prepared: ProbePrepared;
   policy: ProbePolicy;
-  executionId: string;
+  runId: string;
   startedAt: string;
 };
 const root = decodePrepared(data.prepared, data.prepared.environment, data.policy);
@@ -32,7 +32,8 @@ function advance() {
         observation: current.value,
         references: root.pages,
         evidence: {
-          parentExecutionId: data.executionId,
+          parentRunId: data.runId,
+          prepared: data.prepared,
           startedAt: data.startedAt,
           environment: data.prepared.environment,
           operations,
@@ -54,9 +55,11 @@ port.on("message", (entry: ProbeEffectEvidence) => {
           root.language,
         )
       : {
-          result: entry.snapshot.result as never,
+          result: (entry.snapshot.result as unknown as { result: never }).result,
           taskId: entry.snapshot.taskId,
-          executionId: entry.snapshot.execution!.executionId,
+          executionId: (
+            entry.snapshot.result as unknown as { evidence: { execution: { executionId: string } } }
+          ).evidence.execution.executionId,
         },
   );
   advance();

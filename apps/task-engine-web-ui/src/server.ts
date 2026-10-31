@@ -161,13 +161,13 @@ async function boundedBody(response: Response, max = RESPONSE_LIMIT): Promise<Ui
 export function allowedRoute(path: string, method: string, params: URLSearchParams): boolean {
   let keys: string[] = [];
   if (path === "/tasks" && method === "GET")
-    keys = ["type", "executionId", "createdFrom", "createdBefore", "sort", "cursor", "limit"];
-  else if (path === "/executions" && method === "GET")
+    keys = ["type", "runId", "createdFrom", "createdBefore", "sort", "cursor", "limit"];
+  else if (path === "/runs" && method === "GET")
     keys = ["type", "startedFrom", "startedBefore", "sort", "cursor", "limit"];
   else if (["/event-history", "/events"].includes(path) && method === "GET")
     keys = [
       "taskId",
-      "executionId",
+      "runId",
       "seriesId",
       ...(path === "/event-history" ? ["cursor", "limit"] : []),
     ];

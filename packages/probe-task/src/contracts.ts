@@ -1,39 +1,39 @@
 import {
+  type ArtifactReference,
+  type ContractArtifact,
   canonicalJson,
   composeObjectivePages,
   inspectContractFiles,
+  type JsonObject,
   jsonObject,
   selectLanguage,
   validateArtifactReference,
   validateArtifactSubject,
-  type ArtifactReference,
-  type ContractArtifact,
-  type JsonObject,
 } from "@potential-guide/check-artifacts/contracts";
 import {
-  observeObjective,
-  type ObservationInput,
-  type ObservationEffect,
-  type ObservationPolicy,
   type ObjectiveObservation,
+  type ObservationEffect,
+  type ObservationInput,
+  type ObservationPolicy,
+  observeObjective,
   type PreparedObjective,
 } from "@potential-guide/check-artifacts/observation";
 import {
-  json,
+  artifactDigestSchema,
+  artifactHttpsUrlSchema,
+  artifactReferenceSchema,
+} from "@potential-guide/check-task";
+import {
   compileInputSchema,
   freeze,
-  matchesExecutionTime,
+  type Json,
+  json,
+  matchesRunTime,
   TaskError,
+  type TaskSnapshot,
   timestamp,
   ulid,
-  type Json,
-  type TaskSnapshot,
 } from "@potential-guide/task-protocol";
-import {
-  artifactReferenceSchema,
-  artifactHttpsUrlSchema,
-  artifactDigestSchema,
-} from "@potential-guide/check-task";
 
 export interface ProbeInput extends ObservationInput {
   objective: ArtifactReference & { kind: "objective" };
@@ -61,7 +61,8 @@ export interface ProbeResult {
   observation: ObjectiveObservation;
   references: PreparedObjective["pages"];
   evidence: {
-    parentExecutionId: string;
+    parentRunId: string;
+    prepared: ProbePrepared;
     startedAt: string;
     environment: string;
     operations: ProbeEffectEvidence[];
@@ -195,12 +196,13 @@ export function decodePrepared(
 export function validateProbeResult(value: unknown): Json {
   const record = exact(value, ["observation", "references", "evidence"]);
   const evidence = exact(record.evidence, [
-    "parentExecutionId",
+    "parentRunId",
+    "prepared",
     "startedAt",
     "environment",
     "operations",
   ]);
-  ulid(evidence.parentExecutionId);
+  ulid(evidence.parentRunId);
   if (
     typeof evidence.startedAt !== "string" ||
     !Number.isFinite(Date.parse(evidence.startedAt)) ||
@@ -291,9 +293,9 @@ export function replayResult(
       const snapshot = entry.snapshot;
       ulid(snapshot.taskId);
       ulid(snapshot.requestId);
-      ulid(snapshot.execution?.executionId);
-      timestamp(snapshot.execution?.startedAt);
-      timestamp(snapshot.execution?.completedAt);
+      ulid(snapshot.run?.runId);
+      timestamp(snapshot.run?.startedAt);
+      timestamp(snapshot.run?.completedAt);
       timestamp(snapshot.receivedAt);
       timestamp(snapshot.eligibleAt);
       timestamp(snapshot.deadlineAt);
@@ -301,17 +303,19 @@ export function replayResult(
         taskIds.has(snapshot.taskId) ||
         snapshot.stage !== "completed" ||
         snapshot.canceledAt ||
-        !snapshot.execution?.completedAt ||
+        !snapshot.run?.completedAt ||
         !snapshot.result ||
-        !matchesExecutionTime("started-after-eligible", snapshot.eligibleAt, snapshot.execution) ||
-        Date.parse(snapshot.execution.completedAt) > Date.parse(snapshot.deadlineAt)
+        !matchesRunTime("started-after-eligible", snapshot.eligibleAt, snapshot.run) ||
+        Date.parse(snapshot.run.completedAt) > Date.parse(snapshot.deadlineAt)
       )
         throw new TaskError("invalid_probe", "Child completion evidence differs.");
       taskIds.add(snapshot.taskId);
       next = iterator.next({
-        result: snapshot.result as never,
+        result: (snapshot.result as unknown as { result: unknown }).result as never,
         taskId: snapshot.taskId,
-        executionId: snapshot.execution.executionId,
+        executionId: (
+          snapshot.result as unknown as { evidence: { execution: { executionId: string } } }
+        ).evidence.execution.executionId,
       });
     }
   }
@@ -325,3 +329,35 @@ export function replayResult(
     throw new TaskError("invalid_probe", "Observation differs from exact evidence replay.");
   return json(value, 96 * 1024 * 1024);
 }
+export const probeResultSchema = {
+  oneOf: [
+    {
+      type: "object",
+      properties: { kind: { const: "probe-prepared" }, prepared: { type: "object" } },
+      required: ["kind", "prepared"],
+      additionalProperties: false,
+    },
+    {
+      type: "object",
+      properties: { kind: { const: "probe-progress" }, progress: {} },
+      required: ["kind", "progress"],
+      additionalProperties: false,
+    },
+    {
+      type: "object",
+      properties: {
+        observation: { type: "object" },
+        references: { type: "object" },
+        evidence: { type: "object" },
+      },
+      required: ["observation", "references", "evidence"],
+      additionalProperties: false,
+    },
+    {
+      type: "object",
+      properties: { failure: { type: "object" }, evidence: { type: "object" } },
+      required: ["failure", "evidence"],
+      additionalProperties: false,
+    },
+  ],
+};

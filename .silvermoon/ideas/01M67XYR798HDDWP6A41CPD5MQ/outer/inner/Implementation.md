@@ -1,6 +1,11 @@
 # Implementation
 
-本文件是可调整的实施初版，不属于构想验收范围。
+本文件是完整实施候选的主体契约，不改变已接受构想范围。
+
+完整实施候选已通过 `pnpm check`，包括生产 tarball 的独立安装消费者；
+尚须同步准确 revision 并 submitInner，由父代理监督验收。
+具体契约见 [内部设计](./RuntimeDesign.md) 和 [公开协议](../../../../../docs/task-engine.md)；
+基础失败、父代理授权及后续完整验证见 [验证证据](./BoundaryEvidence.md)。
 
 ## Steps
 
@@ -8,16 +13,18 @@
 
 采用 Run 表示完整尝试、Execution 表示实际执行子过程，以及 MatchPolicy / matchPolicy
 表示 Task 对 Run 的匹配政策。对齐类型、请求字段、运行标识、事件、持久化、恢复及公开投影，
-避免新协议仍把整体称为 Execution；兼容性与旧格式处置待定义，不授权默认迁移用户数据。
+避免新协议仍把整体称为 Execution；Facts/SQLite 明确采用 v3 并拒旧，
+不迁移或覆盖用户数据，不提供旧字段、目录或结果形状 fallback。
 保留两种政策值，明确其 Run 事件边界及行为变化。
-收敛单一完整运行入口（run 为候选名称）和可选准备中间事实，
+收敛单一 `run(Input, RunContext)` 入口和独立结构化 checkpoint，
 定义类型运行通道的指定 Run 取消、代际、失联与恢复；
-类型级守护 Worker 作为候选，具体数量、版本/环境归属和运行载体待定。
+类型级守护按注册 type/version/environment 归属，管理多个 Run；
+默认独立 JS 堆、最小 JSON 消息和无继承环境，不按 Run 数量机械创建守护。
 参考 [接口草案](./ideal/TaskType.md) 定界 Progress 的 Run 归属、顺序、持久化确认与背压，
 以及公开结果 schema 和隔离边界内业务复验的分工；不把草案签名当作已批准接口。
-定界必选 messageSchema / messages、Task 归属的投递信封及业务接纳确认，
+落实必选 messageSchema / messages、Task 归属信封、Task signal 及持久化接纳确认，
 支持 boolean Message Schema；false 为 Never，不复用只接受 object 根的 Input Schema 编译入口，
-明确无 Run 路由、投入追加、目标调整与匹配兼容性的关系，不引入隐式绑定或需求改写。
+明确无 Run 路由、投入追加、目标调整与匹配兼容性的关系，不引入隐式绑定或需求改写；尚未绑定/尚未投递的 Run 拒绝业务消息路由。
 
 ### I-S02: 对齐共享和宿主资源边界
 

@@ -307,6 +307,12 @@ export async function checkPackage(value: unknown, maxLayer: 1 | 2 = 2) {
           reason,
         ]),
       ),
+      nodeWorkerImports: new Map(
+        (subject.nodeWorkerImports ?? []).map(({ path, reason }) => [
+          `${subject.directory}/${path}`,
+          reason,
+        ]),
+      ),
     },
     facts.inventory,
   );

@@ -1,6 +1,6 @@
 import {
   type Caller,
-  type ExecutionQuery,
+  type RunQuery,
   fail,
   type HistoryFilter,
   type Observation,
@@ -28,7 +28,8 @@ function status(code: string): number {
   if (code === "contract_revision_mismatch") return 412;
   if (code === "not_found") return 404;
   if (code === "history_expired" || code === "query_expired") return 410;
-  if (code === "idempotency_conflict" || code === "task_finished") return 409;
+  if (["idempotency_conflict", "task_finished", "no_run_route", "message_finished"].includes(code))
+    return 409;
   if (code === "payload_too_large") return 413;
   if (code === "capacity_exceeded") return 429;
   if (
@@ -87,7 +88,7 @@ async function body(request: Request, limit: number): Promise<unknown> {
 }
 function filter(url: URL): HistoryFilter {
   const entries = [...url.searchParams].filter(([key]) =>
-    ["taskId", "executionId", "seriesId"].includes(key),
+    ["taskId", "runId", "seriesId"].includes(key),
   );
   if (entries.length !== 1) fail("invalid_request", "Exactly one history filter required.");
   return Object.fromEntries(entries) as HistoryFilter;
@@ -175,14 +176,14 @@ export function createTaskHandler(
       const path = url.pathname.slice(prefix.length);
       if (request.method === "GET" && path === "/task-types")
         return response(options.service.discoverTypes(caller));
-      if (request.method === "GET" && (path === "/tasks" || path === "/executions")) {
+      if (request.method === "GET" && (path === "/tasks" || path === "/runs")) {
         const query: Record<string, string> = {};
         const allowed = new Set(
-          path === "/executions"
+          path === "/runs"
             ? ["type", "startedFrom", "startedBefore", "sort", "cursor", "limit"]
             : [
                 "type",
-                "executionId",
+                "runId",
                 "createdFrom",
                 "createdBefore",
                 "updatedFrom",
@@ -205,8 +206,8 @@ export function createTaskHandler(
           ...(limit !== undefined ? { limit: Number(limit) } : {}),
         };
         return response(
-          path === "/executions"
-            ? options.service.listExecutions(filters as ExecutionQuery, paging, caller)
+          path === "/runs"
+            ? options.service.listRuns(filters as RunQuery, paging, caller)
             : options.service.listTasks(filters as TaskQuery, paging, caller),
         );
       }
@@ -231,6 +232,20 @@ export function createTaskHandler(
         return response(options.service.getTask(task[1], caller));
       if (task?.[1] && task[2] && request.method === "POST")
         return response(options.service.cancelTask(task[1], caller));
+      const message = /^\/tasks\/([0-9A-Z]+)\/messages\/([0-9A-Z]+)$/.exec(path);
+      if (message?.[1] && message[2]) {
+        if (request.method === "GET")
+          return response(options.service.getTaskMessage(message[1], message[2], caller));
+        if (request.method === "POST") {
+          const raw = object(await body(request, maxBody));
+          if (Object.keys(raw).join(",") !== "payload")
+            fail("invalid_request", "消息正文只能包含 payload。");
+          return response(
+            options.service.sendTaskMessage(message[1], message[2], raw.payload, caller),
+            202,
+          );
+        }
+      }
       const original = /^\/requests\/([0-9A-Z]+)$/.exec(path);
       if (original?.[1] && request.method === "GET")
         return response(options.service.getRequest(original[1], caller));

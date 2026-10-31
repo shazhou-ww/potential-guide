@@ -61,7 +61,7 @@ for (const invalid of ["checkpoint", "facts", "binding"] as const) {
             ? { ...facts, projectionVersion: 1 }
             : {
                 ...facts,
-                executions: { old: { binding: { executionMatch: "completed-after-eligible" } } },
+                runs: { old: { binding: { matchPolicy: "completed-after-eligible" } } },
               };
         db.prepare("UPDATE checkpoint SET payload=?").run(JSON.stringify(payload));
       }
@@ -89,12 +89,12 @@ test("only empty stores initialize v2 and reopen with unchanged identity", async
     assert.deepEqual(reopened.read(), before);
     reopened.close();
     const inspect = new DatabaseSync(filename, { readOnly: true });
-    assert.equal(inspect.prepare("PRAGMA user_version").get()?.user_version, 2);
+    assert.equal(inspect.prepare("PRAGMA user_version").get()?.user_version, 3);
     assert.equal(
       inspect.prepare("SELECT projection_version FROM checkpoint").get()?.projection_version,
-      2,
+      3,
     );
-    assert.equal(before.facts.projectionVersion, 2);
+    assert.equal(before.facts.projectionVersion, 3);
     inspect.close();
   } finally {
     await rm(root, { recursive: true, force: true });

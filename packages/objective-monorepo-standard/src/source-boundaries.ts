@@ -19,17 +19,39 @@ export interface SourceBoundaryContext {
   dependencies: Dependency[];
   put: ReportPut;
   localConfigurationImports?: ReadonlyMap<string, string>;
+  nodeWorkerImports?: ReadonlyMap<string, string>;
 }
 
 export async function checkSourceImport(
   context: SourceBoundaryContext,
   source: string,
-  observed: { specifier: string | null; typeOnly: boolean; localConfiguration?: true },
+  observed: {
+    specifier: string | null;
+    typeOnly: boolean;
+    localConfiguration?: true;
+    nodeWorkerModule?: true;
+  },
 ) {
   const { snapshot, contract, workspace, manifests, dependencies, put } = context;
   const { specifier, typeOnly } = observed;
 
   if (specifier === null) {
+    const workerReason = context.nodeWorkerImports?.get(source);
+    if (
+      workerReason &&
+      observed.nodeWorkerModule &&
+      workspace.runtime === "node" &&
+      workspace.entries.some((entry) => source === `${workspace.path}/${entry}`)
+    ) {
+      put(
+        "pass",
+        "node-worker-module-import",
+        `已声明 Node Worker 本地模块边界：${workerReason}。外部模块内容不属于包内静态依赖枚举。`,
+        "",
+        source,
+      );
+      return;
+    }
     const reason = context.localConfigurationImports?.get(source);
     if (
       reason &&

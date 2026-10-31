@@ -3,8 +3,8 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import test from "node:test";
-import { createTaskEngine } from "@potential-guide/task-engine";
 import type { NewEvent } from "@potential-guide/task-protocol";
+import { createFixtureEngine } from "../../task-engine/test/driver.js";
 import { caller, harness } from "../../task-engine/test/fixtures.js";
 import { openSqliteStore } from "../src/index.js";
 
@@ -35,24 +35,23 @@ test("Execution directory reads persisted SQLite facts after reopen and rejects 
       authorize: () => true,
       limits: { pageSize: 1 },
     };
-    const one = createTaskEngine({ ...options, store });
-    one.start();
-    const page = one.listExecutions({}, {}, caller);
+    const one = createFixtureEngine({ ...options, store });
+    await one.start();
+    const page = one.listRuns({}, {}, caller);
     assert.ok(page.next);
-    assert.equal(page.executions[0]!.state.reclaimed, true);
+    assert.equal(page.runs[0]!.state.reclaimed, true);
     await one.close();
     store.close();
     store = openSqliteStore(filename);
-    const two = createTaskEngine({ ...options, store });
-    two.start();
+    const two = createFixtureEngine({ ...options, store });
+    await two.start();
     try {
-      assert.deepEqual(two.listExecutions({}, {}, caller).executions, page.executions);
-      assert.throws(() => two.listExecutions({}, { cursor: page.next! }, caller), {
+      assert.deepEqual(two.listRuns({}, {}, caller).runs, page.runs);
+      assert.throws(() => two.listRuns({}, { cursor: page.next! }, caller), {
         code: "query_expired",
       });
       assert.equal(
-        two.listExecutions({}, { cursor: two.listExecutions({}, {}, caller).next! }, caller)
-          .executions.length,
+        two.listRuns({}, { cursor: two.listRuns({}, {}, caller).next! }, caller).runs.length,
         1,
       );
     } finally {

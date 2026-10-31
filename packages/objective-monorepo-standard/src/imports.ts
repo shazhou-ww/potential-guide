@@ -1,7 +1,12 @@
 import ts from "typescript";
 
 export function sourceImports(path: string, content: string) {
-  const imports: { specifier: string | null; typeOnly: boolean; localConfiguration?: true }[] = [];
+  const imports: {
+    specifier: string | null;
+    typeOnly: boolean;
+    localConfiguration?: true;
+    nodeWorkerModule?: true;
+  }[] = [];
   const file = ts.createSourceFile(path, content, ts.ScriptTarget.Latest, true);
   const imported = (name: string, from: string, symbol: string) =>
     file.statements.some(
@@ -34,6 +39,28 @@ export function sourceImports(path: string, content: string) {
       ts.isIdentifier(path.expression) &&
       imported(path.expression.text, "node:path", "resolve") &&
       path.arguments.length > 0
+    );
+  };
+  const nodeWorkerModule = (argument: ts.Expression | undefined) => {
+    if (!argument || !ts.isPropertyAccessExpression(argument) || argument.name.text !== "href")
+      return false;
+    const call = (node: ts.Node, from: string, symbol: string): ts.Expression | undefined =>
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      imported(node.expression.text, from, symbol) &&
+      node.arguments.length === 1
+        ? node.arguments[0]
+        : undefined;
+    const canonical = call(argument.expression, "node:url", "pathToFileURL");
+    const file = canonical && call(canonical, "node:fs", "realpathSync");
+    const selected = file && call(file, "node:url", "fileURLToPath");
+    return (
+      !!selected &&
+      ts.isPropertyAccessExpression(selected) &&
+      selected.name.text === "module" &&
+      ts.isIdentifier(selected.expression) &&
+      imported(selected.expression.text, "node:worker_threads", "workerData") &&
+      imported("parentPort", "node:worker_threads", "parentPort")
     );
   };
   function visit(node: ts.Node) {
@@ -75,6 +102,9 @@ export function sourceImports(path: string, content: string) {
           typeOnly: false,
           ...(node.expression.kind === ts.SyntaxKind.ImportKeyword && localConfiguration(argument)
             ? { localConfiguration: true as const }
+            : {}),
+          ...(node.expression.kind === ts.SyntaxKind.ImportKeyword && nodeWorkerModule(argument)
+            ? { nodeWorkerModule: true as const }
             : {}),
         });
     }
