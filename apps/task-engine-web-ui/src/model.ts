@@ -132,6 +132,7 @@ export class SubmissionBar {
   constructor(
     readonly send: (entry: Entry) => Promise<TaskSnapshot>,
     readonly changed: () => void = () => {},
+    readonly accepted: (entry: Entry) => void = () => {},
   ) {}
   create(endpoint: Endpoint): Batch {
     if (this.batches.length >= 100) throw new Error("本页批次上限 100；请移除已结束批次。");
@@ -183,6 +184,7 @@ export class SubmissionBar {
       entry.snapshot = snapshot;
       entry.state = "accepted";
       entry.message = "已创建 / 已确认原提交";
+      this.accepted(entry);
     } catch (error) {
       const definitive = error instanceof ApiError && error.status >= 400 && error.status < 500;
       entry.everUnknown ||= !definitive;
@@ -230,21 +232,26 @@ export class Directory {
   expired = false;
   private generation = 0;
   dropped = 0;
+  error = "";
+  rejectQuery(error: unknown): void {
+    this.generation++;
+    this.error = String(error);
+  }
   async load(
     fetchPage: (query: string) => Promise<TaskPage>,
     query: string,
     append = false,
     current: () => boolean = () => true,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const generation = ++this.generation;
     const isCurrent = () => current() && generation === this.generation;
-    if (append && (this.expired || !this.page?.next)) throw new Error("请重新查询目录。");
-    const original = append ? this.query : query;
-    const params = new URLSearchParams(original);
-    if (append) params.set("cursor", this.page!.next!);
     try {
+      if (append && (this.expired || !this.page?.next)) throw new Error("请重新查询目录。");
+      const original = append ? this.query : query;
+      const params = new URLSearchParams(original);
+      if (append) params.set("cursor", this.page!.next!);
       const next = await fetchPage(params.toString());
-      if (!isCurrent()) return;
+      if (!isCurrent()) return false;
       if (!Array.isArray(next.tasks) || !next.observedAt || !next.expiresAt)
         throw new Error("目录协议无效。");
       if (
@@ -260,10 +267,88 @@ export class Directory {
       }
       this.query = original;
       this.expired = false;
+      this.error = "";
+      return true;
     } catch (error) {
-      if (isCurrent() && error instanceof ApiError && error.code === "query_expired")
-        this.expired = true;
+      if (!isCurrent()) return false;
+      this.error = String(error);
+      if (error instanceof ApiError && error.code === "query_expired") this.expired = true;
       throw error;
+    }
+  }
+}
+export class TaskSnapshots {
+  readonly values = new Map<string, TaskSnapshot>();
+  private readonly versions = new Map<
+    string,
+    { generation: number; watermark: number; floor: number }
+  >();
+  private version(id: string) {
+    let value = this.versions.get(id);
+    if (!value) {
+      value = { generation: 0, watermark: 0, floor: 0 };
+      this.versions.set(id, value);
+      this.trimVersions();
+    }
+    return value;
+  }
+  seed(snapshot: TaskSnapshot): void {
+    if (!this.versions.has(snapshot.taskId)) {
+      this.version(snapshot.taskId);
+      this.store(snapshot);
+    }
+  }
+  begin(id: string): (snapshot: TaskSnapshot) => boolean {
+    const version = this.version(id);
+    const generation = ++version.generation;
+    return (snapshot) => {
+      if (
+        snapshot.taskId !== id ||
+        this.versions.get(id) !== version ||
+        version.generation !== generation
+      )
+        return false;
+      const facts = (value: TaskSnapshot | undefined) => {
+        if (!value) return "";
+        const { timestamp: _observationTime, ...rest } = value;
+        return JSON.stringify(rest);
+      };
+      // HTTP has no causal watermark: changed facts require a later stream boundary
+      // before a buffered pre-response observation can replace them.
+      if (facts(this.values.get(id)) !== facts(snapshot)) version.floor = version.watermark + 1;
+      version.generation++;
+      this.store(snapshot);
+      return true;
+    };
+  }
+  observe(snapshot: TaskSnapshot, watermark: number): boolean {
+    const version = this.version(snapshot.taskId);
+    if (watermark < Math.max(version.watermark, version.floor)) return false;
+    version.watermark = watermark;
+    version.generation++;
+    this.store(snapshot);
+    return true;
+  }
+  private store(snapshot: TaskSnapshot): void {
+    this.values.set(snapshot.taskId, snapshot);
+    let bytes = 0;
+    const keep = [...this.values.values()].reverse();
+    for (const [index, value] of keep.entries()) {
+      bytes += new TextEncoder().encode(JSON.stringify(value)).byteLength;
+      if (index >= 200 || bytes > 8_388_608) {
+        this.values.delete(value.taskId);
+        this.versions.delete(value.taskId);
+      }
+    }
+    this.trimVersions();
+  }
+  private trimVersions(): void {
+    while (this.versions.size > 256) {
+      const oldest = this.versions.keys().next().value;
+      if (oldest) {
+        this.versions.delete(oldest);
+        this.values.delete(oldest);
+      }
     }
   }
 }

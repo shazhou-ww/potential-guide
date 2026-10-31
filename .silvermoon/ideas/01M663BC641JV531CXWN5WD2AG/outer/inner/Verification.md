@@ -15,7 +15,7 @@
 - 正式独立 review/acceptance 属于主 Agent。本文是实施者的实际验证记录，
   不是接受决定或生产部署证明。
 
-## 自动检查
+## 初版自动检查（e9ada324）
 
 在指定 worktree，Node v24.12.0 / pnpm 11.22.0：
 
@@ -107,3 +107,53 @@
 - 本机收藏文件依赖操作员目录权限，文档要求单实例使用同一文件；没有把 loopback
   当作防恶意本机程序的账户隔离。显式重新指向逻辑服务/授权范围时必须更新 binding，
   不声称可识别未声明的同 URL/同 binding 服务替换。
+
+## 主 Agent 审阅后修复
+
+主 Agent 对 e9ada324 独立审阅发现五项阻塞问题，初版 18 项检查不足以覆盖它们；
+没有把初版提交集成、submitInner 或 acceptInner。此次仍只修改同一实现分支，
+不以实施者回归代替主 Agent 的再次审阅。
+
+1. **引用联合约束 / own properties**：不再浅覆盖 `$ref` target 的 properties、
+   required 等断言。有同级校验约束时保留 `allOf` 联合并明确使用局部 JSON；
+   普通纯引用继续生成字段。用审阅给出的 schema 对合法 requiredText 输入，
+   同时通过编辑器读回与真实 `compileInputSchema.validate`；constructor /
+   `__proto__` 回归证明缺省字段不读取 Object.prototype。保留根 object 约束，
+   局部 JSON 输入数组明确拒绝，不把数组展开成请求属性。
+2. **持续 SSE 的 DOM 与焦点**：新增 keyed DOM reconciliation，不再每次
+   replaceChildren。对象、事件集合和 sequence 有稳定键，计数文案不是身份；
+   原 summary、Task 入口、展开详情保持节点身份，动作使用当前回调并保留 busy 状态。
+   自动测试连续 18 次改变事件数量，核对节点与展开状态不变。
+3. **凭据错误回显**：对已解码的 JSON 字符串、对象键和数组递归脱敏，再序列化，
+   不再对序列化文本做 token 替换。独立本机 HTTP fixture 用带双引号、反斜杠和
+   制表符的虚构凭据回显 Authorization 及嵌套属性；确认真实发送原值、返回仍为
+   400 / invalid_request，解码后的各层字符串和键均不含凭据。测试不输出凭据。
+4. **时钟回拨与陈旧回执**：TaskSnapshots 区分仅一次 receipt seed、HTTP 请求
+   世代与 SSE watermark。删除 timestamp 大小比较；旧 receipt 不再随 bar.changed
+   重放。回归覆盖更早时间的新 running/canceled、较旧 watermark、迟到 HTTP 响应、
+   HTTP 取消回执之后的缓冲旧 SSE，以及其他批次变动不会覆盖新事实。
+5. **目录页/错误一致性**：Directory 自己在相同 generation 下提交 page/error，
+   旧成功/旧失败都返回 ignored；浏览器不再独立清空/设置请求错误。回归覆盖旧
+   410 晚于新成功、旧成功晚于新 403、非法新查询使旧在途页失效。
+
+新增回归集中在 `test/review-regressions.test.ts` 与真实 HTTP integration test。
+当前定向检查为 **28 tests / 28 pass / 0 fail / 0 skip**，build、typecheck 均通过。
+另补快捷提交的 300ms 单调时钟重复激活保护与测试，以避免优化后快速回执在
+100ms 双击窗口内重新启用而创建第二条 Task；主动再做入口与原身份重试保持分离。
+
+真实集成 Chromium 中，连接本次新建的独立 fixture/UI，任务持续产生 progress：
+展开“全部公开事件”后计数从 10 增至 32，原 Task summary 聚焦 1.5 秒后仍是
+activeElement、保持 connected，展开状态不变；再将焦点放到 Task 列表原按钮，
+1 秒后仍保留原节点及焦点。当前工具页报告 visibility=hidden，自动指针
+actionability 等待超时，因此本轮用浏览器原生 click/focus 驱动并核对真实
+activeElement；不把这次验证写成前台实体键盘/完整屏幕阅读器矩阵。
+
+最终构建再次实测事件计数 9→25 时上述节点/焦点/展开状态仍保持，并确认选中
+Task 的取消时间出现在独立 Task 区。快捷按钮两次原生激活目标间隔 100ms、
+工具实际间隔 131ms，观测到 **1 次 POST /tasks**；此前使用后台页 setTimeout
+测试会受浏览器节流变成约 1 秒，未将它冒充 100ms 证据。
+
+最终代码再次运行 build、typecheck、28 项定向测试以及完整 `pnpm check`，
+全部退出码 0（包括各 isolated packed consumer）。本轮新建的 UI / fixture
+进程已停止，浏览器页已释放，只有本轮拥有的 fixture 配置/随机凭据被删除；
+没有接触主 Agent 的验证资源，也没有 push、submit 或接受操作。

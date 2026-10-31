@@ -46,6 +46,20 @@ export function resolvedSchema(schema: Schema, root: Schema, depth = 0): Schema 
   const target = resolvedSchema(result as Schema, root, depth + 1);
   const { $ref: _ref, ...siblings } = schema;
   if (typeof target === "boolean") return target ? siblings : false;
+  const annotations = new Set([
+    "title",
+    "description",
+    "$comment",
+    "$defs",
+    "$schema",
+    "default",
+    "examples",
+    "deprecated",
+    "readOnly",
+    "writeOnly",
+  ]);
+  if (Object.keys(siblings).some((key) => !annotations.has(key)))
+    return { ...siblings, allOf: [target, siblings] };
   return { ...target, ...siblings };
 }
 function element<K extends keyof HTMLElementTagNameMap>(
@@ -109,6 +123,10 @@ export function schemaEditor(
       element("pre", JSON.stringify(spec, null, 2)),
     );
     box.append(label, input, details);
+    if (typeof raw === "object" && raw.$ref && "allOf" in spec)
+      box.append(
+        element("p", "$ref 与同级约束联合生效；使用局部 JSON 保留完整约束，不覆盖引用字段。"),
+      );
     return {
       node: box,
       read() {
@@ -171,7 +189,13 @@ export function schemaEditor(
       enabled.disabled = required;
       const label = element("label", `${key}${required ? "（必填）" : "（包含此字段）"}`);
       label.prepend(enabled);
-      const editor = schemaEditor(property, original[key], root, key, depth + 1);
+      const editor = schemaEditor(
+        property,
+        Object.hasOwn(original, key) ? original[key] : undefined,
+        root,
+        key,
+        depth + 1,
+      );
       (editor.node as HTMLFieldSetElement).disabled = !enabled.checked;
       editor.node.hidden = !enabled.checked;
       enabled.addEventListener("change", () => {

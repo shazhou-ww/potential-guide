@@ -5,6 +5,7 @@ import type {
   TaskSnapshot,
   TaskTypeDiscovery,
 } from "@potential-guide/task-protocol";
+import { claimActivation, reconcile } from "./dom.js";
 import { envelopeKeys, envelopeSchema, schemaEditor } from "./form.js";
 import {
   Api,
@@ -19,6 +20,7 @@ import {
   type Parameters,
   Selection,
   SubmissionBar,
+  TaskSnapshots,
   validSnapshot,
 } from "./model.js";
 import type { Endpoint, Favorite } from "./server.js";
@@ -40,24 +42,32 @@ function button(
   text: string,
   action: () => void | Promise<void>,
   disabled = false,
+  minimumInterval = 0,
 ): HTMLButtonElement {
   const result = node("button", text);
   result.type = "button";
   result.disabled = disabled;
+  result.dataset.disabled = String(disabled);
   result.dataset.action = text;
-  result.addEventListener("click", () => {
-    result.disabled = true;
+  result.dataset.key = `action:${text}`;
+  result.onclick = function () {
+    const control = this as HTMLButtonElement;
+    if (control.dataset.busy === "true" || !claimActivation(control, minimumInterval)) return;
+    control.dataset.busy = "true";
+    control.disabled = true;
     void Promise.resolve()
       .then(action)
       .catch(notify)
       .finally(() => {
-        result.disabled = disabled;
+        delete control.dataset.busy;
+        control.disabled = control.dataset.disabled === "true";
       });
-  });
+  };
   return result;
 }
-function details(title: string, value: unknown): HTMLDetailsElement {
+function details(title: string, value: unknown, key = title): HTMLDetailsElement {
   const result = node("details");
+  result.dataset.key = key;
   result.append(node("summary", title), node("pre", JSON.stringify(value, null, 2)));
   return result;
 }
@@ -96,9 +106,8 @@ interface Workspace {
   endpoint: Endpoint;
   types: TaskTypeDiscovery[];
   discoveryError: string;
-  tasks: Map<string, TaskSnapshot>;
+  tasks: TaskSnapshots;
   directory: Directory;
-  directoryError: string;
 }
 function workspace(endpoint = selection.endpoint): Workspace {
   if (!endpoint) throw new Error("请先配置并选择 Endpoint。");
@@ -108,28 +117,12 @@ function workspace(endpoint = selection.endpoint): Workspace {
       endpoint,
       types: [],
       discoveryError: "",
-      tasks: new Map(),
+      tasks: new TaskSnapshots(),
       directory: new Directory(),
-      directoryError: "",
     };
     states.set(endpoint.binding, state);
   }
   return state;
-}
-function rememberTask(endpoint: Endpoint, snapshot: TaskSnapshot): void {
-  const tasks = workspace(endpoint).tasks;
-  const previous = tasks.get(snapshot.taskId);
-  if (previous && previous.timestamp > snapshot.timestamp) return;
-  tasks.set(snapshot.taskId, snapshot);
-  while (tasks.size > 200) {
-    const oldest = tasks.keys().next().value;
-    if (oldest) tasks.delete(oldest);
-  }
-  let bytes = 0;
-  for (const value of [...tasks.values()].reverse()) {
-    bytes += new TextEncoder().encode(JSON.stringify(value)).byteLength;
-    if (bytes > 8_388_608) tasks.delete(value.taskId);
-  }
 }
 const bar = new SubmissionBar(
   (entry) =>
@@ -139,11 +132,11 @@ const bar = new SubmissionBar(
       headers: { "Idempotency-Key": entry.id, "If-Match": `"${entry.revision}"` },
     }),
   () => {
-    for (const batch of bar.batches)
-      for (const entry of batch.entries)
-        if (entry.snapshot) rememberTask(entry.endpoint, entry.snapshot);
     renderBar();
     renderTasks();
+  },
+  (entry) => {
+    if (entry.snapshot) workspace(entry.endpoint).tasks.seed(entry.snapshot);
   },
 );
 function checkedForm(): { endpoint: Endpoint; parameters: Parameters; revision: string } {
@@ -331,10 +324,14 @@ function renderBar(): void {
 }
 function renderTasks(): void {
   const container = get("task-list");
-  container.replaceChildren();
-  if (!selection.endpoint) return;
-  for (const task of workspace().tasks.values()) {
+  const rows: HTMLElement[] = [];
+  if (!selection.endpoint) {
+    reconcile(container, rows);
+    return;
+  }
+  for (const task of workspace().tasks.values.values()) {
     const row = node("div");
+    row.dataset.key = `${selection.endpoint.binding}:task:${task.taskId}`;
     row.className = "task-row";
     row.append(
       button(task.taskId, () => openTask(task.taskId)),
@@ -349,8 +346,9 @@ function renderTasks(): void {
           openExecution(task.execution!.executionId),
         ),
       );
-    container.append(row);
+    rows.push(row);
   }
+  reconcile(container, rows);
 }
 interface Observer {
   kind: "taskId" | "executionId";
@@ -428,8 +426,11 @@ async function live(observer: Observer): Promise<void> {
         observer.message = "";
         failures = 0;
         for (const snapshot of observation.snapshots) {
-          rememberTask(observer.endpoint, snapshot);
-          if (observer.kind === "taskId" && snapshot.taskId === observer.id)
+          const accepted = workspace(observer.endpoint).tasks.observe(
+            snapshot,
+            observation.watermark,
+          );
+          if (accepted && observer.kind === "taskId" && snapshot.taskId === observer.id)
             observer.snapshot = snapshot;
         }
         renderTasks();
@@ -483,22 +484,21 @@ async function openTask(id: string): Promise<void> {
   renderObserver(observer);
   focus("tasks");
   try {
+    const accept = workspace(observer.endpoint).tasks.begin(id);
     const snapshot = await api.request<TaskSnapshot>(observer.endpoint, `/tasks/${id}`, {
       signal: observer.controller.signal,
     });
     if (!validSnapshot(snapshot) || snapshot.taskId !== id) throw new Error("Task 快照协议无效。");
     if (!current(observer)) return;
-    observer.snapshot = snapshot;
-    rememberTask(observer.endpoint, observer.snapshot);
+    accept(snapshot);
+    observer.snapshot = workspace(observer.endpoint).tasks.values.get(id) ?? snapshot;
     renderTasks();
     renderObserver(observer);
     // Request authorization is independent from task/history authorization.
     void api
-      .request<Record<string, unknown>>(
-        observer.endpoint,
-        `/requests/${observer.snapshot.requestId}`,
-        { signal: observer.controller.signal },
-      )
+      .request<Record<string, unknown>>(observer.endpoint, `/requests/${snapshot.requestId}`, {
+        signal: observer.controller.signal,
+      })
       .then((request) => {
         if (current(observer)) {
           observer.request = request;
@@ -528,25 +528,25 @@ async function openExecution(id: string): Promise<void> {
   await history(observer);
   if (current(observer)) void live(observer);
 }
-function eventList(title: string, events: PublicEvent[]): HTMLElement {
+function eventList(key: string, title: string, events: PublicEvent[]): HTMLElement {
   const group = node("details");
+  group.dataset.key = key;
   group.append(node("summary", `${title}（${events.length}）`));
   for (const event of events)
-    group.append(details(`#${event.sequence} ${event.type} · ${event.occurredAt}`, event));
+    group.append(
+      details(
+        `#${event.sequence} ${event.type} · ${event.occurredAt}`,
+        event,
+        `event:${event.sequence}`,
+      ),
+    );
   return group;
 }
 function renderObserver(observer: Observer): void {
   if (!current(observer)) return;
   const container = get(observer.kind === "taskId" ? "task-detail" : "execution-detail");
-  // Keep keyboard focus and expanded event details stable during frequent SSE updates.
-  const focused = document.activeElement as HTMLElement | null;
-  const focusedAction = focused?.closest("[data-action]")?.getAttribute("data-action");
-  const expanded = new Set(
-    [...container.querySelectorAll("details[open]")].map(
-      (item) => item.querySelector("summary")?.textContent,
-    ),
-  );
   const box = node("div");
+  box.dataset.key = `${observer.endpoint.binding}:${observer.kind}:${observer.id}`;
   box.append(
     node("h3", observer.id),
     node(
@@ -598,6 +598,7 @@ function renderObserver(observer: Observer): void {
         "取消选中的 Task",
         async () => {
           if (!current(observer)) return;
+          const accept = workspace(observer.endpoint).tasks.begin(observer.id);
           const snapshot = await api.request<TaskSnapshot>(
             observer.endpoint,
             `/tasks/${observer.id}/cancel`,
@@ -606,8 +607,9 @@ function renderObserver(observer: Observer): void {
           if (!validSnapshot(snapshot) || snapshot.taskId !== observer.id)
             throw new Error("取消回执无效；结果未知，请刷新原 Task 核对，不代表已回收 Execution。");
           if (!current(observer)) return;
-          observer.snapshot = snapshot;
-          rememberTask(observer.endpoint, snapshot);
+          accept(snapshot);
+          observer.snapshot =
+            workspace(observer.endpoint).tasks.values.get(observer.id) ?? snapshot;
           notify("取消回执已收到；关联 Execution 是否回收请看其事件。");
           renderTasks();
           renderObserver(observer);
@@ -615,7 +617,7 @@ function renderObserver(observer: Observer): void {
         !!task.canceledAt || !!task.termination,
       );
       cancel.dataset.action = "cancel";
-      box.append(cancel, details("Task 快照 · 准备/分配/执行关联", task));
+      box.append(cancel, details("Task 快照 · 准备/分配/执行关联", task, "task-snapshot"));
       if (task.result !== undefined)
         box.append(details("结果（业务否定不是系统执行故障）", task.result));
       if (task.error) box.append(details("系统故障事实", task.error));
@@ -640,7 +642,7 @@ function renderObserver(observer: Observer): void {
     }
   } else {
     const events = observer.window.events;
-    const knownOwners = [...workspace().tasks.values()].filter(
+    const knownOwners = [...workspace().tasks.values.values()].filter(
       (task) => task.execution?.executionId === observer.id,
     );
     box.append(
@@ -665,9 +667,11 @@ function renderObserver(observer: Observer): void {
       ? !event.type.startsWith("execution.")
       : event.type.startsWith("execution."),
   );
-  box.append(eventList("对象事件 · 最近窗口", ownEvents));
-  box.append(eventList("全部公开事件 · 最近窗口（含关联对象）", observer.window.events));
-  box.append(eventList("当前历史页 · 全部公开载荷", observer.historyEvents));
+  box.append(eventList("own-events", "对象事件 · 最近窗口", ownEvents));
+  box.append(
+    eventList("all-events", "全部公开事件 · 最近窗口（含关联对象）", observer.window.events),
+  );
+  box.append(eventList("history-events", "当前历史页 · 全部公开载荷", observer.historyEvents));
   const more = button(
     "下一页事件历史",
     () => history(observer, true),
@@ -675,13 +679,7 @@ function renderObserver(observer: Observer): void {
   );
   more.dataset.action = "history-next";
   box.append(more);
-  container.replaceChildren(box);
-  for (const detail of container.querySelectorAll("details"))
-    if (expanded.has(detail.querySelector("summary")?.textContent)) detail.open = true;
-  if (focused && !focused.isConnected && focusedAction)
-    [...container.querySelectorAll<HTMLElement>("[data-action]")]
-      .find((item) => item.dataset.action === focusedAction)
-      ?.focus({ preventScroll: true });
+  reconcile(container, [box]);
 }
 function directoryQuery(): string {
   const query = new URLSearchParams({ sort: "created-desc" });
@@ -703,16 +701,19 @@ function directoryQuery(): string {
 async function queryDirectory(append = false): Promise<void> {
   const state = workspace();
   const lease = selection.capture();
+  let started = false;
   try {
-    await state.directory.load(
+    const query = append ? state.directory.query : directoryQuery();
+    started = true;
+    const accepted = await state.directory.load(
       (query) => api.request(state.endpoint, `/tasks?${query}`, { signal: lease.signal }),
-      append ? state.directory.query : directoryQuery(),
+      query,
       append,
       lease.current,
     );
-    if (lease.current()) state.directoryError = "";
+    if (!accepted) return;
   } catch (error) {
-    if (lease.current()) state.directoryError = String(error);
+    if (!started && lease.current()) state.directory.rejectQuery(error);
   }
   if (lease.current()) renderDirectory();
 }
@@ -722,10 +723,8 @@ function renderDirectory(): void {
   if (!selection.endpoint) return;
   const state = workspace();
   const directory = state.directory;
-  if (state.directoryError)
-    container.append(
-      node("p", `查询错误（不是空结果），以下仅为上次成功快照：${state.directoryError}`),
-    );
+  if (directory.error)
+    container.append(node("p", `查询错误（不是空结果），以下仅为上次成功快照：${directory.error}`));
   if (directory.expired)
     container.append(node("p", "query_expired：旧快照仅供参考。请点“重新查询”，不能继续拼页。"));
   if (!directory.page) {
@@ -909,20 +908,25 @@ async function start(): Promise<void> {
   });
   get("discover").append(button("重新发现类型", () => discover(true)));
   get("create-actions").append(
-    button("提交任务", async () => {
-      if (lastQuick?.state === "unknown")
-        throw new Error(
-          "上一单条提交结果未知；请使用任务栏的原身份重试/核对，或明确“主动再做一次”。",
-        );
-      const form = checkedForm();
-      const lease = selection.capture();
-      // Capture before awaiting so a lost response never permits an accidental new identity.
-      const batch = bar.create(form.endpoint);
-      lastQuick = bar.add(batch, form.parameters, form.revision);
-      const entry = lastQuick;
-      await bar.sendBatch(batch);
-      if (lease.current() && entry.snapshot) await openTask(entry.snapshot.taskId);
-    }),
+    button(
+      "提交任务",
+      async () => {
+        if (lastQuick?.state === "unknown")
+          throw new Error(
+            "上一单条提交结果未知；请使用任务栏的原身份重试/核对，或明确“主动再做一次”。",
+          );
+        const form = checkedForm();
+        const lease = selection.capture();
+        // Capture before awaiting so a lost response never permits an accidental new identity.
+        const batch = bar.create(form.endpoint);
+        lastQuick = bar.add(batch, form.parameters, form.revision);
+        const entry = lastQuick;
+        await bar.sendBatch(batch);
+        if (lease.current() && entry.snapshot) await openTask(entry.snapshot.taskId);
+      },
+      false,
+      300,
+    ),
     button("加入多条草稿", () => {
       const form = checkedForm();
       let batch = bar.batches.find(

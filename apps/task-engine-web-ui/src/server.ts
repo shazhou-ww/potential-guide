@@ -62,6 +62,18 @@ function same(left: string, right: string): boolean {
   const b = Buffer.from(right);
   return a.length === b.length && timingSafeEqual(a, b);
 }
+export function redactCredential(value: unknown, token: string): unknown {
+  if (typeof value === "string") return value.split(token).join("[redacted]");
+  if (Array.isArray(value)) return value.map((item) => redactCredential(item, token));
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key.split(token).join("[redacted]"),
+        redactCredential(item, token),
+      ]),
+    );
+  return value;
+}
 export function publicEndpoint(config: EndpointConfig): Endpoint {
   return {
     id: config.id,
@@ -395,8 +407,7 @@ export async function startUiServer(raw: UiConfig) {
           reject(502, "invalid_backend_response", "后端未返回 JSON。");
         }
         // Never return credential-bearing transport errors from a trusted backend.
-        if (!upstream.ok && endpoint.token)
-          value = JSON.parse(JSON.stringify(value).split(endpoint.token).join("[redacted]"));
+        if (!upstream.ok && endpoint.token) value = redactCredential(value, endpoint.token);
         send(res, upstream.status, value);
         return;
       }

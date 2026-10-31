@@ -89,11 +89,15 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   本地引用生成表单。自由 object 和复杂组合字段提供局部 JSON 编辑及约束查看。
   可选字段需明确勾选；不强转原参数、不补 schema 默认值、不删除额外属性。
   数值字段输入 JSON 数字；完整 Schema 校验由 Task Server 执行。UI 不调用 Equals。
+  `$ref` 带同级校验约束时保留联合语义，使用明确的局部 JSON 编辑，不浅合并或覆盖
+  引用中的字段/required；属性读取仅使用原参数的 own properties。
 - **提交任务栏**：直接提交自动建立独立单条批次，不动多条草稿。多条可以
   上下排序；发送只等待逐条提交回执，不等任务完成，中间拒绝/未知继续后项。
   同次重试保留 ULID、参数及 quoted revision。未知后遇 412 仍是未知，不能
   推断旧 Task 不存在。用“核对原 requestId”或原身份重试核对；主动再做一次
   明确生成新 ULID，可能产生另一 Task。成功项不会被整批重发。
+  快捷提交合并 300ms 内的重复激活，即使首个回执很快返回也不把双击解释为主动新做；
+  这只是交互防重，不取代服务 Idempotency-Key。
 - **契约变化**：412 留下原参数及身份。重新发现不会自动重发；变化后需明确
   “按当前契约重新编辑”。原请求重试不换 guard；业务 digest 与 guard 无关。
 - **Task / Execution**：独立区块，以服务提供的 executionId 关联。完整请求
@@ -104,10 +108,13 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
 - **事件**：首次历史页的 stream cursor 接续 SSE，历史 next 独立分页。按
   sequence 去重，过滤后的序号跳跃不直接推断缺口；断流、失效、未加载历史、
   窗口截断均标明。可逐页查看全部可取的公开事件，公开协议隐藏的内部过程不猜测。
+  实时区按稳定对象/事件键更新 DOM，保留 disclosure 展开及键盘焦点。Task 快照按
+  服务 watermark、本地请求世代与来源保护；timestamp 仅为观察时间，不用于版本排序。
 - **历史目录**：独立向后端查询，含其他客户端授权任务。类型精确匹配，receivedAt
   含下界、不含上界，必须填写带时区时间；固定 created-desc。目录 observedAt /
   expiresAt / 摘要不被 SSE 改写，翻页使用原过滤条件。410/query_expired 后明确
   重新查询，旧视图仅供参考。详情可能比摘要更新，摘要不含业务结果。
+  页和错误状态绑定同一查询世代，旧查询的成功/失败不能覆盖新的结果或错误。
 - **收藏/重做**：收藏完整原参数和 Endpoint，不含 UI 提交身份/guard/凭据。
   历史直接或编辑后重做只取原请求、剥离 requestId，不注入摘要 version、不改
   URL/digest/seriesId/eligibleAt，不自动补锁或解锁。原参数无权读取或已清理时

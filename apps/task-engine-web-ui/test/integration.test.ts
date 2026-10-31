@@ -573,6 +573,77 @@ test("stream admission is bounded and disconnect returns only UI-owned stream ca
   }
 });
 
+test("error responses redact decoded credentials in nested strings and property names, including JSON escapes", async (t) => {
+  const h = await setup(t);
+  const variable = `UI_REDACTION_${randomBytes(8).toString("hex")}`;
+  const credential = `fixture-"quoted"\\slash\ttab-${randomUUID()}`;
+  process.env[variable] = credential;
+  let transmittedExactly = false;
+  const backend = createServer((request, response) => {
+    transmittedExactly = request.headers.authorization === `Bearer ${credential}`;
+    response.writeHead(400, { "Content-Type": "application/json" });
+    response.end(
+      JSON.stringify({
+        error: {
+          code: "invalid_request",
+          message: request.headers.authorization,
+          nested: [{ [credential]: `before:${credential}:after` }, credential],
+        },
+      }),
+    );
+  });
+  await new Promise<void>((resolve) => backend.listen(0, "127.0.0.1", resolve));
+  const address = backend.address();
+  assert.ok(address && typeof address !== "string");
+  const ui = await startUiServer({
+    port: 0,
+    favoritesFile: resolve(h.root, "redaction.json"),
+    endpoints: [
+      {
+        id: "redaction",
+        label: "redaction",
+        binding: "1",
+        url: `http://127.0.0.1:${address.port}`,
+        bearerEnv: variable,
+      },
+    ],
+  });
+  try {
+    const bootstrap = await fetch(`${ui.url}/api/bootstrap`).then((response) => response.json());
+    const response = await fetch(`${ui.url}/api/endpoints/redaction/task-types`, {
+      headers: {
+        "X-UI-Token": bootstrap.csrf,
+        "X-Endpoint-Binding": bootstrap.endpoints[0].binding,
+      },
+    });
+    assert.equal(response.status, 400);
+    assert.equal(transmittedExactly, true);
+    const result = await response.json();
+    assert.equal(result.error.code, "invalid_request");
+    const check = (value: unknown) => {
+      if (typeof value === "string")
+        assert.equal(
+          value.includes(credential),
+          false,
+          "credential must not occur in decoded strings",
+        );
+      else if (value && typeof value === "object")
+        for (const [key, nested] of Object.entries(value)) {
+          check(key);
+          check(nested);
+        }
+    };
+    check(result);
+    assert.match(result.error.message, /\[redacted\]/);
+  } finally {
+    await ui.close();
+    backend.closeAllConnections();
+    await new Promise<void>((resolve, reject) =>
+      backend.close((error) => (error ? reject(error) : resolve())),
+    );
+    delete process.env[variable];
+  }
+});
 test("loopback, host/origin/CSRF, restricted proxy, headers, body limits and redirects", async (t) => {
   const h = await setup(t);
   await assert.rejects(() => startUiServer({ ...h.config, host: "0.0.0.0" }), /loopback/);
