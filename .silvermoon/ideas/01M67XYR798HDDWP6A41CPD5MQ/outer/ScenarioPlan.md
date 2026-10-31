@@ -10,7 +10,8 @@ check-artifacts/check-runtime-files/check-task/probe-task 的完整生产依赖�
 记录原 commit、每个 tarball SHA-256、依赖锁文件及真实 installed 路径。
 Checker/Objective 同样通过已安装公开制品构建入口生成真实归档。
 只授权自有 file 根、loopback Task HTTP 与自有 HTTPS Checker 归档服务；
-Objective 内嵌 Checker 遵循既有 portable HTTPS 约束。自有证书仅通过 NODE_EXTRA_CA_CERTS
+Objective 输入及内嵌 Checker 遵循既有 HTTPS 约束；不把 source 支持 file 当作 Probe 输入支持 file。
+自有证书仅通过 NODE_EXTRA_CA_CERTS
 加入当前验证进程，不关闭 TLS 校验、不修改系统信任库，不连接未知服务或使用现有用户数据库。
 
 ## 场景与判据

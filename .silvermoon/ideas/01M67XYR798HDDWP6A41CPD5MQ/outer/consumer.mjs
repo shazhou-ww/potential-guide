@@ -60,8 +60,9 @@ try {
   });
   const assetRequests = [];
   assets = httpsServer({ key: await readFile("certificates/key.pem"), cert: await readFile("certificates/cert.pem") }, async (request, response) => {
-    if (request.url !== "/checker.tgz") { response.writeHead(404).end(); return; }
-    const bytes = await readFile(join(root, "artifacts", "floating-checker.tgz"));
+    const artifact = request.url === "/checker.tgz" ? "floating-checker.tgz" : request.url === "/objective.tgz" ? "floating-objective.tgz" : undefined;
+    if (!artifact) { response.writeHead(404).end(); return; }
+    const bytes = await readFile(join(root, "artifacts", artifact));
     assetRequests.push({ at: new Date().toISOString(), bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") });
     response.writeHead(200, { "content-type": "application/gzip", "content-length": bytes.length }).end(bytes);
   });
@@ -212,6 +213,9 @@ try {
       await http(ready.url, `/tasks/${x.taskId}/cancel`, {});
       assert.equal((await get(y)).stage, "running");
       await http(ready.url, `/tasks/${y.taskId}/cancel`, {});
+      const canceledRuns = [(await get(x)).run.runId, (await get(y)).run.runId];
+      await until(async () => (await job.call("snapshot")).events,
+        (events) => canceledRuns.every((id) => events.some((event) => event.type === "run.reclaimed" && event.runId === id)));
       const faults = [];
       for (const mode of ["crash", "hang"]) {
         const task = await submitFault(mode, mode);

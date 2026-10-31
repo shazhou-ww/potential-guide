@@ -19,7 +19,7 @@ confirmResourceRelease；动作上下文使用可信 workerGeneration，不把 c
 观察准备中的需求、浮动引用内容变化及 Run 终结结果，
 核对 matchPolicy 字段及 Run / Execution 公开命名，不使用仓库源码替代实际消费制品。
 分别在 Check 和 Probe 的真实制品准备尚未结束时加入 terminated-policy 需求，
-改变同一浮动 URL 的制品内容；Checker 使用自有 HTTPS，Objective 使用自有 file URL，
+改变同一浮动 URL 的制品内容；Checker/Objective 使用各自声明支持的自有 HTTPS URL，
 观察共享 Run 仍返回已固定的旧内容。证书只加入当前自有 Node 进程，不修改系统信任库。
 另用精确 digest 的新需求与错误 digest 验证身份边界，保留业务结果、准备证据、请求及事件。
 

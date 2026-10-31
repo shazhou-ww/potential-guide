@@ -40,7 +40,7 @@ export async function bundles() {
   const directory = join(root, "artifacts");
   await mkdir(directory, { recursive: true });
   const checkUrl = process.env.VALIDATION_HTTPS_ORIGIN + "/checker.tgz";
-  const rootUrl = pathToFileURL(join(directory, "floating-objective.tgz")).href;
+  const rootUrl = process.env.VALIDATION_HTTPS_ORIGIN + "/objective.tgz";
   const versions = {};
   for (const version of ["v1", "v2"]) {
     const checker = await writeContractArtifact(new Map([

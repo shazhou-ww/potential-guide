@@ -9,7 +9,7 @@ try {
   if (process.argv[2] === "seed") {
     const base = { timeoutMs: 10000, subject: { case: "real-process-restart" } };
     const check = a.engine.submit({ ...base, requestId: newId(), type: "check", checker: { kind: "checker", url: process.env.VALIDATION_HTTPS_ORIGIN + "/checker.tgz" } }, caller);
-    const probe = a.engine.submit({ ...base, requestId: newId(), type: "probe", objective: { kind: "objective", url: pathToFileURL(join(root, "artifacts", "floating-objective.tgz")).href } }, caller);
+    const probe = a.engine.submit({ ...base, requestId: newId(), type: "probe", objective: { kind: "objective", url: process.env.VALIDATION_HTTPS_ORIGIN + "/objective.tgz" } }, caller);
     for (const task of [check, probe]) await a.engine.waitForTaskRelease(task.taskId, caller);
     const tasks = [check, probe].map((task) => a.engine.getTask(task.taskId, caller));
     assert.ok(tasks.every((task) => task.stage === "completed"));
