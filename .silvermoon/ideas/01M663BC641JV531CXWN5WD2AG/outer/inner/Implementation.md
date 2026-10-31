@@ -2,7 +2,17 @@
 
 三轮迭代计划，2026-10-31 已对齐依赖最终接口。用户现已授权一名子 agent 实现、主 Agent 独立 review 与 acceptance，无 blocking issue 时不重复询问；范围与约束见[受托审阅记录](Review.md)。准确构想接受后进入实施，不从依赖完成本身推断开工。需求见[构想](ideal/Idea.md)、[需求确认稿](ideal/Requirements.md)与[交互设计](ideal/Design.md)。
 
-**依赖前置已满足，本 UI 仍须独立通过构想 gate。** 在主线 `0b0a25fba63ef57065540fbc7c42e53bd92a729f`，已通过 Silvermoon 核实 `task-type-schema-discovery`、`task-history-query`、`terminated-after-eligible` 均为 `completed`，并对照源码确认公开契约。接入基线见[当前接口核对](ideal/Research.md#当前接口核对)。不继承依赖的 gate 授权；真正启动 I-S01 时仍核对实际目标服务版本与本 idea 的状态。
+本次实现基于 `acceptIdeal#4` 与 primary `2484b5b500c7e234ada734a262ca124041ac5f14`，在专属实现 worktree 完成 I-S01 至 I-S03。实现与检查证据见 [Verification.md](Verification.md)，主 Agent 的两轮修复复核与独立验证见 [Review.md](Review.md)，可复现运行和浏览器步骤见[工作台指南](../../../../../docs/task-engine-web-ui.md)。最终候选已通过独立审阅，准确阶段接受以同步的事件为准；实现子 agent 不修改事件、Review、理想世界或外部结果。
+
+## 实现期细化
+
+- 应用位于 `apps/task-engine-web-ui`，使用现有 Node/TypeScript、esbuild、Biome 与 tsx/Node test runner；DOM 表单测试使用 catalog 中的 linkedom。应用为 private，没有 npm 发布入口。按本仓库标准补充工作区、工具层及 package-owned objectives；`apps` 下的独立 Node 服务采用明确单路径布局例外，不改通用检查规则。
+- UI Server 仅提供固定静态资源、受控 HTTP 转发与本机收藏。运行入口不导入/启动 Engine；Task Server 仅由显式 fixture 和集成测试启动。凭据来自服务端环境变量，配置目标的 URL/身份绑定生成不可逆指纹。只监听 loopback，校验 Host/Origin/跨站请求和会话 token，限制路径/方法/头、请求与响应大小、并发、流与超时，拒绝重定向。
+- 创建、批次、收藏与历史重做共用提交模型。原参数、quoted revision 和新 ULID 身份分开，未知提交保留原身份/guard；原身份重试和主动新做分开。类型表单只消费公开输入 Schema，不使用 Equals、不下载输入引用。
+- Task 与 Execution 各自观察；目录 next、历史 next 与 SSE cursor 独立。历史页与受限实时事件窗口分开保留，断流/过期/截断明确显示。目录保持冻结摘要与原查询，重做只取原请求，不注入摘要版本。
+- 收藏是操作员指定位置的受限 JSON 文件，以原子替换持久化；不引入数据库、账号或同步。目标缺失/显式重新绑定时阻止快捷改投。未提交表单和本次回执不宣称跨重启持久，收藏与后端目录承担原需求中的复用与历史职责。
+
+**依赖前置已满足；本次实施使用本 UI 自身的 acceptIdeal#4，不继承依赖的 gate 授权。** 在主线 `0b0a25fba63ef57065540fbc7c42e53bd92a729f`，已通过 Silvermoon 核实 `task-type-schema-discovery`、`task-history-query`、`terminated-after-eligible` 均为 `completed`，并对照源码确认公开契约。接入基线见[当前接口核对](ideal/Research.md#当前接口核对)。启动 I-S01 时已再次确认本 idea 为 implementing，并直接核对实际 DTO、HTTP handler 与协议文档。
 
 按 I-S01 → I-S02 → I-S03 形成增量，每轮交付可运行的完整流程，不按“先全部后端、再全部页面”划分。迭代不是额外生命周期或 gate：每轮可进行实现阶段的本地集成试用并吸收体验反馈，但不提前勾选 [Deployment](../Deployment.md) 的外部结果；正式阶段转换仍遵循本 idea 的独立流程。
 
