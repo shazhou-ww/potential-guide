@@ -1,65 +1,12 @@
 <!doctype html>
 <html lang="zh-CN">
   <head>
-    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>任务工作台</title><link rel="stylesheet" href="/style.css" /><script type="module" src="/app.js"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="ui-style-nonce" content="__UI_STYLE_NONCE__" />
+    <title>任务工作台</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
   </head>
-  <body>
-    <a class="skip" href="#workspace">跳到工作区</a>
-    <header>
-      <div class="brand"><h1>任务工作台</h1><span>让任务和执行各归其位</span></div>
-      <label class="endpoint-label">服务 <select id="endpoint" aria-label="受控 Endpoint"></select></label>
-      <button id="bar-toggle" type="button" aria-haspopup="dialog">提交任务栏 <span id="bar-count">0 项</span></button>
-    </header>
-    <div class="tabs" role="tablist" aria-label="工作区">
-      <button id="tab-tasks" role="tab" aria-controls="tasks" aria-selected="true" type="button">任务</button>
-      <button id="tab-executions" role="tab" aria-controls="executions" aria-selected="false" tabindex="-1" type="button">执行</button>
-    </div>
-    <p id="notice" role="status" aria-live="polite"></p>
-    <main id="workspace">
-      <section id="tasks" role="tabpanel" aria-labelledby="tab-tasks" tabindex="-1">
-        <div class="page-heading"><div><h2>任务</h2><p>当前与历史任务，来自所选服务的授权目录。</p></div><button id="new-task" class="primary" type="button" aria-haspopup="dialog">＋ 新建任务</button></div>
-        <div class="filters">
-          <label>任务类型<input id="history-type" placeholder="全部类型" /></label>
-          <label>接收时间 · 起（包含）<input id="created-from" placeholder="2026-10-31T00:00:00+08:00" /></label>
-          <label>接收时间 · 止（不含）<input id="created-before" placeholder="带 Z 或时区偏移" /></label>
-          <label class="check"><input id="only-favorites" type="checkbox" />只看收藏</label>
-          <div id="history-actions"></div>
-        </div>
-        <div id="association-filter"></div>
-        <div class="workspace-grid">
-          <div class="list-pane"><div id="directory" class="table-scroll"></div><details class="secondary"><summary>按任务标识定位</summary><div id="task-lookup" class="row"></div></details><fieldset class="secondary" hidden><legend>最近查看</legend><div id="task-list" class="recent"></div></fieldset></div>
-          <aside id="task-detail" class="detail-pane" aria-label="任务详情" tabindex="-1"></aside>
-        </div>
-      </section>
-      <section id="executions" role="tabpanel" aria-labelledby="tab-executions" tabindex="-1" hidden>
-        <div class="page-heading"><div><h2>执行</h2><p>服务中的真实执行记录，包括其他客户端触发的执行；共享执行只列一次。</p></div></div>
-        <div class="filters">
-          <label>执行类型<input id="execution-type" placeholder="全部类型" /></label>
-          <label>开始时间 · 起（包含）<input id="started-from" placeholder="2026-10-31T00:00:00+08:00" /></label>
-          <label>开始时间 · 止（不含）<input id="started-before" placeholder="带 Z 或时区偏移" /></label>
-          <div id="execution-actions"></div>
-        </div>
-        <div class="workspace-grid">
-          <div class="list-pane"><div id="execution-directory" class="table-scroll"></div><details class="secondary"><summary>按执行标识定位</summary><div id="execution-lookup" class="row"></div></details></div>
-          <aside id="execution-detail" class="detail-pane" aria-label="执行详情" tabindex="-1"></aside>
-        </div>
-      </section>
-    </main>
-    <dialog id="create-dialog" aria-labelledby="create-title" aria-modal="true" hidden>
-      <div class="dialog-heading"><h2 id="create-title">新建任务</h2><button type="button" data-close aria-label="关闭新建弹窗">关闭</button></div>
-      <div id="create" tabindex="-1">
-        <p id="dialog-notice" role="status" aria-live="polite"></p>
-        <div class="row"><label for="type">任务类型</label><select id="type" data-initial-focus><option value="">等待发现</option></select><span id="discover"></span></div>
-        <p id="discovery-status"></p><details class="secondary"><summary>表单契约</summary><p id="contract"></p></details>
-        <div id="form-fields"></div><div id="create-actions" class="actions"></div>
-        <details id="legacy-templates" class="secondary" hidden><summary>旧参数模板（没有任务身份）</summary><div id="favorites-list"></div></details>
-      </div>
-    </dialog>
-    <dialog id="submission-dialog" aria-labelledby="bar-title" aria-modal="true" hidden>
-      <div class="dialog-heading"><h2 id="bar-title">提交任务栏</h2><button type="button" data-close aria-label="关闭任务栏">关闭</button></div>
-      <p>按序发出，不等待前一任务完成；每项回执独立，未知结果保留原身份。</p><div id="batches"></div>
-    </dialog>
-    <footer>关闭工作台或暂停观察都不会取消任务。时间筛选使用明确时区，列表摘要是固定查询快照。</footer>
-  </body>
+  <body><div id="app"></div></body>
 </html>

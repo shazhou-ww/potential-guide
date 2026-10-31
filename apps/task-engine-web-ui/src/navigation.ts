@@ -1,103 +1,63 @@
 export type Tab = "tasks" | "executions";
+export type Overlay = "task-detail" | "execution-detail" | "create-dialog" | "submission-dialog";
+
 export class Navigation {
   tab: Tab = "tasks";
-  private readonly returnFocus = new Map<string, HTMLElement | null>();
+  overlay: { id: Overlay; epoch: number; returnTo: HTMLElement | null } | undefined;
+  private epoch = 0;
+  private closed: { epoch: number; target: HTMLElement | null; restore: boolean } | undefined;
   constructor(
     private readonly root: Document,
+    private readonly changed: () => void,
     private readonly selected: (tab: Tab) => void,
-  ) {
-    for (const tab of ["tasks", "executions"] as const) {
-      const button = root.getElementById(`tab-${tab}`)!;
-      button.addEventListener("click", () => this.show(tab));
-      button.addEventListener("keydown", (event) => {
-        if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
-          event.preventDefault();
-          const next =
-            event.key === "Home"
-              ? "tasks"
-              : event.key === "End"
-                ? "executions"
-                : tab === "tasks"
-                  ? "executions"
-                  : "tasks";
-          this.show(next);
-          root.getElementById(`tab-${next}`)?.focus();
-        }
-      });
-    }
-    for (const dialog of root.querySelectorAll<HTMLDialogElement>("dialog")) {
-      dialog.addEventListener("cancel", (event) => {
-        event.preventDefault();
-        this.close(dialog.id);
-      });
-      dialog.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          this.close(dialog.id);
-        }
-        if (event.key !== "Tab") return;
-        const controls = [
-          ...dialog.querySelectorAll<HTMLElement>(
-            "button,input,select,textarea,summary,a[href],[tabindex]",
-          ),
-        ].filter(
-          (item) =>
-            !(item as HTMLInputElement).disabled &&
-            item.tabIndex >= 0 &&
-            !item.closest("[hidden]") &&
-            !item.closest("fieldset:disabled") &&
-            [...dialog.querySelectorAll("details:not([open])")].every(
-              (details) =>
-                !details.contains(item) || !!details.querySelector("summary")?.contains(item),
-            ),
-        );
-        const first = controls[0],
-          last = controls.at(-1);
-        if (event.shiftKey && this.root.activeElement === first) {
-          event.preventDefault();
-          last?.focus();
-        } else if (!event.shiftKey && this.root.activeElement === last) {
-          event.preventDefault();
-          first?.focus();
-        }
-      });
-      for (const close of dialog.querySelectorAll<HTMLButtonElement>("[data-close]"))
-        close.addEventListener("click", () => this.close(dialog.id));
-    }
-    this.show("tasks", false);
-  }
+  ) {}
   show(tab: Tab, notify = true): void {
+    const switched = this.tab !== tab;
+    if (this.tab !== tab && this.overlay) this.close(this.overlay.id, false);
     this.tab = tab;
-    for (const id of ["tasks", "executions"] as const) {
-      const active = id === tab;
-      this.root.getElementById(id)!.hidden = !active;
-      const button = this.root.getElementById(`tab-${id}`)!;
-      button.setAttribute("aria-selected", String(active));
-      button.tabIndex = active ? 0 : -1;
-    }
+    this.changed();
+    if (switched)
+      this.root.querySelector<HTMLElement>(`[data-tab="${tab}"]`)?.focus({ preventScroll: true });
     if (notify) this.selected(tab);
   }
-  open(id: string): void {
-    const dialog = this.root.getElementById(id) as HTMLDialogElement;
-    if (dialog.hasAttribute("open")) return;
-    this.returnFocus.set(id, this.root.activeElement as HTMLElement | null);
-    dialog.hidden = false;
-    if (typeof dialog.showModal === "function") dialog.showModal();
-    else dialog.setAttribute("open", "");
-    (
-      dialog.querySelector<HTMLElement>("[data-initial-focus]") ??
-      dialog.querySelector<HTMLElement>("select,input,button")
-    )?.focus();
+  open(id: Overlay): void {
+    if (this.overlay?.id === id) return;
+    const active = this.root.activeElement as HTMLElement | null;
+    const returnTo =
+      this.overlay?.returnTo ??
+      (active && active !== this.root.body && !active.closest('[role="dialog"]')
+        ? active
+        : (this.closed?.target ?? null));
+    this.closed = undefined;
+    this.overlay = { id, epoch: ++this.epoch, returnTo };
+    this.changed();
   }
-  close(id: string, restore = true): void {
-    const dialog = this.root.getElementById(id) as HTMLDialogElement;
-    if (typeof dialog.close === "function") dialog.close();
-    else dialog.removeAttribute("open");
-    dialog.hidden = true;
-    if (restore) {
-      const target = this.returnFocus.get(id);
-      if (target?.isConnected && !target.closest("[hidden]")) target.focus();
-      else this.root.getElementById(`tab-${this.tab}`)?.focus();
+  close(id: Overlay, restore = true): void {
+    if (this.overlay?.id !== id) return;
+    this.closed = { epoch: this.overlay.epoch, target: this.overlay.returnTo, restore };
+    this.overlay = undefined;
+    this.changed();
+  }
+  restoreFocus(epoch: number): void {
+    // Radix closes asynchronously. An old layer must never steal the new layer's focus.
+    if (this.overlay || this.closed?.epoch !== epoch || !this.closed.restore) return;
+    const active = this.root.activeElement;
+    if (
+      active instanceof HTMLElement &&
+      active !== this.root.body &&
+      active.isConnected &&
+      !active.closest("[hidden]")
+    ) {
+      this.closed = undefined;
+      return;
     }
+    const target = this.closed.target;
+    if (target?.isConnected && !target.closest("[hidden]") && !target.matches(":disabled"))
+      target.focus({ preventScroll: true });
+    else
+      this.root
+        .querySelector<HTMLElement>(`[data-tab="${this.tab}"]`)
+        ?.focus({ preventScroll: true });
+    this.closed = undefined;
   }
 }

@@ -4,7 +4,26 @@
 
 在已验收 v0.5 上调整展示层：任务/执行列表独占可用内容宽度，详情右侧覆盖；Tabs 与标题合为紧凑顶栏；实际引入 shadcn/ui，按需以 React/Tailwind 适配现有展示层并保留上游许可。依赖由 catalog 管理，复用已有业务模型及通用 Schema 编辑行为，不另加后端或业务抽象。I-S01/I-AC01 重新验证；其余协议、星标、目录和观察语义继续回归。本轮保留用户现有后端、任务和星标数据，只更新 UI。
 
+本轮基线为 `c491036b5d8b6a3ca06110f0a82d464735072f04`；准确 Ideal
+`88a18b021f155546ff6f71ac3ac58670188f59aa` 经 acceptIdeal#16 接受。
+实现与验证记录在 [Verification-v0.6.md](Verification-v0.6.md)，不继承旧候选的接受结论。
+
+- 固定官方 `shadcn@4.23.0` 源码与 MIT 许可，引入 React/Tailwind 的本地静态构建。
+  `presentation.tsx` 独占工作台 DOM，旧控制器只发布分离描述与业务操作，
+  由 React 的稳定键协调实际 Button/Table/Input；Tabs/Sheet/Dialog 使用实际 Radix 组件。
+- `form.ts` 作为明确的 Schema DOM 岛，React 只拥有空宿主，不协调岛内字段；
+  关闭弹窗仅拆离宿主，重新打开挂回原节点，保留非法原始文本和读取闭包。
+  单个导航状态决定唯一模态层，关闭世代防旧焦点回调抢走新层或用户后续焦点。
+- 不改 Task Server、公共 DTO、调度、权限或存储；沿用 v0.5 执行目录与星标文件。
+  UI Server 仅增加每 HTML 随机 style nonce，经 `get-nonce` 提供给已核对的
+  `react-style-singleton`；不放宽脚本策略、代理或凭据边界。
+- 既有 41 项 UI 行为保留并迁移真实入口测试机制，新增组件/DOM 所有权回归；
+  原生 Chrome 另证布局、方向键/Tab、Sheet 焦点与滚动、SSE、关联跳转和 CSP。
+  仅在本实现 worktree 构建，验证进程、端口、profile 和目录均独立拥有。
+
 ## 真实试用后的调整轮次
+
+以下保留 v0.5 实施背景；其原生 dialog 展示层由上面的 v0.6 方案替换。
 
 第一轮已通过 acceptInner#6 / acceptOuter#8。本轮按用户明确要求重做两个 Tab、新建弹窗、任务星标与筛选，并补齐整个 Endpoint 的执行目录；旧验证记录仅证明第一轮。实施基线为 primary `b213324a421096463a352e0213e3c0585270968b`，准确 Ideal `4a6c2c31f6b37d552c5401f9ae4b06e80c23350a` 已由 acceptIdeal#10 接受。本轮证据见 [Verification-v0.5.md](Verification-v0.5.md)，不继承第一轮的实现或外部结果接受。
 

@@ -35,5 +35,11 @@
       "quoteStyle": "double",
       "semicolons": "always"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["apps/task-engine-web-ui/src/style.css"],
+      "css": { "parser": { "tailwindDirectives": true } }
+    }
+  ]
 }

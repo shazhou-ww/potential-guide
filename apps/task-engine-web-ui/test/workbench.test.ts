@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import type { Observation, PublicEvent, TaskSnapshot } from "@potential-guide/task-protocol";
-import { parseHTML } from "linkedom";
 import { newIdentity } from "../src/model.js";
 import type { Favorite } from "../src/server.js";
+import { browserDom } from "./browser-dom.js";
 
 async function until(check: () => boolean, reason: string): Promise<void> {
   const end = Date.now() + 3000;
@@ -15,48 +15,14 @@ async function until(check: () => boolean, reason: string): Promise<void> {
   assert.fail(reason);
 }
 test("workbench tabs, retained popup draft, all stars, independent execution directory and stream-only stop are wired", async () => {
-  const { window, document } = parseHTML(
-    await readFile(new URL("../src/index.html", import.meta.url), "utf8"),
-  );
+  const dom = browserDom(await readFile(new URL("../src/index.html", import.meta.url), "utf8"));
+  const { window, document } = dom;
   const previous = {
     window: globalThis.window,
     document: globalThis.document,
     fetch: globalThis.fetch,
     Option: globalThis.Option,
   };
-  const selectValue = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value");
-  const oldFocus = window.HTMLElement.prototype.focus,
-    oldScroll = window.HTMLElement.prototype.scrollIntoView;
-  const tabIndex = Object.getOwnPropertyDescriptor(window.HTMLElement.prototype, "tabIndex");
-  Object.defineProperty(window.HTMLElement.prototype, "tabIndex", {
-    configurable: true,
-    get(this: HTMLElement) {
-      const value = this.getAttribute("tabindex");
-      return value !== null
-        ? Number(value)
-        : ["BUTTON", "INPUT", "SELECT", "TEXTAREA", "SUMMARY"].includes(this.tagName)
-          ? 0
-          : -1;
-    },
-    set(this: HTMLElement, value: number) {
-      this.setAttribute("tabindex", String(value));
-    },
-  });
-  let active: Element | null = null;
-  Object.defineProperty(document, "activeElement", { configurable: true, get: () => active });
-  window.HTMLElement.prototype.focus = function () {
-    active = this;
-  };
-  window.HTMLElement.prototype.scrollIntoView = () => {};
-  Object.defineProperty(window.HTMLSelectElement.prototype, "value", {
-    configurable: true,
-    get(this: HTMLSelectElement) {
-      return [...this.options].find((item) => item.selected)?.value ?? "";
-    },
-    set(this: HTMLSelectElement, value: string) {
-      for (const option of this.options) option.selected = option.value === value;
-    },
-  });
   const endpoint = { id: "demo", label: "demo", binding: "binding" };
   const makeTask = (): TaskSnapshot => ({
     taskId: newIdentity(),
@@ -277,6 +243,8 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     return found as unknown as T;
   };
   const click = (selector: string) => {
+    if (selector.startsWith("#tab-"))
+      document.querySelector<HTMLButtonElement>('[role="dialog"] [data-close]')?.click();
     const control = element<HTMLButtonElement>(selector);
     control.focus();
     control.click();
@@ -320,38 +288,38 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     click("#new-task");
     const type = element<HTMLSelectElement>("#type");
     type.value = "echo";
-    type.dispatchEvent(new window.Event("change"));
+    type.dispatchEvent(new window.Event("change", { bubbles: true }));
     field("超时预算 timeoutMs（毫秒）").value = "1000";
     field("text").value = "draft retained";
     const draft = field("text");
     key(type, "Escape");
-    assert.ok(element("#create-dialog").hidden);
-    assert.ok(active === element("#new-task"), "Esc returns focus to opener");
+    await until(() => !document.querySelector("#create-dialog"), "Esc closes Dialog");
+    await until(
+      () => document.activeElement === element("#new-task"),
+      "Esc returns focus to opener",
+    );
     click("#tab-executions");
     click("#tab-tasks");
     click("#new-task");
     assert.ok(field("text") === draft, "draft control identity survives close and tab switches");
     assert.equal(draft.value, "draft retained");
     assert.equal(element<HTMLInputElement>("#history-type").value, "echo");
-    for (const control of element("#create-dialog").querySelectorAll<HTMLElement>(
-      "button,input,select,textarea,summary",
-    ))
-      control.tabIndex = 0;
-    const first = element<HTMLElement>("#create-dialog [data-close]");
+    const first = element<HTMLElement>("#type");
+    const last = element<HTMLElement>("#create-dialog [data-close]");
     first.focus();
     key(first, "Tab", true);
     assert.ok(
-      active === element("#legacy-templates > summary"),
-      "focus trap includes visible legacy summary, not hidden template buttons",
+      document.activeElement === last,
+      "focus trap wraps to the visible close button, not closed template contents",
     );
-    key(active as unknown as HTMLElement, "Tab");
-    assert.ok(active === first, "Tab wraps to first dialog control");
+    key(last, "Tab");
+    assert.ok(document.activeElement === first, "Tab wraps to first dialog control");
     named("#create-actions", "提交任务").click();
     await until(
       () => !!created && streams.has(created.taskId),
       "submission should select the new Task",
     );
-    assert.ok(element("#create-dialog").hidden);
+    assert.equal(document.querySelector("#create-dialog"), null);
     assert.equal(calls.filter((call) => call === "POST /api/endpoints/demo/tasks").length, 1);
     assert.match(element("#bar-count").textContent!, /1 项/);
     const id = created!.taskId;
@@ -435,8 +403,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     assert.ok(calls.some((call) => call.includes(`/tasks?executionId=${executionId}`)));
     click("#tab-tasks");
     const only = element<HTMLInputElement>("#only-favorites");
-    only.checked = true;
-    only.dispatchEvent(new window.Event("change"));
+    only.click();
     await until(
       () => element("#directory").textContent!.includes(source.taskId.slice(-8)),
       "all stored stars must include off-page Task",
@@ -454,15 +421,17 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     );
     named("#directory", "查看来源 / 模板").click();
     await until(
-      () => element("#task-detail").textContent!.includes("本机保存的完整参数模板"),
+      () =>
+        document.querySelector("#task-detail")?.textContent?.includes("本机保存的完整参数模板") ===
+        true,
       "cleaned source opens a template, not an empty Task",
     );
     assert.match(element("#task-detail").textContent!, /user-lock/);
     named("#task-detail", "★").click();
     await until(() => favorites.length === 1, "unstar should remove only local star");
     assert.equal(cancels, 0);
-    only.checked = false;
-    only.dispatchEvent(new window.Event("change"));
+    document.querySelector<HTMLButtonElement>("#task-detail-sheet [data-close]")!.click();
+    only.click();
     await until(
       () => element("#directory").querySelector(".star") !== null,
       "normal Task directory returns",
@@ -479,11 +448,6 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     window.dispatchEvent(new window.Event("pagehide"));
     await new Promise((resolve) => setTimeout(resolve, 10));
     Object.assign(globalThis, previous);
-    if (selectValue)
-      Object.defineProperty(window.HTMLSelectElement.prototype, "value", selectValue);
-    window.HTMLElement.prototype.focus = oldFocus;
-    window.HTMLElement.prototype.scrollIntoView = oldScroll;
-    if (tabIndex) Object.defineProperty(window.HTMLElement.prototype, "tabIndex", tabIndex);
-    else Reflect.deleteProperty(window.HTMLElement.prototype, "tabIndex");
+    await dom.restore();
   }
 });

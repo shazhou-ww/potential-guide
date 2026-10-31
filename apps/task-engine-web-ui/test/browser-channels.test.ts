@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import type { Observation, TaskSnapshot } from "@potential-guide/task-protocol";
-import { parseHTML } from "linkedom";
 import { newIdentity, TaskSnapshots } from "../src/model.js";
+import { browserDom } from "./browser-dom.js";
 
 async function until(check: () => boolean, message: string): Promise<void> {
   const end = Date.now() + 3000;
@@ -17,27 +17,14 @@ async function until(check: () => boolean, message: string): Promise<void> {
 test("actual browser entry wires cancellation receipts and SSE without cross-channel rollback", async (t) => {
   const reads = t.mock.method(TaskSnapshots.prototype, "begin");
   const cancellations = t.mock.method(TaskSnapshots.prototype, "beginCancellation");
-  const { window, document } = parseHTML(
-    await readFile(new URL("../src/index.html", import.meta.url), "utf8"),
-  );
+  const dom = browserDom(await readFile(new URL("../src/index.html", import.meta.url), "utf8"));
+  const { window, document } = dom;
   const original = {
     window: globalThis.window,
     document: globalThis.document,
     Option: globalThis.Option,
     fetch: globalThis.fetch,
   };
-  const selectValue = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value");
-  const scroll = window.HTMLElement.prototype.scrollIntoView;
-  Object.defineProperty(window.HTMLSelectElement.prototype, "value", {
-    configurable: true,
-    get(this: HTMLSelectElement) {
-      return [...this.options].find((item) => item.selected)?.value ?? "";
-    },
-    set(this: HTMLSelectElement, value: string) {
-      for (const item of this.options) item.selected = item.value === value;
-    },
-  });
-  window.HTMLElement.prototype.scrollIntoView = () => {};
   const snapshots = new Map<string, TaskSnapshot>();
   const streams = new Map<
     string,
@@ -154,6 +141,7 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
     return text ? (JSON.parse(text) as TaskSnapshot) : undefined;
   };
   const open = async (task: TaskSnapshot) => {
+    document.querySelector<HTMLButtonElement>('[role="dialog"] [data-close]')?.click();
     snapshots.set(task.taskId, task);
     const field = document.querySelector("#task-lookup input") as unknown as HTMLInputElement;
     const button = document.querySelector("#task-lookup button") as unknown as HTMLButtonElement;
@@ -190,9 +178,15 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
   try {
     await import("../src/browser.js");
     await until(
+      () => !!document.querySelector("#task-lookup button"),
+      "browser actions should load",
+    );
+    document.getElementById("new-task")!.click();
+    await until(
       () => document.getElementById("discovery-status")?.textContent?.includes("已发现") === true,
       "browser bootstrap should finish",
     );
+    document.querySelector<HTMLButtonElement>("#create-dialog [data-close]")!.click();
 
     // A: this running frame was captured before cancellation, despite its larger global watermark.
     const a = snapshot();
@@ -268,8 +262,6 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
     for (const stream of streams.values()) stream.fail();
     await new Promise((resolve) => setTimeout(resolve, 10));
     Object.assign(globalThis, original);
-    if (selectValue)
-      Object.defineProperty(window.HTMLSelectElement.prototype, "value", selectValue);
-    window.HTMLElement.prototype.scrollIntoView = scroll;
+    await dom.restore();
   }
 });

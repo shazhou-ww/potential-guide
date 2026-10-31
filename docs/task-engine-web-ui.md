@@ -2,8 +2,13 @@
 
 `apps/task-engine-web-ui` 是可选、私有的 Node/TypeScript 应用。它独立于
 Task Server，仅使用公开 HTTP 协议；不会创建 Engine、读其 SQLite、加载业务
-执行器，或因页面/流/UI Server 关闭而取消 Task。示例执行器只属于显式启动的
+执行器，或因抽屉/页面/流/UI Server 关闭而取消 Task。示例执行器只属于显式启动的
 fixture，生产 UI 入口不导入它。
+
+展示层采用真正的 React/shadcn/ui 组件，Tailwind 构建为本地静态 CSS，不依赖 CDN、
+字体下载、路由或 SSR 框架。组件来源固定为 `shadcn@4.23.0` /
+`96da9cc7f1aa10580a3741664e2a77c721206c00`，详见
+[来源、许可及适配说明](../apps/task-engine-web-ui/src/ui/SOURCES.md)。
 
 ## 构建与连接现有服务
 
@@ -60,10 +65,14 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
 - 浏览器必须使用启动日志中的准确地址；Host 必须匹配，Origin 若存在必须
   同源，修改请求必须有同源 Origin 和会话 CSRF 头；拒绝跨站 Fetch Metadata。
   重启后浏览器需刷新以获得新会话 token。
+  更新 v0.6 只需重建并由授权操作者重启 UI，继续使用原配置、环境凭据和
+  favoritesFile；不要用演示 fixture 替换现有 Backend，不需要数据迁移。
 - URL 仅在可信配置中指定，支持 HTTPS 或 loopback HTTP、可选固定路径前缀。
   禁止 URL 用户名/密码、query/hash 和任何后端重定向。不转发浏览器的
   Authorization、Cookie 或任意头；只允许协议方法、路径、查询和必要身份头。
-- CSP 无 inline/eval；不插入 HTML 业务内容。Schema 不加载外部引用，不访问
+- CSP 不使用 unsafe-inline / unsafe-eval，脚本只允许 self；每份 HTML 提供随机
+  style-only nonce，专供 Radix scroll-lock 的受信样式，禁止任意内联样式属性。
+  不插入 HTML 业务内容。Schema 不加载外部引用，不访问
   输入 URL、制品或文件。
 - 修改原目标 URL、身份环境变量名或 `binding` 会改变目标指纹。将原 ID 指向
   不同逻辑服务或权限范围时，操作员**必须更新 binding**。凭据常规轮换不必
@@ -86,9 +95,14 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
 
 ## 操作
 
-- **两个主 Tab**：默认任务页，整合当前/历史目录、筛选、选中详情与星标。
+- **两个主 Tab**：标题、任务/执行 Tabs、受控服务选择、任务栏入口合在紧凑顶栏。
+  默认任务页，整合当前/历史目录、筛选、选中详情与星标。
   执行页查询整个 Endpoint 获授权且保留的执行记录。一次只有一页进入布局和
   键盘顺序；Tab 箭头键、弹窗 Esc/焦点回归可用，跨 Tab 保留筛选、选中项和输入。
+- **全宽列表与详情抽屉**：两个目录独占页面可用宽度，点击任务/执行后从右侧覆盖，
+  不缩窄表格、不改筛选、原分页或列表滚动。关闭按钮、Esc 和宽屏遮罩可关闭，
+  焦点回原入口；跨实体跳转只保留一个模态层。窄屏抽屉占满视口，内容内部滚动。
+  关闭详情不取消 Task；观察事实及其历史分页对象独立于抽屉生命周期。
 - **新建弹窗**：点“新建任务”，先发现当前类型，再选择类型；关闭重开保留本次
   表单（包括尚不合法的字段文本），提交成功关闭弹窗并定位新 Task。常用标量、枚举、数组、嵌套属性、
   本地引用生成表单。自由 object 和复杂组合字段提供局部 JSON 编辑及约束查看。
@@ -197,7 +211,13 @@ pnpm --filter @potential-guide/task-engine-web-ui start (Join-Path $demo 'ui.jso
 关键自动化入口：`#tab-tasks` / `#tab-executions`、`#tasks` / `#executions`（tabpanel）、
 `#new-task` / `#create-dialog`、`#only-favorites`、`.star[aria-pressed]`、
 `#bar-toggle` / `#submission-dialog`、`#directory` / `#execution-directory`、
-`#task-detail` / `#execution-detail`。不要对用户已有进程/浏览器页执行验证或清理。
+`#task-detail-sheet` / `#execution-detail-sheet`（`[data-slot="sheet-content"]`）、
+`#task-detail` / `#execution-detail`（抽屉内容）、`[data-close]`。
+Dialog/Sheet 关闭后不在文档中，不能再检查原生 `dialog.open`；
+用 `[role="dialog"][data-state="open"]`，并等待入场动画结束后测几何。
+`#form-fields` 由 Schema 编辑器独占 DOM，重新打开会挂回同一份原始字段。
+其余组件由 React 独占渲染；不要直接改写其子节点。
+不要对用户已有进程/浏览器页执行验证或清理。
 
 用 Ctrl+C 先关闭 UI、再关闭自己启动的 fixture，确认两个进程退出后，仅删除
 本次 `$demo` 目录。自动化测试也只在工作区 `.cache/ui-test-<uuid>` 建立并清理
@@ -215,17 +235,23 @@ pnpm check
 ```powershell
 pnpm --filter @potential-guide/task-engine-web-ui exec tsx fixture\browser-smoke.ts `
   'C:\Program Files\Google\Chrome\Application\chrome.exe' `
-  'D:\path\to\new-owned-evidence-directory' '9223,62952,61109'
+  'D:\path\to\new-owned-evidence-directory' '9223,64319,61123,61144,62952,61109'
 ```
 
 此脚本只启动自己拥有的随机端口 Backend/UI、全新的 headless 浏览器 profile，
 不会附着现有 Chrome。第三参数为禁止连接的保留端口列表，可按环境指定。
-验证双 Tab、原生 Esc/焦点回归、弹窗输入保留、完成后停流、其他客户端执行与
-390px 布局，保存截图/checks.json；最终关闭自己的进程并删除自己 profile/临时收藏。
+验证真实组件、紧凑顶栏、方向键/Tab/Esc/遮罩、焦点回归、弹窗输入保留、SSE 焦点、
+完整分页后的抽屉宽度/滚动/筛选保持、关联跳转、完成后停流、其他客户端执行、
+390 CSS px 列表与抽屉，以及 nonce 样式可用、任意 inline script/style 被 CSP 阻止。
+保存截图/checks.json；最终关闭自己的进程并删除自己 profile/临时收藏。
 不能把用户既有 profile 或试用目录作为输出位置。
 
 `test/integration.test.ts` 使用真实独立 HTTP listener 和现有 Task Server，
 覆盖权限/作用域、两种 Schema、guard/身份、批次、目录快照/失效、
 Task/Execution、取消/超时/断流、收藏重启与重做。`test/model.test.ts`
 补充丢回执后 412、迟到响应、游标/去重、DOM 表单和参数保持。
+`test/presentation.test.ts` 与实际 browser entry 测试使用 jsdom 26.1.0，
+覆盖 React/Radix 所有权、键控焦点、单层切换、原字段节点保留、忙状态与快速双击；
+纯 Schema 测试继续使用 linkedom。实际布局、原生键盘与 CSP 以独立 Chrome 脚本为准，
+不以 DOM 模拟器冒充浏览器布局证明。
 fixture 和自动测试不是生产部署或独立验收；正式审阅由主 Agent 执行。

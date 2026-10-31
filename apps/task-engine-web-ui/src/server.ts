@@ -296,9 +296,10 @@ export async function startUiServer(raw: UiConfig) {
     res.setHeader("Referrer-Policy", "no-referrer");
     res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
     res.setHeader("X-Frame-Options", "DENY");
+    const styleNonce = randomBytes(24).toString("base64");
     res.setHeader(
       "Content-Security-Policy",
-      "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      `default-src 'none'; script-src 'self'; style-src 'self' 'nonce-${styleNonce}'; style-src-attr 'none'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
     );
     try {
       if (closing) reject(503, "ui_closing", "UI 正在关闭。");
@@ -321,7 +322,11 @@ export async function startUiServer(raw: UiConfig) {
       const asset = assets.get(url.pathname);
       if (asset && method === "GET" && !url.search) {
         res.writeHead(200, { "Content-Type": asset.type });
-        res.end(asset.bytes);
+        res.end(
+          url.pathname === "/"
+            ? asset.bytes.toString("utf8").replace("__UI_STYLE_NONCE__", styleNonce)
+            : asset.bytes,
+        );
         return;
       }
       if (url.pathname === "/api/bootstrap" && method === "GET" && !url.search) {

@@ -8,7 +8,6 @@ import type {
   TaskSummary,
   TaskTypeDiscovery,
 } from "@potential-guide/task-protocol";
-import { claimActivation, reconcile } from "./dom.js";
 import { envelopeKeys, envelopeSchema, schemaEditor } from "./form.js";
 import { ObservationEnd, stages, taskStatus } from "./lifecycle.js";
 import {
@@ -27,9 +26,14 @@ import {
   TaskSnapshots,
   validSnapshot,
 } from "./model.js";
-import { Navigation } from "./navigation.js";
+import { describeAction, WorkbenchView } from "./presentation.tsx";
 import type { Endpoint, Favorite } from "./server.js";
 
+const view = new WorkbenchView(document.getElementById("app")!);
+const navigation = view.navigation;
+function reconcile(id: string, nodes: HTMLElement[]): void {
+  view.render(id, nodes);
+}
 function node<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   text?: string,
@@ -39,6 +43,7 @@ function node<K extends keyof HTMLElementTagNameMap>(
   return result;
 }
 function get(id: string): HTMLElement {
+  if (id === "form-fields") return view.form;
   const result = document.getElementById(id);
   if (!result) throw new Error(`Missing UI element ${id}`);
   return result;
@@ -55,19 +60,7 @@ function button(
   result.dataset.disabled = String(disabled);
   result.dataset.action = text;
   result.dataset.key = `action:${text}`;
-  result.onclick = function () {
-    const control = this as HTMLButtonElement;
-    if (control.dataset.busy === "true" || !claimActivation(control, minimumInterval)) return;
-    control.dataset.busy = "true";
-    control.disabled = true;
-    void Promise.resolve()
-      .then(action)
-      .catch(notify)
-      .finally(() => {
-        delete control.dataset.busy;
-        control.disabled = control.dataset.disabled === "true";
-      });
-  };
+  describeAction(result, { run: action, error: notify, minimumInterval });
   return result;
 }
 function details(title: string, value: unknown, key = title): HTMLDetailsElement {
@@ -78,12 +71,8 @@ function details(title: string, value: unknown, key = title): HTMLDetailsElement
 }
 function notify(error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
-  get("notice").textContent = message;
-  get("dialog-notice").textContent = message;
-}
-function focus(id: string): void {
-  get(id).focus();
-  get(id).scrollIntoView({ block: "start" });
+  view.text("notice", message);
+  view.text("dialog-notice", message);
 }
 function input(label: string, type = "text"): { label: HTMLLabelElement; input: HTMLInputElement } {
   const element = node("input");
@@ -100,7 +89,6 @@ const statusNames = {
   unknown: "结果未知",
 };
 let api: Api;
-let navigation: Navigation;
 let endpoints: Endpoint[] = [];
 let favorites: Favorite[] = [];
 let favoritesGeneration = 0;
@@ -188,6 +176,8 @@ function renderForm(type: TaskTypeDiscovery, parameters?: Parameters): void {
   formEndpoint = workspace().endpoint;
   formRevision = type.revision;
   formType = type.type;
+  view.type(type.type);
+  view.render("contract-actions", []);
   const container = get("form-fields");
   container.replaceChildren();
   const original = parameters ?? { type: type.type };
@@ -211,8 +201,10 @@ function renderForm(type: TaskTypeDiscovery, parameters?: Parameters): void {
         ...(fields.read() as object),
         type: type.type,
       }) as Parameters;
-    get("contract").textContent =
-      `类型 ${type.type} · version ${type.version} · revision ${type.revision.slice(0, 12)}。不补默认值；提交由服务完整校验。`;
+    view.text(
+      "contract",
+      `类型 ${type.type} · version ${type.version} · revision ${type.revision.slice(0, 12)}。不补默认值；提交由服务完整校验。`,
+    );
   } catch (error) {
     formBlocked = true;
     container.append(details("保留的原参数", original));
@@ -242,11 +234,12 @@ async function discover(preserve = false): Promise<void> {
       throw new Error("类型发现协议无效。");
     state.types = types;
     state.discoveryError = "";
-    const select = get("type") as HTMLSelectElement;
-    select.replaceChildren(new Option("选择任务类型", ""));
-    for (const type of types) select.append(new Option(type.type, type.type));
+    view.options([
+      { label: "选择任务类型", value: "" },
+      ...types.map((type) => ({ label: type.type, value: type.type })),
+    ]);
     if (preserve && formType) {
-      select.value = formType;
+      view.type(formType);
       const current = types.find((type) => type.type === formType);
       if (!current) {
         formBlocked = true;
@@ -254,27 +247,30 @@ async function discover(preserve = false): Promise<void> {
       }
       if (current.revision !== formRevision) {
         formBlocked = true;
-        get("contract").textContent =
-          "契约已变化，原输入已保留。点击“按当前契约重新编辑”确认；原提交重试仍保留旧 guard。";
+        view.text(
+          "contract",
+          "契约已变化，原输入已保留。点击“按当前契约重新编辑”确认；原提交重试仍保留旧 guard。",
+        );
         const accept = button("按当前契约重新编辑", () => {
           if (!retained) throw new Error("原输入尚不能解析，请修正原字段后重新发现。");
           renderForm(current, retained);
-          accept.remove();
         });
-        get("form-fields").prepend(accept);
+        view.render("contract-actions", [accept]);
       } else formBlocked = false;
     }
-    get("discovery-status").textContent = `已发现 ${types.length} 种当前类型`;
+    view.text("discovery-status", `已发现 ${types.length} 种当前类型`);
   } catch (error) {
     if (!lease.current()) return;
     state.discoveryError = error instanceof Error ? error.message : String(error);
-    get("discovery-status").textContent =
-      `发现不可用：${state.discoveryError}。目录和详情权限独立，仍可使用。`;
+    view.text(
+      "discovery-status",
+      `发现不可用：${state.discoveryError}。目录和详情权限独立，仍可使用。`,
+    );
     formBlocked = true;
   }
 }
 function renderBar(): void {
-  const container = get("batches");
+  const container = "batches";
   const current = selection.endpoint;
   const cards: HTMLElement[] = [];
   const batches = bar.batches.filter(
@@ -283,8 +279,10 @@ function renderBar(): void {
   const unknown = batches
     .flatMap((batch) => batch.entries)
     .filter((entry) => entry.state === "unknown").length;
-  get("bar-count").textContent =
-    `${batches.reduce((n, batch) => n + batch.entries.length, 0)} 项${unknown ? ` · ${unknown} 未知` : ""}`;
+  view.text(
+    "bar-count",
+    `${batches.reduce((n, batch) => n + batch.entries.length, 0)} 项${unknown ? ` · ${unknown} 未知` : ""}`,
+  );
   for (const batch of batches) {
     const card = node("article");
     card.dataset.key = `batch:${batch.id}`;
@@ -293,7 +291,7 @@ function renderBar(): void {
       "按序发送此批",
       async () => {
         await bar.sendBatch(batch);
-        if (!get("submission-dialog").hidden)
+        if (navigation.overlay?.id === "submission-dialog")
           get("batches")
             .querySelector<HTMLElement>(`[data-key="batch:${batch.id}"] summary`)
             ?.focus();
@@ -371,12 +369,12 @@ function renderBar(): void {
   reconcile(container, cards);
 }
 function renderTasks(): void {
-  const container = get("task-list");
+  const container = "task-list";
   const rows: HTMLElement[] = [];
   if (!selection.endpoint) {
     reconcile(container, rows);
-    if (container.parentElement?.tagName === "FIELDSET")
-      container.parentElement.hidden = rows.length === 0;
+    view.recent = false;
+    view.publish();
     return;
   }
   for (const task of [...workspace().tasks.values.values()].slice(-5)) {
@@ -402,6 +400,7 @@ function renderTasks(): void {
       );
     rows.push(row);
   }
+  view.recent = rows.length > 0;
   reconcile(container, rows);
 }
 interface Observer {
@@ -442,8 +441,8 @@ function closeObservers(): void {
   executionObserver?.controller.abort();
   taskObserver = undefined;
   executionObserver = undefined;
-  get("task-detail").replaceChildren(node("p", "选择一个 Task 查看详情。"));
-  get("execution-detail").replaceChildren(node("p", "选择关联 Execution 查看真实执行事实。"));
+  view.text("task-detail", "选择一个 Task 查看详情。");
+  view.text("execution-detail", "选择关联 Execution 查看真实执行事实。");
 }
 async function history(observer: Observer, next = false): Promise<void> {
   if (observer.loading) return;
@@ -591,7 +590,7 @@ async function openTask(id: string): Promise<void> {
   const observer = newObserver("taskId", id);
   taskObserver = observer;
   renderObserver(observer);
-  focus("task-detail");
+  navigation.open("task-detail");
   try {
     const accept = workspace(observer.endpoint).tasks.begin(id);
     const snapshot = await api.request<TaskSnapshot>(observer.endpoint, `/tasks/${id}`, {
@@ -661,8 +660,8 @@ async function openExecution(id: string): Promise<void> {
     observer.reclaimed = !!summary.reclaimedAt;
     if (observer.end.ended) stopStream(observer, "ended");
   }
-  focus("execution-detail");
   renderObserver(observer);
+  navigation.open("execution-detail");
   await history(observer);
   void associatedTasks(observer);
   if (current(observer)) void live(observer);
@@ -683,11 +682,9 @@ function eventList(key: string, title: string, events: PublicEvent[]): HTMLEleme
 }
 function renderObserver(observer: Observer): void {
   if (!current(observer)) return;
-  const container = get(observer.kind === "taskId" ? "task-detail" : "execution-detail");
+  const container = observer.kind === "taskId" ? "task-detail" : "execution-detail";
   const box = node("div");
   box.dataset.key = `${observer.endpoint.binding}:${observer.kind}:${observer.id}`;
-  const title = observer.kind === "taskId" ? "任务详情" : "执行详情";
-  box.append(node("h3", title));
   const observationState = node(
     "p",
     `${({ idle: "正在读取", live: "实时更新", stale: "观察陈旧 / 已断开", paused: "观察已暂停", ended: "观察已结束" } as const)[observer.streamState]}${observer.window.lastReceived ? ` · 最后读取 ${observer.window.lastReceived}` : ""}${observer.message ? ` · ${observer.message}` : ""}`,
@@ -953,7 +950,7 @@ async function queryDirectory(append = false): Promise<void> {
   if (lease.current()) renderDirectory();
 }
 function renderDirectory(): void {
-  const container = get("directory");
+  const container = "directory";
   const contents = node("div");
   contents.dataset.key = "task-directory";
   if (!selection.endpoint) {
@@ -962,8 +959,7 @@ function renderDirectory(): void {
     reconcile(container, [contents]);
     return;
   }
-  const association = get("association-filter");
-  association.replaceChildren();
+  const association = node("div");
   if (workspace().associatedExecutionId)
     association.append(
       node("span", `执行关联筛选：${workspace().associatedExecutionId.slice(-8)}`),
@@ -972,6 +968,7 @@ function renderDirectory(): void {
         return queryDirectory();
       }),
     );
+  view.render("association-filter", [...association.childNodes]);
   if ((get("only-favorites") as HTMLInputElement).checked) {
     renderStars(contents);
     reconcile(container, [contents]);
@@ -1112,7 +1109,7 @@ async function queryExecutions(append = false): Promise<void> {
   if (lease.current()) renderExecutions();
 }
 function renderExecutions(): void {
-  const root = get("execution-directory"),
+  const root = "execution-directory",
     box = node("div");
   const directory = workspace().executionDirectory;
   box.dataset.key = "execution-directory";
@@ -1195,13 +1192,12 @@ async function reuse(endpoint: Endpoint, parameters: Parameters, direct: boolean
     }
   } else {
     const type = types.find((item) => item.type === parameters.type)!;
-    const select = get("type") as HTMLSelectElement;
-    select.replaceChildren(...types.map((item) => new Option(item.type, item.type)));
-    select.value = type.type;
+    view.options(types.map((item) => ({ label: item.type, value: item.type })));
+    view.type(type.type);
     renderForm(type, structuredClone(parameters));
     lastQuick = undefined;
     navigation.show("tasks", false);
-    get("create-title").textContent = "编辑参数并新建任务";
+    view.text("create-title", "编辑参数并新建任务");
     navigation.open("create-dialog");
   }
 }
@@ -1380,10 +1376,9 @@ async function renderFavorites(): Promise<boolean> {
     throw error;
   }
   favorites = next;
-  const container = get("favorites-list");
-  container.replaceChildren();
+  const container = node("div");
   const legacy = favorites.filter((item) => !item.source);
-  get("legacy-templates").hidden = !legacy.length;
+  view.legacy = legacy.length > 0;
   for (const favorite of legacy) {
     const article = node("article");
     const configured = endpoints.find((endpoint) => endpointMatches(endpoint, favorite.endpoint));
@@ -1411,6 +1406,7 @@ async function renderFavorites(): Promise<boolean> {
     );
     container.append(article);
   }
+  view.render("favorites-list", [...container.childNodes]);
   renderDirectory();
   if (taskObserver && current(taskObserver)) renderObserver(taskObserver);
   return true;
@@ -1423,6 +1419,7 @@ async function chooseEndpoint(id: string): Promise<void> {
   starChecks?.abort();
   navigation.close("create-dialog", false);
   navigation.close("submission-dialog", false);
+  if (navigation.overlay) navigation.close(navigation.overlay.id, false);
   navigation.show("tasks", false);
   (get("endpoint") as HTMLSelectElement).value = endpoint.id;
   closeObservers();
@@ -1432,11 +1429,12 @@ async function chooseEndpoint(id: string): Promise<void> {
   formType = "";
   lastQuick = undefined;
   get("form-fields").replaceChildren();
-  get("contract").textContent = "";
-  (get("type") as HTMLSelectElement).replaceChildren(new Option("正在发现当前目标类型", ""));
-  get("discovery-status").textContent = `正在发现 ${endpoint.label} 的类型…`;
-  get("notice").textContent =
-    `当前目标：${endpoint.label}。旧目标回执留在原分区；断流不会取消 Task。`;
+  view.text("contract", "");
+  view.render("contract-actions", []);
+  view.type("");
+  view.options([{ label: "正在发现当前目标类型", value: "" }]);
+  view.text("discovery-status", `正在发现 ${endpoint.label} 的类型…`);
+  view.text("notice", `当前目标：${endpoint.label}。旧目标回执留在原分区；断流不会取消 Task。`);
   workspace().associatedExecutionId = "";
   (get("only-favorites") as HTMLInputElement).checked = false;
   for (const id of [
@@ -1461,37 +1459,33 @@ async function start(): Promise<void> {
   const bootstrap = (await response.json()) as { csrf: string; endpoints: Endpoint[] };
   api = new Api(bootstrap.csrf);
   endpoints = bootstrap.endpoints;
-  navigation = new Navigation(document, (tab) => {
+  view.events.tab = (tab) => {
     if (tab === "executions" && selection.endpoint && !workspace().executionDirectory.page)
       void queryExecutions();
-  });
-  get("new-task").addEventListener("click", () => {
-    get("create-title").textContent = "新建任务";
-    get("dialog-notice").textContent = "";
+  };
+  view.events.create = () => {
+    view.text("create-title", "新建任务");
+    view.text("dialog-notice", "");
     navigation.open("create-dialog");
-  });
-  get("bar-toggle").addEventListener("click", () => navigation.open("submission-dialog"));
-  get("only-favorites").addEventListener("change", () => {
+  };
+  view.events.favorites = () => {
     if (selection.endpoint) workspace().associatedExecutionId = "";
     starChecks?.abort();
     void queryDirectory().catch(notify);
-  });
-  const select = get("endpoint") as HTMLSelectElement;
-  for (const endpoint of endpoints) select.append(new Option(endpoint.label, endpoint.id));
-  select.addEventListener("change", () => {
-    void chooseEndpoint(select.value).catch(notify);
-  });
-  (get("type") as HTMLSelectElement).addEventListener("change", () => {
-    const type = workspace().types.find(
-      (entry) => entry.type === (get("type") as HTMLSelectElement).value,
-    );
+  };
+  view.endpoints = endpoints;
+  view.events.endpoint = (id) => {
+    void chooseEndpoint(id).catch(notify);
+  };
+  view.events.type = (value) => {
+    const type = workspace().types.find((entry) => entry.type === value);
     if (type) {
       renderForm(type);
       lastQuick = undefined;
     }
-  });
-  get("discover").append(button("重新发现类型", () => discover(true)));
-  get("create-actions").append(
+  };
+  view.render("discover", [button("重新发现类型", () => discover(true))]);
+  view.render("create-actions", [
     button(
       "提交任务",
       async () => {
@@ -1531,29 +1525,34 @@ async function start(): Promise<void> {
       navigation.close("create-dialog", false);
       navigation.open("submission-dialog");
     }),
-  );
-  get("history-actions").append(button("重新查询", () => queryDirectory()));
-  get("execution-actions").append(button("刷新执行目录", () => queryExecutions()));
+  ]);
+  view.render("history-actions", [button("重新查询", () => queryDirectory())]);
+  view.render("execution-actions", [button("刷新执行目录", () => queryExecutions())]);
   const taskId = input("按 Task ID 打开");
-  get("task-lookup").append(
+  taskId.input.id = "task-id-input";
+  view.render("task-lookup", [
     taskId.label,
-    button("打开 Task", () => openTask(taskId.input.value.trim())),
-  );
+    button("打开 Task", () => openTask((get("task-id-input") as HTMLInputElement).value.trim())),
+  ]);
   const executionId = input("按 Execution ID 打开");
-  get("execution-lookup").append(
+  executionId.input.id = "execution-id-input";
+  view.render("execution-lookup", [
     executionId.label,
-    button("打开 Execution", () => openExecution(executionId.input.value.trim())),
-  );
+    button("打开 Execution", () =>
+      openExecution((get("execution-id-input") as HTMLInputElement).value.trim()),
+    ),
+  ]);
   window.addEventListener("pagehide", () => {
     closeObservers();
     starChecks?.abort();
+    view.dispose();
   });
   if (endpoints[0]) await chooseEndpoint(endpoints[0].id);
   else {
     await renderFavorites();
     (get("only-favorites") as HTMLInputElement).checked = true;
     renderDirectory();
-    get("execution-directory").textContent = "未配置服务，执行目录不可用。";
+    view.text("execution-directory", "未配置服务，执行目录不可用。");
     notify("没有配置 Endpoint；请由本机操作员配置并重启 UI。");
   }
 }

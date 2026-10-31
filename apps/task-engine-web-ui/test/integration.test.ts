@@ -649,8 +649,22 @@ test("loopback, host/origin/CSRF, restricted proxy, headers, body limits and red
   const h = await setup(t);
   await assert.rejects(() => startUiServer({ ...h.config, host: "0.0.0.0" }), /loopback/);
   const html = await fetch(h.url);
-  assert.match(html.headers.get("content-security-policy")!, /script-src 'self'/);
-  assert.equal((await html.text()).includes(h.token), false);
+  const policy = html.headers.get("content-security-policy")!;
+  const source = await html.text();
+  assert.match(policy, /script-src 'self'/);
+  assert.doesNotMatch(policy, /unsafe-inline|unsafe-eval/);
+  assert.match(policy, /style-src-attr 'none'/);
+  const nonce = /name="ui-style-nonce" content="([^"]+)"/.exec(source)?.[1];
+  assert.ok(nonce && /^[a-zA-Z0-9+/]{32}$/.test(nonce));
+  assert.ok(policy.includes(`style-src 'self' 'nonce-${nonce}'`));
+  assert.equal(source.includes(h.token), false);
+  const next = await fetch(h.url);
+  assert.notEqual(
+    next.headers.get("content-security-policy"),
+    policy,
+    "each document has its own nonce",
+  );
+  await next.arrayBuffer();
   const wrongHost = await new Promise<number | undefined>((accept, reject) => {
     const request = httpRequest(
       `${h.url}/api/bootstrap`,

@@ -6,10 +6,10 @@ import test from "node:test";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { TaskError, type TaskSnapshot } from "@potential-guide/task-protocol";
-import { parseHTML } from "linkedom";
 import { fixtureTypes } from "../fixture/types.js";
 import { newIdentity } from "../src/model.js";
 import { type Endpoint, type Favorite, startUiServer } from "../src/server.js";
+import { browserDom } from "./browser-dom.js";
 
 async function until(check: () => boolean | Promise<boolean>, reason: string): Promise<void> {
   const end = Date.now() + 5000;
@@ -62,33 +62,18 @@ test("actual browser entry ignores delayed real favorites responses and paginate
   });
   for (const url of [backend.url, ui.url])
     assert.equal(
-      [9223, 61123, 61144, 62952, 61109].includes(Number(new URL(url).port)),
+      [9223, 64319, 61123, 61144, 62952, 61109].includes(Number(new URL(url).port)),
       false,
       "never contact protected trial ports",
     );
-  const { window, document } = parseHTML(
-    await readFile(new URL("../src/index.html", import.meta.url), "utf8"),
-  );
+  const dom = browserDom(await readFile(new URL("../src/index.html", import.meta.url), "utf8"));
+  const { window, document } = dom;
   const original = {
     window: globalThis.window,
     document: globalThis.document,
     fetch: globalThis.fetch,
     Option: globalThis.Option,
   };
-  const selectValue = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value");
-  const scroll = window.HTMLElement.prototype.scrollIntoView;
-  Object.defineProperty(window.HTMLSelectElement.prototype, "value", {
-    configurable: true,
-    get(this: HTMLSelectElement) {
-      return [...this.options].find((item) => item.selected)?.value ?? "";
-    },
-    set(this: HTMLSelectElement, value: string) {
-      const options = [...this.options];
-      for (const item of options) item.removeAttribute("selected");
-      options.find((item) => item.value === value)?.setAttribute("selected", "");
-    },
-  });
-  window.HTMLElement.prototype.scrollIntoView = () => {};
   const bootstrap = (await (await nativeFetch(`${ui.url}/api/bootstrap`)).json()) as {
     csrf: string;
     endpoints: Endpoint[];
@@ -206,10 +191,6 @@ test("actual browser entry ignores delayed real favorites responses and paginate
       () => !!document.querySelector(`#directory [data-key="star:${a.taskId}"]`),
       "real Task directory should load",
     );
-    element<HTMLInputElement>("#task-lookup input").value = b.taskId;
-    element<HTMLButtonElement>("#task-lookup button").click();
-    await until(() => !!document.querySelector("#task-detail .star"), "B detail should open");
-
     holdNext = true;
     star(a.taskId).click();
     await until(() => held.length === 1, "hold A's real refresh response");
@@ -221,7 +202,10 @@ test("actual browser entry ignores delayed real favorites responses and paginate
       held[0]!.value.some((item) => item.source?.taskId === b.taskId),
       false,
     );
-    star(b.taskId).click();
+    element<HTMLInputElement>("#task-lookup input").value = b.taskId;
+    element<HTMLButtonElement>("#task-lookup button").click();
+    await until(() => !!document.querySelector("#task-detail .star"), "B detail should open");
+    detailStar().click();
     await until(
       () => detailStar().getAttribute("aria-pressed") === "true",
       "B's newer GET must update detail",
@@ -237,13 +221,17 @@ test("actual browser entry ignores delayed real favorites responses and paginate
     );
 
     holdNext = true;
+    element<HTMLButtonElement>("#task-detail-sheet [data-close]").click();
     star(c.taskId).click();
     await until(() => held.length === 2, "hold a real snapshot containing B before deletion");
     assert.equal(
       held[1]!.value.some((item) => item.source?.taskId === b.taskId),
       true,
     );
-    star(b.taskId).click();
+    element<HTMLInputElement>("#task-lookup input").value = b.taskId;
+    element<HTMLButtonElement>("#task-lookup button").click();
+    await until(() => !!document.querySelector("#task-detail .star"), "B detail should reopen");
+    detailStar().click();
     await until(
       () => detailStar().getAttribute("aria-pressed") === "false",
       "unstar must refresh detail",
@@ -258,11 +246,12 @@ test("actual browser entry ignores delayed real favorites responses and paginate
     assert.equal(detailStar().getAttribute("aria-pressed"), "false");
 
     holdNext = true;
-    star(b.taskId).click();
+    detailStar().click();
     await until(() => held.length === 3, "hold original target's refresh");
     const select = element<HTMLSelectElement>("#endpoint");
+    element<HTMLButtonElement>("#task-detail-sheet [data-close]").click();
     select.value = "other";
-    select.dispatchEvent(new window.Event("change"));
+    select.dispatchEvent(new window.Event("change", { bubbles: true }));
     await until(
       () =>
         element("#notice").textContent!.includes("另一个目标") &&
@@ -273,13 +262,15 @@ test("actual browser entry ignores delayed real favorites responses and paginate
     await until(() => inFlight === 0, "old target refresh must settle");
     assert.equal(select.value, "other");
     assert.match(element("#notice").textContent!, /另一个目标/);
+    element<HTMLButtonElement>("#new-task").click();
     assert.match(element("#favorites-list").textContent!, /保留旧模板/);
+    element<HTMLButtonElement>("#create-dialog [data-close]").click();
     assert.equal(
       (await stored()).some((item) => !item.source && item.name === "保留旧模板"),
       true,
     );
     select.value = "one";
-    select.dispatchEvent(new window.Event("change"));
+    select.dispatchEvent(new window.Event("change", { bubbles: true }));
     await until(
       () =>
         !!document.querySelector(`#directory [data-key="star:${b.taskId}"]`) &&
@@ -300,7 +291,7 @@ test("actual browser entry ignores delayed real favorites responses and paginate
         );
         failFavorites = true;
         try {
-          star(b.taskId).click();
+          detailStar().click();
           await until(
             () => element("#notice").textContent!.includes("修改失败且刷新失败"),
             "both failures must be visible",
@@ -332,6 +323,8 @@ test("actual browser entry ignores delayed real favorites responses and paginate
     element<HTMLInputElement>("#execution-type").value = "echo";
     element<HTMLInputElement>("#started-from").value = from;
     element<HTMLInputElement>("#started-before").value = before;
+    document.querySelector<HTMLButtonElement>('[role="dialog"] [data-close]')?.click();
+    element<HTMLButtonElement>("#tab-executions").focus();
     element<HTMLButtonElement>("#tab-executions").click();
     await until(
       () => document.querySelectorAll("#execution-directory tbody tr").length === 10,
@@ -371,9 +364,7 @@ test("actual browser entry ignores delayed real favorites responses and paginate
     window.dispatchEvent(new window.Event("pagehide"));
     await new Promise((resolve) => setTimeout(resolve, 20));
     Object.assign(globalThis, original);
-    if (selectValue)
-      Object.defineProperty(window.HTMLSelectElement.prototype, "value", selectValue);
-    window.HTMLElement.prototype.scrollIntoView = scroll;
+    await dom.restore();
     await ui.close();
     await backend.close();
     delete process.env[env];

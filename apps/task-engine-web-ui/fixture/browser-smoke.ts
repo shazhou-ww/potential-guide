@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { once } from "node:events";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
@@ -72,7 +72,7 @@ async function evaluate<T = unknown>(expression: string): Promise<T> {
 async function wait(expression: string, timeout = 10000) {
   const end = Date.now() + timeout;
   while (Date.now() < end) {
-    if (await evaluate(expression)) return;
+    if (await evaluate(`Boolean((${expression}))`)) return;
     await delay(50);
   }
   throw new Error(`UI condition timed out: ${expression}`);
@@ -80,6 +80,45 @@ async function wait(expression: string, timeout = 10000) {
 async function screenshot(name: string) {
   const result = await call<{ data: string }>("Page.captureScreenshot", { format: "png" });
   await writeFile(resolve(output, name), Buffer.from(result.data, "base64"));
+}
+async function click(selector: string) {
+  await wait(`(() => {
+    const element = document.querySelector(${JSON.stringify(selector)});
+    return !!element && !element.closest('[role=dialog]')?.getAnimations().some(animation=>animation.playState==='running');
+  })()`);
+  const point = await evaluate<{ x: number; y: number }>(`(() => {
+    const element = document.querySelector(${JSON.stringify(selector)});
+    if (!element) throw new Error('Missing click target');
+    element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const rect = element.getBoundingClientRect();
+    return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+  })()`);
+  await call("Input.dispatchMouseEvent", {
+    type: "mousePressed",
+    ...point,
+    button: "left",
+    clickCount: 1,
+  });
+  await call("Input.dispatchMouseEvent", {
+    type: "mouseReleased",
+    ...point,
+    button: "left",
+    clickCount: 1,
+  });
+}
+async function pressKey(key: string, windowsVirtualKeyCode: number, modifiers = 0) {
+  for (const type of ["keyDown", "keyUp"])
+    await call("Input.dispatchKeyEvent", {
+      type,
+      key,
+      code: key,
+      windowsVirtualKeyCode,
+      modifiers,
+    });
+}
+async function closeOverlay() {
+  await pressKey("Escape", 27);
+  await wait("!document.querySelector('[role=dialog]')");
 }
 try {
   backend = await startTaskServer({
@@ -116,8 +155,8 @@ try {
     endpoints: [
       {
         id: "owned",
-        label: "独立 v0.5 验证",
-        binding: "owned-v05",
+        label: "独立 v0.6 验证",
+        binding: "owned-v06",
         url: backend.url,
         bearerEnv: env,
       },
@@ -197,6 +236,19 @@ try {
   });
   await call("Runtime.enable");
   await call("Page.enable");
+  checks.browser = (await call<{ product: string }>("Browser.getVersion")).product;
+  for (const asset of ["app.js", "style.css"])
+    checks[`${asset}Sha256`] = createHash("sha256")
+      .update(Buffer.from(await (await fetch(`${ui.url}/${asset}`)).arrayBuffer()))
+      .digest("hex");
+  await call("Page.addScriptToEvaluateOnNewDocument", {
+    source: `
+    globalThis.smokeCsp = [];
+    addEventListener('securitypolicyviolation', event => smokeCsp.push({
+      directive: event.effectiveDirective, blocked: event.blockedURI
+    }));
+  `,
+  });
   await call("Emulation.setDeviceMetricsOverride", {
     width: 1440,
     height: 1000,
@@ -204,79 +256,200 @@ try {
     mobile: false,
   });
   await call("Page.navigate", { url: ui.url });
-  await wait("document.querySelector('#discovery-status')?.textContent.includes('已发现 2')");
+  await wait("document.querySelector('#directory tbody tr')");
   checks.tabs = await evaluate("document.querySelectorAll('[role=tab]').length");
   checks.visiblePanels = await evaluate(
     "document.querySelectorAll('main [role=tabpanel]:not([hidden])').length",
   );
   assert.equal(checks.tabs, 2);
   assert.equal(checks.visiblePanels, 1);
-  await evaluate(
-    "document.querySelector('#new-task').focus();document.querySelector('#new-task').click();true",
+  checks.actualComponents =
+    await evaluate(`['tabs','tabs-list','tabs-trigger','tabs-content','button','input','table','table-row'].every(
+    slot=>document.querySelector('[data-slot="'+slot+'"]')
+  )`);
+  assert.equal(checks.actualComponents, true);
+  checks.headerOneRow = await evaluate(`(() => {
+    const centers=['.topbar h1','.topbar [role=tablist]','.endpoint-label','#bar-toggle'].map(selector=>{
+      const rect=document.querySelector(selector).getBoundingClientRect();return rect.y+rect.height/2;
+    });return Math.max(...centers)-Math.min(...centers)<1;
+  })()`);
+  assert.equal(checks.headerOneRow, true);
+  await click("#tab-tasks");
+  await pressKey("ArrowRight", 39);
+  await wait("document.querySelector('#tab-executions').getAttribute('aria-selected')==='true'");
+  await pressKey("ArrowLeft", 37);
+  await wait("document.querySelector('#tab-tasks').getAttribute('aria-selected')==='true'");
+  checks.keyboardTabs = true;
+  await click("#new-task");
+  await wait("document.querySelector('#create-dialog[data-state=open]')");
+  await wait("document.querySelector('#discovery-status')?.textContent.includes('已发现 2')");
+  checks.nonceStylesApplied = await evaluate(`(() => {
+    const nonce=document.querySelector('meta[name=ui-style-nonce]').content;
+    const styles=[...document.querySelectorAll('style')];
+    return styles.length>0 && styles.every(style=>style.nonce===nonce && style.sheet.cssRules.length>0);
+  })()`);
+  await evaluate("document.querySelector('#create-dialog [data-close]').focus();true");
+  await pressKey("Tab", 9);
+  assert.equal(await evaluate("document.activeElement.id==='type'"), true);
+  await pressKey("Tab", 9, 8);
+  checks.dialogTabTrap = await evaluate(
+    "document.activeElement.matches('#create-dialog [data-close]')",
   );
-  await wait("document.querySelector('#create-dialog').open");
+  assert.equal(checks.dialogTabTrap, true);
+  assert.equal(checks.nonceStylesApplied, true);
   await evaluate(`(() => {
-    const type=document.querySelector('#type'); type.value='echo'; type.dispatchEvent(new Event('change'));
+    const type=document.querySelector('#type'); type.value='echo'; type.dispatchEvent(new Event('change',{bubbles:true}));
     for (const [label,value] of [['消息','独立浏览器验证'],['超时预算 timeoutMs（毫秒）','10000']]) {
       const item=[...document.querySelectorAll('#form-fields label')].find(item=>item.htmlFor&&item.textContent===label);
       document.getElementById(item.htmlFor).value=value;
     }
     const toggle=[...document.querySelectorAll('#form-fields input[type=checkbox]')].find(item=>item.parentElement.textContent.includes('durationMs'));
     toggle.click(); const label=[...document.querySelectorAll('#form-fields label')].find(item=>item.htmlFor&&item.textContent==='durationMs');
-    document.getElementById(label.htmlFor).value='1200';
+    document.getElementById(label.htmlFor).value='2500';
     globalThis.smokeDraft=[...document.querySelectorAll('#form-fields input')].find(item=>item.value==='独立浏览器验证');
     return true;
   })()`);
   await screenshot("popup.png");
-  await call("Input.dispatchKeyEvent", {
-    type: "keyDown",
-    key: "Escape",
-    code: "Escape",
-    windowsVirtualKeyCode: 27,
-  });
-  await call("Input.dispatchKeyEvent", {
-    type: "keyUp",
-    key: "Escape",
-    code: "Escape",
-    windowsVirtualKeyCode: 27,
-  });
-  await wait("!document.querySelector('#create-dialog').open");
+  await closeOverlay();
+  await wait("document.activeElement.id==='new-task'");
   checks.focusReturned = await evaluate("document.activeElement.id==='new-task'");
   assert.equal(checks.focusReturned, true);
-  await evaluate("document.querySelector('#tab-executions').click();true");
+  await click("#tab-executions");
   await wait("document.querySelector('#execution-directory').textContent.includes('survey')");
   assert.equal(await evaluate("document.querySelector('#tasks').hidden"), true);
-  await evaluate(
-    "document.querySelector('#tab-tasks').click();document.querySelector('#new-task').click();true",
-  );
+  await click("#tab-tasks");
+  await click("#new-task");
   checks.draftRetained = await evaluate(
     "globalThis.smokeDraft.isConnected && globalThis.smokeDraft.value==='独立浏览器验证'",
   );
   assert.equal(checks.draftRetained, true);
-  await evaluate(
-    "[...document.querySelectorAll('#create-actions button')].find(item=>item.textContent==='提交任务').click();true",
+  await click('#create-actions button[data-action="提交任务"]');
+  await wait("document.querySelector('#task-detail [data-key=task-snapshot] summary')");
+  const createdId = await evaluate<string>(
+    "JSON.parse(document.querySelector('#task-detail [data-key=task-snapshot] pre').textContent).taskId",
   );
-  await wait("document.querySelector('#task-detail').textContent.includes('观察已结束')");
-  assert.equal(await evaluate("document.querySelector('#create-dialog').open"), false);
+  await evaluate(`(() => {
+    globalThis.smokeSummary=document.querySelector('#task-detail [data-key=task-snapshot] summary');
+    globalThis.smokeEvents=document.querySelector('#task-detail [data-key=all-events]');
+    smokeEvents.open=true; smokeSummary.focus();
+    globalThis.smokeCount=smokeEvents.querySelector('summary').textContent;
+  })()`);
+  await delay(350);
+  checks.sseFocusStable = await evaluate(
+    "document.activeElement===smokeSummary && smokeSummary.isConnected",
+  );
+  checks.eventsStayExpanded = await evaluate(
+    "smokeEvents.open && smokeEvents.querySelector('summary').textContent!==smokeCount",
+  );
+  assert.equal(checks.sseFocusStable, true);
+  assert.equal(checks.eventsStayExpanded, true);
+  await closeOverlay();
+  await evaluate(
+    `globalThis.smokeTaskLink=document.querySelector('#task-list [data-key=open-task]');smokeTaskLink.focus();true`,
+  );
+  await delay(200);
+  checks.taskEntryFocusStable = await evaluate(
+    "document.activeElement===smokeTaskLink && smokeTaskLink.isConnected",
+  );
+  assert.equal(
+    checks.taskEntryFocusStable,
+    true,
+    await evaluate(
+      "JSON.stringify({active:document.activeElement.outerHTML,retained:smokeTaskLink.isConnected})",
+    ),
+  );
+  assert.equal(
+    backend.engine.getTask(createdId, { scope: "fixture", subject: "ui" }).canceledAt,
+    undefined,
+  );
+  checks.closingDoesNotCancel = true;
+  await click('#task-list [data-key="open-task"]');
+  await wait("document.querySelector('#task-detail')?.textContent.includes('观察已结束')");
+  assert.equal(await evaluate("!!document.querySelector('#create-dialog')"), false);
   const stamp = await evaluate(
     "document.querySelector('#task-detail .observation-state').textContent",
   );
-  await delay(350);
+  await delay(1600);
   checks.observationStopped =
     stamp ===
     (await evaluate("document.querySelector('#task-detail .observation-state').textContent"));
   assert.equal(checks.observationStopped, true);
-  await evaluate(
-    "[...document.querySelectorAll('#history-actions button')].find(item=>item.textContent==='重新查询').click();true",
-  );
+  await screenshot("task-sheet.png");
+  await closeOverlay();
+  await click("#history-actions button");
   await wait("document.querySelectorAll('#directory tbody tr').length===2");
-  await evaluate("document.querySelector('#directory .star').click();true");
+  await click("#directory .star");
   await wait("document.querySelector('#directory .star').getAttribute('aria-pressed')==='true'");
   await screenshot("tasks.png");
-  await evaluate(
-    "document.querySelector('#tab-executions').click();[...document.querySelectorAll('#execution-actions button')][0].click();true",
+  for (let index = 0; index < 12; index++)
+    backend.engine.submit(
+      { requestId: newId(), type: "echo", timeoutMs: 10000, text: `目录 ${index}`, durationMs: 1 },
+      { scope: "fixture", subject: "external-client" },
+    );
+  await click("#history-actions button");
+  await wait("document.querySelectorAll('#directory tbody tr').length===10");
+  await click('#directory button[data-action="目录下一页（原过滤条件）"]');
+  await wait("document.querySelectorAll('#directory tbody tr').length===14");
+  await evaluate(`(() => {
+    document.querySelector('#history-type').value='保留未应用条件';
+    const list=document.querySelector('#directory');list.scrollTop=100;
+    globalThis.smokeList={width:list.getBoundingClientRect().width,scroll:list.scrollTop,html:list.textContent};
+  })()`);
+  checks.fullWidthList = await evaluate("smokeList.width>innerWidth*0.95 && smokeList.scroll>0");
+  assert.equal(checks.fullWidthList, true);
+  const row = "#directory tbody tr:nth-child(4) td:nth-child(2) button";
+  await evaluate(`globalThis.smokeOpener=document.querySelector(${JSON.stringify(row)});true`);
+  await click(row);
+  await wait("document.querySelector('#task-detail [data-key=task-snapshot]')");
+  await wait(
+    "Math.abs(document.querySelector('#task-detail-sheet').getBoundingClientRect().right-innerWidth)<1",
   );
-  await wait("document.querySelectorAll('#execution-directory tbody tr').length===2");
+  checks.drawerGeometry = await evaluate(`(() => {
+    const list=document.querySelector('#directory'), sheet=document.querySelector('#task-detail-sheet').getBoundingClientRect();
+    return { beforeWidth:smokeList.width,afterWidth:list.getBoundingClientRect().width,beforeScroll:smokeList.scroll,
+      afterScroll:list.scrollTop,sameContent:list.textContent===smokeList.html,right:sheet.right,width:sheet.width,viewport:innerWidth };
+  })()`);
+  checks.drawerPreservesList = await evaluate(`(() => {
+    const list=document.querySelector('#directory'), sheet=document.querySelector('#task-detail-sheet').getBoundingClientRect();
+    return list.getBoundingClientRect().width===smokeList.width && list.scrollTop===smokeList.scroll
+      && list.textContent===smokeList.html && document.querySelector('#history-type').value==='保留未应用条件'
+      && Math.abs(sheet.right-innerWidth)<1 && sheet.width<innerWidth*0.6
+      && document.querySelectorAll('[role=dialog]').length===1;
+  })()`);
+  assert.equal(checks.drawerPreservesList, true, JSON.stringify(checks.drawerGeometry));
+  await click('[data-slot="sheet-overlay"]');
+  await wait("!document.querySelector('[role=dialog]')");
+  checks.backdropDismissal = true;
+  await wait("document.activeElement===smokeOpener");
+  checks.drawerFocusReturned = true;
+  await click(row);
+  await wait("document.querySelector('#task-detail [data-action=\"查看关联执行 →\"]')");
+  await click('#task-detail [data-action="查看关联执行 →"]');
+  await wait("document.querySelector('#execution-detail button[data-action$=\"→\"]')");
+  await delay(100);
+  assert.equal(
+    await evaluate(
+      "document.querySelectorAll('[role=dialog]').length===1 && document.querySelector('#tasks').hidden && !!document.activeElement.closest('#execution-detail-sheet')",
+    ),
+    true,
+  );
+  await click('#execution-detail button[data-action$="→"]');
+  await wait("document.querySelector('#task-detail [data-key=task-snapshot]')");
+  await delay(100);
+  checks.relatedNavigation = await evaluate(
+    "document.querySelectorAll('[role=dialog]').length===1 && document.querySelector('#executions').hidden && !!document.activeElement.closest('#task-detail-sheet')",
+  );
+  assert.equal(checks.relatedNavigation, true);
+  await closeOverlay();
+  assert.equal(
+    await evaluate("document.querySelector('#directory').scrollTop===smokeList.scroll"),
+    true,
+  );
+  await click("#tab-executions");
+  await click("#execution-actions button");
+  await wait("document.querySelectorAll('#execution-directory tbody tr').length===10");
+  await click('#execution-directory [data-action="执行目录下一页"]');
+  await wait("document.querySelectorAll('#execution-directory tbody tr').length===14");
   const externalExecution = backend.engine.getTask(external.taskId, {
     scope: "fixture",
     subject: "ui",
@@ -285,16 +458,27 @@ try {
     `document.querySelector('#execution-directory').textContent.includes(${JSON.stringify(externalExecution.slice(-8))})`,
   );
   assert.equal(checks.externalExecutionListed, true);
-  await evaluate("document.querySelector('#execution-directory tbody button').click();true");
-  await wait("document.querySelector('#execution-detail').textContent.includes('观察已结束')");
   await screenshot("executions.png");
+  const executionRow = "#execution-directory tbody tr:nth-child(1) button";
+  const executionWidth = await evaluate<number>(
+    "document.querySelector('#execution-directory').getBoundingClientRect().width",
+  );
+  await click(executionRow);
+  await wait("document.querySelector('#execution-detail')?.textContent.includes('观察已结束')");
+  assert.equal(
+    await evaluate("document.querySelector('#execution-directory').getBoundingClientRect().width"),
+    executionWidth,
+  );
+  await screenshot("execution-sheet.png");
+  await closeOverlay();
   await call("Emulation.setDeviceMetricsOverride", {
     width: 390,
     height: 844,
     deviceScaleFactor: 1,
     mobile: false,
   });
-  await evaluate("document.querySelector('#tab-tasks').click();scrollTo(0,0);true");
+  await click("#tab-tasks");
+  await evaluate("scrollTo(0,0);true");
   checks.narrowFits = await evaluate("document.documentElement.scrollWidth <= innerWidth");
   assert.equal(checks.narrowFits, true);
   checks.newTaskUnwrapped = await evaluate(
@@ -302,8 +486,58 @@ try {
   );
   assert.equal(checks.newTaskUnwrapped, true);
   await screenshot("narrow.png");
+  await click(row);
+  await wait("document.querySelector('#task-detail-sheet')");
+  await wait(
+    "!document.querySelector('#task-detail-sheet').getAnimations().some(animation=>animation.playState==='running')",
+  );
+  checks.narrowDrawerFits = await evaluate(`(() => {
+    const sheet=document.querySelector('#task-detail-sheet'), rect=sheet.getBoundingClientRect();
+    return rect.left>=0 && rect.right<=innerWidth+1 && sheet.scrollWidth<=sheet.clientWidth
+      && getComputedStyle(document.querySelector('.detail-scroll')).overflowY==='auto'
+      && document.documentElement.scrollWidth<=innerWidth;
+  })()`);
+  assert.equal(checks.narrowDrawerFits, true);
+  await screenshot("narrow-sheet.png");
+  await closeOverlay();
+  checks.cspViolations = await evaluate("smokeCsp");
+  assert.deepEqual(checks.cspViolations, []);
+  await evaluate(`(() => {
+    const style=document.createElement('style');style.textContent='body{--blocked-probe:blocked}';
+    document.head.append(style);globalThis.smokeBadStyle=style;
+    const script=document.createElement('script');script.textContent='globalThis.smokeInlineRan=true';
+    document.head.append(script);script.remove();
+  })()`);
+  await wait("smokeCsp.length>=2");
+  checks.cspRejectsInline = await evaluate(
+    "!globalThis.smokeInlineRan && !getComputedStyle(document.body).getPropertyValue('--blocked-probe') && smokeCsp.some(e=>e.directive==='script-src-elem') && smokeCsp.some(e=>e.directive==='style-src-elem')",
+  );
+  assert.equal(checks.cspRejectsInline, true);
+  await evaluate("smokeBadStyle.remove();true");
   assert.equal(exceptions.length, 0, "no unhandled browser exceptions");
   console.log(JSON.stringify({ ...checks, ownedUi: ui.url, ownedBackend: backend.url }));
+} catch (error) {
+  if (socket?.readyState === WebSocket.OPEN) {
+    await screenshot("failure.png").catch(() => {});
+    await writeFile(
+      resolve(output, "failure.json"),
+      JSON.stringify(
+        {
+          checks,
+          error: String(error),
+          state: await evaluate(`({
+        notice:document.querySelector('#notice')?.textContent,
+        dialog:document.querySelector('[role=dialog]')?.textContent,
+        active:document.activeElement?.outerHTML,
+        csp:globalThis.smokeCsp
+      })`).catch(() => null),
+        },
+        null,
+        2,
+      ),
+    );
+  }
+  throw error;
 } finally {
   if (socket?.readyState === WebSocket.OPEN) await call("Browser.close", {}, 2000).catch(() => {});
   socket?.close();

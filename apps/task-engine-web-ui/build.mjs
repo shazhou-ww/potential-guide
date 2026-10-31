@@ -1,4 +1,4 @@
-import { copyFile, mkdir } from "node:fs/promises";
+import { appendFile, copyFile, mkdir, readFile } from "node:fs/promises";
 import { build } from "esbuild";
 
 await mkdir("dist/public", { recursive: true });
@@ -8,7 +8,11 @@ await build({
   bundle: true,
   platform: "browser",
   target: "es2022",
+  define: { "process.env.NODE_ENV": '"production"' },
+  minify: true,
 });
-for (const name of ["index.html", "style.css"]) {
-  await copyFile(`src/${name}`, `dist/public/${name}`);
-}
+await copyFile("src/index.html", "dist/public/index.html");
+await appendFile(
+  "dist/public/app.js",
+  `\n/*!\nshadcn/ui shadcn@4.23.0, 96da9cc7f1aa10580a3741664e2a77c721206c00\n${await readFile("src/ui/LICENSE", "utf8")}\n*/\n`,
+);

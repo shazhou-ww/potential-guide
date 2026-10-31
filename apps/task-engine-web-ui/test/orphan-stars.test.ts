@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { parseHTML } from "linkedom";
 import { newIdentity } from "../src/model.js";
+import { browserDom } from "./browser-dom.js";
 
 test("removing all configured Endpoints preserves readable local starred recipes without retargeting", async () => {
-  const { window, document } = parseHTML(
-    await readFile(new URL("../src/index.html", import.meta.url), "utf8"),
-  );
+  const dom = browserDom(await readFile(new URL("../src/index.html", import.meta.url), "utf8"));
+  const { window, document } = dom;
   const previous = {
     window: globalThis.window,
     document: globalThis.document,
@@ -65,5 +64,6 @@ test("removing all configured Endpoints preserves readable local starred recipes
   } finally {
     window.dispatchEvent(new window.Event("pagehide"));
     Object.assign(globalThis, previous);
+    await dom.restore();
   }
 });

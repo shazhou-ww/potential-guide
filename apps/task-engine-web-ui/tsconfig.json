@@ -4,9 +4,11 @@
     "rootDir": ".",
     "outDir": "dist",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "rewriteRelativeImportExtensions": true,
     "declaration": false,
     "declarationMap": false,
     "sourceMap": false
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "fixture/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "fixture/**/*.ts"]
 }
