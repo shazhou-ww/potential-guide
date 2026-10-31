@@ -16,12 +16,18 @@ Last-Event-ID, bounded pull/backpressure and durable cursor recovery.
 Disconnecting never cancels a Task. Cursor expiration is 410/history_expired.
 
 GET `/tasks` is the separately authorized Task directory. It accepts `type`,
-`createdFrom`, `createdBefore`, `updatedFrom`, `updatedBefore`, `sort`, `cursor`
+`executionId`, `createdFrom`, `createdBefore`, `updatedFrom`, `updatedBefore`, `sort`, `cursor`
 and `limit`; duplicate/unknown parameters are errors. Time bounds require explicit
 timezones, lower-inclusive/upper-exclusive. Send the original filters on every
 page. Results freeze membership, ordering and payload-free summaries until
 `expiresAt`; removal/restart/expiry returns 410/query_expired, not a partial
 success. Event cursors cannot be used here. Capacity errors are 429 and complete
 page byte-limit errors are 413. See the guide for budgets and cursor rules.
+
+GET `/executions` uses the independent `list-executions` permission and accepts
+`type`, `startedFrom`, `startedBefore`, `sort=started-desc`, `cursor`, `limit`.
+It returns `{executions,observedAt,expiresAt,next?}` with payload-free summaries;
+shared execution IDs appear once. Its frozen cursor cannot be used for Tasks or
+events. Task associations use `/tasks?executionId=...` and separate Task-list rights.
 
 See [the engine guide](../../docs/task-engine.md).

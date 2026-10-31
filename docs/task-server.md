@@ -30,6 +30,13 @@ using submit authorization. POST `/tasks` optionally accepts
 never fetches artifacts or their subject schemas. Check/Probe examples register
 type version 2; retain original identity-bearing contracts for historical recovery.
 
+GET `/executions` lists frozen, scope-authorized Execution summaries using the
+independent `list-executions` operation. Update explicit operation allowlists.
+It does not expose inputs/results or Task associations. The latter are queried
+through GET `/tasks?executionId=...` with separate Task `list` authority.
+Both directory cursor domains are independent and expire on restart/retention;
+see [directory contracts](task-engine.md#execution-directory).
+
 The HTTP protocol includes POST `/tasks` with `Idempotency-Key`, GET
 `/tasks/:id`, POST `/tasks/:id/cancel`, GET `/event-history?taskId=...`, GET
 `/events?taskId=...` with `Last-Event-ID`. Creation returns 202. Cursor pagination

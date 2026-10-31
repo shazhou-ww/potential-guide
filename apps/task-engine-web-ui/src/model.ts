@@ -1,4 +1,5 @@
 import type {
+  ExecutionPage,
   HistoryPage,
   Observation,
   PublicEvent,
@@ -226,9 +227,50 @@ export class Selection {
     return { signal: this.controller.signal, current: () => generation === this.generation };
   }
 }
-export class Directory {
+function validDirectoryRow(value: unknown, field: "tasks" | "executions"): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const row = value as Record<string, unknown>,
+    state = row.state as Record<string, unknown> | undefined;
+  if (
+    !state ||
+    typeof state !== "object" ||
+    typeof row.type !== "string" ||
+    typeof row.version !== "string"
+  )
+    return false;
+  const ids = field === "tasks" ? ["taskId", "requestId", "seriesId"] : ["executionId"];
+  if (ids.some((key) => !/^[0-9A-HJKMNP-TV-Z]{26}$/.test(String(row[key] ?? "")))) return false;
+  const times = field === "tasks" ? ["receivedAt", "updatedAt"] : ["startedAt"];
+  if (
+    times.some(
+      (key) => typeof row[key] !== "string" || !Number.isFinite(Date.parse(row[key] as string)),
+    )
+  )
+    return false;
+  const flags =
+    field === "tasks"
+      ? ["pending", "timedOut", "canceled", "completed", "executionFailed"]
+      : ["running", "completed", "failed", "reclaimed", "sealed"];
+  if (flags.some((key) => typeof state[key] !== "boolean")) return false;
+  if (field === "tasks") return typeof state.stage === "string";
+  for (const [flag, key] of [
+    ["completed", "completedAt"],
+    ["failed", "failedAt"],
+    ["reclaimed", "reclaimedAt"],
+  ] as const) {
+    if (state[flag] !== (row[key] !== undefined)) return false;
+    if (
+      row[key] !== undefined &&
+      (typeof row[key] !== "string" || !Number.isFinite(Date.parse(row[key] as string)))
+    )
+      return false;
+  }
+  return state.running === (!state.completed && !state.failed && !state.reclaimed);
+}
+export class Directory<P extends TaskPage | ExecutionPage = TaskPage> {
+  constructor(readonly field: "tasks" | "executions" = "tasks") {}
   query = "";
-  page: TaskPage | undefined;
+  page: P | undefined;
   expired = false;
   private generation = 0;
   dropped = 0;
@@ -238,7 +280,7 @@ export class Directory {
     this.error = String(error);
   }
   async load(
-    fetchPage: (query: string) => Promise<TaskPage>,
+    fetchPage: (query: string) => Promise<P>,
     query: string,
     append = false,
     current: () => boolean = () => true,
@@ -252,18 +294,21 @@ export class Directory {
       if (append) params.set("cursor", this.page!.next!);
       const next = await fetchPage(params.toString());
       if (!isCurrent()) return false;
-      if (!Array.isArray(next.tasks) || !next.observedAt || !next.expiresAt)
+      const rows = (page: P) => (page as unknown as Record<string, unknown[]>)[this.field]!;
+      if (!Array.isArray(rows(next)) || !next.observedAt || !next.expiresAt)
         throw new Error("目录协议无效。");
+      if (rows(next).some((row) => !validDirectoryRow(row, this.field)))
+        throw new Error("目录摘要协议无效，未替换已有快照。");
       if (
         append &&
         (next.observedAt !== this.page?.observedAt || next.expiresAt !== this.page.expiresAt)
       )
         throw new Error("目录快照变化；拒绝拼接。请重新查询。");
-      this.page = append ? { ...next, tasks: [...this.page!.tasks, ...next.tasks] } : next;
+      this.page = append ? { ...next, [this.field]: [...rows(this.page!), ...rows(next)] } : next;
       if (!append) this.dropped = 0;
-      if (this.page.tasks.length > 1000) {
-        this.dropped += this.page.tasks.length - 1000;
-        this.page.tasks = this.page.tasks.slice(-1000);
+      if (rows(this.page).length > 1000) {
+        this.dropped += rows(this.page).length - 1000;
+        this.page = { ...this.page, [this.field]: rows(this.page).slice(-1000) };
       }
       this.query = original;
       this.expired = false;

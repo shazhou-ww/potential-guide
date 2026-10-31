@@ -147,6 +147,10 @@ export function schemaEditor(
     };
   };
   if (complex || types.length !== 1 || !types[0]) return localJson();
+  if (!["object", "array"].includes(String(types[0])) || spec.enum || "const" in spec) {
+    box.querySelector("legend")?.remove();
+    box.className = "scalar-field";
+  }
   if (spec.enum || "const" in spec) {
     const values = (spec.enum ?? [spec.const]) as unknown[];
     const select = element("select");
@@ -202,7 +206,14 @@ export function schemaEditor(
         (editor.node as HTMLFieldSetElement).disabled = !enabled.checked;
         editor.node.hidden = !enabled.checked;
       });
-      box.append(label, editor.node);
+      if (required) {
+        const marker = element("span", "必需字段");
+        marker.className = "required-mark";
+        const legend = editor.node.querySelector(":scope > legend");
+        if (legend) legend.append(marker);
+        else editor.node.prepend(marker);
+      } else box.append(label);
+      box.append(editor.node);
       children.push({ key, editor, enabled });
     }
     const extras = Object.fromEntries(

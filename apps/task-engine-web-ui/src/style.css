@@ -1,105 +1,203 @@
 :root {
   font-family: system-ui, "Microsoft YaHei", sans-serif;
-  color: #17283e;
-  background: #f0f3f7;
+  color: #203047;
+  background: #f3f5f8;
   line-height: 1.55;
 }
 * {
   box-sizing: border-box;
 }
+[hidden] {
+  display: none !important;
+}
 body {
   margin: 0;
-  padding-bottom: 5rem;
 }
 header {
-  padding: 1.2rem max(1rem, calc((100vw - 1300px) / 2));
-  background: #17283e;
-  color: white;
-}
-h1 {
-  margin: 0 0 0.7rem;
-  font-size: 1.5rem;
-}
-h2 {
-  font-size: 1.25rem;
-  border-bottom: 2px solid #d5e0ed;
-  padding-bottom: 0.5rem;
-}
-h3 {
-  font-size: 1rem;
-  overflow-wrap: anywhere;
-}
-nav,
-.actions,
-.row {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 0.6rem;
-  align-items: end;
-}
-nav {
-  margin-top: 1rem;
-}
-a {
-  color: #125999;
-}
-header a {
-  color: #e6f0ff;
-  padding: 0.3rem;
-}
-main {
-  max-width: 1300px;
-  margin: auto;
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
   gap: 1rem;
-  padding: 1rem;
+  padding: 1rem 2rem;
+  background: #152840;
+  color: #fff;
 }
-section {
+.brand {
+  flex: 1;
+  min-width: 13rem;
+}
+.brand h1 {
+  font-size: 1.3rem;
+  margin: 0;
+}
+.brand span {
+  font-size: 0.8rem;
+  color: #b7c8dc;
+}
+header label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tabs {
+  display: flex;
+  gap: 0.2rem;
   background: white;
-  border: 1px solid #cbd6e3;
-  border-radius: 0.6rem;
-  padding: 1rem;
-  min-width: 0;
-  scroll-margin-top: 1rem;
+  border-bottom: 1px solid #d5deea;
+  padding: 0 2rem;
 }
-#history,
-#favorites {
-  grid-column: 1 / -1;
+.tabs button {
+  padding: 0.8rem 2rem;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  background: transparent;
+  color: #657187;
+}
+.tabs button[aria-selected="true"] {
+  color: #164c85;
+  box-shadow: inset 0 -3px #2765a4;
+  font-weight: 650;
 }
 #notice {
-  max-width: 1300px;
-  margin: 0.8rem auto 0;
-  padding: 0 1rem;
+  margin: 0.5rem 2rem;
+  min-height: 1.5rem;
+  color: #8a4218;
+}
+main {
+  max-width: 1600px;
+  margin: auto;
+  padding: 0.5rem 2rem 2rem;
+}
+.page-heading,
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+h2 {
+  font-size: 1.35rem;
+  margin: 0.4rem 0;
+}
+h3 {
+  font-size: 1.1rem;
   overflow-wrap: anywhere;
 }
-fieldset {
-  margin: 0.7rem 0;
-  border: 1px solid #cbd6e3;
-  border-radius: 0.3rem;
+.page-heading p {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 0 0 0.8rem;
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.7rem;
+  background: #eaf0f6;
+  padding: 0.8rem 1rem;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+.filters label {
+  flex: 1;
+  min-width: 10rem;
+  font-size: 0.85rem;
+  margin: 0;
+}
+.filters .check {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 0.5rem 0;
+}
+.workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.list-pane,
+.detail-pane {
+  background: white;
+  border: 1px solid #d5deea;
+  border-radius: 0.5rem;
+  padding: 1rem;
   min-width: 0;
 }
-fieldset:disabled {
-  opacity: 0.6;
+.detail-pane {
+  position: sticky;
+  top: 0.8rem;
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
 }
-legend {
-  padding: 0 0.3rem;
+.table-scroll {
+  overflow: auto;
+  max-height: 65vh;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+th {
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: #f5f8fb;
+}
+th,
+td {
+  padding: 0.6rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #e6ecf3;
+}
+td {
   overflow-wrap: anywhere;
+}
+td small {
+  display: block;
+  color: #718198;
+  font-size: 0.7rem;
+}
+.status {
+  font-weight: 650;
+  font-size: 1.3rem;
+  color: #164c85;
+  margin: 0.5rem 0;
+}
+.secondary,
+.observation-state {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+.observation-state {
+  padding: 0.5rem;
+  background: #f0f4f8;
+  border-radius: 0.3rem;
+}
+.error {
+  color: #982c2c;
 }
 label {
   display: block;
-  margin: 0.6rem 0;
+  margin: 0.5rem 0;
+  overflow-wrap: anywhere;
 }
 input,
 select,
 textarea {
   font: inherit;
-  border: 1px solid #8a9eb7;
-  background: white;
-  border-radius: 0.25rem;
+  border: 1px solid #9cacbf;
+  border-radius: 0.3rem;
   padding: 0.45rem;
+  color: #203047;
+  background: white;
   max-width: 100%;
-  color: #17283e;
 }
 input:not([type="checkbox"]),
 textarea {
@@ -115,78 +213,139 @@ textarea {
 }
 button {
   font: inherit;
+  color: #215282;
+  background: #f2f7fc;
+  border: 1px solid #c1d0e0;
+  padding: 0.4rem 0.65rem;
+  border-radius: 0.35rem;
+  margin: 0.2rem 0.25rem 0.2rem 0;
   cursor: pointer;
-  border: 1px solid #8a9eb7;
-  background: #edf4fd;
-  color: #174b81;
-  border-radius: 0.3rem;
-  padding: 0.45rem 0.7rem;
-  margin: 0.25rem 0.25rem 0.25rem 0;
 }
 button:hover {
-  background: #d7e8fc;
+  background: #dfecfa;
+}
+button.primary {
+  background: #225d98;
+  color: white;
+  border-color: #225d98;
+}
+.actions > button:first-child {
+  background: #225d98;
+  color: white;
+  border-color: #225d98;
+}
+.scalar-field {
+  border: 0;
+  padding: 0;
+  margin: 0.6rem 0;
+}
+.required-mark {
+  float: right;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: normal;
+  margin-left: 0.5rem;
 }
 button:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
-  opacity: 0.55;
+}
+.star {
+  font-size: 1.2rem;
+  min-width: 2rem;
+}
+.star[aria-pressed="true"] {
+  color: #8c6100;
+  background: #fff2c6;
 }
 :focus-visible {
-  outline: 3px solid #d97800;
+  outline: 3px solid #d78300;
   outline-offset: 3px;
+}
+fieldset {
+  margin: 0.6rem 0;
+  border: 1px solid #d5deea;
+  border-radius: 0.3rem;
+  min-width: 0;
+}
+legend {
+  padding: 0 0.3rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+summary {
+  cursor: pointer;
+  padding: 0.4rem 0;
+  overflow-wrap: anywhere;
+}
+details {
+  margin: 0.3rem 0;
 }
 pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  background: #f5f7fa;
   padding: 0.6rem;
-  max-height: 30rem;
+  font-size: 0.8rem;
+  max-height: 26rem;
   overflow: auto;
-  font-size: 0.85rem;
-}
-summary {
-  cursor: pointer;
-  overflow-wrap: anywhere;
-  padding: 0.35rem 0;
-}
-article,
-.receipt,
-.task-row {
-  border-bottom: 1px solid #d5e0ed;
-  padding: 0.7rem 0;
+  background: #f5f7fa;
 }
 p {
   overflow-wrap: anywhere;
 }
-.table-scroll {
-  overflow-x: auto;
+.row,
+.actions {
+  display: flex;
+  align-items: end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
-table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 0.9rem;
+.row label {
+  flex: 1;
 }
-th,
-td {
-  padding: 0.5rem;
-  text-align: left;
-  vertical-align: top;
-  border-bottom: 1px solid #d5e0ed;
-  overflow-wrap: anywhere;
+.recent {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  border-top: 1px solid #e6ecf3;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+.task-row {
+  font-size: 0.75rem;
+}
+.task-row span {
+  display: none;
+}
+.receipt,
+article {
+  border-bottom: 1px solid #e0e7f0;
+  padding: 0.7rem 0;
+}
+dialog {
+  width: min(760px, 94vw);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 1.2rem;
+  border: 1px solid #aebed0;
+  border-radius: 0.7rem;
+  box-shadow: 0 1rem 4rem #15284040;
+}
+dialog::backdrop {
+  background: #11253f88;
+}
+.dialog-heading {
+  position: sticky;
+  top: -1.2rem;
+  background: white;
+  z-index: 1;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #d5deea;
 }
 footer {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  padding: 0.8rem 1rem;
-  background: #17283e;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  z-index: 1;
-}
-footer a {
-  color: white;
+  color: #718198;
+  padding: 1rem 2rem;
+  font-size: 0.8rem;
 }
 .skip {
   position: absolute;
@@ -197,21 +356,38 @@ footer a {
   top: 0.5rem;
   background: white;
   padding: 0.5rem;
-  z-index: 2;
+  z-index: 5;
 }
-@media (max-width: 800px) {
+@media (max-width: 850px) {
+  header {
+    padding: 0.8rem;
+  }
+  .tabs {
+    padding: 0 0.8rem;
+  }
   main {
-    display: block;
-    padding: 0.5rem;
+    padding: 0.5rem 0.7rem;
   }
-  section {
-    margin-bottom: 0.7rem;
+  #notice {
+    margin: 0.5rem 0.8rem;
   }
-  footer {
-    font-size: 0.8rem;
+  .workspace-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
-  th,
+  .detail-pane {
+    position: static;
+    max-height: none;
+  }
+  .filters {
+    padding: 0.6rem;
+  }
+  .table-scroll {
+    max-height: 55vh;
+  }
   td {
-    min-width: 9rem;
+    min-width: 5rem;
+  }
+  .filters label {
+    min-width: 12rem;
   }
 }

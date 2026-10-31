@@ -20,5 +20,11 @@ with independent created/updated time filters and payload-free summaries. The
 `list` permission does not grant request/detail permissions; pagination never
 executes Tasks or triggers cleanup.
 
+`engine.listExecutions(query, page, caller)` uses the same bounded frozen-view
+mechanism with an independent `list-executions` grant and cursor domain.
+It reads retained Execution facts directly (including other clients and shared
+executions), without payloads or owner IDs. Task `executionId` filtering provides
+separately authorized bound-task navigation. Neither query changes scheduling.
+
 See [the engine guide](../../docs/task-engine.md) for startup handshakes, ownership,
 recurrence, authorization, retention and resource-control requirements.

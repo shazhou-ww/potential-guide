@@ -46,10 +46,11 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
 收藏包含完整业务参数，应将目录放在仅当前操作员可读写的位置；本工具不是
 本机其他用户或恶意本机程序的隔离边界。同一收藏文件只由一个 UI 实例使用。
 
-首次连接需后端具备当前 `GET /task-types`、quoted `If-Match`、
-`GET /tasks` 目录、请求/任务/事件接口；旧服务或权限拒绝会明确显示错误。
-`list` 独立于 `submit`、`request`、`task`、`history`、`subscribe`；
-发现失败不关闭目录入口。
+首次连接需后端具备当前 `GET /task-types`、quoted `If-Match`、`GET /tasks`、
+`GET /executions` 及请求/任务/事件接口；旧服务缺执行目录时明确报错，不用本机已见
+执行代替。`list-executions` 是独立新增授权操作；它与 Task 的 `list`、`submit`、
+`request`、`task`、`history`、`subscribe` 均不互相授予权限。发现失败不关闭目录入口。
+任务星标需要 `task` 和 `request`：UI Server 经这两个公开接口核对来源并保存原参数。
 
 ### Endpoint 与访问边界
 
@@ -85,13 +86,18 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
 
 ## 操作
 
-- **创建**：先发现当前类型，再选择类型；常用标量、枚举、数组、嵌套属性、
+- **两个主 Tab**：默认任务页，整合当前/历史目录、筛选、选中详情与星标。
+  执行页查询整个 Endpoint 获授权且保留的执行记录。一次只有一页进入布局和
+  键盘顺序；Tab 箭头键、弹窗 Esc/焦点回归可用，跨 Tab 保留筛选、选中项和输入。
+- **新建弹窗**：点“新建任务”，先发现当前类型，再选择类型；关闭重开保留本次
+  表单（包括尚不合法的字段文本），提交成功关闭弹窗并定位新 Task。常用标量、枚举、数组、嵌套属性、
   本地引用生成表单。自由 object 和复杂组合字段提供局部 JSON 编辑及约束查看。
   可选字段需明确勾选；不强转原参数、不补 schema 默认值、不删除额外属性。
   数值字段输入 JSON 数字；完整 Schema 校验由 Task Server 执行。UI 不调用 Equals。
   `$ref` 带同级校验约束时保留联合语义，使用明确的局部 JSON 编辑，不浅合并或覆盖
   引用中的字段/required；属性读取仅使用原参数的 own properties。
-- **提交任务栏**：直接提交自动建立独立单条批次，不动多条草稿。多条可以
+- **提交任务栏**：顶部入口跨 Tab 常驻，展开草稿/回执面板，不是第三个主 Tab。
+  直接提交自动建立独立单条批次，不动多条草稿。多条可以
   上下排序；发送只等待逐条提交回执，不等任务完成，中间拒绝/未知继续后项。
   同次重试保留 ULID、参数及 quoted revision。未知后遇 412 仍是未知，不能
   推断旧 Task 不存在。用“核对原 requestId”或原身份重试核对；主动再做一次
@@ -100,10 +106,11 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   这只是交互防重，不取代服务 Idempotency-Key。
 - **契约变化**：412 留下原参数及身份。重新发现不会自动重发；变化后需明确
   “按当前契约重新编辑”。原请求重试不换 guard；业务 digest 与 guard 无关。
-- **Task / Execution**：独立区块，以服务提供的 executionId 关联。完整请求
+- **Task / Execution**：独立 Tab，以服务提供的 executionId 关联。完整请求
   单独读 `/requests/:requestId`，Task 快照显示准备/分配/取消/阶段/结果/错误；
   Execution 查看开始、progress、逻辑完成、失败、封存和回收事件。未观察到回收
-  不表示仍占资源；已观察关联任务不是全体 owners/worker 统计。`ok:false`
+  不表示仍占资源。执行详情通过 `GET /tasks?executionId=…` 取得独立授权的已绑定
+  关联任务，不扫描事件来拼执行目录，也不推测所有 owners/worker 统计。`ok:false`
   结果不会被标为系统执行错误。
 - **事件**：首次历史页的 stream cursor 接续 SSE，历史 next 独立分页。按
   sequence 去重，过滤后的序号跳跃不直接推断缺口；断流、失效、未加载历史、
@@ -114,15 +121,30 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   冻结完整 Task 事实，旧 GET/SSE 不能撤回，独立取消回执不会被在途观察丢弃；
   后续同一取消快照只更新观察时间，Execution 事件仍继续接收。
   timestamp 仅为观察时间，不用于版本排序。
-- **历史目录**：独立向后端查询，含其他客户端授权任务。类型精确匹配，receivedAt
+- **观察收尾**：任务终结与关联执行逻辑终结/回收证据齐备后停止对应 SSE，显示
+  “观察已结束”。执行自身要同时有逻辑终结和 reclaimed 事实；执行目录的终结/回收
+  摘要也可提供这一证据。运行超时不是执行停止，迟到完成仍保留超时标签。
+  取消后的未知释放关系不猜测，允许手动暂停。暂停/自动结束仅释放流，仍可分页历史；
+  “重新观察”重新读取事实并建立新流（已结束对象会据实再次收尾），不创建或取消 Task。
+- **任务目录**：整合在任务页，独立向后端查询，含其他客户端授权任务。类型精确匹配，receivedAt
   含下界、不含上界，必须填写带时区时间；固定 created-desc。目录 observedAt /
   expiresAt / 摘要不被 SSE 改写，翻页使用原过滤条件。410/query_expired 后明确
   重新查询，旧视图仅供参考。详情可能比摘要更新，摘要不含业务结果。
   页和错误状态绑定同一查询世代，旧查询的成功/失败不能覆盖新的结果或错误。
-- **收藏/重做**：收藏完整原参数和 Endpoint，不含 UI 提交身份/guard/凭据。
+- **执行目录**：直接 `GET /executions`，按 type / startedAt 的含下界、不含上界
+  筛选，started-desc 排序，同刻 executionId 升序。摘要不含输入、Prepared、结果、
+  scope 或 Task 身份；共享执行只出现一次。执行目录游标与任务/事件游标分开，
+  同样冻结 observedAt/expiresAt/成员/摘要，410 要明确重查。
+- **星标/重做**：在任务行或详情标星，服务端成功取到完整原请求后才保存成功；
+  同目标同 taskId 重复标星幂等。保存完整原参数、来源 taskId/requestId/receivedAt
+  和 Endpoint，不含新提交身份/guard/凭据。“只看收藏”查询全部本机星标，不限于
+  已加载目录页；源记录清理后仍显示“来源已清理”的保存模板，取消星标不取消 Task。
+  原目标缺失/重绑的星标仍可查看，但禁止改投。历史无 Task 身份的旧参数收藏完整
+  保留在新建弹窗的“旧参数模板”兼容入口，不冒充服务任务。
   历史直接或编辑后重做只取原请求、剥离 requestId，不注入摘要 version、不改
   URL/digest/seriesId/eligibleAt，不自动补锁或解锁。原参数无权读取或已清理时
-  明确失败，不使用空输入。编辑派生不会修改原收藏。
+  明确失败，不使用空输入；已有星标可以明确选用此前保存的完整副本。编辑重做也用
+  新建弹窗，派生不会修改原收藏。
 - **切换目标**：关闭自己持有的观察流、隔离迟到响应。原目标任务栏回执仍保留
   在原分区；切换不会取消或重新发送 Task。未加入任务栏的表单不是持久草稿，
   切换前请先加入任务栏或收藏。重启后仅收藏持久化；本次回执与观察集合不充当历史。
@@ -155,7 +177,7 @@ pnpm --filter @potential-guide/task-engine-web-ui start (Join-Path $demo 'ui.jso
 
 打开终端 B 打印的准确 URL（端口自动分配）：
 
-1. `echo` 填 text、timeoutMs；`survey` 填 nested subject、active、scores。
+1. 在任务页打开“新建任务”，`echo` 填 text、timeoutMs；`survey` 填 nested subject、active、scores。
    验证不同表单、普通自由对象、完整结果及事件。
 2. 先加入多条，再单条快捷；检查草稿不被发送。准备三项并排序，中项填写不合
    Schema 的值，观察拒绝后仍提交后项。执行顺序由服务决定，不由 UI 保证。
@@ -165,10 +187,17 @@ pnpm --filter @potential-guide/task-engine-web-ui start (Join-Path $demo 'ui.jso
    取消其中一个，另一 Task 不被取消；取消与 Execution 回收分开观察。
 4. durationMs 大于 timeoutMs 可观察运行超时后迟到结果；正常 `ok:false`
    是 fixture 的业务结果。关闭浏览器或只关闭终端 B，终端 A 继续执行。
-5. 查询目录并打开原请求重做。切换“只读目录”验证发现/详情拒绝但目录可读；
+5. 在任务页查询目录并打开原请求重做；切换执行页直接查询其他客户端执行，不需要先打开任务。
+   切换“只读目录”验证发现/详情拒绝但两个目录可读；
    切换“独立 scope”验证数据隔离。
-6. 保存收藏，只重启终端 B，确认原参数/原目标保留；原参数发起新身份，
-   编辑后发送不改原收藏。用窄窗口和 Tab/Enter 操作表单、排序、详情及历史页。
+6. 在任务行标星、启用“只看收藏”，只重启终端 B，确认原参数/原目标保留；
+   原参数发起新身份，编辑后发送不改原星标。观察完成且回收后不再持续更新时间，
+   停流后仍可分页历史。用窄窗口和 Tab/Enter/Esc 操作两页、弹窗、任务栏和详情。
+
+关键自动化入口：`#tab-tasks` / `#tab-executions`、`#tasks` / `#executions`（tabpanel）、
+`#new-task` / `#create-dialog`、`#only-favorites`、`.star[aria-pressed]`、
+`#bar-toggle` / `#submission-dialog`、`#directory` / `#execution-directory`、
+`#task-detail` / `#execution-detail`。不要对用户已有进程/浏览器页执行验证或清理。
 
 用 Ctrl+C 先关闭 UI、再关闭自己启动的 fixture，确认两个进程退出后，仅删除
 本次 `$demo` 目录。自动化测试也只在工作区 `.cache/ui-test-<uuid>` 建立并清理
@@ -180,6 +209,20 @@ pnpm --filter @potential-guide/task-engine-web-ui start (Join-Path $demo 'ui.jso
 pnpm exec turbo run build typecheck test --filter=@potential-guide/task-engine-web-ui...
 pnpm check
 ```
+
+可选原生浏览器冒烟验证（需要已安装 Chromium/Chrome；输出目录必须尚不存在）：
+
+```powershell
+pnpm --filter @potential-guide/task-engine-web-ui exec tsx fixture\browser-smoke.ts `
+  'C:\Program Files\Google\Chrome\Application\chrome.exe' `
+  'D:\path\to\new-owned-evidence-directory' '9223,62952,61109'
+```
+
+此脚本只启动自己拥有的随机端口 Backend/UI、全新的 headless 浏览器 profile，
+不会附着现有 Chrome。第三参数为禁止连接的保留端口列表，可按环境指定。
+验证双 Tab、原生 Esc/焦点回归、弹窗输入保留、完成后停流、其他客户端执行与
+390px 布局，保存截图/checks.json；最终关闭自己的进程并删除自己 profile/临时收藏。
+不能把用户既有 profile 或试用目录作为输出位置。
 
 `test/integration.test.ts` 使用真实独立 HTTP listener 和现有 Task Server，
 覆盖权限/作用域、两种 Schema、guard/身份、批次、目录快照/失效、

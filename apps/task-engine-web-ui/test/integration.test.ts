@@ -7,6 +7,7 @@ import test, { type TestContext } from "node:test";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import {
+  type ExecutionPage,
   type HistoryPage,
   isTimedOut,
   type Observation,
@@ -750,4 +751,123 @@ test("loopback, host/origin/CSRF, restricted proxy, headers, body limits and red
       redirect.close((error) => (error ? reject(error) : resolve())),
     );
   }
+});
+
+test("UI stars fetch complete authorized originals, are idempotent and preserve legacy templates across restart and cleanup", async (t) => {
+  const h = await setup(t, 60000, 20);
+  const entry = await h.submit("starred", {
+    metadata: { url: "https://example.invalid/floating", digest: "user-lock" },
+  });
+  const taskId = entry.snapshot!.taskId;
+  const attempts = await Promise.all(
+    Array.from({ length: 4 }, () =>
+      h.local("/api/favorites", "POST", { endpoint: h.endpoint(), taskId }),
+    ),
+  );
+  const stars = await Promise.all(attempts.map((response) => response.json() as Promise<Favorite>));
+  assert.equal(new Set(stars.map((item) => item.id)).size, 1);
+  const original = originalParameters(await h.request(`/requests/${entry.id}`));
+  assert.deepEqual(stars[0]!.parameters, original);
+  assert.equal(stars[0]!.source!.requestId, entry.id);
+  assert.equal(stars[0]!.source!.taskId, taskId);
+  assert.equal(
+    (await h.local("/api/favorites", "POST", { endpoint: h.endpoint("list"), taskId })).status,
+    403,
+  );
+  assert.equal(
+    (await h.local("/api/favorites", "POST", { endpoint: h.endpoint(), taskId: newIdentity() }))
+      .status,
+    404,
+  );
+  const legacy = await h.local("/api/favorites", "POST", {
+    endpoint: h.endpoint(),
+    name: "旧模板",
+    parameters: { type: "echo", timeoutMs: 1000, text: "legacy" },
+  });
+  assert.equal(legacy.status, 201);
+  await until(
+    () => h.request<TaskSnapshot>(`/tasks/${taskId}`),
+    (snapshot) => snapshot.stage === "completed",
+  );
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  h.backend.engine.collect();
+  await assert.rejects(() => h.request(`/tasks/${taskId}`), /404/);
+  await h.restart();
+  const saved = (await (await h.local("/api/favorites")).json()) as Favorite[];
+  assert.equal(saved.length, 2);
+  assert.deepEqual(saved.find((item) => item.source)?.parameters, original);
+  assert.equal(saved.find((item) => item.name === "旧模板")?.source, undefined);
+  assert.equal(
+    (await h.local("/api/favorites", "POST", { endpoint: h.endpoint(), taskId })).status,
+    200,
+  );
+  await h.local(`/api/favorites/${stars[0]!.id}`, "DELETE");
+  assert.equal(((await (await h.local("/api/favorites")).json()) as Favorite[]).length, 1);
+});
+
+test("UI execution proxy lists other-client records with independent permissions, cursors and authorized associations", async (t) => {
+  const h = await setup(t);
+  const one = await h.submit("one");
+  const external = await fetch(`${h.backend.url}/tasks`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${h.token}`,
+      "content-type": "application/json",
+      "Idempotency-Key": newIdentity(),
+    },
+    body: JSON.stringify({
+      type: "echo",
+      text: "external client",
+      durationMs: 50,
+      timeoutMs: 5000,
+    }),
+  });
+  assert.equal(external.status, 202);
+  const other = (await external.json()) as TaskSnapshot;
+  await until(
+    () => h.request<ExecutionPage>("/executions"),
+    (page) => page.executions.length === 2,
+  );
+  const page = await h.request<ExecutionPage>("/executions?limit=1&sort=started-desc");
+  assert.ok(page.next);
+  const continuation = await h.request<ExecutionPage>(
+    `/executions?limit=1&sort=started-desc&cursor=${encodeURIComponent(page.next)}`,
+  );
+  assert.equal(continuation.observedAt, page.observedAt);
+  assert.equal(continuation.expiresAt, page.expiresAt);
+  assert.equal(JSON.stringify(page).includes("external client"), false);
+  await assert.rejects(() => h.request("/executions", { id: "list" }), /403/);
+  assert.deepEqual((await h.request<ExecutionPage>("/executions", { id: "other" })).executions, []);
+  const externalTask = await h.request<TaskSnapshot>(`/tasks/${other.taskId}`);
+  const associated = await h.request<TaskPage>(
+    `/tasks?executionId=${externalTask.execution!.executionId}`,
+  );
+  assert.deepEqual(
+    associated.tasks.map((task) => task.taskId),
+    [other.taskId],
+  );
+  assert.equal(
+    (
+      await h.request<TaskPage>(`/tasks?executionId=${externalTask.execution!.executionId}`, {
+        id: "other",
+      })
+    ).tasks.length,
+    0,
+  );
+  const history = await h.request<HistoryPage>(`/event-history?taskId=${one.snapshot!.taskId}`);
+  await assert.rejects(
+    () => h.request(`/executions?cursor=${encodeURIComponent(history.cursor)}`),
+    /400/,
+  );
+  assert.equal(
+    (
+      await h.local(
+        "/api/endpoints/full/executions",
+        "POST",
+        {},
+        { "X-Endpoint-Binding": h.endpoint().binding },
+      )
+    ).status,
+    404,
+  );
 });

@@ -1,5 +1,6 @@
 import {
   type Caller,
+  type ExecutionQuery,
   fail,
   type HistoryFilter,
   type Observation,
@@ -174,18 +175,23 @@ export function createTaskHandler(
       const path = url.pathname.slice(prefix.length);
       if (request.method === "GET" && path === "/task-types")
         return response(options.service.discoverTypes(caller));
-      if (request.method === "GET" && path === "/tasks") {
+      if (request.method === "GET" && (path === "/tasks" || path === "/executions")) {
         const query: Record<string, string> = {};
-        const allowed = new Set([
-          "type",
-          "createdFrom",
-          "createdBefore",
-          "updatedFrom",
-          "updatedBefore",
-          "sort",
-          "cursor",
-          "limit",
-        ]);
+        const allowed = new Set(
+          path === "/executions"
+            ? ["type", "startedFrom", "startedBefore", "sort", "cursor", "limit"]
+            : [
+                "type",
+                "executionId",
+                "createdFrom",
+                "createdBefore",
+                "updatedFrom",
+                "updatedBefore",
+                "sort",
+                "cursor",
+                "limit",
+              ],
+        );
         for (const [key, value] of url.searchParams) {
           if (!allowed.has(key) || key in query)
             fail("invalid_request", "Unknown or duplicate Task query parameter.");
@@ -194,15 +200,14 @@ export function createTaskHandler(
         const { cursor, limit, ...filters } = query;
         if (limit !== undefined && !/^[1-9][0-9]*$/.test(limit))
           fail("invalid_request", "limit must be a positive integer.");
+        const paging = {
+          ...(cursor !== undefined ? { cursor } : {}),
+          ...(limit !== undefined ? { limit: Number(limit) } : {}),
+        };
         return response(
-          options.service.listTasks(
-            filters as TaskQuery,
-            {
-              ...(cursor !== undefined ? { cursor } : {}),
-              ...(limit !== undefined ? { limit: Number(limit) } : {}),
-            },
-            caller,
-          ),
+          path === "/executions"
+            ? options.service.listExecutions(filters as ExecutionQuery, paging, caller)
+            : options.service.listTasks(filters as TaskQuery, paging, caller),
         );
       }
       if (request.method === "POST" && path === "/tasks") {

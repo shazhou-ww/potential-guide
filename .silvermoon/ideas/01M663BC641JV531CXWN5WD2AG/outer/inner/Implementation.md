@@ -2,13 +2,28 @@
 
 ## 真实试用后的调整轮次
 
-第一轮已通过 acceptInner#6 / acceptOuter#8。本轮按用户明确要求重做两个 Tab、新建弹窗、任务星标与筛选，并补齐整个 Endpoint 的执行目录；旧验证记录仅证明第一轮，不证明此轮已经完成。I-* 和 D-* 已重置，更新后的构想需重新提交及受托审阅后实施。
+第一轮已通过 acceptInner#6 / acceptOuter#8。本轮按用户明确要求重做两个 Tab、新建弹窗、任务星标与筛选，并补齐整个 Endpoint 的执行目录；旧验证记录仅证明第一轮。实施基线为 primary `b213324a421096463a352e0213e3c0585270968b`，准确 Ideal `4a6c2c31f6b37d552c5401f9ae4b06e80c23350a` 已由 acceptIdeal#10 接受。本轮证据见 [Verification-v0.5.md](Verification-v0.5.md)，不继承第一轮的实现或外部结果接受。
 
 本轮仍由同一实现子 agent 编码，主 Agent 独立 review & acceptance；保留既有提交/取消/因果/凭据边界。服务端执行目录需真正接入协议、服务、存储与 HTTP，复用现有目录机制，不改调度/匹配语义。当前用户试用进程与数据保留，不为更新页面直接重启其内存后端。
 
+本轮实现细化：
+
+- `TaskService.listExecutions` / `GET /executions`、独立 `list-executions` 授权、
+  type/startedAt 半开区间与 started-desc 排序；与 Task 共用 FrozenCatalog 实现，
+  两个目录的命名空间、缓存和资源预算独立，页上重新鉴权。摘要不含业务载荷或 Task 身份。
+- 使用 Memory/SQLite 原有 `Facts.executions` 权威记录，不增加派生表、不迁移存储版本。
+  `GET /tasks?executionId` 仅用于按已绑定执行关联导航，遵守独立 Task `list` 权限，
+  不成为 Input 搜索或全体 owner 遥测。
+- 浏览器只有两个主 tabpanel；新建/编辑使用原生 dialog，草稿 DOM 保留，任务栏是独立
+  常驻入口及面板。所有身份、Endpoint、Schema 与未知提交保护继续复用既有模型。
+- 星标由 UI Server 经公开 Task / Request 接口核对并保存，按 Endpoint binding 与
+  taskId 幂等；旧模板原样保留。星标过滤不依赖目录当前页，无可用 Endpoint 时仍能只读查看旧副本。
+- 实时流有独立 AbortController；明确终结与回收后收尾，暂停不废弃历史分页对象。
+  取消需要公开取消及释放关系事实，不把超时或未知回收当成结束；原生浏览器验证另用完全独立 profile 和随机端口。
+
 三轮迭代计划，2026-10-31 已对齐依赖最终接口。用户现已授权一名子 agent 实现、主 Agent 独立 review 与 acceptance，无 blocking issue 时不重复询问；范围与约束见[受托审阅记录](Review.md)。准确构想接受后进入实施，不从依赖完成本身推断开工。需求见[构想](ideal/Idea.md)、[需求确认稿](ideal/Requirements.md)与[交互设计](ideal/Design.md)。
 
-本次实现基于 `acceptIdeal#4` 与 primary `2484b5b500c7e234ada734a262ca124041ac5f14`，在专属实现 worktree 完成 I-S01 至 I-S03。实现与检查证据见 [Verification.md](Verification.md)，主 Agent 的两轮修复复核与独立验证见 [Review.md](Review.md)，可复现运行和浏览器步骤见[工作台指南](../../../../../docs/task-engine-web-ui.md)。最终候选已通过独立审阅，准确阶段接受以同步的事件为准；实现子 agent 不修改事件、Review、理想世界或外部结果。
+**第一轮历史背景：** 当时基于 `acceptIdeal#4` 与 primary `2484b5b500c7e234ada734a262ca124041ac5f14` 完成原 I-S01 至 I-S03。旧实现与检查证据见 [Verification.md](Verification.md)，主 Agent 的修复复核与独立验证见 [Review.md](Review.md)。本轮运行步骤仍集中在[工作台指南](../../../../../docs/task-engine-web-ui.md)，不把旧候选的接受结论套用到本轮；实现子 agent 不修改事件、Review、理想世界或外部结果。
 
 ## 实现期细化
 
@@ -61,7 +76,7 @@
 
 在 I-S01/I-S02 的创建与观察路径上，交付同机持久收藏、Endpoint 历史类型/时间查询与分页，以及直接或编辑确认后重做，覆盖 US-10、US-11。
 
-收藏保存完整原参数及目标关联，UI 重启后可继续使用；具体本机存储方式在实现期确定，不引入账号同步或跟随服务历史自动淘汰收藏。历史来自公开目录，包含其他客户端提交的获授权保留任务；只以 GET `/requests/:requestId` 返回的原参数重做，不把列表摘要的 version 塞进业务请求。两种复用都走统一提交模型，不自动补锁、解锁或改写 URL；保留与清理由 Service 治理。
+收藏保存完整原参数及目标关联，沿用操作员指定的同机 JSON 文件并兼容旧模板，UI 重启后可继续使用；不引入账号同步或跟随服务历史自动淘汰收藏。历史来自公开目录，包含其他客户端提交的获授权保留任务；只以 GET `/requests/:requestId` 返回的原参数重做，不把列表摘要的 version 塞进业务请求。两种复用都走统一提交模型，不自动补锁、解锁或改写 URL；保留与清理由 Service 治理。
 
 ## Acceptance criteria
 

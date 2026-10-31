@@ -244,6 +244,46 @@ external processes exited. Hosts using external processes must isolate/clean
 prior resources before reusing them. Store ownership is retained if close cannot
 confirm resource cleanup.
 
+## Execution directory
+
+`engine.listExecutions(query, {cursor?, limit?}, caller)` and HTTP `GET /executions`
+list authoritative retained Execution records in the caller's scope, independently
+of the submitting client or any UI observation set. Shared execution IDs appear once.
+The new **`list-executions`** operation requires an explicit policy grant; it grants
+neither Task `list`/detail/request access nor event history/subscriptions.
+
+Query fields: optional exact `type`, `startedFrom` (inclusive), `startedBefore`
+(exclusive), and `sort:"started-desc"` (default). Times require an explicit RFC 3339
+timezone. Equal start times sort by executionId ascending. Pagination uses `cursor`
+and optional positive `limit` not exceeding configured pageSize.
+
+The response is `{executions, observedAt, expiresAt, next?}`. Each summary contains
+executionId, type, version, startedAt, optional completedAt/failedAt/reclaimedAt,
+and independent `state` flags: running, completed, failed, reclaimed, sealed.
+No Input, Prepared, result, error payload, binding, owner identities or Task IDs
+are included. Execution completion is not reclamation.
+
+Both directories use one shared frozen-membership implementation, with independent
+`tasks:` and `executions:` cursor domains, signing secrets, views and budgets.
+The existing queryScanLimit, queryPageBytes, maxQueryViews, maxQueryBytes and
+queryLifetimeMs apply **per directory** (default combined cache ceiling: twice
+maxQueryBytes). All members and summaries are frozen on the first page. Every
+page reauthorizes; removing any member, expiry or restart yields 410/query_expired,
+never a partial substitute. Invalid filters/cursor domains are 400, denied access
+401/403, oversized pages 413, exhausted budgets 429.
+
+MemoryStore and SQLite already persist the authoritative Execution projection.
+No schema version change, derived index, UI database access, scheduling change
+or matching change is involved. Fresh queries after recovery read those same
+records; query cursors remain process-local and cannot survive restart.
+
+For authorized bound Task navigation, `GET /tasks?executionId=<ULID>` adds an exact
+association filter to the Task directory. It uses the independent Task **`list`**
+grant, caller scope, its own frozen cursor and budgets; it is not a list of all
+execution demand/worker owners. Fetching any selected Task/request/history still
+requires its own permission. A denied association query does not disable the
+Execution directory.
+
 ## Task directory
 
 `engine.listTasks(query, {cursor?, limit?}, caller)` and HTTP `GET /tasks`
@@ -261,6 +301,7 @@ Query fields (all optional, combined with AND):
 | Field | Meaning |
 | --- | --- |
 | `type` | Exact registered type name, 1–256 characters |
+| `executionId` | Exact bound Execution ULID; independent Task-list permission |
 | `createdFrom`, `createdBefore` | Inclusive/exclusive service `receivedAt` bounds |
 | `updatedFrom`, `updatedBefore` | Inclusive/exclusive **latest** `updatedAt` bounds |
 | `sort` | `created-desc` (default) or `updated-desc`; ties use ascending taskId |

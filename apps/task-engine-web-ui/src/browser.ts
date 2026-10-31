@@ -1,12 +1,16 @@
 import type {
+  ExecutionPage,
+  ExecutionSummary,
   HistoryPage,
   Observation,
   PublicEvent,
   TaskSnapshot,
+  TaskSummary,
   TaskTypeDiscovery,
 } from "@potential-guide/task-protocol";
 import { claimActivation, reconcile } from "./dom.js";
 import { envelopeKeys, envelopeSchema, schemaEditor } from "./form.js";
+import { ObservationEnd, stages, taskStatus } from "./lifecycle.js";
 import {
   Api,
   ApiError,
@@ -23,6 +27,7 @@ import {
   TaskSnapshots,
   validSnapshot,
 } from "./model.js";
+import { Navigation } from "./navigation.js";
 import type { Endpoint, Favorite } from "./server.js";
 
 function node<K extends keyof HTMLElementTagNameMap>(
@@ -72,7 +77,9 @@ function details(title: string, value: unknown, key = title): HTMLDetailsElement
   return result;
 }
 function notify(error: unknown): void {
-  get("notice").textContent = error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error ? error.message : String(error);
+  get("notice").textContent = message;
+  get("dialog-notice").textContent = message;
 }
 function focus(id: string): void {
   get(id).focus();
@@ -93,7 +100,10 @@ const statusNames = {
   unknown: "结果未知",
 };
 let api: Api;
+let navigation: Navigation;
 let endpoints: Endpoint[] = [];
+let favorites: Favorite[] = [];
+const sourceStates = new Map<string, { label: string }>();
 const selection = new Selection();
 const states = new Map<string, Workspace>();
 let formReader: (() => Parameters) | undefined;
@@ -108,6 +118,8 @@ interface Workspace {
   discoveryError: string;
   tasks: TaskSnapshots;
   directory: Directory;
+  executionDirectory: Directory<ExecutionPage>;
+  associatedExecutionId: string;
 }
 function workspace(endpoint = selection.endpoint): Workspace {
   if (!endpoint) throw new Error("请先配置并选择 Endpoint。");
@@ -119,6 +131,8 @@ function workspace(endpoint = selection.endpoint): Workspace {
       discoveryError: "",
       tasks: new TaskSnapshots(),
       directory: new Directory(),
+      executionDirectory: new Directory<ExecutionPage>("executions"),
+      associatedExecutionId: "",
     };
     states.set(endpoint.binding, state);
   }
@@ -261,18 +275,34 @@ async function discover(preserve = false): Promise<void> {
 function renderBar(): void {
   const container = get("batches");
   const current = selection.endpoint;
-  container.replaceChildren();
+  const cards: HTMLElement[] = [];
   const batches = bar.batches.filter(
     (batch) => current && endpointMatches(batch.endpoint, current),
   );
-  get("bar-count").textContent = `${batches.length} 批次 · 单条快捷不发送待发多条`;
+  const unknown = batches
+    .flatMap((batch) => batch.entries)
+    .filter((entry) => entry.state === "unknown").length;
+  get("bar-count").textContent =
+    `${batches.reduce((n, batch) => n + batch.entries.length, 0)} 项${unknown ? ` · ${unknown} 未知` : ""}`;
   for (const batch of batches) {
     const card = node("article");
+    card.dataset.key = `batch:${batch.id}`;
     card.append(node("h3", `${batch.entries.length} 项 · ${batch.id.slice(-8)}`));
-    if (batch.entries.every((entry) => entry.state === "draft"))
-      card.append(button("按序发送此批", () => bar.sendBatch(batch), batch.sending));
+    const send = button(
+      "按序发送此批",
+      async () => {
+        await bar.sendBatch(batch);
+        if (!get("submission-dialog").hidden)
+          get("batches")
+            .querySelector<HTMLElement>(`[data-key="batch:${batch.id}"] summary`)
+            ?.focus();
+      },
+      batch.sending || !batch.entries.every((entry) => entry.state === "draft"),
+    );
+    card.append(send);
     for (const [index, entry] of batch.entries.entries()) {
       const row = node("div");
+      row.dataset.key = `receipt:${entry.id}`;
       row.className = "receipt";
       row.append(
         node("strong", `${index + 1}. ${entry.parameters.type} · ${statusNames[entry.state]}`),
@@ -331,26 +361,33 @@ function renderBar(): void {
         button("移除此本地批次", () => {
           bar.batches.splice(bar.batches.indexOf(batch), 1);
           renderBar();
+          get("submission-dialog").querySelector<HTMLElement>("[data-close]")?.focus();
         }),
       );
-    container.append(card);
+    cards.push(card);
   }
-  if (!batches.length)
-    container.append(node("p", "暂无批次。直接提交会在这里建立独立的单条回执。"));
+  if (!batches.length) cards.push(node("p", "暂无批次。直接提交会在这里建立独立的单条回执。"));
+  reconcile(container, cards);
 }
 function renderTasks(): void {
   const container = get("task-list");
   const rows: HTMLElement[] = [];
   if (!selection.endpoint) {
     reconcile(container, rows);
+    if (container.parentElement?.tagName === "FIELDSET")
+      container.parentElement.hidden = rows.length === 0;
     return;
   }
-  for (const task of workspace().tasks.values.values()) {
+  for (const task of [...workspace().tasks.values.values()].slice(-5)) {
     const row = node("div");
     row.dataset.key = `${selection.endpoint.binding}:task:${task.taskId}`;
     row.className = "task-row";
+    const taskLink = button(`${taskStatus(task)} · ${task.taskId.slice(-6)}`, () =>
+      openTask(task.taskId),
+    );
+    taskLink.dataset.key = "open-task";
     row.append(
-      button(task.taskId, () => openTask(task.taskId)),
+      taskLink,
       node(
         "span",
         `stage=${task.stage}${task.canceledAt ? " · 已取消" : ""} · 快照 ${task.timestamp}`,
@@ -373,6 +410,14 @@ interface Observer {
   window: EventWindow;
   historyEvents: PublicEvent[];
   controller: AbortController;
+  streamController?: AbortController;
+  streamState: "idle" | "live" | "stale" | "paused" | "ended";
+  end: ObservationEnd;
+  executionState: "unknown" | "running" | "completed" | "failed";
+  reclaimed: boolean;
+  executionSummary?: ExecutionSummary;
+  associated: Directory;
+  template?: Favorite;
   snapshot?: TaskSnapshot;
   request?: Record<string, unknown>;
   message: string;
@@ -411,6 +456,7 @@ async function history(observer: Observer, next = false): Promise<void> {
     if (!current(observer)) return;
     observer.window.history(page);
     observer.historyEvents = page.events;
+    updateFacts(observer, page.events);
     if (!observer.window.streamCursor) observer.window.streamCursor = page.cursor;
     observer.historyError = "";
   } catch (error) {
@@ -424,58 +470,95 @@ async function history(observer: Observer, next = false): Promise<void> {
   }
 }
 async function live(observer: Observer): Promise<void> {
+  if (
+    observer.streamState === "paused" ||
+    observer.streamState === "ended" ||
+    (observer.streamController && !observer.streamController.signal.aborted)
+  )
+    return;
+  const controller = new AbortController();
+  observer.streamController = controller;
+  const abort = () => controller.abort();
+  observer.controller.signal.addEventListener("abort", abort, { once: true });
+  const liveCurrent = () =>
+    current(observer) && !controller.signal.aborted && observer.streamController === controller;
   let failures = 0;
-  while (current(observer) && failures < 5) {
-    try {
-      const query = new URLSearchParams({ [observer.kind]: observer.id });
-      const response = await fetch(api.path(observer.endpoint, `/events?${query}`), {
-        headers: api.headers(
-          observer.endpoint,
-          observer.window.streamCursor ? { "Last-Event-ID": observer.window.streamCursor } : {},
-        ),
-        signal: observer.controller.signal,
-      });
-      if (!response.ok) await api.decode(response);
-      await consumeSse(response, (observation: Observation) => {
-        if (!current(observer)) return;
-        observer.window.observation(observation);
-        observer.message = "";
-        failures = 0;
-        for (const snapshot of observation.snapshots) {
-          const tasks = workspace(observer.endpoint).tasks;
-          preserveSelectedCancellation(observer.endpoint, snapshot.taskId);
-          const accepted = tasks.observe(snapshot, observation.watermark);
-          if (accepted && observer.kind === "taskId" && snapshot.taskId === observer.id) {
-            const retained = workspace(observer.endpoint).tasks.values.get(snapshot.taskId);
-            if (retained) observer.snapshot = retained;
+  try {
+    while (liveCurrent() && failures < 5) {
+      try {
+        const query = new URLSearchParams({ [observer.kind]: observer.id });
+        const response = await fetch(api.path(observer.endpoint, `/events?${query}`), {
+          headers: api.headers(
+            observer.endpoint,
+            observer.window.streamCursor ? { "Last-Event-ID": observer.window.streamCursor } : {},
+          ),
+          signal: controller.signal,
+        });
+        if (!response.ok) await api.decode(response);
+        await consumeSse(response, (observation: Observation) => {
+          if (!liveCurrent()) return;
+          observer.window.observation(observation);
+          observer.streamState = "live";
+          observer.message = "";
+          failures = 0;
+          for (const snapshot of observation.snapshots) {
+            const tasks = workspace(observer.endpoint).tasks;
+            preserveSelectedCancellation(observer.endpoint, snapshot.taskId);
+            const accepted = tasks.observe(snapshot, observation.watermark);
+            if (accepted && observer.kind === "taskId" && snapshot.taskId === observer.id) {
+              const retained = workspace(observer.endpoint).tasks.values.get(snapshot.taskId);
+              if (retained) observer.snapshot = retained;
+            }
           }
-        }
-        renderTasks();
-        renderObserver(observer);
-      });
-      if (!current(observer)) return;
-      observer.message = "流已断开，按最后确认游标续接；不会重提任务。";
-    } catch (error) {
-      if (!current(observer)) return;
-      observer.message = String(error);
-      if (error instanceof ApiError && [400, 401, 403, 404, 410].includes(error.status)) {
-        observer.window.gap = "流不可续接；请核对权限/保留期限后显式重新观察，不能保证事件完整。";
-        failures = 5;
-      } else failures++;
+          updateFacts(observer, observation.events);
+          renderTasks();
+          renderObserver(observer);
+        });
+        if (!liveCurrent()) return;
+        observer.message = "流已断开，按最后确认游标续接；不会重提任务。";
+      } catch (error) {
+        if (!liveCurrent()) return;
+        observer.message = String(error);
+        if (error instanceof ApiError && [400, 401, 403, 404, 410].includes(error.status)) {
+          observer.window.gap = "流不可续接；请核对权限/保留期限后显式重新观察，不能保证事件完整。";
+          failures = 5;
+        } else failures++;
+      }
+      observer.window.stale = true;
+      observer.streamState = "stale";
+      renderObserver(observer);
+      if (failures < 5)
+        await new Promise<void>((resolveDelay) => {
+          const finish = () => {
+            clearTimeout(timer);
+            controller.signal.removeEventListener("abort", finish);
+            resolveDelay();
+          };
+          const timer = setTimeout(finish, Math.min(1000 * (failures + 1), 5000));
+          controller.signal.addEventListener("abort", finish, { once: true });
+          if (controller.signal.aborted) finish();
+        });
     }
-    observer.window.stale = true;
-    renderObserver(observer);
-    if (failures < 5)
-      await new Promise<void>((resolveDelay) => {
-        const finish = () => {
-          clearTimeout(timer);
-          observer.controller.signal.removeEventListener("abort", finish);
-          resolveDelay();
-        };
-        const timer = setTimeout(finish, Math.min(1000 * (failures + 1), 5000));
-        observer.controller.signal.addEventListener("abort", finish, { once: true });
-      });
+  } finally {
+    observer.controller.signal.removeEventListener("abort", abort);
   }
+}
+function stopStream(observer: Observer, state: "paused" | "ended"): void {
+  observer.streamState = state;
+  observer.window.stale = state !== "ended";
+  observer.streamController?.abort();
+}
+function updateFacts(observer: Observer, events: PublicEvent[]): void {
+  observer.end.feed(events, observer.snapshot);
+  for (const event of events)
+    if (observer.kind === "executionId" && event.executionId === observer.id) {
+      if (event.type === "execution.started" && observer.executionState === "unknown")
+        observer.executionState = "running";
+      if (event.type === "execution.completed") observer.executionState = "completed";
+      if (event.type === "execution.failed") observer.executionState = "failed";
+      if (event.type === "execution.reclaimed") observer.reclaimed = true;
+    }
+  if (observer.end.ended) stopStream(observer, "ended");
 }
 function newObserver(kind: Observer["kind"], id: string): Observer {
   if (!/^[0-9A-HJKMNP-TV-Z]{26}$/.test(id)) throw new Error("请输入有效 ULID。");
@@ -488,6 +571,11 @@ function newObserver(kind: Observer["kind"], id: string): Observer {
     window: new EventWindow(),
     historyEvents: [],
     controller: new AbortController(),
+    streamState: "idle",
+    end: new ObservationEnd(kind, id),
+    executionState: "unknown",
+    reclaimed: false,
+    associated: new Directory(),
     message: "",
     detailError: "",
     requestError: "",
@@ -496,10 +584,13 @@ function newObserver(kind: Observer["kind"], id: string): Observer {
   };
 }
 async function openTask(id: string): Promise<void> {
+  navigation.close("create-dialog", false);
+  navigation.close("submission-dialog", false);
+  navigation.show("tasks", false);
   const observer = newObserver("taskId", id);
   taskObserver = observer;
   renderObserver(observer);
-  focus("tasks");
+  focus("task-detail");
   try {
     const accept = workspace(observer.endpoint).tasks.begin(id);
     const snapshot = await api.request<TaskSnapshot>(observer.endpoint, `/tasks/${id}`, {
@@ -531,6 +622,17 @@ async function openTask(id: string): Promise<void> {
   } catch (error) {
     if (current(observer)) {
       observer.detailError = String(error);
+      const saved = favorites.find(
+        (item) => item.source?.taskId === id && endpointMatches(item.endpoint, observer.endpoint),
+      );
+      if (saved) {
+        observer.template = saved;
+        observer.detailError =
+          error instanceof ApiError && error.status === 404
+            ? "来源已清理；以下是本机保存的完整参数模板，不是服务端任务快照。"
+            : `来源不可访问：${String(error)}。可查看已保存模板。`;
+        stopStream(observer, "paused");
+      }
       renderObserver(observer);
     }
   }
@@ -538,11 +640,30 @@ async function openTask(id: string): Promise<void> {
   if (current(observer)) void live(observer);
 }
 async function openExecution(id: string): Promise<void> {
+  navigation.show("executions", false);
+  if (!workspace().executionDirectory.page) void queryExecutions();
   const observer = newObserver("executionId", id);
   executionObserver = observer;
-  focus("executions");
+  const summary = workspace().executionDirectory.page?.executions.find(
+    (item) => item.executionId === id,
+  );
+  if (summary) {
+    observer.executionSummary = summary;
+    observer.end.summary(summary);
+    observer.executionState = summary.completedAt
+      ? "completed"
+      : summary.failedAt
+        ? "failed"
+        : summary.state.running
+          ? "running"
+          : "unknown";
+    observer.reclaimed = !!summary.reclaimedAt;
+    if (observer.end.ended) stopStream(observer, "ended");
+  }
+  focus("execution-detail");
   renderObserver(observer);
   await history(observer);
+  void associatedTasks(observer);
   if (current(observer)) void live(observer);
 }
 function eventList(key: string, title: string, events: PublicEvent[]): HTMLElement {
@@ -564,18 +685,29 @@ function renderObserver(observer: Observer): void {
   const container = get(observer.kind === "taskId" ? "task-detail" : "execution-detail");
   const box = node("div");
   box.dataset.key = `${observer.endpoint.binding}:${observer.kind}:${observer.id}`;
-  box.append(
-    node("h3", observer.id),
-    node(
-      "p",
-      `${observer.window.stale ? "观察陈旧 / 未连接" : "连接中"} · 最后接收 ${observer.window.lastReceived || "尚无"} · ${observer.message}`,
-    ),
+  const title = observer.kind === "taskId" ? "任务详情" : "执行详情";
+  box.append(node("h3", title));
+  const observationState = node(
+    "p",
+    `${({ idle: "正在读取", live: "实时更新", stale: "观察陈旧 / 已断开", paused: "观察已暂停", ended: "观察已结束" } as const)[observer.streamState]}${observer.window.lastReceived ? ` · 最后读取 ${observer.window.lastReceived}` : ""}${observer.message ? ` · ${observer.message}` : ""}`,
   );
-  const refresh = button("重新观察（重新读取历史）", () =>
+  observationState.className = "observation-state";
+  box.append(observationState);
+  const refresh = button("重新观察", () =>
     observer.kind === "taskId" ? openTask(observer.id) : openExecution(observer.id),
   );
   refresh.dataset.action = "refresh";
-  box.append(refresh);
+  box.append(
+    refresh,
+    button(
+      "暂停观察",
+      () => {
+        stopStream(observer, "paused");
+        renderObserver(observer);
+      },
+      observer.streamState === "paused" || observer.streamState === "ended",
+    ),
+  );
   for (const error of [observer.detailError, observer.requestError, observer.historyError])
     if (error) box.append(node("p", error));
   if (observer.window.gap) box.append(node("p", observer.window.gap));
@@ -588,6 +720,18 @@ function renderObserver(observer: Observer): void {
       ),
     );
   if (observer.kind === "taskId") {
+    if (observer.template && !observer.snapshot) {
+      box.append(node("p", "星标模板"), details("保存的完整原参数", observer.template.parameters));
+      box.append(
+        button("用保存参数直接新建", () =>
+          reuse(observer.endpoint, observer.template!.parameters as Parameters, true),
+        ),
+        button("编辑保存参数", () =>
+          reuse(observer.endpoint, observer.template!.parameters as Parameters, false),
+        ),
+        starButton(observer.endpoint, observer.id),
+      );
+    }
     const task = observer.snapshot;
     if (task) {
       const effectiveEnd =
@@ -598,19 +742,31 @@ function renderObserver(observer: Observer): void {
         task.allocation?.failedAt ??
         task.termination?.terminatedAt;
       const timeout = (effectiveEnd ?? task.timestamp) > task.deadlineAt;
+      const state = node("p", taskStatus(task));
+      state.className = "status";
+      box.append(state);
       box.append(
         node(
           "p",
-          `stage: ${task.stage} · 取消: ${task.canceledAt ?? "未取消"} · 超时: ${timeout ? "是（按快照事实计算）" : "否（截至快照时间）"}`,
+          `截止时间：${task.deadlineAt}${task.canceledAt ? ` · 取消于 ${task.canceledAt}` : ""}${timeout ? " · 超时事实保留" : ""}`,
         ),
       );
-      box.append(node("p", "取消与超时不覆盖 stage；Task 终结不等于 Execution 已回收。"));
-      if (task.execution)
+      if ((task.canceledAt || task.termination) && !observer.end.ended)
         box.append(
-          button(`关联 Execution ${task.execution.executionId}`, () =>
-            openExecution(task.execution!.executionId),
-          ),
+          node("p", "任务已终结；关联执行的终结 / 回收尚未全部确认，可继续观察或手动暂停。"),
         );
+      box.append(starButton(observer.endpoint, task.taskId));
+      box.append(
+        details("标识与准备 / 分配时间", {
+          taskId: task.taskId,
+          requestId: task.requestId,
+          receivedAt: task.receivedAt,
+          preparation: task.preparation,
+          allocation: task.allocation,
+        }),
+      );
+      if (task.execution)
+        box.append(button("查看关联执行 →", () => openExecution(task.execution!.executionId)));
       const cancel = button(
         "取消选中的 Task",
         async () => {
@@ -628,15 +784,15 @@ function renderObserver(observer: Observer): void {
           observer.snapshot =
             workspace(observer.endpoint).tasks.values.get(observer.id) ?? snapshot;
           notify("取消回执已收到；关联 Execution 是否回收请看其事件。");
+          updateFacts(observer, []);
           renderTasks();
           renderObserver(observer);
         },
         !!task.canceledAt || !!task.termination,
       );
       cancel.dataset.action = "cancel";
-      box.append(cancel, details("Task 快照 · 准备/分配/执行关联", task, "task-snapshot"));
-      if (task.result !== undefined)
-        box.append(details("结果（业务否定不是系统执行故障）", task.result));
+      box.append(cancel, details("原始 Task 快照", task, "task-snapshot"));
+      if (task.result !== undefined) box.append(details("任务结果", task.result, "task-result"));
       if (task.error) box.append(details("系统故障事实", task.error));
       if (observer.request) {
         box.append(details("原始请求（GET /requests）", observer.request));
@@ -650,32 +806,59 @@ function renderObserver(observer: Observer): void {
             reuse(observer.endpoint, originalParameters(observer.request!), false),
           ),
         );
-        box.append(
-          button("收藏原参数", () =>
-            saveFavorite(observer.endpoint, originalParameters(observer.request!)),
-          ),
-        );
       } else box.append(node("p", "原请求尚不可读；不提供空参数重做。"));
     }
   } else {
     const events = observer.window.events;
-    const knownOwners = [...workspace().tasks.values.values()].filter(
-      (task) => task.execution?.executionId === observer.id,
+    const state = node(
+      "p",
+      `${({ unknown: "执行状态尚未取得", running: "执行中", completed: "已完成", failed: "执行失败" } as const)[observer.executionState]}${observer.reclaimed ? " · 已回收" : " · 回收未确认"}`,
     );
+    state.className = "status";
+    box.append(state, details("执行标识", { executionId: observer.id }));
+    if (observer.associated.error)
+      box.append(node("p", `关联任务不可读：${observer.associated.error}`));
+    if (observer.associated.page)
+      box.append(
+        node(
+          "p",
+          `可读关联任务：已加载 ${observer.associated.page.tasks.length} 条（不是全体 owner 统计）`,
+        ),
+      );
+    for (const task of observer.associated.page?.tasks ?? [])
+      box.append(button(`${task.type} · ${summaryStatus(task)} →`, () => openTask(task.taskId)));
+    if (observer.associated.page?.next)
+      box.append(
+        button("更多关联任务", () => associatedTasks(observer, true), observer.associated.expired),
+      );
     box.append(
-      node("p", `已观察关联 Task：${knownOwners.length}（不是全部 owners 或 worker 统计）`),
+      button("查看此执行的任务", () => {
+        workspace().associatedExecutionId = observer.id;
+        (get("only-favorites") as HTMLInputElement).checked = false;
+        navigation.show("tasks", false);
+        void queryDirectory();
+      }),
     );
-    for (const task of knownOwners) box.append(button(task.taskId, () => openTask(task.taskId)));
+    const dates: Record<string, string | undefined> = {
+      "execution.started": observer.executionSummary?.startedAt,
+      "execution.completed": observer.executionSummary?.completedAt,
+      "execution.failed": observer.executionSummary?.failedAt,
+      "execution.reclaimed": observer.executionSummary?.reclaimedAt,
+    };
     for (const [kind, label] of [
       ["execution.started", "开始"],
       ["execution.completed", "逻辑完成"],
       ["execution.failed", "执行故障"],
       ["execution.sealed", "封存"],
       ["execution.reclaimed", "回收"],
-    ]) {
+    ] as const) {
       const event = events.find((item) => item.type === kind);
+      const fromSummary = dates[kind];
       box.append(
-        node("p", `${label}：${event ? event.occurredAt : "当前窗口未取得证据（不等于未发生）"}`),
+        node(
+          "p",
+          `${label}：${event ? event.occurredAt : fromSummary ? `${fromSummary}（目录事实）` : "当前窗口未取得证据（不等于未发生）"}`,
+        ),
       );
     }
   }
@@ -689,6 +872,7 @@ function renderObserver(observer: Observer): void {
     eventList("all-events", "全部公开事件 · 最近窗口（含关联对象）", observer.window.events),
   );
   box.append(eventList("history-events", "当前历史页 · 全部公开载荷", observer.historyEvents));
+  box.append(button("重新读取事件历史", () => history(observer), observer.loading));
   const more = button(
     "下一页事件历史",
     () => history(observer, true),
@@ -701,21 +885,54 @@ function renderObserver(observer: Observer): void {
 function directoryQuery(): string {
   const query = new URLSearchParams({ sort: "created-desc" });
   const type = (get("history-type") as HTMLInputElement).value;
+  if (type.length > 256) throw new Error("类型筛选最多 256 字符。");
   if (type) query.set("type", type);
+  if (selection.endpoint && workspace().associatedExecutionId)
+    query.set("executionId", workspace().associatedExecutionId);
   for (const [id, key] of [
     ["created-from", "createdFrom"],
     ["created-before", "createdBefore"],
   ] as const) {
     const value = (get(id) as HTMLInputElement).value;
     if (value) {
-      if (!/(Z|[+-]\d{2}:\d{2})$/.test(value) || !Number.isFinite(Date.parse(value)))
-        throw new Error("时间必须包含明确时区，例如 2026-10-31T00:00:00+08:00。");
+      validateTime(value);
       query.set(key, value);
     }
   }
+  validateRange(query.get("createdFrom"), query.get("createdBefore"));
   return query.toString();
 }
+function validateTime(value: string): void {
+  const local = `${value.slice(0, 19)}Z`;
+  if (
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) ||
+    !Number.isFinite(Date.parse(value)) ||
+    !Number.isFinite(Date.parse(local)) ||
+    new Date(local).toISOString().slice(0, 10) !== value.slice(0, 10) ||
+    Number(value.slice(11, 13)) > 23 ||
+    (value.at(-1) !== "Z" && (Number(value.slice(-5, -3)) > 23 || Number(value.slice(-2)) > 59))
+  )
+    throw new Error("请输入真实日期和明确时区，例如 2026-10-31T00:00:00+08:00。");
+}
+function validateRange(from: string | null, before: string | null): void {
+  if (from && before && Date.parse(from) >= Date.parse(before))
+    throw new Error("时间下界必须早于上界（含下界、不含上界）。");
+}
 async function queryDirectory(append = false): Promise<void> {
+  if ((get("only-favorites") as HTMLInputElement).checked) {
+    renderDirectory();
+    try {
+      directoryQuery();
+      await checkStarSources();
+    } catch (error) {
+      notify(error);
+    }
+    if (!selection.endpoint) {
+      renderDirectory();
+      return;
+    }
+    return;
+  }
   const state = workspace();
   const lease = selection.capture();
   let started = false;
@@ -736,27 +953,48 @@ async function queryDirectory(append = false): Promise<void> {
 }
 function renderDirectory(): void {
   const container = get("directory");
-  container.replaceChildren();
-  if (!selection.endpoint) return;
+  const contents = node("div");
+  contents.dataset.key = "task-directory";
+  if (!selection.endpoint) {
+    if ((get("only-favorites") as HTMLInputElement).checked) renderStars(contents);
+    else contents.append(node("p", "未配置服务；可以切换“只看收藏”查看本机保存的模板。"));
+    reconcile(container, [contents]);
+    return;
+  }
+  const association = get("association-filter");
+  association.replaceChildren();
+  if (workspace().associatedExecutionId)
+    association.append(
+      node("span", `执行关联筛选：${workspace().associatedExecutionId.slice(-8)}`),
+      button("清除关联筛选", () => {
+        workspace().associatedExecutionId = "";
+        return queryDirectory();
+      }),
+    );
+  if ((get("only-favorites") as HTMLInputElement).checked) {
+    renderStars(contents);
+    reconcile(container, [contents]);
+    return;
+  }
   const state = workspace();
   const directory = state.directory;
   if (directory.error)
-    container.append(node("p", `查询错误（不是空结果），以下仅为上次成功快照：${directory.error}`));
+    contents.append(node("p", `查询错误（不是空结果），以下仅为上次成功快照：${directory.error}`));
   if (directory.expired)
-    container.append(node("p", "query_expired：旧快照仅供参考。请点“重新查询”，不能继续拼页。"));
+    contents.append(node("p", "query_expired：旧快照仅供参考。请点“重新查询”，不能继续拼页。"));
   if (!directory.page) {
-    container.append(node("p", "尚未查询。目录来自 Endpoint，不依赖类型发现权限。"));
+    contents.append(node("p", "尚未取得任务目录。查询权限与类型发现权限独立。"));
+    reconcile(container, [contents]);
     return;
   }
-  container.append(
+  contents.append(
     node(
       "p",
-      `固定快照 ${directory.page.observedAt} · 有效至 ${directory.page.expiresAt} · 已加载 ${directory.page.tasks.length} 条（非总数）`,
+      `已加载 ${directory.page.tasks.length} 条 · 查询快照 ${directory.page.observedAt} · 有效至 ${directory.page.expiresAt}`,
     ),
   );
-  container.append(node("p", `原查询：${new URLSearchParams(directory.query).toString()}`));
   if (directory.dropped)
-    container.append(
+    contents.append(
       node(
         "p",
         `已释放前 ${directory.dropped} 条本机摘要，仅保留最近 1000 条已加载记录；目录游标仍属于原快照。重新查询可从头查看。`,
@@ -764,7 +1002,13 @@ function renderDirectory(): void {
     );
   const table = node("table");
   const head = node("tr");
-  for (const title of ["Task / 类型", "receivedAt", "摘要状态", "操作"])
+  for (const title of [
+    "收藏",
+    "任务",
+    "状态（查询时）",
+    `接收时间（${Intl.DateTimeFormat().resolvedOptions().timeZone}）`,
+    "操作",
+  ])
     head.append(node("th", title));
   const thead = node("thead");
   thead.append(head);
@@ -772,9 +1016,16 @@ function renderDirectory(): void {
   const body = node("tbody");
   for (const task of directory.page.tasks) {
     const row = node("tr");
-    row.append(node("td", `${task.taskId}\n${task.type}`), node("td", task.receivedAt));
-    const status = node("td");
-    status.append(details(task.state.stage, task.state));
+    row.dataset.key = `task:${state.endpoint.binding}:${task.taskId}`;
+    const star = node("td");
+    star.append(starButton(state.endpoint, task.taskId));
+    const title = node("td");
+    title.append(
+      button(task.type, () => openTask(task.taskId)),
+      node("small", task.taskId.slice(-8)),
+    );
+    row.append(star, title);
+    const status = node("td", summaryStatus(task));
     const actions = node("td");
     actions.append(button("详情", () => openTask(task.taskId)));
     const redo = async (direct: boolean) => {
@@ -787,22 +1038,133 @@ function renderDirectory(): void {
       await reuse(endpoint, originalParameters(original), direct);
     };
     actions.append(
-      button("直接重做", () => redo(true)),
-      button("编辑后重做", () => redo(false)),
+      button("重做", () => redo(true)),
+      button("编辑重做", () => redo(false)),
     );
-    row.append(status, actions);
+    row.append(status, node("td", new Date(task.receivedAt).toLocaleString()), actions);
     body.append(row);
   }
   table.append(body);
-  container.append(table);
-  if (!directory.page.tasks.length) container.append(node("p", "本次查询成功：没有可见记录。"));
-  container.append(
+  contents.append(table);
+  if (!directory.page.tasks.length) contents.append(node("p", "没有符合筛选的任务。"));
+  contents.append(
     button(
       "目录下一页（原过滤条件）",
       () => queryDirectory(true),
       !directory.page.next || directory.expired,
     ),
   );
+  reconcile(container, [contents]);
+}
+function summaryStatus(task: TaskSummary): string {
+  return `${task.state.canceled ? "已取消" : task.state.pending ? "等待资格时间" : (stages[task.state.stage] ?? task.state.stage)}${task.state.timedOut ? " · 已超时" : ""}`;
+}
+async function associatedTasks(observer: Observer, append = false): Promise<void> {
+  try {
+    await observer.associated.load(
+      (query) =>
+        api.request(observer.endpoint, `/tasks?${query}`, { signal: observer.controller.signal }),
+      new URLSearchParams({ executionId: observer.id, sort: "created-desc" }).toString(),
+      append,
+      () => current(observer),
+    );
+  } catch {
+    /* The directory retains its explicit error, independently from event permissions. */
+  }
+  if (current(observer)) renderObserver(observer);
+}
+async function queryExecutions(append = false): Promise<void> {
+  const state = workspace(),
+    lease = selection.capture();
+  let started = false;
+  try {
+    const query = new URLSearchParams({ sort: "started-desc" });
+    const type = (get("execution-type") as HTMLInputElement).value;
+    if (type.length > 256) throw new Error("类型筛选最多 256 字符。");
+    if (type) query.set("type", type);
+    for (const [id, key] of [
+      ["started-from", "startedFrom"],
+      ["started-before", "startedBefore"],
+    ] as const) {
+      const value = (get(id) as HTMLInputElement).value;
+      if (value) {
+        validateTime(value);
+        query.set(key, value);
+      }
+      validateRange(query.get("startedFrom"), query.get("startedBefore"));
+    }
+    started = true;
+    const accepted = await state.executionDirectory.load(
+      (query) => api.request(state.endpoint, `/executions?${query}`, { signal: lease.signal }),
+      query.toString(),
+      append,
+      lease.current,
+    );
+    if (!accepted) return;
+  } catch (error) {
+    if (!started && lease.current()) state.executionDirectory.rejectQuery(error);
+  }
+  if (lease.current()) renderExecutions();
+}
+function renderExecutions(): void {
+  const root = get("execution-directory"),
+    box = node("div");
+  const directory = workspace().executionDirectory;
+  box.dataset.key = "execution-directory";
+  if (directory.error)
+    box.append(
+      node(
+        "p",
+        `执行目录不可用：${directory.error}。请核对权限、服务版本或查询条件；不会改用本机已见记录。`,
+      ),
+    );
+  if (directory.expired) box.append(node("p", "查询已失效，请重新查询；旧快照仅供参考。"));
+  if (directory.page) {
+    box.append(
+      node(
+        "p",
+        `已加载 ${directory.page.executions.length} 个执行 · 查询快照 ${directory.page.observedAt} · 有效至 ${directory.page.expiresAt}`,
+      ),
+    );
+    if (directory.dropped)
+      box.append(node("p", `前 ${directory.dropped} 条本机摘要已释放；重新查询可从头查看。`));
+    const table = node("table"),
+      head = node("tr"),
+      tbody = node("tbody");
+    for (const title of ["执行", "状态（查询时）", "开始时间"]) head.append(node("th", title));
+    const thead = node("thead");
+    thead.append(head);
+    table.append(thead);
+    for (const execution of directory.page.executions) {
+      const row = node("tr"),
+        title = node("td");
+      row.dataset.key = `execution:${execution.executionId}`;
+      title.append(
+        button(execution.type, () => openExecution(execution.executionId)),
+        node("small", execution.executionId.slice(-8)),
+      );
+      row.append(
+        title,
+        node(
+          "td",
+          `${execution.state.completed ? "已完成" : execution.state.failed ? "执行失败" : execution.state.running ? "执行中" : "结果未确认"}${execution.state.reclaimed ? " · 已回收" : " · 未确认回收"}`,
+        ),
+        node("td", new Date(execution.startedAt).toLocaleString()),
+      );
+      tbody.append(row);
+    }
+    table.append(tbody);
+    box.append(table);
+    if (!directory.page.executions.length) box.append(node("p", "没有符合筛选的执行记录。"));
+    box.append(
+      button(
+        "执行目录下一页",
+        () => queryExecutions(true),
+        !directory.page.next || directory.expired,
+      ),
+    );
+  } else box.append(node("p", "尚未取得执行目录。"));
+  reconcile(root, [box]);
 }
 async function reuse(endpoint: Endpoint, parameters: Parameters, direct: boolean): Promise<void> {
   const configured = endpoints.find((item) => endpointMatches(item, endpoint));
@@ -819,7 +1181,13 @@ async function reuse(endpoint: Endpoint, parameters: Parameters, direct: boolean
   const revision = discoveryRevision(types, parameters);
   if (direct) {
     const entry = await bar.quick(endpoint, parameters, revision);
-    if (lease.current() && entry.snapshot) await openTask(entry.snapshot.taskId);
+    if (lease.current()) {
+      notify(entry.message);
+      if (entry.snapshot) {
+        await openTask(entry.snapshot.taskId);
+        void queryDirectory();
+      }
+    }
   } else {
     const type = types.find((item) => item.type === parameters.type)!;
     const select = get("type") as HTMLSelectElement;
@@ -827,21 +1195,155 @@ async function reuse(endpoint: Endpoint, parameters: Parameters, direct: boolean
     select.value = type.type;
     renderForm(type, structuredClone(parameters));
     lastQuick = undefined;
-    focus("create");
+    navigation.show("tasks", false);
+    get("create-title").textContent = "编辑参数并新建任务";
+    navigation.open("create-dialog");
   }
 }
-async function saveFavorite(endpoint: Endpoint, parameters: Parameters): Promise<void> {
-  const name = (get("favorite-name") as HTMLInputElement).value.trim();
-  if (!name) throw new Error("请在创建区填写收藏名称，再收藏参数。");
-  await api.local("/api/favorites", "POST", { name, endpoint, parameters });
-  await renderFavorites();
-  notify("已保存本机收藏；不会保存后端凭据，也不会修改原收藏。");
+function starButton(endpoint: Endpoint, taskId: string): HTMLButtonElement {
+  const saved = favorites.find(
+    (item) => item.source?.taskId === taskId && endpointMatches(item.endpoint, endpoint),
+  );
+  const control = button(saved ? "★" : "☆", async () => {
+    if (saved) await api.local(`/api/favorites/${saved.id}`, "DELETE");
+    else await api.local("/api/favorites", "POST", { endpoint, taskId });
+    await renderFavorites();
+    renderDirectory();
+    if (taskObserver && current(taskObserver)) renderObserver(taskObserver);
+    notify(saved ? "已取消星标；不会取消任务。" : `已保存 ${endpoint.label} 的完整原参数。`);
+  });
+  control.className = "star";
+  control.dataset.key = `star:${taskId}`;
+  control.setAttribute("aria-label", saved ? "取消星标" : "标星任务");
+  control.setAttribute("aria-pressed", String(!!saved));
+  return control;
+}
+function selectedStars(): Favorite[] {
+  const endpoint = selection.endpoint;
+  return favorites.filter(
+    (item) =>
+      item.source &&
+      (!endpoint ||
+        item.endpoint.id === endpoint.id ||
+        !endpoints.some((entry) => endpointMatches(entry, item.endpoint))),
+  );
+}
+function renderStars(box: HTMLElement): void {
+  let query: URLSearchParams;
+  try {
+    query = new URLSearchParams(directoryQuery());
+  } catch (error) {
+    box.append(node("p", String(error)));
+    return;
+  }
+  const stars = selectedStars().filter(
+    (item) =>
+      (!query.get("type") || item.parameters.type === query.get("type")) &&
+      (!query.get("createdFrom") ||
+        Date.parse(item.source!.receivedAt) >= Date.parse(query.get("createdFrom")!)) &&
+      (!query.get("createdBefore") ||
+        Date.parse(item.source!.receivedAt) < Date.parse(query.get("createdBefore")!)),
+  );
+  box.append(node("p", `本机星标 ${stars.length} 条 · 覆盖保存的全部星标，不限于目录当前页。`));
+  for (const favorite of stars) {
+    const article = node("article");
+    article.dataset.key = `favorite:${favorite.id}`;
+    const available =
+      !!selection.endpoint && endpointMatches(favorite.endpoint, selection.endpoint);
+    const status = available
+      ? (sourceStates.get(favorite.id)?.label ?? "来源尚未核对")
+      : "原目标缺失或已重绑，禁止改投";
+    article.append(
+      node("strong", String(favorite.parameters.type)),
+      node("p", `${status} · ${favorite.endpoint.label}`),
+      node("small", `来源 ${favorite.source!.taskId.slice(-8)}`),
+    );
+    article.append(button("查看来源 / 模板", () => openTask(favorite.source!.taskId), !available));
+    article.append(
+      button(
+        "用保存参数新建",
+        () => reuse(favorite.endpoint, favorite.parameters as Parameters, true),
+        !available,
+      ),
+      button(
+        "编辑后新建",
+        () => reuse(favorite.endpoint, favorite.parameters as Parameters, false),
+        !available,
+      ),
+    );
+    article.append(details("保存的完整原参数", favorite.parameters));
+    if (available) article.append(starButton(favorite.endpoint, favorite.source!.taskId));
+    else
+      article.append(
+        button("移除此本机星标", async () => {
+          await api.local(`/api/favorites/${favorite.id}`, "DELETE");
+          await renderFavorites();
+          renderDirectory();
+        }),
+      );
+    box.append(article);
+  }
+  if (!stars.length) box.append(node("p", "暂无符合筛选的星标任务。"));
+}
+let starChecks: AbortController | undefined;
+async function checkStarSources(): Promise<void> {
+  starChecks?.abort();
+  if (!selection.endpoint) return;
+  const control = new AbortController();
+  starChecks = control;
+  const lease = selection.capture();
+  const abort = () => control.abort();
+  lease.signal.addEventListener("abort", abort, { once: true });
+  const items = selectedStars().filter((item) =>
+    endpointMatches(item.endpoint, workspace().endpoint),
+  );
+  let index = 0;
+  try {
+    await Promise.all(
+      Array.from({ length: 4 }, async () => {
+        while (index < items.length && !control.signal.aborted) {
+          const item = items[index++]!;
+          try {
+            preserveSelectedCancellation(item.endpoint, item.source!.taskId);
+            const tasks = workspace(item.endpoint).tasks;
+            const accept = tasks.begin(item.source!.taskId);
+            const value = await api.request<TaskSnapshot>(
+              item.endpoint,
+              `/tasks/${item.source!.taskId}`,
+              { signal: control.signal },
+            );
+            if (!validSnapshot(value) || value.taskId !== item.source!.taskId)
+              throw new Error("来源快照无效");
+            if (control.signal.aborted || !lease.current()) return;
+            preserveSelectedCancellation(item.endpoint, item.source!.taskId);
+            accept(value);
+            sourceStates.set(item.id, {
+              label: `来源可用 · ${taskStatus(tasks.values.get(value.taskId) ?? value)}`,
+            });
+          } catch (error) {
+            if (control.signal.aborted || !lease.current()) return;
+            sourceStates.set(item.id, {
+              label:
+                error instanceof ApiError && error.status === 404
+                  ? "来源已清理 · 保存的模板仍可用"
+                  : `来源不可访问：${String(error)}`,
+            });
+          }
+          if ((get("only-favorites") as HTMLInputElement).checked) renderDirectory();
+        }
+      }),
+    );
+  } finally {
+    lease.signal.removeEventListener("abort", abort);
+  }
 }
 async function renderFavorites(): Promise<void> {
-  const favorites = await api.local<Favorite[]>("/api/favorites");
+  favorites = await api.local<Favorite[]>("/api/favorites");
   const container = get("favorites-list");
   container.replaceChildren();
-  for (const favorite of favorites) {
+  const legacy = favorites.filter((item) => !item.source);
+  get("legacy-templates").hidden = !legacy.length;
+  for (const favorite of legacy) {
     const article = node("article");
     const configured = endpoints.find((endpoint) => endpointMatches(endpoint, favorite.endpoint));
     article.append(
@@ -856,14 +1358,7 @@ async function renderFavorites(): Promise<void> {
       article.append(button("切换到原目标", () => chooseEndpoint(configured.id)));
     article.append(
       button(
-        "直接再发（新身份）",
-        () => reuse(favorite.endpoint, favorite.parameters as Parameters, true),
-        !configured,
-      ),
-    );
-    article.append(
-      button(
-        "编辑后再发",
+        "套用旧模板",
         () => reuse(favorite.endpoint, favorite.parameters as Parameters, false),
         !configured,
       ),
@@ -876,13 +1371,15 @@ async function renderFavorites(): Promise<void> {
     );
     container.append(article);
   }
-  if (!favorites.length)
-    container.append(node("p", "尚无收藏。收藏保存在 UI Server 所在电脑；不跟随服务历史清理。"));
 }
 async function chooseEndpoint(id: string): Promise<void> {
   const endpoint = endpoints.find((item) => item.id === id);
   if (!endpoint) throw new Error("Endpoint 不存在。");
   selection.select(endpoint);
+  starChecks?.abort();
+  navigation.close("create-dialog", false);
+  navigation.close("submission-dialog", false);
+  navigation.show("tasks", false);
   (get("endpoint") as HTMLSelectElement).value = endpoint.id;
   closeObservers();
   formReader = undefined;
@@ -896,12 +1393,23 @@ async function chooseEndpoint(id: string): Promise<void> {
   get("discovery-status").textContent = `正在发现 ${endpoint.label} 的类型…`;
   get("notice").textContent =
     `当前目标：${endpoint.label}。旧目标回执留在原分区；断流不会取消 Task。`;
-  for (const id of ["history-type", "created-from", "created-before"])
+  workspace().associatedExecutionId = "";
+  (get("only-favorites") as HTMLInputElement).checked = false;
+  for (const id of [
+    "history-type",
+    "created-from",
+    "created-before",
+    "execution-type",
+    "started-from",
+    "started-before",
+  ])
     (get(id) as HTMLInputElement).value = "";
   renderBar();
   renderTasks();
   renderDirectory();
+  renderExecutions();
   await Promise.all([discover(), renderFavorites()]);
+  if (selection.endpoint && endpointMatches(selection.endpoint, endpoint)) await queryDirectory();
 }
 async function start(): Promise<void> {
   const response = await fetch("/api/bootstrap");
@@ -909,6 +1417,21 @@ async function start(): Promise<void> {
   const bootstrap = (await response.json()) as { csrf: string; endpoints: Endpoint[] };
   api = new Api(bootstrap.csrf);
   endpoints = bootstrap.endpoints;
+  navigation = new Navigation(document, (tab) => {
+    if (tab === "executions" && selection.endpoint && !workspace().executionDirectory.page)
+      void queryExecutions();
+  });
+  get("new-task").addEventListener("click", () => {
+    get("create-title").textContent = "新建任务";
+    get("dialog-notice").textContent = "";
+    navigation.open("create-dialog");
+  });
+  get("bar-toggle").addEventListener("click", () => navigation.open("submission-dialog"));
+  get("only-favorites").addEventListener("change", () => {
+    if (selection.endpoint) workspace().associatedExecutionId = "";
+    starChecks?.abort();
+    void queryDirectory().catch(notify);
+  });
   const select = get("endpoint") as HTMLSelectElement;
   for (const endpoint of endpoints) select.append(new Option(endpoint.label, endpoint.id));
   select.addEventListener("change", () => {
@@ -939,7 +1462,11 @@ async function start(): Promise<void> {
         lastQuick = bar.add(batch, form.parameters, form.revision);
         const entry = lastQuick;
         await bar.sendBatch(batch);
-        if (lease.current() && entry.snapshot) await openTask(entry.snapshot.taskId);
+        if (lease.current()) notify(entry.message);
+        if (lease.current() && entry.snapshot) {
+          await openTask(entry.snapshot.taskId);
+          void queryDirectory();
+        }
       },
       false,
       300,
@@ -956,12 +1483,13 @@ async function start(): Promise<void> {
       bar.add(batch, form.parameters, form.revision);
       notify("已加入草稿，尚未提交。");
     }),
-    button("收藏当前参数", async () => {
-      const form = checkedForm();
-      await saveFavorite(form.endpoint, form.parameters);
+    button("查看任务栏", () => {
+      navigation.close("create-dialog", false);
+      navigation.open("submission-dialog");
     }),
   );
   get("history-actions").append(button("重新查询", () => queryDirectory()));
+  get("execution-actions").append(button("刷新执行目录", () => queryExecutions()));
   const taskId = input("按 Task ID 打开");
   get("task-lookup").append(
     taskId.label,
@@ -972,10 +1500,16 @@ async function start(): Promise<void> {
     executionId.label,
     button("打开 Execution", () => openExecution(executionId.input.value.trim())),
   );
-  window.addEventListener("pagehide", closeObservers);
+  window.addEventListener("pagehide", () => {
+    closeObservers();
+    starChecks?.abort();
+  });
   if (endpoints[0]) await chooseEndpoint(endpoints[0].id);
   else {
     await renderFavorites();
+    (get("only-favorites") as HTMLInputElement).checked = true;
+    renderDirectory();
+    get("execution-directory").textContent = "未配置服务，执行目录不可用。";
     notify("没有配置 Endpoint；请由本机操作员配置并重启 UI。");
   }
 }

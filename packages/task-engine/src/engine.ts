@@ -10,6 +10,8 @@ import {
   canonical,
   compileInputSchema,
   type ErrorFact,
+  type ExecutionPage,
+  type ExecutionQuery,
   type ExecutionRecord,
   type ExecutionTracking,
   effectiveEnd,
@@ -48,7 +50,7 @@ import {
   timestamp,
   ulid,
 } from "@potential-guide/task-protocol";
-import { type CatalogLimits, TaskCatalog } from "./catalog.js";
+import { type CatalogLimits, ExecutionCatalog, TaskCatalog } from "./catalog.js";
 import { newId } from "./identity.js";
 
 type CompiledType = RegisteredType & InputContract;
@@ -151,6 +153,7 @@ export class TaskEngine implements TaskService {
   private allocations = new Set<Promise<void>>();
   private closeAttempt: Promise<void> | undefined;
   private readonly catalog: TaskCatalog;
+  private readonly executionCatalog: ExecutionCatalog;
   readonly errors: ErrorFact[] = [];
 
   constructor(private readonly options: EngineOptions) {
@@ -158,6 +161,7 @@ export class TaskEngine implements TaskService {
     this.limits = { ...defaults, ...options.limits };
     for (const [key, value] of Object.entries(this.limits)) positive(value, key);
     this.catalog = new TaskCatalog(this.limits);
+    this.executionCatalog = new ExecutionCatalog(this.limits);
     if (this.limits.maxEvents < 32) fail("invalid_request", "maxEvents must be at least 32.");
     for (const type of options.types) {
       if (!type.type || !type.version || !type.environment)
@@ -450,6 +454,25 @@ export class TaskEngine implements TaskService {
       this.authorized(caller, "list", task.binding.scope);
       this.checkHistory(task);
     });
+  }
+  listExecutions(
+    query: ExecutionQuery,
+    page: { cursor?: string; limit?: number },
+    caller: Caller,
+  ): ExecutionPage {
+    this.assertRunning();
+    this.authorized(caller, "list-executions", caller?.scope);
+    return this.executionCatalog.read(
+      query,
+      page,
+      caller,
+      this.view.facts,
+      this.clock.now(),
+      (execution) => {
+        this.authorized(caller, "list-executions", execution.binding.scope);
+        this.checkExecutionHistory(execution);
+      },
+    );
   }
   getRequest(requestId: string, caller: Caller): TaskRequest {
     this.authorized(caller, "request", caller?.scope);
@@ -1427,6 +1450,7 @@ export class TaskEngine implements TaskService {
     if (!this.started || this.closing) return;
     this.closing = true;
     this.catalog.clear();
+    this.executionCatalog.clear();
     this.timer?.();
     for (const stopTimer of this.wallTimers.values()) stopTimer();
     this.wallTimers.clear();

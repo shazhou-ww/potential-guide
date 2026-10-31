@@ -29,6 +29,7 @@ export interface Favorite {
   name: string;
   endpoint: Endpoint;
   parameters: Record<string, unknown>;
+  source?: { taskId: string; requestId: string; receivedAt: string };
 }
 const BODY_LIMIT = 65_536;
 const RESPONSE_LIMIT = 2_097_152;
@@ -160,7 +161,9 @@ async function boundedBody(response: Response, max = RESPONSE_LIMIT): Promise<Ui
 export function allowedRoute(path: string, method: string, params: URLSearchParams): boolean {
   let keys: string[] = [];
   if (path === "/tasks" && method === "GET")
-    keys = ["type", "createdFrom", "createdBefore", "sort", "cursor", "limit"];
+    keys = ["type", "executionId", "createdFrom", "createdBefore", "sort", "cursor", "limit"];
+  else if (path === "/executions" && method === "GET")
+    keys = ["type", "startedFrom", "startedBefore", "sort", "cursor", "limit"];
   else if (["/event-history", "/events"].includes(path) && method === "GET")
     keys = [
       "taskId",
@@ -217,6 +220,18 @@ export async function startUiServer(raw: UiConfig) {
       )
         throw new Error("收藏文件格式无效。");
       record(entry.parameters);
+      if (entry.source !== undefined) {
+        const source = record(entry.source);
+        if (
+          typeof source.taskId !== "string" ||
+          !idPattern.test(source.taskId) ||
+          typeof source.requestId !== "string" ||
+          !idPattern.test(source.requestId) ||
+          typeof source.receivedAt !== "string" ||
+          !Number.isFinite(Date.parse(source.receivedAt))
+        )
+          throw new Error("星标来源格式无效；保留原文件，拒绝静默丢弃。");
+      }
     }
     favorites = parsed as Favorite[];
   } catch (error) {
@@ -327,6 +342,91 @@ export async function startUiServer(raw: UiConfig) {
           const endpoint = endpoints.get(String(record(body.endpoint).id));
           if (!endpoint || record(body.endpoint).binding !== endpoint.public.binding)
             reject(409, "endpoint_changed", "收藏目标缺失或重新绑定，不能静默改投。");
+          if (body.taskId !== undefined) {
+            if (typeof body.taskId !== "string" || !idPattern.test(body.taskId))
+              reject(400, "invalid_task_id", "星标需要真实 Task ID。");
+            const existing = favorites.find(
+              (item) =>
+                item.source?.taskId === body.taskId &&
+                item.endpoint.binding === endpoint.public.binding,
+            );
+            if (existing) {
+              send(res, 200, existing);
+              return;
+            }
+            const read = async (path: string) => {
+              const headers = new Headers({ Accept: "application/json" });
+              if (endpoint.token) headers.set("Authorization", `Bearer ${endpoint.token}`);
+              const upstream = await fetch(`${endpoint.config.url.replace(/\/$/, "")}${path}`, {
+                headers,
+                signal: controller.signal,
+                redirect: "manual",
+              });
+              if (upstream.status >= 300 && upstream.status < 400) {
+                await upstream.body?.cancel();
+                reject(502, "redirect_denied", "后端重定向被拒绝。");
+              }
+              let value: unknown;
+              try {
+                value = JSON.parse(
+                  new TextDecoder("utf-8", { fatal: true }).decode(await boundedBody(upstream)),
+                );
+                assertFiniteJson(value);
+              } catch {
+                reject(502, "invalid_backend_response", "无法读取完整原请求。");
+              }
+              if (!upstream.ok) {
+                const clean = record(
+                  endpoint.token ? redactCredential(value, endpoint.token) : value,
+                );
+                const error = record(clean.error);
+                reject(
+                  upstream.status,
+                  String(error.code ?? "backend_error"),
+                  String(error.message ?? "无法读取星标来源。"),
+                );
+              }
+              return record(value);
+            };
+            const task = await read(`/tasks/${body.taskId}`);
+            if (
+              task.taskId !== body.taskId ||
+              typeof task.requestId !== "string" ||
+              !idPattern.test(task.requestId) ||
+              typeof task.receivedAt !== "string" ||
+              !Number.isFinite(Date.parse(task.receivedAt))
+            )
+              reject(502, "invalid_backend_response", "Task 来源信息无效，未保存星标。");
+            const original = await read(`/requests/${task.requestId}`);
+            if (original.requestId !== task.requestId || typeof original.type !== "string")
+              reject(502, "invalid_backend_response", "原请求无效，未保存星标。");
+            const { requestId: _identity, ...parameters } = original;
+            let favorite: Favorite = {
+              id: randomUUID(),
+              name: original.type,
+              endpoint: endpoint.public,
+              parameters,
+              source: {
+                taskId: body.taskId,
+                requestId: task.requestId,
+                receivedAt: task.receivedAt,
+              },
+            };
+            await save((items) => {
+              const duplicate = items.find(
+                (item) =>
+                  item.source?.taskId === body.taskId &&
+                  item.endpoint.binding === endpoint.public.binding,
+              );
+              if (duplicate) {
+                favorite = duplicate;
+                return items;
+              }
+              return [...items, favorite];
+            });
+            send(res, 201, favorite);
+            return;
+          }
           const parameters = record(body.parameters);
           if ("requestId" in parameters || typeof parameters.type !== "string")
             reject(400, "invalid_parameters", "收藏应为去掉生成身份的原参数。");

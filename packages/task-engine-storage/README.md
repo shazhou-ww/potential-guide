@@ -42,4 +42,9 @@ retained Task; after the full reference graph is explicitly forgotten, new Tasks
 recover from events after the floor. Directory pagination views are deliberately
 process-local and do not survive restart.
 
+The Execution directory uses the existing authoritative `Facts.executions`
+projection persisted by both stores. No new SQLite table/index or schema
+migration is needed. A fresh query after reopen sees recovered records;
+old process-local Execution cursors expire rather than being reconstructed.
+
 See [the engine guide](../../docs/task-engine.md).

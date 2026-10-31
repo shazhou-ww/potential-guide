@@ -147,7 +147,15 @@ export interface Caller {
   scope: string;
   subject: string;
 }
-export type Operation = "submit" | "request" | "task" | "cancel" | "history" | "subscribe" | "list";
+export type Operation =
+  | "submit"
+  | "request"
+  | "task"
+  | "cancel"
+  | "history"
+  | "subscribe"
+  | "list"
+  | "list-executions";
 export type Authorize = (caller: Caller, operation: Operation, scope: string) => boolean;
 export interface PreparationOptions {
   signal: AbortSignal;
@@ -227,6 +235,7 @@ export interface Subscription {
 }
 export interface TaskQuery {
   type?: string;
+  executionId?: string;
   createdFrom?: string;
   createdBefore?: string;
   updatedFrom?: string;
@@ -257,6 +266,34 @@ export interface TaskPage {
   expiresAt: string;
   next?: string;
 }
+export interface ExecutionQuery {
+  type?: string;
+  startedFrom?: string;
+  startedBefore?: string;
+  sort?: "started-desc";
+}
+export interface ExecutionSummary {
+  executionId: string;
+  type: string;
+  version: string;
+  startedAt: string;
+  completedAt?: string;
+  failedAt?: string;
+  reclaimedAt?: string;
+  state: {
+    running: boolean;
+    completed: boolean;
+    failed: boolean;
+    reclaimed: boolean;
+    sealed: boolean;
+  };
+}
+export interface ExecutionPage {
+  executions: ExecutionSummary[];
+  observedAt: string;
+  expiresAt: string;
+  next?: string;
+}
 export interface TaskService {
   discoverTypes(caller: Caller): readonly TaskTypeDiscovery[];
   submit(request: unknown, caller: Caller, options?: SubmitOptions): TaskSnapshot;
@@ -264,6 +301,11 @@ export interface TaskService {
   getTask(taskId: string, caller: Caller): TaskSnapshot;
   cancelTask(taskId: string, caller: Caller): TaskSnapshot;
   listTasks(query: TaskQuery, page: { cursor?: string; limit?: number }, caller: Caller): TaskPage;
+  listExecutions(
+    query: ExecutionQuery,
+    page: { cursor?: string; limit?: number },
+    caller: Caller,
+  ): ExecutionPage;
   readHistory(
     filter: HistoryFilter,
     page: { cursor?: string; limit?: number },
