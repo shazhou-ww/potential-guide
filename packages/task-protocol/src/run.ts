@@ -41,6 +41,12 @@ export interface TaskType<Input = Json, Result = Json, Message extends Json = ne
   messageSchema: JsonSchema;
   run(input: Input, context: RunContext<Message>): Promise<Result>;
 }
+export interface RunResourceContext {
+  runId: string;
+  scope: string;
+  signal: AbortSignal;
+  workerGeneration: string;
+}
 export interface TypeWorkerRegistration {
   type: string;
   version: string;
@@ -55,13 +61,12 @@ export interface TypeWorkerRegistration {
   verifyExportName?: string;
   allocationLimit?: number;
   /** 宿主实际资源动作，不是插件生命周期 hook；不会序列化进 Worker。 */
-  resources?: Readonly<
-    Record<
-      string,
-      (value: Json, context: { runId: string; scope: string; signal: AbortSignal }) => Promise<Json>
-    >
-  >;
+  resources?: Readonly<Record<string, (value: Json, context: RunResourceContext) => Promise<Json>>>;
   cleanupActions?: readonly string[];
+  /** 宿主明确声明所有资源动作仅在请求期间存活；否则必须提供独立清理证明。 */
+  resourceLifetime?: "request";
+  /** 有跨请求存活资源的宿主适配器必须提供清理证明，不序列化进类型 Worker。 */
+  confirmResourceRelease?(context: RunResourceContext): Promise<void>;
 }
 export function validateRunProgress(value: unknown, maxBytes = 65_536): RunProgress & JsonObject {
   const parsed = json(value, maxBytes);

@@ -52,6 +52,10 @@ percent 必须有限且在 0–100，缺失表示未知，允许阶段切换和�
 checkpoint 不恢复调用栈、不授权重跑，不能冒充最终结果。输出按 Run 串行且有界。
 最终 Result 与历史证据由原类型 Worker 的 `verifyExportName` 例程复验；
 例程必须纯验证，不允许借用活动资源能力。同步查询读取已经复验的持久事实。
+成功与 `RunFailure.result` 都执行相同的 terminal 业务复验，
+checkpoint 也验证返回值不可改写。复验前固定原内容，拒绝返回不同内容及原地改写。
+失败证据被拒绝时不保存/公开该 Result，但保留原业务错误和清理未知语义；
+合法失败 Result 保留并在恢复时按原类型再次复验，不用删除全部失败证据回避校验。
 
 Check 最终成功为 `{result, evidence:{prepared, execution, businessProgress}}`；
 Probe 保留 observation、references、operations，并在 evidence 中包含 prepared 和 parentRunId。
@@ -73,6 +77,25 @@ accepted 表示接纳决定，不保证实际消耗，跨 Crash 不承诺 exactl
 
 当前没有通用 Regulator TaskType 注册。本通道不实现新的 Regulate 记账系统；
 治理消费者须自行定义贡献、未使用投入撤回及效果证明，不能拼接权限或覆盖共享需求目标。
+
+## 宿主资源回收证明
+
+类型发出 released 只关闭新消息/动作路由，不直接成为物理回收事实。
+宿主按 Run/Worker 代际跟踪已经启动的资源请求，要求它们结束后才处理回收证明；
+插件没有 await 的请求同样计入。取消使资源 signal 中止，但中止信号不证明动作已经结束。
+旧代际请求保留唯一跟踪 token 和容量占用，迟到 finally 不会删除新代际同数字 ID 的请求。
+
+资源动作的可信 `RunResourceContext` 包含 runId/scope/signal/workerGeneration。
+只有宿主明确保证所有动作仅在请求期间存活，才能声明 `resourceLifetime: "request"`；
+否则必须提供 `confirmResourceRelease(context)`，缺少声明/证明明确拒绝注册。
+回调返回 Json/资源句柄不证明所有外部副作用消失。拥有跨请求资源的适配器必须证明
+实际 owner/句柄已经释放；Probe 的宿主桥独立等待其子需求物理释放，并按 Run/代际隔离所有权。
+该回调是可信资源适配器的证明，不是恢复动态 TaskType 的通用生命周期 hook，不传入 Worker。
+
+资源请求及证明等待受 Supervisor 的 healthMs 限制；超时、证明拒绝或失联保持
+reclamation_unknown，不报告 reclaimed，也不自动重跑。已启动但未结束的请求/证明继续占用
+有界容量，close 明确失败而非无限等待；它们迟到结束不会复活旧回收状态。
+请求结束只满足请求级生命周期约定，不承诺撤销任意 OS/网络副作用。
 
 ## 授权目录与查询
 

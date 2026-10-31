@@ -1,5 +1,10 @@
 # @potential-guide/task-protocol
 
+可信宿主资源声明采用 `resourceLifetime: "request"`，或提供独立
+`confirmResourceRelease(RunResourceContext)` 证明跨请求 owner/句柄已释放。
+上下文包含可信 workerGeneration；这些宿主函数不进入类型 Worker。
+失败 Result 与成功 Result 一样经纯 terminal 业务复验，不能改写或在恢复前放宽。
+
 通用 Task/完整 Run 的 JSON、schema、请求、事件、Store 与服务边界。
 TaskType 仅声明 type/version/inputSchema/resultSchema/messageSchema 和完整 run 入口；
 Host 用 RegisteredType 本地模块描述注册，不传动态函数对象给 Engine。

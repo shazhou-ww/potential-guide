@@ -1,5 +1,9 @@
 # @potential-guide/probe-task
 
+宿主资源桥按 Run/Worker 代际记录子需求所有权，`confirmResourceRelease` 独立等待
+取消后的子需求物理释放。child-submit 返回句柄、类型发送 released 或 callback 返回，
+都不能替代这项证明；旧代际 dispose 不影响新代际所有权。
+
 `createProbeTaskType(options)` 是静态 Host 注册工厂。类型守护负责完整 Run；
 观察业务 Worker 保持独立，Child Task 通过最小、可信、按 Run 所有权限制的资源桥访问服务。
 Caller/scope、Check 环境、容量及 Source 权限来自 Host，不从 Input 或消息拼接。

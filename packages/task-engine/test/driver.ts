@@ -51,6 +51,10 @@ export function createFixtureEngine(
         ...(fixture.resources ? { resources: fixture.resources } : {}),
         ...(fixture.verifyExportName ? { verifyExportName: fixture.verifyExportName } : {}),
         ...(fixture.cleanupActions ? { cleanupActions: fixture.cleanupActions } : {}),
+        ...(fixture.resourceLifetime ? { resourceLifetime: fixture.resourceLifetime } : {}),
+        ...(fixture.confirmResourceRelease
+          ? { confirmResourceRelease: fixture.confirmResourceRelease }
+          : {}),
         ...(fixture.allocationLimit === undefined
           ? {}
           : { allocationLimit: fixture.allocationLimit }),
@@ -67,6 +71,7 @@ export function createFixtureEngine(
       module: new URL("./fixture-worker.mjs", import.meta.url).href,
       exportName: "createFixture",
       configuration: { type: local.type, version: local.version, inputSchema: local.inputSchema },
+      resourceLifetime: "request",
       resources: {
         async "fixture-prepare"(input, context) {
           const operation = local.prepare(input, {

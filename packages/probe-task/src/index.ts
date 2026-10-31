@@ -12,6 +12,7 @@ import {
   object,
   positive,
   type RegisteredType,
+  type RunResourceContext,
   TaskError,
   type TaskService,
 } from "@potential-guide/task-protocol";
@@ -58,20 +59,24 @@ export function createProbeTaskType(
       .digest("hex"),
     configuration: json(configuration),
   });
-  const owned = new Map<string, { ids: Set<string>; active: Set<string> }>();
-  const portFor = (context: { runId: string; scope: string; signal: AbortSignal }) => {
+  const owned = new Map<
+    string,
+    { ids: Set<string>; active: Set<string>; cleanup: Set<Promise<void>> }
+  >();
+  const ownerKey = (context: RunResourceContext) => `${context.workerGeneration}\0${context.runId}`;
+  const portFor = (context: RunResourceContext) => {
     const port = options.children(context.scope);
     if (port.caller.scope !== context.scope || !port.caller.subject)
       throw new TaskError("forbidden", "子需求权限必须保留父 scope。");
-    let state = owned.get(context.runId);
+    let state = owned.get(ownerKey(context));
     if (!state) {
-      state = { ids: new Set(), active: new Set() };
-      owned.set(context.runId, state);
+      state = { ids: new Set(), active: new Set(), cleanup: new Set() };
+      owned.set(ownerKey(context), state);
       context.signal.addEventListener(
         "abort",
         () => {
           for (const id of state!.active) {
-            void Promise.resolve()
+            const operation = Promise.resolve()
               .then(async () => {
                 try {
                   await port.service.cancelTask(id, port.caller);
@@ -81,7 +86,9 @@ export function createProbeTaskType(
                 await port.waitForTaskRelease(id, port.caller);
                 state!.active.delete(id);
               })
-              .catch(() => {});
+              .finally(() => state!.cleanup.delete(operation));
+            state!.cleanup.add(operation);
+            void operation.catch(() => {});
           }
         },
         { once: true },
@@ -89,10 +96,7 @@ export function createProbeTaskType(
     }
     return { port, ids: state.ids, active: state.active };
   };
-  const ownedTask = (
-    value: unknown,
-    context: { runId: string; scope: string; signal: AbortSignal },
-  ) => {
+  const ownedTask = (value: unknown, context: RunResourceContext) => {
     const id = String(object(value).taskId);
     const { port, ids, active } = portFor(context);
     if (!ids.has(id)) throw new TaskError("forbidden", "子需求不属于当前 Run。");
@@ -111,6 +115,14 @@ export function createProbeTaskType(
     verifyExportName: "verifyIsolatedProbe",
     configuration: json(configuration),
     cleanupActions: ["child-cancel", "child-release", "run-dispose"],
+    async confirmResourceRelease(context) {
+      const state = owned.get(ownerKey(context));
+      if (!state) return;
+      await Promise.all(state.cleanup);
+      if (state.active.size)
+        throw new TaskError("reclamation_unknown", "父 Run 的子需求物理回收尚未确认。");
+      owned.delete(ownerKey(context));
+    },
     resources: {
       async authorize(value, context) {
         const reference = value as unknown as ArtifactReference;
@@ -168,10 +180,10 @@ export function createProbeTaskType(
         return null;
       },
       async "run-dispose"(_value, context) {
-        const state = owned.get(context.runId);
+        const state = owned.get(ownerKey(context));
         if (state?.active.size)
           throw new TaskError("reclamation_unknown", "子需求所有权尚未释放。");
-        owned.delete(context.runId);
+        owned.delete(ownerKey(context));
         return null;
       },
     },

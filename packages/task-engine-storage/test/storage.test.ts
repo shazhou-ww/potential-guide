@@ -30,6 +30,7 @@ function type(): RegisteredType {
     module: new URL("./crash-worker.mjs", import.meta.url).href,
     exportName: "createType",
     configuration: {},
+    resourceLifetime: "request",
     resources: {
       async effect() {
         throw new Error("Recovered started work must not rerun.");

@@ -47,6 +47,7 @@ for (const boundary of ["before", "after"]) {
       module: new URL("./crash-worker.mjs", import.meta.url).href,
       exportName: "createType",
       configuration: {},
+      resourceLifetime: "request",
       resources: {
         async effect() {
           starts++;

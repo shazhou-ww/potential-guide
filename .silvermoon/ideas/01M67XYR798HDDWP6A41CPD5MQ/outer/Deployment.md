@@ -5,6 +5,8 @@
 实施使用 SQLite/Facts v3；外部服务必须选择新的数据库路径，旧库只读拒绝，
 不迁移、覆盖或删除现有用户数据。消费制品必须包含编译后的 Node 类型守护模块，
 使用新 Result/evidence 与 matchPolicy/Run 字段；不能把旧脚本的成功形状当作兼容 fallback。
+自定义宿主资源注册必须明确声明请求级 resourceLifetime，或提供跨请求所有权的独立
+confirmResourceRelease；动作上下文使用可信 workerGeneration，不把 callback 返回当所有句柄已释放。
 
 ## Steps
 

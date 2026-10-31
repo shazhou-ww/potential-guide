@@ -211,6 +211,9 @@ export class TaskEngine implements TaskService {
         new TypeSupervisor(
           {
             ...type,
+            ...(Object.keys(type.resources ?? {}).length === 0
+              ? { resourceLifetime: "request" as const }
+              : {}),
             resources: {
               ...type.resources,
               identity: async (_value, context) => {
@@ -291,12 +294,19 @@ export class TaskEngine implements TaskService {
             },
             lost: (ids, error) => {
               for (const id of ids) {
-                const run = this.view.facts.runs[id];
-                if (run) {
-                  this.reportFailure(run, error);
-                  this.cleanupUnknown(id, error.message);
+                try {
+                  const run = this.view.facts.runs[id];
+                  if (run) {
+                    this.reportFailure(run, error);
+                    this.cleanupUnknown(id, error.message);
+                  }
+                } catch (failure) {
+                  this.diagnostic(failure, "cleanup_commit_failed");
+                } finally {
+                  this.releases
+                    .get(id)
+                    ?.reject(new TaskError("reclamation_unknown", error.message));
                 }
-                this.releases.get(id)?.reject(new TaskError("reclamation_unknown", error.message));
               }
             },
           },

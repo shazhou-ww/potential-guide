@@ -45,3 +45,18 @@ checkpoint 走独立 `run.evidence` 事实，不是 Progress，不恢复函数�
 此实现不添加 Regulate 记账系统、不拼接 Agent 授权、不延长 Task deadline，
 不通过消息修改原 Input 或共享需求目标。业务消费者若需要目标修订，必须使用新 Task
 或未来明确的需求修订协议；不能靠本通用通道静默绕过原 Input 兼容性。
+
+## R01/R02 的证据与资源证明收敛
+
+成功/失败 Result 和 checkpoint 采用同一纯复验函数，固定验证前的 canonical 内容；
+拒绝返回不同对象内容或原地改写。无效失败结果不穿过隔离边界，合法失败结果仍保留，
+RunFailure 原错误与清理 unknown 不被复验拒绝覆盖。
+
+宿主资源上下文增加可信 workerGeneration。唯一 token 跟踪已启动请求，
+lose 不清空尚未结束的动作；Run/代际上下文身份判断拒绝旧 finally/证明改变新状态。
+released 先关闭新路由，等待动作结束及宿主确认，不依赖插件自觉 await。
+仅明确声明 resourceLifetime=request 的 Host 动作能以请求结束证明其请求级资源释放；
+否则必须提供 confirmResourceRelease，跨请求句柄/owner 的实际清理仍由适配器证明。
+Probe 宿主桥按 Run/代际保存子需求所有权与 cancel/release 等待。
+等待以 healthMs 为界，超时/拒绝/失联只报告未知；未结束动作和证明仍占有界容量，
+close 明确拒绝，迟到完成不复活旧回收。

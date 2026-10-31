@@ -121,6 +121,18 @@ const resultContract = compileJsonSchema(type.resultSchema, {
 const messageContract = compileJsonSchema(type.messageSchema, {
   maxInputBytes: config.maxPayloadBytes,
 });
+async function verifyResult(value: unknown, mode: string): Promise<Json> {
+  const result = resultContract.validate(value);
+  if (config.verifyExportName) {
+    const expected = canonical(result);
+    const verified = await invocation.run("verify", () =>
+      module[config.verifyExportName!](config.configuration, result, mode),
+    );
+    if (canonical(verified) !== expected || canonical(result) !== expected)
+      throw new Error("业务复验不得改写 Result。");
+  }
+  return result;
+}
 port.postMessage({
   generation: config.generation,
   kind: "ready",
@@ -288,10 +300,7 @@ port.on("message", (message) => {
       run.queued++;
       const operation = run.output
         .then(async () => {
-          if (config.verifyExportName)
-            await invocation.run("verify", () =>
-              module[config.verifyExportName!](config.configuration, parsed, "checkpoint"),
-            );
+          await verifyResult(parsed, "checkpoint");
           await request(message.runId, "checkpoint", parsed);
         })
         .finally(() => {
@@ -304,6 +313,7 @@ port.on("message", (message) => {
   });
   capabilities.set(context, message.runId);
   let finalized = false;
+  let cleanupUncertain = false;
   void Promise.resolve()
     .then(() =>
       invocation.run("run", () => type.run(inputContract.validate(message.input), context)),
@@ -312,29 +322,30 @@ port.on("message", (message) => {
       async (value) => {
         run.finishing = true;
         await run.output;
-        const result = resultContract.validate(value);
-        if (config.verifyExportName) {
-          const verified = await invocation.run("verify", () =>
-            module[config.verifyExportName!](config.configuration, result, "terminal"),
-          );
-          if (canonical(verified) !== canonical(result))
-            throw new Error("业务复验不得改写 Result。");
-        }
+        const result = await verifyResult(value, "terminal");
         await request(message.runId, "complete", result);
         finalized = true;
       },
       async (error) => {
         run.finishing = true;
         await run.output.catch(() => {});
+        cleanupUncertain =
+          error instanceof TaskError &&
+          ["reclamation_failed", "reclamation_unknown"].includes(error.code);
+        let result: Json | undefined;
+        if (error instanceof RunFailure) {
+          try {
+            result = await verifyResult(error.result, "terminal");
+          } catch {
+            // 被拒绝的证据不越过隔离边界；原业务错误及清理未知事实仍保留。
+          }
+        }
         await request(message.runId, "failed", {
           code: error instanceof TaskError ? error.code : "run_failed",
           message: error instanceof Error ? error.message : "类型运行失败。",
-          ...(error instanceof RunFailure ? { result: resultContract.validate(error.result) } : {}),
+          ...(result === undefined ? {} : { result }),
         });
-        finalized = !(
-          error instanceof TaskError &&
-          ["reclamation_failed", "reclamation_unknown"].includes(error.code)
-        );
+        finalized = !cleanupUncertain;
       },
     )
     .catch(async (error) => {
@@ -343,7 +354,7 @@ port.on("message", (message) => {
           code: "run_outcome_unknown",
           message: error instanceof Error ? error.message : "最终确认失败。",
         });
-        finalized = true;
+        finalized = !cleanupUncertain;
       } catch {
         finalized = false;
       }

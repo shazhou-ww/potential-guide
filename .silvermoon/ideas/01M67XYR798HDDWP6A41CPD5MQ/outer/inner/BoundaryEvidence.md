@@ -144,3 +144,31 @@ accepted ideal 的 Git tree 仍为 `2a35f74813b38242f3f2331feaf50d698174acd8`。
 
 本候选只提交完整实现及证据；实施验收仍由父代理监督，未记录 acceptInner/acceptOuter，
 未执行部署或 npm 发布。
+
+## 父代理 R01/R02 审查修正
+
+父代理在上一候选独立复现失败 Result 绕过业务复验、宿主资源动作未结束就确认回收；
+尚未接受实施。完整审查原文与本轮结果见 [SupervisorReview.md](./SupervisorReview.md)，
+此前通过命令保留为历史，不声称它们已经覆盖父代理的新复现。
+
+本轮统一成功/失败/checkpoint 的纯业务验证，复验前固定内容并拒绝原地改写；
+合法失败证据和原业务错误/清理未知保留，无效失败 Result 不持久化或公开。
+宿主按 Run/Worker 代际保存唯一在途 token，released 先关闭路由，再等待动作及独立清理证明。
+取消、lost、重启、相同数字 ID、迟到 finally/证明都不伪造回收；
+超过 healthMs 或证明失败时保持 unknown，close 明确拒绝，不无限等待。
+资源生命周期必须由 Host 明确声明，未声明且无证明的注册被拒绝；
+Probe 的真实子需求资源桥按 Run/代际保留清理证明，callback 返回不等于释放句柄。
+
+可复验关键入口：
+
+- `packages/task-engine/test/supervisor-review.test.ts`：失败证据拒绝/合法保存/损坏恢复、
+  原地改写、原错误及未知清理；未等待资源、取消、Engine 回收屏障、代际同 ID、
+  超时与关闭、资源句柄及证明拒绝/迟到。
+- `packages/probe-task/test/resource-release.test.ts`：真实宿主子需求所有权证明、
+  cancel/release 门闩以及旧代际 dispose 不影响新代际。
+- `pnpm --filter @potential-guide/task-engine --filter @potential-guide/check-task --filter @potential-guide/probe-task --filter @potential-guide/task-engine-storage test`
+  退出码 0：117/20/18/26 项通过，日志 `.cache\run-review-packages.log`。
+- 本轮 `pnpm check` 退出码 0，日志 `.cache\run-review-complete-check-2.log`；
+  全部直接消费者及独立 tarball 场景重新验证，没有关闭、放宽或跳过检查。
+
+accepted ideal 不变；本轮只重新提交修正后的实施候选，继续由父代理监督审查。

@@ -32,6 +32,7 @@ function type(resources: RegisteredType["resources"] = {}): RegisteredType {
     exportName: "createType",
     verifyExportName: "verify",
     configuration: {},
+    resourceLifetime: "request",
     resources,
   };
 }
