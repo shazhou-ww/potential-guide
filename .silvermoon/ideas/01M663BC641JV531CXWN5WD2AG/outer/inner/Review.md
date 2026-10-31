@@ -121,3 +121,11 @@
 - 正常交互零 CSP violation，合法 nonce 的 Radix 样式真实生效；原生浏览器反向探针确认无 nonce 的 inline script/style 被阻止。脚本仍 self-only、style-src-attr 为 none，未使用 unsafe-inline/eval。页面前进/后退也实际验证恢复正常，当前 Chrome 按 no-store 重新加载。
 
 结论：未发现剩余 blocking issue，原有功能由回归维护，新布局由实际几何/焦点/CSP验证证明。主 Agent 按受托授权接受随后同步并提交的准确实现 revision；仍以 CLI 事件记录为准，Outer 更新试用服务前还需核验最终构建和数据保留。
+
+## v0.6.1 行内 Glyph 独立复核
+
+候选 `5383e841998346041c8987b5d29d4732c3c59b03` 只显式标记 13 类次级动作，在既有 ActionButton 层集中映射 Lucide glyph 和中文提示。实体名称、主要新建/提交及高风险动作仍有文字；原回调、key、busy、disabled 和防重复机制不变。没有依赖、业务或后端改动；Tooltip 同源 MIT 来源记录完整。
+
+主 Agent 独立运行 UI **48/48**、依赖图 build/typecheck 及完整 `pnpm check`，均通过。另以新建的 Chrome 测试页和独立 UI/收藏副本验证：表格三个动作各一个可见 SVG、完整中文 aria-label、31.5×31.5px 点击区域及 sr-only 原名称；鼠标悬停和键盘 Tab 都显示提示，Enter 打开原详情，编辑图标打开原参数弹窗。新建/提交仍有可见文字；390px 视口无全页溢出，正常操作零 CSP violation，全程没有后端 POST。
+
+结论：该表达细化符合已接受 Ideal 的清爽展示及可访问性要求，无剩余 blocking issue；主 Agent 按原委托接受随后同步并提交的准确实现 revision。试用更新仍仅替换 UI 并保留原数据。
