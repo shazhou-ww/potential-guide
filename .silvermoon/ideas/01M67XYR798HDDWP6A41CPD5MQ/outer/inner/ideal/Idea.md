@@ -17,7 +17,7 @@ Task 表达需求，Execution 承担包含准备的完整尝试；共享资格�
 2. 浮动 URL 不承诺最新内容；匹配原始 Input，实际内容可追溯，需要固定版本时在 Input pin digest。
 3. 去掉通用 TaskType.authorize，保留服务访问、实际资源动作和资源替换边界。
    Worker 按信任边界或真实多线程并行需求切分；Engine、TaskType 与跨信任边界的定制工作
-   不混在同一 Worker。具体安全机制另行定界，不把 Node Worker 等同安全沙箱，
+   不混在同一 Worker，以独立内存状态和最小消息接口避免相互干涉；不要求完整安全沙箱，
    不改变关联 Idea 的生命周期或验收。
 
 ## 验收标准
