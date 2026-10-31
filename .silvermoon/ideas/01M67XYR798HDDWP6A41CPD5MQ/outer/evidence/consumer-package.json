@@ -1,0 +1,18 @@
+{
+  "name": "whole-run-independent-consumer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@potential-guide/check-artifacts": "file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/packs/check-artifacts.tgz",
+    "@potential-guide/check-runtime-files": "file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/packs/check-runtime-files.tgz",
+    "@potential-guide/check-task": "file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/packs/check-task.tgz",
+    "@potential-guide/probe-task": "file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/packs/probe-task.tgz",
+    "@potential-guide/task-engine": "file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/packs/task-engine.tgz",
+    "@potential-guide/task-engine-http": "file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/packs/task-engine-http.tgz",
+    "@potential-guide/task-engine-server": "file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/packs/task-engine-server.tgz",
+    "@potential-guide/task-engine-storage": "file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/packs/task-engine-storage.tgz",
+    "@potential-guide/task-protocol": "file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/packs/task-protocol.tgz"
+  },
+  "packageManager": "pnpm@11.22.0"
+}

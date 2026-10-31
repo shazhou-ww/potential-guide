@@ -1,6 +1,8 @@
 # Deployment
 
-本文件是可调整的外部验证初版，不属于构想验收范围，不授权 npm 发布。
+本文件是本轮外部验证契约，不改变已接受 ideal/inner，不授权 npm 发布。
+已执行运行、失败/重试及制品/事件证据见 [独立消费者验证](./ExternalVerification.md)；
+这些是 Agent 工作证据，不代表 acceptOuter。
 本轮以 Windows x64 / Node 24 的仓库外自有隔离消费目录验证；
 只使用本次真实打包并安装的 tarball、公开入口和自有 loopback HTTP/HTTPS 服务及文件制品。
 验证方案及可复验驱动见 [外部验证方案](./ScenarioPlan.md)；实际结果另行记录，不用单元测试替代部署观察。

@@ -1,0 +1,15 @@
+(node:52056) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"已安装制品身份与 src 隔离","passed":true}
+file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/node_modules/.pnpm/@potential-guide+check-arti_c2051c711b44c72349f4d4da8fe80cc7/node_modules/@potential-guide/check-artifacts/dist/contracts.js:302
+            throw new Error("Embedded Objective Checkers require portable HTTPS sources.");
+                  ^
+
+Error: Embedded Objective Checkers require portable HTTPS sources.
+    at parseObjectiveArtifactManifest (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/node_modules/.pnpm/@potential-guide+check-arti_c2051c711b44c72349f4d4da8fe80cc7/node_modules/@potential-guide/check-artifacts/dist/contracts.js:302:19)
+    at inspectContractFiles (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/node_modules/.pnpm/@potential-guide+check-arti_c2051c711b44c72349f4d4da8fe80cc7/node_modules/@potential-guide/check-artifacts/dist/contracts.js:491:11)
+    at writeContractArtifact (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/node_modules/.pnpm/@potential-guide+check-arti_c2051c711b44c72349f4d4da8fe80cc7/node_modules/@potential-guide/check-artifacts/dist/contract-build.js:44:23)
+    at bundles (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer-lib.mjs:55:29)
+    at async file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:59:21
+
+Node.js v24.12.0

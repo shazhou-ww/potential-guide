@@ -1,0 +1,29 @@
+(node:5908) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"已安装制品身份与 src 隔离","passed":true}
+{"name":"Check 准备中需求与浮动 URL 固定旧内容","passed":true}
+{"name":"Probe 准备中需求与浮动 Objective 固定旧 root/Checker","passed":true}
+{"name":"精确 digest 与错误 pin 边界","passed":true}
+{"name":"可信 scope/source 拒绝、Never 但 Cancel 可用","passed":true}
+{"name":"业务消息幂等、目标拒绝、共享投入撤回及 deadline 不续期","passed":false,"error":"AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n409 !== 202\n"}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+409 !== 202
+
+    at file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:170:12
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async scenario (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:19:22)
+    at async file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:163:3 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 409,
+  expected: 202,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.12.0

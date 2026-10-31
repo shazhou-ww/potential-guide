@@ -1,0 +1,536 @@
+{
+  "startedAt": "2026-10-31T10:11:35.133Z",
+  "node": "v24.12.0",
+  "platform": "win32",
+  "architecture": "x64",
+  "consumer": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ",
+  "root": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\runs\\attempt-02",
+  "cases": [
+    {
+      "name": "已安装制品身份与 src 隔离",
+      "passed": true,
+      "evidence": {
+        "installed": [
+          {
+            "name": "task-protocol",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+task-protocol@file+packs+task-protocol.tgz\\node_modules\\@potential-guide\\task-protocol\\dist\\index.js",
+            "sha256": "c987ada1afb40370d59cbb9ae6a71dd6dcc0e228792b022ef889eb4aaea5fe22"
+          },
+          {
+            "name": "task-engine",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+task-engine@file+packs+task-engine.tgz\\node_modules\\@potential-guide\\task-engine\\dist\\index.js",
+            "sha256": "cd50485772db48aab3de1620a3f9101bba825837ffb5e21c17134a967ee40dfe"
+          },
+          {
+            "name": "task-engine-storage",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+task-engin_c765f5a48d4b074e1555e693874449b3\\node_modules\\@potential-guide\\task-engine-storage\\dist\\index.js",
+            "sha256": "f9cd963b7fc1c45e06e6317cbaf460e901c57a5ca94da9a3f8f2a57f8d31d2bc"
+          },
+          {
+            "name": "task-engine-http",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+task-engin_755d39c7bca9d7c780fe9eba17ad66c9\\node_modules\\@potential-guide\\task-engine-http\\dist\\index.js",
+            "sha256": "8dfee35a95c1028044f271efd66287208a38ec33460ebeb823d08b7064511e26"
+          },
+          {
+            "name": "task-engine-server",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+task-engin_c26a3271cdbeebdaea23f84e01c51267\\node_modules\\@potential-guide\\task-engine-server\\dist\\index.js",
+            "sha256": "5e9788a21578b132eb22bb34c0d932d2aeab89c41ebacfb01a2c7d2f8ae378df"
+          },
+          {
+            "name": "check-artifacts",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+check-arti_c2051c711b44c72349f4d4da8fe80cc7\\node_modules\\@potential-guide\\check-artifacts\\dist\\index.js",
+            "sha256": "96e5d9b8dd7283cfb8f3b25fe0ea39c78d8f06b638ab860046af941e191501e2"
+          },
+          {
+            "name": "check-runtime-files",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+check-runt_18b39baa31ea546b40bec651052e1b67\\node_modules\\@potential-guide\\check-runtime-files\\dist\\index.js",
+            "sha256": "5d19e4b20059ca1a0a3279e6e1459e8e4075e8c0da91cac22ac59898041fe630"
+          },
+          {
+            "name": "check-task",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+check-task@file+packs+check-task.tgz\\node_modules\\@potential-guide\\check-task\\dist\\index.js",
+            "sha256": "4cb7dd360a8158bd704bd18c230e1d42f61faa1d42628d0c0e11cbd2b306fa69"
+          },
+          {
+            "name": "probe-task",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+probe-task@file+packs+probe-task.tgz\\node_modules\\@potential-guide\\probe-task\\dist\\index.js",
+            "sha256": "388366b8e514348706020ac648cc4b63026cc25ff8a7b15bd23cb697ca2b0036"
+          }
+        ],
+        "manifest": {
+          "acceptedInner": "951ad824149d9337da031a280196e4986b71395d",
+          "codeCommit": "19874fc75002a804cdb17ef51bfbc5c786bd4a8b",
+          "contractCommit": "d7fe9efe78ee59969e90639b19a1a20f0fbf8cfe",
+          "contractRevision": "81348b04c4f1e2df9abe45fa28028f508ec70930",
+          "consumer": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ",
+          "artifacts": [
+            {
+              "name": "@potential-guide/check-task",
+              "version": "0.1.0-rc.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\check-task.tgz",
+              "bytes": 20705,
+              "sha256": "64a4efc016451415d3d4696bc2ef8f84fdf74af460200d03b9bf4267b8a966e4"
+            },
+            {
+              "name": "@potential-guide/probe-task",
+              "version": "0.1.0-rc.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\probe-task.tgz",
+              "bytes": 23661,
+              "sha256": "21f69076c30a9f9fb7d6c274e2964ede28c6dae7ecf40d2f8375148b0a3e5fcd"
+            },
+            {
+              "name": "@potential-guide/task-engine-server",
+              "version": "0.1.0-rc.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-engine-server.tgz",
+              "bytes": 8934,
+              "sha256": "27477850115e903bf9f414da670b251be6834763baa4b1fab7acd42ffc7ad175"
+            },
+            {
+              "name": "@potential-guide/check-artifacts",
+              "version": "0.1.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\check-artifacts.tgz",
+              "bytes": 49357,
+              "sha256": "4f0f80ea782e0707486f1411eea1c446b5b4ce9fd163b9bab87e1e54f4afe58a"
+            },
+            {
+              "name": "@potential-guide/check-runtime-files",
+              "version": "0.1.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\check-runtime-files.tgz",
+              "bytes": 31325,
+              "sha256": "89ec7ad05f53972f8624b15586251016c9a78bf14ac0574283e59b1be2c4a32a"
+            },
+            {
+              "name": "@potential-guide/task-protocol",
+              "version": "0.1.0-rc.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-protocol.tgz",
+              "bytes": 25493,
+              "sha256": "e3446fd0b0b9067c9787445a056f45e14e8563c4f1f3e42f3160f046d6638747"
+            },
+            {
+              "name": "@potential-guide/task-engine",
+              "version": "0.1.0-rc.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-engine.tgz",
+              "bytes": 59365,
+              "sha256": "20f9f32ac67ef933ef00c9a906ebba6511414340c23ebae4c7f75f5602473af0"
+            },
+            {
+              "name": "@potential-guide/task-engine-http",
+              "version": "0.1.0-rc.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-engine-http.tgz",
+              "bytes": 8093,
+              "sha256": "ffb4bcbbe5d1a7b40e179734ab3dca4ab6450562c744527c484247478afae9c1"
+            },
+            {
+              "name": "@potential-guide/task-engine-storage",
+              "version": "0.1.0-rc.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-engine-storage.tgz",
+              "bytes": 8839,
+              "sha256": "69a3e6580315010a838e771514556cfdbf3cb21626a301f28d9f09b04ef88605"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Check 准备中需求与浮动 URL 固定旧内容",
+      "passed": true,
+      "evidence": {
+        "tasks": [
+          {
+            "requestId": "01M68Q2YBC78GN4QEP3X6FY2MR",
+            "taskId": "01M68Q2YBCB74AZH2Q9HT5YX8R",
+            "seriesId": "01M68Q2YBCB74AZH2Q9HT5YX8R",
+            "stage": "completed",
+            "receivedAt": "2026-10-31T10:11:35.404Z",
+            "eligibleAt": "2026-10-31T10:11:35.404Z",
+            "deadlineAt": "2026-10-31T10:11:45.404Z",
+            "timestamp": "2026-10-31T10:11:36.224Z",
+            "run": {
+              "runId": "01M68Q2YBN4ACTXD9JDTWXA61T",
+              "startedAt": "2026-10-31T10:11:35.413Z",
+              "matchedAt": "2026-10-31T10:11:35.413Z",
+              "completedAt": "2026-10-31T10:11:36.218Z"
+            },
+            "termination": {
+              "terminatedAt": "2026-10-31T10:11:36.218Z"
+            },
+            "result": {
+              "result": {
+                "ok": false,
+                "problems": [
+                  {
+                    "kind": "internal",
+                    "id": "version",
+                    "parameters": {
+                      "version": "v1"
+                    }
+                  }
+                ]
+              },
+              "evidence": {
+                "prepared": {
+                  "input": {
+                    "checker": {
+                      "kind": "checker",
+                      "url": "https://127.0.0.1:56582/checker.tgz"
+                    },
+                    "subject": {
+                      "case": "check-share"
+                    }
+                  },
+                  "checker": {
+                    "kind": "checker",
+                    "url": "https://127.0.0.1:56582/checker.tgz",
+                    "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+                  },
+                  "files": {
+                    "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MSJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYxIn19XX19fQ==",
+                    "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                    "references/en/checker.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                    "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                  },
+                  "language": "en",
+                  "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"639be9a609914dfce47a996dce063017a886a5de8dbf33f9952ba1cc4fd7df71\",\"architecture\":\"x64\",\"configuration\":\"9cb9cf6a6c62b5f065e0a9a6d11e3bafca368f278a5e375db5be71a5455019c1\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.12.0\"}",
+                  "workerRevision": "75df54c4ef176bc7301a7985023e190fadc4b854a0cf35abff027f537f0d5b3b"
+                },
+                "execution": {
+                  "executionId": "6f872ae1-2b93-46af-a515-4b2914729318",
+                  "startedAt": "2026-10-31T10:11:35.770Z",
+                  "completedAt": "2026-10-31T10:11:36.135Z"
+                },
+                "businessProgress": [
+                  {
+                    "version": "v1"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "requestId": "01M68Q2YJZEDJVVYEGX6WSFMTC",
+            "taskId": "01M68Q2YK0N7XNSCBXEHXGEXBC",
+            "seriesId": "01M68Q2YK0N7XNSCBXEHXGEXBC",
+            "stage": "completed",
+            "receivedAt": "2026-10-31T10:11:35.648Z",
+            "eligibleAt": "2026-10-31T10:11:35.648Z",
+            "deadlineAt": "2026-10-31T10:11:45.648Z",
+            "timestamp": "2026-10-31T10:11:36.224Z",
+            "run": {
+              "runId": "01M68Q2YBN4ACTXD9JDTWXA61T",
+              "startedAt": "2026-10-31T10:11:35.413Z",
+              "matchedAt": "2026-10-31T10:11:36.218Z",
+              "completedAt": "2026-10-31T10:11:36.218Z"
+            },
+            "termination": {
+              "terminatedAt": "2026-10-31T10:11:36.218Z"
+            },
+            "result": {
+              "result": {
+                "ok": false,
+                "problems": [
+                  {
+                    "kind": "internal",
+                    "id": "version",
+                    "parameters": {
+                      "version": "v1"
+                    }
+                  }
+                ]
+              },
+              "evidence": {
+                "prepared": {
+                  "input": {
+                    "checker": {
+                      "kind": "checker",
+                      "url": "https://127.0.0.1:56582/checker.tgz"
+                    },
+                    "subject": {
+                      "case": "check-share"
+                    }
+                  },
+                  "checker": {
+                    "kind": "checker",
+                    "url": "https://127.0.0.1:56582/checker.tgz",
+                    "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+                  },
+                  "files": {
+                    "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MSJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYxIn19XX19fQ==",
+                    "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                    "references/en/checker.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                    "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                  },
+                  "language": "en",
+                  "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"639be9a609914dfce47a996dce063017a886a5de8dbf33f9952ba1cc4fd7df71\",\"architecture\":\"x64\",\"configuration\":\"9cb9cf6a6c62b5f065e0a9a6d11e3bafca368f278a5e375db5be71a5455019c1\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.12.0\"}",
+                  "workerRevision": "75df54c4ef176bc7301a7985023e190fadc4b854a0cf35abff027f537f0d5b3b"
+                },
+                "execution": {
+                  "executionId": "6f872ae1-2b93-46af-a515-4b2914729318",
+                  "startedAt": "2026-10-31T10:11:35.770Z",
+                  "completedAt": "2026-10-31T10:11:36.135Z"
+                },
+                "businessProgress": [
+                  {
+                    "version": "v1"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "sourceReads": [
+          {
+            "reference": {
+              "kind": "checker",
+              "url": "https://127.0.0.1:56582/checker.tgz"
+            },
+            "scope": "a",
+            "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84",
+            "selectedAt": "2026-10-31T10:11:35.628Z"
+          }
+        ],
+        "publicHistory": {
+          "events": [
+            {
+              "type": "run.started",
+              "scope": "a",
+              "runId": "01M68Q2YBN4ACTXD9JDTWXA61T",
+              "occurredAt": "2026-10-31T10:11:35.413Z",
+              "data": {
+                "run": {
+                  "runId": "01M68Q2YBN4ACTXD9JDTWXA61T",
+                  "generation": "01M68Q2YBN5DV8KR67XV9DE6RX",
+                  "binding": {
+                    "type": "check",
+                    "version": "2",
+                    "contractRevision": "09e9eaa75d399fcda264a175e573c5a5c8d6902ad44ecac66e18aed2fc7069b8",
+                    "environment": "{\"architecture\":\"x64\",\"configuration\":\"1d40e3e79e39d1948854912299f9a96a3467a6be665dd7e881e412089bdd5b8e\",\"node\":\"24.12.0\",\"platform\":\"win32\",\"revision\":\"3d98cab914ac791b80fe570dd50ca03f5d08c3a5dab7fc0da0441d508ff68e21\",\"type\":\"check-run-v3\"}",
+                    "scope": "a",
+                    "subject": "fixture",
+                    "matchPolicy": "started-after-eligible"
+                  },
+                  "input": {
+                    "checker": {
+                      "kind": "checker",
+                      "url": "https://127.0.0.1:56582/checker.tgz"
+                    },
+                    "subject": {
+                      "case": "check-share"
+                    }
+                  },
+                  "startedAt": "2026-10-31T10:11:35.413Z",
+                  "startedSequence": 2
+                }
+              },
+              "sequence": 2
+            },
+            {
+              "type": "run.dispatched",
+              "scope": "a",
+              "runId": "01M68Q2YBN4ACTXD9JDTWXA61T",
+              "occurredAt": "2026-10-31T10:11:35.597Z",
+              "data": {
+                "workerGeneration": "acf393e8-ba3e-4be9-913b-b6fb068743af"
+              },
+              "sequence": 4
+            },
+            {
+              "type": "run.progress",
+              "scope": "a",
+              "runId": "01M68Q2YBN4ACTXD9JDTWXA61T",
+              "occurredAt": "2026-10-31T10:11:35.600Z",
+              "data": {
+                "progress": {
+                  "stage": "preparation",
+                  "message": "准备 Checker。"
+                }
+              },
+              "sequence": 5
+            },
+            {
+              "type": "run.evidence",
+              "scope": "a",
+              "runId": "01M68Q2YBN4ACTXD9JDTWXA61T",
+              "occurredAt": "2026-10-31T10:11:35.705Z",
+              "data": {
+                "kind": "checkpoint",
+                "value": {
+                  "kind": "check-prepared",
+                  "prepared": {
+                    "input": {
+                      "checker": {
+                        "kind": "checker",
+                        "url": "https://127.0.0.1:56582/checker.tgz"
+                      },
+                      "subject": {
+                        "case": "check-share"
+                      }
+                    },
+                    "checker": {
+                      "kind": "checker",
+                      "url": "https://127.0.0.1:56582/checker.tgz",
+                      "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+                    },
+                    "files": {
+                      "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MSJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYxIn19XX19fQ==",
+                      "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                      "references/en/checker.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                      "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                    },
+                    "language": "en",
+                    "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"639be9a609914dfce47a996dce063017a886a5de8dbf33f9952ba1cc4fd7df71\",\"architecture\":\"x64\",\"configuration\":\"9cb9cf6a6c62b5f065e0a9a6d11e3bafca368f278a5e375db5be71a5455019c1\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.12.0\"}",
+                    "workerRevision": "75df54c4ef176bc7301a7985023e190fadc4b854a0cf35abff027f537f0d5b3b"
+                  }
+                }
+              },
+              "sequence": 7
+            },
+            {
+              "type": "run.progress",
+              "scope": "a",
+              "runId": "01M68Q2YBN4ACTXD9JDTWXA61T",
+              "occurredAt": "2026-10-31T10:11:35.709Z",
+              "data": {
+                "progress": {
+                  "stage": "allocation",
+                  "message": "等待 Checker 资源。"
+                }
+              },
+              "sequence": 8
+            },
+            {
+              "type": "run.progress",
+              "scope": "a",
+              "runId": "01M68Q2YBN4ACTXD9JDTWXA61T",
+              "occurredAt": "2026-10-31T10:11:35.771Z",
+              "data": {
+                "progress": {
+                  "stage": "execution",
+                  "message": "Checker 实际执行开始。"
+                }
+              },
+              "sequence": 9
+            },
+            {
+              "type": "run.evidence",
+              "scope": "a",
+              "runId": "01M68Q2YBN4ACTXD9JDTWXA61T",
+              "occurredAt": "2026-10-31T10:11:35.779Z",
+              "data": {
+                "kind": "checkpoint",
+                "value": {
+                  "kind": "check-progress",
+                  "progress": {
+                    "version": "v1"
+                  }
+                }
+              },
+              "sequence": 10
+            },
+            {
+              "type": "run.progress",
+              "scope": "a",
+              "runId": "01M68Q2YBN4ACTXD9JDTWXA61T",
+              "occurredAt": "2026-10-31T10:11:35.781Z",
+              "data": {
+                "progress": {
+                  "stage": "execution",
+                  "message": "Checker 上报业务进度。"
+                }
+              },
+              "sequence": 11
+            },
+            {
+              "type": "run.completed",
+              "scope": "a",
+              "runId": "01M68Q2YBN4ACTXD9JDTWXA61T",
+              "occurredAt": "2026-10-31T10:11:36.218Z",
+              "data": {
+                "result": {
+                  "result": {
+                    "ok": false,
+                    "problems": [
+                      {
+                        "kind": "internal",
+                        "id": "version",
+                        "parameters": {
+                          "version": "v1"
+                        }
+                      }
+                    ]
+                  },
+                  "evidence": {
+                    "prepared": {
+                      "input": {
+                        "checker": {
+                          "kind": "checker",
+                          "url": "https://127.0.0.1:56582/checker.tgz"
+                        },
+                        "subject": {
+                          "case": "check-share"
+                        }
+                      },
+                      "checker": {
+                        "kind": "checker",
+                        "url": "https://127.0.0.1:56582/checker.tgz",
+                        "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+                      },
+                      "files": {
+                        "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MSJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYxIn19XX19fQ==",
+                        "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                        "references/en/checker.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                        "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                      },
+                      "language": "en",
+                      "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"639be9a609914dfce47a996dce063017a886a5de8dbf33f9952ba1cc4fd7df71\",\"architecture\":\"x64\",\"configuration\":\"9cb9cf6a6c62b5f065e0a9a6d11e3bafca368f278a5e375db5be71a5455019c1\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.12.0\"}",
+                      "workerRevision": "75df54c4ef176bc7301a7985023e190fadc4b854a0cf35abff027f537f0d5b3b"
+                    },
+                    "execution": {
+                      "executionId": "6f872ae1-2b93-46af-a515-4b2914729318",
+                      "startedAt": "2026-10-31T10:11:35.770Z",
+                      "completedAt": "2026-10-31T10:11:36.135Z"
+                    },
+                    "businessProgress": [
+                      {
+                        "version": "v1"
+                      }
+                    ]
+                  }
+                }
+              },
+              "sequence": 12
+            },
+            {
+              "type": "run.reclaimed",
+              "scope": "a",
+              "runId": "01M68Q2YBN4ACTXD9JDTWXA61T",
+              "occurredAt": "2026-10-31T10:11:36.222Z",
+              "data": {},
+              "sequence": 16
+            }
+          ],
+          "watermark": 16,
+          "cursor": "eyJzdG9yZUlkIjoiNDI5MjRiZmQtNmM3NS00MzdlLThiNjYtY2I5MjIxZjRjNTg0IiwiZmlsdGVyIjoie1wicnVuSWRcIjpcIjAxTTY4UTJZQk40QUNUWEQ5SkRUV1hBNjFUXCJ9Iiwid2F0ZXJtYXJrIjoxNiwicG9zaXRpb24iOjE2LCJtb2RlIjoic3RyZWFtIn0"
+        }
+      }
+    },
+    {
+      "name": "Probe 准备中需求与浮动 Objective 固定旧 root/Checker",
+      "passed": false,
+      "error": "TaskError: Input does not satisfy inputSchema.",
+      "stack": "TaskError: Input does not satisfy inputSchema.\n    at fail (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/node_modules/.pnpm/@potential-guide+task-protocol@file+packs+task-protocol.tgz/node_modules/@potential-guide/task-protocol/dist/json.js:10:11)\n    at Object.validate (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/node_modules/.pnpm/@potential-guide+task-protocol@file+packs+task-protocol.tgz/node_modules/@potential-guide/task-protocol/dist/schema.js:360:17)\n    at TaskEngine.validated (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/node_modules/.pnpm/@potential-guide+task-engine@file+packs+task-engine.tgz/node_modules/@potential-guide/task-engine/dist/engine.js:285:29)\n    at TaskEngine.parse (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/node_modules/.pnpm/@potential-guide+task-engine@file+packs+task-engine.tgz/node_modules/@potential-guide/task-engine/dist/engine.js:365:32)\n    at TaskEngine.submit (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/node_modules/.pnpm/@potential-guide+task-engine@file+packs+task-engine.tgz/node_modules/@potential-guide/task-engine/dist/engine.js:595:27)\n    at submit (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:92:57)\n    at file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:117:19\n    at scenario (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:19:28)\n    at file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:115:9"
+    }
+  ],
+  "https": {
+    "origin": "https://127.0.0.1:56582",
+    "certSha256": "f3b606dde9f23072bc9a87d08fb0e68191c800ff01bf9fdd65d385944aa2bb8d",
+    "requests": [
+      {
+        "at": "2026-10-31T10:11:35.616Z",
+        "bytes": 563,
+        "sha256": "f8870439b766a884dc5b2e992359e1dcd58714e70a97145c13e12241c7580aa7"
+      }
+    ]
+  },
+  "passed": false,
+  "failure": "TaskError: Input does not satisfy inputSchema."
+}

@@ -1,0 +1,72 @@
+{
+  "acceptedInner": "951ad824149d9337da031a280196e4986b71395d",
+  "codeCommit": "19874fc75002a804cdb17ef51bfbc5c786bd4a8b",
+  "contractCommit": "d7fe9efe78ee59969e90639b19a1a20f0fbf8cfe",
+  "contractRevision": "81348b04c4f1e2df9abe45fa28028f508ec70930",
+  "consumer": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ",
+  "artifacts": [
+    {
+      "name": "@potential-guide/check-task",
+      "version": "0.1.0-rc.0",
+      "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\check-task.tgz",
+      "bytes": 20705,
+      "sha256": "64a4efc016451415d3d4696bc2ef8f84fdf74af460200d03b9bf4267b8a966e4"
+    },
+    {
+      "name": "@potential-guide/probe-task",
+      "version": "0.1.0-rc.0",
+      "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\probe-task.tgz",
+      "bytes": 23661,
+      "sha256": "21f69076c30a9f9fb7d6c274e2964ede28c6dae7ecf40d2f8375148b0a3e5fcd"
+    },
+    {
+      "name": "@potential-guide/task-engine-server",
+      "version": "0.1.0-rc.0",
+      "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-engine-server.tgz",
+      "bytes": 8934,
+      "sha256": "27477850115e903bf9f414da670b251be6834763baa4b1fab7acd42ffc7ad175"
+    },
+    {
+      "name": "@potential-guide/check-artifacts",
+      "version": "0.1.0",
+      "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\check-artifacts.tgz",
+      "bytes": 49357,
+      "sha256": "4f0f80ea782e0707486f1411eea1c446b5b4ce9fd163b9bab87e1e54f4afe58a"
+    },
+    {
+      "name": "@potential-guide/check-runtime-files",
+      "version": "0.1.0",
+      "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\check-runtime-files.tgz",
+      "bytes": 31325,
+      "sha256": "89ec7ad05f53972f8624b15586251016c9a78bf14ac0574283e59b1be2c4a32a"
+    },
+    {
+      "name": "@potential-guide/task-protocol",
+      "version": "0.1.0-rc.0",
+      "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-protocol.tgz",
+      "bytes": 25493,
+      "sha256": "e3446fd0b0b9067c9787445a056f45e14e8563c4f1f3e42f3160f046d6638747"
+    },
+    {
+      "name": "@potential-guide/task-engine",
+      "version": "0.1.0-rc.0",
+      "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-engine.tgz",
+      "bytes": 59365,
+      "sha256": "20f9f32ac67ef933ef00c9a906ebba6511414340c23ebae4c7f75f5602473af0"
+    },
+    {
+      "name": "@potential-guide/task-engine-http",
+      "version": "0.1.0-rc.0",
+      "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-engine-http.tgz",
+      "bytes": 8093,
+      "sha256": "ffb4bcbbe5d1a7b40e179734ab3dca4ab6450562c744527c484247478afae9c1"
+    },
+    {
+      "name": "@potential-guide/task-engine-storage",
+      "version": "0.1.0-rc.0",
+      "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-engine-storage.tgz",
+      "bytes": 8839,
+      "sha256": "69a3e6580315010a838e771514556cfdbf3cb21626a301f28d9f09b04ef88605"
+    }
+  ]
+}

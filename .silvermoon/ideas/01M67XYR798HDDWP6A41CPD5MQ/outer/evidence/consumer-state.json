@@ -1,0 +1,104 @@
+{
+  "verificationContractCommit": "22b575f49c885108ff34f76c04e89fcc292913a0",
+  "verificationContractRevision": "1912321f02627afc798cbfa439d8cf9a674b7c71",
+  "pnpm": "11.22.0",
+  "node": "v24.12.0",
+  "scripts": [
+    {
+      "path": "consumer.mjs",
+      "bytes": 20224,
+      "sha256": "44f849176c5d30d06e923ad19c11443878f9357969cc27e5520231ed5d25fedf"
+    },
+    {
+      "path": "consumer-lib.mjs",
+      "bytes": 6431,
+      "sha256": "5279ea439ced27b4bc5fef72e15c7015c6bd4d6779cf9c63f5b8e40c130164ab"
+    },
+    {
+      "path": "control-type.mjs",
+      "bytes": 1310,
+      "sha256": "847b1f104a704fe241c40198a3347723b9f1b923d8fa2f056099d0d59029a1d8"
+    },
+    {
+      "path": "resource-type.mjs",
+      "bytes": 355,
+      "sha256": "7bc61f84a3bb753f7f7902c0cad83e3aa56c84dd1a556beca29fd4356ccef2d8"
+    },
+    {
+      "path": "fault-type.mjs",
+      "bytes": 925,
+      "sha256": "7437f4491b55229f6ff56b9e4e7041cde8ec8c992dd5f85a33b04d7095f04bb1"
+    },
+    {
+      "path": "fault-child.mjs",
+      "bytes": 1298,
+      "sha256": "ea6b872315d53ed2018ffc9ce6c9ad0dd3a0d766a0a0104a1e48fe5d8ee60d72"
+    },
+    {
+      "path": "restart-child.mjs",
+      "bytes": 1937,
+      "sha256": "d891fbfd310e249383a3acaadd737976c1422d45e0f6e5dcba28c00dcecd01aa"
+    }
+  ],
+  "databases": [
+    {
+      "path": "runs/attempt-05/consumer.sqlite",
+      "bytes": 417792,
+      "sha256": "bf7d3ee5abd0e1324d82f3b246366b827ef8caeb2d24519d6e8e4c26822af18a",
+      "userVersion": 3,
+      "sidecars": [
+        {
+          "path": "runs/attempt-05/consumer.sqlite-wal",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "runs/attempt-05/consumer.sqlite-shm",
+          "bytes": 32768,
+          "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb"
+        }
+      ]
+    },
+    {
+      "path": "runs/attempt-05/history.sqlite",
+      "bytes": 180224,
+      "sha256": "2facf4a008efb5380341a3f61c89c84d9f47da7a36fe8eb626e30acc450a1e5b",
+      "userVersion": 3,
+      "sidecars": [
+        {
+          "path": "runs/attempt-05/history.sqlite-wal",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "runs/attempt-05/history.sqlite-shm",
+          "bytes": 32768,
+          "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb"
+        }
+      ]
+    },
+    {
+      "path": "runs/attempt-05/fault.sqlite",
+      "bytes": 36864,
+      "sha256": "0b16f94d0088624a7bf943d90f5d77cc8085ee10ff2650c9b35543940e8ccf65",
+      "userVersion": 3,
+      "sidecars": [
+        {
+          "path": "runs/attempt-05/fault.sqlite-wal",
+          "bytes": 819912,
+          "sha256": "85a871e96206691e7d17734cb0bdddb08ff28072619da5d5e18e0e4e17c63ca5"
+        },
+        {
+          "path": "runs/attempt-05/fault.sqlite-shm",
+          "bytes": 32768,
+          "sha256": "d2ade39dc9dc2a0c5fd437252deed59ccf464589a4fb22aa0196688caf7f9d25"
+        }
+      ]
+    }
+  ],
+  "lock": {
+    "path": "pnpm-lock.yaml",
+    "bytes": 19129,
+    "sha256": "596e290b3acc2674bb9d46682f563378a65c005d5172ff5d24957cb7ba422fd9"
+  }
+}

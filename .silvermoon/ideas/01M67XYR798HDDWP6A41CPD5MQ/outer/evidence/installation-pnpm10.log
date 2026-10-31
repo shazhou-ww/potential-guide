@@ -1,0 +1,20 @@
+Progress: resolved 0, reused 0, downloaded 1, added 0
+Packages: +23
++++++++++++++++++++++++
+Progress: resolved 48, reused 12, downloaded 9, added 21
+Progress: resolved 48, reused 12, downloaded 10, added 22
+Progress: resolved 48, reused 12, downloaded 11, added 22
+Progress: resolved 48, reused 12, downloaded 11, added 23, done
+
+dependencies:
++ @potential-guide/check-artifacts 0.1.0
++ @potential-guide/check-runtime-files 0.1.0
++ @potential-guide/check-task 0.1.0-rc.0
++ @potential-guide/probe-task 0.1.0-rc.0
++ @potential-guide/task-engine 0.1.0-rc.0
++ @potential-guide/task-engine-http 0.1.0-rc.0
++ @potential-guide/task-engine-server 0.1.0-rc.0
++ @potential-guide/task-engine-storage 0.1.0-rc.0
++ @potential-guide/task-protocol 0.1.0-rc.0
+
+Done in 5.8s using pnpm v10.27.0

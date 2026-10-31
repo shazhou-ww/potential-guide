@@ -1,0 +1,21 @@
+Recreating D:\Code\potential-guide.worktrees\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\node_modules
+? Verifying lockfile against supply-chain policies (48 entries)...
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +23
++++++++++++++++++++++++
+Progress: resolved 23, reused 14, downloaded 9, added 23, done
+
+dependencies:
++ @potential-guide/check-artifacts 0.1.0
++ @potential-guide/check-runtime-files 0.1.0
++ @potential-guide/check-task 0.1.0-rc.0
++ @potential-guide/probe-task 0.1.0-rc.0
++ @potential-guide/task-engine 0.1.0-rc.0
++ @potential-guide/task-engine-http 0.1.0-rc.0
++ @potential-guide/task-engine-server 0.1.0-rc.0
++ @potential-guide/task-engine-storage 0.1.0-rc.0
++ @potential-guide/task-protocol 0.1.0-rc.0
+
+✓ Lockfile passes supply-chain policies (48 entries in 3.4s)
+Done in 3.7s using pnpm v11.22.0

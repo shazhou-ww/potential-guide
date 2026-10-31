@@ -1,0 +1,1664 @@
+{
+  "startedAt": "2026-10-31T10:13:33.631Z",
+  "node": "v24.12.0",
+  "platform": "win32",
+  "architecture": "x64",
+  "consumer": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ",
+  "root": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\runs\\attempt-03",
+  "cases": [
+    {
+      "name": "已安装制品身份与 src 隔离",
+      "passed": true,
+      "evidence": {
+        "installed": [
+          {
+            "name": "task-protocol",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+task-protocol@file+packs+task-protocol.tgz\\node_modules\\@potential-guide\\task-protocol\\dist\\index.js",
+            "sha256": "c987ada1afb40370d59cbb9ae6a71dd6dcc0e228792b022ef889eb4aaea5fe22"
+          },
+          {
+            "name": "task-engine",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+task-engine@file+packs+task-engine.tgz\\node_modules\\@potential-guide\\task-engine\\dist\\index.js",
+            "sha256": "cd50485772db48aab3de1620a3f9101bba825837ffb5e21c17134a967ee40dfe"
+          },
+          {
+            "name": "task-engine-storage",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+task-engin_c765f5a48d4b074e1555e693874449b3\\node_modules\\@potential-guide\\task-engine-storage\\dist\\index.js",
+            "sha256": "f9cd963b7fc1c45e06e6317cbaf460e901c57a5ca94da9a3f8f2a57f8d31d2bc"
+          },
+          {
+            "name": "task-engine-http",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+task-engin_755d39c7bca9d7c780fe9eba17ad66c9\\node_modules\\@potential-guide\\task-engine-http\\dist\\index.js",
+            "sha256": "8dfee35a95c1028044f271efd66287208a38ec33460ebeb823d08b7064511e26"
+          },
+          {
+            "name": "task-engine-server",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+task-engin_c26a3271cdbeebdaea23f84e01c51267\\node_modules\\@potential-guide\\task-engine-server\\dist\\index.js",
+            "sha256": "5e9788a21578b132eb22bb34c0d932d2aeab89c41ebacfb01a2c7d2f8ae378df"
+          },
+          {
+            "name": "check-artifacts",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+check-arti_c2051c711b44c72349f4d4da8fe80cc7\\node_modules\\@potential-guide\\check-artifacts\\dist\\index.js",
+            "sha256": "96e5d9b8dd7283cfb8f3b25fe0ea39c78d8f06b638ab860046af941e191501e2"
+          },
+          {
+            "name": "check-runtime-files",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+check-runt_18b39baa31ea546b40bec651052e1b67\\node_modules\\@potential-guide\\check-runtime-files\\dist\\index.js",
+            "sha256": "5d19e4b20059ca1a0a3279e6e1459e8e4075e8c0da91cac22ac59898041fe630"
+          },
+          {
+            "name": "check-task",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+check-task@file+packs+check-task.tgz\\node_modules\\@potential-guide\\check-task\\dist\\index.js",
+            "sha256": "4cb7dd360a8158bd704bd18c230e1d42f61faa1d42628d0c0e11cbd2b306fa69"
+          },
+          {
+            "name": "probe-task",
+            "entry": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\node_modules\\.pnpm\\@potential-guide+probe-task@file+packs+probe-task.tgz\\node_modules\\@potential-guide\\probe-task\\dist\\index.js",
+            "sha256": "388366b8e514348706020ac648cc4b63026cc25ff8a7b15bd23cb697ca2b0036"
+          }
+        ],
+        "manifest": {
+          "acceptedInner": "951ad824149d9337da031a280196e4986b71395d",
+          "codeCommit": "19874fc75002a804cdb17ef51bfbc5c786bd4a8b",
+          "contractCommit": "d7fe9efe78ee59969e90639b19a1a20f0fbf8cfe",
+          "contractRevision": "81348b04c4f1e2df9abe45fa28028f508ec70930",
+          "consumer": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ",
+          "artifacts": [
+            {
+              "name": "@potential-guide/check-task",
+              "version": "0.1.0-rc.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\check-task.tgz",
+              "bytes": 20705,
+              "sha256": "64a4efc016451415d3d4696bc2ef8f84fdf74af460200d03b9bf4267b8a966e4"
+            },
+            {
+              "name": "@potential-guide/probe-task",
+              "version": "0.1.0-rc.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\probe-task.tgz",
+              "bytes": 23661,
+              "sha256": "21f69076c30a9f9fb7d6c274e2964ede28c6dae7ecf40d2f8375148b0a3e5fcd"
+            },
+            {
+              "name": "@potential-guide/task-engine-server",
+              "version": "0.1.0-rc.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-engine-server.tgz",
+              "bytes": 8934,
+              "sha256": "27477850115e903bf9f414da670b251be6834763baa4b1fab7acd42ffc7ad175"
+            },
+            {
+              "name": "@potential-guide/check-artifacts",
+              "version": "0.1.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\check-artifacts.tgz",
+              "bytes": 49357,
+              "sha256": "4f0f80ea782e0707486f1411eea1c446b5b4ce9fd163b9bab87e1e54f4afe58a"
+            },
+            {
+              "name": "@potential-guide/check-runtime-files",
+              "version": "0.1.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\check-runtime-files.tgz",
+              "bytes": 31325,
+              "sha256": "89ec7ad05f53972f8624b15586251016c9a78bf14ac0574283e59b1be2c4a32a"
+            },
+            {
+              "name": "@potential-guide/task-protocol",
+              "version": "0.1.0-rc.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-protocol.tgz",
+              "bytes": 25493,
+              "sha256": "e3446fd0b0b9067c9787445a056f45e14e8563c4f1f3e42f3160f046d6638747"
+            },
+            {
+              "name": "@potential-guide/task-engine",
+              "version": "0.1.0-rc.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-engine.tgz",
+              "bytes": 59365,
+              "sha256": "20f9f32ac67ef933ef00c9a906ebba6511414340c23ebae4c7f75f5602473af0"
+            },
+            {
+              "name": "@potential-guide/task-engine-http",
+              "version": "0.1.0-rc.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-engine-http.tgz",
+              "bytes": 8093,
+              "sha256": "ffb4bcbbe5d1a7b40e179734ab3dca4ab6450562c744527c484247478afae9c1"
+            },
+            {
+              "name": "@potential-guide/task-engine-storage",
+              "version": "0.1.0-rc.0",
+              "file": "D:\\Code\\potential-guide.worktrees\\whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ\\packs\\task-engine-storage.tgz",
+              "bytes": 8839,
+              "sha256": "69a3e6580315010a838e771514556cfdbf3cb21626a301f28d9f09b04ef88605"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Check 准备中需求与浮动 URL 固定旧内容",
+      "passed": true,
+      "evidence": {
+        "tasks": [
+          {
+            "requestId": "01M68Q6J29T3TBPTSRDB24E9MW",
+            "taskId": "01M68Q6J29P2NRMBE9Q9TTPRNF",
+            "seriesId": "01M68Q6J29P2NRMBE9Q9TTPRNF",
+            "stage": "completed",
+            "receivedAt": "2026-10-31T10:13:33.897Z",
+            "eligibleAt": "2026-10-31T10:13:33.897Z",
+            "deadlineAt": "2026-10-31T10:13:43.897Z",
+            "timestamp": "2026-10-31T10:13:34.738Z",
+            "run": {
+              "runId": "01M68Q6J30W4RVHPRFNNH5ZCWS",
+              "startedAt": "2026-10-31T10:13:33.920Z",
+              "matchedAt": "2026-10-31T10:13:33.920Z",
+              "completedAt": "2026-10-31T10:13:34.726Z"
+            },
+            "termination": {
+              "terminatedAt": "2026-10-31T10:13:34.726Z"
+            },
+            "result": {
+              "result": {
+                "ok": false,
+                "problems": [
+                  {
+                    "kind": "internal",
+                    "id": "version",
+                    "parameters": {
+                      "version": "v1"
+                    }
+                  }
+                ]
+              },
+              "evidence": {
+                "prepared": {
+                  "input": {
+                    "checker": {
+                      "kind": "checker",
+                      "url": "https://127.0.0.1:61142/checker.tgz"
+                    },
+                    "subject": {
+                      "case": "check-share"
+                    }
+                  },
+                  "checker": {
+                    "kind": "checker",
+                    "url": "https://127.0.0.1:61142/checker.tgz",
+                    "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+                  },
+                  "files": {
+                    "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MSJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYxIn19XX19fQ==",
+                    "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                    "references/en/checker.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                    "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                  },
+                  "language": "en",
+                  "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"639be9a609914dfce47a996dce063017a886a5de8dbf33f9952ba1cc4fd7df71\",\"architecture\":\"x64\",\"configuration\":\"9cb9cf6a6c62b5f065e0a9a6d11e3bafca368f278a5e375db5be71a5455019c1\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.12.0\"}",
+                  "workerRevision": "75df54c4ef176bc7301a7985023e190fadc4b854a0cf35abff027f537f0d5b3b"
+                },
+                "execution": {
+                  "executionId": "0b4f21da-e8ee-4c2d-bb27-fb31d4780387",
+                  "startedAt": "2026-10-31T10:13:34.274Z",
+                  "completedAt": "2026-10-31T10:13:34.638Z"
+                },
+                "businessProgress": [
+                  {
+                    "version": "v1"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "requestId": "01M68Q6JA9CSY55GEP4SYQ238H",
+            "taskId": "01M68Q6JA9NEJBPW6A5DVS7SXX",
+            "seriesId": "01M68Q6JA9NEJBPW6A5DVS7SXX",
+            "stage": "completed",
+            "receivedAt": "2026-10-31T10:13:34.153Z",
+            "eligibleAt": "2026-10-31T10:13:34.153Z",
+            "deadlineAt": "2026-10-31T10:13:44.153Z",
+            "timestamp": "2026-10-31T10:13:34.738Z",
+            "run": {
+              "runId": "01M68Q6J30W4RVHPRFNNH5ZCWS",
+              "startedAt": "2026-10-31T10:13:33.920Z",
+              "matchedAt": "2026-10-31T10:13:34.726Z",
+              "completedAt": "2026-10-31T10:13:34.726Z"
+            },
+            "termination": {
+              "terminatedAt": "2026-10-31T10:13:34.726Z"
+            },
+            "result": {
+              "result": {
+                "ok": false,
+                "problems": [
+                  {
+                    "kind": "internal",
+                    "id": "version",
+                    "parameters": {
+                      "version": "v1"
+                    }
+                  }
+                ]
+              },
+              "evidence": {
+                "prepared": {
+                  "input": {
+                    "checker": {
+                      "kind": "checker",
+                      "url": "https://127.0.0.1:61142/checker.tgz"
+                    },
+                    "subject": {
+                      "case": "check-share"
+                    }
+                  },
+                  "checker": {
+                    "kind": "checker",
+                    "url": "https://127.0.0.1:61142/checker.tgz",
+                    "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+                  },
+                  "files": {
+                    "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MSJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYxIn19XX19fQ==",
+                    "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                    "references/en/checker.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                    "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                  },
+                  "language": "en",
+                  "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"639be9a609914dfce47a996dce063017a886a5de8dbf33f9952ba1cc4fd7df71\",\"architecture\":\"x64\",\"configuration\":\"9cb9cf6a6c62b5f065e0a9a6d11e3bafca368f278a5e375db5be71a5455019c1\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.12.0\"}",
+                  "workerRevision": "75df54c4ef176bc7301a7985023e190fadc4b854a0cf35abff027f537f0d5b3b"
+                },
+                "execution": {
+                  "executionId": "0b4f21da-e8ee-4c2d-bb27-fb31d4780387",
+                  "startedAt": "2026-10-31T10:13:34.274Z",
+                  "completedAt": "2026-10-31T10:13:34.638Z"
+                },
+                "businessProgress": [
+                  {
+                    "version": "v1"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "sourceReads": [
+          {
+            "reference": {
+              "kind": "checker",
+              "url": "https://127.0.0.1:61142/checker.tgz"
+            },
+            "scope": "a",
+            "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84",
+            "selectedAt": "2026-10-31T10:13:34.134Z"
+          }
+        ],
+        "publicHistory": {
+          "events": [
+            {
+              "type": "run.started",
+              "scope": "a",
+              "runId": "01M68Q6J30W4RVHPRFNNH5ZCWS",
+              "occurredAt": "2026-10-31T10:13:33.920Z",
+              "data": {
+                "run": {
+                  "runId": "01M68Q6J30W4RVHPRFNNH5ZCWS",
+                  "generation": "01M68Q6J30RQFM2PRRRSXWH650",
+                  "binding": {
+                    "type": "check",
+                    "version": "2",
+                    "contractRevision": "09e9eaa75d399fcda264a175e573c5a5c8d6902ad44ecac66e18aed2fc7069b8",
+                    "environment": "{\"architecture\":\"x64\",\"configuration\":\"1d40e3e79e39d1948854912299f9a96a3467a6be665dd7e881e412089bdd5b8e\",\"node\":\"24.12.0\",\"platform\":\"win32\",\"revision\":\"3d98cab914ac791b80fe570dd50ca03f5d08c3a5dab7fc0da0441d508ff68e21\",\"type\":\"check-run-v3\"}",
+                    "scope": "a",
+                    "subject": "fixture",
+                    "matchPolicy": "started-after-eligible"
+                  },
+                  "input": {
+                    "checker": {
+                      "kind": "checker",
+                      "url": "https://127.0.0.1:61142/checker.tgz"
+                    },
+                    "subject": {
+                      "case": "check-share"
+                    }
+                  },
+                  "startedAt": "2026-10-31T10:13:33.920Z",
+                  "startedSequence": 2
+                }
+              },
+              "sequence": 2
+            },
+            {
+              "type": "run.dispatched",
+              "scope": "a",
+              "runId": "01M68Q6J30W4RVHPRFNNH5ZCWS",
+              "occurredAt": "2026-10-31T10:13:34.104Z",
+              "data": {
+                "workerGeneration": "16f45380-444e-4931-801e-d61a77164096"
+              },
+              "sequence": 4
+            },
+            {
+              "type": "run.progress",
+              "scope": "a",
+              "runId": "01M68Q6J30W4RVHPRFNNH5ZCWS",
+              "occurredAt": "2026-10-31T10:13:34.109Z",
+              "data": {
+                "progress": {
+                  "stage": "preparation",
+                  "message": "准备 Checker。"
+                }
+              },
+              "sequence": 5
+            },
+            {
+              "type": "run.evidence",
+              "scope": "a",
+              "runId": "01M68Q6J30W4RVHPRFNNH5ZCWS",
+              "occurredAt": "2026-10-31T10:13:34.210Z",
+              "data": {
+                "kind": "checkpoint",
+                "value": {
+                  "kind": "check-prepared",
+                  "prepared": {
+                    "input": {
+                      "checker": {
+                        "kind": "checker",
+                        "url": "https://127.0.0.1:61142/checker.tgz"
+                      },
+                      "subject": {
+                        "case": "check-share"
+                      }
+                    },
+                    "checker": {
+                      "kind": "checker",
+                      "url": "https://127.0.0.1:61142/checker.tgz",
+                      "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+                    },
+                    "files": {
+                      "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MSJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYxIn19XX19fQ==",
+                      "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                      "references/en/checker.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                      "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                    },
+                    "language": "en",
+                    "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"639be9a609914dfce47a996dce063017a886a5de8dbf33f9952ba1cc4fd7df71\",\"architecture\":\"x64\",\"configuration\":\"9cb9cf6a6c62b5f065e0a9a6d11e3bafca368f278a5e375db5be71a5455019c1\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.12.0\"}",
+                    "workerRevision": "75df54c4ef176bc7301a7985023e190fadc4b854a0cf35abff027f537f0d5b3b"
+                  }
+                }
+              },
+              "sequence": 7
+            },
+            {
+              "type": "run.progress",
+              "scope": "a",
+              "runId": "01M68Q6J30W4RVHPRFNNH5ZCWS",
+              "occurredAt": "2026-10-31T10:13:34.211Z",
+              "data": {
+                "progress": {
+                  "stage": "allocation",
+                  "message": "等待 Checker 资源。"
+                }
+              },
+              "sequence": 8
+            },
+            {
+              "type": "run.progress",
+              "scope": "a",
+              "runId": "01M68Q6J30W4RVHPRFNNH5ZCWS",
+              "occurredAt": "2026-10-31T10:13:34.274Z",
+              "data": {
+                "progress": {
+                  "stage": "execution",
+                  "message": "Checker 实际执行开始。"
+                }
+              },
+              "sequence": 9
+            },
+            {
+              "type": "run.evidence",
+              "scope": "a",
+              "runId": "01M68Q6J30W4RVHPRFNNH5ZCWS",
+              "occurredAt": "2026-10-31T10:13:34.282Z",
+              "data": {
+                "kind": "checkpoint",
+                "value": {
+                  "kind": "check-progress",
+                  "progress": {
+                    "version": "v1"
+                  }
+                }
+              },
+              "sequence": 10
+            },
+            {
+              "type": "run.progress",
+              "scope": "a",
+              "runId": "01M68Q6J30W4RVHPRFNNH5ZCWS",
+              "occurredAt": "2026-10-31T10:13:34.284Z",
+              "data": {
+                "progress": {
+                  "stage": "execution",
+                  "message": "Checker 上报业务进度。"
+                }
+              },
+              "sequence": 11
+            },
+            {
+              "type": "run.completed",
+              "scope": "a",
+              "runId": "01M68Q6J30W4RVHPRFNNH5ZCWS",
+              "occurredAt": "2026-10-31T10:13:34.726Z",
+              "data": {
+                "result": {
+                  "result": {
+                    "ok": false,
+                    "problems": [
+                      {
+                        "kind": "internal",
+                        "id": "version",
+                        "parameters": {
+                          "version": "v1"
+                        }
+                      }
+                    ]
+                  },
+                  "evidence": {
+                    "prepared": {
+                      "input": {
+                        "checker": {
+                          "kind": "checker",
+                          "url": "https://127.0.0.1:61142/checker.tgz"
+                        },
+                        "subject": {
+                          "case": "check-share"
+                        }
+                      },
+                      "checker": {
+                        "kind": "checker",
+                        "url": "https://127.0.0.1:61142/checker.tgz",
+                        "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+                      },
+                      "files": {
+                        "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MSJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYxIn19XX19fQ==",
+                        "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                        "references/en/checker.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                        "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                      },
+                      "language": "en",
+                      "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"639be9a609914dfce47a996dce063017a886a5de8dbf33f9952ba1cc4fd7df71\",\"architecture\":\"x64\",\"configuration\":\"9cb9cf6a6c62b5f065e0a9a6d11e3bafca368f278a5e375db5be71a5455019c1\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.12.0\"}",
+                      "workerRevision": "75df54c4ef176bc7301a7985023e190fadc4b854a0cf35abff027f537f0d5b3b"
+                    },
+                    "execution": {
+                      "executionId": "0b4f21da-e8ee-4c2d-bb27-fb31d4780387",
+                      "startedAt": "2026-10-31T10:13:34.274Z",
+                      "completedAt": "2026-10-31T10:13:34.638Z"
+                    },
+                    "businessProgress": [
+                      {
+                        "version": "v1"
+                      }
+                    ]
+                  }
+                }
+              },
+              "sequence": 12
+            },
+            {
+              "type": "run.reclaimed",
+              "scope": "a",
+              "runId": "01M68Q6J30W4RVHPRFNNH5ZCWS",
+              "occurredAt": "2026-10-31T10:13:34.737Z",
+              "data": {},
+              "sequence": 16
+            }
+          ],
+          "watermark": 16,
+          "cursor": "eyJzdG9yZUlkIjoiYmUyMGExOTAtNmVlMC00ODIzLTg1MTctNGMxNzc3MDE1OGJlIiwiZmlsdGVyIjoie1wicnVuSWRcIjpcIjAxTTY4UTZKMzBXNFJWSFBSRk5OSDVaQ1dTXCJ9Iiwid2F0ZXJtYXJrIjoxNiwicG9zaXRpb24iOjE2LCJtb2RlIjoic3RyZWFtIn0"
+        }
+      }
+    },
+    {
+      "name": "Probe 准备中需求与浮动 Objective 固定旧 root/Checker",
+      "passed": true,
+      "evidence": {
+        "tasks": [
+          {
+            "requestId": "01M68Q6JWS4AETXRNR945JYZG5",
+            "taskId": "01M68Q6JWTC3QQ53JK8FCPMHQT",
+            "seriesId": "01M68Q6JWTC3QQ53JK8FCPMHQT",
+            "stage": "completed",
+            "receivedAt": "2026-10-31T10:13:34.746Z",
+            "eligibleAt": "2026-10-31T10:13:34.746Z",
+            "deadlineAt": "2026-10-31T10:13:44.746Z",
+            "timestamp": "2026-10-31T10:13:36.049Z",
+            "run": {
+              "runId": "01M68Q6JWWW0GH457RQKJP67YV",
+              "startedAt": "2026-10-31T10:13:34.748Z",
+              "matchedAt": "2026-10-31T10:13:34.748Z",
+              "completedAt": "2026-10-31T10:13:36.041Z"
+            },
+            "termination": {
+              "terminatedAt": "2026-10-31T10:13:36.041Z"
+            },
+            "result": {
+              "observation": {
+                "current": {
+                  "objective": {
+                    "kind": "objective",
+                    "url": "https://127.0.0.1:61142/objective.tgz",
+                    "digest": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295"
+                  },
+                  "levelId": "initial"
+                },
+                "problems": [
+                  {
+                    "objective": {
+                      "kind": "objective",
+                      "url": "https://127.0.0.1:61142/objective.tgz",
+                      "digest": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295"
+                    },
+                    "levelId": "ready",
+                    "checker": "check",
+                    "problem": {
+                      "kind": "internal",
+                      "id": "version",
+                      "parameters": {
+                        "version": "v1"
+                      }
+                    }
+                  }
+                ],
+                "gapSummary": "1 problem(s)",
+                "observedAt": "2026-10-31T10:13:34.748Z",
+                "bindings": {
+                  "https://127.0.0.1:61142/objective.tgz": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295"
+                }
+              },
+              "references": {
+                "en": {
+                  "levels/ready": {
+                    "id": "levels/ready",
+                    "language": "en",
+                    "title": "root-v1",
+                    "description": "自有验证制品",
+                    "references": [],
+                    "content": "自有验证正文。\n",
+                    "origin": {
+                      "artifactDigest": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295",
+                      "path": "references/en/levels/ready.md"
+                    }
+                  },
+                  "objective": {
+                    "id": "objective",
+                    "language": "en",
+                    "title": "root-v1",
+                    "description": "自有验证制品",
+                    "references": [],
+                    "content": "自有验证正文。\n",
+                    "origin": {
+                      "artifactDigest": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295",
+                      "path": "references/en/objective.md"
+                    }
+                  },
+                  "pages/base-check": {
+                    "id": "pages/base-check",
+                    "language": "en",
+                    "title": "v1",
+                    "description": "自有验证制品",
+                    "references": [],
+                    "content": "自有验证正文。\n",
+                    "origin": {
+                      "artifactDigest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84",
+                      "path": "references/en/checker.md"
+                    }
+                  },
+                  "checkers/check": {
+                    "id": "checkers/check",
+                    "language": "en",
+                    "title": "v1",
+                    "description": "自有验证制品",
+                    "references": [],
+                    "content": "自有验证正文。\n",
+                    "origin": {
+                      "artifactDigest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84",
+                      "path": "references/en/checker.md"
+                    }
+                  },
+                  "pages/base-check-version": {
+                    "id": "pages/base-check-version",
+                    "language": "en",
+                    "title": "v1",
+                    "description": "自有验证制品",
+                    "references": [],
+                    "content": "自有验证正文。\n",
+                    "origin": {
+                      "artifactDigest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84",
+                      "path": "references/en/problems/version.md"
+                    }
+                  },
+                  "checkers/check/problems/version": {
+                    "id": "checkers/check/problems/version",
+                    "language": "en",
+                    "title": "v1",
+                    "description": "自有验证制品",
+                    "references": [],
+                    "content": "自有验证正文。\n",
+                    "origin": {
+                      "artifactDigest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84",
+                      "path": "references/en/problems/version.md"
+                    }
+                  }
+                }
+              },
+              "evidence": {
+                "parentRunId": "01M68Q6JWWW0GH457RQKJP67YV",
+                "prepared": {
+                  "input": {
+                    "objective": {
+                      "kind": "objective",
+                      "url": "https://127.0.0.1:61142/objective.tgz"
+                    },
+                    "subject": {
+                      "case": "probe-share"
+                    }
+                  },
+                  "root": {
+                    "reference": {
+                      "kind": "objective",
+                      "url": "https://127.0.0.1:61142/objective.tgz",
+                      "digest": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295"
+                    },
+                    "files": {
+                      "objective.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvb2JqZWN0aXZlL3YxLmpzb24iLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sImxldmVscyI6W3siaWQiOiJyZWFkeSIsImNoZWNrcyI6WyJjaGVjayJdfV0sImNoZWNrZXJzIjp7ImNoZWNrIjp7InVybCI6Imh0dHBzOi8vMTI3LjAuMC4xOjYxMTQyL2NoZWNrZXIudGd6IiwiZGlnZXN0Ijoic2hhMjU2OjI3NzRlNDQ3MjU2OGEwODllMzVjOTA4ZDBiOTBjNDQ0MmY3MzVkOGViNWNmZTFjNTMxZDRjOGU1NmVmN2JkODQiLCJzdWJqZWN0TWFwcGluZyI6IiQifX19",
+                      "references/en/levels/ready.md": "LS0tCnRpdGxlOiByb290LXYxCmRlc2NyaXB0aW9uOiDoh6rmnInpqozor4HliLblk4EKLS0tCuiHquaciemqjOivgeato+aWh+OAggo=",
+                      "references/en/objective.md": "LS0tCnRpdGxlOiByb290LXYxCmRlc2NyaXB0aW9uOiDoh6rmnInpqozor4HliLblk4EKLS0tCuiHquaciemqjOivgeato+aWh+OAggo="
+                    },
+                    "checkers": {
+                      "check": {
+                        "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MSJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYxIn19XX19fQ==",
+                        "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                        "references/en/checker.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                        "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                      }
+                    },
+                    "language": "en"
+                  },
+                  "environment": "{\"adapter\":\"objective-observation-v1\",\"architecture\":\"x64\",\"node\":\"24.12.0\",\"platform\":\"win32\",\"policy\":{\"checkEnvironment\":\"{\\\"architecture\\\":\\\"x64\\\",\\\"configuration\\\":\\\"1d40e3e79e39d1948854912299f9a96a3467a6be665dd7e881e412089bdd5b8e\\\",\\\"node\\\":\\\"24.12.0\\\",\\\"platform\\\":\\\"win32\\\",\\\"revision\\\":\\\"3d98cab914ac791b80fe570dd50ca03f5d08c3a5dab7fc0da0441d508ff68e21\\\",\\\"type\\\":\\\"check-run-v3\\\"}\",\"languages\":[\"en\"],\"maxChecks\":128,\"maxDepth\":8,\"maxObservations\":64},\"revision\":\"74dba6d3851b407f3d459345c16c56d9627acdb9416c46b5afeb73492b1acbdf\",\"wallMs\":60000}"
+                },
+                "startedAt": "2026-10-31T10:13:34.748Z",
+                "environment": "{\"adapter\":\"objective-observation-v1\",\"architecture\":\"x64\",\"node\":\"24.12.0\",\"platform\":\"win32\",\"policy\":{\"checkEnvironment\":\"{\\\"architecture\\\":\\\"x64\\\",\\\"configuration\\\":\\\"1d40e3e79e39d1948854912299f9a96a3467a6be665dd7e881e412089bdd5b8e\\\",\\\"node\\\":\\\"24.12.0\\\",\\\"platform\\\":\\\"win32\\\",\\\"revision\\\":\\\"3d98cab914ac791b80fe570dd50ca03f5d08c3a5dab7fc0da0441d508ff68e21\\\",\\\"type\\\":\\\"check-run-v3\\\"}\",\"languages\":[\"en\"],\"maxChecks\":128,\"maxDepth\":8,\"maxObservations\":64},\"revision\":\"74dba6d3851b407f3d459345c16c56d9627acdb9416c46b5afeb73492b1acbdf\",\"wallMs\":60000}",
+                "operations": [
+                  {
+                    "request": {
+                      "kind": "check",
+                      "invocationId": "2",
+                      "observationId": "1",
+                      "objective": {
+                        "kind": "objective",
+                        "url": "https://127.0.0.1:61142/objective.tgz",
+                        "digest": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295"
+                      },
+                      "level": "ready",
+                      "checker": "check",
+                      "reference": {
+                        "kind": "checker",
+                        "url": "https://127.0.0.1:61142/checker.tgz",
+                        "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+                      },
+                      "subject": {
+                        "case": "probe-share"
+                      },
+                      "language": "en",
+                      "context": {}
+                    },
+                    "snapshot": {
+                      "requestId": "01M68Q6KE439GNMKG2BFXVH4AN",
+                      "taskId": "01M68Q6KECTP7ZRF950QRPGY4N",
+                      "seriesId": "01M68Q6KECTP7ZRF950QRPGY4N",
+                      "stage": "completed",
+                      "receivedAt": "2026-10-31T10:13:35.308Z",
+                      "eligibleAt": "2026-10-31T10:13:35.308Z",
+                      "deadlineAt": "2026-10-31T10:14:35.098Z",
+                      "timestamp": "2026-10-31T10:13:35.901Z",
+                      "run": {
+                        "runId": "01M68Q6KEGQB41ET6BZHES2N9B",
+                        "startedAt": "2026-10-31T10:13:35.312Z",
+                        "matchedAt": "2026-10-31T10:13:35.312Z",
+                        "completedAt": "2026-10-31T10:13:35.886Z"
+                      },
+                      "termination": {
+                        "terminatedAt": "2026-10-31T10:13:35.886Z"
+                      },
+                      "result": {
+                        "result": {
+                          "ok": false,
+                          "problems": [
+                            {
+                              "kind": "internal",
+                              "id": "version",
+                              "parameters": {
+                                "version": "v1"
+                              }
+                            }
+                          ]
+                        },
+                        "evidence": {
+                          "prepared": {
+                            "input": {
+                              "checker": {
+                                "kind": "checker",
+                                "url": "https://127.0.0.1:61142/checker.tgz",
+                                "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+                              },
+                              "subject": {
+                                "case": "probe-share"
+                              },
+                              "context": {},
+                              "language": "en"
+                            },
+                            "checker": {
+                              "kind": "checker",
+                              "url": "https://127.0.0.1:61142/checker.tgz",
+                              "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+                            },
+                            "files": {
+                              "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MSJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYxIn19XX19fQ==",
+                              "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                              "references/en/checker.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                              "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                            },
+                            "language": "en",
+                            "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"639be9a609914dfce47a996dce063017a886a5de8dbf33f9952ba1cc4fd7df71\",\"architecture\":\"x64\",\"configuration\":\"9cb9cf6a6c62b5f065e0a9a6d11e3bafca368f278a5e375db5be71a5455019c1\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.12.0\"}",
+                            "workerRevision": "75df54c4ef176bc7301a7985023e190fadc4b854a0cf35abff027f537f0d5b3b"
+                          },
+                          "execution": {
+                            "executionId": "28fe3abf-4459-4bd6-95b0-5af4a3c7576f",
+                            "startedAt": "2026-10-31T10:13:35.440Z",
+                            "completedAt": "2026-10-31T10:13:35.805Z"
+                          },
+                          "businessProgress": [
+                            {
+                              "version": "v1"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "environment": "{\"architecture\":\"x64\",\"configuration\":\"1d40e3e79e39d1948854912299f9a96a3467a6be665dd7e881e412089bdd5b8e\",\"node\":\"24.12.0\",\"platform\":\"win32\",\"revision\":\"3d98cab914ac791b80fe570dd50ca03f5d08c3a5dab7fc0da0441d508ff68e21\",\"type\":\"check-run-v3\"}"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "requestId": "01M68Q6K4BA6R7HA9TCF7NJTPQ",
+            "taskId": "01M68Q6K4B44EEYVRM6CKSY9F2",
+            "seriesId": "01M68Q6K4B44EEYVRM6CKSY9F2",
+            "stage": "completed",
+            "receivedAt": "2026-10-31T10:13:34.987Z",
+            "eligibleAt": "2026-10-31T10:13:34.987Z",
+            "deadlineAt": "2026-10-31T10:13:44.987Z",
+            "timestamp": "2026-10-31T10:13:36.049Z",
+            "run": {
+              "runId": "01M68Q6JWWW0GH457RQKJP67YV",
+              "startedAt": "2026-10-31T10:13:34.748Z",
+              "matchedAt": "2026-10-31T10:13:36.041Z",
+              "completedAt": "2026-10-31T10:13:36.041Z"
+            },
+            "termination": {
+              "terminatedAt": "2026-10-31T10:13:36.041Z"
+            },
+            "result": {
+              "observation": {
+                "current": {
+                  "objective": {
+                    "kind": "objective",
+                    "url": "https://127.0.0.1:61142/objective.tgz",
+                    "digest": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295"
+                  },
+                  "levelId": "initial"
+                },
+                "problems": [
+                  {
+                    "objective": {
+                      "kind": "objective",
+                      "url": "https://127.0.0.1:61142/objective.tgz",
+                      "digest": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295"
+                    },
+                    "levelId": "ready",
+                    "checker": "check",
+                    "problem": {
+                      "kind": "internal",
+                      "id": "version",
+                      "parameters": {
+                        "version": "v1"
+                      }
+                    }
+                  }
+                ],
+                "gapSummary": "1 problem(s)",
+                "observedAt": "2026-10-31T10:13:34.748Z",
+                "bindings": {
+                  "https://127.0.0.1:61142/objective.tgz": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295"
+                }
+              },
+              "references": {
+                "en": {
+                  "levels/ready": {
+                    "id": "levels/ready",
+                    "language": "en",
+                    "title": "root-v1",
+                    "description": "自有验证制品",
+                    "references": [],
+                    "content": "自有验证正文。\n",
+                    "origin": {
+                      "artifactDigest": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295",
+                      "path": "references/en/levels/ready.md"
+                    }
+                  },
+                  "objective": {
+                    "id": "objective",
+                    "language": "en",
+                    "title": "root-v1",
+                    "description": "自有验证制品",
+                    "references": [],
+                    "content": "自有验证正文。\n",
+                    "origin": {
+                      "artifactDigest": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295",
+                      "path": "references/en/objective.md"
+                    }
+                  },
+                  "pages/base-check": {
+                    "id": "pages/base-check",
+                    "language": "en",
+                    "title": "v1",
+                    "description": "自有验证制品",
+                    "references": [],
+                    "content": "自有验证正文。\n",
+                    "origin": {
+                      "artifactDigest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84",
+                      "path": "references/en/checker.md"
+                    }
+                  },
+                  "checkers/check": {
+                    "id": "checkers/check",
+                    "language": "en",
+                    "title": "v1",
+                    "description": "自有验证制品",
+                    "references": [],
+                    "content": "自有验证正文。\n",
+                    "origin": {
+                      "artifactDigest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84",
+                      "path": "references/en/checker.md"
+                    }
+                  },
+                  "pages/base-check-version": {
+                    "id": "pages/base-check-version",
+                    "language": "en",
+                    "title": "v1",
+                    "description": "自有验证制品",
+                    "references": [],
+                    "content": "自有验证正文。\n",
+                    "origin": {
+                      "artifactDigest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84",
+                      "path": "references/en/problems/version.md"
+                    }
+                  },
+                  "checkers/check/problems/version": {
+                    "id": "checkers/check/problems/version",
+                    "language": "en",
+                    "title": "v1",
+                    "description": "自有验证制品",
+                    "references": [],
+                    "content": "自有验证正文。\n",
+                    "origin": {
+                      "artifactDigest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84",
+                      "path": "references/en/problems/version.md"
+                    }
+                  }
+                }
+              },
+              "evidence": {
+                "parentRunId": "01M68Q6JWWW0GH457RQKJP67YV",
+                "prepared": {
+                  "input": {
+                    "objective": {
+                      "kind": "objective",
+                      "url": "https://127.0.0.1:61142/objective.tgz"
+                    },
+                    "subject": {
+                      "case": "probe-share"
+                    }
+                  },
+                  "root": {
+                    "reference": {
+                      "kind": "objective",
+                      "url": "https://127.0.0.1:61142/objective.tgz",
+                      "digest": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295"
+                    },
+                    "files": {
+                      "objective.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvb2JqZWN0aXZlL3YxLmpzb24iLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sImxldmVscyI6W3siaWQiOiJyZWFkeSIsImNoZWNrcyI6WyJjaGVjayJdfV0sImNoZWNrZXJzIjp7ImNoZWNrIjp7InVybCI6Imh0dHBzOi8vMTI3LjAuMC4xOjYxMTQyL2NoZWNrZXIudGd6IiwiZGlnZXN0Ijoic2hhMjU2OjI3NzRlNDQ3MjU2OGEwODllMzVjOTA4ZDBiOTBjNDQ0MmY3MzVkOGViNWNmZTFjNTMxZDRjOGU1NmVmN2JkODQiLCJzdWJqZWN0TWFwcGluZyI6IiQifX19",
+                      "references/en/levels/ready.md": "LS0tCnRpdGxlOiByb290LXYxCmRlc2NyaXB0aW9uOiDoh6rmnInpqozor4HliLblk4EKLS0tCuiHquaciemqjOivgeato+aWh+OAggo=",
+                      "references/en/objective.md": "LS0tCnRpdGxlOiByb290LXYxCmRlc2NyaXB0aW9uOiDoh6rmnInpqozor4HliLblk4EKLS0tCuiHquaciemqjOivgeato+aWh+OAggo="
+                    },
+                    "checkers": {
+                      "check": {
+                        "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MSJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYxIn19XX19fQ==",
+                        "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                        "references/en/checker.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                        "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                      }
+                    },
+                    "language": "en"
+                  },
+                  "environment": "{\"adapter\":\"objective-observation-v1\",\"architecture\":\"x64\",\"node\":\"24.12.0\",\"platform\":\"win32\",\"policy\":{\"checkEnvironment\":\"{\\\"architecture\\\":\\\"x64\\\",\\\"configuration\\\":\\\"1d40e3e79e39d1948854912299f9a96a3467a6be665dd7e881e412089bdd5b8e\\\",\\\"node\\\":\\\"24.12.0\\\",\\\"platform\\\":\\\"win32\\\",\\\"revision\\\":\\\"3d98cab914ac791b80fe570dd50ca03f5d08c3a5dab7fc0da0441d508ff68e21\\\",\\\"type\\\":\\\"check-run-v3\\\"}\",\"languages\":[\"en\"],\"maxChecks\":128,\"maxDepth\":8,\"maxObservations\":64},\"revision\":\"74dba6d3851b407f3d459345c16c56d9627acdb9416c46b5afeb73492b1acbdf\",\"wallMs\":60000}"
+                },
+                "startedAt": "2026-10-31T10:13:34.748Z",
+                "environment": "{\"adapter\":\"objective-observation-v1\",\"architecture\":\"x64\",\"node\":\"24.12.0\",\"platform\":\"win32\",\"policy\":{\"checkEnvironment\":\"{\\\"architecture\\\":\\\"x64\\\",\\\"configuration\\\":\\\"1d40e3e79e39d1948854912299f9a96a3467a6be665dd7e881e412089bdd5b8e\\\",\\\"node\\\":\\\"24.12.0\\\",\\\"platform\\\":\\\"win32\\\",\\\"revision\\\":\\\"3d98cab914ac791b80fe570dd50ca03f5d08c3a5dab7fc0da0441d508ff68e21\\\",\\\"type\\\":\\\"check-run-v3\\\"}\",\"languages\":[\"en\"],\"maxChecks\":128,\"maxDepth\":8,\"maxObservations\":64},\"revision\":\"74dba6d3851b407f3d459345c16c56d9627acdb9416c46b5afeb73492b1acbdf\",\"wallMs\":60000}",
+                "operations": [
+                  {
+                    "request": {
+                      "kind": "check",
+                      "invocationId": "2",
+                      "observationId": "1",
+                      "objective": {
+                        "kind": "objective",
+                        "url": "https://127.0.0.1:61142/objective.tgz",
+                        "digest": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295"
+                      },
+                      "level": "ready",
+                      "checker": "check",
+                      "reference": {
+                        "kind": "checker",
+                        "url": "https://127.0.0.1:61142/checker.tgz",
+                        "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+                      },
+                      "subject": {
+                        "case": "probe-share"
+                      },
+                      "language": "en",
+                      "context": {}
+                    },
+                    "snapshot": {
+                      "requestId": "01M68Q6KE439GNMKG2BFXVH4AN",
+                      "taskId": "01M68Q6KECTP7ZRF950QRPGY4N",
+                      "seriesId": "01M68Q6KECTP7ZRF950QRPGY4N",
+                      "stage": "completed",
+                      "receivedAt": "2026-10-31T10:13:35.308Z",
+                      "eligibleAt": "2026-10-31T10:13:35.308Z",
+                      "deadlineAt": "2026-10-31T10:14:35.098Z",
+                      "timestamp": "2026-10-31T10:13:35.901Z",
+                      "run": {
+                        "runId": "01M68Q6KEGQB41ET6BZHES2N9B",
+                        "startedAt": "2026-10-31T10:13:35.312Z",
+                        "matchedAt": "2026-10-31T10:13:35.312Z",
+                        "completedAt": "2026-10-31T10:13:35.886Z"
+                      },
+                      "termination": {
+                        "terminatedAt": "2026-10-31T10:13:35.886Z"
+                      },
+                      "result": {
+                        "result": {
+                          "ok": false,
+                          "problems": [
+                            {
+                              "kind": "internal",
+                              "id": "version",
+                              "parameters": {
+                                "version": "v1"
+                              }
+                            }
+                          ]
+                        },
+                        "evidence": {
+                          "prepared": {
+                            "input": {
+                              "checker": {
+                                "kind": "checker",
+                                "url": "https://127.0.0.1:61142/checker.tgz",
+                                "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+                              },
+                              "subject": {
+                                "case": "probe-share"
+                              },
+                              "context": {},
+                              "language": "en"
+                            },
+                            "checker": {
+                              "kind": "checker",
+                              "url": "https://127.0.0.1:61142/checker.tgz",
+                              "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+                            },
+                            "files": {
+                              "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MSJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYxIn19XX19fQ==",
+                              "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                              "references/en/checker.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                              "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MQpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                            },
+                            "language": "en",
+                            "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"639be9a609914dfce47a996dce063017a886a5de8dbf33f9952ba1cc4fd7df71\",\"architecture\":\"x64\",\"configuration\":\"9cb9cf6a6c62b5f065e0a9a6d11e3bafca368f278a5e375db5be71a5455019c1\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.12.0\"}",
+                            "workerRevision": "75df54c4ef176bc7301a7985023e190fadc4b854a0cf35abff027f537f0d5b3b"
+                          },
+                          "execution": {
+                            "executionId": "28fe3abf-4459-4bd6-95b0-5af4a3c7576f",
+                            "startedAt": "2026-10-31T10:13:35.440Z",
+                            "completedAt": "2026-10-31T10:13:35.805Z"
+                          },
+                          "businessProgress": [
+                            {
+                              "version": "v1"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "environment": "{\"architecture\":\"x64\",\"configuration\":\"1d40e3e79e39d1948854912299f9a96a3467a6be665dd7e881e412089bdd5b8e\",\"node\":\"24.12.0\",\"platform\":\"win32\",\"revision\":\"3d98cab914ac791b80fe570dd50ca03f5d08c3a5dab7fc0da0441d508ff68e21\",\"type\":\"check-run-v3\"}"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "sourceReads": [
+          {
+            "reference": {
+              "kind": "checker",
+              "url": "https://127.0.0.1:61142/checker.tgz"
+            },
+            "scope": "a",
+            "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84",
+            "selectedAt": "2026-10-31T10:13:34.134Z"
+          },
+          {
+            "reference": {
+              "kind": "objective",
+              "url": "https://127.0.0.1:61142/objective.tgz"
+            },
+            "scope": "a",
+            "digest": "sha256:db3c3b61aaef3e3b650a448cc2d7544cdde9d5acdfe64eb59bda8d28eca4c295",
+            "selectedAt": "2026-10-31T10:13:34.971Z"
+          },
+          {
+            "reference": {
+              "kind": "checker",
+              "url": "https://127.0.0.1:61142/checker.tgz",
+              "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+            },
+            "scope": "a",
+            "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84",
+            "selectedAt": "2026-10-31T10:13:35.011Z"
+          },
+          {
+            "reference": {
+              "kind": "checker",
+              "url": "https://127.0.0.1:61142/checker.tgz",
+              "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84"
+            },
+            "scope": "a",
+            "digest": "sha256:2774e4472568a089e35c908d0b90c4442f735d8eb5cfe1c531d4c8e56ef7bd84",
+            "selectedAt": "2026-10-31T10:13:35.346Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "精确 digest 与错误 pin 边界",
+      "passed": true,
+      "evidence": {
+        "checker": {
+          "requestId": "01M68Q6M5JRP5HF77RFNAG8MZV",
+          "taskId": "01M68Q6M5JXCNVDXKA7NM4ZT84",
+          "seriesId": "01M68Q6M5JXCNVDXKA7NM4ZT84",
+          "stage": "completed",
+          "receivedAt": "2026-10-31T10:13:36.050Z",
+          "eligibleAt": "2026-10-31T10:13:36.050Z",
+          "deadlineAt": "2026-10-31T10:13:46.050Z",
+          "timestamp": "2026-10-31T10:13:36.647Z",
+          "run": {
+            "runId": "01M68Q6M62YTEEX84FS4JP4Y1V",
+            "startedAt": "2026-10-31T10:13:36.066Z",
+            "matchedAt": "2026-10-31T10:13:36.066Z",
+            "completedAt": "2026-10-31T10:13:36.632Z"
+          },
+          "termination": {
+            "terminatedAt": "2026-10-31T10:13:36.632Z"
+          },
+          "result": {
+            "result": {
+              "ok": false,
+              "problems": [
+                {
+                  "kind": "internal",
+                  "id": "version",
+                  "parameters": {
+                    "version": "v2"
+                  }
+                }
+              ]
+            },
+            "evidence": {
+              "prepared": {
+                "input": {
+                  "checker": {
+                    "kind": "checker",
+                    "url": "https://127.0.0.1:61142/checker.tgz",
+                    "digest": "sha256:aef199a266f52975cd55eac60a48fcae783b0b8f625730ef898df2b90cd044cd"
+                  },
+                  "subject": {
+                    "case": "pin"
+                  }
+                },
+                "checker": {
+                  "kind": "checker",
+                  "url": "https://127.0.0.1:61142/checker.tgz",
+                  "digest": "sha256:aef199a266f52975cd55eac60a48fcae783b0b8f625730ef898df2b90cd044cd"
+                },
+                "files": {
+                  "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MiJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYyIn19XX19fQ==",
+                  "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                  "references/en/checker.md": "LS0tCnRpdGxlOiB2MgpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                  "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MgpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                },
+                "language": "en",
+                "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"639be9a609914dfce47a996dce063017a886a5de8dbf33f9952ba1cc4fd7df71\",\"architecture\":\"x64\",\"configuration\":\"9cb9cf6a6c62b5f065e0a9a6d11e3bafca368f278a5e375db5be71a5455019c1\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.12.0\"}",
+                "workerRevision": "73340db49ddb6d3bd74fa4b479fab55216c9e8eacc274cb63b93e11c06c4e320"
+              },
+              "execution": {
+                "executionId": "6fc05282-8242-477a-9688-f6b118601132",
+                "startedAt": "2026-10-31T10:13:36.191Z",
+                "completedAt": "2026-10-31T10:13:36.551Z"
+              },
+              "businessProgress": [
+                {
+                  "version": "v2"
+                }
+              ]
+            }
+          }
+        },
+        "probe": {
+          "requestId": "01M68Q6MR7VXY0Q292V8HM4AJ0",
+          "taskId": "01M68Q6MR7PD0KF6VTYCY3CVKN",
+          "seriesId": "01M68Q6MR7PD0KF6VTYCY3CVKN",
+          "stage": "completed",
+          "receivedAt": "2026-10-31T10:13:36.647Z",
+          "eligibleAt": "2026-10-31T10:13:36.647Z",
+          "deadlineAt": "2026-10-31T10:13:46.647Z",
+          "timestamp": "2026-10-31T10:13:37.758Z",
+          "run": {
+            "runId": "01M68Q6MRDPZJ78A8EWACEZ5FZ",
+            "startedAt": "2026-10-31T10:13:36.653Z",
+            "matchedAt": "2026-10-31T10:13:36.653Z",
+            "completedAt": "2026-10-31T10:13:37.746Z"
+          },
+          "termination": {
+            "terminatedAt": "2026-10-31T10:13:37.746Z"
+          },
+          "result": {
+            "observation": {
+              "current": {
+                "objective": {
+                  "kind": "objective",
+                  "url": "https://127.0.0.1:61142/objective.tgz",
+                  "digest": "sha256:103c8be27947399c8994e203ca9ddc04922590991d96cc42bfb70a5c9e3ccd9b"
+                },
+                "levelId": "initial"
+              },
+              "problems": [
+                {
+                  "objective": {
+                    "kind": "objective",
+                    "url": "https://127.0.0.1:61142/objective.tgz",
+                    "digest": "sha256:103c8be27947399c8994e203ca9ddc04922590991d96cc42bfb70a5c9e3ccd9b"
+                  },
+                  "levelId": "ready",
+                  "checker": "check",
+                  "problem": {
+                    "kind": "internal",
+                    "id": "version",
+                    "parameters": {
+                      "version": "v2"
+                    }
+                  }
+                }
+              ],
+              "gapSummary": "1 problem(s)",
+              "observedAt": "2026-10-31T10:13:36.653Z",
+              "bindings": {
+                "https://127.0.0.1:61142/objective.tgz": "sha256:103c8be27947399c8994e203ca9ddc04922590991d96cc42bfb70a5c9e3ccd9b"
+              }
+            },
+            "references": {
+              "en": {
+                "levels/ready": {
+                  "id": "levels/ready",
+                  "language": "en",
+                  "title": "root-v2",
+                  "description": "自有验证制品",
+                  "references": [],
+                  "content": "自有验证正文。\n",
+                  "origin": {
+                    "artifactDigest": "sha256:103c8be27947399c8994e203ca9ddc04922590991d96cc42bfb70a5c9e3ccd9b",
+                    "path": "references/en/levels/ready.md"
+                  }
+                },
+                "objective": {
+                  "id": "objective",
+                  "language": "en",
+                  "title": "root-v2",
+                  "description": "自有验证制品",
+                  "references": [],
+                  "content": "自有验证正文。\n",
+                  "origin": {
+                    "artifactDigest": "sha256:103c8be27947399c8994e203ca9ddc04922590991d96cc42bfb70a5c9e3ccd9b",
+                    "path": "references/en/objective.md"
+                  }
+                },
+                "pages/base-check": {
+                  "id": "pages/base-check",
+                  "language": "en",
+                  "title": "v2",
+                  "description": "自有验证制品",
+                  "references": [],
+                  "content": "自有验证正文。\n",
+                  "origin": {
+                    "artifactDigest": "sha256:aef199a266f52975cd55eac60a48fcae783b0b8f625730ef898df2b90cd044cd",
+                    "path": "references/en/checker.md"
+                  }
+                },
+                "checkers/check": {
+                  "id": "checkers/check",
+                  "language": "en",
+                  "title": "v2",
+                  "description": "自有验证制品",
+                  "references": [],
+                  "content": "自有验证正文。\n",
+                  "origin": {
+                    "artifactDigest": "sha256:aef199a266f52975cd55eac60a48fcae783b0b8f625730ef898df2b90cd044cd",
+                    "path": "references/en/checker.md"
+                  }
+                },
+                "pages/base-check-version": {
+                  "id": "pages/base-check-version",
+                  "language": "en",
+                  "title": "v2",
+                  "description": "自有验证制品",
+                  "references": [],
+                  "content": "自有验证正文。\n",
+                  "origin": {
+                    "artifactDigest": "sha256:aef199a266f52975cd55eac60a48fcae783b0b8f625730ef898df2b90cd044cd",
+                    "path": "references/en/problems/version.md"
+                  }
+                },
+                "checkers/check/problems/version": {
+                  "id": "checkers/check/problems/version",
+                  "language": "en",
+                  "title": "v2",
+                  "description": "自有验证制品",
+                  "references": [],
+                  "content": "自有验证正文。\n",
+                  "origin": {
+                    "artifactDigest": "sha256:aef199a266f52975cd55eac60a48fcae783b0b8f625730ef898df2b90cd044cd",
+                    "path": "references/en/problems/version.md"
+                  }
+                }
+              }
+            },
+            "evidence": {
+              "parentRunId": "01M68Q6MRDPZJ78A8EWACEZ5FZ",
+              "prepared": {
+                "input": {
+                  "objective": {
+                    "kind": "objective",
+                    "url": "https://127.0.0.1:61142/objective.tgz",
+                    "digest": "sha256:103c8be27947399c8994e203ca9ddc04922590991d96cc42bfb70a5c9e3ccd9b"
+                  },
+                  "subject": {
+                    "case": "pin"
+                  }
+                },
+                "root": {
+                  "reference": {
+                    "kind": "objective",
+                    "url": "https://127.0.0.1:61142/objective.tgz",
+                    "digest": "sha256:103c8be27947399c8994e203ca9ddc04922590991d96cc42bfb70a5c9e3ccd9b"
+                  },
+                  "files": {
+                    "objective.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvb2JqZWN0aXZlL3YxLmpzb24iLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sImxldmVscyI6W3siaWQiOiJyZWFkeSIsImNoZWNrcyI6WyJjaGVjayJdfV0sImNoZWNrZXJzIjp7ImNoZWNrIjp7InVybCI6Imh0dHBzOi8vMTI3LjAuMC4xOjYxMTQyL2NoZWNrZXIudGd6IiwiZGlnZXN0Ijoic2hhMjU2OmFlZjE5OWEyNjZmNTI5NzVjZDU1ZWFjNjBhNDhmY2FlNzgzYjBiOGY2MjU3MzBlZjg5OGRmMmI5MGNkMDQ0Y2QiLCJzdWJqZWN0TWFwcGluZyI6IiQifX19",
+                    "references/en/levels/ready.md": "LS0tCnRpdGxlOiByb290LXYyCmRlc2NyaXB0aW9uOiDoh6rmnInpqozor4HliLblk4EKLS0tCuiHquaciemqjOivgeato+aWh+OAggo=",
+                    "references/en/objective.md": "LS0tCnRpdGxlOiByb290LXYyCmRlc2NyaXB0aW9uOiDoh6rmnInpqozor4HliLblk4EKLS0tCuiHquaciemqjOivgeato+aWh+OAggo="
+                  },
+                  "checkers": {
+                    "check": {
+                      "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MiJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYyIn19XX19fQ==",
+                      "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                      "references/en/checker.md": "LS0tCnRpdGxlOiB2MgpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                      "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MgpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                    }
+                  },
+                  "language": "en"
+                },
+                "environment": "{\"adapter\":\"objective-observation-v1\",\"architecture\":\"x64\",\"node\":\"24.12.0\",\"platform\":\"win32\",\"policy\":{\"checkEnvironment\":\"{\\\"architecture\\\":\\\"x64\\\",\\\"configuration\\\":\\\"1d40e3e79e39d1948854912299f9a96a3467a6be665dd7e881e412089bdd5b8e\\\",\\\"node\\\":\\\"24.12.0\\\",\\\"platform\\\":\\\"win32\\\",\\\"revision\\\":\\\"3d98cab914ac791b80fe570dd50ca03f5d08c3a5dab7fc0da0441d508ff68e21\\\",\\\"type\\\":\\\"check-run-v3\\\"}\",\"languages\":[\"en\"],\"maxChecks\":128,\"maxDepth\":8,\"maxObservations\":64},\"revision\":\"74dba6d3851b407f3d459345c16c56d9627acdb9416c46b5afeb73492b1acbdf\",\"wallMs\":60000}"
+              },
+              "startedAt": "2026-10-31T10:13:36.653Z",
+              "environment": "{\"adapter\":\"objective-observation-v1\",\"architecture\":\"x64\",\"node\":\"24.12.0\",\"platform\":\"win32\",\"policy\":{\"checkEnvironment\":\"{\\\"architecture\\\":\\\"x64\\\",\\\"configuration\\\":\\\"1d40e3e79e39d1948854912299f9a96a3467a6be665dd7e881e412089bdd5b8e\\\",\\\"node\\\":\\\"24.12.0\\\",\\\"platform\\\":\\\"win32\\\",\\\"revision\\\":\\\"3d98cab914ac791b80fe570dd50ca03f5d08c3a5dab7fc0da0441d508ff68e21\\\",\\\"type\\\":\\\"check-run-v3\\\"}\",\"languages\":[\"en\"],\"maxChecks\":128,\"maxDepth\":8,\"maxObservations\":64},\"revision\":\"74dba6d3851b407f3d459345c16c56d9627acdb9416c46b5afeb73492b1acbdf\",\"wallMs\":60000}",
+              "operations": [
+                {
+                  "request": {
+                    "kind": "check",
+                    "invocationId": "2",
+                    "observationId": "1",
+                    "objective": {
+                      "kind": "objective",
+                      "url": "https://127.0.0.1:61142/objective.tgz",
+                      "digest": "sha256:103c8be27947399c8994e203ca9ddc04922590991d96cc42bfb70a5c9e3ccd9b"
+                    },
+                    "level": "ready",
+                    "checker": "check",
+                    "reference": {
+                      "kind": "checker",
+                      "url": "https://127.0.0.1:61142/checker.tgz",
+                      "digest": "sha256:aef199a266f52975cd55eac60a48fcae783b0b8f625730ef898df2b90cd044cd"
+                    },
+                    "subject": {
+                      "case": "pin"
+                    },
+                    "language": "en",
+                    "context": {}
+                  },
+                  "snapshot": {
+                    "requestId": "01M68Q6N2AQ5Y28MQWZFQ2QGAV",
+                    "taskId": "01M68Q6N2PKA2GMTB2JNQ88MVC",
+                    "seriesId": "01M68Q6N2PKA2GMTB2JNQ88MVC",
+                    "stage": "completed",
+                    "receivedAt": "2026-10-31T10:13:36.982Z",
+                    "eligibleAt": "2026-10-31T10:13:36.982Z",
+                    "deadlineAt": "2026-10-31T10:14:36.774Z",
+                    "timestamp": "2026-10-31T10:13:37.582Z",
+                    "run": {
+                      "runId": "01M68Q6N2W1FH27MH5B1GZ1QNB",
+                      "startedAt": "2026-10-31T10:13:36.988Z",
+                      "matchedAt": "2026-10-31T10:13:36.988Z",
+                      "completedAt": "2026-10-31T10:13:37.565Z"
+                    },
+                    "termination": {
+                      "terminatedAt": "2026-10-31T10:13:37.565Z"
+                    },
+                    "result": {
+                      "result": {
+                        "ok": false,
+                        "problems": [
+                          {
+                            "kind": "internal",
+                            "id": "version",
+                            "parameters": {
+                              "version": "v2"
+                            }
+                          }
+                        ]
+                      },
+                      "evidence": {
+                        "prepared": {
+                          "input": {
+                            "checker": {
+                              "kind": "checker",
+                              "url": "https://127.0.0.1:61142/checker.tgz",
+                              "digest": "sha256:aef199a266f52975cd55eac60a48fcae783b0b8f625730ef898df2b90cd044cd"
+                            },
+                            "subject": {
+                              "case": "pin"
+                            },
+                            "context": {},
+                            "language": "en"
+                          },
+                          "checker": {
+                            "kind": "checker",
+                            "url": "https://127.0.0.1:61142/checker.tgz",
+                            "digest": "sha256:aef199a266f52975cd55eac60a48fcae783b0b8f625730ef898df2b90cd044cd"
+                          },
+                          "files": {
+                            "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MiJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYyIn19XX19fQ==",
+                            "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                            "references/en/checker.md": "LS0tCnRpdGxlOiB2MgpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                            "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MgpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                          },
+                          "language": "en",
+                          "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"639be9a609914dfce47a996dce063017a886a5de8dbf33f9952ba1cc4fd7df71\",\"architecture\":\"x64\",\"configuration\":\"9cb9cf6a6c62b5f065e0a9a6d11e3bafca368f278a5e375db5be71a5455019c1\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.12.0\"}",
+                          "workerRevision": "73340db49ddb6d3bd74fa4b479fab55216c9e8eacc274cb63b93e11c06c4e320"
+                        },
+                        "execution": {
+                          "executionId": "e58b03aa-8da9-4261-b58a-b449df02e553",
+                          "startedAt": "2026-10-31T10:13:37.122Z",
+                          "completedAt": "2026-10-31T10:13:37.481Z"
+                        },
+                        "businessProgress": [
+                          {
+                            "version": "v2"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "environment": "{\"architecture\":\"x64\",\"configuration\":\"1d40e3e79e39d1948854912299f9a96a3467a6be665dd7e881e412089bdd5b8e\",\"node\":\"24.12.0\",\"platform\":\"win32\",\"revision\":\"3d98cab914ac791b80fe570dd50ca03f5d08c3a5dab7fc0da0441d508ff68e21\",\"type\":\"check-run-v3\"}"
+                }
+              ]
+            }
+          }
+        },
+        "bad": {
+          "requestId": "01M68Q6NTZ71B7AX97P33RC6KD",
+          "taskId": "01M68Q6NTZQXYZP9GB5Z4R82FR",
+          "seriesId": "01M68Q6NTZQXYZP9GB5Z4R82FR",
+          "stage": "run_failed",
+          "receivedAt": "2026-10-31T10:13:37.759Z",
+          "eligibleAt": "2026-10-31T10:13:37.759Z",
+          "deadlineAt": "2026-10-31T10:13:47.759Z",
+          "timestamp": "2026-10-31T10:13:37.802Z",
+          "run": {
+            "runId": "01M68Q6NV33ESBJ492PCP71JQV",
+            "startedAt": "2026-10-31T10:13:37.763Z",
+            "matchedAt": "2026-10-31T10:13:37.763Z",
+            "failedAt": "2026-10-31T10:13:37.794Z"
+          },
+          "error": {
+            "code": "artifact_digest_mismatch",
+            "message": "Selected artifact kind or exact digest differs."
+          },
+          "termination": {
+            "terminatedAt": "2026-10-31T10:13:37.794Z"
+          },
+          "result": {
+            "failure": {
+              "code": "artifact_digest_mismatch",
+              "message": "Selected artifact kind or exact digest differs."
+            },
+            "evidence": {
+              "businessProgress": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "可信 scope/source 拒绝、Never 但 Cancel 可用",
+      "passed": true,
+      "evidence": {
+        "message": {
+          "status": 400,
+          "body": {
+            "error": {
+              "code": "invalid_input",
+              "message": "Input does not satisfy inputSchema."
+            }
+          }
+        },
+        "canceled": {
+          "status": 200,
+          "body": {
+            "requestId": "01M68Q6NWBKCJPVX062P9M9V76",
+            "taskId": "01M68Q6NWBT76JPF6FSZFN3KFV",
+            "seriesId": "01M68Q6NWBT76JPF6FSZFN3KFV",
+            "stage": "running",
+            "receivedAt": "2026-10-31T10:13:37.803Z",
+            "eligibleAt": "2026-10-31T10:13:37.803Z",
+            "deadlineAt": "2026-10-31T10:13:47.803Z",
+            "timestamp": "2026-10-31T10:13:37.870Z",
+            "run": {
+              "runId": "01M68Q6NWJKDPP7H4N00QJFBGK",
+              "startedAt": "2026-10-31T10:13:37.810Z",
+              "matchedAt": "2026-10-31T10:13:37.810Z"
+            },
+            "canceledAt": "2026-10-31T10:13:37.863Z"
+          }
+        },
+        "survivor": {
+          "requestId": "01M68Q6NWEHXZVC2JM2QK0GNYH",
+          "taskId": "01M68Q6NWEJK7BBJAVRYHHW2G0",
+          "seriesId": "01M68Q6NWEJK7BBJAVRYHHW2G0",
+          "stage": "completed",
+          "receivedAt": "2026-10-31T10:13:37.806Z",
+          "eligibleAt": "2026-10-31T10:13:37.806Z",
+          "deadlineAt": "2026-10-31T10:13:47.806Z",
+          "timestamp": "2026-10-31T10:13:38.450Z",
+          "run": {
+            "runId": "01M68Q6NWXNFGGVM8NSCC5RK0R",
+            "startedAt": "2026-10-31T10:13:37.821Z",
+            "matchedAt": "2026-10-31T10:13:37.821Z",
+            "completedAt": "2026-10-31T10:13:38.434Z"
+          },
+          "termination": {
+            "terminatedAt": "2026-10-31T10:13:38.434Z"
+          },
+          "result": {
+            "result": {
+              "ok": false,
+              "problems": [
+                {
+                  "kind": "internal",
+                  "id": "version",
+                  "parameters": {
+                    "version": "v2"
+                  }
+                }
+              ]
+            },
+            "evidence": {
+              "prepared": {
+                "input": {
+                  "checker": {
+                    "kind": "checker",
+                    "url": "https://127.0.0.1:61142/checker.tgz"
+                  },
+                  "subject": {
+                    "case": "survive"
+                  }
+                },
+                "checker": {
+                  "kind": "checker",
+                  "url": "https://127.0.0.1:61142/checker.tgz",
+                  "digest": "sha256:aef199a266f52975cd55eac60a48fcae783b0b8f625730ef898df2b90cd044cd"
+                },
+                "files": {
+                  "checker.cjs": "ZXhwb3J0cy5leGVjdXRlPWFzeW5jKHMsYyk9PntjLnByb2dyZXNzKHt2ZXJzaW9uOiJ2MiJ9KTthd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsMzUwKSk7cmV0dXJuIHtzdGF0dXM6MjAwLG1lc3NhZ2U6IiIscGF5bG9hZDp7b2s6ZmFsc2UscHJvYmxlbXM6W3traW5kOiJpbnRlcm5hbCIsaWQ6InZlcnNpb24iLHBhcmFtZXRlcnM6e3ZlcnNpb246InYyIn19XX19fQ==",
+                  "checker.yaml": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9zaGF6aG91LXd3LmdpdGh1Yi5pby9wb3RlbnRpYWwtZ3VpZGUvc2NoZW1hcy9hcnRpZmFjdHMvY2hlY2tlci92MS5qc29uIiwicnVudGltZSI6eyJ0eXBlIjoibm9kZSIsIm1pblZlcnNpb24iOiIyMi4xMy4wIn0sImVudHJ5IjoiY2hlY2tlci5janMiLCJzdWJqZWN0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QifSwibGFuZ3VhZ2VzIjpbImVuIl0sInByb2JsZW1zIjpbInZlcnNpb24iXX0=",
+                  "references/en/checker.md": "LS0tCnRpdGxlOiB2MgpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK",
+                  "references/en/problems/version.md": "LS0tCnRpdGxlOiB2MgpkZXNjcmlwdGlvbjog6Ieq5pyJ6aqM6K+B5Yi25ZOBCi0tLQroh6rmnInpqozor4HmraPmlofjgIIK"
+                },
+                "language": "en",
+                "environment": "{\"adapter\":\"node-commonjs-v1\",\"adapterRevision\":\"639be9a609914dfce47a996dce063017a886a5de8dbf33f9952ba1cc4fd7df71\",\"architecture\":\"x64\",\"configuration\":\"9cb9cf6a6c62b5f065e0a9a6d11e3bafca368f278a5e375db5be71a5455019c1\",\"platform\":\"win32\",\"type\":\"node\",\"version\":\"24.12.0\"}",
+                "workerRevision": "73340db49ddb6d3bd74fa4b479fab55216c9e8eacc274cb63b93e11c06c4e320"
+              },
+              "execution": {
+                "executionId": "94f9f951-f03c-42ab-bff8-52ba74565002",
+                "startedAt": "2026-10-31T10:13:38.000Z",
+                "completedAt": "2026-10-31T10:13:38.362Z"
+              },
+              "businessProgress": [
+                {
+                  "version": "v2"
+                }
+              ]
+            }
+          }
+        },
+        "deniedResult": {
+          "requestId": "01M68Q6PGJJWD9605JSQT7PFSK",
+          "taskId": "01M68Q6PGJ1PVN00CAB6A4QYVM",
+          "seriesId": "01M68Q6PGJ1PVN00CAB6A4QYVM",
+          "stage": "run_failed",
+          "receivedAt": "2026-10-31T10:13:38.450Z",
+          "eligibleAt": "2026-10-31T10:13:38.450Z",
+          "deadlineAt": "2026-10-31T10:13:48.450Z",
+          "timestamp": "2026-10-31T10:13:38.498Z",
+          "run": {
+            "runId": "01M68Q6PH3SR423WBBRA4VCBY2",
+            "startedAt": "2026-10-31T10:13:38.467Z",
+            "matchedAt": "2026-10-31T10:13:38.467Z",
+            "failedAt": "2026-10-31T10:13:38.491Z"
+          },
+          "error": {
+            "code": "forbidden",
+            "message": "自有 source 拒绝此 scope。"
+          },
+          "termination": {
+            "terminatedAt": "2026-10-31T10:13:38.491Z"
+          },
+          "result": {
+            "failure": {
+              "code": "forbidden",
+              "message": "自有 source 拒绝此 scope。"
+            },
+            "evidence": {
+              "businessProgress": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "业务消息幂等、目标拒绝、共享投入撤回及 deadline 不续期",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n409 !== 202\n",
+      "stack": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n409 !== 202\n\n    at file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:170:12\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async scenario (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:19:22)\n    at async file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:163:3"
+    }
+  ],
+  "https": {
+    "origin": "https://127.0.0.1:61142",
+    "certSha256": "f3b606dde9f23072bc9a87d08fb0e68191c800ff01bf9fdd65d385944aa2bb8d",
+    "requests": [
+      {
+        "at": "2026-10-31T10:13:34.122Z",
+        "bytes": 563,
+        "sha256": "f8870439b766a884dc5b2e992359e1dcd58714e70a97145c13e12241c7580aa7"
+      },
+      {
+        "at": "2026-10-31T10:13:34.964Z",
+        "bytes": 485,
+        "sha256": "b81998ac90e5d2209492fa65eea1b2028ae5ca589a828d63f63fb9e155fe984d"
+      },
+      {
+        "at": "2026-10-31T10:13:36.093Z",
+        "bytes": 563,
+        "sha256": "44c7d4d5312ee1d2361ace0a8693ea13a490effabf4bd1fc03222a19aa7dcbd9"
+      },
+      {
+        "at": "2026-10-31T10:13:36.675Z",
+        "bytes": 486,
+        "sha256": "69f2f027c556f12ab160c05a08b5a3602683825a7e6af598de3a1a6fcfb8ecd8"
+      },
+      {
+        "at": "2026-10-31T10:13:37.781Z",
+        "bytes": 563,
+        "sha256": "44c7d4d5312ee1d2361ace0a8693ea13a490effabf4bd1fc03222a19aa7dcbd9"
+      },
+      {
+        "at": "2026-10-31T10:13:37.855Z",
+        "bytes": 563,
+        "sha256": "44c7d4d5312ee1d2361ace0a8693ea13a490effabf4bd1fc03222a19aa7dcbd9"
+      },
+      {
+        "at": "2026-10-31T10:13:37.871Z",
+        "bytes": 563,
+        "sha256": "44c7d4d5312ee1d2361ace0a8693ea13a490effabf4bd1fc03222a19aa7dcbd9"
+      }
+    ]
+  },
+  "passed": false,
+  "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n409 !== 202\n"
+}

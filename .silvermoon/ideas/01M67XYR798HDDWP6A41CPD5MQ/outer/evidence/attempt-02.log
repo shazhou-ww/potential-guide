@@ -1,0 +1,23 @@
+(node:56836) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"已安装制品身份与 src 隔离","passed":true}
+{"name":"Check 准备中需求与浮动 URL 固定旧内容","passed":true}
+{"name":"Probe 准备中需求与浮动 Objective 固定旧 root/Checker","passed":false,"error":"TaskError: Input does not satisfy inputSchema."}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+TaskError: Input does not satisfy inputSchema.
+    at fail (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/node_modules/.pnpm/@potential-guide+task-protocol@file+packs+task-protocol.tgz/node_modules/@potential-guide/task-protocol/dist/json.js:10:11)
+    at Object.validate (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/node_modules/.pnpm/@potential-guide+task-protocol@file+packs+task-protocol.tgz/node_modules/@potential-guide/task-protocol/dist/schema.js:360:17)
+    at TaskEngine.validated (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/node_modules/.pnpm/@potential-guide+task-engine@file+packs+task-engine.tgz/node_modules/@potential-guide/task-engine/dist/engine.js:285:29)
+    at TaskEngine.parse (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/node_modules/.pnpm/@potential-guide+task-engine@file+packs+task-engine.tgz/node_modules/@potential-guide/task-engine/dist/engine.js:365:32)
+    at TaskEngine.submit (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/node_modules/.pnpm/@potential-guide+task-engine@file+packs+task-engine.tgz/node_modules/@potential-guide/task-engine/dist/engine.js:595:27)
+    at submit (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:92:57)
+    at file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:117:19
+    at scenario (file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:19:28)
+    at file:///D:/Code/potential-guide.worktrees/whole-run-consumer-01M67XYR798HDDWP6A41CPD5MQ/consumer.mjs:115:9 {
+  code: 'invalid_input'
+}
+
+Node.js v24.12.0

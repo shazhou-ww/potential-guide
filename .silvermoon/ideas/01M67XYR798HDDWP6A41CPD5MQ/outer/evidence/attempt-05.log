@@ -1,0 +1,11 @@
+(node:56996) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"已安装制品身份与 src 隔离","passed":true}
+{"name":"Check 准备中需求与浮动 URL 固定旧内容","passed":true}
+{"name":"Probe 准备中需求与浮动 Objective 固定旧 root/Checker","passed":true}
+{"name":"精确 digest 与错误 pin 边界","passed":true}
+{"name":"可信 scope/source 拒绝、Never 但 Cancel 可用","passed":true}
+{"name":"业务消息幂等、目标拒绝、共享投入撤回及 deadline 不续期","passed":true}
+{"name":"未 await 宿主动作与独立句柄证明均不能提前 reclaimed","passed":true}
+{"name":"独立故障进程：指定取消、crash/hang、响应及按需恢复不重跑","passed":true}
+{"name":"SQLite 跨真实 Node 进程重启、原业务证据及历史","passed":true}
