@@ -297,6 +297,10 @@ try {
   await evaluate("document.querySelector('#tab-tasks').click();scrollTo(0,0);true");
   checks.narrowFits = await evaluate("document.documentElement.scrollWidth <= innerWidth");
   assert.equal(checks.narrowFits, true);
+  checks.newTaskUnwrapped = await evaluate(
+    "(() => { const button=document.querySelector('#new-task'); return getComputedStyle(button).whiteSpace==='nowrap' && button.scrollWidth<=button.clientWidth; })()",
+  );
+  assert.equal(checks.newTaskUnwrapped, true);
   await screenshot("narrow.png");
   assert.equal(exceptions.length, 0, "no unhandled browser exceptions");
   console.log(JSON.stringify({ ...checks, ownedUi: ui.url, ownedBackend: backend.url }));

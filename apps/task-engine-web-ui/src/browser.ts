@@ -103,6 +103,7 @@ let api: Api;
 let navigation: Navigation;
 let endpoints: Endpoint[] = [];
 let favorites: Favorite[] = [];
+let favoritesGeneration = 0;
 const sourceStates = new Map<string, { label: string }>();
 const selection = new Selection();
 const states = new Map<string, Workspace>();
@@ -1078,25 +1079,29 @@ async function queryExecutions(append = false): Promise<void> {
     lease = selection.capture();
   let started = false;
   try {
-    const query = new URLSearchParams({ sort: "started-desc" });
-    const type = (get("execution-type") as HTMLInputElement).value;
-    if (type.length > 256) throw new Error("类型筛选最多 256 字符。");
-    if (type) query.set("type", type);
-    for (const [id, key] of [
-      ["started-from", "startedFrom"],
-      ["started-before", "startedBefore"],
-    ] as const) {
-      const value = (get(id) as HTMLInputElement).value;
-      if (value) {
-        validateTime(value);
-        query.set(key, value);
+    let query = state.executionDirectory.query;
+    if (!append) {
+      const filters = new URLSearchParams({ sort: "started-desc" });
+      const type = (get("execution-type") as HTMLInputElement).value;
+      if (type.length > 256) throw new Error("类型筛选最多 256 字符。");
+      if (type) filters.set("type", type);
+      for (const [id, key] of [
+        ["started-from", "startedFrom"],
+        ["started-before", "startedBefore"],
+      ] as const) {
+        const value = (get(id) as HTMLInputElement).value;
+        if (value) {
+          validateTime(value);
+          filters.set(key, value);
+        }
       }
-      validateRange(query.get("startedFrom"), query.get("startedBefore"));
+      validateRange(filters.get("startedFrom"), filters.get("startedBefore"));
+      query = filters.toString();
     }
     started = true;
     const accepted = await state.executionDirectory.load(
       (query) => api.request(state.endpoint, `/executions?${query}`, { signal: lease.signal }),
-      query.toString(),
+      query,
       append,
       lease.current,
     );
@@ -1205,11 +1210,11 @@ function starButton(endpoint: Endpoint, taskId: string): HTMLButtonElement {
     (item) => item.source?.taskId === taskId && endpointMatches(item.endpoint, endpoint),
   );
   const control = button(saved ? "★" : "☆", async () => {
-    if (saved) await api.local(`/api/favorites/${saved.id}`, "DELETE");
-    else await api.local("/api/favorites", "POST", { endpoint, taskId });
-    await renderFavorites();
-    renderDirectory();
-    if (taskObserver && current(taskObserver)) renderObserver(taskObserver);
+    const lease = selection.capture();
+    const accepted = saved
+      ? await changeFavorites(`/api/favorites/${saved.id}`, "DELETE")
+      : await changeFavorites("/api/favorites", "POST", { endpoint, taskId });
+    if (!accepted || !lease.current()) return;
     notify(saved ? "已取消星标；不会取消任务。" : `已保存 ${endpoint.label} 的完整原参数。`);
   });
   control.className = "star";
@@ -1276,9 +1281,7 @@ function renderStars(box: HTMLElement): void {
     else
       article.append(
         button("移除此本机星标", async () => {
-          await api.local(`/api/favorites/${favorite.id}`, "DELETE");
-          await renderFavorites();
-          renderDirectory();
+          await changeFavorites(`/api/favorites/${favorite.id}`, "DELETE");
         }),
       );
     box.append(article);
@@ -1337,8 +1340,38 @@ async function checkStarSources(): Promise<void> {
     lease.signal.removeEventListener("abort", abort);
   }
 }
-async function renderFavorites(): Promise<void> {
-  favorites = await api.local<Favorite[]>("/api/favorites");
+async function changeFavorites(
+  path: string,
+  method: "POST" | "DELETE",
+  body?: unknown,
+): Promise<boolean> {
+  // Reads started before a write, or during it, cannot represent its acknowledged outcome.
+  favoritesGeneration++;
+  try {
+    await api.local(path, method, body);
+  } catch (error) {
+    favoritesGeneration++;
+    // A failed/uncertain write must not strand another successful write's invalidated refresh.
+    await renderFavorites().catch(() => {});
+    throw error;
+  }
+  favoritesGeneration++;
+  return renderFavorites();
+}
+async function renderFavorites(): Promise<boolean> {
+  const generation = ++favoritesGeneration;
+  const lease = selection.capture();
+  const currentRead = () => generation === favoritesGeneration && lease.current();
+  let next: Favorite[];
+  try {
+    next = await api.local<Favorite[]>("/api/favorites");
+    if (!currentRead()) return false;
+    if (!Array.isArray(next)) throw new Error("收藏列表协议无效，保留上次已确认数据。");
+  } catch (error) {
+    if (!currentRead()) return false;
+    throw error;
+  }
+  favorites = next;
   const container = get("favorites-list");
   container.replaceChildren();
   const legacy = favorites.filter((item) => !item.source);
@@ -1365,17 +1398,20 @@ async function renderFavorites(): Promise<void> {
     );
     article.append(
       button("删除此收藏", async () => {
-        await api.local(`/api/favorites/${favorite.id}`, "DELETE");
-        await renderFavorites();
+        await changeFavorites(`/api/favorites/${favorite.id}`, "DELETE");
       }),
     );
     container.append(article);
   }
+  renderDirectory();
+  if (taskObserver && current(taskObserver)) renderObserver(taskObserver);
+  return true;
 }
 async function chooseEndpoint(id: string): Promise<void> {
   const endpoint = endpoints.find((item) => item.id === id);
   if (!endpoint) throw new Error("Endpoint 不存在。");
   selection.select(endpoint);
+  const lease = selection.capture();
   starChecks?.abort();
   navigation.close("create-dialog", false);
   navigation.close("submission-dialog", false);
@@ -1409,7 +1445,7 @@ async function chooseEndpoint(id: string): Promise<void> {
   renderDirectory();
   renderExecutions();
   await Promise.all([discover(), renderFavorites()]);
-  if (selection.endpoint && endpointMatches(selection.endpoint, endpoint)) await queryDirectory();
+  if (lease.current()) await queryDirectory();
 }
 async function start(): Promise<void> {
   const response = await fetch("/api/bootstrap");

@@ -79,6 +79,10 @@ main {
   justify-content: space-between;
   gap: 1rem;
 }
+.page-heading > .primary {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
 h2 {
   font-size: 1.35rem;
   margin: 0.4rem 0;

@@ -106,3 +106,42 @@ pnpm --filter @potential-guide/task-engine-web-ui exec tsx fixture\browser-smoke
   用户可暂停；超时运行仍可迟到完成。
 - 收藏文件仍是单实例、操作员保护的同机文件；服务替换需显式更新 Endpoint binding。
 - 目录和详情有清楚的时间边界：冻结摘要可能比实时详情旧；不是从 UI 缓存拼出的全量目录。
+
+## cab2f232 独立审阅跟进
+
+父 Agent 独立浏览器验证发现收藏 GET 反序响应可覆盖新状态，以及执行续页错误读取了
+尚未应用的筛选输入。本轮仅修复这两条路径，另按用户补充让窄屏“新建任务”不拆字；
+保留上述原始证据，不覆盖第一轮截图或检查结果。
+
+- 收藏使用统一读取世代与 Endpoint lease。修改开始、修改完成及失败/未知返回都会
+  使先前读取失效，并重新读取当前保存状态；原修改错误继续报告。只有当前被接受的
+  favorites 结果才能更新旧模板、任务目录和选中详情。旧 starButton 回调不再另行
+  重绘已过期数据，旧目标的迟到完成也不会覆盖当前目标提示。
+- 执行续页直接使用 `executionDirectory.query` 与其原 cursor，不读未提交表单。
+  只有新查询才读取并验证 type / startedFrom / startedBefore。
+- 主按钮仅增加 `flex: 0 0 auto` 与 `white-space: nowrap`，未重做表单或其他布局。
+
+新增 `test/workbench-races.test.ts` 直接加载实际 browser entry，连接**本轮自有的真实
+HTTP Backend/UI**，先消费实际 `/api/favorites` 响应体，再延迟交付；没有构造替代收藏
+快照。验证：
+
+1. A 的 GET 包含 A、不含 B；B 的 POST/GET 先完成后放行 A，B 在目录和详情中仍已标星。
+2. 旧 GET 含 B，取消 B 星标及新 GET 完成后再放行旧结果，B 不恢复。
+3. 旧目标读取延迟时切换 Endpoint，目标/提示不倒退；返回后显示持久星标，旧模板仍保留。
+4. 真实执行目录首 10 条 + next，输入尚未应用的错误日期/另一类型后，续页仍使用原
+   type/时间/cursor 取得第 11–14 条；点击新查询则严格拒绝错误输入且不发送该请求。
+
+相关六个 workspace 的 build / typecheck / test 为 **18/18 个任务成功**；
+UI **40 tests / 40 pass / 0 fail / 0 skip**。
+
+原生 Chrome 再次使用自己的新 headless profile 和随机服务，并显式排除
+`9223,62952,61109,61123,61144`。本次 UI `52750` / Backend `52749` 已关闭，
+profile/临时收藏已清理。新结果见
+[checks.json](evidence/v05-review-fixes/checks.json) 与
+[390px 截图](evidence/v05-review-fixes/narrow.png)：
+`narrowFits=true`、`newTaskUnwrapped=true`，同时原有 Tab、Esc/焦点、草稿、收尾和外部执行
+验证继续通过。该截图使用 390 CSS px；未操作父 Agent 的 110% 缩放用户浏览器。
+
+本跟进最终 `pnpm check` 退出码 0，包含全仓检查及全部 isolated packed consumer。
+没有修改后端协议、调度、既有 Schema/取消/目录冻结规则；没有操作父试用目录、
+后台服务或浏览器页，也没有 push / submit / accept。
