@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
+import { createServer as httpsServer } from "node:https";
 import { once } from "node:events";
 import { mkdir, readFile, writeFile, copyFile, realpath } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -43,6 +44,7 @@ function child(filename, argument) {
   };
 }
 let a;
+let assets;
 const gates = new Map(), outstanding = [];
 try {
   await scenario("已安装制品身份与 src 隔离", async () => {
@@ -56,6 +58,16 @@ try {
     }
     return { installed, manifest: JSON.parse(await readFile("artifact-manifest.json", "utf8")) };
   });
+  const assetRequests = [];
+  assets = httpsServer({ key: await readFile("certificates/key.pem"), cert: await readFile("certificates/cert.pem") }, async (request, response) => {
+    if (request.url !== "/checker.tgz") { response.writeHead(404).end(); return; }
+    const bytes = await readFile(join(root, "artifacts", "floating-checker.tgz"));
+    assetRequests.push({ at: new Date().toISOString(), bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") });
+    response.writeHead(200, { "content-type": "application/gzip", "content-length": bytes.length }).end(bytes);
+  });
+  await new Promise((done) => assets.listen(0, "127.0.0.1", done));
+  process.env.VALIDATION_HTTPS_ORIGIN = `https://127.0.0.1:${assets.address().port}`;
+  report.https = { origin: process.env.VALIDATION_HTTPS_ORIGIN, certSha256: createHash("sha256").update(await readFile("certificates/cert.pem")).digest("hex"), requests: assetRequests };
   const artifacts = await bundles();
   const actionGate = deferred(), proofGate = deferred();
   outstanding.push(actionGate, proofGate);
@@ -242,5 +254,6 @@ finally {
   for (const gate of outstanding) gate.resolve();
   for (const job of jobs) await job.stop().catch((error) => { job.output.cleanupError = String(error); });
   if (a) await a.close().catch((error) => { report.cleanupFailure = String(error); });
+  if (assets) { assets.closeAllConnections(); await new Promise((done) => assets.close(done)); }
   await save();
 }

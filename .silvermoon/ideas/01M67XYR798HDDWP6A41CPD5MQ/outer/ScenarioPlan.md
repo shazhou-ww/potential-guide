@@ -9,7 +9,9 @@ check-artifacts/check-runtime-files/check-task/probe-task 的完整生产依赖�
 仓库外自有非 Git 消费目录通过 file tarball 安装，不 symlink/import 仓库 src；
 记录原 commit、每个 tarball SHA-256、依赖锁文件及真实 installed 路径。
 Checker/Objective 同样通过已安装公开制品构建入口生成真实归档。
-只授权自有 file 根与 loopback Task HTTP，不连接外部未知服务，不使用现有用户数据库。
+只授权自有 file 根、loopback Task HTTP 与自有 HTTPS Checker 归档服务；
+Objective 内嵌 Checker 遵循既有 portable HTTPS 约束。自有证书仅通过 NODE_EXTRA_CA_CERTS
+加入当前验证进程，不关闭 TLS 校验、不修改系统信任库，不连接未知服务或使用现有用户数据库。
 
 ## 场景与判据
 

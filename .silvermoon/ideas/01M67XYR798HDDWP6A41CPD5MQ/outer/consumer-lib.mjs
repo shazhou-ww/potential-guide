@@ -39,7 +39,7 @@ export async function http(url, path, body, scope = "a") {
 export async function bundles() {
   const directory = join(root, "artifacts");
   await mkdir(directory, { recursive: true });
-  const checkUrl = pathToFileURL(join(directory, "floating-checker.tgz")).href;
+  const checkUrl = process.env.VALIDATION_HTTPS_ORIGIN + "/checker.tgz";
   const rootUrl = pathToFileURL(join(directory, "floating-objective.tgz")).href;
   const versions = {};
   for (const version of ["v1", "v2"]) {
@@ -78,7 +78,7 @@ export function access(request) {
 export async function assembly(database, gates = new Map(), extra = []) {
   const reads = [];
   const base = createArtifactSource({
-    allowedOrigins: [], allowedFileRoots: [join(root, "artifacts")],
+    allowedOrigins: [process.env.VALIDATION_HTTPS_ORIGIN], allowedFileRoots: [join(root, "artifacts")],
     authorize(_reference, scope) {
       if (scope !== "a") throw new TaskError("forbidden", "自有 source 拒绝此 scope。");
     },
