@@ -148,6 +148,7 @@ try {
     assert.equal(message.status, 400);
     assert.equal((await http(a.server.url, `/tasks/${x.taskId}`, undefined, "b")).status, 403);
     assert.equal((await http(a.server.url, `/event-history?taskId=${x.taskId}`, undefined, "b")).status, 403);
+    assert.equal((await http(a.server.url, `/tasks/${x.taskId}/cancel`, {}, "b")).status, 403);
     const canceled = await http(a.server.url, `/tasks/${x.taskId}/cancel`, {});
     assert.equal(canceled.status, 200); assert.ok(canceled.body.canceledAt);
     const survivor = await finish(y);
@@ -158,7 +159,12 @@ try {
     const deniedResult = a.engine.getTask(denied.taskId, { scope: "b", subject: "fixture" });
     assert.equal(deniedResult.stage, "run_failed");
     assert.equal(a.reads.some((item) => item.scope === "b"), false);
-    return { message, canceled, survivor, deniedResult };
+    const foreign = new URL(artifacts.checkUrl); foreign.hostname = "localhost";
+    const readsBefore = a.reads.length;
+    const foreignResult = await finish(submit({ type: "check", checker: { kind: "checker", url: foreign.href }, subject: { case: "source-origin-denied" } }));
+    assert.equal(foreignResult.stage, "run_failed");
+    assert.equal(a.reads.length, readsBefore);
+    return { message, canceled, survivor, deniedResult, foreignResult };
   });
   await scenario("业务消息幂等、目标拒绝、共享投入撤回及 deadline 不续期", async () => {
     const x = submit({ type: "control", label: "共同需求", timeoutMs: 1200 });
@@ -220,7 +226,15 @@ try {
       const faults = [];
       for (const mode of ["crash", "hang"]) {
         const task = await submitFault(mode, mode);
-        await until(() => get(task), (value) => value.run);
+        const active = await until(() => get(task), (value) => value.run);
+        await until(async () => {
+          const text = await readFile(join(root, "fault-invocations.jsonl"), "utf8").catch(() => "");
+          return text.includes(`"label":"${mode}"`);
+        }, Boolean);
+        await until(async () => (await job.call("snapshot")).events,
+          (events) => events.some((event) => event.type === "run.progress" && event.runId === active.run.runId));
+        await new Promise((done) => setTimeout(done, 100));
+        if (mode === "hang") assert.equal((await get(task)).stage, "running");
         const started = performance.now();
         assert.equal((await http(ready.url, "/task-types")).status, 200);
         const responseMs = performance.now() - started; assert.ok(responseMs < 1000);
