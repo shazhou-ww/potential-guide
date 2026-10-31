@@ -106,3 +106,18 @@
 用户随后补充要求合并标题栏和 Tabs，并“用 shadcn 把整体样式做得更好看清爽一些”。因此允许展示层接入真正的 shadcn/ui 及所需 React/Tailwind，不只做仿制 CSS；既有业务模型/后端语义不变。官网文档抓取受网络地址限制，未绕过该限制；通过官方公开 GitHub 仓库核实 `apps/v4/registry/new-york-v4/ui` 中 Sheet/Tabs/Button 来源及 MIT 许可。实施时按准确上游版本核实依赖，不照搬未核实的安装命令。
 
 原受托 review & acceptance 安排继续适用于本 topic；主 Agent 接受随后同步并提交的准确修订 Ideal，仍需独立实现及浏览器复核。旧版本的验收不自动覆盖新的布局。
+
+## v0.6 独立实现复核
+
+候选 `8e5ec6739d4eecb5ca3c37daa00082285083cd72` 已由主 Agent 独立复核。公共后端 API、权限、存储、任务模型和收藏格式未改变；变化限于 React/shadcn 展示层、导航、构建依赖和支持样式 nonce 的最小服务端适配。
+
+- 核对真实 Button/Tabs/Sheet/Dialog/Input/Table 源码、固定官方版本及 MIT 许可，非仿制 CSS；依赖集中在 catalog，Tailwind 产物本地编译。Biome 只对该 CSS 开启 Tailwind 指令解析，没有放宽通用规则。
+- 核对 React 独占渲染树、分离描述节点一次性转换和 Schema 岛的所有权。原输入编辑器节点跨弹窗卸载保留；原模型/取消因果/星标世代不重写，详情和操作保持稳定键。
+- 独立使用 app 的自动 JSX tsconfig 执行 UI 47 项和目录 6 项测试，**53/53 通过**；独立完整 `pnpm check` 退出 0。最初从仓库根执行未指定 app tsconfig 的临时测试命令使用了错误 JSX 模式，改用正式 app 配置后全部通过，并非修改产品规避失败。
+- 以用户 Chrome for Testing 中新建的自有页面测试；使用独立 UI 和收藏副本，仅对现有后端做读取，确认没有 POST。原用户服务/星标没有被修改。
+- 1280×900 CSS 视口中顶栏高 56.375px，标题/两 Tabs/服务/任务栏全部在同一栏；列表宽度在 Sheet 打开前后均为 1223px，抽屉范围 x=650..1280，不挤压表格。Esc 关闭后焦点回原详情按钮，列表滚动位置保持 88px。
+- Task → Execution → Task 关联跳转始终只有一个 Sheet；新建弹窗 Esc 返回新建按钮，跨 Tab、关闭重开后原字段节点和未提交文本保留。
+- 390×844 CSS 视口下 clientWidth=scrollWidth=375，Sheet 范围 x=0..390，内容区独立 overflow:auto，无整页横向溢出。实际截图已检查。
+- 正常交互零 CSP violation，合法 nonce 的 Radix 样式真实生效；原生浏览器反向探针确认无 nonce 的 inline script/style 被阻止。脚本仍 self-only、style-src-attr 为 none，未使用 unsafe-inline/eval。页面前进/后退也实际验证恢复正常，当前 Chrome 按 no-store 重新加载。
+
+结论：未发现剩余 blocking issue，原有功能由回归维护，新布局由实际几何/焦点/CSP验证证明。主 Agent 按受托授权接受随后同步并提交的准确实现 revision；仍以 CLI 事件记录为准，Outer 更新试用服务前还需核验最终构建和数据保留。
