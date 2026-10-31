@@ -1352,7 +1352,15 @@ async function changeFavorites(
   } catch (error) {
     favoritesGeneration++;
     // A failed/uncertain write must not strand another successful write's invalidated refresh.
-    await renderFavorites().catch(() => {});
+    try {
+      await renderFavorites();
+    } catch (refreshError) {
+      throw new AggregateError(
+        [error, refreshError],
+        `修改失败且刷新失败，当前仅为上次确认数据。修改原因：${String(error)}；刷新原因：${String(refreshError)}`,
+        { cause: error },
+      );
+    }
     throw error;
   }
   favoritesGeneration++;

@@ -145,3 +145,15 @@ profile/临时收藏已清理。新结果见
 本跟进最终 `pnpm check` 退出码 0，包含全仓检查及全部 isolated packed consumer。
 没有修改后端协议、调度、既有 Schema/取消/目录冻结规则；没有操作父试用目录、
 后台服务或浏览器页，也没有 push / submit / accept。
+
+### 收藏失败恢复的错误提示收尾
+
+按父 Agent 对 f6acfeeb 的补充复核，仅替换失败恢复中吞掉读取错误的 catch。
+写入和恢复读取都失败时，以 AggregateError 保留两次错误及原写入 cause，明确显示
+“修改失败且刷新失败，当前仅为上次确认数据”，并包含各自原因；恢复成功仍抛出原写入
+错误，不改变读取世代、成功路径、后端或用户服务。
+
+实际 browser-entry 回归在传输边界注入 403/write_failure 和 503/refresh_failure，
+确认提示含两次状态/原因，目录和详情的已确认星标不被空数据替代，已保存记录不变。
+`typecheck` 与定向 `workbench-races.test.ts` **2/2（含新增双失败子场景）** 通过。
+最终完整 `pnpm check` 同样退出码 0；本次没有修改后端或操作用户服务。

@@ -19,7 +19,7 @@ async function until(check: () => boolean | Promise<boolean>, reason: string): P
   }
   assert.fail(reason);
 }
-test("actual browser entry ignores delayed real favorites responses and paginates applied execution filters", async () => {
+test("actual browser entry ignores delayed real favorites responses and paginates applied execution filters", async (t) => {
   const root = resolve(".cache", `workbench-races-${randomUUID()}`);
   await mkdir(root, { recursive: true });
   const nativeFetch = globalThis.fetch;
@@ -119,6 +119,7 @@ test("actual browser entry ignores delayed real favorites responses and paginate
   const held: { value: Favorite[]; release(): void }[] = [];
   let holdNext = false,
     inFlight = 0;
+  let failFavorites = false;
   const browserRequests: URL[] = [];
   const transport: typeof fetch = async (input, options) => {
     const url = new URL(String(input), ui.url);
@@ -128,6 +129,18 @@ test("actual browser entry ignores delayed real favorites responses and paginate
     browserRequests.push(url);
     inFlight++;
     try {
+      if (failFavorites && url.pathname.startsWith("/api/favorites")) {
+        const writing = options?.method === "POST" || options?.method === "DELETE";
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: writing ? "write_failure" : "refresh_failure",
+              message: writing ? "write unavailable" : "read unavailable",
+            },
+          }),
+          { status: writing ? 403 : 503, headers: { "Content-Type": "application/json" } },
+        );
+      }
       const response = await nativeFetch(url, { ...options, headers });
       if (
         url.pathname === "/api/favorites" &&
@@ -272,6 +285,37 @@ test("actual browser entry ignores delayed real favorites responses and paginate
         !!document.querySelector(`#directory [data-key="star:${b.taskId}"]`) &&
         star(b.taskId).getAttribute("aria-pressed") === "true",
       "return to original target must show persisted star",
+    );
+
+    await t.test(
+      "failed favorite write and failed recovery read report both causes without replacing confirmed data",
+      async () => {
+        element<HTMLInputElement>("#task-lookup input").value = b.taskId;
+        element<HTMLButtonElement>("#task-lookup button").click();
+        await until(
+          () =>
+            !!document.querySelector("#task-detail .star") &&
+            detailStar().getAttribute("aria-pressed") === "true",
+          "confirmed favorite detail should be available",
+        );
+        failFavorites = true;
+        try {
+          star(b.taskId).click();
+          await until(
+            () => element("#notice").textContent!.includes("修改失败且刷新失败"),
+            "both failures must be visible",
+          );
+          const message = element("#notice").textContent!;
+          assert.match(message, /当前仅为上次确认数据/);
+          assert.match(message, /403 write_failure.*write unavailable/);
+          assert.match(message, /503 refresh_failure.*read unavailable/);
+          assert.equal(star(b.taskId).getAttribute("aria-pressed"), "true");
+          assert.equal(detailStar().getAttribute("aria-pressed"), "true");
+          assert.equal(await persisted(b.taskId), true);
+        } finally {
+          failFavorites = false;
+        }
+      },
     );
 
     for (let index = 0; index < 11; index++) await create(`execution-${index}`);
