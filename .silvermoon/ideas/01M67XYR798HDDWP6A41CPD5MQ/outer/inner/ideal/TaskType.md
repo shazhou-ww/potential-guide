@@ -2,12 +2,16 @@
 
 本文支持 [构想契约](./Idea.md)。用户要求记录修剪后的接口并明确 Progress 上报方式，
 随后确认按阶段、可选百分比和文本消息更新设计；这不等于接受本构想的精确 revision。
+用户于 11:57 确认 messageSchema 与 messages 必选，不需要业务消息时显式使用 false schema。
 完整 TaskType 签名及确认时点仍是设计候选。JsonSchema 是概念占位名，
-不是仓库当前已有的通用 schema 类型；实际采用范围须沿用并核对现有协议能力。
+不是仓库当前已有的通用 schema 类型；Message Schema 须支持 boolean schema，
+不能直接照搬当前要求根 type 为 object 的 Input Schema 编译入口。
 
 ## 接口候选
 
 ```ts
+type MessageSchema = boolean | JsonObject;
+
 interface TaskType<
   Input extends Json = Json,
   Result extends Json = Json,
@@ -17,7 +21,7 @@ interface TaskType<
   version: string;
   inputSchema: JsonSchema;
   resultSchema: JsonSchema;
-  messageSchema?: JsonSchema;
+  messageSchema: MessageSchema;
 
   run(input: Input, context: RunContext<Message>): Promise<Result>;
 }
@@ -28,7 +32,7 @@ interface RunContext<Message extends Json = never> {
   readonly scope: string;
 
   progress(value: RunProgress): Promise<void>;
-  readonly messages?: AsyncIterable<RunMessage<Message>>;
+  readonly messages: AsyncIterable<RunMessage<Message>>;
 }
 
 interface RunMessage<Message extends Json> {
@@ -45,7 +49,7 @@ interface RunProgress {
 }
 ```
 
-TaskType 声明公开 Input、最终 Result、可选 Message 契约与完整运行入口。Prepared 不再是 TaskType 泛型，
+TaskType 声明公开 Input、最终 Result、必选 Message 契约与完整运行入口。Prepared 不再是 TaskType 泛型，
 也不是 run 的前置参数；它作为类型内部对象存在，必要的内容身份/恢复证据另行定界，
 不作为通用 Progress 的任意 JSON payload。
 跨 Worker 的 Input 和消息使用隔离副本，禁止携带 Engine 内部引用或共享可变内存。
@@ -56,11 +60,15 @@ scope 由可信宿主提供，不来自请求正文，也不意味着插件可�
 这一接口没有列出 Check 下载/资源池等能力：它们由类型实现通过受控桥接获得，
 不将业务专有资源 API 塞进每个 TaskType 的通用 RunContext。
 MatchPolicy / matchPolicy 属于 Task 的需求，与 TaskType 的公开 Input 契约分开。
-messageSchema 表示可选业务消息能力；不声明时不提供业务消息入口，
-支持时才装配相应消息通道。messages 的 AsyncIterable 是候选本地消费形式，
+messageSchema 和 messages 均必选，不省略字段或通道。
+不需要业务消息的类型显式声明 messageSchema: false，Message 泛型使用 never；
+false 是标准 JSON Schema，拒绝任意值，包括空对象和 null。{} 或 true 则接受任意 JSON，
+不能用空 schema 冒充 Never。messages 的 AsyncIterable 是候选本地消费形式，
 取出消息不代表业务接纳，接纳/拒绝确认和持久化协议仍需另行定义。
 Caller 是可信服务身份的最小副本，不是 Agent 操作权限或 TaskType 自授权依据。
 详见 [运行消息](./Messages.md)，该信封不是无归属的任意 JSON 广播。
+Never 类型仍有统一通道，但所有业务 payload 在校验阶段被拒绝，不投递给类型；
+没有业务消息不代表自动结束运行通道，通道关闭仍遵循 Run 生命周期。
 
 ## Progress 上报
 
@@ -163,6 +171,7 @@ resultSchema 是最终公开结果契约，不是 Run 内部阶段接口；只�
 
 Run 开始/终结事实、取消确认和物理清理不由 progress 伪装。
 业务输入 Message 也不由 Progress 的 message 字符串承载；
-Check 不需要输入消息时不声明 messageSchema，不增加必须处理的占位消息。
+Check 不需要输入消息时显式声明 messageSchema: false，不增加空对象占位消息；
+messages 仍必选。Cancel 是独立生命周期控制，不被 Never Message Schema 禁用。
 run 的 Promise 完成与清理确认如何衔接、错误事实如何编码、类型守护 Worker 的启动/关闭接口，
 均属于待细化的运行协议；不把当前最简草案当作已经覆盖全部生命周期的实现。

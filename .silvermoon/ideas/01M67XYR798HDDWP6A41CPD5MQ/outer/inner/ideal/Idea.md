@@ -16,7 +16,8 @@ Task 表达需求，Run 承担包含 Preparation、Allocation 和 Execution 的�
 ## 边界
 
 1. Run 是可复用单元，Execution 仅指实际执行子过程；明确 Run 的 start/terminate 边界，
-   保持独立取消、超时和物理回收语义。可选类型消息保留 Task 归属与接纳确认，
+   保持独立取消、超时和物理回收语义。类型消息契约与通道必选，无需消息时使用 false schema；
+   消息保留 Task 归属与接纳确认，
    不直接改写初始 Input、延长期限或复活已终结 Run。
 2. 浮动 URL 不承诺最新内容；匹配原始 Input，实际内容可追溯，需要固定版本时在 Input pin digest。
 3. 去掉通用 TaskType.authorize，保留服务访问、实际资源动作和资源替换边界。
@@ -30,5 +31,5 @@ Task 表达需求，Run 承担包含 Preparation、Allocation 和 Execution 的�
 2. MatchPolicy 的 started-after-eligible / terminated-after-eligible 指向 Run 事件，
    不指内部 Execution；浮动引用复用旧内容不被误判为不兼容或最新内容。
 3. 匹配不再逐 Task 授权资源；实际资源动作及服务访问仍受可信权限约束，
-   类型动态代码不在 Engine 内运行。可选消息的接纳及共享影响可追溯，
+   类型动态代码不在 Engine 内运行。消息的接纳及共享影响可追溯，Never schema 拒绝全部业务消息，
    不用无归属消息覆盖其他需求；类型内部调度与资源复用不成为 Engine 的业务知识。

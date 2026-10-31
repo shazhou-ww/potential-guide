@@ -1,7 +1,8 @@
 # Task 归属的运行消息
 
 本文支持 [构想契约](./Idea.md) 和 [TaskType 接口草案](./TaskType.md)。
-用户于 11:47 要求按可选、类型定义的运行消息方向调整设计；具体接口和可靠接纳协议仍待细化，
+用户于 11:47 要求按类型定义的运行消息方向调整设计，11:57 确认消息 schema 和通道必选，
+不需要业务消息时使用 Never schema；具体接口和可靠接纳协议仍待细化，
 不将该请求视为构想精确 revision 的验收或代码实施授权。
 
 ## Input、Message 与输出
@@ -14,8 +15,12 @@
 | Result | Run 的最终公开结果；不由后续消息改写旧结果 |
 
 运行消息是输入方向，不复用 Progress 的 message 文本，也不让 Engine 解析展示文字控制 Run。
-TaskType 可声明 messageSchema；不支持消息的类型保持无消息接口，
-服务收到此类请求须显式拒绝，不静默丢弃或假装成功。
+每个 TaskType 必须声明 messageSchema，每个 RunContext 必须提供 messages；
+无需业务消息的类型显式声明 messageSchema: false，并以 never 表示业务消息类型。
+false 是标准 JSON Schema，拒绝包括 {}、null 在内的任意值；
+{} 或 true 表示接受任意 JSON，并不是 Never，也不是只接受空对象。
+服务在 schema 校验时显式拒绝 Never 类型的业务消息，不投递、不丢弃或假装成功；
+不自动注入 {} 消息，也不因当前没有业务消息而把运行通道当作终结。
 取消仍是通用生命周期控制，不要求每个类型把 Cancel 定义成自己的业务消息。
 
 ## 以 Task 为归属，经可信通道送达类型 Worker
