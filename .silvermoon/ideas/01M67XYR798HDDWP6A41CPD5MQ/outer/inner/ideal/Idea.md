@@ -3,7 +3,8 @@
 ## 问题
 
 当前 Prepare 属于各个 Task，而共享对象只包含后续 Execution，容易把准备完成误作共享资格，
-并为绕过该前提引入通用 TaskType.authorize。详见 [讨论](./Discussion.md)。
+并为绕过该前提引入通用 TaskType.authorize。详见 [讨论](./Discussion.md)；
+[TaskType 与 Progress 草案](./TaskType.md) 提供接口可行性及待定边界。
 
 ## 结果
 

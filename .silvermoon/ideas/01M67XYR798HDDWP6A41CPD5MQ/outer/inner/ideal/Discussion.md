@@ -41,6 +41,8 @@ Engine 对类型边界只需要一个完整运行入口，不再分别调用 Pre
 将入口命名为 run(Input, context) 是与上述概念一致的候选，尚未确认精确函数签名。
 Prepared 是否可选、使用 yield 还是消息报告，以及中间事实的校验和持久化，仍待定义；
 不因概念命名而预设 generator API 或恢复调用栈能力。
+后续 [TaskType 与 Progress 草案](./TaskType.md) 给出单一 run 及 context.progress 的候选，
+区分最终返回值、业务中间进度与运行生命周期事实；具体签名尚未批准。
 
 取消一个 Task 首先撤销它的需求，不自动取消其他需求共享的 Run。
 需要取消 Run 时向类型守护 Worker 投递指定 Run 的请求，正常取消不通过杀守护 Worker 实现。
