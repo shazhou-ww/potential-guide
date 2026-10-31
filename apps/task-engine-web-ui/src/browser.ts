@@ -124,6 +124,19 @@ function workspace(endpoint = selection.endpoint): Workspace {
   }
   return state;
 }
+function preserveSelectedCancellation(endpoint: Endpoint, id: string): void {
+  // The selected detail owns its confirmed fact even if the bounded list cache evicts it.
+  const selected = taskObserver;
+  if (
+    selected &&
+    current(selected) &&
+    endpointMatches(selected.endpoint, endpoint) &&
+    selected.id === id &&
+    selected.snapshot?.canceledAt !== undefined &&
+    workspace(endpoint).tasks.values.get(id)?.canceledAt === undefined
+  )
+    workspace(endpoint).tasks.confirmCancellation(id, selected.snapshot);
+}
 const bar = new SubmissionBar(
   (entry) =>
     api.request(entry.endpoint, "/tasks", {
@@ -136,7 +149,10 @@ const bar = new SubmissionBar(
     renderTasks();
   },
   (entry) => {
-    if (entry.snapshot) workspace(entry.endpoint).tasks.seed(entry.snapshot);
+    if (entry.snapshot) {
+      preserveSelectedCancellation(entry.endpoint, entry.snapshot.taskId);
+      workspace(entry.endpoint).tasks.seed(entry.snapshot);
+    }
   },
 );
 function checkedForm(): { endpoint: Endpoint; parameters: Parameters; revision: string } {
@@ -426,12 +442,13 @@ async function live(observer: Observer): Promise<void> {
         observer.message = "";
         failures = 0;
         for (const snapshot of observation.snapshots) {
-          const accepted = workspace(observer.endpoint).tasks.observe(
-            snapshot,
-            observation.watermark,
-          );
-          if (accepted && observer.kind === "taskId" && snapshot.taskId === observer.id)
-            observer.snapshot = snapshot;
+          const tasks = workspace(observer.endpoint).tasks;
+          preserveSelectedCancellation(observer.endpoint, snapshot.taskId);
+          const accepted = tasks.observe(snapshot, observation.watermark);
+          if (accepted && observer.kind === "taskId" && snapshot.taskId === observer.id) {
+            const retained = workspace(observer.endpoint).tasks.values.get(snapshot.taskId);
+            if (retained) observer.snapshot = retained;
+          }
         }
         renderTasks();
         renderObserver(observer);
@@ -598,7 +615,7 @@ function renderObserver(observer: Observer): void {
         "取消选中的 Task",
         async () => {
           if (!current(observer)) return;
-          const accept = workspace(observer.endpoint).tasks.begin(observer.id);
+          const accept = workspace(observer.endpoint).tasks.beginCancellation(observer.id);
           const snapshot = await api.request<TaskSnapshot>(
             observer.endpoint,
             `/tasks/${observer.id}/cancel`,

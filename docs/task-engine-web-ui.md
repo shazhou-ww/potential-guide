@@ -109,7 +109,11 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   sequence 去重，过滤后的序号跳跃不直接推断缺口；断流、失效、未加载历史、
   窗口截断均标明。可逐页查看全部可取的公开事件，公开协议隐藏的内部过程不猜测。
   实时区按稳定对象/事件键更新 DOM，保留 disclosure 展开及键盘焦点。Task 快照按
-  服务 watermark、本地请求世代与来源保护；timestamp 仅为观察时间，不用于版本排序。
+  来源保护：watermark 只用于 SSE 之间的排序，普通 GET 使用本地读世代；
+  HTTP 回执没有可比较的水位，不从 lastSeen 推测其位置。已确认取消依据公开契约
+  冻结完整 Task 事实，旧 GET/SSE 不能撤回，独立取消回执不会被在途观察丢弃；
+  后续同一取消快照只更新观察时间，Execution 事件仍继续接收。
+  timestamp 仅为观察时间，不用于版本排序。
 - **历史目录**：独立向后端查询，含其他客户端授权任务。类型精确匹配，receivedAt
   含下界、不含上界，必须填写带时区时间；固定 created-desc。目录 observedAt /
   expiresAt / 摘要不被 SSE 改写，翻页使用原过滤条件。410/query_expired 后明确

@@ -155,21 +155,63 @@ test("causally newer snapshots survive clock rollback and receipt replay", () =>
   assert.equal(tasks.observe(running, 12), false);
   assert.equal(tasks.values.get(initial.taskId), canceled);
 });
-test("HTTP request generations and stream causal floor protect fresh cancellation", () => {
+test("confirmed cancellation cannot be withdrawn by buffered SSE with a larger global watermark", () => {
   const tasks = new TaskSnapshots();
-  tasks.observe(initial, 10);
+  const running: TaskSnapshot = { ...initial, stage: "running" };
+  tasks.observe(running, 10);
   const oldRead = tasks.begin(initial.taskId);
   const latest = tasks.begin(initial.taskId);
   const canceled = {
-    ...initial,
+    ...running,
     canceledAt: "2026-10-31T01:00:00.000Z",
     timestamp: "2026-10-31T01:00:00.000Z",
   };
   assert.equal(latest(canceled), true);
   assert.equal(oldRead(initial), false);
-  assert.equal(tasks.observe(initial, 10), false);
+  assert.equal(tasks.observe(running, 20), false);
   assert.equal(tasks.values.get(initial.taskId), canceled);
-  assert.equal(tasks.observe({ ...canceled, timestamp: "2026-10-31T00:59:00.000Z" }, 11), true);
+  assert.equal(tasks.observe({ ...canceled, timestamp: "2026-10-31T00:59:00.000Z" }, 21), true);
+});
+test("in-flight cancellation receipts survive an intervening running observation and stream failure", () => {
+  for (const begin of ["beginCancellation", "begin"] as const) {
+    const tasks = new TaskSnapshots();
+    const running: TaskSnapshot = { ...initial, stage: "running" };
+    tasks.observe(running, 10);
+    const acceptCancel = tasks[begin](initial.taskId);
+    tasks.observe({ ...running, timestamp: "2026-10-31T01:59:00.000Z" }, 11);
+    const canceled = {
+      ...running,
+      canceledAt: "2026-10-31T01:50:00.000Z",
+      timestamp: "2026-10-31T01:50:00.000Z",
+    };
+    assert.equal(acceptCancel(canceled), true);
+    assert.equal(tasks.values.get(initial.taskId)?.canceledAt, canceled.canceledAt);
+    tasks.seed(initial);
+    assert.equal(tasks.observe(running, 99), false);
+    assert.equal(tasks.values.get(initial.taskId)?.canceledAt, canceled.canceledAt);
+  }
+});
+test("ordinary late GETs remain discardable; cancellation requires a real receipt and freezes Task facts", () => {
+  const tasks = new TaskSnapshots();
+  tasks.observe(initial, 10);
+  const lateRead = tasks.begin(initial.taskId);
+  const running: TaskSnapshot = {
+    ...initial,
+    stage: "running",
+    timestamp: "2026-10-31T01:00:00.000Z",
+  };
+  tasks.observe(running, 11);
+  assert.equal(lateRead(initial), false);
+  assert.throws(() => tasks.beginCancellation(initial.taskId)(running), /未确认/);
+  const canceled = { ...running, canceledAt: "2026-10-31T00:59:00.000Z" };
+  tasks.beginCancellation(initial.taskId)(canceled);
+  assert.equal(
+    tasks.observe({ ...canceled, stage: "completed", timestamp: "2026-10-31T00:58:00.000Z" }, 21),
+    true,
+  );
+  assert.equal(tasks.values.get(initial.taskId)?.stage, "running");
+  assert.equal(tasks.values.get(initial.taskId)?.timestamp, "2026-10-31T00:58:00.000Z");
+  assert.throws(() => tasks.observe(running, Number.NaN), /watermark/);
 });
 test("submission change notifications never replay accepted snapshots", async () => {
   const tasks = new TaskSnapshots();

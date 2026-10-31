@@ -157,3 +157,48 @@ Task 的取消时间出现在独立 Task 区。快捷按钮两次原生激活目
 全部退出码 0（包括各 isolated packed consumer）。本轮新建的 UI / fixture
 进程已停止，浏览器页已释放，只有本轮拥有的 fixture 配置/随机凭据被删除；
 没有接触主 Agent 的验证资源，也没有 push、submit 或接受操作。
+
+## 第二轮复核：HTTP / SSE 取消事实
+
+主 Agent 对 ab3a3084 的独立复核指出，上一节采用的 HTTP `lastSeen + 1` floor
+并不能表达取消回执的真实因果位置；旧 running 帧的全局 watermark 可以因为其他
+Task 而更大。普通读 generation 也不能用于丢弃已经成功的取消修改回执。
+该提交仍未被接受；下述实现及证据替代上一轮对跨通道排序的不足证明。
+
+- **不猜 HTTP 水位**：完全移除 floor，不改变后端 DTO。watermark 只用于 SSE
+  观察之间排序；普通 GET 的在途读仍使用本地读世代。timestamp 仍不是版本号。
+- **使用可证明的不可逆事实**：公开 Engine 的 cancelTask 成功返回 canceledAt；
+  protocol projection 对该 Task 冻结后续事实，仅重新计算观察 timestamp。
+  因此完整已确认取消快照不会被缺少 canceledAt 的旧 GET / SSE 替换，即使该
+  SSE 的全局 watermark 更大；不把 canceledAt 拼到另一份陈旧状态上。
+- **修改与读取分离**：新增 beginCancellation，并由实际取消按钮调用；期间到达
+  的普通快照不会使成功回执失效。无取消事实或目标错误的“成功”回执明确拒绝，
+  冲突取消时间也明确报错。迟到 GET 如果本身带有有效 canceledAt，同样提供不可逆
+  事实；普通非取消 GET 仍可能因读世代过期被忽略。
+- **观察继续**：live 使用模型保留的完整 Task 视图，而不是直接套回原始帧；
+  history/cursor/Execution 事件继续接收，不重提 Task，不声称 Execution 已回收。
+  同一取消事实的后续观察只更新时间，允许时钟回拨。
+
+回归：
+
+1. `review-regressions.test.ts` 精确覆盖 running/10 → HTTP canceled →
+   迟到 running/20，以及 running/10 → 发起取消 → running/11 →
+   成功 canceled；后者分别通过普通读的不可逆事实识别与明确修改回执路径验证。
+   同时覆盖普通 GET 迟到丢弃、错误取消回执、回拨时间及旧 receipt 不重放。
+2. `browser-channels.test.ts` 直接加载实际 `src/browser.ts`，驱动实际 Task
+   入口和取消按钮，在可控传输下经 consumeSse/live 渲染两种交错：
+   A 中先确认取消，再实际消费并显示 sequence 20 的事件，Task 仍为已取消；
+   B 中先显示 sequence 11，再确认取消并使流失败，取消事实仍可见。
+   A 同时使 200 条上限的列表缓存淘汰该 Task，再放入迟到旧回执；当前选中详情
+   独立持有的已确认取消会在 receipt/live 入栏前恢复，避免缓存清理撤回活动视图的事实。
+   同时断言实际 GET 调用 begin 两次、实际取消调用 beginCancellation 两次，
+   防止仅修改 helper 而漏接浏览器调用路径。
+
+该新增 browser-entry 回归是 DOM/受控传输集成，不冒充新的真实 Chromium
+网络故障注入；已有真实 HTTP 集成套件继续运行。上一轮 Schema、凭据脱敏、
+keyed DOM 焦点和目录世代的修复及回归保持不变，最终浏览器复查仍由主 Agent 执行。
+
+本轮相关 build / typecheck 与 **31 tests / 31 pass / 0 fail / 0 skip** 已通过。
+最终完整 `pnpm check` 退出码 0，包含 layers、format、lint、typecheck、test 和
+所有 isolated packed consumer。此次没有启动手动浏览器 fixture，也未操作主 Agent
+资源；自动测试拥有的临时监听器/目录按既有 teardown 清理。仍未 push / submit / accept。

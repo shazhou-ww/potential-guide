@@ -279,14 +279,11 @@ export class Directory {
 }
 export class TaskSnapshots {
   readonly values = new Map<string, TaskSnapshot>();
-  private readonly versions = new Map<
-    string,
-    { generation: number; watermark: number; floor: number }
-  >();
+  private readonly versions = new Map<string, { generation: number; watermark: number }>();
   private version(id: string) {
     let value = this.versions.get(id);
     if (!value) {
-      value = { generation: 0, watermark: 0, floor: 0 };
+      value = { generation: 0, watermark: 0 };
       this.versions.set(id, value);
       this.trimVersions();
     }
@@ -302,29 +299,53 @@ export class TaskSnapshots {
     const version = this.version(id);
     const generation = ++version.generation;
     return (snapshot) => {
+      if (snapshot.taskId !== id) return false;
+      // Cancellation is an irreversible fact, even in a late GET response.
+      if (snapshot.canceledAt !== undefined) return this.confirmCancellation(id, snapshot);
       if (
-        snapshot.taskId !== id ||
         this.versions.get(id) !== version ||
-        version.generation !== generation
+        version.generation !== generation ||
+        this.values.get(id)?.canceledAt !== undefined
       )
         return false;
-      const facts = (value: TaskSnapshot | undefined) => {
-        if (!value) return "";
-        const { timestamp: _observationTime, ...rest } = value;
-        return JSON.stringify(rest);
-      };
-      // HTTP has no causal watermark: changed facts require a later stream boundary
-      // before a buffered pre-response observation can replace them.
-      if (facts(this.values.get(id)) !== facts(snapshot)) version.floor = version.watermark + 1;
       version.generation++;
       this.store(snapshot);
       return true;
     };
   }
+  beginCancellation(id: string): (snapshot: TaskSnapshot) => boolean {
+    // A successful modification receipt is not invalidated by intervening reads or SSE.
+    return (snapshot) => this.confirmCancellation(id, snapshot);
+  }
+  confirmCancellation(id: string, snapshot: TaskSnapshot): boolean {
+    if (
+      snapshot.taskId !== id ||
+      typeof snapshot.canceledAt !== "string" ||
+      !Number.isFinite(Date.parse(snapshot.canceledAt))
+    )
+      throw new Error("取消回执未确认目标 Task 的取消；结果未知，请核对原 Task。");
+    const previous = this.values.get(id);
+    if (previous?.canceledAt !== undefined && previous.canceledAt !== snapshot.canceledAt)
+      throw new Error("取消事实冲突；保留已确认快照，不猜测事实顺序。");
+    this.version(id).generation++;
+    // Public cancellation freezes the Task, not its Execution. Only observation time varies.
+    this.store(
+      previous?.canceledAt !== undefined
+        ? { ...previous, timestamp: snapshot.timestamp }
+        : snapshot,
+    );
+    return true;
+  }
   observe(snapshot: TaskSnapshot, watermark: number): boolean {
+    if (!Number.isSafeInteger(watermark) || watermark < 0)
+      throw new Error("事件观察缺少有效的公开 watermark。");
     const version = this.version(snapshot.taskId);
-    if (watermark < Math.max(version.watermark, version.floor)) return false;
+    if (watermark < version.watermark) return false;
+    const previous = this.values.get(snapshot.taskId);
+    if (previous?.canceledAt !== undefined && snapshot.canceledAt === undefined) return false;
     version.watermark = watermark;
+    if (snapshot.canceledAt !== undefined)
+      return this.confirmCancellation(snapshot.taskId, snapshot);
     version.generation++;
     this.store(snapshot);
     return true;
