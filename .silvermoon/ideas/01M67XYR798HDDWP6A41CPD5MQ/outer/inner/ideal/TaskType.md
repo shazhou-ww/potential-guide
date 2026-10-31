@@ -1,7 +1,8 @@
 # TaskType 最简接口与 Progress 草案
 
-本文支持 [构想契约](./Idea.md)。用户要求记录修剪后的接口并明确 Progress 上报方式；
-以下签名及确认时点是设计候选，不是已批准的实现。JsonSchema 是概念占位名，
+本文支持 [构想契约](./Idea.md)。用户要求记录修剪后的接口并明确 Progress 上报方式，
+随后确认按阶段、可选百分比和文本消息更新设计；这不等于接受本构想的精确 revision。
+完整 TaskType 签名及确认时点仍是设计候选。JsonSchema 是概念占位名，
 不是仓库当前已有的通用 schema 类型；实际采用范围须沿用并核对现有协议能力。
 
 ## 接口候选
@@ -21,12 +22,19 @@ interface RunContext {
   readonly signal: AbortSignal;
   readonly scope: string;
 
-  progress(value: Json): Promise<void>;
+  progress(value: RunProgress): Promise<void>;
+}
+
+interface RunProgress {
+  stage: "preparation" | "allocation" | "execution";
+  percent?: number;
+  message: string;
 }
 ```
 
 TaskType 只声明公开 Input、最终 Result 与完整运行入口。Prepared 不再是 TaskType 泛型，
-也不是 run 的前置参数；它可作为类型内部的对象和可报告的中间信息存在。
+也不是 run 的前置参数；它作为类型内部对象存在，必要的内容身份/恢复证据另行定界，
+不作为通用 Progress 的任意 JSON payload。
 跨 Worker 的 Input 和消息使用隔离副本，禁止携带 Engine 内部引用或共享可变内存。
 RunContext 在类型 Worker 本地构造，signal 和 progress 并不是从 Engine 直接复制的对象或函数。
 scope 由可信宿主提供，不来自请求正文，也不意味着插件可以自行授予资源权限。
@@ -39,26 +47,48 @@ MatchPolicy / matchPolicy 属于 Task 的需求，与 TaskType 的公开 Input �
 ## Progress 上报
 
 使用明确的 context.progress(value)，替换早期草案含糊的 report 名称。
-run 返回值表示最终 Result；progress 表示任意数量的中间进度，不返回最终结果，
-也不声明通用 Preparation/Allocation 状态机。
+run 返回值表示最终 Result；progress 表示任意数量的中间进度，不返回最终结果。
+阶段字段用于统一展示，不让 Engine 根据 Progress 编排 Preparation/Allocation 状态机。
+
+stage 使用名词 preparation、allocation、execution；percent 是当前阶段的预估百分比，
+不是 Run 总百分比。传入时须为有限的 0–100 数值，不传表示未知而不是 0。
+进入下一阶段可重新从低百分比开始，类型不必经历或报告全部阶段，
+也不必先上报上一阶段 100 才能切换。100 不表示 Run 已成功或资源已释放。
+同阶段估计是否需要修订不能由 Engine 擅自加单调增长约束。
+
+message 是任意展示文本，不是机器判定、资源标识或控制指令。
+允许空文本；具体字符串长度/消息字节上限由通用协议约束定义，不新增每类型动态校验。
+Progress 整体是标准化 JSON 对象，但 message 不换成任意 JSON data，
+也不默认新增任意 data 字段或让消费端 JSON.parse(message)。
 
 ```ts
 async function run(input: CheckInput, context: RunContext): Promise<CheckResult> {
   const prepared = await prepareChecker(input, context.signal);
   await context.progress({
-    kind: "prepared",
-    checker: prepared.reference,
+    stage: "preparation",
+    percent: 100,
+    message: "Checker 准备完成",
   });
 
-  return await runChecker(prepared, {
+  await context.progress({
+    stage: "allocation",
+    message: "等待可用的 Checker Worker",
+  });
+
+  return await allocateAndRunChecker(prepared, {
     signal: context.signal,
-    progress: (value) => context.progress(value),
+    progress: (value) =>
+      context.progress({
+        stage: "execution",
+        message: value.message,
+      }),
   });
 }
 ```
 
-示例中的 CheckInput、CheckResult、prepareChecker、runChecker 是业务占位名，
-不是对现有函数签名的修改。只报告可公开且必要的准备摘要，不把完整 Bundle 字节、
+示例中的 CheckInput、CheckResult、prepareChecker、allocateAndRunChecker 是业务占位名，
+不是对现有函数签名的修改；子工作进度适配须显式映射为标准结构。
+只报告可公开且必要的展示信息，不把完整 Bundle 字节、
 凭据、资源句柄或类型内部状态作为 Progress 默认传递。
 Checker 子 Worker 的进度先经类型 Worker 转发，再由 Run 通道交给 Engine；
 业务实现应等待、限流或有界缓冲，不能产生无界待确认消息。
@@ -68,7 +98,7 @@ stdout/stderr 是诊断输出，不是 Progress 协议。
 
 ```text
 具体工作 Worker
-  -> 类型 Worker 内的 context.progress(JSON)
+  -> 类型 Worker 内的 context.progress(RunProgress)
   -> 指定 Run 的消息通道
   -> Engine 校验并接纳 Run progress 事实
   -> 当前接收该 Run 进度的 Task / 订阅
@@ -81,14 +111,20 @@ Run 终结后、旧代际或失联通道的 Progress 不得更新当前状态，
 取消请求与终结不同；取消后的消息处理还须对齐共享需求及 Run 生命周期。
 
 Promise<void> 的候选含义是：Engine 已校验并持久化接纳该 Progress 后确认，
-不是 postMessage 成功就通过。持久化失败、非法 JSON、超限、通道关闭等均显式拒绝；
+不是 postMessage 成功就通过。持久化失败、非法结构/JSON、超限、通道关闭等均显式拒绝；
 类型实现不得吞掉拒绝后继续把上报当作成功。确认不保证订阅者已经收到，
 也不承诺跨 Crash 的 exactly-once。具体消息格式、在途容量及重试规则待定。
 
-Engine 只验证通用有限 JSON、载荷大小、身份、代际、顺序与生命周期约束；
-业务进度结构由类型负责，不再调用 TaskType.validateProgress。
-Prepared 可以用上述 Progress 报告，但报告摘要不自动变成恢复 checkpoint，
-更不自动获得恢复调用栈或重新执行副作用的授权。
+Engine 验证标准 RunProgress 结构、枚举阶段、可选百分比、字符串消息，以及载荷大小、
+身份、代际、顺序与生命周期约束；不再调用 TaskType.validateProgress。
+业务语义和展示文本由类型负责，阶段/百分比不参与 Match Policy 或决定 Run 终结。
+取消请求、成功、失败及清理确认仍走明确生命周期通道，不用额外 Progress 阶段替代。
+
+Prepared、Bundle digest、因果证据等机器可读内容不是展示 Progress。
+不将它们转成 message 后冒充原有结构化信息，也不把准备完成的 Progress 当作 checkpoint。
+这些信息可留在类型内部，或在确有公开/持久化需要时进入明确的业务结果/证据契约；
+具体路径仍待定义，需保留现有消费者所需的内容追溯和历史复验能力。
+Progress 不授予恢复调用栈或重新执行副作用的能力。
 
 ## 当前接口的职责修剪
 
@@ -97,7 +133,7 @@ Prepared 可以用上述 Progress 报告，但报告摘要不自动变成恢复 
 | authorize | 删除通用 hook，保留服务访问与实际资源动作授权 |
 | prepare、validatePrepared、Prepared 泛型 | 移至类型实现内部，不由 Engine 编排 |
 | execute | 替换为接收 Input 的完整 run 入口 |
-| validateProgress | 移至类型内部；Engine 保留通用消息检查 |
+| validateProgress | 删除注入回调；Engine 统一校验 RunProgress，类型负责业务语义 |
 | validateResult | 公开结构由 resultSchema 声明，业务语义在类型边界验证 |
 | validateExecutionResult | 不再作为 Engine 内的同步动态回调；保留所需业务复验能力 |
 | allocationLimit、environment | 归可信宿主注册与运行配置 |

@@ -42,7 +42,11 @@ Engine 对类型边界只需要一个完整运行入口，不再分别调用 Pre
 Prepared 是否可选、使用 yield 还是消息报告，以及中间事实的校验和持久化，仍待定义；
 不因概念命名而预设 generator API 或恢复调用栈能力。
 后续 [TaskType 与 Progress 草案](./TaskType.md) 给出单一 run 及 context.progress 的候选，
-区分最终返回值、业务中间进度与运行生命周期事实；具体签名尚未批准。
+区分最终返回值、展示进度与运行生命周期事实。用户于 11:31 确认按标准 RunProgress 更新：
+stage 为 preparation / allocation / execution，percent 可选且仅表示当前阶段的预估百分比，
+message 为展示字符串；不依赖百分比判断成功、匹配或回收。完整 TaskType 签名尚未批准。
+结构化 Prepared、内容身份和因果证据不塞进 message，必要的记录通道仍待定，
+不因 Progress 标准化而删除现有消费者的机器可读证据。
 
 取消一个 Task 首先撤销它的需求，不自动取消其他需求共享的 Run。
 需要取消 Run 时向类型守护 Worker 投递指定 Run 的请求，正常取消不通过杀守护 Worker 实现。
