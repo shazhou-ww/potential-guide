@@ -1,5 +1,9 @@
 # Check, Probe and generic Server
 
+For the optional, separately started Chinese debugging workbench, see
+[Task Engine Web UI](task-engine-web-ui.md). It uses public HTTP only and does
+not start or stop this Server.
+
 The generic Server composes Engine, HTTP adapter and SQLite. It neither understands
 artifacts nor grants permissions based on Request fields. The standalone command
 belongs to `task-engine-server`, not `task-engine-http`. Importing the programmatic

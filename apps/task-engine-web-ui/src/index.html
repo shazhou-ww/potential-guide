@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>任务工作台</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#create">跳到创建任务</a>
+    <header>
+      <h1>任务工作台</h1>
+      <label>受控 Endpoint <select id="endpoint" aria-label="受控 Endpoint"></select></label>
+      <nav aria-label="工作区">
+        <a href="#create">创建</a><a href="#submission-bar">任务栏</a><a href="#tasks">Task</a>
+        <a href="#executions">Execution</a><a href="#history">历史</a><a href="#favorites">收藏</a>
+      </nav>
+    </header>
+    <p id="notice" role="status" aria-live="polite"></p>
+    <main>
+      <section id="create" tabindex="-1">
+        <h2>创建任务</h2>
+        <div class="row"><label>任务类型 <select id="type"><option value="">等待发现</option></select></label><span id="discover"></span></div>
+        <p id="discovery-status"></p><p id="contract"></p>
+        <div id="form-fields"></div>
+        <label>收藏名称 <input id="favorite-name" maxlength="128" /></label>
+        <div id="create-actions" class="actions"></div>
+      </section>
+      <section id="submission-bar" tabindex="-1">
+        <h2>提交任务栏</h2>
+        <p id="bar-count">0 批次</p>
+        <div id="batches"></div>
+      </section>
+      <section id="tasks" tabindex="-1">
+        <h2>Task · 任务事实</h2>
+        <div id="task-lookup" class="row"></div>
+        <p>本次观察集合，不是全部历史；最多保留 200 条 / 8 MiB 快照。选中任务通过事件流更新；本机释放快照不取消任务。</p>
+        <div id="task-list"></div><div id="task-detail"></div>
+      </section>
+      <section id="executions" tabindex="-1">
+        <h2>Execution · 执行事实</h2>
+        <div id="execution-lookup" class="row"></div>
+        <p>只依据公开事件显示逻辑完成、失败和回收；没有“取消 Execution”操作。</p>
+        <div id="execution-detail"></div>
+      </section>
+      <section id="history" tabindex="-1">
+        <h2>Endpoint 历史目录</h2>
+        <p>按服务 receivedAt 查询，含下界、不含上界；created-desc 排序。时间必须带时区。摘要冻结，详情另查。</p>
+        <label>类型（精确匹配，可留空）<input id="history-type" /></label>
+        <label>receivedAt 下界（包含）<input id="created-from" placeholder="2026-10-31T00:00:00+08:00" /></label>
+        <label>receivedAt 上界（不包含）<input id="created-before" placeholder="2026-11-01T00:00:00+08:00" /></label>
+        <div id="history-actions"></div><div id="directory" class="table-scroll"></div>
+      </section>
+      <section id="favorites" tabindex="-1"><h2>同机收藏</h2><div id="favorites-list"></div></section>
+    </main>
+    <footer><a href="#submission-bar">提交任务栏 · 查看草稿与逐条回执</a><span>关闭页面不会取消任务</span></footer>
+  </body>
+</html>

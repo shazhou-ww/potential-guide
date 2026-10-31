@@ -1,0 +1,30 @@
+{
+  "name": "@potential-guide/task-engine-web-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.ts\"",
+    "start": "node dist/src/main.js",
+    "fixture": "tsx fixture/main.ts",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
+  },
+  "dependencies": {
+    "@potential-guide/task-protocol": "workspace:^"
+  },
+  "devDependencies": {
+    "@potential-guide/task-engine": "workspace:^",
+    "@potential-guide/task-engine-server": "workspace:^",
+    "esbuild": "catalog:",
+    "linkedom": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "@types/node": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

@@ -1,4 +1,5 @@
 packages:
+  - apps/*
   - packages/*
 
 catalog:
@@ -13,6 +14,7 @@ catalog:
   jsonata: 2.1.0
   jsonc-parser: 3.3.1
   json-schema-typed: 9.0.0
+  linkedom: 0.18.12
   npm-package-arg: 13.0.2
   pacote: 21.0.4
   tar: 7.5.22

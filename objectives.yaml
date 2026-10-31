@@ -15,7 +15,9 @@ objectives:
           "packageLayers": "package-layers.yaml",
           "directories": {"apps": "apps", "packages": "packages", "docs": "docs", "scripts": "scripts"},
           "requiredFiles": ["tsconfig.json", "biome.json"],
-          "exceptions": [],
+          "exceptions": [
+            {"path": "apps/task-engine-web-ui", "reason": "Private independently started Node HTTP application serves its own browser bundle; it belongs under apps, not reusable packages or an npm/browser deployment target."}
+          ],
           "assignments": [],
           "allowedDirectories": [
             {"path": "examples", "reason": "Public-package consumer examples copied into independent packed installations."},

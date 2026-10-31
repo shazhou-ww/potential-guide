@@ -1,0 +1,14 @@
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
+objectives:
+  standardize:
+    description: Standardize the private independently started local HTTP workbench and its browser bundle.
+    objective: "@potential-guide/objective-package-standard"
+    inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
+    subject: |
+      {
+        "root": context.repo.rootPath, "directory": context.path,
+        "roles": ["tool"], "runtime": "node",
+        "allows": ["@potential-guide/task-protocol", "@potential-guide/task-engine", "@potential-guide/task-engine-server"],
+        "entries": ["src/main.ts", "src/server.ts", "src/browser.ts"],
+        "generated": [], "deliveries": [], "joins": []
+      }
