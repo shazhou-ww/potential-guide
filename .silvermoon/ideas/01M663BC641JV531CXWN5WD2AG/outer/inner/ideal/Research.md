@@ -1,23 +1,54 @@
 # 任务操作面板：能力与缺口调研
 
-日期：2026-10-30。本文支撑 [Idea.md](Idea.md) 和[需求确认稿](Requirements.md)，不是实施方案或新的需求契约。
+原调研：2026-10-30；当前接口核对：2026-10-31。本文支撑 [Idea.md](Idea.md) 和[需求确认稿](Requirements.md)，不是实施方案或新的需求契约。
 
 2026-10-31 范围更新：用户已将资产管理移出首版及通用 Engine/Web UI 职责。本文保留原源码调查作为历史证据，资产相关事实不再代表首版依赖；以当前需求确认稿为准，不假设每个 Task 都有资产或资产按类型独占。
 
-## 调研范围与证据边界
+## 当前接口核对
+
+基线：[`0b0a25fba63ef57065540fbc7c42e53bd92a729f`](https://github.com/shazhou-ww/potential-guide/tree/0b0a25fba63ef57065540fbc7c42e53bd92a729f)。本会话已通过 Silvermoon 分别确认 `task-type-schema-discovery`、`task-history-query`、`terminated-after-eligible` 为 completed，所有阶段提交均 accepted；它们的完成不接受本 UI 的构想，也不表示 UI 已实现。
+
+| 已交付能力 | 最终公开契约 | UI 接入要点 |
+| --- | --- | --- |
+| 类型发现 | GET `/task-types` → `{type,version,inputSchema,revision}[]`，只列 currentVersions，使用 submit 授权 | 不硬编码 Check/Probe，不广告旧恢复专用版本；不查询资产。按 Endpoint 和契约 revision 关联表单，不把类型 version 当业务参数 |
+| 提交 guard | POST `/tasks`：Idempotency-Key 表示请求身份；可选 If-Match 为一个加引号的发现 revision；失配为 412/contract_revision_mismatch | 新表单提交使用当前发现 revision；不把 guard 塞入 JSON 请求或收藏业务参数，不自行把 Schema helper 的 revision 当作发现 revision |
+| 任务目录 | GET `/tasks`，独立 list 权限；返回 `{tasks,observedAt,expiresAt,next?}` | 列表是固定摘要快照，详情/原请求另读；list 权限不等于 submit、task、request 或 history 权限，不因发现失败就假定目录也不可用 |
+| 基础筛选 | type 精确匹配；createdFrom/createdBefore 是 receivedAt 的含下界/不含上界范围，必须带时区；created-desc 默认，时间相同时 taskId 升序 | UI 将本地日期转换成明确时区边界；不把客户端发起、资格或结束时间当作创建时间；新增查询条件须重新查询 |
+| 摘要 | taskId、requestId、seriesId、type、version、receivedAt、updatedAt、独立 state 标志 | 没有 input、Prepared、result、error/progress payload 或原提交者；不在列表直接展示猜测的业务结果，不把 summary.version 注入重做请求 |
+| 稳定分页 | 首页固定全部成员、顺序及摘要；next 为进程内、绑定 Caller/查询的目录游标；每页重鉴权 | 续页带原过滤条件，不能与事件 cursor 混用。重启、过期、成员清理使查询失效；410/query_expired 后明确重查，不跳过缺项或拼接新旧列表 |
+| 错误/资源 | 非法查询/游标 400，未认证/拒绝 401/403，整页超限 413，容量不足 429；空结果为 200/tasks:[] | 不把失败包装成空列表。页条数不必等于请求 limit，是否还有页只看 next；不假定服务使用默认预算或无限保留 |
+| 执行事实 | started-after-eligible / terminated-after-eligible，按对应事件时间与接收顺序绑定；Input 的 Schema 派生比较与授权参与匹配，Prepared 不决定共享 | 继续分开 Task、Execution、取消、超时和物理回收；不得用 UI 自己的相等算法决定共享，不新增执行取消入口 |
+
+来源：[HTTP 路由与错误映射](../../../../../../packages/task-engine-http/src/index.ts)，L23–47、L171–217；[公开 DTO](../../../../../../packages/task-protocol/src/types.ts)，L228–284；[Engine 发现/提交/目录](../../../../../../packages/task-engine/src/engine.ts)，L397–455；[已交付协议指南](../../../../../../docs/task-engine.md#task-directory)。
+
+### 表单、重试与详情的必要约束
+
+- 输入是 Draft 2020-12、根 object、有限 JSON，标准校验关键字不被缩成 renderer 子集。契约只接受同步、静态本地 JSON Pointer 引用，不加载外部/动态/递归或循环引用，不执行自定义关键字。校验不强转、不填默认值、不移除字段；format 只是注解。详见[Schema 实现](../../../../../../packages/task-protocol/src/schema.ts)及[协议说明](../../../../../../docs/task-engine.md#input-schema-and-generated-equality)。
+- Equals 不是 Validate：最终依赖按 Schema 结构生成独立比较投影，而非本会话早期提议的“先校验再全量 canonical 比较”。UI 不复刻 Equals 来判定原请求幂等、表单合法或是否会共享执行；这些职责保持分离。
+- If-Match 在幂等查重之前检查。一次新请求的失配在本次写入前拒绝，但此前结果未知的同 ID 请求仍可能已创建；后续 412 不是“旧任务不存在”的证明。保留草稿和原请求身份，明确核对原提交；不能悄悄去掉 guard、更新 guard 或生成新 ID 来掩盖未知状态。
+- 历史列表固定观察时刻，详情可以比列表更新。SSE 更新不能反向覆盖目录冻结摘要；目录失效可保留明确标记的旧视图供阅读，但继续翻页必须重新查询。目录 next 与事件历史 next/cursor、SSE Last-Event-ID 分开绑定。
+- 目录还支持 updatedFrom/updatedBefore、updated-desc；这不自动成为新的 UI 用户故事。首版基础入口保持用户确认的 type + receivedAt，updatedAt 是实际最近相关事实时间，不是观察时间，也可能因业务时钟回拨而变小。
+- 类型发现、目录、详情/原请求权限独立。历史可以包含不再属于当前可提交类型的记录；允许读取列表不保证允许重做或可以读取旧参数，失败必须明确，不替换成另一类型或空参数。
+- UI 不自动清理服务历史，也不依赖资产管理。三个依赖已交付的是可接入的服务能力；UI 的持久收藏、受限连接、表单/观察/复用仍需本 idea 接受后实施。
+
+已有相关回归来源：[HTTP tests](../../../../../../packages/task-engine-http/test/http.test.ts)，L8–62、L144–212，覆盖发现权限、quoted If-Match、稳定目录过滤及错误状态。这不是 UI 功能或客户 Endpoint 的验证结果。
+
+## 历史调研范围与证据边界
+
+以下保留早期调研和需求演进记录，所说的“缺少类型发现/目录”仅描述当时基线，已由上面的最终接口替代。历史源码引用保持原含义，不把旧结论当作现行接入要求。
 
 - 基线为本会话独立 worktree 的提交 [`5681098ff36151d4bc379a63a1e7c84de2c27072`](https://github.com/shazhou-ww/potential-guide/tree/5681098ff36151d4bc379a63a1e7c84de2c27072)。下列源码路径及行号均对应此基线。
 - 核对源码、现有测试和工程配置，不查询其他会话的未提交工作，不启动用户已有服务，不清理真实缓存，不发布包。
 - “已有”指此仓库快照中的公开能力，不代表客户运行的 Endpoint 或 npm 最新发布包已经具有相同行为。正式接入前仍需确认实际版本和配置。
 - 原调研建议不等于用户选择；后续用户明确的范围调整已单独标注。当前有效故事为 US-01 至 US-06、US-10、US-11，不把调研或范围调整当作构想接受。
 
-## 结论
+## 历史结论
 
 核心任务操作已有可用基础，不需要为了 UI 重做引擎；但“只在现有 HTTP API 上加页面”无法覆盖全部需求。
 
 首版主要缺口是任务类型及输入 schema 发现、本机收藏，以及 Endpoint 全量历史公开查询。资产查询/版本选择/清理已不在本 UI 范围。调度观察已有 Task 与 Execution 的事实关联，但不等于拥有全服务器资源拓扑或完整任务目录。
 
-## 需求 → 现有能力 → 缺口 → 建议归属
+## 历史需求与能力矩阵
 
 | 需求 | 已核实的能力 | 缺口或限制 | 建议归属，尚未授权实施 |
 | --- | --- | --- | --- |

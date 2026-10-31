@@ -79,7 +79,7 @@
   <body>
     <a class="skip" href="#workspace">跳到工作台草图</a>
     <header>
-      <div class="eyebrow">TASK ENGINE WEB UI · 范围收敛 v0.3</div>
+      <div class="eyebrow">TASK ENGINE WEB UI · 接口对齐 v0.4</div>
       <h1>任务操作面板：五个首版场景</h1>
       <p>一个 Endpoint 下，提交任务栏、Task、Execution 分区关联；UX 细节自行收敛，真实产品阶段再评估使用体验。</p>
       <p class="notice"><strong>离线设计样本，不是可用产品。</strong>所有任务、地址、时间和事件均为虚构示例；没有连接后端。操作按钮禁用，导航与详情展开仅用于审阅，不提交、取消或删除任何内容。</p>
@@ -227,7 +227,7 @@
           <div>
             <div class="fields">
               <label class="field" for="task-type">任务类型（发现结果示例）
-                <select id="task-type" disabled><option>check · 输入契约版本示例 1</option></select>
+                <select id="task-type" disabled><option>check · 类型版本示例 2</option></select>
               </label>
               <label class="field" for="timeout">timeoutMs
                 <input id="timeout" value="30000" readonly>
@@ -268,6 +268,7 @@
 }</pre>
             </details>
             <p class="note">单条快捷、多条发送、收藏再发和历史重做复用同一提交机制。Idempotency-Key 属于这次提交，不从历史复制；结果未知时重试原请求，不再次快捷新建批次。</p>
+            <p class="note">GET /task-types 提供契约 revision。新提交在 If-Match 中使用加引号的发现 revision，不把它写入业务 JSON，也不与 checker.digest 混淆。412 时保留草稿；此前提交结果未知时，412 不能证明原任务不存在，不能偷偷移除 guard 或换新请求身份。</p>
             <h3 style="margin-top: 18px">阻塞示例，不编造可提交表单</h3>
             <ul>
               <li>无法发现类型 / Schema：显示原因并提供重试入口。</li>
@@ -313,7 +314,7 @@
       <section id="history" class="screen" aria-labelledby="history-title">
         <div class="screen-heading">
           <h2 id="history-title">04 / Endpoint 历史：服务端查询，不是本机记录</h2>
-          <p>覆盖当前权限与 Service 保留策略下的所有任务。此能力仍需服务端补充；下面只展示预期交互。</p>
+          <p>GET /tasks 已交付，使用独立 list 权限；下面仍是离线样本，展示授权保留任务的固定摘要快照，而非实时详情。</p>
         </div>
         <div class="toolbar"><strong>Endpoint：本机开发 A</strong><span>历史保留及清理由 Service 配置治理，本页没有治理开关</span></div>
         <div class="content">
@@ -321,25 +322,26 @@
             <label class="field" for="history-type">任务类型
               <select id="history-type" disabled><option>check（示例）</option></select>
             </label>
-            <label class="field" for="history-time">服务接收时间范围（receivedAt）
-              <input id="history-time" value="2026-10-30 09:00 — 2026-10-30 11:00" readonly>
+            <label class="field" for="history-time">服务接收时间范围（receivedAt，下界含、上界不含）
+              <input id="history-time" value="2026-10-30 09:00 — 11:00，UTC+08:00" readonly>
             </label>
           </div>
           <button type="button" disabled>查询服务端历史 · 草图</button>
           <div class="table-wrap" style="margin-top: 16px">
             <table>
-              <caption>虚构查询结果 · 不伪造服务端总数或实时状态</caption>
-              <thead><tr><th scope="col">任务</th><th scope="col">类型</th><th scope="col">服务接收时间</th><th scope="col">阶段与独立事实</th><th scope="col">业务结果</th></tr></thead>
+              <caption>虚构固定快照 · observedAt 10:30，expiresAt 10:31（仅示例，不是固定保留承诺）</caption>
+              <thead><tr><th scope="col">任务</th><th scope="col">类型</th><th scope="col">服务接收时间</th><th scope="col">最近相关事实时间</th><th scope="col">快照中的阶段与事实</th></tr></thead>
               <tbody>
-                <tr><td>T-106</td><td>check</td><td>10:20</td><td>completed</td><td>ok: false · 业务不满足，不是系统故障</td></tr>
-                <tr><td>T-100</td><td>check</td><td>09:10</td><td>completed</td><td>ok: true</td></tr>
+                <tr><td>T-106</td><td>check</td><td>10:20</td><td>10:22</td><td>completed</td></tr>
+                <tr><td>T-100</td><td>check</td><td>09:10</td><td>09:12</td><td>completed</td></tr>
               </tbody>
             </table>
           </div>
           <p class="muted">样例背景：T-100 来自另一客户端提交，也应被查询到；“提交客户端”不被假定为现有协议返回字段。</p>
-          <div class="actions"><button type="button" disabled>继续读取下一页 · 草图</button><span>类型/时间条件作用于服务端范围，不只过滤当前页</span></div>
+          <div class="actions"><button type="button" disabled>使用 next 继续读取 · 草图</button><span>续页携带原过滤条件；列表成员、顺序和摘要保持冻结</span></div>
           <details open>
             <summary>T-100 · 原参数复用示例</summary>
+            <p>详情和原参数需分别读取 GET /tasks/:id、GET /requests/:requestId；可比上面的列表快照更新。目录不含业务结果，不能据 completed 推测 ok 为 true，也不能将列表的历史 version 注入新请求。</p>
             <p>原引用是浮动 URL，未锁版本。重做时仍不锁；不自动使用上次实际运行的 digest。</p>
             <div class="actions">
               <button type="button" disabled>直接重做 · 新单条批次</button>
@@ -347,7 +349,7 @@
               <a href="#workspace">查看加入观察后的布局</a>
             </div>
           </details>
-          <p class="note">服务未提供列表能力时明确显示“历史查询能力尚不可用”；已清理、未授权、查询失败分别说明。不用本次观察集合冒充历史，不以空参数冒充可重做。</p>
+          <p class="note">410/query_expired 时提示重新查询，不把新旧页面拼接。目录 next 不是事件 cursor；非法游标、权限拒绝、413/429 与空结果分别说明。旧 Endpoint 不支持列表时明确提示，不用本次观察集合冒充历史，不以空参数冒充重做。</p>
           <p class="muted">Input 内部参数筛选：后续高级候选，不属于这版基础筛选。</p>
         </div>
       </section>
