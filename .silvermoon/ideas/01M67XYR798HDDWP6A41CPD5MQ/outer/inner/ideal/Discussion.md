@@ -1,4 +1,52 @@
-# 完整 Execution 与资源授权讨论
+# 完整 Run、Match Policy 与类型隔离讨论
+
+## 当前概念命名
+
+用户于 11:22 要求采用 Match Policy 命名并补全文档。完整可复用过程采用 Run，
+避免 Execution 同时指整体与其中的实际执行阶段。以下历史讨论保留当时的 Execution /
+Execute 用语；其中表示完整尝试的含义，在当前设计中对应 Run，不延续到新的子阶段命名。
+
+| 概念 | 名称 | 职责 |
+| --- | --- | --- |
+| 需求 | Task | 表达 Input、生效时间、等待期限及匹配政策 |
+| 完整可复用单元 | Run | 承担准备、分配资源与实际执行的一次完整尝试 |
+| 类型执行实现 | Executor | 编排 Run，管理具体工作及资源复用 |
+| 内部阶段 | Preparation / Allocation / Execution | 分别表示准备、资源分配及实际执行，不各自充当 Task 匹配对象 |
+| 匹配政策 | Match Policy；MatchPolicy / matchPolicy | 决定 Task 可匹配哪些 Run |
+
+原 executionMatch / ExecutionMatch 在新协议中对应 matchPolicy / MatchPolicy，
+不采用 matchingPolicy / MatchingPolicy，也不把字段命名绑定为 runMatching。
+Match 作名词修饰语表达“关于匹配的政策”，不是单独的匹配结果字段。
+Idea 的 ID 与别名 whole-execution-reuse 保持稳定；别名中的旧用词不定义新协议概念。
+
+## Run 事件与匹配语义
+
+started-after-eligible 和 terminated-after-eligible 两个政策值保留，
+但 started / terminated 均指 Run 的事件边界，不指内部 Execution 子过程。
+前者要求 Run 开始事件时间不早于 Task 的实际 eligible；
+后者要求 Run 逻辑终结事件时间不早于该 eligible。接收先于匹配事件的持久化顺序边界仍保留，
+不因改名而倒查接收前的已终结 Run，也不把 deadline 变成普遍的结果匹配上界。
+
+Run 的开始不能再默认等于已经分配到业务 Worker、开始实际 Execution。
+完整开始事件的精确提交时点及分配类型守护 Worker 与分配具体业务资源的区别，仍待定义。
+开始后可以准备、等待资源，再实际执行；准备或分配失败也可使 Run 失败终结。
+物理清理完成不是 Run 逻辑终结的同义词。
+
+同 Input、版本、环境、scope 等兼容边界内的需求可共享同一个 Run；
+Prepared 是该 Run 实际固定内容的中间事实，不是接收 Task 的共享资格。
+浮动 URL 的当前目标变化不使已选 Run 的旧内容失去匹配资格，Match Policy 不保证内容新鲜度；
+需要确切内容时在 Input pin digest。
+
+Engine 对类型边界只需要一个完整运行入口，不再分别调用 Prepare、Allocate、Execute。
+将入口命名为 run(Input, context) 是与上述概念一致的候选，尚未确认精确函数签名。
+Prepared 是否可选、使用 yield 还是消息报告，以及中间事实的校验和持久化，仍待定义；
+不因概念命名而预设 generator API 或恢复调用栈能力。
+
+取消一个 Task 首先撤销它的需求，不自动取消其他需求共享的 Run。
+需要取消 Run 时向类型守护 Worker 投递指定 Run 的请求，正常取消不通过杀守护 Worker 实现。
+类型守护 Worker 的健康重启与业务资源回收单独处理；重启不是对旧 Run 的自动重跑授权。
+类型内的物理 Worker 热复用不改变 Run 身份或 Match Policy，
+其 Bundle digest 匹配由类型实现负责，Engine 不理解 Bundle 版本调度。
 
 ## 用户讨论形成的方向
 
@@ -20,7 +68,7 @@ Prepared 记录实际使用的不可变内容而不是接收方的匹配资格�
 用户后续询问 Authorize 是否可整体去掉，讨论明确区分该 hook 与服务授权、资源动作授权、
 资源替换控制，不把这些机制一并删除。
 
-## 需要精确定义的概念
+## 早期讨论中待定的概念
 
 - 准备工作及 Prepared 归属 Execution，不归属每个接收 Task 的共享资格。
 - 建议将 Execution start 定义为完整尝试开始、先于准备；这是设计建议，
