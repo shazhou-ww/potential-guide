@@ -1,6 +1,6 @@
 # Implementation
 
-准备阶段的三轮迭代计划，2026-10-31 已对齐依赖最终接口。用户已要求按可试用增量整理范围与完成标准；依赖完成不构成本 UI 的开工或构想验收授权。需求见[构想](ideal/Idea.md)、[需求确认稿](ideal/Requirements.md)与[交互设计](ideal/Design.md)。
+三轮迭代计划，2026-10-31 已对齐依赖最终接口。用户现已授权一名子 agent 实现、主 Agent 独立 review 与 acceptance，无 blocking issue 时不重复询问；范围与约束见[受托审阅记录](Review.md)。准确构想接受后进入实施，不从依赖完成本身推断开工。需求见[构想](ideal/Idea.md)、[需求确认稿](ideal/Requirements.md)与[交互设计](ideal/Design.md)。
 
 **依赖前置已满足，本 UI 仍须独立通过构想 gate。** 在主线 `0b0a25fba63ef57065540fbc7c42e53bd92a729f`，已通过 Silvermoon 核实 `task-type-schema-discovery`、`task-history-query`、`terminated-after-eligible` 均为 `completed`，并对照源码确认公开契约。接入基线见[当前接口核对](ideal/Research.md#当前接口核对)。不继承依赖的 gate 授权；真正启动 I-S01 时仍核对实际目标服务版本与本 idea 的状态。
 
@@ -19,7 +19,7 @@
 | Task/Execution 公开协议 | 实际 Endpoint 版本、提交/查询/取消、快照/事件、cursor 及错误语义；以[当前协议文档](../../../../../docs/task-engine.md)和实际服务为准 | I-S01/I-S02 复用通用事实与投影，不复制旧匹配算法。主线 `0d54f74a0efc7a0432b6efb49d487dc2c467db6e` 已更新事件顺序和匹配语义，Prepared 相等不是共享前提 |
 | [Endpoint 历史查询](../../../01M66TPNEMSQ8Y8SDSN2CDN6BA/outer/inner/ideal/Idea.md) | 已交付 GET `/tasks`；首版使用 type、createdFrom/createdBefore（receivedAt，含下界不含上界）、created-desc 和 next；list 权限独立 | I-S03 使用固定摘要快照，续页保持原过滤条件并区分目录/事件游标；详情与原参数另查，410/query_expired 后明确重新查询，不拼接新旧快照 |
 
-此前等待 Schema 完成的要求已经满足；三个依赖现在均有已同步的实现及独立验收。对旧 Endpoint 缺少能力、权限拒绝或版本不兼容仍明确报错，不用硬编码类型、本机历史或测试替身代替真实交付。当前只更新准备材料与 Agent 的构想提交，不在取得本 idea 的接受决定前实现 UI。
+此前等待 Schema 完成的要求已经满足；三个依赖现在均有已同步的实现及独立验收。对旧 Endpoint 缺少能力、权限拒绝或版本不兼容仍明确报错，不用硬编码类型、本机历史或测试替身代替真实交付。本 session 按明确的受托审阅授权推进，不在准确 acceptIdeal 之前实现 UI；后续仍须独立审阅和证据，不由实现子 agent 自行接受。
 
 ## Steps
 
