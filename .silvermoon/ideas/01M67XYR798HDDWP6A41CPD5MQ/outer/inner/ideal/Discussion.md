@@ -47,6 +47,10 @@ stage 为 preparation / allocation / execution，percent 可选且仅表示当�
 message 为展示字符串；不依赖百分比判断成功、匹配或回收。完整 TaskType 签名尚未批准。
 结构化 Prepared、内容身份和因果证据不塞进 message，必要的记录通道仍待定，
 不因 Progress 标准化而删除现有消费者的机器可读证据。
+用户于 11:47 要求补入 [可选运行消息](./Messages.md)：输入消息由类型定义，
+与 Progress 输出分离；以 Task 为归属交由类型 Worker 处理相关 Run。
+追加投入不续期或授予权限，目标调整不覆盖其他共享需求，
+终结竞争与业务接纳须显式确认。完整投递、幂等和需求修订接口仍待细化。
 
 取消一个 Task 首先撤销它的需求，不自动取消其他需求共享的 Run。
 需要取消 Run 时向类型守护 Worker 投递指定 Run 的请求，正常取消不通过杀守护 Worker 实现。

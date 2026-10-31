@@ -8,21 +8,34 @@
 ## 接口候选
 
 ```ts
-interface TaskType<Input extends Json = Json, Result extends Json = Json> {
+interface TaskType<
+  Input extends Json = Json,
+  Result extends Json = Json,
+  Message extends Json = never,
+> {
   type: string;
   version: string;
   inputSchema: JsonSchema;
   resultSchema: JsonSchema;
+  messageSchema?: JsonSchema;
 
-  run(input: Input, context: RunContext): Promise<Result>;
+  run(input: Input, context: RunContext<Message>): Promise<Result>;
 }
 
-interface RunContext {
+interface RunContext<Message extends Json = never> {
   readonly runId: string;
   readonly signal: AbortSignal;
   readonly scope: string;
 
   progress(value: RunProgress): Promise<void>;
+  readonly messages?: AsyncIterable<RunMessage<Message>>;
+}
+
+interface RunMessage<Message extends Json> {
+  readonly messageId: string;
+  readonly taskId: string;
+  readonly caller: Readonly<Caller>;
+  readonly payload: Message;
 }
 
 interface RunProgress {
@@ -32,7 +45,7 @@ interface RunProgress {
 }
 ```
 
-TaskType 只声明公开 Input、最终 Result 与完整运行入口。Prepared 不再是 TaskType 泛型，
+TaskType 声明公开 Input、最终 Result、可选 Message 契约与完整运行入口。Prepared 不再是 TaskType 泛型，
 也不是 run 的前置参数；它作为类型内部对象存在，必要的内容身份/恢复证据另行定界，
 不作为通用 Progress 的任意 JSON payload。
 跨 Worker 的 Input 和消息使用隔离副本，禁止携带 Engine 内部引用或共享可变内存。
@@ -43,6 +56,11 @@ scope 由可信宿主提供，不来自请求正文，也不意味着插件可�
 这一接口没有列出 Check 下载/资源池等能力：它们由类型实现通过受控桥接获得，
 不将业务专有资源 API 塞进每个 TaskType 的通用 RunContext。
 MatchPolicy / matchPolicy 属于 Task 的需求，与 TaskType 的公开 Input 契约分开。
+messageSchema 表示可选业务消息能力；不声明时不提供业务消息入口，
+支持时才装配相应消息通道。messages 的 AsyncIterable 是候选本地消费形式，
+取出消息不代表业务接纳，接纳/拒绝确认和持久化协议仍需另行定义。
+Caller 是可信服务身份的最小副本，不是 Agent 操作权限或 TaskType 自授权依据。
+详见 [运行消息](./Messages.md)，该信封不是无归属的任意 JSON 广播。
 
 ## Progress 上报
 
@@ -144,5 +162,7 @@ resultSchema 是最终公开结果契约，不是 Run 内部阶段接口；只�
 不能因为删除旧回调就把结构合法当作业务证据有效。
 
 Run 开始/终结事实、取消确认和物理清理不由 progress 伪装。
+业务输入 Message 也不由 Progress 的 message 字符串承载；
+Check 不需要输入消息时不声明 messageSchema，不增加必须处理的占位消息。
 run 的 Promise 完成与清理确认如何衔接、错误事实如何编码、类型守护 Worker 的启动/关闭接口，
 均属于待细化的运行协议；不把当前最简草案当作已经覆盖全部生命周期的实现。
