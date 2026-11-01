@@ -282,6 +282,31 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     );
     assert.ok(calls.some((call) => call.includes("/runs?")));
     click("#tab-tasks");
+    const taskRow = element<HTMLTableRowElement>(
+      `#directory tr[data-entity-id="${remote.taskId}"]`,
+    );
+    assert.equal(taskRow.cells[1]!.querySelector("button"), null);
+    assert.equal(taskRow.querySelector('[data-action="详情"]'), null);
+    const star = taskRow.querySelector<HTMLButtonElement>(".star")!;
+    star.click();
+    await until(
+      () => star.getAttribute("aria-pressed") === "true" && !star.disabled,
+      "row star remains independent",
+    );
+    assert.equal(document.querySelector('[role="dialog"]'), null);
+    star.click();
+    await until(
+      () => star.getAttribute("aria-pressed") === "false" && !star.disabled,
+      "restore original stars",
+    );
+    taskRow.cells[1]!.click();
+    await until(
+      () => streams.has(remote.taskId) && !!document.querySelector("#task-detail"),
+      "Task row opens the real task observer",
+    );
+    assert.match(element("#task-detail").textContent!, new RegExp(remote.taskId));
+    element<HTMLButtonElement>("#task-detail-sheet [data-close]").click();
+    await until(() => document.activeElement === taskRow, "closing returns focus to the Task row");
     element<HTMLInputElement>("#history-type").value = "echo";
     click("#new-task");
     const type = element<HTMLSelectElement>("#type");
@@ -383,8 +408,13 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     assert.equal(historySignals.at(-1)!.aborted, false);
     assert.equal(streamStarts, starts);
     click("#tab-executions");
-    named("#execution-directory", "remote-execution").click();
     const runId = remote.run!.runId;
+    const runRow = element<HTMLTableRowElement>(
+      `#execution-directory tr[data-entity-id="${runId}"]`,
+    );
+    assert.equal(runRow.cells[0]!.querySelector("button"), null);
+    runRow.focus();
+    key(runRow, " ");
     await until(() => streams.has(runId), "independent Run can open");
     streams.get(runId)!.emit({
       snapshots: [],

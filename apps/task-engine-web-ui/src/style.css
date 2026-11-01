@@ -180,6 +180,19 @@ main {
 .list-pane {
   min-width: 0;
 }
+tr[data-row-action] {
+  cursor: pointer;
+}
+tr[data-row-action]:focus-visible {
+  outline: 2px solid #71717a;
+  outline-offset: -2px;
+}
+td[data-row-controls] {
+  cursor: default;
+}
+.entity-type {
+  font-weight: 500;
+}
 .table-scroll {
   overflow: auto;
   max-height: 65vh;

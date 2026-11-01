@@ -37,6 +37,7 @@ let socket: WebSocket | undefined;
 let launchError: Error | undefined;
 const checks: Record<string, unknown> = {};
 const exceptions: unknown[] = [];
+const heldRequests: string[] = [];
 let sequence = 0;
 const pending = new Map<
   number,
@@ -89,8 +90,9 @@ async function click(selector: string) {
   const point = await evaluate<{ x: number; y: number }>(`(() => {
     const element = document.querySelector(${JSON.stringify(selector)});
     if (!element) throw new Error('Missing click target');
-    element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    const rect = element.getBoundingClientRect();
+    const target=element.matches('tr[data-row-action]') ? element.querySelector('.entity-type') : element;
+    target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const rect = target.getBoundingClientRect();
     return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
   })()`);
   await call("Input.dispatchMouseEvent", {
@@ -111,10 +113,12 @@ async function pressKey(key: string, windowsVirtualKeyCode: number, modifiers = 
     await call("Input.dispatchKeyEvent", {
       type,
       key,
-      code: key,
+      code: key === " " ? "Space" : key,
       windowsVirtualKeyCode,
       modifiers,
-      ...(key === "Enter" && type === "keyDown" ? { text: "\r", unmodifiedText: "\r" } : {}),
+      ...(["Enter", " "].includes(key) && type === "keyDown"
+        ? { text: key === "Enter" ? "\r" : " ", unmodifiedText: key === "Enter" ? "\r" : " " }
+        : {}),
     });
 }
 async function closeOverlay() {
@@ -219,6 +223,8 @@ try {
       params?: unknown;
     };
     if (message.method === "Runtime.exceptionThrown") exceptions.push(message.params);
+    if (message.method === "Fetch.requestPaused")
+      heldRequests.push((message.params as { requestId: string }).requestId);
     if (message.id !== undefined) {
       const request = pending.get(message.id);
       if (request) {
@@ -283,22 +289,23 @@ try {
   checks.keyboardTabs = true;
   checks.inlineGlyphs = await evaluate(`(() => {
     const buttons=[...document.querySelectorAll('#directory button[data-glyph-action]')];
-    return buttons.length===3 && buttons.every(button=>{
+    return buttons.length===2 && buttons.every(button=>{
       const rect=button.getBoundingClientRect();
       return button.querySelectorAll('svg').length===1 && button.querySelector('svg').getAttribute('aria-hidden')==='true'
         && button.querySelector('.sr-only') && getComputedStyle(button.querySelector('.sr-only')).width==='1px'
         && button.getAttribute('aria-label') && rect.width>=28 && rect.width<=36 && rect.height>=28;
-    }) && document.querySelector('#directory tbody td:nth-child(2) button').textContent==='survey'
-      && !document.querySelector('#directory tbody td:nth-child(2) button svg')
+    }) && document.querySelector('#directory .entity-type').textContent==='survey'
+      && !document.querySelector('#directory tbody td:nth-child(2) button')
+      && !document.querySelector('#directory [data-action="详情"]')
       && document.querySelector('#new-task').textContent.includes('新建任务');
   })()`);
   assert.equal(checks.inlineGlyphs, true);
   const hover = await evaluate<{ x: number; y: number }>(`(() => {
-    const rect=document.querySelector('#directory [data-action="详情"]').getBoundingClientRect();
+    const rect=document.querySelector('#directory [data-action="编辑重做"]').getBoundingClientRect();
     return {x:rect.x+rect.width/2,y:rect.y+rect.height/2};
   })()`);
   await call("Input.dispatchMouseEvent", { type: "mouseMoved", ...hover });
-  await wait("document.querySelector('[role=tooltip]')?.textContent==='查看详情'");
+  await wait("document.querySelector('[role=tooltip]')?.textContent==='编辑参数后重做'");
   checks.glyphHoverHint = true;
   await wait(
     "!document.querySelector('[data-slot=tooltip-content]').getAnimations().some(animation=>animation.playState==='running')",
@@ -308,29 +315,150 @@ try {
   await delay(50);
   await call("Input.dispatchMouseEvent", { type: "mouseMoved", x: 0, y: 700 });
   await wait("!document.querySelector('[role=tooltip]')");
-  await evaluate("document.querySelector('#directory tbody td:nth-child(2) button').focus();true");
+  await evaluate("document.querySelector('#directory [data-action=\"重做\"]').focus();true");
   await pressKey("Tab", 9);
-  await wait("document.querySelector('[role=tooltip]')?.textContent==='查看详情'");
+  await wait("document.querySelector('[role=tooltip]')?.textContent==='编辑参数后重做'");
   checks.glyphKeyboardHint = await evaluate(`(() => {
     const button=document.activeElement, tip=document.getElementById(button.getAttribute('aria-describedby'));
-    return button.dataset.action==='详情' && button.getAttribute('aria-label')==='查看详情'
+    return button.dataset.action==='编辑重做' && button.getAttribute('aria-label')==='编辑参数后重做'
       && tip?.getAttribute('role')==='tooltip';
   })()`);
   assert.equal(checks.glyphKeyboardHint, true);
   await pressKey("Escape", 27);
   await wait("!document.querySelector('[role=tooltip]')");
+  await call("Fetch.enable", {
+    patterns: [{ urlPattern: `${ui.url}/api/endpoints/*/requests/*`, requestStage: "Response" }],
+  });
   await pressKey("Enter", 13);
-  await wait("document.querySelector('#task-detail [data-key=task-snapshot]')");
-  checks.glyphDetailAction = await evaluate(
-    `JSON.parse(document.querySelector('#task-detail [data-key=task-snapshot] pre').textContent).taskId===${JSON.stringify(external.taskId)}`,
-  );
-  assert.equal(checks.glyphDetailAction, true);
-  await closeOverlay();
-  await click('#directory [data-action="编辑重做"]');
+  const pausedDeadline = Date.now() + 10000;
+  while (!heldRequests.length && Date.now() < pausedDeadline) await delay(20);
+  assert.equal(heldRequests.length, 1, "the real edit request should pause");
+  await wait("document.querySelector('#directory [data-action=\"编辑重做\"]').disabled");
+  await click('#directory [data-row-control]:has([data-action="编辑重做"])');
+  await delay(100);
+  assert.equal(await evaluate("document.querySelectorAll('[role=dialog]').length"), 0);
+  assert.equal(heldRequests.length, 1, "disabled wrapper must not trigger a row read");
+  for (const requestId of heldRequests) await call("Fetch.continueRequest", { requestId });
+  await call("Fetch.disable");
   await wait("document.querySelector('#create-title')?.textContent==='编辑参数并新建任务'");
   checks.glyphEditAction = await evaluate("document.querySelector('#type').value==='survey'");
   assert.equal(checks.glyphEditAction, true);
+  checks.rowControlsIsolated = true;
   await closeOverlay();
+  await click("#directory .star");
+  await wait(
+    "document.querySelector('#directory .star').getAttribute('aria-pressed')==='true' && !document.querySelector('#directory .star').disabled",
+  );
+  assert.equal(await evaluate("document.querySelectorAll('[role=dialog]').length"), 0);
+  await evaluate("document.querySelector('#directory .star').focus();true");
+  await pressKey(" ", 32);
+  await wait("document.querySelector('#directory .star').getAttribute('aria-pressed')==='false'");
+  assert.equal(await evaluate("document.querySelectorAll('[role=dialog]').length"), 0);
+  checks.rowChildSpaceIsolated = true;
+  const rowPoint = await evaluate<{ x: number; y: number }>(`(() => {
+    const r=document.querySelector('#directory .entity-type').getBoundingClientRect();
+    return {x:r.x+r.width/2,y:r.y+r.height/2};
+  })()`);
+  for (const modifiers of [1, 2, 4, 8])
+    for (const type of ["mousePressed", "mouseReleased"])
+      await call("Input.dispatchMouseEvent", {
+        type,
+        ...rowPoint,
+        button: "left",
+        clickCount: 1,
+        modifiers,
+      });
+  for (const type of ["mousePressed", "mouseReleased"])
+    await call("Input.dispatchMouseEvent", { type, ...rowPoint, button: "middle", clickCount: 1 });
+  for (const column of [1, 5]) {
+    const point = await evaluate<{ x: number; y: number }>(`(() => {
+      const r=document.querySelector('#directory tbody td:nth-child(${column})').getBoundingClientRect();
+      return {x:r.right-3,y:r.y+r.height/2};
+    })()`);
+    for (const type of ["mousePressed", "mouseReleased"])
+      await call("Input.dispatchMouseEvent", { type, ...point, button: "left", clickCount: 1 });
+  }
+  await delay(100);
+  assert.equal(await evaluate("document.querySelectorAll('[role=dialog]').length"), 0);
+  await evaluate(`(() => {
+    const range=document.createRange();range.selectNodeContents(document.querySelector('#directory .entity-type'));
+    getSelection().removeAllRanges();getSelection().addRange(range);
+  })()`);
+  await click('#directory [data-row-action="task"]');
+  await delay(100);
+  assert.equal(await evaluate("document.querySelectorAll('[role=dialog]').length"), 0);
+  await evaluate("getSelection().removeAllRanges();true");
+  const drag = await evaluate<{ x: number; y: number; end: number }>(`(() => {
+    const r=document.querySelector('#directory .entity-type').getBoundingClientRect();
+    return {x:r.left+2,y:r.y+r.height/2,end:r.right-2};
+  })()`);
+  await call("Input.dispatchMouseEvent", {
+    type: "mousePressed",
+    x: drag.x,
+    y: drag.y,
+    button: "left",
+    clickCount: 1,
+  });
+  for (const x of [drag.x + 8, drag.end])
+    await call("Input.dispatchMouseEvent", {
+      type: "mouseMoved",
+      x,
+      y: drag.y,
+      button: "left",
+      buttons: 1,
+    });
+  await call("Input.dispatchMouseEvent", {
+    type: "mouseReleased",
+    x: drag.end,
+    y: drag.y,
+    button: "left",
+    clickCount: 1,
+  });
+  checks.rowSelectionGuard = await evaluate(
+    "!!getSelection().toString() && !document.querySelector('[role=dialog]')",
+  );
+  assert.equal(checks.rowSelectionGuard, true);
+  await evaluate(
+    "getSelection().removeAllRanges();document.querySelector('#directory [data-row-action=task]').focus();true",
+  );
+  const taskRowKeys: string[] = [];
+  checks.taskRowKeys = taskRowKeys;
+  for (const [key, code] of [
+    ["Enter", 13],
+    [" ", 32],
+  ] as const) {
+    await pressKey(key, code);
+    await wait("document.querySelector('#task-detail [data-key=task-snapshot]')");
+    taskRowKeys.push(key === " " ? "Space" : key);
+    assert.equal(
+      await evaluate(
+        `JSON.parse(document.querySelector('#task-detail [data-key=task-snapshot] pre').textContent).taskId===${JSON.stringify(external.taskId)}`,
+      ),
+      true,
+    );
+    await closeOverlay();
+    await wait("document.activeElement.matches('#directory tr[data-row-action=task]')");
+  }
+  checks.taskRowKeyboard = true;
+  const accessibility = await call<{
+    nodes: {
+      role?: { value: string };
+      name?: { value: string };
+      properties?: { name: string; value: { value: unknown } }[];
+    }[];
+  }>("Accessibility.getFullAXTree");
+  checks.nativeTableSemantics =
+    accessibility.nodes.some((node) => node.role?.value === "table") &&
+    accessibility.nodes.some((node) => node.role?.value === "cell") &&
+    accessibility.nodes.some(
+      (node) =>
+        node.role?.value === "row" &&
+        node.name?.value.startsWith("查看任务 ") &&
+        node.properties?.some(
+          (property) => property.name === "focusable" && property.value.value === true,
+        ),
+    );
+  assert.equal(checks.nativeTableSemantics, true);
   await click("#new-task");
   await wait("document.querySelector('#create-dialog[data-state=open]')");
   await wait("document.querySelector('#discovery-status')?.textContent.includes('已发现 2')");
@@ -478,7 +606,7 @@ try {
   })()`);
   checks.fullWidthList = await evaluate("smokeList.width>innerWidth*0.95 && smokeList.scroll>0");
   assert.equal(checks.fullWidthList, true);
-  const row = "#directory tbody tr:nth-child(4) td:nth-child(2) button";
+  const row = '#directory tbody tr[data-row-action="task"]:nth-child(4)';
   await evaluate(`globalThis.smokeOpener=document.querySelector(${JSON.stringify(row)});true`);
   await click(row);
   await wait("document.querySelector('#task-detail [data-key=task-snapshot]')");
@@ -504,8 +632,8 @@ try {
   await wait("document.activeElement===smokeOpener");
   checks.drawerFocusReturned = true;
   await click(row);
-  await wait("document.querySelector('#task-detail [data-action=\"查看关联执行 →\"]')");
-  await click('#task-detail [data-action="查看关联执行 →"]');
+  await wait("document.querySelector('#task-detail [data-action^=\"关联 Run \"]')");
+  await click('#task-detail [data-action^="关联 Run "]');
   await wait("document.querySelector('#execution-detail button[data-action$=\"→\"]')");
   await delay(100);
   assert.equal(
@@ -540,7 +668,11 @@ try {
   );
   assert.equal(checks.externalExecutionListed, true);
   await screenshot("executions.png");
-  const executionRow = "#execution-directory tbody tr:nth-child(1) button";
+  const executionRow = '#execution-directory tbody tr[data-row-action="run"]:nth-child(1)';
+  checks.runTypeText = await evaluate(
+    "!document.querySelector('#execution-directory tbody button') && !!document.querySelector('#execution-directory .entity-type')",
+  );
+  assert.equal(checks.runTypeText, true);
   const executionWidth = await evaluate<number>(
     "document.querySelector('#execution-directory').getBoundingClientRect().width",
   );
@@ -551,6 +683,11 @@ try {
     executionWidth,
   );
   await screenshot("execution-sheet.png");
+  await closeOverlay();
+  await wait("document.activeElement.matches('#execution-directory tr[data-row-action=run]')");
+  await pressKey(" ", 32);
+  await wait("document.querySelector('#execution-detail')?.textContent.includes('观察已结束')");
+  checks.runRowKeyboard = true;
   await closeOverlay();
   await call("Emulation.setDeviceMetricsOverride", {
     width: 390,

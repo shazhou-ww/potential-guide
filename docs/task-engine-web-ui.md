@@ -65,8 +65,9 @@ Run 代替。`list-runs` 是独立授权操作；它与 Task 的 `list`、`submi
 - 浏览器必须使用启动日志中的准确地址；Host 必须匹配，Origin 若存在必须
   同源，修改请求必须有同源 Origin 和会话 CSRF 头；拒绝跨站 Fetch Metadata。
   重启后浏览器需刷新以获得新会话 token。
-  更新 v0.6 只需重建并由授权操作者重启 UI，继续使用原配置、环境凭据和
-  favoritesFile；不要用演示 fixture 替换现有 Backend，不需要数据迁移。
+  仅更新 UI 的前提是 Backend 已支持当前 Run 协议。旧 Execution 服务不能直接承载
+  当前 UI；演示升级应另建匹配版本的隔离 fixture，不迁移旧演示数据。
+  UI 不启动、迁移或清理 Backend；既有服务的停止和切换由操作者另行授权。
 - URL 仅在可信配置中指定，支持 HTTPS 或 loopback HTTP、可选固定路径前缀。
   禁止 URL 用户名/密码、query/hash 和任何后端重定向。不转发浏览器的
   Authorization、Cookie 或任意头；只允许协议方法、路径、查询和必要身份头。
@@ -95,7 +96,12 @@ Run 代替。`list-runs` 是独立授权操作；它与 Task 的 `list`、`submi
 
 ## 操作
 
-- **行内图标**：详情、重做/编辑、观察刷新/暂停、历史重读、草稿上移/下移及保存模板
+- **数据行导航**：Task 与 Run 目录的类型是普通文字，不是按钮。点击数据行，或聚焦行后
+  按 Enter / Space 打开详情；关闭 Sheet 回原行，表格仍保留真实 table/row/cell 语义。
+  星标、重做/编辑及整个操作单元格（包括空白、禁用按钮和提示包装区域）独立处理，
+  不再重复打开行。选中文字、拖选、修饰键和非主键点击不导航。
+  Task 行不再保留重复的“详情”图标。
+- **行内图标**：重做/编辑、观察刷新/暂停、历史重读、草稿上移/下移及保存模板
   的查看/编辑使用单个 Lucide glyph。鼠标悬停或键盘聚焦显示中文提示，按钮有完整
   可访问名称；Esc 可关闭提示，Enter 仍执行原动作。新建、提交、实体名称、取消、
   未知回执重试保留文字，不把所有按钮机械图标化。`data-action` 和稳定 key 不变，
@@ -218,6 +224,10 @@ pnpm --filter @potential-guide/task-engine-web-ui start (Join-Path $demo 'ui.jso
 `#bar-toggle` / `#submission-dialog`、`#directory` / `#execution-directory`、
 `#task-detail-sheet` / `#execution-detail-sheet`（`[data-slot="sheet-content"]`）、
 `#task-detail` / `#execution-detail`（抽屉内容）、`[data-close]`。
+数据行使用 `#directory tr[data-row-action="task"]` 与
+`#execution-directory tr[data-row-action="run"]`，完整 ID 在 `data-entity-id`；
+`.entity-type` 是普通文字，`td[data-row-controls]` 是独立操作区。
+`execution-*` 仅保留为现有 DOM ID，实际协议始终为 `/runs`、`runId`，不兼容回退旧接口。
 Dialog/Sheet 关闭后不在文档中，不能再检查原生 `dialog.open`；
 用 `[role="dialog"][data-state="open"]`，并等待入场动画结束后测几何。
 `#form-fields` 由 Schema 编辑器独占 DOM，重新打开会挂回同一份原始字段。
