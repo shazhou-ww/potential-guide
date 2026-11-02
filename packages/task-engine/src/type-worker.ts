@@ -188,6 +188,13 @@ port.on("message", (message) => {
     return;
   }
   if (message.kind === "cancel") {
+    const run = runs.get(message.runId);
+    if (!run || run.controller.signal.aborted) return;
+    port.postMessage({
+      generation: config.generation,
+      kind: "stopping",
+      runId: message.runId,
+    });
     runs.get(message.runId)?.controller.abort();
     runs.get(message.runId)?.inbox.close();
     for (const controller of runs.get(message.runId)?.tasks.values() ?? []) controller.abort();

@@ -1,3 +1,5 @@
+let invocations = 0;
+
 export function createType(configuration) {
   return {
     type: "isolated",
@@ -6,8 +8,15 @@ export function createType(configuration) {
     resultSchema: true,
     messageSchema: configuration.messageSchema,
     async run(input, context) {
+      invocations++;
+      if (input.kind === "heap") return { invocations };
+      if (input.kind === "exit") process.exit(19);
       if (input.kind === "block") {
         while (true) {}
+      }
+      if (input.kind === "ignore-cancel") {
+        await context.progress({ stage: "preparation", message: context.runId });
+        await new Promise(() => {});
       }
       if (input.kind === "message") {
         for await (const message of context.messages) {
@@ -20,12 +29,13 @@ export function createType(configuration) {
           };
         }
       }
-      if (input.kind === "wait") {
+      if (input.kind === "wait" || input.kind === "wait-fail") {
         await context.progress({ stage: "preparation", message: context.runId });
         await new Promise((resolve) => {
           if (context.signal.aborted) resolve();
           else context.signal.addEventListener("abort", resolve, { once: true });
         });
+        if (input.kind === "wait-fail") throw new Error("business exit failed");
         return { runId: context.runId, scope: context.scope, canceled: true };
       }
       await context.progress({ stage: "preparation", percent: 100, message: context.runId });

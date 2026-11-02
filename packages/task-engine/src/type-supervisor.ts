@@ -30,12 +30,32 @@ export interface TypeChannel {
   ): Promise<void>;
   released(runId: string): void;
   lost(runIds: readonly string[], error: ErrorFact): void;
+  stopping?(runId: string): Promise<void>;
+  exited?(runId: string, fact: RunWorkerExit): Promise<void>;
+}
+export interface RunWorkerExit {
+  code: number;
+  requested: boolean;
+  forced: boolean;
+}
+export class RunDispatchError extends TaskError {
+  constructor(
+    error: unknown,
+    readonly releaseConfirmed: boolean,
+  ) {
+    super(
+      error instanceof TaskError ? error.code : "type_unavailable",
+      error instanceof Error ? error.message : "Run 入口投递失败。",
+    );
+  }
 }
 export interface SupervisorLimits {
   heartbeatMs: number;
   healthMs: number;
   maxInFlight: number;
   maxPayloadBytes: number;
+  stopGraceMs?: number;
+  forceExitWaitMs?: number;
 }
 interface ResourceContext {
   runId: string;
@@ -48,8 +68,12 @@ interface ResourceContext {
   releaseTimer?: NodeJS.Timeout;
   uncertain: boolean;
 }
+interface ChannelBudget {
+  inFlight: Set<object>;
+  resourceProofs: Set<ResourceContext>;
+}
 /** 跨边界只传静态注册数据，不传宿主生命周期闭包。 */
-export class TypeSupervisor {
+class RunWorker {
   private worker: Worker | undefined;
   private generation: string | undefined;
   private heartbeat: NodeJS.Timeout | undefined;
@@ -59,10 +83,26 @@ export class TypeSupervisor {
   private runs = new Set<string>();
   private routes = new Set<string>();
   private contexts = new Map<string, ResourceContext>();
-  private inFlight = new Set<object>();
-  private resourceProofs = new Set<ResourceContext>();
+  private readonly inFlight: Set<object>;
+  private readonly resourceProofs: Set<ResourceContext>;
+  private pendingOperations = 0;
+  private pendingProofs = 0;
   private verifySequence = 0;
   private lastRequestId = 0;
+  private stopping = false;
+  private dispatched = false;
+  private forced = false;
+  private exitObserved = false;
+  private exitPublished = false;
+  private exiting = false;
+  private stopTimer: NodeJS.Timeout | undefined;
+  private exitFact: RunWorkerExit | undefined;
+  private exitWaiters = new Set<(fact: RunWorkerExit) => void>();
+  private outcome:
+    | { kind: "completed"; value: Json }
+    | { kind: "failed"; error: ErrorFact; result?: Json }
+    | undefined;
+  private loss: ErrorFact | undefined;
   private verifications = new Map<
     number,
     { resolve(value: Json): void; reject(error: unknown): void }
@@ -71,7 +111,10 @@ export class TypeSupervisor {
     readonly registration: TypeWorkerRegistration,
     private readonly channel: TypeChannel,
     private readonly limits: SupervisorLimits,
+    budget: ChannelBudget,
   ) {
+    this.inFlight = budget.inFlight;
+    this.resourceProofs = budget.resourceProofs;
     compileInputSchema(registration.inputSchema);
     compileJsonSchema(registration.resultSchema);
     compileJsonSchema(registration.messageSchema);
@@ -146,7 +189,11 @@ export class TypeSupervisor {
         this.lose(worker, generation, error.message);
       };
       worker.on("error", startupFailure);
-      worker.on("exit", (code) => startupFailure(new Error(`类型守护退出：${code}`)));
+      worker.on("exit", (code) => {
+        clearTimeout(timer);
+        if (!ready) reject(new TaskError("type_unavailable", `Run Worker 握手前退出：${code}`));
+        void this.observeExit(worker, generation, code);
+      });
       worker.on("message", (message) => {
         if (!message || typeof message !== "object" || Array.isArray(message)) {
           startupFailure(new Error("类型守护消息不是对象。"));
@@ -201,23 +248,42 @@ export class TypeSupervisor {
           this.lastPong = performance.now();
           return;
         }
+        if (message.kind === "stopping") {
+          if (!this.stopping || !this.runs.has(message.runId)) return;
+          void Promise.resolve()
+            .then(() => {
+              if (!this.exitObserved) return this.channel.stopping?.(message.runId);
+            })
+            .catch((error) =>
+              this.lose(
+                worker,
+                generation,
+                error instanceof Error ? error.message : "停止事实保存失败。",
+              ),
+            );
+          return;
+        }
         if (message.kind === "released") {
           const context = this.contexts.get(message.runId);
           if (!context || context.releaseRequested) return;
           context.releaseRequested = true;
           this.routes.delete(context.runId);
-          context.releaseTimer = setTimeout(
-            () => this.abandonRun(context, "宿主资源动作或清理证明超时，物理回收未知。"),
-            this.limits.healthMs,
-          );
           context.controller.abort();
+          this.endWorker();
           this.finishRelease(context);
           return;
         }
         if (message.kind === "uncertain") {
           const context = this.contexts.get(message.runId);
-          if (context)
-            this.abandonRun(context, "类型没有获得最终事实或清理确认，不确认物理回收成功。");
+          if (context) {
+            context.uncertain = true;
+            context.releaseRequested = true;
+            this.loss = {
+              code: "reclamation_unknown",
+              message: "类型没有获得最终事实或清理确认，不确认物理回收成功。",
+            };
+            this.endWorker();
+          }
           return;
         }
         void this.receive(worker, generation, message);
@@ -261,6 +327,7 @@ export class TypeSupervisor {
     }
     const operation = {};
     this.inFlight.add(operation);
+    this.pendingOperations++;
     let resourceContext: ResourceContext | undefined;
     try {
       const value = json(message.value, this.limits.maxPayloadBytes);
@@ -311,12 +378,13 @@ export class TypeSupervisor {
           );
           break;
         case "complete":
-          await this.channel.complete(
-            runId,
-            compileJsonSchema(this.registration.resultSchema, {
+          if (this.outcome) throw new TaskError("run_finished", "Run 已提交可靠结果。");
+          this.outcome = {
+            kind: "completed",
+            value: compileJsonSchema(this.registration.resultSchema, {
               maxInputBytes: this.limits.maxPayloadBytes,
             }).validate(value),
-          );
+          };
           break;
         case "failed": {
           if (
@@ -327,15 +395,18 @@ export class TypeSupervisor {
             typeof value.message !== "string"
           )
             throw new TaskError("invalid_payload", "类型错误事实无效。");
-          await this.channel.failed(
-            runId,
-            { code: value.code, message: value.message },
-            value.result === undefined
-              ? undefined
-              : compileJsonSchema(this.registration.resultSchema, {
-                  maxInputBytes: this.limits.maxPayloadBytes,
-                }).validate(value.result),
-          );
+          if (this.outcome) throw new TaskError("run_finished", "Run 已提交可靠结果。");
+          this.outcome = {
+            kind: "failed",
+            error: { code: value.code, message: value.message },
+            ...(value.result === undefined
+              ? {}
+              : {
+                  result: compileJsonSchema(this.registration.resultSchema, {
+                    maxInputBytes: this.limits.maxPayloadBytes,
+                  }).validate(value.result),
+                }),
+          };
           break;
         }
         case "message-confirm": {
@@ -375,6 +446,7 @@ export class TypeSupervisor {
       );
     } finally {
       this.inFlight.delete(operation);
+      this.pendingOperations--;
       if (resourceContext) {
         resourceContext.resources.delete(operation);
         this.finishRelease(resourceContext);
@@ -400,6 +472,7 @@ export class TypeSupervisor {
   private finishRelease(context: ResourceContext): void {
     if (
       !this.currentContext(context) ||
+      !this.exitPublished ||
       !context.releaseRequested ||
       context.releaseStarted ||
       context.resources.size
@@ -415,7 +488,10 @@ export class TypeSupervisor {
       return;
     }
     context.releaseStarted = true;
-    if (proof) this.resourceProofs.add(context);
+    if (proof) {
+      this.resourceProofs.add(context);
+      this.pendingProofs++;
+    }
     void Promise.resolve()
       .then(() =>
         proof?.({
@@ -435,7 +511,10 @@ export class TypeSupervisor {
         },
         () => this.abandonRun(context, "宿主适配器无法证明资源所有权清理完成。"),
       )
-      .finally(() => this.resourceProofs.delete(context));
+      .finally(() => {
+        this.resourceProofs.delete(context);
+        if (proof) this.pendingProofs--;
+      });
   }
   async run(runId: string, input: Json, scope: string): Promise<void> {
     if (!runId || typeof runId !== "string" || !scope || typeof scope !== "string")
@@ -444,7 +523,8 @@ export class TypeSupervisor {
       maxInputBytes: this.limits.maxPayloadBytes,
     }).validate(input);
     await this.start();
-    if (this.runs.has(runId)) throw new TaskError("invalid_tracking", "重复 Run 身份。");
+    if (this.runs.size || this.exitObserved)
+      throw new TaskError("invalid_tracking", "每个 Worker 只能承载一个完整 Run。");
     this.runs.add(runId);
     this.contexts.set(runId, {
       runId,
@@ -458,19 +538,23 @@ export class TypeSupervisor {
     });
     try {
       await this.channel.dispatch?.(runId, this.generation!);
+      if (!this.worker || this.exitObserved || this.closing)
+        throw new TaskError("run_finished", "Run Worker 已退出，不再投递入口。");
+      this.worker.postMessage({
+        generation: this.generation,
+        kind: "run",
+        runId,
+        scope,
+        input: parsed,
+      });
+      this.dispatched = true;
     } catch (error) {
       this.runs.delete(runId);
       this.contexts.delete(runId);
       throw error;
     }
-    this.worker!.postMessage({
-      generation: this.generation,
-      kind: "run",
-      runId,
-      scope,
-      input: parsed,
-    });
     this.routes.add(runId);
+    if (this.stopping) this.cancel(runId);
   }
   async verify(value: Json, mode = "historical"): Promise<void> {
     await this.start();
@@ -498,9 +582,21 @@ export class TypeSupervisor {
       throw new TaskError("invalid_type", "历史业务复验不得改写 Result。");
   }
   cancel(runId: string): void {
+    this.stopping = true;
     this.contexts.get(runId)?.controller.abort();
-    if (this.runs.has(runId))
+    if (this.runs.has(runId)) {
+      this.routes.delete(runId);
       this.worker?.postMessage({ generation: this.generation, kind: "cancel", runId });
+      this.stopTimer ??= setTimeout(() => {
+        void this.forceTerminate().catch((error) => {
+          const worker = this.worker;
+          const generation = this.generation;
+          if (worker && generation)
+            this.lose(worker, generation, error instanceof Error ? error.message : "停止未确认。");
+        });
+      }, this.limits.stopGraceMs ?? 5000);
+      this.stopTimer.unref();
+    }
   }
   withdraw(runId: string, taskId: string, reason: string): void {
     if (this.runs.has(runId))
@@ -536,26 +632,113 @@ export class TypeSupervisor {
   }
   private lose(worker: Worker, generation: string, message: string): void {
     if (this.worker !== worker || this.generation !== generation) return;
+    this.loss ??= { code: "type_worker_lost", message };
+    for (const context of this.contexts.values()) context.controller.abort();
+    this.routes.clear();
+    this.endWorker();
+  }
+  private endWorker(): void {
+    if (!this.worker || this.exiting) return;
+    this.exiting = true;
+    this.routes.clear();
+    for (const context of this.contexts.values()) context.controller.abort();
+    void this.worker.terminate().catch((error) => {
+      this.loss ??= {
+        code: "stop_unconfirmed",
+        message: error instanceof Error ? error.message : "Worker 退出未确认。",
+      };
+    });
+  }
+  private async observeExit(worker: Worker, generation: string, code: number): Promise<void> {
+    if (this.worker !== worker || this.generation !== generation || this.exitObserved) return;
+    this.exitObserved = true;
+    this.exitFact = { code, requested: this.stopping, forced: this.forced };
+    for (const resolve of this.exitWaiters) resolve(this.exitFact);
+    this.exitWaiters.clear();
+    clearTimeout(this.stopTimer);
+    this.stopTimer = undefined;
     clearInterval(this.heartbeat);
     this.heartbeat = undefined;
     this.worker = undefined;
-    this.generation = undefined;
     const runIds = [...this.runs];
-    this.runs.clear();
     this.routes.clear();
-    for (const context of this.contexts.values()) {
-      clearTimeout(context.releaseTimer);
-      context.controller.abort();
-    }
-    this.contexts.clear();
     this.lastRequestId = 0;
     for (const operation of this.verifications.values())
-      operation.reject(new TaskError("type_unavailable", message));
+      operation.reject(new TaskError("type_unavailable", "复验 Worker 已退出。"));
     this.verifications.clear();
     try {
-      this.channel.lost(runIds, { code: "type_worker_lost", message });
+      for (const id of runIds) {
+        if (this.outcome?.kind === "completed") await this.channel.complete(id, this.outcome.value);
+        else if (this.outcome?.kind === "failed")
+          await this.channel.failed(id, this.outcome.error, this.outcome.result);
+        await this.channel.exited?.(id, this.exitFact);
+      }
+      this.exitPublished = true;
+      const clean = [...this.contexts.values()].every(
+        (context) => context.releaseRequested && !context.uncertain,
+      );
+      if (!clean || this.loss) {
+        for (const context of this.contexts.values()) {
+          clearTimeout(context.releaseTimer);
+          context.controller.abort();
+        }
+        this.contexts.clear();
+        this.runs.clear();
+        if (runIds.length)
+          this.channel.lost(
+            runIds,
+            this.loss ?? {
+              code: this.stopping ? "reclamation_unknown" : "type_worker_lost",
+              message: "Worker 已退出，宿主资源回收未确认。",
+            },
+          );
+      } else {
+        for (const context of this.contexts.values()) {
+          context.releaseTimer = setTimeout(
+            () => this.abandonRun(context, "宿主资源动作或清理证明超时，物理回收未知。"),
+            this.limits.healthMs,
+          );
+          this.finishRelease(context);
+        }
+      }
+    } catch (error) {
+      for (const context of this.contexts.values()) {
+        clearTimeout(context.releaseTimer);
+        context.controller.abort();
+      }
+      this.contexts.clear();
+      this.runs.clear();
+      this.channel.lost(runIds, {
+        code: "exit_commit_failed",
+        message: error instanceof Error ? error.message : "退出事实保存失败。",
+      });
+    }
+  }
+  async forceTerminate(): Promise<RunWorkerExit> {
+    this.stopping = true;
+    this.forced = true;
+    if (this.exitFact) return this.exitFact;
+    if (!this.worker) throw new TaskError("stop_unconfirmed", "没有可确认退出的 Worker。");
+    let resolve!: (fact: RunWorkerExit) => void;
+    const exited = new Promise<RunWorkerExit>((done) => {
+      resolve = done;
+    });
+    this.exitWaiters.add(resolve);
+    this.endWorker();
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      return await Promise.race([
+        exited,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () => reject(new TaskError("stop_unconfirmed", "强制终止后未确认 Worker 退出。")),
+            this.limits.forceExitWaitMs ?? 5000,
+          );
+        }),
+      ]);
     } finally {
-      void worker.terminate().catch(() => {});
+      clearTimeout(timer);
+      this.exitWaiters.delete(resolve);
     }
   }
   async close(): Promise<void> {
@@ -566,7 +749,7 @@ export class TypeSupervisor {
       throw new TaskError("reclamation_failed", "类型守护或宿主仍有未确认清理的 Run/资源动作。");
     if (!worker) return;
     clearInterval(this.heartbeat);
-    this.worker = undefined;
+    this.endWorker();
     await worker.terminate();
   }
   canRoute(runId: string): boolean {
@@ -575,8 +758,142 @@ export class TypeSupervisor {
   async retire(reason = "类型守护退休，原资源与副作用不作清理成功推断。"): Promise<void> {
     const worker = this.worker;
     const generation = this.generation;
-    if (!worker || !generation) return;
+    if (!worker || !generation) {
+      for (const context of this.contexts.values()) this.abandonRun(context, reason);
+      return;
+    }
     this.lose(worker, generation, reason);
     await worker.terminate();
+  }
+  get hasPendingWork(): boolean {
+    return this.pendingOperations > 0 || this.pendingProofs > 0 || this.worker !== undefined;
+  }
+  get preDispatchReleaseConfirmed(): boolean {
+    return (
+      this.exitObserved &&
+      !this.dispatched &&
+      !this.hasPendingWork &&
+      !this.contexts.size &&
+      !this.runs.size
+    );
+  }
+}
+
+export class TypeSupervisor {
+  readonly registration: TypeWorkerRegistration;
+  private readonly workers = new Map<string, RunWorker>();
+  private readonly retired = new Set<RunWorker>();
+  private verifier: RunWorker;
+  private readonly inFlight = new Set<object>();
+  private readonly resourceProofs = new Set<ResourceContext>();
+  private startup = Promise.resolve();
+  private closing = false;
+
+  constructor(
+    registration: TypeWorkerRegistration,
+    private readonly channel: TypeChannel,
+    private readonly limits: SupervisorLimits,
+  ) {
+    for (const [name, value] of Object.entries(limits))
+      if (!Number.isSafeInteger(value) || value <= 0)
+        throw new TaskError("invalid_type", `${name} 必须是正整数。`);
+    this.verifier = new RunWorker(registration, channel, limits, {
+      inFlight: this.inFlight,
+      resourceProofs: this.resourceProofs,
+    });
+    this.registration = this.verifier.registration;
+  }
+  async start(): Promise<void> {
+    if (this.closing) throw new TaskError("engine_closed", "类型守护已关闭。");
+    await this.verifier.start();
+  }
+  async run(runId: string, input: Json, scope: string): Promise<void> {
+    if (this.closing) throw new TaskError("engine_closed", "类型守护已关闭。");
+    if (this.workers.has(runId)) throw new TaskError("invalid_tracking", "重复 Run 身份。");
+    for (const retired of this.retired) if (!retired.hasPendingWork) this.retired.delete(retired);
+    const channel: TypeChannel = {
+      ...this.channel,
+      released: (id) => {
+        if (this.workers.get(id) === worker) this.workers.delete(id);
+        this.channel.released(id);
+      },
+      lost: (ids, error) => {
+        if (this.workers.get(runId) === worker) this.workers.delete(runId);
+        if (worker.hasPendingWork) this.retired.add(worker);
+        this.channel.lost(ids, error);
+      },
+    };
+    const worker = new RunWorker(this.registration, channel, this.limits, {
+      inFlight: this.inFlight,
+      resourceProofs: this.resourceProofs,
+    });
+    this.workers.set(runId, worker);
+    const previous = this.startup;
+    let release!: () => void;
+    this.startup = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    try {
+      // Serialize boot only; ready Run Workers continue executing independently.
+      await previous;
+      if (this.closing) throw new TaskError("engine_closed", "类型守护已关闭。");
+      if (this.workers.get(runId) !== worker)
+        throw new TaskError("run_finished", "排队中的 Worker 已退休，不再投递旧 Run。");
+      await worker.run(runId, input, scope);
+    } catch (error) {
+      if (this.workers.get(runId) === worker) this.workers.delete(runId);
+      this.retired.add(worker);
+      await worker.retire("Run 入口投递失败，原 Worker 不再复用。");
+      throw new RunDispatchError(error, worker.preDispatchReleaseConfirmed);
+    } finally {
+      release();
+    }
+  }
+  async verify(value: Json, mode = "historical"): Promise<void> {
+    if (this.closing) throw new TaskError("engine_closed", "类型守护已关闭。");
+    await this.verifier.verify(value, mode);
+  }
+  cancel(runId: string): void {
+    this.workers.get(runId)?.cancel(runId);
+  }
+  async forceTerminate(runId: string): Promise<RunWorkerExit> {
+    const worker = this.workers.get(runId);
+    if (!worker) throw new TaskError("no_run_route", "Run 没有独立 Worker。");
+    return await worker.forceTerminate();
+  }
+  withdraw(runId: string, taskId: string, reason: string): void {
+    this.workers.get(runId)?.withdraw(runId, taskId, reason);
+  }
+  message(
+    runId: string,
+    value: { messageId: string; taskId: string; caller: Caller; payload: Json },
+  ): void {
+    const worker = this.workers.get(runId);
+    if (!worker) throw new TaskError("no_run_route", "Task 没有当前 Run 路由。");
+    worker.message(runId, value);
+  }
+  canRoute(runId: string): boolean {
+    return this.workers.get(runId)?.canRoute(runId) ?? false;
+  }
+  async close(): Promise<void> {
+    this.closing = true;
+    const outcomes = await Promise.allSettled(
+      [...this.workers.values(), ...this.retired, this.verifier].map((worker) => worker.close()),
+    );
+    const failure = outcomes.find((outcome) => outcome.status === "rejected");
+    if (failure?.status === "rejected") throw failure.reason;
+    this.workers.clear();
+    this.retired.clear();
+  }
+  async retire(reason?: string): Promise<void> {
+    const workers = [...this.workers.values()];
+    this.workers.clear();
+    for (const worker of workers) this.retired.add(worker);
+    await Promise.all(workers.map((worker) => worker.retire(reason)));
+    await this.verifier.retire(reason);
+    this.verifier = new RunWorker(this.registration, this.channel, this.limits, {
+      inFlight: this.inFlight,
+      resourceProofs: this.resourceProofs,
+    });
   }
 }

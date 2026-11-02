@@ -6,6 +6,7 @@ import {
   isTimedOut,
   type JsonObject,
   reduce,
+  TaskError,
 } from "@potential-guide/task-protocol";
 import { MemoryStore } from "../src/testing.js";
 import { createFixtureEngine as createTaskEngine } from "./driver.js";
@@ -27,8 +28,15 @@ for (const outcome of ["completed", "failed"] as const) {
       assert.equal(h.engine.getTask(follower.taskId, caller).stage, "initial");
       assert.equal(h.engine.getTask(follower.taskId, caller).run, undefined);
       h.clock.setTime(Date.parse(follower.eligibleAt));
-      if (outcome === "completed") h.work[0]!.permit.complete({ text: "shared" });
-      else h.work[0]!.permit.fail({ code: "business", message: "Failed" });
+      if (outcome === "completed") h.work[0]!.done.resolve({ text: "shared" });
+      else h.work[0]!.done.reject(new TaskError("business", "Failed"));
+      assert.equal(h.engine.getTask(follower.taskId, caller).stage, "initial");
+      assert.equal(
+        h.store.read().events.some((event) => event.type === `run.${outcome}`),
+        false,
+      );
+      h.work[0]!.exit.resolve();
+      await h.engine.waitForTaskRelease(owner.taskId, caller);
       const final = h.engine.getTask(follower.taskId, caller);
       assert.equal(final.stage, outcome === "completed" ? "completed" : "run_failed");
       assert.equal(final.run?.runId, h.engine.getTask(owner.taskId, caller).run?.runId);
@@ -137,15 +145,17 @@ for (const outcome of ["completed", "failed"] as const) {
   test(`timed-out unbound demand still accepts ${outcome} without scheduling work`, async () => {
     const h = harness();
     try {
-      h.submit({ timeoutMs: 1000 });
+      const owner = h.submit({ timeoutMs: 1000 });
       await h.turn();
       const task = h.submit({ matchPolicy: "terminated-after-eligible", timeoutMs: 2 });
       await h.turn(3);
       assert.equal(h.work.length, 1);
       assert.equal(h.engine.getTask(task.taskId, caller).run, undefined);
       assert.ok(isTimedOut(h.engine.getTask(task.taskId, caller)));
-      if (outcome === "completed") h.work[0]!.permit.complete({ text: "late" });
-      else h.work[0]!.permit.fail({ code: "late", message: "Late failure" });
+      if (outcome === "completed") h.work[0]!.done.resolve({ text: "late" });
+      else h.work[0]!.done.reject(new TaskError("late", "Late failure"));
+      h.work[0]!.exit.resolve();
+      await h.engine.waitForTaskRelease(owner.taskId, caller);
       const result = h.engine.getTask(task.taskId, caller);
       assert.equal(result.stage, outcome === "completed" ? "completed" : "run_failed");
       assert.ok(isTimedOut(result));

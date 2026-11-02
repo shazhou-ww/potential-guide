@@ -193,7 +193,7 @@ test("query freezes membership/order/summaries across writes and supports cursor
 test("unbound terminated-policy demand ignores progress; failed and not-yet-run Tasks remain discoverable", async () => {
   const h = harness();
   try {
-    h.submit();
+    const owner = h.submit();
     await h.turn();
     const waiting = h.submit({ matchPolicy: "terminated-after-eligible" });
     h.clock.setTime(h.clock.now() + 10);
@@ -203,7 +203,9 @@ test("unbound terminated-policy demand ignores progress; failed and not-yet-run 
         ?.updatedAt,
       waiting.receivedAt,
     );
-    h.work[0]?.permit.fail({ code: "test_failure", message: "private details" });
+    h.work[0]!.done.reject(new TaskError("test_failure", "private details"));
+    h.work[0]!.exit.resolve();
+    await h.engine.waitForTaskRelease(owner.taskId, caller);
     const listed = h.engine.listTasks({}, {}, caller);
     assert.ok(listed.tasks.every((task) => task.state.runFailed));
     assert.ok(listed.tasks.every((task) => task.updatedAt === at(h.clock.now())));

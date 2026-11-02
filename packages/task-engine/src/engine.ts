@@ -55,7 +55,7 @@ import {
 } from "@potential-guide/task-protocol";
 import { type CatalogLimits, RunCatalog, TaskCatalog } from "./catalog.js";
 import { newId } from "./identity.js";
-import { TypeSupervisor } from "./type-supervisor.js";
+import { RunDispatchError, TypeSupervisor } from "./type-supervisor.js";
 
 type CompiledType = RegisteredType & InputContract & { resultContract: JsonContract };
 
@@ -1133,6 +1133,12 @@ export class TaskEngine implements TaskService {
       })
       .catch((error) => {
         const current = this.view.facts.runs[permit.runId]!;
+        if (error instanceof RunDispatchError && error.releaseConfirmed) {
+          this.reportFailure(current, errorFact(error, "type_unavailable"));
+          this.physicalReleases.add(permit.runId);
+          this.confirmRelease(permit.runId);
+          return;
+        }
         if (
           !current.workerGeneration &&
           error instanceof TaskError &&

@@ -7,6 +7,14 @@
 [Task Engine](../../docs/task-engine.md)。Engine 不执行动态 TaskType 的初始化、prepare、validator 或 run。
 类型模块通过本地 file URL 注册，在守护内提供最简 TaskType.run。
 
+类型守护为每个完整 Run 创建独立 Worker，不跨 Run 共享模块堆；历史复验使用独立的复验 Worker。
+同类型的 Worker 启动按序排队，避免启动风暴耗尽健康握手预算；已就绪的 Run 仍并行执行。
+指定 Run 的协作取消、健康失联或强制终止不停止同类型的其他 Run。
+类型上报结果先在隔离通道校验，宿主观察到该 Worker 退出后才交付终结回调；
+宿主资源动作及独立清理证明仍须完成后才能确认回收，Worker 退出不替代这些证明。
+守护的 `stopGraceMs`、`forceExitWaitMs` 均默认 5,000ms；停止接纳与实际退出分别通过通道报告，
+强制退出等待超时明确报告 `stop_unconfirmed`，不伪造资源回收成功。
+
 `EngineOptions.authorize` 仍控制 submit/request/task/cancel/history/subscribe/list/list-runs/message。
 `listRuns` 提供独立授权、无载荷且有界的冻结完整 Run 目录；`listTasks({runId})`
 列出当前 Caller 可读的已绑定需求，不由消息或历史接口间接授予目录权限。

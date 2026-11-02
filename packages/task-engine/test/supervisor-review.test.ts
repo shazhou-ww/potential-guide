@@ -71,6 +71,41 @@ function fixture(type: RegisteredType, healthMs = 5000) {
   return { supervisor, released, complete, failed, lost };
 }
 
+test("入口投递前失败且独立 Worker 已确认退出，不虚构在途宿主资源或永久保留租约", async () => {
+  const store = new MemoryStore();
+  const engine = createTaskEngine({
+    store,
+    types: [{ ...registration(), exportName: "missingFactory" }],
+    currentVersions: { review: "1" },
+    authorize: () => true,
+  });
+  const caller = { scope: "scope", subject: "review" };
+  await engine.start();
+  try {
+    const task = engine.submit({ requestId: newId(), type: "review", timeoutMs: 10000 }, caller);
+    engine.tick();
+    await engine.waitForTaskRelease(task.taskId, caller);
+    const run = Object.values(store.read().facts.runs)[0]!;
+    assert.equal(run.error?.code, "type_unavailable");
+    assert.ok(run.reclaimedAt);
+    assert.equal(run.workerGeneration, undefined);
+    assert.equal(
+      store.read().events.some((event) => event.type === "run.progress"),
+      false,
+    );
+    assert.equal(
+      engine.errors.some((error) => error.code === "reclamation_unknown"),
+      false,
+    );
+    await engine.close();
+    store.claim("next-owner");
+    store.release("next-owner");
+  } finally {
+    await engine.close();
+    store.close();
+  }
+});
+
 for (const rewrite of [false, true, "in-place"]) {
   test(`R01 隔离边界拒绝${rewrite === "in-place" ? "原地改写" : rewrite ? "改写" : "无效"}失败证据，保留原业务错误`, async () => {
     const f = fixture(registration({ rewrite }));

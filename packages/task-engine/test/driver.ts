@@ -108,7 +108,6 @@ export function createFixtureEngine(
             failure: unknown;
           const internals = engine as unknown as {
             report(run: RunRecord, kind: "progress" | "complete", value: unknown): void;
-            reportFailure(run: RunRecord, error: { code: string; message: string }): void;
             supervisors: Map<string, TypeSupervisor>;
           };
           const handlers = internals.supervisors.get(`${local.type}\0${local.version}`)!
@@ -123,7 +122,6 @@ export function createFixtureEngine(
               try {
                 value = json(local.validateResult(result), engine.limits.maxPayloadBytes);
                 if (local.validateExecutionResult) local.validateExecutionResult(value, prepared);
-                internals.report(run, "complete", value);
               } catch (error) {
                 failure =
                   error instanceof TaskError
@@ -132,13 +130,10 @@ export function createFixtureEngine(
                         "invalid_payload",
                         error instanceof Error ? error.message : "结果校验失败。",
                       );
-                const failed = failure as TaskError;
-                internals.reportFailure(run, { code: failed.code, message: failed.message });
               }
             },
             fail(error) {
               if (value === undefined) failure = new TaskError(error.code, error.message);
-              internals.reportFailure(run, error);
             },
           };
           const tracking = await local.execute(prepared, {

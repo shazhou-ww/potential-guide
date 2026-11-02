@@ -140,7 +140,11 @@ export function harness(
     assert.ok(item);
     item.done.resolve(result);
     item.exit.resolve();
-    await flush();
+    const end = performance.now() + 5000;
+    while (!store.read().facts.runs[item.permit.runId]?.reclaimedAt) {
+      if (performance.now() > end) assert.fail("Run 结果与物理回收未在期限内确认。");
+      await new Promise<void>((resolve) => setTimeout(resolve, 5));
+    }
   }
   async function close() {
     await engine.close();
