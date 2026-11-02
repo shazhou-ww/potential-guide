@@ -76,7 +76,8 @@ await engine.getTask(taskId);
 ```
 
 TaskRequest 对应本文 Request，避免与平台的 Request 类型混淆；其余领域类型只引用名称，字段另行定义。
-TaskSnapshot、RunSnapshot 和 Page 均包含查询水位 `revision`，各事件也携带自身的 `revision`。
+TaskSnapshot、RunSnapshot 和 Page 均包含查询水位 `revision`，各事件也携带自身的 `revision`；
+快照/摘要的最小事实范围及筛选边界见[观察契约](./task-engine-contracts/observation.md)。
 所有订阅以 `fromRevision` 为起始锚点，先补读其后的历史再接续实时流；具体语义见[数据域事件序号与查询 Revision](./task-engine-contracts/revision.md)。
 Page 表示有界分页，完整集合可通过续页获取；HistoryQuery、TaskCollectionQueryOptions、
 RunCollectionQueryOptions 均包含[历史与集合查询的分页](./task-engine-contracts/pagination.md)定义的 `cursor`、`limit`；
@@ -181,6 +182,7 @@ subscribeTask(taskId: string, fromRevision: Revision): Promise<Subscription<Task
 
 - 关于变更事件的范围，参考[Task 与 Run 的查询范围及订阅粒度](./task-engine-contracts/observation.md)。
 - 关于事件流消费与取消订阅，参考[订阅句柄与订阅生命周期](./task-engine-contracts/subscription.md)。
+
 - 关于匹配引起的状态变化，参考[Task 匹配与 Run 启动](./task-engine-contracts/run-matching.md)。
 
 ### B4. 查询 Task 集合
@@ -314,3 +316,22 @@ subscribeRuns(
 
 - 关于集合概况事件的范围，参考[Task 与 Run 的查询范围及订阅粒度](./task-engine-contracts/observation.md)。
 - 关于事件流消费与取消订阅，参考[订阅句柄与订阅生命周期](./task-engine-contracts/subscription.md)。
+
+## 配套能力与可信装配
+
+A1–C5 是核心控制与观察操作，不是删除现有配套能力的名单。本轮继续提供：
+
+- `discoverTypes`：发现实际可提交类型、版本与输入 Schema，提交校验相应版本/Schema 前置条件。
+  类型注册属于可信初始化配置，不引入类型自授权或资产发现。
+- `getRequest`：读取不可变原始请求意图，保留省略与显式值区别；缺失或不可提供明确失败。
+- `sendTaskMessage` / `getTaskMessage`：保留 Task 归属、可信 Caller、消息幂等、Never 禁用、
+  入队不等于接纳及失联可为 unknown 的约束。按唯一匹配路由，未匹配不向候选 Run 广播；
+  进入停止流程后不接纳新业务消息，Worker 退出后不再投递或复活 Run。消息不创建 Run 或改变匹配，
+  不把未确认交付报告为已执行；业务消息含义由 TaskType 决定，不新增 Regulate 协议。
+
+配套能力与核心操作一同纳入直接 HTTP、Check/Probe 和 Web UI 的链路验收。
+Probe 通过关联 Run 的独立历史核验实际环境及结果证据，不依赖 Task history 混入 Run progress；
+Check/Probe 仍对完整 Run 的业务结果与资源释放负责。
+
+可信宿主在开放服务前校验配置、取得数据域独占并验证可支持格式；不支持的旧域明确拒绝且原样保留，
+不自动换域、迁移或重跑。宿主停止配置与等待边界遵守[Run 终止](./task-engine-contracts/run-termination.md)。

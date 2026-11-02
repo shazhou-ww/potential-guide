@@ -17,7 +17,9 @@
 3. ULID 时间由外部参与者提供，只用于准入检查，不证明实际生成时间，也不替代服务端 `receivedAt`。
 4. ID 过期只限制提交及重试，不取消已受理 Task，不改变其时间边界，也不限制它预约未来生效。
 5. 更换 ID 属于新 Request，不享有原 ID 的幂等保证。
-6. 窗口长度、允许的未来时钟偏差及精确边界另行定义。
+6. 公开配置默认 windowMs=86,400,000、futureSkewMs=60,000；windowMs 为正，futureSkewMs 可为 0。
+   每次准入先可靠推进下界 L=max(已持久下界, now-windowMs)，再检查时间戳 t 满足 L <= t <= now+futureSkewMs，
+   两端包含等号，包括幂等重试；新域下界初始化为 now-windowMs。扩大窗口也不得回退已持久下界。
 
 ## 幂等凭据保留
 

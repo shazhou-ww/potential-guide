@@ -81,6 +81,9 @@ deadlineAt = effectiveEligibleAt + timeoutMs
 2. 取消不冻结内部推进阶段；后续 Task stage 继续对应关联 Run 的生命周期 stage，外部控制状态保持 `canceled: true`。
 3. `canceled: true` 可以与 `completed`、`failed` 或 `stopped` 同时成立，分别表达撤回需求与运行结局。
 4. `pending` Task 被取消后，不再处理其生效、进行新的 Run 匹配或启动 Run；时间状态仍可按时间边界推算。
+5. 已终结 Task 也可撤回需求：首次取消仍记录一次取消事实，已终结 Run 不再进入停止流程。
+   重复取消返回已取消，不新增事件或 revision；未知 Task 或详情不可提供明确失败，不创建对象。
+   取消结果包含 Task 标识、是否本次改变及一致查询水位，不证明 Worker 已退出或资源已回收。
 
 ## 取消或超时后的运行观察
 
@@ -91,7 +94,8 @@ deadlineAt = effectiveEligibleAt + timeoutMs
 ## UI 聚合与逻辑判断
 
 1. UI 可将三维状态聚合为展示标签，不另存聚合状态。
-2. 已讨论的展示优先级为 `completed`、`failed`、`canceled`，其余再判断 `timeout`；`stopped` 等状态的展示规则另行定义。
+2. 展示优先级为 `completed`、`failed`、`stopped`，然后为 `canceled`、`timeout`，其余展示 `pending` 或 `eligible` 下的 stage；
+   仍保留取消和时间依据，不因聚合标签丢失三维信息。
 3. 展示优先级不参与匹配、取消或回收决策，这些逻辑直接判断三个维度。
 4. 已完成 Task 日后可以越过 deadline，UI 仍展示完成，二者并不矛盾。
 

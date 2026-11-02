@@ -1,8 +1,10 @@
 # 契约差异与验收索引
 
-本文件服务于 [Idea](Idea.md)，是准备阶段的只读差异核对，不是实施设计、完成证据或删除授权。
+本文件服务于 [Idea](Idea.md)，保留准备阶段只读核对的历史证据，并提供本轮验收索引，不是实施设计、完成证据或删除授权。
 核对日期为 2026-11-02，代码与文档快照为 `3011dd9bd6dcd920d16987e08c05ecbc8a93bb3b`；
-职责及十篇契约基线为 `5d44c83d`。行号对应核对快照，后续改动须更新受影响条目。
+初始职责及十篇契约基线为 `5d44c83d`。代码行号对应核对快照，不表示已重审当前实现；
+本轮 Q01–Q07 已收敛于[准备决策](Open-questions.md)，并精确补齐直接职责/契约。
+表中的 Q 编号指向已决边界，不再是待审批问题；实现尚未开始。
 新契约优先；旧讨论只用于确认已讨论内容，旧测试是待重审的证据入口，不反向决定规范。
 
 ## 覆盖与责任
@@ -68,7 +70,7 @@ Check/Probe 内部使用 Execution、业务证据或资源池不因名称相似�
 | V01 | 同域同 ID 并发/重启重试只获一个 Task；完整原意图变化冲突，省略不被默认值覆盖。ULID 过旧、过于未来、窗口外幂等、时钟回拨/重启/配置回退均按选定边界拒绝；详情不可用不重建。 | [storage.test.ts][storage-tests] L61、129、232；新增窗口边界断言 |
 | V02 | 同域双实例第二个初始化失败且第一实例不受扰；释放/进程崩溃后接管原域，另域不串数据；启动失败不得先开放 listener。 | [server.test.ts][server-tests] L167、247、262；[storage.test.ts][storage-tests] L101 |
 | V03 | 假时钟依次取 eligibleAt−1、eligibleAt、deadlineAt、deadlineAt+1；分别 pending/eligible/eligible/timeout，completed/failed/canceled/stopped 后仍按 now 推算；到点不增 revision，受理时间不随重试/恢复移动。 | [protocol.test.ts][protocol-tests] L46（旧冻结断言必须重写）；[event-binding.test.ts][binding-tests] L95 |
-| V04 | 两 Task 共享 Run，取消一个后另一个继续；被取消 Task 的 stage 仍跟随 stopping/completed/failed/stopped，canceled 保留；pending 取消不启动/新匹配。GET/SSE 乱序不能撤销取消，也不能冻结后续 stage。 | [projection-races.test.ts][race-tests] L171、[UI model][ui-model] L325–395 对应测试；终态后取消依 Q03 |
+| V04 | 两 Task 共享 Run，取消一个后另一个继续；被取消 Task 的 stage 仍跟随 stopping/completed/failed/stopped，canceled 保留；pending 取消不启动/新匹配。终态后首次取消仍记录撤回，重复取消不新增事件；GET/SSE 乱序不撤销取消、不冻结后续 stage。 | [projection-races.test.ts][race-tests] L171、[UI model][ui-model] L325–395 对应测试；Q03 |
 | V05 | 两政策使用新名字；同刻及墙钟回拨的多个候选按严格开始序号选最早；terminates-policy 在 eligible 且 Run 已开始未终结时立即匹配；停止/后续候选/恢复不重选，不用计划代替开始事实。 | [event-binding.test.ts][binding-tests] L15、59、119；[whole-run.test.ts][whole-tests] L64（旧等待绑定断言须替换） |
 | V06 | 新 Task 匹配与进入终止流程以两种顺序交错；匹配先成立则计入有效需求，终止先成立则禁止新匹配，即使 Worker 尚未报告 stopping；原匹配永不转移或抹去。 | [event-binding.test.ts][binding-tests] L216；新增所有停止入口竞态 |
 | V07 | 取消/超时触发回收，只有已匹配、eligible、未 canceled Task 能保护 Run；pending、未匹配及过期候选不能阻止停止。停止信号不变 stage，Worker 接纳才 stopping；协商超时强制终止指定 Run，另一个同类型 Run 不受影响。 | [type-supervisor.test.ts][supervisor-tests] L78、190；新增指定 Run 卡死与超时隔离 |
@@ -77,17 +79,17 @@ Check/Probe 内部使用 Execution、业务证据或资源池不因名称相似�
 | V10 | 一个 Run 事件影响多 Task，仅分配一个源 revision；各单体历史/订阅沿用该源位置。单体快照和空/非空集合均返回同事实边界的域水位，取消、结果与缓存覆盖位置一致，progress 仅 Run 可见。 | [protocol.test.ts][protocol-tests] L64；新增跨实体水位与派生事件断言 |
 | V11 | 多页间并发创建/更新仍固定成员、摘要、顺序及水位；同页重试一致，完整遍历无漏无重。参数非法、跨域/种类/条件 cursor、清理/权限撤销、过期、扫描/字节超限明确失败；历史缺失不以有效空页冒充。 | [catalog.test.ts][catalog-tests] L158、338、410、429、519；[execution-catalog.test.ts][run-catalog-tests] L116、177 |
 | V12 | 从查询 R 后补历史，注册期间发生事件不丢；历史尾接实时、断线重连允许重投；跨域/未来/过期/非法 R 明确失败。取消句柄、HTTP 断开只停观察；慢消费者有界且能显式恢复。 | [http.test.ts][http-tests] L214、249、292；新增 fromRevision 与集合补读 |
-| V13 | 基线含全部分页；一条 R 使多个成员加入/更新/移出，中途断线、重投、慢消费后仍完整应用 R，不能按 R 丢掉其他成员。按历史前后条件重建，与相同 R 和观察时间重查一致，覆盖原先不在基线中的成员。 | 新增集合协议/Engine/HTTP/UI 场景；使用现有测试 runner，不造框架；依 Q01–Q02 |
-| V14 | 仅进度、仅时间经过、匹配、取消、终结分别验证 Task/Run 事件粒度、摘要及 updatedAt 变化；时间筛选不支持时明确拒绝，支持时客户端重算能处理没有源事件的成员变化。 | [catalog.test.ts][catalog-tests] L113、193；[UI EventWindow][ui-model] L421；依 Q02、Q05 |
+| V13 | 基线含全部分页；一条 R 使多个成员加入/更新/移出，完整源封装应用前不推进锚点，中途断线允许重投，不能按 R 丢成员。超大封装或慢消费显式失败且不交付部分；按历史前后事实重建，与同 R/观察时间重查一致，覆盖原先不在基线中的成员。 | 新增集合协议/Engine/HTTP/UI 场景；使用现有测试 runner，不造框架；Q01–Q02 |
+| V14 | 仅进度、仅时间经过、匹配、取消、终结分别验证 Task/Run 事件粒度、摘要及 updatedAt；Run progress 不更新 Task，取消不冻结后续 Run stage。时间派生条件及未知条件明确拒绝；事实时间区间验证下界含、上界不含。 | [catalog.test.ts][catalog-tests] L113、193；[UI EventWindow][ui-model] L421；Q02、Q05 |
 | V15 | 独立 HTTP 消费者及 Web UI 发现类型、提交、取消、查 Task/Run、完整分页并订阅；Check/Probe 保留结果证据、子任务真实环境核验与资源释放。旧 Task 历史不再混入 Run 事件时，Probe 仍能经明确入口核验 Run，不能删除校验换取通过。 | [http.test.ts][http-tests] L8、[server.test.ts][server-tests] L72；Check/Probe 与 UI 集成测试；依 Q06 |
-| V16 | 周期与业务系列不再由 Engine 自动创建后继或因同 series 相互取消；取消订阅不取消 Task；UI 重做使用原参数和新 requestId，不变成旧 Run 重放。如何处置旧请求/记录由 Q07 明确，不凭此场景删数据。 | [engine][engine] L728–759、1422–1465；Probe 请求及 UI 原参数重做测试 |
+| V16 | 周期与业务系列不再由 Engine 自动创建后继或因同 series 相互取消；取消订阅不取消 Task；UI 重做使用原参数和新 requestId，不重放旧 Run。不支持旧格式在开放服务前明确拒绝且原库不变；新域须显式选择且身份/水位不冒充旧域连续。 | [engine][engine] L728–759、1422–1465；Probe 请求及 UI 原参数重做测试；Q07 |
 
 ## 验证边界
 
-本次只修改当前 Ideal World 文档，不修改源码、测试、其他 Idea 或职责基线。
+原核对只修改当前 Ideal World 文档；本轮收敛另外精确补齐直接职责/契约，仍不修改源码、测试或其他 Idea。
 上述 V 项全部是后续验收要求；现有用例即使通过，也不证明新契约满足。
 实施前须重新建立必要基线；用户报告原 main 曾在 Web UI test 出现 reclamation_failed，不能宣称历史全套基线通过。
-本轮检查的实际结果单独记录在[未决问题的准备状态](Open-questions.md#准备状态)，不把代码测试失败误称为文档新增回归。
+已知基线及主 Agent 隔离复测结果见[准备状态](Open-questions.md#准备状态)，不把局部复测通过宣称为全套通过，也不把旧核对当作当前阻塞。
 
 [responsibilities]: ../../../../../../docs/axis/task-engine-responsibilities.md
 [domain]: ../../../../../../docs/axis/task-engine-contracts/data-domain.md
