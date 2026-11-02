@@ -1,7 +1,7 @@
 # Deployment
 
 本阶段仅在受控本地环境验证已接受的实现，不发布 npm、不改生产环境、不迁移旧数据。
-验证对象为本 Idea 已接受的 `implementationRevision=fd81e6762dce4ba465b2e1ca08fb0b2e3bc9778c`；
+验证对象为本 Idea 已接受的 `implementationRevision=b101e88a5a2d45c874dc037a684a90864a4d1f63`；
 后续 Task Bundle Idea 的增量不在本轮验收范围。
 
 ## Steps
@@ -9,7 +9,9 @@
 ### D-S01: 验证独立服务消费
 
 运行 `pnpm pack:check`，在仅安装生产 tarball 的独立消费者中核对服务启动、提交、取消、
-Task/Run 查询与订阅及真实 Check/Probe。运行 Web UI 的 Chrome 隔离冒烟，验证独立后端连接与交互；
+Task/Run 查询与订阅及真实 Check/Probe。仅验证 fixture/文档变化且生产包文件树完全相同时，
+可沿用已通过的生产 tarball 证据并记录不变性；不把旧 UI 冒烟结果当成新版通过。
+运行 Web UI 的 Chrome 隔离冒烟，验证独立后端连接与交互；
 UI 是私有 workspace 应用，浏览器场景不冒充 npm tarball 消费。
 
 ### D-S02: 验证退出恢复与增量观察
