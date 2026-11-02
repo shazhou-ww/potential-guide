@@ -1,7 +1,7 @@
 # Deployment
 
 本阶段仅在受控本地环境验证已接受的实现，不发布 npm、不改生产环境、不迁移旧数据。
-验证对象为本 Idea 已接受的 `implementationRevision=51a9212036d4718cd448766210e70e0cf9471086`；
+验证对象为本 Idea 已接受的 `implementationRevision=fd81e6762dce4ba465b2e1ca08fb0b2e3bc9778c`；
 后续 Task Bundle Idea 的增量不在本轮验收范围。
 
 ## Steps
