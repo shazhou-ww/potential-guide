@@ -18,10 +18,10 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 验证独立 Bundle 消费
-- [ ] **D-S02:** 验证跟踪与重启连续性
+- [x] **D-S01:** 验证独立 Bundle 消费
+- [x] **D-S02:** 验证跟踪与重启连续性
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 发布形态可用
-- [ ] **D-AC02:** 公开跟踪结果可信
+- [x] **D-AC01:** 发布形态可用
+- [x] **D-AC02:** 公开跟踪结果可信
