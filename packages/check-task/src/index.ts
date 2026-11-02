@@ -1,12 +1,21 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { runtimeRevision } from "./runtime-identity.js";
 import {
   type ArtifactReference,
   canonicalJson,
   validateArtifactReference,
 } from "@potential-guide/check-artifacts/contracts";
-import { authorizeSync, json, positive, type RegisteredType } from "@potential-guide/task-protocol";
-import type { CheckTaskOptions } from "./implementation.js";
+import {
+  authorizeSync,
+  json,
+  positive,
+  type RegisteredType,
+  type TaskType,
+  type Json,
+  type RunContext,
+  TaskError,
+} from "@potential-guide/task-protocol";
+import { createIsolatedCheck, type CheckInput, type CheckTaskOptions } from "./implementation.js";
 import { checkInputSchema, checkResultSchema } from "./input.js";
 
 export type { CheckInput, CheckPrepared, CheckTaskOptions } from "./implementation.js";
@@ -25,7 +34,7 @@ export {
 
 export function createCheckTaskType(
   options: CheckTaskOptions,
-): RegisteredType & { close(): Promise<void> } {
+): RegisteredType & TaskType<CheckInput, Json> & { close(): Promise<void> } {
   const configuration = {
     directory: options.directory,
     version: options.version ?? "2",
@@ -47,10 +56,7 @@ export function createCheckTaskType(
     node: process.versions.node,
     platform: process.platform,
     architecture: process.arch,
-    revision: createHash("sha256")
-      .update(readFileSync(module))
-      .update(readFileSync(new URL("./worker.js", module)))
-      .digest("hex"),
+    revision: runtimeRevision,
     configuration: createHash("sha256")
       .update(canonicalJson(json(environmentConfiguration)))
       .digest("hex"),
@@ -61,7 +67,7 @@ export function createCheckTaskType(
     authorizeSync(() => options.source.authorize(reference, scope));
     return reference;
   };
-  return {
+  const registration: RegisteredType & { close(): Promise<void> } = {
     type: "check",
     version: configuration.version,
     environment,
@@ -93,5 +99,36 @@ export function createCheckTaskType(
       },
     },
     async close() {},
+  };
+  return {
+    ...registration,
+    async run(input, context) {
+      const current = context as RunContext;
+      if (!current.generation || !current.startedAt)
+        throw new TaskError("invalid_tracking", "SDK Run identity is required.");
+      const type = createIsolatedCheck(configuration, {
+        async invoke(capability, operation, value) {
+          if (capability !== context)
+            throw new TaskError("forbidden", "Current Run context required.");
+          if (operation === "identity")
+            return {
+              runId: current.runId,
+              generation: current.generation!,
+              startedAt: current.startedAt!,
+            };
+          if (operation === "replacement") return null;
+          if (operation === "authorize-replacement") return false;
+          const action = registration.resources?.[operation];
+          if (!action) throw new TaskError("forbidden", "Unknown business resource action.");
+          return action(value, {
+            runId: current.runId,
+            workerGeneration: current.generation!,
+            scope: current.scope,
+            signal: current.signal,
+          });
+        },
+      });
+      return type.run(input, context);
+    },
   };
 }

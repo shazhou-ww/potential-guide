@@ -43,8 +43,8 @@ import {
   type TaskPage,
   type TaskQuery,
   type TaskRecord,
-  type TaskRequest,
-  type TaskService,
+  type CoordinatorRequest as TaskRequest,
+  type CoordinatorService as TaskService,
   type TaskSnapshot,
   type TaskSummary,
   type TaskTypeDiscovery,
@@ -74,6 +74,9 @@ export interface EngineLimits extends CatalogLimits, ObservationLimits {
   retentionMs: number;
   windowMs: number;
   futureSkewMs: number;
+  maxPreparing: number;
+  requestResultRetentionMs: number;
+  maxWaitMs: number;
   stopGraceMs: number;
   forceExitWaitMs: number;
   heartbeatMs: number;
@@ -89,6 +92,7 @@ export interface EngineOptions {
   limits?: Partial<EngineLimits>;
   allocationLimits?: Readonly<Record<string, number>>;
   onError?: (error: ErrorFact) => void;
+  loadBundle?: (binding: Binding) => Promise<() => void>;
 }
 export const defaultEngineLimits: Readonly<EngineLimits> = Object.freeze({
   maxTasks: 10_000,
@@ -103,6 +107,9 @@ export const defaultEngineLimits: Readonly<EngineLimits> = Object.freeze({
   retentionMs: 86_400_000,
   windowMs: 86_400_000,
   futureSkewMs: 60_000,
+  maxPreparing: 1000,
+  requestResultRetentionMs: 86_400_000,
+  maxWaitMs: 30_000,
   stopGraceMs: 5000,
   forceExitWaitMs: 5000,
   heartbeatMs: 100,
@@ -118,7 +125,15 @@ export const defaultEngineLimits: Readonly<EngineLimits> = Object.freeze({
   subscriptionBufferEvents: 64,
   subscriptionBufferBytes: 1_048_576,
 });
-const common = new Set(["requestId", "type", "timeoutMs", "eligibleAt", "seriesId", "matchPolicy"]);
+const common = new Set([
+  "requestId",
+  "type",
+  "bundle",
+  "timeoutMs",
+  "eligibleAt",
+  "seriesId",
+  "matchPolicy",
+]);
 const systemClock: Clock = {
   now: () => Date.now(),
   schedule(callback, delay) {
@@ -142,6 +157,7 @@ interface Group {
   resolve(): void;
   reject(error: unknown): void;
   wall?: () => void;
+  releaseBundle?: () => void;
 }
 export class TaskEngine implements TaskService {
   private readonly owner = newId();
@@ -149,6 +165,10 @@ export class TaskEngine implements TaskService {
   readonly limits: EngineLimits;
   readonly errors: ErrorFact[] = [];
   private readonly types = new Map<string, CompiledType>();
+  private readonly historyContracts = new Map<
+    string,
+    { input: InputContract; result: JsonContract }
+  >();
   private readonly supervisors = new Map<string, TypeSupervisor>();
   private readonly allocations = new Map<string, Group>();
   private readonly allocationLimits = new Map<string, number>();
@@ -244,48 +264,57 @@ export class TaskEngine implements TaskService {
         ...(Object.keys(registration.resources ?? {}).length
           ? {}
           : { resourceLifetime: "request" as const }),
-        resources: {
-          ...registration.resources,
-          identity: async (_value, context) => {
-            const run = this.view.facts.runs[context.runId];
-            if (!run) throw new TaskError("not_found", "Run not found.");
-            return { runId: run.runId, startedAt: run.startedAt, generation: run.generation };
-          },
-          replacement: async (_value, context) => {
-            const current = this.view.facts.runs[context.runId];
-            const candidate =
-              current &&
-              Object.values(this.view.facts.runs).find(
-                (run) =>
-                  run.runId !== current.runId &&
-                  !run.exit &&
-                  !run.stopRequested &&
-                  this.compatible(current, run) &&
-                  !this.hasDemand(run.runId),
-              );
-            return candidate ? { runId: candidate.runId, generation: candidate.generation } : null;
-          },
-          "authorize-replacement": async (value, context) => {
-            const raw = object(value),
-              current = this.view.facts.runs[context.runId];
-            const run = typeof raw.runId === "string" ? this.view.facts.runs[raw.runId] : undefined;
-            if (
-              !current ||
-              !run ||
-              run.generation !== raw.generation ||
-              run.exit ||
-              run.stopRequested ||
-              !this.compatible(current, run) ||
-              this.hasDemand(run.runId)
-            )
-              return false;
-            this.requestStop(run.runId, "resource_replacement");
-            return true;
-          },
-        },
+        resources: registration.bundle
+          ? {}
+          : {
+              ...registration.resources,
+              identity: async (_value, context) => {
+                const run = this.view.facts.runs[context.runId];
+                if (!run) throw new TaskError("not_found", "Run not found.");
+                return { runId: run.runId, startedAt: run.startedAt, generation: run.generation };
+              },
+              replacement: async (_value, context) => {
+                const current = this.view.facts.runs[context.runId];
+                const candidate =
+                  current &&
+                  Object.values(this.view.facts.runs).find(
+                    (run) =>
+                      run.runId !== current.runId &&
+                      !run.exit &&
+                      !run.stopRequested &&
+                      this.compatible(current, run) &&
+                      !this.hasDemand(run.runId),
+                  );
+                return candidate
+                  ? { runId: candidate.runId, generation: candidate.generation }
+                  : null;
+              },
+              "authorize-replacement": async (value, context) => {
+                const raw = object(value),
+                  current = this.view.facts.runs[context.runId];
+                const run =
+                  typeof raw.runId === "string" ? this.view.facts.runs[raw.runId] : undefined;
+                if (
+                  !current ||
+                  !run ||
+                  run.generation !== raw.generation ||
+                  run.exit ||
+                  run.stopRequested ||
+                  !this.compatible(current, run) ||
+                  this.hasDemand(run.runId)
+                )
+                  return false;
+                this.requestStop(run.runId, "resource_replacement");
+                return true;
+              },
+            },
       },
       {
-        dispatch: async (id, generation) => this.dispatch(id, generation),
+        dispatch: async (id, generation) => {
+          this.dispatch(id, generation);
+          const run = this.view.facts.runs[id]!;
+          return { generation: run.generation, startedAt: run.startedAt };
+        },
         progress: async (id, value) => this.report(this.view.facts.runs[id]!, "progress", value),
         checkpoint: async (id, value) => {
           const run = this.currentRun(id);
@@ -359,6 +388,23 @@ export class TaskEngine implements TaskService {
       this.allocationLimits.set(registration.type, capacity);
     }
   }
+  installBundle(registration: RegisteredType): void {
+    if (!this.types.has(this.key(registration))) this.register(registration);
+    this.unavailable.delete(this.key(registration));
+  }
+  commitAdmission(events: NewEvent[]): void {
+    this.budget(
+      events.length + events.filter((event) => event.type === "submission.preparing").length * 2,
+      events.filter((event) => event.type === "submission.resolved").length * 2,
+    );
+    this.commit(events);
+  }
+  facts(): StoreView {
+    return this.view;
+  }
+  authorizeAdmission(caller: Caller, operation: Operation, scope: string): void {
+    this.authorized(caller, operation, scope);
+  }
   private type(binding: Pick<Binding, "type" | "version">): CompiledType {
     const type = this.types.get(this.key(binding));
     if (!type) throw new TaskError("unsupported_version", "Original type version is unavailable.");
@@ -379,13 +425,41 @@ export class TaskEngine implements TaskService {
     return type;
   }
   private checkTask(task: TaskRecord): void {
-    this.historical(task.binding).validate(task.input);
+    if (task.binding.bundle) this.boundContracts(task.binding).input.validate(task.input);
+    else this.historical(task.binding).validate(task.input);
   }
   private checkRun(run: RunRecord): void {
-    const type = this.historical(run.binding);
-    type.validate(run.input);
-    if (run.outcome?.result !== undefined) type.resultContract.validate(run.outcome.result);
+    if (run.binding.bundle) {
+      const contract = this.boundContracts(run.binding);
+      contract.input.validate(run.input);
+      if (run.outcome?.result !== undefined) contract.result.validate(run.outcome.result);
+    } else {
+      const type = this.historical(run.binding);
+      type.validate(run.input);
+      if (run.outcome?.result !== undefined) type.resultContract.validate(run.outcome.result);
+    }
     if (run.progress !== undefined) validateRunProgress(run.progress, this.limits.maxPayloadBytes);
+  }
+  private boundContracts(binding: Binding): { input: InputContract; result: JsonContract } {
+    const key = canonical({
+      input: binding.inputSchema,
+      result: binding.declaration!.resultSchema,
+    });
+    let contract = this.historyContracts.get(key);
+    if (!contract) {
+      contract = {
+        input: compileInputSchema(binding.inputSchema, {
+          maxInputBytes: this.limits.maxPayloadBytes,
+        }),
+        result: compileJsonSchema(binding.declaration!.resultSchema, {
+          maxInputBytes: this.limits.maxPayloadBytes,
+        }),
+      };
+      if (this.historyContracts.size >= 64)
+        this.historyContracts.delete(this.historyContracts.keys().next().value!);
+      this.historyContracts.set(key, contract);
+    }
+    return contract;
   }
   private readable(): void {
     if (!this.started) throw new TaskError("engine_closed", "Engine is closed.");
@@ -416,10 +490,15 @@ export class TaskEngine implements TaskService {
     if (this.errors.length > 100) this.errors.shift();
     this.options.onError?.(fact);
   }
-  private budget(extra: number): void {
+  private budget(extra: number, credit = 0): void {
     const reserve =
       this.allocations.size * 8 +
-      Object.values(this.view.facts.tasks).filter((task) => !task.canceledAt).length;
+      Object.values(this.view.facts.tasks).filter((task) => !task.canceledAt).length +
+      Object.values(this.view.facts.submissions).filter(
+        (record) => record.decision.status === "preparing",
+      ).length *
+        2 -
+      credit;
     if (this.view.events.length + reserve + extra >= this.limits.maxEvents)
       throw new TaskError("capacity_exceeded", "Event retention budget exhausted.");
   }
@@ -478,29 +557,37 @@ export class TaskEngine implements TaskService {
     this.authorized(caller, "submit", caller?.scope);
     return Object.freeze(this.discovery.filter((type) => !this.unavailable.has(this.key(type))));
   }
-  submit(request: unknown, caller: Caller, options: SubmitOptions = {}): TaskSnapshot {
+  submit(
+    request: unknown,
+    caller: Caller,
+    options: SubmitOptions = {},
+    prepared?: {
+      registration: RegisteredType;
+      intent: import("@potential-guide/task-protocol").TaskRequest;
+    },
+  ): TaskSnapshot {
     this.accepting();
     this.authorized(caller, "submit", caller?.scope);
-    const raw = object(json(request, this.limits.maxPayloadBytes)),
-      requestId = ulid(raw.requestId),
-      now = this.clock.now();
+    const raw = object(prepared ? request : json(request, this.limits.maxPayloadBytes)),
+      requestId = ulid(raw.requestId);
+    let now = this.clock.now();
     const lower = Math.max(
       this.view.facts.admissionLowerBound ?? -Number.MAX_SAFE_INTEGER,
       now - this.limits.windowMs,
     );
-    if (this.view.facts.admissionLowerBound !== lower) {
+    if (!prepared && this.view.facts.admissionLowerBound !== lower) {
       this.budget(1);
       this.commit([
         { type: "window.advanced", scope: "", occurredAt: at(now), data: { lowerBound: lower } },
       ]);
     }
     const time = requestTime(requestId);
-    if (time < lower)
+    if (!prepared && time < lower)
       throw new TaskError(
         "request_expired",
         "Request ULID is before the persistent admission floor.",
       );
-    if (time > now + this.limits.futureSkewMs)
+    if (!prepared && time > now + this.limits.futureSkewMs)
       throw new TaskError("request_future", "Request ULID exceeds the permitted future skew.");
     if (
       options.expectedRevision !== undefined &&
@@ -526,9 +613,9 @@ export class TaskEngine implements TaskService {
         "Engine recurrence and legacy request formats are not supported.",
       );
     if (typeof raw.type !== "string") throw new TaskError("invalid_request", "type is required.");
-    const version = Object.hasOwn(this.currentVersions, raw.type)
-      ? this.currentVersions[raw.type]
-      : undefined;
+    const version =
+      prepared?.registration.version ??
+      (Object.hasOwn(this.currentVersions, raw.type) ? this.currentVersions[raw.type] : undefined);
     if (!version) throw new TaskError("unknown_type", "Type is not registered for submission.");
     const type = this.type({ type: raw.type, version });
     if (this.unavailable.has(this.key(type)))
@@ -537,9 +624,13 @@ export class TaskEngine implements TaskService {
     if (policy !== "starts-after-eligible" && policy !== "terminates-after-eligible")
       throw new TaskError("unsupported_request", "Unsupported matchPolicy.");
     const input = type.validate(
-      Object.fromEntries(Object.entries(raw).filter(([key]) => !common.has(key))),
+      Object.fromEntries(
+        Object.entries(prepared?.intent ?? raw).filter(
+          ([key]) => !common.has(key) || (prepared !== undefined && key === "type"),
+        ),
+      ),
     );
-    const receivedAt = at(now),
+    let receivedAt = at(now),
       eligibleAt = at(
         Math.max(now, raw.eligibleAt === undefined ? now : Date.parse(timestamp(raw.eligibleAt))),
       );
@@ -553,7 +644,14 @@ export class TaskEngine implements TaskService {
       throw new TaskError("forbidden", "Series belongs to another scope.");
     if (Object.keys(this.view.facts.tasks).length >= this.limits.maxTasks)
       throw new TaskError("capacity_exceeded", "Task retention capacity exhausted.");
-    this.budget(2);
+    this.budget(prepared ? 3 : 2, prepared ? 2 : 0);
+    if (prepared) {
+      now = this.clock.now();
+      receivedAt = at(now);
+      eligibleAt = at(
+        Math.max(now, raw.eligibleAt === undefined ? now : Date.parse(timestamp(raw.eligibleAt))),
+      );
+    }
     const task: TaskRecord = {
       taskId,
       seriesId,
@@ -562,7 +660,7 @@ export class TaskEngine implements TaskService {
       deadlineAt: at(Date.parse(eligibleAt) + positive(raw.timeoutMs, "timeoutMs")),
       receivedSequence: this.view.facts.watermark + 1,
       input,
-      request: raw as TaskRequest,
+      request: prepared?.intent ?? (raw as TaskRequest),
       binding: {
         type: raw.type,
         version,
@@ -572,10 +670,26 @@ export class TaskEngine implements TaskService {
         scope: caller.scope,
         subject: caller.subject,
         matchPolicy: policy,
+        ...(prepared
+          ? {
+              bundle: structuredClone(prepared.intent.bundle),
+              declaration: structuredClone(prepared.registration.bundle!.declaration),
+            }
+          : {}),
       },
     };
     this.commit([
       { type: "task.created", taskId, scope: caller.scope, occurredAt: receivedAt, data: { task } },
+      ...(prepared
+        ? [
+            {
+              type: "submission.resolved" as const,
+              scope: caller.scope,
+              occurredAt: receivedAt,
+              data: { requestId, decision: { status: "accepted" as const, requestId, taskId } },
+            },
+          ]
+        : []),
     ]);
     return project(this.view.facts, taskId, now);
   }
@@ -593,7 +707,7 @@ export class TaskEngine implements TaskService {
     const credential = this.view.facts.requests[ulid(id)];
     if (!credential) throw new TaskError("not_found", "Request is unavailable.");
     this.authorized(caller, "request", credential.scope);
-    return structuredClone(credential.intent);
+    return structuredClone(credential.intent) as TaskRequest;
   }
   cancelTask(id: string, caller: Caller): CancellationResult {
     const task = this.task(id, caller, "cancel"),
@@ -806,7 +920,10 @@ export class TaskEngine implements TaskService {
         (field) => a.binding[field] === b.binding[field],
       ) &&
       canonical(a.binding.inputSchema) === canonical(b.binding.inputSchema) &&
-      this.historical(a.binding).equals(a.input, b.input)
+      (a.binding.bundle
+        ? compileInputSchema(a.binding.inputSchema)
+        : this.historical(a.binding)
+      ).equals(a.input, b.input)
     );
   }
   private active(task: TaskRecord, now = this.clock.now()): boolean {
@@ -849,6 +966,7 @@ export class TaskEngine implements TaskService {
       await Promise.all([...this.supervisors.values()].map((supervisor) => supervisor.start()));
       if (this.closing) throw new TaskError("engine_closed", "Startup was withdrawn.");
       for (const run of Object.values(this.view.facts.runs)) {
+        if (run.binding.bundle) continue;
         const supervisor = this.supervisors.get(this.key(run.binding))!;
         if (run.outcome?.result !== undefined) await supervisor.verify(run.outcome.result);
         for (const evidence of run.evidence ?? [])
@@ -958,9 +1076,11 @@ export class TaskEngine implements TaskService {
       startup: Promise.resolve(),
     };
     this.allocations.set(id, group);
-    group.startup = this.supervisors
-      .get(this.key(task.binding))!
-      .run(id, task.input, task.binding.scope)
+    group.startup = Promise.resolve()
+      .then(async () => {
+        if (task.binding.bundle) group.releaseBundle = await this.options.loadBundle!(task.binding);
+        await this.supervisors.get(this.key(task.binding))!.run(id, task.input, task.binding.scope);
+      })
       .catch((error) => {
         const run = this.view.facts.runs[id];
         if (run && !run.exit && error instanceof RunDispatchError && error.releaseConfirmed) {
@@ -976,10 +1096,12 @@ export class TaskEngine implements TaskService {
           );
         } else {
           group.resolve();
+          group.releaseBundle?.();
           this.allocations.delete(id);
           if (
             error instanceof TaskError &&
-            ["unsupported_contract", "invalid_type", "type_unavailable"].includes(error.code)
+            (["unsupported_contract", "invalid_type", "type_unavailable"].includes(error.code) ||
+              (task.binding.bundle && !["engine_closed", "run_finished"].includes(error.code)))
           )
             this.unavailable.add(this.key(task.binding));
         }
@@ -1084,6 +1206,7 @@ export class TaskEngine implements TaskService {
       const group = this.allocations.get(id);
       group?.wall?.();
       group?.resolve();
+      group?.releaseBundle?.();
       this.allocations.delete(id);
     } catch (error) {
       this.allocations.get(id)?.reject(error);

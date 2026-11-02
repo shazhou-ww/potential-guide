@@ -115,6 +115,63 @@ test("v4 persists raw qualification facts and replays matching after rollback an
     clean(file);
   }
 });
+test("M03/M04 SQLite restart preserves actual early-exit invalidation and requires a later qualification source", () => {
+  const file = filename();
+  const f = fixture();
+  f.task(1, -20);
+  const original = f.run(2, -10);
+  const task = f.task(3, 0, 10);
+  f.append({
+    type: "qualification-time-observed",
+    scope: "",
+    occurredAt: time(10),
+    data: { observedAt: time(10) },
+  });
+  const next = f.run(4, 11);
+  f.append({
+    type: "run.exited",
+    scope: "scope",
+    runId: original.runId,
+    occurredAt: time(5),
+    data: { basis: "worker", code: 1 },
+  });
+  const store = openSqliteStore(file);
+  store.claim("writer");
+  store.append(
+    "writer",
+    0,
+    f.events.map(({ sequence: _sequence, ...event }) => event),
+  );
+  const before = project(store.read().facts, task.taskId, epoch + 10);
+  assert.equal(before.stage, "initial");
+  assert.equal(before.updatedAt, time(5));
+  store.release("writer");
+  store.close();
+  const reopened = openSqliteStore(file);
+  try {
+    reopened.claim("reader");
+    const view = reopened.read();
+    assert.deepEqual(project(view.facts, task.taskId, epoch + 10), before);
+    assert.equal(view.facts.runs[original.runId]?.exit?.occurredAt, time(5));
+    reopened.append("reader", 6, [
+      {
+        type: "qualification-time-observed",
+        scope: "",
+        occurredAt: time(10),
+        data: { observedAt: time(10) },
+      },
+    ]);
+    const after = project(reopened.read().facts, task.taskId, epoch + 10);
+    assert.equal(after.run?.runId, next.runId);
+    assert.equal(after.run?.matchedAt, time(10));
+    assert.equal(after.updatedAt, time(10));
+    assert.equal(Object.keys(reopened.read().facts.runs).length, 2);
+    reopened.release("reader");
+  } finally {
+    reopened.close();
+    clean(file);
+  }
+});
 test("v4 keeps request credentials after detail removal and its admission floor after compaction", () => {
   const file = filename(),
     store = openSqliteStore(file),

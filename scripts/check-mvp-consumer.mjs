@@ -7,8 +7,11 @@ export async function checkMvpConsumer(root, directory, label, graph, run) {
   assert.ok(!names.has("@potential-guide/checker-host"));
   assert.ok(!names.has("@potential-guide/objective-host"));
   if (label === "mvp-server") {
-    assert.ok(!names.has("@potential-guide/check-artifacts"));
+    assert.ok(names.has("@potential-guide/check-artifacts"));
+    assert.ok(names.has("@potential-guide/check-runtime-files"));
+    assert.ok(!names.has("@potential-guide/task-sdk"));
     assert.ok(!names.has("@potential-guide/check-task"));
+    assert.ok(!names.has("@potential-guide/probe-task"));
   } else {
     assert.ok(names.has("esbuild"), "A subpath is not installation dependency isolation.");
     assert.ok(names.has("tar"));
@@ -104,21 +107,23 @@ console.log("pure-packed: checker/objective manifests, full files, References, d
       join(directory, "echo-type.mjs"),
       await readFile(join(root, "examples", "task-server", "echo-type.mjs")),
     );
+    if (label === "mvp-check")
+      await writeFile(
+        join(directory, "build-bundles.mjs"),
+        await readFile(join(root, "examples", "task-server", "build-bundles.mjs")),
+      );
     if (label === "mvp-check") {
       await writeFile(
         join(directory, "check-config.mjs"),
         `
 import {readFile} from "node:fs/promises";
 import {resolve} from "node:path";
-import {createArtifactSource,createCheckTaskType} from "@potential-guide/check-task";
 import {TaskError} from "@potential-guide/task-protocol";
 export default function configure(){
- const source=createArtifactSource({allowedOrigins:["https://example.test"],allowedFileRoots:[resolve("imports")],authorize(_r,scope){if(scope!=="example")throw Error("denied")},download:()=>readFile("checker.tgz")});
- const check=createCheckTaskType({source,directory:".workers",workers:1});
- return {port:0,database:process.env.TASK_SERVER_DATABASE??"check.sqlite",types:[check],currentVersions:{check:"2"},
+ return {port:0,database:process.env.TASK_SERVER_DATABASE??"check.sqlite",limits:{maxConcurrent:4,maxPayloadBytes:100663296,queryPageBytes:100663296,sourceEnvelopeBytes:100663296},
  authorize:(caller,_op,scope)=>caller.scope===scope,
  resolveCaller(request){if(request.headers.get("authorization")!=="Bearer fixture")throw new TaskError("unauthenticated","Authentication required.");return {scope:"example",subject:"example"}},
- async closeResources(){await check.close();await source.close()}};
+ };
 }
 `,
       );
@@ -138,6 +143,7 @@ ${
     ? `
 import {checkerSchemaUri} from "@potential-guide/check-artifacts/contracts";
 import {writeContractArtifact,packContractArtifact} from "@potential-guide/check-artifacts/build";
+import {buildExampleBundle} from "./build-bundles.mjs";
 const page=Buffer.from("---\\ntitle: Packed\\ndescription: Packed\\n---\\nBody\\n");
 const built=await writeContractArtifact(new Map([
  ["checker.yaml",Buffer.from(JSON.stringify({$schema:checkerSchemaUri,runtime:{type:"node",minVersion:"22.13.0"},entry:"checker.cjs",subjectSchema:{type:"object"},languages:["en"],problems:["bad"]}))],
@@ -146,10 +152,12 @@ const built=await writeContractArtifact(new Map([
 ]),"artifact");
 await packContractArtifact(built.directory,"checker.tgz");
 await mkdir("imports");await copyFile("checker.tgz",resolve("imports","checker.tgz"));
-const body={type:"check",checker:{kind:"checker",url:"https://example.test/checker.tgz",digest:built.digest},subject:{},timeoutMs:10000};
+const bundle=await buildExampleBundle({kind:"check",directory:resolve("author"),sourceOptions:{allowedOrigins:["https://example.test"],allowedFileRoots:[resolve("imports")]},downloadResources:{"https://example.test/checker.tgz":"resources/checker.tgz"},resources:{"resources/checker.tgz":resolve("checker.tgz")}});
+const body={bundle,checker:{kind:"checker",url:"https://example.test/checker.tgz",digest:built.digest},subject:{},timeoutMs:10000};
 const fileBody={...body,checker:{...body.checker,url:pathToFileURL(resolve("imports","checker.tgz")).href}};
 `
-    : `const body={type:"echo",text:"packed",timeoutMs:10000};`
+    : `import {readFile} from "node:fs/promises";const binding=JSON.parse(await readFile(${JSON.stringify(join(directory, "..", "task-sdk", "fixture", "binding.json"))},"utf8"));
+const body={bundle:{url:pathToFileURL(${JSON.stringify(join(directory, "..", "task-sdk", "fixture", "bundle.tar.gz"))}).href,digest:binding.digest},text:"packed",timeoutMs:10000};`
 }
 process.env.TASK_SERVER_TOKEN="fixture";process.env.TASK_SERVER_PORT="0";
 const configure=(await import("./${label === "mvp-check" ? "check" : "echo"}-config.mjs")).default;
@@ -157,7 +165,9 @@ const headers={authorization:"Bearer fixture","content-type":"application/json"}
 async function exercise(url,requestBody=body){
  assert.equal((await fetch(url+"/tasks/"+newId())).status,401);
  const response=await fetch(url+"/tasks",{method:"POST",headers:{...headers,"Idempotency-Key":newId()},body:JSON.stringify(requestBody)});
- assert.equal(response.status,202);const initial=await response.json();
+ assert.ok(response.ok);let decision=await response.json();
+ while(decision.status==="preparing")decision=await(await fetch(url+"/requests/"+decision.requestId+"/status?waitMs=1000",{headers})).json();
+ assert.equal(decision.status,"accepted");const initial=await(await fetch(url+"/tasks/"+decision.taskId,{headers})).json();
  const stream=await fetch(url+"/events?taskId="+initial.taskId,{headers:{...headers,"Last-Event-ID":initial.revision}});
  assert.equal(stream.status,200);const reader=stream.body.getReader();
  const text=new TextDecoder().decode((await reader.read()).value);
@@ -200,7 +210,7 @@ try{
  if(process.platform!=="win32")assert.equal(result.code,0);
  await assert.rejects(fetch(url));
 }finally{if(child.exitCode===null&&child.signalCode===null)child.kill("SIGKILL");await exited}
-${label === "mvp-check" ? `assert.deepEqual(await readdir(".workers"),[]);` : ""}
+${label === "mvp-check" ? `assert.deepEqual(await readdir(".business-workers"),[]);` : ""}
 console.log("packed ${label}: programmatic + CLI readiness, auth, result, history and SSE reconnect; Windows SIGTERM is forced-process shutdown");
 `,
     );

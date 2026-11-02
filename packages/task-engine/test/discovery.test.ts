@@ -200,7 +200,7 @@ test("run records independently require the original contract identity", async (
   }
 });
 
-test("generated structural equality ignores allowed undeclared fields and never invokes obsolete per-demand type authorization", async () => {
+test("M01 includes allowed undeclared fields and never invokes obsolete per-demand type authorization", async () => {
   const h = await harness({
     inputSchema: { type: "object", properties: { text: { type: "string" } }, required: ["text"] },
   });
@@ -215,25 +215,22 @@ test("generated structural equality ignores allowed undeclared fields and never 
     const allowed = h.submit({ source: "allowed", matchPolicy: "terminates-after-eligible" });
     const duplicate = h.submit({ source: "owner", matchPolicy: "terminates-after-eligible" });
     assert.equal(duplicate.run?.runId, h.engine.getTask(owner.taskId, caller).run?.runId);
-    assert.equal(
-      h.engine.getTask(allowed.taskId, caller).run?.runId,
-      h.engine.getTask(owner.taskId, caller).run?.runId,
-    );
+    assert.equal(h.engine.getTask(allowed.taskId, caller).run, undefined);
     assert.equal(Object.hasOwn(h.store.read().facts.tasks[allowed.taskId]!, "prepared"), false);
     revoked = true;
     await h.finish();
     await h.turn();
     assert.ok(h.engine.getTask(allowed.taskId, caller).run);
     assert.ok(h.engine.getTask(blocked.taskId, caller).run);
-    assert.equal(
+    assert.notEqual(
       h.engine.getTask(allowed.taskId, caller).run?.runId,
       h.engine.getTask(owner.taskId, caller).run?.runId,
     );
-    assert.equal(
+    assert.notEqual(
       h.engine.getTask(blocked.taskId, caller).run?.runId,
       h.engine.getTask(owner.taskId, caller).run?.runId,
     );
-    assert.equal(
+    assert.notEqual(
       h.engine.getTask(allowed.taskId, caller).run?.runId,
       h.engine.getTask(blocked.taskId, caller).run?.runId,
     );
@@ -241,7 +238,7 @@ test("generated structural equality ignores allowed undeclared fields and never 
       h.engine.errors.some((error) => error.message === "source permission revoked"),
       false,
     );
-    assert.equal(h.work.length, 1);
+    assert.equal(h.work.length, 3);
   } finally {
     await h.close();
   }

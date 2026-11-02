@@ -1,4 +1,5 @@
-import { createTaskEngine, newId } from "@potential-guide/task-engine";
+import { newId } from "@potential-guide/task-engine";
+import { createTaskEngine } from "../../task-engine/dist/engine.js";
 import { VirtualClock } from "@potential-guide/task-engine/testing";
 import { at, TaskError } from "@potential-guide/task-protocol";
 import { openSqliteStore } from "../dist/index.js";

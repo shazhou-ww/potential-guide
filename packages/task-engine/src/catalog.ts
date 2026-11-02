@@ -58,6 +58,7 @@ export function normalizeTaskQuery(query: TaskQuery): TaskQuery {
         ![
           "taskId",
           "type",
+          "bundleDigest",
           "scope",
           "seriesId",
           "runId",
@@ -76,6 +77,11 @@ export function normalizeTaskQuery(query: TaskQuery): TaskQuery {
     if (raw[key] !== undefined) result[key] = ulid(raw[key]);
   for (const key of ["type", "scope"] as const)
     if (raw[key] !== undefined) result[key] = text(raw[key]);
+  if (raw.bundleDigest !== undefined) {
+    if (typeof raw.bundleDigest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(raw.bundleDigest))
+      fail("invalid_request", "Expected a full Bundle Digest.");
+    result.bundleDigest = raw.bundleDigest;
+  }
   if (raw.stage !== undefined) {
     if (!stages.includes(raw.stage as Stage))
       fail("unsupported_condition", "Unsupported Task stage.");
@@ -105,6 +111,7 @@ export function normalizeRunQuery(query: RunQuery): RunQuery {
         ![
           "runId",
           "type",
+          "bundleDigest",
           "scope",
           "stage",
           "startedFrom",
@@ -119,6 +126,11 @@ export function normalizeRunQuery(query: RunQuery): RunQuery {
   if (raw.runId !== undefined) result.runId = ulid(raw.runId);
   for (const key of ["type", "scope"] as const)
     if (raw[key] !== undefined) result[key] = text(raw[key]);
+  if (raw.bundleDigest !== undefined) {
+    if (typeof raw.bundleDigest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(raw.bundleDigest))
+      fail("invalid_request", "Expected a full Bundle Digest.");
+    result.bundleDigest = raw.bundleDigest;
+  }
   if (raw.stage !== undefined) {
     if (raw.stage === "initial" || !stages.includes(raw.stage as Stage))
       fail("invalid_request", "Unsupported Run stage.");
@@ -139,6 +151,9 @@ export function taskSummary(task: TaskRecord, facts: Facts, now: number): TaskSu
   const snapshot = project(facts, task.taskId, now, false);
   return {
     taskId: task.taskId,
+    ...(task.binding.bundle
+      ? { bundle: structuredClone(task.binding.bundle), name: task.binding.declaration!.name }
+      : {}),
     requestId: task.request.requestId,
     seriesId: task.seriesId,
     type: task.binding.type,
@@ -165,6 +180,9 @@ export function runSummary(run: RunRecord, facts: Facts, now: number): RunSummar
   const snapshot = projectRun(facts, run.runId, now);
   return {
     runId: run.runId,
+    ...(run.binding.bundle
+      ? { bundle: structuredClone(run.binding.bundle), name: run.binding.declaration!.name }
+      : {}),
     type: run.binding.type,
     version: run.binding.version,
     scope: run.binding.scope,
@@ -192,6 +210,7 @@ export function taskMatches(item: TaskSummary, query: TaskQuery): boolean {
   return !(
     (query.taskId !== undefined && item.taskId !== query.taskId) ||
     (query.type !== undefined && item.type !== query.type) ||
+    (query.bundleDigest !== undefined && item.bundle?.digest !== query.bundleDigest) ||
     (query.scope !== undefined && item.scope !== query.scope) ||
     (query.seriesId !== undefined && item.seriesId !== query.seriesId) ||
     (query.runId !== undefined && item.runId !== query.runId) ||
@@ -207,6 +226,7 @@ export function runMatches(item: RunSummary, query: RunQuery): boolean {
   return !(
     (query.runId !== undefined && item.runId !== query.runId) ||
     (query.type !== undefined && item.type !== query.type) ||
+    (query.bundleDigest !== undefined && item.bundle?.digest !== query.bundleDigest) ||
     (query.scope !== undefined && item.scope !== query.scope) ||
     (query.stage !== undefined && item.stage !== query.stage) ||
     (query.startedFrom && item.startedAt < query.startedFrom) ||

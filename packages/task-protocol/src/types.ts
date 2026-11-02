@@ -1,12 +1,13 @@
 import type { Json, JsonObject } from "./json.js";
 import type { TypeWorkerRegistration } from "./run.js";
 import type { InputSchema } from "./schema.js";
+import type { BundleReference, ResolvedTaskBundle } from "./bundle.js";
 
 export type Stage = "initial" | "running" | "stopping" | "stopped" | "completed" | "failed";
 export type RunStage = Exclude<Stage, "initial">;
 export type MatchPolicy = "starts-after-eligible" | "terminates-after-eligible";
 export type Revision = string;
-export type TaskRequest = JsonObject & {
+export type CoordinatorRequest = JsonObject & {
   requestId: string;
   type: string;
   timeoutMs: number;
@@ -14,11 +15,34 @@ export type TaskRequest = JsonObject & {
   seriesId?: string;
   matchPolicy?: MatchPolicy;
 };
+export type TaskRequest = JsonObject & {
+  requestId: string;
+  bundle: BundleReference;
+  timeoutMs: number;
+  eligibleAt?: string;
+  seriesId?: string;
+  matchPolicy?: MatchPolicy;
+};
+export type SubmissionResult =
+  | { status: "preparing"; requestId: string; trackingToken: string }
+  | { status: "accepted"; requestId: string; taskId: string }
+  | { status: "rejected"; requestId: string; error: ErrorFact };
+export interface SubmissionRecord {
+  request: TaskRequest;
+  caller: Caller;
+  arrivedAt: string;
+  qualifiedLowerBound: number;
+  decision: SubmissionResult;
+  terminalAt?: string;
+  resultForgotten?: boolean;
+}
 export interface ErrorFact {
   code: string;
   message: string;
 }
 export interface TaskSnapshot {
+  bundle?: BundleReference;
+  name?: string;
   requestId: string;
   taskId: string;
   seriesId: string;
@@ -45,6 +69,8 @@ export interface TaskSnapshot {
   result?: Json;
 }
 export interface Binding {
+  bundle?: BundleReference;
+  declaration?: ResolvedTaskBundle;
   type: string;
   version: string;
   contractRevision: string;
@@ -61,7 +87,7 @@ export interface TaskRecord {
   eligibleAt: string;
   deadlineAt: string;
   receivedSequence: number;
-  request: TaskRequest;
+  request: CoordinatorRequest | TaskRequest;
   binding: Binding;
   input: Json;
   canceledAt?: string;
@@ -101,7 +127,7 @@ export interface RunRecord {
   cleanupUnknown?: { reason: string; observedAt: string };
 }
 export interface Facts {
-  projectionVersion: 4;
+  projectionVersion: 5;
   dataDomain: string;
   admissionLowerBound: number | null;
   observations: { sequence: number; observedAt: string }[];
@@ -109,7 +135,11 @@ export interface Facts {
   tasks: Record<string, TaskRecord>;
   runs: Record<string, RunRecord>;
   messages: Record<string, TaskMessageRecord>;
-  requests: Record<string, { taskId: string; scope: string; intent: TaskRequest }>;
+  requests: Record<
+    string,
+    { taskId: string; scope: string; intent: CoordinatorRequest | TaskRequest }
+  >;
+  submissions: Record<string, SubmissionRecord>;
 }
 export interface TaskMessageRecord {
   taskId: string;
@@ -124,6 +154,12 @@ export interface TaskMessageRecord {
   reason?: string;
 }
 export interface EventData {
+  "submission.preparing": { record: SubmissionRecord };
+  "submission.resolved": {
+    requestId: string;
+    decision: Exclude<SubmissionResult, { status: "preparing" }>;
+  };
+  "submission.results-forgotten": { requestIds: string[] };
   "window.advanced": { lowerBound: number };
   "qualification-time-observed": { observedAt: string };
   "task.created": { task: TaskRecord };
@@ -176,6 +212,8 @@ export interface PublicEvent {
 export type TaskEvent = PublicEvent;
 export type RunEvent = PublicEvent;
 export interface RunSnapshot {
+  bundle?: BundleReference;
+  name?: string;
   runId: string;
   dataDomain: string;
   revision: Revision;
@@ -290,6 +328,7 @@ export interface Subscription {
   unsubscribe(): Promise<void>;
 }
 export interface TaskQuery {
+  bundleDigest?: string;
   taskId?: string;
   type?: string;
   scope?: string;
@@ -304,6 +343,8 @@ export interface TaskQuery {
   sort?: "created-desc" | "updated-desc";
 }
 export interface TaskSummary {
+  bundle?: BundleReference;
+  name?: string;
   taskId: string;
   requestId: string;
   seriesId: string;
@@ -336,6 +377,7 @@ export interface TaskPage {
   next?: string;
 }
 export interface RunQuery {
+  bundleDigest?: string;
   runId?: string;
   type?: string;
   scope?: string;
@@ -347,6 +389,8 @@ export interface RunQuery {
   sort?: "started-desc" | "updated-desc";
 }
 export interface RunSummary {
+  bundle?: BundleReference;
+  name?: string;
   runId: string;
   type: string;
   version: string;
@@ -396,7 +440,7 @@ export interface CollectionSubscription<Summary> {
 export interface CancellationResult extends TaskSnapshot {
   changed: boolean;
 }
-export interface TaskService {
+export interface CoordinatorService {
   sendTaskMessage(
     taskId: string,
     messageId: string,
@@ -406,7 +450,7 @@ export interface TaskService {
   getTaskMessage(taskId: string, messageId: string, caller: Caller): TaskMessageRecord;
   discoverTypes(caller: Caller): readonly TaskTypeDiscovery[];
   submit(request: unknown, caller: Caller, options?: SubmitOptions): TaskSnapshot;
-  getRequest(requestId: string, caller: Caller): TaskRequest;
+  getRequest(requestId: string, caller: Caller): CoordinatorRequest;
   getTask(taskId: string, caller: Caller): TaskSnapshot;
   cancelTask(taskId: string, caller: Caller): CancellationResult;
   getRun(runId: string, caller: Caller): RunSnapshot;
@@ -442,6 +486,16 @@ export interface TaskService {
   subscribe(filter: HistoryFilter, resume: string | undefined, caller: Caller): Subscription;
   start(): Promise<void>;
   close(): Promise<void>;
+}
+export interface TaskService
+  extends Omit<CoordinatorService, "discoverTypes" | "submit" | "getRequest"> {
+  submit(request: unknown, caller: Caller): Promise<SubmissionResult>;
+  getRequest(requestId: string, caller: Caller): TaskRequest;
+  getRequestStatus(
+    requestId: string,
+    options: { waitMs?: number },
+    caller: Caller,
+  ): Promise<SubmissionResult>;
 }
 export interface TaskTypeDiscovery {
   readonly type: string;

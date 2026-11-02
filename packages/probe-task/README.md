@@ -1,30 +1,32 @@
 # @potential-guide/probe-task
 
-子 Check 的终态 Task 不是实际环境的替代证明。Probe 经独立 getRun/getRunHistory 核验
-Run 身份、完成结果、开始历史及实际 environment 与准备约定一致；历史不依赖 Task 混合 Run 事件。
-旧进程已开始而无退出事实的 Probe/Check Run 恢复 stopped，不再次观察或重演副作用。
+`createProbeTaskType(options).run` 是可由 SDK 打包的普通业务回调。
+作者固定 `checkBundle:{url,digest}`，显式配置 Source、可信 scoped child
+client 和 Check 内容身份；不要从 Input 或消息拼装权限。
+Engine 直接启动 SDK Worker，不注册 Check/Probe、不桥接业务资源、
+不安装这些业务包。观察 Worker 已嵌入代码，无作者安装目录依赖。
+静态工厂元数据保留给库级调用，不是通用 Engine 的注册 API。
 
-宿主资源桥按 Run/Worker 代际记录子需求所有权，`confirmResourceRelease` 独立等待
-取消后的子需求物理释放。child-submit 返回句柄、类型发送 released 或 callback 返回，
-都不能替代这项证明；旧代际 dispose 不影响新代际所有权。
+Input 是 objective、subject、context?、bindings?、language?、targetLevel?。
+Child Check 使用标准 Request/Task/Run API 与三态受理结果，有独立身份、
+等待预算和物理释放 barrier；preparing token 不被当作 Task。
+取消父需求只撤销其拥有的 Child Task，不误杀共享 Run 的其他需求。
+子 Task 终态不是实际执行证据：当前执行会读取独立 Run/Run history，
+核对真实身份、完成结果、开始历史及精确 Check Bundle Digest。
+Generic Run.environment 仍是实际 Node 环境，不伪装成业务内容身份。
 
-`createProbeTaskType(options)` 是静态 Host 注册工厂。类型守护负责完整 Run；
-观察业务 Worker 保持独立，Child Task 通过最小、可信、按 Run 所有权限制的资源桥访问服务。
-Caller/scope、Check 环境、容量及 Source 权限来自 Host，不从 Input 或消息拼接。
+messageSchema 为 false，业务消息均拒绝；取消走独立控制通道。
+Progress 仅展示 stage/percent?/message；
+`probe-prepared` / `probe-progress` 保存固定内容及因果机器证据。
+成功结果保留 observation、references、evidence.operations 和 prepared、
+parentRunId、startedAt。失败保留已有机器证据，不生成成功 fallback。
+Checker executionId 不等于父或子通用 Run ID。
 
-Input 保持 objective、subject、context?、bindings?、language?、targetLevel?。
-父 Run 从准备前开始，兼容需求无需再次准备。Child 使用自己的 Task/Run identity，
-独立等待预算和物理所有权 barrier；取消一个共享需求不误杀其他需求。
+当前业务结果/证据核验保留；**历史查询不再启动旧业务代码重放观察**，
+只读取通用持久事实和声明 Schema。重启时已开始而没有退出事实的
+Probe/Check Run 恢复 stopped，不再次观察，不伪造退出时间或资源释放。
+本包不引入新的 Regulator、治理记账或权限模型。
 
-messageSchema 为 false，业务消息均拒绝；取消不受 Never schema 限制。
-标准 Progress 只展示 stage/percent?/message。
-`probe-prepared` 和 `probe-progress` checkpoint 保留固定 Bundle 与因果机器证据。
-成功 Result 保持 observation、references、evidence.operations，
-evidence 另含 prepared、parentRunId 和完整 Run 的 startedAt；失败是明确 failure/evidence 分支。
-Check 子阶段 executionId 来自 Check Result 业务证据，不把它当成父 Run 标识。
-
-历史复验在原类型守护中读取已固定 bytes/digest 和 Child 事实重放纯观察，不下载、不创建 Child、
-不运行旧业务副作用。跨实体墙钟回退依赖持久化事件顺序，不伪造统一的物理时钟。
-本包不注册通用 Regulator、不实现新的治理记账。
-
-完整协议及新数据库边界见 [Task Engine](../../docs/task-engine.md)。
+完整协议见 [Task Engine](../../docs/task-engine.md)。
+[公共包样例](../../examples/task-server/README.md)提供自包含 Bundle、
+真实独立 Child HTTP 及 SQLite 重启验证。

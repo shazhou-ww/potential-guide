@@ -7,9 +7,11 @@ const check = process.argv.includes("--check");
 const { checkerSchema, objectiveArtifactSchema } = await import(
   "../packages/check-artifacts/dist/index.js"
 );
+const { taskBundleSchema } = await import("../packages/task-protocol/dist/index.js");
 for (const [kind, schema] of [
   ["checker", checkerSchema],
   ["objective", objectiveArtifactSchema],
+  ["task", taskBundleSchema],
 ]) {
   const destination = new URL(`../schemas/artifacts/${kind}/v1.json`, import.meta.url);
   const text = execFileSync(

@@ -332,6 +332,12 @@ function compileContract<Input = Json>(
                 key,
                 projection(shape.unevaluatedProperties, input[key]!, budget),
               ]);
+            if (
+              !matched &&
+              !record(shape.additionalProperties) &&
+              !record(shape.unevaluatedProperties)
+            )
+              entries.push(["additional", key, projection(true, input[key]!, budget)]);
           }
           return ["object", ...entries];
         }
@@ -391,7 +397,7 @@ function compileContract<Input = Json>(
   return Object.freeze({
     inputSchema: schema as InputSchema,
     revision: createHash("sha256")
-      .update(`task-input-projection-v2\n${canonical(schema)}`)
+      .update(`task-input-projection-v3\n${canonical(schema)}`)
       .digest("hex"),
     validate(value: unknown): Input {
       const input = json(value, limits.maxInputBytes);

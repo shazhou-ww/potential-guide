@@ -10,9 +10,39 @@ import {
   type RunTracking,
   type StartPermit,
   TaskError,
+  type CoordinatorService,
+  type TaskService,
 } from "@potential-guide/task-protocol";
-import { createTaskEngine, type EngineOptions } from "../src/index.js";
+import { createTaskEngine, type EngineOptions } from "../src/engine.js";
 import type { TypeSupervisor } from "../src/type-supervisor.js";
+
+/** Admission-result adapter for legacy coordinator/business unit fixtures only. */
+export function coordinatorSubmissions<T extends CoordinatorService>(core: T) {
+  const methods = {
+    async submit(value: unknown, caller: Parameters<TaskService["submit"]>[1]) {
+      const task = core.submit(value, caller);
+      return { status: "accepted" as const, requestId: task.requestId, taskId: task.taskId };
+    },
+    async getRequestStatus(
+      id: string,
+      _options: object,
+      caller: Parameters<TaskService["getRequest"]>[1],
+    ) {
+      core.getRequest(id, caller);
+      const task = (
+        core as unknown as { facts(): { facts: { requests: Record<string, { taskId: string }> } } }
+      ).facts().facts.requests[id]!;
+      return { status: "accepted" as const, requestId: id, taskId: task.taskId };
+    },
+  };
+  return new Proxy(core, {
+    get(target, key) {
+      if (Object.hasOwn(methods, key)) return Reflect.get(methods, key);
+      const value = Reflect.get(target, key, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as unknown as Omit<T, "submit"> & Pick<TaskService, "submit" | "getRequestStatus">;
+}
 
 // 旧协调器测试使用受控资源端口，不把这些 fixture 函数作为生产 TaskType 注册。
 export interface LifecycleFixture<Input = Json, Prepared = Input> {

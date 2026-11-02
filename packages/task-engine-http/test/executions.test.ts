@@ -3,6 +3,7 @@ import test from "node:test";
 import { type RunPage, TaskError } from "@potential-guide/task-protocol";
 import { caller, harness } from "../../task-engine/test/fixtures.js";
 import { createTaskHandler } from "../src/index.js";
+import { coordinatorService } from "./service.js";
 
 test("GET /runs exposes only authorized frozen summaries and validates all query boundaries", async () => {
   const h = await harness({
@@ -12,7 +13,7 @@ test("GET /runs exposes only authorized frozen summaries and validates all query
       (who.subject === "tester" || (who.subject === "exec" && op === "list-runs")),
   });
   const handler = createTaskHandler({
-    service: h.engine,
+    service: coordinatorService(h.engine),
     resolveCaller(request) {
       const subject = request.headers.get("authorization");
       if (!subject) throw new TaskError("unauthenticated", "Required");

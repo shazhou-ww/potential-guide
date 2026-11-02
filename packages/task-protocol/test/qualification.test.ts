@@ -75,7 +75,7 @@ test("Q08: GET does not match at the clock boundary; one raw witness qualifies w
     { code: "invalid_fact" },
   );
 });
-test("Q08: rollback and smaller exit wall time preserve matching; result is not terminal before exit", () => {
+test("M03: pure rollback preserves matching; an actual early exit invalidates terminates matching", () => {
   const { f, a, run } = seed();
   f.append({
     type: "qualification-time-observed",
@@ -104,11 +104,14 @@ test("Q08: rollback and smaller exit wall time preserve matching; result is not 
     occurredAt: time(5),
     data: { basis: "worker", code: 0 },
   });
-  const completed = project(f.facts, a.taskId, epoch + 5);
-  assert.equal(completed.stage, "completed");
-  assert.equal(completed.run?.runId, run.runId);
-  assert.deepEqual(completed.result, { ok: true });
-  assert.equal(isPending(completed), true);
+  const invalidated = project(f.facts, a.taskId, epoch + 5);
+  assert.equal(invalidated.stage, "initial");
+  assert.equal(invalidated.run, undefined);
+  assert.equal(invalidated.result, undefined);
+  assert.equal(invalidated.updatedAt, time(5));
+  assert.equal(invalidated.revision, "domain:6");
+  assert.equal(projectRun(f.facts, run.runId, epoch + 5).stage, "completed");
+  assert.equal(isPending(invalidated), true);
   assert.equal(isTimedOut(project(f.facts, a.taskId, epoch + 1001)), true);
   f.append({
     type: "task.canceled",
@@ -119,8 +122,12 @@ test("Q08: rollback and smaller exit wall time preserve matching; result is not 
   });
   const canceled = project(f.facts, a.taskId, epoch + 1001);
   assert.equal(canceled.canceled, true);
-  assert.equal(canceled.stage, "completed");
-  assert.deepEqual(canceled.result, { ok: true });
+  assert.equal(canceled.stage, "initial");
+  assert.equal(canceled.result, undefined);
+  assert.deepEqual(
+    project(reduce(emptyFacts("domain"), f.events), a.taskId, epoch + 1001),
+    canceled,
+  );
 });
 test("Q08: pending cancellation cannot borrow a later witness and later objects cannot borrow an older witness", () => {
   const { f, a } = seed();
@@ -130,6 +137,84 @@ test("Q08: pending cancellation cannot borrow a later witness and later objects 
     scope: "scope",
     occurredAt: time(5),
     data: {},
+  });
+  test("M03/M04: invalidation cannot borrow a historical witness for another Run; later qualification uses its own source", () => {
+    const { f, a, run } = seed();
+    f.append({
+      type: "qualification-time-observed",
+      scope: "",
+      occurredAt: time(10),
+      data: { observedAt: time(10) },
+    });
+    const replacement = f.run(4, 11);
+    assert.equal(project(f.facts, a.taskId, epoch + 11).run?.runId, run.runId);
+    f.append({
+      type: "run.exited",
+      scope: "scope",
+      runId: run.runId,
+      occurredAt: time(5),
+      data: { basis: "worker", code: 1 },
+    });
+    const invalidated = project(f.facts, a.taskId, epoch + 5);
+    assert.equal(invalidated.stage, "initial");
+    assert.equal(invalidated.updatedAt, time(5));
+    assert.equal(invalidated.revision, "domain:6");
+    assert.equal(wouldQualify(f.facts, time(5)), false);
+    assert.equal(wouldQualify(f.facts, time(1001)), false);
+    assert.equal(wouldQualify(f.facts, time(10)), true);
+    f.append({
+      type: "qualification-time-observed",
+      scope: "",
+      occurredAt: time(10),
+      data: { observedAt: time(10) },
+    });
+    const rematched = project(f.facts, a.taskId, epoch + 10);
+    assert.equal(rematched.run?.runId, replacement.runId);
+    assert.equal(rematched.run?.matchedAt, time(10));
+    assert.equal(rematched.updatedAt, time(10));
+    assert.equal(rematched.revision, "domain:7");
+    assert.deepEqual(
+      project(reduce(emptyFacts("domain"), f.events), a.taskId, epoch + 10),
+      rematched,
+    );
+  });
+  test("M03: starts policy retains its match after an earlier actual exit; canceled invalidated Tasks cannot rematch", () => {
+    const f = fixture();
+    const a = f.task(1, 0, 10, "starts-after-eligible");
+    const run = f.run(2, 10);
+    f.append({
+      type: "run.exited",
+      scope: "scope",
+      runId: run.runId,
+      occurredAt: time(5),
+      data: { basis: "worker", code: 1 },
+    });
+    assert.equal(project(f.facts, a.taskId, epoch + 5).run?.runId, run.runId);
+    const g = seed();
+    g.f.append({
+      type: "qualification-time-observed",
+      scope: "",
+      occurredAt: time(10),
+      data: { observedAt: time(10) },
+    });
+    g.f.append({
+      type: "task.canceled",
+      taskId: g.a.taskId,
+      scope: "scope",
+      occurredAt: time(11),
+      data: {},
+    });
+    g.f.append({
+      type: "run.exited",
+      scope: "scope",
+      runId: g.run.runId,
+      occurredAt: time(5),
+      data: { basis: "worker", code: 1 },
+    });
+    g.f.run(4, 12);
+    assert.equal(project(g.f.facts, g.a.taskId, epoch + 12).stage, "initial");
+    assert.equal(project(g.f.facts, g.a.taskId, epoch + 12).canceled, true);
+    assert.equal(wouldQualify(g.f.facts, time(12)), false);
   });
   assert.equal(wouldQualify(f.facts, time(10)), false);
   assert.equal(project(f.facts, a.taskId, epoch + 10).run, undefined);

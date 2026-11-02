@@ -464,7 +464,7 @@ export function gitTreeDigest(files: ReadonlyMap<string, Buffer>): string {
   return `sha256:${tree(root).toString("hex")}`;
 }
 export function assertRuntime(
-  manifest: CheckerManifest,
+  manifest: Pick<CheckerManifest, "runtime">,
   actual = { type: "node", version: process.versions.node },
 ) {
   if (actual.type !== manifest.runtime.type) throw new Error("Unsupported Checker runtime.");

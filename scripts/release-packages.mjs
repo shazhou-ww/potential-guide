@@ -238,6 +238,13 @@ export const releasePackages = [
 export const verificationPackages = [
   ...releasePackages,
   {
+    id: "task-sdk",
+    directory: "task-sdk",
+    name: "@potential-guide/task-sdk",
+    requiredExports: ["runTask", "RunFailure"],
+    bins: [],
+  },
+  {
     id: "probe-task",
     directory: "probe-task",
     name: "@potential-guide/probe-task",

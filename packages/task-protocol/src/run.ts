@@ -1,6 +1,7 @@
 import { fail, type Json, type JsonObject, json, TaskError } from "./json.js";
 import type { InputSchema, JsonSchema } from "./schema.js";
 import type { Caller } from "./types.js";
+import type { ResolvedTaskBundle } from "./bundle.js";
 
 export interface RunProgress {
   stage: "preparation" | "allocation" | "execution";
@@ -26,6 +27,8 @@ export class RunFailure extends TaskError {
   }
 }
 export interface RunContext<Message extends Json = never> {
+  readonly generation?: string;
+  readonly startedAt?: string;
   readonly runId: string;
   readonly scope: string;
   readonly signal: AbortSignal;
@@ -48,6 +51,7 @@ export interface RunResourceContext {
   workerGeneration: string;
 }
 export interface TypeWorkerRegistration {
+  bundle?: { digest: string; declaration: ResolvedTaskBundle };
   type: string;
   version: string;
   environment: string;

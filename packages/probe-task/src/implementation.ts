@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { runtimeRevision } from "./runtime-identity.js";
+import { workerSource } from "./worker-source.js";
 import { setTimeout as delay } from "node:timers/promises";
 import { Worker } from "node:worker_threads";
 import {
@@ -32,6 +32,8 @@ import {
   type TaskService,
   type TaskSnapshot,
   type TaskType,
+  type BundleReference,
+  type SubmissionResult,
 } from "@potential-guide/task-protocol";
 import {
   decodePrepared,
@@ -54,7 +56,14 @@ export { probeInputSchema, validateProbeInput } from "./contracts.js";
 
 export interface ChildTaskPort {
   service: {
-    [K in "submit" | "getTask" | "cancelTask" | "readHistory" | "getRun" | "getRunHistory"]: (
+    [K in
+      | "submit"
+      | "getRequestStatus"
+      | "getTask"
+      | "cancelTask"
+      | "readHistory"
+      | "getRun"
+      | "getRunHistory"]: (
       ...args: Parameters<TaskService[K]>
     ) => ReturnType<TaskService[K]> | Promise<ReturnType<TaskService[K]>>;
   };
@@ -69,7 +78,7 @@ interface Resources {
 export function createIsolatedProbe(
   configuration: Configuration,
   resources: Resources,
-): TaskType<ProbeInput, Json> {
+): TaskType<ProbeInput, Json> & { environment: string } {
   const identities = new WeakMap<AbortSignal, object>();
   const contexts = new Map<string, { context: object; caller: Caller }>();
   const implementation = createProbeImplementation(
@@ -99,7 +108,12 @@ export function createIsolatedProbe(
           caller: current.caller,
           service: {
             submit: (request) =>
-              invoke("child-submit", json(request)) as unknown as Promise<TaskSnapshot>,
+              invoke("child-submit", json(request)) as unknown as Promise<SubmissionResult>,
+            getRequestStatus: (requestId, options) =>
+              invoke("child-status", {
+                requestId,
+                ...options,
+              }) as unknown as Promise<SubmissionResult>,
             getTask: (taskId) =>
               invoke("child-get", { taskId }) as unknown as Promise<TaskSnapshot>,
             cancelTask: (taskId) =>
@@ -132,6 +146,7 @@ export function createIsolatedProbe(
     },
   );
   return {
+    environment: implementation.environment,
     type: implementation.type,
     version: implementation.version,
     inputSchema: implementation.inputSchema,
@@ -299,6 +314,7 @@ export async function verifyIsolatedProbe(
   }
 }
 export interface ProbeTaskOptions {
+  checkBundle?: BundleReference;
   source: ArtifactSource;
   checkEnvironment: string;
   /** Trusted scoped authority. Never populated from the request body. */
@@ -353,10 +369,6 @@ export function createProbeImplementation(
     policy.maxChecks > 512
   )
     throw new TaskError("invalid_config", "Invalid bounded Probe policy.");
-  const workerUrl = new URL(
-    import.meta.url.endsWith(".ts") ? "../dist/worker.js" : "./worker.js",
-    import.meta.url,
-  );
   const environment = canonicalJson({
     adapter: "objective-observation-v1",
     node: process.versions.node,
@@ -364,14 +376,7 @@ export function createProbeImplementation(
     architecture: process.arch,
     wallMs,
     policy: json(policy),
-    revision: createHash("sha256")
-      .update(readFileSync(new URL(import.meta.url)))
-      .update(readFileSync(workerUrl))
-      .update(readFileSync(new URL("./contracts.js", workerUrl)))
-      .update(
-        readFileSync(new URL(import.meta.resolve("@potential-guide/check-artifacts/observation"))),
-      )
-      .digest("hex"),
+    revision: runtimeRevision,
   });
   const validatePrepared = (value: unknown) => {
     decodePrepared(value as ProbePrepared, environment, policy);
@@ -418,7 +423,8 @@ export function createProbeImplementation(
     const owned = new Set<string>();
     const pending = new Set<Promise<void>>();
     const deadline = performance.now() + wallMs;
-    const worker = new Worker(workerUrl, {
+    const worker = new Worker(workerSource, {
+      eval: true,
       execArgv: [],
       env: { NODE_OPTIONS: "" },
       resourceLimits: { maxOldGenerationSizeMb: 128, maxYoungGenerationSizeMb: 32 },
@@ -487,10 +493,10 @@ export function createProbeImplementation(
       }
       const remaining = Math.floor(deadline - performance.now());
       if (remaining < 1) throw new TaskError("probe_wall_limit", "No child time budget remains.");
-      const initial = await port.service.submit(
+      let decision = await port.service.submit(
         {
           requestId: newId(),
-          type: "check",
+          ...(options.checkBundle ? { bundle: options.checkBundle } : { type: "check" }),
           checker: request.reference,
           subject: request.subject,
           context: request.context,
@@ -500,6 +506,13 @@ export function createProbeImplementation(
         },
         port.caller,
       );
+      while (decision.status === "preparing") {
+        await delay(5);
+        decision = await port.service.getRequestStatus(decision.requestId, {}, port.caller);
+      }
+      if (decision.status === "rejected")
+        throw new TaskError(decision.error.code, decision.error.message);
+      const initial = await port.service.getTask(decision.taskId, port.caller);
       owned.add(initial.taskId);
       progress({ kind: "child", request, taskId: initial.taskId });
       let snapshot: TaskSnapshot = initial;
@@ -521,7 +534,9 @@ export function createProbeImplementation(
       const runSnapshot = await port.service.getRun(snapshot.run.runId, port.caller);
       if (
         runSnapshot.runId !== snapshot.run.runId ||
-        runSnapshot.type !== "check" ||
+        (options.checkBundle
+          ? runSnapshot.bundle?.digest !== options.checkBundle.digest
+          : runSnapshot.type !== "check") ||
         runSnapshot.stage !== "completed" ||
         runSnapshot.dataDomain !== snapshot.dataDomain ||
         runSnapshot.result === undefined ||
@@ -545,7 +560,11 @@ export function createProbeImplementation(
           }
         cursor = page.next;
       } while (cursor);
-      if (actual !== policy.checkEnvironment || actual !== runSnapshot.environment)
+      if (options.checkBundle) actual = runSnapshot.bundle?.digest;
+      if (
+        actual !== policy.checkEnvironment ||
+        (!options.checkBundle && actual !== runSnapshot.environment)
+      )
         throw new TaskError(
           "unsupported_environment",
           "Child Check runtime differs from prepared Probe.",

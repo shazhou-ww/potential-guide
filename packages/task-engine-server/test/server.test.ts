@@ -1,35 +1,64 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
+import { TaskClient } from "@potential-guide/task-engine-http";
 import test from "node:test";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import { openSqliteStore } from "@potential-guide/task-engine-storage";
-import { type RegisteredType, TaskError, type TaskPage } from "@potential-guide/task-protocol";
+import {
+  taskSchemaUri,
+  TaskError,
+  type TaskPage,
+  type BundleReference,
+  type SubmissionResult,
+} from "@potential-guide/task-protocol";
 import { type ServerOptions, startTaskServer } from "../src/index.js";
 
-function type(): RegisteredType {
-  return {
-    type: "echo",
-    version: "1",
-    environment: "test",
-    inputSchema: { type: "object" },
-    resultSchema: true,
-    messageSchema: false,
-    module: new URL("./echo-worker.mjs", import.meta.url).href,
-    exportName: "createEcho",
-    configuration: {},
-  };
-}
-function config(): ServerOptions {
+const authoredRoot = resolve(".cache", `server-author-${randomUUID()}`);
+let reference: BundleReference;
+let authoring: Promise<void> | undefined;
+test.after(() => rm(authoredRoot, { recursive: true, force: true }));
+async function config(): Promise<ServerOptions> {
+  authoring ??= (async () => {
+    await mkdir(authoredRoot, { recursive: true });
+    const yaml = join(authoredRoot, "task.yaml"),
+      entry = join(authoredRoot, "callback.ts");
+    await writeFile(
+      yaml,
+      JSON.stringify({
+        $schema: taskSchemaUri,
+        name: "Server Echo",
+        runtime: { type: "node", minVersion: "22.13.0" },
+        entry: "worker.cjs",
+        inputSchema: { type: "object" },
+        resultSchema: true,
+        messageSchema: false,
+      }),
+    );
+    await writeFile(
+      entry,
+      `import {createEcho} from ${JSON.stringify(fileURLToPath(new URL("./echo-worker.mjs", import.meta.url)))};
+const type=createEcho({});export default(input,context)=>type.run(input,context);`,
+    );
+    const built = await buildTaskBundle({
+      declaration: yaml,
+      entry,
+      outDirectory: join(authoredRoot, "bundle"),
+    });
+    const packed = await packTaskBundle(built.directory, join(authoredRoot, "bundle.tgz"));
+    reference = { url: pathToFileURL(packed.archive).href, digest: built.digest };
+  })();
+  await authoring;
   return {
     store: new MemoryStore(),
     port: 0,
-    types: [type()],
-    currentVersions: { echo: "1" },
+    bundleDirectory: join(authoredRoot, randomUUID()),
     authorize: (caller, _operation, scope) =>
       caller.scope === scope && caller.subject === "allowed",
     resolveCaller(request) {
@@ -46,7 +75,7 @@ function config(): ServerOptions {
 }
 const headers = { authorization: "Bearer good", "content-type": "application/json" };
 test("shutdown owns cancellation of a quiet SSE body even when request abort propagation is blocked", async () => {
-  const options = config();
+  const options = await config();
   const resolveCaller = options.resolveCaller;
   options.resolveCaller = (request) => {
     // Fault-inject a lost downstream abort; the HTTP bridge still owns its body reader.
@@ -100,7 +129,7 @@ test("independent programmatic import cannot listen, open a database or install 
 });
 test("import has no signals; real HTTP auth, permission, bounded body, history and SSE reconnect", async () => {
   const signals = process.listenerCount("SIGINT");
-  const options = config();
+  const options = await config();
   const server = await startTaskServer(options);
   try {
     assert.equal(process.listenerCount("SIGINT"), signals);
@@ -110,7 +139,7 @@ test("import has no signals; real HTTP auth, permission, bounded body, history a
         await fetch(`${server.url}/tasks`, {
           method: "POST",
           headers: { ...headers, authorization: "Bearer bad", "Idempotency-Key": newId() },
-          body: JSON.stringify({ type: "echo", text: "hello", timeoutMs: 10000 }),
+          body: JSON.stringify({ bundle: reference, text: "hello", timeoutMs: 10000 }),
         })
       ).status,
       403,
@@ -119,11 +148,20 @@ test("import has no signals; real HTTP auth, permission, bounded body, history a
     const submitted = await fetch(`${server.url}/tasks`, {
       method: "POST",
       headers: { ...headers, "Idempotency-Key": requestId },
-      body: JSON.stringify({ type: "echo", text: "hello", timeoutMs: 10000 }),
+      body: JSON.stringify({ bundle: reference, text: "hello", timeoutMs: 10000 }),
     });
-    assert.equal(submitted.status, 202);
-    const task = (await submitted.json()) as { taskId: string; revision: string };
-    const directory = await fetch(`${server.url}/tasks?type=echo`, { headers });
+    assert.ok(submitted.ok);
+    const client = new TaskClient({ url: server.url, headers });
+    let decision = (await submitted.json()) as SubmissionResult;
+    while (decision.status === "preparing")
+      decision = await client.getRequestStatus(requestId, { waitMs: 1000 });
+    assert.equal(decision.status, "accepted");
+    if (decision.status !== "accepted") throw Error("Expected accepted.");
+    const task = await client.getTask(decision.taskId);
+    const directory = await fetch(
+      `${server.url}/tasks?bundleDigest=${encodeURIComponent(reference.digest)}`,
+      { headers },
+    );
     assert.equal(directory.status, 200);
     assert.equal(((await directory.json()) as TaskPage).tasks[0]?.taskId, task.taskId);
     assert.equal((await fetch(`${server.url}/tasks`)).status, 401);
@@ -205,7 +243,7 @@ test("occupied port and invalid config roll back resources and release the Store
   assert.ok(address && typeof address !== "string");
   let closed = 0;
   const options = {
-    ...config(),
+    ...(await config()),
     port: address.port,
     closeResources() {
       closed++;
@@ -219,15 +257,15 @@ test("occupied port and invalid config roll back resources and release the Store
     await assert.rejects(startTaskServer({ ...options, port: -1 }), /configuration/);
     assert.equal(closed, 2);
     await assert.rejects(
-      startTaskServer({ ...options, currentVersions: { missing: "1" } }),
-      /not registered/,
+      startTaskServer({ ...options, currentVersions: { missing: "1" } } as ServerOptions),
+      { code: "invalid_config" },
     );
     await assert.rejects(
       startTaskServer({
         ...options,
-        types: [{ ...type(), messageSchema: undefined } as unknown as RegisteredType],
-      }),
-      /TaskType/,
+        types: [{}],
+      } as ServerOptions),
+      { code: "invalid_config" },
     );
   } finally {
     options.store!.close();
@@ -235,7 +273,7 @@ test("occupied port and invalid config roll back resources and release the Store
   }
 });
 test("startup failure after acquiring resources and bounded shutdown never report false success", async () => {
-  const options = config();
+  const options = await config();
   let cleaned = 0;
   await assert.rejects(
     startTaskServer({
@@ -263,7 +301,7 @@ test("startup failure after acquiring resources and bounded shutdown never repor
     finish = resolve;
   });
   const server = await startTaskServer({
-    ...config(),
+    ...(await config()),
     store,
     shutdownMs: 20,
     limits: { stopGraceMs: 5, forceExitWaitMs: 5 },
@@ -282,7 +320,7 @@ test("startup failure after acquiring resources and bounded shutdown never repor
 test("SQLite duplicate owner fails without disturbing the live Server", async () => {
   const root = resolve(".cache", `server-owner-${randomUUID()}`);
   await mkdir(root, { recursive: true });
-  const base = config();
+  const base = await config();
   const { store: _unused, ...rest } = base;
   const options = { ...rest, database: resolve(root, "tasks.sqlite") };
   const server = await startTaskServer(options);
@@ -305,7 +343,7 @@ test("physical resource cleanup failure is not successful shutdown; lease remain
     retainedOwner = owner;
   };
   const server = await startTaskServer({
-    ...config(),
+    ...(await config()),
     store,
     closeResources() {
       throw new Error("physical cleanup failed");

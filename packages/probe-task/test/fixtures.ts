@@ -13,7 +13,10 @@ import { newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import { type Clock, isTimedOut, type TaskSnapshot } from "@potential-guide/task-protocol";
 import { createCheckFixture as createCheckTaskType } from "../../check-task/test/type-fixture.js";
-import { createFixtureEngine as createTaskEngine } from "../../task-engine/test/driver.js";
+import {
+  createFixtureEngine as createTaskEngine,
+  coordinatorSubmissions,
+} from "../../task-engine/test/driver.js";
 import type { ProbeTaskOptions } from "../src/index.js";
 import { createProbeFixture as createProbeTaskType } from "./type-fixture.js";
 export const caller = { scope: "a", subject: "tester" };
@@ -116,7 +119,7 @@ export async function harness(
     parents: 2,
     wallMs: 30_000,
     children: (scope) => ({
-      service: engine,
+      service: coordinatorSubmissions(engine),
       caller: { scope, subject: "trusted-probe" },
       waitForTaskRelease: (id, caller) => engine.waitForTaskRelease(id, caller),
     }),

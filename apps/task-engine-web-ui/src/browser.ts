@@ -8,7 +8,7 @@ import type {
   RunSummary,
   TaskSnapshot,
   TaskSummary,
-  TaskTypeDiscovery,
+  SubmissionResult,
 } from "@potential-guide/task-protocol";
 import { envelopeKeys, envelopeSchema, schemaEditor } from "./form.js";
 import { ObservationEnd, stages, taskStatus } from "./lifecycle.js";
@@ -18,7 +18,7 @@ import {
   consumeCollectionSse,
   consumeSse,
   Directory,
-  discoveryRevision,
+  bundleDigest,
   type Entry,
   EventWindow,
   endpointMatches,
@@ -108,6 +108,7 @@ function input(label: string, type = "text"): { label: HTMLLabelElement; input: 
 const statusNames = {
   draft: "草稿",
   sending: "提交中",
+  preparing: "制品准备中",
   accepted: "已确认",
   failed: "被拒绝",
   unknown: "结果未知",
@@ -121,14 +122,10 @@ const selection = new Selection();
 const states = new Map<string, Workspace>();
 let formReader: (() => Parameters) | undefined;
 let formEndpoint: Endpoint | undefined;
-let formRevision: string | undefined;
-let formType = "";
 let formBlocked = false;
 let lastQuick: Entry | undefined;
 interface Workspace {
   endpoint: Endpoint;
-  types: TaskTypeDiscovery[];
-  discoveryError: string;
   tasks: TaskSnapshots;
   directory: Directory;
   taskCollection?: AbortController;
@@ -142,8 +139,6 @@ function workspace(endpoint = selection.endpoint): Workspace {
   if (!state) {
     state = {
       endpoint,
-      types: [],
-      discoveryError: "",
       tasks: new TaskSnapshots(),
       directory: new Directory(),
       executionDirectory: new Directory<RunPage>("runs"),
@@ -168,10 +163,10 @@ function preserveSelectedCancellation(endpoint: Endpoint, id: string): void {
 }
 const bar = new SubmissionBar(
   (entry) =>
-    api.request(entry.endpoint, "/tasks", {
+    api.request<SubmissionResult>(entry.endpoint, "/tasks", {
       method: "POST",
       body: entry.parameters,
-      headers: { "Idempotency-Key": entry.id, "If-Match": `"${entry.revision}"` },
+      headers: { "Idempotency-Key": entry.id },
     }),
   () => {
     renderBar();
@@ -183,53 +178,49 @@ const bar = new SubmissionBar(
       workspace(entry.endpoint).tasks.seed(entry.snapshot);
     }
   },
+  (entry) => api.request<SubmissionResult>(entry.endpoint, `/requests/${entry.id}/status`),
+  (entry, id) => api.request<TaskSnapshot>(entry.endpoint, `/tasks/${id}`),
 );
 function checkedForm(): { endpoint: Endpoint; parameters: Parameters; revision: string } {
   if (
     !formReader ||
     !formEndpoint ||
-    !formRevision ||
     formBlocked ||
     !selection.endpoint ||
     !endpointMatches(formEndpoint, selection.endpoint)
   )
-    throw new Error("表单未绑定可用契约。请重新发现类型；原输入不会自动提交。");
-  return { endpoint: formEndpoint, parameters: formReader(), revision: formRevision };
+    throw new Error("请先选择 Endpoint 并填写完整 Bundle 引用；原输入不会自动提交。");
+  const parameters = formReader();
+  return { endpoint: formEndpoint, parameters, revision: bundleDigest(parameters) };
 }
-function renderForm(type: TaskTypeDiscovery, parameters?: Parameters): void {
+function renderForm(parameters?: Parameters): void {
   formReader = undefined;
   formBlocked = false;
   formEndpoint = workspace().endpoint;
-  formRevision = type.revision;
-  formType = type.type;
-  view.type(type.type);
   view.render("contract-actions", []);
   const container = get("form-fields");
   container.replaceChildren();
-  const original = parameters ?? { type: type.type };
+  const original = parameters ?? { bundle: { url: "", digest: "" } };
   const envelope = Object.fromEntries(
-    Object.entries(original).filter(([key]) => envelopeKeys.includes(key) && key !== "type"),
+    Object.entries(original).filter(([key]) => envelopeKeys.includes(key)),
   );
   const business = Object.fromEntries(
     Object.entries(original).filter(([key]) => !envelopeKeys.includes(key)),
   );
   try {
     const common = schemaEditor(envelopeSchema, envelope, envelopeSchema, "请求参数");
-    const fields = schemaEditor(type.inputSchema, business, type.inputSchema, `${type.type} 输入`);
-    container.append(
-      common.node,
-      fields.node,
-      details("Task 输入 Schema · 服务端进行完整校验", type.inputSchema),
-    );
-    formReader = () =>
-      ({
-        ...(common.read() as object),
-        ...(fields.read() as object),
-        type: type.type,
-      }) as Parameters;
+    const inputSchema = { type: "object" };
+    const fields = schemaEditor(inputSchema, business, inputSchema, "业务 Input（JSON 对象）");
+    container.append(common.node, fields.node);
+    formReader = () => {
+      const payload = fields.read() as Record<string, unknown>;
+      if ([...envelopeKeys, "requestId"].some((key) => Object.hasOwn(payload, key)))
+        throw new Error("业务 Input 不得覆盖 Bundle 引用、Request 身份或时间参数。");
+      return { ...(common.read() as object), ...payload } as Parameters;
+    };
     view.text(
       "contract",
-      `类型 ${type.type} · version ${type.version} · revision ${type.revision.slice(0, 12)}。不补默认值；提交由服务完整校验。`,
+      "每个 Request 固定 URL 与完整 Digest；服务按 Bundle 离线契约校验 Input。准备完成前不创建 Task，也不开始 Task 超时。",
     );
   } catch (error) {
     formBlocked = true;
@@ -237,63 +228,9 @@ function renderForm(type: TaskTypeDiscovery, parameters?: Parameters): void {
     notify(error);
   }
 }
-async function discover(preserve = false): Promise<void> {
-  const state = workspace();
-  const lease = selection.capture();
-  let retained: Parameters | undefined;
-  if (preserve && formReader) {
-    try {
-      retained = formReader();
-    } catch {
-      /* Invalid raw field text remains in the current DOM. */
-    }
-  }
-  try {
-    const types = await api.request<TaskTypeDiscovery[]>(state.endpoint, "/task-types", {
-      signal: lease.signal,
-    });
-    if (!lease.current()) return;
-    if (
-      !Array.isArray(types) ||
-      types.some((type) => !type.type || !type.inputSchema || !/^[a-f0-9]{64}$/.test(type.revision))
-    )
-      throw new Error("类型发现协议无效。");
-    state.types = types;
-    state.discoveryError = "";
-    view.options([
-      { label: "选择任务类型", value: "" },
-      ...types.map((type) => ({ label: type.type, value: type.type })),
-    ]);
-    if (preserve && formType) {
-      view.type(formType);
-      const current = types.find((type) => type.type === formType);
-      if (!current) {
-        formBlocked = true;
-        throw new Error("当前类型已不再可提交；保留原输入。");
-      }
-      if (current.revision !== formRevision) {
-        formBlocked = true;
-        view.text(
-          "contract",
-          "契约已变化，原输入已保留。点击“按当前契约重新编辑”确认；原提交重试仍保留旧 guard。",
-        );
-        const accept = button("按当前契约重新编辑", () => {
-          if (!retained) throw new Error("原输入尚不能解析，请修正原字段后重新发现。");
-          renderForm(current, retained);
-        });
-        view.render("contract-actions", [accept]);
-      } else formBlocked = false;
-    }
-    view.text("discovery-status", `已发现 ${types.length} 种当前类型`);
-  } catch (error) {
-    if (!lease.current()) return;
-    state.discoveryError = error instanceof Error ? error.message : String(error);
-    view.text(
-      "discovery-status",
-      `发现不可用：${state.discoveryError}。目录和详情权限独立，仍可使用。`,
-    );
-    formBlocked = true;
-  }
+async function initializeForm(): Promise<void> {
+  renderForm();
+  view.text("discovery-status", "无需类型注册或发现；名称仅用于展示，Digest 决定执行内容。");
 }
 function renderBar(): void {
   const container = "batches";
@@ -330,14 +267,18 @@ function renderBar(): void {
       row.dataset.key = `receipt:${entry.id}`;
       row.className = "receipt";
       row.append(
-        node("strong", `${index + 1}. ${entry.parameters.type} · ${statusNames[entry.state]}`),
+        node(
+          "strong",
+          `${index + 1}. ${entry.parameters.bundle.digest.slice(0, 19)} · ${statusNames[entry.state]}`,
+        ),
         node("p", entry.message),
       );
       row.append(
         details("提交参数与原身份", {
           endpoint: entry.endpoint.id,
           requestId: entry.id,
-          revision: entry.revision,
+          ...(entry.taskId ? { taskId: entry.taskId } : {}),
+          bundleDigest: entry.revision,
           parameters: entry.parameters,
         }),
       );
@@ -353,14 +294,18 @@ function renderBar(): void {
           ),
         );
       }
-      if (entry.snapshot)
+      if (entry.taskId)
         row.append(
-          button(`打开 Task ${entry.snapshot.taskId.slice(-8)}`, () =>
-            openTask(entry.snapshot!.taskId),
-          ),
+          button(`打开 Task ${entry.taskId.slice(-8)}`, () => {
+            if (!selection.endpoint || !endpointMatches(entry.endpoint, selection.endpoint))
+              throw new Error("原 Endpoint 已变化，禁止静默改投。");
+            return openTask(entry.taskId!);
+          }),
         );
+      if (["preparing", "unknown", "failed"].includes(entry.state))
+        row.append(button("按 requestId 核对结果", () => bar.refresh(entry)));
       if (entry.state === "unknown" || entry.state === "failed") {
-        row.append(button("原身份重试（保留 guard）", () => bar.retry(entry)));
+        row.append(button("原身份重试（保留原意图）", () => bar.retry(entry)));
         row.append(
           button("核对原 requestId", async () => {
             const value = await api.request<Record<string, unknown>>(
@@ -369,7 +314,7 @@ function renderBar(): void {
             );
             if (selection.endpoint && endpointMatches(entry.endpoint, selection.endpoint))
               notify(
-                `原请求可读，已持久化；请在目录查找对应 Task。requestId=${String(value.requestId)}。`,
+                `原请求可读；不代表已创建 Task。请另查处理结果。requestId=${String(value.requestId)}。`,
               );
           }),
         );
@@ -959,7 +904,7 @@ function directoryQuery(): string {
   const query = new URLSearchParams({ sort: "created-desc" });
   const type = (get("history-type") as HTMLInputElement).value;
   if (type.length > 256) throw new Error("类型筛选最多 256 字符。");
-  if (type) query.set("type", type);
+  if (type) query.set("bundleDigest", type);
   if (selection.endpoint && workspace().associatedExecutionId)
     query.set("runId", workspace().associatedExecutionId);
   for (const [id, key] of [
@@ -1142,7 +1087,7 @@ function renderDirectory(): void {
   if (directory.expired)
     contents.append(node("p", "query_expired：旧快照仅供参考。请点“重新查询”，不能继续拼页。"));
   if (!directory.page) {
-    contents.append(node("p", "尚未取得任务目录。查询权限与类型发现权限独立。"));
+    contents.append(node("p", "尚未取得任务目录。目录查询与提交、Request 跟踪相互独立。"));
     reconcile(container, [contents]);
     return;
   }
@@ -1181,7 +1126,7 @@ function renderDirectory(): void {
     describeRowAction(row, {
       kind: "task",
       id: task.taskId,
-      label: `查看任务 ${task.type} · ${task.taskId.slice(-8)} 的详情`,
+      label: `查看任务 ${task.name ?? task.type} · ${task.taskId.slice(-8)} 的详情`,
       run: () => openTask(task.taskId),
       error: notify,
     });
@@ -1189,7 +1134,7 @@ function renderDirectory(): void {
     star.dataset.rowControls = "";
     star.append(starButton(state.endpoint, task.taskId));
     const title = node("td");
-    const type = node("span", task.type);
+    const type = node("span", task.name ?? task.type);
     type.className = "entity-type";
     title.append(type, node("small", task.taskId.slice(-8)));
     row.append(star, title);
@@ -1273,7 +1218,7 @@ async function queryExecutions(append = false): Promise<void> {
       const filters = new URLSearchParams({ sort: "started-desc" });
       const type = (get("execution-type") as HTMLInputElement).value;
       if (type.length > 256) throw new Error("类型筛选最多 256 字符。");
-      if (type) filters.set("type", type);
+      if (type) filters.set("bundleDigest", type);
       for (const [id, key] of [
         ["started-from", "startedFrom"],
         ["started-before", "startedBefore"],
@@ -1339,11 +1284,11 @@ function renderExecutions(): void {
       describeRowAction(row, {
         kind: "run",
         id: execution.runId,
-        label: `查看 Run ${execution.type} · ${execution.runId.slice(-8)} 的详情`,
+        label: `查看 Run ${execution.name ?? execution.type} · ${execution.runId.slice(-8)} 的详情`,
         run: () => openRun(execution.runId),
         error: notify,
       });
-      const type = node("span", execution.type);
+      const type = node("span", execution.name ?? execution.type);
       type.className = "entity-type";
       title.append(type, node("small", execution.runId.slice(-8)));
       row.append(
@@ -1375,14 +1320,8 @@ async function reuse(endpoint: Endpoint, parameters: Parameters, direct: boolean
   if (!selection.endpoint || !endpointMatches(selection.endpoint, endpoint))
     throw new Error(`请先明确切换到收藏/原请求目标 ${endpoint.label}，不会改投当前目标。`);
   const lease = selection.capture();
-  const state = workspace();
-  const types = await api.request<TaskTypeDiscovery[]>(endpoint, "/task-types", {
-    signal: lease.signal,
-  });
-  if (!lease.current()) return;
-  state.types = types;
-  const revision = discoveryRevision(types, parameters);
   if (direct) {
+    const revision = bundleDigest(parameters);
     const entry = await bar.quick(endpoint, parameters, revision);
     if (lease.current()) {
       notify(entry.message);
@@ -1392,10 +1331,9 @@ async function reuse(endpoint: Endpoint, parameters: Parameters, direct: boolean
       }
     }
   } else {
-    const type = types.find((item) => item.type === parameters.type)!;
-    view.options(types.map((item) => ({ label: item.type, value: item.type })));
-    view.type(type.type);
-    renderForm(type, structuredClone(parameters));
+    renderForm(structuredClone(parameters));
+    if (!parameters.bundle)
+      notify("旧模板未转换；请显式填写 Bundle 引用并检查业务 Input，原模板保持不变。");
     lastQuick = undefined;
     navigation.show("tasks", false);
     view.text("create-title", "编辑参数并新建任务");
@@ -1440,7 +1378,9 @@ function renderStars(box: HTMLElement): void {
   }
   const stars = selectedStars().filter(
     (item) =>
-      (!query.get("type") || item.parameters.type === query.get("type")) &&
+      (!query.get("bundleDigest") ||
+        ((item.parameters.bundle as { digest?: string } | undefined)?.digest ??
+          item.parameters.type) === query.get("bundleDigest")) &&
       (!query.get("createdFrom") ||
         Date.parse(item.source!.receivedAt) >= Date.parse(query.get("createdFrom")!)) &&
       (!query.get("createdBefore") ||
@@ -1456,7 +1396,7 @@ function renderStars(box: HTMLElement): void {
       ? (sourceStates.get(favorite.id)?.label ?? "来源尚未核对")
       : "原目标缺失或已重绑，禁止改投";
     article.append(
-      node("strong", String(favorite.parameters.type)),
+      node("strong", favorite.name),
       node("p", `${status} · ${favorite.endpoint.label}`),
       node("small", `来源 ${favorite.source!.taskId.slice(-8)}`),
     );
@@ -1628,15 +1568,11 @@ async function chooseEndpoint(id: string): Promise<void> {
   closeObservers();
   formReader = undefined;
   formEndpoint = undefined;
-  formRevision = undefined;
-  formType = "";
   lastQuick = undefined;
   get("form-fields").replaceChildren();
   view.text("contract", "");
   view.render("contract-actions", []);
-  view.type("");
-  view.options([{ label: "正在发现当前目标类型", value: "" }]);
-  view.text("discovery-status", `正在发现 ${endpoint.label} 的类型…`);
+  view.text("discovery-status", `目标：${endpoint.label}。每次提交使用明确的 Bundle 引用。`);
   view.text("notice", `当前目标：${endpoint.label}。旧目标回执留在原分区；断流不会取消 Task。`);
   workspace().associatedExecutionId = "";
   (get("only-favorites") as HTMLInputElement).checked = false;
@@ -1653,7 +1589,7 @@ async function chooseEndpoint(id: string): Promise<void> {
   renderTasks();
   renderDirectory();
   renderExecutions();
-  await Promise.all([discover(), renderFavorites()]);
+  await Promise.all([initializeForm(), renderFavorites()]);
   if (lease.current()) await queryDirectory();
 }
 async function start(): Promise<void> {
@@ -1680,21 +1616,13 @@ async function start(): Promise<void> {
   view.events.endpoint = (id) => {
     void chooseEndpoint(id).catch(notify);
   };
-  view.events.type = (value) => {
-    const type = workspace().types.find((entry) => entry.type === value);
-    if (type) {
-      renderForm(type);
-      lastQuick = undefined;
-    }
-  };
-  view.render("discover", [button("重新发现类型", () => discover(true))]);
   view.render("create-actions", [
     button(
       "提交任务",
       async () => {
-        if (lastQuick?.state === "unknown")
+        if (lastQuick && ["unknown", "preparing", "sending"].includes(lastQuick.state))
           throw new Error(
-            "上一单条提交结果未知；请使用任务栏的原身份重试/核对，或明确“主动再做一次”。",
+            "上一 Request 尚未完成受理确认；请在任务栏按原 requestId 跟踪，或明确“主动再做一次”。",
           );
         const form = checkedForm();
         const lease = selection.capture();
@@ -1745,6 +1673,10 @@ async function start(): Promise<void> {
   ]);
   const timeRefresh = setInterval(() => {
     if (!selection.endpoint) return;
+    for (const batch of bar.batches)
+      if (endpointMatches(batch.endpoint, selection.endpoint))
+        for (const entry of batch.entries)
+          if (entry.state === "preparing" || entry.state === "unknown") void bar.refresh(entry);
     renderTasks();
     if (!(get("only-favorites") as HTMLInputElement).checked) renderDirectory();
     if (taskObserver && current(taskObserver)) renderObserver(taskObserver);

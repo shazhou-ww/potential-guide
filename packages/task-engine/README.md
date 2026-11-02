@@ -1,31 +1,50 @@
 # @potential-guide/task-engine
 
-协调 Task 需求与完整 Run。Run 从持久化开始事件进入 preparation/allocation/execution，
-不以业务 Worker 分配完成作为开始；共享不要求接收 Task 独立准备。
+按完整 Bundle `{url, digest}` 受理 Request，协调独立 Task 与可共享的完整 Run。
+没有类型注册、当前版本选择或 `discoverTypes`。名称只展示，Digest 确定内容。
 
-公开协议、静态类型注册、隔离 Worker、消息、证据、取消和存储破坏性边界见
-[Task Engine](../../docs/task-engine.md)。Engine 不执行动态 TaskType 的初始化、prepare、validator 或 run。
-类型模块通过本地 file URL 注册，在守护内提供最简 TaskType.run。
+```ts
+const engine = createTaskEngine({
+  store,
+  bundleDirectory: ".cache/task-bundles",
+  authorize: (caller, _operation, scope) => caller.scope === scope,
+});
+await engine.start();
+const submitted = await engine.submit(request, caller);
+const result = submitted.status === "preparing"
+  ? await engine.getRequestStatus(request.requestId, {waitMs: 1000}, caller)
+  : submitted;
+if (result.status === "accepted") {
+  const task = engine.getTask(result.taskId, caller);
+}
+```
 
-类型守护为每个完整 Run 创建独立 Worker，不跨 Run 共享模块堆；历史复验使用独立的复验 Worker。
-同类型的 Worker 启动按序排队，避免启动风暴耗尽健康握手预算；已就绪的 Run 仍并行执行。
-指定 Run 的协作取消、健康失联或强制终止不停止同类型的其他 Run。
-类型上报结果先在隔离通道校验，宿主观察到该 Worker 退出后才交付终结回调；
-宿主资源动作及独立清理证明仍须完成后才能确认回收，Worker 退出不替代这些证明。
-守护的 `stopGraceMs`、`forceExitWaitMs` 均默认 5,000ms；停止接纳与实际退出分别通过通道报告，
-强制退出等待超时明确报告 `stop_unconfirmed`，不伪造资源回收成功。
+`preparing` 不是 Task。返回前保存原 Request、窗口资格与恢复依据；
+accepted 与 Task 创建原子持久化，rejected 也保留幂等依据。
+共享获取按 Digest，不共享逐 Request 的输入校验或结果。
+准备没有整体截止；停止观察不取消处理，Task 时间只在最终创建时锚定。
+`getRequest` 读取原始意图，`getRequestStatus` 独立读取处理结果。
 
-`EngineOptions.authorize` 仍控制 submit/request/task/cancel/history/subscribe/list/list-runs/message。
-`listRuns` 提供独立授权、无载荷且有界的冻结完整 Run 目录；`listTasks({runId})`
-列出当前 Caller 可读的事实匹配需求，不由消息或历史接口间接授予目录权限。
-`allocationLimits` 和资源能力由可信 Host 配置，不由类型插件自授。
-`pool` 子入口保留实际业务资源的替换、owner/reclaim 和物理退出确认；不把这些控制当作 Run 匹配政策。
+每 Run 直接启动已验证 `worker.cjs`，不加载作者 factory，也不启动历史业务复验 Worker。
+SDK 延迟到 Run 命令后才求值作者模块。宿主确认物理退出后裁决终态，回收是另一事实。
+历史查询使用持久事实，不要求缓存仍在，也不重演旧 Run。
 
-`testing` 子入口为显式非持久 MemoryStore / VirtualClock。测试中的受控 resource fixtures
-只用于协调器时序，不是生产生命周期代理；真实隔离与消息证明使用独立模块及 Worker。
+Facts/SQLite v5 明确拒绝 v4 等旧格式；操作者必须显式选择新域。
+`collectRequestResults()` 只清理终态跟踪可见性，不删除 Task；
+`collect()` 继续管理 Task/Run 历史的受保护保留边界。
 
-`defaultEngineLimits` 公开默认预算。默认 ULID 窗口为 24 小时、未来偏差 60 秒；
-持久下界只前进，接收范围两端包含等号，并在幂等查重前验证。
-Task 由受理/取消和 Run 源事实推导，不持久化绑定或权威 Task 状态；必要时只补单个 observedAt 资格见证。
-Task progress 只从独立 Run 查询，取消及终态不冻结当前时间标签或后续 stage。
-全域源 revision 支持冻结分页、fromRevision 补读及完整集合封装；超限不返回部分成功。
+宿主可配置 `bundleLimits`、`bundleConcurrency`（默认 4）及通用 Engine limits。
+`maxPreparing` 默认 1000，`maxWaitMs` 默认 30,000ms，
+`requestResultRetentionMs` 默认 86,400,000ms。队列等待不构成 preparation 超时。
+缓存使用租约保护在途准备/运行；`evictBundle(digest)` 是宿主维护，不是类型目录。
+
+原 Input 判等包含合法额外字段；实际提前退出可使 terminates 匹配失效，
+纯 now 回拨及 recovery stopped 不触发该例外。失效和后续匹配沿源 revision 观察。
+冻结分页、订阅补读、完整集合封装和 scope 授权保持不变。
+
+`testing` 提供非持久 MemoryStore / VirtualClock；旧协调器资源 fixtures
+只是内部回归测试，不是生产注册 API。`pool` 保留业务资源协调工具。
+Worker 不是 OS 安全沙箱。
+
+完整接口与边界见 [Task Engine](../../docs/task-engine.md)、
+[Worker 协议](../../docs/task-bundle-worker.md)。

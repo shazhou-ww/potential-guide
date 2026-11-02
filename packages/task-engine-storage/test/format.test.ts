@@ -13,7 +13,7 @@ async function bytes(root: string) {
   );
 }
 
-for (const version of [0, 1, 99]) {
+for (const version of [0, 1, 3, 4, 99]) {
   test(`version ${version} occupied database is rejected without changing bytes or sidecars`, async () => {
     const root = resolve(".cache", `format-${randomUUID()}`);
     await mkdir(root, { recursive: true });
@@ -75,7 +75,7 @@ for (const invalid of ["checkpoint", "facts", "binding"] as const) {
   });
 }
 
-test("only empty stores initialize v4 and reopen with unchanged identity", async () => {
+test("only empty stores initialize v5 and reopen with unchanged identity", async () => {
   const root = resolve(".cache", `format-${randomUUID()}`);
   await mkdir(root, { recursive: true });
   const filename = join(root, "new.sqlite");
@@ -90,12 +90,12 @@ test("only empty stores initialize v4 and reopen with unchanged identity", async
     reopened.close();
     const inspect = new DatabaseSync(filename, { readOnly: true });
     try {
-      assert.equal(inspect.prepare("PRAGMA user_version").get()?.user_version, 4);
+      assert.equal(inspect.prepare("PRAGMA user_version").get()?.user_version, 5);
       assert.equal(
         inspect.prepare("SELECT projection_version FROM checkpoint").get()?.projection_version,
-        4,
+        5,
       );
-      assert.equal(before.facts.projectionVersion, 4);
+      assert.equal(before.facts.projectionVersion, 5);
     } finally {
       inspect.close();
     }

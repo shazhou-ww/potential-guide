@@ -1,7 +1,9 @@
 # Task Engine Server
 
-Generic Node HTTP/SSE assembly and CLI. Registers only trusted TaskTypes; has no
-Checker, Objective, or artifact dependency. See [server guide](../../docs/task-server.md).
+Generic Node HTTP/SSE assembly and CLI. Requests carry fixed Bundle references;
+there is no type registry or discovery. It reuses generic artifact primitives,
+without Checker/Objective business hosts or a production Task SDK dependency.
+See [Engine guide](../../docs/task-engine.md).
 
 ```js
 import { startTaskServer } from "@potential-guide/task-engine-server";
@@ -23,8 +25,9 @@ The default shutdown budget is 15,000ms and must cover the configured
 must explicitly configure all three budgets; startup rejects inconsistent limits.
 The 30,000ms request timeout is not an SSE response lifetime.
 
-`bindService(engine)` lets trusted composition wire in-process adapters before
-recovery/listener startup. `allocationLimits` optionally overrides type allocation
-lanes; neither option introduces business dependencies. See
-`examples/task-server/probe-config.mjs` for Check + Probe registration and
-`probe-integration.mjs` for HTTP/SSE/recovery verification.
+Configure `bundleDirectory`, optional `bundleLimits`/`bundleConcurrency`, and
+the existing authorization/HTTP/Engine limits. `types`, `currentVersions`, and
+`allocationLimits` are rejected legacy configuration.
+`bindService(engine)` remains a trusted composition hook, not registration.
+SQLite v5 refuses old databases before mutation; explicitly select a new path.
+Check/Probe examples are still being switched to fixed Bundle references.

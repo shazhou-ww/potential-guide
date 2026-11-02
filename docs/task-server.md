@@ -4,14 +4,20 @@ For the optional, separately started Chinese debugging workbench, see
 [Task Engine Web UI](task-engine-web-ui.md). It uses public HTTP only and does
 not start or stop this Server.
 
-The generic Server composes Engine, HTTP adapter and SQLite. It neither understands
-artifacts nor grants permissions based on Request fields. The standalone command
+The generic v5 protocol is now Bundle-based. The Check/Probe composition examples
+in this guide are still being switched; they are not valid v5 registration
+instructions. See [the current generic API](task-engine.md).
+
+The generic Server composes Engine, HTTP adapter and SQLite. It neither interprets
+Check/Objective business artifacts nor grants permissions based on Request fields. The standalone command
 belongs to `task-engine-server`, not `task-engine-http`. Importing the programmatic
 entry opens no listener and installs no global signal handlers.
 
 ## Trusted assembly
 
-Pass `types`, `currentVersions`, `authorize` and `resolveCaller` explicitly.
+Pass `authorize`, `resolveCaller`, and a trusted `bundleDirectory`; optional
+`bundleLimits` and `bundleConcurrency` govern preparation. Registry options
+`types`, `currentVersions`, and `allocationLimits` are rejected.
 `resolveCaller` authenticates every HTTP request (including SSE reconnect);
 Engine `authorize` checks every operation and every stream pull. Scope is trusted
 Caller context, never a business field. Deny by default. Local callers must pass
@@ -24,20 +30,19 @@ requests an ephemeral port. The returned URL means Store recovery and listening
 have succeeded. HTTP request/body/parser/subscription limits and socket/request
 timeouts are bounded. Put TLS and rate quotas at the deployment boundary.
 
-GET `/task-types` discovers current `{type,version,inputSchema,revision}` entries
-using submit authorization. POST `/tasks` optionally accepts
-`If-Match: "<revision>"`; stale contracts return 412 before Task acceptance
-(the independent monotonic admission-floor fact may still advance). Discovery
-never fetches artifacts or their subject schemas. Check/Probe examples register
-type version 2; retain original identity-bearing contracts for historical recovery.
+There is no `/task-types`. POST `/tasks` carries a complete Bundle URL and Digest;
+Idempotency-Key supplies requestId. Old If-Match guards are rejected.
+preparing returns 202 without a Task; accepted/rejected return the stored terminal
+decision with 200. GET `/requests/:id/status?waitMs=…` observes the same Request,
+separately from GET `/requests/:id` for its immutable original intent.
 
 GET `/runs` 通过独立 `list-runs` 权限返回按 scope 授权的冻结完整 Run 摘要；
 明确更新允许列表，不从 Task 权限推导 Run 目录权限。摘要不含 Input/Result/owner。
 已绑定关联需求通过 GET `/tasks?runId=...` 及独立 Task `list` 权限查询。
 两种目录的游标域独立，重启/历史清理后失效；见
 [目录契约](task-engine.md#授权目录与查询)。旧目录与查询字段不提供兼容别名。
-类型必须提供静态 RegisteredType，动态模块只在类型守护 Worker 导入。
-Facts/SQLite v4 在写入前拒绝旧数据库；新部署须显式选择新路径，不能覆盖、删除或迁移旧库，
+Engine 直接启动 SDK 生成的 worker.cjs，不接受类型 factory，也不执行历史业务复验。
+Facts/SQLite v5 在写入前拒绝 v4 等旧数据库；新部署须显式选择新路径，不能覆盖、删除或迁移旧库，
 也不能将新域身份或 revision 冒充旧域连续历史。
 
 The HTTP protocol includes POST `/tasks` with `Idempotency-Key`, GET
@@ -186,6 +191,9 @@ author-build package in this MVP. A split would change the existing `/build`
 consumer contract or leave a compatibility dependency and would not deliver
 installation isolation without migration. Packed-consumer evidence records the
 actual installed graph rather than claiming a subpath makes dependencies vanish.
+Engine's generic Bundle loader reuses the `/files` primitives, so these support
+packages now also appear transitively in the Server's production graph. The
+author-only `task-sdk` is not a Server production dependency.
 
 ## Probe composition
 

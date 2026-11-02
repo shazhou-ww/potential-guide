@@ -6,8 +6,10 @@ import { pathToFileURL } from "node:url";
 import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
 import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 import { discoveryHostBins } from "./release-packages.mjs";
+import { checkTaskBundleConsumer } from "./check-task-bundle-consumer.mjs";
+import { checkTaskSdkConsumer } from "./check-task-sdk-consumer.mjs";
 
-export async function checkPackageConsumers(root, scratch, definitions, tarballs, run) {
+export async function checkPackageConsumers(root, scratch, definitions, tarballs, run, only) {
   const manifests = new Map();
   for (const { name, directory } of definitions) {
     manifests.set(
@@ -16,6 +18,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     );
   }
   const scenarios = [
+    ["task-sdk", ["@potential-guide/task-sdk", "@potential-guide/task-protocol"]],
     [
       "probe-task",
       [
@@ -25,6 +28,8 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         "@potential-guide/task-engine",
         "@potential-guide/task-engine-server",
         "@potential-guide/task-protocol",
+        "@potential-guide/task-sdk",
+        "@potential-guide/task-engine-http",
       ],
     ],
     ["artifact-contracts", ["@potential-guide/check-artifacts"]],
@@ -39,6 +44,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     [
       "mvp-check",
       [
+        "@potential-guide/task-sdk",
         "@potential-guide/check-task",
         "@potential-guide/task-engine-server",
         "@potential-guide/task-engine",
@@ -98,7 +104,9 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       ],
     ],
   ];
+  if (!only) await checkTaskBundleConsumer(scratch, tarballs, manifests, run);
   for (const [label, entries] of scenarios) {
+    if (only && label !== only) continue;
     const directory = join(scratch, label);
     await mkdir(directory);
     await writeFile(
@@ -145,7 +153,13 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         "@potential-guide/objective-pilot",
       ])
         assert.ok(!names.has(forbidden));
-      for (const filename of ["probe-config.mjs", "probe-integration.mjs"])
+      for (const filename of [
+        "probe-config.mjs",
+        "probe-integration.mjs",
+        "echo-config.mjs",
+        "echo-type.mjs",
+        "build-bundles.mjs",
+      ])
         await writeFile(
           join(directory, filename),
           await readFile(join(root, "examples", "task-server", filename)),
@@ -154,11 +168,14 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     }
     if (label === "artifact-contracts" || label.startsWith("mvp-"))
       await checkMvpConsumer(root, directory, label, graph, run);
-    if (label.startsWith("task-")) {
+    if (label === "task-sdk") {
+      await checkTaskSdkConsumer(directory, run);
+    }
+    if (label.startsWith("task-") && label !== "task-sdk") {
       const script = join(directory, "generic-task.mjs");
       await writeFile(
         join(directory, "type-worker.mjs"),
-        `export function createEcho(){return {type:"echo",version:"1",inputSchema:{type:"object"},resultSchema:true,messageSchema:false,async run(input,context){await context.progress({stage:"execution",message:"返回输入"});return input}}}`,
+        `export default async function echo(input){return input}`,
       );
       await writeFile(
         script,
@@ -174,7 +191,10 @@ assert.deepEqual(json({value:2}),{value:2});
     : `
 import {createTaskEngine,newId} from "@potential-guide/task-engine";
 import {MemoryStore} from "@potential-guide/task-engine/testing";
-const type={type:"echo",version:"1",environment:"node",inputSchema:{type:"object"},resultSchema:true,messageSchema:false,module:new URL("./type-worker.mjs",import.meta.url).href,exportName:"createEcho",configuration:{}};
+import {readFile} from "node:fs/promises";
+import {pathToFileURL} from "node:url";
+const binding=JSON.parse(await readFile(${JSON.stringify(join(scratch, "task-sdk", "fixture", "binding.json"))},"utf8"));
+const bundle={url:pathToFileURL(${JSON.stringify(join(scratch, "task-sdk", "fixture", "bundle.tar.gz"))}).href,digest:binding.digest};
 ${
   label === "task-adapters"
     ? `
@@ -184,10 +204,12 @@ const store=openSqliteStore("consumer.sqlite");
 `
     : "const store=new MemoryStore();"
 }
-const engine=createTaskEngine({store,types:[type],currentVersions:{echo:"1"},authorize:()=>true});
+const engine=createTaskEngine({store,bundleDirectory:"bundle-cache",authorize:()=>true});
 await engine.start();
 const caller={scope:"consumer",subject:"fixture"};
-const task=engine.submit({requestId:newId(),type:"echo",text:"packed",timeoutMs:10000},caller);
+let decision=await engine.submit({requestId:newId(),bundle,text:"packed",timeoutMs:10000},caller);
+while(decision.status==="preparing")decision=await engine.getRequestStatus(decision.requestId,{waitMs:1000},caller);
+assert.equal(decision.status,"accepted");const task=engine.getTask(decision.taskId,caller);
 let result;
 for(let i=0;i<200;i++){await new Promise(r=>setTimeout(r,10));result=engine.getTask(task.taskId,caller);if(result.stage==="completed")break;}
 assert.equal(result.stage,"completed");assert.deepEqual(result.result,{text:"packed"});

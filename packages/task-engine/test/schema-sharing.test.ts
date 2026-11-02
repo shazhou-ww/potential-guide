@@ -32,9 +32,16 @@ for (const scenario of sharingCases)
       });
       assert.equal(follower.run?.runId === runId, scenario.equal);
       const request = h.engine.getRequest(owner.requestId, caller);
-      assert.throws(() => h.engine.submit({ ...request, ...scenario.right }, caller), {
-        code: "idempotency_conflict",
-      });
+      assert.throws(
+        () =>
+          h.engine.submit(
+            { ...request, ...scenario.right, timeoutMs: request.timeoutMs + 1 },
+            caller,
+          ),
+        {
+          code: "idempotency_conflict",
+        },
+      );
       const members = h.engine.subscribeTasks({ runId }, baseline.revision, caller);
       try {
         assert.deepEqual(

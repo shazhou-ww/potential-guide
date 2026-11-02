@@ -11,8 +11,9 @@ import { openSqliteStore } from "@potential-guide/task-engine-storage";
 import { positive, type Store, TaskError } from "@potential-guide/task-protocol";
 
 export interface ServerOptions {
-  types: EngineOptions["types"];
-  currentVersions: EngineOptions["currentVersions"];
+  bundleDirectory?: string;
+  bundleLimits?: EngineOptions["bundleLimits"];
+  bundleConcurrency?: number;
   authorize: EngineOptions["authorize"];
   resolveCaller: HandlerOptions["resolveCaller"];
   store?: Store;
@@ -22,7 +23,6 @@ export interface ServerOptions {
   host?: string;
   port?: number;
   limits?: EngineOptions["limits"];
-  allocationLimits?: EngineOptions["allocationLimits"];
   http?: Omit<HandlerOptions, "service" | "resolveCaller">;
   shutdownMs?: number;
   requestTimeoutMs?: number;
@@ -94,12 +94,9 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
   try {
     if (
       !options ||
-      !Array.isArray(options.types) ||
-      !options.types.length ||
+      ["types", "currentVersions", "allocationLimits"].some((key) => Object.hasOwn(options, key)) ||
       typeof options.authorize !== "function" ||
       typeof options.resolveCaller !== "function" ||
-      !options.currentVersions ||
-      typeof options.currentVersions !== "object" ||
       (options.store && options.database) ||
       (options.host !== undefined && (typeof options.host !== "string" || !options.host)) ||
       (options.port !== undefined &&
@@ -119,25 +116,6 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
     server.requestTimeout = positive(options.requestTimeoutMs ?? 30_000, "requestTimeoutMs");
     server.headersTimeout = Math.min(server.requestTimeout, 30_000);
     server.maxConnections = positive(options.maxConnections ?? 256, "maxConnections");
-    for (const type of options.types)
-      if (
-        !type ||
-        typeof type.type !== "string" ||
-        !type.type ||
-        typeof type.version !== "string" ||
-        !type.version ||
-        typeof type.environment !== "string" ||
-        !type.environment ||
-        typeof type.module !== "string" ||
-        !Object.hasOwn(type, "resultSchema") ||
-        !Object.hasOwn(type, "messageSchema") ||
-        type.resultSchema === undefined ||
-        type.messageSchema === undefined
-      )
-        throw new TaskError("invalid_config", "Invalid trusted TaskType.");
-    for (const [type, version] of Object.entries(options.currentVersions))
-      if (!options.types.some((entry) => entry.type === type && entry.version === version))
-        throw new TaskError("invalid_config", "Current TaskType version is not registered.");
     store = options.store ?? openSqliteStore(options.database ?? "tasks.sqlite");
     const underlying = store;
     // Engine can finish before composition-owned resources. Keep the same physical
@@ -161,11 +139,13 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
     };
     engine = createTaskEngine({
       store: lease,
-      types: options.types,
-      currentVersions: options.currentVersions,
+      bundleDirectory: options.bundleDirectory ?? `${options.database ?? "tasks.sqlite"}.bundles`,
+      ...(options.bundleConcurrency !== undefined
+        ? { bundleConcurrency: options.bundleConcurrency }
+        : {}),
+      ...(options.bundleLimits ? { bundleLimits: options.bundleLimits } : {}),
       authorize: options.authorize,
       ...(options.limits ? { limits: options.limits } : {}),
-      ...(options.allocationLimits ? { allocationLimits: options.allocationLimits } : {}),
     });
     const handler = createTaskHandler({
       ...options.http,

@@ -1,12 +1,15 @@
 import { dirname, join } from "node:path";
+import { readFile, writeFile } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
+import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
 import {
   packContractArtifact,
   writeContractArtifact,
 } from "@potential-guide/check-artifacts/build";
 import { checkerSchemaUri, inspectContractFiles } from "@potential-guide/check-artifacts/contracts";
-import { createArtifactSource, createCheckTaskType } from "@potential-guide/check-task";
+import { createCheckTaskType } from "@potential-guide/check-task";
 import { startTaskServer } from "@potential-guide/task-engine-server";
-import { TaskError } from "@potential-guide/task-protocol";
+import { TaskError, taskSchemaUri } from "@potential-guide/task-protocol";
 
 const [database, directory, restarting, archive] = process.argv.slice(2);
 const page = Buffer.from("---\ntitle: Restart\ndescription: Restart\n---\nBody\n");
@@ -34,49 +37,74 @@ const artifact = inspectContractFiles(
     ["references/en/checker.md", page],
   ]),
 );
-if (archive && restarting !== "restart") {
+if (restarting !== "restart") {
   const built = await writeContractArtifact(artifact.files, join(dirname(archive), "fixture"));
   await packContractArtifact(built.directory, archive);
 }
-const files = archive
-  ? createArtifactSource({
-      allowedOrigins: [],
-      allowedFileRoots: [dirname(archive)],
+const root = dirname(database),
+  referenceFile = join(root, "bundle-reference.json");
+if (restarting !== "restart") {
+  const type = createCheckTaskType({
+    directory,
+    source: {
       authorize() {},
-      async download() {
-        throw Error("File source must never reach HTTPS download.");
+      async resolve() {
+        throw Error("Authoring only.");
       },
-    })
-  : undefined;
-const type = createCheckTaskType({
-  workers: 1,
-  directory,
-  wallMs: 30000,
-  source: files ?? {
-    authorize() {},
-    async resolve() {
-      if (restarting === "restart") throw Error("Restore may not fetch newer content.");
-      return artifact;
     },
-  },
-});
+  });
+  const yaml = join(root, "task.yaml"),
+    entry = join(root, "callback.ts");
+  await writeFile(
+    yaml,
+    JSON.stringify({
+      $schema: taskSchemaUri,
+      name: "Restart Check",
+      runtime: { type: "node", minVersion: "22.13.0" },
+      entry: "worker.cjs",
+      inputSchema: type.inputSchema,
+      resultSchema: type.resultSchema,
+      messageSchema: false,
+    }),
+  );
+  await writeFile(
+    entry,
+    `import {readFile} from "node:fs/promises";
+import {createCheckTaskType,createArtifactSource} from "@potential-guide/check-task";
+const source=createArtifactSource({allowedOrigins:["https://example.test"],allowedFileRoots:[${JSON.stringify(dirname(archive))}],authorize(){},download(){return readFile(${JSON.stringify(archive)})}});
+const type=createCheckTaskType({directory:${JSON.stringify(directory)},workers:1,wallMs:30000,source});
+export default(input,context)=>type.run(input,context);`,
+  );
+  const built = await buildTaskBundle({
+    declaration: yaml,
+    entry,
+    outDirectory: join(root, "task-bundle"),
+  });
+  const packed = await packTaskBundle(built.directory, join(root, "task-bundle.tgz"));
+  await writeFile(
+    referenceFile,
+    JSON.stringify({ url: pathToFileURL(packed.archive).href, digest: built.digest }),
+  );
+}
+const bundle = JSON.parse(await readFile(referenceFile, "utf8"));
 const server = await startTaskServer({
   database,
   port: 0,
-  types: [type],
-  currentVersions: { check: "2" },
+  bundleDirectory: join(root, "cache"),
+  limits: {
+    maxConcurrent: 1,
+    maxPayloadBytes: 100663296,
+    queryPageBytes: 100663296,
+    sourceEnvelopeBytes: 100663296,
+  },
   authorize: (caller, _operation, scope) => caller.scope === scope,
   resolveCaller(request) {
     if (request.headers.get("authorization") !== "Bearer test")
       throw new TaskError("unauthenticated", "Authentication required.");
     return { scope: "restart", subject: "test" };
   },
-  async closeResources() {
-    await type.close();
-    await files?.close();
-  },
 });
-process.send({ url: server.url });
+process.send({ url: server.url, bundle });
 process.on("message", async (message) => {
   if (message === "close") {
     await server.close();

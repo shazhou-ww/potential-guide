@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Json, RegisteredType } from "@potential-guide/task-protocol";
-import { createTaskEngine, newId } from "../src/index.js";
+import { createTaskEngine } from "../src/engine.js";
+import { newId } from "../src/index.js";
 import { MemoryStore, VirtualClock } from "../src/testing.js";
 
 const caller = { scope: "scope", subject: "owner" };

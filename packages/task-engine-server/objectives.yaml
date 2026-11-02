@@ -8,7 +8,7 @@ objectives:
       {
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm", "cli"], "runtime": "node",
-        "allows": ["@potential-guide/task-protocol", "@potential-guide/task-engine", "@potential-guide/task-engine-http", "@potential-guide/task-engine-storage"],
+        "allows": ["@potential-guide/task-protocol", "@potential-guide/task-engine", "@potential-guide/task-engine-http", "@potential-guide/task-engine-storage", "@potential-guide/task-sdk"],
         "entries": ["src/index.ts", "src/main.ts"], "generated": [], "deliveries": [],
         "localConfigurationImports": [{"path": "src/main.ts", "reason": "The standalone CLI explicitly loads an operator-selected local configuration via pathToFileURL(resolve(...)); HTTP cannot select this module."}],
         "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "generic-task-server", "kind": "cli"}]

@@ -1,5 +1,4 @@
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { runtimeRevision } from "./runtime-identity.js";
 import {
   type ArtifactReference,
   canonicalJson,
@@ -15,15 +14,27 @@ import {
   type RunResourceContext,
   TaskError,
   type TaskService,
+  type SubmissionResult,
+  type TaskType,
+  type Json,
+  type RunContext,
+  RunFailure,
 } from "@potential-guide/task-protocol";
 import { probeInputSchema, probeResultSchema } from "./contracts.js";
-import type { ProbeTaskOptions } from "./implementation.js";
+import { createIsolatedProbe, type ProbeTaskOptions } from "./implementation.js";
+import type { ProbeInput } from "./contracts.js";
 
 export type { ProbeTaskOptions } from "./implementation.js";
 export interface ChildTaskPort {
   service: Pick<
     TaskService,
-    "submit" | "getTask" | "cancelTask" | "readHistory" | "getRun" | "getRunHistory"
+    | "submit"
+    | "getRequestStatus"
+    | "getTask"
+    | "cancelTask"
+    | "readHistory"
+    | "getRun"
+    | "getRunHistory"
   >;
   caller: { scope: string; subject: string };
   waitForTaskRelease(taskId: string, caller: { scope: string; subject: string }): Promise<void>;
@@ -38,9 +49,10 @@ function childObservation(value: unknown) {
 
 export function createProbeTaskType(
   options: ProbeTaskOptions,
-): RegisteredType & { close(): Promise<void> } {
+): RegisteredType & TaskType<ProbeInput, Json> & { close(): Promise<void> } {
   const configuration = {
     checkEnvironment: options.checkEnvironment,
+    ...(options.checkBundle ? { checkBundle: options.checkBundle } : {}),
     version: options.version ?? "2",
     languages: [...(options.languages ?? ["en"])],
     parents: positive(options.parents ?? 4, "parents"),
@@ -60,25 +72,21 @@ export function createProbeTaskType(
     node: process.versions.node,
     platform: process.platform,
     architecture: process.arch,
-    revision: createHash("sha256")
-      .update(readFileSync(module))
-      .update(readFileSync(new URL("./contracts.js", module)))
-      .update(readFileSync(new URL("./worker.js", module)))
-      .digest("hex"),
+    revision: runtimeRevision,
     configuration: json(configuration),
   });
   const owned = new Map<
     string,
-    { ids: Set<string>; active: Set<string>; cleanup: Set<Promise<void>> }
+    { ids: Set<string>; requests: Set<string>; active: Set<string>; cleanup: Set<Promise<void>> }
   >();
   const ownerKey = (context: RunResourceContext) => `${context.workerGeneration}\0${context.runId}`;
   const portFor = (context: RunResourceContext) => {
-    const port = options.children(context.scope);
+    const port = options.children(context.scope, context.runId);
     if (port.caller.scope !== context.scope || !port.caller.subject)
       throw new TaskError("forbidden", "子需求权限必须保留父 scope。");
     let state = owned.get(ownerKey(context));
     if (!state) {
-      state = { ids: new Set(), active: new Set(), cleanup: new Set() };
+      state = { ids: new Set(), requests: new Set(), active: new Set(), cleanup: new Set() };
       owned.set(ownerKey(context), state);
       context.signal.addEventListener(
         "abort",
@@ -102,7 +110,7 @@ export function createProbeTaskType(
         { once: true },
       );
     }
-    return { port, ids: state.ids, active: state.active };
+    return { port, ids: state.ids, requests: state.requests, active: state.active };
   };
   const ownedTask = (value: unknown, context: RunResourceContext) => {
     const id = String(object(value).taskId);
@@ -120,7 +128,7 @@ export function createProbeTaskType(
     }
     throw new TaskError("forbidden", "Run 不属于当前父 Run 的唯一匹配子需求。");
   };
-  return {
+  const registration: RegisteredType & { close(): Promise<void> } = {
     type: "probe",
     version: configuration.version,
     environment,
@@ -164,17 +172,39 @@ export function createProbeTaskType(
         return { scope: caller.scope, subject: caller.subject };
       },
       async "child-submit"(value, context) {
-        const { port, ids, active } = portFor(context);
-        const snapshot = await port.service.submit(value, port.caller);
-        ids.add(snapshot.taskId);
-        active.add(snapshot.taskId);
-        if (context.signal.aborted) {
-          await port.service.cancelTask(snapshot.taskId, port.caller);
-          await port.waitForTaskRelease(snapshot.taskId, port.caller);
-          active.delete(snapshot.taskId);
-          context.signal.throwIfAborted();
+        const { port, ids, requests, active } = portFor(context);
+        requests.add(String(object(value).requestId));
+        const result = await port.service.submit(value, port.caller);
+        if (result.status === "accepted") {
+          ids.add(result.taskId);
+          active.add(result.taskId);
+          if (context.signal.aborted) {
+            await port.service.cancelTask(result.taskId, port.caller);
+            await port.waitForTaskRelease(result.taskId, port.caller);
+            active.delete(result.taskId);
+            context.signal.throwIfAborted();
+          }
         }
-        return childObservation(snapshot);
+        return childObservation(result);
+      },
+      async "child-status"(value, context) {
+        const raw = object(value),
+          id = String(raw.requestId);
+        const { port, ids, requests, active } = portFor(context);
+        if (!requests.has(id))
+          throw new TaskError("forbidden", "Request does not belong to this parent Run.");
+        const result: SubmissionResult = await port.service.getRequestStatus(id, {}, port.caller);
+        if (result.status === "accepted") {
+          ids.add(result.taskId);
+          active.add(result.taskId);
+          if (context.signal.aborted) {
+            await port.service.cancelTask(result.taskId, port.caller);
+            await port.waitForTaskRelease(result.taskId, port.caller);
+            active.delete(result.taskId);
+            context.signal.throwIfAborted();
+          }
+        }
+        return childObservation(result);
       },
       async "child-get"(value, context) {
         const { id, port } = ownedTask(value, context);
@@ -217,5 +247,66 @@ export function createProbeTaskType(
       },
     },
     async close() {},
+  };
+  return {
+    ...registration,
+    async run(input, context) {
+      const current = context as RunContext;
+      if (!current.generation || !current.startedAt)
+        throw new TaskError("invalid_tracking", "SDK Run identity is required.");
+      const resourceContext: RunResourceContext = {
+        runId: current.runId,
+        workerGeneration: current.generation,
+        scope: current.scope,
+        signal: current.signal,
+      };
+      const type = createIsolatedProbe(configuration, {
+        async invoke(capability, operation, value) {
+          if (capability !== context)
+            throw new TaskError("forbidden", "Current Run context required.");
+          if (operation === "identity")
+            return {
+              runId: current.runId,
+              generation: current.generation!,
+              startedAt: current.startedAt!,
+            };
+          if (operation === "replacement") return null;
+          if (operation === "authorize-replacement") return false;
+          const action = registration.resources?.[operation];
+          if (!action) throw new TaskError("forbidden", "Unknown business resource action.");
+          return action(value, resourceContext);
+        },
+      });
+      let value: Json | undefined, failure: unknown;
+      try {
+        value = await type.run(input, context);
+      } catch (error) {
+        failure = error;
+      }
+      try {
+        await registration.confirmResourceRelease!(resourceContext);
+      } catch (error) {
+        throw new RunFailure(
+          "reclamation_unknown",
+          error instanceof Error ? error.message : "Child release unconfirmed.",
+          json(
+            {
+              failure: { code: "reclamation_unknown", message: "Child release unconfirmed." },
+              evidence: {
+                trace: [
+                  {
+                    kind: "before-cleanup-failure",
+                    value: failure instanceof RunFailure ? failure.result : (value ?? null),
+                  },
+                ],
+              },
+            },
+            96 * 1024 * 1024,
+          ),
+        );
+      }
+      if (failure) throw failure;
+      return value!;
+    },
   };
 }

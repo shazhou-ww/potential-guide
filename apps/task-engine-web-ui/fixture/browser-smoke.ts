@@ -4,6 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { once } from "node:events";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { writeFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
@@ -11,7 +12,7 @@ import { startTaskServer } from "@potential-guide/task-engine-server";
 import { TaskError } from "@potential-guide/task-protocol";
 import { startUiServer } from "../src/server.js";
 import { assertDirectoryPreserved, type DirectoryView } from "./directory-invariants.js";
-import { fixtureTypes } from "./types.js";
+import { fixtureTypes, fixtureBundles, submitFixture } from "./types.js";
 
 const [executable, directory, reserved = "9223"] = process.argv.slice(2);
 if (!executable || !directory)
@@ -27,13 +28,24 @@ const safePort = (url: string) => {
   if (forbidden.has(Number(new URL(url).port)))
     throw new Error("Reserved user port; refusing connection.");
 };
-const resources = fixtureTypes(),
-  token = randomBytes(32).toString("hex");
 const controlledText = "取消后仍观察共享 Run";
-let releaseControlledRun = () => {};
-const controlledRunGate = new Promise<void>((resolveGate) => {
-  releaseControlledRun = resolveGate;
-});
+const gateFile = resolve(output, "controlled-run.released");
+const releaseControlledRun = () => writeFileSync(gateFile, "released");
+const resources = await fixtureBundles(
+  resolve(output, "author"),
+  fixtureTypes().types.map((type) =>
+    type.type === "echo"
+      ? {
+          ...type,
+          module: new URL("./smoke-worker.mjs", import.meta.url).href,
+          exportName: "createSmokeType",
+          configuration: { ...type.configuration, smokeGateText: controlledText },
+        }
+      : type,
+  ),
+  gateFile,
+);
+const token = randomBytes(32).toString("hex");
 const env = `UI_SMOKE_${randomBytes(8).toString("hex")}`;
 process.env[env] = token;
 let backend: Awaited<ReturnType<typeof startTaskServer>> | undefined;
@@ -141,24 +153,7 @@ try {
     port: 0,
     store: new MemoryStore(),
     ownStore: true,
-    types: resources.types.map((type) =>
-      type.type === "echo"
-        ? {
-            ...type,
-            module: new URL("./smoke-worker.mjs", import.meta.url).href,
-            exportName: "createSmokeType",
-            configuration: { ...type.configuration, smokeGateText: controlledText },
-            resourceLifetime: "request",
-            resources: {
-              async "smoke-gate"() {
-                await controlledRunGate;
-                return null;
-              },
-            },
-          }
-        : type,
-    ),
-    currentVersions: { echo: "1", survey: "1" },
+    bundleDirectory: resolve(output, "bundle-cache"),
     authorize: (caller, _operation, scope) => caller.scope === scope,
     resolveCaller(request) {
       if (request.headers.get("authorization") !== `Bearer ${token}`)
@@ -173,7 +168,8 @@ try {
     limits: { pageSize: 10 },
   });
   safePort(backend.url);
-  const external = backend.engine.submit(
+  const external = await submitFixture(
+    backend.engine,
     {
       requestId: newId(),
       type: "survey",
@@ -183,6 +179,7 @@ try {
       durationMs: 100,
     },
     { scope: "fixture", subject: "external-client" },
+    resources,
   );
   ui = await startUiServer({
     port: 0,
@@ -371,7 +368,10 @@ try {
   for (const requestId of heldRequests) await call("Fetch.continueRequest", { requestId });
   await call("Fetch.disable");
   await wait("document.querySelector('#create-title')?.textContent==='编辑参数并新建任务'");
-  checks.glyphEditAction = await evaluate("document.querySelector('#type').value==='survey'");
+  checks.glyphEditAction = await evaluate(`(() => {
+    const label=[...document.querySelectorAll('#form-fields label')].find(item=>item.htmlFor&&item.textContent==='Bundle URL');
+    return document.getElementById(label.htmlFor).value===${JSON.stringify(resources.bundles.survey!.url)};
+  })()`);
   assert.equal(checks.glyphEditAction, true);
   checks.rowControlsIsolated = true;
   await closeOverlay();
@@ -491,7 +491,7 @@ try {
   assert.equal(checks.nativeTableSemantics, true);
   await click("#new-task");
   await wait("document.querySelector('#create-dialog[data-state=open]')");
-  await wait("document.querySelector('#discovery-status')?.textContent.includes('已发现 2')");
+  await wait("document.querySelector('#discovery-status')?.textContent.includes('无需类型注册')");
   checks.nonceStylesApplied = await evaluate(`(() => {
     const nonce=document.querySelector('meta[name=ui-style-nonce]').content;
     const styles=[...document.querySelectorAll('style')];
@@ -499,7 +499,10 @@ try {
   })()`);
   await evaluate("document.querySelector('#create-dialog [data-close]').focus();true");
   await pressKey("Tab", 9);
-  assert.equal(await evaluate("document.activeElement.id==='type'"), true);
+  assert.equal(
+    await evaluate("document.activeElement===document.querySelector('#form-fields input')"),
+    true,
+  );
   await pressKey("Tab", 9, 8);
   checks.dialogTabTrap = await evaluate(
     "document.activeElement.matches('#create-dialog [data-close]')",
@@ -507,19 +510,18 @@ try {
   assert.equal(checks.dialogTabTrap, true);
   assert.equal(checks.nonceStylesApplied, true);
   await evaluate(`(() => {
-    const type=document.querySelector('#type'); type.value='echo'; type.dispatchEvent(new Event('change',{bubbles:true}));
-    for (const [label,value] of [['消息','独立浏览器验证'],['超时预算 timeoutMs（毫秒）','10000']]) {
+    for (const [label,value] of [['Bundle URL',${JSON.stringify(resources.bundles.echo!.url)}],['完整内容 Digest（sha256:…）',${JSON.stringify(resources.bundles.echo!.digest)}],['超时预算 timeoutMs（毫秒）','10000']]) {
       const item=[...document.querySelectorAll('#form-fields label')].find(item=>item.htmlFor&&item.textContent===label);
       document.getElementById(item.htmlFor).value=value;
     }
-    const toggle=[...document.querySelectorAll('#form-fields input[type=checkbox]')].find(item=>item.parentElement.textContent.includes('durationMs'));
-    toggle.click(); const label=[...document.querySelectorAll('#form-fields label')].find(item=>item.htmlFor&&item.textContent==='durationMs');
-    document.getElementById(label.htmlFor).value='2500';
-    globalThis.smokeDraft=[...document.querySelectorAll('#form-fields input')].find(item=>item.value==='独立浏览器验证');
+    globalThis.smokeDraft=document.querySelector('#form-fields textarea');
+    smokeDraft.value=JSON.stringify({text:'独立浏览器验证',durationMs:6000});
     return true;
   })()`);
   await click('#create-actions [data-action="加入多条草稿"]');
-  await evaluate("smokeDraft.value='第二条草稿';true");
+  await evaluate(
+    "smokeDraft.value=JSON.stringify({...JSON.parse(smokeDraft.value),text:'第二条草稿'});true",
+  );
   await click('#create-actions [data-action="加入多条草稿"]');
   await click('#create-actions [data-action="查看任务栏"]');
   await wait("document.querySelectorAll('#batches .receipt').length===2");
@@ -547,7 +549,9 @@ try {
   await screenshot("queue-glyphs.png");
   await closeOverlay();
   await click("#new-task");
-  await evaluate("smokeDraft.value='独立浏览器验证';true");
+  await evaluate(
+    "smokeDraft.value=JSON.stringify({...JSON.parse(smokeDraft.value),text:'独立浏览器验证'});true",
+  );
   await screenshot("popup.png");
   await closeOverlay();
   await wait("document.activeElement.id==='new-task'");
@@ -559,10 +563,19 @@ try {
   await click("#tab-tasks");
   await click("#new-task");
   checks.draftRetained = await evaluate(
-    "globalThis.smokeDraft.isConnected && globalThis.smokeDraft.value==='独立浏览器验证'",
+    "globalThis.smokeDraft.isConnected && JSON.parse(globalThis.smokeDraft.value).text==='独立浏览器验证'",
   );
   assert.equal(checks.draftRetained, true);
   await click('#create-actions button[data-action="提交任务"]');
+  if (
+    !(await evaluate("!!document.querySelector('#task-detail [data-key=task-snapshot] summary')"))
+  ) {
+    await closeOverlay();
+    await click("#bar-toggle");
+    await wait("!!document.querySelector('#batches button[data-action^=\"打开 Task \"]')");
+    checks.bundleAdmission = true;
+    await click('#batches button[data-action^="打开 Task "]');
+  }
   await wait("document.querySelector('#task-detail [data-key=task-snapshot] summary')");
   const createdId = await evaluate<string>(
     "JSON.parse(document.querySelector('#task-detail [data-key=task-snapshot] pre').textContent).taskId",
@@ -573,7 +586,7 @@ try {
     smokeEvents.open=true; smokeSummary.focus();
     globalThis.smokeCount=smokeEvents.querySelector('summary').textContent;
   })()`);
-  await delay(350);
+  await wait("smokeEvents.querySelector('summary').textContent!==smokeCount");
   checks.sseFocusStable = await evaluate(
     "document.activeElement===smokeSummary && smokeSummary.isConnected",
   );
@@ -659,9 +672,11 @@ try {
   await wait("document.querySelector('#directory .star').getAttribute('aria-pressed')==='true'");
   await screenshot("tasks.png");
   for (let index = 0; index < 12; index++) {
-    const member = backend.engine.submit(
+    const member = await submitFixture(
+      backend.engine,
       { requestId: newId(), type: "echo", timeoutMs: 60000, text: `目录 ${index}`, durationMs: 1 },
       { scope: "fixture", subject: "external-client" },
+      resources,
     );
     const deadline = performance.now() + 15000;
     for (;;) {
@@ -866,8 +881,18 @@ try {
     text: controlledText,
     durationMs: 1,
   };
-  const controlled = backend.engine.submit({ ...sharedInput, requestId: newId() }, caller);
-  const companion = backend.engine.submit({ ...sharedInput, requestId: newId() }, caller);
+  const controlled = await submitFixture(
+    backend.engine,
+    { ...sharedInput, requestId: newId() },
+    caller,
+    resources,
+  );
+  const companion = await submitFixture(
+    backend.engine,
+    { ...sharedInput, requestId: newId() },
+    caller,
+    resources,
+  );
   await click("#tasks details.secondary > summary");
   await wait("document.querySelector('#tasks details.secondary').open");
   await click("#task-id-input");

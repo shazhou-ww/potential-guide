@@ -4,11 +4,20 @@ New immutable schema namespaces:
 
 - `https://shazhou-ww.github.io/potential-guide/schemas/artifacts/checker/v1.json`
 - `https://shazhou-ww.github.io/potential-guide/schemas/artifacts/objective/v1.json`
+- `https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json`
 
 These are repository contracts; publication availability is a separate release
 step. Historical schemas and `sha256-pguide-*` digests retain their original
 meaning. Re-author and validate the new file set to migrate; changing a prefix,
 file extension, or schema URI is not migration.
+
+The Task namespace has its own declaration and Worker protocol:
+[`task-bundle-worker.md`](task-bundle-worker.md) and
+[`task-sdk`](../packages/task-sdk/README.md). It uses `task.yaml`, one
+`worker.cjs`, optional `schemas/` and `resources/`, and three business Schemas.
+Its builder is `@potential-guide/task-sdk/build`; it does not extend the
+Checker/Objective Host authorization or business APIs. The remaining sections
+below describe Checker/Objective artifacts and their existing Host services.
 
 ## Authoring
 

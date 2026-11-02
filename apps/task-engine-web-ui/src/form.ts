@@ -1,34 +1,28 @@
 import { assertFiniteJson } from "./json.js";
 
 type Schema = boolean | Record<string, unknown>;
-export const envelopeKeys = [
-  "type",
-  "timeoutMs",
-  "eligibleAt",
-  "seriesId",
-  "matchPolicy",
-  "recurrence",
-];
+export const envelopeKeys = ["bundle", "timeoutMs", "eligibleAt", "seriesId", "matchPolicy"];
 export const envelopeSchema: Schema = {
   type: "object",
-  required: ["timeoutMs"],
+  required: ["bundle", "timeoutMs"],
   additionalProperties: false,
   properties: {
+    bundle: {
+      type: "object",
+      title: "Task Bundle 引用",
+      required: ["url", "digest"],
+      additionalProperties: false,
+      properties: {
+        url: { type: "string", title: "Bundle URL" },
+        digest: { type: "string", title: "完整内容 Digest（sha256:…）" },
+      },
+    },
     timeoutMs: { type: "integer", title: "超时预算 timeoutMs（毫秒）", minimum: 1 },
     eligibleAt: { type: "string", title: "资格时间 eligibleAt（带时区 ISO 时间）" },
     seriesId: { type: "string", title: "seriesId（可选原样保留）" },
     matchPolicy: {
       type: "string",
       enum: ["starts-after-eligible", "terminates-after-eligible"],
-    },
-    recurrence: {
-      type: "object",
-      required: ["periodMs", "anchor"],
-      additionalProperties: false,
-      properties: {
-        periodMs: { type: "integer", minimum: 1 },
-        anchor: { type: "string", enum: ["eligible", "terminated"] },
-      },
     },
   },
 };

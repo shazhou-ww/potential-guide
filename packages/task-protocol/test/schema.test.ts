@@ -37,7 +37,7 @@ test("prototype-named fields require own JSON values and retain validation and p
     assert.equal(c.equals({}, { [key]: 1 }), false);
     assert.equal(c.equals({ [key]: 1 }, { [key]: 1 }), true);
     assert.equal(c.equals({ [key]: 1 }, { [key]: 2 }), false);
-    assert.equal(c.equals({ [key]: "wrong", extra: 1 }, { [key]: "wrong", extra: 2 }), true);
+    assert.equal(c.equals({ [key]: "wrong", extra: 1 }, { [key]: "wrong", extra: 2 }), false);
     const inherited = Object.create({ [key]: 1 });
     assert.throws(() => c.validate(inherited), { code: "invalid_payload" });
     assert.throws(() => c.equals(inherited, {}), { code: "invalid_payload" });
@@ -55,7 +55,7 @@ test("prototype-named fields require own JSON values and retain validation and p
   assert.throws(() => c.validate({ ["__proto__"]: { x: "wrong" } }), { code: "invalid_input" });
   assert.equal(
     c.equals({ ["__proto__"]: { x: 1, extra: 1 } }, { ["__proto__"]: { x: 1, extra: 2 } }),
-    true,
+    false,
   );
   assert.ok(Object.hasOwn(c.inputSchema.properties as object, "__proto__"));
   assert.equal(c.inputSchema.patternProperties, undefined);
@@ -69,7 +69,7 @@ test("unevaluatedItems contributes local structural tails, never evaluated annot
       properties: { list: { type: "array", ...schema } },
     });
   const c = array({ unevaluatedItems: item("x") });
-  assert.equal(c.equals({ list: [{ x: 1, extra: 1 }] }, { list: [{ x: 1, extra: 2 }] }), true);
+  assert.equal(c.equals({ list: [{ x: 1, extra: 1 }] }, { list: [{ x: 1, extra: 2 }] }), false);
   assert.equal(c.equals({ list: [{ x: 1 }] }, { list: [{ x: 2 }] }), false);
   assert.equal(c.equals({ list: [{ x: 1 }, { x: 2 }] }, { list: [{ x: 2 }, { x: 1 }] }), false);
   assert.equal(c.equals({ list: [{}] }, { list: [{}, {}] }), false);
@@ -98,18 +98,18 @@ test("unevaluatedItems contributes local structural tails, never evaluated annot
       { x: 3, y: 2 },
     ],
   };
-  assert.equal(tail.equals(left, right), true);
+  assert.equal(tail.equals(left, right), false);
   assert.throws(() => tail.validate(left));
   const explicitTail = array({ ...tuple, items: item("y"), unevaluatedItems: item("x") });
   assert.equal(explicitTail.equals(left, right), false);
-  assert.equal(explicitTail.equals(left, { list: [{ head: 1 }, { x: 99, y: 1 }] }), true);
+  assert.equal(explicitTail.equals(left, { list: [{ head: 1 }, { x: 99, y: 1 }] }), false);
   const combined = array({ allOf: [{ ...tuple, items: false }, { unevaluatedItems: item("x") }] });
   assert.equal(
     combined.equals({ list: [{ head: 1, x: 2 }] }, { list: [{ head: 1, x: 3 }] }),
     false,
   );
   const contains = array({ contains: item("tag"), unevaluatedItems: item("x") });
-  assert.equal(contains.equals({ list: [{ tag: 1, x: 2 }] }, { list: [{ tag: 2, x: 2 }] }), true);
+  assert.equal(contains.equals({ list: [{ tag: 1, x: 2 }] }, { list: [{ tag: 2, x: 2 }] }), false);
   assert.equal(contains.equals({ list: [{ tag: 1, x: 2 }] }, { list: [{ tag: 1, x: 3 }] }), false);
 });
 
@@ -124,7 +124,7 @@ test("validation and equality are independent; JSON presence, types and defaults
   assert.throws(() => contract.validate({ foo: 1, extra: true }), { code: "invalid_input" });
   assert.throws(() => contract.validate({}), { code: "invalid_input" });
   assert.equal(contract.equals({}, {}), true);
-  assert.equal(contract.equals({ foo: 0, extra: 1 }, { foo: 0, extra: 2 }), true);
+  assert.equal(contract.equals({ foo: 0, extra: 1 }, { foo: 0, extra: 2 }), false);
   assert.equal(contract.equals({}, { foo: 10 }), false);
   assert.equal(contract.equals({}, { foo: null }), false);
   assert.equal(contract.equals({ foo: -0 }, { foo: 0 }), true);
@@ -139,7 +139,7 @@ test("free JSON, dictionaries, patterns and boolean additionalProperties have ex
     const schema: InputSchema = { type: "object", properties: { foo: { type: "object" } } };
     if (additional !== undefined) schema.additionalProperties = additional;
     const contract = compileInputSchema(schema);
-    assert.equal(contract.equals({ foo: { a: 1 }, x: 1 }, { foo: { a: 1 }, x: 2 }), true);
+    assert.equal(contract.equals({ foo: { a: 1 }, x: 1 }, { foo: { a: 1 }, x: 2 }), false);
     assert.equal(contract.equals({ foo: { a: 1 } }, { foo: { a: 2 } }), false);
   }
   for (const schema of [{ type: "object" }, { type: "object", properties: {} }])
@@ -153,18 +153,28 @@ test("free JSON, dictionaries, patterns and boolean additionalProperties have ex
   });
   assert.equal(
     dictionary.equals({ a: { value: 1, extra: 1 } }, { a: { value: 1, extra: 2 } }),
-    true,
+    false,
   );
   assert.equal(dictionary.equals({ a: {} }, { b: {} }), false);
   const pattern = compileInputSchema({
     type: "object",
     patternProperties: { "^x": { type: "object", properties: { id: {} } } },
   });
-  assert.equal(pattern.equals({ x: { id: 1 }, extra: 1 }, { x: { id: 1 }, extra: 2 }), true);
+  assert.equal(pattern.equals({ x: { id: 1 }, extra: 1 }, { x: { id: 1 }, extra: 2 }), false);
   assert.equal(pattern.equals({ x: { id: 1 } }, { x: { id: 2 } }), false);
 });
 
 test("composition is structural union, never OR of equality; equivalence laws include invalid inputs", () => {
+  const permissiveBranch = compileInputSchema({
+    type: "object",
+    anyOf: [{ properties: { text: { type: "string" } }, additionalProperties: false }, {}],
+  });
+  permissiveBranch.validate({ text: "hello", extra: 1 });
+  permissiveBranch.validate({ text: "hello", extra: 2 });
+  assert.equal(
+    permissiveBranch.equals({ text: "hello", extra: 1 }, { text: "hello", extra: 2 }),
+    false,
+  );
   for (const keyword of ["anyOf", "oneOf", "allOf"]) {
     const c = compileInputSchema({
       type: "object",
@@ -186,7 +196,7 @@ test("composition is structural union, never OR of equality; equivalence laws in
     ];
     assert.equal(c.equals(values[0], values[1]), false);
     assert.equal(c.equals(values[1], values[2]), false);
-    assert.equal(c.equals(values[0], values[3]), true);
+    assert.equal(c.equals(values[0], values[3]), false);
     for (const a of values) {
       assert.equal(c.equals(a, a), true);
       for (const b of values) {
@@ -224,7 +234,7 @@ test("refs retain siblings, tuples preserve boundaries, advanced standard constr
   assert.equal(c.equals({ x: 1 }, { x: 2 }), false);
   assert.equal(
     c.equals({ y: [{ a: 1, ignored: 1 }, "v"] }, { y: [{ a: 1, ignored: 2 }, "v"] }),
-    true,
+    false,
   );
   assert.equal(c.equals({ y: [1, 2] }, { y: [2, 1] }), false);
   assert.equal(c.equals({ y: [1] }, { y: [1, null] }), false);
@@ -252,8 +262,8 @@ test("local JSON type selects union shapes without validating constraints", () =
       },
     },
   });
-  assert.equal(c.equals({ value: { x: 0, extra: 1 } }, { value: { x: 0, extra: 2 } }), true);
-  assert.equal(c.equals({ value: [{ y: 1, extra: 1 }] }, { value: [{ y: 1, extra: 2 }] }), true);
+  assert.equal(c.equals({ value: { x: 0, extra: 1 } }, { value: { x: 0, extra: 2 } }), false);
+  assert.equal(c.equals({ value: [{ y: 1, extra: 1 }] }, { value: [{ y: 1, extra: 2 }] }), false);
   assert.equal(c.equals({ value: { x: 0 } }, { value: [{ y: 0 }] }), false);
   assert.equal(c.equals({ value: "invalid" }, { value: "invalid" }), true);
   assert.throws(() => c.validate({ value: { x: 0 } }));

@@ -1,26 +1,29 @@
 # @potential-guide/check-task
 
-每个完整 Check Run 使用独立类型 Worker。可信注册将 allocationLimit 设为 workers，
-在隔离模块堆不共享业务池时仍保留配置的整体容量；等待名额的 Task 保持 initial，
-不先伪造 Run 开始或准备 checkpoint。已开始但无退出事实的旧 Run 恢复 stopped，
-未开始的有效 Task 则按原受理时间/期限继续协调。
+`createCheckTaskType(options).run` 是作者可直接包装的普通 SDK 回调：
+`export default (input, context) => check.run(input, context)`。
+用 `@potential-guide/task-sdk/build` 将它及全部第三方依赖打进自包含
+`worker.cjs`；Engine 只接收 `{bundle:{url,digest}, ...}`，不注册业务类型、
+不安装本包、不提供资源桥。Checker 执行 Worker 已嵌入交付代码，不读取作者
+安装目录中的脚本。旧静态工厂元数据保留给库级调用，不是通用 Engine 的注册 API。
 
-`createCheckTaskType(options)` 返回可信 Host 的静态 RegisteredType，不在 Host 创建业务执行池或调用类型代码。
-完整 run、准备和资源调度在类型守护；Checker Bundle 在独立业务 Worker。
+业务 Source 权限、可信根目录、资源容量由作者回调显式设置。
+Input 是 checker reference、subject、context?、language?；浮动业务 URL 在 Run
+内固定，精确业务版本使用 digest。Bundle 的固定 Digest 则覆盖完整可执行文件树，
+两者不能混淆。共享与调度由通用 Engine 按完整合法 Input 判等、当前资格协调；
+宿主仅设通用容量，没有业务专用全局 allocation lane。
 
-Input 保持 checker reference、subject、context?、language?，Input Schema 为 object。
-浮动 URL 的内容在 Run 内固定，可被兼容需求共享；精确版本用 digest。接收方不再次准备或资源授权。
-实际 resolve / Checker 使用仍经 Source 资源动作授权；权限不来自 Task 或运行消息。
+每次执行仍创建独立 Checker Worker。业务结果及准备内容、subject/result、
+执行身份和环境证据仍在**当前实际执行**中核验。结果为
+`{result,evidence:{prepared,execution,businessProgress}}`；失败是明确
+`{failure,evidence}`，没有成功形状 fallback。`executionId` 是 Checker 子阶段，
+不是通用 Run ID。messageSchema 为 false；Progress 只展示，
+`check-prepared` / `check-progress` 保留机器证据。
 
-messageSchema 为 false（Never），统一 messages 通道存在，但任何业务消息都拒绝；取消走独立控制通道。
-Progress 使用统一展示结构，不能读取 message 中的机器 JSON。
-准备内容通过 `check-prepared` checkpoint 持久化，业务进度通过 `check-progress` 保留机器证据。
-最终结果为 `{result, evidence:{prepared, execution, businessProgress}}`；
-失败为 `{failure,evidence}`，没有成功形状 fallback。
-execution 中的 executionId/startedAt/completedAt 仅是实际 Checker 子阶段，不是 Run。
+历史查询读取持久事实及锁定声明 Schema，不启动旧业务 Worker 复验。
+已开始而无退出事实的旧 Run 恢复 stopped，不重演副作用；
+未开始的有效 Task 继续按原创建时间/期限协调。环境证据不包含环境变量值。
 
-历史 Bundle、digest、subject/result 和环境一致性在原类型 Worker 纯复验，不下载、不执行旧 Checker。
-环境身份只含指纹，展示/证据不携带环境变量值；scratch directory 不定义执行环境身份。
-当前每次业务执行仍创建新 Checker Worker，不宣称已实现 Bundle 热 Worker 复用。
-
-完整共享、消息及 SQLite v3 边界见 [Task Engine](../../docs/task-engine.md)。
+完整 v5 协议见 [Task Engine](../../docs/task-engine.md)；
+作者/宿主分离、直接消费及真实 HTTPS/file 业务样例见
+[公共包示例](../../examples/task-server/README.md)。

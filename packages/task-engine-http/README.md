@@ -1,7 +1,7 @@
 # @potential-guide/task-engine-http
 
 以可信 resolveCaller 和 EngineOptions.authorize 包装 TaskService，不从请求正文推断 Caller、scope 或能力。
-提供 task-types、tasks、requests、Task messages 及十二项核心操作：
+提供 tasks、requests、Task messages 及十二项核心操作；没有 task-types：
 提交/取消；Task/Run 各自的单体快照、历史、订阅、冻结目录和集合订阅。
 单体观察路由为 `/tasks/:id`、`/tasks/:id/history`、`/tasks/:id/events` 及对应 `/runs/:id` 路由。
 集合订阅为 `/tasks/events`、`/runs/events`；新订阅显式提供 `fromRevision` 或 Last-Event-ID 源 revision。
@@ -12,7 +12,11 @@ Run/Task/事件游标域独立，页面固定 revision、成员及观察时间�
 一个源事件的全部集合变化在单个封装内原子交付；超限发送无 id 的 task.error，保留最后完整 revision。
 安静流发送不含事件 id 的连接注释，确保 HTTP 连接可确认，但不产生领域事实。
 旧 `/executions` 与 `executionId` 查询明确拒绝。
-Task 创建采用 Idempotency-Key，If-Match 可固定当前契约 revision；请求使用 matchPolicy。
+Request 使用 Idempotency-Key 和完整 Bundle `{url,digest}`，旧 If-Match 明确拒绝。
+POST 返回 preparing（202）或 accepted/rejected（200），preparing 不是 Task。
+GET `/requests/:id` 读取原始意图；GET `/requests/:id/status?waitMs=…`
+独立读取/等待处理结果。long poll 到期不取消准备，断开只结束观察。
+`TaskClient` 提供同协议的异步客户端，不在客户端将 preparing 伪造为 Task。
 
 业务消息为 POST/GET `/tasks/:taskId/messages/:messageId`，POST 正文仅含 payload。
 消息使用独立 message 服务授权、schema 校验和当前已绑定/已投递 Run 路由。

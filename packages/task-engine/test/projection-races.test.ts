@@ -6,7 +6,7 @@ import { caller, flush, harness } from "./fixtures.js";
 for (const outcome of ["completed", "failed"] as const) {
   for (const offset of [-1, 0, 1]) {
     for (const tickFirst of [false, true]) {
-      test(`established shared ${outcome} survives exit at eligible${offset >= 0 ? "+" : ""}${offset}, tickFirst=${tickFirst}`, async () => {
+      test(`M03 shared ${outcome} at eligible${offset >= 0 ? "+" : ""}${offset}, tickFirst=${tickFirst}`, async () => {
         const h = await harness();
         try {
           const original = h.submit({ timeoutMs: 1000 });
@@ -25,18 +25,18 @@ for (const outcome of ["completed", "failed"] as const) {
           h.clock.setTime(Date.parse(task.deadlineAt) + 1);
           if (tickFirst) h.engine.tick();
           const current = h.engine.getTask(task.taskId, caller);
-          assert.equal(current.run?.runId, runId);
-          assert.equal(current.stage, outcome);
+          assert.equal(current.run?.runId, offset < 0 ? undefined : runId);
+          assert.equal(current.stage, offset < 0 ? "initial" : outcome);
           assert.ok(isTimedOut(current));
           const canceled = h.engine.cancelTask(task.taskId, caller);
           assert.equal(canceled.changed, true);
-          assert.equal(canceled.stage, outcome);
+          assert.equal(canceled.stage, offset < 0 ? "initial" : outcome);
           assert.equal(canceled.canceled, true);
           assert.deepEqual(canceled.result, current.result);
           h.clock.setTime(Date.parse(task.eligibleAt) - 1);
           const rollback = h.engine.getTask(task.taskId, caller);
-          assert.equal(rollback.stage, outcome);
-          assert.equal(rollback.run?.runId, runId);
+          assert.equal(rollback.stage, offset < 0 ? "initial" : outcome);
+          assert.equal(rollback.run?.runId, offset < 0 ? undefined : runId);
           assert.ok(isPending(rollback));
           assert.equal(isTimedOut(rollback), false);
           const view = h.store.read();
@@ -54,6 +54,49 @@ for (const outcome of ["completed", "failed"] as const) {
       });
     }
   }
+}
+
+for (const state of ["pending", "eligible", "timeout", "canceled"] as const) {
+  test(`M02/M03 invalidated Task only schedules a fresh Run when currently eligible and not canceled: ${state}`, async () => {
+    const h = await harness();
+    try {
+      const owner = h.submit({ timeoutMs: 1000 });
+      await h.turn();
+      await h.turn(10);
+      const follower = h.submit({ matchPolicy: "terminates-after-eligible" });
+      const originalRun = h.engine.getTask(owner.taskId, caller).run!.runId;
+      assert.equal(follower.run?.runId, originalRun);
+      h.clock.setTime(Date.parse(follower.eligibleAt) - 1);
+      await h.finish();
+      assert.equal(h.engine.getTask(follower.taskId, caller).stage, "initial");
+      const before = h.store.read().facts.watermark;
+      h.engine.tick();
+      assert.equal(h.work.length, 1);
+      assert.equal(h.store.read().facts.watermark, before);
+      if (state === "timeout") h.clock.setTime(Date.parse(follower.deadlineAt) + 1);
+      else if (state !== "pending") h.clock.setTime(Date.parse(follower.eligibleAt));
+      if (state === "canceled") h.engine.cancelTask(follower.taskId, caller);
+      await h.turn(0);
+      const current = h.engine.getTask(follower.taskId, caller);
+      if (state === "eligible") {
+        assert.equal(h.work.length, 2);
+        assert.equal(current.stage, "running");
+        assert.notEqual(current.run?.runId, originalRun);
+        await h.finish(1);
+      } else {
+        assert.equal(h.work.length, 1);
+        assert.equal(current.stage, "initial");
+      }
+      assert.equal(h.engine.getRun(originalRun, caller).stage, "completed");
+      const view = h.store.read();
+      assert.deepEqual(
+        project(reduce(view.prefix, view.events), follower.taskId, h.clock.now()),
+        h.engine.getTask(follower.taskId, caller),
+      );
+    } finally {
+      await h.close();
+    }
+  });
 }
 
 test("committed stop entry excludes later qualification and a new Run cannot reuse the stopped Worker", async () => {

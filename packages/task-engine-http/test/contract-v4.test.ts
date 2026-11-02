@@ -2,19 +2,24 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile, rm } from "node:fs/promises";
+import { resolve, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
 import { MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
 import type {
   CancellationResult,
   HistoryPage,
-  RegisteredType,
   RunPage,
   RunSnapshot,
   TaskMessageRecord,
   TaskPage,
   TaskRequest,
   TaskSnapshot,
-  TaskTypeDiscovery,
+  SubmissionResult,
 } from "@potential-guide/task-protocol";
+import { taskSchemaUri } from "@potential-guide/task-protocol";
 import { createTaskHandler } from "../src/index.js";
 
 async function until(check: () => boolean) {
@@ -40,27 +45,39 @@ async function eventFrame(reader: ReadableStreamDefaultReader<Uint8Array>): Prom
 async function fixture(limits: Parameters<typeof createTaskEngine>[0]["limits"] = {}) {
   const store = new MemoryStore(),
     clock = new VirtualClock();
-  const type: RegisteredType = {
-    type: "isolated",
-    version: "1",
-    environment: "http-fixture",
-    inputSchema: { type: "object" },
-    resultSchema: true,
-    messageSchema: true,
-    module: new URL("../../task-engine/test/isolated-type.mjs", import.meta.url).href,
-    exportName: "createType",
-    configuration: { messageSchema: true },
-    resourceLifetime: "request",
-    async confirmResourceRelease(context) {
-      assert.ok(store.read().facts.runs[context.runId]?.exit);
-    },
-  };
+  const root = resolve(".cache", `http-contract-${randomUUID()}`);
+  await mkdir(root, { recursive: true });
+  const yaml = join(root, "task.yaml"),
+    entry = join(root, "callback.ts");
+  await writeFile(
+    yaml,
+    JSON.stringify({
+      $schema: taskSchemaUri,
+      name: "HTTP fixture",
+      runtime: { type: "node", minVersion: "22.13.0" },
+      entry: "worker.cjs",
+      inputSchema: { type: "object" },
+      resultSchema: true,
+      messageSchema: true,
+    }),
+  );
+  await writeFile(
+    entry,
+    `import {createType} from ${JSON.stringify(fileURLToPath(new URL("../../task-engine/test/isolated-type.mjs", import.meta.url)))};
+const type=createType({messageSchema:true});export default (input,context)=>type.run(input,context);`,
+  );
+  const built = await buildTaskBundle({
+    declaration: yaml,
+    entry,
+    outDirectory: join(root, "bundle"),
+  });
+  const packed = await packTaskBundle(built.directory, join(root, "bundle.tgz"));
+  const bundle = { url: pathToFileURL(packed.archive).href, digest: built.digest };
   const caller = { scope: "scope", subject: "http" };
   const engine = createTaskEngine({
     store,
     clock,
-    types: [type],
-    currentVersions: { isolated: "1" },
+    bundleDirectory: join(root, "cache"),
     authorize: () => true,
     limits,
   });
@@ -73,11 +90,16 @@ async function fixture(limits: Parameters<typeof createTaskEngine>[0]["limits"] 
       new Request("http://fixture/tasks", {
         method: "POST",
         headers: { "content-type": "application/json", "Idempotency-Key": requestId },
-        body: JSON.stringify({ type: "isolated", kind, timeoutMs: 1000, ...extra }),
+        body: JSON.stringify({ bundle, kind, timeoutMs: 1000, ...extra }),
       }),
     );
-    assert.equal(response.status, 202);
-    return response.json() as Promise<TaskSnapshot>;
+    assert.ok(response.ok);
+    let result = (await response.json()) as SubmissionResult;
+    while (result.status === "preparing")
+      result = await engine.getRequestStatus(requestId, { waitMs: 1000 }, caller);
+    assert.equal(result.status, "accepted");
+    if (result.status !== "accepted") throw Error("Expected accepted.");
+    return engine.getTask(result.taskId, caller);
   };
   const cancel = (id: string) =>
     handler(new Request(`http://fixture/tasks/${id}/cancel`, { method: "POST" }));
@@ -90,9 +112,11 @@ async function fixture(limits: Parameters<typeof createTaskEngine>[0]["limits"] 
     get,
     submit,
     cancel,
+    bundle,
     async close() {
       await engine.close();
       store.close();
+      await rm(root, { recursive: true, force: true });
     },
   };
 }
@@ -100,7 +124,7 @@ test("concurrent HTTP retries accept exactly one Task and retain the complete or
   const f = await fixture();
   try {
     const requestId = newId(f.clock.now());
-    const body = { type: "isolated", kind: "wait", timeoutMs: 1000 };
+    const body = { bundle: f.bundle, kind: "wait", timeoutMs: 1000 };
     const send = (payload: unknown) =>
       f.handler(
         new Request("http://fixture/tasks", {
@@ -110,9 +134,15 @@ test("concurrent HTTP retries accept exactly one Task and retain the complete or
         }),
       );
     const responses = await Promise.all(Array.from({ length: 8 }, () => send(body)));
-    assert.ok(responses.every((response) => response.status === 202));
-    const snapshots = await Promise.all(responses.map((response) => data<TaskSnapshot>(response)));
-    assert.equal(new Set(snapshots.map((snapshot) => snapshot.taskId)).size, 1);
+    assert.ok(responses.every((response) => response.ok));
+    const decisions = await Promise.all(
+      responses.map((response) => data<SubmissionResult>(response)),
+    );
+    assert.ok(decisions.every((value) => value.requestId === requestId));
+    let final = await f.engine.getRequestStatus(requestId, { waitMs: 1000 }, f.caller);
+    while (final.status === "preparing")
+      final = await f.engine.getRequestStatus(requestId, { waitMs: 1000 }, f.caller);
+    assert.equal(final.status, "accepted");
     assert.equal(Object.keys(f.store.read().facts.tasks).length, 1);
     assert.equal(f.store.read().events.filter((event) => event.type === "task.created").length, 1);
     assert.deepEqual(f.engine.getRequest(requestId, f.caller), { ...body, requestId });
@@ -175,9 +205,7 @@ test("HTTP source fan-out fails atomically with the last complete revision and a
 test("HTTP controls, independent Task/Run snapshots and frozen histories expose a consistent source revision", async () => {
   const f = await fixture();
   try {
-    const types = await data<TaskTypeDiscovery[]>(f.get("/task-types"));
-    assert.equal(types[0]?.version, "1");
-    assert.match(types[0]!.revision, /^[a-f0-9]{64}$/);
+    assert.equal((await f.get("/task-types")).status, 404);
     const task = await f.submit("heap");
     f.engine.tick();
     await until(() => f.engine.getTask(task.taskId, f.caller).stage === "completed");

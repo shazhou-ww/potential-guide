@@ -22,7 +22,7 @@ messages 必选、Task 归属及确认与生命周期控制分离；checkpoint �
 Facts projection v4；Task 仅存受理/取消事实，匹配与状态按源前缀推导。
 Task/Run Binding 保留原 inputSchema；实时共享与纯事实重放都使用该 Schema 编译的结构 Equals。
 历史分组的 equivalenceKey 与 Equals 共用投影和序列化，由绑定 Schema 与原 Input 重建，不落盘为匹配权威。
-允许但未声明的额外字段可忽略；声明字段及 schema-valued 字典结构仍参与比较。
+允许但未声明的额外字段也参与比较，不能忽略其存在或取值差异。
 Request 幂等冲突检查仍比较完整原始 Request，不使用结构 Equals。
 全域源 revision、完整集合封装和 fromRevision 补读不使用每 Task 权威快照或绑定事务。
 旧版本明确拒绝，无隐式数据迁移或删除。

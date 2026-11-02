@@ -15,8 +15,9 @@ import {
   type TaskPage,
   type TaskSnapshot,
   type TaskTypeDiscovery,
+  type SubmissionResult,
 } from "@potential-guide/task-protocol";
-import { fixtureTypes } from "../fixture/types.js";
+import { fixtureBundles } from "../fixture/types.js";
 import {
   ApiError,
   consumeSse,
@@ -26,6 +27,7 @@ import {
   newIdentity,
   originalParameters,
   SubmissionBar,
+  type Batch,
 } from "../src/model.js";
 import { type Endpoint, type Favorite, startUiServer } from "../src/server.js";
 
@@ -37,13 +39,12 @@ async function setup(t: TestContext, queryLifetimeMs = 60_000, retentionMs = 86_
   process.env[env] = token;
   process.env[`${env}_LIST`] = `${token}-list`;
   process.env[`${env}_OTHER`] = `${token}-other`;
-  const resources = fixtureTypes();
+  const resources = await fixtureBundles(resolve(root, "author"));
   const store = new MemoryStore();
   const backend = await startTaskServer({
     port: 0,
     store,
-    types: resources.types,
-    currentVersions: { echo: "1", survey: "1" },
+    bundleDirectory: resolve(root, "cache"),
     authorize: (caller, operation, scope) =>
       caller.scope === scope && (caller.subject !== "list" || operation === "list"),
     resolveCaller(request) {
@@ -123,15 +124,36 @@ async function setup(t: TestContext, queryLifetimeMs = 60_000, retentionMs = 86_
     if (!response.ok) throw new ApiError(response.status, value.error.code, value.error.message);
     return value as T;
   };
-  const discovery = await request<TaskTypeDiscovery[]>("/task-types");
-  const send = (entry: Entry) =>
-    request<TaskSnapshot>("/tasks", {
+  const discovery = resources.types.map((type) => ({
+    ...type,
+    revision: resources.bundles[type.type]!.digest,
+  }));
+  const send = async (entry: Entry) => {
+    let result = await request<SubmissionResult>("/tasks", {
       id: entry.endpoint.id,
       method: "POST",
       body: entry.parameters,
-      headers: { "Idempotency-Key": entry.id, "If-Match": `"${entry.revision}"` },
+      headers: { "Idempotency-Key": entry.id },
     });
-  const bar = new SubmissionBar(send);
+    while (result.status === "preparing")
+      result = await request<SubmissionResult>(`/requests/${entry.id}/status?waitMs=1000`, {
+        id: entry.endpoint.id,
+      });
+    return result;
+  };
+  class FixtureBar extends SubmissionBar {
+    override add(batch: Batch, parameters: Record<string, unknown>, digest: string) {
+      return super.add(batch, resources.parameters(parameters), digest);
+    }
+    override quick(endpoint: Endpoint, parameters: Record<string, unknown>, digest: string) {
+      return super.quick(endpoint, resources.parameters(parameters), digest);
+    }
+  }
+  const makeBar = (sender = send) =>
+    new FixtureBar(sender, undefined, undefined, undefined, (entry, id) =>
+      request<TaskSnapshot>(`/tasks/${id}`, { id: entry.endpoint.id }),
+    );
+  const bar = makeBar();
   const submit = (text: string, extra: Record<string, unknown> = {}) =>
     bar.quick(
       endpoint(),
@@ -159,6 +181,8 @@ async function setup(t: TestContext, queryLifetimeMs = 60_000, retentionMs = 86_
     bar,
     submit,
     send,
+    makeBar,
+    parameters: resources.parameters,
     get url() {
       return ui.url;
     },
@@ -206,8 +230,13 @@ test("real HTTP discovery, two schemas, quoted guard, immutable input and origin
   };
   const entry = await h.bar.quick(h.endpoint(), parameters, revision(h.discovery, "survey"));
   assert.equal(entry.state, "accepted");
-  assert.deepEqual(originalParameters(await h.request(`/requests/${entry.id}`)), parameters);
+  assert.deepEqual(
+    originalParameters(await h.request(`/requests/${entry.id}`)),
+    h.parameters(parameters),
+  );
   const accepted = await h.send(entry);
+  assert.equal(accepted.status, "accepted");
+  if (accepted.status !== "accepted") throw Error("Expected accepted.");
   assert.equal(accepted.taskId, entry.snapshot!.taskId);
   await assert.rejects(
     () =>
@@ -217,9 +246,7 @@ test("real HTTP discovery, two schemas, quoted guard, immutable input and origin
         headers: { "Idempotency-Key": newIdentity(), "If-Match": `"${"0".repeat(64)}"` },
       }),
     (error: unknown) =>
-      error instanceof ApiError &&
-      error.status === 412 &&
-      error.code === "contract_revision_mismatch",
+      error instanceof ApiError && error.status === 400 && error.code === "unsupported_request",
   );
   await assert.rejects(
     () =>
@@ -228,7 +255,7 @@ test("real HTTP discovery, two schemas, quoted guard, immutable input and origin
         body: parameters,
         headers: { "Idempotency-Key": newIdentity(), "If-Match": revision(h.discovery, "survey") },
       }),
-    /identity_required/,
+    /unsupported_request/,
   );
   const invalid = await h.bar.quick(
     h.endpoint(),
@@ -269,7 +296,7 @@ test("three item batch continues after failure, shortcut never sends drafts, unk
   const all = await h.request<TaskPage>("/tasks?limit=2");
   assert.ok(all.observedAt >= before);
   let lost = true;
-  const uncertain = new SubmissionBar(async (entry) => {
+  const uncertain = h.makeBar(async (entry) => {
     const result = await h.send(entry);
     if (lost) {
       lost = false;
@@ -296,12 +323,12 @@ test("directory permissions and scopes are independent; frozen paging, raw-reque
   const h = await setup(t);
   const first = await h.submit("from UI");
   const externalId = newIdentity();
-  const raw = {
+  const raw = h.parameters({
     type: "echo",
     timeoutMs: 5000,
     text: "external",
     metadata: { url: "https://example.invalid/floating", digest: "user-lock" },
-  };
+  });
   const external = await fetch(`${h.backend.url}/tasks`, {
     method: "POST",
     headers: {
@@ -311,11 +338,11 @@ test("directory permissions and scopes are independent; frozen paging, raw-reque
     },
     body: JSON.stringify(raw),
   });
-  assert.equal(external.status, 202);
+  assert.ok(external.ok);
   await h.submit("third");
   await assert.rejects(
     () => h.request("/task-types", { id: "list" }),
-    (error: unknown) => error instanceof ApiError && error.status === 403,
+    (error: unknown) => error instanceof ApiError && error.status === 404,
   );
   const page = await h.request<TaskPage>("/tasks?limit=1&sort=created-desc", { id: "list" });
   assert.ok(page.next);
@@ -352,14 +379,28 @@ test("directory expiration preserves stale view and requires an explicit new que
   await h.submit("two");
   const directory = new Directory();
   const fetchPage = (query: string) => h.request<TaskPage>(`/tasks?${query}`);
-  await directory.load(fetchPage, "type=echo&sort=created-desc&limit=1");
+  await directory.load(
+    fetchPage,
+    `bundleDigest=${encodeURIComponent(revision(h.discovery, "echo"))}&sort=created-desc&limit=1`,
+  );
   const old = directory.page;
   await new Promise((resolve) => setTimeout(resolve, 100));
-  await assert.rejects(() => directory.load(fetchPage, "type=survey", true), /query_expired/);
+  await assert.rejects(
+    () =>
+      directory.load(
+        fetchPage,
+        `bundleDigest=${encodeURIComponent(revision(h.discovery, "survey"))}`,
+        true,
+      ),
+    /query_expired/,
+  );
   assert.equal(directory.expired, true);
   assert.equal(directory.page, old);
   await assert.rejects(() => directory.load(fetchPage, "", true), /重新查询/);
-  await directory.load(fetchPage, "type=survey&sort=created-desc&limit=1");
+  await directory.load(
+    fetchPage,
+    `bundleDigest=${encodeURIComponent(revision(h.discovery, "survey"))}&sort=created-desc&limit=1`,
+  );
   assert.deepEqual(directory.page!.tasks, []);
   assert.equal(directory.expired, false);
 });
@@ -478,12 +519,12 @@ test("shared Run, queued Task, cancellation, timeout, history/SSE and disconnect
 
 test("favorites persist across UI restart, keep original parameters, and block rebinding", async (t) => {
   const h = await setup(t);
-  const parameters = {
+  const parameters = h.parameters({
     type: "echo",
     timeoutMs: 5000,
     text: "saved",
     metadata: { url: "https://example.invalid/latest", digest: "locked", nested: [null, false, 1] },
-  };
+  });
   const response = await h.local("/api/favorites", "POST", {
     name: "完整配方",
     endpoint: h.endpoint(),
@@ -627,7 +668,7 @@ test("error responses redact decoded credentials in nested strings and property 
   });
   try {
     const bootstrap = await fetch(`${ui.url}/api/bootstrap`).then((response) => response.json());
-    const response = await fetch(`${ui.url}/api/endpoints/redaction/task-types`, {
+    const response = await fetch(`${ui.url}/api/endpoints/redaction/tasks`, {
       headers: {
         "X-UI-Token": bootstrap.csrf,
         "X-Endpoint-Binding": bootstrap.endpoints[0].binding,
@@ -734,7 +775,6 @@ test("loopback, host/origin/CSRF, restricted proxy, headers, body limits and red
         {
           "X-Endpoint-Binding": h.endpoint().binding,
           "Idempotency-Key": newIdentity(),
-          "If-Match": `"${revision(h.discovery, "echo")}"`,
         },
       )
     ).status,
@@ -763,7 +803,7 @@ test("loopback, host/origin/CSRF, restricted proxy, headers, body limits and red
     const bootstrap = await fetch(`${otherUi.url}/api/bootstrap`).then((response) =>
       response.json(),
     );
-    const response = await fetch(`${otherUi.url}/api/endpoints/redirect/task-types`, {
+    const response = await fetch(`${otherUi.url}/api/endpoints/redirect/tasks`, {
       headers: {
         "X-UI-Token": bootstrap.csrf,
         "X-Endpoint-Binding": bootstrap.endpoints[0].binding,
@@ -842,15 +882,24 @@ test("UI execution proxy lists other-client records with independent permissions
       "content-type": "application/json",
       "Idempotency-Key": newIdentity(),
     },
-    body: JSON.stringify({
-      type: "echo",
-      text: "external client",
-      durationMs: 50,
-      timeoutMs: 5000,
-    }),
+    body: JSON.stringify(
+      h.parameters({
+        type: "echo",
+        text: "external client",
+        durationMs: 50,
+        timeoutMs: 5000,
+      }),
+    ),
   });
-  assert.equal(external.status, 202);
-  const other = (await external.json()) as TaskSnapshot;
+  assert.ok(external.ok);
+  let decision = (await external.json()) as SubmissionResult;
+  while (decision.status === "preparing")
+    decision = await h.request<SubmissionResult>(
+      `/requests/${decision.requestId}/status?waitMs=1000`,
+    );
+  assert.equal(decision.status, "accepted");
+  if (decision.status !== "accepted") throw Error("Expected accepted.");
+  const other = await h.request<TaskSnapshot>(`/tasks/${decision.taskId}`);
   await until(
     () => h.request<RunPage>("/runs"),
     (page) => page.runs.length === 2,

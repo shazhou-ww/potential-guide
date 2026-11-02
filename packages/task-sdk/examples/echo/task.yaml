@@ -1,0 +1,21 @@
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json
+name: Repository Echo
+runtime:
+  type: node
+  minVersion: "22.13.0"
+entry: worker.cjs
+inputSchema:
+  type: object
+  properties:
+    text:
+      type: string
+  required: [text]
+  additionalProperties: false
+resultSchema:
+  type: object
+  properties:
+    text:
+      type: string
+  required: [text]
+  additionalProperties: false
+messageSchema: false

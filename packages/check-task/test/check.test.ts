@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, rm } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { resolve, join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
+import { TaskClient } from "@potential-guide/task-engine-http";
 import test from "node:test";
 import {
   type ContractArtifact,
@@ -11,8 +14,8 @@ import {
 import { newId } from "@potential-guide/task-engine";
 import { MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
-import type { TaskSnapshot } from "@potential-guide/task-protocol";
-import { TaskError } from "@potential-guide/task-protocol";
+import type { TaskSnapshot, MatchPolicy } from "@potential-guide/task-protocol";
+import { TaskError, taskSchemaUri } from "@potential-guide/task-protocol";
 import { createFixtureEngine as createTaskEngine } from "../../task-engine/test/driver.js";
 import type { ArtifactSource } from "../src/index.js";
 import { createCheckFixture as createCheckTaskType } from "./type-fixture.js";
@@ -430,9 +433,38 @@ test("Check real HTTP/SSE authorization, shared cancellation, pagination and rec
     },
   });
   const store = new MemoryStore();
+  await mkdir(directory, { recursive: true });
+  const yaml = join(directory, "task.yaml"),
+    entry = join(directory, "callback.ts");
+  await writeFile(
+    yaml,
+    JSON.stringify({
+      $schema: taskSchemaUri,
+      name: "Check HTTP",
+      runtime: { type: "node", minVersion: "22.13.0" },
+      entry: "worker.cjs",
+      inputSchema: type.inputSchema,
+      resultSchema: type.resultSchema,
+      messageSchema: false,
+    }),
+  );
+  await writeFile(
+    entry,
+    `import {createCheckTaskType} from "@potential-guide/check-task";
+import {inspectContractFiles} from "@potential-guide/check-artifacts/contracts";
+const content=inspectContractFiles(new Map(${JSON.stringify([...content.files].map(([path, bytes]) => [path, bytes.toString("base64")]))}.map(([path,text])=>[path,Buffer.from(text,"base64")])));
+const type=createCheckTaskType({directory:${JSON.stringify(directory)},workers:1,source:{authorize(){},async resolve(){return content}}});
+export default(input,context)=>type.run(input,context);`,
+  );
+  const built = await buildTaskBundle({
+    declaration: yaml,
+    entry,
+    outDirectory: join(directory, "bundle"),
+  });
+  const packed = await packTaskBundle(built.directory, join(directory, "bundle.tgz"));
+  const bundle = { url: pathToFileURL(packed.archive).href, digest: built.digest };
   const server = await startTaskServer({
-    types: [type],
-    currentVersions: { check: "2" },
+    bundleDirectory: join(directory, "cache"),
     store,
     port: 0,
     authorize: (who, _operation, scope) => who.scope === scope,
@@ -445,6 +477,7 @@ test("Check real HTTP/SSE authorization, shared cancellation, pagination and rec
     http: { pollMs: 5 },
   });
   const headers = { authorization: "Bearer test", "content-type": "application/json" };
+  const client = new TaskClient({ url: server.url, headers });
   const get = async (id: string) => {
     const response = await fetch(`${server.url}/tasks/${id}`, { headers });
     assert.equal(response.status, 200);
@@ -458,20 +491,21 @@ test("Check real HTTP/SSE authorization, shared cancellation, pagination and rec
     }
     throw new Error(`Missing ${stage}`);
   };
-  const submit = async (matchPolicy = "starts-after-eligible") => {
-    const response = await fetch(`${server.url}/tasks`, {
-      method: "POST",
-      headers: { ...headers, "Idempotency-Key": newId() },
-      body: JSON.stringify({
-        type: "check",
-        checker: reference,
-        subject: {},
-        timeoutMs: 10000,
-        matchPolicy,
-      }),
+  const submit = async (matchPolicy: MatchPolicy = "starts-after-eligible") => {
+    const requestId = newId();
+    let result = await client.submit({
+      requestId,
+      bundle,
+      checker: reference,
+      subject: {},
+      timeoutMs: 10000,
+      matchPolicy,
     });
-    assert.equal(response.status, 202);
-    return (await response.json()) as TaskSnapshot;
+    while (result.status === "preparing")
+      result = await client.getRequestStatus(requestId, { waitMs: 1000 });
+    assert.equal(result.status, "accepted");
+    if (result.status !== "accepted") throw Error("Expected accepted.");
+    return client.getTask(result.taskId);
   };
   try {
     const a = await submit();

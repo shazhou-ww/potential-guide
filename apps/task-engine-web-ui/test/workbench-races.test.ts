@@ -5,14 +5,22 @@ import { resolve } from "node:path";
 import test from "node:test";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
-import { TaskError, type TaskSnapshot } from "@potential-guide/task-protocol";
-import { fixtureTypes } from "../fixture/types.js";
+import {
+  TaskError,
+  type TaskSnapshot,
+  type SubmissionResult,
+} from "@potential-guide/task-protocol";
+import { fixtureBundles } from "../fixture/types.js";
 import { newIdentity } from "../src/model.js";
 import { type Endpoint, type Favorite, startUiServer } from "../src/server.js";
 import { browserDom } from "./browser-dom.js";
 
-async function until(check: () => boolean | Promise<boolean>, reason: string): Promise<void> {
-  const end = Date.now() + 5000;
+async function until(
+  check: () => boolean | Promise<boolean>,
+  reason: string,
+  timeout = 5000,
+): Promise<void> {
+  const end = Date.now() + timeout;
   while (Date.now() < end) {
     if (await check()) return;
     await new Promise((resolve) => setTimeout(resolve, 5));
@@ -27,13 +35,12 @@ test("actual browser entry ignores delayed real favorites responses and paginate
     token = randomBytes(32).toString("hex");
   process.env[env] = token;
   process.env[`${env}_OTHER`] = `${token}-other`;
-  const resources = fixtureTypes();
+  const resources = await fixtureBundles(resolve(root, "author"));
   const backend = await startTaskServer({
     port: 0,
     store: new MemoryStore(),
     ownStore: true,
-    types: resources.types,
-    currentVersions: { echo: "1", survey: "1" },
+    bundleDirectory: resolve(root, "cache"),
     limits: { pageSize: 10 },
     authorize: (caller, _operation, scope) => caller.scope === scope,
     resolveCaller(request) {
@@ -96,18 +103,38 @@ test("actual browser entry ignores delayed real favorites responses and paginate
         "content-type": "application/json",
         "Idempotency-Key": newIdentity(),
       },
-      body: JSON.stringify({ type: "echo", timeoutMs: 5000, durationMs: 1, text }),
+      body: JSON.stringify(
+        resources.parameters({ type: "echo", timeoutMs: 30000, durationMs: 1, text }),
+      ),
     });
-    assert.equal(response.status, 202, await response.clone().text());
-    const task = (await response.json()) as TaskSnapshot;
-    await until(() => {
-      const current = backend.engine.getTask(task.taskId, { scope: "one", subject: "ui" });
-      return (
-        current.stage === "completed" &&
-        !!current.run &&
-        !!backend.engine.getRun(current.run.runId, { scope: "one", subject: "ui" }).reclaimedAt
+    assert.ok(response.ok, await response.clone().text());
+    let result = (await response.json()) as SubmissionResult;
+    while (result.status === "preparing")
+      result = await backend.engine.getRequestStatus(
+        result.requestId,
+        { waitMs: 1000 },
+        { scope: "one", subject: "ui" },
       );
-    }, "each fixture Run must finish and release before creating the next directory member");
+    assert.equal(result.status, "accepted");
+    if (result.status !== "accepted") throw Error("Expected accepted.");
+    const task = backend.engine.getTask(result.taskId, { scope: "one", subject: "ui" });
+    await until(
+      () => {
+        const current = backend.engine.getTask(task.taskId, { scope: "one", subject: "ui" });
+        assert.notEqual(
+          current.stage,
+          "failed",
+          JSON.stringify({ current, errors: backend.engine.errors }),
+        );
+        return (
+          current.stage === "completed" &&
+          !!current.run &&
+          !!backend.engine.getRun(current.run.runId, { scope: "one", subject: "ui" }).reclaimedAt
+        );
+      },
+      "each fixture Run must finish and release before creating the next directory member",
+      15000,
+    );
     return backend.engine.getTask(task.taskId, { scope: "one", subject: "ui" });
   };
   const held: { value: Favorite[]; release(): void }[] = [];
@@ -327,9 +354,11 @@ test("actual browser entry ignores delayed real favorites responses and paginate
           .length === 4
       );
     }, "fixture should expose 14 executions");
-    const from = new Date(Date.now() - 60000).toISOString(),
+    const from = new Date(
+        Math.min(...[a, b, c].map((task) => Date.parse(task.run!.startedAt))) - 1,
+      ).toISOString(),
       before = new Date(Date.now() + 60000).toISOString();
-    element<HTMLInputElement>("#execution-type").value = "echo";
+    element<HTMLInputElement>("#execution-type").value = resources.bundles.echo!.digest;
     element<HTMLInputElement>("#started-from").value = from;
     element<HTMLInputElement>("#started-before").value = before;
     document.querySelector<HTMLButtonElement>('[role="dialog"] [data-close]')?.click();
@@ -343,13 +372,14 @@ test("actual browser entry ignores delayed real favorites responses and paginate
     element<HTMLInputElement>("#started-from").value = "not-a-date";
     element<HTMLInputElement>("#started-before").value = "also-not-a-date";
     clickNamed("#execution-directory", "执行目录下一页");
-    await until(
-      () => document.querySelectorAll("#execution-directory tbody tr").length === 14,
-      "continuation must ignore unapplied invalid filters",
-    );
+    await until(() => {
+      const text = element("#execution-directory").textContent!;
+      assert.ok(!text.includes("不可用"), text);
+      return document.querySelectorAll("#execution-directory tbody tr").length === 14;
+    }, "continuation must ignore unapplied invalid filters");
     const reads = browserRequests.filter((url) => url.pathname.endsWith("/runs"));
     assert.equal(reads.length, 2);
-    assert.equal(reads[1]!.searchParams.get("type"), "echo");
+    assert.equal(reads[1]!.searchParams.get("bundleDigest"), resources.bundles.echo!.digest);
     assert.equal(reads[1]!.searchParams.get("startedFrom"), from);
     assert.equal(reads[1]!.searchParams.get("startedBefore"), before);
     assert.ok(reads[1]!.searchParams.get("cursor"));

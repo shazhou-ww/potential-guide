@@ -24,6 +24,7 @@ export interface HandlerOptions {
   auditRejection?: (event: { requestId?: string; code: string }) => void;
 }
 function status(code: string): number {
+  if (code === "observation_aborted") return 499;
   if (code === "unauthenticated") return 401;
   if (code === "forbidden") return 403;
   if (code === "contract_revision_mismatch") return 412;
@@ -78,6 +79,7 @@ function params(url: URL, allowed: readonly string[]): Record<string, string> {
   return result;
 }
 const taskFilters = [
+  "bundleDigest",
   "taskId",
   "type",
   "scope",
@@ -92,6 +94,7 @@ const taskFilters = [
   "sort",
 ];
 const runFilters = [
+  "bundleDigest",
   "runId",
   "type",
   "scope",
@@ -143,6 +146,22 @@ function response(value: unknown, code = 200): Response {
     status: code,
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
+}
+async function observe<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
+  let abort!: () => void;
+  const ended = new Promise<never>((_resolve, reject) => {
+    abort = () =>
+      reject(
+        new TaskError("observation_aborted", "Observation ended; Request processing continues."),
+      );
+    signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) abort();
+  });
+  try {
+    return await Promise.race([operation, ended]);
+  } finally {
+    signal.removeEventListener("abort", abort);
+  }
 }
 async function body(request: Request, limit: number): Promise<unknown> {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))
@@ -358,8 +377,6 @@ export function createTaskHandler(
               "task.collection",
             );
       }
-      if (request.method === "GET" && path === "/task-types")
-        return response(options.service.discoverTypes(caller));
       if (request.method === "GET" && (path === "/tasks" || path === "/runs")) {
         const query = params(url, [
           ...(path === "/runs" ? runFilters : taskFilters),
@@ -387,16 +404,31 @@ export function createTaskHandler(
         identity = ulid(request.headers.get("Idempotency-Key"));
         const raw = object(await body(request, maxBody));
         if ("requestId" in raw) fail("invalid_request", "requestId belongs in Idempotency-Key.");
-        const match = request.headers.get("If-Match");
-        if (match !== null && !/^"[a-f0-9]{64}"$/.test(match))
-          fail("invalid_request", "If-Match must contain one quoted contract revision.");
+        if (request.headers.has("If-Match"))
+          fail(
+            "unsupported_request",
+            "If-Match type discovery guards are not supported; pin Bundle Digest.",
+          );
+        const result = await observe(
+          options.service.submit({ ...raw, requestId: identity }, caller),
+          request.signal,
+        );
+        return response(result, result.status === "preparing" ? 202 : 200);
+      }
+      const requestStatus = /^\/requests\/([0-9A-Z]+)\/status$/.exec(path);
+      if (request.method === "GET" && requestStatus?.[1]) {
+        const values = params(url, ["waitMs"]);
+        if (values.waitMs !== undefined && !/^(?:0|[1-9][0-9]*)$/.test(values.waitMs))
+          fail("invalid_request", "waitMs must be a nonnegative integer.");
         return response(
-          options.service.submit(
-            { ...raw, requestId: identity },
-            caller,
-            match === null ? {} : { expectedRevision: match.slice(1, -1) },
+          await observe(
+            options.service.getRequestStatus(
+              requestStatus[1],
+              values.waitMs === undefined ? {} : { waitMs: Number(values.waitMs) },
+              caller,
+            ),
+            request.signal,
           ),
-          202,
         );
       }
       const task = /^\/tasks\/([0-9A-Z]+)(\/cancel)?$/.exec(path);
@@ -482,3 +514,4 @@ export function createTaskHandler(
     }
   };
 }
+export { TaskClient, type TaskClientOptions } from "./client.js";

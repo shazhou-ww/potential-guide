@@ -24,6 +24,7 @@
     "tailwind-merge": "catalog:"
   },
   "devDependencies": {
+    "@potential-guide/task-sdk": "workspace:^",
     "@potential-guide/task-engine": "workspace:^",
     "@potential-guide/task-engine-server": "workspace:^",
     "@tailwindcss/cli": "catalog:",

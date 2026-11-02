@@ -5,10 +5,38 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import spawn from "cross-spawn";
 import { checkPackageConsumers } from "./check-package-consumers.mjs";
 import { verificationPackages } from "./release-packages.mjs";
+import { checkTaskBundleConsumer } from "./check-task-bundle-consumer.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const pnpmCommand = "pnpm";
-const packages = verificationPackages;
+const bundlesOnly = process.argv.includes("--task-bundles");
+const sdkOnly = process.argv.includes("--task-sdk");
+if (sdkOnly && bundlesOnly) throw new Error("Select only one consumer scope.");
+const sdkPackages = new Set([
+  "check-runtime-files",
+  "check-artifacts",
+  "task-protocol",
+  "task-sdk",
+]);
+const bundlePackages = new Set([
+  "check-runtime-files",
+  "check-artifacts",
+  "task-protocol",
+  "task-sdk",
+  "task-engine",
+  "task-engine-http",
+  "task-engine-storage",
+  "task-engine-server",
+  "check-task",
+  "probe-task",
+]);
+const packages =
+  bundlesOnly || sdkOnly
+    ? verificationPackages.filter((entry) =>
+        (sdkOnly ? sdkPackages : bundlePackages).has(entry.directory),
+      )
+    : verificationPackages;
+const manifests = new Map();
 
 function run(command, args, cwd = root, env = process.env, expectedCode = 0) {
   return new Promise((resolve, reject) => {
@@ -42,6 +70,7 @@ try {
   for (const expected of packages) {
     const packageRoot = join(root, "packages", expected.directory);
     const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
+    manifests.set(manifest.name, manifest);
     assert.equal(manifest.name, expected.name);
     assert.deepEqual(Object.keys(manifest.bin ?? {}).sort(), [...(expected.bins ?? [])].sort());
     for (const dependency of expected.forbiddenRuntimeDependencies ?? []) {
@@ -125,7 +154,16 @@ try {
     tarballs.set(expected.name, packed.filename);
     console.log(`${expected.name}: ${String(files.length)} packed files`);
   }
-  await checkPackageConsumers(root, destination, packages, tarballs, run);
+  if (bundlesOnly) await checkTaskBundleConsumer(destination, tarballs, manifests, run);
+  else
+    await checkPackageConsumers(
+      root,
+      destination,
+      packages,
+      tarballs,
+      run,
+      sdkOnly ? "task-sdk" : undefined,
+    );
 } finally {
   if (process.env.PGUIDE_KEEP_PACK_CONSUMERS === "1")
     console.log(`Owned consumer fixtures retained: ${destination}`);

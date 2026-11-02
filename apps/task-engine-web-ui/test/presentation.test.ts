@@ -116,9 +116,10 @@ test("React/shadcn owns rendering and isolates the persistent schema editor", as
         const raw = document.createElement("textarea");
         raw.id = "raw-schema-value";
         raw.value = "{ unfinished JSON";
-        view.form.append(raw);
-        view.options([{ label: "echo", value: "echo" }]);
-        view.type("echo");
+        const reference = document.createElement("input");
+        reference.id = "bundle-reference-value";
+        reference.value = "https://example.test/task.tar.gz";
+        view.form.append(raw, reference);
         nav.show("tasks", false);
         nav.open("create-dialog");
         await delay(10);
@@ -132,7 +133,8 @@ test("React/shadcn owns rendering and isolates the persistent schema editor", as
         await delay(10);
         assert.ok(element("#raw-schema-value") === raw);
         assert.equal(raw.value, "{ unfinished JSON");
-        assert.equal(element<HTMLSelectElement>("#type").value, "echo");
+        assert.equal(element<HTMLInputElement>("#bundle-reference-value").value, reference.value);
+        assert.equal(document.querySelector("#type"), null);
         nav.close("create-dialog");
         await delay(30);
       },

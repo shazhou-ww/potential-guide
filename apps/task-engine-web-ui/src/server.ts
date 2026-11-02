@@ -179,6 +179,7 @@ export function allowedRoute(path: string, method: string, params: URLSearchPara
   if (path === "/tasks" && method === "GET")
     keys = [
       "taskId",
+      "bundleDigest",
       "type",
       "scope",
       "seriesId",
@@ -196,6 +197,7 @@ export function allowedRoute(path: string, method: string, params: URLSearchPara
   else if (path === "/runs" && method === "GET")
     keys = [
       "runId",
+      "bundleDigest",
       "type",
       "scope",
       "stage",
@@ -212,6 +214,7 @@ export function allowedRoute(path: string, method: string, params: URLSearchPara
       path === "/tasks/events"
         ? [
             "taskId",
+            "bundleDigest",
             "type",
             "scope",
             "seriesId",
@@ -227,6 +230,7 @@ export function allowedRoute(path: string, method: string, params: URLSearchPara
           ]
         : [
             "runId",
+            "bundleDigest",
             "type",
             "scope",
             "stage",
@@ -242,6 +246,11 @@ export function allowedRoute(path: string, method: string, params: URLSearchPara
     method === "GET"
   )
     keys = path.endsWith("/events") ? ["fromRevision"] : ["cursor", "limit"];
+  else if (
+    new RegExp(`^/requests/${idPattern.source.slice(1, -1)}/status$`).test(path) &&
+    method === "GET"
+  )
+    keys = ["waitMs"];
   else if (["/event-history", "/events"].includes(path) && method === "GET")
     keys = [
       "taskId",
@@ -251,7 +260,6 @@ export function allowedRoute(path: string, method: string, params: URLSearchPara
     ];
   else if (
     !(
-      (path === "/task-types" && method === "GET") ||
       (path === "/tasks" && method === "POST") ||
       (new RegExp(`^/(tasks|runs|requests)/${idPattern.source.slice(1, -1)}$`).test(path) &&
         method === "GET") ||
@@ -481,12 +489,19 @@ export async function startUiServer(raw: UiConfig) {
             )
               reject(502, "invalid_backend_response", "Task 来源信息无效，未保存星标。");
             const original = await read(`/requests/${task.requestId}`);
-            if (original.requestId !== task.requestId || typeof original.type !== "string")
+            const bundle = original.bundle as Record<string, unknown> | undefined;
+            if (
+              original.requestId !== task.requestId ||
+              !bundle ||
+              typeof bundle.url !== "string" ||
+              typeof bundle.digest !== "string" ||
+              !/^sha256:[a-f0-9]{64}$/.test(bundle.digest)
+            )
               reject(502, "invalid_backend_response", "原请求无效，未保存星标。");
             const { requestId: _identity, ...parameters } = original;
             let favorite: Favorite = {
               id: randomUUID(),
-              name: original.type,
+              name: typeof task.name === "string" ? task.name : "Task Bundle",
               endpoint: endpoint.public,
               parameters,
               source: {
@@ -511,7 +526,10 @@ export async function startUiServer(raw: UiConfig) {
             return;
           }
           const parameters = record(body.parameters);
-          if ("requestId" in parameters || typeof parameters.type !== "string")
+          if (
+            "requestId" in parameters ||
+            (typeof parameters.type !== "string" && !parameters.bundle)
+          )
             reject(400, "invalid_parameters", "收藏应为去掉生成身份的原参数。");
           if (typeof body.name !== "string" || !body.name.trim() || body.name.length > 128)
             reject(400, "invalid_name", "收藏名称为 1–128 字符。");
@@ -551,11 +569,11 @@ export async function startUiServer(raw: UiConfig) {
       let payload: string | undefined;
       if (method === "POST" && route[2] === "/tasks") {
         const key = String(req.headers["idempotency-key"] ?? "");
-        const match = String(req.headers["if-match"] ?? "");
-        if (!idPattern.test(key) || !/^"[a-f0-9]{64}"$/.test(match))
-          reject(400, "identity_required", "提交需要 ULID 与带引号的发现 revision。");
+        if (!idPattern.test(key))
+          reject(400, "identity_required", "提交需要原 requestId（ULID）。");
+        if (req.headers["if-match"] !== undefined)
+          reject(400, "unsupported_request", "使用完整 Bundle Digest，不接受旧类型发现 guard。");
         headers.set("Idempotency-Key", key);
-        headers.set("If-Match", match);
         headers.set("Content-Type", "application/json");
         const body = record(await incomingBody(req));
         if ("requestId" in body) reject(400, "invalid_request", "requestId 只能在请求头中。");

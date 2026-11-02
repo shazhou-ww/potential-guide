@@ -199,7 +199,8 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
     );
     document.getElementById("new-task")!.click();
     await until(
-      () => document.getElementById("discovery-status")?.textContent?.includes("已发现") === true,
+      () =>
+        document.getElementById("discovery-status")?.textContent?.includes("无需类型注册") === true,
       "browser bootstrap should finish",
     );
     document.querySelector<HTMLButtonElement>("#create-dialog [data-close]")!.click();

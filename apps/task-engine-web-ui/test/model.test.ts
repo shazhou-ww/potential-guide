@@ -4,7 +4,7 @@ import type {
   HistoryPage,
   PublicEvent,
   TaskPage,
-  TaskSnapshot,
+  SubmissionResult,
 } from "@potential-guide/task-protocol";
 import { parseHTML } from "linkedom";
 import { envelopeSchema, resolvedSchema, schemaEditor } from "../src/form.js";
@@ -21,6 +21,7 @@ import {
 } from "../src/model.js";
 
 const endpoint = { id: "one", label: "one", binding: "stable" };
+const bundle = { url: "https://example.test/task", digest: `sha256:${"a".repeat(64)}` };
 const emptyPage = (observedAt: string, next?: string): TaskPage => ({
   tasks: [],
   items: [],
@@ -41,28 +42,11 @@ test("unknown then 412 remains unknown; batch continues and all retries preserve
     attempt++;
     if (attempt === 1) throw new Error("connection lost");
     if (attempt === 3) throw new ApiError(412, "contract_revision_mismatch", "changed");
-    return {
-      taskId: newIdentity(),
-      requestId: entry.id,
-      seriesId: newIdentity(),
-      stage: "initial",
-      receivedAt: new Date().toISOString(),
-      eligibleAt: new Date().toISOString(),
-      deadlineAt: new Date().toISOString(),
-      timestamp: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      dataDomain: "domain",
-      revision: "domain:1",
-      canceled: false,
-    } as TaskSnapshot;
+    return { status: "accepted", taskId: newIdentity(), requestId: entry.id };
   });
   const batch = bar.create(endpoint);
-  const unknown = bar.add(
-    batch,
-    { type: "echo", nested: { digest: "business-only" } },
-    "a".repeat(64),
-  );
-  const second = bar.add(batch, { type: "echo" }, "a".repeat(64));
+  const unknown = bar.add(batch, { bundle, nested: { digest: "business-only" } }, "a".repeat(64));
+  const second = bar.add(batch, { bundle }, bundle.digest);
   await bar.sendBatch(batch);
   assert.equal(unknown.state, "unknown");
   assert.equal(second.state, "accepted");
@@ -70,7 +54,7 @@ test("unknown then 412 remains unknown; batch continues and all retries preserve
   assert.equal(unknown.state, "unknown");
   assert.deepEqual(calls[0], calls[2]);
   assert.match(unknown.message, /412/);
-  assert.deepEqual(unknown.parameters, { type: "echo", nested: { digest: "business-only" } });
+  assert.deepEqual(unknown.parameters, { bundle, nested: { digest: "business-only" } });
   await bar.sendBatch(batch);
   assert.equal(calls.length, 3);
 });
@@ -84,8 +68,8 @@ test("selection invalidates late work without changing original submission endpo
   assert.equal(endpointMatches(endpoint, selection.endpoint!), false);
 });
 test("malformed success response is unknown, never an accepted-shaped fallback", async () => {
-  const bar = new SubmissionBar(async () => ({}) as TaskSnapshot);
-  const entry = await bar.quick(endpoint, { type: "echo" }, "a".repeat(64));
+  const bar = new SubmissionBar(async () => ({}) as SubmissionResult);
+  const entry = await bar.quick(endpoint, { bundle }, bundle.digest);
   assert.equal(entry.state, "unknown");
   assert.equal(entry.snapshot, undefined);
 });
@@ -165,6 +149,7 @@ test("events deduplicate by full source/entity identity, do not infer gaps and i
 test("original parameters remove only generated requestId, not user series/eligibility or business locks", () => {
   const original = {
     requestId: newIdentity(),
+    bundle,
     type: "any",
     seriesId: newIdentity(),
     eligibleAt: "2026-01-01T00:00:00Z",
@@ -221,9 +206,11 @@ test("schema fields render scalars, arrays, nested refs, free objects and preser
     assert.equal(document.querySelectorAll('input[type="text"]').length, 5);
     assert.equal(document.querySelectorAll("textarea").length, 3);
     assert.equal("absent" in (editor.read() as object), false);
-    const common = schemaEditor(envelopeSchema, { timeoutMs: 250 });
-    assert.deepEqual(common.read(), { timeoutMs: 250 });
-    const timeout = common.node.querySelector('input[type="text"]') as HTMLInputElement;
+    const common = schemaEditor(envelopeSchema, { bundle, timeoutMs: 250 });
+    assert.deepEqual(common.read(), { bundle, timeoutMs: 250 });
+    const timeout = [...common.node.querySelectorAll<HTMLInputElement>('input[type="text"]')].find(
+      (input) => input.value === "250",
+    )!;
     timeout.value = "0250";
     assert.throws(() => common.read(), /JSON 数字/);
     timeout.value = "250";

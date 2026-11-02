@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { RegisteredType, Store } from "@potential-guide/task-protocol";
-import { createTaskEngine, newId } from "../src/index.js";
+import { createTaskEngine } from "../src/engine.js";
+import { newId } from "../src/index.js";
 import { MemoryStore } from "../src/testing.js";
 
 test("最终结果与恢复复验留在原类型 Worker，损坏业务证据不能得到成功形状", async () => {

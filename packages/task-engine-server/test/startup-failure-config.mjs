@@ -17,20 +17,9 @@ export default async function configure() {
   return {
     store: new MemoryStore(),
     port: 0,
-    types: [
-      {
-        type: "fixture",
-        version: "1",
-        environment: "test",
-        inputSchema: { type: "object" },
-        resultSchema: true,
-        messageSchema: false,
-        module: new URL("./echo-worker.mjs", import.meta.url).href,
-        exportName: "createEcho",
-        configuration: {},
-      },
-    ],
-    currentVersions: { missing: "1" },
+    bindService() {
+      throw new Error("Composition startup rejected.");
+    },
     authorize: () => true,
     resolveCaller: () => ({ scope: "fixture", subject: "fixture" }),
     shutdownMs: 25,

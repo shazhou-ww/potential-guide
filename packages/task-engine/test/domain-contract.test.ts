@@ -7,7 +7,8 @@ import {
   type Store,
   TaskError,
 } from "@potential-guide/task-protocol";
-import { createTaskEngine, newId } from "../src/index.js";
+import { createTaskEngine } from "../src/engine.js";
+import { newId } from "../src/index.js";
 import { MemoryStore, VirtualClock } from "../src/testing.js";
 
 const caller = { scope: "scope", subject: "actor" };
@@ -88,7 +89,7 @@ test("startup rejects an otherwise valid cached Task judgment not justified by s
   }
 });
 
-test("Q08 end-to-end: initial+eligible until coordination; complete source envelope, rollback and terminal cancel", async () => {
+test("M03 end-to-end: witness survives pure rollback, real early exit invalidates through complete observation", async () => {
   const f = fixture();
   await f.engine.start();
   try {
@@ -112,6 +113,7 @@ test("Q08 end-to-end: initial+eligible until coordination; complete source envel
       [b.taskId],
     );
     const members = f.engine.subscribeTasks({ stage: "running" }, baseline.revision, caller);
+    const allMembers = f.engine.subscribeTasks({}, baseline.revision, caller);
     const single = f.engine.subscribeTask(a.taskId, baseline.revision, caller);
     try {
       f.clock.setTime(eligible);
@@ -149,12 +151,39 @@ test("Q08 end-to-end: initial+eligible until coordination; complete source envel
       assert.equal(isPending(rollback), true);
       f.engine.cancelTask(b.taskId, caller);
       await until(() => f.engine.getRun(runId, caller).reclaimedAt !== undefined);
-      assert.equal(f.engine.getTask(a.taskId, caller).stage, "completed");
+      assert.equal(f.engine.getTask(a.taskId, caller).stage, "initial");
       assert.equal(isPending(f.engine.getTask(a.taskId, caller)), true);
+      const exited = f.store.read().facts.runs[runId]!.exit!;
+      const exitRevision = `${f.store.read().storeId}:${exited.sequence}`;
+      const invalidation = single.pull().events.find((event) => event.revision === exitRevision);
+      assert.equal(invalidation?.type, "task.changed");
+      const envelopes = [];
+      for (;;) {
+        const batch = members.pull();
+        if (!batch.length) break;
+        envelopes.push(...batch);
+      }
+      assert.ok(
+        envelopes.some((envelope) =>
+          envelope.changes.some((change) => change.id === a.taskId && change.kind === "removed"),
+        ),
+      );
+      const allEnvelopes = [];
+      for (;;) {
+        const batch = allMembers.pull();
+        if (!batch.length) break;
+        allEnvelopes.push(...batch);
+      }
+      const changes = allEnvelopes.find((event) => event.revision === exitRevision);
+      const changed = changes?.changes.find((change) => change.id === a.taskId);
+      assert.equal(changed?.kind, "updated");
+      assert.equal(changed?.summary?.stage, "initial");
+      assert.equal(changed?.summary?.updatedAt, exited.occurredAt);
+      assert.equal(f.engine.getTask(a.taskId, caller).updatedAt, exited.occurredAt);
       const first = f.engine.cancelTask(a.taskId, caller);
       assert.equal(first.changed, true);
       assert.equal(first.canceled, true);
-      assert.equal(first.stage, "completed");
+      assert.equal(first.stage, "initial");
       const second = f.engine.cancelTask(a.taskId, caller);
       assert.equal(second.changed, false);
       assert.equal(second.revision, first.revision);
@@ -166,6 +195,7 @@ test("Q08 end-to-end: initial+eligible until coordination; complete source envel
       );
     } finally {
       members.close();
+      allMembers.close();
       single.close();
     }
   } finally {

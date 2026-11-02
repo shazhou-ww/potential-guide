@@ -26,7 +26,12 @@ test("独立子 Run 观察沿用 Engine 已配置的预算，不被桥接默认 
     children: (scope) => ({
       caller: { scope, subject: "host" },
       service: {
-        submit: () => snapshot,
+        submit: async () => ({ status: "accepted", requestId: "request", taskId: snapshot.taskId }),
+        getRequestStatus: async () => ({
+          status: "accepted",
+          requestId: "request",
+          taskId: snapshot.taskId,
+        }),
         getTask: () => snapshot,
         cancelTask: () => ({ ...snapshot, changed: true }),
         readHistory: () => history,
@@ -43,7 +48,11 @@ test("独立子 Run 观察沿用 Engine 已配置的预算，不被桥接默认 
     workerGeneration: "one",
   };
   try {
-    assert.deepEqual(await type.resources!["child-submit"]!(null, context), snapshot);
+    assert.deepEqual(await type.resources!["child-submit"]!({ requestId: "request" }, context), {
+      status: "accepted",
+      requestId: "request",
+      taskId: snapshot.taskId,
+    });
     assert.deepEqual(await type.resources!["child-run"]!({ runId: "run" }, context), run);
     assert.deepEqual(
       await type.resources!["child-run-history"]!({ runId: "run", page: {} }, context),
@@ -75,7 +84,12 @@ test("父 Run 的资源请求返回子句柄不代表已回收；宿主证明等
     children: (scope) => ({
       caller: { scope, subject: "host" },
       service: {
-        submit: () => snapshot,
+        submit: async () => ({ status: "accepted", requestId: "request", taskId: snapshot.taskId }),
+        getRequestStatus: async () => ({
+          status: "accepted",
+          requestId: "request",
+          taskId: snapshot.taskId,
+        }),
         getTask: () => snapshot,
         cancelTask: () => {
           canceled = true;
@@ -102,7 +116,7 @@ test("父 Run 的资源请求返回子句柄不代表已回收；宿主证明等
     workerGeneration: "one",
   };
   try {
-    await type.resources!["child-submit"]!(null, context);
+    await type.resources!["child-submit"]!({ requestId: "request" }, context);
     await assert.rejects(type.confirmResourceRelease!({ ...context, workerGeneration: "one" }), {
       code: "reclamation_unknown",
     });
@@ -119,7 +133,7 @@ test("父 Run 的资源请求返回子句柄不代表已回收；宿主证明等
     await type.resources!["run-dispose"]!(null, context);
     const next = new AbortController();
     const fresh = { ...context, signal: next.signal, workerGeneration: "two" };
-    await type.resources!["child-submit"]!(null, fresh);
+    await type.resources!["child-submit"]!({ requestId: "fresh-request" }, fresh);
     await type.resources!["run-dispose"]!(null, context);
     await assert.rejects(type.confirmResourceRelease!(fresh), { code: "reclamation_unknown" });
     next.abort();

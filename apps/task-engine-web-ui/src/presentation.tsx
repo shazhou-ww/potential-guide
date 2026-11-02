@@ -476,7 +476,7 @@ function Workbench({ view }: { view: WorkbenchView }) {
               </Button>
             </div>
             <div className="filters">
-              <Field id="history-type" label="任务类型" placeholder="全部类型" />
+              <Field id="history-type" label="Bundle Digest" placeholder="完整 sha256:…（可选）" />
               <Field
                 id="created-from"
                 label="接收时间 · 起（包含）"
@@ -521,7 +521,11 @@ function Workbench({ view }: { view: WorkbenchView }) {
               <p>服务中的完整 Run 记录，包括其他客户端触发的尝试；共享 Run 只列一次。</p>
             </div>
             <div className="filters">
-              <Field id="execution-type" label="Run 类型" placeholder="全部类型" />
+              <Field
+                id="execution-type"
+                label="Bundle Digest"
+                placeholder="完整 sha256:…（可选）"
+              />
               <Field
                 id="started-from"
                 label="开始时间 · 起（包含）"
@@ -605,39 +609,20 @@ function OverlayPanel({ view }: { view: WorkbenchView }) {
           </DialogTitle>
           <DialogDescription>
             {id === "create-dialog"
-              ? "按当前服务契约填写，关闭弹窗会保留未提交的输入。"
+              ? "填写固定 Bundle 引用与业务输入；准备完成前不创建 Task。关闭弹窗保留输入。"
               : "按序发出，不等待前一任务完成；未知结果保留原身份。"}
           </DialogDescription>
         </DialogHeader>
         {id === "create-dialog" ? (
           <div id="create">
             <Port view={view} id="dialog-notice" role="status" aria-live="polite" />
-            <div className="row">
-              <label htmlFor="type">任务类型</label>
-              <select
-                id="type"
-                value={view.selectedType}
-                onChange={(event) => {
-                  const value = event.currentTarget.value;
-                  view.type(value);
-                  view.events.type(value);
-                }}
-              >
-                {view.types.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-              {port("discover")}
-            </div>
             {port("discovery-status", "secondary")}
+            <SchemaIsland view={view} />
             <details className="secondary">
               <summary>表单契约</summary>
               {port("contract")}
             </details>
             {port("contract-actions")}
-            <SchemaIsland view={view} />
             {port("create-actions", "actions")}
             <details id="legacy-templates" className="secondary" hidden={!view.legacy}>
               <summary>旧参数模板（没有任务身份）</summary>

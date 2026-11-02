@@ -4,5 +4,5 @@ export {
   type EngineLimits,
   type EngineOptions,
   TaskEngine,
-} from "./engine.js";
+} from "./bundle-engine.js";
 export { newId } from "./identity.js";

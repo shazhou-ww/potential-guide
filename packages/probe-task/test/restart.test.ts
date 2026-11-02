@@ -6,7 +6,11 @@ import { resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { newId } from "@potential-guide/task-engine";
-import type { TaskSnapshot } from "@potential-guide/task-protocol";
+import type {
+  TaskSnapshot,
+  BundleReference,
+  SubmissionResult,
+} from "@potential-guide/task-protocol";
 
 test("real process restart interrupts started Probe and children without observing again; SQLite result/history survive", async () => {
   const root = resolve(".cache", `probe-restart-${randomUUID()}`);
@@ -26,11 +30,11 @@ test("real process restart interrupts started Probe and children without observi
     child.stderr!.on("data", (chunk) => {
       output += chunk;
     });
-    const url = await new Promise<string>((resolve, reject) => {
+    const ready = await new Promise<{ url: string; bundle: BundleReference }>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error(output || "Child startup timeout.")), 60000);
       child.once("message", (value) => {
         clearTimeout(timer);
-        resolve((value as { url: string }).url);
+        resolve(value as { url: string; bundle: BundleReference });
       });
       child.once("error", (error) => {
         clearTimeout(timer);
@@ -41,21 +45,29 @@ test("real process restart interrupts started Probe and children without observi
         reject(new Error(output));
       });
     });
-    return { child, url };
+    return { child, ...ready };
   }
+  let bundle: BundleReference;
   async function submit(url: string, name: string, spin: boolean) {
     const response = await fetch(`${url}/tasks`, {
       method: "POST",
       headers: { "content-type": "application/json", "Idempotency-Key": newId() },
       body: JSON.stringify({
-        type: "probe",
+        bundle,
         objective: { kind: "objective", url: "https://example.test/root" },
         subject: { name, spin, marker },
         timeoutMs: 30000,
       }),
     });
-    assert.equal(response.status, 202);
-    return (await response.json()) as TaskSnapshot;
+    assert.ok(response.ok);
+    let result = (await response.json()) as SubmissionResult;
+    while (result.status === "preparing")
+      result = (await (
+        await fetch(`${url}/requests/${result.requestId}/status?waitMs=1000`)
+      ).json()) as SubmissionResult;
+    assert.equal(result.status, "accepted");
+    if (result.status !== "accepted") throw Error("Expected accepted.");
+    return (await (await fetch(`${url}/tasks/${result.taskId}`)).json()) as TaskSnapshot;
   }
   async function read(url: string, id: string) {
     const response = await fetch(`${url}/tasks/${id}`);
@@ -72,6 +84,7 @@ test("real process restart interrupts started Probe and children without observi
   }
   try {
     const first = await launch("first");
+    bundle = first.bundle;
     const completed = await submit(first.url, "completed", false);
     const done = await wait(first.url, completed.taskId, "completed");
     const running = await submit(first.url, "running", true);

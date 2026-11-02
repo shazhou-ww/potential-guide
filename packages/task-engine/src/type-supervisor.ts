@@ -16,7 +16,10 @@ import {
 } from "@potential-guide/task-protocol";
 
 export interface TypeChannel {
-  dispatch?(runId: string, generation: string): Promise<void>;
+  dispatch?(
+    runId: string,
+    generation: string,
+  ): Promise<void | { generation: string; startedAt: string }>;
   progress(runId: string, value: Json): Promise<void>;
   checkpoint?(runId: string, value: Json): Promise<void>;
   complete(runId: string, value: Json): Promise<void>;
@@ -159,13 +162,19 @@ class RunWorker {
     if (this.worker) return;
     const generation = randomUUID();
     const worker = new Worker(
-      new URL(
-        import.meta.url.endsWith(".ts") ? "../dist/type-worker.js" : "./type-worker.js",
-        import.meta.url,
-      ),
+      this.registration.bundle
+        ? new URL(this.registration.module)
+        : new URL(
+            import.meta.url.endsWith(".ts") ? "../dist/type-worker.js" : "./type-worker.js",
+            import.meta.url,
+          ),
       {
         execArgv: [],
-        env: { NODE_OPTIONS: "" },
+        env: {
+          NODE_OPTIONS: "",
+          ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
+          ...(process.env.WINDIR ? { WINDIR: process.env.WINDIR } : {}),
+        },
         resourceLimits: { maxOldGenerationSizeMb: 128 },
         workerData: {
           module: this.registration.module,
@@ -176,6 +185,7 @@ class RunWorker {
           generation,
           maxInFlight: this.limits.maxInFlight,
           maxPayloadBytes: this.limits.maxPayloadBytes,
+          ...(this.registration.bundle ? { bundle: this.registration.bundle } : {}),
         },
       },
     );
@@ -215,13 +225,23 @@ class RunWorker {
             const expected = this.registration;
             if (
               canonical(json(message.value)) !==
-              canonical({
-                type: expected.type,
-                version: expected.version,
-                inputSchema: expected.inputSchema,
-                resultSchema: expected.resultSchema,
-                messageSchema: expected.messageSchema,
-              })
+              canonical(
+                expected.bundle
+                  ? {
+                      $schema: expected.bundle.declaration.$schema,
+                      digest: expected.bundle.digest,
+                      inputSchema: expected.inputSchema,
+                      resultSchema: expected.resultSchema,
+                      messageSchema: expected.messageSchema,
+                    }
+                  : {
+                      type: expected.type,
+                      version: expected.version,
+                      inputSchema: expected.inputSchema,
+                      resultSchema: expected.resultSchema,
+                      messageSchema: expected.messageSchema,
+                    },
+              )
             )
               throw new TaskError("unsupported_contract", "隔离类型与宿主注册契约不同。");
             ready = true;
@@ -550,7 +570,7 @@ class RunWorker {
       uncertain: false,
     });
     try {
-      await this.channel.dispatch?.(runId, this.generation!);
+      const identity = await this.channel.dispatch?.(runId, this.generation!);
       if (!this.worker || this.exitObserved || this.closing)
         throw new TaskError("run_finished", "Run Worker 已退出，不再投递入口。");
       this.worker.postMessage({
@@ -559,6 +579,7 @@ class RunWorker {
         runId,
         scope,
         input: parsed,
+        ...(identity ? { identity } : {}),
       });
       this.dispatched = true;
     } catch (error) {
@@ -821,6 +842,7 @@ export class TypeSupervisor {
   }
   async start(): Promise<void> {
     if (this.closing) throw new TaskError("engine_closed", "类型守护已关闭。");
+    if (this.registration.bundle) return;
     await this.verifier.start();
   }
   async run(runId: string, input: Json, scope: string): Promise<void> {
@@ -867,6 +889,10 @@ export class TypeSupervisor {
   }
   async verify(value: Json, mode = "historical"): Promise<void> {
     if (this.closing) throw new TaskError("engine_closed", "类型守护已关闭。");
+    if (this.registration.bundle) {
+      compileJsonSchema(this.registration.resultSchema).validate(value);
+      return;
+    }
     await this.verifier.verify(value, mode);
   }
   cancel(runId: string): void {

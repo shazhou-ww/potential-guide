@@ -1,40 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { newId } from "@potential-guide/task-engine";
-import { TaskError, type TaskPage, type TaskSnapshot } from "@potential-guide/task-protocol";
+import { TaskError, type TaskPage } from "@potential-guide/task-protocol";
 import { caller, flush, harness } from "../../task-engine/test/fixtures.js";
 import { createTaskHandler } from "../src/index.js";
+import { coordinatorService, fixtureBundle } from "./service.js";
 
-test("discovery uses submit authority and optional quoted If-Match guards raw idempotency", async () => {
+test("type discovery is absent and legacy If-Match cannot replace a fixed Bundle reference", async () => {
   const h = await harness();
   const handler = createTaskHandler({
-    service: h.engine,
+    service: coordinatorService(h.engine),
     resolveCaller: (request) => ({
       ...caller,
       subject: request.headers.get("authorization") ?? "",
     }),
   });
   try {
-    assert.equal((await handler(new Request("http://host/task-types"))).status, 401);
-    assert.equal(
-      (
-        await handler(
-          new Request("http://host/task-types", { headers: { authorization: "denied" } }),
-        )
-      ).status,
-      403,
-    );
     const discovery = await handler(
       new Request("http://host/task-types", { headers: { authorization: "tester" } }),
     );
-    assert.equal(discovery.status, 200);
-    const found = (await discovery.json()) as {
-      type: string;
-      version: string;
-      revision: string;
-      inputSchema: unknown;
-    }[];
-    const echo = found.find((entry) => entry.type === "echo")!;
+    assert.equal(discovery.status, 404);
     const id = newId(h.clock.now());
     const submit = (match?: string, text = "hello") =>
       handler(
@@ -46,16 +31,16 @@ test("discovery uses submit authority and optional quoted If-Match guards raw id
             "Idempotency-Key": id,
             ...(match === undefined ? {} : { "If-Match": match }),
           },
-          body: JSON.stringify({ type: "echo", text, timeoutMs: 100 }),
+          body: JSON.stringify({ bundle: fixtureBundle, text, timeoutMs: 100 }),
         }),
       );
-    assert.equal((await submit(`"${"0".repeat(64)}"`)).status, 412);
+    assert.equal((await submit(`"${"0".repeat(64)}"`)).status, 400);
     assert.deepEqual(h.store.read().facts.tasks, {});
     assert.ok(h.store.read().events.every((event) => event.type === "window.advanced"));
-    assert.equal((await submit(echo.revision)).status, 400);
-    assert.equal((await submit(`"${echo.revision}"`)).status, 202);
-    assert.equal((await submit()).status, 202);
-    assert.equal((await submit(`"${echo.revision}"`, "changed")).status, 409);
+    assert.equal((await submit(fixtureBundle.digest)).status, 400);
+    assert.equal((await submit(`"${fixtureBundle.digest}"`)).status, 400);
+    assert.equal((await submit()).status, 200);
+    assert.equal((await submit(undefined, "changed")).status, 409);
     assert.ok(!JSON.stringify(h.engine.getRequest(id, caller)).includes("Revision"));
   } finally {
     await h.close();
@@ -66,7 +51,7 @@ test("Web adapter and core preserve body/header identity, auth and errors withou
   const h = await harness();
   const audit: { requestId?: string; code: string }[] = [];
   const handler = createTaskHandler({
-    service: h.engine,
+    service: coordinatorService(h.engine),
     prefix: "/api",
     auditRejection: (event) => audit.push(event),
     resolveCaller: (request) => {
@@ -85,14 +70,15 @@ test("Web adapter and core preserve body/header identity, auth and errors withou
   }
   try {
     const id = newId(h.clock.now());
-    const body = { type: "echo", text: "hello", timeoutMs: 100 };
+    const body = { bundle: fixtureBundle, text: "hello", timeoutMs: 100 };
     const response = await request("/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Idempotency-Key": id },
       body: JSON.stringify(body),
     });
-    assert.equal(response.status, 202);
-    const task = (await response.json()) as TaskSnapshot;
+    assert.equal(response.status, 200);
+    const accepted = (await response.json()) as { taskId: string };
+    const task = h.engine.getTask(accepted.taskId, caller);
     assert.equal(task.requestId, id);
     assert.equal(task.stage, "initial");
     const obsolete = await request("/tasks", {
@@ -148,7 +134,10 @@ test("GET task directory strictly parses bounded filters and preserves query err
     limits: { pageSize: 1, queryLifetimeMs: 100 },
     authorize: (_who, operation) => operation !== "list" || allowed,
   });
-  const handler = createTaskHandler({ service: h.engine, resolveCaller: () => caller });
+  const handler = createTaskHandler({
+    service: coordinatorService(h.engine),
+    resolveCaller: () => caller,
+  });
   const request = (query = "") => handler(new Request(`http://host/tasks${query}`));
   try {
     const task = h.submit();
@@ -180,7 +169,7 @@ test("GET task directory strictly parses bounded filters and preserves query err
     const encoded = encodeURIComponent(task.receivedAt.replace("Z", "+00:00"));
     assert.equal((await request(`?createdFrom=${encoded}`)).status, 200);
     allowed = false;
-    assert.equal((await handler(new Request("http://host/task-types"))).status, 200);
+    assert.equal((await handler(new Request("http://host/task-types"))).status, 404);
     assert.equal((await request(`?type=echo&sort=updated-desc&cursor=${page.next}`)).status, 403);
     allowed = true;
     h.clock.setTime(h.clock.now() + 100);
@@ -202,7 +191,10 @@ test("directory capacity and byte failures are not successful empty HTTP pages",
     try {
       h.submit();
       h.submit();
-      const handler = createTaskHandler({ service: h.engine, resolveCaller: () => caller });
+      const handler = createTaskHandler({
+        service: coordinatorService(h.engine),
+        resolveCaller: () => caller,
+      });
       const response = await handler(new Request("http://host/tasks"));
       assert.equal(response.status, expected);
       assert.equal("tasks" in ((await response.json()) as object), false);
@@ -214,7 +206,11 @@ test("directory capacity and byte failures are not successful empty HTTP pages",
 
 test("SSE handoff and Last-Event-ID use durable facts; disconnect never cancels", async () => {
   const h = await harness();
-  const handler = createTaskHandler({ service: h.engine, resolveCaller: () => caller, pollMs: 1 });
+  const handler = createTaskHandler({
+    service: coordinatorService(h.engine),
+    resolveCaller: () => caller,
+    pollMs: 1,
+  });
   try {
     const task = h.submit();
     const response = await handler(
@@ -264,7 +260,7 @@ test("SSE handoff and Last-Event-ID use durable facts; disconnect never cancels"
 test("HTTP payload bounds, filter checks and expired cursor mapping", async () => {
   const h = await harness({ limits: { retentionMs: 5 } });
   const handler = createTaskHandler({
-    service: h.engine,
+    service: coordinatorService(h.engine),
     resolveCaller: () => caller,
     maxBodyBytes: 128,
   });

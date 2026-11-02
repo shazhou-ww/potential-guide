@@ -27,7 +27,8 @@
     "@potential-guide/task-protocol": "workspace:^"
   },
   "devDependencies": {
-    "@potential-guide/task-engine": "workspace:^"
+    "@potential-guide/task-engine": "workspace:^",
+    "@potential-guide/task-sdk": "workspace:^"
   },
   "engines": {
     "node": ">=22.13.0"

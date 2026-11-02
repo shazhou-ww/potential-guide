@@ -1,5 +1,6 @@
 protocol:
   - "@potential-guide/task-protocol"
+  - "@potential-guide/task-sdk"
   - "@potential-guide/task-engine"
   - "@potential-guide/task-engine-http"
   - "@potential-guide/task-engine-storage"

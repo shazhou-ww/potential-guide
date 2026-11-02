@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 import { Worker } from "node:worker_threads";
+import { checkerWorkerSource } from "@potential-guide/check-runtime-files";
 import {
   type CheckerManifest,
   type ContractArtifact,
@@ -39,22 +40,20 @@ export function runChecker(
       mkdirSync(dirname(destination), { recursive: true, mode: 0o700 });
       writeFileSync(destination, bytes, { flag: "wx", mode: 0o400 });
     }
-    worker = new Worker(
-      new URL(import.meta.resolve("@potential-guide/check-runtime-files/worker")),
-      {
-        execArgv: [],
-        env: { ...options.environment, NODE_OPTIONS: "" },
-        workerData: {
-          entry: join(directory, artifact.manifest.entry),
-          source: artifact.files.get(artifact.manifest.entry)!.toString("utf8"),
-          generation: permit.generation,
-          messageBytes: 8 * 1024 * 1024,
-        },
-        resourceLimits: { maxOldGenerationSizeMb: options.memoryMb, maxYoungGenerationSizeMb: 32 },
-        stdout: true,
-        stderr: true,
+    worker = new Worker(checkerWorkerSource, {
+      execArgv: [],
+      eval: true,
+      env: { ...options.environment, NODE_OPTIONS: "" },
+      workerData: {
+        entry: join(directory, artifact.manifest.entry),
+        source: artifact.files.get(artifact.manifest.entry)!.toString("utf8"),
+        generation: permit.generation,
+        messageBytes: 8 * 1024 * 1024,
       },
-    );
+      resourceLimits: { maxOldGenerationSizeMb: options.memoryMb, maxYoungGenerationSizeMb: 32 },
+      stdout: true,
+      stderr: true,
+    });
   } catch (error) {
     rmSync(directory, { recursive: true, force: true });
     throw error;

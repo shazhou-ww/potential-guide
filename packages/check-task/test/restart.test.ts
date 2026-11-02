@@ -6,7 +6,11 @@ import { resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { newId } from "@potential-guide/task-engine";
-import type { TaskSnapshot } from "@potential-guide/task-protocol";
+import type {
+  TaskSnapshot,
+  BundleReference,
+  SubmissionResult,
+} from "@potential-guide/task-protocol";
 
 for (const transport of ["https", "file"])
   test(`real ${transport} SQLite/Node-worker restart preserves identity/deadline, original bytes and never reruns unknown run`, async () => {
@@ -20,12 +24,7 @@ for (const transport of ["https", "file"])
     async function launch(mode: string) {
       const child = fork(
         fileURLToPath(new URL("./restart-child.mjs", import.meta.url)),
-        [
-          database,
-          resolve(root, `workers-${mode}`),
-          mode,
-          ...(transport === "file" ? [archive] : []),
-        ],
+        [database, resolve(root, `workers-${mode}`), mode, archive, transport],
         { silent: true, execArgv: [] },
       );
       children.push(child);
@@ -34,33 +33,36 @@ for (const transport of ["https", "file"])
       child.stderr!.on("data", (chunk) => {
         output += chunk;
       });
-      const url = await new Promise<string>((resolve, reject) => {
-        const timer = setTimeout(
-          () => reject(new Error(`Child readiness timeout: ${output}`)),
-          10000,
-        );
-        child.once("message", (message) => {
-          clearTimeout(timer);
-          resolve((message as { url: string }).url);
-        });
-        child.once("error", (error) => {
-          clearTimeout(timer);
-          reject(error);
-        });
-        child.once("exit", () => {
-          clearTimeout(timer);
-          reject(new Error(`Child exited: ${output}`));
-        });
-      });
-      return { child, url };
+      const ready = await new Promise<{ url: string; bundle: BundleReference }>(
+        (resolve, reject) => {
+          const timer = setTimeout(
+            () => reject(new Error(`Child readiness timeout: ${output}`)),
+            10000,
+          );
+          child.once("message", (message) => {
+            clearTimeout(timer);
+            resolve(message as { url: string; bundle: BundleReference });
+          });
+          child.once("error", (error) => {
+            clearTimeout(timer);
+            reject(error);
+          });
+          child.once("exit", () => {
+            clearTimeout(timer);
+            reject(new Error(`Child exited: ${output}`));
+          });
+        },
+      );
+      return { child, ...ready };
     }
     const headers = { authorization: "Bearer test", "content-type": "application/json" };
+    let bundle: BundleReference;
     async function submit(url: string, name: string, spin: boolean) {
       const response = await fetch(`${url}/tasks`, {
         method: "POST",
         headers: { ...headers, "Idempotency-Key": newId() },
         body: JSON.stringify({
-          type: "check",
+          bundle,
           checker: {
             kind: "checker",
             url:
@@ -72,8 +74,17 @@ for (const transport of ["https", "file"])
           timeoutMs: 30000,
         }),
       });
-      assert.equal(response.status, 202);
-      return (await response.json()) as TaskSnapshot;
+      assert.ok(response.ok);
+      let result = (await response.json()) as SubmissionResult;
+      while (result.status === "preparing")
+        result = (await (
+          await fetch(`${url}/requests/${result.requestId}/status?waitMs=1000`, { headers })
+        ).json()) as SubmissionResult;
+      assert.equal(result.status, "accepted");
+      if (result.status !== "accepted") throw Error("Expected accepted.");
+      return (await (
+        await fetch(`${url}/tasks/${result.taskId}`, { headers })
+      ).json()) as TaskSnapshot;
     }
     async function wait(url: string, id: string, stage: string) {
       for (let count = 0; count < 500; count++) {
@@ -87,6 +98,7 @@ for (const transport of ["https", "file"])
     }
     try {
       const first = await launch("initial");
+      bundle = first.bundle;
       const running = await submit(first.url, "running", true);
       const bound = await wait(first.url, running.taskId, "running");
       for (let attempt = 0; ; attempt++) {
@@ -120,7 +132,7 @@ for (const transport of ["https", "file"])
       }
       first.child.kill("SIGKILL");
       await exits.get(first.child);
-      if (transport === "file") await rm(archive);
+      await rm(archive);
       const restarted = await launch("restart");
       const interrupted = await wait(restarted.url, running.taskId, "stopped");
       assert.equal(interrupted.error, undefined);

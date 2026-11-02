@@ -8,7 +8,7 @@ objectives:
       {
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm"], "runtime": "node",
-        "allows": ["@potential-guide/task-protocol", "@potential-guide/task-engine"],
+        "allows": ["@potential-guide/task-protocol", "@potential-guide/task-engine", "@potential-guide/task-sdk"],
         "entries": ["src/index.ts"], "generated": [], "deliveries": [],
         "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "generic-task-server", "kind": "cli"}]
       }

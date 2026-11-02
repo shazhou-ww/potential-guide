@@ -1,7 +1,7 @@
 # @potential-guide/task-engine-storage
 
 显式本地 SQLite Store：WAL、foreign keys、FULL durability、事务事件/索引/检查点及独占 lease。
-Facts projection 与 SQLite user_version 均为 4。旧版本、未知格式和混合记录在写入前明确拒绝；
+Facts projection 与 SQLite user_version 均为 5。v4、旧版本、未知格式和混合记录在写入前明确拒绝；
 不会迁移、覆盖或删除现有用户数据库，请选择新路径。
 
 Task 仅持久化受理/取消事实；必要的资格观测载荷只有 observedAt，不写绑定或 Task 权威快照。
@@ -13,6 +13,8 @@ Run 从准备前开始；开始、投递代际、进度、结构化证据、可�
 固定水位分页/SSE 和受引用/未回收资源保护的 compact 不使下界回退。
 未确认清理不释放 Engine lease，也不伪造 reclaimed 事实。
 
-业务历史复验在原类型 Worker，不在 Store 加载动态代码；
-原配置、版本/契约或内容不可用时明确拒绝，不提供成功形状 fallback。
+Preparing Request、到达时资格、原始意图和处理结果也持久化；
+accepted 与 Task 创建同事务，rejected 保留幂等依据。
+终态跟踪可见性按首次 terminalAt 单独清理，不清理准备中请求，也不删除 Task。
+历史读取不执行原业务 Worker，不因 Bundle 内容淘汰而重跑或丢失事实。
 完整说明见 [Task Engine](../../docs/task-engine.md)。

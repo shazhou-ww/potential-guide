@@ -262,20 +262,25 @@ test("ordinary late GETs remain discardable; cancellation requires a real receip
   assert.throws(() => tasks.observe(running, Number.NaN), /watermark/);
 });
 test("submission change notifications never replay accepted snapshots", async () => {
+  const bundle = { url: "https://example.test/task", digest: `sha256:${"a".repeat(64)}` };
   const tasks = new TaskSnapshots();
   let seeds = 0;
   const bar = new SubmissionBar(
-    async (entry) => ({ ...initial, requestId: entry.id }),
+    async (entry) => ({ status: "accepted", taskId: initial.taskId, requestId: entry.id }),
     () => {},
     (entry) => {
       seeds++;
       tasks.seed(entry.snapshot!);
     },
+    undefined,
+    async (entry) => ({ ...initial, requestId: entry.id, bundle }),
   );
   const endpoint = { id: "one", label: "one", binding: "one" };
-  await bar.quick(endpoint, { type: "echo" }, "a".repeat(64));
+  const created = await bar.quick(endpoint, { bundle }, bundle.digest);
   const canceled = {
     ...initial,
+    requestId: created.id,
+    bundle,
     canceled: true,
     revision: "domain:12",
     canceledAt: "2026-10-31T01:00:00.000Z",
@@ -283,7 +288,7 @@ test("submission change notifications never replay accepted snapshots", async ()
   };
   tasks.observe(canceled, 12);
   const batch = bar.create(endpoint);
-  bar.add(batch, { type: "echo" }, "a".repeat(64));
+  bar.add(batch, { bundle }, bundle.digest);
   bar.changed();
   assert.equal(seeds, 1);
   assert.deepEqual(tasks.values.get(initial.taskId), canceled);

@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "../../.cache/tsbuildinfo/task-sdk.tsbuildinfo"
+  },
+  "references": [{ "path": "../task-protocol" }, { "path": "../check-artifacts" }],
+  "include": ["src/**/*.ts"]
+}

@@ -32,7 +32,11 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
-    "@potential-guide/task-protocol": "workspace:^"
+    "@potential-guide/task-protocol": "workspace:^",
+    "@potential-guide/check-artifacts": "workspace:^"
+  },
+  "devDependencies": {
+    "@potential-guide/task-sdk": "workspace:^"
   },
   "engines": {
     "node": ">=22.13.0"

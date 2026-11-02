@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { runtimeRevision } from "./runtime-identity.js";
+import { checkerRuntimeRevision } from "@potential-guide/check-runtime-files";
 import {
   type ArtifactReference,
   assertRuntime,
@@ -133,7 +134,7 @@ type Configuration = Omit<CheckTaskOptions, "source">;
 export function createIsolatedCheck(
   configuration: Configuration,
   resources: Resources,
-): TaskType<CheckInput, Json> {
+): TaskType<CheckInput, Json> & { environment: string } {
   const identities = new WeakMap<AbortSignal, object>();
   const starts = new Map<string, () => void>();
   const implementation = createCheckImplementation(
@@ -157,6 +158,7 @@ export function createIsolatedCheck(
     (runId) => starts.get(runId)?.(),
   );
   return {
+    environment: implementation.environment,
     type: implementation.type,
     version: implementation.version,
     inputSchema: implementation.inputSchema,
@@ -357,19 +359,8 @@ export function createCheckImplementation(
     architecture: process.arch,
     adapter: "node-commonjs-v1",
     adapterRevision: createHash("sha256")
-      .update(
-        readFileSync(new URL(import.meta.resolve("@potential-guide/check-runtime-files/worker"))),
-      )
-      .update(
-        readFileSync(
-          new URL(import.meta.resolve("@potential-guide/check-runtime-files/worker-json")),
-        ),
-      )
-      .update(
-        readFileSync(
-          new URL(import.meta.url.endsWith(".ts") ? "./worker.ts" : "./worker.js", import.meta.url),
-        ),
-      )
+      .update(runtimeRevision)
+      .update(checkerRuntimeRevision)
       .digest("hex"),
     configuration: createHash("sha256")
       .update(canonicalJson({ variables, memoryMb, wallMs }))

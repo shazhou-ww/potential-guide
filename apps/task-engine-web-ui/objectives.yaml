@@ -8,7 +8,7 @@ objectives:
       {
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["tool"], "runtime": "node",
-        "allows": ["@potential-guide/task-protocol", "@potential-guide/task-engine", "@potential-guide/task-engine-server"],
+        "allows": ["@potential-guide/task-protocol", "@potential-guide/task-engine", "@potential-guide/task-engine-server", "@potential-guide/task-sdk"],
         "entries": ["src/main.ts", "src/server.ts", "src/browser.ts"],
         "generated": [], "deliveries": [], "joins": []
       }

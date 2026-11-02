@@ -8,8 +8,11 @@ objectives:
       {
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm"], "runtime": "node",
-        "allows": ["@potential-guide/task-protocol"],
-        "entries": ["src/index.ts", "src/pool.ts", "src/testing.ts", "src/type-worker.ts"], "generated": [], "deliveries": [],
-        "nodeWorkerImports": [{"path": "src/type-worker.ts", "reason": "宿主注册的 Node 类型守护仅加载经 fileURLToPath、realpathSync 与 pathToFileURL 确认的本地模块；外部插件内容不由包内静态图枚举。"}],
+        "allows": ["@potential-guide/task-protocol", "@potential-guide/check-artifacts", "@potential-guide/task-sdk"],
+        "entries": ["src/index.ts", "src/pool.ts", "src/testing.ts", "src/type-worker.ts", "src/type-supervisor.ts"], "generated": [], "deliveries": [],
+        "nodeWorkerImports": [
+          {"path": "src/type-worker.ts", "reason": "内部协调器回归保留的本地模块适配边界；不属于公开 Bundle 注册 API。"},
+          {"path": "src/type-supervisor.ts", "reason": "直接启动已通过完整文件树 Digest、声明与路径验证的 Bundle worker.cjs；外部 Bundle 内容不由包内源码图枚举。"}
+        ],
         "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "generic-task-server", "kind": "cli"}]
       }

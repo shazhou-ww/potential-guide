@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { newId } from "@potential-guide/task-engine";
 import { isTimedOut } from "@potential-guide/task-protocol";
+import { coordinatorSubmissions } from "../../task-engine/test/driver.js";
 import { probeResultReferences } from "../src/contracts.js";
 import type { ProbeResult } from "../src/index.js";
 import {
@@ -41,7 +42,7 @@ test("backward business clock preserves completion with an eligible independent 
           );
         }
         return {
-          service: h.engine,
+          service: coordinatorSubmissions(h.engine),
           caller: { scope, subject: "trusted-probe" },
           waitForTaskRelease: (id, caller) => h.engine.waitForTaskRelease(id, caller),
         };

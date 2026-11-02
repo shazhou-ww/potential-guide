@@ -8,7 +8,8 @@ import {
   type Store,
   TaskError,
 } from "@potential-guide/task-protocol";
-import { createTaskEngine, newId } from "../src/index.js";
+import { createTaskEngine } from "../src/engine.js";
+import { newId } from "../src/index.js";
 import { MemoryStore } from "../src/testing.js";
 import { type TypeChannel, TypeSupervisor } from "../src/type-supervisor.js";
 

@@ -24,7 +24,7 @@ export function revision(facts: Pick<Facts, "dataDomain" | "watermark">): string
 }
 export function emptyFacts(dataDomain = "test-domain"): Facts {
   return {
-    projectionVersion: 4,
+    projectionVersion: 5,
     dataDomain,
     watermark: 0,
     admissionLowerBound: null,
@@ -33,16 +33,18 @@ export function emptyFacts(dataDomain = "test-domain"): Facts {
     runs: {},
     messages: {},
     requests: {},
+    submissions: {},
   };
 }
 export function assertFactsVersion(facts: Facts): void {
   if (
-    facts?.projectionVersion !== 4 ||
+    facts?.projectionVersion !== 5 ||
     !facts.dataDomain ||
     !facts.tasks ||
     !facts.runs ||
     !facts.messages ||
     !facts.requests ||
+    !facts.submissions ||
     !Array.isArray(facts.observations) ||
     !Number.isSafeInteger(facts.watermark) ||
     facts.watermark < 0 ||
@@ -67,6 +69,48 @@ export function assertFactsVersion(facts: Facts): void {
   for (const run of Object.values(facts.runs))
     if (!["starts-after-eligible", "terminates-after-eligible"].includes(run.binding.matchPolicy))
       fail("unsupported_version", "Unsupported stored Run policy.");
+  for (const [id, record] of Object.entries(facts.submissions)) {
+    if (
+      !record ||
+      record.request?.requestId !== id ||
+      typeof record.caller?.scope !== "string" ||
+      !record.caller.scope ||
+      typeof record.caller.subject !== "string" ||
+      !record.caller.subject ||
+      !Number.isSafeInteger(record.qualifiedLowerBound) ||
+      !["preparing", "accepted", "rejected"].includes(record.decision?.status) ||
+      record.decision.requestId !== id ||
+      (record.resultForgotten !== undefined && record.resultForgotten !== true)
+    )
+      fail("unsupported_version", "Unsupported stored Request processing record.");
+    try {
+      ulid(id);
+      timestamp(record.arrivedAt);
+    } catch {
+      fail("unsupported_version", "Invalid stored Request qualification.");
+    }
+    if (record.decision.status === "preparing") {
+      if (record.decision.trackingToken !== id || record.terminalAt || record.resultForgotten)
+        fail("unsupported_version", "Invalid preparing Request.");
+    } else {
+      try {
+        timestamp(record.terminalAt);
+      } catch {
+        fail("unsupported_version", "Terminal Request needs its original terminal time.");
+      }
+      if (record.decision.status === "accepted") {
+        try {
+          ulid(record.decision.taskId);
+        } catch {
+          fail("unsupported_version", "Invalid accepted Task identity.");
+        }
+      } else if (
+        typeof record.decision.error?.code !== "string" ||
+        typeof record.decision.error.message !== "string"
+      )
+        fail("unsupported_version", "Invalid persisted rejection.");
+    }
+  }
 }
 export function restoreTaskUpdates(view: StoreView): StoreView {
   assertFactsVersion(view.facts);
@@ -102,6 +146,7 @@ interface Index {
   watermark: number;
   groups: Map<string, RunRecord[]>;
   matches: Map<string, Match | null>;
+  invalidations: Map<string, { sequence: number; observedAt: string }>;
 }
 const indices = new WeakMap<Facts, Index>();
 const comparisonContracts = new Map<string, InputContract>();
@@ -129,7 +174,12 @@ function group(record: Pick<TaskRecord, "binding" | "input">): string {
 function index(facts: Facts): Index {
   const existing = indices.get(facts);
   if (existing?.watermark === facts.watermark) return existing;
-  const value: Index = { watermark: facts.watermark, groups: new Map(), matches: new Map() };
+  const value: Index = {
+    watermark: facts.watermark,
+    groups: new Map(),
+    matches: new Map(),
+    invalidations: new Map(),
+  };
   for (const run of Object.values(facts.runs).sort(
     (a, b) => a.startedSequence - b.startedSequence,
   )) {
@@ -145,41 +195,49 @@ function qualification(facts: Facts, task: TaskRecord): Match | undefined {
   const cache = index(facts);
   const saved = cache.matches.get(task.taskId);
   if (saved !== undefined) return saved ?? undefined;
-  for (const run of cache.groups.get(group(task)) ?? []) {
-    if (task.binding.matchPolicy === "starts-after-eligible" && run.startedAt < task.eligibleAt)
+  const candidates = cache.groups.get(group(task)) ?? [];
+  let match: Match | undefined;
+  for (const observation of facts.observations) {
+    if (observation.sequence < task.receivedSequence) continue;
+    if (
+      match &&
+      task.binding.matchPolicy === "terminates-after-eligible" &&
+      match.run.exit?.basis === "worker" &&
+      match.run.exit.sequence <= observation.sequence &&
+      match.run.exit.occurredAt < task.eligibleAt
+    ) {
+      cache.invalidations.set(task.taskId, {
+        sequence: match.run.exit.sequence,
+        observedAt: match.run.exit.occurredAt,
+      });
+      match = undefined;
+    }
+    if (
+      match ||
+      observation.sequence >= (task.canceledSequence ?? Infinity) ||
+      observation.observedAt < task.eligibleAt ||
+      observation.observedAt > task.deadlineAt
+    )
       continue;
-    const lower = Math.max(task.receivedSequence, run.startedSequence);
-    const upper = Math.min(
-      task.canceledSequence ?? Infinity,
-      run.stopRequested?.sequence ?? Infinity,
-      run.exit?.basis === "recovery" ? run.exit.sequence : Infinity,
+    const run = candidates.find(
+      (candidate) =>
+        candidate.startedSequence <= observation.sequence &&
+        (candidate.stopRequested?.sequence ?? Infinity) > observation.sequence &&
+        !(
+          candidate.exit?.basis === "recovery" && candidate.exit.sequence <= observation.sequence
+        ) &&
+        (task.binding.matchPolicy === "starts-after-eligible"
+          ? candidate.startedAt >= task.eligibleAt
+          : !(
+              candidate.exit?.basis === "worker" &&
+              candidate.exit.sequence <= observation.sequence &&
+              candidate.exit.occurredAt < task.eligibleAt
+            )),
     );
-    let left = 0,
-      right = facts.observations.length;
-    while (left < right) {
-      const middle = Math.floor((left + right) / 2);
-      if ((facts.observations[middle]?.sequence ?? Infinity) < lower) left = middle + 1;
-      else right = middle;
-    }
-    for (let i = left; i < facts.observations.length; i++) {
-      const observation = facts.observations[i];
-      if (!observation || observation.sequence >= upper) break;
-      if (observation.observedAt < task.eligibleAt || observation.observedAt > task.deadlineAt)
-        continue;
-      if (
-        task.binding.matchPolicy === "terminates-after-eligible" &&
-        run.exit &&
-        run.exit.sequence <= observation.sequence &&
-        run.exit.occurredAt < task.eligibleAt
-      )
-        continue;
-      const match = { run, ...observation };
-      cache.matches.set(task.taskId, match);
-      return match;
-    }
+    if (run) match = { run, ...observation };
   }
-  cache.matches.set(task.taskId, null);
-  return undefined;
+  cache.matches.set(task.taskId, match ?? null);
+  return match;
 }
 export function matchedRun(facts: Facts, task: TaskRecord): RunRecord | undefined {
   return qualification(facts, task)?.run;
@@ -198,6 +256,8 @@ export function project(
   const updates: [number, string][] = [[task.receivedSequence, task.receivedAt]];
   if (task.canceledSequence !== undefined && task.canceledAt)
     updates.push([task.canceledSequence, task.canceledAt]);
+  const invalidation = index(facts).invalidations.get(taskId);
+  if (invalidation) updates.push([invalidation.sequence, invalidation.observedAt]);
   if (match) updates.push([match.sequence, match.observedAt]);
   if (run?.stoppingSequence !== undefined && run.stoppingAt)
     updates.push([run.stoppingSequence, run.stoppingAt]);
@@ -218,6 +278,9 @@ export function project(
     revision: revision(facts),
     dataDomain: facts.dataDomain,
     canceled: !!task.canceledAt,
+    ...(task.binding.bundle
+      ? { bundle: structuredClone(task.binding.bundle), name: task.binding.declaration!.name }
+      : {}),
     ...(task.canceledAt ? { canceledAt: task.canceledAt } : {}),
   };
   if (run && match) {
@@ -244,6 +307,9 @@ export function projectRun(facts: Facts, runId: string, now: number): RunSnapsho
     fail("history_gap", "Completed Run result is missing.");
   const snapshot: RunSnapshot = {
     runId,
+    ...(run.binding.bundle
+      ? { bundle: structuredClone(run.binding.bundle), name: run.binding.declaration!.name }
+      : {}),
     dataDomain: facts.dataDomain,
     revision: revision(facts),
     timestamp: at(now),
@@ -300,6 +366,56 @@ export function reduce(prefix: Facts, events: readonly FactEvent[]): Facts {
     if ((task && task.binding.scope !== event.scope) || (run && run.binding.scope !== event.scope))
       fail("invalid_fact", "Source scope mismatch.");
     switch (event.type) {
+      case "submission.preparing": {
+        const record = event.data.record;
+        const id = ulid(record.request.requestId);
+        const time = requestTime(id);
+        if (
+          facts.submissions[id] ||
+          facts.requests[id] ||
+          record.decision.status !== "preparing" ||
+          record.decision.requestId !== id ||
+          record.decision.trackingToken !== id ||
+          record.caller.scope !== event.scope ||
+          record.arrivedAt !== event.occurredAt ||
+          record.terminalAt ||
+          record.resultForgotten ||
+          record.qualifiedLowerBound !== facts.admissionLowerBound ||
+          time < record.qualifiedLowerBound
+        )
+          fail("invalid_fact", "Invalid preparing admission.");
+        facts.submissions[id] = structuredClone(record);
+        break;
+      }
+      case "submission.resolved": {
+        const record = facts.submissions[event.data.requestId];
+        const decision = event.data.decision;
+        if (
+          !record ||
+          record.caller.scope !== event.scope ||
+          record.decision.status !== "preparing" ||
+          decision.requestId !== event.data.requestId
+        )
+          fail("invalid_fact", "Invalid terminal admission.");
+        if (
+          decision.status === "accepted" &&
+          facts.requests[decision.requestId]?.taskId !== decision.taskId
+        )
+          fail("invalid_fact", "Accepted admission requires its atomically created Task.");
+        if (decision.status === "rejected" && facts.requests[decision.requestId])
+          fail("invalid_fact", "Rejected admission cannot create a Task.");
+        record.decision = structuredClone(decision);
+        record.terminalAt = event.occurredAt;
+        break;
+      }
+      case "submission.results-forgotten":
+        for (const id of event.data.requestIds) {
+          const record = facts.submissions[id];
+          if (!record || record.decision.status === "preparing" || record.resultForgotten)
+            fail("invalid_fact", "Cannot forget an in-flight or unavailable admission result.");
+          record.resultForgotten = true;
+        }
+        break;
       case "qualification-time-observed":
         if (
           event.scope !== "" ||
@@ -321,6 +437,14 @@ export function reduce(prefix: Facts, events: readonly FactEvent[]): Facts {
         for (const [id, credential] of Object.entries(facts.requests))
           if (!facts.tasks[credential.taskId] && requestTime(id) < event.data.lowerBound)
             delete facts.requests[id];
+        for (const [id, record] of Object.entries(facts.submissions))
+          if (
+            record.resultForgotten &&
+            record.decision.status !== "preparing" &&
+            requestTime(id) < event.data.lowerBound &&
+            (record.decision.status === "rejected" || !facts.tasks[record.decision.taskId])
+          )
+            delete facts.submissions[id];
         break;
       case "task.created": {
         const created = event.data.task;
@@ -341,13 +465,17 @@ export function reduce(prefix: Facts, events: readonly FactEvent[]): Facts {
         if (
           created.eligibleAt < created.receivedAt ||
           created.deadlineAt < created.eligibleAt ||
-          created.request.type !== created.binding.type ||
+          (created.binding.bundle
+            ? canonical(created.request.bundle!) !==
+              canonical(created.binding.bundle as unknown as import("./json.js").Json)
+            : created.request.type !== created.binding.type) ||
           !Number.isSafeInteger(created.request.timeoutMs) ||
           created.request.timeoutMs <= 0 ||
           Date.parse(created.deadlineAt) - Date.parse(created.eligibleAt) !==
             created.request.timeoutMs ||
           (facts.admissionLowerBound !== null &&
-            requestTime(created.request.requestId) < facts.admissionLowerBound)
+            requestTime(created.request.requestId) < facts.admissionLowerBound &&
+            facts.submissions[created.request.requestId]?.decision.status !== "preparing")
         )
           fail("invalid_fact", "Invalid accepted time anchors.");
         facts.tasks[created.taskId] = structuredClone(created);

@@ -1,16 +1,16 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, rm } from "node:fs/promises";
+import { mkdir, readdir, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   packContractArtifact,
   writeContractArtifact,
 } from "@potential-guide/check-artifacts/build";
 import { checkerSchemaUri, objectiveSchemaUri } from "@potential-guide/check-artifacts/contracts";
-import { createArtifactSource } from "@potential-guide/check-task";
 import { newId } from "@potential-guide/task-engine";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { composeProbeServer } from "./probe-config.mjs";
+import { buildExampleBundle } from "./build-bundles.mjs";
 
 const directory = resolve(".cache", `probe-integration-${randomUUID()}`);
 await mkdir(directory, { recursive: true });
@@ -71,7 +71,6 @@ await packContractArtifact(objective.directory, join(directory, "objective.tgz")
 const caller = { scope: "example", subject: "example" };
 const headers = { authorization: "Bearer fixture", "content-type": "application/json" };
 const body = {
-  type: "probe",
   objective: {
     kind: "objective",
     url: "https://example.test/objective.tgz",
@@ -81,20 +80,7 @@ const body = {
   timeoutMs: 20000,
 };
 function configure() {
-  // Test-only injected transport. Public source references remain HTTPS.
-  const source = createArtifactSource({
-    allowedOrigins: ["https://example.test"],
-    authorize(_reference, scope) {
-      assert.equal(scope, "example");
-    },
-    download(url) {
-      const filename = new URL(url).pathname === "/objective.tgz" ? "objective.tgz" : "checker.tgz";
-      return readFile(join(directory, filename));
-    },
-  });
   return composeProbeServer({
-    source,
-    directory: join(directory, "workers"),
     database: join(directory, "tasks.sqlite"),
     token: "fixture",
   });
@@ -123,7 +109,31 @@ async function observation(reader) {
 let server;
 try {
   server = await startTaskServer(configure());
-  const inProcess = server.engine.submit({ ...body, requestId: newId() }, caller);
+  const authorOptions = {
+    directory: join(directory, "author"),
+    sourceOptions: { allowedOrigins: ["https://example.test"] },
+    downloadResources: {
+      "https://example.test/checker.tgz": "resources/checker.tgz",
+      "https://example.test/objective.tgz": "resources/objective.tgz",
+    },
+    resources: {
+      "resources/checker.tgz": join(directory, "checker.tgz"),
+      "resources/objective.tgz": join(directory, "objective.tgz"),
+    },
+  };
+  const checkBundle = await buildExampleBundle({ ...authorOptions, kind: "check" });
+  const probeBundle = await buildExampleBundle({
+    ...authorOptions,
+    kind: "probe",
+    checkBundle,
+    serviceUrl: server.url,
+    token: "fixture",
+  });
+  body.bundle = probeBundle;
+  let inProcess = await server.engine.submit({ ...body, requestId: newId() }, caller);
+  while (inProcess.status === "preparing")
+    inProcess = await server.engine.getRequestStatus(inProcess.requestId, { waitMs: 1000 }, caller);
+  assert.equal(inProcess.status, "accepted");
   const local = await wait(() => server.engine.getTask(inProcess.taskId, caller));
   assert.equal(local.stage, "completed");
   assert.equal(local.result.observation.current.levelId, "initial");
@@ -133,8 +143,16 @@ try {
     headers: { ...headers, "Idempotency-Key": newId() },
     body: JSON.stringify(body),
   });
-  assert.equal(response.status, 202);
-  const accepted = await response.json();
+  assert.ok(response.ok);
+  let decision = await response.json();
+  while (decision.status === "preparing")
+    decision = await (
+      await fetch(`${server.url}/requests/${decision.requestId}/status?waitMs=1000`, { headers })
+    ).json();
+  assert.equal(decision.status, "accepted");
+  const accepted = await (
+    await fetch(`${server.url}/tasks/${decision.taskId}`, { headers })
+  ).json();
   const stream = await fetch(`${server.url}/events?taskId=${accepted.taskId}`, {
     headers: { ...headers, "Last-Event-ID": accepted.revision },
   });
@@ -184,7 +202,7 @@ try {
   );
   await server.close();
   server = undefined;
-  assert.deepEqual(await readdir(join(directory, "workers")), []);
+  assert.deepEqual(await readdir(".business-workers"), []);
   console.log(
     "probe-packed: exact artifacts, one Check worker, in-process + real HTTP/SSE reconnect, authorized child history, SQLite recovery, physical cleanup",
   );

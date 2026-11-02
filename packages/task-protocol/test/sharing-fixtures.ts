@@ -22,7 +22,7 @@ export const sharingCases: SharingCase[] = [
     schema: { type: "object", properties: text, required: ["text"] },
     left: { text: "hello", extra: 1 },
     right: { text: "hello", extra: 2 },
-    equal: true,
+    equal: false,
   },
   {
     name: "explicit fields",
@@ -44,7 +44,7 @@ export const sharingCases: SharingCase[] = [
     },
     left: { text: "hello", nested: { value: 1, extra: 1 } },
     right: { text: "hello", nested: { value: 1, extra: 2 } },
-    equal: true,
+    equal: false,
   },
   ...[false, true].map((equal) => ({
     name: `schema-valued dictionary equal=${equal}`,
@@ -53,7 +53,7 @@ export const sharingCases: SharingCase[] = [
       properties: { ...text, dictionary: { type: "object", additionalProperties: value } },
     },
     left: { text: "hello", dictionary: { key: { value: 1, extra: 1 } } },
-    right: { text: "hello", dictionary: { key: { value: equal ? 1 : 2, extra: 2 } } },
+    right: { text: "hello", dictionary: { key: { value: equal ? 1 : 2, extra: equal ? 1 : 2 } } },
     equal,
   })),
   ...["allOf", "anyOf", "oneOf"].map((keyword) => ({

@@ -17,7 +17,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -b",
+    "build": "node ../../scripts/embed-task-workers.mjs check-task && tsc -b",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "lint": "biome lint .",
     "test": "tsx --test \"test/*.test.ts\"",
@@ -30,6 +30,8 @@
     "@potential-guide/task-engine": "workspace:^"
   },
   "devDependencies": {
+    "@potential-guide/task-engine-http": "workspace:^",
+    "@potential-guide/task-sdk": "workspace:^",
     "@potential-guide/task-engine-server": "workspace:^",
     "@potential-guide/task-engine-storage": "workspace:^"
   },

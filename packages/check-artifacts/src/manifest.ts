@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { lstat, readdir, realpath } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { readArtifactTree } from "@potential-guide/check-runtime-files";
+import { type ArtifactTreeLimits, readArtifactTree } from "@potential-guide/check-runtime-files";
 import { Ajv, type AnySchema } from "ajv";
 import { artifactLimits, safePath } from "./paths.js";
 export { artifactLimits, safeComponent, safePath } from "./paths.js";
@@ -121,7 +121,11 @@ export function inspectFiles(files: ReadonlyMap<string, Buffer>) {
       .update(bytes);
   return { manifest, digest: `${artifactDigestPrefix}${hash.digest("hex")}`, files };
 }
-async function readPortableTree(directory: string) {
+async function readPortableTree(
+  directory: string,
+  configuration: Partial<ArtifactTreeLimits> = {},
+) {
+  const limits = { ...artifactLimits, ...configuration };
   const root = resolve(directory);
   const info = await lstat(root);
   if (!info.isDirectory() || info.isSymbolicLink() || (await realpath(root)) !== root)
@@ -134,7 +138,7 @@ async function readPortableTree(directory: string) {
       if (!safePath(name) || seen.has(name.toLowerCase()))
         throw new Error("Check artifact contains an unsafe or ambiguous path.");
       seen.add(name.toLowerCase());
-      if (seen.size > artifactLimits.paths) throw new Error("Check artifact exceeds path bounds.");
+      if (seen.size > limits.paths) throw new Error("Check artifact exceeds path bounds.");
       if (entry.isDirectory()) {
         directories.push(name);
         await visit(join(path, entry.name), `${name}/`);
@@ -143,7 +147,7 @@ async function readPortableTree(directory: string) {
     }
   }
   await visit(root, "");
-  const artifact = await readArtifactTree(root);
+  const artifact = await readArtifactTree(root, configuration);
   return { files: artifact.files, directories };
 }
 function rejectEmptyDirectories(
@@ -154,8 +158,11 @@ function rejectEmptyDirectories(
     throw new Error("Check artifact contains an undeclared empty directory.");
 }
 /** Bounded, no-link portable tree reader shared by declarative artifact consumers. */
-export async function readArtifactFiles(directory: string): Promise<ReadonlyMap<string, Buffer>> {
-  const { files, directories } = await readPortableTree(directory);
+export async function readArtifactFiles(
+  directory: string,
+  configuration: Partial<ArtifactTreeLimits> = {},
+): Promise<ReadonlyMap<string, Buffer>> {
+  const { files, directories } = await readPortableTree(directory, configuration);
   rejectEmptyDirectories(files, directories);
   return files;
 }

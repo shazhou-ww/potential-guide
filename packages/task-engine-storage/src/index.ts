@@ -46,11 +46,11 @@ function inspectFormat(db: DatabaseSync): boolean {
     if (db.prepare("SELECT name FROM sqlite_schema LIMIT 1").get()) unsupported();
     return false;
   }
-  if (version !== 4) unsupported();
+  if (version !== 5) unsupported();
   const checkpoint = db
     .prepare("SELECT projection_version, payload FROM checkpoint WHERE singleton=1")
     .get();
-  if (checkpoint?.projection_version !== 4 || typeof checkpoint.payload !== "string") unsupported();
+  if (checkpoint?.projection_version !== 5 || typeof checkpoint.payload !== "string") unsupported();
   assertFactsVersion(JSON.parse(checkpoint.payload) as Facts);
   return true;
 }
@@ -67,7 +67,7 @@ function preflight(filename: string): void {
   }
   if (length >= 64 && header.subarray(0, 16).toString() === "SQLite format 3\0") {
     const version = header.readUInt32BE(60);
-    if (version !== 0 && version !== 4) unsupported();
+    if (version !== 0 && version !== 5) unsupported();
   }
   const wal = `${filename}-wal`;
   if (existsSync(wal) && statSync(wal).size > 0) {
@@ -160,7 +160,7 @@ export class SqliteStore implements Store {
           singleton INTEGER PRIMARY KEY CHECK(singleton=1),
           payload TEXT NOT NULL, checksum TEXT NOT NULL
         );
-        PRAGMA user_version=4;
+        PRAGMA user_version=5;
       `);
       const domain = randomUUID();
       this.db
@@ -168,7 +168,7 @@ export class SqliteStore implements Store {
         .run(domain, `${this.filename}.owner`, randomBytes(32).toString("hex"));
       const initial = JSON.stringify(emptyFacts(domain));
       this.db
-        .prepare("INSERT OR IGNORE INTO checkpoint VALUES (1, 0, 4, ?, ?)")
+        .prepare("INSERT OR IGNORE INTO checkpoint VALUES (1, 0, 5, ?, ?)")
         .run(initial, checksum(initial));
       this.db
         .prepare("INSERT OR IGNORE INTO history_prefix VALUES (1, ?, ?)")
@@ -219,7 +219,7 @@ export class SqliteStore implements Store {
       !metadata ||
       typeof metadata.cursor_key !== "string" ||
       !checkpoint ||
-      checkpoint.projection_version !== 4 ||
+      checkpoint.projection_version !== 5 ||
       typeof checkpoint.payload !== "string" ||
       checksum(checkpoint.payload) !== checkpoint.checksum
     )

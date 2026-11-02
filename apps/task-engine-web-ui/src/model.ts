@@ -9,11 +9,11 @@ import type {
   TaskPage,
   TaskSnapshot,
   TaskSummary,
-  TaskTypeDiscovery,
+  SubmissionResult,
 } from "@potential-guide/task-protocol";
 import type { Endpoint } from "./server.js";
 
-export type Parameters = Record<string, unknown> & { type: string };
+export type Parameters = Record<string, unknown> & { bundle: { url: string; digest: string } };
 const stageValues = ["initial", "running", "stopping", "stopped", "completed", "failed"];
 export function sourcePosition(value: string): { domain: string; position: number } {
   if (typeof value !== "string" || value.length > 1024) throw new Error("源 revision 无效。");
@@ -128,7 +128,7 @@ export function newIdentity(): string {
 }
 export function originalParameters(request: Record<string, unknown>): Parameters {
   const { requestId: _generated, ...parameters } = structuredClone(request);
-  if (typeof parameters.type !== "string") throw new Error("原请求缺少类型，不能重做。");
+  bundleDigest(parameters as Parameters);
   return parameters as Parameters;
 }
 export function endpointMatches(left: Endpoint, right: Endpoint): boolean {
@@ -186,7 +186,7 @@ export class Api {
     return this.decode<T>(response);
   }
 }
-export type ReceiptState = "draft" | "sending" | "accepted" | "failed" | "unknown";
+export type ReceiptState = "draft" | "sending" | "preparing" | "accepted" | "failed" | "unknown";
 export interface Entry {
   id: string;
   endpoint: Endpoint;
@@ -196,6 +196,9 @@ export interface Entry {
   everUnknown: boolean;
   message: string;
   snapshot?: TaskSnapshot;
+  taskId?: string;
+  observing?: boolean;
+  decision?: "accepted" | "rejected";
 }
 export interface Batch {
   id: string;
@@ -206,9 +209,11 @@ export interface Batch {
 export class SubmissionBar {
   readonly batches: Batch[] = [];
   constructor(
-    readonly send: (entry: Entry) => Promise<TaskSnapshot>,
+    readonly send: (entry: Entry) => Promise<SubmissionResult>,
     readonly changed: () => void = () => {},
     readonly accepted: (entry: Entry) => void = () => {},
+    readonly status?: (entry: Entry) => Promise<SubmissionResult>,
+    readonly loadTask?: (entry: Entry, taskId: string) => Promise<TaskSnapshot>,
   ) {}
   create(endpoint: Endpoint): Batch {
     if (this.batches.length >= 100) throw new Error("本页批次上限 100；请移除已结束批次。");
@@ -222,6 +227,7 @@ export class SubmissionBar {
     return batch;
   }
   add(batch: Batch, parameters: Parameters, revision: string): Entry {
+    bundleDigest(parameters);
     if (batch.sending || batch.entries.some((item) => item.state !== "draft"))
       throw new Error("已发送批次不能再加入草稿。");
     if (batch.entries.length >= 50) throw new Error("每批最多 50 项。");
@@ -250,24 +256,91 @@ export class SubmissionBar {
     this.changed();
   }
   async retry(entry: Entry): Promise<void> {
+    if (entry.decision === "rejected") {
+      await this.refresh(entry);
+      return;
+    }
+    if (entry.state === "preparing") {
+      await this.refresh(entry);
+      return;
+    }
     if (entry.state === "sending" || entry.state === "accepted") return;
     entry.state = "sending";
     this.changed();
     try {
-      const snapshot = await this.send(entry);
-      if (!validSnapshot(snapshot) || snapshot.requestId !== entry.id)
-        throw new Error("后端提交回执无效，不能确认创建结果。");
-      entry.snapshot = snapshot;
-      entry.state = "accepted";
-      entry.message = "已创建 / 已确认原提交";
-      this.accepted(entry);
+      await this.apply(entry, await this.send(entry));
     } catch (error) {
-      const definitive = error instanceof ApiError && error.status >= 400 && error.status < 500;
+      const definitive =
+        error instanceof ApiError &&
+        error.status >= 400 &&
+        error.status < 500 &&
+        error.code !== "observation_aborted";
       entry.everUnknown ||= !definitive;
       entry.state = entry.everUnknown ? "unknown" : "failed";
-      entry.message = `${entry.state === "unknown" ? "提交结果未知；原身份与 guard 保留。后续 412 也不能排除原任务存在。" : "本次提交被拒绝。"} ${error instanceof Error ? error.message : String(error)}`;
+      entry.message = `${entry.state === "unknown" ? "提交结果未知；保留原 requestId 与完整 Bundle 引用，可查询或按原意图重试。" : "本次提交被拒绝。"} ${error instanceof Error ? error.message : String(error)}`;
     }
     this.changed();
+  }
+  private async apply(entry: Entry, result: SubmissionResult): Promise<void> {
+    if (
+      !result ||
+      result.requestId !== entry.id ||
+      !["preparing", "accepted", "rejected"].includes(result.status)
+    )
+      throw new Error("后端 Request 回执无效。");
+    if (
+      entry.decision &&
+      (entry.decision !== result.status ||
+        (result.status === "accepted" && result.taskId !== entry.taskId))
+    )
+      throw new Error("已确认的 Request 终态不能回退或更换 Task。");
+    if (result.status === "preparing") {
+      if (result.trackingToken !== entry.id) throw new Error("tracking token 必须是 requestId。");
+      entry.state = "preparing";
+      entry.message = "制品准备中；尚未创建 Task。";
+      return;
+    }
+    if (result.status === "rejected") {
+      entry.decision = "rejected";
+      entry.state = "failed";
+      entry.message = `${result.error.code}：${result.error.message}`;
+      return;
+    }
+    if (!/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/.test(result.taskId)) throw new Error("Task 身份无效。");
+    entry.state = "accepted";
+    entry.decision = "accepted";
+    entry.taskId = result.taskId;
+    entry.message = "已创建 Task / 已确认原提交。";
+    if (this.loadTask) {
+      try {
+        const snapshot = await this.loadTask(entry, result.taskId);
+        if (
+          !validSnapshot(snapshot) ||
+          snapshot.requestId !== entry.id ||
+          snapshot.taskId !== result.taskId ||
+          snapshot.bundle?.digest !== entry.parameters.bundle.digest ||
+          snapshot.bundle.url !== entry.parameters.bundle.url
+        )
+          throw new Error("Task 快照与已确认 Request 不一致。");
+        entry.snapshot = snapshot;
+        this.accepted(entry);
+      } catch (error) {
+        entry.message += ` 快照读取失败：${error instanceof Error ? error.message : String(error)}`;
+      }
+    }
+  }
+  async refresh(entry: Entry): Promise<void> {
+    if (!this.status || entry.observing || entry.state === "draft" || entry.state === "sending")
+      return;
+    entry.observing = true;
+    try {
+      await this.apply(entry, await this.status(entry));
+    } catch (error) {
+      entry.message = `${entry.decision ? "原受理终态保留；当前观察未完成。" : "状态观察未完成；处理继续。"}${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      entry.observing = false;
+      this.changed();
+    }
   }
   async sendBatch(batch: Batch): Promise<void> {
     if (batch.sending) return;
@@ -799,9 +872,15 @@ export async function consumeCollectionSse(
     reader.releaseLock();
   }
 }
-export function discoveryRevision(types: TaskTypeDiscovery[], parameters: Parameters): string {
-  const type = types.find((entry) => entry.type === parameters.type);
-  if (!type) throw new Error(`当前发现没有可提交类型 ${parameters.type}，保留原参数。`);
-  if (!/^[a-f0-9]{64}$/.test(type.revision)) throw new Error("发现 revision 无效。");
-  return type.revision;
+export function bundleDigest(parameters: Parameters): string {
+  const bundle = parameters.bundle;
+  if (
+    !bundle ||
+    typeof bundle.url !== "string" ||
+    !bundle.url ||
+    typeof bundle.digest !== "string" ||
+    !/^sha256:[a-f0-9]{64}$/.test(bundle.digest)
+  )
+    throw new Error("每个 Request 必须提供完整 Bundle URL 和 Digest；旧类型模板不会自动转换。");
+  return bundle.digest;
 }

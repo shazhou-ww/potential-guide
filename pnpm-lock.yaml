@@ -192,6 +192,9 @@ importers:
       '@potential-guide/task-engine-server':
         specifier: workspace:^
         version: link:../../packages/task-engine-server
+      '@potential-guide/task-sdk':
+        specifier: workspace:^
+        version: link:../../packages/task-sdk
       '@tailwindcss/cli':
         specifier: 'catalog:'
         version: 4.3.3
@@ -283,12 +286,18 @@ importers:
         specifier: workspace:^
         version: link:../task-protocol
     devDependencies:
+      '@potential-guide/task-engine-http':
+        specifier: workspace:^
+        version: link:../task-engine-http
       '@potential-guide/task-engine-server':
         specifier: workspace:^
         version: link:../task-engine-server
       '@potential-guide/task-engine-storage':
         specifier: workspace:^
         version: link:../task-engine-storage
+      '@potential-guide/task-sdk':
+        specifier: workspace:^
+        version: link:../task-sdk
 
   packages/cli-runtime:
     dependencies:
@@ -665,12 +674,18 @@ importers:
         specifier: workspace:^
         version: link:../task-protocol
     devDependencies:
+      '@potential-guide/task-engine-http':
+        specifier: workspace:^
+        version: link:../task-engine-http
       '@potential-guide/task-engine-server':
         specifier: workspace:^
         version: link:../task-engine-server
       '@potential-guide/task-engine-storage':
         specifier: workspace:^
         version: link:../task-engine-storage
+      '@potential-guide/task-sdk':
+        specifier: workspace:^
+        version: link:../task-sdk
 
   packages/regulation-coordinator:
     dependencies:
@@ -686,9 +701,16 @@ importers:
 
   packages/task-engine:
     dependencies:
+      '@potential-guide/check-artifacts':
+        specifier: workspace:^
+        version: link:../check-artifacts
       '@potential-guide/task-protocol':
         specifier: workspace:^
         version: link:../task-protocol
+    devDependencies:
+      '@potential-guide/task-sdk':
+        specifier: workspace:^
+        version: link:../task-sdk
 
   packages/task-engine-http:
     dependencies:
@@ -699,6 +721,9 @@ importers:
       '@potential-guide/task-engine':
         specifier: workspace:^
         version: link:../task-engine
+      '@potential-guide/task-sdk':
+        specifier: workspace:^
+        version: link:../task-sdk
 
   packages/task-engine-server:
     dependencies:
@@ -714,6 +739,10 @@ importers:
       '@potential-guide/task-protocol':
         specifier: workspace:^
         version: link:../task-protocol
+    devDependencies:
+      '@potential-guide/task-sdk':
+        specifier: workspace:^
+        version: link:../task-sdk
 
   packages/task-engine-storage:
     dependencies:
@@ -724,12 +753,30 @@ importers:
       '@potential-guide/task-engine':
         specifier: workspace:^
         version: link:../task-engine
+      '@potential-guide/task-sdk':
+        specifier: workspace:^
+        version: link:../task-sdk
 
   packages/task-protocol:
     dependencies:
       ajv:
         specifier: 'catalog:'
         version: 8.20.0
+
+  packages/task-sdk:
+    dependencies:
+      '@potential-guide/check-artifacts':
+        specifier: workspace:^
+        version: link:../check-artifacts
+      '@potential-guide/task-protocol':
+        specifier: workspace:^
+        version: link:../task-protocol
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.2
+      tar:
+        specifier: 'catalog:'
+        version: 7.5.22
 
   packages/test-tree:
     dependencies:

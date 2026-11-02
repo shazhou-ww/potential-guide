@@ -24,7 +24,9 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     Option: globalThis.Option,
   };
   const endpoint = { id: "demo", label: "demo", binding: "binding" };
+  const bundle = { url: "https://example.test/task", digest: `sha256:${"a".repeat(64)}` };
   const makeTask = (): TaskSnapshot => ({
+    bundle,
     taskId: newIdentity(),
     requestId: newIdentity(),
     seriesId: newIdentity(),
@@ -46,7 +48,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     [remote.taskId, remote],
   ]);
   const parameters = {
-    type: "echo",
+    bundle,
     timeoutMs: 1000,
     text: "saved",
     metadata: { url: "https://example.invalid/floating", digest: "user-lock" },
@@ -154,7 +156,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     if (path === "/tasks" && method === "POST") {
       created = { ...makeTask(), requestId: new Headers(options?.headers).get("Idempotency-Key")! };
       records.set(created.taskId, created);
-      return json(created, 202);
+      return json({ status: "accepted", requestId: created.requestId, taskId: created.taskId });
     }
     if (path === "/runs")
       return json({
@@ -354,15 +356,14 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     assert.match(element("#task-detail").textContent!, new RegExp(remote.taskId));
     element<HTMLButtonElement>("#task-detail-sheet [data-close]").click();
     await until(() => document.activeElement === taskRow, "closing returns focus to the Task row");
-    element<HTMLInputElement>("#history-type").value = "echo";
+    element<HTMLInputElement>("#history-type").value = bundle.digest;
     click("#new-task");
-    const type = element<HTMLSelectElement>("#type");
-    type.value = "echo";
-    type.dispatchEvent(new window.Event("change", { bubbles: true }));
+    field("Bundle URL").value = bundle.url;
+    field("完整内容 Digest（sha256:…）").value = bundle.digest;
     field("超时预算 timeoutMs（毫秒）").value = "1000";
-    field("text").value = "draft retained";
-    const draft = field("text");
-    key(type, "Escape");
+    const draft = element<HTMLTextAreaElement>("#form-fields textarea");
+    draft.value = JSON.stringify({ text: "draft retained" });
+    key(field("Bundle URL"), "Escape");
     await until(() => !document.querySelector("#create-dialog"), "Esc closes Dialog");
     await until(
       () => document.activeElement === element("#new-task"),
@@ -371,10 +372,13 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     click("#tab-executions");
     click("#tab-tasks");
     click("#new-task");
-    assert.ok(field("text") === draft, "draft control identity survives close and tab switches");
-    assert.equal(draft.value, "draft retained");
-    assert.equal(element<HTMLInputElement>("#history-type").value, "echo");
-    const first = element<HTMLElement>("#type");
+    assert.ok(
+      element("#form-fields textarea") === draft,
+      "draft control identity survives close and tab switches",
+    );
+    assert.equal(draft.value, JSON.stringify({ text: "draft retained" }));
+    assert.equal(element<HTMLInputElement>("#history-type").value, bundle.digest);
+    const first = field("Bundle URL");
     const last = element<HTMLElement>("#create-dialog [data-close]");
     first.focus();
     key(first, "Tab", true);
