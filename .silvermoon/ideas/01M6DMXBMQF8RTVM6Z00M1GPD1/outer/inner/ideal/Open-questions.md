@@ -1,7 +1,9 @@
 # 准备决策
 
-本文件服务于 [Idea](Idea.md) 及[契约差异](Contract-audit.md)，沿用文件名与 Q01–Q07 编号以保持追踪。
-2026-11-02 按本轮明确授权收敛以下边界；全部为当前候选结论，不是生命周期验收、实施证据或删除授权。
+本文件服务于 [Idea](Idea.md) 及[契约差异](Contract-audit.md)，沿用文件名与 Q01–Q08 编号以保持追踪。
+Q01–Q07 保留既定结论；2026-11-02 新增 Q08，作为需要重新验收准确 Ideal 的实质澄清候选。
+Q08 由主 Agent 依据用户明确授予的自主设计与门禁职责选择，不是用户逐条回答；
+不可用的交互不构成选择或决定证据。本文件不是生命周期验收、实施证据或删除授权。
 旧核对快照中的“待定”不再是实时阻塞；以本文件及同步补齐的职责/契约为准。
 数据域独占、三维状态、唯一最早匹配、停止互斥、Worker 退出终结、不重演、单调准入下界、
 全域源事件 revision、冻结分页与 fromRevision 补读保持不变。
@@ -30,6 +32,8 @@ pending/eligible/timeout、相对 now 的年龄、UI 聚合标签等派生筛选
 不隐式降级成部分候选集合，也不在服务端增设到点事件。
 快照/摘要提供时间边界和观察时间，UI 可对完整事实候选集本地展示时间标签；
 不承诺按时间派生标签过滤后的服务端完整集合。对应 V03/V13/V14，见[观察][observation]。
+Task stage 与匹配 Run 以 Q08 的已提交资格边界为依据，不能由 GET 的原始 now 自行新增匹配；
+因此继续保留这两类事实筛选，不改成客户端发现缺失成员的时间重算方案。
 
 ## Q03：公共观察形状与取消结果的剩余语义
 
@@ -42,7 +46,8 @@ pending/eligible/timeout、相对 now 的年龄、UI 聚合标签等派生筛选
   可靠结果/失败、终结时间及其正常退出/恢复裁决依据（如有）、资源回收的已知或未知状态。
   progress 和完整业务载荷留在单 Run 层；Probe 经 Run 标识读取独立 Run 历史核验实际环境。
 - TaskEvent 只表达该 Task 可见的创建、取消、匹配成立、关联 Run stage/结果变化，沿用源 revision；
-  Run progress 不成为 TaskEvent。纯时间经过和读取不产生事件。
+  Run progress 载荷本身不成为 TaskEvent。独立时间推算和读取不产生事件；
+  实际新匹配按 Q08 由证明资格的源事实产生派生变化。
 - Task 摘要包括标识、类型、scope/series、创建/更新时间、时间边界、stage、canceled、匹配 Run；
   Run 摘要包括标识、类型、scope、开始顺序与时间、更新时间、stage、停止流程及终结依据。
   摘要不含原输入、完整结果、progress 或消息载荷；详情从单体入口读取。
@@ -88,6 +93,8 @@ Run updatedAt 随其开始、进入停止流程、接纳停止、progress、结�
 同一源事件的派生变化使用该事实时间；若墙钟回拨，更新时间取 max(先前 updatedAt, 事实时间)，
 排序并列以稳定实体标识打破，事件顺序仍只由 revision 决定。
 重复取消、仅时间流逝、读取或心跳不改变 updatedAt、不制造摘要事件。
+Q08 中实际提交资格依据而形成的新匹配，按匹配事实时间更新受影响 Task；
+不因一次时间见证就刷新所有 Task/Run 的 updatedAt。
 对应 V14；[旧目录][old-catalog]“进度算 Task 更新”和取消冻结规则被本决定替代。
 
 ## Q06：职责表之外的现有能力如何归属
@@ -120,22 +127,54 @@ task.run.bound/task.terminated、旧 matchPolicy 或 recurrence 的域拒绝打�
 后者不能通过换域悄悄隐藏。新格式的同域重启仍须满足全部[持久恢复][recovery]规则。
 对应 V01/V02/V09/V16；不包含清理工具或旧 Idea 生命周期操作。
 
+## Q08：持久资格观测与纯时间推算的边界
+
+**决定：采用数据域级 `qualification-time-observed` 资格时间见证。**
+这是对原“纯时间不产生事件”的限制性澄清：独立时间标签推算无事件，实际协调新匹配资格的可信观测可以形成源事实。
+不能伪称文字与语义毫无变化；此候选须重走 preparing、准确 revision 的 submitIdeal/acceptIdeal，
+旧 Ideal 接受不能转作本候选的接受。
+
+1. 协调器处理 Task/Run 的已提交事实前后边界。真实 Run 开始或其他已能证明资格的源事件优先充当边界，
+   不为同一资格额外造见证。
+2. 仅当既有源事实不能证明、且本次实际处理会让至少一个尚未匹配且可处理的 Task 获得新资格时，
+   提交一次见证。领域载荷仅有 `observedAt`，不含绑定、所选 Run、Task 状态或受影响 Task 列表；
+   标准事件元数据与全域源 revision 照常存在。
+3. 额外见证严格位于相关 Task 受理与 Run 开始之后；后来的对象不能借用旧见证。
+   截至该源序位置，结合可信观测边界、取消/生效/超时条件及 Run 资格，选择严格开始顺序最早的唯一匹配。
+   观测必须与所依据的事实前缀一致，提交前前缀变化须重评；历史重放使用当时事实，不用当前 Run 状态补历史。
+4. 允许 `initial + eligible`，直到协调器处理并形成已提交资格依据；不承诺墙钟到点同步完成匹配。
+   pending/eligible/timeout 仍按当前 now 独立推算，GET 绝不写领域事实或提交见证。
+5. 资格成立与停止互斥：资格先成立则计入需求，停止先成立则禁止新匹配；
+   已取消 pending 不新增匹配。既定匹配不因 now 回拨、后续较小的终结墙钟或重启而撤销、换选。
+6. 单个见证可能影响多个 Task，沿用同一源 revision 生成全部派生变化及完整集合封装，
+   不为每个 Task 写新事实或权威缓存，不往已消费的旧 revision 补成员。
+   从基线水位 S 补读必须包含随后见证 W 的全部相关变化，完整消费后才推进到 W。
+7. 反复处理同一资格、没有新资格的 timer tick、GET、心跳或仅时间标签越界均不生成见证，
+   不把时间水位做成无限 tick 日志。见证及前后边界依据必须持久保存或可由等价事实前缀重建，
+   不能只留最大 observedAt、所选 Run 或计数器。
+
+最小反例以 now=10 未处理/处理、回拨至 5、重启恢复及集合 S 后补读验证；
+并覆盖真实源事实优先、不重复见证、已取消 pending、停止互斥、多成员完整交付与较小终结墙钟。
+对应 X03/X06/X07/X08/X10、V03/V05/V09/V10/V13/V14/V17；
+细节见[匹配契约][matching]及验收索引。这是已决设计候选，尚未实现或验收。
+
 ## 准备状态
 
 - 12 项核心操作、10 篇跨操作契约及八个 workspace 的历史核对保留于 Contract-audit.md；
-  Q01–Q07 已收敛，没有剩余语义 blocker。方法命名、编码及内部数据结构留给实施，不预实现设计。
-- Idea 已移除准备步骤；Implementation/Deployment 保持轻量种子，ledger 全部未勾选。
-  本次仅准备文档；submit/accept、Git 同步与独立验证由主 Agent 负责，未授权本执行代理追加事件或提交。
-- 原全量 `pnpm check` 退出 1，task-engine 的 117 项中 112 通过、5 失败；
+  Q01–Q08 已收敛，Q08 须重新验收准确 Ideal 后才继续核心实现。方法命名、编码及内部数据结构仍留给实施。
+- Idea 仍为短方向卡；已有 Worker 进展不证明 Q08 完成，ledger 全部未勾选。
+  本轮仅文档候选；submit/accept、Git 同步与独立验证由主 Agent 负责，执行代理不追加事件或提交。
+- 以下为准备初期的历史基线，不能作为当前阻塞或本轮检查结果：当时全量 `pnpm check` 退出 1，117 项中 112 通过、5 失败；
   失败在 boundaries L99、discovery L199、engine L23/L105、projection-races L171。
-  尚未证明全套通过，后续 test/pack 未完成；此前 Web UI reclamation_failed 也未因此解决。
+  当时后续 test/pack 未完成，此前 Web UI reclamation_failed 也未因此解决。
 - 主 Agent 在未改源码时，对这五项以现有 tsx/Node runner、`--test-concurrency=1` 和精确 name pattern
   隔离串行复测，5/5 通过，耗时 11.8s。此结果提示负载/时序差异，不证明根因或全套通过。
   实施须区分旧语义断言与真实故障，解决紧耦合脆弱等待，不放宽语义断言换取通过。
-- 执行代理已检查 11 个改动 Markdown 文件的 123 个本地链接及锚点、Q/V/X/operation 编号、
+- 初期执行代理检查过 11 个 Markdown 文件的 123 个本地链接及锚点、Q/V/X/operation 编号、
   下游种子与未勾选 ledger；检查通过，`git diff --check`、`silvermoon check --worktree --audience agent` 通过。
   现有 Biome 不处理这些 Markdown（报告 0 文件并退出 1），不将其记为格式检查通过；未添加框架或改配置。
-  主 Agent 仍负责候选的独立验证与同步；未重新运行全量 `pnpm check`，不改写上述基线结论。
+  这些是历史文档检查记录，不代替本轮候选检查。既有 Worker 阶段另有已完成回归证据，也不证明新资格语义。
+  本轮只检查文档候选，不重新运行源码全量检查；主 Agent 仍负责准确 Ideal 的独立验证、同步与门禁。
 
 [old-catalog]: ../../../../01M66TPNEMSQ8Y8SDSN2CDN6BA/outer/inner/ideal/Research.md
 [old-schema]: ../../../../01M66MRFCSDK99MAEN8RN3NKBH/outer/inner/ideal/Research.md
@@ -145,3 +184,4 @@ task.run.bound/task.terminated、旧 matchPolicy 或 recurrence 的域拒绝打�
 [subscription]: ../../../../../../docs/axis/task-engine-contracts/subscription.md
 [lifecycle]: ../../../../../../docs/axis/task-engine-contracts/task-lifecycle.md
 [recovery]: ../../../../../../docs/axis/task-engine-contracts/persistence-recovery.md
+[matching]: ../../../../../../docs/axis/task-engine-contracts/run-matching.md

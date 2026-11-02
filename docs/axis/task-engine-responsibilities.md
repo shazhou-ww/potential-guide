@@ -55,6 +55,7 @@
 | 状态快照（Snapshot） | 实体在某个观察边界的当前状态。 |
 | 变更历史（Change History） | 实体已经发生的不可变变更记录。 |
 | Revision | 数据域内严格递增的事件位置，也用于表达查询已覆盖的水位，详见[数据域事件序号与查询 Revision](./task-engine-contracts/revision.md)。 |
+| 资格时间见证 | 协调器实际处理新匹配资格、而既有源事实不足以证明时提交的数据域级 `qualification-time-observed`；领域载荷仅有 observedAt，不记录绑定/所选 Run/Task 状态，详见[匹配契约](./task-engine-contracts/run-matching.md)。 |
 | TaskEvent / RunEvent | Task 或 Run 已发生事实的统一事件模型，分别供历史查询与后续订阅读取。 |
 | 摘要（Summary） | 集合成员用于概况展示的精简信息，不包含全部详情。 |
 | 订阅句柄（Subscription Handle） | 提供事件流与取消订阅能力的逻辑接口，详见[订阅句柄与订阅生命周期](./task-engine-contracts/subscription.md)。 |
@@ -76,6 +77,9 @@ output 不规定传输协议；side effects 为“无”指无领域状态或订
 const engine = await openTaskEngine({ dataDomain });
 await engine.getTask(taskId);
 ```
+
+匹配关系与 stage 依据已提交的资格观测边界，允许协调器处理前出现 initial+eligible；
+时间标签仍按 now，查询绝不写资格事实。独立时间推算无事件，实际资格观测形成源事实的限制性澄清见匹配契约。
 
 TaskRequest 对应本文 Request，避免与平台的 Request 类型混淆；其余领域类型只引用名称，字段另行定义。
 TaskSnapshot、RunSnapshot 和 Page 均包含查询水位 `revision`，各事件也携带自身的 `revision`；

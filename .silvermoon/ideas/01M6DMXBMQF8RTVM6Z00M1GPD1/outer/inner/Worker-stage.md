@@ -1,7 +1,8 @@
 # 独立 Run Worker 阶段证据
 
 本文件服务于 [Implementation](Implementation.md)。这是第一个可重复验证的实施阶段，不是完整 Inner、
-V01–V16 全部通过、实施验收或外部部署证据。Ideal 与 Outer 未改，I-* / D-* ledger 仍全部未勾选。
+V01–V16 全部通过、实施验收或外部部署证据。该 Worker 阶段当时未改 Ideal/Outer，I-* / D-* ledger 仍全部未勾选。
+后续资格时间见证已形成 Ideal 的 Q08 澄清候选，但尚未实现，不能用本阶段证据替代。
 
 ## 已落地行为
 
@@ -98,7 +99,7 @@ test 在同一 Web UI reclamation_failed 停止，pack:check 未执行。局部�
 2. 仍需实现持久准入下界、新格式拒绝/保留策略、公共 Run 快照、统一查询水位、
    冻结分页与 fromRevision 的单体/集合补读及完整源封装。
 3. 仍需贯通配套能力、HTTP/Server、Check/Probe 的独立 Run 核验与 Web UI；
-   尚未改收藏或范围外 workspace。剩余 V01–V16 适用证据、八包与完整质量检查仍是 Inner 完成条件。
+   尚未改收藏或范围外 workspace。剩余 V01–V17 适用证据、八包与完整质量检查仍是 Inner 完成条件。
 
 ## 可执行复核入口
 
