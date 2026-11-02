@@ -38,6 +38,10 @@ let launchError: Error | undefined;
 const checks: Record<string, unknown> = {};
 const exceptions: unknown[] = [];
 const heldRequests: string[] = [];
+const taskInDetail = `(() => {
+  const element=document.querySelector('#task-detail [data-key=task-snapshot] pre');
+  return element ? JSON.parse(element.textContent) : null;
+})()`;
 let sequence = 0;
 const pending = new Map<
   number,
@@ -553,8 +557,9 @@ try {
   assert.equal(checks.sseFocusStable, true);
   assert.equal(checks.eventsStayExpanded, true);
   await closeOverlay();
+  const createdLink = `#task-list [data-key$=":task:${createdId}"] [data-key="open-task"]`;
   await evaluate(
-    `globalThis.smokeTaskLink=document.querySelector('#task-list [data-key=open-task]');smokeTaskLink.focus();true`,
+    `globalThis.smokeTaskLink=document.querySelector(${JSON.stringify(createdLink)});smokeTaskLink.focus();true`,
   );
   await delay(200);
   checks.taskEntryFocusStable = await evaluate(
@@ -572,8 +577,44 @@ try {
     undefined,
   );
   checks.closingDoesNotCancel = true;
-  await click('#task-list [data-key="open-task"]');
-  await wait("document.querySelector('#task-detail')?.textContent.includes('观察已结束')");
+  await click(createdLink);
+  await wait(
+    `(${taskInDetail})?.taskId===${JSON.stringify(createdId)} && (${taskInDetail})?.stage==='completed'`,
+  );
+  checks.terminalTaskStillObserved = await evaluate(
+    "!document.querySelector('#task-detail .observation-state').textContent.includes('观察已结束')",
+  );
+  assert.equal(checks.terminalTaskStillObserved, true);
+  checks.terminalTaskFirstCancel = await evaluate(
+    "!document.querySelector('#task-detail [data-action=cancel]').disabled",
+  );
+  assert.equal(checks.terminalTaskFirstCancel, true);
+  const completed = backend.engine.getTask(createdId, { scope: "fixture", subject: "ui" });
+  await click('#task-detail [data-action="cancel"]');
+  await wait(
+    `(${taskInDetail})?.canceled===true && document.querySelector('#task-detail [data-action=cancel]')?.disabled`,
+  );
+  const canceled = backend.engine.getTask(createdId, { scope: "fixture", subject: "ui" });
+  assert.equal(canceled.stage, "completed");
+  assert.deepEqual(canceled.result, completed.result);
+  await click('#task-detail [data-action="cancel"]');
+  assert.equal(
+    backend.engine.cancelTask(createdId, { scope: "fixture", subject: "ui" }).changed,
+    false,
+  );
+  const cancellationFacts = (taskId: string) =>
+    backend!.engine
+      .getTaskHistory(taskId, {}, { scope: "fixture", subject: "ui" })
+      .events.filter((event) => event.type === "task.canceled").length;
+  assert.equal(cancellationFacts(createdId), 1);
+  checks.terminalTaskCancelOnce = true;
+  await wait(
+    "document.querySelector('#task-detail .status').textContent.includes('时间 timeout') && document.querySelector('#task-detail').textContent.includes('超时事实保留')",
+    Math.max(10_000, Date.parse(canceled.deadlineAt) - Date.now() + 5000),
+  );
+  checks.taskTimeContinuesAfterTerminalCancellation = true;
+  await click('#task-detail [data-action="暂停观察"]');
+  await wait("document.querySelector('#task-detail')?.textContent.includes('观察已暂停')");
   assert.equal(await evaluate("!!document.querySelector('#create-dialog')"), false);
   const stamp = await evaluate(
     "document.querySelector('#task-detail .observation-state').textContent",
@@ -583,6 +624,7 @@ try {
     stamp ===
     (await evaluate("document.querySelector('#task-detail .observation-state').textContent"));
   assert.equal(checks.observationStopped, true);
+  checks.observationStoppedAfterExplicitPause = true;
   await screenshot("task-sheet.png");
   await closeOverlay();
   await click("#history-actions button");
@@ -590,11 +632,24 @@ try {
   await click("#directory .star");
   await wait("document.querySelector('#directory .star').getAttribute('aria-pressed')==='true'");
   await screenshot("tasks.png");
-  for (let index = 0; index < 12; index++)
-    backend.engine.submit(
-      { requestId: newId(), type: "echo", timeoutMs: 10000, text: `目录 ${index}`, durationMs: 1 },
+  for (let index = 0; index < 12; index++) {
+    const member = backend.engine.submit(
+      { requestId: newId(), type: "echo", timeoutMs: 60000, text: `目录 ${index}`, durationMs: 1 },
       { scope: "fixture", subject: "external-client" },
     );
+    const deadline = performance.now() + 15000;
+    for (;;) {
+      const current = backend.engine.getTask(member.taskId, { scope: "fixture", subject: "ui" });
+      if (
+        current.stage === "completed" &&
+        current.run &&
+        backend.engine.getRun(current.run.runId, { scope: "fixture", subject: "ui" }).reclaimedAt
+      )
+        break;
+      assert.ok(performance.now() < deadline, "directory fixture Run must finish and release");
+      await delay(20);
+    }
+  }
   await click("#history-actions button");
   await wait("document.querySelectorAll('#directory tbody tr').length===10");
   await click('#directory button[data-action="目录下一页（原过滤条件）"]');
@@ -731,6 +786,60 @@ try {
     backend.engine.getTask(redone, { scope: "fixture", subject: "ui" }).requestId !==
       backend.engine.getTask(redoSource, { scope: "fixture", subject: "ui" }).requestId;
   assert.equal(checks.glyphRedoAction, true);
+  await closeOverlay();
+  const caller = { scope: "fixture", subject: "ui" };
+  const sharedInput = {
+    type: "echo",
+    timeoutMs: 15000,
+    text: "取消后仍观察共享 Run",
+    durationMs: 5000,
+  };
+  const controlled = backend.engine.submit({ ...sharedInput, requestId: newId() }, caller);
+  const companion = backend.engine.submit({ ...sharedInput, requestId: newId() }, caller);
+  await click("#tasks details.secondary > summary");
+  await wait("document.querySelector('#tasks details.secondary').open");
+  await click("#task-id-input");
+  await pressKey("a", 65, 2);
+  await call("Input.insertText", { text: controlled.taskId });
+  assert.equal(await evaluate("document.querySelector('#task-id-input').value"), controlled.taskId);
+  await click("#task-lookup button");
+  await wait(
+    `(() => {
+      const element=document.querySelector('#task-detail [data-key=task-snapshot] pre');
+      if (!element) return false;
+      const task=JSON.parse(element.textContent);
+      return task.taskId===${JSON.stringify(controlled.taskId)} && task.stage==='running';
+    })()`,
+  );
+  const sharedRun = backend.engine.getTask(controlled.taskId, caller).run!.runId;
+  assert.equal(backend.engine.getTask(companion.taskId, caller).run?.runId, sharedRun);
+  await click('#task-detail [data-action="cancel"]');
+  await wait(`(${taskInDetail})?.canceled===true`);
+  assert.equal(backend.engine.getTask(controlled.taskId, caller).stage, "running");
+  assert.equal(backend.engine.getTask(companion.taskId, caller).canceled, false);
+  assert.equal(
+    await evaluate(
+      "document.querySelector('#task-detail').textContent.includes('不代表关联 Run 已退出')",
+    ),
+    true,
+  );
+  await wait(`(${taskInDetail})?.stage==='completed'`);
+  const advanced = backend.engine.getTask(controlled.taskId, caller);
+  assert.equal(advanced.canceled, true);
+  assert.equal(advanced.run?.runId, sharedRun);
+  assert.deepEqual(advanced.result, backend.engine.getTask(companion.taskId, caller).result);
+  assert.equal(cancellationFacts(controlled.taskId), 1);
+  checks.canceledTaskFollowsRun = true;
+  checks.sharedDemandSurvivesCancellation = true;
+  assert.equal(
+    await evaluate(
+      "document.querySelector('#task-detail .observation-state').textContent.includes('观察已结束')",
+    ),
+    false,
+  );
+  await screenshot("canceled-task-completed.png");
+  await click('#task-detail [data-action="暂停观察"]');
+  await wait("document.querySelector('#task-detail')?.textContent.includes('观察已暂停')");
   await closeOverlay();
   checks.cspViolations = await evaluate("smokeCsp");
   assert.deepEqual(checks.cspViolations, []);

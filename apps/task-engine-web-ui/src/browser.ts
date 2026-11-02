@@ -794,13 +794,9 @@ function renderObserver(observer: Observer): void {
     }
     const task = observer.snapshot;
     if (task) {
-      const effectiveEnd =
-        task.canceledAt ??
-        task.run?.completedAt ??
-        task.run?.failedAt ??
-        task.termination?.terminatedAt;
-      const timeout = (effectiveEnd ?? task.timestamp) > task.deadlineAt;
-      const state = node("p", taskStatus(task));
+      const now = Date.now();
+      const timeout = now > Date.parse(task.deadlineAt);
+      const state = node("p", taskStatus(task, now));
       state.className = "status";
       box.append(state);
       box.append(
@@ -809,11 +805,18 @@ function renderObserver(observer: Observer): void {
           `截止时间：${task.deadlineAt}${task.canceledAt ? ` · 取消于 ${task.canceledAt}` : ""}${timeout ? " · 超时事实保留" : ""}`,
         ),
       );
-      if ((task.canceledAt || task.termination) && !observer.end.ended)
+      if (task.termination && !observer.end.ended)
         box.append(
           node(
             "p",
-            "Run 已形成结局；Task 仍可撤回需求，可继续观察控制变化。资源回收请查看关联 Run。",
+            `Run 已形成结局；${task.canceled ? "Task 需求已撤回" : "Task 仍可撤回需求"}，可继续观察控制变化。资源回收请查看关联 Run。`,
+          ),
+        );
+      else if (task.canceledAt && !observer.end.ended)
+        box.append(
+          node(
+            "p",
+            "Task 需求已撤回，不代表关联 Run 已退出；继续观察其 stage，资源回收请查看关联 Run。",
           ),
         );
       box.append(starButton(observer.endpoint, task.taskId));
@@ -848,7 +851,7 @@ function renderObserver(observer: Observer): void {
           renderTasks();
           renderObserver(observer);
         },
-        !!task.canceledAt || !!task.termination,
+        !!task.canceledAt,
       );
       cancel.dataset.action = "cancel";
       box.append(cancel, details("原始 Task 快照", task, "task-snapshot"));

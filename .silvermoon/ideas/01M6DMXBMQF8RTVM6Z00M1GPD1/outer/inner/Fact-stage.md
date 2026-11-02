@@ -187,6 +187,67 @@ typecheck、test、pack:check 全部完成。全仓 test 为 **68/68 Turbo tasks
 相关四个 I 项在完整通过后勾回，六个 I 项完成，四个 D 项不变。
 目前没有本轮已知剩余失败；保留主 Agent 再次独立验证，不推断接受、不提交或进入 Outer。
 
+## Outer Chrome 发现后的 Inner UI 回修
+
+主 Agent 独立完整检查 exit 0 后已同步候选 `31ba74b0`，Inner `51a9212036d4`
+经 submit/accept，开始 Outer。Outer 计划 `e3fc4560` 已同步，但真实 Chrome 冒烟
+`engine-outer-browser-9597c5bc-eb4b-468b-a3e2-ec52e9b6fbab` 在旧 fixture 约 L576
+等待 Task“观察已结束”失败。该等待沿用旧语义；Task 的 Run 已终结不妨碍首次取消，
+不能自动冻结 Task 观察。本次按明确授权回修 Inner，不写 Outer 或生命周期事件。
+
+### 产品修正
+
+- `browser.ts` 删除以 canceledAt / Run completedAt / failedAt / termination 冻结超时的 effectiveEnd。
+  详情超时提示与三维 taskStatus 共用当前 `now`，不因取消或 stage 终结冻结；可随时钟回拨重算。
+- 取消按钮仅在已有 canceledAt 时禁用，Run 终结不禁止 Task 的首次取消。
+- 只有 termination 才展示“Run 已形成结局”；仅有取消事实时明确需求撤回不证明 Run 已退出，
+  且提示继续观察 stage，避免把控制事实当作 Run 结局或资源回收证明。
+- Run 观察仍遵循既有终结加回收规则，没有改 lifecycle 的 Run 结束判据。
+
+### 新候选验证
+
+- `browser-channels.test.ts` 通过真实 browser entry/回执/SSE 路径增加：
+  已取消 running Task 后续变为 completed；终态首次取消按钮可用；取消后按钮禁用且不重复 POST；
+  Run 在截止前终结/取消仍会随 now 跨截止显示 timeout，并能随 now 回拨回 eligible。
+  本地时钟受控、等待预算采用 performance.now，不用墙钟冻结破坏测试边界。
+- 定向入口：
+  `pnpm --filter @potential-guide/task-engine-web-ui exec tsx --test test\browser-channels.test.ts test\lifecycle.test.ts test\workbench.test.ts`
+  **exit 0，6/6**，日志 `.cache/ui-controls-targeted.log`。
+- 原生 Chrome fixture 不再等待 Task 自动结束：
+  等待明确 Task ID 的 completed，点击首次取消，检查结果/stage 不变、仅一个 task.canceled；
+  对同 ID 重复取消验证 changed=false；等真实时间跨 deadline 验证终态取消后的 timeout；
+  显式暂停后才检查 observation stamp 稳定。
+  另建立同一 Run 的两个需求：取消一个后仍 running，另一需求未取消并保护 Run；
+  原 Task 最终 canceled=true、stage=completed、同一 Run/结果，取消源事实仍仅一个。
+- 完整 Chrome/156.0.8078.76 fixture **exit 0**：
+  `.cache/engine-inner-ui-controls-ddaa0d6e-2df6-48a6-88e1-44d21528aca2/checks.json`，
+  新增检查 terminalTaskStillObserved、terminalTaskFirstCancel、terminalTaskCancelOnce、
+  taskTimeContinuesAfterTerminalCancellation、observationStoppedAfterExplicitPause、
+  canceledTaskFollowsRun、sharedDemandSurvivesCancellation 全为 true。
+  原有 native keyboard/focus、Run 自动结束、抽屉几何、390px、CSP 等检查完整保留并通过；
+  新截图 `canceled-task-completed.png`，完整命令日志 `.cache/ui-controls-chrome-pass.log`。
+  仅使用自有随机端口和新 profile，避开指定保留端口；结束后关闭自有进程，删除 profile 与临时收藏，
+  截图和 checks.json 留存，不接触用户现有浏览器或服务。
+
+以下 fixture 调试失败如实保留，均不计为通过：
+首轮新条件在 detail 尚无快照时直接读 textContent；随后发现旧“最近查看”首项其实是外部 survey，
+已改为明确 createdId 选取。抽屉比较又发现十二个目录 Run 尚在变化，改为逐个等待真实 completed/reclaimed，
+仅目录布置使用 60s Request budget，避免几何检查与合法时间标签变化竞争；
+原10s终态超时场景和内容/宽度/滚动断言未删改。新增标识定位最初未展开 details，
+已改为原生点击展开、键盘输入和按钮点击。各失败目录保留原 failure.json/failure.png，
+未覆盖成功证据或把失败说成验收成功。
+
+三个 I-AC 先重置，完整新候选检查完成后才勾回；旧生产 pack 运行不替代本轮代码的验证。
+
+本轮最终 `pnpm check` 已读取句柄 `ui-controls-final-check` 至 **completed exit 0**，
+新日志 `.cache/ui-controls-final-check.log`。build/layers、format、lint、typecheck、
+全仓 test 及 pack:check 全部完成，包含 UI 的完整 60 用例与所有18类独立生产消费者；
+不是引用主 Agent 尚在运行的旧 pack，也没有重启重复完整检查。三个 I-AC 此后才勾回。
+原生证据目录内 `.profile` 与 `.favorites.json` 均已确认不存在，截图与 checks.json 保留。
+本轮只改 UI browser、直接回归、browser-smoke 及 Inner/ledger，不修改 Ideal、events、
+Outer 计划或旧 Outer 失败证据；不提交或推送。已接受的旧 Inner revision 不代表此新候选已接受，
+仍由主 Agent 对新 implementationRevision 重新 submit/acceptInner，再继续 Outer。
+
 ## 改动范围与实际边界
 
 - 八包：task-protocol 的 v4 事实/投影/形状；task-engine 的协调/Worker/观察/目录及 fixtures；

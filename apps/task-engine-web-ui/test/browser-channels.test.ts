@@ -6,8 +6,8 @@ import { newIdentity, TaskSnapshots } from "../src/model.js";
 import { browserDom } from "./browser-dom.js";
 
 async function until(check: () => boolean, message: string): Promise<void> {
-  const end = Date.now() + 3000;
-  while (Date.now() < end) {
+  const end = performance.now() + 3000;
+  while (performance.now() < end) {
     if (check()) return;
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
@@ -15,6 +15,8 @@ async function until(check: () => boolean, message: string): Promise<void> {
 }
 
 test("actual browser entry wires cancellation receipts and SSE without cross-channel rollback", async (t) => {
+  let now = Date.parse("2026-10-31T04:00:00.000Z");
+  t.mock.method(Date, "now", () => now);
   const reads = t.mock.method(TaskSnapshots.prototype, "begin");
   const cancellations = t.mock.method(TaskSnapshots.prototype, "beginCancellation");
   const dom = browserDom(await readFile(new URL("../src/index.html", import.meta.url), "utf8"));
@@ -238,6 +240,25 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
     );
     assert.equal(readDetail()?.canceledAt, canceledA.canceledAt);
     assert.match(document.getElementById("task-list")!.textContent!, /已取消/);
+    assert.match(document.getElementById("task-detail")!.textContent!, /超时事实保留/);
+    assert.doesNotMatch(document.getElementById("task-detail")!.textContent!, /Run 已形成结局/);
+    assert.match(document.getElementById("task-detail")!.textContent!, /不代表关联 Run 已退出/);
+    emit(
+      {
+        ...canceledA,
+        stage: "completed",
+        result: { ok: true },
+        termination: { terminatedAt: a.timestamp },
+        run: { ...a.run!, completedAt: a.timestamp },
+      },
+      26,
+    );
+    await until(
+      () => readDetail()?.stage === "completed",
+      "canceled Task must still follow its Run to completion",
+    );
+    assert.equal(readDetail()?.canceledAt, canceledA.canceledAt);
+    assert.equal(streams.get(a.taskId)!.closed, false);
 
     // B: an in-flight cancel receipt must survive an intervening running observation and stream loss.
     const b = snapshot();
@@ -275,6 +296,53 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
       2,
       "both actual cancel callbacks must use the modification-receipt path",
     );
+
+    rejectReconnect = false;
+    now = Date.parse("2026-10-31T02:30:00.000Z");
+    const c: TaskSnapshot = {
+      ...snapshot(),
+      stage: "completed",
+      result: { ok: true },
+      termination: { terminatedAt: "2026-10-31T02:01:00.000Z" },
+    };
+    c.run = { ...c.run!, completedAt: c.termination!.terminatedAt };
+    await open(c);
+    const cancelControl = () =>
+      document.querySelector<HTMLButtonElement>('#task-detail [data-action="cancel"]')!;
+    assert.equal(cancelControl().disabled, false, "terminal Task still accepts first cancellation");
+    assert.doesNotMatch(document.getElementById("task-detail")!.textContent!, /超时事实保留/);
+    assert.equal(streams.get(c.taskId)!.closed, false);
+    now = Date.parse("2026-10-31T04:00:00.000Z");
+    emit(c, 31);
+    await until(
+      () => document.getElementById("task-detail")!.textContent!.includes("超时事实保留"),
+      "time advances after Run termination rather than freezing at termination",
+    );
+    await cancel(c.taskId);
+    const canceledC = {
+      ...c,
+      canceled: true,
+      canceledAt: "2026-10-31T02:02:00.000Z",
+      revision: "domain:32",
+    };
+    receipts.get(c.taskId)!(canceledC);
+    await until(
+      () => readDetail()?.canceledAt === canceledC.canceledAt && cancelControl().disabled,
+      "terminal cancellation must be acknowledged and disable only further cancellations",
+    );
+    cancelControl().click();
+    assert.deepEqual(canceledIds, [a.taskId, b.taskId, c.taskId]);
+    assert.equal(readDetail()?.stage, "completed");
+    assert.deepEqual(readDetail()?.result, c.result);
+    assert.equal(streams.get(c.taskId)!.closed, false);
+    now = Date.parse("2026-10-31T02:30:00.000Z");
+    emit(canceledC, 33);
+    await until(
+      () => !document.getElementById("task-detail")!.textContent!.includes("超时事实保留"),
+      "current time can roll back independently of termination and cancellation",
+    );
+    assert.equal(readDetail()?.stage, "completed");
+    assert.equal(readDetail()?.canceled, true);
   } finally {
     window.dispatchEvent(new window.Event("pagehide"));
     for (const stream of streams.values()) stream.fail();
