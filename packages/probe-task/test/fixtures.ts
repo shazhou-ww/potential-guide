@@ -127,10 +127,15 @@ export async function harness(
     types: [check, probe],
     currentVersions: { check: "2", probe: "2" },
     authorize: (who, _operation, scope) => who.scope === scope,
-    limits: { maxConcurrent: 1, maxPayloadBytes: 8 * 1024 * 1024, ...limits },
+    limits: {
+      maxConcurrent: 1,
+      maxPayloadBytes: 8 * 1024 * 1024,
+      queryPageBytes: 20 * 1024 * 1024,
+      ...limits,
+    },
     ...(clock ? { clock } : {}),
   });
-  engine.start();
+  await engine.start();
   return {
     engine,
     store,
@@ -141,7 +146,7 @@ export async function harness(
     submit(fields = {}) {
       return engine.submit(
         {
-          requestId: newId(),
+          requestId: newId(clock?.now() ?? Date.now()),
           type: "probe",
           objective: { kind: "objective", url: rootUrl },
           subject: {},

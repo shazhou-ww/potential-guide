@@ -22,16 +22,16 @@ function continuation(page: TaskPage): string {
 }
 
 test("directory covers callers/types with independent half-open normalized time ranges", async () => {
-  const h = harness({ authorize: () => true });
+  const h = await harness({ authorize: () => true });
   try {
     const first = h.submit();
     h.clock.setTime(h.clock.now() + 1_000);
     const second = h.engine.submit(
-      { requestId: newId(), type: "sum", timeoutMs: 100, values: [1, 2] },
+      { requestId: newId(h.clock.now()), type: "sum", timeoutMs: 100, values: [1, 2] },
       { scope: caller.scope, subject: "another-client" },
     );
     h.engine.submit(
-      { requestId: newId(), type: "echo", timeoutMs: 100, text: "hidden" },
+      { requestId: newId(h.clock.now()), type: "echo", timeoutMs: 100, text: "hidden" },
       { scope: "other", subject: caller.subject },
     );
     const all = h.engine.listTasks({}, {}, caller);
@@ -43,9 +43,14 @@ test("directory covers callers/types with independent half-open normalized time 
     assert.equal(all.tasks[0]?.updatedAt, second.receivedAt);
     for (const item of all.tasks)
       assert.deepEqual(Object.keys(item).sort(), [
+        "canceled",
+        "deadlineAt",
+        "eligibleAt",
         "receivedAt",
         "requestId",
+        "scope",
         "seriesId",
+        "stage",
         "state",
         "taskId",
         "type",
@@ -90,7 +95,7 @@ test("directory covers callers/types with independent half-open normalized time 
 });
 
 test("same-time task IDs sort deterministically; last accepted updates can move backwards", async () => {
-  const h = harness();
+  const h = await harness();
   try {
     const one = h.submit();
     const two = h.submit();
@@ -110,17 +115,19 @@ test("same-time task IDs sort deterministically; last accepted updates can move 
   }
 });
 
-test("new shared progress updates bound live Tasks but never a canceled Task", async () => {
-  const h = harness();
+test("shared progress updates only the Run; canceled Tasks still observe later terminal facts", async () => {
+  const h = await harness();
   try {
     const one = h.submit();
     const two = h.submit();
     await h.turn();
     assert.equal(h.work.length, 1);
+    const matchedAt = h.engine.getTask(two.taskId, caller).updatedAt;
     h.clock.setTime(h.clock.now() + 10);
     h.work[0]?.permit.progress({ stage: "execution", percent: 1, message: "" });
     const updates = h.engine.listTasks({}, {}, caller).tasks;
-    assert.ok(updates.every((task) => task.updatedAt === at(h.clock.now())));
+    assert.ok(updates.every((task) => task.updatedAt === matchedAt));
+    assert.equal(h.engine.getRun(h.work[0]!.permit.runId, caller).updatedAt, at(h.clock.now()));
     assert.ok(updates.every((task) => task.state.stage === "running"));
     h.clock.setTime(h.clock.now() + 10);
     h.engine.cancelTask(one.taskId, caller);
@@ -128,16 +135,16 @@ test("new shared progress updates bound live Tasks but never a canceled Task", a
     h.clock.setTime(h.clock.now() + 10);
     h.work[0]?.permit.progress({ stage: "execution", percent: 2, message: "" });
     const after = h.engine.listTasks({ sort: "updated-desc" }, {}, caller);
-    assert.equal(after.tasks[0]?.taskId, two.taskId);
-    assert.equal(after.tasks[0]?.updatedAt, at(h.clock.now()));
-    assert.equal(after.tasks[1]?.updatedAt, canceledAt);
+    assert.equal(after.tasks[0]?.taskId, one.taskId);
+    assert.equal(after.tasks[0]?.updatedAt, canceledAt);
+    assert.equal(after.tasks[1]?.updatedAt, matchedAt);
     assert.equal(JSON.stringify(after).includes("percent"), false);
     await h.finish();
     h.engine.tick();
     assert.equal(
       h.engine.listTasks({}, {}, caller).tasks.find((task) => task.taskId === one.taskId)
         ?.updatedAt,
-      canceledAt,
+      at(h.clock.now()),
     );
     const broken = h.store.read().facts;
     const runId = h.work[0]?.permit.runId;
@@ -156,7 +163,7 @@ test("new shared progress updates bound live Tasks but never a canceled Task", a
 });
 
 test("query freezes membership/order/summaries across writes and supports cursor replay", async () => {
-  const h = harness({ limits: { pageSize: 1 } });
+  const h = await harness({ limits: { pageSize: 1 } });
   try {
     const one = h.submit();
     h.clock.setTime(h.clock.now() + 10);
@@ -190,12 +197,12 @@ test("query freezes membership/order/summaries across writes and supports cursor
   }
 });
 
-test("unbound terminated-policy demand ignores progress; failed and not-yet-run Tasks remain discoverable", async () => {
-  const h = harness();
+test("qualified terminates-policy demand ignores progress; failed and not-yet-run Tasks remain discoverable", async () => {
+  const h = await harness();
   try {
     const owner = h.submit();
     await h.turn();
-    const waiting = h.submit({ matchPolicy: "terminated-after-eligible" });
+    const waiting = h.submit({ matchPolicy: "terminates-after-eligible" });
     h.clock.setTime(h.clock.now() + 10);
     h.work[0]?.permit.progress({ stage: "execution", percent: 10, message: "" });
     assert.equal(
@@ -213,7 +220,7 @@ test("unbound terminated-policy demand ignores progress; failed and not-yet-run 
   } finally {
     await h.close();
   }
-  const failing = harness({
+  const failing = await harness({
     prepare: async () => {
       throw new Error("cannot prepare");
     },
@@ -224,7 +231,7 @@ test("unbound terminated-policy demand ignores progress; failed and not-yet-run 
     await failing.turn();
     const listed = failing.engine.listTasks({}, {}, caller).tasks[0];
     assert.equal(listed?.taskId, task.taskId);
-    assert.equal(listed?.state.stage, "run_failed");
+    assert.equal(listed?.state.stage, "failed");
   } finally {
     await failing.close();
   }
@@ -233,7 +240,7 @@ test("unbound terminated-policy demand ignores progress; failed and not-yet-run 
 test("directory permissions stay separate from original-request permission and are reevaluated", async () => {
   let allowed = true;
   let submitAllowed = true;
-  const h = harness({
+  const h = await harness({
     authorize: (_who, operation) =>
       operation !== "request" &&
       (operation !== "list" || allowed) &&
@@ -273,7 +280,7 @@ test("directory permissions stay separate from original-request permission and a
 });
 
 test("catalog keeps historical schema binding while redo uses the current discovered contract", async () => {
-  const h = harness();
+  const h = await harness();
   try {
     const original = h.submit({ eligibleAt: at(h.clock.now() + 10_000) });
     const raw = h.engine.getRequest(original.requestId, caller);
@@ -292,7 +299,7 @@ test("catalog keeps historical schema binding while redo uses the current discov
       assert.deepEqual(latest.getRequest(original.requestId, caller), raw);
       assert.equal(raw.version, undefined);
       assert.equal(raw.expectedRevision, undefined);
-      const redo = latest.submit({ ...raw, requestId: newId() }, caller);
+      const redo = latest.submit({ ...raw, requestId: newId(h.clock.now()) }, caller);
       assert.equal(
         latest.listTasks({}, {}, caller).tasks.find((task) => task.taskId === redo.taskId)?.version,
         "2",
@@ -314,7 +321,7 @@ test("catalog keeps historical schema binding while redo uses the current discov
       read() {
         const view = h.store.read();
         for (const task of Object.values(view.facts.tasks)) {
-          delete task.updatedAt;
+          assert.equal("updatedAt" in task, false);
           Reflect.deleteProperty(task.binding, "contractRevision");
         }
         return view;
@@ -338,7 +345,7 @@ test("catalog keeps historical schema binding while redo uses the current discov
 });
 
 test("invalid inputs, cursor domains, expiry, tampering and restart fail explicitly", async () => {
-  const h = harness({ limits: { pageSize: 1, queryLifetimeMs: 100 } });
+  const h = await harness({ limits: { pageSize: 1, queryLifetimeMs: 100 } });
   try {
     const task = h.submit();
     h.submit();
@@ -349,11 +356,11 @@ test("invalid inputs, cursor domains, expiry, tampering and restart fail explici
       { sort: "oldest" },
       { createdFrom: task.receivedAt, createdBefore: task.receivedAt },
       { createdFrom: "2026-01-01T24:00:00Z" },
-      { scope: "other" },
       { type: "" },
     ])
       assert.throws(() => h.engine.listTasks(query as never, {}, caller), code("invalid_request"));
-    for (const limit of [0, -1, 0.1, 2])
+    assert.deepEqual(h.engine.listTasks({ scope: "other" }, {}, caller).tasks, []);
+    for (const limit of [0, -1, 0.1, 1001])
       assert.throws(() => h.engine.listTasks({}, { limit }, caller), code("invalid_request"));
     assert.throws(() => h.engine.listTasks({}, { limit: NaN }, caller), code("invalid_payload"));
     const first = h.engine.listTasks({}, {}, caller);
@@ -412,7 +419,7 @@ test("invalid inputs, cursor domains, expiry, tampering and restart fail explici
 test("monotonic query lifetime still expires after wall-clock rollback", async (t) => {
   let monotonic = 100;
   t.mock.method(performance, "now", () => monotonic);
-  const h = harness({ limits: { pageSize: 1, queryLifetimeMs: 100 } });
+  const h = await harness({ limits: { pageSize: 1, queryLifetimeMs: 100 } });
   try {
     h.submit();
     h.submit();
@@ -429,7 +436,7 @@ test("monotonic query lifetime still expires after wall-clock rollback", async (
 });
 
 test("removed members invalidate the whole view, even members already delivered", async () => {
-  const h = harness({ limits: { pageSize: 1 } });
+  const h = await harness({ limits: { pageSize: 1 } });
   try {
     h.submit();
     h.submit();
@@ -451,7 +458,7 @@ test("removed members invalidate the whole view, even members already delivered"
 });
 
 test("explicit collection invalidates pages and memory restart recovers after compaction", async () => {
-  const h = harness({ limits: { pageSize: 1, retentionMs: 1 } });
+  const h = await harness({ limits: { pageSize: 1, retentionMs: 1 } });
   try {
     const one = h.submit();
     const two = h.submit();
@@ -488,17 +495,19 @@ test("explicit collection invalidates pages and memory restart recovers after co
 });
 
 test("bounded 5000-record scan preserves all membership without a derived index", async () => {
-  const h = harness();
+  const h = await harness({ limits: { queryPageBytes: 200_000 } });
   try {
     const original = h.submit();
     const facts = h.store.read().facts;
     const template = facts.tasks[original.taskId];
     assert.ok(template);
     for (let index = 1; index < 5_000; index++) {
-      const taskId = newId();
+      const taskId = newId(h.clock.now());
       facts.tasks[taskId] = {
-        ...template,
-        snapshot: { ...template.snapshot, taskId, requestId: taskId, seriesId: taskId },
+        ...structuredClone(template),
+        taskId,
+        seriesId: taskId,
+        request: { ...template.request, requestId: taskId },
       };
     }
     const catalog = new TaskCatalog(h.engine.limits);
@@ -519,7 +528,7 @@ test("bounded 5000-record scan preserves all membership without a derived index"
 });
 
 test("scan, total memory, view count and full wire page bytes are bounded without truncation", async () => {
-  const h = harness();
+  const h = await harness();
   try {
     for (let index = 0; index < 4; index++) h.submit();
     const facts = h.store.read().facts;
@@ -549,15 +558,15 @@ test("scan, total memory, view count and full wire page bytes are bounded withou
       () => read(new TaskCatalog({ ...h.engine.limits, queryPageBytes: 100 })),
       code("payload_too_large"),
     );
-    const bounded = new TaskCatalog({ ...h.engine.limits, queryPageBytes: 750 });
+    const bounded = new TaskCatalog({ ...h.engine.limits, queryPageBytes: 1300 });
     let page = read(bounded);
     const found = [...page.tasks];
     assert.ok(page.next);
-    assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 750);
+    assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 1300);
     while (page.next) {
       page = read(bounded, page.next);
       found.push(...page.tasks);
-      assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 750);
+      assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 1300);
     }
     assert.equal(new Set(found.map((item) => item.taskId)).size, 4);
     const oneView = new TaskCatalog({ ...h.engine.limits, pageSize: 1, maxQueryViews: 1 });
@@ -571,25 +580,25 @@ test("scan, total memory, view count and full wire page bytes are bounded withou
   }
 });
 
-test("legal v2 checkpoints recover missing update metadata from exact retained progress events", async () => {
-  const h = harness();
+test("v4 updates derive from source facts without Task metadata; old checkpoint versions are rejected", async () => {
+  const h = await harness();
   try {
     const task = h.submit();
     await h.turn();
+    const taskUpdatedAt = h.engine.getTask(task.taskId, caller).updatedAt;
     h.clock.setTime(h.clock.now() + 10);
     h.work[0]?.permit.progress({ stage: "execution", percent: 1, message: "" });
     h.clock.setTime(h.clock.now() - 20);
     h.work[0]?.permit.progress({ stage: "execution", percent: 2, message: "" });
     const view = h.store.read();
-    delete view.facts.tasks[task.taskId]?.updatedAt;
-    for (const event of view.events)
-      if (event.type === "task.created") delete event.data.task.updatedAt;
     const recovered = restoreTaskUpdates(view);
-    assert.equal(recovered.facts.tasks[task.taskId]?.updatedAt, at(h.clock.now()));
+    assert.deepEqual(recovered, view);
+    assert.equal("updatedAt" in recovered.facts.tasks[task.taskId]!, false);
+    assert.equal(h.engine.getTask(task.taskId, caller).updatedAt, taskUpdatedAt);
+    assert.equal(recovered.facts.runs[h.work[0]!.permit.runId]!.updatedAt, at(h.clock.now()));
     const broken = structuredClone(view);
-    delete broken.facts.tasks[task.taskId]?.updatedAt;
-    broken.events = [];
-    assert.throws(() => restoreTaskUpdates(broken), code("history_gap"));
+    Reflect.set(broken.facts, "projectionVersion", 2);
+    assert.throws(() => restoreTaskUpdates(broken), code("unsupported_version"));
     assert.throws(() => h.store.compact("not-owner", view.facts.watermark), code("store_owned"));
   } finally {
     await h.close();

@@ -1,35 +1,108 @@
 import type {
-  RunPage,
+  CollectionEnvelope,
   HistoryPage,
   Observation,
   PublicEvent,
+  RunPage,
+  RunSnapshot,
+  RunSummary,
   TaskPage,
   TaskSnapshot,
+  TaskSummary,
   TaskTypeDiscovery,
 } from "@potential-guide/task-protocol";
 import type { Endpoint } from "./server.js";
 
 export type Parameters = Record<string, unknown> & { type: string };
+const stageValues = ["initial", "running", "stopping", "stopped", "completed", "failed"];
+export function sourcePosition(value: string): { domain: string; position: number } {
+  if (typeof value !== "string" || value.length > 1024) throw new Error("源 revision 无效。");
+  const split = value.lastIndexOf(":"),
+    raw = value.slice(split + 1),
+    position = Number(raw);
+  if (split <= 0 || !/^(0|[1-9]\d*)$/.test(raw) || !Number.isSafeInteger(position))
+    throw new Error("源 revision 无效。");
+  return { domain: value.slice(0, split), position };
+}
 export function validSnapshot(value: unknown): value is TaskSnapshot {
   if (!value || typeof value !== "object") return false;
   const task = value as Record<string, unknown>;
+  try {
+    if (sourcePosition(String(task.revision)).domain !== task.dataDomain) return false;
+  } catch {
+    return false;
+  }
+  if (
+    task.canceledAt !== undefined &&
+    (typeof task.canceledAt !== "string" || !Number.isFinite(Date.parse(task.canceledAt)))
+  )
+    return false;
+  const run = task.run as Record<string, unknown> | undefined;
+  if (
+    run !== undefined &&
+    (!run ||
+      typeof run !== "object" ||
+      !/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/.test(String(run.runId)) ||
+      typeof run.startedAt !== "string" ||
+      !Number.isFinite(Date.parse(run.startedAt)))
+  )
+    return false;
+  if ((task.stage === "initial") !== (run === undefined)) return false;
+  if (["completed", "failed", "stopped"].includes(String(task.stage))) {
+    const termination = task.termination as Record<string, unknown> | undefined;
+    const end =
+      run?.[
+        task.stage === "completed"
+          ? "completedAt"
+          : task.stage === "failed"
+            ? "failedAt"
+            : "stoppedAt"
+      ];
+    if (
+      !termination ||
+      typeof termination.terminatedAt !== "string" ||
+      !Number.isFinite(Date.parse(termination.terminatedAt)) ||
+      typeof end !== "string" ||
+      !Number.isFinite(Date.parse(end))
+    )
+      return false;
+    if (task.stage === "completed" && !Object.hasOwn(task, "result")) return false;
+  }
   return (
     ["taskId", "requestId", "seriesId"].every((key) =>
-      /^[0-9A-HJKMNP-TV-Z]{26}$/.test(String(task[key] ?? "")),
+      /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/.test(String(task[key] ?? "")),
     ) &&
-    ["receivedAt", "eligibleAt", "deadlineAt", "timestamp"].every(
+    ["receivedAt", "eligibleAt", "deadlineAt", "timestamp", "updatedAt"].every(
       (key) => typeof task[key] === "string" && Number.isFinite(Date.parse(task[key] as string)),
     ) &&
-    [
-      "initial",
-      "preparing",
-      "queued",
-      "running",
-      "completed",
-      "preparation_failed",
-      "allocation_failed",
-      "run_failed",
-    ].includes(String(task.stage))
+    stageValues.includes(String(task.stage)) &&
+    typeof task.canceled === "boolean" &&
+    task.canceled === (task.canceledAt !== undefined) &&
+    typeof task.dataDomain === "string" &&
+    typeof task.revision === "string" &&
+    task.revision.startsWith(`${task.dataDomain}:`) &&
+    /^[0-9]+$/.test(task.revision.slice(String(task.dataDomain).length + 1))
+  );
+}
+export function validRunSnapshot(value: unknown): value is RunSnapshot {
+  if (!value || typeof value !== "object") return false;
+  const run = value as Record<string, unknown>;
+  try {
+    if (sourcePosition(String(run.revision)).domain !== run.dataDomain) return false;
+  } catch {
+    return false;
+  }
+  return (
+    /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/.test(String(run.runId)) &&
+    stageValues.includes(String(run.stage)) &&
+    run.stage !== "initial" &&
+    typeof run.dataDomain === "string" &&
+    typeof run.revision === "string" &&
+    run.revision.startsWith(`${run.dataDomain}:`) &&
+    typeof run.startedAt === "string" &&
+    Number.isFinite(Date.parse(run.startedAt)) &&
+    typeof run.updatedAt === "string" &&
+    Number.isFinite(Date.parse(run.updatedAt))
   );
 }
 export class ApiError extends Error {
@@ -37,6 +110,7 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     message: string,
+    readonly details?: unknown,
   ) {
     super(`${status} ${code}：${message}`);
   }
@@ -80,6 +154,7 @@ export class Api {
         response.status,
         value.error?.code ?? "invalid_response",
         value.error?.message ?? "后端错误",
+        value.error?.details,
       );
     return value as T;
   }
@@ -240,7 +315,10 @@ function validDirectoryRow(value: unknown, field: "tasks" | "runs"): boolean {
     return false;
   const ids = field === "tasks" ? ["taskId", "requestId", "seriesId"] : ["runId"];
   if (ids.some((key) => !/^[0-9A-HJKMNP-TV-Z]{26}$/.test(String(row[key] ?? "")))) return false;
-  const times = field === "tasks" ? ["receivedAt", "updatedAt"] : ["startedAt"];
+  const times =
+    field === "tasks"
+      ? ["receivedAt", "updatedAt", "eligibleAt", "deadlineAt"]
+      : ["startedAt", "updatedAt"];
   if (
     times.some(
       (key) => typeof row[key] !== "string" || !Number.isFinite(Date.parse(row[key] as string)),
@@ -250,13 +328,20 @@ function validDirectoryRow(value: unknown, field: "tasks" | "runs"): boolean {
   const flags =
     field === "tasks"
       ? ["pending", "timedOut", "canceled", "completed", "runFailed"]
-      : ["running", "completed", "failed", "reclaimed", "sealed"];
+      : ["running", "completed", "failed", "stopping", "stopped", "reclaimed", "sealed"];
   if (flags.some((key) => typeof state[key] !== "boolean")) return false;
-  if (field === "tasks") return typeof state.stage === "string";
+  if (field === "tasks")
+    return (
+      stageValues.includes(String(row.stage)) &&
+      row.stage === state.stage &&
+      row.canceled === state.canceled &&
+      typeof row.scope === "string"
+    );
   for (const [flag, key] of [
     ["completed", "completedAt"],
     ["failed", "failedAt"],
     ["reclaimed", "reclaimedAt"],
+    ["stopped", "stoppedAt"],
   ] as const) {
     if (state[flag] !== (row[key] !== undefined)) return false;
     if (
@@ -265,7 +350,76 @@ function validDirectoryRow(value: unknown, field: "tasks" | "runs"): boolean {
     )
       return false;
   }
-  return state.running === (!state.completed && !state.failed && !state.reclaimed);
+  return (
+    stageValues.includes(String(row.stage)) &&
+    row.stage !== "initial" &&
+    (["running", "completed", "failed", "stopping", "stopped"] as const).every(
+      (stage) => state[stage] === (row.stage === stage),
+    )
+  );
+}
+export class CollectionReplica {
+  private values: Map<string, TaskSummary | RunSummary>;
+  revision: string;
+  constructor(
+    readonly field: "tasks" | "runs",
+    items: (TaskSummary | RunSummary)[],
+    revision: string,
+    readonly maxItems = 10_000,
+    readonly maxBytes = 8_388_608,
+  ) {
+    sourcePosition(revision);
+    this.revision = revision;
+    this.values = new Map(items.map((item) => [this.id(item), item]));
+    if (this.values.size !== items.length || items.some((item) => !validDirectoryRow(item, field)))
+      throw new Error("完整基线有重复成员或无效摘要。");
+    this.budget(this.values);
+  }
+  private id(item: TaskSummary | RunSummary): string {
+    return this.field === "tasks" ? (item as TaskSummary).taskId : (item as RunSummary).runId;
+  }
+  private budget(values: Map<string, TaskSummary | RunSummary>): void {
+    if (
+      values.size > this.maxItems ||
+      new TextEncoder().encode(JSON.stringify([...values.values()])).byteLength > this.maxBytes
+    )
+      throw new Error("完整集合超过本机预算；不截断基线或推进续读位置。");
+  }
+  apply(envelope: CollectionEnvelope<TaskSummary | RunSummary>): boolean {
+    const previous = sourcePosition(this.revision),
+      next = sourcePosition(envelope.revision);
+    if (next.domain !== previous.domain) throw new Error("集合增量属于另一个数据域。");
+    if (next.position <= previous.position) return false;
+    if (!Array.isArray(envelope.changes) || envelope.changes.length > 1000)
+      throw new Error("集合源封装无效或超限。");
+    const draft = new Map(this.values),
+      seen = new Set<string>();
+    for (const change of envelope.changes) {
+      if (seen.has(change.id)) throw new Error("同一源封装重复成员。");
+      seen.add(change.id);
+      if (change.kind === "removed") {
+        if (!draft.delete(change.id)) throw new Error("集合移出没有对应完整基线成员。");
+      } else {
+        if (
+          !["joined", "updated"].includes(change.kind) ||
+          !change.summary ||
+          !validDirectoryRow(change.summary, this.field) ||
+          this.id(change.summary) !== change.id ||
+          (change.kind === "updated" && !draft.has(change.id)) ||
+          (change.kind === "joined" && draft.has(change.id))
+        )
+          throw new Error("集合增量不匹配完整基线。");
+        draft.set(change.id, structuredClone(change.summary));
+      }
+    }
+    this.budget(draft);
+    this.values = draft;
+    this.revision = envelope.revision;
+    return true;
+  }
+  items(): (TaskSummary | RunSummary)[] {
+    return [...this.values.values()];
+  }
 }
 export class Directory<P extends TaskPage | RunPage = TaskPage> {
   constructor(readonly field: "tasks" | "runs" = "tasks") {}
@@ -275,6 +429,8 @@ export class Directory<P extends TaskPage | RunPage = TaskPage> {
   private generation = 0;
   dropped = 0;
   error = "";
+  live = false;
+  private replica: CollectionReplica | undefined;
   rejectQuery(error: unknown): void {
     this.generation++;
     this.error = String(error);
@@ -295,21 +451,28 @@ export class Directory<P extends TaskPage | RunPage = TaskPage> {
       const next = await fetchPage(params.toString());
       if (!isCurrent()) return false;
       const rows = (page: P) => (page as unknown as Record<string, unknown[]>)[this.field]!;
-      if (!Array.isArray(rows(next)) || !next.observedAt || !next.expiresAt)
+      if (!Array.isArray(rows(next)) || !next.observedAt || !next.expiresAt || !next.revision)
         throw new Error("目录协议无效。");
+      sourcePosition(next.revision);
       if (rows(next).some((row) => !validDirectoryRow(row, this.field)))
         throw new Error("目录摘要协议无效，未替换已有快照。");
       if (
         append &&
-        (next.observedAt !== this.page?.observedAt || next.expiresAt !== this.page.expiresAt)
+        (next.revision !== this.page?.revision ||
+          next.observedAt !== this.page?.observedAt ||
+          next.expiresAt !== this.page.expiresAt)
       )
         throw new Error("目录快照变化；拒绝拼接。请重新查询。");
-      this.page = append ? { ...next, [this.field]: [...rows(this.page!), ...rows(next)] } : next;
+      const merged = append ? [...rows(this.page!), ...rows(next)] : rows(next);
+      if (
+        merged.length > 10_000 ||
+        new TextEncoder().encode(JSON.stringify(merged)).byteLength > 8_388_608
+      )
+        throw new Error("完整目录超过本机预算；未丢弃成员或推进游标。");
+      this.page = { ...next, [this.field]: merged, items: merged };
+      this.replica = undefined;
+      this.live = false;
       if (!append) this.dropped = 0;
-      if (rows(this.page).length > 1000) {
-        this.dropped += rows(this.page).length - 1000;
-        this.page = { ...this.page, [this.field]: rows(this.page).slice(-1000) };
-      }
       this.query = original;
       this.expired = false;
       this.error = "";
@@ -320,6 +483,42 @@ export class Directory<P extends TaskPage | RunPage = TaskPage> {
       if (error instanceof ApiError && error.code === "query_expired") this.expired = true;
       throw error;
     }
+  }
+  apply(envelope: CollectionEnvelope<TaskSummary | RunSummary>): boolean {
+    if (!this.page || this.page.next || this.dropped)
+      throw new Error("分页基线未完整，不能应用集合增量。");
+    this.replica ??= new CollectionReplica(
+      this.field,
+      (this.page as unknown as Record<string, (TaskSummary | RunSummary)[]>)[this.field]!,
+      this.page.revision,
+    );
+    const accepted = this.replica.apply(envelope);
+    if (accepted) {
+      const items = this.replica.items();
+      const sort = new URLSearchParams(this.query).get("sort");
+      const key =
+        sort === "updated-desc" ? "updatedAt" : this.field === "tasks" ? "receivedAt" : "startedAt";
+      items.sort((a, b) => {
+        const left = (a as unknown as Record<string, string>)[key] ?? "";
+        const right = (b as unknown as Record<string, string>)[key] ?? "";
+        const ai = this.field === "tasks" ? (a as TaskSummary).taskId : (a as RunSummary).runId;
+        const bi = this.field === "tasks" ? (b as TaskSummary).taskId : (b as RunSummary).runId;
+        return left === right ? (ai < bi ? -1 : ai > bi ? 1 : 0) : left > right ? -1 : 1;
+      });
+      this.page = { ...this.page, [this.field]: items, items, revision: this.replica.revision };
+    }
+    this.live = true;
+    return accepted;
+  }
+  prepareLive(): string {
+    if (!this.page || this.page.next || this.dropped)
+      throw new Error("必须先取得完整分页基线，才可订阅集合。");
+    this.replica = new CollectionReplica(
+      this.field,
+      (this.page as unknown as Record<string, (TaskSummary | RunSummary)[]>)[this.field]!,
+      this.page.revision,
+    );
+    return this.page.revision;
   }
 }
 export class TaskSnapshots {
@@ -335,8 +534,9 @@ export class TaskSnapshots {
     return value;
   }
   seed(snapshot: TaskSnapshot): void {
+    if (!validSnapshot(snapshot)) throw new Error("Task 快照协议无效。");
     if (!this.versions.has(snapshot.taskId)) {
-      this.version(snapshot.taskId);
+      this.version(snapshot.taskId).watermark = sourcePosition(snapshot.revision).position;
       this.store(snapshot);
     }
   }
@@ -344,16 +544,17 @@ export class TaskSnapshots {
     const version = this.version(id);
     const generation = ++version.generation;
     return (snapshot) => {
-      if (snapshot.taskId !== id) return false;
-      // Cancellation is an irreversible fact, even in a late GET response.
-      if (snapshot.canceledAt !== undefined) return this.confirmCancellation(id, snapshot);
+      if (!validSnapshot(snapshot) || snapshot.taskId !== id || this.versions.get(id) !== version)
+        return false;
+      const position = sourcePosition(snapshot.revision).position;
+      if (snapshot.canceled) return this.confirmCancellation(id, snapshot);
       if (
-        this.versions.get(id) !== version ||
-        version.generation !== generation ||
-        this.values.get(id)?.canceledAt !== undefined
+        position < version.watermark ||
+        (version.generation !== generation && position <= version.watermark)
       )
         return false;
       version.generation++;
+      version.watermark = position;
       this.store(snapshot);
       return true;
     };
@@ -364,6 +565,7 @@ export class TaskSnapshots {
   }
   confirmCancellation(id: string, snapshot: TaskSnapshot): boolean {
     if (
+      !validSnapshot(snapshot) ||
       snapshot.taskId !== id ||
       typeof snapshot.canceledAt !== "string" ||
       !Number.isFinite(Date.parse(snapshot.canceledAt))
@@ -372,22 +574,22 @@ export class TaskSnapshots {
     const previous = this.values.get(id);
     if (previous?.canceledAt !== undefined && previous.canceledAt !== snapshot.canceledAt)
       throw new Error("取消事实冲突；保留已确认快照，不猜测事实顺序。");
-    this.version(id).generation++;
-    // Public cancellation freezes the Task, not its Run. Only observation time varies.
-    this.store(
-      previous?.canceledAt !== undefined
-        ? { ...previous, timestamp: snapshot.timestamp }
-        : snapshot,
-    );
+    const version = this.version(id),
+      position = sourcePosition(snapshot.revision).position;
+    version.generation++;
+    const latest =
+      previous && sourcePosition(previous.revision).position > position ? previous : snapshot;
+    version.watermark = Math.max(version.watermark, position);
+    this.store({ ...latest, canceled: true, canceledAt: snapshot.canceledAt });
     return true;
   }
   observe(snapshot: TaskSnapshot, watermark: number): boolean {
     if (!Number.isSafeInteger(watermark) || watermark < 0)
       throw new Error("事件观察缺少有效的公开 watermark。");
     const version = this.version(snapshot.taskId);
+    if (!validSnapshot(snapshot) || sourcePosition(snapshot.revision).position !== watermark)
+      throw new Error("快照 revision 与观察水位不一致。");
     if (watermark < version.watermark) return false;
-    const previous = this.values.get(snapshot.taskId);
-    if (previous?.canceledAt !== undefined && snapshot.canceledAt === undefined) return false;
     version.watermark = watermark;
     if (snapshot.canceledAt !== undefined)
       return this.confirmCancellation(snapshot.taskId, snapshot);
@@ -396,7 +598,13 @@ export class TaskSnapshots {
     return true;
   }
   private store(snapshot: TaskSnapshot): void {
-    this.values.set(snapshot.taskId, snapshot);
+    const previous = this.values.get(snapshot.taskId);
+    if (previous && previous.dataDomain !== snapshot.dataDomain)
+      throw new Error("不能合并不同数据域的 Task 快照。");
+    const value = previous?.canceledAt
+      ? { ...snapshot, canceled: true, canceledAt: previous.canceledAt }
+      : snapshot;
+    this.values.set(snapshot.taskId, value);
     let bytes = 0;
     const keep = [...this.values.values()].reverse();
     for (const [index, value] of keep.entries()) {
@@ -418,6 +626,9 @@ export class TaskSnapshots {
     }
   }
 }
+export function eventKey(event: PublicEvent): string {
+  return `${event.revision}:${event.taskId ?? ""}:${event.runId ?? ""}:${event.type}`;
+}
 export class EventWindow {
   events: PublicEvent[] = [];
   historyNext: string | undefined;
@@ -428,9 +639,15 @@ export class EventWindow {
   gap = "";
   lastReceived = "";
   merge(events: PublicEvent[]): void {
-    const values = new Map(this.events.map((event) => [event.sequence, event]));
-    for (const event of events) values.set(event.sequence, event);
-    const sorted = [...values.values()].sort((a, b) => a.sequence - b.sequence);
+    const values = new Map(this.events.map((event) => [eventKey(event), event]));
+    for (const event of events) {
+      if (!event.revision || sourcePosition(event.revision).position !== event.sequence)
+        throw new Error("事件 revision 与源序位置不一致。");
+      values.set(eventKey(event), event);
+    }
+    const sorted = [...values.values()].sort(
+      (a, b) => a.sequence - b.sequence || eventKey(a).localeCompare(eventKey(b)),
+    );
     let bytes = 0;
     const kept: PublicEvent[] = [];
     for (const event of sorted.reverse()) {
@@ -447,6 +664,7 @@ export class EventWindow {
     if (
       !Array.isArray(page.events) ||
       typeof page.cursor !== "string" ||
+      !page.revision ||
       !Number.isSafeInteger(page.watermark)
     )
       throw new Error("事件历史协议无效。");
@@ -480,6 +698,15 @@ export async function consumeSse(
         const frame = buffer.slice(0, end);
         buffer = buffer.slice(end + 2);
         const lines = frame.split("\n");
+        if (lines.includes("event: task.error")) {
+          const value = JSON.parse(
+            lines
+              .filter((line) => line.startsWith("data:"))
+              .map((line) => line.slice(5).trimStart())
+              .join("\n"),
+          );
+          throw streamError(value);
+        }
         if (lines.includes("event: task.observation")) {
           const data = lines
             .filter((line) => line.startsWith("data:"))
@@ -499,6 +726,74 @@ export async function consumeSse(
       }
     }
     if (buffer.trim()) throw new Error("事件帧不完整，保留最后确认游标。");
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+}
+function streamError(value: {
+  error?: { code?: string; message?: string; details?: unknown };
+}): ApiError {
+  const code = value.error?.code ?? "stream_error";
+  const status =
+    code === "forbidden"
+      ? 403
+      : code === "unauthenticated"
+        ? 401
+        : ["history_expired", "query_expired"].includes(code)
+          ? 410
+          : code === "capacity_exceeded"
+            ? 429
+            : code.startsWith("invalid_")
+              ? 400
+              : 503;
+  return new ApiError(status, code, value.error?.message ?? "订阅中断。", value.error?.details);
+}
+export async function consumeCollectionSse(
+  response: Response,
+  receive: (envelope: CollectionEnvelope<TaskSummary | RunSummary>) => void,
+): Promise<void> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("集合事件流为空。");
+  const decoder = new TextDecoder();
+  let buffer = "";
+  try {
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      buffer += decoder.decode(chunk.value, { stream: true }).replace(/\r\n/g, "\n");
+      if (new TextEncoder().encode(buffer).byteLength > 1_048_576)
+        throw new Error("集合源封装超出本机预算。");
+      let end = buffer.indexOf("\n\n");
+      while (end !== -1) {
+        const lines = buffer.slice(0, end).split("\n");
+        buffer = buffer.slice(end + 2);
+        const data = lines
+          .filter((line) => line.startsWith("data:"))
+          .map((line) => line.slice(5).trimStart())
+          .join("\n");
+        if (lines.includes("event: task.error")) throw streamError(JSON.parse(data));
+        if (
+          lines.some(
+            (line) => line === "event: task.collection" || line === "event: run.collection",
+          )
+        ) {
+          const envelope = JSON.parse(data) as CollectionEnvelope<TaskSummary | RunSummary>;
+          if (
+            !envelope.revision ||
+            lines
+              .find((line) => line.startsWith("id:"))
+              ?.slice(3)
+              .trim() !== envelope.revision ||
+            !Array.isArray(envelope.changes)
+          )
+            throw new Error("集合事件源封装无效。");
+          receive(envelope);
+        }
+        end = buffer.indexOf("\n\n");
+      }
+    }
+    if (buffer.trim()) throw new Error("集合源封装中途断线；保留最后完整应用的 revision。");
   } finally {
     await reader.cancel().catch(() => {});
     reader.releaseLock();

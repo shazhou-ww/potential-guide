@@ -1,9 +1,19 @@
 # Implementation
 
-既有独立 Run Worker 阶段保留；当前尚未完成本契约或进入实施验收。
-阶段行为、可重复验证与剩余范围见 [Worker 阶段证据](Worker-stage.md)；ledger 的 I-* 仍全部未勾选。
-[匹配资格的时间观测边界](Matching-observation-boundary.md)已由主 Agent 裁决，并形成 Ideal 的 Q08 实质澄清候选；
-须重新准备、提交并接受准确 Ideal 后才继续核心实现。资格见证尚未实现，不把设计已决或 Worker 回归通过当作实施完成。
+主 Agent 复核发现 Run sharing 错用全 Input canonical，偏离既有 Schema Equals 共识。
+先前无保留 ready 结论已撤回，六个 I-* 先重置；本次恢复 Schema Equals 并完成修复后验证后才勾回。
+实时预约与事实投影共用既有 Schema 编译投影，原 Schema 持久在 Binding，历史 key 可重建且不成为独立权威。
+原始完整 Request canonical 幂等冲突检查不变；修复后的定向、八包 338/338 与完整 `pnpm check` 均实际 exit 0。
+主 Agent 随后独立复验暴露 CLI/Worker 时序失败；已按真实握手/条件等待修复，
+并修正再次全仓检查暴露的 SSE reader 取消所有权缺口。最新完整 `pnpm check` 实际 exit 0，
+负对照、失败试跑及最终日志独立记在 Fact-stage 时序小节，不以旧通过覆盖新失败。
+既有独立 Run Worker 阶段保留为[历史阶段证据](Worker-stage.md)，不替代当前完整验证。
+[匹配资格的时间观测边界](Matching-observation-boundary.md)的 Q08 已随准确 Ideal
+`564f6709fc0c7c2d152777520b7a9cf49d7aeb94` 经主 Agent 按授权接受，核心事实模型已继续实施。
+当前源事实、完整 Run 退出、准入持久下界和观察链路的代码与分层证据见
+[事实模型实施证据](Fact-stage.md)：保留旧候选 306 用例的历史记录，并单列本次修复后的命令和实际退出码，
+包含真实生产 tarball/独立消费者验证。D-* 未勾选。
+未进入 Outer，未提交、推送或追加生命周期事件。
 
 ## Steps
 

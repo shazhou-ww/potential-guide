@@ -58,7 +58,9 @@ test("known URL paths reject credential-bearing and normalization-bypass inputs 
         url,
       );
     }
-    assert.equal(h.store.read().facts.watermark, 0);
+    assert.deepEqual(h.store.read().facts.tasks, {});
+    assert.deepEqual(h.store.read().facts.runs, {});
+    assert.ok(h.store.read().events.every((event) => event.type === "window.advanced"));
     validateCheckInput({ checker: { kind: "checker", url: "file:///C:/check.tar" }, subject: {} });
     validateProbeInput({
       objective: { kind: "objective", url: "https://example.test/a?v=1&name=value%20x" },
@@ -93,7 +95,7 @@ test("Probe digest conflicts become preparation_failed after authorization but b
     const task = h.submit(input);
     const final = await wait(
       () => h.read(task),
-      (snapshot) => snapshot.stage === "run_failed",
+      (snapshot) => snapshot.stage === "failed",
     );
     assert.equal(final.error?.code, "invalid_probe");
     assert.match(final.error!.message, /Root binding conflict/);

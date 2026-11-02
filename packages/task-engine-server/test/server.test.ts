@@ -45,6 +45,35 @@ function config(): ServerOptions {
   };
 }
 const headers = { authorization: "Bearer good", "content-type": "application/json" };
+test("shutdown owns cancellation of a quiet SSE body even when request abort propagation is blocked", async () => {
+  const options = config();
+  const resolveCaller = options.resolveCaller;
+  options.resolveCaller = (request) => {
+    // Fault-inject a lost downstream abort; the HTTP bridge still owns its body reader.
+    request.signal.addEventListener("abort", (event) => event.stopImmediatePropagation());
+    return resolveCaller(request);
+  };
+  const server = await startTaskServer(options);
+  const baseline = server.engine.listTasks({}, {}, { scope: "one", subject: "allowed" });
+  const response = await fetch(
+    `${server.url}/tasks/events?fromRevision=${encodeURIComponent(baseline.revision)}`,
+    { headers },
+  );
+  const reader = response.body?.getReader();
+  assert.ok(reader);
+  try {
+    const connected = await reader.read();
+    assert.match(new TextDecoder().decode(connected.value), /connected/);
+    await server.close();
+    assert.equal(server.engine.errors.length, 0);
+    assert.equal((await reader.read()).done, true);
+  } finally {
+    await reader.cancel().catch(() => {});
+    await server.engine.close();
+    await server.close().catch(() => {});
+    options.store?.close();
+  }
+});
 test("independent programmatic import cannot listen, open a database or install global signals", () => {
   const output = execFileSync(
     process.execPath,
@@ -93,7 +122,7 @@ test("import has no signals; real HTTP auth, permission, bounded body, history a
       body: JSON.stringify({ type: "echo", text: "hello", timeoutMs: 10000 }),
     });
     assert.equal(submitted.status, 202);
-    const task = (await submitted.json()) as { taskId: string };
+    const task = (await submitted.json()) as { taskId: string; revision: string };
     const directory = await fetch(`${server.url}/tasks?type=echo`, { headers });
     assert.equal(directory.status, 200);
     assert.equal(((await directory.json()) as TaskPage).tasks[0]?.taskId, task.taskId);
@@ -101,9 +130,12 @@ test("import has no signals; real HTTP auth, permission, bounded body, history a
     assert.equal((await fetch(`${server.url}/events?taskId=${task.taskId}`)).status, 401);
     assert.equal(
       (
-        await fetch(`${server.url}/events?taskId=${task.taskId}`, {
-          headers: { authorization: "Bearer other" },
-        })
+        await fetch(
+          `${server.url}/events?taskId=${task.taskId}&fromRevision=${encodeURIComponent(task.revision)}`,
+          {
+            headers: { authorization: "Bearer other" },
+          },
+        )
       ).status,
       403,
     );
@@ -125,7 +157,9 @@ test("import has no signals; real HTTP auth, permission, bounded body, history a
       ).status,
       413,
     );
-    const stream = await fetch(`${server.url}/events?taskId=${task.taskId}`, { headers });
+    const stream = await fetch(`${server.url}/events?taskId=${task.taskId}`, {
+      headers: { ...headers, "Last-Event-ID": task.revision },
+    });
     assert.equal(stream.status, 200);
     const reader = stream.body!.getReader();
     const first = new TextDecoder().decode((await reader.read()).value);
@@ -232,6 +266,7 @@ test("startup failure after acquiring resources and bounded shutdown never repor
     ...config(),
     store,
     shutdownMs: 20,
+    limits: { stopGraceMs: 5, forceExitWaitMs: 5 },
     closeResources: () => physical,
   });
   await assert.rejects(server.close(), /not confirmed/);

@@ -116,7 +116,7 @@ test("real file archive -> prepare -> actual worker; HTTPS hook unchanged and ne
     currentVersions: { check: "2" },
     authorize: () => true,
   });
-  engine.start();
+  await engine.start();
   try {
     const eligibleAt = new Date(Date.now() - 1000).toISOString();
     const task = engine.submit(
@@ -208,7 +208,7 @@ test("file Tasks retain subject validation and separate actual runtime availabil
     currentVersions: { check: "2" },
     authorize: () => true,
   });
-  engine.start();
+  await engine.start();
   try {
     for (const [artifact, code] of [
       [unavailable, "unsupported_runtime"],
@@ -229,7 +229,7 @@ test("file Tasks retain subject validation and separate actual runtime availabil
         { scope: "one", subject: "test" },
       );
       const failed = await final(engine, task);
-      assert.equal(failed.stage, "run_failed");
+      assert.equal(failed.stage, "failed");
       assert.equal(failed.error?.code, code);
     }
     assert.equal(Object.keys(store.read().facts.runs).length, 2);

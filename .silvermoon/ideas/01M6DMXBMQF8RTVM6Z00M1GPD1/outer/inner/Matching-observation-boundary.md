@@ -1,10 +1,13 @@
-# 匹配资格的时间观测边界：已决，未实现
+# 匹配资格的时间观测边界：已实现，待 Inner 接受
 
 本文件服务于 [Implementation](Implementation.md)。2026-11-02 主 Agent 依据用户明确授予的自主设计与门禁职责，
 选择持久资格时间见证；这不是用户逐条回答，不可用的交互也不构成选择证据。
 定义冲突已决，不再是等待普通实现许可的问题；但这是实质澄清，已写入 Ideal 的
-[Q08 决策候选](ideal/Open-questions.md)，须重走准确 Ideal 的 preparing/submitIdeal/acceptIdeal 后才继续核心实现。
-设计已决不等于代码已实现或 Inner 已验收；ledger 仍全部未勾选。
+[Q08 决策](ideal/Open-questions.md)。准确 Ideal `564f6709fc0c7c2d152777520b7a9cf49d7aeb94`
+已由主 Agent 完成 submitIdeal/acceptIdeal，并在接受提交
+`616cc7cf9e12918cc60f06b0bccf786b8dd8c8a9` 同步后继续实施。
+代码、完整验证及 V17 真实崩溃/历史集合补读证据见 [事实模型实施证据](Fact-stage.md)；
+完整 `pnpm check` 已退出 0，I-* 按完成勾选、D-* 未勾选；这不等于 Inner 已接受。
 
 ## 已决边界
 
@@ -47,13 +50,13 @@ policy=terminates-after-eligible；初始源水位 S，筛选 stage=running 或 
 
 没有经历资格处理的 S 前缀与经历处理后的 W 前缀已经不同，故不再依赖不可恢复的内存匹配缓存区分历史。
 真实源事件已经证明资格时不额外写见证；pending 已取消、停止先成立、后来才受理/开始的对象均不能借见证获得非法匹配。
-完整验收矩阵见 [Contract-audit 的 V17](ideal/Contract-audit.md#v17资格观测最小反例与反向边界)，尚未实施。
+完整验收矩阵见 [Contract-audit 的 V17](ideal/Contract-audit.md#v17资格观测最小反例与反向边界)；
+当前已实现资格源事实、回放及完整封装；最终验收索引与实际结果见实施证据。
 
 ## 执行状态与证据边界
 
-- 先前协议/存储草稿已撤回，源码仍为 Worker 检查点 `9b4836c50afa32b775cb7c74dd4ce80f5abb87a1`；
-  本轮只更新文档，不把候选写成已经落地的核心事实模型。
-- 撤回后的 task-engine build 与 task-protocol 11/11 是恢复源码检查点的历史证据，
-  不证明 Q08 新语义。既有 Worker 阶段质量检查同样不替代新资格见证验证。
-- 本轮不改源码、Outer、ledger、事件，不 commit/push，也不请求或记录生命周期接受。
-  准确 Ideal 的重新同步与门禁由主 Agent 负责。
+- 撤回旧草稿及 Worker 检查点属于接受 Q08 前的历史，不再代表当前源码。
+- 当前 `qualification.test.ts`、`domain-contract.test.ts` 与 SQLite `facts-v4.test.ts`
+  分别证明纯源序资格、真实 Engine 的 initial+eligible→协调→回拨，以及见证的落盘重开。
+  测试命令、实际结果及未完成边界集中记录在 [事实模型实施进展](Fact-stage.md)。
+- 不修改已接受 Ideal 或 Outer，不把本文件当作第二份规范；生命周期与 Git 同步仍由主 Agent 负责。

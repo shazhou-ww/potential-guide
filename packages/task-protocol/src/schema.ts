@@ -45,6 +45,7 @@ export interface InputContract<Input = Json> {
   readonly revision: string;
   validate(value: unknown): Input;
   equals(left: unknown, right: unknown): boolean;
+  equivalenceKey(value: Json): string;
 }
 const defaults: SchemaLimits = {
   maxSchemaBytes: 262_144,
@@ -102,8 +103,9 @@ function compileContract<Input = Json>(
   for (const [key, limit] of Object.entries(limits))
     if (!Number.isSafeInteger(limit) || limit <= 0)
       fail("invalid_schema", `${key} must be a positive safe integer.`);
-  const schema = json(value, limits.maxSchemaBytes);
-  if (!isSchema(schema)) fail("invalid_schema", "JSON Schema must be a boolean or object.");
+  const parsed = json(value, limits.maxSchemaBytes);
+  if (!isSchema(parsed)) fail("invalid_schema", "JSON Schema must be a boolean or object.");
+  const schema = parsed;
   const nodes = new Set<Schema>();
   const locations = new Set<string>();
   const children = new Map<Schema, Schema[]>();
@@ -383,6 +385,9 @@ function compileContract<Input = Json>(
     write(value);
     return chunks.join("");
   }
+  function equivalenceKey(value: Json): string {
+    return projectionKey(projection(schema, value, { remaining: limits.maxProjectionNodes }));
+  }
   return Object.freeze({
     inputSchema: schema as InputSchema,
     revision: createHash("sha256")
@@ -395,17 +400,10 @@ function compileContract<Input = Json>(
     },
     equals(left: unknown, right: unknown): boolean {
       return (
-        projectionKey(
-          projection(schema, json(left, limits.maxInputBytes), {
-            remaining: limits.maxProjectionNodes,
-          }),
-        ) ===
-        projectionKey(
-          projection(schema, json(right, limits.maxInputBytes), {
-            remaining: limits.maxProjectionNodes,
-          }),
-        )
+        equivalenceKey(json(left, limits.maxInputBytes)) ===
+        equivalenceKey(json(right, limits.maxInputBytes))
       );
     },
+    equivalenceKey,
   });
 }

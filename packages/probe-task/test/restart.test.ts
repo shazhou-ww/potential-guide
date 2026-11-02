@@ -84,8 +84,8 @@ test("real process restart interrupts started Probe and children without observi
     first.child.kill("SIGKILL");
     await exits.get(first.child);
     const second = await launch("second");
-    const interrupted = await wait(second.url, running.taskId, "run_failed");
-    assert.equal(interrupted.error?.code, "execution_interrupted");
+    const interrupted = await wait(second.url, running.taskId, "stopped");
+    assert.equal(interrupted.error, undefined);
     assert.equal(interrupted.run?.runId, bound.run?.runId);
     assert.equal(interrupted.deadlineAt, running.deadlineAt);
     const restored = await read(second.url, completed.taskId);

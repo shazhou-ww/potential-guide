@@ -54,7 +54,7 @@ export { probeInputSchema, validateProbeInput } from "./contracts.js";
 
 export interface ChildTaskPort {
   service: {
-    [K in "submit" | "getTask" | "cancelTask" | "readHistory"]: (
+    [K in "submit" | "getTask" | "cancelTask" | "readHistory" | "getRun" | "getRunHistory"]: (
       ...args: Parameters<TaskService[K]>
     ) => ReturnType<TaskService[K]> | Promise<ReturnType<TaskService[K]>>;
   };
@@ -103,12 +103,22 @@ export function createIsolatedProbe(
             getTask: (taskId) =>
               invoke("child-get", { taskId }) as unknown as Promise<TaskSnapshot>,
             cancelTask: (taskId) =>
-              invoke("child-cancel", { taskId }) as unknown as Promise<TaskSnapshot>,
+              invoke("child-cancel", { taskId }) as unknown as Promise<
+                ReturnType<TaskService["cancelTask"]>
+              >,
             readHistory: (filter, page) =>
               invoke("child-history", {
                 taskId: "taskId" in filter ? filter.taskId : "",
                 page: json(page),
               }) as never,
+            getRun: (runId) =>
+              invoke("child-run", { runId }) as unknown as Promise<
+                ReturnType<TaskService["getRun"]>
+              >,
+            getRunHistory: (runId, page) =>
+              invoke("child-run-history", { runId, page: json(page) }) as unknown as Promise<
+                ReturnType<TaskService["getRunHistory"]>
+              >,
           },
           waitForTaskRelease: async (taskId) => {
             await invoke("child-release", { taskId });
@@ -485,7 +495,7 @@ export function createProbeImplementation(
           subject: request.subject,
           context: request.context,
           language: request.language,
-          matchPolicy: "started-after-eligible",
+          matchPolicy: "starts-after-eligible",
           timeoutMs: remaining,
         },
         port.caller,
@@ -508,22 +518,34 @@ export function createProbeImplementation(
           `Child ${snapshot.taskId}: ${snapshot.error?.code ?? snapshot.stage}.`,
         );
       // Check the actual committed child runtime, not a caller-declared label.
+      const runSnapshot = await port.service.getRun(snapshot.run.runId, port.caller);
+      if (
+        runSnapshot.runId !== snapshot.run.runId ||
+        runSnapshot.type !== "check" ||
+        runSnapshot.stage !== "completed" ||
+        runSnapshot.dataDomain !== snapshot.dataDomain ||
+        runSnapshot.result === undefined ||
+        canonicalJson(runSnapshot.result) !== canonicalJson(snapshot.result)
+      )
+        throw new TaskError("invalid_probe", "Child Task and independent Run evidence differ.");
       let cursor: string | undefined;
       let actual: string | undefined;
       do {
-        const page = await port.service.readHistory(
-          { taskId: snapshot.taskId },
+        const page = await port.service.getRunHistory(
+          snapshot.run.runId,
           cursor ? { cursor } : {},
           port.caller,
         );
         for (const event of page.events)
-          if (event.type === "run.started") {
-            const run = (event.data as { run?: { binding?: { environment?: string } } }).run;
-            actual = run?.binding?.environment;
+          if (event.type === "run.started" && event.runId === snapshot.run.runId) {
+            const run = (
+              event.data as { run?: { runId?: string; binding?: { environment?: string } } }
+            ).run;
+            if (run?.runId === snapshot.run.runId) actual = run.binding?.environment;
           }
         cursor = page.next;
       } while (cursor);
-      if (actual !== policy.checkEnvironment)
+      if (actual !== policy.checkEnvironment || actual !== runSnapshot.environment)
         throw new TaskError(
           "unsupported_environment",
           "Child Check runtime differs from prepared Probe.",

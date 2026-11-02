@@ -3,7 +3,6 @@ import test from "node:test";
 import {
   at,
   canonical,
-  emptyFacts,
   isCanceled,
   isCompleted,
   isPending,
@@ -11,7 +10,6 @@ import {
   isTimedOut,
   type JsonObject,
   json,
-  project,
   reduce,
 } from "@potential-guide/task-protocol";
 import { newId } from "../src/index.js";
@@ -21,7 +19,7 @@ import { createFixtureEngine as createTaskEngine } from "./driver.js";
 import { caller, deferred, echoEquals, flush, harness, validateEcho } from "./fixtures.js";
 
 test("initial is fact-based; identity prepare, two generic types and independent time dimensions", async () => {
-  const h = harness();
+  const h = await harness();
   try {
     const task = h.submit({ eligibleAt: at(h.clock.now() + 20) });
     assert.equal(task.stage, "initial");
@@ -38,15 +36,16 @@ test("initial is fact-based; identity prepare, two generic types and independent
     h.clock.advance(1000);
     const finished = h.engine.getTask(task.taskId, caller);
     assert.ok(isCompleted(finished));
-    assert.equal(isTimedOut(finished), false);
+    assert.equal(isTimedOut(finished), true);
     assert.deepEqual(finished.result, { text: "hello" });
-    for (const key of ["type", "request", "state", "revision", "progress", "matchPolicy"])
+    for (const key of ["type", "request", "state", "progress", "matchPolicy"])
       assert.equal(key in finished, false);
+    assert.equal(typeof finished.revision, "string");
     assert.throws(() => h.submit({ type: "sum", text: undefined } as never), {
       code: "invalid_payload",
     });
     const sum = h.engine.submit(
-      { requestId: newId(), type: "sum", values: [2, 3], timeoutMs: 100 },
+      { requestId: newId(h.clock.now()), type: "sum", values: [2, 3], timeoutMs: 100 },
       caller,
     );
     await h.turn();
@@ -60,7 +59,7 @@ test("initial is fact-based; identity prepare, two generic types and independent
 });
 
 test("admission validates full intent, strict JSON, original omissions, authorization and equals", async () => {
-  const h = harness();
+  const h = await harness();
   try {
     const task = h.submit();
     const raw = h.engine.getRequest(task.requestId, caller);
@@ -102,8 +101,8 @@ test("admission validates full intent, strict JSON, original omissions, authoriz
   }
 });
 
-test("sharing uses input, scope and eligibility; Task cancellation freezes independently", async () => {
-  const h = harness();
+test("sharing uses input, scope and eligibility; cancellation does not freeze shared Run facts", async () => {
+  const h = await harness();
   try {
     const a = h.submit();
     const b = h.submit();
@@ -120,19 +119,20 @@ test("sharing uses input, scope and eligibility; Task cancellation freezes indep
     h.engine.tick();
     const after = h.engine.getTask(a.taskId, caller);
     assert.ok(isCanceled(after));
-    assert.equal(after.stage, "running");
-    assert.equal(after.result, undefined);
-    assert.equal(after.run?.completedAt, undefined);
+    assert.equal(after.stage, "completed");
+    assert.deepEqual(after.result, { text: "hello" });
+    assert.ok(after.run?.completedAt);
     assert.ok(isCompleted(h.engine.getTask(b.taskId, caller)));
     assert.equal(h.engine.cancelTask(a.taskId, caller).canceledAt, frozen.canceledAt);
-    assert.throws(() => h.engine.cancelTask(b.taskId, caller), { code: "task_finished" });
+    assert.equal(h.engine.cancelTask(b.taskId, caller).changed, true);
+    assert.equal(h.engine.cancelTask(b.taskId, caller).changed, false);
   } finally {
     await h.close();
   }
 });
 
 test("normal not-performed business results complete; business exceptions fail only run", async () => {
-  const h = harness();
+  const h = await harness();
   try {
     const a = h.submit();
     await h.turn();
@@ -153,30 +153,31 @@ test("normal not-performed business results complete; business exceptions fail o
   }
 });
 
-test("deadline equality, durable completion before cancellation and late result adoption", async () => {
+test("deadline equality, durable completion and terminal cancellation preserve independent current time", async () => {
   for (const lateness of [0, 1]) {
-    const h = harness();
+    const h = await harness();
     try {
       const task = h.submit();
       await h.turn();
       h.clock.advance(Date.parse(task.deadlineAt) - h.clock.now() + lateness);
       await h.finish();
       // No Task coordinator turn has processed completion.
-      assert.throws(() => h.engine.cancelTask(task.taskId, caller), { code: "task_finished" });
+      assert.equal(h.engine.cancelTask(task.taskId, caller).stage, "completed");
+      assert.equal(isTimedOut(h.engine.getTask(task.taskId, caller)), lateness > 0);
       h.clock.advance(10000);
       const result = h.engine.getTask(task.taskId, caller);
       assert.ok(isCompleted(result));
-      assert.equal(isTimedOut(result), lateness > 0);
+      assert.equal(isTimedOut(result), true);
     } finally {
       await h.close();
     }
   }
 });
 
-test("expired preparation retracts; late prepare cannot launch and initial/preparing cancellation freezes", async () => {
+test("expired preparation retracts and late preparation cannot launch business execution", async () => {
   const preparation = deferred<JsonObject>();
   let aborted = false;
-  const h = harness({
+  const h = await harness({
     prepare: async (_input, options) => {
       options.signal.addEventListener("abort", () => {
         aborted = true;
@@ -191,7 +192,7 @@ test("expired preparation retracts; late prepare cannot launch and initial/prepa
     await h.turn();
     assert.equal(h.engine.getTask(b.taskId, caller).stage, "running");
     await h.turn(101);
-    assert.equal(aborted, false);
+    assert.equal(aborted, true);
     h.engine.cancelTask(b.taskId, caller);
     preparation.resolve({ text: "hello" });
     await flush();
@@ -199,17 +200,17 @@ test("expired preparation retracts; late prepare cannot launch and initial/prepa
     assert.equal(h.work.length, 0);
     assert.ok(isTimedOut(h.engine.getTask(b.taskId, caller)));
     const c = h.submit();
-    h.engine.tick();
+    await h.turn();
     assert.equal(h.engine.cancelTask(c.taskId, caller).stage, "running");
-    await flush();
-    assert.equal(h.engine.getTask(c.taskId, caller).stage, "running");
+    await h.engine.waitForTaskRelease(c.taskId, caller);
+    assert.equal(h.engine.getTask(c.taskId, caller).stage, "stopped");
   } finally {
     await h.close();
   }
 });
 
-test("allocation waits without running; expired queued owner retracts, not running owner", async () => {
-  const h = harness({ resources: ["js"] });
+test("expired running and queued demands both stop without starting queued business code", async () => {
+  const h = await harness({ resources: ["js"] });
   try {
     const a = h.submit({ text: "occupy", timeoutMs: 10 });
     await h.turn();
@@ -217,34 +218,35 @@ test("allocation waits without running; expired queued owner retracts, not runni
     await h.turn();
     assert.equal(h.engine.getTask(b.taskId, caller).stage, "running");
     await h.turn(20);
-    assert.equal(h.work[0]?.stops.length, 0);
-    assert.equal(h.pool.stats.queued, 1);
-    await h.finish();
-    await h.turn();
-    assert.equal(h.work.length, 2);
-    assert.equal(h.engine.getTask(a.taskId, caller).stage, "completed");
+    await Promise.all([a, b].map((task) => h.engine.waitForTaskRelease(task.taskId, caller)));
+    assert.equal(h.work[0]?.stops.length, 1);
+    assert.equal(h.pool.stats.queued, 0);
+    assert.equal(h.work.length, 1);
+    assert.equal(h.engine.getTask(a.taskId, caller).stage, "stopped");
     assert.ok(isTimedOut(h.engine.getTask(a.taskId, caller)));
-    assert.equal(h.engine.getTask(b.taskId, caller).stage, "running");
-    await h.finish(1, { text: "queued" });
-    assert.equal(h.engine.getTask(b.taskId, caller).stage, "completed");
+    assert.equal(h.engine.getTask(b.taskId, caller).stage, "stopped");
   } finally {
     await h.close();
   }
 });
 
-test("termination binds at the event and keeps its time across late observation", async () => {
-  const h = harness();
+test("terminates policy qualifies an active Run at a committed source boundary", async () => {
+  const h = await harness();
   try {
     const a = h.submit({ eligibleAt: at(h.clock.now() - 10) });
     await h.turn();
-    const b = h.submit({ matchPolicy: "terminated-after-eligible" });
+    const b = h.submit({ matchPolicy: "terminates-after-eligible" });
+    assert.equal(
+      h.engine.getTask(b.taskId, caller).run?.runId,
+      h.engine.getTask(a.taskId, caller).run?.runId,
+    );
     await h.turn();
     assert.equal(h.work.length, 1);
     await h.finish();
     h.clock.advance(200);
     h.engine.tick();
     assert.ok(isCompleted(h.engine.getTask(b.taskId, caller)));
-    assert.equal(isTimedOut(h.engine.getTask(b.taskId, caller)), false);
+    assert.equal(isTimedOut(h.engine.getTask(b.taskId, caller)), true);
     assert.ok(isCompleted(h.engine.getTask(a.taskId, caller)));
   } finally {
     await h.close();
@@ -253,7 +255,7 @@ test("termination binds at the event and keeps its time across late observation"
 
 test("prepared differences do not prevent input sharing, but scope still isolates", async () => {
   let version = 0;
-  const h = harness({ prepare: async (input) => ({ ...input, contentVersion: ++version }) });
+  const h = await harness({ prepare: async (input) => ({ ...input, contentVersion: ++version }) });
   try {
     h.submit();
     h.submit();
@@ -262,11 +264,11 @@ test("prepared differences do not prevent input sharing, but scope still isolate
   } finally {
     await h.close();
   }
-  const scoped = harness();
+  const scoped = await harness();
   try {
     scoped.submit();
     scoped.engine.submit(
-      { requestId: newId(), type: "echo", text: "hello", timeoutMs: 100 },
+      { requestId: newId(scoped.clock.now()), type: "echo", text: "hello", timeoutMs: 100 },
       { ...caller, scope: "b" },
     );
     await scoped.turn();
@@ -277,21 +279,21 @@ test("prepared differences do not prevent input sharing, but scope still isolate
 });
 
 test("prepare validation fails before allocation; registered contracts are immutable", async () => {
-  const h = harness({ prepare: async () => ({ bad: Infinity }) });
+  const h = await harness({ prepare: async () => ({ bad: Infinity }) });
   try {
     const task = h.submit();
     await h.turn();
-    assert.equal(h.engine.getTask(task.taskId, caller).stage, "run_failed");
+    assert.equal(h.engine.getTask(task.taskId, caller).stage, "failed");
     assert.equal(h.work.length, 0);
   } finally {
     await h.close();
   }
-  const broken = harness();
+  const broken = await harness();
   try {
-    broken.submit({ matchPolicy: "terminated-after-eligible" });
+    broken.submit({ matchPolicy: "terminates-after-eligible" });
     await broken.turn();
     broken.type.inputSchema = { type: "object", properties: { other: { type: "number" } } };
-    broken.submit({ matchPolicy: "terminated-after-eligible" });
+    broken.submit({ matchPolicy: "terminates-after-eligible" });
     await broken.turn();
     assert.equal(broken.engine.errors.length, 0);
     assert.equal(broken.work.length, 1);
@@ -300,98 +302,104 @@ test("prepare validation fails before allocation; registered contracts are immut
   }
 });
 
-test("eligible recurrence keeps cadence and one pending, not one active", async () => {
-  const h = harness({ resources: ["js", "js", "js", "js"] });
+test("eligible recurrence is rejected; external series can retain multiple independent pending Tasks", async () => {
+  const h = await harness({ resources: ["js", "js", "js", "js"] });
   try {
     const start = h.clock.now();
-    const a = h.submit({ timeoutMs: 1000, recurrence: { anchor: "eligible", periodMs: 10 } });
+    assert.throws(() => h.submit({ recurrence: { anchor: "eligible", periodMs: 10 } }), {
+      code: "unsupported_request",
+    });
+    assert.equal(Object.keys(h.store.read().facts.tasks).length, 0);
+    const seriesId = newId(start);
+    const a = h.submit({ timeoutMs: 1000, eligibleAt: at(start + 30), seriesId });
+    const b = h.submit({ timeoutMs: 1000, eligibleAt: at(start + 40), seriesId });
+    assert.ok(isPending(a));
+    assert.ok(isPending(b));
+    assert.equal(h.engine.getTask(a.taskId, caller).canceled, false);
     await h.turn(25);
-    const records = Object.values(h.store.read().facts.tasks);
-    assert.equal(records.length, 2);
-    const b = records.find((task) => task.snapshot.taskId !== a.taskId);
-    assert.equal(b?.snapshot.eligibleAt, at(start + 30));
-    assert.notEqual(b?.request.requestId, a.requestId);
-    assert.equal(b?.snapshot.seriesId, a.seriesId);
+    assert.equal(h.work.length, 0);
     await h.turn(5);
-    const series = Object.values(h.store.read().facts.tasks);
-    assert.equal(series.length, 3);
-    assert.equal(
-      series.filter((task) =>
-        isPending(project(h.store.read().facts, task.snapshot.taskId, h.clock.now())),
-      ).length,
-      1,
-    );
-    assert.equal(
-      series.filter(
-        (task) => task.snapshot.eligibleAt <= at(h.clock.now()) && !task.snapshot.termination,
-      ).length,
-      2,
+    assert.equal(h.work.length, 1);
+    assert.equal(h.engine.getTask(b.taskId, caller).stage, "initial");
+    await h.turn(10);
+    assert.equal(h.work.length, 2);
+    assert.notEqual(
+      h.engine.getTask(a.taskId, caller).run?.runId,
+      h.engine.getTask(b.taskId, caller).run?.runId,
     );
     h.engine.cancelTask(a.taskId, caller);
-    assert.equal(Object.values(h.store.read().facts.tasks).length, 3);
+    assert.equal(h.engine.getTask(b.taskId, caller).canceled, false);
+    assert.equal(Object.values(h.store.read().facts.tasks).length, 2);
   } finally {
     await h.close();
   }
 });
 
-test("terminated recurrence anchors timeout at deadline and never repeats after late finish", async () => {
-  const h = harness();
+test("terminated recurrence is rejected and an external successor cannot be synthesized by completion", async () => {
+  const h = await harness();
   try {
     const start = h.clock.now();
-    const a = h.submit({ timeoutMs: 10, recurrence: { anchor: "terminated", periodMs: 20 } });
-    await h.turn();
-    await h.turn(54);
-    let records = Object.values(h.store.read().facts.tasks);
-    assert.equal(records.length, 2);
-    const b = records.find((task) => task.snapshot.taskId !== a.taskId);
-    assert.equal(b?.snapshot.eligibleAt, at(start + 70));
-    assert.equal(h.engine.getTask(a.taskId, caller).termination, undefined);
-    await h.turn(15);
-    await h.finish();
-    h.engine.tick();
-    records = Object.values(h.store.read().facts.tasks);
-    assert.equal(records.length, 2, "A cannot create C after B exits pending");
-    assert.equal(
-      records.find((task) => task.snapshot.taskId === a.taskId)?.successor?.taskId,
-      b?.snapshot.taskId,
+    assert.throws(
+      () => h.submit({ timeoutMs: 10, recurrence: { anchor: "terminated", periodMs: 20 } }),
+      { code: "unsupported_request" },
     );
+    const a = h.submit();
+    await h.turn();
+    await h.finish();
+    const b = h.submit({ seriesId: a.seriesId, eligibleAt: at(start + 70) });
+    await h.turn(54);
+    assert.equal(h.engine.getTask(a.taskId, caller).stage, "completed");
+    assert.equal(h.engine.getTask(b.taskId, caller).stage, "initial");
+    assert.equal(h.work.length, 1);
+    await h.turn(15);
+    await h.finish(1);
+    h.engine.tick();
+    assert.equal(Object.keys(h.store.read().facts.tasks).length, 2);
+    assert.equal(h.engine.getTask(b.taskId, caller).stage, "completed");
+    assert.equal("successor" in h.store.read().facts.tasks[a.taskId]!, false);
   } finally {
     await h.close();
   }
 });
 
-test("capacity backpressure preserves recurrence planning and recovery references", async () => {
-  const h = harness({ limits: { maxTasks: 1 } });
+test("capacity backpressure preserves accepted facts and never creates implicit recurrence state", async () => {
+  const h = await harness({ limits: { maxTasks: 1 } });
   try {
-    const a = h.submit({ recurrence: { anchor: "eligible", periodMs: 10 } });
+    const a = h.submit({ eligibleAt: at(h.clock.now() + 1000) });
     assert.throws(() => h.submit(), { code: "capacity_exceeded" });
     await h.turn();
-    assert.equal(h.store.read().facts.tasks[a.taskId]?.successor, undefined);
+    assert.equal("successor" in h.store.read().facts.tasks[a.taskId]!, false);
     h.engine.collect();
     assert.ok(h.store.read().facts.tasks[a.taskId]);
     h.engine.limits.maxTasks = 3;
+    const b = h.submit({ seriesId: a.seriesId, eligibleAt: at(h.clock.now() + 1000) });
     await h.turn();
-    assert.ok(h.store.read().facts.tasks[a.taskId]?.successor);
+    assert.equal(h.engine.getTask(a.taskId, caller).canceled, false);
+    assert.equal(h.engine.getTask(b.taskId, caller).canceled, false);
+    assert.equal(Object.keys(h.store.read().facts.tasks).length, 2);
   } finally {
     await h.close();
   }
 });
 
 test("history fixed watermarks, repeatable stream resumes, pure checkpoint equivalence", async () => {
-  const h = harness();
+  const h = await harness();
   try {
     const task = h.submit();
     await h.turn();
+    const filter = { runId: h.engine.getTask(task.taskId, caller).run!.runId };
     h.work[0]?.permit.progress({ stage: "execution", percent: 1, message: "" });
-    const page = h.engine.readHistory({ taskId: task.taskId }, { limit: 2 }, caller);
+    const taskUpdatedAt = h.engine.getTask(task.taskId, caller).updatedAt;
+    const page = h.engine.readHistory(filter, { limit: 2 }, caller);
     h.work[0]?.permit.progress({ stage: "execution", percent: 2, message: "" });
+    assert.equal(h.engine.getTask(task.taskId, caller).updatedAt, taskUpdatedAt);
     assert.ok(page.next);
     const nextCursor = page.next;
-    const second = h.engine.readHistory({ taskId: task.taskId }, { cursor: page.next }, caller);
+    const second = h.engine.readHistory(filter, { cursor: page.next }, caller);
     assert.ok(second.events.every((event) => event.sequence <= page.watermark));
-    const sub = h.engine.subscribe({ taskId: task.taskId }, second.cursor, caller);
+    const sub = h.engine.subscribe(filter, second.cursor, caller);
     assert.ok(sub.initial.events.some((event) => event.sequence > page.watermark));
-    const repeat = h.engine.subscribe({ taskId: task.taskId }, second.cursor, caller);
+    const repeat = h.engine.subscribe(filter, second.cursor, caller);
     assert.deepEqual(repeat.initial.events, sub.initial.events);
     assert.throws(
       () => h.engine.readHistory({ seriesId: task.seriesId }, { cursor: nextCursor }, caller),
@@ -402,10 +410,10 @@ test("history fixed watermarks, repeatable stream resumes, pure checkpoint equiv
     await h.finish();
     h.engine.tick();
     const view = h.store.read();
-    assert.deepEqual(reduce(emptyFacts(), view.events), view.facts);
+    assert.deepEqual(reduce(view.prefix, view.events), view.facts);
     const half = Math.floor(view.events.length / 2);
     assert.deepEqual(
-      reduce(reduce(emptyFacts(), view.events.slice(0, half)), view.events.slice(half)),
+      reduce(reduce(view.prefix, view.events.slice(0, half)), view.events.slice(half)),
       view.facts,
     );
     assert.deepEqual(reduce(view.facts, view.events), view.facts);
@@ -445,7 +453,7 @@ test("version-bound history and idempotency never silently use current validator
   const engine = createTaskEngine(options);
   await engine.start();
   const raw = {
-    requestId: newId(),
+    requestId: newId(clock.now()),
     type: "echo",
     text: "old",
     timeoutMs: 100,
@@ -481,7 +489,7 @@ test("version-bound history and idempotency never silently use current validator
 });
 
 test("invalid business result becomes explicit run failure, never a stranded running task", async () => {
-  const h = harness({
+  const h = await harness({
     validateResult() {
       throw new Error("result schema defect");
     },
@@ -491,24 +499,27 @@ test("invalid business result becomes explicit run failure, never a stranded run
     await h.turn();
     await h.finish();
     h.engine.tick();
-    assert.equal(h.engine.getTask(task.taskId, caller).stage, "run_failed");
+    assert.equal(h.engine.getTask(task.taskId, caller).stage, "failed");
     assert.equal(h.engine.getTask(task.taskId, caller).error?.code, "invalid_payload");
   } finally {
     await h.close();
   }
 });
 
-test("terminated-after adopts a completion equal to eligible without premature association", async () => {
-  const h = harness();
+test("terminates policy uses a proving source boundary without awaiting completion", async () => {
+  const h = await harness();
   try {
-    h.submit();
+    const owner = h.submit();
     await h.turn();
-    const task = h.submit({ matchPolicy: "terminated-after-eligible" });
+    const task = h.submit({ matchPolicy: "terminates-after-eligible" });
     h.engine.tick();
     await flush();
     h.engine.tick();
-    assert.equal(h.engine.getTask(task.taskId, caller).stage, "initial");
-    assert.equal(h.engine.getTask(task.taskId, caller).run, undefined);
+    assert.equal(h.engine.getTask(task.taskId, caller).stage, "running");
+    assert.equal(
+      h.engine.getTask(task.taskId, caller).run?.runId,
+      h.engine.getTask(owner.taskId, caller).run?.runId,
+    );
     await h.finish();
     h.engine.tick();
     assert.equal(h.engine.getTask(task.taskId, caller).stage, "completed");
@@ -519,24 +530,31 @@ test("terminated-after adopts a completion equal to eligible without premature a
   }
 });
 
-test("fixed history page cannot retroactively gain an older Execution through a later binding", async () => {
-  const h = harness();
+test("fixed history cannot retroactively acquire an older Run through a later qualification", async () => {
+  const h = await harness();
   try {
-    h.submit();
+    const owner = h.submit({ timeoutMs: 1000 });
     await h.turn();
     const task = h.submit({
-      matchPolicy: "terminated-after-eligible",
-      recurrence: { anchor: "eligible", periodMs: 1 },
+      matchPolicy: "terminates-after-eligible",
+      seriesId: owner.seriesId,
+      eligibleAt: at(h.clock.now() + 10),
     });
     h.engine.tick();
     await flush();
     await h.turn();
-    const page = h.engine.readHistory({ taskId: task.taskId }, { limit: 1 }, caller);
+    const filter = { seriesId: task.seriesId };
+    const page = h.engine.readHistory(filter, { limit: 1 }, caller);
     assert.ok(page.next);
-    await h.turn();
-    const rest = h.engine.readHistory({ taskId: task.taskId }, { cursor: page.next }, caller);
+    await h.turn(10);
     assert.equal(
-      rest.events.some((event) => event.runId !== undefined),
+      h.engine.getTask(task.taskId, caller).run?.runId,
+      h.engine.getTask(owner.taskId, caller).run?.runId,
+    );
+    const rest = h.engine.readHistory(filter, { cursor: page.next }, caller);
+    assert.equal(rest.revision, page.revision);
+    assert.equal(
+      rest.events.some((event) => event.taskId === task.taskId && event.runId !== undefined),
       false,
     );
   } finally {

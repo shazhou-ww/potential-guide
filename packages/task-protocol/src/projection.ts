@@ -1,372 +1,542 @@
-import { at, fail, timestamp } from "./json.js";
-import type { FactEvent, Facts, MatchPolicy, RunRecord, StoreView, TaskSnapshot } from "./types.js";
+import { at, canonical, fail, timestamp, ulid } from "./json.js";
+import { compileInputSchema, type InputContract } from "./schema.js";
+import type {
+  FactEvent,
+  Facts,
+  MatchPolicy,
+  RunRecord,
+  RunSnapshot,
+  RunStage,
+  StoreView,
+  TaskRecord,
+  TaskSnapshot,
+} from "./types.js";
 
+export function requestTime(id: string): number {
+  const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  return [...ulid(id).slice(0, 10)].reduce(
+    (value, digit) => value * 32 + alphabet.indexOf(digit),
+    0,
+  );
+}
+export function revision(facts: Pick<Facts, "dataDomain" | "watermark">): string {
+  return `${facts.dataDomain}:${facts.watermark}`;
+}
+export function emptyFacts(dataDomain = "test-domain"): Facts {
+  return {
+    projectionVersion: 4,
+    dataDomain,
+    watermark: 0,
+    admissionLowerBound: null,
+    observations: [],
+    tasks: {},
+    runs: {},
+    messages: {},
+    requests: {},
+  };
+}
+export function assertFactsVersion(facts: Facts): void {
+  if (
+    facts?.projectionVersion !== 4 ||
+    !facts.dataDomain ||
+    !facts.tasks ||
+    !facts.runs ||
+    !facts.messages ||
+    !facts.requests ||
+    !Array.isArray(facts.observations) ||
+    !Number.isSafeInteger(facts.watermark) ||
+    facts.watermark < 0 ||
+    (facts.admissionLowerBound !== null && !Number.isSafeInteger(facts.admissionLowerBound))
+  )
+    fail(
+      "unsupported_version",
+      "Unsupported Task facts. Explicitly select a new domain; old data is not migrated or deleted.",
+    );
+  for (const task of Object.values(facts.tasks))
+    if (
+      "snapshot" in task ||
+      !task.taskId ||
+      task.request.recurrence !== undefined ||
+      (task.request.matchPolicy !== undefined &&
+        !["starts-after-eligible", "terminates-after-eligible"].includes(
+          task.request.matchPolicy,
+        )) ||
+      !["starts-after-eligible", "terminates-after-eligible"].includes(task.binding.matchPolicy)
+    )
+      fail("unsupported_version", "Unsupported stored Task representation or policy.");
+  for (const run of Object.values(facts.runs))
+    if (!["starts-after-eligible", "terminates-after-eligible"].includes(run.binding.matchPolicy))
+      fail("unsupported_version", "Unsupported stored Run policy.");
+}
+export function restoreTaskUpdates(view: StoreView): StoreView {
+  assertFactsVersion(view.facts);
+  return view;
+}
+export function authorizeSync(authorize: () => unknown): void {
+  const value = authorize();
+  if (value !== undefined) {
+    void Promise.resolve(value).catch(() => {});
+    fail("invalid_type", "Authorization must be synchronous and return no value.");
+  }
+}
+export function runStage(run: RunRecord): RunStage {
+  if (run.exit?.basis === "recovery") return "stopped";
+  if (run.exit) return run.outcome?.kind ?? (run.stopRequested ? "stopped" : "failed");
+  return run.stoppingAt ? "stopping" : "running";
+}
 export function matchesRunTime(
   policy: MatchPolicy,
   eligibleAt: string,
-  run: Pick<RunRecord, "startedAt" | "completedAt" | "failedAt">,
+  run: Pick<RunRecord, "startedAt" | "exit">,
 ): boolean {
-  switch (policy) {
-    case "started-after-eligible":
-      return run.startedAt >= eligibleAt;
-    case "terminated-after-eligible": {
-      const end = run.completedAt ?? run.failedAt;
-      return end !== undefined && end >= eligibleAt;
-    }
-    default:
-      return fail("invalid_request", "Unsupported matchPolicy.");
+  if (policy === "starts-after-eligible") return run.startedAt >= eligibleAt;
+  if (policy === "terminates-after-eligible") return !run.exit || run.exit.occurredAt >= eligibleAt;
+  return fail("invalid_request", "Unsupported matchPolicy.");
+}
+interface Match {
+  run: RunRecord;
+  sequence: number;
+  observedAt: string;
+}
+interface Index {
+  watermark: number;
+  groups: Map<string, RunRecord[]>;
+  matches: Map<string, Match | null>;
+}
+const indices = new WeakMap<Facts, Index>();
+const comparisonContracts = new Map<string, InputContract>();
+function group(record: Pick<TaskRecord, "binding" | "input">): string {
+  const b = record.binding;
+  if (!b.inputSchema) fail("unsupported_contract", "Original bound inputSchema is missing.");
+  const schema = canonical(b.inputSchema);
+  let contract = comparisonContracts.get(schema);
+  if (!contract) {
+    contract = compileInputSchema(b.inputSchema);
+    if (comparisonContracts.size >= 64)
+      comparisonContracts.delete(comparisonContracts.keys().next().value!);
+    comparisonContracts.set(schema, contract);
   }
+  return canonical([
+    b.type,
+    b.version,
+    b.contractRevision,
+    b.environment,
+    b.scope,
+    schema,
+    contract.equivalenceKey(record.input),
+  ]);
 }
-
-export function emptyFacts(): Facts {
-  return { projectionVersion: 3, watermark: 0, tasks: {}, runs: {}, messages: {} };
+function index(facts: Facts): Index {
+  const existing = indices.get(facts);
+  if (existing?.watermark === facts.watermark) return existing;
+  const value: Index = { watermark: facts.watermark, groups: new Map(), matches: new Map() };
+  for (const run of Object.values(facts.runs).sort(
+    (a, b) => a.startedSequence - b.startedSequence,
+  )) {
+    const key = group(run);
+    const runs = value.groups.get(key) ?? [];
+    runs.push(run);
+    value.groups.set(key, runs);
+  }
+  indices.set(facts, value);
+  return value;
 }
-
-export function assertFactsVersion(facts: Facts): void {
-  if (facts?.projectionVersion !== 3 || !facts.messages)
-    fail(
-      "unsupported_version",
-      "Unsupported Task facts. Use new storage; old data is not migrated.",
+function qualification(facts: Facts, task: TaskRecord): Match | undefined {
+  const cache = index(facts);
+  const saved = cache.matches.get(task.taskId);
+  if (saved !== undefined) return saved ?? undefined;
+  for (const run of cache.groups.get(group(task)) ?? []) {
+    if (task.binding.matchPolicy === "starts-after-eligible" && run.startedAt < task.eligibleAt)
+      continue;
+    const lower = Math.max(task.receivedSequence, run.startedSequence);
+    const upper = Math.min(
+      task.canceledSequence ?? Infinity,
+      run.stopRequested?.sequence ?? Infinity,
+      run.exit?.basis === "recovery" ? run.exit.sequence : Infinity,
     );
-  for (const record of [...Object.values(facts.tasks), ...Object.values(facts.runs)])
-    if (
-      record.binding.matchPolicy !== "started-after-eligible" &&
-      record.binding.matchPolicy !== "terminated-after-eligible"
-    )
-      fail("unsupported_version", "Unsupported stored matchPolicy. Use new storage.");
-  for (const task of Object.values(facts.tasks))
-    if (
-      task.request.matchPolicy !== undefined &&
-      task.request.matchPolicy !== "started-after-eligible" &&
-      task.request.matchPolicy !== "terminated-after-eligible"
-    )
-      fail("unsupported_version", "Unsupported stored request matchPolicy. Use new storage.");
-  for (const task of Object.values(facts.tasks))
-    if (task.updatedAt !== undefined) timestamp(task.updatedAt);
-}
-
-/** v2 stores protect all events while any recovery references remain. */
-export function restoreTaskUpdates(view: StoreView): StoreView {
-  if (!Object.values(view.facts.tasks).some((task) => task.updatedAt === undefined)) return view;
-  const prefix = emptyFacts();
-  prefix.watermark = view.floor;
-  const recovered = reduce(prefix, view.events);
-  if (recovered.watermark !== view.facts.watermark)
-    fail("history_gap", "Cannot recover Task update times from incomplete v2 history.");
-  for (const [id, task] of Object.entries(view.facts.tasks)) {
-    if (task.updatedAt !== undefined) continue;
-    const updatedAt = recovered.tasks[id]?.updatedAt;
-    if (updatedAt === undefined)
-      fail("history_gap", "Missing creation/update history for retained Task.");
-    task.updatedAt = updatedAt;
-  }
-  return view;
-}
-
-export function authorizeSync(authorize: () => unknown): void {
-  const result = authorize();
-  if (result !== undefined) {
-    // Drain rejected async callbacks without treating an unresolved grant as authorization.
-    if (result && typeof (result as PromiseLike<unknown>).then === "function")
-      void Promise.resolve(result).catch(() => {});
-    fail("invalid_type", "Authorization must return synchronously without a value.");
-  }
-}
-
-export function reduce(prefix: Facts, events: readonly FactEvent[]): Facts {
-  assertFactsVersion(prefix);
-  const facts = structuredClone(prefix);
-  for (const event of events) {
-    if (event.sequence <= facts.watermark) continue;
-    if (event.sequence !== facts.watermark + 1) fail("history_gap", "Non-contiguous event prefix.");
-    timestamp(event.occurredAt);
-    const task = event.taskId ? facts.tasks[event.taskId] : undefined;
-    const run = event.runId ? facts.runs[event.runId] : undefined;
-    const snapshot = task?.snapshot;
-    const previousSnapshot = snapshot ? JSON.stringify(snapshot) : undefined;
-    const frozen = snapshot?.canceledAt !== undefined;
-    if (event.type.startsWith("task.") && event.type !== "task.created" && !task)
-      fail("invalid_fact", "Task fact references a missing Task.");
-    if (event.type.startsWith("run.") && event.type !== "run.started" && !run)
-      fail("invalid_fact", "Execution fact references a missing Execution.");
-    if (task && task.binding.scope !== event.scope)
-      fail("invalid_fact", "Task fact scope mismatch.");
-    if (run && run.binding.scope !== event.scope)
-      fail("invalid_fact", "Execution fact scope mismatch.");
-    switch (event.type) {
-      case "message.received": {
-        const message = event.data.message;
-        const key = `${message.taskId}\0${message.messageId}`;
-        if (
-          !task ||
-          facts.messages[key] ||
-          message.state !== "queued" ||
-          message.taskId !== event.taskId ||
-          message.runId !== event.runId ||
-          message.caller.scope !== event.scope ||
-          snapshot?.canceledAt ||
-          snapshot?.termination
-        )
-          fail("invalid_fact", "消息接收身份或生命周期无效。");
-        facts.messages[key] = structuredClone(message);
-        break;
-      }
-      case "message.resolved": {
-        const message = facts.messages[`${event.taskId}\0${event.data.messageId}`];
-        if (!message || message.runId !== event.runId || message.state !== "queued")
-          fail("invalid_fact", "消息确认没有对应的在途消息。");
-        message.state = event.data.state;
-        message.resolvedAt = event.occurredAt;
-        if (event.data.reason !== undefined) message.reason = event.data.reason;
-        break;
-      }
-      case "run.cleanup.unknown":
-        if (!run || run.reclaimedAt) fail("invalid_fact", "未知清理不能覆盖已确认回收。");
-        run.cleanupUnknown = { reason: event.data.reason, observedAt: event.occurredAt };
-        break;
-      case "task.created":
-        if (
-          event.data.task.snapshot.stage !== "initial" ||
-          event.data.task.receivedSequence !== event.sequence ||
-          event.taskId !== event.data.task.snapshot.taskId ||
-          event.scope !== event.data.task.binding.scope
-        )
-          fail("invalid_fact", "Invalid Task creation fact.");
-        if (facts.tasks[event.data.task.snapshot.taskId]) fail("invalid_fact", "Duplicate Task.");
-        matchesRunTime(event.data.task.binding.matchPolicy, event.occurredAt, {
-          startedAt: event.occurredAt,
-        });
-        facts.tasks[event.data.task.snapshot.taskId] = {
-          ...structuredClone(event.data.task),
-          updatedAt: event.data.task.snapshot.receivedAt,
-        };
-        break;
-      case "task.run.bound": {
-        const target = facts.runs[event.data.runId];
-        if (!target) fail("invalid_fact", "Binding references missing Execution.");
-        if (snapshot && !frozen) {
-          const boundary =
-            task?.binding.matchPolicy === "started-after-eligible"
-              ? target.startedSequence
-              : target.terminatedSequence;
-          const time =
-            task?.binding.matchPolicy === "started-after-eligible"
-              ? target.startedAt
-              : (target.completedAt ?? target.failedAt);
-          if (
-            !task ||
-            snapshot.run ||
-            snapshot.termination ||
-            snapshot.stage !== "initial" ||
-            target.binding.scope !== event.scope ||
-            target.binding.type !== task.binding.type ||
-            target.binding.version !== task.binding.version ||
-            target.binding.environment !== task.binding.environment ||
-            (target.sealed && !target.sealedTaskIds?.includes(snapshot.taskId)) ||
-            boundary === undefined ||
-            boundary <= prefix.watermark ||
-            task.receivedSequence >= boundary ||
-            time !== event.occurredAt ||
-            !matchesRunTime(task.binding.matchPolicy, snapshot.eligibleAt, target)
-          )
-            fail("invalid_fact", "Illegal run binding.");
-          snapshot.stage = "running";
-
-          snapshot.run = {
-            runId: target.runId,
-            startedAt: target.startedAt,
-            matchedAt: event.occurredAt,
-          };
-        }
-        break;
-      }
-      case "run.started":
-        if (
-          event.runId !== event.data.run.runId ||
-          event.scope !== event.data.run.binding.scope ||
-          event.sequence !== event.data.run.startedSequence ||
-          event.occurredAt !== event.data.run.startedAt
-        )
-          fail("invalid_fact", "Invalid run startup identity/time.");
-        if (run) fail("invalid_fact", "Duplicate Execution.");
-        matchesRunTime(event.data.run.binding.matchPolicy, event.occurredAt, {
-          startedAt: event.occurredAt,
-        });
-        facts.runs[event.data.run.runId] = structuredClone(event.data.run);
-        break;
-      case "run.dispatched":
-        if (!run || run.workerGeneration || run.completedAt || run.failedAt)
-          fail("invalid_fact", "Run 投递身份或生命周期无效。");
-        run.workerGeneration = event.data.workerGeneration;
-        break;
-      case "run.evidence":
-        if (!run || run.reclaimedAt) fail("invalid_fact", "Run 证据没有活动或清理中的运行边界。");
-        run.evidence ??= [];
-        run.evidence.push(event.data);
-        break;
-      case "run.completed":
-        if (!run || run.completedAt || run.failedAt)
-          fail("invalid_fact", "Execution already ended or missing.");
-        run.completedAt = event.occurredAt;
-        run.terminatedSequence = event.sequence;
-        run.result = event.data.result;
-        break;
-      case "run.failed":
-        if (!run || run.completedAt || run.failedAt)
-          fail("invalid_fact", "Execution already ended or missing.");
-        run.failedAt = event.occurredAt;
-        run.terminatedSequence = event.sequence;
-        run.error = event.data.error;
-        if (event.data.result !== undefined) run.result = event.data.result;
-        break;
-      case "run.sealed":
-        if (run) {
-          if (run.sealed) fail("invalid_fact", "Execution already sealed.");
-          run.sealed = true;
-          run.sealedTaskIds = [...event.data.taskIds];
-        }
-        break;
-      case "run.reclaimed":
-        if (run) {
-          run.reclaimedAt = event.occurredAt;
-          delete run.cleanupUnknown;
-        }
-        break;
-      case "run.progress":
-        break;
-      case "task.terminated":
-        if (snapshot && !frozen && !snapshot.termination) {
-          const target = event.data.runId ? facts.runs[event.data.runId] : undefined;
-          if (event.data.runId && snapshot.run?.runId !== event.data.runId)
-            fail("invalid_fact", "Termination must use the Task's bound Execution.");
-          if (!target && !["preparation_failed", "allocation_failed"].includes(snapshot.stage))
-            fail("invalid_fact", "Termination lacks a final process fact.");
-          if (target && snapshot.run) {
-            if (target.completedAt) {
-              snapshot.stage = "completed";
-              snapshot.run.completedAt = target.completedAt;
-            } else if (target.failedAt) {
-              snapshot.stage = "run_failed";
-              snapshot.run.failedAt = target.failedAt;
-              if (target.error) snapshot.error = target.error;
-            } else fail("invalid_fact", "Termination references unfinished Execution.");
-          }
-          snapshot.termination = { terminatedAt: event.occurredAt };
-        }
-        break;
-      case "task.canceled":
-        if (task && snapshot && !snapshot.termination && !frozen) {
-          const ids = event.data.runIds ?? [];
-          if (ids.some((id) => facts.runs[id]?.binding.scope !== event.scope))
-            fail("invalid_fact", "Cancellation release references an unauthorized Execution.");
-          snapshot.canceledAt = event.occurredAt;
-          task.releaseRunIds = [...ids];
-        }
-        break;
-      case "task.successor":
-        if (task) {
-          if (task.successor) fail("invalid_fact", "Duplicate successor.");
-          task.successor = event.data;
-        }
-        break;
-      case "records.forgotten":
-        for (const id of event.data.taskIds) delete facts.tasks[id];
-        for (const id of event.data.runIds) delete facts.runs[id];
-        for (const [key, message] of Object.entries(facts.messages))
-          if (event.data.taskIds.includes(message.taskId)) delete facts.messages[key];
-        break;
-      default:
-        fail("invalid_fact", "Unknown event type.");
+    let left = 0,
+      right = facts.observations.length;
+    while (left < right) {
+      const middle = Math.floor((left + right) / 2);
+      if ((facts.observations[middle]?.sequence ?? Infinity) < lower) left = middle + 1;
+      else right = middle;
     }
-    if (task && (JSON.stringify(snapshot) !== previousSnapshot || event.type === "task.successor"))
-      task.updatedAt = event.occurredAt;
-    if (
-      event.type === "run.progress" ||
-      event.type === "run.completed" ||
-      event.type === "run.failed"
-    )
-      for (const affected of Object.values(facts.tasks))
-        if (
-          affected.snapshot.run?.runId === event.runId &&
-          !affected.snapshot.canceledAt &&
-          !affected.snapshot.termination
-        )
-          affected.updatedAt = event.occurredAt;
-    facts.watermark = event.sequence;
+    for (let i = left; i < facts.observations.length; i++) {
+      const observation = facts.observations[i];
+      if (!observation || observation.sequence >= upper) break;
+      if (observation.observedAt < task.eligibleAt || observation.observedAt > task.deadlineAt)
+        continue;
+      if (
+        task.binding.matchPolicy === "terminates-after-eligible" &&
+        run.exit &&
+        run.exit.sequence <= observation.sequence &&
+        run.exit.occurredAt < task.eligibleAt
+      )
+        continue;
+      const match = { run, ...observation };
+      cache.matches.set(task.taskId, match);
+      return match;
+    }
   }
-  assertFactsVersion(facts);
-  return facts;
+  cache.matches.set(task.taskId, null);
+  return undefined;
 }
-
+export function matchedRun(facts: Facts, task: TaskRecord): RunRecord | undefined {
+  return qualification(facts, task)?.run;
+}
 export function project(
   facts: Facts,
   taskId: string,
   now: number,
   includeResult = true,
 ): TaskSnapshot {
-  assertFactsVersion(facts);
   const task = facts.tasks[taskId];
   if (!task) fail("not_found", "Task not found.");
-  const snapshot = structuredClone(task.snapshot);
-  assertStage(snapshot);
-  if (
-    (snapshot.stage === "initial" && snapshot.run) ||
-    (snapshot.stage === "running" && !snapshot.run) ||
-    (snapshot.stage === "completed" &&
-      (!snapshot.termination || !snapshot.run?.completedAt || snapshot.canceledAt)) ||
-    (snapshot.stage === "run_failed" && (!snapshot.termination || !snapshot.run?.failedAt))
-  )
-    fail("invalid_fact", "Illegal stage/fact combination.");
-  snapshot.timestamp = at(now);
-  if (!snapshot.canceledAt && !snapshot.termination && snapshot.run) {
-    const run = facts.runs[snapshot.run.runId];
-    if (!run) fail("history_gap", "Missing bound Execution.");
-    if (run.failedAt) snapshot.run.failedAt = run.failedAt;
-    if (run.completedAt && matchesRunTime(task.binding.matchPolicy, snapshot.eligibleAt, run))
-      snapshot.run.completedAt = run.completedAt;
-  }
-  if (
-    (snapshot.stage === "completed" || snapshot.stage === "run_failed") &&
-    !snapshot.canceledAt &&
-    snapshot.run
-  ) {
-    const run = facts.runs[snapshot.run.runId];
-    if (!run || (snapshot.stage === "completed" && run.result === undefined))
-      fail("history_gap", "Missing result.");
-    if (includeResult && run.result !== undefined) snapshot.result = structuredClone(run.result);
+  const match = qualification(facts, task);
+  const run = match?.run;
+  const stage = run ? runStage(run) : "initial";
+  const updates: [number, string][] = [[task.receivedSequence, task.receivedAt]];
+  if (task.canceledSequence !== undefined && task.canceledAt)
+    updates.push([task.canceledSequence, task.canceledAt]);
+  if (match) updates.push([match.sequence, match.observedAt]);
+  if (run?.stoppingSequence !== undefined && run.stoppingAt)
+    updates.push([run.stoppingSequence, run.stoppingAt]);
+  if (run?.exit && match && run.exit.sequence >= match.sequence)
+    updates.push([run.exit.sequence, run.exit.occurredAt]);
+  if (stage === "completed" && run?.result === undefined)
+    fail("history_gap", "Completed Run result is missing.");
+  const snapshot: TaskSnapshot = {
+    requestId: task.request.requestId,
+    taskId,
+    seriesId: task.seriesId,
+    stage,
+    receivedAt: task.receivedAt,
+    eligibleAt: task.eligibleAt,
+    deadlineAt: task.deadlineAt,
+    timestamp: at(now),
+    updatedAt: updates.sort((a, b) => a[0] - b[0]).at(-1)![1],
+    revision: revision(facts),
+    dataDomain: facts.dataDomain,
+    canceled: !!task.canceledAt,
+    ...(task.canceledAt ? { canceledAt: task.canceledAt } : {}),
+  };
+  if (run && match) {
+    snapshot.run = { runId: run.runId, startedAt: run.startedAt, matchedAt: match.observedAt };
+    if (run.exit) {
+      snapshot.termination = { terminatedAt: run.exit.occurredAt };
+      if (stage === "completed") snapshot.run.completedAt = run.exit.occurredAt;
+      if (stage === "failed") snapshot.run.failedAt = run.exit.occurredAt;
+      if (stage === "stopped") snapshot.run.stoppedAt = run.exit.occurredAt;
+    }
+    if (stage === "failed")
+      snapshot.error = structuredClone(
+        run.error ?? { code: "worker_exit", message: "Worker exited without a reliable result." },
+      );
+    if (includeResult && (stage === "completed" || stage === "failed") && run.result !== undefined)
+      snapshot.result = structuredClone(run.result);
   }
   return snapshot;
 }
-
-export function effectiveEnd(snapshot: TaskSnapshot): string | undefined {
-  assertStage(snapshot);
-  return (
-    snapshot.canceledAt ??
-    snapshot.run?.completedAt ??
-    snapshot.run?.failedAt ??
-    snapshot.termination?.terminatedAt
+export function projectRun(facts: Facts, runId: string, now: number): RunSnapshot {
+  const run = facts.runs[runId];
+  if (!run) fail("not_found", "Run not found.");
+  if (runStage(run) === "completed" && run.result === undefined)
+    fail("history_gap", "Completed Run result is missing.");
+  const snapshot: RunSnapshot = {
+    runId,
+    dataDomain: facts.dataDomain,
+    revision: revision(facts),
+    timestamp: at(now),
+    type: run.binding.type,
+    version: run.binding.version,
+    environment: run.binding.environment,
+    scope: run.binding.scope,
+    startedAt: run.startedAt,
+    startedSequence: run.startedSequence,
+    updatedAt: run.updatedAt,
+    stage: runStage(run),
+    ...(run.stopRequested ? { stopRequested: structuredClone(run.stopRequested) } : {}),
+    ...(run.stoppingAt ? { stoppingAt: run.stoppingAt } : {}),
+    ...(run.outcome && !run.exit ? { outcome: structuredClone(run.outcome) } : {}),
+    ...(run.exit ? { exit: structuredClone(run.exit) } : {}),
+    ...(run.completedAt ? { completedAt: run.completedAt } : {}),
+    ...(run.failedAt ? { failedAt: run.failedAt } : {}),
+    ...(run.exit && runStage(run) === "stopped" ? { stoppedAt: run.exit.occurredAt } : {}),
+    ...(run.result === undefined ? {} : { result: structuredClone(run.result) }),
+    ...(run.error ? { error: structuredClone(run.error) } : {}),
+    ...(run.progress === undefined ? {} : { progress: structuredClone(run.progress) }),
+    ...(run.reclaimedAt ? { reclaimedAt: run.reclaimedAt } : {}),
+    ...(run.cleanupUnknown ? { cleanupUnknown: structuredClone(run.cleanupUnknown) } : {}),
+  };
+  return snapshot;
+}
+export function wouldQualify(facts: Facts, observedAt: string): boolean {
+  timestamp(observedAt);
+  const after = structuredClone(facts);
+  after.watermark++;
+  after.observations.push({ sequence: after.watermark, observedAt });
+  return Object.values(facts.tasks).some(
+    (task) =>
+      !task.canceledAt &&
+      !matchedRun(facts, task) &&
+      task.eligibleAt <= observedAt &&
+      observedAt <= task.deadlineAt &&
+      matchedRun(after, task) !== undefined,
   );
 }
+export function reduce(prefix: Facts, events: readonly FactEvent[]): Facts {
+  assertFactsVersion(prefix);
+  const facts = structuredClone(prefix);
+  for (const event of events) {
+    if (event.sequence <= facts.watermark) continue;
+    if (event.sequence !== facts.watermark + 1) fail("history_gap", "Incomplete source prefix.");
+    timestamp(event.occurredAt);
+    const task = event.taskId ? facts.tasks[event.taskId] : undefined;
+    const run = event.runId ? facts.runs[event.runId] : undefined;
+    if (event.type.startsWith("task.") && event.type !== "task.created" && !task)
+      fail("invalid_fact", "Task fact has no Task.");
+    if (event.type.startsWith("run.") && event.type !== "run.started" && !run)
+      fail("invalid_fact", "Run fact has no Run.");
+    if ((task && task.binding.scope !== event.scope) || (run && run.binding.scope !== event.scope))
+      fail("invalid_fact", "Source scope mismatch.");
+    switch (event.type) {
+      case "qualification-time-observed":
+        if (
+          event.scope !== "" ||
+          event.taskId ||
+          event.runId ||
+          Object.keys(event.data).join(",") !== "observedAt" ||
+          event.data.observedAt !== event.occurredAt ||
+          !wouldQualify(facts, event.data.observedAt)
+        )
+          fail("invalid_fact", "Qualification witness must establish new processable eligibility.");
+        break;
+      case "window.advanced":
+        if (
+          !Number.isSafeInteger(event.data.lowerBound) ||
+          (facts.admissionLowerBound !== null && event.data.lowerBound < facts.admissionLowerBound)
+        )
+          fail("invalid_fact", "Admission lower bound cannot retreat.");
+        facts.admissionLowerBound = event.data.lowerBound;
+        for (const [id, credential] of Object.entries(facts.requests))
+          if (!facts.tasks[credential.taskId] && requestTime(id) < event.data.lowerBound)
+            delete facts.requests[id];
+        break;
+      case "task.created": {
+        const created = event.data.task;
+        if (
+          created.taskId !== event.taskId ||
+          created.binding.scope !== event.scope ||
+          created.receivedSequence !== event.sequence ||
+          created.receivedAt !== event.occurredAt ||
+          created.canceledAt ||
+          created.canceledSequence !== undefined ||
+          facts.tasks[created.taskId] ||
+          facts.requests[created.request.requestId]
+        )
+          fail("invalid_fact", "Invalid Task acceptance.");
+        timestamp(created.receivedAt);
+        timestamp(created.eligibleAt);
+        timestamp(created.deadlineAt);
+        if (
+          created.eligibleAt < created.receivedAt ||
+          created.deadlineAt < created.eligibleAt ||
+          created.request.type !== created.binding.type ||
+          !Number.isSafeInteger(created.request.timeoutMs) ||
+          created.request.timeoutMs <= 0 ||
+          Date.parse(created.deadlineAt) - Date.parse(created.eligibleAt) !==
+            created.request.timeoutMs ||
+          (facts.admissionLowerBound !== null &&
+            requestTime(created.request.requestId) < facts.admissionLowerBound)
+        )
+          fail("invalid_fact", "Invalid accepted time anchors.");
+        facts.tasks[created.taskId] = structuredClone(created);
+        facts.requests[created.request.requestId] = {
+          taskId: created.taskId,
+          scope: created.binding.scope,
+          intent: structuredClone(created.request),
+        };
+        break;
+      }
+      case "task.canceled":
+        if (!task || task.canceledAt) fail("invalid_fact", "Duplicate cancellation.");
+        task.canceledAt = event.occurredAt;
+        task.canceledSequence = event.sequence;
+        for (const message of Object.values(facts.messages))
+          if (message.taskId === task.taskId && message.state === "queued") {
+            message.state = "rejected";
+            message.resolvedAt = event.occurredAt;
+            message.reason = "Task canceled before business acceptance.";
+          }
+        break;
+      case "run.started": {
+        const created = event.data.run;
+        if (
+          run ||
+          created.runId !== event.runId ||
+          created.binding.scope !== event.scope ||
+          created.startedSequence !== event.sequence ||
+          created.startedAt !== event.occurredAt ||
+          created.exit ||
+          created.outcome ||
+          created.stopRequested ||
+          created.stoppingAt ||
+          created.completedAt ||
+          created.failedAt ||
+          created.result !== undefined ||
+          created.error ||
+          created.reclaimedAt ||
+          created.cleanupUnknown ||
+          created.progress !== undefined ||
+          created.evidence ||
+          created.workerGeneration ||
+          created.updatedAt !== created.startedAt
+        )
+          fail("invalid_fact", "Invalid Run start.");
+        facts.runs[created.runId] = structuredClone(created);
+        break;
+      }
+      case "run.dispatched":
+        if (!run || run.exit || run.workerGeneration) fail("invalid_fact", "Invalid dispatch.");
+        run.workerGeneration = event.data.workerGeneration;
+        break;
+      case "run.stop.requested":
+        if (!run || run.exit || run.stopRequested) fail("invalid_fact", "Invalid stop request.");
+        run.stopRequested = {
+          occurredAt: event.occurredAt,
+          sequence: event.sequence,
+          reason: event.data.reason,
+        };
+        break;
+      case "run.stopping":
+        if (!run || run.exit || !run.stopRequested || run.stoppingAt)
+          fail("invalid_fact", "Invalid stop acceptance.");
+        run.stoppingAt = event.occurredAt;
+        run.stoppingSequence = event.sequence;
+        break;
+      case "run.outcome":
+        if (!run || run.exit || run.outcome)
+          fail("invalid_fact", "Run no longer accepts a result.");
+        if (event.data.outcome.occurredAt !== event.occurredAt)
+          fail("invalid_fact", "Outcome time mismatch.");
+        run.outcome = structuredClone(event.data.outcome);
+        break;
+      case "run.exited":
+        if (!run || run.exit) fail("invalid_fact", "Duplicate exit.");
+        run.exit = { ...event.data, sequence: event.sequence, occurredAt: event.occurredAt };
+        if (event.data.basis === "recovery")
+          run.cleanupUnknown = {
+            reason: "Recovery does not prove physical exit or cleanup.",
+            observedAt: event.occurredAt,
+          };
+        else if (run.outcome?.kind === "completed") {
+          run.completedAt = event.occurredAt;
+          run.result = structuredClone(run.outcome.result);
+        } else if (run.outcome?.kind === "failed") {
+          run.failedAt = event.occurredAt;
+          run.error = structuredClone(run.outcome.error);
+          if (run.outcome.result !== undefined) run.result = structuredClone(run.outcome.result);
+        } else if (!run.stopRequested) {
+          run.failedAt = event.occurredAt;
+          run.error = { code: "worker_exit", message: "Worker exited without a reliable result." };
+        }
+        for (const message of Object.values(facts.messages))
+          if (message.runId === run.runId && message.state === "queued") {
+            message.state = "unknown";
+            message.resolvedAt = event.occurredAt;
+            message.reason = "Run exited without a business acceptance receipt.";
+          }
+        break;
+      case "run.progress":
+        if (!run || run.exit) fail("invalid_fact", "Progress after exit.");
+        run.progress = structuredClone(event.data.progress);
+        break;
+      case "run.evidence":
+        if (!run || run.exit) fail("invalid_fact", "Evidence after exit.");
+        run.evidence ??= [];
+        run.evidence.push(structuredClone(event.data));
+        break;
+      case "run.reclaimed":
+        if (!run || !run.exit || run.reclaimedAt)
+          fail("invalid_fact", "Reclamation needs an actual terminal boundary.");
+        run.reclaimedAt = event.occurredAt;
+        delete run.cleanupUnknown;
+        break;
+      case "run.cleanup.unknown":
+        if (!run || run.reclaimedAt) fail("invalid_fact", "Cannot replace known reclamation.");
+        run.cleanupUnknown = { reason: event.data.reason, observedAt: event.occurredAt };
+        break;
+      case "message.received": {
+        const message = event.data.message,
+          key = `${message.taskId}\0${message.messageId}`;
+        if (
+          !task ||
+          !run ||
+          run.exit ||
+          run.stopRequested ||
+          task.canceledAt ||
+          message.taskId !== task.taskId ||
+          message.runId !== run.runId ||
+          message.caller.scope !== event.scope ||
+          message.generation !== run.generation ||
+          matchedRun(facts, task)?.runId !== run.runId ||
+          facts.messages[key] ||
+          message.state !== "queued"
+        )
+          fail("invalid_fact", "Invalid message route.");
+        facts.messages[key] = structuredClone(message);
+        break;
+      }
+      case "message.resolved": {
+        const message = facts.messages[`${event.taskId}\0${event.data.messageId}`];
+        if (!message || message.state !== "queued" || message.runId !== event.runId)
+          fail("invalid_fact", "Receipt has no pending message.");
+        message.state = event.data.state;
+        message.resolvedAt = event.occurredAt;
+        if (event.data.reason !== undefined) message.reason = event.data.reason;
+        break;
+      }
+      case "records.forgotten":
+        if (
+          event.data.runIds.length &&
+          Object.keys(facts.tasks).some((id) => !event.data.taskIds.includes(id))
+        )
+          fail("protected_history", "Retained Tasks need matching facts.");
+        for (const id of event.data.taskIds) delete facts.tasks[id];
+        for (const id of event.data.runIds) delete facts.runs[id];
+        for (const [key, message] of Object.entries(facts.messages))
+          if (event.data.taskIds.includes(message.taskId)) delete facts.messages[key];
+        break;
+      default:
+        fail("invalid_fact", "Unsupported source event.");
+    }
+    if (run && event.type.startsWith("run.") && event.type !== "run.dispatched")
+      run.updatedAt = event.occurredAt;
+    facts.observations.push({
+      sequence: event.sequence,
+      observedAt:
+        event.type === "qualification-time-observed" ? event.data.observedAt : event.occurredAt,
+    });
+    facts.watermark = event.sequence;
+  }
+  assertFactsVersion(facts);
+  return facts;
+}
+export function effectiveEnd(snapshot: TaskSnapshot): string | undefined {
+  return snapshot.termination?.terminatedAt ?? snapshot.canceledAt;
+}
 export function isPending(snapshot: TaskSnapshot): boolean {
-  return effectiveEnd(snapshot) === undefined && snapshot.timestamp < snapshot.eligibleAt;
+  return snapshot.timestamp < snapshot.eligibleAt;
 }
 export function isTimedOut(snapshot: TaskSnapshot): boolean {
-  return (effectiveEnd(snapshot) ?? snapshot.timestamp) > snapshot.deadlineAt;
+  return snapshot.timestamp > snapshot.deadlineAt;
 }
 export function isCanceled(snapshot: TaskSnapshot): boolean {
-  assertStage(snapshot);
-  return snapshot.canceledAt !== undefined;
+  return snapshot.canceled;
 }
 export function isCompleted(snapshot: TaskSnapshot): boolean {
-  assertStage(snapshot);
   return snapshot.stage === "completed";
 }
 export function isRunFailed(snapshot: TaskSnapshot): boolean {
-  assertStage(snapshot);
-  return snapshot.stage === "run_failed";
-}
-
-function assertStage(snapshot: TaskSnapshot): void {
-  if (!["initial", "running", "completed", "run_failed"].includes(snapshot.stage))
-    fail("invalid_fact", "Unknown Task stage.");
+  return snapshot.stage === "failed";
 }

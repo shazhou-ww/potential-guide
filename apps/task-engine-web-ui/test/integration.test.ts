@@ -7,10 +7,10 @@ import test, { type TestContext } from "node:test";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import {
-  type RunPage,
   type HistoryPage,
   isTimedOut,
   type Observation,
+  type RunPage,
   TaskError,
   type TaskPage,
   type TaskSnapshot,
@@ -380,7 +380,7 @@ test("shared Run, queued Task, cancellation, timeout, history/SSE and disconnect
     (value) => value.stage === "running",
   );
   assert.equal(runningA.run!.runId, runningB.run!.runId);
-  assert.equal((await snapshot(waiting)).stage, "running");
+  assert.equal((await snapshot(waiting)).stage, "initial");
   const canceled = await h.request<TaskSnapshot>(`/tasks/${a.snapshot!.taskId}/cancel`, {
     method: "POST",
   });
@@ -403,7 +403,11 @@ test("shared Run, queued Task, cancellation, timeout, history/SSE and disconnect
   );
   const abort = new AbortController();
   const response = await fetch(`${h.url}/api/endpoints/full/events?taskId=${b.snapshot!.taskId}`, {
-    headers: { "X-UI-Token": h.csrf, "X-Endpoint-Binding": h.endpoint().binding },
+    headers: {
+      "X-UI-Token": h.csrf,
+      "X-Endpoint-Binding": h.endpoint().binding,
+      "Last-Event-ID": runningB.revision,
+    },
     signal: abort.signal,
   });
   assert.equal(response.status, 200);
@@ -445,7 +449,12 @@ test("shared Run, queued Task, cancellation, timeout, history/SSE and disconnect
     () => snapshot(waiting),
     (value) => value.stage === "completed",
   );
-  const timed = await h.submit("late", { timeoutMs: 30, durationMs: 200 });
+  const timed = await h.submit("late", { timeoutMs: 1000, durationMs: 1500 });
+  await h.submit("late", {
+    timeoutMs: 5000,
+    durationMs: 1500,
+    matchPolicy: "terminates-after-eligible",
+  });
   const timeout = await until(
     () => snapshot(timed),
     (value) => isTimedOut(value),
@@ -512,7 +521,7 @@ test("favorites persist across UI restart, keep original parameters, and block r
     409,
   );
 });
-test("expired public event cursors fail explicitly and cleaned requests cannot be redone", async (t) => {
+test("expired public event cursors fail while admissible Request credentials outlive removed Task details", async (t) => {
   const h = await setup(t, 60000, 100);
   const entry = await h.submit("expiring", { durationMs: 30 });
   await until(
@@ -542,14 +551,21 @@ test("expired public event cursors fail explicitly and cleaned requests cannot b
     },
   );
   assert.equal(expired.status, 410);
-  await assert.rejects(() => h.request(`/requests/${entry.id}`), /404/);
+  assert.equal(
+    (await h.request<{ requestId: string }>(`/requests/${entry.id}`)).requestId,
+    entry.id,
+  );
+  await assert.rejects(() => h.request(`/tasks/${entry.snapshot!.taskId}`), /410/);
 });
 
 test("stream admission is bounded and disconnect returns only UI-owned stream capacity", async (t) => {
   const h = await setup(t);
   const entry = await h.submit("stream-budget", { durationMs: 2000 });
   const path = `/api/endpoints/full/events?taskId=${entry.snapshot!.taskId}`;
-  const headers = { "X-Endpoint-Binding": h.endpoint().binding };
+  const headers = {
+    "X-Endpoint-Binding": h.endpoint().binding,
+    "Last-Event-ID": entry.snapshot!.revision,
+  };
   const streams: Response[] = [];
   try {
     for (let index = 0; index < 8; index++) {
@@ -696,14 +712,11 @@ test("loopback, host/origin/CSRF, restricted proxy, headers, body limits and red
     ).status,
     404,
   );
-  assert.equal(
-    (
-      await h.local("/api/endpoints/full/tasks?scope=two", "GET", undefined, {
-        "X-Endpoint-Binding": h.endpoint().binding,
-      })
-    ).status,
-    404,
-  );
+  const foreignScope = await h.local("/api/endpoints/full/tasks?scope=two", "GET", undefined, {
+    "X-Endpoint-Binding": h.endpoint().binding,
+  });
+  assert.equal(foreignScope.status, 200);
+  assert.deepEqual(((await foreignScope.json()) as { tasks: unknown[] }).tasks, []);
   assert.equal(
     (
       await h.local("/api/endpoints/full/tasks", "DELETE", undefined, {
@@ -805,7 +818,7 @@ test("UI stars fetch complete authorized originals, are idempotent and preserve 
   );
   await new Promise((resolve) => setTimeout(resolve, 50));
   h.backend.engine.collect();
-  await assert.rejects(() => h.request(`/tasks/${taskId}`), /404/);
+  await assert.rejects(() => h.request(`/tasks/${taskId}`), /410/);
   await h.restart();
   const saved = (await (await h.local("/api/favorites")).json()) as Favorite[];
   assert.equal(saved.length, 2);

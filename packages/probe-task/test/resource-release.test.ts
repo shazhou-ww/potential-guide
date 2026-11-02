@@ -1,8 +1,60 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
-import type { TaskSnapshot } from "@potential-guide/task-protocol";
+import type { HistoryPage, RunSnapshot, TaskSnapshot } from "@potential-guide/task-protocol";
 import { createProbeTaskType } from "../src/index.js";
+
+test("独立子 Run 观察沿用 Engine 已配置的预算，不被桥接默认 64 KiB 二次截断", async () => {
+  const result = { evidence: "x".repeat(80 * 1024) };
+  const snapshot = { taskId: "child", run: { runId: "run" }, result } as unknown as TaskSnapshot;
+  const run = { runId: "run", result } as unknown as RunSnapshot;
+  const history = {
+    events: [{ sequence: 1, revision: "domain:1", type: "run.evidence", data: result }],
+    items: [],
+    revision: "domain:1",
+    watermark: 1,
+    cursor: "cursor",
+  } as unknown as HistoryPage;
+  const type = createProbeTaskType({
+    checkEnvironment: "test",
+    source: {
+      authorize() {},
+      async resolve() {
+        throw new Error("No artifact read.");
+      },
+    },
+    children: (scope) => ({
+      caller: { scope, subject: "host" },
+      service: {
+        submit: () => snapshot,
+        getTask: () => snapshot,
+        cancelTask: () => ({ ...snapshot, changed: true }),
+        readHistory: () => history,
+        getRun: () => run,
+        getRunHistory: () => history,
+      },
+      waitForTaskRelease: async () => {},
+    }),
+  });
+  const context = {
+    runId: "parent",
+    scope: "scope",
+    signal: new AbortController().signal,
+    workerGeneration: "one",
+  };
+  try {
+    assert.deepEqual(await type.resources!["child-submit"]!(null, context), snapshot);
+    assert.deepEqual(await type.resources!["child-run"]!({ runId: "run" }, context), run);
+    assert.deepEqual(
+      await type.resources!["child-run-history"]!({ runId: "run", page: {} }, context),
+      history,
+    );
+    await type.resources!["child-release"]!({ taskId: "child" }, context);
+    await type.resources!["run-dispose"]!(null, context);
+  } finally {
+    await type.close();
+  }
+});
 
 test("父 Run 的资源请求返回子句柄不代表已回收；宿主证明等待子需求物理释放", async () => {
   let finish!: () => void;
@@ -27,10 +79,16 @@ test("父 Run 的资源请求返回子句柄不代表已回收；宿主证明等
         getTask: () => snapshot,
         cancelTask: () => {
           canceled = true;
-          return snapshot;
+          return { ...snapshot, changed: true };
         },
         readHistory: () => {
           throw new Error("不应读取历史。");
+        },
+        getRun: () => {
+          throw new Error("不应读取 Run。");
+        },
+        getRunHistory: () => {
+          throw new Error("不应读取 Run 历史。");
         },
       },
       waitForTaskRelease: () => release,

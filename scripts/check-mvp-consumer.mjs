@@ -158,7 +158,7 @@ async function exercise(url,requestBody=body){
  assert.equal((await fetch(url+"/tasks/"+newId())).status,401);
  const response=await fetch(url+"/tasks",{method:"POST",headers:{...headers,"Idempotency-Key":newId()},body:JSON.stringify(requestBody)});
  assert.equal(response.status,202);const initial=await response.json();
- const stream=await fetch(url+"/events?taskId="+initial.taskId,{headers});
+ const stream=await fetch(url+"/events?taskId="+initial.taskId,{headers:{...headers,"Last-Event-ID":initial.revision}});
  assert.equal(stream.status,200);const reader=stream.body.getReader();
  const text=new TextDecoder().decode((await reader.read()).value);
  const cursor=/^id: (.+)$/m.exec(text)[1];await reader.cancel();
@@ -169,8 +169,14 @@ async function exercise(url,requestBody=body){
  assert.equal(final.stage,"completed");
  ${label === "mvp-check" ? `assert.equal(final.result.result.ok,false);assert.ok(final.result.evidence.prepared.checker.digest);` : `assert.deepEqual(final.result,{text:"packed"});`}
  let next;let events=0;
- do {const url_=new URL(url+"/event-history?taskId="+initial.taskId+"&limit=1");if(next)url_.searchParams.set("cursor",next);const page=await(await fetch(url_,{headers})).json();events+=page.events.length;next=page.next}while(next);
- assert.ok(events>=5);
+ do {const url_=new URL(url+"/event-history?taskId="+initial.taskId+"&limit=1");if(next)url_.searchParams.set("cursor",next);const page=await(await fetch(url_,{headers})).json();assert.ok(page.events.every(event=>!event.type.startsWith("run.")));events+=page.events.length;next=page.next}while(next);
+ assert.equal(events,3);
+ const run=await(await fetch(url+"/runs/"+final.run.runId,{headers})).json();
+ assert.equal(run.stage,"completed");
+ const history=await(await fetch(url+"/runs/"+run.runId+"/history",{headers})).json();
+ assert.ok(history.events.some(event=>event.type==="run.started"));
+ assert.ok(history.events.some(event=>event.type==="run.exited"));
+ assert.ok(history.events.length>=5);
  if(requestBody.checker?.url.startsWith("file:"))console.log(JSON.stringify({case:"packed-real-file-check",url:requestBody.checker.url,digest:requestBody.checker.digest,taskId:final.taskId,runId:final.run.runId,result:final.result}));
 }
 const signals=process.listenerCount("SIGINT");

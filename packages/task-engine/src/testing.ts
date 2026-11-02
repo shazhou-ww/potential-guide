@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import {
   type Clock,
   emptyFacts,
@@ -13,7 +14,15 @@ import { newId } from "./identity.js";
 export class MemoryStore implements Store {
   private owner: string | undefined;
   private closed = false;
-  private view: StoreView = { storeId: newId(), floor: 0, facts: emptyFacts(), events: [] };
+  private readonly domain = newId();
+  private view: StoreView = {
+    storeId: this.domain,
+    cursorKey: randomBytes(32).toString("hex"),
+    floor: 0,
+    prefix: emptyFacts(this.domain),
+    facts: emptyFacts(this.domain),
+    events: [],
+  };
   beforeCommit?: () => void;
   claim(owner: string): void {
     if (this.closed || this.owner) fail("store_owned", "Store is closed or already owned.");
@@ -36,6 +45,8 @@ export class MemoryStore implements Store {
     }));
     const facts = reduce(this.view.facts, appended);
     this.beforeCommit?.();
+    if (this.view.facts.watermark !== expectedWatermark)
+      fail("storage_conflict", "Source prefix changed during the commit hook.");
     this.view = { ...this.view, facts, events: [...this.view.events, ...appended] };
     return this.read();
   }
@@ -43,10 +54,12 @@ export class MemoryStore implements Store {
     if (this.owner !== owner) fail("store_owned", "Owner mismatch.");
     if (Object.keys(this.view.facts.tasks).length || Object.keys(this.view.facts.runs).length)
       fail("protected_history", "Recovery references still protect history.");
-    if (through < this.view.floor || through > this.view.facts.watermark)
+    if (through < this.view.floor || through !== this.view.facts.watermark)
       fail("invalid_cursor", "Invalid compaction boundary.");
     this.view.events = this.view.events.filter((event) => event.sequence > through);
     this.view.floor = through;
+    this.view.facts.observations = [];
+    this.view.prefix = structuredClone(this.view.facts);
   }
   close(): void {
     if (this.owner) fail("store_owned", "Release Engine before closing Store.");

@@ -1,7 +1,11 @@
 import { once } from "node:events";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { Readable } from "node:stream";
-import { createTaskEngine, type EngineOptions } from "@potential-guide/task-engine";
+import {
+  createTaskEngine,
+  defaultEngineLimits,
+  type EngineOptions,
+} from "@potential-guide/task-engine";
 import { createTaskHandler, type HandlerOptions } from "@potential-guide/task-engine-http";
 import { openSqliteStore } from "@potential-guide/task-engine-storage";
 import { positive, type Store, TaskError } from "@potential-guide/task-protocol";
@@ -60,7 +64,7 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
   let owner: string | undefined;
   let released = false;
   let closing = false;
-  let shutdownMs = 10_000;
+  let shutdownMs = 15_000;
   const active = new Set<AbortController>();
   const operations = new Set<Promise<void>>();
   const server = createServer();
@@ -102,7 +106,16 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
         (!Number.isInteger(options.port) || options.port < 0 || options.port > 65535))
     )
       throw new TaskError("invalid_config", "Invalid trusted server configuration.");
-    shutdownMs = positive(options.shutdownMs ?? 10_000, "shutdownMs");
+    shutdownMs = positive(options.shutdownMs ?? 15_000, "shutdownMs");
+    if (
+      shutdownMs <
+      (options.limits?.stopGraceMs ?? defaultEngineLimits.stopGraceMs) +
+        (options.limits?.forceExitWaitMs ?? defaultEngineLimits.forceExitWaitMs)
+    )
+      throw new TaskError(
+        "invalid_config",
+        "shutdownMs must cover stopGraceMs plus forceExitWaitMs.",
+      );
     server.requestTimeout = positive(options.requestTimeoutMs ?? 30_000, "requestTimeoutMs");
     server.headersTimeout = Math.min(server.requestTimeout, 30_000);
     server.maxConnections = positive(options.maxConnections ?? 256, "maxConnections");
@@ -161,11 +174,15 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
     });
     const bridge = async (incoming: IncomingMessage, outgoing: ServerResponse) => {
       const controller = new AbortController();
+      let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+      const cancelBody = () => {
+        void reader?.cancel().catch(() => {});
+      };
+      controller.signal.addEventListener("abort", cancelBody, { once: true });
       active.add(controller);
       const abort = () => controller.abort();
       incoming.once("aborted", abort);
       outgoing.once("close", abort);
-      let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
       try {
         if (closing) {
           outgoing.writeHead(503).end();
@@ -189,10 +206,10 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
           return;
         }
         const response = await handler(new Request(`http://localhost${incoming.url}`, init));
+        reader = response.body?.getReader();
         if (controller.signal.aborted) return;
         outgoing.writeHead(response.status, Object.fromEntries(response.headers));
         outgoing.flushHeaders();
-        reader = response.body?.getReader();
         while (reader && !controller.signal.aborted) {
           const item = await reader.read();
           if (item.done) break;
@@ -206,6 +223,7 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
       } finally {
         await reader?.cancel().catch(() => {});
         reader?.releaseLock();
+        controller.signal.removeEventListener("abort", cancelBody);
         controller.abort();
         active.delete(controller);
         incoming.removeListener("aborted", abort);

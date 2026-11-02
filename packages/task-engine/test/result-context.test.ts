@@ -49,15 +49,29 @@ test("最终结果与恢复复验留在原类型 Worker，损坏业务证据不�
       close: () => store.close(),
       read() {
         const view = store.read();
-        view.facts.runs[final.run!.runId]!.result = {
+        const forged = {
           prepared: { original: { text: "forged" } },
           value: { ok: true },
         };
+        const run = view.facts.runs[final.run!.runId]!;
+        run.result = forged;
+        if (run.outcome?.kind === "completed") run.outcome.result = forged;
+        for (const event of view.events)
+          if (
+            event.runId === run.runId &&
+            event.type === "run.outcome" &&
+            event.data.outcome.kind === "completed"
+          )
+            event.data.outcome.result = forged;
         return view;
       },
     };
     const restored = createTaskEngine({ ...options, store: corrupt });
-    await assert.rejects(restored.start(), /业务证据/);
+    try {
+      await assert.rejects(restored.start(), /业务证据/);
+    } finally {
+      await restored.close();
+    }
   } finally {
     await engine.close();
     store.close();

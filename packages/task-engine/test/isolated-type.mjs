@@ -29,13 +29,14 @@ export function createType(configuration) {
           };
         }
       }
-      if (input.kind === "wait" || input.kind === "wait-fail") {
+      if (input.kind === "wait" || input.kind === "wait-fail" || input.kind === "abort-on-cancel") {
         await context.progress({ stage: "preparation", message: context.runId });
         await new Promise((resolve) => {
           if (context.signal.aborted) resolve();
           else context.signal.addEventListener("abort", resolve, { once: true });
         });
         if (input.kind === "wait-fail") throw new Error("business exit failed");
+        if (input.kind === "abort-on-cancel") throw context.signal.reason;
         return { runId: context.runId, scope: context.scope, canceled: true };
       }
       await context.progress({ stage: "preparation", percent: 100, message: context.runId });

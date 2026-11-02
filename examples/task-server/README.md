@@ -33,9 +33,12 @@ POST `/tasks` with JSON, bearer token and a fresh ULID `Idempotency-Key`:
 }
 ```
 
-Follow `/tasks/:taskId`, `/event-history?taskId=...`, and `/events?taskId=...`.
-Reconnect SSE with the last acknowledged `Last-Event-ID`; deduplicate by event
-sequence. CLI readiness is a JSON `ready` line. SIGINT/SIGTERM cleanly close it
+Follow `/tasks/:taskId`, `/tasks/:taskId/history`, and `/tasks/:taskId/events?fromRevision=...`.
+Use independent `/runs/:runId` and `/runs/:runId/history` for progress, results and actual environment.
+Collection streams require a complete frozen baseline and a source revision; same-source members are one atomic envelope.
+Reconnect SSE with the last acknowledged `Last-Event-ID`; deduplicate complete
+source envelopes or `(revision, member id, kind)`, never sibling members by sequence alone.
+CLI readiness is a JSON `ready` line. SIGINT/SIGTERM cleanly close it
 where the OS delivers catchable signals; Windows forced process termination is
 crash recovery, not graceful shutdown.
 # Probe composition

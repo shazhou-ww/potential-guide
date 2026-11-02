@@ -1,12 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
 import { type JsonObject, json } from "@potential-guide/task-protocol";
 import { newId } from "../src/index.js";
 import { createExecutorPool } from "../src/pool.js";
 import { MemoryStore } from "../src/testing.js";
 import type { LifecycleFixture } from "./driver.js";
 import { createFixtureEngine as createTaskEngine } from "./driver.js";
-import { caller, flush, harness, validateEcho } from "./fixtures.js";
+import { caller, deferred, harness, validateEcho } from "./fixtures.js";
+
+async function until(check: () => boolean, description: string) {
+  const deadline = performance.now() + 15_000;
+  while (!check()) {
+    assert.ok(performance.now() < deadline, `Timed out waiting for ${description}.`);
+    await delay(10);
+  }
+}
 
 test("startup captures one trusted timestamp even if time advances on every clock read", async () => {
   const store = new MemoryStore();
@@ -54,14 +63,17 @@ test("startup captures one trusted timestamp even if time advances on every cloc
   await engine.start();
   try {
     const task = engine.submit(
-      { requestId: newId(), type: "echo", text: "time", timeoutMs: 10000 },
+      { requestId: newId(now), type: "echo", text: "time", timeoutMs: 10000 },
       caller,
     );
-    engine.tick();
-    await flush();
-    engine.tick();
-    await flush();
-    engine.tick();
+    await until(() => {
+      engine.tick();
+      return (
+        starts === 1 &&
+        engine.getTask(task.taskId, caller).stage === "completed" &&
+        !!Object.values(store.read().facts.runs)[0]?.reclaimedAt
+      );
+    }, "the Run result, actual exit and resource reclamation");
     assert.equal(starts, 1);
     assert.equal(engine.getTask(task.taskId, caller).stage, "completed");
     assert.ok(Object.values(store.read().facts.runs)[0]?.reclaimedAt);
@@ -73,7 +85,7 @@ test("startup captures one trusted timestamp even if time advances on every cloc
 });
 
 test("failed durable startup prevents business invocation and releases reserved Pool resource", async () => {
-  const h = harness();
+  const h = await harness();
   try {
     const task = h.submit();
     h.clock.advance(1);
@@ -85,7 +97,10 @@ test("failed durable startup prevents business invocation and releases reserved 
       }
     };
     h.engine.tick();
-    await flush();
+    await until(
+      () => h.engine.errors.some((error) => error.code === "storage_failure"),
+      "the rejected durable startup",
+    );
     assert.equal(h.work.length, 0);
     assert.equal(h.pool.stats.idle, 2);
     assert.equal(h.engine.getTask(task.taskId, caller).stage, "initial");
@@ -97,28 +112,45 @@ test("failed durable startup prevents business invocation and releases reserved 
 });
 
 test("registered environment is detached from subsequent author object mutation", async () => {
-  const h = harness();
+  const preparing = deferred<void>();
+  const continuePreparation = deferred<void>();
+  const h = await harness({
+    async prepare(input) {
+      preparing.resolve();
+      await continuePreparation.promise;
+      return input;
+    },
+  });
   try {
     const task = h.submit();
     h.clock.advance(1);
     h.engine.tick();
-    await flush();
+    let entered = false;
+    void preparing.promise.then(() => {
+      entered = true;
+    });
+    await until(() => entered, "the Run Worker to enter controlled preparation");
     h.type.environment = "different-runtime";
-    h.engine.tick();
-    await flush();
+    continuePreparation.resolve();
+    await until(
+      () => h.work.length === 1 && h.engine.getTask(task.taskId, caller).stage === "running",
+      "the Run Worker to allocate business work",
+    );
     assert.equal(h.work.length, 1);
     assert.equal(h.engine.getTask(task.taskId, caller).stage, "running");
     assert.equal(h.store.read().facts.tasks[task.taskId]?.binding.environment, "js-v1");
   } finally {
+    continuePreparation.resolve();
     await h.close();
   }
 });
 
 test("Task and event backpressure preserve final facts and expose payload failures", async () => {
-  const h = harness({ limits: { maxEvents: 64 } });
+  const h = await harness({ limits: { maxEvents: 64 } });
   try {
     const task = h.submit();
     await h.turn();
+    await until(() => h.work.length === 1, "business work before testing backpressure");
     assert.throws(
       () => {
         for (let index = 0; index < 100; index++)
@@ -126,10 +158,11 @@ test("Task and event backpressure preserve final facts and expose payload failur
       },
       { code: "capacity_exceeded" },
     );
-    await flush();
-    h.engine.tick();
-    await flush();
-    assert.equal(h.engine.getTask(task.taskId, caller).stage, "run_failed");
+    await until(() => {
+      h.engine.tick();
+      return h.engine.getTask(task.taskId, caller).stage === "failed" && h.pool.stats.idle === 2;
+    }, "backpressure failure and physical resource release");
+    assert.equal(h.engine.getTask(task.taskId, caller).stage, "failed");
     assert.equal(h.engine.getTask(task.taskId, caller).error?.code, "capacity_exceeded");
     assert.ok(h.store.read().events.length <= 64);
     assert.equal(h.pool.stats.idle, 2);
@@ -139,15 +172,28 @@ test("Task and event backpressure preserve final facts and expose payload failur
 });
 
 test("run wall timer survives business-clock rollback independently of Task deadline", async () => {
-  const h = harness({ limits: { executionWallMs: 5 } });
+  let h: Awaited<ReturnType<typeof harness>>;
+  h = await harness({
+    limits: { executionWallMs: 5 },
+    prepare: async (input) => {
+      h.clock.setTime(h.clock.now() - 10000);
+      h.submit({ matchPolicy: "terminates-after-eligible", timeoutMs: 60000 });
+      return input;
+    },
+  });
   try {
     const task = h.submit({ timeoutMs: 1000 });
     await h.turn();
-    h.clock.setTime(h.clock.now() - 10000);
+    await until(() => h.work.length === 1, "business work before advancing the Run wall timer");
     await h.turn(5);
-    await flush();
-    h.engine.tick();
-    assert.equal(h.engine.getTask(task.taskId, caller).stage, "run_failed");
+    await h.engine.waitForTaskRelease(task.taskId, caller);
+    const stopped = h.engine.getTask(task.taskId, caller);
+    assert.equal(stopped.stage, "stopped");
+    assert.ok(stopped.timestamp < stopped.eligibleAt);
+    assert.equal(
+      h.engine.getRun(stopped.run!.runId, caller).stopRequested?.reason,
+      "execution_wall_limit",
+    );
     assert.equal(h.work[0]?.stops.length, 1);
     assert.equal(h.pool.stats.idle, 2);
   } finally {

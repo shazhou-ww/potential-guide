@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
   closeSync,
   copyFileSync,
@@ -46,11 +46,11 @@ function inspectFormat(db: DatabaseSync): boolean {
     if (db.prepare("SELECT name FROM sqlite_schema LIMIT 1").get()) unsupported();
     return false;
   }
-  if (version !== 3) unsupported();
+  if (version !== 4) unsupported();
   const checkpoint = db
     .prepare("SELECT projection_version, payload FROM checkpoint WHERE singleton=1")
     .get();
-  if (checkpoint?.projection_version !== 3 || typeof checkpoint.payload !== "string") unsupported();
+  if (checkpoint?.projection_version !== 4 || typeof checkpoint.payload !== "string") unsupported();
   assertFactsVersion(JSON.parse(checkpoint.payload) as Facts);
   return true;
 }
@@ -67,7 +67,7 @@ function preflight(filename: string): void {
   }
   if (length >= 64 && header.subarray(0, 16).toString() === "SQLite format 3\0") {
     const version = header.readUInt32BE(60);
-    if (version !== 0 && version !== 3) unsupported();
+    if (version !== 0 && version !== 4) unsupported();
   }
   const wal = `${filename}-wal`;
   if (existsSync(wal) && statSync(wal).size > 0) {
@@ -143,35 +143,37 @@ export class SqliteStore implements Store {
         CREATE TABLE IF NOT EXISTS metadata (
           singleton INTEGER PRIMARY KEY CHECK(singleton=1),
           store_id TEXT NOT NULL, floor INTEGER NOT NULL, watermark INTEGER NOT NULL,
-          owner_path TEXT NOT NULL
+          owner_path TEXT NOT NULL, cursor_key TEXT NOT NULL
         );
         CREATE TABLE IF NOT EXISTS events (
-          sequence INTEGER PRIMARY KEY, payload TEXT NOT NULL
+          sequence INTEGER PRIMARY KEY, payload TEXT NOT NULL, checksum TEXT NOT NULL
         );
         CREATE TABLE IF NOT EXISTS requests (
           request_id TEXT PRIMARY KEY, task_id TEXT NOT NULL UNIQUE
-        );
-        CREATE TABLE IF NOT EXISTS successors (
-          predecessor TEXT PRIMARY KEY REFERENCES requests(task_id),
-          successor TEXT NOT NULL REFERENCES requests(task_id),
-          request_id TEXT NOT NULL REFERENCES requests(request_id)
         );
         CREATE TABLE IF NOT EXISTS checkpoint (
           singleton INTEGER PRIMARY KEY CHECK(singleton=1),
           watermark INTEGER NOT NULL, projection_version INTEGER NOT NULL,
           payload TEXT NOT NULL, checksum TEXT NOT NULL
         );
-        PRAGMA user_version=3;
-        COMMIT;
+        CREATE TABLE IF NOT EXISTS history_prefix (
+          singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+          payload TEXT NOT NULL, checksum TEXT NOT NULL
+        );
+        PRAGMA user_version=4;
       `);
+      const domain = randomUUID();
       this.db
-        .prepare("INSERT OR IGNORE INTO metadata VALUES (1, ?, 0, 0, ?)")
-        .run(randomUUID(), `${this.filename}.owner`);
-      const initial = JSON.stringify(emptyFacts());
+        .prepare("INSERT OR IGNORE INTO metadata VALUES (1, ?, 0, 0, ?, ?)")
+        .run(domain, `${this.filename}.owner`, randomBytes(32).toString("hex"));
+      const initial = JSON.stringify(emptyFacts(domain));
       this.db
-        .prepare("INSERT OR IGNORE INTO checkpoint VALUES (1, 0, 3, ?, ?)")
+        .prepare("INSERT OR IGNORE INTO checkpoint VALUES (1, 0, 4, ?, ?)")
         .run(initial, checksum(initial));
-      this.db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+      this.db
+        .prepare("INSERT OR IGNORE INTO history_prefix VALUES (1, ?, ?)")
+        .run(initial, checksum(initial));
+      this.db.exec("COMMIT; PRAGMA wal_checkpoint(TRUNCATE)");
     } catch (error) {
       this.db.close();
       throw error;
@@ -206,7 +208,7 @@ export class SqliteStore implements Store {
   }
   private readInside(): StoreView {
     const metadata = this.db
-      .prepare("SELECT store_id, floor, watermark FROM metadata WHERE singleton=1")
+      .prepare("SELECT store_id, floor, watermark, cursor_key FROM metadata WHERE singleton=1")
       .get();
     const checkpoint = this.db
       .prepare(
@@ -215,23 +217,39 @@ export class SqliteStore implements Store {
       .get();
     if (
       !metadata ||
+      typeof metadata.cursor_key !== "string" ||
       !checkpoint ||
-      checkpoint.projection_version !== 3 ||
+      checkpoint.projection_version !== 4 ||
       typeof checkpoint.payload !== "string" ||
       checksum(checkpoint.payload) !== checkpoint.checksum
     )
       fail("storage_corrupt", "Invalid durable checkpoint.");
     let facts: Facts;
+    let prefix: Facts;
     let events: FactEvent[];
     try {
       facts = JSON.parse(checkpoint.payload) as Facts;
       assertFactsVersion(facts);
+      const row = this.db
+        .prepare("SELECT payload,checksum FROM history_prefix WHERE singleton=1")
+        .get();
+      if (!row || typeof row.payload !== "string" || checksum(row.payload) !== row.checksum)
+        fail("storage_corrupt", "Invalid retained source prefix.");
+      prefix = JSON.parse(row.payload) as Facts;
+      assertFactsVersion(prefix);
+      if (
+        prefix.watermark !== metadata.floor ||
+        prefix.dataDomain !== metadata.store_id ||
+        facts.dataDomain !== metadata.store_id
+      )
+        fail("storage_corrupt", "Source prefix or data domain mismatch.");
       events = this.db
-        .prepare("SELECT sequence, payload FROM events ORDER BY sequence")
+        .prepare("SELECT sequence, payload, checksum FROM events ORDER BY sequence")
         .all()
         .map((row) => {
           const event = JSON.parse(String(row.payload)) as FactEvent;
-          if (event.sequence !== row.sequence) fail("storage_corrupt", "Event sequence mismatch.");
+          if (event.sequence !== row.sequence || checksum(String(row.payload)) !== row.checksum)
+            fail("storage_corrupt", "Event identity or checksum mismatch.");
           return event;
         });
     } catch (error) {
@@ -240,15 +258,17 @@ export class SqliteStore implements Store {
     }
     if (facts.watermark !== checkpoint.watermark)
       fail("storage_corrupt", "Checkpoint boundary mismatch.");
-    facts = reduce(
-      facts,
-      events.filter((event) => event.sequence > facts.watermark),
-    );
+    const rebuilt = reduce(prefix, events);
+    if (JSON.stringify(rebuilt) !== JSON.stringify(facts))
+      fail("storage_corrupt", "Cached facts do not match the retained source prefix.");
+    facts = rebuilt;
     if (facts.watermark !== metadata.watermark)
       fail("storage_corrupt", "Missing committed event suffix.");
     return restoreTaskUpdates({
       storeId: String(metadata.store_id),
+      cursorKey: metadata.cursor_key,
       floor: Number(metadata.floor),
+      prefix,
       facts,
       events,
     });
@@ -278,26 +298,19 @@ export class SqliteStore implements Store {
         sequence: expectedWatermark + index + 1,
       }));
       const facts = reduce(view.facts, appended);
-      const insert = this.db.prepare("INSERT INTO events(sequence,payload) VALUES (?, ?)");
+      const insert = this.db.prepare(
+        "INSERT INTO events(sequence,payload,checksum) VALUES (?, ?, ?)",
+      );
       for (const event of appended) {
-        insert.run(event.sequence, JSON.stringify(event));
+        const serialized = JSON.stringify(event);
+        insert.run(event.sequence, serialized, checksum(serialized));
         if (event.type === "task.created")
           this.db
             .prepare("INSERT INTO requests(request_id,task_id) VALUES (?, ?)")
-            .run(event.data.task.request.requestId, event.data.task.snapshot.taskId);
-        if (event.type === "task.successor")
-          this.db
-            .prepare("INSERT INTO successors(predecessor,successor,request_id) VALUES (?, ?, ?)")
-            .run(event.taskId ?? "", event.data.taskId, event.data.requestId);
-        if (event.type === "records.forgotten") {
-          for (const id of event.data.taskIds)
-            this.db
-              .prepare("DELETE FROM successors WHERE predecessor=? OR successor=?")
-              .run(id, id);
-          for (const id of event.data.taskIds)
-            this.db.prepare("DELETE FROM requests WHERE task_id=?").run(id);
-        }
+            .run(event.data.task.request.requestId, event.data.task.taskId);
       }
+      for (const id of Object.keys(view.facts.requests))
+        if (!facts.requests[id]) this.db.prepare("DELETE FROM requests WHERE request_id=?").run(id);
       const payload = JSON.stringify(facts);
       this.db
         .prepare("UPDATE checkpoint SET watermark=?,payload=?,checksum=? WHERE singleton=1")
@@ -320,10 +333,18 @@ export class SqliteStore implements Store {
       const view = this.readInside();
       if (Object.keys(view.facts.tasks).length || Object.keys(view.facts.runs).length)
         fail("protected_history", "Recovery references still protect history.");
-      if (through < view.floor || through > view.facts.watermark)
+      if (through < view.floor || through !== view.facts.watermark)
         fail("invalid_cursor", "Invalid history compaction boundary.");
       this.db.prepare("DELETE FROM events WHERE sequence<=?").run(through);
       this.db.prepare("UPDATE metadata SET floor=? WHERE singleton=1").run(through);
+      view.facts.observations = [];
+      const serialized = JSON.stringify(view.facts);
+      this.db
+        .prepare("UPDATE history_prefix SET payload=?,checksum=? WHERE singleton=1")
+        .run(serialized, checksum(serialized));
+      this.db
+        .prepare("UPDATE checkpoint SET payload=?,checksum=? WHERE singleton=1")
+        .run(serialized, checksum(serialized));
       this.db.exec("COMMIT");
       this.db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
     } catch (error) {

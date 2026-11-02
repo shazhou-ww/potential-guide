@@ -21,6 +21,7 @@ export interface TypeChannel {
   checkpoint?(runId: string, value: Json): Promise<void>;
   complete(runId: string, value: Json): Promise<void>;
   failed(runId: string, error: ErrorFact, result?: Json): Promise<void>;
+  outcome?(runId: string, value: RunOutcomeReport): Promise<void>;
   confirm(
     runId: string,
     taskId: string,
@@ -33,6 +34,9 @@ export interface TypeChannel {
   stopping?(runId: string): Promise<void>;
   exited?(runId: string, fact: RunWorkerExit): Promise<void>;
 }
+export type RunOutcomeReport =
+  | { kind: "completed"; result: Json }
+  | { kind: "failed"; error: ErrorFact; result?: Json };
 export interface RunWorkerExit {
   code: number;
   requested: boolean;
@@ -377,15 +381,18 @@ class RunWorker {
             validateRunProgress(value, this.limits.maxPayloadBytes),
           );
           break;
-        case "complete":
+        case "complete": {
           if (this.outcome) throw new TaskError("run_finished", "Run 已提交可靠结果。");
-          this.outcome = {
+          const completed = {
             kind: "completed",
             value: compileJsonSchema(this.registration.resultSchema, {
               maxInputBytes: this.limits.maxPayloadBytes,
             }).validate(value),
-          };
+          } as const;
+          await this.channel.outcome?.(runId, { kind: "completed", result: completed.value });
+          this.outcome = completed;
           break;
+        }
         case "failed": {
           if (
             !value ||
@@ -396,7 +403,7 @@ class RunWorker {
           )
             throw new TaskError("invalid_payload", "类型错误事实无效。");
           if (this.outcome) throw new TaskError("run_finished", "Run 已提交可靠结果。");
-          this.outcome = {
+          const failed = {
             kind: "failed",
             error: { code: value.code, message: value.message },
             ...(value.result === undefined
@@ -406,7 +413,13 @@ class RunWorker {
                     maxInputBytes: this.limits.maxPayloadBytes,
                   }).validate(value.result),
                 }),
-          };
+          } as const;
+          await this.channel.outcome?.(runId, {
+            kind: "failed",
+            error: failed.error,
+            ...(failed.result === undefined ? {} : { result: failed.result }),
+          });
+          this.outcome = failed;
           break;
         }
         case "message-confirm": {
@@ -674,6 +687,9 @@ class RunWorker {
         await this.channel.exited?.(id, this.exitFact);
       }
       this.exitPublished = true;
+      if (this.registration.confirmResourceRelease)
+        for (const context of this.contexts.values())
+          if (!context.uncertain) context.releaseRequested = true;
       const clean = [...this.contexts.values()].every(
         (context) => context.releaseRequested && !context.uncertain,
       );
@@ -874,6 +890,10 @@ export class TypeSupervisor {
   }
   canRoute(runId: string): boolean {
     return this.workers.get(runId)?.canRoute(runId) ?? false;
+  }
+  stopAccepting(): void {
+    this.closing = true;
+    for (const [id, worker] of this.workers) worker.cancel(id);
   }
   async close(): Promise<void> {
     this.closing = true;

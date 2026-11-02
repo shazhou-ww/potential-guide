@@ -22,6 +22,7 @@ export async function verify(_configuration, result, mode) {
   if (result.prepared?.original?.text !== "bound" || result.value?.ok !== true)
     throw new Error("原类型业务证据不一致。");
   if (mode === "checkpoint") {
+    if (activeContext === undefined) return result;
     try {
       await activeContext.progress({ stage: "preparation", message: "复验不能追加进度。" });
     } catch (error) {

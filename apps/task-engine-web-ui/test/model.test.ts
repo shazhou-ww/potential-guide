@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { HistoryPage, PublicEvent, TaskSnapshot } from "@potential-guide/task-protocol";
+import type {
+  HistoryPage,
+  PublicEvent,
+  TaskPage,
+  TaskSnapshot,
+} from "@potential-guide/task-protocol";
 import { parseHTML } from "linkedom";
 import { envelopeSchema, resolvedSchema, schemaEditor } from "../src/form.js";
 import { assertFiniteJson } from "../src/json.js";
@@ -16,6 +21,14 @@ import {
 } from "../src/model.js";
 
 const endpoint = { id: "one", label: "one", binding: "stable" };
+const emptyPage = (observedAt: string, next?: string): TaskPage => ({
+  tasks: [],
+  items: [],
+  revision: "domain:1",
+  observedAt,
+  expiresAt: "later",
+  ...(next === undefined ? {} : { next }),
+});
 test("nonfinite JSON is rejected rather than serialized as null", () => {
   assert.throws(() => assertFiniteJson(JSON.parse('{"nested":[1e400]}')), /有限/);
   assert.doesNotThrow(() => assertFiniteJson({ false: false, null: null, number: 2 }));
@@ -37,6 +50,10 @@ test("unknown then 412 remains unknown; batch continues and all retries preserve
       eligibleAt: new Date().toISOString(),
       deadlineAt: new Date().toISOString(),
       timestamp: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      dataDomain: "domain",
+      revision: "domain:1",
+      canceled: false,
     } as TaskSnapshot;
   });
   const batch = bar.create(endpoint);
@@ -74,7 +91,7 @@ test("malformed success response is unknown, never an accepted-shaped fallback",
 });
 test("a newer directory query cannot be overwritten by an older in-flight page", async () => {
   const directory = new Directory();
-  let release: (page: { tasks: []; observedAt: string; expiresAt: string }) => void = () => {};
+  let release: (page: TaskPage) => void = () => {};
   const old = directory.load(
     () =>
       new Promise((resolve) => {
@@ -82,18 +99,15 @@ test("a newer directory query cannot be overwritten by an older in-flight page",
       }),
     "type=old",
   );
-  await directory.load(
-    async () => ({ tasks: [], observedAt: "new", expiresAt: "later" }),
-    "type=new",
-  );
-  release({ tasks: [], observedAt: "old", expiresAt: "later" });
+  await directory.load(async () => emptyPage("new"), "type=new");
+  release(emptyPage("old"));
   await old;
   assert.equal(directory.page!.observedAt, "new");
   assert.equal(directory.query, "type=new");
 });
 test("directory uses original filters and ignores a late page after endpoint switch", async () => {
   const directory = new Directory();
-  const page = { tasks: [], observedAt: "now", expiresAt: "later", next: "directory-only" };
+  const page = emptyPage("now", "directory-only");
   await directory.load(async () => page, "type=old&sort=created-desc");
   await directory.load(
     async (query) => {
@@ -113,13 +127,14 @@ test("directory uses original filters and ignores a late page after endpoint swi
   );
   assert.equal(directory.page!.observedAt, "now");
 });
-test("events deduplicate by sequence, do not infer gaps and independently bound history/stream state", () => {
+test("events deduplicate by full source/entity identity, do not infer gaps and independently bound history/stream state", () => {
   const window = new EventWindow();
   const events = Array.from(
     { length: 600 },
     (_, index) =>
       ({
         sequence: index * 3,
+        revision: `domain:${index * 3}`,
         type: "run.progress",
         occurredAt: "now",
         scope: "one",
@@ -131,8 +146,15 @@ test("events deduplicate by sequence, do not infer gaps and independently bound 
     cursor: "history-resume",
     next: "history-next",
     watermark: 20,
+    revision: "domain:20",
   } as HistoryPage);
-  window.observation({ events, cursor: "stream-cursor", snapshots: [], watermark: 2000 });
+  window.observation({
+    events,
+    cursor: "stream-cursor",
+    snapshots: [],
+    watermark: 2000,
+    revision: "domain:2000",
+  });
   window.merge(events.slice(-10));
   assert.equal(window.events.length, 500);
   assert.equal(window.truncated, true);

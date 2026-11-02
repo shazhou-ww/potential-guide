@@ -21,12 +21,20 @@ import type { ProbeTaskOptions } from "./implementation.js";
 
 export type { ProbeTaskOptions } from "./implementation.js";
 export interface ChildTaskPort {
-  service: Pick<TaskService, "submit" | "getTask" | "cancelTask" | "readHistory">;
+  service: Pick<
+    TaskService,
+    "submit" | "getTask" | "cancelTask" | "readHistory" | "getRun" | "getRunHistory"
+  >;
   caller: { scope: string; subject: string };
   waitForTaskRelease(taskId: string, caller: { scope: string; subject: string }): Promise<void>;
 }
 export type { ProbeEffectEvidence, ProbeInput, ProbePrepared, ProbeResult } from "./contracts.js";
 export { probeInputSchema, validateProbeInput } from "./contracts.js";
+
+function childObservation(value: unknown) {
+  // Engine query budgets apply before the existing 96 MiB resource transport bound.
+  return json(value, 96 * 1024 * 1024);
+}
 
 export function createProbeTaskType(
   options: ProbeTaskOptions,
@@ -102,6 +110,16 @@ export function createProbeTaskType(
     if (!ids.has(id)) throw new TaskError("forbidden", "子需求不属于当前 Run。");
     return { id, port, ids, active };
   };
+  const ownedRun = async (value: unknown, context: RunResourceContext) => {
+    const raw = object(value),
+      runId = String(raw.runId),
+      { port, ids } = portFor(context);
+    for (const id of ids) {
+      const task = await port.service.getTask(id, port.caller);
+      if (task.run?.runId === runId) return { runId, port };
+    }
+    throw new TaskError("forbidden", "Run 不属于当前父 Run 的唯一匹配子需求。");
+  };
   return {
     type: "probe",
     version: configuration.version,
@@ -156,21 +174,32 @@ export function createProbeTaskType(
           active.delete(snapshot.taskId);
           context.signal.throwIfAborted();
         }
-        return json(snapshot);
+        return childObservation(snapshot);
       },
       async "child-get"(value, context) {
         const { id, port } = ownedTask(value, context);
-        return json(await port.service.getTask(id, port.caller));
+        return childObservation(await port.service.getTask(id, port.caller));
       },
       async "child-cancel"(value, context) {
         const { id, port } = ownedTask(value, context);
-        return json(await port.service.cancelTask(id, port.caller));
+        return childObservation(await port.service.cancelTask(id, port.caller));
       },
       async "child-history"(value, context) {
         const { id, port } = ownedTask(value, context);
         const raw = object(value);
-        return json(
+        return childObservation(
           await port.service.readHistory({ taskId: id }, object(raw.page) as {}, port.caller),
+        );
+      },
+      async "child-run"(value, context) {
+        const { runId, port } = await ownedRun(value, context);
+        return childObservation(await port.service.getRun(runId, port.caller));
+      },
+      async "child-run-history"(value, context) {
+        const { runId, port } = await ownedRun(value, context),
+          raw = object(value);
+        return childObservation(
+          await port.service.getRunHistory(runId, object(raw.page) as {}, port.caller),
         );
       },
       async "child-release"(value, context) {

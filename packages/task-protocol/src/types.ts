@@ -2,12 +2,10 @@ import type { Json, JsonObject } from "./json.js";
 import type { TypeWorkerRegistration } from "./run.js";
 import type { InputSchema } from "./schema.js";
 
-export type Stage = "initial" | "running" | "completed" | "run_failed";
-export type MatchPolicy = "started-after-eligible" | "terminated-after-eligible";
-export interface Recurrence {
-  periodMs: number;
-  anchor: "eligible" | "terminated";
-}
+export type Stage = "initial" | "running" | "stopping" | "stopped" | "completed" | "failed";
+export type RunStage = Exclude<Stage, "initial">;
+export type MatchPolicy = "starts-after-eligible" | "terminates-after-eligible";
+export type Revision = string;
 export type TaskRequest = JsonObject & {
   requestId: string;
   type: string;
@@ -15,7 +13,6 @@ export type TaskRequest = JsonObject & {
   eligibleAt?: string;
   seriesId?: string;
   matchPolicy?: MatchPolicy;
-  recurrence?: Recurrence & JsonObject;
 };
 export interface ErrorFact {
   code: string;
@@ -30,6 +27,10 @@ export interface TaskSnapshot {
   eligibleAt: string;
   deadlineAt: string;
   timestamp: string;
+  revision: Revision;
+  dataDomain: string;
+  updatedAt: string;
+  canceled: boolean;
   canceledAt?: string;
   run?: {
     runId: string;
@@ -37,6 +38,7 @@ export interface TaskSnapshot {
     matchedAt?: string;
     completedAt?: string;
     failedAt?: string;
+    stoppedAt?: string;
   };
   termination?: { terminatedAt: string };
   error?: ErrorFact;
@@ -46,21 +48,34 @@ export interface Binding {
   type: string;
   version: string;
   contractRevision: string;
+  inputSchema: InputSchema;
   environment: string;
   scope: string;
   subject: string;
   matchPolicy: MatchPolicy;
 }
 export interface TaskRecord {
+  taskId: string;
+  seriesId: string;
+  receivedAt: string;
+  eligibleAt: string;
+  deadlineAt: string;
   receivedSequence: number;
-  /** Absent only in historical v2 checkpoints; recover from retained events, never guess. */
-  updatedAt?: string;
   request: TaskRequest;
   binding: Binding;
   input: Json;
-  releaseRunIds?: string[];
-  snapshot: TaskSnapshot;
-  successor?: { requestId: string; taskId: string };
+  canceledAt?: string;
+  canceledSequence?: number;
+}
+export type RunOutcome =
+  | { kind: "completed"; result: Json; occurredAt: string }
+  | { kind: "failed"; error: ErrorFact; result?: Json; occurredAt: string };
+export interface RunExit {
+  basis: "worker" | "recovery";
+  occurredAt: string;
+  sequence: number;
+  code?: number;
+  forced?: boolean;
 }
 export interface RunRecord {
   runId: string;
@@ -69,9 +84,13 @@ export interface RunRecord {
   input: Json;
   startedAt: string;
   startedSequence: number;
-  terminatedSequence?: number;
-  sealed?: boolean;
-  sealedTaskIds?: string[];
+  updatedAt: string;
+  stopRequested?: { occurredAt: string; sequence: number; reason: string };
+  stoppingAt?: string;
+  stoppingSequence?: number;
+  outcome?: RunOutcome;
+  exit?: RunExit;
+  progress?: Json;
   completedAt?: string;
   failedAt?: string;
   result?: Json;
@@ -82,11 +101,15 @@ export interface RunRecord {
   cleanupUnknown?: { reason: string; observedAt: string };
 }
 export interface Facts {
-  projectionVersion: 3;
+  projectionVersion: 4;
+  dataDomain: string;
+  admissionLowerBound: number | null;
+  observations: { sequence: number; observedAt: string }[];
   watermark: number;
   tasks: Record<string, TaskRecord>;
   runs: Record<string, RunRecord>;
   messages: Record<string, TaskMessageRecord>;
+  requests: Record<string, { taskId: string; scope: string; intent: TaskRequest }>;
 }
 export interface TaskMessageRecord {
   taskId: string;
@@ -101,18 +124,18 @@ export interface TaskMessageRecord {
   reason?: string;
 }
 export interface EventData {
+  "window.advanced": { lowerBound: number };
+  "qualification-time-observed": { observedAt: string };
   "task.created": { task: TaskRecord };
-  "task.run.bound": { runId: string };
-  "task.terminated": { runId?: string; error?: ErrorFact };
-  "task.canceled": { runIds?: string[] };
-  "task.successor": { requestId: string; taskId: string };
+  "task.canceled": Record<string, never>;
   "run.started": { run: RunRecord };
   "run.dispatched": { workerGeneration: string };
   "run.evidence": { kind: "checkpoint" | "late-completed" | "late-failed"; value: Json };
   "run.progress": { progress: Json };
-  "run.completed": { result: Json };
-  "run.failed": { error: ErrorFact; result?: Json };
-  "run.sealed": { taskIds: string[] };
+  "run.outcome": { outcome: RunOutcome };
+  "run.stop.requested": { reason: string };
+  "run.stopping": Record<string, never>;
+  "run.exited": { basis: "worker" | "recovery"; code?: number; forced?: boolean };
   "run.reclaimed": Record<string, never>;
   "run.cleanup.unknown": { reason: string };
   "message.received": { message: TaskMessageRecord };
@@ -140,10 +163,49 @@ export type NewEvent = FactEvent extends infer E
     ? Omit<E, "sequence">
     : never
   : never;
-export type PublicEvent = Omit<FactEvent, "data"> & { data: Json };
+export interface PublicEvent {
+  sequence: number;
+  revision: Revision;
+  type: string;
+  occurredAt: string;
+  scope: string;
+  taskId?: string;
+  runId?: string;
+  data: Json;
+}
+export type TaskEvent = PublicEvent;
+export type RunEvent = PublicEvent;
+export interface RunSnapshot {
+  runId: string;
+  dataDomain: string;
+  revision: Revision;
+  timestamp: string;
+  type: string;
+  version: string;
+  scope: string;
+  environment: string;
+  startedAt: string;
+  startedSequence: number;
+  updatedAt: string;
+  stage: RunStage;
+  stopRequested?: RunRecord["stopRequested"];
+  stoppingAt?: string;
+  outcome?: RunOutcome;
+  exit?: RunExit;
+  completedAt?: string;
+  failedAt?: string;
+  stoppedAt?: string;
+  result?: Json;
+  error?: ErrorFact;
+  progress?: Json;
+  reclaimedAt?: string;
+  cleanupUnknown?: RunRecord["cleanupUnknown"];
+}
 export interface StoreView {
   storeId: string;
+  cursorKey: string;
   floor: number;
+  prefix: Facts;
   facts: Facts;
   events: FactEvent[];
 }
@@ -167,6 +229,7 @@ export type Operation =
   | "submit"
   | "request"
   | "task"
+  | "run"
   | "cancel"
   | "history"
   | "subscribe"
@@ -206,6 +269,8 @@ export interface RegisteredType extends TypeWorkerRegistration {}
 export type HistoryFilter = { taskId: string } | { runId: string } | { seriesId: string };
 export interface HistoryPage {
   events: PublicEvent[];
+  items: PublicEvent[];
+  revision: Revision;
   watermark: number;
   cursor: string;
   next?: string;
@@ -214,16 +279,24 @@ export interface Observation {
   snapshots: TaskSnapshot[];
   events: PublicEvent[];
   watermark: number;
+  revision: Revision;
   cursor: string;
 }
 export interface Subscription {
   initial: Observation;
   pull(): Observation;
   close(): void;
+  events: AsyncIterable<PublicEvent>;
+  unsubscribe(): Promise<void>;
 }
 export interface TaskQuery {
+  taskId?: string;
   type?: string;
+  scope?: string;
+  seriesId?: string;
   runId?: string;
+  stage?: Stage;
+  canceled?: boolean;
   createdFrom?: string;
   createdBefore?: string;
   updatedFrom?: string;
@@ -238,6 +311,12 @@ export interface TaskSummary {
   version: string;
   receivedAt: string;
   updatedAt: string;
+  eligibleAt: string;
+  deadlineAt: string;
+  scope: string;
+  stage: Stage;
+  canceled: boolean;
+  runId?: string;
   state: {
     stage: Stage;
     pending: boolean;
@@ -249,24 +328,37 @@ export interface TaskSummary {
 }
 export interface TaskPage {
   tasks: TaskSummary[];
+  items: TaskSummary[];
+  revision: Revision;
   /** Fixed observation time for this query's summaries, not a Task update. */
   observedAt: string;
   expiresAt: string;
   next?: string;
 }
 export interface RunQuery {
+  runId?: string;
   type?: string;
+  scope?: string;
+  stage?: RunStage;
+  updatedFrom?: string;
+  updatedBefore?: string;
   startedFrom?: string;
   startedBefore?: string;
-  sort?: "started-desc";
+  sort?: "started-desc" | "updated-desc";
 }
 export interface RunSummary {
   runId: string;
   type: string;
   version: string;
   startedAt: string;
+  startedSequence: number;
+  updatedAt: string;
+  scope: string;
+  stage: RunStage;
+  stopRequested: boolean;
   completedAt?: string;
   failedAt?: string;
+  stoppedAt?: string;
   reclaimedAt?: string;
   state: {
     running: boolean;
@@ -274,13 +366,35 @@ export interface RunSummary {
     failed: boolean;
     reclaimed: boolean;
     sealed: boolean;
+    stopping: boolean;
+    stopped: boolean;
   };
 }
 export interface RunPage {
   runs: RunSummary[];
+  items: RunSummary[];
+  revision: Revision;
   observedAt: string;
   expiresAt: string;
   next?: string;
+}
+export interface CollectionChange<Summary> {
+  kind: "joined" | "updated" | "removed";
+  id: string;
+  summary?: Summary;
+}
+export interface CollectionEnvelope<Summary> {
+  revision: Revision;
+  changes: CollectionChange<Summary>[];
+}
+export interface CollectionSubscription<Summary> {
+  events: AsyncIterable<CollectionEnvelope<Summary>>;
+  pull(): CollectionEnvelope<Summary>[];
+  unsubscribe(): Promise<void>;
+  close(): void;
+}
+export interface CancellationResult extends TaskSnapshot {
+  changed: boolean;
 }
 export interface TaskService {
   sendTaskMessage(
@@ -294,7 +408,30 @@ export interface TaskService {
   submit(request: unknown, caller: Caller, options?: SubmitOptions): TaskSnapshot;
   getRequest(requestId: string, caller: Caller): TaskRequest;
   getTask(taskId: string, caller: Caller): TaskSnapshot;
-  cancelTask(taskId: string, caller: Caller): TaskSnapshot;
+  cancelTask(taskId: string, caller: Caller): CancellationResult;
+  getRun(runId: string, caller: Caller): RunSnapshot;
+  getTaskHistory(
+    taskId: string,
+    page: { cursor?: string; limit?: number },
+    caller: Caller,
+  ): HistoryPage;
+  getRunHistory(
+    runId: string,
+    page: { cursor?: string; limit?: number },
+    caller: Caller,
+  ): HistoryPage;
+  subscribeTask(taskId: string, fromRevision: Revision, caller: Caller): Subscription;
+  subscribeRun(runId: string, fromRevision: Revision, caller: Caller): Subscription;
+  subscribeTasks(
+    query: TaskQuery,
+    fromRevision: Revision,
+    caller: Caller,
+  ): CollectionSubscription<TaskSummary>;
+  subscribeRuns(
+    query: RunQuery,
+    fromRevision: Revision,
+    caller: Caller,
+  ): CollectionSubscription<RunSummary>;
   listTasks(query: TaskQuery, page: { cursor?: string; limit?: number }, caller: Caller): TaskPage;
   listRuns(query: RunQuery, page: { cursor?: string; limit?: number }, caller: Caller): RunPage;
   readHistory(

@@ -1,4 +1,4 @@
-import { createTaskEngine } from "@potential-guide/task-engine";
+import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { VirtualClock } from "@potential-guide/task-engine/testing";
 import { at, TaskError } from "@potential-guide/task-protocol";
 import { openSqliteStore } from "../dist/index.js";
@@ -16,6 +16,23 @@ const store = openSqliteStore(filename, {
       process.exit(17);
   },
 });
+const append = store.append.bind(store);
+store.append = (owner, watermark, events) => {
+  armed = events.some((event) =>
+    mode.startsWith("submit-")
+      ? event.type === "task.created" && event.data.task.request.requestId === requestId
+      : mode.startsWith("startup-")
+        ? event.type === "run.started"
+        : mode.startsWith("terminate-")
+          ? event.type === "run.exited"
+          : mode.startsWith("qualification-")
+            ? event.type === "qualification-time-observed"
+            : mode.startsWith("external-")
+              ? event.type === "task.created" && event.data.task.request.requestId !== requestId
+              : false,
+  );
+  return append(owner, watermark, events);
+};
 const type = {
   type: "echo",
   version: "1",
@@ -29,6 +46,24 @@ const type = {
   resourceLifetime: "request",
   resources: {
     async effect() {
+      if (mode === "started") process.exit(17);
+      if (mode.startsWith("qualification-")) {
+        for (let index = 0; index < 2; index++)
+          engine.submit(
+            {
+              requestId: newId(clock.now()),
+              type: "echo",
+              text: "crash",
+              timeoutMs: 1000,
+              eligibleAt: at(clock.now() + 9),
+              matchPolicy: "terminates-after-eligible",
+            },
+            { scope: "a", subject: "tester" },
+          );
+        clock.setTime(clock.now() + 9);
+        engine.tick();
+        throw new Error("Qualification fault did not fire.");
+      }
       if (mode.startsWith("terminate-")) {
         engine.submit(
           {
@@ -36,11 +71,10 @@ const type = {
             type: "echo",
             text: "crash",
             timeoutMs: 1000,
-            matchPolicy: "terminated-after-eligible",
+            matchPolicy: "terminates-after-eligible",
           },
           { scope: "a", subject: "tester" },
         );
-        armed = true;
         if (mode.includes("-failed-")) throw new TaskError("business", "Durable failure");
       }
       return { text: "durable final" };
@@ -59,7 +93,6 @@ if (mode === "owner") {
   process.send?.({ owned: true });
   setInterval(() => engine.tick(), 1000);
 } else {
-  armed = mode.startsWith("submit-");
   const task = engine.submit(
     {
       requestId,
@@ -67,9 +100,6 @@ if (mode === "owner") {
       text: "crash",
       timeoutMs: 1000,
       ...(mode === "future" ? { eligibleAt: at(clock.now() + 100) } : {}),
-      ...(mode.startsWith("successor-")
-        ? { recurrence: { anchor: "eligible", periodMs: 100 } }
-        : {}),
     },
     { scope: "a", subject: "tester" },
   );
@@ -77,16 +107,22 @@ if (mode === "owner") {
     process.send?.({ taskId: task.taskId });
     process.exit(17);
   }
-  armed = mode.startsWith("successor-") || mode.startsWith("startup-");
+  if (mode.startsWith("external-")) {
+    engine.submit(
+      {
+        requestId: requestId.slice(0, -1) + (requestId.endsWith("0") ? "1" : "0"),
+        type: "echo",
+        text: "crash",
+        timeoutMs: 1000,
+        seriesId: task.seriesId,
+        eligibleAt: at(clock.now() + 100),
+      },
+      { scope: "a", subject: "tester" },
+    );
+    throw new Error("External admission fault did not fire.");
+  }
   clock.advance(1);
   engine.tick();
-  if (!mode.startsWith("terminate-") && mode !== "completed") {
-    process.send?.({
-      taskId: task.taskId,
-      runId: engine.getTask(task.taskId, { scope: "a", subject: "tester" }).run?.runId,
-    });
-    process.exit(17);
-  }
   for (let count = 0; count < 1000; count++) {
     if (engine.getTask(task.taskId, { scope: "a", subject: "tester" }).termination) {
       process.send?.({ taskId: task.taskId });

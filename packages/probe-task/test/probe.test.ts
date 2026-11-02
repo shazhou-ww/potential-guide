@@ -17,14 +17,29 @@ import {
   wait,
 } from "./fixtures.js";
 
-test("backward business clock between parent start and child submission preserves completion", async () => {
+test("backward business clock preserves completion with an eligible independent owner protecting the parent", async () => {
   let offset = 0;
+  let protectedParent = false;
   let h: Awaited<ReturnType<typeof harness>>;
   h = await harness(
     entries(),
     {
       children(scope) {
         offset = -20_000;
+        if (!protectedParent) {
+          protectedParent = true;
+          const parent = Object.values(h.store.read().facts.tasks).find(
+            (task) => task.binding.type === "probe",
+          )!;
+          h.engine.submit(
+            {
+              ...parent.request,
+              requestId: newId(Date.now() + offset),
+              matchPolicy: "terminates-after-eligible",
+            },
+            caller,
+          );
+        }
         return {
           service: h.engine,
           caller: { scope, subject: "trusted-probe" },
@@ -109,17 +124,28 @@ test("clock rollback during child run keeps engine-applicable completion evidenc
     let childId = "";
     for (let attempt = 0; attempt < 1000; attempt++) {
       const child = Object.values(h.store.read().facts.tasks).find(
-        (task) => task.binding.type === "check" && task.snapshot.run,
+        (task) => task.binding.type === "check" && h.engine.getTask(task.taskId, caller).run,
       );
       if (child) {
-        assert.equal(child.snapshot.run!.completedAt, undefined);
-        childId = child.snapshot.taskId;
+        assert.equal(h.engine.getTask(child.taskId, caller).run!.completedAt, undefined);
+        childId = child.taskId;
         break;
       }
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
     assert.ok(childId, "A child must start before the business clock rolls back.");
     offset = -20_000;
+    for (const id of [parent.taskId, childId]) {
+      const request = h.engine.getRequest(h.engine.getTask(id, caller).requestId, caller);
+      h.engine.submit(
+        {
+          ...request,
+          requestId: newId(Date.now() + offset),
+          matchPolicy: "terminates-after-eligible",
+        },
+        caller,
+      );
+    }
     const final = await wait(
       () => h.read(parent),
       (snapshot) => !!snapshot.run?.completedAt || !!snapshot.run?.failedAt,
@@ -208,7 +234,7 @@ test("cumulative levels, multiple Checks, immutable content, exact evidence and 
     const modified = structuredClone(prepared);
     modified.root.files["objective.yaml"] = Buffer.from("{}").toString("base64");
     assert.throws(() => h.probe.validatePrepared(modified));
-    const history = h.engine.readHistory({ taskId: task.taskId }, { limit: 100 }, caller);
+    const history = h.engine.getRunHistory(final.run!.runId, { limit: 100 }, caller);
     assert.ok(history.events.some((event) => event.type === "run.progress"));
     assert.throws(() =>
       h.engine.readHistory({ taskId: task.taskId }, {}, { ...caller, scope: "other" }),
@@ -247,8 +273,8 @@ test("dynamic requirements resolve once, retain exact selection, recheck with ge
       probeResultReferences(final.result).map((reference) => reference.url),
       [checkUrl, dependencyUrl, dependencyUrl, depCheckUrl, checkUrl],
     );
-    const history = h.engine.readHistory({ taskId: task.taskId }, { limit: 100 }, caller);
-    assert.ok(history.events.some((event) => event.type === "run.completed"));
+    const history = h.engine.getRunHistory(final.run!.runId, { limit: 100 }, caller);
+    assert.ok(history.events.some((event) => event.type === "run.exited"));
     assert.ok(result.evidence.operations.some((entry) => "content" in entry));
     assert.ok(
       result.evidence.operations.some((entry) => "snapshot" in entry && !!entry.snapshot.run),
@@ -315,7 +341,7 @@ test("unknown/invalid results and invented dependency evidence fail, not busines
     try {
       const task = h.submit();
       const final = await wait(() => h.read(task));
-      assert.equal(final.stage, "run_failed", JSON.stringify(final));
+      assert.equal(final.stage, "failed", JSON.stringify(final));
       assert.ok(final.result && typeof final.result === "object" && "failure" in final.result);
     } finally {
       await h.close();
@@ -354,10 +380,10 @@ test("cancel parent detaches only its child Task; shared Check's independent own
     let childId = "";
     for (let attempt = 0; attempt < 500; attempt++) {
       const child = Object.values(h.store.read().facts.tasks).find(
-        (task) => task.binding.type === "check" && task.snapshot.run,
+        (task) => task.binding.type === "check" && h.engine.getTask(task.taskId, caller).run,
       );
       if (child) {
-        childId = child.snapshot.taskId;
+        childId = child.taskId;
         break;
       }
       await new Promise((resolve) => setTimeout(resolve, 5));
@@ -370,11 +396,11 @@ test("cancel parent detaches only its child Task; shared Check's independent own
         ...request,
         requestId: newId(),
         eligibleAt: child.eligibleAt,
-        matchPolicy: "terminated-after-eligible",
+        matchPolicy: "terminates-after-eligible",
       },
       { scope: caller.scope, subject: "trusted-probe" },
     );
-    assert.equal(h.read(independent).run, undefined);
+    assert.equal(h.read(independent).run?.runId, child.run?.runId);
     h.engine.cancelTask(parent.taskId, caller);
     const completed = await wait(() => h.read(independent));
     assert.equal(completed.stage, "completed");
@@ -386,7 +412,7 @@ test("cancel parent detaches only its child Task; shared Check's independent own
   }
 });
 
-test("Task deadline is not run cancellation; late parent success remains timed out", async () => {
+test("an eligible independent owner permits late parent success without freezing the expired Task", async () => {
   let offset = 0;
   const h = await harness(
     entries(
@@ -409,6 +435,16 @@ test("Task deadline is not run cancellation; late parent success remains timed o
       (value) => !!value.run || !!value.error,
     );
     assert.ok(snapshot.run);
+    const protection = h.engine.submit(
+      {
+        ...h.engine.getRequest(task.requestId, caller),
+        requestId: newId(),
+        timeoutMs: 60000,
+        matchPolicy: "terminates-after-eligible",
+      },
+      caller,
+    );
+    assert.equal(protection.run?.runId, snapshot.run.runId);
     offset = 20000;
     const expired = await wait(() => h.read(task));
     assert.ok(isTimedOut(expired));
@@ -431,7 +467,7 @@ test("wall/depth/check-count budgets stop exact owned work and physically releas
   try {
     const task = h.submit();
     const final = await wait(() => h.read(task));
-    assert.equal(final.stage, "run_failed");
+    assert.equal(final.stage, "failed");
     assert.match(final.error!.message, /wall|interrupted/i);
     assert.equal(h.probe.diagnostics.quarantined, 0);
     await h.engine.waitForTaskRelease(task.taskId, caller);
@@ -446,7 +482,7 @@ test("wall/depth/check-count budgets stop exact owned work and physically releas
   try {
     const task = bounded.submit();
     const final = await wait(() => bounded.read(task));
-    assert.equal(final.stage, "run_failed");
+    assert.equal(final.stage, "failed");
     assert.match(final.error!.message, /budget/);
   } finally {
     await bounded.close();
@@ -463,7 +499,7 @@ test("initial observation performs no Check and pinned input rejects differing c
     const bad = h.submit({
       objective: { kind: "objective", url: rootUrl, digest: `sha256:${"0".repeat(64)}` },
     });
-    assert.equal((await wait(() => h.read(bad))).stage, "run_failed");
+    assert.equal((await wait(() => h.read(bad))).stage, "failed");
   } finally {
     await h.close();
   }
@@ -491,10 +527,10 @@ test("deterministic parent wall expiration confirms active child physical cleanu
     let childId = "";
     for (let attempt = 0; attempt < 2000; attempt++) {
       const child = Object.values(h.store.read().facts.tasks).find(
-        (item) => item.binding.type === "check" && item.snapshot.run,
+        (item) => item.binding.type === "check" && h.engine.getTask(item.taskId, caller).run,
       );
       if (child) {
-        childId = child.snapshot.taskId;
+        childId = child.taskId;
         break;
       }
       await new Promise((resolve) => setTimeout(resolve, 5));
@@ -507,8 +543,11 @@ test("deterministic parent wall expiration confirms active child physical cleanu
     );
     walls[0]!();
     const final = await wait(() => h.read(task));
-    assert.equal(final.stage, "run_failed");
-    assert.equal(final.error?.code, "execution_wall_limit");
+    assert.equal(final.stage, "failed");
+    assert.equal(
+      h.engine.getRun(final.run!.runId, caller).stopRequested?.reason,
+      "execution_wall_limit",
+    );
     await h.engine.waitForTaskRelease(task.taskId, caller);
     const child = h.engine.getTask(childId, caller);
     assert.ok(child.canceledAt);
@@ -533,7 +572,7 @@ test("recursive depth and unknown dynamic target are diagnosed without regulatio
     try {
       const task = h.submit();
       const final = await wait(() => h.read(task));
-      assert.equal(final.stage, "run_failed");
+      assert.equal(final.stage, "failed");
       assert.match(final.error!.message, message);
       assert.ok(
         Object.values(h.store.read().facts.tasks).every((task) =>
@@ -561,7 +600,7 @@ test("trusted caller must preserve scope and actual child environment must match
     try {
       const task = h.submit();
       const final = await wait(() => h.read(task));
-      assert.equal(final.stage, "run_failed");
+      assert.equal(final.stage, "failed");
       assert.match(final.error!.message, /scope|runtime/);
     } finally {
       await h.close();

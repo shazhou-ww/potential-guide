@@ -11,6 +11,7 @@ import {
 
 export interface CatalogLimits {
   pageSize: number;
+  maxPageSize: number;
   queryScanLimit: number;
   queryPageBytes: number;
   maxQueryViews: number;
@@ -25,12 +26,14 @@ interface QueryView<S> {
   expiresAt: string;
   expiresMono: number;
   bytes: number;
+  dataDomain: string;
+  revision: string;
 }
 interface Definition<R, S, Q> {
   namespace: "tasks" | "runs";
   normalize(raw: Q): Q;
   records(facts: Facts): Record<string, R>;
-  matches(record: R, query: Q): boolean;
+  matches(record: R, query: Q, facts: Facts, now: number): boolean;
   summary(record: R, facts: Facts, now: number): S;
   id(summary: S): string;
   compare(left: S, right: S, query: Q): number;
@@ -76,8 +79,8 @@ export class FrozenCatalog<R extends { binding: { scope: string } }, S, Q> {
     if (Object.keys(paging).some((key) => key !== "limit" && key !== "cursor"))
       fail("invalid_request", "Unknown directory page field.");
     const limit = page.limit === undefined ? this.limits.pageSize : positive(page.limit, "limit");
-    if (limit > this.limits.pageSize)
-      fail("invalid_request", "Directory page limit exceeds pageSize.");
+    if (limit > this.limits.maxPageSize)
+      fail("invalid_request", "Directory page limit exceeds maxPageSize.");
     for (const [id, view] of this.views)
       if (now >= Date.parse(view.expiresAt) || performance.now() >= view.expiresMono)
         this.remove(id, view);
@@ -104,6 +107,7 @@ export class FrozenCatalog<R extends { binding: { scope: string } }, S, Q> {
       view = saved;
       if (
         view.key !== key ||
+        view.dataDomain !== facts.dataDomain ||
         view.caller !== identity ||
         !Number.isSafeInteger(position) ||
         position <= 0 ||
@@ -121,6 +125,8 @@ export class FrozenCatalog<R extends { binding: { scope: string } }, S, Q> {
         expiresAt: at(now + this.limits.queryLifetimeMs),
         expiresMono: performance.now() + this.limits.queryLifetimeMs,
         bytes: 512 + 2 * (key.length + identity.length),
+        dataDomain: facts.dataDomain,
+        revision: `${facts.dataDomain}:${facts.watermark}`,
       };
       if (this.bytes + view.bytes > this.limits.maxQueryBytes)
         fail("capacity_exceeded", "Directory query memory budget exhausted.");
@@ -130,7 +136,11 @@ export class FrozenCatalog<R extends { binding: { scope: string } }, S, Q> {
         if (++scanned > this.limits.queryScanLimit)
           fail("capacity_exceeded", "Directory scan limit exceeded.");
         const record = records[recordId];
-        if (!record || record.binding.scope !== caller.scope || !def.matches(record, query))
+        if (
+          !record ||
+          record.binding.scope !== caller.scope ||
+          !def.matches(record, query, facts, now)
+        )
           continue;
         authorize(record);
         const item = def.summary(record, facts, now);
@@ -150,14 +160,21 @@ export class FrozenCatalog<R extends { binding: { scope: string } }, S, Q> {
       }
       authorize(record);
     }
-    const result: { items: S[]; observedAt: string; expiresAt: string; next?: string } = {
+    const result: {
+      items: S[];
+      revision: string;
+      observedAt: string;
+      expiresAt: string;
+      next?: string;
+    } = {
       items: [],
+      revision: view.revision,
       observedAt: view.observedAt,
       expiresAt: view.expiresAt,
     };
     const pageBytes = () => {
       const { items, ...metadata } = result;
-      return bytes({ [def.namespace]: items, ...metadata });
+      return bytes({ items, [def.namespace]: items, ...metadata });
     };
     while (position < view.items.length && result.items.length < limit) {
       const item = view.items[position];

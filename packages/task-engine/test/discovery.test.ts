@@ -52,7 +52,7 @@ test("discovery is immutable, current-only, submit-authorized and detached from 
     current.inputSchema.properties = {};
     assert.equal(engine.discoverTypes(caller)[0]?.version, "2");
     const request = {
-      requestId: newId(),
+      requestId: newId(clock.now()),
       type: "example",
       value: 1,
       timeoutMs: 100,
@@ -62,7 +62,8 @@ test("discovery is immutable, current-only, submit-authorized and detached from 
     assert.throws(() => engine.submit(request, caller, { expectedRevision: "stale" }), {
       code: "contract_revision_mismatch",
     });
-    assert.equal(store.read().facts.watermark, 0);
+    assert.deepEqual(store.read().facts.tasks, {});
+    assert.ok(store.read().events.every((event) => event.type === "window.advanced"));
     const created = engine.submit(request, caller, { expectedRevision: revision });
     assert.equal(engine.submit(request, caller).taskId, created.taskId);
     assert.equal(
@@ -94,7 +95,7 @@ test("revision races fail before persistence; history never silently changes Sch
   await first.start();
   const oldRevision = first.discoverTypes(caller)[0]!.revision;
   const raw = {
-    requestId: newId(),
+    requestId: newId(clock.now()),
     type: "example",
     value: 1,
     timeoutMs: 100,
@@ -110,7 +111,10 @@ test("revision races fail before persistence; history never silently changes Sch
   });
   await second.start();
   assert.throws(
-    () => second.submit({ ...raw, requestId: newId() }, caller, { expectedRevision: oldRevision }),
+    () =>
+      second.submit({ ...raw, requestId: newId(clock.now()) }, caller, {
+        expectedRevision: oldRevision,
+      }),
     { code: "contract_revision_mismatch" },
   );
   assert.equal(second.submit(raw, caller).taskId, task.taskId);
@@ -157,7 +161,7 @@ test("revision races fail before persistence; history never silently changes Sch
 });
 
 test("run records independently require the original contract identity", async () => {
-  const h = harness();
+  const h = await harness();
   try {
     h.submit();
     await h.turn();
@@ -196,8 +200,8 @@ test("run records independently require the original contract identity", async (
   }
 });
 
-test("generated structural equality never bypasses synchronous event-time authorization", async () => {
-  const h = harness({
+test("generated structural equality ignores allowed undeclared fields and never invokes obsolete per-demand type authorization", async () => {
+  const h = await harness({
     inputSchema: { type: "object", properties: { text: { type: "string" } }, required: ["text"] },
   });
   let revoked = false;
@@ -207,12 +211,20 @@ test("generated structural equality never bypasses synchronous event-time author
   try {
     const owner = h.submit({ source: "owner" });
     await h.turn();
-    const blocked = h.submit({ source: "blocked", matchPolicy: "terminated-after-eligible" });
-    const allowed = h.submit({ source: "allowed", matchPolicy: "terminated-after-eligible" });
-    assert.equal(h.engine.getTask(allowed.taskId, caller).run, undefined);
+    const blocked = h.submit({ source: "blocked", matchPolicy: "terminates-after-eligible" });
+    const allowed = h.submit({ source: "allowed", matchPolicy: "terminates-after-eligible" });
+    const duplicate = h.submit({ source: "owner", matchPolicy: "terminates-after-eligible" });
+    assert.equal(duplicate.run?.runId, h.engine.getTask(owner.taskId, caller).run?.runId);
+    assert.equal(
+      h.engine.getTask(allowed.taskId, caller).run?.runId,
+      h.engine.getTask(owner.taskId, caller).run?.runId,
+    );
     assert.equal(Object.hasOwn(h.store.read().facts.tasks[allowed.taskId]!, "prepared"), false);
     revoked = true;
     await h.finish();
+    await h.turn();
+    assert.ok(h.engine.getTask(allowed.taskId, caller).run);
+    assert.ok(h.engine.getTask(blocked.taskId, caller).run);
     assert.equal(
       h.engine.getTask(allowed.taskId, caller).run?.runId,
       h.engine.getTask(owner.taskId, caller).run?.runId,
@@ -220,6 +232,10 @@ test("generated structural equality never bypasses synchronous event-time author
     assert.equal(
       h.engine.getTask(blocked.taskId, caller).run?.runId,
       h.engine.getTask(owner.taskId, caller).run?.runId,
+    );
+    assert.equal(
+      h.engine.getTask(allowed.taskId, caller).run?.runId,
+      h.engine.getTask(blocked.taskId, caller).run?.runId,
     );
     assert.equal(
       h.engine.errors.some((error) => error.message === "source permission revoked"),

@@ -5,7 +5,7 @@ import { caller, harness } from "../../task-engine/test/fixtures.js";
 import { createTaskHandler } from "../src/index.js";
 
 test("GET /runs exposes only authorized frozen summaries and validates all query boundaries", async () => {
-  const h = harness({
+  const h = await harness({
     limits: { pageSize: 1, queryLifetimeMs: 1000 },
     authorize: (who, op, scope) =>
       who.scope === scope &&
@@ -34,15 +34,15 @@ test("GET /runs exposes only authorized frozen summaries and validates all query
     assert.ok(page.next);
     assert.equal((await get(`/runs?cursor=${encodeURIComponent(page.next)}`, "exec")).status, 200);
     for (const query of [
-      "scope=other",
       "type=echo&type=echo",
       "limit=0",
-      "limit=2",
-      "sort=updated-desc",
+      "limit=1001",
       "startedFrom=bad",
       "cursor=event-cursor",
     ])
       assert.equal((await get(`/runs?${query}`)).status, 400, query);
+    assert.equal((await get("/runs?scope=other")).status, 200);
+    assert.equal((await get("/runs?limit=2&sort=updated-desc")).status, 200);
     h.clock.advance(1001);
     const expired = await get(`/runs?cursor=${encodeURIComponent(page.next)}`, "exec");
     assert.equal(expired.status, 410);

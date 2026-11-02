@@ -1,5 +1,9 @@
 # @potential-guide/probe-task
 
+子 Check 的终态 Task 不是实际环境的替代证明。Probe 经独立 getRun/getRunHistory 核验
+Run 身份、完成结果、开始历史及实际 environment 与准备约定一致；历史不依赖 Task 混合 Run 事件。
+旧进程已开始而无退出事实的 Probe/Check Run 恢复 stopped，不再次观察或重演副作用。
+
 宿主资源桥按 Run/Worker 代际记录子需求所有权，`confirmResourceRelease` 独立等待
 取消后的子需求物理释放。child-submit 返回句柄、类型发送 released 或 callback 返回，
 都不能替代这项证明；旧代际 dispose 不影响新代际所有权。

@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { newId } from "@potential-guide/task-engine";
 import { VirtualClock } from "@potential-guide/task-engine/testing";
 import type { RegisteredType } from "@potential-guide/task-protocol";
-import { at, emptyFacts, reduce } from "@potential-guide/task-protocol";
+import { at, project, reduce } from "@potential-guide/task-protocol";
 import { createFixtureEngine as createTaskEngine } from "../../task-engine/test/driver.js";
 import { openSqliteStore } from "../src/index.js";
 
@@ -73,7 +73,7 @@ test("SQLite WAL/FK/FULL, atomic indexes, checkpoint and duplicate owners", asyn
   await engine.start();
   try {
     const raw = {
-      requestId: newId(),
+      requestId: newId(clock.now()),
       type: "echo",
       text: "future",
       timeoutMs: 100,
@@ -90,7 +90,7 @@ test("SQLite WAL/FK/FULL, atomic indexes, checkpoint and duplicate owners", asyn
     assert.equal(inspection.prepare("SELECT count(*) AS n FROM checkpoint").get()?.n, 1);
     inspection.close();
     const view = store.read();
-    assert.deepEqual(view.facts, reduce(emptyFacts(), view.events));
+    assert.deepEqual(view.facts, reduce(view.prefix, view.events));
   } finally {
     await engine.close();
     store.close();
@@ -129,7 +129,7 @@ for (const mode of ["started", "completed", "future"]) {
   test(`real restart: ${mode} preserves exact identity and adopts reliable facts`, async () => {
     const root = await directory();
     const filename = join(root, "tasks.sqlite");
-    const requestId = newId();
+    const requestId = newId(new VirtualClock().now());
     await crash(filename, mode, requestId);
     const store = openSqliteStore(filename);
     const clock = new VirtualClock();
@@ -144,15 +144,15 @@ for (const mode of ["started", "completed", "future"]) {
       const before = Object.values(store.read().facts.tasks)[0];
       assert.ok(before);
       await engine.start();
-      const snapshot = engine.getTask(before.snapshot.taskId, caller);
+      const snapshot = engine.getTask(before.taskId, caller);
       assert.equal(snapshot.requestId, requestId);
-      assert.equal(snapshot.deadlineAt, before.snapshot.deadlineAt);
+      assert.equal(snapshot.deadlineAt, before.deadlineAt);
       assert.equal(
         snapshot.stage,
-        mode === "completed" ? "completed" : mode === "started" ? "run_failed" : "initial",
+        mode === "completed" ? "completed" : mode === "started" ? "stopped" : "initial",
       );
       if (mode === "completed") assert.deepEqual(snapshot.result, { text: "durable final" });
-      if (mode === "started") assert.equal(snapshot.error?.code, "execution_interrupted");
+      if (mode === "started") assert.equal(snapshot.error, undefined);
       assert.equal(
         engine.submit(engine.getRequest(requestId, caller), caller).taskId,
         snapshot.taskId,
@@ -182,19 +182,97 @@ for (const mode of ["started", "completed", "future"]) {
 }
 
 for (const moment of ["before", "after"]) {
+  test(`real crash ${moment} qualification commit replays complete historical membership after rollback and recovery`, async () => {
+    const root = await directory();
+    const filename = join(root, "tasks.sqlite");
+    await crash(filename, `qualification-${moment}`, newId(new VirtualClock().now()));
+    const store = openSqliteStore(filename);
+    const before = store.read();
+    const followers = Object.values(before.facts.tasks).filter(
+      (task) => task.binding.matchPolicy === "terminates-after-eligible",
+    );
+    assert.equal(followers.length, 2);
+    const run = Object.values(before.facts.runs)[0]!;
+    const witness = before.events.find((event) => event.type === "qualification-time-observed");
+    assert.equal(!!witness, moment === "after");
+    const clock = new VirtualClock();
+    clock.setTime(clock.now() + 5);
+    for (const task of followers)
+      assert.equal(
+        project(before.facts, task.taskId, clock.now()).stage,
+        moment === "after" ? "running" : "initial",
+      );
+    const engine = createTaskEngine({
+      store,
+      clock,
+      types: [type()],
+      currentVersions: { echo: "1" },
+      authorize: () => true,
+    });
+    try {
+      await engine.start();
+      assert.equal(engine.getRun(run.runId, caller).exit?.basis, "recovery");
+      for (const task of followers) {
+        const snapshot = engine.getTask(task.taskId, caller);
+        assert.equal(snapshot.stage, moment === "after" ? "stopped" : "initial");
+        assert.equal(snapshot.run?.runId, moment === "after" ? run.runId : undefined);
+        assert.ok(snapshot.timestamp < snapshot.eligibleAt);
+      }
+      assert.deepEqual(store.read().facts.tasks, before.facts.tasks);
+      if (witness) {
+        const subscription = engine.subscribeTasks(
+          { runId: run.runId },
+          `${before.storeId}:${witness.sequence - 1}`,
+          caller,
+        );
+        try {
+          const joined = subscription.pull();
+          assert.equal(joined.length, 1);
+          assert.equal(joined[0]!.revision, `${before.storeId}:${witness.sequence}`);
+          assert.deepEqual(
+            joined[0]!.changes.map((change) => change.id),
+            followers.map((task) => task.taskId).sort(),
+          );
+          assert.ok(
+            joined[0]!.changes.every(
+              (change) => change.kind === "joined" && change.summary?.stage === "running",
+            ),
+          );
+          const recovery = subscription.pull();
+          assert.equal(recovery[0]!.changes.length, 3);
+          assert.ok(
+            recovery[0]!.changes.every(
+              (change) => change.kind === "updated" && change.summary?.stage === "stopped",
+            ),
+          );
+        } finally {
+          subscription.close();
+        }
+      }
+    } finally {
+      await engine.close();
+      store.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+}
+
+for (const moment of ["before", "after"]) {
   for (const outcome of ["completed", "failed"]) {
-    test(`real crash ${moment} ${outcome} atomically preserves termination bindings`, async () => {
+    test(`real crash ${moment} ${outcome} Worker-exit commit projects all matching Tasks without binding writes`, async () => {
       const root = await directory();
       const filename = join(root, "tasks.sqlite");
-      await crash(filename, `terminate-${outcome}-${moment}`, newId());
+      await crash(filename, `terminate-${outcome}-${moment}`, newId(new VirtualClock().now()));
       const store = openSqliteStore(filename);
       const before = store.read();
       const tasks = Object.values(before.facts.tasks);
       assert.equal(tasks.length, 2);
       const demand = tasks.find(
-        (task) => task.binding.matchPolicy === "terminated-after-eligible",
+        (task) => task.binding.matchPolicy === "terminates-after-eligible",
       )!;
-      assert.equal(demand.snapshot.run !== undefined, moment === "after");
+      const saved = project(before.facts, demand.taskId, new VirtualClock().now() + 1);
+      assert.ok(saved.run);
+      assert.equal(saved.stage, moment === "after" ? outcome : "running");
       const clock = new VirtualClock();
       clock.advance(10);
       const engine = createTaskEngine({
@@ -206,22 +284,19 @@ for (const moment of ["before", "after"]) {
       });
       try {
         await engine.start();
-        const expected = moment === "after" && outcome === "completed" ? "completed" : "run_failed";
+        const expected = moment === "after" ? outcome : "stopped";
         for (const task of tasks) {
-          const final = engine.getTask(task.snapshot.taskId, caller);
+          const final = engine.getTask(task.taskId, caller);
           assert.equal(final.stage, expected);
-          assert.equal(final.eligibleAt, task.snapshot.eligibleAt);
-          assert.equal(final.deadlineAt, task.snapshot.deadlineAt);
+          assert.equal(final.eligibleAt, task.eligibleAt);
+          assert.equal(final.deadlineAt, task.deadlineAt);
           assert.equal(
             final.error?.code,
-            moment === "before"
-              ? "execution_interrupted"
-              : outcome === "failed"
-                ? "business"
-                : undefined,
+            moment === "before" ? undefined : outcome === "failed" ? "business" : undefined,
           );
         }
-        assert.deepEqual(store.read().facts, reduce(emptyFacts(), store.read().events));
+        const view = store.read();
+        assert.deepEqual(view.facts, reduce(view.prefix, view.events));
       } finally {
         await engine.close();
         store.close();
@@ -232,7 +307,7 @@ for (const moment of ["before", "after"]) {
   test(`crash ${moment} commit keeps request/event/index atomic`, async () => {
     const root = await directory();
     const filename = join(root, "tasks.sqlite");
-    const requestId = newId();
+    const requestId = newId(new VirtualClock().now());
     await crash(filename, `submit-${moment}`, requestId);
     const store = openSqliteStore(filename);
     const clock = new VirtualClock();
@@ -256,11 +331,11 @@ for (const moment of ["before", "after"]) {
       await rm(root, { recursive: true, force: true });
     }
   });
-  test(`crash ${moment} successor transaction never splits planning/admission`, async () => {
+  test(`crash ${moment} external-series admission preserves independent requests without successor authority`, async () => {
     const root = await directory();
     const filename = join(root, "tasks.sqlite");
-    const requestId = newId();
-    await crash(filename, `successor-${moment}`, requestId);
+    const requestId = newId(new VirtualClock().now());
+    await crash(filename, `external-${moment}`, requestId);
     const store = openSqliteStore(filename);
     const clock = new VirtualClock();
     const engine = createTaskEngine({
@@ -275,14 +350,23 @@ for (const moment of ["before", "after"]) {
         (task) => task.request.requestId === requestId,
       );
       assert.ok(prior);
-      const saved = prior.successor;
+      assert.equal("successor" in prior, false);
       assert.equal(Object.keys(store.read().facts.tasks).length, moment === "before" ? 1 : 2);
       await engine.start();
-      clock.advance(1);
-      engine.tick();
-      const restored = store.read().facts.tasks[prior.snapshot.taskId];
-      assert.ok(restored?.successor);
-      if (saved) assert.deepEqual(restored.successor, saved);
+      const request = {
+        requestId: requestId.slice(0, -1) + (requestId.endsWith("0") ? "1" : "0"),
+        type: "echo",
+        text: "crash",
+        timeoutMs: 1000,
+        seriesId: prior.seriesId,
+        eligibleAt: at(clock.now() + 100),
+      };
+      const next = engine.submit(request, caller);
+      assert.equal(engine.submit(request, caller).taskId, next.taskId);
+      assert.notEqual(next.taskId, prior.taskId);
+      assert.equal(engine.getTask(prior.taskId, caller).canceled, false);
+      assert.equal(next.canceled, false);
+      assert.equal(next.seriesId, prior.seriesId);
       assert.equal(Object.keys(store.read().facts.tasks).length, 2);
     } finally {
       await engine.close();

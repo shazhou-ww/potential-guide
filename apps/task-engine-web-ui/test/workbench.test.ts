@@ -33,6 +33,10 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     eligibleAt: "2026-10-31T00:00:00.000Z",
     deadlineAt: "2026-10-31T00:00:01.000Z",
     timestamp: "2026-10-31T00:00:00.000Z",
+    updatedAt: "2026-10-31T00:00:00.000Z",
+    dataDomain: "domain",
+    revision: "domain:10",
+    canceled: false,
     run: { runId: newIdentity(), startedAt: "2026-10-31T00:00:00.000Z" },
   });
   const source = makeTask(),
@@ -66,6 +70,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     historySignals: AbortSignal[] = [];
   const streams = new Map<string, { emit(value: Observation): void; closed: boolean }>();
   const envelope = {
+    revision: "domain:10",
     observedAt: "2026-10-31T00:00:00.000Z",
     expiresAt: "2100-01-01T00:00:00.000Z",
   };
@@ -87,6 +92,12 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     version: "1",
     receivedAt: task.receivedAt,
     updatedAt: task.timestamp,
+    eligibleAt: task.eligibleAt,
+    deadlineAt: task.deadlineAt,
+    scope: "scope",
+    stage: task.stage,
+    canceled: task.canceled,
+    runId: task.run?.runId,
     state: {
       stage: task.stage,
       pending: false,
@@ -154,15 +165,37 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
             type: "remote-execution",
             version: "1",
             startedAt: remote.receivedAt,
+            startedSequence: 1,
+            updatedAt: remote.updatedAt,
+            scope: "scope",
+            stage: "running",
+            stopRequested: false,
             state: {
               running: true,
               completed: false,
               failed: false,
+              stopping: false,
+              stopped: false,
               reclaimed: false,
               sealed: false,
             },
           },
         ],
+      });
+    if (path === `/runs/${remote.run!.runId}`)
+      return json({
+        runId: remote.run!.runId,
+        dataDomain: "domain",
+        revision: "domain:10",
+        timestamp: remote.timestamp,
+        type: "echo",
+        version: "1",
+        scope: "scope",
+        environment: "fixture",
+        startedAt: remote.run!.startedAt,
+        startedSequence: 1,
+        updatedAt: remote.updatedAt,
+        stage: "running",
       });
     const task = /^\/tasks\/([^/]+)(\/cancel)?$/.exec(path);
     if (task?.[1]) {
@@ -181,9 +214,22 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
       if (options?.signal) historySignals.push(options.signal);
       if (url.searchParams.has("cursor")) {
         historyPages++;
-        return json({ events: [], watermark: 10, cursor: "resume-next" });
+        return json({
+          events: [],
+          items: [],
+          revision: "domain:10",
+          watermark: 10,
+          cursor: "resume-next",
+        });
       }
-      return json({ events: [], watermark: 10, cursor: "resume", next: "history-next" });
+      return json({
+        events: [],
+        items: [],
+        revision: "domain:10",
+        watermark: 10,
+        cursor: "resume",
+        next: "history-next",
+      });
     }
     if (path === "/events") {
       streamStarts++;
@@ -218,6 +264,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
         events: [],
         snapshots: records.has(id) ? [records.get(id)!] : [],
         watermark: 10,
+        revision: "domain:10",
         cursor: "live",
       });
       return new Response(stream, { headers: { "content-type": "text/event-stream" } });
@@ -368,6 +415,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     const completed: TaskSnapshot = {
       ...created!,
       stage: "completed",
+      revision: "domain:20",
       result: { ok: false },
       timestamp: finishedAt,
       run: { ...created!.run!, completedAt: finishedAt },
@@ -376,6 +424,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     const event = (type: PublicEvent["type"], sequence: number, runId: string): PublicEvent => ({
       type,
       sequence,
+      revision: `domain:${sequence}`,
       runId,
       scope: "scope",
       occurredAt: finishedAt,
@@ -383,25 +432,32 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     });
     streams.get(id)!.emit({
       snapshots: [completed],
-      events: [event("run.completed", 20, completed.run!.runId)],
+      events: [],
       watermark: 20,
+      revision: "domain:20",
       cursor: "complete",
     });
     await until(
-      () => element("#task-detail").textContent!.includes("已完成 · 已超时"),
+      () =>
+        element("#task-detail").textContent!.includes("已完成") &&
+        element("#task-detail").textContent!.includes("时间 timeout"),
       "late completion must retain timeout",
     );
     assert.equal(streams.get(id)!.closed, false, "logical completion is not reclamation");
     streams.get(id)!.emit({
-      snapshots: [completed],
-      events: [event("run.reclaimed", 21, completed.run!.runId)],
+      snapshots: [{ ...completed, revision: "domain:21" }],
+      events: [],
       watermark: 21,
+      revision: "domain:21",
       cursor: "reclaimed",
     });
-    await until(
-      () => streams.get(id)!.closed && element("#task-detail").textContent!.includes("观察已结束"),
-      "completed and reclaimed should end SSE",
+    assert.equal(
+      streams.get(id)!.closed,
+      false,
+      "terminal Task remains observable for later cancellation",
     );
+    named("#task-detail", "暂停观察").click();
+    await until(() => streams.get(id)!.closed, "explicit pause only releases observation");
     const starts = streamStarts;
     named("#task-detail", "下一页事件历史").click();
     await until(() => historyPages === 2, "history must remain available after automatic end");
@@ -418,8 +474,9 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     await until(() => streams.has(runId), "independent Run can open");
     streams.get(runId)!.emit({
       snapshots: [],
-      events: [event("run.completed", 30, runId), event("run.reclaimed", 31, runId)],
+      events: [event("run.exited", 30, runId), event("run.reclaimed", 31, runId)],
       watermark: 31,
+      revision: "domain:31",
       cursor: "exec-end",
     });
     await until(

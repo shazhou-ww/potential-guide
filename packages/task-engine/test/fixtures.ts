@@ -37,7 +37,7 @@ export const echoSchema = {
 const echoContract = compileInputSchema<JsonObject>(echoSchema);
 export const validateEcho = echoContract.validate;
 export const echoEquals = echoContract.equals;
-export function harness(
+export async function harness(
   options: {
     limits?: Partial<EngineLimits>;
     resources?: string[];
@@ -73,7 +73,6 @@ export function harness(
         exited: exit.promise,
         cooperate(reason) {
           stops.push(reason);
-          done.reject(new Error(reason));
           exit.resolve();
         },
         async force() {
@@ -121,7 +120,7 @@ export function harness(
     authorize: options.authorize ?? ((who) => who.subject === "tester"),
     ...(options.limits ? { limits: options.limits } : {}),
   });
-  engine.start();
+  await engine.start();
   function submit(extra: JsonObject = {}) {
     return engine.submit(
       { requestId: newId(clock.now()), type: "echo", text: "hello", timeoutMs: 100, ...extra },
@@ -131,8 +130,14 @@ export function harness(
   async function turn(milliseconds = 1) {
     clock.advance(milliseconds);
     engine.tick();
+    const settledStarts = async () => {
+      const state = engine as unknown as { allocations: Map<string, { startup: Promise<void> }> };
+      await Promise.all([...state.allocations.values()].map((group) => group.startup));
+    };
+    await settledStarts();
     await flush();
     engine.tick();
+    await settledStarts();
     await flush();
   }
   async function finish(index = 0, result: Json = { text: "hello" }) {

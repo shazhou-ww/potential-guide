@@ -75,6 +75,22 @@ export function redactCredential(value: unknown, token: string): unknown {
     );
   return value;
 }
+export function serializeSseFrame(frame: string, token?: string): string {
+  const lines = frame.split("\n");
+  if (!lines.some((line) => /^event:\s*task\.error\s*$/.test(line))) return `${frame}\n\n`;
+  let value: unknown;
+  try {
+    value = JSON.parse(
+      lines
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trimStart())
+        .join("\n"),
+    );
+  } catch {
+    reject(502, "invalid_stream", "后端错误控制帧不是 JSON。");
+  }
+  return `event: task.error\ndata: ${JSON.stringify(token ? redactCredential(value, token) : value)}\n\n`;
+}
 export function publicEndpoint(config: EndpointConfig): Endpoint {
   return {
     id: config.id,
@@ -161,21 +177,83 @@ async function boundedBody(response: Response, max = RESPONSE_LIMIT): Promise<Ui
 export function allowedRoute(path: string, method: string, params: URLSearchParams): boolean {
   let keys: string[] = [];
   if (path === "/tasks" && method === "GET")
-    keys = ["type", "runId", "createdFrom", "createdBefore", "sort", "cursor", "limit"];
+    keys = [
+      "taskId",
+      "type",
+      "scope",
+      "seriesId",
+      "runId",
+      "stage",
+      "canceled",
+      "createdFrom",
+      "createdBefore",
+      "updatedFrom",
+      "updatedBefore",
+      "sort",
+      "cursor",
+      "limit",
+    ];
   else if (path === "/runs" && method === "GET")
-    keys = ["type", "startedFrom", "startedBefore", "sort", "cursor", "limit"];
+    keys = [
+      "runId",
+      "type",
+      "scope",
+      "stage",
+      "startedFrom",
+      "startedBefore",
+      "updatedFrom",
+      "updatedBefore",
+      "sort",
+      "cursor",
+      "limit",
+    ];
+  else if (["/tasks/events", "/runs/events"].includes(path) && method === "GET")
+    keys =
+      path === "/tasks/events"
+        ? [
+            "taskId",
+            "type",
+            "scope",
+            "seriesId",
+            "runId",
+            "stage",
+            "canceled",
+            "createdFrom",
+            "createdBefore",
+            "updatedFrom",
+            "updatedBefore",
+            "sort",
+            "fromRevision",
+          ]
+        : [
+            "runId",
+            "type",
+            "scope",
+            "stage",
+            "startedFrom",
+            "startedBefore",
+            "updatedFrom",
+            "updatedBefore",
+            "sort",
+            "fromRevision",
+          ];
+  else if (
+    new RegExp(`^/(tasks|runs)/${idPattern.source.slice(1, -1)}/(history|events)$`).test(path) &&
+    method === "GET"
+  )
+    keys = path.endsWith("/events") ? ["fromRevision"] : ["cursor", "limit"];
   else if (["/event-history", "/events"].includes(path) && method === "GET")
     keys = [
       "taskId",
       "runId",
       "seriesId",
-      ...(path === "/event-history" ? ["cursor", "limit"] : []),
+      ...(path === "/event-history" ? ["cursor", "limit"] : ["fromRevision"]),
     ];
   else if (
     !(
       (path === "/task-types" && method === "GET") ||
       (path === "/tasks" && method === "POST") ||
-      (new RegExp(`^/(tasks|requests)/${idPattern.source.slice(1, -1)}$`).test(path) &&
+      (new RegExp(`^/(tasks|runs|requests)/${idPattern.source.slice(1, -1)}$`).test(path) &&
         method === "GET") ||
       (new RegExp(`^/tasks/${idPattern.source.slice(1, -1)}/cancel$`).test(path) &&
         method === "POST")
@@ -460,7 +538,7 @@ export async function startUiServer(raw: UiConfig) {
       const endpoint = endpoints.get(route[1]);
       if (!endpoint || req.headers["x-endpoint-binding"] !== endpoint.public.binding)
         reject(409, "endpoint_changed", "目标缺失或重新绑定；请刷新并核对目标。");
-      streaming = route[2] === "/events";
+      streaming = route[2] === "/events" || route[2].endsWith("/events");
       if (streaming && streams >= MAX_STREAMS) reject(429, "ui_stream_capacity", "UI 事件流上限。");
       if (streaming) {
         streams++;
@@ -524,25 +602,40 @@ export async function startUiServer(raw: UiConfig) {
       const reader = upstream.body?.getReader();
       if (!reader) reject(502, "invalid_stream", "缺少事件流。");
       let bytes = 0;
+      let pending = "";
+      const decoder = new TextDecoder("utf-8", { fatal: true });
       try {
         while (!controller.signal.aborted) {
           const chunk = await reader.read();
           if (chunk.done) break;
           bytes += chunk.value.byteLength;
-          if (bytes > STREAM_BYTES) break;
-          if (!res.write(chunk.value)) {
-            await new Promise<void>((resolveDrain) => {
-              const finish = () => {
-                res.off("drain", finish);
-                controller.signal.removeEventListener("abort", finish);
-                resolveDrain();
-              };
-              res.once("drain", finish);
-              controller.signal.addEventListener("abort", finish, { once: true });
-              if (controller.signal.aborted) finish();
-            });
+          if (bytes > STREAM_BYTES)
+            reject(502, "ui_stream_capacity", "UI 事件流字节预算耗尽，请从最后完整水位重连。");
+          pending = (pending + decoder.decode(chunk.value, { stream: true })).replace(
+            /\r\n/g,
+            "\n",
+          );
+          let boundary = pending.indexOf("\n\n");
+          while (boundary >= 0) {
+            const frame = serializeSseFrame(pending.slice(0, boundary), endpoint.token);
+            pending = pending.slice(boundary + 2);
+            if (!res.write(frame)) {
+              await new Promise<void>((resolveDrain) => {
+                const finish = () => {
+                  res.off("drain", finish);
+                  controller.signal.removeEventListener("abort", finish);
+                  resolveDrain();
+                };
+                res.once("drain", finish);
+                controller.signal.addEventListener("abort", finish, { once: true });
+                if (controller.signal.aborted) finish();
+              });
+            }
+            boundary = pending.indexOf("\n\n");
           }
         }
+        pending += decoder.decode();
+        if (pending.trim()) reject(502, "invalid_stream", "后端事件流在完整封装结束前中断。");
       } finally {
         await reader.cancel().catch(() => {});
         reader.releaseLock();

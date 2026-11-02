@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { newId } from "@potential-guide/task-engine";
 import { VirtualClock } from "@potential-guide/task-engine/testing";
 import type { RegisteredType } from "@potential-guide/task-protocol";
+import { project } from "@potential-guide/task-protocol";
 import { createFixtureEngine as createTaskEngine } from "../../task-engine/test/driver.js";
 import { openSqliteStore } from "../src/index.js";
 
@@ -17,7 +18,7 @@ for (const boundary of ["before", "after"]) {
     const filename = join(root, "tasks.sqlite");
     const child = fork(
       fileURLToPath(new URL("./crash-child.mjs", import.meta.url)),
-      [filename, `startup-${boundary}`, newId()],
+      [filename, `startup-${boundary}`, newId(new VirtualClock().now())],
       { silent: true },
     );
     const exit = await new Promise<number | null>((resolveExit, reject) => {
@@ -33,9 +34,18 @@ for (const boundary of ["before", "after"]) {
     });
     assert.equal(exit, 17);
     const store = openSqliteStore(filename);
-    const before = Object.values(store.read().facts.tasks)[0];
+    const saved = store.read();
+    const before = Object.values(saved.facts.tasks)[0];
     assert.ok(before);
-    assert.equal(before.snapshot.stage, boundary === "before" ? "initial" : "running");
+    assert.equal(
+      project(saved.facts, before.taskId, new VirtualClock().now()).stage,
+      boundary === "before" ? "initial" : "running",
+    );
+    assert.equal(
+      Object.values(saved.facts.runs).every((run) => typeof run.workerGeneration === "string"),
+      true,
+      "The start and dispatch-generation source facts commit atomically before entry delivery.",
+    );
     let starts = 0;
     const type: RegisteredType = {
       type: "echo",
@@ -70,17 +80,17 @@ for (const boundary of ["before", "after"]) {
       for (
         let index = 0;
         index < 200 &&
-        !engine.getTask(before.snapshot.taskId, { scope: "a", subject: "tester" }).termination;
+        !engine.getTask(before.taskId, { scope: "a", subject: "tester" }).termination;
         index++
       )
         await new Promise((resolve) => setTimeout(resolve, 5));
       engine.tick();
-      const task = engine.getTask(before.snapshot.taskId, { scope: "a", subject: "tester" });
+      const task = engine.getTask(before.taskId, { scope: "a", subject: "tester" });
       assert.equal(task.requestId, before.request.requestId);
-      assert.equal(task.deadlineAt, before.snapshot.deadlineAt);
+      assert.equal(task.deadlineAt, before.deadlineAt);
       assert.equal(starts, boundary === "before" ? 1 : 0);
-      assert.equal(task.stage, boundary === "before" ? "completed" : "run_failed");
-      if (boundary === "after") assert.equal(task.error?.code, "execution_interrupted");
+      assert.equal(task.stage, boundary === "before" ? "completed" : "stopped");
+      if (boundary === "after") assert.equal(task.error, undefined);
     } finally {
       await engine.close();
       store.close();

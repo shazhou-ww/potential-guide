@@ -55,13 +55,20 @@ function setup(registration: RegisteredType, allowMessage = true) {
   });
   const submit = (mode: string, extra = {}) =>
     engine.submit(
-      { requestId: newId(), type: "run-test", mode, text: "input", timeoutMs: 5000, ...extra },
+      {
+        requestId: newId(clock.now()),
+        type: "run-test",
+        mode,
+        text: "input",
+        timeoutMs: 5000,
+        ...extra,
+      },
       caller,
     );
   return { engine, store, clock, submit };
 }
 
-test("准备中可共享完整 Run，接收方不准备且不伪造 terminated-policy 消息路由", async () => {
+test("准备中按源事实共享完整 Run；接收方有真实消息路由，但未消费消息不伪造接纳", async () => {
   let resolve!: () => void;
   const gate = new Promise<void>((a) => {
     resolve = a;
@@ -87,13 +94,14 @@ test("准备中可共享完整 Run，接收方不准备且不伪造 terminated-p
       run.startedSequence < before.events.find((event) => event.type === "run.progress")!.sequence,
     );
     h.clock.advance(1);
-    const receiver = h.submit("work", { matchPolicy: "terminated-after-eligible", timeoutMs: 1 });
+    const receiver = h.submit("work", { matchPolicy: "terminates-after-eligible", timeoutMs: 1 });
+    const protector = h.submit("work", { matchPolicy: "terminates-after-eligible" });
     h.engine.tick();
-    assert.equal(h.engine.getTask(receiver.taskId, caller).run, undefined);
-    assert.throws(
-      () => h.engine.sendTaskMessage(receiver.taskId, newId(), { kind: "finish" }, caller),
-      { code: "no_run_route" },
-    );
+    assert.equal(receiver.run?.runId, run.runId);
+    assert.equal(protector.run?.runId, run.runId);
+    const message = h.engine.sendTaskMessage(receiver.taskId, newId(), { kind: "finish" }, caller);
+    assert.equal(message.state, "queued");
+    assert.equal(message.runId, run.runId);
     h.engine.cancelTask(owner.taskId, caller);
     h.clock.advance(10);
     h.engine.tick();
@@ -105,6 +113,10 @@ test("准备中可共享完整 Run，接收方不准备且不伪造 terminated-p
     assert.equal(preparations, 1);
     assert.equal(final.deadlineAt, receiver.deadlineAt);
     assert.ok(h.engine.getTask(owner.taskId, caller).canceledAt);
+    assert.equal(
+      h.engine.getTaskMessage(receiver.taskId, message.messageId, caller).state,
+      "rejected",
+    );
   } finally {
     resolve();
     await h.engine.close();
@@ -144,7 +156,7 @@ test("消息接纳有持久化状态与幂等身份，取消只撤回所属需�
     assert.equal(h.engine.getTask(b.taskId, caller).deadlineAt, b.deadlineAt);
     assert.throws(
       () => h.engine.sendTaskMessage(b.taskId, newId(), { kind: "add", amount: 1 }, caller),
-      { code: "task_finished" },
+      { code: "no_run_route" },
     );
   } finally {
     await h.engine.close();

@@ -1,11 +1,12 @@
 import {
   type Caller,
-  type RunQuery,
   fail,
   type HistoryFilter,
   type Observation,
   object,
   positive,
+  type Revision,
+  type RunQuery,
   type Subscription,
   TaskError,
   type TaskQuery,
@@ -27,7 +28,8 @@ function status(code: string): number {
   if (code === "forbidden") return 403;
   if (code === "contract_revision_mismatch") return 412;
   if (code === "not_found") return 404;
-  if (code === "history_expired" || code === "query_expired") return 410;
+  if (["history_expired", "query_expired", "record_unavailable", "request_expired"].includes(code))
+    return 410;
   if (["idempotency_conflict", "task_finished", "no_run_route", "message_finished"].includes(code))
     return 409;
   if (code === "payload_too_large") return 413;
@@ -39,11 +41,102 @@ function status(code: string): number {
       "unsupported_version",
       "unsupported_contract",
       "unsupported_environment",
+      "type_unavailable",
+      "stop_unconfirmed",
+      "reclamation_unknown",
     ].includes(code)
   )
     return 503;
-  if (code.startsWith("invalid_") || code === "unknown_type") return 400;
+  if (
+    code.startsWith("invalid_") ||
+    ["unknown_type", "request_future", "unsupported_request", "unsupported_condition"].includes(
+      code,
+    )
+  )
+    return 400;
   return 500;
+}
+function errorBody(error: unknown) {
+  return {
+    error: {
+      code: error instanceof TaskError ? error.code : "internal_error",
+      message: error instanceof TaskError ? error.message : "Internal server error.",
+      ...(error instanceof TaskError && error.details !== undefined
+        ? { details: error.details }
+        : {}),
+    },
+  };
+}
+function params(url: URL, allowed: readonly string[]): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [key, value] of url.searchParams) {
+    if (!allowed.includes(key))
+      fail("unsupported_condition", `Unsupported query condition: ${key}`);
+    if (Object.hasOwn(result, key)) fail("invalid_request", "Duplicate query parameter.");
+    result[key] = value;
+  }
+  return result;
+}
+const taskFilters = [
+  "taskId",
+  "type",
+  "scope",
+  "seriesId",
+  "runId",
+  "stage",
+  "canceled",
+  "createdFrom",
+  "createdBefore",
+  "updatedFrom",
+  "updatedBefore",
+  "sort",
+];
+const runFilters = [
+  "runId",
+  "type",
+  "scope",
+  "stage",
+  "startedFrom",
+  "startedBefore",
+  "updatedFrom",
+  "updatedBefore",
+  "sort",
+];
+function filters(values: Record<string, string>): TaskQuery | RunQuery {
+  const { canceled, ...rest } = values;
+  if (canceled === undefined) return rest;
+  if (canceled !== "true" && canceled !== "false")
+    fail("invalid_request", "canceled must be true or false.");
+  return { ...rest, canceled: canceled === "true" };
+}
+function paging(values: Record<string, string>) {
+  if (values.limit !== undefined && !/^[1-9][0-9]*$/.test(values.limit))
+    fail("invalid_request", "Invalid page limit.");
+  return {
+    ...(values.cursor !== undefined ? { cursor: values.cursor } : {}),
+    ...(values.limit !== undefined ? { limit: Number(values.limit) } : {}),
+  };
+}
+function anchor(request: Request, values: Record<string, string>): Revision {
+  const value = request.headers.get("Last-Event-ID") ?? values.fromRevision;
+  if (!value) fail("invalid_revision", "fromRevision is required.");
+  return value;
+}
+async function noBody(request: Request): Promise<void> {
+  const reader = request.body?.getReader();
+  if (!reader) return;
+  try {
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) return;
+      if (chunk.value.byteLength) {
+        await reader.cancel();
+        fail("invalid_request", "Cancellation does not accept a new request body.");
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }
 function response(value: unknown, code = 200): Response {
   return new Response(JSON.stringify(value), {
@@ -136,8 +229,82 @@ function stream(subscription: Subscription, signal: AbortSignal, pollMs: number)
           first = false;
           value.enqueue(frame(observation));
         } catch (error) {
+          value.enqueue(
+            new TextEncoder().encode(
+              `event: task.error\ndata: ${JSON.stringify(errorBody(error))}\n\n`,
+            ),
+          );
           close();
-          value.error(error);
+          value.close();
+        }
+      },
+      cancel: close,
+    },
+    { highWaterMark: 1 },
+  );
+  return new Response(readable, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
+function eventStream<T extends { revision: Revision }>(
+  subscription: { events: AsyncIterable<T>; unsubscribe(): Promise<void> },
+  signal: AbortSignal,
+  eventName: string,
+): Response {
+  const iterator = subscription.events[Symbol.asyncIterator]();
+  let closed = false,
+    controller: ReadableStreamDefaultController<Uint8Array>;
+  const close = async () => {
+    if (closed) return;
+    closed = true;
+    signal.removeEventListener("abort", abort);
+    await subscription.unsubscribe();
+    await iterator.return?.();
+  };
+  const abort = () => {
+    void close();
+    try {
+      controller?.close();
+    } catch {}
+  };
+  const readable = new ReadableStream<Uint8Array>(
+    {
+      start(value) {
+        controller = value;
+        signal.addEventListener("abort", abort, { once: true });
+        if (signal.aborted) abort();
+        else value.enqueue(new TextEncoder().encode(": connected\n\n"));
+      },
+      async pull(value) {
+        if (closed) return;
+        try {
+          const next = await iterator.next();
+          if (closed) return;
+          if (next.done) {
+            await close();
+            value.close();
+            return;
+          }
+          value.enqueue(
+            new TextEncoder().encode(
+              `id: ${next.value.revision}\nevent: ${eventName}\ndata: ${JSON.stringify(next.value)}\n\n`,
+            ),
+          );
+        } catch (error) {
+          if (!closed) {
+            value.enqueue(
+              new TextEncoder().encode(
+                `event: task.error\ndata: ${JSON.stringify(errorBody(error))}\n\n`,
+              ),
+            );
+            await close();
+            value.close();
+          }
         }
       },
       cancel: close,
@@ -174,41 +341,46 @@ export function createTaskHandler(
       const url = new URL(request.url);
       if (prefix && !url.pathname.startsWith(`${prefix}/`)) fail("not_found", "Route not found.");
       const path = url.pathname.slice(prefix.length);
+      if (request.method === "GET" && (path === "/tasks/events" || path === "/runs/events")) {
+        const runs = path === "/runs/events";
+        const values = params(url, [...(runs ? runFilters : taskFilters), "fromRevision"]);
+        const from = anchor(request, values);
+        const { fromRevision: _from, ...query } = values;
+        return runs
+          ? eventStream(
+              options.service.subscribeRuns(filters(query) as RunQuery, from, caller),
+              request.signal,
+              "run.collection",
+            )
+          : eventStream(
+              options.service.subscribeTasks(filters(query) as TaskQuery, from, caller),
+              request.signal,
+              "task.collection",
+            );
+      }
       if (request.method === "GET" && path === "/task-types")
         return response(options.service.discoverTypes(caller));
       if (request.method === "GET" && (path === "/tasks" || path === "/runs")) {
-        const query: Record<string, string> = {};
-        const allowed = new Set(
-          path === "/runs"
-            ? ["type", "startedFrom", "startedBefore", "sort", "cursor", "limit"]
-            : [
-                "type",
-                "runId",
-                "createdFrom",
-                "createdBefore",
-                "updatedFrom",
-                "updatedBefore",
-                "sort",
-                "cursor",
-                "limit",
-              ],
-        );
-        for (const [key, value] of url.searchParams) {
-          if (!allowed.has(key) || key in query)
-            fail("invalid_request", "Unknown or duplicate Task query parameter.");
-          query[key] = value;
-        }
+        const query = params(url, [
+          ...(path === "/runs" ? runFilters : taskFilters),
+          "cursor",
+          "limit",
+        ]);
         const { cursor, limit, ...filters } = query;
-        if (limit !== undefined && !/^[1-9][0-9]*$/.test(limit))
-          fail("invalid_request", "limit must be a positive integer.");
-        const paging = {
-          ...(cursor !== undefined ? { cursor } : {}),
-          ...(limit !== undefined ? { limit: Number(limit) } : {}),
-        };
+        const page = paging({
+          ...(cursor === undefined ? {} : { cursor }),
+          ...(limit === undefined ? {} : { limit }),
+        });
+        const parsed = { ...filters } as TaskQuery;
+        if (filters.canceled !== undefined) {
+          if (filters.canceled !== "true" && filters.canceled !== "false")
+            fail("invalid_request", "canceled must be true or false.");
+          parsed.canceled = filters.canceled === "true";
+        }
         return response(
           path === "/runs"
-            ? options.service.listRuns(filters as RunQuery, paging, caller)
-            : options.service.listTasks(filters as TaskQuery, paging, caller),
+            ? options.service.listRuns(parsed as RunQuery, page, caller)
+            : options.service.listTasks(parsed, page, caller),
         );
       }
       if (request.method === "POST" && path === "/tasks") {
@@ -230,8 +402,34 @@ export function createTaskHandler(
       const task = /^\/tasks\/([0-9A-Z]+)(\/cancel)?$/.exec(path);
       if (task?.[1] && request.method === "GET" && !task[2])
         return response(options.service.getTask(task[1], caller));
-      if (task?.[1] && task[2] && request.method === "POST")
+      if (task?.[1] && task[2] && request.method === "POST") {
+        await noBody(request);
         return response(options.service.cancelTask(task[1], caller));
+      }
+      const entity = /^\/(tasks|runs)\/([0-9A-Z]+)\/(history|events)$/.exec(path);
+      if (entity?.[2] && request.method === "GET") {
+        const id = entity[2],
+          run = entity[1] === "runs";
+        if (entity[3] === "history") {
+          const query = params(url, ["cursor", "limit"]);
+          return response(
+            run
+              ? options.service.getRunHistory(id, paging(query), caller)
+              : options.service.getTaskHistory(id, paging(query), caller),
+          );
+        }
+        const from = anchor(request, params(url, ["fromRevision"]));
+        return eventStream(
+          run
+            ? options.service.subscribeRun(id, from, caller)
+            : options.service.subscribeTask(id, from, caller),
+          request.signal,
+          run ? "run.event" : "task.event",
+        );
+      }
+      const run = /^\/runs\/([0-9A-Z]+)$/.exec(path);
+      if (run?.[1] && request.method === "GET")
+        return response(options.service.getRun(run[1], caller));
       const message = /^\/tasks\/([0-9A-Z]+)\/messages\/([0-9A-Z]+)$/.exec(path);
       if (message?.[1] && message[2]) {
         if (request.method === "GET")
@@ -250,6 +448,7 @@ export function createTaskHandler(
       if (original?.[1] && request.method === "GET")
         return response(options.service.getRequest(original[1], caller));
       if (request.method === "GET" && path === "/event-history") {
+        params(url, ["taskId", "runId", "seriesId", "cursor", "limit"]);
         const cursor = url.searchParams.get("cursor") ?? undefined;
         const limit = url.searchParams.has("limit")
           ? Number(url.searchParams.get("limit"))
@@ -265,29 +464,19 @@ export function createTaskHandler(
           ),
         );
       }
-      if (request.method === "GET" && path === "/events")
+      if (request.method === "GET" && path === "/events") {
+        const query = params(url, ["taskId", "runId", "seriesId", "fromRevision"]);
         return stream(
-          options.service.subscribe(
-            filter(url),
-            request.headers.get("Last-Event-ID") ?? undefined,
-            caller,
-          ),
+          options.service.subscribe(filter(url), anchor(request, query), caller),
           request.signal,
           pollMs,
         );
+      }
       fail("not_found", "Route not found.");
     } catch (error) {
       const code = error instanceof TaskError ? error.code : "internal_error";
       options.auditRejection?.({ ...(identity ? { requestId: identity } : {}), code });
-      return response(
-        {
-          error: {
-            code,
-            message: error instanceof TaskError ? error.message : "Internal server error.",
-          },
-        },
-        status(code),
-      );
+      return response(errorBody(error), status(code));
     } finally {
       if (counted) active--;
     }

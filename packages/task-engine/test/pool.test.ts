@@ -280,7 +280,7 @@ test("real isolated runaway worker is physically terminated before pressure repl
   await engine.start();
   try {
     const old = engine.submit(
-      { requestId: newId(), type: "echo", text: "runaway", timeoutMs: 5 },
+      { requestId: newId(clock.now()), type: "echo", text: "runaway", timeoutMs: 5 },
       caller,
     );
     clock.advance(1);
@@ -291,9 +291,9 @@ test("real isolated runaway worker is physically terminated before pressure repl
     await ready.promise;
     clock.advance(10);
     engine.tick();
-    assert.equal(exited, false, "Task timeout does not stop running run");
+    assert.equal(exited, false, "Stop acceptance is not evidence that the worker has exited.");
     const next = engine.submit(
-      { requestId: newId(), type: "echo", text: "next", timeoutMs: 100 },
+      { requestId: newId(clock.now()), type: "echo", text: "next", timeoutMs: 100 },
       caller,
     );
     clock.advance(1);
@@ -308,12 +308,12 @@ test("real isolated runaway worker is physically terminated before pressure repl
     assert.equal(forced, 1);
     assert.equal(starts, 2);
     assert.equal(engine.getTask(next.taskId, caller).stage, "completed");
-    assert.equal(engine.getTask(old.taskId, caller).stage, "run_failed");
+    assert.equal(engine.getTask(old.taskId, caller).stage, "failed");
     assert.notEqual(
       engine.getTask(old.taskId, caller).run?.runId,
       engine.getTask(next.taskId, caller).run?.runId,
     );
-    assert.ok(Object.values(store.read().facts.runs).some((run) => run.sealed));
+    assert.ok(Object.values(store.read().facts.runs).some((run) => run.stopRequested));
   } finally {
     await worker?.terminate();
     await engine.close();
@@ -323,7 +323,7 @@ test("real isolated runaway worker is physically terminated before pressure repl
 });
 
 test("independent wall cap and last-owner cancellation reclaim without fabricating Task cancel", async () => {
-  const h = harness({ limits: { executionWallMs: 5 } });
+  const h = await harness({ limits: { executionWallMs: 5 } });
   try {
     const task = h.submit({ timeoutMs: 1000 });
     await h.turn();
@@ -331,7 +331,7 @@ test("independent wall cap and last-owner cancellation reclaim without fabricati
     await flush();
     h.engine.tick();
     const snapshot = h.engine.getTask(task.taskId, caller);
-    assert.equal(snapshot.stage, "run_failed");
+    assert.equal(snapshot.stage, "stopped");
     assert.equal(snapshot.canceledAt, undefined);
     assert.equal(h.pool.stats.idle, 2);
   } finally {
@@ -340,7 +340,7 @@ test("independent wall cap and last-owner cancellation reclaim without fabricati
 });
 
 test("cancel at durable start and delayed tracking return cannot orphan the run", async () => {
-  const h = harness();
+  const h = await harness();
   try {
     const originalExecute = h.type.execute;
     const delivery = deferred<void>();
@@ -354,17 +354,17 @@ test("cancel at durable start and delayed tracking return cannot orphan the run"
     assert.equal(h.work.length, 1);
     h.engine.cancelTask(task.taskId, caller);
     delivery.resolve();
-    await flush();
+    await h.engine.waitForTaskRelease(task.taskId, caller);
     assert.equal(h.work[0]?.stops.length, 1);
     assert.equal(h.pool.stats.idle, 2);
-    assert.equal(h.engine.getTask(task.taskId, caller).stage, "running");
+    assert.equal(h.engine.getTask(task.taskId, caller).stage, "stopped");
   } finally {
     await h.close();
   }
 });
 
 test("close waits for delayed tracking before releasing Store ownership", async () => {
-  const h = harness();
+  const h = await harness();
   const delivery = deferred<void>();
   const originalExecute = h.type.execute;
   h.type.execute = async (input, options) => {
@@ -384,12 +384,12 @@ test("close waits for delayed tracking before releasing Store ownership", async 
 });
 
 test("non-artifact orchestration returns child identity as ordinary result data", async () => {
-  const h = harness();
+  const h = await harness();
   try {
     const parent = h.submit({ text: "parent" });
     await h.turn();
     const child = h.engine.submit(
-      { requestId: newId(), type: "sum", values: [1, 2], timeoutMs: 100 },
+      { requestId: newId(h.clock.now()), type: "sum", values: [1, 2], timeoutMs: 100 },
       caller,
     );
     await h.turn();
@@ -407,8 +407,8 @@ test("non-artifact orchestration returns child identity as ordinary result data"
   }
 });
 
-test("Engine denies stale pressure authorization after a new protected owner attaches", async () => {
-  const h = harness({ resources: ["js"] });
+test("Engine denies stale pressure authorization for a newly protected Run and never revives a stopped Run", async () => {
+  const h = await harness({ resources: ["js"] });
   const release = deferred<void>();
   const execute = h.type.execute;
   h.type.execute = async (input, options) => {
@@ -416,25 +416,30 @@ test("Engine denies stale pressure authorization after a new protected owner att
     return execute(input, options);
   };
   try {
-    h.submit({ timeoutMs: 5 });
+    const old = h.submit({ timeoutMs: 5 });
     await h.turn();
     await h.turn(10);
     h.submit({ text: "replacement" });
     await h.turn();
-    const protectedTask = h.submit({ matchPolicy: "terminated-after-eligible" });
+    const protectedTask = h.submit({ matchPolicy: "terminates-after-eligible" });
     await h.turn();
-    assert.equal(h.engine.getTask(protectedTask.taskId, caller).run, undefined);
+    assert.ok(h.engine.getTask(protectedTask.taskId, caller).run);
+    assert.notEqual(
+      h.engine.getTask(protectedTask.taskId, caller).run?.runId,
+      h.engine.getTask(old.taskId, caller).run?.runId,
+    );
     release.resolve();
     await flush();
-    assert.equal(h.work[0]?.stops.length, 0);
+    assert.equal(h.work[0]?.stops.length, 1);
+    assert.equal(h.work[1]?.stops.length, 0);
     assert.equal(h.pool.stats.queued, 1);
-    await h.finish();
+    await h.finish(1);
     assert.equal(
       h.engine.getTask(protectedTask.taskId, caller).run?.runId,
-      h.work[0]?.permit.runId,
+      h.work[1]?.permit.runId,
     );
     await flush();
-    assert.equal(h.work.length, 2);
+    assert.equal(h.work.length, 3);
   } finally {
     release.resolve();
     await h.close();
@@ -442,7 +447,7 @@ test("Engine denies stale pressure authorization after a new protected owner att
 });
 
 test("two pressure replacements cannot double-count one resource; stale callbacks cannot affect successor", async () => {
-  const h = harness({ resources: ["js"] });
+  const h = await harness({ resources: ["js"] });
   try {
     h.submit({ timeoutMs: 5 });
     await h.turn();

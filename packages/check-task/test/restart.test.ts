@@ -95,11 +95,11 @@ for (const transport of ["https", "file"])
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
       const queued = await submit(first.url, "queued", false);
-      await wait(first.url, queued.taskId, "running");
+      await wait(first.url, queued.taskId, "initial");
       let prepared: { checker: { digest: string } } | undefined;
       for (let attempt = 0; attempt < 500 && !prepared; attempt++) {
         const history = (await (
-          await fetch(`${first.url}/event-history?taskId=${queued.taskId}&limit=100`, { headers })
+          await fetch(`${first.url}/runs/${bound.run!.runId}/history?limit=100`, { headers })
         ).json()) as {
           events: {
             type: string;
@@ -122,15 +122,27 @@ for (const transport of ["https", "file"])
       await exits.get(first.child);
       if (transport === "file") await rm(archive);
       const restarted = await launch("restart");
-      const interrupted = await wait(restarted.url, running.taskId, "run_failed");
-      assert.equal(interrupted.error?.code, "execution_interrupted");
+      const interrupted = await wait(restarted.url, running.taskId, "stopped");
+      assert.equal(interrupted.error, undefined);
       assert.equal(interrupted.requestId, running.requestId);
       assert.equal(interrupted.run?.runId, bound.run?.runId);
       assert.equal(interrupted.deadlineAt, running.deadlineAt);
-      const restored = await wait(restarted.url, queued.taskId, "run_failed");
+      const restored = await wait(restarted.url, queued.taskId, "failed");
       assert.equal(restored.requestId, queued.requestId);
       assert.equal(restored.deadlineAt, queued.deadlineAt);
-      assert.equal(restored.error?.code, "execution_interrupted");
+      assert.ok(
+        restored.error,
+        "Unstarted work must attempt its unavailable source and fail explicitly, not be labeled an interrupted Run.",
+      );
+      assert.ok(restored.run);
+      assert.notEqual(restored.run.runId, interrupted.run?.runId);
+      const retained = await (
+        await fetch(`${restarted.url}/runs/${bound.run!.runId}/history?limit=100`, { headers })
+      ).json();
+      assert.ok(
+        JSON.stringify(retained).includes(prepared.checker.digest),
+        "Original prepared bytes remain independently verifiable in Run history.",
+      );
       assert.deepEqual((await readFile(marker, "utf8")).trim().split(/\r?\n/), ["running"]);
       restarted.child.send("close");
       await exits.get(restarted.child);

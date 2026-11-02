@@ -14,18 +14,28 @@ function next(page: RunPage): string {
 }
 
 test("Execution directory is authoritative, scope-isolated, shared once and payload-free", async () => {
-  const h = harness({ resources: ["js", "js", "js", "js"], authorize: () => true });
+  const h = await harness({ resources: ["js", "js", "js", "js"], authorize: () => true });
   try {
     const a = h.submit(),
       b = h.submit();
     await h.turn();
     h.clock.setTime(h.clock.now() + 1000);
     const external = h.engine.submit(
-      { requestId: newId(), type: "echo", text: "external secret input", timeoutMs: 10000 },
+      {
+        requestId: newId(h.clock.now()),
+        type: "echo",
+        text: "external secret input",
+        timeoutMs: 10000,
+      },
       { scope: caller.scope, subject: "another-client" },
     );
     h.engine.submit(
-      { requestId: newId(), type: "echo", text: "other scope secret", timeoutMs: 10000 },
+      {
+        requestId: newId(h.clock.now()),
+        type: "echo",
+        text: "other scope secret",
+        timeoutMs: 10000,
+      },
       { scope: "other", subject: "external" },
     );
     await h.turn();
@@ -37,9 +47,14 @@ test("Execution directory is authoritative, scope-isolated, shared once and payl
     assert.equal(page.runs[0]!.runId, h.engine.getTask(external.taskId, caller).run!.runId);
     assert.deepEqual(Object.keys(page.runs[0]!).sort(), [
       "runId",
+      "scope",
+      "stage",
       "startedAt",
+      "startedSequence",
       "state",
+      "stopRequested",
       "type",
+      "updatedAt",
       "version",
     ]);
     assert.equal(JSON.stringify(page).includes("secret"), false);
@@ -77,7 +92,7 @@ test("Execution directory is authoritative, scope-isolated, shared once and payl
 
 test("Execution list permission is independent and is rechecked on every frozen page", async () => {
   let allowed = true;
-  const h = harness({
+  const h = await harness({
     authorize: (who, operation, scope) =>
       who.scope === scope &&
       (who.subject === "reader" ? allowed && operation === "list-runs" : who.subject === "tester"),
@@ -114,7 +129,10 @@ test("Execution list permission is independent and is rechecked on every frozen 
 });
 
 test("Execution snapshots freeze state and membership, use independent cursors and expire on collection/restart", async () => {
-  const h = harness({ limits: { pageSize: 1, retentionMs: 1 }, resources: ["js", "js", "js"] });
+  const h = await harness({
+    limits: { pageSize: 1, retentionMs: 1 },
+    resources: ["js", "js", "js"],
+  });
   try {
     h.submit({ text: "one" });
     h.submit({ text: "two" });
@@ -175,7 +193,7 @@ test("Execution snapshots freeze state and membership, use independent cursors a
 });
 
 test("Execution query input, time, scan, view and byte budgets fail explicitly", async () => {
-  const h = harness({ limits: { pageSize: 1, maxQueryViews: 1, queryLifetimeMs: 20 } });
+  const h = await harness({ limits: { pageSize: 1, maxQueryViews: 1, queryLifetimeMs: 20 } });
   try {
     h.submit({ text: "one" });
     h.submit({ text: "two" });
@@ -185,9 +203,12 @@ test("Execution query input, time, scan, view and byte budgets fail explicitly",
       { startedFrom: "no-timezone" },
       { startedFrom: at(h.clock.now()), startedBefore: at(h.clock.now()) },
       { sort: "created-desc" },
-      { input: "secret" },
     ])
       assert.throws(() => h.engine.listRuns(query as never, {}, caller), code("invalid_request"));
+    assert.throws(
+      () => h.engine.listRuns({ input: "secret" } as never, {}, caller),
+      code("unsupported_condition"),
+    );
     const first = h.engine.listRuns({}, {}, caller);
     assert.throws(() => h.engine.listRuns({ type: "echo" }, {}, caller), code("capacity_exceeded"));
     assert.ok(

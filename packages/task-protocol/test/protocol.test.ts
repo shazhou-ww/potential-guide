@@ -43,7 +43,7 @@ test("finite JSON never invokes accessors/toJSON and rejects non-JSON structures
   assert.throws(() => json("💡".repeat(100), 20), { code: "payload_too_large" });
 });
 
-test("time projection freezes effective end and deadline equality", () => {
+test("time projection stays independent of cancellation and terminal stage, including deadline equality", () => {
   const snapshot: TaskSnapshot = {
     taskId: "t",
     requestId: "r",
@@ -53,11 +53,20 @@ test("time projection freezes effective end and deadline equality", () => {
     eligibleAt: at(0),
     deadlineAt: at(10),
     timestamp: at(10),
+    revision: "test-domain:0",
+    dataDomain: "test-domain",
+    updatedAt: at(0),
+    canceled: false,
   };
   assert.equal(isTimedOut(snapshot), false);
   assert.equal(isTimedOut({ ...snapshot, timestamp: at(11) }), true);
-  assert.equal(isTimedOut({ ...snapshot, timestamp: at(100), canceledAt: at(10) }), false);
+  assert.equal(
+    isTimedOut({ ...snapshot, timestamp: at(100), canceled: true, canceledAt: at(10) }),
+    true,
+  );
   assert.equal(isTimedOut({ ...snapshot, timestamp: at(100), canceledAt: at(11) }), true);
+  for (const stage of ["completed", "failed", "stopped"] as const)
+    assert.equal(isTimedOut({ ...snapshot, stage, timestamp: at(100) }), true);
   assert.throws(() => at(Number.MAX_SAFE_INTEGER));
 });
 

@@ -3,6 +3,8 @@ import type {
   Observation,
   PublicEvent,
   RunPage,
+  RunSnapshot,
+  RunStage,
   RunSummary,
   TaskSnapshot,
   TaskSummary,
@@ -13,17 +15,21 @@ import { ObservationEnd, stages, taskStatus } from "./lifecycle.js";
 import {
   Api,
   ApiError,
+  consumeCollectionSse,
   consumeSse,
   Directory,
   discoveryRevision,
   type Entry,
   EventWindow,
   endpointMatches,
+  eventKey,
   originalParameters,
   type Parameters,
   Selection,
   SubmissionBar,
+  sourcePosition,
   TaskSnapshots,
+  validRunSnapshot,
   validSnapshot,
 } from "./model.js";
 import {
@@ -125,6 +131,8 @@ interface Workspace {
   discoveryError: string;
   tasks: TaskSnapshots;
   directory: Directory;
+  taskCollection?: AbortController;
+  runCollection?: AbortController;
   executionDirectory: Directory<RunPage>;
   associatedExecutionId: string;
 }
@@ -429,7 +437,9 @@ interface Observer {
   streamController?: AbortController;
   streamState: "idle" | "live" | "stale" | "paused" | "ended";
   end: ObservationEnd;
-  executionState: "unknown" | "running" | "completed" | "failed";
+  executionState: "unknown" | RunStage;
+  runSnapshot?: RunSnapshot;
+  sourceWatermark: number;
   reclaimed: boolean;
   executionSummary?: RunSummary;
   associated: Directory;
@@ -535,7 +545,7 @@ async function live(observer: Observer): Promise<void> {
       } catch (error) {
         if (!liveCurrent()) return;
         observer.message = String(error);
-        if (error instanceof ApiError && [400, 401, 403, 404, 410].includes(error.status)) {
+        if (error instanceof ApiError && [400, 401, 403, 404, 410, 429].includes(error.status)) {
           observer.window.gap = "流不可续接；请核对权限/保留期限后显式重新观察，不能保证事件完整。";
           failures = 5;
         } else failures++;
@@ -565,15 +575,26 @@ function stopStream(observer: Observer, state: "paused" | "ended"): void {
   observer.streamController?.abort();
 }
 function updateFacts(observer: Observer, events: PublicEvent[]): void {
+  for (const event of events)
+    if (observer.kind === "taskId" && event.taskId === observer.id) {
+      const snapshot = (event.data as { snapshot?: unknown }).snapshot;
+      if (validSnapshot(snapshot)) {
+        const tasks = workspace(observer.endpoint).tasks;
+        if (tasks.observe(snapshot, event.sequence))
+          observer.snapshot = tasks.values.get(observer.id) ?? snapshot;
+      }
+    }
   observer.end.feed(events, observer.snapshot);
   for (const event of events)
     if (observer.kind === "runId" && event.runId === observer.id) {
+      observer.sourceWatermark = Math.max(observer.sourceWatermark, event.sequence);
       if (event.type === "run.started" && observer.executionState === "unknown")
         observer.executionState = "running";
-      if (event.type === "run.completed") observer.executionState = "completed";
-      if (event.type === "run.failed") observer.executionState = "failed";
       if (event.type === "run.reclaimed") observer.reclaimed = true;
+      if (event.type === "run.exited") observer.executionState = "unknown";
     }
+  if (observer.kind === "runId" && events.some((event) => event.runId === observer.id))
+    void refreshRun(observer);
   if (observer.end.ended) stopStream(observer, "ended");
 }
 function newObserver(kind: Observer["kind"], id: string): Observer {
@@ -590,6 +611,7 @@ function newObserver(kind: Observer["kind"], id: string): Observer {
     streamState: "idle",
     end: new ObservationEnd(kind, id),
     executionState: "unknown",
+    sourceWatermark: 0,
     reclaimed: false,
     associated: new Directory(),
     message: "",
@@ -616,6 +638,7 @@ async function openTask(id: string): Promise<void> {
     if (!current(observer)) return;
     accept(snapshot);
     observer.snapshot = workspace(observer.endpoint).tasks.values.get(id) ?? snapshot;
+    observer.window.streamCursor = snapshot.revision;
     renderTasks();
     renderObserver(observer);
     // Request authorization is independent from task/history authorization.
@@ -664,21 +687,46 @@ async function openRun(id: string): Promise<void> {
   if (summary) {
     observer.executionSummary = summary;
     observer.end.summary(summary);
-    observer.executionState = summary.completedAt
-      ? "completed"
-      : summary.failedAt
-        ? "failed"
-        : summary.state.running
-          ? "running"
-          : "unknown";
+    observer.executionState = summary.stage;
     observer.reclaimed = !!summary.reclaimedAt;
     if (observer.end.ended) stopStream(observer, "ended");
   }
   renderObserver(observer);
   navigation.open("execution-detail");
+  await refreshRun(observer);
   await history(observer);
   void associatedTasks(observer);
   if (current(observer)) void live(observer);
+}
+async function refreshRun(observer: Observer): Promise<void> {
+  if (!current(observer) || observer.kind !== "runId") return;
+  try {
+    const snapshot = await api.request<RunSnapshot>(observer.endpoint, `/runs/${observer.id}`, {
+      signal: observer.controller.signal,
+    });
+    if (!validRunSnapshot(snapshot) || snapshot.runId !== observer.id)
+      throw new Error("Run 快照协议无效。");
+    if (!current(observer)) return;
+    if (sourcePosition(snapshot.revision).position < observer.sourceWatermark) return;
+    const previous = observer.runSnapshot;
+    if (
+      previous &&
+      (previous.dataDomain !== snapshot.dataDomain ||
+        sourcePosition(previous.revision).position > sourcePosition(snapshot.revision).position)
+    )
+      return;
+    observer.runSnapshot = snapshot;
+    observer.sourceWatermark = sourcePosition(snapshot.revision).position;
+    observer.executionState = snapshot.stage;
+    observer.reclaimed = !!snapshot.reclaimedAt;
+    observer.end.run(snapshot);
+    observer.window.streamCursor ??= snapshot.revision;
+    observer.detailError = "";
+    if (observer.end.ended) stopStream(observer, "ended");
+  } catch (error) {
+    if (current(observer)) observer.detailError = String(error);
+  }
+  if (current(observer)) renderObserver(observer);
 }
 function eventList(key: string, title: string, events: PublicEvent[]): HTMLElement {
   const group = node("details");
@@ -689,7 +737,7 @@ function eventList(key: string, title: string, events: PublicEvent[]): HTMLEleme
       details(
         `#${event.sequence} ${event.type} · ${event.occurredAt}`,
         event,
-        `event:${event.sequence}`,
+        `event:${eventKey(event)}`,
       ),
     );
   return group;
@@ -763,7 +811,10 @@ function renderObserver(observer: Observer): void {
       );
       if ((task.canceledAt || task.termination) && !observer.end.ended)
         box.append(
-          node("p", "Task 已终结；关联 Run 的终结 / 回收尚未全部确认，可继续观察或手动暂停。"),
+          node(
+            "p",
+            "Run 已形成结局；Task 仍可撤回需求，可继续观察控制变化。资源回收请查看关联 Run。",
+          ),
         );
       box.append(starButton(observer.endpoint, task.taskId));
       box.append(
@@ -821,7 +872,18 @@ function renderObserver(observer: Observer): void {
     const events = observer.window.events;
     const state = node(
       "p",
-      `${({ unknown: "Run 状态尚未取得", running: "尝试中", completed: "已完成", failed: "Run 失败" } as const)[observer.executionState]}${observer.reclaimed ? " · 已回收" : " · 回收未确认"}`,
+      `${
+        (
+          {
+            unknown: "Run 状态尚未取得",
+            running: "尝试中",
+            stopping: "正在停止",
+            stopped: "已停止",
+            completed: "已完成",
+            failed: "Run 失败",
+          } as const
+        )[observer.executionState]
+      }${observer.reclaimed ? " · 已回收" : " · 回收未确认"}`,
     );
     state.className = "status";
     box.append(state, details("Run 标识", { runId: observer.id }));
@@ -849,16 +911,17 @@ function renderObserver(observer: Observer): void {
       }),
     );
     const dates: Record<string, string | undefined> = {
-      "run.started": observer.executionSummary?.startedAt,
-      "run.completed": observer.executionSummary?.completedAt,
-      "run.failed": observer.executionSummary?.failedAt,
-      "run.reclaimed": observer.executionSummary?.reclaimedAt,
+      "run.started": observer.runSnapshot?.startedAt ?? observer.executionSummary?.startedAt,
+      "run.completed": observer.runSnapshot?.completedAt ?? observer.executionSummary?.completedAt,
+      "run.failed": observer.runSnapshot?.failedAt ?? observer.executionSummary?.failedAt,
+      "run.exited": observer.runSnapshot?.exit?.occurredAt ?? observer.executionSummary?.stoppedAt,
+      "run.reclaimed": observer.runSnapshot?.reclaimedAt ?? observer.executionSummary?.reclaimedAt,
     };
     for (const [kind, label] of [
       ["run.started", "开始"],
-      ["run.completed", "逻辑完成"],
+      ["run.completed", "完成"],
       ["run.failed", "执行故障"],
-      ["run.sealed", "封存"],
+      ["run.exited", "退出/恢复裁决"],
       ["run.reclaimed", "回收"],
     ] as const) {
       const event = events.find((item) => item.type === kind);
@@ -941,6 +1004,11 @@ async function queryDirectory(append = false): Promise<void> {
     return;
   }
   const state = workspace();
+  if (!append) {
+    state.taskCollection?.abort();
+    delete state.taskCollection;
+    state.directory.live = false;
+  }
   const lease = selection.capture();
   let started = false;
   try {
@@ -953,10 +1021,91 @@ async function queryDirectory(append = false): Promise<void> {
       lease.current,
     );
     if (!accepted) return;
+    if (!state.directory.page?.next) void monitorDirectory(state, "tasks", lease);
   } catch (error) {
     if (!started && lease.current()) state.directory.rejectQuery(error);
   }
   if (lease.current()) renderDirectory();
+}
+async function monitorDirectory(
+  state: Workspace,
+  kind: "tasks" | "runs",
+  lease: ReturnType<Selection["capture"]>,
+): Promise<void> {
+  const directory = kind === "tasks" ? state.directory : state.executionDirectory;
+  const controller = new AbortController();
+  if (kind === "tasks") {
+    state.taskCollection?.abort();
+    state.taskCollection = controller;
+  } else {
+    state.runCollection?.abort();
+    state.runCollection = controller;
+  }
+  const abort = () => controller.abort();
+  lease.signal.addEventListener("abort", abort, { once: true });
+  if (lease.signal.aborted) abort();
+  const active = () =>
+    lease.current() &&
+    !controller.signal.aborted &&
+    (kind === "tasks" ? state.taskCollection : state.runCollection) === controller;
+  const render = () => {
+    if (active()) kind === "tasks" ? renderDirectory() : renderExecutions();
+  };
+  let failures = 0;
+  try {
+    let from = directory.prepareLive();
+    while (active() && failures < 5) {
+      try {
+        const query = new URLSearchParams(directory.query);
+        query.set("fromRevision", from);
+        const response = await fetch(api.path(state.endpoint, `/${kind}/events?${query}`), {
+          headers: api.headers(state.endpoint),
+          signal: controller.signal,
+        });
+        if (!response.ok) await api.decode(response);
+        if (!active()) return;
+        directory.live = true;
+        directory.error = "";
+        failures = 0;
+        render();
+        await consumeCollectionSse(response, (envelope) => {
+          if (!active()) return;
+          directory.apply(envelope);
+          from = directory.page!.revision;
+          render();
+        });
+        if (!active()) return;
+        directory.error = "集合流已断开，按最后完整源 revision 续接；不会拼接不完整基线。";
+      } catch (error) {
+        if (!active()) return;
+        directory.error = `实时集合不可用，保留上次完整快照：${String(error)}`;
+        if (error instanceof ApiError && [400, 401, 403, 404, 410, 429].includes(error.status))
+          failures = 5;
+        else failures++;
+      }
+      directory.live = false;
+      render();
+      if (failures < 5)
+        await new Promise<void>((resolve) => {
+          const finish = () => {
+            clearTimeout(timer);
+            controller.signal.removeEventListener("abort", finish);
+            resolve();
+          };
+          const timer = setTimeout(finish, 1000);
+          controller.signal.addEventListener("abort", finish, { once: true });
+          if (controller.signal.aborted) finish();
+        });
+    }
+  } catch (error) {
+    if (active()) {
+      directory.error = String(error);
+      directory.live = false;
+      render();
+    }
+  } finally {
+    lease.signal.removeEventListener("abort", abort);
+  }
 }
 function renderDirectory(): void {
   const container = "directory";
@@ -997,7 +1146,7 @@ function renderDirectory(): void {
   contents.append(
     node(
       "p",
-      `已加载 ${directory.page.tasks.length} 条 · 查询快照 ${directory.page.observedAt} · 有效至 ${directory.page.expiresAt}`,
+      `已加载 ${directory.page.tasks.length} 条 · ${directory.live ? "完整实时集合" : directory.page.next ? "分页基线未完整，暂不应用增量" : "完整快照"} · 水位 ${directory.page.revision} · 基线 ${directory.page.observedAt}`,
     ),
   );
   if (directory.dropped)
@@ -1021,7 +1170,9 @@ function renderDirectory(): void {
   thead.append(head);
   table.append(thead);
   const body = node("tbody");
-  for (const task of directory.page.tasks) {
+  if (directory.page.tasks.length > 1000)
+    contents.append(node("p", "仅渲染前 1000 条；完整集合仍保留并按源封装更新。"));
+  for (const task of directory.page.tasks.slice(0, 1000)) {
     const row = node("tr");
     row.dataset.key = `task:${state.endpoint.binding}:${task.taskId}`;
     describeRowAction(row, {
@@ -1071,7 +1222,24 @@ function renderDirectory(): void {
   reconcile(container, [contents]);
 }
 function summaryStatus(task: TaskSummary): string {
-  return `${task.state.canceled ? "已取消" : task.state.pending ? "等待资格时间" : (stages[task.state.stage] ?? task.state.stage)}${task.state.timedOut ? " · 已超时" : ""}`;
+  const now = Date.now(),
+    time =
+      now < Date.parse(task.eligibleAt)
+        ? "pending"
+        : now > Date.parse(task.deadlineAt)
+          ? "timeout"
+          : "eligible";
+  const terminal = ["completed", "failed", "stopped"].includes(task.stage);
+  const label = terminal
+    ? stages[task.stage]
+    : task.canceled
+      ? "已取消"
+      : time === "timeout"
+        ? "已超时"
+        : time === "pending"
+          ? "等待资格时间"
+          : stages[task.stage];
+  return `${label} · ${task.canceled ? "已取消" : "未取消"} · 时间 ${time}`;
 }
 async function associatedTasks(observer: Observer, append = false): Promise<void> {
   try {
@@ -1091,6 +1259,11 @@ async function queryExecutions(append = false): Promise<void> {
   const state = workspace(),
     lease = selection.capture();
   let started = false;
+  if (!append) {
+    state.runCollection?.abort();
+    delete state.runCollection;
+    state.executionDirectory.live = false;
+  }
   try {
     let query = state.executionDirectory.query;
     if (!append) {
@@ -1119,6 +1292,7 @@ async function queryExecutions(append = false): Promise<void> {
       lease.current,
     );
     if (!accepted) return;
+    if (!state.executionDirectory.page?.next) void monitorDirectory(state, "runs", lease);
   } catch (error) {
     if (!started && lease.current()) state.executionDirectory.rejectQuery(error);
   }
@@ -1141,7 +1315,7 @@ function renderExecutions(): void {
     box.append(
       node(
         "p",
-        `已加载 ${directory.page.runs.length} 个 Run · 查询快照 ${directory.page.observedAt} · 有效至 ${directory.page.expiresAt}`,
+        `已加载 ${directory.page.runs.length} 个 Run · ${directory.live ? "完整实时集合" : directory.page.next ? "分页基线未完整，暂不应用增量" : "完整快照"} · 水位 ${directory.page.revision} · 基线 ${directory.page.observedAt}`,
       ),
     );
     if (directory.dropped)
@@ -1153,7 +1327,9 @@ function renderExecutions(): void {
     const thead = node("thead");
     thead.append(head);
     table.append(thead);
-    for (const execution of directory.page.runs) {
+    if (directory.page.runs.length > 1000)
+      box.append(node("p", "仅渲染前 1000 条；完整集合仍保留。"));
+    for (const execution of directory.page.runs.slice(0, 1000)) {
       const row = node("tr"),
         title = node("td");
       row.dataset.key = `run:${execution.runId}`;
@@ -1564,7 +1740,19 @@ async function start(): Promise<void> {
     executionId.label,
     button("打开 Run", () => openRun((get("execution-id-input") as HTMLInputElement).value.trim())),
   ]);
+  const timeRefresh = setInterval(() => {
+    if (!selection.endpoint) return;
+    renderTasks();
+    if (!(get("only-favorites") as HTMLInputElement).checked) renderDirectory();
+    if (taskObserver && current(taskObserver)) renderObserver(taskObserver);
+  }, 1000);
+  (timeRefresh as unknown as { unref?: () => void }).unref?.();
   window.addEventListener("pagehide", () => {
+    clearInterval(timeRefresh);
+    for (const state of states.values()) {
+      state.taskCollection?.abort();
+      state.runCollection?.abort();
+    }
     closeObservers();
     starChecks?.abort();
     view.dispose();

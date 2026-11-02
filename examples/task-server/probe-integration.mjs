@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, readdir, rm } from "node:fs/promises";
-import { resolve, join } from "node:path";
-import { checkerSchemaUri, objectiveSchemaUri } from "@potential-guide/check-artifacts/contracts";
+import { mkdir, readdir, readFile, rm } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import {
-  writeContractArtifact,
   packContractArtifact,
+  writeContractArtifact,
 } from "@potential-guide/check-artifacts/build";
+import { checkerSchemaUri, objectiveSchemaUri } from "@potential-guide/check-artifacts/contracts";
 import { createArtifactSource } from "@potential-guide/check-task";
 import { newId } from "@potential-guide/task-engine";
 import { startTaskServer } from "@potential-guide/task-engine-server";
@@ -135,7 +135,9 @@ try {
   });
   assert.equal(response.status, 202);
   const accepted = await response.json();
-  const stream = await fetch(`${server.url}/events?taskId=${accepted.taskId}`, { headers });
+  const stream = await fetch(`${server.url}/events?taskId=${accepted.taskId}`, {
+    headers: { ...headers, "Last-Event-ID": accepted.revision },
+  });
   assert.equal(stream.status, 200);
   const reader = stream.body.getReader();
   const initialObservation = await observation(reader);
@@ -159,18 +161,27 @@ try {
   const child = remote.result.evidence.operations.find((entry) => entry.request.kind === "check");
   assert.ok(child.snapshot.run.runId);
   assert.equal(child.request.reference.digest, checker.digest);
-  const history = server.engine.readHistory({ taskId: child.snapshot.taskId }, {}, caller);
-  assert.ok(history.events.some((event) => event.type === "run.completed"));
-  const publicHistory = await fetch(`${server.url}/event-history?taskId=${child.snapshot.taskId}`, {
+  const childRun = server.engine.getRun(child.snapshot.run.runId, caller);
+  assert.equal(childRun.stage, "completed");
+  const history = server.engine.getRunHistory(childRun.runId, {}, caller);
+  assert.ok(history.events.some((event) => event.type === "run.exited"));
+  const publicHistory = await fetch(`${server.url}/runs/${childRun.runId}/history`, {
     headers,
   });
   assert.equal(publicHistory.status, 200);
-  assert.ok((await publicHistory.json()).events.some((event) => event.type === "run.completed"));
+  assert.ok((await publicHistory.json()).events.some((event) => event.type === "run.exited"));
   assert.equal((await fetch(`${server.url}/tasks/${accepted.taskId}`)).status, 401);
   await server.close();
   server = await startTaskServer(configure());
   const restored = server.engine.getTask(accepted.taskId, caller);
-  assert.deepEqual({ ...restored, timestamp: "" }, { ...remote, timestamp: "" });
+  assert.deepEqual(
+    { ...restored, timestamp: "", revision: "" },
+    { ...remote, timestamp: "", revision: "" },
+  );
+  assert.equal(restored.dataDomain, remote.dataDomain);
+  assert.ok(
+    Number(restored.revision.split(":").at(-1)) >= Number(remote.revision.split(":").at(-1)),
+  );
   await server.close();
   server = undefined;
   assert.deepEqual(await readdir(join(directory, "workers")), []);

@@ -1,5 +1,10 @@
 # @potential-guide/check-task
 
+每个完整 Check Run 使用独立类型 Worker。可信注册将 allocationLimit 设为 workers，
+在隔离模块堆不共享业务池时仍保留配置的整体容量；等待名额的 Task 保持 initial，
+不先伪造 Run 开始或准备 checkpoint。已开始但无退出事实的旧 Run 恢复 stopped，
+未开始的有效 Task 则按原受理时间/期限继续协调。
+
 `createCheckTaskType(options)` 返回可信 Host 的静态 RegisteredType，不在 Host 创建业务执行池或调用类型代码。
 完整 run、准备和资源调度在类型守护；Checker Bundle 在独立业务 Worker。
 

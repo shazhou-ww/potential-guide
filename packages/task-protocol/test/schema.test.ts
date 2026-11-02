@@ -1,6 +1,23 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { compileInputSchema, type InputSchema } from "../src/index.js";
+import { sharingCases } from "./sharing-fixtures.js";
+
+for (const scenario of sharingCases)
+  test(`sharing key uses generated Equals: ${scenario.name}`, () => {
+    const contract = compileInputSchema(scenario.schema);
+    contract.validate(scenario.left);
+    contract.validate(scenario.right);
+    assert.equal(contract.equals(scenario.left, scenario.right), scenario.equal);
+    assert.equal(
+      contract.equivalenceKey(scenario.left) === contract.equivalenceKey(scenario.right),
+      scenario.equal,
+    );
+    assert.equal(
+      compileInputSchema(structuredClone(scenario.schema)).equivalenceKey(scenario.left),
+      contract.equivalenceKey(scenario.left),
+    );
+  });
 
 test("prototype-named fields require own JSON values and retain validation and projection", () => {
   for (const key of ["toString", "constructor", "__proto__"]) {

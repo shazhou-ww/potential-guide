@@ -305,7 +305,7 @@ export function replayResult(
         snapshot.canceledAt ||
         !snapshot.run?.completedAt ||
         !snapshot.result ||
-        !matchesRunTime("started-after-eligible", snapshot.eligibleAt, snapshot.run) ||
+        !matchesRunTime("starts-after-eligible", snapshot.eligibleAt, snapshot.run) ||
         Date.parse(snapshot.run.completedAt) > Date.parse(snapshot.deadlineAt)
       )
         throw new TaskError("invalid_probe", "Child completion evidence differs.");

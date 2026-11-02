@@ -336,6 +336,16 @@ port.on("message", (message) => {
       async (error) => {
         run.finishing = true;
         await run.output.catch(() => {});
+        if (
+          controller.signal.aborted &&
+          !(error instanceof RunFailure) &&
+          (error?.name === "AbortError" ||
+            error?.code === "ABORT_ERR" ||
+            error?.code === "run_canceled")
+        ) {
+          finalized = true;
+          return;
+        }
         cleanupUncertain =
           error instanceof TaskError &&
           ["reclamation_failed", "reclamation_unknown"].includes(error.code);

@@ -98,8 +98,17 @@ test("actual browser entry ignores delayed real favorites responses and paginate
       },
       body: JSON.stringify({ type: "echo", timeoutMs: 5000, durationMs: 1, text }),
     });
-    assert.equal(response.status, 202);
-    return response.json() as Promise<TaskSnapshot>;
+    assert.equal(response.status, 202, await response.clone().text());
+    const task = (await response.json()) as TaskSnapshot;
+    await until(() => {
+      const current = backend.engine.getTask(task.taskId, { scope: "one", subject: "ui" });
+      return (
+        current.stage === "completed" &&
+        !!current.run &&
+        !!backend.engine.getRun(current.run.runId, { scope: "one", subject: "ui" }).reclaimedAt
+      );
+    }, "each fixture Run must finish and release before creating the next directory member");
+    return backend.engine.getTask(task.taskId, { scope: "one", subject: "ui" });
   };
   const held: { value: Favorite[]; release(): void }[] = [];
   let holdNext = false,
@@ -366,7 +375,27 @@ test("actual browser entry ignores delayed real favorites responses and paginate
     Object.assign(globalThis, original);
     await dom.restore();
     await ui.close();
-    await backend.close();
+    try {
+      await backend.close();
+    } catch (error) {
+      const state = backend.engine as unknown as {
+        started: boolean;
+        closing: boolean;
+        allocations: Map<string, { started: boolean }>;
+        observations: { handles: Set<unknown> };
+      };
+      console.error(
+        JSON.stringify({
+          phase: "backend-close",
+          started: state.started,
+          closing: state.closing,
+          allocations: [...state.allocations.values()].map((group) => group.started),
+          observers: state.observations.handles.size,
+          errors: backend.engine.errors,
+        }),
+      );
+      await Promise.reject(error);
+    }
     delete process.env[env];
     delete process.env[`${env}_OTHER`];
     await rm(root, { recursive: true, force: true });

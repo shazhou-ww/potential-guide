@@ -18,6 +18,10 @@ nonzero even when configuration or failed rollback retains handles; the diagnost
 explicitly states that physical cleanup is unconfirmed, never `ready` or `closed`.
 SQLite is the default; programmatic Store injection is supported. Injection
 does not transfer Store ownership unless `ownStore: true`.
+The default shutdown budget is 15,000ms and must cover the configured
+`stopGraceMs + forceExitWaitMs` (both default to 5,000ms). Shorter compositions
+must explicitly configure all three budgets; startup rejects inconsistent limits.
+The 30,000ms request timeout is not an SSE response lifetime.
 
 `bindService(engine)` lets trusted composition wire in-process adapters before
 recovery/listener startup. `allocationLimits` optionally overrides type allocation

@@ -73,7 +73,13 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
       });
     const id = url.searchParams.get("taskId") ?? "";
     if (path === "/event-history")
-      return response({ events: [], watermark: 10, cursor: "history-resume" });
+      return response({
+        events: [],
+        items: [],
+        revision: "domain:10",
+        watermark: 10,
+        cursor: "history-resume",
+      });
     if (path === "/events") {
       if (rejectReconnect)
         return response({ error: { code: "forbidden", message: "fixture disconnect" } }, 403);
@@ -108,6 +114,7 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
         snapshots: [snapshots.get(id)!],
         events: [],
         watermark: 10,
+        revision: "domain:10",
         cursor: "stream-10",
       });
       return new Response(stream, { headers: { "Content-Type": "text/event-stream" } });
@@ -134,6 +141,10 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
     eligibleAt: "2026-10-31T02:00:00.000Z",
     deadlineAt: "2026-10-31T03:00:00.000Z",
     timestamp: "2026-10-31T02:00:00.000Z",
+    updatedAt: "2026-10-31T02:00:00.000Z",
+    dataDomain: "domain",
+    revision: "domain:10",
+    canceled: false,
     run: { runId: newIdentity(), startedAt: "2026-10-31T02:00:00.000Z" },
   });
   const readDetail = () => {
@@ -161,17 +172,20 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
   };
   const emit = (task: TaskSnapshot, watermark: number) =>
     streams.get(task.taskId)!.emit({
-      snapshots: [task],
+      snapshots: [{ ...task, revision: `domain:${watermark}` }],
       watermark,
+      revision: `domain:${watermark}`,
       cursor: `stream-${watermark}`,
       events: [
         {
           sequence: watermark,
-          type: "run.progress",
+          revision: `domain:${watermark}`,
+          type: "task.changed",
+          taskId: task.taskId,
           scope: "fixture",
           runId: task.run!.runId,
           occurredAt: task.timestamp,
-          data: { step: watermark },
+          data: { snapshot: { ...task, revision: `domain:${watermark}` } } as never,
         },
       ],
     });
@@ -194,6 +208,8 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
     await cancel(a.taskId);
     const canceledA = {
       ...a,
+      canceled: true,
+      revision: "domain:25",
       canceledAt: "2026-10-31T01:59:00.000Z",
       timestamp: "2026-10-31T01:59:00.000Z",
     };
@@ -217,7 +233,7 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
     );
     emit(a, 20);
     await until(
-      () => document.querySelector('#task-detail [data-key="event:20"]') !== null,
+      () => document.querySelector('#task-detail [data-key^="event:domain:20:"]') !== null,
       "late SSE frame must actually traverse live/renderObserver",
     );
     assert.equal(readDetail()?.canceledAt, canceledA.canceledAt);
@@ -229,11 +245,13 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
     await cancel(b.taskId);
     emit({ ...b, timestamp: "2026-10-31T01:58:00.000Z" }, 11);
     await until(
-      () => document.querySelector('#task-detail [data-key="event:11"]') !== null,
+      () => document.querySelector('#task-detail [data-key^="event:domain:11:"]') !== null,
       "intervening observation must be consumed before receipt",
     );
     const canceledB = {
       ...b,
+      canceled: true,
+      revision: "domain:12",
       canceledAt: "2026-10-31T01:57:00.000Z",
       timestamp: "2026-10-31T01:57:00.000Z",
     };

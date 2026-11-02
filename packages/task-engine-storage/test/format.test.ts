@@ -75,7 +75,7 @@ for (const invalid of ["checkpoint", "facts", "binding"] as const) {
   });
 }
 
-test("only empty stores initialize v2 and reopen with unchanged identity", async () => {
+test("only empty stores initialize v4 and reopen with unchanged identity", async () => {
   const root = resolve(".cache", `format-${randomUUID()}`);
   await mkdir(root, { recursive: true });
   const filename = join(root, "new.sqlite");
@@ -89,13 +89,16 @@ test("only empty stores initialize v2 and reopen with unchanged identity", async
     assert.deepEqual(reopened.read(), before);
     reopened.close();
     const inspect = new DatabaseSync(filename, { readOnly: true });
-    assert.equal(inspect.prepare("PRAGMA user_version").get()?.user_version, 3);
-    assert.equal(
-      inspect.prepare("SELECT projection_version FROM checkpoint").get()?.projection_version,
-      3,
-    );
-    assert.equal(before.facts.projectionVersion, 3);
-    inspect.close();
+    try {
+      assert.equal(inspect.prepare("PRAGMA user_version").get()?.user_version, 4);
+      assert.equal(
+        inspect.prepare("SELECT projection_version FROM checkpoint").get()?.projection_version,
+        4,
+      );
+      assert.equal(before.facts.projectionVersion, 4);
+    } finally {
+      inspect.close();
+    }
   } finally {
     await rm(root, { recursive: true, force: true });
   }

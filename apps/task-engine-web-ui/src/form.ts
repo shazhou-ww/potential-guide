@@ -19,7 +19,7 @@ export const envelopeSchema: Schema = {
     seriesId: { type: "string", title: "seriesId（可选原样保留）" },
     matchPolicy: {
       type: "string",
-      enum: ["started-after-eligible", "terminated-after-eligible"],
+      enum: ["starts-after-eligible", "terminates-after-eligible"],
     },
     recurrence: {
       type: "object",

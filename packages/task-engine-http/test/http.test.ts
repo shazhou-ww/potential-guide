@@ -6,7 +6,7 @@ import { caller, flush, harness } from "../../task-engine/test/fixtures.js";
 import { createTaskHandler } from "../src/index.js";
 
 test("discovery uses submit authority and optional quoted If-Match guards raw idempotency", async () => {
-  const h = harness();
+  const h = await harness();
   const handler = createTaskHandler({
     service: h.engine,
     resolveCaller: (request) => ({
@@ -35,7 +35,7 @@ test("discovery uses submit authority and optional quoted If-Match guards raw id
       inputSchema: unknown;
     }[];
     const echo = found.find((entry) => entry.type === "echo")!;
-    const id = newId();
+    const id = newId(h.clock.now());
     const submit = (match?: string, text = "hello") =>
       handler(
         new Request("http://host/tasks", {
@@ -50,7 +50,8 @@ test("discovery uses submit authority and optional quoted If-Match guards raw id
         }),
       );
     assert.equal((await submit(`"${"0".repeat(64)}"`)).status, 412);
-    assert.equal(h.store.read().facts.watermark, 0);
+    assert.deepEqual(h.store.read().facts.tasks, {});
+    assert.ok(h.store.read().events.every((event) => event.type === "window.advanced"));
     assert.equal((await submit(echo.revision)).status, 400);
     assert.equal((await submit(`"${echo.revision}"`)).status, 202);
     assert.equal((await submit()).status, 202);
@@ -62,7 +63,7 @@ test("discovery uses submit authority and optional quoted If-Match guards raw id
 });
 
 test("Web adapter and core preserve body/header identity, auth and errors without listener", async () => {
-  const h = harness();
+  const h = await harness();
   const audit: { requestId?: string; code: string }[] = [];
   const handler = createTaskHandler({
     service: h.engine,
@@ -83,7 +84,7 @@ test("Web adapter and core preserve body/header identity, auth and errors withou
     );
   }
   try {
-    const id = newId();
+    const id = newId(h.clock.now());
     const body = { type: "echo", text: "hello", timeoutMs: 100 };
     const response = await request("/tasks", {
       method: "POST",
@@ -96,7 +97,7 @@ test("Web adapter and core preserve body/header identity, auth and errors withou
     assert.equal(task.stage, "initial");
     const obsolete = await request("/tasks", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": newId() },
+      headers: { "Content-Type": "application/json", "Idempotency-Key": newId(h.clock.now()) },
       body: JSON.stringify({ ...body, matchPolicy: "completed-after-eligible" }),
     });
     assert.equal(obsolete.status, 400);
@@ -109,7 +110,7 @@ test("Web adapter and core preserve body/header identity, auth and errors withou
       await (await request(`/tasks/${task.taskId}`)).json(),
       h.engine.getTask(task.taskId, caller),
     );
-    assert.equal((await request(`/tasks/${task.taskId}/cancel`, { method: "POST" })).status, 409);
+    assert.equal((await request(`/tasks/${task.taskId}/cancel`, { method: "POST" })).status, 200);
     assert.equal(
       (await request(`/tasks/${task.taskId}`, { headers: { authorization: "b" } })).status,
       403,
@@ -143,7 +144,7 @@ test("Web adapter and core preserve body/header identity, auth and errors withou
 
 test("GET task directory strictly parses bounded filters and preserves query error statuses", async () => {
   let allowed = true;
-  const h = harness({
+  const h = await harness({
     limits: { pageSize: 1, queryLifetimeMs: 100 },
     authorize: (_who, operation) => operation !== "list" || allowed,
   });
@@ -166,16 +167,16 @@ test("GET task directory strictly parses bounded filters and preserves query err
     assert.equal((await request(`?cursor=${page.next}`)).status, 400);
     for (const query of [
       "?type=echo&type=sum",
-      "?scope=a",
       "?from=2026-01-01",
       "?limit=",
       "?limit=1.5",
-      "?limit=2",
+      "?limit=1001",
       "?cursor=",
       "?createdFrom=2026-01-01",
       "?sort=oldest",
     ])
       assert.equal((await request(query)).status, 400, query);
+    assert.equal((await request("?scope=a&limit=2")).status, 200);
     const encoded = encodeURIComponent(task.receivedAt.replace("Z", "+00:00"));
     assert.equal((await request(`?createdFrom=${encoded}`)).status, 200);
     allowed = false;
@@ -197,7 +198,7 @@ test("directory capacity and byte failures are not successful empty HTTP pages",
     [{ queryScanLimit: 1 }, 429],
     [{ queryPageBytes: 100 }, 413],
   ] as const) {
-    const h = harness({ limits });
+    const h = await harness({ limits });
     try {
       h.submit();
       h.submit();
@@ -212,11 +213,15 @@ test("directory capacity and byte failures are not successful empty HTTP pages",
 });
 
 test("SSE handoff and Last-Event-ID use durable facts; disconnect never cancels", async () => {
-  const h = harness();
+  const h = await harness();
   const handler = createTaskHandler({ service: h.engine, resolveCaller: () => caller, pollMs: 1 });
   try {
     const task = h.submit();
-    const response = await handler(new Request(`http://host/events?taskId=${task.taskId}`));
+    const response = await handler(
+      new Request(
+        `http://host/events?taskId=${task.taskId}&fromRevision=${encodeURIComponent(task.revision)}`,
+      ),
+    );
     assert.equal(response.headers.get("content-type"), "text/event-stream");
     const reader = response.body?.getReader();
     assert.ok(reader);
@@ -235,8 +240,18 @@ test("SSE handoff and Last-Event-ID use durable facts; disconnect never cancels"
     const resumedReader = resumed.body?.getReader();
     assert.ok(resumedReader);
     const frame = new TextDecoder().decode((await resumedReader.read()).value);
-    assert.match(frame, /run.progress/);
-    assert.match(frame, /after initial watermark/);
+    assert.match(frame, /task.changed/);
+    assert.equal(frame.includes("after initial watermark"), false);
+    const runHistory = h.engine.getRunHistory(
+      h.engine.getTask(task.taskId, caller).run!.runId,
+      {},
+      caller,
+    );
+    assert.ok(
+      runHistory.events.some((event) =>
+        JSON.stringify(event.data).includes("after initial watermark"),
+      ),
+    );
     await resumedReader.cancel();
     await h.finish();
     h.engine.tick();
@@ -247,7 +262,7 @@ test("SSE handoff and Last-Event-ID use durable facts; disconnect never cancels"
 });
 
 test("HTTP payload bounds, filter checks and expired cursor mapping", async () => {
-  const h = harness({ limits: { retentionMs: 5 } });
+  const h = await harness({ limits: { retentionMs: 5 } });
   const handler = createTaskHandler({
     service: h.engine,
     resolveCaller: () => caller,
@@ -282,25 +297,26 @@ test("HTTP payload bounds, filter checks and expired cursor mapping", async () =
     assert.equal(expired.status, 410);
     assert.equal(
       ((await expired.json()) as { error: { code: string } }).error.code,
-      "history_expired",
+      "record_unavailable",
     );
   } finally {
     await h.close();
   }
 });
 
-test("core reauthorizes each subscription pull; slow clients have bounded pull pages", async () => {
-  const h = harness({ limits: { pageSize: 2, maxSubscriptions: 1 } });
+test("core reauthorizes each subscription pull and slow clients fail explicitly without partial success", async () => {
+  const h = await harness({ limits: { subscriptionBufferEvents: 2, maxSubscriptions: 1 } });
   try {
     const task = h.submit();
-    const subscription = h.engine.subscribe({ taskId: task.taskId }, undefined, caller);
-    assert.throws(() => h.engine.subscribe({ taskId: task.taskId }, undefined, caller), {
+    await h.turn();
+    const run = h.engine.getRun(h.engine.getTask(task.taskId, caller).run!.runId, caller);
+    const filter = { runId: run.runId };
+    const subscription = h.engine.subscribe(filter, run.revision, caller);
+    assert.throws(() => h.engine.subscribe(filter, run.revision, caller), {
       code: "capacity_exceeded",
     });
-    await h.turn();
-    for (let i = 0; i < 10; i++)
-      h.work[0]?.permit.progress({ stage: "execution", message: String(i) });
-    assert.equal(subscription.pull().events.length, 2);
+    h.work[0]?.permit.progress({ stage: "execution", message: "one" });
+    assert.equal(subscription.pull().events.length, 1);
     const saved = caller.subject;
     caller.subject = "revoked";
     try {
@@ -309,6 +325,11 @@ test("core reauthorizes each subscription pull; slow clients have bounded pull p
       caller.subject = saved;
     }
     subscription.close();
+    const slow = h.engine.subscribe(filter, h.engine.getRun(run.runId, caller).revision, caller);
+    for (let i = 0; i < 3; i++)
+      h.work[0]?.permit.progress({ stage: "execution", message: String(i) });
+    assert.throws(() => slow.pull(), { code: "capacity_exceeded" });
+    slow.close();
     assert.equal(h.engine.getTask(task.taskId, caller).canceledAt, undefined);
   } finally {
     await h.close();

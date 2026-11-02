@@ -26,7 +26,8 @@ timeouts are bounded. Put TLS and rate quotas at the deployment boundary.
 
 GET `/task-types` discovers current `{type,version,inputSchema,revision}` entries
 using submit authorization. POST `/tasks` optionally accepts
-`If-Match: "<revision>"`; stale contracts return 412 before persistence. Discovery
+`If-Match: "<revision>"`; stale contracts return 412 before Task acceptance
+(the independent monotonic admission-floor fact may still advance). Discovery
 never fetches artifacts or their subject schemas. Check/Probe examples register
 type version 2; retain original identity-bearing contracts for historical recovery.
 
@@ -36,12 +37,17 @@ GET `/runs` 通过独立 `list-runs` 权限返回按 scope 授权的冻结完整
 两种目录的游标域独立，重启/历史清理后失效；见
 [目录契约](task-engine.md#授权目录与查询)。旧目录与查询字段不提供兼容别名。
 类型必须提供静态 RegisteredType，动态模块只在类型守护 Worker 导入。
-Facts/SQLite v3 拒绝旧数据库；新部署须选择新路径，不能覆盖现有用户数据。
+Facts/SQLite v4 在写入前拒绝旧数据库；新部署须显式选择新路径，不能覆盖、删除或迁移旧库，
+也不能将新域身份或 revision 冒充旧域连续历史。
 
 The HTTP protocol includes POST `/tasks` with `Idempotency-Key`, GET
 `/tasks/:id`, POST `/tasks/:id/cancel`, GET `/event-history?taskId=...`, GET
-`/events?taskId=...` with `Last-Event-ID`. Creation returns 202. Cursor pagination
-and SSE use the same durable history; deduplicate events by sequence. Disconnect
+`/events?taskId=...` with an explicit `fromRevision` or `Last-Event-ID`. Task and Run
+also have independent `/:id/history` and `/:id/events` routes; `/tasks/events` and
+`/runs/events` emit complete source envelopes. Creation returns 202. Freeze the
+entire paged baseline before subscribing from its revision. A source may affect
+multiple members: apply its whole envelope before advancing the anchor, and never
+deduplicate individual members by source sequence alone. Disconnect
 does not cancel a Task. Business `ok:false` is a normal completed Check result.
 
 ## Resource ownership

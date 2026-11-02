@@ -1,57 +1,53 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { at, isTimedOut, project } from "@potential-guide/task-protocol";
+import { at, isPending, isTimedOut, project, reduce } from "@potential-guide/task-protocol";
 import { caller, flush, harness } from "./fixtures.js";
 
 for (const outcome of ["completed", "failed"] as const) {
   for (const offset of [-1, 0, 1]) {
     for (const tickFirst of [false, true]) {
-      test(`shared ${outcome} at eligible${offset >= 0 ? "+" : ""}${offset}, tickFirst=${tickFirst}, agrees with cancellation`, async () => {
-        const h = harness();
+      test(`established shared ${outcome} survives exit at eligible${offset >= 0 ? "+" : ""}${offset}, tickFirst=${tickFirst}`, async () => {
+        const h = await harness();
         try {
           const original = h.submit({ timeoutMs: 1000 });
           await h.turn();
           await h.turn(10);
-          const task = h.submit({ matchPolicy: "terminated-after-eligible" });
-          await h.turn();
-          assert.equal(h.work.length, 1);
-          assert.equal(h.engine.getTask(task.taskId, caller).run, undefined);
+          const task = h.submit({ matchPolicy: "terminates-after-eligible" });
+          const runId = h.engine.getTask(original.taskId, caller).run!.runId;
+          assert.equal(task.run?.runId, runId);
           h.clock.setTime(Date.parse(task.eligibleAt) + offset);
           if (outcome === "completed") await h.finish();
           else {
-            h.work[0]?.done.reject(new Error("shared run failed after clock adjustment"));
+            h.work[0]?.done.reject(new Error("reliable shared failure after clock adjustment"));
             h.work[0]?.exit.resolve();
             await flush();
           }
           h.clock.setTime(Date.parse(task.deadlineAt) + 1);
-          const inapplicable = offset < 0;
-          assert.equal(isTimedOut(h.engine.getTask(task.taskId, caller)), inapplicable);
-          if (tickFirst) {
-            h.engine.tick();
-            assert.equal(isTimedOut(h.engine.getTask(task.taskId, caller)), inapplicable);
-          }
-          if (inapplicable) {
-            const canceled = h.engine.cancelTask(task.taskId, caller);
-            assert.ok(canceled.canceledAt);
-            assert.equal(canceled.stage, "initial");
-            assert.equal(canceled.termination, undefined);
-            assert.equal(canceled.result, undefined);
-            assert.equal(canceled.run?.completedAt, undefined);
-            assert.ok(isTimedOut(canceled));
-          } else {
-            assert.equal(
-              h.engine.getTask(task.taskId, caller).run?.runId,
-              h.engine.getTask(original.taskId, caller).run?.runId,
-            );
-            assert.throws(() => h.engine.cancelTask(task.taskId, caller), {
-              code: "task_finished",
-            });
-            assert.equal(
-              h.engine.getTask(task.taskId, caller).stage,
-              outcome === "completed" ? "completed" : "run_failed",
-            );
-            assert.equal(isTimedOut(h.engine.getTask(task.taskId, caller)), false);
-          }
+          if (tickFirst) h.engine.tick();
+          const current = h.engine.getTask(task.taskId, caller);
+          assert.equal(current.run?.runId, runId);
+          assert.equal(current.stage, outcome);
+          assert.ok(isTimedOut(current));
+          const canceled = h.engine.cancelTask(task.taskId, caller);
+          assert.equal(canceled.changed, true);
+          assert.equal(canceled.stage, outcome);
+          assert.equal(canceled.canceled, true);
+          assert.deepEqual(canceled.result, current.result);
+          h.clock.setTime(Date.parse(task.eligibleAt) - 1);
+          const rollback = h.engine.getTask(task.taskId, caller);
+          assert.equal(rollback.stage, outcome);
+          assert.equal(rollback.run?.runId, runId);
+          assert.ok(isPending(rollback));
+          assert.equal(isTimedOut(rollback), false);
+          const view = h.store.read();
+          assert.deepEqual(
+            project(reduce(view.prefix, view.events), task.taskId, h.clock.now()),
+            rollback,
+          );
+          assert.deepEqual(
+            view.events.filter((event) => event.taskId === task.taskId).map((event) => event.type),
+            ["task.created", "task.canceled"],
+          );
         } finally {
           await h.close();
         }
@@ -60,31 +56,29 @@ for (const outcome of ["completed", "failed"] as const) {
   }
 }
 
-test("sealing blocks new owners but retains an applicable late completion for its existing owner", async () => {
-  const h = harness({ resources: ["js"] });
+test("committed stop entry excludes later qualification and a new Run cannot reuse the stopped Worker", async () => {
+  const h = await harness();
   try {
-    const original = h.submit({ timeoutMs: 5 });
+    const original = h.submit();
     await h.turn();
+    const originalRun = h.engine.getTask(original.taskId, caller).run!.runId;
+    const next = h.submit({
+      eligibleAt: at(h.clock.now() + 10),
+      matchPolicy: "terminates-after-eligible",
+    });
+    h.engine.cancelTask(original.taskId, caller);
+    await h.engine.waitForTaskRelease(original.taskId, caller);
+    assert.ok(h.engine.getRun(originalRun, caller).stopRequested);
     await h.turn(10);
-    const execute = h.type.execute;
-    h.type.execute = (input, options) =>
-      execute(input, {
-        ...options,
-        authorizeReplacement(id, generation) {
-          const authorized = options.authorizeReplacement(id, generation);
-          if (authorized) h.work[0]?.permit.complete({ text: "late but applicable" });
-          return authorized;
-        },
-      });
-    h.submit({ text: "replacement" });
-    await h.turn();
-    await flush();
-    h.engine.tick();
-    const task = h.engine.getTask(original.taskId, caller);
-    assert.equal(task.stage, "completed");
-    assert.ok(isTimedOut(task));
-    assert.deepEqual(task.result, { text: "late but applicable" });
-    assert.ok(h.store.read().facts.runs[task.run?.runId ?? ""]?.sealed);
+    const current = h.engine.getTask(next.taskId, caller);
+    assert.equal(current.stage, "running");
+    assert.notEqual(current.run?.runId, originalRun);
+    assert.ok(
+      h.store.read().facts.runs[current.run!.runId]!.startedSequence >
+        h.store.read().facts.runs[originalRun]!.stopRequested!.sequence,
+    );
+    await h.finish(1);
+    assert.equal(h.engine.getTask(next.taskId, caller).stage, "completed");
   } finally {
     await h.close();
   }
@@ -92,12 +86,12 @@ test("sealing blocks new owners but retains an applicable late completion for it
 
 for (const outcome of ["completed", "failed"] as const) {
   for (const late of [false, true]) {
-    test(`durable ${outcome}, late=${late}, fixes timeout before coordinator settlement`, async () => {
-      const h = harness();
+    test(`durable ${outcome}, late=${late}, changes no Task authority and never freezes the now dimension`, async () => {
+      const h = await harness();
       try {
         const task = h.submit();
         await h.turn();
-        if (late) h.clock.setTime(Date.parse(task.deadlineAt) + 1);
+        h.clock.setTime(Date.parse(task.deadlineAt) + (late ? 1 : 0));
         const endedAt = at(h.clock.now());
         if (outcome === "completed") await h.finish();
         else {
@@ -105,31 +99,31 @@ for (const outcome of ["completed", "failed"] as const) {
           h.work[0]?.exit.resolve();
           await flush();
         }
+        assert.equal(isTimedOut(h.engine.getTask(task.taskId, caller)), late);
         const prefix = h.store.read().facts;
-        assert.ok(prefix.tasks[task.taskId]?.snapshot.termination);
+        assert.equal("snapshot" in prefix.tasks[task.taskId]!, false);
         h.clock.setTime(Date.parse(task.deadlineAt) + 2);
         const saved = JSON.stringify(prefix);
         const before = project(prefix, task.taskId, h.clock.now());
-        assert.equal(JSON.stringify(prefix), saved, "projection must not write a Task judgment");
+        assert.equal(JSON.stringify(prefix), saved, "projection must not persist a Task judgment");
         assert.deepEqual(before, h.engine.getTask(task.taskId, caller));
-        assert.equal(isTimedOut(before), late);
+        assert.ok(isTimedOut(before));
         assert.equal(
           outcome === "completed" ? before.run?.completedAt : before.run?.failedAt,
           endedAt,
         );
-        assert.equal(before.stage, outcome === "completed" ? "completed" : "run_failed");
+        assert.equal(before.stage, outcome);
         assert.ok(before.termination);
         if (outcome === "completed") assert.deepEqual(before.result, { text: "hello" });
         else assert.equal(before.result, undefined);
-        assert.throws(() => h.engine.cancelTask(task.taskId, caller), { code: "task_finished" });
+        assert.equal(h.engine.cancelTask(task.taskId, caller).stage, outcome);
         h.engine.tick();
         const after = h.engine.getTask(task.taskId, caller);
-        assert.equal(after.stage, outcome === "completed" ? "completed" : "run_failed");
-        assert.equal(
-          isTimedOut(after),
-          isTimedOut(before),
-          "settlement cannot revoke an observed timeout",
-        );
+        assert.equal(after.stage, outcome);
+        assert.ok(isTimedOut(after));
+        h.clock.setTime(Date.parse(task.eligibleAt) - 1);
+        assert.ok(isPending(h.engine.getTask(task.taskId, caller)));
+        assert.equal(h.engine.getTask(task.taskId, caller).stage, outcome);
       } finally {
         await h.close();
       }
@@ -137,51 +131,53 @@ for (const outcome of ["completed", "failed"] as const) {
   }
 }
 
-test("projection does not borrow an unbound or time-ineligible completion", async () => {
-  const h = harness();
+test("projection cannot borrow a time-ineligible completion or a nonexistent Run from a cached Task judgment", async () => {
+  const h = await harness();
   try {
     const task = h.submit();
     await h.turn();
     await h.finish();
     const prefix = h.store.read().facts;
-    const record = prefix.tasks[task.taskId];
-    assert.ok(record?.snapshot.run);
-    const run = prefix.runs[record.snapshot.run.runId];
-    assert.ok(run?.completedAt);
-    const time = Date.parse(task.deadlineAt) + 1;
-    for (const match of ["started-after-eligible", "terminated-after-eligible"] as const) {
-      record.binding.matchPolicy = match;
-      record.snapshot.stage = "running";
-      delete record.snapshot.termination;
-      delete record.snapshot.run.completedAt;
-      record.snapshot.eligibleAt = at(
-        Date.parse(match === "started-after-eligible" ? run.startedAt : run.completedAt) + 1,
-      );
-      assert.equal(project(prefix, task.taskId, time).run?.completedAt, undefined);
-      assert.ok(isTimedOut(project(prefix, task.taskId, time)));
+    const runId = h.engine.getTask(task.taskId, caller).run!.runId;
+    const run = prefix.runs[runId]!;
+    const eligible = Math.max(Date.parse(run.startedAt), Date.parse(run.exit!.occurredAt)) + 1;
+    for (const matchPolicy of ["starts-after-eligible", "terminates-after-eligible"] as const) {
+      const facts = structuredClone(prefix);
+      const record = facts.tasks[task.taskId]!;
+      record.binding.matchPolicy = matchPolicy;
+      record.eligibleAt = at(eligible);
+      record.deadlineAt = at(eligible + 100);
+      const snapshot = project(facts, task.taskId, eligible + 101);
+      assert.equal(snapshot.run, undefined);
+      assert.equal(snapshot.stage, "initial");
+      assert.ok(isTimedOut(snapshot));
     }
-    delete record.snapshot.run;
-    record.snapshot.stage = "initial";
-    assert.ok(isTimedOut(project(prefix, task.taskId, time)));
+    const missing = structuredClone(prefix);
+    delete missing.runs[runId];
+    assert.equal(project(missing, task.taskId, h.clock.now()).run, undefined);
   } finally {
     await h.close();
   }
 });
 
-test("cancel-first snapshot stays frozen when a shared Execution later completes", async () => {
-  const h = harness();
+test("cancel-first Task keeps its canceled fact but observes later shared completion and current timeout", async () => {
+  const h = await harness();
   try {
-    const canceled = h.submit();
+    const task = h.submit();
     h.submit();
     await h.turn();
-    const frozen = h.engine.cancelTask(canceled.taskId, caller);
+    const canceled = h.engine.cancelTask(task.taskId, caller);
+    h.clock.setTime(h.clock.now() + 1);
     await h.finish();
-    h.clock.setTime(Date.parse(canceled.deadlineAt) + 1);
-    const after = h.engine.getTask(canceled.taskId, caller);
-    assert.deepEqual({ ...after, timestamp: frozen.timestamp }, frozen);
-    assert.equal(after.run?.completedAt, undefined);
-    assert.equal(after.result, undefined);
-    assert.equal(isTimedOut(after), false);
+    h.clock.setTime(Date.parse(task.deadlineAt) + 1);
+    const after = h.engine.getTask(task.taskId, caller);
+    assert.equal(after.canceledAt, canceled.canceledAt);
+    assert.equal(after.stage, "completed");
+    assert.ok(after.run?.completedAt);
+    assert.deepEqual(after.result, { text: "hello" });
+    assert.ok(isTimedOut(after));
+    assert.notEqual(after.revision, canceled.revision);
+    assert.notEqual(after.updatedAt, canceled.updatedAt);
   } finally {
     await h.close();
   }

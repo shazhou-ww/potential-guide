@@ -11,7 +11,7 @@ import { openSqliteStore } from "../src/index.js";
 test("Execution directory reads persisted SQLite facts after reopen and rejects prior-process cursors", async () => {
   const root = resolve(".cache", `execution-catalog-${randomUUID()}`);
   await mkdir(root, { recursive: true });
-  const h = harness();
+  const h = await harness();
   try {
     h.submit({ text: "one" });
     h.submit({ text: "two" });

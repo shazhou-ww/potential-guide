@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { RunPage, PublicEvent, TaskSnapshot } from "@potential-guide/task-protocol";
+import type { PublicEvent, RunPage, TaskSnapshot } from "@potential-guide/task-protocol";
 import { ObservationEnd, taskStatus } from "../src/lifecycle.js";
 import { Directory } from "../src/model.js";
 
@@ -13,11 +13,16 @@ const task: TaskSnapshot = {
   eligibleAt: "2026-10-31T00:00:00.000Z",
   deadlineAt: "2026-10-31T00:00:01.000Z",
   timestamp: "2026-10-31T00:00:02.000Z",
+  updatedAt: "2026-10-31T00:00:00.000Z",
+  dataDomain: "domain",
+  revision: "domain:1",
+  canceled: false,
   run: { runId: "execution", startedAt: "2026-10-31T00:00:00.000Z" },
 };
 const event = (type: PublicEvent["type"], data: PublicEvent["data"] = {}): PublicEvent => ({
   type,
   sequence: 1,
+  revision: "domain:1",
   occurredAt: "2026-10-31T00:00:02.000Z",
   scope: "scope",
   runId: "execution",
@@ -32,14 +37,34 @@ test("frozen Execution summaries can prove completed reclamation without a histo
     startedAt: task.receivedAt,
     completedAt: task.timestamp,
     reclaimedAt: task.timestamp,
-    state: { running: false, completed: true, failed: false, reclaimed: true, sealed: true },
+    scope: "scope",
+    stage: "completed",
+    startedSequence: 1,
+    updatedAt: task.timestamp,
+    stopRequested: true,
+    state: {
+      running: false,
+      completed: true,
+      failed: false,
+      stopping: false,
+      stopped: false,
+      reclaimed: true,
+      sealed: true,
+    },
   });
   assert.equal(end.ended, true);
   const directory = new Directory<RunPage>("runs");
   await assert.rejects(
     () =>
       directory.load(
-        async () => ({ runs: [{}], observedAt: "now", expiresAt: "later" }) as RunPage,
+        async () =>
+          ({
+            runs: [{}],
+            items: [{}],
+            revision: "domain:1",
+            observedAt: "now",
+            expiresAt: "later",
+          }) as RunPage,
         "",
       ),
     /摘要协议无效/,
@@ -47,11 +72,11 @@ test("frozen Execution summaries can prove completed reclamation without a histo
   assert.equal(directory.page, undefined);
   assert.match(directory.error, /协议无效/);
 });
-test("timeout stays independent; completed Task waits for actual execution reclamation", () => {
+test("time stays independent; a terminal matched Task remains observable for later cancellation", () => {
   const end = new ObservationEnd("taskId", "task");
   end.feed([], task);
   assert.equal(end.ended, false);
-  assert.equal(taskStatus(task), "Run 尝试中 · 已超时");
+  assert.match(taskStatus(task, Date.parse(task.timestamp)), /stage running.*时间 timeout/);
   const completed: TaskSnapshot = {
     ...task,
     stage: "completed",
@@ -59,37 +84,46 @@ test("timeout stays independent; completed Task waits for actual execution recla
     run: { ...task.run!, completedAt: task.timestamp },
     result: { ok: false },
   };
-  end.feed([event("run.completed", { result: { ok: false } })], completed);
-  assert.equal(taskStatus(completed), "已完成 · 已超时");
+  end.feed([event("run.exited", { basis: "worker" })], completed);
+  assert.match(
+    taskStatus(completed, Date.parse(task.timestamp)),
+    /已完成.*stage completed.*时间 timeout/,
+  );
   assert.equal(end.ended, false);
   end.feed([event("run.reclaimed")], completed);
-  assert.equal(end.ended, true);
+  assert.equal(end.ended, false);
 });
 test("cancellation does not invent execution shutdown; ended Execution needs logical and physical facts", () => {
   const end = new ObservationEnd("taskId", "task");
-  const canceled = { ...task, canceledAt: task.timestamp };
+  const canceled = { ...task, canceled: true, canceledAt: task.timestamp };
   end.feed([{ ...event("task.canceled", { runIds: ["execution"] }), taskId: "task" }], canceled);
   assert.equal(end.ended, false);
   end.feed([event("run.reclaimed")], canceled);
   assert.equal(end.ended, false);
-  end.feed([event("run.failed", { error: { code: "stopped", message: "stopped" } })], canceled);
-  assert.equal(end.ended, true);
+  end.feed([event("run.exited", { basis: "worker" })], canceled);
+  assert.equal(end.ended, false);
   const execution = new ObservationEnd("runId", "execution");
-  execution.feed([event("run.completed", { result: false })]);
+  execution.feed([event("run.exited", { basis: "worker" })]);
   assert.equal(execution.ended, false);
   execution.feed([event("run.reclaimed")]);
   assert.equal(execution.ended, true);
 });
-test("unbound cancellation needs explicit absence of releases; history can establish the end", () => {
+test("an unbound canceled snapshot proves there can be no future Run matching", () => {
   const { run: _run, ...unbound } = task;
-  const canceled: TaskSnapshot = { ...unbound, stage: "initial", canceledAt: task.timestamp };
+  const canceled: TaskSnapshot = {
+    ...unbound,
+    stage: "initial",
+    canceled: true,
+    canceledAt: task.timestamp,
+  };
   const end = new ObservationEnd("taskId", "task");
   end.feed([], canceled);
-  assert.equal(end.ended, false);
+  assert.equal(end.ended, true);
   end.feed(
     [
       {
         sequence: 1,
+        revision: "domain:1",
         type: "task.canceled",
         taskId: "task",
         occurredAt: task.timestamp,

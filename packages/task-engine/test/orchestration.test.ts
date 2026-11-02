@@ -20,7 +20,7 @@ test("isolated admission lets executing and queued parents advance with one chil
       const result = (async () => {
         if (input.kind === "child") return { value: 6 };
         const child = engine.submit(
-          { requestId: newId(), type: "child", value: input.value!, timeoutMs: 1000 },
+          { requestId: newId(clock.now()), type: "child", value: input.value!, timeoutMs: 1000 },
           caller,
         );
         while (!controller.signal.aborted) {
@@ -76,7 +76,10 @@ test("isolated admission lets executing and queued parents advance with one chil
   await engine.start();
   try {
     const parents = [1, 2, 3].map((value) =>
-      engine.submit({ requestId: newId(), type: "parent", value, timeoutMs: 1000 }, caller),
+      engine.submit(
+        { requestId: newId(clock.now()), type: "parent", value, timeoutMs: 1000 },
+        caller,
+      ),
     );
     for (let i = 0; i < 100; i++) {
       clock.advance(1);
@@ -166,7 +169,10 @@ test("independent run wall limit force-terminates a real uncooperative worker", 
   });
   await engine.start();
   try {
-    const task = engine.submit({ requestId: newId(), type: "loop", timeoutMs: 1000 }, caller);
+    const task = engine.submit(
+      { requestId: newId(clock.now()), type: "loop", timeoutMs: 1000 },
+      caller,
+    );
     clock.advance(1);
     engine.tick();
     await flush();
@@ -182,7 +188,7 @@ test("independent run wall limit force-terminates a real uncooperative worker", 
     assert.equal(forceCount, 1);
     assert.equal(cleanCount, 1);
     assert.equal(pool.stats.idle, 1);
-    assert.equal(engine.getTask(task.taskId, caller).stage, "run_failed");
+    assert.equal(engine.getTask(task.taskId, caller).stage, "failed");
     assert.equal(engine.getTask(task.taskId, caller).canceledAt, undefined);
   } finally {
     await worker?.terminate();

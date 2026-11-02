@@ -89,9 +89,7 @@ export function createFixtureEngine(
           });
           const value = await new Promise<Json>((resolve, reject) => {
             const abort = () =>
-              reject(
-                new TaskError("fixture_canceled", "受控 fixture 等待已取消；未分配业务资源。"),
-              );
+              reject(new TaskError("run_canceled", "受控 fixture 等待已取消；未分配业务资源。"));
             context.signal.addEventListener("abort", abort, { once: true });
             if (context.signal.aborted) abort();
             void operation.then((value) => {
@@ -106,6 +104,7 @@ export function createFixtureEngine(
           let started = false,
             value: Json | undefined,
             failure: unknown;
+          let tracking: RunTracking | undefined;
           const internals = engine as unknown as {
             report(run: RunRecord, kind: "progress" | "complete", value: unknown): void;
             supervisors: Map<string, TypeSupervisor>;
@@ -117,7 +116,15 @@ export function createFixtureEngine(
             runId: run.runId,
             generation: run.generation,
             startedAt: run.startedAt,
-            progress: (progress) => internals.report(run, "progress", progress),
+            progress(progress) {
+              try {
+                internals.report(run, "progress", progress);
+              } catch (error) {
+                failure = error;
+                void tracking?.reclaim("fixture_progress_failed").catch(() => {});
+                throw error;
+              }
+            },
             complete(result) {
               try {
                 value = json(local.validateResult(result), engine.limits.maxPayloadBytes);
@@ -133,43 +140,56 @@ export function createFixtureEngine(
               }
             },
             fail(error) {
-              if (value === undefined) failure = new TaskError(error.code, error.message);
+              if (value === undefined && failure === undefined)
+                failure = new TaskError(error.code, error.message);
             },
           };
-          const tracking = await local.execute(prepared, {
-            context: Object.freeze({
-              type: local.type,
-              version: local.version,
-              environment: local.environment,
-              scope: context.scope,
-            }),
-            signal: context.signal,
-            ...(candidate && typeof candidate === "object" && !Array.isArray(candidate)
-              ? { replaceRunId: String(candidate.runId) }
-              : {}),
-            authorizeReplacement: (runId, generation) =>
-              handlers["authorize-replacement"]!({ runId, generation }, context).then(
-                (value) => value === true,
-              ),
-            start() {
-              if (started) throw new TaskError("allocation_canceled", "fixture 已分配资源。");
-              started = true;
-              return permit;
-            },
-          });
+          tracking = await local
+            .execute(prepared, {
+              context: Object.freeze({
+                type: local.type,
+                version: local.version,
+                environment: local.environment,
+                scope: context.scope,
+              }),
+              signal: context.signal,
+              ...(candidate && typeof candidate === "object" && !Array.isArray(candidate)
+                ? { replaceRunId: String(candidate.runId) }
+                : {}),
+              authorizeReplacement: (runId, generation) =>
+                handlers["authorize-replacement"]!({ runId, generation }, context).then(
+                  (value) => value === true,
+                ),
+              start() {
+                if (started) throw new TaskError("allocation_canceled", "fixture 已分配资源。");
+                started = true;
+                return permit;
+              },
+            })
+            .catch((error: unknown) => {
+              if (
+                context.signal.aborted &&
+                error instanceof TaskError &&
+                error.code === "allocation_canceled"
+              )
+                throw new TaskError("run_canceled", error.message);
+              throw error;
+            });
           if (
             tracking.runId !== run.runId ||
             tracking.generation !== run.generation ||
             tracking.startedAt !== run.startedAt
           )
             throw new TaskError("invalid_tracking", "fixture tracking 身份不一致。");
+          const currentTracking = tracking;
+          if (failure) void currentTracking.reclaim("fixture_progress_failed").catch(() => {});
           const abort = () => {
-            void tracking.reclaim("run_canceled").catch(() => {});
+            void currentTracking.reclaim("run_canceled").catch(() => {});
           };
           context.signal.addEventListener("abort", abort, { once: true });
           try {
             if (context.signal.aborted) abort();
-            await tracking.finished;
+            await currentTracking.finished;
             if (failure) throw failure;
             if (value === undefined) throw new TaskError("invalid_tracking", "fixture 缺少结果。");
             return value;

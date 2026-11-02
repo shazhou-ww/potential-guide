@@ -72,6 +72,7 @@ export function createCheckTaskType(
     exportName: "createIsolatedCheck",
     verifyExportName: "verifyIsolatedCheck",
     configuration: json(configuration),
+    allocationLimit: configuration.workers,
     resourceLifetime: "request",
     resources: {
       async authorize(value, context) {

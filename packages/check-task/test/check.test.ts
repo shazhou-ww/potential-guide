@@ -84,7 +84,7 @@ async function harness(
     authorize: (who, _operation, scope) => who.scope === scope,
     ...extra,
   });
-  engine.start();
+  await engine.start();
   return {
     engine,
     store,
@@ -100,7 +100,7 @@ async function harness(
     submit(extraFields = {}) {
       return engine.submit(
         {
-          requestId: newId(),
+          requestId: newId(extra.clock?.now() ?? Date.now()),
           type: "check",
           checker: reference,
           subject: {},
@@ -184,7 +184,7 @@ test("real worker reports normal business failure and provenance; strict input/r
         ),
       /Undeclared/,
     );
-    const history = h.engine.readHistory({ taskId: task.taskId }, {}, caller);
+    const history = h.engine.getRunHistory(final.run!.runId, {}, caller);
     assert.ok(history.events.some((event) => event.type === "run.progress"));
     assert.ok(
       history.events
@@ -213,7 +213,7 @@ test("manifest and complete files may pass while actual runtime is unavailable; 
       const task = h.submit(fields);
       const final = await wait(
         () => h.read(task),
-        (item) => item.stage === "run_failed",
+        (item) => item.stage === "failed",
       );
       assert.equal(final.error?.code, code);
       assert.equal(Object.keys(h.store.read().facts.runs).length, 1);
@@ -235,7 +235,7 @@ test("undeclared problem, invocation failure, timer leak and failed dispose neve
       const task = h.submit();
       const final = await wait(
         () => h.read(task),
-        (item) => item.stage === "run_failed",
+        (item) => item.stage === "failed",
       );
       assert.ok(
         final.result &&
@@ -260,7 +260,7 @@ test("owned subprocess leak fails and physical child exit is confirmed before ca
     const task = h.submit({ subject: { child: true } });
     const final = await wait(
       () => h.read(task),
-      (item) => item.stage === "run_failed",
+      (item) => item.stage === "failed",
     );
     const trace = (final.result as { evidence: { businessProgress: { pid?: number }[] } }).evidence
       .businessProgress;
@@ -305,9 +305,9 @@ test("shared real run has independent cancellation, idempotency and physical rec
       () => h.read(a),
       (item) => item.stage === "running",
     );
-    const b = h.submit({ matchPolicy: "terminated-after-eligible" });
-    assert.equal(h.read(b).stage, "initial");
-    assert.equal(h.read(b).run, undefined);
+    const b = h.submit({ matchPolicy: "terminates-after-eligible" });
+    assert.equal(h.read(b).stage, "running");
+    assert.equal(h.read(b).run?.runId, h.read(a).run?.runId);
     const original = h.engine.getRequest(b.requestId, caller);
     assert.equal(h.engine.submit(original, caller).taskId, b.taskId);
     h.engine.cancelTask(a.taskId, caller);
@@ -352,10 +352,12 @@ test("deterministic deadline projection records late worker completion without c
     const task = h.submit({ timeoutMs: 10 });
     clock.advance(1);
     h.engine.tick();
-    for (let index = 0; index < 60; index++) await Promise.resolve();
-    h.engine.tick();
-    for (let index = 0; index < 60; index++) await Promise.resolve();
-    assert.equal(h.read(task).stage, "running");
+    await wait(
+      () => h.read(task),
+      (item) => item.stage === "running",
+    );
+    const protector = h.submit({ timeoutMs: 1000, matchPolicy: "terminates-after-eligible" });
+    assert.equal(h.read(protector).run?.runId, h.read(task).run?.runId);
     clock.advance(20);
     await wait(
       () => {
@@ -393,7 +395,7 @@ test("input-equivalent mutable sources share the selected run, never bypass sour
           ),
     );
     h.replace(artifact());
-    const b = h.submit({ matchPolicy: "terminated-after-eligible" });
+    const b = h.submit({ matchPolicy: "terminates-after-eligible" });
     await wait(
       () => h.read(b),
       (item) => item.stage === "completed",
@@ -401,10 +403,10 @@ test("input-equivalent mutable sources share the selected run, never bypass sour
     assert.equal(h.read(a).run?.runId, h.read(b).run?.runId);
     h.deny();
     const count = Object.keys(h.store.read().facts.tasks).length;
-    const denied = h.submit({ matchPolicy: "terminated-after-eligible" });
+    const denied = h.submit({ matchPolicy: "terminates-after-eligible" });
     const rejected = await wait(
       () => h.read(denied),
-      (item) => item.stage === "run_failed",
+      (item) => item.stage === "failed",
     );
     assert.match(rejected.error!.message, /denied/);
     assert.equal(Object.keys(h.store.read().facts.tasks).length, count + 1);
@@ -456,7 +458,7 @@ test("Check real HTTP/SSE authorization, shared cancellation, pagination and rec
     }
     throw new Error(`Missing ${stage}`);
   };
-  const submit = async (matchPolicy = "started-after-eligible") => {
+  const submit = async (matchPolicy = "starts-after-eligible") => {
     const response = await fetch(`${server.url}/tasks`, {
       method: "POST",
       headers: { ...headers, "Idempotency-Key": newId() },
@@ -474,16 +476,16 @@ test("Check real HTTP/SSE authorization, shared cancellation, pagination and rec
   try {
     const a = await submit();
     await until(a.taskId, "running");
-    const b = await submit("terminated-after-eligible");
-    assert.equal((await get(b.taskId)).stage, "initial");
-    assert.equal((await get(b.taskId)).run, undefined);
+    const b = await submit("terminates-after-eligible");
+    assert.equal((await get(b.taskId)).stage, "running");
+    assert.equal((await get(b.taskId)).run?.runId, (await get(a.taskId)).run?.runId);
     assert.equal((await fetch(`${server.url}/tasks/${a.taskId}`)).status, 401);
     const canceled = await fetch(`${server.url}/tasks/${a.taskId}/cancel`, {
       method: "POST",
       headers,
     });
     assert.equal(canceled.status, 200);
-    let cursor: string | undefined;
+    let cursor: string | undefined = b.revision;
     const seen = new Set<number>();
     for (let connection = 0; connection < 3; connection++) {
       const response = await fetch(`${server.url}/events?taskId=${b.taskId}`, {
@@ -499,6 +501,7 @@ test("Check real HTTP/SSE authorization, shared cancellation, pagination and rec
       await reader.cancel();
     }
     const final = await until(b.taskId, "completed");
+    await server.engine.waitForTaskRelease(b.taskId, caller);
     assert.equal((final.result as { result: { ok: boolean } }).result.ok, false);
     assert.ok((await get(a.taskId)).canceledAt);
     let next: string | undefined;
@@ -512,7 +515,19 @@ test("Check real HTTP/SSE authorization, shared cancellation, pagination and rec
       next = page.next;
     } while (next);
     assert.equal(history.length, new Set(history).size);
-    assert.ok(history.length > 4);
+    assert.ok(history.length >= 2);
+    const runHistory = server.engine.getRunHistory(final.run!.runId, {}, caller);
+    for (const kind of [
+      "run.started",
+      "run.progress",
+      "run.outcome",
+      "run.exited",
+      "run.reclaimed",
+    ])
+      assert.ok(
+        runHistory.events.some((event) => event.type === kind),
+        kind,
+      );
     assert.ok([...seen].every((sequence) => history.includes(sequence)));
   } finally {
     await server.close();

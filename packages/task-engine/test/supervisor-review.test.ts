@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import {
-  TaskError,
   type ErrorFact,
   type Json,
   type RegisteredType,
   type Store,
+  TaskError,
 } from "@potential-guide/task-protocol";
 import { createTaskEngine, newId } from "../src/index.js";
 import { MemoryStore } from "../src/testing.js";
@@ -71,7 +71,7 @@ function fixture(type: RegisteredType, healthMs = 5000) {
   return { supervisor, released, complete, failed, lost };
 }
 
-test("入口投递前失败且独立 Worker 已确认退出，不虚构在途宿主资源或永久保留租约", async () => {
+test("静态 factory 不可用则启动明确失败，不虚构 Run 或永久保留租约", async () => {
   const store = new MemoryStore();
   const engine = createTaskEngine({
     store,
@@ -79,16 +79,10 @@ test("入口投递前失败且独立 Worker 已确认退出，不虚构在途宿
     currentVersions: { review: "1" },
     authorize: () => true,
   });
-  const caller = { scope: "scope", subject: "review" };
-  await engine.start();
   try {
-    const task = engine.submit({ requestId: newId(), type: "review", timeoutMs: 10000 }, caller);
-    engine.tick();
-    await engine.waitForTaskRelease(task.taskId, caller);
-    const run = Object.values(store.read().facts.runs)[0]!;
-    assert.equal(run.error?.code, "type_unavailable");
-    assert.ok(run.reclaimedAt);
-    assert.equal(run.workerGeneration, undefined);
+    await assert.rejects(engine.start(), /factory/);
+    assert.deepEqual(store.read().facts.runs, {});
+    assert.deepEqual(store.read().facts.tasks, {});
     assert.equal(
       store.read().events.some((event) => event.type === "run.progress"),
       false,
@@ -140,7 +134,7 @@ test("R01 合法失败证据及无效证据的运行/恢复事实一致", async 
     try {
       await engine.waitForTaskRelease(task.taskId, caller);
       const before = engine.getTask(task.taskId, caller);
-      assert.equal(before.stage, "run_failed");
+      assert.equal(before.stage, "failed");
       assert.deepEqual(before.error, { code: "business_failure", message: "原业务失败" });
       assert.deepEqual(before.result, valid ? { valid, marker: "失败证据" } : undefined);
       if (!valid)
@@ -169,7 +163,17 @@ test("R01 合法失败证据及无效证据的运行/恢复事实一致", async 
           close: () => store.close(),
           read() {
             const view = store.read();
-            view.facts.runs[before.run!.runId]!.result = { valid: false, marker: "篡改证据" };
+            const forged = { valid: false, marker: "篡改证据" };
+            const run = view.facts.runs[before.run!.runId]!;
+            run.result = forged;
+            if (run.outcome?.kind === "failed") run.outcome.result = forged;
+            for (const event of view.events)
+              if (
+                event.runId === run.runId &&
+                event.type === "run.outcome" &&
+                event.data.outcome.kind === "failed"
+              )
+                event.data.outcome.result = forged;
             return view;
           },
         };

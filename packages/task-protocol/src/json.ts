@@ -5,6 +5,7 @@ export class TaskError extends Error {
   constructor(
     public readonly code: string,
     message: string,
+    public readonly details?: Json,
   ) {
     super(message);
     this.name = "TaskError";
