@@ -33,7 +33,9 @@
 
 1. **业务含义与过程**：输入、前置条件、制品和结果的业务含义，以及内部准备、业务资源分配与复用、执行步骤和业务后继决策，由 TaskType 或业务方负责。
 2. **业务系列与周期提交**：seriesId 的组织规则和周期性 Request 的产生由外部参与者负责。
-3. **通用资产与消费者生命周期**：不接管业务制品、缓存、资源池或 UI 的生命周期；停止观察不等于取消任务。
+3. **通用资产与消费者生命周期**：不接管业务制品、业务缓存、资源池或 UI 的生命周期；停止观察不等于取消任务。
+   TaskType 自身交付制品的获取、校验、缓存与装载属于 Engine 的通用类型装载职责，
+   见[Task Bundle、类型装载与运行库](./task-engine-contracts/task-bundle.md)，不扩展为任意业务资产管理。
 
 ## 术语表
 
@@ -98,14 +100,17 @@ interface Subscription<Event> {
 | 项目 | 说明 |
 | --- | --- |
 | input | Request |
-| output | 受理结果及对应 Task |
-| side effects | 新请求创建 Task，按需调度 Run |
+| output | 已创建 Task 的受理成功结果、明确拒绝结果，或 preparing 与 tracking token |
+| side effects | 持久跟踪待受理 Request，按需准备 Bundle；校验通过后创建 Task，按需协调 Run |
 
 ```ts
 submit(request: TaskRequest): Promise<SubmissionResult>;
 ```
 
-提交创建 Task 的请求，获得受理结果，由 Engine 按需协调 Run。
+提交创建 Task 的请求。可立即返回成功或拒绝；尚未完成准备时返回 preparing 与 tracking token，
+调用方可查询或 long poll 最终受理结果。tracking token 直接使用 `requestId`，不额外生成标识；
+它对应 Request，不对应多个 Request 可共享的
+Bundle preparation；preparing 请求及准备关联跨重启恢复，Task 仍在校验通过后才创建。
 
 - 关于提交检查与重复请求的处理，参考[Request 受理与幂等处理](./task-engine-contracts/request-admission.md)。
 - 关于受理后的生效与超时，参考[Task 生命周期与三维状态](./task-engine-contracts/task-lifecycle.md)。
@@ -321,9 +326,17 @@ subscribeRuns(
 
 A1–C5 是核心控制与观察操作，不是删除现有配套能力的名单。本轮继续提供：
 
-- `discoverTypes`：发现实际可提交类型、版本与输入 Schema，提交校验相应版本/Schema 前置条件。
-  类型注册属于可信初始化配置，不引入类型自授权或资产发现。
+- 类型契约获取：Request 通过 URL 与 Digest 成对引用自包含 Task Bundle，
+  Engine 按需获取并验证，不要求显式类型注册；宿主配置容量限制，不另引入来源或执行权限模型。
+  Engine 不提供 `discoverTypes` 类型枚举或类型目录，Bundle 的查找由调用方或外部目录负责，
+  不将缓存列表视为可提交类型目录。
+  内容寻址、装载及公共运行库边界见
+  [Task Bundle、类型装载与运行库](./task-engine-contracts/task-bundle.md)。
 - `getRequest`：读取不可变原始请求意图，保留省略与显式值区别；缺失或不可提供明确失败。
+- 受理状态查询：以 `requestId` 查询 preparing/accepted/rejected，
+  同一操作通过可选 `waitMs` 支持立即查询或有界 long poll；不改变请求处理。
+  此能力与读取原始请求的 `getRequest` 分离，见
+  [统一状态查询与 long poll](./task-engine-contracts/request-admission.md#统一状态查询与-long-poll)。
 - `sendTaskMessage` / `getTaskMessage`：保留 Task 归属、可信 Caller、消息幂等、Never 禁用、
   入队不等于接纳及失联可为 unknown 的约束。按唯一匹配路由，未匹配不向候选 Run 广播；
   进入停止流程后不接纳新业务消息，Worker 退出后不再投递或复活 Run。消息不创建 Run 或改变匹配，
