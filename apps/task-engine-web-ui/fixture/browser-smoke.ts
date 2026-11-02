@@ -10,6 +10,7 @@ import { MemoryStore } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { TaskError } from "@potential-guide/task-protocol";
 import { startUiServer } from "../src/server.js";
+import { assertDirectoryPreserved, type DirectoryView } from "./directory-invariants.js";
 import { fixtureTypes } from "./types.js";
 
 const [executable, directory, reserved = "9223"] = process.argv.slice(2);
@@ -28,6 +29,11 @@ const safePort = (url: string) => {
 };
 const resources = fixtureTypes(),
   token = randomBytes(32).toString("hex");
+const controlledText = "取消后仍观察共享 Run";
+let releaseControlledRun = () => {};
+const controlledRunGate = new Promise<void>((resolveGate) => {
+  releaseControlledRun = resolveGate;
+});
 const env = `UI_SMOKE_${randomBytes(8).toString("hex")}`;
 process.env[env] = token;
 let backend: Awaited<ReturnType<typeof startTaskServer>> | undefined;
@@ -38,6 +44,7 @@ let launchError: Error | undefined;
 const checks: Record<string, unknown> = {};
 const exceptions: unknown[] = [];
 const heldRequests: string[] = [];
+const directoryQueries: string[] = [];
 const taskInDetail = `(() => {
   const element=document.querySelector('#task-detail [data-key=task-snapshot] pre');
   return element ? JSON.parse(element.textContent) : null;
@@ -134,12 +141,31 @@ try {
     port: 0,
     store: new MemoryStore(),
     ownStore: true,
-    types: resources.types,
+    types: resources.types.map((type) =>
+      type.type === "echo"
+        ? {
+            ...type,
+            module: new URL("./smoke-worker.mjs", import.meta.url).href,
+            exportName: "createSmokeType",
+            configuration: { ...type.configuration, smokeGateText: controlledText },
+            resourceLifetime: "request",
+            resources: {
+              async "smoke-gate"() {
+                await controlledRunGate;
+                return null;
+              },
+            },
+          }
+        : type,
+    ),
     currentVersions: { echo: "1", survey: "1" },
     authorize: (caller, _operation, scope) => caller.scope === scope,
     resolveCaller(request) {
       if (request.headers.get("authorization") !== `Bearer ${token}`)
         throw new TaskError("unauthenticated", "Fixture authentication required.");
+      const url = new URL(request.url);
+      if (request.method === "GET" && url.pathname === "/tasks")
+        directoryQueries.push(`${url.pathname}${url.search}`);
       return { scope: "fixture", subject: "ui" };
     },
     closeResources: resources.close,
@@ -654,11 +680,33 @@ try {
   await wait("document.querySelectorAll('#directory tbody tr').length===10");
   await click('#directory button[data-action="目录下一页（原过滤条件）"]');
   await wait("document.querySelectorAll('#directory tbody tr').length===14");
-  await evaluate(`(() => {
-    document.querySelector('#history-type').value='保留未应用条件';
+  await wait("document.querySelector('#directory').textContent.includes('完整实时集合')");
+  await click("#history-type");
+  await pressKey("a", 65, 2);
+  await call("Input.insertText", { text: "保留未应用条件" });
+  const beforeDirectory: DirectoryView = {
+    ...(await evaluate<Omit<DirectoryView, "queryReads">>(`(() => {
+    globalThis.smokeDirectoryView=() => {
+      const list=document.querySelector('#directory');
+      return {
+        width:list.getBoundingClientRect().width,scroll:list.scrollTop,text:list.textContent,
+        members:[...list.querySelectorAll('tbody tr')].map(row=>({id:row.dataset.entityId,key:row.dataset.key})),
+        drafts:[...document.querySelectorAll('#history-type,#created-from,#created-before,#only-favorites')]
+          .map(control=>({id:control.id,value:control.value,checked:control.checked}))
+      };
+    };
     const list=document.querySelector('#directory');list.scrollTop=100;
-    globalThis.smokeList={width:list.getBoundingClientRect().width,scroll:list.scrollTop,html:list.textContent};
-  })()`);
+    globalThis.smokeList=smokeDirectoryView();
+    globalThis.smokeListRows=[...list.querySelectorAll('tbody tr')];
+    globalThis.smokeListControls=smokeList.drafts.map(control=>document.getElementById(control.id));
+    return smokeList;
+  })()`)),
+    queryReads: [...directoryQueries],
+  };
+  assert.deepEqual(
+    beforeDirectory.drafts.map((draft) => draft.id),
+    ["history-type", "created-from", "created-before", "only-favorites"],
+  );
   checks.fullWidthList = await evaluate("smokeList.width>innerWidth*0.95 && smokeList.scroll>0");
   assert.equal(checks.fullWidthList, true);
   const row = '#directory tbody tr[data-row-action="task"]:nth-child(4)';
@@ -668,15 +716,39 @@ try {
   await wait(
     "Math.abs(document.querySelector('#task-detail-sheet').getBoundingClientRect().right-innerWidth)<1",
   );
+  assert.equal(
+    backend.engine.cancelTask(external.taskId, { scope: "fixture", subject: "external-client" })
+      .changed,
+    true,
+  );
+  await wait(
+    `document.querySelector('#directory tr[data-entity-id="${external.taskId}"] td:nth-child(3)').textContent.includes('已取消')`,
+  );
+  const afterDirectory: DirectoryView = {
+    ...(await evaluate<Omit<DirectoryView, "queryReads">>("smokeDirectoryView()")),
+    queryReads: [...directoryQueries],
+  };
+  assertDirectoryPreserved(beforeDirectory, afterDirectory);
+  checks.drawerAllowsLiveStatusUpdates = beforeDirectory.text !== afterDirectory.text;
+  assert.equal(checks.drawerAllowsLiveStatusUpdates, true);
+  checks.drawerPreservesQuery = true;
+  checks.drawerPreservesMembersAndOrder = true;
+  checks.drawerPreservesFilterDrafts = true;
+  checks.drawerPreservesRowAndControlIdentity = await evaluate(`(() => {
+    const rows=[...document.querySelectorAll('#directory tbody tr')];
+    return rows.length===smokeListRows.length && rows.every((row,index)=>row===smokeListRows[index])
+      && smokeListControls.every(control=>control===document.getElementById(control.id));
+  })()`);
+  assert.equal(checks.drawerPreservesRowAndControlIdentity, true);
   checks.drawerGeometry = await evaluate(`(() => {
     const list=document.querySelector('#directory'), sheet=document.querySelector('#task-detail-sheet').getBoundingClientRect();
     return { beforeWidth:smokeList.width,afterWidth:list.getBoundingClientRect().width,beforeScroll:smokeList.scroll,
-      afterScroll:list.scrollTop,sameContent:list.textContent===smokeList.html,right:sheet.right,width:sheet.width,viewport:innerWidth };
+      afterScroll:list.scrollTop,sameContent:list.textContent===smokeList.text,right:sheet.right,width:sheet.width,viewport:innerWidth };
   })()`);
   checks.drawerPreservesList = await evaluate(`(() => {
     const list=document.querySelector('#directory'), sheet=document.querySelector('#task-detail-sheet').getBoundingClientRect();
     return list.getBoundingClientRect().width===smokeList.width && list.scrollTop===smokeList.scroll
-      && list.textContent===smokeList.html && document.querySelector('#history-type').value==='保留未应用条件'
+      && document.querySelector('#history-type').value==='保留未应用条件'
       && Math.abs(sheet.right-innerWidth)<1 && sheet.width<innerWidth*0.6
       && document.querySelectorAll('[role=dialog]').length===1;
   })()`);
@@ -790,9 +862,9 @@ try {
   const caller = { scope: "fixture", subject: "ui" };
   const sharedInput = {
     type: "echo",
-    timeoutMs: 15000,
-    text: "取消后仍观察共享 Run",
-    durationMs: 5000,
+    timeoutMs: 60000,
+    text: controlledText,
+    durationMs: 1,
   };
   const controlled = backend.engine.submit({ ...sharedInput, requestId: newId() }, caller);
   const companion = backend.engine.submit({ ...sharedInput, requestId: newId() }, caller);
@@ -823,6 +895,7 @@ try {
     ),
     true,
   );
+  releaseControlledRun();
   await wait(`(${taskInDetail})?.stage==='completed'`);
   const advanced = backend.engine.getTask(controlled.taskId, caller);
   assert.equal(advanced.canceled, true);
@@ -880,6 +953,7 @@ try {
   }
   throw error;
 } finally {
+  releaseControlledRun();
   if (socket?.readyState === WebSocket.OPEN) await call("Browser.close", {}, 2000).catch(() => {});
   socket?.close();
   for (const request of pending.values()) clearTimeout(request.timer);

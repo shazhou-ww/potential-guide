@@ -248,6 +248,63 @@ typecheck、test、pack:check 全部完成。全仓 test 为 **68/68 Turbo tasks
 Outer 计划或旧 Outer 失败证据；不提交或推送。已接受的旧 Inner revision 不代表此新候选已接受，
 仍由主 Agent 对新 implementationRevision 重新 submit/acceptInner，再继续 Outer。
 
+## Outer 列表文本不变量误判：仅修 fixture
+
+主 Agent 已同步 `59643dbb`，新 Inner `fd81e6762dce` 重新 submit/accept 后，
+Outer 计划 `1cdf67c4` 的 Chrome 在 browser-smoke 约 L683 再次失败。
+原始证据 `.cache/engine-outer-final-4c6a25ae-465c-44a4-b556-bd90cf47f399` 保持未改：
+sameContent=false，但宽度前后均1383、滚动前后均100，drawer right1440/width630/viewport1440。
+这不足以证明详情打开破坏列表。核对产品代码发现 renderDirectory 合法展示实时连接状态、
+全域 revision 和按 now 推算的时间标签；分页完成后 monitorDirectory 异步接入流，
+旧 fixture 仅等十四行就抓整段 textContent，没有等待完整实时基线，且错误禁止合法文本更新。
+
+本轮没有修改 browser.ts、model、presentation、服务或生产包：
+
+- fixture 等完整分页与“完整实时集合”就绪，再通过原生键盘录入未应用过滤草稿。
+- 记录真实 Backend GET /tasks 的 URL/query 请求序列，详情前后必须完全相同；
+  不是只检查表单值，也不把用户未应用的草稿当作已应用查询。
+- `fixture/directory-invariants.ts` 精确比较成员 ID/key 及顺序、四个过滤控件的值/checked、
+  宽度和滚动；原生 Chrome 额外比较所有行及过滤控件的 DOM 对象身份。
+  drawer 几何、模态单层、关闭后焦点、用户草稿及后续滚动断言仍保留。
+- 在详情已打开时，由另一个可信调用者首次取消已终结的 external Task，
+  必须观察到该行“已取消”的真实源增量，且所有上述结构不变量仍成立。
+  两次最终运行均为 sameContent=false；这现在是预期的合法状态更新诊断，
+  并新增 drawerAllowsLiveStatusUpdates=true，不能通过冻结流或吞掉源事件取巧。
+- 精准单测验证仅文本/状态/时间/revision 展示变化可通过，十组 query 增减、
+  成员替换/删除/顺序/key、草稿/checkbox、滚动/宽度变化必须抛错，
+  没有简单删除“不变”要求。
+
+第一次新 Chrome 的上述抽屉检查均通过，但后续既有 shared-Run 场景失败：
+`.cache/engine-inner-drawer-invariants-6ee70b8e-112b-4816-90d9-539851d5c9c6` 的
+failure.json 显示精确目标 Task 已 completed，5秒业务运行在 UI 操作前就结束了，
+不是查询错对象或产品拒绝取消。没有原样重试掩盖。
+现仅在 smoke 使用 `fixture/smoke-worker.mjs` 包装原示例类型，对指定测试输入走
+fixture 专用 Resource 握手，保持 Run 直到 UI 取消确认后才显式释放；
+companion 需求保护共享 Run，随后正常结束。finally 也释放 gate，所有观察仍有上界。
+不用更长固定 sleep 猜测运行窗口，不修改产品运行/取消规则。
+
+### 本轮实际验证
+
+- UI 定向：
+  `pnpm --filter @potential-guide/task-engine-web-ui exec tsx --test test\directory-invariants.test.ts test\collection-v4.test.ts test\rows.test.ts`
+  **exit 0，12/12**；日志 `.cache/drawer-fixture-targeted.log`。
+- format 检查、UI `lint`、UI `typecheck`、`pnpm exec tsc -p tsconfig.test.json --noEmit --pretty false`
+  均 **exit 0**；lint 有 warnings，无 errors。日志 `.cache/drawer-fixture-lint.log`、
+  `.cache/drawer-fixture-typecheck.log`、`.cache/drawer-fixture-test-types.log`。
+- 在最终代码不变的同一执行中，两个不同全新 Chrome/156.0.8078.76 profile
+  **连续完整运行，两次 exit 0**，不是挑选若干重试成功：
+  1. `.cache/engine-inner-drawer-invariants-0f33dbfb-9fe2-42e6-a05d-208b7af8a5e9/checks.json`
+  2. `.cache/engine-inner-drawer-invariants-b2d4f5f0-a5cd-4d19-8e02-5b2ca5460fb2/checks.json`
+  日志 `.cache/drawer-verified-chrome-1.log`、`.cache/drawer-verified-chrome-2.log`。
+  两次 drawerAllowsLiveStatusUpdates、drawerPreservesQuery、drawerPreservesMembersAndOrder、
+  drawerPreservesFilterDrafts、drawerPreservesRowAndControlIdentity、drawerPreservesList 均 true；
+  两次宽度1383→1383、滚动100→100、sameContent=false，且 canceledTaskFollowsRun=true。
+  既有 terminal cancellation、Run 结束、键盘/焦点、窄屏和 CSP 全套仍通过。
+- I-AC02/I-AC03 在上述验证后勾回。不重跑全 pack，不修改正在运行的主 Agent pack，
+  不拿旧全仓通过冒充本次重新执行；产品文件和生产包未变。
+  本轮只修改 fixture、精准测试和 Inner/ledger，不改 Outer/Ideal/events，不提交或推送，
+  由主 Agent 按新 implementationRevision 再次门禁。
+
 ## 改动范围与实际边界
 
 - 八包：task-protocol 的 v4 事实/投影/形状；task-engine 的协调/Worker/观察/目录及 fixtures；

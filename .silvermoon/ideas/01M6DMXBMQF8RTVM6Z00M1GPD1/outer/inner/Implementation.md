@@ -22,6 +22,14 @@
 不以旧接受/旧 tarball 验证代替新候选证据，不修改 Ideal、Outer 计划/证据或 events。
 本轮不提交、推送、追加生命周期或自行越过重新 submit/acceptInner。
 
+主 Agent 随后同步修复 `59643dbb`、重新接受 Inner `fd81e6762dce`；
+Outer 计划 `1cdf67c4` 的原生 Chrome 又暴露 fixture 将整段列表 textContent 当作静态不变量。
+本轮只修 fixture/精准测试，不改产品：等待完整实时基线，再比较实际查询请求、成员/顺序、
+行与控件身份、用户草稿、宽度和滚动；主动加入合法源增量，必须允许状态/水位/时间文本更新。
+相关 I-AC02/I-AC03 先重置，定向 UI 12/12、format/lint/typecheck 与连续两个新 profile
+完整 Chrome 均实际 exit 0 后勾回；未重跑全 pack。失败及两次证据路径见 Fact-stage，
+不以该修复代替主 Agent 对新 Inner 的再次门禁。
+
 ## Steps
 
 ### I-S01: 对齐协议与核心运行语义
