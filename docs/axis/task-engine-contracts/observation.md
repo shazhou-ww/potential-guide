@@ -57,13 +57,15 @@
 2. Run 快照提供类型/匹配身份、严格开始顺序及开始时间、stage、停止流程是否已进入与 Worker 是否接纳、
    可靠结果/失败、终结时间及正常退出/恢复裁决依据（如有）、资源回收的已知或未知状态。
    progress 和完整业务载荷属于单 Run 观察；TaskType 提供的实际环境证据仍可经 Run 历史独立核验。
-3. TaskEvent 表达该 Task 可见的创建、取消、匹配成立、关联 Run stage/结果变化，沿用源 revision；
+3. TaskEvent 表达该 Task 可见的创建、取消、匹配成立或失效、关联 Run stage/结果变化，沿用源 revision；
    Run progress 载荷本身不生成 TaskEvent。独立时间推算和读取不产生事件；
    实际资格观测引起的匹配变化沿用证明该资格的源 revision。
+   [终结时间回拨导致的匹配失效](./run-matching.md#时钟回拨导致的匹配失效与巡检)沿用对应 Run 终结事实的 revision；
+   后续有效匹配按其源事实表达，不删除先前的匹配历史。巡检未引起事实变化时不生成事件。
 4. Task 摘要包含标识、类型、scope/series、创建/更新时间、时间边界、stage、canceled、匹配 Run；
    Run 摘要包含标识、类型、scope、开始顺序与时间、更新时间、stage、停止流程及终结依据。
    不含原输入、完整结果、progress 或消息载荷；额外公开的摘要事实（例如回收结论）改变时也必须生成摘要更新。
-5. Task updatedAt 只随创建、首次取消、匹配成立、关联 Run stage/结果变化；
+5. Task updatedAt 只随创建、首次取消、匹配成立或失效、关联 Run stage/结果变化；
    Run updatedAt 随开始、进入停止流程、接纳停止、progress、结果、退出/恢复裁决及公开回收事实变化。
    使用 max(先前 updatedAt, 源事实时间)，并列排序以稳定实体标识打破；事件先后只由 revision 确定。
    重复取消、时间经过、读取及心跳不改变 updatedAt；取消不冻结后续事实。

@@ -29,10 +29,12 @@ Task 状态由三个独立维度共同表达，不合并为单一互斥状态枚
 
 以下 stage 表达 Task 的推进位置；除未匹配时的 `initial` 外，均对应唯一匹配 Run 的生命周期状态。
 唯一匹配按[Task 匹配与 Run 启动](./run-matching.md)规定的最早开始顺序确定，不随其他候选变化。
+提前推导的匹配因[Run 终结时间回拨而失效](./run-matching.md#时钟回拨导致的匹配失效与巡检)时，
+Task 按当前有效匹配重新推导 stage；没有有效匹配时为 `initial`，不额外引入“僵尸”状态。
 
 | stage | 含义 |
 | --- | --- |
-| `initial` | Task 已受理，尚未匹配 Run；可能未生效，也可能已生效并等待匹配。 |
+| `initial` | Task 已受理，当前没有有效匹配 Run；包括尚未匹配或因终结时间回拨而失配，不代表当前一定具备调度资格。 |
 | `running` | Task 已匹配 Run，且 Run 处于 `running`；不表示内部业务 Execution 已开始。 |
 | `stopping` | 关联 Run 的 Worker 已接纳协商并开始停止处理。 |
 | `stopped` | 关联 Run 已裁决为停止，包括确认停止、确认强制终止或重启后失去跟踪的恢复裁决。 |
@@ -40,7 +42,8 @@ Task 状态由三个独立维度共同表达，不合并为单一互斥状态枚
 | `failed` | Task 已依据匹配 Run 的失败终结形成失败裁决；包括完整 Run 内准备、分配或执行过程的失败。 |
 
 1. `initial`、`running`、`stopping` 是非终结的内部推进位置，`completed`、`failed`、`stopped` 是内部推进结局。
-2. `starts-after-eligible` 根据 Run 开始等已提交资格事实推导匹配；
+2. 新匹配以 Task 未取消且在资格判断边界的时间状态为 [`eligible`](#时间状态与处理) 为前提；
+   `starts-after-eligible` 根据 Run 开始等已提交资格事实推导匹配；
    `terminates-after-eligible` 在可信资格观测边界确认 Task 已生效、Run 已开始且未终结时即可推导匹配，无需等待 Run 结束。
 3. 取消或超时均不冻结 stage；它们分别改变外部控制状态或时间状态，后续关联 Run 的结果仍按事实推进 Task 的 stage。
 4. Task 的终结 stage 不额外证明资源已回收；时间维度只表达当前是否已越过时间边界，不判定结果是否按时产生。
@@ -59,6 +62,7 @@ deadlineAt = effectiveEligibleAt + timeoutMs
 
 未指定生效时间或指定了过去时间时，实际生效时间为 `receivedAt`；指定未来时间时采用该未来时间。
 这些时间在首次受理时确定，幂等重试和重启不重新锚定，也不将默认值回写到原始 Request。
+Run 终结时间回拨导致失配时，这些边界也不随巡检或后续 Run 调度重置。
 
 ### 时间状态与处理
 
@@ -68,12 +72,19 @@ deadlineAt = effectiveEligibleAt + timeoutMs
 | `effectiveEligibleAt <= now <= deadlineAt` | `eligible` |
 | `now > deadlineAt` | `timeout` |
 
+`pending`、`eligible`、`timeout` 在同一判断时刻互斥；三维状态相互独立不表示同一维度内的取值可以并存。
+匹配与调度条件中的“已生效”指当前处于 `eligible`，不是“曾经生效”；已超时的 Task 不再满足该条件。
+
 服务端使用同一时间体系判断；客户端可自行推算，允许时钟偏差造成展示差异。
 即使 Run 已终结，也不以终结时间替换 `now`。
 
-1. 未取消的 Task 生效后，Engine 进行 Run 匹配与调度判断。
+1. 只有未取消且处于 `eligible` 的 Task 才参与新的 Run 匹配与调度判断；
+   不为 `pending` 或 `timeout` 的 Task 启动新的 Run。
+   匹配资格按[相关事实成立时的边界](./run-matching.md#唯一匹配与开始顺序)判断，不按读取时的状态抹去既有匹配。
 2. 生效不保证立即启动 Run；安排调度不等于 Run 已开始。
-3. Task 超时不等同于取消，也不冻结 stage；符合匹配规则的迟到成功或失败结果仍可推进 stage，时间状态仍按 `now` 推算。
+3. Task 超时不等同于取消，也不冻结 stage；超时本身不撤销已经成立的匹配，
+   仍符合匹配政策的关联 Run 的迟到成功或失败结果可推进 stage，时间状态仍按 `now` 推算。
+   回拨失配后的巡检也不豁免调度条件，不为已超时或已取消的 Task 启动新的 Run。
 4. eligible、timeout 由已知时间边界与当前时间推算，到点本身不产生事件；客户端可自行计算，允许因时钟差出现展示差异。
 5. 不发送到点事件不免除 Engine 的匹配、调度及超时处理责任。
    实际发生的 Run 开始、Task 取消、Run 终结等事实仍记录为事件并供订阅。
