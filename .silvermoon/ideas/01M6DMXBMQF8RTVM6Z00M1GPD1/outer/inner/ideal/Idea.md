@@ -6,7 +6,7 @@ Task Engine 的职责、状态与观察协议已重新明确，现有实现及�
 
 ## 结果
 
-使 Task Engine 及直接消费者符合[职责入口](../../../../../../docs/axis/task-engine-responsibilities.md)与其引用契约；初始基线为提交 `5d44c83d`，后续变更须显式追踪。
+使 Task Engine 及直接消费者符合[职责入口](../../../../../../docs/axis/task-engine-responsibilities.md)与其引用契约；初始基线为提交 `5d44c83d`，后续变更须显式追踪。只读核对结果、责任与验收场景见[契约差异](Contract-audit.md)，准备门禁见[未决问题](Open-questions.md)。
 
 ## 边界
 
@@ -22,4 +22,4 @@ Task Engine 的职责、状态与观察协议已重新明确，现有实现及�
 
 ## 下一步
 
-只读核对契约与当前实现，形成差异、未决问题及验收对应关系，再提交构想审阅；创建本 Idea 不代表构想已获接受或可以直接开工。
+收敛 Q01–Q07 的剩余边界并更新候选，检查、同步后才记录准确 revision 的 submitIdeal；当前未提交验收，不改造代码。创建、文档同步及旧 Idea 的决定均不构成本 Idea 的 acceptIdeal。
