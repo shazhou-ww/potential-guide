@@ -18,6 +18,7 @@ business:
   - "@potential-guide/objective-regulator"
   - "@potential-guide/regulation-coordinator"
 tools:
+  - "@potential-guide/pguide-task-engine"
   - "@potential-guide/task-engine-web-ui"
   - "@potential-guide/test-tree"
   - pguide

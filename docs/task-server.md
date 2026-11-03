@@ -1,8 +1,8 @@
 # Check, Probe and generic Server
 
-For the optional, separately started Chinese debugging workbench, see
-[Task Engine Web UI](task-engine-web-ui.md). It uses public HTTP only and does
-not start or stop this Server.
+For the optional Chinese debugging workbench, see
+[Task Engine Web UI](task-engine-web-ui.md). It uses public HTTP only.
+It can run independently or be started alongside Engine by the service command.
 
 The generic v5 protocol is now Bundle-based. The Check/Probe composition examples
 in this guide are still being switched; they are not valid v5 registration
@@ -10,8 +10,87 @@ instructions. See [the current generic API](task-engine.md).
 
 The generic Server composes Engine, HTTP adapter and SQLite. It neither interprets
 Check/Objective business artifacts nor grants permissions based on Request fields. The standalone command
-belongs to `task-engine-server`, not `task-engine-http`. Importing the programmatic
+is `pguide-task-engine` from `@potential-guide/pguide-task-engine`. Importing the programmatic
 entry opens no listener and installs no global signal handlers.
+
+## Declarative local service
+
+Install the command package alongside `pguide` and expose its binary on PATH or
+through existing `pguide.commandDirectories`. Both entries share one parser:
+
+```powershell
+pguide task-engine --config .\server.yaml --port 0
+pguide-task-engine --no-global-config --database .\new-tasks.sqlite --port 0 --ipfs-rpc-url http://127.0.0.1:5001
+pguide task-engine --help --format json
+```
+
+```yaml
+host: localhost
+port: 3000
+database: ./tasks.sqlite
+ipfsRpcUrl: http://127.0.0.1:5001
+scope: local
+ui: true
+uiOptions:
+  host: 127.0.0.1
+  port: 4310
+  favoritesFile: ./task-favorites.json
+```
+
+Precedence is **explicit CLI > explicit YAML/JSON file > pguide user
+config.jsonc > defaults**. Every supplied layer is validated before replacement;
+even an overridden invalid value fails. Unknown service fields, duplicate keys,
+malformed files and missing explicit files fail. No JavaScript config is imported.
+No project service values or environment service overrides are added.
+
+The user file uses complete setting IDs, for example
+`{"task-engine.port":3001,"task-engine.database":"./tasks.sqlite"}`. Settings are
+`task-engine.host`, `.port`, `.database`, `.ipfsRpcUrl`, `.scope`, `.ui` and
+`.uiOptions`; dots identify complete settings, not nested property paths.
+Other namespaces remain valid shared settings. Objects replace as a whole:
+`uiOptions` must contain exactly host, port and favoritesFile in every layer
+that supplies it. CLI equivalent is `--ui-options '<complete JSON object>'`.
+Use `--ui` / `--no-ui` for an explicit boolean, and `--ipfs-rpc-url` for Kubo
+RPC (not an HTTP Gateway). No `ipfsEndpoint` or `ipfs.rpcUrl` aliases exist.
+
+The existing user path is `%APPDATA%\pguide\config.jsonc` on Windows
+(fallback `~\AppData\Roaming\pguide\config.jsonc`) and
+`$XDG_CONFIG_HOME/pguide/config.jsonc` elsewhere (fallback
+`~/.config/pguide/config.jsonc`). Help prints the actual path. Missing user files
+are optional; present malformed/unreadable files fail. `--no-global-config`
+skips the user main file, including its commandDirectories during top-level
+discovery. PATH and project command discovery still work; project service values
+never participate. Other commands continue rejecting the retired global `--config`.
+No configuration file or registration is automatically written.
+
+`--cwd` selects the effective CWD at either entry. CLI paths and the path passed
+to `--config` resolve there. File-provided paths resolve against that file's own
+directory, including paths in uiOptions; overriding another value does not move
+their anchor. Defaults are 127.0.0.1:3000, tasks.sqlite, RPC
+http://127.0.0.1:5001, scope local and UI off. Default UI is 127.0.0.1:4310 with
+task-favorites.json in effective CWD. Port 0 selects a free port; ready output
+reports actual Engine and optional UI URLs.
+
+CLI is token-free **local-only**, not a multiuser security boundary. Only
+127.0.0.1, localhost (normalized to 127.0.0.1), and ::1 are accepted.
+Caller `local-cli` can use the explicit supported operations only in the
+configured scope. Host, Origin and browser fetch-site are checked; only GET/POST
+are admitted and POST requires application/json. UI retains its own same-origin
+and CSRF rules and connects to Engine over HTTP. Do not expose this service
+through a proxy. Other local users/processes are not isolated.
+
+Foreground startup owns only the Engine and optional UI it creates. UI startup
+failure rolls Engine back; catchable SIGINT/SIGTERM closes UI then Engine.
+It never starts/stops Kubo, manages pins/GC/IPFS_PATH, replaces occupied listeners,
+or cancels Tasks when a browser closes. Windows forced process termination is
+not graceful cleanup. No system daemon or autostart is installed.
+
+The old `task-engine-server` binary and `.mjs` configuration import path are
+retired. Convert `IPFS_API` to `--ipfs-rpc-url` or `ipfsRpcUrl`,
+`TASK_SERVER_PORT` to `--port`, and `TASK_SERVER_DATABASE` to `--database`.
+Those old example environment variables are not read by the new command.
+The local CLI does not use `TASK_SERVER_TOKEN`; applications needing custom
+authentication/callbacks must use the unchanged programmatic assembly below.
 
 ## Trusted assembly
 
@@ -23,8 +102,8 @@ connected to an independently managed local Kubo RPC endpoint; optional
 Engine `authorize` checks every operation and every stream pull. Scope is trusted
 Caller context, never a business field. Deny by default. Local callers must pass
 the same authorization policy. HTTP cannot load config modules or change resource
-limits. A trusted CLI config is arbitrary local code and must not be writable by
-HTTP clients.
+limits. Programmatic composition is trusted application code; CLI configuration
+is data only and cannot serialize authorization or resource callbacks.
 
 `startTaskServer` defaults to loopback port 3000 and `tasks.sqlite`. `port: 0`
 requests an ephemeral port. The returned URL means Store recovery and listening
@@ -78,9 +157,8 @@ Shutdown closes admission/listeners and active streams, then reclaims Engine
 resources, composition resources, Store lease and owned Store. Failure/time
 budget exhaustion rejects rather than claiming success; unconfirmed cleanup
 retains the Store lease. CLI reports failure and exits nonzero, never `closed`.
-This includes rejected configuration imports/factories and startup rollback
-failures: the CLI explicitly terminates rather than only setting `exitCode`,
-which cannot stop a process held open by configuration-owned resources.
+This includes startup rollback failures: the CLI explicitly terminates rather
+than claiming clean shutdown. Configuration modules are never executed.
 Programmatic callers must handle failure and may not reuse unconfirmed resources.
 No global signal hooks are installed by the library.
 

@@ -48,6 +48,11 @@ verification inventory, alongside the artifact support packages. Their MVP
 checks pack/install real consumers, but do not add release tags, bootstrap
 publication, or workflow authorization. A later release requires an explicit
 publication scope and package-specific tag configuration.
+`@potential-guide/pguide-task-engine` and `@potential-guide/task-engine-web-ui`
+are also local-verification-only packages under `apps/`. The command's packed
+production dependencies include the public UI server and browser assets; no
+private workspace dependency is allowed. No new release tags or npm publication
+authorization are introduced by this service-command change.
 The independent `regulation-coordinator` library follows `objective-regulator`
 and owns its scheduling helpers and runner types. `cli-core` precedes
 `pguide-config`. `objective-declarations` consumes CLI Core and Pilot protocol only;

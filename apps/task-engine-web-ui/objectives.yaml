@@ -1,7 +1,7 @@
 $schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
 objectives:
   standardize:
-    description: Standardize the private independently started local HTTP workbench and its browser bundle.
+    description: Standardize the independently started local HTTP workbench and its packaged browser bundle.
     objective: "@potential-guide/objective-package-standard"
     inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
     subject: |

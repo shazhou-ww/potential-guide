@@ -101,7 +101,7 @@ export function publicEndpoint(config: EndpointConfig): Endpoint {
       .digest("hex"),
   };
 }
-function validateConfig(config: UiConfig): void {
+export function validateUiConfig(config: UiConfig): void {
   if (!["127.0.0.1", "::1"].includes(config.host ?? "127.0.0.1"))
     throw new Error("UI 仅支持 loopback；未配置远程用户访问控制，拒绝公开监听。");
   if (
@@ -284,7 +284,7 @@ export function allowedRoute(path: string, method: string, params: URLSearchPara
 
 export async function startUiServer(raw: UiConfig) {
   const config = structuredClone(raw);
-  validateConfig(config);
+  validateUiConfig(config);
   const endpoints = new Map(
     config.endpoints.map((entry) => {
       const token = entry.bearerEnv ? process.env[entry.bearerEnv] : undefined;

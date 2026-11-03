@@ -145,7 +145,6 @@ export default async function configure(){
       join(directory, "mvp.mjs"),
       `
 import assert from "node:assert/strict";
-import {spawn} from "node:child_process";
 import {writeFile,readdir,mkdir,copyFile} from "node:fs/promises";
 import {fileURLToPath,pathToFileURL} from "node:url";
 import {resolve} from "node:path";
@@ -210,29 +209,10 @@ const signals=process.listenerCount("SIGINT");
 const server=await startTaskServer(await configure());
 assert.equal(process.listenerCount("SIGINT"),signals);
 try{await exercise(server.url);${label === "mvp-check" ? "await exercise(server.url,fileBody);" : ""}}finally{await server.close()}
-const cli=fileURLToPath(new URL("./main.js",import.meta.resolve("@potential-guide/task-engine-server")));
-const child=spawn(process.execPath,[cli,"--config","./consumer-config.mjs"],{env:{...process.env,TASK_SERVER_DATABASE:"cli.sqlite"},stdio:["ignore","pipe","pipe"],windowsHide:true});
-let stderr="";child.stderr.on("data",chunk=>stderr+=chunk);
-const exited=new Promise(resolve=>child.once("exit",(code,signal)=>resolve({code,signal})));
-try{
- const url=await new Promise((resolve,reject)=>{
-  let text="";const timer=setTimeout(()=>reject(Error("CLI readiness timeout: "+stderr)),10000);
-  child.stdout.on("data",chunk=>{text+=chunk;for(const line of text.split("\\n")){try{const value=JSON.parse(line);if(value.event==="ready"){clearTimeout(timer);resolve(value.url)}}catch{}}});
-  child.once("error",error=>{clearTimeout(timer);reject(error)});
-  child.once("exit",()=>{clearTimeout(timer);reject(Error(stderr))});
- });
- await exercise(url);
- ${label === "mvp-check" ? "await exercise(url,fileBody);" : ""}
- child.kill("SIGTERM");const result=await exited;
- if(process.platform!=="win32")assert.equal(result.code,0);
- await assert.rejects(fetch(url));
-}finally{if(child.exitCode===null&&child.signalCode===null)child.kill("SIGKILL");await exited}
 ${label === "mvp-check" ? `assert.deepEqual(await readdir(".business-workers"),[]);` : ""}
-console.log("packed ${label}: programmatic + CLI readiness, auth, result, history and SSE reconnect; Windows SIGTERM is forced-process shutdown");
+console.log("packed ${label}: programmatic readiness, auth, result, history and SSE reconnect; declarative CLI is verified separately");
 `,
     );
-    const help = await run("pnpm", ["exec", "task-engine-server", "--help"], directory);
-    assert.match(help, /--config/);
     console.log(await run(process.execPath, ["mvp.mjs"], directory));
   }
   console.log(`${label} actual production install: ${[...names].sort().join(", ")}`);

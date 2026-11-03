@@ -1,6 +1,8 @@
 # Implementation
 
-准备阶段的轻量实施种子，尚未开始实现。范围与已确认规则见[配置边界](ideal/Configuration.md)。
+实施已开始，当前按用户换机器的要求暂停并保存未完成检查点；
+代码、验证结果和恢复顺序见[实施交接](Handoff.md)。以下步骤及标准尚未全部完成，ledger 保持未勾选。
+范围与已确认规则见[配置边界](ideal/Configuration.md)。
 
 ## Steps
 

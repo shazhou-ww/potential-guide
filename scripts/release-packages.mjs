@@ -248,7 +248,8 @@ export const verificationPackages = [
     directory: "task-engine-server",
     name: "@potential-guide/task-engine-server",
     requiredExports: ["startTaskServer"],
-    bins: ["task-engine-server"],
+    bins: [],
+    forbiddenFiles: ["dist/main.js"],
     forbiddenDependencies: [
       "@potential-guide/check-task",
       "@potential-guide/probe-task",

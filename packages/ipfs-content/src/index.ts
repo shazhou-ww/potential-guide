@@ -1,4 +1,5 @@
 import type { ExportContentOptions, UnixFSEntry } from "ipfs-unixfs-exporter";
+import type { KuboRPCClient } from "kubo-rpc-client";
 import { CID } from "multiformats/cid";
 import { sha256 } from "multiformats/hashes/sha2";
 
@@ -25,7 +26,13 @@ export const unixfsImportOptions = Object.freeze({
 });
 
 /** RPC transport only; the independently managed node and client belong to the caller. */
-export async function createIpfsClient(url: string) {
+export async function createIpfsClient(url: string): Promise<
+  Omit<KuboRPCClient, "block"> & {
+    block: Omit<KuboRPCClient["block"], "get"> & {
+      get(cid: string | CID, options?: Parameters<KuboRPCClient["block"]["get"]>[1]): Promise<Uint8Array>;
+    };
+  }
+> {
   const endpoint = new URL(url);
   if (
     !["http:", "https:"].includes(endpoint.protocol) ||
@@ -36,7 +43,15 @@ export async function createIpfsClient(url: string) {
   )
     throw new Error("IPFS endpoint must be an HTTP(S) RPC base URL.");
   const { create } = await import("kubo-rpc-client");
-  return create({ url: endpoint, timeout: 30_000 });
+  const client = create({ url: endpoint, timeout: 30_000 });
+  return {
+    ...client,
+    block: {
+      ...client.block,
+      get: (cid, options) =>
+        client.block.get(typeof cid === "string" ? CID.parse(cid) : cid, options),
+    },
+  };
 }
 
 export interface ContentAccessOptions {

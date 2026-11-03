@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "namespace": "task-engine",
+  "settings": {
+    "task-engine.host": {
+      "description": "Fixed loopback binding; localhost normalizes to 127.0.0.1.",
+      "schema": { "enum": ["127.0.0.1", "localhost", "::1"] }
+    },
+    "task-engine.port": {
+      "description": "Engine TCP port; zero selects an available port.",
+      "schema": { "type": "integer", "minimum": 0, "maximum": 65535 }
+    },
+    "task-engine.database": {
+      "description": "SQLite filename, relative to the source file directory.",
+      "schema": { "type": "string", "minLength": 1 }
+    },
+    "task-engine.ipfsRpcUrl": {
+      "description": "Kubo HTTP(S) RPC base URL, not a Gateway; no URL credentials.",
+      "schema": { "type": "string", "minLength": 1 }
+    },
+    "task-engine.scope": {
+      "description": "Single local Caller scope. Other scopes are denied.",
+      "schema": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{1,64}$" }
+    },
+    "task-engine.ui": {
+      "description": "Start the HTTP-only local Web UI.",
+      "schema": { "type": "boolean" }
+    },
+    "task-engine.uiOptions": {
+      "description": "Whole UI setting, replaced rather than deep merged. All properties required.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["host", "port", "favoritesFile"],
+        "properties": {
+          "host": { "enum": ["127.0.0.1", "localhost", "::1"] },
+          "port": { "type": "integer", "minimum": 0, "maximum": 65535 },
+          "favoritesFile": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

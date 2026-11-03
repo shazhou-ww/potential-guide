@@ -1,0 +1,32 @@
+{
+  "name": "@potential-guide/pguide-task-engine",
+  "version": "0.1.0-rc.0",
+  "description": "Declarative local Task Engine service command with optional Web UI.",
+  "type": "module",
+  "bin": { "pguide-task-engine": "./dist/main.js" },
+  "pguide": { "settings": "./settings.json" },
+  "files": ["dist", "settings.json", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.ts\"",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
+  },
+  "dependencies": {
+    "@potential-guide/cli-core": "workspace:^",
+    "@potential-guide/ipfs-content": "workspace:^",
+    "@potential-guide/task-engine-server": "workspace:^",
+    "@potential-guide/task-engine-web-ui": "workspace:^",
+    "@potential-guide/task-protocol": "workspace:^",
+    "yaml": "catalog:"
+  },
+  "engines": { "node": ">=22.13.0" },
+  "publishConfig": { "access": "public" },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shazhou-ww/potential-guide.git",
+    "directory": "apps/pguide-task-engine"
+  }
+}
