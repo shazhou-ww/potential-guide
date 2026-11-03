@@ -269,6 +269,20 @@ interface BundleReference {
 }
 ```
 
+协议提供 `parseBundleReference(reference: string): BundleReference` 与
+`formatBundleReference(bundle: BundleReference): string`，用于解析和拼合
+`{url}#{digest}`，例如 `https://example.com/task.tar.gz#sha256:<64 位小写十六进制摘要>`。
+无需额外的业务类型协议前缀，保留获取 URL 自身的协议。
+获取 URL 不得包含 fragment（包括空 `#`）；唯一的 `#` 后必须是完整 Digest，
+不接受短摘要、额外 fragment 或百分号编码的摘要，不自动 trim 或改写输入。
+解析和拼合均复用完整 Bundle 引用校验，非法输入抛出 `invalid_request`；
+获取 URL 长度上限仍为 4096 字符，不包含追加的 `#` 与 Digest。
+支持的获取 URL 为 `https:`、`http:` 和本机 `file:`，不得携带用户名或密码；
+`file:` 不接受 query 或非本机主机名。
+辅助函数保留获取 URL 的原始字符串，HTTP 获取不发送 fragment。
+此字符串是引用的展示/填写形式；Request 仍携带结构化 `{url, digest}`，
+不以整串字符串作为内容判等或缓存键。
+
 1. Digest 是 Bundle 的内容身份，URL 是获取位置，不是唯一内容身份。
 2. 不同 URL 配合同一 Digest，引用同一份内容；相同 URL 配合不同 Digest，引用不同内容。
    正确性不依赖发布方保证 URL 永远不变。

@@ -106,6 +106,14 @@
     margin: 0.4rem 0;
   }
 }
+.bundle-reference {
+  display: block;
+  max-width: 72ch;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  font-size: 0.8rem;
+  color: #71717a;
+}
 .topbar {
   display: flex;
   align-items: center;
