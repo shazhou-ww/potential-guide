@@ -48,3 +48,8 @@ Worker 不是 OS 安全沙箱。
 
 完整接口与边界见 [Task Engine](../../docs/task-engine.md)、
 [Worker 协议](../../docs/task-bundle-worker.md)。
+`EngineOptions.logs` configures bounded diagnostic storage independently from
+lifecycle facts. `getRunLogs` and pull-based `subscribeRunLogs` authorize Run
+reads and expose capacity, expiry, gaps and completeness. Existing v1 bundles
+remain runnable but explicitly unsupported for Logs. See
+[Run Logs](../../docs/task-run-logs.md).

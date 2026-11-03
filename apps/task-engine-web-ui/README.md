@@ -25,3 +25,7 @@ changes do not move the headers.
 The optional Bundle cache page, alongside Task and Run, manages only the selected Endpoint's cached
 content through independently authorized public APIs; it is not an asset registry
 or upload service. See [cache management](../../docs/task-bundle-cache.md).
+Run detail includes an independent Logs interface with follow/pause, sequence
+resume, history paging, explicit missing/expired/unsupported states, and a
+300-entry / 1-MiB browser window. See
+[Run Logs and standalone UI verification](../../docs/task-run-logs.md).

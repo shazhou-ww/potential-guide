@@ -10,12 +10,18 @@ import {
   type ErrorFact,
   type Json,
   json,
+  type RunLogInput,
+  type RunLogReceipt,
   TaskError,
   type TypeWorkerRegistration,
+  taskLogSchemaUri,
+  validateRunLog,
   validateRunProgress,
 } from "@potential-guide/task-protocol";
 
 export interface TypeChannel {
+  logDropped?(runId: string, generation: string, scope: string, count: number): RunLogReceipt;
+  log?(runId: string, generation: string, scope: string, value: RunLogInput): RunLogReceipt;
   dispatch?(
     runId: string,
     generation: string,
@@ -96,6 +102,9 @@ class RunWorker {
   private pendingProofs = 0;
   private verifySequence = 0;
   private lastRequestId = 0;
+  private lastLogId = 0;
+  private lastSdkDropped = 0;
+  private finalSdkDrop = false;
   private stopping = false;
   private dispatched = false;
   private forced = false;
@@ -170,6 +179,8 @@ class RunWorker {
           ),
       {
         execArgv: [],
+        stdout: true,
+        stderr: true,
         env: {
           NODE_OPTIONS: "",
           ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
@@ -189,6 +200,8 @@ class RunWorker {
         },
       },
     );
+    worker.stdout.resume();
+    worker.stderr.resume();
     this.worker = worker;
     this.generation = generation;
     this.starting = new Promise<void>((resolve, reject) => {
@@ -260,6 +273,61 @@ class RunWorker {
           return;
         }
         if (!ready) return startupFailure(new Error("握手前收到类型运行消息。"));
+        if (message.kind === "log" || message.kind === "log-drop") {
+          let value: RunLogReceipt;
+          let error: { code: string; message: string } | undefined;
+          try {
+            const context = this.contexts.get(message.runId);
+            if (
+              this.registration.bundle?.declaration.$schema !== taskLogSchemaUri ||
+              !context ||
+              context.releaseRequested ||
+              !this.runs.has(message.runId) ||
+              !Number.isSafeInteger(message.logId) ||
+              message.logId !== this.lastLogId + 1
+            )
+              throw new TaskError("invalid_log_identity", "Invalid diagnostic channel identity.");
+            this.lastLogId = message.logId;
+            if (message.kind === "log-drop") {
+              if (
+                !Number.isSafeInteger(message.count) ||
+                message.count < this.lastSdkDropped ||
+                this.finalSdkDrop ||
+                (message.final !== undefined && message.final !== true)
+              )
+                throw new TaskError("invalid_log", "Invalid cumulative dropped-log snapshot.");
+              const count = message.count - this.lastSdkDropped;
+              this.lastSdkDropped = message.count;
+              this.finalSdkDrop = message.final === true;
+              value = count
+                ? (this.channel.logDropped?.(context.runId, generation, context.scope, count) ?? {
+                    state: "unavailable",
+                    reason: "disabled",
+                  })
+                : { state: "dropped", reason: "capacity" };
+            } else {
+              value = this.channel.log?.(
+                context.runId,
+                generation,
+                context.scope,
+                validateRunLog(message.value),
+              ) ?? { state: "unavailable", reason: "disabled" };
+            }
+          } catch (failure) {
+            if (failure instanceof TaskError && failure.code.startsWith("invalid_log"))
+              error = { code: failure.code, message: failure.message };
+            value = { state: "unavailable", reason: "storage" };
+          }
+          worker.postMessage({
+            generation,
+            runId: message.runId,
+            kind: message.kind === "log" ? "log-ack" : "log-drop-ack",
+            logId: message.logId,
+            value,
+            ...(error ? { error } : {}),
+          });
+          return;
+        }
         if (message.kind === "verified") {
           const operation = this.verifications.get(message.id);
           if (!operation) return;

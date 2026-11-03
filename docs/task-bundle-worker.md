@@ -1,5 +1,9 @@
 # Task Bundle Worker 通信
 
+本文固定 **v1**；其声明和消息表保持不变。新增诊断能力由显式
+[`Task v2 / Run Logs`](task-run-logs.md) 协议提供。当前宿主同时接受 v1/v2；
+旧 Bundle 继续运行，日志 API 明确返回 `unsupported`。
+
 `https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json`
 同时固定声明与以下协议。没有独立数字版本。运行库为
 `@potential-guide/task-sdk`，作者构建入口为其 `/build` 子路径。

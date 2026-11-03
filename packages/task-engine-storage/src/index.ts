@@ -22,11 +22,13 @@ import {
   reduce,
   restoreTaskUpdates,
   type Store,
+  type StoredRunLogs,
   type StoreView,
   TaskError,
 } from "@potential-guide/task-protocol";
 
 export interface SqliteOptions {
+  logFault?: () => void;
   busyTimeoutMs?: number;
   fault?: (point: "beforeCommit" | "afterCommit") => void;
 }
@@ -109,6 +111,100 @@ function preflight(filename: string): void {
 }
 
 export class SqliteStore implements Store {
+  private logsInitialized = false;
+  private logDepth = 0;
+  private readonly busyTimeoutMs: number;
+  private logOperation<T>(operation: () => T): T {
+    const outer = this.logDepth === 0;
+    if (outer) this.db.exec("PRAGMA busy_timeout=0");
+    this.logDepth++;
+    try {
+      return operation();
+    } finally {
+      this.logDepth--;
+      if (outer) this.db.exec(`PRAGMA busy_timeout=${this.busyTimeoutMs}`);
+    }
+  }
+  markRunLogsUnavailable(owner: string, id: string, now: number): void {
+    this.logOperation(() => {
+      this.owned(owner);
+      this.initializeLogs();
+      const value = this.readRunLogs(id) ?? {
+        runId: id,
+        updatedAt: now,
+        bytes: 0,
+        entries: [],
+        state: {
+          availability: "unavailable" as const,
+          completeness: "open" as const,
+          dropped: 0,
+          lastSequence: 0,
+          firstSequence: 1,
+        },
+      };
+      value.state.availability = "unavailable";
+      value.state.reason = "storage";
+      this.db
+        .prepare("INSERT OR REPLACE INTO run_logs VALUES (?, ?, ?, ?)")
+        .run(id, value.updatedAt, value.bytes, JSON.stringify(value));
+    });
+  }
+  private initializeLogs(): void {
+    if (this.closed) fail("storage_failure", "Store closed.");
+    if (this.logsInitialized) return;
+    this.db.exec(`CREATE TABLE IF NOT EXISTS run_logs (
+      run_id TEXT PRIMARY KEY, updated_at INTEGER NOT NULL, bytes INTEGER NOT NULL, payload TEXT NOT NULL
+    ); CREATE INDEX IF NOT EXISTS run_logs_age ON run_logs(updated_at);`);
+    this.logsInitialized = true;
+  }
+  readRunLogs(id: string): StoredRunLogs | undefined {
+    return this.logOperation(() => {
+      this.initializeLogs();
+      const row = this.db.prepare("SELECT payload FROM run_logs WHERE run_id=?").get(id);
+      return row ? (JSON.parse(String(row.payload)) as StoredRunLogs) : undefined;
+    });
+  }
+  writeRunLogs(owner: string, value: StoredRunLogs): void {
+    this.logOperation(() => {
+      this.owned(owner);
+      this.initializeLogs();
+      this.options.logFault?.();
+      this.db
+        .prepare("INSERT OR REPLACE INTO run_logs VALUES (?, ?, ?, ?)")
+        .run(value.runId, value.updatedAt, value.bytes, JSON.stringify(value));
+    });
+  }
+  pruneRunLogs(owner: string, before: number, maxBytes: number, maxRuns: number): void {
+    this.logOperation(() => {
+      this.owned(owner);
+      this.initializeLogs();
+      const rows = this.db
+        .prepare("SELECT run_id, updated_at, bytes FROM run_logs ORDER BY updated_at, run_id")
+        .all();
+      let bytes = rows.reduce((sum, row) => sum + Number(row.bytes), 0);
+      this.db.exec("BEGIN IMMEDIATE");
+      try {
+        for (const row of rows) {
+          if (Number(row.updated_at) >= before && bytes <= maxBytes) continue;
+          const value = this.readRunLogs(String(row.run_id))!;
+          bytes -= value.bytes;
+          value.bytes = 0;
+          value.entries = [];
+          value.state.availability = "expired";
+          value.state.firstSequence = value.state.lastSequence + 1;
+          this.db
+            .prepare("UPDATE run_logs SET bytes=0, payload=? WHERE run_id=?")
+            .run(JSON.stringify(value), value.runId);
+        }
+        for (const row of rows.slice(0, Math.max(0, rows.length - maxRuns)))
+          this.db.prepare("DELETE FROM run_logs WHERE run_id=?").run(String(row.run_id));
+        this.db.exec("COMMIT");
+      } catch (error) {
+        this.db.exec("ROLLBACK");
+        throw error;
+      }
+    });
+  }
   private readonly db: DatabaseSync;
   private lock: DatabaseSync | undefined;
   private owner: string | undefined;
@@ -128,6 +224,7 @@ export class SqliteStore implements Store {
     const timeout = options.busyTimeoutMs ?? 100;
     if (!Number.isSafeInteger(timeout) || timeout < 0 || timeout > 5_000)
       fail("invalid_request", "SQLite busy timeout must be between 0 and 5000 ms.");
+    this.busyTimeoutMs = timeout;
     this.filename = resolve(filename);
     preflight(this.filename);
     this.db = new DatabaseSync(this.filename);

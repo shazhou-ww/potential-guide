@@ -9,6 +9,8 @@ import {
 
 export const taskSchemaUri =
   "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json";
+export const taskLogSchemaUri =
+  "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v2.json";
 export const taskBundleSchema = {
   $id: taskSchemaUri,
   $comment:
@@ -44,7 +46,7 @@ export const taskBundleSchema = {
 };
 export * from "./bundle-reference.js";
 export interface TaskBundleDeclaration {
-  $schema: typeof taskSchemaUri;
+  $schema: typeof taskSchemaUri | typeof taskLogSchemaUri;
   name: string;
   runtime: { type: "node"; minVersion: string };
   entry: "worker.cjs";
@@ -83,9 +85,20 @@ export interface BundleCacheService {
   removeCachedBundle(digest: string, caller: import("./types.js").Caller): Promise<void>;
 }
 const validator = new Ajv2020({ strict: true, allowUnionTypes: true }).compile(taskBundleSchema);
+export const taskLogBundleSchema = {
+  ...taskBundleSchema,
+  $id: taskLogSchemaUri,
+  $comment:
+    "Task Worker v2: v1 business messages plus independent log/log-ack and bounded cumulative log-drop/log-drop-ack diagnostics.",
+  properties: { ...taskBundleSchema.properties, $schema: { const: taskLogSchemaUri } },
+};
+const logValidator = new Ajv2020({ strict: true, allowUnionTypes: true }).compile(
+  taskLogBundleSchema,
+);
 export function validateTaskBundle(value: unknown): TaskBundleDeclaration {
   const parsed = json(value, 1_048_576);
-  if (!validator(parsed)) fail("invalid_bundle", "Invalid task.yaml declaration.");
+  if (!validator(parsed) && !logValidator(parsed))
+    fail("invalid_bundle", "Invalid task.yaml declaration.");
   return parsed as unknown as TaskBundleDeclaration;
 }
 const objectSchema = (value: Json | undefined): value is JsonObject =>

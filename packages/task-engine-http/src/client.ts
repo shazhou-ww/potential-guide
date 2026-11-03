@@ -1,21 +1,23 @@
 import {
-  type CancellationResult,
-  type BundleCachePage,
   type BundleCacheDetail,
+  type BundleCachePage,
   type Caller,
+  type CancellationResult,
   type HistoryFilter,
   type HistoryPage,
   isPending,
   isTimedOut,
+  type RunLogPage,
+  type RunLogQuery,
   type RunPage,
   type RunQuery,
   type RunSnapshot,
   type SubmissionResult,
+  TaskError,
   type TaskPage,
   type TaskQuery,
   type TaskRequest,
   type TaskSnapshot,
-  TaskError,
   ulid,
   validateBundleReference,
 } from "@potential-guide/task-protocol";
@@ -106,6 +108,78 @@ export class TaskClient {
   }
   getRun(id: string, _caller?: Caller): Promise<RunSnapshot> {
     return this.request(`/runs/${encodeURIComponent(id)}`);
+  }
+  getRunLogs(
+    id: string,
+    page: RunLogQuery = {},
+    options: { signal?: AbortSignal } = {},
+  ): Promise<RunLogPage> {
+    return this.request(this.query(`/runs/${encodeURIComponent(id)}/logs`, page), options);
+  }
+  async *subscribeRunLogs(
+    id: string,
+    page: RunLogQuery = {},
+    options: { signal?: AbortSignal } = {},
+  ): AsyncGenerator<RunLogPage> {
+    const response = await (this.options.fetch ?? globalThis.fetch)(
+      `${this.options.url.replace(/\/$/, "")}${this.query(`/runs/${encodeURIComponent(id)}/logs/events`, page)}`,
+      { ...(this.options.headers ? { headers: this.options.headers } : {}), ...options },
+    );
+    if (!response.ok) {
+      const value = (await response.json()) as { error?: { code: string; message: string } };
+      throw new TaskError(
+        value.error?.code ?? "transport_error",
+        value.error?.message ?? `HTTP ${response.status}`,
+      );
+    }
+    if (!response.body) throw new TaskError("transport_error", "Missing diagnostic stream.");
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    try {
+      for (;;) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        for (;;) {
+          const boundary = buffer.indexOf("\n\n");
+          if (boundary < 0) break;
+          const frame = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          if (frame.length > 2_097_152)
+            throw new TaskError(
+              "invalid_response",
+              "Diagnostic frame exceeds the bounded wire limit.",
+            );
+          const data = frame
+            .split("\n")
+            .filter((line) => line.startsWith("data: "))
+            .map((line) => line.slice(6))
+            .join("\n");
+          if (!data) continue;
+          const value = JSON.parse(data) as RunLogPage & {
+            error?: { code: string; message: string };
+          };
+          if (value.error) throw new TaskError(value.error.code, value.error.message);
+          if (value.runId !== id || !Array.isArray(value.entries))
+            throw new TaskError("invalid_response", "Diagnostic stream returned a different Run.");
+          yield value;
+        }
+        if (buffer.length > 2_097_152)
+          throw new TaskError(
+            "invalid_response",
+            "Diagnostic frame exceeds the bounded wire limit.",
+          );
+      }
+      if (buffer.trim())
+        throw new TaskError(
+          "transport_error",
+          "Diagnostic stream ended mid-frame; resume from the confirmed sequence.",
+        );
+    } finally {
+      await reader.cancel().catch(() => {});
+      reader.releaseLock();
+    }
   }
   listCachedBundles(page: { after?: string; limit?: number } = {}): Promise<BundleCachePage> {
     return this.request(this.query("/bundle-cache", page));

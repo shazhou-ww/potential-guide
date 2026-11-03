@@ -1,6 +1,6 @@
 import {
-  type Caller,
   type BundleCacheService,
+  type Caller,
   fail,
   type HistoryFilter,
   type Observation,
@@ -466,6 +466,33 @@ export function createTaskHandler(
         return response(options.service.cancelTask(task[1], caller));
       }
       const entity = /^\/(tasks|runs)\/([0-9A-Z]+)\/(history|events)$/.exec(path);
+      const logs = /^\/runs\/([0-9A-Z]+)\/logs(\/events)?$/.exec(path);
+      if (logs?.[1] && request.method === "GET") {
+        const values = params(url, ["afterSequence", "limit"]);
+        const sequence = logs[2]
+          ? (request.headers.get("Last-Event-ID") ?? values.afterSequence)
+          : values.afterSequence;
+        if (sequence !== undefined && !/^(0|[1-9]\d*)$/.test(sequence))
+          fail("invalid_log_cursor", "Invalid log sequence.");
+        if (values.limit !== undefined && !/^[1-9]\d*$/.test(values.limit))
+          fail("invalid_log_cursor", "Invalid log page limit.");
+        const page = {
+          ...(sequence !== undefined ? { afterSequence: Number(sequence) } : {}),
+          ...(values.limit !== undefined ? { limit: Number(values.limit) } : {}),
+        };
+        if (logs[2]) {
+          if (!options.service.subscribeRunLogs)
+            fail("unsupported_version", "Run logs unsupported by this host.");
+          return logStream(
+            options.service.subscribeRunLogs(logs[1], page, caller),
+            request.signal,
+            pollMs,
+          );
+        }
+        if (!options.service.getRunLogs)
+          fail("unsupported_version", "Run logs unsupported by this host.");
+        return response(options.service.getRunLogs(logs[1], page, caller));
+      }
       if (entity?.[2] && request.method === "GET") {
         const id = entity[2],
           run = entity[1] === "runs";
@@ -542,3 +569,5 @@ export function createTaskHandler(
   };
 }
 export { TaskClient, type TaskClientOptions } from "./client.js";
+
+import { logStream } from "./logs.js";

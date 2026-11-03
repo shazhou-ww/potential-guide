@@ -23,11 +23,11 @@ import assert from "node:assert/strict";
 import {rm,writeFile} from "node:fs/promises";
 import {resolve,join} from "node:path";
 import {buildTaskBundle,packTaskBundle} from "@potential-guide/task-sdk/build";
-import {resolveBundleSchemas,taskSchemaUri} from "@potential-guide/task-protocol";
+import {resolveBundleSchemas,taskLogSchemaUri} from "@potential-guide/task-protocol";
 const root=resolve("fixture");
-const declaration={$schema:taskSchemaUri,name:"Packed echo",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",inputSchema:{type:"object"},resultSchema:true,messageSchema:false};
+const declaration={$schema:taskLogSchemaUri,name:"Packed echo",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",inputSchema:{type:"object"},resultSchema:true,messageSchema:false};
 await writeFile(join(root,"task.yaml"),JSON.stringify(declaration));
-await writeFile(join(root,"callback.ts"),'export default async (input,context)=>{await context.progress({stage:"execution",message:"Packed callback."});return input;}');
+await writeFile(join(root,"callback.ts"),'export default async (input,context)=>{await context.log({level:"info",message:"Packed diagnostic."});await context.progress({stage:"execution",message:"Packed callback."});return input;}');
 const built=await buildTaskBundle({declaration:join(root,"task.yaml"),entry:join(root,"callback.ts"),outDirectory:join(root,"bundle")});
 const packed=await packTaskBundle(built.directory,join(root,"bundle.tar.gz"));
 assert.equal(packed.digest,built.digest);
@@ -77,7 +77,7 @@ for(const name of ["@potential-guide/task-sdk","@potential-guide/check-task","@p
 const bundle=JSON.parse(await readFile(new URL("./binding.json",import.meta.url),"utf8"));
 const generation="packed-production-consumer";
 const worker=new Worker(new URL("./bundle/worker.cjs",import.meta.url),{execArgv:[],env:{NODE_OPTIONS:"",NODE_PATH:""},workerData:{generation,maxInFlight:8,maxPayloadBytes:65536,bundle}});
-let complete=false;
+let complete=false,logs=0;
 try{
 await new Promise((resolve,reject)=>{
  const timer=setTimeout(()=>reject(new Error("Packed Worker timed out.")),10000);
@@ -86,11 +86,12 @@ await new Promise((resolve,reject)=>{
   try{
    assert.equal(message.generation,generation);
    if(message.kind==="ready"){assert.equal(message.value.digest,bundle.digest);worker.postMessage({generation,kind:"run",runId:"packed",scope:"consumer",input:{text:"self-contained"}});}
+   else if(message.kind==="log"){assert.equal(message.value.message,"Packed diagnostic.");logs++;worker.postMessage({generation,runId:"packed",kind:"log-ack",logId:message.logId,value:{state:"stored",sequence:logs}});}
    else if(message.id!==undefined){
     if(message.kind==="complete"){assert.deepEqual(message.value,{text:"self-contained"});complete=true;}
     assert.notEqual(message.kind,"failed");
     worker.postMessage({generation,kind:"ack",id:message.id});
-   }else if(message.kind==="released"){assert.ok(complete);clearTimeout(timer);resolve();}
+   }else if(message.kind==="released"){assert.ok(complete);assert.equal(logs,1);clearTimeout(timer);resolve();}
    else if(message.kind==="uncertain")throw new Error("Uncertain cleanup.");
   }catch(error){clearTimeout(timer);reject(error);}
  });
