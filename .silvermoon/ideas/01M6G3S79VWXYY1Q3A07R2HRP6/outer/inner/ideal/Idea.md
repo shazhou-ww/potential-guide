@@ -16,6 +16,7 @@ Request 支持根 CID 字符串或 `{cid, hint}`，hint 可提供单个或多个
 
 1. 仅限 Task Engine 新架构及其交付、装载与消费链路，不改既有 Check/Probe 业务制品。
 2. 保留声明、Schema、自包含 Worker、完整准入及 Task/Run 生命周期语义；
+   底层 IPFS access 只理解节点与内容，Engine 解释 Bundle，SDK 封装 context；
    IPFS 可承担块缓存，入口装载及资源是否物化属于宿主实现。
 3. 本轮先修订 axis；不实施运行时代码，不新增资产管理、权限或远程执行模型。
 

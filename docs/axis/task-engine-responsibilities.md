@@ -343,6 +343,8 @@ A1–C5 是核心控制与观察操作，不是删除现有配套能力的名单
   Bundle 内文件可通过根 CID 加相对路径独立访问；这不是新增 Task/Run 控制或订阅操作。
   业务 Worker 经 Task context 读取当前 Bundle 的相对路径内容，不依赖宿主物理目录；
   本地 IPFS 节点可承担块缓存，资源是否物化由宿主实现决定，完整准入验证仍保留。
+  初始化由宿主装配仅理解 IPFS 节点与内容的 client/access；
+  Bundle 解释与准入属于 Engine，context 访问封装属于 Task SDK，不放入底层 IPFS 接口。
   此替换仅限 Task Engine 新架构，不改变 Check/Probe 等业务制品的引用或传输格式。
 - `getRequest`：读取不可变原始请求意图，保留省略与显式值区别；缺失或不可提供明确失败。
 - 受理状态查询：以 `requestId` 查询 preparing/accepted/rejected，

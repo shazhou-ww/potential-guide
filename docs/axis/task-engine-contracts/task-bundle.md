@@ -368,6 +368,23 @@ type BundleReference =
 
 ## Engine 的制品装载职责
 
+### IPFS access 与 Bundle 解释的分层
+
+1. Engine 初始化由可信宿主提供 IPFS client/access。底层只感知标准 IPFS 内容节点、
+   CID、DAG 链接、UnixFS 路径与文件内容，不解释 Task Bundle、`task.yaml` 或 Run。
+   这里的内容节点是 CID 标识的 DAG 对象，不等同于提供服务的服务器进程。
+2. 底层复用标准 IPFS 实现的获取、遍历、流式读取、内容验证及 pin 能力，
+   不另定义 Bundle 专属获取协议，也不将 `openBundle`、Bundle Schema 校验或 Task context
+   加入通用 IPFS access。节点连接、gateway 和访问策略由宿主装配。
+3. Engine 的装载层将指定根节点解释为 Bundle，判断其目录类型、文件集合、
+   声明、Schema、入口及容量；根 CID 的有效性与内容验证通过不等于 Bundle 准入通过。
+   活动内容保护由 Engine 协调，底层可提供通用 pin 或保留能力，但不理解 Run 生命周期。
+4. Task SDK 将当前 Run 可信绑定的 Bundle 包装为 context 相对路径访问能力，
+   不向业务暴露底层 IPFS client、gateway、宿主连接配置或文件位置。
+5. 初始化需要可用的 IPFS 访问能力，不要求 HTTP gateway URI 是唯一或必填依赖；
+   Request hint 只能辅助候选获取，不代替可信初始化配置或绕过宿主访问策略。
+   初始化参数名与具体标准 IPFS API 在实施时确定，不新造一套平行节点协议。
+
 ### IPFS 获取、入口装载与资源访问
 
 1. 获取直接消费根 CID 所标识的 UnixFS 目录与文件块，复用 IPFS 的寻址、传输及验证能力；
@@ -379,11 +396,27 @@ type BundleReference =
 4. 宿主以 Node 支持的装载方式直接启动已验证的自包含 `worker.cjs`，
    不依赖 Node Worker 原生接受 IPFS URI，不新增业务动态加载外部代码的执行模型。
    入口是否落地及资源是否物化为目录是宿主实现选择，不作为业务可依赖的存放位置契约；
+   文件内容可以由 IPFS 读取为内存字节或流，不要求先写本地物化文件。
    业务资源统一通过 context 读取，不能要求业务以入口位置或工作目录定位资源。
    如物化本地文件，必须只读使用并拒绝越界、重复或歧义路径、符号链接及特殊文件，
    不覆盖其他 Bundle。
 5. 获取、装载与读取受可信宿主容量限制。IPFS 节点或网关不可用、内容缺失、验证失败等错误
    明确报告，不改用其他 CID、不将不完整目录当作成功结果。
+
+### 内存读取与 Worker 启动的实现选择
+
+1. Bundle 资源可由标准 IPFS 读取接口以流或字节返回，经 SDK 封装后供 context 访问，
+   不要求业务资源先落地。读取须执行容量、取消、完整性及活动内容保护约束，
+   流式读取不授权忽略后续块验证或将未完成的内容当作成功。
+2. 自包含 `worker.cjs` 可在验证后读入有界内存，再通过 Node 支持的源码启动方式
+   创建 Worker，例如 CommonJS 的 `new Worker(source, { eval: true })`。
+   这不是让 Node 直接执行 IPFS URI；Worker 构造器也不直接接收 IPFS stream 或 `Uint8Array`。
+   源码启动需要完整、有效编码的源码字符串，不能边下载边执行未验证代码。
+3. 是否采用源码启动而不写入口文件，属于实施阶段的加载方案，
+   需验证生成入口与 SDK 协议、Node 内置依赖、错误栈和诊断定位的行为。
+   业务不得依赖物理入口位置；自包含与 context 资源访问不授权动态安装依赖或加载另一份业务代码。
+4. 无业务文件物化不等于无磁盘使用：IPFS 节点可在自身 blockstore 保存内容，
+   Engine 的持久事实仍遵守数据域契约。流或内存读取也不取消准入前对完整文件树的验证。
 
 ### 宿主容量限制
 

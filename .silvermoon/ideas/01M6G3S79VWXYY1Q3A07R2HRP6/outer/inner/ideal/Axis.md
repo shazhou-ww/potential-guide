@@ -146,7 +146,7 @@ After： 成品文件树 → UnixFS 导入 / 根 CID → IPFS 获取 / 完整验
 ## Engine 初始化：Before / After
 
 初始化决定宿主如何可信地获取 Bundle；Request 的 CID 决定获取哪份内容，
-hint 只是候选获取位置。新架构需要可用的 IPFS Bundle 访问能力，
+hint 只是候选获取位置。新架构需要可用的通用 IPFS client/access，
 但不要求把 HTTP gateway URI 定义为 Engine 的唯一或必填依赖。
 
 ### Before：Engine 自带 URL 下载与目录缓存
@@ -166,27 +166,30 @@ await engine.start();
 解包并验证 Digest。`fetchBundle` 可选，用于替换 HTTP 获取实现；
 本机 `file:` 读取仍属于既有获取链路。初始化不需要配置 IPFS 节点或 gateway。
 
-### After：宿主提供可信的 IPFS Bundle 访问能力
+### After：宿主提供通用 IPFS client/access
 
 以下是新架构的逻辑示意，不是已经实现的 API；
-`bundleAccess` 是待实施时确定的能力参数名，`trustedIpfsAccess` 由宿主装配：
+`ipfsAccess` 是待实施时确定的能力参数名，`ipfsClient` 由可信宿主装配，
+不是 Bundle 专属读取对象：
 
 ```ts
 const engine = createTaskEngine({
   store,
-  bundleAccess: trustedIpfsAccess,
+  ipfsAccess: ipfsClient,
 });
 await engine.start();
 ```
 
-该能力负责接入 IPFS 内容获取与验证，并落实宿主的网络访问策略和活动内容保留机制。
-Engine 仍负责 Bundle 准入、入口装载及向 Worker 提供 context 读取能力，
+该能力只处理 CID、DAG 节点与链接、UnixFS 路径及文件内容，复用标准 IPFS 获取与验证，
+不理解 `task.yaml`、Bundle 格式、Task 或 Run。宿主配置连接与网络访问策略；
+通用 pin/保留能力可由底层提供，但活动内容保护的生命周期由 Engine 协调。
+Engine 负责将根节点解释为 Bundle、执行准入、装载入口及向 Worker 提供 SDK 的 context 读取能力，
 不能因为获取实现被注入就跳过声明、文件集合或容量校验。
 其具体接口、配置字段与资源所有权在实施阶段落实，不提前固定实现类或启动外部服务。
 
 | 变化点 | Before | After |
 | --- | --- | --- |
-| 获取依赖 | Engine 自带 URL/文件获取；可选 `fetchBundle` 替换 HTTP 获取。 | 宿主装配可信 IPFS Bundle 访问能力，不把 gateway URI 当作唯一接口。 |
+| 获取依赖 | Engine 自带 URL/文件获取；可选 `fetchBundle` 替换 HTTP 获取。 | 宿主装配只处理节点与内容的标准 IPFS client/access，不把 gateway URI 当作唯一接口。 |
 | 默认获取位置 | 必填 Request URL 决定下载位置。 | 默认 IPFS 获取路径由初始化能力配置；Request 可额外提供 gateway hint。 |
 | 是否必须传 gateway | 原链路不使用 IPFS gateway。 | 不必；gateway 是获取能力的一种实现，本地节点、远程可验证网关或嵌入式 IPFS 都可作为实施选择。 |
 | 本地 gateway 场景 | 没有原生 IPFS 获取与验证配置。 | 宿主可让访问能力连接已配置的本地 IPFS 节点/gateway；不代表 Engine 自动安装、启动或管理节点。 |
@@ -206,7 +209,7 @@ Engine 仍负责 Bundle 准入、入口装载及向 Worker 提供 context 读取
 
 | 输入 | 来源与用途 | 不承担的职责 |
 | --- | --- | --- |
-| IPFS Bundle 访问能力 | 由可信宿主初始化装配；决定默认获取路径、验证、访问策略和活动内容保护。 | 不替 Request 选择另一份 Bundle，不把 gateway 地址当作内容身份。 |
+| IPFS client/access | 由可信宿主初始化装配；提供节点/内容获取、验证及通用保留能力，执行宿主访问策略。 | 不解释 Bundle、Task 或 Run，不提供 Bundle 专属读取协议，不把 gateway 地址当作内容身份。 |
 | Request 的根 CID | 调用方明确指定不可变 Bundle 内容。 | 不保证内容留存，也不指定必须使用的节点或网关。 |
 | Request 的 hint | 调用方提供单个或有序候选 gateway，获取层可按宿主策略采用。 | 不初始化访问能力，不提供访问授权，不修改宿主配置，不绕过 CID 验证。 |
 
@@ -214,6 +217,21 @@ Engine 仍负责 Bundle 准入、入口装载及向 Worker 提供 context 读取
 带 hint 的 Request 仍经过同一能力与策略，不能成为另一条未经校验的获取通道。
 这也是 context 不需要暴露 gateway 的原因：业务只读当前 Bundle 的相对路径内容，
 后端选择与连接细节留在宿主获取层。
+
+### IPFS 节点、Engine 与 Task context 的分层
+
+```text
+IPFS client/access：CID、DAG 节点/链接、UnixFS 内容获取与验证、通用 pin
+        ↓
+Engine 装载层：将根节点解释为 Bundle，校验声明/文件树，协调活动保护与 Worker 启动
+        ↓
+Task SDK / context：可信绑定当前 Bundle，向业务提供相对路径内容读取
+```
+
+这里的“节点”指 CID 标识的内容 DAG 对象，不是某台服务机器。
+底层不增加 `openBundle`、Bundle Schema 校验或 Run 租约语义；
+context 的 `bundle.readFile(...)` 是 SDK 的领域封装，而不是 IPFS client 的接口。
+实际连接可以是本地 IPFS 服务、gateway 或嵌入式实现，不另造一套节点访问工具。
 
 ## Worker 如何访问 Bundle 内容
 
@@ -238,6 +256,26 @@ Node Worker 不能原生以 IPFS URI 作为入口。宿主仍须采用 Node 支�
 资源是否落地、是否保留物化目录或经本地 gateway 读取，属于实现选择。
 Gateway 是读取入口，真正的块缓存、pin 和 GC 由其背后的 IPFS 节点承担。
 Context 封装不取消准入前的完整 Bundle 验证，也不承诺 Node Worker 是安全沙箱。
+
+### 是否必须写本地物化文件
+
+不必将“写本地 Bundle 文件”作为读取或启动的强制环节；以下说明可选实现，
+并不表示已经选定、实现或验证了完整 SDK 的无文件启动方案。
+
+| 内容 | 内存 / 流读取方式 | 必须保留的边界 |
+| --- | --- | --- |
+| Bundle 内资源 | IPFS 读取为字节或流，由 context 封装；可以不写本地资源文件。 | 固定根 CID、相对路径检查、容量与停止约束、活动内容保护、明确读取错误。 |
+| Worker 代码 | 获取并验证自包含 `worker.cjs`，读入有界内存，再以 Node 支持的源码方式启动。 | 完整有效源码与编码、独立 Worker、SDK 握手和退出协议；不能直接把 IPFS URI、流或字节数组交给 Worker 构造器。 |
+| 完整准入 | 遍历并验证全部 Bundle 文件与声明，可逐文件处理，不要求形成持久物化目录。 | 不能只验证入口或把完整文件树验证延迟到业务执行；流式读取不取消整包验证。 |
+
+CommonJS 可以使用 `new Worker(source, { eval: true })` 从内存源码启动；
+本轮仅用独立 Node 探针验证了这种启动方式能执行源码并接收内存字节，
+不是生成的 Task SDK Worker 全链路验收。
+实施时仍须检查生成入口、自包含依赖、通信握手、错误栈与诊断定位；
+本构想不要求物理文件位置，也不以源码启动引入远程动态代码或外部依赖加载。
+资源流可以有背压，不应为读取大文件默认将整个 Bundle 一次性聚合到内存；
+现有 context `readFile` 示例返回 `Uint8Array`，是否另提供流式 SDK 方法在实施时确定。
+不写业务物化文件不等于全系统无磁盘：IPFS blockstore 与 Engine 持久事实仍可使用磁盘。
 
 ## 受理、匹配、恢复与观察对照
 
