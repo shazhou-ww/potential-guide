@@ -1,6 +1,7 @@
 {
   "files": [],
   "references": [
+    { "path": "./packages/check-environment" },
     { "path": "./packages/objective-host" },
     { "path": "./packages/check-artifacts" },
     { "path": "./packages/test-tree" },

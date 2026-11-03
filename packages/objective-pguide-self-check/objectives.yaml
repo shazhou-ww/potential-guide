@@ -8,7 +8,7 @@ objectives:
       {
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm", "tool"], "runtime": "node",
-        "allows": ["@potential-guide/objective-pguide-setup", "@potential-guide/cli-core", "pguide"],
+        "allows": ["@potential-guide/check-environment", "@potential-guide/objective-pguide-setup", "@potential-guide/cli-core", "pguide"],
         "entries": ["self-check.mjs"], "generated": [],
         "joins": [{"id":"public-library-suite","kind":"npm"}], "deliveries": []
       }

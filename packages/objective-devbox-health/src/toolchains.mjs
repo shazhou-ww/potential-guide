@@ -1,21 +1,9 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { compareVersions, parseToolVersion } from "@potential-guide/check-environment";
 import { envelope, issue } from "./contract.mjs";
 import { directoryProblems, execute } from "./execution.mjs";
-export function parseToolVersion(output) {
-  return /(?:^|\s)v?(\d+\.\d+(?:\.\d+)*)(?:\b|$)/m.exec(output)?.[1];
-}
-export function compareVersions(actual, expected) {
-  const a = actual.split(".").map((part) => part.replace(/^0+(?=\d)/, ""));
-  const b = expected.split(".").map((part) => part.replace(/^0+(?=\d)/, ""));
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const first = a[i] ?? "0";
-    const second = b[i] ?? "0";
-    if (first.length !== second.length) return Math.sign(first.length - second.length);
-    if (first !== second) return first > second ? 1 : -1;
-  }
-  return 0;
-}
+export { compareVersions, parseToolVersion };
 export async function toolchains(subject, context) {
   const problems = await directoryProblems(subject);
   if (problems.length) return envelope(problems);

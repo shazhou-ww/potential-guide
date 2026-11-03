@@ -6,6 +6,10 @@
 不提交生成副本。`pnpm health:check` 验证新鲜度；容器侧无需安装包依赖。
 职责与历史 URI 迁移见 [Pilot packages](../../docs/pilot-packages.md)。
 
+目录写入复验和工具版本解析复用
+[check-environment](../check-environment/README.md)，构建时打入自包含制品；
+不新增子 Task 调度，原有目录归属、等级、问题 ID 和工具链实际编译验证保持不变。
+
 这是独立的 repository-owned Pilot，不新增 CLI 子命令，不依赖模型调用，也不取代
 pguide setup／self-check 的安装和 Agent 协议验证。
 

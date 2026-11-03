@@ -263,6 +263,18 @@ importers:
         specifier: 'catalog:'
         version: 2.1.0
 
+  packages/check-environment:
+    devDependencies:
+      '@potential-guide/task-engine':
+        specifier: workspace:^
+        version: link:../task-engine
+      '@potential-guide/task-protocol':
+        specifier: workspace:^
+        version: link:../task-protocol
+      '@potential-guide/task-sdk':
+        specifier: workspace:^
+        version: link:../task-sdk
+
   packages/check-host:
     dependencies:
       '@potential-guide/check-artifacts':
@@ -396,6 +408,9 @@ importers:
 
   packages/objective-devbox-health:
     devDependencies:
+      '@potential-guide/check-environment':
+        specifier: workspace:^
+        version: link:../check-environment
       '@potential-guide/effects':
         specifier: workspace:^
         version: link:../effects
@@ -451,6 +466,9 @@ importers:
 
   packages/objective-pguide-self-check:
     devDependencies:
+      '@potential-guide/check-environment':
+        specifier: workspace:^
+        version: link:../check-environment
       '@potential-guide/cli-core':
         specifier: workspace:^
         version: link:../pguide-cli-core
@@ -468,6 +486,9 @@ importers:
         specifier: workspace:^
         version: link:../objective-setup-marker/dist/package
     devDependencies:
+      '@potential-guide/check-environment':
+        specifier: workspace:^
+        version: link:../check-environment
       '@potential-guide/objective-pilot':
         specifier: workspace:^
         version: link:../objective-pilot
