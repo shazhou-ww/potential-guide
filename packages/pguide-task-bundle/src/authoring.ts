@@ -143,6 +143,13 @@ export function toTaskSchema(value: TSchema): Record<string, unknown> {
       throw new Error(
         "Engine does not enforce format or content annotations; use supported explicit constraints.",
       );
+    if (
+      schema &&
+      node[Kind] === "Tuple" &&
+      node.additionalItems !== undefined &&
+      node.additionalItems !== false
+    )
+      throw new Error("Unsupported TypeBox Tuple additionalItems override.");
     const output: Record<string, unknown> = {};
     for (const [key, child] of Object.entries(node)) {
       if (schema && node[Kind] === "Tuple" && (key === "items" || key === "additionalItems"))
@@ -288,7 +295,7 @@ export async function readTaskBuild(file: string): Promise<BuildTaskBundleOption
     write: false,
     logLevel: "silent",
     banner: {
-      js: `const __filename=${JSON.stringify(contractFile)};const __dirname=${JSON.stringify(root)};`,
+      js: `const __filename=${JSON.stringify(contractFile)};const __dirname=${JSON.stringify(dirname(contractFile))};`,
     },
   });
   const module = { exports: {} as { default?: TaskContract } };

@@ -12,8 +12,35 @@ const pnpmCommand = "pnpm";
 const bundlesOnly = process.argv.includes("--task-bundles");
 const sdkOnly = process.argv.includes("--task-sdk");
 const serviceOnly = process.argv.includes("--task-service");
-if ([sdkOnly, bundlesOnly, serviceOnly].filter(Boolean).length > 1)
+const authoringOnly = process.argv.includes("--bundle-authoring");
+if ([sdkOnly, bundlesOnly, serviceOnly, authoringOnly].filter(Boolean).length > 1)
   throw new Error("Select only one consumer scope.");
+const authoringPackages = new Set([
+  "pguide",
+  "@potential-guide/pguide-task-bundle",
+  "@potential-guide/task-engine",
+]);
+if (authoringOnly) {
+  const pending = [...authoringPackages];
+  for (const name of pending) {
+    const entry = verificationPackages.find((entry) => entry.name === name);
+    assert.ok(entry, `Missing verification package ${name}.`);
+    const manifest = JSON.parse(
+      await readFile(
+        join(root, entry.workspace ?? "packages", entry.directory, "package.json"),
+        "utf8",
+      ),
+    );
+    for (const [dependency, version] of Object.entries({
+      ...manifest.dependencies,
+      ...manifest.optionalDependencies,
+    }))
+      if (version.startsWith("workspace:") && !authoringPackages.has(dependency)) {
+        authoringPackages.add(dependency);
+        pending.push(dependency);
+      }
+  }
+}
 const sdkPackages = new Set([
   "ipfs-content",
   "check-runtime-files",
@@ -35,9 +62,11 @@ const bundlePackages = new Set([
   "probe-task",
 ]);
 const packages =
-  bundlesOnly || sdkOnly
+  bundlesOnly || sdkOnly || authoringOnly
     ? verificationPackages.filter((entry) =>
-        (sdkOnly ? sdkPackages : bundlePackages).has(entry.directory),
+        authoringOnly
+          ? authoringPackages.has(entry.name)
+          : (sdkOnly ? sdkPackages : bundlePackages).has(entry.directory),
       )
     : verificationPackages;
 const manifests = new Map();
@@ -172,7 +201,13 @@ try {
       packages,
       tarballs,
       run,
-      sdkOnly ? "task-sdk" : serviceOnly ? "task-service" : undefined,
+      sdkOnly
+        ? "task-sdk"
+        : serviceOnly
+          ? "task-service"
+          : authoringOnly
+            ? "bundle-authoring"
+            : undefined,
     );
 } finally {
   if (process.env.PGUIDE_KEEP_PACK_CONSUMERS === "1")

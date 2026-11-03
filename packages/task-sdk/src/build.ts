@@ -157,7 +157,13 @@ export async function buildTaskBundle(options: BuildTaskBundleOptions) {
     throw new Error("Task output parent must be canonical, without links.");
   const marker = `${output}.pguide-task-bundle.json`;
   const ownership = `${JSON.stringify({ version: 1, output, owner })}\n`;
-  const lock = await open(`${marker}.lock`, "wx");
+  const lock = await open(`${marker}.lock`, "wx").catch((error: NodeJS.ErrnoException) => {
+    if (error.code === "EEXIST")
+      throw new Error(
+        "Task output is locked. If a build crashed, inspect its output and staging/backup siblings before manually recovering the owned lock.",
+      );
+    throw error;
+  });
   const staging = `${output}.${randomUUID()}`;
   const backup = `${output}.previous.${randomUUID()}`;
   let previous = false;

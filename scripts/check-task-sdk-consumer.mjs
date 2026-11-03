@@ -27,7 +27,7 @@ import {importTaskBundle} from "@potential-guide/task-sdk/publish";
 import {MemoryIpfsClient} from "@potential-guide/ipfs-content/testing";
 import {resolveBundleSchemas,taskSchemaUri,validateTaskBundle} from "@potential-guide/task-protocol";
 const root=resolve("fixture");
-const declaration={$schema:taskSchemaUri,name:"Packed echo",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",inputSchema:{type:"object"},resultSchema:true,messageSchema:false};
+const declaration={$schema:taskSchemaUri,name:"Packed echo",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",include:["task.yaml","worker.cjs"],inputSchema:{type:"object"},resultSchema:true,messageSchema:false};
 assert.equal(validateTaskBundle(declaration).$schema,taskSchemaUri);
 for(const version of ["v2","v3"])assert.throws(()=>validateTaskBundle({...declaration,$schema:taskSchemaUri.replace("v1",version)}),{code:"invalid_bundle"});
 console.log("Packed Task schema validation: v1 accepted; removed v2 and future v3 rejected.");

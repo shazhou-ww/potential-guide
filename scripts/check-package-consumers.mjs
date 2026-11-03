@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { delimiter, isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { checkBundleAuthoringConsumer } from "./check-bundle-authoring-consumer.mjs";
 import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
 import { checkTaskBundleConsumer } from "./check-task-bundle-consumer.mjs";
 import { checkTaskSdkConsumer } from "./check-task-sdk-consumer.mjs";
@@ -88,8 +89,16 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     ["objectives", ["@potential-guide/pguide-objectives"]],
     ["config", ["@potential-guide/pguide-config"]],
     ["agents", ["@potential-guide/pguide-agents"]],
-    ["bundle-authoring", ["pguide", "@potential-guide/pguide-task-bundle"]],
     ["task-service", ["pguide", "@potential-guide/pguide-task-engine"]],
+    [
+      "bundle-authoring",
+      [
+        "pguide",
+        "@potential-guide/pguide-task-bundle",
+        "@potential-guide/task-sdk",
+        "@potential-guide/ipfs-content",
+      ],
+    ],
     [
       "combined",
       [
@@ -182,16 +191,8 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
       };
       const pguide = join(directory, "node_modules", "pguide", "dist", "bin.js");
-      const author = join(
-        directory,
-        "node_modules",
-        "@potential-guide",
-        "pguide-task-bundle",
-        "dist",
-        "bin.js",
-      );
       const metadata = JSON.parse(
-        await run(process.execPath, [author, "--pguide-command-metadata"], directory, env),
+        await run("pguide-task-bundle", ["--pguide-command-metadata"], directory, env),
       );
       assert.equal(metadata.command, "task-bundle");
       const help = JSON.parse(
@@ -207,7 +208,13 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         join(directory, "contract.ts"),
         `import {Type} from "@sinclair/typebox";export default {input:Type.Object({text:Type.String()}),result:Type.String(),message:Type.Never()};`,
       );
-      await writeFile(join(directory, "main.ts"), "export default async input=>input.text;");
+      await writeFile(
+        join(directory, "main.ts"),
+        `import type {BundleCallback} from "@potential-guide/pguide-task-bundle";
+import type contract from "./contract.js";
+const callback:BundleCallback<typeof contract>=async input=>input.text;
+export default callback;`,
+      );
       await writeFile(
         join(directory, "task.build.yaml"),
         JSON.stringify({
@@ -221,8 +228,8 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       );
       const checked = JSON.parse(
         await run(
-          process.execPath,
-          [author, "check", "author", "task.build.yaml", "--format", "json"],
+          "pguide-task-bundle",
+          ["check", "author", "task.build.yaml", "--format", "json"],
           directory,
           env,
         ),
@@ -243,13 +250,14 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       );
       const artifact = JSON.parse(
         await run(
-          process.execPath,
-          [author, "check", "artifact", "bundle", "--format", "json"],
+          "pguide-task-bundle",
+          ["check", "artifact", "bundle", "--format", "json"],
           directory,
           env,
         ),
       );
       assert.equal(artifact.result.cid, built.result.cid);
+      await checkBundleAuthoringConsumer(directory, built.result.cid, tarballs, manifests, run);
     }
     if (["task-protocol", "task-engine", "task-adapters"].includes(label)) {
       const script = join(directory, "generic-task.mjs");

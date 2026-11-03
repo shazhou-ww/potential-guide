@@ -17,6 +17,13 @@ shared `--cwd`, `--format json`, `--help` and `--version` options.
 There is **no include command**. `check` requires an explicit `author` or
 `artifact` mode; it never writes output or publishes.
 
+With `--format json`, successful operations return
+`{schemaVersion: 1, command: "task-bundle <operation>", status: "ok", result}`.
+Check results contain `declaration`, `resolved`, `cid` and exact `files`;
+build returns `directory`, `cid` and `declaration`; publish returns only `cid`.
+Help and discovery use the existing CLI metadata contracts. Errors and exit
+statuses use the shared pguide CLI handling, not a second diagnostics protocol.
+
 ## Author input
 
 ```yaml
@@ -69,6 +76,7 @@ Supported kinds: Object, String, Number, Integer, Boolean, Null, Literal, Array,
 Tuple, Union, Intersect, Record, Ref and Never, subject to strict Engine
 Draft 2020-12 validation. Tuple's Draft-7 `items` array becomes `prefixItems`
 with `items: false`; Never retains its equivalent `{not:{}}` representation.
+Tuple `additionalItems` overrides other than `false` are rejected, not discarded.
 Optional/readonly metadata has no second runtime validator. Transform, Unsafe,
 Date, function, non-JSON and unknown metadata/kinds fail. `format` and content
 annotations are rejected rather than silently treated as enforced constraints.
@@ -105,6 +113,12 @@ load the author's contract, TypeBox modules or dependencies.
   files, are never recursively overwritten. Keep the marker for rebuilds; copy
   **only dist** for distribution. Do not edit the marker or recover a stale lock
   while another build is running.
+- Replacement is an operation-level rollback, not a crash-durable filesystem
+  transaction or a guarantee of gap-free directory visibility. A process crash
+  can leave a lock and staging/backup siblings. Builds fail closed on that lock:
+  stop the owning process, inspect the marker and validate the output or backup
+  with `check artifact`, then recover only those owned paths. Do not remove a lock
+  automatically or delete a backup before confirming a valid retained artifact.
 - `task.yaml` contains a required, exact `include` list including itself,
   `worker.cjs`, schemas and selected resources. No globs, absent files or extra
   files are accepted. Old no-manifest bundles fail with rebuild/new-CID guidance.
@@ -121,3 +135,19 @@ provides static `settings.json`; register it with `pguide config packages regist
 when the normal installation discovery does not find it. Never store credentials
 in the RPC URL. Publish does not rebuild, edit the artifact, create a Task or
 start/stop Kubo. Execution is a separate Engine consumer's responsibility.
+
+## Repository verification (no npm publish)
+
+After `pnpm build`, run `pnpm --filter @potential-guide/pguide-task-bundle test`
+for author/Schema/real Worker and isolated HTTP RPC tests. To pack the runtime
+dependency closure, install into an independent consumer and verify both discovery
+and the standalone binary:
+
+```text
+node scripts/check-packages.mjs --bundle-authoring
+```
+
+`node scripts/check-packages.mjs --task-bundles` separately tests packed
+SDK/Engine consumption by CID on a business-free host. Both commands own and
+clean their `.cache` fixtures; `PGUIDE_KEEP_PACK_CONSUMERS=1` retains them for
+inspection. They do not use an existing Kubo or publish any package to npm.

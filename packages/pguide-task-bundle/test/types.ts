@@ -17,4 +17,20 @@ const callback: BundleCallback<typeof contract> = async (input, context) => {
 };
 // @ts-expect-error result must match the generated result Schema
 const wrongResult: BundleCallback<typeof contract> = async () => ({ count: "bad" });
-void [input, wrongInput, callback, wrongResult];
+const wrongMessage: BundleCallback<typeof contract> = async (_input, context) => {
+  for await (const message of context.messages) {
+    // @ts-expect-error message payload comes from the same Schema
+    const stop: string = message.payload.stop;
+    void stop;
+  }
+  return { count: 0 };
+};
+const readonly = Type.Object({
+  tuple: Type.Readonly(Type.Tuple([Type.String(), Type.Integer()])),
+});
+const tuple: Static<typeof readonly> = { tuple: ["a", 1] };
+// @ts-expect-error tuple position types are inferred
+const wrongTuple: Static<typeof readonly> = { tuple: [1, "a"] };
+// @ts-expect-error readonly properties cannot be reassigned
+tuple.tuple = ["b", 2];
+void [input, wrongInput, callback, wrongResult, wrongMessage, tuple, wrongTuple];

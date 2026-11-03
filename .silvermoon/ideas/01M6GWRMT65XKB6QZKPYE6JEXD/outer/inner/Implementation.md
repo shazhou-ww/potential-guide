@@ -1,9 +1,9 @@
 # Implementation
 
-实施已开始，当前按用户换设备要求保存未完成检查点；尚未提交 Inner，也未开始部署。
-范围仍以已接受的[作者流程](ideal/Authoring.md)为准。
-实际改动、验证结果、剩余工作和恢复顺序见[设备切换交接](Handoff.md)；
-该交接不是实施验收证据已完整的声明，ledger 保持未完成。
+已接续设备切换检查点，范围仍以已接受的[作者流程](ideal/Authoring.md)为准。
+实现与复验说明见[实施验证](Verification.md)，原检查点背景见[设备切换交接](Handoff.md)。
+本阶段不发布 npm、不接管服务，也不记录审批或生命周期提交事件；
+父代理负责审核、同步 primary 和准确 revision 的提交/验收。
 
 ## Steps
 

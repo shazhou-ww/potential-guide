@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, rm, rmdir, symlink, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
@@ -19,6 +20,28 @@ import { Type } from "@sinclair/typebox";
 import { buildTask, checkTaskBuild, taskBuildSchemaUri, toTaskSchema } from "../src/authoring.js";
 
 const execute = promisify(execFile);
+test("nested trusted contract modules resolve __dirname relative to the contract, not the build file", async () => {
+  await fixture(async (root, file) => {
+    await mkdir(join(root, "src"));
+    await writeFile(join(root, "src", "value.txt"), "nested");
+    await writeFile(
+      join(root, "src", "contract.ts"),
+      `import {Type} from "@sinclair/typebox";
+import {readFileSync} from "node:fs";
+import {join} from "node:path";
+const text=readFileSync(join(__dirname,"value.txt"),"utf8");
+export default {input:Type.Object({text:Type.Literal(text)}),result:Type.String(),message:Type.Never()};`,
+    );
+    const definition = JSON.parse(await readFile(file, "utf8"));
+    definition.source.contract = "src/contract.ts";
+    await writeFile(file, JSON.stringify(definition));
+    const checked = await checkTaskBuild(file);
+    const compiled = compileInputSchema(checked.resolved.inputSchema);
+    assert.deepEqual(compiled.validate({ text: "nested" }), { text: "nested" });
+    assert.throws(() => compiled.validate({ text: "wrong" }));
+    assert.equal((await readdir(root)).includes("dist"), false);
+  });
+});
 test("shared TypeBox resources resolve offline and fail on missing closure or conflicting IDs", async () => {
   await fixture(async (root, file) => {
     await writeFile(
@@ -66,6 +89,24 @@ test("publishing imports one checked snapshot even if disk changes during block 
     assert.ok(client.pins.has(built.cid));
   });
 });
+test("publishing rejects incorrect block and pin receipts without rewriting the artifact", async () => {
+  await fixture(async (_root, file) => {
+    const built = await buildTask(file);
+    const before = await readArtifactFiles(built.directory);
+    const client = new MemoryIpfsClient();
+    const put = client.block.put;
+    client.block.put = async (_bytes, options) => put(Buffer.from("wrong block"), options);
+    await assert.rejects(importTaskBundle(built.directory, client), /different CID/);
+    assert.equal(client.pins.size, 0);
+    client.block.put = put;
+    const wrongPin = await put(Buffer.from("wrong pin"), {
+      format: "raw",
+    });
+    client.pin.add = async () => wrongPin;
+    await assert.rejects(importTaskBundle(built.directory, client), /requested root pin/);
+    assert.deepEqual(await readArtifactFiles(built.directory), before);
+  });
+});
 
 test("directory links cannot enter selected resources or redirect output writes", async () => {
   await fixture(async (root, file) => {
@@ -93,7 +134,7 @@ export default {
  message: Type.Never()
 };`;
 async function fixture(action: (root: string, file: string) => Promise<void>) {
-  const root = resolve(".test-task-authoring", randomUUID());
+  const root = resolve(".cache", `task-authoring-${randomUUID()}`);
   await mkdir(join(root, "assets", "nested"), { recursive: true });
   try {
     await writeFile(join(root, "contract.ts"), contract);
@@ -119,7 +160,6 @@ async function fixture(action: (root: string, file: string) => Promise<void>) {
     await action(root, file);
   } finally {
     await rm(root, { recursive: true, force: true });
-    await rmdir(resolve(".test-task-authoring")).catch(() => {});
   }
 }
 test("author check is write-free; build is deterministic, complete and clean; artifact-only publish needs no sources", async () => {
@@ -143,6 +183,10 @@ test("author check is write-free; build is deterministic, complete and clean; ar
     assert.deepEqual(input.validate({ text: "hello", extra: 1 }), { text: "hello", extra: 1 });
     assert.equal(input.equals({ text: "hello", extra: 1 }, { text: "hello", extra: 2 }), false);
     assert.throws(() => input.validate({ text: 42 }));
+    await writeFile(join(root, "assets", "new.json"), '{"new":true}\n');
+    const added = await buildTask(file);
+    assert.notEqual(added.cid, first.cid);
+    assert.equal((await readArtifactFiles(added.directory)).has("resources/new.json"), true);
     await rm(join(root, "assets", "one.json"));
     const second = await buildTask(file);
     assert.notEqual(second.cid, first.cid);
@@ -247,12 +291,201 @@ test("TypeBox conversion preserves optional, union, tuple and local reference se
     Type.Function([], Type.String()),
     Type.Unsafe({ type: "string" }),
     Type.String({ format: "email" }),
+    Object.assign(Type.Tuple([Type.String()]), { additionalItems: true }),
     Type.Transform(Type.String())
       .Decode((x) => x.length)
       .Encode((x) => String(x)),
   ])
     assert.throws(() => toTaskSchema(unsupported), /Unsupported|does not enforce/);
   assert.throws(() => compileInputSchema(toTaskSchema(Type.String())), /root type object/);
+});
+test("TypeBox JSON contracts preserve readonly, arrays, records, optional fields and local fragments", () => {
+  const schema = toTaskSchema(
+    Type.Object(
+      {
+        fixed: Type.Readonly(Type.String()),
+        values: Type.Array(Type.Integer(), { minItems: 1 }),
+        labels: Type.Record(Type.String(), Type.Boolean()),
+        optional: Type.Optional(Type.String()),
+        local: Type.Ref("#/$defs/text"),
+      },
+      { additionalProperties: false, $defs: { text: Type.String({ minLength: 2 }) } },
+    ),
+  );
+  const compiled = compileInputSchema(schema);
+  const valid = { fixed: "a", values: [1], labels: { present: true }, local: "ok" };
+  assert.deepEqual(compiled.validate(valid), valid);
+  for (const invalid of [
+    { ...valid, fixed: 1 },
+    { ...valid, values: [] },
+    { ...valid, values: [1.5] },
+    { ...valid, labels: { present: "yes" } },
+    { ...valid, optional: 1 },
+    { ...valid, local: "x" },
+    { ...valid, extra: true },
+  ])
+    assert.throws(() => compiled.validate(invalid));
+  assert.throws(() => compileJsonSchema(toTaskSchema(Type.Never())).validate(null));
+});
+test("identical authors in independent roots produce the same CID and Worker bytes", async () => {
+  await fixture(async (_root, file) => {
+    const first = await buildTask(file);
+    await fixture(async (_other, otherFile) => {
+      const second = await buildTask(otherFile);
+      assert.equal(first.cid, second.cid);
+      assert.deepEqual(
+        await readFile(join(first.directory, "worker.cjs")),
+        await readFile(join(second.directory, "worker.cjs")),
+      );
+    });
+  });
+});
+test("existing locks and changed ownership preserve the complete prior output and recovery files", async () => {
+  await fixture(async (root, file) => {
+    const built = await buildTask(file);
+    const marker = `${built.directory}.pguide-task-bundle.json`;
+    const lock = `${marker}.lock`;
+    const ownership = await readFile(marker);
+    await writeFile(lock, "another build or interrupted process");
+    await assert.rejects(buildTask(file), /locked.*crashed/);
+    assert.equal(await readFile(lock, "utf8"), "another build or interrupted process");
+    assert.equal((await checkTaskArtifact(built.directory)).cid, built.cid);
+    await rm(lock);
+    await writeFile(marker, "{}");
+    await assert.rejects(buildTask(file), /ownership/);
+    assert.equal((await checkTaskArtifact(built.directory)).cid, built.cid);
+    assert.equal(await readFile(marker, "utf8"), "{}");
+    assert.equal((await readdir(root)).includes("dist.pguide-task-bundle.json.lock"), false);
+    await writeFile(marker, ownership);
+    assert.equal((await buildTask(file)).cid, built.cid);
+  });
+});
+test("publish CLI uses artifact bytes only, honors RPC precedence and rejects invalid artifacts before RPC", async () => {
+  await fixture(async (root, file) => {
+    const built = await buildTask(file);
+    const client = new MemoryIpfsClient();
+    await importTaskBundle(built.directory, client);
+    const before = await readArtifactFiles(built.directory);
+    const nodes = await Promise.all(
+      ["user", "project", "override"].map(async () => {
+        let requests = 0;
+        let pins = 0;
+        const failures: unknown[] = [];
+        const server = createServer(async (request, response) => {
+          requests++;
+          try {
+            assert.ok(request.url);
+            const url = new URL(request.url, "http://localhost");
+            let result: unknown;
+            if (url.pathname === "/api/v0/block/put") {
+              const chunks: Buffer[] = [];
+              for await (const chunk of request) chunks.push(Buffer.from(chunk));
+              const body = Buffer.concat(chunks);
+              const boundary = /boundary="?([^";]+)"?/.exec(
+                request.headers["content-type"] ?? "",
+              )?.[1];
+              assert.ok(boundary);
+              const bytes = body.subarray(
+                body.indexOf("\r\n\r\n") + 4,
+                body.lastIndexOf(`\r\n--${boundary}`),
+              );
+              const block = [...client.blocks].find(([, value]) => bytes.equals(value));
+              assert.ok(block, "RPC must upload only a checked artifact block");
+              result = { Key: block[0], Size: bytes.length };
+            } else {
+              assert.equal(url.pathname, "/api/v0/pin/add");
+              assert.equal(url.searchParams.get("arg"), built.cid);
+              pins++;
+              result = { Pins: [built.cid] };
+            }
+            response.setHeader("content-type", "application/json");
+            response.end(JSON.stringify(result));
+          } catch (error) {
+            failures.push(error);
+            response.writeHead(500).end(JSON.stringify({ Message: String(error) }));
+          }
+        });
+        await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+        const address = server.address();
+        assert.ok(address && typeof address !== "string");
+        return {
+          server,
+          url: `http://127.0.0.1:${address.port}`,
+          requests: () => requests,
+          pins: () => pins,
+          failures,
+        };
+      }),
+    );
+    try {
+      const [user, project, override] = nodes;
+      assert.ok(user && project && override);
+      const home = join(root, "home");
+      await mkdir(join(home, "pguide"), { recursive: true });
+      await mkdir(join(root, ".pguide"));
+      await mkdir(join(root, "nested"));
+      const env = { ...process.env, APPDATA: home, XDG_CONFIG_HOME: home };
+      const bin = resolve("dist", "bin.js");
+      const publish = async (...extra: string[]) =>
+        JSON.parse(
+          (
+            await execute(
+              process.execPath,
+              [
+                bin,
+                "publish",
+                built.directory,
+                "--cwd",
+                join(root, "nested"),
+                "--format",
+                "json",
+                ...extra,
+              ],
+              { env },
+            )
+          ).stdout,
+        );
+      await writeFile(join(root, "contract.ts"), "throw new Error('must not evaluate');");
+      await rm(join(root, "callback.ts"));
+      await rm(file);
+      await assert.rejects(publish());
+      assert.deepEqual(
+        nodes.map((node) => node.requests()),
+        [0, 0, 0],
+      );
+      await writeFile(
+        join(home, "pguide", "config.jsonc"),
+        JSON.stringify({ "task-bundle.ipfsRpc": user.url }),
+      );
+      assert.equal((await publish()).result.cid, built.cid);
+      assert.equal(user.pins(), 1);
+      await writeFile(
+        join(root, ".pguide", "config.jsonc"),
+        JSON.stringify({ "task-bundle.ipfsRpc": project.url }),
+      );
+      assert.equal((await publish()).result.cid, built.cid);
+      assert.equal(project.pins(), 1);
+      assert.equal((await publish("--ipfs-rpc", override.url)).result.cid, built.cid);
+      assert.equal(override.pins(), 1);
+      assert.deepEqual(await readArtifactFiles(built.directory), before);
+      const requests = nodes.map((node) => node.requests());
+      await assert.rejects(publish("--ipfs-rpc", `${override.url}?secret=invalid`));
+      await writeFile(join(built.directory, "extra.txt"), "not declared");
+      await assert.rejects(publish("--ipfs-rpc", override.url));
+      assert.deepEqual(
+        nodes.map((node) => node.requests()),
+        requests,
+      );
+      assert.deepEqual(
+        nodes.flatMap((node) => node.failures),
+        [],
+      );
+    } finally {
+      await Promise.all(
+        nodes.map(({ server }) => new Promise<void>((done) => server.close(() => done()))),
+      );
+    }
+  });
 });
 test("unsafe output, unmanaged output, empty and overlapping globs fail without altering existing files", async () => {
   await fixture(async (root, file) => {
@@ -281,6 +514,9 @@ test("unsafe output, unmanaged output, empty and overlapping globs fail without 
   });
 });
 test("CLI exposes pguide metadata, structured help and explicit check modes", async () => {
+  const buildApi = await import("@potential-guide/task-sdk/build");
+  assert.equal("createIpfsClient" in buildApi, false);
+  assert.equal("importTaskBundle" in buildApi, false);
   const bin = resolve("dist", "bin.js");
   const metadata = JSON.parse(
     (await execute(process.execPath, [bin, "--pguide-command-metadata"])).stdout,
