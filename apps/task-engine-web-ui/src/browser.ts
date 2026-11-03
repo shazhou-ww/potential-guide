@@ -101,20 +101,43 @@ function details(title: string, value: unknown, key = title): HTMLDetailsElement
 }
 function notify(error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
+  report("操作", message, selection.endpoint, true);
+  view.publish();
+}
+function inform(message: string): void {
   view.text("notice", message);
   view.text("dialog-notice", message);
+}
+function report(
+  source: string,
+  message: string,
+  endpoint = selection.endpoint,
+  event = false,
+): void {
+  view.error(
+    `${endpoint?.id ?? "UI"}:${endpoint?.binding ?? ""} / ${source}`,
+    message,
+    event,
+    `${endpoint?.label ?? "UI"} / ${source.replace(/[0-9A-HJKMNP-TV-Z]{26}/g, (id) => id.slice(-8))}`,
+  );
 }
 function bundleReference(bundle: BundleReference): HTMLElement {
   const result = node("code", formatBundleReference(bundle));
   result.className = "bundle-reference";
   return result;
 }
-function input(label: string, type = "text"): { label: HTMLLabelElement; input: HTMLInputElement } {
-  const element = node("input");
-  element.type = type;
-  const wrapper = node("label", label);
-  wrapper.append(element);
-  return { label: wrapper, input: element };
+function compactBundle(digest: string): HTMLElement {
+  const result = node("code", `sha256:${digest.replace(/^sha256:/, "").slice(0, 12)}`);
+  result.className = "bundle-digest";
+  result.title = digest;
+  result.setAttribute("aria-label", `Bundle Digest ${digest}`);
+  return result;
+}
+function copyDigest(digest: string): HTMLButtonElement {
+  return button("复制完整 Digest", async () => {
+    await navigator.clipboard.writeText(digest);
+    inform("已复制完整 Bundle Digest。");
+  });
 }
 const statusNames = {
   draft: "草稿",
@@ -140,27 +163,19 @@ function renderCache(): void {
   const endpoint = selection.endpoint;
   if (!endpoint) return;
   const box = node("div");
+  box.className = "cache-layout";
   box.dataset.key = `cache:${endpoint.binding}`;
-  box.append(
-    node(
-      "p",
-      `服务：${endpoint.label}。需要独立的缓存读取/清理权限；状态为查询时观察，不是冻结目录。`,
-    ),
+  report("Bundle 缓存", cacheError);
+  const footer = node("footer");
+  footer.className = "directory-grid-footer cache-footer";
+  const summary = node("p");
+  summary.setAttribute("role", "status");
+  summary.textContent = `${cachePage ? `本页 ${cachePage.items.length} 项 · 观察于 ${cachePage.observedAt}` : "尚未取得缓存目录"} · ${cacheError ? "查询失败 / 数据待核对，详见错误日志" : cacheBusy ? "正在读取或清理缓存…" : "缓存快照；不是全缓存容量统计"}`;
+  footer.append(
+    summary,
+    button("刷新缓存", () => loadCache(), cacheBusy),
   );
-  box.append(button("刷新缓存", () => loadCache(), cacheBusy));
-  if (cacheBusy) box.append(node("p", "正在读取或清理缓存…"));
-  if (cacheError) {
-    const error = node("p", cacheError);
-    error.setAttribute("role", "alert");
-    box.append(error);
-  }
   if (cachePage) {
-    box.append(
-      node(
-        "p",
-        `本页 ${cachePage.items.length} 项 · 观察于 ${cachePage.observedAt}；不是全缓存容量统计。`,
-      ),
-    );
     const table = node("table");
     const head = node("thead");
     const heading = node("tr");
@@ -173,15 +188,16 @@ function renderCache(): void {
       const row = node("tr");
       row.dataset.key = item.digest;
       const identity = node("td");
-      identity.append(node("strong", item.name ?? "正在准备"), node("p", item.digest));
+      identity.append(node("strong", item.name ?? "正在准备"), compactBundle(item.digest));
       const controls = node("td");
       controls.append(
-        button("查看契约", () => readCacheDetail(item.digest), cacheBusy),
-        button(
+        inlineButton("查看契约", () => readCacheDetail(item.digest), cacheBusy),
+        inlineButton(
           "清理此缓存",
           () => {
             cacheConfirm = item.digest;
             renderCache();
+            navigation.open("cache-confirm");
           },
           cacheBusy || item.preparing || item.leases > 0,
         ),
@@ -204,14 +220,15 @@ function renderCache(): void {
     }
     table.append(body);
     const scroll = node("div");
-    scroll.className = "table-scroll";
+    scroll.className = "cache-grid-scroll";
     scroll.append(table);
     box.append(scroll);
     if (!cachePage.items.length)
       box.append(node("p", "当前页没有缓存 Bundle。可运行任务后刷新；不会自动下载内容。"));
     if (cachePage.next)
-      box.append(button("下一页缓存", () => loadCache(cachePage!.next), cacheBusy));
+      footer.append(button("下一页缓存", () => loadCache(cachePage!.next), cacheBusy));
   }
+  box.append(footer);
   if (cacheConfirm) {
     const digest = cacheConfirm;
     const confirm = node("section");
@@ -226,17 +243,19 @@ function renderCache(): void {
         "保留缓存",
         () => {
           cacheConfirm = undefined;
-          renderCache();
+          navigation.close("cache-confirm");
         },
         cacheBusy,
       ),
     );
-    box.append(confirm);
+    view.render("cache-confirmation", [confirm]);
   }
   if (cacheDetail)
-    box.append(
+    view.render("cache-detail", [
+      node("p", cacheDetail.digest),
+      copyDigest(cacheDetail.digest),
       details("Bundle 声明与解析后契约", cacheDetail, `cache-detail:${cacheDetail.digest}`),
-    );
+    ]);
   reconcile("bundle-cache", [box]);
 }
 async function loadCache(after?: string): Promise<void> {
@@ -282,6 +301,7 @@ async function readCacheDetail(digest: string): Promise<void> {
     if (!lease.current() || generation !== cacheGeneration) return;
     if (detail.digest !== digest) throw new Error("缓存详情身份不一致。");
     cacheDetail = detail;
+    navigation.open("cache-detail");
   } catch (error) {
     if (lease.current() && generation === cacheGeneration)
       cacheError = `契约读取失败：${String(error)}`;
@@ -308,6 +328,7 @@ async function removeCache(digest: string): Promise<void> {
     if (!lease.current() || generation !== cacheGeneration) return;
     if (receipt.removed !== true || receipt.digest !== digest)
       throw new Error("清理回执无效；结果未知，请刷新核对。");
+    navigation.close("cache-confirm");
     await loadCache();
   } catch (error) {
     if (lease.current() && generation === cacheGeneration)
@@ -451,18 +472,23 @@ function renderBar(): void {
     card.dataset.key = `batch:${batch.id}`;
     card.append(node("h3", `${batch.entries.length} 项 · ${batch.id.slice(-8)}`));
     const send = button(
-      "按序发送此批",
+      "提交此批",
       async () => {
         await bar.sendBatch(batch);
-        if (navigation.overlay?.id === "submission-dialog")
+        if (navigation.overlay?.id === "create-dialog")
           get("batches")
             .querySelector<HTMLElement>(`[data-key="batch:${batch.id}"] summary`)
             ?.focus();
       },
       batch.sending || !batch.entries.every((entry) => entry.state === "draft"),
     );
-    card.append(send);
+    if (batch.sending || batch.entries.every((entry) => entry.state === "draft")) card.append(send);
     for (const [index, entry] of batch.entries.entries()) {
+      report(
+        `Request:${entry.id}`,
+        entry.state === "failed" || entry.state === "unknown" ? entry.message : "",
+        batch.endpoint,
+      );
       const row = node("div");
       row.dataset.key = `receipt:${entry.id}`;
       row.className = "receipt";
@@ -514,7 +540,7 @@ function renderBar(): void {
               `/requests/${entry.id}`,
             );
             if (selection.endpoint && endpointMatches(entry.endpoint, selection.endpoint))
-              notify(
+              inform(
                 `原请求可读；不代表已创建 Task。请另查处理结果。requestId=${String(value.requestId)}。`,
               );
           }),
@@ -534,12 +560,14 @@ function renderBar(): void {
         button("移除此本地批次", () => {
           bar.batches.splice(bar.batches.indexOf(batch), 1);
           renderBar();
-          get("submission-dialog").querySelector<HTMLElement>("[data-close]")?.focus();
+          if (navigation.overlay?.id === "create-dialog")
+            get("create-dialog").querySelector<HTMLElement>("#batch-title")?.focus();
         }),
       );
     cards.push(card);
   }
-  if (!batches.length) cards.push(node("p", "暂无批次。直接提交会在这里建立独立的单条回执。"));
+  if (!batches.length)
+    cards.push(node("p", "尚未加入批量。填写任务后点“加入批量”，或直接提交当前任务。"));
   reconcile(container, cards);
 }
 function renderTasks(): void {
@@ -694,6 +722,7 @@ async function live(observer: Observer): Promise<void> {
       }
       observer.window.stale = true;
       observer.streamState = "stale";
+      report(`${observer.kind}:${observer.id} / 事件流`, observer.message, observer.endpoint, true);
       renderObserver(observer);
       if (failures < 5)
         await new Promise<void>((resolveDelay) => {
@@ -765,7 +794,6 @@ function newObserver(kind: Observer["kind"], id: string): Observer {
 }
 async function openTask(id: string): Promise<void> {
   navigation.close("create-dialog", false);
-  navigation.close("submission-dialog", false);
   navigation.show("tasks", false);
   const observer = newObserver("taskId", id);
   taskObserver = observer;
@@ -891,7 +919,7 @@ function renderObserver(observer: Observer): void {
   box.dataset.key = `${observer.endpoint.binding}:${observer.kind}:${observer.id}`;
   const observationState = node(
     "p",
-    `${({ idle: "正在读取", live: "实时更新", stale: "观察陈旧 / 已断开", paused: "观察已暂停", ended: "观察已结束" } as const)[observer.streamState]}${observer.window.lastReceived ? ` · 最后读取 ${observer.window.lastReceived}` : ""}${observer.message ? ` · ${observer.message}` : ""}`,
+    `${({ idle: "正在读取", live: "实时更新", stale: "观察陈旧 / 已断开，详见错误日志", paused: "观察已暂停", ended: "观察已结束" } as const)[observer.streamState]}${observer.window.lastReceived ? ` · 最后读取 ${observer.window.lastReceived}` : ""}`,
   );
   observationState.className = "observation-state";
   box.append(observationState);
@@ -910,9 +938,16 @@ function renderObserver(observer: Observer): void {
       observer.streamState === "paused" || observer.streamState === "ended",
     ),
   );
-  for (const error of [observer.detailError, observer.requestError, observer.historyError])
-    if (error) box.append(node("p", error));
-  if (observer.window.gap) box.append(node("p", observer.window.gap));
+  for (const [source, error] of [
+    ["详情", observer.detailError],
+    ["原请求", observer.requestError],
+    ["历史", observer.historyError],
+    ["事件流", observer.message],
+    ["历史缺口", observer.window.gap],
+  ] as const)
+    report(`${observer.kind}:${observer.id} / ${source}`, error ?? "", observer.endpoint);
+  if (observer.detailError || observer.requestError || observer.historyError || observer.window.gap)
+    box.append(node("p", "部分信息不可用或存在缺口，详见错误日志。"));
   if (!observer.window.historyLoaded) box.append(node("p", "未读取到历史，实时流不代表完整历史。"));
   if (observer.window.truncated)
     box.append(
@@ -923,7 +958,10 @@ function renderObserver(observer: Observer): void {
     );
   if (observer.kind === "taskId") {
     if (observer.template && !observer.snapshot) {
-      box.append(node("p", "星标模板"), details("保存的完整原参数", observer.template.parameters));
+      box.append(
+        node("p", "本机保存的完整参数模板，不是服务端任务快照。"),
+        details("保存的完整原参数", observer.template.parameters),
+      );
       box.append(
         button("用保存参数直接新建", () =>
           reuse(observer.endpoint, observer.template!.parameters as Parameters, true),
@@ -936,7 +974,7 @@ function renderObserver(observer: Observer): void {
     }
     const task = observer.snapshot;
     if (task) {
-      if (task.bundle) box.append(bundleReference(task.bundle));
+      if (task.bundle) box.append(bundleReference(task.bundle), copyDigest(task.bundle.digest));
       const now = Date.now();
       const timeout = now > Date.parse(task.deadlineAt);
       const state = node("p", taskStatus(task, now));
@@ -991,7 +1029,7 @@ function renderObserver(observer: Observer): void {
           accept(snapshot);
           observer.snapshot =
             workspace(observer.endpoint).tasks.values.get(observer.id) ?? snapshot;
-          notify("取消回执已收到；关联 Run 是否回收请看其事件。");
+          inform("取消回执已收到；关联 Run 是否回收请看其事件。");
           updateFacts(observer, []);
           renderTasks();
           renderObserver(observer);
@@ -1001,6 +1039,11 @@ function renderObserver(observer: Observer): void {
       cancel.dataset.action = "cancel";
       box.append(cancel, details("原始 Task 快照", task, "task-snapshot"));
       if (task.result !== undefined) box.append(details("任务结果", task.result, "task-result"));
+      report(
+        `Task:${observer.id} / 系统故障`,
+        task.error ? `${task.error.code}: ${task.error.message}` : "",
+        observer.endpoint,
+      );
       if (task.error) box.append(details("系统故障事实", task.error));
       if (observer.request) {
         box.append(details("原始请求（GET /requests）", observer.request));
@@ -1037,7 +1080,8 @@ function renderObserver(observer: Observer): void {
     box.append(state, details("Run 标识", { runId: observer.id }));
     const snapshot = observer.runSnapshot;
     if (snapshot) {
-      if (snapshot.bundle) box.append(bundleReference(snapshot.bundle));
+      if (snapshot.bundle)
+        box.append(node("code", snapshot.bundle.digest), copyDigest(snapshot.bundle.digest));
       box.append(details("原始 Run 快照", snapshot, "run-snapshot"));
       if (snapshot.progress !== undefined)
         box.append(details("Run 进展（不代表完成）", snapshot.progress, "run-progress"));
@@ -1045,6 +1089,11 @@ function renderObserver(observer: Observer): void {
         box.append(details("类型结果报告（不代表退出或回收）", snapshot.outcome, "run-outcome"));
       if (snapshot.result !== undefined)
         box.append(details("Run 结果", snapshot.result, "run-result"));
+      report(
+        `Run:${observer.id} / 系统故障`,
+        snapshot.error ? `${snapshot.error.code}: ${snapshot.error.message}` : "",
+        observer.endpoint,
+      );
       if (snapshot.error !== undefined)
         box.append(details("Run 故障事实", snapshot.error, "run-error"));
       if (snapshot.stopRequested !== undefined)
@@ -1060,8 +1109,8 @@ function renderObserver(observer: Observer): void {
         );
       }
     } else box.append(node("p", "未取得 Run 快照；目录摘要和事件不替代完整诊断事实。"));
-    if (observer.associated.error)
-      box.append(node("p", `关联任务不可读：${observer.associated.error}`));
+    report(`Run:${observer.id} / 关联任务`, observer.associated.error, observer.endpoint);
+    if (observer.associated.error) box.append(node("p", "关联任务不可读，详见错误日志。"));
     if (observer.associated.page)
       box.append(
         node(
@@ -1277,6 +1326,7 @@ async function observeCollection<P extends TaskPage | RunPage>(
   current: () => boolean,
   render: () => void,
   canRefresh: () => boolean,
+  errorSource = kind === "tasks" ? "任务目录" : "Run 目录",
 ): Promise<void> {
   const abort = () => controller.abort();
   parent.addEventListener("abort", abort, { once: true });
@@ -1306,6 +1356,7 @@ async function observeCollection<P extends TaskPage | RunPage>(
         await consumeCollectionSse(response, receive);
       },
       changed: render,
+      failed: (message) => report(errorSource, message, endpoint, true),
     });
   } finally {
     parent.removeEventListener("abort", abort);
@@ -1314,7 +1365,7 @@ async function observeCollection<P extends TaskPage | RunPage>(
 function directoryObservation(directory: Directory<TaskPage | RunPage>): string {
   if (directory.live) return "完整实时集合";
   if (directory.polling)
-    return `分页近实时（5 秒采样）${document.hidden ? " · 页面隐藏，采样暂停" : ""}${directory.refreshing ? " · 正在刷新" : ""}${directory.stale ? " · 数据陈旧" : ""}`;
+    return `分页近实时（5 秒采样）${document.hidden ? " · 页面隐藏，采样暂停" : ""}${directory.stale ? " · 数据陈旧，详见错误日志" : ""}`;
   return directory.stale
     ? "上次确认快照 · 数据陈旧"
     : directory.page?.next
@@ -1362,10 +1413,7 @@ function renderDirectory(): void {
   }
   const state = workspace();
   const directory = state.directory;
-  if (directory.error)
-    contents.append(node("p", `查询错误（不是空结果），以下仅为上次成功快照：${directory.error}`));
-  if (directory.expired)
-    contents.append(node("p", "query_expired：旧快照仅供参考。请点“重新查询”，不能继续拼页。"));
+  report("任务目录", directory.error);
   if (!directory.page) {
     contents.append(node("p", "尚未取得任务目录。目录查询与提交、Request 跟踪相互独立。"));
     show();
@@ -1401,7 +1449,7 @@ function renderDirectory(): void {
     const type = node("span", task.name ?? task.type);
     type.className = "entity-type";
     title.append(type, node("small", task.taskId.slice(-8)));
-    if (task.bundle) title.append(bundleReference(task.bundle));
+    if (task.bundle) title.append(compactBundle(task.bundle.digest));
     row.append(star, title);
     const status = node("td", taskStatus(task));
     status.title = taskStatusExplanation(task);
@@ -1464,6 +1512,7 @@ async function associatedTasks(observer: Observer, append = false): Promise<void
           if (active()) renderObserver(observer);
         },
         () => directoryRefreshAllowed("execution-detail"),
+        `Run:${observer.id} / 关联任务`,
       );
   } catch {
     /* The directory retains its explicit error, independently from event permissions. */
@@ -1518,14 +1567,7 @@ function renderExecutions(): void {
   const rows: DirectoryRowDescription[] = [];
   let more: HTMLButtonElement | undefined;
   box.dataset.key = "execution-directory";
-  if (directory.error)
-    box.append(
-      node(
-        "p",
-        `执行目录不可用：${directory.error}。请核对权限、服务版本或查询条件；不会改用本机已见记录。`,
-      ),
-    );
-  if (directory.expired) box.append(node("p", "查询已失效，请重新查询；旧快照仅供参考。"));
+  report("Run 目录", directory.error);
   if (directory.page) {
     box.append(
       node(
@@ -1549,7 +1591,7 @@ function renderExecutions(): void {
       const type = node("span", execution.name ?? execution.type);
       type.className = "entity-type";
       title.append(type, node("small", execution.runId.slice(-8)));
-      if (execution.bundle) title.append(bundleReference(execution.bundle));
+      if (execution.bundle) title.append(compactBundle(execution.bundle.digest));
       const status = `${execution.state.completed ? "已完成" : execution.state.failed ? "执行失败" : execution.state.running ? "执行中" : "结果未确认"}${execution.state.reclaimed ? " · 已回收" : " · 未确认回收"}`;
       row.append(
         title,
@@ -1570,7 +1612,10 @@ function renderExecutions(): void {
       () => queryExecutions(true),
       !directory.page.next || directory.expired,
     );
-  } else box.append(node("p", "尚未取得执行目录。"));
+  } else
+    box.append(
+      node("p", directory.error ? "执行目录不可用，详见错误日志。" : "尚未取得执行目录。"),
+    );
   view.directory(
     "runs",
     {
@@ -1593,7 +1638,7 @@ async function reuse(endpoint: Endpoint, parameters: Parameters, direct: boolean
     const revision = bundleDigest(parameters);
     const entry = await bar.quick(endpoint, parameters, revision);
     if (lease.current()) {
-      notify(entry.message);
+      inform(entry.message);
       if (entry.snapshot) {
         await openTask(entry.snapshot.taskId);
         void queryDirectory();
@@ -1602,7 +1647,7 @@ async function reuse(endpoint: Endpoint, parameters: Parameters, direct: boolean
   } else {
     renderForm(structuredClone(parameters));
     if (!parameters.bundle)
-      notify("旧模板未转换；请显式填写 Bundle 引用并检查业务 Input，原模板保持不变。");
+      inform("旧模板未转换；请显式填写 Bundle 引用并检查业务 Input，原模板保持不变。");
     lastQuick = undefined;
     navigation.show("tasks", false);
     view.text("create-title", "编辑参数并新建任务");
@@ -1619,7 +1664,7 @@ function starButton(endpoint: Endpoint, taskId: string): HTMLButtonElement {
       ? await changeFavorites(`/api/favorites/${saved.id}`, "DELETE")
       : await changeFavorites("/api/favorites", "POST", { endpoint, taskId });
     if (!accepted || !lease.current()) return;
-    notify(saved ? "已取消星标；不会取消任务。" : `已保存 ${endpoint.label} 的完整原参数。`);
+    inform(saved ? "已取消星标；不会取消任务。" : `已保存 ${endpoint.label} 的完整原参数。`);
   });
   control.className = "star";
   control.dataset.key = `star:${taskId}`;
@@ -1653,8 +1698,9 @@ function renderStars(box: HTMLElement): void {
   let query: URLSearchParams;
   try {
     query = new URLSearchParams(directoryQuery());
+    report("收藏筛选", "");
   } catch (error) {
-    box.append(node("p", String(error)));
+    report("收藏筛选", String(error));
     show();
     return;
   }
@@ -1690,7 +1736,7 @@ function renderStars(box: HTMLElement): void {
     star.append(
       available
         ? starButton(favorite.endpoint, favorite.source!.taskId)
-        : button("移除此本机星标", async () => {
+        : inlineButton("移除此本机星标", async () => {
             await changeFavorites(`/api/favorites/${favorite.id}`, "DELETE");
           }),
     );
@@ -1769,14 +1815,16 @@ async function checkStarSources(): Promise<void> {
             sourceStates.set(item.id, {
               label: `来源可用 · ${taskStatus(tasks.values.get(value.taskId) ?? value)}`,
             });
+            report(`收藏:${item.id} / 来源`, "", item.endpoint);
           } catch (error) {
             if (control.signal.aborted || !lease.current()) return;
             sourceStates.set(item.id, {
               label:
                 error instanceof ApiError && error.status === 404
                   ? "来源已清理 · 保存的模板仍可用"
-                  : `来源不可访问：${String(error)}`,
+                  : "来源不可访问，详见错误日志",
             });
+            report(`收藏:${item.id} / 来源`, String(error), item.endpoint, true);
           }
           if ((get("only-favorites") as HTMLInputElement).checked) renderDirectory();
         }
@@ -1874,7 +1922,6 @@ async function chooseEndpoint(id: string): Promise<void> {
   const lease = selection.capture();
   starChecks?.abort();
   navigation.close("create-dialog", false);
-  navigation.close("submission-dialog", false);
   if (navigation.overlay) navigation.close(navigation.overlay.id, false);
   const cacheSelected = navigation.tab === "cache";
   navigation.show(cacheSelected ? "cache" : "tasks", false);
@@ -1910,6 +1957,10 @@ async function chooseEndpoint(id: string): Promise<void> {
   }
 }
 async function start(): Promise<void> {
+  const unexpectedError = (event: ErrorEvent) => notify(event.error ?? event.message);
+  const rejectedPromise = (event: PromiseRejectionEvent) => notify(event.reason);
+  window.addEventListener("error", unexpectedError);
+  window.addEventListener("unhandledrejection", rejectedPromise);
   const response = await fetch("/api/bootstrap");
   if (!response.ok) throw new Error(`UI 启动失败：${response.status}`);
   const bootstrap = (await response.json()) as { csrf: string; endpoints: Endpoint[] };
@@ -1941,7 +1992,7 @@ async function start(): Promise<void> {
       async () => {
         if (lastQuick && ["unknown", "preparing", "sending"].includes(lastQuick.state))
           throw new Error(
-            "上一 Request 尚未完成受理确认；请在任务栏按原 requestId 跟踪，或明确“主动再做一次”。",
+            "上一 Request 尚未完成受理确认；请在下方回执按原 requestId 跟踪，或明确“主动再做一次”。",
           );
         const form = checkedForm();
         const lease = selection.capture();
@@ -1950,16 +2001,15 @@ async function start(): Promise<void> {
         lastQuick = bar.add(batch, form.parameters, form.revision);
         const entry = lastQuick;
         await bar.sendBatch(batch);
-        if (lease.current()) notify(entry.message);
+        if (lease.current()) inform(entry.message);
         if (lease.current() && entry.snapshot) {
-          await openTask(entry.snapshot.taskId);
           void queryDirectory();
         }
       },
       false,
       300,
     ),
-    button("加入多条草稿", () => {
+    button("加入批量", () => {
       const form = checkedForm();
       let batch = bar.batches.find(
         (item) =>
@@ -1969,27 +2019,11 @@ async function start(): Promise<void> {
       );
       batch ??= bar.create(form.endpoint);
       bar.add(batch, form.parameters, form.revision);
-      notify("已加入草稿，尚未提交。");
-    }),
-    button("查看任务栏", () => {
-      navigation.close("create-dialog", false);
-      navigation.open("submission-dialog");
+      inform("已加入批量，尚未提交；可继续填写下一条。");
     }),
   ]);
   view.render("history-actions", [button("重新查询", () => queryDirectory())]);
   view.render("execution-actions", [button("刷新执行目录", () => queryExecutions())]);
-  const taskId = input("按 Task ID 打开");
-  taskId.input.id = "task-id-input";
-  view.render("task-lookup", [
-    taskId.label,
-    button("打开 Task", () => openTask((get("task-id-input") as HTMLInputElement).value.trim())),
-  ]);
-  const executionId = input("按 Run ID 打开");
-  executionId.input.id = "execution-id-input";
-  view.render("execution-lookup", [
-    executionId.label,
-    button("打开 Run", () => openRun((get("execution-id-input") as HTMLInputElement).value.trim())),
-  ]);
   const timeRefresh = setInterval(() => {
     if (!selection.endpoint) return;
     for (const batch of bar.batches)
@@ -2009,6 +2043,8 @@ async function start(): Promise<void> {
   };
   document.addEventListener("visibilitychange", visibility);
   window.addEventListener("pagehide", () => {
+    window.removeEventListener("error", unexpectedError);
+    window.removeEventListener("unhandledrejection", rejectedPromise);
     clearInterval(timeRefresh);
     document.removeEventListener("visibilitychange", visibility);
     for (const state of states.values()) {

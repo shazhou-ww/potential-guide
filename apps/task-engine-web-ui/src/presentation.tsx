@@ -8,6 +8,9 @@ import {
   RefreshCw,
   RotateCcw,
   SquarePen,
+  FileSearch,
+  Trash2,
+  TriangleAlert,
 } from "lucide-react";
 import {
   type ComponentProps,
@@ -23,6 +26,7 @@ import {
 import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { claimActivation } from "./dom.js";
+import { ErrorLog } from "./error-log.js";
 import { Navigation, type Tab } from "./navigation.js";
 import type { Endpoint } from "./server.js";
 import { Button } from "./ui/button.tsx";
@@ -54,6 +58,9 @@ const inlineActions = {
   编辑保存参数: { Icon: SquarePen, label: "编辑保存参数后新建" },
   编辑后新建: { Icon: SquarePen, label: "编辑保存参数后新建" },
   "查看来源 / 模板": { Icon: Eye, label: "查看来源或保存模板" },
+  查看契约: { Icon: FileSearch, label: "查看 Bundle 契约" },
+  清理此缓存: { Icon: Trash2, label: "清理此缓存（需要确认）" },
+  移除此本机星标: { Icon: Trash2, label: "移除此本机星标" },
 } as const;
 export type InlineAction = keyof typeof inlineActions;
 export interface DirectoryRowDescription extends Omit<DirectoryRow, "content"> {
@@ -216,6 +223,9 @@ function ActionButton({
       size={glyph ? "icon" : props.size}
       aria-label={glyph?.label ?? props["aria-label"]}
       data-glyph-action={action.glyph}
+      className={
+        action.glyph === "清理此缓存" ? "text-destructive hover:text-destructive" : props.className
+      }
       disabled={disabled || busy}
       data-busy={busy || undefined}
       onClick={(event) => {
@@ -321,6 +331,8 @@ interface Events {
 }
 const noop = () => {};
 export class WorkbenchView {
+  readonly errors = new ErrorLog();
+  errorsOpen = false;
   readonly form = document.createElement("div");
   readonly navigation = new Navigation(
     document,
@@ -396,6 +408,14 @@ export class WorkbenchView {
   }
   content(id: string): ReactNode {
     return this.contents.get(id);
+  }
+  error(source: string, message: string, event = false, label = source): void {
+    if (event) this.errors.record(source, message, label);
+    else this.errors.observe(source, message, label);
+  }
+  toggleErrors(open: boolean): void {
+    this.errorsOpen = open;
+    this.publish();
   }
   options(types: { value: string; label: string }[]): void {
     this.types = types;
@@ -491,18 +511,19 @@ function Workbench({ view }: { view: WorkbenchView }) {
   useSyncExternalStore(view.subscribe, view.snapshot);
   const nav = view.navigation;
   const overlay = nav.overlay;
-  const content = (id: string, className?: string) => (
-    <Port view={view} id={id} className={className} />
-  );
   return (
     <TooltipProvider delayDuration={350}>
       <a className="skip" href="#workspace">
         跳到工作区
       </a>
-      <Tabs value={nav.tab} onValueChange={(tab) => nav.show(tab as Tab)}>
+      <Tabs
+        className="workbench-shell"
+        value={nav.tab}
+        onValueChange={(tab) => nav.show(tab as Tab)}
+      >
         <header className="topbar">
           <h1>任务工作台</h1>
-          <TabsList aria-label="工作区">
+          <TabsList variant="line" className="workspace-navigation" aria-label="工作区">
             <TabsTrigger id="tab-tasks" aria-controls="tasks" value="tasks" data-tab="tasks">
               任务
             </TabsTrigger>
@@ -532,14 +553,6 @@ function Workbench({ view }: { view: WorkbenchView }) {
               ))}
             </select>
           </label>
-          <Button
-            id="bar-toggle"
-            variant="outline"
-            aria-haspopup="dialog"
-            onClick={() => nav.open("submission-dialog")}
-          >
-            提交任务栏 <span id="bar-count">{view.content("bar-count") ?? "0 项"}</span>
-          </Button>
         </header>
         <Port view={view} id="notice" role="status" aria-live="polite" />
         <main id="workspace">
@@ -561,14 +574,6 @@ function Workbench({ view }: { view: WorkbenchView }) {
             </div>
             <div className="list-pane">
               <DirectoryPanel view={view} kind="tasks" />
-              <details className="secondary">
-                <summary>按任务标识定位</summary>
-                {content("task-lookup", "row")}
-              </details>
-              <fieldset className="secondary" hidden={!view.recent}>
-                <legend>最近查看</legend>
-                {content("task-list", "recent")}
-              </fieldset>
             </div>
           </TabsContent>
           <TabsContent
@@ -583,10 +588,6 @@ function Workbench({ view }: { view: WorkbenchView }) {
             </div>
             <div className="list-pane">
               <DirectoryPanel view={view} kind="runs" />
-              <details className="secondary">
-                <summary>按执行标识定位</summary>
-                {content("execution-lookup", "row")}
-              </details>
             </div>
           </TabsContent>
           <TabsContent
@@ -607,8 +608,87 @@ function Workbench({ view }: { view: WorkbenchView }) {
         </main>
       </Tabs>
       {overlay && <OverlayPanel key={overlay.epoch} view={view} />}
-      <footer>关闭详情或暂停观察都不会取消任务。时间筛选使用明确时区，列表是固定查询快照。</footer>
+      <ErrorCenter view={view} />
     </TooltipProvider>
+  );
+}
+function ErrorButton({ view }: { view: WorkbenchView }) {
+  return (
+    <Button
+      className="error-launcher"
+      variant="outline"
+      aria-label={`错误日志：${view.errors.entries.length} 个问题`}
+      aria-haspopup="dialog"
+      aria-expanded={view.errorsOpen}
+      onClick={() => view.toggleErrors(true)}
+    >
+      <TriangleAlert aria-hidden="true" />
+      <span aria-live="polite">{view.errors.entries.length}</span>
+    </Button>
+  );
+}
+function ErrorCenter({ view }: { view: WorkbenchView }) {
+  return (
+    <Sheet open={view.errorsOpen} onOpenChange={(open) => view.toggleErrors(open)}>
+      {!view.navigation.overlay && <ErrorButton view={view} />}
+      <SheetContent
+        side="bottom"
+        className="error-sheet"
+        closeLabel="关闭错误日志"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          document.querySelector<HTMLElement>(".error-launcher")?.focus({ preventScroll: true });
+        }}
+      >
+        <SheetHeader>
+          <SheetTitle>错误日志 ({view.errors.entries.length})</SheetTitle>
+          <SheetDescription>
+            当前页面会话，最多保留 100 个问题。清理日志不会取消任务或修复故障。
+          </SheetDescription>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!view.errors.entries.length}
+            onClick={() => {
+              view.errors.clear();
+              view.publish();
+            }}
+          >
+            清空日志
+          </Button>
+        </SheetHeader>
+        <div className="error-scroll">
+          {!view.errors.entries.length && <p>暂无错误记录。</p>}
+          {view.errors.entries.map((entry) => (
+            <div key={entry.id} className="error-entry">
+              <details>
+                <summary>
+                  <strong>{entry.label}</strong> · {entry.count} 次
+                  {entry.resolved ? " · 已恢复" : " · 错误记录"}
+                  <span className="error-summary">{entry.message}</span>
+                </summary>
+                <p>
+                  首次：{entry.firstSeen} · 最近：{entry.lastSeen}
+                </p>
+                <p>来源：{entry.source}</p>
+                <pre>{entry.message}</pre>
+              </details>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`清理错误记录 ${entry.id}`}
+                onClick={() => {
+                  view.errors.clear(entry.id);
+                  view.publish();
+                }}
+              >
+                <Trash2 aria-hidden="true" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 function OverlayPanel({ view }: { view: WorkbenchView }) {
@@ -631,7 +711,10 @@ function OverlayPanel({ view }: { view: WorkbenchView }) {
   const port = (name: string, className?: string) => (
     <Port view={view} id={name} className={className} />
   );
-  if (id === "task-detail" || id === "execution-detail") {
+  const protectErrors = (event: Event) => {
+    if (view.errorsOpen) event.preventDefault();
+  };
+  if (id === "task-detail" || id === "execution-detail" || id === "cache-detail") {
     return (
       <Sheet open onOpenChange={close}>
         <SheetContent
@@ -639,16 +722,27 @@ function OverlayPanel({ view }: { view: WorkbenchView }) {
           className="detail-sheet"
           onOpenAutoFocus={autofocus}
           onCloseAutoFocus={restore}
+          onInteractOutside={protectErrors}
+          onEscapeKeyDown={protectErrors}
         >
           <SheetHeader>
             <SheetTitle id={`${id}-title`} tabIndex={-1} className="outline-none">
-              {id === "task-detail" ? "任务详情" : "执行详情"}
+              {id === "task-detail"
+                ? "任务详情"
+                : id === "cache-detail"
+                  ? "Bundle 契约"
+                  : "执行详情"}
             </SheetTitle>
-            <SheetDescription>独立事实与公开事件 · 关闭不会取消任务</SheetDescription>
+            <SheetDescription>
+              {id === "cache-detail"
+                ? "服务端缓存的声明与解析后契约"
+                : "独立事实与公开事件 · 关闭不会取消任务"}
+            </SheetDescription>
           </SheetHeader>
           <div className="detail-scroll">
             <Port view={view} id={id} tabIndex={-1} />
           </div>
+          <ErrorButton view={view} />
         </SheetContent>
       </Sheet>
     );
@@ -660,15 +754,19 @@ function OverlayPanel({ view }: { view: WorkbenchView }) {
         className="workbench-dialog"
         onOpenAutoFocus={autofocus}
         onCloseAutoFocus={restore}
+        onInteractOutside={protectErrors}
+        onEscapeKeyDown={protectErrors}
       >
         <DialogHeader>
           <DialogTitle id={id === "create-dialog" ? "create-title" : `${id}-title`} tabIndex={-1}>
-            {id === "create-dialog" ? (view.content("create-title") ?? "新建任务") : "提交任务栏"}
+            {id === "create-dialog"
+              ? (view.content("create-title") ?? "新建任务")
+              : "清理 Bundle 缓存"}
           </DialogTitle>
           <DialogDescription>
             {id === "create-dialog"
-              ? "填写固定 Bundle 引用与业务输入；准备完成前不创建 Task。关闭弹窗保留输入。"
-              : "按序发出，不等待前一任务完成；未知结果保留原身份。"}
+              ? "直接提交当前任务，或加入批量后统一提交。关闭弹窗保留输入、批量草稿与回执。"
+              : "只清理缓存内容，不删除任务历史或原归档。"}
           </DialogDescription>
         </DialogHeader>
         {id === "create-dialog" ? (
@@ -682,14 +780,24 @@ function OverlayPanel({ view }: { view: WorkbenchView }) {
             </details>
             {port("contract-actions")}
             {port("create-actions", "actions")}
+            <section className="submission-batches" aria-labelledby="batch-title">
+              <h3 id="batch-title" tabIndex={-1}>
+                批量草稿与提交回执 <span id="bar-count">{view.content("bar-count") ?? "0 项"}</span>
+              </h3>
+              <p className="secondary">
+                批量按序发出，不等待任务完成；未知结果保留原身份，可在这里核对。
+              </p>
+              {port("batches")}
+            </section>
             <details id="legacy-templates" className="secondary" hidden={!view.legacy}>
               <summary>旧参数模板（没有任务身份）</summary>
               {port("favorites-list")}
             </details>
           </div>
         ) : (
-          port("batches")
+          port("cache-confirmation")
         )}
+        <ErrorButton view={view} />
       </DialogContent>
     </Dialog>
   );

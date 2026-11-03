@@ -319,6 +319,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
       "Task directory must load by default",
     );
     assert.equal(document.querySelectorAll('[role="tab"]').length, 3);
+    assert.equal(document.querySelector("#bar-toggle"), null);
     assert.equal(document.querySelectorAll('main [role="tabpanel"]:not([hidden])').length, 1);
     click("#tab-executions");
     await until(
@@ -338,8 +339,8 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     assert.equal(taskRow.cells[1]!.querySelector("button"), null);
     assert.equal(taskRow.querySelector('[data-action="详情"]'), null);
     assert.equal(
-      taskRow.querySelector(".bundle-reference")?.textContent,
-      `${bundle.url}#${bundle.digest}`,
+      taskRow.querySelector(".bundle-digest")?.textContent,
+      `sha256:${bundle.digest.slice(7, 19)}`,
     );
     const star = taskRow.querySelector<HTMLButtonElement>(".star")!;
     star.click();
@@ -399,21 +400,30 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     first.value = bundle.url;
     named("#create-actions", "提交任务").click();
     await until(
-      () => element("#dialog-notice").textContent!.includes("URL#Digest"),
+      () => element(".error-launcher").textContent !== "0",
       "incomplete Bundle reference is rejected locally",
     );
+    element<HTMLButtonElement>(".error-launcher").click();
+    await until(() => !!document.querySelector(".error-sheet"), "error panel opens");
+    await until(
+      () => element(".error-sheet").textContent!.includes("URL#Digest"),
+      "validation error is logged",
+    );
+    element<HTMLButtonElement>(".error-sheet [data-close]").click();
     assert.equal(calls.filter((call) => call === "POST /api/endpoints/demo/tasks").length, 0);
     assert.equal(draft.value, JSON.stringify({ text: "draft retained" }));
     first.value = `${bundle.url}#${bundle.digest}`;
     await new Promise((resolve) => setTimeout(resolve, 310));
     named("#create-actions", "提交任务").click();
     await until(
-      () => !!created && streams.has(created.taskId),
-      "submission should select the new Task",
+      () => !!created && element("#batches").textContent!.includes("已确认"),
+      "submission should retain its receipt in the create dialog",
     );
-    assert.equal(document.querySelector("#create-dialog"), null);
+    assert.ok(document.querySelector("#create-dialog"));
     assert.equal(calls.filter((call) => call === "POST /api/endpoints/demo/tasks").length, 1);
     assert.match(element("#bar-count").textContent!, /1 项/);
+    named("#batches", `打开 Task ${created!.taskId.slice(-8)}`).click();
+    await until(() => streams.has(created!.taskId), "receipt opens the submitted Task");
     const id = created!.taskId;
     assert.equal(named("#task-detail", "暂停观察").dataset.glyphAction, "暂停观察");
     assert.equal(named("#task-detail", "暂停观察").querySelectorAll("svg").length, 1);
@@ -546,11 +556,73 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     failStar = true;
     element<HTMLButtonElement>("#directory .star").click();
     await until(
-      () => element("#notice").textContent!.includes("403"),
+      () => Number(element(".error-launcher").textContent) > 0,
       "original-request denial must remain visible",
     );
+    element<HTMLButtonElement>(".error-launcher").click();
+    await until(() => !!document.querySelector(".error-sheet"), "denial appears in error log");
+    await until(() => element(".error-sheet").textContent!.includes("403"), "denial is logged");
     assert.equal(favorites.length, 1);
     assert.equal(element("#directory .star").getAttribute("aria-pressed"), "false");
+    element<HTMLButtonElement>(".error-sheet [data-close]").click();
+
+    click("#new-task");
+    field("Task Bundle 引用（URL#digest）").value = `${bundle.url}#${bundle.digest}`;
+    field("超时预算 timeoutMs（毫秒）").value = "1000";
+    const batchInput = element<HTMLTextAreaElement>("#form-fields textarea");
+    batchInput.value = JSON.stringify({ text: "batch first" });
+    named("#create-actions", "加入批量").click();
+    await until(
+      () =>
+        element("#batches").textContent!.includes("batch first") &&
+        !named("#create-actions", "加入批量").disabled,
+      "first draft is queued",
+    );
+    batchInput.value = JSON.stringify({ text: "batch second" });
+    named("#create-actions", "加入批量").click();
+    await until(
+      () => element("#batches").textContent!.includes("batch second"),
+      "second draft is queued",
+    );
+    const queued = [...element("#batches").querySelectorAll<HTMLElement>(".receipt")].filter(
+      (row) => row.querySelector('[data-action="下移"]'),
+    );
+    assert.equal(queued.length, 2);
+    assert.match(queued[0]!.textContent!, /batch first/);
+    assert.doesNotMatch(queued[0]!.textContent!, /batch second/);
+    assert.match(queued[1]!.textContent!, /batch second/);
+    const before = calls.filter((call) => call === "POST /api/endpoints/demo/tasks").length;
+    assert.equal(before, 1, "adding drafts must not submit");
+    const draftIds = queued.map((row) => row.dataset.key);
+    element<HTMLButtonElement>("#create-dialog [data-close]").click();
+    click("#new-task");
+    assert.equal(element<HTMLTextAreaElement>("#form-fields textarea").value, batchInput.value);
+    assert.deepEqual(
+      [...element("#batches").querySelectorAll<HTMLElement>(".receipt")]
+        .filter((row) => row.querySelector('[data-action="下移"]'))
+        .map((row) => row.dataset.key),
+      draftIds,
+      "reopening retains batch identities",
+    );
+    batchInput.value = JSON.stringify({ text: "direct alongside batch" });
+    named("#create-actions", "提交任务").click();
+    await until(
+      () =>
+        calls.filter((call) => call === "POST /api/endpoints/demo/tasks").length === before + 1 &&
+        !element("#create-actions").querySelector('[data-busy="true"]'),
+      "direct submit does not send pending batch",
+    );
+    assert.equal(element("#batches").querySelectorAll('[data-action="下移"]').length, 2);
+    named("#batches", "提交此批").click();
+    await until(
+      () =>
+        calls.filter((call) => call === "POST /api/endpoints/demo/tasks").length === before + 3 &&
+        !element("#batches").querySelector('[data-busy="true"]'),
+      "batch sends both entries once",
+    );
+    assert.equal(element("#batches").querySelector('[data-action="提交此批"]'), null);
+    assert.ok(document.querySelector("#create-dialog"), "batch submit keeps the form open");
+    assert.equal(batchInput.value, JSON.stringify({ text: "direct alongside batch" }));
   } finally {
     window.dispatchEvent(new window.Event("pagehide"));
     await new Promise((resolve) => setTimeout(resolve, 10));

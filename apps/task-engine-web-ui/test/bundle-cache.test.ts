@@ -109,8 +109,8 @@ test("parallel cache page requires deliberate single deletion, keeps in-use cont
   };
   const dialog = () => document.getElementById("cache");
   const button = (text: string) =>
-    [...dialog()!.querySelectorAll<HTMLButtonElement>("button")].find(
-      (item) => item.textContent === text,
+    [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+      (item) => item.textContent === text && !item.closest("[hidden]"),
     )!;
   try {
     await import("../src/browser.js");
@@ -124,7 +124,7 @@ test("parallel cache page requires deliberate single deletion, keeps in-use cont
       () => !!dialog()?.textContent?.includes("Cached fixture"),
       "cache should load without task grants",
     );
-    assert.match(dialog()!.textContent!, /One/);
+    assert.match(document.getElementById("notice")!.textContent!, /One/);
     assert.equal(document.querySelectorAll('main [role="tabpanel"]:not([hidden])').length, 1);
     assert.equal(document.querySelector('[role="dialog"]'), null);
     assert.equal(document.getElementById("tab-cache")!.getAttribute("aria-selected"), "true");
@@ -138,12 +138,14 @@ test("parallel cache page requires deliberate single deletion, keeps in-use cont
     );
     button("查看契约").click();
     await until(
-      () => !!dialog()?.querySelector('details[data-key^="cache-detail"]'),
+      () => !!document.querySelector('#cache-detail details[data-key^="cache-detail"]'),
       "detail should render",
     );
+    assert.ok(document.querySelector("#cache-detail-sheet"));
+    document.querySelector<HTMLButtonElement>("#cache-detail-sheet [data-close]")!.click();
     button("清理此缓存").click();
     await until(
-      () => !!dialog()?.textContent?.includes("确认清理"),
+      () => !!document.getElementById("cache-confirm")?.textContent?.includes("确认清理"),
       "confirmation should be explicit",
     );
     assert.equal(deletes, 0);
@@ -153,9 +155,16 @@ test("parallel cache page requires deliberate single deletion, keeps in-use cont
     button("清理此缓存").click();
     button("确认清理").click();
     await until(
-      () => !!dialog()?.textContent?.includes("bundle_in_use"),
+      () => Number(document.querySelector(".error-launcher")?.textContent) > 0,
       "busy failure must be explicit",
     );
+    document.querySelector<HTMLButtonElement>(".error-launcher")!.click();
+    await until(() => !!document.querySelector(".error-sheet"), "error drawer should open");
+    await until(
+      () => document.querySelector(".error-sheet")!.textContent!.includes("bundle_in_use"),
+      "cleanup error is logged",
+    );
+    document.querySelector<HTMLButtonElement>(".error-sheet [data-close]")!.click();
     assert.equal(deletes, 1);
     assert.match(dialog()!.textContent!, /Cached fixture/);
     conflict = false;
@@ -173,12 +182,12 @@ test("parallel cache page requires deliberate single deletion, keeps in-use cont
     endpoint.value = "two";
     endpoint.dispatchEvent(new window.Event("change", { bubbles: true }));
     await until(
-      () => !!dialog()?.textContent?.includes("Cache operator permission required"),
+      () => !!dialog()?.textContent?.includes("查询失败"),
       "endpoint change loads the new cache page without leaving it",
     );
     delayed!(json(listing()));
     await until(
-      () => !!dialog()?.textContent?.includes("Cache operator permission required"),
+      () => !!dialog()?.textContent?.includes("查询失败"),
       "new endpoint denial must not be hidden",
     );
     assert.doesNotMatch(dialog()!.textContent!, /Cached fixture/);

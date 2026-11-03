@@ -49,6 +49,32 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
       });
     if (url.pathname === "/api/favorites") return response([]);
     const path = url.pathname.replace("/api/endpoints/demo", "");
+    if (path === "/tasks") {
+      const tasks = [...snapshots.values()].map((task) => ({
+        ...task,
+        type: "echo",
+        version: "1",
+        scope: "fixture",
+        state: {
+          stage: task.stage,
+          pending: false,
+          timedOut: false,
+          canceled: task.canceled,
+          completed: false,
+          runFailed: false,
+        },
+      }));
+      return response({
+        tasks,
+        items: tasks,
+        revision: "domain:10",
+        observedAt: "2026-10-31T02:00:00.000Z",
+        expiresAt: "2026-10-31T03:00:00.000Z",
+      });
+    }
+    if (path === "/tasks/events") {
+      return response({ error: { code: "forbidden", message: "fixture collection denied" } }, 403);
+    }
     if (path === "/task-types")
       return response([
         { type: "echo", version: "1", revision: "a".repeat(64), inputSchema: { type: "object" } },
@@ -156,11 +182,14 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
   const open = async (task: TaskSnapshot) => {
     document.querySelector<HTMLButtonElement>('[role="dialog"] [data-close]')?.click();
     snapshots.set(task.taskId, task);
-    const field = document.querySelector("#task-lookup input") as unknown as HTMLInputElement;
-    const button = document.querySelector("#task-lookup button") as unknown as HTMLButtonElement;
-    await until(() => !button.disabled, "lookup should be ready");
-    field.value = task.taskId;
-    button.click();
+    const refresh = document.querySelector<HTMLButtonElement>("#history-actions button")!;
+    await until(() => !refresh.disabled, "query should be ready");
+    refresh.click();
+    await until(
+      () => !!document.querySelector(`#directory tr[data-entity-id="${task.taskId}"]`),
+      "task should be listed",
+    );
+    document.querySelector<HTMLElement>(`#directory tr[data-entity-id="${task.taskId}"]`)!.click();
     await until(
       () => streams.has(task.taskId) && readDetail()?.taskId === task.taskId,
       "real openTask/live path should observe selected Task",
@@ -194,7 +223,7 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
   try {
     await import("../src/browser.js");
     await until(
-      () => !!document.querySelector("#task-lookup button"),
+      () => !!document.querySelector("#history-actions button"),
       "browser actions should load",
     );
     document.getElementById("new-task")!.click();
@@ -240,7 +269,7 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
       "late SSE frame must actually traverse live/renderObserver",
     );
     assert.equal(readDetail()?.canceledAt, canceledA.canceledAt);
-    assert.match(document.getElementById("task-list")!.textContent!, /已取消/);
+    assert.equal(readDetail()?.canceled, true);
     assert.match(
       document.getElementById("task-detail")!.textContent!,
       /当前已过截止时间，不代表结果逾期/,

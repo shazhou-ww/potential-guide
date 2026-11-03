@@ -39,6 +39,7 @@ test("Run diagnostics use the independent snapshot without history or Task acces
   };
   let emit: ((value: Observation) => void) | undefined;
   const denied = new Set<string>();
+  let allowRunListing = true;
   const json = (value: unknown, status = 200) =>
     new Response(JSON.stringify(value), {
       status,
@@ -54,6 +55,30 @@ test("Run diagnostics use the independent snapshot without history or Task acces
     if (url.pathname === "/api/favorites") return json([]);
     const path = url.pathname.replace("/api/endpoints/demo", "");
     if (path === `/runs/${snapshot.runId}`) return json(snapshot);
+    if (path === "/runs" && allowRunListing) {
+      const runs = [
+        {
+          ...snapshot,
+          ...(snapshot.stage === "failed" ? { failedAt: at } : {}),
+          state: {
+            running: snapshot.stage === "running",
+            completed: false,
+            failed: snapshot.stage === "failed",
+            stopping: snapshot.stage === "stopping",
+            stopped: false,
+            reclaimed: !!snapshot.reclaimedAt,
+            sealed: false,
+          },
+        },
+      ];
+      return json({
+        runs,
+        items: runs,
+        revision: snapshot.revision,
+        observedAt: at,
+        expiresAt: "2026-11-03T01:00:00.000Z",
+      });
+    }
     if (["/tasks", "/runs", "/event-history"].includes(path)) {
       denied.add(path);
       return json({ error: { code: "forbidden", message: `No access to ${path}` } }, 403);
@@ -80,16 +105,27 @@ test("Run diagnostics use the independent snapshot without history or Task acces
     return value === undefined ? undefined : JSON.parse(value!);
   };
   const openRun = async () => {
-    const field = document.querySelector<HTMLInputElement>("#execution-lookup input")!;
-    const button = document.querySelector<HTMLButtonElement>("#execution-lookup button")!;
-    await until(() => !button.disabled, "Run lookup should be ready");
-    field.value = snapshot.runId;
-    button.click();
+    allowRunListing = true;
+    document.getElementById("tab-executions")!.click();
+    const refresh = document.querySelector<HTMLButtonElement>("#execution-actions button")!;
+    await until(() => !refresh.disabled, "Run query should be ready");
+    refresh.click();
+    await until(
+      () => !!document.querySelector(`#execution-directory tr[data-entity-id="${snapshot.runId}"]`),
+      "Run should be listed",
+    );
+    allowRunListing = false;
+    document
+      .querySelector<HTMLElement>(`#execution-directory tr[data-entity-id="${snapshot.runId}"]`)!
+      .click();
     await until(() => read("run-snapshot")?.runId === snapshot.runId, "Run snapshot should render");
   };
   try {
     await import("../src/browser.js");
-    await until(() => !!document.querySelector("#execution-lookup button"), "browser should start");
+    await until(
+      () => !!document.querySelector("#execution-actions button"),
+      "browser should start",
+    );
     await openRun();
     await until(() => !!emit && denied.has("/event-history"), "history denial should be visible");
     assert.equal(read("run-result"), false, "false is a real result, not an absent result");
@@ -99,7 +135,13 @@ test("Run diagnostics use the independent snapshot without history or Task acces
     assert.equal(read("run-exit"), undefined);
     assert.match(detail().textContent!, /类型结果报告（不代表退出或回收）/);
     assert.match(detail().textContent!, /尝试中 · 回收未确认/);
-    assert.match(detail().textContent!, /No access to \/event-history/);
+    document.querySelector<HTMLButtonElement>(".error-launcher")!.click();
+    await until(() => !!document.querySelector(".error-sheet"), "error center should open");
+    assert.match(
+      document.querySelector(".error-sheet")!.textContent!,
+      /No access to \/event-history/,
+    );
+    document.querySelector<HTMLButtonElement>(".error-sheet [data-close]")!.click();
     assert.match(detail().textContent!, /关联任务不可读/);
 
     const progress = detail().querySelector<HTMLDetailsElement>('[data-key="run-progress"]')!;
