@@ -375,7 +375,7 @@ type BundleReference =
 
 ### IPFS access 与 Bundle 解释的分层
 
-1. Engine 初始化由可信宿主提供 IPFS client/access。底层只感知标准 IPFS 内容节点、
+1. Engine 初始化通过 `ipfsClient` 参数接收可信宿主提供的通用 IPFS 客户端。底层只感知标准 IPFS 内容节点、
    CID、DAG 链接、UnixFS 路径与文件内容，不解释 Task Bundle、`task.yaml` 或 Run。
    这里的内容节点是 CID 标识的 DAG 对象，不等同于提供服务的服务器进程。
 2. 底层复用标准 IPFS 实现的获取、遍历、流式读取、内容验证及 pin 能力，
@@ -388,7 +388,7 @@ type BundleReference =
    不向业务暴露底层 IPFS client、gateway、宿主连接配置或文件位置。
 5. 初始化需要可用的 IPFS 访问能力，不要求 HTTP gateway URI 是唯一或必填依赖；
    Request hint 只能辅助候选获取，不代替可信初始化配置或绕过宿主访问策略。
-   初始化参数名与具体标准 IPFS API 在实施时确定，不新造一套平行节点协议。
+   初始化参数名固定为 `ipfsClient`，具体标准 IPFS API 在实施时确定，不新造一套平行节点协议。
 
 ### IPFS 获取、入口装载与资源访问
 

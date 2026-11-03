@@ -169,13 +169,13 @@ await engine.start();
 ### After：宿主提供通用 IPFS client/access
 
 以下是新架构的逻辑示意，不是已经实现的 API；
-`ipfsAccess` 是待实施时确定的能力参数名，`ipfsClient` 由可信宿主装配，
+初始化参数统一命名为 `ipfsClient`，由可信宿主装配通用 IPFS 客户端，
 不是 Bundle 专属读取对象：
 
 ```ts
 const engine = createTaskEngine({
   store,
-  ipfsAccess: ipfsClient,
+  ipfsClient,
 });
 await engine.start();
 ```
@@ -202,7 +202,7 @@ Engine 负责将根节点解释为 Bundle、执行准入、装载入口及向 Wo
 不是 Engine 核心契约要求。无论选哪种后端，均必须满足同一 CID/DAG 验证、
 完整准入、容量限制和 Run 资源保护边界。
 上述示例的 `store` 只为展示当前 API；[职责入口](../../../../../../docs/axis/task-engine-responsibilities.md)
-中逻辑初始化 `openTaskEngine({ dataDomain })` 的数据域绑定语义不因引入 IPFS 改变，
+中逻辑初始化 `openTaskEngine({ dataDomain, ipfsClient })` 的数据域绑定语义不因引入 IPFS 改变，
 也不表示要同时建立第二套初始化入口。
 
 ### 初始化能力与 Request hint 的分工
