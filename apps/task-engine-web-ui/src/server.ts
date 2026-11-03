@@ -570,6 +570,7 @@ export async function startUiServer(raw: UiConfig) {
         timer = setTimeout(abort, STREAM_MS);
       }
       const headers = new Headers({ Accept: streaming ? "text/event-stream" : "application/json" });
+      if (method === "POST") headers.set("Content-Type", "application/json");
       if (endpoint.token) headers.set("Authorization", `Bearer ${endpoint.token}`);
       let payload: string | undefined;
       if (method === "POST" && route[2] === "/tasks") {

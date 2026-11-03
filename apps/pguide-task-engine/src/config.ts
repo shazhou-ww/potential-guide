@@ -35,7 +35,11 @@ function path(value: unknown, base: string, source: string): string {
 }
 
 /** Validate every provided value before replacing complete settings across layers. */
-export function validateLayer(value: unknown, base: string, source: string): Partial<ServiceConfig> {
+export function validateLayer(
+  value: unknown,
+  base: string,
+  source: string,
+): Partial<ServiceConfig> {
   if (!object(value)) invalid(source, "configuration");
   const result: Partial<ServiceConfig> = {};
   for (const [key, entry] of Object.entries(value)) {
@@ -58,7 +62,13 @@ export function validateLayer(value: unknown, base: string, source: string): Par
         } catch {
           invalid(source, key);
         }
-        if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash)
+        if (
+          !["http:", "https:"].includes(url.protocol) ||
+          url.username ||
+          url.password ||
+          url.search ||
+          url.hash
+        )
           invalid(source, key);
         result.ipfsRpcUrl = url.href;
         break;
@@ -72,8 +82,11 @@ export function validateLayer(value: unknown, base: string, source: string): Par
         result.ui = entry;
         break;
       case "uiOptions":
-        if (!object(entry) || Object.keys(entry).length !== 3 ||
-          !["host", "port", "favoritesFile"].every((name) => Object.hasOwn(entry, name)))
+        if (
+          !object(entry) ||
+          Object.keys(entry).length !== 3 ||
+          !["host", "port", "favoritesFile"].every((name) => Object.hasOwn(entry, name))
+        )
           invalid(source, key);
         result.uiOptions = {
           host: host(entry.host, source),
@@ -93,8 +106,12 @@ export function parseArguments(argv: readonly string[]) {
   let configFile: string | undefined;
   let global = true;
   const names: Record<string, string> = {
-    "--host": "host", "--port": "port", "--database": "database",
-    "--ipfs-rpc-url": "ipfsRpcUrl", "--scope": "scope", "--ui-options": "uiOptions",
+    "--host": "host",
+    "--port": "port",
+    "--database": "database",
+    "--ipfs-rpc-url": "ipfsRpcUrl",
+    "--scope": "scope",
+    "--ui-options": "uiOptions",
   };
   for (let index = 0; index < rest.length; index++) {
     const raw = rest[index]!;
@@ -109,9 +126,11 @@ export function parseArguments(argv: readonly string[]) {
       else cli.ui = flag === "--ui";
       continue;
     }
-    if (flag !== "--config" && !Object.hasOwn(names, flag)) throw new ConfigurationError("Unknown service option.");
+    if (flag !== "--config" && !Object.hasOwn(names, flag))
+      throw new ConfigurationError("Unknown service option.");
     const value = equals < 0 ? rest[++index] : raw.slice(equals + 1);
-    if (!value || value.startsWith("--")) throw new ConfigurationError("Service option requires a value.");
+    if (!value || value.startsWith("--"))
+      throw new ConfigurationError("Service option requires a value.");
     if (flag === "--config") configFile = resolve(options.cwd, value);
     else {
       const field = names[flag]!;
@@ -119,34 +138,55 @@ export function parseArguments(argv: readonly string[]) {
         if (!/^\d+$/.test(value)) invalid("CLI", field);
         cli[field] = Number(value);
       } else if (field === "uiOptions") {
-        try { cli[field] = JSON.parse(value); } catch { invalid("CLI", field); }
+        try {
+          cli[field] = JSON.parse(value);
+        } catch {
+          invalid("CLI", field);
+        }
       } else cli[field] = value;
     }
   }
   return { options, cli, configFile, global };
 }
 
-export async function resolveConfig(parsed: ReturnType<typeof parseArguments>): Promise<ServiceConfig> {
+export async function resolveConfig(
+  parsed: ReturnType<typeof parseArguments>,
+): Promise<ServiceConfig> {
   const cwd = parsed.options.cwd;
   const defaults: ServiceConfig = {
-    host: "127.0.0.1", port: 3000, database: resolve(cwd, "tasks.sqlite"),
-    ipfsRpcUrl: "http://127.0.0.1:5001/", scope: "local", ui: false,
-    uiOptions: { host: "127.0.0.1", port: 4310, favoritesFile: resolve(cwd, "task-favorites.json") },
+    host: "127.0.0.1",
+    port: 3000,
+    database: resolve(cwd, "tasks.sqlite"),
+    ipfsRpcUrl: "http://127.0.0.1:5001/",
+    scope: "local",
+    ui: false,
+    uiOptions: {
+      host: "127.0.0.1",
+      port: 4310,
+      favoritesFile: resolve(cwd, "task-favorites.json"),
+    },
   };
   let user: Partial<ServiceConfig> = {};
   if (parsed.global) {
     const loaded = await loadConfig(cwd, ["task-engine"], { project: false }).catch(() => {
-      throw new ConfigurationError("Cannot read or validate pguide user configuration/settings registry.");
+      throw new ConfigurationError(
+        "Cannot read or validate pguide user configuration/settings registry.",
+      );
     });
     const entries = Object.entries(loaded.value).filter(([id]) => id.startsWith("task-engine."));
-    user = validateLayer(Object.fromEntries(entries.map(([id, value]) => [id.slice(12), value])),
-      dirname(userConfigPath()), "pguide user config");
+    user = validateLayer(
+      Object.fromEntries(entries.map(([id, value]) => [id.slice(12), value])),
+      dirname(userConfigPath()),
+      "pguide user config",
+    );
   }
   let file: Partial<ServiceConfig> = {};
   if (parsed.configFile) {
     const extension = extname(parsed.configFile).toLowerCase();
     if (![".yaml", ".yml", ".json"].includes(extension))
-      throw new ConfigurationError("Service --config requires YAML/JSON data. Executable .mjs configs are retired; migrate to declarative fields.");
+      throw new ConfigurationError(
+        "Service --config requires YAML/JSON data. Executable .mjs configs are retired; migrate to declarative fields.",
+      );
     let value: unknown;
     try {
       const text = await readFile(parsed.configFile, "utf8");
@@ -158,7 +198,9 @@ export async function resolveConfig(parsed: ReturnType<typeof parseArguments>): 
         if (document.errors.length || document.warnings.length) invalid("service file", "YAML");
         value = document.toJS({ maxAliasCount: 0 });
       }
-    } catch { throw new ConfigurationError("Cannot read or parse service YAML/JSON file."); }
+    } catch {
+      throw new ConfigurationError("Cannot read or parse service YAML/JSON file.");
+    }
     file = validateLayer(value, dirname(parsed.configFile), "service file");
   }
   const cli = validateLayer(parsed.cli, cwd, "CLI");

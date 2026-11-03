@@ -6,14 +6,17 @@ import { pathToFileURL } from "node:url";
 import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
 import { checkTaskBundleConsumer } from "./check-task-bundle-consumer.mjs";
 import { checkTaskSdkConsumer } from "./check-task-sdk-consumer.mjs";
+import { checkTaskServiceConsumer } from "./check-task-service-consumer.mjs";
 import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 
 export async function checkPackageConsumers(root, scratch, definitions, tarballs, run, only) {
   const manifests = new Map();
-  for (const { name, directory } of definitions) {
+  for (const { name, directory, workspace } of definitions) {
     manifests.set(
       name,
-      JSON.parse(await readFile(join(root, "packages", directory, "package.json"), "utf8")),
+      JSON.parse(
+        await readFile(join(root, workspace ?? "packages", directory, "package.json"), "utf8"),
+      ),
     );
   }
   const scenarios = [
@@ -86,6 +89,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     ["config", ["@potential-guide/pguide-config"]],
     ["agents", ["@potential-guide/pguide-agents"]],
     ["bundle-authoring", ["pguide", "@potential-guide/pguide-task-bundle"]],
+    ["task-service", ["pguide", "@potential-guide/pguide-task-engine"]],
     [
       "combined",
       [
@@ -166,6 +170,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     if (label === "task-sdk") {
       await checkTaskSdkConsumer(directory, run);
     }
+    if (label === "task-service") await checkTaskServiceConsumer(directory, run);
     if (label === "bundle-authoring") {
       const bin = join(directory, "node_modules", ".bin");
       const home = join(directory, "home");
@@ -246,7 +251,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       );
       assert.equal(artifact.result.cid, built.result.cid);
     }
-    if (label.startsWith("task-") && label !== "task-sdk") {
+    if (["task-protocol", "task-engine", "task-adapters"].includes(label)) {
       const script = join(directory, "generic-task.mjs");
       await writeFile(
         join(directory, "type-worker.mjs"),

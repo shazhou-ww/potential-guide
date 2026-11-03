@@ -738,7 +738,11 @@ export function extractGlobals(
       rest.push(argument);
       continue;
     }
-    if (!stopped && (argument === "--config" || argument.startsWith("--config=")) && !policy.serviceConfig)
+    if (
+      !stopped &&
+      (argument === "--config" || argument.startsWith("--config=")) &&
+      !policy.serviceConfig
+    )
       throw new CliError(
         "--config is retired. Use the user config.jsonc or nearest project .pguide/config.jsonc selected by --cwd.",
       );

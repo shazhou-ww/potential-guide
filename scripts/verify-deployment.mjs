@@ -48,7 +48,7 @@ async function packAndInstall() {
   const tarballs = new Map();
   const manifests = new Map();
   for (const definition of packageDefinitions) {
-    const packageRoot = join(root, "packages", definition.directory);
+    const packageRoot = join(root, definition.workspace ?? "packages", definition.directory);
     const packageManifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
     assert.equal(packageManifest.name, definition.name);
     manifests.set(definition.name, packageManifest);

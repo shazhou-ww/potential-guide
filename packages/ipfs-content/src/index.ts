@@ -29,7 +29,10 @@ export const unixfsImportOptions = Object.freeze({
 export async function createIpfsClient(url: string): Promise<
   Omit<KuboRPCClient, "block"> & {
     block: Omit<KuboRPCClient["block"], "get"> & {
-      get(cid: string | CID, options?: Parameters<KuboRPCClient["block"]["get"]>[1]): Promise<Uint8Array>;
+      get(
+        cid: string | CID,
+        options?: Parameters<KuboRPCClient["block"]["get"]>[1],
+      ): Promise<Uint8Array>;
     };
   }
 > {

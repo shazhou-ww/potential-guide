@@ -203,6 +203,29 @@ export const releasePackages = [
 export const verificationPackages = [
   ...releasePackages,
   {
+    id: "pguide-task-engine",
+    workspace: "apps",
+    directory: "pguide-task-engine",
+    name: "@potential-guide/pguide-task-engine",
+    bins: ["pguide-task-engine"],
+    requiredFiles: ["settings.json"],
+  },
+  {
+    id: "task-engine-web-ui",
+    workspace: "apps",
+    directory: "task-engine-web-ui",
+    name: "@potential-guide/task-engine-web-ui",
+    bins: [],
+    sourceOutputDirectory: "dist/src/",
+    requiredFiles: [
+      "dist/src/server.js",
+      "dist/src/server.d.ts",
+      "dist/public/index.html",
+      "dist/public/app.js",
+      "dist/public/style.css",
+    ],
+  },
+  {
     id: "ipfs-content",
     directory: "ipfs-content",
     name: "@potential-guide/ipfs-content",

@@ -8,8 +8,14 @@
       "import": "./dist/src/server.js"
     }
   },
-  "files": ["dist/src", "dist/public", "README.md"],
-  "publishConfig": { "access": "public" },
+  "files": [
+    "dist/src",
+    "dist/public",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -7,8 +7,9 @@ objectives:
     subject: |
       {
         "root": context.repo.rootPath, "directory": context.path,
-        "roles": ["tool"], "runtime": "node",
+        "roles": ["npm", "cli"], "runtime": "node",
         "allows": ["@potential-guide/cli-core", "@potential-guide/ipfs-content", "@potential-guide/task-engine-server", "@potential-guide/task-engine-web-ui", "@potential-guide/task-protocol"],
         "entries": ["src/main.ts"],
-        "generated": [], "deliveries": [], "joins": []
+        "generated": [], "deliveries": [],
+        "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "generic-task-server", "kind": "cli"}]
       }

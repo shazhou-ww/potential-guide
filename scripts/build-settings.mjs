@@ -15,9 +15,13 @@ const compiler = new Ajv({
 const validators = {};
 const exports = {};
 const descriptions = [];
-const workspaces = (await Promise.all(["packages", "apps"].map(async (group) =>
-  (await readdir(resolve(root, group))).map((directory) => resolve(root, group, directory)),
-))).flat();
+const workspaces = (
+  await Promise.all(
+    ["packages", "apps"].map(async (group) =>
+      (await readdir(resolve(root, group))).map((directory) => resolve(root, group, directory)),
+    ),
+  )
+).flat();
 for (const packageRoot of workspaces) {
   let metadata;
   try {

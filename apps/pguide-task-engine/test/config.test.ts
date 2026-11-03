@@ -15,33 +15,59 @@ test("four layers, whole settings, paths, isolation and validation", async (t) =
   process.env.XDG_CONFIG_HOME = join(directory, "user");
   t.after(async () => {
     for (const [key, value] of Object.entries(previous))
-      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
     await rm(directory, { recursive: true, force: true });
   });
   const userPath = userConfigPath();
   await mkdir(dirname(userPath), { recursive: true });
   await mkdir(join(directory, "files"));
   await mkdir(join(directory, ".pguide"));
-  await writeFile(join(directory, ".pguide", "config.jsonc"), '{"task-engine.port":"invalid project value"}');
+  await writeFile(
+    join(directory, ".pguide", "config.jsonc"),
+    '{"task-engine.port":"invalid project value"}',
+  );
   const config = join(directory, "files", "server.yaml");
-  const load = (args: string[] = []) => resolveConfig(parseArguments(["--cwd", directory, ...args]));
+  const load = (args: string[] = []) =>
+    resolveConfig(parseArguments(["--cwd", directory, ...args]));
   const initial = await load();
   assert.equal(initial.port, 3000);
   assert.equal(initial.database, join(directory, "tasks.sqlite"));
-  await writeFile(userPath, JSON.stringify({
-    "task-engine.port": 1234, "task-engine.database": "user.sqlite",
-    "task-engine.uiOptions": { host: "localhost", port: 4321, favoritesFile: "user.json" },
-    "other-package.anything": { legal: true },
-  }));
-  await writeFile(config, "port: 2345\nuiOptions: {host: '::1', port: 0, favoritesFile: file.json}\n");
+  await writeFile(
+    userPath,
+    JSON.stringify({
+      "task-engine.port": 1234,
+      "task-engine.database": "user.sqlite",
+      "task-engine.uiOptions": { host: "localhost", port: 4321, favoritesFile: "user.json" },
+      "other-package.anything": { legal: true },
+    }),
+  );
+  await writeFile(
+    config,
+    "port: 2345\nuiOptions: {host: '::1', port: 0, favoritesFile: file.json}\n",
+  );
   const user = await load();
   assert.equal(user.port, 1234);
   assert.equal(user.database, join(dirname(userPath), "user.sqlite"));
   const file = await load(["--config", "files/server.yaml"]);
   assert.equal(file.port, 2345);
   assert.equal(file.database, user.database);
-  assert.deepEqual(file.uiOptions, { host: "::1", port: 0, favoritesFile: join(dirname(config), "file.json") });
-  const cli = await load(["--config", config, "--port", "0", "--host", "localhost", "--database", "cli.sqlite", "--no-ui"]);
+  assert.deepEqual(file.uiOptions, {
+    host: "::1",
+    port: 0,
+    favoritesFile: join(dirname(config), "file.json"),
+  });
+  const cli = await load([
+    "--config",
+    config,
+    "--port",
+    "0",
+    "--host",
+    "localhost",
+    "--database",
+    "cli.sqlite",
+    "--no-ui",
+  ]);
   assert.equal(cli.port, 0);
   assert.equal(cli.host, "127.0.0.1");
   assert.equal(cli.database, join(directory, "cli.sqlite"));
@@ -49,13 +75,22 @@ test("four layers, whole settings, paths, isolation and validation", async (t) =
   await writeFile(config, "database: file.sqlite\n");
   assert.equal((await load(["--config", config])).database, join(dirname(config), "file.sqlite"));
   for (const bad of [
-    { port: "invalid" }, { host: "0.0.0.0" }, { host: "192.168.1.1" },
-    { ipfsEndpoint: "http://localhost" }, { ipfs: { rpcUrl: "http://localhost" } },
-    { ipfsRpcUrl: "https://secret:password@example.test" }, { ipfsRpcUrl: "file:///kubo" },
-    { uiOptions: { port: 0 } }, { scope: "" }, { database: "" }, { ui: "false" },
+    { port: "invalid" },
+    { host: "0.0.0.0" },
+    { host: "192.168.1.1" },
+    { ipfsEndpoint: "http://localhost" },
+    { ipfs: { rpcUrl: "http://localhost" } },
+    { ipfsRpcUrl: "https://secret:password@example.test" },
+    { ipfsRpcUrl: "file:///kubo" },
+    { uiOptions: { port: 0 } },
+    { scope: "" },
+    { database: "" },
+    { ui: "false" },
   ]) {
     await writeFile(config, JSON.stringify(bad));
-    await assert.rejects(load(["--config", config, "--port", "0", "--host", "127.0.0.1", "--no-ui"]));
+    await assert.rejects(
+      load(["--config", config, "--port", "0", "--host", "127.0.0.1", "--no-ui"]),
+    );
   }
   await writeFile(config, "{}");
   await writeFile(userPath, '{"task-engine.port":"invalid"}');

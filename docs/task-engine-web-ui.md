@@ -4,7 +4,11 @@ Run 详情的独立 **Logs · 诊断日志** 支持跟随/暂停、历史分页�
 并发/切换隔离；浏览器保留最多 300 条 / 1 MiB，显示未知尾部、缺口、截断、
 过期、不支持和故障。详见 [Run Logs 与独立安装](task-run-logs.md)。
 
-`apps/task-engine-web-ui` 是可选、私有的 Node/TypeScript 应用。它独立于
+`apps/task-engine-web-ui` 是可选的 Node/TypeScript 应用，其本地产物提供
+`@potential-guide/task-engine-web-ui/server` 与完整浏览器资源供服务命令消费。
+可通过 `pguide task-engine --ui` 前台组合启动，也可继续独立连接既有 HTTP 服务；
+见[声明式服务配置](task-server.md#declarative-local-service)。这不表示已经发布 npm。
+它独立于
 Task Server，仅使用公开 HTTP 协议；不会创建 Engine、读其 SQLite、加载业务
 执行器，或因抽屉/页面/流/UI Server 关闭而取消 Task。示例执行器只属于显式启动的
 fixture，生产 UI 入口不导入它。

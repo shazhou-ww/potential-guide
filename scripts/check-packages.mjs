@@ -11,7 +11,9 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const pnpmCommand = "pnpm";
 const bundlesOnly = process.argv.includes("--task-bundles");
 const sdkOnly = process.argv.includes("--task-sdk");
-if (sdkOnly && bundlesOnly) throw new Error("Select only one consumer scope.");
+const serviceOnly = process.argv.includes("--task-service");
+if ([sdkOnly, bundlesOnly, serviceOnly].filter(Boolean).length > 1)
+  throw new Error("Select only one consumer scope.");
 const sdkPackages = new Set([
   "ipfs-content",
   "check-runtime-files",
@@ -70,7 +72,7 @@ const destination = await mkdtemp(join(root, ".cache", "potential-guide-packs-")
 const tarballs = new Map();
 try {
   for (const expected of packages) {
-    const packageRoot = join(root, "packages", expected.directory);
+    const packageRoot = join(root, expected.workspace ?? "packages", expected.directory);
     const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
     manifests.set(manifest.name, manifest);
     assert.equal(manifest.name, expected.name);
@@ -119,9 +121,14 @@ try {
     assert.equal(packed.name, expected.name);
     assert.equal(packed.version, manifest.version);
     const files = packed.files.map(({ path }) => path);
-    for (const file of files.filter((path) => path.startsWith("dist/") && path.endsWith(".js"))) {
+    const output = expected.sourceOutputDirectory ?? "dist/";
+    for (const file of files.filter((path) => path.startsWith(output) && path.endsWith(".js"))) {
       await assert.doesNotReject(
-        access(join(packageRoot, "src", `${file.slice(5, -3)}.ts`)),
+        Promise.any(
+          ["ts", "tsx"].map((extension) =>
+            access(join(packageRoot, "src", `${file.slice(output.length, -3)}.${extension}`)),
+          ),
+        ),
         `${expected.name} contains stale output ${file}; clean and rebuild before packing.`,
       );
     }
@@ -129,6 +136,7 @@ try {
       assert.ok(!files.includes(forbidden), `${expected.name} contains retired ${forbidden}.`);
     }
     for (const required of [
+      ...(expected.requiredFiles ?? []),
       ...(expected.requiredExports === undefined ? [] : ["dist/index.js", "dist/index.d.ts"]),
       ...(expected.bins === undefined
         ? []
@@ -164,7 +172,7 @@ try {
       packages,
       tarballs,
       run,
-      sdkOnly ? "task-sdk" : undefined,
+      sdkOnly ? "task-sdk" : serviceOnly ? "task-service" : undefined,
     );
 } finally {
   if (process.env.PGUIDE_KEEP_PACK_CONSUMERS === "1")

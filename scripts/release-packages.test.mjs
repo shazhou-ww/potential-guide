@@ -12,9 +12,12 @@ import {
 test("local verification covers the internal runtime dependency closure without expanding release tags", async () => {
   const names = new Set(verificationPackages.map(({ name }) => name));
   assert.equal(names.size, verificationPackages.length);
-  for (const { directory } of verificationPackages) {
+  for (const { directory, workspace } of verificationPackages) {
     const manifest = JSON.parse(
-      await readFile(new URL(`../packages/${directory}/package.json`, import.meta.url), "utf8"),
+      await readFile(
+        new URL(`../${workspace ?? "packages"}/${directory}/package.json`, import.meta.url),
+        "utf8",
+      ),
     );
     for (const [name, range] of Object.entries(manifest.dependencies ?? {})) {
       if (range.startsWith("workspace:"))
@@ -28,6 +31,8 @@ test("local verification covers the internal runtime dependency closure without 
     "probe-task",
     "task-engine-server",
     "pguide-task-bundle",
+    "pguide-task-engine",
+    "task-engine-web-ui",
   ]) {
     assert.ok(verificationPackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.1.0`), /Unsupported package/);

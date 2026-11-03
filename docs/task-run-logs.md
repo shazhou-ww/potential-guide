@@ -230,12 +230,19 @@ The SDK-only variant is `node scripts\check-packages.mjs --task-sdk`.
 
 For an operator-controlled long-lived candidate, reuse the retained
 `bundle-runtime` installation, **not** the script's random-token fixture server.
-Prepare a trusted local module there, for example:
+For the token-free loopback service, install the locally packed
+`@potential-guide/pguide-task-engine` and UI dependency graph instead and follow
+[the declarative service guide](task-server.md#declarative-local-service).
+The old `task-engine-server --config operator.mjs` executable is retired;
+YAML/JSON cannot carry custom logging limits or authentication callbacks.
+Applications requiring those hooks retain the programmatic API. For example,
+prepare an ordinary application entry there (not a CLI configuration module):
 
 ```js
 import { TaskError } from "@potential-guide/task-protocol";
-import { createIpfsClient } from "@potential-guide/task-engine";
-export default {
+import { createIpfsClient } from "@potential-guide/ipfs-content";
+import { startTaskServer } from "@potential-guide/task-engine-server";
+const service = await startTaskServer({
   host: "127.0.0.1", port: 3000,
   database: "operator-v5.sqlite",
   ipfsClient: await createIpfsClient("http://127.0.0.1:5001"),
@@ -249,11 +256,23 @@ export default {
       throw new TaskError("unauthenticated", "Authentication required.");
     return { scope: "operator", subject: "operator" };
   },
+});
+let closing = false;
+const close = () => {
+  if (closing) return;
+  closing = true;
+  void service.close().then(() => {
+    process.removeListener("SIGINT", close);
+    process.removeListener("SIGTERM", close);
+  }, () => process.exit(1));
 };
+process.on("SIGINT", close);
+process.on("SIGTERM", close);
+console.log(service.url);
 ```
 
 Provide a private token in that process environment and start
-`pnpm exec task-engine-server --config .\operator.mjs` **from `bundle-runtime`**.
+`node .\operator.mjs` **from `bundle-runtime`**.
 Use a new database domain for a new candidate, not an old-format database.
 Do not commit the private module, token, SQLite files or favorites.
 
