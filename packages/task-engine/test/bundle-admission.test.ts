@@ -131,7 +131,6 @@ test("verified memory-source Worker streams resources independent of author/host
         startedAt: snapshot.run!.startedAt,
         scope: caller.scope,
       });
-      assert.equal(await engine.evictBundle(cid), true);
       await engine.close();
       client.blocks.clear();
       const restored = createTaskEngine(options);

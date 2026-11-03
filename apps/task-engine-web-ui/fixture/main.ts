@@ -17,8 +17,6 @@ const server = await startTaskServer({
   ipfsClient: resources.ipfsClient,
   authorize: (caller, operation, scope) =>
     caller.scope === scope &&
-    (!["cache-read", "cache-remove"].includes(operation) ||
-      (caller.scope === "demo" && caller.subject === "full")) &&
     (caller.subject !== "directory" || ["list", "list-runs"].includes(operation)),
   resolveCaller(request) {
     const bearer = request.headers.get("authorization");

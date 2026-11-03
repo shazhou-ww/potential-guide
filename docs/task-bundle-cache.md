@@ -1,64 +1,17 @@
-# Endpoint Task Bundle 缓存管理
+# Task Bundle 内容存储与内部复用
 
-缓存管理只观察或驱逐所连接 Task Server 已取得的内容，不是类型注册、制品仓库、
-上传入口或任务历史管理。UI Server 不读取后端磁盘，也不承担缓存所有权。
+Task Bundle 的持久内容由独立 IPFS/Kubo 节点管理。Engine 不维护额外的 Bundle 文件缓存目录，
+只在内存中保留已验证的装载结果、Schema、Worker 源码及活动内容保护。
+这些状态是内部运行机制，不是类型目录或操作员缓存管理产品。
 
-## 权限
+原 `/bundle-cache` 列表、详情和删除 API 已移除，返回 404。
+Engine 与 TaskClient 不再提供 `listCachedBundles`、`getCachedBundle`、
+`removeCachedBundle` 或 `evictBundle`，也不再定义 `cache-read` / `cache-remove` 操作。
+Web 工作台只提供 Task 和 Run 工作区，不提供缓存页或缓存管理代理。
 
-`cache-read` 授予列举与契约读取，`cache-remove` 授予单项清理。
-它们与业务 `submit`、`list`、`task` 等权限独立，由可信 `authorize` 策略显式决定。
-这些权限提供 **整个 Endpoint 缓存** 的操作员访问，不按业务 scope 过滤：
-内容按 Digest 共享，名称、契约和占用也可能来自其他 scope。
-只应授予可信操作员；策略收到的 scope 是 Caller 的可信 scope，不代表缓存属于该 scope。
-读取权限不自动授予清理权限。使用通配允许策略的部署需自行审查这些新操作。
+准备与运行仍复用已验证内容，并受内部占用保护和容量上限约束。
+关闭 Engine 释放它自己的内存状态，不关闭共享 IPFS 客户端或节点，不移除共享 pin。
+IPFS 内容、pin 和垃圾回收应通过独立节点的管理工具处理，而不是通过 Task Engine。
+历史查询读取持久事实，不因 Engine 内存状态释放而失效；需要再次执行时仍按根 CID 获取并验证内容。
 
-## 接口
-
-| HTTP | 程序化入口 | 返回 |
-|---|---|---|
-| `GET /bundle-cache?limit=50&after=sha256:…` | `engine.listCachedBundles(page, caller)` | `{items, observedAt, next?}` |
-| `GET /bundle-cache/sha256:…` | `engine.getCachedBundle(digest, caller)` | 内容状态及原声明、解析后 Schema |
-| `DELETE /bundle-cache/sha256:…` | `engine.removeCachedBundle(digest, caller)` | `{removed:true,digest}` |
-
-`TaskClient` 提供相应异步方法，身份来自其可信传输配置。Server 将管理端口接入已有鉴权链路；
-单独使用 `createTaskHandler` 时可通过 `bundleCache` 注入管理端口，不提供时返回 404。
-DELETE 不接受请求体，无批量清空接口。
-
-列表按完整 Digest 升序，`after` 是排他的上一页末 Digest，不是冻结目录游标。
-默认每页 50，最多 100；目录扫描超过 10,000 个条目明确返回容量错误，不截断伪装完整成功。
-分页之间内容和占用可变化，应刷新后判断；列表总和不是磁盘使用量的固定快照。
-单页中并发消失的缓存可略过，不以旧数据补齐。临时获取目录不作为已缓存内容列出。
-已提交获取但尚未缓存的内容可显示 `cached:false`、`preparing:true`，没有名称或大小时不编造。
-
-摘要包含 `digest`、`cached`、`preparing`、`leases`，已缓存时另有 `name`、`bytes` 和 `files`。
-`bytes` 是经过校验的完整文件内容字节总数，不是文件系统分配空间或压缩包大小。
-`leases` 是缓存内容保护计数，不等于活跃 Run 数或 Task 数，准备及内部读取也可能短暂持有。
-管理读取只做文件与声明校验，不下载内容、不执行 Worker；不导出后端目录或缓存来源 URL。
-Digest 不含原始获取位置，因此只凭缓存不能生成完整提交引用；新任务仍需明确的 URL + Digest。
-
-## 清理与并发
-
-正在获取、被租约持有或另一清理进行中的内容拒绝清理，HTTP 409 / `bundle_in_use`。
-列表只是观察，删除时必须重新仲裁，不能凭列表显示“空闲”绕过保护。
-清理开始后到达的获取等待该次删除，再按正常规则重新获取内容；
-同一 Engine 内不会因删除/获取竞争把正在使用的内容误删。
-
-成功只移除该 Digest 的缓存，不停止 Run、不取消 Task、不改原请求或历史，不删除原归档。
-已受理但未开始的 Task 之后可能需要重新获取；原来源不可用时显式失败。
-已经不存在的内容按幂等删除成功处理；获取详情则返回 404。
-拒绝或删除失败不能伪装成功，失败时刷新核对，不承诺释放未知资源或回滚部分磁盘操作。
-
-缓存目录只由一个 Engine 进程管理，不支持多个进程共用并发驱逐，也不要由外部工具直接删除。
-从目录恢复列表不需要先运行任务；篡改内容、非法条目和超过当前容量的内容明确报错，
-不以空缓存掩盖损坏。此功能不自动修复、迁移或清空异常目录。
-
-## Web 工作台
-
-“Bundle 缓存”是与“任务”“Run”并列的第三个页面，显示当前 Endpoint、按页摘要及契约详情。
-清理先显示完整 Digest 与后果，再由“确认清理”执行；忙碌内容禁用入口，但后端仍独立校验。
-切换 Endpoint 保持在缓存页但清空旧内容并重新读取，迟到响应不能覆盖新目标，
-也不会自动改投清理请求；跨页面切换不清理内容、不取消任务。
-UI 只保留当前页，刷新或翻页时清空旧契约选择；详情失败清楚标记旧观察不代表当前事实。
-没有权限或后端没有此接口时显示错误，不扫描事件或本机目录来模拟管理。
-
-范围不含上传、发布、自动淘汰、批量清空或源归档删除。
+参见 [Task Engine](task-engine.md) 和 [Task Bundle 契约](axis/task-engine-contracts/task-bundle.md)。

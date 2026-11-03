@@ -1,7 +1,6 @@
 import type { IpfsClient } from "@potential-guide/ipfs-content";
 import {
   at,
-  type BundleCacheService,
   bundleCid,
   type Caller,
   canonical,
@@ -417,34 +416,6 @@ export class TaskEngine implements TaskService {
   tick(): void {
     this.core.tick();
   }
-  async evictBundle(cid: string): Promise<boolean> {
-    return this.cache.evict(cid);
-  }
-  private cacheAccess(caller: Caller, operation: "cache-read" | "cache-remove"): void {
-    this.readable();
-    if (
-      !caller ||
-      typeof caller.scope !== "string" ||
-      !caller.scope ||
-      typeof caller.subject !== "string" ||
-      !caller.subject ||
-      !this.options.authorize(caller, operation, caller.scope)
-    )
-      throw new TaskError("forbidden", "Endpoint-wide Bundle cache permission required.");
-  }
-  readonly listCachedBundles: BundleCacheService["listCachedBundles"] = async (page, caller) => {
-    this.cacheAccess(caller, "cache-read");
-    return this.cache.list(page);
-  };
-  readonly getCachedBundle: BundleCacheService["getCachedBundle"] = async (cid, caller) => {
-    this.cacheAccess(caller, "cache-read");
-    return this.cache.detail(cid);
-  };
-  readonly removeCachedBundle: BundleCacheService["removeCachedBundle"] = async (cid, caller) => {
-    this.cacheAccess(caller, "cache-remove");
-    if (!(await this.cache.evict(cid)))
-      throw new TaskError("bundle_in_use", "Bundle is preparing, leased or being removed.");
-  };
   close(): Promise<void> {
     if (this.closeAttempt) return this.closeAttempt;
     this.closeAttempt = this.closeInner().catch((error) => {

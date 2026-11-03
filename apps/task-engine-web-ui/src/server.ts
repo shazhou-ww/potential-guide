@@ -177,9 +177,7 @@ async function boundedBody(response: Response, max = RESPONSE_LIMIT): Promise<Ui
 }
 export function allowedRoute(path: string, method: string, params: URLSearchParams): boolean {
   let keys: string[] = [];
-  if (path === "/bundle-cache" && method === "GET") keys = ["after", "limit"];
-  else if (/^\/bundle-cache\/[^/]+$/.test(path) && ["GET", "DELETE"].includes(method)) keys = [];
-  else if (path === "/tasks" && method === "GET")
+  if (path === "/tasks" && method === "GET")
     keys = [
       "taskId",
       "bundleCid",

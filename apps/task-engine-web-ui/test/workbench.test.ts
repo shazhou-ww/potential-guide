@@ -321,7 +321,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
       () => element("#directory").textContent!.includes(remote.taskId.slice(-8)),
       "Task directory must load by default",
     );
-    assert.equal(document.querySelectorAll('[role="tab"]').length, 3);
+    assert.equal(document.querySelectorAll('[role="tab"]').length, 2);
     assert.equal(document.querySelector("#bar-toggle"), null);
     assert.equal(document.querySelectorAll('main [role="tabpanel"]:not([hidden])').length, 1);
     click("#tab-executions");

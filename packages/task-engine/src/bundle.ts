@@ -7,8 +7,6 @@ import {
 } from "@potential-guide/check-artifacts/files";
 import { type IpfsClient, openContent, protectContent } from "@potential-guide/ipfs-content";
 import {
-  type BundleCacheDetail,
-  type BundleCachePage,
   type BundleReference,
   bundleCid,
   type JsonObject,
@@ -351,49 +349,6 @@ export class BundleCache {
     this.protectionBudget.bytes -= this.prepared.get(cid)?.protectedBytes ?? 0;
     this.prepared.delete(cid);
     return true;
-  }
-  async detail(cid: string): Promise<BundleCacheDetail> {
-    cid = bundleCid(validateBundleReference(cid));
-    this.lifetime.signal.throwIfAborted();
-    const prepared = this.prepared.get(cid);
-    if (!prepared && !this.fetching.has(cid))
-      throw new TaskError("not_found", "Bundle metadata is not cached.");
-    return {
-      cid,
-      cached: !!prepared,
-      preparing: this.fetching.has(cid),
-      leases: this.pins.get(cid) ?? 0,
-      ...(prepared
-        ? {
-            name: prepared.declaration.name,
-            bytes: prepared.bytes,
-            files: prepared.files,
-            declaration: prepared.declaration,
-            resolved: prepared.resolved,
-          }
-        : {}),
-    };
-  }
-  async list(page: { after?: string; limit?: number }): Promise<BundleCachePage> {
-    const limit = page.limit ?? 50;
-    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
-      throw new TaskError("invalid_request", "Cache page limit must be between 1 and 100.");
-    const after =
-      page.after === undefined ? undefined : bundleCid(validateBundleReference(page.after));
-    const candidates = [...new Set([...this.prepared.keys(), ...this.fetching.keys()])]
-      .filter((cid) => !after || cid > after)
-      .sort();
-    const items = await Promise.all(
-      candidates.slice(0, limit).map(async (cid) => {
-        const { declaration: _declaration, resolved: _resolved, ...entry } = await this.detail(cid);
-        return entry;
-      }),
-    );
-    return {
-      items,
-      observedAt: new Date().toISOString(),
-      ...(candidates.length > limit ? { next: candidates[limit - 1] } : {}),
-    };
   }
   async close(): Promise<void> {
     this.lifetime.abort(new TaskError("engine_closed", "Bundle reads are closing."));

@@ -38,9 +38,6 @@ test("standard UnixFS imports are reproducible; full admission and verified chun
     ]);
     assert.equal(a.cid, b.cid);
     assert.equal(await cache.available(alias), true);
-    assert.equal((await cache.detail(alias)).cid, cid);
-    assert.deepEqual((await cache.list({ after: alias })).items, []);
-    assert.equal((await cache.detail(cid)).leases, 2);
     assert.equal(await cache.evict(cid), false);
     assert.equal(await cache.evict(alias), false);
     // Engine-owned bounded verified blocks protect active content even if the node GC runs.

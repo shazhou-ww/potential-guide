@@ -39,7 +39,8 @@ Facts/SQLite v5 明确拒绝 v4 等旧格式；操作者必须显式选择新域
 `maxPreparing` 默认 1000，`maxWaitMs` 默认 30,000ms，
 `requestResultRetentionMs` 默认 86,400,000ms。队列等待不构成 preparation 超时。
 完整 DAG、声明、Schema 闭包、路径和容量校验在 Task 创建前完成。
-缓存使用有界 verified blocks 及租约保护在途准备/运行；`evictBundle(cid)` 只清理自身缓存。
+内部内存复用使用有界 verified blocks 及租约保护在途准备/运行，不提供公开缓存管理 API；
+Engine 不维护额外的 Bundle 文件缓存目录，持久内容、pin 与 GC 由独立 IPFS 节点管理。
 `bundleLimits.protectedBytes` 默认 256 MiB，是所有受保护块的总量预算；超限明确拒绝。
 Engine 不启动/停止节点、不关闭共享 client，也不删除共享或发布者 pin。
 gateway 默认禁止访问；宿主通过 `allowGateway(url)` 明确授权，所有 gateway 块仍须 CID 校验。

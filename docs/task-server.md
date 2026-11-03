@@ -62,10 +62,9 @@ does not cancel a Task. Business `ok:false` is a normal completed Check result.
 
 ## Resource ownership
 
-Server exposes optional operator-facing [Bundle cache management](./task-bundle-cache.md)
-through the same authentication boundary. Explicit `cache-read` and `cache-remove`
-grants cover the entire Endpoint cache, not a scope-filtered business catalog.
-The Web UI is only a client; it never deletes the Server's cache directory directly.
+Server does not expose Bundle cache management APIs. Persistent content belongs to
+the independent IPFS node; Engine's verified in-memory load results and leases are
+internal runtime state. See [content storage and reuse](./task-bundle-cache.md).
 
 The Server owns its listener and subscriptions; Engine owns lifecycle and
 execution tracking. Check owns its generic pool and each physical worker.

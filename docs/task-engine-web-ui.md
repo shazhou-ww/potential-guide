@@ -123,12 +123,6 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   记录，不宣称服务端全量命中数或支持随机跳页。完整基线仍保留最多 10,000 条 /
   8 MiB 的预算，不再只展示前 1000 条。实时更新保留列筛选、排序、分页和弹出面板状态；
   数据缩减会收敛页码，新查询回到首页，切换 Endpoint 清除本地列筛选与排序。
-- **Bundle 缓存**：与任务、Run 并列的独立页面，管理当前 Endpoint 机器上的内容缓存，不是浏览器本地文件。
-  提供分页列表、大小/占用、声明契约及显式确认的单项清理；与 Task/Run 目录权限独立。
-  行内操作使用固定尺寸图标按钮；声明契约使用与 Task/Run 相同的右侧详情抽屉，
-  清理确认使用模态弹窗，不在表格下追加内容。
-  忙碌内容清理被拒绝，清理不删除任务历史或原归档；后续运行可能需要重新获取。
-  详细权限、并发与接口见 [Endpoint Task Bundle 缓存管理](./task-bundle-cache.md)。
 - **数据行导航**：Task 与 Run 目录的类型是普通文字，不是按钮。点击数据行，或聚焦行后
   按 Enter / Space 打开详情；关闭 Sheet 回原行，表格仍保留真实 table/row/cell 语义。
   星标、重做/编辑及整个操作单元格（包括空白、禁用按钮和提示包装区域）独立处理，
@@ -139,10 +133,11 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   可访问名称；Esc 可关闭提示，Enter 仍执行原动作。新建、提交、实体名称、取消、
   未知回执重试保留文字，不把所有按钮机械图标化。`data-action` 和稳定 key 不变，
   图标按钮另有 `data-glyph-action`，不会因文字隐藏而改变提交身份或业务回调。
-- **三个主 Tab**：标题、任务/Run/Bundle 缓存 Tabs、受控服务选择合在顶栏。
+- **两个主 Tab**：标题、任务/Run Tabs、受控服务选择合在顶栏。
   主导航使用舒展的文字和下划线选中态，窄屏时独立成行。
   默认任务页，整合当前/历史目录、筛选、选中详情与星标。
-  Run 页查询整个 Endpoint 获授权且保留的运行记录，缓存页提供缓存列表、契约与单项清理。
+  Run 页查询整个 Endpoint 获授权且保留的运行记录，不提供 Bundle 缓存页。
+  IPFS 内容由独立节点管理，Engine 内存复用不作为公开管理接口。
   一次只有一页进入布局和
   键盘顺序；Tab 箭头键、弹窗 Esc/焦点回归可用，跨 Tab 保留筛选、选中项和输入。
 - **全宽列表与详情抽屉**：两个目录独占页面可用宽度，点击任务/执行后从右侧覆盖，
@@ -160,7 +155,7 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   填写根 CID 或 `{cid,hint}` JSON；hint 为单个或有序多个 HTTP(S) gateway 基址，
   不参与内容身份。共享协议函数校验后保留引用形状与 hint 顺序，
   编辑重做、原始历史和星标不偷偷改写引用。
-  Task/Run 目录与缓存表格展示名称、短实体 ID 和短 CID；悬停及详情可复制完整 CID，
+  Task/Run 目录展示名称、短实体 ID 和短 CID；悬停及详情可复制完整 CID，
   短值不用于判等或查询。原始引用是纯文本，UI 不访问 hint。
   内容判等、`bundleCid` 查询和缓存都以完整规范化 CID 为准。
 - **新建弹窗**：填写固定根 CID / JSON Bundle 引用、timeoutMs 和可选时间/匹配参数，
@@ -301,10 +296,10 @@ pnpm --filter @potential-guide/task-engine-web-ui start (Join-Path $demo 'ui.jso
    原参数发起新身份，编辑后发送不改原星标。Run 终结且回收后自动停流，
    Task 仍可继续观察取消与时间变化；停流后仍可分页历史。
    打开 Run 详情查看结果、故障与退出诊断，不把无历史权限误解为没有结果。
-   用窄窗口和 Tab/Enter/Esc 操作三个页面、新建/批量弹窗和详情。
+   用窄窗口和 Tab/Enter/Esc 操作两个页面、新建/批量弹窗和详情。
 
-关键自动化入口：`#tab-tasks` / `#tab-executions` / `#tab-cache`、
-`#tasks` / `#executions` / `#cache`（tabpanel）、`#bundle-cache`（缓存列表与详情）、
+关键自动化入口：`#tab-tasks` / `#tab-executions`、
+`#tasks` / `#executions`（tabpanel）、
 `#new-task` / `#create-dialog`、`#only-favorites`、`.star[aria-pressed]`、
 `#create-dialog #batches` / `#bar-count`（批量与回执）、`#directory` / `#execution-directory`、
 `#task-detail-sheet` / `#execution-detail-sheet`（`[data-slot="sheet-content"]`）、

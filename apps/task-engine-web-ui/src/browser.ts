@@ -1,6 +1,4 @@
 import type {
-  BundleCacheDetail,
-  BundleCachePage,
   BundleReference,
   HistoryPage,
   Observation,
@@ -155,193 +153,6 @@ let favorites: Favorite[] = [];
 let favoritesGeneration = 0;
 const sourceStates = new Map<string, { label: string }>();
 const selection = new Selection();
-let cacheGeneration = 0;
-let cachePage: BundleCachePage | undefined;
-let cacheDetail: BundleCacheDetail | undefined;
-let cacheConfirm: string | undefined;
-let cacheError = "";
-let cacheBusy = false;
-function renderCache(): void {
-  const endpoint = selection.endpoint;
-  if (!endpoint) return;
-  const box = node("div");
-  box.className = "cache-layout";
-  box.dataset.key = `cache:${endpoint.binding}`;
-  report("Bundle 缓存", cacheError);
-  const footer = node("footer");
-  footer.className = "directory-grid-footer cache-footer";
-  const summary = node("p");
-  summary.setAttribute("role", "status");
-  summary.textContent = `${cachePage ? `本页 ${cachePage.items.length} 项 · 观察于 ${cachePage.observedAt}` : "尚未取得缓存目录"} · ${cacheError ? "查询失败 / 数据待核对，详见错误日志" : cacheBusy ? "正在读取或清理缓存…" : "缓存快照；不是全缓存容量统计"}`;
-  footer.append(
-    summary,
-    button("刷新缓存", () => loadCache(), cacheBusy),
-  );
-  if (cachePage) {
-    const table = node("table");
-    const head = node("thead");
-    const heading = node("tr");
-    for (const label of ["Bundle / CID", "内容大小", "占用", "操作"])
-      heading.append(node("th", label));
-    head.append(heading);
-    table.append(head);
-    const body = node("tbody");
-    for (const item of cachePage.items) {
-      const row = node("tr");
-      row.dataset.key = item.cid;
-      const identity = node("td");
-      identity.append(node("strong", item.name ?? "正在准备"), compactBundle(item.cid));
-      const controls = node("td");
-      controls.append(
-        inlineButton("查看契约", () => readCacheDetail(item.cid), cacheBusy),
-        inlineButton(
-          "清理此缓存",
-          () => {
-            cacheConfirm = item.cid;
-            renderCache();
-            navigation.open("cache-confirm");
-          },
-          cacheBusy || item.preparing || item.leases > 0,
-        ),
-      );
-      row.append(
-        identity,
-        node(
-          "td",
-          item.bytes === undefined
-            ? "尚未缓存"
-            : `${item.bytes.toLocaleString()} 字节 / ${item.files} 文件`,
-        ),
-        node(
-          "td",
-          `${item.preparing ? "准备中" : "未在准备"} · ${item.leases} 个占用租约（不等于 Task 数）`,
-        ),
-        controls,
-      );
-      body.append(row);
-    }
-    table.append(body);
-    const scroll = node("div");
-    scroll.className = "cache-grid-scroll";
-    scroll.append(table);
-    box.append(scroll);
-    if (!cachePage.items.length)
-      box.append(node("p", "当前页没有缓存 Bundle。可运行任务后刷新；不会自动下载内容。"));
-    if (cachePage.next)
-      footer.append(button("下一页缓存", () => loadCache(cachePage!.next), cacheBusy));
-  }
-  box.append(footer);
-  if (cacheConfirm) {
-    const digest = cacheConfirm;
-    const confirm = node("section");
-    confirm.dataset.key = `remove:${digest}`;
-    confirm.append(
-      node(
-        "p",
-        `确认清理 ${digest}？只移除 Engine 内容保护与元数据，不删除任务、历史或共享 IPFS pin。再次运行需重新验证内容。`,
-      ),
-      button("确认清理", () => removeCache(digest), cacheBusy),
-      button(
-        "保留缓存",
-        () => {
-          cacheConfirm = undefined;
-          navigation.close("cache-confirm");
-        },
-        cacheBusy,
-      ),
-    );
-    view.render("cache-confirmation", [confirm]);
-  }
-  if (cacheDetail)
-    view.render("cache-detail", [
-      node("p", cacheDetail.cid),
-      copyCid(cacheDetail.cid),
-      details("Bundle 声明与解析后契约", cacheDetail, `cache-detail:${cacheDetail.cid}`),
-    ]);
-  reconcile("bundle-cache", [box]);
-}
-async function loadCache(after?: string): Promise<void> {
-  if (!selection.endpoint) return;
-  const endpoint = selection.endpoint,
-    lease = selection.capture(),
-    generation = ++cacheGeneration;
-  cacheBusy = true;
-  cacheError = "";
-  cacheConfirm = undefined;
-  cacheDetail = undefined;
-  renderCache();
-  try {
-    const query = new URLSearchParams({ limit: "50", ...(after ? { after } : {}) });
-    const page = await api.request<BundleCachePage>(endpoint, `/bundle-cache?${query}`, {
-      signal: lease.signal,
-    });
-    if (!lease.current() || generation !== cacheGeneration) return;
-    if (!Array.isArray(page.items) || typeof page.observedAt !== "string")
-      throw new Error("缓存列表协议无效。");
-    cachePage = page;
-  } catch (error) {
-    if (lease.current() && generation === cacheGeneration)
-      cacheError = `缓存读取失败；旧页仅供参考。${String(error)}`;
-  } finally {
-    if (lease.current() && generation === cacheGeneration) {
-      cacheBusy = false;
-      renderCache();
-    }
-  }
-}
-async function readCacheDetail(digest: string): Promise<void> {
-  const endpoint = workspace().endpoint,
-    lease = selection.capture(),
-    generation = ++cacheGeneration;
-  cacheBusy = true;
-  cacheError = "";
-  renderCache();
-  try {
-    const detail = await api.request<BundleCacheDetail>(endpoint, `/bundle-cache/${digest}`, {
-      signal: lease.signal,
-    });
-    if (!lease.current() || generation !== cacheGeneration) return;
-    if (detail.cid !== digest) throw new Error("缓存详情身份不一致。");
-    cacheDetail = detail;
-    navigation.open("cache-detail");
-  } catch (error) {
-    if (lease.current() && generation === cacheGeneration)
-      cacheError = `契约读取失败：${String(error)}`;
-  } finally {
-    if (lease.current() && generation === cacheGeneration) {
-      cacheBusy = false;
-      renderCache();
-    }
-  }
-}
-async function removeCache(digest: string): Promise<void> {
-  const endpoint = workspace().endpoint,
-    lease = selection.capture(),
-    generation = ++cacheGeneration;
-  cacheBusy = true;
-  cacheError = "";
-  renderCache();
-  try {
-    const receipt = await api.request<{ removed: boolean; cid: string }>(
-      endpoint,
-      `/bundle-cache/${digest}`,
-      { method: "DELETE", signal: lease.signal },
-    );
-    if (!lease.current() || generation !== cacheGeneration) return;
-    if (receipt.removed !== true || receipt.cid !== digest)
-      throw new Error("清理回执无效；结果未知，请刷新核对。");
-    navigation.close("cache-confirm");
-    await loadCache();
-  } catch (error) {
-    if (lease.current() && generation === cacheGeneration)
-      cacheError = `清理未确认：${String(error)}。不会停止 Run；请刷新核对缓存状态。`;
-  } finally {
-    if (lease.current() && generation === cacheGeneration) {
-      cacheBusy = false;
-      renderCache();
-    }
-  }
-}
 const states = new Map<string, Workspace>();
 let formReader: (() => Parameters) | undefined;
 let formEndpoint: Endpoint | undefined;
@@ -2119,18 +1930,11 @@ async function chooseEndpoint(id: string): Promise<void> {
   const endpoint = endpoints.find((item) => item.id === id);
   if (!endpoint) throw new Error("Endpoint 不存在。");
   selection.select(endpoint);
-  cacheGeneration++;
-  cachePage = undefined;
-  cacheDetail = undefined;
-  cacheConfirm = undefined;
-  cacheError = "";
-  cacheBusy = false;
   const lease = selection.capture();
   starChecks?.abort();
   navigation.close("create-dialog", false);
   if (navigation.overlay) navigation.close(navigation.overlay.id, false);
-  const cacheSelected = navigation.tab === "cache";
-  navigation.show(cacheSelected ? "cache" : "tasks", false);
+  navigation.show("tasks", false);
   (get("endpoint") as HTMLSelectElement).value = endpoint.id;
   closeObservers();
   formReader = undefined;
@@ -2157,10 +1961,7 @@ async function chooseEndpoint(id: string): Promise<void> {
   renderDirectory();
   renderExecutions();
   await Promise.all([initializeForm(), renderFavorites()]);
-  if (lease.current()) {
-    if (cacheSelected) await loadCache();
-    else await queryDirectory();
-  }
+  if (lease.current()) await queryDirectory();
 }
 async function start(): Promise<void> {
   const unexpectedError = (event: ErrorEvent) => notify(event.error ?? event.message);
@@ -2172,9 +1973,7 @@ async function start(): Promise<void> {
   const bootstrap = (await response.json()) as { csrf: string; endpoints: Endpoint[] };
   api = new Api(bootstrap.csrf);
   endpoints = bootstrap.endpoints;
-  view.text("bundle-cache", "请选择受控 Endpoint 后查看缓存。");
   view.events.tab = (tab) => {
-    if (tab === "cache") void loadCache();
     if (tab === "executions" && selection.endpoint && !workspace().executionDirectory.page)
       void queryExecutions();
   };

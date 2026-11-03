@@ -55,33 +55,6 @@ export interface TaskBundleDeclaration {
 export interface ResolvedTaskBundle extends Omit<TaskBundleDeclaration, "inputSchema"> {
   inputSchema: InputSchema;
 }
-export interface BundleCacheEntry {
-  cid: string;
-  cached: boolean;
-  preparing: boolean;
-  leases: number;
-  name?: string;
-  bytes?: number;
-  files?: number;
-}
-export interface BundleCachePage {
-  items: BundleCacheEntry[];
-  observedAt: string;
-  next?: string;
-}
-export interface BundleCacheDetail extends BundleCacheEntry {
-  declaration?: TaskBundleDeclaration;
-  resolved?: ResolvedTaskBundle;
-}
-/** Endpoint-wide operator access, not a scope-filtered business catalog. */
-export interface BundleCacheService {
-  listCachedBundles(
-    page: { after?: string; limit?: number },
-    caller: import("./types.js").Caller,
-  ): Promise<BundleCachePage>;
-  getCachedBundle(cid: string, caller: import("./types.js").Caller): Promise<BundleCacheDetail>;
-  removeCachedBundle(cid: string, caller: import("./types.js").Caller): Promise<void>;
-}
 const validator = new Ajv2020({ strict: true, allowUnionTypes: true }).compile(taskBundleSchema);
 export function validateTaskBundle(value: unknown): TaskBundleDeclaration {
   const parsed = json(value, 1_048_576);

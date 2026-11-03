@@ -1,6 +1,4 @@
 import {
-  type BundleCacheDetail,
-  type BundleCachePage,
   type Caller,
   type CancellationResult,
   type HistoryFilter,
@@ -180,17 +178,6 @@ export class TaskClient {
       await reader.cancel().catch(() => {});
       reader.releaseLock();
     }
-  }
-  listCachedBundles(page: { after?: string; limit?: number } = {}): Promise<BundleCachePage> {
-    return this.request(this.query("/bundle-cache", page));
-  }
-  getCachedBundle(digest: string): Promise<BundleCacheDetail> {
-    return this.request(`/bundle-cache/${encodeURIComponent(digest).replace("%3A", ":")}`);
-  }
-  async removeCachedBundle(digest: string): Promise<void> {
-    await this.request(`/bundle-cache/${encodeURIComponent(digest).replace("%3A", ":")}`, {
-      method: "DELETE",
-    });
   }
   listTasks(
     query: TaskQuery,
