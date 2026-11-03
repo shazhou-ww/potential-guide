@@ -1,6 +1,7 @@
 # Deployment
 
-本契约为准备阶段的轻量外部验证初版；本轮不部署服务或发布包。
+本轮在本机隔离的离线环境验证，不发布 npm 包或上传公共 IPFS 网络。
+使用独立 Kubo 发布节点与消费节点、合成非敏感 Bundle、独立 Engine 子进程及临时 SQLite 数据域。
 
 ## Steps
 
@@ -13,8 +14,15 @@
 ### D-S02: 验证跨节点消费与恢复
 
 从独立消费环境验证根引用、单文件读取、业务经 context 消费字节流、Task 执行及宿主重启；
+将标准验证后的合成块从发布节点复制到独立消费节点，随后停止发布节点，
+在作者目录已删除的条件下运行；以 scalar/array hint 测试实际 gateway raw-block 获取。
 验证根 CID 简写、单 gateway hint 和多候选 hint 均保持相同内容身份，
 核验内容缺失时的明确失败和不依赖内容的历史查询。
+
+验证辅助保存在本阶段的 `verification/endpoint.mjs`，
+通过 `node .silvermoon\ideas\01M6G3S79VWXYY1Q3A07R2HRP6\outer\verification\endpoint.mjs`
+执行。只使用现有已校验 Kubo 二进制，临时节点全部 `--offline` 且仅监听 loopback；
+所有子进程与临时目录由辅助自身清理，不关闭外部共享节点。
 
 ## Acceptance criteria
 
