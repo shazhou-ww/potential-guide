@@ -143,6 +143,78 @@ Before：成品文件树 → Git tree Digest → tgz + 发布 URL → 下载 / �
 After： 成品文件树 → UnixFS 导入 / 根 CID → IPFS 获取 / 完整验证 → 宿主装载入口 → Worker 经 context 读资源
 ```
 
+## Engine 初始化：Before / After
+
+初始化决定宿主如何可信地获取 Bundle；Request 的 CID 决定获取哪份内容，
+hint 只是候选获取位置。新架构需要可用的 IPFS Bundle 访问能力，
+但不要求把 HTTP gateway URI 定义为 Engine 的唯一或必填依赖。
+
+### Before：Engine 自带 URL 下载与目录缓存
+
+下面使用[现有 Bundle Engine API](../../../../../../packages/task-engine/src/bundle-engine.ts)
+展示变化前的配置形状；`store` 由宿主提供，其他无关配置省略：
+
+```ts
+const engine = createTaskEngine({
+  store,
+  bundleDirectory: bundleCacheDirectory,
+});
+await engine.start();
+```
+
+当前必须配置 `bundleDirectory`；Engine 自建 Bundle 缓存，从 Request 的 URL 获取归档，
+解包并验证 Digest。`fetchBundle` 可选，用于替换 HTTP 获取实现；
+本机 `file:` 读取仍属于既有获取链路。初始化不需要配置 IPFS 节点或 gateway。
+
+### After：宿主提供可信的 IPFS Bundle 访问能力
+
+以下是新架构的逻辑示意，不是已经实现的 API；
+`bundleAccess` 是待实施时确定的能力参数名，`trustedIpfsAccess` 由宿主装配：
+
+```ts
+const engine = createTaskEngine({
+  store,
+  bundleAccess: trustedIpfsAccess,
+});
+await engine.start();
+```
+
+该能力负责接入 IPFS 内容获取与验证，并落实宿主的网络访问策略和活动内容保留机制。
+Engine 仍负责 Bundle 准入、入口装载及向 Worker 提供 context 读取能力，
+不能因为获取实现被注入就跳过声明、文件集合或容量校验。
+其具体接口、配置字段与资源所有权在实施阶段落实，不提前固定实现类或启动外部服务。
+
+| 变化点 | Before | After |
+| --- | --- | --- |
+| 获取依赖 | Engine 自带 URL/文件获取；可选 `fetchBundle` 替换 HTTP 获取。 | 宿主装配可信 IPFS Bundle 访问能力，不把 gateway URI 当作唯一接口。 |
+| 默认获取位置 | 必填 Request URL 决定下载位置。 | 默认 IPFS 获取路径由初始化能力配置；Request 可额外提供 gateway hint。 |
+| 是否必须传 gateway | 原链路不使用 IPFS gateway。 | 不必；gateway 是获取能力的一种实现，本地节点、远程可验证网关或嵌入式 IPFS 都可作为实施选择。 |
+| 本地 gateway 场景 | 没有原生 IPFS 获取与验证配置。 | 宿主可让访问能力连接已配置的本地 IPFS 节点/gateway；不代表 Engine 自动安装、启动或管理节点。 |
+| 内容缓存 | `bundleDirectory` 是 Engine 自维护的内容缓存目录。 | 块缓存复用 IPFS 节点/实现，不要求独立 Bundle 分发缓存；可选入口文件与物化目录不是业务路径契约。 |
+| 初始化配置错误 | 校验既有可信配置，错误明确报告。 | 缺少有效获取能力或配置无效时明确报初始化错误，不把 Request hint 当作可信初始化的替代。 |
+| 网络内容暂不可用 | URL 获取失败按提交失败处理。 | 合法初始化不承诺每个 CID 可获取；节点离线、缺块或读取失败按实际操作明确报告，不要求初始化时预取所有 Bundle。 |
+| 重启与生命周期 | 固定数据域、恢复持久事实并管理 Worker 生命周期。 | 相同规则保留；访问能力与可选目录配置不改变数据域身份，也不自动重演旧 Run。 |
+
+使用 gateway 的第一版实现可以要求配置默认 gateway，但那是该实现的配置要求，
+不是 Engine 核心契约要求。无论选哪种后端，均必须满足同一 CID/DAG 验证、
+完整准入、容量限制和 Run 资源保护边界。
+上述示例的 `store` 只为展示当前 API；[职责入口](../../../../../../docs/axis/task-engine-responsibilities.md)
+中逻辑初始化 `openTaskEngine({ dataDomain })` 的数据域绑定语义不因引入 IPFS 改变，
+也不表示要同时建立第二套初始化入口。
+
+### 初始化能力与 Request hint 的分工
+
+| 输入 | 来源与用途 | 不承担的职责 |
+| --- | --- | --- |
+| IPFS Bundle 访问能力 | 由可信宿主初始化装配；决定默认获取路径、验证、访问策略和活动内容保护。 | 不替 Request 选择另一份 Bundle，不把 gateway 地址当作内容身份。 |
+| Request 的根 CID | 调用方明确指定不可变 Bundle 内容。 | 不保证内容留存，也不指定必须使用的节点或网关。 |
+| Request 的 hint | 调用方提供单个或有序候选 gateway，获取层可按宿主策略采用。 | 不初始化访问能力，不提供访问授权，不修改宿主配置，不绕过 CID 验证。 |
+
+只提供 CID 的 Request 必须能通过初始化配置的获取能力处理；
+带 hint 的 Request 仍经过同一能力与策略，不能成为另一条未经校验的获取通道。
+这也是 context 不需要暴露 gateway 的原因：业务只读当前 Bundle 的相对路径内容，
+后端选择与连接细节留在宿主获取层。
+
 ## Worker 如何访问 Bundle 内容
 
 业务回调只知道“当前 Run 所属 Bundle”和其中的相对路径，不知道文件在宿主哪里。
