@@ -193,3 +193,35 @@ Worker 资源拉取与内存入口，并独立执行：
 不将未验证的生产安装图或部署标准标为完成。`I-AC03` 与所有 `D-*` 继续未勾选。
 恢复条件为 registry/TLS 与包管理器验证元数据正常后，完成独立生产安装图及剩余检查；
 随后再同步准确的实施 revision，提交实施门限并进入部署验证。
+
+### 腾讯 registry 重试
+
+用户通过 `nrm` 切换到 `https://mirrors.tencent.com/npm/` 后，协调者重新执行
+`node scripts\check-packages.mjs --task-bundles`，本次退出 0：
+11 个相关 tarball 文件/导出检查、全新 author/runtime 生产安装图、
+作者 node_modules 不可用时的独立宿主 Check/Probe Bundle 执行、
+真实负业务结果与证据、HTTP 日志历史及实时补读均通过。
+之前的 registry/TLS 安装阻塞已经解除，没有关闭 TLS 或绕过供给链校验。
+
+重新执行 `pnpm check`，本次在 Check 的 HTTPS SQLite/Node Worker 重启测试遇到
+10 秒 readiness 超时；不能将该次全量结果记为通过。
+继续串行运行 workspace suites 以区分并行负载边界与实际回归，门限在复核完成前保持未提交。
+
+### 串行复核与实施审批依据
+
+`pnpm exec turbo run test --concurrency=1` 中，Engine 160、Storage 48、IPFS content 2、
+SDK 14、HTTP 19、Server 19、Environment 8 均通过。
+该全仓串行命令最终被已有 monorepo 职责分类断言阻断：
+`.agent/skills/component-responsibility-docs/SKILL.md` 缺少责任规则，结果为 `unverified`。
+这不是 IPFS 行为回归；保留该检查的失败事实，不修改无关技能或放宽分类规则。
+
+随后执行
+`pnpm exec turbo run test --concurrency=1 --filter=@potential-guide/check-task --filter=@potential-guide/probe-task --filter=@potential-guide/task-protocol`，
+三套相关测试通过；再执行
+`pnpm --dir apps\task-engine-web-ui exec tsx --test --test-concurrency=1 "test\*.test.ts"`，
+UI 91 项通过。结合其他相关 suites、独立生产安装图及类型检查，I-AC03 的相关链路已有证据。
+
+协调者依据用户授权接受以下非本次回归例外：全仓并行重启时限不稳定、
+monorepo 既有技能分类未验证；不声称 `pnpm check` 整体通过。
+此次认可实施链路的完整验证，不把无关全仓基线问题作为 IPFS 语义未完成的证明，
+也不因此取消任何 Deployment 检验。准确同步后提交实施门限。
