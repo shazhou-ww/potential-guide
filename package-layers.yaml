@@ -5,8 +5,6 @@ protocol:
   - "@potential-guide/task-engine-http"
   - "@potential-guide/task-engine-storage"
   - "@potential-guide/task-engine-server"
-  - "@potential-guide/checker-host"
-  - "@potential-guide/objective-host"
   - "@potential-guide/check-artifacts"
   - "@potential-guide/check-runtime-files"
   - "@potential-guide/effects"

@@ -1,5 +1,10 @@
 # npm Objective 包与固定消费
 
+Checker/Objective Host 执行链路已退役。npm 包的显式准备、摘要计算与固定缓存验证仍保留；
+CLI `probe`、`regulate` 和 `continue` 在迁移到 Task Bundle 前明确拒绝执行，
+不会重放或改写旧治理记录。以下旧消费与恢复示例仅用于理解历史格式；
+新执行请按 [Task Bundle 契约](axis/task-engine-contracts/task-bundle.md)显式构建和提交。
+
 独立 Check 的新增交付入口见
 [`@potential-guide/check-artifacts`](../packages/check-artifacts/README.md)：
 显式构建、独立 manifest/resources/References、本地或 HTTPS 准备、准确 digest

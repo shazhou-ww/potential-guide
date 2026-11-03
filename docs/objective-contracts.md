@@ -136,8 +136,9 @@ fall back to the old per-check process/IPC protocol.
 Workers export `execute(subject, context)` and return an envelope. The business
 layer resolves returned dependency `requirements` against real observations and
 rechecks the original check; the Host does not interpret Objective dependencies.
-See [Check Host](../packages/check-host/README.md) for revision, cleanup and
-observation ownership.
+The old Host execution path is retired. Static declarations remain valid,
+but CLI execution does not fall back to that protocol; author Task Bundles for the
+[generic Engine](axis/task-engine-contracts/task-bundle.md) explicitly.
 
 Upgrade a v2 source in a new commit only after migrating its entrypoints,
 resources, dependency handling and fixtures. Changing only `$schema` is not a

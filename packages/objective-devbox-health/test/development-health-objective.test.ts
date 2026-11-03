@@ -5,14 +5,11 @@ import { test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { Effect } from "@potential-guide/effects";
 import {
-  createWorkerCheckProbe,
   fileResources,
   loadPilotSpec,
   observe,
   type PilotSpec,
-  parseCheckEnvelope,
 } from "@potential-guide/objective-pilot";
-import { readArtifact } from "../../check-host/dist/index.js";
 import { root } from "../../pguide/test/fixtures.js";
 
 const objective = join(root, "packages", "objective-devbox-health");
@@ -498,27 +495,6 @@ test("task boundaries preserve healthy long tasks and never conflate deadline wi
     ids(health.layoutProblems({ ...normalized, cacheDirectory: `${subject.workspace}/cache` })),
     ["layout-invalid"],
   );
-});
-
-test("helper and all workers report malformed input as explicit invocation faults", async () => {
-  for (const stage of health.stages) {
-    const artifact = await readArtifact(join(objective, "dist", "package", "checks", stage));
-    const probe = createWorkerCheckProbe({
-      directory: artifact.directory,
-      revision: artifact.revision,
-      evidence: false,
-    });
-    const parsed = parseCheckEnvelope(await probe({}, new AbortController().signal));
-    assert.equal(parsed.status, 502);
-    assert.equal(parsed.payload, null);
-    assert.match(parsed.message, /worker-invocation/);
-  }
-  const malformed = await direct(helperPath, ["identity"], "{broken");
-  assert.equal(JSON.parse(malformed.stdout).status, 400);
-  const invalidStage = await health.check("sample", subject);
-  assert.equal(invalidStage.status, 400);
-  const invalid = await health.sample({ ...subject, unsupported: true });
-  assert.equal(invalid.status, 400);
 });
 
 test("native unsupported platforms are explicit faults, never mock success", async (t) => {

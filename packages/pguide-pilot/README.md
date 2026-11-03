@@ -7,6 +7,11 @@ transitive bins are not on PATH, through the public `./bin/probe`,
 `./bin/scaffold`, and `./bin/validate` exports. They share source/definition
 conventions and preserve existing options, output envelopes and exit codes.
 
+Host-based `probe` execution is now retired and explicitly returns exit code 2
+with `pilot-error` until migrated to Task Bundles. Scaffolding and static Pilot
+validation remain available. Artifact validation is local-only and reports
+`validationScope: "local-artifact"`; it does not resolve the external closure.
+
 ```sh
 pguide-scaffold pilot ./objective --check ready --problem not-ready
 pguide-validate pilot ./objective
@@ -16,10 +21,10 @@ pguide-probe --help
 Data-only Objective artifacts use `pguide-validate artifact <directory>` and
 `pguide-probe --pilot <directory> --revision <exact-artifact-digest>`.
 An exact `artifact+file:` address also works with `--pilot` or declarations.
-Artifact validation verifies the declared Check/dependency closure and composed
-References without running Checks. See [authoring and consumption](../../docs/objective-artifacts.md).
-Legacy scaffold/package/Git behavior remains available; this command does not
-silently convert existing sources.
+Artifact validation verifies the local manifest, declared files and mappings
+without running Checks. External Check/dependency closure and inherited
+References are not resolved. See [authoring contracts](../../docs/objective-artifacts.md).
+Legacy source formats are not silently converted.
 
 Default output and `--format markdown` share the same human-readable receipts.
 Scaffolding reports the destination, manifest, languages and next validation

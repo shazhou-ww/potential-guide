@@ -15,13 +15,11 @@ Actual file acquisition requires explicit `allowedFileRoots` in
 `@potential-guide/check-task`'s `createArtifactSource`. The legacy prepare/Host
 APIs and portable Objective embedded/dependency references do not gain file access.
 
-For ordinary network consumption prefer [Check Host v2](../check-host/README.md):
-the same Host owns source confirmation, exact cache, References and Task
-execution. This package remains the reusable explicit build/validation/preparation
-foundation. Private filesystem primitives live in `check-runtime-files`, so
-artifacts do not depend on the Host scheduler. Existing pinned HTTPS preparation
-continues to reject redirects; the Host's separate controlled-origin acquisition
-adds bounded, reauthorized HTTPS redirects without weakening that legacy API.
+The old Checker/Objective Hosts have been retired. This package remains the reusable
+explicit build/validation/preparation foundation, not a Task scheduler.
+Private filesystem primitives live in `check-runtime-files`.
+Generic execution uses `check-task` inside a Task Bundle. Existing pinned HTTPS
+preparation continues to reject redirects; no old Host protocol is restored.
 
 Standalone Check delivery, independent of npm Objective packages. This workspace
 library provides author-triggered build/pack and consumer-triggered preparation.
@@ -61,7 +59,6 @@ can be read relative to it.
 
 ```js
 import { prepareCheckArtifact } from "@potential-guide/check-artifacts";
-import { CheckKernel } from "@potential-guide/checker-host";
 
 const prepared = await prepareCheckArtifact({
   kind: "directory",
@@ -76,28 +73,16 @@ const prepared = await prepareCheckArtifact({
 // { kind: "https", url: "https://trusted.example/check.tgz",
 //   digest: "<logical digest>", transportDigest: "sha256:<64 lowercase hex>" }
 
-const kernel = await CheckKernel.create("D:\\consumer\\snapshots");
-try {
-  await kernel.executeCheck({
-    checkId: "caller-generated-unique-id",
-    directory: prepared.directory,
-    revision: prepared.revision,
-    subject: { file: "D:\\consumer\\target.txt" },
-  });
-  // Observe/subscribe until terminal before closing; see Check Host's API.
-} finally {
-  await kernel.close();
-}
+console.log(prepared.digest, prepared.revision);
 ```
 
 `inspectCheckArtifact(directory)` returns verified `{manifest, digest, files}` for
 an explicitly built local directory. `prepareCheckArtifact` requires an **exact**
 logical digest, never a version range. Its result has `{digest, manifest,
-artifactDirectory, directory, revision}`. Only `directory` and `revision` go to
-Host. The complete logical tree (including References) is in `artifactDirectory`;
+artifactDirectory, directory, revision}`. The complete logical tree (including References) is in `artifactDirectory`;
 the execution tree contains only worker and resources. Consumers can validate
 subjects/results against the manifest schemas and resolve problem IDs through
-`manifest.references.problems`; this layer does not change Host's opaque JSON API.
+`manifest.references.problems`; this layer does not execute the prepared worker.
 There is no Objective lookup, inheritance, override or built-in migration here.
 The exported `readArtifactFiles` portable bounded reader and `safePath` validator
 are also used by the tool-side declarative Objective assembler; existing Check

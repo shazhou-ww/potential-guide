@@ -1,17 +1,16 @@
 # Objective Pilot
 
-## Host v2 artifact probes
+## Host retirement
 
-`createArtifactCheckProbe({check:{url,digest}, client?, timeoutMs?, evidence?})`
-uses the Host's independent observation Tasks with default
-`started-after-request` freshness. The Host, not the Pilot caller, prepares the
-Check and validates its manifest. Evidence records `check.host-observation` with
-taskId, executionId, actual digest/revision and observation times. Business
-envelopes retain the existing result contract; invocation/timeout/cancellation
-reject rather than pretending the business failed. Signal cancellation withdraws
-that Task only. `createWorkerCheckProbe` remains the explicit v1 compatibility
-adapter for existing directory/revision sources. HTTPS Objective artifacts use
-v2; fixed Objective digests never become implicit latest.
+The old Checker/Objective Hosts and their execution adapters have been removed.
+`createArtifactCheckProbe`, `createWorkerCheckProbe` and `bindObjectiveService`
+are no longer exported. This package retains Objective business observation,
+dependency handling, evidence, and explicit memory/process probes; it does not
+provide a replacement Task scheduler or translate old Host requests.
+CLI `probe`, `regulate` and `continue` explicitly reject execution until migrated.
+Use [Task Bundles](../../docs/axis/task-engine-contracts/task-bundle.md) with
+[`check-task`](../check-task/README.md) and [`probe-task`](../probe-task/README.md)
+for the generic Engine path.
 
 Pilot definitions, schema compilation, strict parsing, reference validation and
 subject projection now have an independently installable canonical home:
@@ -174,26 +173,12 @@ Invocation failure is `{"status":502,"payload":null,"message":"transport: offlin
 A malformed envelope, undeclared problem, unsuccessful process exit, or
 non-200 HTTP response is an invocation fault, not a business defect.
 
-Committed v3 checks are self-contained `worker.cjs` modules with explicit resources
-inside the same artifact directory. `createWorkerCheckProbe({ directory, revision,
-timeoutMs })` submits the subject to the authenticated shared Check Host and observes
-that execution's current state. `revision` covers every artifact file, not just the
-entrypoint. The worker exports `execute(subject, context)` and returns the envelope;
-it does not read stdin or write a result to stdout. Worker cwd is not the source
-checkout: resolve packaged resources relative to `__dirname`, never from cwd or an
-assumed number of parent directories.
-
-Host observation disconnect does not cancel execution. AbortSignal cancellation
-sends an explicit cancellation request and waits for the execution's terminal
-state and cleanup acknowledgement. A failed cleanup is an invocation failure.
-The default adapter timeout is 30000 ms; this is distinct from the whole observation
-budget. See [Check Host](../check-host/README.md) for capacities and retention.
-Legacy process entrypoints and bare-subject HTTP are not Git-loader fallbacks;
-the old bare-subject HTTP factory rejects use explicitly. Standalone business
-CLI helpers remain separate from the committed worker execution protocol.
-Preparing another immutable source binding does not publish over the active
-binding's artifact. Publication occurs immediately before invocation; conflicting
-concurrent directory revisions are still explicit failures, not blind retries.
+Manifest v3's static worker declarations retain their historical meaning, but this
+package no longer executes those modules through a shared Host. Standalone process
+probes are explicit injected business capabilities, not old-worker or Git-loader
+fallbacks. The bare-subject HTTP factory still rejects use explicitly.
+Task Bundle callbacks and cancellation use the Task SDK and generic Engine
+contracts instead; they are not automatically inferred from old declarations.
 
 ## Objective level checks and dependency probes
 
