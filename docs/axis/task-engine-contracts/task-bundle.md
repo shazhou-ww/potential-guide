@@ -1,3 +1,7 @@
+---
+frozen: false
+---
+
 # Task Bundle、类型装载与运行库
 
 本契约补充 TaskType 的交付、引用、装载与执行边界，记录 Task Bundle 的设计共识，
@@ -33,7 +37,9 @@ Bundle 声明以 `$schema` URL 统一标识声明格式与 Worker/Engine 通信�
 不另设数字 `formatVersion` 或独立 `protocolVersion`。同一个 Schema URL 对应唯一确定的通信协议契约。
 唯一标识为
 `https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json`，
-同时包含独立诊断日志协议。项目尚未正式发布，v1 在发布前可原地演进；
+同时包含独立诊断日志协议。当前 `frozen: false`，v1 可原地演进；
+契约是否冻结以[axis 冻结标记](../task-engine-responsibilities.md#axis-协议冻结标记)为准，
+不根据版本号或是否发布自行推断。
 已移除的 Task v2 与未来未知 Schema URL 均明确拒绝，不作为 v1 别名。
 机器定义见 [v1](../../../schemas/artifacts/task/v1.json)，日志规则见[日志契约](./run-logs.md)。
 
@@ -99,8 +105,8 @@ messageSchema: false
 3. 不支持的格式、协议、Schema 能力或 Node 版本明确拒绝，不启动业务执行。
    宿主按明确支持的 `$schema` URL 选择对应声明验证器和通信协议实现，
    不自动下载未知 URL 并将其当作可信格式；能验证 YAML 不等于支持对应通信协议。
-   项目尚未正式发布，当前声明格式与通信协议统一在 v1 内演进。
-   正式发布后的不兼容迭代才需另行确定新的 Schema URL 与迁移规则。
+   当前声明格式与通信协议未冻结，统一在 v1 内原地演进。
+   明确标记 `frozen: true` 后，不兼容迭代另行确定新的 Schema URL 与迁移规则。
    此 Schema 标识不意味着现有内部通信可直接兼容。
 4. Bundle 根 CID 不写入 `task.yaml`，避免内容身份自引用；
    完整成品目录导入 IPFS 后取得根 CID，形成外部引用。
@@ -572,7 +578,7 @@ type BundleReference =
 - Context Bundle 读取的具体 SDK 方法、宿主/Worker 通信与入口装载方式仍待落实；
   资源物化与否不得改变相对路径访问契约，也不得取消准入前完整验证。
 - Worker 握手与消息编码已有[独立协议文档](../../task-bundle-worker.md)，
-  项目尚未正式发布，新能力统一在 v1 内演进；正式发布后的不兼容迭代另行定义 Schema URL 边界。
+  当前协议未冻结，新能力统一在 v1 内原地演进；显式冻结后，不兼容迭代另行定义 Schema URL 边界。
 - 既有注册 API、持久事实与消费端的实施迁移方案。
 - IPFS 标准实现选择、可复现的 UnixFS 导入参数、宿主节点/网关配置与活动内容保护机制；
   新架构直接采用 IPFS 引用，不以兼容旧 URL/Digest/tgz 链路为目标。
