@@ -7,14 +7,11 @@ const check = process.argv.includes("--check");
 const { checkerSchema, objectiveArtifactSchema } = await import(
   "../packages/check-artifacts/dist/index.js"
 );
-const { taskBundleSchema, taskLogBundleSchema } = await import(
-  "../packages/task-protocol/dist/index.js"
-);
+const { taskBundleSchema } = await import("../packages/task-protocol/dist/index.js");
 for (const [kind, schema, version = "v1"] of [
   ["checker", checkerSchema],
   ["objective", objectiveArtifactSchema],
   ["task", taskBundleSchema],
-  ["task", taskLogBundleSchema, "v2"],
 ]) {
   const destination = new URL(`../schemas/artifacts/${kind}/${version}.json`, import.meta.url);
   const text = execFileSync(

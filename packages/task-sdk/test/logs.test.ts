@@ -4,7 +4,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { Worker } from "node:worker_threads";
-import { resolveBundleSchemas, taskLogSchemaUri } from "@potential-guide/task-protocol";
+import { resolveBundleSchemas, taskSchemaUri } from "@potential-guide/task-protocol";
 import { buildTaskBundle } from "../src/build.js";
 
 for (const mode of ["timeout", "cancel", "unawaited", "host-invalid"]) {
@@ -12,7 +12,7 @@ for (const mode of ["timeout", "cancel", "unawaited", "host-invalid"]) {
     const directory = resolve(".cache", `sdk-logs-${randomUUID()}`);
     await mkdir(directory, { recursive: true });
     const declaration = {
-      $schema: taskLogSchemaUri,
+      $schema: taskSchemaUri,
       name: "SDK log boundary",
       runtime: { type: "node" as const, minVersion: "22.13.0" },
       entry: "worker.cjs" as const,

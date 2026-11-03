@@ -9,13 +9,13 @@ non-sensitive `fields`; arbitrary messages are untrusted text, not HTML.
 ## Author API and compatibility
 
 Use `@potential-guide/task-sdk` and a declaration with
-`https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v2.json`.
-The canonical [v2 schema](../schemas/artifacts/task/v2.json) is a **new explicit
-Worker protocol boundary**; [v1](../schemas/artifacts/task/v1.json) is unchanged.
-Both remain accepted by the builder and Engine. Existing v1 Workers run without
-new messages; their log availability is `unsupported`, not an empty log history.
-The new SDK on a v1 declaration returns `unavailable/unsupported` without sending
-log messages. Hosts verify the declaration/digest handshake before dispatch.
+`https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json`.
+The sole canonical [v1 schema](../schemas/artifacts/task/v1.json) and
+[Worker protocol](task-bundle-worker.md) include diagnostic messages. This project
+has not formally released; its v1 contract evolves in place. The removed task
+v2 and future schema URLs are rejected, not aliased to v1. V1 supports logs;
+disabled logging and custom hosts without diagnostic support remain explicitly
+unavailable. Hosts verify the declaration/digest handshake before dispatch.
 
 ```ts
 import type { RunContext } from "@potential-guide/task-sdk";
@@ -31,6 +31,31 @@ export default async function callback(input: { name: string }, context: RunCont
   return { ok: true };
 }
 ```
+
+### Log level convention
+
+Authors explicitly choose one of `debug < info < warn < error`:
+
+| level | Meaning | Examples |
+| --- | --- | --- |
+| `debug` | Fine-grained implementation diagnostics, not routine operator milestones. | Selected branches, per-item execution details, non-sensitive counters. |
+| `info` | Important facts and summaries of normal execution. | Operation start/end, check summaries, expected business conclusions. |
+| `warn` | An actionable risk, abnormal condition or degradation that can continue or has recovered. | Bounded retries, fallback paths, check findings requiring attention. |
+| `error` | An unrecovered execution fault prevented the current operation from completing. | Required resource unavailable, failed execution step. |
+
+An expected negative check result is not itself an execution fault: use `info`
+for normal conclusions/summaries, or `warn` for actionable findings, not `error`
+merely because Result is `{ok:false}`. Recoverable problems use `warn`; log a
+final unrecovered operation fault as `error`, without repeating it for every retry.
+Routine loop/poll details belong at `debug`, not `info`.
+
+Levels do not throw, change Run state, imply final success/failure or establish
+log completeness. An author must still return the declared result or throw to
+express a business failure. All levels share the bounded retention policy;
+`error` is not guaranteed preferential retention. Use non-sensitive context,
+impact and actionable detail in warn/error messages; levels do not replace
+business problem IDs or error codes. The normative contract is
+[Run log levels](axis/task-engine-contracts/run-logs.md#日志级别约定).
 
 `log(RunLogInput): Promise<RunLogReceipt>` returns:
 
@@ -62,10 +87,12 @@ only the increase in cumulative count, so terminal/replayed totals do not double
 count. A physically lost terminal snapshot leaves the existing unknown-tail
 semantics; it cannot block cancellation, Result or reclamation.
 
-V2 adds `log {generation, runId, logId, value}`, independent
-`log-ack {generation, runId, logId, value|error}`, and bounded aggregate
+V1 includes `log {generation, runId, logId, value}`, independent
+`log-ack {generation, runId, logId, value: RunLogReceipt, error?: {code, message}}`, and bounded aggregate
 `log-drop {generation, runId, logId, count, final?: true}` and
-`log-drop-ack {generation, runId, logId, value|error}`.
+`log-drop-ack {generation, runId, logId, value: RunLogReceipt, error?: {code, message}}`.
+A successful ACK contains a receipt; a rejected ACK additionally contains an
+error (with an unavailable/storage receipt).
 `count` is the cumulative SDK-capacity rejection count, not a delta.
 `logId` increases independently
 from business `id`. The host validates Worker generation against persisted
@@ -195,7 +222,7 @@ Remove-Item Env:\PGUIDE_KEEP_PACK_CONSUMERS
 
 The script packs local tarballs, installs two independent production graphs with
 local tarball overrides, removes author sources/dependency access, and starts a
-business-free Engine/HTTP/SQLite process. It verifies real v2 Check diagnostics
+business-free Engine/HTTP/SQLite process. It verifies real v1 Check diagnostics
 through history/SSE with unchanged Result/evidence. It prints the exact retained
 `.cache\potential-guide-packs-*` directory; that directory contains tarballs,
 `bundle-author`, `bundle-runtime`, and `task-bundles`. Nothing is published.
@@ -234,7 +261,7 @@ local SDK/Protocol tarball graph (restore the retained author's `author_modules`
 to `node_modules` only for authoring). Run
 `node .\build.mjs .\artifacts\diagnostic-check`. It prints the exact
 `{url,digest}` Bundle reference. Submit it with fresh ULID and
-`checks: [{name:"identity", expected:"v2", actual:"v2"},
+`checks: [{name:"identity", expected:"v1", actual:"v1"},
 {name:"readiness", expected:"ready", actual:"not-ready"}]`.
 The result is `{ok:false, problemCount:1}`; detailed assertions remain Logs.
 
@@ -249,7 +276,7 @@ into a fresh owned UI directory. No UI `node_modules` is needed. Prepare:
   "favoritesFile": "favorites.json",
   "endpoints": [{
     "id": "candidate", "label": "Run logs candidate",
-    "url": "http://127.0.0.1:3000", "binding": "operator-logs-v2",
+    "url": "http://127.0.0.1:3000", "binding": "operator-logs-v1",
     "bearerEnv": "TASK_UI_BACKEND_TOKEN"
   }]
 }

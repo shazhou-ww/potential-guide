@@ -16,6 +16,9 @@ Task Bundle 的完整引用可使用 `URL#sha256:<64 位小写十六进制摘要
 失败 Result 与成功 Result 一样经纯 terminal 业务复验，不能改写或在恢复前放宽。
 
 通用 Task/完整 Run 的 JSON、schema、请求、事件、Store 与服务边界。
+
+Task Bundle/Worker 使用唯一 `taskSchemaUri` v1，包含独立诊断日志协议。
+项目尚未正式发布，v1 可原地演进；已移除的 Task v2 和未来未知 URL 明确拒绝，不做别名。
 TaskType 仅声明 type/version/inputSchema/resultSchema/messageSchema 和完整 run 入口；
 Host 用 RegisteredType 本地模块描述注册，不传动态函数对象给 Engine。
 

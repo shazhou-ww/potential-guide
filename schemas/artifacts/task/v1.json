@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",
-  "$comment": "Git SHA-256 root tree identity. One CommonJS Worker per Run; generation-scoped ready, run, ping/pong, ack, progress, checkpoint, complete, failed, message, cancel, stopping and released messages.",
+  "$comment": "Git SHA-256 root tree identity. One CommonJS Worker per Run; generation-scoped business messages and independent log/log-ack, bounded cumulative log-drop/log-drop-ack diagnostics.",
   "type": "object",
   "additionalProperties": false,
   "required": [

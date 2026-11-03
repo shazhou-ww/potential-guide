@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { taskLogSchemaUri } from "@potential-guide/task-protocol";
+import { taskSchemaUri } from "@potential-guide/task-protocol";
 import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
 
 /** Author-side only. The server never imports this module or business packages. */
@@ -75,7 +75,7 @@ export default(input,context)=>type.run(input,context);
   await writeFile(
     declaration,
     JSON.stringify({
-      $schema: taskLogSchemaUri,
+      $schema: taskSchemaUri,
       name: kind,
       runtime: { type: "node", minVersion: "22.13.0" },
       entry: "worker.cjs",

@@ -12,7 +12,6 @@ import {
   type RunLogPage,
   type SubmissionResult,
   TaskError,
-  taskLogSchemaUri,
   taskSchemaUri,
 } from "@potential-guide/task-protocol";
 import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
@@ -34,7 +33,7 @@ async function fixture(
     bundle: { url: string; digest: string };
     receipts: string;
   }) => Promise<void>,
-  version = taskLogSchemaUri,
+  version = taskSchemaUri,
 ) {
   const directory = resolve(".cache", `run-logs-${randomUUID()}`);
   await mkdir(directory, { recursive: true });
@@ -167,7 +166,7 @@ async function ended(api: TaskClient, id: string) {
     (run) => !!run.reclaimedAt,
   );
 }
-test("v2 real SDK -> SQLite -> authenticated HTTP history/realtime, concurrent isolation and restart; Result stays concise", async () => {
+test("v1 real SDK -> SQLite -> authenticated HTTP history/realtime, concurrent isolation and restart; Result stays concise", async () => {
   await fixture(async ({ directory, bundle }) => {
     const config = options(directory);
     let server = await startTaskServer(config);
@@ -377,15 +376,20 @@ test("slow consumers replay pages, retention reports explicit gaps, and subscrip
     }
   });
 });
-test("v1 bundles remain runnable and are explicitly unsupported for diagnostic logs; disabled v2 is distinct", async () => {
+test("v1 bundles support diagnostic logs; disabled logging is distinct", async () => {
   await fixture(async ({ directory, bundle, receipts }) => {
     const server = await startTaskServer(options(directory));
     try {
       const api = client(server.url);
-      const task = await submit(api, bundle, "legacy");
+      const task = await submit(api, bundle, "v1");
       await ended(api, task.run!.runId);
-      assert.equal((await api.getRunLogs(task.run!.runId)).state.availability, "unsupported");
-      assert.match(await readFile(receipts, "utf8"), /"reason":"unsupported"/);
+      const logs = await api.getRunLogs(task.run!.runId);
+      assert.equal(logs.state.availability, "available");
+      assert.deepEqual(
+        logs.entries.map((entry) => entry.message),
+        ["begin:v1", "end:v1"],
+      );
+      assert.match(await readFile(receipts, "utf8"), /"state":"stored"/);
     } finally {
       await server.close();
     }

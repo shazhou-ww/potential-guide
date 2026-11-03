@@ -42,7 +42,7 @@ import {
   type SubmitOptions,
   type Subscription,
   TaskError,
-  taskLogSchemaUri,
+  taskSchemaUri,
   type TaskMessageRecord,
   type TaskPage,
   type TaskQuery,
@@ -322,7 +322,7 @@ export class TaskEngine implements TaskService {
         dispatch: async (id, generation) => {
           this.dispatch(id, generation);
           const run = this.view.facts.runs[id]!;
-          if (run.binding.declaration?.$schema === taskLogSchemaUri) this.logs.initialize(id);
+          if (run.binding.declaration?.$schema === taskSchemaUri) this.logs.initialize(id);
           return { generation: run.generation, startedAt: run.startedAt };
         },
         progress: async (id, value) => this.report(this.view.facts.runs[id]!, "progress", value),
@@ -741,7 +741,7 @@ export class TaskEngine implements TaskService {
     return this.logs.page(
       id,
       page,
-      run.binding.declaration?.$schema === taskLogSchemaUri,
+      run.binding.declaration?.$schema === taskSchemaUri,
       !run.exit
         ? "open"
         : run.stopRequested ||

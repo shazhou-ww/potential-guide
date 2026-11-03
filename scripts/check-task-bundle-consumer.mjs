@@ -145,7 +145,7 @@ const nullSource={authorize(){},async resolve(){throw Error("Author schema extra
 const check=createCheckTaskType({source:nullSource,directory:"unused"});
 async function bundle(kind,inputSchema,resultSchema,callback,resources){
  const yaml=resolve(kind+".yaml"),entry=resolve(kind+".ts");
- await writeFile(yaml,JSON.stringify({$schema:"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v2.json",name:"Shared display name",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",inputSchema,resultSchema,messageSchema:false}));
+ await writeFile(yaml,JSON.stringify({$schema:"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",name:"Shared display name",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",inputSchema,resultSchema,messageSchema:false}));
  await writeFile(entry,callback);
  const built=await buildTaskBundle({declaration:yaml,entry,resources,outDirectory:join(root,kind)});
  const packed=await packTaskBundle(built.directory,join(root,kind+".tar.gz"));
@@ -208,7 +208,7 @@ assert.equal((await client.getRunHistory(check.run.runId)).events.some(event=>ev
 let replayed=0;
 for await(const page of client.subscribeRunLogs(check.run.runId)){replayed+=page.entries.length;assert.equal(page.runId,check.run.runId);}
 assert.equal(replayed,checkLogs.entries.length);
-console.log("Packed v2 Check diagnostics: HTTP history and realtime replay verified; Result/evidence unchanged.");
+console.log("Packed v1 Check diagnostics: HTTP history and realtime replay verified; Result/evidence unchanged.");
 const probe=await execute({bundle:refs.probeBundle,objective:{kind:"objective",url:"https://example.test/objective.tgz",digest:refs.objectiveDigest},subject:{}});
 assert.equal(probe.result.observation.current.levelId,"initial");
 assert.equal(probe.result.observation.problems[0].problem.id,"bad");

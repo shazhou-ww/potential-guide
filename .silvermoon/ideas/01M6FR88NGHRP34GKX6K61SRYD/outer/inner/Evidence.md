@@ -1,5 +1,8 @@
 # Task Run Logs 实施证据
 
+> 本文件保留当时 v2 候选的原始证明，不是当前 v1 证明。用户后续明确纠正：
+> 项目尚未正式发布，日志统一回到唯一 v1，v2 已移除；以下历史命令和结果已被取代。
+
 ## 父任务最终复核
 
 最终有界丢弃通知修订后，父任务实际重跑：
@@ -35,7 +38,7 @@ events.jsonl、Git 分支/索引，也未提交、推送或调用 Silvermoon 门
 - [类型、回执、容量、状态与 JSON 校验](../../../../../packages/task-protocol/src/logs.ts)
   / [RunContext.log](../../../../../packages/task-protocol/src/run.ts)
   / [显式 v2 与不变 v1 的声明校验](../../../../../packages/task-protocol/src/bundle.ts)
-  / [canonical v2 Schema](../../../../../schemas/artifacts/task/v2.json)。
+  / [当时的 canonical v2 Schema](https://github.com/shazhou-ww/potential-guide/blob/38c872cfd53a9e0343f05c12f73043f1caf6920b/schemas/artifacts/task/v2.json)。
 - [SDK 独立 pending/timeout/cancel 与聚合丢弃](../../../../../packages/task-sdk/src/index.ts)；
   [实际独立 SDK bundle 测试](../../../../../packages/task-sdk/test/logs.test.ts)。
 - [Worker 宿主身份校验与独立确认](../../../../../packages/task-engine/src/type-supervisor.ts)；

@@ -2,6 +2,10 @@
 
 本契约区分单体与集合、当前状态与历史及后续变化，避免查询与订阅承担不明确或过量的数据范围。
 
+本文的事件、revision 与分页规则针对生命周期观察。独立诊断日志由
+[Run 日志契约](./run-logs.md)定义；它不属于 TaskEvent/RunEvent，
+不进入实体摘要或推进生命周期 revision/updatedAt，也不采用生命周期历史 cursor。
+
 关联 [职责入口](../task-engine-responsibilities.md)：operations B1–B5、C1–C5，Task 与 Run 的查询和订阅。
 
 1. 单个实体的当前状态与变更历史分别查询：前者返回当前状态快照，不默认包含历史；后者返回不可变变更记录，可独立分页。订阅提供后续变更事件。

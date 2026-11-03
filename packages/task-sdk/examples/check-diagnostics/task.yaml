@@ -1,4 +1,4 @@
-$schema: https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v2.json
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json
 name: Diagnostic assertions
 runtime:
   type: node

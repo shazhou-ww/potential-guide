@@ -34,5 +34,5 @@ Check/Probe examples are still being switched to fixed Bundle references.
 Diagnostic logging is configured independently with `ServerOptions.logs`.
 Authenticated Run history and SSE are available at `/runs/:id/logs` and
 `/runs/:id/logs/events`; they use Run read scope authorization, not lifecycle
-history. See [Run Logs](../../docs/task-run-logs.md) for v1/v2 compatibility,
+history. See [Run Logs](../../docs/task-run-logs.md) for the sole v1 diagnostic contract,
 bounded retention, receipts, and local tarball/standalone UI instructions.

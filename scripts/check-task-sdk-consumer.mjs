@@ -23,9 +23,12 @@ import assert from "node:assert/strict";
 import {rm,writeFile} from "node:fs/promises";
 import {resolve,join} from "node:path";
 import {buildTaskBundle,packTaskBundle} from "@potential-guide/task-sdk/build";
-import {resolveBundleSchemas,taskLogSchemaUri} from "@potential-guide/task-protocol";
+import {resolveBundleSchemas,taskSchemaUri,validateTaskBundle} from "@potential-guide/task-protocol";
 const root=resolve("fixture");
-const declaration={$schema:taskLogSchemaUri,name:"Packed echo",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",inputSchema:{type:"object"},resultSchema:true,messageSchema:false};
+const declaration={$schema:taskSchemaUri,name:"Packed echo",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",inputSchema:{type:"object"},resultSchema:true,messageSchema:false};
+assert.equal(validateTaskBundle(declaration).$schema,taskSchemaUri);
+for(const version of ["v2","v3"])assert.throws(()=>validateTaskBundle({...declaration,$schema:taskSchemaUri.replace("v1",version)}),{code:"invalid_bundle"});
+console.log("Packed Task schema validation: v1 accepted; removed v2 and future v3 rejected.");
 await writeFile(join(root,"task.yaml"),JSON.stringify(declaration));
 await writeFile(join(root,"callback.ts"),'export default async (input,context)=>{await context.log({level:"info",message:"Packed diagnostic."});await context.progress({stage:"execution",message:"Packed callback."});return input;}');
 const built=await buildTaskBundle({declaration:join(root,"task.yaml"),entry:join(root,"callback.ts"),outDirectory:join(root,"bundle")});
@@ -85,7 +88,7 @@ await new Promise((resolve,reject)=>{
  worker.on("message",message=>{
   try{
    assert.equal(message.generation,generation);
-   if(message.kind==="ready"){assert.equal(message.value.digest,bundle.digest);worker.postMessage({generation,kind:"run",runId:"packed",scope:"consumer",input:{text:"self-contained"}});}
+   if(message.kind==="ready"){assert.equal(message.value.$schema,"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json");assert.equal(message.value.digest,bundle.digest);worker.postMessage({generation,kind:"run",runId:"packed",scope:"consumer",input:{text:"self-contained"}});}
    else if(message.kind==="log"){assert.equal(message.value.message,"Packed diagnostic.");logs++;worker.postMessage({generation,runId:"packed",kind:"log-ack",logId:message.logId,value:{state:"stored",sequence:logs}});}
    else if(message.id!==undefined){
     if(message.kind==="complete"){assert.deepEqual(message.value,{text:"self-contained"});complete=true;}
@@ -102,7 +105,7 @@ console.log("Packed Task Worker completed without node_modules.");
   );
 
   // run() resolves on child close, not readiness or a build-complete message.
-  await run(process.execPath, ["task-sdk-build.mjs"], directory);
+  console.log(await run(process.execPath, ["task-sdk-build.mjs"], directory));
   const control = join(fixture, "control.mjs");
   console.log(await run(process.execPath, [control, "visible"], directory));
   await withoutAuthorDependencies(directory, async () => {

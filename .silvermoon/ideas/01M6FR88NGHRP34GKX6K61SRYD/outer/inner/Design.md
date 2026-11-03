@@ -1,6 +1,6 @@
 # Task Run 日志简短设计
 
-这是实施阶段固定后的设计，API 与协议以源码和 [Evidence.md](Evidence.md) 为准。它服务于
+这是当前实施设计，API 与协议以源码和当前运行文档为准；[Evidence.md](Evidence.md) 保留被取代的 v2 历史验证。它服务于
 [Implementation.md](Implementation.md) 的 I-S01、I-S02、I-S03；构想验收范围仍由
 [Idea.md](ideal/Idea.md) 定义；不改变已接受构想或代替 Deployment gate。
 完整运行说明与独立本地 tarball / standalone UI 步骤见
@@ -67,7 +67,7 @@ type RunLogReceipt =
 log(value: RunLogInput): Promise<RunLogReceipt>;
 ```
 
-Worker 回调示例（使用 v2 声明与当前 SDK）：
+Worker 回调示例（使用 v1 声明与当前 SDK）：
 
 ```ts
 import type { RunContext } from "@potential-guide/task-sdk";
@@ -97,11 +97,11 @@ export default async function echo(input: { text: string }, context: RunContext)
 
 ## Worker、Engine 与保留边界
 
-- v2 (`https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v2.json`)
-  引入 `log` / `log-ack` / 累计聚合 `log-drop` / `log-drop-ack`，
-  独立 `logId`，不原地扩写已固定的
-  [Task Bundle v1 协议](../../../../../docs/task-bundle-worker.md)。新旧协议显式区分，
-  宿主在运行前检查兼容性；旧 bundle 仍按旧协议执行，UI 显示“不支持日志”，而不是“无日志”。
+- 唯一 v1 (`https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json`)
+  包含 `log` / `log-ack` / 累计聚合 `log-drop` / `log-drop-ack`，
+  使用独立 `logId`，见 [Task Bundle v1 协议](../../../../../docs/task-bundle-worker.md)。
+  项目尚未正式发布，v1 可原地演进；已移除的 v2 与未来未知版本在执行前拒绝，不做别名。
+  v1 支持日志；禁用、自定义宿主不支持日志仍须区别于“无日志”。
 - 宿主校验 generation、Run 与 scope，对同一 Run 分配单调序号及宿主接收时间。
   顺序以宿主接受顺序为准，不用 Worker 时钟推导跨 Run 顺序。
 - 日志队列与必要业务输出隔离。单条字节数、待处理队列、每 Run 总量、全局存储和保留时长

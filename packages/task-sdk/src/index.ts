@@ -13,7 +13,6 @@ import {
   type RunMessage,
   type RunProgress,
   TaskError,
-  taskLogSchemaUri,
   taskSchemaUri,
   validateRunLog,
   validateRunProgress,
@@ -72,8 +71,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
   declaration: ResolvedTaskBundle,
 ): void {
   const port = parentPort;
-  if (!port || ![taskSchemaUri, taskLogSchemaUri].includes(declaration.$schema))
-    throw new Error("Unsupported Task Worker.");
+  if (!port || declaration.$schema !== taskSchemaUri) throw new Error("Unsupported Task Worker.");
   const config = workerData as {
     generation: string;
     maxInFlight: number;
@@ -205,8 +203,6 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
   }
   async function log(value: RunLogInput): Promise<RunLogReceipt> {
     const parsed = validateRunLog(value);
-    if (declaration.$schema !== taskLogSchemaUri)
-      return { state: "unavailable", reason: "unsupported" };
     if (finishing || controller.signal.aborted) return { state: "unavailable", reason: "channel" };
     if (logPending.size >= Math.min(config.maxInFlight, 16)) {
       droppedLogs = Math.min(Number.MAX_SAFE_INTEGER, droppedLogs + 1);

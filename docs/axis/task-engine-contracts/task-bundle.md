@@ -3,7 +3,9 @@
 本契约补充 TaskType 的交付、引用、装载与执行边界，记录 Task Bundle 的设计共识，
 不表示当前代码已经实现这些能力。不以现有 Check/Probe 制品格式或本地模块注册 API
 反向限制本契约。以下定义成品目录、声明文件与生成入口的目标格式；
-公共 SDK 和构建工具尚待实现，通信消息细节及迁移方案另行定义。
+公共 SDK 和构建工具已提供实现；具体参数与通信编码见
+[SDK 文档](../../../packages/task-sdk/README.md)和[Worker 协议](../../task-bundle-worker.md)，
+不将这些实现细节反向限定为全部架构契约。迁移方案仍需按明确授权处理。
 本文只定义通用 Task Bundle 与 Task SDK；Check/Probe 的描述逻辑、业务入口和专用 SDK
 留待独立业务文档定义，不作为 Engine 核心契约的一部分。
 IPFS 内容寻址与目录交付仅适用于此处的 Task Engine 新架构；
@@ -29,9 +31,11 @@ Run 的匹配、停止和退出事实仍遵守[运行匹配](./run-matching.md)�
 Bundle 声明以 `$schema` URL 统一标识声明格式与 Worker/Engine 通信协议，
 沿用现有 Checker/Objective YAML 制品的 Schema URL 方式，
 不另设数字 `formatVersion` 或独立 `protocolVersion`。同一个 Schema URL 对应唯一确定的通信协议契约。
-本契约约定的标识为
-`https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json`；
-该 URL 是目标 Schema 标识，Schema 文件的实现与公开发布尚待完成。
+唯一标识为
+`https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json`，
+同时包含独立诊断日志协议。项目尚未正式发布，v1 在发布前可原地演进；
+已移除的 Task v2 与未来未知 Schema URL 均明确拒绝，不作为 v1 别名。
+机器定义见 [v1](../../../schemas/artifacts/task/v1.json)，日志规则见[日志契约](./run-logs.md)。
 
 此格式的 Bundle 逻辑根目录如下；对应 IPFS UnixFS 目录根，不附加包名或版本外层目录：
 
@@ -95,9 +99,8 @@ messageSchema: false
 3. 不支持的格式、协议、Schema 能力或 Node 版本明确拒绝，不启动业务执行。
    宿主按明确支持的 `$schema` URL 选择对应声明验证器和通信协议实现，
    不自动下载未知 URL 并将其当作可信格式；能验证 YAML 不等于支持对应通信协议。
-   Schema URL 对应的声明格式与通信协议契约不可原地改写。
-   声明格式或通信协议契约发生版本迭代时使用新的 Schema URL，
-   即使只改变协议而 YAML 字段不变，也必须更新 URL。
+   项目尚未正式发布，当前声明格式与通信协议统一在 v1 内演进。
+   正式发布后的不兼容迭代才需另行确定新的 Schema URL 与迁移规则。
    此 Schema 标识不意味着现有内部通信可直接兼容。
 4. Bundle 根 CID 不写入 `task.yaml`，避免内容身份自引用；
    完整成品目录导入 IPFS 后取得根 CID，形成外部引用。
@@ -189,9 +192,10 @@ async function taskCallback(input: Input, context: RunContext): Promise<Result> 
 回调边界如下：
 
 - `input` 是通过声明的 Input Schema 校验后的业务输入。
-- `context` 由 Task SDK 构造，提供当前 Run 信息、停止信号、进度上报、业务消息收取
-  及当前 Bundle 的只读内容访问能力。
-  具体成员名与类型在 SDK 接口定义时确定。
+- `context` 由 Task SDK 构造，提供当前 Run 信息、停止信号、进度、checkpoint、
+  业务消息和独立诊断日志能力，并按本文的 Context Bundle 契约提供当前 Bundle 的只读内容访问。
+  可信身份、确认与结束行为见[RunContext 契约](./run-context.md)。
+  具体成员类型由 SDK/Protocol 定义，不要求作者拼写底层协议。
 - 回调返回最终结果，由 SDK 按 Result Schema 校验并上报；抛出错误表示执行失败。
 - SDK 不向回调传入原始 Worker 通信端口或 Engine 实例。
   业务作者不自行构造协议消息，停止、结果上报与退出通信由 SDK 统一处理。
@@ -219,7 +223,8 @@ runTask(taskCallback);
 3. 启动所需的可信 Run 信息、通信通道和资源能力由宿主协议提供，
    业务 Input 不能覆盖这些信息。完整握手和消息编码另行定义。
 4. 回调返回结果，或抛出执行错误；运行库负责将其转换为协议结果，
-   排空必须确认的输出、完成清理并结束通信。未确认清理不能伪装成成功。
+   排空必须确认的业务输出、完成清理并结束通信。独立诊断不成为无限排空或清理等待条件；
+   未确认清理不能伪装成成功。
 5. Engine 仍独立校验跨边界数据、执行取消与强制终止，并确认物理退出；
    不能因为入口由官方 SDK 生成就信任 Worker 自报的生命周期事实。
 
@@ -544,7 +549,7 @@ type BundleReference =
 ## 公共运行库边界
 
 `runTask(taskCallback)` 封装 Worker 与 Engine 主线程的通信协议、
-运行上下文、取消、消息、进度、结果及退出流程，不解释业务结果的领域含义。
+运行上下文、取消、消息、进度、checkpoint、独立日志、结果及退出流程，不解释业务结果的领域含义。
 
 1. 具体 Task 源码可以引用上述公共库，构建后各自包含所需实现；
    公共库不是由宿主共享加载的运行时依赖，也不是另一层执行服务。
@@ -561,10 +566,13 @@ type BundleReference =
 不作为本轮核心契约尚未定稿的问题：
 
 - 受理状态查询的正式方法名与传输编码；立即查询和 long poll 已统一为可选 `waitMs` 的同一操作。
-- `buildTaskBundle` 的具体参数类型，以及回调 context 成员的具体命名与类型。
-- Context Bundle 读取的具体 SDK 方法、宿主/Worker 通信与入口装载方式；
+- `buildTaskBundle` 参数与回调 context 成员已有公共类型，见
+  [SDK 文档](../../../packages/task-sdk/README.md)与[RunContext 契约](./run-context.md)；
+  后续接口演进不得绕过本文的身份、声明与兼容边界。
+- Context Bundle 读取的具体 SDK 方法、宿主/Worker 通信与入口装载方式仍待落实；
   资源物化与否不得改变相对路径访问契约，也不得取消准入前完整验证。
-- Worker 协议的完整握手与消息编码。
+- Worker 握手与消息编码已有[独立协议文档](../../task-bundle-worker.md)，
+  项目尚未正式发布，新能力统一在 v1 内演进；正式发布后的不兼容迭代另行定义 Schema URL 边界。
 - 既有注册 API、持久事实与消费端的实施迁移方案。
 - IPFS 标准实现选择、可复现的 UnixFS 导入参数、宿主节点/网关配置与活动内容保护机制；
   新架构直接采用 IPFS 引用，不以兼容旧 URL/Digest/tgz 链路为目标。

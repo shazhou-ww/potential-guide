@@ -4,7 +4,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { Worker } from "node:worker_threads";
-import { resolveBundleSchemas, taskLogSchemaUri } from "@potential-guide/task-protocol";
+import { resolveBundleSchemas, taskSchemaUri } from "@potential-guide/task-protocol";
 import { buildTaskBundle } from "../src/build.js";
 
 for (const acknowledgment of ["withheld", "late"]) {
@@ -16,7 +16,7 @@ for (const acknowledgment of ["withheld", "late"]) {
       await writeFile(
         join(directory, "task.yaml"),
         JSON.stringify({
-          $schema: taskLogSchemaUri,
+          $schema: taskSchemaUri,
           name: "Bounded drop reporting",
           runtime: { type: "node", minVersion: "22.13.0" },
           entry: "worker.cjs",

@@ -228,6 +228,13 @@ test("V02: Bundle logical roots are exact; no outer directory, runtime change or
       ["task.yaml", Buffer.from(JSON.stringify(value))],
       ["worker.cjs", Buffer.from("code")],
     ]);
+  assert.equal(inspectTaskBundle(files(declaration)).declaration.$schema, taskSchemaUri);
+  for (const version of ["v2", "v3"])
+    assert.throws(
+      () =>
+        inspectTaskBundle(files({ ...declaration, $schema: taskSchemaUri.replace("v1", version) })),
+      { code: "invalid_bundle" },
+    );
   assert.throws(() => inspectTaskBundle(new Map([["outer/task.yaml", Buffer.from("x")]])), {
     code: "invalid_bundle",
   });

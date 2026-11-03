@@ -14,7 +14,7 @@ import {
   type RunLogReceipt,
   TaskError,
   type TypeWorkerRegistration,
-  taskLogSchemaUri,
+  taskSchemaUri,
   validateRunLog,
   validateRunProgress,
 } from "@potential-guide/task-protocol";
@@ -279,7 +279,7 @@ class RunWorker {
           try {
             const context = this.contexts.get(message.runId);
             if (
-              this.registration.bundle?.declaration.$schema !== taskLogSchemaUri ||
+              this.registration.bundle?.declaration.$schema !== taskSchemaUri ||
               !context ||
               context.releaseRequested ||
               !this.runs.has(message.runId) ||

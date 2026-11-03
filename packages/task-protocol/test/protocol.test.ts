@@ -1,6 +1,36 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { at, emptyFacts, isTimedOut, json, reduce, type TaskSnapshot } from "../src/index.js";
+import {
+  at,
+  emptyFacts,
+  isTimedOut,
+  json,
+  reduce,
+  taskBundleSchema,
+  taskSchemaUri,
+  type TaskSnapshot,
+  validateTaskBundle,
+} from "../src/index.js";
+
+test("the sole unreleased Task v1 includes diagnostics; removed v2 and future schemas are rejected", () => {
+  const declaration = {
+    $schema: taskSchemaUri,
+    name: "V1 diagnostics",
+    runtime: { type: "node", minVersion: "22.13.0" },
+    entry: "worker.cjs",
+    inputSchema: { type: "object" },
+    resultSchema: true,
+    messageSchema: false,
+  };
+  assert.equal(validateTaskBundle(declaration).$schema, taskSchemaUri);
+  assert.equal(taskBundleSchema.$id, taskSchemaUri);
+  assert.match(taskBundleSchema.$comment, /log\/log-ack/);
+  for (const version of ["v2", "v3", "v999"])
+    assert.throws(
+      () => validateTaskBundle({ ...declaration, $schema: taskSchemaUri.replace("v1", version) }),
+      { code: "invalid_bundle" },
+    );
+});
 
 test("finite JSON never invokes accessors/toJSON and rejects non-JSON structures", () => {
   let invoked = 0;

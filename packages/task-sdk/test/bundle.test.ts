@@ -220,6 +220,39 @@ test("V01: build fails on changed Schema locks, incomplete closure, conflicts an
       assert.throws(() => validateTaskBundle({ ...declaration, name }), /Invalid task.yaml/);
   });
 });
+test("removed Task v2 and future schemas cannot build or pack Workers", async () => {
+  await workspace(async (directory) => {
+    const yaml = join(directory, "task.yaml");
+    const callback = join(directory, "callback.ts");
+    await writeFile(callback, "export default async input => input;");
+    const bundle = join(directory, "bundle");
+    await mkdir(bundle);
+    await writeFile(join(bundle, "worker.cjs"), "throw Error('must not run');");
+    for (const version of ["v2", "v3"]) {
+      const manifest = JSON.stringify({
+        ...declaration,
+        $schema: taskSchemaUri.replace("v1", version),
+        inputSchema: { type: "object" },
+        resultSchema: true,
+      });
+      await writeFile(yaml, manifest);
+      await writeFile(join(bundle, "task.yaml"), manifest);
+      await assert.rejects(
+        buildTaskBundle({
+          declaration: yaml,
+          entry: callback,
+          outDirectory: join(directory, version),
+        }),
+        { code: "invalid_bundle" },
+      );
+      await assert.rejects(packTaskBundle(bundle, join(directory, `${version}.tar.gz`)), {
+        code: "invalid_bundle",
+      });
+      assert.equal(existsSync(join(directory, version)), false);
+      assert.equal(existsSync(join(directory, `${version}.tar.gz`)), false);
+    }
+  });
+});
 test("V01: unsupported dynamic imports and native extensions cannot become self-contained Workers", async () => {
   await workspace(async (directory) => {
     const yaml = join(directory, "task.yaml");

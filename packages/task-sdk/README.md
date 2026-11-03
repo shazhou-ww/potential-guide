@@ -9,8 +9,9 @@ See `examples/echo`; run its `build.mjs` after building the workspace. Output mu
 not already exist. Only Node built-ins may remain external to `worker.cjs`.
 
 `context.log({level, message, fields?})` provides async typed diagnostic receipts,
-independent of business outputs. Use a **v2** declaration to enable its dedicated
-channel; v1 bundles remain compatible and report unsupported. See
+independent of business outputs. The sole **v1** declaration includes its dedicated
+channel; the project is unreleased and evolves v1 in place. Removed v2 and future
+schema URLs are rejected, not aliased. Disabled/custom-host diagnostics remain unavailable. See
 [Run Logs, limits and independent install verification](../../docs/task-run-logs.md)
 and the packaged `examples/check-diagnostics` assertion sample.
 

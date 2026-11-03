@@ -28,6 +28,8 @@
 - **C3. 订阅单个 Run**：获取该 Run 的后续变更事件流及取消订阅能力。
 - **C4. 查询 Run 集合**：获取数据域内符合条件的完整 Run 摘要列表。
 - **C5. 订阅 Run 集合**：获取符合条件的 Run 集合概况事件流及取消订阅能力。
+- **C6. 查询 Run 诊断日志**：获取指定 Run 仍保留的独立诊断日志页、限额及可用性状态。
+- **C7. 订阅 Run 诊断日志**：按该 Run 的日志序号补读并跟随诊断输出，不使用生命周期 revision。
 
 ### 非职责
 
@@ -84,7 +86,8 @@ await engine.getTask(taskId);
 时间标签仍按 now，查询绝不写资格事实。独立时间推算无事件，实际资格观测形成源事实的限制性澄清见匹配契约。
 
 TaskRequest 对应本文 Request，避免与平台的 Request 类型混淆；其余领域类型只引用名称，字段另行定义。
-TaskSnapshot、RunSnapshot 和 Page 均包含查询水位 `revision`，各事件也携带自身的 `revision`；
+TaskSnapshot、RunSnapshot 和生命周期 Page 均包含查询水位 `revision`，各生命周期事件也携带自身的 `revision`；
+独立 RunLogPage 使用日志 sequence，不包含生命周期 revision，见[日志契约](./task-engine-contracts/run-logs.md)。
 快照/摘要的最小事实范围及筛选边界见[观察契约](./task-engine-contracts/observation.md)。
 所有订阅以 `fromRevision` 为起始锚点，先补读其后的历史再接续实时流；具体语义见[数据域事件序号与查询 Revision](./task-engine-contracts/revision.md)。
 Page 表示有界分页，完整集合可通过续页获取；HistoryQuery、TaskCollectionQueryOptions、
@@ -328,9 +331,40 @@ subscribeRuns(
 - 关于集合概况事件的范围，参考[Task 与 Run 的查询范围及订阅粒度](./task-engine-contracts/observation.md)。
 - 关于事件流消费与取消订阅，参考[订阅句柄与订阅生命周期](./task-engine-contracts/subscription.md)。
 
+### C6. 查询 Run 诊断日志
+
+| 项目 | 说明 |
+| --- | --- |
+| input | Run 标识、afterSequence 及有限 limit |
+| output | 独立日志页、续读序号、缺口、限额及可用性/完整性状态 |
+| side effects | 可触发日志保留清理，不修改业务生命周期事实 |
+
+```ts
+getRunLogs(runId: string, query: RunLogQuery): Promise<RunLogPage>;
+```
+
+读取仍保留的诊断，不代替 C2 的 Run 变更历史。
+权限、保留、独立序号与错误语义见[Run 诊断日志](./task-engine-contracts/run-logs.md)。
+
+### C7. 订阅 Run 诊断日志
+
+| 项目 | 说明 |
+| --- | --- |
+| input | Run 标识、afterSequence 及有限页预算 |
+| output | 独立日志订阅，交付有界日志页与状态，支持解除观察 |
+| side effects | 建立日志订阅，可触发保留清理，不取消 Task/Run |
+
+```ts
+subscribeRunLogs(runId: string, query: RunLogQuery): Promise<LogSubscription>;
+```
+
+以上仍是逻辑签名；Engine 拉取句柄与 HTTP 异步迭代器是各自传输实现。
+补读、实时衔接与容量独立于 C3 的生命周期事件订阅，
+见[Run 诊断日志](./task-engine-contracts/run-logs.md#查询与实时续接)。
+
 ## 配套能力与可信装配
 
-A1–C5 是核心控制与观察操作，不是删除现有配套能力的名单。本轮继续提供：
+A1–C7 是核心控制与观察操作，不是删除现有配套能力的名单。本轮继续提供：
 
 - 类型契约获取：Request 通过根 CID 字符串或 `{cid, hint}` 引用自包含 Task Bundle 的 UnixFS 目录，
   Engine 按需获取并验证，不要求显式类型注册；宿主配置容量限制，不另引入来源或执行权限模型。

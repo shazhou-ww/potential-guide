@@ -186,7 +186,7 @@ Engine、动态 TaskType 和跨信任边界的定制工作保持独立内存状�
 
 来源：[authorize 边界澄清][whole-discussion]、[完整 Run 实施契约][whole-implementation]。
 
-### AX-17：Progress、checkpoint 和 Result 不互相冒充
+### AX-17：Log、Progress、checkpoint 和 Result 不互相冒充
 
 RunProgress 只包含 stage、可选 percent 和展示 message；
 percent 是当前阶段预估，缺失表示未知，100 不表示成功或回收，
@@ -194,6 +194,12 @@ percent 是当前阶段预估，缺失表示未知，100 不表示成功或回�
 checkpoint 是独立结构化证据，Result 是最终结果；结构合法不替代业务证据有效，
 复验在类型隔离边界内执行，不改写验证对象或历史事实。
 确认在约定的校验和持久化边界之后返回，不等于订阅者已经收到。
+
+Log 是显式、有界、独立保留的诊断，不替代上述任何业务输出，
+不推进生命周期 revision 或参与匹配、复用与终结。
+日志不可用、超限、过期及尾部未知需明确可见；诊断确认不能充当退出或回收证明。
+context 的身份、消息与确认边界见[RunContext 契约](./task-engine-contracts/run-context.md)，
+日志序号、保留与消费边界见[Run 日志契约](./task-engine-contracts/run-logs.md)。
 
 来源：[Progress 讨论][task-type]、[已接受的输出与复验设计][runtime]。
 
