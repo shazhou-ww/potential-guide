@@ -25,6 +25,12 @@ node .silvermoon\ideas\01M6G3S79VWXYY1Q3A07R2HRP6\outer\verification\endpoint.mj
 根 CID 为 `bafybeigvgtgl44su2dwo5mrigae5ozoow7mfcam3myaucrfzizqr56xg3e`，
 完整 Bundle 包含 9 个经标准解析与哈希验证的块。
 
+随后将 gateway 实例的 SQLite 路径也明确限定到本次临时目录，
+同步到 primary `49ca32e556d20fd030f7471ca8a7eea717514b96` 后完整重跑同一命令，退出 0，
+所有下表结果再次成立，`git status --short` 无输出，节点/数据库/作者目录没有残留。
+重跑根 CID 为 `bafybeifcs7o5ueszsyjmp53vsakfwyr6vm6f62kbohlfs3wzgnz57x3gpq`；
+构建源码包含临时作者位置，跨次验证 CID 可不同，不将其误作相同固定输入的重现性证据。
+
 | 标准 | 实际结果与证明 |
 | --- | --- |
 | D-S01 | 使用两个独立 Kubo repo 和服务进程；SDK 在发布节点导入合成 Bundle，经验证复制块到消费节点并确认递归 pin。 |
