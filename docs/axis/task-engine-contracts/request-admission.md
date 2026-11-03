@@ -10,12 +10,15 @@
 2. 在窗口内按完整 `requestId` 做幂等检查：相同原始意图且原记录仍保留时返回该请求当前的处理结果，
    包括原 tracking token、已创建的 Task 或已记录的失败；不另开一份处理。
    请求内容冲突则拒绝；原记录已清理时按下述保留规则明确报告不可用。
-3. 新 Request 携带完整 Bundle 的 `ipfs://<root-CID>` 目录根引用，不要求预注册类型，
+3. 新 Request 的 Bundle 引用使用完整根 CID 字符串，或 `{cid, hint}` 对象；
+   hint 为 gateway 基址 URI 或有序候选列表，不要求预注册类型，
    不接受旧 `{url, digest}`、`URL#digest` 或 tgz 引用。
    Engine 按需获取并验证 Bundle，再使用其中的 Input Schema 校验输入；
    所有准入检查通过后才创建 Task。下载、制品验证或输入校验失败均为提交失败，
    不创建 Task，也不记作 Run 失败。缓存命中仍遵守相同校验要求；
    制品规则见[Task Bundle](./task-bundle.md)。
+   引用形状、CID 与 hint 必须有效；hint 不授权宿主访问任意地址。
+   幂等仍比较完整原始意图，改变引用形式、hint 或候选顺序不因 CID 相同而被忽略。
 4. 在绑定数据域内，根据 `matchPolicy` 等匹配条件，决定是否需要调度新的 Run。Request 幂等与 Task–Run 匹配是不同的判断，不合并独立 Task。
 5. 同一 `requestId` 并发提交也最多创建一个 Task；受理成功返回前，Task 的受理事实与幂等依据必须可靠保存。
 

@@ -47,7 +47,7 @@
 | Run | 包含准备、资源分配与实际执行的一次完整尝试，可由多个 Task 共享。 |
 | Execution | Run 内部实际业务执行的子过程，不是 Task 的匹配对象。 |
 | TaskType | 定义业务输入、输出与消息契约并实现完整 Run 的任务类型。 |
-| Task Bundle 根 CID | 新架构中自包含 Task Bundle 的 UnixFS 目录内容身份；通过 `ipfs://<root-CID>` 引用，与节点或网关地址无关。 |
+| Task Bundle 根 CID | 新架构中自包含 Task Bundle 的 UnixFS 目录内容身份；Request 使用根 CID 字符串或 `{cid, hint}` 引用，hint 不参与身份。 |
 | 数据域 | Task、Run 及其关系和历史的稳定归属范围，详见[数据域归属与运行实例独占绑定](./task-engine-contracts/data-domain.md)。 |
 | 运行实例 | 一次初始化后固定绑定一个数据域的 Engine 运行时实例。 |
 | 输入 Schema | 描述 TaskType 输入合法结构与约束的声明式契约。 |
@@ -331,12 +331,14 @@ subscribeRuns(
 
 A1–C5 是核心控制与观察操作，不是删除现有配套能力的名单。本轮继续提供：
 
-- 类型契约获取：Request 通过 `ipfs://<root-CID>` 引用自包含 Task Bundle 的 UnixFS 目录，
+- 类型契约获取：Request 通过根 CID 字符串或 `{cid, hint}` 引用自包含 Task Bundle 的 UnixFS 目录，
   Engine 按需获取并验证，不要求显式类型注册；宿主配置容量限制，不另引入来源或执行权限模型。
   Engine 不提供 `discoverTypes` 类型枚举或类型目录，Bundle 的查找由调用方或外部目录负责，
   不将缓存列表视为可提交类型目录。
   内容寻址、装载及公共运行库边界见
   [Task Bundle、类型装载与运行库](./task-engine-contracts/task-bundle.md)。
+  Hint 仅为单个 gateway 基址 URI 或有序候选列表；宿主按访问策略决定是否采用，
+  不将调用方提示当作可信配置、内容身份或访问授权。
   Bundle 内文件可通过根 CID 加相对路径独立访问；这不是新增 Task/Run 控制或订阅操作。
   此替换仅限 Task Engine 新架构，不改变 Check/Probe 等业务制品的引用或传输格式。
 - `getRequest`：读取不可变原始请求意图，保留省略与显式值区别；缺失或不可提供明确失败。

@@ -254,7 +254,7 @@ Engine 直接消费 Bundle，不要求安装该 SDK。
 5. 构建必须验证依赖闭合；除 Node 内置模块外，不允许留下需要宿主解析的外部模块。
    无法静态封装的动态依赖、原生扩展或外部可执行依赖不能被当成已自包含而静默放行。
 6. 完成文件集合与格式验证后，将完整成品目录作为 UnixFS 目录导入 IPFS，取得根 CID
-   与 `ipfs://<root-CID>` 引用；不再要求生成 tgz、Git 文件树摘要或独立发布 URL。
+   作为 Bundle 引用，发布环境可附带 gateway hint；不再要求生成 tgz、Git 文件树摘要或独立发布 URL。
    构建与导入可以分步完成，但仅生成本地目录不代表已经发布或保证远端可获取；
    工具必须区分成品生成、CID 生成与内容保留结果，不伪造发布成功。
 7. 不同 Bundle 可以包含不同 SDK 或第三方库版本，只要各自实现其 Schema URL 规定、
@@ -264,28 +264,51 @@ Engine 直接消费 Bundle，不要求安装该 SDK。
 
 ## 内容身份与引用
 
-Bundle 统一使用标准 IPFS URI 引用 UnixFS 目录根，Request 的 Bundle 引用为字符串：
+Bundle 使用标准 IPFS 根 CID 标识 UnixFS 目录，Request 的 Bundle 引用支持以下多态：
 
 ```ts
-type BundleReference = string;
+type BundleReference =
+  | string
+  | {
+      cid: string;
+      hint: string | string[];
+    };
 ```
 
-`ipfs://<root-CID>` 中的根 CID 是完整 Bundle 的内容身份，不是运行 IPFS 服务的节点地址。
-节点、网关和连接方式由可信宿主配置，不写入 Request 或 Bundle 身份。
+字符串形式直接填写完整根 CID，不是 `ipfs://<root-CID>` URI；
+对象形式以 `cid` 填写同一完整根 CID，`hint` 提供一个或多个候选 gateway 基址 URI。
+根 CID 是完整 Bundle 的唯一内容身份，不是运行 IPFS 服务的节点地址。
+节点、网关和连接方式由可信宿主配置；调用方可提供 hint，但它不是内容身份或可信宿主配置。
 不再定义 `{url, digest}`、`URL#digest` 或独立的 Bundle 摘要算法；
 新架构不保留这些形式的双轨入口、自动转换或成功回退。
 
 1. Request 必须引用不可变的 UnixFS 目录根，不能用单个文件、压缩包 CID、
-   IPNS 名称、DNSLink 或“最新版”别名替代。根引用不携带文件路径、query 或 fragment。
-   非法 URI、无效 CID 或不支持的 IPFS 编码能力明确拒绝，不静默修正请求。
+   IPNS 名称、DNSLink 或“最新版”别名替代。CID 字段不携带 URI、文件路径、query 或 fragment。
+   非法引用形状、无效 CID 或不支持的 IPFS 编码能力明确拒绝，不静默修正请求。
 2. CID 的解析、编码、内容判等及 DAG 验证复用 IPFS 标准实现；
    不用 CID 字符串短前缀、展示名称或网关 URL 判等。
-   原始 Request 保留填写形式，幂等仍比较完整原始意图；
+   原始 Request 保留填写形式及 hint，幂等仍比较完整原始意图；
    内容复用与类型匹配按解析后的根 CID 判断，二者不混为一套比较规则。
 3. 根 CID 固定完整目录及文件字节，包括 `task.yaml`、`worker.cjs`、共享 Schema 和静态资源；
    不因某个文件未被执行读取就排除它。获取不同内容不能更新期望 CID 或代替成功结果。
 4. IPFS 内容完整性不证明发布者可信、代码安全或内容始终可获取；
    不引入额外来源授权或执行权限模型，也不将公共 IPFS 当作保密机制。
+
+### Gateway hint
+
+1. `hint` 当前仅表示 gateway 基址 URI 或有序候选 gateway URI 列表，不是任意提示对象，
+   不使用 `gatewayHint` 字段，也不将已经拼上 `/ipfs/<CID>` 的内容 URL 作为基址。
+   不提供 hint 时使用根 CID 字符串形式；对象形式包含 `cid` 和 `hint`。
+2. 候选顺序表达获取偏好，不要求从全部 gateway 下载，也不锁定串行、并行或重试算法。
+   宿主可利用 hint，也可使用配置的网关或其他 IPFS 节点；hint 不构成必须采用该地址的指令。
+3. Hint 是调用方输入，宿主在访问前按可信网络访问策略校验 URI 与目标；
+   不能将 hint 当成授权、放宽宿主访问限制或绕过 CID/DAG 验证。
+   非法 hint 明确报告请求错误，不能静默将非法引用当作无 hint 的成功输入。
+4. 三种引用形式的 CID 相同时，内容身份相同；hint 的有无、形式、值和候选顺序
+   不参与缓存身份、共享 preparation 的内容身份或 Run 匹配。
+   同一 `requestId` 换引用形式、改变 hint 或候选顺序仍改变原始请求意图，按幂等冲突处理。
+5. 内部可解析为 CID 与候选列表供获取层使用，但不能将解析结果回写原始 Request。
+   Hint 不保证 gateway 可用、内容留存或获取成功，也不允许改用其他 CID 成功回退。
 
 ### 目录导入与内容身份
 
@@ -340,7 +363,7 @@ type BundleReference = string;
 ### 装载边界
 
 1. Engine 不要求显式注册 Bundle，也不以预注册类型目录作为提交前提。
-   每个 Request 携带完整 `ipfs://<root-CID>` 引用；Engine 按需获取、校验、缓存和装载，
+   每个 Request 携带根 CID 字符串或 `{cid, hint}` 引用；Engine 按需获取、校验、缓存和装载，
    不再要求各业务类型各自提供可执行制品获取框架。
    Engine 不提供 `discoverTypes` 或类型目录，Bundle 的查找由调用方或外部目录负责；
    本地缓存只记录已获取内容，不作为类型枚举结果。
@@ -417,7 +440,8 @@ type BundleReference = string;
 
 ### 历史 Bundle 内容保留
 
-1. 对历史 Bundle，持久记录保留原 IPFS 根引用与 CID，不要求随历史永久保存完整 Bundle 内容，
+1. 对历史 Bundle，持久记录保留原多态引用（包括原 hint，如有）与根 CID，
+   不要求随历史永久保存完整 Bundle 内容，
    也不要求永久递归 pin 所有历史 Bundle。
    这不减少 Request、Task、Run 自身应保存的结果与历史事实。
 2. 仅被历史记录引用的 Bundle 内容可按宿主缓存策略淘汰，
