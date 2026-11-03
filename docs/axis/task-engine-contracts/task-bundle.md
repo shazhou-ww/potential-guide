@@ -189,7 +189,8 @@ async function taskCallback(input: Input, context: RunContext): Promise<Result> 
 回调边界如下：
 
 - `input` 是通过声明的 Input Schema 校验后的业务输入。
-- `context` 由 Task SDK 构造，提供当前 Run 信息、停止信号、进度上报和业务消息收取能力。
+- `context` 由 Task SDK 构造，提供当前 Run 信息、停止信号、进度上报、业务消息收取
+  及当前 Bundle 的只读内容访问能力。
   具体成员名与类型在 SDK 接口定义时确定。
 - 回调返回最终结果，由 SDK 按 Result Schema 校验并上报；抛出错误表示执行失败。
 - SDK 不向回调传入原始 Worker 通信端口或 Engine 实例。
@@ -221,6 +222,37 @@ runTask(taskCallback);
    排空必须确认的输出、完成清理并结束通信。未确认清理不能伪装成成功。
 5. Engine 仍独立校验跨边界数据、执行取消与强制终止，并确认物理退出；
    不能因为入口由官方 SDK 生成就信任 Worker 自报的生命周期事实。
+
+### Context 的 Bundle 内容访问
+
+业务回调通过 context 访问当前 Run 所属 Bundle 内的相对路径内容，
+不应感知或依赖 Worker 入口与资源在宿主上的存放位置。逻辑接口及使用示意如下，
+具体方法名与类型在 SDK 实施时确定：
+
+```ts
+interface BundleContent {
+  readFile(relativePath: string): Promise<Uint8Array>;
+}
+
+const bytes = await context.bundle.readFile("resources/config.json");
+const config = JSON.parse(new TextDecoder().decode(bytes));
+```
+
+1. 访问能力由 SDK 封装，可信宿主绑定当前 Run 实际使用的根 CID；
+   业务回调只传 Bundle 根下的相对路径，不能通过 Input 或读取参数改成另一个 CID。
+2. 相对路径以 Bundle 逻辑根为基准，不以 `process.cwd()`、`__dirname` 或入口物理目录为基准。
+   拒绝绝对路径、越界、链接与不符合 Bundle 文件集合规则的目标。
+   具体路径编码规则复用 Bundle/IPFS 路径规则，不靠宿主路径拼接静默修正输入。
+3. 接口异步返回文件内容，不返回本地路径、文件句柄、gateway 或节点地址，
+   也不提供写回 Bundle 的能力。业务回调不自行拼接 gateway URL 或实现 IPFS 获取协议。
+4. 实际读取可来自受保护的本地内容或 IPFS 获取层；
+   无论后端如何，均须保持当前根 CID 的内容完整性，并执行宿主适用的读取容量限制。
+   文件不存在、获取失败、验证失败或资源已不可用时明确报错，不返回伪造的空内容。
+5. 读取能力及在途操作遵守 Run 的停止与资源释放边界，不能脱离所属 Run 无限持有资源。
+   宿主保护活动工作所需内容，SDK 负责封装读取通信与错误，不向业务回调暴露原始宿主端口。
+6. Context 抽象不取消准入前完整 Bundle 验证，不新增远程代码加载或依赖安装通道。
+   Node Worker 仍不是安全沙箱；本规则约束官方业务访问契约，
+   不声称能阻止业务代码调用 Node 内置文件系统或探测其运行环境。
 
 ## 公共 SDK 来源与构建职责
 
@@ -336,7 +368,7 @@ type BundleReference =
 
 ## Engine 的制品装载职责
 
-### IPFS 获取与本地物化
+### IPFS 获取、入口装载与资源访问
 
 1. 获取直接消费根 CID 所标识的 UnixFS 目录与文件块，复用 IPFS 的寻址、传输及验证能力；
    不再要求 tar.gz、gzip/tar 解包或另设 Bundle 归档协议。
@@ -344,10 +376,13 @@ type BundleReference =
    无论传输方式如何，均须验证 CID、DAG 链接及所消费的块，不盲信普通 HTTP 响应。
 3. Engine 在准入前获取并验证完整 Bundle 文件树及声明契约；
    单文件访问能力不把准入改成仅检查入口或延迟检查未获取的资源。
-4. 执行前将已验证文件树物化为本地只读目录，直接启动原 `worker.cjs`；
-   不依赖 Node 原生执行 IPFS URI，不新增按需远程加载业务代码的执行模型。
-   物化必须拒绝越界、重复或歧义路径、符号链接及特殊文件，不覆盖其他 Bundle。
-5. 获取与物化受可信宿主容量限制。IPFS 节点或网关不可用、内容缺失、验证失败等错误
+4. 宿主以 Node 支持的装载方式直接启动已验证的自包含 `worker.cjs`，
+   不依赖 Node Worker 原生接受 IPFS URI，不新增业务动态加载外部代码的执行模型。
+   入口是否落地及资源是否物化为目录是宿主实现选择，不作为业务可依赖的存放位置契约；
+   业务资源统一通过 context 读取，不能要求业务以入口位置或工作目录定位资源。
+   如物化本地文件，必须只读使用并拒绝越界、重复或歧义路径、符号链接及特殊文件，
+   不覆盖其他 Bundle。
+5. 获取、装载与读取受可信宿主容量限制。IPFS 节点或网关不可用、内容缺失、验证失败等错误
    明确报告，不改用其他 CID、不将不完整目录当作成功结果。
 
 ### 宿主容量限制
@@ -427,13 +462,17 @@ type BundleReference =
 
 ## 内容缓存
 
-1. 内容寻址与块复用使用 IPFS 标准能力；完整 Bundle 的装载与本地物化缓存按根 CID 复用。
+1. 内容寻址与块复用使用 IPFS 标准能力，不要求 Engine 再维护一套 Bundle 内容分发缓存。
+   宿主可配置本地 IPFS 节点及其 gateway，由节点承担块缓存、pin 与垃圾回收；
+   gateway 是读取入口，不单独构成缓存或保留保证。
+   Engine 仍负责完整 Bundle 准入、入口装载、context 读取能力及活动内容保护。
+   如另保留装载结果或物化目录，可按根 CID 复用；是否长期缓存本地目录是实现选择。
    不再另建以 URL 和自定义 Digest 为键的寻址体系，节点或网关更换不改变内容身份。
 2. 内容复用不等于 Request 已受理。缓存命中仍须满足宿主容量限制，
    并按各请求的 Input 完成校验，不能将其他请求的受理结果当作当前请求的结果。
 3. 缓存命中使用已验证且完整性受保护的内容，不需要为判断“最新版本”而重新访问网络。
    缓存缺失或内容损坏时，重新获取仍须满足原期望根 CID。
-4. IPFS 块缓存与本地物化目录均不能将局部可用误认为完整 Bundle 可装载；
+4. IPFS 块缓存与可选本地物化目录均不能将局部可用误认为完整 Bundle 可装载；
    根 CID 可解析不等于其所有后继块均已保留或可获取。
 5. 缓存淘汰与传输重试不改变 Bundle 身份，不触发任务重跑，
    也不改变已有 Task 与 Run 的匹配或终结事实。
@@ -490,6 +529,8 @@ type BundleReference =
 
 - 受理状态查询的正式方法名与传输编码；立即查询和 long poll 已统一为可选 `waitMs` 的同一操作。
 - `buildTaskBundle` 的具体参数类型，以及回调 context 成员的具体命名与类型。
+- Context Bundle 读取的具体 SDK 方法、宿主/Worker 通信与入口装载方式；
+  资源物化与否不得改变相对路径访问契约，也不得取消准入前完整验证。
 - Worker 协议的完整握手与消息编码。
 - 既有注册 API、持久事实与消费端的实施迁移方案。
 - IPFS 标准实现选择、可复现的 UnixFS 导入参数、宿主节点/网关配置与活动内容保护机制；
