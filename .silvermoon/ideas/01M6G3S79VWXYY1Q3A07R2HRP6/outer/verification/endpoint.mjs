@@ -189,6 +189,7 @@ if (process.argv[2] === "engine-child") {
     for (const hint of [consumer.gateway, [`${consumer.gateway}/missing`, consumer.gateway]]) {
       gatewayServer = await startTaskServer({
         port: 0,
+        database: join(scratch, `gateway-${Array.isArray(hint) ? "array" : "scalar"}.sqlite`),
         ipfsClient: { block: { get: async () => { throw new Error("Controlled gateway fallback."); } } },
         allowGateway: (url) => { calls.push(url.href); return url.origin === consumer.gateway; },
         authorize: () => true, resolveCaller: () => ({ scope: "offline-proof", subject: "local" }),
