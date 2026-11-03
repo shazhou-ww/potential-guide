@@ -107,6 +107,9 @@ Request 的 Bundle 简写：<root-CID>
   或 Run 匹配；不存在第二套摘要。
 - Hint 是 gateway 基址 URI，不是拼好 `/ipfs/<CID>` 的内容 URL，也不是任意提示对象。
   数组顺序表示偏好，不要求从全部 gateway 获取，不规定串行、并行或重试算法。
+- 无 hint 使用 CID 字符串；拒绝空字符串、空数组及数组空值。
+  候选为绝对 HTTP(S) gateway 基址 URI，不携带用户名、密码、query 或 fragment。
+  候选数量与 URI 长度由宿主限制，超限明确拒绝，不截断后继续受理。
 - 宿主可以采用 hint，也可以使用其他配置的 gateway 或 IPFS 节点；
   调用方提示不是可信配置或访问授权，采用前仍须遵守宿主网络访问策略。
 - 所有获取结果仍验证同一 CID/DAG。Hint 不可用不允许换内容，
@@ -127,13 +130,13 @@ Request 的 Bundle 简写：<root-CID>
 | 交付对象 | 文件树打包成 tar.gz，压缩包作为下载对象。 | 文件树直接导入为 UnixFS 目录，传输其 DAG 与文件块，不再要求 tgz。 |
 | 构建与发布结果 | 构建目录与 Digest，再打包并取得 URL，组成完整引用。 | 构建目录，再导入取得根 CID；发布环境可附带 hint，CID 生成与发布保留结果明确区分。 |
 | 包内单文件读取 | 此交付链路须下载并解包，才能按路径读取内部文件。 | 可按根 CID 加路径直接读取并验证所需 DAG 与文件块，无需先取全包。 |
-| Worker 内资源读取 | 只约定本地 Bundle 目录，未定义 context 的资源读取接口。 | 经 Task context 以 Bundle 根相对路径读取内容，不依赖 Worker 的 `__dirname`、工作目录或 gateway 位置。 |
+| Worker 内资源读取 | 只约定本地 Bundle 目录，未定义 context 的资源读取接口。 | 经 Task context 以 Bundle 根相对路径统一返回字节流，调用方需要整文件时自行聚合，不依赖 Worker 的物理位置。 |
 | 完整性验证 | 解包后重算 Git 文件树摘要，与期望 Digest 比对。 | 使用标准 IPFS 实现验证 CID、DAG 链接和块；普通 HTTP 字节响应不能替代验证。 |
 | Bundle 合法性 | 内容摘要通过后，还须检查声明、入口、Schema 与文件集合。 | 相同检查保留；CID 验证通过不代表 Bundle 合法。 |
 | 共享 Schema | 全部定义收录在 Bundle 内，并纳入完整 Digest；装载不联网补契约。 | 全部定义仍收录在同一目录并受根 CID 约束，离线闭包规则不变。 |
 | 完整装载与执行 | 获取完整归档并解包，验证后启动本地只读 `worker.cjs`。 | 完整验证后以 Node 支持的方式装载同一入口；物理位置与资源物化是宿主实现选择，不向业务暴露。 |
 | 宿主容量 | 限制下载、解压后总字节数、单文件大小和文件数量。 | 限制传输、文件树总字节数、单文件大小、文件数量及 DAG 遍历预算；超限仍明确失败。 |
-| 内容缓存 | 按自定义 Digest 存储完整内容，不同 URL 可复用。 | 可由本地 IPFS 节点承担块缓存与 pin/GC；Engine 负责准入、入口装载和 context 读取，不要求独立内容分发缓存或长期物化目录。 |
+| 内容缓存 | 按自定义 Digest 存储完整内容，不同 URL 可复用。 | 独立本地 IPFS 服务承担块缓存与 pin/GC；Engine 负责准入、入口装载和 context 读取，不内嵌节点或要求长期物化目录。 |
 | 展示名称 | 名称不是身份；修改名称会改变 Digest。 | 名称仍不是身份；修改名称会改变根 CID，CID 缩写仍不能用于真实操作。 |
 
 交付链路可以概括为：
@@ -169,8 +172,8 @@ await engine.start();
 ### After：宿主提供通用 IPFS client/access
 
 以下是新架构的逻辑示意，不是已经实现的 API；
-初始化参数统一命名为 `ipfsClient`，由可信宿主装配通用 IPFS 客户端，
-不是 Bundle 专属读取对象：
+初始化参数统一命名为 `ipfsClient`，由可信宿主装配连接独立本地 IPFS endpoint 的通用客户端，
+不是 Bundle 专属读取对象，也不是嵌入 Engine 进程的 IPFS 节点：
 
 ```ts
 const engine = createTaskEngine({
@@ -185,18 +188,20 @@ await engine.start();
 通用 pin/保留能力可由底层提供，但活动内容保护的生命周期由 Engine 协调。
 Engine 负责将根节点解释为 Bundle、执行准入、装载入口及向 Worker 提供 SDK 的 context 读取能力，
 不能因为获取实现被注入就跳过声明、文件集合或容量校验。
-其具体接口、配置字段与资源所有权在实施阶段落实，不提前固定实现类或启动外部服务。
+注入者负责创建与关闭客户端，Engine 仅释放自己的读取与内容保护；
+具体标准客户端、连接配置和共享保护机制在实施阶段落实，本轮不启动外部服务。
 
 | 变化点 | Before | After |
 | --- | --- | --- |
 | 获取依赖 | Engine 自带 URL/文件获取；可选 `fetchBundle` 替换 HTTP 获取。 | 宿主装配只处理节点与内容的标准 IPFS client/access，不把 gateway URI 当作唯一接口。 |
-| 默认获取位置 | 必填 Request URL 决定下载位置。 | 默认 IPFS 获取路径由初始化能力配置；Request 可额外提供 gateway hint。 |
-| 是否必须传 gateway | 原链路不使用 IPFS gateway。 | 不必；gateway 是获取能力的一种实现，本地节点、远程可验证网关或嵌入式 IPFS 都可作为实施选择。 |
-| 本地 gateway 场景 | 没有原生 IPFS 获取与验证配置。 | 宿主可让访问能力连接已配置的本地 IPFS 节点/gateway；不代表 Engine 自动安装、启动或管理节点。 |
+| 默认获取位置 | 必填 Request URL 决定下载位置。 | 客户端连接独立本地 IPFS endpoint；Request 可额外提供受宿主策略约束的 gateway hint。 |
+| 是否必须传 gateway | 原链路不使用 IPFS gateway。 | 初始化仍注入 `ipfsClient`，不必固定成 gateway URI；它使用独立 endpoint 的具体标准 API，不内嵌节点。 |
+| 本地 gateway 场景 | 没有原生 IPFS 获取与验证配置。 | 部署层独立管理本地 IPFS 服务及其持久存储，Engine 不安装、启动或停止该服务。 |
+| 客户端所有权 | HTTP 获取回调与 Engine 缓存配合使用。 | 注入者创建和关闭 `ipfsClient`；Engine 不关闭共享客户端，仅释放自己的流与内容保护。 |
 | 内容缓存 | `bundleDirectory` 是 Engine 自维护的内容缓存目录。 | 块缓存复用 IPFS 节点/实现，不要求独立 Bundle 分发缓存；可选入口文件与物化目录不是业务路径契约。 |
 | 初始化配置错误 | 校验既有可信配置，错误明确报告。 | 缺少有效获取能力或配置无效时明确报初始化错误，不把 Request hint 当作可信初始化的替代。 |
 | 网络内容暂不可用 | URL 获取失败按提交失败处理。 | 合法初始化不承诺每个 CID 可获取；节点离线、缺块或读取失败按实际操作明确报告，不要求初始化时预取所有 Bundle。 |
-| 重启与生命周期 | 固定数据域、恢复持久事实并管理 Worker 生命周期。 | 相同规则保留；访问能力与可选目录配置不改变数据域身份，也不自动重演旧 Run。 |
+| 重启与生命周期 | 固定数据域、恢复持久事实并管理 Worker 生命周期。 | 相同规则保留；Engine 崩溃不连带终止独立 IPFS 服务，但不能自动声称在途传输已完成或可续传。 |
 
 使用 gateway 的第一版实现可以要求配置默认 gateway，但那是该实现的配置要求，
 不是 Engine 核心契约要求。无论选哪种后端，均必须满足同一 CID/DAG 验证、
@@ -231,16 +236,38 @@ Task SDK / context：可信绑定当前 Bundle，向业务提供相对路径内�
 这里的“节点”指 CID 标识的内容 DAG 对象，不是某台服务机器。
 底层不增加 `openBundle`、Bundle Schema 校验或 Run 租约语义；
 context 的 `bundle.readFile(...)` 是 SDK 的领域封装，而不是 IPFS client 的接口。
-实际连接可以是本地 IPFS 服务、gateway 或嵌入式实现，不另造一套节点访问工具。
+客户端连接本地独立 IPFS 服务，复用其标准 API，不内嵌节点或另造一套节点访问工具。
+
+### 独立 endpoint 的故障隔离与所有权
+
+```text
+部署层管理的独立 IPFS 服务进程：endpoint、blockstore、pin/GC、节点传输
+                 ↑ 标准 API
+Task Engine server 进程：注入的 ipfsClient 对象、Bundle 校验与调度
+                 ↓
+独立 Run Worker：经 context 消费当前 Bundle 字节流
+```
+
+客户端连接对象可以在 Engine server 内；需要隔离的是长期运行的 IPFS 服务进程，
+不是要求每个连接对象也有独立进程。Engine 不启动或停止节点，
+正常关闭只释放自己的读取和保护，不关闭共享客户端或撤销其他持有者的 pin。
+同一 CID 有多个使用者时，释放一次访问不能让其他使用者的内容失去保护。
+
+Engine 崩溃不应连带终止 IPFS 服务；节点已确认持久化的内容仍受其保留策略管理。
+但进程内缓冲、未完成上传和网络流仍可能丢失或中断，不能据此承诺续传、零丢失或传输完成。
+恢复应依赖持久请求、节点实际状态和 CID 验证；同机进程隔离不隔离整机或磁盘故障。
 
 ## Worker 如何访问 Bundle 内容
 
 业务回调只知道“当前 Run 所属 Bundle”和其中的相对路径，不知道文件在宿主哪里。
-以下是 SDK 访问契约示意，不表示方法已经实现：
+统一返回按 `Uint8Array` 分块的异步字节流，不再提供直接返回整文件缓冲区的平行接口。
+以下是消费示意，不表示方法已经实现或锁定某一种标准流类型：
 
 ```ts
-const bytes = await context.bundle.readFile("resources/config.json");
-const config = JSON.parse(new TextDecoder().decode(bytes));
+const stream = await context.bundle.readFile("resources/config.json");
+for await (const chunk of stream) {
+  await consumeChunk(chunk);
+}
 ```
 
 | 变化点 | Before | After |
@@ -248,7 +275,7 @@ const config = JSON.parse(new TextDecoder().decode(bytes));
 | 路径基准 | Bundle 有本地目录，但缺少统一业务读取接口。 | 相对于当前 Bundle 逻辑根，不相对于进程工作目录或入口物理目录。 |
 | 获取细节 | 本地文件布局可能成为业务自行读取的依赖。 | SDK 封装读取，宿主选择本地内容或 IPFS 后端；业务不拼接 gateway 或感知目录。 |
 | 内容归属 | 从已装载 Bundle 读取。 | Context 可信绑定当前 Run 的根 CID；读取参数与业务 Input 不能切换 CID。 |
-| 读取结果 | 依赖业务自行选择文件系统访问方式。 | 异步返回文件内容，不返回物理路径、句柄或 gateway；不存在、越界、获取/验证失败明确报错。 |
+| 读取结果 | 依赖业务自行选择文件系统访问方式。 | 统一返回字节流，不返回整文件缓冲区或物理位置；调用方自行按需聚合，创建流和消费中途都可能明确失败。 |
 | 活动资源 | 本地目录需受保护。 | IPFS 内容、可选本地文件及在途读取均遵守 Run 停止、保护与释放边界。 |
 
 Node Worker 不能原生以 IPFS URI 作为入口。宿主仍须采用 Node 支持的方式装载
@@ -256,6 +283,9 @@ Node Worker 不能原生以 IPFS URI 作为入口。宿主仍须采用 Node 支�
 资源是否落地、是否保留物化目录或经本地 gateway 读取，属于实现选择。
 Gateway 是读取入口，真正的块缓存、pin 和 GC 由其背后的 IPFS 节点承担。
 Context 封装不取消准入前的完整 Bundle 验证，也不承诺 Node Worker 是安全沙箱。
+`consumeChunk` 是调用方自己的消费逻辑。流支持背压和取消，SDK 不在后台强制聚合或无限预读。
+返回流不代表已读完；后续获取或验证失败必须报流错误，不能当作正常 EOF。
+调用方中途退出须释放自己的读取，不能因此关闭共享客户端或中断其他 Run 的读取。
 
 ### 是否必须写本地物化文件
 
@@ -264,7 +294,7 @@ Context 封装不取消准入前的完整 Bundle 验证，也不承诺 Node Work
 
 | 内容 | 内存 / 流读取方式 | 必须保留的边界 |
 | --- | --- | --- |
-| Bundle 内资源 | IPFS 读取为字节或流，由 context 封装；可以不写本地资源文件。 | 固定根 CID、相对路径检查、容量与停止约束、活动内容保护、明确读取错误。 |
+| Bundle 内资源 | IPFS 取得内容，由 context 统一返回字节流；可以不写本地资源文件。 | 固定根 CID、逐块验证、路径检查、背压与取消、容量与活动保护、明确流错误。 |
 | Worker 代码 | 获取并验证自包含 `worker.cjs`，读入有界内存，再以 Node 支持的源码方式启动。 | 完整有效源码与编码、独立 Worker、SDK 握手和退出协议；不能直接把 IPFS URI、流或字节数组交给 Worker 构造器。 |
 | 完整准入 | 遍历并验证全部 Bundle 文件与声明，可逐文件处理，不要求形成持久物化目录。 | 不能只验证入口或把完整文件树验证延迟到业务执行；流式读取不取消整包验证。 |
 
@@ -274,7 +304,8 @@ CommonJS 可以使用 `new Worker(source, { eval: true })` 从内存源码启动
 实施时仍须检查生成入口、自包含依赖、通信握手、错误栈与诊断定位；
 本构想不要求物理文件位置，也不以源码启动引入远程动态代码或外部依赖加载。
 资源流可以有背压，不应为读取大文件默认将整个 Bundle 一次性聚合到内存；
-现有 context `readFile` 示例返回 `Uint8Array`，是否另提供流式 SDK 方法在实施时确定。
+Context `readFile` 示例仅返回流，需要完整 `Uint8Array`、文本或 JSON 时由调用方有界聚合；
+具体标准流类型在实施时确定，不再保留“先整文件、再另加流接口”的方案。
 不写业务物化文件不等于全系统无磁盘：IPFS blockstore 与 Engine 持久事实仍可使用磁盘。
 
 ## 受理、匹配、恢复与观察对照

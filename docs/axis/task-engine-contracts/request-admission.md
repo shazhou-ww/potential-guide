@@ -22,6 +22,8 @@ frozen: false
    不创建 Task，也不记作 Run 失败。缓存命中仍遵守相同校验要求；
    制品规则见[Task Bundle](./task-bundle.md)。
    引用形状、CID 与 hint 必须有效；hint 不授权宿主访问任意地址。
+   空 hint 字符串或列表、非法 gateway URI 及超过宿主数量/长度上限均明确拒绝；
+   URI 约束见[Gateway hint](./task-bundle.md#gateway-hint)，不静默截断或当作无 hint。
    幂等仍比较完整原始意图，改变引用形式、hint 或候选顺序不因 CID 相同而被忽略。
 4. 在绑定数据域内，根据 `matchPolicy` 等匹配条件，决定是否需要调度新的 Run。Request 幂等与 Task–Run 匹配是不同的判断，不合并独立 Task。
 5. 同一 `requestId` 并发提交也最多创建一个 Task；受理成功返回前，Task 的受理事实与幂等依据必须可靠保存。

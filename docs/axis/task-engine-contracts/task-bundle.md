@@ -238,27 +238,33 @@ runTask(taskCallback);
 
 业务回调通过 context 访问当前 Run 所属 Bundle 内的相对路径内容，
 不应感知或依赖 Worker 入口与资源在宿主上的存放位置。逻辑接口及使用示意如下，
-具体方法名与类型在 SDK 实施时确定：
+统一返回按 `Uint8Array` 分块的异步字节流；具体标准流类型与方法名在 SDK 实施时确定：
 
 ```ts
-interface BundleContent {
-  readFile(relativePath: string): Promise<Uint8Array>;
+const stream = await context.bundle.readFile("resources/config.json");
+for await (const chunk of stream) {
+  await consumeChunk(chunk);
 }
-
-const bytes = await context.bundle.readFile("resources/config.json");
-const config = JSON.parse(new TextDecoder().decode(bytes));
 ```
+
+`consumeChunk` 表示调用方自己的消费逻辑，不是额外 SDK 方法。
+Context 不再提供直接返回整文件 `Uint8Array` 的另一套读取接口；
+调用方需要完整字节、文本或 JSON 时，自行有界消费并聚合流。
 
 1. 访问能力由 SDK 封装，可信宿主绑定当前 Run 实际使用的根 CID；
    业务回调只传 Bundle 根下的相对路径，不能通过 Input 或读取参数改成另一个 CID。
 2. 相对路径以 Bundle 逻辑根为基准，不以 `process.cwd()`、`__dirname` 或入口物理目录为基准。
    拒绝绝对路径、越界、链接与不符合 Bundle 文件集合规则的目标。
    具体路径编码规则复用 Bundle/IPFS 路径规则，不靠宿主路径拼接静默修正输入。
-3. 接口异步返回文件内容，不返回本地路径、文件句柄、gateway 或节点地址，
+3. 接口异步返回内容流，不返回完整文件缓冲区、本地路径、文件句柄、gateway 或节点地址，
    也不提供写回 Bundle 的能力。业务回调不自行拼接 gateway URL 或实现 IPFS 获取协议。
 4. 实际读取可来自受保护的本地内容或 IPFS 获取层；
    无论后端如何，均须保持当前根 CID 的内容完整性，并执行宿主适用的读取容量限制。
    文件不存在、获取失败、验证失败或资源已不可用时明确报错，不返回伪造的空内容。
+   流必须支持背压与取消；返回流不等于读取成功，创建流与消费中途都可能失败。
+   每个输出块须经当前根 CID 的内容链路验证，后续失败必须作为流错误暴露，不能伪装成正常 EOF。
+   调用方中途停止读取时释放自己的流；取消一个消费者不终止其他 Run 或共享客户端。
+   SDK 不因统一流接口就在后台预读、聚合整文件或无限缓冲。
 5. 读取能力及在途操作遵守 Run 的停止与资源释放边界，不能脱离所属 Run 无限持有资源。
    宿主保护活动工作所需内容，SDK 负责封装读取通信与错误，不向业务回调暴露原始宿主端口。
 6. Context 抽象不取消准入前完整 Bundle 验证，不新增远程代码加载或依赖安装通道。
@@ -342,6 +348,9 @@ type BundleReference =
 1. `hint` 当前仅表示 gateway 基址 URI 或有序候选 gateway URI 列表，不是任意提示对象，
    不使用 `gatewayHint` 字段，也不将已经拼上 `/ipfs/<CID>` 的内容 URL 作为基址。
    不提供 hint 时使用根 CID 字符串形式；对象形式包含 `cid` 和 `hint`。
+   拒绝空字符串、空数组及数组中的空值；候选必须是有效的绝对 HTTP(S) gateway 基址 URI。
+   URI 不携带用户名、密码、query 或 fragment；请求不能通过这些位置夹带凭据或替换内容路径。
+   Hint 的候选数量与单个 URI 长度上限由可信宿主配置，超限明确拒绝，不截断或丢弃后继续受理。
 2. 候选顺序表达获取偏好，不要求从全部 gateway 下载，也不锁定串行、并行或重试算法。
    宿主可利用 hint，也可使用配置的网关或其他 IPFS 节点；hint 不构成必须采用该地址的指令。
 3. Hint 是调用方输入，宿主在访问前按可信网络访问策略校验 URI 与目标；
@@ -396,6 +405,22 @@ type BundleReference =
    Request hint 只能辅助候选获取，不代替可信初始化配置或绕过宿主访问策略。
    初始化参数名固定为 `ipfsClient`，具体标准 IPFS API 在实施时确定，不新造一套平行节点协议。
 
+### 独立 IPFS endpoint 与客户端生命周期
+
+1. 目标部署使用本地独立运行的 IPFS 服务 endpoint，不将 IPFS 节点或 blockstore 运行时
+   嵌入 Task Engine server 进程，也不将它作为随该进程退出而终止的附属进程。
+   部署层独立启动、管理该服务及持久存储，Engine 不负责安装或启动节点。
+2. 注入的 `ipfsClient` 是连接该 endpoint 的通用客户端对象，可以存在于 Engine 进程内；
+   它与独立 IPFS 服务进程是两个不同对象。Endpoint 的具体 API、连接参数与客户端库在实施时确定，
+   不要求它只能是 HTTP gateway。Request hint 仍只是受宿主策略约束的候选网关。
+3. 注入者负责客户端的创建与关闭。Engine 关闭时只取消自己的读取、释放自己取得的内容保护，
+   不关闭可能被共享的 `ipfsClient`，不停止独立 IPFS 服务，不撤销其他使用者持有的 pin。
+   同 CID 的其他持有者仍存在时，不能以本 Engine 释放为由使其内容失去保护。
+4. Engine 进程崩溃不应连带终止 IPFS 服务；已由该服务确认持久化的内容仍按其保留策略管理。
+   这不保证在途上传或下载自动完成、续传或零数据丢失：进程内缓冲、未提交上传及网络连接仍可能中断，
+   是否恢复由节点能力、持久请求及重新验证决定，不能伪造传输完成。
+   本地独立进程也不隔离整机或磁盘故障。
+
 ### IPFS 获取、入口装载与资源访问
 
 1. 获取直接消费根 CID 所标识的 UnixFS 目录与文件块，复用 IPFS 的寻址、传输及验证能力；
@@ -416,7 +441,7 @@ type BundleReference =
 
 ### 内存读取与 Worker 启动的实现选择
 
-1. Bundle 资源可由标准 IPFS 读取接口以流或字节返回，经 SDK 封装后供 context 访问，
+1. Bundle 资源由标准 IPFS 读取能力取得，经 SDK 统一封装为字节流供 context 访问，
    不要求业务资源先落地。读取须执行容量、取消、完整性及活动内容保护约束，
    流式读取不授权忽略后续块验证或将未完成的内容当作成功。
 2. 自包含 `worker.cjs` 可在验证后读入有界内存，再通过 Node 支持的源码启动方式
@@ -507,7 +532,7 @@ type BundleReference =
 ## 内容缓存
 
 1. 内容寻址与块复用使用 IPFS 标准能力，不要求 Engine 再维护一套 Bundle 内容分发缓存。
-   宿主可配置本地 IPFS 节点及其 gateway，由节点承担块缓存、pin 与垃圾回收；
+   宿主配置独立本地 IPFS 服务，由节点承担块缓存、pin 与垃圾回收；
    gateway 是读取入口，不单独构成缓存或保留保证。
    Engine 仍负责完整 Bundle 准入、入口装载、context 读取能力及活动内容保护。
    如另保留装载结果或物化目录，可按根 CID 复用；是否长期缓存本地目录是实现选择。
@@ -576,11 +601,13 @@ type BundleReference =
   [SDK 文档](../../../packages/task-sdk/README.md)与[RunContext 契约](./run-context.md)；
   后续接口演进不得绕过本文的身份、声明与兼容边界。
 - Context Bundle 读取的具体 SDK 方法、宿主/Worker 通信与入口装载方式仍待落实；
-  资源物化与否不得改变相对路径访问契约，也不得取消准入前完整验证。
+  统一返回字节流，具体标准流类型仍待落实；资源物化与否不得改变相对路径访问契约，
+  也不得取消准入前完整验证。
 - Worker 握手与消息编码已有[独立协议文档](../../task-bundle-worker.md)，
   当前协议未冻结，新能力统一在 v1 内原地演进；显式冻结后，不兼容迭代另行定义 Schema URL 边界。
 - 既有注册 API、持久事实与消费端的实施迁移方案。
-- IPFS 标准实现选择、可复现的 UnixFS 导入参数、宿主节点/网关配置与活动内容保护机制；
+- 独立本地 IPFS endpoint 与客户端实现选择、可复现的 UnixFS 导入参数、
+  宿主节点/网关配置与活动内容保护机制；
   新架构直接采用 IPFS 引用，不以兼容旧 URL/Digest/tgz 链路为目标。
 
 并发幂等须保证同一 `requestId` 最多创建一个 Task，并保留在途请求所需凭据，
