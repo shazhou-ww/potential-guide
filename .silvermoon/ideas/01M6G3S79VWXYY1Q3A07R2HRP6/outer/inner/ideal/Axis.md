@@ -169,13 +169,13 @@ await engine.start();
 ### After：宿主提供通用 IPFS client/access
 
 以下是新架构的逻辑示意，不是已经实现的 API；
-`ipfsAccess` 是待实施时确定的能力参数名，`ipfsClient` 由可信宿主装配，
+初始化参数统一命名为 `ipfsClient`，由可信宿主装配通用 IPFS 客户端，
 不是 Bundle 专属读取对象：
 
 ```ts
 const engine = createTaskEngine({
   store,
-  ipfsAccess: ipfsClient,
+  ipfsClient,
 });
 await engine.start();
 ```
