@@ -55,7 +55,7 @@
 被高层覆盖的非法值仍必须报错，不丢弃后回退默认值。只有未提供的设置才使用默认值。
 禁用的用户层不读取、不参与校验。各来源使用同一字段契约，不保留四套合法性规则。
 
-以下表达目标使用方式；完整字段及 flag 映射在实施时统一定义：
+以下表达目标使用方式；IPFS RPC 命名按下述约定，其余字段及 flag 映射在实施时统一定义：
 
 ```powershell
 pguide task-engine --config server.yaml --port 3001
@@ -66,16 +66,21 @@ pguide-task-engine --host 127.0.0.1 --port 3000 --database .\tasks.sqlite --ipfs
 host: 127.0.0.1
 port: 3000
 database: ./tasks.sqlite
-ipfs:
-  rpcUrl: http://127.0.0.1:5001
+ipfsRpcUrl: http://127.0.0.1:5001
 ```
+
+IPFS 连接只需一个 Kubo RPC URL 字符串：服务文件使用单层 `ipfsRpcUrl`，
+CLI 使用 `--ipfs-rpc-url`，pguide 用户设置使用完整 ID `task-engine.ipfsRpcUrl`。
+该 ID 的点号表示设置命名空间，不是嵌套对象。地址指向 Kubo RPC，不是 IPFS HTTP Gateway；
+不使用含义模糊的 `ipfsEndpoint` 别名，也不预设 `ipfs.rpcUrl` 两层结构。
+未来确有其他连接配置需求时再评估结构，不为未出现的需求提前嵌套。
 
 配置仅描述数据，不执行 JavaScript、模块导入或安装钩子。
 旧 `.mjs` 配置必须明确拒绝并给出迁移提示，不能作为隐式回退继续执行。
 该变更不取消程序化 API：嵌入者和测试仍可直接传入 client 与回调。
 
 复用 pguide 的完整 setting ID 覆盖单位：对象和数组整体替换，不做隐式深合并，
-显式对象须满足该设置的完整要求。具体 setting ID、服务文件字段和 flag 映射在实施时定义；
+显式对象须满足该设置的完整要求。除上述 IPFS RPC 命名外，其余 setting ID、服务文件字段和 flag 映射在实施时定义；
 需要单独覆盖的能力应有明确设置粒度，不能把点号临时解释成任意对象路径。
 共享 JSONC 中其他包的合法设置不算服务未知字段；服务命名空间内未知字段明确失败，
 共享结构错误和注册损坏仍按现有规则处理，不借此重写其他命令的配置语义。
