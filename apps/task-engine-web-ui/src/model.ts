@@ -500,13 +500,18 @@ export class Directory<P extends TaskPage | RunPage = TaskPage> {
   page: P | undefined;
   expired = false;
   private generation = 0;
+  private loadedPages = 0;
   dropped = 0;
   error = "";
   live = false;
+  polling = false;
+  refreshing = false;
+  stale = false;
   private replica: CollectionReplica | undefined;
   rejectQuery(error: unknown): void {
     this.generation++;
     this.error = String(error);
+    this.stale = true;
   }
   async load(
     fetchPage: (query: string) => Promise<P>,
@@ -537,6 +542,11 @@ export class Directory<P extends TaskPage | RunPage = TaskPage> {
       )
         throw new Error("目录快照变化；拒绝拼接。请重新查询。");
       const merged = append ? [...rows(this.page!), ...rows(next)] : rows(next);
+      const ids = merged.map((value) => {
+        const row = value as TaskSummary | RunSummary;
+        return "taskId" in row ? row.taskId : row.runId;
+      });
+      if (new Set(ids).size !== ids.length) throw new Error("目录快照有重复成员，拒绝拼接。");
       if (
         merged.length > 10_000 ||
         new TextEncoder().encode(JSON.stringify(merged)).byteLength > 8_388_608
@@ -545,16 +555,56 @@ export class Directory<P extends TaskPage | RunPage = TaskPage> {
       this.page = { ...next, [this.field]: merged, items: merged };
       this.replica = undefined;
       this.live = false;
+      this.loadedPages = append ? this.loadedPages + 1 : 1;
       if (!append) this.dropped = 0;
       this.query = original;
       this.expired = false;
       this.error = "";
+      this.stale = false;
       return true;
     } catch (error) {
       if (!isCurrent()) return false;
       this.error = String(error);
+      this.stale = true;
       if (error instanceof ApiError && error.code === "query_expired") this.expired = true;
       throw error;
+    }
+  }
+  async refresh(
+    fetchPage: (query: string) => Promise<P>,
+    current: () => boolean = () => true,
+  ): Promise<boolean> {
+    if (this.refreshing || !this.page) return false;
+    const generation = ++this.generation;
+    const isCurrent = () => current() && generation === this.generation;
+    const baseline = this.page;
+    const draft = new Directory<P>(this.field);
+    this.refreshing = true;
+    try {
+      for (let index = 0; index < this.loadedPages; index++) {
+        if (!(await draft.load(fetchPage, this.query, index > 0, isCurrent))) return false;
+        if (!draft.page?.next) break;
+      }
+      if (!isCurrent() || !draft.page) return false;
+      const before = sourcePosition(baseline.revision),
+        after = sourcePosition(draft.page.revision);
+      if (before.domain !== after.domain || after.position < before.position)
+        throw new Error("刷新快照的数据域或水位无效，保留上次确认窗口。");
+      this.page = draft.page;
+      this.loadedPages = draft.loadedPages;
+      this.replica = undefined;
+      this.live = false;
+      this.expired = false;
+      this.error = "";
+      this.stale = false;
+      return true;
+    } catch (error) {
+      if (!isCurrent()) return false;
+      this.error = `分页刷新失败，保留上次确认窗口：${String(error)}`;
+      this.stale = true;
+      throw error;
+    } finally {
+      this.refreshing = false;
     }
   }
   apply(envelope: CollectionEnvelope<TaskSummary | RunSummary>): boolean {
@@ -581,6 +631,7 @@ export class Directory<P extends TaskPage | RunPage = TaskPage> {
       this.page = { ...this.page, [this.field]: items, items, revision: this.replica.revision };
     }
     this.live = true;
+    this.stale = false;
     return accepted;
   }
   prepareLive(): string {

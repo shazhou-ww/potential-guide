@@ -7,9 +7,11 @@ import type {
   RunStage,
   RunSummary,
   TaskSnapshot,
+  TaskPage,
   TaskSummary,
   SubmissionResult,
 } from "@potential-guide/task-protocol";
+import { observeDirectory } from "./directory-observation.js";
 import { envelopeKeys, envelopeSchema, schemaEditor } from "./form.js";
 import { ObservationEnd, stages, taskStatus } from "./lifecycle.js";
 import {
@@ -380,6 +382,7 @@ interface Observer {
   historyEvents: PublicEvent[];
   controller: AbortController;
   streamController?: AbortController;
+  associatedController?: AbortController;
   streamState: "idle" | "live" | "stale" | "paused" | "ended";
   end: ObservationEnd;
   executionState: "unknown" | RunStage;
@@ -841,7 +844,7 @@ function renderObserver(observer: Observer): void {
       box.append(
         node(
           "p",
-          `可读关联任务：已加载 ${observer.associated.page.tasks.length} 条（不是全体 owner 统计）`,
+          `可读关联任务：已加载 ${observer.associated.page.tasks.length} 条（不是全体 owner 统计） · ${directoryObservation(observer.associated)}`,
         ),
       );
     for (const task of observer.associated.page?.tasks ?? [])
@@ -937,6 +940,12 @@ function validateRange(from: string | null, before: string | null): void {
     throw new Error("时间下界必须早于上界（含下界、不含上界）。");
 }
 async function queryDirectory(append = false): Promise<void> {
+  if (selection.endpoint) {
+    workspace().taskCollection?.abort();
+    delete workspace().taskCollection;
+    workspace().directory.live = false;
+    workspace().directory.polling = false;
+  }
   if ((get("only-favorites") as HTMLInputElement).checked) {
     renderDirectory();
     try {
@@ -952,11 +961,6 @@ async function queryDirectory(append = false): Promise<void> {
     return;
   }
   const state = workspace();
-  if (!append) {
-    state.taskCollection?.abort();
-    delete state.taskCollection;
-    state.directory.live = false;
-  }
   const lease = selection.capture();
   let started = false;
   try {
@@ -969,7 +973,7 @@ async function queryDirectory(append = false): Promise<void> {
       lease.current,
     );
     if (!accepted) return;
-    if (!state.directory.page?.next) void monitorDirectory(state, "tasks", lease);
+    void monitorDirectory(state, "tasks", lease);
   } catch (error) {
     if (!started && lease.current()) state.directory.rejectQuery(error);
   }
@@ -989,9 +993,6 @@ async function monitorDirectory(
     state.runCollection?.abort();
     state.runCollection = controller;
   }
-  const abort = () => controller.abort();
-  lease.signal.addEventListener("abort", abort, { once: true });
-  if (lease.signal.aborted) abort();
   const active = () =>
     lease.current() &&
     !controller.signal.aborted &&
@@ -999,61 +1000,98 @@ async function monitorDirectory(
   const render = () => {
     if (active()) kind === "tasks" ? renderDirectory() : renderExecutions();
   };
-  let failures = 0;
+  await observeCollection<TaskPage | RunPage>(
+    directory,
+    state.endpoint,
+    kind,
+    controller,
+    lease.signal,
+    active,
+    render,
+    () =>
+      !navigation.overlay &&
+      directoryRefreshAllowed(kind === "tasks" ? "directory" : "execution-directory"),
+  );
+}
+function directoryRefreshAllowed(id: string): boolean {
+  const focused = document.activeElement;
+  return (
+    !document.hidden &&
+    !(focused?.closest("table") && get(id).contains(focused)) &&
+    window.getSelection()?.isCollapsed !== false
+  );
+}
+function waitDirectoryRefresh(signal: AbortSignal, milliseconds: number): Promise<void> {
+  return new Promise((resolve) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const finish = () => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", finish);
+      document.removeEventListener("visibilitychange", visibility);
+      resolve();
+    };
+    const visibility = () => {
+      clearTimeout(timer);
+      if (!document.hidden) finish();
+    };
+    signal.addEventListener("abort", finish, { once: true });
+    document.addEventListener("visibilitychange", visibility);
+    if (signal.aborted) finish();
+    else if (!document.hidden) timer = setTimeout(finish, milliseconds);
+  });
+}
+async function observeCollection<P extends TaskPage | RunPage>(
+  directory: Directory<P>,
+  endpoint: Endpoint,
+  kind: "tasks" | "runs",
+  controller: AbortController,
+  parent: AbortSignal,
+  current: () => boolean,
+  render: () => void,
+  canRefresh: () => boolean,
+): Promise<void> {
+  const abort = () => controller.abort();
+  parent.addEventListener("abort", abort, { once: true });
+  if (parent.aborted) abort();
   try {
-    let from = directory.prepareLive();
-    while (active() && failures < 5) {
-      try {
+    await observeDirectory({
+      directory,
+      signal: controller.signal,
+      current,
+      canRefresh,
+      wait: (milliseconds) => waitDirectoryRefresh(controller.signal, milliseconds),
+      fetchPage: (query) =>
+        api.request<P>(endpoint, `/${kind}?${query}`, { signal: controller.signal }),
+      stream: async (from, receive) => {
         const query = new URLSearchParams(directory.query);
         query.set("fromRevision", from);
-        const response = await fetch(api.path(state.endpoint, `/${kind}/events?${query}`), {
-          headers: api.headers(state.endpoint),
+        const response = await fetch(api.path(endpoint, `/${kind}/events?${query}`), {
+          headers: api.headers(endpoint),
           signal: controller.signal,
         });
         if (!response.ok) await api.decode(response);
-        if (!active()) return;
+        if (!current() || controller.signal.aborted) return;
         directory.live = true;
         directory.error = "";
-        failures = 0;
+        directory.stale = false;
         render();
-        await consumeCollectionSse(response, (envelope) => {
-          if (!active()) return;
-          directory.apply(envelope);
-          from = directory.page!.revision;
-          render();
-        });
-        if (!active()) return;
-        directory.error = "集合流已断开，按最后完整源 revision 续接；不会拼接不完整基线。";
-      } catch (error) {
-        if (!active()) return;
-        directory.error = `实时集合不可用，保留上次完整快照：${String(error)}`;
-        if (error instanceof ApiError && [400, 401, 403, 404, 410, 429].includes(error.status))
-          failures = 5;
-        else failures++;
-      }
-      directory.live = false;
-      render();
-      if (failures < 5)
-        await new Promise<void>((resolve) => {
-          const finish = () => {
-            clearTimeout(timer);
-            controller.signal.removeEventListener("abort", finish);
-            resolve();
-          };
-          const timer = setTimeout(finish, 1000);
-          controller.signal.addEventListener("abort", finish, { once: true });
-          if (controller.signal.aborted) finish();
-        });
-    }
-  } catch (error) {
-    if (active()) {
-      directory.error = String(error);
-      directory.live = false;
-      render();
-    }
+        await consumeCollectionSse(response, receive);
+      },
+      changed: render,
+    });
   } finally {
-    lease.signal.removeEventListener("abort", abort);
+    parent.removeEventListener("abort", abort);
   }
+}
+function directoryObservation(directory: Directory<TaskPage | RunPage>): string {
+  if (directory.live) return "完整实时集合";
+  if (directory.polling)
+    return `分页近实时（5 秒采样）${document.hidden ? " · 页面隐藏，采样暂停" : ""}${directory.refreshing ? " · 正在刷新" : ""}${directory.stale ? " · 数据陈旧" : ""}`;
+  return directory.stale
+    ? "上次确认快照 · 数据陈旧"
+    : directory.page?.next
+      ? "分页快照 · 自动采样已暂停"
+      : "完整快照";
 }
 function renderDirectory(): void {
   const container = "directory";
@@ -1094,7 +1132,7 @@ function renderDirectory(): void {
   contents.append(
     node(
       "p",
-      `已加载 ${directory.page.tasks.length} 条 · ${directory.live ? "完整实时集合" : directory.page.next ? "分页基线未完整，暂不应用增量" : "完整快照"} · 水位 ${directory.page.revision} · 基线 ${directory.page.observedAt}`,
+      `已加载 ${directory.page.tasks.length} 条 · ${directoryObservation(directory)} · 水位 ${directory.page.revision} · 基线 ${directory.page.observedAt}`,
     ),
   );
   if (directory.dropped)
@@ -1190,14 +1228,32 @@ function summaryStatus(task: TaskSummary): string {
   return `${label} · ${task.canceled ? "已取消" : "未取消"} · 时间 ${time}`;
 }
 async function associatedTasks(observer: Observer, append = false): Promise<void> {
+  observer.associatedController?.abort();
+  const controller = new AbortController();
+  observer.associatedController = controller;
+  const active = () =>
+    current(observer) && observer.associatedController === controller && !controller.signal.aborted;
   try {
-    await observer.associated.load(
+    const accepted = await observer.associated.load(
       (query) =>
         api.request(observer.endpoint, `/tasks?${query}`, { signal: observer.controller.signal }),
       new URLSearchParams({ runId: observer.id, sort: "created-desc" }).toString(),
       append,
-      () => current(observer),
+      active,
     );
+    if (accepted)
+      void observeCollection(
+        observer.associated,
+        observer.endpoint,
+        "tasks",
+        controller,
+        observer.controller.signal,
+        active,
+        () => {
+          if (active()) renderObserver(observer);
+        },
+        () => directoryRefreshAllowed("execution-detail"),
+      );
   } catch {
     /* The directory retains its explicit error, independently from event permissions. */
   }
@@ -1207,11 +1263,10 @@ async function queryExecutions(append = false): Promise<void> {
   const state = workspace(),
     lease = selection.capture();
   let started = false;
-  if (!append) {
-    state.runCollection?.abort();
-    delete state.runCollection;
-    state.executionDirectory.live = false;
-  }
+  state.runCollection?.abort();
+  delete state.runCollection;
+  state.executionDirectory.live = false;
+  state.executionDirectory.polling = false;
   try {
     let query = state.executionDirectory.query;
     if (!append) {
@@ -1240,7 +1295,7 @@ async function queryExecutions(append = false): Promise<void> {
       lease.current,
     );
     if (!accepted) return;
-    if (!state.executionDirectory.page?.next) void monitorDirectory(state, "runs", lease);
+    void monitorDirectory(state, "runs", lease);
   } catch (error) {
     if (!started && lease.current()) state.executionDirectory.rejectQuery(error);
   }
@@ -1263,7 +1318,7 @@ function renderExecutions(): void {
     box.append(
       node(
         "p",
-        `已加载 ${directory.page.runs.length} 个 Run · ${directory.live ? "完整实时集合" : directory.page.next ? "分页基线未完整，暂不应用增量" : "完整快照"} · 水位 ${directory.page.revision} · 基线 ${directory.page.observedAt}`,
+        `已加载 ${directory.page.runs.length} 个 Run · ${directoryObservation(directory)} · 水位 ${directory.page.revision} · 基线 ${directory.page.observedAt}`,
       ),
     );
     if (directory.dropped)
@@ -1682,8 +1737,16 @@ async function start(): Promise<void> {
     if (taskObserver && current(taskObserver)) renderObserver(taskObserver);
   }, 1000);
   (timeRefresh as unknown as { unref?: () => void }).unref?.();
+  const visibility = () => {
+    if (!selection.endpoint) return;
+    renderDirectory();
+    renderExecutions();
+    if (executionObserver && current(executionObserver)) renderObserver(executionObserver);
+  };
+  document.addEventListener("visibilitychange", visibility);
   window.addEventListener("pagehide", () => {
     clearInterval(timeRefresh);
+    document.removeEventListener("visibilitychange", visibility);
     for (const state of states.values()) {
       state.taskCollection?.abort();
       state.runCollection?.abort();
