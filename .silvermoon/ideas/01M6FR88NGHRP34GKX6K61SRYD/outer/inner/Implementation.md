@@ -6,14 +6,15 @@
 
 明确日志级别、Run 归属、顺序、输出背压、容量与保留策略，以及不可用和超限的可见语义。
 对照[现有 Worker 协议](../../../../../docs/task-bundle-worker.md)，明确协议版本与兼容边界，不原地扩写已固定的协议。
+以[简短设计与 Worker API 前后对比](Design.md)为可调整的准备期设计候选；实施时固定类型、限额和兼容方案。
 
 ### I-S02: 接通作者与消费链路
 
-提供 SDK 日志入口，接通 Worker、Engine、存储及查询/订阅链路；保持业务 Result、progress、checkpoint 和生命周期判断独立。
+提供 SDK Log API，接通 Worker、Engine、存储及消费侧日志查询/实时订阅 API；保持业务 Result、progress、checkpoint 和生命周期判断独立。
 
 ### I-S03: 展示日志并补齐验证
 
-工作台提供按 Run 的实时与历史日志展示，以 check 的逐项诊断作为使用样例，验证并发隔离、结束后查询和异常边界。
+在 Task Engine Web UI 的 Run 详情中提供独立日志界面，显示详细内容、级别、顺序与可用性，支持实时跟随、历史分页和重新连接。以 check 的逐项诊断作为使用样例，验证并发隔离、结束后查询和异常边界。
 
 ## Acceptance criteria
 
@@ -23,7 +24,7 @@
 
 ### I-AC02: 实时与历史链路完整
 
-通过 Engine、存储、HTTP 及工作台测试证明：并发 Run 的日志不串流，订阅与历史查询符合约定的顺序、保留和断连语义。
+通过 Engine、存储、HTTP 及 Task Engine Web UI 测试证明：作者 Log API、消费侧查询/订阅 API 与 Run 日志界面完整连通；并发 Run 的日志不串流，订阅与历史查询符合约定的顺序、保留和断连语义。
 
 ### I-AC03: 异常与容量边界可验证
 
