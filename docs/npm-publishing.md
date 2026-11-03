@@ -43,7 +43,7 @@ packages and their release tags are retired.
 The generic task packages are independent of those business hosts: release
 `task-protocol` before `task-engine`, `task-engine-http`, and `task-engine-storage`.
 Adding their packaging checks does not publish or deploy them.
-`check-environment`, `task-sdk`, `check-task`, `probe-task`, and `task-engine-server` currently belong only to the local
+`check-environment`, `task-sdk`, `pguide-task-bundle`, `check-task`, `probe-task`, and `task-engine-server` currently belong only to the local
 verification inventory, alongside the artifact support packages. Their MVP
 checks pack/install real consumers, but do not add release tags, bootstrap
 publication, or workflow authorization. A later release requires an explicit

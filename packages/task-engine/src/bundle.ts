@@ -16,6 +16,7 @@ import {
   TaskError,
   validateBundleReference,
   validateTaskBundle,
+  validateTaskBundleFiles,
 } from "@potential-guide/task-protocol";
 
 export type BundleLimits = Pick<ArchiveLimits, "bytes" | "files" | "paths" | "fileBytes"> & {
@@ -89,6 +90,7 @@ export function inspectTaskBundle(
   let schemas: JsonObject[];
   try {
     declaration = validateTaskBundle(parseArtifactYaml(yaml));
+    validateTaskBundleFiles(declaration, files.keys());
     schemas = [...files]
       .filter(([path]) => path.startsWith("schemas/"))
       .map(

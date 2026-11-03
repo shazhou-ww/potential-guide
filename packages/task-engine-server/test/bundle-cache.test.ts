@@ -7,7 +7,8 @@ import { newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore } from "@potential-guide/task-engine/testing";
 import { TaskClient } from "@potential-guide/task-engine-http";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { startTaskServer } from "../src/index.js";
 
 test("retired cache routes return 404 without changing IPFS content or Task admission", {

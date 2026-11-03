@@ -9,7 +9,8 @@ import { createCheckTaskType } from "@potential-guide/check-task";
 import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { TaskError, taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 
 const [database, directory, restarting, archive] = process.argv.slice(2);
 const page = Buffer.from("---\ntitle: Restart\ndescription: Restart\n---\nBody\n");

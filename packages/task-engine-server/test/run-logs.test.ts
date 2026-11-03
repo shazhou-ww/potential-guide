@@ -13,7 +13,8 @@ import {
   TaskError,
   taskSchemaUri,
 } from "@potential-guide/task-protocol";
-import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { type ServerOptions, startTaskServer } from "../src/index.js";
 
 const ipfsClient = new MemoryIpfsClient();

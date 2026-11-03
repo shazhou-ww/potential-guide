@@ -7,7 +7,8 @@ import test from "node:test";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, VirtualClock } from "@potential-guide/task-engine/testing";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { openSqliteStore } from "../src/index.js";
 
 for (const phase of ["beforeCommit", "afterCommit"] as const) {

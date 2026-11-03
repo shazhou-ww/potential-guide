@@ -11,7 +11,8 @@ import {
   type TaskService,
   taskSchemaUri,
 } from "@potential-guide/task-protocol";
-import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import type { Parameters } from "../src/model.js";
 
 export function fixtureTypes() {

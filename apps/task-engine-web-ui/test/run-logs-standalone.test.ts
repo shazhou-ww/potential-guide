@@ -9,7 +9,8 @@ import { newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { TaskError } from "@potential-guide/task-protocol";
-import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { consumeRunLogSse } from "../src/run-logs.js";
 
 test("built standalone UI (without installed UI dependencies) proxies real SDK diagnostic sample history/SSE with token and endpoint isolation", async () => {

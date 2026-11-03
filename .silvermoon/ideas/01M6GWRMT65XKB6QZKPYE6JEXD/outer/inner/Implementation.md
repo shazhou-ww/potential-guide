@@ -1,7 +1,9 @@
 # Implementation
 
-准备阶段的轻量种子，尚未实施。范围见[作者流程](ideal/Authoring.md)；
-先验证 TypeBox 与 Engine 支持的 JSON Schema 能力及类型语义，再细化内部设计。
+实施已开始，当前按用户换设备要求保存未完成检查点；尚未提交 Inner，也未开始部署。
+范围仍以已接受的[作者流程](ideal/Authoring.md)为准。
+实际改动、验证结果、剩余工作和恢复顺序见[设备切换交接](Handoff.md)；
+该交接不是实施验收证据已完整的声明，ledger 保持未完成。
 
 ## Steps
 

@@ -85,6 +85,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     ["objectives", ["@potential-guide/pguide-objectives"]],
     ["config", ["@potential-guide/pguide-config"]],
     ["agents", ["@potential-guide/pguide-agents"]],
+    ["bundle-authoring", ["pguide", "@potential-guide/pguide-task-bundle"]],
     [
       "combined",
       [
@@ -116,6 +117,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         entries.map((name) => [name, pathToFileURL(tarballs.get(name)).href]),
       ),
     };
+    if (label === "bundle-authoring") manifest.dependencies["@sinclair/typebox"] = "0.34.52";
     await writeFile(join(directory, "package.json"), JSON.stringify(manifest, null, 2));
     await run(
       "pnpm",
@@ -163,6 +165,86 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       await checkMvpConsumer(root, directory, label, graph, run);
     if (label === "task-sdk") {
       await checkTaskSdkConsumer(directory, run);
+    }
+    if (label === "bundle-authoring") {
+      const bin = join(directory, "node_modules", ".bin");
+      const home = join(directory, "home");
+      await mkdir(home);
+      const env = {
+        ...process.env,
+        APPDATA: home,
+        XDG_CONFIG_HOME: home,
+        PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
+      };
+      const pguide = join(directory, "node_modules", "pguide", "dist", "bin.js");
+      const author = join(
+        directory,
+        "node_modules",
+        "@potential-guide",
+        "pguide-task-bundle",
+        "dist",
+        "bin.js",
+      );
+      const metadata = JSON.parse(
+        await run(process.execPath, [author, "--pguide-command-metadata"], directory, env),
+      );
+      assert.equal(metadata.command, "task-bundle");
+      const help = JSON.parse(
+        await run(
+          process.execPath,
+          [pguide, "task-bundle", "--help", "--format", "json"],
+          directory,
+          env,
+        ),
+      );
+      assert.deepEqual(help.subcommands, ["check", "build", "publish"]);
+      await writeFile(
+        join(directory, "contract.ts"),
+        `import {Type} from "@sinclair/typebox";export default {input:Type.Object({text:Type.String()}),result:Type.String(),message:Type.Never()};`,
+      );
+      await writeFile(join(directory, "main.ts"), "export default async input=>input.text;");
+      await writeFile(
+        join(directory, "task.build.yaml"),
+        JSON.stringify({
+          $schema:
+            "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task-build/v1.json",
+          name: "Packed author",
+          runtime: { minVersion: "22.13.0" },
+          source: { entry: "main.ts", contract: "contract.ts" },
+          outDirectory: "bundle",
+        }),
+      );
+      const checked = JSON.parse(
+        await run(
+          process.execPath,
+          [author, "check", "author", "task.build.yaml", "--format", "json"],
+          directory,
+          env,
+        ),
+      );
+      assert.equal(existsSync(join(directory, "bundle")), false);
+      const built = JSON.parse(
+        await run(
+          process.execPath,
+          [pguide, "task-bundle", "build", "task.build.yaml", "--format", "json"],
+          directory,
+          env,
+        ),
+      );
+      assert.equal(built.result.cid, checked.result.cid);
+      await writeFile(
+        join(directory, "contract.ts"),
+        "throw new Error('Artifact checks must not evaluate author code');",
+      );
+      const artifact = JSON.parse(
+        await run(
+          process.execPath,
+          [author, "check", "artifact", "bundle", "--format", "json"],
+          directory,
+          env,
+        ),
+      );
+      assert.equal(artifact.result.cid, built.result.cid);
     }
     if (label.startsWith("task-") && label !== "task-sdk") {
       const script = join(directory, "generic-task.mjs");

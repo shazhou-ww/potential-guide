@@ -7,7 +7,8 @@ import { newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import { TaskClient } from "@potential-guide/task-engine-http";
 import { TaskError, taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { startTaskServer } from "../src/index.js";
 
 test("V06/V10: real authenticated TCP Server executes the SDK entry, reopens SQLite v5 without content or business replay", async () => {

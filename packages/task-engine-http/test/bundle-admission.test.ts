@@ -6,7 +6,8 @@ import test from "node:test";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
 import { TaskError, taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { createTaskHandler, TaskClient } from "../src/index.js";
 
 test("V10: client rejects legacy Task-shaped receipts, mismatched tracking tokens and incomplete Bundle references", async () => {

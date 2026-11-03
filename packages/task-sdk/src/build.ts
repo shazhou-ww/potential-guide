@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { isBuiltin } from "node:module";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assertRuntime,
@@ -9,36 +9,47 @@ import {
   readArtifactFiles,
   safePath,
 } from "@potential-guide/check-artifacts/files";
-import {
-  createIpfsClient,
-  type IpfsImportClient,
-  importContent,
-  publishContent,
-} from "@potential-guide/ipfs-content";
+import { importContent } from "@potential-guide/ipfs-content";
 import {
   type JsonObject,
   resolveBundleSchemas,
   validateTaskBundle,
 } from "@potential-guide/task-protocol";
 import { build } from "esbuild";
+import { checkTaskArtifact, inspectTaskArtifact } from "./artifact.js";
 
 export interface BuildTaskBundleOptions {
-  declaration: string;
+  declaration: string | Record<string, unknown>;
   entry: string;
   exportName?: string;
   outDirectory: string;
   /** Exact author-controlled shared Schema bytes, locked by SHA-256 (not Bundle tree Digest). */
   schemas?: readonly { path: string; digest: string }[];
+  schemaDocuments?: readonly JsonObject[];
   resources?: Readonly<Record<string, string>>;
+  owner?: string;
 }
-export async function buildTaskBundle(options: BuildTaskBundleOptions) {
-  const manifestBytes = await readFile(options.declaration);
-  const declaration = validateTaskBundle(parseArtifactYaml(manifestBytes));
+async function regularFile(path: string): Promise<string> {
+  const absolute = resolve(path);
+  const info = await lstat(absolute);
+  if (!info.isFile() || info.isSymbolicLink() || (await realpath(absolute)) !== absolute)
+    throw new Error("Task build input must be a canonical regular file, without links.");
+  return absolute;
+}
+export async function compileTaskBundle(options: BuildTaskBundleOptions) {
+  await regularFile(options.entry);
+  const source =
+    typeof options.declaration === "string"
+      ? parseArtifactYaml(await readFile(await regularFile(options.declaration)))
+      : options.declaration;
+  if (!source || typeof source !== "object" || Array.isArray(source))
+    throw new Error("Task build declaration must be an object.");
+  const declaration = validateTaskBundle({ ...source, include: ["task.yaml", "worker.cjs"] });
   assertRuntime(declaration);
-  const files = new Map<string, Buffer>([["task.yaml", manifestBytes]]);
+  const files = new Map<string, Buffer>();
   const schemas: JsonObject[] = [];
   for (const [index, locked] of (options.schemas ?? []).entries()) {
-    const bytes = await readFile(locked.path);
+    const bytes = await readFile(await regularFile(locked.path));
     if (`sha256:${createHash("sha256").update(bytes).digest("hex")}` !== locked.digest)
       throw new Error("Shared Schema lock mismatch; update the lock explicitly.");
     const schema = JSON.parse(
@@ -47,12 +58,20 @@ export async function buildTaskBundle(options: BuildTaskBundleOptions) {
     schemas.push(schema);
     files.set(`schemas/${index}.json`, bytes);
   }
-  const resolved = resolveBundleSchemas(declaration, schemas);
+  for (const schema of options.schemaDocuments ?? []) {
+    files.set(
+      `schemas/${schemas.length}.json`,
+      Buffer.from(`${JSON.stringify(schema, null, 2)}\n`),
+    );
+    schemas.push(schema);
+  }
   for (const [path, source] of Object.entries(options.resources ?? {})) {
     if (!safePath(path) || !path.startsWith("resources/"))
       throw new Error("Task resources require safe resources/ paths.");
-    files.set(path, await readFile(source));
+    files.set(path, await readFile(await regularFile(source)));
   }
+  declaration.include = ["task.yaml", "worker.cjs", ...files.keys()].sort();
+  const resolved = resolveBundleSchemas(declaration, schemas);
   const exportName = options.exportName ?? "default";
   if (!/^(?:default|[A-Za-z_$][A-Za-z0-9_$]*)$/.test(exportName))
     throw new Error("Invalid callback export name.");
@@ -75,6 +94,7 @@ runTask(async (input, context) => {
     format: "cjs",
     write: false,
     metafile: true,
+    minify: true,
     packages: "bundle",
     legalComments: "eof",
     define: { "import.meta.url": "__artifactURL" },
@@ -94,56 +114,106 @@ runTask(async (input, context) => {
   )
     throw new Error("Task Worker must contain all non-builtin code dependencies.");
   files.set("worker.cjs", Buffer.from(bundle.outputFiles[0]!.contents));
-  const cid = await importContent(files, async () => {});
+  files.set("task.yaml", Buffer.from(`${JSON.stringify(declaration, null, 2)}\n`));
+  const checked = await inspectTaskArtifact(files);
+  return { ...checked, contents: files };
+}
+
+export async function buildTaskBundle(options: BuildTaskBundleOptions) {
+  const compiled = await compileTaskBundle(options);
   const output = resolve(options.outDirectory);
+  const owner = resolve(
+    options.owner ??
+      (typeof options.declaration === "string" ? options.declaration : options.entry),
+  );
+  for (const input of [
+    owner,
+    options.entry,
+    ...Object.values(options.resources ?? {}),
+    ...(options.schemas ?? []).map(({ path }) => path),
+  ]) {
+    const distance = relative(output, resolve(input));
+    if (
+      !distance ||
+      (!distance.startsWith(`..${sep}`) && distance !== ".." && !distance.includes(":"))
+    )
+      throw new Error("Task output must not contain author inputs.");
+  }
+  let ancestor = dirname(output);
+  for (;;) {
+    const info = await lstat(ancestor).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return undefined;
+      throw error;
+    });
+    if (info) {
+      if (!info.isDirectory() || info.isSymbolicLink() || (await realpath(ancestor)) !== ancestor)
+        throw new Error("Task output parent must be canonical, without links.");
+      break;
+    }
+    ancestor = dirname(ancestor);
+  }
+  await mkdir(dirname(output), { recursive: true });
+  if ((await realpath(dirname(output))) !== dirname(output))
+    throw new Error("Task output parent must be canonical, without links.");
+  const marker = `${output}.pguide-task-bundle.json`;
+  const ownership = `${JSON.stringify({ version: 1, output, owner })}\n`;
+  const lock = await open(`${marker}.lock`, "wx");
   const staging = `${output}.${randomUUID()}`;
-  await mkdir(staging, { recursive: true, mode: 0o700 });
+  const backup = `${output}.previous.${randomUUID()}`;
+  let previous = false;
+  let installed = false;
   try {
-    for (const [path, bytes] of files) {
+    const markerInfo = await lstat(marker).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return undefined;
+      throw error;
+    });
+    const owned =
+      markerInfo?.isFile() &&
+      !markerInfo.isSymbolicLink() &&
+      (await readFile(marker, "utf8")) === ownership;
+    if (markerInfo && !owned)
+      throw new Error("Task output ownership marker does not match this build.");
+    const exists = await lstat(output).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return undefined;
+      throw error;
+    });
+    if (exists) {
+      if (!exists.isDirectory() || exists.isSymbolicLink() || !owned)
+        throw new Error("Refusing to replace an unmanaged Task output directory.");
+      await checkTaskArtifact(output);
+    }
+    await mkdir(staging, { mode: 0o700 });
+    for (const [path, bytes] of compiled.contents) {
       const target = join(staging, ...path.split("/"));
       await mkdir(dirname(target), { recursive: true, mode: 0o700 });
       await writeFile(target, bytes, { flag: "wx", mode: 0o600 });
     }
-    if ((await importContent(await readArtifactFiles(staging), async () => {})) !== cid)
+    if ((await importContent(await readArtifactFiles(staging), async () => {})) !== compiled.cid)
       throw new Error("Task Bundle changed during build.");
-    await mkdir(output);
+    if (exists) {
+      await rename(output, backup);
+      previous = true;
+    }
     try {
-      for (const name of await readdir(staging))
-        await rename(join(staging, name), join(output, name));
+      await rename(staging, output);
+      installed = true;
+      if (!owned) await writeFile(marker, ownership, { flag: "wx", mode: 0o600 });
     } catch (error) {
-      await rm(output, { recursive: true, force: true });
+      if (installed) await rm(output, { recursive: true, force: true });
+      if (previous) {
+        await rename(backup, output);
+        previous = false;
+      }
       throw error;
     }
-    return { directory: output, cid, declaration };
+    if (previous) {
+      await rm(backup, { recursive: true });
+      previous = false;
+    }
+    return { directory: output, cid: compiled.cid, declaration: compiled.declaration };
   } finally {
     await rm(staging, { recursive: true, force: true });
+    await lock.close();
+    await rm(`${marker}.lock`);
   }
 }
-export async function importTaskBundle(directory: string, ipfsClient: IpfsImportClient) {
-  const files = await readArtifactFiles(directory);
-  const declaration = validateTaskBundle(
-    parseArtifactYaml(files.get("task.yaml") ?? Buffer.alloc(0)),
-  );
-  if (
-    !files.has("worker.cjs") ||
-    [...files.keys()].some(
-      (path) =>
-        !["task.yaml", "worker.cjs"].includes(path) &&
-        !path.startsWith("schemas/") &&
-        !path.startsWith("resources/"),
-    )
-  )
-    throw new Error("Invalid Task Bundle tree.");
-  resolveBundleSchemas(
-    declaration,
-    [...files]
-      .filter(([path]) => path.startsWith("schemas/"))
-      .map(
-        ([, bytes]) =>
-          JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as JsonObject,
-      ),
-  );
-  const cid = await publishContent(files, ipfsClient);
-  return { cid };
-}
-export { createIpfsClient };

@@ -16,7 +16,7 @@ objectives:
           "directories": {"apps": "apps", "packages": "packages", "docs": "docs", "scripts": "scripts"},
           "requiredFiles": ["tsconfig.json", "biome.json"],
           "exceptions": [
-            {"path": "apps/task-engine-web-ui", "reason": "Private independently started Node HTTP application serves its own browser bundle; it belongs under apps, not reusable packages or an npm/browser deployment target."}
+            {"path": "apps/task-engine-web-ui", "reason": "Private standalone Node HTTP app with its own browser bundle; not an npm/browser deployment."}
           ],
           "assignments": [],
           "allowedDirectories": [
@@ -29,15 +29,15 @@ objectives:
         "deliveries": [
           {
             "id": "public-library-suite",
-            "purpose": "Publish the public packages as consumable npm libraries through package-specific releases.",
+            "purpose": "Deliver npm libraries through package-specific releases.",
             "kind": "npm",
-            "packages": ["@potential-guide/ipfs-content","@potential-guide/check-environment","@potential-guide/task-protocol","@potential-guide/task-sdk","@potential-guide/task-engine","@potential-guide/task-engine-http","@potential-guide/task-engine-storage","@potential-guide/task-engine-server","@potential-guide/check-task","@potential-guide/probe-task","@potential-guide/check-artifacts","@potential-guide/check-runtime-files","@potential-guide/effects","@potential-guide/git-source","@potential-guide/objective-pilot","@potential-guide/objective-regulator","@potential-guide/regulation-coordinator","@potential-guide/cli-core","@potential-guide/pguide-config","@potential-guide/pguide-agents","pguide","@potential-guide/pilot-protocol","@potential-guide/cli-runtime","@potential-guide/objective-declarations","@potential-guide/pguide-pilot","@potential-guide/pguide-regulate","@potential-guide/pguide-objectives","@potential-guide/objective-monorepo-standard","@potential-guide/objective-package-standard","@potential-guide/objective-devbox-health","@potential-guide/objective-pguide-setup","@potential-guide/objective-pguide-self-check","@potential-guide/objective-setup-marker"],
+            "packages": ["@potential-guide/ipfs-content","@potential-guide/check-environment","@potential-guide/task-protocol","@potential-guide/task-sdk","@potential-guide/task-engine","@potential-guide/task-engine-http","@potential-guide/task-engine-storage","@potential-guide/task-engine-server","@potential-guide/check-task","@potential-guide/probe-task","@potential-guide/check-artifacts","@potential-guide/check-runtime-files","@potential-guide/effects","@potential-guide/git-source","@potential-guide/objective-pilot","@potential-guide/objective-regulator","@potential-guide/regulation-coordinator","@potential-guide/cli-core","@potential-guide/pguide-config","@potential-guide/pguide-task-bundle","@potential-guide/pguide-agents","pguide","@potential-guide/pilot-protocol","@potential-guide/cli-runtime","@potential-guide/objective-declarations","@potential-guide/pguide-pilot","@potential-guide/pguide-regulate","@potential-guide/pguide-objectives","@potential-guide/objective-monorepo-standard","@potential-guide/objective-package-standard","@potential-guide/objective-devbox-health","@potential-guide/objective-pguide-setup","@potential-guide/objective-pguide-self-check","@potential-guide/objective-setup-marker"],
             "entry": {"package": "@potential-guide/objective-pilot", "path": "src/index.ts"},
             "runtime": "node", "resources": [], "services": [], "capabilities": [], "independent": false
           },
           {
             "id": "generic-task-server",
-            "purpose": "Deliver a standalone authenticated task Server without business packages, using generic artifact primitives.",
+            "purpose": "Deliver an authenticated standalone task Server without business packages.",
             "kind": "cli",
             "packages": ["@potential-guide/ipfs-content","@potential-guide/task-protocol","@potential-guide/task-engine","@potential-guide/task-engine-http","@potential-guide/task-engine-storage","@potential-guide/task-engine-server","@potential-guide/check-artifacts","@potential-guide/check-runtime-files"],
             "entry":{"package":"@potential-guide/task-engine-server","path":"src/main.ts"},
@@ -45,9 +45,9 @@ objectives:
           },
           {
             "id": "developer-commands",
-            "purpose": "Deliver pguide and its configuration extension without coupling private checking tools to the public distribution.",
+            "purpose": "Deliver pguide extensions without private checking tools.",
             "kind": "cli",
-            "packages": ["@potential-guide/check-artifacts","@potential-guide/check-runtime-files","@potential-guide/effects","@potential-guide/objective-pilot","@potential-guide/objective-regulator","@potential-guide/cli-core","@potential-guide/pguide-config","@potential-guide/pguide-agents","pguide","@potential-guide/pilot-protocol","@potential-guide/cli-runtime","@potential-guide/objective-declarations","@potential-guide/pguide-pilot","@potential-guide/pguide-regulate","@potential-guide/pguide-objectives"],
+            "packages": ["@potential-guide/check-artifacts","@potential-guide/check-runtime-files","@potential-guide/effects","@potential-guide/objective-pilot","@potential-guide/objective-regulator","@potential-guide/cli-core","@potential-guide/pguide-config","@potential-guide/pguide-task-bundle","@potential-guide/task-protocol","@potential-guide/task-sdk","@potential-guide/ipfs-content","@potential-guide/pguide-agents","pguide","@potential-guide/pilot-protocol","@potential-guide/cli-runtime","@potential-guide/objective-declarations","@potential-guide/pguide-pilot","@potential-guide/pguide-regulate","@potential-guide/pguide-objectives"],
             "entry": {"package": "pguide", "path": "src/bin.ts"},
             "runtime": "node", "resources": [], "services": [], "capabilities": [], "independent": false
           }

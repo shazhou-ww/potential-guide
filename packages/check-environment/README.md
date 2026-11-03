@@ -115,7 +115,7 @@ is assumed to be started and authorized; normal task observation is unchanged:
 ```js
 import {readFile} from "node:fs/promises";
 import {join, resolve} from "node:path";
-import {importTaskBundle} from "@potential-guide/task-sdk/build";
+import {importTaskBundle} from "@potential-guide/task-sdk/publish";
 
 const directory = resolve("packages", "check-environment", "dist", "bundles");
 const refs = JSON.parse(await readFile(join(directory, "references.json"), "utf8"));

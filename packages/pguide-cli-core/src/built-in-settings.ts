@@ -374,6 +374,23 @@ export const builtInSettings = [
         }
       }
     }
+  },
+  {
+    "name": "@potential-guide/pguide-task-bundle",
+    "description": {
+      "schemaVersion": 1,
+      "namespace": "task-bundle",
+      "settings": {
+        "task-bundle.ipfsRpc": {
+          "description": "Publisher-owned Kubo RPC URL. Used only by artifact publish; --ipfs-rpc overrides it.",
+          "schema": {
+            "type": "string",
+            "pattern": "^https?://",
+            "minLength": 1
+          }
+        }
+      }
+    }
   }
 ];
 "use strict";
@@ -1941,6 +1958,50 @@ validate25.errors = vErrors;
 return errors === 0;
 }
 
+export const setting16 = validate26;
+const schema27 = {"type":"string","pattern":"^https?://","minLength":1};
+const func2 = require("ajv/dist/runtime/ucs2length").default;
+const pattern13 = new RegExp("^https?://", "u");
+
+function validate26(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+let vErrors = null;
+let errors = 0;
+if(typeof data === "string"){
+if(func2(data) < 1){
+const err0 = {instancePath,schemaPath:"#/minLength",keyword:"minLength",params:{limit: 1},message:"must NOT have fewer than 1 characters"};
+if(vErrors === null){
+vErrors = [err0];
+}
+else {
+vErrors.push(err0);
+}
+errors++;
+}
+if(!pattern13.test(data)){
+const err1 = {instancePath,schemaPath:"#/pattern",keyword:"pattern",params:{pattern: "^https?://"},message:"must match pattern \""+"^https?://"+"\""};
+if(vErrors === null){
+vErrors = [err1];
+}
+else {
+vErrors.push(err1);
+}
+errors++;
+}
+}
+else {
+const err2 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "string"},message:"must be string"};
+if(vErrors === null){
+vErrors = [err2];
+}
+else {
+vErrors.push(err2);
+}
+errors++;
+}
+validate26.errors = vErrors;
+return errors === 0;
+}
+
 export const builtInValidators = {
   "pguide.commandDirectories": setting0,
   "pguide.diagnoseAhpTimeoutMs": setting1,
@@ -1958,4 +2019,5 @@ export const builtInValidators = {
   "regulate.retentionDays": setting13,
   "regulate.quota": setting14,
   "regulate.permissions": setting15,
+  "task-bundle.ipfsRpc": setting16,
 };

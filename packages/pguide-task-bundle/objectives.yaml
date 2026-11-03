@@ -1,0 +1,14 @@
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
+objectives:
+  standardize:
+    description: Standardize the TypeBox Task Bundle authoring and artifact publishing command.
+    objective: "@potential-guide/objective-package-standard"
+    inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
+    subject: |
+      {
+        "root": context.repo.rootPath, "directory": context.path,
+        "roles": ["npm", "cli"], "runtime": "node",
+        "allows": ["@potential-guide/cli-core", "@potential-guide/check-artifacts", "@potential-guide/task-protocol", "@potential-guide/task-sdk", "@potential-guide/ipfs-content"],
+        "entries": ["src/bin.ts", "src/authoring.ts"], "generated": [], "deliveries": [],
+        "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "developer-commands", "kind": "cli"}]
+      }

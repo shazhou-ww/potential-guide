@@ -17,7 +17,8 @@ import {
   type TaskPage,
   taskSchemaUri,
 } from "@potential-guide/task-protocol";
-import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { type ServerOptions, startTaskServer } from "../src/index.js";
 
 const authoredRoot = resolve(".cache", `server-author-${randomUUID()}`);

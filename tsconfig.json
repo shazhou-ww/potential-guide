@@ -1,6 +1,7 @@
 {
   "files": [],
   "references": [
+    { "path": "./packages/pguide-task-bundle" },
     { "path": "./packages/ipfs-content" },
     { "path": "./packages/check-environment" },
     { "path": "./packages/check-artifacts" },

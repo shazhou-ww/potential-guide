@@ -5,8 +5,8 @@ import { sha256 } from "multiformats/hashes/sha2";
 export interface IpfsClient {
   block: { get(cid: string, options?: { signal?: AbortSignal }): Promise<Uint8Array> };
 }
-export interface IpfsImportClient extends IpfsClient {
-  block: IpfsClient["block"] & {
+export interface IpfsImportClient {
+  block: {
     put(
       bytes: Uint8Array,
       options: { format: string; mhtype: string; version: 1; pin: false },

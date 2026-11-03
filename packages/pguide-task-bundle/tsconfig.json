@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "../../.cache/tsbuildinfo/pguide-task-bundle.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../pguide-cli-core" },
+    { "path": "../check-artifacts" },
+    { "path": "../task-protocol" },
+    { "path": "../task-sdk" }
+  ]
+}

@@ -66,6 +66,9 @@ runtime:
   type: node
   minVersion: "22.13.0"
 entry: worker.cjs
+include:
+  - task.yaml
+  - worker.cjs
 inputSchema:
   type: object
   properties:
@@ -93,6 +96,7 @@ messageSchema: false
 | `name` | 必填，非空单行展示字符串；允许 Unicode 和内部普通空格，允许重名，不作为机器标识。 |
 | `runtime` | 必填对象，仅包含 `type` 和 `minVersion`；`type` 为 `node`，`minVersion` 为稳定的三段数字版本字符串。 |
 | `entry` | 必填，固定为 `worker.cjs`，指向 Bundle 根目录内的 CommonJS 文件。 |
+| `include` | 必填，完整成品的精确相对文件路径数组，包含 `task.yaml` 自身和 Worker；不允许通配符、重复、大小写歧义或文件/目录冲突。 |
 | `inputSchema` | 必填，使用 Engine 支持的 JSON Schema Draft 2020-12 输入契约；可内联或通过 `$ref` 引用共享 Schema，解析后仍要求根输入为对象。 |
 | `resultSchema` | 必填，使用 Engine 支持的 JSON Schema Draft 2020-12 结果契约；可内联或通过 `$ref` 引用共享 Schema。 |
 | `messageSchema` | 必填，使用相同方言并支持 `$ref`；`false` 表示不接收业务消息，不能用省略代替。 |
@@ -110,13 +114,15 @@ messageSchema: false
    此 Schema 标识不意味着现有内部通信可直接兼容。
 4. Bundle 根 CID 不写入 `task.yaml`，避免内容身份自引用；
    完整成品目录导入 IPFS 后取得根 CID，形成外部引用。
+   精确清单与实际文件集合必须一致，缺失和额外文件均拒绝。
+   旧的无清单 Bundle 不走兼容回退，必须重新构建并使用新的根 CID。
 5. 不声明 npm dependencies、宿主模块路径、factory 导出名或安装命令。
    Worker 入口是可直接启动的程序，不是由 Engine 导入并调用的业务 factory。
 6. Request 携带完整 Bundle 的 IPFS 根引用，以目录根 CID 确定具体制品，
    不另设核心注册名或独立业务版本字段。`name`、Schema URL 和 SDK 包版本都不能替代根 CID。
 7. 业务专属声明放在业务资源中或构建进入口，不向 `task.yaml` 增加 Engine 必须解释的
-   业务字段。作者在 YAML 中声明三份 Schema 或其 `$ref`；
-   构建工具以该声明为契约来源，不要求在业务回调模块中重复维护另一份契约。
+   业务字段。作者以同源 TypeBox 定义提供三份 Schema 及其推导类型，
+   构建工具生成运行声明与离线 Schema，不要求在业务回调中重复维护另一份契约。
 
 ### 展示名称
 
@@ -182,8 +188,10 @@ resultSchema:
 
 ## 作者入口与生成的 Worker
 
-作者手写 `task.yaml` 声明，并单独提供普通 TypeScript/JavaScript 业务回调模块；
-不要求通过一个代码定义对象生成 YAML。构建工具接收声明文件与业务模块，
+作者提供 `task.build.yaml`、TypeBox 契约模块与普通 TypeScript/JavaScript 业务回调模块；
+构建工具生成完整 `task.yaml`、Worker、共享 Schema 和精确清单，不维护第二份顶层运行声明。
+作者流程见 [task-bundle CLI](../../../packages/pguide-task-bundle/README.md)。
+构建工具接收作者定义与业务模块，
 由构建参数选择模块导出，不将源码路径或导出名加入成品声明。
 声明中的 `entry: worker.cjs` 指向生成的成品入口，不是作者的源代码模块。
 作者模块不是最终 Worker，不需要自行处理 `parentPort`、`workerData`、握手、消息序列号或退出通信。
@@ -274,19 +282,22 @@ Context 不再提供直接返回整文件 `Uint8Array` 的另一套读取接口�
 ## 公共 SDK 来源与构建职责
 
 由本仓库维护并发布通用 Task SDK，包名为 `@potential-guide/task-sdk`，
-在同一包中分离运行库和构建工具两个入口：
+在同一包中分离运行库、纯构建、成品检查和发布装配入口：
 
 ```ts
 import { runTask } from "@potential-guide/task-sdk";
 import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { checkTaskArtifact } from "@potential-guide/task-sdk/artifact";
+import { createIpfsClient, importTaskBundle } from "@potential-guide/task-sdk/publish";
 ```
 
 根入口供生成的 Worker 使用；`/build` 供作者构建环境使用，
-接收 YAML 声明、回调模块及构建参数，产出自包含 Bundle 成品目录，供 IPFS 导入与发布。
-这两个导入表示不同使用场景，不应在 Worker 中导入构建入口。
+接收低层声明定义、回调模块及构建参数，生成包含精确清单的自包含 Bundle。
+`/artifact` 只检查成品；`/publish` 才负责 RPC/import/pin 装配，纯 build 不重导出网络 client。
+这些入口表示不同使用场景，不应在 Worker 中导入作者工具。
 Engine 直接消费 Bundle，不要求安装该 SDK。
 
-作者提供手写 YAML 声明与单独的 Task 回调模块；SDK 提供 `runTask`、Hub 通信、运行上下文与生命周期协议，
+作者 CLI 将构建描述与 TypeBox 同源定义转成低层编译输入；SDK 提供 `runTask`、Hub 通信、运行上下文与生命周期协议，
 以及生成 Worker 和标准 Bundle 的构建入口。业务库可以复用这些能力，
 但其专用 API 和发布组织不由本契约定义。
 
@@ -296,15 +307,18 @@ Engine 直接消费 Bundle，不要求安装该 SDK。
    不复制出另一套 Engine 必须识别的 Bundle 格式或通信协议。
 3. 运行库与构建入口分离；根入口不导入或重新导出构建工具，
    构建器、打包器等工具不因引用运行库而进入 Worker 成品。
-4. 构建工具校验作者的 `task.yaml` 并将其放入成品，使用其中的三份 Schema 声明，
+4. 构建工具校验作者输入并生成 `task.yaml` 及三份 Schema 声明，
    收齐并锁定共享 Schema 的引用闭包，生成启动包装并打包业务回调、运行库及第三方代码，
-   并复制显式声明的静态资源。
+   并按构建规则选择静态资源，生成覆盖整个成品的精确清单。
+   只在完整候选通过校验后替换明确归属工具的旧输出，不叠加残留文件。
    生成代码由工具维护，作者无需手写或手工修改成品 Worker。
 5. 构建必须验证依赖闭合；除 Node 内置模块外，不允许留下需要宿主解析的外部模块。
    无法静态封装的动态依赖、原生扩展或外部可执行依赖不能被当成已自包含而静默放行。
 6. 完成文件集合与格式验证后，将完整成品目录作为 UnixFS 目录导入 IPFS，取得根 CID
    作为 Bundle 引用，发布环境可附带 gateway hint；不再要求生成 tgz、Git 文件树摘要或独立发布 URL。
-   构建与导入可以分步完成，但仅生成本地目录不代表已经发布或保证远端可获取；
+   构建离线计算 CID，不导入远端节点；publish 仅消费成品并验证同一份字节，
+   不读取作者模块、重新展开 glob、隐式重建或提交 Task。
+   仅生成本地目录不代表已经发布或保证远端可获取；
    工具必须区分成品生成、CID 生成与内容保留结果，不伪造发布成功。
 7. 不同 Bundle 可以包含不同 SDK 或第三方库版本，只要各自实现其 Schema URL 规定、
    且宿主明确支持的契约。SDK 必须按 YAML 指定的 Schema URL 选择匹配的运行协议来生成 Worker，

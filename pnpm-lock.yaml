@@ -18,6 +18,9 @@ catalogs:
     '@npmcli/run-script':
       specifier: 10.0.4
       version: 10.0.4
+    '@sinclair/typebox':
+      specifier: 0.34.52
+      version: 0.34.52
     '@tailwindcss/cli':
       specifier: 4.3.3
       version: 4.3.3
@@ -658,6 +661,34 @@ importers:
       '@potential-guide/objective-regulator':
         specifier: workspace:^
         version: link:../objective-regulator
+
+  packages/pguide-task-bundle:
+    dependencies:
+      '@potential-guide/check-artifacts':
+        specifier: workspace:^
+        version: link:../check-artifacts
+      '@potential-guide/cli-core':
+        specifier: workspace:^
+        version: link:../pguide-cli-core
+      '@potential-guide/task-protocol':
+        specifier: workspace:^
+        version: link:../task-protocol
+      '@potential-guide/task-sdk':
+        specifier: workspace:^
+        version: link:../task-sdk
+      '@sinclair/typebox':
+        specifier: 'catalog:'
+        version: 0.34.52
+      ajv:
+        specifier: 'catalog:'
+        version: 8.20.0
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.2
+    devDependencies:
+      '@potential-guide/ipfs-content':
+        specifier: workspace:^
+        version: link:../ipfs-content
 
   packages/pilot-protocol:
     dependencies:
@@ -2085,6 +2116,9 @@ packages:
   '@sigstore/verify@4.1.2':
     resolution: {integrity: sha512-BfD9eLrz3A/DG58aSgfgZYmIR6V9Yw96QVN/frtu2bEH7ctSTk2TDvHU12un3JsDPBTqTNkqkIkucjxljpOFqQ==}
     engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0}
+
+  '@sinclair/typebox@0.34.52':
+    resolution: {integrity: sha512-XiMQh7qqVlxZzcVD+kkGMNGMzcTrDMLWI7S4x7z1MkCkbDPrekpZXEUK0eZqZFMuHQg2a2DZOcDIh9o5v3Gonw==}
 
   '@tailwindcss/cli@4.3.3':
     resolution: {integrity: sha512-ZvS/n1ZHOBKcVlhkt8l5NNr1EDXk1NboYO5CYDOs6NUmvT9z6bzkwsosaJftY57T/3gWNzWMJzIXLodZC8ssdw==}
@@ -5030,6 +5064,8 @@ snapshots:
       '@sigstore/bundle': 5.0.0
       '@sigstore/core': 4.0.1
       '@sigstore/protobuf-specs': 0.5.2
+
+  '@sinclair/typebox@0.34.52': {}
 
   '@tailwindcss/cli@4.3.3':
     dependencies:

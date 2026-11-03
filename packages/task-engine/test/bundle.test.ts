@@ -13,6 +13,14 @@ function files(extra: Record<string, Buffer> = {}) {
           name: "same name",
           runtime: { type: "node", minVersion: "22.13.0" },
           entry: "worker.cjs",
+          include: [
+            "task.yaml",
+            "worker.cjs",
+            "resources/data.bin",
+            ...Object.keys(extra).filter(
+              (path) => !["task.yaml", "worker.cjs", "resources/data.bin"].includes(path),
+            ),
+          ],
           inputSchema: { type: "object" },
           resultSchema: true,
           messageSchema: false,

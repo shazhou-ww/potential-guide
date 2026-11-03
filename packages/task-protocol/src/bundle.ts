@@ -15,7 +15,16 @@ export const taskBundleSchema = {
     "IPFS UnixFS directory root CID identity. One CommonJS Worker per Run; generation-scoped business messages and independent log/log-ack, bounded cumulative log-drop/log-drop-ack diagnostics.",
   type: "object",
   additionalProperties: false,
-  required: ["$schema", "name", "runtime", "entry", "inputSchema", "resultSchema", "messageSchema"],
+  required: [
+    "$schema",
+    "name",
+    "runtime",
+    "entry",
+    "include",
+    "inputSchema",
+    "resultSchema",
+    "messageSchema",
+  ],
   properties: {
     $schema: { const: taskSchemaUri },
     name: {
@@ -37,6 +46,17 @@ export const taskBundleSchema = {
       },
     },
     entry: { const: "worker.cjs" },
+    include: {
+      type: "array",
+      minItems: 2,
+      maxItems: 256,
+      uniqueItems: true,
+      items: {
+        type: "string",
+        pattern:
+          "^(?:task\\.yaml|worker\\.cjs|(?:schemas|resources)/[^\\\\:*?<>|\\u0000-\\u001f]+)$",
+      },
+    },
     inputSchema: { type: "object" },
     resultSchema: { type: ["object", "boolean"] },
     messageSchema: { type: ["object", "boolean"] },
@@ -48,6 +68,7 @@ export interface TaskBundleDeclaration {
   name: string;
   runtime: { type: "node"; minVersion: string };
   entry: "worker.cjs";
+  include: string[];
   inputSchema: JsonObject;
   resultSchema: JsonSchema;
   messageSchema: JsonSchema;
@@ -58,8 +79,70 @@ export interface ResolvedTaskBundle extends Omit<TaskBundleDeclaration, "inputSc
 const validator = new Ajv2020({ strict: true, allowUnionTypes: true }).compile(taskBundleSchema);
 export function validateTaskBundle(value: unknown): TaskBundleDeclaration {
   const parsed = json(value, 1_048_576);
+  if (
+    parsed &&
+    typeof parsed === "object" &&
+    !Array.isArray(parsed) &&
+    !Object.hasOwn(parsed, "include")
+  )
+    fail(
+      "invalid_bundle",
+      "Task Bundle has no exact include manifest. Rebuild with the current Task Bundle authoring tools and use the new CID.",
+    );
   if (!validator(parsed)) fail("invalid_bundle", "Invalid task.yaml declaration.");
-  return parsed as unknown as TaskBundleDeclaration;
+  const declaration = parsed as unknown as TaskBundleDeclaration;
+  const folded = new Set<string>();
+  const spellings = new Map<string, string>();
+  for (const path of declaration.include) {
+    if (
+      path !== path.normalize("NFC") ||
+      Buffer.byteLength(path) > 1024 ||
+      path
+        .split("/")
+        .some(
+          (part) =>
+            !part ||
+            part === "." ||
+            part === ".." ||
+            /[. ]$/.test(part) ||
+            Buffer.byteLength(part) > 255 ||
+            part.toLowerCase() === "node_modules" ||
+            /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part) ||
+            part.includes("\u007f"),
+        ) ||
+      folded.has(path.toLowerCase())
+    )
+      fail("invalid_bundle", "Task Bundle include requires unique, portable exact file paths.");
+    folded.add(path.toLowerCase());
+    let prefix = "";
+    for (const part of path.split("/")) {
+      prefix = prefix ? `${prefix}/${part}` : part;
+      const previous = spellings.get(prefix.toLowerCase());
+      if (previous !== undefined && previous !== prefix)
+        fail("invalid_bundle", "Task Bundle include has ambiguous path casing.");
+      spellings.set(prefix.toLowerCase(), prefix);
+    }
+  }
+  for (const path of declaration.include)
+    if (declaration.include.some((parent) => path.startsWith(`${parent}/`)))
+      fail("invalid_bundle", "Task Bundle include has a file/directory collision.");
+  if (!folded.has("task.yaml") || !folded.has("worker.cjs"))
+    fail("invalid_bundle", "Task Bundle include must contain task.yaml and worker.cjs.");
+  return declaration;
+}
+export function validateTaskBundleFiles(
+  declaration: TaskBundleDeclaration,
+  paths: Iterable<string>,
+): void {
+  const actual = new Set(paths);
+  if (
+    actual.size !== declaration.include.length ||
+    declaration.include.some((path) => !actual.has(path))
+  )
+    fail(
+      "invalid_bundle",
+      "Task Bundle has missing or undeclared files; rebuild the complete artifact.",
+    );
 }
 const objectSchema = (value: Json | undefined): value is JsonObject =>
   value !== null && typeof value === "object" && !Array.isArray(value);

@@ -6,7 +6,8 @@ import test from "node:test";
 import { readArtifactFiles } from "@potential-guide/check-artifacts/files";
 import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
 import { type SubmissionResult, taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { createTaskEngine, newId } from "../src/index.js";
 import { MemoryStore, VirtualClock } from "../src/testing.js";
 
@@ -187,9 +188,8 @@ test("raw reference/hint representation stays idempotent while CID-only matching
         );
       }
       assert.equal(engine.listTasks({ bundleCid: cid }, {}, caller).items.length, 4);
-      const otherCid = await client.import(
-        new Map([...tree, ["resources/extra", Buffer.from("different root")]]),
-      );
+      const otherTree = new Map([...tree, ["resources/data.bin", Buffer.alloc(600_000, 43)]]);
+      const otherCid = await client.import(otherTree);
       const different = { ...request, requestId: newId(clock.now()), bundle: otherCid };
       await engine.submit(different, caller);
       const other = accepted(

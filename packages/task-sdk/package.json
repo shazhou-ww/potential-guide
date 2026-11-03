@@ -14,6 +14,14 @@
     "./build": {
       "types": "./dist/build.d.ts",
       "import": "./dist/build.js"
+    },
+    "./artifact": {
+      "types": "./dist/artifact.d.ts",
+      "import": "./dist/artifact.js"
+    },
+    "./publish": {
+      "types": "./dist/publish.d.ts",
+      "import": "./dist/publish.js"
     }
   },
   "files": [

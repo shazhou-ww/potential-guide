@@ -132,7 +132,8 @@ process.on("message",async message=>{if(message==="close"){try{await server.clos
 import assert from "node:assert/strict";
 import {mkdir,readFile,writeFile} from "node:fs/promises";
 import {join,resolve} from "node:path";
-import {buildTaskBundle,importTaskBundle} from "@potential-guide/task-sdk/build";
+import {buildTaskBundle} from "@potential-guide/task-sdk/build";
+import {importTaskBundle} from "@potential-guide/task-sdk/publish";
 import {MemoryIpfsClient} from "@potential-guide/ipfs-content/testing";
 import {writeContractArtifact,packContractArtifact} from "@potential-guide/check-artifacts/build";
 import {checkerSchemaUri,objectiveSchemaUri} from "@potential-guide/check-artifacts/contracts";

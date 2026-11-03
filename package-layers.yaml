@@ -23,6 +23,7 @@ tools:
   - pguide
   - "@potential-guide/cli-core"
   - "@potential-guide/pguide-config"
+  - "@potential-guide/pguide-task-bundle"
   - "@potential-guide/pguide-agents"
   - "@potential-guide/cli-runtime"
   - "@potential-guide/pguide-pilot"

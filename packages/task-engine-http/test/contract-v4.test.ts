@@ -19,7 +19,8 @@ import type {
   TaskSnapshot,
 } from "@potential-guide/task-protocol";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { createTaskHandler } from "../src/index.js";
 
 async function until(check: () => boolean) {

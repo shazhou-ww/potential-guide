@@ -1,12 +1,25 @@
 # Task SDK
 
 `@potential-guide/task-sdk` provides the generated Worker runtime. Author tools
-import `buildTaskBundle`, `createIpfsClient` and `importTaskBundle` from `@potential-guide/task-sdk/build`;
+import `buildTaskBundle`/`compileTaskBundle` from `@potential-guide/task-sdk/build`,
+`checkTaskArtifact` from `/artifact`, and `createIpfsClient`/`importTaskBundle` from `/publish`;
 the runtime entry never imports the builder.
 
-Write `task.yaml` and a callback `(input, context) => Promise<result>` independently.
-See `examples/echo`; run its `build.mjs` after building the workspace. Output must
-not already exist. Only Node built-ins may remain external to `worker.cjs`.
+The preferred author workflow is [pguide task-bundle](../pguide-task-bundle/README.md):
+`task.build.yaml` plus a TypeBox contract and typed callback generate the complete
+artifact. No author-maintained runtime YAML or include command is needed.
+The low-level compiler API remains available for repository tooling and the SDK's
+`examples/echo`/`check-diagnostics` fixtures: its `declaration` accepts a JSON-compatible
+definition or a declaration-source filename; it always generates the exact manifest.
+This is not a fallback for loading legacy artifacts. Old no-manifest artifacts are
+rejected by artifact checking, publishing and Engine admission with rebuild guidance.
+Only Node built-ins may remain external to `worker.cjs`.
+
+`compileTaskBundle` returns validated in-memory bytes without writing.
+`buildTaskBundle` writes a complete clean artifact and atomically replaces only
+an output whose sibling `.pguide-task-bundle.json` marker matches its owner.
+Unknown existing directories are refused; failed builds preserve prior output.
+Do not delete the marker when rebuilding. Distribute only the artifact directory.
 
 `context.log({level, message, fields?})` provides async typed diagnostic receipts,
 independent of business outputs. The sole **v1** declaration includes its dedicated
@@ -16,6 +29,8 @@ schema URLs are rejected, not aliased. Disabled/custom-host diagnostics remain u
 and the packaged `examples/check-diagnostics` assertion sample.
 
 Shared JSON Schema files are supplied through `schemas: [{path, digest}]`.
+Generated in-memory schemas can instead use `schemaDocuments`; both paths use
+the same offline resolver and produce ordinary `schemas/` files.
 Each lock is `sha256:` plus the SHA-256 of the exact JSON file bytes. Every
 resource needs an absolute `$id`; supply the entire transitive closure. The
 builder never resolves references over the network. A changed lock, missing

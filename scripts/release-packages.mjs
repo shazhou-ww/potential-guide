@@ -224,6 +224,12 @@ export const verificationPackages = [
     bins: [],
   },
   {
+    id: "pguide-task-bundle",
+    directory: "pguide-task-bundle",
+    name: "@potential-guide/pguide-task-bundle",
+    bins: ["pguide-task-bundle"],
+  },
+  {
     id: "probe-task",
     directory: "probe-task",
     name: "@potential-guide/probe-task",

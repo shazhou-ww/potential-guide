@@ -13,13 +13,15 @@ import {
   taskSchemaUri,
   validateTaskBundle,
 } from "@potential-guide/task-protocol";
-import { buildTaskBundle, importTaskBundle } from "../src/build.js";
+import { buildTaskBundle } from "../src/build.js";
+import { importTaskBundle } from "../src/publish.js";
 
 const declaration = {
   $schema: taskSchemaUri,
   name: "相同展示名称",
   runtime: { type: "node", minVersion: "22.13.0" },
   entry: "worker.cjs",
+  include: ["task.yaml", "worker.cjs"],
   inputSchema: { $ref: "https://example.test/input" },
   resultSchema: { $ref: "https://example.test/result" },
   messageSchema: false,

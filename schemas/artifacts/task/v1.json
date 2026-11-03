@@ -9,6 +9,7 @@
     "name",
     "runtime",
     "entry",
+    "include",
     "inputSchema",
     "resultSchema",
     "messageSchema"
@@ -35,6 +36,16 @@
       }
     },
     "entry": { "const": "worker.cjs" },
+    "include": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(?:task\\.yaml|worker\\.cjs|(?:schemas|resources)/[^\\\\:*?<>|\\u0000-\\u001f]+)$"
+      }
+    },
     "inputSchema": { "type": "object" },
     "resultSchema": { "type": ["object", "boolean"] },
     "messageSchema": { "type": ["object", "boolean"] }

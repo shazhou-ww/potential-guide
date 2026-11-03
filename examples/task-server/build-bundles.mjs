@@ -2,11 +2,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { bundleCid, parseBundleReference, taskSchemaUri } from "@potential-guide/task-protocol";
-import {
-  buildTaskBundle,
-  createIpfsClient,
-  importTaskBundle,
-} from "@potential-guide/task-sdk/build";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { createIpfsClient, importTaskBundle } from "@potential-guide/task-sdk/publish";
 
 /** Author-side only. The server never imports this module or business packages. */
 export async function buildExampleBundle({

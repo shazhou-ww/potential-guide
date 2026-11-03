@@ -22,7 +22,8 @@ export async function checkTaskSdkConsumer(directory, run) {
 import assert from "node:assert/strict";
 import {rm,writeFile} from "node:fs/promises";
 import {resolve,join} from "node:path";
-import {buildTaskBundle,importTaskBundle} from "@potential-guide/task-sdk/build";
+import {buildTaskBundle} from "@potential-guide/task-sdk/build";
+import {importTaskBundle} from "@potential-guide/task-sdk/publish";
 import {MemoryIpfsClient} from "@potential-guide/ipfs-content/testing";
 import {resolveBundleSchemas,taskSchemaUri,validateTaskBundle} from "@potential-guide/task-protocol";
 const root=resolve("fixture");

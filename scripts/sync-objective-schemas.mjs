@@ -8,10 +8,12 @@ const { checkerSchema, objectiveArtifactSchema } = await import(
   "../packages/check-artifacts/dist/index.js"
 );
 const { taskBundleSchema } = await import("../packages/task-protocol/dist/index.js");
+const { taskBuildSchema } = await import("../packages/pguide-task-bundle/dist/authoring.js");
 for (const [kind, schema, version = "v1"] of [
   ["checker", checkerSchema],
   ["objective", objectiveArtifactSchema],
   ["task", taskBundleSchema],
+  ["task-build", taskBuildSchema],
 ]) {
   const destination = new URL(`../schemas/artifacts/${kind}/${version}.json`, import.meta.url);
   const text = execFileSync(

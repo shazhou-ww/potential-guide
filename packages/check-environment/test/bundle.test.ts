@@ -11,7 +11,7 @@ import {
   compileJsonSchema,
   type JsonObject,
 } from "@potential-guide/task-protocol";
-import { importTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { inputSchemas, resultSchema } from "../src/contracts.js";
 
 const caller = { scope: "environment-tests", subject: "consumer" };
