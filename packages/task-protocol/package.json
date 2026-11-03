@@ -39,6 +39,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "multiformats": "catalog:",
     "ajv": "catalog:"
   },
   "repository": {

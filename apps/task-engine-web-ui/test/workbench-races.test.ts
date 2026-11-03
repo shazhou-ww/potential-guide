@@ -6,9 +6,9 @@ import test from "node:test";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import {
+  type SubmissionResult,
   TaskError,
   type TaskSnapshot,
-  type SubmissionResult,
 } from "@potential-guide/task-protocol";
 import { fixtureBundles } from "../fixture/types.js";
 import { newIdentity } from "../src/model.js";
@@ -40,7 +40,7 @@ test("actual browser entry ignores delayed real favorites responses and paginate
     port: 0,
     store: new MemoryStore(),
     ownStore: true,
-    bundleDirectory: resolve(root, "cache"),
+    ipfsClient: resources.ipfsClient,
     limits: { pageSize: 10 },
     authorize: (caller, _operation, scope) => caller.scope === scope,
     resolveCaller(request) {
@@ -358,7 +358,7 @@ test("actual browser entry ignores delayed real favorites responses and paginate
         Math.min(...[a, b, c].map((task) => Date.parse(task.run!.startedAt))) - 1,
       ).toISOString(),
       before = new Date(Date.now() + 60000).toISOString();
-    element<HTMLInputElement>("#execution-type").value = resources.bundles.echo!.digest;
+    element<HTMLInputElement>("#execution-type").value = String(resources.bundles.echo);
     element<HTMLInputElement>("#started-from").value = from;
     element<HTMLInputElement>("#started-before").value = before;
     document.querySelector<HTMLButtonElement>('[role="dialog"] [data-close]')?.click();
@@ -379,7 +379,7 @@ test("actual browser entry ignores delayed real favorites responses and paginate
     }, "continuation must ignore unapplied invalid filters");
     const reads = browserRequests.filter((url) => url.pathname.endsWith("/runs"));
     assert.equal(reads.length, 2);
-    assert.equal(reads[1]!.searchParams.get("bundleDigest"), resources.bundles.echo!.digest);
+    assert.equal(reads[1]!.searchParams.get("bundleCid"), resources.bundles.echo);
     assert.equal(reads[1]!.searchParams.get("startedFrom"), from);
     assert.equal(reads[1]!.searchParams.get("startedBefore"), before);
     assert.ok(reads[1]!.searchParams.get("cursor"));

@@ -1,8 +1,8 @@
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import type { IpfsClient } from "@potential-guide/ipfs-content";
 import {
   at,
   type BundleCacheService,
+  bundleCid,
   type Caller,
   canonical,
   type ErrorFact,
@@ -26,10 +26,11 @@ export interface EngineOptions
     CoordinatorOptions,
     "types" | "currentVersions" | "allocationLimits" | "loadBundle"
   > {
-  bundleDirectory: string;
+  ipfsClient: IpfsClient;
   bundleLimits?: Partial<BundleLimits>;
   bundleConcurrency?: number;
-  fetchBundle?: typeof globalThis.fetch;
+  allowGateway?: (url: URL) => boolean;
+  fetchIpfs?: typeof globalThis.fetch;
 }
 function failure(error: unknown): ErrorFact {
   return {
@@ -66,16 +67,23 @@ export class TaskEngine implements TaskService {
   readonly waitForTaskRelease: Coordinator["waitForTaskRelease"];
   readonly collect: Coordinator["collect"];
   constructor(private readonly options: EngineOptions) {
-    for (const key of ["types", "currentVersions", "allocationLimits"])
+    for (const key of [
+      "types",
+      "currentVersions",
+      "allocationLimits",
+      "bundleDirectory",
+      "fetchBundle",
+    ])
       if (Object.hasOwn(options, key))
         throw new TaskError("invalid_config", "Bundle Engine does not accept a type registry.");
     this.cache = new BundleCache({
-      directory: options.bundleDirectory,
+      ipfsClient: options.ipfsClient,
       ...(options.bundleConcurrency !== undefined
         ? { concurrency: options.bundleConcurrency }
         : {}),
       ...(options.bundleLimits ? { limits: options.bundleLimits } : {}),
-      ...(options.fetchBundle ? { fetch: options.fetchBundle } : {}),
+      ...(options.allowGateway ? { allowGateway: options.allowGateway } : {}),
+      ...(options.fetchIpfs ? { fetch: options.fetchIpfs } : {}),
     });
     this.core = new Coordinator({
       store: options.store,
@@ -125,30 +133,63 @@ export class TaskEngine implements TaskService {
     if (!this.started || this.closing) throw new TaskError("engine_closed", "Engine is closed.");
   }
   private install(bundle: Awaited<ReturnType<BundleCache["acquire"]>>) {
+    const cid = bundle.cid;
     const registration = {
       type: "bundle",
-      version: bundle.digest,
+      version: bundle.cid,
       environment: "node",
       inputSchema: bundle.resolved.inputSchema,
       resultSchema: bundle.resolved.resultSchema,
       messageSchema: bundle.resolved.messageSchema,
-      module: pathToFileURL(join(bundle.directory, "worker.cjs")).href,
+      module: `ipfs://${bundle.cid}/worker.cjs`,
       exportName: "unused",
       configuration: null,
-      bundle: { digest: bundle.digest, declaration: bundle.resolved },
+      bundle: { cid: bundle.cid, declaration: bundle.resolved },
+      getBundleSource: () => this.cache.source(cid),
+      readBundle: (path: string, signal: AbortSignal) => this.cache.read(cid, path, signal),
     };
     this.core.installBundle(registration);
     return registration;
   }
   async start(): Promise<void> {
-    for (const record of [
-      ...Object.values(this.core.facts().facts.tasks),
-      ...Object.values(this.core.facts().facts.runs),
-    ])
+    const facts = this.core.facts().facts;
+    for (const record of [...Object.values(facts.tasks), ...Object.values(facts.runs)])
       if (!record.binding.bundle || !record.binding.declaration)
         throw new TaskError(
           "unsupported_version",
           "Legacy type facts require a separate new data domain.",
+        );
+      else {
+        try {
+          validateBundleReference(record.binding.bundle);
+        } catch {
+          throw new TaskError(
+            "unsupported_version",
+            "Stored Bundle protocol is unsupported; use a separate data domain.",
+          );
+        }
+      }
+    for (const record of Object.values(facts.submissions)) {
+      if (record.bundleProtocol !== "ipfs")
+        throw new TaskError(
+          "unsupported_version",
+          "Stored submission Bundle protocol is unsupported; no automatic migration.",
+        );
+      if (record.decision.status === "rejected") continue;
+      try {
+        validateBundleReference(record.request.bundle);
+      } catch {
+        throw new TaskError(
+          "unsupported_version",
+          "Stored submission Bundle protocol is unsupported; no automatic migration.",
+        );
+      }
+    }
+    for (const id of Object.keys(facts.requests))
+      if (facts.submissions[id]?.bundleProtocol !== "ipfs")
+        throw new TaskError(
+          "unsupported_version",
+          "Legacy idempotency records require a separate data domain.",
         );
     await this.core.start();
     try {
@@ -222,6 +263,7 @@ export class TaskEngine implements TaskService {
         (record) => record.decision.status === "preparing",
       ).length >= this.limits.maxPreparing;
     const record: SubmissionRecord = {
+      bundleProtocol: "ipfs",
       request: raw as TaskRequest,
       caller: structuredClone(caller),
       arrivedAt: at(now),
@@ -254,7 +296,9 @@ export class TaskEngine implements TaskService {
     if (overloaded) return this.result(this.core.facts().facts.submissions[id]!);
     let cached = false;
     try {
-      cached = await this.cache.available(validateBundleReference(raw.bundle).digest);
+      cached = await this.cache.available(
+        bundleCid(validateBundleReference(raw.bundle, this.cache.limits.hints)),
+      );
     } catch (error) {
       this.reject(id, error);
       return this.result(this.core.facts().facts.submissions[id]!);
@@ -373,8 +417,8 @@ export class TaskEngine implements TaskService {
   tick(): void {
     this.core.tick();
   }
-  async evictBundle(digest: string): Promise<boolean> {
-    return this.cache.evict(digest);
+  async evictBundle(cid: string): Promise<boolean> {
+    return this.cache.evict(cid);
   }
   private cacheAccess(caller: Caller, operation: "cache-read" | "cache-remove"): void {
     this.readable();
@@ -392,16 +436,13 @@ export class TaskEngine implements TaskService {
     this.cacheAccess(caller, "cache-read");
     return this.cache.list(page);
   };
-  readonly getCachedBundle: BundleCacheService["getCachedBundle"] = async (digest, caller) => {
+  readonly getCachedBundle: BundleCacheService["getCachedBundle"] = async (cid, caller) => {
     this.cacheAccess(caller, "cache-read");
-    return this.cache.detail(digest);
+    return this.cache.detail(cid);
   };
-  readonly removeCachedBundle: BundleCacheService["removeCachedBundle"] = async (
-    digest,
-    caller,
-  ) => {
+  readonly removeCachedBundle: BundleCacheService["removeCachedBundle"] = async (cid, caller) => {
     this.cacheAccess(caller, "cache-remove");
-    if (!(await this.cache.evict(digest)))
+    if (!(await this.cache.evict(cid)))
       throw new TaskError("bundle_in_use", "Bundle is preparing, leased or being removed.");
   };
   close(): Promise<void> {
@@ -414,10 +455,12 @@ export class TaskEngine implements TaskService {
   }
   private async closeInner(): Promise<void> {
     this.closing = true;
+    const coreClose = this.core.close();
+    void coreClose.catch(() => {});
     await this.cache.close();
     await Promise.allSettled([...this.processing.values()]);
     for (const pending of this.waiters.values()) for (const wake of pending) wake();
-    await this.core.close();
+    await coreClose;
     this.started = false;
   }
 }

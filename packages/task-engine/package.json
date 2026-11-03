@@ -32,6 +32,7 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
+    "@potential-guide/ipfs-content": "workspace:^",
     "@potential-guide/task-protocol": "workspace:^",
     "@potential-guide/check-artifacts": "workspace:^"
   },

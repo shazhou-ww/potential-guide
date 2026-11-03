@@ -1,4 +1,5 @@
 import type {
+  BundleReference,
   CollectionEnvelope,
   HistoryPage,
   Observation,
@@ -6,14 +7,18 @@ import type {
   RunPage,
   RunSnapshot,
   RunSummary,
+  SubmissionResult,
   TaskPage,
   TaskSnapshot,
   TaskSummary,
-  SubmissionResult,
 } from "@potential-guide/task-protocol";
+import {
+  bundleCid,
+  validateBundleReference,
+} from "@potential-guide/task-protocol/bundle-reference";
 import type { Endpoint } from "./server.js";
 
-export type Parameters = Record<string, unknown> & { bundle: { url: string; digest: string } };
+export type Parameters = Record<string, unknown> & { bundle: BundleReference };
 const stageValues = ["initial", "running", "stopping", "stopped", "completed", "failed"];
 export function sourcePosition(value: string): { domain: string; position: number } {
   if (typeof value !== "string" || value.length > 1024) throw new Error("源 revision 无效。");
@@ -128,7 +133,7 @@ export function newIdentity(): string {
 }
 export function originalParameters(request: Record<string, unknown>): Parameters {
   const { requestId: _generated, ...parameters } = structuredClone(request);
-  bundleDigest(parameters as Parameters);
+  bundleIdentity(parameters as Parameters);
   return parameters as Parameters;
 }
 export function endpointMatches(left: Endpoint, right: Endpoint): boolean {
@@ -227,7 +232,7 @@ export class SubmissionBar {
     return batch;
   }
   add(batch: Batch, parameters: Parameters, revision: string): Entry {
-    bundleDigest(parameters);
+    bundleIdentity(parameters);
     if (batch.sending || batch.entries.some((item) => item.state !== "draft"))
       throw new Error("已发送批次不能再加入草稿。");
     if (batch.entries.length >= 50) throw new Error("每批最多 50 项。");
@@ -318,8 +323,9 @@ export class SubmissionBar {
           !validSnapshot(snapshot) ||
           snapshot.requestId !== entry.id ||
           snapshot.taskId !== result.taskId ||
-          snapshot.bundle?.digest !== entry.parameters.bundle.digest ||
-          snapshot.bundle.url !== entry.parameters.bundle.url
+          !snapshot.bundle ||
+          JSON.stringify(validateBundleReference(snapshot.bundle)) !==
+            JSON.stringify(validateBundleReference(entry.parameters.bundle))
         )
           throw new Error("Task 快照与已确认 Request 不一致。");
         entry.snapshot = snapshot;
@@ -923,15 +929,6 @@ export async function consumeCollectionSse(
     reader.releaseLock();
   }
 }
-export function bundleDigest(parameters: Parameters): string {
-  const bundle = parameters.bundle;
-  if (
-    !bundle ||
-    typeof bundle.url !== "string" ||
-    !bundle.url ||
-    typeof bundle.digest !== "string" ||
-    !/^sha256:[a-f0-9]{64}$/.test(bundle.digest)
-  )
-    throw new Error("每个 Request 必须提供完整 Bundle URL 和 Digest；旧类型模板不会自动转换。");
-  return bundle.digest;
+export function bundleIdentity(parameters: Parameters): string {
+  return bundleCid(validateBundleReference(parameters.bundle));
 }

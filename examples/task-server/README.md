@@ -1,6 +1,6 @@
 # Public-package Task Bundle examples
 
-The author builder now emits explicit v2 Bundles. Check emits selected per-problem
+The author builder emits the sole evolving v1 Bundle protocol. Check emits selected per-problem
 diagnostics (index/kind/problem ID, not parameter/environment dumps) through
 `context.log`; its existing Result/evidence schema remains unchanged. See
 [Run Logs](../../docs/task-run-logs.md) and the concise SDK assertion sample.
@@ -8,6 +8,9 @@ diagnostics (index/kind/problem ID, not parameter/environment dumps) through
 The generic server installs Engine/HTTP/Storage/Server, **not** SDK, Check or Probe.
 Run `task-engine-server --config ./echo-config.mjs` with `TASK_SERVER_TOKEN`
 and optionally `TASK_SERVER_PORT` / `TASK_SERVER_DATABASE`.
+Independently run a private/local Kubo daemon; `IPFS_API` defaults to
+`http://127.0.0.1:5001`. The asynchronous trusted configuration injects that generic
+client; Engine shutdown never stops the daemon, closes a shared client or removes shared pins.
 `check-config.mjs` and `probe-config.mjs` intentionally use that identical
 business-free configuration. Use a new v5 database path; older domains are
 rejected without migration or rewriting their bytes.
@@ -18,24 +21,24 @@ chosen business packages), copy `build-bundles.mjs` and `echo-type.mjs`.
 For Check use `check` and explicitly authorize `CHECK_ORIGIN` and/or
 `CHECK_FILE_ROOT`. These are **business callback** policy, never a server
 registration. For Probe also supply `CHILD_SERVICE_URL`, `CHILD_SERVICE_TOKEN`
-and `CHECK_BUNDLE` (an exact JSON `{url,digest}` Check Bundle reference).
+and `CHECK_BUNDLE` (an exact root CID or `{cid,hint}` JSON Check Bundle reference).
 Child credentials are explicit private author configuration; never put real
 credentials in source control or publicly distributed Bundles. Run callbacks
 do not inherit general host credentials.
 
 The SDK produces a self-contained `worker.cjs`, declaration, locked Schema
-closure and opaque resources. Deploy only the resulting archive, not author
-source or `node_modules`. The returned Digest is the Git SHA-256 **file tree**
-identity, not the tar.gz checksum. Name is display-only, not a selector.
+closure and opaque resources. Import/pin the resulting directory on the
+caller-managed IPFS node, not author source or `node_modules`. The returned root
+CID is standard UnixFS content identity; name is display-only, not a selector.
+Callbacks read bundled resources via `context.bundle.read(path)` byte streams,
+not `import.meta.url` or physical host paths. Existing business Checker/Objective
+archives and their URL/Digest inputs are unchanged.
 
 POST `/tasks` with JSON, bearer token and a fresh ULID `Idempotency-Key`:
 
 ```json
 {
-  "bundle": {
-    "url": "https://trusted.example/check-task.tar.gz",
-    "digest": "sha256:<exact-64-hex-root-tree>"
-  },
+  "bundle": "<exact-task-bundle-root-CID>",
   "timeoutMs": 30000,
   "checker": {
     "kind": "checker",
@@ -54,7 +57,7 @@ intent separately. Only accepted decisions expose a real Task ID. Then read
 There is no type directory or registered selector, and no fabricated preparing
 Task. Reuse an identical request ID only for the identical original request.
 
-`node check-in-process.mjs <bundle-url> <bundle-digest> <checker-url> <checker-digest>`
+`node check-in-process.mjs <bundle-cid-or-json> <checker-url> <checker-digest>`
 uses the same asynchronous admission protocol without Server.
 `file:` business URLs require an explicit callback-owned trusted root; a browser
 file picker does not grant remote filesystem access. The generic server has no
@@ -73,4 +76,4 @@ resources are fixture callback configuration, not host resource bridges.
 The stronger separate-install proof is
 `node scripts/check-packages.mjs --task-bundles`: author dependencies/source
 are removed before a distinct business-free production process consumes both
-archives and validates their actual results/evidence.
+CID-addressed directories and validates their actual results/evidence.

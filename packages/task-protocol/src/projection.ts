@@ -78,6 +78,7 @@ export function assertFactsVersion(facts: Facts): void {
       typeof record.caller.subject !== "string" ||
       !record.caller.subject ||
       !Number.isSafeInteger(record.qualifiedLowerBound) ||
+      (record.bundleProtocol !== undefined && record.bundleProtocol !== "ipfs") ||
       !["preparing", "accepted", "rejected"].includes(record.decision?.status) ||
       record.decision.requestId !== id ||
       (record.resultForgotten !== undefined && record.resultForgotten !== true)

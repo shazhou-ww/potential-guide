@@ -1,25 +1,26 @@
-import { createTaskEngine, newId } from "@potential-guide/task-engine";
+import { createIpfsClient, createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
+import { parseBundleReference } from "@potential-guide/task-protocol/bundle-reference";
 
-const [bundleUrl, bundleDigest, url, digest] = process.argv.slice(2);
-if (!bundleUrl || !bundleDigest || !url || !digest)
+const [bundleReference, url, digest] = process.argv.slice(2);
+if (!bundleReference || !url || !digest)
   throw new Error(
-    "Usage: node check-in-process.mjs <bundle-url> <bundle-digest> <checker-url> <checker-digest>",
+    "Usage: node check-in-process.mjs <bundle-cid-or-json> <checker-url> <checker-digest>",
   );
 const caller = { scope: "example", subject: "example" };
 const store = new MemoryStore();
 const engine = createTaskEngine({
   store,
-  bundleDirectory: ".task-bundle-cache",
+  ipfsClient: await createIpfsClient(process.env.IPFS_API ?? "http://127.0.0.1:5001"),
   authorize: (who, _operation, scope) => who.scope === scope && who.subject === "example",
   limits: { maxPayloadBytes: 8 * 1024 * 1024 },
 });
-engine.start();
+await engine.start();
 try {
   let decision = await engine.submit(
     {
       requestId: newId(),
-      bundle: { url: bundleUrl, digest: bundleDigest },
+      bundle: parseBundleReference(bundleReference),
       checker: { kind: "checker", url, digest },
       subject: {},
       timeoutMs: 30000,

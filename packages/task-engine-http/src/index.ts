@@ -82,7 +82,7 @@ function params(url: URL, allowed: readonly string[]): Record<string, string> {
   return result;
 }
 const taskFilters = [
-  "bundleDigest",
+  "bundleCid",
   "taskId",
   "type",
   "scope",
@@ -97,7 +97,7 @@ const taskFilters = [
   "sort",
 ];
 const runFilters = [
-  "bundleDigest",
+  "bundleCid",
   "runId",
   "type",
   "scope",
@@ -377,7 +377,7 @@ export function createTaskHandler(
           ),
         );
       }
-      const cachedBundle = /^\/bundle-cache\/(sha256:[a-f0-9]{64})$/.exec(path);
+      const cachedBundle = /^\/bundle-cache\/([^/]+)$/.exec(path);
       if (cachedBundle?.[1] && ["GET", "DELETE"].includes(request.method)) {
         if (!options.bundleCache) fail("not_found", "Bundle cache management is unavailable.");
         params(url, []);
@@ -385,7 +385,7 @@ export function createTaskHandler(
           return response(await options.bundleCache.getCachedBundle(cachedBundle[1], caller));
         await noBody(request);
         await options.bundleCache.removeCachedBundle(cachedBundle[1], caller);
-        return response({ removed: true, digest: cachedBundle[1] });
+        return response({ removed: true, cid: cachedBundle[1] });
       }
       if (request.method === "GET" && (path === "/tasks/events" || path === "/runs/events")) {
         const runs = path === "/runs/events";
@@ -434,7 +434,7 @@ export function createTaskHandler(
         if (request.headers.has("If-Match"))
           fail(
             "unsupported_request",
-            "If-Match type discovery guards are not supported; pin Bundle Digest.",
+            "If-Match type discovery guards are not supported; pin Bundle root CID.",
           );
         const result = await observe(
           options.service.submit({ ...raw, requestId: identity }, caller),

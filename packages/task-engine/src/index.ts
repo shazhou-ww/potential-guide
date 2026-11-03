@@ -1,3 +1,4 @@
+export { createIpfsClient, type IpfsClient } from "@potential-guide/ipfs-content";
 export {
   createTaskEngine,
   defaultEngineLimits,

@@ -32,10 +32,10 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@potential-guide/ipfs-content": "workspace:^",
     "@potential-guide/task-protocol": "workspace:^",
     "@potential-guide/check-artifacts": "workspace:^",
-    "esbuild": "catalog:",
-    "tar": "catalog:"
+    "esbuild": "catalog:"
   },
   "publishConfig": {
     "access": "public"

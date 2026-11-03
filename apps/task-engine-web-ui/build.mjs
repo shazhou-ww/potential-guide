@@ -3,6 +3,14 @@ import { build } from "esbuild";
 
 await mkdir("dist/public", { recursive: true });
 await build({
+  entryPoints: ["src/server.ts"],
+  outfile: "dist/src/server.js",
+  bundle: true,
+  platform: "node",
+  format: "esm",
+  target: "node22",
+});
+await build({
   entryPoints: ["src/browser.ts"],
   outfile: "dist/public/app.js",
   bundle: true,

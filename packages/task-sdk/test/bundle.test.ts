@@ -5,19 +5,15 @@ import { mkdir, readFile, rm, rmdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { Worker } from "node:worker_threads";
-import {
-  gitTreeDigest,
-  parseArtifactYaml,
-  readArtifactFiles,
-  unpackArtifactFiles,
-} from "@potential-guide/check-artifacts/files";
+import { parseArtifactYaml, readArtifactFiles } from "@potential-guide/check-artifacts/files";
+import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
 import {
   compileInputSchema,
   resolveBundleSchemas,
   taskSchemaUri,
   validateTaskBundle,
 } from "@potential-guide/task-protocol";
-import { buildTaskBundle, packTaskBundle } from "../src/build.js";
+import { buildTaskBundle, importTaskBundle } from "../src/build.js";
 
 const declaration = {
   $schema: taskSchemaUri,
@@ -86,10 +82,9 @@ export default async (input, context) => {
       schemas,
       outDirectory: join(directory, "bundle"),
     });
-    const packed = await packTaskBundle(built.directory, join(directory, "bundle.tar.gz"));
-    assert.equal(packed.digest, built.digest);
-    const files = await unpackArtifactFiles(await readFile(packed.archive));
-    assert.equal(gitTreeDigest(files), built.digest);
+    const published = await importTaskBundle(built.directory, new MemoryIpfsClient());
+    assert.equal(published.cid, built.cid);
+    const files = await readArtifactFiles(built.directory);
     assert.equal([...files.keys()].filter((name) => name.startsWith("schemas/")).length, 3);
     const resolved = resolveBundleSchemas(
       validateTaskBundle(parseArtifactYaml(files.get("task.yaml")!)),
@@ -113,7 +108,7 @@ export default async (input, context) => {
         generation,
         maxInFlight: 8,
         maxPayloadBytes: 65_536,
-        bundle: { digest: built.digest, declaration: resolved },
+        bundle: { cid: built.cid, declaration: resolved },
       },
     });
     let completed = false;
@@ -220,7 +215,7 @@ test("V01: build fails on changed Schema locks, incomplete closure, conflicts an
       assert.throws(() => validateTaskBundle({ ...declaration, name }), /Invalid task.yaml/);
   });
 });
-test("removed Task v2 and future schemas cannot build or pack Workers", async () => {
+test("removed Task v2 and future schemas cannot build or import Workers", async () => {
   await workspace(async (directory) => {
     const yaml = join(directory, "task.yaml");
     const callback = join(directory, "callback.ts");
@@ -245,11 +240,10 @@ test("removed Task v2 and future schemas cannot build or pack Workers", async ()
         }),
         { code: "invalid_bundle" },
       );
-      await assert.rejects(packTaskBundle(bundle, join(directory, `${version}.tar.gz`)), {
+      await assert.rejects(importTaskBundle(bundle, new MemoryIpfsClient()), {
         code: "invalid_bundle",
       });
       assert.equal(existsSync(join(directory, version)), false);
-      assert.equal(existsSync(join(directory, `${version}.tar.gz`)), false);
     }
   });
 });

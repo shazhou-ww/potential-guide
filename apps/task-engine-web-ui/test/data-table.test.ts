@@ -276,7 +276,7 @@ test("Task and Run grids integrate column filters, sorting and pagination withou
         render(60);
         button("下一页").click();
         await delay(10);
-        render(60, { query: "bundleDigest=new" });
+        render(60, { query: "bundleCid=new" });
         await delay(10);
         assert.equal(visible()[0], "id-0");
         await select("#directory .column-filter-popup select", "已完成");

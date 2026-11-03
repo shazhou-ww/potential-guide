@@ -34,6 +34,9 @@ export interface RunContext<Message extends Json = never> {
   readonly scope: string;
   readonly signal: AbortSignal;
   readonly messages: AsyncIterable<RunMessage<Message>>;
+  readonly bundle?: {
+    read(path: string, options?: { signal?: AbortSignal }): ReadableStream<Uint8Array>;
+  };
   progress(value: RunProgress): Promise<void>;
   checkpoint(value: Json): Promise<void>;
   log(value: RunLogInput): Promise<RunLogReceipt>;
@@ -53,7 +56,9 @@ export interface RunResourceContext {
   workerGeneration: string;
 }
 export interface TypeWorkerRegistration {
-  bundle?: { digest: string; declaration: ResolvedTaskBundle };
+  bundle?: { cid: string; declaration: ResolvedTaskBundle };
+  getBundleSource?(): string;
+  readBundle?(path: string, signal: AbortSignal): Promise<AsyncIterator<Uint8Array>>;
   type: string;
   version: string;
   environment: string;

@@ -220,7 +220,7 @@ test("actual browser atomically samples paginated windows, pauses hidden pages a
     assert.equal(document.getElementById("history-type"), input);
     assert.equal(container.scrollTop, 77);
     assert.equal(
-      reads.some((url) => url.searchParams.has("bundleDigest")),
+      reads.some((url) => url.searchParams.has("bundleCid")),
       false,
     );
     click('#directory button[data-action="目录下一页（原过滤条件）"]');

@@ -1,4 +1,5 @@
 protocol:
+  - "@potential-guide/ipfs-content"
   - "@potential-guide/task-protocol"
   - "@potential-guide/task-sdk"
   - "@potential-guide/task-engine"

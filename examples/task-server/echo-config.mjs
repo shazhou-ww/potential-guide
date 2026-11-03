@@ -1,3 +1,4 @@
+import { createIpfsClient } from "@potential-guide/task-engine";
 import { TaskError } from "@potential-guide/task-protocol";
 
 export default function configure() {
@@ -10,11 +11,12 @@ export default function configure() {
   });
 }
 
-export function configureTaskServer({ token, port = 0, database, bundleDirectory }) {
+export async function configureTaskServer({ token, port = 0, database, ipfsClient }) {
+  ipfsClient ??= await createIpfsClient(process.env.IPFS_API ?? "http://127.0.0.1:5001");
   return {
     port,
     database,
-    bundleDirectory,
+    ipfsClient,
     limits: {
       maxConcurrent: 4,
       maxPayloadBytes: 96 * 1024 * 1024,

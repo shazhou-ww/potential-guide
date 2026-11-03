@@ -25,9 +25,10 @@ Worker 通信见 [协议文档](../../task-bundle-worker.md)。
 
 ## 能力分工与确认
 
-本文列出的成员对应当前 SDK。并发补充的 Context Bundle 只读访问是额外的目标能力，
-其具体 SDK 方法仍待落实，见[Bundle 契约](./task-bundle.md)；
-不能由下表推断该能力已实现，也不因尚未列出方法而取消该架构要求。
+本文列出的成员对应当前 SDK；Bundle 只读能力的语义见[Bundle 契约](./task-bundle.md)。
+具体方法为 `context.bundle.read(relativePath, {signal?})`，统一返回标准
+`ReadableStream<Uint8Array>`；用户需要完整内容时自行聚合。
+流支持背压、取消及创建/消费中途错误，不依赖物理 Bundle 目录。
 
 | 成员 | 职责 | 不代表 |
 | --- | --- | --- |
@@ -35,6 +36,7 @@ Worker 通信见 [协议文档](../../task-bundle-worker.md)。
 | `checkpoint` | 上报符合声明 Result Schema 的中间结构化结果证据 | 最终结果、调用栈恢复、已消除重启不确定性 |
 | `messages` | 收取路由到当前 Run、各自归属某 Task 的业务消息 | 广播、Run 创建或自动业务接纳 |
 | `log` | 写入独立、有界的显式诊断日志 | Result、progress、checkpoint 或生命周期事实 |
+| `bundle.read` | 以统一字节流读取当前根 CID 下的安全相对路径 | 任意 CID、宿主文件路径、整文件平行 API 或延迟准入 |
 | 回调返回值 | 提交符合 Result Schema 的最终业务结果 | Worker 已物理退出或资源已回收 |
 
 1. progress、checkpoint、消息确认采用必要业务输出通道；作者应等待其异步确认并处理拒绝。

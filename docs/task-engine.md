@@ -9,16 +9,16 @@ v5 使用按需 Bundle、持久受理与下述统一消费协议。Check/Probe �
 
 ## 按需受理
 
-每个 Request 必带完整 `bundle: {url, digest}`、`requestId`、`timeoutMs`，
+每个 Request 必带 `bundle: "根CID"` 或 `bundle: {cid, hint}`、`requestId`、`timeoutMs`，
 可选 `eligibleAt`、`seriesId`、`matchPolicy`；其余合法字段是业务 Input。
-Digest 是完整逻辑文件树的 Git SHA-256 OID，不是 tar.gz 的压缩字节摘要。
-URL 是获取位置；同 Digest 可跨 URL 复用，名称只展示、允许重名。
+CID 是标准 UnixFS 目录根内容身份；hint 是单个或有序多个 HTTP(S) gateway 基址，
+不参与内容匹配。名称只展示、允许重名，不再支持 Task Bundle URL/Digest 或 tgz 链路。
 没有 Bundle 注册、当前版本表、`discoverTypes` 或 `/task-types`。
 
 ```ts
 const engine = createTaskEngine({
   store,
-  bundleDirectory: ".cache/task-bundles",
+  ipfsClient, // 连接 caller 独立管理的本地 IPFS endpoint 的通用 client
   authorize: (caller, _operation, scope) => caller.scope === scope,
 });
 await engine.start();
@@ -47,7 +47,7 @@ long poll 与 Task timeout、Bundle 准备相互独立。
 每次新到达（包括重试）先检查
 `L <= ULID时间 <= now+futureSkewMs`；
 `L=max(持久旧L, now-windowMs)` 只前进。新域初始化下界，重启/回拨不撤回。
-原始完整意图比较与 Input Equals 不同；同 ID 改 URL、Digest 或任意字段均冲突。
+原始完整意图比较与 Input Equals 不同；同 ID 改 CID、hint 形状/顺序或任意字段均冲突。
 Preparing 已获得的资格跨窗口推进和重启保留；查询 token 不重新检查窗口。
 
 Bundle 全部准备和准入校验完成后，才锚定 Task receivedAt；
@@ -65,20 +65,27 @@ eligibleAt 为请求值与最终创建时间的较大者，deadlineAt 为其加 
 根运行库与 `/build` 分离；只允许 Node 内置代码外置。
 `task.yaml` 的固定 `$schema` 同时选择声明和通信契约，不加数字格式/协议版本。
 共享 Schema 收录完整精确锁定闭包，按 `$id` 离线解析。
-声明、Schema、资源、入口和原始文件名/字节都计入 Digest。
+声明、Schema、资源、入口和原始文件名/字节都由目录根 CID 覆盖。
 见 [SDK](../packages/task-sdk/README.md) 与 [Worker 协议](task-bundle-worker.md)。
 
-宿主在下载流、解包和缓存读取边界执行容量、路径、重复、链接与特殊文件检查；
-归档不剥外目录，不截断、改名或替换内容。缓存命中仍受当前策略约束。
+宿主用标准 UnixFS exporter 解释经 multiformats SHA-256 校验的块，
+完整遍历所有文件后验证声明、Schema 闭包、容量、路径、重复与特殊文件；
+不截断、改名、替换内容，也不存在延迟读取绕过准入。
 `bundleConcurrency` 默认 4，限制获取/验证并发；排队不是整体等待截止。
-缓存按 Digest 共享，准备与 Run 租约阻止在用内容淘汰。
-历史只需保留引用，内容可淘汰；需要时只能重取原 Digest，不能改写历史或重跑。
+缓存按 CID 共享，准备与 Run 租约保护有界的自有 verified blocks，
+因此节点 GC 不会破坏活动内容；`protectedBytes` 默认总量 256 MiB。
+Engine 不调用共享 pin.rm、不关闭 client、不嵌入节点或管理节点进程。
+历史只需保留引用，内容可淘汰；需要时只能重取原 CID，不能改写历史或重跑。
+hint 默认不授权网络访问，`allowGateway(url)` 由宿主控制；gateway raw block 仍逐块验 CID。
 
-每个 Run 直接启动验证后的 worker.cjs，握手不执行作者业务模块；
+每个 Run 以内存 CommonJS source 启动验证后的 worker.cjs，握手不执行作者业务模块；
 Run 开始事实持久后，SDK 才求值回调及其业务模块。
 可信 runId/generation/startedAt/scope 不来自 Input。
 宿主独立校验跨边界数据、停止、物理退出与回收；结果上报不是终态。
 不执行作者 factory 或历史业务复验，事实查询不依赖 Bundle 缓存。
+`context.bundle.read(path, {signal?})` 统一返回 `ReadableStream<Uint8Array>`，
+由逐 pull IPC 提供背压，取消及创建/消费中途错误明确传播。没有整文件平行 API，
+业务自行聚合；不依赖 cwd、`__dirname` 或物理 Bundle 目录。
 
 回调必须完成自己的外部资源清理；无法确认时报告 reclamation_unknown，
 不能用 released 自证物理退出或任意 OS 副作用已撤销。Worker 不是安全沙箱。
@@ -125,5 +132,6 @@ messageSchema:false 不接收业务消息；消息入队不是业务接纳，必
 Facts projection 和 SQLite user_version 为 **5**。
 v4 及更旧/混合格式在修改前明确拒绝，保留原库、WAL、SHM、owner 字节。
 必须由操作者显式指定新域路径；不自动迁移、删除、换域或重演。
+同为未冻结 v5 的旧 URL/Digest Bundle 事实或 submission 也明确拒绝，不做破坏性自动迁移。
 查询过期与格式不支持不同，不能靠静默切域掩盖。
 通用协调器旧模块/资源 fixtures 仅为内部回归测试，不是公开注册 API。

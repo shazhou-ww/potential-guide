@@ -7,14 +7,24 @@ import { assertFiniteJson } from "./json.js";
 
 type Schema = boolean | Record<string, unknown>;
 const bundleReferenceSchema: Schema = {
-  type: "object",
   title: "Task Bundle 引用",
-  required: ["url", "digest"],
-  additionalProperties: false,
-  properties: {
-    url: { type: "string", title: "Bundle URL" },
-    digest: { type: "string", title: "完整内容 Digest（sha256:…）" },
-  },
+  oneOf: [
+    { type: "string", title: "根 CID" },
+    {
+      type: "object",
+      required: ["cid", "hint"],
+      additionalProperties: false,
+      properties: {
+        cid: { type: "string" },
+        hint: {
+          oneOf: [
+            { type: "string", minLength: 1 },
+            { type: "array", minItems: 1, items: { type: "string", minLength: 1 } },
+          ],
+        },
+      },
+    },
+  ],
 };
 export const envelopeKeys = ["bundle", "timeoutMs", "eligibleAt", "seriesId", "matchPolicy"];
 export const envelopeSchema: Schema = {
@@ -97,14 +107,14 @@ export function schemaEditor(
     input.type = "text";
     input.required = true;
     input.spellcheck = false;
-    input.placeholder = "https://example.com/task.tar.gz#sha256:…";
+    input.placeholder = 'bafy… 或 {"cid":"bafy…","hint":["http://localhost:8080"]}';
     input.value =
       initial === undefined ? "" : formatBundleReference(validateBundleReference(initial));
-    const label = element("label", "Task Bundle 引用（URL#digest）");
+    const label = element("label", "Task Bundle 引用（根 CID / JSON）");
     label.htmlFor = input.id;
     const hint = element(
       "p",
-      "粘贴获取 URL#sha256:完整64位小写摘要。摘要固定执行内容；同一内容可来自不同 URL。",
+      "根 CID 固定内容；hint 是可选、有序的 HTTP(S) gateway 提示，不参与内容匹配。",
     );
     hint.id = `${input.id}-hint`;
     input.setAttribute("aria-describedby", hint.id);

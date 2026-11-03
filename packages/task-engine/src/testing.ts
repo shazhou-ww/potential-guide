@@ -117,3 +117,4 @@ export class VirtualClock implements Clock {
     return this.timers.size;
   }
 }
+export { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";

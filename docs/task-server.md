@@ -15,7 +15,8 @@ entry opens no listener and installs no global signal handlers.
 
 ## Trusted assembly
 
-Pass `authorize`, `resolveCaller`, and a trusted `bundleDirectory`; optional
+Pass `authorize`, `resolveCaller`, and a caller-owned generic `ipfsClient`
+connected to an independently managed local Kubo RPC endpoint; optional
 `bundleLimits` and `bundleConcurrency` govern preparation. Registry options
 `types`, `currentVersions`, and `allocationLimits` are rejected.
 `resolveCaller` authenticates every HTTP request (including SSE reconnect);
@@ -30,7 +31,11 @@ requests an ephemeral port. The returned URL means Store recovery and listening
 have succeeded. HTTP request/body/parser/subscription limits and socket/request
 timeouts are bounded. Put TLS and rate quotas at the deployment boundary.
 
-There is no `/task-types`. POST `/tasks` carries a complete Bundle URL and Digest;
+There is no `/task-types`. POST `/tasks` carries a root CID string or `{cid,hint}`;
+the optional ordered gateway hints never become content identity. The Engine
+validates every DAG block and the full Bundle before creating a Task, runs verified
+CommonJS source without a mandatory content directory, and never stops the node,
+closes a shared client, or removes shared pins.
 Idempotency-Key supplies requestId. Old If-Match guards are rejected.
 preparing returns 202 without a Task; accepted/rejected return the stored terminal
 decision with 200. GET `/requests/:id/status?waitMs=…` observes the same Request,

@@ -28,6 +28,7 @@ export type SubmissionResult =
   | { status: "accepted"; requestId: string; taskId: string }
   | { status: "rejected"; requestId: string; error: ErrorFact };
 export interface SubmissionRecord {
+  bundleProtocol?: "ipfs";
   request: TaskRequest;
   caller: Caller;
   arrivedAt: string;
@@ -334,7 +335,7 @@ export interface Subscription {
   unsubscribe(): Promise<void>;
 }
 export interface TaskQuery {
-  bundleDigest?: string;
+  bundleCid?: string;
   taskId?: string;
   type?: string;
   scope?: string;
@@ -383,7 +384,7 @@ export interface TaskPage {
   next?: string;
 }
 export interface RunQuery {
-  bundleDigest?: string;
+  bundleCid?: string;
   runId?: string;
   type?: string;
   scope?: string;

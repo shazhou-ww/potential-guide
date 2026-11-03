@@ -3,9 +3,8 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
-import { pathToFileURL } from "node:url";
 import { newId } from "@potential-guide/task-engine";
-import { MemoryStore } from "@potential-guide/task-engine/testing";
+import { MemoryIpfsClient, MemoryStore } from "@potential-guide/task-engine/testing";
 import { TaskClient } from "@potential-guide/task-engine-http";
 import { openSqliteStore } from "@potential-guide/task-engine-storage";
 import {
@@ -14,8 +13,10 @@ import {
   TaskError,
   taskSchemaUri,
 } from "@potential-guide/task-protocol";
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
 import { type ServerOptions, startTaskServer } from "../src/index.js";
+
+const ipfsClient = new MemoryIpfsClient();
 
 async function until<T>(read: () => Promise<T>, ready: (value: T) => boolean): Promise<T> {
   const deadline = performance.now() + 15_000;
@@ -28,11 +29,7 @@ async function until<T>(read: () => Promise<T>, ready: (value: T) => boolean): P
   }
 }
 async function fixture(
-  run: (value: {
-    directory: string;
-    bundle: { url: string; digest: string };
-    receipts: string;
-  }) => Promise<void>,
+  run: (value: { directory: string; bundle: string; receipts: string }) => Promise<void>,
   version = taskSchemaUri,
 ) {
   const directory = resolve(".cache", `run-logs-${randomUUID()}`);
@@ -103,12 +100,12 @@ export default async (input, context) => {
       entry,
       outDirectory: join(directory, "bundle"),
     });
-    const packed = await packTaskBundle(built.directory, join(directory, "bundle.tar.gz"));
+    await importTaskBundle(built.directory, ipfsClient);
     await rm(entry);
     await run({
       directory,
       receipts,
-      bundle: { url: pathToFileURL(packed.archive).href, digest: built.digest },
+      bundle: built.cid,
     });
   } catch (error) {
     console.error(error);
@@ -122,7 +119,7 @@ export default async (input, context) => {
 function options(directory: string): ServerOptions {
   return {
     database: join(directory, "tasks.sqlite"),
-    bundleDirectory: join(directory, "cache"),
+    ipfsClient,
     port: 0,
     limits: { tickMs: 5, stopGraceMs: 100, forceExitWaitMs: 1000, healthTimeoutMs: 10_000 },
     resolveCaller: (request) => {
@@ -137,12 +134,7 @@ function options(directory: string): ServerOptions {
 function client(url: string, token = "a"): TaskClient {
   return new TaskClient({ url, headers: { authorization: `Bearer ${token}` } });
 }
-async function submit(
-  api: TaskClient,
-  bundle: { url: string; digest: string },
-  label: string,
-  mode = "success",
-) {
+async function submit(api: TaskClient, bundle: string, label: string, mode = "success") {
   let decision: SubmissionResult = await api.submit({
     requestId: newId(),
     bundle,

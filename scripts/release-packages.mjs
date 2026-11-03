@@ -203,6 +203,13 @@ export const releasePackages = [
 export const verificationPackages = [
   ...releasePackages,
   {
+    id: "ipfs-content",
+    directory: "ipfs-content",
+    name: "@potential-guide/ipfs-content",
+    requiredExports: ["createIpfsClient", "openContent", "importContent"],
+    bins: [],
+  },
+  {
     id: "check-environment",
     directory: "check-environment",
     name: "@potential-guide/check-environment",

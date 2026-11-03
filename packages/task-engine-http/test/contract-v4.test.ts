@@ -1,25 +1,25 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
+import { fileURLToPath } from "node:url";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
-import { randomUUID } from "node:crypto";
-import { mkdir, writeFile, rm } from "node:fs/promises";
-import { resolve, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
-import { MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
+import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
 import type {
   CancellationResult,
   HistoryPage,
   RunPage,
   RunSnapshot,
+  SubmissionResult,
   TaskMessageRecord,
   TaskPage,
   TaskRequest,
   TaskSnapshot,
-  SubmissionResult,
 } from "@potential-guide/task-protocol";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
+import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
 import { createTaskHandler } from "../src/index.js";
 
 async function until(check: () => boolean) {
@@ -71,13 +71,13 @@ const type=createType({messageSchema:true});export default (input,context)=>type
     entry,
     outDirectory: join(root, "bundle"),
   });
-  const packed = await packTaskBundle(built.directory, join(root, "bundle.tgz"));
-  const bundle = { url: pathToFileURL(packed.archive).href, digest: built.digest };
+  const ipfsClient = new MemoryIpfsClient();
+  const bundle = (await importTaskBundle(built.directory, ipfsClient)).cid;
   const caller = { scope: "scope", subject: "http" };
   const engine = createTaskEngine({
     store,
     clock,
-    bundleDirectory: join(root, "cache"),
+    ipfsClient,
     authorize: () => true,
     limits,
   });

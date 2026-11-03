@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import spawn from "cross-spawn";
 import { checkPackageConsumers } from "./check-package-consumers.mjs";
-import { verificationPackages } from "./release-packages.mjs";
 import { checkTaskBundleConsumer } from "./check-task-bundle-consumer.mjs";
+import { verificationPackages } from "./release-packages.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const pnpmCommand = "pnpm";
@@ -13,12 +13,14 @@ const bundlesOnly = process.argv.includes("--task-bundles");
 const sdkOnly = process.argv.includes("--task-sdk");
 if (sdkOnly && bundlesOnly) throw new Error("Select only one consumer scope.");
 const sdkPackages = new Set([
+  "ipfs-content",
   "check-runtime-files",
   "check-artifacts",
   "task-protocol",
   "task-sdk",
 ]);
 const bundlePackages = new Set([
+  "ipfs-content",
   "check-runtime-files",
   "check-artifacts",
   "task-protocol",

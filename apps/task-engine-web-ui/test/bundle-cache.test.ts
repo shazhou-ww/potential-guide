@@ -6,7 +6,7 @@ import { allowedRoute } from "../src/server.js";
 import { browserDom } from "./browser-dom.js";
 
 test("cache proxy permits only bounded catalog/detail/single removal routes", () => {
-  const digest = `sha256:${"a".repeat(64)}`;
+  const digest = "bafybeigdyrzt5sfp7udm7hu76u7ydwfmksn3y3sc57x4taoj7c3x2m3yuy";
   assert.equal(allowedRoute("/bundle-cache", "GET", new URLSearchParams("limit=50")), true);
   assert.equal(allowedRoute(`/bundle-cache/${digest}`, "GET", new URLSearchParams()), true);
   assert.equal(allowedRoute(`/bundle-cache/${digest}`, "DELETE", new URLSearchParams()), true);
@@ -29,8 +29,8 @@ test("parallel cache page requires deliberate single deletion, keeps in-use cont
   const dom = browserDom(await readFile(new URL("../src/index.html", import.meta.url), "utf8"));
   const { window, document } = dom;
   const previous = globalThis.fetch;
-  const digest = `sha256:${"a".repeat(64)}`,
-    busyDigest = `sha256:${"b".repeat(64)}`;
+  const digest = "bafybeigdyrzt5sfp7udm7hu76u7ydwfmksn3y3sc57x4taoj7c3x2m3yuy",
+    busyDigest = "bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku";
   const at = new Date().toISOString();
   let removed = false,
     deletes = 0,
@@ -38,7 +38,7 @@ test("parallel cache page requires deliberate single deletion, keeps in-use cont
   let delayed: ((value: Response) => void) | undefined;
   let delayNext = false;
   const detail: BundleCacheDetail = {
-    digest,
+    cid: digest,
     cached: true,
     preparing: false,
     leases: 0,
@@ -53,7 +53,7 @@ test("parallel cache page requires deliberate single deletion, keeps in-use cont
       : [
           detail,
           {
-            digest: busyDigest,
+            cid: busyDigest,
             cached: true,
             preparing: false,
             leases: 1,
@@ -101,7 +101,7 @@ test("parallel cache page requires deliberate single deletion, keeps in-use cont
         if (conflict)
           return json({ error: { code: "bundle_in_use", message: "Bundle is busy" } }, 409);
         removed = true;
-        return json({ removed: true, digest });
+        return json({ removed: true, cid: digest });
       }
       return json(detail);
     }

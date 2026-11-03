@@ -1,14 +1,13 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { newId } from "@potential-guide/task-engine";
-import { MemoryStore } from "@potential-guide/task-engine/testing";
+import { MemoryIpfsClient, MemoryStore } from "@potential-guide/task-engine/testing";
 import { TaskClient } from "@potential-guide/task-engine-http";
-import { taskSchemaUri, TaskError } from "@potential-guide/task-protocol";
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
+import { TaskError, taskSchemaUri } from "@potential-guide/task-protocol";
+import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
 import { startTaskServer } from "../src/index.js";
 
 test("authenticated endpoint-wide cache management is independent of task grants and preserves active content and history", {
@@ -47,11 +46,12 @@ context.signal.throwIfAborted(); await new Promise(resolve=>setTimeout(resolve,5
       entry: callback,
       outDirectory: join(root, "bundle"),
     });
-    const packed = await packTaskBundle(built.directory, join(root, "bundle.tar.gz"));
+    const ipfsClient = new MemoryIpfsClient();
+    await importTaskBundle(built.directory, ipfsClient);
     server = await startTaskServer({
       port: 0,
       store: new MemoryStore(),
-      bundleDirectory: join(root, "cache"),
+      ipfsClient,
       authorize: (caller, operation) =>
         caller.subject === "admin" ||
         (caller.subject === "reader"
@@ -76,14 +76,14 @@ context.signal.throwIfAborted(); await new Promise(resolve=>setTimeout(resolve,5
       business = client("business");
     assert.equal((await fetchBounded(`${server.url}/bundle-cache`)).status, 401);
     await assert.rejects(business.listCachedBundles(), { code: "forbidden" });
-    await assert.rejects(business.getCachedBundle(built.digest), { code: "forbidden" });
-    await assert.rejects(business.removeCachedBundle(built.digest), { code: "forbidden" });
-    await assert.rejects(reader.removeCachedBundle(built.digest), { code: "forbidden" });
+    await assert.rejects(business.getCachedBundle(built.cid), { code: "forbidden" });
+    await assert.rejects(business.removeCachedBundle(built.cid), { code: "forbidden" });
+    await assert.rejects(reader.removeCachedBundle(built.cid), { code: "forbidden" });
     assert.deepEqual((await reader.listCachedBundles()).items, []);
     const requestId = newId();
     const request = {
       requestId,
-      bundle: { url: pathToFileURL(packed.archive).href, digest: built.digest },
+      bundle: built.cid,
       timeoutMs: 5000,
       value: 42,
       eligibleAt: new Date(Date.now() + 60_000).toISOString(),
@@ -93,9 +93,9 @@ context.signal.throwIfAborted(); await new Promise(resolve=>setTimeout(resolve,5
     assert.equal(decision.status, "accepted");
     if (decision.status !== "accepted") throw new Error("Expected accepted Task.");
     const page = await reader.listCachedBundles({ limit: 1 });
-    assert.equal(page.items[0]!.digest, built.digest);
+    assert.equal(page.items[0]!.cid, built.cid);
     assert.equal(page.items[0]!.name, "Cache test");
-    const detail = await reader.getCachedBundle(built.digest);
+    const detail = await reader.getCachedBundle(built.cid);
     assert.equal(detail.declaration!.name, "Cache test");
     assert.ok(detail.bytes! > 0);
     assert.equal(JSON.stringify(detail).includes(root), false, "local paths are not exported");
@@ -104,7 +104,7 @@ context.signal.throwIfAborted(); await new Promise(resolve=>setTimeout(resolve,5
       headers: { Authorization: "admin" },
     });
     assert.equal(badQuery.status, 400);
-    const withBody = await fetchBounded(`${server.url}/bundle-cache/${built.digest}`, {
+    const withBody = await fetchBounded(`${server.url}/bundle-cache/${built.cid}`, {
       method: "DELETE",
       headers: { Authorization: "admin" },
       body: "not allowed",
@@ -120,11 +120,11 @@ context.signal.throwIfAborted(); await new Promise(resolve=>setTimeout(resolve,5
     const active = await admin.getRequestStatus(activeId, { waitMs: 5000 });
     if (active.status !== "accepted") throw new Error("Active Task was not accepted.");
     const deadline = Date.now() + 10000;
-    while ((await admin.getCachedBundle(built.digest)).leases === 0) {
+    while ((await admin.getCachedBundle(built.cid)).leases === 0) {
       if (Date.now() > deadline) throw new Error("Run did not lease Bundle.");
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
-    const busy = await fetchBounded(`${server.url}/bundle-cache/${built.digest}`, {
+    const busy = await fetchBounded(`${server.url}/bundle-cache/${built.cid}`, {
       method: "DELETE",
       headers: { Authorization: "admin" },
     });
@@ -132,19 +132,19 @@ context.signal.throwIfAborted(); await new Promise(resolve=>setTimeout(resolve,5
     const busyError = (await busy.json()) as { error: { code: string } };
     assert.equal(busyError.error.code, "bundle_in_use");
     await writeFile(gate, "release");
-    while ((await admin.getCachedBundle(built.digest)).leases !== 0) {
+    while ((await admin.getCachedBundle(built.cid)).leases !== 0) {
       if (Date.now() > deadline) throw new Error("Run did not release Bundle.");
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
     assert.equal((await admin.getTask(active.taskId)).stage, "completed");
-    await admin.removeCachedBundle(built.digest);
+    await admin.removeCachedBundle(built.cid);
     assert.deepEqual((await admin.listCachedBundles()).items, []);
     assert.equal((await admin.getTask(decision.taskId)).stage, "initial");
     assert.deepEqual(await admin.getRequest(requestId), request);
     assert.equal((await admin.getTask(active.taskId)).stage, "completed");
-    assert.ok((await readFile(packed.archive)).length);
-    await assert.rejects(admin.getCachedBundle(built.digest), { code: "not_found" });
-    await admin.removeCachedBundle(built.digest);
+    assert.ok(ipfsClient.blocks.size);
+    await assert.rejects(admin.getCachedBundle(built.cid), { code: "not_found" });
+    await admin.removeCachedBundle(built.cid);
     await admin.cancelTask(decision.taskId);
   } finally {
     await server?.close();

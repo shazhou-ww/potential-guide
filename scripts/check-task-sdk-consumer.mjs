@@ -22,7 +22,8 @@ export async function checkTaskSdkConsumer(directory, run) {
 import assert from "node:assert/strict";
 import {rm,writeFile} from "node:fs/promises";
 import {resolve,join} from "node:path";
-import {buildTaskBundle,packTaskBundle} from "@potential-guide/task-sdk/build";
+import {buildTaskBundle,importTaskBundle} from "@potential-guide/task-sdk/build";
+import {MemoryIpfsClient} from "@potential-guide/ipfs-content/testing";
 import {resolveBundleSchemas,taskSchemaUri,validateTaskBundle} from "@potential-guide/task-protocol";
 const root=resolve("fixture");
 const declaration={$schema:taskSchemaUri,name:"Packed echo",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",inputSchema:{type:"object"},resultSchema:true,messageSchema:false};
@@ -32,9 +33,11 @@ console.log("Packed Task schema validation: v1 accepted; removed v2 and future v
 await writeFile(join(root,"task.yaml"),JSON.stringify(declaration));
 await writeFile(join(root,"callback.ts"),'export default async (input,context)=>{await context.log({level:"info",message:"Packed diagnostic."});await context.progress({stage:"execution",message:"Packed callback."});return input;}');
 const built=await buildTaskBundle({declaration:join(root,"task.yaml"),entry:join(root,"callback.ts"),outDirectory:join(root,"bundle")});
-const packed=await packTaskBundle(built.directory,join(root,"bundle.tar.gz"));
-assert.equal(packed.digest,built.digest);
-await writeFile(join(root,"binding.json"),JSON.stringify({digest:built.digest,declaration:resolveBundleSchemas(declaration,[])}));
+const ipfsClient=new MemoryIpfsClient();
+const published=await importTaskBundle(built.directory,ipfsClient);
+assert.equal(published.cid,built.cid);
+await writeFile(join(root,"blocks.json"),JSON.stringify([...ipfsClient.blocks].map(([cid,bytes])=>[cid,Buffer.from(bytes).toString("hex")])));
+await writeFile(join(root,"binding.json"),JSON.stringify({cid:built.cid,declaration:resolveBundleSchemas(declaration,[])}));
 await rm(join(root,"callback.ts"));
 await rm(join(root,"task.yaml"));
 `,
@@ -88,7 +91,7 @@ await new Promise((resolve,reject)=>{
  worker.on("message",message=>{
   try{
    assert.equal(message.generation,generation);
-   if(message.kind==="ready"){assert.equal(message.value.$schema,"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json");assert.equal(message.value.digest,bundle.digest);worker.postMessage({generation,kind:"run",runId:"packed",scope:"consumer",input:{text:"self-contained"}});}
+   if(message.kind==="ready"){assert.equal(message.value.$schema,"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json");assert.equal(message.value.cid,bundle.cid);worker.postMessage({generation,kind:"run",runId:"packed",scope:"consumer",input:{text:"self-contained"}});}
    else if(message.kind==="log"){assert.equal(message.value.message,"Packed diagnostic.");logs++;worker.postMessage({generation,runId:"packed",kind:"log-ack",logId:message.logId,value:{state:"stored",sequence:logs}});}
    else if(message.id!==undefined){
     if(message.kind==="complete"){assert.deepEqual(message.value,{text:"self-contained"});complete=true;}

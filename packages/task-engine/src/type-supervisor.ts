@@ -87,6 +87,10 @@ interface ChannelBudget {
 }
 /** 跨边界只传静态注册数据，不传宿主生命周期闭包。 */
 class RunWorker {
+  private readonly reads = new Map<
+    number,
+    { controller: AbortController; iterator: Promise<AsyncIterator<Uint8Array>>; busy: boolean }
+  >();
   private worker: Worker | undefined;
   private generation: string | undefined;
   private heartbeat: NodeJS.Timeout | undefined;
@@ -141,6 +145,15 @@ class RunWorker {
       !registration.confirmResourceRelease
     )
       throw new TaskError("invalid_type", "宿主资源必须声明请求级生命周期或提供独立清理证明。");
+    if (registration.bundle) {
+      if (!registration.getBundleSource || !registration.readBundle)
+        throw new TaskError(
+          "invalid_bundle",
+          "Verified Bundle source and content access are required.",
+        );
+      this.registration = { ...registration, moduleDigest: registration.bundle.cid };
+      return;
+    }
     if (!registration.module.startsWith("file:") || !registration.exportName)
       throw new TaskError("invalid_type", "类型注册需要明确的本地模块和导出。");
     const selected = new URL(registration.module);
@@ -172,12 +185,13 @@ class RunWorker {
     const generation = randomUUID();
     const worker = new Worker(
       this.registration.bundle
-        ? new URL(this.registration.module)
+        ? this.registration.getBundleSource!()
         : new URL(
             import.meta.url.endsWith(".ts") ? "../dist/type-worker.js" : "./type-worker.js",
             import.meta.url,
           ),
       {
+        ...(this.registration.bundle ? { eval: true } : {}),
         execArgv: [],
         stdout: true,
         stderr: true,
@@ -242,7 +256,7 @@ class RunWorker {
                 expected.bundle
                   ? {
                       $schema: expected.bundle.declaration.$schema,
-                      digest: expected.bundle.digest,
+                      cid: expected.bundle.cid,
                       inputSchema: expected.inputSchema,
                       resultSchema: expected.resultSchema,
                       messageSchema: expected.messageSchema,
@@ -273,6 +287,104 @@ class RunWorker {
           return;
         }
         if (!ready) return startupFailure(new Error("握手前收到类型运行消息。"));
+        if (message.kind === "bundle-pull" || message.kind === "bundle-cancel") {
+          const context = this.contexts.get(message.runId);
+          const id = message.readId;
+          if (
+            !context ||
+            context.releaseRequested ||
+            !this.runs.has(message.runId) ||
+            !Number.isSafeInteger(id) ||
+            id <= 0 ||
+            !this.registration.readBundle
+          ) {
+            worker.postMessage({
+              generation,
+              kind: "bundle-data",
+              readId: id,
+              error: { code: "forbidden", message: "Bundle read requires an active Run." },
+            });
+            return;
+          }
+          if (message.kind === "bundle-cancel") {
+            const read = this.reads.get(id);
+            this.reads.delete(id);
+            read?.controller.abort();
+            void read?.iterator.then((iterator) => iterator.return?.()).catch(() => {});
+            return;
+          }
+          let read = this.reads.get(id);
+          if (!read) {
+            if (this.reads.size >= this.limits.maxInFlight || typeof message.path !== "string") {
+              worker.postMessage({
+                generation,
+                kind: "bundle-data",
+                readId: id,
+                error: { code: "capacity_exceeded", message: "Bundle stream capacity exceeded." },
+              });
+              return;
+            }
+            const controller = new AbortController();
+            read = {
+              controller,
+              busy: false,
+              iterator: this.registration.readBundle(
+                message.path,
+                AbortSignal.any([controller.signal, context.controller.signal]),
+              ),
+            };
+            this.reads.set(id, read);
+          }
+          if (read.busy) {
+            read.controller.abort();
+            worker.postMessage({
+              generation,
+              kind: "bundle-data",
+              readId: id,
+              error: {
+                code: "invalid_bundle",
+                message: "Only one outstanding stream pull is allowed.",
+              },
+            });
+            return;
+          }
+          read.busy = true;
+          const operation = read;
+          void operation.iterator
+            .then((iterator) => iterator.next())
+            .then(
+              (item) => {
+                operation.busy = false;
+                if (this.reads.get(id) !== operation || this.worker !== worker) return;
+                if (item.done) this.reads.delete(id);
+                worker.postMessage({
+                  generation,
+                  kind: "bundle-data",
+                  readId: id,
+                  done: !!item.done,
+                  ...(item.done ? {} : { chunk: item.value }),
+                });
+              },
+              (error) => {
+                this.reads.delete(id);
+                operation.controller.abort();
+                worker.postMessage({
+                  generation,
+                  kind: "bundle-data",
+                  readId: id,
+                  error: {
+                    code: error instanceof TaskError ? error.code : "bundle_fetch_failed",
+                    message:
+                      error instanceof Error
+                        ? error.message.slice(0, 512)
+                        : "Bundle stream failed.",
+                  },
+                });
+              },
+            )
+            .catch(() => {});
+          return;
+        }
         if (message.kind === "log" || message.kind === "log-drop") {
           let value: RunLogReceipt;
           let error: { code: string; message: string } | undefined;
@@ -754,6 +866,11 @@ class RunWorker {
   private async observeExit(worker: Worker, generation: string, code: number): Promise<void> {
     if (this.worker !== worker || this.generation !== generation || this.exitObserved) return;
     this.exitObserved = true;
+    for (const read of this.reads.values()) {
+      read.controller.abort();
+      void read.iterator.then((iterator) => iterator.return?.()).catch(() => {});
+    }
+    this.reads.clear();
     this.exitFact = { code, requested: this.stopping, forced: this.forced };
     for (const resolve of this.exitWaiters) resolve(this.exitFact);
     this.exitWaiters.clear();

@@ -1,7 +1,7 @@
 import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
 import { inputSchemas, resultSchema } from "./dist/contracts.js";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
@@ -30,10 +30,6 @@ for (const kind of ["tools", "directories", "network"]) {
     entry: join(root, "dist", `${kind}.js`),
     outDirectory: directory,
   });
-  const archive = join(output, `${kind}.tar.gz`);
-  await rm(archive, { force: true });
-  const packed = await packTaskBundle(directory, archive);
-  if (packed.digest !== built.digest) throw new Error("Packed bundle digest differs from build.");
-  references[kind] = { archive: `${kind}.tar.gz`, digest: packed.digest };
+  references[kind] = { directory: kind, cid: built.cid };
 }
 await writeFile(join(output, "references.json"), `${JSON.stringify(references, null, 2)}\n`);

@@ -1,7 +1,7 @@
 # @potential-guide/probe-task
 
 `createProbeTaskType(options).run` 是可由 SDK 打包的普通业务回调。
-作者固定 `checkBundle:{url,digest}`，显式配置 Source、可信 scoped child
+作者固定 `checkBundle:"根CID"` 或 `{cid,hint}`，显式配置 Source、可信 scoped child
 client 和 Check 内容身份；不要从 Input 或消息拼装权限。
 Engine 直接启动 SDK Worker，不注册 Check/Probe、不桥接业务资源、
 不安装这些业务包。观察 Worker 已嵌入代码，无作者安装目录依赖。
@@ -12,7 +12,7 @@ Child Check 使用标准 Request/Task/Run API 与三态受理结果，有独立�
 等待预算和物理释放 barrier；preparing token 不被当作 Task。
 取消父需求只撤销其拥有的 Child Task，不误杀共享 Run 的其他需求。
 子 Task 终态不是实际执行证据：当前执行会读取独立 Run/Run history，
-核对真实身份、完成结果、开始历史及精确 Check Bundle Digest。
+核对真实身份、完成结果、开始历史及精确 Check Bundle CID；hint 不参与身份比较。
 Generic Run.environment 仍是实际 Node 环境，不伪装成业务内容身份。
 
 messageSchema 为 false，业务消息均拒绝；取消走独立控制通道。

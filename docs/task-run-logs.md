@@ -15,7 +15,7 @@ The sole canonical [v1 schema](../schemas/artifacts/task/v1.json) and
 has not formally released; its v1 contract evolves in place. The removed task
 v2 and future schema URLs are rejected, not aliased to v1. V1 supports logs;
 disabled logging and custom hosts without diagnostic support remain explicitly
-unavailable. Hosts verify the declaration/digest handshake before dispatch.
+unavailable. Hosts verify the declaration/root-CID handshake before dispatch.
 
 ```ts
 import type { RunContext } from "@potential-guide/task-sdk";
@@ -234,9 +234,11 @@ Prepare a trusted local module there, for example:
 
 ```js
 import { TaskError } from "@potential-guide/task-protocol";
+import { createIpfsClient } from "@potential-guide/task-engine";
 export default {
   host: "127.0.0.1", port: 3000,
-  database: "operator-v5.sqlite", bundleDirectory: "operator-bundles",
+  database: "operator-v5.sqlite",
+  ipfsClient: await createIpfsClient("http://127.0.0.1:5001"),
   logs: { enabled: true, entryBytes: 16384, runBytes: 1048576,
     runEntries: 2000, totalBytes: 67108864, maxRuns: 10000,
     retentionMs: 86400000, pageSize: 100, maxSubscriptions: 128 },
@@ -260,7 +262,9 @@ The installed SDK tarball contains `examples\check-diagnostics`: copy its
 local SDK/Protocol tarball graph (restore the retained author's `author_modules`
 to `node_modules` only for authoring). Run
 `node .\build.mjs .\artifacts\diagnostic-check`. It prints the exact
-`{url,digest}` Bundle reference. Submit it with fresh ULID and
+offline `{directory,cid}` result, or set `IPFS_API` to the independently managed
+private/local endpoint to import and pin it there. Submit the printed root CID
+(optionally `{cid,hint}` for host-authorized gateway fallback) with fresh ULID and
 `checks: [{name:"identity", expected:"v1", actual:"v1"},
 {name:"readiness", expected:"ready", actual:"not-ready"}]`.
 The result is `{ok:false, problemCount:1}`; detailed assertions remain Logs.

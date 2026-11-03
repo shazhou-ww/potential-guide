@@ -24,6 +24,7 @@ export function browserDom(html: string) {
     "DocumentFragment",
     "SVGElement",
     "MutationObserver",
+    "EventTarget",
     "Event",
     "CustomEvent",
     "KeyboardEvent",

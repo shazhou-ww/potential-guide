@@ -14,14 +14,14 @@ import type {
   TaskPage,
   TaskSnapshot,
 } from "@potential-guide/task-protocol";
-import { formatBundleReference } from "@potential-guide/task-protocol/bundle-reference";
+import { bundleCid, formatBundleReference } from "@potential-guide/task-protocol/bundle-reference";
 import { observeDirectory } from "./directory-observation.js";
 import { envelopeKeys, envelopeSchema, schemaEditor } from "./form.js";
 import { ObservationEnd, taskStatus, taskStatusExplanation } from "./lifecycle.js";
 import {
   Api,
   ApiError,
-  bundleDigest,
+  bundleIdentity,
   consumeCollectionSse,
   consumeSse,
   Directory,
@@ -129,16 +129,16 @@ function bundleReference(bundle: BundleReference): HTMLElement {
   return result;
 }
 function compactBundle(digest: string): HTMLElement {
-  const result = node("code", `sha256:${digest.replace(/^sha256:/, "").slice(0, 12)}`);
+  const result = node("code", `${digest.slice(0, 16)}…`);
   result.className = "bundle-digest";
   result.title = digest;
-  result.setAttribute("aria-label", `Bundle Digest ${digest}`);
+  result.setAttribute("aria-label", `Bundle CID ${digest}`);
   return result;
 }
-function copyDigest(digest: string): HTMLButtonElement {
-  return button("复制完整 Digest", async () => {
+function copyCid(digest: string): HTMLButtonElement {
+  return button("复制完整 CID", async () => {
     await navigator.clipboard.writeText(digest);
-    inform("已复制完整 Bundle Digest。");
+    inform("已复制完整 Bundle CID。");
   });
 }
 const statusNames = {
@@ -181,23 +181,23 @@ function renderCache(): void {
     const table = node("table");
     const head = node("thead");
     const heading = node("tr");
-    for (const label of ["Bundle / Digest", "内容大小", "占用", "操作"])
+    for (const label of ["Bundle / CID", "内容大小", "占用", "操作"])
       heading.append(node("th", label));
     head.append(heading);
     table.append(head);
     const body = node("tbody");
     for (const item of cachePage.items) {
       const row = node("tr");
-      row.dataset.key = item.digest;
+      row.dataset.key = item.cid;
       const identity = node("td");
-      identity.append(node("strong", item.name ?? "正在准备"), compactBundle(item.digest));
+      identity.append(node("strong", item.name ?? "正在准备"), compactBundle(item.cid));
       const controls = node("td");
       controls.append(
-        inlineButton("查看契约", () => readCacheDetail(item.digest), cacheBusy),
+        inlineButton("查看契约", () => readCacheDetail(item.cid), cacheBusy),
         inlineButton(
           "清理此缓存",
           () => {
-            cacheConfirm = item.digest;
+            cacheConfirm = item.cid;
             renderCache();
             navigation.open("cache-confirm");
           },
@@ -238,7 +238,7 @@ function renderCache(): void {
     confirm.append(
       node(
         "p",
-        `确认清理 ${digest}？只移除缓存内容，不删除任务、历史或原归档。再次运行可能需要重新获取；原来源不可用时会失败。`,
+        `确认清理 ${digest}？只移除 Engine 内容保护与元数据，不删除任务、历史或共享 IPFS pin。再次运行需重新验证内容。`,
       ),
       button("确认清理", () => removeCache(digest), cacheBusy),
       button(
@@ -254,9 +254,9 @@ function renderCache(): void {
   }
   if (cacheDetail)
     view.render("cache-detail", [
-      node("p", cacheDetail.digest),
-      copyDigest(cacheDetail.digest),
-      details("Bundle 声明与解析后契约", cacheDetail, `cache-detail:${cacheDetail.digest}`),
+      node("p", cacheDetail.cid),
+      copyCid(cacheDetail.cid),
+      details("Bundle 声明与解析后契约", cacheDetail, `cache-detail:${cacheDetail.cid}`),
     ]);
   reconcile("bundle-cache", [box]);
 }
@@ -301,7 +301,7 @@ async function readCacheDetail(digest: string): Promise<void> {
       signal: lease.signal,
     });
     if (!lease.current() || generation !== cacheGeneration) return;
-    if (detail.digest !== digest) throw new Error("缓存详情身份不一致。");
+    if (detail.cid !== digest) throw new Error("缓存详情身份不一致。");
     cacheDetail = detail;
     navigation.open("cache-detail");
   } catch (error) {
@@ -322,13 +322,13 @@ async function removeCache(digest: string): Promise<void> {
   cacheError = "";
   renderCache();
   try {
-    const receipt = await api.request<{ removed: boolean; digest: string }>(
+    const receipt = await api.request<{ removed: boolean; cid: string }>(
       endpoint,
       `/bundle-cache/${digest}`,
       { method: "DELETE", signal: lease.signal },
     );
     if (!lease.current() || generation !== cacheGeneration) return;
-    if (receipt.removed !== true || receipt.digest !== digest)
+    if (receipt.removed !== true || receipt.cid !== digest)
       throw new Error("清理回执无效；结果未知，请刷新核对。");
     navigation.close("cache-confirm");
     await loadCache();
@@ -414,7 +414,7 @@ function checkedForm(): { endpoint: Endpoint; parameters: Parameters; revision: 
   )
     throw new Error("请先选择 Endpoint 并填写完整 Bundle 引用；原输入不会自动提交。");
   const parameters = formReader();
-  return { endpoint: formEndpoint, parameters, revision: bundleDigest(parameters) };
+  return { endpoint: formEndpoint, parameters, revision: bundleIdentity(parameters) };
 }
 function renderForm(parameters?: Parameters): void {
   formReader = undefined;
@@ -443,7 +443,7 @@ function renderForm(parameters?: Parameters): void {
     };
     view.text(
       "contract",
-      "填写 URL#digest 固定 Bundle 内容；服务按 Bundle 离线契约校验 Input。准备完成前不创建 Task，也不开始 Task 超时。",
+      "填写根 CID 或 {cid,hint} 固定 Bundle 内容；hint 不参与匹配。完整准备前不创建 Task，也不开始 Task 超时。",
     );
   } catch (error) {
     formBlocked = true;
@@ -453,7 +453,7 @@ function renderForm(parameters?: Parameters): void {
 }
 async function initializeForm(): Promise<void> {
   renderForm();
-  view.text("discovery-status", "无需类型注册或发现；名称仅用于展示，Digest 决定执行内容。");
+  view.text("discovery-status", "无需类型注册或发现；名称仅用于展示，CID 决定执行内容。");
 }
 function renderBar(): void {
   const container = "batches";
@@ -497,7 +497,7 @@ function renderBar(): void {
       row.append(
         node(
           "strong",
-          `${index + 1}. ${entry.parameters.bundle.digest.slice(0, 19)} · ${statusNames[entry.state]}`,
+          `${index + 1}. ${bundleCid(entry.parameters.bundle).slice(0, 19)} · ${statusNames[entry.state]}`,
         ),
         node("p", entry.message),
       );
@@ -507,7 +507,7 @@ function renderBar(): void {
           endpoint: entry.endpoint.id,
           requestId: entry.id,
           ...(entry.taskId ? { taskId: entry.taskId } : {}),
-          bundleDigest: entry.revision,
+          bundleCid: entry.revision,
           parameters: entry.parameters,
         }),
       );
@@ -1178,7 +1178,7 @@ function renderObserver(observer: Observer): void {
     }
     const task = observer.snapshot;
     if (task) {
-      if (task.bundle) box.append(bundleReference(task.bundle), copyDigest(task.bundle.digest));
+      if (task.bundle) box.append(bundleReference(task.bundle), copyCid(bundleCid(task.bundle)));
       const now = Date.now();
       const timeout = now > Date.parse(task.deadlineAt);
       const state = node("p", taskStatus(task, now));
@@ -1285,7 +1285,7 @@ function renderObserver(observer: Observer): void {
     const snapshot = observer.runSnapshot;
     if (snapshot) {
       if (snapshot.bundle)
-        box.append(node("code", snapshot.bundle.digest), copyDigest(snapshot.bundle.digest));
+        box.append(node("code", bundleCid(snapshot.bundle)), copyCid(bundleCid(snapshot.bundle)));
       box.append(details("原始 Run 快照", snapshot, "run-snapshot"));
       if (snapshot.progress !== undefined)
         box.append(details("Run 进展（不代表完成）", snapshot.progress, "run-progress"));
@@ -1389,7 +1389,7 @@ function directoryQuery(): string {
   const query = new URLSearchParams({ sort: "created-desc" });
   const type = (get("history-type") as HTMLInputElement).value;
   if (type.length > 256) throw new Error("类型筛选最多 256 字符。");
-  if (type) query.set("bundleDigest", type);
+  if (type) query.set("bundleCid", type);
   if (selection.endpoint && workspace().associatedExecutionId)
     query.set("runId", workspace().associatedExecutionId);
   for (const [id, key] of [
@@ -1654,7 +1654,7 @@ function renderDirectory(): void {
     const type = node("span", task.name ?? task.type);
     type.className = "entity-type";
     title.append(type, node("small", task.taskId.slice(-8)));
-    if (task.bundle) title.append(compactBundle(task.bundle.digest));
+    if (task.bundle) title.append(compactBundle(bundleCid(task.bundle)));
     row.append(star, title);
     const status = node("td", taskStatus(task));
     status.title = taskStatusExplanation(task);
@@ -1738,7 +1738,7 @@ async function queryExecutions(append = false): Promise<void> {
       const filters = new URLSearchParams({ sort: "started-desc" });
       const type = (get("execution-type") as HTMLInputElement).value;
       if (type.length > 256) throw new Error("类型筛选最多 256 字符。");
-      if (type) filters.set("bundleDigest", type);
+      if (type) filters.set("bundleCid", type);
       for (const [id, key] of [
         ["started-from", "startedFrom"],
         ["started-before", "startedBefore"],
@@ -1796,7 +1796,7 @@ function renderExecutions(): void {
       const type = node("span", execution.name ?? execution.type);
       type.className = "entity-type";
       title.append(type, node("small", execution.runId.slice(-8)));
-      if (execution.bundle) title.append(compactBundle(execution.bundle.digest));
+      if (execution.bundle) title.append(compactBundle(bundleCid(execution.bundle)));
       const status = `${execution.state.completed ? "已完成" : execution.state.failed ? "执行失败" : execution.state.running ? "执行中" : "结果未确认"}${execution.state.reclaimed ? " · 已回收" : " · 未确认回收"}`;
       row.append(
         title,
@@ -1840,7 +1840,7 @@ async function reuse(endpoint: Endpoint, parameters: Parameters, direct: boolean
     throw new Error(`请先明确切换到收藏/原请求目标 ${endpoint.label}，不会改投当前目标。`);
   const lease = selection.capture();
   if (direct) {
-    const revision = bundleDigest(parameters);
+    const revision = bundleIdentity(parameters);
     const entry = await bar.quick(endpoint, parameters, revision);
     if (lease.current()) {
       inform(entry.message);
@@ -1911,9 +1911,10 @@ function renderStars(box: HTMLElement): void {
   }
   const stars = selectedStars().filter(
     (item) =>
-      (!query.get("bundleDigest") ||
-        ((item.parameters.bundle as { digest?: string } | undefined)?.digest ??
-          item.parameters.type) === query.get("bundleDigest")) &&
+      (!query.get("bundleCid") ||
+        (item.parameters.bundle
+          ? bundleIdentity(item.parameters as Parameters)
+          : item.parameters.type) === query.get("bundleCid")) &&
       (!query.get("createdFrom") ||
         Date.parse(item.source!.receivedAt) >= Date.parse(query.get("createdFrom")!)) &&
       (!query.get("createdBefore") ||

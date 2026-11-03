@@ -3,8 +3,8 @@ import test from "node:test";
 import type {
   HistoryPage,
   PublicEvent,
-  TaskPage,
   SubmissionResult,
+  TaskPage,
 } from "@potential-guide/task-protocol";
 import { parseHTML } from "linkedom";
 import { envelopeSchema, resolvedSchema, schemaEditor } from "../src/form.js";
@@ -21,7 +21,10 @@ import {
 } from "../src/model.js";
 
 const endpoint = { id: "one", label: "one", binding: "stable" };
-const bundle = { url: "https://example.test/task", digest: `sha256:${"a".repeat(64)}` };
+const bundle = {
+  cid: "bafybeigdyrzt5sfp7udm7hu76u7ydwfmksn3y3sc57x4taoj7c3x2m3yuy",
+  hint: "http://localhost:8080",
+};
 const emptyPage = (observedAt: string, next?: string): TaskPage => ({
   tasks: [],
   items: [],
@@ -46,7 +49,7 @@ test("unknown then 412 remains unknown; batch continues and all retries preserve
   });
   const batch = bar.create(endpoint);
   const unknown = bar.add(batch, { bundle, nested: { digest: "business-only" } }, "a".repeat(64));
-  const second = bar.add(batch, { bundle }, bundle.digest);
+  const second = bar.add(batch, { bundle }, bundle.cid);
   await bar.sendBatch(batch);
   assert.equal(unknown.state, "unknown");
   assert.equal(second.state, "accepted");
@@ -69,7 +72,7 @@ test("selection invalidates late work without changing original submission endpo
 });
 test("malformed success response is unknown, never an accepted-shaped fallback", async () => {
   const bar = new SubmissionBar(async () => ({}) as SubmissionResult);
-  const entry = await bar.quick(endpoint, { bundle }, bundle.digest);
+  const entry = await bar.quick(endpoint, { bundle }, bundle.cid);
   assert.equal(entry.state, "unknown");
   assert.equal(entry.snapshot, undefined);
 });
@@ -209,15 +212,15 @@ test("schema fields render scalars, arrays, nested refs, free objects and preser
     const common = schemaEditor(envelopeSchema, { bundle, timeoutMs: 250 });
     assert.deepEqual(common.read(), { bundle, timeoutMs: 250 });
     const reference = common.node.querySelector<HTMLInputElement>('input[type="text"]')!;
-    assert.equal(reference.value, `${bundle.url}#${bundle.digest}`);
+    assert.equal(reference.value, JSON.stringify(bundle));
     assert.equal(reference.getAttribute("aria-describedby"), `${reference.id}-hint`);
-    reference.value = bundle.url;
-    assert.throws(() => common.read(), /URL#Digest/);
-    reference.value = `${bundle.url}#${bundle.digest}`;
+    reference.value = bundle.hint;
+    assert.throws(() => common.read(), /CID/);
+    reference.value = JSON.stringify(bundle);
     assert.deepEqual(common.read(), { bundle, timeoutMs: 250 });
     const empty = schemaEditor(envelopeSchema, {});
     assert.equal(empty.node.querySelector<HTMLInputElement>('input[type="text"]')!.value, "");
-    assert.throws(() => empty.read(), /URL#Digest/);
+    assert.throws(() => empty.read(), /CID/);
     const timeout = [...common.node.querySelectorAll<HTMLInputElement>('input[type="text"]')].find(
       (input) => input.value === "250",
     )!;

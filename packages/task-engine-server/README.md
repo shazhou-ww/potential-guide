@@ -25,12 +25,16 @@ The default shutdown budget is 15,000ms and must cover the configured
 must explicitly configure all three budgets; startup rejects inconsistent limits.
 The 30,000ms request timeout is not an SSE response lifetime.
 
-Configure `bundleDirectory`, optional `bundleLimits`/`bundleConcurrency`, and
+Inject a generic caller-owned `ipfsClient` connected to an independently managed
+local Kubo RPC endpoint. Engine shutdown never stops that node, closes the client,
+or removes shared pins. Configure optional `bundleLimits`/`bundleConcurrency`,
+explicit gateway host policy `allowGateway`, and
 the existing authorization/HTTP/Engine limits. `types`, `currentVersions`, and
 `allocationLimits` are rejected legacy configuration.
 `bindService(engine)` remains a trusted composition hook, not registration.
 SQLite v5 refuses old databases before mutation; explicitly select a new path.
-Check/Probe examples are still being switched to fixed Bundle references.
+Check/Probe Task Bundles use root CID references; their business artifact formats
+and business URL/Digest inputs are unchanged.
 Diagnostic logging is configured independently with `ServerOptions.logs`.
 Authenticated Run history and SSE are available at `/runs/:id/logs` and
 `/runs/:id/logs/events`; they use Run read scope authorization, not lifecycle

@@ -12,7 +12,7 @@ export const taskSchemaUri =
 export const taskBundleSchema = {
   $id: taskSchemaUri,
   $comment:
-    "Git SHA-256 root tree identity. One CommonJS Worker per Run; generation-scoped business messages and independent log/log-ack, bounded cumulative log-drop/log-drop-ack diagnostics.",
+    "IPFS UnixFS directory root CID identity. One CommonJS Worker per Run; generation-scoped business messages and independent log/log-ack, bounded cumulative log-drop/log-drop-ack diagnostics.",
   type: "object",
   additionalProperties: false,
   required: ["$schema", "name", "runtime", "entry", "inputSchema", "resultSchema", "messageSchema"],
@@ -56,7 +56,7 @@ export interface ResolvedTaskBundle extends Omit<TaskBundleDeclaration, "inputSc
   inputSchema: InputSchema;
 }
 export interface BundleCacheEntry {
-  digest: string;
+  cid: string;
   cached: boolean;
   preparing: boolean;
   leases: number;
@@ -79,8 +79,8 @@ export interface BundleCacheService {
     page: { after?: string; limit?: number },
     caller: import("./types.js").Caller,
   ): Promise<BundleCachePage>;
-  getCachedBundle(digest: string, caller: import("./types.js").Caller): Promise<BundleCacheDetail>;
-  removeCachedBundle(digest: string, caller: import("./types.js").Caller): Promise<void>;
+  getCachedBundle(cid: string, caller: import("./types.js").Caller): Promise<BundleCacheDetail>;
+  removeCachedBundle(cid: string, caller: import("./types.js").Caller): Promise<void>;
 }
 const validator = new Ajv2020({ strict: true, allowUnionTypes: true }).compile(taskBundleSchema);
 export function validateTaskBundle(value: unknown): TaskBundleDeclaration {

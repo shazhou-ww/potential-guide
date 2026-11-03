@@ -4,9 +4,9 @@ import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { delimiter, isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
-import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 import { checkTaskBundleConsumer } from "./check-task-bundle-consumer.mjs";
 import { checkTaskSdkConsumer } from "./check-task-sdk-consumer.mjs";
+import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 
 export async function checkPackageConsumers(root, scratch, definitions, tarballs, run, only) {
   const manifests = new Map();
@@ -17,7 +17,14 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     );
   }
   const scenarios = [
-    ["task-sdk", ["@potential-guide/task-sdk", "@potential-guide/task-protocol"]],
+    [
+      "task-sdk",
+      [
+        "@potential-guide/task-sdk",
+        "@potential-guide/task-protocol",
+        "@potential-guide/ipfs-content",
+      ],
+    ],
     [
       "probe-task",
       [
@@ -176,11 +183,12 @@ assert.deepEqual(json({value:2}),{value:2});
 `
     : `
 import {createTaskEngine,newId} from "@potential-guide/task-engine";
-import {MemoryStore} from "@potential-guide/task-engine/testing";
+import {MemoryIpfsClient,MemoryStore} from "@potential-guide/task-engine/testing";
 import {readFile} from "node:fs/promises";
-import {pathToFileURL} from "node:url";
 const binding=JSON.parse(await readFile(${JSON.stringify(join(scratch, "task-sdk", "fixture", "binding.json"))},"utf8"));
-const bundle={url:pathToFileURL(${JSON.stringify(join(scratch, "task-sdk", "fixture", "bundle.tar.gz"))}).href,digest:binding.digest};
+const bundle=binding.cid;
+const ipfsClient=new MemoryIpfsClient();
+for(const [cid,hex] of JSON.parse(await readFile(${JSON.stringify(join(scratch, "task-sdk", "fixture", "blocks.json"))},"utf8")))ipfsClient.blocks.set(cid,Buffer.from(hex,"hex"));
 ${
   label === "task-adapters"
     ? `
@@ -190,7 +198,7 @@ const store=openSqliteStore("consumer.sqlite");
 `
     : "const store=new MemoryStore();"
 }
-const engine=createTaskEngine({store,bundleDirectory:"bundle-cache",authorize:()=>true});
+const engine=createTaskEngine({store,ipfsClient,authorize:()=>true});
 await engine.start();
 const caller={scope:"consumer",subject:"fixture"};
 let decision=await engine.submit({requestId:newId(),bundle,text:"packed",timeoutMs:10000},caller);

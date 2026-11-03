@@ -242,7 +242,7 @@ export function DirectoryTable({
                               column.getIsFiltered() ||
                               (column.id === "favorite" && data.query.startsWith("favorites:")) ||
                               (column.id === "title" &&
-                                (query.has("bundleDigest") || query.has("runId"))) ||
+                                (query.has("bundleCid") || query.has("runId"))) ||
                               (column.id === "time" &&
                                 [
                                   "createdFrom",

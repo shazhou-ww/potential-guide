@@ -3,13 +3,13 @@
 `createCheckTaskType(options).run` 是作者可直接包装的普通 SDK 回调：
 `export default (input, context) => check.run(input, context)`。
 用 `@potential-guide/task-sdk/build` 将它及全部第三方依赖打进自包含
-`worker.cjs`；Engine 只接收 `{bundle:{url,digest}, ...}`，不注册业务类型、
+`worker.cjs`；Engine 只接收 `{bundle:"根CID", ...}` 或 `{bundle:{cid,hint}, ...}`，不注册业务类型、
 不安装本包、不提供资源桥。Checker 执行 Worker 已嵌入交付代码，不读取作者
 安装目录中的脚本。旧静态工厂元数据保留给库级调用，不是通用 Engine 的注册 API。
 
 业务 Source 权限、可信根目录、资源容量由作者回调显式设置。
 Input 是 checker reference、subject、context?、language?；浮动业务 URL 在 Run
-内固定，精确业务版本使用 digest。Bundle 的固定 Digest 则覆盖完整可执行文件树，
+内固定，精确业务版本仍使用原 digest。Task Bundle 的根 CID 则覆盖完整可执行文件树，
 两者不能混淆。共享与调度由通用 Engine 按完整合法 Input 判等、当前资格协调；
 宿主仅设通用容量，没有业务专用全局 allocation lane。
 

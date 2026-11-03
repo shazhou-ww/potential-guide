@@ -1,23 +1,16 @@
-import { randomUUID } from "node:crypto";
-import { createReadStream, type Dir } from "node:fs";
-import { chmod, lstat, mkdir, opendir, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import {
   type ArchiveLimits,
-  ArchiveCapacityError,
   artifactLimits,
   assertRuntime,
-  gitTreeDigest,
   parseArtifactYaml,
-  readArtifactFiles,
   safePath,
-  unpackArtifactFiles,
 } from "@potential-guide/check-artifacts/files";
+import { type IpfsClient, openContent, protectContent } from "@potential-guide/ipfs-content";
 import {
-  type BundleReference,
   type BundleCacheDetail,
   type BundleCachePage,
+  type BundleReference,
+  bundleCid,
   type JsonObject,
   type ResolvedTaskBundle,
   resolveBundleSchemas,
@@ -27,18 +20,29 @@ import {
   validateTaskBundle,
 } from "@potential-guide/task-protocol";
 
-export type BundleLimits = ArchiveLimits;
+export type BundleLimits = Pick<ArchiveLimits, "bytes" | "files" | "paths" | "fileBytes"> & {
+  hints: number;
+  protectedBytes: number;
+  blocks: number;
+};
 export const defaultBundleLimits: Readonly<BundleLimits> = Object.freeze({
-  ...artifactLimits,
+  bytes: artifactLimits.bytes,
+  files: artifactLimits.files,
+  paths: artifactLimits.paths,
   fileBytes: 64 * 1024 * 1024,
+  hints: 16,
+  protectedBytes: 256 * 1024 * 1024,
+  blocks: 16_384,
 });
 export interface VerifiedBundle {
-  digest: string;
+  cid: string;
   declaration: TaskBundleDeclaration;
   resolved: ResolvedTaskBundle;
-  directory: string;
+  source: string;
   bytes: number;
   files: number;
+  protectedBytes: number;
+  read(path: string, signal: AbortSignal): Promise<AsyncIterator<Uint8Array>>;
 }
 export function inspectTaskBundle(
   files: ReadonlyMap<string, Buffer>,
@@ -82,10 +86,7 @@ export function inspectTaskBundle(
   }
   const yaml = files.get("task.yaml");
   if (!yaml || !files.get("worker.cjs")?.length)
-    throw new TaskError(
-      "invalid_bundle",
-      "Bundle requires task.yaml and a nonempty worker.cjs at its logical root.",
-    );
+    throw new TaskError("invalid_bundle", "Bundle requires task.yaml and nonempty worker.cjs.");
   let declaration: TaskBundleDeclaration;
   let schemas: JsonObject[];
   try {
@@ -96,9 +97,10 @@ export function inspectTaskBundle(
         ([, content]) =>
           JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(content)) as JsonObject,
       );
+    new TextDecoder("utf-8", { fatal: true }).decode(files.get("worker.cjs"));
   } catch (error) {
     if (error instanceof TaskError) throw error;
-    throw new TaskError("invalid_bundle", "Invalid Bundle declaration or shared Schema JSON.");
+    throw new TaskError("invalid_bundle", "Invalid Bundle declaration, Worker or Schema JSON.");
   }
   try {
     assertRuntime(declaration);
@@ -108,77 +110,60 @@ export function inspectTaskBundle(
   return {
     declaration,
     resolved: resolveBundleSchemas(declaration, schemas),
-    digest: gitTreeDigest(files),
     bytes,
     files: files.size,
   };
 }
 export interface BundleCacheOptions {
-  directory: string;
+  ipfsClient: IpfsClient;
   concurrency?: number;
   limits?: Partial<BundleLimits>;
+  allowGateway?: (url: URL) => boolean;
   fetch?: typeof globalThis.fetch;
 }
 
-/** Content cache only: it is not a registry, type directory or admission-result cache. */
+/** Bounded verified load results and leases, never a distribution service or owner of shared pins. */
 export class BundleCache {
   readonly limits: BundleLimits;
-  private readonly root: string;
   private readonly fetching = new Map<string, Promise<VerifiedBundle>>();
+  private readonly prepared = new Map<string, VerifiedBundle>();
   private readonly pins = new Map<string, number>();
-  private readonly removing = new Map<string, Promise<void>>();
   private readonly lifetime = new AbortController();
+  private readonly protectionBudget = { bytes: 0, limit: 0 };
   private readonly concurrency: number;
   private occupied = 0;
   private readonly waiting: { enter(): void; reject(error: unknown): void }[] = [];
   constructor(private readonly options: BundleCacheOptions) {
-    if (!options.directory)
-      throw new TaskError("invalid_config", "Bundle cache directory is required.");
-    this.root = resolve(options.directory);
+    if (typeof options.ipfsClient?.block?.get !== "function")
+      throw new TaskError("invalid_config", "A caller-owned IPFS content client is required.");
+    if (
+      (options.allowGateway !== undefined && typeof options.allowGateway !== "function") ||
+      (options.fetch !== undefined && typeof options.fetch !== "function")
+    )
+      throw new TaskError("invalid_config", "Invalid IPFS gateway access policy or transport.");
     this.concurrency = options.concurrency ?? 4;
     if (!Number.isSafeInteger(this.concurrency) || this.concurrency <= 0)
       throw new TaskError("invalid_config", "Invalid Bundle preparation concurrency.");
     this.limits = { ...defaultBundleLimits, ...options.limits };
+    this.protectionBudget.limit = this.limits.protectedBytes;
     for (const [key, value] of Object.entries(this.limits))
       if (!Object.hasOwn(defaultBundleLimits, key) || !Number.isSafeInteger(value) || value <= 0)
         throw new TaskError("invalid_config", "Invalid Bundle capacity.");
   }
-  private target(digest: string): string {
-    if (!/^sha256:[a-f0-9]{64}$/.test(digest))
-      throw new TaskError("invalid_request", "Invalid Bundle Digest.");
-    return join(this.root, digest.slice("sha256:".length));
+  async available(cid: string): Promise<boolean> {
+    cid = bundleCid(validateBundleReference(cid));
+    return this.prepared.has(cid);
   }
-  private async cached(digest: string): Promise<VerifiedBundle | undefined> {
-    const directory = this.target(digest);
-    try {
-      await lstat(directory);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
-      throw error;
-    }
-    let files: ReadonlyMap<string, Buffer>;
-    try {
-      files = await readArtifactFiles(directory, this.limits);
-    } catch (error) {
-      if ((error as { status?: number }).status === 413)
-        throw new TaskError("capacity_exceeded", "Cached Bundle exceeds current host capacity.");
-      throw new TaskError("invalid_bundle", "Cached Bundle cannot be verified.");
-    }
-    const inspected = inspectTaskBundle(files, this.limits);
-    if (inspected.digest !== digest)
-      throw new TaskError(
-        "bundle_digest_mismatch",
-        "Cached Bundle content differs from its Digest.",
-      );
-    return { ...inspected, directory };
+  source(cid: string): string {
+    const prepared = this.prepared.get(cid);
+    if (!prepared) throw new TaskError("bundle_fetch_failed", "Bundle is not protected.");
+    return prepared.source;
   }
-  async available(digest: string): Promise<boolean> {
-    try {
-      return (await lstat(this.target(digest))).isDirectory();
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
-      throw error;
-    }
+  read(cid: string, path: string, signal: AbortSignal): Promise<AsyncIterator<Uint8Array>> {
+    const prepared = this.prepared.get(cid);
+    if (!prepared)
+      return Promise.reject(new TaskError("bundle_fetch_failed", "Bundle is not protected."));
+    return prepared.read(path, signal);
   }
   private async inSlot<T>(action: () => Promise<T>): Promise<T> {
     await new Promise<void>((resolve, reject) => {
@@ -198,209 +183,212 @@ export class BundleCache {
     }
   }
   async acquire(reference: BundleReference): Promise<VerifiedBundle & { release(): void }> {
-    const signal = this.lifetime.signal;
-    const ref = validateBundleReference(reference);
-    const removing = this.removing.get(ref.digest);
-    if (removing) await removing;
-    signal.throwIfAborted();
-    this.pins.set(ref.digest, (this.pins.get(ref.digest) ?? 0) + 1);
+    const ref = validateBundleReference(reference, this.limits.hints);
+    const cid = bundleCid(ref);
+    this.lifetime.signal.throwIfAborted();
+    this.pins.set(cid, (this.pins.get(cid) ?? 0) + 1);
     let released = false;
     const release = () => {
       if (released) return;
       released = true;
-      const count = this.pins.get(ref.digest)! - 1;
-      if (count) this.pins.set(ref.digest, count);
-      else this.pins.delete(ref.digest);
+      const count = (this.pins.get(cid) ?? 1) - 1;
+      if (count) this.pins.set(cid, count);
+      else this.pins.delete(cid);
     };
-    let operation = this.fetching.get(ref.digest);
+    let operation = this.fetching.get(cid);
     if (!operation) {
-      operation = this.inSlot(() => this.prepare(ref, signal));
-      this.fetching.set(ref.digest, operation);
+      operation = this.inSlot(() => this.prepare(ref));
+      this.fetching.set(cid, operation);
       void operation
         .finally(() => {
-          if (this.fetching.get(ref.digest) === operation) this.fetching.delete(ref.digest);
+          if (this.fetching.get(cid) === operation) this.fetching.delete(cid);
         })
         .catch(() => {});
     }
     try {
-      const prepared = await operation;
-      signal.throwIfAborted();
+      const prepared = this.prepared.get(cid) ?? (await operation);
+      this.lifetime.signal.throwIfAborted();
+      this.prepared.set(cid, prepared);
       return { ...prepared, release };
     } catch (error) {
       release();
       throw error;
     }
   }
-  private async prepare(reference: BundleReference, signal: AbortSignal): Promise<VerifiedBundle> {
-    const cached = await this.cached(reference.digest);
+  private async prepare(reference: BundleReference): Promise<VerifiedBundle> {
+    const cid = bundleCid(reference);
+    const cached = this.prepared.get(cid);
     if (cached) return cached;
-    const files = await this.download(reference.url, signal);
-    const inspected = inspectTaskBundle(files, this.limits);
-    if (inspected.digest !== reference.digest)
-      throw new TaskError(
-        "bundle_digest_mismatch",
-        "Downloaded Bundle does not match the requested Digest.",
-      );
-    signal.throwIfAborted();
-    await mkdir(this.root, { recursive: true, mode: 0o700 });
-    const stage = join(this.root, `.staging-${randomUUID()}`);
-    const directory = this.target(reference.digest);
-    await mkdir(stage, { mode: 0o700 });
-    try {
-      for (const [path, content] of files) {
-        const target = join(stage, ...path.split("/"));
-        await mkdir(dirname(target), { recursive: true, mode: 0o700 });
-        await writeFile(target, content, { flag: "wx", mode: 0o400 });
-        await chmod(target, 0o400);
+    const protectedBlocks = new Map<string, Uint8Array>();
+    const gateways =
+      typeof reference === "string"
+        ? []
+        : typeof reference.hint === "string"
+          ? [reference.hint]
+          : reference.hint;
+    const access = (signal: AbortSignal) => ({
+      signal: AbortSignal.any([signal, this.lifetime.signal]),
+      gateways,
+      ...(this.options.allowGateway ? { allowGateway: this.options.allowGateway } : {}),
+      ...(this.options.fetch ? { fetch: this.options.fetch } : {}),
+      maxBlockBytes: Math.min(this.limits.bytes, 2 * 1024 * 1024),
+      protectedBlocks,
+      maxProtectedBytes: this.limits.bytes * 2,
+      protectionBudget: this.protectionBudget,
+      maxDagBlocks: this.limits.blocks,
+      maxFileBytes: this.limits.fileBytes,
+      inspectNode: (entry: Awaited<ReturnType<typeof openContent>>) => {
+        if (entry.type === "file" && !["file", "raw"].includes(entry.unixfs.type))
+          throw new TaskError(
+            "invalid_bundle",
+            "Bundle requires regular files, not UnixFS symlink or metadata nodes.",
+          );
+      },
+    });
+    const files = new Map<string, Buffer>();
+    const logicalPaths = new Set<string>();
+    let total = 0;
+    let paths = 0;
+    const walk = async (
+      entry: Awaited<ReturnType<typeof openContent>>,
+      path: string,
+    ): Promise<void> => {
+      if (path && ++paths > this.limits.paths)
+        throw new TaskError("capacity_exceeded", "Bundle path capacity exceeded.");
+      if (path && !safePath(path)) throw new TaskError("invalid_bundle", "Unsafe Bundle path.");
+      if (path) {
+        const folded = path.toLowerCase();
+        if (logicalPaths.has(folded))
+          throw new TaskError("invalid_bundle", "Duplicate or ambiguous Bundle path.");
+        logicalPaths.add(folded);
       }
-      signal.throwIfAborted();
-      try {
-        await rename(stage, directory);
-      } catch (error) {
-        if (!(await this.cached(reference.digest))) throw error;
-      }
-      const verified = await this.cached(reference.digest);
-      if (!verified)
-        throw new TaskError("invalid_bundle", "Verified Bundle disappeared while caching.");
-      return verified;
-    } finally {
-      await rm(stage, { recursive: true, force: true });
-    }
-  }
-  private async download(urlText: string, signal: AbortSignal): Promise<Map<string, Buffer>> {
-    const url = new URL(urlText);
-    let body: AsyncIterable<Uint8Array>;
-    let response: Response | undefined;
-    let extracting = false;
+      if (entry.type === "directory") {
+        let entries = 0;
+        if (path && !["resources", "schemas"].includes(path.split("/")[0]!))
+          throw new TaskError("invalid_bundle", "Unsupported Bundle directory.");
+        for await (const child of entry.entries({ signal: this.lifetime.signal })) {
+          entries++;
+          if (!child.name || child.name.includes("/") || child.name.includes("\\"))
+            throw new TaskError("invalid_bundle", "Unsafe IPFS directory name.");
+          await walk(
+            await openContent(
+              this.options.ipfsClient,
+              child.cid.toString(),
+              access(this.lifetime.signal),
+            ),
+            path ? `${path}/${child.name}` : child.name,
+          );
+        }
+        if (path && !entries)
+          throw new TaskError("invalid_bundle", "Empty Bundle directories are not supported.");
+      } else if (entry.type === "file" || entry.type === "raw") {
+        if (!path || files.size >= this.limits.files)
+          throw new TaskError("capacity_exceeded", "Bundle file capacity exceeded.");
+        const chunks: Buffer[] = [];
+        let size = 0;
+        for await (const chunk of entry.content({ signal: this.lifetime.signal })) {
+          size += chunk.byteLength;
+          total += chunk.byteLength;
+          if (size > this.limits.fileBytes || total > this.limits.bytes)
+            throw new TaskError("capacity_exceeded", "Bundle byte capacity exceeded.");
+          chunks.push(Buffer.from(chunk));
+        }
+        if (files.has(path)) throw new TaskError("invalid_bundle", "Duplicate Bundle path.");
+        files.set(path, Buffer.concat(chunks));
+      } else
+        throw new TaskError("invalid_bundle", "Bundle requires regular UnixFS files/directories.");
+    };
     try {
-      if (url.protocol === "file:") {
-        const file = fileURLToPath(url);
-        const info = await lstat(file);
-        if (!info.isFile() || info.isSymbolicLink())
-          throw new TaskError("invalid_bundle", "Bundle URL must identify a regular archive file.");
-        if (info.size > this.limits.archiveBytes)
-          throw new TaskError("capacity_exceeded", "Bundle download capacity exceeded.");
-        body = createReadStream(file, { signal });
-      } else {
-        response = await (this.options.fetch ?? globalThis.fetch)(url, {
-          signal,
-          redirect: "error",
-          credentials: "omit",
-          headers: { "Accept-Encoding": "identity" },
-        });
-        if (!response.ok || !response.body)
-          throw new TaskError("bundle_fetch_failed", "Bundle download failed.");
-        const length = response.headers.get("content-length");
-        if (length && (!/^\d+$/.test(length) || Number(length) > this.limits.archiveBytes))
-          throw new TaskError("capacity_exceeded", "Bundle download capacity exceeded.");
-        const encoding = response.headers.get("content-encoding");
-        if (encoding && encoding !== "identity")
-          throw new TaskError("invalid_bundle", "Bundle requires identity HTTP content encoding.");
-        body = response.body;
-      }
-      extracting = true;
-      return await unpackArtifactFiles(body, signal, this.limits);
-    } catch (error) {
-      if (signal.aborted) throw signal.reason;
-      if (error instanceof TaskError) throw error;
-      if (error instanceof ArchiveCapacityError)
-        throw new TaskError("capacity_exceeded", "Bundle acquisition exceeds host capacity.");
-      const code =
-        (error as { code?: string; cause?: { code?: string } }).code ??
-        (error as { cause?: { code?: string } }).cause?.code;
-      throw new TaskError(
-        !extracting || code?.startsWith("E") ? "bundle_fetch_failed" : "invalid_bundle",
-        "Bundle acquisition or archive validation failed.",
-      );
-    } finally {
-      await response?.body?.cancel().catch(() => {});
-    }
-  }
-  /** Host-directed eviction cannot invalidate an in-flight preparation or active Run lease. */
-  async evict(digest: string): Promise<boolean> {
-    const target = this.target(digest);
-    if (this.fetching.has(digest) || this.pins.has(digest) || this.removing.has(digest))
-      return false;
-    const operation = rm(target, { recursive: true, force: true });
-    this.removing.set(digest, operation);
-    try {
-      await operation;
-      return true;
-    } finally {
-      this.removing.delete(digest);
-    }
-  }
-  async detail(digest: string): Promise<BundleCacheDetail> {
-    this.target(digest);
-    const removing = this.removing.get(digest);
-    if (removing) await removing;
-    this.lifetime.signal.throwIfAborted();
-    const leases = this.pins.get(digest) ?? 0;
-    this.pins.set(digest, leases + 1);
-    try {
-      const prepared = await this.cached(digest);
-      if (!prepared && !this.fetching.has(digest))
-        throw new TaskError("not_found", "Bundle is not cached.");
+      await protectContent(this.options.ipfsClient, cid, access(this.lifetime.signal));
+      const root = await openContent(this.options.ipfsClient, cid, access(this.lifetime.signal));
+      if (root.type !== "directory")
+        throw new TaskError("invalid_bundle", "Bundle CID must identify a directory.");
+      await walk(root, "");
+      const inspected = inspectTaskBundle(files, this.limits);
+      const allowed = new Set(files.keys());
       return {
-        digest,
-        cached: !!prepared,
-        preparing: this.fetching.has(digest),
-        leases: this.pins.get(digest)! - 1,
-        ...(prepared
-          ? {
-              name: prepared.declaration.name,
-              bytes: prepared.bytes,
-              files: prepared.files,
-              declaration: prepared.declaration,
-              resolved: prepared.resolved,
+        ...inspected,
+        cid,
+        source: files.get("worker.cjs")!.toString("utf8"),
+        protectedBytes: [...protectedBlocks.values()].reduce((sum, block) => sum + block.length, 0),
+        read: async (path, signal) => {
+          if (!safePath(path) || !allowed.has(path))
+            throw new TaskError("invalid_bundle", "Bundle path is absent or outside its root.");
+          const entry = await openContent(
+            this.options.ipfsClient,
+            `${cid}/${path}`,
+            access(signal),
+          );
+          if (entry.type !== "file" && entry.type !== "raw")
+            throw new TaskError("invalid_bundle", "Bundle path is not a regular file.");
+          const combined = access(signal).signal;
+          return (async function* () {
+            combined.throwIfAborted();
+            for await (const chunk of entry.content({ signal: combined })) {
+              combined.throwIfAborted();
+              yield chunk;
             }
-          : {}),
+            combined.throwIfAborted();
+          })()[Symbol.asyncIterator]();
+        },
       };
-    } finally {
-      const count = this.pins.get(digest)! - 1;
-      if (count) this.pins.set(digest, count);
-      else this.pins.delete(digest);
+    } catch (error) {
+      this.protectionBudget.bytes -= [...protectedBlocks.values()].reduce(
+        (sum, block) => sum + block.length,
+        0,
+      );
+      protectedBlocks.clear();
+      if (this.lifetime.signal.aborted) throw this.lifetime.signal.reason;
+      if (error instanceof TaskError) throw error;
+      if (error instanceof Error && /^IPFS .*capacity exceeded\.$/.test(error.message))
+        throw new TaskError("capacity_exceeded", "IPFS acquisition exceeds host capacity.");
+      throw new TaskError("bundle_fetch_failed", "IPFS acquisition or CID verification failed.");
     }
+  }
+  async evict(cid: string): Promise<boolean> {
+    cid = bundleCid(validateBundleReference(cid));
+    if (this.fetching.has(cid) || this.pins.has(cid)) return false;
+    this.protectionBudget.bytes -= this.prepared.get(cid)?.protectedBytes ?? 0;
+    this.prepared.delete(cid);
+    return true;
+  }
+  async detail(cid: string): Promise<BundleCacheDetail> {
+    cid = bundleCid(validateBundleReference(cid));
+    this.lifetime.signal.throwIfAborted();
+    const prepared = this.prepared.get(cid);
+    if (!prepared && !this.fetching.has(cid))
+      throw new TaskError("not_found", "Bundle metadata is not cached.");
+    return {
+      cid,
+      cached: !!prepared,
+      preparing: this.fetching.has(cid),
+      leases: this.pins.get(cid) ?? 0,
+      ...(prepared
+        ? {
+            name: prepared.declaration.name,
+            bytes: prepared.bytes,
+            files: prepared.files,
+            declaration: prepared.declaration,
+            resolved: prepared.resolved,
+          }
+        : {}),
+    };
   }
   async list(page: { after?: string; limit?: number }): Promise<BundleCachePage> {
     const limit = page.limit ?? 50;
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
       throw new TaskError("invalid_request", "Cache page limit must be between 1 and 100.");
-    if (page.after !== undefined) this.target(page.after);
-    this.lifetime.signal.throwIfAborted();
-    const digests = new Set(this.fetching.keys());
-    let directory: Dir | undefined;
-    try {
-      directory = await opendir(this.root);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    }
-    if (directory) {
-      let scanned = 0;
-      for await (const entry of directory) {
-        if (++scanned > 10_000)
-          throw new TaskError("capacity_exceeded", "Cache directory enumeration budget exceeded.");
-        if (/^[a-f0-9]{64}$/.test(entry.name)) {
-          if (!entry.isDirectory() || entry.isSymbolicLink())
-            throw new TaskError("invalid_bundle", "Cache entry is not a regular directory.");
-          digests.add(`sha256:${entry.name}`);
-        }
-      }
-    }
-    const candidates = [...digests].filter((digest) => !page.after || digest > page.after).sort();
-    const items: BundleCachePage["items"] = [];
-    for (const digest of candidates.slice(0, limit)) {
-      try {
-        const {
-          declaration: _declaration,
-          resolved: _resolved,
-          ...entry
-        } = await this.detail(digest);
-        items.push(entry);
-      } catch (error) {
-        if (!(error instanceof TaskError) || error.code !== "not_found") throw error;
-      }
-    }
+    const after =
+      page.after === undefined ? undefined : bundleCid(validateBundleReference(page.after));
+    const candidates = [...new Set([...this.prepared.keys(), ...this.fetching.keys()])]
+      .filter((cid) => !after || cid > after)
+      .sort();
+    const items = await Promise.all(
+      candidates.slice(0, limit).map(async (cid) => {
+        const { declaration: _declaration, resolved: _resolved, ...entry } = await this.detail(cid);
+        return entry;
+      }),
+    );
     return {
       items,
       observedAt: new Date().toISOString(),
@@ -408,8 +396,10 @@ export class BundleCache {
     };
   }
   async close(): Promise<void> {
-    this.lifetime.abort(new TaskError("engine_closed", "Bundle cache is closing."));
+    this.lifetime.abort(new TaskError("engine_closed", "Bundle reads are closing."));
     for (const waiting of this.waiting.splice(0)) waiting.reject(this.lifetime.signal.reason);
     await Promise.allSettled([...this.fetching.values()]);
+    this.prepared.clear();
+    this.protectionBudget.bytes = 0;
   }
 }

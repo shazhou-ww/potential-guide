@@ -9,9 +9,9 @@ pnpm --filter @potential-guide/check-environment... build
 ```
 
 The package contains `dist/bundles/<kind>/task.yaml`, the self-contained
-`worker.cjs`, and `<kind>.tar.gz`. `dist/bundles/references.json` records the
-relative archive filename and its complete Bundle Digest. The digest identifies
-the file tree, not the compressed archive bytes. Build output is ignored by Git.
+`worker.cjs`. `dist/bundles/references.json` records each relative directory and its
+standard UnixFS root CID. No archive or parallel Bundle digest is produced.
+Build output is ignored by Git.
 
 ## Inputs
 
@@ -105,35 +105,34 @@ These bundles do not repurpose progress or checkpoint as verbose output.
 Console stderr is not a task-history logging channel. A dedicated channel needs
 its own bounded delivery, retention and consumer contract.
 
-Changing the business result contract changes the Bundle Digest. Rebuild and
-use the new reference from `references.json`; existing digest-pinned archives
+Changing the business result contract changes the Bundle CID. Rebuild and
+use the new reference from `references.json`; existing CID-addressed content
 retain their original contracts.
 
-After building, a Task Engine consumer can submit a local archive. The Engine
+After building, import the directory to a private/local IPFS endpoint and submit its root CID. The Engine
 is assumed to be started and authorized; normal task observation is unchanged:
 
 ```js
 import {readFile} from "node:fs/promises";
 import {join, resolve} from "node:path";
-import {pathToFileURL} from "node:url";
+import {importTaskBundle} from "@potential-guide/task-sdk/build";
 
 const directory = resolve("packages", "check-environment", "dist", "bundles");
 const refs = JSON.parse(await readFile(join(directory, "references.json"), "utf8"));
+const published = await importTaskBundle(join(directory, refs.tools.directory), ipfsClient);
+if (published.cid !== refs.tools.cid) throw new Error("Import parameters differ.");
 await engine.submit({
   requestId,
-  bundle: {
-    url: pathToFileURL(join(directory, refs.tools.archive)).href,
-    digest: refs.tools.digest
-  },
+  bundle: published.cid,
   tools: [{command: process.execPath, args: ["--version"], minimumVersion: "22.13.0"}],
   timeoutMs: 5000
 }, caller);
 ```
 
-Production delivery can upload the archives to GitHub Releases and publish an
-index with complete `{url, digest}` references. Do not overwrite released bytes
-or use `latest` as executable identity. npm delivers the author/library package;
-the generic Engine does not install it. This change adds local packing
+Production delivery imports/pins the directory on the caller-managed node and
+publishes root CID references, optionally with gateway hints. Do not use
+`latest` as executable identity. npm delivers the author/library package;
+the generic Engine does not install it. This change adds local delivery
 verification only, not publication workflows or release authorization.
 
 ## Objective integration

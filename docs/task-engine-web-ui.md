@@ -57,7 +57,7 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
 
 连接需后端支持当前 Task Bundle 协议：`POST /tasks`、
 `GET /requests/:requestId/status`、`GET /tasks`、`GET /runs` 及请求/实体/事件接口。
-提交携带准确 Bundle URL 和完整内容 Digest，不查询 `/task-types`，不发送旧 `If-Match` guard。
+提交携带准确 Bundle 根 CID 字符串或 `{cid,hint}`，不查询 `/task-types`，不发送旧 `If-Match` guard。
 旧服务或缺失接口明确报错，不用本机已见 Run 代替服务目录。
 `list-runs` 是独立授权操作；它与 Task 的 `list`、`submit`、`request`、`task`、
 `history`、`subscribe` 均不互相授予权限。没有提交或详情权限也不关闭目录入口。
@@ -115,7 +115,7 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   状态栏仍明确表示数据陈旧或查询不可用，不因重连增删错误行。
   关联 Run 筛选放在任务列筛选面板中。表格滚动容器预留滚动条空间，底部信息
   不参与滚动锚定，避免状态变化造成表头抖动。
-  名称/完整 ID 搜索、状态筛选作用于已加载记录；Bundle Digest、带明确时区的时间
+  名称/完整 ID 搜索、状态筛选作用于已加载记录；Bundle CID、带明确时区的时间
   范围仍通过表格底部“重新查询 / 刷新执行目录”提交服务端。收藏开关位于收藏列的弹出面板。
   底部支持每页 10/25/50/100 条、上一页/下一页和清除列筛选与排序；该清除操作不改
   服务端查询输入。原“目录下一页 / 执行目录下一页”独立加载原查询快照的下一批，
@@ -156,15 +156,14 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   不自动弹出、不推挤表格，也不关闭已有详情。条目可折叠、单项或全部清理；
   同一来源的重复错误聚合计次，恢复后保留记录并标记已恢复。
   最多保留 100 个问题，刷新页面后清空。清理记录不等于故障恢复，不取消任务或停止观察。
-- **Bundle 引用**：新建任务使用单个 `Task Bundle 引用（URL#digest）` 字段，
-  填写获取 URL 与完整 `sha256:` 摘要。共享协议辅助函数解析和校验后，
-  请求仍提交结构化 `{url, digest}`。编辑重做从原引用拼合，不改写 URL 或摘要。
-  Task/Run 目录与缓存表格仅展示名称、短实体 ID 和 12 位内容 Digest，不显示获取 URL；
-  悬停可查看完整 Digest，详情支持复制完整 Digest。短值不用于判等或查询。
-  Task 详情与提交回执保留完整引用为可选取的纯文本，不访问该 URL；
-  Run 详情的 Bundle 标识仅展示完整 Digest，原始快照不被改写。
-  内容判等与缓存仍以完整 Digest 为准。
-- **新建弹窗**：填写固定 `URL#digest` Bundle 引用、timeoutMs 和可选时间/匹配参数，
+- **Bundle 引用**：新建任务使用单个 `Task Bundle 引用（根 CID / JSON）` 字段，
+  填写根 CID 或 `{cid,hint}` JSON；hint 为单个或有序多个 HTTP(S) gateway 基址，
+  不参与内容身份。共享协议函数校验后保留引用形状与 hint 顺序，
+  编辑重做、原始历史和星标不偷偷改写引用。
+  Task/Run 目录与缓存表格展示名称、短实体 ID 和短 CID；悬停及详情可复制完整 CID，
+  短值不用于判等或查询。原始引用是纯文本，UI 不访问 hint。
+  内容判等、`bundleCid` 查询和缓存都以完整规范化 CID 为准。
+- **新建弹窗**：填写固定根 CID / JSON Bundle 引用、timeoutMs 和可选时间/匹配参数，
   在独立 JSON 对象编辑器输入业务字段。UI 不下载或执行 Bundle，不猜测其业务 Schema，
   不再从类型发现生成业务表单；完整输入校验由服务取得 Bundle 后按声明契约执行。
   业务字段不得覆盖 Bundle、Request 身份或通用时间参数。
@@ -184,8 +183,8 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   明确生成新 ULID，可能产生另一 Task。成功项不会被整批重发。
   快捷提交合并 300ms 内的重复激活，即使首个回执很快返回也不把双击解释为主动新做；
   这只是交互防重，不取代服务 Idempotency-Key。
-- **契约与内容身份**：Bundle Digest 固定完整内容，名称只用于展示。
-  修改 URL、Digest 或业务输入是新意图，需用新身份提交；重做不会偷偷改投最新内容。
+- **契约与内容身份**：Bundle 根 CID 固定完整内容，名称只用于展示。
+  修改 CID、hint 形状/顺序或业务输入是新意图，需用新身份提交；重做不会偷偷改投最新内容。
   服务端拒绝旧类型发现 guard；UI 不提供双协议选择或自动迁移旧参数。
 - **Task / Run**：独立 Tab，以服务提供的 runId 关联。完整请求
   单独读 `/requests/:requestId`，Task 快照显示取消/阶段/结果/错误与关联 Run；
@@ -219,7 +218,7 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   摘要也可提供这一证据。运行超时不是执行停止，迟到完成仍保留超时标签。
   取消后的未知释放关系不猜测，允许手动暂停。暂停/自动结束仅释放流，仍可分页历史；
   “重新观察”重新读取事实并建立新流（已结束对象会据实再次收尾），不创建或取消 Task。
-- **任务目录**：整合在任务页，独立向后端查询，含其他客户端授权任务。按 Bundle Digest 精确匹配，
+- **任务目录**：整合在任务页，独立向后端查询，含其他客户端授权任务。按 Bundle CID 精确匹配，
   receivedAt 含下界、不含上界，必须填写带时区时间；固定 created-desc。完整基线使用集合 SSE，
   按完整源 revision 原子应用成员加入、更新和移出；尚有下一页时每 5 秒采样一次。
   采样从无 cursor 的新查询开始，按已加载页数读取同一冻结快照，全部成功后整体替换
@@ -234,7 +233,7 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   本机预算不足或不完整基线不得截断后伪装成完整集合。
   详情可能比摘要更新，摘要不含业务结果。
   页和错误状态绑定同一查询世代，旧查询的成功/失败不能覆盖新的结果或错误。
-- **Run 目录**：直接 `GET /runs`，按 Bundle Digest / startedAt 的含下界、不含上界
+- **Run 目录**：直接 `GET /runs`，按 Bundle CID / startedAt 的含下界、不含上界
   筛选，started-desc 排序，同刻 runId 升序。摘要不含输入、准备证据、结果、
   Task 身份；共享执行只出现一次。Run 目录游标与任务/事件游标分开，
   使用与任务目录相同的完整集合 SSE / 分页窗口采样机制，410 要明确重查。
@@ -248,7 +247,7 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   原目标缺失/重绑的星标仍可查看，但禁止改投。历史无 Task 身份的旧参数收藏完整
   保留在新建弹窗的“旧参数模板”兼容入口，不冒充服务任务。
   历史直接或编辑后重做只取原请求、剥离 requestId，不注入摘要 version、不改
-  URL/digest/seriesId/eligibleAt，不自动补锁或解锁。原参数无权读取或已清理时
+  CID/hint/seriesId/eligibleAt，不自动补锁或解锁。原参数无权读取或已清理时
   明确失败，不使用空输入；已有星标可以明确选用此前保存的完整副本。编辑重做也用
   新建弹窗，派生不会修改原收藏。
 - **切换目标**：关闭自己持有的观察流、隔离迟到响应。原目标提交回执仍保留
@@ -283,7 +282,7 @@ pnpm --filter @potential-guide/task-engine-web-ui start (Join-Path $demo 'ui.jso
 
 打开终端 B 打印的准确 URL（端口自动分配）：
 
-1. 在任务页打开“新建任务”，填入终端 A 打印的 `echo` 或 `survey` Bundle URL/Digest，
+1. 在任务页打开“新建任务”，填入终端 A 打印的 `echo` 或 `survey` Bundle 根 CID，
    以及 timeoutMs。echo 的业务 JSON 示例为 `{"text":"hello","durationMs":100}`；
    survey 示例为 `{"subject":{"name":"demo","active":true},"scores":[1,2],"mode":"brief"}`。
    验证 preparing 回执不冒充 Task，accepted 后能打开真实任务、完整结果及事件。

@@ -3,6 +3,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { validateBundleReference } from "@potential-guide/task-protocol/bundle-reference";
 import { assertFiniteJson } from "./json.js";
 
 export interface EndpointConfig {
@@ -177,12 +178,11 @@ async function boundedBody(response: Response, max = RESPONSE_LIMIT): Promise<Ui
 export function allowedRoute(path: string, method: string, params: URLSearchParams): boolean {
   let keys: string[] = [];
   if (path === "/bundle-cache" && method === "GET") keys = ["after", "limit"];
-  else if (/^\/bundle-cache\/sha256:[a-f0-9]{64}$/.test(path) && ["GET", "DELETE"].includes(method))
-    keys = [];
+  else if (/^\/bundle-cache\/[^/]+$/.test(path) && ["GET", "DELETE"].includes(method)) keys = [];
   else if (path === "/tasks" && method === "GET")
     keys = [
       "taskId",
-      "bundleDigest",
+      "bundleCid",
       "type",
       "scope",
       "seriesId",
@@ -200,7 +200,7 @@ export function allowedRoute(path: string, method: string, params: URLSearchPara
   else if (path === "/runs" && method === "GET")
     keys = [
       "runId",
-      "bundleDigest",
+      "bundleCid",
       "type",
       "scope",
       "stage",
@@ -217,7 +217,7 @@ export function allowedRoute(path: string, method: string, params: URLSearchPara
       path === "/tasks/events"
         ? [
             "taskId",
-            "bundleDigest",
+            "bundleCid",
             "type",
             "scope",
             "seriesId",
@@ -233,7 +233,7 @@ export function allowedRoute(path: string, method: string, params: URLSearchPara
           ]
         : [
             "runId",
-            "bundleDigest",
+            "bundleCid",
             "type",
             "scope",
             "stage",
@@ -497,15 +497,14 @@ export async function startUiServer(raw: UiConfig) {
             )
               reject(502, "invalid_backend_response", "Task 来源信息无效，未保存星标。");
             const original = await read(`/requests/${task.requestId}`);
-            const bundle = original.bundle as Record<string, unknown> | undefined;
-            if (
-              original.requestId !== task.requestId ||
-              !bundle ||
-              typeof bundle.url !== "string" ||
-              typeof bundle.digest !== "string" ||
-              !/^sha256:[a-f0-9]{64}$/.test(bundle.digest)
-            )
+            const bundle = original.bundle;
+            if (original.requestId !== task.requestId || !bundle)
               reject(502, "invalid_backend_response", "原请求无效，未保存星标。");
+            try {
+              validateBundleReference(bundle);
+            } catch {
+              reject(502, "invalid_backend_response", "原 Bundle 引用无效，未保存星标。");
+            }
             const { requestId: _identity, ...parameters } = original;
             let favorite: Favorite = {
               id: randomUUID(),
@@ -580,7 +579,7 @@ export async function startUiServer(raw: UiConfig) {
         if (!idPattern.test(key))
           reject(400, "identity_required", "提交需要原 requestId（ULID）。");
         if (req.headers["if-match"] !== undefined)
-          reject(400, "unsupported_request", "使用完整 Bundle Digest，不接受旧类型发现 guard。");
+          reject(400, "unsupported_request", "使用完整 Bundle CID，不接受旧类型发现 guard。");
         headers.set("Idempotency-Key", key);
         headers.set("Content-Type", "application/json");
         const body = record(await incomingBody(req));

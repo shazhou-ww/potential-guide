@@ -12,7 +12,9 @@ import { positive, type Store, TaskError } from "@potential-guide/task-protocol"
 
 export interface ServerOptions {
   logs?: EngineOptions["logs"];
-  bundleDirectory?: string;
+  ipfsClient: EngineOptions["ipfsClient"];
+  allowGateway?: EngineOptions["allowGateway"];
+  fetchIpfs?: EngineOptions["fetchIpfs"];
   bundleLimits?: EngineOptions["bundleLimits"];
   bundleConcurrency?: number;
   authorize: EngineOptions["authorize"];
@@ -95,7 +97,9 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
   try {
     if (
       !options ||
-      ["types", "currentVersions", "allocationLimits"].some((key) => Object.hasOwn(options, key)) ||
+      ["types", "currentVersions", "allocationLimits", "bundleDirectory", "fetchBundle"].some(
+        (key) => Object.hasOwn(options, key),
+      ) ||
       typeof options.authorize !== "function" ||
       typeof options.resolveCaller !== "function" ||
       (options.store && options.database) ||
@@ -150,7 +154,9 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
     };
     engine = createTaskEngine({
       store: lease,
-      bundleDirectory: options.bundleDirectory ?? `${options.database ?? "tasks.sqlite"}.bundles`,
+      ipfsClient: options.ipfsClient,
+      ...(options.allowGateway ? { allowGateway: options.allowGateway } : {}),
+      ...(options.fetchIpfs ? { fetchIpfs: options.fetchIpfs } : {}),
       ...(options.bundleConcurrency !== undefined
         ? { bundleConcurrency: options.bundleConcurrency }
         : {}),

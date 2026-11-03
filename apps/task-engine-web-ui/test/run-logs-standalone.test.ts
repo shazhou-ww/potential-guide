@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
-import { spawn, type ChildProcess } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { MemoryStore } from "@potential-guide/task-engine/testing";
+import { fileURLToPath } from "node:url";
 import { newId } from "@potential-guide/task-engine";
+import { MemoryIpfsClient, MemoryStore } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { TaskError } from "@potential-guide/task-protocol";
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
 import { consumeRunLogSse } from "../src/run-logs.js";
 
 test("built standalone UI (without installed UI dependencies) proxies real SDK diagnostic sample history/SSE with token and endpoint isolation", async () => {
@@ -31,11 +31,12 @@ test("built standalone UI (without installed UI dependencies) proxies real SDK d
       ),
       outDirectory: join(directory, "bundle"),
     });
-    const packed = await packTaskBundle(built.directory, join(directory, "sample.tar.gz"));
+    const ipfsClient = new MemoryIpfsClient();
+    await importTaskBundle(built.directory, ipfsClient);
     backend = await startTaskServer({
       port: 0,
       store: new MemoryStore(),
-      bundleDirectory: join(directory, "cache"),
+      ipfsClient,
       logs: { pageSize: 1 },
       authorize: (caller, _operation, scope) => caller.scope === scope,
       resolveCaller: (request) => {
@@ -48,7 +49,7 @@ test("built standalone UI (without installed UI dependencies) proxies real SDK d
     let decision = await backend.engine.submit(
       {
         requestId: newId(),
-        bundle: { url: pathToFileURL(packed.archive).href, digest: built.digest },
+        bundle: built.cid,
         timeoutMs: 30_000,
         checks: [
           { name: "package identity", expected: "v2", actual: "v2" },

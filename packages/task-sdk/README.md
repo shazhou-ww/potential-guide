@@ -1,7 +1,7 @@
 # Task SDK
 
 `@potential-guide/task-sdk` provides the generated Worker runtime. Author tools
-import `buildTaskBundle` and `packTaskBundle` from `@potential-guide/task-sdk/build`;
+import `buildTaskBundle`, `createIpfsClient` and `importTaskBundle` from `@potential-guide/task-sdk/build`;
 the runtime entry never imports the builder.
 
 Write `task.yaml` and a callback `(input, context) => Promise<result>` independently.
@@ -22,13 +22,33 @@ builder never resolves references over the network. A changed lock, missing
 resource, conflicting ID, unsupported Schema feature or unresolved fragment fails
 the build. The generated runtime embeds the same resolved contracts.
 
-The returned Bundle Digest is the Git SHA-256 root tree OID, not a tarball hash.
-Publish the archive separately and submit its complete `{url, digest}` reference.
+The builder returns `{directory, cid, declaration}`. The CID is the standard
+UnixFS directory root, computed offline with fixed import settings; no Bundle
+tree digest or archive is required. Publish with
+`importTaskBundle(directory, await createIpfsClient("http://127.0.0.1:5001"))`.
+The independently running local Kubo node must already exist. Publication pins
+the root; that pin belongs to the publisher/caller, never the Engine.
+Submit a root CID string or `{cid, hint}`; `hint` is a nonempty HTTP(S) gateway
+base URI or ordered nonempty array. Hints are not content identity; changing their
+representation/order still changes raw Request intent.
 Names are display text, not identifiers. The fixed declaration `$schema` also
 identifies the generation-scoped Worker communication contract; there is no
 independent numeric format/protocol version.
 
-Bundle bytes are immutable. Runtime output belongs outside the Bundle directory.
+`context.bundle.read(relativePath, {signal?})` always returns a standard
+`ReadableStream<Uint8Array>`. It is demand-driven, supports cancellation and
+surfaces creation/midstream errors. Buffer explicitly when needed:
+
+```ts
+const chunks: Uint8Array[] = [];
+for await (const chunk of context.bundle.read("resources/data.bin")) chunks.push(chunk);
+const bytes = Buffer.concat(chunks);
+```
+
+Resources belong to the current root; absolute paths, traversal and absent files
+fail. Do not locate resources with `__dirname`, `import.meta.url` or cwd:
+Workers may execute verified CommonJS source in memory without a Bundle directory.
+Bundle bytes are immutable. Runtime output belongs outside the Bundle.
 Workers are isolation/lifecycle boundaries, not security sandboxes.
 
 The generation-scoped message contract is documented in

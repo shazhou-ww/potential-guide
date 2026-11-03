@@ -480,7 +480,7 @@ function DirectoryPanel({ view, kind }: { view: WorkbenchView; kind: "tasks" | "
           <>
             <Field
               id={task ? "history-type" : "execution-type"}
-              label="Bundle Digest（服务端查询）"
+              label="Bundle CID（服务端查询）"
               placeholder="完整 sha256:…（可选）"
             />
             <p>修改后点击表格底部“{task ? "重新查询" : "刷新执行目录"}”。</p>
@@ -601,7 +601,7 @@ function Workbench({ view }: { view: WorkbenchView }) {
               <p>所选 Endpoint 的 Task Bundle 缓存</p>
             </div>
             <p className="secondary">
-              缓存位于服务机器，不是浏览器本地文件；清理不删除任务历史或原归档。
+              缓存保护属于 Engine，不是浏览器本地文件；清理不删除任务历史或共享 IPFS pin。
             </p>
             <Port view={view} id="bundle-cache" role="region" aria-label="Bundle 缓存列表与详情" />
           </TabsContent>
@@ -766,7 +766,7 @@ function OverlayPanel({ view }: { view: WorkbenchView }) {
           <DialogDescription>
             {id === "create-dialog"
               ? "直接提交当前任务，或加入批量后统一提交。关闭弹窗保留输入、批量草稿与回执。"
-              : "只清理缓存内容，不删除任务历史或原归档。"}
+              : "只清理 Engine 自有保护与元数据，不删除任务历史或共享 IPFS pin。"}
           </DialogDescription>
         </DialogHeader>
         {id === "create-dialog" ? (

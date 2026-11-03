@@ -58,7 +58,7 @@ export default async (_input, context) => {
           maxInFlight: 16,
           maxPayloadBytes: 65_536,
           bundle: {
-            digest: bundle.digest,
+            cid: bundle.cid,
             declaration: resolveBundleSchemas(bundle.declaration, []),
           },
         },

@@ -4,11 +4,10 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
-import { pathToFileURL } from "node:url";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
-import { VirtualClock } from "@potential-guide/task-engine/testing";
+import { MemoryIpfsClient, VirtualClock } from "@potential-guide/task-engine/testing";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
 import { openSqliteStore } from "../src/index.js";
 
 for (const phase of ["beforeCommit", "afterCommit"] as const) {
@@ -43,11 +42,12 @@ for (const phase of ["beforeCommit", "afterCommit"] as const) {
           entry: callback,
           outDirectory: join(directory, "bundle"),
         });
-        const packed = await packTaskBundle(built.directory, join(directory, "bundle.tar.gz"));
+        const ipfsClient = new MemoryIpfsClient();
+        await importTaskBundle(built.directory, ipfsClient);
         const now = Date.now();
         const request = {
           requestId: newId(now),
-          bundle: { url: pathToFileURL(packed.archive).href, digest: built.digest },
+          bundle: built.cid,
           value: decision === "accepted" ? 1 : "invalid",
           timeoutMs: 100,
         };
@@ -57,6 +57,9 @@ for (const phase of ["beforeCommit", "afterCommit"] as const) {
           `
 import {openSqliteStore} from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
 import {createTaskEngine} from ${JSON.stringify(new URL("../../task-engine/dist/index.js", import.meta.url).href)};
+import {MemoryIpfsClient} from ${JSON.stringify(new URL("../../task-engine/dist/testing.js", import.meta.url).href)};
+const ipfsClient=new MemoryIpfsClient();
+for(const [cid,hex] of ${JSON.stringify([...ipfsClient.blocks].map(([cid, bytes]) => [cid, Buffer.from(bytes).toString("hex")]))})ipfsClient.blocks.set(cid,Buffer.from(hex,"hex"));
 let armed=false;
 const physical=openSqliteStore(${JSON.stringify(filename)},{fault(point){if(armed&&point===${JSON.stringify(phase)})process.exit(73)}});
 const store={
@@ -64,7 +67,7 @@ claim:id=>physical.claim(id),release:id=>physical.release(id),read:()=>physical.
 append(owner,watermark,events){armed=events.some(event=>event.type==="submission.resolved");return physical.append(owner,watermark,events)},
 compact:(...args)=>physical.compact(...args),close:()=>physical.close()
 };
-const engine=createTaskEngine({store,bundleDirectory:${JSON.stringify(join(directory, "cache"))},authorize:()=>true});
+const engine=createTaskEngine({store,ipfsClient,authorize:()=>true});
 await engine.start();
 const request=${JSON.stringify(request)};
 await engine.submit(request,{scope:"scope",subject:"child"});
@@ -74,14 +77,13 @@ process.exit(2);
         );
         const crashed = spawnSync(process.execPath, [child], { encoding: "utf8", timeout: 20_000 });
         assert.equal(crashed.status, 73, crashed.stderr);
-        await rm(packed.archive);
         await rm(callback);
         const store = openSqliteStore(filename);
         const clock = new VirtualClock(now + 1000);
         const engine = createTaskEngine({
           store,
           clock,
-          bundleDirectory: join(directory, "cache"),
+          ipfsClient,
           authorize: () => true,
           limits: { windowMs: 100 },
         });

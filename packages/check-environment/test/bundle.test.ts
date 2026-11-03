@@ -1,25 +1,26 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readdir, readFile, realpath, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, realpath, rm } from "node:fs/promises";
 import { createServer } from "node:http";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import test from "node:test";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
-import { MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
+import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
 import {
   compileInputSchema,
   compileJsonSchema,
   type JsonObject,
 } from "@potential-guide/task-protocol";
+import { importTaskBundle } from "@potential-guide/task-sdk/build";
 import { inputSchemas, resultSchema } from "../src/contracts.js";
 
 const caller = { scope: "environment-tests", subject: "consumer" };
 const bundles = fileURLToPath(new URL("../dist/bundles/", import.meta.url));
 
-test("all three packed bundles run through the Engine using URL plus full Digest", async () => {
-  const directory = await realpath(await mkdtemp(join(tmpdir(), "environment-bundles-")));
-  const refs: Record<string, { archive: string; digest: string }> = JSON.parse(
+test("all three directory bundles run through the Engine using verified root CIDs", async () => {
+  await mkdir(resolve(".cache"), { recursive: true });
+  const directory = await realpath(await mkdtemp(join(resolve(".cache"), "environment-bundles-")));
+  const refs: Record<string, { directory: string; cid: string }> = JSON.parse(
     await readFile(join(bundles, "references.json"), "utf8"),
   );
   const server = createServer((_request, response) => response.end("ok"));
@@ -28,10 +29,14 @@ test("all three packed bundles run through the Engine using URL plus full Digest
   assert.ok(address && typeof address !== "string");
   const store = new MemoryStore();
   const clock = new VirtualClock();
+  const ipfsClient = new MemoryIpfsClient();
+  for (const ref of Object.values(refs)) {
+    assert.equal((await importTaskBundle(join(bundles, ref.directory), ipfsClient)).cid, ref.cid);
+  }
   const engine = createTaskEngine({
     store,
     clock,
-    bundleDirectory: join(directory, "cache"),
+    ipfsClient,
     authorize: () => true,
   });
   try {
@@ -110,7 +115,7 @@ test("all three packed bundles run through the Engine using URL plus full Digest
         const request = {
           ...input,
           requestId: newId(clock.now()),
-          bundle: { url: pathToFileURL(join(bundles, ref.archive)).href, digest: ref.digest },
+          bundle: ref.cid,
           timeoutMs: 10000,
         };
         await engine.submit(request, caller);

@@ -1,23 +1,26 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { isBuiltin } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assertRuntime,
-  gitTreeDigest,
   parseArtifactYaml,
   readArtifactFiles,
   safePath,
-  unpackArtifactFiles,
 } from "@potential-guide/check-artifacts/files";
+import {
+  createIpfsClient,
+  type IpfsImportClient,
+  importContent,
+  publishContent,
+} from "@potential-guide/ipfs-content";
 import {
   type JsonObject,
   resolveBundleSchemas,
   validateTaskBundle,
 } from "@potential-guide/task-protocol";
 import { build } from "esbuild";
-import * as tar from "tar";
 
 export interface BuildTaskBundleOptions {
   declaration: string;
@@ -91,7 +94,7 @@ runTask(async (input, context) => {
   )
     throw new Error("Task Worker must contain all non-builtin code dependencies.");
   files.set("worker.cjs", Buffer.from(bundle.outputFiles[0]!.contents));
-  const digest = gitTreeDigest(files);
+  const cid = await importContent(files, async () => {});
   const output = resolve(options.outDirectory);
   const staging = `${output}.${randomUUID()}`;
   await mkdir(staging, { recursive: true, mode: 0o700 });
@@ -101,7 +104,7 @@ runTask(async (input, context) => {
       await mkdir(dirname(target), { recursive: true, mode: 0o700 });
       await writeFile(target, bytes, { flag: "wx", mode: 0o600 });
     }
-    if (gitTreeDigest(await readArtifactFiles(staging)) !== digest)
+    if ((await importContent(await readArtifactFiles(staging), async () => {})) !== cid)
       throw new Error("Task Bundle changed during build.");
     await mkdir(output);
     try {
@@ -111,12 +114,12 @@ runTask(async (input, context) => {
       await rm(output, { recursive: true, force: true });
       throw error;
     }
-    return { directory: output, digest, declaration };
+    return { directory: output, cid, declaration };
   } finally {
     await rm(staging, { recursive: true, force: true });
   }
 }
-export async function packTaskBundle(directory: string, archive: string) {
+export async function importTaskBundle(directory: string, ipfsClient: IpfsImportClient) {
   const files = await readArtifactFiles(directory);
   const declaration = validateTaskBundle(
     parseArtifactYaml(files.get("task.yaml") ?? Buffer.alloc(0)),
@@ -140,23 +143,7 @@ export async function packTaskBundle(directory: string, archive: string) {
           JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as JsonObject,
       ),
   );
-  const digest = gitTreeDigest(files);
-  const chunks: Buffer[] = [];
-  for await (const chunk of tar.c(
-    {
-      cwd: resolve(directory),
-      gzip: true,
-      portable: true,
-      noMtime: true,
-      noDirRecurse: true,
-    },
-    [...files.keys()].sort(),
-  ))
-    chunks.push(Buffer.from(chunk));
-  const bytes = Buffer.concat(chunks);
-  if (gitTreeDigest(await unpackArtifactFiles(bytes)) !== digest)
-    throw new Error("Task Bundle changed during packing.");
-  await mkdir(dirname(resolve(archive)), { recursive: true });
-  await writeFile(archive, bytes, { flag: "wx" });
-  return { archive: resolve(archive), digest };
+  const cid = await publishContent(files, ipfsClient);
+  return { cid };
 }
+export { createIpfsClient };

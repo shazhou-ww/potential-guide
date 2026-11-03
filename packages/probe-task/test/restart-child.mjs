@@ -1,16 +1,16 @@
+import { readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import {
   checkerSchemaUri,
   inspectContractFiles,
   objectiveSchemaUri,
 } from "@potential-guide/check-artifacts/contracts";
 import { createCheckTaskType } from "@potential-guide/check-task";
+import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
-import { createProbeTaskType } from "../dist/index.js";
-import { dirname, join } from "node:path";
-import { readFile, writeFile } from "node:fs/promises";
-import { pathToFileURL } from "node:url";
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
+import { buildTaskBundle, importTaskBundle } from "@potential-guide/task-sdk/build";
+import { createProbeTaskType } from "../dist/index.js";
 
 const [database, directory] = process.argv.slice(2);
 const page = Buffer.from("---\ntitle: Test\ndescription: Test\n---\nBody\n");
@@ -64,10 +64,18 @@ const source = {
     return ref.kind === "objective" ? root : check;
   },
 };
+const ipfsClient = new MemoryIpfsClient();
+for (const kind of ["check-task", "probe-task"]) {
+  try {
+    await importTaskBundle(join(dirname(database), kind), ipfsClient);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+}
 const server = await startTaskServer({
   database,
   port: 0,
-  bundleDirectory: join(dirname(database), "cache"),
+  ipfsClient,
   limits: {
     maxConcurrent: 4,
     maxPayloadBytes: 100663296,
@@ -108,8 +116,7 @@ const source={authorize(){},async resolve(ref){return ref.kind==="objective"?roo
       entry,
       outDirectory: join(dirname(database), kind),
     });
-    const packed = await packTaskBundle(built.directory, join(dirname(database), kind + ".tgz"));
-    return { url: pathToFileURL(packed.archive).href, digest: built.digest };
+    return (await importTaskBundle(built.directory, ipfsClient)).cid;
   }
   const checkType = createCheckTaskType({ source, directory });
   const checkBundle = await build(
@@ -122,7 +129,7 @@ const type=createCheckTaskType({source,directory:${JSON.stringify(directory)}});
   const probeType = createProbeTaskType({
     source,
     checkBundle,
-    checkEnvironment: checkBundle.digest,
+    checkEnvironment: checkBundle,
     children() {
       throw Error("Author only.");
     },
@@ -134,7 +141,7 @@ const type=createCheckTaskType({source,directory:${JSON.stringify(directory)}});
 import {createProbeTaskType} from "@potential-guide/probe-task";
 import {TaskClient} from "@potential-guide/task-engine-http";
 const client=new TaskClient({url:${JSON.stringify(server.url)}});
-const type=createProbeTaskType({source,checkBundle:${JSON.stringify(checkBundle)},checkEnvironment:${JSON.stringify(checkBundle.digest)},
+const type=createProbeTaskType({source,checkBundle:${JSON.stringify(checkBundle)},checkEnvironment:${JSON.stringify(checkBundle)},
 children(scope){return{service:client,caller:{scope,subject:"tester"},waitForTaskRelease:(id)=>client.waitForTaskRelease(id)}}});
 export default(input,context)=>type.run(input,context);`,
   );

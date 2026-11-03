@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { once } from "node:events";
+import { writeFileSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { writeFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
@@ -12,7 +12,7 @@ import { startTaskServer } from "@potential-guide/task-engine-server";
 import { TaskError } from "@potential-guide/task-protocol";
 import { startUiServer } from "../src/server.js";
 import { assertDirectoryPreserved, type DirectoryView } from "./directory-invariants.js";
-import { fixtureTypes, fixtureBundles, submitFixture } from "./types.js";
+import { fixtureBundles, fixtureTypes, submitFixture } from "./types.js";
 
 const [executable, directory, reserved = "9223"] = process.argv.slice(2);
 if (!executable || !directory)
@@ -158,7 +158,7 @@ try {
     port: 0,
     store: new MemoryStore(),
     ownStore: true,
-    bundleDirectory: resolve(output, "bundle-cache"),
+    ipfsClient: resources.ipfsClient,
     authorize: (caller, _operation, scope) => caller.scope === scope,
     resolveCaller(request) {
       if (request.headers.get("authorization") !== `Bearer ${token}`)
@@ -378,8 +378,8 @@ try {
   await call("Fetch.disable");
   await wait("document.querySelector('#create-title')?.textContent==='编辑参数并新建任务'");
   checks.glyphEditAction = await evaluate(`(() => {
-    const label=[...document.querySelectorAll('#form-fields label')].find(item=>item.htmlFor&&item.textContent==='Task Bundle 引用（URL#digest）');
-    return document.getElementById(label.htmlFor).value===${JSON.stringify(`${resources.bundles.survey!.url}#${resources.bundles.survey!.digest}`)};
+    const label=[...document.querySelectorAll('#form-fields label')].find(item=>item.htmlFor&&item.textContent==='Task Bundle 引用（根 CID / JSON）');
+    return document.getElementById(label.htmlFor).value===${JSON.stringify(String(resources.bundles.survey))};
   })()`);
   assert.equal(checks.glyphEditAction, true);
   checks.rowControlsIsolated = true;
@@ -519,7 +519,7 @@ try {
   assert.equal(checks.dialogTabTrap, true);
   assert.equal(checks.nonceStylesApplied, true);
   await evaluate(`(() => {
-    for (const [label,value] of [['Task Bundle 引用（URL#digest）',${JSON.stringify(`${resources.bundles.echo!.url}#${resources.bundles.echo!.digest}`)}],['超时预算 timeoutMs（毫秒）','10000']]) {
+    for (const [label,value] of [['Task Bundle 引用（根 CID / JSON）',${JSON.stringify(String(resources.bundles.echo))}],['超时预算 timeoutMs（毫秒）','10000']]) {
       const item=[...document.querySelectorAll('#form-fields label')].find(item=>item.htmlFor&&item.textContent===label);
       document.getElementById(item.htmlFor).value=value;
     }

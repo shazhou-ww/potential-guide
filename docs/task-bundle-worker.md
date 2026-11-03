@@ -14,7 +14,9 @@ Schema URL 明确拒绝，不作为 v1 别名。禁用日志和自定义宿主�
 
 ## 初始化与身份
 
-宿主直接以 `new Worker(worker.cjs, {workerData})` 启动，可信 workerData 为：
+宿主可从经过完整 CID/DAG 和 Bundle 校验的有界 CommonJS source
+以 `new Worker(source, {eval:true, workerData})` 启动，不依赖物理 Bundle 目录。
+可信 workerData 为：
 
 ```ts
 {
@@ -22,7 +24,7 @@ Schema URL 明确拒绝，不作为 v1 别名。禁用日志和自定义宿主�
   maxInFlight: number;
   maxPayloadBytes: number;
   bundle: {
-    digest: string;
+    cid: string;
     declaration: ResolvedTaskBundle;
   };
 }
@@ -42,7 +44,7 @@ Worker → 宿主：
 
 | kind | 其他字段 |
 | --- | --- |
-| ready | `value: {$schema, digest, inputSchema, resultSchema, messageSchema}` |
+| ready | `value: {$schema, cid, inputSchema, resultSchema, messageSchema}` |
 | pong | 无 |
 | progress | `id, runId, value: RunProgress` |
 | checkpoint | `id, runId, value: Result` |
@@ -105,7 +107,25 @@ context 提供 `runId`、`generation`、`startedAt`、`scope`、`signal`、`mess
 
 构建器的共享 Schema 参数为 `{path, digest}` 列表，digest 是该 JSON 文件原始字节的
 SHA-256。完整传递闭包必须已锁定且可用；URL 不是更新通道。
-构建结果的 Bundle Digest 则是完整文件树的 Git SHA-256 OID，二者不可混称。
+构建结果的 Bundle 身份是标准 UnixFS 目录根 CID，与单个 Schema 文件锁不可混称。
+
+## Bundle 只读流通道
+
+SDK 的 `context.bundle.read(relativePath, {signal?})` 返回标准
+`ReadableStream<Uint8Array>`，不提供宿主路径或整文件平行 API。
+通道仍带 generation，由当前 Run 的可信上下文限定当前根 CID：
+
+- Worker `bundle-pull {runId, readId, path}`：每个流最多一个在途 pull；
+  第一次 pull 创建读取，之后只推进同一个迭代器。
+- 宿主 `bundle-data {readId, done, chunk?}` 或 `{readId, error:{code,message}}`：
+  区分完整结束、数据与创建/消费中途失败，不把错误或截断当 EOF。
+- Worker `bundle-cancel {runId, readId}`：取消底层读取并释放迭代器；
+  用户 AbortSignal、Run 停止及 Worker 退出同样取消自有读取。
+
+SDK 使用 highWaterMark:0；不消费则不发送 pull。宿主限制活动流数量，
+标准 UnixFS exporter 以 256 KiB range window 有界读取，避免其内部 eager queue
+在暂停消费时聚合整个文件。标准库负责 DAG 解释、范围及截断校验。
+所有文件、Schema 闭包及 DAG 块在 admission 前已完整验证；运行时流不会绕过准入。
 
 根运行入口不导入构建器。除 Node 内置模块外，所有代码依赖必须进入 worker.cjs；
 不支持的动态依赖或原生扩展构建失败。Worker 不是安全沙箱。

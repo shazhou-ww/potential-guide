@@ -1,5 +1,3 @@
-import { runtimeRevision } from "./runtime-identity.js";
-import { workerSource } from "./worker-source.js";
 import { setTimeout as delay } from "node:timers/promises";
 import { Worker } from "node:worker_threads";
 import {
@@ -18,6 +16,8 @@ import { newId } from "@potential-guide/task-engine";
 import { createExecutorPool, type RunningWork } from "@potential-guide/task-engine/pool";
 import {
   authorizeSync,
+  type BundleReference,
+  bundleCid,
   type Caller,
   type ExecuteOptions,
   isTimedOut,
@@ -28,12 +28,11 @@ import {
   RunFailure,
   type RunTracking,
   type StartPermit,
+  type SubmissionResult,
   TaskError,
   type TaskService,
   type TaskSnapshot,
   type TaskType,
-  type BundleReference,
-  type SubmissionResult,
 } from "@potential-guide/task-protocol";
 import {
   decodePrepared,
@@ -50,6 +49,8 @@ import {
   validateProbeInput,
   validateProbeResult,
 } from "./contracts.js";
+import { runtimeRevision } from "./runtime-identity.js";
+import { workerSource } from "./worker-source.js";
 
 export type { ProbeEffectEvidence, ProbeInput, ProbePrepared, ProbeResult } from "./contracts.js";
 export { probeInputSchema, validateProbeInput } from "./contracts.js";
@@ -535,7 +536,7 @@ export function createProbeImplementation(
       if (
         runSnapshot.runId !== snapshot.run.runId ||
         (options.checkBundle
-          ? runSnapshot.bundle?.digest !== options.checkBundle.digest
+          ? !runSnapshot.bundle || bundleCid(runSnapshot.bundle) !== bundleCid(options.checkBundle)
           : runSnapshot.type !== "check") ||
         runSnapshot.stage !== "completed" ||
         runSnapshot.dataDomain !== snapshot.dataDomain ||
@@ -560,7 +561,8 @@ export function createProbeImplementation(
           }
         cursor = page.next;
       } while (cursor);
-      if (options.checkBundle) actual = runSnapshot.bundle?.digest;
+      if (options.checkBundle)
+        actual = runSnapshot.bundle ? bundleCid(runSnapshot.bundle) : undefined;
       if (
         actual !== policy.checkEnvironment ||
         (!options.checkBundle && actual !== runSnapshot.environment)

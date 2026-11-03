@@ -1,8 +1,12 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
+import { fileURLToPath } from "node:url";
+import { bundleCid, parseBundleReference, taskSchemaUri } from "@potential-guide/task-protocol";
+import {
+  buildTaskBundle,
+  createIpfsClient,
+  importTaskBundle,
+} from "@potential-guide/task-sdk/build";
 
 /** Author-side only. The server never imports this module or business packages. */
 export async function buildExampleBundle({
@@ -14,7 +18,9 @@ export async function buildExampleBundle({
   serviceUrl,
   token,
   checkBundle,
+  ipfsClient,
 }) {
+  ipfsClient ??= await createIpfsClient(process.env.IPFS_API ?? "http://127.0.0.1:5001");
   await mkdir(directory, { recursive: true });
   let inputSchema = { type: "object" };
   let resultSchema = true;
@@ -28,11 +34,10 @@ export async function buildExampleBundle({
     };
     const sourceCode = `
 import {createArtifactSource} from "@potential-guide/check-task";
-import {readFile} from "node:fs/promises";
 import {resolve} from "node:path";
-const source=createArtifactSource({...${JSON.stringify(sourceOptions)},
+const createSource=context=>createArtifactSource({...${JSON.stringify(sourceOptions)},
 authorize(_reference,scope){if(scope!=="example")throw Error("Source scope denied.");},
-${downloadResources ? `download(url){const path=${JSON.stringify(downloadResources)}[url];if(!path)throw Error("Unknown controlled resource.");return readFile(new URL("./"+path,import.meta.url));}` : ""}
+${downloadResources ? `async download(url){const path=${JSON.stringify(downloadResources)}[url];if(!path)throw Error("Unknown controlled resource.");const chunks=[];for await(const chunk of context.bundle.read(path))chunks.push(chunk);return Buffer.concat(chunks);}` : ""}
 });
 `;
     let callback;
@@ -42,8 +47,7 @@ ${downloadResources ? `download(url){const path=${JSON.stringify(downloadResourc
       type = createCheckTaskType({ source, directory: "author-only" });
       callback = `${sourceCode}
 import {createCheckTaskType} from "@potential-guide/check-task";
-const type=createCheckTaskType({source,directory:resolve(".business-workers"),workers:1});
-export default(input,context)=>type.run(input,context);
+export default(input,context)=>createCheckTaskType({source:createSource(context),directory:resolve(".business-workers"),workers:1}).run(input,context);
 `;
     } else if (kind === "probe") {
       if (!checkBundle || !serviceUrl || !token)
@@ -52,7 +56,7 @@ export default(input,context)=>type.run(input,context);
       type = createProbeTaskType({
         source,
         checkBundle,
-        checkEnvironment: checkBundle.digest,
+        checkEnvironment: bundleCid(checkBundle),
         children() {
           throw Error("Author only.");
         },
@@ -61,9 +65,8 @@ export default(input,context)=>type.run(input,context);
 import {createProbeTaskType} from "@potential-guide/probe-task";
 import {TaskClient} from "@potential-guide/task-engine-http";
 const client=new TaskClient({url:${JSON.stringify(serviceUrl)},headers:{authorization:${JSON.stringify(`Bearer ${token}`)}}});
-const type=createProbeTaskType({source,checkBundle:${JSON.stringify(checkBundle)},checkEnvironment:${JSON.stringify(checkBundle.digest)},
-children(scope){return{service:client,caller:{scope,subject:"example"},waitForTaskRelease:id=>client.waitForTaskRelease(id)}}});
-export default(input,context)=>type.run(input,context);
+export default(input,context)=>createProbeTaskType({source:createSource(context),checkBundle:${JSON.stringify(checkBundle)},checkEnvironment:${JSON.stringify(bundleCid(checkBundle))},
+children(scope){return{service:client,caller:{scope,subject:"example"},waitForTaskRelease:id=>client.waitForTaskRelease(id)}}}).run(input,context);
 `;
     } else throw Error("Unknown example callback.");
     inputSchema = type.inputSchema;
@@ -90,8 +93,7 @@ export default(input,context)=>type.run(input,context);
     resources,
     outDirectory: join(directory, `${kind}-bundle`),
   });
-  const packed = await packTaskBundle(built.directory, join(directory, `${kind}.tar.gz`));
-  return { url: pathToFileURL(packed.archive).href, digest: built.digest };
+  return (await importTaskBundle(built.directory, ipfsClient)).cid;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -99,20 +101,18 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   if (!kind || !directory)
     throw Error("Usage: node build-bundles.mjs <echo|check|probe> <new-author-directory>");
   console.log(
-    JSON.stringify(
-      await buildExampleBundle({
-        kind,
-        directory: resolve(directory),
-        sourceOptions: {
-          allowedOrigins: process.env.CHECK_ORIGIN ? [process.env.CHECK_ORIGIN] : [],
-          allowedFileRoots: process.env.CHECK_FILE_ROOT
-            ? [resolve(process.env.CHECK_FILE_ROOT)]
-            : [],
-        },
-        serviceUrl: process.env.CHILD_SERVICE_URL,
-        token: process.env.CHILD_SERVICE_TOKEN,
-        checkBundle: process.env.CHECK_BUNDLE ? JSON.parse(process.env.CHECK_BUNDLE) : undefined,
-      }),
-    ),
+    await buildExampleBundle({
+      kind,
+      directory: resolve(directory),
+      sourceOptions: {
+        allowedOrigins: process.env.CHECK_ORIGIN ? [process.env.CHECK_ORIGIN] : [],
+        allowedFileRoots: process.env.CHECK_FILE_ROOT ? [resolve(process.env.CHECK_FILE_ROOT)] : [],
+      },
+      serviceUrl: process.env.CHILD_SERVICE_URL,
+      token: process.env.CHILD_SERVICE_TOKEN,
+      checkBundle: process.env.CHECK_BUNDLE
+        ? parseBundleReference(process.env.CHECK_BUNDLE)
+        : undefined,
+    }),
   );
 }
