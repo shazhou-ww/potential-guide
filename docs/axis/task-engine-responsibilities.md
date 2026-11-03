@@ -89,7 +89,8 @@ TaskRequest 对应本文 Request，避免与平台的 Request 类型混淆；其
 TaskSnapshot、RunSnapshot 和生命周期 Page 均包含查询水位 `revision`，各生命周期事件也携带自身的 `revision`；
 独立 RunLogPage 使用日志 sequence，不包含生命周期 revision，见[日志契约](./task-engine-contracts/run-logs.md)。
 快照/摘要的最小事实范围及筛选边界见[观察契约](./task-engine-contracts/observation.md)。
-所有订阅以 `fromRevision` 为起始锚点，先补读其后的历史再接续实时流；具体语义见[数据域事件序号与查询 Revision](./task-engine-contracts/revision.md)。
+生命周期订阅以 `fromRevision` 为起始锚点，先补读其后的历史再接续实时流；具体语义见[数据域事件序号与查询 Revision](./task-engine-contracts/revision.md)。
+C7 的独立日志订阅使用 `afterSequence`，不混用生命周期锚点。
 Page 表示有界分页，完整集合可通过续页获取；HistoryQuery、TaskCollectionQueryOptions、
 RunCollectionQueryOptions 均包含[历史与集合查询的分页](./task-engine-contracts/pagination.md)定义的 `cursor`、`limit`；
 查询条件和订阅条件分别定义，不默认相同。
