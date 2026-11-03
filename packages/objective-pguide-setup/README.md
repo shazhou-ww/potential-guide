@@ -238,7 +238,20 @@ hooks 或签名配置把测试带到其他仓库；同样覆盖 `PGUIDE_STATE_DI
 不能设置准确金额预算；用户同意的是一次有界执行，具体计费依 Agent/供应商。
 核心 process probe 默认 30 秒，本地 Pilot 的 run.cjs 默认仍拒绝总预算超过 24000 毫秒。
 可在**启动 probe 的用户/最近项目 JSONC**中设置
-`"pilot.probe": { "timeoutMs": 75000, "retry": { "maxRetries": 0, "delayMs": 0 } }`，
+```json
+{
+  "pilot.probe": {
+    "timeoutMs": 75000,
+    "observationBudget": {
+      "timeoutMs": 225000,
+      "maxDepth": 32,
+      "maxObservations": 128
+    },
+    "retry": { "maxRetries": 0, "delayMs": 0 }
+  }
+}
+```
+
 同时在本地 subject 设置 `allowSanity:true, timeoutMs:60000`；例如使用
 `pguide probe --cwd D:\setup --pilot <固定 Git URI> --revision <commit> --subject-file D:\setup\subject.json --format json`。
 这会实际运行同一 Git snapshot 的检查及随机 nonce 修复/复核，不接受缓存或直接 helper
@@ -254,8 +267,11 @@ runtime 通过 `PGUIDE_PROBE_TIMEOUT_MS` 注入实际 process 期限，不继承
 嵌套 CLI 的 Git source cache 也置于同一 runtime-owned 目录；仍应保留 Windows Git
 路径长度余量，长预算不解除路径限制。安装验证仅在 Windows 缩短 process cache cwd，
 已安装入口、subject 工作目录、config、Git URI 和固定 revision 仍为独立消费者的绝对路径。
-该设置是每个 check process 的上限，不包含 Git snapshot 加载；regulate 的整个 observation
-另受同一个 `probe.timeoutMs` 上限约束，整个 run quota 和 Agent limits 也不变。
+`pilot.probe.timeoutMs` 是每个 check process 的上限，不包含 Git snapshot 加载。
+完整 dependency observation 由独立的 `pilot.probe.observationBudget` 约束，默认仍为 30000ms；
+只提高单个 check 的期限不会扩大它。上例为 installation、configuration、sanity 三个 check
+分别预留 75000ms，完整 observation 为 225000ms。source preparation 还受独立的
+`preparationTimeoutMs` 约束；regulate 的外层 probe 期限、整个 run quota 和 Agent limits 也不变。
 SSH 仍保留原有 24000ms cap，不因本地 opt-in 扩大；总预算包含 10000 毫秒传输余量，
 因此 Git Pilot SSH subject 须显式设置 `timeoutMs <= 14000`；不要假设真实远端 sanity
 能在此时间完成。先运行有界 readiness，实际较慢的 sanity 使用直接 helper 的显式长时限。

@@ -16,10 +16,11 @@ objectives:
           "directories": {"apps": "apps", "packages": "packages", "docs": "docs", "scripts": "scripts"},
           "requiredFiles": ["tsconfig.json", "biome.json"],
           "exceptions": [
-            {"path": "apps/task-engine-web-ui", "reason": "Private independently started Node HTTP application serves its own browser bundle; it belongs under apps, not reusable packages or an npm/browser deployment target."}
+            {"path": "apps/task-engine-web-ui", "reason": "Private Node/browser app; not a library or npm/browser deployment."}
           ],
           "assignments": [],
           "allowedDirectories": [
+            {"path": ".agent/skills", "reason": "Project skills per AGENTS.md."},
             {"path": "examples", "reason": "Public-package consumer examples copied into independent packed installations."},
             {"path": "config", "reason": "Repository-owned release policy."},
             {"path": "schemas", "reason": "Canonical immutable JSON Schema publication sources."}

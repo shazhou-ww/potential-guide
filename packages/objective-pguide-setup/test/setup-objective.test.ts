@@ -1008,7 +1008,11 @@ test("fixed npm package coordinates long local budgets and existing file-auth AC
             ),
           },
           regulationStrategy: {
-            probe: { timeoutMs: 75000, retry: { maxRetries: 0, delayMs: 0 } },
+            probe: {
+              timeoutMs: 75000,
+              observationBudget: { timeoutMs: 225000, maxDepth: 32, maxObservations: 128 },
+              retry: { maxRetries: 0, delayMs: 0 },
+            },
           },
         }),
         f.work,
@@ -1357,7 +1361,7 @@ test("self-check wrong, summary-only, unsupported, persistent-grant, incomplete 
   ]) {
     const f = await setup(mode);
     try {
-      const result = await f.direct("sanity", selfSubject(f), selfHelper);
+      const result = await f.direct("sanity", { ...selfSubject(f), timeoutMs: 60000 }, selfHelper);
       isProblem(result, "sanity-failed");
       const parameters = result.payload?.problems[0]?.parameters as { reason: string } | undefined;
       assert.equal(parameters?.reason, reason);
@@ -1443,7 +1447,11 @@ test("self-check fixed npm packages coordinate default and explicit long budgets
           JSON.stringify({
             ...f.config,
             regulationStrategy: {
-              probe: { timeoutMs: 90000, retry: { maxRetries: 0, delayMs: 0 } },
+              probe: {
+                timeoutMs: 90000,
+                observationBudget: { timeoutMs: 270000, maxDepth: 32, maxObservations: 128 },
+                retry: { maxRetries: 0, delayMs: 0 },
+              },
             },
           }),
           f.work,

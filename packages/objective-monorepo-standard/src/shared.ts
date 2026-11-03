@@ -395,6 +395,7 @@ export async function resolveSource(snapshot: Snapshot, source: string, specifie
   const candidates = [
     base,
     base.replace(/\.js$/, ".ts"),
+    base.replace(/\.js$/, ".tsx"),
     base.replace(/\.jsx$/, ".tsx"),
     base.replace(/\.mjs$/, ".mts"),
     base.replace(/\.cjs$/, ".cts"),

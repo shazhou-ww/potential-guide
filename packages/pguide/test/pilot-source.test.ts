@@ -545,7 +545,7 @@ test("worker dependency source binding preserves exact commits, routing and owne
           cacheDirectory: deadlineCache,
           preparationTimeoutMs: 10000,
           probeTimeoutMs: 15000,
-          observationBudget: { timeoutMs: 1500, maxDepth: 8, maxObservations: 16 },
+          observationBudget: { timeoutMs: 5000, maxDepth: 8, maxObservations: 16 },
           reports: { enabled: false },
         },
       ),

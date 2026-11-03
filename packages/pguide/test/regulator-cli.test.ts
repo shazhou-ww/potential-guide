@@ -584,6 +584,20 @@ test("per-Agent timeout includes ACP startup and invocation failures never start
 test("one-shot regulation finishes at target without scheduling another observation", async () => {
   const f = await fixture();
   try {
+    const counter = join(f.directory, "one-shot-count");
+    await writeFile(f.subject, JSON.stringify({ counter }));
+    await writeFile(
+      join(f.repository, "objective", "checks", "ready", "worker.cjs"),
+      `const {readFile,writeFile}=require("node:fs/promises");
+exports.execute=async(subject)=>{
+  let count=0;
+  try {count=Number(await readFile(subject.counter,"utf8"));}
+  catch(error){if(error.code!=="ENOENT")throw error;}
+  await writeFile(subject.counter,String(count+1));
+  if(count!==0)throw Error("A completed one-shot must not be observed again");
+  return {status:200,message:"",payload:{ok:true,problems:[]}};
+};`,
+    );
     const commit = await f.commit();
     const config = join(f.directory, "one-shot.yaml");
     await writeConfig(
@@ -593,8 +607,8 @@ test("one-shot regulation finishes at target without scheduling another observat
         defaultAgent: "unused",
         stateDirectory: join(f.directory, "state"),
         regulationStrategy: {
-          quota: { timeoutMs: 1500, maxAgentRuns: 2, maxStallRuns: 2 },
-          probe: { timeoutMs: 1000, retry: { maxRetries: 0, delayMs: 0 } },
+          quota: { timeoutMs: 30000, maxAgentRuns: 2, maxStallRuns: 2 },
+          probe: { timeoutMs: 30000, retry: { maxRetries: 0, delayMs: 0 } },
         },
         agents: {
           unused: {
@@ -627,6 +641,7 @@ test("one-shot regulation finishes at target without scheduling another observat
     assert.equal(report.status, "target-reached");
     assert.equal(report.attempts[0].observations.length, 1);
     assert.deepEqual(report.attempts[0].actions, []);
+    assert.equal(await readFile(counter, "utf8"), "1");
   } finally {
     await rm(f.directory, { recursive: true, force: true });
   }

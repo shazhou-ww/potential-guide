@@ -516,6 +516,17 @@ test("root retains joint delivery coverage, dependency closure, layout and runti
   });
 });
 
+test("real repository classifies project skills at their documented location", async () => {
+  const entry = parseObjectives(await readFile(join(root, "objectives.yaml"), "utf8")).standardize;
+  const subject = projectObjective(entry, context(root), undefined);
+  const result = await checkRepository(subject, 1, () => async (wire) => {
+    const report = await checkPackage(wire, 1);
+    assert.equal(report.state, "pass", JSON.stringify(report.findings));
+    return { status: 200, payload: { ok: true, problems: [] }, message: "" };
+  });
+  assert.equal(result.report.state, "pass", JSON.stringify(result.report.findings));
+});
+
 test("real repository has thirty-six package-owned subjects and no old contract input", async (t) => {
   const entry = parseObjectives(await readFile(join(root, "objectives.yaml"), "utf8")).standardize;
   const subject = projectObjective(entry, context(root), undefined);

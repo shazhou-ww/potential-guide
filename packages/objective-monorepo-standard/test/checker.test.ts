@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import type { Contract } from "../src/contract.js";
 import { type Delivery, parsePackageSubject, type Report, type Workspace } from "../src/index.js";
-import { Snapshot } from "../src/shared.js";
+import { resolveSource, Snapshot } from "../src/shared.js";
 import { checkFixture } from "./capability-fixture.js";
 
 const scratch = join(process.cwd(), ".cache");
@@ -130,6 +130,23 @@ test("layer one can pass and internal packages do not require public release met
     assert.equal(has(await check(), "external-import-resolution", "unverified"), true);
   });
 });
+test("JavaScript imports resolve TSX sources without changing existing candidate precedence", async () => {
+  await fixture(async ({ root, check, write }) => {
+    const source = "packages/shared/src/index.ts";
+    const component = "packages/shared/src/component";
+    await write(source, "import './component.js';");
+    await write(`${component}.tsx`, "export const value = 1;");
+    const snapshot = new Snapshot(root);
+    assert.equal(await resolveSource(snapshot, source, "./component.js"), `${component}.tsx`);
+    assert.equal((await check()).state, "pass");
+
+    await write(`${component}.ts`, "export const value = 2;");
+    assert.equal(await resolveSource(snapshot, source, "./component.js"), `${component}.ts`);
+    await write(`${component}.js`, "export const value = 3;");
+    assert.equal(await resolveSource(snapshot, source, "./component.js"), `${component}.js`);
+    assert.equal(await resolveSource(snapshot, source, "./missing.js"), undefined);
+  });
+});
 test("only explicitly assigned generated files skip source observation", async () => {
   await fixture(async ({ contract, check, write }) => {
     const bundle = "packages/shared/runtime/bundle.cjs";
@@ -210,6 +227,30 @@ test("unknown purpose is pending classification; generated and tool-fixed except
     });
     report = await check();
     assert.equal(report.layer2, "checked");
+  });
+});
+test("project skill policy covers only the declared skills directory", async () => {
+  await fixture(async ({ contract, check, write }) => {
+    const skill = ".agent/skills/example/SKILL.md";
+    await write(skill, "# Example project skill");
+    assert.equal(has(await check(), "file-classification", "unverified"), true);
+
+    contract.policy.allowedDirectories.push({
+      path: ".agent/skills",
+      reason: "Repository-owned project skills at their discovery location.",
+    });
+    assert.equal((await check()).state, "pass");
+
+    const unrelated = [".agent/other.md", ".agent/skills-extra/example/SKILL.md"];
+    for (const path of unrelated) await write(path, "# Unclassified file");
+    const report = await check();
+    assert.deepEqual(
+      report.findings
+        .filter(({ rule, state }) => rule === "file-classification" && state === "unverified")
+        .map(({ location }) => location)
+        .sort(),
+      unrelated.sort(),
+    );
   });
 });
 test("structure inventory excludes dist directories but still classifies source files and files named dist", async () => {
@@ -554,7 +595,7 @@ test("role combinations do not force browser and Worker into separate packages",
       false,
     );
     await write("apps/app/src/index.ts", "import './browser-path.js';");
-    await write("apps/app/src/browser-path.ts", "import 'node:crypto';");
+    await write("apps/app/src/browser-path.tsx", "import 'node:crypto';");
     report = await check();
     assert.equal(has(report, "entry-runtime"), true);
     const finding = report.findings.find(
