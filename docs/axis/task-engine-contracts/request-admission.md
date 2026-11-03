@@ -10,7 +10,8 @@
 2. 在窗口内按完整 `requestId` 做幂等检查：相同原始意图且原记录仍保留时返回该请求当前的处理结果，
    包括原 tracking token、已创建的 Task 或已记录的失败；不另开一份处理。
    请求内容冲突则拒绝；原记录已清理时按下述保留规则明确报告不可用。
-3. 新 Request 携带完整 Bundle URL 与 Digest，不要求预注册类型。
+3. 新 Request 携带完整 Bundle 的 `ipfs://<root-CID>` 目录根引用，不要求预注册类型，
+   不接受旧 `{url, digest}`、`URL#digest` 或 tgz 引用。
    Engine 按需获取并验证 Bundle，再使用其中的 Input Schema 校验输入；
    所有准入检查通过后才创建 Task。下载、制品验证或输入校验失败均为提交失败，
    不创建 Task，也不记作 Run 失败。缓存命中仍遵守相同校验要求；
@@ -97,7 +98,8 @@ getRequestStatus(requestId: string, options?: { waitMs?: number }): Promise<Subm
    tracking token、准入判断和最终处理结果。
 2. 共享 preparation 只产出已验证 Bundle，不能替代各 Request 的 Input Schema 校验。
    同一 Bundle 准备完成后，一个 Request 可以创建 Task，另一个可以因输入无效而 rejected。
-3. 共享必须满足各请求指定的内容身份，不能用其他 Digest 的准备结果替代。
+3. 共享以解析后的 Bundle 根 CID 为内容身份，不能用其他 CID 的准备结果替代；
+   节点或网关地址不参与共享身份。此比较不替代完整原始 Request 的幂等比较。
    单个请求校验失败不因此终止其他有效请求仍需要的共享准备工作。
 4. 此 preparation 属于受理前制品装载，不是 Task stage、Run 或 Run 内的业务准备阶段。
    共享 preparation 不合并 Request/Task，也不预先决定未来 Task 是否共享 Run。

@@ -5,6 +5,8 @@
 
 当前职责边界与行为契约以[Task Engine 职责边界](./task-engine-responsibilities.md)为讨论入口。
 以下保留原整理内容，其中系列、周期续作等陈述不代表当前决定；冲突时不以本草稿覆盖后续明确共识。
+其中 Bundle digest、URL 等历史陈述不作为新架构的内容寻址依据；
+新架构统一采用 IPFS UnixFS 目录根 CID，见[Task Bundle 契约](./task-engine-contracts/task-bundle.md#内容身份与引用)。
 
 本文从近期 Task Engine 相关 Ideas 的明确讨论、构想及实施契约中提取陈述，
 并用必要代码核对实际差异。它不是根据现有代码归纳出来的“现状即正确”，
