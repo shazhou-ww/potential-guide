@@ -8,17 +8,10 @@
   },
   "include": ["src/**/*.ts"],
   "references": [
-    { "path": "../objective-host" },
     { "path": "../check-artifacts" },
-    { "path": "../check-host" },
+    { "path": "../check-runtime-files" },
     {
       "path": "../pguide-cli-core"
-    },
-    {
-      "path": "../effects"
-    },
-    {
-      "path": "../git-source"
     },
     {
       "path": "../objective-pilot"

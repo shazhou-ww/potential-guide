@@ -2,8 +2,8 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   at,
-  type Caller,
   type BundleCacheService,
+  type Caller,
   canonical,
   type ErrorFact,
   json,
@@ -11,9 +11,9 @@ import {
   requestTime,
   type SubmissionRecord,
   type SubmissionResult,
+  TaskError,
   type TaskRequest,
   type TaskService,
-  TaskError,
   ulid,
   validateBundleReference,
 } from "@potential-guide/task-protocol";
@@ -49,6 +49,8 @@ export class TaskEngine implements TaskService {
   readonly getTask: TaskService["getTask"];
   readonly cancelTask: TaskService["cancelTask"];
   readonly getRun: TaskService["getRun"];
+  readonly getRunLogs: Coordinator["getRunLogs"];
+  readonly subscribeRunLogs: Coordinator["subscribeRunLogs"];
   readonly getTaskHistory: TaskService["getTaskHistory"];
   readonly getRunHistory: TaskService["getRunHistory"];
   readonly subscribeTask: TaskService["subscribeTask"];
@@ -80,6 +82,7 @@ export class TaskEngine implements TaskService {
       types: [],
       currentVersions: {},
       authorize: options.authorize,
+      ...(options.logs ? { logs: options.logs } : {}),
       ...(options.clock ? { clock: options.clock } : {}),
       ...(options.limits ? { limits: options.limits } : {}),
       ...(options.onError ? { onError: options.onError } : {}),
@@ -92,6 +95,8 @@ export class TaskEngine implements TaskService {
     this.getTask = this.core.getTask.bind(this.core);
     this.cancelTask = this.core.cancelTask.bind(this.core);
     this.getRun = this.core.getRun.bind(this.core);
+    this.getRunLogs = this.core.getRunLogs.bind(this.core);
+    this.subscribeRunLogs = this.core.subscribeRunLogs.bind(this.core);
     this.getTaskHistory = this.core.getTaskHistory.bind(this.core);
     this.getRunHistory = this.core.getRunHistory.bind(this.core);
     this.subscribeTask = this.core.subscribeTask.bind(this.core);

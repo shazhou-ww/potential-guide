@@ -1,5 +1,10 @@
 # Public-package Task Bundle examples
 
+The author builder now emits explicit v2 Bundles. Check emits selected per-problem
+diagnostics (index/kind/problem ID, not parameter/environment dumps) through
+`context.log`; its existing Result/evidence schema remains unchanged. See
+[Run Logs](../../docs/task-run-logs.md) and the concise SDK assertion sample.
+
 The generic server installs Engine/HTTP/Storage/Server, **not** SDK, Check or Probe.
 Run `task-engine-server --config ./echo-config.mjs` with `TASK_SERVER_TOKEN`
 and optionally `TASK_SERVER_PORT` / `TASK_SERVER_DATABASE`.

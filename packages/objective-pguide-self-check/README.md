@@ -8,7 +8,8 @@
 
 独立、只观测的本机 Objective，由被检查设备上**已安装的 pguide** 运行；
 没有新增 CLI 命令。缺 pguide 时先用 [setup/bootstrap](../objective-pguide-setup/README.md)
-补齐安装。旧 setup（含 SSH、`allowSanity` 和 regulation fixture）保持原行为。
+补齐安装。旧 setup 的嵌套 CLI sanity 已因 Host 退役而明确失败；
+本包的独立直接 Agent 检查仍保留，但 CLI `probe` 入口等待 Task Bundle 迁移。
 Agent profile 由被检查设备的 `pguide agents show` 从用户/项目 `agents.yaml`
 读取，主配置只保留默认名称等设置；新 subject 拒绝 `configPath`。
 旧内嵌 profiles 必须先显式执行 `pguide agents migrate --scope user|project`。

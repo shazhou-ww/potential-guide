@@ -5,6 +5,12 @@ It installs Pilot commands (`probe`, `scaffold`, `validate`), `config` and
 `objectives` by default; its built-ins are `diagnose` and `complete`.
 Regulation remains optional.
 
+Checker/Objective Host execution has been retired. `probe`, `regulate` and
+`continue` keep their discovery and help entries but execution explicitly fails
+until migrated to Task Bundles. Existing regulation state is not replayed or
+rewritten. Static `scaffold`/`validate`, configuration, Agent resources and
+Objective declaration management remain available.
+
 Install the default CLI and add optional commands as needed (use explicit
 candidate versions when testing RCs):
 

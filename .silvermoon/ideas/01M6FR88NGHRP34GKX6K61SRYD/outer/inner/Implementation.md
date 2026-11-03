@@ -1,5 +1,9 @@
 # Implementation
 
+实施固定契约及兼容边界见 [Design.md](Design.md)，可复核命令、结果、源码链接与
+独立 tarball/standalone Web UI 运行步骤统一见 [Evidence.md](Evidence.md)。
+Deployment 项仍由独立部署门禁核验，本文件不授予部署批准。
+
 ## Steps
 
 ### I-S01: 定义诊断日志契约

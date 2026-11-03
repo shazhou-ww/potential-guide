@@ -8,6 +8,12 @@ Write `task.yaml` and a callback `(input, context) => Promise<result>` independe
 See `examples/echo`; run its `build.mjs` after building the workspace. Output must
 not already exist. Only Node built-ins may remain external to `worker.cjs`.
 
+`context.log({level, message, fields?})` provides async typed diagnostic receipts,
+independent of business outputs. Use a **v2** declaration to enable its dedicated
+channel; v1 bundles remain compatible and report unsupported. See
+[Run Logs, limits and independent install verification](../../docs/task-run-logs.md)
+and the packaged `examples/check-diagnostics` assertion sample.
+
 Shared JSON Schema files are supplied through `schemas: [{path, digest}]`.
 Each lock is `sha256:` plus the SHA-256 of the exact JSON file bytes. Every
 resource needs an absolute `$id`; supply the entire transitive closure. The

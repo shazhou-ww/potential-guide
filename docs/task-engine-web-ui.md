@@ -1,5 +1,9 @@
 # 任务引擎 Web 工作台
 
+Run 详情的独立 **Logs · 诊断日志** 支持跟随/暂停、历史分页、按序号续接与
+并发/切换隔离；浏览器保留最多 300 条 / 1 MiB，显示未知尾部、缺口、截断、
+过期、不支持和故障。详见 [Run Logs 与独立安装](task-run-logs.md)。
+
 `apps/task-engine-web-ui` 是可选、私有的 Node/TypeScript 应用。它独立于
 Task Server，仅使用公开 HTTP 协议；不会创建 Engine、读其 SQLite、加载业务
 执行器，或因抽屉/页面/流/UI Server 关闭而取消 Task。示例执行器只属于显式启动的

@@ -1,7 +1,7 @@
+import type { BundleReference, ResolvedTaskBundle } from "./bundle.js";
 import type { Json, JsonObject } from "./json.js";
 import type { TypeWorkerRegistration } from "./run.js";
 import type { InputSchema } from "./schema.js";
-import type { BundleReference, ResolvedTaskBundle } from "./bundle.js";
 
 export type Stage = "initial" | "running" | "stopping" | "stopped" | "completed" | "failed";
 export type RunStage = Exclude<Stage, "initial">;
@@ -248,6 +248,10 @@ export interface StoreView {
   events: FactEvent[];
 }
 export interface Store {
+  markRunLogsUnavailable?: import("./logs.js").RunLogStorage["markRunLogsUnavailable"];
+  readRunLogs?: import("./logs.js").RunLogStorage["readRunLogs"];
+  writeRunLogs?: import("./logs.js").RunLogStorage["writeRunLogs"];
+  pruneRunLogs?: import("./logs.js").RunLogStorage["pruneRunLogs"];
   claim(owner: string): void;
   release(owner: string): void;
   read(): StoreView;
@@ -456,6 +460,16 @@ export interface CoordinatorService {
   getTask(taskId: string, caller: Caller): TaskSnapshot;
   cancelTask(taskId: string, caller: Caller): CancellationResult;
   getRun(runId: string, caller: Caller): RunSnapshot;
+  getRunLogs?(
+    runId: string,
+    page: import("./logs.js").RunLogQuery,
+    caller: Caller,
+  ): import("./logs.js").RunLogPage;
+  subscribeRunLogs?(
+    runId: string,
+    page: import("./logs.js").RunLogQuery,
+    caller: Caller,
+  ): import("./logs.js").RunLogSubscription;
   getTaskHistory(
     taskId: string,
     page: { cursor?: string; limit?: number },

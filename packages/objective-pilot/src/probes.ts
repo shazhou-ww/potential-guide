@@ -2,12 +2,6 @@ import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
-  type CheckState,
-  type CheckClient,
-  connectHost,
-  type Subject as HostSubject,
-} from "@potential-guide/checker-host";
-import {
   bindDependencyRequest,
   type ObjectiveDependencySource,
   withDependencyResolutions,
@@ -16,7 +10,6 @@ import { type CheckEvidenceContext, RunEvidence } from "./evidence.js";
 import { parseCheckEnvelope } from "./pilot.js";
 import { stopPosixTree } from "./process-tree.js";
 import type { CheckProbe, CheckResult, DependencyResolution, Envelope, Subject } from "./types.js";
-import type { ObjectiveSource } from "./types.js";
 import { fields, json, ObjectiveConfigurationError, record } from "./validation.js";
 
 function failure(kind: string, cause: unknown, status = 502): Envelope<CheckResult> {
@@ -64,122 +57,6 @@ function evidenceProbe(
   };
 }
 
-export function createArtifactCheckProbe(options: {
-  readonly check: { readonly url: string; readonly digest: string };
-  readonly client?: CheckClient;
-  readonly timeoutMs?: number;
-  readonly evidence?: RunEvidence | false;
-  readonly identity?: unknown;
-}): CheckProbe {
-  return evidenceProbe(async (subject, signal, context, resolutions) => {
-    signal.throwIfAborted();
-    const client = options.client ?? (await connectHost());
-    const task = await client.check({
-      check: options.check,
-      subject: structuredClone(subject) as HostSubject,
-      context: { resolutions: JSON.parse(JSON.stringify(resolutions ?? [])) },
-      freshness: "started-after-request",
-      timeoutMs: options.timeoutMs ?? 30_000,
-    });
-    const cancel = () => {
-      void task.cancel().catch(() => {});
-    };
-    signal.addEventListener("abort", cancel, { once: true });
-    if (signal.aborted) cancel();
-    try {
-      const observation = await task.result();
-      signal.throwIfAborted();
-      if (options.evidence)
-        options.evidence.stream.emit("check.host-observation", {
-          checkRunId: context?.checkRunId,
-          taskId: observation.taskId,
-          executionId: observation.executionId,
-          hostInstance: observation.hostInstance,
-          artifact: observation.artifact,
-          acceptedAt: observation.acceptedAt,
-          executionStartedAt: observation.executionStartedAt,
-          executionCompletedAt: observation.executionCompletedAt,
-        });
-      return parseCheckEnvelope(observation.result);
-    } finally {
-      signal.removeEventListener("abort", cancel);
-    }
-  }, options);
-}
-
-export function createWorkerCheckProbe(options: {
-  readonly directory: string;
-  readonly revision: string;
-  readonly inputView?: unknown;
-  readonly objectivePackages?: Readonly<Record<string, string>>;
-  readonly objectiveSources?: Readonly<Record<string, ObjectiveSource>>;
-  readonly objectiveExecutables?: Readonly<Record<string, readonly string[]>>;
-  readonly timeoutMs?: number;
-  readonly evidence?: RunEvidence | false;
-  readonly identity?: unknown;
-}): CheckProbe {
-  return evidenceProbe(async (subject, signal, _evidence, resolutions) => {
-    signal.throwIfAborted();
-    const client = await connectHost();
-    const timeout = AbortSignal.timeout(options.timeoutMs ?? 30_000);
-    let state: CheckState;
-    try {
-      state = await client.execute(
-        {
-          directory: options.directory,
-          revision: options.revision,
-          subject: structuredClone(subject) as HostSubject,
-          context: {
-            objectivePackages: options.objectivePackages ?? {},
-            objectiveSources: JSON.parse(JSON.stringify(options.objectiveSources ?? {})),
-            objectiveExecutables: JSON.parse(JSON.stringify(options.objectiveExecutables ?? {})),
-            environment: Object.fromEntries(
-              [
-                "PATH",
-                "Path",
-                "SystemRoot",
-                "WINDIR",
-                "ComSpec",
-                "TEMP",
-                "TMP",
-                "HOME",
-                "USERPROFILE",
-                "APPDATA",
-                "LOCALAPPDATA",
-                "XDG_CONFIG_HOME",
-                "XDG_STATE_HOME",
-                "XDG_CACHE_HOME",
-                "TMPDIR",
-                "LANG",
-                "LC_ALL",
-                "PGUIDE_TIMINGS",
-                "PGUIDE_CHECK_HOST_DIRECTORY",
-              ].flatMap((key) => (process.env[key] === undefined ? [] : [[key, process.env[key]]])),
-            ),
-            resolutions: JSON.parse(JSON.stringify(resolutions ?? [])),
-            inputView:
-              options.inputView === undefined
-                ? null
-                : JSON.parse(JSON.stringify(options.inputView)),
-            timeoutMs: options.timeoutMs ?? 30_000,
-          },
-        },
-        AbortSignal.any([signal, timeout]),
-      );
-    } catch (error) {
-      signal.throwIfAborted();
-      if (timeout.aborted)
-        return failure(
-          "check-timeout",
-          `${JSON.stringify(options.identity)}: ${options.timeoutMs ?? 30_000}ms`,
-        );
-      throw error;
-    }
-    if (state.state === "Completed") return parseCheckEnvelope(state.result);
-    return failure("worker-invocation", state.state === "Failed" ? state.error : state.state);
-  }, options);
-}
-
 export function createMemoryCheckProbe(
   invoke: (
     subject: Subject,
@@ -218,7 +95,7 @@ export function createHttpCheckProbe(
   } = {},
 ): CheckProbe {
   throw new ObjectiveConfigurationError(
-    `Legacy bare-subject HTTP checks are unsupported (${url}); use a worker directory/revision with createWorkerCheckProbe.`,
+    `Legacy bare-subject HTTP checks are unsupported (${url}); use a Task Bundle with the Task Engine.`,
   );
 }
 

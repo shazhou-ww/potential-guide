@@ -2,10 +2,8 @@
   "files": [],
   "references": [
     { "path": "./packages/check-environment" },
-    { "path": "./packages/objective-host" },
     { "path": "./packages/check-artifacts" },
     { "path": "./packages/test-tree" },
-    { "path": "./packages/check-host" },
     { "path": "./packages/pguide-agents" },
     {
       "path": "./packages/objective-monorepo-standard"

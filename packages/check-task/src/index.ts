@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { runtimeRevision } from "./runtime-identity.js";
 import {
   type ArtifactReference,
   canonicalJson,
@@ -7,16 +6,17 @@ import {
 } from "@potential-guide/check-artifacts/contracts";
 import {
   authorizeSync,
+  type Json,
   json,
   positive,
   type RegisteredType,
-  type TaskType,
-  type Json,
   type RunContext,
   TaskError,
+  type TaskType,
 } from "@potential-guide/task-protocol";
-import { createIsolatedCheck, type CheckInput, type CheckTaskOptions } from "./implementation.js";
+import { type CheckInput, type CheckTaskOptions, createIsolatedCheck } from "./implementation.js";
 import { checkInputSchema, checkResultSchema } from "./input.js";
+import { runtimeRevision } from "./runtime-identity.js";
 
 export type { CheckInput, CheckPrepared, CheckTaskOptions } from "./implementation.js";
 export {
@@ -104,6 +104,11 @@ export function createCheckTaskType(
     ...registration,
     async run(input, context) {
       const current = context as RunContext;
+      await current.log({
+        level: "debug",
+        message: "开始逐项检查。",
+        fields: { phase: "prepare" },
+      });
       if (!current.generation || !current.startedAt)
         throw new TaskError("invalid_tracking", "SDK Run identity is required.");
       const type = createIsolatedCheck(configuration, {
@@ -128,7 +133,41 @@ export function createCheckTaskType(
           });
         },
       });
-      return type.run(input, context);
+      try {
+        const result = await type.run(input, context);
+        const report = (
+          result as { result?: { ok?: boolean; problems?: { id?: string; kind?: string }[] } }
+        ).result;
+        for (const [index, problem] of (report?.problems ?? []).slice(0, 100).entries())
+          await current.log({
+            level: "warn",
+            message: "逐项检查发现问题。",
+            fields: {
+              index,
+              kind: problem.kind ?? "unknown",
+              ...(problem.id ? { problemId: problem.id } : {}),
+            },
+          });
+        await current.log({
+          level: "info",
+          message: "Checker 已完成，业务结果与诊断分开保留。",
+          fields: {
+            phase: "complete",
+            ok: report?.ok ?? false,
+            problemCount: report?.problems?.length ?? 0,
+          },
+        });
+        return result;
+      } catch (error) {
+        await current.log({
+          level: "error",
+          message: "Checker 执行失败。",
+          fields: {
+            code: error instanceof TaskError ? error.code : "check_failed",
+          },
+        });
+        throw error;
+      }
     },
   };
 }

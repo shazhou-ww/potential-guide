@@ -18,3 +18,8 @@ accepted 与 Task 创建同事务，rejected 保留幂等依据。
 终态跟踪可见性按首次 terminalAt 单独清理，不清理准备中请求，也不删除 Task。
 历史读取不执行原业务 Worker，不因 Bundle 内容淘汰而重跑或丢失事实。
 完整说明见 [Task Engine](../../docs/task-engine.md)。
+Run diagnostic logs use independent additive `run_logs` storage, not lifecycle
+events or Result. Its writes/status retention use the same exclusive Engine
+lease; lifecycle projection version remains 5. See
+[Run Logs](../../docs/task-run-logs.md) for logical budgets, expiry/missing states,
+SQLite high-water allocation, and the separate `logFault` test hook.

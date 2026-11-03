@@ -5,7 +5,7 @@ import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node
 import { delimiter, dirname, join, resolve } from "node:path";
 import { test } from "node:test";
 import { sameDirectory } from "../src/path.js";
-import { bin, commandPackage, fixture, git, scratch, settingsFixture } from "./fixtures.js";
+import { bin, commandPackage, fixture, scratch, settingsFixture } from "./fixtures.js";
 
 const root = resolve(import.meta.dirname, "..", "..", "..");
 const tmpdir = () => scratch;
@@ -266,7 +266,7 @@ test("bare usage and text help never execute discovered command metadata", async
   }
 });
 
-test("scaffold and static validate preserve multilingual Wiki; production probes require committed snapshots", async () => {
+test("scaffold and static validate preserve multilingual Wiki while old execution is retired", async () => {
   const f = await fixture();
   try {
     const guide = join(f.repository, "objective");
@@ -282,8 +282,8 @@ test("scaffold and static validate preserve multilingual Wiki; production probes
       "json",
     ]);
     assert.equal(uncommitted.code, 2);
-    assert.match(uncommitted.stdout, /dirty|uncommitted/);
-    const commit = await f.commit();
+    assert.match(uncommitted.stdout, /Legacy Pilot execution is retired/);
+    await f.commit();
     const probe = await run(bins.probe, [
       "--pilot",
       manifest,
@@ -294,13 +294,9 @@ test("scaffold and static validate preserve multilingual Wiki; production probes
       "--format",
       "json",
     ]);
-    assert.equal(probe.code, 0, probe.stdout);
-    assert.equal(JSON.parse(probe.stdout).status, 200);
-    assert.equal(JSON.parse(probe.stdout).payload.current.levelId, "ready");
-    assert.equal(
-      JSON.parse(probe.stdout).payload.versions[f.uri],
-      await git(f.repository, "rev-parse", `${commit}:objective`),
-    );
+    assert.equal(probe.code, 2, probe.stdout);
+    assert.equal(JSON.parse(probe.stdout).status, "pilot-error");
+    assert.match(probe.stdout, /Legacy Pilot execution is retired/);
     const overviewPath = join(guide, "references", "system", "overview", "en-US.md");
     const overview = await readFile(overviewPath, "utf8");
     assert.match(overview, /references: \[\]/);
@@ -692,7 +688,7 @@ test("malformed user/project Agent resources do not break main config or Objecti
         env,
       );
       assert.equal(regulation.code, 2, regulation.stdout);
-      assert.match(regulation.stdout, /agents YAML/);
+      assert.match(regulation.stdout, /Legacy Pilot execution is retired/);
       await rm(resource);
     }
   } finally {

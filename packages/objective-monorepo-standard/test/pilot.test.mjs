@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
-import { after, before, test } from "node:test";
+import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Effect } from "@potential-guide/effects";
 import {
   captureFilesystemObservation,
-  createWorkerCheckProbe,
+  createMemoryCheckProbe,
   fileResources,
   filesystemObservationRevision,
   loadPilotSpec,
@@ -17,25 +17,20 @@ import {
   projectObjective,
 } from "@potential-guide/objective-pilot";
 import { makeRegulatorSpec, regulate } from "@potential-guide/objective-regulator";
-import { createWorkerHost } from "../../../scripts/worker-test-helpers.mjs";
-import { readArtifact } from "../../check-host/dist/index.js";
 import { main } from "../check.mjs";
-import { checkPackage, checkRepository, defaultPolicy } from "../src/index.ts";
+import {
+  checkPackage,
+  checkRepository,
+  defaultPolicy,
+  withDependencyResolutions,
+  withInputView,
+} from "../src/index.ts";
 
 const root = fileURLToPath(new URL("../../..", import.meta.url));
 const rootId = "@potential-guide/objective-monorepo-standard";
 const packageId = "@potential-guide/objective-package-standard";
 const scratch = join(root, ".cache");
 await mkdir(scratch, { recursive: true });
-const hostRoot = await mkdtemp(join(scratch, "monorepo-worker-host-"));
-let host;
-before(async () => {
-  host = await createWorkerHost(hostRoot);
-});
-after(async () => {
-  await host?.close();
-  await rm(hostRoot, { recursive: true, force: true });
-});
 
 export function context(root, directory = ".") {
   return {
@@ -82,15 +77,8 @@ async function fixtureSpec(objectiveId) {
     },
   });
 }
+
 async function runtimeFor(id, calls = [], failBinding = false, inputView) {
-  const artifacts = new Map();
-  for (const check of ["structure", "deliveries"])
-    artifacts.set(
-      check,
-      await readArtifact(
-        join(root, "packages", id.split("/").at(-1), "dist", "package", "checks", check),
-      ),
-    );
   return {
     observationRevision: (input, signal) =>
       filesystemObservationRevision(
@@ -107,13 +95,40 @@ async function runtimeFor(id, calls = [], failBinding = false, inputView) {
             return { status: 502, payload: null, message: "Input view integrity mismatch." };
           view = JSON.parse(bytes);
         }
-        const artifact = artifacts.get(ref.checkId);
-        return createWorkerCheckProbe({
-          directory: artifact.directory,
-          revision: artifact.revision,
-          ...(view === undefined ? {} : { inputView: view }),
-          evidence: false,
-        })(subject, signal, resolutions);
+        return createMemoryCheckProbe(
+          async () =>
+            withDependencyResolutions(resolutions ?? [], () =>
+              withInputView(view, async () => {
+                const layer = ref.checkId === "structure" ? 1 : 2;
+                const result =
+                  id === packageId
+                    ? { report: await checkPackage(subject, layer) }
+                    : await checkRepository(subject, layer, undefined, signal);
+                const problems =
+                  result.problems ??
+                  (result.report.state === "pass"
+                    ? []
+                    : [
+                        {
+                          kind: "internal",
+                          id: layer === 1 ? "structure-incomplete" : "delivery-incomplete",
+                          parameters: { report: result.report },
+                        },
+                      ]);
+                const requirements = result.requirements ?? [];
+                return {
+                  status: 200,
+                  message: JSON.stringify(result.report),
+                  payload: {
+                    ok: !problems.length && !requirements.length,
+                    problems,
+                    ...(requirements.length ? { requirements } : {}),
+                  },
+                };
+              }),
+            ),
+          { evidence: false },
+        )(subject, signal, resolutions);
       };
     },
     async resolveObjective(objectiveId) {
@@ -127,7 +142,7 @@ async function runtimeFor(id, calls = [], failBinding = false, inputView) {
   };
 }
 
-test("host input view preserves complete independent package checks and rejects forged view bytes", async () => {
+test("input view preserves complete independent package checks and rejects forged view bytes", async () => {
   await fixture(async ({ target, own, subject, write }) => {
     subject.policy.packageLayers = "package-layers.yaml";
     await write("package-layers.yaml", "protocol: [shared]\nbusiness: []\ntools: []");
@@ -516,7 +531,7 @@ test("root retains joint delivery coverage, dependency closure, layout and runti
   });
 });
 
-test("real repository has thirty-six package-owned subjects and no old contract input", async (t) => {
+test("real repository has thirty-four package-owned subjects and no old contract input", async (t) => {
   const entry = parseObjectives(await readFile(join(root, "objectives.yaml"), "utf8")).standardize;
   const subject = projectObjective(entry, context(root), undefined);
   const observed = [];
@@ -599,7 +614,7 @@ test("real repository has thirty-six package-owned subjects and no old contract 
       result.report.findings.filter(({ state }) => state === "fail" || state === "unverified"),
     ),
   );
-  assert.equal(observed.length, 36);
+  assert.equal(observed.length, 34);
   assert.deepEqual(result.problems, []);
   assert.ok(observed.every(({ source }) => source.expectedLevelId === "terminal"));
   assert.throws(() =>
