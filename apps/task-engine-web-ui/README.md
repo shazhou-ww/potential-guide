@@ -13,3 +13,11 @@ pnpm --filter @potential-guide/task-engine-web-ui start D:\Private\task-ui\ui-co
 
 No npm release, remote-user access control, asset management or backend
 lifecycle ownership is provided.
+
+Task and Run directories use TanStack Table with the existing React/shadcn styling.
+Single-line column headers contain sorting controls and filter icons. Native
+popovers contain all filters, including favorites, name/ID, status and Bundle/time
+query inputs, without changing header height. The table footer contains loaded-record pagination and the
+separate server cursor continuation; partial directories are explicitly labeled.
+Snapshot information and query errors also stay in the footer, so live status
+changes do not move the headers.

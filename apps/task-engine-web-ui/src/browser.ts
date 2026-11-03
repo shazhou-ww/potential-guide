@@ -39,6 +39,7 @@ import {
 import {
   describeAction,
   describeRowAction,
+  type DirectoryRowDescription,
   type InlineAction,
   WorkbenchView,
 } from "./presentation.tsx";
@@ -1104,13 +1105,28 @@ function directoryObservation(directory: Directory<TaskPage | RunPage>): string 
       : "完整快照";
 }
 function renderDirectory(): void {
-  const container = "directory";
   const contents = node("div");
   contents.dataset.key = "task-directory";
+  const rows: DirectoryRowDescription[] = [];
+  const show = (more?: HTMLButtonElement) =>
+    view.directory(
+      "tasks",
+      {
+        rows,
+        scope: `${selection.endpoint?.id ?? ""}:${selection.endpoint?.binding ?? ""}`,
+        query: selection.endpoint ? workspace().directory.query : "",
+        complete:
+          !!selection.endpoint && !!workspace().directory.page && !workspace().directory.page?.next,
+        more,
+      },
+      [contents],
+    );
   if (!selection.endpoint) {
     if ((get("only-favorites") as HTMLInputElement).checked) renderStars(contents);
-    else contents.append(node("p", "未配置服务；可以切换“只看收藏”查看本机保存的模板。"));
-    reconcile(container, [contents]);
+    else {
+      contents.append(node("p", "未配置服务；可以切换“只看收藏”查看本机保存的模板。"));
+      show();
+    }
     return;
   }
   const association = node("div");
@@ -1125,7 +1141,6 @@ function renderDirectory(): void {
   view.render("association-filter", [...association.childNodes]);
   if ((get("only-favorites") as HTMLInputElement).checked) {
     renderStars(contents);
-    reconcile(container, [contents]);
     return;
   }
   const state = workspace();
@@ -1136,7 +1151,7 @@ function renderDirectory(): void {
     contents.append(node("p", "query_expired：旧快照仅供参考。请点“重新查询”，不能继续拼页。"));
   if (!directory.page) {
     contents.append(node("p", "尚未取得任务目录。目录查询与提交、Request 跟踪相互独立。"));
-    reconcile(container, [contents]);
+    show();
     return;
   }
   contents.append(
@@ -1152,23 +1167,7 @@ function renderDirectory(): void {
         `已释放前 ${directory.dropped} 条本机摘要，仅保留最近 1000 条已加载记录；目录游标仍属于原快照。重新查询可从头查看。`,
       ),
     );
-  const table = node("table");
-  const head = node("tr");
-  for (const title of [
-    "收藏",
-    "任务",
-    "状态（查询时）",
-    `接收时间（${Intl.DateTimeFormat().resolvedOptions().timeZone}）`,
-    "操作",
-  ])
-    head.append(node("th", title));
-  const thead = node("thead");
-  thead.append(head);
-  table.append(thead);
-  const body = node("tbody");
-  if (directory.page.tasks.length > 1000)
-    contents.append(node("p", "仅渲染前 1000 条；完整集合仍保留并按源封装更新。"));
-  for (const task of directory.page.tasks.slice(0, 1000)) {
+  for (const task of directory.page.tasks) {
     const row = node("tr");
     row.dataset.key = `task:${state.endpoint.binding}:${task.taskId}`;
     describeRowAction(row, {
@@ -1204,19 +1203,22 @@ function renderDirectory(): void {
       inlineButton("编辑重做", () => redo(false)),
     );
     row.append(status, node("td", new Date(task.receivedAt).toLocaleString()), actions);
-    body.append(row);
+    rows.push({
+      id: row.dataset.key,
+      title: `${task.name ?? task.type} ${task.taskId}`,
+      status: summaryStatus(task),
+      time: Date.parse(task.receivedAt),
+      node: row,
+    });
   }
-  table.append(body);
-  contents.append(table);
   if (!directory.page.tasks.length) contents.append(node("p", "没有符合筛选的任务。"));
-  contents.append(
+  show(
     button(
       "目录下一页（原过滤条件）",
       () => queryDirectory(true),
       !directory.page.next || directory.expired,
     ),
   );
-  reconcile(container, [contents]);
 }
 function summaryStatus(task: TaskSummary): string {
   const now = Date.now(),
@@ -1313,9 +1315,10 @@ async function queryExecutions(append = false): Promise<void> {
   if (lease.current()) renderExecutions();
 }
 function renderExecutions(): void {
-  const root = "execution-directory",
-    box = node("div");
+  const box = node("div");
   const directory = workspace().executionDirectory;
+  const rows: DirectoryRowDescription[] = [];
+  let more: HTMLButtonElement | undefined;
   box.dataset.key = "execution-directory";
   if (directory.error)
     box.append(
@@ -1334,16 +1337,7 @@ function renderExecutions(): void {
     );
     if (directory.dropped)
       box.append(node("p", `前 ${directory.dropped} 条本机摘要已释放；重新查询可从头查看。`));
-    const table = node("table"),
-      head = node("tr"),
-      tbody = node("tbody");
-    for (const title of ["执行", "状态（查询时）", "开始时间"]) head.append(node("th", title));
-    const thead = node("thead");
-    thead.append(head);
-    table.append(thead);
-    if (directory.page.runs.length > 1000)
-      box.append(node("p", "仅渲染前 1000 条；完整集合仍保留。"));
-    for (const execution of directory.page.runs.slice(0, 1000)) {
+    for (const execution of directory.page.runs) {
       const row = node("tr"),
         title = node("td");
       row.dataset.key = `run:${execution.runId}`;
@@ -1358,28 +1352,38 @@ function renderExecutions(): void {
       type.className = "entity-type";
       title.append(type, node("small", execution.runId.slice(-8)));
       if (execution.bundle) title.append(bundleReference(execution.bundle));
+      const status = `${execution.state.completed ? "已完成" : execution.state.failed ? "执行失败" : execution.state.running ? "执行中" : "结果未确认"}${execution.state.reclaimed ? " · 已回收" : " · 未确认回收"}`;
       row.append(
         title,
-        node(
-          "td",
-          `${execution.state.completed ? "已完成" : execution.state.failed ? "执行失败" : execution.state.running ? "执行中" : "结果未确认"}${execution.state.reclaimed ? " · 已回收" : " · 未确认回收"}`,
-        ),
+        node("td", status),
         node("td", new Date(execution.startedAt).toLocaleString()),
       );
-      tbody.append(row);
+      rows.push({
+        id: row.dataset.key,
+        title: `${execution.name ?? execution.type} ${execution.runId}`,
+        status,
+        time: Date.parse(execution.startedAt),
+        node: row,
+      });
     }
-    table.append(tbody);
-    box.append(table);
     if (!directory.page.runs.length) box.append(node("p", "没有符合筛选的 Run 记录。"));
-    box.append(
-      button(
-        "执行目录下一页",
-        () => queryExecutions(true),
-        !directory.page.next || directory.expired,
-      ),
+    more = button(
+      "执行目录下一页",
+      () => queryExecutions(true),
+      !directory.page.next || directory.expired,
     );
   } else box.append(node("p", "尚未取得执行目录。"));
-  reconcile(root, [box]);
+  view.directory(
+    "runs",
+    {
+      rows,
+      scope: `${selection.endpoint?.id ?? ""}:${selection.endpoint?.binding ?? ""}`,
+      query: directory.query,
+      complete: !!directory.page && !directory.page.next,
+      more,
+    },
+    [box],
+  );
 }
 async function reuse(endpoint: Endpoint, parameters: Parameters, direct: boolean): Promise<void> {
   const configured = endpoints.find((item) => endpointMatches(item, endpoint));
@@ -1436,11 +1440,24 @@ function selectedStars(): Favorite[] {
   );
 }
 function renderStars(box: HTMLElement): void {
+  const rows: DirectoryRowDescription[] = [];
+  const show = () =>
+    view.directory(
+      "tasks",
+      {
+        rows,
+        scope: `${selection.endpoint?.id ?? ""}:${selection.endpoint?.binding ?? ""}`,
+        query: `favorites:${selection.endpoint ? workspace().directory.query : ""}`,
+        complete: true,
+      },
+      [box],
+    );
   let query: URLSearchParams;
   try {
     query = new URLSearchParams(directoryQuery());
   } catch (error) {
     box.append(node("p", String(error)));
+    show();
     return;
   }
   const stars = selectedStars().filter(
@@ -1455,22 +1472,40 @@ function renderStars(box: HTMLElement): void {
   );
   box.append(node("p", `本机星标 ${stars.length} 条 · 覆盖保存的全部星标，不限于目录当前页。`));
   for (const favorite of stars) {
-    const article = node("article");
-    article.dataset.key = `favorite:${favorite.id}`;
+    const row = node("tr");
+    row.dataset.key = `favorite:${favorite.id}`;
     const available =
       !!selection.endpoint && endpointMatches(favorite.endpoint, selection.endpoint);
     const status = available
       ? (sourceStates.get(favorite.id)?.label ?? "来源尚未核对")
       : "原目标缺失或已重绑，禁止改投";
-    article.append(
-      node("strong", favorite.name),
-      node("p", `${status} · ${favorite.endpoint.label}`),
-      node("small", `来源 ${favorite.source!.taskId.slice(-8)}`),
+    if (available)
+      describeRowAction(row, {
+        kind: "task",
+        id: favorite.source!.taskId,
+        label: `查看收藏任务 ${favorite.name} 的详情`,
+        run: () => openTask(favorite.source!.taskId),
+        error: notify,
+      });
+    const star = node("td");
+    star.dataset.rowControls = "";
+    star.append(
+      available
+        ? starButton(favorite.endpoint, favorite.source!.taskId)
+        : button("移除此本机星标", async () => {
+            await changeFavorites(`/api/favorites/${favorite.id}`, "DELETE");
+          }),
     );
-    article.append(
+    const title = node("td");
+    const name = node("span", favorite.name);
+    name.className = "entity-type";
+    title.append(name, node("small", favorite.source!.taskId.slice(-8)));
+    const actions = node("td");
+    actions.dataset.rowControls = "";
+    actions.append(
       inlineButton("查看来源 / 模板", () => openTask(favorite.source!.taskId), !available),
     );
-    article.append(
+    actions.append(
       button(
         "用保存参数新建",
         () => reuse(favorite.endpoint, favorite.parameters as Parameters, true),
@@ -1482,17 +1517,24 @@ function renderStars(box: HTMLElement): void {
         !available,
       ),
     );
-    article.append(details("保存的完整原参数", favorite.parameters));
-    if (available) article.append(starButton(favorite.endpoint, favorite.source!.taskId));
-    else
-      article.append(
-        button("移除此本机星标", async () => {
-          await changeFavorites(`/api/favorites/${favorite.id}`, "DELETE");
-        }),
-      );
-    box.append(article);
+    actions.append(details("保存的完整原参数", favorite.parameters));
+    row.append(
+      star,
+      title,
+      node("td", `${status} · ${favorite.endpoint.label}`),
+      node("td", new Date(favorite.source!.receivedAt).toLocaleString()),
+      actions,
+    );
+    rows.push({
+      id: row.dataset.key,
+      title: `${favorite.name} ${favorite.source!.taskId}`,
+      status,
+      time: Date.parse(favorite.source!.receivedAt),
+      node: row,
+    });
   }
   if (!stars.length) box.append(node("p", "暂无符合筛选的星标任务。"));
+  show();
 }
 let starChecks: AbortController | undefined;
 async function checkStarSources(): Promise<void> {

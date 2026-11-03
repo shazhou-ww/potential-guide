@@ -26,6 +26,7 @@ import { claimActivation } from "./dom.js";
 import { Navigation, type Tab } from "./navigation.js";
 import type { Endpoint } from "./server.js";
 import { Button } from "./ui/button.tsx";
+import { DirectoryTable, type DirectoryTableData, type DirectoryRow } from "./ui/data-table.tsx";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,9 @@ const inlineActions = {
   "查看来源 / 模板": { Icon: Eye, label: "查看来源或保存模板" },
 } as const;
 export type InlineAction = keyof typeof inlineActions;
+export interface DirectoryRowDescription extends Omit<DirectoryRow, "content"> {
+  node: HTMLTableRowElement;
+}
 
 interface Action {
   run(): void | Promise<void>;
@@ -323,13 +327,23 @@ export class WorkbenchView {
     () => this.publish(),
     (tab) => this.events.tab(tab),
   );
-  events: Events = { tab: noop, endpoint: noop, type: noop, favorites: noop, create: noop };
+  events: Events = {
+    tab: noop,
+    endpoint: noop,
+    type: noop,
+    favorites: noop,
+    create: noop,
+  };
   endpoints: Endpoint[] = [];
   types: { value: string; label: string }[] = [];
   selectedType = "";
   legacy = false;
   recent = false;
   private readonly contents = new Map<string, ReactNode>();
+  readonly directories: Record<"tasks" | "runs", DirectoryTableData> = {
+    tasks: { rows: [], scope: "", query: "", complete: false },
+    runs: { rows: [], scope: "", query: "", complete: false },
+  };
   private readonly listeners = new Set<() => void>();
   private revision = 0;
   private root: Root;
@@ -357,6 +371,24 @@ export class WorkbenchView {
   render(id: string, nodes: Node[]): void {
     this.contents.set(id, nodes.map(describe));
     this.publish();
+  }
+  directory(
+    kind: "tasks" | "runs",
+    data: Omit<DirectoryTableData, "rows" | "more"> & {
+      rows: DirectoryRowDescription[];
+      more?: HTMLButtonElement | undefined;
+    },
+    notices: Node[],
+  ): void {
+    this.directories[kind] = {
+      ...data,
+      rows: data.rows.map(({ node, ...row }, index) => ({
+        ...row,
+        content: describe(node, index),
+      })),
+      more: data.more ? describe(data.more, 0) : undefined,
+    };
+    this.render(kind === "tasks" ? "directory" : "execution-directory", notices);
   }
   text(id: string, text: string): void {
     this.contents.set(id, text);
@@ -404,6 +436,55 @@ function Field({ id, label, placeholder }: { id: string; label: string; placehol
       {label}
       <Input id={id} placeholder={placeholder} />
     </label>
+  );
+}
+function DirectoryPanel({ view, kind }: { view: WorkbenchView; kind: "tasks" | "runs" }) {
+  const task = kind === "tasks";
+  const id = task ? "directory" : "execution-directory";
+  const actionsId = task ? "history-actions" : "execution-actions";
+  return (
+    <div id={id} className="table-scroll">
+      <DirectoryTable
+        kind={kind}
+        data={view.directories[kind]}
+        info={<div className="directory-notices">{view.content(id)}</div>}
+        favoriteFilter={
+          task ? (
+            <label className="directory-favorites">
+              <input id="only-favorites" type="checkbox" onChange={() => view.events.favorites()} />
+              只看收藏
+            </label>
+          ) : undefined
+        }
+        bundleFilter={
+          <>
+            <Field
+              id={task ? "history-type" : "execution-type"}
+              label="Bundle Digest（服务端查询）"
+              placeholder="完整 sha256:…（可选）"
+            />
+            <p>修改后点击表格底部“{task ? "重新查询" : "刷新执行目录"}”。</p>
+            {task && <Port view={view} id="association-filter" />}
+          </>
+        }
+        timeFilter={
+          <>
+            <Field
+              id={task ? "created-from" : "started-from"}
+              label={`${task ? "接收" : "开始"}时间 · 起（包含）`}
+              placeholder="2026-10-31T00:00:00+08:00"
+            />
+            <Field
+              id={task ? "created-before" : "started-before"}
+              label={`${task ? "接收" : "开始"}时间 · 止（不含）`}
+              placeholder="带 Z 或时区偏移"
+            />
+            <p>服务端时间范围，填写明确时区后在表格底部重新查询。</p>
+          </>
+        }
+        actions={<Port view={view} id={actionsId} />}
+      />
+    </div>
   );
 }
 function Workbench({ view }: { view: WorkbenchView }) {
@@ -475,31 +556,8 @@ function Workbench({ view }: { view: WorkbenchView }) {
                 ＋ 新建任务
               </Button>
             </div>
-            <div className="filters">
-              <Field id="history-type" label="Bundle Digest" placeholder="完整 sha256:…（可选）" />
-              <Field
-                id="created-from"
-                label="接收时间 · 起（包含）"
-                placeholder="2026-10-31T00:00:00+08:00"
-              />
-              <Field
-                id="created-before"
-                label="接收时间 · 止（不含）"
-                placeholder="带 Z 或时区偏移"
-              />
-              <label className="check">
-                <input
-                  id="only-favorites"
-                  type="checkbox"
-                  onChange={() => view.events.favorites()}
-                />
-                只看收藏
-              </label>
-              {content("history-actions")}
-            </div>
-            {content("association-filter")}
             <div className="list-pane">
-              {content("directory", "table-scroll")}
+              <DirectoryPanel view={view} kind="tasks" />
               <details className="secondary">
                 <summary>按任务标识定位</summary>
                 {content("task-lookup", "row")}
@@ -520,26 +578,8 @@ function Workbench({ view }: { view: WorkbenchView }) {
             <div className="page-heading">
               <p>服务中的完整 Run 记录，包括其他客户端触发的尝试；共享 Run 只列一次。</p>
             </div>
-            <div className="filters">
-              <Field
-                id="execution-type"
-                label="Bundle Digest"
-                placeholder="完整 sha256:…（可选）"
-              />
-              <Field
-                id="started-from"
-                label="开始时间 · 起（包含）"
-                placeholder="2026-10-31T00:00:00+08:00"
-              />
-              <Field
-                id="started-before"
-                label="开始时间 · 止（不含）"
-                placeholder="带 Z 或时区偏移"
-              />
-              {content("execution-actions")}
-            </div>
             <div className="list-pane">
-              {content("execution-directory", "table-scroll")}
+              <DirectoryPanel view={view} kind="runs" />
               <details className="secondary">
                 <summary>按执行标识定位</summary>
                 {content("execution-lookup", "row")}

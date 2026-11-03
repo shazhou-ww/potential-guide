@@ -204,6 +204,11 @@ test("actual browser atomically samples paginated windows, pauses hidden pages a
     await new Promise((resolve) => setTimeout(resolve, 5100));
     assert.equal(reads.length, count, "hidden pages do not sample");
     visibility(false);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(reads.length, count, "focused table filters pause window replacement");
+    input.blur();
+    visibility(true);
+    visibility(false);
     await until(() => !!release, "returning to visible starts a fresh multi-page sample");
     assert.deepEqual(ids(), [a.taskId, b.taskId], "new first page is not published alone");
     assert.equal(streams.has("one/tasks/events"), false);
@@ -212,7 +217,7 @@ test("actual browser atomically samples paginated windows, pauses hidden pages a
     await until(() => ids().includes(d.taskId), "the complete new window replaces old rows");
     assert.deepEqual(ids(), [c.taskId, d.taskId]);
     assert.equal(input.value, "unapplied");
-    assert.equal(document.activeElement, input);
+    assert.equal(document.getElementById("history-type"), input);
     assert.equal(container.scrollTop, 77);
     assert.equal(
       reads.some((url) => url.searchParams.has("bundleDigest")),

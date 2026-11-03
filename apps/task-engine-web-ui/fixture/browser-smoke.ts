@@ -696,6 +696,102 @@ try {
   await click('#directory button[data-action="目录下一页（原过滤条件）"]');
   await wait("document.querySelectorAll('#directory tbody tr').length===14");
   await wait("document.querySelector('#directory').textContent.includes('完整实时集合')");
+  checks.integratedTableControls = await evaluate(`(() => {
+    const ids=['history-type','created-from','created-before','only-favorites'];
+    return ids.every(id=>document.getElementById(id).closest('[popover]'))
+      && !!document.querySelector('#history-actions').closest('footer')
+      && !document.querySelector('.filters');
+  })()`);
+  assert.equal(checks.integratedTableControls, true);
+  checks.statusInformationBelowTable =
+    await evaluate(`['directory','execution-directory'].every(id=>
+    document.querySelector('#'+id+' .directory-notices').closest('footer'))`);
+  assert.equal(checks.statusInformationBelowTable, true);
+  const headerHeight = await evaluate<number>(
+    "document.querySelector('#directory thead').getBoundingClientRect().height",
+  );
+  assert.ok(headerHeight <= 48, `Single-line header exceeded 48px: ${headerHeight}`);
+  await click('#directory [data-filter="tasks-favorite-filter-popup"]');
+  await wait("document.querySelector('#tasks-favorite-filter-popup').matches(':popover-open')");
+  await wait("document.activeElement.id==='only-favorites'");
+  checks.popupDoesNotResizeHeader = await evaluate(`(() => {
+    const popup=document.querySelector('#tasks-favorite-filter-popup').getBoundingClientRect();
+    return document.querySelector('#directory thead').getBoundingClientRect().height===${headerHeight}
+      && popup.width>0 && popup.left>=0 && popup.right<=innerWidth && popup.bottom<=innerHeight;
+  })()`);
+  assert.equal(checks.popupDoesNotResizeHeader, true);
+  await pressKey("Escape", 27);
+  await wait("!document.querySelector('#tasks-favorite-filter-popup').matches(':popover-open')");
+  await wait("document.activeElement.dataset.filter==='tasks-favorite-filter-popup'");
+  checks.filterPopupEscapeRestoresFocus = true;
+  const beforeTableOperations = directoryQueries.length;
+  await evaluate(`(() => {
+    const size=document.querySelector('#directory select[aria-label="任务每页条数"]');
+    size.value='10';size.dispatchEvent(new Event('change',{bubbles:true}));
+  })()`);
+  await wait("document.querySelectorAll('#directory tbody tr').length===10");
+  await click("#directory nav button:last-child");
+  await wait("document.querySelectorAll('#directory tbody tr').length===4");
+  await click("#directory nav button:first-child");
+  await wait("document.querySelectorAll('#directory tbody tr').length===10");
+  await click('#directory th button[aria-label^="接收时间"]');
+  await wait("document.querySelector('#directory th[aria-sort=descending]')");
+  await click('#directory th button[aria-label^="接收时间"]');
+  await wait("document.querySelector('#directory th[aria-sort=ascending]')");
+  await click('#directory [data-filter="tasks-title-filter-popup"]');
+  await wait("document.querySelector('#tasks-title-filter-popup').matches(':popover-open')");
+  await click("#tasks-title-filter");
+  await call("Input.insertText", { text: "survey" });
+  await wait("document.querySelectorAll('#directory tbody tr').length===1");
+  await wait("document.querySelector('#directory .entity-type').textContent==='survey'");
+  await click('#directory footer button[data-action="clear-columns"]');
+  await wait("document.querySelectorAll('#directory tbody tr').length===10");
+  await evaluate(`(() => {
+    const size=document.querySelector('#directory select[aria-label="任务每页条数"]');
+    size.value='25';size.dispatchEvent(new Event('change',{bubbles:true}));
+  })()`);
+  await wait("document.querySelectorAll('#directory tbody tr').length===14");
+  assert.equal(directoryQueries.length, beforeTableOperations);
+  checks.tableSortingFilteringPagination = true;
+  await click('#directory [data-filter="tasks-time-filter-popup"]');
+  await wait("document.querySelector('#tasks-time-filter-popup').matches(':popover-open')");
+  await evaluate("document.querySelector('#created-from').value='not-a-date';true");
+  await pressKey("Escape", 27);
+  await wait("!document.querySelector('#tasks-time-filter-popup').matches(':popover-open')");
+  await evaluate(
+    "document.querySelector('#history-actions button').scrollIntoView({block:'nearest'});true",
+  );
+  const stableHeader = await evaluate<{ x: number; y: number; width: number; height: number }>(
+    "(() => { const {x,y,width,height}=document.querySelector('#directory thead').getBoundingClientRect();return {x,y,width,height}; })()",
+  );
+  const footerHeight = await evaluate<number>(
+    "document.querySelector('#directory footer').getBoundingClientRect().height",
+  );
+  await click("#history-actions button");
+  await wait(
+    "document.querySelector('#directory .directory-notices').textContent.includes('真实日期')",
+  );
+  const errorHeader = await evaluate<{ x: number; y: number; width: number; height: number }>(
+    "(() => { const {x,y,width,height}=document.querySelector('#directory thead').getBoundingClientRect();return {x,y,width,height}; })()",
+  );
+  assert.deepEqual(errorHeader, stableHeader);
+  assert.ok(
+    (await evaluate<number>(
+      "document.querySelector('#directory footer').getBoundingClientRect().height",
+    )) > footerHeight,
+  );
+  checks.statusChangesPreserveHeaderGeometry = true;
+  await evaluate("document.querySelector('#created-from').value='';true");
+  await click("#history-actions button");
+  await wait(
+    "!document.querySelector('#directory .directory-notices').textContent.includes('真实日期')",
+  );
+  await wait("document.querySelectorAll('#directory tbody tr').length===10");
+  await click('#directory button[data-action="目录下一页（原过滤条件）"]');
+  await wait("document.querySelectorAll('#directory tbody tr').length===14");
+  await screenshot("integrated-table.png");
+  await click('#directory [data-filter="tasks-title-filter-popup"]');
+  await wait("document.querySelector('#tasks-title-filter-popup').matches(':popover-open')");
   await click("#history-type");
   await pressKey("a", 65, 2);
   await call("Input.insertText", { text: "保留未应用条件" });
@@ -704,13 +800,13 @@ try {
     globalThis.smokeDirectoryView=() => {
       const list=document.querySelector('#directory');
       return {
-        width:list.getBoundingClientRect().width,scroll:list.scrollTop,text:list.textContent,
+        width:list.getBoundingClientRect().width,scroll:list.querySelector('.directory-grid-scroll').scrollTop,text:list.textContent,
         members:[...list.querySelectorAll('tbody tr')].map(row=>({id:row.dataset.entityId,key:row.dataset.key})),
         drafts:[...document.querySelectorAll('#history-type,#created-from,#created-before,#only-favorites')]
           .map(control=>({id:control.id,value:control.value,checked:control.checked}))
       };
     };
-    const list=document.querySelector('#directory');list.scrollTop=100;
+    const list=document.querySelector('#directory');list.querySelector('.directory-grid-scroll').scrollTop=100;
     globalThis.smokeList=smokeDirectoryView();
     globalThis.smokeListRows=[...list.querySelectorAll('tbody tr')];
     globalThis.smokeListControls=smokeList.drafts.map(control=>document.getElementById(control.id));
@@ -720,7 +816,7 @@ try {
   };
   assert.deepEqual(
     beforeDirectory.drafts.map((draft) => draft.id),
-    ["history-type", "created-from", "created-before", "only-favorites"],
+    ["only-favorites", "history-type", "created-from", "created-before"],
   );
   checks.fullWidthList = await evaluate("smokeList.width>innerWidth*0.95 && smokeList.scroll>0");
   assert.equal(checks.fullWidthList, true);
@@ -758,11 +854,11 @@ try {
   checks.drawerGeometry = await evaluate(`(() => {
     const list=document.querySelector('#directory'), sheet=document.querySelector('#task-detail-sheet').getBoundingClientRect();
     return { beforeWidth:smokeList.width,afterWidth:list.getBoundingClientRect().width,beforeScroll:smokeList.scroll,
-      afterScroll:list.scrollTop,sameContent:list.textContent===smokeList.text,right:sheet.right,width:sheet.width,viewport:innerWidth };
+      afterScroll:list.querySelector('.directory-grid-scroll').scrollTop,sameContent:list.textContent===smokeList.text,right:sheet.right,width:sheet.width,viewport:innerWidth };
   })()`);
   checks.drawerPreservesList = await evaluate(`(() => {
     const list=document.querySelector('#directory'), sheet=document.querySelector('#task-detail-sheet').getBoundingClientRect();
-    return list.getBoundingClientRect().width===smokeList.width && list.scrollTop===smokeList.scroll
+    return list.getBoundingClientRect().width===smokeList.width && list.querySelector('.directory-grid-scroll').scrollTop===smokeList.scroll
       && document.querySelector('#history-type').value==='保留未应用条件'
       && Math.abs(sheet.right-innerWidth)<1 && sheet.width<innerWidth*0.6
       && document.querySelectorAll('[role=dialog]').length===1;
@@ -793,7 +889,9 @@ try {
   assert.equal(checks.relatedNavigation, true);
   await closeOverlay();
   assert.equal(
-    await evaluate("document.querySelector('#directory').scrollTop===smokeList.scroll"),
+    await evaluate(
+      "document.querySelector('#directory .directory-grid-scroll').scrollTop===smokeList.scroll",
+    ),
     true,
   );
   await click("#tab-executions");
@@ -841,6 +939,24 @@ try {
   await evaluate("scrollTo(0,0);true");
   checks.narrowFits = await evaluate("document.documentElement.scrollWidth <= innerWidth");
   assert.equal(checks.narrowFits, true);
+  checks.narrowGridContained = await evaluate(`(() => {
+    const list=document.querySelector('#directory').getBoundingClientRect();
+    const footer=document.querySelector('#directory footer').getBoundingClientRect();
+    const lookup=document.querySelector('#tasks details.secondary').getBoundingClientRect();
+    return footer.bottom<=list.bottom+1 && lookup.top>=list.bottom;
+  })()`);
+  assert.equal(checks.narrowGridContained, true);
+  await click('#directory [data-filter="tasks-time-filter-popup"]');
+  await wait("document.querySelector('#tasks-time-filter-popup').matches(':popover-open')");
+  checks.narrowFilterPopupFits = await evaluate(`(() => {
+    const popup=document.querySelector('#tasks-time-filter-popup').getBoundingClientRect();
+    return popup.left>=0 && popup.right<=innerWidth+1 && popup.top>=0
+      && popup.bottom<=innerHeight+1 && popup.width>0;
+  })()`);
+  assert.equal(checks.narrowFilterPopupFits, true);
+  await screenshot("narrow-filter-popup.png");
+  await pressKey("Escape", 27);
+  await wait("!document.querySelector('#tasks-time-filter-popup').matches(':popover-open')");
   checks.newTaskUnwrapped = await evaluate(
     "(() => { const button=document.querySelector('#new-task'); return getComputedStyle(button).whiteSpace==='nowrap' && button.scrollWidth<=button.clientWidth; })()",
   );

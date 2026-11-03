@@ -164,27 +164,6 @@ main {
   flex: 0 0 auto;
   white-space: nowrap;
 }
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 0.8rem;
-  margin: 0.9rem 0 1.2rem;
-}
-.filters label {
-  flex: 1 1 12rem;
-  font-size: 0.8rem;
-  color: #52525b;
-}
-.filters label input {
-  margin-top: 0.3rem;
-}
-.filters .check {
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
-  padding: 0.5rem 0;
-}
 .list-pane {
   min-width: 0;
 }
@@ -202,14 +181,15 @@ td[data-row-controls] {
   font-weight: 500;
 }
 .table-scroll {
-  overflow: auto;
-  max-height: 65vh;
   background: white;
   border: 1px solid #e4e4e7;
   border-radius: 0.5rem;
 }
-.table-scroll > div > p {
-  padding: 0.6rem;
+.directory-notices p {
+  padding: 0;
+  margin: 0.2rem 0 0.5rem;
+  font-size: 0.8rem;
+  color: #71717a;
 }
 .table-scroll [data-slot="table-head"] {
   background: #fafafa;
@@ -219,6 +199,122 @@ td[data-row-controls] {
   white-space: normal;
   min-width: 7rem;
   overflow-wrap: anywhere;
+}
+.directory-grid-scroll {
+  max-height: 65vh;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.directory-grid [data-slot="table-head"] {
+  vertical-align: middle;
+  padding: 0.4rem 0.5rem;
+}
+.directory-column-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+  anchor-scope: --column-filter;
+}
+.directory-sort-button {
+  padding: 0.25rem 0.35rem;
+}
+.directory-column-label {
+  padding: 0.35rem;
+}
+.directory-favorites {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+.column-filter-trigger {
+  anchor-name: --column-filter;
+}
+.column-filter-trigger[data-active="true"] {
+  color: #18181b;
+  background: #e4e4e7;
+}
+.column-filter-popup {
+  position: fixed;
+  inset: auto;
+  position-anchor: --column-filter;
+  position-area: bottom span-right;
+  position-try-fallbacks:
+    flip-inline,
+    flip-block,
+    flip-inline flip-block;
+  margin: 0.4rem 0 0;
+  width: 21rem;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: 0.8rem;
+  border: 1px solid #d4d4d8;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #18181b;
+  box-shadow: 0 6px 20px #18181b1a;
+  font-size: 0.8rem;
+  font-weight: 400;
+  white-space: normal;
+}
+.column-filter-popup-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
+}
+.column-filter-popup-heading h3 {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.column-filter-fields {
+  display: grid;
+  gap: 0.6rem;
+}
+.column-filter-fields label {
+  display: grid;
+  gap: 0.3rem;
+}
+.column-filter-fields p {
+  margin: 0;
+  color: #71717a;
+  font-size: 0.75rem;
+}
+@supports not (anchor-scope: --column-filter) {
+  .column-filter-popup {
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+  }
+}
+.directory-grid-footer {
+  border-top: 1px solid #e4e4e7;
+  padding: 0.65rem 0.8rem;
+  overflow-anchor: none;
+}
+.directory-grid-footer p {
+  margin: 0 0 0.5rem;
+  color: #71717a;
+  font-size: 0.8rem;
+}
+.directory-grid-actions,
+.directory-grid-actions nav,
+.directory-page-size {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.directory-page-size {
+  margin-left: auto;
+  font-size: 0.8rem;
+}
+.directory-page-size select {
+  padding: 0.3rem;
 }
 td small {
   display: block;
@@ -379,10 +475,7 @@ footer {
   #notice {
     margin: 0.5rem 0.8rem 0;
   }
-  .filters label {
-    flex-basis: 100%;
-  }
-  .table-scroll {
+  .directory-grid-scroll {
     max-height: 55vh;
   }
   .detail-sheet {
