@@ -208,6 +208,16 @@ test("schema fields render scalars, arrays, nested refs, free objects and preser
     assert.equal("absent" in (editor.read() as object), false);
     const common = schemaEditor(envelopeSchema, { bundle, timeoutMs: 250 });
     assert.deepEqual(common.read(), { bundle, timeoutMs: 250 });
+    const reference = common.node.querySelector<HTMLInputElement>('input[type="text"]')!;
+    assert.equal(reference.value, `${bundle.url}#${bundle.digest}`);
+    assert.equal(reference.getAttribute("aria-describedby"), `${reference.id}-hint`);
+    reference.value = bundle.url;
+    assert.throws(() => common.read(), /URL#Digest/);
+    reference.value = `${bundle.url}#${bundle.digest}`;
+    assert.deepEqual(common.read(), { bundle, timeoutMs: 250 });
+    const empty = schemaEditor(envelopeSchema, {});
+    assert.equal(empty.node.querySelector<HTMLInputElement>('input[type="text"]')!.value, "");
+    assert.throws(() => empty.read(), /URL#Digest/);
     const timeout = [...common.node.querySelectorAll<HTMLInputElement>('input[type="text"]')].find(
       (input) => input.value === "250",
     )!;

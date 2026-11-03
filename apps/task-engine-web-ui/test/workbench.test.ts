@@ -87,6 +87,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
       headers: { "content-type": "application/json" },
     });
   const summary = (task: TaskSnapshot) => ({
+    bundle,
     taskId: task.taskId,
     requestId: task.requestId,
     seriesId: task.seriesId,
@@ -336,6 +337,10 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     );
     assert.equal(taskRow.cells[1]!.querySelector("button"), null);
     assert.equal(taskRow.querySelector('[data-action="详情"]'), null);
+    assert.equal(
+      taskRow.querySelector(".bundle-reference")?.textContent,
+      `${bundle.url}#${bundle.digest}`,
+    );
     const star = taskRow.querySelector<HTMLButtonElement>(".star")!;
     star.click();
     await until(
@@ -354,16 +359,19 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
       "Task row opens the real task observer",
     );
     assert.match(element("#task-detail").textContent!, new RegExp(remote.taskId));
+    assert.equal(
+      element("#task-detail .bundle-reference").textContent,
+      `${bundle.url}#${bundle.digest}`,
+    );
     element<HTMLButtonElement>("#task-detail-sheet [data-close]").click();
     await until(() => document.activeElement === taskRow, "closing returns focus to the Task row");
     element<HTMLInputElement>("#history-type").value = bundle.digest;
     click("#new-task");
-    field("Bundle URL").value = bundle.url;
-    field("完整内容 Digest（sha256:…）").value = bundle.digest;
+    field("Task Bundle 引用（URL#digest）").value = `${bundle.url}#${bundle.digest}`;
     field("超时预算 timeoutMs（毫秒）").value = "1000";
     const draft = element<HTMLTextAreaElement>("#form-fields textarea");
     draft.value = JSON.stringify({ text: "draft retained" });
-    key(field("Bundle URL"), "Escape");
+    key(field("Task Bundle 引用（URL#digest）"), "Escape");
     await until(() => !document.querySelector("#create-dialog"), "Esc closes Dialog");
     await until(
       () => document.activeElement === element("#new-task"),
@@ -378,7 +386,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     );
     assert.equal(draft.value, JSON.stringify({ text: "draft retained" }));
     assert.equal(element<HTMLInputElement>("#history-type").value, bundle.digest);
-    const first = field("Bundle URL");
+    const first = field("Task Bundle 引用（URL#digest）");
     const last = element<HTMLElement>("#create-dialog [data-close]");
     first.focus();
     key(first, "Tab", true);
@@ -388,6 +396,16 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     );
     key(last, "Tab");
     assert.ok(document.activeElement === first, "Tab wraps to first dialog control");
+    first.value = bundle.url;
+    named("#create-actions", "提交任务").click();
+    await until(
+      () => element("#dialog-notice").textContent!.includes("URL#Digest"),
+      "incomplete Bundle reference is rejected locally",
+    );
+    assert.equal(calls.filter((call) => call === "POST /api/endpoints/demo/tasks").length, 0);
+    assert.equal(draft.value, JSON.stringify({ text: "draft retained" }));
+    first.value = `${bundle.url}#${bundle.digest}`;
+    await new Promise((resolve) => setTimeout(resolve, 310));
     named("#create-actions", "提交任务").click();
     await until(
       () => !!created && streams.has(created.taskId),

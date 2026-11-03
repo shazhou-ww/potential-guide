@@ -1,22 +1,28 @@
+import {
+  formatBundleReference,
+  parseBundleReference,
+  validateBundleReference,
+} from "@potential-guide/task-protocol/bundle-reference";
 import { assertFiniteJson } from "./json.js";
 
 type Schema = boolean | Record<string, unknown>;
+const bundleReferenceSchema: Schema = {
+  type: "object",
+  title: "Task Bundle 引用",
+  required: ["url", "digest"],
+  additionalProperties: false,
+  properties: {
+    url: { type: "string", title: "Bundle URL" },
+    digest: { type: "string", title: "完整内容 Digest（sha256:…）" },
+  },
+};
 export const envelopeKeys = ["bundle", "timeoutMs", "eligibleAt", "seriesId", "matchPolicy"];
 export const envelopeSchema: Schema = {
   type: "object",
   required: ["bundle", "timeoutMs"],
   additionalProperties: false,
   properties: {
-    bundle: {
-      type: "object",
-      title: "Task Bundle 引用",
-      required: ["url", "digest"],
-      additionalProperties: false,
-      properties: {
-        url: { type: "string", title: "Bundle URL" },
-        digest: { type: "string", title: "完整内容 Digest（sha256:…）" },
-      },
-    },
+    bundle: bundleReferenceSchema,
     timeoutMs: { type: "integer", title: "超时预算 timeoutMs（毫秒）", minimum: 1 },
     eligibleAt: { type: "string", title: "资格时间 eligibleAt（带时区 ISO 时间）" },
     seriesId: { type: "string", title: "seriesId（可选原样保留）" },
@@ -83,6 +89,28 @@ export function schemaEditor(
   depth = 0,
 ): Editor {
   if (depth > 32) throw new Error("表单嵌套超过 32 层。");
+  if (raw === bundleReferenceSchema) {
+    const box = element("fieldset");
+    box.className = "scalar-field";
+    const input = element("input");
+    input.id = `field-${++fieldId}`;
+    input.type = "text";
+    input.required = true;
+    input.spellcheck = false;
+    input.placeholder = "https://example.com/task.tar.gz#sha256:…";
+    input.value =
+      initial === undefined ? "" : formatBundleReference(validateBundleReference(initial));
+    const label = element("label", "Task Bundle 引用（URL#digest）");
+    label.htmlFor = input.id;
+    const hint = element(
+      "p",
+      "粘贴获取 URL#sha256:完整64位小写摘要。摘要固定执行内容；同一内容可来自不同 URL。",
+    );
+    hint.id = `${input.id}-hint`;
+    input.setAttribute("aria-describedby", hint.id);
+    box.append(label, input, hint);
+    return { node: box, read: () => parseBundleReference(input.value) };
+  }
   const schema = resolvedSchema(raw, root);
   const box = element("fieldset");
   const title =

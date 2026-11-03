@@ -10,6 +10,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./bundle-reference": {
+      "types": "./dist/bundle-reference.d.ts",
+      "import": "./dist/bundle-reference.js"
     }
   },
   "files": [

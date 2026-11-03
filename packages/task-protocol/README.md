@@ -1,5 +1,15 @@
 # @potential-guide/task-protocol
 
+Task Bundle 的完整引用可使用 `URL#sha256:<64 位小写十六进制摘要>`：
+`parseBundleReference(reference)` 解析为 `{url, digest}`，
+`formatBundleReference(bundle)` 校验并拼合为字符串。两者复用
+`validateBundleReference` 的 URL 与 Digest 约束，非法输入抛出
+`TaskError`（`invalid_request`）。获取 URL 不得带 fragment，包括空 `#`；
+不截短、解码或修正 Digest，不改写 URL。HTTP 请求不发送 fragment。
+请求在线路上仍使用 `{url, digest}`；内容判等与缓存使用 Digest，而非完整引用字符串。
+辅助函数同时从包根与浏览器安全的 `@potential-guide/task-protocol/bundle-reference`
+子入口导出；浏览器使用子入口，不引入 Node Schema 编译与摘要依赖。
+
 可信宿主资源声明采用 `resourceLifetime: "request"`，或提供独立
 `confirmResourceRelease(RunResourceContext)` 证明跨请求 owner/句柄已释放。
 上下文包含可信 workerGeneration；这些宿主函数不进入类型 Worker。

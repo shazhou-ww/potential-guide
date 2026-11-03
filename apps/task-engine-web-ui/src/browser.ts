@@ -1,4 +1,5 @@
 import type {
+  BundleReference,
   HistoryPage,
   Observation,
   PublicEvent,
@@ -10,6 +11,7 @@ import type {
   TaskSummary,
   SubmissionResult,
 } from "@potential-guide/task-protocol";
+import { formatBundleReference } from "@potential-guide/task-protocol/bundle-reference";
 import { envelopeKeys, envelopeSchema, schemaEditor } from "./form.js";
 import { ObservationEnd, stages, taskStatus } from "./lifecycle.js";
 import {
@@ -97,6 +99,11 @@ function notify(error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
   view.text("notice", message);
   view.text("dialog-notice", message);
+}
+function bundleReference(bundle: BundleReference): HTMLElement {
+  const result = node("code", formatBundleReference(bundle));
+  result.className = "bundle-reference";
+  return result;
 }
 function input(label: string, type = "text"): { label: HTMLLabelElement; input: HTMLInputElement } {
   const element = node("input");
@@ -200,7 +207,7 @@ function renderForm(parameters?: Parameters): void {
   view.render("contract-actions", []);
   const container = get("form-fields");
   container.replaceChildren();
-  const original = parameters ?? { bundle: { url: "", digest: "" } };
+  const original = parameters ?? {};
   const envelope = Object.fromEntries(
     Object.entries(original).filter(([key]) => envelopeKeys.includes(key)),
   );
@@ -220,7 +227,7 @@ function renderForm(parameters?: Parameters): void {
     };
     view.text(
       "contract",
-      "每个 Request 固定 URL 与完整 Digest；服务按 Bundle 离线契约校验 Input。准备完成前不创建 Task，也不开始 Task 超时。",
+      "填写 URL#digest 固定 Bundle 内容；服务按 Bundle 离线契约校验 Input。准备完成前不创建 Task，也不开始 Task 超时。",
     );
   } catch (error) {
     formBlocked = true;
@@ -273,6 +280,7 @@ function renderBar(): void {
         ),
         node("p", entry.message),
       );
+      row.append(bundleReference(entry.parameters.bundle));
       row.append(
         details("提交参数与原身份", {
           endpoint: entry.endpoint.id,
@@ -739,6 +747,7 @@ function renderObserver(observer: Observer): void {
     }
     const task = observer.snapshot;
     if (task) {
+      if (task.bundle) box.append(bundleReference(task.bundle));
       const now = Date.now();
       const timeout = now > Date.parse(task.deadlineAt);
       const state = node("p", taskStatus(task, now));
@@ -835,6 +844,7 @@ function renderObserver(observer: Observer): void {
     );
     state.className = "status";
     box.append(state, details("Run 标识", { runId: observer.id }));
+    if (observer.runSnapshot?.bundle) box.append(bundleReference(observer.runSnapshot.bundle));
     if (observer.associated.error)
       box.append(node("p", `关联任务不可读：${observer.associated.error}`));
     if (observer.associated.page)
@@ -1137,6 +1147,7 @@ function renderDirectory(): void {
     const type = node("span", task.name ?? task.type);
     type.className = "entity-type";
     title.append(type, node("small", task.taskId.slice(-8)));
+    if (task.bundle) title.append(bundleReference(task.bundle));
     row.append(star, title);
     const status = node("td", summaryStatus(task));
     const actions = node("td");
@@ -1291,6 +1302,7 @@ function renderExecutions(): void {
       const type = node("span", execution.name ?? execution.type);
       type.className = "entity-type";
       title.append(type, node("small", execution.runId.slice(-8)));
+      if (execution.bundle) title.append(bundleReference(execution.bundle));
       row.append(
         title,
         node(
