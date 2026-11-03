@@ -21,3 +21,7 @@ query inputs, without changing header height. The table footer contains loaded-r
 separate server cursor continuation; partial directories are explicitly labeled.
 Snapshot information and query errors also stay in the footer, so live status
 changes do not move the headers.
+
+The optional Bundle cache page, alongside Task and Run, manages only the selected Endpoint's cached
+content through independently authorized public APIs; it is not an asset registry
+or upload service. See [cache management](../../docs/task-bundle-cache.md).

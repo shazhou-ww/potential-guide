@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { createReadStream } from "node:fs";
-import { chmod, lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { createReadStream, type Dir } from "node:fs";
+import { chmod, lstat, mkdir, opendir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -16,6 +16,8 @@ import {
 } from "@potential-guide/check-artifacts/files";
 import {
   type BundleReference,
+  type BundleCacheDetail,
+  type BundleCachePage,
   type JsonObject,
   type ResolvedTaskBundle,
   resolveBundleSchemas,
@@ -35,6 +37,8 @@ export interface VerifiedBundle {
   declaration: TaskBundleDeclaration;
   resolved: ResolvedTaskBundle;
   directory: string;
+  bytes: number;
+  files: number;
 }
 export function inspectTaskBundle(
   files: ReadonlyMap<string, Buffer>,
@@ -105,6 +109,8 @@ export function inspectTaskBundle(
     declaration,
     resolved: resolveBundleSchemas(declaration, schemas),
     digest: gitTreeDigest(files),
+    bytes,
+    files: files.size,
   };
 }
 export interface BundleCacheOptions {
@@ -120,6 +126,7 @@ export class BundleCache {
   private readonly root: string;
   private readonly fetching = new Map<string, Promise<VerifiedBundle>>();
   private readonly pins = new Map<string, number>();
+  private readonly removing = new Map<string, Promise<void>>();
   private readonly lifetime = new AbortController();
   private readonly concurrency: number;
   private occupied = 0;
@@ -193,6 +200,8 @@ export class BundleCache {
   async acquire(reference: BundleReference): Promise<VerifiedBundle & { release(): void }> {
     const signal = this.lifetime.signal;
     const ref = validateBundleReference(reference);
+    const removing = this.removing.get(ref.digest);
+    if (removing) await removing;
     signal.throwIfAborted();
     this.pins.set(ref.digest, (this.pins.get(ref.digest) ?? 0) + 1);
     let released = false;
@@ -310,9 +319,93 @@ export class BundleCache {
   /** Host-directed eviction cannot invalidate an in-flight preparation or active Run lease. */
   async evict(digest: string): Promise<boolean> {
     const target = this.target(digest);
-    if (this.fetching.has(digest) || this.pins.has(digest)) return false;
-    await rm(target, { recursive: true, force: true });
-    return true;
+    if (this.fetching.has(digest) || this.pins.has(digest) || this.removing.has(digest))
+      return false;
+    const operation = rm(target, { recursive: true, force: true });
+    this.removing.set(digest, operation);
+    try {
+      await operation;
+      return true;
+    } finally {
+      this.removing.delete(digest);
+    }
+  }
+  async detail(digest: string): Promise<BundleCacheDetail> {
+    this.target(digest);
+    const removing = this.removing.get(digest);
+    if (removing) await removing;
+    this.lifetime.signal.throwIfAborted();
+    const leases = this.pins.get(digest) ?? 0;
+    this.pins.set(digest, leases + 1);
+    try {
+      const prepared = await this.cached(digest);
+      if (!prepared && !this.fetching.has(digest))
+        throw new TaskError("not_found", "Bundle is not cached.");
+      return {
+        digest,
+        cached: !!prepared,
+        preparing: this.fetching.has(digest),
+        leases: this.pins.get(digest)! - 1,
+        ...(prepared
+          ? {
+              name: prepared.declaration.name,
+              bytes: prepared.bytes,
+              files: prepared.files,
+              declaration: prepared.declaration,
+              resolved: prepared.resolved,
+            }
+          : {}),
+      };
+    } finally {
+      const count = this.pins.get(digest)! - 1;
+      if (count) this.pins.set(digest, count);
+      else this.pins.delete(digest);
+    }
+  }
+  async list(page: { after?: string; limit?: number }): Promise<BundleCachePage> {
+    const limit = page.limit ?? 50;
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
+      throw new TaskError("invalid_request", "Cache page limit must be between 1 and 100.");
+    if (page.after !== undefined) this.target(page.after);
+    this.lifetime.signal.throwIfAborted();
+    const digests = new Set(this.fetching.keys());
+    let directory: Dir | undefined;
+    try {
+      directory = await opendir(this.root);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    if (directory) {
+      let scanned = 0;
+      for await (const entry of directory) {
+        if (++scanned > 10_000)
+          throw new TaskError("capacity_exceeded", "Cache directory enumeration budget exceeded.");
+        if (/^[a-f0-9]{64}$/.test(entry.name)) {
+          if (!entry.isDirectory() || entry.isSymbolicLink())
+            throw new TaskError("invalid_bundle", "Cache entry is not a regular directory.");
+          digests.add(`sha256:${entry.name}`);
+        }
+      }
+    }
+    const candidates = [...digests].filter((digest) => !page.after || digest > page.after).sort();
+    const items: BundleCachePage["items"] = [];
+    for (const digest of candidates.slice(0, limit)) {
+      try {
+        const {
+          declaration: _declaration,
+          resolved: _resolved,
+          ...entry
+        } = await this.detail(digest);
+        items.push(entry);
+      } catch (error) {
+        if (!(error instanceof TaskError) || error.code !== "not_found") throw error;
+      }
+    }
+    return {
+      items,
+      observedAt: new Date().toISOString(),
+      ...(candidates.length > limit ? { next: candidates[limit - 1] } : {}),
+    };
   }
   async close(): Promise<void> {
     this.lifetime.abort(new TaskError("engine_closed", "Bundle cache is closing."));

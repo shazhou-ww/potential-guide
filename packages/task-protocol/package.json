@@ -14,6 +14,10 @@
     "./bundle-reference": {
       "types": "./dist/bundle-reference.d.ts",
       "import": "./dist/bundle-reference.js"
+    },
+    "./presentation": {
+      "types": "./dist/presentation.d.ts",
+      "import": "./dist/presentation.js"
     }
   },
   "files": [

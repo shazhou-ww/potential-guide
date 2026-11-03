@@ -23,7 +23,7 @@ export interface ServerOptions {
   host?: string;
   port?: number;
   limits?: EngineOptions["limits"];
-  http?: Omit<HandlerOptions, "service" | "resolveCaller">;
+  http?: Omit<HandlerOptions, "service" | "resolveCaller" | "bundleCache">;
   shutdownMs?: number;
   requestTimeoutMs?: number;
   maxConnections?: number;
@@ -150,6 +150,7 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
     const handler = createTaskHandler({
       ...options.http,
       service: engine,
+      bundleCache: engine,
       resolveCaller: options.resolveCaller,
     });
     const bridge = async (incoming: IncomingMessage, outgoing: ServerResponse) => {

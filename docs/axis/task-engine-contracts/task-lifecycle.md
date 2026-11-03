@@ -115,6 +115,14 @@ Run 终结时间回拨导致失配时，这些边界也不随巡检或后续 Run
    仍保留取消和时间依据，不因聚合标签丢失三维信息。
 3. 展示优先级不参与匹配、取消或回收决策，这些逻辑直接判断三个维度。
 4. 已完成 Task 日后可以越过 deadline，UI 仍展示完成，二者并不矛盾。
+5. 协议包提供纯函数 `aggregateTaskStatus(task, now)`，输入为 stage、canceled、
+   eligibleAt、deadlineAt 和显式 epoch 毫秒，返回 `{ status, qualifiers }`，不含 i18n 或颜色。
+   终结 stage 优先于 canceled，canceled 优先于 timedOut；未取消、未超时的 running /
+   stopping 保留运行阶段，即使时钟回拨到生效前；仅 initial 按时间区分 pending（待生效）
+   和 waiting（等待匹配）。now 等于生效时间或截止时间时仍处于 eligible。
+6. 已终结且取消的任务附加 `demandWithdrawn`；取消或超时但 stage 为 running / stopping
+   时附加 `runNotEnded`。其余 qualifiers 为空数组，不推断停止原因、资源回收或结果是否逾期。
+   列表展示主状态，限定信息按需提示，原始三维事实及时间边界保留在详情中。
 
 Task 取消、超时对运行的影响，见[Task 取消、超时与 Run 终止](./run-termination.md)；
 Task 与 Run 何时建立匹配关系，见[Task 匹配与 Run 启动](./run-matching.md)。

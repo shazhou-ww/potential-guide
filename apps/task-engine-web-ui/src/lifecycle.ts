@@ -4,33 +4,35 @@ import type {
   RunSummary,
   TaskSnapshot,
 } from "@potential-guide/task-protocol";
+import {
+  aggregateTaskStatus,
+  type TaskDisplayStatus,
+  type TaskStatusInput,
+  type TaskStatusQualifier,
+} from "@potential-guide/task-protocol/presentation";
 
-export const stages: Record<string, string> = {
-  initial: "等待符合条件的 Run",
-  running: "Run 尝试中",
+const statusLabels: Record<TaskDisplayStatus, string> = {
+  pending: "待生效",
+  waiting: "等待运行",
+  running: "运行中",
   stopping: "正在停止",
   stopped: "已停止",
   completed: "已完成",
-  failed: "Run 失败",
+  failed: "运行失败",
+  canceled: "已取消",
+  timedOut: "已超时",
 };
-export function taskStatus(task: TaskSnapshot, now = Date.now()): string {
-  const time =
-    now < Date.parse(task.eligibleAt)
-      ? "pending"
-      : now > Date.parse(task.deadlineAt)
-        ? "timeout"
-        : "eligible";
-  const terminal = ["completed", "failed", "stopped"].includes(task.stage);
-  const label = terminal
-    ? stages[task.stage]
-    : task.canceled
-      ? "已取消"
-      : time === "timeout"
-        ? "已超时"
-        : time === "pending"
-          ? "等待资格时间"
-          : stages[task.stage];
-  return `${label} · stage ${task.stage} · ${task.canceled ? "已取消" : "未取消"} · 时间 ${time}`;
+const qualifierLabels: Record<TaskStatusQualifier, string> = {
+  demandWithdrawn: "需求已撤回",
+  runNotEnded: "关联运行尚未结束",
+};
+export function taskStatus(task: TaskStatusInput, now = Date.now()): string {
+  return statusLabels[aggregateTaskStatus(task, now).status];
+}
+export function taskStatusExplanation(task: TaskStatusInput, now = Date.now()): string {
+  return aggregateTaskStatus(task, now)
+    .qualifiers.map((qualifier) => qualifierLabels[qualifier])
+    .join("；");
 }
 export class ObservationEnd {
   private readonly reclaimed = new Set<string>();

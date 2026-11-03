@@ -51,7 +51,7 @@ test("React/shadcn owns rendering and isolates the persistent schema editor", as
           "table-cell",
         ])
           assert.ok(document.querySelector(`[data-slot="${slot}"]`), slot);
-        assert.equal(document.querySelectorAll("header [role=tab]").length, 2);
+        assert.equal(document.querySelectorAll("header [role=tab]").length, 3);
         assert.equal(document.querySelectorAll('main [role="tabpanel"]:not([hidden])').length, 1);
         assert.equal(document.querySelectorAll("#directory img").length, 0);
         cell.textContent = "mutating a consumed description is not a DOM update";

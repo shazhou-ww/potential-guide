@@ -51,10 +51,12 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
 收藏包含完整业务参数，应将目录放在仅当前操作员可读写的位置；本工具不是
 本机其他用户或恶意本机程序的隔离边界。同一收藏文件只由一个 UI 实例使用。
 
-首次连接需后端具备当前 `GET /task-types`、quoted `If-Match`、`GET /tasks`、
-`GET /runs` 及请求/任务/事件接口；旧服务缺 Run 目录时明确报错，不用本机已见
-Run 代替。`list-runs` 是独立授权操作；它与 Task 的 `list`、`submit`、
-`request`、`task`、`history`、`subscribe` 均不互相授予权限。发现失败不关闭目录入口。
+连接需后端支持当前 Task Bundle 协议：`POST /tasks`、
+`GET /requests/:requestId/status`、`GET /tasks`、`GET /runs` 及请求/实体/事件接口。
+提交携带准确 Bundle URL 和完整内容 Digest，不查询 `/task-types`，不发送旧 `If-Match` guard。
+旧服务或缺失接口明确报错，不用本机已见 Run 代替服务目录。
+`list-runs` 是独立授权操作；它与 Task 的 `list`、`submit`、`request`、`task`、
+`history`、`subscribe` 均不互相授予权限。没有提交或详情权限也不关闭目录入口。
 任务星标需要 `task` 和 `request`：UI Server 经这两个公开接口核对来源并保存原参数。
 
 ### Endpoint 与访问边界
@@ -89,8 +91,9 @@ Run 代替。`list-runs` 是独立授权操作；它与 Task 的 `list`、`submi
 
 收藏最多 200 条 / 4 MiB，原子替换写入本机文件；最近事件窗口最多 500 条 /
 2 MiB，清理会明确标记，历史当前页单独保留。任务栏最多 100 批次、每批 50 项、
-总计 200 项。目录窗口/完整集合最多保留 10,000 条 / 8 MiB 摘要；
-超限明确报错，保留上次确认窗口，不截断成员或推进游标。
+总计 200 项。每个目录窗口/完整集合最多保留 10,000 条 / 8 MiB 摘要，
+表格按本机页大小渲染已加载记录；超限明确失败，保留上次确认窗口，
+不截断成员或推进游标。
 各 Endpoint 观察列表最多保留 200 条 / 8 MiB 快照，选中对象详情独立保留；释放本机
 视图不取消后端 Task。
 这些是 UI 保护，不是服务治理配置。UI 不清理后端任务、历史、执行或资产。
@@ -115,6 +118,10 @@ Run 代替。`list-runs` 是独立授权操作；它与 Task 的 `list`、`submi
   记录，不宣称服务端全量命中数或支持随机跳页。完整基线仍保留最多 10,000 条 /
   8 MiB 的预算，不再只展示前 1000 条。实时更新保留列筛选、排序、分页和弹出面板状态；
   数据缩减会收敛页码，新查询回到首页，切换 Endpoint 清除本地列筛选与排序。
+- **Bundle 缓存**：与任务、Run 并列的独立页面，管理当前 Endpoint 机器上的内容缓存，不是浏览器本地文件。
+  提供分页列表、大小/占用、声明契约及显式确认的单项清理；与 Task/Run 目录权限独立。
+  忙碌内容清理被拒绝，清理不删除任务历史或原归档；后续运行可能需要重新获取。
+  详细权限、并发与接口见 [Endpoint Task Bundle 缓存管理](./task-bundle-cache.md)。
 - **数据行导航**：Task 与 Run 目录的类型是普通文字，不是按钮。点击数据行，或聚焦行后
   按 Enter / Space 打开详情；关闭 Sheet 回原行，表格仍保留真实 table/row/cell 语义。
   星标、重做/编辑及整个操作单元格（包括空白、禁用按钮和提示包装区域）独立处理，
@@ -125,9 +132,10 @@ Run 代替。`list-runs` 是独立授权操作；它与 Task 的 `list`、`submi
   可访问名称；Esc 可关闭提示，Enter 仍执行原动作。新建、提交、实体名称、取消、
   未知回执重试保留文字，不把所有按钮机械图标化。`data-action` 和稳定 key 不变，
   图标按钮另有 `data-glyph-action`，不会因文字隐藏而改变提交身份或业务回调。
-- **两个主 Tab**：标题、任务/执行 Tabs、受控服务选择、任务栏入口合在紧凑顶栏。
+- **三个主 Tab**：标题、任务/Run/Bundle 缓存 Tabs、受控服务选择、任务栏入口合在紧凑顶栏。
   默认任务页，整合当前/历史目录、筛选、选中详情与星标。
-  执行页查询整个 Endpoint 获授权且保留的执行记录。一次只有一页进入布局和
+  Run 页查询整个 Endpoint 获授权且保留的运行记录，缓存页提供缓存列表、契约与单项清理。
+  一次只有一页进入布局和
   键盘顺序；Tab 箭头键、弹窗 Esc/焦点回归可用，跨 Tab 保留筛选、选中项和输入。
 - **全宽列表与详情抽屉**：两个目录独占页面可用宽度，点击任务/执行后从右侧覆盖，
   不缩窄表格、不改筛选、原分页或列表滚动。关闭按钮、Esc 和宽屏遮罩可关闭，
@@ -138,45 +146,61 @@ Run 代替。`list-runs` 是独立授权操作；它与 Task 的 `list`、`submi
   请求仍提交结构化 `{url, digest}`。编辑重做从原引用拼合，不改写 URL 或摘要。
   任务/Run 目录、详情与提交回执展示完整引用为可选取的纯文本，不访问该 URL；
   长引用可换行，不改变列表导航。内容判等与缓存仍以 Digest 为准。
-- **新建弹窗**：点“新建任务”，填写完整 Bundle 引用与请求参数；关闭重开保留本次
-  表单（包括尚不合法的字段文本），提交成功关闭弹窗并定位新 Task。常用标量、枚举、数组、嵌套属性、
-  本地引用生成表单。自由 object 和复杂组合字段提供局部 JSON 编辑及约束查看。
-  可选字段需明确勾选；不强转原参数、不补 schema 默认值、不删除额外属性。
-  数值字段输入 JSON 数字；完整 Schema 校验由 Task Server 执行。UI 不调用 Equals。
-  `$ref` 带同级校验约束时保留联合语义，使用明确的局部 JSON 编辑，不浅合并或覆盖
-  引用中的字段/required；属性读取仅使用原参数的 own properties。
-- **提交任务栏**：顶部入口跨 Tab 常驻，展开草稿/回执面板，不是第三个主 Tab。
+- **新建弹窗**：填写固定 `URL#digest` Bundle 引用、timeoutMs 和可选时间/匹配参数，
+  在独立 JSON 对象编辑器输入业务字段。UI 不下载或执行 Bundle，不猜测其业务 Schema，
+  不再从类型发现生成业务表单；完整输入校验由服务取得 Bundle 后按声明契约执行。
+  业务字段不得覆盖 Bundle、Request 身份或通用时间参数。
+  可选参数需明确勾选，不强转原参数、不补默认值、不删除额外业务字段。
+  关闭重开保留本次表单及尚不合法的原文本。同步取得 accepted 与快照时定位新 Task；
+  异步 preparing 则先保留任务栏回执，不伪造任务详情。
+- **提交任务栏**：顶部入口跨三个 Tab 常驻，展开草稿/回执面板，不另占主 Tab。
   直接提交自动建立独立单条批次，不动多条草稿。多条可以
   上下排序；发送只等待逐条提交回执，不等任务完成，中间拒绝/未知继续后项。
-  同次重试保留 ULID、参数及 quoted revision。未知后遇 412 仍是未知，不能
-  推断旧 Task 不存在。用“核对原 requestId”或原身份重试核对；主动再做一次
+  preparing 只表示 Request 正在准备，尚无 Task，也未开始 Task 超时；
+  UI 定期查询 `/requests/:requestId/status`，accepted 后按真实 taskId 读取快照，
+  rejected 显示明确拒绝。处理状态观察失败不撤回已确认事实，也不取消后端处理。
+  同次重试保留 ULID、完整 Bundle 引用和原参数。提交结果未知时，后续请求被拒绝也不能
+  据此推断原 Task 不存在。用“按 requestId 核对结果”或原身份重试核对；主动再做一次
   明确生成新 ULID，可能产生另一 Task。成功项不会被整批重发。
   快捷提交合并 300ms 内的重复激活，即使首个回执很快返回也不把双击解释为主动新做；
   这只是交互防重，不取代服务 Idempotency-Key。
-- **契约变化**：412 留下原参数及身份。重新发现不会自动重发；变化后需明确
-  “按当前契约重新编辑”。原请求重试不换 guard；业务 digest 与 guard 无关。
+- **契约与内容身份**：Bundle Digest 固定完整内容，名称只用于展示。
+  修改 URL、Digest 或业务输入是新意图，需用新身份提交；重做不会偷偷改投最新内容。
+  服务端拒绝旧类型发现 guard；UI 不提供双协议选择或自动迁移旧参数。
 - **Task / Run**：独立 Tab，以服务提供的 runId 关联。完整请求
   单独读 `/requests/:requestId`，Task 快照显示取消/阶段/结果/错误与关联 Run；
-  Run 查看准备前开始、progress、逻辑完成、失败、封存和回收事件。未观察到回收
-  不表示仍占资源。Run 详情通过 `GET /tasks?runId=…` 取得独立授权的已绑定
+  Run 详情直接使用 `GET /runs/:runId` 的快照，展示原始快照、进展、结果、故障、
+  类型结果报告、停止请求、退出/恢复裁决和清理未知证据；不要求先读取关联 Task 或事件历史。
+  有值才展示字段，`false`、`null` 仍是有效结果。结果报告、实际退出和资源回收分开：
+  progress 或 outcome 不证明已退出，发出停止请求不证明已停止，清理未知不证明已释放资源。
+  完成与失败时间取当前快照或目录摘要，不假造已不再存在的 `run.completed` / `run.failed` 事件。
+  展开状态在实时更新中保留；历史和关联任务读取失败独立显示，不隐藏已取得的 Run 诊断。
+  未观察到回收不表示仍占资源。Run 详情通过 `GET /tasks?runId=…` 取得独立授权的已绑定
   关联任务，不扫描事件来拼执行目录，也不推测所有 owners/worker 统计。`ok:false`
   结果不会被标为系统执行错误。
+- **Task 展示状态**：列表、最近查看、关联任务和详情标题复用协议纯函数
+  `aggregateTaskStatus(task, now)`，仅将语义标识映射为本 UI 的中文文案。
+  主状态优先展示运行结局，再判断取消、超时，最后展示当前推进阶段；
+  不再并列拼接“未取消”“时间 timeout”。取消或超时但运行未结束时提供提示，
+  已终结后取消则说明需求已撤回。详情保留原始快照、取消时间和截止时间；
+  当前已越过截止时间不表示结果逾期，已完成任务不会随时间流逝变成失败或超时主状态。
 - **事件**：首次历史页的 stream cursor 接续 SSE，历史 next 独立分页。按
   sequence 去重，过滤后的序号跳跃不直接推断缺口；断流、失效、未加载历史、
   窗口截断均标明。可逐页查看全部可取的公开事件，公开协议隐藏的内部过程不猜测。
   实时区按稳定对象/事件键更新 DOM，保留 disclosure 展开及键盘焦点。Task 快照按
-  来源保护：watermark 只用于 SSE 之间的排序，普通 GET 使用本地读世代；
-  HTTP 回执没有可比较的水位，不从 lastSeen 推测其位置。已确认取消依据公开契约
-  冻结完整 Task 事实，旧 GET/SSE 不能撤回，独立取消回执不会被在途观察丢弃；
-  后续同一取消快照只更新观察时间，Run 事件仍继续接收。
+  来源保护：快照和事件按 dataDomain 与 revision 判断源位置，普通 GET 还使用本地读世代；
+  不从连接活跃或同刻 timestamp 推测新旧。旧 GET/SSE 不能撤回已确认取消，
+  独立取消回执不会被在途观察丢弃；取消并不冻结整个 Task，后续匹配 Run 的 stage、
+  结果和退出事实仍可推进。
   timestamp 仅为观察时间，不用于版本排序。
-- **观察收尾**：任务终结与关联执行逻辑终结/回收证据齐备后停止对应 SSE，显示
-  “观察已结束”。执行自身要同时有逻辑终结和 reclaimed 事实；执行目录的终结/回收
+- **观察收尾**：未匹配 Run 的 Task 确认取消后停止其 SSE；已匹配的 Task 即使终结或取消，
+  仍可观察后续控制和 Run 事实，不因终态自动冻结。Run 自身要同时有终结和 reclaimed
+  事实才停止对应 SSE，显示“观察已结束”；Run 目录的终结/回收
   摘要也可提供这一证据。运行超时不是执行停止，迟到完成仍保留超时标签。
   取消后的未知释放关系不猜测，允许手动暂停。暂停/自动结束仅释放流，仍可分页历史；
   “重新观察”重新读取事实并建立新流（已结束对象会据实再次收尾），不创建或取消 Task。
-- **任务目录**：整合在任务页，独立向后端查询，含其他客户端授权任务。类型精确匹配，receivedAt
-  含下界、不含上界，必须填写带时区时间；固定 created-desc。完整基线使用集合 SSE，
+- **任务目录**：整合在任务页，独立向后端查询，含其他客户端授权任务。按 Bundle Digest 精确匹配，
+  receivedAt 含下界、不含上界，必须填写带时区时间；固定 created-desc。完整基线使用集合 SSE，
   按完整源 revision 原子应用成员加入、更新和移出；尚有下一页时每 5 秒采样一次。
   采样从无 cursor 的新查询开始，按已加载页数读取同一冻结快照，全部成功后整体替换
   已加载窗口及其 observedAt、expiresAt、revision 和 next，不混拼新旧快照，也不保证窗口
@@ -187,11 +211,12 @@ Run 代替。`list-runs` 是独立授权操作；它与 Task 的 `list`、`submi
   主目录暂不自动替换，避免移动用户正在操作的行。独立详情及原有选中 ID 不被窗口刷新重置。
   翻页/重新查询/切换 Endpoint/页面关闭使旧观察失效，不并发采样或让迟到响应覆盖新查询。
   手动翻页遇到 410/query_expired 后明确重新查询，旧视图仅供参考。
+  本机预算不足或不完整基线不得截断后伪装成完整集合。
   详情可能比摘要更新，摘要不含业务结果。
   页和错误状态绑定同一查询世代，旧查询的成功/失败不能覆盖新的结果或错误。
-- **Run 目录**：直接 `GET /runs`，按 type / startedAt 的含下界、不含上界
+- **Run 目录**：直接 `GET /runs`，按 Bundle Digest / startedAt 的含下界、不含上界
   筛选，started-desc 排序，同刻 runId 升序。摘要不含输入、准备证据、结果、
-  scope 或 Task 身份；共享执行只出现一次。执行目录游标与任务/事件游标分开，
+  Task 身份；共享执行只出现一次。Run 目录游标与任务/事件游标分开，
   使用与任务目录相同的完整集合 SSE / 分页窗口采样机制，410 要明确重查。
   Run 详情中的可读关联 Task 列表同样按完整基线或分页窗口观察，不推断全体 owners。
   Task/Run 详情保留原 SSE，尚未创建 Task 的 preparing / unknown Request 回执仍每秒核对状态；
@@ -238,8 +263,10 @@ pnpm --filter @potential-guide/task-engine-web-ui start (Join-Path $demo 'ui.jso
 
 打开终端 B 打印的准确 URL（端口自动分配）：
 
-1. 在任务页打开“新建任务”，`echo` 填 text、timeoutMs；`survey` 填 nested subject、active、scores。
-   验证不同表单、普通自由对象、完整结果及事件。
+1. 在任务页打开“新建任务”，填入终端 A 打印的 `echo` 或 `survey` Bundle URL/Digest，
+   以及 timeoutMs。echo 的业务 JSON 示例为 `{"text":"hello","durationMs":100}`；
+   survey 示例为 `{"subject":{"name":"demo","active":true},"scores":[1,2],"mode":"brief"}`。
+   验证 preparing 回执不冒充 Task，accepted 后能打开真实任务、完整结果及事件。
 2. 先加入多条，再单条快捷；检查草稿不被发送。准备三项并排序，中项填写不合
    Schema 的值，观察拒绝后仍提交后项。执行顺序由服务决定，不由 UI 保证。
 3. 要演示共享，准备两个相同 echo 输入（含相同 durationMs），
@@ -249,13 +276,16 @@ pnpm --filter @potential-guide/task-engine-web-ui start (Join-Path $demo 'ui.jso
 4. durationMs 大于 timeoutMs 可观察运行超时后迟到结果；正常 `ok:false`
    是 fixture 的业务结果。关闭浏览器或只关闭终端 B，终端 A 继续执行。
 5. 在任务页查询目录并打开原请求重做；切换执行页直接查询其他客户端执行，不需要先打开任务。
-   切换“只读目录”验证发现/详情拒绝但两个目录可读；
+   切换“只读目录”验证提交/详情拒绝但两个目录可读；
    切换“独立 scope”验证数据隔离。
 6. 在任务行标星、启用“只看收藏”，只重启终端 B，确认原参数/原目标保留；
-   原参数发起新身份，编辑后发送不改原星标。观察完成且回收后不再持续更新时间，
-   停流后仍可分页历史。用窄窗口和 Tab/Enter/Esc 操作两页、弹窗、任务栏和详情。
+   原参数发起新身份，编辑后发送不改原星标。Run 终结且回收后自动停流，
+   Task 仍可继续观察取消与时间变化；停流后仍可分页历史。
+   打开 Run 详情查看结果、故障与退出诊断，不把无历史权限误解为没有结果。
+   用窄窗口和 Tab/Enter/Esc 操作三个页面、弹窗、任务栏和详情。
 
-关键自动化入口：`#tab-tasks` / `#tab-executions`、`#tasks` / `#executions`（tabpanel）、
+关键自动化入口：`#tab-tasks` / `#tab-executions` / `#tab-cache`、
+`#tasks` / `#executions` / `#cache`（tabpanel）、`#bundle-cache`（缓存列表与详情）、
 `#new-task` / `#create-dialog`、`#only-favorites`、`.star[aria-pressed]`、
 `#bar-toggle` / `#submission-dialog`、`#directory` / `#execution-directory`、
 `#task-detail-sheet` / `#execution-detail-sheet`（`[data-slot="sheet-content"]`）、
@@ -298,9 +328,11 @@ pnpm --filter @potential-guide/task-engine-web-ui exec tsx fixture\browser-smoke
 不能把用户既有 profile 或试用目录作为输出位置。
 
 `test/integration.test.ts` 使用真实独立 HTTP listener 和现有 Task Server，
-覆盖权限/作用域、两种 Schema、guard/身份、批次、目录快照/失效、
+覆盖权限/作用域、两种 Bundle、异步受理/身份、批次、目录快照/失效、
 Task/Run、取消/超时/断流、收藏重启与重做。`test/model.test.ts`
-补充丢回执后 412、迟到响应、游标/去重、DOM 表单和参数保持。
+补充丢回执后的拒绝、迟到响应、游标/去重、DOM 表单和参数保持。
+`test/run-diagnostics.test.ts` 使用实际 browser entry 验证没有历史或关联 Task 权限时仍可读取
+Run 结果与故障，区分结果报告/停止/回收，保留实时折叠状态且不将业务内容作为 HTML 执行。
 `test/presentation.test.ts` 与实际 browser entry 测试使用 jsdom 26.1.0，
 覆盖 React/Radix 所有权、键控焦点、单层切换、原字段节点保留、忙状态与快速双击；
 纯 Schema 测试继续使用 linkedom。实际布局、原生键盘与 CSP 以独立 Chrome 脚本为准，

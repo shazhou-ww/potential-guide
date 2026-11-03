@@ -295,7 +295,7 @@ try {
   checks.visiblePanels = await evaluate(
     "document.querySelectorAll('main [role=tabpanel]:not([hidden])').length",
   );
-  assert.equal(checks.tabs, 2);
+  assert.equal(checks.tabs, 3);
   assert.equal(checks.visiblePanels, 1);
   checks.actualComponents =
     await evaluate(`['tabs','tabs-list','tabs-trigger','tabs-content','button','input','table','table-row'].every(
@@ -310,6 +310,10 @@ try {
   assert.equal(checks.headerOneRow, true);
   await click("#tab-tasks");
   await pressKey("ArrowRight", 39);
+  await wait("document.querySelector('#tab-executions').getAttribute('aria-selected')==='true'");
+  await pressKey("ArrowRight", 39);
+  await wait("document.querySelector('#tab-cache').getAttribute('aria-selected')==='true'");
+  await pressKey("ArrowLeft", 37);
   await wait("document.querySelector('#tab-executions').getAttribute('aria-selected')==='true'");
   await pressKey("ArrowLeft", 37);
   await wait("document.querySelector('#tab-tasks').getAttribute('aria-selected')==='true'");
@@ -369,8 +373,8 @@ try {
   await call("Fetch.disable");
   await wait("document.querySelector('#create-title')?.textContent==='编辑参数并新建任务'");
   checks.glyphEditAction = await evaluate(`(() => {
-    const label=[...document.querySelectorAll('#form-fields label')].find(item=>item.htmlFor&&item.textContent==='Bundle URL');
-    return document.getElementById(label.htmlFor).value===${JSON.stringify(resources.bundles.survey!.url)};
+    const label=[...document.querySelectorAll('#form-fields label')].find(item=>item.htmlFor&&item.textContent==='Task Bundle 引用（URL#digest）');
+    return document.getElementById(label.htmlFor).value===${JSON.stringify(`${resources.bundles.survey!.url}#${resources.bundles.survey!.digest}`)};
   })()`);
   assert.equal(checks.glyphEditAction, true);
   checks.rowControlsIsolated = true;
@@ -510,7 +514,7 @@ try {
   assert.equal(checks.dialogTabTrap, true);
   assert.equal(checks.nonceStylesApplied, true);
   await evaluate(`(() => {
-    for (const [label,value] of [['Bundle URL',${JSON.stringify(resources.bundles.echo!.url)}],['完整内容 Digest（sha256:…）',${JSON.stringify(resources.bundles.echo!.digest)}],['超时预算 timeoutMs（毫秒）','10000']]) {
+    for (const [label,value] of [['Task Bundle 引用（URL#digest）',${JSON.stringify(`${resources.bundles.echo!.url}#${resources.bundles.echo!.digest}`)}],['超时预算 timeoutMs（毫秒）','10000']]) {
       const item=[...document.querySelectorAll('#form-fields label')].find(item=>item.htmlFor&&item.textContent===label);
       document.getElementById(item.htmlFor).value=value;
     }
@@ -648,7 +652,7 @@ try {
   assert.equal(cancellationFacts(createdId), 1);
   checks.terminalTaskCancelOnce = true;
   await wait(
-    "document.querySelector('#task-detail .status').textContent.includes('时间 timeout') && document.querySelector('#task-detail').textContent.includes('超时事实保留')",
+    "document.querySelector('#task-detail .status').textContent==='已完成' && document.querySelector('#task-detail').textContent.includes('当前已过截止时间，不代表结果逾期')",
     Math.max(10_000, Date.parse(canceled.deadlineAt) - Date.now() + 5000),
   );
   checks.taskTimeContinuesAfterTerminalCancellation = true;
@@ -820,6 +824,10 @@ try {
   );
   checks.fullWidthList = await evaluate("smokeList.width>innerWidth*0.95 && smokeList.scroll>0");
   assert.equal(checks.fullWidthList, true);
+  const externalStatus = `document.querySelector('#directory tr[data-entity-id="${external.taskId}"] td:nth-child(3)')`;
+  assert.equal(await evaluate(`${externalStatus}.textContent`), "已完成");
+  const beforeExternalQualifier = await evaluate<string>(`${externalStatus}.title`);
+  assert.equal(beforeExternalQualifier, "");
   const row = '#directory tbody tr[data-row-action="task"]:nth-child(4)';
   await evaluate(`globalThis.smokeOpener=document.querySelector(${JSON.stringify(row)});true`);
   await click(row);
@@ -832,15 +840,14 @@ try {
       .changed,
     true,
   );
-  await wait(
-    `document.querySelector('#directory tr[data-entity-id="${external.taskId}"] td:nth-child(3)').textContent.includes('已取消')`,
-  );
+  await wait(`${externalStatus}.textContent==='已完成' && ${externalStatus}.title==='需求已撤回'`);
   const afterDirectory: DirectoryView = {
     ...(await evaluate<Omit<DirectoryView, "queryReads">>("smokeDirectoryView()")),
     queryReads: [...directoryQueries],
   };
   assertDirectoryPreserved(beforeDirectory, afterDirectory);
-  checks.drawerAllowsLiveStatusUpdates = beforeDirectory.text !== afterDirectory.text;
+  checks.drawerAllowsLiveStatusUpdates =
+    beforeExternalQualifier !== (await evaluate<string>(`${externalStatus}.title`));
   assert.equal(checks.drawerAllowsLiveStatusUpdates, true);
   checks.drawerPreservesQuery = true;
   checks.drawerPreservesMembersAndOrder = true;
@@ -918,6 +925,35 @@ try {
   );
   await click(executionRow);
   await wait("document.querySelector('#execution-detail')?.textContent.includes('观察已结束')");
+  await wait("document.querySelector('#execution-detail [data-key=run-snapshot] pre')");
+  const runDiagnostics = await evaluate<{
+    snapshot: {
+      runId: string;
+      result?: unknown;
+      error?: unknown;
+      exit?: unknown;
+      reclaimedAt?: string;
+    };
+    result: unknown;
+    exit: unknown;
+  }>(`(() => {
+    const read=key=>JSON.parse(document.querySelector('#execution-detail [data-key="'+key+'"] pre').textContent);
+    return {snapshot:read('run-snapshot'),result:read('run-result'),exit:read('run-exit')};
+  })()`);
+  const actualRun = backend.engine.getRun(runDiagnostics.snapshot.runId, {
+    scope: "fixture",
+    subject: "ui",
+  });
+  assert.deepEqual(runDiagnostics.snapshot.result, actualRun.result);
+  assert.deepEqual(runDiagnostics.snapshot.exit, actualRun.exit);
+  assert.equal(runDiagnostics.snapshot.reclaimedAt, actualRun.reclaimedAt);
+  assert.deepEqual(runDiagnostics.result, actualRun.result);
+  assert.deepEqual(runDiagnostics.exit, actualRun.exit);
+  assert.equal((runDiagnostics.result as { ok: boolean }).ok, false);
+  assert.equal(runDiagnostics.snapshot.error, undefined);
+  assert.ok(runDiagnostics.snapshot.reclaimedAt);
+  checks.runDiagnostics = true;
+  await click('#execution-detail [data-key="run-result"] > summary');
   assert.equal(
     await evaluate("document.querySelector('#execution-directory').getBoundingClientRect().width"),
     executionWidth,
@@ -976,6 +1012,21 @@ try {
   assert.equal(checks.narrowDrawerFits, true);
   await screenshot("narrow-sheet.png");
   await closeOverlay();
+  await click("#tab-executions");
+  await click(executionRow);
+  await wait("document.querySelector('#execution-detail [data-key=run-result] pre')");
+  await click('#execution-detail [data-key="run-result"] > summary');
+  checks.narrowRunDiagnosticsFit = await evaluate(`(() => {
+    const sheet=document.querySelector('#execution-detail-sheet');
+    const result=document.querySelector('#execution-detail [data-key=run-result] pre');
+    const rect=sheet.getBoundingClientRect();
+    return rect.left>=0 && rect.right<=innerWidth+1 && sheet.scrollWidth<=sheet.clientWidth
+      && result.scrollWidth<=result.clientWidth && document.documentElement.scrollWidth<=innerWidth;
+  })()`);
+  assert.equal(checks.narrowRunDiagnosticsFit, true);
+  await screenshot("narrow-run-diagnostics.png");
+  await closeOverlay();
+  await click("#tab-tasks");
   const redoSource = await evaluate<string>(
     "document.querySelector('#directory tbody tr:nth-child(4)').dataset.key.split(':').at(-1)",
   );
@@ -1055,6 +1106,64 @@ try {
   await click('#task-detail [data-action="暂停观察"]');
   await wait("document.querySelector('#task-detail')?.textContent.includes('观察已暂停')");
   await closeOverlay();
+  await click("#tab-cache");
+  checks.cachePeerPage = await evaluate(
+    "document.querySelector('#tab-cache').getAttribute('aria-selected')==='true' && !document.querySelector('[role=dialog]') && document.querySelectorAll('main [role=tabpanel]:not([hidden])').length===1",
+  );
+  assert.equal(checks.cachePeerPage, true);
+  await wait(
+    "document.querySelector('#bundle-cache tbody tr [data-action=\"查看契约\"]')?.disabled===false",
+  );
+  await click('#bundle-cache tbody tr:first-child [data-action="查看契约"]');
+  await wait("document.querySelector('#bundle-cache details[data-key^=\"cache-detail:\"] pre')");
+  const cachedDetail = await evaluate<{
+    digest: string;
+    leases: number;
+    declaration: { name: string };
+  }>("JSON.parse(document.querySelector('#bundle-cache details pre').textContent)");
+  assert.ok(cachedDetail.declaration.name);
+  assert.match(cachedDetail.digest, /^sha256:[a-f0-9]{64}$/);
+  checks.cacheDetail = true;
+  checks.narrowCacheFits = await evaluate(`(() => {
+    const panel=document.querySelector('#cache'), rect=panel.getBoundingClientRect();
+    return rect.left>=0 && rect.right<=innerWidth+1 && panel.scrollWidth<=panel.clientWidth
+      && document.documentElement.scrollWidth<=innerWidth;
+  })()`);
+  assert.equal(checks.narrowCacheFits, true);
+  await screenshot("narrow-cache.png");
+  await call("Emulation.setDeviceMetricsOverride", {
+    width: 1440,
+    height: 1000,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await screenshot("bundle-cache.png");
+  const taskBeforeEviction = backend.engine.getTask(controlled.taskId, caller);
+  const cacheRow = `#bundle-cache tr[data-key="${cachedDetail.digest}"]`;
+  const cacheDeadline = performance.now() + 10000;
+  while ((await backend.engine.getCachedBundle(cachedDetail.digest, caller)).leases > 0) {
+    assert.ok(performance.now() < cacheDeadline, "cache should become idle after all Run releases");
+    await delay(50);
+  }
+  await click('#bundle-cache [data-action="刷新缓存"]');
+  await wait(`(() => {
+    const button=document.querySelector(${JSON.stringify(`${cacheRow} [data-action="清理此缓存"]`)});
+    return button && !button.disabled;
+  })()`);
+  await click(`${cacheRow} [data-action="清理此缓存"]`);
+  assert.equal((await backend.engine.getCachedBundle(cachedDetail.digest, caller)).cached, true);
+  await click('#bundle-cache [data-action="确认清理"]');
+  await wait(`!document.querySelector(${JSON.stringify(cacheRow)})`);
+  await assert.rejects(backend.engine.getCachedBundle(cachedDetail.digest, caller), {
+    code: "not_found",
+  });
+  const taskAfterEviction = backend.engine.getTask(controlled.taskId, caller);
+  assert.equal(taskAfterEviction.taskId, taskBeforeEviction.taskId);
+  assert.equal(taskAfterEviction.stage, taskBeforeEviction.stage);
+  assert.deepEqual(taskAfterEviction.result, taskBeforeEviction.result);
+  checks.cacheSingleEviction = true;
+  checks.cachePreservesTaskHistory = true;
+  await click("#tab-tasks");
   checks.cspViolations = await evaluate("smokeCsp");
   assert.deepEqual(checks.cspViolations, []);
   await evaluate(`(() => {

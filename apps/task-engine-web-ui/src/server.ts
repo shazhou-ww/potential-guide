@@ -176,7 +176,10 @@ async function boundedBody(response: Response, max = RESPONSE_LIMIT): Promise<Ui
 }
 export function allowedRoute(path: string, method: string, params: URLSearchParams): boolean {
   let keys: string[] = [];
-  if (path === "/tasks" && method === "GET")
+  if (path === "/bundle-cache" && method === "GET") keys = ["after", "limit"];
+  else if (/^\/bundle-cache\/sha256:[a-f0-9]{64}$/.test(path) && ["GET", "DELETE"].includes(method))
+    keys = [];
+  else if (path === "/tasks" && method === "GET")
     keys = [
       "taskId",
       "bundleDigest",
@@ -579,11 +582,11 @@ export async function startUiServer(raw: UiConfig) {
         if ("requestId" in body) reject(400, "invalid_request", "requestId 只能在请求头中。");
         payload = JSON.stringify(body);
       } else if (
-        method === "POST" &&
+        ["POST", "DELETE"].includes(method) &&
         ((req.headers["content-length"] !== "0" && req.headers["content-length"] !== undefined) ||
           req.headers["transfer-encoding"])
       )
-        reject(400, "unexpected_body", "取消接口不接收请求体。");
+        reject(400, "unexpected_body", "此操作不接收请求体。");
       if (streaming && req.headers["last-event-id"])
         headers.set("Last-Event-ID", String(req.headers["last-event-id"]));
       const target = `${endpoint.config.url.replace(/\/$/, "")}${route[2]}${url.search}`;

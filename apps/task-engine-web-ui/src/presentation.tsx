@@ -514,6 +514,9 @@ function Workbench({ view }: { view: WorkbenchView }) {
             >
               Run
             </TabsTrigger>
+            <TabsTrigger id="tab-cache" aria-controls="cache" value="cache" data-tab="cache">
+              Bundle 缓存
+            </TabsTrigger>
           </TabsList>
           <label className="endpoint-label" htmlFor="endpoint">
             服务
@@ -585,6 +588,21 @@ function Workbench({ view }: { view: WorkbenchView }) {
                 {content("execution-lookup", "row")}
               </details>
             </div>
+          </TabsContent>
+          <TabsContent
+            value="cache"
+            id="cache"
+            aria-labelledby="tab-cache"
+            forceMount
+            hidden={nav.tab !== "cache"}
+          >
+            <div className="page-heading">
+              <p>所选 Endpoint 的 Task Bundle 缓存</p>
+            </div>
+            <p className="secondary">
+              缓存位于服务机器，不是浏览器本地文件；清理不删除任务历史或原归档。
+            </p>
+            <Port view={view} id="bundle-cache" role="region" aria-label="Bundle 缓存列表与详情" />
           </TabsContent>
         </main>
       </Tabs>

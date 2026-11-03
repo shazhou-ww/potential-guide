@@ -405,6 +405,21 @@ article button,
 .workbench-dialog [data-slot="dialog-header"] {
   padding-right: 1.5rem;
 }
+#bundle-cache {
+  min-width: 0;
+}
+#bundle-cache button {
+  margin: 0.2rem 0.3rem 0.2rem 0;
+}
+#bundle-cache section {
+  margin: 0.8rem 0;
+  padding: 0.8rem;
+  border: 1px solid #d4d4d8;
+  border-radius: 0.4rem;
+}
+#bundle-cache [role="alert"] {
+  color: #b91c1c;
+}
 #dialog-notice {
   color: #854d0e;
   font-size: 0.9rem;

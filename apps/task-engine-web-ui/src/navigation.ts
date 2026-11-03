@@ -1,4 +1,4 @@
-export type Tab = "tasks" | "executions";
+export type Tab = "tasks" | "executions" | "cache";
 export type Overlay = "task-detail" | "execution-detail" | "create-dialog" | "submission-dialog";
 
 export class Navigation {

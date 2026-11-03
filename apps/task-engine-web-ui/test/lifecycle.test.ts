@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { PublicEvent, RunPage, TaskSnapshot } from "@potential-guide/task-protocol";
-import { ObservationEnd, taskStatus } from "../src/lifecycle.js";
+import { ObservationEnd, taskStatus, taskStatusExplanation } from "../src/lifecycle.js";
 import { Directory } from "../src/model.js";
 
 const task: TaskSnapshot = {
@@ -76,7 +76,8 @@ test("time stays independent; a terminal matched Task remains observable for lat
   const end = new ObservationEnd("taskId", "task");
   end.feed([], task);
   assert.equal(end.ended, false);
-  assert.match(taskStatus(task, Date.parse(task.timestamp)), /stage running.*时间 timeout/);
+  assert.equal(taskStatus(task, Date.parse(task.timestamp)), "已超时");
+  assert.equal(taskStatusExplanation(task, Date.parse(task.timestamp)), "关联运行尚未结束");
   const completed: TaskSnapshot = {
     ...task,
     stage: "completed",
@@ -85,10 +86,8 @@ test("time stays independent; a terminal matched Task remains observable for lat
     result: { ok: false },
   };
   end.feed([event("run.exited", { basis: "worker" })], completed);
-  assert.match(
-    taskStatus(completed, Date.parse(task.timestamp)),
-    /已完成.*stage completed.*时间 timeout/,
-  );
+  assert.equal(taskStatus(completed, Date.parse(task.timestamp)), "已完成");
+  assert.equal(taskStatusExplanation(completed, Date.parse(task.timestamp)), "");
   assert.equal(end.ended, false);
   end.feed([event("run.reclaimed")], completed);
   assert.equal(end.ended, false);
@@ -96,6 +95,12 @@ test("time stays independent; a terminal matched Task remains observable for lat
 test("cancellation does not invent execution shutdown; ended Execution needs logical and physical facts", () => {
   const end = new ObservationEnd("taskId", "task");
   const canceled = { ...task, canceled: true, canceledAt: task.timestamp };
+  assert.equal(taskStatus(canceled, Date.parse(task.timestamp)), "已取消");
+  assert.equal(taskStatusExplanation(canceled, Date.parse(task.timestamp)), "关联运行尚未结束");
+  assert.equal(
+    taskStatusExplanation({ ...canceled, stage: "completed" }, Date.parse(task.timestamp)),
+    "需求已撤回",
+  );
   end.feed([{ ...event("task.canceled", { runIds: ["execution"] }), taskId: "task" }], canceled);
   assert.equal(end.ended, false);
   end.feed([event("run.reclaimed")], canceled);

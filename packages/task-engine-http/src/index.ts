@@ -1,5 +1,6 @@
 import {
   type Caller,
+  type BundleCacheService,
   fail,
   type HistoryFilter,
   type Observation,
@@ -16,6 +17,7 @@ import {
 
 export interface HandlerOptions {
   service: TaskService;
+  bundleCache?: BundleCacheService;
   resolveCaller(request: Request): Caller | Promise<Caller>;
   prefix?: string;
   maxBodyBytes?: number;
@@ -24,6 +26,7 @@ export interface HandlerOptions {
   auditRejection?: (event: { requestId?: string; code: string }) => void;
 }
 function status(code: string): number {
+  if (code === "bundle_in_use") return 409;
   if (code === "observation_aborted") return 499;
   if (code === "unauthenticated") return 401;
   if (code === "forbidden") return 403;
@@ -133,8 +136,7 @@ async function noBody(request: Request): Promise<void> {
       const chunk = await reader.read();
       if (chunk.done) return;
       if (chunk.value.byteLength) {
-        await reader.cancel();
-        fail("invalid_request", "Cancellation does not accept a new request body.");
+        fail("invalid_request", "This operation does not accept a request body.");
       }
     }
   } finally {
@@ -360,6 +362,31 @@ export function createTaskHandler(
       const url = new URL(request.url);
       if (prefix && !url.pathname.startsWith(`${prefix}/`)) fail("not_found", "Route not found.");
       const path = url.pathname.slice(prefix.length);
+      if (path === "/bundle-cache" && request.method === "GET") {
+        if (!options.bundleCache) fail("not_found", "Bundle cache management is unavailable.");
+        const values = params(url, ["after", "limit"]);
+        if (values.limit !== undefined && !/^[1-9]\d*$/.test(values.limit))
+          fail("invalid_request", "Invalid cache page limit.");
+        return response(
+          await options.bundleCache.listCachedBundles(
+            {
+              ...(values.after !== undefined ? { after: values.after } : {}),
+              ...(values.limit !== undefined ? { limit: Number(values.limit) } : {}),
+            },
+            caller,
+          ),
+        );
+      }
+      const cachedBundle = /^\/bundle-cache\/(sha256:[a-f0-9]{64})$/.exec(path);
+      if (cachedBundle?.[1] && ["GET", "DELETE"].includes(request.method)) {
+        if (!options.bundleCache) fail("not_found", "Bundle cache management is unavailable.");
+        params(url, []);
+        if (request.method === "GET")
+          return response(await options.bundleCache.getCachedBundle(cachedBundle[1], caller));
+        await noBody(request);
+        await options.bundleCache.removeCachedBundle(cachedBundle[1], caller);
+        return response({ removed: true, digest: cachedBundle[1] });
+      }
       if (request.method === "GET" && (path === "/tasks/events" || path === "/runs/events")) {
         const runs = path === "/runs/events";
         const values = params(url, [...(runs ? runFilters : taskFilters), "fromRevision"]);

@@ -318,7 +318,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
       () => element("#directory").textContent!.includes(remote.taskId.slice(-8)),
       "Task directory must load by default",
     );
-    assert.equal(document.querySelectorAll('[role="tab"]').length, 2);
+    assert.equal(document.querySelectorAll('[role="tab"]').length, 3);
     assert.equal(document.querySelectorAll('main [role="tabpanel"]:not([hidden])').length, 1);
     click("#tab-executions");
     await until(
@@ -461,9 +461,9 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     });
     await until(
       () =>
-        element("#task-detail").textContent!.includes("已完成") &&
-        element("#task-detail").textContent!.includes("时间 timeout"),
-      "late completion must retain timeout",
+        element("#task-detail .status").textContent === "已完成" &&
+        element("#task-detail").textContent!.includes("当前已过截止时间，不代表结果逾期"),
+      "completion is the primary status while the current time boundary remains in details",
     );
     assert.equal(streams.get(id)!.closed, false, "logical completion is not reclamation");
     streams.get(id)!.emit({

@@ -273,6 +273,8 @@ export type Operation =
   | "subscribe"
   | "list"
   | "list-runs"
+  | "cache-read"
+  | "cache-remove"
   | "message";
 export type Authorize = (caller: Caller, operation: Operation, scope: string) => boolean;
 export interface PreparationOptions {

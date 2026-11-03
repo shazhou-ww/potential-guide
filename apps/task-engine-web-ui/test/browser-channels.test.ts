@@ -241,7 +241,10 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
     );
     assert.equal(readDetail()?.canceledAt, canceledA.canceledAt);
     assert.match(document.getElementById("task-list")!.textContent!, /已取消/);
-    assert.match(document.getElementById("task-detail")!.textContent!, /超时事实保留/);
+    assert.match(
+      document.getElementById("task-detail")!.textContent!,
+      /当前已过截止时间，不代表结果逾期/,
+    );
     assert.doesNotMatch(document.getElementById("task-detail")!.textContent!, /Run 已形成结局/);
     assert.match(document.getElementById("task-detail")!.textContent!, /不代表关联 Run 已退出/);
     emit(
@@ -311,14 +314,21 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
     const cancelControl = () =>
       document.querySelector<HTMLButtonElement>('#task-detail [data-action="cancel"]')!;
     assert.equal(cancelControl().disabled, false, "terminal Task still accepts first cancellation");
-    assert.doesNotMatch(document.getElementById("task-detail")!.textContent!, /超时事实保留/);
+    assert.doesNotMatch(
+      document.getElementById("task-detail")!.textContent!,
+      /当前已过截止时间，不代表结果逾期/,
+    );
     assert.equal(streams.get(c.taskId)!.closed, false);
     now = Date.parse("2026-10-31T04:00:00.000Z");
     emit(c, 31);
     await until(
-      () => document.getElementById("task-detail")!.textContent!.includes("超时事实保留"),
+      () =>
+        document
+          .getElementById("task-detail")!
+          .textContent!.includes("当前已过截止时间，不代表结果逾期"),
       "time advances after Run termination rather than freezing at termination",
     );
+    assert.equal(document.querySelector("#task-detail .status")!.textContent, "已完成");
     await cancel(c.taskId);
     const canceledC = {
       ...c,
@@ -339,7 +349,10 @@ test("actual browser entry wires cancellation receipts and SSE without cross-cha
     now = Date.parse("2026-10-31T02:30:00.000Z");
     emit(canceledC, 33);
     await until(
-      () => !document.getElementById("task-detail")!.textContent!.includes("超时事实保留"),
+      () =>
+        !document
+          .getElementById("task-detail")!
+          .textContent!.includes("当前已过截止时间，不代表结果逾期"),
       "current time can roll back independently of termination and cancellation",
     );
     assert.equal(readDetail()?.stage, "completed");

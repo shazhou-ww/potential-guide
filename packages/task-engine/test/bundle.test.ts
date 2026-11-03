@@ -67,11 +67,22 @@ test("V02/B09: content cache shares preparation by Digest across URLs, pins acti
       const a = cache.acquire({ url: "https://example.test/a", digest });
       const b = cache.acquire({ url: "https://example.test/b", digest });
       assert.equal(await cache.evict(digest), false);
+      assert.deepEqual((await cache.list({})).items, [
+        { digest, cached: false, preparing: true, leases: 2 },
+      ]);
       release();
       const [first, second] = await Promise.all([a, b]);
       assert.equal(fetched, 1);
       assert.equal(first.directory, second.directory);
       assert.equal(first.declaration.name, "相同展示名称");
+      const detail = await cache.detail(digest);
+      assert.equal(detail.name, "相同展示名称");
+      assert.equal(detail.cached, true);
+      assert.equal(detail.leases, 2);
+      assert.ok(detail.bytes! > 0);
+      assert.ok(detail.files! >= 2);
+      assert.deepEqual(detail.declaration, first.declaration);
+      assert.equal("directory" in detail, false);
       first.release();
       first.release();
       assert.equal(await cache.evict(digest), false);
@@ -89,6 +100,81 @@ test("V02/B09: content cache shares preparation by Digest across URLs, pins acti
         { code: "bundle_digest_mismatch" },
       );
       assert.equal(await cache.evict(`sha256:${"0".repeat(64)}`), true);
+    } finally {
+      await cache.close();
+    }
+  });
+});
+test("cache management enumerates persisted content, bounds pages and serializes acquisition behind eviction", async () => {
+  await fixture(async ({ directory, bytes, digest }) => {
+    let fetched = 0;
+    const options = {
+      directory: join(directory, "cache"),
+      fetch: async () => {
+        fetched++;
+        return new Response(bytes);
+      },
+    };
+    const cache = new BundleCache(options);
+    const ref = { url: "https://example.test/bundle", digest };
+    try {
+      (await cache.acquire(ref)).release();
+      const page = await cache.list({ limit: 1 });
+      assert.equal(page.items.length, 1);
+      assert.equal(page.items[0]!.leases, 0);
+      assert.equal((await cache.list({ after: digest })).items.length, 0);
+      await assert.rejects(cache.list({ limit: 0 }), { code: "invalid_request" });
+      await assert.rejects(cache.list({ limit: 101 }), { code: "invalid_request" });
+      await assert.rejects(cache.list({ after: "../outside" }), { code: "invalid_request" });
+      await assert.rejects(cache.detail(`sha256:${"0".repeat(64)}`), { code: "not_found" });
+      const reopened = new BundleCache(options);
+      try {
+        assert.equal((await reopened.list({})).items[0]!.digest, digest);
+      } finally {
+        await reopened.close();
+      }
+      await writeFile(
+        join(directory, "callback.ts"),
+        "export default async input => ({other:input});",
+      );
+      const another = await buildTaskBundle({
+        declaration: join(directory, "task.yaml"),
+        entry: join(directory, "callback.ts"),
+        outDirectory: join(directory, "another"),
+      });
+      const anotherArchive = await packTaskBundle(
+        another.directory,
+        join(directory, "another.tar.gz"),
+      );
+      (
+        await cache.acquire({
+          url: pathToFileURL(anotherArchive.archive).href,
+          digest: another.digest,
+        })
+      ).release();
+      const firstPage = await cache.list({ limit: 1 });
+      assert.equal(firstPage.next, firstPage.items[0]!.digest);
+      const nextPage = await cache.list({ limit: 1, after: firstPage.next });
+      assert.deepEqual(
+        [...firstPage.items, ...nextPage.items].map((item) => item.digest),
+        [digest, another.digest].sort(),
+      );
+      assert.equal(nextPage.next, undefined);
+      assert.equal(await cache.evict(another.digest), true);
+      const removed = cache.evict(digest);
+      const acquiring = cache.acquire(ref);
+      assert.equal(await removed, true);
+      const acquired = await acquiring;
+      assert.equal(fetched, 2, "acquisition must wait for eviction then fetch valid content");
+      assert.equal(acquired.digest, digest);
+      assert.equal(await cache.evict(digest), false);
+      acquired.release();
+      assert.equal(await cache.evict(digest), true);
+      assert.deepEqual((await cache.list({})).items, []);
+      assert.equal(
+        await readFile(join(directory, "bundle.tar.gz")).then((data) => data.length),
+        bytes.length,
+      );
     } finally {
       await cache.close();
     }

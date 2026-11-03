@@ -25,6 +25,26 @@ matchPolicy / MatchPolicy 使用 starts-after-eligible、terminates-after-eligib
 stage、canceled、按当前 now 推导的时间标签互相独立，取消或终态不冻结后两者。
 Progress 另用 preparation/allocation/execution、可选有限 0–100 percent 与展示字符串。
 
+`aggregateTaskStatus(task, now)` 是纯展示聚合函数，`now` 必须显式传入 epoch 毫秒。
+输入仅需 `stage`、`canceled`、`eligibleAt`、`deadlineAt`，兼容 TaskSnapshot / TaskSummary。
+返回 `{ status, qualifiers }`，不含文案、颜色或 i18n；各 UI 自行映射。
+`status` 为 completed / failed / stopped / canceled / timedOut / stopping / running /
+pending（待生效）/ waiting（已生效、等待匹配）。
+优先保留运行结局，再判断取消、超时，之后保留 running / stopping，
+仅 initial 按生效边界区分 pending / waiting；已匹配运行不因时钟回拨显示待生效。
+终结后取消附加 `demandWithdrawn`；取消或超时但运行未终结附加 `runNotEnded`；
+其余 `qualifiers` 为空数组。这些标识不证明资源回收或结果是否按时产生。
+时间输入遵循协议 canonical UTC，截止不得早于生效时间；无效输入抛出 `TaskError`。
+聚合结果不存储，也不用于匹配、取消或回收决策。
+
+浏览器使用独立入口，避免加载服务端 schema / crypto：
+
+```ts
+import { aggregateTaskStatus } from "@potential-guide/task-protocol/presentation";
+
+const { status, qualifiers } = aggregateTaskStatus(task, now);
+```
+
 messageSchema 支持 boolean，false 是 Never，{} / true 不是 Never。
 messages 必选、Task 归属及确认与生命周期控制分离；checkpoint 是独立、按 resultSchema 验证的机器证据。
 公共服务消息操作使用 taskId/messageId、可信 Caller、持久化状态，不改 Input/deadline。
