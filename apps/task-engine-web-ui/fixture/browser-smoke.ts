@@ -108,7 +108,9 @@ async function screenshot(name: string) {
 async function click(selector: string) {
   await wait(`(() => {
     const element = document.querySelector(${JSON.stringify(selector)});
-    return !!element && !element.closest('[role=dialog]')?.getAnimations().some(animation=>animation.playState==='running');
+    return !!element && !Array.from(document.querySelectorAll('[role=dialog]')).some(
+      dialog=>dialog.getAnimations().some(animation=>animation.playState==='running')
+    );
   })()`);
   const point = await evaluate<{ x: number; y: number }>(`(() => {
     const element = document.querySelector(${JSON.stringify(selector)});
@@ -130,6 +132,9 @@ async function click(selector: string) {
     button: "left",
     clickCount: 1,
   });
+  await wait(`!Array.from(document.querySelectorAll('[role=dialog]')).some(
+    dialog=>dialog.getAnimations().some(animation=>animation.playState==='running')
+  )`);
 }
 async function pressKey(key: string, windowsVirtualKeyCode: number, modifiers = 0) {
   for (const type of ["keyDown", "keyUp"])
@@ -303,7 +308,7 @@ try {
   )`);
   assert.equal(checks.actualComponents, true);
   checks.headerOneRow = await evaluate(`(() => {
-    const centers=['.topbar h1','.topbar [role=tablist]','.endpoint-label','#bar-toggle'].map(selector=>{
+    const centers=['.topbar h1','.topbar [role=tablist]','.endpoint-label'].map(selector=>{
       const rect=document.querySelector(selector).getBoundingClientRect();return rect.y+rect.height/2;
     });return Math.max(...centers)-Math.min(...centers)<1;
   })()`);
@@ -522,12 +527,17 @@ try {
     smokeDraft.value=JSON.stringify({text:'独立浏览器验证',durationMs:6000});
     return true;
   })()`);
-  await click('#create-actions [data-action="加入多条草稿"]');
+  await click('#create-actions [data-action="加入批量"]');
   await evaluate(
     "smokeDraft.value=JSON.stringify({...JSON.parse(smokeDraft.value),text:'第二条草稿'});true",
   );
-  await click('#create-actions [data-action="加入多条草稿"]');
-  await click('#create-actions [data-action="查看任务栏"]');
+  await click('#create-actions [data-action="加入批量"]');
+  assert.equal(
+    await evaluate(
+      "!document.querySelector('#bar-toggle') && !!document.querySelector('#create-dialog #batches')",
+    ),
+    true,
+  );
   await wait("document.querySelectorAll('#batches .receipt').length===2");
   const queue = await evaluate<string[]>(
     "[...document.querySelectorAll('#batches .receipt')].map(row=>row.dataset.key)",
@@ -571,15 +581,11 @@ try {
   );
   assert.equal(checks.draftRetained, true);
   await click('#create-actions button[data-action="提交任务"]');
-  if (
-    !(await evaluate("!!document.querySelector('#task-detail [data-key=task-snapshot] summary')"))
-  ) {
-    await closeOverlay();
-    await click("#bar-toggle");
-    await wait("!!document.querySelector('#batches button[data-action^=\"打开 Task \"]')");
-    checks.bundleAdmission = true;
-    await click('#batches button[data-action^="打开 Task "]');
-  }
+  await wait(
+    "!!document.querySelector('#create-dialog #batches button[data-action^=\"打开 Task \"]')",
+  );
+  checks.bundleAdmission = true;
+  await click('#batches button[data-action^="打开 Task "]');
   await wait("document.querySelector('#task-detail [data-key=task-snapshot] summary')");
   const createdId = await evaluate<string>(
     "JSON.parse(document.querySelector('#task-detail [data-key=task-snapshot] pre').textContent).taskId",
@@ -600,7 +606,8 @@ try {
   assert.equal(checks.sseFocusStable, true);
   assert.equal(checks.eventsStayExpanded, true);
   await closeOverlay();
-  const createdLink = `#task-list [data-key$=":task:${createdId}"] [data-key="open-task"]`;
+  const createdLink = `#directory tr[data-entity-id="${createdId}"]`;
+  await wait(`!!document.querySelector(${JSON.stringify(createdLink)})`);
   await evaluate(
     `globalThis.smokeTaskLink=document.querySelector(${JSON.stringify(createdLink)});smokeTaskLink.focus();true`,
   );
@@ -772,27 +779,42 @@ try {
     "document.querySelector('#directory footer').getBoundingClientRect().height",
   );
   await click("#history-actions button");
-  await wait(
-    "document.querySelector('#directory .directory-notices').textContent.includes('真实日期')",
-  );
+  await click(".error-launcher");
+  await wait("document.querySelector('.error-sheet')?.textContent.includes('真实日期')");
+  await screenshot("error-center.png");
+  await click(".error-sheet [data-close]");
   const errorHeader = await evaluate<{ x: number; y: number; width: number; height: number }>(
     "(() => { const {x,y,width,height}=document.querySelector('#directory thead').getBoundingClientRect();return {x,y,width,height}; })()",
   );
   assert.deepEqual(errorHeader, stableHeader);
-  assert.ok(
-    (await evaluate<number>(
+  assert.equal(
+    await evaluate<number>(
       "document.querySelector('#directory footer').getBoundingClientRect().height",
-    )) > footerHeight,
+    ),
+    footerHeight,
   );
   checks.statusChangesPreserveHeaderGeometry = true;
   await evaluate("document.querySelector('#created-from').value='';true");
   await click("#history-actions button");
   await wait(
-    "!document.querySelector('#directory .directory-notices').textContent.includes('真实日期')",
+    "!document.querySelector('#directory .directory-notices').textContent.includes('数据陈旧')",
   );
   await wait("document.querySelectorAll('#directory tbody tr').length===10");
   await click('#directory button[data-action="目录下一页（原过滤条件）"]');
   await wait("document.querySelectorAll('#directory tbody tr').length===14");
+  checks.viewportTableGeometry = await evaluate(`(() => {
+    const scroll=document.querySelector('#directory .directory-grid-scroll');
+    scroll.scrollTop=scroll.scrollHeight;
+    const head=document.querySelector('#directory th').getBoundingClientRect();
+    const footer=document.querySelector('#directory footer').getBoundingClientRect();
+    const last=document.querySelector('#directory tbody tr:last-child').getBoundingClientRect();
+    const frame=scroll.getBoundingClientRect();
+    const valid=Math.abs(head.top-frame.top)<=2 && Math.abs(footer.bottom-innerHeight)<=2
+      && last.bottom<=frame.bottom+2;
+    scroll.scrollTop=0;
+    return valid;
+  })()`);
+  assert.equal(checks.viewportTableGeometry, true);
   await screenshot("integrated-table.png");
   await click('#directory [data-filter="tasks-title-filter-popup"]');
   await wait("document.querySelector('#tasks-title-filter-popup').matches(':popover-open')");
@@ -978,8 +1000,8 @@ try {
   checks.narrowGridContained = await evaluate(`(() => {
     const list=document.querySelector('#directory').getBoundingClientRect();
     const footer=document.querySelector('#directory footer').getBoundingClientRect();
-    const lookup=document.querySelector('#tasks details.secondary').getBoundingClientRect();
-    return footer.bottom<=list.bottom+1 && lookup.top>=list.bottom;
+    return footer.bottom<=list.bottom+1 && Math.abs(footer.bottom-innerHeight)<=2
+      && !document.querySelector('#task-lookup');
   })()`);
   assert.equal(checks.narrowGridContained, true);
   await click('#directory [data-filter="tasks-time-filter-popup"]');
@@ -1060,13 +1082,18 @@ try {
     caller,
     resources,
   );
-  await click("#tasks details.secondary > summary");
-  await wait("document.querySelector('#tasks details.secondary').open");
-  await click("#task-id-input");
-  await pressKey("a", 65, 2);
-  await call("Input.insertText", { text: controlled.taskId });
-  assert.equal(await evaluate("document.querySelector('#task-id-input').value"), controlled.taskId);
-  await click("#task-lookup button");
+  await evaluate(`(() => {
+    for (const id of ['history-type','created-from','created-before'])
+      document.getElementById(id).value='';
+    const favorites=document.getElementById('only-favorites');
+    if (favorites.checked) {
+      favorites.checked=false;
+      favorites.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+  })()`);
+  await click("#history-actions button");
+  await wait(`!!document.querySelector('#directory tr[data-entity-id="${controlled.taskId}"]')`);
+  await click(`#directory tr[data-entity-id="${controlled.taskId}"]`);
   await wait(
     `(() => {
       const element=document.querySelector('#task-detail [data-key=task-snapshot] pre');
@@ -1115,15 +1142,32 @@ try {
     "document.querySelector('#bundle-cache tbody tr [data-action=\"查看契约\"]')?.disabled===false",
   );
   await click('#bundle-cache tbody tr:first-child [data-action="查看契约"]');
-  await wait("document.querySelector('#bundle-cache details[data-key^=\"cache-detail:\"] pre')");
+  await wait("document.querySelector('#cache-detail details[data-key^=\"cache-detail:\"] pre')");
   const cachedDetail = await evaluate<{
     digest: string;
     leases: number;
     declaration: { name: string };
-  }>("JSON.parse(document.querySelector('#bundle-cache details pre').textContent)");
+  }>("JSON.parse(document.querySelector('#cache-detail details pre').textContent)");
   assert.ok(cachedDetail.declaration.name);
   assert.match(cachedDetail.digest, /^sha256:[a-f0-9]{64}$/);
   checks.cacheDetail = true;
+  await evaluate("globalThis.smokeCacheSheet=document.querySelector('#cache-detail-sheet');true");
+  await click(".error-launcher");
+  await wait("!!document.querySelector('.error-sheet')");
+  checks.errorsPreserveCacheDetail = await evaluate(`(() => {
+    const errors=document.querySelector('.error-sheet').getBoundingClientRect();
+    return smokeCacheSheet===document.querySelector('#cache-detail-sheet')
+      && Math.abs(errors.bottom-innerHeight)<=2;
+  })()`);
+  assert.equal(checks.errorsPreserveCacheDetail, true);
+  await screenshot("errors-over-detail.png");
+  await click(".error-sheet [data-close]");
+  await wait("!document.querySelector('.error-sheet')");
+  assert.equal(
+    await evaluate("smokeCacheSheet===document.querySelector('#cache-detail-sheet')"),
+    true,
+  );
+  await click("#cache-detail-sheet [data-close]");
   checks.narrowCacheFits = await evaluate(`(() => {
     const panel=document.querySelector('#cache'), rect=panel.getBoundingClientRect();
     return rect.left>=0 && rect.right<=innerWidth+1 && panel.scrollWidth<=panel.clientWidth
@@ -1152,7 +1196,7 @@ try {
   })()`);
   await click(`${cacheRow} [data-action="清理此缓存"]`);
   assert.equal((await backend.engine.getCachedBundle(cachedDetail.digest, caller)).cached, true);
-  await click('#bundle-cache [data-action="确认清理"]');
+  await click('#cache-confirm [data-action="确认清理"]');
   await wait(`!document.querySelector(${JSON.stringify(cacheRow)})`);
   await assert.rejects(backend.engine.getCachedBundle(cachedDetail.digest, caller), {
     code: "not_found",

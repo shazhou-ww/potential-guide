@@ -92,7 +92,7 @@ test("React/shadcn owns rendering and isolates the persistent schema editor", as
       "one overlay owns focus and delayed close cannot steal a user's next focus",
       async () => {
         nav.close("task-detail");
-        const next = element("#bar-toggle");
+        const next = element("#new-task");
         next.focus();
         await delay(30);
         assert.ok(document.activeElement === next);

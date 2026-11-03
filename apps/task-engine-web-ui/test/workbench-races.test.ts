@@ -238,8 +238,7 @@ test("actual browser entry ignores delayed real favorites responses and paginate
       held[0]!.value.some((item) => item.source?.taskId === b.taskId),
       false,
     );
-    element<HTMLInputElement>("#task-lookup input").value = b.taskId;
-    element<HTMLButtonElement>("#task-lookup button").click();
+    element(`#directory tr[data-entity-id="${b.taskId}"]`).click();
     await until(() => !!document.querySelector("#task-detail .star"), "B detail should open");
     detailStar().click();
     await until(
@@ -264,8 +263,7 @@ test("actual browser entry ignores delayed real favorites responses and paginate
       held[1]!.value.some((item) => item.source?.taskId === b.taskId),
       true,
     );
-    element<HTMLInputElement>("#task-lookup input").value = b.taskId;
-    element<HTMLButtonElement>("#task-lookup button").click();
+    element(`#directory tr[data-entity-id="${b.taskId}"]`).click();
     await until(() => !!document.querySelector("#task-detail .star"), "B detail should reopen");
     detailStar().click();
     await until(
@@ -317,8 +315,7 @@ test("actual browser entry ignores delayed real favorites responses and paginate
     await t.test(
       "failed favorite write and failed recovery read report both causes without replacing confirmed data",
       async () => {
-        element<HTMLInputElement>("#task-lookup input").value = b.taskId;
-        element<HTMLButtonElement>("#task-lookup button").click();
+        element(`#directory tr[data-entity-id="${b.taskId}"]`).click();
         await until(
           () =>
             !!document.querySelector("#task-detail .star") &&
@@ -329,16 +326,19 @@ test("actual browser entry ignores delayed real favorites responses and paginate
         try {
           detailStar().click();
           await until(
-            () => element("#notice").textContent!.includes("修改失败且刷新失败"),
+            () => Number(element(".error-launcher").textContent) > 0,
             "both failures must be visible",
           );
-          const message = element("#notice").textContent!;
+          element<HTMLButtonElement>(".error-launcher").click();
+          await until(() => !!document.querySelector(".error-sheet"), "error panel should open");
+          const message = element(".error-sheet").textContent!;
           assert.match(message, /当前仅为上次确认数据/);
           assert.match(message, /403 write_failure.*write unavailable/);
           assert.match(message, /503 refresh_failure.*read unavailable/);
           assert.equal(star(b.taskId).getAttribute("aria-pressed"), "true");
           assert.equal(detailStar().getAttribute("aria-pressed"), "true");
           assert.equal(await persisted(b.taskId), true);
+          element<HTMLButtonElement>(".error-sheet [data-close]").click();
         } finally {
           failFavorites = false;
         }
@@ -386,8 +386,9 @@ test("actual browser entry ignores delayed real favorites responses and paginate
     assert.equal(element<HTMLInputElement>("#started-from").value, "not-a-date");
     assert.equal(element("#execution-directory").textContent!.includes("不可用"), false);
     clickNamed("#execution-actions", "刷新执行目录");
+    element<HTMLButtonElement>(".error-launcher").click();
     await until(
-      () => element("#execution-directory").textContent!.includes("真实日期"),
+      () => document.querySelector(".error-sheet")?.textContent?.includes("真实日期") === true,
       "new queries must still validate new filters",
     );
     assert.equal(browserRequests.filter((url) => url.pathname.endsWith("/runs")).length, 2);
