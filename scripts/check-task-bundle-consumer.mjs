@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { spawn } from "node:child_process";
 import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 
 /** Separate author install and business-free production host; no in-process business ports. */
@@ -145,7 +145,7 @@ const nullSource={authorize(){},async resolve(){throw Error("Author schema extra
 const check=createCheckTaskType({source:nullSource,directory:"unused"});
 async function bundle(kind,inputSchema,resultSchema,callback,resources){
  const yaml=resolve(kind+".yaml"),entry=resolve(kind+".ts");
- await writeFile(yaml,JSON.stringify({$schema:"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",name:"Shared display name",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",inputSchema,resultSchema,messageSchema:false}));
+ await writeFile(yaml,JSON.stringify({$schema:"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v2.json",name:"Shared display name",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",inputSchema,resultSchema,messageSchema:false}));
  await writeFile(entry,callback);
  const built=await buildTaskBundle({declaration:yaml,entry,resources,outDirectory:join(root,kind)});
  const packed=await packTaskBundle(built.directory,join(root,kind+".tar.gz"));
@@ -200,6 +200,15 @@ assert.equal(check.result.result.ok,false);
 assert.equal(check.result.result.problems[0].id,"bad");
 assert.equal(check.result.evidence.prepared.checker.digest,refs.checkerDigest);
 assert.ok(check.result.evidence.execution.executionId);
+const checkLogs=await client.getRunLogs(check.run.runId);
+assert.equal(checkLogs.state.availability,"available");
+assert.ok(checkLogs.entries.some(entry=>entry.level==="warn"&&entry.fields.problemId==="bad"));
+assert.ok(checkLogs.entries.every(entry=>entry.runId===check.run.runId));
+assert.equal((await client.getRunHistory(check.run.runId)).events.some(event=>event.type.includes("log")),false);
+let replayed=0;
+for await(const page of client.subscribeRunLogs(check.run.runId)){replayed+=page.entries.length;assert.equal(page.runId,check.run.runId);}
+assert.equal(replayed,checkLogs.entries.length);
+console.log("Packed v2 Check diagnostics: HTTP history and realtime replay verified; Result/evidence unchanged.");
 const probe=await execute({bundle:refs.probeBundle,objective:{kind:"objective",url:"https://example.test/objective.tgz",digest:refs.objectiveDigest},subject:{}});
 assert.equal(probe.result.observation.current.levelId,"initial");
 assert.equal(probe.result.observation.problems[0].problem.id,"bad");

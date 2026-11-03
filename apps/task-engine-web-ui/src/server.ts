@@ -245,6 +245,11 @@ export function allowedRoute(path: string, method: string, params: URLSearchPara
             "fromRevision",
           ];
   else if (
+    new RegExp(`^/runs/${idPattern.source.slice(1, -1)}/logs(/events)?$`).test(path) &&
+    method === "GET"
+  )
+    keys = ["afterSequence", "limit"];
+  else if (
     new RegExp(`^/(tasks|runs)/${idPattern.source.slice(1, -1)}/(history|events)$`).test(path) &&
     method === "GET"
   )

@@ -7,11 +7,15 @@ import {
   json,
   type ResolvedTaskBundle,
   type RunContext,
-  type RunProgress,
   RunFailure,
+  type RunLogInput,
+  type RunLogReceipt,
   type RunMessage,
-  taskSchemaUri,
+  type RunProgress,
   TaskError,
+  taskLogSchemaUri,
+  taskSchemaUri,
+  validateRunLog,
   validateRunProgress,
 } from "@potential-guide/task-protocol";
 
@@ -19,7 +23,13 @@ export type TaskCallback<Input = Json, Result = Json, Message extends Json = nev
   input: Input,
   context: RunContext<Message>,
 ) => Promise<Result>;
-export type { RunContext, RunMessage, RunProgress } from "@potential-guide/task-protocol";
+export type {
+  RunContext,
+  RunLogInput,
+  RunLogReceipt,
+  RunMessage,
+  RunProgress,
+} from "@potential-guide/task-protocol";
 export { RunFailure } from "@potential-guide/task-protocol";
 
 class Inbox implements AsyncIterable<RunMessage<Json>> {
@@ -62,7 +72,8 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
   declaration: ResolvedTaskBundle,
 ): void {
   const port = parentPort;
-  if (!port || declaration.$schema !== taskSchemaUri) throw new Error("Unsupported Task Worker.");
+  if (!port || ![taskSchemaUri, taskLogSchemaUri].includes(declaration.$schema))
+    throw new Error("Unsupported Task Worker.");
   const config = workerData as {
     generation: string;
     maxInFlight: number;
@@ -99,6 +110,131 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
   let queued = 0;
   let cleanupUncertain = false;
   let output = Promise.resolve();
+  let logSequence = 0;
+  const logPending = new Map<
+    number,
+    {
+      resolve(value: RunLogReceipt): void;
+      reject(error: Error): void;
+      timer: ReturnType<typeof setTimeout>;
+    }
+  >();
+  let droppedLogs = 0;
+  let reportedDroppedLogs = 0;
+  let dropScheduled = false;
+  let dropReportingClosed = false;
+  let finalDropSent = false;
+  let dropPending:
+    | {
+        id: number;
+        count: number;
+        timer: ReturnType<typeof setTimeout>;
+      }
+    | undefined;
+  function flushDroppedLogs(): void {
+    if (
+      dropPending ||
+      dropReportingClosed ||
+      finishing ||
+      controller.signal.aborted ||
+      droppedLogs <= reportedDroppedLogs
+    )
+      return;
+    const id = ++logSequence;
+    const count = droppedLogs;
+    const timer = setTimeout(() => {
+      // Keep the unknown in-flight identity: timeout cannot authorize another queued frame.
+      dropReportingClosed = true;
+    }, 1000);
+    dropPending = { id, count, timer };
+    try {
+      port!.postMessage({
+        generation: config.generation,
+        runId,
+        kind: "log-drop",
+        logId: id,
+        count,
+      });
+    } catch {
+      clearTimeout(timer);
+      dropPending = undefined;
+      dropReportingClosed = true;
+    }
+  }
+  function scheduleDroppedLogs(): void {
+    if (
+      dropScheduled ||
+      dropPending ||
+      dropReportingClosed ||
+      finishing ||
+      controller.signal.aborted
+    )
+      return;
+    dropScheduled = true;
+    queueMicrotask(() => {
+      dropScheduled = false;
+      flushDroppedLogs();
+    });
+  }
+  function finishDroppedLogs(): void {
+    if (finalDropSent || droppedLogs <= reportedDroppedLogs) return;
+    finalDropSent = true;
+    // One terminal cumulative snapshot is bounded even when the ordinary acknowledgment is lost.
+    try {
+      port!.postMessage({
+        generation: config.generation,
+        runId,
+        kind: "log-drop",
+        logId: ++logSequence,
+        count: droppedLogs,
+        final: true,
+      });
+    } catch {
+      /* Disconnected tail remains unknown; required outputs never wait for this snapshot. */
+    }
+  }
+  function settleLogs(): void {
+    if (dropPending) clearTimeout(dropPending.timer);
+    dropPending = undefined;
+    dropReportingClosed = true;
+    for (const operation of logPending.values()) {
+      clearTimeout(operation.timer);
+      operation.resolve({ state: "unavailable", reason: "channel" });
+    }
+    logPending.clear();
+  }
+  async function log(value: RunLogInput): Promise<RunLogReceipt> {
+    const parsed = validateRunLog(value);
+    if (declaration.$schema !== taskLogSchemaUri)
+      return { state: "unavailable", reason: "unsupported" };
+    if (finishing || controller.signal.aborted) return { state: "unavailable", reason: "channel" };
+    if (logPending.size >= Math.min(config.maxInFlight, 16)) {
+      droppedLogs = Math.min(Number.MAX_SAFE_INTEGER, droppedLogs + 1);
+      scheduleDroppedLogs();
+      return { state: "dropped", reason: "capacity" };
+    }
+    const id = ++logSequence;
+    return new Promise<RunLogReceipt>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        logPending.delete(id);
+        resolve({ state: "unavailable", reason: "timeout" });
+      }, 1000);
+      logPending.set(id, { resolve, reject, timer });
+      try {
+        port!.postMessage({
+          generation: config.generation,
+          runId,
+          kind: "log",
+          logId: id,
+          value: parsed,
+        });
+      } catch {
+        clearTimeout(timer);
+        logPending.delete(id);
+        resolve({ state: "unavailable", reason: "channel" });
+      }
+    });
+  }
   function request(kind: string, value: unknown): Promise<void> {
     if (pending.size >= config.maxInFlight)
       return Promise.reject(new Error("Task channel capacity exceeded."));
@@ -137,6 +273,31 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
   });
   port.on("message", (envelope) => {
     if (!envelope || envelope.generation !== config.generation) return;
+    if (envelope.kind === "log-drop-ack") {
+      if (envelope.runId !== runId || !dropPending || envelope.logId !== dropPending.id) return;
+      const operation = dropPending;
+      clearTimeout(operation.timer);
+      dropPending = undefined;
+      if (envelope.error || envelope.value?.state === "unavailable") {
+        dropReportingClosed = true;
+      } else {
+        reportedDroppedLogs = operation.count;
+        dropReportingClosed = false;
+        scheduleDroppedLogs();
+      }
+      return;
+    }
+    if (envelope.kind === "log-ack") {
+      if (envelope.runId !== runId) return;
+      const operation = logPending.get(envelope.logId);
+      if (!operation) return;
+      logPending.delete(envelope.logId);
+      clearTimeout(operation.timer);
+      if (envelope.error)
+        operation.reject(new TaskError(envelope.error.code, envelope.error.message));
+      else operation.resolve(envelope.value);
+      return;
+    }
     if (envelope.kind === "ack") {
       const operation = pending.get(envelope.id);
       if (!operation) return;
@@ -154,6 +315,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
     if (envelope.kind === "cancel") {
       port.postMessage({ generation: config.generation, runId, kind: "stopping" });
       controller.abort();
+      settleLogs();
       inbox.close();
       for (const task of tasks.values()) task.abort();
       return;
@@ -206,6 +368,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
       progress: (value: RunProgress) =>
         enqueue("progress", validateRunProgress(value, config.maxPayloadBytes)),
       checkpoint: (value: Json) => enqueue("checkpoint", result.validate(value)),
+      log,
     });
     const reportFailure = async (error: unknown) => {
       cleanupUncertain =
@@ -230,6 +393,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
       .then(
         async (value) => {
           finishing = true;
+          finishDroppedLogs();
           await output;
           let validated: Json;
           try {
@@ -242,6 +406,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
         },
         async (error) => {
           finishing = true;
+          finishDroppedLogs();
           await output.catch(() => {});
           if (
             controller.signal.aborted &&
@@ -255,6 +420,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
         () => {
           inbox.close();
           controller.abort();
+          settleLogs();
           for (const task of tasks.values()) task.abort();
           port.postMessage({
             generation: config.generation,
@@ -266,6 +432,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
         () => {
           inbox.close();
           controller.abort();
+          settleLogs();
           for (const task of tasks.values()) task.abort();
           port.postMessage({ generation: config.generation, runId, kind: "uncertain" });
           port.close();

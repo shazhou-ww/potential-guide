@@ -1,7 +1,8 @@
+import type { ResolvedTaskBundle } from "./bundle.js";
 import { fail, type Json, type JsonObject, json, TaskError } from "./json.js";
+import type { RunLogInput, RunLogReceipt } from "./logs.js";
 import type { InputSchema, JsonSchema } from "./schema.js";
 import type { Caller } from "./types.js";
-import type { ResolvedTaskBundle } from "./bundle.js";
 
 export interface RunProgress {
   stage: "preparation" | "allocation" | "execution";
@@ -35,6 +36,7 @@ export interface RunContext<Message extends Json = never> {
   readonly messages: AsyncIterable<RunMessage<Message>>;
   progress(value: RunProgress): Promise<void>;
   checkpoint(value: Json): Promise<void>;
+  log(value: RunLogInput): Promise<RunLogReceipt>;
 }
 export interface TaskType<Input = Json, Result = Json, Message extends Json = never> {
   type: string;

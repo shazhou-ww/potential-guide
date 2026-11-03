@@ -1,17 +1,18 @@
 import type {
-  BundleReference,
   BundleCacheDetail,
   BundleCachePage,
+  BundleReference,
   HistoryPage,
   Observation,
   PublicEvent,
+  RunLogPage,
   RunPage,
   RunSnapshot,
   RunStage,
   RunSummary,
-  TaskSnapshot,
-  TaskPage,
   SubmissionResult,
+  TaskPage,
+  TaskSnapshot,
 } from "@potential-guide/task-protocol";
 import { formatBundleReference } from "@potential-guide/task-protocol/bundle-reference";
 import { observeDirectory } from "./directory-observation.js";
@@ -20,10 +21,10 @@ import { ObservationEnd, taskStatus, taskStatusExplanation } from "./lifecycle.j
 import {
   Api,
   ApiError,
+  bundleDigest,
   consumeCollectionSse,
   consumeSse,
   Directory,
-  bundleDigest,
   type Entry,
   EventWindow,
   endpointMatches,
@@ -38,12 +39,13 @@ import {
   validSnapshot,
 } from "./model.js";
 import {
+  type DirectoryRowDescription,
   describeAction,
   describeRowAction,
-  type DirectoryRowDescription,
   type InlineAction,
   WorkbenchView,
 } from "./presentation.tsx";
+import { consumeRunLogSse, RunLogWindow } from "./run-logs.js";
 import type { Endpoint, Favorite } from "./server.js";
 
 const view = new WorkbenchView(document.getElementById("app")!);
@@ -569,6 +571,12 @@ function renderTasks(): void {
   reconcile(container, rows);
 }
 interface Observer {
+  logs: RunLogWindow;
+  logController?: AbortController;
+  logState: "loading" | "following" | "paused" | "disconnected" | "ended";
+  logError: string;
+  logLoading: boolean;
+  logGeneration: number;
   kind: "taskId" | "runId";
   id: string;
   endpoint: Endpoint;
@@ -746,6 +754,11 @@ function newObserver(kind: Observer["kind"], id: string): Observer {
   return {
     kind,
     id,
+    logs: new RunLogWindow(id),
+    logState: "loading",
+    logError: "",
+    logLoading: false,
+    logGeneration: 0,
     endpoint: workspace().endpoint,
     window: new EventWindow(),
     historyEvents: [],
@@ -836,9 +849,204 @@ async function openRun(id: string): Promise<void> {
   renderObserver(observer);
   navigation.open("execution-detail");
   await refreshRun(observer);
+  void loadLogs(observer);
   await history(observer);
   void associatedTasks(observer);
   if (current(observer)) void live(observer);
+}
+function pauseLogs(observer: Observer): void {
+  observer.logGeneration++;
+  observer.logState = "paused";
+  observer.logController?.abort();
+}
+async function loadLogs(observer: Observer, next = false): Promise<void> {
+  if (!current(observer) || observer.logLoading) return;
+  pauseLogs(observer);
+  const generation = observer.logGeneration;
+  observer.logLoading = true;
+  try {
+    const page = await api.request<RunLogPage>(
+      observer.endpoint,
+      `/runs/${observer.id}/logs?afterSequence=${next ? observer.logs.sequence : 0}${observer.logs.limits ? `&limit=${Math.min(50, observer.logs.limits.pageSize)}` : ""}`,
+      { signal: observer.controller.signal },
+    );
+    if (!current(observer) || generation !== observer.logGeneration) return;
+    observer.logs.accept(page, true);
+    observer.logError = "";
+    if (!next) void followLogs(observer);
+  } catch (error) {
+    if (!current(observer) || generation !== observer.logGeneration) return;
+    observer.logError =
+      error instanceof ApiError && error.code === "unsupported_version"
+        ? `此服务不支持 Run Logs 接口：${error.message}`
+        : `日志加载失败：${String(error)}`;
+    observer.logState = "disconnected";
+  } finally {
+    observer.logLoading = false;
+    if (current(observer)) renderObserver(observer);
+  }
+}
+async function followLogs(observer: Observer): Promise<void> {
+  observer.logGeneration++;
+  observer.logController?.abort();
+  const controller = new AbortController();
+  observer.logController = controller;
+  const abort = () => controller.abort();
+  observer.controller.signal.addEventListener("abort", abort, { once: true });
+  const valid = () =>
+    current(observer) && !controller.signal.aborted && observer.logController === controller;
+  let failures = 0;
+  try {
+    while (valid() && failures < 5) {
+      try {
+        observer.logState = "following";
+        renderObserver(observer);
+        const response = await fetch(
+          api.path(
+            observer.endpoint,
+            `/runs/${observer.id}/logs/events?limit=${Math.min(50, observer.logs.limits?.pageSize ?? 50)}&afterSequence=${observer.logs.sequence}`,
+          ),
+          { headers: api.headers(observer.endpoint), signal: controller.signal },
+        );
+        if (!response.ok) await api.decode(response);
+        await consumeRunLogSse(response, (page) => {
+          if (!valid()) return;
+          observer.logs.accept(page);
+          observer.logError = "";
+          observer.logState = "following";
+          failures = 0;
+          renderObserver(observer);
+          const viewport = document.querySelector<HTMLElement>(
+            `[data-run-log-viewport="${observer.id}"]`,
+          );
+          if (viewport) viewport.scrollTop = viewport.scrollHeight;
+        });
+        if (!valid()) return;
+        if (
+          observer.logs.state?.completeness !== "open" ||
+          ["unsupported", "disabled", "expired"].includes(observer.logs.state?.availability ?? "")
+        ) {
+          observer.logState = "ended";
+          renderObserver(observer);
+          return;
+        }
+        observer.logError = "日志流已断开，按最后确认序号续接。";
+      } catch (error) {
+        if (!valid()) return;
+        observer.logError = `日志流中断：${String(error)}。可重新连接补读。`;
+        if (error instanceof ApiError && [400, 401, 403, 404, 410, 503].includes(error.status))
+          failures = 5;
+        else failures++;
+      }
+      observer.logState = "disconnected";
+      renderObserver(observer);
+      if (failures < 5)
+        await new Promise<void>((resolve) => {
+          const finish = () => {
+            clearTimeout(timer);
+            controller.signal.removeEventListener("abort", finish);
+            resolve();
+          };
+          const timer = setTimeout(finish, 1000);
+          controller.signal.addEventListener("abort", finish, { once: true });
+          if (controller.signal.aborted) finish();
+        });
+    }
+  } finally {
+    observer.controller.signal.removeEventListener("abort", abort);
+  }
+}
+function logPanel(observer: Observer): HTMLElement {
+  const panel = node("section");
+  panel.className = "run-logs";
+  panel.dataset.key = `logs:${observer.id}`;
+  panel.setAttribute("aria-label", `Run ${observer.id} Logs`);
+  panel.append(node("h3", "Logs · 诊断日志"), node("code", observer.id));
+  const toolbar = node("div");
+  toolbar.className = "run-log-toolbar";
+  toolbar.append(
+    button(
+      "暂停日志跟随",
+      () => {
+        pauseLogs(observer);
+        renderObserver(observer);
+      },
+      observer.logState !== "following",
+    ),
+    button(
+      "跟随 / 重新连接日志",
+      () => followLogs(observer),
+      observer.logState === "following" || observer.logLoading,
+    ),
+    button("从头读取日志", () => loadLogs(observer), observer.logLoading),
+    button(
+      "下一页日志",
+      () => loadLogs(observer, true),
+      !observer.logs.hasMore || observer.logLoading,
+    ),
+  );
+  panel.append(toolbar);
+  const state = observer.logs.state;
+  const names = {
+    available: "日志可用",
+    unsupported: "此 Bundle 协议不支持日志",
+    disabled: "宿主已禁用日志",
+    truncated: "日志已截断 / 输出超限",
+    expired: "日志已过期或被容量清理",
+    unavailable: "日志存储不可用",
+  };
+  const status = node(
+    "p",
+    `${state ? names[state.availability] : "正在读取日志"}；${({ loading: "读取中", following: "实时跟随", paused: "跟随已暂停", disconnected: "已断连", ended: "跟随结束" } as const)[observer.logState]}`,
+  );
+  status.setAttribute("role", "status");
+  panel.append(status);
+  if (state)
+    panel.append(
+      node(
+        "p",
+        `已丢弃 ${state.dropped} 条；尾部${({ open: "尚未结束", complete: "已确认", unknown: "完整性未知（成功/取消不保证日志完整）" } as const)[state.completeness]}${state.reason ? `；${state.reason}` : ""}`,
+      ),
+    );
+  if (observer.logs.limits) {
+    const limits = observer.logs.limits;
+    panel.append(
+      node(
+        "p",
+        `宿主限额：单条 ${limits.entryBytes} 字节；每 Run ${limits.runEntries} 条 / ${limits.runBytes} 字节；全局 ${limits.totalBytes} 字节；保留 ${limits.retentionMs} 毫秒。`,
+      ),
+    );
+  }
+  if (observer.logError) {
+    const error = node("p", observer.logError);
+    error.setAttribute("role", "alert");
+    panel.append(error);
+  }
+  if (observer.logs.gap)
+    panel.append(node("p", "日志游标存在缺口，不能保证完整。已保留可读取内容。"));
+  if (observer.logs.trimmed)
+    panel.append(node("p", "浏览器窗口已按 300 条 / 1 MiB 清理；使用历史分页查看较早日志。"));
+  if (!observer.logs.entries.length && state?.availability === "available")
+    panel.append(node("p", "此 Run 尚未输出诊断日志。"));
+  const viewport = node("div");
+  viewport.dataset.runLogViewport = observer.id;
+  viewport.dataset.key = `log-viewport:${observer.id}`;
+  viewport.className = "run-log-viewport";
+  viewport.tabIndex = 0;
+  for (const entry of observer.logs.entries) {
+    const row = node("article");
+    row.className = `run-log-entry run-log-${entry.level}`;
+    row.dataset.key = `log:${observer.id}:${entry.sequence}`;
+    row.append(
+      node("small", `#${entry.sequence}  ${entry.receivedAt}  ${entry.level}`),
+      node("pre", entry.message),
+    );
+    if (entry.fields)
+      row.append(details("结构化字段", entry.fields, `log-fields:${entry.sequence}`));
+    viewport.append(row);
+  }
+  panel.append(viewport);
+  return panel;
 }
 async function refreshRun(observer: Observer): Promise<void> {
   if (!current(observer) || observer.kind !== "runId") return;
@@ -1116,6 +1324,7 @@ function renderObserver(observer: Observer): void {
   const ownEvents = observer.window.events.filter((event) =>
     observer.kind === "taskId" ? !event.type.startsWith("run.") : event.type.startsWith("run."),
   );
+  if (observer.kind === "runId") box.append(logPanel(observer));
   box.append(eventList("own-events", "对象事件 · 最近窗口", ownEvents));
   box.append(
     eventList("all-events", "全部公开事件 · 最近窗口（含关联对象）", observer.window.events),

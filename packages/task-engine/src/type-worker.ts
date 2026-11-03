@@ -273,6 +273,7 @@ port.on("message", (message) => {
   };
   runs.set(message.runId, run);
   const context: RunContext<Json> = Object.freeze({
+    log: async () => ({ state: "unavailable" as const, reason: "unsupported" as const }),
     runId: message.runId,
     scope: message.scope,
     signal: controller.signal,

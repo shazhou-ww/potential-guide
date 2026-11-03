@@ -26,3 +26,7 @@ GET `/requests/:id` 读取原始意图；GET `/requests/:id/status?waitMs=…`
 
 展示进度、结构化 checkpoint/Result 证据、deadline、共享与恢复边界见
 [Task Engine](../../docs/task-engine.md)。不支持旧 executionMatch 或旧结果形状 fallback。
+`TaskClient.getRunLogs(id, {afterSequence, limit}, {signal})` reads retained
+diagnostics. `subscribeRunLogs` is an abortable async-generator SSE client with
+bounded frames and explicit gaps/status pages. See
+[Run Logs](../../docs/task-run-logs.md); these APIs are separate from Run events.

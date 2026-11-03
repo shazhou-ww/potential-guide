@@ -11,6 +11,7 @@ import { openSqliteStore } from "@potential-guide/task-engine-storage";
 import { positive, type Store, TaskError } from "@potential-guide/task-protocol";
 
 export interface ServerOptions {
+  logs?: EngineOptions["logs"];
   bundleDirectory?: string;
   bundleLimits?: EngineOptions["bundleLimits"];
   bundleConcurrency?: number;
@@ -133,6 +134,16 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
       read: () => underlying.read(),
       append: (...args) => underlying.append(...args),
       compact: (...args) => underlying.compact(...args),
+      ...(underlying.markRunLogsUnavailable
+        ? { markRunLogsUnavailable: underlying.markRunLogsUnavailable.bind(underlying) }
+        : {}),
+      ...(underlying.readRunLogs ? { readRunLogs: underlying.readRunLogs.bind(underlying) } : {}),
+      ...(underlying.writeRunLogs
+        ? { writeRunLogs: underlying.writeRunLogs.bind(underlying) }
+        : {}),
+      ...(underlying.pruneRunLogs
+        ? { pruneRunLogs: underlying.pruneRunLogs.bind(underlying) }
+        : {}),
       close: () => {
         throw new Error("Store lifecycle belongs to the Server.");
       },
@@ -145,6 +156,7 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
         : {}),
       ...(options.bundleLimits ? { bundleLimits: options.bundleLimits } : {}),
       authorize: options.authorize,
+      ...(options.logs ? { logs: options.logs } : {}),
       ...(options.limits ? { limits: options.limits } : {}),
     });
     const handler = createTaskHandler({
