@@ -3,22 +3,11 @@ import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
-  discoveryHostBins,
   parseReleaseTag,
   releasePackages,
   releaseVersion,
   verificationPackages,
 } from "./release-packages.mjs";
-
-test("discovery-owned startup bins cover the installed Checker Host and compatibility alias", async () => {
-  const manifest = JSON.parse(
-    await readFile(new URL("../packages/check-host/package.json", import.meta.url), "utf8"),
-  );
-  assert.deepEqual([...discoveryHostBins].sort(), Object.keys(manifest.bin).sort());
-  assert.ok(discoveryHostBins.includes("pguide-checker-host"));
-  assert.ok(discoveryHostBins.includes("pguide-check-host"));
-  assert.ok(!discoveryHostBins.includes("pguide"));
-});
 
 test("local verification covers the internal runtime dependency closure without expanding release tags", async () => {
   const names = new Set(verificationPackages.map(({ name }) => name));
@@ -45,16 +34,15 @@ test("local verification covers the internal runtime dependency closure without 
 });
 
 test("release inventory contains the new packages and excludes retired Guide and Supervisor", () => {
-  assert.equal(releasePackages.length, 27);
+  assert.equal(releasePackages.length, 25);
   for (const field of ["id", "directory", "name"]) {
-    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 27);
+    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 25);
   }
   for (const name of [
     "@potential-guide/task-protocol",
     "@potential-guide/task-engine",
     "@potential-guide/task-engine-http",
     "@potential-guide/task-engine-storage",
-    "@potential-guide/checker-host",
     "@potential-guide/effects",
     "@potential-guide/git-source",
     "@potential-guide/objective-pilot",
@@ -63,7 +51,12 @@ test("release inventory contains the new packages and excludes retired Guide and
     assert.ok(releasePackages.some((entry) => entry.name === name));
   }
   assert.ok(!releasePackages.some(({ id }) => id === "objective-guide"));
-  for (const id of ["objective-portfolio-supervisor", "pguide-supervise"]) {
+  for (const id of [
+    "checker-host",
+    "objective-host",
+    "objective-portfolio-supervisor",
+    "pguide-supervise",
+  ]) {
     assert.ok(!releasePackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.3.0-rc.0`), /Unsupported package/);
   }

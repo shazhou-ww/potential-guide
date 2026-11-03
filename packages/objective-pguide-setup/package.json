@@ -34,6 +34,7 @@
     "node": ">=22.13.0"
   },
   "devDependencies": {
+    "@potential-guide/check-environment": "workspace:^",
     "@potential-guide/objective-pilot": "workspace:^",
     "@potential-guide/pguide-config": "workspace:^",
     "pguide": "workspace:^"

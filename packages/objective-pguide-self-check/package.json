@@ -28,6 +28,7 @@
     "node": ">=22.13.0"
   },
   "devDependencies": {
+    "@potential-guide/check-environment": "workspace:^",
     "@potential-guide/objective-pguide-setup": "workspace:^",
     "@potential-guide/cli-core": "workspace:^",
     "pguide": "workspace:^"

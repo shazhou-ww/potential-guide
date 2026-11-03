@@ -6,6 +6,13 @@ binaries do not require `pguide`; install alongside it to discover `regulate`
 and `continue`. Agent execution and process-worker helpers are public tool APIs
 available to external callers without a reverse dependency.
 
+The Host-based CLI execution path has been retired. `regulate` and `continue`
+explicitly reject with `pilot-error` and exit code 2 before pruning or writing
+state, reading Agent resources, or starting execution. Help remains available.
+The historical recovery and output contracts below describe stored records,
+not a currently executable continuation path. There is no automatic Task Bundle
+conversion or state replay.
+
 Stopping a regulation process first requests cooperative abort, allowing it to
 explicitly cancel shared Host checks and acknowledge cleanup. The process runner
 waits up to ten seconds for this acknowledgement before terminating its owned

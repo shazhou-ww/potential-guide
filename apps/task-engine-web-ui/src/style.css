@@ -153,14 +153,51 @@
   font-size: 0.8rem;
   color: #71717a;
 }
+.bundle-digest {
+  display: block;
+  color: #71717a;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+html,
+body,
+#app {
+  height: 100%;
+  overflow: hidden;
+}
+.workbench-shell {
+  height: 100dvh;
+  min-height: 0;
+  gap: 0;
+  overflow: hidden;
+}
 .topbar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 1.2rem;
-  padding: 0.8rem 1.5rem;
+  padding: 0 1.5rem;
+  min-height: 4.3rem;
+  flex-shrink: 0;
   border-bottom: 1px solid #e4e4e7;
   background: white;
+}
+.topbar .workspace-navigation {
+  height: 4.3rem;
+  padding: 0;
+  gap: 1.8rem;
+}
+.workspace-navigation [data-slot="tabs-trigger"] {
+  height: 100%;
+  padding: 0 0.4rem;
+  font-size: 1.05rem;
+  border-radius: 0;
+}
+.workspace-navigation [data-slot="tabs-trigger"][data-state="active"] {
+  font-weight: 650;
+}
+.workspace-navigation [data-slot="tabs-trigger"]::after {
+  bottom: 0;
 }
 .topbar h1 {
   font-size: 1.1rem;
@@ -182,11 +219,33 @@
   margin: 0.5rem 1.5rem 0;
   color: #854d0e;
   font-size: 0.85rem;
-  min-height: 1.3rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 main {
   width: 100%;
-  padding: 0.8rem 1.5rem 1.5rem;
+  padding: 0.8rem 1.5rem 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+main > [data-slot="tabs-content"],
+.list-pane,
+.list-pane > .table-scroll,
+.directory-grid,
+#bundle-cache,
+.cache-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 .page-heading {
   display: flex;
@@ -194,6 +253,7 @@ main {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 0.8rem;
+  flex-shrink: 0;
 }
 .page-heading p {
   color: #71717a;
@@ -240,9 +300,35 @@ td[data-row-controls] {
   overflow-wrap: anywhere;
 }
 .directory-grid-scroll {
-  max-height: 65vh;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   scrollbar-gutter: stable;
+  scroll-padding-top: 3rem;
+}
+.directory-grid-scroll [data-slot="table-container"],
+.cache-grid-scroll [data-slot="table-container"] {
+  overflow: visible;
+}
+.directory-grid-scroll [data-slot="table-head"],
+.cache-grid-scroll [data-slot="table-head"] {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fafafa;
+}
+.cache-grid-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  scroll-padding-top: 3rem;
+  background: white;
+  border: 1px solid #e4e4e7;
+}
+.cache-grid-scroll [data-slot="table-cell"] {
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 .directory-grid [data-slot="table-head"] {
   vertical-align: middle;
@@ -334,6 +420,24 @@ td[data-row-controls] {
   border-top: 1px solid #e4e4e7;
   padding: 0.65rem 0.8rem;
   overflow-anchor: none;
+  flex: 0 0 8.5rem;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 5.5rem;
+  background: #fafafa;
+}
+.directory-notices {
+  height: 2rem;
+  overflow: auto;
+}
+.directory-notices p,
+.directory-grid-footer > p {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cache-footer {
+  flex-basis: 8.5rem;
 }
 .directory-grid-footer p {
   margin: 0 0 0.5rem;
@@ -433,13 +537,29 @@ article button,
   overflow: auto;
   min-height: 0;
   flex: 1;
-  padding: 0.8rem 1.3rem 1.5rem;
+  padding: 0.8rem 1.3rem 5rem;
   overscroll-behavior: contain;
 }
 .workbench-dialog {
   max-width: min(48rem, calc(100vw - 2rem));
   max-height: 90dvh;
   overflow: auto;
+}
+.submission-batches {
+  margin-top: 1.2rem;
+  padding-top: 1rem;
+  padding-bottom: 3rem;
+  border-top: 1px solid #e4e4e7;
+}
+.submission-batches h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+#bar-count {
+  color: #71717a;
+  font-size: 0.8rem;
+  font-weight: normal;
 }
 .workbench-dialog [data-slot="dialog-header"] {
   padding-right: 1.5rem;
@@ -492,6 +612,55 @@ footer {
   padding: 0.5rem 1.5rem 1rem;
   font-size: 0.75rem;
 }
+.error-launcher {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.25rem;
+  z-index: 40;
+  min-width: 3.5rem;
+  height: 2.8rem;
+  border-radius: 1.4rem;
+  background: white;
+}
+[role="dialog"] .error-launcher {
+  position: absolute;
+  z-index: 1;
+}
+.error-sheet {
+  z-index: 70;
+  height: min(40dvh, 30rem);
+  min-height: min(18rem, 90dvh);
+  gap: 0;
+}
+.error-sheet [data-slot="sheet-header"] {
+  flex-shrink: 0;
+  padding: 1rem 3rem 0.75rem 1.5rem;
+  border-bottom: 1px solid #e4e4e7;
+}
+.error-sheet [data-slot="sheet-header"] button {
+  align-self: flex-start;
+}
+.error-scroll {
+  overflow: auto;
+  padding: 0.5rem 1.5rem;
+  min-height: 0;
+}
+.error-entry {
+  display: flex;
+  align-items: flex-start;
+  border-bottom: 1px solid #e4e4e7;
+  gap: 1rem;
+}
+.error-entry details {
+  flex: 1;
+  min-width: 0;
+}
+.error-summary {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 .skip {
   position: absolute;
   left: -10000px;
@@ -506,10 +675,14 @@ footer {
 @media (max-width: 640px) {
   .topbar {
     gap: 0.7rem;
-    padding: 0.8rem;
+    padding: 0.6rem 0.8rem 0;
   }
-  .topbar [data-slot="tabs-list"] {
-    margin-left: auto;
+  .topbar .workspace-navigation {
+    order: 5;
+    width: 100%;
+    height: 3.4rem;
+    justify-content: flex-start;
+    gap: 1.1rem;
   }
   .endpoint-label {
     order: 3;
@@ -520,17 +693,22 @@ footer {
     flex: 1;
     width: 0;
   }
-  #bar-toggle {
-    order: 4;
-  }
   main {
-    padding: 0.6rem 0.8rem 1rem;
+    padding: 0.6rem 0.8rem 0;
   }
   #notice {
     margin: 0.5rem 0.8rem 0;
   }
-  .directory-grid-scroll {
-    max-height: 55vh;
+  .directory-grid-footer {
+    flex-basis: 12rem;
+    padding-right: 4.5rem;
+  }
+  .error-launcher {
+    right: 0.8rem;
+    bottom: 0.8rem;
+  }
+  .error-sheet {
+    height: 70dvh;
   }
   .detail-sheet {
     width: 100vw;

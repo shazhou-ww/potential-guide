@@ -7,8 +7,6 @@ on:
       - "task-engine-v*"
       - "task-engine-http-v*"
       - "task-engine-storage-v*"
-      - "checker-host-v*"
-      - "objective-host-v*"
       - "effects-v*"
       - "git-source-v*"
       - "objective-pilot-v*"
@@ -41,8 +39,6 @@ on:
           - task-engine
           - task-engine-http
           - task-engine-storage
-          - checker-host
-          - objective-host
           - effects
           - git-source
           - objective-pilot

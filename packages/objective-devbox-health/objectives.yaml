@@ -8,7 +8,7 @@ objectives:
       {
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm", "tool"], "runtime": "node",
-        "allows": ["@potential-guide/effects", "@potential-guide/objective-pilot"],
+        "allows": ["@potential-guide/check-environment", "@potential-guide/effects", "@potential-guide/objective-pilot"],
         "entries": ["health-check.mjs"], "generated": [],
         "joins": [{"id":"public-library-suite","kind":"npm"}], "deliveries": []
       }

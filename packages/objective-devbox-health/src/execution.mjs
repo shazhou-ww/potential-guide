@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { lstat, readFile, realpath, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { lstat, readFile, realpath } from "node:fs/promises";
+import { probeDirectoryWrite } from "@potential-guide/check-environment";
 import { directories, Fault, issue } from "./contract.mjs";
 // All subprocesses share a stage deadline; each command also has an individual bound.
 export function execute(
@@ -138,16 +137,7 @@ export async function directoryProblems(subject, writable = false) {
         continue;
       }
       if (writable) {
-        const probe = join(path, `.pguide-health-${randomUUID()}`);
-        let created = false;
-        try {
-          await writeFile(probe, "machine-health\n", { flag: "wx", mode: 0o600 });
-          created = true;
-          if ((await readFile(probe, "utf8")) !== "machine-health\n")
-            throw new Fault("directory-probe: readback mismatch.");
-        } finally {
-          if (created) await rm(probe);
-        }
+        await probeDirectoryWrite(path);
       }
     } catch (error) {
       if (!["ENOENT", "EACCES", "EPERM", "EROFS", "ENOSPC", "ENOTDIR"].includes(error.code))

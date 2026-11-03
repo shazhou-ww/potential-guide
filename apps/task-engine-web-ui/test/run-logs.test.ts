@@ -120,6 +120,26 @@ test("Run detail Logs follow/pause/reconnect/history are independent, switched R
       });
     if (url.pathname === "/api/favorites") return json([]);
     const path = url.pathname.replace("/api/endpoints/demo", "");
+    if (path === "/runs") {
+      const runs = [a, b].map((runId) => ({
+        runId,
+        type: "fixture",
+        version: "2",
+        stage: "running",
+        startedAt: time,
+        updatedAt: time,
+        state: {
+          running: true,
+          completed: false,
+          failed: false,
+          stopping: false,
+          stopped: false,
+          reclaimed: false,
+          sealed: false,
+        },
+      }));
+      return json({ runs, items: runs, revision: "domain:10", observedAt: time, expiresAt: time });
+    }
     for (const id of [a, b]) {
       if (path === `/runs/${id}`)
         return json({
@@ -184,16 +204,21 @@ test("Run detail Logs follow/pause/reconnect/history are independent, switched R
   const action = (name: string) =>
     detail().querySelector<HTMLButtonElement>(`button[data-action="${name}"]`)!;
   async function open(id: string) {
-    const field = document.querySelector<HTMLInputElement>("#execution-lookup input")!;
-    const button = document.querySelector<HTMLButtonElement>("#execution-lookup button")!;
-    await until(() => !button.disabled, "lookup ready");
-    field.value = id;
-    button.click();
+    document.getElementById("tab-executions")!.click();
+    document.querySelector<HTMLButtonElement>("#execution-actions button")!.click();
+    await until(
+      () => !!document.querySelector(`#execution-directory tr[data-entity-id="${id}"]`),
+      "Run row ready",
+    );
+    document.querySelector<HTMLElement>(`#execution-directory tr[data-entity-id="${id}"]`)!.click();
     await until(() => !!detail()?.textContent?.includes(id), "Run identity displayed");
   }
   try {
     await import("../src/browser.js");
-    await until(() => !!document.querySelector("#execution-lookup button"), "browser ready");
+    await until(
+      () => document.getElementById("notice")?.textContent?.includes("当前目标：fixture") === true,
+      "browser ready",
+    );
     await open(a);
     await until(() => !!resolveA, "A history request pending");
     document.querySelector<HTMLButtonElement>('[role="dialog"] [data-close]')!.click();
@@ -204,7 +229,15 @@ test("Run detail Logs follow/pause/reconnect/history are independent, switched R
     await until(() => detail().textContent!.includes(`${b}:2`), "B stream rendered");
     assert.equal(detail().textContent!.includes(`${a}:1`), false);
     assert.equal(detail().querySelector(".run-logs script"), null, "Diagnostic text is not HTML.");
-    assert.match(detail().textContent!, /Lifecycle history is not authorized/);
+    document.querySelector<HTMLButtonElement>(".error-launcher")!.click();
+    await until(
+      () =>
+        document
+          .querySelector(".error-sheet")
+          ?.textContent?.includes("Lifecycle history is not authorized") === true,
+      "history denial appears in error center",
+    );
+    document.querySelector<HTMLButtonElement>(".error-sheet [data-close]")!.click();
     action("暂停日志跟随").click();
     await until(() => detail().textContent!.includes("跟随已暂停"), "pause visible");
     action("下一页日志").click();
@@ -249,8 +282,12 @@ test("Run detail Logs follow/pause/reconnect/history are independent, switched R
     assert.match(detail().textContent!, /完整性未知/);
     action("暂停日志跟随").click();
     action("从头读取日志").click();
+    document.querySelector<HTMLButtonElement>(".error-launcher")!.click();
     await until(
-      () => detail().textContent!.includes("此服务不支持 Run Logs 接口"),
+      () =>
+        document
+          .querySelector(".error-sheet")
+          ?.textContent?.includes("此服务不支持 Run Logs 接口") === true,
       "Unsupported host is distinct from storage failure.",
     );
   } finally {

@@ -1,5 +1,3 @@
-export const discoveryHostBins = ["pguide-checker-host", "pguide-check-host"];
-
 export const releasePackages = [
   ...[
     ["task-protocol", ["reduce", "project", "isTimedOut", "json"]],
@@ -27,38 +25,6 @@ export const releasePackages = [
     bins: [],
     objective: true,
   })),
-  {
-    id: "checker-host",
-    directory: "check-host",
-    name: "@potential-guide/checker-host",
-    requiredExports: [
-      "CheckKernel",
-      "CheckClient",
-      "connectHost",
-      "connectCheckerHost",
-      "readArtifact",
-      "serve",
-      "CheckerService",
-      "createServiceRouter",
-    ],
-    bins: discoveryHostBins,
-    forbiddenDependencies: ["@potential-guide/objective-pilot", "@potential-guide/cli-core"],
-  },
-  {
-    id: "objective-host",
-    directory: "objective-host",
-    name: "@potential-guide/objective-host",
-    requiredExports: [
-      "ObjectiveService",
-      "ObjectiveTaskClient",
-      "ProbeTask",
-      "createObjectiveRouter",
-      "createUnifiedServices",
-      "serveUnifiedHost",
-    ],
-    bins: [],
-    forbiddenDependencies: ["@potential-guide/objective-pilot", "@potential-guide/cli-core"],
-  },
   {
     id: "effects",
     directory: "effects",
@@ -97,7 +63,6 @@ export const releasePackages = [
       "parseCheckEnvelope",
       "createProcessCheckProbe",
       "createHttpCheckProbe",
-      "createWorkerCheckProbe",
     ],
     bins: [],
     forbiddenDependencies: [
@@ -237,6 +202,13 @@ export const releasePackages = [
 // Local verification includes support packages without authorizing their publication.
 export const verificationPackages = [
   ...releasePackages,
+  {
+    id: "check-environment",
+    directory: "check-environment",
+    name: "@potential-guide/check-environment",
+    requiredExports: ["checkTools", "checkDirectories", "checkNetwork"],
+    bins: [],
+  },
   {
     id: "task-sdk",
     directory: "task-sdk",

@@ -16,6 +16,7 @@ import {
   writeResult,
 } from "@potential-guide/cli-core";
 import {
+  assertPilotExecutionSupported,
   inspectObjectiveArtifact,
   pilotSourceBudgets,
   withPilot,
@@ -161,6 +162,7 @@ export async function runProbe(
     "--no-reports": "flag",
   });
   const language = option(argv, "--language") as string | undefined;
+  assertPilotExecutionSupported();
   const loaded = await loadConfig(globals.cwd, ["pilot", "cli-core", "objectives"]);
   const selected = await selectObjective(argv, globals, loaded.value);
   const controller = new AbortController();
@@ -366,23 +368,16 @@ export async function runValidate(argv: string[], globals: GlobalOptions): Promi
   if (argv[0] === "artifact" && argv[1] !== undefined) {
     const directory = resolve(globals.cwd, argv[1]);
     const artifact = await inspectObjectiveArtifact(directory);
-    await withPilot(
-      directory,
-      globals.cwd,
-      artifact.digest,
-      async (spec) => {
-        writeResult(
-          {
-            schemaVersion: 1,
-            status: "valid",
-            objectiveId: spec.objectiveId,
-            artifactDigest: spec.version,
-          },
-          globals.format,
-          `# Objective artifact validation\n\n- Objective: ${markdownInlineCode(spec.objectiveId)}\n- Digest: ${markdownInlineCode(spec.version)}\n- Scope: fixed closure and References verified; no Check executed.`,
-        );
+    writeResult(
+      {
+        schemaVersion: 1,
+        status: "valid",
+        objectiveId: artifact.manifest.id,
+        artifactDigest: artifact.digest,
+        validationScope: "local-artifact",
       },
-      { reports: { enabled: false } },
+      globals.format,
+      `# Objective artifact validation\n\n- Objective: ${markdownInlineCode(artifact.manifest.id)}\n- Digest: ${markdownInlineCode(artifact.digest)}\n- Scope: local manifest, file set, mappings and declared Reference files verified; external Check/dependency closure not resolved. No Check executed.`,
     );
     return;
   }

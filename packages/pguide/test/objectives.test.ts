@@ -1,15 +1,15 @@
+import { extractGlobals } from "@potential-guide/cli-core";
 import assert from "node:assert/strict";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { extractGlobals } from "@potential-guide/cli-core";
 import {
   bindObjective,
   listObjectives,
-  type ObjectiveDeclaration,
   objectiveContext,
   parseObjectives,
   selectObjective,
+  type ObjectiveDeclaration,
 } from "../../objective-declarations/src/index.js";
 import { fixture as pilotFixture } from "../../objective-pilot/test/fixtures.js";
 import {
@@ -17,8 +17,7 @@ import {
   parseStrictYaml,
   validateObjectivesDocument,
 } from "../../pilot-protocol/src/index.js";
-import { bin, fixture, git, run, writeConfig } from "./fixtures.js";
-import { dependencyWorker } from "./worker-fixtures.js";
+import { bin, fixture, git, run } from "./fixtures.js";
 
 const unit = { type: "object", additionalProperties: false, maxProperties: 0 } as const;
 const declaration: ObjectiveDeclaration = {
@@ -380,7 +379,8 @@ test("context recognizes absent origin but explicitly rejects malformed and non-
     "json",
   ]);
   assert.equal(invalid.code, 2, invalid.stdout + invalid.stderr);
-  assert.equal(JSON.parse(invalid.stdout).status, "context-error");
+  assert.equal(JSON.parse(invalid.stdout).status, "pilot-error");
+  assert.match(invalid.stdout, /Legacy Pilot execution is retired/);
   assert.ok(!invalid.stdout.includes("secret"));
 });
 
@@ -447,104 +447,6 @@ test("Git operational failures and corrupt metadata never become successful fall
   }
 });
 
-test("declaration probe and direct probe agree; declaration mutation does not redirect continue", async (t) => {
-  const f = await fixture();
-  t.after(() => rm(f.directory, { recursive: true, force: true }));
-  const selected: ObjectiveDeclaration = {
-    ...declaration,
-    objective: "./objective",
-    subject: "{}",
-  };
-  await writeFile(join(f.repository, "objectives.yaml"), document(selected));
-  const commit = await f.commit();
-  const args = ["--cwd", f.repository, "--format", "json", "--no-reports"];
-  const selectedProbe = await run(bin("probe"), [
-    "--objective",
-    "check",
-    "--scope",
-    "directory",
-    ...args,
-  ]);
-  const direct = await run(bin("probe"), ["--pilot", f.uri, "--subject-file", f.subject, ...args]);
-  assert.equal(selectedProbe.code, 0, selectedProbe.stdout + selectedProbe.stderr);
-  assert.equal(direct.code, 0, direct.stdout + direct.stderr);
-  assert.deepEqual(
-    JSON.parse(selectedProbe.stdout).payload.versions,
-    JSON.parse(direct.stdout).payload.versions,
-  );
-  for (const extra of [
-    ["--pilot", f.uri],
-    ["--subject-file", f.subject],
-  ]) {
-    const result = await run(bin("probe"), ["--objective", "check", ...extra, ...args]);
-    assert.equal(result.code, 2, result.stdout);
-    assert.match(result.stdout, /mutually exclusive/);
-  }
-  const input = join(f.directory, "input.json");
-  await writeFile(input, '{"extra":true}');
-  const invalid = await run(bin("probe"), ["--objective", "check", "--input-file", input, ...args]);
-  assert.equal(invalid.code, 2, invalid.stdout);
-  const config = join(f.directory, "config.json");
-  const state = join(f.directory, "state");
-  await writeFile(
-    join(f.repository, ".git", "info", "exclude"),
-    ".pguide/agents.yaml\n.pguide/config.jsonc\n",
-  );
-  await writeConfig(
-    config,
-    JSON.stringify({
-      schemaVersion: 2,
-      stateDirectory: state,
-      defaultAgent: "forbidden",
-      agents: {
-        forbidden: {
-          connection: { type: "acp", protocolVersion: "1" },
-          transport: { type: "stdio", command: process.execPath, args: ["-e", "process.exit(99)"] },
-        },
-      },
-    }),
-    f.repository,
-  );
-  const regulated = await run(bin("regulate"), [
-    "--objective",
-    "check",
-    "--scope",
-    "directory",
-    "--target",
-    "terminal",
-    "--fixture-config",
-    config,
-    "--cwd",
-    f.repository,
-    "--format",
-    "json",
-  ]);
-  assert.equal(regulated.code, 0, regulated.stdout + regulated.stderr);
-  const id = JSON.parse(regulated.stdout).regulationId;
-  const saved = JSON.parse(
-    await readFile(join(state, "regulations", id, "regulation.json"), "utf8"),
-  );
-  assert.equal(saved.objectiveCommit, commit);
-  assert.equal(saved.objectiveTree, await git(f.repository, "rev-parse", `${commit}:objective`));
-  assert.equal(saved.binding.entry.name, "check");
-  await writeFile(join(f.repository, "objectives.yaml"), document());
-  await f.commit();
-  const continued = await run(bin("continue"), [
-    id,
-    "--fixture-config",
-    config,
-    "--cwd",
-    f.repository,
-    "--format",
-    "json",
-  ]);
-  assert.equal(continued.code, 0, continued.stdout + continued.stderr);
-  assert.equal(
-    JSON.parse(continued.stdout).outcome.latestObservation.payload.current.objectiveId,
-    f.uri,
-  );
-});
-
 test("management requires scope, atomically validates, and migration preserves unrelated registrations", async (t) => {
   const f = await fixture();
   t.after(() => rm(f.directory, { recursive: true, force: true }));
@@ -581,86 +483,4 @@ test("management requires scope, atomically validates, and migration preserves u
   assert.equal((await invoke(["remove", "check", "--scope", "directory"])).code, 0);
   assert.deepEqual(await listObjectives(f.directory, "directory"), []);
   assert.equal(dirname(file), f.directory);
-});
-
-test("continue restores cross-repository dependency snapshots while a new binding follows the source", async (t) => {
-  const parent = await fixture();
-  const child = await fixture();
-  t.after(() =>
-    Promise.all(
-      [parent.directory, child.directory].map((directory) =>
-        rm(directory, { recursive: true, force: true }),
-      ),
-    ),
-  );
-  const childScript = join(child.repository, "objective", "checks", "ready", "worker.cjs");
-  await writeFile(
-    childScript,
-    'exports.execute = async (inputSubject, context) => {\n    return { status: 200, message: "", payload: { ok: false, problems: [{ kind: "internal", id: "not-ready", parameters: {} }] } };\n};\n',
-  );
-  const childCommit = await child.commit();
-  await writeFile(
-    join(parent.repository, "objective", "checks", "ready", "worker.cjs"),
-    dependencyWorker(child.uri),
-  );
-  await parent.commit();
-  const state = join(parent.directory, "state");
-  const config = join(parent.directory, "config.json");
-  await writeConfig(
-    config,
-    JSON.stringify({
-      schemaVersion: 2,
-      stateDirectory: state,
-      defaultAgent: "unused",
-      agents: {
-        unused: {
-          connection: { type: "acp", protocolVersion: "1" },
-          transport: { type: "stdio", command: process.execPath, args: ["-e", "process.exit(99)"] },
-        },
-      },
-    }),
-  );
-  const args = [
-    "--pilot",
-    parent.uri,
-    "--subject-file",
-    parent.subject,
-    "--target",
-    "terminal",
-    "--fixture-config",
-    config,
-    "--format",
-    "json",
-  ];
-  const first = await run(bin("regulate"), args);
-  assert.equal(first.code, 3, first.stdout + first.stderr);
-  const firstReport = JSON.parse(first.stdout);
-  const saved = JSON.parse(
-    await readFile(join(state, "regulations", firstReport.regulationId, "regulation.json"), "utf8"),
-  );
-  assert.equal(saved.sourceBindings[child.uri].commit, childCommit);
-  await writeFile(
-    childScript,
-    'exports.execute = async (inputSubject, context) => {\n    return { status: 200, message: "", payload: { ok: true, problems: [] } };\n};\n',
-  );
-  const updated = await child.commit();
-  assert.notEqual(updated, childCommit);
-  const resumed = await run(bin("continue"), [
-    firstReport.regulationId,
-    "--fixture-config",
-    config,
-    "--format",
-    "json",
-  ]);
-  assert.equal(resumed.code, 3, resumed.stdout + resumed.stderr);
-  assert.equal(
-    JSON.parse(resumed.stdout).outcome.latestObservation.payload.sources[child.uri].commit,
-    childCommit,
-  );
-  const fresh = await run(bin("regulate"), args);
-  assert.equal(fresh.code, 0, fresh.stdout + fresh.stderr);
-  assert.equal(
-    JSON.parse(fresh.stdout).outcome.latestObservation.payload.sources[child.uri].commit,
-    updated,
-  );
 });

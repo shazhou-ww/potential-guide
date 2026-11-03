@@ -1,5 +1,6 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
+import { probeDirectoryWrite } from "@potential-guide/check-environment";
 import { acpReady, configured } from "./configuration.mjs";
 import { Fault, Problem, problem, subjectValue, success } from "./contract.mjs";
 import { directSanity } from "./direct-sanity.mjs";
@@ -73,6 +74,7 @@ export async function check(stage, value, options = {}) {
       subject.timeoutMs,
     );
     await mkdir(subject.scratchDirectory, { recursive: true });
+    await probeDirectoryWrite(subject.scratchDirectory, controller.signal);
     const probeDirectory =
       options.pilot && !options.selfCheck ? environment.PGUIDE_PROBE_TEMP_DIR : undefined;
     if (probeDirectory !== undefined && !isAbsolute(probeDirectory))

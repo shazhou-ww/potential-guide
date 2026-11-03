@@ -263,17 +263,17 @@ importers:
         specifier: 'catalog:'
         version: 2.1.0
 
-  packages/check-host:
-    dependencies:
-      '@potential-guide/check-artifacts':
+  packages/check-environment:
+    devDependencies:
+      '@potential-guide/task-engine':
         specifier: workspace:^
-        version: link:../check-artifacts
-      '@potential-guide/check-runtime-files':
+        version: link:../task-engine
+      '@potential-guide/task-protocol':
         specifier: workspace:^
-        version: link:../check-runtime-files
-      '@potential-guide/effects':
+        version: link:../task-protocol
+      '@potential-guide/task-sdk':
         specifier: workspace:^
-        version: link:../effects
+        version: link:../task-sdk
 
   packages/check-runtime-files: {}
 
@@ -316,30 +316,18 @@ importers:
       '@potential-guide/check-artifacts':
         specifier: workspace:^
         version: link:../check-artifacts
-      '@potential-guide/checker-host':
+      '@potential-guide/check-runtime-files':
         specifier: workspace:^
-        version: link:../check-host
+        version: link:../check-runtime-files
       '@potential-guide/cli-core':
         specifier: workspace:^
         version: link:../pguide-cli-core
-      '@potential-guide/effects':
-        specifier: workspace:^
-        version: link:../effects
-      '@potential-guide/git-source':
-        specifier: workspace:^
-        version: link:../git-source
-      '@potential-guide/objective-host':
-        specifier: workspace:^
-        version: link:../objective-host
       '@potential-guide/objective-pilot':
         specifier: workspace:^
         version: link:../objective-pilot
       '@potential-guide/pilot-protocol':
         specifier: workspace:^
         version: link:../pilot-protocol
-      ajv:
-        specifier: 'catalog:'
-        version: 8.20.0
       npm-package-arg:
         specifier: 'catalog:'
         version: 13.0.2
@@ -396,6 +384,9 @@ importers:
 
   packages/objective-devbox-health:
     devDependencies:
+      '@potential-guide/check-environment':
+        specifier: workspace:^
+        version: link:../check-environment
       '@potential-guide/effects':
         specifier: workspace:^
         version: link:../effects
@@ -403,15 +394,6 @@ importers:
         specifier: workspace:^
         version: link:../objective-pilot
     publishDirectory: dist/package
-
-  packages/objective-host:
-    dependencies:
-      '@potential-guide/check-artifacts':
-        specifier: workspace:^
-        version: link:../check-artifacts
-      '@potential-guide/checker-host':
-        specifier: workspace:^
-        version: link:../check-host
 
   packages/objective-monorepo-standard:
     dependencies:
@@ -451,6 +433,9 @@ importers:
 
   packages/objective-pguide-self-check:
     devDependencies:
+      '@potential-guide/check-environment':
+        specifier: workspace:^
+        version: link:../check-environment
       '@potential-guide/cli-core':
         specifier: workspace:^
         version: link:../pguide-cli-core
@@ -468,6 +453,9 @@ importers:
         specifier: workspace:^
         version: link:../objective-setup-marker/dist/package
     devDependencies:
+      '@potential-guide/check-environment':
+        specifier: workspace:^
+        version: link:../check-environment
       '@potential-guide/objective-pilot':
         specifier: workspace:^
         version: link:../objective-pilot
@@ -481,15 +469,9 @@ importers:
 
   packages/objective-pilot:
     dependencies:
-      '@potential-guide/checker-host':
-        specifier: workspace:^
-        version: link:../check-host
       '@potential-guide/effects':
         specifier: workspace:^
         version: link:../effects
-      '@potential-guide/objective-host':
-        specifier: workspace:^
-        version: link:../objective-host
       '@potential-guide/pilot-protocol':
         specifier: workspace:^
         version: link:../pilot-protocol
@@ -789,10 +771,6 @@ importers:
       yaml:
         specifier: 'catalog:'
         version: 2.9.1
-    devDependencies:
-      '@potential-guide/checker-host':
-        specifier: workspace:^
-        version: link:../check-host
 
 packages:
 

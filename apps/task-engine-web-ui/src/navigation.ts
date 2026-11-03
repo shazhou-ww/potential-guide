@@ -1,5 +1,10 @@
 export type Tab = "tasks" | "executions" | "cache";
-export type Overlay = "task-detail" | "execution-detail" | "create-dialog" | "submission-dialog";
+export type Overlay =
+  | "task-detail"
+  | "execution-detail"
+  | "cache-detail"
+  | "cache-confirm"
+  | "create-dialog";
 
 export class Navigation {
   tab: Tab = "tasks";

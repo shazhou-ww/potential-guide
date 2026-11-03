@@ -1,5 +1,14 @@
 # Declarative Objective artifacts
 
+Host-based execution has been retired. Local artifact inspection and reference
+codecs remain available; `pguide validate artifact` reports
+`validationScope: "local-artifact"` and does not resolve external Checks,
+dependencies or inherited References. CLI `probe`, `regulate` and `continue`
+explicitly reject execution until migrated to
+[Task Bundles](axis/task-engine-contracts/task-bundle.md).
+Consumption and recovery examples below document the retired workflow, not
+currently supported execution.
+
 An Objective is `objective.json` plus explicitly declared References. It has no
 package.json, npm package identity, version range, registry choice, JavaScript
 entrypoint, installation or consumer-side build. Checks remain independently

@@ -1,11 +1,20 @@
 # 从控制机 A 配置目标机 B 的 pguide setup Objective
 
+Checker/Objective Host 已退役。旧 setup 的 nonce sanity 依赖 CLI `probe`/`regulate`，
+当前会明确报告调用失败，不会宣称修复成功；该路径等待 Task Bundle 迁移。
+安装、配置检查与 SSH 传输仍保留。独立本机自查的直接 Agent 检查不依赖旧 Host，
+但通过 CLI `probe` 观察任何 Objective 的入口暂不可执行。
+
 本 Objective 是独立 npm 包，身份为实际 package.json.name，版本为完整交付内容 digest。
 sanity marker 由另一个固定包 `@potential-guide/objective-setup-marker` 提供，
 不再内嵌第二个定义。源码/原始资源入库；`pnpm build` 把 worker/SSH runtime
 生成到忽略的 staging/dist，消费 `dist/package` 或准确 tarball，不提交生成副本。
 新鲜度命令为 `pnpm setup:check`。
 职责与历史 URI 迁移见 [Pilot packages](../../docs/pilot-packages.md)。
+
+scratch 写入复验与 devbox-health 共用
+[check-environment](../check-environment/README.md) 的独占临时文件探测，
+构建时打入自包含制品；setup 原有 scratch 创建、授权和等级语义不变。
 
 已有本机 pguide 的设备优先运行独立的
 [本机自查 Objective](../objective-pguide-self-check/README.md)：默认一次直接 Agent marker 修复，
