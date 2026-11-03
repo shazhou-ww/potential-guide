@@ -1,7 +1,7 @@
 {
   "name": "@potential-guide/task-engine-server",
   "version": "0.1.0-rc.0",
-  "description": "Generic authenticated Node HTTP/SSE task server and standalone CLI.",
+  "description": "Generic authenticated Node HTTP/SSE task server.",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -11,9 +11,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
-  },
-  "bin": {
-    "task-engine-server": "./dist/main.js"
   },
   "files": [
     "dist",

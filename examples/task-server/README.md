@@ -6,11 +6,14 @@ diagnostics (index/kind/problem ID, not parameter/environment dumps) through
 [Run Logs](../../docs/task-run-logs.md) and the concise SDK assertion sample.
 
 The generic server installs Engine/HTTP/Storage/Server, **not** SDK, Check or Probe.
-Run `task-engine-server --config ./echo-config.mjs` with `TASK_SERVER_TOKEN`
-and optionally `TASK_SERVER_PORT` / `TASK_SERVER_DATABASE`.
-Independently run a private/local Kubo daemon; `IPFS_API` defaults to
-`http://127.0.0.1:5001`. The asynchronous trusted configuration injects that generic
-client; Engine shutdown never stops the daemon, closes a shared client or removes shared pins.
+Install `@potential-guide/pguide-task-engine` and run
+`pguide-task-engine --config ./server.yaml` against an independently managed
+Kubo RPC. See [service configuration](../../docs/task-server.md) for user settings,
+precedence, `--no-global-config` and optional `--ui`.
+The token-free CLI is fixed-loopback and single-scope only.
+The `.mjs` examples are **programmatic composition helpers**, never CLI config
+inputs: import `configureTaskServer` and pass its result to `startTaskServer`
+when custom token authentication or injected clients are required.
 `check-config.mjs` and `probe-config.mjs` intentionally use that identical
 business-free configuration. Use a new v5 database path; older domains are
 rejected without migration or rewriting their bytes.
@@ -34,7 +37,8 @@ Callbacks read bundled resources via `context.bundle.read(path)` byte streams,
 not `import.meta.url` or physical host paths. Existing business Checker/Objective
 archives and their URL/Digest inputs are unchanged.
 
-POST `/tasks` with JSON, bearer token and a fresh ULID `Idempotency-Key`:
+POST `/tasks` with JSON and a fresh ULID `Idempotency-Key` (add a bearer token
+only when using the authenticated programmatic example):
 
 ```json
 {

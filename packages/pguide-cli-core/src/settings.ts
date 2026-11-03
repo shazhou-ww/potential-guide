@@ -414,7 +414,8 @@ export function requireSettings(
 
 async function exists(path: string): Promise<boolean> {
   try {
-    return (await stat(path)).isFile();
+    if (!(await stat(path)).isFile()) throw new CliError("Configuration path is not a file.");
+    return true;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
     throw error;
@@ -446,11 +447,12 @@ export async function existingProjectConfig(cwd: string): Promise<string | undef
 export async function loadConfig(
   cwd: string,
   namespaces?: readonly string[],
+  selection: { user?: boolean; project?: boolean } = {},
 ): Promise<LoadedConfig> {
   const catalog = await loadSettingsCatalog();
   const user = userConfigPath();
-  await rejectLegacyConfig(user);
-  const project = await existingProjectConfig(cwd);
+  if (selection.user !== false) await rejectLegacyConfig(user);
+  const project = selection.project === false ? undefined : await existingProjectConfig(cwd);
   const loaded: LoadedConfig = {
     value: {},
     sources: {},
@@ -466,7 +468,7 @@ export async function loadConfig(
     Object.assign(loaded.value, value);
     for (const id of Object.keys(value)) loaded.sources[id] = source;
   };
-  for (const path of [user, project]) {
+  for (const path of [selection.user === false ? undefined : user, project]) {
     if (path === undefined || !(await exists(path))) continue;
     merge(parseConfig(await readFile(path, "utf8")), path);
     loaded.files.push(path);
