@@ -238,6 +238,13 @@ export const releasePackages = [
 export const verificationPackages = [
   ...releasePackages,
   {
+    id: "check-environment",
+    directory: "check-environment",
+    name: "@potential-guide/check-environment",
+    requiredExports: ["checkTools", "checkDirectories", "checkNetwork"],
+    bins: [],
+  },
+  {
     id: "task-sdk",
     directory: "task-sdk",
     name: "@potential-guide/task-sdk",

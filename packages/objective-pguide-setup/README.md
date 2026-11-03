@@ -7,6 +7,10 @@ sanity marker 由另一个固定包 `@potential-guide/objective-setup-marker` �
 新鲜度命令为 `pnpm setup:check`。
 职责与历史 URI 迁移见 [Pilot packages](../../docs/pilot-packages.md)。
 
+scratch 写入复验与 devbox-health 共用
+[check-environment](../check-environment/README.md) 的独占临时文件探测，
+构建时打入自包含制品；setup 原有 scratch 创建、授权和等级语义不变。
+
 已有本机 pguide 的设备优先运行独立的
 [本机自查 Objective](../objective-pguide-self-check/README.md)：默认一次直接 Agent marker 修复，
 不嵌套 regulation、不需要 allowSanity。本文旧 bootstrap/setup 的授权及 SSH 行为不变；

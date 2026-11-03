@@ -28,6 +28,7 @@
     "node": ">=22.13.0"
   },
   "devDependencies": {
+    "@potential-guide/check-environment": "workspace:^",
     "@potential-guide/effects": "workspace:^",
     "@potential-guide/objective-pilot": "workspace:^"
   }

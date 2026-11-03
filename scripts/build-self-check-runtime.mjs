@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { build } from "esbuild";
 import ts from "typescript";
 import { buildEvidenceRuntime } from "./build-evidence-runtime.mjs";
 
@@ -71,6 +72,15 @@ await emit(
   true,
 );
 await emit("direct-agent.mjs", await source("scripts/self-check-agent.mjs"));
+const directoryProbe = await build({
+  entryPoints: [join(root, "packages", "check-environment", "src", "directories.ts")],
+  bundle: true,
+  platform: "node",
+  format: "esm",
+  target: "node22",
+  write: false,
+});
+await emit("directory-probe.mjs", directoryProbe.outputFiles[0].text);
 await emit(
   "setup-check.mjs",
   (await source("packages/objective-pguide-setup/setup-check.mjs")).replace(/^#!.*\r?\n/, ""),
@@ -81,6 +91,10 @@ for (const name of await readdir(join(root, "packages", "objective-pguide-setup"
     if (name === "cli.mjs")
       text = text.replace(/from "[^"]*evidence\.mjs"/, 'from "../evidence.mjs"');
     if (name === "runner.mjs") {
+      text = text.replace(
+        'from "@potential-guide/check-environment"',
+        'from "../directory-probe.mjs"',
+      );
       const ast = ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
       let removed = 0;
       const transformed = ts.transform(ast, [

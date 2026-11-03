@@ -12,6 +12,7 @@ protocol:
   - "@potential-guide/effects"
   - "@potential-guide/pilot-protocol"
 business:
+  - "@potential-guide/check-environment"
   - "@potential-guide/check-task"
   - "@potential-guide/probe-task"
   - "@potential-guide/objective-pilot"
