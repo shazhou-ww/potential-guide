@@ -407,13 +407,14 @@ test("real HTTPS acquisition pins both digests, rejects redirects and tampering,
     digest = built.digest,
     transfer = packed.transportDigest,
     timeoutMs = 30_000,
+    externalSignal = false,
   ) {
     const script = `import {prepareCheckArtifact} from ${JSON.stringify(moduleURL)};
       const {closePrivateFileBackend:close}=await import(${JSON.stringify(new URL("../../check-runtime-files/dist/index.js", import.meta.url).href)});
     const trace=value=>{if(process.env.PGUIDE_HTTPS_TRACE==="1")console.error(${JSON.stringify(path)}+":"+value);};
     trace("acquire");
     let code=0;
-    try { console.log(JSON.stringify(await prepareCheckArtifact(${JSON.stringify({ kind: "https", url: `https://127.0.0.1:${address && typeof address !== "string" ? address.port : 0}${path}`, digest, transportDigest: transfer })},${JSON.stringify({ cacheDirectory: cache, timeoutMs })}))); }
+    try { console.log(JSON.stringify(await prepareCheckArtifact(${JSON.stringify({ kind: "https", url: `https://127.0.0.1:${address && typeof address !== "string" ? address.port : 0}${path}`, digest, transportDigest: transfer })},{...${JSON.stringify({ cacheDirectory: cache, timeoutMs })}${externalSignal ? ",signal:new AbortController().signal" : ""}}))); }
     catch(error) {console.error(error);code=1;}
     finally {trace("backend-close");await close();trace("backend-closed");}
     await new Promise(done=>process.stdout.write("",done));
@@ -440,9 +441,18 @@ test("real HTTPS acquisition pins both digests, rejects redirects and tampering,
         `sha256-pguide-check-v1:${"0".repeat(64)}`,
       ),
     );
-    const timedOutCache = `${cacheDirectory}-timeout`;
-    await assert.rejects(child("/slow", timedOutCache, built.digest, packed.transportDigest, 150));
-    assert.deepEqual(await readdir(timedOutCache), []);
+    for (const externalSignal of [false, true]) {
+      const timedOutCache = `${cacheDirectory}-timeout-${externalSignal}`;
+      const timeoutStarted = Date.now();
+      await assert.rejects(
+        child("/slow", timedOutCache, built.digest, packed.transportDigest, 150, externalSignal),
+      );
+      assert.ok(
+        Date.now() - timeoutStarted < 5_000,
+        "The request deadline must bound slow bodies.",
+      );
+      assert.deepEqual(await readdir(timedOutCache), []);
+    }
     await assert.rejects(
       child(
         "/check.tgz",
