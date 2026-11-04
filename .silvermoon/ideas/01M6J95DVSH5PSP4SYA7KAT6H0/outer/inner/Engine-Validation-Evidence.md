@@ -1,5 +1,29 @@
 # Engine 统一校验实施证据
 
+## 最新完整检查结论
+
+按用户“同步最新 main，继续修到 pnpm check 通过”的授权，已保存实现到
+`d6c9b0d1`，再以 `60a1ed3e` 合入 primary 的 `0a7a0d32`。原有四项共享修改
+与该 primary 提交内容完全一致，合并前后逐文件 Git 内容摘要核对相同，未丢弃。
+
+最新 main 的测试隔离与并行上限修复使完整测试阶段通过。随后真实包检查暴露
+两个独立问题，均未跳过检查或删除负控制：
+
+- SDK 拆分前的 dist/artifact、build、publish 残留被旧 typecheck 缓存重新恢复。
+  只清理 SDK 自有 dist，强制重建并刷新 SDK 的 build/typecheck 两份缓存，
+  未清理共享缓存根目录、改动生产时限或掩盖包文件检查。
+- authoring 的生产宿主位于仓库下，缺失依赖控制意外解析到祖先 TypeBox。
+  改为仓库外 canonical 临时宿主，复制已验证区块，仅安装 Engine 运行依赖；
+  缺失 SDK/作者工具/TypeBox 的真实负控制仍执行。成功或失败均 finally 清理
+  自有目录，新增测试证明祖先依赖隔离、错误传播和清理。定向四项隔离测试通过，
+  `node scripts/check-packages.mjs --bundle-authoring` 的真实打包消费通过。
+
+最终原样执行 **`pnpm check`，退出 0**：layers/build、format、lint、
+typecheck、全部 workspace 与根脚本测试，以及完整 pack:check 全部通过，
+包括最终 combined 和仓库外 Bundle authoring/Engine/真实 Worker 消费。
+此结论替代下文历史失败状态；I-AC02 的实施工作已完成，不代表自动记录生命周期
+accept 或完成最低 Node/断网等独立 Deployment 门限，也未发布 npm。
+
 ## 授权、范围与流程
 
 用户在本轮明确改为 Engine 统一承担 input/result/message 契约校验，授权更新三份

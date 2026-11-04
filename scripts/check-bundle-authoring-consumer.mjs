@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { withoutAuthorDependencies } from "./check-task-sdk-consumer.mjs";
 import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 
 export async function checkBundleAuthoringConsumer(directory, cid, tarballs, manifests, run) {
@@ -20,44 +20,45 @@ await writeFile("blocks.json",JSON.stringify([...client.blocks].map(([key,bytes]
   );
   for (const file of ["main.ts", "contract.ts", "task.build.yaml"]) await rm(join(directory, file));
   await run(process.execPath, ["publish.mjs"], directory);
-  const host = join(directory, "runtime");
-  await mkdir(host);
-  const entries = ["@potential-guide/task-engine"];
-  await writeFile(
-    join(host, "pnpm-workspace.yaml"),
-    `packages: []\noverrides: ${JSON.stringify(Object.fromEntries([...tarballs].map(([name, path]) => [name, pathToFileURL(path).href])))}\n`,
-  );
-  await writeFile(
-    join(host, "package.json"),
-    JSON.stringify({
-      private: true,
-      type: "module",
-      dependencies: Object.fromEntries(
-        entries.map((name) => [name, pathToFileURL(tarballs.get(name)).href]),
-      ),
-    }),
-  );
-  await run(
-    "pnpm",
-    ["install", "--prod", "--prefer-offline", "--ignore-scripts", "--no-frozen-lockfile"],
-    host,
-  );
-  const graph = await verifyConsumerGraph(
-    host,
-    consumerVersions(manifests, entries),
-    entries,
-    true,
-  );
-  const names = new Set(graph.map((entry) => entry.name));
-  for (const name of [
-    "@sinclair/typebox",
-    "@potential-guide/pguide-task-bundle",
-    "@potential-guide/task-sdk",
-  ])
-    assert.ok(!names.has(name), `Production host must not install ${name}.`);
-  await writeFile(
-    join(host, "consume.mjs"),
-    `
+  const host = await realpath(await mkdtemp(join(tmpdir(), "pguide-bundle-runtime-")));
+  try {
+    await copyFile(join(directory, "blocks.json"), join(host, "blocks.json"));
+    const entries = ["@potential-guide/task-engine"];
+    await writeFile(
+      join(host, "pnpm-workspace.yaml"),
+      `packages: []\noverrides: ${JSON.stringify(Object.fromEntries([...tarballs].map(([name, path]) => [name, pathToFileURL(path).href])))}\n`,
+    );
+    await writeFile(
+      join(host, "package.json"),
+      JSON.stringify({
+        private: true,
+        type: "module",
+        dependencies: Object.fromEntries(
+          entries.map((name) => [name, pathToFileURL(tarballs.get(name)).href]),
+        ),
+      }),
+    );
+    await run(
+      "pnpm",
+      ["install", "--prod", "--prefer-offline", "--ignore-scripts", "--no-frozen-lockfile"],
+      host,
+    );
+    const graph = await verifyConsumerGraph(
+      host,
+      consumerVersions(manifests, entries),
+      entries,
+      true,
+    );
+    const names = new Set(graph.map((entry) => entry.name));
+    for (const name of [
+      "@sinclair/typebox",
+      "@potential-guide/pguide-task-bundle",
+      "@potential-guide/task-sdk",
+    ])
+      assert.ok(!names.has(name), `Production host must not install ${name}.`);
+    await writeFile(
+      join(host, "consume.mjs"),
+      `
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {createTaskEngine,newId} from "@potential-guide/task-engine";
@@ -65,7 +66,7 @@ import {MemoryIpfsClient,MemoryStore} from "@potential-guide/task-engine/testing
 for(const name of ["@potential-guide/task-sdk","@potential-guide/pguide-task-bundle","@sinclair/typebox"])
  await assert.rejects(import(name),error=>error.code==="ERR_MODULE_NOT_FOUND");
 const client=new MemoryIpfsClient();
-for(const [key,hex] of JSON.parse(await readFile("../blocks.json","utf8")))
+for(const [key,hex] of JSON.parse(await readFile("./blocks.json","utf8")))
  client.blocks.set(key,Buffer.from(hex,"hex"));
 const store=new MemoryStore();
 const engine=createTaskEngine({store,ipfsClient:client,authorize:()=>true});
@@ -87,8 +88,9 @@ try {
 } finally {await engine.close();store.close();}
 console.log("Packed TypeBox artifact: CID-only Engine/real Worker execution passed without author sources or dependencies.");
 `,
-  );
-  await withoutAuthorDependencies(directory, async () => {
+    );
     console.log(await run(process.execPath, ["consume.mjs"], host));
-  });
+  } finally {
+    await rm(host, { recursive: true, force: true });
+  }
 }

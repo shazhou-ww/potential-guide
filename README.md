@@ -76,6 +76,8 @@ can also start parallel test files, child processes and Workers.
 Generated `.test-*` fixture directories are ignored by Git and Biome; keep
 new runtime fixtures under `.cache/` so repository scans do not race their
 cleanup, and hand-written test sources under `test/`.
+Production-only Bundle consumer checks use an owned temporary directory outside
+the repository so missing author dependencies cannot resolve from ancestor workspaces.
 
 ## CLI
 

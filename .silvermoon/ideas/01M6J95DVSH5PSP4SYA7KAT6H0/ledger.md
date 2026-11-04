@@ -11,7 +11,7 @@
 ### Implementation acceptance criteria
 
 - [x] **I-AC01:** 显式入口与轻量依赖成立
-- [ ] **I-AC02:** 宿主校验、拒绝及物理回收有效
+- [x] **I-AC02:** 宿主校验、拒绝及物理回收有效
 - [x] **I-AC03:** 可复现真实交付体积下降
 
 ## Deployment
