@@ -282,7 +282,10 @@ On POSIX, component opens are relative to pinned directory descriptors through
 `O_NOFOLLOW`/`O_DIRECTORY`/`O_NONBLOCK`. Descriptor identities, named entries,
 link counts and nanosecond file metadata are verified; reads never exceed the
 limit even if a writer grows the file. A host without a working descriptor
-filesystem fails with `artifact_file_unsupported`. Platform-specific tests and
+filesystem fails with `artifact_file_unsupported`. macOS `/dev/fd` does not provide
+the required directory-relative traversal; packed deployment checks assert this
+explicit failure (without a business result) while still executing HTTPS Check
+Bundles and verifying their results. Platform-specific tests and
 actual platform skips are recorded in the implementation evidence; Windows tests
 are not proof of POSIX behavior.
 

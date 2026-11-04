@@ -179,6 +179,7 @@ process.env.TASK_SERVER_TOKEN="fixture";process.env.TASK_SERVER_PORT="0";
 const configure=(await import("./consumer-config.mjs")).default;
 const headers={authorization:"Bearer fixture","content-type":"application/json"};
 async function exercise(url,requestBody=body){
+ const unsupportedFile=process.platform==="darwin"&&requestBody.checker?.url.startsWith("file:");
  assert.equal((await fetch(url+"/tasks/"+newId())).status,401);
  const response=await fetch(url+"/tasks",{method:"POST",headers:{...headers,"Idempotency-Key":newId()},body:JSON.stringify(requestBody)});
  assert.ok(response.ok);let decision=await response.json();
@@ -192,18 +193,24 @@ async function exercise(url,requestBody=body){
  const resumedReader=resumed.body.getReader();await resumedReader.read();await resumedReader.cancel();
  let final;
  for(let i=0;i<500;i++){final=await (await fetch(url+"/tasks/"+initial.taskId,{headers})).json();if(final.termination)break;await new Promise(r=>setTimeout(r,10))}
- assert.equal(final.stage,"completed",JSON.stringify({request:requestBody,task:final}));
+ assert.equal(final.stage,unsupportedFile?"failed":"completed",JSON.stringify({request:requestBody,task:final}));
+ if(unsupportedFile){
+  assert.equal(final.error.code,"artifact_file_unsupported");
+  assert.equal(final.result.failure.code,"artifact_file_unsupported");
+  assert.equal(final.result.result,undefined);
+ }else{
  ${label === "mvp-check" ? `assert.equal(final.result.result.ok,false);assert.ok(final.result.evidence.prepared.checker.digest);` : `assert.deepEqual(final.result,{text:"packed"});`}
+ }
  let next;let events=0;
  do {const url_=new URL(url+"/event-history?taskId="+initial.taskId+"&limit=1");if(next)url_.searchParams.set("cursor",next);const page=await(await fetch(url_,{headers})).json();assert.ok(page.events.every(event=>!event.type.startsWith("run.")));events+=page.events.length;next=page.next}while(next);
  assert.equal(events,3);
  const run=await(await fetch(url+"/runs/"+final.run.runId,{headers})).json();
- assert.equal(run.stage,"completed");
+ assert.equal(run.stage,unsupportedFile?"failed":"completed");
  const history=await(await fetch(url+"/runs/"+run.runId+"/history",{headers})).json();
  assert.ok(history.events.some(event=>event.type==="run.started"));
  assert.ok(history.events.some(event=>event.type==="run.exited"));
  assert.ok(history.events.length>=5);
- if(requestBody.checker?.url.startsWith("file:"))console.log(JSON.stringify({case:"packed-real-file-check",url:requestBody.checker.url,digest:requestBody.checker.digest,taskId:final.taskId,runId:final.run.runId,result:final.result}));
+ if(requestBody.checker?.url.startsWith("file:"))console.log(JSON.stringify({case:unsupportedFile?"packed-unsupported-file-check":"packed-real-file-check",url:requestBody.checker.url,digest:requestBody.checker.digest,taskId:final.taskId,runId:final.run.runId,result:final.result}));
 }
 const signals=process.listenerCount("SIGINT");
 const server=await startTaskServer(await configure());
