@@ -83,10 +83,54 @@ export function runChecker(
       type,
       ...fields,
     });
+  async function reclaimChildren() {
+    // Keep the spawning worker alive until libuv has reaped its children.
+    for (const pid of owned) {
+      if (process.platform === "win32") {
+        try {
+          await promisify(execFile)("taskkill", ["/PID", String(pid), "/T", "/F"], {
+            windowsHide: true,
+            timeout: options.cleanupMs,
+          });
+        } catch (error) {
+          try {
+            process.kill(pid, 0);
+          } catch (cause) {
+            if ((cause as NodeJS.ErrnoException).code === "ESRCH") continue;
+            throw cause;
+          }
+          throw error;
+        }
+      } else {
+        try {
+          process.kill(pid, "SIGKILL");
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+        }
+      }
+      const until = performance.now() + options.cleanupMs;
+      for (;;) {
+        try {
+          process.kill(pid, 0);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+          break;
+        }
+        if (performance.now() >= until) throw new Error("Owned process exit is unconfirmed.");
+        await delay(10);
+      }
+    }
+    owned.clear();
+  }
   let termination: Promise<void> | undefined;
   const force = () =>
     (termination ??= (async () => {
       stopped = true;
+      try {
+        await reclaimChildren();
+      } catch (error) {
+        failure ??= error instanceof Error ? error : new Error("Owned process cleanup failed.");
+      }
       await worker.terminate();
       await exited;
     })());
@@ -152,43 +196,7 @@ export function runChecker(
     },
     force,
     async cleanup() {
-      // Only process IDs reported by this run are candidates for reclamation.
-      for (const pid of owned) {
-        if (process.platform === "win32") {
-          try {
-            await promisify(execFile)("taskkill", ["/PID", String(pid), "/T", "/F"], {
-              windowsHide: true,
-              timeout: options.cleanupMs,
-            });
-          } catch (error) {
-            try {
-              process.kill(pid, 0);
-            } catch (cause) {
-              if ((cause as NodeJS.ErrnoException).code === "ESRCH") continue;
-              throw cause;
-            }
-            throw error;
-          }
-        } else {
-          try {
-            process.kill(pid, "SIGKILL");
-          } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
-          }
-        }
-        const until = performance.now() + options.cleanupMs;
-        for (;;) {
-          try {
-            process.kill(pid, 0);
-          } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
-            break;
-          }
-          if (performance.now() >= until) throw new Error("Owned process exit is unconfirmed.");
-          await delay(10);
-        }
-      }
-      owned.clear();
+      await reclaimChildren();
       rmSync(directory, { recursive: true, force: true });
     },
   };

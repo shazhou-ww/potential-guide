@@ -129,7 +129,7 @@ test("M03: pure rollback preserves matching; an actual early exit invalidates te
     canceled,
   );
 });
-test("Q08: pending cancellation cannot borrow a later witness and later objects cannot borrow an older witness", () => {
+test("Q08: pending cancellation cannot borrow a later witness and later objects cannot borrow an older witness", async () => {
   const { f, a } = seed();
   f.append({
     type: "task.canceled",
@@ -138,7 +138,7 @@ test("Q08: pending cancellation cannot borrow a later witness and later objects 
     occurredAt: time(5),
     data: {},
   });
-  test("M03/M04: invalidation cannot borrow a historical witness for another Run; later qualification uses its own source", () => {
+  await test("M03/M04: invalidation cannot borrow a historical witness for another Run; later qualification uses its own source", () => {
     const { f, a, run } = seed();
     f.append({
       type: "qualification-time-observed",
@@ -178,7 +178,7 @@ test("Q08: pending cancellation cannot borrow a later witness and later objects 
       rematched,
     );
   });
-  test("M03: starts policy retains its match after an earlier actual exit; canceled invalidated Tasks cannot rematch", () => {
+  await test("M03: starts policy retains its match after an earlier actual exit; canceled invalidated Tasks cannot rematch", () => {
     const f = fixture();
     const a = f.task(1, 0, 10, "starts-after-eligible");
     const run = f.run(2, 10);
