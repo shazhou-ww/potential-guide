@@ -1,0 +1,27 @@
+# Ledger
+
+## Implementation
+
+### Implementation steps
+
+- [ ] **I-S01:** 验证官方读取链路与行为边界
+- [ ] **I-S02:** 收敛 Bundle 与 Engine 职责
+- [ ] **I-S03:** 更新关联契约与发布清单
+
+### Implementation acceptance criteria
+
+- [ ] **I-AC01:** 官方 Gateway 与 Worker 资源链路可验证
+- [ ] **I-AC02:** 离线 CAR 与依赖收敛可验证
+- [ ] **I-AC03:** 关联验证与行为说明完整
+
+## Deployment
+
+### Deployment steps
+
+- [ ] **D-S01:** 验证外部 CAR 交付与 Gateway 执行
+- [ ] **D-S02:** 验证故障与迁移说明
+
+### Deployment acceptance criteria
+
+- [ ] **D-AC01:** 独立消费者完成 CAR 到 Worker 的闭环
+- [ ] **D-AC02:** 故障结果及用户边界得到确认
