@@ -25,7 +25,7 @@
     "task-workers:check": "node scripts/embed-task-workers.mjs check-runtime-files --check && node scripts/embed-task-workers.mjs check-task --check && node scripts/embed-task-workers.mjs probe-task --check",
     "bootstrap:pack": "node scripts/create-npm-bootstrap-packages.mjs",
     "build": "turbo run build",
-    "sources:check": "pnpm run settings:check && pnpm run task-workers:check",
+    "sources:check": "pnpm run settings:check && node scripts/check-generated-sources.mjs && pnpm run task-workers:check",
     "check": "pnpm run sources:check && pnpm run layers:check && pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run pack:check",
     "layers:check": "pnpm run build && node scripts/check-layers.mjs",
     "clean": "turbo run clean && node -e \"for (const path of ['.cache', '.turbo']) require('node:fs').rmSync(path, { recursive: true, force: true })\"",

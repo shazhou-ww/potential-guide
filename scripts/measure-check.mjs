@@ -14,8 +14,10 @@ let pending = "";
 const start = performance.now();
 function line(text) {
   process.stdout.write(`${text}\n`);
-  const stage = stages.find((name) =>
-    text.startsWith(`> ${manifest.name}@${manifest.version} ${name} `),
+  const stage = stages.find(
+    (name) =>
+      text.startsWith(`> ${manifest.name}@${manifest.version} ${name} `) ||
+      text === `$ ${manifest.scripts[name]}`,
   );
   if (!stage) return;
   const now = performance.now();

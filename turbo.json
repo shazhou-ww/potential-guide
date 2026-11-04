@@ -47,6 +47,9 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/packages/objective-monorepo-standard/src/**",
+        "$TURBO_ROOT$/packages/objective-monorepo-standard/objective.yaml",
+        "$TURBO_ROOT$/packages/objective-monorepo-standard/check.mjs",
+        "$TURBO_ROOT$/packages/objective-monorepo-standard/package.json",
         "$TURBO_ROOT$/scripts/build-*.mjs",
         "$TURBO_ROOT$/scripts/build-monorepo-runtime.mjs",
         "$TURBO_ROOT$/scripts/build-evidence-runtime.mjs",

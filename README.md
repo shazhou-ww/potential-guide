@@ -72,8 +72,10 @@ pnpm test
 
 Run `pnpm check` for the default repository verification: source drift, build/layer
 boundaries, formatting, lint, production and test types, tests, and packed artifact
-structure. Checked-in settings and embedded task Workers are checked **before**
-builds can regenerate them. Objective staging resources are Turbo build outputs;
+structure. Checked-in settings and embedded task Workers are snapshot-guarded
+across the build: regeneration drift fails validation and restores the original
+sources, even on a failed build. This allows cold builds to supply the dependencies
+needed by Worker validation without silently repairing drift. Objective staging resources are Turbo build outputs;
 `pnpm test` builds or restores them instead of rebuilding every Worker unconditionally.
 
 Run `pnpm consumers:check` for the full isolated package-consumer suite (including
