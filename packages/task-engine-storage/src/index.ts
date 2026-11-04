@@ -11,7 +11,6 @@ import {
 } from "node:fs";
 import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { pathToFileURL } from "node:url";
 import {
   assertFactsVersion,
   emptyFacts,
@@ -99,13 +98,19 @@ function preflight(filename: string): void {
       for (const suffix of ["", "-wal", "-shm"]) rmSync(`${snapshot}${suffix}`, { force: true });
     }
   } else {
-    const uri = pathToFileURL(filename);
-    uri.searchParams.set("immutable", "1");
-    const db = new DatabaseSync(uri.href, { readOnly: true });
+    // Node 22.13 treats SQLite URI strings as filenames. Inspect an owned copy
+    // so rejecting a format never changes the original database or sidecars.
+    const snapshot = `${filename}.inspect-${randomUUID()}`;
     try {
-      inspectFormat(db);
+      copyFileSync(filename, snapshot);
+      const db = new DatabaseSync(snapshot, { readOnly: true });
+      try {
+        inspectFormat(db);
+      } finally {
+        db.close();
+      }
     } finally {
-      db.close();
+      for (const suffix of ["", "-wal", "-shm"]) rmSync(`${snapshot}${suffix}`, { force: true });
     }
   }
 }

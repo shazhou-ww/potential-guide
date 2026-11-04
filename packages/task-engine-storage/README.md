@@ -3,6 +3,8 @@
 显式本地 SQLite Store：WAL、foreign keys、FULL durability、事务事件/索引/检查点及独占 lease。
 Facts projection 与 SQLite user_version 均为 5。v4、旧版本、未知格式和混合记录在写入前明确拒绝；
 不会迁移、覆盖或删除现有用户数据库，请选择新路径。
+格式预检使用同目录的临时只读副本（含存在的 WAL），不修改原数据库或 sidecar；
+兼容 Node.js 22.13，不依赖 SQLite URI 文件名支持。
 
 Task 仅持久化受理/取消事实；必要的资格观测载荷只有 observedAt，不写绑定或 Task 权威快照。
 Run 从准备前开始；开始、投递代际、进度、结构化证据、可靠 outcome、停止请求/确认、退出、

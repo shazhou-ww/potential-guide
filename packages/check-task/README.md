@@ -19,6 +19,8 @@ Input 是 checker reference、subject、context?、language?；浮动业务 URL 
 `{failure,evidence}`，没有成功形状 fallback。`executionId` 是 Checker 子阶段，
 不是通用 Run ID。messageSchema 为 false；Progress 只展示，
 `check-prepared` / `check-progress` 保留机器证据。
+强制终止 Worker 前先回收其上报的子进程，让仍存活的创建线程确认子进程退出；
+无法确认物理清理时不释放容量。
 
 历史查询读取持久事实及锁定声明 Schema，不启动旧业务 Worker 复验。
 已开始而无退出事实的旧 Run 恢复 stopped，不重演副作用；
