@@ -217,6 +217,47 @@ test("V01: build fails on changed Schema locks, incomplete closure, conflicts an
       assert.throws(() => validateTaskBundle({ ...declaration, name }), /Invalid task.yaml/);
   });
 });
+test("Bundle-relative Schema files resolve alongside absolute IDs, fragments and shared references", () => {
+  const resources = [
+    {
+      $id: "https://example.test/input",
+      type: "object",
+      properties: { text: { $ref: "./shared#text" } },
+      required: ["text"],
+    },
+    { $id: "https://example.test/shared", $defs: { text: { $anchor: "text", type: "string" } } },
+  ];
+  const paths = ["schemas/input.json", "schemas/shared.json"];
+  const bundle = validateTaskBundle({
+    ...declaration,
+    include: ["task.yaml", "worker.cjs", ...paths],
+    inputSchema: { $ref: "schemas/input.json" },
+    resultSchema: { $ref: "./schemas/shared.json#/$defs/text" },
+    messageSchema: { $ref: "schemas/shared.json#text" },
+  });
+  const resolved = resolveBundleSchemas(bundle, resources, paths);
+  assert.deepEqual(compileInputSchema(resolved.inputSchema).validate({ text: "ok" }), {
+    text: "ok",
+  });
+  assert.throws(() => compileInputSchema(resolved.inputSchema).validate({ text: 1 }));
+  assert.deepEqual(resolved.resultSchema, { type: "string" });
+  assert.deepEqual(resolved.messageSchema, { type: "string" });
+  assert.throws(() => resolveBundleSchemas(bundle, resources), /Missing offline/);
+  assert.throws(() => resolveBundleSchemas(bundle, resources, paths.slice(1)), /paths.*manifest/);
+  assert.throws(
+    () => resolveBundleSchemas(bundle, resources, ["schemas/unknown.json", paths[1]!]),
+    /paths.*manifest/,
+  );
+  assert.throws(
+    () =>
+      resolveBundleSchemas(
+        { ...bundle, inputSchema: { $ref: "schemas/missing.json" } },
+        resources,
+        paths,
+      ),
+    /Missing offline/,
+  );
+});
 test("removed Task v2 and future schemas cannot build or import Workers", async () => {
   await workspace(async (directory) => {
     const yaml = join(directory, "task.yaml");

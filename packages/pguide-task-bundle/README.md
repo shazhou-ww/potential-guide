@@ -86,8 +86,11 @@ to the Worker **and input equality**, never stripped.
 An optional `schemas: [sharedTypeBoxSchema, ...]` in the default export supplies
 the complete offline reference closure. Every shared resource needs an absolute
 `$id`; conflicting IDs, unresolved fragments and cyclic references fail. The
-three generated root schemas receive stable IDs unless the author supplies them,
-are stored under `schemas/`, and are referenced by the generated declaration.
+three generated root schemas receive stable IDs unless the author supplies them
+and are stored under `schemas/`. The generated YAML references their actual
+Bundle-relative paths: `schemas/0.json`, `schemas/1.json` and `schemas/2.json`.
+Artifact checking, publishing and Engine loading resolve those files offline;
+their `$id` values still resolve shared references within the Schema documents.
 
 Author check/build **evaluate the trusted contract module** in the local process.
 They are not sandboxes; do not check untrusted source. They bundle but do not
@@ -106,20 +109,19 @@ load the author's contract, TypeBox modules or dependencies.
   fail. Selection cannot traverse the output directory.
 - A complete candidate is compiled and validated before replacing output.
   Staging/backup siblings and an exclusive lock protect replacement; a failed
-  compile retains the previous artifact. Managed output is replaced, not merged,
-  so deleted resources disappear.
-- The sibling `dist.pguide-task-bundle.json` records output ownership, not Bundle
-  content. Existing unowned directories, or managed artifacts with unexpected
-  files, are never recursively overwritten. Keep the marker for rebuilds; copy
-  **only dist** for distribution. Do not edit the marker or recover a stale lock
-  while another build is running.
+  compile retains the previous artifact. Output is replaced, not merged,
+  so deleted resources disappear. An existing output must be a complete valid
+  Task Bundle with no unexpected files; arbitrary directories are never overwritten.
+- Successful builds leave only the artifact directory, without a persistent
+  `dist.pguide-task-bundle.json` sidecar. A matching ownership marker from an older
+  build is removed after success; a conflicting marker fails without deleting it.
 - Replacement is an operation-level rollback, not a crash-durable filesystem
   transaction or a guarantee of gap-free directory visibility. A process crash
   can leave a lock and staging/backup siblings. Builds fail closed on that lock:
-  stop the owning process, inspect the marker and validate the output or backup
+  stop the owning process and validate the output or backup
   with `check artifact`, then recover only those owned paths. Do not remove a lock
   automatically or delete a backup before confirming a valid retained artifact.
-- `task.yaml` contains a required, exact `include` list including itself,
+- `task.yaml` uses YAML block formatting and contains a required, exact `include` list including itself,
   `worker.cjs`, schemas and selected resources. No globs, absent files or extra
   files are accepted. Old no-manifest bundles fail with rebuild/new-CID guidance.
 - Fixed UnixFS import settings and deterministic Worker output produce the root

@@ -16,10 +16,12 @@ rejected by artifact checking, publishing and Engine admission with rebuild guid
 Only Node built-ins may remain external to `worker.cjs`.
 
 `compileTaskBundle` returns validated in-memory bytes without writing.
-`buildTaskBundle` writes a complete clean artifact and atomically replaces only
-an output whose sibling `.pguide-task-bundle.json` marker matches its owner.
-Unknown existing directories are refused; failed builds preserve prior output.
-Do not delete the marker when rebuilding. Distribute only the artifact directory.
+`buildTaskBundle` writes a complete clean artifact, including a YAML-formatted
+`task.yaml`. An existing output must pass exact artifact validation before
+replacement; unknown files, invalid artifacts and links are refused.
+Failed compilation preserves prior output. No persistent sidecar is generated.
+A matching legacy `.pguide-task-bundle.json` ownership marker is removed after
+a successful build; a conflicting marker is refused rather than deleted.
 
 `context.log({level, message, fields?})` provides async typed diagnostic receipts,
 independent of business outputs. The sole **v1** declaration includes its dedicated
@@ -36,6 +38,9 @@ resource needs an absolute `$id`; supply the entire transitive closure. The
 builder never resolves references over the network. A changed lock, missing
 resource, conflicting ID, unsupported Schema feature or unresolved fragment fails
 the build. The generated runtime embeds the same resolved contracts.
+Declarations may reference exact Bundle-relative Schema paths such as
+`schemas/0.json` (including fragments), as well as their absolute `$id` values.
+All build, artifact-check and Engine paths use the same offline file mapping.
 
 The builder returns `{directory, cid, declaration}`. The CID is the standard
 UnixFS directory root, computed offline with fixed import settings; no Bundle

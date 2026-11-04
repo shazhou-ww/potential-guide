@@ -30,7 +30,6 @@ for (const kind of ["tools", "directories", "network"]) {
     entry: join(root, "dist", `${kind}.js`),
     outDirectory: directory,
   });
-  await rm(`${directory}.pguide-task-bundle.json`);
   await rm(declaration);
   references[kind] = { directory: kind, cid: built.cid };
 }

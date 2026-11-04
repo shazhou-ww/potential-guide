@@ -88,15 +88,14 @@ export function inspectTaskBundle(
     throw new TaskError("invalid_bundle", "Bundle requires task.yaml and nonempty worker.cjs.");
   let declaration: TaskBundleDeclaration;
   let schemas: JsonObject[];
+  const schemaFiles = [...files].filter(([path]) => path.startsWith("schemas/"));
   try {
     declaration = validateTaskBundle(parseArtifactYaml(yaml));
     validateTaskBundleFiles(declaration, files.keys());
-    schemas = [...files]
-      .filter(([path]) => path.startsWith("schemas/"))
-      .map(
-        ([, content]) =>
-          JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(content)) as JsonObject,
-      );
+    schemas = schemaFiles.map(
+      ([, content]) =>
+        JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(content)) as JsonObject,
+    );
     new TextDecoder("utf-8", { fatal: true }).decode(files.get("worker.cjs"));
   } catch (error) {
     if (error instanceof TaskError) throw error;
@@ -109,7 +108,11 @@ export function inspectTaskBundle(
   }
   return {
     declaration,
-    resolved: resolveBundleSchemas(declaration, schemas),
+    resolved: resolveBundleSchemas(
+      declaration,
+      schemas,
+      schemaFiles.map(([path]) => path),
+    ),
     bytes,
     files: files.size,
   };
