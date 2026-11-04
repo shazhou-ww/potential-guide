@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
 import {
@@ -11,7 +12,6 @@ import {
   compileJsonSchema,
   type JsonObject,
 } from "@potential-guide/task-protocol";
-import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { inputSchemas, resultSchema } from "../src/contracts.js";
 
 const caller = { scope: "environment-tests", subject: "consumer" };

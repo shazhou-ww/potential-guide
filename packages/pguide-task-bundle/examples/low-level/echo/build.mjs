@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
-import { buildTaskBundle } from "@potential-guide/task-sdk/build";
-import { createIpfsClient, importTaskBundle } from "@potential-guide/task-sdk/publish";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
+import { createIpfsClient, importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 
 const source = (name) => fileURLToPath(new URL(name, import.meta.url));
 const built = await buildTaskBundle({

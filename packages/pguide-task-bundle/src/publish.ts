@@ -1,4 +1,4 @@
-import { readArtifactFiles } from "@potential-guide/check-artifacts/files";
+import { readArtifactFiles } from "@potential-guide/artifact-files";
 import { type IpfsImportClient, publishContent } from "@potential-guide/ipfs-content";
 import { inspectTaskArtifact } from "./artifact.js";
 

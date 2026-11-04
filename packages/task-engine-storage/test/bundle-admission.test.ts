@@ -4,11 +4,11 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
+import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, VirtualClock } from "@potential-guide/task-engine/testing";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle } from "@potential-guide/task-sdk/build";
-import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { openSqliteStore } from "../src/index.js";
 
 for (const phase of ["beforeCommit", "afterCommit"] as const) {

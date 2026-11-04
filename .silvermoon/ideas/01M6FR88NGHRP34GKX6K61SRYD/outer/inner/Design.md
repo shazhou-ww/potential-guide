@@ -30,7 +30,7 @@
 
 ### Before：现有 SDK 用法
 
-以下来自现有 [echo 回调](../../../../../packages/task-sdk/examples/echo/callback.ts)，
+以下来自现有 [echo 回调](../../../../../packages/pguide-task-bundle/examples/low-level/echo/callback.ts)，
 progress 表示执行阶段，Result 只返回业务数据：
 
 ```ts

@@ -5,6 +5,8 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
+import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
 import type {
@@ -19,8 +21,6 @@ import type {
   TaskSnapshot,
 } from "@potential-guide/task-protocol";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle } from "@potential-guide/task-sdk/build";
-import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { createTaskHandler } from "../src/index.js";
 
 async function until(check: () => boolean) {

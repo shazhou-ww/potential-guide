@@ -7,15 +7,15 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
 import { Worker } from "node:worker_threads";
-import { parseArtifactYaml, readArtifactFiles } from "@potential-guide/check-artifacts/files";
+import { parseArtifactYaml, readArtifactFiles } from "@potential-guide/artifact-files";
 import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
+import { checkTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
+import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 import {
   compileInputSchema,
   compileJsonSchema,
   validateTaskBundle,
 } from "@potential-guide/task-protocol";
-import { checkTaskArtifact } from "@potential-guide/task-sdk/artifact";
-import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { Type } from "@sinclair/typebox";
 import { buildTask, checkTaskBuild, taskBuildSchemaUri, toTaskSchema } from "../src/authoring.js";
 
@@ -541,7 +541,7 @@ test("unsafe output, unmanaged output, empty and overlapping globs fail without 
   });
 });
 test("CLI exposes pguide metadata, structured help and explicit check modes", async () => {
-  const buildApi = await import("@potential-guide/task-sdk/build");
+  const buildApi = await import("@potential-guide/pguide-task-bundle/build");
   assert.equal("createIpfsClient" in buildApi, false);
   assert.equal("importTaskBundle" in buildApi, false);
   const bin = resolve("dist", "bin.js");

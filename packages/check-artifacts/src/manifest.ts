@@ -1,9 +1,14 @@
 import { createHash } from "node:crypto";
-import { lstat, readdir, realpath } from "node:fs/promises";
-import { join, resolve } from "node:path";
-import { type ArtifactTreeLimits, readArtifactTree } from "@potential-guide/check-runtime-files";
+import {
+  ArtifactTreeError,
+  type ArtifactTreeLimits,
+  readPortableTree as readTree,
+  rejectEmptyDirectories as rejectEmpty,
+} from "@potential-guide/artifact-files";
+import { HostError } from "@potential-guide/check-runtime-files";
 import { Ajv, type AnySchema } from "ajv";
-import { artifactLimits, safePath } from "./paths.js";
+import { safePath } from "./paths.js";
+
 export { artifactLimits, safeComponent, safePath } from "./paths.js";
 
 export const artifactDigestPrefix = "sha256-pguide-check-v1:";
@@ -121,43 +126,35 @@ export function inspectFiles(files: ReadonlyMap<string, Buffer>) {
       .update(bytes);
   return { manifest, digest: `${artifactDigestPrefix}${hash.digest("hex")}`, files };
 }
+function checkFileError(error: unknown): never {
+  if (error instanceof ArtifactTreeError) throw new HostError(error.status, error.message);
+  if (error instanceof Error) {
+    error.message = error.message
+      .replace(/^Artifact root /, "Check root ")
+      .replace(/^Artifact /, "Check artifact ");
+  }
+  throw error;
+}
 async function readPortableTree(
   directory: string,
   configuration: Partial<ArtifactTreeLimits> = {},
 ) {
-  const limits = { ...artifactLimits, ...configuration };
-  const root = resolve(directory);
-  const info = await lstat(root);
-  if (!info.isDirectory() || info.isSymbolicLink() || (await realpath(root)) !== root)
-    throw new Error("Check root must be a canonical regular directory.");
-  const seen = new Set<string>();
-  const directories: string[] = [];
-  async function visit(path: string, prefix: string): Promise<void> {
-    for (const entry of await readdir(path, { withFileTypes: true })) {
-      const name = `${prefix}${entry.name}`;
-      if (!safePath(name) || seen.has(name.toLowerCase()))
-        throw new Error("Check artifact contains an unsafe or ambiguous path.");
-      seen.add(name.toLowerCase());
-      if (seen.size > limits.paths) throw new Error("Check artifact exceeds path bounds.");
-      if (entry.isDirectory()) {
-        directories.push(name);
-        await visit(join(path, entry.name), `${name}/`);
-      } else if (!entry.isFile())
-        throw new Error("Check artifact links and special files are forbidden.");
-    }
+  try {
+    return await readTree(directory, configuration);
+  } catch (error) {
+    checkFileError(error);
   }
-  await visit(root, "");
-  const artifact = await readArtifactTree(root, configuration);
-  return { files: artifact.files, directories };
 }
 function rejectEmptyDirectories(
   files: ReadonlyMap<string, Buffer>,
   directories: readonly string[],
 ) {
-  if (directories.some((name) => ![...files.keys()].some((file) => file.startsWith(`${name}/`))))
-    throw new Error("Check artifact contains an undeclared empty directory.");
+  try {
+    rejectEmpty(files, directories);
+  } catch (error) {
+    checkFileError(error);
+  }
 }
-/** Bounded, no-link portable tree reader shared by declarative artifact consumers. */
 export async function readArtifactFiles(
   directory: string,
   configuration: Partial<ArtifactTreeLimits> = {},

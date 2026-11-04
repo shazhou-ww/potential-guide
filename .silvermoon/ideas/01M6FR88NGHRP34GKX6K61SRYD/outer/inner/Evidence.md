@@ -40,7 +40,7 @@ events.jsonl、Git 分支/索引，也未提交、推送或调用 Silvermoon 门
   / [显式 v2 与不变 v1 的声明校验](../../../../../packages/task-protocol/src/bundle.ts)
   / [当时的 canonical v2 Schema](https://github.com/shazhou-ww/potential-guide/blob/38c872cfd53a9e0343f05c12f73043f1caf6920b/schemas/artifacts/task/v2.json)。
 - [SDK 独立 pending/timeout/cancel 与聚合丢弃](../../../../../packages/task-sdk/src/index.ts)；
-  [实际独立 SDK bundle 测试](../../../../../packages/task-sdk/test/logs.test.ts)。
+  [实际独立 SDK bundle 测试](../../../../../packages/pguide-task-bundle/test/logs.test.ts)。
 - [Worker 宿主身份校验与独立确认](../../../../../packages/task-engine/src/type-supervisor.ts)；
   [Engine 授权/查询/订阅](../../../../../packages/task-engine/src/engine.ts)；
   [有界日志策略](../../../../../packages/task-engine/src/logs.ts)。
@@ -53,7 +53,7 @@ events.jsonl、Git 分支/索引，也未提交、推送或调用 Silvermoon 门
   [有界浏览器窗口/帧解析](../../../../../apps/task-engine-web-ui/src/run-logs.ts)、
   [受限可信代理路由](../../../../../apps/task-engine-web-ui/src/server.ts)。
 - [真正 Check 作者适配器的选定问题诊断](../../../../../packages/check-task/src/index.ts)；
-  [精简业务 Result 的逐项 assertion 样例](../../../../../packages/task-sdk/examples/check-diagnostics/callback.ts)。
+  [精简业务 Result 的逐项 assertion 样例](../../../../../packages/pguide-task-bundle/examples/low-level/check-diagnostics/callback.ts)。
 - [API、容量/保留/认证选项和独立 pack/install/run 完整步骤](../../../../../docs/task-run-logs.md)。
 
 ## 已执行命令与结果
@@ -260,7 +260,7 @@ pnpm exec tsx --test --test-concurrency=1 --test-name-pattern="known URL paths r
   返回明确报告回执，存储/禁用故障不会伪装为成功报告确认。
 - `validateRunLog` 移除了 `as unknown as RunLogInput`；枚举、message、
   字段对象逐项 guard 后显式构造返回对象。Engine 新增 imports 已移至文件顶部。
-- [新增真实 SDK bundle 回归](../../../../../packages/task-sdk/test/drop-reporting.test.ts)
+- [新增真实 SDK bundle 回归](../../../../../packages/pguide-task-bundle/test/drop-reporting.test.ts)
   在宿主不确认普通 log 时，分两轮执行共 **40000 次 awaited rejection**，
   第二轮在报告确认 timeout 之后，分别测试一直不确认 drop 与迟到 ACK。
   断言普通报告超时后仍只有一帧、最终最多两帧、最终丢弃总计准确为 40000，

@@ -2,7 +2,7 @@
 
 `createCheckTaskType(options).run` 是作者可直接包装的普通 SDK 回调：
 `export default (input, context) => check.run(input, context)`。
-用 `@potential-guide/task-sdk/build` 将它及全部第三方依赖打进自包含
+用 `@potential-guide/pguide-task-bundle/build` 将它及全部第三方依赖打进自包含
 `worker.cjs`；Engine 只接收 `{bundle:"根CID", ...}` 或 `{bundle:{cid,hint}, ...}`，不注册业务类型、
 不安装本包、不提供资源桥。Checker 执行 Worker 已嵌入交付代码，不读取作者
 安装目录中的脚本。旧静态工厂元数据保留给库级调用，不是通用 Engine 的注册 API。

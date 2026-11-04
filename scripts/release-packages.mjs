@@ -1,4 +1,10 @@
 export const releasePackages = [
+  {
+    id: "pguide-task-bundle",
+    directory: "pguide-task-bundle",
+    name: "@potential-guide/pguide-task-bundle",
+    bins: ["pguide-task-bundle"],
+  },
   ...[
     ["task-protocol", ["reduce", "project", "isTimedOut", "json"]],
     ["task-engine", ["createTaskEngine", "newId"]],
@@ -203,6 +209,13 @@ export const releasePackages = [
 export const verificationPackages = [
   ...releasePackages,
   {
+    id: "artifact-files",
+    directory: "artifact-files",
+    name: "@potential-guide/artifact-files",
+    requiredExports: ["readArtifactFiles", "readArtifactTree", "parseArtifactYaml", "safePath"],
+    bins: [],
+  },
+  {
     id: "pguide-task-engine",
     workspace: "apps",
     directory: "pguide-task-engine",
@@ -250,12 +263,6 @@ export const verificationPackages = [
     name: "@potential-guide/task-sdk",
     requiredExports: ["runTask", "RunFailure"],
     bins: [],
-  },
-  {
-    id: "pguide-task-bundle",
-    directory: "pguide-task-bundle",
-    name: "@potential-guide/pguide-task-bundle",
-    bins: ["pguide-task-bundle"],
   },
   {
     id: "probe-task",

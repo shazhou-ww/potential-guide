@@ -149,7 +149,7 @@ TypeBox 依赖加入共享 catalog，并通过正常依赖工具安装，不在�
 
 [bundle]: ../../../../../../docs/axis/task-engine-contracts/task-bundle.md
 [pguide]: ../../../../../../packages/pguide/README.md
-[build]: ../../../../../../packages/task-sdk/src/build.ts
+[build]: ../../../../../../packages/pguide-task-bundle/src/build.ts
 [sdk]: ../../../../../../packages/task-sdk/src/index.ts
 [declaration]: ../../../../../../packages/task-protocol/src/bundle.ts
 [server-idea]: ../../../../01M6GRRES5EBHYDP1G9DZEGE8E/outer/inner/ideal/Idea.md

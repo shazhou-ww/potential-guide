@@ -37,7 +37,8 @@
     "@potential-guide/check-artifacts": "workspace:^"
   },
   "devDependencies": {
-    "@potential-guide/task-sdk": "workspace:^"
+    "@potential-guide/task-sdk": "workspace:^",
+    "@potential-guide/pguide-task-bundle": "workspace:^"
   },
   "engines": {
     "node": ">=22.13.0"

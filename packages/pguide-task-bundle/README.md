@@ -80,6 +80,10 @@ already has `src/main.ts` or `task.build.yaml`. JSON init results include
 
 ## Author input
 
+The SDK supplies Worker runtime/types only. All author tooling, including the
+low-level compiler used by repository fixtures, lives in this package. The
+runtime dependency closure does not include Check artifact or Check host packages.
+
 ```yaml
 $schema: https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task-build/v1.json
 name: Echo
@@ -145,6 +149,31 @@ and are stored under `schemas/`. The generated YAML references their actual
 Bundle-relative paths: `schemas/0.json`, `schemas/1.json` and `schemas/2.json`.
 Artifact checking, publishing and Engine loading resolve those files offline;
 their `$id` values still resolve shared references within the Schema documents.
+
+### Low-level tooling API
+
+Repository tools that already supply a declaration and callback can use
+`buildTaskBundle`/`compileTaskBundle` from `@potential-guide/pguide-task-bundle/build`,
+`checkTaskArtifact` from `/artifact`, and `createIpfsClient`/`importTaskBundle`
+from `/publish`. These are author tools, never Worker runtime entrypoints.
+Prefer the build-file CLI workflow for new tasks; see `examples/echo`.
+The migrated `examples/low-level/echo` and `examples/low-level/check-diagnostics`
+fixtures demonstrate the declaration-based API.
+
+The compiler's `declaration` accepts a JSON-compatible definition or a
+declaration-source filename. It always generates an exact manifest;
+`compileTaskBundle` returns validated in-memory bytes, while `buildTaskBundle`
+writes the complete artifact. Existing output must pass exact validation before
+replacement. Unknown files, links and invalid artifacts are refused; failed
+compilation preserves prior output. A matching legacy ownership sidecar is
+removed after success, while a conflicting one is refused.
+
+Locked Schema files use `schemas: [{path, digest}]`, with a `sha256:` lock over
+the exact JSON bytes. Generated in-memory resources use `schemaDocuments`.
+Both produce ordinary `schemas/` files and use the same offline resolver.
+Every shared resource needs an absolute `$id` and the complete transitive closure.
+Changed locks, conflicting IDs, unsupported Schema features and unresolved
+fragments fail without network resolution.
 
 Author check/build **evaluate the trusted contract module** in the local process.
 They are not sandboxes; do not check untrusted source. They bundle but do not

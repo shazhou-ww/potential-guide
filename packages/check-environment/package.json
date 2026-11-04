@@ -28,7 +28,8 @@
   "devDependencies": {
     "@potential-guide/task-sdk": "workspace:^",
     "@potential-guide/task-engine": "workspace:^",
-    "@potential-guide/task-protocol": "workspace:^"
+    "@potential-guide/task-protocol": "workspace:^",
+    "@potential-guide/pguide-task-bundle": "workspace:^"
   },
   "publishConfig": {
     "access": "public"

@@ -6,11 +6,11 @@ import {
   objectiveSchemaUri,
 } from "@potential-guide/check-artifacts/contracts";
 import { createCheckTaskType } from "@potential-guide/check-task";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
+import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle } from "@potential-guide/task-sdk/build";
-import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { createProbeTaskType } from "../dist/index.js";
 
 const [database, directory] = process.argv.slice(2);

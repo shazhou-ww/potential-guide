@@ -10,17 +10,27 @@ import { typeScriptHost } from "./typescript-host.js";
 
 const ranks = { protocol: 0, business: 1, tools: 2 };
 type Layer = keyof typeof ranks | "deferredExternalization";
-type Policy = Record<Layer, string[]>;
+type Policy = Record<Layer, string[]> & { developmentTools?: Record<string, string[]> };
 const validator = ajv.compile<Policy>({
   type: "object",
   additionalProperties: false,
   required: Object.keys(ranks),
-  properties: Object.fromEntries(
-    [...Object.keys(ranks), "deferredExternalization"].map((layer) => [
-      layer,
-      { type: "array", items: { type: "string", minLength: 1 } },
-    ]),
-  ),
+  properties: {
+    ...Object.fromEntries(
+      [...Object.keys(ranks), "deferredExternalization"].map((layer) => [
+        layer,
+        { type: "array", items: { type: "string", minLength: 1 } },
+      ]),
+    ),
+    developmentTools: {
+      type: "object",
+      additionalProperties: {
+        type: "array",
+        uniqueItems: true,
+        items: { type: "string", minLength: 1 },
+      },
+    },
+  },
 });
 
 export function classify(policy: Policy, names: string[]) {
@@ -88,6 +98,13 @@ export async function observePackageLayers(
     packages.map((pkg) => pkg.name),
   );
   for (const error of errors) fail("package-layer-classification", policyPath, error);
+  for (const name of Object.keys(policy.developmentTools ?? {}))
+    if (layers.get(name) !== "tools")
+      fail(
+        "package-layer-policy",
+        policyPath,
+        `Development tool must be classified as tools: ${name}.`,
+      );
   const names = [...layers.keys()].sort((a, b) => b.length - a.length);
   const host = await typeScriptHost(snapshot);
   function target(specifier: string, file: string) {
@@ -107,8 +124,17 @@ export async function observePackageLayers(
   }
   for (const pkg of packages) {
     if (layers.get(pkg.name) === "deferredExternalization") continue;
-    const check = (to: string | undefined, location: string) => {
-      if (to && to !== pkg.name && !allowed(layers, pkg.name, to))
+    const check = (to: string | undefined, location: string, development = false) => {
+      if (
+        to &&
+        to !== pkg.name &&
+        !allowed(layers, pkg.name, to) &&
+        !(
+          development &&
+          layers.get(to) === "tools" &&
+          Object.hasOwn(policy.developmentTools ?? {}, to)
+        )
+      )
         fail("package-layer-dependency", location, `${pkg.name} -> ${to}: forbidden dependency.`, [
           pkg.name,
           to,
@@ -117,7 +143,11 @@ export async function observePackageLayers(
     const manifestFile = `${pkg.directory}/package.json`;
     for (const { kind, name, version } of dependencyGroups(pkg.manifest)) {
       const location = `${manifestFile} (${kind})`;
-      check(target(name, resolve(snapshot.root, manifestFile)), location);
+      check(
+        target(name, resolve(snapshot.root, manifestFile)),
+        location,
+        kind === "devDependencies",
+      );
       if (typeof version !== "string") continue;
       if (version.startsWith("npm:")) {
         const alias = version.slice(4);
@@ -128,6 +158,7 @@ export async function observePackageLayers(
             resolve(snapshot.root, manifestFile),
           ),
           location,
+          kind === "devDependencies",
         );
       }
       if (version.startsWith("file:") || version.startsWith("link:"))
@@ -137,6 +168,7 @@ export async function observePackageLayers(
             resolve(snapshot.root, manifestFile),
           ),
           location,
+          kind === "devDependencies",
         );
     }
     const configFile = `${pkg.directory}/tsconfig.json`;
@@ -182,7 +214,12 @@ export async function observePackageLayers(
               .resolvedModule?.resolvedFileName;
             if (resolved) dependency = target(resolve(resolved), absolute);
           }
-          check(dependency, file);
+          const development =
+            dependency !== undefined &&
+            !under(file, `${pkg.directory}/src`) &&
+            policy.developmentTools?.[dependency]?.includes(file) === true &&
+            Object.hasOwn(pkg.manifest.devDependencies ?? {}, dependency);
+          check(dependency, file, development);
         }
       } catch (error) {
         add(

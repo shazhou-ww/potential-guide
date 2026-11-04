@@ -18,7 +18,7 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
 import { Worker } from "node:worker_threads";
-import { checkTaskArtifact } from "@potential-guide/task-sdk/artifact";
+import { checkTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { buildTask, checkTaskBuild } from "../src/authoring.js";
 import { initTaskBundle } from "../src/init.js";
 

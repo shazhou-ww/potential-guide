@@ -6,6 +6,8 @@ import { createServer } from "node:http";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
+import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore } from "@potential-guide/task-engine/testing";
 import { TaskClient } from "@potential-guide/task-engine-http";
@@ -17,8 +19,6 @@ import {
   type TaskPage,
   taskSchemaUri,
 } from "@potential-guide/task-protocol";
-import { buildTaskBundle } from "@potential-guide/task-sdk/build";
-import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { type ServerOptions, startTaskServer } from "../src/index.js";
 
 const authoredRoot = resolve(".cache", `server-author-${randomUUID()}`);

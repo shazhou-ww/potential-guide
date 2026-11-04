@@ -8,14 +8,14 @@ import {
   checkerSchemaUri,
   inspectContractFiles,
 } from "@potential-guide/check-artifacts/contracts";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
+import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
 import { TaskClient } from "@potential-guide/task-engine-http";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import type { MatchPolicy, TaskSnapshot } from "@potential-guide/task-protocol";
 import { TaskError, taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle } from "@potential-guide/task-sdk/build";
-import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { createFixtureEngine as createTaskEngine } from "../../task-engine/test/driver.js";
 import type { ArtifactSource } from "../src/index.js";
 import { createCheckFixture as createCheckTaskType } from "./type-fixture.js";

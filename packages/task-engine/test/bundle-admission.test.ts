@@ -5,9 +5,9 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { readArtifactFiles } from "@potential-guide/check-artifacts/files";
 import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
+import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 import { type SubmissionResult, taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle } from "@potential-guide/task-sdk/build";
-import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { createTaskEngine, newId } from "../src/index.js";
 import { MemoryStore, VirtualClock } from "../src/testing.js";
 

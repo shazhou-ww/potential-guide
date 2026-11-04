@@ -5,12 +5,12 @@ import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
+import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { TaskError } from "@potential-guide/task-protocol";
-import { buildTaskBundle } from "@potential-guide/task-sdk/build";
-import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { consumeRunLogSse } from "../src/run-logs.js";
 
 test("built standalone UI (without installed UI dependencies) proxies real SDK diagnostic sample history/SSE with token and endpoint isolation", async () => {
@@ -22,11 +22,14 @@ test("built standalone UI (without installed UI dependencies) proxies real SDK d
   try {
     const built = await buildTaskBundle({
       declaration: fileURLToPath(
-        new URL("../../../packages/task-sdk/examples/check-diagnostics/task.yaml", import.meta.url),
+        new URL(
+          "../../../packages/pguide-task-bundle/examples/low-level/check-diagnostics/task.yaml",
+          import.meta.url,
+        ),
       ),
       entry: fileURLToPath(
         new URL(
-          "../../../packages/task-sdk/examples/check-diagnostics/callback.ts",
+          "../../../packages/pguide-task-bundle/examples/low-level/check-diagnostics/callback.ts",
           import.meta.url,
         ),
       ),

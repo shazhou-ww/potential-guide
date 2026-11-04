@@ -7,9 +7,9 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { createIpfsClient } from "@potential-guide/ipfs-content";
 import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
+import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle } from "@potential-guide/task-sdk/build";
-import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { parseArguments, resolveConfig } from "../src/config.js";
 import { localPolicy, startService } from "../src/service.js";
 

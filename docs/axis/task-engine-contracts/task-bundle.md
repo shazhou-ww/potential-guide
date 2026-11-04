@@ -290,9 +290,9 @@ Context 不再提供直接返回整文件 `Uint8Array` 的另一套读取接口�
 
 ```ts
 import { runTask } from "@potential-guide/task-sdk";
-import { buildTaskBundle } from "@potential-guide/task-sdk/build";
-import { checkTaskArtifact } from "@potential-guide/task-sdk/artifact";
-import { createIpfsClient, importTaskBundle } from "@potential-guide/task-sdk/publish";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
+import { checkTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
+import { createIpfsClient, importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 ```
 
 根入口供生成的 Worker 使用；`/build` 供作者构建环境使用，

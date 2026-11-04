@@ -6,7 +6,9 @@ Schema URL 明确拒绝，不作为 v1 别名。禁用日志和自定义宿主�
 
 `https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json`
 同时固定声明与以下协议。没有独立数字版本。运行库为
-`@potential-guide/task-sdk`，作者构建入口为其 `/build` 子路径。
+`@potential-guide/task-sdk`，仅提供 Worker 运行时与类型。
+作者使用 [`pguide task-bundle`](../packages/pguide-task-bundle/README.md)；
+底层构建、制品校验和发布 API 也归属该作者工具包，不由 SDK 提供。
 
 本协议对应生成的单个 `worker.cjs`，不导入作者 factory、不创建第二层执行 Worker，
 也不含历史业务复验或宿主业务资源 RPC。

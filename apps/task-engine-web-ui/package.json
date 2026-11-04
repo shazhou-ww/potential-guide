@@ -59,7 +59,8 @@
     "typescript": "catalog:",
     "tailwindcss": "catalog:",
     "tw-animate-css": "catalog:",
-    "@types/node": "catalog:"
+    "@types/node": "catalog:",
+    "@potential-guide/pguide-task-bundle": "workspace:^"
   },
   "engines": {
     "node": ">=22.13.0"

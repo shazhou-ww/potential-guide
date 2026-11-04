@@ -162,8 +162,8 @@ try {
   report.kuboRpc = rpc;
   await writeFile("author/echo.mjs", await readFile(join(source, "examples", "task-server", "echo-type.mjs")));
   await writeFile("author/prepare.mjs", `
-import {buildTaskBundle} from "@potential-guide/task-sdk/build";
-import {importTaskBundle} from "@potential-guide/task-sdk/publish";
+import {buildTaskBundle} from "@potential-guide/pguide-task-bundle/build";
+import {importTaskBundle} from "@potential-guide/pguide-task-bundle/publish";
 import {createIpfsClient} from "@potential-guide/ipfs-content";
 const schema={type:"object",properties:{message:{type:"string"}},required:["message"],additionalProperties:false};
 const built=await buildTaskBundle({declaration:{$schema:"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",name:"Outer echo",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",inputSchema:schema,resultSchema:schema,messageSchema:false},entry:"echo.mjs",outDirectory:"bundle"});

@@ -193,8 +193,8 @@ export default async function(input,context) {
 import assert from "node:assert/strict";
 import {readFile,writeFile} from "node:fs/promises";
 import {join} from "node:path";
-import {buildTaskBundle} from "@potential-guide/task-sdk/build";
-import {importTaskBundle} from "@potential-guide/task-sdk/publish";
+import {buildTaskBundle} from "@potential-guide/pguide-task-bundle/build";
+import {importTaskBundle} from "@potential-guide/pguide-task-bundle/publish";
 import {MemoryIpfsClient} from "@potential-guide/ipfs-content/testing";
 import {createIpfsClient} from "@potential-guide/ipfs-content";
 const built=await buildTaskBundle({

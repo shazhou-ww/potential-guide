@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildTaskBundle } from "@potential-guide/task-sdk/build";
-import { createIpfsClient, importTaskBundle } from "@potential-guide/task-sdk/publish";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
+import { createIpfsClient, importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 
 const directory = resolve(process.argv[2] ?? ".cache/check-diagnostics");
 const built = await buildTaskBundle({

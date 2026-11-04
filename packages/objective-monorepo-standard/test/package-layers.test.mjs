@@ -165,6 +165,52 @@ test("manifest and cross-package source paths cannot bypass reverse dependency c
   }
 });
 
+test("declared development tools allow only dev dependencies and explicitly listed non-src build scripts", async () => {
+  await mkdir(".cache", { recursive: true });
+  const root = await mkdtemp(join(".cache", "layer-authoring-"));
+  try {
+    await writeFile(join(root, "package.json"), '{"name":"fixture"}');
+    await writeFile(join(root, "pnpm-workspace.yaml"), "packages: [packages/*]");
+    await writeFile(join(root, "turbo.json"), '{"tasks":{}}');
+    await writeFile(
+      join(root, "package-layers.yaml"),
+      stringify({
+        protocol: ["low"],
+        business: [],
+        tools: ["author"],
+        developmentTools: { author: ["packages/low/build.mjs", "packages/low/src/runtime.ts"] },
+      }),
+    );
+    for (const name of ["low", "author"]) {
+      await mkdir(join(root, "packages", name, "src"), { recursive: true });
+      await writeFile(
+        join(root, "packages", name, "package.json"),
+        JSON.stringify({
+          name,
+          ...(name === "low" ? { devDependencies: { author: "workspace:^" } } : {}),
+        }),
+      );
+    }
+    await writeFile(join(root, "packages", "low", "build.mjs"), 'import "author/build";');
+    assert.deepEqual(await checkLayers(root), []);
+    await writeFile(join(root, "packages", "low", "src", "runtime.ts"), 'import "author/build";');
+    await writeFile(join(root, "packages", "low", "other.mjs"), 'import "author/build";');
+    const sources = await checkLayers(root);
+    assert.equal(sources.length, 2, sources.join("\n"));
+    assert.ok(sources.some((error) => error.includes("src/runtime.ts")));
+    assert.ok(sources.some((error) => error.includes("other.mjs")));
+    await writeFile(
+      join(root, "packages", "low", "package.json"),
+      JSON.stringify({ name: "low", dependencies: { author: "workspace:^" } }),
+    );
+    const runtime = await checkLayers(root);
+    assert.ok(runtime.some((error) => error.includes("(dependencies)")));
+    assert.ok(runtime.some((error) => error.includes("build.mjs")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("invalid and missing YAML policies fail explicitly", async () => {
   await mkdir(".cache", { recursive: true });
   const root = await mkdtemp(join(".cache", "layer-policy-"));

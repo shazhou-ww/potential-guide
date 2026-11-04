@@ -8,9 +8,20 @@
   },
   "include": ["src/**/*.ts"],
   "references": [
-    { "path": "../pguide-cli-core" },
-    { "path": "../check-artifacts" },
-    { "path": "../task-protocol" },
-    { "path": "../task-sdk" }
+    {
+      "path": "../pguide-cli-core"
+    },
+    {
+      "path": "../task-protocol"
+    },
+    {
+      "path": "../task-sdk"
+    },
+    {
+      "path": "../artifact-files"
+    },
+    {
+      "path": "../ipfs-content"
+    }
   ]
 }

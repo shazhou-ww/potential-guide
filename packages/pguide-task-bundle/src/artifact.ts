@@ -3,7 +3,7 @@ import {
   assertRuntime,
   parseArtifactYaml,
   readArtifactFiles,
-} from "@potential-guide/check-artifacts/files";
+} from "@potential-guide/artifact-files";
 import { importContent } from "@potential-guide/ipfs-content";
 import {
   type JsonObject,

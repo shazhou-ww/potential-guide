@@ -11,8 +11,8 @@ import {
   setting,
   writeResult,
 } from "@potential-guide/cli-core";
-import { checkTaskArtifact } from "@potential-guide/task-sdk/artifact";
-import { createIpfsClient, importTaskBundle } from "@potential-guide/task-sdk/publish";
+import { checkTaskArtifact } from "./artifact.js";
+import { createIpfsClient, importTaskBundle } from "./publish.js";
 
 const help: CommandHelp = {
   description: "Initialize, check, build and publish complete TypeBox Task Bundles.",

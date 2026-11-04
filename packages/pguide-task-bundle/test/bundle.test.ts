@@ -5,7 +5,7 @@ import { mkdir, readFile, rm, rmdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { Worker } from "node:worker_threads";
-import { parseArtifactYaml, readArtifactFiles } from "@potential-guide/check-artifacts/files";
+import { parseArtifactYaml, readArtifactFiles } from "@potential-guide/artifact-files";
 import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
 import {
   compileInputSchema,

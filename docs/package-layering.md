@@ -146,6 +146,16 @@ imports/reexports (including type imports, import types, dynamic imports,
 CommonJS, npm/TypeScript path aliases and cross-package relative/file paths). Generated `dist`,
 dependency directories and test fixtures are not production origins.
 
+The optional `developmentTools` policy maps a tools-layer package to exact
+non-`src` build-script paths. Listed tools may be declared in `devDependencies`
+by lower-layer packages for authoring and tests. Only the listed scripts may
+import them, and only with that direct development dependency; runtime
+dependencies and imports under `src/` remain forbidden. This permits repository
+Bundle fixtures and `check-environment/build.mjs` to use
+`@potential-guide/pguide-task-bundle` without coupling the Worker SDK or runtime
+packages to an author command. Shared `@potential-guide/artifact-files` primitives
+belong to the protocol layer and have no Check or author-command dependency.
+
 `packages/objective-monorepo-standard/test/package-layers.test.mjs` exercises valid downward/direct-protocol/same-layer
 edges and rejects reverse/deferred-concrete/unknown edges, including actual
 temporary workspace manifests and relative source/type references.

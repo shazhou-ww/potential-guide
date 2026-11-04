@@ -1,7 +1,7 @@
 import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
 import { inputSchemas, resultSchema } from "./dist/contracts.js";
 
 const root = fileURLToPath(new URL(".", import.meta.url));

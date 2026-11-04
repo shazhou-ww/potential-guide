@@ -61,8 +61,9 @@ eligibleAt 为请求值与最终创建时间的较大者，deadlineAt 为其加 
 
 ## 制品、Schema 与运行
 
-作者用 `@potential-guide/task-sdk/build` 构建手写 YAML 与普通回调。
-根运行库与 `/build` 分离；只允许 Node 内置代码外置。
+作者用 `pguide task-bundle build task.build.yaml` 从 TypeBox 契约与回调生成制品。
+底层构建 API 归属 `@potential-guide/pguide-task-bundle/build`；
+`task-sdk` 仅保留 Worker 运行时与类型，只允许 Node 内置代码外置。
 `task.yaml` 的固定 `$schema` 同时选择声明和通信契约，不加数字格式/协议版本。
 共享 Schema 收录完整精确锁定闭包，按 `$id` 离线解析。
 声明、Schema、资源、入口和原始文件名/字节都由目录根 CID 覆盖。

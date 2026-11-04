@@ -41,5 +41,8 @@
     "type": "git",
     "url": "git+https://github.com/shazhou-ww/potential-guide.git",
     "directory": "packages/check-runtime-files"
+  },
+  "dependencies": {
+    "@potential-guide/artifact-files": "workspace:^"
   }
 }

@@ -47,7 +47,8 @@
     "ajv": "catalog:",
     "esbuild": "catalog:",
     "tar": "catalog:",
-    "yaml": "catalog:"
+    "yaml": "catalog:",
+    "@potential-guide/artifact-files": "workspace:^"
   },
   "devDependencies": {
     "jsonata": "catalog:",

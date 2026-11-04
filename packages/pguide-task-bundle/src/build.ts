@@ -8,7 +8,7 @@ import {
   parseArtifactYaml,
   readArtifactFiles,
   safePath,
-} from "@potential-guide/check-artifacts/files";
+} from "@potential-guide/artifact-files";
 import { importContent } from "@potential-guide/ipfs-content";
 import {
   type JsonObject,
@@ -80,7 +80,7 @@ export async function compileTaskBundle(options: BuildTaskBundleOptions) {
   const exportName = options.exportName ?? "default";
   if (!/^(?:default|[A-Za-z_$][A-Za-z0-9_$]*)$/.test(exportName))
     throw new Error("Invalid callback export name.");
-  const runtime = fileURLToPath(new URL("./index.js", import.meta.url));
+  const runtime = fileURLToPath(import.meta.resolve("@potential-guide/task-sdk"));
   const bundle = await build({
     stdin: {
       contents: `import {runTask} from ${JSON.stringify(runtime)};

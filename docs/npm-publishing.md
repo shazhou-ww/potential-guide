@@ -4,6 +4,7 @@ Potential Guide defines independent CLI, library, and Objective releases:
 
 | Package | Release tag |
 | --- | --- |
+| `@potential-guide/pguide-task-bundle` | `pguide-task-bundle-vX.Y.Z` |
 | `@potential-guide/task-protocol` | `task-protocol-vX.Y.Z` |
 | `@potential-guide/task-engine` | `task-engine-vX.Y.Z` |
 | `@potential-guide/task-engine-http` | `task-engine-http-vX.Y.Z` |
@@ -43,11 +44,33 @@ packages and their release tags are retired.
 The generic task packages are independent of those business hosts: release
 `task-protocol` before `task-engine`, `task-engine-http`, and `task-engine-storage`.
 Adding their packaging checks does not publish or deploy them.
-`check-environment`, `task-sdk`, `pguide-task-bundle`, `check-task`, `probe-task`, and `task-engine-server` currently belong only to the local
+`check-environment`, `task-sdk`, `check-task`, `probe-task`, and `task-engine-server` currently belong only to the local
 verification inventory, alongside the artifact support packages. Their MVP
 checks pack/install real consumers, but do not add release tags, bootstrap
 publication, or workflow authorization. A later release requires an explicit
 publication scope and package-specific tag configuration.
+`@potential-guide/pguide-task-bundle` now has a placeholder and a GitHub Trusted
+Publisher configured by the package owner. It participates in the existing
+`publish-npm.yaml` workflow under environment `npm`, using its own
+`pguide-task-bundle-v*` tags or the `pguide-task-bundle` manual dry-run choice.
+The current first candidate is `0.1.0-rc.0` and must use the `rc` dist-tag.
+Adding this release route does not publish a version or authorize its support
+packages. Before tagging, confirm its exact packed runtime dependency closure
+is already published at the required versions. `task-sdk` is the Worker runtime,
+not the old build/publish API: author tooling belongs to `pguide-task-bundle`.
+The author CLI must not install `check-artifacts` or `check-runtime-files`.
+Release-inventory tests enforce that separation and require every internal
+runtime dependency to have a local verification pack. A verification entry alone
+does not authorize publishing a new support package.
+The neutral `@potential-guide/artifact-files` package now supplies portable file
+and YAML primitives without pulling in legacy Check runtime/build code.
+For this CLI's release, the support packages to prepare are `artifact-files`,
+`ipfs-content`, and the runtime-only `task-sdk`, in dependency order; the two
+Check packages are no longer in its runtime dependency closure.
+These support packages still require their own release authorization and
+workflow/tag entries before publishing their actual product versions.
+Local tarball overrides are not proof that npm can install the released CLI.
+Repository validation must also pass; do not bypass the workflow's `pnpm check`.
 `@potential-guide/pguide-task-engine` and `@potential-guide/task-engine-web-ui`
 are also local-verification-only packages under `apps/`. The command's packed
 production dependencies include the public UI server and browser assets; no
@@ -108,6 +131,7 @@ environment named `npm`, and leave it without npm secrets. Optional required
 reviewers are compatible with the workflow, but any deployment branch or tag
 rules must allow these release tags:
 
+- `pguide-task-bundle-v*`
 - `task-protocol-v*`
 - `task-engine-v*`
 - `task-engine-http-v*`

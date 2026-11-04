@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
+import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import type { RegisteredType } from "@potential-guide/task-protocol";
@@ -11,8 +13,6 @@ import {
   type TaskService,
   taskSchemaUri,
 } from "@potential-guide/task-protocol";
-import { buildTaskBundle } from "@potential-guide/task-sdk/build";
-import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import type { Parameters } from "../src/model.js";
 
 export function fixtureTypes() {

@@ -12,7 +12,7 @@ export async function checkBundleAuthoringConsumer(directory, cid, tarballs, man
 import assert from "node:assert/strict";
 import {writeFile} from "node:fs/promises";
 import {MemoryIpfsClient} from "@potential-guide/ipfs-content/testing";
-import {importTaskBundle} from "@potential-guide/task-sdk/publish";
+import {importTaskBundle} from "@potential-guide/pguide-task-bundle/publish";
 const client=new MemoryIpfsClient();
 assert.equal((await importTaskBundle("bundle",client)).cid,${JSON.stringify(cid)});
 await writeFile("blocks.json",JSON.stringify([...client.blocks].map(([key,bytes])=>[key,Buffer.from(bytes).toString("hex")])));

@@ -14,6 +14,7 @@ export async function checkTaskBundleConsumer(scratch, tarballs, manifests, run)
   await mkdir(artifacts);
   const entries = {
     author: [
+      "@potential-guide/pguide-task-bundle",
       "@potential-guide/ipfs-content",
       "@potential-guide/task-sdk",
       "@potential-guide/check-task",
@@ -132,8 +133,8 @@ process.on("message",async message=>{if(message==="close"){try{await server.clos
 import assert from "node:assert/strict";
 import {mkdir,readFile,writeFile} from "node:fs/promises";
 import {join,resolve} from "node:path";
-import {buildTaskBundle} from "@potential-guide/task-sdk/build";
-import {importTaskBundle} from "@potential-guide/task-sdk/publish";
+import {buildTaskBundle} from "@potential-guide/pguide-task-bundle/build";
+import {importTaskBundle} from "@potential-guide/pguide-task-bundle/publish";
 import {MemoryIpfsClient} from "@potential-guide/ipfs-content/testing";
 import {writeContractArtifact,packContractArtifact} from "@potential-guide/check-artifacts/build";
 import {checkerSchemaUri,objectiveSchemaUri} from "@potential-guide/check-artifacts/contracts";

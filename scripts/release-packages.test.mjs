@@ -30,7 +30,6 @@ test("local verification covers the internal runtime dependency closure without 
     "check-task",
     "probe-task",
     "task-engine-server",
-    "pguide-task-bundle",
     "pguide-task-engine",
     "task-engine-web-ui",
   ]) {
@@ -40,11 +39,12 @@ test("local verification covers the internal runtime dependency closure without 
 });
 
 test("release inventory contains the new packages and excludes retired Guide and Supervisor", () => {
-  assert.equal(releasePackages.length, 25);
+  assert.equal(releasePackages.length, 26);
   for (const field of ["id", "directory", "name"]) {
-    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 25);
+    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 26);
   }
   for (const name of [
+    "@potential-guide/pguide-task-bundle",
     "@potential-guide/task-protocol",
     "@potential-guide/task-engine",
     "@potential-guide/task-engine-http",
@@ -66,6 +66,40 @@ test("release inventory contains the new packages and excludes retired Guide and
     assert.ok(!releasePackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.3.0-rc.0`), /Unsupported package/);
   }
+});
+
+test("Task SDK is runtime-only and author tools do not install legacy Check packages", async () => {
+  const manifests = new Map(
+    await Promise.all(
+      verificationPackages.map(async ({ name, directory, workspace }) => [
+        name,
+        JSON.parse(
+          await readFile(
+            new URL(`../${workspace ?? "packages"}/${directory}/package.json`, import.meta.url),
+            "utf8",
+          ),
+        ),
+      ]),
+    ),
+  );
+  const sdk = manifests.get("@potential-guide/task-sdk");
+  assert.deepEqual(Object.keys(sdk.exports), ["."]);
+  assert.deepEqual(Object.keys(sdk.dependencies), ["@potential-guide/task-protocol"]);
+  const visited = new Set();
+  function visit(name) {
+    if (visited.has(name)) return;
+    visited.add(name);
+    assert.ok(
+      !["@potential-guide/check-artifacts", "@potential-guide/check-runtime-files"].includes(name),
+      `Task author tooling must not install ${name}`,
+    );
+    const manifest = manifests.get(name);
+    assert.ok(manifest, `Missing verification package ${name}`);
+    for (const [dependency, range] of Object.entries(manifest.dependencies ?? {}))
+      if (range.startsWith("workspace:")) visit(dependency);
+  }
+  visit("@potential-guide/pguide-task-bundle");
+  assert.ok(visited.has("@potential-guide/task-sdk"));
 });
 
 test("package-specific RC tags preserve package identity and never select latest", () => {

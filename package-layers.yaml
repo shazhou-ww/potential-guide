@@ -1,4 +1,5 @@
 protocol:
+  - "@potential-guide/artifact-files"
   - "@potential-guide/ipfs-content"
   - "@potential-guide/task-protocol"
   - "@potential-guide/task-sdk"
@@ -39,3 +40,6 @@ tools:
   - "@potential-guide/objective-setup-marker"
 deferredExternalization:
   - "@potential-guide/git-source"
+developmentTools:
+  "@potential-guide/pguide-task-bundle":
+    - packages/check-environment/build.mjs

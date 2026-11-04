@@ -6,11 +6,11 @@ import {
 } from "@potential-guide/check-artifacts/build";
 import { checkerSchemaUri, inspectContractFiles } from "@potential-guide/check-artifacts/contracts";
 import { createCheckTaskType } from "@potential-guide/check-task";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
+import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { TaskError, taskSchemaUri } from "@potential-guide/task-protocol";
-import { buildTaskBundle } from "@potential-guide/task-sdk/build";
-import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 
 const [database, directory, restarting, archive] = process.argv.slice(2);
 const page = Buffer.from("---\ntitle: Restart\ndescription: Restart\n---\nBody\n");

@@ -24,7 +24,7 @@ function pilotExecutionError(): CliError {
     "pilot-error",
     {
       nextAction:
-        "Build Task Bundles with @potential-guide/task-sdk/build and submit their exact references to the Task Engine.",
+        "Build Task Bundles with pguide task-bundle build and submit their exact references to the Task Engine.",
       existingRecords: "Existing regulation records are not migrated or replayed.",
     },
   );

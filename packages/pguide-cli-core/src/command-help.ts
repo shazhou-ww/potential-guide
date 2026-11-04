@@ -105,7 +105,7 @@ const help: Record<Command, CommandHelp> = {
         title: "Notes",
         lines: [
           "  Execution returns exit 2 and pilot-error before source acquisition or Agent work.",
-          "  Build Task Bundles with @potential-guide/task-sdk/build and submit exact references.",
+          "  Build Task Bundles with pguide task-bundle build and submit exact references.",
           "  Static scaffold/validate and Objective declaration management remain available.",
           "  Manage declarations with pguide objectives; config aliases are legacy sources only.",
           "  Use @name to require a registered Objective; bare names resolve when registered.",

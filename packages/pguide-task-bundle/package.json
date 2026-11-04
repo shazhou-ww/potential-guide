@@ -12,6 +12,18 @@
     "./bin/task-bundle": {
       "types": "./dist/bin.d.ts",
       "import": "./dist/bin.js"
+    },
+    "./build": {
+      "types": "./dist/build.d.ts",
+      "import": "./dist/build.js"
+    },
+    "./artifact": {
+      "types": "./dist/artifact.d.ts",
+      "import": "./dist/artifact.js"
+    },
+    "./publish": {
+      "types": "./dist/publish.d.ts",
+      "import": "./dist/publish.js"
     }
   },
   "bin": {
@@ -38,15 +50,14 @@
   },
   "dependencies": {
     "@potential-guide/cli-core": "workspace:^",
-    "@potential-guide/check-artifacts": "workspace:^",
     "@potential-guide/task-protocol": "workspace:^",
     "@potential-guide/task-sdk": "workspace:^",
     "@sinclair/typebox": "catalog:",
     "ajv": "catalog:",
-    "esbuild": "catalog:"
-  },
-  "devDependencies": {
-    "@potential-guide/ipfs-content": "workspace:^"
+    "esbuild": "catalog:",
+    "@potential-guide/artifact-files": "workspace:^",
+    "@potential-guide/ipfs-content": "workspace:^",
+    "yaml": "catalog:"
   },
   "publishConfig": {
     "access": "public"

@@ -22,10 +22,12 @@ export async function checkTaskSdkConsumer(directory, run) {
 import assert from "node:assert/strict";
 import {rm,writeFile} from "node:fs/promises";
 import {resolve,join} from "node:path";
-import {buildTaskBundle} from "@potential-guide/task-sdk/build";
-import {importTaskBundle} from "@potential-guide/task-sdk/publish";
+import {buildTaskBundle} from "@potential-guide/pguide-task-bundle/build";
+import {importTaskBundle} from "@potential-guide/pguide-task-bundle/publish";
 import {MemoryIpfsClient} from "@potential-guide/ipfs-content/testing";
 import {resolveBundleSchemas,taskSchemaUri,validateTaskBundle} from "@potential-guide/task-protocol";
+for(const subpath of ["build","artifact","publish"])
+ await assert.rejects(import("@potential-guide/task-sdk/"+subpath),error=>error.code==="ERR_PACKAGE_PATH_NOT_EXPORTED");
 const root=resolve("fixture");
 const declaration={$schema:taskSchemaUri,name:"Packed echo",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",include:["task.yaml","worker.cjs"],inputSchema:{type:"object"},resultSchema:true,messageSchema:false};
 assert.equal(validateTaskBundle(declaration).$schema,taskSchemaUri);

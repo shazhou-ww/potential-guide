@@ -3,13 +3,13 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { createIpfsClient, createIpfsGatewayClient } from "../packages/ipfs-content/dist/index.js";
+import { buildTaskBundle } from "../packages/pguide-task-bundle/dist/build.js";
+import { importTaskBundle } from "../packages/pguide-task-bundle/dist/publish.js";
 import { newId } from "../packages/task-engine/dist/index.js";
 import { MemoryStore } from "../packages/task-engine/dist/testing.js";
 import { TaskClient } from "../packages/task-engine-http/dist/index.js";
 import { startTaskServer } from "../packages/task-engine-server/dist/index.js";
 import { taskSchemaUri } from "../packages/task-protocol/dist/index.js";
-import { buildTaskBundle } from "../packages/task-sdk/dist/build.js";
-import { importTaskBundle } from "../packages/task-sdk/dist/publish.js";
 
 // The daemon must be independently managed and offline/private; this helper never starts it.
 const endpoint = new URL(process.env.IPFS_API ?? "http://127.0.0.1:55001");

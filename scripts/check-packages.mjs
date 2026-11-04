@@ -42,13 +42,17 @@ if (authoringOnly) {
   }
 }
 const sdkPackages = new Set([
+  "artifact-files",
+  "pguide-cli-core",
+  "pguide-task-bundle",
   "ipfs-content",
-  "check-runtime-files",
-  "check-artifacts",
   "task-protocol",
   "task-sdk",
 ]);
 const bundlePackages = new Set([
+  "artifact-files",
+  "pguide-cli-core",
+  "pguide-task-bundle",
   "ipfs-content",
   "check-runtime-files",
   "check-artifacts",

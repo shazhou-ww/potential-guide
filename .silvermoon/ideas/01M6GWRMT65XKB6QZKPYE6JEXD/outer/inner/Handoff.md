@@ -60,7 +60,7 @@ TypeBox 选用 `@sinclair/typebox@0.34.52`，加入共享 catalog 并更新 lock
   无清单的旧 Bundle 明确拒绝并提示重新构建、使用新 CID。
 - `packages/task-engine/src/bundle.ts` 在装载时验证相同精确集合。
   `schemas/artifacts/task/v1.json` 和 Axis 文档同步更新，没有旧格式兼容回退。
-- `packages/task-sdk/src/build.ts` 仅保留纯编译/构建：
+- `packages/pguide-task-bundle/src/build.ts` 仅保留纯编译/构建（已从 Task SDK 迁出）：
   `compileTaskBundle` 产出内存快照，`buildTaskBundle` 生成声明、Worker、
   schemas/resources 和 UnixFS CID；低层声明输入 API 保留供仓库工具使用，
   它生成清单，不是旧成品装载兼容路径。

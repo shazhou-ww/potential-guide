@@ -1,7 +1,7 @@
 {
   "name": "@potential-guide/task-sdk",
   "version": "0.1.0-rc.0",
-  "description": "Build standalone Task Bundles and run their generation-scoped Worker protocol.",
+  "description": "Generation-scoped Task Worker runtime and author callback types.",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -10,24 +10,11 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./build": {
-      "types": "./dist/build.d.ts",
-      "import": "./dist/build.js"
-    },
-    "./artifact": {
-      "types": "./dist/artifact.d.ts",
-      "import": "./dist/artifact.js"
-    },
-    "./publish": {
-      "types": "./dist/publish.d.ts",
-      "import": "./dist/publish.js"
     }
   },
   "files": [
     "dist",
-    "README.md",
-    "examples"
+    "README.md"
   ],
   "scripts": {
     "build": "tsc -b",
@@ -40,11 +27,7 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
-    "@potential-guide/ipfs-content": "workspace:^",
-    "@potential-guide/task-protocol": "workspace:^",
-    "@potential-guide/check-artifacts": "workspace:^",
-    "esbuild": "catalog:",
-    "yaml": "catalog:"
+    "@potential-guide/task-protocol": "workspace:^"
   },
   "publishConfig": {
     "access": "public"

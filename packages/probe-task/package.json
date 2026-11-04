@@ -33,7 +33,8 @@
     "@potential-guide/task-engine-http": "workspace:^",
     "@potential-guide/task-sdk": "workspace:^",
     "@potential-guide/task-engine-server": "workspace:^",
-    "@potential-guide/task-engine-storage": "workspace:^"
+    "@potential-guide/task-engine-storage": "workspace:^",
+    "@potential-guide/pguide-task-bundle": "workspace:^"
   },
   "engines": {
     "node": ">=22.13.0"

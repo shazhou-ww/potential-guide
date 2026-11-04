@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
-import { delimiter, isAbsolute, join } from "node:path";
+import { delimiter, dirname, isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { checkBundleAuthoringConsumer } from "./check-bundle-authoring-consumer.mjs";
 import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
@@ -24,6 +24,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     [
       "task-sdk",
       [
+        "@potential-guide/pguide-task-bundle",
         "@potential-guide/task-sdk",
         "@potential-guide/task-protocol",
         "@potential-guide/ipfs-content",
@@ -95,6 +96,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     [
       "task-service",
       [
+        "@potential-guide/pguide-task-bundle",
         "pguide",
         "@potential-guide/pguide-task-engine",
         "@potential-guide/ipfs-content",
@@ -165,6 +167,21 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         label === "artifact-contracts" ||
         label.startsWith("mvp-"),
     );
+    if (label === "bundle-authoring" || label === "task-sdk") {
+      const authorEntries = ["@potential-guide/pguide-task-bundle"];
+      const authorGraph = await verifyConsumerGraph(
+        directory,
+        consumerVersions(manifests, authorEntries),
+        authorEntries,
+        true,
+      );
+      const names = new Set(authorGraph.map((entry) => entry.name));
+      for (const forbidden of [
+        "@potential-guide/check-artifacts",
+        "@potential-guide/check-runtime-files",
+      ])
+        assert.ok(!names.has(forbidden), `Author tools must not install ${forbidden}.`);
+    }
     if (label === "probe-task") {
       const names = new Set(graph.map((entry) => entry.name));
       for (const forbidden of [
@@ -200,7 +217,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         ...process.env,
         APPDATA: home,
         XDG_CONFIG_HOME: home,
-        PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
+        PATH: [bin, dirname(process.execPath)].join(delimiter),
       };
       const pguide = join(directory, "node_modules", "pguide", "dist", "bin.js");
       const metadata = JSON.parse(
