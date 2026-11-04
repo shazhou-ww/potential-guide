@@ -15,6 +15,17 @@ import { localPolicy, startService } from "../src/service.js";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 
+function currentRequestId() {
+  const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  let timestamp = Date.now();
+  let prefix = "";
+  for (let index = 0; index < 10; index++) {
+    prefix = alphabet[timestamp % 32] + prefix;
+    timestamp = Math.floor(timestamp / 32);
+  }
+  return `${prefix}0000000000000000`;
+}
+
 test("Gateway-only Engine and UI execute a Bundle without any RPC and retain source ownership", async (t) => {
   await mkdir(join(root, ".cache"), { recursive: true });
   const directory = await mkdtemp(join(root, ".cache", "service-gateway-"));
@@ -95,7 +106,7 @@ test("Gateway-only Engine and UI execute a Bundle without any RPC and retain sou
           origin: service.uiUrl!,
         };
       }
-      const requestId = "01M6GRRES5EBHYDP1G9DZEGE8E";
+      const requestId = currentRequestId();
       const submitted = await fetch(`${endpoint}/tasks`, {
         method: "POST",
         headers: { ...headers, "Idempotency-Key": requestId },
@@ -136,7 +147,7 @@ test("Gateway-only Engine and UI execute a Bundle without any RPC and retain sou
     ipfsGatewayUrl: `${url}/missing`,
   });
   try {
-    const requestId = "01M6GRRES5EBHYDP1G9DZEGE8E";
+    const requestId = currentRequestId();
     await fetch(`${failed.url}/tasks`, {
       method: "POST",
       headers: { "content-type": "application/json", "Idempotency-Key": requestId },
