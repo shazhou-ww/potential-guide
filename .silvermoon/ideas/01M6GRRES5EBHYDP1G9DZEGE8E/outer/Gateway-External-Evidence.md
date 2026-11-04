@@ -168,6 +168,21 @@ CLI 停止后真实 Kubo 仍返回 version 200，最后仅由 harness 关闭。
 这些历史结果放在 JSON 的 `supersedes.historicalRepositoryValidation`，
 不冒充本次重跑；本轮未修改相关源码/规则。
 
+## 主代理最终复核
+
+在证据提交 `0bc079ab9bada7f0f0d1858a3a2ec9b76aa0e700` 上，主代理独立重跑
+Gateway/CLI/Engine/Server 的同一组回归，**16/16 通过**；
+以结构化断言核对本轮 sourceCommit、7 个精确成功结果、18 个配置拒绝、
+3 个内容拒绝、零 RPC 请求、七块 clean YAML Bundle、配置保护和零遗留资源，均通过。
+相对实测源码 `9648e209` 的 apps、packages、scripts 和 lockfile 没有变化。
+
+随后主代理执行当前集成候选的 `pnpm check`：**退出 1**。
+build/layers、format、lint、typecheck 均通过；Turbo test 为 **67 successful / 74 total**，
+已报告失败仍仅是既存 `.agent/skills/component-responsibility-docs/SKILL.md`
+责任分类 `unverified`。本次没有报告 readiness timeout，不沿用历史超时结论；
+后续完整 pack 阶段因短路未执行，不声明全量通过。该复核只增加 Outer 证据，
+没有改变部署契约或产品源码。
+
 ## 复现
 
 需要该 source commit 的已构建产物；从源码根目录运行，选择不存在的无空格外部目录：
