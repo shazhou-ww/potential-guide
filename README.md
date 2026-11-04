@@ -86,6 +86,8 @@ CLI discovery and runtime deployment checks. Full delivery validation is
 default checks on Node 22/24 and the full consumer/deployment suite on Linux,
 macOS and Windows. This retains platform-specific artifact and Worker assertions
 while removing two redundant consumer runs from the Node matrix.
+The publishing workflow explicitly retains `pnpm consumers:check` after default
+checks; this validation split does not change release permissions or publish packages.
 Direct `node scripts/check-packages.mjs` retains full consumer validation;
 `--structure` selects artifact structure only and cannot be combined with consumer
 scope flags.
